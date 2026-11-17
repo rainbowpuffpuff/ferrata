@@ -136,7 +136,8 @@ the signer witness, runs step 1, the two-pair Miller loop, the final check, the 
 updates: 512 keys in one part), encodes the job and applies it, as the program's `VerifyAll` and
 `ApplyVerified` do. The 342- and 512-signer rows put a committee whose keys the bench holds in place
 of the signing committee in the store (its summary), and sign the real update_1 with it; headers
-and branches stay real. At 510 signers this gives the real update's cycles within 187.
+and branches stay real. At 510 signers this gives the real update's cycles within 187. The run was
+repeated after the guest was rebuilt (reformatted source): every user-cycle count was identical.
 
 | case (update_1) | path | step 1 | Miller | final check | Miller + check | adoption | rest | whole (user cycles) | segments |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|

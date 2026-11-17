@@ -15,7 +15,7 @@
        9033281  T  whole update: inputs read to new store (one cycle_count delta)
        9076609  EXECUTION user cycles (SessionInfo::cycles)
        9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
-          0.45  executor wall-clock seconds
+          0.46  executor wall-clock seconds
 
 ### finality, mainnet update_1 as served: 510 of 512 signers / witness (residue check)
           2045  R  read the inputs
@@ -34,7 +34,7 @@
        6529808  T  whole update: inputs read to new store (one cycle_count delta)
        6573265  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.33  executor wall-clock seconds
+          0.32  executor wall-clock seconds
 
 ### finality, mainnet update_1 as served: 510 of 512 signers / witness folded into the Miller loop
           2205  R  read the inputs
@@ -52,7 +52,7 @@
        5869041  T  whole update: inputs read to new store (one cycle_count delta)
        5911714  EXECUTION user cycles (SessionInfo::cycles)
        6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.30  executor wall-clock seconds
+          0.29  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 510 (update_1's bits) signers / current (final exponentiation)
           1725  R  read the inputs
@@ -71,7 +71,7 @@
        9033468  T  whole update: inputs read to new store (one cycle_count delta)
        9076796  EXECUTION user cycles (SessionInfo::cycles)
        9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
-          0.43  executor wall-clock seconds
+          0.42  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 510 (update_1's bits) signers / witness (residue check)
           2045  R  read the inputs
@@ -90,7 +90,7 @@
        6529995  T  whole update: inputs read to new store (one cycle_count delta)
        6573452  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.33  executor wall-clock seconds
+          0.32  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 510 (update_1's bits) signers / witness folded into the Miller loop
           2205  R  read the inputs
@@ -108,7 +108,7 @@
        5869228  T  whole update: inputs read to new store (one cycle_count delta)
        5911901  EXECUTION user cycles (SessionInfo::cycles)
        6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.30  executor wall-clock seconds
+          0.29  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / current (final exponentiation)
           7647  R  read the inputs
@@ -127,7 +127,7 @@
       13269044  T  whole update: inputs read to new store (one cycle_count delta)
       13312372  EXECUTION user cycles (SessionInfo::cycles)
       14680064  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 14 segments)
-          0.53  executor wall-clock seconds
+          0.52  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / witness (residue check)
           7967  R  read the inputs
@@ -146,7 +146,7 @@
       10765571  T  whole update: inputs read to new store (one cycle_count delta)
       10809028  EXECUTION user cycles (SessionInfo::cycles)
       11796480  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 12 segments)
-          0.44  executor wall-clock seconds
+          0.43  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / witness folded into the Miller loop
           8127  R  read the inputs
@@ -164,7 +164,7 @@
       10104804  T  whole update: inputs read to new store (one cycle_count delta)
       10147477  EXECUTION user cycles (SessionInfo::cycles)
       11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.43  executor wall-clock seconds
+          0.40  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 512 (all) signers / current (final exponentiation)
           1677  R  read the inputs
@@ -183,7 +183,7 @@
        8981889  T  whole update: inputs read to new store (one cycle_count delta)
        9025217  EXECUTION user cycles (SessionInfo::cycles)
        9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
-          0.49  executor wall-clock seconds
+          0.43  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 512 (all) signers / witness (residue check)
           1997  R  read the inputs
@@ -202,7 +202,7 @@
        6478416  T  whole update: inputs read to new store (one cycle_count delta)
        6521873  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.36  executor wall-clock seconds
+          0.35  executor wall-clock seconds
 
 ### finality, update_1 signed by the bench's committee: 512 (all) signers / witness folded into the Miller loop
           2157  R  read the inputs
@@ -220,7 +220,7 @@
        5817649  T  whole update: inputs read to new store (one cycle_count delta)
        5860322  EXECUTION user cycles (SessionInfo::cycles)
        6356992  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.32  executor wall-clock seconds
+          0.29  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), mainnet update_1 as served: 510 of 512 signers / current (final exponentiation)
           6337  R  read the inputs
@@ -241,7 +241,7 @@
       15043368  T  whole update: inputs read to new store (one cycle_count delta)
       15100180  EXECUTION user cycles (SessionInfo::cycles)
       16252928  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 16 segments)
-          0.64  executor wall-clock seconds
+          0.60  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), mainnet update_1 as served: 510 of 512 signers / witness (residue check)
           6657  R  read the inputs
@@ -262,7 +262,7 @@
       12539895  T  whole update: inputs read to new store (one cycle_count delta)
       12596637  EXECUTION user cycles (SessionInfo::cycles)
       13631488  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.52  executor wall-clock seconds
+          0.50  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), mainnet update_1 as served: 510 of 512 signers / witness folded into the Miller loop
           6817  R  read the inputs
@@ -282,7 +282,7 @@
       11879128  T  whole update: inputs read to new store (one cycle_count delta)
       11935103  EXECUTION user cycles (SessionInfo::cycles)
       12845056  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.49  executor wall-clock seconds
+          0.53  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 510 (update_1's bits) signers / current (final exponentiation)
           6337  R  read the inputs
@@ -303,7 +303,7 @@
       15043555  T  whole update: inputs read to new store (one cycle_count delta)
       15100367  EXECUTION user cycles (SessionInfo::cycles)
       16252928  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 16 segments)
-          0.61  executor wall-clock seconds
+          0.79  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 510 (update_1's bits) signers / witness (residue check)
           6657  R  read the inputs
@@ -324,7 +324,7 @@
       12540082  T  whole update: inputs read to new store (one cycle_count delta)
       12596824  EXECUTION user cycles (SessionInfo::cycles)
       13631488  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.51  executor wall-clock seconds
+          0.50  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 510 (update_1's bits) signers / witness folded into the Miller loop
           6817  R  read the inputs
@@ -344,7 +344,7 @@
       11879315  T  whole update: inputs read to new store (one cycle_count delta)
       11935290  EXECUTION user cycles (SessionInfo::cycles)
       12845056  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.51  executor wall-clock seconds
+          0.47  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / current (final exponentiation)
          12259  R  read the inputs
@@ -365,7 +365,7 @@
       19279131  T  whole update: inputs read to new store (one cycle_count delta)
       19335943  EXECUTION user cycles (SessionInfo::cycles)
       20971520  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 20 segments)
-          0.78  executor wall-clock seconds
+          0.71  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / witness (residue check)
          12579  R  read the inputs
@@ -386,7 +386,7 @@
       16775658  T  whole update: inputs read to new store (one cycle_count delta)
       16832400  EXECUTION user cycles (SessionInfo::cycles)
       18350080  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 18 segments)
-          0.73  executor wall-clock seconds
+          0.62  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 342 (every third member absent: 170) signers / witness folded into the Miller loop
          12739  R  read the inputs
@@ -406,7 +406,7 @@
       16114891  T  whole update: inputs read to new store (one cycle_count delta)
       16170866  EXECUTION user cycles (SessionInfo::cycles)
       17825792  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 17 segments)
-          0.60  executor wall-clock seconds
+          0.59  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 512 (all) signers / current (final exponentiation)
           6289  R  read the inputs
@@ -427,7 +427,7 @@
       14991976  T  whole update: inputs read to new store (one cycle_count delta)
       15048788  EXECUTION user cycles (SessionInfo::cycles)
       16252928  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 16 segments)
-          0.59  executor wall-clock seconds
+          0.61  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 512 (all) signers / witness (residue check)
           6609  R  read the inputs
@@ -448,7 +448,7 @@
       12488503  T  whole update: inputs read to new store (one cycle_count delta)
       12545245  EXECUTION user cycles (SessionInfo::cycles)
       13631488  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.55  executor wall-clock seconds
+          0.51  executor wall-clock seconds
 
 ### period (handoff, adopts 512 keys), update_1 signed by the bench's committee: 512 (all) signers / witness folded into the Miller loop
           6769  R  read the inputs
@@ -484,7 +484,7 @@
            243  refused: code
        6532066  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.34  executor wall-clock seconds
+          0.32  executor wall-clock seconds
 
 ### REFUSAL: finality update_1, witness path, w with a coefficient outside Fp6
           2045  R  read the inputs
@@ -500,7 +500,7 @@
            242  refused: code
        5495036  EXECUTION user cycles (SessionInfo::cycles)
        6291456  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 6 segments)
-          0.34  executor wall-clock seconds
+          0.28  executor wall-clock seconds
 
 ### REFUSAL: finality update_1, folded path, c given as its own inverse
           2205  R  read the inputs
@@ -515,7 +515,7 @@
            241  refused: code
        3249142  EXECUTION user cycles (SessionInfo::cycles)
        3670016  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 4 segments)
-          0.22  executor wall-clock seconds
+          0.21  executor wall-clock seconds
 
 ### REFUSAL: finality update_1, folded path, c with one bit flipped
           2205  R  read the inputs
@@ -530,7 +530,7 @@
            241  refused: code
        3249142  EXECUTION user cycles (SessionInfo::cycles)
        3670016  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 4 segments)
-          0.22  executor wall-clock seconds
+          0.21  executor wall-clock seconds
 
 ### OPS: the Fp12 operations, on update_1's product and witness
         235085  O1 16 generic Fp12 squarings (blst_fp12_sqr)
@@ -544,5 +544,5 @@
        3581110  O9 final exponentiation and is_one (blst_final_exp)
        7608669  EXECUTION user cycles (SessionInfo::cycles)
        8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
-          0.40  executor wall-clock seconds
+          0.39  executor wall-clock seconds
 
