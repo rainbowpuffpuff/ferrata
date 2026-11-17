@@ -131,7 +131,15 @@ async function reopenView(app, kind) {
   check(true, "the view is gone (no instance of it left in Basecamp's window)");
   await shot(app, `${kind === "burn" ? "17c" : "14c"}-view-unloaded-while-the-${kind}-is-proven`);
   await press(await shown());
-  await waitFor(app, async () => { const u = await shown(); if (!u || u.text !== "Unload") throw new Error(u ? u.text : "no row"); }, 60000, "the view loaded again");
+  // Loaded again, Basecamp opens the app, and the inspector's row goes off screen: wait for the view's new instance (or
+  // for the row to say Unload, then open the app from the sidebar).
+  await waitFor(app, async () => {
+    if ((await idsOf(app, "objectName", V)).length > 0) return;
+    const u = await shown();
+    if (u && u.text === "Unload") return;
+    throw new Error(`no view yet (row: ${u ? u.text : "not shown"})`);
+  }, 60000, "the view loaded again");
+  log({ view_loaded_again: true, instances: (await idsOf(app, "objectName", V)).length });
   await clickName(app, "sidebar.app.ferrata_bridge_ui");
   await sleep(1000);
   await waitFor(app, async () => { const id = await get(app, `${kind}Job ? ${kind}Job.id : -1`); if (id !== before.id) throw new Error(`job ${id}`); }, 60000, "the reopened view found the job");
