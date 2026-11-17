@@ -1,0 +1,158 @@
+these 4 derivations will be built:
+  /nix/store/0jkfjipsps1h6z7r4cjnw4afnmai6718-logos-ferrata_bridge_ui-module.drv
+  /nix/store/6br8zg38c8qk68zzf85zpxylqv324kzw-logos-ferrata_bridge_ui-module-lgx-0.1.0.drv
+  /nix/store/y1pr0libr84bvqyc42vpiizjjxm5wsxc-logos-ferrata_bridge_ui-module-install.drv
+  /nix/store/imm4cjd5rmvin1kwcf1mkcl3pzsad004-run-logos-ui-tests.drv
+building '/nix/store/0jkfjipsps1h6z7r4cjnw4afnmai6718-logos-ferrata_bridge_ui-module.drv'...
+logos-ferrata_bridge_ui-module> Copied QML view directory from qml
+logos-ferrata_bridge_ui-module> Generated qmldir at qml/qmldir (module com.logos.module.ferrata_bridge_ui)
+building '/nix/store/6br8zg38c8qk68zzf85zpxylqv324kzw-logos-ferrata_bridge_ui-module-lgx-0.1.0.drv'...
+logos-ferrata_bridge_ui-module-lgx> Running phase: patchPhase
+logos-ferrata_bridge_ui-module-lgx> Running phase: updateAutotoolsGnuConfigScriptsPhase
+logos-ferrata_bridge_ui-module-lgx> Running phase: configurePhase
+logos-ferrata_bridge_ui-module-lgx> no configure script, doing nothing
+logos-ferrata_bridge_ui-module-lgx> Running phase: buildPhase
+logos-ferrata_bridge_ui-module-lgx> Created package: logos-ferrata_bridge_ui-module.lgx
+logos-ferrata_bridge_ui-module-lgx> Patching manifest from metadata...
+logos-ferrata_bridge_ui-module-lgx> Staged 3 entries from /nix/store/5g0fq1gilksn31v249izxh0j9srmjzgs-logos-ferrata_bridge_ui-module/lib
+logos-ferrata_bridge_ui-module-lgx> Bundling icon: ferrata.png -> assets/icon.png
+logos-ferrata_bridge_ui-module-lgx> No LGX assets at /nix/store/5g0fq1gilksn31v249izxh0j9srmjzgs-logos-ferrata_bridge_ui-module/share/logos; skipping lidl
+logos-ferrata_bridge_ui-module-lgx> Adding variant linux-amd64-dev to logos-ferrata_bridge_ui-module.lgx (no backend main entry)...
+logos-ferrata_bridge_ui-module-lgx> Added variant 'linux-amd64-dev' to logos-ferrata_bridge_ui-module.lgx
+logos-ferrata_bridge_ui-module-lgx> Done: logos-ferrata_bridge_ui-module.lgx
+logos-ferrata_bridge_ui-module-lgx> Running phase: installPhase
+building '/nix/store/y1pr0libr84bvqyc42vpiizjjxm5wsxc-logos-ferrata_bridge_ui-module-install.drv'...
+logos-ferrata_bridge_ui-module-install> Installing logos-ferrata_bridge_ui-module.lgx via lgpm...
+logos-ferrata_bridge_ui-module-install> Installing from file: /nix/store/7j59a2l4sk1yl9d1s65sqkyalk4r48n1-logos-ferrata_bridge_ui-module-lgx-0.1.0/logos-ferrata_bridge_ui-module.lgx...Warning: Package is unsigned: /nix/store/7j59a2l4sk1yl9d1s65sqkyalk4r48n1-logos-ferrata_bridge_ui-module-lgx-0.1.0/logos-ferrata_bridge_ui-module.lgx
+logos-ferrata_bridge_ui-module-install>  done
+logos-ferrata_bridge_ui-module-install> Installed to: /nix/store/mw1djyq4lv81pv4sj0gng5fqpr3qkdfx-logos-ferrata_bridge_ui-module-install/plugins
+building '/nix/store/imm4cjd5rmvin1kwcf1mkcl3pzsad004-run-logos-ui-tests.drv'...
+Running: wlj1rv7h4bdyqazqmh266l69asb7xwjw-ui-tests.mjs
+Launching: /nix/store/vdwrrx2pq7j3wznydr06zz0vw3dnam23-logos-basecamp-dev-launch -platform offscreen
+Waiting for inspector to become available...
+[app:err] Standalone mode — apps: ferrata_bridge_ui
+[app:out] LogosBasecamp version pre-release-b642a9a (dev build)
+Build commits:
+  - logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb
+  - logos-nix 7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+  - logos-cpp-sdk 05e14426d73e798d4e000e1e8e47372b0fb40f37
+  - logos-module ceee1e35649cc938c213515c672fa40df0a32469
+  - logos-liblogos af19e519c9b579a1dab86e8dc3960925fc28b526
+  - logos-package-manager 73c21ab64e3ddc4b5745ec7c91405eb56c691de2
+  - logos-package-manager-module f12ef8597660b71770fd7984f91c28113c0ae8d9
+  - logos-package-downloader-module 1999184e5c1a40fe27657ce8068375c7a70f0840
+  - logos-storage-module 7548f41ae189917d58c37f0fb6d3a2700b99f59b
+  - logos-capability-module 0edae0eed8f7475f8e48e0202388f968865b2736
+  - logos-modules-state-module 726c4b755e78bd8ac131fb57a37294da11e03e7b
+  - logos-package 4bdd9041ebfbd06c2b22134afdcd27fce8a43f3c
+  - logos-package-manager-ui 15c5a4142f271a9cd5963ede1cf6180e4fcf0cb2
+  - logos-design-system 493a243454451a844a7b73ef501616141d1308de
+  - logos-view-module-runtime 3e69973acc259505f2ffb0ab8753cabd820193a9
+  - logos-qt-mcp 89d1d498d37700ccdc864fe93cd98ec840f95ffb
+  - nix-bundle-logos-module-install 4ebf721f3558919aa932ba250a93a7d62e932d47
+  - nix-bundle-dir 66d7f61792c4be0b7e3e6b9890dc1d58f52a4beb
+  - nix-bundle-appimage 677e6fce32369016a405d4129d2d0598d35d03ba
+  - nix-bundle-macos-app 3cf5c5941a791c1935acecfb4761f42941115b90
+Base data directory: <spike>/tmp/lez-core-v04/tmp.vcKebL8m0J/user-dir-1
+[app:out] [2026-11-17 15:24:16.112] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[app:out] [2026-11-17 15:24:16.132] [out] [capability_module] [2026-11-17 15:24:16.131] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[app:out] [2026-11-17 15:24:16.133] [info] [logos] Module loaded: capability_module
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.134"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "15:24:16.135"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8613760
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 15:24:16.150] [info] [logos] Module loaded: modules_state
+RemoteTransportConnection: Connecting to registry: "local:logos_modules_state_d3ffb60da0b0" at "15:24:16.151"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_modules_state_d3ffb60da0b0"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.151"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+Logos Core started successfully!
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.151"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+RemoteTransportConnection: Requesting object: "capability_module" at "15:24:16.151"
+[app:out] [LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8697408
+[app:out] RemoteTransportConnection: Requesting object: "modules_state" at "15:24:16.152"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "modules_state"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8874624
+[app:out] [2026-11-17 15:24:16.153] [info] [logos] Pushed module snapshot to modules_state
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8715072
+[app:out] Restricted package_manager to core, package_manager_ui_backend
+[app:out] Restricted package_downloader to core, package_manager_ui_backend
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "15:24:16.155"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8874576
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 15:24:16.173] [info] [logos] Module loaded: package_manager
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_d3ffb60da0b0" at "15:24:16.174"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_d3ffb60da0b0"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.174"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+[app:out] package_manager module loaded by default.
+Currently loaded modules:
+  - "package_manager"
+  - "modules_state"
+  - "capability_module"
+Total modules: 3
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_d3ffb60da0b0" at "15:24:16.177"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_d3ffb60da0b0"
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.177"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+RemoteTransportConnection: Requesting object: "package_manager" at "15:24:16.177"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_manager"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8985824
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8918416
+[app:out] [LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9133360
+[app:out] MainUIBackend: reachability from "dummy"
+MainUIBackend created
+[app:out] qrc:/qt/qml/Basecamp/AppManager/Basecamp/AppManager/AppManagerPanelHeader.qml:47:13: QML LogosTabBar: Binding loop detected for property "implicitWidth":
+qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabBar.qml:10:5
+[app:out] MainContainer created
+System tray is not available on this system
+[app:out] This plugin does not support propagateSizeHints()
+[app:out] [QmlInspector] Inspector server listening on port 3768
+[app:out] ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+[app:out] Loading UI module: "ferrata_bridge_ui"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "15:24:16.615"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 33598096
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] logos.basecamp.sandbox: Sandbox configured for plugin=ferrata_bridge_ui: install="/nix/store/mw1djyq4lv81pv4sj0gng5fqpr3qkdfx-logos-ferrata_bridge_ui-module-install/plugins/ferrata_bridge_ui" entry="/nix/store/mw1djyq4lv81pv4sj0gng5fqpr3qkdfx-logos-ferrata_bridge_ui-module-install/plugins/ferrata_bridge_ui/qml" appLibDir=/nix/store/49ad2a80zwbvywz9qxibwnmsbivnsds1-logos-basecamp-0.0.0-dev/lib untrustedRoots=2
+[app:out] logos.qmlbridge: DEPRECATED: ferrata_bridge_ui calls logos core from QML (logos.callModuleAsync). Move the call into a backend module ("backend": "module" in metadata.json); QML access to logos core is removed in the next breaking release.
+RemoteTransportConnection: Connecting to registry: "local:logos_ferrata_bridge_module_d3ffb60da0b0" at "15:24:16.680"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_ferrata_bridge_module_d3ffb60da0b0"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_d3ffb60da0b0" at "15:24:16.680"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_d3ffb60da0b0"
+[app:out] MainContainer: Added plugin dock to WorkspaceArea: "Ferrata Bridge" (module: "ferrata_bridge_ui" )
+Successfully loaded UI module: "ferrata_bridge_ui"
+Inspector connected.
+[app:out] [QmlInspector] Client connected from "::ffff:127.0.0.1"
+[app:out] [QmlInspector] Client disconnected
+
+Running 10 test(s)...
+
+[app:out] [QmlInspector] Client connected from "::ffff:127.0.0.1"
+  [32m✓[0m ferrata_bridge_ui: loads in Basecamp
+  [32m✓[0m ferrata_bridge_ui: Deposit renders
+  [32m✓[0m ferrata_bridge_ui: Claim renders
+  [32m✓[0m ferrata_bridge_ui: Burn and release renders
+  [32m✓[0m ferrata_bridge_ui: Positions renders
+  [32m✓[0m ferrata_bridge_ui: Registry renders
+  [32m✓[0m ferrata_bridge_ui: Admin renders
+  [32m✓[0m ferrata_bridge_ui: Privacy renders
+  [32m✓[0m ferrata_bridge_ui: Endpoints renders
+[app:out] logos.basecamp.sandbox: Blocked network POST "http://127.0.0.1:18600/rpc" [plugin=ferrata_bridge_ui]: sandboxed ui_qml modules may not use the network.
+  [32m✓[0m ferrata_bridge_ui: the sandbox keeps the view off the network inside Basecamp
+
+10 passed, 0 failed
+
+[app:out] [QmlInspector] Client disconnected
+Unloading UI module: "ferrata_bridge_ui"
+[app:out] Successfully unloaded UI module: "ferrata_bridge_ui"
+MainContainer destroyed
+[app:err] [LogosObject] Destroying RemoteLogosObject 0
+[app:err] [LogosObject] Destroying RemoteLogosObject 0
+[LogosObject] Destroying RemoteLogosObject 0
+All 1 test file(s) passed

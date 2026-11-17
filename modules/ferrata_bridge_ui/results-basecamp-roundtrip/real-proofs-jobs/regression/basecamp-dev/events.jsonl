@@ -1,0 +1,153 @@
+{"t":"2026-11-17T14:47:24.456Z","check":"inside Logos: the view's transport is the core module"}
+{"t":"2026-11-17T14:47:24.465Z","check":"Basecamp's bridge has callModuleAsync (the view calls asynchronously)"}
+{"t":"2026-11-17T14:47:24.521Z","shot":"01-basecamp-opens-the-mini-app","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:24.521Z","step":"Basecamp opens the mini-app","ok":true,"ms":84}
+{"t":"2026-11-17T14:47:24.577Z","click":"sidebar.section.3"}
+{"t":"2026-11-17T14:47:25.252Z","click":"moduleRow.loadToggle.ferrata_bridge_module"}
+{"t":"2026-11-17T14:47:25.411Z","loaded":"ferrata_bridge_module"}
+{"t":"2026-11-17T14:47:25.427Z","click":"moduleRow.loadToggle.lez_core"}
+{"t":"2026-11-17T14:47:25.585Z","loaded":"lez_core"}
+{"t":"2026-11-17T14:47:27.128Z","shot":"02-module-inspector-core-modules-loaded","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:27.137Z","click":"sidebar.app.ferrata_bridge_ui"}
+{"t":"2026-11-17T14:47:27.788Z","step":"Basecamp's Module Inspector loads the core modules","ok":true,"ms":3267}
+{"t":"2026-11-17T14:47:27.802Z","host_call":"open","reply":"{\"ok\":true,\"result\":{\"chain\":\"http://127.0.0.1:18700/\",\"chain_id\":11155111,\"config_id\":\"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c\",\"depositor\":\"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc\",\"module\":\"ferrata_bridge_module wallet session\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"proofs\":\"dev\",\"vault\":\"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516\"}}"}
+{"t":"2026-11-17T14:47:27.802Z","check":"wallet open: "}
+{"t":"2026-11-17T14:47:27.968Z","host_call":"lez","reply":"{\"ok\":true,\"result\":{\"calls\":[{\"method\":\"open\",\"ms\":142,\"reply\":\"0\"},{\"method\":\"get_sequencer_addr\",\"ms\":2,\"reply\":\"http://127.0.0.1:3040/\"},{\"method\":\"get_current_block_height\",\"ms\":9,\"reply\":\"19\"},{\"method\":\"list_accounts\",\"ms\":1}],\"plain_path\":\"the zone's history and Ethereum: the chain service; a send lez_core refuses goes through the chain service\",\"private_holding\":\"lez_core.sync_to_block + get_account_private, beside the chain service's wallet\",\"private_sends\":\"lez_core.send_generic_private_transaction_with_accounts (executed and proven by LEZ's wallet inside Logos Core)\",\"program_bin_bytes\":592840,\"program_bin_sha256\":\"0x11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070\",\"reads\":\"every bridge actor state through lez_core.get_account_public, beside the chain service's\",\"via\":\"lez_core\",\"wallet\":{\"config\":\"<spike>/tmp/lez-core-v04-seq/w-basecamp-jobs-dev/lezcore-wallet/wallet_config.json\",\"head\":\"19\",\"holds_private_0\":true,\"private_accounts\":9,\"sequencer\":\"http://127.0.0.1:3040/\",\"storage\":\"<spike>/tmp/lez-core-v04-seq/w-basecamp-jobs-dev/lezcore-wallet/storage.json\"}}}"}
+{"t":"2026-11-17T14:47:27.968Z","check":"wallet lez (the session's LEZ through lez_core): "}
+{"t":"2026-11-17T14:47:27.968Z","step":"the session: the module opened at the chains (the host's step)","ok":true,"ms":180}
+{"t":"2026-11-17T14:47:28.009Z","shot":"03-start","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:28.018Z","check":"no deposit before the wallet is connected"}
+{"t":"2026-11-17T14:47:28.134Z","click":"wallet.connect"}
+{"t":"2026-11-17T14:47:28.307Z","check":"info from the module: a running LEZ devnet (sequencer http://127.0.0.1:3040 and a Logos Blockchain node) and a local anvil (http://127.0.0.1:8"}
+{"t":"2026-11-17T14:47:28.657Z","shot":"04-wallet-account-selection","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:28.778Z","click":"wallet.account.0"}
+{"t":"2026-11-17T14:47:29.055Z","click":"header.refresh"}
+{"t":"2026-11-17T14:47:29.632Z","check":"the account the view shows is the chain's depositor"}
+{"t":"2026-11-17T14:47:29.632Z","check":"the Ethereum balance the view shows equals anvil's (10000000000000000000000 wei)"}
+{"t":"2026-11-17T14:47:29.640Z","balances":"Ethereum: 10000 ETH (block 8)  ·  LEZ /0: private 0 ETH, public 0 ETH (block 19)"}
+{"t":"2026-11-17T14:47:29.989Z","shot":"05-connected-account-and-balances","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:29.989Z","step":"connect: the account and both sides' balances","ok":true,"ms":2021}
+{"t":"2026-11-17T14:47:30.107Z","click":"tab.registry"}
+{"t":"2026-11-17T14:47:30.626Z","click":"registry.refresh"}
+{"t":"2026-11-17T14:47:30.793Z","check":"ETH registered on the vault"}
+{"t":"2026-11-17T14:47:30.800Z","check":"no LEZ side before the operator's first import"}
+{"t":"2026-11-17T14:47:31.151Z","shot":"06-registry-before-the-import","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:31.151Z","step":"registry before the operator's first import","ok":true,"ms":1161}
+{"t":"2026-11-17T14:47:31.272Z","click":"tab.deposit"}
+{"t":"2026-11-17T14:47:31.684Z","check":"private destination pre-selected"}
+{"t":"2026-11-17T14:47:31.691Z","check":"the random delay and the relayer on by default"}
+{"t":"2026-11-17T14:47:31.699Z","check":"the leak indicator reads Minimal"}
+{"t":"2026-11-17T14:47:32.437Z","shot":"07-deposit-defaults","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:32.556Z","click":"deposit.review"}
+{"t":"2026-11-17T14:47:32.724Z","check":"the approval prompt is for \"Deposit\" (Deposit to the Ferrata vault)"}
+{"t":"2026-11-17T14:47:32.769Z","shot":"08-deposit-approval","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:32.887Z","click":"approval.approve"}
+{"t":"2026-11-17T14:47:33.059Z","check":"deposited to a private account"}
+{"t":"2026-11-17T14:47:33.174Z","click":"header.refresh"}
+{"t":"2026-11-17T14:47:33.654Z","check":"one Deposit log more on the vault (1)"}
+{"t":"2026-11-17T14:47:33.654Z","check":"the Deposit log names the user's account as depositor"}
+{"t":"2026-11-17T14:47:33.655Z","check":"the vault holds 1002000000000000 wei more (the Deposit log's 1000000000000000 and its fees); the user paid 1073119176978732 wei with gas"}
+{"t":"2026-11-17T14:47:34.008Z","shot":"09-deposit-sent","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:34.008Z","step":"deposit: private by default","ok":true,"ms":2856}
+{"t":"2026-11-17T14:47:34.126Z","click":"tab.positions"}
+{"t":"2026-11-17T14:47:34.642Z","click":"positions.recover"}
+{"t":"2026-11-17T14:47:34.807Z","check":"the deposit found from the seed, waiting for the import (1)"}
+{"t":"2026-11-17T14:47:34.807Z","check":"the recovered deposit is the vault's leaf 0"}
+{"t":"2026-11-17T14:47:35.154Z","shot":"10-positions-before-the-import","width":1440,"height":1250}
+{"t":"2026-11-17T14:47:35.154Z","step":"positions before the import (recovery from the seed)","ok":true,"ms":1146}
+{"t":"2026-11-17T14:48:46.033Z","ops":"import","ms":70533,"exit":0,"out":"[14:47:39] capture-1: capture of block 9 0x1d3ddf85647b46155b67e6a2690827ec98b0b6bb19657e044abc10bb407e5f5c (state root patched: False): 1 deposit(s), 6 slot(s)\n[14:47:39] operator: crown-driver crown-b --operator-only over capture-1\n[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   26 + 10.3s aba32d49e59a08077dde4327b946d9d5f7031aa65eae9956b8fda5a4daedaafd\n[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1\n[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   27 +  9.9s 94f4699d5fdc1e3ca1e62f0802aefd3ec3cf77581931f010bf298bf38944d5b6\n[crown-b] blocks 20..=27 (T1 0xdb6624f8d05f1d4f033279e83abb6997cbb447f6c1331ea4add088ce0de28d17); 0 burn note(s) written to <spike>/tmp/lez-core-v04-seq/w-basecamp-jobs-dev/notes.json\n"}
+{"t":"2026-11-17T14:48:59.500Z","ops":"fund","ms":13467,"exit":0,"out":"[14:48:46] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)\n{\"step\":\"faucet public transfer (stand-in for the gas drop)\",\"tx\":\"1eb9a7bf651d2f14ba86957bf2483fe607ae51fadd75713d20126519ad041ee9\",\"amount\":\"3000000000000\",\"fee_paid_in_the_proof\":null,\"send_ms\":2,\"seen_ms\":4003}\n{\"step\":\"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)\",\"tx\":\"f8a59903c2897e59fc15894dbcc91fd202751b5766373364105e550e95d59963\",\"amount\":\"2000000000000\",\"fee_paid_in_the_proof\":\"5070616\",\"send_ms\":114,\"seen_ms\":9147}\n"}
+{"t":"2026-11-17T14:48:59.823Z","check":"the import's and the gas drop's LEZ transactions applied, none reverted (25)"}
+{"t":"2026-11-17T14:48:59.942Z","click":"tab.registry"}
+{"t":"2026-11-17T14:49:00.460Z","click":"registry.refresh"}
+{"t":"2026-11-17T14:49:00.628Z","check":"the LEZ side of the token is shown (token(cid, ETH), read by the module)"}
+{"t":"2026-11-17T14:49:00.643Z","registry_lez":"LEZ, mint cap: level 340282366920938463463374607431768211455 of 340282366920938463463374607431768211455 LEZ units (used 0.0 %); burn cap: level 340282366920938463463374607431768211455 of 340282366920938463463374607431768211455 (used 0.0 %);\nmints frozen until not frozen; burns frozen until not frozen","registry_eth":"ETH  registered · deposits open · escrowed 0.001002 ETH"}
+{"t":"2026-11-17T14:49:00.996Z","shot":"11-registry-after-the-import-caps","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:00.996Z","step":"the operator's import and the gas drop (not the user's steps)","ok":true,"ms":85842}
+{"t":"2026-11-17T14:49:01.115Z","click":"tab.positions"}
+{"t":"2026-11-17T14:49:01.635Z","click":"positions.recover"}
+{"t":"2026-11-17T14:49:01.920Z","click":"tab.claim"}
+{"t":"2026-11-17T14:49:02.483Z","click":"claim.pick.0"}
+{"t":"2026-11-17T14:49:02.642Z","check":"the private claim pre-selected"}
+{"t":"2026-11-17T14:49:02.649Z","check":"held by the deposit's random delay"}
+{"t":"2026-11-17T14:49:02.657Z","check":"the leak indicator reads Minimal"}
+{"t":"2026-11-17T14:49:03.009Z","shot":"12-claim-held-by-its-delay","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:03.023Z","waited_ms":21510908,"on":"the view's clock","until":"heldUntil[0]"}
+{"t":"2026-11-17T14:49:03.042Z","check":"the delay was waited out, not overridden"}
+{"t":"2026-11-17T14:49:03.390Z","shot":"13-claim-delay-passed","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:03.892Z","click":"claim.submit"}
+{"t":"2026-11-17T14:49:04.062Z","check":"the approval prompt is for \"Private claim\" (Private claim on LEZ)"}
+{"t":"2026-11-17T14:49:04.106Z","shot":"14-claim-approval","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:04.224Z","click":"approval.approve"}
+{"t":"2026-11-17T14:49:04.399Z","job_started":"claim","id":1,"state":"queued"}
+{"t":"2026-11-17T14:49:07.473Z","job_in_progress":"claim","id":1,"state":"sent","note":"over or sent before it was looked at (dev mode proves in about a second)"}
+{"t":"2026-11-17T14:49:13.685Z","job_done":"claim","id":1,"state":"settled","elapsed_ms":6911,"proving_ms":833,"tx_hash":"24c694337b8a657795d1145b823e95c59d219402be89c6d8662216cc57373adb","phases":["queued","proving","sent","settled"]}
+{"t":"2026-11-17T14:49:13.685Z","check":"the claim's job 1 settled (settled) after 6911 ms, its proof 833 ms"}
+{"t":"2026-11-17T14:49:13.696Z","check":"settled as a private transaction on the sequencer"}
+{"t":"2026-11-17T14:49:13.696Z","check":"the view's reply is the job's (its transaction)"}
+{"t":"2026-11-17T14:49:13.809Z","click":"claim.refresh"}
+{"t":"2026-11-17T14:49:14.306Z","check":"the claim's transaction 24c694337b8a… is in LEZ block 30, private, not reverted"}
+{"t":"2026-11-17T14:49:14.306Z","check":"the block the view names (30) is the sequencer's (30)"}
+{"t":"2026-11-17T14:49:14.306Z","check":"the zone has the claim's transaction more"}
+{"t":"2026-11-17T14:49:14.421Z","click":"header.refresh"}
+{"t":"2026-11-17T14:49:14.930Z","shot":"15-claim-settled-privately","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:14.930Z","step":"the private claim, once its random delay has passed","ok":true,"ms":13934}
+{"t":"2026-11-17T14:49:15.048Z","click":"tab.redeem"}
+{"t":"2026-11-17T14:49:15.566Z","click":"burn.kind.private"}
+{"t":"2026-11-17T14:49:15.832Z","click":"burn.denom.0"}
+{"t":"2026-11-17T14:49:15.991Z","check":"the private holder (the default)"}
+{"t":"2026-11-17T14:49:15.998Z","check":"the release's random delay on by default"}
+{"t":"2026-11-17T14:49:16.008Z","check":"a fresh recipient generated (0xaedeb4ac646eadd1a9fb34c3a10ebf66f2c4e11a)"}
+{"t":"2026-11-17T14:49:16.014Z","check":"the leak indicator reads Minimal"}
+{"t":"2026-11-17T14:49:16.362Z","shot":"16-burn-private-defaults","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:16.827Z","click":"burn.submit"}
+{"t":"2026-11-17T14:49:16.993Z","check":"the approval prompt is for \"Burn\" (Burn on LEZ)"}
+{"t":"2026-11-17T14:49:17.038Z","shot":"17-burn-approval","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:17.155Z","click":"approval.approve"}
+{"t":"2026-11-17T14:49:17.328Z","job_started":"burn","id":2,"state":"queued","release_delay_ms":32400000}
+{"t":"2026-11-17T14:49:17.328Z","check":"the burn's job carries the view's random release delay (32400000 ms)"}
+{"t":"2026-11-17T14:49:20.395Z","job_in_progress":"burn","id":2,"state":"settled","note":"over or sent before it was looked at (dev mode proves in about a second)"}
+{"t":"2026-11-17T14:49:20.407Z","job_done":"burn","id":2,"state":"settled","elapsed_ms":2782,"proving_ms":521,"tx_hash":"fa6910a443e6e3f870a37b3acd4420d442efec734fce8713c45b1554b84a7126","phases":["queued","proving","sent","settled"]}
+{"t":"2026-11-17T14:49:20.407Z","check":"the burn's job 2 settled (settled) after 2782 ms, its proof 521 ms"}
+{"t":"2026-11-17T14:49:20.418Z","check":"settled privately; the private holding is spent"}
+{"t":"2026-11-17T14:49:20.418Z","check":"the note is for the fresh recipient"}
+{"t":"2026-11-17T14:49:20.418Z","check":"the burn's reply (the job's result) carries its release delay (32400000 ms)"}
+{"t":"2026-11-17T14:49:20.429Z","check":"the release is held from the burn's settlement for that delay"}
+{"t":"2026-11-17T14:49:20.791Z","check":"the burn's transaction is in LEZ block 31, private, not reverted, its Burn call visible to the checkpoint"}
+{"t":"2026-11-17T14:49:21.146Z","shot":"18-burn-settled-privately","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:21.146Z","step":"the private burn to a fresh address","ok":true,"ms":6216}
+{"t":"2026-11-17T14:49:42.056Z","ops":"checkpoint","ms":20910,"exit":0,"out":"[14:49:21] checkpoint: blocks 20..=31, once block 31 is final on Bedrock\n[14:49:41] realblocks-crown: node: 405 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=32: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (798263b0… 32): all 32 accepted; channel tip message = block 32's: false seqnet-19-31: 12 blocks, 34 transactions, 118917\n[14:49:41] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {\"executor_wall_s\":0.155713175,\"image_id\":\"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e\",\"input_bytes\":120903,\"journal_bytes\":544,\"journal_equals_native\":true,\"padded_cycles\":5505024,\"po2\":[20,20,20,20,20,18],\"segments\":6,\"user_cycles\":4907485}\n[14:49:41] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0xec1466233e7d3e4383c5d23b94a0558a370cd7718d6671833a12f62925906749)\n[14:49:41] relayer: {\"event\":\"job-done\",\"tx\":null,\"why\":null} {\"event\":\"candidate-waiting\",\"tx\":null,\"why\":null} {\"event\":\"stop\",\"tx\":null,\"why\":\"rounds\"} \n[14:49:41] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1794930582)\n[14:49:41] relayer: {\"event\":\"start\",\"tx\":null} {\"event\":\"finalized\",\"tx\":\"0xebb9dc919b9d2d5a4305acb09e4f7b5c5e0a6a01c4ffa0ec5c83cdc1c13e14ab\"} {\"event\":\"stop\",\"tx\":null} \n[14:49:42] vault: finalState 0xd0e356828296a6ffe6d300548621436f828959cced4deaeef644e4f00270f2fb, checkpoints 1\n"}
+{"t":"2026-11-17T14:49:42.431Z","check":"a checkpoint finalized on the vault (1)"}
+{"t":"2026-11-17T14:49:42.549Z","click":"redeem.refresh"}
+{"t":"2026-11-17T14:49:42.713Z","check":"the private burn found from the seed"}
+{"t":"2026-11-17T14:49:42.831Z","click":"release.pick.0"}
+{"t":"2026-11-17T14:49:42.990Z","check":"the release is held by its random delay"}
+{"t":"2026-11-17T14:49:43.344Z","shot":"19-release-held-by-its-delay","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:43.354Z","waited_ms":32377584,"on":"the view's clock","until":"releaseHeldUntil[0]"}
+{"t":"2026-11-17T14:49:43.454Z","ops":"pass-time 121 the vault release delay after finalizeAttested","ms":99,"exit":0,"out":"[14:49:43] anvil's clock moved on 121 s: the vault release delay after finalizeAttested (Ethereum time now 1794930705)\n"}
+{"t":"2026-11-17T14:49:43.470Z","check":"the delay was waited out, not overridden"}
+{"t":"2026-11-17T14:49:43.589Z","click":"release.submit"}
+{"t":"2026-11-17T14:49:43.755Z","check":"the approval prompt is for \"Release\" (Release on Ethereum)"}
+{"t":"2026-11-17T14:49:43.801Z","shot":"20-release-approval","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:43.917Z","click":"approval.approve"}
+{"t":"2026-11-17T14:49:44.087Z","check":"paid to the burn's fresh recipient"}
+{"t":"2026-11-17T14:49:44.441Z","check":"the fresh address holds 997000000000000 wei on anvil"}
+{"t":"2026-11-17T14:49:44.441Z","check":"one Release log on the vault, to the fresh address"}
+{"t":"2026-11-17T14:49:44.441Z","check":"the fresh address got 997000000000000 of the Release log's 1000000000000000 wei (relay fee 2000000000000)"}
+{"t":"2026-11-17T14:49:44.795Z","shot":"21-released-to-the-fresh-address","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:44.796Z","step":"the checkpoint (operator) and the release by a relayer","ok":true,"ms":23650}
+{"t":"2026-11-17T14:49:44.913Z","click":"tab.positions"}
+{"t":"2026-11-17T14:49:45.430Z","click":"positions.recover"}
+{"t":"2026-11-17T14:49:45.594Z","check":"recovery from the seed: Found 1 deposits of this wallet (0 not claimed) among 1 in the vault, and 1 burns (0 not released)."}
+{"t":"2026-11-17T14:49:45.708Z","click":"header.refresh"}
+{"t":"2026-11-17T14:49:46.211Z","shot":"22-positions-after-the-round-trip","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:46.328Z","click":"tab.privacy"}
+{"t":"2026-11-17T14:49:47.081Z","shot":"23-privacy","width":1440,"height":1250}
+{"t":"2026-11-17T14:49:47.081Z","step":"positions after the round trip","ok":true,"ms":2285}
+{"t":"2026-11-17T14:49:47.092Z","view_calls":33,"polls":4,"longest_ms":3141,"cut":0}
+{"t":"2026-11-17T14:49:47.092Z","check":"no call of the view cut by the host (33 calls, 4 of them job polls)"}
+{"t":"2026-11-17T14:49:47.092Z","check":"every call of the view answered within Basecamp's 20000 ms: the longest 3141 ms"}
+{"t":"2026-11-17T14:49:47.101Z","host_call":"jobs","reply":"{\"ok\":true,\"result\":{\"jobs\":[{\"created_ms\":1794926944224,\"elapsed_ms\":6911,\"error\":null,\"finished_ms\":1794926951135,\"id\":1,\"kind\":\"claim\",\"params\":{\"leaf_index\":0,\"private\":true},\"phases\":[{\"at_ms\":1794926944224,\"detail\":{\"doing\":\"reading the chains, building the transaction\"},\"state\":\"queued\"},{\"at_ms\":1794926944280,\"detail\":{\"by\":\"lez_core.send_generic_private_transaction_with_accounts: LEZ's wallet executes and proves it inside Logos Core, then sends it\",\"synced_to\":29},\"state\":\"proving\"},{\"at_ms\":1794926945113,\"detail\":{\"by\":\"lez_core\",\"prove_ms\":833,\"tx_hash\":\"24c694337b8a657795d1145b823e95c59d219402be89c6d8662216cc57373adb\",\"waiting_for\":\"the block that applies it\"},\"state\":\"sent\"},{\"at_ms\":1794926951135,\"state\":\"settled\"}],\"proving_ms\":833,\"result\":{\"account\":0,\"accounts\":[{\"account\":\"0xd0029aa57943164511b1565faea8a7b0f0df439cc613c9ee5fc64366ac66fe85\",\"kind\":\"private_self\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\"},{\"account\":\"0xca2acbaf3226c4aca4f4398ca79c3ea7ef6a5a72142e24146b2fba6776d0109c\",\"kind\":\"pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x9841324986c1738609d1ce86706830ba333bddd8c3b0a15eae3c6ba7725656d6\"},{\"account\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"kind\":\"pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xdb969a9d8d4c230b6834eb49fec5db23acc3fc2016b45dec7c22ee2f03968a2d\"},{\"account\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"kind\":\"pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0x317520139f7796f663c3a78a6a7dc5fa6fda376150a062a25e0098fbf3900255\"},{\"account\":\"0xc20652ac739e79be454663e70d38e4ab9d56797033b0d9e2bfd4ccabe3443ed2\",\"kind\":\"pda\",\"program\":\"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d\",\"seed\":\"0xa69e5333481e537ac3b97554ae6c9619982fbd2faf574284b8727851254f4243\"},{\"account\":\"0xd50f4251bfaeaf077"}
+{"t":"2026-11-17T14:49:47.110Z","host_call":"lez_report","reply":"{\"ok\":true,\"result\":{\"log\":[{\"calls\":[{\"method\":\"open\",\"ms\":142,\"reply\":\"0\"},{\"method\":\"get_sequencer_addr\",\"ms\":2,\"reply\":\"http://127.0.0.1:3040/\"},{\"method\":\"get_current_block_height\",\"ms\":9,\"reply\":\"19\"},{\"method\":\"list_accounts\",\"ms\":1}],\"kind\":\"open\"},{\"call\":{\"method\":\"open\",\"ms\":142,\"reply\":\"0\"},\"kind\":\"call\"},{\"call\":{\"method\":\"get_sequencer_addr\",\"ms\":2,\"reply\":\"http://127.0.0.1:3040/\"},\"kind\":\"call\"},{\"call\":{\"method\":\"get_current_block_height\",\"ms\":9,\"reply\":\"19\"},\"kind\":\"call\"},{\"call\":{\"method\":\"list_accounts\",\"ms\":1},\"kind\":\"call\"},{\"account\":\"0xe629dd971612b72a39d9460a51e34f4835069ec70a15b61cec97b69f10c745c3\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":2,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"config(cid)\"},{\"account\":\"0xf6f31c5f7fc3c9def9540bc6c5a094aff85dde07d0533e49093cd4a09f67829a\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":1,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"token(cid, ETH)\"},{\"account\":\"0xd29ddfc72b4e49cbb2b7ff75a64856e77409ee52e73c3681e665827508698d2e\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":1,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"holder(0x8a7162a5)\"},{\"account\":\"0xaf31ba1760e14c6b3720b582aae7266ca5f4fb78f3ccde94d2f6e25455d7c89b\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":1,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"holder(0xc0fe2bd9)\"},{\"account\":\"0x5035accd68c9e64a9e0da346d144208b5e88a03cd023a02d5e2abcca019749c4\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":1,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"holder(0xa9d64610)\"},{\"account\":\"0x810f27075ab6536f718c05277636fd9cdaa331c6f80870322fe369e1f5c2b4fb\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\":\"read\",\"ms\":1,\"plain_bytes\":0,\"via\":\"lez_core.get_account_public\",\"what\":\"holder(0x34cd0ca1)\"},{\"account\":\"0x42cac3eb21382a92c9512f5b3a4d0cee797598a53e26cf90f174337a7bef4224\",\"actor_states\":0,\"bytes\":0,\"equal\":true,\"kind\""}
+{"t":"2026-11-17T14:49:47.111Z","check":"lez_report"}
+{"t":"2026-11-17T14:49:47.111Z","step":"records: the view's calls, the module's LEZ path","ok":true,"ms":30}
