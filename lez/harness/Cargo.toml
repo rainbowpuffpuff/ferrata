@@ -39,6 +39,7 @@ sha2 = "0.10"
 # or test of this crate, or of what depends on it, builds the experimental guest.
 methods-residue-experimental = { path = "../methods-residue-experimental", optional = true }
 residue = { path = "../../bench/residue", optional = true }
+residue-agg = { path = "../../bench/residue-agg", optional = true }
 
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
@@ -53,4 +54,4 @@ default = [] # lez-select
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
 # The experimental one-transaction update (tests/residue_experimental.rs, bench/RESIDUE.md).
-residue-experimental = ["dep:methods-residue-experimental", "dep:residue"]
+residue-experimental = ["dep:methods-residue-experimental", "dep:residue", "dep:residue-agg"]

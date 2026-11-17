@@ -804,6 +804,7 @@ dependencies = [
  "ferrata-lez-wire",
  "lee_core",
  "residue",
+ "residue-agg",
  "risc0-zkvm",
  "sha2",
  "tiny-keccak",
@@ -1534,6 +1535,15 @@ name = "residue"
 version = "0.1.0"
 dependencies = [
  "blst",
+]
+
+[[package]]
+name = "residue-agg"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "sha2",
 ]
 
 [[package]]

@@ -4,7 +4,9 @@
 //! `docs/image-ids.md`) in which `VerifyAll` replaces the final exponentiation (`Job::step3`) by the
 //! residue-witness check (`bench/residue`, `bench/RESIDUE.md`): the `signers` field of
 //! `VerifyAll` carries the signer witness followed by the residue witness `c` and the scaling
-//! factor `w` (576 bytes each). Nothing else differs (`diff` it against `guests/program`). It
+//! factor `w` (576 bytes each); a signer witness that starts with the marker `0xffff` is a
+//! `residue_agg::NonSigners` witness (one multiproof for all non-signers, `bench/RESIDUE.md` §9),
+//! composed by `residue_agg::step1`. Nothing else differs (`diff` it against `guests/program`). It
 //! exists only to measure what LEZ's state machine charges for a finality update verified in one
 //! transaction this way (`harness/tests/residue_experimental.rs`). Its image id is not in
 //! `docs/image-ids.md` and nothing may rely on it.
@@ -499,10 +501,28 @@ fn verify_all(
         return Err(core(Error::Malformed));
     }
     let (signers, residue_witness) = signers.split_at(signers.len() - WITNESS);
-    let signers = SignerWitness::decode(signers, n).map_err(core)?;
-    let mut job =
+    // EXPERIMENTAL: a signer witness that starts with the marker 0xffff (a count above any
+    // committee's size, so never a valid `SignerWitness`) is a `residue_agg::NonSigners` witness:
+    // the non-signers' keys and one multiproof of their leaves (bench/RESIDUE.md §9); the signing
+    // key is then composed by `residue_agg::step1`. Any other witness goes to the core's step 1.
+    let mut job = if let Some(rest) = signers.strip_prefix(&[0xff, 0xff]) {
+        let signers = residue_agg::NonSigners::decode(rest, n).map_err(core)?;
+        residue_agg::step1(
+            &store,
+            &update,
+            &signers,
+            update.signature_slot,
+            &spec,
+            &config.genesis_validators_root,
+            1,
+            residue_agg::Sum::Batch,
+        )
+        .map_err(step)?
+    } else {
+        let signers = SignerWitness::decode(signers, n).map_err(core)?;
         steps::step1(&store, &update, &signers, update.signature_slot, &spec, &config.genesis_validators_root, 1)
-            .map_err(step)?;
+            .map_err(step)?
+    };
     job.step2().map_err(step)?;
     // EXPERIMENTAL: the residue-witness check instead of `job.step3()`.
     let steps::Phase::FinalExp { product } = &job.phase else { return Err(step(StepError::Phase)) };
