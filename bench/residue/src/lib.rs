@@ -1,0 +1,218 @@
+//! The residue-witness check of a BLS12-381 pairing product, for the bench only.
+//!
+//! **Experimental and unaudited. No deployed program uses this code**: the light-client program
+//! and every other guest with an image id still run the final exponentiation (`Blst::final_half`).
+//!
+//! A signature check is `e(−key, H(m)) · e(signature, g1) == 1`: the Miller-loop product `f`
+//! passes iff `f^h == 1`, `h = (p^12 − 1)/r` (the final exponentiation). Instead of computing
+//! `f^h`, the submitter supplies a *residue witness* `c ∈ Fp12` and a *scaling factor* `w ∈ Fp6`,
+//! computed off-chain ([`witness`]), and the program checks
+//!
+//! ```text
+//!     c ≠ 0,   w ∈ Fp6,   f · w == c^λ,   λ = p − u = p + |u|,   so c^λ = Frobenius(c) · c^|u|,
+//! ```
+//!
+//! which costs one Frobenius map, 63 squarings and 7 multiplications in Fp12 ([`check`]).
+//! Soundness: `r | λ` and `(p^6 − 1) | h`, so `f·w = c^λ` gives `f^h = c^(λh) · w^(−h) = 1`
+//! (`c^(λh) = (c^(p^12−1))^(λ/r) = 1` for `c ≠ 0`; `w^(p^6−1) = 1` for `w ∈ Fp6*`). Without
+//! `c ≠ 0` the all-zero witness passes for every `f`; without `w ∈ Fp6` any `f` passes with
+//! `w = c^λ/f`. `bench/RESIDUE.md` gives the argument in full, with the references.
+//!
+//! The method is Novakovic and Eagen, "On Proving Pairings" (IACR ePrint 2024/640), in the form
+//! gnark uses for BLS12-381 (`std/algebra/emulated/sw_bls12381`, commit 64599174, Apache-2.0:
+//! `AssertFinalExponentiationIsOne` in pairing.go and `finalExpWitness` in hints.go) and OpenVM
+//! follows (`guest-libs/pairing/src/bls12_381/pairing.rs`, commit df4e8c5c, MIT/Apache-2.0).
+//! This file is written from that description, not copied: the check and the witness algorithm
+//! are re-implemented on blst's Fp12 arithmetic (the accelerated blst in a RISC Zero guest); the
+//! exponents are derived from p, r and u by `gen_constants.py`. Where the algorithm follows
+//! gnark's `finalExpWitness`, credit is due to it: Copyright 2020-2025 Consensys Software Inc.,
+//! licensed under the Apache License, Version 2.0.
+#![allow(unsafe_code)]
+
+use blst::{
+    blst_bendian_from_fp, blst_final_exp, blst_fp, blst_fp12, blst_fp12_frobenius_map, blst_fp12_is_equal,
+    blst_fp12_is_one, blst_fp12_mul, blst_fp12_one, blst_fp12_sqr, blst_fp_from_bendian,
+};
+
+mod constants;
+pub use constants::*;
+
+/// The canonical encoding of an Fp12 element: twelve big-endian 48-byte coefficients, in blst's
+/// tower order (`ferrata_core::bls::FP12_BYTES`, the encoding of the Miller-loop product). The
+/// first 288 bytes are the Fp6 coefficient `c0`, the last 288 the coefficient `c1` of `w`.
+pub const FP12_BYTES: usize = 576;
+
+/// Why a witness was refused.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Refusal {
+    /// A coefficient of `c` or `w` is not below p.
+    NonCanonical,
+    /// `c == 0`.
+    ZeroResidue,
+    /// `w` is not in the subfield Fp6 (its `c1` is not zero).
+    ScalingNotInFp6,
+    /// `f · w != c^λ`.
+    Mismatch,
+}
+
+/// Decode a canonical Fp12 encoding: every coefficient below p (it survives a decode–encode round
+/// trip, as `ferrata_core::steps` checks a stored product).
+pub fn decode_fp12(bytes: &[u8; FP12_BYTES]) -> Option<blst_fp12> {
+    let mut f = blst_fp12::default();
+    let slots = f.fp6.iter_mut().flat_map(|x| x.fp2.iter_mut()).flat_map(|x| x.fp.iter_mut());
+    for (fp, chunk) in slots.zip(bytes.chunks_exact(48)) {
+        let mut back = [0u8; 48];
+        // SAFETY: `chunk` holds the 48 bytes blst reads; `back` has the 48 bytes it writes.
+        unsafe {
+            blst_fp_from_bendian(fp, chunk.as_ptr());
+            blst_bendian_from_fp(back.as_mut_ptr(), fp);
+        }
+        if back != chunk {
+            return None;
+        }
+    }
+    Some(f)
+}
+
+/// The canonical encoding (see [`FP12_BYTES`]).
+pub fn encode_fp12(f: &blst_fp12) -> [u8; FP12_BYTES] {
+    let mut out = [0u8; FP12_BYTES];
+    let coefficients = f.fp6.iter().flat_map(|x| x.fp2.iter()).flat_map(|x| x.fp.iter());
+    for (chunk, fp) in out.chunks_exact_mut(48).zip(coefficients) {
+        // SAFETY: `chunk` has the 48 bytes blst writes; `fp` is a valid field element.
+        unsafe { blst_bendian_from_fp(chunk.as_mut_ptr(), fp) };
+    }
+    out
+}
+
+fn fp_is_zero(x: &blst_fp) -> bool {
+    x.l.iter().all(|l| *l == 0)
+}
+
+/// True if `f == 0` (blst keeps elements reduced; zero is all-zero limbs in Montgomery form).
+pub fn is_zero(f: &blst_fp12) -> bool {
+    f.fp6.iter().flat_map(|x| x.fp2.iter()).flat_map(|x| x.fp.iter()).all(fp_is_zero)
+}
+
+/// True if `f` lies in the subfield Fp6 = { a + 0·w }: its coefficient `c1` is zero.
+pub fn in_fp6(f: &blst_fp12) -> bool {
+    f.fp6[1].fp2.iter().flat_map(|x| x.fp.iter()).all(fp_is_zero)
+}
+
+pub fn mul(a: &blst_fp12, b: &blst_fp12) -> blst_fp12 {
+    let mut out = blst_fp12::default();
+    // SAFETY: valid destination and sources.
+    unsafe { blst_fp12_mul(&mut out, a, b) };
+    out
+}
+
+/// The generic Fp12 squaring (valid for every element; the cyclotomic squaring is not, and `c` is
+/// not in the cyclotomic subgroup).
+pub fn sqr(a: &blst_fp12) -> blst_fp12 {
+    let mut out = blst_fp12::default();
+    // SAFETY: valid destination and source.
+    unsafe { blst_fp12_sqr(&mut out, a) };
+    out
+}
+
+/// `a^p`.
+pub fn frobenius(a: &blst_fp12) -> blst_fp12 {
+    let mut out = blst_fp12::default();
+    // SAFETY: valid destination and source.
+    unsafe { blst_fp12_frobenius_map(&mut out, a, 1) };
+    out
+}
+
+pub fn one() -> blst_fp12 {
+    // SAFETY: blst returns a pointer to its static one.
+    unsafe { *blst_fp12_one() }
+}
+
+pub fn eq(a: &blst_fp12, b: &blst_fp12) -> bool {
+    // SAFETY: valid elements.
+    unsafe { blst_fp12_is_equal(a, b) }
+}
+
+/// `c^|u|`, left to right over the 64 bits of |u| = 0xd201000000010000: 63 squarings and 5
+/// multiplications.
+pub fn pow_abs_u(c: &blst_fp12) -> blst_fp12 {
+    let mut acc = *c; // the top bit
+    for i in (0..63).rev() {
+        acc = sqr(&acc);
+        if (ABS_U >> i) & 1 == 1 {
+            acc = mul(&acc, c);
+        }
+    }
+    acc
+}
+
+/// `c^λ = c^p · c^|u|`.
+pub fn pow_lambda(c: &blst_fp12) -> blst_fp12 {
+    mul(&frobenius(c), &pow_abs_u(c))
+}
+
+/// The check that replaces the final exponentiation: `c ≠ 0`, `w ∈ Fp6`, `f · w == c^λ`.
+pub fn check(f: &blst_fp12, c: &blst_fp12, w: &blst_fp12) -> Result<(), Refusal> {
+    if is_zero(c) {
+        return Err(Refusal::ZeroResidue);
+    }
+    if !in_fp6(w) {
+        return Err(Refusal::ScalingNotInFp6);
+    }
+    if eq(&mul(f, w), &pow_lambda(c)) {
+        Ok(())
+    } else {
+        Err(Refusal::Mismatch)
+    }
+}
+
+/// [`check`] on encoded witnesses, refusing a non-canonical encoding first.
+pub fn check_bytes(f: &blst_fp12, c: &[u8; FP12_BYTES], w: &[u8; FP12_BYTES]) -> Result<(), Refusal> {
+    let c = decode_fp12(c).ok_or(Refusal::NonCanonical)?;
+    let w = decode_fp12(w).ok_or(Refusal::NonCanonical)?;
+    check(f, &c, &w)
+}
+
+/// The equation alone, without the side conditions (for the tests that show they are needed).
+pub fn equation_holds(f: &blst_fp12, c: &blst_fp12, w: &blst_fp12) -> bool {
+    eq(&mul(f, w), &pow_lambda(c))
+}
+
+/// `a^e`, `e` big-endian, by left-to-right square-and-multiply with generic squarings (host side;
+/// the witness and the tests' independent `f^h`).
+pub fn pow_be(a: &blst_fp12, e: &[u8]) -> blst_fp12 {
+    let mut acc = one();
+    for byte in e {
+        for i in (0..8).rev() {
+            acc = sqr(&acc);
+            if (byte >> i) & 1 == 1 {
+                acc = mul(&acc, a);
+            }
+        }
+    }
+    acc
+}
+
+/// The honest witness for a Miller-loop product `f` (host side), as gnark's `finalExpWitness`
+/// computes it. Write the group `{x : x^h = 1}` (order h = 27·POLY·F, the three factors pairwise
+/// coprime) as the product of its subgroups of orders F, 27 and POLY, and `f = f_F · f_27 · f_P`.
+/// `g = f^F` kills `f_F`; `w = g^(27A + POLY·B) = f_P^-1 · f_27^-1` (see gen_constants.py), so
+/// `f · w = f_F`, and `c = (f·w)^(λ^-1 mod F)` has `c^λ = f·w`. For `f` with `f^h == 1` the
+/// result passes [`check`]; for any other `f` nothing does (the soundness argument above), and in
+/// particular not this output.
+pub fn witness(f: &blst_fp12) -> (blst_fp12, blst_fp12) {
+    let g = pow_be(f, &F);
+    let w = pow_be(&g, &W_EXP);
+    let c = pow_be(&mul(f, &w), &LAMBDA_INV_MOD_F);
+    (c, w)
+}
+
+/// The current path's verdict: blst's final exponentiation, then the comparison with one
+/// (`ferrata_core::bls::Blst::final_half`).
+pub fn final_exp_is_one(f: &blst_fp12) -> bool {
+    let mut out = blst_fp12::default();
+    // SAFETY: valid destination and source.
+    unsafe { blst_final_exp(&mut out, f) };
+    // SAFETY: `out` is a valid element.
+    unsafe { blst_fp12_is_one(&out) }
+}

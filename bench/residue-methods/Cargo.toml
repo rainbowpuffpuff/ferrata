@@ -1,0 +1,12 @@
+[package]
+name = "residue-methods"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+
+# Only the residue bench guest, so that building it does not rebuild the six guests of methods/.
+[package.metadata.risc0]
+methods = ["../guests/residue-accel"]
