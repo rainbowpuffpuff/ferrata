@@ -214,8 +214,10 @@ account (`program 7MNn…`), not by message; the order of the messages is the pr
 measurements of the deployed `VerifyAll` on this update (`lez/RESULTS.md` §2: 9,121,514) were made
 on other builds of the same source. Output: [`results/residue/lez-experimental.txt`](results/residue/lez-experimental.txt).
 Re-check: `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness
---test residue_experimental -- --nocapture` (needs `spike/upstream/lez-v0.4.0-rc1` beside the
-repository, as every harness test).
+--features residue-experimental --test residue_experimental -- --nocapture` (needs
+`spike/upstream/lez-v0.4.0-rc1` beside the repository, as every harness test). The copy and this test
+are behind the harness's feature `residue-experimental`: no ordinary build or test of the harness, or
+of what depends on it, builds the experimental guest.
 
 Not run through the state machine: the folded variant (derived: 6,629,246 − 660,640 + 576 bytes
 of `c^−1` at 5.7 cycles each ≈ 5.97M, 60% of the limit), and the 342-signer and period cases (the

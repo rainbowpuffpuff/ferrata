@@ -1,6 +1,7 @@
 # The experimental program copy through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1), 17 Nov 2026
 # Modal build box; RISC0_DEV_MODE=1 (public transactions are executed and metered, not proven).
-# cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --test residue_experimental -- --nocapture
+# cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --features residue-experimental --test residue_experimental -- --nocapture
+# (first run without the feature, when the copy was an ordinary dev-dependency; run again behind the feature the same day: every figure below identical)
 # The handlers of the copy are labelled by its account (program 7MNn...), not by message: VerifyAll -> ApplyVerified -> Record.
 image ids in this build (they depend on the build path): experimental copy a097e9288461cadc782211f3ea1751574593816107e68ddfe38ae5cfd81a41f4, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
 | transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |

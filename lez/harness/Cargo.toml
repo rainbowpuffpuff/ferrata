@@ -33,14 +33,17 @@ borsh = { version = "=1.6.1", features = ["derive"] }
 hex = "0.4"
 sha2 = "0.10"
 
+# EXPERIMENTAL, bench-only (tests/residue_experimental.rs): the program copy that checks a residue
+# witness instead of the final exponentiation, and the native witness computation. Used by that test only; optional
+# (a dev-dependency cannot be), behind the feature `residue-experimental`, so that no ordinary build
+# or test of this crate, or of what depends on it, builds the experimental guest.
+methods-residue-experimental = { path = "../methods-residue-experimental", optional = true }
+residue = { path = "../../bench/residue", optional = true }
+
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
 # from the bridge program's transactions (tests/bridge_burn.rs).
 checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core" }
-# EXPERIMENTAL, bench-only (tests/residue_experimental.rs): the program copy that checks a residue
-# witness instead of the final exponentiation, and the native witness computation.
-methods-residue-experimental = { path = "../methods-residue-experimental" }
-residue = { path = "../../bench/residue" }
 
 [features]
 # The calls whose LEZ API differs between the tags this crate builds against. The default is set
@@ -49,3 +52,5 @@ residue = { path = "../../bench/residue" }
 default = [] # lez-select
 lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
+# The experimental one-transaction update (tests/residue_experimental.rs, bench/RESIDUE.md).
+residue-experimental = ["dep:methods-residue-experimental", "dep:residue"]

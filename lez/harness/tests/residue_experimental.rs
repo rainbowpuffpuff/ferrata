@@ -12,7 +12,9 @@
 //! comparison the same update goes through the deployed program's `VerifyAll`
 //! (`scenarios::one_transaction_update`) in the same build.
 //!
-//! `RISC0_DEV_MODE=1 cargo test -p harness --test residue_experimental -- --nocapture`
+//! Behind the feature `residue-experimental` (no ordinary build of the harness builds the copy):
+//! `RISC0_DEV_MODE=1 cargo test -p harness --features residue-experimental --test residue_experimental -- --nocapture`
+#![cfg(feature = "residue-experimental")]
 
 use std::borrow::Cow;
 
