@@ -1,0 +1,597 @@
+[
+  {
+    "method": "jobs",
+    "ok": true,
+    "ms": 34,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": false,
+    "ms": 1,
+    "transport": "module",
+    "error": "busy: job 2 (the private burn) is proving since 8 s; `scan` would wait for it (it calls lez_core or rereads the chains): poll `job` and call it again once the job is done"
+  },
+  {
+    "method": "info",
+    "ok": true,
+    "ms": 7,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "jobs",
+    "ok": true,
+    "ms": 8,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 2,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 2,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 2,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 2,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 2,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 3,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 0,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "job",
+    "ok": true,
+    "ms": 1,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 65,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 86,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 44,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "release",
+    "ok": true,
+    "ms": 77,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 39,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 41,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "info",
+    "ok": true,
+    "ms": 24,
+    "transport": "module",
+    "error": ""
+  },
+  {
+    "method": "scan",
+    "ok": true,
+    "ms": 43,
+    "transport": "module",
+    "error": ""
+  }
+]

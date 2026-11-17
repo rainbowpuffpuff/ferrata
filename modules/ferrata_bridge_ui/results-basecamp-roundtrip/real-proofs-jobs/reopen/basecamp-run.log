@@ -1,0 +1,329 @@
+Running: roundtrip.mjs
+Launching: /nix/store/vdwrrx2pq7j3wznydr06zz0vw3dnam23-logos-basecamp-dev-launch -platform offscreen
+Waiting for inspector to become available...
+[app:err] Standalone mode — apps: ferrata_bridge_ui
+[app:out] LogosBasecamp version pre-release-b642a9a (dev build)
+Build commits:
+  - logos-basecamp b642a9aba732b80343a3a7b622dad8c65e534bdb
+  - logos-nix 7c1eb8bc390546f32aaf134866a1c7db8e9311cc
+  - logos-cpp-sdk 05e14426d73e798d4e000e1e8e47372b0fb40f37
+  - logos-module ceee1e35649cc938c213515c672fa40df0a32469
+  - logos-liblogos af19e519c9b579a1dab86e8dc3960925fc28b526
+  - logos-package-manager 73c21ab64e3ddc4b5745ec7c91405eb56c691de2
+  - logos-package-manager-module f12ef8597660b71770fd7984f91c28113c0ae8d9
+  - logos-package-downloader-module 1999184e5c1a40fe27657ce8068375c7a70f0840
+  - logos-storage-module 7548f41ae189917d58c37f0fb6d3a2700b99f59b
+  - logos-capability-module 0edae0eed8f7475f8e48e0202388f968865b2736
+  - logos-modules-state-module 726c4b755e78bd8ac131fb57a37294da11e03e7b
+  - logos-package 4bdd9041ebfbd06c2b22134afdcd27fce8a43f3c
+  - logos-package-manager-ui 15c5a4142f271a9cd5963ede1cf6180e4fcf0cb2
+  - logos-design-system 493a243454451a844a7b73ef501616141d1308de
+  - logos-view-module-runtime 3e69973acc259505f2ffb0ab8753cabd820193a9
+  - logos-qt-mcp 89d1d498d37700ccdc864fe93cd98ec840f95ffb
+  - nix-bundle-logos-module-install 4ebf721f3558919aa932ba250a93a7d62e932d47
+  - nix-bundle-dir 66d7f61792c4be0b7e3e6b9890dc1d58f52a4beb
+  - nix-bundle-appimage 677e6fce32369016a405d4129d2d0598d35d03ba
+  - nix-bundle-macos-app 3cf5c5941a791c1935acecfb4761f42941115b90
+Base data directory: <short-tmp>/tmp.z71wW0jHhO/user-dir-1
+[app:out] [2026-11-17 16:03:30.550] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[app:out] [2026-11-17 16:03:30.571] [out] [capability_module] [2026-11-17 16:03:30.570] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[app:out] [2026-11-17 16:03:30.572] [info] [logos] Module loaded: capability_module
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:30.573"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:30.574"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8563248
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 16:03:30.591] [info] [logos] Module loaded: modules_state
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_modules_state_18c7dd217c61" at "16:03:30.592"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_modules_state_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:30.592"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] Logos Core started successfully!
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:30.592"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:30.592"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8718464
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8713920
+[app:out] RemoteTransportConnection: Requesting object: "modules_state" at "16:03:30.593"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "modules_state"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8899712
+[app:out] [2026-11-17 16:03:30.593] [info] [logos] Pushed module snapshot to modules_state
+Restricted package_manager to core, package_manager_ui_backend
+[app:out] Restricted package_downloader to core, package_manager_ui_backend
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:30.595"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8904064
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 16:03:30.614] [info] [logos] Module loaded: package_manager
+RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_18c7dd217c61" at "16:03:30.615"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:30.615"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] package_manager module loaded by default.
+Currently loaded modules:
+  - "package_manager"
+  - "modules_state"
+  - "capability_module"
+Total modules: 3
+[app:out] RemoteTransportConnection: Connecting to registry: "local:logos_package_manager_18c7dd217c61" at "16:03:30.617"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_package_manager_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:30.617"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+RemoteTransportConnection: Requesting object: "package_manager" at "16:03:30.617"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "package_manager"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9003936
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8909008
+[app:out] [LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 9152480
+[app:out] MainUIBackend: reachability from "dummy"
+[app:out] MainUIBackend created
+[app:out] qrc:/qt/qml/Basecamp/AppManager/Basecamp/AppManager/AppManagerPanelHeader.qml:47:13: QML LogosTabBar: Binding loop detected for property "implicitWidth":
+qrc:/qt-project.org/imports/QtQuick/Controls/Basic/TabBar.qml:10:5
+[app:out] MainContainer created
+System tray is not available on this system
+[app:out] This plugin does not support propagateSizeHints()
+[app:out] [QmlInspector] Inspector server listening on port 3768
+[app:out] ShortcutBridge: bound 1 QML shortcut(s) on pane QQuickWidget
+[app:out] Loading UI module: "ferrata_bridge_ui"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:31.065"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 33634304
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] logos.basecamp.sandbox: Sandbox configured for plugin=ferrata_bridge_ui: install="<basecamp-build>/ui-install/plugins/ferrata_bridge_ui" entry="<basecamp-build>/ui-install/plugins/ferrata_bridge_ui/qml" appLibDir=/nix/store/49ad2a80zwbvywz9qxibwnmsbivnsds1-logos-basecamp-0.0.0-dev/lib untrustedRoots=2
+[app:out] logos.qmlbridge: DEPRECATED: ferrata_bridge_ui calls logos core from QML (logos.callModuleAsync). Move the call into a backend module ("backend": "module" in metadata.json); QML access to logos core is removed in the next breaking release.
+RemoteTransportConnection: Connecting to registry: "local:logos_ferrata_bridge_module_18c7dd217c61" at "16:03:31.130"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_ferrata_bridge_module_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:31.130"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] MainContainer: Added plugin dock to WorkspaceArea: "Ferrata Bridge" (module: "ferrata_bridge_ui" )
+Successfully loaded UI module: "ferrata_bridge_ui"
+Inspector connected.
+[app:out] [QmlInspector] Client connected from "::ffff:127.0.0.1"
+[QmlInspector] Client disconnected
+
+Running 13 test(s)...
+
+[app:out] [QmlInspector] Client connected from "::ffff:127.0.0.1"
+  [32m✓[0m Basecamp opens the mini-app
+[app:out] MainContainer: Active section index changed to 3
+[app:out] ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+[app:out] Loading core module: "ferrata_bridge_module"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:34.292"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 57562992
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 16:03:34.311] [info] [logos] Module loaded: ferrata_bridge_module
+RemoteTransportConnection: Connecting to registry: "local:logos_ferrata_bridge_module_18c7dd217c61" at "16:03:34.311"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_ferrata_bridge_module_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:34.311"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] Successfully loaded core module: "ferrata_bridge_module"
+[app:out] [LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 49523584
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 38212336
+RemoteTransportConnection: Requesting object: "capability_module" at "16:03:34.314"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 49180592
+[app:out] [2026-11-17 16:03:34.314] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[app:out] RemoteTransportConnection: Requesting object: "ferrata_bridge_module" at "16:03:34.315"
+[LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "ferrata_bridge_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 49493408
+[app:out] Loading core module: "lez_core"
+[app:out] RemoteTransportConnection: Requesting object: "capability_module" at "16:03:34.470"
+[app:out] [LogosObject] RemoteTransportConnection: returning RemoteLogosObject for: "capability_module"
+[LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 8859056
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:out] [2026-11-17 16:03:34.492] [info] [logos] Module loaded: lez_core
+RemoteTransportConnection: Connecting to registry: "local:logos_lez_core_18c7dd217c61" at "16:03:34.493"
+[app:out] RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_lez_core_18c7dd217c61"
+RemoteTransportConnection: Connecting to registry: "local:logos_capability_module_18c7dd217c61" at "16:03:34.493"
+RemoteTransportConnection: Registry connect attempt started (no peer contact yet): "local:logos_capability_module_18c7dd217c61"
+[app:out] Successfully loaded core module: "lez_core"
+[app:out] [LogosObject] Created RemoteLogosObject wrapping QRemoteObjectReplica 49684384
+[app:out] App launcher clicked: "ferrata_bridge_ui"
+[app:out] MainContainer: Active section index changed to 0
+  [32m✓[0m Basecamp's Module Inspector loads the core modules
+[app:out] [2026-11-17 16:03:36.853] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+  [32m✓[0m the session: the module opened at the chains (the host's step)
+[app:out] [2026-11-17 16:03:37.804] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.805] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.807] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.808] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.809] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.810] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.811] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.813] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.814] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.815] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:37.835] [out] [lez_core] Syncing to block 19. Blocks to sync: 19
+[app:out] [2026-11-17 16:03:37.858] [out] [lez_core] Synced to block 19 in 22.330758ms
+[app:out] [2026-11-17 16:03:38.073] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.074] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.075] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.076] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.078] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.079] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.080] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.081] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.082] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:38.083] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m connect: the account and both sides' balances
+[app:out] [2026-11-17 16:03:39.598] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:39.600] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m registry before the operator's first import
+[app:out] [2026-11-17 16:03:41.864] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.865] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.866] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.868] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.869] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.870] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.871] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.872] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.873] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.874] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:41.878] [out] [lez_core] Syncing to block 20. Blocks to sync: 1
+[app:out] [2026-11-17 16:03:41.879] [out] [lez_core] Synced to block 20 in 1.026218ms
+[app:out] [2026-11-17 16:03:42.112] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.113] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.114] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.116] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.117] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.118] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.120] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.121] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.123] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:42.124] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m deposit: private by default
+[app:out] [2026-11-17 16:03:43.634] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.635] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.637] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.638] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.639] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.640] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.642] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.642] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.644] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:03:43.645] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m positions before the import (recovery from the seed)
+  [32m✓[0m the operator's import and the gas drop (not the user's steps)
+[app:out] [2026-11-17 16:08:11.981] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.982] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.983] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.985] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.986] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.987] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.989] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:11.990] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:08:12.013] [out] [lez_core] Syncing to block 47. Blocks to sync: 27
+[app:out] [2026-11-17 16:08:12.032] [out] [lez_core] Synced to block 47 in 18.88067ms
+[app:out] [2026-11-17 16:08:14.535] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.246] [out] [lez_core] Syncing to block 72. Blocks to sync: 25
+[app:out] [2026-11-17 16:12:20.262] [out] [lez_core] Synced to block 72 in 15.539923ms
+[app:out] [2026-11-17 16:12:20.541] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.542] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.544] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.545] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.546] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.548] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.549] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.551] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.668] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.669] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.670] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.671] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.673] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.674] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.676] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:20.677] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.350] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.351] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.352] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.354] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.355] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.356] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.357] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:12:21.359] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m the private claim, once its random delay has passed
+[app:out] MainContainer: Active section index changed to 3
+[app:out] ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+[app:out] Refreshing UI modules
+[app:out] Unloading UI module: "ferrata_bridge_ui"
+[app:out] Successfully unloaded UI module: "ferrata_bridge_ui"
+[app:out] ShortcutBridge: bound 2 QML shortcut(s) on pane QQuickWidget
+[app:out] Loading UI module: "ferrata_bridge_ui"
+[app:out] logos.basecamp.sandbox: Sandbox configured for plugin=ferrata_bridge_ui: install="<basecamp-build>/ui-install/plugins/ferrata_bridge_ui" entry="<basecamp-build>/ui-install/plugins/ferrata_bridge_ui/qml" appLibDir=/nix/store/49ad2a80zwbvywz9qxibwnmsbivnsds1-logos-basecamp-0.0.0-dev/lib untrustedRoots=2
+[app:out] logos.qmlbridge: DEPRECATED: ferrata_bridge_ui calls logos core from QML (logos.callModuleAsync). Move the call into a backend module ("backend": "module" in metadata.json); QML access to logos core is removed in the next breaking release.
+[app:out] MainContainer: Added plugin dock to WorkspaceArea: "Ferrata Bridge" (module: "ferrata_bridge_ui" )
+[app:out] MainContainer: Active section index changed to 0
+[app:out] Successfully loaded UI module: "ferrata_bridge_ui"
+[app:out] App launcher clicked: "ferrata_bridge_ui"
+[app:out] [2026-11-17 16:16:10.014] [out] [lez_core] Syncing to block 95. Blocks to sync: 23
+[app:out] [2026-11-17 16:16:10.030] [out] [lez_core] Synced to block 95 in 16.493965ms
+[app:out] [2026-11-17 16:16:11.895] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.897] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.898] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.899] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.901] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.902] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.903] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.905] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.935] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.937] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.938] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.940] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.941] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.945] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.946] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:11.947] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m the private burn to a fresh address
+[app:out] [2026-11-17 16:16:34.731] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.732] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.733] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.734] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.735] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.737] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.738] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.739] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:34.744] [out] [lez_core] Syncing to block 97. Blocks to sync: 2
+[app:out] [2026-11-17 16:16:34.745] [out] [lez_core] Synced to block 97 in 1.813182ms
+[app:out] [2026-11-17 16:16:36.174] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.175] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.177] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.178] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.179] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.180] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.182] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:36.183] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m the checkpoint (operator) and the release by a relayer
+[app:out] [2026-11-17 16:16:37.652] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.653] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.654] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.656] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.657] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.658] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.659] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.660] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.934] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.936] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.937] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.938] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.939] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.941] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.942] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[app:out] [2026-11-17 16:16:37.943] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+  [32m✓[0m positions after the round trip
+  [32m✓[0m records: the view's calls, the module's LEZ path
+
+13 passed, 0 failed
+
+[app:out] [QmlInspector] Client disconnected
+[app:out] Unloading UI module: "ferrata_bridge_ui"
+[app:out] Successfully unloaded UI module: "ferrata_bridge_ui"
+[app:out] MainContainer destroyed
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[LogosObject] Destroying RemoteLogosObject 0
+[app:out] [LogosObject] Destroying RemoteLogosObject 0
+[app:err] [LogosObject] Destroying RemoteLogosObject 0
+[app:err] [LogosObject] Destroying RemoteLogosObject 0
+[LogosObject] Destroying RemoteLogosObject 0
+All 1 test file(s) passed
