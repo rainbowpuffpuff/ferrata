@@ -1,0 +1,1243 @@
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / current (final exponentiation) / core (a branch per non-signer)
+          1831  R  read the inputs
+           770  info: signer witness bytes
+          3328  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087345  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9032669  T  whole update: inputs read to new store (one cycle_count delta)
+       9076757  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.49  executor wall-clock seconds
+
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / current (final exponentiation) / multiproof + batch sum
+          1818  R  read the inputs
+           548  info: signer witness bytes
+          3106  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069684  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9010220  T  whole update: inputs read to new store (one cycle_count delta)
+       9055164  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.48  executor wall-clock seconds
+
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / witness / core (a branch per non-signer)
+          2151  R  read the inputs
+           770  info: signer witness bytes
+          4480  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087345  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6529353  T  whole update: inputs read to new store (one cycle_count delta)
+       6573568  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.39  executor wall-clock seconds
+
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / witness / multiproof + batch sum
+          2138  R  read the inputs
+           548  info: signer witness bytes
+          4258  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069684  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6506904  T  whole update: inputs read to new store (one cycle_count delta)
+       6551855  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.41  executor wall-clock seconds
+
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / witness folded / core (a branch per non-signer)
+          2311  R  read the inputs
+           770  info: signer witness bytes
+          5056  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087345  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5868498  T  whole update: inputs read to new store (one cycle_count delta)
+       5911862  EXECUTION user cycles (SessionInfo::cycles)
+       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.36  executor wall-clock seconds
+
+### finality, mainnet update_1 as served: 510 of 512 (real committee) / witness folded / multiproof + batch sum
+          2298  R  read the inputs
+           548  info: signer witness bytes
+          4834  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069684  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5846049  T  whole update: inputs read to new store (one cycle_count delta)
+       5890269  EXECUTION user cycles (SessionInfo::cycles)
+       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.36  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / current (final exponentiation) / core (a branch per non-signer)
+          1783  R  read the inputs
+             2  info: signer witness bytes
+          2560  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           218  D3 decode the signer witness (SignerWitness)
+             0  info: non-signers
+       2041814  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8981523  T  whole update: inputs read to new store (one cycle_count delta)
+       9025611  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.50  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / current (final exponentiation) / multiproof + batch sum
+          1784  R  read the inputs
+             4  info: signer witness bytes
+          2562  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           146  D3 decode the signer witness (NonSigners)
+             0  info: non-signers
+             0  info: multiproof siblings
+       2037849  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8977613  T  whole update: inputs read to new store (one cycle_count delta)
+       9022557  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.50  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / witness / core (a branch per non-signer)
+          2103  R  read the inputs
+             2  info: signer witness bytes
+          3712  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           218  D3 decode the signer witness (SignerWitness)
+             0  info: non-signers
+       2041814  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6478207  T  whole update: inputs read to new store (one cycle_count delta)
+       6522422  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.37  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / witness / multiproof + batch sum
+          2104  R  read the inputs
+             4  info: signer witness bytes
+          3714  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           146  D3 decode the signer witness (NonSigners)
+             0  info: non-signers
+             0  info: multiproof siblings
+       2037849  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6474297  T  whole update: inputs read to new store (one cycle_count delta)
+       6519248  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.38  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / witness folded / core (a branch per non-signer)
+          2263  R  read the inputs
+             2  info: signer witness bytes
+          4288  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           218  D3 decode the signer witness (SignerWitness)
+             0  info: non-signers
+       2041814  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5817352  T  whole update: inputs read to new store (one cycle_count delta)
+       5860716  EXECUTION user cycles (SessionInfo::cycles)
+       6356992  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.37  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 512 (all) / witness folded / multiproof + batch sum
+          2264  R  read the inputs
+             4  info: signer witness bytes
+          4290  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           146  D3 decode the signer witness (NonSigners)
+             0  info: non-signers
+             0  info: multiproof siblings
+       2037849  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5813442  T  whole update: inputs read to new store (one cycle_count delta)
+       5857662  EXECUTION user cycles (SessionInfo::cycles)
+       6356992  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.37  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / current (final exponentiation) / core (a branch per non-signer)
+          1807  R  read the inputs
+           386  info: signer witness bytes
+          2944  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          3025  D3 decode the signer witness (SignerWitness)
+             1  info: non-signers
+       2065113  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9007653  T  whole update: inputs read to new store (one cycle_count delta)
+       9051741  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.54  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / current (final exponentiation) / multiproof + batch sum
+          1808  R  read the inputs
+           388  info: signer witness bytes
+          2946  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           691  D3 decode the signer witness (NonSigners)
+             1  info: non-signers
+             9  info: multiproof siblings
+       2057929  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8998262  T  whole update: inputs read to new store (one cycle_count delta)
+       9043206  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.50  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / witness / core (a branch per non-signer)
+          2127  R  read the inputs
+           386  info: signer witness bytes
+          4096  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          3025  D3 decode the signer witness (SignerWitness)
+             1  info: non-signers
+       2065113  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6504337  T  whole update: inputs read to new store (one cycle_count delta)
+       6548552  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.42  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / witness / multiproof + batch sum
+          2128  R  read the inputs
+           388  info: signer witness bytes
+          4098  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           691  D3 decode the signer witness (NonSigners)
+             1  info: non-signers
+             9  info: multiproof siblings
+       2057929  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6494946  T  whole update: inputs read to new store (one cycle_count delta)
+       6539897  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.41  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / witness folded / core (a branch per non-signer)
+          2287  R  read the inputs
+           386  info: signer witness bytes
+          4672  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          3025  D3 decode the signer witness (SignerWitness)
+             1  info: non-signers
+       2065113  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5843482  T  whole update: inputs read to new store (one cycle_count delta)
+       5886846  EXECUTION user cycles (SessionInfo::cycles)
+       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.37  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 511 (member 300 absent) / witness folded / multiproof + batch sum
+          2288  R  read the inputs
+           388  info: signer witness bytes
+          4674  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           691  D3 decode the signer witness (NonSigners)
+             1  info: non-signers
+             9  info: multiproof siblings
+       2057929  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5834091  T  whole update: inputs read to new store (one cycle_count delta)
+       5878311  EXECUTION user cycles (SessionInfo::cycles)
+       6356992  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.38  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / current (final exponentiation) / core (a branch per non-signer)
+          1831  R  read the inputs
+           770  info: signer witness bytes
+          3328  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087532  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9032856  T  whole update: inputs read to new store (one cycle_count delta)
+       9076944  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.52  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / current (final exponentiation) / multiproof + batch sum
+          1818  R  read the inputs
+           548  info: signer witness bytes
+          3106  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069871  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9010407  T  whole update: inputs read to new store (one cycle_count delta)
+       9055351  EXECUTION user cycles (SessionInfo::cycles)
+       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.51  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / witness / core (a branch per non-signer)
+          2151  R  read the inputs
+           770  info: signer witness bytes
+          4480  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087532  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6529540  T  whole update: inputs read to new store (one cycle_count delta)
+       6573755  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.44  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / witness / multiproof + batch sum
+          2138  R  read the inputs
+           548  info: signer witness bytes
+          4258  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069871  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6507091  T  whole update: inputs read to new store (one cycle_count delta)
+       6552042  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.44  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / witness folded / core (a branch per non-signer)
+          2311  R  read the inputs
+           770  info: signer witness bytes
+          5056  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2087532  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5868685  T  whole update: inputs read to new store (one cycle_count delta)
+       5912049  EXECUTION user cycles (SessionInfo::cycles)
+       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.38  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 510 (update_1's bits) / witness folded / multiproof + batch sum
+          2298  R  read the inputs
+           548  info: signer witness bytes
+          4834  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2069871  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       5846236  T  whole update: inputs read to new store (one cycle_count delta)
+       5890456  EXECUTION user cycles (SessionInfo::cycles)
+       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.38  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / current (final exponentiation) / core (a branch per non-signer)
+          3961  R  read the inputs
+         23810  info: signer witness bytes
+         26368  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        171385  D3 decode the signer witness (SignerWitness)
+            62  info: non-signers
+       3424871  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10537925  T  whole update: inputs read to new store (one cycle_count delta)
+      10582013  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.57  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / current (final exponentiation) / multiproof + batch sum
+          2742  R  read the inputs
+         10532  info: signer witness bytes
+         13090  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         12692  D3 decode the signer witness (NonSigners)
+            62  info: non-signers
+           143  info: multiproof siblings
+       2686391  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9639659  T  whole update: inputs read to new store (one cycle_count delta)
+       9684603  EXECUTION user cycles (SessionInfo::cycles)
+      10485760  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.55  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / witness / core (a branch per non-signer)
+          4281  R  read the inputs
+         23810  info: signer witness bytes
+         27520  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        171385  D3 decode the signer witness (SignerWitness)
+            62  info: non-signers
+       3424871  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8034609  T  whole update: inputs read to new store (one cycle_count delta)
+       8078824  EXECUTION user cycles (SessionInfo::cycles)
+       8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.46  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / witness / multiproof + batch sum
+          3062  R  read the inputs
+         10532  info: signer witness bytes
+         14242  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         12692  D3 decode the signer witness (NonSigners)
+            62  info: non-signers
+           143  info: multiproof siblings
+       2686391  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7136343  T  whole update: inputs read to new store (one cycle_count delta)
+       7181294  EXECUTION user cycles (SessionInfo::cycles)
+       7864320  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.43  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / witness folded / core (a branch per non-signer)
+          4441  R  read the inputs
+         23810  info: signer witness bytes
+         28096  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        171385  D3 decode the signer witness (SignerWitness)
+            62  info: non-signers
+       3424871  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7373754  T  whole update: inputs read to new store (one cycle_count delta)
+       7417118  EXECUTION user cycles (SessionInfo::cycles)
+       8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.44  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 450 (62 absent at random, seed 3) / witness folded / multiproof + batch sum
+          3222  R  read the inputs
+         10532  info: signer witness bytes
+         14818  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         12692  D3 decode the signer witness (NonSigners)
+            62  info: non-signers
+           143  info: multiproof siblings
+       2686391  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6475488  T  whole update: inputs read to new store (one cycle_count delta)
+       6519708  EXECUTION user cycles (SessionInfo::cycles)
+       7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.39  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / current (final exponentiation) / core (a branch per non-signer)
+          5731  R  read the inputs
+         43010  info: signer witness bytes
+         45568  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        309385  D3 decode the signer witness (SignerWitness)
+           112  info: non-signers
+       4539489  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      11792313  T  whole update: inputs read to new store (one cycle_count delta)
+      11836401  EXECUTION user cycles (SessionInfo::cycles)
+      12713984  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
+          0.60  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / current (final exponentiation) / multiproof + batch sum
+          3332  R  read the inputs
+         17092  info: signer witness bytes
+         19650  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         21212  D3 decode the signer witness (NonSigners)
+           112  info: non-signers
+           198  info: multiproof siblings
+       3113489  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10075867  T  whole update: inputs read to new store (one cycle_count delta)
+      10120811  EXECUTION user cycles (SessionInfo::cycles)
+      11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.56  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / witness / core (a branch per non-signer)
+          6051  R  read the inputs
+         43010  info: signer witness bytes
+         46720  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        309385  D3 decode the signer witness (SignerWitness)
+           112  info: non-signers
+       4539489  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       9288997  T  whole update: inputs read to new store (one cycle_count delta)
+       9333212  EXECUTION user cycles (SessionInfo::cycles)
+      10485760  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.49  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / witness / multiproof + batch sum
+          3652  R  read the inputs
+         17092  info: signer witness bytes
+         20802  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         21212  D3 decode the signer witness (NonSigners)
+           112  info: non-signers
+           198  info: multiproof siblings
+       3113489  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7572551  T  whole update: inputs read to new store (one cycle_count delta)
+       7617502  EXECUTION user cycles (SessionInfo::cycles)
+       8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.42  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / witness folded / core (a branch per non-signer)
+          6211  R  read the inputs
+         43010  info: signer witness bytes
+         47296  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        309385  D3 decode the signer witness (SignerWitness)
+           112  info: non-signers
+       4539489  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8628142  T  whole update: inputs read to new store (one cycle_count delta)
+       8671506  EXECUTION user cycles (SessionInfo::cycles)
+       9437184  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.45  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 400 (112 absent at random, seed 2) / witness folded / multiproof + batch sum
+          3812  R  read the inputs
+         17092  info: signer witness bytes
+         21378  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         21212  D3 decode the signer witness (NonSigners)
+           112  info: non-signers
+           198  info: multiproof siblings
+       3113489  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       6911696  T  whole update: inputs read to new store (one cycle_count delta)
+       6955916  EXECUTION user cycles (SessionInfo::cycles)
+       7602176  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.39  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / current (final exponentiation) / core (a branch per non-signer)
+          7729  R  read the inputs
+         64898  info: signer witness bytes
+         67456  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        466705  D3 decode the signer witness (SignerWitness)
+           169  info: non-signers
+       5810099  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      13222241  T  whole update: inputs read to new store (one cycle_count delta)
+      13266329  EXECUTION user cycles (SessionInfo::cycles)
+      14680064  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 14 segments)
+          0.62  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / current (final exponentiation) / multiproof + batch sum
+          3852  R  read the inputs
+         22532  info: signer witness bytes
+         25090  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29396  D3 decode the signer witness (NonSigners)
+           169  info: non-signers
+           197  info: multiproof siblings
+       3540116  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10511198  T  whole update: inputs read to new store (one cycle_count delta)
+      10556142  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.55  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / witness / core (a branch per non-signer)
+          8049  R  read the inputs
+         64898  info: signer witness bytes
+         68608  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        466705  D3 decode the signer witness (SignerWitness)
+           169  info: non-signers
+       5810099  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10718925  T  whole update: inputs read to new store (one cycle_count delta)
+      10763140  EXECUTION user cycles (SessionInfo::cycles)
+      11665408  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 12 segments)
+          0.52  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / witness / multiproof + batch sum
+          4172  R  read the inputs
+         22532  info: signer witness bytes
+         26242  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29396  D3 decode the signer witness (NonSigners)
+           169  info: non-signers
+           197  info: multiproof siblings
+       3540116  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8007882  T  whole update: inputs read to new store (one cycle_count delta)
+       8052833  EXECUTION user cycles (SessionInfo::cycles)
+       8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.41  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / witness folded / core (a branch per non-signer)
+          8209  R  read the inputs
+         64898  info: signer witness bytes
+         69184  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        466705  D3 decode the signer witness (SignerWitness)
+           169  info: non-signers
+       5810099  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10058070  T  whole update: inputs read to new store (one cycle_count delta)
+      10101434  EXECUTION user cycles (SessionInfo::cycles)
+      11010048  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.48  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 343 (169 absent at random, seed 4) / witness folded / multiproof + batch sum
+          4332  R  read the inputs
+         22532  info: signer witness bytes
+         26818  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29396  D3 decode the signer witness (NonSigners)
+           169  info: non-signers
+           197  info: multiproof siblings
+       3540116  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7347027  T  whole update: inputs read to new store (one cycle_count delta)
+       7391247  EXECUTION user cycles (SessionInfo::cycles)
+       8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.40  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / current (final exponentiation) / core (a branch per non-signer)
+          7753  R  read the inputs
+         65282  info: signer witness bytes
+         67840  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832383  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      13247309  T  whole update: inputs read to new store (one cycle_count delta)
+      13291397  EXECUTION user cycles (SessionInfo::cycles)
+      14680064  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 14 segments)
+          0.64  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / current (final exponentiation) / multiproof + batch sum
+          3866  R  read the inputs
+         22756  info: signer witness bytes
+         25314  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29636  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           201  info: multiproof siblings
+       3551622  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10522958  T  whole update: inputs read to new store (one cycle_count delta)
+      10567902  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.58  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / witness / core (a branch per non-signer)
+          8073  R  read the inputs
+         65282  info: signer witness bytes
+         68992  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832383  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10743993  T  whole update: inputs read to new store (one cycle_count delta)
+      10788208  EXECUTION user cycles (SessionInfo::cycles)
+      11796480  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 12 segments)
+          0.55  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / witness / multiproof + batch sum
+          4186  R  read the inputs
+         22756  info: signer witness bytes
+         26466  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29636  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           201  info: multiproof siblings
+       3551622  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8019642  T  whole update: inputs read to new store (one cycle_count delta)
+       8064593  EXECUTION user cycles (SessionInfo::cycles)
+       8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.50  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / witness folded / core (a branch per non-signer)
+          8233  R  read the inputs
+         65282  info: signer witness bytes
+         69568  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832383  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10083138  T  whole update: inputs read to new store (one cycle_count delta)
+      10126502  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.54  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (170 absent at random, seed 1) / witness folded / multiproof + batch sum
+          4346  R  read the inputs
+         22756  info: signer witness bytes
+         27042  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29636  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           201  info: multiproof siblings
+       3551622  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7358787  T  whole update: inputs read to new store (one cycle_count delta)
+       7403007  EXECUTION user cycles (SessionInfo::cycles)
+       8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.46  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / current (final exponentiation) / core (a branch per non-signer)
+          7753  R  read the inputs
+         65282  info: signer witness bytes
+         67840  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832502  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      13247428  T  whole update: inputs read to new store (one cycle_count delta)
+      13291516  EXECUTION user cycles (SessionInfo::cycles)
+      14680064  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 14 segments)
+          0.69  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / current (final exponentiation) / multiproof + batch sum
+          4006  R  read the inputs
+         24516  info: signer witness bytes
+         27074  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       3605938  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       3611883  S3 step 3: final exponentiation and check (Blst::final_half)
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10578734  T  whole update: inputs read to new store (one cycle_count delta)
+      10623678  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.60  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / witness / core (a branch per non-signer)
+          8073  R  read the inputs
+         65282  info: signer witness bytes
+         68992  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832502  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10744112  T  whole update: inputs read to new store (one cycle_count delta)
+      10788327  EXECUTION user cycles (SessionInfo::cycles)
+      11796480  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 12 segments)
+          0.53  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / witness / multiproof + batch sum
+          4326  R  read the inputs
+         24516  info: signer witness bytes
+         28226  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       3605938  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3275068  S2 step 2: two-pair Miller loop
+       1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       8075418  T  whole update: inputs read to new store (one cycle_count delta)
+       8120369  EXECUTION user cycles (SessionInfo::cycles)
+       8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.45  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / witness folded / core (a branch per non-signer)
+          8233  R  read the inputs
+         65282  info: signer witness bytes
+         69568  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5832502  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+      10083257  T  whole update: inputs read to new store (one cycle_count delta)
+      10126621  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.53  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / witness folded / multiproof + batch sum
+          4486  R  read the inputs
+         24516  info: signer witness bytes
+         28802  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       3605938  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7414563  T  whole update: inputs read to new store (one cycle_count delta)
+       7458783  EXECUTION user cycles (SessionInfo::cycles)
+       8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
+          0.43  executor wall-clock seconds
+
+### finality, update_1 signed by the bench's committee: 342 (every third member absent: the multiproof's worst case) / witness folded / multiproof + chain sum
+          4486  R  read the inputs
+         24516  info: signer witness bytes
+         28802  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       3940489  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+          2549  J  encode the job (VerifyAll hands it to the instance)
+           470  info: job bytes
+          5816  P  apply (the instance's ApplyVerified, without its decode)
+             0  info: adopted a committee (1 = yes)
+       7749114  T  whole update: inputs read to new store (one cycle_count delta)
+       7793334  EXECUTION user cycles (SessionInfo::cycles)
+       8454144  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
+          0.44  executor wall-clock seconds
+
+### period (adopts 512 keys), mainnet update_1 as served: 510 of 512 (real committee) / witness folded / core (a branch per non-signer)
+          6923  R  read the inputs
+           770  info: signer witness bytes
+         54288  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         32171  D2 decode the compact update, store_for_update
+          5785  D3 decode the signer witness (SignerWitness)
+             2  info: non-signers
+       2097419  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+         37008  A0 the adoption keys into 96-byte arrays
+       5954983  A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)
+          4227  J  encode the job (VerifyAll hands it to the instance)
+           761  info: job bytes
+          5819  P  apply (the instance's ApplyVerified, without its decode)
+             1  info: adopted a committee (1 = yes)
+      11878401  T  whole update: inputs read to new store (one cycle_count delta)
+      11935129  EXECUTION user cycles (SessionInfo::cycles)
+      12845056  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
+          0.56  executor wall-clock seconds
+
+### period (adopts 512 keys), mainnet update_1 as served: 510 of 512 (real committee) / witness folded / multiproof + batch sum
+          6910  R  read the inputs
+           548  info: signer witness bytes
+         54066  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         32171  D2 decode the compact update, store_for_update
+           884  D3 decode the signer witness (NonSigners)
+             2  info: non-signers
+            11  info: multiproof siblings
+       2079758  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+         37008  A0 the adoption keys into 96-byte arrays
+       5954983  A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)
+          4227  J  encode the job (VerifyAll hands it to the instance)
+           761  info: job bytes
+          5819  P  apply (the instance's ApplyVerified, without its decode)
+             1  info: adopted a committee (1 = yes)
+      11855952  T  whole update: inputs read to new store (one cycle_count delta)
+      11913877  EXECUTION user cycles (SessionInfo::cycles)
+      12845056  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
+          0.62  executor wall-clock seconds
+
+### period (adopts 512 keys), signed by the bench's committee: 342 (every third absent) / witness folded / core (a branch per non-signer)
+         12845  R  read the inputs
+         65282  info: signer witness bytes
+        118800  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         32171  D2 decode the compact update, store_for_update
+        469465  D3 decode the signer witness (SignerWitness)
+           170  info: non-signers
+       5842576  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+         37008  A0 the adoption keys into 96-byte arrays
+       5954983  A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)
+          4227  J  encode the job (VerifyAll hands it to the instance)
+           761  info: job bytes
+          5819  P  apply (the instance's ApplyVerified, without its decode)
+             1  info: adopted a committee (1 = yes)
+      16093160  T  whole update: inputs read to new store (one cycle_count delta)
+      16149888  EXECUTION user cycles (SessionInfo::cycles)
+      17825792  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 17 segments)
+          0.81  executor wall-clock seconds
+
+### period (adopts 512 keys), signed by the bench's committee: 342 (every third absent) / witness folded / multiproof + batch sum
+          9098  R  read the inputs
+         24516  info: signer witness bytes
+         78034  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         32171  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       3616012  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
+         37008  A0 the adoption keys into 96-byte arrays
+       5954983  A1 adoption: 512 keys in one part (on curve, not identity, key root, sum)
+          4227  J  encode the job (VerifyAll hands it to the instance)
+           761  info: job bytes
+          5819  P  apply (the instance's ApplyVerified, without its decode)
+             1  info: adopted a committee (1 = yes)
+      13424466  T  whole update: inputs read to new store (one cycle_count delta)
+      13482391  EXECUTION user cycles (SessionInfo::cycles)
+      14680064  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 14 segments)
+          0.72  executor wall-clock seconds
+
+### REFUSAL (342, folded, multiproof): a multiproof node with one bit flipped
+          4486  R  read the inputs
+         24516  info: signer witness bytes
+         28802  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       1325243  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       1399296  T  whole update: inputs read to new store (one cycle_count delta)
+            80  refused: code
+       1412144  EXECUTION user cycles (SessionInfo::cycles)
+       2097152  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 2 segments)
+          0.15  executor wall-clock seconds
+
+### REFUSAL (342, folded, multiproof): one non-signer's key replaced by a key outside the committee
+          4486  R  read the inputs
+         24516  info: signer witness bytes
+         28802  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         30956  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           256  info: multiproof siblings
+       1325242  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       1399295  T  whole update: inputs read to new store (one cycle_count delta)
+            80  refused: code
+       1412143  EXECUTION user cycles (SessionInfo::cycles)
+       2097152  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 2 segments)
+          0.15  executor wall-clock seconds
+
+### REFUSAL (342, folded, multiproof): the witness of another bitfield with as many non-signers
+          4346  R  read the inputs
+         22756  info: signer witness bytes
+         27042  info: input bytes (store, update, signer witness, adoption keys, c, w, c^-1)
+          1915  D1 decode the compact store
+         31566  D2 decode the compact update, store_for_update
+         29636  D3 decode the signer witness (NonSigners)
+           170  info: non-signers
+           201  info: multiproof siblings
+       1125203  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
+       1197796  T  whole update: inputs read to new store (one cycle_count delta)
+            80  refused: code
+       1210644  EXECUTION user cycles (SessionInfo::cycles)
+       1572864  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 2 segments)
+          0.15  executor wall-clock seconds
+

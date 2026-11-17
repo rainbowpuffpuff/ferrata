@@ -1,0 +1,144 @@
+### PROFILE: the bench's committee, 342 signers, every third member absent (the multiproof's worst case)
+        469468  D3 decode the core's witness (SignerWitness::decode)
+         30958  D3n decode the multiproof witness (NonSigners::decode)
+           170  info: non-signers
+         65282  info: core witness bytes
+         24516  info: multiproof witness bytes
+           256  info: multiproof siblings
+       3857505  K0 the core's composition (copy of steps::signing_key)
+       1667892  K1 residue_agg::signing_key, batch addition
+       2002443  K2 residue_agg::signing_key, one mixed addition per non-signer
+          7557  P1 bookkeeping: the absent indices, the count and branch-length checks
+        486477  P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)
+        290105  P2a  of which: x and y to Montgomery form (2 x blst_fp_from_bendian, no range check)
+        141692  P2b  of which: the on-curve check (blst_p1_affine_on_curve)
+         18782  P3 not the identity (blst_p1_affine_is_inf)
+        199351  P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)
+        211420  P5 the leaf: pubkey_leaf (SHA-256 of 64 bytes, sha2's streaming API)
+       2001930  P6 the branch: is_valid_merkle_branch, depth 9 (9 x hash_pair, sha2's streaming API)
+        822599  P7 the sum: one blst_p1_add_or_double_affine per non-signer
+         96448  P8 once: the aggregate decompressed, the sum subtracted, the identity check
+      59927295  P9 (not in the core) a subgroup check of each key, blst_p1_affine_in_g1, for comparison
+         52265  C1 the compressed key from the bytes (residue_agg::compressed)
+        137845  C2 the leaf by two compressions (residue_agg::leaf)
+        418123  C3 one multiproof of all the leaves (residue_agg::multiproof_root)
+        947019  C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)
+        487709  C4 the sum by blst_p1s_add (batch affine addition)
+        504984  C5 key_point on every key (flag check, blst_p1_deserialize, not identity)
+       1247115  U1 1,000 x hash_pair (sha2's streaming API, as the core)
+        811098  U2 1,000 x residue_agg::node (two compressions)
+        205206  U3 1,000 x blst_fp_mul (Montgomery multiplication)
+        244206  U4 1,000 x blst_fp_inverse
+       4837406  U5 1,000 x blst_p1_add_or_double_affine
+      84379704  EXECUTION user cycles (SessionInfo::cycles)
+      88604672  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 85 segments)
+          3.58  executor wall-clock seconds
+
+### PROFILE: the bench's committee, 342 signers, 170 absent at random (seed 1)
+        469468  D3 decode the core's witness (SignerWitness::decode)
+         29638  D3n decode the multiproof witness (NonSigners::decode)
+           170  info: non-signers
+         65282  info: core witness bytes
+         22756  info: multiproof witness bytes
+           201  info: multiproof siblings
+       3857498  K0 the core's composition (copy of steps::signing_key)
+       1613702  K1 residue_agg::signing_key, batch addition
+       1948253  K2 residue_agg::signing_key, one mixed addition per non-signer
+          7551  P1 bookkeeping: the absent indices, the count and branch-length checks
+        486477  P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)
+        290105  P2a  of which: x and y to Montgomery form (2 x blst_fp_from_bendian, no range check)
+        141692  P2b  of which: the on-curve check (blst_p1_affine_on_curve)
+         18782  P3 not the identity (blst_p1_affine_is_inf)
+        199351  P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)
+        211420  P5 the leaf: pubkey_leaf (SHA-256 of 64 bytes, sha2's streaming API)
+       2001937  P6 the branch: is_valid_merkle_branch, depth 9 (9 x hash_pair, sha2's streaming API)
+        822599  P7 the sum: one blst_p1_add_or_double_affine per non-signer
+         96448  P8 once: the aggregate decompressed, the sum subtracted, the identity check
+      59927295  P9 (not in the core) a subgroup check of each key, blst_p1_affine_in_g1, for comparison
+         52276  C1 the compressed key from the bytes (residue_agg::compressed)
+        137845  C2 the leaf by two compressions (residue_agg::leaf)
+        363936  C3 one multiproof of all the leaves (residue_agg::multiproof_root)
+        946837  C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)
+        487709  C4 the sum by blst_p1s_add (batch affine addition)
+        504984  C5 key_point on every key (flag check, blst_p1_deserialize, not identity)
+       1247115  U1 1,000 x hash_pair (sha2's streaming API, as the core)
+        811098  U2 1,000 x residue_agg::node (two compressions)
+        205206  U3 1,000 x blst_fp_mul (Montgomery multiplication)
+        244206  U4 1,000 x blst_fp_inverse
+       4837406  U5 1,000 x blst_p1_add_or_double_affine
+      84215500  EXECUTION user cycles (SessionInfo::cycles)
+      88604672  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 85 segments)
+          3.54  executor wall-clock seconds
+
+### PROFILE: the bench's committee, 400 signers, 112 absent at random (seed 2)
+        309388  D3 decode the core's witness (SignerWitness::decode)
+         21214  D3n decode the multiproof witness (NonSigners::decode)
+           112  info: non-signers
+         43010  info: core witness bytes
+         17092  info: multiproof witness bytes
+           198  info: multiproof siblings
+       2576642  K0 the core's composition (copy of steps::signing_key)
+       1175105  K1 residue_agg::signing_key, batch addition
+       1381838  K2 residue_agg::signing_key, one mixed addition per non-signer
+          6241  P1 bookkeeping: the absent indices, the count and branch-length checks
+        320539  P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)
+        191157  P2a  of which: x and y to Montgomery form (2 x blst_fp_from_bendian, no range check)
+         93378  P2b  of which: the on-curve check (blst_p1_affine_on_curve)
+         12402  P3 not the identity (blst_p1_affine_is_inf)
+        131375  P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)
+        139326  P5 the leaf: pubkey_leaf (SHA-256 of 64 bytes, sha2's streaming API)
+       1318971  P6 the branch: is_valid_merkle_branch, depth 9 (9 x hash_pair, sha2's streaming API)
+        542053  P7 the sum: one blst_p1_add_or_double_affine per non-signer
+         96448  P8 once: the aggregate decompressed, the sum subtracted, the identity check
+      39481541  P9 (not in the core) a subgroup check of each key, blst_p1_affine_in_g1, for comparison
+         34493  C1 the compressed key from the bytes (residue_agg::compressed)
+         90865  C2 the leaf by two compressions (residue_agg::leaf)
+        303771  C3 one multiproof of all the leaves (residue_agg::multiproof_root)
+        623439  C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)
+        335097  C4 the sum by blst_p1s_add (batch affine addition)
+        332724  C5 key_point on every key (flag check, blst_p1_deserialize, not identity)
+       1247115  U1 1,000 x hash_pair (sha2's streaming API, as the core)
+        811098  U2 1,000 x residue_agg::node (two compressions)
+        205206  U3 1,000 x blst_fp_mul (Montgomery multiplication)
+        244206  U4 1,000 x blst_fp_inverse
+       4837406  U5 1,000 x blst_p1_add_or_double_affine
+      59076288  EXECUTION user cycles (SessionInfo::cycles)
+      62128128  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 60 segments)
+          2.43  executor wall-clock seconds
+
+### PROFILE: the bench's committee, 510 signers, update_1's bits
+          5788  D3 decode the core's witness (SignerWitness::decode)
+           886  D3n decode the multiproof witness (NonSigners::decode)
+             2  info: non-signers
+           770  info: core witness bytes
+           548  info: multiproof witness bytes
+            11  info: multiproof siblings
+        147475  K0 the core's composition (copy of steps::signing_key)
+        130481  K1 residue_agg::signing_key, batch addition
+        130038  K2 residue_agg::signing_key, one mixed addition per non-signer
+          3528  P1 bookkeeping: the absent indices, the count and branch-length checks
+          5829  P2 decode: blst_p1_deserialize (flags, canonical, to Montgomery form, on the curve, x != 0)
+          3497  P2a  of which: x and y to Montgomery form (2 x blst_fp_from_bendian, no range check)
+          1748  P2b  of which: the on-curve check (blst_p1_affine_on_curve)
+           302  P3 not the identity (blst_p1_affine_is_inf)
+          2455  P4 re-compress (blst_p1_affine_compress: x out of Montgomery form, sign of y)
+          2596  P5 the leaf: pubkey_leaf (SHA-256 of 64 bytes, sha2's streaming API)
+         23648  P6 the branch: is_valid_merkle_branch, depth 9 (9 x hash_pair, sha2's streaming API)
+          9983  P7 the sum: one blst_p1_add_or_double_affine per non-signer
+         96448  P8 once: the aggregate decompressed, the sum subtracted, the identity check
+        705111  P9 (not in the core) a subgroup check of each key, blst_p1_affine_in_g1, for comparison
+           728  C1 the compressed key from the bytes (residue_agg::compressed)
+          1765  C2 the leaf by two compressions (residue_agg::leaf)
+         12318  C3 one multiproof of all the leaves (residue_agg::multiproof_root)
+         11207  C3b the branches by two-compression hashes (9 x residue_agg::node per non-signer; for comparison)
+         10423  C4 the sum by blst_p1s_add (batch affine addition)
+          6024  C5 key_point on every key (flag check, blst_p1_deserialize, not identity)
+       1247115  U1 1,000 x hash_pair (sha2's streaming API, as the core)
+        811098  U2 1,000 x residue_agg::node (two compressions)
+        205206  U3 1,000 x blst_fp_mul (Montgomery multiplication)
+        244206  U4 1,000 x blst_fp_inverse
+       4837406  U5 1,000 x blst_p1_add_or_double_affine
+      10791445  EXECUTION user cycles (SessionInfo::cycles)
+      11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
+          0.44  executor wall-clock seconds
+

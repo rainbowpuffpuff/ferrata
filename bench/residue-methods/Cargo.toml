@@ -7,6 +7,6 @@ publish = false
 [build-dependencies]
 risc0-build = { version = "=3.0.5" }
 
-# Only the residue bench guest, so that building it does not rebuild the six guests of methods/.
+# Only the residue bench guests, so that building them does not rebuild the six guests of methods/.
 [package.metadata.risc0]
-methods = ["../guests/residue-accel"]
+methods = ["../guests/residue-accel", "../guests/residue-agg-accel"]

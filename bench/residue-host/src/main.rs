@@ -369,9 +369,13 @@ fn main() {
     match std::env::args().nth(1).as_deref() {
         Some("measure") => measure(),
         Some("check") => guest_check(),
+        Some("profile") => agg::profile(),
+        Some("measure-agg") => agg::measure(),
         _ => {
-            eprintln!("usage: residue-host measure | check");
+            eprintln!("usage: residue-host measure | check | profile | measure-agg");
             std::process::exit(2);
         }
     }
 }
+
+mod agg;
