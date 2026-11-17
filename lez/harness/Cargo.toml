@@ -37,6 +37,10 @@ sha2 = "0.10"
 # The checkpoint program's own block parser and message decoder, to check what it would collect
 # from the bridge program's transactions (tests/bridge_burn.rs).
 checkpoint-core = { path = "../../checkpoint/crates/checkpoint-core" }
+# EXPERIMENTAL, bench-only (tests/residue_experimental.rs): the program copy that checks a residue
+# witness instead of the final exponentiation, and the native witness computation.
+methods-residue-experimental = { path = "../methods-residue-experimental" }
+residue = { path = "../../bench/residue" }
 
 [features]
 # The calls whose LEZ API differs between the tags this crate builds against. The default is set

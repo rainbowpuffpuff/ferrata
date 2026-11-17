@@ -1,0 +1,32 @@
+# EXPERIMENTAL, UNAUDITED, BENCH-ONLY: a copy of guests/program whose VerifyAll checks the residue
+# witness (../../../bench/residue) instead of computing the final exponentiation. Not deployed; its
+# image id is not in docs/image-ids.md. Built by ../../methods-residue-experimental only.
+[package]
+name = "ferrata_lez_residue_experimental"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+ferrata-lez-wire = { path = "../../wire" }
+ferrata-core = { path = "../../../crates/ferrata-core", default-features = false, features = ["blst"] }
+residue = { path = "../../../bench/residue" }
+lee_core = { path = "../../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = "=0.10.8"
+blst = "=0.3.16"
+tiny-keccak = "=2.0.2"
+
+[patch.crates-io]
+blst = { git = "https://github.com/risc0/blst", tag = "v0.3.16-risczero.0" }
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

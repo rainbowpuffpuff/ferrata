@@ -1,0 +1,14 @@
+# EXPERIMENTAL, bench-only: builds guests/program-residue-experimental alone, so that the deployed
+# programs' methods crate (../methods) is unchanged.
+[package]
+name = "methods-residue-experimental"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+
+[package.metadata.risc0]
+methods = ["../guests/program-residue-experimental"]
