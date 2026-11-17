@@ -35,7 +35,7 @@ use ferrata_core::{
     steps::{self, Phase, StepError},
     store::{LightClientStore, StoreCore},
     types::{BlsSignature, LightClientBootstrap, LightClientHeader, LightClientUpdate, SyncAggregate, SyncCommittee},
-    validate::{sync_committee_signing_root, Context},
+    validate::Context,
     witness::{CompactStore, CompactUpdate, SignerWitness},
     Error, Root,
 };
@@ -355,8 +355,12 @@ fn signing_committee<'a>(full: &'a StoreCore, update: &LightClientUpdate, spec: 
 struct Setup {
     spec: ChainSpec,
     gvr: Root,
+    /// The store after update_0, and the committee that signs update_1.
     compact: CompactStore,
     committee: SyncCommittee,
+    /// The store after the bootstrap, and the committee that signs update_0.
+    compact_boot: CompactStore,
+    committee_boot: SyncCommittee,
     updates: Vec<LightClientUpdate>,
 }
 
@@ -369,31 +373,41 @@ fn setup() -> Setup {
     let mut policy =
         FinalizedStore::initialize_with(&root(MAINNET_TRUSTED), &bootstrap, LcFork::Electra, &spec, &bls, Adoption::OnChain)
             .unwrap();
+    let compact_boot = CompactStore::of(policy.core());
+    let committee_boot = signing_committee(policy.core(), &updates[0], &spec).clone();
     policy.process_update(&updates[0], updates[0].signature_slot + 1, &ctx).unwrap();
     let compact = CompactStore::of(policy.core());
     let committee = signing_committee(policy.core(), &updates[1], &spec).clone();
-    Setup { spec, gvr, compact, committee, updates }
+    Setup { spec, gvr, compact, committee, compact_boot, committee_boot, updates }
 }
 
-/// Steps 1 and 2 of the program for `update` against the store after update_0, the signer
-/// witness built honestly for its bits; returns the job after step 2 and its product.
-fn product(s: &Setup, update: &LightClientUpdate) -> (steps::Job, blst_fp12) {
-    let w = SignerWitness::build(&s.committee, &update.sync_aggregate.bits).unwrap();
+/// Steps 1 and 2 of the program for `update` against `store`, the signer witness built honestly
+/// from `committee` for the update's bits; returns the job after step 2 and its product.
+fn product_on(
+    s: &Setup,
+    store: &CompactStore,
+    committee: &SyncCommittee,
+    update: &LightClientUpdate,
+) -> (steps::Job, blst_fp12) {
+    let w = SignerWitness::build(committee, &update.sync_aggregate.bits).unwrap();
     let mut job =
-        steps::step1(&s.compact, &CompactUpdate::of(update), &w, update.signature_slot, &s.spec, &s.gvr, 1).unwrap();
+        steps::step1(store, &CompactUpdate::of(update), &w, update.signature_slot, &s.spec, &s.gvr, 1).unwrap();
     job.step2().unwrap();
     let Phase::FinalExp { product } = job.phase.clone() else { panic!("step 2 leaves the product") };
     (job, decode_fp12(&product).unwrap())
 }
 
+/// [`product_on`] for update_1 (or a variant of it) against the store after update_0.
+fn product(s: &Setup, update: &LightClientUpdate) -> (steps::Job, blst_fp12) {
+    product_on(s, &s.compact, &s.committee, update)
+}
+
+/// The Fp12 element `n` (in Fp), from its canonical encoding (`blst_fp12::default()` is one).
 fn fp12_scalar(n: &BigUint) -> blst_fp12 {
-    let mut f = blst_fp12::default();
-    let mut b = [0u8; 48];
+    let mut b = [0u8; FP12_BYTES];
     let bytes = n.to_bytes_be();
-    b[48 - bytes.len()..].copy_from_slice(&bytes);
-    // SAFETY: `b` holds the 48 bytes blst reads.
-    unsafe { blst_fp_from_bendian(&mut f.fp6[0].fp2[0].fp[0], b.as_ptr()) };
-    f
+    b[48 - bytes.len()..48].copy_from_slice(&bytes);
+    decode_fp12(&b).unwrap()
 }
 
 /// A primitive cube root of unity of Fp, embedded in Fp12: 2^((p-1)/3) (2 is not a cube mod p).
@@ -455,8 +469,10 @@ fn tampered_inputs_are_refused() {
 
     // c and w tampered with, for update_1's (valid) product.
     let zeta = cube_root_of_unity();
-    let (_, f2) = product(&s, &s.updates[2]);
-    let (c2, w2) = witness(&f2);
+    // A second valid product: update_0 against the store after the bootstrap.
+    let (_, f0) = product_on(&s, &s.compact_boot, &s.committee_boot, &s.updates[0]);
+    assert!(final_exp_is_one(&f0));
+    let (c2, w2) = witness(&f0);
     let mut flipped = cb;
     flipped[47] ^= 1;
     let mut non_canonical = cb;
@@ -467,11 +483,11 @@ fn tampered_inputs_are_refused() {
     w_non_canonical[..48].copy_from_slice(&add_p(&wb[..48]));
     let cases: Vec<(&str, [u8; FP12_BYTES], [u8; FP12_BYTES], Refusal)> = vec![
         ("c: one bit flipped", flipped, wb, Refusal::Mismatch),
-        ("c: update_2's", encode_fp12(&c2), wb, Refusal::Mismatch),
+        ("c: update_0's", encode_fp12(&c2), wb, Refusal::Mismatch),
         ("c: zero", [0u8; FP12_BYTES], wb, Refusal::ZeroResidue),
         ("c: a coefficient plus p (non-canonical)", non_canonical, wb, Refusal::NonCanonical),
         ("w: times a cube root of unity", cb, encode_fp12(&mul(&w, &zeta)), Refusal::Mismatch),
-        ("w: update_2's", cb, encode_fp12(&w2), Refusal::Mismatch),
+        ("w: update_0's", cb, encode_fp12(&w2), Refusal::Mismatch),
         ("w: with a coefficient outside Fp6", cb, encode_fp12(&w_out), Refusal::ScalingNotInFp6),
         ("w: zero", cb, [0u8; FP12_BYTES], Refusal::Mismatch),
         ("w: a coefficient plus p (non-canonical)", cb, w_non_canonical, Refusal::NonCanonical),
@@ -496,7 +512,8 @@ fn tampered_inputs_are_refused() {
     t.sync_aggregate.signature = s.updates[2].sync_aggregate.signature;
     let (_, bad) = product(&s, &t);
     assert!(!final_exp_is_one(&bad));
-    let zero = blst_fp12::default();
+    let zero = decode_fp12(&[0u8; FP12_BYTES]).unwrap(); // `blst_fp12::default()` is one
+    assert!(is_zero(&zero));
     assert!(equation_holds(&bad, &zero, &zero), "0 · 0 == 0^λ");
     assert_eq!(check(&bad, &zero, &zero), Err(Refusal::ZeroResidue));
     lines.push("necessity of c != 0: c = 0, w = 0 satisfy f·w == c^λ for an invalid f; refused, ZeroResidue".into());

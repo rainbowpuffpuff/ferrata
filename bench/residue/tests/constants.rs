@@ -58,8 +58,9 @@ fn exponents_rederived_and_relations_hold() {
     // p = (u-1)^2 (u^4-u^2+1)/3 + u and r = u^4 - u^2 + 1, with u = -|u|.
     let u = -BigInt::from(ABS_U);
     let (pi, ri) = (BigInt::from(p.clone()), BigInt::from(r.clone()));
-    assert_eq!(ri, u.pow(4) - u.pow(2) + 1);
-    assert_eq!(pi, (&u - 1).pow(2) * &ri / 3 + &u);
+    let (one_i, three_i) = (BigInt::from(1), BigInt::from(3));
+    assert_eq!(ri, u.pow(4) - u.pow(2) + &one_i);
+    assert_eq!(pi, (&u - &one_i).pow(2) * &ri / &three_i + &u);
     let n = p.pow(12) - &one;
     assert_eq!(&n % &r, BigUint::from(0u8));
     let h = &n / &r;

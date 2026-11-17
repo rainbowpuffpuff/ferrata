@@ -260,9 +260,12 @@ fn the_witness_check_agrees_with_the_final_exponentiation() {
             });
         }
     });
-    // I5: the edge invalid products.
+    // I5: the edge invalid products. Zero is decoded from 576 zero bytes: in the blst crate,
+    // `blst_fp12::default()` is one, not zero.
     let (name, _, _) = CATEGORIES[8];
-    run_case(name, false, &blst_fp12::default(), &tally);
+    let zero = decode_fp12(&[0u8; FP12_BYTES]).unwrap();
+    assert!(is_zero(&zero) && !eq(&zero, &one()));
+    run_case(name, false, &zero, &tally);
     run_case(name, false, &order_r(&mut Rng::new(8, 0)), &tally);
 
     let tally = tally.into_inner().unwrap();
