@@ -112,9 +112,9 @@ async function reopenView(app, kind) {
   check((await evalIn(app, toggle, "text")) === "Unload", "the view is loaded");
   await clickName(app, toggle);
   await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Load") throw new Error(t); }, 60000, "the view unloaded");
-  const gone = (await idsOf(app, "objectName", V)).length;
-  log({ view_unloaded: true, views_left: gone });
-  check(gone === 0, `the view is gone (${gone} instances)`);
+  await waitFor(app, async () => { const n = (await idsOf(app, "objectName", V)).length; if (n !== 0) throw new Error(`${n} instances`); }, 15000, "the view's instance destroyed");
+  log({ view_unloaded: true, inspector, views_left: 0 });
+  check(true, "the view is gone (no instance of it left in Basecamp's window)");
   await shot(app, `${kind === "burn" ? "17c" : "14c"}-view-unloaded-while-the-${kind}-is-proven`);
   await clickName(app, toggle);
   await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Unload") throw new Error(t); }, 60000, "the view loaded again");
