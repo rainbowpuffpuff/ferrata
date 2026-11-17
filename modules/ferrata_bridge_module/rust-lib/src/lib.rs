@@ -55,7 +55,9 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// burn, release), each run with the methods above over the chains' state, which a chain service
     /// reads and to which it signs and sends (the stand-in for Logos Core's own modules); `lez` routes the
     /// session's LEZ reads and private sends through Logos Core's `lez_core`, `lez_report` lists those
-    /// calls; `{"ok", ...}`.
+    /// calls; `claim` and `burn` start a job in a thread of the module and answer at once (a private one is
+    /// proven for minutes, and a host may end the call sooner), `job` answers a job's state and, once done, its
+    /// reply, `jobs` lists them (calls/src/jobs.rs); `{"ok", ...}`.
     fn wallet(&mut self, request: String) -> String;
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}

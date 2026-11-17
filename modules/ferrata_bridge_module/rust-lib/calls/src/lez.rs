@@ -53,6 +53,8 @@ const READ_MS: u64 = 60_000;
 const SYNC_MS: u64 = 900_000;
 /// A private transaction is executed and proven before it is sent: minutes on a CPU.
 const SEND_MS: u64 = 2_400_000;
+/// Who proves a private send on this path (a job's `proving` phase).
+const PROVER: &str = "lez_core.send_generic_private_transaction_with_accounts: LEZ's wallet executes and proves it inside Logos Core, then sends it";
 
 struct Lez {
     program_elf: Vec<u8>,
@@ -335,6 +337,7 @@ pub(crate) fn send_private(message_hex: &str, accounts: &Value, root_index: u64,
         // As lez_core at cc73ebf mentions every account: none authorizing.
         let (acc, programs) = accounts_json(accounts, Some(false))?;
         let args = json!([acc, root_index, bytes_arg(&message), bytes_arg(&elf), kind, [], [], programs]);
+        crate::jobs::phase("proving", json!({ "by": PROVER, "attempt": "as lez_core cc73ebf mentions accounts", "synced_to": head }));
         let (reply, ms) = call("send_generic_private_transaction_with_accounts", &args, SEND_MS)?;
         let v: Value = serde_json::from_str(&reply).unwrap_or(json!({ "raw": reply }));
         let e = json!({ "kind": "send", "what": what, "attempt": "as lez_core cc73ebf mentions accounts (none authorizing)",
@@ -347,6 +350,7 @@ pub(crate) fn send_private(message_hex: &str, accounts: &Value, root_index: u64,
     }
     let (acc, programs) = accounts_json(accounts, None)?;
     let args = json!([acc, root_index, bytes_arg(&message), bytes_arg(&elf), kind, [], [], programs]);
+    crate::jobs::phase("proving", json!({ "by": PROVER, "synced_to": head }));
     let (reply, ms) = call("send_generic_private_transaction_with_accounts", &args, SEND_MS)?;
     let v: Value = serde_json::from_str(&reply).map_err(|e| format!("send_generic_private_transaction_with_accounts: not JSON ({e}): {reply}"))?;
     let e = json!({ "kind": "send", "what": what, "attempt": "authorizing as LEZ's wallet API (the patched lez_core)",

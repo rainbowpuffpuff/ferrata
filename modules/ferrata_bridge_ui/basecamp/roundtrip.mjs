@@ -8,18 +8,27 @@
 // window is taken at each state. The view's random delays are waited out on the view's clock (the user waiting), the
 // vault's on anvil's; none is overridden, no default is changed.
 //
+// The claim and the burn are jobs of ferrata_bridge_module (calls/src/jobs.rs): the view's call starts the job and is
+// answered at once, the view polls it; while a job proves, its picture is taken, the view's button is checked disabled, a
+// second start of the same step is checked to answer the running job, and a call that would wait for the proof is checked
+// refused at once. At the end every call of the view is checked answered within Basecamp's 20 s, none cut.
+// BASECAMP_REOPEN=1: while the burn's job proves, the view is unloaded and loaded again through Basecamp's Module
+// Inspector (a fresh instance of the view), which must find the running job and complete the step.
+//
 // Environment: SEQNET_OPS (ops.sh), SEQNET_CHAIN_URL (seqnet-chain), BASECAMP_LEZ (lez_core | plain),
 // BASECAMP_LEZ_PARAMS (the `lez` call's parameters: the user's LEZ wallet for lez_core), BASECAMP_WAIT_MS (a private
-// transaction's longest wait).
+// transaction's longest wait), BASECAMP_REOPEN.
 import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
-import { fw, OUT, log, idOf, evalIn, clickName, shot, waitFor, sidebarSection, writeJson, sleep } from "./lib.mjs";
+import { appendFileSync, readFileSync } from "node:fs";
+import { fw, OUT, log, idOf, idsOf, evalIn, clickName, shot, waitFor, sidebarSection, writeJson, sleep } from "./lib.mjs";
 const { test, run } = fw;
 
 const V = "ferrata.root";                       // the view's root: expressions are evaluated in the view's context
 const LEZ = process.env.BASECAMP_LEZ || "lez_core";
 const CORE = LEZ === "lez_core" ? ["ferrata_bridge_module", "lez_core"] : ["ferrata_bridge_module"];
 const WAIT = parseInt(process.env.BASECAMP_WAIT_MS || "180000", 10);
+const REOPEN = process.env.BASECAMP_REOPEN === "1";
+const HOST_CAP_MS = 20000;                      // Basecamp's cut of a view's call to a core module (results README, L4)
 const st = { fresh: "", deposit: null, claim: null, burn: null, chain: {} };
 
 // Fail fast: once a step fails the later ones are not run, so no later picture can show a stale state as a success.
@@ -52,28 +61,74 @@ function chain(label, record = true) {
   st.chain[label] = j;
   return j;
 }
-// After an approval: the view's call either settled (its text says so), or the host cut it (Basecamp cuts a view's
-// call to a core module at 20 s: results README, "Not reached: L4") while the module went on. Then the view's report
-// is recorded and pictured, the outcome is read on the chain (a new private LEZ transaction), and the caller refreshes
-// the view. Returns null when the view's call settled, else the chain's transaction.
-async function settledOrCut(app, textProp, settledPart, what, before, shotName) {
-  const text = await get(app, textProp);
-  if (has(text, settledPart)) return null;
-  const err = await get(app, "lastError");
-  if (!has(err, "Logos host")) throw new Error(`${what}: ${text} ${err}`);
-  log({ host_cut: what, error: err });
-  await shot(app, shotName);
+// The step's job, once the view's call has started it: the module's record as the view keeps it (claimJob, burnJob).
+async function jobOf(app, kind) {
+  await waitFor(app, async () => { if ((await get(app, `${kind}Job !== null`)) !== true) throw new Error(`no ${kind} job: ${await get(app, "lastError")}`); }, 30000, `the ${kind}'s job`);
+  return getJson(app, `${kind}Job`);
+}
+// While the step's job proves: the view's button is disabled, a second start of the same step (as a view that lost the
+// reply would send it) answers the running job, a call that would wait for the proof is refused at once; the picture.
+// In dev mode the proof takes about a second: the job may be over before it is looked at (logged).
+async function jobInProgress(app, kind, again, shotName) {
+  await waitFor(app, async () => { const s = await get(app, `${kind}Job ? ${kind}Job.state : ""`); if (s === "" || s === "queued") throw new Error(s); }, 120000, `the ${kind}'s job past queued`);
+  const j = await getJson(app, `${kind}Job`);
+  if (j.state !== "proving") { log({ job_in_progress: kind, id: j.id, state: j.state, note: "over or sent before it was looked at (dev mode proves in about a second)" }); return j; }
+  check((await evalIn(app, `${kind}.submit`, "enabled")) === false && has(await evalIn(app, `${kind}.submit`, "text"), `Proof being made (job ${j.id})`), `while job ${j.id} proves, the view's ${kind} button is disabled and says so`);
   const t0 = Date.now();
-  for (;;) {
-    const j = chain(`${what}: on the chain after the host's cut`, false);
-    const fresh = j.lez.txs.filter((t) => t.kind === "private" && !before.lez.txs.some((b) => b.tx === t.tx));
-    if (fresh.length) {
-      log({ applied_after_the_cut: what, tx: fresh[0].tx, block: fresh[0].block, reverted: fresh[0].reverted, ms_after_the_cut: Date.now() - t0 });
-      return fresh[0];
-    }
-    if (Date.now() - t0 > WAIT) throw new Error(`${what}: no new private transaction on the chain ${WAIT} ms after the host's cut`);
-    await sleep(15000);
-  }
+  const second = await wallet(app, kind, again);
+  check(second.ok === true && second.result.started === false && second.result.job.id === j.id, `a second ${kind} while job ${j.id} proves answers that job (started: false, ${Date.now() - t0} ms): no second transaction`);
+  const t1 = Date.now();
+  const scan = await wallet(app, "scan", {});
+  const ms = Date.now() - t1;
+  check(scan.ok === false && has(scan.error, `busy: job ${j.id}`) && ms < 5000, `a scan while job ${j.id} proves is refused at once (${ms} ms): it would wait for lez_core`);
+  await sleep(4000);                            // a poll or two: the elapsed time moves on in the picture
+  const k = await getJson(app, `${kind}Job`);
+  log({ job_in_progress: kind, id: k.id, state: k.state, proving_ms: k.proving_ms, elapsed_ms: k.elapsed_ms, text: await evalIn(app, `${kind}.job`, "text") });
+  await shot(app, shotName);
+  return k;
+}
+async function jobDone(app, kind) {
+  await waitFor(app, async () => { if ((await get(app, `jobOver(${kind}Job)`)) !== true) throw new Error(await get(app, `${kind}Job.state`)); }, WAIT, `the ${kind}'s job done`);
+  const j = await getJson(app, `${kind}Job`);
+  log({ job_done: kind, id: j.id, state: j.state, elapsed_ms: j.elapsed_ms, proving_ms: j.proving_ms, tx_hash: j.tx_hash, phases: j.phases.map((p) => p.state) });
+  check(j.state === "settled", `the ${kind}'s job ${j.id} settled (${j.state}${j.error ? ": " + j.error : ""}) after ${j.elapsed_ms} ms, its proof ${j.proving_ms} ms`);
+  return j;
+}
+// R2: the view unloaded and loaded again through Basecamp's Module Inspector while the step's job proves; the fresh view
+// must find the job (it lists the module's jobs when it opens) and complete the step from it.
+async function reopenView(app, kind) {
+  const before = await getJson(app, `${kind}Job`);
+  writeJson("view-calls-before-reopen.json", await getJson(app, "callLog"));
+  const toggle = "moduleRow.loadToggle.ferrata_bridge_ui";
+  await clickName(app, await sidebarSection(app, "Settings"));
+  await app.click("Module Inspector");
+  await sleep(500);
+  await waitFor(app, async () => { await idOf(app, toggle); }, 20000, "the view's row in the Module Inspector");
+  check((await evalIn(app, toggle, "text")) === "Unload", "the view is loaded");
+  await clickName(app, toggle);
+  await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Load") throw new Error(t); }, 60000, "the view unloaded");
+  const gone = (await idsOf(app, "objectName", V)).length;
+  log({ view_unloaded: true, views_left: gone });
+  check(gone === 0, `the view is gone (${gone} instances)`);
+  await shot(app, `${kind === "burn" ? "17c" : "14c"}-view-unloaded-while-the-${kind}-is-proven`);
+  await clickName(app, toggle);
+  await waitFor(app, async () => { const t = await evalIn(app, toggle, "text"); if (t !== "Unload") throw new Error(t); }, 60000, "the view loaded again");
+  await clickName(app, "sidebar.app.ferrata_bridge_ui");
+  await sleep(1000);
+  await waitFor(app, async () => { const id = await get(app, `${kind}Job ? ${kind}Job.id : -1`); if (id !== before.id) throw new Error(`job ${id}`); }, 60000, "the reopened view found the job");
+  const j = await getJson(app, `${kind}Job`);
+  check((await get(app, "connectedAccount")) === "" && (await get(app, "callLog.length")) < 10, "a fresh instance of the view (not connected, its call log new)");
+  check(j.id === before.id, `the reopened view found job ${j.id} (${j.state}, ${j.elapsed_ms} ms) from the module's listing`);
+  log({ reopened: kind, job: j.id, state: j.state, elapsed_ms: j.elapsed_ms });
+  // The user connects the reopened view again.
+  await click(app, "wallet.connect");
+  await waitFor(app, async () => { if ((await get(app, "selecting")) !== true) throw new Error("not selecting"); }, 10000, "account selection");
+  await idle(app);
+  await click(app, "wallet.account.0");
+  await tab(app, kind === "burn" ? "redeem" : "claim");
+  await sleep(4000);
+  await shot(app, `${kind === "burn" ? "17d" : "14d"}-reopened-view-found-the-${kind}-job`);
+  return j;
 }
 const word = (data, i) => BigInt("0x" + hex(data).slice(64 * i, 64 * (i + 1)));
 function lezTx(j, txHash) { return j.lez.txs.find((t) => hex(t.tx) === hex(txHash)); }
@@ -248,18 +303,21 @@ step("the private claim, once its random delay has passed", async (app) => {
   const before = chain("before claim");
   await click(app, "claim.submit");
   await approve(app, "Private claim", "14-claim-approval");
-  const cut = await settledOrCut(app, "claimText", "Claimed privately", "claim", before, "14b-claim-cut-by-the-host");
-  if (!cut) {
-    st.claim = await getJson(app, "claimReply");
-    check(st.claim.settled && st.claim.private, "settled as a private transaction on the sequencer");
-  }
+  const started = await jobOf(app, "claim");
+  log({ job_started: "claim", id: started.id, state: started.state });
+  await jobInProgress(app, "claim", { leaf_index: st.leaf, private: true }, "14b-claim-job-proving");
+  st.claimJob = await jobDone(app, "claim");
+  await waitFor(app, async () => { if (!has(await get(app, "claimText"), "Claimed privately")) throw new Error(await get(app, "claimText + ' ' + lastError")); }, 30000, "the claim's reply applied");
+  st.claim = await getJson(app, "claimReply");
+  check(st.claim.settled && st.claim.private, "settled as a private transaction on the sequencer");
+  check(hex(st.claim.tx_hash) === hex(st.claimJob.tx_hash), "the view's reply is the job's (its transaction)");
   await click(app, "claim.refresh");
   await idle(app);
   await waitFor(app, async () => { const s = await get(app, "positions.deposits[0].state"); if (s !== "claimed") throw new Error(s); }, 60000, "the deposit shows as claimed");
   const j = chain("after claim");
-  const t = lezTx(j, cut ? cut.tx : st.claim.tx_hash);
-  check(t && t.kind === "private" && !t.reverted, `the claim's transaction ${hex(t && t.tx).slice(0, 12)}… is in LEZ block ${t && t.block}, private, not reverted${cut ? " (found on the chain after the host cut the view's call)" : ""}`);
-  if (!cut) check(st.claim.block === undefined || Number(st.claim.block) === t.block, `the block the view names (${st.claim.block}) is the sequencer's (${t && t.block})`);
+  const t = lezTx(j, st.claim.tx_hash);
+  check(t && t.kind === "private" && !t.reverted, `the claim's transaction ${hex(t && t.tx).slice(0, 12)}… is in LEZ block ${t && t.block}, private, not reverted`);
+  check(st.claim.block === undefined || Number(st.claim.block) === t.block, `the block the view names (${st.claim.block}) is the sequencer's (${t && t.block})`);
   check(j.lez.txs.length > before.lez.txs.length, "the zone has the claim's transaction more");
   await click(app, "header.refresh");
   await idle(app);
@@ -278,16 +336,27 @@ step("the private burn to a fresh address", async (app) => {
   check(has(await evalIn(app, "burn.leaks.summary", "text"), "Minimal"), "the leak indicator reads Minimal");
   await picture(app, "16-burn-private-defaults");
   const before = chain("before burn");
+  const delayMs = (await get(app, "releaseDelayHours")) * 3600 * 1000;
   await click(app, "burn.submit");
   await approve(app, "Burn", "17-burn-approval");
-  const cut = await settledOrCut(app, "burnText", "Burned privately", "burn", before, "17b-burn-cut-by-the-host");
-  if (!cut) {
-    st.burn = await getJson(app, "burnReply");
-    check(st.burn.settled && st.burn.private && st.burn.balance === "0", "settled privately; the private holding is spent");
-    check(hex(st.burn.recipient) === hex(st.fresh), "the note is for the fresh recipient");
+  const started = await jobOf(app, "burn");
+  log({ job_started: "burn", id: started.id, state: started.state, release_delay_ms: started.params.release_delay_ms });
+  check(started.params.release_delay_ms === delayMs, `the burn's job carries the view's random release delay (${delayMs} ms)`);
+  await jobInProgress(app, "burn", { account: 0, amount: started.params.amount, recipient: st.fresh, private: true, release_delay_ms: delayMs }, "17b-burn-job-proving");
+  if (REOPEN) {
+    const j = await getJson(app, "burnJob");
+    log({ reopen: j.state === "proving" ? "while the burn's job proves" : `after the burn's job was ${j.state} (dev mode proves in about a second)` });
+    await reopenView(app, "burn");
   }
+  st.burnJob = await jobDone(app, "burn");
+  await waitFor(app, async () => { if (!has(await get(app, "burnText"), "Burned privately")) throw new Error(await get(app, "burnText + ' ' + lastError")); }, 30000, "the burn's reply applied");
+  st.burn = await getJson(app, "burnReply");
+  check(st.burn.settled && st.burn.private && st.burn.balance === "0", "settled privately; the private holding is spent");
+  check(hex(st.burn.recipient) === hex(st.fresh), "the note is for the fresh recipient");
+  check(st.burn.release_delay_ms === delayMs, `the burn's reply (the job's result) carries its release delay (${st.burn.release_delay_ms} ms)`);
+  check((await get(app, "releaseHeldUntil[0]")) === st.burnJob.finished_ms + (await get(app, "clockOffset")) + delayMs, "the release is held from the burn's settlement for that delay");
   const j = chain("after burn");
-  const t = lezTx(j, cut ? cut.tx : st.burn.tx_hash);
+  const t = lezTx(j, st.burn.tx_hash);
   check(t && t.kind === "private" && !t.reverted && has(t.visible, "Burn"), `the burn's transaction is in LEZ block ${t && t.block}, private, not reverted, its Burn call visible to the checkpoint`);
   await picture(app, "18-burn-settled-privately");
 });
@@ -335,13 +404,25 @@ step("positions after the round trip", async (app) => {
 });
 
 step("records: the view's calls, the module's LEZ path", async (app) => {
-  writeJson("view-calls.json", await getJson(app, "callLog"));
+  const calls = await getJson(app, "callLog");
+  writeJson("view-calls.json", calls);
+  let all = calls;
+  if (REOPEN) { try { all = JSON.parse(readFileSync(`${OUT}/view-calls-before-reopen.json`, "utf8")).concat(calls); } catch (e) { log({ note: `no record of the first view's calls: ${e.message}` }); } }
+  const longest = all.reduce((m, c) => Math.max(m, c.ms), 0);
+  const cutCalls = all.filter((c) => /Logos host|timed out/i.test(c.error));
+  const polls = all.filter((c) => c.method === "job").length;
+  log({ view_calls: all.length, polls, longest_ms: longest, cut: cutCalls.length });
+  check(cutCalls.length === 0, `no call of the view cut by the host (${all.length} calls, ${polls} of them job polls)`);
+  check(longest < HOST_CAP_MS, `every call of the view answered within Basecamp's ${HOST_CAP_MS} ms: the longest ${longest} ms`);
+  const jobs = await wallet(app, "jobs", {});
+  writeJson("jobs.json", jobs.result ?? jobs);
   if (LEZ === "lez_core") {
     const r = await wallet(app, "lez_report", {});
     writeJson("lez-report.json", r.result ?? r);
     check(r.ok === true, "lez_report");
   }
-  writeJson("summary.json", { lez: LEZ, deposit: st.deposit, leaf: st.leaf, claim: st.claim, burn: st.burn, fresh: st.fresh });
+  writeJson("summary.json", { lez: LEZ, deposit: st.deposit, leaf: st.leaf, claim: st.claim, burn: st.burn, fresh: st.fresh,
+    claim_job: st.claimJob, burn_job: st.burnJob, reopen: REOPEN });
 });
 
 run();

@@ -54,6 +54,21 @@ pub fn wallet(request: &str) -> String {
 }
 
 fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
+    // The jobs (jobs.rs) answer from the module's memory, never from the chains or lez_core.
+    if method == "job" {
+        return crate::jobs::get(params);
+    }
+    if method == "jobs" {
+        return Ok(crate::jobs::list());
+    }
+    // While a job runs, a call that would call lez_core or reread the chains on the module's Qt thread is refused at
+    // once (jobs.rs: it would wait there for lez_core, busy proving). `info`, `price` and `deposit` read and send
+    // through the chain service only; `claim` and `burn` answer the running job, or are refused.
+    if let Some(job) = crate::jobs::active() {
+        if !matches!(method, "info" | "price" | "deposit" | "claim" | "burn") {
+            return Err(crate::jobs::busy(method, &job));
+        }
+    }
     if method == "open" {
         return open(params);
     }
@@ -82,8 +97,9 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         "price" => c.post("module.price", json!({ "denomination": params["denomination"], "token": ETH })),
         "deposit" => c.deposit(params),
         "scan" => c.scan(),
-        "claim" => c.claim(params),
-        "burn" => c.burn(params),
+        // A private claim or burn proven on a CPU takes minutes: a job (jobs.rs), answered at once, polled with `job`.
+        "claim" => crate::jobs::start("claim", params, move |p| c.claim(p)),
+        "burn" => crate::jobs::start("burn", params, move |p| c.burn(p)),
         "release" => c.release(params),
         "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
         m if m.starts_with("admin.") => Err("the admin functions are the devnet backend's: not run through the module".into()),
@@ -178,7 +194,14 @@ impl Chain {
     /// when `lez_core` sent nothing, the chain service sends it (`module.submit`).
     fn submit(&self, message: &Value, accounts: &Value, root_index: &Value, what: &str) -> Result<Value, String> {
         let private = accounts[0]["kind"] == "private_self";
-        let plain = || self.post("module.submit", json!({ "message": message, "accounts": accounts, "root_index": root_index, "what": what }));
+        let plain = || -> Result<Value, String> {
+            if private {
+                crate::jobs::phase("proving", json!({ "by": "the chain service (seqnet-chain): LEZ's wallet library executes and proves it, then sends it" }));
+            }
+            let sent = self.post("module.submit", json!({ "message": message, "accounts": accounts, "root_index": root_index, "what": what }))?;
+            crate::jobs::phase("sent", json!({ "tx_hash": sent["tx_hash"], "block": sent["block"], "by": "the chain service" }));
+            Ok(sent)
+        };
         if !(private && crate::lez::active()) {
             let mut sent = plain()?;
             if crate::lez::active() {
@@ -192,6 +215,7 @@ impl Chain {
         match crate::lez::send_private(message_hex, accounts, root_index.as_u64().unwrap_or(0), program, what) {
             Ok(lez) => {
                 let hash = lez["reply"]["tx_hash"].as_str().unwrap_or("").to_string();
+                crate::jobs::phase("sent", json!({ "tx_hash": hash, "prove_ms": lez["prove_ms"], "by": "lez_core", "waiting_for": "the block that applies it" }));
                 let applied = self.post("module.tx", json!({ "hash": hash, "since": since }))?;
                 let status = crate::lez::poll(&hash);
                 Ok(json!({
@@ -571,6 +595,8 @@ impl Chain {
             "account": a,
             "amount": amount.to_string(),
             "recipient": recipient,
+            // The view's random release delay, kept with the burn so that a view opened again holds the release as chosen.
+            "release_delay_ms": params["release_delay_ms"],
             "balance": self.private_holding(a)?.0.to_string(),
             "tx_hash": sent["tx_hash"],
             "block": sent["block"],
@@ -651,4 +677,51 @@ fn word_dec(v: &Value) -> Result<String, String> {
         return Err("amount above 2^128".into());
     }
     Ok(u128::from_be_bytes(w[16..].try_into().expect("16 bytes")).to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::jobs::tests::{serial, wait_done};
+    use std::sync::mpsc;
+
+    fn call(method: &str, params: Value) -> Value {
+        serde_json::from_str(&wallet(&json!({ "method": method, "params": params }).to_string())).expect("the reply is JSON")
+    }
+
+    #[test]
+    fn the_view_reaches_the_jobs_through_wallet() {
+        let _s = serial();
+        let r = call("job", json!({ "id": 424_242 }));
+        assert_eq!(r["ok"], false);
+        assert!(r["error"].as_str().unwrap().starts_with("no job 424242 in this module"), "{r}");
+        let l = call("jobs", json!({}));
+        assert_eq!(l["ok"], true);
+        assert!(l["result"]["jobs"].is_array());
+    }
+
+    #[test]
+    fn while_a_job_runs_what_would_wait_for_it_is_refused_at_once() {
+        let _s = serial();
+        let (go, gate) = mpsc::channel::<()>();
+        let r = crate::jobs::start("claim", &json!({ "leaf_index": 0 }), move |_| {
+            gate.recv().ok();
+            Ok(json!({ "settled": true }))
+        })
+        .unwrap();
+        let id = r["job"]["id"].as_u64().unwrap();
+        for m in ["scan", "registry", "release", "lez", "lez_report", "open"] {
+            let r = call(m, json!({}));
+            assert_eq!(r["ok"], false);
+            assert!(r["error"].as_str().unwrap().starts_with(&format!("busy: job {id} (the private claim)")), "{m}: {r}");
+        }
+        // The chain service's own calls are not held (here: no session).
+        assert!(call("info", json!({}))["error"].as_str().unwrap().contains("no wallet session"));
+        // The job's own poll and the listing answer.
+        assert_eq!(call("job", json!({ "id": id }))["result"]["running"], true);
+        assert_eq!(call("jobs", json!({}))["result"]["running"].as_u64(), Some(id));
+        go.send(()).unwrap();
+        assert_eq!(wait_done(id)["state"], "settled");
+        assert!(call("scan", json!({}))["error"].as_str().unwrap().contains("no wallet session"));
+    }
 }

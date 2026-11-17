@@ -113,12 +113,14 @@ bash "$REPO/e2e/seqnet/ops.sh" import || die "ops.sh import"
 call registry '{}' || die "registry"
 bash "$REPO/e2e/seqnet/ops.sh" fund || die "ops.sh fund"
 call scan '{}' || die "scan"
-call claim '{"leaf_index": 0, "private": true}' || die "the private claim"
+# The module's claim and burn are jobs (calls/src/jobs.rs); logosctl's call may last minutes (--timeout above), so these
+# run in the call itself ("wait": true), answered as before.
+call claim '{"leaf_index": 0, "private": true, "wait": true}' || die "the private claim"
 call scan '{}' || die "scan"
 FRESH="$(cast wallet new --json | jq -r '.[0].address')"
 echo "FRESH=$FRESH" >> "$SEQNET_ENV"
 say "the user's fresh Ethereum address for the release: $FRESH (cast wallet new; its key is not kept)"
-call burn "$(jq -c -n --arg r "$FRESH" '{account: 0, amount: "1000000000000000", private: true, recipient: $r}')" || die "the private burn"
+call burn "$(jq -c -n --arg r "$FRESH" '{account: 0, amount: "1000000000000000", private: true, recipient: $r, wait: true}')" || die "the private burn"
 call scan '{}' || die "scan"
 bash "$REPO/e2e/seqnet/ops.sh" checkpoint || die "ops.sh checkpoint"
 if call release '{"burn_index": 0}'; then

@@ -18,6 +18,7 @@
 
 use std::fmt::Write as _;
 
+mod jobs;
 mod lez;
 mod rpc;
 mod session;

@@ -32,6 +32,11 @@ function pct(used, capacity) {
 
 // The program's and the vault's codes, by name, mapped to what the user can do.
 var MESSAGES = [
+    // The module's jobs (its private claim and burn run for minutes): busy while one is proven, one at a time, a job the
+    // module does not know (it was restarted).
+    [/^busy: job \d+/, "Busy: a private transaction is being proven. This can be done once it is finished."],
+    [/^refused: job \d+ .*one private transaction at a time/, "One private transaction at a time: the one being proven must finish first."],
+    [/no job \d+ in this module/, "Unknown job: the module does not have it (it may have been restarted). Refresh your positions to see what reached the chain."],
     // The host stopped waiting (Basecamp cuts a ui module's call to a core module at 20 s), the module did not: the
     // step may still complete, so the user must not be told that nothing changed.
     [/Logos host:.*(timed out|timeout)/i, "No answer in time: the step may still complete. Refresh your positions before repeating it."],

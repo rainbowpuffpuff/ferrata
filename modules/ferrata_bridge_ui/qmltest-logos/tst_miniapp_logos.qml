@@ -197,5 +197,51 @@ Item {
             verify(has(el("positions.summary").text, "0 not claimed"), el("positions.summary").text);
             shot("18-positions-after-private-round-trip");
         }
+
+        // The module's jobs (ferrata_bridge_module calls/src/jobs.rs): the claim and the burn above were jobs the view
+        // started and polled. Then: a view opened afresh finds them (the burn's with its release delay); an unknown job
+        // id; a failed job's error reaching the view.
+        function test_08_jobs() {
+            var l = wallet("jobs", {});
+            verify(l.ok, "jobs: " + l.error);
+            var kinds = l.result.jobs.map(function (j) { return j.kind + ":" + j.state; });
+            console.log("JOBS " + JSON.stringify(kinds));
+            verify(kinds.indexOf("claim:settled") >= 0 && kinds.indexOf("burn:settled") >= 0, "the claim's and the burn's jobs settled: " + kinds);
+            // A second view, its state empty, as a view opened again: it picks the jobs up from the module.
+            var c = Qt.createComponent(Qt.resolvedUrl("../qml/Main.qml"));
+            var v2 = c.createObject(host, { visible: false });
+            verify(v2 !== null && v2.claimJob === null && v2.burnJob === null && v2.burnText === "", "a fresh view knows no job");
+            v2.resumeJobs();
+            tryVerify(function () { return v2.burnJob !== null && v2.claimJob !== null; }, 30000, "the fresh view found the jobs");
+            compare(v2.burnJob.state, "settled", "the burn's job, finished, found again");
+            verify(has(v2.burnText, "Burned privately"), "its reply applied: " + v2.burnText);
+            verify(v2.burnReply.release_delay_ms > 0, "the burn's release delay came back with the job: " + v2.burnReply.release_delay_ms);
+            compare(v2.releaseHeldUntil[0], v2.burnJob.finished_ms + v2.burnReply.release_delay_ms, "the release held from the burn's settlement for its own delay");
+            verify(has(v2.claimText, "Claimed privately"), "the claim's reply applied: " + v2.claimText);
+            v2.destroy();
+            // An unknown job id: the module says so; the view, polling it, ends the job with that answer.
+            var r = wallet("job", { id: 987654 });
+            verify(!r.ok && has(r.error, "no job 987654 in this module"), "unknown id: " + r.error);
+            host.app.adoptJob({ id: 987654, kind: "claim", state: "proving", elapsed_ms: 0 }, false);
+            tryVerify(function () { return host.app.claimJob.state === "failed"; }, 30000, "the view's poll of an unknown job");
+            verify(has(host.app.lastError, "no job 987654"), "its error reached the view: " + host.app.lastError);
+            verify(has(el("error.message").text, "Unknown job"), el("error.message").text);
+            // A failed job's error reaches the view: a claim of a position that is not this wallet's.
+            tab("claim");
+            host.app.claimLeaf = 99;
+            click("claim.submit");
+            approve("claim", "");
+            tryVerify(function () { return host.app.claimJob && host.app.claimJob.id !== 987654 && host.app.jobOver(host.app.claimJob); }, 60000, "the failing claim's job ended");
+            compare(host.app.claimJob.state, "failed", "the job failed");
+            verify(has(host.app.lastError, "not a deposit of this wallet"), "the job's error reached the view: " + host.app.lastError);
+            verify(el("error.banner").visible, "shown in the error banner");
+            verify(has(el("claim.job").text, "failed"), el("claim.job").text);
+            compare(host.app.claimText, "", "no claim text for a failed claim");
+            shot("19-a-failed-job-reaches-the-view");
+            // Every call of the view returned at once: the longest.
+            var longest = 0;
+            for (var i = 0; i < host.app.callLog.length; i++) longest = Math.max(longest, host.app.callLog[i].ms);
+            console.log("CALLS " + host.app.callLog.length + " longest " + longest + " ms");
+        }
     }
 }

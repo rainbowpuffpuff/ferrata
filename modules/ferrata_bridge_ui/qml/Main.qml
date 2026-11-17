@@ -29,6 +29,16 @@ Rectangle {
     // How long the view waits for the core module's answer through an asynchronous host bridge.
     property int moduleTimeoutMs: 600000
     property var callLog: []
+    // A claim or burn through the module is a job (ferrata_bridge_module, calls/src/jobs.rs): a private one is proven for
+    // minutes on a CPU, and Basecamp ends a view's call to a core module at 20 s. The call starts the job and is answered
+    // at once; the view keeps the job's record (claimJob, burnJob), polls it every jobPollMs and applies its reply once it
+    // is done. A view opened again picks the jobs up (resumeJobs).
+    property var claimJob: null
+    property var burnJob: null
+    property int jobPollMs: 3000
+    property var appliedJobs: ({})
+    property bool jobPolling: false
+    property bool positionsDeferred: false
     property string ethRpc: "http://127.0.0.1:18545"
     property string sequencer: "harness"
     property string endpointStatus: ""
@@ -98,18 +108,22 @@ Rectangle {
         return h;
     }
 
-    function call(method, params, done) {
-        busy += 1;
+    // `quiet`: a background call (a job's poll, the jobs listing) that neither marks the view busy nor sets its last
+    // result or error; it is still in the call log.
+    function call(method, params, done, quiet) {
+        if (!quiet) busy += 1;
         calls += 1;
         var t0 = Date.now();
         var finish = function (ok, value) {
-            busy -= 1;
+            if (!quiet) busy -= 1;
             // The view's own record of its calls (method, outcome, milliseconds), for a test or a support request.
             callLog.push({ method: method, ok: ok, ms: Date.now() - t0, transport: transport, error: ok ? "" : String(value).slice(0, 300) });
-            if (callLog.length > 500) callLog.shift();
-            lastMethod = method;
-            lastOk = ok;
-            if (ok) { lastResult = value; lastError = ""; } else { lastError = String(value); }
+            if (callLog.length > 2000) callLog.shift();
+            if (!quiet) {
+                lastMethod = method;
+                lastOk = ok;
+                if (ok) { lastResult = value; lastError = ""; } else { lastError = String(value); }
+            }
             if (done) done(ok, value);
         };
         if (transport === "module") {
@@ -164,8 +178,82 @@ Rectangle {
         finish(true, (r && r.result !== undefined) ? r.result : r);
     }
     function refreshInfo(done) { call("info", {}, function (ok, v) { if (ok) info = v; if (done) done(ok, v); }); }
-    function refreshRegistry(done) { call("registry", {}, function (ok, v) { if (ok) registry = v; if (done) done(ok, v); }); }
-    function refreshPositions(done) { call("scan", {}, function (ok, v) { if (ok) positions = v; if (done) done(ok, v); }); }
+    // While a job runs, the module answers neither (they would wait for LEZ's wallet, busy proving): the positions are read
+    // once the job is done.
+    function refreshRegistry(done) {
+        if (jobRunning()) { if (done) done(false, "deferred: a job is running"); return; }
+        call("registry", {}, function (ok, v) { if (ok) registry = v; if (done) done(ok, v); });
+    }
+    function refreshPositions(done) {
+        if (jobRunning()) { positionsDeferred = true; if (done) done(false, "deferred: a job is running"); return; }
+        call("scan", {}, function (ok, v) { if (ok) positions = v; if (done) done(ok, v); });
+    }
+
+    // ---- jobs (the module's claim and burn) ----
+    function jobOver(j) { return !!j && (j.state === "settled" || j.state === "failed"); }
+    function jobRunning() { return (!!claimJob && !jobOver(claimJob)) || (!!burnJob && !jobOver(burnJob)); }
+    // A claim or burn: the module answers with a job, polled until it is done; the devnet backend answers with the
+    // step's reply itself. Either way stepDone runs once with the reply.
+    function step(kind, params) {
+        call(kind, params, function (ok, v) {
+            if (ok && v && v.job) adoptJob(v.job, false);
+            else stepDone(kind, ok, v, null, false);
+        });
+    }
+    function adoptJob(j, resumed) {
+        if (j.kind === "claim") claimJob = j; else if (j.kind === "burn") burnJob = j; else return;
+        if (jobOver(j)) applyJob(j, resumed);
+    }
+    // A finished job's reply, applied once, as the call's own reply was: the step's text, the release's hold.
+    function applyJob(j, resumed) {
+        if (appliedJobs[j.id]) return;
+        var a = {}; for (var k in appliedJobs) a[k] = appliedJobs[k]; a[j.id] = true; appliedJobs = a;
+        var hasReply = j.result !== null && j.result !== undefined;
+        stepDone(j.kind, hasReply, hasReply ? j.result : j.error, j, resumed);
+        if (positionsDeferred && !jobRunning()) { positionsDeferred = false; refreshPositions(); }
+    }
+    function stepDone(kind, ok, v, job, resumed) {
+        // A failed job's error reaches the view's banner, as a failed call's does (not for a job found on reopening).
+        if (!ok && job && !resumed) { lastError = String(v); lastOk = false; }
+        if (kind === "claim") claimFinished(ok, v, job); else burnFinished(ok, v, job);
+    }
+    function pollJobs() {
+        if (jobPolling) return;
+        var j = (claimJob && !jobOver(claimJob)) ? claimJob : ((burnJob && !jobOver(burnJob)) ? burnJob : null);
+        if (!j) return;
+        jobPolling = true;
+        call("job", { id: j.id }, function (ok, v) {
+            jobPolling = false;
+            if (ok) adoptJob(v, false);
+            // The module no longer has it (restarted): the job is over, with the module's answer as its error.
+            else if (/no job \d+/.test(String(v))) adoptJob({ id: j.id, kind: j.kind, state: "failed", error: String(v), elapsed_ms: j.elapsed_ms, result: null }, false);
+        }, true);
+    }
+    // A view opened again, or one that missed a reply, picks up the module's newest claim and burn jobs: a running one
+    // is polled again, a finished one is applied (its text; the release's hold from the burn's own delay).
+    function resumeJobs(done) {
+        if (transport !== "module") { if (done) done(false, "no module"); return; }
+        call("jobs", {}, function (ok, v) {
+            if (ok && v && v.jobs) {
+                var newest = {};
+                for (var i = 0; i < v.jobs.length; i++) newest[v.jobs[i].kind] = v.jobs[i];
+                if (newest.claim && (!claimJob || claimJob.id <= newest.claim.id)) adoptJob(newest.claim, true);
+                if (newest.burn && (!burnJob || burnJob.id <= newest.burn.id)) adoptJob(newest.burn, true);
+            }
+            if (done) done(ok, v);
+        }, true);
+    }
+    function jobText(j) {
+        if (!j) return "";
+        var all = Math.round((j.elapsed_ms || 0) / 1000), proving = Math.round((j.proving_ms || 0) / 1000);
+        var what = "the private " + j.kind;
+        if (j.state === "queued") return "Job " + j.id + ": " + what + " is being prepared (the chains read, the transaction built), " + all + " s.";
+        if (j.state === "proving") return "Job " + j.id + ": the proof of " + what + " is being made by the LEZ wallet, " + proving + " s so far (" + all + " s in all). It takes minutes on a CPU; this view may be closed meanwhile.";
+        if (j.state === "sent") return "Job " + j.id + ": proven in " + proving + " s and sent (transaction " + Fmt.short(j.tx_hash) + "); waiting for the block that applies it, " + all + " s in all.";
+        if (j.state === "settled") return "Job " + j.id + ": " + what + " settled after " + all + " s" + (j.proving_ms ? " (the proof " + proving + " s)" : "") + ".";
+        return "Job " + j.id + ": " + what + " failed after " + all + " s: " + Fmt.friendly(j.error) + " (" + Fmt.technical(j.error) + ")";
+    }
+    Timer { id: jobTimer; interval: jobPollMs; repeat: true; running: jobRunning(); onTriggered: pollJobs() }
     function refreshAdmin(done) { call("admin.status", {}, function (ok, v) { if (ok) { admin = v; registry = v.registry; } if (done) done(ok, v); }); }
     function token() { return registry && registry.tokens && registry.tokens.length ? registry.tokens[0] : null; }
     function denomAmount(i) { var t = token(); return t && t.denominations[i] ? t.denominations[i].amount : "0"; }
@@ -211,6 +299,7 @@ Rectangle {
             return;
         }
         refreshInfo();
+        resumeJobs();
         selecting = true;
     }
     function approve() { var a = approval; approval = null; if (a && a.go) a.go(); }
@@ -219,7 +308,12 @@ Rectangle {
     // On the devnet the view loads its data at once. Inside Logos it calls ferrata_bridge_module on the
     // user's first action instead: a synchronous call to a core module that is not installed must not
     // hold the view before it is drawn.
-    Component.onCompleted: if (transport === "devnet") { refreshInfo(); refreshRegistry(); }
+    // Inside Basecamp (asynchronous calls) it picks up the module's jobs at once: a view opened again finds the proof it
+    // left running, and a finished one's reply.
+    Component.onCompleted: {
+        if (transport === "devnet") { refreshInfo(); refreshRegistry(); }
+        else if (typeof logos.callModuleAsync === "function") resumeJobs();
+    }
 
     // ---- reusable pieces -----------------------------------------------------------------------
     component Heading: Label { font.pixelSize: 18; font.bold: true; color: "#1d2733"; Layout.topMargin: 6 }
@@ -283,7 +377,13 @@ Rectangle {
                 RowLayout {
                     Label { objectName: "wallet.status"; text: connectedAccount ? "Wallet: " + Fmt.short(connectedAccount) : "Wallet: not connected"; font.bold: true }
                     Button { objectName: "wallet.connect"; text: connectedAccount ? "Switch account" : "Connect wallet"; onClicked: walletConnect() }
-                    BusyIndicator { running: busy > 0; visible: busy > 0; implicitWidth: 24; implicitHeight: 24 }
+                    BusyIndicator { running: busy > 0 || jobRunning(); visible: running; implicitWidth: 24; implicitHeight: 24 }
+                }
+                Label {
+                    objectName: "header.job"
+                    visible: jobRunning()
+                    text: jobRunning() ? jobText(claimJob && !jobOver(claimJob) ? claimJob : burnJob) : ""
+                    color: "#8a6d00"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.maximumWidth: 560
                 }
                 // Both sides of the connected account, as the backend last read them: the Ethereum balance and block
                 // (`info`), the LEZ holdings of account /0 (`scan`); refreshed on demand.
@@ -430,9 +530,15 @@ Rectangle {
                     Button { objectName: "claim.wait"; visible: transport === "devnet" && claimLeaf >= 0 && held(claimLeaf); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(heldUntil[claimLeaf]) + " h on)"; onClicked: letTimePass(heldUntil[claimLeaf]) }
                     Button {
                         objectName: "claim.submit"
-                        text: claimMode === "private" ? "Claim privately" : "Claim in plaintext"
-                        enabled: busy === 0 && claimLeaf >= 0 && connectedAccount !== "" && (claimMode === "private" || plainAcknowledged) && (!held(claimLeaf) || skipDelay)
+                        text: claimJob && !jobOver(claimJob) ? "Proof being made (job " + claimJob.id + ")" : (claimMode === "private" ? "Claim privately" : "Claim in plaintext")
+                        enabled: busy === 0 && !jobRunning() && claimLeaf >= 0 && connectedAccount !== "" && (claimMode === "private" || plainAcknowledged) && (!held(claimLeaf) || skipDelay)
                         onClicked: reviewClaim()
+                    }
+                    RowLayout {
+                        visible: claimJob !== null
+                        Layout.fillWidth: true
+                        BusyIndicator { running: claimJob !== null && !jobOver(claimJob); visible: running; implicitWidth: 24; implicitHeight: 24 }
+                        Label { objectName: "claim.job"; text: jobText(claimJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: claimJob && claimJob.state === "failed" ? "#b3261e" : "#1d2733" }
                     }
                 }
                 LeakList {
@@ -471,9 +577,15 @@ Rectangle {
                     CheckBox { objectName: "burn.delay"; text: "Hold the release for a random delay (recommended): " + releaseDelayHours + " h"; checked: releaseDelayOn; onClicked: releaseDelayOn = checked }
                     Button {
                         objectName: "burn.submit"
-                        text: "Burn " + denomText(burnDenom)
-                        enabled: busy === 0 && connectedAccount !== "" && (burnKind === "private" || burnPublicAcknowledged)
+                        text: burnJob && !jobOver(burnJob) ? "Proof being made (job " + burnJob.id + ")" : "Burn " + denomText(burnDenom)
+                        enabled: busy === 0 && !jobRunning() && connectedAccount !== "" && (burnKind === "private" || burnPublicAcknowledged)
                         onClicked: reviewBurn()
+                    }
+                    RowLayout {
+                        visible: burnJob !== null
+                        Layout.fillWidth: true
+                        BusyIndicator { running: burnJob !== null && !jobOver(burnJob); visible: running; implicitWidth: 24; implicitHeight: 24 }
+                        Label { objectName: "burn.job"; text: jobText(burnJob); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: burnJob && burnJob.state === "failed" ? "#b3261e" : "#1d2733" }
                     }
                 }
                 LeakList {
@@ -504,7 +616,7 @@ Rectangle {
                     }
                     CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }
                     Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
-                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
+                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
@@ -741,15 +853,17 @@ Rectangle {
             rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", d ? d.kind + " LEZ account /" + d.account : "?"], ["Asset", "wrapped ETH"], ["Amount", d ? Fmt.eth(d.amount) : "?"], ["Destination", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")], ["Submitted by", relayerOn ? "a permissionless relayer" : "you"]],
             effects: claimMode === "private" ? ["Proves the claim in the LEZ wallet; spends the deposit's nullifier", "Mints the denomination to your account; does not say which deposit"] : ["Spends the deposit's nullifier in public", "Mints the denomination to your account, naming the deposit"]
         }, function () {
-            call("claim", { leaf_index: claimLeaf, private: claimMode === "private" }, function (ok, v) {
-                if (!ok) { claimText = ""; return; }
-                claimReply = v;
-                if (v.settled && v.private) claimText = "Claimed privately: " + v.what + ". Private balance /" + v.account + ": " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
-                else if (v.settled) claimText = "Claimed: " + v.what + ". Balance " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ".";
-                else claimText = "Private claim built (nullifier " + Fmt.short(v.nullifier) + ", root of " + v.root_leaf_count + " leaves). Public on LEZ once proven: " + v.public_on_lez.join(", ") + ". Not settled here: " + v.not_settled_because + ".";
-                refreshPositions();
-            });
+            step("claim", { leaf_index: claimLeaf, private: claimMode === "private" });
         });
+    }
+    // The claim's reply (the call's, or its job's once done).
+    function claimFinished(ok, v, job) {
+        if (!ok) { claimText = ""; return; }
+        claimReply = v;
+        if (v.settled && v.private) claimText = "Claimed privately: " + v.what + ". Private balance /" + v.account + ": " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
+        else if (v.settled) claimText = "Claimed: " + v.what + ". Balance " + Fmt.eth(v.balance) + ". Nullifier " + Fmt.short(v.nullifier) + ".";
+        else claimText = "Private claim built (nullifier " + Fmt.short(v.nullifier) + ", root of " + v.root_leaf_count + " leaves). Public on LEZ once proven: " + v.public_on_lez.join(", ") + ". Not settled here: " + v.not_settled_because + ".";
+        refreshPositions();
     }
 
     function reviewBurn() {
@@ -758,19 +872,27 @@ Rectangle {
             rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", burnKind + " LEZ account /0"], ["Asset", "wrapped ETH"], ["Amount", denomText(burnDenom)], ["Destination", "release to " + recipient + " on Ethereum (encrypted in the note)"]],
             effects: ["Debits " + denomText(burnDenom) + " from the holder", "Publishes a burn note for a later release"]
         }, function () {
-            call("burn", { account: 0, amount: denomAmount(burnDenom), recipient: recipient, private: burnKind === "private" }, function (ok, v) {
-                if (!ok) { burnText = ""; return; }
-                burnReply = v;
-                var h = {}; for (var k in releaseHeldUntil) h[k] = releaseHeldUntil[k];
-                if (v.settled && releaseDelayOn && v.burn_index !== undefined) h[v.burn_index] = now() + releaseDelayHours * 3600 * 1000;
-                releaseHeldUntil = h;
-                var after = " Release to " + Fmt.short(v.recipient) + " after the next checkpoint" + (releaseDelayOn ? " and your random delay (" + releaseDelayHours + " h)." : ".");
-                if (v.settled && v.private) burnText = "Burned privately " + Fmt.eth(v.amount) + " (" + v.what + "); private balance /" + v.account + " " + Fmt.eth(v.balance) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + "." + after;
-                else if (v.settled) burnText = "Burned " + Fmt.eth(v.amount) + " (" + v.what + "); balance " + Fmt.eth(v.balance) + "." + after;
-                else burnText = "Private burn not settled here: " + v.not_settled_because + ".";
-                refreshPositions();
-            });
+            // The release's random delay goes with the burn: the module keeps it with the job and returns it in the reply.
+            step("burn", { account: 0, amount: denomAmount(burnDenom), recipient: recipient, private: burnKind === "private",
+                           release_delay_ms: releaseDelayOn ? releaseDelayHours * 3600 * 1000 : 0 });
         });
+    }
+    // The burn's reply (the call's, or its job's once done). The release is held for the delay the burn was started with
+    // (the reply's release_delay_ms; a devnet backend's reply has none: the view's own choice), from the burn's
+    // settlement on this view's clock (the job's end, moved by the view's clock offset).
+    function burnFinished(ok, v, job) {
+        if (!ok) { burnText = ""; return; }
+        burnReply = v;
+        var delay = (v.release_delay_ms !== undefined && v.release_delay_ms !== null) ? Number(v.release_delay_ms) : (releaseDelayOn ? releaseDelayHours * 3600 * 1000 : 0);
+        var from = job && job.finished_ms ? job.finished_ms + clockOffset : now();
+        var h = {}; for (var k in releaseHeldUntil) h[k] = releaseHeldUntil[k];
+        if (v.settled && delay > 0 && v.burn_index !== undefined) h[v.burn_index] = from + delay;
+        releaseHeldUntil = h;
+        var after = " Release to " + Fmt.short(v.recipient) + " after the next checkpoint" + (delay > 0 ? " and your random delay (" + Math.round(delay / 3600000) + " h)." : ".");
+        if (v.settled && v.private) burnText = "Burned privately " + Fmt.eth(v.amount) + " (" + v.what + "); private balance /" + v.account + " " + Fmt.eth(v.balance) + ". Proof: " + proofText(v.proof) + ". Public on LEZ: " + v.public_on_lez.join(", ") + "." + after;
+        else if (v.settled) burnText = "Burned " + Fmt.eth(v.amount) + " (" + v.what + "); balance " + Fmt.eth(v.balance) + "." + after;
+        else burnText = "Private burn not settled here: " + v.not_settled_because + ".";
+        refreshPositions();
     }
 
     function reviewRelease() {

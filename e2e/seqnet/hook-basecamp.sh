@@ -12,7 +12,8 @@
 #      relayer's steps run between them (ops.sh); after each step the chains are read directly (ops.sh chain); a
 #      picture of Basecamp's window at each state.
 # BASECAMP_LEZ=lez_core (default: the session's LEZ reads, private holding, private claim and burn through lez_core,
-# the module's `wallet lez`) or plain (all through seqnet-chain). Records: $RUN/basecamp/.
+# the module's `wallet lez`) or plain (all through seqnet-chain). BASECAMP_REOPEN=1: the view unloaded and loaded again
+# while the burn's job proves (roundtrip.mjs). Records: $RUN/basecamp/.
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
@@ -49,12 +50,12 @@ LEZ_PARAMS="$(jq -c -n --arg c "$W/lezcore-wallet/wallet_config.json" --arg s "$
   --arg b "$BRIDGE_BIN" '{via: "lez_core", wallet: {config: $c, storage: $s, password_file: $p}, program_bin: $b}')"
 dmode=(env RISC0_DEV_MODE=1); [ "$PROOFS" = real ] && dmode=(env -u RISC0_DEV_MODE)
 wait_ms=180000; [ "$PROOFS" = real ] && wait_ms=1800000
-{ cat "$BC/VERSIONS"; echo "route: $LEZ_ROUTE; proofs: $PROOFS"; } > "$M/basecamp-versions.txt"
+{ cat "$BC/VERSIONS"; echo "route: $LEZ_ROUTE; proofs: $PROOFS; reopen: ${BASECAMP_REOPEN:-0}"; } > "$M/basecamp-versions.txt"
 say "Basecamp: $(head -n 1 "$BC/VERSIONS" | cut -c1-80); the round trip in the mini-app (LEZ through $LEZ_ROUTE, proofs $PROOFS)"
 t0=$(date +%s)
 ( cd "$REPO/modules/ferrata_bridge_ui/basecamp" && "${dmode[@]}" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-}" \
     PATH="${ZONE_BIN:-/nonexistent}:$PATH" TMPDIR="$LT" HOME="$W/basecamp-home" LOGOS_TEST_TIMEOUT=10800 \
-    BASECAMP_OUT="$M" BASECAMP_LEZ="$LEZ_ROUTE" BASECAMP_LEZ_PARAMS="$LEZ_PARAMS" BASECAMP_WAIT_MS="$wait_ms" \
+    BASECAMP_OUT="$M" BASECAMP_LEZ="$LEZ_ROUTE" BASECAMP_LEZ_PARAMS="$LEZ_PARAMS" BASECAMP_WAIT_MS="$wait_ms" BASECAMP_REOPEN="${BASECAMP_REOPEN:-0}" \
     SEQNET_CHAIN_URL="http://127.0.0.1:$CHAIN_PORT/" SEQNET_OPS="bash $REPO/e2e/seqnet/ops.sh" \
     "$DEV" --module "$BC/ui-install" --modules-dir "$BC/modules-root" --width 1440 --height 1250 \
     --test "$REPO/modules/ferrata_bridge_ui/basecamp/roundtrip.mjs" ) > "$M/basecamp-run.log" 2>&1
