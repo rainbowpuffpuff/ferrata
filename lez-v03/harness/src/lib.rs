@@ -952,3 +952,205 @@ pub fn write_results(name: &str, reports: &[TxReport]) {
     }
     std::fs::write(dir.join(format!("{name}.tsv")), out).unwrap();
 }
+
+// ---------------------------------------------------------------------------------------------
+// Driven by state: what a run sends next, whatever third parties did before it
+// ---------------------------------------------------------------------------------------------
+//
+// Anyone may send the program's transactions (`Init`, `Update`, `Continue`, `Attest`) and
+// anyone may write an empty account's loader shard (`WriteSegment` needs no signature). None of it
+// can make the program accept what the core refuses (soundness is the program's); it can only make
+// a pre-signed sequence fail (liveness). So a run reads the chain before it signs, and signs what
+// is missing from the state it finds:
+// - the program: deployed only if the header and segment accounts are free or hold exactly ours;
+//   otherwise the run chooses fresh accounts ([`deployment`]);
+// - an instance created by someone else without its committee: adopt it (`Continue`);
+// - a verified handoff left without its adoption (it blocks every update, 207): adopt it;
+// - updates someone else already applied: skipped; the native light client is rebuilt from the
+//   store the chain holds ([`Instance::sync_to_state`]), so later updates are built on it.
+
+/// Read access to the accounts' shards (the in-process chain, or a snapshot of a sequencer's).
+pub trait StateView {
+    fn shard_of(&self, account: AccountId, program: AccountId) -> Vec<u8>;
+}
+
+impl StateView for Chain {
+    fn shard_of(&self, account: AccountId, program: AccountId) -> Vec<u8> {
+        self.shard(account, program)
+    }
+}
+
+/// A snapshot of shards read over RPC.
+#[derive(Clone, Debug, Default)]
+pub struct MapView(pub std::collections::HashMap<(AccountId, AccountId), Vec<u8>>);
+
+impl StateView for MapView {
+    fn shard_of(&self, account: AccountId, program: AccountId) -> Vec<u8> {
+        self.0.get(&(account, program)).cloned().unwrap_or_default()
+    }
+}
+
+/// The deployment's accounts as the chain holds them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Deployment {
+    /// The header holds this program (`FERRATA_V03_ID`): nothing to deploy.
+    Ours,
+    /// The header is free; `written[i]` if segment `i` already holds exactly our chunk.
+    Free { written: Vec<bool> },
+    /// Someone else wrote the header or a segment: choose fresh accounts.
+    Taken(String),
+}
+
+/// The segments' expected loader shards for `header`'s chain of `segments`.
+pub fn segment_shards(segments: &[AccountId]) -> Vec<Vec<u8>> {
+    let user_elf = risc0_binfmt::ProgramBinary::decode(FERRATA_V03_ELF).expect("a RISC Zero program binary").user_elf.to_vec();
+    user_elf
+        .chunks(program_loader_core::MAX_SEGMENT_DATA_LEN)
+        .enumerate()
+        .map(|(i, c)| {
+            lee_core::program::ProgramSegment { bytecode: c.to_vec(), next_segment: segments.get(i + 1).copied() }.to_bytes()
+        })
+        .collect()
+}
+
+pub fn deployment(view: &dyn StateView, header: AccountId, segments: &[AccountId]) -> Deployment {
+    let h = view.shard_of(header, PROGRAM_LOADER_ACCOUNT_ID);
+    if !h.is_empty() {
+        return match lee_core::program::ProgramHeader::from_bytes(&h) {
+            Some(p) if p.image_id == FERRATA_V03_ID => Deployment::Ours,
+            Some(p) => Deployment::Taken(format!("the header account {header} holds image {}", image_id_hex(p.image_id))),
+            None => Deployment::Taken(format!("the header account {header} holds other loader data")),
+        };
+    }
+    let mut written = vec![];
+    for (i, (seg, want)) in segments.iter().zip(segment_shards(segments)).enumerate() {
+        let got = view.shard_of(*seg, PROGRAM_LOADER_ACCOUNT_ID);
+        if got.is_empty() {
+            written.push(false);
+        } else if got == want {
+            written.push(true);
+        } else {
+            return Deployment::Taken(format!("segment account {i} ({seg}) was written by someone else"));
+        }
+    }
+    Deployment::Free { written }
+}
+
+/// One step a run sends, with the kind its verdict is checked by (`init`, `adopt-init`,
+/// `adopt-pending`, `update:<name>`, `continue:<name>`).
+#[derive(Clone, Debug)]
+pub struct Planned2 {
+    pub kind: String,
+    pub planned: Planned,
+}
+
+impl Instance {
+    /// Make the native light client hold exactly `store` (the chain's), its committees taken
+    /// from `known` by their summaries. The finalized header is the beacon header alone: records
+    /// are always built from the update that finalizes a header, never from the store.
+    pub fn sync_to_state(&mut self, store: &CompactStore, known: &[SyncCommittee]) -> Result<(), String> {
+        let find = |s: &ferrata_core::witness::CommitteeSummary| {
+            known.iter().find(|c| ferrata_core::witness::CommitteeSummary::of(c) == *s).cloned()
+        };
+        let current = find(&store.current).ok_or("the store's current committee is not among the known ones")?;
+        let next = match &store.next {
+            Some(n) => find(n).ok_or("the store's next committee is not among the known ones")?,
+            None => SyncCommittee::empty(self.config.sync_committee_size as usize),
+        };
+        let mut header = LightClientHeader::empty(store.fork);
+        header.beacon = store.finalized.clone();
+        let core = StoreCore { fork: store.fork, finalized_header: header, current_sync_committee: current, next_sync_committee: next };
+        self.native = FinalizedStore::from_core(core, &BLS).map_err(|e| format!("{e:?}"))?;
+        if CompactStore::of(self.native.core()) != *store {
+            return Err("the rebuilt store differs from the chain's".into());
+        }
+        Ok(())
+    }
+
+    /// The parts of `committee` from part `from` on.
+    fn parts_from(&self, committee: &SyncCommittee, from: u8) -> Vec<Part> {
+        self.parts(committee).into_iter().filter(|p| p.index >= from).collect()
+    }
+
+    /// Everything to send next, read from `view`: `Init` (or the adoption a third party's
+    /// `Init` left undone), the adoption of a verified handoff left undone, then every update of
+    /// `updates` newer than the store (in order; one or two transactions each). The native light
+    /// client ends where the chain will be once these apply. `notes` says what was found.
+    pub fn plan_from_state(
+        &mut self,
+        view: &dyn StateView,
+        bootstrap: &LightClientBootstrap,
+        updates: &[(String, LightClientUpdate)],
+        known: &[SyncCommittee],
+        notes: &mut Vec<String>,
+    ) -> Result<Vec<Planned2>, String> {
+        let mut out = vec![];
+        let shard = view.shard_of(self.account(), self.program);
+        let after = |t: u64| t + 12_000;
+        if shard.is_empty() {
+            let (p, rest) = self.init(bootstrap, usize::MAX);
+            assert!(rest.is_empty());
+            out.push(Planned2 { kind: "init".into(), planned: p });
+        } else {
+            let state: InstanceState = borsh::from_slice(&shard).map_err(|e| format!("instance state: {e}"))?;
+            let job = state.job.as_ref().map(|j| Job::decode(j)).transpose().map_err(|e| format!("job: {e:?}"))?;
+            if !state.active {
+                // Someone created the instance without adopting its committee: adopt it.
+                let job = job.ok_or("an inactive instance without its job")?;
+                let from = job.adoption.as_ref().map(|a| a.next_part()).unwrap_or(0);
+                let parts = self.parts_from(&bootstrap.current_sync_committee, from);
+                notes.push(format!("the instance exists without its committee adopted: Continue with parts {from}.. of it"));
+                let steps = parts.into_iter().map(Step::Adopt).collect();
+                let c = self.continue_with("adopt the bootstrap committee (Continue)", steps, Some(job.pending.record()), after(self.config.slot_start_ms(bootstrap.header.beacon.slot)));
+                out.push(Planned2 { kind: "adopt-init".into(), planned: c });
+            } else {
+                let store = CompactStore::decode(&state.store).map_err(|e| format!("store: {e:?}"))?;
+                self.sync_to_state(&store, known)?;
+                if let Some(job) = job.filter(|j| j.phase == Phase::Verified && j.adoption_pending()) {
+                    // A verified handoff someone left without its adoption blocks every update (207).
+                    let a = job.adoption.as_ref().unwrap();
+                    let committee = known
+                        .iter()
+                        .find(|c| ferrata_core::witness::CommitteeSummary::of(c) == a.committee)
+                        .ok_or("the pending job's committee is not among the known ones: fetch its period's update")?
+                        .clone();
+                    let mut done = job.clone();
+                    done.adoption.as_mut().unwrap().complete = true;
+                    let (next, outcome) = steps::apply(&store, &done, &self.spec).map_err(|e| format!("{e:?}"))?;
+                    let record = outcome.advanced.then(|| job.pending.record().clone());
+                    notes.push(format!("a verified handoff waits for its adoption: Continue with parts {}..", a.next_part()));
+                    let steps = self.parts_from(&committee, a.next_part()).into_iter().map(Step::Adopt).collect();
+                    let c = self.continue_with("adopt the pending handoff's committee (Continue)", steps, record.as_ref(), 0);
+                    out.push(Planned2 { kind: "adopt-pending".into(), planned: c });
+                    self.sync_to_state(&next, known)?;
+                }
+            }
+        }
+        for (name, u) in updates {
+            let finalized = self.native.core().finalized_header.beacon.slot;
+            if u.finalized_header.beacon.slot <= finalized && !(u.next_sync_committee.pubkeys.iter().any(|k| *k != [0u8; 48]) && !self.native.core().is_next_sync_committee_known()) {
+                notes.push(format!("{name}: the instance is already at slot {finalized} or later: skipped"));
+                continue;
+            }
+            let layout = self.layout_for(self.native.core().fork, u);
+            if self.native_job(u, layout).is_none() {
+                notes.push(format!("{name}: refused by the native light client on the chain's store: skipped"));
+                continue;
+            }
+            let (p, rest, record) = self.update(&format!("update {name} (residue witness{})", ""), u, Verify::Residue { c: vec![], w: vec![] }, Signers::Core, false);
+            let one = rest.is_empty();
+            let mut p = p;
+            if one {
+                p.label = format!("update {name} (residue witness, one transaction)");
+            }
+            let t = p.timestamp_ms;
+            out.push(Planned2 { kind: format!("update:{name}"), planned: p });
+            if !one {
+                let c = self.continue_with(&format!("update {name}: Continue (adopt 512 keys, apply)"), rest.into_iter().map(Step::Adopt).collect(), record.as_ref(), t + 12_000);
+                out.push(Planned2 { kind: format!("continue:{name}"), planned: c });
+            }
+            self.follow(u);
+        }
+        Ok(out)
+    }
+}
