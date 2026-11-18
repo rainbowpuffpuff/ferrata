@@ -77,7 +77,10 @@ path. Since the evidence (`Instruction::Evidence`, the frozen flag, `Attest`'s i
 `155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f` (625,824 ELF bytes, 7 segments), deployed nowhere;
 the earlier tests pass on it with the same results and codes ([`results/misbehaviour-tests.txt`](results/misbehaviour-tests.txt),
 the regenerated tables in [`results/misbehaviour-regression/`](results/misbehaviour-regression/); the tables above
-stay those of `bac768a8…`).
+stay those of `bac768a8…`). **The wire changed with it:** `Attest` now names the instance's account first, so a client
+built from this tree (which also deploys this tree's image) cannot attest under an instance of `8d3b59ff…` or
+`bac768a8…`, which refuse that account list (`WRONG_ACCOUNT`, 201); the prepared public-testnet run, signed in advance
+for `8d3b59ff…`, must keep the client and plan it was prepared with.
 
 ## Through v0.3.1's block application, with real data
 
