@@ -2,8 +2,10 @@ warning: lee@0.1.0: Generated module at <spike>/tmp/history-hops/target-hops/deb
 warning: programs@0.1.0: Generated module at <spike>/tmp/history-hops/target-hops/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
    Compiling methods v0.1.0 (<spike>/ferrata-wt-history-hops/lez/methods)
    Compiling methods-program-class v0.1.0 (<spike>/ferrata-wt-history-hops/lez/methods-program-class)
+   Compiling ferrata-lez-wire-class v0.1.0 (<spike>/ferrata-wt-history-hops/lez/wire-class)
+   Compiling ferrata-lez-bridge-wire v0.1.0 (<spike>/ferrata-wt-history-hops/lez/bridge-wire)
    Compiling harness v0.1.0 (<spike>/ferrata-wt-history-hops/lez/harness)
-    Finished `test` profile [optimized + debuginfo] target(s) in 9.11s
+    Finished `test` profile [optimized + debuginfo] target(s) in 17.71s
      Running tests/history_hops.rs (<spike>/tmp/history-hops/target-hops/debug/deps/history_hops-50c4317081df6560)
 
 running 3 tests
@@ -125,6 +127,6 @@ The control:
 
 test hop_chains_on_sepolia ... ok
 
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 116.73s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 86.99s
 
 exit 0

@@ -17,22 +17,22 @@
 //!
 //! | Class | Facts | Identifier over | As a nullifier |
 //! |---|---|---|---|
-//! | [`Event`](attest::StatementClass::Event) (1) | a log of a transaction that succeeded | chain id, block number, transaction index, the log's position in its receipt, the log's hash | safe: one identifier per emitted log |
-//! | [`Leaf`](attest::StatementClass::Leaf) (2) | a leaf of a SHA-256 accumulator | chain id, contract, slot, leaf index, leaf; no root | safe when the consumer pins a contract that writes each index once |
+//! | [`Event`](attest::StatementClass::Event) (1) | a log of a transaction that succeeded | chain id, block number, transaction index, the log's position in its receipt, the log's hash | safe when the consumer pins the emitting contract and the event (`docs/design/attestation.md` §7, rule 7): one identifier per emitted log |
+//! | [`Leaf`](attest::StatementClass::Leaf) (2) | a leaf of a SHA-256 accumulator | chain id, contract, slot, leaf index, leaf; no root | safe when the consumer pins the contract and the slot that holds the root, and the contract writes each index once |
 //! | [`Value`](attest::StatementClass::Value) (3) | an account, a storage slot | chain id, address, slot, the value; no block | not alone |
 //!
-//! **Event.** A finalized block number names one block of the chain, and a transaction index and a
-//! position in its receipt name one log of it: the log happened once, and its identifier exists
-//! once. Neither the record nor the EIP-2935 hops that reached the block enter the identifier, so a
-//! log reached through another record or another chain of hops has the same identifier and
-//! nullifies the same way (`lez/harness/tests/history_hops.rs` checks this on a real deposit).
+//! **Event.** A finalized block number, a transaction index and a position in its receipt name one
+//! log of the chain: its identifier exists once. Neither the record nor the EIP-2935 hops that
+//! reached the block enter it, so another record or chain of hops gives the same identifier
+//! (`lez/harness/tests/history_hops.rs` checks this on a real deposit). The attestation proves that a
+//! log was emitted, not the emitter's discipline: the consumer pins the emitting contract and event.
 //!
 //! **Leaf.** The identifier leaves the root out, so one leaf has one identifier under every later
 //! root (a nullifier keyed on a root would allow one claim per root), and indices are below 2^32
-//! (otherwise `i` and `i + 2^32` would share a path). It identifies an event only if the contract
-//! writes each index once: the attestation proves what slot `slot` of `contract` commits to, not
-//! the contract's discipline, so the consumer must pin the contract (the bridge pins its vault,
-//! whose `deposit` appends at `nextLeafIndex`).
+//! (otherwise `i` and `i + 2^32` would share a path). It covers the contract and the slot, and the
+//! attestation proves a leaf under whatever slot the request names: it is one per event only if the
+//! consumer pins the contract and the slot that holds the root, and that contract writes each index
+//! once (the bridge pins its vault and slot 0; the vault's `deposit` appends at `nextLeafIndex`).
 //!
 //! **Value.** The identifier names a value, not an event. The default identifier has no block: a
 //! value that holds at many blocks, or changes and changes back, has one identifier, so a
@@ -45,11 +45,11 @@
 //! attestation's: the class reports what the attestation itself guarantees.
 //!
 //! **The bridge's nullifiers.** A deposit is a leaf of the vault's accumulator, and its nullifier is
-//! `N = H("ferrata/nf/v1" ‖ s ‖ fid)` with `fid` the leaf's identifier (Leaf class: root left out,
-//! the vault pinned by the configuration, never a claimant input) and `s` the depositor's secret,
-//! so it is one per deposit and nobody without `s` can compute it (`docs/design/bridge.md` §5.3).
-//! The reference consumer spends `H(s ‖ statement id)` of the vault's `Deposit` log (Event class,
-//! rule 7 of the Recommended Consumer Pattern). Neither keys a nullifier on a Value.
+//! `N = H("ferrata/nf/v1" ‖ s ‖ fid)` with `fid` the leaf's identifier (Leaf class: root left out;
+//! the vault a configuration constant, the root's slot 0 a program constant, neither a claimant input)
+//! and `s` the depositor's secret, so it is one per deposit and nobody without `s` can compute it
+//! (`docs/design/bridge.md` §5.3). The reference consumer spends `H(s ‖ statement id)` of the vault's
+//! `Deposit` log (Event class, rule 7 of the Recommended Consumer Pattern). Neither keys on a Value.
 
 pub use ferrata_lez_wire::*;
 
@@ -72,10 +72,10 @@ pub mod attest {
     #[borsh(use_discriminant = true)]
     #[repr(u8)]
     pub enum StatementClass {
-        /// A log: one identifier per emitted log. Safe to nullify.
+        /// A log: one identifier per emitted log. Safe to nullify when the consumer pins the emitter and event.
         Event = 1,
-        /// An accumulator leaf: one identifier per leaf index of a contract that writes each index
-        /// once. Safe to nullify when the consumer pins that contract.
+        /// An accumulator leaf: one identifier per leaf index of a contract that writes each index once.
+        /// Safe to nullify when the consumer pins that contract and the slot that holds the root.
         Leaf = 2,
         /// An account or a storage value: names a value, not an event. Not a nullifier alone.
         Value = 3,
@@ -91,8 +91,8 @@ pub mod attest {
             }
         }
 
-        /// Whether the identifier is one per event (Event, Leaf), so that spending it once spends
-        /// the event once.
+        /// Whether the identifier is one per event (Event, Leaf) once the consumer pins the emitter and the
+        /// event (Event) or the contract and the slot (Leaf): then spending it once spends the event once.
         pub fn is_nullifiable(self) -> bool {
             matches!(self, Self::Event | Self::Leaf)
         }

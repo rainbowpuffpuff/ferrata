@@ -238,8 +238,8 @@ identifier, in the reply and in the root-transaction event (`FRT-ATC1`):
 
 | Class (byte) | Facts | As a nullifier |
 |---|---|---|
-| `Event` (1) | `Fact::Log` | safe: one identifier per emitted log, whichever record or chain of hops proved it |
-| `Leaf` (2) | `Fact::AccumulatorLeaf` | safe when you pin a contract that writes each index once (the bridge pins its vault) |
+| `Event` (1) | `Fact::Log` | safe when you pin the emitting contract and the event (§6, rule 7): one identifier per emitted log, whichever record or chain of hops proved it |
+| `Leaf` (2) | `Fact::AccumulatorLeaf` | safe when you pin the contract and the slot that holds the root, and that contract writes each index once (the bridge pins its vault and slot 0); pinning the contract alone is not enough: one leaf under two slots has two identifiers |
 | `Value` (3) | `Fact::Account`, `Fact::Storage` | not alone: the default identifier is one for every block where the value holds (distinct events merge), the block-bound one is new at every block (a nullifier on it allows a claim per block) |
 
 A consumer that keys a nullifier takes its claim from an `Event` or a `Leaf` statement and uses a

@@ -10,3 +10,5 @@ D=results/history-hops
 cargo test -p ferrata-lez-wire-class --locked > $D/wire-class-tests.txt 2>&1; echo "exit $?" >> $D/wire-class-tests.txt
 cargo test -p harness --locked --features program-class --test history_hops -- --nocapture --test-threads 3 > $D/history-hops-tests.txt 2>&1
 echo "exit $?" >> $D/history-hops-tests.txt
+cargo test -p harness --locked --features program-class --test history_hops_review -- --nocapture --test-threads 2 > $D/history-hops-review-tests.txt 2>&1
+echo "exit $?" >> $D/history-hops-review-tests.txt

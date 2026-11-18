@@ -1,0 +1,31 @@
+warning: lee@0.1.0: Generated module at <spike>/tmp/history-hops/target-hops/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/tmp/history-hops/target-hops/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods-program-class v0.1.0 (<spike>/ferrata-wt-history-hops/lez/methods-program-class)
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-history-hops/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-history-hops/lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 6.21s
+     Running tests/history_hops_review.rs (<spike>/tmp/history-hops/target-hops/debug/deps/history_hops_review-e8aeee55b5a36dd1)
+
+running 2 tests
+one leaf 0x2ef7f7d4… of contract 0x77…77: slot 0 index 0 -> id 0x518d401c…, slot 7 index 1 -> id 0xc0086870…; both Leaf, both is_nullifiable()
+
+test one_leaf_under_two_slots_of_one_contract_has_two_leaf_identifiers ... ok
+test hop_chain_edges_reuse_loops_order_and_padding has been running for over 60 seconds
+| case | native | program |
+|---|---|---|
+| control: R -> a1 -> a2 | Ok(block 12111477, hops 2) | applied |
+| control: R -> R-8191 (first block of the window) | Ok(block 12104582, hops 1) | applied |
+| reused hop: R -> a1 twice | Err(150) | exit Some(150) |
+| reused hop later: R -> a1 -> a2 -> a2 | Err(150) | exit Some(150) |
+| loop back up: R -> a1 -> a2 -> a1 (a1's header, proofs of a1's state) | Err(150) | exit Some(150) |
+| reversed order: a1 -> a2 first, then R -> a1 | Err(110) | exit Some(110) |
+| padded header: a1's header with one byte appended | Err(101) | exit Some(101) |
+| right state, wrong slot: a1's header with the proof of slot (R-8191) mod 8191 | Err(110) | exit Some(110) |
+| right slot proof, another block's account proof (R-8191's state) | Err(110) | exit Some(110) |
+| hop past the window from a hop record: R -> R-8191 -> (R-2*8191 is the edge) ok | Ok(block 12096391, hops 2) | applied |
+
+test hop_chain_edges_reuse_loops_order_and_padding ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 87.01s
+
+exit 0

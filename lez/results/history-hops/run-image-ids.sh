@@ -5,7 +5,7 @@
 set -u
 D=lez/results/history-hops/image-ids
 mkdir -p $D
-OUT=$TMPDIR/ids
+OUT="${TMPDIR:-$PWD/reproduce-out}/ids"
 rm -rf $OUT
 { echo "before the build:"; for t in target lez/target checkpoint/target bridge/target; do if [ -e $t ]; then echo "$t EXISTS"; else echo "$t absent"; fi; done; ls -d lez/guests/*/target 2>/dev/null || echo "no guest target"; } > $D/fresh.txt
 scripts/reproduce-image-ids.sh build --out $OUT > $D/build.txt 2>&1; echo "build exit $?" >> $D/build.txt
