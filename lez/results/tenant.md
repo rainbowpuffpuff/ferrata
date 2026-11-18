@@ -6,7 +6,7 @@ in-process harness) with the frozen bridge program: each test asserts that the p
 the image the live Sepolia vault's `configId` commits to. No guest was changed. The tests record the behaviour: each
 asserts the outcomes below, so a change of behaviour fails them.
 
-- **Where:** the Modal build box `ferrata-wt-tenant` (profile `ohyou`), 18 November 2026 about 13:45 UTC; dev mode
+- **Where:** the Modal build box `ferrata-wt-tenant` (profile `ws-12`), 18 November 2026 about 13:45 UTC; dev mode
   (no proofs: the harness executes every transition and meters its cycles as LEZ does). `3 passed`, 195 s.
 - **Re-check:** `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test tenant -- --nocapture --test-threads 1`.
   The tests rewrite [`tenant/r1.txt`](tenant/r1.txt), [`tenant/r1-frontrun.txt`](tenant/r1-frontrun.txt) and
