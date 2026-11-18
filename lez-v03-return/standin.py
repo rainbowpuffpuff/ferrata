@@ -19,11 +19,13 @@ no attestor. Never for production.
   standin.py layout --program ID --config-id 0x.. [--imported N] --out LAYOUT.json
                                                             where lez-v03-bridge keeps its burn accumulator
   standin.py checkpoint --identity ID.json --burns BURNS.json --parent-state 0x.. --signers A,B,C --threshold T
-        (--rpc URL [--layout LAYOUT.json] [--block N] | --tip-id N --tip-hash 0x..)
-        [--imported N] [--deposit-root 0x..] --out CHECKPOINT.json
-                                                            the vault's 17-word checkpoint journal for the burn root
+        --rpc URL --layout LAYOUT.json [--block N] [--imported N] [--deposit-root 0x..] --out CHECKPOINT.json
+                                                            the vault's 17-word checkpoint journal for the burn root,
+                                                            only after the node's bridge state matched the burns and
+                                                            the tip was Finalized on the node (no option skips either)
   standin.py sign --checkpoint CHECKPOINT.json --verifier 0x.. --keys KEYS [--count K] --out CANDIDATE.json
-                                                            the seal: K signatures (default: the threshold)
+                                                            the seal: K signatures (default: the threshold); refuses a
+                                                            checkpoint whose source does not record both checks
   standin.py check-seal --candidate CANDIDATE.json          recovers the signers of a seal (no key needed)
 
 Every digest, tree and encoding here is recomputed by other code before anything depends on it: the burn leaves
@@ -405,7 +407,54 @@ def decode_block(raw: bytes) -> dict:
         raise SystemExit(f"block {block_id}: unknown bedrock status {raw[-1]}")
     return {"id": block_id, "prev": raw[8:40], "hash": raw[40:72], "timestamp_ms": timestamp, "tx_count": tx_count,
             "status": STATUS[raw[-1]], "recomputed_hash": recomputed, "bytes": len(raw),
-            "sha256": sha256(raw).hex()}
+            "sha256": sha256(raw).hex(), "raw": raw}
+
+
+class Reader:
+    def __init__(self, data: bytes):
+        self.data, self.pos = data, 0
+
+    def take(self, n: int) -> bytes:
+        if self.pos + n > len(self.data):
+            raise ValueError(f"truncated at {self.pos}")
+        out = self.data[self.pos:self.pos + n]
+        self.pos += n
+        return out
+
+    def u32(self) -> int:
+        return struct.unpack("<I", self.take(4))[0]
+
+
+def parse_block(raw: bytes) -> list:
+    """borsh(Block) of LEZ v0.3.1, every byte accounted for. Public transactions (tag 0) are read in full:
+    Message {program_account_id, shard_selectors: [(account_id, program_account_id)], nonces, instruction_data,
+    fee: Option<FeeDeclaration>} and WitnessSet {(signature, public key)*} (lee/state_machine/src/public_transaction/
+    message.rs, lee/state_machine/core/src/account.rs ProgramShardSelector). A privacy-preserving transaction (tag 1)
+    stops the walk with ValueError: its layout is not read here, so whoever needs every transaction refuses."""
+    r = Reader(raw)
+    r.take(80)
+    txs = []
+    for index in range(r.u32()):
+        start, tag = r.pos, r.take(1)[0]
+        if tag != 0:
+            raise ValueError(f"transaction {index}: tag {tag}, not a public transaction")
+        program = r.take(32)
+        shards = [(r.take(32), r.take(32)) for _ in range(r.u32())]
+        nonces = [int.from_bytes(r.take(16), "little") for _ in range(r.u32())]
+        data = r.take(r.u32())
+        fee_tag = r.take(1)[0]
+        if fee_tag > 1:
+            raise ValueError(f"transaction {index}: fee option tag {fee_tag}")
+        fee = None
+        if fee_tag == 1:
+            fee = {"payer": r.take(32), "gas_limit": struct.unpack("<Q", r.take(8))[0],
+                   "tip": struct.unpack("<Q", r.take(8))[0], "max_fee": int.from_bytes(r.take(16), "little")}
+        witnesses = [(r.take(64), r.take(32)) for _ in range(r.u32())]
+        txs.append({"program": program, "shards": shards, "nonces": nonces, "data": data, "fee": fee,
+                    "witnesses": witnesses, "bytes": r.pos - start})
+    if r.pos != len(raw) - 1:
+        raise ValueError(f"{len(raw) - 1 - r.pos} bytes between the last transaction and the status byte")
+    return txs
 
 
 def checked_block(lez: Lez, block_id: int) -> dict:
@@ -419,12 +468,21 @@ def checked_block(lez: Lez, block_id: int) -> dict:
     return b
 
 
+WALK = 64  # at most this many blocks are walked: down from the head to a Finalized one, or between a tip and a read
+
+
 def newest_final(lez: Lez) -> dict:
-    """The newest block the node reports Finalized: finality is monotone in the block id (the sequencer marks every
-    block up to the finalized one, lez/sequencer/actors/storage/src/actor.rs:246-266), so a binary search finds it."""
-    lo, hi = 1, lez.head()
-    if checked_block(lez, lo)["status"] != "Finalized":
-        raise SystemExit("block 1 is not Finalized on this node")
+    """The newest block the node reports Finalized. Finality is monotone in the block id (the sequencer marks every
+    block up to the finalized one, lez/sequencer/actors/storage/src/actor.rs:246-266): walked down from the head for
+    up to WALK blocks (on the public testnet the flag is a few blocks behind the head), then a binary search below."""
+    head = lez.head()
+    for block_id in range(head, max(head - WALK, 0), -1):
+        b = checked_block(lez, block_id)
+        if b["status"] == "Finalized":
+            return b
+    lo, hi = 1, head - WALK
+    if hi < 1 or checked_block(lez, lo)["status"] != "Finalized":
+        raise SystemExit("no block of this node is Finalized")
     while lo < hi:
         mid = (lo + hi + 1) // 2
         if checked_block(lez, mid)["status"] == "Finalized":
@@ -491,6 +549,71 @@ def read_accumulator(lez: Lez, layout: dict) -> dict:
     raise SystemExit("the head moved during six reads of the accumulator")
 
 
+def read_state(lez: Lez, layout: dict) -> tuple:
+    """The accumulator and the block it is the state after: the head block is read before and after the accumulator
+    and must be the same block both times (same id, same hash), so a head replaced during the read is not taken."""
+    for _ in range(6):
+        before = checked_block(lez, lez.head())
+        chain = read_accumulator(lez, layout)
+        if chain["head"] == before["id"] and checked_block(lez, chain["head"])["hash"] == before["hash"]:
+            return chain, before
+        time.sleep(2)
+    raise SystemExit("the head block changed during six reads of the accumulator")
+
+
+def bridge_watch(layout: dict) -> tuple:
+    """The ids a transaction that can change the accumulator names at its root: the bridge program, and every account
+    the layout reads."""
+    if not layout.get("program"):
+        raise SystemExit("the layout names no bridge program")
+    accounts = {b58decode(account_id(layout["account"]))} if layout.get("account") else set()
+    for v in list(layout.values()) + list(layout.get("expect", [])):
+        if isinstance(v, dict) and v.get("account"):
+            accounts.add(b58decode(account_id(v["account"])))
+    return b58decode(account_id(layout["program"])), accounts
+
+
+def blocks_between(lez: Lez, low: dict, high: dict) -> list:
+    """The blocks after `low` up to `high` as the node holds them now: each hash recomputed from its contents, each
+    linked to the one before, the first to `low`, and the last one `high` itself (so none was replaced meanwhile)."""
+    if not 0 < high["id"] - low["id"] <= WALK:
+        raise SystemExit(f"blocks {low['id']} to {high['id']}: more than {WALK} blocks apart, or not in order")
+    blocks, prev = [], low
+    for block_id in range(low["id"] + 1, high["id"] + 1):
+        b = checked_block(lez, block_id)
+        if b["prev"] != prev["hash"]:
+            raise SystemExit(f"block {block_id} does not link to block {block_id - 1}")
+        blocks.append(b)
+        prev = b
+    if prev["hash"] != high["hash"]:
+        raise SystemExit(f"block {high['id']} changed on the node while the blocks were read")
+    return blocks
+
+
+def no_bridge_transaction(blocks: list, program: bytes, accounts: set) -> list:
+    """Refuses unless every transaction of `blocks` is one this tool reads in full (a public transaction) and none
+    names the bridge program or an account of the accumulator, at its root or in a shard selector. Why that is
+    enough (lez-v03-return/README.md, "A tip below the head"): in v0.3.1 a program's shard of an account is written
+    only by that program's own apply; lez-v03-bridge burns and imports only as a transaction's root call (it refuses a
+    caller: guests/bridge/src/main.rs:125, 237), and a public transaction's root call is its message's
+    program_account_id. A privacy-preserving transaction is not read here, so one of those refuses as well."""
+    out = []
+    for b in blocks:
+        try:
+            txs = parse_block(b["raw"])
+        except ValueError as e:
+            raise SystemExit(f"block {b['id']}: a transaction this tool does not read ({e}); it could change the "
+                             "accumulator, so only a tip at the read head is attested")
+        for k, tx in enumerate(txs):
+            named = {tx["program"]} | {acc for acc, _ in tx["shards"]} | {prog for _, prog in tx["shards"]}
+            if program in named or accounts & named:
+                raise SystemExit(f"block {b['id']} carries a transaction of the bridge program (transaction {k}): the "
+                                 "accumulator may differ between the tip and the read")
+        out.append({"id": b["id"], "hash": hx(b["hash"]), "status": b["status"], "transactions": len(txs),
+                    "root_programs": sorted({b58encode(t["program"]) for t in txs})})
+    return out
+
+
 # ---- the layout of lez-v03-bridge's state (its core crate, read on 18 November 2026) -------------------------------
 
 PDA_PREFIX = b"/LEE/v0.2/AccountId/PDA/" + bytes(8)  # lee/state_machine/core/src/program/mod.rs:242-257 (v0.3.1)
@@ -511,6 +634,8 @@ def bridge_layout(program: bytes, config_id: bytes, imported: int | None) -> dic
     layout = {
         "what": "lez-v03-bridge's state as its core crate lays it out (borsh); derived, to be checked against the node",
         "program": b58encode(program), "account": burns, "count_endian": "little",
+        "changes_only_in_root_calls": "lez-v03-bridge writes burns(cid) only in Burn and root(cid, n) only in "
+                                      "ImportRoot, and both refuse a caller (guests/bridge/src/main.rs:125, 237)",
         "config_id": {"offset": 1, "length": 32}, "burn_count": {"offset": 33, "length": 8},
         "burn_frontier": {"offset": 45, "length": 1024},
         "expect": [{"offset": 0, "hex": "05", "what": "burns(cid) holds BridgeState::Burns (variant 5)"},
@@ -689,47 +814,53 @@ def cmd_checkpoint(a) -> None:
     root, frontier, count = tree_root(leaves), tree_frontier(leaves), len(leaves)
     if root_from_frontier(count, frontier) != root or ("burn_root" in burns and unhex(burns["burn_root"], 32) != root):
         raise SystemExit("the burn root recomputed from the leaves is not the listed one")
-    imported, source, chain = a.imported, {"kind": "given on the command line (no LEZ node was read)"}, None
-    if a.rpc:
-        lez = Lez(a.rpc)
-        if a.layout:
-            layout = json.load(open(a.layout))
-            chain = read_accumulator(lez, layout)
-            if chain["burn_count"] != count:
-                raise SystemExit(f"the node's accumulator holds {chain['burn_count']} burns, burns.json lists {count}")
-            if chain["burn_root"] is not None and chain["burn_root"] != root:
-                raise SystemExit("the node's burn root is not the root of the listed burns")
-            if chain["burn_frontier"] is not None and chain["burn_frontier"] != frontier:
-                raise SystemExit("the node's burn frontier is not the frontier of the listed burns")
-            if chain["burn_root"] is None and chain["burn_frontier"] is None:
-                raise SystemExit("the layout names neither burn_root nor burn_frontier")
-            if chain["config_id"] is not None and chain["config_id"] != ident["configId"]:
-                raise SystemExit("the node's bridge configuration is not the vault's lezConfigId")
-            if chain["imported_leaf_count"] is not None:
-                if imported is not None and imported != chain["imported_leaf_count"]:
-                    raise SystemExit("--imported differs from the node's imported leaf count")
-                imported = chain["imported_leaf_count"]
-            if a.deposit_root is not None:
-                if chain["imported_root"] is None:
-                    raise SystemExit("--deposit-root given, but the layout names no imported_root")
-                if chain["imported_root"] != unhex(a.deposit_root, 32):
-                    raise SystemExit("the deposit root LEZ imported is not the vault's")
-            # The state was read after block `head`: the checkpoint is cut there unless a later block is named.
-            block_id = a.block if a.block is not None else chain["head"]
-            if block_id < chain["head"]:
-                raise SystemExit(f"the accumulator was read at head {chain['head']}, after block {block_id}")
-        else:
-            block_id = a.block
-        tip = final_tip(lez, block_id)
-        source = {"kind": "LEZ node", "rpc": a.rpc, "tip": tip_record(tip), "final_on_node": tip["status"] == "Finalized",
-                  "accumulator_checked_against_node": chain is not None,
-                  "accumulator_read_at_head": None if chain is None else chain["head"],
-                  "imported_root_is_the_vaults": bool(chain is not None and a.deposit_root is not None)}
-        tip_id, tip_hash = tip["id"], tip["hash"]
+    imported, lez = a.imported, Lez(a.rpc)
+    layout = json.load(open(a.layout))
+    chain, read_at = read_state(lez, layout)
+    if chain["burn_count"] != count:
+        raise SystemExit(f"the node's accumulator holds {chain['burn_count']} burns, burns.json lists {count}")
+    if chain["burn_root"] is not None and chain["burn_root"] != root:
+        raise SystemExit("the node's burn root is not the root of the listed burns")
+    if chain["burn_frontier"] is not None and chain["burn_frontier"] != frontier:
+        raise SystemExit("the node's burn frontier is not the frontier of the listed burns")
+    if chain["burn_root"] is None and chain["burn_frontier"] is None:
+        raise SystemExit("the layout names neither burn_root nor burn_frontier")
+    if chain["config_id"] is not None and chain["config_id"] != ident["configId"]:
+        raise SystemExit("the node's bridge configuration is not the vault's lezConfigId")
+    if chain["imported_leaf_count"] is not None:
+        if imported is not None and imported != chain["imported_leaf_count"]:
+            raise SystemExit("--imported differs from the node's imported leaf count")
+        imported = chain["imported_leaf_count"]
+    if a.deposit_root is not None:
+        if chain["imported_root"] is None:
+            raise SystemExit("--deposit-root given, but the layout names no imported_root")
+        if chain["imported_root"] != unhex(a.deposit_root, 32):
+            raise SystemExit("the deposit root LEZ imported is not the vault's")
+    # The tip: the block named, or the newest the node reports Finalized; a block not Finalized is refused. The state
+    # was read after block `read_at`: a tip elsewhere is taken only if no block between the two can have changed it.
+    tip, between = final_tip(lez, a.block), []
+    if tip["id"] == read_at["id"]:
+        if tip["hash"] != read_at["hash"]:
+            raise SystemExit(f"block {tip['id']} changed on the node after the accumulator was read")
     else:
-        if a.tip_id is None or a.tip_hash is None:
-            raise SystemExit("give --rpc, or --tip-id and --tip-hash")
-        tip_id, tip_hash = a.tip_id, unhex(a.tip_hash, 32)
+        if not layout.get("changes_only_in_root_calls"):
+            raise SystemExit(f"the accumulator was read after block {read_at['id']}, the tip is block {tip['id']}, and "
+                             "the layout does not say the bridge changes it only in root calls "
+                             "(changes_only_in_root_calls): only a tip at the read head is attested")
+        program, accounts = bridge_watch(layout)
+        low, high = (tip, read_at) if tip["id"] < read_at["id"] else (read_at, tip)
+        between = no_bridge_transaction(blocks_between(lez, low, high), program, accounts)
+    source = {"kind": "LEZ node", "rpc": a.rpc, "tip": tip_record(tip), "final_on_node": tip["status"] == "Finalized",
+              "accumulator_checked_against_node": True, "accumulator_read_at_head": read_at["id"],
+              "accumulator_read_at_hash": hx(read_at["hash"]),
+              "blocks_between_tip_and_read": between,
+              "imported_root_is_the_vaults": a.deposit_root is not None}
+    if between:
+        source["why_the_read_is_the_tips"] = (
+            "no transaction in the blocks between the tip and the read names the bridge program or an account of the "
+            "accumulator, every one of them is read in full, and the bridge changes the accumulator only in a root "
+            "call: the accumulator after the tip is the one read (lez-v03-return/README.md)")
+    tip_id, tip_hash = tip["id"], tip["hash"]
     if imported is None:
         raise SystemExit("the imported leaf count is unknown: --imported, or imported_leaf_count in the layout")
     keys = signer_words(a.signers.split(","))
@@ -746,7 +877,8 @@ def cmd_checkpoint(a) -> None:
                   "journal": hx(journal), "journalDigest": hx(sha256(journal)),
                   "signers": [hx(k[12:]) for k in keys], "threshold": a.threshold, "source": source})
     print(json.dumps({"burnRoot": hx(root), "burnCount": count, "tipId": tip_id, "newState": hx(new_state),
-                      "journalDigest": hx(sha256(journal)), "final_on_node": source.get("final_on_node")}))
+                      "journalDigest": hx(sha256(journal)), "final_on_node": source["final_on_node"],
+                      "accumulator_read_at_head": read_at["id"], "blocks_between": len(between)}))
 
 
 def cmd_layout(a) -> None:
@@ -760,6 +892,13 @@ def cmd_layout(a) -> None:
 def cmd_sign(a) -> None:
     cp = json.load(open(a.checkpoint))
     c = cp["checkpoint"]
+    src = cp.get("source") or {}
+    if not (src.get("kind") == "LEZ node" and src.get("final_on_node") is True
+            and src.get("accumulator_checked_against_node") is True):
+        raise SystemExit("the checkpoint's source does not record both checks (its tip Finalized on the LEZ node, the "
+                         "bridge's accumulator on that node equal to the burns): nothing is signed")
+    if int(src["tip"]["id"]) != int(c["tipId"]) or src["tip"]["hash"].lower() != c["tipHash"].lower():
+        raise SystemExit("the checkpoint's tip is not the tip its source checked: nothing is signed")
     journal = checkpoint_journal(c)
     if hx(journal) != cp["journal"]:
         raise SystemExit("the journal in the file is not the encoding of its checkpoint")
@@ -845,9 +984,8 @@ def main() -> None:
     p.add_argument("--notes", required=True); p.add_argument("--out", required=True)
     p = sub.add_parser("checkpoint"); p.add_argument("--identity", required=True); p.add_argument("--burns", required=True)
     p.add_argument("--parent-state", required=True); p.add_argument("--signers", required=True)
-    p.add_argument("--threshold", type=int, required=True); p.add_argument("--rpc"); p.add_argument("--layout")
-    p.add_argument("--block", type=int)
-    p.add_argument("--tip-id", type=int); p.add_argument("--tip-hash"); p.add_argument("--imported", type=int)
+    p.add_argument("--threshold", type=int, required=True); p.add_argument("--rpc", required=True)
+    p.add_argument("--layout", required=True); p.add_argument("--block", type=int); p.add_argument("--imported", type=int)
     p.add_argument("--deposit-root"); p.add_argument("--out", required=True)
     p = sub.add_parser("layout"); p.add_argument("--program", required=True); p.add_argument("--config-id", required=True)
     p.add_argument("--imported", type=int); p.add_argument("--out", required=True)

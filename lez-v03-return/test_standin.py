@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Tests of the stand-in attestor (standin.py), standard library only:  python3 -I lez-v03-return/test_standin.py
 
-The LEZ node is a local stub that serves LEZ v0.3.1's `getLastBlockId`, `getBlock` and `getAccount` answers: three
-REAL blocks of the public LEZ testnet (fixtures/, read on 18 November 2026: 83000 and 83001 Finalized, 83002 Pending)
-and a bridge account whose shard holds a burn accumulator computed natively. Nothing here talks to a network.
+The LEZ node is a local stub that serves LEZ v0.3.1's `getLastBlockId`, `getBlock` and `getAccount` answers: REAL
+blocks of the public LEZ testnet (fixtures/, read on 18 November 2026: 83000 and 83001 Finalized, 83002 and 83003
+Pending) and a bridge account whose shard holds a burn accumulator computed natively. Nothing here talks to a network.
 """
 import base64
 import http.server
@@ -36,6 +36,13 @@ def jl(path: str):
 
 def real_block(block_id: int) -> str:
     return jl(os.path.join(HERE, "fixtures", f"testnet-block-{block_id}.json"))["result"]
+
+
+def public_tx(program: bytes, shards: list = (), data: bytes = b"") -> bytes:
+    """borsh of a v0.3.1 public transaction: tag 0, Message {program_account_id, shard_selectors, nonces,
+    instruction_data, fee: None}, WitnessSet {} (standin.parse_block reads it back)."""
+    return (b"\x00" + program + len(shards).to_bytes(4, "little") + b"".join(a + p for a, p in shards)
+            + bytes(4) + len(data).to_bytes(4, "little") + data + b"\x00" + bytes(4))
 
 
 def made_block(block_id: int, prev: bytes, status: int, body: bytes = bytes(4)) -> str:
@@ -204,9 +211,11 @@ class StandInTest(unittest.TestCase):
         NODE.shard = NODE.shard[:100]
         self.assertIn("the layout reads", self.checkpoint(block=None, ok=False).stderr)
 
-    def test_a_block_before_the_read_is_refused(self):
-        NODE.head = 83001
-        self.assertIn("after block 83000", self.checkpoint(block=83000, ok=False).stderr)
+    def test_a_tip_away_from_the_read_needs_a_layout_that_says_the_bridge_changes_only_in_root_calls(self):
+        # The test layout does not say it: a tip below the head the state was read at is refused, named or not.
+        NODE.head = 83002
+        self.assertIn("changes_only_in_root_calls", self.checkpoint(block=None, ok=False).stderr)
+        self.assertIn("changes_only_in_root_calls", self.checkpoint(block=83001, ok=False).stderr)
 
     # ---- lez-v03-bridge's own layout (borsh of its BridgeState), derived from the program id and the configuration ---
 
@@ -252,16 +261,79 @@ class StandInTest(unittest.TestCase):
         NODE.accounts = {}  # nothing deployed at the derived addresses
         self.assertIn("has 0 bytes", self.bridge_checkpoint(layout, ok=False).stderr)
 
+    # ---- a Finalized tip below the head (the blocks between are read) ---------------------------------------------
+
+    def test_a_final_tip_below_the_head_is_attested_when_no_block_between_touches_the_bridge(self):
+        # The real testnet blocks: 83001 Finalized, 83002 and 83003 Pending (11 public transactions of other programs).
+        NODE.blocks[83003], NODE.head = real_block(83003), 83003
+        layout = self.bridge_state(self.leaves, 2, bytes(32))
+        out = json.loads(self.bridge_checkpoint(layout).stdout)
+        self.assertEqual((out["tipId"], out["accumulator_read_at_head"], out["blocks_between"]), (83001, 83003, 2))
+        src = jl(self.path("checkpoint.json"))["source"]
+        self.assertTrue(src["final_on_node"] and src["accumulator_checked_against_node"])
+        self.assertEqual([b["id"] for b in src["blocks_between_tip_and_read"]], [83002, 83003])
+        self.assertEqual([b["transactions"] for b in src["blocks_between_tip_and_read"]], [2, 9])
+        self.assertEqual(src["tip"]["hash"], s.hx(s.decode_block(base64.b64decode(real_block(83001)))["hash"]))
+        # Named, the same block is taken the same way; the record is signed.
+        self.bridge_checkpoint(layout, "--block", "83001")
+        self.assertEqual(jl(self.path("checkpoint.json"))["checkpoint"]["tipId"], 83001)
+        self.tool("sign", "--checkpoint", self.path("checkpoint.json"), "--verifier", VERIFIER, "--keys", self.keys,
+                  "--out", self.path("candidate.json"))
+
+    def pending_after_83001(self, body: bytes) -> None:
+        h83001 = s.decode_block(base64.b64decode(real_block(83001)))["hash"]
+        NODE.blocks[83002], NODE.head = made_block(83002, h83001, 0, body), 83002
+
+    def test_a_bridge_transaction_between_the_tip_and_the_read_is_refused(self):
+        layout = self.bridge_state(self.leaves, 2, bytes(32))
+        program, burns_account = s.b58decode(PROGRAM), s.b58decode(jl(layout)["account"])
+        other = s.sha256(b"test: another program")
+        for what, tx in (("its root call", public_tx(program)),
+                         ("a shard of the accumulator", public_tx(other, [(burns_account, other)])),
+                         ("a shard under the bridge program", public_tx(other, [(s.sha256(b"x"), program)]))):
+            self.pending_after_83001((2).to_bytes(4, "little") + public_tx(other) + tx)
+            self.assertIn("carries a transaction of the bridge program", self.bridge_checkpoint(layout, ok=False).stderr,
+                          what)
+        # Another program's transaction alone: the tip below the head is taken.
+        self.pending_after_83001((1).to_bytes(4, "little") + public_tx(other))
+        self.assertEqual(json.loads(self.bridge_checkpoint(layout).stdout)["tipId"], 83001)
+
+    def test_a_transaction_the_tool_does_not_read_between_the_tip_and_the_read_is_refused(self):
+        # A privacy-preserving transaction (tag 1) could carry a private burn: it is not parsed, so it refuses.
+        layout = self.bridge_state(self.leaves, 2, bytes(32))
+        self.pending_after_83001((1).to_bytes(4, "little") + b"\x01" + bytes(64))
+        self.assertIn("does not read", self.bridge_checkpoint(layout, ok=False).stderr)
+
+    def test_a_head_replaced_during_the_read_is_not_taken(self):
+        layout = self.bridge_state(self.leaves, 2, bytes(32))
+        self.pending_after_83001((1).to_bytes(4, "little") + public_tx(s.sha256(b"first")))
+        answer, replaced = NODE.answer, []
+
+        def replacing(method, params):
+            if method == "getAccount" and not replaced:
+                replaced.append(1)  # another block 83002 (as the testnet's 83006 was replaced on 18 November)
+                self.pending_after_83001((1).to_bytes(4, "little") + public_tx(s.sha256(b"second")))
+            return answer(method, params)
+
+        NODE.answer = replacing
+        self.addCleanup(lambda: NODE.__dict__.pop("answer", None))
+        self.bridge_checkpoint(layout)
+        src = jl(self.path("checkpoint.json"))["source"]
+        second = s.decode_block(base64.b64decode(NODE.blocks[83002]))["hash"]
+        self.assertEqual(src["accumulator_read_at_hash"], s.hx(second), "read again under the block that stayed")
+
     # ---- finality ---------------------------------------------------------------------------------------------------
 
     def test_a_pending_tip_is_refused(self):
-        # The real block 83002 is Pending on the public node: a state read at that head is not attested.
-        self.assertIn("83002 is Pending", self.checkpoint(block=None, ok=False).stderr)
+        # The real block 83002 is Pending on the public node: it is no tip.
+        self.assertIn("83002 is Pending", self.checkpoint(block=83002, ok=False).stderr)
 
     def test_there_is_no_way_to_attest_a_pending_tip(self):
         # Named outright it is refused as well, and no flag lifts the refusal.
         self.assertIn("83002 is Pending", self.checkpoint(block=83002, ok=False).stderr)
-        p = self.checkpoint("--allow-pending", block=None, ok=False)
+        p = self.checkpoint("--allow-pending", block=83002, ok=False)
+        self.assertIn("unrecognized arguments", p.stderr)
+        p = self.checkpoint("--tip-id", "83002", block=None, ok=False)
         self.assertIn("unrecognized arguments", p.stderr)
         # `tip` only shows it.
         shown = json.loads(self.tool("tip", "--rpc", self.rpc, "--block", "83002").stdout)

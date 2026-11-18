@@ -429,10 +429,17 @@ def cmd_check(a) -> int:
         need(logs[0]["data"][2 + 64:2 + 128] == c["burnRoot"][2:], "the finalised burn root")
         ok, ret = rpc.call(r.vault, selector("burnRootStatus(bytes32)") + w(c["burnRoot"]))
         need(ok and int.from_bytes(ret[:32], "big") == 1, "the burn root is not accepted")
-        final = cand["source"].get("final_on_node")
+        src = cand["source"]
+        need(src.get("final_on_node") is True, "the candidate's tip was not checked Finalized on the LEZ node")
+        need(src.get("accumulator_checked_against_node") is True,
+             "the candidate's burns were not compared with the bridge's accumulator on the LEZ node")
+        need(int(src["tip"]["id"]) == c["tipId"] and src["tip"]["hash"].lower() == c["tipHash"].lower(),
+             "the journal's tip is not the tip the attestor checked")
+        between = src.get("blocks_between_tip_and_read") or []
         return (f"burn root {c['burnRoot']} over {c['burnCount']} burns at LEZ block {c['tipId']}; signed by "
-                f"{[s.hx(g) for g in got]}; source: {cand['source']['kind']}"
-                + ("" if final is None else f", tip final on the node: {final}"))
+                f"{[s.hx(g) for g in got]}; source: {src['kind']} {src.get('rpc')}, tip Finalized there, accumulator "
+                f"compared there after block {src.get('accumulator_read_at_head')}"
+                + (f" ({len(between)} blocks between, none touching the bridge)" if between else ""))
 
     @check("REAL: both release proofs verify in RISC Zero's Groth16 verifier, and the vault paid them")
     def _():

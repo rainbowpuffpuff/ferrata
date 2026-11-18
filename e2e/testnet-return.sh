@@ -10,7 +10,9 @@
 #   e2e/testnet-return.sh plan   <run>            reads only: the deployer's nonce, the addresses, the LEZ tip, the
 #                                                 vault's parameters and what the run sends -> e2e/runs/<run>/
 #   e2e/testnet-return.sh fork   <run>            the whole Ethereum side on a local anvil fork of Sepolia; the sender
-#                                                 is impersonated, no key is read, nothing leaves this machine
+#                                                 is impersonated, no key is read, nothing leaves this machine; the LEZ
+#                                                 side is a local stub node (lez-v03-return/stub_node.py: recorded real
+#                                                 testnet blocks, a bridge state placed from the rehearsal's burns)
 #   e2e/testnet-return.sh live   <run> <stage>    one stage on Sepolia; refuses unless FERRATA_SEPOLIA_SEND=yes
 #                                                 stages: deploy | deposit <j> | attest | submit | finalize |
 #                                                         release <i> | refusals <phase> | status | all
@@ -29,15 +31,18 @@
 #   SEPOLIA_RPC_URL, ETH_FROM            the endpoint and the sender
 #   ETH_KEYSTORE + ETH_PASSWORD          (live) paths of a keystore file and of a file with its password: Foundry's own
 #   (or ETH_KEYSTORE_ACCOUNT)            variables, read by forge itself; this script never opens either file
-#   FERRATA_STANDIN_KEYS                 the directory of the stand-in keys (standin.py keygen): outside this repository
+#   FERRATA_STANDIN_KEYS                 the directory of the stand-in keys (standin.py keygen): outside this repository;
+#                                        a live run needs keys no other run of this leg has used (live refuses others)
 #   FERRATA_STANDIN_THRESHOLD            default 2
 #   FERRATA_LEZ_RPC                      the LEZ node (default https://testnet.lez.logos.co)
 #   FERRATA_LEZ_CONFIG_ID                the LEZ v0.3.1 bridge configuration's id (the vault's lezConfigId; it also is
 #                                        in every burn leaf). Unset: a labelled placeholder, for a rehearsal only
-#   FERRATA_LEZ_PROGRAM | FERRATA_LEZ_LAYOUT   (live attest) the bridge program's id on LEZ, from which the layout
-#                                        of lez-v03-bridge's burn accumulator is derived; or a layout file
-#                                        (lez-v03-return/INTERFACE.md). FERRATA_IMPORTED: the leaf count LEZ imported
-#                                        (default: the vault's)
+#   FERRATA_LEZ_PROGRAM | FERRATA_LEZ_LAYOUT   (attest: one is required) the bridge program's id on LEZ, from which
+#                                        the layout of lez-v03-bridge's burn accumulator is derived; or a layout file
+#                                        (lez-v03-return/INTERFACE.md). The attestor compares the burns with that state
+#                                        on the node and signs nothing otherwise. FERRATA_IMPORTED: the leaf count LEZ
+#                                        imported (default: the vault's). FERRATA_LEZ_BLOCK: the tip (default: the
+#                                        newest block the node reports Finalized; see lez-v03-return/README.md)
 #   FERRATA_WALLET_SEED_TEXT             (live attest, prove) the seed text lez-v03-bridge's driver burned with: the
 #                                        wallet's notes are recomputed from it, in accumulator order
 #                                        (FERRATA_BURN_INDICES, default 0,1; FERRATA_BURN_KINDS, default
@@ -58,7 +63,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
 mode="${1:-}"; name="${2:-}"
-case "$mode" in plan | fork | live | prove | verify | attest) ;; *) sed -n '2,56p' "$0" >&2; exit 2 ;; esac
+case "$mode" in plan | fork | live | prove | verify | attest) ;; *) awk 'NR > 1 && /^set -euo/ {exit} NR > 1' "$0" >&2; exit 2 ;; esac
 [ -n "$name" ] || { echo "a run name" >&2; exit 2; }
 shift 2
 run="$here/runs/$name"
@@ -308,34 +313,39 @@ do_attest() {
     "${standin_py[@]}" burns-from-notes --identity "$id" --notes "$cp/burn-notes.json" --out "$cp/burns.json"
   fi
   if [ ! -f "$cp/burns.json" ]; then
-    [ "${FERRATA_FORK:-}" = 1 ] || [ "${FERRATA_NATIVE_BURNS:-}" = yes ] || die "no burns: set FERRATA_WALLET_SEED_TEXT, FERRATA_BURN_NOTES or FERRATA_BURNS (INTERFACE.md)"
+    [ "${FERRATA_FORK:-}" = 1 ] || die "no burns: set FERRATA_WALLET_SEED_TEXT, FERRATA_BURN_NOTES or FERRATA_BURNS (INTERFACE.md)"
     say "attest: STAND-IN burns of a labelled test wallet, computed natively (a rehearsal; not from LEZ blocks)"
     "${standin_py[@]}" native-burns --identity "$id" --recipient "$ETH_FROM" --out "$cp"
   fi
   signers="$(jq -r '.standIn.signers | join(",")' "$plan")"
   imported="${FERRATA_IMPORTED:-}"
   local layout="${FERRATA_LEZ_LAYOUT:-}" leaves
-  if [ "$(cast code "$(jq -r .vault "$plan")" --rpc-url "$SEPOLIA_RPC_URL")" != 0x ]; then
-    parent="$(call 'finalState()(bytes32)')"
-    leaves="$(call 'nextLeafIndex()(uint64)' | word)"
-    if [ -z "$layout" ] && [ -n "${FERRATA_LEZ_PROGRAM:-}" ]; then
-      # lez-v03-bridge's own layout, derived from its program id and the configuration (INTERFACE.md §1).
-      layout="$cp/layout.json"
-      "${standin_py[@]}" layout --program "$FERRATA_LEZ_PROGRAM" --config-id "$(jq -r .lezConfigId "$plan")" \
-        --imported "${imported:-$leaves}" --out "$layout"
-    fi
-    [ -z "$layout" ] && [ -z "$imported" ] && imported="$leaves"
-    [ -n "$layout" ] && args+=(--layout "$layout")
-    # The deposit root LEZ imported must be the vault's, when the layout names it and LEZ imported every leaf.
-    if [ -n "$layout" ] && jq -e .imported_root "$layout" > /dev/null && [ "${imported:-$leaves}" = "$leaves" ] \
-        && [ "${FERRATA_SKIP_DEPOSIT_ROOT:-}" != yes ]; then
-      args+=(--deposit-root "$(call 'depositRoot()(bytes32)')")
-    fi
-  else
-    # Before the vault exists (a rehearsal signs ahead of its fork): the first checkpoint builds on the genesis state.
-    [ "${FERRATA_NATIVE_BURNS:-}" = yes ] || die "the vault is not deployed"
-    parent="$(jq -r .genesisState "$plan")"
-    [ -n "$imported" ] || imported="$(jq '.deposits | length' "$plan")"
+  # The attestor signs only after it has compared the burns with the bridge's accumulator on the LEZ node, at a tip the
+  # node reports Finalized (standin.py checkpoint refuses without a layout, sign without both checks recorded).
+  [ -n "$layout" ] || [ -n "${FERRATA_LEZ_PROGRAM:-}" ] ||
+    die "attest compares the burns with the bridge's state on the LEZ node: set FERRATA_LEZ_PROGRAM (the bridge program's id) or FERRATA_LEZ_LAYOUT (lez-v03-return/INTERFACE.md)"
+  [ "$(cast code "$(jq -r .vault "$plan")" --rpc-url "$SEPOLIA_RPC_URL")" != 0x ] || die "the vault is not deployed"
+  parent="$(call 'finalState()(bytes32)')"
+  leaves="$(call 'nextLeafIndex()(uint64)' | word)"
+  if [ "${FERRATA_FORK:-}" = 1 ]; then
+    # The rehearsal's LEZ node is a local stub (lez-v03-return/stub_node.py): real recorded testnet blocks, and a
+    # bridge state PLACED from these burns and the vault's deposit root (a stand-in: no LEZ block holds the burns).
+    python3 -I "$repo/lez-v03-return/stub_node.py" bridge-state --identity "$id" --burns "$cp/burns.json" \
+      --program "$FERRATA_LEZ_PROGRAM" --imported "${imported:-$leaves}" --deposit-root "$(call 'depositRoot()(bytes32)')" \
+      --out "$cp/stub-node-state.json"
+  fi
+  if [ -z "$layout" ]; then
+    # lez-v03-bridge's own layout, derived from its program id and the configuration (INTERFACE.md §1).
+    layout="$cp/layout.json"
+    "${standin_py[@]}" layout --program "$FERRATA_LEZ_PROGRAM" --config-id "$(jq -r .lezConfigId "$plan")" \
+      --imported "${imported:-$leaves}" --out "$layout"
+  fi
+  args+=(--layout "$layout")
+  if [ -z "$imported" ] && ! jq -e .imported_leaf_count "$layout" > /dev/null; then imported="$leaves"; fi
+  # The deposit root LEZ imported must be the vault's, when the layout names it and LEZ imported every leaf.
+  if jq -e .imported_root "$layout" > /dev/null && [ "${imported:-$leaves}" = "$leaves" ] \
+      && [ "${FERRATA_SKIP_DEPOSIT_ROOT:-}" != yes ]; then
+    args+=(--deposit-root "$(call 'depositRoot()(bytes32)')")
   fi
   [ -n "$imported" ] && [ -z "${FERRATA_LEZ_PROGRAM:-}" ] && args+=(--imported "$imported")
   [ -n "${FERRATA_LEZ_BLOCK:-}" ] && args+=(--block "$FERRATA_LEZ_BLOCK")
@@ -458,6 +468,18 @@ live)
   [ "$(cast balance "$ETH_FROM" --rpc-url "$SEPOLIA_RPC_URL")" -ge $((72000000 * 2 * $(cast gas-price --rpc-url "$SEPOLIA_RPC_URL") + 2004000000000000)) ] ||
     die "the sender cannot pay ~72M gas at twice the gas price of now plus the deposits"
   [ "$(jq -r .lezConfigIdIsPlaceholder "$plan")" = false ] || die "the plan's lezConfigId is a placeholder: set FERRATA_LEZ_CONFIG_ID and plan again"
+  # Fresh stand-in keys: none of the plan's signers may have signed for another run of this leg (the rehearsals' seals
+  # are committed, for the same chain, verifier and vault addresses as a live run at the same nonce).
+  for other in "$here"/runs/testnet-return-*/plan.json; do
+    [ -f "$other" ] && [ "$(realpath "$other")" != "$(realpath "$plan")" ] || continue
+    jq -e -n --slurpfile a "$plan" --slurpfile b "$other" '([$a[0].standIn.signers[] | ascii_downcase]
+      - [$b[0].standIn.signers[] | ascii_downcase] | length) == ($a[0].standIn.signers | length)' > /dev/null ||
+      die "the plan's stand-in keys also signed for $(basename "$(dirname "$other")"): a live run uses fresh keys (standin.py keygen --dir <a new directory>, FERRATA_STANDIN_KEYS, plan again)"
+  done
+  if [ "${1:-}" = all ] && [ -n "${FERRATA_BURNS:-}${FERRATA_BURN_NOTES:-}${FERRATA_WALLET_SEED_TEXT:-}" ] &&
+      [ -z "${FERRATA_LEZ_PROGRAM:-}${FERRATA_LEZ_LAYOUT:-}" ]; then
+    die "the burns are given but not the bridge's state to compare them with: set FERRATA_LEZ_PROGRAM or FERRATA_LEZ_LAYOUT (nothing sent)"
+  fi
   exec > >(tee -a "$run/logs/live.log") 2>&1
   stage="${1:?stage}"
   if [ "$stage" = all ]; then
@@ -482,11 +504,22 @@ fork)
   exec > >(tee -a "$run/logs/fork.log") 2>&1
   anvil --fork-url "$fork_url" --port "$port" --auto-impersonate > "$run/logs/anvil.log" 2>&1 &
   anvil_pid=$!
-  trap 'kill "$anvil_pid" 2> /dev/null || true' EXIT
+  # The LEZ side of the rehearsal: a local stub node (lez-v03-return/stub_node.py) serving real recorded testnet
+  # blocks and, once the burns are known, a bridge state placed from them. Nothing is read from the LEZ testnet.
+  stub_port="${FERRATA_STUB_LEZ_PORT:-8547}"
+  python3 -I "$repo/lez-v03-return/stub_node.py" serve --port "$stub_port" --blocks "$repo/lez-v03-return/fixtures" \
+    --state "$run/checkpoint/stub-node-state.json" > "$run/logs/stub-node.log" 2>&1 &
+  stub_pid=$!
+  trap 'kill "$anvil_pid" "$stub_pid" 2> /dev/null || true' EXIT
+  lez_rpc="http://127.0.0.1:$stub_port"
+  export FERRATA_LEZ_PROGRAM="${FERRATA_LEZ_PROGRAM:-$(python3 -I "$repo/lez-v03-return/stub_node.py" program)}"
+  unset FERRATA_LEZ_LAYOUT
   export SEPOLIA_RPC_URL="http://127.0.0.1:$port" FERRATA_FORK=1 FERRATA_UNLOCKED=1
   unset ETH_KEYSTORE ETH_PASSWORD ETH_KEYSTORE_ACCOUNT
   for _ in $(seq 1 90); do cast chain-id --rpc-url "$SEPOLIA_RPC_URL" > /dev/null 2>&1 && break; sleep 1; done
+  for _ in $(seq 1 30); do grep -q '"stub"' "$run/logs/stub-node.log" 2> /dev/null && break; sleep 1; done
   say "fork of chain $(cast chain-id --rpc-url "$SEPOLIA_RPC_URL") at block $(cast block-number --rpc-url "$SEPOLIA_RPC_URL") (from $fork_url); nothing is sent to Sepolia"
+  say "LEZ: the stub node $lez_rpc (recorded testnet blocks $(jq -c .blocks "$run/logs/stub-node.log" 2> /dev/null | head -n 1), bridge program $FERRATA_LEZ_PROGRAM, a STAND-IN)"
   cast rpc --rpc-url "$SEPOLIA_RPC_URL" anvil_setBalance "$ETH_FROM" 0x3635c9adc5dea00000 > /dev/null # 1000 ETH, on the fork only
   [ -f "$plan" ] || do_plan
   [ "$(cast nonce "$ETH_FROM" --rpc-url "$SEPOLIA_RPC_URL")" = "$(jq -r .firstNonce "$plan")" ] || die "the sender's nonce on the fork is not the plan's first nonce: plan again"

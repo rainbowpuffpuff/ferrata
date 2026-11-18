@@ -139,50 +139,9 @@ def msg_id(content: dict) -> bytes:
 
 # ---- LEZ v0.3.1 blocks: every transaction, field by field ----------------------------------------------------------
 
-class Reader:
-    def __init__(self, data: bytes):
-        self.data, self.pos = data, 0
-
-    def take(self, n: int) -> bytes:
-        if self.pos + n > len(self.data):
-            raise ValueError(f"truncated at {self.pos}")
-        out = self.data[self.pos:self.pos + n]
-        self.pos += n
-        return out
-
-    def u32(self) -> int:
-        return struct.unpack("<I", self.take(4))[0]
-
-
-def parse_block(raw: bytes) -> list:
-    """borsh(Block) of LEZ v0.3.1, every byte accounted for. Public transactions (tag 0) are read in full:
-    Message {program_account_id, shard_selectors, nonces, instruction_data, fee: Option<FeeDeclaration>} and
-    WitnessSet {(signature, public key)*}. A privacy-preserving transaction (tag 1) stops the walk: none is in the
-    fixtures, and its layout is not written out here."""
-    r = Reader(raw)
-    r.take(80)
-    txs = []
-    for index in range(r.u32()):
-        start, tag = r.pos, r.take(1)[0]
-        if tag != 0:
-            raise ValueError(f"transaction {index}: tag {tag}, not a public transaction")
-        program = r.take(32)
-        shards = [(r.take(32), r.take(32)) for _ in range(r.u32())]
-        nonces = [int.from_bytes(r.take(16), "little") for _ in range(r.u32())]
-        data = r.take(r.u32())
-        fee_tag = r.take(1)[0]
-        if fee_tag > 1:
-            raise ValueError(f"transaction {index}: fee option tag {fee_tag}")
-        fee = None
-        if fee_tag == 1:
-            fee = {"payer": r.take(32), "gas_limit": struct.unpack("<Q", r.take(8))[0],
-                   "tip": struct.unpack("<Q", r.take(8))[0], "max_fee": int.from_bytes(r.take(16), "little")}
-        witnesses = [(r.take(64), r.take(32)) for _ in range(r.u32())]
-        txs.append({"program": program, "shards": shards, "nonces": nonces, "data": data, "fee": fee,
-                    "witnesses": witnesses, "bytes": r.pos - start})
-    if r.pos != len(raw) - 1:
-        raise ValueError(f"{len(raw) - 1 - r.pos} bytes between the last transaction and the status byte")
-    return txs
+# The parser lives in standin.py (the attestor reads the blocks between its tip and its read with it).
+Reader = s.Reader
+parse_block = s.parse_block
 
 
 # ---- the offline check ----------------------------------------------------------------------------------------------
