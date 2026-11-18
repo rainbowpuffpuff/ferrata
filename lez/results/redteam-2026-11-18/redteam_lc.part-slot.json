@@ -1,0 +1,169 @@
+{
+  "counts": {
+    "PASS": 8
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "part-slot",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:ParticipationLow",
+          "core:BelowSupermajority",
+          "core:SignatureMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-PART-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 51,
+        "code_name": "core:BelowSupermajority",
+        "note": "0 of 512 [no participants: Open]",
+        "outcome": "refused"
+      },
+      "title": "no participants",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "prog:BAD_MESSAGE",
+          "step:Witness"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-PART-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "a zero byte inserted after the 64 bit bytes [bitvector of 65 bytes]",
+        "outcome": "refused"
+      },
+      "title": "participation bitvector of the wrong length",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SlotOrderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 22,
+        "code_name": "core:SlotOrderInvalid",
+        "note": "signature_slot = attested slot [signature_slot = attested slot: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature_slot equal to the attested slot",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SlotOrderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 22,
+        "code_name": "core:SlotOrderInvalid",
+        "note": "signature_slot = attested - 1 [signature_slot = attested - 1: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature_slot below the attested slot",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "lez:validity-window"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-04",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Execution outside of the validity window",
+        "note": "timestamp = slot start - 1 ms [Open 1 ms before the signature slot]",
+        "outcome": "refused"
+      },
+      "title": "Open sent before its signature slot starts",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:PeriodSkipped",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 23,
+        "code_name": "core:PeriodSkipped",
+        "note": "signature_slot + 2 periods [signature two periods ahead: Open]",
+        "outcome": "refused"
+      },
+      "title": "update signed two periods ahead (skips a period)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:PeriodSkipped"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 23,
+        "code_name": "core:PeriodSkipped",
+        "note": "store right after Init [next period, next unknown: Open]",
+        "outcome": "refused"
+      },
+      "title": "next-period signature while the next committee is unknown",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:PeriodSkipped",
+          "core:NotNewer",
+          "core:UpdateIrrelevant"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 23,
+        "code_name": "core:PeriodSkipped",
+        "note": "update_0 after the store moved to period 1900 [period-1899 update after rotation: Open]",
+        "outcome": "refused"
+      },
+      "title": "update from an older period than the store",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

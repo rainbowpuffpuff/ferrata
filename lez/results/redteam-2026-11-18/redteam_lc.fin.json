@@ -1,0 +1,226 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PASS": 10
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "fin",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalityBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 26,
+        "code_name": "core:FinalityBranchInvalid",
+        "note": "finality branch node 0 flipped [finality branch node 0 flipped: Open]",
+        "outcome": "refused"
+      },
+      "title": "finality branch with one sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "core:FinalityBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "finality branch one node short [finality branch one node short: Open]",
+        "outcome": "refused"
+      },
+      "title": "finality branch one node short",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalityBranchInvalid",
+          "core:NotNewer"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized beacon header replaced by the checkpoint's [finalized beacon header replaced by the checkpoint's: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized beacon header replaced, branch kept",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution state root [finalized execution state root: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution state root tampered (beacon header intact)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution receipts root [finalized execution receipts root: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution receipts root tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution block number + 1 [finalized execution block number + 1: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution block number tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution block hash [finalized execution block hash: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution block hash tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution timestamp + 12 [finalized execution timestamp + 12: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution timestamp tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": "finalized execution branch node 0 [finalized execution branch node 0: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized header: execution branch sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:AttestedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 21,
+        "code_name": "core:AttestedHeaderInvalid",
+        "note": "attested execution state root [attested execution state root: Open]",
+        "outcome": "refused"
+      },
+      "title": "attested header: execution state root tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalityBranchInvalid",
+          "core:FinalizedHeaderInvalid",
+          "core:NotNewer",
+          "core:NotFinalized"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 26,
+        "code_name": "core:FinalityBranchInvalid",
+        "note": "empty finalized header, real finality branch [empty finalized header, real finality branch: Open]",
+        "outcome": "refused"
+      },
+      "title": "empty finalized header with a real finality branch",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}
