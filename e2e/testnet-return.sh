@@ -287,13 +287,21 @@ do_attest() {
   local cp="$run/checkpoint" parent signers args=() imported
   [ -f "$cp/candidate.json" ] && { say "attest: $cp/candidate.json exists"; return 0; }
   if [ -n "${FERRATA_BURNS:-}" ]; then cp "$FERRATA_BURNS" "$cp/burns.json"; fi
-  if [ ! -f "$cp/burns.json" ] && [ -n "${FERRATA_WALLET_SEED_TEXT:-}" ]; then
-    # lez-v03-bridge's wallet: its notes recomputed from the seed text its driver was given (INTERFACE.md §2).
+  if [ ! -f "$cp/burn-notes.json" ] && [ -n "${FERRATA_WALLET_SEED_TEXT:-}" ]; then
+    # lez-v03-bridge's wallet: its notes, with their release secrets, recomputed from the seed text its driver was
+    # given (INTERFACE.md §2 and §4). With FERRATA_BURNS (the port's own burns.json) the two must be the same burns.
     local check=()
     [ -n "${FERRATA_DRIVER_NOTES:-}" ] && check=(--check "$FERRATA_DRIVER_NOTES")
     "${standin_py[@]}" wallet-burns --identity "$id" --seed-text "$FERRATA_WALLET_SEED_TEXT" \
       --recipient "${FERRATA_BURN_RECIPIENT:-$ETH_FROM}" --indices "${FERRATA_BURN_INDICES:-0,1}" \
-      --kinds "${FERRATA_BURN_KINDS:-public,private}" "${check[@]}" --out "$cp"
+      --kinds "${FERRATA_BURN_KINDS:-public,private}" "${check[@]}" --out "$cp/wallet"
+    if [ -f "$cp/burns.json" ]; then
+      [ "$(jq -r .burn_root "$cp/burns.json")" = "$(jq -r .burn_root "$cp/wallet/burns.json")" ] ||
+        die "the burns recomputed from the wallet's seed are not the burns of FERRATA_BURNS"
+    else
+      cp "$cp/wallet/burns.json" "$cp/burns.json"
+    fi
+    cp "$cp/wallet/burn-notes.json" "$cp/burn-notes.json"; rm -rf "$cp/wallet"
   fi
   if [ ! -f "$cp/burns.json" ] && [ -n "${FERRATA_BURN_NOTES:-}" ]; then
     cp "$FERRATA_BURN_NOTES" "$cp/burn-notes.json"

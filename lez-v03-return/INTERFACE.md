@@ -87,8 +87,11 @@ layout file from two values instead of asking for offsets (`standin.py layout --
 
 The frontier is the bridge core's canonical one, so it compares byte for byte. The derived layout also pins the two
 variant bytes, the frontier's length and `root(cid, n)`'s configuration, and the attestor compares `root(cid, n).root`
-with the vault's `depositRoot()` when LEZ imported every leaf. These offsets were read from the port's source, not
-checked against its binary; a wrong derivation finds an empty shard or a wrong byte, and the attestor then refuses.
+with the vault's `depositRoot()` when LEZ imported every leaf. The port documents the same offsets in its own README
+("Burn accumulator account") and prints this layout file and a run's `burns.json` itself (`bridge03 <run> layout`,
+`bridge03 <run> burns`); either source works here (`FERRATA_LEZ_LAYOUT` and `FERRATA_BURNS`, or the derivation). They
+were compared as source and text, not against a deployed program; a wrong layout finds an empty shard or a wrong
+byte, and the attestor then refuses.
 
 The wallet's notes: the port's driver makes burn `i` with `BurnNote::create` from keys
 `BridgeKeys::from_bridge_seed(sha256(<seed text>))` and records `{r, memo, mac, c_out, hash}` per burn, without the
