@@ -524,7 +524,8 @@ class Proxy:
         self.net = Net(a.network, first=a.first, log=self.log)
         self.all_loopback = all(loopback(u) for u in self.net.urls)
         self.lag = a.lag if a.lag is not None else (0 if self.all_loopback else 3)
-        self.pin_ttl = float(os.environ.get("PUBNET_PIN_TTL_S", "12"))
+        # a local chain (lag 0): every "latest" is the head as it is now (an evm_mine or a warp shows at once)
+        self.pin_ttl = float(os.environ.get("PUBNET_PIN_TTL_S", "12" if self.lag else "0"))
         self.sender = (a.sender or "").lower() or None
         self.allow_unlocked = a.allow_unlocked
         self.chain = None
@@ -653,7 +654,9 @@ class Proxy:
         if method.startswith(LOCAL_ONLY):
             if not self.all_loopback:
                 raise Permanent(f"pubnet: permanent: {method} goes to a local chain only")
-            return self.net.call(method, params, urls=self.net.urls[:1])
+            r = self.net.call(method, params, urls=self.net.urls[:1])
+            self._pin_t = 0.0  # the local chain moved (evm_mine, evm_increaseTime, ...): pin again
+            return r
         return self.net.call(method, params)
 
     def agreed_nonce(self) -> tuple[int, int]:
