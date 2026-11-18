@@ -20,6 +20,8 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/.." && pwd)"
 fork=0; [ "${1:-}" = --fork ] && { fork=1; shift; }
+# The rehearsal's stages run as children of `--fork <run> all`, against its loopback fork.
+[ "${FERRATA_SEPOLIA_FORK:-}" = 1 ] && case "${SEPOLIA_RPC_URL:-}" in http://127.0.0.1:*) fork=2 ;; esac
 run="${1:?run directory}"; stage="${2:?stage}"; arg="${3:-}"
 mkdir -p "$run"; run="$(cd "$run" && pwd)"
 case "$run" in "$repo"/*) echo "sepolia.sh: the run directory must be outside the repository" >&2; exit 1 ;; esac
@@ -35,17 +37,30 @@ rec() { # rec STAGE RECEIPT-JSON: append to <run>/sepolia.json
 if [ "$fork" = 1 ]; then
   upstream="${SEPOLIA_RPC_URL:?SEPOLIA_RPC_URL: the Sepolia endpoint the fork reads from}"
   export ETH_FROM="${ETH_FROM:-0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07}"   # crown-live-3's deployer, impersonated
-  export SEPOLIA_RPC_URL=http://127.0.0.1:8547 FERRATA_UNLOCKED=1
+  export SEPOLIA_RPC_URL=http://127.0.0.1:8547 FERRATA_UNLOCKED=1 FERRATA_SEPOLIA_FORK=1
   anvil --fork-url "$upstream" --port 8547 --auto-impersonate --silent > "$run/anvil-fork.log" 2>&1 &
   apid=$!; trap 'kill $apid 2>/dev/null || true' EXIT
   for _ in $(seq 1 60); do cast chain-id --rpc-url "$SEPOLIA_RPC_URL" > /dev/null 2>&1 && break; sleep 1; done
   cast rpc anvil_setBalance "$ETH_FROM" 0x56BC75E2D63100000 --rpc-url "$SEPOLIA_RPC_URL" > /dev/null   # 100 ETH, fork only
   say "fork of Sepolia at block $(cast block-number --rpc-url "$SEPOLIA_RPC_URL"), deployer $ETH_FROM impersonated"
   if [ "$stage" = all ]; then
-    for s in identity deploy "deposit 0" "deposit 1" status; do "$0" "$run" $s; done
+    "$0" "$run" identity
+    if [ ! -f "$run/config_id.txt" ]; then
+      # The rehearsal's own LEZ side, no network: a configuration of a bridge account the driver makes, a placeholder
+      # light client (FERRATA_LC_PROGRAM, default: that account) and instance, this vault; and the deposits' openings.
+      drv="${BRIDGE03:-$here/target/release/bridge03}"; [ -x "$drv" ] || die "build the driver (cargo build --release -p driver03)"
+      head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$run/payer.key"
+      "$drv" "$run" setup --sequencer https://testnet.lez.logos.co --payer "$run/payer.key" > "$run/setup.log"
+      "$drv" "$run" config --chain 11155111 --vault "$(jq -r .vault "$run/identity.json")" \
+        --lc "${FERRATA_LC_PROGRAM:-$(jq -r .bridge "$run/run.json")}" \
+        --instance "${FERRATA_LC_INSTANCE:-$(printf 'ferrata/lez-v03-bridge/fork-rehearsal' | sha256sum | cut -c1-64)}" \
+        --eth 1000000000000000 > "$run/config_id.txt"
+      "$drv" "$run" deposits --seed "ferrata/lez-v03-bridge: fork rehearsal seed (test value)" --depositor "$ETH_FROM" > "$run/deposits.json"
+    fi
+    for s in deploy "deposit 0" "deposit 1" status; do "$0" "$run" $s; done
     exit 0
   fi
-else
+elif [ "$fork" = 0 ]; then
   : "${SEPOLIA_RPC_URL:?SEPOLIA_RPC_URL}" "${ETH_FROM:?ETH_FROM}"
   case "$stage" in deploy|deposit) [ "${FERRATA_SEPOLIA_SEND:-}" = yes ] || die "set FERRATA_SEPOLIA_SEND=yes to send" ;; esac
 fi
@@ -68,7 +83,7 @@ case "$stage" in
     cid="$(cat "$run/config_id.txt")"; vault="$(jq -r .vault "$run/identity.json")"
     # forge reads and writes only under vault/deployments/ (vault/foundry.toml fs_permissions): fork-* (vault/.gitignore)
     # for the rehearsal, v03bridge-* (the repository's .gitignore) for Sepolia; both copied into the run directory.
-    dep="$repo/vault/deployments/$([ "$fork" = 1 ] && echo fork-)v03bridge-$(basename "$run")"
+    dep="$repo/vault/deployments/$([ "$fork" != 0 ] && echo fork-)v03bridge-$(basename "$run")"
     mkdir -p "$repo/vault/deployments"
     jq --arg cid "$cid" '.lezConfigId = $cid | ._source = "lez-v03-bridge/sepolia.sh: vault/script/params/sepolia.json with lez-v03-bridge'"'"'s testnet configuration id; the checkpoint and release image ids are the v0.4 programs'"'"' (no v0.3.1 checkpoint guest exists: RETURN.md)"' \
       "$repo/vault/script/params/sepolia.json" > "$dep-params.json"
