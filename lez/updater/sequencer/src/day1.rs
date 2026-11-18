@@ -20,9 +20,8 @@
 //!   fund     --keys DIR --amount N                                       rehearsal only: LEZ's published local test
 //!                                                                        account pays the payer and the daemon key
 //!
-//! Sending to anything but a sequencer on this machine needs `FERRATA_TESTNET_SEND=yes` and
-//! `FERRATA_SEQUENCER_REMOTE=<that exact URL>` (`live.rs`, `check_loopback`); the read-only commands read through
-//! the same client and never call `sendTransaction`.
+//! Reading a sequencer that is not on this machine needs `FERRATA_SEQUENCER_REMOTE=<that exact URL>`; sending to it
+//! needs `FERRATA_TESTNET_SEND=yes` as well (`live.rs`, `check_loopback` and `check_send`, checked before every send).
 
 use std::{
     collections::BTreeMap,
@@ -537,6 +536,7 @@ async fn send_stage(live: &mut Live, state: &Path, stage: &str) -> Result<bool> 
             match st {
                 "dead" => bail!("[{stage}] {i:02} {label}: dead (a signer's nonce was used by another transaction; it never applied). Stop: decide by hand (`status`)"),
                 "pending" => {
+                    crate::live::check_send(&live.opts.rpc)?;
                     attempts += 1;
                     ensure!(attempts <= 6, "[{stage}] {i:02} {label}: sent {attempts} times, never included");
                     let since_head = live.head().await?;
@@ -822,6 +822,7 @@ async fn cmd_fund(a: &Args) -> Result<()> {
         wait_final: true,
     };
     let live = Live::open(opts, &[faucet.clone()]).await?;
+    crate::live::check_send(&live.opts.rpc)?;
     for who in ["payer", "daemon"] {
         let key = read_key(&keys.join(format!("{who}.key")))?;
         let to = id_of(&key);

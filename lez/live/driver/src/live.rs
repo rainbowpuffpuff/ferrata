@@ -58,27 +58,41 @@ pub struct Live {
 }
 
 /// Only a sequencer on this machine: the wallet's own default is LEZ's public testnet. The one exception is the
-/// day-one deployment (`lez/testnet04/day1.sh`): another sequencer only when both `FERRATA_TESTNET_SEND=yes` and
-/// `FERRATA_SEQUENCER_REMOTE` naming exactly that URL are in the environment (the script sets the second for the URL
-/// it was given, and refuses to send unless the owner set the first).
+/// day-one deployment (`lez/testnet04/day1.sh`): another sequencer when `FERRATA_SEQUENCER_REMOTE` names exactly that
+/// URL (the script sets it to the URL it was given). Reading it is then allowed; sending to it needs
+/// `FERRATA_TESTNET_SEND=yes` too ([`check_send`], at every place a transaction leaves: `send`, `send_mentions`,
+/// `send_raw` here, the updater's `SequencerLedger::submit`, `ferrata-day1`'s `send` and `fund`).
 pub fn check_loopback(rpc: &str) -> Result<()> {
-    if remote_allowed(rpc) {
+    if is_loopback(rpc) || remote_named(rpc) {
         return Ok(());
     }
-    let rest = rpc.strip_prefix("http://").ok_or_else(|| anyhow!("the RPC address must be http://127.0.0.1:PORT"))?;
-    let host = rest.split([':', '/']).next().unwrap_or("");
-    ensure!(
-        host == "127.0.0.1" || host == "localhost",
-        "refusing to talk to {host}: only a local sequencer (another needs FERRATA_TESTNET_SEND=yes and FERRATA_SEQUENCER_REMOTE={rpc})"
-    );
-    Ok(())
+    let host = rpc.split("://").nth(1).unwrap_or(rpc).split([':', '/']).next().unwrap_or("");
+    bail!("refusing to talk to {host}: only a local sequencer (another needs FERRATA_SEQUENCER_REMOTE={rpc})")
 }
 
-/// `rpc` is the sequencer the owner named for the day-one deployment, and sending to it is allowed.
-pub fn remote_allowed(rpc: &str) -> bool {
-    std::env::var("FERRATA_TESTNET_SEND").as_deref() == Ok("yes")
-        && std::env::var("FERRATA_SEQUENCER_REMOTE").is_ok_and(|named| !named.is_empty() && named == rpc)
+fn is_loopback(rpc: &str) -> bool {
+    let Some(rest) = rpc.strip_prefix("http://") else { return false };
+    let host = rest.split([':', '/']).next().unwrap_or("");
+    host == "127.0.0.1" || host == "localhost"
+}
+
+/// `rpc` is the sequencer the day-one deployment was given.
+pub fn remote_named(rpc: &str) -> bool {
+    std::env::var("FERRATA_SEQUENCER_REMOTE").is_ok_and(|named| !named.is_empty() && named == rpc)
         && (rpc.starts_with("http://") || rpc.starts_with("https://"))
+}
+
+/// Before a transaction is sent: a sequencer on this machine, or the named one with `FERRATA_TESTNET_SEND=yes` (the
+/// owner's decision; nothing here sets it).
+pub fn check_send(rpc: &str) -> Result<()> {
+    if is_loopback(rpc) {
+        return Ok(());
+    }
+    ensure!(
+        remote_named(rpc) && std::env::var("FERRATA_TESTNET_SEND").as_deref() == Ok("yes"),
+        "refusing to send to {rpc}: a sequencer not on this machine needs FERRATA_TESTNET_SEND=yes and FERRATA_SEQUENCER_REMOTE={rpc}"
+    );
+    Ok(())
 }
 
 fn wallet_config_json(rpc: &str, gas_limit: u64) -> String {
@@ -310,12 +324,14 @@ impl Live {
     /// Send one public transaction through LEZ's wallet: `actors` are declared in order, the
     /// message goes to `actors[root]`, `payer` pays (co-signing if it is not an actor).
     pub async fn send(&mut self, tx: Tx) -> Result<Result<Sent, Outcome>> {
+        check_send(&self.opts.rpc)?;
         let mentions: Vec<AccountMention> = tx.actors.iter().map(|pda| mention(*pda)).collect();
         self.send_mentions(tx, mentions).await
     }
 
     /// `tx` with these account mentions instead of its PDAs (for actors that are not PDAs).
     pub async fn send_mentions(&mut self, tx: Tx, mentions: Vec<AccountMention>) -> Result<Result<Sent, Outcome>> {
+        check_send(&self.opts.rpc)?;
         self.sync().await?;
         let gas_limit = tx.gas_limit.unwrap_or(self.opts.gas_limit);
         self.set_gas_limit(gas_limit);
@@ -369,6 +385,7 @@ impl Live {
     /// Send an already built transaction (not through the wallet's builders).
     pub async fn send_raw(&mut self, step: &str, tx: LeeTransaction, note: String) -> Result<Outcome> {
         use wallet::WalletSequencerClient as _;
+        check_send(&self.opts.rpc)?;
         self.sync().await?;
         let since_head = self.head().await?;
         let hash = tx.hash();
