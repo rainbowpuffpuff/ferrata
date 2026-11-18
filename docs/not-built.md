@@ -5,7 +5,13 @@ The README keeps a short form of it.
 
 The design notes specify these; there is no code for them here:
 - in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): a transfer that credits a private recipient
-  privately, the admin's own handover, the switch to a v0.4 token program when one is released;
+  privately, the admin's own handover, the switch to a v0.4 token program when one is released; the nullifier
+  account keyed by the configuration id, a holder account per configuration and destination, and an oversized state
+  refused with a code: the change that closes the two known issues of 18 November 2026 (a second configuration of
+  the same vault can freeze a public-kind deposit whose `s` it knows; a destination's shared holder account can be
+  filled; [`bridge.md`](design/bridge.md) §3, [EVIDENCE](EVIDENCE.md) row 136). It changes the bridge program's
+  image id, so it is milestone B1's; it is built in the LEZ v0.3.1 port only (branch `testnet-v03-bridge` at
+  `ff453dcc`);
 - rule (B): the watchers' `monitor` reading attestations (the four-sequencer zone has run the bridge program, both
   burns, their releases through a vault on a local anvil and a rotation its committee proposed,
   `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran

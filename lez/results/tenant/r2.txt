@@ -1,0 +1,57 @@
+# R2: holder(dest) with k holdings of other configurations (LEZ v0.4.0-rc1, frozen bridge ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd)
+
+Execution gas limit of a transaction: 10000000. Holdings placed directly (borsh: 4 + 68 k + 1 bytes).
+
+## A claim to it (leaf 2, 1 ETH, public kind)
+
+| k | state bytes | outcome | gas_exec charged | fee_base | cycles at the holder |
+|---:|---:|---|---:|---:|---:|
+| 0 | 6 | applied | 260775 | 2102624 | 21138 |
+| 1505 | 102346 | applied | 2683111 | 21481312 | 2443474 |
+| 3010 | 204686 | applied | 5108009 | 40880496 | 4868372 |
+| 6020 | 409366 | applied | 9957528 | 79676648 | 9717891 |
+| 6043 | 410930 | applied | 9991609 | 79949296 | 9751972 |
+| 6046 | 411134 | applied | 9996081 | 79985072 | 9756444 |
+| 6047 | 411202 | applied | 9997551 | 79996832 | 9757914 |
+| 6048 | 411270 | applied | 9999010 | 80008504 | 9759373 |
+| 6049 | 411338 | failed, no exit code: Execution exceeded its cycle budget of 17663 cycles | 10000000 | 80016424 | 9760861 |
+| 6055 | 411746 | failed, no exit code: Execution exceeded its cycle budget of 8740 cycles | 10000000 | 80016424 | 9769784 |
+| 6067 | 412562 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 6114 | 415758 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 6208 | 422150 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 6396 | 434934 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 6772 | 460502 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 7525 | 511706 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 9030 | 614046 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+| 12040 | 818726 | failed, no exit code: Execution exceeded its cycle budget of 9778524 cycles | 10000000 | 80016424 | 0 |
+
+largest k at which a claim to it applies: 6048; at 6049: failed, no exit code: Execution exceeded its cycle budget of 17663 cycles
+
+## The owner's burn of 1 ETH it holds there (k other holdings in front of it)
+
+| k | state bytes | outcome | gas_exec charged | fee_base | cycles at the holder |
+|---:|---:|---|---:|---:|---:|
+| 0 | 74 | applied | 164842 | 1325448 | 30266 |
+| 6049 | 411406 | applied | 9910823 | 79293296 | 9776247 |
+| 6096 | 414602 | applied | 9980316 | 79849240 | 9845740 |
+| 6107 | 415350 | applied | 9996608 | 79979576 | 9862032 |
+| 6108 | 415418 | applied | 9998111 | 79991600 | 9863535 |
+| 6109 | 415486 | applied | 9999626 | 80003720 | 9865050 |
+| 6110 | 415554 | failed, no exit code: Execution exceeded its cycle budget of 20509 cycles | 10000000 | 80006712 | 9866527 |
+| 6113 | 415758 | failed, no exit code: Execution exceeded its cycle budget of 15886 cycles | 10000000 | 80006712 | 9871150 |
+| 6119 | 416166 | failed, no exit code: Execution exceeded its cycle budget of 7190 cycles | 10000000 | 80006712 | 9879846 |
+| 6143 | 417798 | failed, no exit code: Execution exceeded its cycle budget of 7162 cycles | 10000000 | 80006712 | 9915440 |
+| 6238 | 424258 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+| 6427 | 437110 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+| 6805 | 462814 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+| 7561 | 514222 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+| 9073 | 617038 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+| 12098 | 822738 | failed, no exit code: Execution exceeded its cycle budget of 9975338 cycles | 10000000 | 80006712 | 0 |
+
+largest k at which the owner's burn applies: 6109
+
+## The attacker's cost (derived from the measured gas above)
+
+claim into an empty holder: 260775 gas; growth: 1610.2 gas per holding already there (k = 0 to 6048);
+Register: 331816 gas per token (one holding per (configuration, token) pair)
+6049 claims: 3.103e10 gas; 6049 Registers: 2.007e9 gas; total about 3.304e10 execution gas
