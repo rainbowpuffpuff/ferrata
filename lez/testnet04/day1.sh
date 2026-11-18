@@ -383,6 +383,20 @@ stage_send() { # stage_send STAGE SIGN-ARGS...: sign once (kept), then send the 
   if [ ! -d "$KEYS/tx/$stage" ]; then tool sign --keys "$KEYS" --state "$STATE" --stage "$stage" "$@"; fi
   tool send --keys "$KEYS" --state "$STATE" --stage "$stage"
 }
+instance_on_chain() { # the instance KEYS/instance.json names exists on chain (as of the last final block)
+  [ -f "$KEYS/instance.json" ] && [ "$(inspect_json | jq_py 'd.get("instance",{}).get("exists")')" = True ]
+}
+stage_init() { # (b): nothing when the instance exists on chain; else sign once (from the checkpoint kept in KEYS/init/,
+  # fetched the first time) and send the stored bytes. The tool refuses to sign when the instance exists (and writes
+  # KEYS/instance.json): that is done too.
+  if instance_on_chain; then say "(b) the instance $(jq_py 'd["instance_id"]' < "$KEYS/instance.json") exists on chain: no Init"; return 0; fi
+  [ -f "$KEYS/init/chain.json" ] || fetch_checkpoint "$FETCH"
+  if [ ! -d "$KEYS/tx/init" ]; then
+    tool sign --keys "$KEYS" --state "$STATE" --stage init --fetch "$FETCH" \
+      || { instance_on_chain && { say "(b) the instance exists on chain: no Init"; return 0; }; return 1; }
+  fi
+  tool send --keys "$KEYS" --state "$STATE" --stage init
+}
 run() {
   [ "${FERRATA_TESTNET_SEND:-}" = yes ] || die "refusing to send to $URL: set FERRATA_TESTNET_SEND=yes (the owner's decision)"
   need_tools; check_programs
@@ -408,13 +422,8 @@ run() {
   until_stage a
   # (b) Init from a fresh finalized checkpoint, kept beside the keys at the first signing (KEYS/init/); nothing when
   # the instance exists on chain
-  if [ -f "$KEYS/instance.json" ] && [ "$(inspect_json | jq_py 'd.get("instance",{}).get("exists")')" = True ]; then
-    say "(b) the instance $(jq_py 'd["instance_id"]' < "$KEYS/instance.json") exists on chain already: no Init"
-  else
-    [ -f "$KEYS/init/chain.json" ] || fetch_checkpoint "$FETCH"
-    say "(b) Init of the Sepolia instance"
-    retry "(b) Init" stage_send init --fetch "$FETCH"
-  fi
+  say "(b) Init of the Sepolia instance"
+  retry "(b) Init" stage_init
   until_stage b
   # (c) the daemon (Adopt parts of the initial committee, then every update), detached
   say "(c) the updater daemon"
