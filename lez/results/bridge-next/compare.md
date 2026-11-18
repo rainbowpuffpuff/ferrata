@@ -1,20 +1,21 @@
-# second build (7c7d2b3a…1e2f) against deployed program (ccde6171…71dd), table by table
+# second build (c5cad2cd…d6da) against deployed program (ccde6171…71dd), table by table
 
-Written by `lez/scripts/compare-tables.py`: every cell of second build (7c7d2b3a…1e2f)'s tables that differs from
+Written by `lez/scripts/compare-tables.py`: every cell of second build (c5cad2cd…d6da)'s tables that differs from
 deployed program (ccde6171…71dd)'s, rows paired in order.
 
 | file | tables | rows | rows equal | rows that differ | text lines that differ |
 |---|---:|---:|---:|---:|---:|
 | `bridge-burn.md` | 4 | 56 | 35 | 21 | 3 |
-| `bridge-controls.md` | 3 | 331 | 259 | 72 | 1 |
-| `bridge-gloas.md` | 2 | 38 | 25 | 13 | 1 |
-| `bridge-inbound.md` | 2 | 125 | 95 | 30 | 1 |
+| `bridge-controls.md` | 3 | 331 | 255 | 76 | 1 |
+| `bridge-gloas.md` | 2 | 38 | 19 | 19 | 1 |
+| `bridge-inbound.md` | 2 | 125 | 87 | 38 | 1 |
 | `bridge-private-claim.md` | 2 | 3 | 2 | 1 | 6 |
-| `bridge-roles.md` | 3 | 295 | 256 | 39 | 1 |
+| `bridge-roles.md` | 3 | 295 | 252 | 43 | 1 |
 | `bridge-time.md` | 2 | 152 | 122 | 30 | 1 |
 | `bridge-transfer-private.md` | 2 | 3 | 1 | 2 | 1 |
-| `bridge-vault-storage.md` | 2 | 125 | 72 | 53 | 1 |
+| `bridge-vault-storage.md` | 2 | 125 | 70 | 55 | 1 |
 | `a1-successors-ws.md` | only in deployed program (ccde6171…71dd) | | | | |
+| `bridge-next.md` | only in deployed program (ccde6171…71dd) | | | | |
 | `environment.md` | only in deployed program (ccde6171…71dd) | | | | |
 | `holdings.md` | only in deployed program (ccde6171…71dd) | | | | |
 | `images.md` | only in deployed program (ccde6171…71dd) | | | | |
@@ -44,7 +45,7 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - 2 / Burn: the same note again: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 31,901 → bridge Burn 52,736 → bridge Admit 35,566 → bridge Burn 22,940` → `bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 52,736 → bridge Admit 35,566 → bridge Burn 22,940`; execution gas: `167,805` → `166,383` (-1,422); base fee: `1,349,152` → `1,337,776` (-11,376)
 - 3 / Burn 0.5 ETH (not a denomination): handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 31,901 → bridge Burn 32,513` → `bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 32,513`; execution gas: `89,076` → `87,654` (-1,422); base fee: `719,320` → `707,944` (-11,376)
 - 4 / Burn 1 unit of another token (no holding of it): handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 26,457` → `bridge Burn 24,804 → bridge Burn 25,620`; execution gas: `51,119` → `50,424` (-695); base fee: `415,664` → `410,104` (-5,560)
-- 5 / Burn 10 ETH with 9 held: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 26,591` → `bridge Burn 24,804 → bridge Burn 25,770`; execution gas: `51,253` → `50,574` (-679); base fee: `416,736` → `411,304` (-5,432)
+- 5 / Burn 10 ETH with 9 held: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 26,591` → `bridge Burn 24,811 → bridge Burn 25,770`; execution gas: `51,253` → `50,581` (-672); base fee: `416,736` → `411,360` (-5,376)
 - 7 / Burn under a configuration the payer holds nothing of: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 26,224` → `bridge Burn 24,804 → bridge Burn 21,388`; execution gas: `50,886` → `46,192` (-4,694); base fee: `413,800` → `376,248` (-37,552)
 - 11 / Burn 1 ETH (B) by the payer: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 31,355 → bridge Burn 48,868 → bridge Admit 35,566 → bridge Burn 21,612` → `bridge Burn 24,804 → bridge Burn 29,915 → bridge Burn 48,868 → bridge Admit 35,566 → bridge Burn 21,612`; execution gas: `162,063` → `160,765` (-1,298); base fee: `1,303,216` → `1,292,832` (-10,384)
 - Burn 1 ETH (A) by the payer / bridge Burn: cycles: `24,662` → `24,804` (+142)
@@ -55,7 +56,7 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - Burn 0.5 ETH (not a denomination) / bridge Burn: cycles: `31,901` → `30,337` (-1,564); input bytes (ReceiveInput): `465` → `397` (-68); of which pre-state: `142` → `74` (-68); journal bytes: `889` → `753` (-136); post-state bytes: `142` → `74` (-68)
 - Burn 1 unit of another token (no holding of it) / bridge Burn: cycles: `24,662` → `24,804` (+142)
 - Burn 1 unit of another token (no holding of it) / bridge Burn: cycles: `26,457` → `25,620` (-837); input bytes (ReceiveInput): `465` → `397` (-68); of which pre-state: `142` → `74` (-68)
-- Burn 10 ETH with 9 held / bridge Burn: cycles: `24,662` → `24,804` (+142)
+- Burn 10 ETH with 9 held / bridge Burn: cycles: `24,662` → `24,811` (+149)
 - Burn 10 ETH with 9 held / bridge Burn: cycles: `26,591` → `25,770` (-821); input bytes (ReceiveInput): `465` → `397` (-68); of which pre-state: `142` → `74` (-68)
 - Burn under a configuration the payer holds nothing of / bridge Burn: cycles: `24,662` → `24,804` (+142)
 - Burn under a configuration the payer holds nothing of / bridge Burn: cycles: `26,224` → `21,388` (-4,836); input bytes (ReceiveInput): `465` → `323` (-142); of which pre-state: `142` → `0` (-142)
@@ -64,6 +65,8 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 
 ## `bridge-controls.md`
 
+- 1 / Init A: handlers run (cycles each): `bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419` → `bridge Init 44,897 → Attest 86,790 → bridge (reply) 39,419`; execution gas: `171,027` → `171,106` (+79); base fee: `1,383,784` → `1,384,416` (+632)
+- 2 / Init B: handlers run (cycles each): `bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419` → `bridge Init 44,277 → Attest 84,699 → bridge (reply) 39,419`; execution gas: `168,316` → `168,395` (+79); base fee: `1,361,584` → `1,362,216` (+632)
 - 5 / Register ETH (A): entry, schedules 0 and 1, count at block 100: handlers run (cycles each): `bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 73,907 → Attest 151,273 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `331,816` → `331,790` (-26); base fee: `2,676,504` → `2,676,296` (-208)
 - 6 / Register ETH (A) again: handlers run (cycles each): `bridge Register 80,680 → Attest 165,778 → bridge (reply) 74,257 → bridge WriteToken 34,994` → `bridge Register 80,667 → Attest 165,778 → bridge (reply) 74,244 → bridge WriteToken 34,994`; execution gas: `355,709` → `355,683` (-26); base fee: `2,870,312` → `2,870,104` (-208)
 - 7 / Register T2 (A): vault A holds no entry for it: handlers run (cycles each): `bridge Register 66,224 → Attest 147,735 → bridge (reply) 50,017` → `bridge Register 66,211 → Attest 147,735 → bridge (reply) 50,004`; execution gas: `263,976` → `263,950` (-26); base fee: `2,132,872` → `2,132,664` (-208)
@@ -86,6 +89,8 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - 69 / Burn 1 ETH (A) after the Tick: the freeze has lapsed: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 31,901 → bridge Burn 52,735 → bridge Admit 35,860 → bridge Burn 21,612` → `bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 52,735 → bridge Admit 35,860 → bridge Burn 21,612`; execution gas: `166,770` → `165,348` (-1,422); base fee: `1,340,872` → `1,329,496` (-11,376)
 - 77 / Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue: handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 47,708 → bridge Admit 35,859 → bridge Spend 30,916 → bridge Mint 24,538 → bridge Mint 22,784` → `bridge Claim 107,702 → bridge Issue 48,756 → bridge Admit 35,859 → bridge Spend 31,725 → bridge Mint 23,617 → bridge Mint 18,761`; execution gas: `269,507` → `266,420` (-3,087); base fee: `2,172,480` → `2,147,784` (-24,696)
 - 78 / Burn 1 ETH (B) after Sunset: burns continue: handlers run (cycles each): `bridge Burn 24,662 → bridge Burn 33,236 → bridge Burn 49,283 → bridge Admit 35,565 → bridge Burn 21,612` → `bridge Burn 24,804 → bridge Burn 31,659 → bridge Burn 49,283 → bridge Admit 35,565 → bridge Burn 21,612`; execution gas: `164,358` → `162,923` (-1,435); base fee: `1,321,576` → `1,310,096` (-11,480)
+- Init A / bridge Init: cycles: `44,818` → `44,897` (+79)
+- Init B / bridge Init: cycles: `44,198` → `44,277` (+79)
 - Register ETH (A): entry, schedules 0 and 1, count at block 100 / bridge Register: cycles: `73,920` → `73,907` (-13)
 - Register ETH (A): entry, schedules 0 and 1, count at block 100 / bridge (reply): cycles: `74,476` → `74,463` (-13)
 - Register ETH (A) again / bridge Register: cycles: `80,680` → `80,667` (-13)
@@ -139,10 +144,16 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 
 ## `bridge-gloas.md`
 
+- 1 / Init C, Gloas record, no header: handlers run (cycles each): `bridge Init 46,103 → Attest 20,673` → `bridge Init 46,182 → Attest 20,673`; execution gas: `66,776` → `66,855` (+79); base fee: `549,952` → `550,584` (+632)
+- 2 / Init C, Gloas record, another block's header: handlers run (cycles each): `bridge Init 54,048 → Attest 36,830` → `bridge Init 54,127 → Attest 36,830`; execution gas: `90,878` → `90,957` (+79); base fee: `748,584` → `749,216` (+632)
+- 3 / Init C, Gloas record, header in front of the account proof: handlers run (cycles each): `bridge Init 54,048 → Attest 113,473 → bridge (reply) 39,419` → `bridge Init 54,127 → Attest 113,473 → bridge (reply) 39,419`; execution gas: `206,940` → `207,019` (+79); base fee: `1,677,080` → `1,677,712` (+632)
 - 4 / Register ETH (C), Gloas record, no header: handlers run (cycles each): `bridge Register 73,647 → Attest 25,664` → `bridge Register 73,634 → Attest 25,664`; execution gas: `99,311` → `99,298` (-13); base fee: `815,872` → `815,768` (-104)
 - 5 / Register ETH (C), Gloas record, with the header: handlers run (cycles each): `bridge Register 84,495 → Attest 176,262 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 84,482 → Attest 176,262 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `367,380` → `367,354` (-26); base fee: `2,966,240` → `2,966,032` (-208)
 - 8 / Claim: leaf 0 under root(C, 2): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 47,280 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161` → `bridge Claim 107,702 → bridge Issue 48,328 → bridge Admit 35,565 → bridge Spend 31,725 → bridge Mint 18,761 → bridge Mint 18,761`; execution gas: `257,785` → `260,842` (+3,057); base fee: `2,078,704` → `2,103,160` (+24,456)
 - 9 / Claim: leaf 0 again (replay): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 47,280 → bridge Admit 35,565 → bridge Spend 19,559` → `bridge Claim 107,702 → bridge Issue 48,328 → bridge Admit 35,565 → bridge Spend 20,082`; execution gas: `210,106` → `211,677` (+1,571); base fee: `1,697,272` → `1,709,840` (+12,568)
+- Init C, Gloas record, no header / bridge Init: cycles: `46,103` → `46,182` (+79)
+- Init C, Gloas record, another block's header / bridge Init: cycles: `54,048` → `54,127` (+79)
+- Init C, Gloas record, header in front of the account proof / bridge Init: cycles: `54,048` → `54,127` (+79)
 - Register ETH (C), Gloas record, no header / bridge Register: cycles: `73,647` → `73,634` (-13)
 - Register ETH (C), Gloas record, with the header / bridge Register: cycles: `84,495` → `84,482` (-13)
 - Register ETH (C), Gloas record, with the header / bridge (reply): cycles: `74,476` → `74,463` (-13)
@@ -155,6 +166,10 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 
 ## `bridge-inbound.md`
 
+- 1 / Init A: vault A's slot 2 holds configId(A): handlers run (cycles each): `bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419` → `bridge Init 44,897 → Attest 86,790 → bridge (reply) 39,419`; execution gas: `171,027` → `171,106` (+79); base fee: `1,383,784` → `1,384,416` (+632)
+- 2 / Init B (another configuration, vault B): handlers run (cycles each): `bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419` → `bridge Init 44,277 → Attest 84,699 → bridge (reply) 39,419`; execution gas: `168,316` → `168,395` (+79); base fee: `1,361,584` → `1,362,216` (+632)
+- 3 / Init A' (vault A, another fee recipient): slot 2 is configId(A): handlers run (cycles each): `bridge Init 44,818 → Attest 86,790 → bridge (reply) 32,198` → `bridge Init 44,897 → Attest 86,790 → bridge (reply) 32,198`; execution gas: `163,806` → `163,885` (+79); base fee: `1,326,016` → `1,326,648` (+632)
+- 4 / Init A again: handlers run (cycles each): `bridge Init 39,401` → `bridge Init 39,481`; execution gas: `39,401` → `39,481` (+80); base fee: `330,776` → `331,416` (+640)
 - 5 / Register ETH (A): entry and schedule 0 attested at block 100: handlers run (cycles each): `bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 73,907 → Attest 151,273 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `331,816` → `331,790` (-26); base fee: `2,676,504` → `2,676,296` (-208)
 - 6 / Register ETH (B): handlers run (cycles each): `bridge Register 76,864 → Attest 156,184 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 76,851 → Attest 156,184 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `339,671` → `339,645` (-26); base fee: `2,739,528` → `2,739,320` (-208)
 - 18 / Claim: the shared vector's deposit (leaf 2) under root(A, 5): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161` → `bridge Claim 107,702 → bridge Issue 52,214 → bridge Admit 35,565 → bridge Spend 31,725 → bridge Mint 18,761 → bridge Mint 18,761`; execution gas: `261,671` → `264,728` (+3,057); base fee: `2,109,792` → `2,134,248` (+24,456)
@@ -163,6 +178,10 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - 30 / Mint sent directly to a holder: handlers run (cycles each): `bridge Mint 11,546` → `bridge Mint 12,072`; execution gas: `11,546` → `12,072` (+526); base fee: `97,360` → `101,568` (+4,208)
 - 31 / Claim: leaf 6, 10 ETH to the payer, under root(A, 8) (fee schedule 1): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 22,496` → `bridge Claim 107,702 → bridge Issue 52,634 → bridge Admit 35,565 → bridge Spend 38,243 → bridge Mint 18,761 → bridge Mint 18,761 → bridge Mint 23,096`; execution gas: `290,962` → `294,762` (+3,800); base fee: `2,344,120` → `2,374,520` (+30,400)
 - 32 / Claim: vault B's deposit under root(B, 8): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 47,293 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 22,784 → bridge Mint 22,784` → `bridge Claim 107,702 → bridge Issue 48,341 → bridge Admit 35,565 → bridge Spend 31,725 → bridge Mint 18,761 → bridge Mint 18,761`; execution gas: `267,044` → `260,855` (-6,189); base fee: `2,152,776` → `2,103,264` (-49,512)
+- Init A: vault A's slot 2 holds configId(A) / bridge Init: cycles: `44,818` → `44,897` (+79)
+- Init B (another configuration, vault B) / bridge Init: cycles: `44,198` → `44,277` (+79)
+- Init A' (vault A, another fee recipient): slot 2 is configId(A) / bridge Init: cycles: `44,818` → `44,897` (+79)
+- Init A again / bridge Init: cycles: `39,401` → `39,481` (+80)
 - Register ETH (A): entry and schedule 0 attested at block 100 / bridge Register: cycles: `73,920` → `73,907` (-13)
 - Register ETH (A): entry and schedule 0 attested at block 100 / bridge (reply): cycles: `74,476` → `74,463` (-13)
 - Register ETH (B) / bridge Register: cycles: `76,864` → `76,851` (-13)
@@ -192,6 +211,8 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 
 ## `bridge-roles.md`
 
+- 1 / Init A: handlers run (cycles each): `bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419` → `bridge Init 44,897 → Attest 86,790 → bridge (reply) 39,419`; execution gas: `171,027` → `171,106` (+79); base fee: `1,383,784` → `1,384,416` (+632)
+- 2 / Init B: handlers run (cycles each): `bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419` → `bridge Init 44,277 → Attest 84,699 → bridge (reply) 39,419`; execution gas: `168,316` → `168,395` (+79); base fee: `1,361,584` → `1,362,216` (+632)
 - 5 / Register ETH (A): handlers run (cycles each): `bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 73,907 → Attest 151,273 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `331,816` → `331,790` (-26); base fee: `2,676,504` → `2,676,296` (-208)
 - 6 / Register ETH (B): handlers run (cycles each): `bridge Register 76,864 → Attest 156,184 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 76,851 → Attest 156,184 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `339,671` → `339,645` (-26); base fee: `2,739,528` → `2,739,320` (-208)
 - 11 / Claim A's leaf 6: 10 ETH to the payer: handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,564 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 18,161` → `bridge Claim 107,702 → bridge Issue 52,634 → bridge Admit 35,564 → bridge Spend 38,243 → bridge Mint 18,761 → bridge Mint 18,761 → bridge Mint 18,761`; execution gas: `286,626` → `290,426` (+3,800); base fee: `2,309,432` → `2,339,832` (+30,400)
@@ -202,6 +223,8 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - 16 / Transfer of a token with no holding (B's ETH): handlers run (cycles each): `bridge Transfer 17,578 → bridge Transfer 19,062` → `bridge Transfer 17,722 → bridge Transfer 15,075`; execution gas: `36,640` → `32,797` (-3,843); base fee: `298,648` → `267,904` (-30,744)
 - 21 / Transfer 0.1 ETH (A): the holder, signed, to the payer: handlers run (cycles each): `bridge Transfer 17,578 → bridge Transfer 23,394 → bridge Transfer 36,807 → bridge Credit 21,307` → `bridge Transfer 17,722 → bridge Transfer 23,465 → bridge Transfer 36,950 → bridge Credit 21,378`; execution gas: `99,086` → `99,515` (+429); base fee: `799,624` → `803,056` (+3,432)
 - 69 / Transfer 1 ETH (A) after Sunset: balances still move: handlers run (cycles each): `bridge Transfer 17,578 → bridge Transfer 23,394 → bridge Transfer 36,829 → bridge Credit 21,307` → `bridge Transfer 17,722 → bridge Transfer 23,465 → bridge Transfer 36,972 → bridge Credit 21,378`; execution gas: `99,108` → `99,537` (+429); base fee: `798,392` → `801,824` (+3,432)
+- Init A / bridge Init: cycles: `44,818` → `44,897` (+79)
+- Init B / bridge Init: cycles: `44,198` → `44,277` (+79)
 - Register ETH (A) / bridge Register: cycles: `73,920` → `73,907` (-13)
 - Register ETH (A) / bridge (reply): cycles: `74,476` → `74,463` (-13)
 - Register ETH (B) / bridge Register: cycles: `76,864` → `76,851` (-13)
@@ -268,10 +291,11 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 ## `bridge-transfer-private.md`
 
 - Transfer at the private holder (debits, sends Transfer) / 249: user cycles: `19,113` → `19,114` (+1)
-- e190611c58d3283ed5f11e4fa7441be6559a8b0391151cb28ee958294d83a1d1 / alias cd0ea9aa: to: `0840c609b5de392eab03c82b5a8fb7d5719e34edaa363995a53441132d2f173f` → `e190611c58d3283ed5f11e4fa7441be6559a8b0391151cb28ee958294d83a1d1`
+- 9006abe4cd8ef1b789df66e3543177fe13b323e52010ab47648a3ecd0937c571 / alias cd0ea9aa: to: `0840c609b5de392eab03c82b5a8fb7d5719e34edaa363995a53441132d2f173f` → `9006abe4cd8ef1b789df66e3543177fe13b323e52010ab47648a3ecd0937c571`
 
 ## `bridge-vault-storage.md`
 
+- 1 / Init (pairing under a synthetic block: slot 2 = configId): handlers run (cycles each): `bridge Init 42,488 → Attest 75,407 → bridge (reply) 39,419` → `bridge Init 42,567 → Attest 75,407 → bridge (reply) 39,419`; execution gas: `157,314` → `157,393` (+79); base fee: `1,272,360` → `1,272,992` (+632)
 - 2 / Register ETH with lezUnit ×10 (not the vault's entry): handlers run (cycles each): `bridge Register 106,268 → Attest 220,937 → bridge (reply) 50,670` → `bridge Register 106,255 → Attest 220,937 → bridge (reply) 50,657`; execution gas: `377,875` → `377,849` (-26); base fee: `3,062,792` → `3,062,584` (-208)
 - 3 / Register ETH with schedule 0 a second later: handlers run (cycles each): `bridge Register 106,076 → Attest 220,937 → bridge (reply) 53,399` → `bridge Register 106,063 → Attest 220,937 → bridge (reply) 53,386`; execution gas: `380,412` → `380,386` (-26); base fee: `3,083,088` → `3,082,880` (-208)
 - 4 / Register ETH: the vault's entry and schedule 0 at P: handlers run (cycles each): `bridge Register 106,076 → Attest 220,937 → bridge (reply) 74,476 → bridge WriteToken 32,147` → `bridge Register 106,063 → Attest 220,937 → bridge (reply) 74,463 → bridge WriteToken 32,147`; execution gas: `433,636` → `433,610` (-26); base fee: `3,508,880` → `3,508,672` (-208)
@@ -285,6 +309,7 @@ deployed program (ccde6171…71dd)'s, rows paired in order.
 - 21 / Claim leaf 3 (ETH, under root(n = 6)): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 51,535 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 23,965` → `bridge Claim 107,702 → bridge Issue 52,583 → bridge Admit 35,565 → bridge Spend 38,243 → bridge Mint 18,761 → bridge Mint 18,761 → bridge Mint 24,565`; execution gas: `292,380` → `296,180` (+3,800); base fee: `2,355,464` → `2,385,864` (+30,400)
 - 22 / Claim leaf 4 (token 0x1d1499…, under root(n = 6)): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 45,905 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 24,212` → `bridge Claim 107,702 → bridge Issue 46,953 → bridge Admit 35,565 → bridge Spend 31,725 → bridge Mint 18,761 → bridge Mint 24,812`; execution gas: `262,461` → `265,518` (+3,057); base fee: `2,116,112` → `2,140,568` (+24,456)
 - 23 / Claim leaf 5 (ETH, under root(n = 6)): handlers run (cycles each): `bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 22,496 → bridge Mint 23,965` → `bridge Claim 107,702 → bridge Issue 52,634 → bridge Admit 35,565 → bridge Spend 38,243 → bridge Mint 18,761 → bridge Mint 23,096 → bridge Mint 24,565`; execution gas: `296,766` → `300,566` (+3,800); base fee: `2,390,552` → `2,420,952` (+30,400)
+- Init (pairing under a synthetic block: slot 2 = configId) / bridge Init: cycles: `42,488` → `42,567` (+79)
 - Register ETH with lezUnit ×10 (not the vault's entry) / bridge Register: cycles: `106,268` → `106,255` (-13)
 - Register ETH with lezUnit ×10 (not the vault's entry) / bridge (reply): cycles: `50,670` → `50,657` (-13)
 - Register ETH with schedule 0 a second later / bridge Register: cycles: `106,076` → `106,063` (-13)

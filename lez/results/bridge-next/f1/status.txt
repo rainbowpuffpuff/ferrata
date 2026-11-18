@@ -1,0 +1,22 @@
+repro exit 0 469 s 18:13:43
+compare exit 0 0 s 18:13:43
+next exit 0 55 s 18:14:38
+ids15 exit 0 1 s 18:14:39
+second build: c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da
+634:const SECOND_BRIDGE: &str = "c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da";
+wire-next exit 0 31 s 18:15:11
+wire-default exit 0 1 s 18:15:12
+norun-default exit 0 55 s 18:16:07
+norun-next exit 0 24 s 18:16:31
+f1-default exit 0 10 s 18:16:41
+f1-next exit 0 10 s 18:16:51
+redteam-init-default exit 0 29 s 18:17:20
+redteam-init-next exit 0 35 s 18:17:55
+suites-next exit 0 224 s 18:21:39
+tenant-next exit 0 63 s 18:22:42
+privacy-next exit 0 86 s 18:24:08
+secfix-default exit 0 17 s 18:24:25
+clippy-wire exit 0 14 s 18:24:39
+clippy-harness-next exit 0 25 s 18:25:04
+clippy-harness-default exit 0 5 s 18:25:09
+ALL DONE 18:25:09

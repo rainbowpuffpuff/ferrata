@@ -1,0 +1,7 @@
+18:05:54 source <worktree> (HEAD
+not a git tree); HOME ~; nproc 2
+18:05:54 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5, lez rust v1.91.1-rust-x86_64-unknown-linux-gnu v2024.1.5-cpp-x86_64-unknown-linux-gnu 
+18:13:40 build a ok
+18:13:40 build b ok
+18:13:40 build c ok
+18:13:43 programs: checkpoint.bin checkpoint_b.bin ferrata_bridge.bin ferrata_lez.bin release.bin segment.bin 

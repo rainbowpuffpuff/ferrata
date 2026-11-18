@@ -1,4 +1,4 @@
-# R2 against the second build: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, second build 7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f, not deployed)
+# R2 against the second build: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, second build c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da, not deployed)
 
 Execution gas limit of a transaction: 10000000. The k holdings of other configurations are placed as the second build would leave them: each at its own holder(cid, dest), one account per configuration (state bytes: the k accounts' states in all); A's claim and A's owner's burn touch holder(A, ·) only.
 
@@ -23,8 +23,8 @@ Every claim and every burn above: the same gas, fee and cycles as with k = 0.
 
 ## holder(A, dest) takes credits under A only
 
-configId(A) 806d1fd7749b25ee6953f08df553e23dbcb45165f9a01a7933174f311e9343fb
-configId(B) 5aa05edb5eb0ccf58f82fd485f3c8b3ead7ee0615d94313d761ff8565cb3620c
+configId(A) aee5731a223a2ff3e94a70820c22c6e45044b4295b304f759e4232af93de0432
+configId(B) 11502fea63942e615f6395b594574f2f5067b4be247f3cd4efc03b3c3f233997
 
 | delivered (the program's executor, no state machine) | exit code |
 |---|---:|

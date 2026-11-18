@@ -341,6 +341,12 @@ passed, cancellable), an M-of-N freeze authority (`Cosigned`: one transaction al
 12-hour pauses and the keyless `Sunset` (anyone attests the vault's `retired` flag)
 ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §2, §5; [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §14). The admin's own
 handover on LEZ is not built ([README](../README.md#specified-but-not-built), "Specified but not built").
+**One exception on the deployed LEZ program** (the red team's F1,
+[`reviews/redteam-2026-11-18.md`](reviews/redteam-2026-11-18.md)): its `Init` does not refuse controls whose freeze
+authority is the admin, so in such a configuration the admin holds both roles and can freeze and run `Sunset`, which the
+table says it cannot. `configId` commits to the controls, so this is visible before anyone deposits; the vault refuses
+the same pair at construction (`RolesMustDiffer`). The program's second build (not deployed) refuses such an `Init`
+(240; [`lez/results/bridge-next.md`](../lez/results/bridge-next.md), "F1"); milestone B1 deploys it.
 
 **Off-chain participants of the bridge** (after [`bridge.md`](design/bridge.md) §6, §12.3, §14):
 

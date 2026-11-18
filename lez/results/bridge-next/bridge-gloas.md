@@ -1,12 +1,12 @@
 # The bridge program under a record in the Gloas layout (`harness/tests/bridge_inbound.rs`)
 
-Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`; the record binds the hash of a real Sepolia header (block 12103422) whose state root is replaced by the synthetic state's; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da`; the record binds the hash of a real Sepolia header (block 12103422) whose state root is replaced by the synthetic state's; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init C, Gloas record, no header | bridge Init 46,103 → Attest 20,673 | 66,776 | 1% | 1,968 | 549,952 | refused: exit 215 (HeaderRequired) |
-| 2 | Init C, Gloas record, another block's header | bridge Init 54,048 → Attest 36,830 | 90,878 | 2% | 2,695 | 748,584 | refused: exit 120 (HeaderHashMismatch) |
-| 3 | Init C, Gloas record, header in front of the account proof | bridge Init 54,048 → Attest 113,473 → bridge (reply) 39,419 | 206,940 | 4% | 2,695 | 1,677,080 | applied |
+| 1 | Init C, Gloas record, no header | bridge Init 46,182 → Attest 20,673 | 66,855 | 1% | 1,968 | 550,584 | refused: exit 215 (HeaderRequired) |
+| 2 | Init C, Gloas record, another block's header | bridge Init 54,127 → Attest 36,830 | 90,957 | 2% | 2,695 | 749,216 | refused: exit 120 (HeaderHashMismatch) |
+| 3 | Init C, Gloas record, header in front of the account proof | bridge Init 54,127 → Attest 113,473 → bridge (reply) 39,419 | 207,019 | 4% | 2,695 | 1,677,712 | applied |
 | 4 | Register ETH (C), Gloas record, no header | bridge Register 73,634 → Attest 25,664 | 99,298 | 2% | 2,673 | 815,768 | refused: exit 215 (HeaderRequired) |
 | 5 | Register ETH (C), Gloas record, with the header | bridge Register 84,482 → Attest 176,262 → bridge (reply) 74,463 → bridge WriteToken 32,147 | 367,354 | 7% | 3,400 | 2,966,032 | applied |
 | 6 | ImportRoot C, Gloas record, no header | bridge ImportRoot 51,024 → Attest 22,441 | 73,465 | 1% | 1,885 | 602,800 | refused: exit 215 (HeaderRequired) |
@@ -18,11 +18,11 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Init C, Gloas record, no header | bridge Init | 46,103 | 1 | 1,515 | 1,441 | 0 | 3,180 | 390 | 0 |
+| Init C, Gloas record, no header | bridge Init | 46,182 | 1 | 1,515 | 1,441 | 0 | 3,180 | 390 | 0 |
 | Init C, Gloas record, no header | Attest | 20,673 | 1 | 1,569 | 1,178 | 253 | 0 | – | 215 |
-| Init C, Gloas record, another block's header | bridge Init | 54,048 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
+| Init C, Gloas record, another block's header | bridge Init | 54,127 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
 | Init C, Gloas record, another block's header | Attest | 36,830 | 1 | 2,260 | 1,869 | 253 | 0 | – | 120 |
-| Init C, Gloas record, header in front of the account proof | bridge Init | 54,048 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
+| Init C, Gloas record, header in front of the account proof | bridge Init | 54,127 | 1 | 2,242 | 2,168 | 0 | 4,598 | 390 | 0 |
 | Init C, Gloas record, header in front of the account proof | Attest | 113,473 | 1 | 2,260 | 1,869 | 253 | 2,723 | – | 0 |
 | Init C, Gloas record, header in front of the account proof | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
 | Register ETH (C), Gloas record, no header | bridge Register | 73,634 | 1 | 2,785 | 2,147 | 564 | 5,791 | 950 | 0 |
