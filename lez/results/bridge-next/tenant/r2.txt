@@ -1,0 +1,37 @@
+# R2 against the second build: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, second build 7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f, not deployed)
+
+Execution gas limit of a transaction: 10000000. The k holdings of other configurations are placed as the second build would leave them: each at its own holder(cid, dest), one account per configuration (state bytes: the k accounts' states in all); A's claim and A's owner's burn touch holder(A, ·) only.
+
+## A claim to dest (A's leaf 2, 1 ETH, public kind)
+
+| k | state bytes (k accounts) | outcome | gas_exec charged | fee_base | cycles at holder(A, dest) |
+|---:|---:|---|---:|---:|---:|
+| 0 | 0 | applied | 260855 | 2103264 | 18761 |
+| 1505 | 111370 | applied | 260855 | 2103264 | 18761 |
+| 6049 | 447626 | applied | 260855 | 2103264 | 18761 |
+| 12098 | 895252 | applied | 260855 | 2103264 | 18761 |
+
+## The owner's burn of 1 ETH it holds under A
+
+| k | state bytes (k accounts) | outcome | gas_exec charged | fee_base | cycles at holder(A, owner) |
+|---:|---:|---|---:|---:|---:|
+| 0 | 0 | applied | 165055 | 1327152 | 30337 |
+| 6110 | 452140 | applied | 165055 | 1327152 | 30337 |
+| 12098 | 895252 | applied | 165055 | 1327152 | 30337 |
+
+Every claim and every burn above: the same gas, fee and cycles as with k = 0.
+
+## holder(A, dest) takes credits under A only
+
+configId(A) 806d1fd7749b25ee6953f08df553e23dbcb45165f9a01a7933174f311e9343fb
+configId(B) 5aa05edb5eb0ccf58f82fd485f3c8b3ead7ee0615d94313d761ff8565cb3620c
+
+| delivered (the program's executor, no state machine) | exit code |
+|---|---:|
+| Mint under B from nullifier(B, …), delivered at holder(A, dest) | 243 |
+| Mint under A from nullifier(B, …), delivered at holder(A, dest) | 243 |
+| Mint under B from nullifier(B, …), delivered at holder(B, dest) | 0 |
+| Mint under A from nullifier(A, …), delivered at holder(A, dest) | 0 |
+| Credit under B from token(B, ETH), delivered at holder(A, dest) | 243 |
+| Credit under A from token(B, ETH), delivered at holder(A, dest) | 243 |
+| Credit under A from token(A, ETH), delivered at holder(A, dest) | 0 |

@@ -48,9 +48,7 @@ use ferrata_bridge_core::{
     tree::Tree,
     BridgeKeys, Hash,
 };
-use ferrata_lez_bridge_wire::{
-    self as bw, burn_mac_v2, nullifier_actor, own_actor, BridgeMessage, HolderState, Holding, Note,
-};
+use ferrata_lez_bridge_wire::{self as bw, burn_mac_v2, own_actor, BridgeMessage, HolderState, Holding, Note};
 use harness::{
     bridge::{
         catalog, eth_entry, private_account_id, private_keys, private_post_state, relayer, Deposit, Vault, World,
@@ -704,7 +702,7 @@ fn set_up_vault(w: &mut World, leaves: Vec<Hash>, variant: &'static str) -> (Has
 #[test]
 fn privacy_suite_lez_half() {
     let mode = proof_mode();
-    let bridge_image = harness::image_id_hex(methods::FERRATA_BRIDGE_ID);
+    let bridge_image = harness::image_id_hex(harness::bridge::BRIDGE_ID);
     if let Ok(want) = std::env::var("FERRATA_EXPECT_BRIDGE_IMAGE_ID") {
         assert_eq!(bare_hex(&bridge_image), bare_hex(&want), "the bridge program's image id (docs/image-ids.md)");
     }
@@ -756,7 +754,7 @@ fn privacy_suite_lez_half() {
         let expected = d.nullifier(CHAIN_ID, &VAULT_P);
         assert_eq!(field(&r, "Issue.nullifier"), expected, "{}: N", r.id);
         let mut r = r;
-        let account = nullifier_actor(w.program, CHAIN_ID, &VAULT_P, &expected).account_id;
+        let account = harness::bridge::nullifier_of(w.program, &cid, CHAIN_ID, &VAULT_P, &expected).account_id;
         r.fields.push(("derived.nullifier_account".into(), account.value().to_vec()));
         nullifiers[u] = expected;
         records.push(r);
@@ -854,7 +852,8 @@ fn privacy_suite_lez_half() {
             let u = claim_order[r.seq];
             let d = &deposits[u];
             let fid = deposit_id(&chain, &VAULT_P, d.leaf_index, &d.leaf());
-            let pda = |x: &Hash| *nullifier_actor(w.program, CHAIN_ID, &VAULT_P, x).account_id.value();
+            let pda =
+                |x: &Hash| *harness::bridge::nullifier_of(w.program, &cid, CHAIN_ID, &VAULT_P, x).account_id.value();
             r.substituted("naive", &[(nullifiers[u], fid), (pda(&nullifiers[u]), pda(&fid))])
         })
         .collect();
@@ -924,7 +923,7 @@ fn privacy_suite_lez_half() {
         let d = &deposits_b[u];
         let witness = vault_b.witness(d, n);
         let range = wb.range(&cid, &ETH, d.leaf_index);
-        let nf = nullifier_actor(wb.program, CHAIN_ID, &VAULT_P, &d.nullifier(CHAIN_ID, &VAULT_P));
+        let nf = harness::bridge::nullifier_of(wb.program, &cid, CHAIN_ID, &VAULT_P, &d.nullifier(CHAIN_ID, &VAULT_P));
         let mut actors = vec![bw::root_actor(wb.program, &cid, n)];
         actors.extend(wb.claim_actors(&cid, &ETH, nf, Some(user_account(&users[u])), Some(*relayer().value())));
         let mut r =
@@ -987,20 +986,15 @@ fn privacy_suite_lez_half() {
     label(relayer(), "the relayer");
     label(harness::bridge::fee_recipient(), "the fee recipient");
     // Wrapped balances sit at holder PDAs since the security fixes (review C-1).
-    label(bw::holder_actor(w.program, relayer()).account_id, "holder(the relayer) (its wrapped balance: relay fees)");
-    label(
-        bw::holder_actor(w.program, harness::bridge::fee_recipient()).account_id,
-        "holder(the fee recipient) (its wrapped balance: mint fees)",
-    );
+    let holder = |account| harness::bridge::holder_of(w.program, &cid, account).account_id;
+    label(holder(relayer()), "holder(the relayer) (its wrapped balance: relay fees)");
+    label(holder(harness::bridge::fee_recipient()), "holder(the fee recipient) (its wrapped balance: mint fees)");
     label(bw::config_actor(w.program, &cid).account_id, "config(cid) (global gate, time)");
     label(bw::token_actor(w.program, &cid, &ETH).account_id, "token(cid, ETH) (token gate, time)");
     label(bw::root_actor(w.program, &cid, n).account_id, "root(cid, 20)");
     for user in &users {
         label(user.public_dest, "a public destination (plaintext universe)");
-        label(
-            bw::holder_actor(w.program, user.public_dest).account_id,
-            "holder(a public destination) (plaintext universe)",
-        );
+        label(holder(user.public_dest), "holder(a public destination) (plaintext universe)");
     }
     let lez = json!({
         "accounts": labels,

@@ -188,8 +188,10 @@ The design notes specify these; there is no code for them here. In short (in ful
 [docs/not-built.md](docs/not-built.md)):
 
 - **The bridge program on LEZ:** a transfer that credits a private recipient privately, the admin's own handover,
-  the switch to a v0.4 token program when one is released; the nullifier and holder accounts keyed by the
-  configuration, which close the two tenant-isolation issues of 18 November ([row 136](docs/EVIDENCE.md)).
+  the switch to a v0.4 token program when one is released; in the deployed program, the nullifier and holder
+  accounts keyed by the configuration, which close the two tenant-isolation issues of 18 November
+  ([row 136](docs/EVIDENCE.md)): they are built and tested in a second build of the program, which is not deployed
+  ([row 143](docs/EVIDENCE.md)).
 - **The attestation program:** consumers bound to the root id, a chain of several EIP-2935 hops under a Gloas
   record, the F.8 test.
 - **Rule (B):** the watchers' `monitor` reading attestations.

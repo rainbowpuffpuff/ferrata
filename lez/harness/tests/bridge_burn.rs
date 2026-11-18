@@ -456,7 +456,7 @@ fn burns_and_what_the_checkpoint_collects() {
              One LEZ block holding the transactions below (the second burn marked reverted, as settlement \
              recorded it):\n\n{table}\n\
              NOut v2 of the first note: `{}`.\n",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             render_transitions(&reports),
             harness::grouped(private_burn.charge.gas_exec),
             harness::grouped(private_burn.charge.gas_stor),

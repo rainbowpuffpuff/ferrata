@@ -15,13 +15,13 @@
 
 use ferrata_bridge_core::{inbound::DestKind, Hash};
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_seed, code, config_actor, config_seed, holder_actor, nullifier_actor, nullifier_seed, root_actor,
-    root_seed, token_actor, token_seed, word_of_u128, BridgeConfig, BridgeMessage, BridgeState, Controls, Note,
+    burn_actor, burn_seed, code, config_actor, config_seed, root_actor, root_seed, token_actor, token_seed,
+    word_of_u128, BridgeConfig, BridgeMessage, BridgeState, Controls, Note,
 };
 use harness::{
     bridge::{
-        bridge_program, config, controls, eth_entry, fee_recipient, registry_slots, Block, Deposit, Vault, VaultSlots,
-        World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, RELAY_FEES,
+        bridge_program, config, controls, eth_entry, fee_recipient, holder_of, nullifier_of, nullifier_seed_of,
+        registry_slots, Block, Deposit, Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, RELAY_FEES,
     },
     TxReport,
 };
@@ -115,12 +115,12 @@ fn attack_claim(
     let witness = att.vault.witness(&d, n);
     let range = w.range(&att.cid, &ETH, d.leaf_index);
     let root = root_actor(program, &att.cid, n);
-    let nullifier = nullifier_actor(program, CHAIN_ID, &att.vault.address, &att.nullifier(leaf));
+    let nullifier = nullifier_of(program, &att.cid, CHAIN_ID, &att.vault.address, &att.nullifier(leaf));
     let mut actors = vec![root];
     actors.extend(w.claim_actors(&att.cid, &ETH, nullifier, Some(AccountId::new(d.dest)), relayer));
     // The attacker's configuration has its own fee recipient (the relay fee's account when no
     // relayer is named).
-    let fee_actor = holder_actor(program, AccountId::new(att.config.controls.fee_recipient));
+    let fee_actor = holder_of(program, &att.cid, AccountId::new(att.config.controls.fee_recipient));
     if !actors.contains(&fee_actor) {
         actors.push(fee_actor);
     }
@@ -212,7 +212,7 @@ fn c1_c_a_claim_cannot_destroy_a_pending_claim() {
     let payer_id = *w.chain.payer.value();
     let payer = w.chain.payer;
     let honest = vault(&mut w, HONEST, controls(), &[payer_id], 9_200_021);
-    let target = nullifier_actor(program, CHAIN_ID, &HONEST, &honest.nullifier(0));
+    let target = nullifier_of(program, &honest.cid, CHAIN_ID, &HONEST, &honest.nullifier(0));
     let att = vault(&mut w, ATTACKER, controls(), &[*target.account_id.value()], 9_200_022);
     open(&mut w, "attacker", &att);
     open(&mut w, "H", &honest);
@@ -222,7 +222,7 @@ fn c1_c_a_claim_cannot_destroy_a_pending_claim() {
         &att,
         0,
         None,
-        &[nullifier_seed(CHAIN_ID, &HONEST, &honest.nullifier(0))],
+        &[nullifier_seed_of(&honest.cid, CHAIN_ID, &HONEST, &honest.nullifier(0))],
     );
     expect(&r, None);
     assert!(is_empty(&w, target), "the claim wrote nothing at the nullifier");
@@ -230,7 +230,7 @@ fn c1_c_a_claim_cannot_destroy_a_pending_claim() {
     let r = w.claim("the victim's claim after the attacker's", &honest.cid, 1, &HONEST, witness);
     expect(&r, None);
     assert_eq!(w.balance_of(payer, &honest.cid, &ETH), DENOMINATIONS[0], "the victim has its deposit");
-    assert!(w.nullifier(&HONEST, &honest.nullifier(0)).is_some(), "N is spent by the victim's claim");
+    assert!(w.nullifier(&honest.cid, &HONEST, &honest.nullifier(0)).is_some(), "N is spent by the victim's claim");
 }
 
 /// C-1 (d): a claim names `root(cid, n)` at a count not imported yet; the import still succeeds.
@@ -295,7 +295,7 @@ fn c1_e_a_claim_cannot_block_a_burn() {
     assert!(is_empty(&w, target), "the claim wrote nothing at the burn record");
     // The payer's burn: a top-level call it signs at its own actor of the program.
     let own = Actor::new(payer, program);
-    let mut actors = vec![own, holder_actor(program, payer)];
+    let mut actors = vec![own, holder_of(program, &honest.cid, payer)];
     actors.extend(w.burn_actors(own, &honest.cid, &note).into_iter().skip(1));
     let mut unique = Vec::new();
     for a in actors {
@@ -396,8 +396,8 @@ fn c1_f_a_mint_is_accepted_only_at_its_holder() {
     let w = World::new();
     let program = w.program;
     let (vault, n) = ([0xa3; 20], [0x6e; 32]);
-    let from = nullifier_actor(program, CHAIN_ID, &vault, &n);
     let cid = cid_of(&w, HONEST, controls());
+    let from = nullifier_of(program, &cid, CHAIN_ID, &vault, &n);
     let target = config_actor(program, &cid);
     let named = *target.account_id.value();
     let mint = BridgeMessage::Mint {
@@ -412,7 +412,7 @@ fn c1_f_a_mint_is_accepted_only_at_its_holder() {
     let elf = bridge_program();
     for (what, receiver, want) in [
         ("Mint naming config(cid), delivered at config(cid)", target, u32::from(code::WRONG_SENDER)),
-        ("Mint naming config(cid), delivered at holder(config(cid))", holder_actor(program, target.account_id), 0),
+        ("Mint naming config(cid), delivered at holder(config(cid))", holder_of(program, &cid, target.account_id), 0),
     ] {
         let input = ReceiveInput {
             receiver,
