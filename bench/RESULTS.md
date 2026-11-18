@@ -390,8 +390,10 @@ addition, SHA-256 of 64 bytes as two compressions; `residue_agg::step1` is the c
 that one change) against the core's composition, in one bench guest (`guests/residue-agg-accel`):
 one whole update per execution as in the section below, finality update_1 against the store after
 update_0, signed by the bench's committee substituted in the store except the 510 row. Executor only
-(r0vm 3.0.5), Modal build box, 17 Nov 2026. Outputs: `results/residue/agg/` ([`tables.md`](results/residue/agg/tables.md),
-[`boundary.md`](results/residue/agg/boundary.md), `one-tx.txt`, `profile.txt`, `lez.txt`).
+(r0vm 3.0.5), Modal build box, 17 Nov 2026; other placements of the absent members, and a re-run of
+the rest with every figure unchanged, 18 Nov 2026. Outputs: `results/residue/agg/` ([`tables.md`](results/residue/agg/tables.md),
+[`boundary.md`](results/residue/agg/boundary.md), [`placements.md`](results/residue/agg/placements.md), `one-tx.txt`,
+`profile.txt`, `placement-phases.txt`, `edge-cases.txt`, `lez.txt`, `lez-placements.txt`).
 
 | signers | witness folded: core / one multiproof | witness check: core / one multiproof | signer witness bytes |
 |---|---:|---:|---:|
@@ -399,34 +401,47 @@ update_0, signed by the bench's committee substituted in the store except the 51
 | 510 (mainnet update_1, real committee) | 5,911,862 / 5,890,269 | 6,573,568 / 6,551,855 | 770 / 548 |
 | 450 | 7,417,118 / 6,519,708 | 8,078,824 / 7,181,294 | 23,810 / 10,532 |
 | 400 | 8,671,506 / 6,955,916 | 9,333,212 / 7,617,502 | 43,010 / 17,092 |
-| 342 (every third absent: the multiproof's most hashes) | 10,126,621 / **7,458,783** | 10,788,327 / **8,120,369** | 65,282 / 24,516 |
+| 342 (every third absent: the most hashes, 425, and witness nodes, 256) | 10,126,621 / **7,458,783** | 10,788,327 / **8,120,369** | 65,282 / 24,516 |
 
-* Execution user cycles of the whole execution; of `MAX_GAS_EXEC` (10M) at 342: 101.3% / **74.6%**
-  folded, 107.9% / **81.2%** with the witness check. With the final exponentiation the whole update
-  is still over at 342 (13,291,516 / 10,623,678). Every row with every path: `tables.md` (also 511,
-  343, 342 at random positions, and period updates).
+* Execution user cycles of the bare guest's whole execution. They are the bare guest's counts, not
+  LEZ's charge: what LEZ charged is below, for the witness check only (its copy of the program does
+  not fold the check, and no folded run was made through LEZ). With the final exponentiation the
+  whole update is still over 10M cycles at 342 (13,291,516 / 10,623,678). Every row with every path:
+  `tables.md` (also 511, 343, 342 at random positions, and period updates).
+* **Every third member absent is not the costliest placement** (`placements.md`, 18 Nov): of 26
+  placements of the 170 absent members the costliest has every absent index odd, 8,128,806 with the
+  witness check (8,437 more than every third; 7,467,220 folded), the cheapest (the first 170 members)
+  7,866,334; among placements with the same 425 hashes and 256 nodes the difference is all in step 1
+  (`placement-phases.txt`). The maximum over all placements and committees is not established. Nor
+  does the cost grow at every step with the number of absent members: with 1 to 170 absent, evenly
+  spaced, it falls at 16, 32, 64, 128 (by 22,639), 144 and 160, where blst's batch addition adds
+  fewer points one by one; over 1 to 170 the maximum is at 170 (8,120,212).
 * A non-signer costs **9,418** cycles instead of 25,094 (this build; 25,213 in the section below):
-  per non-signer the core spends 11,778 on its branch's 9 SHA-256 nodes, 1,244 on its leaf, 4,839 on
+  per non-signer the core spends 11,776 on its branch's 9 SHA-256 nodes, 1,244 on its leaf, 4,839 on
   one mixed addition, 2,862 decoding the key, 1,173 re-compressing it (`profile.txt`); the multiproof
-  needs at most 425 nodes for 170 non-signers instead of 1,530. No subgroup check is made on a
-  non-signer's key, in either composition.
+  needs at most 425 hashes for 170 non-signers instead of 1,530, and carries at most 256 witness
+  nodes instead of 1,530. No subgroup check is made on a non-signer's key, in either composition.
 * **The fewest signers that fit one transaction**: with a branch per non-signer 348 (folded) and 374
   (witness check) in the bare guest (`boundary.md`: 348 at 9,976,122, 347 at 10,001,188; 374 at
   9,985,559, 373 at 10,010,661), and 386 through LEZ's state machine (9,985,702 execution gas; 380 to
   385 exceed the budget); with one multiproof 342, the policy's floor, in every path that checks a
-  residue witness.
+  residue witness, at every placement of the absent members measured.
 * Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1; the experimental copy of the
   program, which now also takes the non-signers as one multiproof): the 342-signer finality update in
-  one transaction was charged **8,318,645** execution gas (83.2%), applied, the store the natively
-  applied job's (8,653,530 with the non-signers summed by the core's chain of additions, exact for any
-  points; blst's batch addition is exact for keys in G1, every Ethereum committee's: `RESIDUE.md`
-  §9.3); with a branch per non-signer it exceeded the 10M budget; with one node of the multiproof
-  altered it was refused (exit 80). The 510-signer mainnet update: 6,606,700 (6,629,335
-  with a branch per non-signer in the same build).
+  one transaction, every third member absent, was charged **8,318,645** execution gas (83.2%),
+  applied, the store the natively applied job's (8,653,530 with the non-signers summed by the core's
+  chain of additions, exact for any points; blst's batch addition is exact for keys in G1, every
+  Ethereum committee's: `RESIDUE.md` §9.3); at the costliest placement found (every absent index
+  odd) **8,326,572** (83.3%; 8,661,457 with the chain), and over the 12 placements run through LEZ
+  8,013,965 to 8,326,572 (`lez-placements.txt`), which leaves about 1.67M gas to the limit at the
+  costliest measured; with a branch per non-signer it reverted on the 10M cycle budget; with one node
+  of the multiproof altered it was refused (exit 80). The 510-signer mainnet update: 6,606,700
+  (6,629,335 with a branch per non-signer in the same build).
 * Re-check: `cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host
   && ./target/release/residue-host profile && ./target/release/residue-host measure-agg &&
-  ./target/release/residue-host boundary` (about two minutes on the build box, guest builds
-  included); LEZ: `RESIDUE.md` §9.8.
+  ./target/release/residue-host boundary && cargo test --release -p residue-host --test placements`
+  (on the build box on 18 Nov, with its build cache warm and the guests already built: 83 s to
+  `boundary`, 130 s for the placements test; a clean build was not timed); LEZ: `RESIDUE.md` §9.8.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 
