@@ -171,7 +171,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | F.13 | in part | Mint fee paid on LEZ, burn fee taken at release on the vault; rates capped at 1%; claims show their schedule's range. | 8, 9, 41, 91; `vault/test/Fees.t.sol` |
 | F.14 | shown | All 32 freeze combinations on the vault; LEZ freezes per token or globally (242) in the harness; both in Ferrata's own code. | 8, 43, 74; `vault/test/Freeze.t.sol` |
 | F.15 | shown | `Init` refuses another configuration (246) and foreign proofs (110); vault journals bind every field; the live vault holds the devnet's `configId`. | 8, 91, 92; `vault/test/JournalBinding.t.sol` |
-| F.16 | in part | A vault-A deposit under configuration B's root is refused (249); no malicious-tenant test; the switching text is a first draft. | 8; `docs/guides/deployer-guide.md` §7 |
+| F.16 | in part | A vault-A deposit under configuration B's root is refused (249), but the configurations are not strictly separated: the malicious-tenant test shows that a second configuration of the same vault can freeze a public-kind deposit whose `s` it knows (the paired one's claim refused, 250) and fill a destination's shared holder account; the fix changes the image id (B1); the switching text is a first draft. | 8, 136; `lez/harness/tests/tenant.rs`; `docs/guides/deployer-guide.md` §7 |
 | F.17 | shown | USDT-style deposits and releases pass on a local EVM and through the tool; fee-on-transfer and false-returning tokens rejected. | 12, 85; `vault/test/Deposit.t.sol`; `vault/test/Release.t.sol` |
 
 ### Usability
