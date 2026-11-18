@@ -8,6 +8,7 @@
 //! (`run.json`, the wallet's storage under `wallet/`), never in the repository. Each sending step
 //! records its transaction hash and block in `run.json` and is skipped when run again (resumable).
 
+#[allow(dead_code)]
 #[path = "../../harness/src/deposits.rs"]
 mod deposits;
 #[path = "../../harness/src/eth.rs"]
@@ -224,7 +225,7 @@ async fn setup(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
 /// its burn) and a private holder.
 fn accounts(run: &mut Run, w: &mut WalletCore, sequencer: &str, payer: AccountId) -> Result<()> {
     let w = &mut *w;
-    let mut new_public = |w: &mut WalletCore| w.create_new_account_public(None).0.to_string();
+    let new_public = |w: &mut WalletCore| w.create_new_account_public(None).0.to_string();
     let segments = |w: &mut WalletCore, elf: &[u8]| -> Vec<String> {
         (0..elf.len().div_ceil(program_loader_segment())).map(|_| w.create_new_account_public(None).0.to_string()).collect()
     };
@@ -742,6 +743,11 @@ fn batch(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
         let recipient: [u8; 20] = unhex(arg(a, "recipient")?)?;
         let note: Note = deposits::note(&keys, &cid, 0, config.evm_chain_id, config.vault, recipient, ETH, config.registry[0].amount);
         let owner = run.acc("holder_public")?;
+        // The note, as `burn` records it: `state` reads its account, `burns` its leaf (first burn sent).
+        let sent = run.rec["notes"]["burn-public"]["sent"].as_u64().unwrap_or(0);
+        run.rec["notes"]["burn-public"] = json!({ "r": h(&note.r), "memo": h(&note.memo), "mac": h(&note.mac),
+            "c_out": h(&note.c_out), "token": h(&note.token), "amount": h(&note.amount), "hash": h(&note.hash()), "sent": sent });
+        run.save()?;
         let burn = Instruction::Burn { config: config.clone(), note, from: BurnFrom::Holder };
         steps.push(call(
             "burn-public",
