@@ -1023,6 +1023,7 @@ class Proxy:
                 if open_:
                     raise Transient("pubnet: transient: an earlier transaction's fate is unknown: "
                                     + ", ".join(t["hash"] for t in open_))
+            txs = self.journal.txs()  # as it is now: the inline resolution above may have recorded fates
             bad = self.journal.bad_txs()
             if bad:
                 raise Permanent(f"pubnet: permanent: an earlier transaction was {bad[0]['state']}"
