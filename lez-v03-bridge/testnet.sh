@@ -102,6 +102,7 @@ evm_local() { # the vault on a plain local anvil, its two deposits, one capture
   local cid; cid="$(cat "$run/config_id.txt")"
   # forge reads and writes only under vault/deployments/ (vault/foundry.toml fs_permissions); fork-* is ignored there.
   local dep="$repo/vault/deployments/fork-v03bridge-$(basename "$run")"
+  mkdir -p "$repo/vault/deployments"
   if [ "$(jq -r '.complete // false' "$run/deploy-vault.json" 2>/dev/null)" != true ]; then
     jq --arg cid "$cid" '.lezConfigId = $cid | ._source = "lez-v03-bridge/testnet.sh: sepolia.json with this run'"'"'s v0.3.1 configuration id; the checkpoint and release image ids are the v0.4 programs'"'"' (no v0.3.1 checkpoint guest: the return leg is not built, RETURN.md)"' \
       "$repo/vault/script/params/sepolia.json" > "$dep-params.json"

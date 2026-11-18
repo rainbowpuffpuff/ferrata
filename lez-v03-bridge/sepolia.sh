@@ -69,6 +69,7 @@ case "$stage" in
     # forge reads and writes only under vault/deployments/ (vault/foundry.toml fs_permissions): fork-* (vault/.gitignore)
     # for the rehearsal, v03bridge-* (the repository's .gitignore) for Sepolia; both copied into the run directory.
     dep="$repo/vault/deployments/$([ "$fork" = 1 ] && echo fork-)v03bridge-$(basename "$run")"
+    mkdir -p "$repo/vault/deployments"
     jq --arg cid "$cid" '.lezConfigId = $cid | ._source = "lez-v03-bridge/sepolia.sh: vault/script/params/sepolia.json with lez-v03-bridge'"'"'s testnet configuration id; the checkpoint and release image ids are the v0.4 programs'"'"' (no v0.3.1 checkpoint guest exists: RETURN.md)"' \
       "$repo/vault/script/params/sepolia.json" > "$dep-params.json"
     out="$dep.json"
