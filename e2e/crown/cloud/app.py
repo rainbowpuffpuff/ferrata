@@ -21,7 +21,9 @@ Never `modal profile activate`: the profile is given per command.
                     the CUDA prover gpu-prover/modal_app.py::build put on the Volume ferrata-prover (read-only).
   groth16_wrap      RISC Zero's Groth16 prover image, run as a plain function (no Docker).
 
-Volume ferrata-crown: inputs/ (the LEZ bundle and the R0BF programs, from `setup`), cloud/<run>/ (what `start`
+Volume ferrata-crown: inputs/ (the LEZ bundle and the R0BF programs, from `setup`: input set rc1, crown-live-1 to -3's),
+inputs-rc3/ (input set rc3: LEZ v0.4.0-rc3 and the second build of the checkpoint guests; e2e/crown/cloud/inputs.json;
+a run's set is its run.json's "inputs"), cloud/<run>/ (what `start`
 uploaded: src.bundle, src.tar.gz, src.json, call.json; what the runner writes: status.json, runner.log, build-*.log,
 drive.out, forge's broadcast/ and deployments/), runs/<run>/ (the run directory), lez/<run>/ (the LEZ side's
 CROWN_LEZ_VOL: bundle, generations, captures, session-a/, session-b/), cache/ (built tools by source hash).
@@ -297,6 +299,15 @@ def _build(r: _Run, env: dict) -> dict:
     return tools
 
 
+def _inputs_dir(r: "_Run") -> str:
+    """The Volume directory of the run's input set (run.json "inputs", default rc1; the tree's e2e/crown/cloud/inputs.json)."""
+    name = json.load(open(f"{r.vrun}/run.json")).get("inputs", "rc1")
+    sets = json.load(open(f"{r.repo}/e2e/crown/cloud/inputs.json"))
+    if name not in sets or name.startswith("_"):
+        raise RuntimeError(f"run.json names input set {name!r}, which e2e/crown/cloud/inputs.json does not have")
+    return sets[name]["dir"]
+
+
 def _runner(run: str, repo: str, mode: str, commit: str) -> dict:
     import sys
 
@@ -316,9 +327,11 @@ def _runner(run: str, repo: str, mode: str, commit: str) -> dict:
         mirror.start()
         env = dict(os.environ)  # with MODAL_*: drive.py calls gpu_prove and groth16_wrap of this app from here
         spike = os.path.dirname(repo)
+        inputs = _inputs_dir(r)
+        r.say(f"input set {json.load(open(f'{r.vrun}/run.json')).get('inputs', 'rc1')}: {VOL}/{inputs}")
         env.update(TMPDIR=f"{spike}/tmp/crown-cloud", FOUNDRY_DISABLE_NIGHTLY_WARNING="1",
                    XDG_CACHE_HOME=f"{spike}/tmp/xdg-cache", CROWN_APP=APP_NAME, CROWN_VOL=VOL,
-                   CROWN_INPUTS=f"{VOL}/inputs", CROWN_LEZ_VOL=f"{VOL}/lez/{run}", CROWN_CLOUD=r.cloud)
+                   CROWN_INPUTS=f"{VOL}/{inputs}", CROWN_LEZ_VOL=f"{VOL}/lez/{run}", CROWN_CLOUD=r.cloud)
         for k in ("FERRATA_UNLOCKED", "ETH_KEYSTORE", "ETH_PASSWORD", "ETH_RPC_URL", "RISC0_DEV_MODE", "MODAL_PROFILE",
                   "SEPOLIA_RPC_URL", "ETH_FROM"):
             env.pop(k, None)
@@ -328,7 +341,7 @@ def _runner(run: str, repo: str, mode: str, commit: str) -> dict:
         if mode == "selftest":
             checks = {
                 "git HEAD": subprocess.run(["git", "-C", repo, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
-                "inputs": sorted(os.listdir(f"{VOL}/inputs")) if os.path.isdir(f"{VOL}/inputs") else None,
+                "inputs": sorted(os.listdir(f"{VOL}/{inputs}")) if os.path.isdir(f"{VOL}/{inputs}") else None,
                 "vault/lib": sorted(os.listdir(f"{repo}/vault/lib")) if os.path.isdir(f"{repo}/vault/lib") else None,
                 "ping": modal.Function.from_name(APP_NAME, "ping").remote(),
                 "secret keys present": sorted(k for k, v in secret.items() if v),
@@ -413,8 +426,9 @@ LEZ_ENV = ("CROWN_VAULT", "CROWN_ETH_FEES_AT", "CROWN_RECIPIENT", "CROWN_PRIVATE
 @app.function(image=runner_image, cpu=(16.0, 32.0), memory=(16384, 65536), timeout=3 * 3600, retries=0,
               max_containers=1, single_use_containers=True, volumes={VOL: volume})
 def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: bytes, env: dict,
-                inputs_tar: bytes | None = None, may_start: bool = True) -> dict:
-    """lez/crown/session.sh <step> (the run's own copy, `script`) with CROWN_LEZ_VOL = lez/<run> on the Volume.
+                inputs_tar: bytes | None = None, may_start: bool = True, inputs: str = "inputs") -> dict:
+    """lez/crown/session.sh <step> (the run's own copy, `script`) with CROWN_LEZ_VOL = lez/<run> on the Volume; the
+    bundle copied from the Volume directory `inputs` (the run's input set) at the zone's first session.
     Session A runs only on an empty zone, B only on generation 1; a session whose generation exists returns its saved
     records (may_start=False: never run, only return). Returns {ok, ran, rc, generation, records (tar of session-<step>/),
     tail}."""
@@ -440,8 +454,10 @@ def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: byt
         if not may_start or gen() != want - 1:
             return {"ok": False, "ran": False, "rc": None, "generation": gen(),
                     "tail": f"session {step} needs generation {want - 1} and may_start; the zone is at {gen()}"}
+        if "/" in inputs or inputs.startswith("."):
+            return {"ok": False, "ran": False, "rc": None, "generation": gen(), "tail": f"inputs {inputs!r}: not a directory name"}
         if not os.path.isfile(f"{lez}/bundle.tar.zst"):
-            shutil.copy2(f"{VOL}/inputs/bundle.tar.zst", f"{lez}/bundle.tar.zst.part")
+            shutil.copy2(f"{VOL}/{inputs}/bundle.tar.zst", f"{lez}/bundle.tar.zst.part")
             os.replace(f"{lez}/bundle.tar.zst.part", f"{lez}/bundle.tar.zst")
         if _sha256(f"{lez}/bundle.tar.zst") != bundle_sha256:
             return {"ok": False, "ran": False, "rc": None, "generation": gen(),

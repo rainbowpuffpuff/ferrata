@@ -57,11 +57,28 @@ PROG = f"{RUN}/programs"
 CHAIN_ID = 11155111
 VERIFIER = "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0"  # RISC Zero's Groth16 verifier of sepolia-live-2 (reused)
 DELTA = 3600
-# The final programs (path-independent builds, docs/image-ids.md; the R0BF files of scripts/reproduce-image-ids.sh build)
-IDS = {"checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
-       "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
-       "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592",
-       "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
+# The run's input set (run.json "inputs", default rc1: crown-live-1 to -3): the R0BF programs by role, their files and
+# image ids (e2e/crown/cloud/inputs.json; docs/image-ids.md). rc1: the final programs; rc3: the second build of the
+# checkpoint guests (Logos Blockchain 0.3.5-rc.1's fork digest) with the final segment and release.
+def _input_set() -> tuple[str, dict]:
+    try:
+        name = json.load(open(f"{RUN}/run.json")).get("inputs", "rc1")
+    except OSError:
+        name = "rc1"
+    sets = json.load(open(f"{REPO}/e2e/crown/cloud/inputs.json"))
+    if name.startswith("_") or name not in sets:
+        raise SystemExit(f"run.json names input set {name!r}, which e2e/crown/cloud/inputs.json does not have")
+    return name, sets[name]
+
+
+INPUT_SET, _SET = _input_set()
+IDS = {role: v["image_id"] for role, v in _SET["programs"].items()}
+FILES = {role: v["file"] for role, v in _SET["programs"].items()}
+
+
+def prog(role: str) -> str:
+    """The R0BF program of a role (checkpoint_b, checkpoint, segment, release) in the run's copy of the inputs."""
+    return f"{PROG}/{FILES[role]}.bin"
 ZERO32 = "0x" + "00" * 32
 GPU_WAIT_S = int(os.environ.get("CROWN_GPU_WAIT_S", "7200"))
 CAPTURE_ATTEMPTS = 12
@@ -266,11 +283,13 @@ def prepare_inputs() -> None:
     if not os.path.isdir(PROG):
         shutil.copytree(f"{INPUTS}/programs", PROG + ".part")
         os.replace(PROG + ".part", PROG)
-    lines = out([E2E, "image-id"] + [f"{PROG}/{p}.bin" for p in IDS]).splitlines()
-    got_ids = {os.path.basename(x["program"])[:-4]: x["image_id"] for x in (json.loads(l) for l in lines if l.startswith("{"))}
+    lines = out([E2E, "image-id"] + [prog(r) for r in IDS]).splitlines()
+    by_file = {os.path.basename(x["program"])[:-4]: x["image_id"] for x in (json.loads(l) for l in lines if l.startswith("{"))}
+    got_ids = {r: by_file.get(FILES[r]) for r in IDS}
     if got_ids != IDS:
-        die(f"the R0BF programs' image ids {got_ids} are not the crown build's {IDS}")
-    say(f"inputs: LEZ bundle sha256 {got[:16]}..., programs {', '.join(f'{k} {v[:10]}...' for k, v in got_ids.items())}")
+        die(f"the R0BF programs' image ids {got_ids} are not input set {INPUT_SET}'s {IDS}")
+    say(f"inputs (set {INPUT_SET}: {_SET['lez']}): LEZ bundle sha256 {got[:16]}..., programs "
+        + ", ".join(f"{r} ({FILES[r]}) {v[:10]}..." for r, v in got_ids.items()))
 
 
 def driver(*a: str) -> str:
@@ -369,7 +388,8 @@ def session(step: str, extra: dict, inputs_tar: bytes | None = None, may_start: 
             f" {hashlib.sha256(script).hexdigest()[:12]}), chain {lez_chain()}")
         t0 = time.time()
         try:
-            res = fn.remote(RUN_NAME, step, lez_chain(), jload(f"{RUN}/bundle.json")["sha256"], script, env, inputs_tar, may_start)
+            res = fn.remote(RUN_NAME, step, lez_chain(), jload(f"{RUN}/bundle.json")["sha256"], script, env, inputs_tar, may_start,
+                            inputs=os.path.basename(INPUTS.rstrip("/")))
         except Exception as e:
             say(f"LEZ session {step.upper()}: the call failed after {time.time() - t0:.0f} s: {type(e).__name__}: {str(e)[:300]}")
             time.sleep(30)
@@ -408,8 +428,10 @@ def st_lez_a() -> bool:
     # Once the vault's deployment has begun only the saved session may come back: never a new zone.
     session("a", {}, may_start=not deploy_started())
     a = session_a()
+    fork = f"{LEZ}/session-a/chain-fork.json"
     say(f"session A: T0 = {a['tip']['id']} {a['tip']['hash']}, channel keys {a['channel']['keys']}, bedrockGenesisId"
-        f" {a['bedrockGenesisId']}, chain {a.get('chain')}")
+        f" {a['bedrockGenesisId']}" + (f" (the node's fork digest, {open(fork).read().strip()[:120]})" if os.path.isfile(fork)
+                                       else " (sha256 of the deployment settings)") + f", chain {a.get('chain')}")
     return True
 
 
@@ -636,7 +658,7 @@ def st_checkpoint_exec() -> bool:
     if os.path.isfile(f"{CP}/exec.txt"):
         return False
     name = cp_name()
-    p = subprocess.run([E2E, "exec", "--program", f"{PROG}/checkpoint_b.bin", "--input", f"{CP}/input/{name}.input",
+    p = subprocess.run([E2E, "exec", "--program", prog("checkpoint_b"), "--input", f"{CP}/input/{name}.input",
                         "--meta", f"{CP}/input/{name}.json"], capture_output=True, text=True, cwd=REPO)
     with open(f"{RUN}/logs/checkpoint-exec.log", "a") as f:
         f.write(p.stdout + p.stderr)
@@ -656,10 +678,11 @@ def modal_fn(name: str):
 def stage_gpu(name: str) -> bytes:
     """e2e/crown/stage-gpu.sh's layout in memory: programs/{checkpoint-b,checkpoint,segment}.bin, fixtures/<name>.*,
     MANIFEST.json with the files' hashes and the programs' image ids."""
-    files = {"programs/checkpoint-b.bin": f"{PROG}/checkpoint_b.bin", "programs/checkpoint.bin": f"{PROG}/checkpoint.bin",
-             "programs/segment.bin": f"{PROG}/segment.bin", f"fixtures/{name}.input": f"{CP}/input/{name}.input",
+    files = {"programs/checkpoint-b.bin": prog("checkpoint_b"), "programs/checkpoint.bin": prog("checkpoint"),
+             "programs/segment.bin": prog("segment"), f"fixtures/{name}.input": f"{CP}/input/{name}.input",
              f"fixtures/{name}.json": f"{CP}/input/{name}.json"}
-    manifest = {"source": f"crown-cloud drive.py: {name}", "commit": out(["git", "-C", REPO, "rev-parse", "HEAD"]),
+    manifest = {"source": f"crown-cloud drive.py: {name} (input set {INPUT_SET}: checkpoint-b.bin is {FILES['checkpoint_b']},"
+                          f" checkpoint.bin {FILES['checkpoint']})", "commit": out(["git", "-C", REPO, "rev-parse", "HEAD"]),
                 "local_image_ids": {"checkpoint": IDS["checkpoint"], "checkpoint-b": IDS["checkpoint_b"], "segment": IDS["segment"]},
                 "files": {k: {"bytes": os.path.getsize(v), "sha256": sha256(v)} for k, v in files.items()}}
     buf = io.BytesIO()
@@ -730,7 +753,7 @@ def st_checkpoint_prove() -> bool:
             pass
         os.remove(callf)
         t1 = time.time()
-        run([E2E, "prove", "--program", f"{PROG}/checkpoint_b.bin", "--input", f"{CP}/input/{name}.input", "--meta", meta,
+        run([E2E, "prove", "--program", prog("checkpoint_b"), "--input", f"{CP}/input/{name}.input", "--meta", meta,
              "--out-dir", f"{CP}/cpu"], log="checkpoint-prove-cpu.log")
         say(f"checkpoint prove: CPU proof in {time.time() - t1:.0f} s")
         src = f"{CP}/cpu/receipt-succinct.bin"
@@ -839,7 +862,7 @@ def st_releases_prove() -> bool:
         rec = f"{REL}/{name}/prove/receipt-succinct.bin"
         if not os.path.isfile(rec):
             t0 = time.time()
-            run([E2E, "prove", "--program", f"{PROG}/release.bin", "--input", f"{REL}/release-{name}.input", "--meta", meta,
+            run([E2E, "prove", "--program", prog("release"), "--input", f"{REL}/release-{name}.input", "--meta", meta,
                  "--out-dir", f"{REL}/{name}/prove"], log="releases.log")
             say(f"release {name}: CPU proof in {time.time() - t0:.0f} s")
         w = wrap(rec, IDS["release"], meta, f"{REL}/{name}/wrap", f"{REL}/{name}/receipt", "releases.log")

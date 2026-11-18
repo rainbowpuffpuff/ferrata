@@ -2,9 +2,11 @@
 # One session of the crown run's LEZ devnet (lez/crown/README.md), on a Modal container or the build box; never on
 # a laptop. Modelled on lez/lab/session.sh: the zone is saved as generations on a Volume between sessions.
 #
-#   session.sh a   a NEW zone (refuses if a generation exists): LEZ v0.4.0-rc1 sequencer + Logos Blockchain node
-#                  (LEZ's local configuration, dev-mode leader proofs, `setup --create-channel`); crown-driver crown-a
-#                  (deploy, the Sepolia instance and its catch-up); stop cleanly; save generation 1; session-a/
+#   session.sh a   a NEW zone (refuses if a generation exists): the bundle's LEZ sequencer + Logos Blockchain node
+#                  (LEZ v0.4.0-rc1 and node d480efc6, or LEZ v0.4.0-rc3 and node 0.3.5-rc.1; LEZ's local configuration,
+#                  dev-mode leader proofs, `setup --create-channel`); crown-driver crown-a (deploy, the Sepolia instance
+#                  and its catch-up; on a node that serves GET /chain/fork (0.3.5-rc.1) with --fork-digest, so that the
+#                  configuration's bedrockGenesisId is the zone's fork digest); stop cleanly; save generation 1; session-a/
 #   session.sh b   restore the newest generation; crown-driver crown-b over the captures (the bridge's pairing,
 #                  registration, imports, claims and burns, with two real private proofs); the node's final blocks
 #                  (session-b/node/, for the checkpoint); stop; save; session-b/
@@ -156,6 +158,7 @@ node_dump() {
   curl -fsS -m 10 -o "$N/info.json" "$api/cryptarchia/info" && curl -fsS -m 10 -o "$N/channel.json" "$api/channel/$CHANNEL" \
     || { say "node dump: no info/channel"; return 1; }
   curl -fsS -m 10 -o "$N/chain-id.json" "$api/chain/id" || say "node dump: no chain id"
+  curl -fsS -m 10 -o "$N/chain-fork.json" "$api/chain/fork" 2>/dev/null || rm -f "$N/chain-fork.json"
   lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$N/info.json")"
   echo "$from" > "$N/slot-from.txt"
   while [ -n "$lib" ] && [ "$from" -le "$lib" ]; do
@@ -179,18 +182,23 @@ for i in $(seq 1 600); do
 done
 [ -s "$WORK/bedrock-info.json" ] || fail "the Bedrock node did not answer"
 say "Bedrock node up: $(cat "$WORK/bedrock-info.json")"
+# The node's slot length, from the deployment settings it runs with: 1 s on LEZ v0.4.0-rc1's local settings, 4 s on
+# rc2's and rc3's (an epoch of 60 slots: 240 s; lez/live/run-live.sh's bedrock_origin). Slot 0's unix second is then
+# the second at which the tip's slot changes minus slot x SLOT_S.
+SLOT_S="$(sed -n 's/^ *slot_duration_in_seconds: *\([0-9][0-9]*\) *$/\1/p' "$S/bedrock/deployment-settings.yaml" | sed -n 1p)"
+[ -n "$SLOT_S" ] && [ "$SLOT_S" -gt 0 ] || SLOT_S=1
 slot() { curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null | sed -n 's/.*"slot":\([0-9]*\).*/\1/p'; }
 ORIGIN=""; last="$(slot)"; seen=0
 for i in $(seq 1 900); do
   now_slot="$(slot)"
   if [ -n "$now_slot" ] && [ -n "$last" ] && [ "$now_slot" != "$last" ] && [ "$now_slot" -gt 0 ]; then
-    v=$(( $(date +%s) - now_slot )); if [ -z "$ORIGIN" ] || [ "$v" -lt "$ORIGIN" ]; then ORIGIN="$v"; fi
+    v=$(( $(date +%s) - now_slot * SLOT_S )); if [ -z "$ORIGIN" ] || [ "$v" -lt "$ORIGIN" ]; then ORIGIN="$v"; fi
     seen=$(( seen + 1 )); [ "$seen" -ge 3 ] && break
   fi
   last="$now_slot"; sleep 0.1
 done
 [ -n "$ORIGIN" ] || fail "could not read the node's slot clock"
-say "node slot 0 is unix second $ORIGIN"
+say "node slot 0 is unix second $ORIGIN (slots of $SLOT_S s)"
 if [ "$STEP" = dump ]; then
   for i in $(seq 1 120); do grep -q '"state":"Online"' <(curl -fsS -m 3 "http://127.0.0.1:$BEDROCK_PORT/cryptarchia/info" 2>/dev/null) && break; sleep 1; done
   node_dump; rc=$?
@@ -502,6 +510,17 @@ if [ "$STEP" = a ]; then
   grep -q '"accredited_keys":\["' "$WORK/channel.json" 2>/dev/null || fail "the node does not serve the channel's keys"
   say "channel: $(cut -c1-300 "$WORK/channel.json")"
   extra=(); [ -n "${CROWN_VAULT:-}" ] && extra=(--vault "$CROWN_VAULT")
+  # Logos Blockchain 0.3.5-rc.1 (LEZ v0.4.0-rc3's node) serves its fork digest; every Mantle transaction carries it and
+  # the checkpoint guests of guests-0-3-5 require bedrockGenesisId to be it. A node without /chain/fork: none.
+  if curl -fsS -m 10 -o "$WORK/chain-fork.json" "http://127.0.0.1:$BEDROCK_PORT/chain/fork" 2>/dev/null; then
+    digest="$(sed -n 's/.*"fork_digest":"\(0x\)\{0,1\}\([0-9a-fA-F]\{64\}\)".*/\2/p' "$WORK/chain-fork.json" | tr 'A-F' 'a-f')"
+    [ -n "$digest" ] || fail "GET /chain/fork answered without a fork digest: $(head -c 300 "$WORK/chain-fork.json")"
+    extra+=(--fork-digest "$digest")
+    say "node fork digest $digest (GET /chain/fork): the configuration's bedrockGenesisId"
+  else
+    rm -f "$WORK/chain-fork.json"
+    say "the node serves no /chain/fork: bedrockGenesisId = sha256(deployment settings)"
+  fi
   timeout $(( DEADLINE_MIN * 60 )) "$BIN/crown-driver" crown-a "${D[@]}" --channel "$WORK/channel.json" \
     --genesis "$S/bedrock/deployment-settings.yaml" --identity-out "$WORK/session-a.json" "${extra[@]}" > "$LOG/driver.log" 2>&1
   DRIVER_RC=$?
@@ -563,6 +582,7 @@ cp "$WORK/bedrock-end.json" "$OUT/cryptarchia-info.json" 2>/dev/null
 cp "$WORK/channel-end.json" "$OUT/channel-end.json" 2>/dev/null
 if [ "$STEP" = a ]; then
   cp "$WORK/channel.json" "$OUT/channel.json" 2>/dev/null
+  [ -f "$WORK/chain-fork.json" ] && cp "$WORK/chain-fork.json" "$OUT/chain-fork.json"
   cp "$S/bedrock/deployment-settings.yaml" "$OUT/deployment-settings.yaml"
   cp "$S/sequencer_home/channel_signing_key" "$OUT/channel_signing_key" 2>/dev/null || say "no channel_signing_key in the sequencer home"
   [ -n "$SAVED" ] && cp "$WORK/session-a.json" "$OUT/session-a.json"

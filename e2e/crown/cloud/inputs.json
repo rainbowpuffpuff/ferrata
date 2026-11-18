@@ -1,0 +1,23 @@
+{
+ "_doc": "The input sets of the crown run (e2e/crown/README.md): where each set lives on the Volume ferrata-crown, the LEZ side its bundle carries, and the R0BF programs by role (file name in <dir>/programs/, image id: docs/image-ids.md). `setup --inputs NAME` uploads one set and leaves the others untouched; a run records its set in run.json (\"inputs\"; a run without it is rc1, crown-live-1 to -3); ctl.py, drive.py and verify.py read this file.",
+ "rc1": {
+  "dir": "inputs",
+  "lez": "LEZ v0.4.0-rc1 (sequencer_service 1806e873) and Logos Blockchain node d480efc6",
+  "programs": {
+   "checkpoint_b": {"file": "checkpoint_b", "image_id": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e"},
+   "checkpoint": {"file": "checkpoint", "image_id": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84"},
+   "segment": {"file": "segment", "image_id": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592"},
+   "release": {"file": "release", "image_id": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
+  }
+ },
+ "rc3": {
+  "dir": "inputs-rc3",
+  "lez": "LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)",
+  "programs": {
+   "checkpoint_b": {"file": "checkpoint_b_0_3_5", "image_id": "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf"},
+   "checkpoint": {"file": "checkpoint_0_3_5", "image_id": "0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f"},
+   "segment": {"file": "segment", "image_id": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592"},
+   "release": {"file": "release", "image_id": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
+  }
+ }
+}

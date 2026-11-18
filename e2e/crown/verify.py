@@ -42,6 +42,10 @@ CHECKPOINT_DOMAIN = "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406f
 # scripts/verify-sepolia.py: a run of the final programs records docs/image-ids.md's ids, crown-live-1 and
 # crown-rehearsal-3 the ids of e2e/crown/README.md's "The programs of crown-live-1". The chain anchors them: the vault's
 # immutables must equal them (the "vault" check) and every seal must verify under them on chain.
+# The R0BF files that hold a role: the final programs' names, and the second build's checkpoint_b (zones on Logos
+# Blockchain 0.3.5-rc.1, input set rc3 of e2e/crown/cloud/inputs.json).
+ROLE_OF_FILE = {"checkpoint_b": "checkpoint_b", "checkpoint_b_0_3_5": "checkpoint_b", "release": "release"}
+PROGRAM_FILE: dict = {}  # role -> the run's programs/<file>.bin, set by run_ids()
 IDS: dict = {}  # set in main() by run_ids()
 IDS_SRC: list = []  # the records that gave them
 IDS_ERROR = ""
@@ -75,8 +79,9 @@ def run_ids(run: str):
                 if line.strip():
                     row = json.loads(line)
                     name = os.path.basename(row["program"]).removesuffix(".bin")
-                    if name in ("checkpoint_b", "release"):
-                        rec(name, row["image_id"], "programs/ids.jsonl")
+                    if name in ROLE_OF_FILE:
+                        rec(ROLE_OF_FILE[name], row["image_id"], "programs/ids.jsonl")
+                        PROGRAM_FILE[ROLE_OF_FILE[name]] = os.path.join(run, "programs", f"{name}.bin")
     missing = [k for k in ("checkpoint_b", "release") if k not in ids]
     if missing:
         bad.append(f"no recorded {' or '.join(missing)} id (params.json, programs/ids.jsonl)")
@@ -174,8 +179,18 @@ def main() -> int:
         need(on.lower() == cid, f"vault's storedLezConfigId {on}")
         return f"{cid} = the vault's storedLezConfigId"
 
-    @check("bedrockGenesisId = sha256(deployment settings)")
+    @check("bedrockGenesisId = sha256(deployment settings), or the zone's fork digest (Logos Blockchain 0.3.5-rc.1)")
     def _():
+        fork = f"{L}/session-a/chain-fork.json"
+        if os.path.isfile(fork):  # the node served GET /chain/fork at session A: LEZ v0.4.0-rc3's node 0.3.5-rc.1
+            d = "0x" + str(jl(fork).get("fork_digest", "")).lower().removeprefix("0x")
+            need(re.fullmatch(r"0x[0-9a-f]{64}", d) is not None, f"session-a/chain-fork.json: no fork digest")
+            need(d == sa["bedrockGenesisId"].lower(), f"the fork digest {d} != bedrockGenesisId {sa['bedrockGenesisId']}")
+            nb = f"{L}/session-b/node/chain-fork.json"
+            if os.path.isfile(nb):
+                db = "0x" + str(jl(nb).get("fork_digest", "")).lower().removeprefix("0x")
+                need(db == d, f"session B's node served fork digest {db}, session A's {d}")
+            return f"{d} = the node's fork digest (GET /chain/fork at session A{' and B' if os.path.isfile(nb) else ''})"
         got = "0x" + sha256f(f"{L}/session-a/deployment-settings.yaml")
         need(got == sa["bedrockGenesisId"].lower(), f"{got} != {sa['bedrockGenesisId']}")
         return got
@@ -323,7 +338,8 @@ def main() -> int:
                 need(p.returncode == 0, f"realblocks-crown: {p.stderr.strip()[-300:]}")
                 new, old = sha256f(f"{t}/{name}.input"), sha256f(f"{R}/checkpoint/input/{name}.input")
                 need(new == old, f"rebuilt input {new} != proven {old}")
-                e = subprocess.run([a.e2e, "exec", "--program", f"{R}/programs/checkpoint_b.bin", "--input", f"{t}/{name}.input",
+                e = subprocess.run([a.e2e, "exec", "--program", PROGRAM_FILE.get("checkpoint_b", f"{R}/programs/checkpoint_b.bin"),
+                                    "--input", f"{t}/{name}.input",
                                     "--meta", f"{t}/{name}.json"], capture_output=True, text=True)
                 need(e.returncode == 0, f"exec: {e.stderr.strip()[-300:]}")
                 need(jl(f"{t}/{name}.json")["journal"] == crown["candidate"]["journal"][2:], "the native journal is not the candidate's")

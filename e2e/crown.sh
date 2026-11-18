@@ -2,8 +2,13 @@
 # The crown run (e2e/crown/README.md) in the cloud: the Modal app ferrata-crown (e2e/crown/cloud/app.py) on the
 # your Modal workspace. Once started it needs nothing from this machine until the results are fetched.
 #
-#   e2e/crown.sh setup [--bundle FILE] [--programs DIR]   deploy the app; the LEZ bundle and the programs to its Volume
-#   e2e/crown.sh start [--fork] [--yes] [--halt-after STAGE] [--lez-chain sepolia] [run]
+#   e2e/crown.sh setup [--inputs rc1|rc3] [--bundle FILE] [--programs DIR]
+#                                     deploy the app; the LEZ bundle and the programs to its Volume, under the input
+#                                     set's directory (e2e/crown/cloud/inputs.json: rc1 = inputs/, crown-live-1 to -3's;
+#                                     rc3 = inputs-rc3/: LEZ v0.4.0-rc3, its node 0.3.5-rc.1, the second build of the
+#                                     checkpoint guests); the other sets stay as they are
+#   e2e/crown.sh start [--fork] [--inputs rc1|rc3] [--yes] [--halt-after STAGE] [--lez-chain sepolia] [run]
+#                                     --inputs: a new run's input set (default rc1; a resume keeps the run's own);
 #                                     live (default run crown-live-3; crown-live-1 is done, crown-live-2 stopped at lez-a: its
 #                                     checkpoint was outside the weak-subjectivity period): signs on Sepolia only after a typed yes;
 #                                     --fork (default run crown-rehearsal-4): an anvil fork of Sepolia, nothing sent;
@@ -46,6 +51,7 @@ start)
     --yes) opts+=(--yes) ;;
     --halt-after) opts+=(--halt-after "$2"); shift ;;
     --lez-chain) opts+=(--lez-chain "$2"); shift ;;
+    --inputs) opts+=(--inputs "$2"); shift ;;
     *) break ;;
     esac
     shift
@@ -65,5 +71,5 @@ verify)
   SEPOLIA_RPC_URL="$SEPOLIA_RPC_URL" python3 -I "$here/crown/verify.py" "$run" --lez "$run/lez"
   ;;
 updater|updater-stop|updater-status|updater-fetch) ctl "$cmd" "$@" ;;
-*) sed -n '2,23p' "$0" >&2; exit 2 ;;
+*) sed -n '2,30p' "$0" >&2; exit 2 ;;
 esac

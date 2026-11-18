@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """The laptop side of e2e/crown.sh (which sets MODAL_PROFILE, FERRATA_REPO and TMPDIR).
 
-    ctl.py setup [--bundle FILE|none] [--programs DIR]  deploy ferrata-crown; the LEZ bundle and the R0BF programs to
-                                                    the Volume (checked: sha256, image ids); a ping
-    ctl.py start <run> live|fork|selftest [--yes] [--halt-after STAGE] [--lez-chain sepolia]
+    ctl.py setup [--inputs rc1|rc3] [--bundle FILE|none] [--programs DIR]  deploy ferrata-crown; the LEZ bundle and the
+                    R0BF programs to the Volume, under the input set's directory (e2e/crown/cloud/inputs.json: rc1 =
+                    inputs/, crown-live-1 to -3's; rc3 = inputs-rc3/, LEZ v0.4.0-rc3 and the second build of the checkpoint
+                    guests), checked: sha256, image ids; the other sets untouched; a ping
+    ctl.py start <run> live|fork|selftest [--inputs rc1|rc3] [--yes] [--halt-after STAGE] [--lez-chain sepolia]
+                    (--inputs: a new run's input set, recorded in its run.json; default rc1; a resume keeps its own)
                     (--lez-chain sepolia: a fork run whose session A uses the real Sepolia checkpoint of the bundle's
                     fixture instead of the stand-in; it ends after identity, so --halt-after lez-a|identity)
     ctl.py status <run>
@@ -41,11 +44,22 @@ SCRATCH = os.path.join(os.environ["TMPDIR"], "crown-cloud")
 IGNORED_INPUTS = ("vault/lib",)  # git ignores it; forge needs it
 DEPLOYER = "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07"  # the throwaway deployer of the Secret (sepolia-live-2's)
 PUBLIC_SEPOLIA = "https://ethereum-sepolia-rpc.publicnode.com"
-IDS = {"checkpoint_b": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
-       "checkpoint": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
-       "segment": "0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592",
-       "release": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"}
-BUNDLES = ("tmp/crown-lez/bundle.tar.zst", "tmp/crown-lez/rehearsal/vol/bundle.tar.zst")
+# The input sets (the Volume directory, the LEZ side, the R0BF programs by role: file and image id), as drive.py and
+# verify.py read them.
+INPUT_SETS = {k: v for k, v in json.load(open(os.path.join(REPO, "e2e/crown/cloud/inputs.json"))).items() if not k.startswith("_")}
+DEFAULT_INPUTS = "rc1"
+BUNDLES = ("tmp/crown-lez/bundle.tar.zst", "tmp/crown-lez/rehearsal/vol/bundle.tar.zst")  # rc1's default bundle paths
+
+
+def input_set(name: str) -> dict:
+    if name not in INPUT_SETS:
+        die(f"no input set {name!r} (e2e/crown/cloud/inputs.json: {', '.join(sorted(INPUT_SETS))})")
+    return INPUT_SETS[name]
+
+
+def set_ids(name: str) -> dict:
+    """{file stem: image id} of an input set's programs."""
+    return {v["file"]: v["image_id"] for v in input_set(name)["programs"].values()}
 STAGES = ["lez-a", "identity", "deploy", "deposit0", "capture1", "deposit1", "capture2", "lez-b", "checkpoint-input",
           "checkpoint-exec", "checkpoint-prove", "checkpoint-wrap", "submit", "releases-prove", "wait", "finalize",
           "release0", "release1", "verify"]
@@ -116,8 +130,9 @@ def check_run_name(run: str) -> None:
 
 
 # ---- setup --------------------------------------------------------------------------------------------------------
-def check_programs(d: str) -> list:
-    """The R0BF programs of crown-proofs (ids.jsonl): every file's sha256 as recorded, every id the crown build's."""
+def check_programs(d: str, inputs: str) -> list:
+    """The R0BF programs (ids.jsonl): every file's sha256 as recorded, every id the input set's."""
+    ids = set_ids(inputs)
     rows = [json.loads(l) for l in open(os.path.join(d, "ids.jsonl")) if l.strip()]
     seen = {}
     for r in rows:
@@ -125,15 +140,18 @@ def check_programs(d: str) -> list:
         path = os.path.join(d, f"{name}.bin")
         if sha256(path) != r["sha256"]:
             die(f"{path}: sha256 is not ids.jsonl's")
-        if IDS.get(name) != r["image_id"]:
-            die(f"{name}: image id {r['image_id']} is not the crown build's {IDS.get(name)}")
+        if ids.get(name) != r["image_id"]:
+            die(f"{name}: image id {r['image_id']} is not input set {inputs}'s {ids.get(name)}")
         seen[name] = path
-    if set(seen) != set(IDS):
-        die(f"{d} holds {sorted(seen)}, the run needs {sorted(IDS)}")
+    if set(seen) != set(ids):
+        die(f"{d} holds {sorted(seen)}, input set {inputs} needs {sorted(ids)}")
     return [os.path.join(d, "ids.jsonl")] + [seen[n] for n in sorted(seen)]
 
 
-def setup(bundle: str | None, programs: str | None) -> None:
+def setup(bundle: str | None, programs: str | None, inputs: str = DEFAULT_INPUTS) -> None:
+    idir = input_set(inputs)["dir"]
+    if inputs != DEFAULT_INPUTS and (not bundle or not programs):
+        die(f"setup --inputs {inputs}: give --bundle FILE and --programs DIR (the defaults are rc1's)")
     try:
         modal.Secret.from_name(SECRET_NAME).hydrate()
     except NotFoundError:
@@ -142,7 +160,7 @@ def setup(bundle: str | None, programs: str | None) -> None:
         bundle = bundle or next((os.path.join(SPIKE, b) for b in BUNDLES if os.path.isfile(os.path.join(SPIKE, b))), None)
         if not bundle or not os.path.isfile(bundle):
             die(f"no LEZ bundle (lez/crown/build.sh all on the build box, fetched to one of {BUNDLES}); give --bundle FILE")
-    progs = check_programs(programs or os.path.join(SPIKE, "tmp/crown-proofs/programs"))
+    progs = check_programs(programs or os.path.join(SPIKE, "tmp/crown-proofs/programs"), inputs)
     os.makedirs(SCRATCH, exist_ok=True)
     log = os.path.join(SCRATCH, "deploy.log")
     print(f"deploying {APP_NAME} (the first time builds its images, about 15 minutes); log {log}")
@@ -153,22 +171,23 @@ def setup(bundle: str | None, programs: str | None) -> None:
     vol = volume()
     meta = {"sha256": sha256(bundle), "bytes": os.path.getsize(bundle), "source": os.path.relpath(bundle, SPIKE),
             "uploaded_at": utc()} if bundle != "none" else {"sha256": None, "source": "none (--bundle none)", "bytes": 0}
-    have = vjson(vol, "inputs/bundle.json") or {}
+    meta["inputs"] = inputs
+    have = vjson(vol, f"{idir}/bundle.json") or {}
     with vol.batch_upload(force=True) as b:
         if meta["sha256"] and have.get("sha256") != meta["sha256"]:
-            b.put_file(bundle, "inputs/bundle.tar.zst")
+            b.put_file(bundle, f"{idir}/bundle.tar.zst")
             mp = os.path.join(SCRATCH, "bundle.json")
             with open(mp, "w") as f:
                 json.dump(meta, f, indent=1)
-            b.put_file(mp, "inputs/bundle.json")
+            b.put_file(mp, f"{idir}/bundle.json")
         for p in progs:
-            b.put_file(p, f"inputs/programs/{os.path.basename(p)}")
+            b.put_file(p, f"{idir}/programs/{os.path.basename(p)}")
     if meta["sha256"]:
         print(f"inputs: LEZ bundle {meta['source']} ({meta['bytes']} bytes, sha256 {meta['sha256'][:16]}...)"
               f"{' already there' if have.get('sha256') == meta['sha256'] else ' uploaded'}")
     else:
         print(f"inputs: no LEZ bundle given (--bundle none); on the Volume: {have.get('source', 'none')}")
-    print(f"inputs: programs {', '.join(sorted(IDS))} (ids and sha256 as ids.jsonl)")
+    print(f"inputs ({inputs}, the Volume's {idir}/): programs {', '.join(sorted(set_ids(inputs)))} (ids and sha256 as ids.jsonl)")
     print("ping:", modal.Function.from_name(APP_NAME, "ping").remote())
     print(f"setup done: {APP_NAME} deployed (idle until `start`)")
 
@@ -181,7 +200,7 @@ def cast(*a: str, rpc: str) -> str:
     return r.stdout.strip()
 
 
-def gate(deployer: str, identity: dict | None = None) -> None:
+def gate(deployer: str, identity: dict | None = None, inputs: str = DEFAULT_INPUTS) -> None:
     """Before a live run: what will be signed, by whom, at what price; then a typed yes (ethskills wallets).
     identity: the run's identity.json on a resume. Its vault was fixed at the first start as CREATE(deployer, N+2) for
     that start's nonce N; once part of the deployment has been sent the nonce has moved, so the current nonce + 2 is
@@ -209,6 +228,8 @@ LIVE crown run on Sepolia (chain {chain}), signed in the cloud (Modal app {APP_N
      token, register ETH, register token, renounce; 2 deposits of
      0.001002 ETH each (0.001 + relay fee; returned by the releases less the checkpoint fees); submitCandidate;
      finalizeAttested (after W = 3600 s); 2 releases. Gas at most ~{gas:,} at {price} wei: ~{gas * price / 1e18:.9f} ETH.
+  LEZ side: {input_set(inputs)['lez']} (input set {inputs}); the vault pins
+     checkpoint_b {input_set(inputs)['programs']['checkpoint_b']['image_id']}, release {input_set(inputs)['programs']['release']['image_id']}
   Modal: about 3 to 4 hours (GPU queue permitting), ~2-4 USD on {os.environ.get('MODAL_PROFILE')}.
 """)
     if nonce != pending:
@@ -257,8 +278,11 @@ def pack(run: str) -> tuple[str, str, str, dict]:
     return bundle, tar, meta, src
 
 
-def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str | None = None) -> None:
+def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str | None = None,
+          inputs: str | None = None) -> None:
     check_run_name(run)
+    if inputs is not None:
+        input_set(inputs)
     if halt_after and halt_after not in STAGES:
         die(f"--halt-after: one of {', '.join(STAGES)}")
     if lez_chain is not None and (mode != "fork" or lez_chain != "sepolia" or halt_after not in ("lez-a", "identity")):
@@ -270,15 +294,19 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str
     except NotFoundError:
         die(f"the app {APP_NAME} is not deployed: `e2e/crown.sh setup` first")
     vol = volume()
-    if mode != "selftest" and (not vjson(vol, "inputs/bundle.json") or vread(vol, "inputs/programs/ids.jsonl") is None):
-        die("the Volume has no inputs: `e2e/crown.sh setup`")
+    rj = vjson(vol, f"runs/{run}/run.json")
+    if rj and inputs is not None and rj.get("inputs", DEFAULT_INPUTS) != inputs:
+        die(f"{run} was started with input set {rj.get('inputs', DEFAULT_INPUTS)}, not {inputs}")
+    inputs = (rj or {}).get("inputs", DEFAULT_INPUTS) if rj else (inputs or DEFAULT_INPUTS)
+    idir = input_set(inputs)["dir"]
+    if mode != "selftest" and (not vjson(vol, f"{idir}/bundle.json") or vread(vol, f"{idir}/programs/ids.jsonl") is None):
+        die(f"the Volume has no input set {inputs} ({idir}/): `e2e/crown.sh setup --inputs {inputs} ...`")
     for other in runs_on_volume(vol):
         c = vjson(vol, f"cloud/{other}/call.json")
         if c and call_state(c["call_id"])[0] == "active":
             if other == run:
                 die(f"a runner for {run} is already active ({c['call_id']}): `status {run}`, or `stop`")
             print(f"note: the runner of {other} is active")
-    rj = vjson(vol, f"runs/{run}/run.json")
     deployer = os.environ.get("ETH_FROM") or DEPLOYER
     identity = vjson(vol, f"runs/{run}/identity.json") if rj else None
     if rj:
@@ -290,12 +318,13 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str
         done = [l.split()[0] for l in (vread(vol, f"runs/{run}/stages.done") or b"").decode().splitlines() if l.strip()]
         print(f"resuming {run} (created {rj['created_at']}): done {', '.join(done) or 'nothing'}")
     if mode == "live" and not yes:
-        gate(deployer, identity)
+        gate(deployer, identity, inputs)
     bundle, tar, meta, src = pack(run)
     local_rj = None
     if not rj:
         rj = {"run": run, "mode": "fork" if mode == "selftest" else mode, "deployer": deployer, "chainId": 11155111,
-              "created_at": utc(), "label": "crown run" if mode == "live" else "crown REHEARSAL (anvil fork of Sepolia)"}
+              "created_at": utc(), "label": "crown run" if mode == "live" else "crown REHEARSAL (anvil fork of Sepolia)",
+              "inputs": inputs, "lez": input_set(inputs)["lez"]}
         if lez_chain is not None:
             rj["lez_chain"] = lez_chain
             rj["label"] += f"; session A on the {lez_chain} checkpoint, ending after identity"
@@ -320,7 +349,7 @@ def start(run: str, mode: str, yes: bool, halt_after: str | None, lez_chain: str
         json.dump(record, f, indent=1)
     with vol.batch_upload(force=True) as b:
         b.put_file(rec, f"cloud/{run}/call.json")
-    print(f"started {mode} run {run}: {fname} call {call.object_id}, commit {src['commit'][:12]}"
+    print(f"started {mode} run {run}: {fname} call {call.object_id}, commit {src['commit'][:12]}, input set {inputs}"
           + (f", halting after {halt_after}" if halt_after else ""))
     print(f"It runs without this machine. `e2e/crown.sh status {run}`; at the end `e2e/crown.sh fetch {run}`.")
 
@@ -344,6 +373,8 @@ def status(run: str) -> None:
         what = "finished (result expired)"
     print(f"run {run} ({call['mode']}, commit {call['commit'][:12]}), {call.get('function', 'runner')} {call['call_id']}"
           f" started {call['started_at']}: {what}")
+    rjs = vjson(vol, f"runs/{run}/run.json") or {}
+    print(f"  input set {rjs.get('inputs', DEFAULT_INPUTS)}: {input_set(rjs.get('inputs', DEFAULT_INPUTS))['lez']}")
     ds = vjson(vol, f"runs/{run}/state.json") or {}
     done = [l.split()[0] for l in (vread(vol, f"runs/{run}/stages.done") or b"").decode().splitlines() if l.strip()]
     print(f"  stage {ds.get('stage', '-')}{(': ' + ds['note']) if ds.get('note') else ''} (updated {ds.get('updated_at', '-')})")
@@ -506,9 +537,9 @@ def main() -> None:
     a = sys.argv[1:]
     opt = lambda name: a[a.index(name) + 1] if name in a and a.index(name) + 1 < len(a) else None
     if a[:1] == ["setup"]:
-        setup(opt("--bundle"), opt("--programs"))
+        setup(opt("--bundle"), opt("--programs"), opt("--inputs") or DEFAULT_INPUTS)
     elif len(a) >= 3 and a[0] == "start" and a[2] in ("live", "fork", "selftest"):
-        start(a[1], a[2], "--yes" in a, opt("--halt-after"), opt("--lez-chain"))
+        start(a[1], a[2], "--yes" in a, opt("--halt-after"), opt("--lez-chain"), opt("--inputs"))
     elif len(a) >= 2 and a[0] == "status":
         status(a[1])
     elif len(a) >= 2 and a[0] == "fetch":
