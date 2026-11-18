@@ -66,7 +66,7 @@ of [`docs/design/bridge.md`](design/bridge.md) §3 ([`lez/results/bridge-next.md
 [EVIDENCE](EVIDENCE.md) row 143). **Not deployed: no vault pins it**; milestone B1 would deploy it with a new vault,
 whose `configId` commits to this image id. Built on 18 November 2026 on the Modal build box from this tree (RISC Zero
 3.0.5, guest Rust 1.91.1, through `scripts/guest-rustc`), in the same fresh target directories in which
-`scripts/reproduce-image-ids.sh build` had rebuilt every guest above, and after `compare --vault 0x04eE…e44c` had
+`scripts/reproduce-image-ids.sh build` had rebuilt every guest of the first table (14), and after `compare --vault 0x04eE…e44c` had
 compared them: 14 of 14 and 6 of 6, the vault's `checkpointImageId` and `releaseImageId` equal to the rebuilt ids; then
 15 of 15 with this one ([`lez/results/bridge-next/reproduce/`](../lez/results/bridge-next/reproduce/compare.log); the
 target directories did not exist when the build started: [`lez/results/bridge-next.md`](../lez/results/bridge-next.md)). Rebuild: `cd lez && cargo build -p methods-bridge-next --locked` (with `RISC0_HOME` the
