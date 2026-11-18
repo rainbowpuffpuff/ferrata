@@ -542,7 +542,12 @@ else
   prover="${CROWN_R0VM:-$BIN/r0vm}"
   privacy="${CROWN_PRIVATE:-real}"
   devmode=(env -u RISC0_DEV_MODE); [ "$privacy" = fake ] && devmode=(env RISC0_DEV_MODE=1)
-  timeout $(( DEADLINE_MIN * 60 )) "${devmode[@]}" RISC0_SERVER_PATH="$prover" nice -n 10 "$BIN/crown-driver" crown-b "${D[@]}" \
+  # The prover's threads: every CPU the container shows (os.cpu_count), not what the scheduler's affinity reports (on
+  # Modal's gVisor that is the reserved share: nproc said 2 on a 32-thread box, m0-rc3). crown-rc3-rehearsal-1 proved
+  # the private claim and burn in 773.9 s and 938.5 s without it; rc3's own sessions with 32 threads 264-306 s.
+  threads="${RAYON_NUM_THREADS:-$(python3 -I -c 'import os; print(os.cpu_count() or 16)')}"
+  say "crown-b: real private proofs with RAYON_NUM_THREADS=$threads (nproc $(nproc))"
+  timeout $(( DEADLINE_MIN * 60 )) "${devmode[@]}" RAYON_NUM_THREADS="$threads" RISC0_SERVER_PATH="$prover" nice -n 10 "$BIN/crown-driver" crown-b "${D[@]}" \
     --identity "$VOL/session-a/session-a.json" "${caps[@]}" --private "$privacy" \
     --session-out "$WORK/session-b.json" --notes-out "$WORK/burn-notes.json" "${extra[@]}" > "$LOG/driver.log" 2>&1
   DRIVER_RC=$?
