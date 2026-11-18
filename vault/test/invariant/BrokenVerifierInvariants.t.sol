@@ -12,8 +12,8 @@ import {AcceptAllVerifier} from "../mocks/AcceptAllVerifier.sol";
 import {VaultTestBase} from "../utils/VaultTestBase.sol";
 import {BrokenVerifierHandler} from "./BrokenVerifierHandler.sol";
 
-/// @notice A vault whose verifier accepts every seal: AcceptAllVerifier behind RISC Zero's unmodified emergency stop
-///         (guardian: the freeze authority). Finite release caps on three of four tokens (USDT has none) and globally,
+/// @notice A vault whose verifier accepts every seal: AcceptAllVerifier behind RISC Zero's unmodified emergency stop,
+///         whose owner is renounced as at a deployment. Finite release caps on three of four tokens (USDT has none) and globally,
 ///         release delays from the floor (1 h, DAI) to the revocation window (3 days, ETH), and a checkpoint fee of
 ///         0.1%, so forged releases credit the attacker as the checkpoints' prover.
 abstract contract BrokenVerifierSetup is VaultTestBase {
@@ -34,6 +34,9 @@ abstract contract BrokenVerifierSetup is VaultTestBase {
     /// @dev Replaces the base suite's vault with one whose verifier accepts every seal, behind the real emergency stop.
     function _deployBroken() internal {
         brokenStop = new RiscZeroVerifierEmergencyStop(IRiscZeroVerifierFull(address(new AcceptAllVerifier())), freezer);
+        // As at a deployment, nobody holds the stop's key: only RISC Zero's proof of an exploit trips it.
+        vm.prank(freezer);
+        brokenStop.renounceOwnership();
         IRiscZeroVerifier v = IRiscZeroVerifier(address(brokenStop));
         FerrataVault.Deployment memory dep =
             _mode() == FerrataVault.Mode.A ? _deployment(v, LEZ_CONFIG_ID) : _deploymentB(v, LEZ_CONFIG_ID);
@@ -118,7 +121,7 @@ contract BrokenVerifierInvariants is BrokenVerifierSetup {
         selectors[8] = BrokenVerifierHandler.freezerRevokes.selector;
         selectors[9] = BrokenVerifierHandler.freezerFreezes.selector;
         selectors[10] = BrokenVerifierHandler.freezerRetires.selector;
-        selectors[11] = BrokenVerifierHandler.guardianStops.selector;
+        selectors[11] = BrokenVerifierHandler.anyoneStops.selector;
         selectors[12] = BrokenVerifierHandler.warp.selector;
         targetContract(address(handler));
         targetSelector(StdInvariant.FuzzSelector({addr: address(handler), selectors: selectors}));

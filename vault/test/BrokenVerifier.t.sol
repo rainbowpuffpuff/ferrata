@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 pragma solidity ^0.8.26;
 
+import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
+
 import {FerrataVault} from "../src/FerrataVault.sol";
 import {BrokenVerifierSetup} from "./invariant/BrokenVerifierInvariants.t.sol";
 import {ReferenceMerkle} from "./utils/ReferenceMerkle.sol";
@@ -215,14 +217,18 @@ contract BrokenVerifierTest is BrokenVerifierSetup {
         assertEq(available, 40_000e18 - escrowLeaf0);
     }
 
-    /// @notice After RISC Zero's emergency stop nothing proven is accepted: no release, no candidate, no refund.
-    function test_afterTheEmergencyStopNothingPays() public {
+    /// @notice Nobody holds the stop's key (renounced, as at a deployment), but the broken verifier accepts a junk "proof
+    ///         of exploit" too, so anyone can trip the stop; after it nothing proven is accepted.
+    function test_anyoneCanTripTheStopAndThenNothingPays() public {
         _depositN(alice, address(dai), 2, 2);
         uint256 finalizedAt = _forge(ROOT, false, 0);
         vm.warp(finalizedAt + MIN_DELAY);
         _release(address(dai), 2, ROOT);
         vm.prank(freezer);
+        vm.expectRevert(abi.encodeWithSignature("OwnableUnauthorizedAccount(address)", freezer));
         brokenStop.estop();
+        vm.prank(bob);
+        brokenStop.estop(RiscZeroReceipt({seal: JUNK, claimDigest: bytes32(0)}));
         _releaseRefused(address(dai), 2, ROOT, bytes4(keccak256("EnforcedPause()")));
         FerrataVault.Checkpoint memory c;
         c.nMin = N_MIN;

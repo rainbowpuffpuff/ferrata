@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
+import {Receipt as RiscZeroReceipt} from "risc0/IRiscZeroVerifier.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
@@ -12,7 +13,7 @@ import {ReferenceMerkle} from "../utils/ReferenceMerkle.sol";
 ///         Zero's emergency stop), and this handler is an attacker who forges checkpoints with burn roots of its choice
 ///         and releases against them with fresh nullifiers, to its own address, at the earliest second the vault
 ///         allows. Honest depositors keep depositing; the freeze authority, a watcher and the stop's guardian
-///         sometimes react (revoke, cancel, freeze, retire, stop). The handler keeps its own model of what the vault
+///         sometimes react (revoke, cancel, freeze, retire), and someone may trip the emergency stop. The handler keeps its own model of what the vault
 ///         must refuse, from its own records and the deployment's parameters, and counts every payout the model says
 ///         should not have happened, and every window in which payouts exceeded the release caps' bound.
 contract BrokenVerifierHandler is Test {
@@ -421,11 +422,13 @@ contract BrokenVerifierHandler is Test {
         retiredModel = true;
     }
 
-    /// @dev One time in 64: the guardian trips RISC Zero's emergency stop in front of the verifier (forever).
-    function guardianStops(uint256 seed) external {
+    /// @dev One time in 64: someone trips RISC Zero's emergency stop (forever). Its owner is renounced, as at a
+    ///      deployment, so the only way is `estop(receipt)` with a "proof of exploit" (a receipt for the all-zero claim
+    ///      digest), which the broken verifier accepts from anyone: a junk receipt.
+    function anyoneStops(uint256 seed) external {
         if (seed % 64 != 17 || stopped) return;
-        vm.prank(freezer);
-        estop.estop();
+        vm.prank(watcher);
+        estop.estop(RiscZeroReceipt({seal: FORGED_SEAL, claimDigest: bytes32(0)}));
         stopped = true;
         stops++;
     }
