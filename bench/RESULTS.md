@@ -5,7 +5,8 @@
 final exponentiation measured on 17 Nov 2026, has one too: "2026-11-17: one update in one
 transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md); so does the
 signing key composed from one multiproof of the non-signers, measured the same evening: "2026-11-17:
-the fewest signers in one transaction".)
+the fewest signers in one transaction"; and a committee handoff in one transaction, the next committee adopted by its
+summary, 18 Nov 2026: "2026-11-18: a committee handoff in one transaction".)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
@@ -442,6 +443,38 @@ the rest with every figure unchanged, 18 Nov 2026. Outputs: `results/residue/agg
   ./target/release/residue-host boundary && cargo test --release -p residue-host --test placements`
   (on the build box on 18 Nov, with its build cache warm and the guests already built: 83 s to
   `boundary`, 130 s for the placements test; a clean build was not timed); LEZ: `RESIDUE.md` §9.8.
+
+## 2026-11-18: a committee handoff in one transaction, the next committee adopted by its summary (experimental, unaudited)
+
+**Not in any deployed program; `crates/ferrata-core` unchanged; sound only under the honest-supermajority
+assumption the light client already makes.** [`RESIDUE.md`](RESIDUE.md) §10 gives the soundness argument (what the
+core's 512-key adoption establishes that this does not, why it does not matter under that assumption, what a wrong
+aggregate field would do, deposit proofs of possession, and what the consensus specification, Helios and Lodestar do
+with the aggregate field, at pinned commits). `residue-handoff` adopts a handoff's next committee by the summary step 1
+proved; `one_step` runs the whole update with one multiproof (§9) and the residue witness. Measured with
+`residue-host measure-handoff` in the bench guest `guests/residue-agg-accel` (r0vm 3.0.5 executor), mainnet update_1
+as served (a handoff) against the store after update_0, on the Modal build box, 18 Nov 2026. Outputs:
+`results/residue/handoff/` ([`tables.md`](results/residue/handoff/tables.md), `one-tx.txt`, `tests.txt`, `lez.txt`).
+
+* Execution user cycles of the whole handoff, witness check (folded): **6,578,036** (5,916,026) at 510 of 512 with the
+  real committee; at 342 signers, signed by the bench's committee, **8,154,987** (7,492,977) at the costliest placement
+  of the absent members found (every absent index odd) and 8,146,550 (7,484,540) with every third absent. With the
+  core's 512-key adoption instead: 12,575,468 (11,913,881) and 14,152,419. The summary adoption is 686 cycles, the
+  512-key adoption 5,991,991.
+* The store after the one-step path equals the core's after all its steps on every update of the official `sync`
+  vectors (160: 91 accepted, 66 handoffs; 69 refused alike), the mainnet replay (5 handoffs) and Sepolia through Gloas
+  (33, 32 handoffs); only the job's adoption progress differs. Refused alike: a bad next-committee branch (27), 341
+  signers (51), no finality (50), stale (52, 23). The one difference: a next committee whose aggregate field is not the
+  sum of its keys (only a state the beacon chain's transition did not produce holds one) is refused by the core (45)
+  and accepted here; then the honest committee is refused and one member signs for all of it (`RESIDUE.md` §10.3).
+* Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1, the experimental copy, which adopts by the summary
+  when `VerifyAll` carries no adoption keys): **6,621,551** execution gas (66.2%) for the 510-signer handoff, applied;
+  **8,341,469** (83.4%) at 342 signers at the costliest placement found (8,333,542 with every third absent, 8,676,354
+  with the chain of additions); with the 512 keys in the same transaction it reverts on the 10M budget. The deployed
+  program's image id, printed by the same build, is still `816d1fef…`.
+* LEZ v0.3.1 (`lez-v03`, `Verify::ResidueSummary`): every handoff of the mainnet replay (at most 6,647,863) and of
+  Sepolia's 32 periods (at most 6,592,610) in one transaction; the port's image id changed (`f8ec1b21…`).
+* Re-check: `RESIDUE.md` §10.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 

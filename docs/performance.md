@@ -97,8 +97,14 @@ execution gas for it in one transaction with every third member absent (83.2%) a
 at the costliest placement found (the maximum over all placements is not established; about 1.67M
 gas is left to the limit), and the bare guest takes 7,458,783 folded with every third absent; with a
 branch per non-signer the fewest signers that fit are 386
-(EVIDENCE row 128, [`bench/RESIDUE.md`](../bench/RESIDUE.md) §9). A period update still does not fit.
-The deployed programs are unchanged.
+(EVIDENCE row 128, [`bench/RESIDUE.md`](../bench/RESIDUE.md) §9). A period update (a committee handoff) does not
+fit with the next committee's 512 keys adopted (5,991,991 cycles for the adoption alone); adopted by its summary
+instead (its key root and aggregate key as the update's branch proves them in the signed attested state, which is
+sound only under the honest-supermajority assumption the light client already makes, `bench/RESIDUE.md` §10), it
+fits one transaction: the experimental copy was charged **6,621,551** execution gas (66.2%) for mainnet update_1 as a
+handoff and **8,341,469** (83.4%) for a 342-signer handoff at the costliest placement found, and the LEZ v0.3.1 port
+takes every handoff of the mainnet replay and of Sepolia's 32 periods in one transaction, at most 6,647,863
+(EVIDENCE row 137). The deployed programs are unchanged.
 
 **Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private
 attestation of a `Transfer`, 380,577 user cycles for the consumer's two transitions plus LEZ's privacy
