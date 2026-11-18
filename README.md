@@ -28,6 +28,7 @@ What is here are prototypes and their measurements. **Not audited. Not for produ
 | see every result, with the command that re-checks it | [docs/EVIDENCE.md](docs/EVIDENCE.md) |
 | check the live Sepolia round trip yourself | [docs/guides/verify.md](docs/guides/verify.md) |
 | find where each RFP requirement is met | [docs/traceability.md](docs/traceability.md) |
+| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 17 and 27 shown, 35 and 37 in part, 4 and 2 not yet, 3 and 2 waiting on Logos (our own strict count, 18 November 2026) |
 | read the design | [attestation](docs/design/attestation.md), [bridge](docs/design/bridge.md), [what LEZ v0.4 decides](docs/design/lez-v0.4-findings.md) |
 | know who is trusted for what | [docs/trust.md](docs/trust.md) |
 | see what is not built yet | [Specified but not built](#specified-but-not-built) |
