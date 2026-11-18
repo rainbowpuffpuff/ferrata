@@ -805,7 +805,11 @@ pub fn fixture_meta(name: &str, bytes: &[u8], description: &str, expect: Option<
         }
         (Err(e), Some(want)) => {
             let got = e;
-            ensure!(got.starts_with(want), "{name}: native run refused with {got}, expected {want}");
+            // The second build wraps the default build's refusals in `Core(..)` (checkpoint_core::bedrock_0_3_5::Error).
+            ensure!(
+                got.starts_with(want) || got.starts_with(&format!("Core({want}")),
+                "{name}: native run refused with {got}, expected {want}"
+            );
             meta["expect_refusal"] = json!(got);
             meta["native"] = json!(format!("refused: {got}"));
         }

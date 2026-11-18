@@ -1,0 +1,20 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  deployer 0x0c8b321A2B8b06cA79459585B13Ea6a33635d0A8, rule B, gas rule eip8037, cap 100000000, block gas limit 100000000
+  FERRATA_STEP groth16Verifier
+  FERRATA_GAS groth16Verifier estimate 1179986 limit 1474982 cap 100000000
+  FERRATA_CREATED groth16Verifier 0x4378481de377150C04ab37fCE442FD3D4C02f7FA
+
+SKIPPING ON CHAIN SIMULATION.
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: spike/ferrata-wt-rc3-return/vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
+
+Sensitive values saved to: spike/ferrata-wt-rc3-return/vault/cache/DeployVault.s.sol/11155111/run-latest.json
+
