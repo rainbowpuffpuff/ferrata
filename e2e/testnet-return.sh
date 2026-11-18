@@ -21,7 +21,7 @@
 #
 # Stages in order (fork runs them all; live: one at a time, or `all`, which stops wherever the LEZ side must act):
 #   plan -> deploy (3 or 4 transactions) -> deposit 0, deposit 1 -> [the LEZ side imports, mints and burns] ->
-#   attest (reads the LEZ node, signs) -> submit -> the wait delta -> finalize -> prove -> the release delay ->
+#   attest (reads the LEZ node, signs) -> prove -> submit -> the wait delta -> finalize -> the release delay ->
 #   release 0, release 1 -> verify
 #
 # Settings: the environment, or the file $FERRATA_ENV_FILE (default e2e/sepolia-live.env, not committed; the same file
@@ -458,7 +458,9 @@ live)
       say "the deposits are in the vault. Now the LEZ side: import, mint, burn. Then run this again with FERRATA_WALLET_SEED_TEXT (or FERRATA_BURN_NOTES, FERRATA_BURNS) and FERRATA_LEZ_PROGRAM (or FERRATA_LEZ_LAYOUT) set; it stops unless the burns' block is Finalized on the LEZ node."
       exit 0
     fi
-    do_stage attest; do_stage refusals pre-submit; do_stage submit; do_stage prove; do_stage refusals pre-final
+    # The proofs come before the candidate: the burn root is known once it is attested, and the wait (delta) is
+    # shorter than two proofs, so the refusal "finalisation before the wait is over" is asked right after submit.
+    do_stage attest; do_stage prove; do_stage refusals pre-submit; do_stage submit; do_stage refusals pre-final
     do_stage wait; do_stage finalize; do_stage release-wait; do_stage release 0; do_stage release 1
     do_stage refusals post-release; do_stage gas
     say "DONE: now e2e/testnet-return.sh verify $name"
@@ -484,9 +486,9 @@ fork)
   do_stage deploy
   do_stage deposit 0; do_stage deposit 1
   do_stage attest
+  if [ "$(jq '[.releases // [] | .[] | select(.seal != null)] | length' "$crown")" != 2 ]; then do_stage prove; fi
   do_stage refusals pre-submit
   do_stage submit
-  if [ "$(jq '[.releases // [] | .[] | select(.seal != null)] | length' "$crown")" != 2 ]; then do_stage prove; fi
   do_stage refusals pre-final
   do_stage wait; do_stage finalize
   do_stage release-wait; do_stage release 0; do_stage release 1
