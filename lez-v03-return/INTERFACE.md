@@ -44,33 +44,20 @@ LEZ v0.3.1 keeps, in every account, one byte string ("shard") per program
   given with `--imported` (`FERRATA_IMPORTED`), and the record says it was not read from the node.
 - The offsets above are an example, not the bridge's layout: they are whatever the v0.3.1 bridge program writes.
 
-The tool reads the fields between two reads of the head block id that agree, so they are the state after that block.
-It refuses unless the count equals the number of listed burns, the root (and the frontier, if read) equal the ones it
-recomputes from the listed burns, and `config_id` (if read) equals the vault's `lezConfigId`.
+The tool reads the fields between two reads of the head block that agree (same id, same hash), so they are the
+state after that block. It refuses unless the count equals the number of listed burns, the root (and the frontier, if
+read) equal the ones it recomputes from the listed burns, and `config_id` (if read) equals the vault's `lezConfigId`.
+The layout is required: without one the tool reads no state and signs nothing.
 
-## 2. The burns: `burns.json` (`FERRATA_BURNS`), or the wallet's notes (`FERRATA_BURN_NOTES`)
-
-A release proof needs a Merkle path, so every leaf of the accumulator must be known, in order. Either file gives them.
-
-`burns.json` (every burn of the configuration, as [`bridge/e2e`](../bridge/e2e/src/main.rs)'s `crown-release` reads
-it):
-
-```json
-{"config_id": "0x…", "burn_count": 2, "burn_root": "0x…",
- "burns": [{"burn_index": 0, "token": "0x… (20 bytes)", "amount": "0x… (32 bytes)", "c_out": "0x…", "r": "0x…",
-            "leaf": "0x…", "block": 83010, "origin": "…"}]}
-```
-
-`burn-notes.json` (the LEZ wallet's own burns, the crown run's format): a list of
-`{"i", "kind": "public" | "private", "r", "sOut", "cOut", "recipient", "token", "amount" (decimal), "denomIndex"}`.
-`standin.py burns-from-notes` turns it into `burns.json` when these burns, in this order, are all the accumulator
-holds; the comparison with the node's root then decides whether that was true. The notes are also what the release
-proofs are made from (`sOut` is the release secret: the file is the wallet's, and is not committed).
+- `program` (required for a tip below the read head) and `changes_only_in_root_calls`: a statement, with its source,
+  that the bridge changes these fields only in a transaction whose root call is the bridge. With both, a `Finalized`
+  tip below the read head is taken when no block between them names the program or an account the layout reads
+  (README, "A tip below the head"); without them, only a tip at the read head.
 
 ## 3. The tip: the node's own block and finality flag
 
-Nothing from the bridge: `getBlock` (`lez/sequencer/service/rpc/src/lib.rs:56`). See "What final means" in
-[`README.md`](README.md).
+Nothing from the bridge: `getBlock` (`lez/sequencer/service/rpc/src/lib.rs:56`). See "What final means" and "A tip
+below the head" in [`README.md`](README.md).
 
 ## 4. As `lez-v03-bridge` has it (read in its source on 18 November 2026)
 

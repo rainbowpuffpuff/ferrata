@@ -283,8 +283,11 @@ deployment replaces the checkpoint proof and nothing else
 - **Stand-in:** the burn root. The vault's verifier is `StandInCheckpointVerifier`, which for one constant
   id that is no program's (`0x66ff80f9…dc38`, the vault's `checkpointImageId`) accepts the signatures of 2
   of 3 keys **that the operator of the run holds**, over the vault's own journal digest, and sends every
-  other id to RISC Zero's verifier. The keys sign after an attestor has compared the root with the bridge's
-  state on Logos's public node at a block that node reports final.
+  other id to RISC Zero's verifier. The keys sign only through an attestor that has compared the burns with
+  the bridge's state on Logos's public node and cut the checkpoint at a block that node reports final, the
+  blocks after it read and none touching the bridge (`standin.py sign` refuses a checkpoint without both
+  checks). The vault refuses equal checkpoint and release ids, so the stand-in id can never be the release
+  id; the live run's keys are fresh ones that have signed nothing else.
 
 **You trust the operator's keys for everything outbound in that deployment:** two of them can make the
 vault accept any burn root, then prove releases of burns that never happened under it, and take the escrow

@@ -59,6 +59,16 @@ protects against a signing mistake, not against the operator.
 What the keys cannot do: stand in for a release proof (signatures sent as a release seal reach RISC Zero's verifier and
 fail), reuse a signature on another vault, verifier, chain or journal, or sign after RISC Zero's stop.
 
+**What keeps every release on a real proof is the vault, not the stand-in.** The stand-in accepts any digest that a
+threshold of the keys signed under its one id; it cannot tell a checkpoint journal from a release journal. Releases
+stay on zero-knowledge proofs because the vault calls its verifier with `releaseImageId` for a release and refuses a
+deployment whose two ids are equal (`FerrataVault.sol:580-583`, `InvalidImageIds`); `DeployStandIn.s.sol:146` pins
+`checkpointImageId` to the stand-in id, so the release id cannot be it; and `verify.py` re-checks the deployed
+`releaseImageId` against the `release` program's id (`lez-v03-return/verify.py:359`). A vault built by hand with
+another checkpoint id and the stand-in id for releases would take signed releases; the script cannot build one, and
+`StandInLimits.t.sol` shows both halves (the vault refuses the stand-in id for both programs; the misbuilt vault, which
+it does not refuse, would answer a signed release digest).
+
 ## The deployment that uses it
 
 Chosen for the testnet run ([`e2e/testnet-return.sh`](../../../e2e/testnet-return.sh),
@@ -93,8 +103,9 @@ verifier alone keeps them until a checkpoint proof for the zone exists
 
 ## Tests
 
-[`test/standin/`](../../test/standin/), 40 tests; the vault's own suites are untouched (504 passed, 1 skipped, with
-these).
+[`test/standin/`](../../test/standin/), 53 tests in three suites (30 + 10 + 13, of which 10 inherited); the vault's
+own suites are untouched (the whole suite, merged with public main `f1fe63c4`: 51 suites, 534 passed, 0 failed,
+1 skipped, on the Modal build box, 18 Nov 2026).
 
 - `StandInCheckpointVerifier.t.sol` (30): a threshold is accepted (every pair, all three); refused are a seal below
   threshold, an empty or misaligned seal, more signatures than keys, a wrong signer, a duplicated signer, signers out
@@ -110,6 +121,10 @@ these).
   an unsigned root, a root signed below threshold, a root signed for another vault, chain or configuration, a signed
   journal with a changed field, crown-live-3's real `checkpoint_b` proof, signatures as a release proof, and a
   candidate after RISC Zero's stop.
+- `StandInLimits.t.sol` (3 of its own, from an independent review, and the 10 of `StandInVault.t.sol` it inherits): a
+  raw or odd recovery id (`v` = 0, 1, 29, 30, 0, 255) is refused, not mis-recovered; the vault refuses the stand-in id
+  for both programs (above); a finalised signed journal cannot be submitted again, and a later checkpoint carrying the
+  same root pays no nullifier twice (real crown-live-3 Groth16 seals).
 
 ```sh
 cd vault && forge test --match-path "test/standin/*"
