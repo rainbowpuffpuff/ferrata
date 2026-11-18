@@ -274,8 +274,44 @@ pub enum Instruction {
     /// `instance(id)`, then `header(id, slot)` if `record` is claimed.
     Continue { instance_id: Root, steps: Vec<Step>, record: Option<RecordClaim> },
     /// Prove storage slots under `header(id, slot)` and write each as `statement(id, s)`.
-    /// Accounts: `header(id, slot)`, then one `statement(id, s)` per claimed statement, in order.
+    /// Accounts: `instance(id)` (it must not be frozen; nothing is written there), `header(id, slot)`,
+    /// then one `statement(id, s)` per claimed statement, in order.
     Attest { instance_id: Root, slot: u64, query: StorageQuery, statements: Vec<Statement> },
+    /// EXPERIMENTAL, UNAUDITED (`bench/misbehaviour`, `bench/MISBEHAVIOUR.md`): `update` as evidence that a
+    /// sync committee the instance holds signed finality contradicting `against`; if it is, the instance is
+    /// frozen with the evidence recorded. Anyone may send it. One transaction: `verify` is `Core` or
+    /// `Residue`, `signers` one multiproof (`0xffff`/`0xfffe` and a `residue_agg::NonSigners`). Accounts:
+    /// `instance(id)`, then `header(id, slot)` for `Against::Record`.
+    Evidence { instance_id: Root, update: Vec<u8>, signers: Vec<u8>, verify: Verify, against: Against, window: Window },
+}
+
+/// What a piece of evidence contradicts (EXPERIMENTAL, `bench/MISBEHAVIOUR.md` §1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum Against {
+    /// The record `header(id, slot)`: the instruction claims the root of its beacon header, and the record's
+    /// apply checks the claim; the evidence finalizes another header at `slot`.
+    Record { slot: u64, root: Root },
+    /// The next committee the instance adopted for its current period; the evidence proves another one in a
+    /// state of that period whose finalized header is of that period too.
+    NextCommittee,
+}
+
+/// What a frozen instance keeps of the evidence that froze it (EXPERIMENTAL).
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct Freeze {
+    /// 1: a recorded finalized header contradicted at its slot; 2: the adopted next committee contradicted.
+    pub kind: u8,
+    /// The record's slot (kind 1) or the period (kind 2).
+    pub at: u64,
+    /// The record's root (kind 1) or the adopted next committee's `SyncCommittee` root (kind 2).
+    pub held: Root,
+    /// The evidence's finalized header root (kind 1) or its next committee's root (kind 2).
+    pub conflicting: Root,
+    /// The root of the evidence's attested beacon header, and its signature slot.
+    pub attested_root: Root,
+    pub signature_slot: u64,
+    /// `CompactUpdate::digest` of the evidence in the layout of the store it was checked against.
+    pub update_digest: Root,
 }
 
 /// What happens at `instance(id)`.
@@ -284,6 +320,8 @@ pub enum InstanceOp {
     Init { config: Config, checkpoint: Root, bootstrap: Vec<u8>, adopt: Vec<Part> },
     Update { instance_id: Root, update: Vec<u8>, signers: Vec<u8>, verify: Verify, adopt: Vec<Part> },
     Continue { instance_id: Root, steps: Vec<Step> },
+    /// EXPERIMENTAL: check evidence and freeze.
+    Evidence { instance_id: Root, update: Vec<u8>, signers: Vec<u8>, verify: Verify, against: Against },
 }
 
 /// The data of one effect (the plan's output, one apply's input).
@@ -298,6 +336,11 @@ pub enum Effect {
     Check { instance_id: Root, query: StorageQuery, statements: Vec<Statement> },
     /// At `statement(id, s)`: write the claimed statement (once).
     Statement(Statement),
+    /// At `instance(id)`: the instance exists and is not frozen; changes nothing (`Attest`).
+    Live { instance_id: Root },
+    /// At `header(id, slot)`: the record exists and its beacon header's root is `root`; changes nothing
+    /// (`Evidence` against a record).
+    Recorded { instance_id: Root, slot: u64, root: Root },
 }
 
 /// The shard of `instance(id)`.
@@ -314,6 +357,9 @@ pub struct InstanceState {
     pub applied: u64,
     /// `ferrata_core::steps::Job` encoding of the job in progress, if any.
     pub job: Option<Vec<u8>>,
+    /// EXPERIMENTAL: the evidence that froze the instance, if any (`bench/MISBEHAVIOUR.md`). A frozen
+    /// instance refuses `Update`, `Continue`, `Attest` and `Evidence` (`FROZEN`) and keeps everything else.
+    pub frozen: Option<Freeze>,
 }
 
 /// The shard of `header(id, slot)`.
@@ -335,7 +381,8 @@ macro_rules! exit_codes {
 }
 
 /// Exit codes. The core's refusals keep their codes (1–79 light client, 80–84 the step API,
-/// 100–199 the execution layer); this program's own are 200–229.
+/// 100–199 the execution layer), and the evidence check its own (85, `NoContradiction`: the update
+/// contradicts nothing the instance holds, `bench/misbehaviour`); this program's own are 200–229.
 pub mod code {
     exit_codes! {
         /// The instruction or an effect does not decode.
@@ -375,5 +422,10 @@ pub mod code {
         WRONG_STATEMENT = 220;
         /// A residue witness of the wrong length.
         BAD_WITNESS = 221;
+        /// EXPERIMENTAL: the instance is frozen by evidence of conflicting finality.
+        FROZEN = 222;
+        /// EXPERIMENTAL: evidence in a form the program does not take (a verification other than `Core` or
+        /// `Residue`, or a signer witness that is not one multiproof).
+        EVIDENCE_FORM = 223;
     }
 }

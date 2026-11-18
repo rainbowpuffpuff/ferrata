@@ -56,7 +56,16 @@ Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/
 - `Continue { instance_id, steps, record }`: the job's next steps (Miller, FinalExp, Residue, Adopt).
 - `Attest { instance_id, slot, query, statements }`: storage slots of one account under `header(id, slot)`
   (`ferrata_core::attest::attest_storage`, the block's RLP header for a Gloas record), each written to
-  `statement(id, s)`.
+  `statement(id, s)`. Its accounts start with `instance(id)` (since the evidence below: an apply there refuses a
+  frozen instance and writes nothing).
+- `Evidence { instance_id, update, signers, verify, against, window }` (EXPERIMENTAL, UNAUDITED,
+  [`../bench/MISBEHAVIOUR.md`](../bench/MISBEHAVIOUR.md)): anyone may send an update that a committee the instance
+  holds signed, as evidence that it contradicts a recorded finalized header at its slot (`Against::Record`, the
+  record's account checked in the same transaction) or the next committee the instance adopted for its period
+  (`Against::NextCommittee`); if it does, the instance is frozen with the evidence recorded, and refuses `Update`,
+  `Continue`, `Attest` and `Evidence` from then on (`FROZEN`, 222), keeping its store and records. One transaction:
+  6,656,148 gas at 510 of 512 signers, 8,443,193 at 342 (the residue witness, one multiproof). An honest network
+  never produces such evidence (`MISBEHAVIOUR.md` §3); [`harness/tests/misbehaviour.rs`](harness/tests/misbehaviour.rs).
 
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
 `apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
@@ -64,7 +73,11 @@ reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5
 the image the local sequencer run below used. This branch builds `bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e`
 (598,876 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and the zero-period
 check, and has not run on a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
-path.
+path. Since the evidence (`Instruction::Evidence`, the frozen flag, `Attest`'s instance account) this branch builds
+`155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f` (625,824 ELF bytes, 7 segments), deployed nowhere;
+the earlier tests pass on it with the same results and codes ([`results/misbehaviour-tests.txt`](results/misbehaviour-tests.txt),
+the regenerated tables in [`results/misbehaviour-regression/`](results/misbehaviour-regression/); the tables above
+stay those of `bac768a8…`).
 
 ## Through v0.3.1's block application, with real data
 
@@ -219,6 +232,7 @@ period), so none was changed; anyone can create the same instance, and the run a
 cd lez-v03
 scripts/build.sh --lez                       # program, harness, client; LEZ v0.3.1's sequencer_service and wallet
 cargo test --release --locked -p harness-v03 --test v03 --test third_party --test adversarial -- --nocapture --test-threads 4
+cargo test --release --locked -p harness-v03 --test misbehaviour -- --nocapture --test-threads 2   # evidence and the freeze (EXPERIMENTAL)
 tests/sendguard.sh && tests/verifystatus.sh  # the script's send guard and verify, against stubs (no network, no keys)
 ./testnet.sh local                           # a v0.3.1 sequencer here, the whole queued sequence, verify
 ./testnet.sh plan                            # the public run, signed and simulated; sends nothing
