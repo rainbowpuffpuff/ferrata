@@ -13,14 +13,16 @@
 #                                 block C = finality update 2 + the attestation. Resumable and idempotent: data fetched
 #                                 and transactions signed are kept and never rebuilt; a second run only re-sends the same
 #                                 signed bytes (harmless: a duplicate is dropped at the nonce check) and waits.
-#                                 Refuses to start unless FERRATA_TESTNET_SEND=yes.
+#                                 Driven by state: each round reads the chain and signs only what it is missing
+#                                 (a third party's Init, update or handoff, a squatted deployment account; README).
+#                                 Refuses any sequencer but a loopback one unless FERRATA_TESTNET_SEND=yes.
 #   ./testnet.sh resend           send the signed transactions the chain does not hold yet again, byte for byte (after a
-#                                 rewind or a sequencer restart).
-#   ./testnet.sh verify           re-read every verdict from the sequencer's state and compare with the committed record;
+#                                 rewind or a sequencer restart); the same guard as run.
+#   ./testnet.sh verify           re-read state and compare it with the committed record and with what the data implies;
 #                                 for the public testnet also the explorer, PENDING while a block is Pending on
 #                                 Bedrock. Exit 0 only if all match (3 if only explorer checks are pending).
 #   ./testnet.sh local            the same run against a LEZ v0.3.1 sequencer started here (standalone: mock Bedrock),
-#                                 then verify; records under results/local/.
+#                                 then verify; records under results/local/. Loopback URLs only.
 #
 # Target: the public testnet (https://testnet.lez.logos.co) unless FERRATA_SEQUENCER is set. Keys and run data live under
 # $FERRATA_STATE (default spike/tmp/testnet-v03/<public|local>), never in the repository; the record of a run (no keys)
@@ -39,10 +41,18 @@ UA="curl/8"
 WAIT_SECONDS="${FERRATA_WAIT:-1800}"
 
 cmd="${1:-}"; shift || true
-target="public"
-if [ "$cmd" = local ] || [ "${FERRATA_SEQUENCER:-$PUBLIC_URL}" != "$PUBLIC_URL" ]; then target="local"; fi
 URL="${FERRATA_SEQUENCER:-$PUBLIC_URL}"
 [ "$cmd" = local ] && URL="${FERRATA_SEQUENCER:-http://127.0.0.1:3040}"
+is_loopback() { # the URL's host is this machine
+  local host; host="$(printf '%s' "$1" | sed -E 's#^[a-z]+://(\[[^]]*\]|[^/:]*).*#\1#')"
+  case "$host" in 127.*|localhost|"[::1]") return 0 ;; *) return 1 ;; esac
+}
+if [ "$URL" = "$PUBLIC_URL" ]; then target="public"; elif is_loopback "$URL"; then target="local"; else target="remote"; fi
+send_guard() { # every path that can send: anything but this machine needs FERRATA_TESTNET_SEND=yes (never set here)
+  if [ "$target" != local ] && [ "${FERRATA_TESTNET_SEND:-}" != yes ]; then
+    echo "refusing to send to $URL: set FERRATA_TESTNET_SEND=yes (only loopback sequencers are exempt)" >&2; exit 1
+  fi
+}
 STATE="${FERRATA_STATE:-$SPIKE/tmp/testnet-v03/$target}"
 RUN="$STATE/run"
 RECORD="$HERE/results/$target"
@@ -103,7 +113,7 @@ EOF
 
 copy_record() { # the run's record, without keys, into the repository's results
   mkdir -p "$RECORD"
-  for f in chain.json state.json applied.txt signed.tsv nonces.json txs.tsv record.json requests.tsv batch.json bootstrap.ssz; do
+  for f in chain.json state.json applied.txt signed.tsv nonces.json txs.tsv record.json requests.tsv batch.json bootstrap.ssz notes.txt run-log.tsv; do
     [ -f "$RUN/$f" ] && cp "$RUN/$f" "$RECORD/$f"
   done
   for d in updates proofs signed; do
@@ -160,56 +170,77 @@ EOF
 
 run() {
   need_client
-  if [ "${FERRATA_TESTNET_SEND:-}" != yes ]; then
-    echo "refusing to send: set FERRATA_TESTNET_SEND=yes to run against $URL" >&2; exit 1
-  fi
+  send_guard
   ensure_wallet
   echo "== run against $URL, payer $PAYER (balance $(balance)), $(date -u +%FT%TZ)"
-  if [ ! -f "$RUN/signed.tsv" ]; then
-    fetch_all "$RUN"
+  [ -f "$RUN/signed.tsv" ] || fetch_all "$RUN"
+  local round out need slot hash
+  for round in 1 2 3 4 5 6; do
+    # Driven by state: queue reads the chain and signs only what it is missing (or, while earlier
+    # signed transactions are not in a block, sends their bytes again and signs nothing).
     "$CLIENT" queue "$RUN"
-  else
-    "$CLIENT" queue "$RUN"            # signs only what is not signed yet (nothing, after a complete first run)
-    "$CLIENT" resend "$RUN"
-  fi
-  if "$CLIENT" wait "$RUN" "$WAIT_SECONDS"; then
-    "$CLIENT" record "$RUN"
-    copy_record
-    echo "== done: payer balance $(balance), $(date -u +%FT%TZ)"
-  else
-    copy_record
-    echo "== not all included yet: ./testnet.sh run again later (it re-sends the same signed bytes and waits)" >&2
-    exit 3
-  fi
+    if ! "$CLIENT" wait "$RUN" "$WAIT_SECONDS"; then
+      copy_record
+      echo "== not all included yet: ./testnet.sh run again later (it re-sends the same signed bytes and waits)" >&2
+      exit 3
+    fi
+    set +e; out="$("$CLIENT" goal "$RUN")"; rc=$?; set -e
+    printf '%s\n' "$out"
+    if [ $rc -eq 0 ]; then
+      "$CLIENT" record "$RUN"
+      copy_record
+      echo "== done after $round round(s): payer balance $(balance), $(date -u +%FT%TZ)"
+      return 0
+    fi
+    [ $rc -eq 4 ] || exit $rc
+    need="$(printf '%s\n' "$out" | grep -m1 '^NEED-' || true)"
+    case "$need" in
+      NEED-FINALITY*) python3 -I scripts/fetch.py finality "$RUN" "${need#NEED-FINALITY }" 1500 ;;
+      NEED-PROOF*) read -r _ slot hash <<< "$need"; python3 -I scripts/fetch.py proof "$RUN" "$slot" "$hash" "$VAULT" "$VAULT_SLOTS" ;;
+      *) : ;;  # NEED-ROUND: the next queue signs what the state now calls for
+    esac
+  done
+  echo "== the goal is not reached after 6 rounds: see $RUN/notes.txt" >&2
+  exit 1
 }
 
 verify() {
   need_client
   [ -f "$RECORD/record.json" ] || { echo "no record at $RECORD" >&2; exit 2; }
-  local tmp rc=0 pending=0
+  local tmp rc=0 pending=0 expected checked=0 statuses
   tmp="$(mktemp -d "$STATE/verify.XXXXXX")"
   cp -r "$RECORD/." "$tmp/"
   "$CLIENT" verify "$tmp" || rc=1
-  if [ "$target" = public ]; then
-    # The explorer shows a block once it is final on the Logos Blockchain; until then the block is Pending over RPC.
-    while IFS=$'\t' read -r hash block status label; do
-      if [ "$block" = "-" ]; then echo "MISMATCH explorer: $label ($hash) is in no block"; rc=1; continue; fi
-      if [ "$status" = Pending ]; then echo "PENDING  explorer: $label ($hash) in block $block, Pending on Bedrock"; pending=1; continue; fi
-      if curl -sS -m 30 -A "$UA" "$EXPLORER/transaction/$hash" | grep -q "$hash" \
-         && curl -sS -m 30 -A "$UA" "$EXPLORER/block/$block" | grep -q "$hash"; then
-        echo "MATCH    explorer: $label ($hash) in block $block ($status)"
-      else
-        echo "MISMATCH explorer: $label ($hash) not shown in block $block ($status)"; rc=1
-      fi
-    done < <("$CLIENT" status "$tmp")
+  expected="$(tail -n +2 "$tmp/signed.tsv" 2>/dev/null | grep -c . || true)"
+  if ! statuses="$("$CLIENT" status "$tmp")"; then
+    echo "MISMATCH status: the blocks of the signed transactions could not be read"; rc=1; statuses=""
   fi
+  while IFS=$'\t' read -r hash block status label; do
+    [ -n "$hash" ] || continue
+    checked=$((checked + 1))
+    if [ "$block" = "-" ]; then echo "MISMATCH $label ($hash) is in no block"; rc=1; continue; fi
+    [ "$target" = public ] || continue
+    # The explorer shows a block once it is final on the Logos Blockchain; until then it is Pending over RPC.
+    if [ "$status" = Pending ]; then echo "PENDING  explorer: $label ($hash) in block $block, Pending on Bedrock"; pending=1; continue; fi
+    # Both pages must show it: the block's page (whose URL does not hold the hash) lists the hash.
+    if curl -sS -m 30 -A "$UA" "$EXPLORER/transaction/$hash" | grep -q "$hash" \
+       && curl -sS -m 30 -A "$UA" "$EXPLORER/block/$block" | grep -q "$hash"; then
+      echo "MATCH    explorer: $label ($hash) in block $block ($status)"
+    else
+      echo "MISMATCH explorer: $label ($hash) not shown in block $block ($status)"; rc=1
+    fi
+  done <<< "$statuses"
   rm -rf "$tmp"
+  if [ "$expected" -eq 0 ] || [ "$checked" -ne "$expected" ]; then
+    echo "MISMATCH: $checked of $expected signed transactions checked"; rc=1
+  fi
   if [ $rc -ne 0 ]; then echo "verify: MISMATCH (see above)"; return 1; fi
   if [ $pending -ne 0 ]; then echo "verify: state matches; explorer PENDING until the blocks are final on Bedrock"; return 3; fi
-  echo "verify: every verdict matches the record ($RECORD)"
+  echo "verify: every check matches the record ($RECORD); $checked transactions checked"
 }
 
 local_run() {
+  is_loopback "$URL" || { echo "local: $URL is not this machine; local runs only against a loopback sequencer" >&2; exit 1; }
   need_client
   [ -x "$LEZ_BIN/sequencer_service" ] || { echo "build first: scripts/build.sh --lez" >&2; exit 2; }
   ensure_wallet
@@ -235,9 +266,9 @@ EOF
   trap 'kill "$(cat "$STATE/sequencer.pid")" 2>/dev/null || true' EXIT
   for _ in $(seq 90); do rpc getLastBlockId '[]' 2>/dev/null | grep -q result && break; sleep 2; done
   echo "sequencer up: $(rpc getLastBlockId '[]')"
-  FERRATA_SEQUENCER="$URL" FERRATA_TESTNET_SEND=yes run
-  FERRATA_SEQUENCER="$URL" verify
-  grep -E 'deferred|Nonce mismatch|Created block|block [0-9]+ ' "$STATE/sequencer.log" | tail -n 200 > "$RECORD/sequencer-excerpt.log" || true
+  run
+  verify
+  grep -v -E 'execution time|^\s*$' "$STATE/sequencer.log" | tail -n 400 > "$RECORD/sequencer.log.txt" || true
   python3 -I - "$home/config.json" "$RECORD/sequencer_config.json" <<'EOF'
 import json, sys
 c = json.load(open(sys.argv[1])); c["home"] = "<state>/sequencer"
@@ -248,7 +279,7 @@ EOF
 case "$cmd" in
   plan) plan "$@" ;;
   run) run ;;
-  resend) need_client; ensure_wallet; "$CLIENT" resend "$RUN" ;;
+  resend) need_client; send_guard; ensure_wallet; "$CLIENT" resend "$RUN" ;;
   verify) verify ;;
   local) local_run ;;
   *) sed -n '2,29p' "$0"; exit 2 ;;
