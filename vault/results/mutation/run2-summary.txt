@@ -1,0 +1,13 @@
+mutants: 3170; with a result: 3170; without: 0
+overall: invalid 1853, killed 1297, survived 20
+by file:
+  src/FerrataRegistry.sol: invalid 697, killed 528, survived 11
+  src/FerrataVault.sol: invalid 1156, killed 769, survived 9
+by operator:
+  AssignmentMutation: invalid 446, killed 203, survived 10
+  BinaryOpMutation: invalid 1326, killed 462, survived 3
+  DeleteExpressionMutation: invalid 10, killed 209, survived 4
+  IfStatementMutation: invalid 2, killed 293, survived 3
+  SwapArgumentsOperatorMutation: killed 120
+  UnaryOperatorMutation: invalid 69, killed 10
+by stage: invalid/build 1853, killed/invariant 5, killed/suite 1292, survived/invariant 20

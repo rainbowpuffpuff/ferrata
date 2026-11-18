@@ -58,7 +58,7 @@ forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-co
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
 forge test                                               # everything, including the invariant campaign:
-                                                         # 464 passed, 1 skipped (PrivacySuite, without its LEZ half)
+                                                         # 476 passed, 1 skipped (PrivacySuite, without its LEZ half)
 forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
 forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
 forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
@@ -866,4 +866,6 @@ slots and hashes, refunds by schedule), across deposits, the tree, the registry 
 committee checks and the wait, beacons, finalisation and monotonicity, the journal layout, cancellation,
 revocation, refunds and their opening rules, releases, pull payments, freezes, roles and caps. Each is caught by
 named failing tests; for example, dropping the release-freeze check from `refund` is caught by
-`test_refund_refusedUnderTheReleaseFreeze`. It is not an exhaustive mutation run.
+`test_refund_refusedUnderTheReleaseFreeze`. It is not an exhaustive mutation run; [`MUTATION.md`](MUTATION.md) is
+a tool-generated one (Certora's Gambit, 3,170 mutants of both files: every one that compiles killed or, six,
+equivalent, after ten tests it led to).
