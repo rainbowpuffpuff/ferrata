@@ -249,8 +249,9 @@ measured, Modal build box, 18 Nov 2026):
 
 Evidence fits one transaction like a finality update (`bench/RESIDUE.md` §6 and §9.6: 6,629,246 and 8,318,645 on the
 LEZ v0.4 copy; `lez-v03/README.md`: a finality update in one transaction on v0.3.1): the same signature check, plus
-its contradiction check and, for kind (A), one apply at the record. A refusal before the signature costs under 3% of
-the limit. The program's image id is now `155b7317…635f` (625,824 ELF bytes, 7 segments; `bac768a8…` before this
+its contradiction check and, for kind (A), one apply at the record. A refusal before the signature costs at most
+306,206 gas (3.1% of the limit, the 341-signer case, whose input is the largest); one at the record account (213, 219)
+comes after the signature and costs about as much as the evidence. The program's image id is now `155b7317…635f` (625,824 ELF bytes, 7 segments; `bac768a8…` before this
 change; deployed nowhere; none of them is in `docs/image-ids.md`).
 
 ## 9. What an auditor must check
