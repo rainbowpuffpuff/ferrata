@@ -188,6 +188,10 @@ fn review_zero_period_config() {
     let accounts = vec![instance_account(&program, &id), header_account(&program, &id, slot)];
     let r = chain.submit("zero-period Init", program, &accounts, borsh::to_vec(&init).unwrap(), &[], GAS_LIMIT, config.slot_start_ms(slot + 1));
     println!("REVIEW T5 zero-period Init: status={} exit={:?} exec_gas={} fee={}", r.status, r.exit, r.exec_gas, r.fee);
+    // Since the review's finding 7 was applied (`check_config`), the zero-period config is refused at `Init`
+    // (BAD_CONFIG), so no instance exists for an update to panic in; before, `Init` applied and every update
+    // panicked and was charged the whole gas limit.
+    assert!(r.refused_with(code::BAD_CONFIG), "zero-period Init refused: {r:?}");
     if !r.ok() {
         return;
     }

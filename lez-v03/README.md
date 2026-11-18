@@ -35,15 +35,15 @@ apply at the instance (or at the record) checks the claim against what it verifi
 reverts the whole transaction. The timestamp validity window, which the plan sets without seeing the store, is
 claimed the same way and must equal v0.4's (from the signature slot to the end of the weak-subjectivity period of
 the stored finalized header). Refusals exit with a code, so v0.3.1 charges the cycles used, not the gas limit,
-with one exception an independent review found: `check_config` (`guest/src/main.rs:362-372`, identical to the v0.4
-program's, `../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync_committee_period = 0`; such an
-instance's `Init` applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`)
-and is charged the whole gas limit. Only that instance is affected, created with that config by whoever chose it, and
-no state changes ([`harness/tests/adversarial.rs`](harness/tests/adversarial.rs), `review_zero_period_config`). Not
-fixed in the reviewed image `8d3b59ff…` that the prepared public-testnet run deploys, because the check would have moved
-that image's id. That reason does not hold for this branch's image `f8ec1b21…`, whose id moved anyway (the
-one-transaction handoff); the check is not in `f8ec1b21…` either, and comes as a change of its own. The guest's own doc
-comment (`guest/src/main.rs:15-17`) says refusals never panic; it is left unchanged until then.
+with one exception an independent review found in the reviewed image `8d3b59ff…` (the one the prepared
+public-testnet run deploys): its `check_config` (identical to the v0.4 program's,
+`../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync_committee_period = 0`; such an instance's `Init`
+applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`) and is charged the
+whole gas limit. Only that instance is affected, created with that config by whoever chose it, and no state changes.
+It was not fixed in `8d3b59ff…` because the check would have moved that image's id. **This branch's image
+`bac768a8…` fixes it**: its `check_config` (`guest/src/main.rs`) refuses a zero-epoch period at `Init` (`BAD_CONFIG`,
+212), and [`harness/tests/adversarial.rs`](harness/tests/adversarial.rs) (`review_zero_period_config`) now asserts that
+refusal. The deployed v0.4 program keeps the gap (its image id is fixed).
 
 Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/src/main.rs)):
 
@@ -61,9 +61,9 @@ Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
 `apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
 reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, 6 segments),
-the image the local sequencer run below used. This branch builds `f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2`
-(598,796 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and has not run on
-a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
+the image the local sequencer run below used. This branch builds `bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e`
+(598,876 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and the zero-period
+check, and has not run on a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
 path.
 
 ## Through v0.3.1's block application, with real data
@@ -81,15 +81,15 @@ the vault's proofs). Ran on the Modal build box, 18 November 2026; results in [`
 | **finality update in ONE transaction, residue witness** (mainnet update_1, 510 of 512) | **6,647,616** | 66.5% | 4,934 |
 | the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,729 and 6,530,623 | 65.3% | 4,732 |
 | finality update in one transaction by the core alone (mainnet update_4) | 9,103,198 | 91.0% | 3,390 |
-| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,075; 7,885,681 | 79.8%; 78.9% | 51,196; 51,202 |
-| **handoff (period update) in ONE transaction, the committee adopted by its summary, sound only under the light client's honest-supermajority assumption** (`Verify::ResidueSummary`, one multiproof; image `f8ec1b21…`; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,565,465; 6,636,683; 6,647,863; 6,597,601** | 65.7% to 66.5% | 3,901 to 4,964 |
-| the same, Sepolia: the 32 handoffs of periods 1378 to 1409 (through the Gloas layout change) | 6,448,420 to **6,592,610** | at most 65.9% | 3,664 to 5,424 |
+| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,077; 7,885,683 | 79.8%; 78.9% | 51,196; 51,202 |
+| **handoff (period update) in ONE transaction, the committee adopted by its summary, sound only under the light client's honest-supermajority assumption** (`Verify::ResidueSummary`, one multiproof; image `bac768a8…`; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,655,335; 6,726,614; 6,737,794; 6,687,532** | 66.6% to 67.4% | 3,901 to 4,964 |
+| the same, Sepolia: the 32 handoffs of periods 1378 to 1409 (through the Gloas layout change) | 6,538,351 to **6,682,541** | at most 66.8% | 3,664 to 5,424 |
 | handoff with the 512 keys adopted: `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,571 + 7,707,411 | 65.7% + 77.1% | 3,897 + 49,486 |
 | handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,993, 3,337,313, 3,670,720, 7,704,931 | | |
 | handoff, steps 1-3 by the core in one transaction, then the adoption | 9,114,250 + 7,704,931 | 91.1% + 77.0% | |
 | handoff with the multiproof of the non-signers and the residue witness, then the adoption | 6,566,232 + 7,704,931 | | |
 | `Attest` of two slots (`depositRoot`, `nextLeafIndex`) under a Gloas record | 526,207 and 512,641 | 5.3% | 6,970; 6,991 |
-| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 569,448 in all |
+| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 569,528 in all |
 
 The v0.4 bench measured 6,629,246 for the same mainnet update in one transaction through LEZ v0.4's state machine
 ([`../bench/RESIDUE.md`](../bench/RESIDUE.md), EVIDENCE row 127); v0.3.1 charges 6,647,616. A finality update by the
@@ -102,7 +102,7 @@ is one (`handoffs_in_one_transaction_each`, `results/mainnet-handoff-one-tx.tsv`
 each, the instance's store is the native policy store's, whose adoption checks the 512 keys, and a header that advances
 is recorded; refused, nothing changed: a next-committee branch with one node altered (27), the summary adoption with
 the 512 keys sent beside it (84, `NoAdoption`), update_0 again (23). At 342 signers the handoff was measured on v0.4's
-state machine only (8,341,469 gas at the costliest placement found, row 137): this harness has no way to write a
+state machine only (8,431,403 gas at the costliest placement found, row 137): this harness has no way to write a
 substituted committee into an instance's state. Sepolia: 76 transactions
 applied, 32 handoffs from period 1378 to 1409, the store upgrading itself to the Gloas layout at 1379, then the two
 finality updates and the attestations (slot 0 = `0xa5b5c43f…4875` and slot 1 = 1 of vault `0xd0b5…8af7` at block
@@ -112,12 +112,14 @@ Refused, each with its code and nothing changed: a replayed `Init` (203); a stal
 replayed as sent (218, its window is the old store's); a participation bit cleared (40, `SignatureInvalid`); a
 finalized header changed (26); a tampered residue witness (40); a wrong claimed record (219); a widened window
 (218); an update while a verified job waits for its adoption (207); an attestation claiming a wrong value (220),
-with a changed proof node (110) or without the block's header under a Gloas record (215). A transaction sent before
+with a changed proof node (110) or without the block's header under a Gloas record (215); an `Init` whose
+sync-committee period is zero epochs (212, this branch's image; 1,705,891 gas). A transaction sent before
 its signature slot is outside its window: v0.3.1 includes it and charges the whole declared limit.
 
-**Image id.** The summary adoption changed the program: this branch's image is
-`f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2` (598,796 ELF bytes; its deployed segments are 1,460
-bytes longer), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the prepared
+**Image id.** The summary adoption and the zero-period check changed the program: this branch's image is
+`bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e` (598,876 ELF bytes; its deployed segments are 1,540
+bytes longer; this branch's first build, before the zero-period check and the aggregate field's decoding, was
+`f8ec1b21…`), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the prepared
 public-testnet run deploys, the reviewed image before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
 (`results/local/txs.tsv`). Every figure of the table above is from this build, 18 November 2026; each is 69 to 89 gas
 above the earlier build's for the same transaction (the earlier figures are in the history of `results/`); the local

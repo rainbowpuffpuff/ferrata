@@ -1,12 +1,12 @@
 label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
-deploy ferrata-v03: WriteSegment 6 of 6 (74852 bytes)	2	applied	-	0	0.0%	75148	0	100000	601184	8	8	1100
+deploy ferrata-v03: WriteSegment 6 of 6 (74932 bytes)	2	applied	-	0	0.0%	75228	0	100000	601824	8	8	1100
 deploy ferrata-v03: WriteSegment 5 of 6 (98304 bytes)	3	applied	-	0	0.0%	98696	0	100000	789568	8	8	1101
 deploy ferrata-v03: WriteSegment 4 of 6 (98304 bytes)	4	applied	-	0	0.0%	98696	0	100000	789568	8	8	1102
 deploy ferrata-v03: WriteSegment 3 of 6 (98304 bytes)	5	applied	-	0	0.0%	98696	0	100000	789568	8	8	1103
 deploy ferrata-v03: WriteSegment 2 of 6 (98304 bytes)	6	applied	-	0	0.0%	98696	0	100000	789568	8	8	1104
 deploy ferrata-v03: WriteSegment 1 of 6 (98304 bytes)	7	applied	-	0	0.0%	98696	0	100000	789568	8	8	1105
 deploy ferrata-v03: CreateHeader (immutable)	8	applied	-	0	0.0%	820	0	100000	6560	8	8	1106
-Init	9	applied	-	7885681	78.9%	51202	7885681	10000000	63495064	8	8	1791196524000
+Init	9	applied	-	7885683	78.9%	51202	7885683	10000000	63495080	8	8	1791196524000
 period 1378: Update (residue witness)	10	applied	-	6567493	65.7%	3881	6567493	10000000	59138485	9	8	1791215748000
 period 1378: Continue (adopt 512 keys, apply)	11	applied	-	7702939	77.0%	49851	7702939	10000000	77428198	10	8	1791215760000
 period 1379: Update (residue witness)	12	applied	-	6422152	64.2%	3407	6422152	10000000	70670928	11	8	1791300600000
