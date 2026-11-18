@@ -363,3 +363,21 @@ fn a_342_signer_handoff_in_one_transaction() {
         );
     }
 }
+
+/// An independent review's finding 7, in the copy: a `Config` whose sync-committee period is zero epochs
+/// would make every update panic in the period arithmetic (a division by zero) and be charged the whole
+/// gas limit; the copy's `check_config` refuses it at `Init` (`BAD_CONFIG`, 212), and nothing is created.
+#[test]
+fn a_zero_period_config_is_refused_at_init() {
+    let mut chain = Chain::new();
+    let state = std::mem::replace(&mut chain.state, V03State::new());
+    chain.state = state.with_named_programs([(EXPERIMENTAL, experimental_program())]);
+    let mut config = mainnet_config(2);
+    config.epochs_per_sync_committee_period = 0;
+    let inst = Instance::new(EXPERIMENTAL, config, root(TRUSTED_BLOCK_ROOT));
+    print_header();
+    let run = inst.init(&mut chain, &mainnet_bootstrap(), "EXPERIMENTAL zero-period");
+    print_report(&run.reports[0]);
+    assert_eq!(run.reports[0].exit_code, Some(212), "BAD_CONFIG");
+    assert!(run.reports.iter().all(|r| !r.ok()), "nothing applies");
+}

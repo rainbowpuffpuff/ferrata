@@ -153,6 +153,11 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
     if config.ws_period_epochs == 0 || config.seconds_per_slot == 0 || config.slots_per_epoch == 0 {
         return Err(code::BAD_CONFIG);
     }
+    // EXPERIMENTAL (an independent review's finding 7): a sync-committee period of zero epochs would
+    // make every update panic in the period arithmetic (a division by zero); refused at `Init`.
+    if config.epochs_per_sync_committee_period == 0 {
+        return Err(code::BAD_CONFIG);
+    }
     Ok(())
 }
 
