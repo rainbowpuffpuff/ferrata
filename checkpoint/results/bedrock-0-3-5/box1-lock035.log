@@ -1,0 +1,50 @@
+    Updating crates.io index
+ Downloading crates ...
+  Downloaded bitflags v1.3.2
+  Downloaded foreign-types-shared v0.3.1
+  Downloaded block v0.1.6
+  Downloaded malloc_buf v0.0.6
+  Downloaded core-foundation-sys v0.8.7
+  Downloaded core-foundation v0.9.4
+  Downloaded foreign-types-macros v0.2.4
+  Downloaded objc v0.2.7
+  Downloaded wasi v0.11.1+wasi-snapshot-preview1
+  Downloaded foreign-types v0.5.0
+  Downloaded core-graphics-types v0.1.3
+  Downloaded r-efi v5.3.0
+  Downloaded wit-bindgen v0.57.1
+  Downloaded zerocopy-derive v0.8.63
+  Downloaded wasip2 v1.0.4+wasi-0.2.12
+  Downloaded fiat-crypto v0.2.9
+  Downloaded metal v0.29.0
+guests-0-3-5/Cargo.lock against guests/Cargo.lock (only the workspace members may differ):
+635c635
+< name = "ferrata-checkpoint-b-guest"
+---
+> name = "ferrata-checkpoint-0-3-5-guest"
+646,668c646
+< name = "ferrata-checkpoint-guest"
+< version = "0.1.0"
+< dependencies = [
+<  "bytemuck",
+<  "checkpoint-core",
+<  "curve25519-dalek",
+<  "risc0-zkvm",
+<  "sha2",
+< ]
+< 
+< [[package]]
+< name = "ferrata-micro-guest"
+< version = "0.1.0"
+< dependencies = [
+<  "bytemuck",
+<  "checkpoint-core",
+<  "curve25519-dalek",
+<  "risc0-zkvm",
+<  "sha2",
+< ]
+< 
+< [[package]]
+< name = "ferrata-segment-guest"
+---
+> name = "ferrata-checkpoint-b-0-3-5-guest"

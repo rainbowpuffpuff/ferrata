@@ -2,7 +2,7 @@
 
 ## The six guests rebuilt at the crown build path (`reproduce-box/`)
 
-`scripts/reproduce-image-ids.sh build` on the build box (Modal CPU container, workspace deeferentleeg, through
+`scripts/reproduce-image-ids.sh build` on the build box (Modal CPU container, workspace ws-9, through
 `mrun`; no Docker there, so its steps ran directly in the box's image, which the Dockerfile mirrors), branch
 `verify-anyone` from `integration6` c52eee4, the tree copied to the crown build path
 `spike/ferrata-wt-crown` inside the box only. A cold box (no cargo registry, no target directory): copy 13:09:25Z,

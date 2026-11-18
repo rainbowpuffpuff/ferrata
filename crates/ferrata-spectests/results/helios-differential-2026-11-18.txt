@@ -1,0 +1,26 @@
+# cargo test --locked -p ferrata-spectests --test helios_lab_record --test helios_oracle -- --nocapture --test-threads 1
+# on the build box (a Modal CPU container), 2026-11-18T14:11Z, rustc 1.93.0 (254b59607 2026-01-19), the tests of commit 69569cc3; official vectors consensus-specs v1.7.0-beta.4 minimal
+running 4 tests
+test every_recorded_mainnet_update_agrees_with_helios ... mainnet: 95 updates (9 period, 86 finality), 0 layout upgrades, 6 rotations, 94 advances, 7 adoptions; finalized periods 1907..=1913; end: slot 15676800, period 1913, root 0x4429b5f5dce1aac353a9704ada837ee010a105c38de4cf1be58d84e02e13d9e7, block Some(26437017) 0xf450ce6bd77f6c9f9a4d04139657d3f8edf7682fe5eefc45816f22b3f92ce49f
+ok
+test every_recorded_sepolia_update_agrees_with_helios ... sepolia: 125 updates (39 period, 86 finality), 1 layout upgrades, 38 rotations, 125 advances, 39 adoptions; finalized periods 1378..=1416; end: slot 11600992, period 1416, root 0xa062b3c835f081f6206d9a056a09ece2c6dbf60d4e22e25648df11dfddd247fc, block None 0xd4179ad86a66c51d6d5b5b4ba17b09a59d7e4256e53bbb26c84ca25a037d0283
+ok
+test helios_871_the_identity_key_among_the_participants ... 871, 32 of 32 bits set, member 5 the identity: ferrata Err(PubkeyInvalid), Helios accepts (finalized slot 64 -> 72, optimistic -> 80)
+871, 16 of 32 bits set, member 5 the identity: ferrata Err(PubkeyInvalid), Helios accepts (finalized slot 64 -> 64, optimistic -> 80)
+ok
+test helios_872_a_finality_branch_under_an_empty_finalized_header ... 872, empty finalized header: ferrata Err(FinalityBranchInvalid) / Err(FinalityBranchInvalid); Helios accepts; its optimistic header 15625920 -> 15626048
+ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.42s
+running 9 tests
+test mainnet_end_to_end_finality_update_agrees_with_helios ... ok
+test mainnet_periods_1899_to_1903_agree_with_helios ... ok
+test mutated_mainnet_updates_are_refused_by_both ... ok
+test mutated_sepolia_gloas_data_is_refused_by_both ... ok
+test official_sync_vectors_agree_with_helios ... helios oracle: Tally { cases: 33, steps: 129, updates_accepted_by_both: 111, below_supermajority: 0, force_updates: 15, upgrades: 3 }; compared by fork {"capella": 10, "deneb": 8, "electra": 5, "fulu": 6, "gloas": 4}
+not decoded by helios (19): ["altair/advance_finality_without_sync_committee (the bootstrap: NoMatchingVariant)", "altair/capella_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "altair/deneb_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "altair/electra_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "altair/gloas_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "altair/light_client_sync (the bootstrap: NoMatchingVariant)", "altair/light_client_sync_no_force_update (the bootstrap: NoMatchingVariant)", "altair/supply_sync_committee_from_past_update (the bootstrap: NoMatchingVariant)", "bellatrix/advance_finality_without_sync_committee (the bootstrap: NoMatchingVariant)", "bellatrix/capella_deneb_fork (the bootstrap: NoMatchingVariant)", "bellatrix/capella_electra_fork (the bootstrap: NoMatchingVariant)", "bellatrix/capella_fork (the bootstrap: NoMatchingVariant)", "bellatrix/capella_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "bellatrix/deneb_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "bellatrix/electra_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "bellatrix/gloas_store_with_legacy_data (the bootstrap: NoMatchingVariant)", "bellatrix/light_client_sync (the bootstrap: NoMatchingVariant)", "bellatrix/light_client_sync_no_force_update (the bootstrap: NoMatchingVariant)", "bellatrix/supply_sync_committee_from_past_update (the bootstrap: NoMatchingVariant)"]
+ok
+test participation_from_zero_to_full_agrees_with_helios ... ok
+test sepolia_through_the_gloas_fork_agrees_with_helios ... ok
+test the_test_encoder_reproduces_real_bytes ... ok
+test where_helios_departs_from_the_specification ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.88s

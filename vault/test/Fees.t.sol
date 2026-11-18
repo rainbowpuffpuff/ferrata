@@ -203,6 +203,26 @@ contract FeesTest is VaultTestBase {
         assertEq(checkpointFee, CHECKPOINT1);
     }
 
+    /// @notice Schedule 0 is announced and in force at the registration's own time, and its published hash carries
+    ///         that time (vault/MUTATION.md, Gambit registry-1021 and registry-1027: setUp registers at timestamp 1,
+    ///         where a constant 1 cannot be told apart from it).
+    function test_registration_scheduleZeroCarriesTheRegistrationsTime() public {
+        address token2 = address(0xF00E);
+        vm.etch(token2, address(new MockERC20("Fee token 2", "FE2", 18)).code);
+        FerrataVault.TokenParams memory p = _feeTokenParams();
+        p.lezDefinition = bytes32(uint256(0xdef2));
+        vm.warp(1_000_000);
+        uint64 fromLeaf = vault.nextLeafIndex();
+        vm.prank(admin);
+        vault.registerToken(token2, p);
+        assertEq(
+            vm.load(address(vault), _feeSlot(token2, 0)),
+            _scheduleHash(
+                token2, 0, [fromLeaf, 1_000_000, 1_000_000], _two(0, 0), _two(0, 0), _two(CHECKPOINT0, CHECKPOINT1)
+            )
+        );
+    }
+
     /// @notice Registration emits what the LEZ side needs to rebuild both preimages, in force from the leaf count.
     function test_registration_emitsTheEntryAndScheduleZero() public {
         _deposit(alice, ETH, 0, keccak256("an earlier leaf")); // schedule 0 of a later token starts at leaf 1
@@ -500,6 +520,38 @@ contract FeesTest is VaultTestBase {
         assertEq(vault.escrowed(FEE_TOKEN), 0);
     }
 
+    /// @notice A refund finds its leaf's schedule among four (vault/MUTATION.md, Gambit registry-283: with three
+    ///         schedules at most, a binary search that sets `high = 1` instead of `high = mid` still lands right).
+    function test_feeChange_aRefundFindsItsLeafsScheduleAmongFour() public {
+        uint64 at = uint64(block.timestamp);
+        _depositExactly(alice, 1, D1 + RELAY1); // leaf 0: schedule 0
+        _announce(_two(1e16, 1e17), _two(0, 0), _two(0, 0));
+        vm.warp(at + 7 days);
+        _depositExactly(bob, 1, D1 + 1e17 + RELAY1); // leaf 1: schedule 1 from here
+        _announce(_two(5e15, 3e16), _two(0, 0), _two(0, 0));
+        vm.warp(at + 14 days);
+        _depositExactly(alice, 1, D1 + 3e16 + RELAY1); // leaf 2: schedule 2 from here
+        _announce(_two(2e15, 2e16), _two(0, 0), _two(0, 0));
+        vm.warp(at + 21 days);
+        _depositExactly(bob, 1, D1 + 2e16 + RELAY1); // leaf 3: schedule 3 from here
+
+        vm.prank(freezer);
+        vault.retire();
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(vault, ROOT, 0, true); // LEZ imported nothing
+        _submit(c);
+        _finalizeAfterDelta(c);
+        vm.warp(block.timestamp + REVOKE_WINDOW + 1);
+
+        uint256[4] memory expected = [D1 + RELAY1, D1 + 1e17 + RELAY1, D1 + 3e16 + RELAY1, D1 + 2e16 + RELAY1];
+        for (uint64 i = 0; i < 4; i++) {
+            address who = _leafData[i].depositor;
+            uint256 before = t.balanceOf(who);
+            _refundLeaf(i);
+            assertEq(t.balanceOf(who) - before, expected[i]);
+        }
+        assertEq(vault.escrowed(FEE_TOKEN), 0);
+    }
+
     // ---- releases -------------------------------------------------------------------------------------------------
 
     /// @dev Schedule 1 with burn and checkpoint fees on denomination 0, in force from the next deposit.
@@ -615,6 +667,34 @@ contract FeesTest is VaultTestBase {
         prover.setOpen(true);
         prover.claim(address(vault), ETH);
         assertEq(address(prover).balance, checkpointFee);
+    }
+
+    /// @notice The checkpoint fee goes to the prover of the checkpoint that finalised the release's root, here
+    ///         checkpoint 1, not to checkpoint 0's (vault/MUTATION.md, Gambit vault-1580: the suite's released roots
+    ///         were checkpoint 0's, or every checkpoint had the same prover).
+    function test_release_checkpointFeeGoesToTheProverOfTheRootsOwnCheckpoint() public {
+        _acceptRoot(keccak256("fees: an earlier root")); // checkpoint 0, proven by this contract
+        address prover = makeAddr("prover of checkpoint 1");
+        FerrataVault.Checkpoint memory c = _nextCheckpoint(ROOT);
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(prover);
+        vault.submitCandidate(c, SEAL);
+        (uint256 submittedAt, uint256 wait) = _waitOf(vault, c.newState);
+        vm.warp(submittedAt + wait);
+        vm.roll(block.number + 1);
+        uint256 beaconIndex = vault.recordBeacon();
+        (, bytes32 beaconNonce) = vault.beacons(beaconIndex);
+        c.echoNonce = beaconNonce;
+        _proveCheckpoint(_checkpointJournal(c));
+        vm.prank(relayer); // the finalisation's sender is not paid
+        vault.finalize(beaconIndex, c, SEAL);
+        assertEq(vault.burnRootCheckpoint(ROOT), 2);
+
+        _depositExactly(alice, 0, D0 + RELAY0);
+        _release(0, recipient, 0, keccak256("n1"));
+        assertEq(vault.owed(prover, FEE_TOKEN), CHECKPOINT0);
+        assertEq(vault.owed(address(this), FEE_TOKEN), 0);
+        assertEq(t.balanceOf(recipient), D0 - CHECKPOINT0);
     }
 
     function _three(uint256 v) internal pure returns (uint256[] memory x) {

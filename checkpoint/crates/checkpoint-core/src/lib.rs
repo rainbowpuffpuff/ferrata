@@ -34,3 +34,8 @@ pub use error::Error;
 pub type Hash = [u8; 32];
 /// A 20-byte Ethereum address (or other 20-byte field).
 pub type Address = [u8; 20];
+
+/// Logos Blockchain 0.3.5-rc.1's transaction layout (a fork digest before the operations) and the two rules over it:
+/// the second build, cargo feature `bedrock-0-3-5`, off by default (`bedrock_0_3_5/mod.rs`).
+#[cfg(feature = "bedrock-0-3-5")]
+pub mod bedrock_0_3_5;

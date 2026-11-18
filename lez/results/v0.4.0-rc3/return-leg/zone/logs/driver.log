@@ -1,0 +1,17 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 0 (the last one final on Bedrock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, 627064 bytes (sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9), user ELF 594640 bytes in 7 segment(s)
+scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61, 268228 bytes (sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0), user ELF 235804 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from ../ferrata-wt-rc3-return-z/lez/results/v0.4.0-rc3
+blocks: 1..=129
+transactions: 0 sent; 0 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 0, storage gas 0, base fees 0
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 129 of 129
+records written to ../tmp/rc3-return/live/run/export

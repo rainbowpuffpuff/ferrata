@@ -1,0 +1,83 @@
+== Bedrock: Logos Blockchain node f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30, pid 495, API 127.0.0.1:18080
+== slot 0 of the Bedrock node is unix second 1785493027, so an epoch (60 slots of 4 s) begins at seconds = 67 mod 240
+== Bedrock: Logos Blockchain node f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30, pid 1461, API 127.0.0.1:18080
+== sequencer: sequencer_service (be2ac354f4268d7c021519735667d5d5b723e5901a65e4dcd47cd686dc42ca34), pid 1844, RPC 127.0.0.1:3040
+   head block 1, 3 s after the sequencer was started
+   the sequencer started its scheduler 2 s after it was started: its blocks are made 2 s after the seconds at which an epoch can begin, 8 s before the next such second
+== slot 0 of the Bedrock node is unix second 1785493027, so an epoch (60 slots of 4 s) begins at seconds = 67 mod 240; the sequencer makes its blocks 2 s after the seconds at which an epoch can begin and 8 s before the next such second (interval 10 s; wanted: 1 to 2 s after); the zone was started 1 time(s) to get this
+command: ../tmp/rc3-return/live/bin/sequencer_service start ../tmp/rc3-return/live/run/sequencer_home --rpc-listen-address 127.0.0.1:3040 
+RISC0_* variables in the sequencer's environment: RISC0_HOME=../risc0-home-lez 
+(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)
+== phase info (10:13:19)
+sequencer http://127.0.0.1:3040: head block 1, followed to block 0 (the last one final on Bedrock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, 627064 bytes (sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9), user ELF 594640 bytes in 7 segment(s)
+scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61, 268228 bytes (sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0), user ELF 235804 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from spike/ferrata-wt-rc3-return-z/lez/results/v0.4.0-rc3
+== phase hook (10:13:19)
+[return-leg 10:13:19] the zone: LEZ RPC http://127.0.0.1:3040, Bedrock http://127.0.0.1:18080; image ids: checkpoint_0_3_5 0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f, checkpoint_b_0_3_5 0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf, release 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9
+[return-leg 10:13:19] node: fork digest c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (GET /chain/fork), channel 0101010101010101010101010101010101010101010101010101010101010101
+[return-leg 10:13:19] the channel: {"keys":1,"configuration_threshold":1,"posting_timeframe":0,"tip_slot":2375941}; the attestor reads node blocks from slot 2375341
+[return-leg 10:17:16] session A: T0 = 24 0x8c2816562d488fa924977b565bd9fe607f1e0b3a9bf47ae1bb016d1eb4024220; bedrockGenesisId = the fork digest; key set n = 1, posting timeframe 0
+[return-leg 10:17:17] anvil (local, chain id 11155111, no fork): deployer 0x0c8b321A2B8b06cA79459585B13Ea6a33635d0A8 (impersonated) nonce 0; vault 0x169E05aE832232B7B177b717D718bccaC12F65b1; configId 0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458; genesisState 0x8805ccd3d2fb02517ff18e1bca60db4bc60b679fd2dab32d7acf8b9607c6194f
+[return-leg 10:17:28] deposit 0 sent; capture-1: capture of block 9 0xf21d926f695e153eabe1e08c3f3d2622d1f4f5f617b45f121845788e71a55a91 (state root patched: False): 1 deposit(s), 6 slot(s)
+[return-leg 10:17:29] deposit 1 sent; capture-2: capture of block 10 0x6ad02b56eb68278fd5796100c3882e0341952c5748c78bdedcdc12ed961f0d57 (state root patched: False): 2 deposit(s), 6 slot(s)
+[return-leg 10:17:50] crown-driver check: [check] stage 2: configId 0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458 in slot 2; pairing, import and register requests accepted natively
+certified db10fbb2e95e5e99a55020121720fa7a5f0e90094774c6283e4e46467b0c1205 by channel key 8e0f5f733af7483afd663f39851ca5bb00d840b5c3441c90b532036f808f0d06
+[return-leg 10:17:50] attestor started (key from the OS's randomness, not recorded; certified by the sequencer's channel key; a round every 60 s)
+[return-leg 10:17:50] crown-b: real private proofs, RAYON_NUM_THREADS=32
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block   50 + 23.6s 7fbc958c035d03bf18a6c39aeb4339c9879371ef0e623abdea37a1d07ace45bd
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block   52 + 19.8s 983664876382ebbc79ea78d0781df1a09c512ce0047f1646071d9df1ff1f9933
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    321523 block   54 + 19.3s 1a404201ed26354dffe0a499bd3440a3aa2c843f60bd9d3c12c8c221c06407bd
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    319468 block   56 + 19.8s 761a95d634397b4f202210631e560e7ec32e4be5140ca4f8bb1570bb8189ce15
+[crown-b] private wallet at block 57: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 306.3 s (252267 bytes)
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block   89 + 21.3s e4e690b3a01236f1ffcc820ee536aec09e0f6f30253f70d15f7debf2ca1cf08e
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block   91 + 19.7s 481a3f4eb8134274fc3eab8669a4e4a7a77509bbb6647a7d2ae8585f1b42a829
+Syncing to block 91. Blocks to sync: 34
+Synced to block 91 in 151.361207ms
+[crown-b] private test account 0 after the claim (wallet's view at block 91): Some(HolderState { holdings: [Holding { config_id: [254, 147, 212, 29, 12, 215, 10, 148, 127, 125, 234, 109, 67, 82, 84, 117, 88, 103, 39, 109, 184, 193, 50, 126, 133, 143, 155, 182, 252, 119, 68, 88], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 317.5 s (255031 bytes)
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block  125 + 21.6s 81e13ff531ce79b8de99e94aa78c04d3b86197e7413176f1ca5075991f93d3ef
+[crown-b] blocks 25..=125 (T1 0xa3a908b8fc2df3e11d9649ad3bbb08cfe836503448b91cadd023b1b3284c1b37); 2 burn note(s) written to work/hook/burn-notes.json
+[return-leg 10:34:04] session B: T1 = 125; steps [["bridge Init (pairing: configId in the vault's slot 2)","applied","37"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","39"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","41"],["bridge Claim: deposit 0 (public) under root(cid, 1)","applied","44"],["bridge ImportFees: ETH schedule 1 absent at n=2","applied","54"],["bridge ImportRoot n=2 (stage 2, block 10)","applied","56"],["bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)","applied","89"],["bridge Burn (public): 0.001 ETH of public test account 0, note 0","applied","91"],["bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)","applied","125"]
+attested: channel key 8e0f5f733af7483afd663f39851ca5bb00d840b5c3441c90b532036f808f0d06 | attestation key db10fbb2e95e5e99a55020121720fa7a5f0e90094774c6283e4e46467b0c1205 | final tip 125 a3a908b8fc2df3e11d9649ad3bbb08cfe836503448b91cadd023b1b3284c1b37 (final message bf70a49f606754156ba5ab1a77e65c638bc574aa01eb9824b645457986d704a6) | node lib slot 2376251, blocks 1..=125 checked | key set n = 1 hash 04b3d59823ac43877f45cc9b7b1d41cb6f0678063d50cf5b4d16d948922ff65f
+work/att-0/final.json: verifies (channel key 8e0f5f733af7483afd663f39851ca5bb00d840b5c3441c90b532036f808f0d06, tip 125)
+[return-leg 10:34:06] node answers (the attestor's final round): slots from 2375341 to the LIB 2376251, 2 windows, 4081638 bytes
+[return-leg 10:34:06] hook done: T0 24, T1 125, attested tip 125
+== phase export (10:34:06)
+blocks: 1..=129
+transactions: 0 sent; 0 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 0, storage gas 0, base fees 0
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 129 of 129
+records written to spike/tmp/rc3-return/live/run/export
+# The run's environment
+
+- started 2026-11-18T10:12:43Z, finished 2026-11-18T10:34:47Z (UTC); exit status of the phases: 0
+- phases: info hook export
+- LEZ: v0.4.0-rc3, commit bafd07be0701398f9bc435f73ab05e9a7936c301, source tree unmodified
+- sequencer: sequencer_service, sha256 be2ac354f4268d7c021519735667d5d5b723e5901a65e4dcd47cd686dc42ca34, built with rustc 1.98.1 (48a229cea 2026-09-01) cargo 1.98.1 (797e8a9bc 2026-08-05) 
+- Bedrock: a Logos Blockchain node run as a process, resolved by LEZ's bedrock/tools/resolve_bedrock_node.py: { "binary_sha256": "2f30172903a36175606f466fa6a9d5503a26cb8f95eb9b9444677ee06520c6e2", "release_asset": "logos-blockchain-node-linux-x86_64-0.3.5-rc.1.tar.gz", "release_commit": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30", "release_tag": "0.3.5-rc.1", "resolution": "release", "resolved_sha": "f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30", "target_platform": "linux-x86_64"}
+- Bedrock configuration: LEZ's bedrock/node-config.yaml (see config/bedrock-node-config.diff) and bedrock/deployment-settings.yaml, POL_PROOF_DEV_MODE=true as in LEZ's container entrypoint (leader proofs in dev mode)
+- sequencer configuration: LEZ's lez/sequencer/service/networks/local.json with the changes of config/sequencer_config.diff
+- RISC0_* variables in the sequencer's environment: RISC0_HOME=../risc0-home-lez 
+- block phase: slot 0 of the Bedrock node is unix second 1785493027, so an epoch (60 slots of 4 s) begins at seconds = 67 mod 240; the sequencer makes its blocks 2 s after the seconds at which an epoch can begin and 8 s before the next such second (interval 10 s; wanted: 1 to 2 s after); the zone was started 1 time(s) to get this
+- as the logs show it: 129 blocks published, at seconds after an epoch second (mod 10): 3 s (x129); 6 epochs began during the run, at seconds after slot 0 (mod 240): 0 (x5), 1 (x1); the least time from a published block to the next epoch's first second: 7 s; blocks the node proposed with a transaction removed: 0
+- Bedrock gas prices during the run (logs/bedrock-gas-prices.log): 3 values; first: 2026-11-18T10:13:03.467Z execution_base_gas_price:1 storage_gas_price:1; last: 2026-11-18T10:29:07.292Z execution_base_gas_price:1 storage_gas_price:3
+- head rewinds in the sequencer's log: 0; inscriptions it gave up on: 0
+- driver: live-driver, built from lez/live/driver at  (uncommitted paths: 0)
+- r0vm: risc0-r0vm 3.0.5
+- guest binaries: program sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9, scripted sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0
+- machine: 2 CPUs visible, unknown, 64 GiB, Linux 4.19.0-gvisor
+- ports: sequencer RPC 127.0.0.1:3040, metrics 127.0.0.1:9000, Bedrock API 127.0.0.1:18080
+- last block: 130; blocks the sequencer published to Bedrock: 130; its last channel update: adopted none, finalized 129..=129 (1), head Some(130)
+- Bedrock node at the end (cryptarchia/info): {"cryptarchia_info":{"lib":"013addd0d3725595997df57fd0cd230f96f64430b21908c1f7e1913dc345b9d9","lib_slot":2376261,"tip":"acb4698615ef4c4b4a0a70f9a32460ce4247c3840eee43d614c40d59f6bd80d5","slot":2376264,"height":314,"state":"Online"},"phase":"Following"}
+== records in spike/ferrata-wt-rc3-return/lez/results/v0.4.0-rc3/return-leg/zone

@@ -1,0 +1,16 @@
+[
+  {
+    "amount": "1000000000000000",
+    "commitment": "596285ad3e7e7044f9ef598582f70409f62f6291f85cccd6385a3486d48d5c75",
+    "depositor": "79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "leaf": "10cacb95158f8092082bf6b2dc104e3232afab8a423f4b13db4f1b2371ad97d3",
+    "leaf_index": 0
+  },
+  {
+    "amount": "1000000000000000",
+    "commitment": "0a8b34c4acd05ec8a354c7e51c73b3c0c4898faaea446fd6fa8199764d44f61d",
+    "depositor": "79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "leaf": "e632e2d551a9c6c178620fd7cd684a8398d5d540f935545a52bbdd3f88cf6036",
+    "leaf_index": 1
+  }
+]

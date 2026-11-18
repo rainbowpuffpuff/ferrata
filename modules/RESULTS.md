@@ -526,7 +526,7 @@ steps ran locally for both packages ([`catalog/`](catalog/README.md)).
 
 ### Where it ran
 
-The project's Modal build box (workspace `ohyou`), a gVisor container (`Linux 4.19.0-gvisor x86_64`,
+The project's Modal build box (workspace `ws-12`), a gVisor container (`Linux 4.19.0-gvisor x86_64`,
 64 GiB; `nproc` reported 2, the box allows up to 32 threads), started cold for this worktree: Nix
 2.28.3, cargo 1.93.0, Python 3.12.1, jq 1.7. Builder, SDK, `logosctl` and nixpkgs at the revisions of
 the first run (below); Logos packages from source (the Logos binary cache was not used). On the laptop

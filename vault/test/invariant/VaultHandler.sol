@@ -718,6 +718,15 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
             f[2][i] =
                 withdraw ? current.checkpointFees[i] : _bound(uint256(keccak256(abi.encode(seed, i, 2))), 0, ceiling);
         }
+        // The vault withdraws the pending announcement whenever the announced fees are the fees in force, also when
+        // random fees happen to equal them (a seed repeated from setUp's announcements, say): the model follows that
+        // rule, not only its own one-in-five choice.
+        bool same = true;
+        for (uint256 i = 0; i < denoms.length; i++) {
+            if (
+                f[0][i] != current.mintFees[i] || f[1][i] != current.burnFees[i] || f[2][i] != current.checkpointFees[i]
+            ) same = false;
+        }
         vm.prank(admin);
         vault.announceFees(token, f[0], f[1], f[2]);
         Schedule storage p = _pending[token];
@@ -725,7 +734,7 @@ contract VaultHandler is CommonBase, StdCheats, StdUtils {
         p.mintFees = f[0];
         p.burnFees = f[1];
         p.checkpointFees = f[2];
-        if (withdraw) p.effectiveAt = 0;
+        if (withdraw || same) p.effectiveAt = 0;
     }
 
     /// @dev Anyone puts a due fee change in force.

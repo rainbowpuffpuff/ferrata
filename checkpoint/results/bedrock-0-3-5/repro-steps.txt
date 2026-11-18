@@ -1,0 +1,7 @@
+08:57:02 source spike/ferrata-wt-rc3-return (HEAD
+not a git tree); HOME ~; nproc 2
+08:57:02 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5, lez rust v1.91.1-rust-x86_64-unknown-linux-gnu v2024.1.5-cpp-x86_64-unknown-linux-gnu 
+09:03:13 build a ok
+09:03:13 build b ok
+09:03:13 build c ok
+09:03:15 programs: checkpoint.bin checkpoint_b.bin ferrata_bridge.bin ferrata_lez.bin release.bin segment.bin 

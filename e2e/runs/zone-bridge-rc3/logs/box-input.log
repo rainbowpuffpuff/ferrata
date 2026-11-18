@@ -1,0 +1,10 @@
+Logos Blockchain 0.3.5-rc.1 layout: every transaction carries fork digest 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (= bedrockGenesisId)
+node: 301 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=125: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (8e0f5f73… 125): all 125 accepted; channel tip message = block 125's: false
+zone-24-125: 101 blocks, 217 transactions, 608482 B of blocks, input 610856 B; burns 2 (root 0x78aae8032592950b0cfa09a7de939391fe7591e58f218e5928f334c814ac7759), imported leaf count 2, sunset false; journal sha256 2d3b85669959241d4e85ea450a6e40f14c168ab4a7f03bc7acb0a786961eb1a9; parent state 0x8805ccd3d2fb02517ff18e1bca60db4bc60b679fd2dab32d7acf8b9607c6194f; new state 0x27848dc86dfacb76e2c99dff4f02142fb26cbb2bd99e734c7663d21e4093340f; configId 0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458
+kept 1 of 1 (n = 1, t = 1)
+zone-24-125-all: accepted: n = 1, t = 1, 1 attestations counted, producer 8e0f5f733af7483afd663f39851ca5bb00d840b5c3441c90b532036f808f0d06
+0 of 1: refused by the collector: Error: too few attestations: 0 valid, t(n = 1) = 1 needed; dropped []
+zone-24-125-below: refused: Core(InsufficientAttestations { have: 0, need: 1 })
+{"executor_wall_s":0.585630008,"image_id":"0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf","input_bytes":610856,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":21102592,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,17],"segments":21,"user_cycles":18971326}
+{"executor_wall_s":0.522724483,"image_id":"0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf","input_bytes":610856,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":21102592,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,17],"segments":21,"user_cycles":18971326}
+checkpoint refused: Core(InsufficientAttestations { have: 0, need: 1 })
