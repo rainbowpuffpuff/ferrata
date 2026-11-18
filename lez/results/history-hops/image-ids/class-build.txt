@@ -1,0 +1,4 @@
+   Compiling methods-program-class v0.1.0 (<spike>/ferrata-wt-history-hops/lez/methods-program-class)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1m 04s
+build exit 0
+guest_ids exit 0

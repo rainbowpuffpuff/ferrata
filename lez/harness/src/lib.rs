@@ -9,6 +9,7 @@
 pub mod attest;
 pub mod bridge;
 pub mod holdings;
+pub mod hops;
 pub mod private;
 pub mod scenarios;
 pub mod sepolia;
@@ -88,6 +89,20 @@ pub const TWIN: AccountId = AccountId::new([0x5c; 32]);
 /// Where the program built without the accelerated Keccak is deployed, for the comparison of
 /// Stage 4 (`guests/program-keccak-soft`).
 pub const KECCAK_SOFT: AccountId = AccountId::new([0x5d; 32]);
+
+/// Where the attestation program's second build is deployed (`guests/program-class`: the reply
+/// with each statement's nullifier-safety class; deployed nowhere else), with the feature
+/// `program-class`.
+#[cfg(feature = "program-class")]
+pub const CLASSED: AccountId = AccountId::new([0x5f; 32]);
+
+#[cfg(feature = "program-class")]
+pub fn classed_program() -> Program {
+    Program::new_unchecked(
+        methods_program_class::FERRATA_LEZ_CLASS_ID,
+        Cow::Borrowed(methods_program_class::FERRATA_LEZ_CLASS_ELF),
+    )
+}
 
 pub fn ferrata_program() -> Program {
     Program::new_unchecked(methods::FERRATA_LEZ_ID, Cow::Borrowed(methods::FERRATA_LEZ_ELF))
@@ -305,6 +320,8 @@ impl Chain {
                 (KECCAK_SOFT, ferrata_keccak_soft_program()),
             ])
             .with_genesis_programs([(ferrata_program(), true), (consumer_program(), true), (scripted_program(), true)]);
+        #[cfg(feature = "program-class")]
+        let state = state.with_named_programs([(CLASSED, classed_program())]);
         Self { state, payer_key, payer, nonce: 0, block_id: 2, reports: Vec::new(), last_tx: Vec::new() }
     }
 
