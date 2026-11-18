@@ -656,7 +656,7 @@ and H-1; a new deployment must use this program, whose new image changes every `
 
 The keyless `Sunset`, the freeze authority's 14-day handover, a multisig (M-of-N) freeze authority,
 watchers and transfers between holders, as `BRIDGE.md` §2 and §5 now specify them.
-`harness/tests/bridge_roles.rs` (dev mode, build box `stufflaters`, 16 cores) starts from the two
+`harness/tests/bridge_roles.rs` (dev mode, build box `ws-8`, 16 cores) starts from the two
 configurations (both ticked to block 102's record, ETH registered on both, `root(A, 8)` with ETH's
 schedule 1, `root(B, 8)`, the payer's claim of A's leaf 6: 10 ETH) and runs every accepted path and
 every refusal below; a refusal reverts its whole transaction, and the test checks the states after

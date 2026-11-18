@@ -5,7 +5,7 @@ prover hands the light client and the inclusion code is attacker-chosen bytes. S
 three of them differential against the reference implementations the tests already compare
 with (alloy-rlp 0.3.17, alloy-trie 0.9.9, the consensus specs' Merkle-branch definitions).
 
-Run on 11 November 2026 on the Modal build box of branch `fuzz-core` (workspace `stufflaters`):
+Run on 11 November 2026 on the Modal build box of branch `fuzz-core` (workspace `ws-8`):
 a container with 32 vCPUs visible (`nproc --all`), 64 GiB at most; Rust 1.93.0, cargo-fuzz
 0.13.2, libfuzzer-sys 0.4.13. Built with `cargo fuzz build -a -s none` and
 `RUSTFLAGS=-Coverflow-checks=on`: optimized, with debug assertions and overflow checks, so an
@@ -118,7 +118,7 @@ source (`lez/guests/bridge/src/main.rs`, its leading `//!` lines turned into `//
 refuses inner doc comments) into the crate, and the target calls its `handle`; no guest was changed,
 so no image id changed.
 
-Run on 11 November 2026 on the Modal build box of branch `fuzz-bridge` (workspace `stufflaters`, 32
+Run on 11 November 2026 on the Modal build box of branch `fuzz-bridge` (workspace `ws-8`, 32
 vCPUs visible); Rust 1.98.1, cargo-fuzz 0.13.1, libfuzzer-sys 0.4.13; built with
 `cargo +1.98.1 fuzz build --fuzz-dir fuzz/programs -a -s none` and `RUSTFLAGS=-Coverflow-checks=on`
 (optimized, debug assertions and overflow checks: an arithmetic overflow is a crash, where the
