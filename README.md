@@ -198,8 +198,7 @@ The design notes specify these; there is no code for them here. In short (in ful
   view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side still reads, signs and sends
   through a stand-in service.
 - **Logos Blockchain 0.3.5-rc.1:** the checkpoint guests' reading of a transaction's fork digest.
-- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the deployment script that
-  renounces the emergency stop's owner outside fork rehearsals, the gas drop's sealed credit in the relayer daemon
+- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop's sealed credit in the relayer daemon
   (it ran through `ferrata-gasdrop` and crown-driver on LEZ v0.4.0-rc3, [row 124](docs/EVIDENCE.md)) and for burns.
 
 ## Not audited. Not for production.

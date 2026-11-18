@@ -261,8 +261,9 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   (`amount / lezUnit × unitWeight`); deposit and release buckets per token and globally on the vault;
   refunds draw on the release buckets. `SetCap` never goes below the configuration's immutable floor.
   LEZ programs cannot read a clock on v0.4.0-rc1 and rc2 (rc3 adds a read of the producer's timestamp, which Ferrata does
-  not use: `lez/results/v0.4.0-rc3/README.md`): claims, `Freeze`, `SetCap` and `Tick` carry the caller's time `t`
-  under a validity window `[t, t + 10 min)`, which a sequencer can stretch within its own limits.
+  not use: `lez/results/v0.4.0-rc3/README.md`): freezes and caps run on the newest Ethereum execution timestamp the
+  attestation program has recorded, never on a caller's time. `Tick` and `Freeze` read a record; claims and `SetCap`
+  carry no time ([EVIDENCE](../EVIDENCE.md) row 28). A freeze therefore holds while the light client stalls.
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
 

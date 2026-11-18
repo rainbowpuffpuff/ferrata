@@ -65,9 +65,6 @@ The design notes specify these; there is no code for them here:
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:
 - rule (A) (D13): Δ_g of 3 h when participation is partial (a deployment parameter);
-- roles (D13): the deployment script that renounces the emergency stop's owner is run in fork
-  rehearsals only (the vault's side, the watchers, the 14-day role change, keyless `retire()` and the
-  cap floor are built);
 - inbound (D13): the gas drop's sealed credit in the relayer daemon (`ferrata-relayer` sends a public transfer, which
   no private claim can sweep) and for burns; the sealed credit to a private one-time account and its sweep inside
   the private claim ran on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124: `ferrata-gasdrop`, crown-driver; the

@@ -166,8 +166,8 @@ claim is estimated at about 58M accelerated user cycles).
 | the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 | proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
 
-**Gap:** the CPU, memory and bandwidth of the updater daemon and of `monitor` (both built, [EVIDENCE](EVIDENCE.md)
-rows 43–45, 79–81; not measured).
+**Gap:** the CPU, memory and bandwidth of the updater daemon, and the CPU and bandwidth of `monitor` (both built,
+[EVIDENCE](EVIDENCE.md) rows 43–45, 79–81; of `monitor` only memory is measured: 34,216 kB resident, row 43).
 
 ### P.7 State growth
 
@@ -339,7 +339,7 @@ on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoin
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 
 **Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
-measured) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
+measured, except `monitor`'s memory, 34,216 kB resident, row 43) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
 
 ### P.7 State growth at 1M and 10M operations
 
