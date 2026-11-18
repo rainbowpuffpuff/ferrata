@@ -142,6 +142,9 @@ run_all() {
     b deposits --seed "$seed" --depositor "${FERRATA_DEPOSITOR:?FERRATA_DEPOSITOR}" --j0 "${FERRATA_J0:-0}" --leaf0 "${FERRATA_LEAF0:-0}" > "$run/deposits.json"
   fi
   local n=$(( ${FERRATA_LEAF0:-0} + 2 ))
+  local cap="${FERRATA_CAPTURE:-$run/capture}" block
+  block="$(cd "$cap" && ls proof_0x*_*.json | head -1 | sed 's/.*_\([0-9]*\)\.json/\1/')"
+  jq --argjson b "$block" --argjson n "$n" '.capture_block = $b | .capture_leaves = $n' "$run/run.json" > "$run/run.json.new" && mv "$run/run.json.new" "$run/run.json"
   log "Init"; b init $(capture_args)
   log "ImportRoot n = $n"; b import $(capture_args) --n "$n"
   log "Claim deposit 0 (public)"; b claim --deposit 0 --n "$n"
@@ -163,6 +166,9 @@ record() { # the record without keys or the wallet, for results/<net>/
   cp "$run/state.json" "$results/state.json"
   [ -f "$run/evm.json" ] && cp "$run/evm.json" "$results/evm.json"
   [ -f "$run/deposits.json" ] && cp "$run/deposits.json" "$results/deposits.json"
+  for k in 0 1; do [ -f "$run/deposit-$k.json" ] && cp "$run/deposit-$k.json" "$results/deposit-$k.json"; done
+  [ -f "$run/deploy-vault.json" ] && cp "$run/deploy-vault.json" "$results/deploy-vault.json"
+  [ -f "$run/capture.log" ] && cp -r "${FERRATA_CAPTURE:-$run/capture}" "$results/capture"
   for f in claim-private.time burn-private.time; do
     [ -f "$run/$f" ] && grep -E "Elapsed|Maximum resident" "$run/$f" > "$results/$f.txt" || true
   done
