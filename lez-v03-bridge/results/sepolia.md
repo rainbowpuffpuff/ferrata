@@ -4,6 +4,8 @@ Written by `harness/tests/sepolia.rs` (`cargo test -p harness03 --test sepolia`)
 
 Natively, the program's check (`vault_facts`) of both captures gives (block, root, count) = (12,119,428, `67681306f0edccb80cbae3e74fa91a5d97d9df5130c82d0253a4c117a8444967`, 1) and (12,119,519, `a67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469`, 2), and the claim statement opens both deposits under the second root.
 
+Under a record the v0.3.1 light client wrote itself (lez-v03/results/local: its instance `02cf6bf09f8b921aaf83e646b26b64c1fe0b3b3dc07b24f48a962d6fecfdb82f` advanced through Sepolia's own finality updates wrote header(instance, 11,605,376), binding block 12,160,907), the program's check of that run's capture gives (12,160,907, `a67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469`, 2): the same root, from a later finalized block.
+
 The vault pins the v0.4 configuration `10837afeaf6402e9d4bc2c4a13039e70f88762f13336d9c222d2f6d3b6a95553`; this program's configuration is `11d07e07f3c2a9b717fd9489ed9033077fb06f002824bdee43fa3f0468f29091`. So `Init` is refused (246, the pairing working); each import's plan verifies both storage proofs and is then refused by the configuration's guard (245); the claim is refused (245, no root imported).
 
 | # | transaction | kind | result | execution gas | storage gas (bytes) |
@@ -15,3 +17,4 @@ The vault pins the v0.4 configuration `10837afeaf6402e9d4bc2c4a13039e70f88762f13
 | 5 | ImportRoot n = 1 at block 12,119,428 (proofs verified; no configuration) | public | 245 `NOT_FOUND` (public) | 285125 | 6745 |
 | 6 | ImportRoot n = 2 at block 12,119,519 (proofs verified; no configuration) | public | 245 `NOT_FOUND` (public) | 285125 | 6745 |
 | 7 | Claim of deposit 0 (public kind) under the root at two leaves | public | 245 `NOT_FOUND` (public) | 131337 | 1936 |
+| 8 | ImportRoot n = 2 under the v0.3.1 light client's own record of block 12,160,907 (proofs verified; no configuration) | public | 245 `NOT_FOUND` (public) | 283937 | 6744 |

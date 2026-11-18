@@ -151,11 +151,11 @@ fn inbound_and_burns_on_synthetic_storage() {
         ("the imported root", root4.root.to_vec()),
         ("root(cid, 4)'s account", root_account(w.bridge, &cid, 4).value().to_vec()),
     ];
-    for (i, s) in d1.path.iter().enumerate().filter(|(_, s)| **s != [0u8; 32]) {
-        needles.push((if i == 0 { "a path sibling" } else { "another path sibling" }, s.to_vec()));
+    for s in d1.path.iter().filter(|s| **s != [0u8; 32]) {
+        needles.push(("each non-zero path sibling", s.to_vec()));
     }
     let shown = occurrences(&bytes, &needles);
-    for hidden in ["the destination (the private account's id)", "s", "C", "the deposit leaf", "the depositor", "the borsh witness", "N", "a path sibling", "another path sibling"] {
+    for hidden in ["the destination (the private account's id)", "s", "C", "the deposit leaf", "the depositor", "the borsh witness", "N", "each non-zero path sibling"] {
         assert!(!shown.contains(&hidden), "the private claim shows {hidden}");
     }
     assert!(shown.contains(&"configId") && shown.contains(&"root(cid, 4)'s account"));
@@ -163,7 +163,11 @@ fn inbound_and_burns_on_synthetic_storage() {
         "{} bytes searched; present: {}; absent: {}",
         bytes.len(),
         shown.join(", "),
-        needles.iter().map(|(n, _)| *n).filter(|n| !shown.contains(n)).collect::<Vec<_>>().join(", ")
+        {
+            let mut absent: Vec<&str> = needles.iter().map(|(n, _)| *n).filter(|n| !shown.contains(n)).collect();
+            absent.dedup();
+            absent.join(", ")
+        }
     );
     let (t, _) = w.claim_privately("ClaimPrivately of deposit 1 again (replay)", &config, &root4, &d1, &mut private);
     assert_eq!(code_of(&t), Some(u32::from(code::ALREADY_CLAIMED)));
