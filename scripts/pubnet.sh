@@ -76,6 +76,7 @@ pubnet_stage() {
       pubnet_up "$PUBNET_NETWORK" "$PUBNET_DIR" "$PUBNET_SENDER" "$PUBNET_FIRST" || return 75
     fi
     since="$(date +%s.%N)"
+    local sent0; sent0="$(grep -c '"event": "signed"' "$PUBNET_DIR/journal.jsonl" 2>/dev/null || true)"
     rc=0
     # A run that hangs (forge waiting for a receipt no node will give) is ended after PUBNET_ATTEMPT_TIMEOUT_S: what
     # it sent is in the journal, and its fate is found below before anything else.
@@ -85,6 +86,9 @@ pubnet_stage() {
     [ "$rc" = 0 ] && return 0
     cls="$(python3 -I "$PUBNET_PY" classify --events "$PUBNET_DIR/events.jsonl" --since "$since" "$log")"
     if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then cls=transient; echo "pubnet: the run took longer than ${PUBNET_ATTEMPT_TIMEOUT_S:-900} s and was ended" >> "$log"; fi
+    # The run sent, and every fate is now known and good (resolve above): whatever it failed on afterwards (a receipt
+    # it gave up waiting for, a read), the next run plans on the chain as it now is.
+    if [ "$(grep -c '"event": "signed"' "$PUBNET_DIR/journal.jsonl" 2>/dev/null || true)" != "${sent0:-0}" ]; then cls=transient; fi
     tail -n 12 "$log" | sed -e "s,${PUBNET_FIRST:-@@none@@},<endpoint>,g" >&2
     if [ "$cls" != transient ]; then
       _pubnet_say "the run failed for a permanent reason (log $log); nothing more is sent"

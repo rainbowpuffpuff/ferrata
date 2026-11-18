@@ -97,7 +97,7 @@ TRANSIENT_RE = re.compile(
     r"\b50[0234]\b|bad gateway|service unavailable|gateway time|timed? ?out|timeout|connection (refused|reset|aborted)|"
     r"remote end closed|broken pipe|temporarily|try again|overloaded|no response|eof occurred|network is unreachable|"
     r"name or service not known|temporary failure in name resolution|pubnet: transient|"
-    r"tx not found|transaction not found|receipt not found", re.I)  # asked only for hashes we sent: lag
+    r"tx not found|transaction not found|receipt not found|dropped from the mempool", re.I)  # hashes we sent: lag
 PERMANENT_RE = re.compile(
     r"execution reverted|revert|invalid (argument|params|opcode|sender|signature|transaction|chain)|"
     r"insufficient funds|nonce too (low|high)|intrinsic gas|gas required exceeds|exceeds block gas limit|"
