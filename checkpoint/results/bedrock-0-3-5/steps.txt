@@ -1,0 +1,6 @@
+tests exit 1 39 s 08:57:02
+repro exit 0 373 s 09:03:15
+compare exit 0 0 s 09:03:16
+lock035 exit 0 0 s 09:03:16
+build035 exit 0 79 s 09:04:35
+ALL DONE 09:04:35

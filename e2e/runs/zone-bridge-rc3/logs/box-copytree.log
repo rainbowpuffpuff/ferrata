@@ -1,0 +1,19 @@
+lez-select: v0.4.0-rc1 -> v0.4.0-rc3 (bafd07be0701398f9bc435f73ab05e9a7936c301)
+v0.4.0-rc3
+spike/tmp/rc3-return/live/bedrock/.resolved-host:
+total 80568
+drwxr-xr-x 1 root root       80 Nov 18 09:07 .
+drwxr-xr-x 1 root root       60 Nov 18 09:07 ..
+-rwxr-xr-x 1 root root 82500888 Nov 18 09:07 logos-blockchain-node
+-rw-r--r-- 1 root root      386 Nov 18 09:07 metadata.json
+
+spike/tmp/rc3-return/live/bin:
+total 133916
+drwxr-xr-x 1 root root      140 Nov 18 09:14 .
+drwxr-xr-x 1 root root      140 Nov 18 09:14 ..
+-rwxr-xr-x 1 root root 35702592 Nov 18 09:14 crown-driver
+-rwxr-xr-x 1 root root 35308288 Nov 18 09:14 live-driver
+-rwxr-xr-x 1 root root 66116856 Nov 18 09:14 sequencer_service
+-rw-r--r-- 1 root root       65 Nov 18 09:14 sequencer_service.sha256
+-rw-r--r-- 1 root root       72 Nov 18 09:14 sequencer_service.toolchain
+be2ac354f4268d7c021519735667d5d5b723e5901a65e4dcd47cd686dc42ca34

@@ -1,0 +1,28 @@
+tip 2554419fc9e2c6fa2f20b405a86a8f9b82930afb (scripts/reproduce-image-ids.sh build --out OUT, then compare --out OUT --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c, on the Modal box, 18 Nov 2026; methods-0-3-5 was built in the same target directory, so the two new guests are listed with the 14)
+build exit 0
+vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c (mode B): checkpointImageId is checkpoint_b's id, releaseImageId release's
+MATCH  attestation   rebuilt 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df  README = rebuilt  vault -  (sha256 ddfde69bea89a5b8…)
+MATCH  bridge        rebuilt 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd  README = rebuilt  vault -  (sha256 11d832482ff0a26c…)
+MATCH  checkpoint_b  rebuilt 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e  README = rebuilt  vault = rebuilt  risc0-build = rebuilt  (sha256 7b5c3735635ff116…)
+MATCH  checkpoint    rebuilt 0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84  README = rebuilt  vault -  risc0-build = rebuilt  (sha256 e9e800e9a8d82358…)
+MATCH  segment       rebuilt 0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592  README = rebuilt  vault -  risc0-build = rebuilt  (sha256 2beb911014fa9b83…)
+MATCH  release       rebuilt 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9  README = rebuilt  vault = rebuilt  risc0-build = rebuilt  (sha256 7be1349cba34b670…)
+6 of 6 ids of the crown run's programs equal the recorded ones
+MATCH  claim                            rebuilt 0xde8d67a46e07254f2fc31202cbae5a35d26f6bfc96e6e436ba732281015965f4  docs/image-ids.md = rebuilt
+MATCH  gasdrop                          rebuilt 0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4  docs/image-ids.md = rebuilt
+MATCH  release                          rebuilt 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9  docs/image-ids.md = rebuilt
+MATCH  checkpoint                       rebuilt 0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84  docs/image-ids.md = rebuilt
+MATCH  checkpoint_0_3_5                 rebuilt 0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f  docs/image-ids.md = rebuilt
+MATCH  checkpoint_b                     rebuilt 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e  docs/image-ids.md = rebuilt
+MATCH  checkpoint_b_0_3_5               rebuilt 0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf  docs/image-ids.md = rebuilt
+MATCH  micro                            rebuilt 0xcf7aa50c95fe0832ede59ebcef28c98020d83739c70cccb4d4687e1bf9dc5843  docs/image-ids.md = rebuilt
+MATCH  segment                          rebuilt 0x11e888e94b9520b08477ba5c5c29cc46bdffc7b1e7c5fe822eb0776f40c54592  docs/image-ids.md = rebuilt
+MATCH  ferrata_bridge                   rebuilt 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd  docs/image-ids.md = rebuilt
+MATCH  ferrata_consumer                 rebuilt 0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96  docs/image-ids.md = rebuilt
+MATCH  ferrata_consumer_keccak_accel    rebuilt 0xfa9bef9049151bc92ef32de84e0fdc1153447f115b090b8b6414330ce9d243cc  docs/image-ids.md = rebuilt
+MATCH  ferrata_holdings                 rebuilt 0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591  docs/image-ids.md = rebuilt
+MATCH  ferrata_lez                      rebuilt 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df  docs/image-ids.md = rebuilt
+MATCH  ferrata_lez_keccak_soft          rebuilt 0xefe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e  docs/image-ids.md = rebuilt
+MATCH  scripted                         rebuilt 0x8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61  docs/image-ids.md = rebuilt
+16 of 16 guests equal docs/image-ids.md
+compare exit 0

@@ -1,0 +1,7 @@
+[11:24:26] W warped: 3601 s (anvil evm_increaseTime)
+[11:24:27] finalState 0x27848dc86dfacb76e2c99dff4f02142fb26cbb2bd99e734c7663d21e4093340f = the journal's new state; burnRootStatus(0x78aae8032592950b0cfa09a7de939391fe7591e58f218e5928f334c814ac7759) = true 1795004667 [1.795e9] 
+[11:24:27] release delay warped: 121 s
+[11:24:28] release 0: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[11:24:30] release 1: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[2026-11-18T11:24:30Z] chain 11155111 block 16 deployer nonce 14
+[2026-11-18T11:24:30Z] vault 0x169E05aE832232B7B177b717D718bccaC12F65b1: finalState 0x27848dc86dfacb76e2c99dff4f02142fb26cbb2bd99e734c7663d21e4093340f leaves 2 checkpoints 1
