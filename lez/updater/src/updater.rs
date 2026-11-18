@@ -33,9 +33,9 @@ use crate::{
         committee_key, decode_committee, decode_finality_update, decode_update, encode_committee, layout_for,
         signer_witness, signing_committee,
     },
-    config::{Fees, Policy},
+    config::{ClientMatch, Fees, Policy},
     ledger::{Ledger, Tx, TxOutcome},
-    source::Source,
+    source::{client_family, Source},
 };
 
 /// One instance of the program.
@@ -133,6 +133,15 @@ pub struct SourceStats {
     pub mismatch: bool,
     /// A headers source: the finalized headers it confirmed.
     pub confirmed: u64,
+    /// `policy.min_distinct_clients`: the client it last reported at `/eth/v1/node/version` (empty: none yet).
+    pub client: String,
+    /// ... the times that report changed (a provider behind a load balancer may answer from nodes of several clients).
+    pub client_changes: u64,
+    /// ... the updates for which it served other bytes than another source (the same finality update, by attested
+    /// header and signature slot, or the same finished period), each counted once.
+    pub disagreements: u64,
+    /// ... and this round's, described.
+    pub disagree: Option<String>,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -181,6 +190,12 @@ struct Candidate {
 // What the program would do with a candidate, and the job of an accepted one: ferrata-advance's.
 use ferrata_advance::{Planned, Verdict};
 
+/// What two sources must serve byte for byte when both serve it (`policy.min_distinct_clients`): a finality update,
+/// by its attested header's root and its signature slot (one block's sync aggregate over its parent: honest nodes
+/// derive the same bytes), or the update of a finished sync-committee period (`false`, zero, period: the best update of
+/// a period no longer changes once the period is over).
+type UpdateKey = (bool, Root, u64);
+
 pub struct Updater {
     /// The daemon's name (logs, metrics).
     pub label: String,
@@ -204,6 +219,16 @@ pub struct Updater {
     opening: Option<(Root, bool, Vec<u8>)>,
     /// (headers source, slot) -> the root it confirmed canonical there (a finalized block stays canonical).
     confirmed: BTreeMap<(usize, u64), Root>,
+    /// Per source, the client family it reported this round (`policy.min_distinct_clients`; `None`: none).
+    clients: Vec<Option<String>>,
+    /// Disagreements already counted: (what was served, source).
+    disagreed: BTreeSet<(UpdateKey, usize)>,
+    /// `client_match = "bytes"`: per update (the SHA-256 of the bytes as served), the (client family, source) pairs that
+    /// served exactly those bytes, this round or an earlier one: implementations differ in which finality update they
+    /// keep serving (measured 18 November 2026: Lodestar serves the first update of a newly finalized checkpoint for
+    /// the whole epoch, Nimbus the newest, so the two serve the same bytes during one slot), so the match need not
+    /// fall in one round. At most 4096 updates are kept.
+    served_by: BTreeMap<Root, BTreeSet<(String, usize)>>,
     /// How a backoff waits (milliseconds); tests pass one that does not sleep.
     pub sleep: fn(u64),
     /// Log lines to stderr.
@@ -246,6 +271,9 @@ impl Updater {
             carried: BTreeMap::new(),
             opening: None,
             confirmed: BTreeMap::new(),
+            clients: Vec::new(),
+            disagreed: BTreeSet::new(),
+            served_by: BTreeMap::new(),
             sleep: real_sleep,
             verbose: false,
         };
@@ -514,6 +542,101 @@ impl Updater {
         out
     }
 
+    /// `policy.min_distinct_clients`: ask every usable source which client it runs (once a round: a provider behind a
+    /// load balancer can answer from several nodes, and a change is counted).
+    fn refresh_clients(&mut self) {
+        self.clients = vec![None; self.sources.len()];
+        for i in 0..self.sources.len() {
+            if !self.usable(i) {
+                continue;
+            }
+            self.stats(i).requests += 1;
+            match self.sources[i].client() {
+                Ok(version) => {
+                    let name = self.sources[i].name().to_string();
+                    let s = self.stats(i);
+                    let before = std::mem::replace(&mut s.client, version.clone());
+                    if !before.is_empty() && before != version {
+                        s.client_changes += 1;
+                        self.log(&format!("source {name} now reports {version} (was {before})"));
+                    }
+                    self.clients[i] = client_family(&version);
+                }
+                Err(e) => {
+                    self.stats(i).errors += 1;
+                    self.log(&format!("client: {e:#}"));
+                }
+            }
+        }
+    }
+
+    /// The client family source `i` reported this round.
+    fn family(&self, i: usize) -> Option<String> {
+        self.clients.get(i).cloned().flatten()
+    }
+
+    /// Sources that served different bytes for the same update (`UpdateKey`): logged, counted once per update and
+    /// source, and named in `/health` for the round. Who is right is not decided here; an update the program would
+    /// refuse demotes its source as always.
+    fn note_disagreements(&mut self, candidates: &[Candidate]) {
+        let spec = self.inst.config.spec();
+        for i in 0..self.sources.len() {
+            self.stats(i).disagree = None;
+        }
+        let head = candidates.iter().map(|c| spec.period_at_slot(c.update.attested_header.beacon.slot)).max();
+        let mut served: BTreeMap<UpdateKey, Vec<(usize, Root, u64, usize)>> = BTreeMap::new();
+        for c in candidates {
+            let key = if c.period_update {
+                let period = spec.period_at_slot(c.update.attested_header.beacon.slot);
+                if Some(period) >= head {
+                    continue; // the period is not over: its best update can still change
+                }
+                (true, [0u8; 32], period)
+            } else {
+                (false, c.update.attested_header.beacon.hash_tree_root(), c.update.signature_slot)
+            };
+            let digest: Root = Sha256::digest(&c.raw).into();
+            let signers = c.update.sync_aggregate.bits.iter().filter(|b| **b).count();
+            served.entry(key).or_default().push((c.source, digest, c.update.finalized_header.beacon.slot, signers));
+        }
+        if self.disagreed.len() > 4096 {
+            self.disagreed.clear();
+        }
+        for (key, list) in served {
+            if list.iter().map(|x| x.1).collect::<BTreeSet<_>>().len() < 2 {
+                continue;
+            }
+            let what = if key.0 {
+                format!("the period-{} update", key.2)
+            } else {
+                format!("the finality update attested at 0x{}, signed at slot {}", &hex::encode(key.1)[..16], key.2)
+            };
+            let line: Vec<String> = list
+                .iter()
+                .map(|&(i, digest, finalized, signers)| {
+                    format!(
+                        "{} ({}): sha256 {}…, finalized slot {finalized}, {signers} signers",
+                        self.sources[i].name(),
+                        self.family(i).unwrap_or_else(|| "no client".into()),
+                        &hex::encode(digest)[..16]
+                    )
+                })
+                .collect();
+            self.log(&format!("sources disagree on {what}: {}", line.join("; ")));
+            for &(i, digest, ..) in &list {
+                let others: Vec<&str> =
+                    list.iter().filter(|x| x.1 != digest).map(|x| self.sources[x.0].name()).collect();
+                let note = format!("serves other bytes than {} for {what}", others.join(", "));
+                let new = self.disagreed.insert((key, i));
+                let s = self.stats(i);
+                if new {
+                    s.disagreements += 1;
+                }
+                s.disagree = Some(note);
+            }
+        }
+    }
+
     fn evaluate(&self, store: &CompactStore, update: &LightClientUpdate) -> Verdict {
         let current = self.committees.get(&store.current.pubkeys_root);
         let next = store.next.as_ref().and_then(|n| self.committees.get(&n.pubkeys_root));
@@ -629,9 +752,27 @@ impl Updater {
                 return Ok(plan);
             }
         }
+        let k = self.policy.min_distinct_clients;
+        if k >= 2 {
+            self.refresh_clients();
+        }
         let candidates = self.candidates(&store);
         if candidates.is_empty() {
             return Ok(Plan::Stuck("no source answered".into()));
+        }
+        if k >= 2 {
+            self.note_disagreements(&candidates);
+            if self.policy.client_match == ClientMatch::Bytes {
+                if self.served_by.len() > 4096 {
+                    self.served_by.clear();
+                }
+                for c in &candidates {
+                    if let Some(family) = self.family(c.source) {
+                        let digest: Root = Sha256::digest(&c.raw).into();
+                        self.served_by.entry(digest).or_default().insert((family, c.source));
+                    }
+                }
+            }
         }
         // Judge every candidate with the program's own checks.
         // (source, the job ferrata-advance plans, period update, the bytes as served)
@@ -708,16 +849,53 @@ impl Updater {
                 .map(|(s, ..)| *s)
                 .collect();
             agreeing.extend(self.confirm_header(header.slot, &root, &mut asked));
-            first.get_or_insert((agreeing.len(), header.slot));
-            if agreeing.len() >= self.policy.min_agreeing {
-                pick = Some((i, agreeing));
+            // Client diversity: the clients of the sources that served this update byte for byte, or that serve or
+            // confirm its finalized header.
+            let pairs: BTreeSet<(String, usize)> = match (k >= 2, self.policy.client_match) {
+                (false, _) => BTreeSet::new(),
+                (true, ClientMatch::Bytes) => {
+                    let digest: Root = Sha256::digest(&useful[i].3).into();
+                    self.served_by.get(&digest).cloned().unwrap_or_default()
+                }
+                (true, ClientMatch::FinalizedHeader) => {
+                    agreeing.iter().filter_map(|&s| Some((self.family(s)?, s))).collect()
+                }
+            };
+            let clients: BTreeSet<String> = pairs.iter().map(|(f, _)| f.clone()).collect();
+            let diverse = k < 2 || distinct_pairs(&pairs.iter().cloned().collect::<Vec<_>>(), k);
+            if first.is_none() && !diverse {
+                self.log(&format!(
+                    "update finalizing slot {} (attested slot {}): {} only, {} of the {k} clients \
+                     policy.min_distinct_clients asks; not sent",
+                    header.slot,
+                    useful[i].1.update.attested_header.beacon.slot,
+                    if clients.is_empty() { "no client".to_string() } else { clients.iter().cloned().collect::<Vec<_>>().join(", ") },
+                    clients.len()
+                ));
+            }
+            first.get_or_insert((agreeing.len(), header.slot, clients.clone()));
+            if agreeing.len() >= self.policy.min_agreeing && diverse {
+                pick = Some((i, agreeing, clients));
                 break;
             }
         }
-        let Some((pick, agreeing)) = pick else {
-            let (n, slot) = first.expect("useful is not empty");
+        let Some((pick, agreeing, clients)) = pick else {
+            let (n, slot, clients) = first.expect("useful is not empty");
+            let diversity = if k >= 2 {
+                let how = match self.policy.client_match {
+                    ClientMatch::Bytes => "byte for byte",
+                    ClientMatch::FinalizedHeader => "its finalized header",
+                };
+                format!(
+                    "; {} of {k} clients agree {how} ({})",
+                    clients.len(),
+                    clients.iter().cloned().collect::<Vec<_>>().join(", ")
+                )
+            } else {
+                String::new()
+            };
             return Ok(Plan::Waiting(format!(
-                "{n} of {} sources serve finalized slot {slot}",
+                "{n} of {} sources serve finalized slot {slot}{diversity}",
                 self.policy.min_agreeing
             )));
         };
@@ -737,7 +915,11 @@ impl Updater {
             if chosen.outcome.rotated { "; rotates the committees" } else { "" },
             if chosen.outcome.adopted { "; adopts the next committee" } else { "" },
             names.join(", ")
-        );
+        ) + &if k >= 2 {
+            format!("; clients {}", clients.iter().cloned().collect::<Vec<_>>().join(", "))
+        } else {
+            String::new()
+        };
         let plan = self.next_step(ledger, chosen, (period_update, raw), &state)?;
         if let Plan::Send(a) = &plan {
             if a.step == Step::Open {
@@ -1068,6 +1250,8 @@ impl Updater {
                 why.push(format!("source {name} lagging (finalized slot {})", s.finalized_slot));
             } else if s.mismatch {
                 why.push(format!("source {name} holds another block canonical at a finalized header's slot"));
+            } else if let Some(d) = &s.disagree {
+                why.push(format!("source {name} {d}"));
             } else if !s.available && s.requests > 0 {
                 why.push(format!("source {name} unavailable"));
             }
@@ -1127,6 +1311,17 @@ impl Updater {
             let _ = writeln!(o, "ferrata_updater_source_finalized_slot{{{sl}}} {}", s.finalized_slot);
             let _ = writeln!(o, "ferrata_updater_source_confirmed_total{{{sl}}} {}", s.confirmed);
             let _ = writeln!(o, "ferrata_updater_source_mismatches_total{{{sl}}} {}", s.mismatches);
+            if self.policy.min_distinct_clients >= 2 {
+                let _ = writeln!(o, "ferrata_updater_source_disagreements_total{{{sl}}} {}", s.disagreements);
+                let _ = writeln!(o, "ferrata_updater_source_client_changes_total{{{sl}}} {}", s.client_changes);
+                if let Some(family) = client_family(&s.client) {
+                    let _ = writeln!(
+                        o,
+                        "ferrata_updater_source_client_info{{{sl},client=\"{family}\",version=\"{}\"}} 1",
+                        s.client
+                    );
+                }
+            }
         }
         let (status, _) = self.health();
         let code = match status {
@@ -1140,7 +1335,7 @@ impl Updater {
 
     pub fn health_json(&self) -> serde_json::Value {
         let (status, why) = self.health();
-        serde_json::json!({
+        let mut v = serde_json::json!({
             "daemon": self.label,
             "chain": self.inst.name,
             "status": status,
@@ -1150,6 +1345,53 @@ impl Updater {
             "period": self.metrics.period,
             "last_plan": self.metrics.last_plan,
             "last_error": self.metrics.last_error,
-        })
+        });
+        if self.policy.min_distinct_clients >= 2 {
+            // What each source reported at /eth/v1/node/version.
+            let clients: BTreeMap<&String, &String> =
+                self.metrics.sources.iter().map(|(name, s)| (name, &s.client)).collect();
+            v["clients"] = serde_json::json!(clients);
+        }
+        v
+    }
+}
+
+/// Whether `k` of `pairs` (client family, source) have pairwise different families and pairwise different sources: `k`
+/// clients, each from a source of its own.
+fn distinct_pairs(pairs: &[(String, usize)], k: usize) -> bool {
+    fn pick(pairs: &[(String, usize)], k: usize, families: &mut Vec<String>, sources: &mut Vec<usize>) -> bool {
+        if families.len() == k {
+            return true;
+        }
+        for (f, s) in pairs {
+            if families.contains(f) || sources.contains(s) {
+                continue;
+            }
+            families.push(f.clone());
+            sources.push(*s);
+            if pick(pairs, k, families, sources) {
+                return true;
+            }
+            families.pop();
+            sources.pop();
+        }
+        false
+    }
+    pick(pairs, k, &mut Vec::new(), &mut Vec::new())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::distinct_pairs;
+
+    #[test]
+    fn distinct_clients_from_distinct_sources() {
+        let p = |v: &[(&str, usize)]| v.iter().map(|(f, s)| (f.to_string(), *s)).collect::<Vec<_>>();
+        assert!(!distinct_pairs(&p(&[("nimbus", 0), ("nimbus", 1)]), 2), "one client from two sources");
+        assert!(!distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 0)]), 2), "two clients from one source");
+        assert!(distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 0), ("lodestar", 1)]), 2));
+        assert!(!distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 1)]), 3));
+        assert!(distinct_pairs(&p(&[("nimbus", 0), ("lodestar", 1), ("lighthouse", 2)]), 3));
+        assert!(!distinct_pairs(&p(&[]), 2));
     }
 }

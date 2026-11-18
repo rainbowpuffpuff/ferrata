@@ -40,6 +40,49 @@ pub trait Source: Send {
     fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
         bail!("{}: serves no headers (slot {slot})", self.name())
     }
+    /// `GET /eth/v1/node/version`: the client the node says it runs (`data.version`, e.g. `Lodestar/v1.51.0/7923280`),
+    /// for `policy.min_distinct_clients`. The provider's own claim: nothing authenticates it.
+    fn client(&mut self) -> Result<String> {
+        bail!("{}: reports no client", self.name())
+    }
+}
+
+/// The client family of a `/eth/v1/node/version` answer: its first word, lower case (`Nimbus/v26.10.2-5628de-stateofus`:
+/// `nimbus`; `Lighthouse/v8.3.3-57c2abc/x86_64-linux`: `lighthouse`).
+pub fn client_family(version: &str) -> Option<String> {
+    let first = version.split('/').next()?.trim().to_ascii_lowercase();
+    (!first.is_empty()).then_some(first)
+}
+
+/// `data.version` of a `/eth/v1/node/version` answer, kept to printable ASCII and 100 characters (it reaches logs and
+/// metric labels, and a provider chooses it).
+pub fn parse_version_answer(body: &str) -> Result<String> {
+    let v: serde_json::Value = serde_json::from_str(body).context("not JSON")?;
+    let raw = v["data"]["version"].as_str().ok_or_else(|| anyhow!("no data.version"))?;
+    let clean: String = raw
+        .chars()
+        .take(100)
+        .map(|c| if c.is_ascii_graphic() && c != '"' && c != '\\' { c } else { '_' })
+        .collect();
+    if client_family(&clean).is_none() {
+        bail!("an empty version");
+    }
+    Ok(clean)
+}
+
+/// `GET {base}/eth/v1/node/version` with `curl` (a generic User-Agent, nothing that identifies the caller).
+pub fn node_version(name: &str, base: &str, timeout_secs: u64) -> Result<String> {
+    let url = format!("{}/eth/v1/node/version", base.trim_end_matches('/'));
+    let out = Command::new("curl")
+        .args(["-sS", "--fail", "--max-time", &timeout_secs.to_string()])
+        .args(["-H", "Accept: application/json", "-A", "ferrata-updater"])
+        .arg(&url)
+        .output()
+        .with_context(|| format!("{name}: curl did not start"))?;
+    if !out.status.success() {
+        bail!("{name}: {url}: {}", String::from_utf8_lossy(&out.stderr).trim());
+    }
+    parse_version_answer(&String::from_utf8_lossy(&out.stdout)).with_context(|| format!("{name}: {url}"))
 }
 
 /// A beacon node's REST API, read with `curl` (no TLS library in this workspace): SSZ, a generic
@@ -80,6 +123,9 @@ impl Source for BeaconApi {
     }
     fn finality_update(&mut self) -> Result<Vec<u8>> {
         self.get("/eth/v1/beacon/light_client/finality_update")
+    }
+    fn client(&mut self) -> Result<String> {
+        node_version(&self.name, &self.base, self.timeout_secs)
     }
 }
 
@@ -157,6 +203,9 @@ impl Source for BeaconApiModule {
         let v = self.request("getLightClientFinalityUpdate", serde_json::json!({}))?;
         crate::lc_json::finality_update(&v).with_context(|| format!("{}: finality update", self.name))
     }
+    fn client(&mut self) -> Result<String> {
+        bail!("{}: beacon_api_module fails over between providers: no one node's client", self.name)
+    }
 }
 
 /// A beacon node's REST API that serves no light-client data (most public ones; publicnode's answers 404 to
@@ -184,6 +233,9 @@ impl Source for HeaderWitness {
     }
     fn light_client(&self) -> bool {
         false
+    }
+    fn client(&mut self) -> Result<String> {
+        node_version(&self.name, &self.base, self.timeout_secs)
     }
     fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
         let url = format!("{}/eth/v1/beacon/headers/{slot}", self.base.trim_end_matches('/'));
@@ -256,6 +308,11 @@ pub struct Recorded {
     pub clock: Clock,
     /// Entries this source is behind the clock (0: up to date).
     pub lag: usize,
+    /// Entries this source is ahead of the clock: it serves valid updates no other source serves yet (the tests'
+    /// stand-in for a fork that only one implementation, or a captured committee's accomplice, serves).
+    pub ahead: usize,
+    /// The `/eth/v1/node/version` answer it stands for (`None`: it reports none).
+    pub client: Option<String>,
 }
 
 impl Recorded {
@@ -264,11 +321,11 @@ impl Recorded {
             fs::read(dir.join("bootstrap.ssz")).with_context(|| format!("{}: bootstrap.ssz", dir.display()))?;
         let checkpoint = crate::chain::root(&fs::read_to_string(dir.join("checkpoint"))?)?;
         let entries = load_entries(&dir.join("updates"), config)?;
-        Ok(Self { name: name.to_string(), bootstrap, checkpoint, entries, clock, lag: 0 })
+        Ok(Self { name: name.to_string(), bootstrap, checkpoint, entries, clock, lag: 0, ahead: 0, client: None })
     }
 
     fn visible(&self) -> usize {
-        self.clock.now().saturating_sub(self.lag).min(self.entries.len())
+        self.clock.now().saturating_add(self.ahead).saturating_sub(self.lag).min(self.entries.len())
     }
 }
 
@@ -327,6 +384,9 @@ impl Source for Recorded {
             .find(|e| !e.period_update)
             .map(|e| e.bytes.clone())
             .ok_or_else(|| anyhow!("{}: no finality update yet (404)", self.name))
+    }
+    fn client(&mut self) -> Result<String> {
+        self.client.clone().ok_or_else(|| anyhow!("{}: reports no client", self.name))
     }
 }
 
@@ -405,6 +465,13 @@ impl<S: Source> Source for Faulty<S> {
                 Ok(self.flip_signature(b, false))
             }
             Fault::WrongBootstrap => self.inner.finality_update(),
+        }
+    }
+    fn client(&mut self) -> Result<String> {
+        match self.fault {
+            Fault::Down => bail!("{}: connection refused", self.label),
+            // A liar reports whatever client it likes.
+            _ => self.inner.client(),
         }
     }
 }
