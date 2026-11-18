@@ -1,0 +1,26 @@
+LEZ http://127.0.0.1:3040, last block 67; record /home/q/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-testnet-v03-bridge/lez-v03-bridge/results/local
+PASS LEZ burn-private: tx faf49f718704828d… in block 66 (Pending)
+PASS LEZ burn-public: tx c8565630dce720ca… in block 53 (Pending)
+PASS LEZ claim-0: tx 149af130f3abf042… in block 34 (Pending)
+PASS LEZ claim-0-other-dest: tx d8986460d7dc1cfd… in block 38 (Pending)
+PASS LEZ claim-0-replay: tx 1ce9b715805926af… in block 36 (Pending)
+PASS LEZ claim-1: tx 8ca9d9faaf689c61… in block 51 (Pending)
+PASS LEZ import-2: tx b4cb8f094abed9a7… in block 32 (Pending)
+PASS LEZ init: tx 6974c49f758c9500… in block 30 (Pending)
+PASS LEZ record-10: tx 30e5392fda271f3a… in block 28 (Pending)
+PASS LEZ burns (5ACHAjFFoR…): Burns(BurnTree { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83, 111, 213
+PASS LEZ config (Av53zjxhXg…): Config(ConfigState { config: BridgeConfig { bedrock_genesis_id: [136, 28, 251, 191, 32, 157, 5, 209, 35, 68, 249, 73, 9, 205, 63, 146, 79, 174, 248, 181, 63, 12
+PASS LEZ holder_public (FMGBe3AVSN…): Holder(HolderState { holdings: [] })
+PASS LEZ note_burn-private (JDNRwDeian…): Burn(BurnRecord { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83, 111, 
+PASS LEZ note_burn-public (Bgtrdw8J5q…): Burn(BurnRecord { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83, 111, 2
+PASS LEZ nullifier_0 (GTpXzq1A1z…): Nullifier(NullifierState { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83
+PASS LEZ nullifier_1 (2RXiXM7whc…): Nullifier(NullifierState { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83
+PASS LEZ record (DNgRbss8MY…): a light client record
+PASS LEZ root_1 (8uNKtnw6Gr…): empty
+PASS LEZ root_2 (E9jxMtquqZ…): Root(RootState { config_id: [241, 5, 146, 101, 226, 133, 105, 254, 57, 116, 155, 99, 238, 151, 158, 152, 122, 245, 156, 198, 234, 7, 208, 232, 249, 83, 111, 213
+PASS EVM vault slot 2 at block 10 = configId: 0xf1059265e28569fe39749b63ee979e987af59cc6ea07d0e8f9536fd555fa7947
+PASS EVM vault slot 1 at block 10 = 2 leaves: 0x0000000000000000000000000000000000000000000000000000000000000002
+PASS EVM vault slot 0 at block 10 is the root LEZ imported: 0x4664dcd3a8ae9eac625d53ddf6e52a192ec7b6d3d7bea24ed67958624d38821b
+PASS EVM deposit 0 0x169c6241f4… status 1
+PASS EVM deposit 1 0x1456b58f52… status 1
+24 checks, 0 fail, 0 pending (blocks not final yet)

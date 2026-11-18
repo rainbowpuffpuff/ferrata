@@ -6,11 +6,11 @@ The deliverable remains the LEZ v0.4 programs (`../lez/`, image ids in `../docs/
 existing image id moved. **What ran where**: the program through LEZ v0.3.1's own state machine (synthetic vault
 storage, and the real Sepolia storage proofs of the crown run's live vault); the whole round to the burns on a local
 LEZ v0.3.1 standalone sequencer and a local anvil, with the private claim and the private burn proven for real by
-LEZ's wallet (`results/local/`, filled by `local.sh`). **What it does not show**: any transaction on the public
+LEZ's wallet ([`results/local.md`](results/local.md)). **What it does not show**: any transaction on the public
 testnet or on Sepolia (prepared, not sent: `testnet.sh`, `sepolia.sh`, the owner's commands in the agent's report);
-a release on Ethereum (the return leg is a design note, [`RETURN.md`](RETURN.md)); the v0.3.1 light client verifying
-the records the bridge reads (its port is branch `testnet-v03`, `lez-v03/`; here records are placed, or written by a
-stand-in program, see below).
+a release on Ethereum (the return leg is a design note, [`RETURN.md`](RETURN.md)); the bridge reading records the v0.3.1 light client wrote *on the same chain*
+(its port, branch `testnet-v03`, is merged here in `lez-v03/`; one of its records is read in `results/sepolia.md`; the
+local round's records are written by a stand-in program, see below).
 
 ## What the program is
 
@@ -45,8 +45,11 @@ equivalent: a chained call cannot return data on v0.3.1 (an apply cannot emit ca
 chained `Attest` could only assert facts the caller states, checked by the light client's apply against the same
 record and the same core (`attest_batch`); here the bridge's own apply checks that the record is the light client's,
 and its plan does the proof check, so the trust is the same: the record the light client wrote after verifying a
-finality update. The sibling's light client was not committed when this was built; `guests/records` is a
-**STAND-IN** that writes any record it is given at the same layout, for the local run only.
+finality update. The light client's own `Attest` (`lez-v03/wire`: a `Check` of a storage query at
+`header(instance, slot)`, then one write-once `statement(instance, s)` account per statement) could be chained the
+same way; it is not, because it would add a written account per attested fact to every import and change nothing in
+what is checked. `guests/records` is a **STAND-IN** that writes any record it is given at the light client's layout,
+for the local round only (the light client needs a beacon chain, which a local anvil has not).
 
 **Balances.** The testnet ships no token program: wrapped balances stay in the bridge's own accounts, as the v0.4
 program does today (`../lez/BRIDGE.md` §3): `holder(account)` for public ones (a PDA whose seed names the account,
@@ -91,7 +94,7 @@ controls.
 
 ## Results
 
-- [`results/synthetic.md`](results/synthetic.md): 31 transactions through `lee::V03State` (dev-mode proofs for the two
+- [`results/synthetic.md`](results/synthetic.md): 31 transactions through `lee::V03State` (dev-mode proofs for the
   private ones): `Init` (Gloas record with and without the header, a wrong pairing, twice), imports (another root, a
   record not keyed by its slot, twice, before `Init`), claims (replay, another destination, an unknown root, a made-up
   root, a leaf index at the count, a private-kind deposit by the plaintext path, an unregistered amount; ETH and the
@@ -99,11 +102,19 @@ controls.
   transaction searched for its private inputs, burns (the same note twice, not a denomination, nothing held, not
   signed; the private holder's), the burn tree against the bridge core's. Gas per transaction.
 - [`results/sepolia.md`](results/sepolia.md): the crown run's live vault `0x04eE8FF1…e44c` under Sepolia's own
-  finalized blocks 12,119,428 and 12,119,519: the program's check of both storage proofs, `Init` refused (246: the
-  vault pins the v0.4 configuration, the pairing working), each import's plan verifying both real proofs and then
-  refused for want of a configuration (245), the claim refused (245).
-- `results/local/`: the local sequencer run (`local.sh`): its record, the accounts read back, the proving time,
-  memory and bytes of the two real proofs, and `verify.py`'s checks.
+  finalized blocks 12,119,428 and 12,119,519 (records placed) and 12,160,907 (**a record the v0.3.1 light client wrote
+  itself**, from `lez-v03`'s local run): the program's check of the real storage proofs, `Init` refused (246: the vault
+  pins the v0.4 configuration, the pairing working), each import's plan verifying the real proofs and then refused for
+  want of a configuration (245), the claim refused (245).
+- [`results/local.md`](results/local.md): **the round to the burns on a local LEZ v0.3.1 standalone sequencer and
+  anvil**: the vault deployed by `vault/script/deploy.sh`, two deposits, the stand-in's record, `Init`, `ImportRoot`,
+  the public claim and two refusals, the private claim and the private burn **proven for real by LEZ's wallet**
+  (169.5 s and 157.8 s, 247,826 and 248,346 bytes, 9.3 GiB peak), the public burn; every verdict read back over RPC
+  (24 checks, 0 fail).
+- `results/fork/`: `sepolia.sh --fork` on a fork of Sepolia at block 12,161,092: the inbound-only vault paired with a
+  v0.3.1 configuration (the crown run's verifier, library and token reused), its two deposits, slot 2 = `configId`.
+- `harness/tests/light_client_layout.rs`: the records the bridge reads are where, and as, the merged light client's
+  wire crate (`lez-v03/wire`) writes them.
 
 ## Reproduce
 
