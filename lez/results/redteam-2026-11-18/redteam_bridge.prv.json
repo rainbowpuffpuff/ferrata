@@ -1,0 +1,78 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PASS": 3
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "prv",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-PRV-01",
+      "kind": "control",
+      "observed": {
+        "effect_mismatch": "8993 transaction bytes searched; found: the leaf index (8-byte big-endian) at offsets [1170, 5734] (context ±8 bytes: [\"000000000000000100000000000000060000000000000008\", \"000000000000000100000000000000060000000000000008\"]); the boundary Issue message: Some(\"0ff25abf0963f20203ca11d2782bd641659f0de977bb453ec3809f41c27a2489eb000000000000000000000000000000000000000050e5353617fb3940cd426389a758e6f202ee2ea12cab11441c9754beaa2043790000e8890423c78a00000000000000000100000000000000060000000000000008000000000000000800000000000000015b0e4f6dddea8b9ef3118d6002a25c09ab379653ffb60586f4604f1fa6a0b39201ecececececececececececececececececececececececececececececececec\")",
+        "outcome": "accepted"
+      },
+      "title": "a private claim publishes no deposit link",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-PRV-02",
+      "kind": "control",
+      "observed": {
+        "note": "the leaf index looked for as its witness encoding (u64 little-endian, inside the borsh witness) [the base plaintext claim]",
+        "outcome": "accepted"
+      },
+      "title": "a plaintext claim links (documented)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-PRV-03",
+      "kind": "control",
+      "observed": {
+        "note": "fees [(500000000000000, 100000000000000), (500000000000000, 100000000000000)]",
+        "outcome": "accepted"
+      },
+      "title": "fees do not distinguish claimants",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID",
+          "bridge:ALREADY_CLAIMED",
+          "bridge:CAPPED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-PRV-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "exit codes [Some(249), Some(250), Some(255)]; LEZ's revert strings [\"Some(\\\"Program exited with non-zero code 249 after 94768 cycles\\\")\", \"Some(\\\"Program exited with non-zero code 250 after 19559 cycles\\\")\", \"Some(\\\"Program exited with non-zero code 255 after 28937 cycles\\\")\"] [a claim with a flipped path bit]",
+        "outcome": "refused"
+      },
+      "title": "refusals publish only a code",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

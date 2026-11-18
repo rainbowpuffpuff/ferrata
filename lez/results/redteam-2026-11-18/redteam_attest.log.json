@@ -1,0 +1,191 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PASS": 8
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "log",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:LogIndexOutOfRange"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 125,
+        "code_name": "core:LogIndexOutOfRange",
+        "note": "tx 0 has 7 logs; log index 7; native evaluate: refused core:LogIndexOutOfRange [AT-LOG-01]",
+        "outcome": "refused"
+      },
+      "title": "log index past the receipt's logs",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ReceiptNotIncluded",
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 112,
+        "code_name": "core:ProofTrailingNodes",
+        "note": "tx index 531 (= the block's 531 transactions) with the proof of receipt 530; native evaluate: refused core:ProofTrailingNodes [AT-LOG-02]",
+        "outcome": "refused"
+      },
+      "title": "transaction index past the block's last transaction",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "receipt proof of tx 0, node 1 byte 57 xor 0xff; native evaluate: refused core:ProofNodeMismatch [AT-LOG-03]",
+        "outcome": "refused"
+      },
+      "title": "receipt proof node byte flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ReceiptFailed",
+          "core:LogIndexOutOfRange"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 124,
+        "code_name": "core:ReceiptFailed",
+        "note": "log 0 of tx 37 of the record's own block (receipt status 0); the vector's parenthesis names the e2e fixture's parent block, the attestation fixture's block holds a failed transaction itself; native evaluate: refused core:ReceiptFailed [AT-LOG-04]",
+        "outcome": "refused"
+      },
+      "title": "log of a failed transaction",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "USDC Transfer to 0x0000000aa232009084bd71a5797d089aa4edfad4, condition Topic(2) = 0x000000000004444c5dc75cb358380d2e3de08a90; native evaluate: refused core:PredicateFailed [AT-LOG-05]",
+        "outcome": "refused"
+      },
+      "title": "Transfer recipient predicate on the wrong recipient",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:QueryInvalid",
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "condition Topic(5) = 0 on a three-topic Transfer; native evaluate: refused core:PredicateFailed [AT-LOG-06]",
+        "outcome": "refused"
+      },
+      "title": "condition on a topic the log does not have",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:QueryInvalid",
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "condition DataWord(100) = 0 on a Transfer with one data word; native evaluate: refused core:PredicateFailed [AT-LOG-07]",
+        "outcome": "refused"
+      },
+      "title": "condition on a data word past the log's data",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "Transfer emitted by 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC), condition Emitter = WETH; native evaluate: refused core:PredicateFailed [AT-LOG-08]",
+        "outcome": "refused"
+      },
+      "title": "emitter predicate on the wrong contract",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch",
+          "core:ReceiptNotIncluded",
+          "core:ProofNodeInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LOG-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "tx index 1 with the proof of receipt 0; native evaluate: refused core:ProofNodeMismatch [AT-LOG-09]",
+        "outcome": "refused"
+      },
+      "title": "receipt proof of transaction i presented as transaction j",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

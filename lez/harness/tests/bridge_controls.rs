@@ -30,7 +30,7 @@ const TARGET_GAS_EXEC: u64 = 5_000_000;
 const HOUR_MS: u64 = 3_600_000;
 
 fn results_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(name)
+    harness::results_dir().join(name)
 }
 
 fn run(reports: &mut Vec<TxReport>, report: TxReport, code: Option<u8>) {
@@ -279,7 +279,7 @@ fn registry_fees_caps_freezes_and_sunset() {
     assert_eq!(w.balance(relayer(), &cid_a), RELAY_FEES[2]);
     let r = w.claim("Claim leaf 2 (1.001 ETH) with 0.94 ETH left in the bucket", &cid_a, 5, &va, vector.clone());
     run(&mut reports, r, Some(code::CAPPED));
-    assert!(w.nullifier(&va, &w.vector_n).is_none(), "a capped claim leaves its deposit claimable");
+    assert!(w.nullifier(&cid_a, &va, &w.vector_n).is_none(), "a capped claim leaves its deposit claimable");
     let ten_s = w.finalize(t0 / 1000 + 10);
     let r =
         w.claim("Claim leaf 2 once a record 10 s later exists, no Tick: not refilled", &cid_a, 5, &va, vector.clone());
@@ -560,7 +560,7 @@ fn registry_fees_caps_freezes_and_sunset() {
              {table_reports}\n## Handler executions\n\n{}\n\
              ## What the checkpoint program collects of the Sunset (`checkpoint-core`'s `parse_block` and `BridgeMessage::decode`)\n\n\
              One LEZ block holding the transactions below (the refused ones marked reverted, as settlement recorded them):\n\n{table}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             render_transitions(&reports),
         ),
     )

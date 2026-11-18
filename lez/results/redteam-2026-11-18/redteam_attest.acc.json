@@ -1,0 +1,181 @@
+{
+  "counts": {
+    "PASS": 9
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "acc",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "WETH's account proof, node 1 byte 266 xor 0xff; native evaluate: refused core:ProofNodeMismatch [AT-ACC-01]",
+        "outcome": "refused"
+      },
+      "title": "account proof node byte flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofIncomplete"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 111,
+        "code_name": "core:ProofIncomplete",
+        "note": "WETH's account proof without its last (leaf) node; native evaluate: refused core:ProofIncomplete [AT-ACC-02]",
+        "outcome": "refused"
+      },
+      "title": "account proof missing its last node",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofTrailingNodes"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 112,
+        "code_name": "core:ProofTrailingNodes",
+        "note": "WETH's account proof with the balance-slot proof's first node appended; native evaluate: refused core:ProofTrailingNodes [AT-ACC-03]",
+        "outcome": "refused"
+      },
+      "title": "account proof with a trailing node",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch",
+          "core:ProofNodeInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "address 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 (USDC) with WETH's account proof; native evaluate: refused core:ProofNodeMismatch [AT-ACC-04]",
+        "outcome": "refused"
+      },
+      "title": "proof of one account presented for another existing account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 111,
+        "code_name": "core:ProofIncomplete",
+        "note": "WETH's address, its account proof without the leaf, conditions nonce = balance = storage root = code hash = 0; native evaluate: refused core:ProofIncomplete [AT-ACC-05]",
+        "outcome": "refused"
+      },
+      "title": "existing account claimed absent by dropping the leaf",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-ACC-06",
+      "kind": "control",
+      "observed": {
+        "note": "address 0x3e05d7d15f0d45265117bcd6e6682f138ee60e60 with its exclusion proof (no conditions); native evaluate: accepted, 1 statements; the reply's fact is Account with every field zero [AT-ACC-06]",
+        "outcome": "accepted"
+      },
+      "title": "absent address proven absent",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "condition Balance >= WETH's real balance + 1; native evaluate: refused core:PredicateFailed [AT-ACC-07]",
+        "outcome": "refused"
+      },
+      "title": "balance condition that does not hold",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:QueryInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 131,
+        "code_name": "core:QueryInvalid",
+        "note": "condition Topic(0) = 0 on WETH's account; native evaluate: refused core:QueryInvalid [AT-ACC-08]",
+        "outcome": "refused"
+      },
+      "title": "condition on a field accounts do not have",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:QueryInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-ACC-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 131,
+        "code_name": "core:QueryInvalid",
+        "note": "no accounts, logs, leaves, hops or relations; native evaluate: refused core:QueryInvalid [AT-ACC-09]",
+        "outcome": "refused"
+      },
+      "title": "empty request",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

@@ -1,0 +1,296 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PANIC": 1,
+    "PASS": 13
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "consumer",
+  "results": [
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "CON-01",
+      "kind": "control",
+      "observed": {
+        "note": "Claim of the fixture's USDC Transfer (tx 0, log 0) at claim(pool, N); balance(pool, 0x000000000004444c5dc75cb358380d2e3de08a90) = 32141291 (the amount), 1 credit [CON-01]",
+        "outcome": "accepted"
+      },
+      "title": "reference consumer claims a real Transfer once",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:ALREADY_CLAIMED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 223,
+        "code_name": "cons:ALREADY_CLAIMED",
+        "note": "after CON-01's claim (applied), the same Claim again [CON-02]",
+        "outcome": "refused"
+      },
+      "title": "the same Transfer claimed twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed",
+          "cons:UNEXPECTED_FACT"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "USDC Transfer (tx 0, log 4) to 0x000000000004444c5dc75cb358380d2e3de08a90, not the pool's recipient [CON-03]",
+        "outcome": "refused"
+      },
+      "title": "a Transfer to another recipient",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "prog:WRONG_INSTANCE",
+          "cons:BINDING_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 213,
+        "code_name": "prog:NO_RECORD",
+        "note": "Pool.instance_id = another instance's id (mainnet config, 4 adoption parts), Claim at slot 15624480 (the mainnet record's). The consumer addresses the record from the pool, header(pool.instance_id, slot), so the call goes to header(663f8cbc2120…, 15624480); the transaction lists that actor (admitted by PDA evidence) so the programs decide [CON-04]",
+        "outcome": "refused"
+      },
+      "title": "a pool bound to another instance",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:NULLIFIER_MISMATCH",
+          "cons:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 229,
+        "code_name": "cons:NULLIFIER_MISMATCH",
+        "note": "the fixture's Transfer claimed at claim(pool, N') with N' the nullifier of another log's identifier (tx 0, log 1) [CON-05]",
+        "outcome": "refused"
+      },
+      "title": "claim actor that does not match the statement's nullifier",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 225,
+        "code_name": "cons:WRONG_SENDER",
+        "note": "a transaction signed by an ordinary key whose root message is Credit at balance(pool, owner) [CON-13]",
+        "outcome": "refused"
+      },
+      "title": "Credit sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:BAD_REPLY",
+          "cons:WRONG_SENDER",
+          "cons:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-14",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Program violated execution rules",
+        "note": "the same image at a second program account (harness::TWIN) holds, at its header(id, slot), a forged record (the real one with the receipts root of a receipt whose Transfer pays 10^30 to the pool's recipient from 0xee…ee); Pool.ferrata = the real program; the Claim of the forged log lists the copy's record actor in place of the real one [CON-14]",
+        "outcome": "refused"
+      },
+      "title": "reply from a copy of the attestation program",
+      "verdict": "PANIC"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "CON-15",
+      "kind": "control",
+      "observed": {
+        "note": "Claim with one bit of the receipt leaf flipped: refused core:ProofNodeMismatch; then the correct Claim; credited once after the retry [CON-15 retry]",
+        "outcome": "accepted"
+      },
+      "title": "a refused claim can be retried",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:COMMITMENT_MISMATCH",
+          "cons:NULLIFIER_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 218,
+        "code_name": "cons:COMMITMENT_MISMATCH",
+        "note": "ClaimDeposit of public-kind deposit 0 with s's first byte xor 0x01, at claim(pool, H(s' ‖ id)) [CON-06]",
+        "outcome": "refused"
+      },
+      "title": "vault deposit claimed with a wrong opening",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_KIND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 219,
+        "code_name": "cons:WRONG_KIND",
+        "note": "ClaimDeposit of deposit 1 (kind 0x01, private) with its correct opening [CON-07]",
+        "outcome": "refused"
+      },
+      "title": "public claim of a private-kind deposit",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_KIND",
+          "cons:COMMITMENT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 219,
+        "code_name": "cons:WRONG_KIND",
+        "note": "ClaimDeposit of deposit 0 with kind = 0x03 [CON-08]",
+        "outcome": "refused"
+      },
+      "title": "kind byte that is no kind",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:ALREADY_CLAIMED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 223,
+        "code_name": "cons:ALREADY_CLAIMED",
+        "note": "public-kind deposit 0 claimed publicly (applied), then ClaimDepositPrivately of it; not provable: proving failed: Program exited with non-zero code 223 after 13956 cycles",
+        "outcome": "refused"
+      },
+      "title": "deposit claimed publicly then privately",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 224,
+        "code_name": "cons:WRONG_RECEIVER",
+        "note": "ClaimDepositPrivately of private-kind deposit 1 (correct opening) run by a private account that is not its destination; not provable: proving failed: Program exited with non-zero code 224 after 36500 cycles",
+        "outcome": "refused"
+      },
+      "title": "private-kind deposit claimed by another account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 225,
+        "code_name": "cons:WRONG_SENDER",
+        "note": "a transaction signed by an ordinary key whose root message is Spend{pool, N0, credit} at claim(pool, N0) [CON-11]",
+        "outcome": "refused"
+      },
+      "title": "Spend sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "consumer",
+      "expected": {
+        "codes": [
+          "cons:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CON-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 225,
+        "code_name": "cons:WRONG_SENDER",
+        "note": "a transaction signed by an ordinary key whose root message is CreditHolder at holder(pool, dest) [CON-12]",
+        "outcome": "refused"
+      },
+      "title": "CreditHolder sent by an outside account",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

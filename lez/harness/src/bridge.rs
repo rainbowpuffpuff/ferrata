@@ -11,6 +11,11 @@
 //! **The shared vectors.** Vault A's first five leaves are the claim tree of
 //! `bridge/vectors/inbound-v2.json` (`claim`), so `root(5)` is the vector's root and the claim of
 //! its leaf 2 must spend the vector's `N`. Leaves 5–7 are this harness's own deposits.
+//!
+//! **Which build.** By default the deployed program (`guests/bridge`, `methods::FERRATA_BRIDGE_*`). With the
+//! feature `bridge-next`, its second build (`guests/bridge-next`, not deployed), whose nullifier and holder
+//! accounts are keyed by the configuration id as well: [`holder_of`] and [`nullifier_of`] give the right address
+//! for either, and the tests use them, so every suite runs against both (`lez/results/bridge-next.md`).
 
 use std::borrow::Cow;
 
@@ -26,10 +31,10 @@ use ferrata_core::{
     Root,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, config_seed, fee_slot, holder_actor, nullifier_actor, own_actor, register_slots,
-    registry_slot, root_actor, root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams,
-    ClaimWitness, Controls, FeeSchedule, HolderState, ImportProof, NullifierState, PairingProof, RootState,
-    ScheduleRange, TimeRecord, TokenEntry, TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
+    self as bw, code, config_actor, config_seed, fee_slot, own_actor, register_slots, registry_slot, root_actor,
+    root_seed, token_actor, BridgeConfig, BridgeMessage, BridgeState, CapParams, ClaimWitness, Controls, FeeSchedule,
+    HolderState, ImportProof, NullifierState, PairingProof, RootState, ScheduleRange, TimeRecord, TokenEntry,
+    TokenState, VaultProof, Word, SLOT_CONFIG_ID, SLOT_COUNT, SLOT_ROOT,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use ferrata_spectests::execkit::{account_rlp, enc, header_rlp, keccak, Trie};
@@ -42,19 +47,83 @@ use serde_json::Value;
 
 use crate::{ferrata_account, Chain, TxReport};
 
+/// The bridge program these tests run: the deployed one (`guests/bridge`).
+#[cfg(not(feature = "bridge-next"))]
+pub const BRIDGE_ID: [u32; 8] = methods::FERRATA_BRIDGE_ID;
+#[cfg(not(feature = "bridge-next"))]
+pub const BRIDGE_ELF: &[u8] = methods::FERRATA_BRIDGE_ELF;
+/// The bridge program these tests run: its second build (`guests/bridge-next`, feature `bridge-next`).
+#[cfg(feature = "bridge-next")]
+pub const BRIDGE_ID: [u32; 8] = methods_bridge_next::FERRATA_BRIDGE_NEXT_ID;
+#[cfg(feature = "bridge-next")]
+pub const BRIDGE_ELF: &[u8] = methods_bridge_next::FERRATA_BRIDGE_NEXT_ELF;
+/// Whether these tests run the second build (`guests/bridge-next`).
+pub const SECOND_BUILD: bool = cfg!(feature = "bridge-next");
+
 pub fn bridge_program() -> Program {
-    Program::new_unchecked(methods::FERRATA_BRIDGE_ID, Cow::Borrowed(methods::FERRATA_BRIDGE_ELF))
+    Program::new_unchecked(BRIDGE_ID, Cow::Borrowed(BRIDGE_ELF))
 }
 
 /// Where the genesis deployment of the bridge program lives: `bridgeHeader`.
 pub fn bridge_account() -> AccountId {
-    AccountId::from_builtin_program(methods::FERRATA_BRIDGE_ID)
+    AccountId::from_builtin_program(BRIDGE_ID)
+}
+
+/// `holder(account)` of the deployed program (`cid` is not part of its address), `holder(cid, account)` of the
+/// second build.
+#[cfg(not(feature = "bridge-next"))]
+pub fn holder_of(program: AccountId, _cid: &Hash, account: AccountId) -> Actor {
+    bw::holder_actor(program, account)
+}
+
+/// `holder(account)` of the deployed program, `holder(cid, account)` of the second build (this one).
+#[cfg(feature = "bridge-next")]
+pub fn holder_of(program: AccountId, cid: &Hash, account: AccountId) -> Actor {
+    bw::config_keyed::holder_actor(program, cid, account)
+}
+
+/// The seed of [`holder_of`].
+#[cfg(not(feature = "bridge-next"))]
+pub fn holder_seed_of(_cid: &Hash, account: &Hash) -> PdaSeed {
+    bw::holder_seed(account)
+}
+
+/// The seed of [`holder_of`].
+#[cfg(feature = "bridge-next")]
+pub fn holder_seed_of(cid: &Hash, account: &Hash) -> PdaSeed {
+    bw::config_keyed::holder_seed(cid, account)
+}
+
+/// `nullifier(chain, vault, N)` of the deployed program (`cid` is not part of its address), `nullifier(cid, chain,
+/// vault, N)` of the second build.
+#[cfg(not(feature = "bridge-next"))]
+pub fn nullifier_of(program: AccountId, _cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
+    bw::nullifier_actor(program, chain_id, vault, n)
+}
+
+/// `nullifier(chain, vault, N)` of the deployed program, `nullifier(cid, chain, vault, N)` of the second build (this
+/// one).
+#[cfg(feature = "bridge-next")]
+pub fn nullifier_of(program: AccountId, cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
+    bw::config_keyed::nullifier_actor(program, cid, chain_id, vault, n)
+}
+
+/// The seed of [`nullifier_of`].
+#[cfg(not(feature = "bridge-next"))]
+pub fn nullifier_seed_of(_cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
+    bw::nullifier_seed(chain_id, vault, n)
+}
+
+/// The seed of [`nullifier_of`].
+#[cfg(feature = "bridge-next")]
+pub fn nullifier_seed_of(cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
+    bw::config_keyed::nullifier_seed(cid, chain_id, vault, n)
 }
 
 /// The bridge program's image id as 32 bytes (risc0's little-endian words).
 pub fn bridge_image_id() -> Root {
     let mut out = [0u8; 32];
-    for (i, w) in methods::FERRATA_BRIDGE_ID.iter().enumerate() {
+    for (i, w) in BRIDGE_ID.iter().enumerate() {
         out[4 * i..4 * i + 4].copy_from_slice(&w.to_le_bytes());
     }
     out
@@ -793,17 +862,20 @@ impl World {
         }
     }
 
-    /// The public holdings of `account`, at `holder(account)`.
-    pub fn holder(&self, account: AccountId) -> Option<HolderState> {
-        match self.state(holder_actor(self.program, account)) {
+    /// The public holdings of `account` (under `cid`), at `holder(account)` (`holder(cid, account)` of the second
+    /// build).
+    pub fn holder(&self, cid: &Hash, account: AccountId) -> Option<HolderState> {
+        match self.state(holder_of(self.program, cid, account)) {
             Some(BridgeState::Holder(holder)) => Some(holder),
             None => None,
             other => panic!("not a holder: {other:?}"),
         }
     }
 
-    pub fn nullifier(&self, vault: &[u8; 20], n: &Hash) -> Option<NullifierState> {
-        match self.state(nullifier_actor(self.program, CHAIN_ID, vault, n)) {
+    /// `N` of `vault` spent (under `cid`), at `nullifier(chain, vault, N)` (`nullifier(cid, chain, vault, N)` of the
+    /// second build).
+    pub fn nullifier(&self, cid: &Hash, vault: &[u8; 20], n: &Hash) -> Option<NullifierState> {
+        match self.state(nullifier_of(self.program, cid, CHAIN_ID, vault, n)) {
             Some(BridgeState::Nullifier(spent)) => Some(spent),
             None => None,
             other => panic!("not a nullifier: {other:?}"),
@@ -812,7 +884,7 @@ impl World {
 
     /// The balance of `token` that `account` holds under `cid`.
     pub fn balance_of(&self, account: AccountId, cid: &Hash, token: &[u8; 20]) -> u128 {
-        self.holder(account).and_then(|h| h.holding(cid, token).map(|h| h.amount)).unwrap_or(0)
+        self.holder(cid, account).and_then(|h| h.holding(cid, token).map(|h| h.amount)).unwrap_or(0)
     }
 
     /// The ETH balance `account` holds under `cid`.
@@ -983,7 +1055,7 @@ impl World {
         let accounts =
             dest.into_iter().chain([fee_recipient(), relayer.map(AccountId::new).unwrap_or_else(fee_recipient)]);
         for account in accounts {
-            let actor = holder_actor(self.program, account);
+            let actor = holder_of(self.program, cid, account);
             if !actors.contains(&actor) {
                 actors.push(actor);
             }
@@ -1011,7 +1083,7 @@ impl World {
     ) -> TxReport {
         let root = root_actor(self.program, cid, n);
         let n_d = Deposit::of(&witness).nullifier(CHAIN_ID, vault);
-        let nullifier = nullifier_actor(self.program, CHAIN_ID, vault, &n_d);
+        let nullifier = nullifier_of(self.program, cid, CHAIN_ID, vault, &n_d);
         let mut actors = vec![root];
         actors.extend(self.claim_actors(cid, &witness.token, nullifier, Some(AccountId::new(witness.dest)), relayer));
         let evidence = self.evidence(root, root_seed(cid, n));
@@ -1029,7 +1101,7 @@ impl World {
 
     /// The public actors of a private claim of `deposit` (of `vault`) under `root(cid, n)`.
     pub fn private_claim_actors(&self, cid: &Hash, n: u64, vault: &[u8; 20], deposit: &Deposit) -> Vec<Actor> {
-        let nullifier = nullifier_actor(self.program, CHAIN_ID, vault, &deposit.nullifier(CHAIN_ID, vault));
+        let nullifier = nullifier_of(self.program, cid, CHAIN_ID, vault, &deposit.nullifier(CHAIN_ID, vault));
         let dest = (deposit.kind == DestKind::Public).then(|| AccountId::new(deposit.dest));
         let mut actors = vec![root_actor(self.program, cid, n)];
         actors.extend(self.claim_actors(cid, &deposit.token, nullifier, dest, Some(*relayer().value())));
@@ -1040,7 +1112,7 @@ impl World {
     /// signs), its `holder(account)`, the token, the configuration, the record.
     pub fn public_burn_actors(&self, account: AccountId, cid: &Hash, note: &bw::Note) -> Vec<Actor> {
         let mut actors = self.burn_actors(own_actor(self.program, account), cid, note);
-        actors.insert(1, holder_actor(self.program, account));
+        actors.insert(1, holder_of(self.program, cid, account));
         actors
     }
 
@@ -1149,8 +1221,8 @@ impl World {
     /// The actors of a public holder's `Transfer`: its own actor, its `holder(account)`, the
     /// token, the recipient's `holder(to)`.
     pub fn transfer_actors(&self, account: AccountId, cid: &Hash, token: &[u8; 20], to: AccountId) -> Vec<Actor> {
-        let mut actors = vec![own_actor(self.program, account), holder_actor(self.program, account)];
-        for actor in [token_actor(self.program, cid, token), holder_actor(self.program, to)] {
+        let mut actors = vec![own_actor(self.program, account), holder_of(self.program, cid, account)];
+        for actor in [token_actor(self.program, cid, token), holder_of(self.program, cid, to)] {
             if !actors.contains(&actor) {
                 actors.push(actor);
             }

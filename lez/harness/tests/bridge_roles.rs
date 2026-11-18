@@ -14,8 +14,8 @@ use checkpoint_core::{
     wire::BridgeMessage as CpMessage,
 };
 use ferrata_lez_bridge_wire::{
-    self as bw, code, config_actor, holder_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState,
-    CosignedAction, FreezeAuthority, HolderState, Holding, Roles, ROLE_TIMELOCK_MS, SLOT_RETIRED, WATCHER_PAUSE_MS,
+    self as bw, code, config_actor, own_actor, token_actor, BridgeMessage, CapParams, ConfigState, CosignedAction,
+    FreezeAuthority, HolderState, Holding, Roles, ROLE_TIMELOCK_MS, SLOT_RETIRED, WATCHER_PAUSE_MS,
 };
 use harness::{
     attest::render_executed,
@@ -168,13 +168,13 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
     let actors = w.transfer_actors(recipient, &cid_a, &ETH, payer);
     let r = w.send("Transfer from the recipient's actor, not signed by it", actors[0], &stolen, actors.clone());
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
-    let at_holder = holder_actor(program, recipient);
+    let at_holder = harness::bridge::holder_of(program, &cid_a, recipient);
     let r = w.send("Transfer sent to holder(recipient) itself", at_holder, &stolen, actors.clone());
     run(&mut reports, r, Some(code::NOT_AUTHORIZED));
     let r = w.send("Transfer sent to token(A, ETH) itself (a credit from nothing)", eth_a, &stolen, actors.clone());
     run(&mut reports, r, Some(code::WRONG_SENDER));
     let credit = BridgeMessage::Credit { config_id: cid_a, token: ETH, amount: one, to: *payer.value() };
-    let at_payer = holder_actor(program, payer);
+    let at_payer = harness::bridge::holder_of(program, &cid_a, payer);
     let r = w.send("Credit sent to holder(payer) itself", at_payer, &credit, vec![at_payer]);
     run(&mut reports, r, Some(code::WRONG_SENDER));
     let tenth = DENOMINATIONS[0];
@@ -492,7 +492,7 @@ fn transfers_handover_multisig_watchers_and_keyless_sunset() {
              {table_reports}\n## Handler executions\n\n{}\n\
              ## What the checkpoint program collects (`checkpoint-core`'s `parse_block` and `BridgeMessage::decode`)\n\n\
              One LEZ block holding the transactions below (the refused ones marked reverted, as settlement recorded them):\n\n{table}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             render_transitions(&reports),
         ),
     )
@@ -551,7 +551,7 @@ fn a_private_holder_transfers() {
     assert_eq!(executed.exit_code, 0);
     let executed_table = render_executed(&[executed]);
     let token_a = token_actor(program, &cid_a, &ETH);
-    let publics: Vec<Actor> = vec![token_a, holder_actor(program, recipient)];
+    let publics: Vec<Actor> = vec![token_a, harness::bridge::holder_of(program, &cid_a, recipient)];
     let holder_p = harness::private::PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
     let settled = w
         .chain
@@ -581,7 +581,7 @@ fn a_private_holder_transfers() {
         pending: None,
     };
     private_post_state(&w.chain, &private_keys(seed), &claimed, RESERVE, &left).expect("0.9 ETH left, privately");
-    assert!(matches!(w.holder(recipient), Some(HolderState { pending: None, .. })));
+    assert!(matches!(w.holder(&cid_a, recipient), Some(HolderState { pending: None, .. })));
     let boundary: String = outgoing
         .iter()
         .map(|(to, from, m)| {
@@ -602,7 +602,7 @@ fn a_private_holder_transfers() {
              execution gas {}, storage gas {}.\n\n## The private transition\n\n{executed_table}\n\
              ## Private to public deliveries (what the transaction shows)\n\n| to | from | message |\n|---|---|---:|\n{boundary}\n\
              The private account's id does not occur in the transaction's bytes; its remaining 0.9 ETH is found only in its new commitment.\n",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             tx_bytes.len(),
             settled.charge.gas_exec,
             settled.charge.gas_stor,

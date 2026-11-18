@@ -1,0 +1,232 @@
+{
+  "counts": {
+    "PASS": 12
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "brn",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-BRN-01",
+      "kind": "control",
+      "observed": {
+        "note": "holder(H) holds 0.2 ETH under A [Burn d0 by H]",
+        "outcome": "accepted"
+      },
+      "title": "burn of one denomination from a public holding",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_REGISTERED",
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 251,
+        "code_name": "bridge:NOT_REGISTERED",
+        "note": "holder(H) holds 0.2 ETH [Burn d0 - 1 by H]",
+        "outcome": "refused"
+      },
+      "title": "burn of an amount that is not a denomination",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:INSUFFICIENT_BALANCE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 254,
+        "code_name": "bridge:INSUFFICIENT_BALANCE",
+        "note": "holder(H) holds 0.1 ETH [Burn d1 by H (holds d0)]",
+        "outcome": "refused"
+      },
+      "title": "burn more than held",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_WRITTEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": "holding after: 100000000000000000 (d0 = 100000000000000000) [the same Burn again]",
+        "outcome": "refused"
+      },
+      "title": "the same note burned twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-BRN-05",
+      "kind": "control",
+      "observed": {
+        "note": "X's burn first: applied true exit None [H burns its note]",
+        "outcome": "accepted"
+      },
+      "title": "a copied tag cannot make the owner's burn revert",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "holder(P) after: 100000000000000000 [Burn as a nested call from program P]",
+        "outcome": "refused"
+      },
+      "title": "burn as a nested call from another program",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED",
+          "lez:any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "signed by the payer and X; H did not sign [X sends Burn at H's own actor]",
+        "outcome": "refused"
+      },
+      "title": "burn of someone else's public holding",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": "holder(H) holds 0.1 ETH [Burn d0 by H while burns are frozen]",
+        "outcome": "refused"
+      },
+      "title": "burn while burns are frozen",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CAPPED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 255,
+        "code_name": "bridge:CAPPED",
+        "note": "burn bucket level before: Some(0) [Burn d0 by H with the burn bucket drained]",
+        "outcome": "refused"
+      },
+      "title": "burn above the burn bucket",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:INSUFFICIENT_BALANCE",
+          "bridge:NOT_REGISTERED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 254,
+        "code_name": "bridge:INSUFFICIENT_BALANCE",
+        "note": "holder(H) holds 0.1 ETH under A, nothing under B [Burn d0 by H under configuration B]",
+        "outcome": "refused"
+      },
+      "title": "burn under a configuration where nothing is held",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE",
+          "bridge:NOT_REGISTERED",
+          "bridge:INSUFFICIENT_BALANCE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-BRN-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 251,
+        "code_name": "bridge:NOT_REGISTERED",
+        "note": "holder(H) holds 0.1 ETH [Burn of 2^200 by H]",
+        "outcome": "refused"
+      },
+      "title": "burn of an amount above 128 bits",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-BRN-12",
+      "kind": "control",
+      "observed": {
+        "note": "the recipient's 20 bytes searched in the transaction, every actor state it touched and its events [Burn d0 by H, memo = recipient XOR pad]",
+        "outcome": "accepted"
+      },
+      "title": "a burn publishes no recipient in the clear",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

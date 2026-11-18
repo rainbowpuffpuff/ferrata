@@ -32,6 +32,8 @@ __pycache__/
 /vectors/*
 !/vectors/acc-leaf.json
 !/vectors/vault-tree-v2.json
+# The blind red-team vectors of 18 Nov 2026 (docs/reviews/redteam-2026-11-18.md), written by hand, committed.
+!/vectors/redteam-2026-11-18/
 
 # Generated fixtures, prover scratch and re-runs the sub-projects do not commit
 /checkpoint/fixtures/

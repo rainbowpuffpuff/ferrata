@@ -1458,6 +1458,7 @@ dependencies = [
  "lee",
  "lee_core",
  "methods",
+ "methods-bridge-next",
  "methods-residue-experimental",
  "programs",
  "residue",
@@ -1842,6 +1843,13 @@ dependencies = [
 
 [[package]]
 name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
+
+[[package]]
+name = "methods-bridge-next"
 version = "0.1.0"
 dependencies = [
  "risc0-build",
