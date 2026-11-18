@@ -29,11 +29,21 @@ stop`, a timeout, a crash) continues with `start`; `stages.done` lists what fini
 
 Environment (set by app.py): CROWN_INPUTS, CROWN_LEZ_VOL, CROWN_CLOUD, CROWN_E2E, CROWN_REALBLOCKS, CROWN_APP; live:
 SEPOLIA_RPC_URL, ETH_FROM, ETH_KEYSTORE, ETH_PASSWORD; fork: CROWN_FORK_UPSTREAM, FERRATA_UNLOCKED=1.
+CROWN_AUTO_RESUMES (default 4): how many transient stops are resumed without a human.
+
+The network (e2e/NETWORK.md): one local proxy (scripts/pubnet.py) for the whole run, in front of SEPOLIA_RPC_URL and
+the free public Sepolia endpoints (on a fork: anvil alone); this file's reads, sepolia.sh's forge and cast, and
+verify.py go through it, so reads at "latest" are pinned a few blocks behind the head and never before the deployer's
+last transaction, and every signed transaction is journaled in <run>/net/ before it leaves. A stop is transient when
+sepolia.sh exits 75 (its budget spent on transient errors with nothing in flight) or a read failed for a transient
+reason: the run waits (2, 4, 8, 16 min, +-25 %) and resumes itself, at most CROWN_AUTO_RESUMES times, each one in
+crown.log and run.json "auto_resumes". Any other stop waits for a human (`e2e/crown.sh start`).
 """
 import hashlib
 import io
 import json
 import os
+import random
 import shutil
 import signal
 import subprocess
@@ -42,6 +52,9 @@ import tarfile
 import time
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+sys.path.insert(0, os.path.join(REPO, "scripts"))
+import pubnet  # noqa: E402  (scripts/pubnet.py: the network helper)
+
 RUN_NAME, MODE = sys.argv[1], sys.argv[2]
 RUN = f"{REPO}/e2e/runs/{RUN_NAME}"
 INPUTS = os.environ.get("CROWN_INPUTS", "/vol/inputs")
@@ -89,7 +102,9 @@ LOCAL_RPC = "http://127.0.0.1:8545"
 
 
 class Stop(Exception):
-    pass
+    def __init__(self, msg: str, transient: bool = False):
+        super().__init__(msg)
+        self.transient = transient
 
 
 def utc() -> str:
@@ -111,8 +126,8 @@ def say(msg: str) -> None:
         f.write(line + "\n")
 
 
-def die(msg: str):
-    raise Stop(msg)
+def die(msg: str, transient: bool = False):
+    raise Stop(msg, transient)
 
 
 def jload(path: str):
@@ -151,20 +166,80 @@ def run(cmd: list, log: str | None = None, env: dict | None = None, cwd: str | N
             rc = 124
     if check and rc != 0:
         tail = open(path, errors="replace").read().splitlines()[-12:]
-        die(f"{os.path.basename(str(cmd[0]))} exited {rc} (logs/{log or 'crown.log'}):\n    " + "\n    ".join(scrub(l) for l in tail))
+        # 75: a pubnet-aware script (sepolia.sh) stopped on transient errors with nothing in flight
+        die(f"{os.path.basename(str(cmd[0]))} exited {rc} (logs/{log or 'crown.log'}):\n    " + "\n    ".join(scrub(l) for l in tail),
+            transient=rc == pubnet.TEMPFAIL)
     return rc
 
 
 def out(cmd: list, env: dict | None = None, timeout: int = 300) -> str:
-    p = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, env=env or os.environ, cwd=REPO, timeout=timeout)
+    try:
+        p = subprocess.run([str(c) for c in cmd], capture_output=True, text=True, env=env or os.environ, cwd=REPO,
+                           timeout=timeout)
+    except subprocess.TimeoutExpired:
+        die(f"{os.path.basename(str(cmd[0]))} {cmd[1] if len(cmd) > 1 else ''} timed out after {timeout} s",
+            transient=os.path.basename(str(cmd[0])) == "cast")
     if p.returncode != 0:
-        die(f"{os.path.basename(str(cmd[0]))} {cmd[1] if len(cmd) > 1 else ''} failed: {scrub(p.stderr.strip()[-400:])}")
+        err = p.stderr.strip()[-400:]
+        die(f"{os.path.basename(str(cmd[0]))} {cmd[1] if len(cmd) > 1 else ''} failed: {scrub(err)}",
+            transient=os.path.basename(str(cmd[0])) == "cast" and pubnet.classify(err) == "transient")
     return p.stdout.strip()
 
 
 # ---- the chain ------------------------------------------------------------------------------------------------------
+PROXY = None
+
+
+def start_proxy() -> None:
+    """The run's network proxy (scripts/pubnet.py proxy) in front of SEPOLIA_RPC_URL (and, live, the free public
+    Sepolia endpoints); its URL, journal and sender exported so sepolia.sh and deploy.sh use it rather than their own."""
+    global PROXY
+    d = f"{RUN}/net"
+    os.makedirs(d, exist_ok=True)
+    port = f"{d}/port"
+    if os.path.exists(port):
+        os.remove(port)
+    cmd = [sys.executable, "-I", f"{REPO}/scripts/pubnet.py", "proxy", "--network", "sepolia", "--journal",
+           f"{d}/journal.jsonl", "--sender", os.environ["ETH_FROM"], "--first", os.environ["SEPOLIA_RPC_URL"],
+           "--port-file", port] + (["--allow-unlocked"] if MODE == "fork" else [])
+    PROXY = subprocess.Popen(cmd, stdout=open(f"{d}/proxy.log", "a"), stderr=subprocess.STDOUT)
+    for _ in range(150):
+        if os.path.isfile(port) and os.path.getsize(port) > 0:
+            break
+        if PROXY.poll() is not None:
+            break
+        time.sleep(0.2)
+    if not (os.path.isfile(port) and os.path.getsize(port) > 0):
+        die(f"the network proxy did not start (net/proxy.log)", transient=True)
+    url = f"http://127.0.0.1:{open(port).read().strip()}"
+    os.environ.update(PUBNET_URL=url, PUBNET_DIR=d, PUBNET_SENDER=os.environ["ETH_FROM"], PUBNET_NETWORK="sepolia",
+                      PUBNET_FIRST=os.environ["SEPOLIA_RPC_URL"])
+    say(f"network: proxy {url} ({len(pubnet.endpoints('sepolia', 'rpc', os.environ['SEPOLIA_RPC_URL']))} endpoint(s);"
+        f" journal net/journal.jsonl)")
+
+
+def ensure_proxy() -> None:
+    if PROXY is None or PROXY.poll() is not None:
+        if PROXY is not None:
+            say(f"network: the proxy exited ({PROXY.returncode}); starting it again")
+        start_proxy()
+
+
+def stop_proxy() -> None:
+    if PROXY is not None and PROXY.poll() is None:
+        PROXY.terminate()
+        try:
+            PROXY.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            PROXY.kill()
+
+
+def chain_url(stage: str = "drive") -> str:
+    return f"{os.environ['PUBNET_URL']}/{stage}" if os.environ.get("PUBNET_URL") else os.environ["SEPOLIA_RPC_URL"]
+
+
 def rpc_env() -> dict:
-    return {**os.environ, "ETH_RPC_URL": os.environ["SEPOLIA_RPC_URL"]}
+    return {**os.environ, "ETH_RPC_URL": chain_url()}
 
 
 def cast(*a: str) -> str:
@@ -922,12 +997,13 @@ def st_verify() -> bool:
     cmd = ["python3", "-I", f"{REPO}/e2e/crown/verify.py", RUN, "--lez", LEZ, "--channel-key", KEY, "--e2e", E2E,
            "--realblocks", RB]
     log = "verify.log"
-    rc = run(cmd, log=log, check=False)
-    if rc != 0:  # the endpoint may answer from a node a few blocks behind the last release (see call_until)
+    env = {**os.environ, "SEPOLIA_RPC_URL": chain_url("verify")}  # pinned reads: never before the last release
+    rc = run(cmd, log=log, check=False, env=env)
+    if rc != 0:  # a read the proxy could not serve in its budget: once more
         say("verify: a check failed (logs/verify.log); reading everything again in 60 s")
         time.sleep(60)
         log = "verify-retry.log"
-        rc = run(cmd, log=log, check=False)
+        rc = run(cmd, log=log, check=False, env=env)
     with open(f"{RUN}/logs/{log}") as src, open(f"{RUN}/verify.txt", "w") as dst:  # without the command line
         dst.writelines(l for l in src if not l.startswith("[") or "] $ " not in l)
     if rc != 0:
@@ -946,6 +1022,9 @@ STEPS = {"lez-a": st_lez_a, "identity": st_identity, "deploy": st_deploy, "depos
          "release1": lambda: st_release(1), "verify": st_verify}
 
 
+AUTO_RESUMES = int(os.environ.get("CROWN_AUTO_RESUMES", "4"))
+
+
 def main() -> int:
     os.makedirs(f"{RUN}/logs", exist_ok=True)
     if MODE not in ("live", "fork"):
@@ -959,30 +1038,48 @@ def main() -> int:
         os.environ["ETH_FROM"] = rj["deployer"]
     halt = os.environ.get("CROWN_HALT_AFTER") or rj.get("halt_after")
     say(f"drive.py {RUN_NAME} {MODE}: done so far {done_list() or 'nothing'}" + (f"; halting after {halt}" if halt else ""))
+    resumes = 0
     try:
-        prepare_inputs()
-        if MODE == "fork":
-            start_anvil()
-        for stage in STAGES:
-            if MODE == "fork" and lez_chain() == "sepolia" and stage not in SEPOLIA_ON_FORK_STAGES:
-                die(f"a fork run with session A on Sepolia (--lez-chain sepolia) ends after {SEPOLIA_ON_FORK_STAGES[-1]}")
-            state(stage)
-            t0 = time.time()
-            acted = STEPS[stage]()
-            mark(stage, f"{time.time() - t0:.0f}s" + ("" if acted else " (already done)"))
-            if acted:
-                say(f"stage {stage}: done in {time.time() - t0:.0f} s")
-            if halt == stage:
-                say(f"halted after {stage} (CROWN_HALT_AFTER); `start` again continues")
-                state(stage, "halted")
+        while True:
+            try:
+                if resumes == 0:
+                    prepare_inputs()
+                    if MODE == "fork":
+                        start_anvil()
+                for stage in STAGES:
+                    if MODE == "fork" and lez_chain() == "sepolia" and stage not in SEPOLIA_ON_FORK_STAGES:
+                        die(f"a fork run with session A on Sepolia (--lez-chain sepolia) ends after {SEPOLIA_ON_FORK_STAGES[-1]}")
+                    state(stage)
+                    ensure_proxy()
+                    t0 = time.time()
+                    acted = STEPS[stage]()
+                    mark(stage, f"{time.time() - t0:.0f}s" + ("" if acted else " (already done)"))
+                    if acted:
+                        say(f"stage {stage}: done in {time.time() - t0:.0f} s")
+                    if halt == stage:
+                        say(f"halted after {stage} (CROWN_HALT_AFTER); `start` again continues")
+                        state(stage, "halted")
+                        return 0
+                state("DONE")
                 return 0
-        state("DONE")
-        return 0
-    except Stop as e:
-        say(f"STOP: {e}")
-        state(jload(f"{RUN}/state.json").get("stage", "?") if os.path.isfile(f"{RUN}/state.json") else "?", f"stopped: {str(e)[:300]}")
-        return 1
+            except Stop as e:
+                stage = jload(f"{RUN}/state.json").get("stage", "?") if os.path.isfile(f"{RUN}/state.json") else "?"
+                if not (e.transient and resumes < AUTO_RESUMES):
+                    say(f"STOP{' (transient; automatic resumes used up)' if e.transient else ''}: {e}")
+                    state(stage, f"stopped: {str(e)[:300]}")
+                    return 1
+                resumes += 1
+                pause = min(1800.0, 120.0 * 2 ** (resumes - 1)) * random.uniform(0.75, 1.25)
+                say(f"STOP (transient, nothing in flight): {e}")
+                say(f"auto-resume {resumes} of {AUTO_RESUMES} in {pause:.0f} s")
+                state(stage, f"auto-resume {resumes}/{AUTO_RESUMES} in {pause:.0f} s after: {str(e)[:240]}")
+                rj = runj()
+                rj.setdefault("auto_resumes", []).append({"at": utc(), "stage": stage, "pause_s": round(pause),
+                                                          "reason": scrub(str(e))[:300]})
+                jsave(f"{RUN}/run.json", rj)
+                time.sleep(pause)
     finally:
+        stop_proxy()
         stop_anvil()
 
 
