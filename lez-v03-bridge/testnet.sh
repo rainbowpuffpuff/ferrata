@@ -3,6 +3,8 @@
 # program on a LEZ v0.3.1 sequencer, the inbound leg and the burns.
 #
 #   lez-v03-bridge/testnet.sh plan     the steps, their transactions and costs; read-only RPC calls only
+#   lez-v03-bridge/testnet.sh prepare  (testnet) the wallet, accounts, configuration id and deposits' commitments that
+#                                      sepolia.sh needs; nothing sent
 #   lez-v03-bridge/testnet.sh run      sends; refused unless FERRATA_TESTNET_SEND=yes; resumable (each step is
 #                                      recorded in the run directory and skipped when done)
 #   lez-v03-bridge/testnet.sh verify   re-reads every verdict from both chains' RPCs against the run's record
@@ -175,12 +177,24 @@ record() { # the record without keys or the wallet, for results/<net>/
   log "record written to $results"
 }
 
+prepare() { # the public run's LEZ wallet, accounts and configuration, and the deposits' commitments: nothing sent
+  [ "$net" = testnet ] || { echo "testnet.sh prepare: FERRATA_NET=testnet only (local runs do it in run)" >&2; exit 1; }
+  mkdir -p "$run"
+  b setup --sequencer "$lez" --payer "${FERRATA_PAYER_KEY:?FERRATA_PAYER_KEY: a key file, 32 bytes hex, outside the repository}" > "$run/setup.log"
+  b config --chain 11155111 --vault "${FERRATA_VAULT:?FERRATA_VAULT: sepolia.sh identity}" \
+    --lc "${FERRATA_LC_PROGRAM:?FERRATA_LC_PROGRAM: the light client program account on the testnet}" \
+    --instance "$instance" --eth "$eth_denomination" > "$run/config_id.txt"
+  b deposits --seed "$seed" --depositor "${FERRATA_DEPOSITOR:?FERRATA_DEPOSITOR: the Sepolia depositor}" --j0 0 --leaf0 0 > "$run/deposits.json"
+  log "configuration id $(cat "$run/config_id.txt") (the vault's lezConfigId); deposits' commitments in $run/deposits.json"
+}
+
 verify() {
   python3 -I "$here/verify.py" --lez "$lez" --eth "$eth" "$results"
 }
 
 case "$cmd" in
   plan) plan ;;
+  prepare) prepare ;;
   run) run_all ;;
   verify) verify ;;
   *) echo "usage: testnet.sh plan | run | verify" >&2; exit 1 ;;
