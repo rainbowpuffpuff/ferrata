@@ -1,0 +1,87 @@
+# Burns (`harness/tests/bridge_burn.rs`); the private burn in RISC Zero dev mode
+
+Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`.
+
+## Public burns and refusals
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | Burn 1 ETH (A) by the payer | bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 52,736 → bridge Admit 35,566 → bridge Burn 21,612 | 165,055 | 3% | 839 | 1,327,152 | applied |
+| 2 | Burn: the same note again | bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 52,736 → bridge Admit 35,566 → bridge Burn 22,940 | 166,383 | 3% | 839 | 1,337,776 | refused: exit 244 (ALREADY_WRITTEN) |
+| 3 | Burn 0.5 ETH (not a denomination) | bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 32,513 | 87,654 | 2% | 839 | 707,944 | refused: exit 251 (NOT_REGISTERED) |
+| 4 | Burn 1 unit of another token (no holding of it) | bridge Burn 24,804 → bridge Burn 25,620 | 50,424 | 1% | 839 | 410,104 | refused: exit 254 (INSUFFICIENT_BALANCE) |
+| 5 | Burn 10 ETH with 9 held | bridge Burn 24,804 → bridge Burn 25,770 | 50,574 | 1% | 839 | 411,304 | refused: exit 254 (INSUFFICIENT_BALANCE) |
+| 6 | Burn at the vector's destination, not signed by it | bridge Burn 16,853 | 16,853 | 0% | 839 | 141,536 | refused: exit 253 (NOT_AUTHORIZED) |
+| 7 | Burn under a configuration the payer holds nothing of | bridge Burn 24,804 → bridge Burn 21,388 | 46,192 | 1% | 839 | 376,248 | refused: exit 254 (INSUFFICIENT_BALANCE) |
+| 8 | Burn sent to the burn account itself | bridge Burn 16,986 | 16,986 | 0% | 648 | 141,072 | refused: exit 243 (WRONG_SENDER) |
+| 9 | Burn sent to the token account itself (a top-level call) | bridge Burn 30,173 | 30,173 | 1% | 711 | 247,072 | refused: exit 243 (WRONG_SENDER) |
+| 10 | Burn as a nested call from another program, in a transaction the holder signed | scripted 10,383 → bridge Burn 18,087 | 28,470 | 1% | 867 | 234,696 | refused: exit 253 (NOT_AUTHORIZED) |
+| 11 | Burn 1 ETH (B) by the payer | bridge Burn 24,804 → bridge Burn 29,915 → bridge Burn 48,868 → bridge Admit 35,566 → bridge Burn 21,612 | 160,765 | 3% | 839 | 1,292,832 | applied |
+| 12 | Echo (rule (A)'s nonce) | bridge Echo 8,593 | 8,593 | 0% | 431 | 72,192 | applied |
+| 13 | Sunset by the payer (not the freeze authority) | bridge Sunset 12,611 → bridge Sunset 24,832 | 37,443 | 1% | 495 | 303,504 | refused: exit 253 (NOT_AUTHORIZED) |
+
+## Handler executions
+
+| transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Burn 1 ETH (A) by the payer | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) by the payer | bridge Burn | 30,337 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) by the payer | bridge Burn | 52,736 | 1 | 1,354 | 185 | 1,031 | 2,841 | 1,031 | 0 |
+| Burn 1 ETH (A) by the payer | bridge Admit | 35,566 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Burn 1 ETH (A) by the payer | bridge Burn | 21,612 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn: the same note again | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn: the same note again | bridge Burn | 30,337 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn: the same note again | bridge Burn | 52,736 | 1 | 1,354 | 185 | 1,031 | 2,841 | 1,031 | 0 |
+| Burn: the same note again | bridge Admit | 35,566 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Burn: the same note again | bridge Burn | 22,940 | 1 | 508 | 185 | 185 | 0 | – | 244 |
+| Burn 0.5 ETH (not a denomination) | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 0.5 ETH (not a denomination) | bridge Burn | 30,337 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 0.5 ETH (not a denomination) | bridge Burn | 32,513 | 1 | 1,354 | 185 | 1,031 | 0 | – | 251 |
+| Burn 1 unit of another token (no holding of it) | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 unit of another token (no holding of it) | bridge Burn | 25,620 | 1 | 397 | 185 | 74 | 0 | – | 254 |
+| Burn 10 ETH with 9 held | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 10 ETH with 9 held | bridge Burn | 25,770 | 1 | 397 | 185 | 74 | 0 | – | 254 |
+| Burn at the vector's destination, not signed by it | bridge Burn | 16,853 | 1 | 259 | 185 | 0 | 0 | – | 253 |
+| Burn under a configuration the payer holds nothing of | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn under a configuration the payer holds nothing of | bridge Burn | 21,388 | 1 | 323 | 185 | 0 | 0 | – | 254 |
+| Burn sent to the burn account itself | bridge Burn | 16,986 | 1 | 259 | 185 | 0 | 0 | – | 243 |
+| Burn sent to the token account itself (a top-level call) | bridge Burn | 30,173 | 1 | 1,290 | 185 | 1,031 | 0 | – | 243 |
+| Burn as a nested call from another program, in a transaction the holder signed | scripted | 10,383 | 1 | 350 | 276 | 0 | 628 | – | 0 |
+| Burn as a nested call from another program, in a transaction the holder signed | bridge Burn | 18,087 | 1 | 323 | 185 | 0 | 0 | – | 253 |
+| Burn 1 ETH (B) by the payer | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (B) by the payer | bridge Burn | 29,915 | 1 | 397 | 185 | 74 | 685 | 6 | 0 |
+| Burn 1 ETH (B) by the payer | bridge Burn | 48,868 | 1 | 1,166 | 185 | 843 | 2,465 | 843 | 0 |
+| Burn 1 ETH (B) by the payer | bridge Admit | 35,566 | 1 | 772 | 70 | 564 | 1,361 | 564 | 0 |
+| Burn 1 ETH (B) by the payer | bridge Burn | 21,612 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Echo (rule (A)'s nonce) | bridge Echo | 8,593 | 1 | 107 | 33 | 0 | 128 | – | 0 |
+| Sunset by the payer (not the freeze authority) | bridge Sunset | 12,611 | 1 | 107 | 33 | 0 | 233 | – | 0 |
+| Sunset by the payer (not the freeze authority) | bridge Sunset | 24,832 | 1 | 735 | 33 | 564 | 0 | – | 253 |
+
+## The private burn
+
+| handler execution | input bytes (ReceiveInput) | journal bytes | user cycles | segments | cycles with padding (sum of 2^po2) | exit |
+|---|---:|---:|---:|---:|---:|---:|
+| Burn at the private holder (debits, sends Burn) | 333 | 621 | 25,679 | 1 | 131,072 | 0 |
+
+LEZ charged: execution gas 519,678, storage gas 224,063, base fee 5,949,928; transaction 7,857 bytes (dev mode).
+
+The private claim that made the holding: execution gas 560,290, storage gas 224,063.
+
+## What the checkpoint program collects (`checkpoint-core`'s `parse_block` and `BridgeMessage::decode`)
+
+One LEZ block holding the transactions below (the second burn marked reverted, as settlement recorded it):
+
+| transaction | origin | message bytes | checkpoint's decoder | collected |
+|---|---|---:|---|---|
+| ImportRoot A n=8 | PublicRoot | 1499 | ImportRoot (its proofs skipped) | yes |
+| Claim: leaf 6 (10 ETH to the payer) | PublicRoot | 1271 | ignored (variant 4 and up) | no |
+| Burn 1 ETH (A) by the payer | PublicRoot | 185 | Burn | yes |
+| Burn: the same note again | PublicRoot | 185 | Burn | no (reverted) |
+| Burn 1 ETH (B) by the payer | PublicRoot | 185 | Burn | yes |
+| Echo (rule (A)'s nonce) | PublicRoot | 33 | Echo | yes |
+| private claim (leaf 5) | PrivateToPublic | 1 | ignored (variant 4 and up) | no |
+| private claim (leaf 5) | PublicToPrivate | 121 | ignored (variant 4 and up) | no (not public execution) |
+| private claim (leaf 5) | PrivateToPublic | 167 | ignored (variant 4 and up) | no |
+| private burn | PrivateToPublic | 185 | Burn | yes |
+
+NOut v2 of the first note: `88e67ac0a9c6f719ebb037323689fca35abbd7a70952b2e2fab257672d8768e3`.

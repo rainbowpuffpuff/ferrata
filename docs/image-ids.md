@@ -55,6 +55,28 @@ from the root lists these two with the others.
 | checkpoint, rule (A), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint`): `checkpoint_0_3_5` | `0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f` | `4e872fb563f99e176594889d382626144c4958e0a2cca5408178ff5a27569a0e` | 446,600 | `9f86858ee059cd28230b32c31d3f6f6b33ae46d7ce88976c34e38f6d89048f26` |
 | checkpoint, rule (B), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint-b`): `checkpoint_b_0_3_5` | `0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf` | `66ac3a9c20794dc36d35a2d21fedf18e78c79c442f82ac70a3e2d59cd5d8ec77` | 448,128 | `3fb2b8da3d82e9b454c7d4d73a56b61e68664e78e93401cded9b13189e131ff0` |
 
+## The bridge program's second build: nullifier and holder accounts keyed by the configuration; not deployed
+
+`lez/guests/bridge-next/` (a workspace of its own; its lockfile is `lez/guests/bridge/`'s with only the package's name
+changed), built by `lez/methods-bridge-next`: the bridge program above with `nullifier(cid, chain, vault, N)` and
+`holder(cid, account)` in place of `nullifier(chain, vault, N)` and `holder(account)` (bridge-wire's cargo feature
+`config-keyed`, off by default, which the deployed program does not compile: `lez/bridge-wire/src/config_keyed.rs`,
+declared at the end of `lib.rs`, so no line of the deployed program's sources moved). It fixes the two known issues
+of [`docs/design/bridge.md`](design/bridge.md) §3 ([`lez/results/bridge-next.md`](../lez/results/bridge-next.md),
+[EVIDENCE](EVIDENCE.md) row 143). **Not deployed: no vault pins it**; milestone B1 would deploy it with a new vault,
+whose `configId` commits to this image id. Built on 18 November 2026 on the Modal build box from this tree (RISC Zero
+3.0.5, guest Rust 1.91.1, through `scripts/guest-rustc`), in the same fresh target directories in which
+`scripts/reproduce-image-ids.sh build` had rebuilt every guest of the first table (14), and after `compare --vault 0x04eE…e44c` had
+compared them: 14 of 14 and 6 of 6, the vault's `checkpointImageId` and `releaseImageId` equal to the rebuilt ids; then
+15 of 15 with this one ([`lez/results/bridge-next/reproduce/`](../lez/results/bridge-next/reproduce/compare.log); the
+target directories did not exist when the build started: [`lez/results/bridge-next.md`](../lez/results/bridge-next.md)). Rebuild: `cd lez && cargo build -p methods-bridge-next --locked` (with `RISC0_HOME` the
+LEZ RISC Zero home, as for `methods`), then `python3 -I scripts/reproduce/guest_ids.py . OUT.tsv` from the root lists it
+with the others.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| bridge program, second build (`lez/guests/bridge-next`): `ferrata_bridge_next` | `0x7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f` | `692b30c16f817771a7bffbc00229a42452b76e39c8b4ecf17bcd593a9e189ae4` | 593,224 | `cbbee74111c528cd2d0de11183c81fcc6a18255c0d28a3a9ec231c5cd3b39671` |
+
 ## The attestation program with statement classes; not deployed
 
 The second build of the attestation program: `lez/guests/program-class/` (its own workspace; its lockfile is
@@ -62,10 +84,11 @@ The second build of the attestation program: `lez/guests/program-class/` (its ow
 `lez/guests/program/src/main.rs` against the new crate `lez/wire-class` under the name `ferrata_lez_wire`, whose
 `attest` replies with each statement's nullifier-safety class beside its unchanged identifier
 ([`docs/design/attestation.md`](design/attestation.md) §5.7); built by `lez/methods-program-class`. No file the 14
-guests above compile changed. Built on 18 November 2026 on the Modal build box from this tree (RISC Zero 3.0.5, guest
+guests of the first table compile changed. Built on 18 November 2026 on the Modal build box from this tree (RISC Zero 3.0.5, guest
 Rust 1.91.1, through `scripts/guest-rustc`, `RISC0_BUILD_LOCKED=1`), after `scripts/reproduce-image-ids.sh build` and
-`compare --vault 0x04eE…e44c` on the same tree and box, on which no target directory had existed, gave 14 of 14 and 6 of
-6 for the table above ([`lez/results/history-hops/image-ids/`](../lez/results/history-hops/image-ids/compare.txt)); the
+`compare --vault 0x04eE…e44c` on the same tree and box, on which no target directory had existed, gave 14 of 14 for the
+first table and 6 of 6 for the crown run's recorded ids, the vault's `checkpointImageId` and `releaseImageId` among them
+([`lez/results/history-hops/image-ids/`](../lez/results/history-hops/image-ids/compare.txt)); the
 id compiled into the harness the tests ran is the same. Rebuild: `bash lez/results/history-hops/run-class-id.sh` from
 the root after `run-image-ids.sh`, or `cd lez && cargo build -p methods-program-class --locked`, then
 `python3 -I scripts/reproduce/guest_ids.py . OUT.tsv` from the root lists it with the others.

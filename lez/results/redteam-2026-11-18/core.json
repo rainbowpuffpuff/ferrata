@@ -1,0 +1,61 @@
+{
+  "test": "crates/ferrata-spectests/tests/redteam_core.rs (not written)",
+  "counts": {
+    "UNSUPPORTED": 3
+  },
+  "results": [
+    {
+      "id": "LC-SIG-15",
+      "area": "lc",
+      "kind": "adversarial",
+      "title": "signing key is the identity point",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "core:SigningKeyIdentity",
+          "core:BelowSupermajority",
+          "core:CommitteeInvalid",
+          "core:PubkeyInvalid"
+        ]
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "LC-PART-04",
+      "area": "lc",
+      "kind": "adversarial",
+      "title": "21 of 32 signers (minimal preset)",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "core:BelowSupermajority"
+        ]
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "LC-PART-05",
+      "area": "lc",
+      "kind": "control",
+      "title": "22 of 32 signers (minimal preset)",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    }
+  ],
+  "note": "the lead stopped the run for budget before this group's test was written; every vector UNSUPPORTED"
+}

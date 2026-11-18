@@ -12,7 +12,7 @@
 //! that depends on this program's image (`bridge_inbound.rs` tests the pairing). Writes
 //! `results/bridge-vault-storage.md`.
 
-use std::{fs, path::PathBuf};
+use std::fs;
 
 use ferrata_bridge_core::inbound::DestKind;
 use ferrata_lez_bridge_wire::{
@@ -268,7 +268,7 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
     let transitions = render_transitions(&reports);
     println!("{table}\n{transitions}");
     fs::write(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results/bridge-vault-storage.md"),
+        harness::results_dir().join("bridge-vault-storage.md"),
         format!(
             "# The bridge program on FerrataVault's own storage (`harness/tests/bridge_vault_storage.rs`)\n\n\
              Bridge program image `{}`. The blocks P and Q hold exactly the storage FerrataVault v5 wrote in \
@@ -276,7 +276,7 @@ fn the_bridge_reads_the_vaults_own_registry_fees_and_tree() {
              {n_p} and {n_q} leaves); `Init` under a synthetic block (the pairing is `bridge_inbound.rs`'s \
              subject). Every transaction settled by LEZ's own functions in a block of its own.\n\n{table}\n\
              ## Handler executions\n\n{transitions}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             p_slots.len(),
             q_slots.len(),
         ),

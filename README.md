@@ -45,6 +45,7 @@ Every document, one line each: [docs/README.md](docs/README.md).
 | The light-client core | 52 of 52 official `sync` cases, Altair to Gloas; 33 of them step by step against Helios as a differential oracle | laptop CPU, CI | [1](docs/EVIDENCE.md) |
 | The light client kept running ([the lab](lez/lab/README.md)) | two instances following Sepolia and mainnet on a LEZ zone, unattended, a session every two hours; the record replays offline, and each session's finalized roots equal a second beacon provider's | a LEZ v0.4.0-rc1 sequencer we run, one validator | [21](docs/EVIDENCE.md) |
 | The round trip, live on Sepolia | Ethereum to LEZ and back on the final programs, one public and one private crossing each way, through FerrataVault v5; anyone can check it from the committed records | Sepolia; a LEZ devnet we ran | [91, 92](docs/EVIDENCE.md) |
+| Our seals on Ethereum mainnet, read-only | every Groth16 seal the tree records with its journal (66, the live round trip's among them) accepted by RISC Zero's own router and Groth16 verifier 3.0.0 on mainnet by `eth_call`; each seal, image id or journal with one byte changed refused | Ethereum mainnet, read-only, two public endpoints; nothing deployed, nothing sent | [149](docs/EVIDENCE.md) |
 | The return leg with several sequencers | the bridge program on a zone of four LEZ sequencers with an attestor beside each, its rule (B) checkpoint proven into the vault, and a rotation its committee proposed | a zone we ran; the vault on a local anvil, a stand-in beacon chain | [100, 101](docs/EVIDENCE.md) |
 | The return leg on LEZ v0.4.0-rc3 | the checkpoint guests' second build reads Logos Blockchain 0.3.5-rc.1's fork digest (the deployed ids unchanged); its rule (B) checkpoint over an rc3 zone's real blocks proven for real, wrapped and accepted by the vault, both burns released | rc3's sequencer (one) and node (one validator); CPUs of a Modal box; the vault on a local anvil | [129, 130](docs/EVIDENCE.md) |
 | M0 check 4: real proofs on the newest LEZ tag | the private update, attestation, claim and burn proven for real and applied by LEZ v0.4.0-rc3's own sequencer in final blocks (`just m0`: GO) | CPUs of a Modal box; rc3's sequencer and node | [123](docs/EVIDENCE.md) |
@@ -188,8 +189,10 @@ The design notes specify these; there is no code for them here. In short (in ful
 [docs/not-built.md](docs/not-built.md)):
 
 - **The bridge program on LEZ:** a transfer that credits a private recipient privately, the admin's own handover,
-  the switch to a v0.4 token program when one is released; the nullifier and holder accounts keyed by the
-  configuration, which close the two tenant-isolation issues of 18 November ([row 136](docs/EVIDENCE.md)).
+  the switch to a v0.4 token program when one is released; in the deployed program, the nullifier and holder
+  accounts keyed by the configuration, which close the two tenant-isolation issues of 18 November
+  ([row 136](docs/EVIDENCE.md)): they are built and tested in a second build of the program, which is not deployed
+  ([row 143](docs/EVIDENCE.md)).
 - **The attestation program:** consumers bound to the root id, the F.8 test. (Chains of EIP-2935 hops are built:
   up to 32 in one transaction on real data, [row 145](docs/EVIDENCE.md).)
 - **Rule (B):** the watchers' `monitor` reading attestations.

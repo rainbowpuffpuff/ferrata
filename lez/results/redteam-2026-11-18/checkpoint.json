@@ -1,0 +1,221 @@
+{
+  "counts": {
+    "PASS": 12
+  },
+  "results": [
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-01",
+      "kind": "adversarial",
+      "observed": {
+        "error": "HashMismatch { index: 2 }",
+        "note": "burn 3's transaction removed from T, header kept: refused HashMismatch { index: 2 }; same, T's stored hash recomputed: refused BrokenLink { index: 3 }",
+        "outcome": "refused"
+      },
+      "title": "a burn transaction dropped from a block",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-02",
+      "kind": "adversarial",
+      "observed": {
+        "error": "BadBlockId { index: 1, expected: 3, got: 4 }",
+        "note": "blocks 2, 4 (= T), 5, 6: block 3 omitted",
+        "outcome": "refused"
+      },
+      "title": "a block skipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-03",
+      "kind": "adversarial",
+      "observed": {
+        "error": "ConfigMalformed",
+        "note": "rule (A), new key list 0,1,2,3,4,4 (4 distinct supporters other than D would meet t(6) = 4): refused ConfigMalformed; rule (B), new key list 0,1,2,3,4,4 (4 distinct supporters other than D would meet t(6) = 4): refused ConfigMalformed",
+        "outcome": "refused"
+      },
+      "title": "key-set change with a repeated key",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-04",
+      "kind": "adversarial",
+      "observed": {
+        "error": "ConfigTimeframe { current: 30, proposed: 31 }",
+        "note": "rule (A), posting_timeframe 31 where the key-set hash binds 30: refused ConfigTimeframe { current: 30, proposed: 31 }; rule (B), posting_timeframe 31 where the key-set hash binds 30: refused ConfigTimeframe { current: 30, proposed: 31 }",
+        "outcome": "refused"
+      },
+      "title": "key-set change of the turn length",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-05",
+      "kind": "adversarial",
+      "observed": {
+        "error": "ConfigTimeframe { current: 30, proposed: 0 }",
+        "note": "rule (A), posting_timeframe 0: refused ConfigTimeframe { current: 30, proposed: 0 }; rule (B), posting_timeframe 0: refused ConfigTimeframe { current: 30, proposed: 0 }",
+        "outcome": "refused"
+      },
+      "title": "key-set change with turn length 0",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-06",
+      "kind": "adversarial",
+      "observed": {
+        "error": "InsufficientAttestations { have: 2, need: 3 }",
+        "note": "n = 4, t = 3; certified attestations by keys 0 and 1 only",
+        "outcome": "refused"
+      },
+      "title": "t - 1 attestations",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-07",
+      "kind": "adversarial",
+      "observed": {
+        "error": "BadCertificate",
+        "note": "key 2's certificate binds vault 0x42..42 instead of the deployment's (its attestation is for this deployment)",
+        "outcome": "refused"
+      },
+      "title": "attestation key certified for another vault",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-08",
+      "kind": "adversarial",
+      "observed": {
+        "error": "DuplicateAttestor",
+        "note": "attestations by keys 0, 1, 1 (key 1's attestation twice: three entries for t = 3)",
+        "outcome": "refused"
+      },
+      "title": "repeated attestation key",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-09",
+      "kind": "adversarial",
+      "observed": {
+        "error": "BadAttestation",
+        "note": "key 2's attestation key signs SHA-256 of the final-tier message v2 instead of the message",
+        "outcome": "refused"
+      },
+      "title": "attestation over a bare digest",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-10",
+      "kind": "adversarial",
+      "observed": {
+        "error": "NotAccredited",
+        "note": "T inscribed by channel key 4, outside K; t valid attestations",
+        "outcome": "refused"
+      },
+      "title": "T inscribed by a key outside K",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [
+          "any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "CKP-11",
+      "kind": "adversarial",
+      "observed": {
+        "error": "InsufficientSupport { have: 2, need: 3 }",
+        "note": "support: D (key 0) on block 5, key 1 on block 5, key 2 on block 6",
+        "outcome": "refused"
+      },
+      "title": "the producer counted as a supporter",
+      "verdict": "PASS"
+    },
+    {
+      "area": "checkpoint",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "CKP-12",
+      "kind": "control",
+      "observed": {
+        "note": "accepted; burnCount 3 (without the foreign burn 3), burn root equals the 3-burn root of this configuration",
+        "outcome": "accepted"
+      },
+      "title": "burns of another configuration are ignored",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "checkpoint/crates/checkpoint-core/tests/redteam.rs"
+}

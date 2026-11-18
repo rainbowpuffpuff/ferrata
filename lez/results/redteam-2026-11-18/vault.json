@@ -1,0 +1,293 @@
+{
+  "test": "vault/test/RedTeam.t.sol",
+  "counts": {
+    "PASS": 16
+  },
+  "results": [
+    {
+      "id": "VLT-01",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "plain ETH sent to the vault",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "DirectEthNotAccepted()",
+        "note": "1 ether, empty calldata, from an EOA: refused DirectEthNotAccepted()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-02",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "deposit with j != depositCount[msg.sender]",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "WrongDepositIndex()",
+        "note": "USDC denomination 0 funded and approved; index j + 1: refused WrongDepositIndex()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-03",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "deposit after retire",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "VaultRetired()",
+        "note": "retired by the freeze authority; exact value, correct index: refused VaultRetired()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-04",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "fee-on-transfer token",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "TransferAmountMismatch()",
+        "note": "fee-on-transfer token registered by the admin; denomination 0 funded and approved: refused TransferAmountMismatch()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-05",
+      "area": "vault",
+      "kind": "control",
+      "title": "USDT-like token without a return value",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "accepted",
+        "note": "deposit escrowed 1002000000 (denomination 1000000000 + relay fee); release paid the recipient 1000000000; NOut used: accepted"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-06",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "denomination index out of range",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "InvalidDenominationIndex()",
+        "note": "USDC (3 denominations) funded and approved; denomIndex 8: refused InvalidDenominationIndex()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-07",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "release replayed (same NOut)",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "NullifierAlreadyUsed()",
+        "note": "same release, same seal: refused NullifierAlreadyUsed(); same release, re-randomised seal: refused NullifierAlreadyUsed()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-08",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "relay fee neither 0 nor the registered one",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "InvalidRelayFee()",
+        "note": "relayFee 2000000000000001 = registered + 1; journal proven: refused InvalidRelayFee()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-09",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "release before the release delay",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "ReleaseDelayNotElapsed()",
+        "note": "releaseDelay 1 h; at finalizedAt + 1 h - 1 s; journal proven: refused ReleaseDelayNotElapsed()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-10",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "release against a revoked root",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "BurnRootNotAccepted()",
+        "note": "root's checkpoint revoked inside the window; journal proven: refused BurnRootNotAccepted()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-11",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "candidate whose parentState is not finalState",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "ParentNotFinal()",
+        "note": "parentState random; journal proven: refused ParentNotFinal()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-12",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "candidate already pending",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "CandidateAlreadySubmitted()",
+        "note": "the same candidate (same newState, proven journal) one minute later: refused CandidateAlreadySubmitted()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-13",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "refund of a leaf below the sunset boundary",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "NotRefundable()",
+        "note": "k = 2, refund(1) after the revoke window; true leaf and path: refused NotRefundable()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-14",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "refund before retirement",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "NotRetired()",
+        "note": "k = 1, refund(1), not retired, after the revoke window: refused NotRetired()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-15",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "revoke an already revoked index",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "CheckpointAlreadyRevoked()",
+        "note": "by the freeze authority, same index: refused CheckpointAlreadyRevoked()"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "id": "VLT-16",
+      "area": "vault",
+      "kind": "adversarial",
+      "title": "admin lowers delta",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "evm:revert"
+        ]
+      },
+      "observed": {
+        "outcome": "refused",
+        "error": "DeltaCanOnlyRise()",
+        "note": "raiseDelta(14399) by the admin; current 14400: refused DeltaCanOnlyRise()"
+      },
+      "verdict": "PASS"
+    }
+  ]
+}
