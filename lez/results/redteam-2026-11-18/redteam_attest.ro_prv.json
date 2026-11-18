@@ -1,0 +1,127 @@
+{
+  "counts": {
+    "PASS": 7
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "ro_prv",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-RO-01",
+      "kind": "control",
+      "observed": {
+        "note": "first an Attest that is refused (balance < 1: refused core:PredicateFailed), then an accepted one; the record's account (its state, nonce, everything) is identical before and after [AT-RO-01 accepted]",
+        "outcome": "accepted"
+      },
+      "title": "Attest changes no state",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-RO-02",
+      "kind": "control",
+      "observed": {
+        "note": "WETH account and balance slot (k = 2 statements); native evaluate: accepted, 2 statements; event data 112 bytes = 48 + 32·2; no proof node, slot key or address in any of the 1 event(s) [AT-RO-02]",
+        "outcome": "accepted"
+      },
+      "title": "Attest as the transaction root emits the identifiers only",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:NO_RECORD",
+          "prog:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-RO-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 213,
+        "code_name": "prog:NO_RECORD",
+        "note": "header(id, 15624481) (no record), admitted by its PDA evidence so that the program decides [AT-RO-03]",
+        "outcome": "refused"
+      },
+      "title": "Attest at an actor that holds no record",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:NO_RECORD",
+          "prog:WRONG_RECEIVER",
+          "prog:BAD_STATE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-RO-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 209,
+        "code_name": "prog:BAD_STATE",
+        "note": "instance(id) of the mainnet instance [AT-RO-04]",
+        "outcome": "refused"
+      },
+      "title": "Attest at the instance actor",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-RO-05",
+      "kind": "control",
+      "observed": {
+        "note": "B-LC-SEP in place of B-LC-MAIN (no mainnet record with proofs is followed by two updates in any fixture): the Sepolia instance replayed to period 1408 takes the attestation fixture's finality update (record of slot S = 11549664, block 12,105,936), then period 1409's update (5 jobs, committee only) and the vault fixture's finality update (finalized slot 11556608); USDC's totalSupply_ attested under S afterwards; native evaluate: accepted, 2 statements [AT-RO-05]",
+        "outcome": "accepted"
+      },
+      "title": "a record stays valid after later updates",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-PRV-01",
+      "kind": "control",
+      "observed": {
+        "note": "a private consumer reads header(id, 15624480) keeping a 103-byte query; neither the query nor any 12-byte window of it is in the 8837 transaction bytes",
+        "outcome": "accepted"
+      },
+      "title": "a private read publishes no query bytes",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-PRV-02",
+      "kind": "control",
+      "observed": {
+        "note": "a private consumer calls Attest (CallAttest) with a WETH storage request; the whole 6939-byte request is in the 22665 transaction bytes",
+        "outcome": "accepted"
+      },
+      "title": "a private call publishes its query (documented leak)",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

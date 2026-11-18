@@ -1,0 +1,198 @@
+{
+  "counts": {
+    "PASS": 10
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "int",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [Mint sent to holder(payer) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "Mint sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root; nullifier spent after: false [Spend sent to nullifier(N) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "Spend sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [WriteRoot sent to root(A, 9) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "WriteRoot sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root; the state: ETH's of A with the token set to U [WriteToken sent to token(A, U) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "WriteToken sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER",
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [Issue sent to token(A, ETH) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "Issue sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [Admit sent to config(A) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "Admit sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [Credit sent to holder(payer) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "Credit sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [ExtendFees sent to token(A, ETH) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "ExtendFees sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INT-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "sent by the payer (an ordinary account) as the transaction's root [Read sent to config(A) as the root]",
+        "outcome": "refused"
+      },
+      "title": "Read as a top-level call",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-INT-10",
+      "kind": "control",
+      "observed": {
+        "note": "config(A)'s state compared byte for byte [Echo sent to config(A)]",
+        "outcome": "accepted"
+      },
+      "title": "Echo changes nothing",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

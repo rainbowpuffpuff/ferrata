@@ -1,0 +1,56 @@
+{
+  "counts": {
+    "PASS": 3
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "id",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-ID-01",
+      "kind": "control",
+      "observed": {
+        "note": "e2e fixture: WETH's balance slot of the Uniswap v2 pair, the same value (0xee633e5bbb4f863523) at R = 26,379,842 and one hop back at m1 = R − 16 (no fixture has a storage proof at R − 1); both slot identifiers are c6fc2bc8b26098fc",
+        "outcome": "accepted"
+      },
+      "title": "storage identifier does not depend on the block",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-ID-02",
+      "kind": "control",
+      "observed": {
+        "note": "two USDC Transfer logs of the record's block; each identifier against SHA-256 over §5.2's fields (chain id, block, tx index, log position, log hash) derived from the JSON-RPC log by harness::attest::log_statement_id; ids 4910a599ca62 and f694ef675ad7 equal the formula and differ",
+        "outcome": "accepted"
+      },
+      "title": "log identifier equals the spec formula",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-ID-03",
+      "kind": "control",
+      "observed": {
+        "note": "B-AT-ACC, synthetic (as vault::synthetic): two blocks whose vault slot 0 holds the root of the first 5 and of all 8 deposits of the vault's tree vectors, each under a Gloas record placed in LEZ's state; leaf 2 attested under each; one identifier f167fcf3624c4f8d under both roots (spec formula: equal)",
+        "outcome": "accepted"
+      },
+      "title": "accumulator-leaf identifier is the same under two roots",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

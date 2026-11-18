@@ -1,0 +1,102 @@
+{
+  "counts": {
+    "PASS": 5
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "bind",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:WRONG_INSTANCE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-BIND-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 211,
+        "code_name": "prog:WRONG_INSTANCE",
+        "note": "WETH storage request bound to the id of another instance of the program (mainnet's configuration with 4 adoption parts, the same checkpoint, chain id 1); native evaluate: refused prog:WRONG_INSTANCE [AT-BIND-01]",
+        "outcome": "refused"
+      },
+      "title": "request bound to another instance",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ChainMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-BIND-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 140,
+        "code_name": "core:ChainMismatch",
+        "note": "WETH storage request, chain id 11155111, at the mainnet record; native evaluate: refused core:ChainMismatch [AT-BIND-02]",
+        "outcome": "refused"
+      },
+      "title": "mainnet record asked as a Sepolia statement",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:WRONG_INSTANCE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-BIND-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 211,
+        "code_name": "prog:WRONG_INSTANCE",
+        "note": "bound to the id of another instance of the program (mainnet's configuration with 4 adoption parts, the same checkpoint, chain id 1) and chain id 11155111; native evaluate: refused prog:WRONG_INSTANCE [AT-BIND-04]",
+        "outcome": "refused"
+      },
+      "title": "wrong instance and wrong chain together",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ChainMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-BIND-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 140,
+        "code_name": "core:ChainMismatch",
+        "note": "Sepolia Gloas record of block 12,105,936 (Stage 5), its RLP header and USDC's slot proof, chain id 1; native evaluate: refused core:ChainMismatch [AT-BIND-03]",
+        "outcome": "refused"
+      },
+      "title": "Sepolia record asked as a mainnet statement",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-BIND-05",
+      "kind": "control",
+      "observed": {
+        "note": "root instance 88df84285312 (Sepolia, replayed to period 1409), successor 5135362b15f7 created by Succeed (Heze scheduled), which wrote the record of slot 11549664; USDC storage request bound to the root id, sent to the successor's record; native evaluate: accepted, 2 statements; the reply's instance id (event bytes 0..32) is the root id [AT-BIND-05]",
+        "outcome": "accepted"
+      },
+      "title": "request bound to the root id of the record's lineage",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}
