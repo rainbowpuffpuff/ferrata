@@ -1,21 +1,21 @@
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test the_summary_adoption_refuses_a_job_that_adopts_nothing ... ok
-refused alike by the core's steps and the one-step path: next-committee branch node 0 altered: code 27
+test a_zero_period_spec_is_refused_not_a_panic ... one step with zero epochs per sync-committee period: refused (1), no panic
+one step with zero slots per epoch: refused (1), no panic
+test an_aggregate_that_is_not_the_sum_is_the_one_difference ... an aggregate field that is not the sum of the keys: the core's adoption refuses the handoff (code 45), the summary adoption accepts it; afterwards the honest committee's signature is refused (40) and its first member alone, every bit set, is accepted. The consistent handoff: accepted alike, and the reverse.
+test one_step_equals_the_cores_steps_on_every_update_and_handoff ... one step = the core's steps (store, outcome, job but its adoption progress; or the refusal code):
+  official sync vectors: Tally { updates: 160, accepted: 91, handoffs: 66, refused: 69 }
+  mainnet replay: Tally { updates: 5, accepted: 5, handoffs: 5, refused: 0 }
+  Sepolia through Gloas: Tally { updates: 33, accepted: 33, handoffs: 32, refused: 0 }
+test refusals_of_a_handoff_are_the_cores ... refused alike by the core's steps and the one-step path: next-committee branch node 0 altered: code 27
 refused alike by the core's steps and the one-step path: next-committee branch node 3 altered: code 27
 refused alike by the core's steps and the one-step path: next-committee branch node 5 altered: code 27
 refused alike by the core's steps and the one-step path: next committee's aggregate replaced, branch unchanged: code 27
 refused alike by the core's steps and the one-step path: one key of the next committee replaced, branch unchanged: code 27
-an aggregate field that is not the sum of the keys: the core's adoption refuses the handoff (code 45), the summary adoption accepts it; afterwards the honest committee's signature is refused (40) and its first member alone, every bit set, is accepted. The consistent handoff: accepted alike, and the reverse.
-test an_aggregate_that_is_not_the_sum_is_the_one_difference ... ok
 refused alike by the core's steps and the one-step path: 341 of 512 signers: code 51
 refused alike by the core's steps and the one-step path: a period update without finality: code 50
 refused alike by the core's steps and the one-step path: update_1 again, after it was applied: code 52
 refused alike by the core's steps and the one-step path: update_0, older than the store: code 23
-test refusals_of_a_handoff_are_the_cores ... ok
-one step = the core's steps (store, outcome, job but its adoption progress; or the refusal code):
-  official sync vectors: Tally { updates: 160, accepted: 91, handoffs: 66, refused: 69 }
-  mainnet replay: Tally { updates: 5, accepted: 5, handoffs: 5, refused: 0 }
-  Sepolia through Gloas: Tally { updates: 33, accepted: 33, handoffs: 32, refused: 0 }
-test one_step_equals_the_cores_steps_on_every_update_and_handoff ... ok
-test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.37s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test the_summary_adoption_refuses_a_job_that_adopts_nothing ... ok
+test the_summary_adoption_refuses_an_aggregate_that_does_not_decode_or_is_the_identity ... summary adoption, aggregate field does not decode: refused (45)
+summary adoption, aggregate field the identity: refused (45)
+summary adoption, aggregate field x not on the curve: refused (45)
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.44s

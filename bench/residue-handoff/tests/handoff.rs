@@ -645,3 +645,75 @@ fn an_aggregate_that_is_not_the_sum_is_the_one_difference() {
          first member alone, every bit set, is accepted. The consistent handoff: accepted alike, and the reverse."
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// The review's findings 9 and 7, applied
+// ---------------------------------------------------------------------------------------------
+
+/// Finding 9: a handoff job whose next committee's aggregate field does not decode, or is the identity,
+/// is refused by the summary adoption with the core's code (45), and nothing changes.
+#[test]
+fn the_summary_adoption_refuses_an_aggregate_that_does_not_decode_or_is_the_identity() {
+    let b = base();
+    let compact = CompactUpdate::of(&b.handoff);
+    let signers = NonSigners::build(&b.real, &b.handoff.sync_aggregate.bits).unwrap();
+    let job =
+        residue_agg::step1(&b.store, &compact, &signers, b.handoff.signature_slot, &b.spec, &b.gvr, 1, Sum::Batch)
+            .unwrap();
+    let mut identity = [0u8; 48];
+    identity[0] = 0xc0;
+    for (label, field) in [("does not decode", [0xff; 48]), ("the identity", identity), ("x not on the curve", {
+        let mut f = b.real.aggregate_pubkey;
+        f[47] ^= 1;
+        f
+    })] {
+        let mut j = job.clone();
+        let mut summary = j.adoption.as_ref().unwrap().committee;
+        summary.aggregate_pubkey = field;
+        j.adoption.as_mut().unwrap().committee = summary;
+        if let PendingApply::Update { next, .. } = &mut j.pending {
+            *next = Some(summary);
+        }
+        let before = j.clone();
+        let r = adopt_summary(&mut j);
+        // A flipped bit of x may still decode (half of all x are on the curve): then it is adopted.
+        if label == "x not on the curve" && r.is_ok() {
+            println!("summary adoption, aggregate field {label}: this x happens to decode; adopted");
+            continue;
+        }
+        assert_eq!(r, Err(StepError::Core(Error::CommitteeInvalid)), "{label}");
+        assert_eq!(j, before, "{label}: a refused adoption changes nothing");
+        println!("summary adoption, aggregate field {label}: refused (45)");
+    }
+    // The real field: adopted.
+    let mut j = job.clone();
+    assert_eq!(adopt_summary(&mut j), Ok(()));
+}
+
+/// Finding 7: a chain specification with zero slots per epoch or zero epochs per sync-committee period
+/// is refused (`Malformed`, 1) before any period arithmetic, where it would panic (a division by zero).
+#[test]
+fn a_zero_period_spec_is_refused_not_a_panic() {
+    let b = base();
+    let compact = CompactUpdate::of(&b.handoff);
+    let signers = NonSigners::build(&b.real, &b.handoff.sync_aggregate.bits).unwrap();
+    let zero = [0u8; FP12_BYTES];
+    for (label, spec) in [
+        ("zero epochs per sync-committee period", {
+            let mut s = b.spec.clone();
+            s.preset.epochs_per_sync_committee_period = 0;
+            s
+        }),
+        ("zero slots per epoch", {
+            let mut s = b.spec.clone();
+            s.preset.slots_per_epoch = 0;
+            s
+        }),
+    ] {
+        let r = one_step(&b.store, &b.store, &compact, &signers, b.handoff.signature_slot, &zero, &zero, &spec, &b.gvr, Sum::Batch);
+        assert_eq!(r.map(|_| ()), Err(StepError::Core(Error::Malformed)), "{label}");
+        assert_eq!(residue_handoff::check_spec(&spec), Err(StepError::Core(Error::Malformed)), "{label}");
+        println!("one step with {label}: refused (1), no panic");
+    }
+    assert_eq!(residue_handoff::check_spec(&b.spec), Ok(()));
+}

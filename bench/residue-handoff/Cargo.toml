@@ -13,6 +13,8 @@ description = "Experimental, unaudited: a committee handoff in one execution, th
 ferrata-core = { path = "../../crates/ferrata-core", default-features = false, features = ["blst"] }
 residue = { path = "../residue" }
 residue-agg = { path = "../residue-agg" }
+# Decodes the adopted aggregate field (blst_p1_uncompress), as the core's adoption does by its comparison.
+blst = "0.3"
 
 [dev-dependencies]
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }

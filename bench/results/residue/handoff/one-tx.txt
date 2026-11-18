@@ -10,15 +10,15 @@
        2079758  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       6520239  T  whole update: inputs read to new store (one cycle_count delta)
-       6578036  EXECUTION user cycles (SessionInfo::cycles)
+       6610170  T  whole update: inputs read to new store (one cycle_count delta)
+       6667967  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.33  executor wall-clock seconds
+          0.51  executor wall-clock seconds
 
 ### period (handoff), mainnet update_1 as served: 510 of 512 (real committee) / witness folded / multiproof + batch sum / summary (no keys)
           2303  R  read the inputs
@@ -31,15 +31,15 @@
             11  info: multiproof siblings
        2079758  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       5859384  T  whole update: inputs read to new store (one cycle_count delta)
-       5916026  EXECUTION user cycles (SessionInfo::cycles)
-       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.29  executor wall-clock seconds
+       5949315  T  whole update: inputs read to new store (one cycle_count delta)
+       6005957  EXECUTION user cycles (SessionInfo::cycles)
+       6553600  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.43  executor wall-clock seconds
 
 ### period (handoff), mainnet update_1 as served: 510 of 512 (real committee) / witness / multiproof + chain sum / summary (no keys)
           2143  R  read the inputs
@@ -53,15 +53,15 @@
        2079315  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       6519796  T  whole update: inputs read to new store (one cycle_count delta)
-       6577593  EXECUTION user cycles (SessionInfo::cycles)
+       6609727  T  whole update: inputs read to new store (one cycle_count delta)
+       6667524  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.31  executor wall-clock seconds
+          0.45  executor wall-clock seconds
 
 ### period (handoff), mainnet update_1 as served: 510 of 512 (real committee) / witness / multiproof + batch sum / core: 512 keys
           6750  R  read the inputs
@@ -84,7 +84,7 @@
       12517222  T  whole update: inputs read to new store (one cycle_count delta)
       12575468  EXECUTION user cycles (SessionInfo::cycles)
       13631488  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.44  executor wall-clock seconds
+          0.65  executor wall-clock seconds
 
 ### period (handoff), mainnet update_1 as served: 510 of 512 (real committee) / witness folded / multiproof + batch sum / core: 512 keys
           6910  R  read the inputs
@@ -106,7 +106,7 @@
       11855956  T  whole update: inputs read to new store (one cycle_count delta)
       11913881  EXECUTION user cycles (SessionInfo::cycles)
       12845056  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.42  executor wall-clock seconds
+          0.61  executor wall-clock seconds
 
 ### period (handoff), mainnet update_1 as served: 510 of 512 (real committee) / final exponentiation / core (a branch per non-signer) / summary (no keys)
           1836  R  read the inputs
@@ -119,15 +119,15 @@
        2097419  S1 step 1: policy, validation, signing key (non-signers' keys and branches), H(m)
        3275068  S2 step 2: two-pair Miller loop
        3611883  S3 step 3: final exponentiation and check (Blst::final_half)
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       9046004  T  whole update: inputs read to new store (one cycle_count delta)
-       9102704  EXECUTION user cycles (SessionInfo::cycles)
-       9699328  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
-          0.40  executor wall-clock seconds
+       9135935  T  whole update: inputs read to new store (one cycle_count delta)
+       9192635  EXECUTION user cycles (SessionInfo::cycles)
+       9961472  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 10 segments)
+          0.53  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 512 (all) / witness / multiproof + batch sum / summary (no keys)
           2109  R  read the inputs
@@ -141,15 +141,15 @@
        2047923  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       6487632  T  whole update: inputs read to new store (one cycle_count delta)
-       6545429  EXECUTION user cycles (SessionInfo::cycles)
+       6577563  T  whole update: inputs read to new store (one cycle_count delta)
+       6635360  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.31  executor wall-clock seconds
+          0.35  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 512 (all) / witness folded / multiproof + batch sum / summary (no keys)
           2269  R  read the inputs
@@ -162,15 +162,15 @@
              0  info: multiproof siblings
        2047923  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       5826777  T  whole update: inputs read to new store (one cycle_count delta)
-       5883419  EXECUTION user cycles (SessionInfo::cycles)
-       6422528  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.28  executor wall-clock seconds
+       5916708  T  whole update: inputs read to new store (one cycle_count delta)
+       5973350  EXECUTION user cycles (SessionInfo::cycles)
+       6553600  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
+          0.36  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 512 (all) / witness / multiproof + chain sum / summary (no keys)
           2109  R  read the inputs
@@ -184,15 +184,15 @@
        2047923  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       6487632  T  whole update: inputs read to new store (one cycle_count delta)
-       6545429  EXECUTION user cycles (SessionInfo::cycles)
+       6577563  T  whole update: inputs read to new store (one cycle_count delta)
+       6635360  EXECUTION user cycles (SessionInfo::cycles)
        7340032  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 7 segments)
-          0.31  executor wall-clock seconds
+          0.36  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 512 (all) / witness / multiproof + batch sum / core: 512 keys
           6716  R  read the inputs
@@ -215,7 +215,7 @@
       12484615  T  whole update: inputs read to new store (one cycle_count delta)
       12542861  EXECUTION user cycles (SessionInfo::cycles)
       13631488  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 13 segments)
-          0.45  executor wall-clock seconds
+          0.57  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every third absent: the most hashes) / witness / multiproof + batch sum / summary (no keys)
           4331  R  read the inputs
@@ -229,15 +229,15 @@
        3616012  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       8088753  T  whole update: inputs read to new store (one cycle_count delta)
-       8146550  EXECUTION user cycles (SessionInfo::cycles)
+       8178684  T  whole update: inputs read to new store (one cycle_count delta)
+       8236481  EXECUTION user cycles (SessionInfo::cycles)
        8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
-          0.32  executor wall-clock seconds
+          0.44  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every third absent: the most hashes) / witness folded / multiproof + batch sum / summary (no keys)
           4491  R  read the inputs
@@ -250,15 +250,15 @@
            256  info: multiproof siblings
        3616012  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       7427898  T  whole update: inputs read to new store (one cycle_count delta)
-       7484540  EXECUTION user cycles (SessionInfo::cycles)
+       7517829  T  whole update: inputs read to new store (one cycle_count delta)
+       7574471  EXECUTION user cycles (SessionInfo::cycles)
        8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
-          0.31  executor wall-clock seconds
+          0.40  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every third absent: the most hashes) / witness / multiproof + chain sum / summary (no keys)
           4331  R  read the inputs
@@ -272,15 +272,15 @@
        3950563  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       8423304  T  whole update: inputs read to new store (one cycle_count delta)
-       8481101  EXECUTION user cycles (SessionInfo::cycles)
+       8513235  T  whole update: inputs read to new store (one cycle_count delta)
+       8571032  EXECUTION user cycles (SessionInfo::cycles)
        9437184  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
-          0.31  executor wall-clock seconds
+          0.47  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every third absent: the most hashes) / witness / multiproof + batch sum / core: 512 keys
           8938  R  read the inputs
@@ -303,7 +303,7 @@
       14085736  T  whole update: inputs read to new store (one cycle_count delta)
       14143982  EXECUTION user cycles (SessionInfo::cycles)
       15204352  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 15 segments)
-          0.44  executor wall-clock seconds
+          0.60  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every absent index odd: 4g+3 in every group of four, 4g+1 in groups 0..41; the costliest placement found) / witness / multiproof + batch sum / summary (no keys)
           4331  R  read the inputs
@@ -317,15 +317,15 @@
        3624449  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       8097190  T  whole update: inputs read to new store (one cycle_count delta)
-       8154987  EXECUTION user cycles (SessionInfo::cycles)
+       8187121  T  whole update: inputs read to new store (one cycle_count delta)
+       8244918  EXECUTION user cycles (SessionInfo::cycles)
        8912896  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
-          0.32  executor wall-clock seconds
+          0.39  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every absent index odd: 4g+3 in every group of four, 4g+1 in groups 0..41; the costliest placement found) / witness folded / multiproof + batch sum / summary (no keys)
           4491  R  read the inputs
@@ -338,15 +338,15 @@
            256  info: multiproof siblings
        3624449  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3722450  S23f Miller loop with c^-1 folded in (blst lines, own loop) and the folded witness check
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       7436335  T  whole update: inputs read to new store (one cycle_count delta)
-       7492977  EXECUTION user cycles (SessionInfo::cycles)
+       7526266  T  whole update: inputs read to new store (one cycle_count delta)
+       7582908  EXECUTION user cycles (SessionInfo::cycles)
        8388608  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 8 segments)
-          0.28  executor wall-clock seconds
+          0.37  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every absent index odd: 4g+3 in every group of four, 4g+1 in groups 0..41; the costliest placement found) / witness / multiproof + chain sum / summary (no keys)
           4331  R  read the inputs
@@ -360,15 +360,15 @@
        3959000  S1 step 1: policy, validation, signing key (non-signers' keys, one multiproof), H(m)
        3275068  S2 step 2: two-pair Miller loop
        1108212  S3w witness check: decode c and w (canonical), c != 0, w in Fp6, f*w == c^lambda
-           686  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
+         90617  A2 adoption by the summary (no keys; residue_handoff::adopt_summary)
           3791  J  encode the job (VerifyAll hands it to the instance)
            550  info: job bytes
           5816  P  apply (the instance's ApplyVerified, without its decode)
              1  info: adopted a committee (1 = yes)
-       8431741  T  whole update: inputs read to new store (one cycle_count delta)
-       8489538  EXECUTION user cycles (SessionInfo::cycles)
+       8521672  T  whole update: inputs read to new store (one cycle_count delta)
+       8579469  EXECUTION user cycles (SessionInfo::cycles)
        9437184  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 9 segments)
-          0.31  executor wall-clock seconds
+          0.41  executor wall-clock seconds
 
 ### period (handoff), update_1 signed by the bench's committee: 342 (every absent index odd: 4g+3 in every group of four, 4g+1 in groups 0..41; the costliest placement found) / witness / multiproof + batch sum / core: 512 keys
           8938  R  read the inputs
@@ -391,7 +391,7 @@
       14094173  T  whole update: inputs read to new store (one cycle_count delta)
       14152419  EXECUTION user cycles (SessionInfo::cycles)
       15204352  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 15 segments)
-          0.44  executor wall-clock seconds
+          0.58  executor wall-clock seconds
 
 ### REFUSAL (code 27): a node of the next-committee branch with one bit flipped
           2143  R  read the inputs
@@ -407,7 +407,7 @@
             27  refused: code
         203443  EXECUTION user cycles (SessionInfo::cycles)
         524288  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 1 segments)
-          0.08  executor wall-clock seconds
+          0.09  executor wall-clock seconds
 
 ### REFUSAL (code 51): 341 of 512 signers (the bench's committee)
           3625  R  read the inputs

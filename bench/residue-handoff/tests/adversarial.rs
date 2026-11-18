@@ -8,8 +8,11 @@
 //!    the real `pubkeys_root`: the core's adoption refuses it (45), the summary adoption takes it; afterwards
 //!    `aggregate − Σ non-signers` with member 31 absent is exactly Q, so the forger alone produces a "31 of 32" update
 //!    that is accepted, and the 31 honest members' real signature is refused (40). Also an identity aggregate and one
-//!    that does not decode. (Possible only with 342-of-512-equivalent signatures on a state the beacon chain's
-//!    transition did not produce: outside the light client's assumption, §10.3.)
+//!    that does not decode: since the review's finding 9 was applied, the summary adoption decodes the field and
+//!    refuses both with the core's code (45), so both paths refuse them alike (as written, the review expected the
+//!    summary path to accept them and every later update to be refused). (Possible only with 342-of-512-equivalent
+//!    signatures on a state the beacon chain's transition did not produce: outside the light client's assumption,
+//!    §10.3.)
 //! 2. `period_finality_and_replay_refusals`: not finalized, the wrong period, the same handoff twice, another committee
 //!    for a period whose next committee is already adopted: both paths refuse with the same code.
 //! 3. `adopt_summary_guards`: `adopt_summary` on jobs whose pending next committee is not the progress's: refused; a
@@ -144,9 +147,14 @@ fn forged_aggregates_after_summary_adoption() {
         println!("handoff with aggregate field {label}: core {:?}, summary path {:?}", code(&core), code(&one));
         if label == "consistent" {
             assert_eq!(core.as_ref().unwrap().0, one.as_ref().unwrap().0, "consistent: same store");
-        } else {
+        } else if label == "Q + P_31" {
             assert_eq!(code(&core), Some(45), "{label}: the core's adoption refuses (CommitteeInvalid)");
             assert!(one.is_ok(), "{label}: the summary adoption accepts");
+        } else {
+            // Finding 9 applied: the summary adoption decodes the field and refuses it as the core does.
+            assert_eq!(code(&core), Some(45), "{label}: the core's adoption refuses (CommitteeInvalid)");
+            assert_eq!(code(&one), Some(45), "{label}: the summary adoption refuses alike");
+            continue;
         }
         let (s, o, _) = one.unwrap();
         assert!(o.adopted);
@@ -180,9 +188,6 @@ fn forged_aggregates_after_summary_adoption() {
                 ("consistent", _) => None,
                 ("Q + P_31", "forger alone as 31 of 32") => None, // a forged signature ACCEPTED
                 ("Q + P_31", _) => Some(40),
-                ("identity", "honest 32 of 32") => Some(43),
-                ("identity", _) => Some(40),
-                ("undecodable", _) => Some(42),
                 _ => unreachable!(),
             };
             assert_eq!(code(&r), want, "after [{label}] {ulabel}");
