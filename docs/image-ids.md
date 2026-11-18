@@ -76,3 +76,23 @@ with the others.
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
 | bridge program, second build (`lez/guests/bridge-next`): `ferrata_bridge_next` | `0x7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f` | `692b30c16f817771a7bffbc00229a42452b76e39c8b4ecf17bcd593a9e189ae4` | 593,224 | `cbbee74111c528cd2d0de11183c81fcc6a18255c0d28a3a9ec231c5cd3b39671` |
+
+## The attestation program with statement classes; not deployed
+
+The second build of the attestation program: `lez/guests/program-class/` (its own workspace; its lockfile is
+`lez/guests/program/`'s with the package renamed and `ferrata-lez-wire-class` added) compiles the deployed program's own
+`lez/guests/program/src/main.rs` against the new crate `lez/wire-class` under the name `ferrata_lez_wire`, whose
+`attest` replies with each statement's nullifier-safety class beside its unchanged identifier
+([`docs/design/attestation.md`](design/attestation.md) §5.7); built by `lez/methods-program-class`. No file the 14
+guests of the first table compile changed. Built on 18 November 2026 on the Modal build box from this tree (RISC Zero 3.0.5, guest
+Rust 1.91.1, through `scripts/guest-rustc`, `RISC0_BUILD_LOCKED=1`), after `scripts/reproduce-image-ids.sh build` and
+`compare --vault 0x04eE…e44c` on the same tree and box, on which no target directory had existed, gave 14 of 14 for the
+first table and 6 of 6 for the crown run's recorded ids, the vault's `checkpointImageId` and `releaseImageId` among them
+([`lez/results/history-hops/image-ids/`](../lez/results/history-hops/image-ids/compare.txt)); the
+id compiled into the harness the tests ran is the same. Rebuild: `bash lez/results/history-hops/run-class-id.sh` from
+the root after `run-image-ids.sh`, or `cd lez && cargo build -p methods-program-class --locked`, then
+`python3 -I scripts/reproduce/guest_ids.py . OUT.tsv` from the root lists it with the others.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| attestation program with statement classes (`lez/guests/program-class`): `ferrata_lez_class` | `0x0927560f3e6e6c795ede77041f872458f7802a4a4e1c84450b114fa9147f942c` | `0480cc6d1338ed4d45d5825b94ff9c776a313da342d7bfb9b4e22f6ab5ee478e` | 628,228 | `84f191eb2f447d9202631fac15fc4ae03e5a67311dd8300dc1c74570ab07e74e` |

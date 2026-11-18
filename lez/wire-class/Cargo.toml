@@ -1,0 +1,15 @@
+[package]
+name = "ferrata-lez-wire-class"
+description = "The attestation program's reply with each statement's nullifier-safety class: the wire of the program's second build (guests/program-class, not deployed)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+# A crate of its own rather than a feature of ../wire: the deployed programs compile ../wire, and
+# not one byte of it changes. The second build compiles the deployed program's own src/main.rs
+# against this crate under the name `ferrata_lez_wire` (guests/program-class/Cargo.toml).
+[dependencies]
+ferrata-lez-wire = { path = "../wire" }
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+borsh = { version = "=1.6.1", features = ["derive"] }

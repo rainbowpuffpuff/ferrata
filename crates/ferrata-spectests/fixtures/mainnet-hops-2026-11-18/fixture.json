@@ -1,0 +1,63 @@
+{
+  "network": "mainnet",
+  "chain_id": 1,
+  "record": 26384851,
+  "window": 8191,
+  "chains": [
+    [
+      26384835,
+      26376644,
+      26368453,
+      26360262
+    ]
+  ],
+  "headers": {
+    "26384852": "0x9df982c0e5fcbac10cec056a049cafad26eea172e2659ce4bd2c36aebc310c47",
+    "26384851": "0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce",
+    "26384835": "0x6563fc5beca44eb23beb284a22bdfc789749731a94fbac7a1457cbd245b8739d",
+    "26376659": "0x3219a87ca3083496995101dd25e6d5eb40b5178078c8b060901e36a29a99ac11",
+    "26376644": "0x3e2f2a3369f1a60673df70b6d59b1c079e9313cf6f9a3b3e711d57186d042654",
+    "26368453": "0xad0eb73866f57fa4ee4a63ae37f2073ad796f45e3f07de36624a65de18bfe3dd",
+    "26360262": "0x6f7bec6b171384b84fd9dea7092001c32518f45f80dc6e3a27f697224bbd22c4"
+  },
+  "history_slots": {
+    "26384851": [
+      1624
+    ],
+    "26384835": [
+      1624
+    ],
+    "26376644": [
+      1624
+    ],
+    "26368453": [
+      1624
+    ],
+    "26360262": []
+  },
+  "receipts": [
+    26360262
+  ],
+  "transfers": {
+    "26360262": {
+      "tx_index": 6,
+      "log_index": 0,
+      "block_log_index": 4,
+      "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "logs_in_receipt": 1
+    }
+  },
+  "storage": [
+    {
+      "block": 26360262,
+      "address": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "slot": "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0",
+      "value": "0x0000000000000000000000000000000000000000000000e89aba2c237e5b1ea2",
+      "getter": "balanceOf(address) of 0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc"
+    }
+  ],
+  "extra_headers": [
+    26384852,
+    26376659
+  ]
+}
