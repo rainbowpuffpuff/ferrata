@@ -158,6 +158,7 @@ fn ids() -> Result<()> {
             "records_image_id": h(&image_id(methods03::FERRATA_RECORDS03_ID)),
             "records_program_id": format!("{:?}", r.id()),
             "records_elf_bytes": RECORDS_ELF.len(),
+            "privacy_preserving_circuit_id": format!("{:?}", lee::PRIVACY_PRESERVING_CIRCUIT_ID),
         }))?
     );
     Ok(())
