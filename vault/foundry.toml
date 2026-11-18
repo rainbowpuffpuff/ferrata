@@ -46,6 +46,8 @@ fs_permissions = [
     # test/PrivacySuite.t.sol reads the LEZ half's scenario and writes what each transaction published
     # (target/privacy/ at the repository root, not committed; FERRATA_PRIVACY_DIR overrides).
     { access = "read-write", path = "../target/privacy" },
+    # test/invariant/BrokenVerifierInvariants.t.sol appends one line per run (the campaign's totals; not committed).
+    { access = "read-write", path = "../target/broken-verifier" },
 ]
 
 [lint]
