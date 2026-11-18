@@ -1,0 +1,1529 @@
+{
+ "endpoint": "https://eth.drpc.org",
+ "seals": [
+  {
+   "label": "e2e/runs/crown-live-3 checkpoint",
+   "sealHead": "0x73c457ba1603bb74e1867619",
+   "sealSha256": "0x56084d2f10d78db16f8ab8298ed2670ba198a50d0730bd6091720d74a27e3a60",
+   "imageId": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+   "journalSha256": "0x84494ac4b4e36c72319d701ccf3d320ee8a0de62b506920683110ed8f0ae404e",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-live-3/crown.json candidate.seal/journal; e2e/runs/crown-live-3/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-live-3 release private-1",
+   "sealHead": "0x73c457ba21c31f24101398b6",
+   "sealSha256": "0xfa76c6e1c11d0f6abd91fe3e30fb22876dd5e65d4b84c1783a058d48f0cec479",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xa517749e9f211d695a4783743b5d08db2e778390989751b056fbfead07c178aa",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-live-3/crown.json releases[private-1].seal; e2e/runs/crown-live-3/params.json releaseImageId; e2e/runs/crown-live-3/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-live-3 release public-0",
+   "sealHead": "0x73c457ba00e378309819c599",
+   "sealSha256": "0xd2089dbefa8e29b1731270ed238d2efc8d66ff00bd1fcde9fce56f286787fd3a",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x895b80769268b20ac7253bae00fb5549b89be392f550cbc6f808d314fde143d4",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-live-3/crown.json releases[public-0].seal; e2e/runs/crown-live-3/params.json releaseImageId; e2e/runs/crown-live-3/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-rc3 checkpoint",
+   "sealHead": "0x73c457ba2a699583d931a07b",
+   "sealSha256": "0xca597df520566a979a35516a9fb6b4ca149be18b9b7815d98a4dbb7c03cd59be",
+   "imageId": "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf",
+   "journalSha256": "0x2d3b85669959241d4e85ea450a6e40f14c168ab4a7f03bc7acb0a786961eb1a9",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/zone-bridge-rc3/checkpoint/receipts/seal.hex; e2e/runs/zone-bridge-rc3/checkpoint/receipts/groth16.json image_id; e2e/runs/zone-bridge-rc3/checkpoint/receipts/journal.hex",
+    "e2e/runs/zone-bridge-rc3/crown.json candidate.seal/journal; e2e/runs/zone-bridge-rc3/params.json checkpointImageIdB (deploy.json mode B)",
+    "vault/test/real/fixtures/zone-bridge-rc3.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-rc3 release private-1",
+   "sealHead": "0x73c457ba2bd9fc3686423b4b",
+   "sealSha256": "0xeba859ccb2aa565ecb8becda76e7c8a22faaa2db30b9d2f324dec5c297d03b02",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xee94873310e1ccdda49f91f1cf4a43483e8e09d0124fecce9ad4323fb8d48165",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-rc3/crown.json releases[private-1].seal; e2e/runs/zone-bridge-rc3/params.json releaseImageId; e2e/runs/zone-bridge-rc3/releases/release-private-1.json journal",
+    "e2e/runs/zone-bridge-rc3/releases/receipts/release-private-1/seal.hex; e2e/runs/zone-bridge-rc3/releases/receipts/release-private-1/groth16.json image_id; e2e/runs/zone-bridge-rc3/releases/receipts/release-private-1/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-rc3 release public-0",
+   "sealHead": "0x73c457ba1e87b82f6f5a5e29",
+   "sealSha256": "0xee878120a77a5552b0c23368f4386e96885f1ca9bf92350b5f3a1ef02e779718",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xcb42efea73cf0a611c622b589d7eb8263fe5458748055c3054b03c51680bc415",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-rc3/crown.json releases[public-0].seal; e2e/runs/zone-bridge-rc3/params.json releaseImageId; e2e/runs/zone-bridge-rc3/releases/release-public-0.json journal",
+    "e2e/runs/zone-bridge-rc3/releases/receipts/release-public-0/seal.hex; e2e/runs/zone-bridge-rc3/releases/receipts/release-public-0/groth16.json image_id; e2e/runs/zone-bridge-rc3/releases/receipts/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-2 release private-1",
+   "sealHead": "0x73c457ba283779df23d8a06f",
+   "sealSha256": "0xd8ddd0de11d5bd889963121a57bf2bafc0f06c132d98f7065c1d79b087eab948",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x25dbdf336e6b6810ccdd5189ab5d7644035d2ec01f4805e5fb817784541c32fa",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/testnet-return-fork-2/crown.json releases[private-1].seal; e2e/runs/testnet-return-fork-2/params.json releaseImageId; e2e/runs/testnet-return-fork-2/releases/release-private-1.json journal",
+    "e2e/runs/testnet-return-fork-2/releases/receipts/release-private-1/seal.hex; e2e/runs/testnet-return-fork-2/releases/receipts/release-private-1/groth16.json image_id; e2e/runs/testnet-return-fork-2/releases/receipts/release-private-1/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-2 release public-0",
+   "sealHead": "0x73c457ba01ff4afceaf09f76",
+   "sealSha256": "0x47f99b8716b0e5878104c61fcce0cb14c00a83bb0421c66a98b36a8eabc4db7e",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xb01a0ef130d0a996851bc21bfe70642e64e23589bcbe3ac6dc0deb36523b5611",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/testnet-return-fork-2/crown.json releases[public-0].seal; e2e/runs/testnet-return-fork-2/params.json releaseImageId; e2e/runs/testnet-return-fork-2/releases/release-public-0.json journal",
+    "e2e/runs/testnet-return-fork-2/releases/receipts/release-public-0/seal.hex; e2e/runs/testnet-return-fork-2/releases/receipts/release-public-0/groth16.json image_id; e2e/runs/testnet-return-fork-2/releases/receipts/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bridge/artifacts/erc20",
+   "sealHead": "0x73c457ba09cde587a81fd3be",
+   "sealSha256": "0x725e34e9a28b82992580ac18aeead313a5de7e208496251525b278f53b3fd079",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0xcb236a60277c10779accd6948c52fb1503cdbd1e42c00fda70b4883ea934c586",
+   "journalBytes": 352,
+   "records": [
+    "bridge/artifacts/erc20/seal.hex; bridge/artifacts/scenario.json release_image_id (case erc20); bridge/artifacts/erc20/journal.hex",
+    "bridge/evm-verify/test/fixtures/v2/release-erc20.json seal/journal/releaseImageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bridge/artifacts/eth",
+   "sealHead": "0x73c457ba0ce985f820a8ae15",
+   "sealSha256": "0x3bac45d0d4f3e71d9a986f1494914d3be787885d9c1861b03b0d897ef8d8ac21",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0x58581b6367f6c9e5cbb72d0f174c282873ee5c11554a0cdd204f17bf67e57fe2",
+   "journalBytes": 352,
+   "records": [
+    "bridge/artifacts/eth/seal.hex; bridge/artifacts/scenario.json release_image_id (case eth); bridge/artifacts/eth/journal.hex",
+    "bridge/evm-verify/test/fixtures/v2/release-eth.json seal/journal/releaseImageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bridge/artifacts/ethpull",
+   "sealHead": "0x73c457ba2b618a641c144791",
+   "sealSha256": "0x4a7044dc35c7e5e5346ff0eb9ef259fd4a0d8ac1bf72a00c047e801ea1781f8e",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0x3d706f2b6c84b60d28877cfddeaac80e227dbc64da35276abb8afbbf1b0b9ecb",
+   "journalBytes": 352,
+   "records": [
+    "bridge/artifacts/ethpull/seal.hex; bridge/artifacts/scenario.json release_image_id (case ethpull); bridge/artifacts/ethpull/journal.hex",
+    "bridge/evm-verify/test/fixtures/v2/release-ethpull.json seal/journal/releaseImageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bridge/artifacts/v1/erc20",
+   "sealHead": "0x73c457ba1cb8c1deda500a9d",
+   "sealSha256": "0x46ca7973fee777be06c76e6e5e086577b603fa5b3c4050f8f6c7c0e362988a05",
+   "imageId": "0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41",
+   "journalSha256": "0xcab00ffb84b1ce4fc9c1c635219d315d01580974c52070436ba7282324080a0f",
+   "journalBytes": 352,
+   "records": [
+    "bridge/artifacts/v1/erc20/seal.hex; bridge/artifacts/v1/scenario.json release_image_id (case erc20); bridge/artifacts/v1/erc20/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bridge/artifacts/v1/eth",
+   "sealHead": "0x73c457ba11f83c6786b292f7",
+   "sealSha256": "0x6ad981c99568fdc3eee705dc8b39de036b4a3e8e0c7af71589fa2b0f031a3d3a",
+   "imageId": "0x2ca5b06e8da21a4f51506ded03fa5bd89249080b30affe5350ee9da446fc4c41",
+   "journalSha256": "0xbd09000ed51097cd420ef2f272392a41678747eab330d6dfffc92365c36dcbd2",
+   "journalBytes": 352,
+   "records": [
+    "bridge/artifacts/v1/eth/seal.hex; bridge/artifacts/v1/scenario.json release_image_id (case eth); bridge/artifacts/v1/eth/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "bench/report/20261111T1849Z-333f14d58f95/user/bench-20261111T1849Z-333f14d58f95/release/run-1/groth16",
+   "sealHead": "0x73c457ba135484e27d620bf7",
+   "sealSha256": "0x41e13fdef5217cd86fb1f899d28b182aa06986c3130d9e960a31b1c9823a31f9",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "bench/report/20261111T1849Z-333f14d58f95/user/bench-20261111T1849Z-333f14d58f95/release/run-1/groth16/seal.hex; bench/report/20261111T1849Z-333f14d58f95/user/bench-20261111T1849Z-333f14d58f95/release/run-1/groth16/groth16.json image_id; bench/report/20261111T1849Z-333f14d58f95/user/bench-20261111T1849Z-333f14d58f95/release/run-1/groth16/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "checkpoint/artifacts/cp-empty-1-run2",
+   "sealHead": "0x73c457ba1e6c93942e1fa072",
+   "sealSha256": "0xaa0c1a6bb3fc5059d458326206f7e4e7668a0949813053e511944fca587b4cb4",
+   "imageId": "0xbbf58feda031d9a7263d64efeac5979762443acd1beb3a4b31ef73e1163334c0",
+   "journalSha256": "0x326636f27722937a3bcc038cd9e48844286ed1ec1b969615b8321e25cf94fc4e",
+   "journalBytes": 544,
+   "records": [
+    "checkpoint/artifacts/cp-empty-1-run2/seal.hex; checkpoint/artifacts/README.md (\"checkpoint image\"); checkpoint/artifacts/cp-empty-1-run2/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "checkpoint/artifacts/cp-empty-1-under-load",
+   "sealHead": "0x73c457ba019db98e70ba748e",
+   "sealSha256": "0xf4fa901ece021a900e2ca419349a8c03d40e20ce5d5ef2ebd868693c98620622",
+   "imageId": "0xbbf58feda031d9a7263d64efeac5979762443acd1beb3a4b31ef73e1163334c0",
+   "journalSha256": "0x326636f27722937a3bcc038cd9e48844286ed1ec1b969615b8321e25cf94fc4e",
+   "journalBytes": 544,
+   "records": [
+    "checkpoint/artifacts/cp-empty-1-under-load/seal.hex; checkpoint/artifacts/README.md (\"checkpoint image\"); checkpoint/artifacts/cp-empty-1-under-load/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "checkpoint/realblocks/out-crown-r4/releases/release-public-0",
+   "sealHead": "0x73c457ba1e9de2ab961189a2",
+   "sealSha256": "0xd12d8a22c9f3f5453fe0f9c38f70a245dc4c3b83fe353dee83ad6b7993013753",
+   "imageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+   "journalSha256": "0x55034b265e932d9bdeded792a283cc4be6370fafce2e1c3f0ec5b8abca2a7026",
+   "journalBytes": 352,
+   "records": [
+    "checkpoint/realblocks/out-crown-r4/releases/release-public-0/seal.hex; checkpoint/realblocks/out-crown-r4/proofs.json releaseImageId; checkpoint/realblocks/out-crown-r4/releases/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork-2/fixture.json candidate",
+   "sealHead": "0x73c457ba0172d8a088ce9fe0",
+   "sealSha256": "0xd590ba302ed409a0caacd2b713d325b7104dabf28ceab0ea9c2a2421390a5cc8",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0xd9b82172e4198278877c0112ad7132f7fe01ca5c99cae8d0e85119c055831dc3",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/cloud-fork-2/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/cloud-fork-2/receipts/cp-e2e-candidate/seal.hex; e2e/runs/cloud-fork-2/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/cloud-fork-2/receipts/cp-e2e-candidate/journal.hex",
+    "e2e/runs/cloud-fork-3/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/sepolia-live-2/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/sepolia-live-2/receipts/cp-e2e-candidate/seal.hex; e2e/runs/sepolia-live-2/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/sepolia-live-2/receipts/cp-e2e-candidate/journal.hex"
+   ],
+   "filesWithThisSeal": 5,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork-2/fixture.json finalize",
+   "sealHead": "0x73c457ba27319c1f98d47295",
+   "sealSha256": "0x9055e573d8772702477c2fac33fdcaba83e4f37f9944f1d2d6edfde5d3cfe849",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0x8ddad45eca55f3d32d9287acd67b8eb084288fbd5970754220512acb14e056d9",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/cloud-fork-2/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/cloud-fork-2/receipts/cp-e2e-finalize/seal.hex; e2e/runs/cloud-fork-2/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/cloud-fork-2/receipts/cp-e2e-finalize/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork-2/receipts/release-erc20",
+   "sealHead": "0x73c457ba011e97fa190fb8ad",
+   "sealSha256": "0x6adea08ff6c20d6709c5428ee522425a99e058f675adc377a6197fcbf4fdc7cc",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0x3ad8dc09b775ff8215be89e73aabde6dc0260499cdf7793eaad172e90eb80739",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/cloud-fork-2/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/cloud-fork-2/receipts/release-erc20/seal.hex; e2e/runs/cloud-fork-2/receipts/release-erc20/groth16.json image_id; e2e/runs/cloud-fork-2/receipts/release-erc20/journal.hex",
+    "e2e/runs/cloud-fork-3/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live-2/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live-2/receipts/release-erc20/seal.hex; e2e/runs/sepolia-live-2/receipts/release-erc20/groth16.json image_id; e2e/runs/sepolia-live-2/receipts/release-erc20/journal.hex"
+   ],
+   "filesWithThisSeal": 5,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork-2/receipts/release-eth",
+   "sealHead": "0x73c457ba0618f5efd10cd733",
+   "sealSha256": "0xb7c0a338d2d743ff586a693811b2e9fdd6d4597c03a2669c23a6ec0157a90010",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0x32dd1898381db62299eeff7ca99ebcddb26fd72f630ceadb5d908f94dfc860e5",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/cloud-fork-2/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/cloud-fork-2/receipts/release-eth/seal.hex; e2e/runs/cloud-fork-2/receipts/release-eth/groth16.json image_id; e2e/runs/cloud-fork-2/receipts/release-eth/journal.hex",
+    "e2e/runs/cloud-fork-3/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live-2/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live-2/receipts/release-eth/seal.hex; e2e/runs/sepolia-live-2/receipts/release-eth/groth16.json image_id; e2e/runs/sepolia-live-2/receipts/release-eth/journal.hex"
+   ],
+   "filesWithThisSeal": 5,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork-3/fixture.json finalize",
+   "sealHead": "0x73c457ba1130d2050db08c1d",
+   "sealSha256": "0x9ce5107040a635d41599a0ff963bb9e8c52a35e556453b194cf723061cfd9af1",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0x7a55676e2e9bbb9d110013608930bff660551afd90cba9fc3c904e3f68bc8868",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/cloud-fork-3/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/cloud-fork-3/receipts/cp-e2e-finalize/seal.hex; e2e/runs/cloud-fork-3/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/cloud-fork-3/receipts/cp-e2e-finalize/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/cloud-fork/fixture.json finalize",
+   "sealHead": "0x73c457ba1dbd9cfa3571632c",
+   "sealSha256": "0xe902cdad59b2440c09f3449dff0ddc4313c024963d02e9a73ba8925de63e25f3",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0xfcb222028bda2207196902ce292e57a010a0e23298068f1448687a45ed1e32f2",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/cloud-fork/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/cloud-fork/receipts/cp-e2e-finalize/seal.hex; e2e/runs/cloud-fork/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/cloud-fork/receipts/cp-e2e-finalize/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-live-1 checkpoint",
+   "sealHead": "0x73c457ba183e98d26ae3210b",
+   "sealSha256": "0x489387bf2080c16c33ccf6eb3ecc9b343d22d51c6292ad65b9c5aa35103f0d7d",
+   "imageId": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+   "journalSha256": "0x419de8117a70febfe71361f5567e0c115cc5a0f29351d5f2a6b9519928db878f",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-live-1/crown.json candidate.seal/journal; e2e/runs/crown-live-1/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-live-1 release private-1",
+   "sealHead": "0x73c457ba086ebdd285e42873",
+   "sealSha256": "0x0a82a3e063343c6cef618a9b3eba04d8eadf4e376928b9a717eee66b7bee375d",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x48cee28fc4825955df82a8545775801933f557333202a7d83ffda825989531e5",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-live-1/crown.json releases[private-1].seal; e2e/runs/crown-live-1/params.json releaseImageId; e2e/runs/crown-live-1/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-live-1 release public-0",
+   "sealHead": "0x73c457ba05679de9dc1b88e8",
+   "sealSha256": "0x9484d70af821dbc43e3f059ff3abd77526e0f0a8ca0c8bff99532d142c6d112f",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x3806e62f539b2bc7164b9e37e6321c98f26808b8c001b2ebf691a951c47c5600",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-live-1/crown.json releases[public-0].seal; e2e/runs/crown-live-1/params.json releaseImageId; e2e/runs/crown-live-1/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-1 checkpoint",
+   "sealHead": "0x73c457ba301dc8e704b70602",
+   "sealSha256": "0xdded38a7242f03b341c2e484293d70674ce15f74d4a927455ca40283661cbc22",
+   "imageId": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
+   "journalSha256": "0xa3f27e4fa9d9e69af618a7e7c51d447b300080f412e7584735e5b1e647677d33",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-rehearsal-1/crown.json candidate.seal/journal; e2e/runs/crown-rehearsal-1/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-1 release private-1",
+   "sealHead": "0x73c457ba071bd94b910a1bb8",
+   "sealSha256": "0x2c4e816d0d0652613b063fbae6968a462d72e6d73d270c4185c32a18783273b3",
+   "imageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+   "journalSha256": "0x8f40c7711860af32136f0ad1b5965c092826682f25b349b31ee92a41b67cb828",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-1/crown.json releases[private-1].seal; e2e/runs/crown-rehearsal-1/params.json releaseImageId; e2e/runs/crown-rehearsal-1/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-1 release public-0",
+   "sealHead": "0x73c457ba1a6be8f0f38faabe",
+   "sealSha256": "0x80eb36be2498ea1d196346f5b0da5600caed6e62ec1971beb0b8f1b4018727aa",
+   "imageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+   "journalSha256": "0x55034b265e932d9bdeded792a283cc4be6370fafce2e1c3f0ec5b8abca2a7026",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-1/crown.json releases[public-0].seal; e2e/runs/crown-rehearsal-1/params.json releaseImageId; e2e/runs/crown-rehearsal-1/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-3 checkpoint",
+   "sealHead": "0x73c457ba1d9a9816c952001c",
+   "sealSha256": "0x5411518359869f89a605719648a2730a95567c85daf0935024ead0310c399e62",
+   "imageId": "0xa475e8f9aaa41d0ae3bf9a20ae7d937ebc637a961808765f0ff175158760d3b2",
+   "journalSha256": "0xef0846410d8b31c18b29a3fe392a85a5a2f2c7bf8d74dddc403c92aed048cded",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-rehearsal-3/crown.json candidate.seal/journal; e2e/runs/crown-rehearsal-3/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-3 release private-1",
+   "sealHead": "0x73c457ba044807b211ec3328",
+   "sealSha256": "0x0fa4d9156050de1d0d663a8331dc3ad235dfb9199099e888540bc147c640a2d9",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-3/crown.json releases[private-1].seal; e2e/runs/crown-rehearsal-3/params.json releaseImageId; e2e/runs/crown-rehearsal-3/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-3 release public-0",
+   "sealHead": "0x73c457ba2aa14fb878e3c6f8",
+   "sealSha256": "0xe51405b268a64bb3e97361364cf55d57808d9b20c4547ce59500d04f7a70ce98",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0xc85df801023e59f07913a5920977116512cfbf253a5b867bd5a1acf871f3c1b0",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-3/crown.json releases[public-0].seal; e2e/runs/crown-rehearsal-3/params.json releaseImageId; e2e/runs/crown-rehearsal-3/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-4 checkpoint",
+   "sealHead": "0x73c457ba0aba043340b1c1cd",
+   "sealSha256": "0x684dbbc8d30b2bbac11478a25e848bf589bfd734359dafcfa140e81d41162345",
+   "imageId": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+   "journalSha256": "0x6ad4b486cbde4e5fb94c8d06b5d8cfae62b3e055337418ec104e6273e4a4eb27",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-rehearsal-4/crown.json candidate.seal/journal; e2e/runs/crown-rehearsal-4/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-4 release private-1",
+   "sealHead": "0x73c457ba1c1cca03e4650a9d",
+   "sealSha256": "0x0593a3376ac1fac59fbccafc663b3b5ba70e4b1f8c37b7cf71d7ff69ab3f29f5",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xd0c53d25736084b7e52a9a896335248a30b02eddfe7a3962642a39c3b73ad67e",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-4/crown.json releases[private-1].seal; e2e/runs/crown-rehearsal-4/params.json releaseImageId; e2e/runs/crown-rehearsal-4/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-4 release public-0",
+   "sealHead": "0x73c457ba1d9be407350bbee3",
+   "sealSha256": "0x0cb4e589107ae594835156af35291108aa9c6b91b0b48248d72ea2f809f006b8",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xb5a8b1b8b252dc8d6ef69a957049a3faf482575ad00f7c81125b0a0b31ea3718",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-4/crown.json releases[public-0].seal; e2e/runs/crown-rehearsal-4/params.json releaseImageId; e2e/runs/crown-rehearsal-4/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-5 checkpoint",
+   "sealHead": "0x73c457ba2bf81cd6ef5e9b97",
+   "sealSha256": "0x279e56af765a76662e4a791f4441cf7f085fe87a3374ef3b970ffa83dc17635e",
+   "imageId": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+   "journalSha256": "0x8eb4840dd6095c31c165e8254f9f610d82d0fba098da8f35e63d4297f9153ad3",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/crown-rehearsal-5/crown.json candidate.seal/journal; e2e/runs/crown-rehearsal-5/params.json checkpointImageIdB (deploy.json mode B)"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-5 release private-1",
+   "sealHead": "0x73c457ba2e79c24660ee270e",
+   "sealSha256": "0x6b10d0143df16fdf02d0545ae3e4457ee5c7890b1fbd80cfc5ac18d477b52812",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xd0c53d25736084b7e52a9a896335248a30b02eddfe7a3962642a39c3b73ad67e",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-5/crown.json releases[private-1].seal; e2e/runs/crown-rehearsal-5/params.json releaseImageId; e2e/runs/crown-rehearsal-5/releases/release-private-1.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/crown-rehearsal-5 release public-0",
+   "sealHead": "0x73c457ba1110b9a2c549d0cd",
+   "sealSha256": "0x41431cb6d8d55c7a49696b45cd629c5e367f7ac5068b524669bcf323142920c0",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xb5a8b1b8b252dc8d6ef69a957049a3faf482575ad00f7c81125b0a0b31ea3718",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/crown-rehearsal-5/crown.json releases[public-0].seal; e2e/runs/crown-rehearsal-5/params.json releaseImageId; e2e/runs/crown-rehearsal-5/releases/release-public-0.json journal"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/fork-driver/fixture.json finalize",
+   "sealHead": "0x73c457ba06b0743c8c5dfed9",
+   "sealSha256": "0x402a554b47dee59493737c3088be1bc6accbf5a21d82da66524acb91adfe356b",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0x1d0c881b786a506b9a138fc1e2a49782cd817f97b1ab2ebb1b1fb8375959b50e",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/fork-driver/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/fork-driver/receipts/cp-e2e-finalize/seal.hex; e2e/runs/fork-driver/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/fork-driver/receipts/cp-e2e-finalize/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/fork/fixture.json candidate",
+   "sealHead": "0x73c457ba2ce3721a42d39ebf",
+   "sealSha256": "0x74f5db205b4fea3772ac7d3c3bcf0410c7bb9018fde05e87dd5389dd8108ee53",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0xb62dac3a750daf4c4c7705b897207deeb88a26ecb54efd5e3808e418305cbe83",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/cloud-fork/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/cloud-fork/receipts/cp-e2e-candidate/seal.hex; e2e/runs/cloud-fork/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/cloud-fork/receipts/cp-e2e-candidate/journal.hex",
+    "e2e/runs/fork-driver/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/fork-driver/receipts/cp-e2e-candidate/seal.hex; e2e/runs/fork-driver/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/fork-driver/receipts/cp-e2e-candidate/journal.hex",
+    "e2e/runs/fork/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/fork/receipts/cp-e2e-candidate/seal.hex; e2e/runs/fork/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/fork/receipts/cp-e2e-candidate/journal.hex",
+    "e2e/runs/sepolia-live/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/sepolia-live/receipts/cp-e2e-candidate/seal.hex; e2e/runs/sepolia-live/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/sepolia-live/receipts/cp-e2e-candidate/journal.hex",
+    "e2e/runs/sepolia/fixture.json candidate.seal/journal; checkpointImageId",
+    "e2e/runs/sepolia/receipts/cp-e2e-candidate/seal.hex; e2e/runs/sepolia/receipts/cp-e2e-candidate/groth16.json image_id; e2e/runs/sepolia/receipts/cp-e2e-candidate/journal.hex",
+    "vault/test/real/fixtures/return-leg.json candidate.seal/journal; checkpointImageId"
+   ],
+   "filesWithThisSeal": 11,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/fork/fixture.json finalize",
+   "sealHead": "0x73c457ba048095838448e652",
+   "sealSha256": "0x05f3665e7a3f61faa6b7497323a79aad8eb72d7f1e0e26ad2b1dfa16ee54a054",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0x7f028a95d36c0f6ce57223fd76a5f374bd34a58e5283d766c1ea3a914ce3c026",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/fork/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/fork/receipts/cp-e2e-finalize/seal.hex; e2e/runs/fork/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/fork/receipts/cp-e2e-finalize/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/fork/receipts/release-erc20",
+   "sealHead": "0x73c457ba2809b331658b8308",
+   "sealSha256": "0x89084da8f5c35f1d82f0db979df3ac5cbc91fde1c3376d3df32fd17606914db7",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0x25e3e91c4c5d76c07a8b91cdb6eec2f62058e8d9ae0df34afb66e31a9aaf4c43",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/cloud-fork/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/cloud-fork/receipts/release-erc20/seal.hex; e2e/runs/cloud-fork/receipts/release-erc20/groth16.json image_id; e2e/runs/cloud-fork/receipts/release-erc20/journal.hex",
+    "e2e/runs/fork-driver/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/fork-driver/receipts/release-erc20/seal.hex; e2e/runs/fork-driver/receipts/release-erc20/groth16.json image_id; e2e/runs/fork-driver/receipts/release-erc20/journal.hex",
+    "e2e/runs/fork/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/fork/receipts/release-erc20/seal.hex; e2e/runs/fork/receipts/release-erc20/groth16.json image_id; e2e/runs/fork/receipts/release-erc20/journal.hex",
+    "e2e/runs/sepolia-live/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live/receipts/release-erc20/seal.hex; e2e/runs/sepolia-live/receipts/release-erc20/groth16.json image_id; e2e/runs/sepolia-live/receipts/release-erc20/journal.hex",
+    "e2e/runs/sepolia/fixture.json releases[1].seal/journal; releaseImageId",
+    "e2e/runs/sepolia/receipts/release-erc20/seal.hex; e2e/runs/sepolia/receipts/release-erc20/groth16.json image_id; e2e/runs/sepolia/receipts/release-erc20/journal.hex",
+    "vault/test/real/fixtures/return-leg.json releases[1].seal/journal; releaseImageId"
+   ],
+   "filesWithThisSeal": 11,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/fork/receipts/release-eth",
+   "sealHead": "0x73c457ba2d201949cfff6f03",
+   "sealSha256": "0x55c1e419b19ec1312c4e31029091093c66cad3e73092ea35f4e56476633654f3",
+   "imageId": "0xdda76672e6e05535117ed6880227a414420344cba9c47b6e112c7dabc5b027c5",
+   "journalSha256": "0xbd7eaf7a44f1352b171d4cd7d174b9219ec22f27e0d4990b745e55c2e3773ee9",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/cloud-fork/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/cloud-fork/receipts/release-eth/seal.hex; e2e/runs/cloud-fork/receipts/release-eth/groth16.json image_id; e2e/runs/cloud-fork/receipts/release-eth/journal.hex",
+    "e2e/runs/fork-driver/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/fork-driver/receipts/release-eth/seal.hex; e2e/runs/fork-driver/receipts/release-eth/groth16.json image_id; e2e/runs/fork-driver/receipts/release-eth/journal.hex",
+    "e2e/runs/fork/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/fork/receipts/release-eth/seal.hex; e2e/runs/fork/receipts/release-eth/groth16.json image_id; e2e/runs/fork/receipts/release-eth/journal.hex",
+    "e2e/runs/sepolia-live/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/sepolia-live/receipts/release-eth/seal.hex; e2e/runs/sepolia-live/receipts/release-eth/groth16.json image_id; e2e/runs/sepolia-live/receipts/release-eth/journal.hex",
+    "e2e/runs/sepolia/fixture.json releases[0].seal/journal; releaseImageId",
+    "e2e/runs/sepolia/receipts/release-eth/seal.hex; e2e/runs/sepolia/receipts/release-eth/groth16.json image_id; e2e/runs/sepolia/receipts/release-eth/journal.hex",
+    "vault/test/real/fixtures/return-leg.json releases[0].seal/journal; releaseImageId"
+   ],
+   "filesWithThisSeal": 11,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/relayer-fork/paid",
+   "sealHead": "0x73c457ba1418b11670481b46",
+   "sealSha256": "0xde184ff03a89e2bcbf6a501a848bf1264eb92e6185ae8df557b211fa813663a4",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0xdb0eddae6e0e02db6e8b00d123924949d064692ae3568452d23758ddf01d5a4e",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/relayer-fork/paid/seal.hex; e2e/runs/relayer-fork/paid/groth16.json image_id; e2e/runs/relayer-fork/paid/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/sepolia/fixture.json finalize",
+   "sealHead": "0x73c457ba291b29151119045a",
+   "sealSha256": "0x9270b24f2d0c38713800fe2976d05ed390d71dcfb658fab84abc897d21a34c55",
+   "imageId": "0x95b816ed2614e340c85fed3ba3dad1f70e7dff2da1363406ade87e1333583caf",
+   "journalSha256": "0xc9ab74a7a7e16b6b7d8084e5cbedf9b6488b87f3719ace3408aa47ffd3cc3e69",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/sepolia/fixture.json finalize.seal/journal; checkpointImageId",
+    "e2e/runs/sepolia/receipts/cp-e2e-finalize/seal.hex; e2e/runs/sepolia/receipts/cp-e2e-finalize/groth16.json image_id; e2e/runs/sepolia/receipts/cp-e2e-finalize/journal.hex",
+    "vault/test/real/fixtures/return-leg.json finalize.seal/journal; checkpointImageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-1 release private-1",
+   "sealHead": "0x73c457ba0053f4009f6965bd",
+   "sealSha256": "0x8fb5273e0425935cda206952adc1c4fb2f579187f5d145600fafe8114941680b",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x25dbdf336e6b6810ccdd5189ab5d7644035d2ec01f4805e5fb817784541c32fa",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/testnet-return-fork-1/crown.json releases[private-1].seal; e2e/runs/testnet-return-fork-1/params.json releaseImageId; e2e/runs/testnet-return-fork-1/releases/release-private-1.json journal",
+    "e2e/runs/testnet-return-fork-1/releases/receipts/release-private-1/seal.hex; e2e/runs/testnet-return-fork-1/releases/receipts/release-private-1/groth16.json image_id; e2e/runs/testnet-return-fork-1/releases/receipts/release-private-1/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-1 release public-0",
+   "sealHead": "0x73c457ba06eab97c165ea949",
+   "sealSha256": "0x7843dd996aa04fb5e418615544213ac66482c88b477daa3f2f52212d4e2a811b",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0xb01a0ef130d0a996851bc21bfe70642e64e23589bcbe3ac6dc0deb36523b5611",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/testnet-return-fork-1/crown.json releases[public-0].seal; e2e/runs/testnet-return-fork-1/params.json releaseImageId; e2e/runs/testnet-return-fork-1/releases/release-public-0.json journal",
+    "e2e/runs/testnet-return-fork-1/releases/receipts/release-public-0/seal.hex; e2e/runs/testnet-return-fork-1/releases/receipts/release-public-0/groth16.json image_id; e2e/runs/testnet-return-fork-1/releases/receipts/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-1 checkpoint",
+   "sealHead": "0x73c457ba021d006e33f47960",
+   "sealSha256": "0x3bb8fce8e32966f0df46944ab143f483dd18f2d85b45ebe73624af832c8abb06",
+   "imageId": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+   "journalSha256": "0xa2aa83f38ced4aa38d192d4f72d8967974a75ea6301b96e7ca314ddf88477f77",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/zone-bridge-1/checkpoint/receipts/seal.hex; e2e/runs/zone-bridge-1/checkpoint/receipts/groth16.json image_id; e2e/runs/zone-bridge-1/checkpoint/receipts/journal.hex",
+    "e2e/runs/zone-bridge-1/crown.json candidate.seal/journal; e2e/runs/zone-bridge-1/params.json checkpointImageIdB (deploy.json mode B)",
+    "vault/test/real/fixtures/zone-bridge.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-1 release private-1",
+   "sealHead": "0x73c457ba131d45a910df1b19",
+   "sealSha256": "0x24f7ea013a788e42fb25dee105d4a23a3d63bee9d9c5bb71d5ae53529209bd54",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x96b17e06df829672d68a9d187a2e116a0db7413f273f8ca21c2effac5f11ac98",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-1/crown.json releases[private-1].seal; e2e/runs/zone-bridge-1/params.json releaseImageId; e2e/runs/zone-bridge-1/releases/release-private-1.json journal",
+    "e2e/runs/zone-bridge-1/releases/receipts/release-private-1/seal.hex; e2e/runs/zone-bridge-1/releases/receipts/release-private-1/groth16.json image_id; e2e/runs/zone-bridge-1/releases/receipts/release-private-1/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-1 release public-0",
+   "sealHead": "0x73c457ba077ad6e18ce78201",
+   "sealSha256": "0x3a47236d4658566c19e3c33b92c11762ac77c76a5bf95faf14938aac1ece47a4",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x0aec646595ad99ea9559f61ce33571c10c59a7ef02891ee97b33b58ace7546e2",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-1/crown.json releases[public-0].seal; e2e/runs/zone-bridge-1/params.json releaseImageId; e2e/runs/zone-bridge-1/releases/release-public-0.json journal",
+    "e2e/runs/zone-bridge-1/releases/receipts/release-public-0/seal.hex; e2e/runs/zone-bridge-1/releases/receipts/release-public-0/groth16.json image_id; e2e/runs/zone-bridge-1/releases/receipts/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-2 checkpoint",
+   "sealHead": "0x73c457ba18ab5f74903e716c",
+   "sealSha256": "0x3686f2b9106b88bec24ab15f829cb44b2189ed34833d414f3b4d12f8e6eb62cc",
+   "imageId": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+   "journalSha256": "0x0c916209c62d8209f1e28d5b52b5c5fb659e079f742b2c3d9dd0d137c4d9d12c",
+   "journalBytes": 544,
+   "records": [
+    "e2e/runs/zone-bridge-2/checkpoint/receipts/seal.hex; e2e/runs/zone-bridge-2/checkpoint/receipts/groth16.json image_id; e2e/runs/zone-bridge-2/checkpoint/receipts/journal.hex",
+    "e2e/runs/zone-bridge-2/crown.json candidate.seal/journal; e2e/runs/zone-bridge-2/params.json checkpointImageIdB (deploy.json mode B)",
+    "vault/test/real/fixtures/zone-bridge-rotation.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-2 release private-1",
+   "sealHead": "0x73c457ba1b60f3a2bb119a26",
+   "sealSha256": "0xdbb445cf9431a2339f311eda99afdea6816632b24f9f01b3e019ae0fa2219ad2",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x96b17e06df829672d68a9d187a2e116a0db7413f273f8ca21c2effac5f11ac98",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-2/crown.json releases[private-1].seal; e2e/runs/zone-bridge-2/params.json releaseImageId; e2e/runs/zone-bridge-2/releases/release-private-1.json journal",
+    "e2e/runs/zone-bridge-2/releases/receipts/release-private-1/seal.hex; e2e/runs/zone-bridge-2/releases/receipts/release-private-1/groth16.json image_id; e2e/runs/zone-bridge-2/releases/receipts/release-private-1/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "e2e/runs/zone-bridge-2 release public-0",
+   "sealHead": "0x73c457ba1378d18174182046",
+   "sealSha256": "0x3d7283aa373c06a51d82fcbd32684728ba2ff7bec3e2aef7149fba6064a2ec3d",
+   "imageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+   "journalSha256": "0x0aec646595ad99ea9559f61ce33571c10c59a7ef02891ee97b33b58ace7546e2",
+   "journalBytes": 352,
+   "records": [
+    "e2e/runs/zone-bridge-2/crown.json releases[public-0].seal; e2e/runs/zone-bridge-2/params.json releaseImageId; e2e/runs/zone-bridge-2/releases/release-public-0.json journal",
+    "e2e/runs/zone-bridge-2/releases/receipts/release-public-0/seal.hex; e2e/runs/zone-bridge-2/releases/receipts/release-public-0/groth16.json image_id; e2e/runs/zone-bridge-2/releases/receipts/release-public-0/journal.hex"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "lez/results/p4-minimum/runs/cpu16-mem16g/release/run-1/groth16",
+   "sealHead": "0x73c457ba190796271e9261d7",
+   "sealSha256": "0x4ccf01aaf8866f392319a99aa5457de4dc7860f171f5934d2b47c6a6954aa0c6",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "lez/results/p4-minimum/runs/cpu16-mem16g/release/run-1/groth16/seal.hex; lez/results/p4-minimum/runs/cpu16-mem16g/release/run-1/groth16/groth16.json image_id; lez/results/p4-minimum/runs/cpu16-mem16g/release/run-1/groth16/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "lez/results/p4-minimum/runs/cpu16-mem16g/release/run-2/groth16",
+   "sealHead": "0x73c457ba246cf41c5644e3bb",
+   "sealSha256": "0xb2e54610c2f95a3912054d3d6c99e858332527118605e1631b4ad27157a18269",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "lez/results/p4-minimum/runs/cpu16-mem16g/release/run-2/groth16/seal.hex; lez/results/p4-minimum/runs/cpu16-mem16g/release/run-2/groth16/groth16.json image_id; lez/results/p4-minimum/runs/cpu16-mem16g/release/run-2/groth16/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "lez/results/p4-minimum/runs/cpu8-mem16g/release/run-1/groth16",
+   "sealHead": "0x73c457ba00e7fb513543befb",
+   "sealSha256": "0xc066949cde407140f01091a93cb4b8733f0a80227c0a62cd4d030d3b6dcb9c5d",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "lez/results/p4-minimum/runs/cpu8-mem16g/release/run-1/groth16/seal.hex; lez/results/p4-minimum/runs/cpu8-mem16g/release/run-1/groth16/groth16.json image_id; lez/results/p4-minimum/runs/cpu8-mem16g/release/run-1/groth16/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "lez/results/p4-minimum/runs/cpu8-mem16g/release/run-2/groth16",
+   "sealHead": "0x73c457ba0bdc8f3df6799619",
+   "sealSha256": "0x30a7bb24ae3a79fefa6c7001699ed9abfa2a4e23deb2633689906829b33d919b",
+   "imageId": "0x17257f91bca70abf7a5476b498d687e95b6fb4d59e75b6bca1d46877ac9bf5cd",
+   "journalSha256": "0x7904cd1a8a54e0543a7a0162ca7704e6f754591e65afd56112c116ec9f6b428e",
+   "journalBytes": 352,
+   "records": [
+    "lez/results/p4-minimum/runs/cpu8-mem16g/release/run-2/groth16/seal.hex; lez/results/p4-minimum/runs/cpu8-mem16g/release/run-2/groth16/groth16.json image_id; lez/results/p4-minimum/runs/cpu8-mem16g/release/run-2/groth16/journal.hex"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/crown-r1.json",
+   "sealHead": "0x73c457ba0a547aa8016308cb",
+   "sealSha256": "0x3fe4037d89311bb65178f3ba0081e73788dec2455ef4074788ae97138b803900",
+   "imageId": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
+   "journalSha256": "0x854f167ce473d1325b32705114d6ff49a9c8445b72966670c42ecfe01194169e",
+   "journalBytes": 544,
+   "records": [
+    "gpu-prover/results/crown-r1-l4/crown-r1-7-202/groth16/seal.hex; gpu-prover/results/crown-r1-l4/crown-r1-7-202/prove.json image_id; gpu-prover/results/crown-r1-l4/crown-r1-7-202/groth16/journal.hex",
+    "vault/test/real/fixtures/crown-r1.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/crown-r1.json release",
+   "sealHead": "0x73c457ba1557ced21aacf67e",
+   "sealSha256": "0xc28a83a67a0e2ef04f0435489726f61c3214f4a40c8f46197365a73f9bf5b44c",
+   "imageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+   "journalSha256": "0xeadbd3d5faa43af1513a019f755914874089f3ebfd59ecd14152cc4d980039e2",
+   "journalBytes": 352,
+   "records": [
+    "vault/test/real/fixtures/crown-r1.json releaseSeal/releaseJournal/releaseImageId"
+   ],
+   "filesWithThisSeal": 1,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/crown-r4.json",
+   "sealHead": "0x73c457ba01f5fdb9dd372624",
+   "sealSha256": "0xc17f7b292231ffe41393c936b7c888ed5037712146d2c8bc621397992c8f6c9a",
+   "imageId": "0x7e51065ffd0a8004fbdd0452871c4a77da7b59e6499365f43d61363fd4307754",
+   "journalSha256": "0x905d2ca8ea34b379e76db5b11cc81fde668e564359d4109261a3eeb411fbac2f",
+   "journalBytes": 544,
+   "records": [
+    "checkpoint/realblocks/out-crown-r4/proofs.json candidate.seal/journal; checkpointImageIdB",
+    "gpu-prover/results/crown-r4-l4/crown-17-92/groth16/seal.hex; gpu-prover/results/crown-r4-l4/crown-17-92/prove.json image_id; gpu-prover/results/crown-r4-l4/crown-17-92/groth16/journal.hex",
+    "vault/test/real/fixtures/crown-r4.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/crown-r4.json release",
+   "sealHead": "0x73c457ba10596e1bb7736934",
+   "sealSha256": "0xa2b983ffc561fa98075c440c95f36344fc0e6c9211b8c45f538e6479f8da4a7e",
+   "imageId": "0x20595dc54bbd80cf487e4666286db9aab7a048e2e0d7646b42ec6d3c90ca2625",
+   "journalSha256": "0x8f40c7711860af32136f0ad1b5965c092826682f25b349b31ee92a41b67cb828",
+   "journalBytes": 352,
+   "records": [
+    "checkpoint/realblocks/out-crown-r4/releases/release-private-1/seal.hex; checkpoint/realblocks/out-crown-r4/proofs.json releaseImageId; checkpoint/realblocks/out-crown-r4/releases/release-private-1/journal.hex",
+    "vault/test/real/fixtures/crown-r4.json releaseSeal/releaseJournal/releaseImageId"
+   ],
+   "filesWithThisSeal": 3,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/real-blocks.json",
+   "sealHead": "0x73c457ba04f355ed5c04bf2f",
+   "sealSha256": "0x901a1ffe314e5302199a31c976e27566c0ad17032bbced27ec173950c423d2f5",
+   "imageId": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+   "journalSha256": "0x887c8d444f4ed0ac460826aa4659f86af15f345b017ae9a0730565c9f6630d5f",
+   "journalBytes": 544,
+   "records": [
+    "gpu-prover/results/realblocks-l4/real-lab-8-202/groth16/seal.hex; gpu-prover/results/realblocks-l4/real-lab-8-202/groth16/groth16.json image_id; gpu-prover/results/realblocks-l4/real-lab-8-202/groth16/journal.hex",
+    "vault/test/real/fixtures/real-blocks.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/rule-b-multi.json",
+   "sealHead": "0x73c457ba0fa5c58778371a7f",
+   "sealSha256": "0x8bceaccfcbcf77b74a9e5688bbf38e916b85e8de389874c3e0bff4b20b5faf3a",
+   "imageId": "0x82dec3b8c242297e236d6862f74c4b29428e961bb539c84058fd0922b188e464",
+   "journalSha256": "0x498dd53d5ac7a18ce0c633dadfe376c29c65998a176e3adb173def422bfe0f09",
+   "journalBytes": 544,
+   "records": [
+    "vault/test/real/fixtures/rule-b-multi.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/rule-b-rotation.json",
+   "sealHead": "0x73c457ba2418101918a87538",
+   "sealSha256": "0xd8260fc63d8b38d25e10193d51249fe4b68e1542af8b3ee19d69d66aa7a9cda7",
+   "imageId": "0x82dec3b8c242297e236d6862f74c4b29428e961bb539c84058fd0922b188e464",
+   "journalSha256": "0xb399dc40e7197d582677af073b25c38603360446982ea626c1583bdd37ba8ccf",
+   "journalBytes": 544,
+   "records": [
+    "vault/test/real/fixtures/rule-b-rotation.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/rule-b-zone.json",
+   "sealHead": "0x73c457ba21a31275885860d7",
+   "sealSha256": "0x8a1a7e2657cba964d8caa2db1edbe3a55ec62e80a7c8521dbb136cdfa7c85ddd",
+   "imageId": "0x82dec3b8c242297e236d6862f74c4b29428e961bb539c84058fd0922b188e464",
+   "journalSha256": "0x57d90e168cc24420aafeb0e6f5bfece785c8add07b31532ba696abf8695ec985",
+   "journalBytes": 544,
+   "records": [
+    "vault/test/real/fixtures/rule-b-zone.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  },
+  {
+   "label": "vault/test/real/fixtures/rule-b.json",
+   "sealHead": "0x73c457ba2faa5a73be02e4d2",
+   "sealSha256": "0x94d167eaf43b65fdc82626590d6cdd580b7977898aad28cde937282e236af836",
+   "imageId": "0xd359754364c10357103359276867f4fe58842c42cbb30a3ada5b241de6aa0d64",
+   "journalSha256": "0xad40f3f5e3bdff41c5e60d215ddd198bdf806dc6d9a00c65d488e581359b3a51",
+   "journalBytes": 544,
+   "records": [
+    "gpu-prover/results/ruleb-l4b/rb-empty-360-n4/groth16/seal.hex; gpu-prover/results/ruleb-l4b/rb-empty-360-n4/groth16/groth16.json image_id; gpu-prover/results/ruleb-l4b/rb-empty-360-n4/groth16/journal.hex",
+    "vault/test/real/fixtures/rule-b.json seal/journal/imageId"
+   ],
+   "filesWithThisSeal": 2,
+   "router": "returns",
+   "verifier": "returns",
+   "seal_changed": "reverts VerificationFailed()",
+   "image_changed": "reverts VerificationFailed()",
+   "journal_changed": "reverts VerificationFailed()",
+   "pass": true
+  }
+ ],
+ "chainId": 1,
+ "block": 26443464,
+ "latestAtStart": 26443469,
+ "startedUtc": "2026-11-18T17:33:26Z",
+ "code": {
+  "0x8EaB2D97Dfce405A1692a21b3ff3A172d593D319": {
+   "bytes": 2356,
+   "keccak256": "0x063e95c836fe8ba9cf81b200e67b069864dc85d0dfc694179cf148ecb7b742d6"
+  },
+  "0x9F9994Eb4Cb5200198FEfb470f8b50301662e696": {
+   "bytes": 2384,
+   "keccak256": "0x0dd0c6cdf06b60b1a88cb4602efbb5f492585a20fd61f8aa1d92468aad819963"
+  },
+  "0x2a098988600d87650Fb061FfAff08B97149Fa84D": {
+   "bytes": 5313,
+   "keccak256": "0xfe03c66078969d097f867351171b4639d726c8376c35022675ed44cbbcbaa720"
+  },
+  "0x0b144E07A0826182B6b59788c34b32Bfa86Fb711": {
+   "bytes": 6712,
+   "keccak256": "0xeef7cffa62df6d915131805bda95c44ddc0374f6b0138413ec3dce77c8402325"
+  }
+ },
+ "routerTable": [
+  {
+   "version": "1.1.0-rc.3",
+   "selector": "0x50bd1769",
+   "estop": "0x08AeD6C108E500540a9544beF7a8B8a05E056e87",
+   "getVerifier": "reverts SelectorRemoved(bytes4)",
+   "paused": null,
+   "stoppedInRecord": false,
+   "asRecorded": false
+  },
+  {
+   "version": "1.2.0",
+   "selector": "0xc101b42b",
+   "estop": "0x03B66cEDaB014Ca7E970Bfb83C1951d10DD2A805",
+   "getVerifier": "reverts SelectorRemoved(bytes4)",
+   "paused": null,
+   "stoppedInRecord": false,
+   "asRecorded": false
+  },
+  {
+   "version": "2.0.0-rc.3",
+   "selector": "0x9f39696c",
+   "estop": "0x68dC2cB4e61774873971c499D9b239ec5Ac540E3",
+   "getVerifier": "0x68dc2cb4e61774873971c499d9b239ec5ac540e3",
+   "paused": true,
+   "stoppedInRecord": true,
+   "asRecorded": true
+  },
+  {
+   "version": "2.1.0",
+   "selector": "0xf536085a",
+   "estop": "0xDa8f3de6fBBdb261Ac771B813a578A7aBdA6B2b1",
+   "getVerifier": "0xda8f3de6fbbdb261ac771b813a578a7abda6b2b1",
+   "paused": true,
+   "stoppedInRecord": true,
+   "asRecorded": true
+  },
+  {
+   "version": "2.2.0",
+   "selector": "0xbb001d44",
+   "estop": "0x1efDd13f831ceeEa14940806705A53D3211CD698",
+   "getVerifier": "0x1efdd13f831ceeea14940806705a53d3211cd698",
+   "paused": false,
+   "stoppedInRecord": false,
+   "asRecorded": true
+  },
+  {
+   "version": "3.0.0",
+   "selector": "0x73c457ba",
+   "estop": "0x9F9994Eb4Cb5200198FEfb470f8b50301662e696",
+   "getVerifier": "0x9f9994eb4cb5200198fefb470f8b50301662e696",
+   "paused": false,
+   "stoppedInRecord": false,
+   "asRecorded": true
+  }
+ ],
+ "verifierGetters": {
+  "SELECTOR": "0x73c457ba",
+  "VERSION": "3.0.0",
+  "CONTROL_ROOT_0": "0x41af18736dc9d7921c859fc95ac84da5",
+  "CONTROL_ROOT_1": "0x561f8c992a424deb37ccdf4e19c0e7db",
+  "BN254_CONTROL_ID": "0x04446e66d300eb7fb45c9726bb53c793dda407a62e9601618bb43c5c14657ac0"
+ },
+ "noJournal": [
+  {
+   "label": "docs/privacy/real release-00",
+   "sealHead": "0x73c457ba12bef678fb7f8cfd",
+   "records": [
+    "docs/privacy/real/proofs.json releases[0].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-01",
+   "sealHead": "0x73c457ba10d94a53794ee7aa",
+   "records": [
+    "docs/privacy/real/proofs.json releases[1].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-02",
+   "sealHead": "0x73c457ba28eff6a23a46b1f1",
+   "records": [
+    "docs/privacy/real/proofs.json releases[2].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-03",
+   "sealHead": "0x73c457ba157e90c22b9168f2",
+   "records": [
+    "docs/privacy/real/proofs.json releases[3].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-04",
+   "sealHead": "0x73c457ba22e0f4f954bad030",
+   "records": [
+    "docs/privacy/real/proofs.json releases[4].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-05",
+   "sealHead": "0x73c457ba2abe3300cf3af685",
+   "records": [
+    "docs/privacy/real/proofs.json releases[5].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-06",
+   "sealHead": "0x73c457ba221f7e7ff3c0b1b3",
+   "records": [
+    "docs/privacy/real/proofs.json releases[6].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-07",
+   "sealHead": "0x73c457ba2edd6a8c1343048d",
+   "records": [
+    "docs/privacy/real/proofs.json releases[7].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-08",
+   "sealHead": "0x73c457ba201d763066c369c5",
+   "records": [
+    "docs/privacy/real/proofs.json releases[8].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-09",
+   "sealHead": "0x73c457ba1c23b97eb11e9ab3",
+   "records": [
+    "docs/privacy/real/proofs.json releases[9].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-10",
+   "sealHead": "0x73c457ba23d27b4cef4cf9ca",
+   "records": [
+    "docs/privacy/real/proofs.json releases[10].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-11",
+   "sealHead": "0x73c457ba18a61fd773f203dd",
+   "records": [
+    "docs/privacy/real/proofs.json releases[11].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-12",
+   "sealHead": "0x73c457ba26bdd46482596603",
+   "records": [
+    "docs/privacy/real/proofs.json releases[12].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-13",
+   "sealHead": "0x73c457ba1eccc6c8c950e068",
+   "records": [
+    "docs/privacy/real/proofs.json releases[13].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-14",
+   "sealHead": "0x73c457ba19a5afb1768b96c8",
+   "records": [
+    "docs/privacy/real/proofs.json releases[14].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-15",
+   "sealHead": "0x73c457ba0fbde889ac856885",
+   "records": [
+    "docs/privacy/real/proofs.json releases[15].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-16",
+   "sealHead": "0x73c457ba219a59a3635fce25",
+   "records": [
+    "docs/privacy/real/proofs.json releases[16].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-17",
+   "sealHead": "0x73c457ba0a0f6d16fc0aea47",
+   "records": [
+    "docs/privacy/real/proofs.json releases[17].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-18",
+   "sealHead": "0x73c457ba1bafe4431587a3c9",
+   "records": [
+    "docs/privacy/real/proofs.json releases[18].seal, succinct.image_id (no journal)"
+   ]
+  },
+  {
+   "label": "docs/privacy/real release-19",
+   "sealHead": "0x73c457ba0c54b9be8bb9846a",
+   "records": [
+    "docs/privacy/real/proofs.json releases[19].seal, succinct.image_id (no journal)"
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "label": "e2e/runs/crown-fork-3r checkpoint",
+   "head": "0x73c457ba",
+   "bytes": 4,
+   "src": "e2e/runs/crown-fork-3r/crown.json candidate.seal/journal; e2e/runs/crown-fork-3r/params.json checkpointImageIdB (deploy.json mode B)"
+  },
+  {
+   "label": "e2e/runs/crown-fork-3r release 0",
+   "head": "0x73c457ba",
+   "bytes": 4,
+   "src": "e2e/runs/crown-fork-3r/crown.json releases[0].seal; e2e/runs/crown-fork-3r/params.json releaseImageId; no journal record"
+  },
+  {
+   "label": "e2e/runs/crown-fork-3r release 1",
+   "head": "0x73c457ba",
+   "bytes": 4,
+   "src": "e2e/runs/crown-fork-3r/crown.json releases[1].seal; e2e/runs/crown-fork-3r/params.json releaseImageId; no journal record"
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-1 checkpoint",
+   "head": "0x962e7684",
+   "bytes": 130,
+   "src": "e2e/runs/testnet-return-fork-1/crown.json candidate.seal/journal; e2e/runs/testnet-return-fork-1/params.json checkpointImageIdB (deploy.json mode B)"
+  },
+  {
+   "label": "e2e/runs/testnet-return-fork-2 checkpoint",
+   "head": "0x962e7684",
+   "bytes": 130,
+   "src": "e2e/runs/testnet-return-fork-2/crown.json candidate.seal/journal; e2e/runs/testnet-return-fork-2/params.json checkpointImageIdB (deploy.json mode B)"
+  }
+ ],
+ "passes": 74,
+ "fails": 0,
+ "requests": 354
+}
