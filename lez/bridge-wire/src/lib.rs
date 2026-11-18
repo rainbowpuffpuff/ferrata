@@ -1592,3 +1592,8 @@ mod tests {
         assert!(HEADER_MARKER[0] < 0xc0);
     }
 }
+
+/// The second build's keys (cargo feature `config-keyed`, off by default, which the deployed bridge program does not
+/// compile): `nullifier(cid, chain, vault, N)` and `holder(cid, account)`, [`config_keyed`].
+#[cfg(feature = "config-keyed")]
+pub mod config_keyed;

@@ -56,13 +56,17 @@ pub const LEZ_TAG: &str = if cfg!(feature = "lez-rc3") {
 };
 
 /// Where the tests and `tables` write: `lez/results/` against v0.4.0-rc1, `lez/results/<tag>/`
-/// against another tag, so that one tag's results never overwrite another's;
+/// against another tag, so that one tag's results never overwrite another's; under the feature
+/// `bridge-next` (the bridge program's second build) `lez/results/bridge-next/` (and `<tag>/` in it),
+/// so that the deployed program's results are never overwritten either;
 /// `FERRATA_LEZ_RESULTS_DIR` overrides it. The directory is created.
 pub fn results_dir() -> PathBuf {
+    let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results");
+    let base = if cfg!(feature = "bridge-next") { base.join("bridge-next") } else { base };
     let dir = match std::env::var_os("FERRATA_LEZ_RESULTS_DIR") {
         Some(dir) => PathBuf::from(dir),
-        None if cfg!(feature = "lez-rc2") => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(LEZ_TAG),
-        None => PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results"),
+        None if cfg!(feature = "lez-rc2") => base.join(LEZ_TAG),
+        None => base,
     };
     fs::create_dir_all(&dir).expect("create the results directory");
     dir

@@ -24,7 +24,7 @@ const HOUR_MS: u64 = 3_600_000;
 const YEAR_MS: u64 = 365 * 24 * HOUR_MS;
 
 fn results_path(name: &str) -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../results").join(name)
+    harness::results_dir().join(name)
 }
 
 fn run(reports: &mut Vec<TxReport>, report: TxReport, code: Option<u8>) {
@@ -283,7 +283,7 @@ fn freezes_and_caps_follow_attested_time_only() {
              Bridge program image `{}`; every transaction settled by LEZ's own functions in a block of its own, \
              stamped with the world's LEZ time (a year ahead where the label says so).\n\n{table}\n\
              ## Handler executions\n\n{}\n",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             render_transitions(&reports),
         ),
     )

@@ -7,8 +7,7 @@
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{
-    nullifier_actor, own_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding,
-    NullifierState, ScheduleRange,
+    own_actor, root_actor, token_actor, BridgeMessage, BridgeState, HolderState, Holding, NullifierState, ScheduleRange,
 };
 use harness::{
     attest::render_executed,
@@ -59,7 +58,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
     let root = root_actor(w.program, &cid, 8);
     let token = token_actor(w.program, &cid, &ETH);
     let publics = w.private_claim_actors(&cid, 8, &va, &deposit);
-    assert!(publics.contains(&nullifier_actor(w.program, CHAIN_ID, &va, &n)));
+    assert!(publics.contains(&harness::bridge::nullifier_of(w.program, &cid, CHAIN_ID, &va, &n)));
     let me = own_actor(w.program, account.id());
     let run = w
         .chain
@@ -108,10 +107,10 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
 
     // Public state: N is spent; nothing public at the private account.
     assert_eq!(
-        w.nullifier(&va, &n),
+        w.nullifier(&cid, &va, &n),
         Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: DENOMINATIONS[1] })
     );
-    assert!(w.holder(account.id()).is_none(), "no public holder state at the private account");
+    assert!(w.holder(&cid, account.id()).is_none(), "no public holder state at the private account");
     assert_eq!(w.balance(relayer(), &cid), RELAY_FEES[1], "the relay fee, minted publicly");
     assert_eq!(w.balance(fee_recipient(), &cid), 0, "leaf 5 is under schedule 0: no mint fee");
     // Private state: the chain holds the commitment of the account with its 1 ETH holding.
@@ -169,7 +168,7 @@ fn a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_re
              | execution gas | storage gas (tx bytes) | base fee | transaction bytes (dev mode: no real receipt) | proof bytes |\n\
              |---:|---:|---:|---:|---:|\n| {} | {} | {} | {} | {} |\n\n\
              ## Public outputs (`harness::private::describe_public_outputs`)\n\n{}\n\n## Search\n\n{report}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID),
+            harness::image_id_hex(harness::bridge::BRIDGE_ID),
             harness::grouped(charge.gas_exec),
             harness::grouped(charge.gas_stor),
             harness::grouped(charge.fee_base as u64),
@@ -253,5 +252,5 @@ fn a_private_claim_to_a_public_destination_and_the_refusals() {
         .expect("not provable");
     println!("not the destination: {err}");
     assert!(err.contains("252"), "{err}");
-    assert!(w.nullifier(&va, &n).is_none(), "nothing spent");
+    assert!(w.nullifier(&cid, &va, &n).is_none(), "nothing spent");
 }
