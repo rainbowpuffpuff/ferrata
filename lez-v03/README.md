@@ -40,23 +40,30 @@ program's, `../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync
 instance's `Init` applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`)
 and is charged the whole gas limit. Only that instance is affected, created with that config by whoever chose it, and
 no state changes ([`harness/tests/adversarial.rs`](harness/tests/adversarial.rs), `review_zero_period_config`). Not
-fixed: the check would move the image id. The guest's own doc comment (`guest/src/main.rs:15-17`) says refusals never
-panic; it is left unchanged for the same reason.
+fixed in the reviewed image `8d3b59ff…` that the prepared public-testnet run deploys, because the check would have moved
+that image's id. That reason does not hold for this branch's image `f8ec1b21…`, whose id moved anyway (the
+one-transaction handoff); the check is not in `f8ec1b21…` either, and comes as a change of its own. The guest's own doc
+comment (`guest/src/main.rs:15-17`) says refusals never panic; it is left unchanged until then.
 
 Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/src/main.rs)):
 
 - `Init { config, checkpoint, bootstrap, adopt, record, window }`: the same trusted checkpoint and `Config` as the
   v0.4 program; with the committee's 512 keys in `adopt` it is one transaction.
 - `Update { instance_id, update, signers, verify, adopt, record, window }`, `verify` one of `Open` (step 1),
-  `Miller` (steps 1-2), `Core` (steps 1-3, the core alone), `Residue { c, w }` (steps 1-2 and the residue check).
+  `Miller` (steps 1-2), `Core` (steps 1-3, the core alone), `Residue { c, w }` (steps 1-2 and the residue check),
+  `ResidueSummary { c, w }` (as `Residue`; a handoff's next committee then adopted by its summary, which is sound only
+  under the light client's honest-supermajority assumption, [`../bench/RESIDUE.md`](../bench/RESIDUE.md) §10).
 - `Continue { instance_id, steps, record }`: the job's next steps (Miller, FinalExp, Residue, Adopt).
 - `Attest { instance_id, slot, query, statements }`: storage slots of one account under `header(id, slot)`
   (`ferrata_core::attest::attest_storage`, the block's RLP header for a Gloas record), each written to
   `statement(id, s)`.
 
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
-`apply`, `store_for_update`). Image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`, 597,336 ELF
-bytes, 6 segments; built through the repository's `scripts/guest-rustc`, so the id does not depend on the build
+`apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
+reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, 6 segments),
+the image the local sequencer run below used. This branch builds `f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2`
+(598,796 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and has not run on
+a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
 path.
 
 ## Through v0.3.1's block application, with real data
@@ -75,7 +82,7 @@ the vault's proofs). Ran on the Modal build box, 18 November 2026; results in [`
 | the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,729 and 6,530,623 | 65.3% | 4,732 |
 | finality update in one transaction by the core alone (mainnet update_4) | 9,103,198 | 91.0% | 3,390 |
 | `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,075; 7,885,681 | 79.8%; 78.9% | 51,196; 51,202 |
-| **handoff (period update) in ONE transaction, the committee adopted by its summary** (`Verify::ResidueSummary`, one multiproof; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,565,465; 6,636,683; 6,647,863; 6,597,601** | 65.7% to 66.5% | 3,901 to 4,964 |
+| **handoff (period update) in ONE transaction, the committee adopted by its summary, sound only under the light client's honest-supermajority assumption** (`Verify::ResidueSummary`, one multiproof; image `f8ec1b21…`; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,565,465; 6,636,683; 6,647,863; 6,597,601** | 65.7% to 66.5% | 3,901 to 4,964 |
 | the same, Sepolia: the 32 handoffs of periods 1378 to 1409 (through the Gloas layout change) | 6,448,420 to **6,592,610** | at most 65.9% | 3,664 to 5,424 |
 | handoff with the 512 keys adopted: `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,571 + 7,707,411 | 65.7% + 77.1% | 3,897 + 49,486 |
 | handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,993, 3,337,313, 3,670,720, 7,704,931 | | |
@@ -108,9 +115,10 @@ finalized header changed (26); a tampered residue witness (40); a wrong claimed 
 with a changed proof node (110) or without the block's header under a Gloas record (215). A transaction sent before
 its signature slot is outside its window: v0.3.1 includes it and charges the whole declared limit.
 
-**Image id.** The summary adoption changed the program (it is deployed nowhere): this build's image id is
-`f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2` (598,796 ELF bytes; its deployed segments are 1,460 bytes longer); the local
-sequencer run below used the program before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
+**Image id.** The summary adoption changed the program: this branch's image is
+`f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2` (598,796 ELF bytes; its deployed segments are 1,460
+bytes longer), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the prepared
+public-testnet run deploys, the reviewed image before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
 (`results/local/txs.tsv`). Every figure of the table above is from this build, 18 November 2026; each is 69 to 89 gas
 above the earlier build's for the same transaction (the earlier figures are in the history of `results/`); the local
 run's figures are the earlier build's.

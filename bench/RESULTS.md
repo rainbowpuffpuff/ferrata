@@ -6,7 +6,8 @@ final exponentiation measured on 17 Nov 2026, has one too: "2026-11-17: one upda
 transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md); so does the
 signing key composed from one multiproof of the non-signers, measured the same evening: "2026-11-17:
 the fewest signers in one transaction"; and a committee handoff in one transaction, the next committee adopted by its
-summary, 18 Nov 2026: "2026-11-18: a committee handoff in one transaction".)
+summary, 18 Nov 2026, sound only under the light client's honest-supermajority assumption: "2026-11-18: a
+committee handoff in one transaction".)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
@@ -444,7 +445,7 @@ the rest with every figure unchanged, 18 Nov 2026. Outputs: `results/residue/agg
   (on the build box on 18 Nov, with its build cache warm and the guests already built: 83 s to
   `boundary`, 130 s for the placements test; a clean build was not timed); LEZ: `RESIDUE.md` §9.8.
 
-## 2026-11-18: a committee handoff in one transaction, the next committee adopted by its summary (experimental, unaudited)
+## 2026-11-18: a committee handoff in one transaction, the next committee adopted by its summary, sound only under the light client's honest-supermajority assumption (experimental, unaudited)
 
 **Not in any deployed program; `crates/ferrata-core` unchanged; sound only under the honest-supermajority
 assumption the light client already makes.** [`RESIDUE.md`](RESIDUE.md) §10 gives the soundness argument (what the
@@ -466,7 +467,11 @@ as served (a handoff) against the store after update_0, on the Modal build box, 
   (33, 32 handoffs); only the job's adoption progress differs. Refused alike: a bad next-committee branch (27), 341
   signers (51), no finality (50), stale (52, 23). The one difference: a next committee whose aggregate field is not the
   sum of its keys (only a state the beacon chain's transition did not produce holds one) is refused by the core (45)
-  and accepted here; then the honest committee is refused and one member signs for all of it (`RESIDUE.md` §10.3).
+  and accepted here; then the honest committee is refused, and the forger alone produces accepted updates in a
+  participation pattern fixed at the forged handoff (`RESIDUE.md` §10.3; the adversarial tests of an independent
+  review, `residue-handoff/tests/adversarial.rs`: with the field `Q + P_31` the holder of `Q` alone signs an
+  accepted "31 of 32" update). Since such a forged committee keeps the real `pubkeys_root`, a monitor or updater
+  must compare the whole summary, not the key root alone.
 * Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1, the experimental copy, which adopts by the summary
   when `VerifyAll` carries no adoption keys): **6,621,551** execution gas (66.2%) for the 510-signer handoff, applied;
   **8,341,469** (83.4%) at 342 signers at the costliest placement found (8,333,542 with every third absent, 8,676,354

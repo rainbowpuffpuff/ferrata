@@ -31,8 +31,9 @@ honest-supermajority assumption.
   placement of the absent members that was measured**: LEZ's state machine charged an experimental
   copy 8,318,645 execution gas (83.2%) for it with every third member absent and 8,326,572 (83.3%)
   at the costliest placement found (the maximum over all placements is not established, §9.6); bare
-  guest 7,458,783 folded (every third absent). A **period update does not fit at any participation**: adopting 512 keys costs 5,991,991
-  cycles on top of the verification.
+  guest 7,458,783 folded (every third absent). A **period update with its 512 keys adopted does not fit at any
+  participation**: that adoption costs 5,991,991 cycles on top of the verification (adopted by its summary
+  instead, it fits: the next bullet, §10).
 * **A period update (a committee handoff) in one transaction** (§10, 18 Nov 2026): with the next committee adopted by
   its summary (its key root and aggregate key as the update's branch proves them in the signed attested state) instead
   of its 512 keys, which is sound only under the honest-supermajority assumption the light client already makes,
@@ -45,7 +46,8 @@ honest-supermajority assumption.
   on another build); the live updater (`lez/updater`) uses the job path (three transactions, five
   with an adoption, each under the 5M target). The witness check would move the one-transaction
   path from 91% to 66% of the limit (folded, about 60%: derived, §6); it does not remove the job
-  path, which period updates and low participation still need.
+  path, which period updates still need with the 512-key adoption (§10 adopts by the summary instead) and low
+  participation with a branch per non-signer (§9 uses one multiproof instead).
 
 ## 2. What the check is
 
@@ -624,8 +626,9 @@ The deployed programs, their image ids and the deployed update path (three trans
 adoption) are unchanged; the policy is unchanged (342 signers is still its floor). As for §8, the
 production change would be a new program image, deployment and real proofs, the multiproof witness
 in the updater (host code: `NonSigners::build`), and an audit of both the residue check and this
-composition. A **period update** still does not fit at any participation (folded: 11,913,877 at 510,
-13,482,391 at 342 in the bare guest); the job path stays for it. Re-check:
+composition. A **period update with the 512-key adoption** still does not fit at any participation (folded:
+11,913,877 at 510, 13,482,391 at 342 in the bare guest); the job path stays for it. Adopted by its summary
+instead, which is sound only under the light client's honest-supermajority assumption, it fits (§10). Re-check:
 `cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host &&
 ./target/release/residue-host profile && ./target/release/residue-host measure-agg &&
 ./target/release/residue-host boundary && cargo test --release -p residue-host --test placements`;
@@ -634,11 +637,12 @@ composition. A **period update** still does not fit at any participation (folded
 same with `--test residue_placements` (`RISC0_HOME`: the LEZ guest toolchain, as in §6; the charged
 gas depends on the guest binary it builds).
 
-## 10. A committee handoff in one transaction: the next committee adopted by its summary
+## 10. A committee handoff in one transaction, the next committee adopted by its summary: sound only under the light client's honest-supermajority assumption
 
 Written on 18 Nov 2026. **Experimental and unaudited, a bench measurement and two experimental program
-copies; it is sound only under the honest-supermajority assumption the light client already makes (at
-least two thirds of each sync committee honest, [`docs/trust.md`](../docs/trust.md) §2.2), and nothing
+copies; it is sound only under the honest-supermajority assumption the light client already makes (fewer
+than 342 of a committee's 512 members dishonest, so that any 342 signers include an honest one: the threshold
+of [`docs/trust.md`](../docs/trust.md) §2.2), and nothing
 deployed changed** (no program or guest with an image id in `docs/image-ids.md`, and `crates/ferrata-core`,
 are untouched).
 
@@ -652,12 +656,15 @@ adoption takes the proven summary as it is, in the same transaction as the updat
 made at use time: each non-signer's key is decoded canonically and proven against `pubkeys_root` (the
 core's composition or the multiproof of §9), and the aggregate is decoded. On every state the beacon
 chain's state transition produced, the two adopt the same summary: the aggregate there is the sum of the
-keys by construction, and every key passed `KeyValidate`. They differ only on a state in which the
-aggregate field is not the sum of the keys, which only 342 or more members of a committee, signing a state
-the transition did not produce, can bring; those signers can as well bring a committee of keys of their
-own whose aggregate is right, and the core's adoption accepts that. So the core's check refuses only a
-forgery no forger needs to make, and the summary adoption does not weaken the light client under its
-assumption. Without the assumption the light client is not sound with either adoption.
+keys by construction, and every key passed `KeyValidate`. They differ only on states the transition did not
+produce, of two kinds: an aggregate field that is not the sum of the keys, and a key leaf that is not the
+leaf of a valid point (the summary path adopts that committee, and the member can then never be a non-signer,
+refused 80: liveness only). Only 342 or more members of a committee, signing such a state, can bring either.
+Those signers can as well bring a committee of keys of their own whose aggregate is right, and the core's
+adoption accepts that; what the forged aggregate field gives them in addition is a stored committee that keeps
+the real `pubkeys_root`, so every tool must compare the whole summary, not the key root alone (§10.3). Under
+its assumption the summary adoption does not weaken the light client; without it the light client is not
+sound with either adoption.
 
 Sources (read-only copies beside the repository under `spike/upstream/`): consensus-specs v1.7.0-beta.4
 (commit `aa16bb4c`, the version of the pinned `sync` vectors); the IETF BLS signature draft 04, which the
@@ -693,8 +700,8 @@ and a non-signer's key is decoded where it is used, by the same checks as (A1) (
 
 ### 10.2 Why the difference does not matter under the light client's assumption
 
-The assumption: at least two thirds of each sync committee are honest, so at most 170 of 512 members are
-not, and any 342 signatures include signatures of honest members. An honest member signs the root of the
+The assumption: fewer than 342 of a committee's 512 members are dishonest (the threshold of `docs/trust.md`
+§2.2's capture table), so any 342 signatures include an honest member's. An honest member signs the root of the
 block it holds as its head (`get_sync_committee_message`, `specs/altair/validator.md:363-375`, signing
 `block_root` at l. 368) and holds a block only if its `state_root` is the root of the state the state
 transition computes (`state_transition`, `specs/phase0/beacon-chain.md:1822-1835`, the assertion at
@@ -725,24 +732,36 @@ state.
 ### 10.3 What a wrong aggregate field would do
 
 It needs a state the transition did not produce, signed by at least 342 members of the committee the
-store already holds: the assumption has failed for that committee. If the adopted summary's aggregate is
-`Σ P_i + D` with `D ≠ 0` (the `P_i` the keys under `pubkeys_root`):
+store already holds: the assumption has failed for that committee. Say the adopted summary keeps the real
+`pubkeys_root` (so the real keys `P_i` under it) and only its aggregate field is `Σ P_i + D` with `D ≠ 0`:
 
 * every later update signed by the adopted committee is checked against `Σ signers + D`: the honest
-  committee's signatures are refused (`SignatureInvalid`), and an aggregate field that does not decode
-  refuses every such update (`PubkeyInvalid`). The instance stalls until a new `Init` from a trusted
-  checkpoint;
-* whoever chose `D` signs for that committee alone: with `aggregate_pubkey` set to a key `Q` it holds,
-  an update with every bit set is verified against `Q`. The test of §10.7 builds the refused honest
-  committee and the one member signing for all (not the aggregate that does not decode).
+  committee's signatures are refused (`SignatureInvalid`, 40), an aggregate field that does not decode
+  refuses every such update (`PubkeyInvalid`, 42), and the identity as the field gives 43 or 40. The
+  instance stalls until a new `Init` from a trusted checkpoint;
+* and the forger produces **forged signatures that are accepted**, not only a stall: with the field
+  `Q + Σ_{j∈J} P_j` for a key `Q` it holds and a set `J` of members it chooses (it need not hold their
+  secrets), an update with exactly the members of `J` absent is verified against `Q`, so the holder of `Q`
+  alone produces accepted updates whose participation looks real, in the participation pattern `J` fixed
+  at the forged handoff (every bit set when `J` is empty). The adversarial tests of §10.7
+  (`tests/adversarial.rs`, written by an independent review) build the field `Q + P_31`: the forger alone
+  produces an accepted "31 of 32" update, and the 31 honest members' real signature is refused (40).
 
 The same signers can instead sign a state whose next committee is 512 keys of their own with the right
 aggregate. The core's adoption accepts that committee (it checks consistency, not provenance) and they
-hold the light client from then on, with either adoption. A wrong aggregate field gives them nothing that
-a consistent committee of their own does not. So the summary adoption changes what is accepted only on
-updates from states the transition did not produce: there the core refuses at adoption
-(`CommitteeInvalid`, 45) and the one-transaction path accepts (tested, §10.7). It changes nothing on an
-update of a real chain.
+hold the light client from then on, with either adoption. What a forged aggregate field with the **real**
+`pubkeys_root` gives them beyond that: under the core's adoption any forged committee must change
+`pubkeys_root` (its keys must sum to its field), while under the summary adoption the forged committee keeps
+the real key root and differs only in the 48-byte aggregate field. A tool that identifies a stored committee
+by `pubkeys_root` alone matches the forged summary to the real committee: Ferrata's updater does
+(`lez/updater/src/updater.rs:518-519` and `:926-927`), and so does the attest module
+(`modules/ferrata_attest_module/rust-lib/calls/src/advance.rs:75-77`); a monitor comparing key roots with
+Ethereum's would not flag it. So, with the summary adoption, **any monitor or updater must compare the whole
+summary** (the aggregate field too, or `CommitteeSummary::root`), not the key root alone. Neither the
+updater nor the attest module performs the summary adoption today; the requirement holds before either is
+used with it. The summary adoption changes what is accepted only on updates from states the transition did
+not produce: there the core refuses at adoption (`CommitteeInvalid`, 45) and the one-transaction path
+accepts (tested, §10.7). It changes nothing on an update of a real chain.
 
 ### 10.4 Could a key of a real committee be invalid?
 
@@ -804,8 +823,10 @@ from the committee it stored after the branch, which is equivalent up to SHA-256
 
 ### 10.7 Tests
 
-All on the Modal build box, 18 Nov 2026 (`cargo test --release -p residue-handoff`: 4 tests pass in 3.4 s;
-output [`results/residue/handoff/tests.txt`](results/residue/handoff/tests.txt)).
+All on the Modal build box, 18 Nov 2026 (`cargo test --release -p residue-handoff`: the 4 tests of
+`tests/handoff.rs` pass in 3.4 s, output [`results/residue/handoff/tests.txt`](results/residue/handoff/tests.txt); the
+4 of `tests/adversarial.rs`, written by an independent review, in 1.0 s, output
+[`results/residue/handoff/adversarial.txt`](results/residue/handoff/adversarial.txt)).
 
 | test | what | count | result |
 |---|---|---:|---|
@@ -813,6 +834,7 @@ output [`results/residue/handoff/tests.txt`](results/residue/handoff/tests.txt))
 | refusals of a handoff | mainnet update_1 as served (a handoff, 510 of 512): a node of its next-committee branch altered (three positions), its next committee's aggregate or one of its keys replaced with the branch unchanged: 27; signed by the bench's committee, 341 signers: 51 (342: accepted alike); the handoff without finality: 50; the handoff again on the store it produced: 52; update_0 on that store: 23 | 10 | refused alike by both paths |
 | `adopt_summary` | a finality update's job (it adopts nothing), an initialization's (the bootstrap keeps the core's adoption), a handoff's job adopted twice | 3 | `NoAdoption` (84), nothing changed |
 | the one difference (§10.3) | a chain that never existed (the store of the Electra `sync` vector case with a committee the test holds, fabricated updates as `ferrata-spectests`' `mutation_guards.rs`): a handoff to a next committee whose aggregate field is its first key; then an update of the next period signed by that committee | 1 handoff, 4 later updates | the core refuses at its adoption (45), the one-step path accepts; afterwards the committee's honest signature is refused (40) and its first member alone, every bit set, is accepted; from the consistent handoff (accepted alike) the reverse, and the next update alike by both paths |
+| adversarial (an independent review's, `tests/adversarial.rs`) | on a fabricated chain (32 members): next committees whose aggregate field is `Q + P_31` (the real keys and key root; `Q` held by the forger, member 31's secret not), the identity, or undecodable; then three later updates on each adopted store; refusals from the start store (not finalized 50; a signature, attested or finalized header a period later 23, three cases; 21 of 32 signers 51), the same handoff again (52), another next committee for the adopted period (28); `adopt_summary` on a tampered `pending` or progress; 160 mutations of the honest handoff | 4 handoffs, 12 later updates, 7 refusals, 4 guards, 160 mutations | the core refuses each forged field (45), the summary path adopts it; after `Q + P_31` the forger alone signs an accepted "31 of 32" update and the honest 31 are refused (40); identity 40/43, undecodable 42; once a store holds the field both paths give the same code on all 12; refusals alike; guards 84 and `apply`'s 81; the mutations 13 accepted alike (same store), 147 refused alike |
 | guest | `residue-host measure-handoff`: 18 executions of a handoff, each giving the store the core's steps give (natively also `one_step`, both sums); in the guest, a next-committee branch node flipped (27), 341 signers (51), the handoff again (52) | 18 + 3 | pass |
 | LEZ v0.4 | `lez/harness/tests/residue_handoff.rs` (2 tests, §10.8); the earlier `residue_experimental` tests with the changed copy (4; the fewest-signers search not re-run) | 2 + 4 | pass |
 | LEZ v0.3.1 | `lez-v03/harness/tests/v03.rs`, `handoffs_in_one_transaction_each` (§10.8); the other `v03` (4), `third_party` (4) and `adversarial` (5) tests with the new image; the client builds; `tests/sendguard.sh`, `tests/verifystatus.sh` | 1 + 13 + 2 scripts | pass |
@@ -885,6 +907,9 @@ local sequencer run of `lez-v03/README.md` used `8d3b59ff…`), and its other fi
    adoption), `Verify::ResidueSummary` on v0.3.1 (adoption parts beside it are refused, 84).
 5. That nothing downstream reads the adoption progress of an applied job (the v0.4 `VerifyAll` path
    never stores the job; the v0.3.1 instance clears it when the job applies).
+6. That every tool that reads a stored committee (an updater, a monitor, the attest module) compares the whole
+   summary, the aggregate field included, and not `pubkeys_root` alone (§10.3): today's updater and attest module
+   match committees by the key root alone, and neither performs the summary adoption yet.
 
 ### 10.10 What this does not change
 
