@@ -5,8 +5,8 @@ Read on 18 November 2026 from a clone of `logos-blockchain/logos-execution-zone`
 Paths below are relative to that clone. Tag **v0.3.2** (`ee6ed447`, 28 Oct 2026; the LEZ docs' CLI page says the
 testnet runs it, the endpoints page says v0.3.1) differs from v0.3.1 in 22 files, all in the sequencer's Bedrock and
 indexer plumbing, `Cargo.toml`'s Logos Blockchain pins, CI and tests: `lee/` (the state machine), `lez/programs/`,
-`lez/chain_state/` and `lez/wallet/` are byte-identical, so everything here holds for both
-(`diff -rq lez-v0.3.1 lez-v0.3.2 -x .git`).
+`lez/wallet/` are byte-identical and `lez/chain_state/` differs only inside the `#[cfg(test)] mod tests` of
+`src/consistency.rs` (line 319 on), so everything here holds for both (`diff -rq lez-v0.3.1 lez-v0.3.2 -x .git`).
 
 ## How a program runs: plan, then apply, over per-program shards
 

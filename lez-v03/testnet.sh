@@ -72,6 +72,11 @@ rpc() { # rpc METHOD PARAMS_JSON: one read-only JSON-RPC call to the sequencer
 ensure_wallet() { # the payer, the program's header account and its segment accounts: fresh keys outside the repository
   mkdir -p "$RUN"
   if [ ! -f "$LEE_WALLET_HOME_DIR/storage.json" ]; then
+    # A non-local wallet is made once, on purpose: a missing one (a fresh box, a wrong path) must not become a new
+    # payer silently. The public payer's wallet lives in spike/tmp/testnet-v03/public/wallet (mrun --put it).
+    if [ "$target" != local ] && [ "${FERRATA_NEW_WALLET:-}" != yes ]; then
+      echo "no wallet at $LEE_WALLET_HOME_DIR: copy the existing one there (mrun --put), or set FERRATA_NEW_WALLET=yes to make a new payer" >&2; exit 1
+    fi
     "$CLIENT" new-wallet "$RUN" "$URL" > "$STATE/payer"
     echo "fresh keys were made under $LEE_WALLET_HOME_DIR (never in the repository)"
   fi

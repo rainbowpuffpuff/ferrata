@@ -1,12 +1,12 @@
 seq	label	kind	tx_hash	payer_nonce	bytes	gas_limit	sim_block	sim_exec_gas	sim_fee	sim_status	file
-0	deploy: WriteSegment 6 of 6 (73392 bytes)	segment:5	acc9f2484f2aece73d72b4a661dfcad88605da4911c284bb07659839d6962a85	0	73688	100000	2	0	589504	applied	signed/000.hex
-1	deploy: WriteSegment 5 of 6 (98304 bytes)	segment:4	e01814bdf00220150b157f71a44c52625aa87323dec9fe3b96ce53ee836b87a2	1	98696	100000	2	0	789568	applied	signed/001.hex
-2	deploy: WriteSegment 4 of 6 (98304 bytes)	segment:3	33ffb66aae0160004ddfaa7cd668d25e06b0f5a865d67e653085b326314f692a	2	98696	100000	2	0	789568	applied	signed/002.hex
-3	deploy: WriteSegment 3 of 6 (98304 bytes)	segment:2	38d1dff0b5a95e466bcd7110f12df892be6ad47fe4cda4c5901a87f5cc2d0ecd	3	98696	100000	2	0	789568	applied	signed/003.hex
-4	deploy: WriteSegment 2 of 6 (98304 bytes)	segment:1	55e40358f308c83f5477891429ff99e7fced62e3b2ff50ca1846baa128a0c427	4	98696	100000	2	0	789568	applied	signed/004.hex
-5	deploy: WriteSegment 1 of 6 (98304 bytes)	segment:0	634916accdf78656eb2fe3622855295a2de123f7ef313f4df591e69ee627e755	5	98696	100000	2	0	789568	applied	signed/005.hex
-6	deploy: CreateHeader (immutable)	header	625263d2302d1574ca6effe7ac4e7914c1746d70d53c0e085c00f76a384e1a68	6	820	100000	2	0	6560	applied	signed/006.hex
-7	Init (checkpoint, its 512 keys adopted)	init	080b4b09a06a7d17dbd963c6cb3994cf4ad0fd232aca13252cd3e4d2631e7e55	7	50887	8160000	2	7884541	63483424	applied	signed/007.hex
-8	update 000-finality-11605344.ssz (residue witness, one transaction)	update:000-finality-11605344.ssz	5a3d6e72ece3c163bad739c16fdc0b1dc817c9cafc4e132ac5b34796d3cded5e	8	11260	7300000	3	7046809	63522621	applied	signed/008.hex
-9	update 001-finality-11605376.ssz (residue witness, one transaction)	update:001-finality-11605376.ssz	0c24a8413b0552a700f2d746f200a262d912a5e90f2e1145aa58f843492f2895	9	16636	7730000	4	7472244	74855528	applied	signed/009.hex
-10	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11605376	attest:11605376	bc7e924af4f35ee65d7f57df3267b9fe456698bddc4094d09183ac9543a0e27c	10	6820	550000	4	501007	5064630	applied	signed/010.hex
+0	deploy: WriteSegment 6 of 6 (73392 bytes)	segment:5	d4da7fd433105a186247c05dbf5d89d466e74d8c8a3dfb96a3b757e2f82687e9	0	73688	100000	2	0	589504	applied	signed/000.hex
+1	deploy: WriteSegment 5 of 6 (98304 bytes)	segment:4	185ca79a5e1e0e644b3692fa3e15558d61ba724bc73bfd2b58bca09f41d0ca7a	1	98696	100000	2	0	789568	applied	signed/001.hex
+2	deploy: WriteSegment 4 of 6 (98304 bytes)	segment:3	507b088333ec00b6087689ee6d010456b193968014d7440b13b5c5696967a4aa	2	98696	100000	2	0	789568	applied	signed/002.hex
+3	deploy: WriteSegment 3 of 6 (98304 bytes)	segment:2	f04734190dde7f4bc74c87e9e2f27ea2700981a6a8dfc6005c6a8f4a2fdffd4d	3	98696	100000	2	0	789568	applied	signed/003.hex
+4	deploy: WriteSegment 2 of 6 (98304 bytes)	segment:1	1ee626ab8bb13a34eaffe96a0213080431f7c4e0e3e50859d899041b323a8a9c	4	98696	100000	2	0	789568	applied	signed/004.hex
+5	deploy: WriteSegment 1 of 6 (98304 bytes)	segment:0	b0cf2d25ddc28fc4552a946cced1dcd13b0c66b8400f246ea882d600f3de77d8	5	98696	100000	2	0	789568	applied	signed/005.hex
+6	deploy: CreateHeader (immutable)	header	331ff28d8948b56e8c7007865fe888e20e96939dadf7cda7c38425d35a208350	6	820	100000	2	0	6560	applied	signed/006.hex
+7	Init	init	e60dd6b7534aca12cf877deb5c3402543236d2249d40e20bc184b224d9e535b0	7	50887	8160000	2	7884541	63483424	applied	signed/007.hex
+8	update 000-finality-11605600.ssz (residue witness, one transaction)	update:000-finality-11605600.ssz	525d80d4c35cf21d170a5ebe74e8cae0c3e0c3eb688cd88521bd2caf4f389b55	8	11260	7300000	3	7046507	63519903	applied	signed/008.hex
+9	update 001-finality-11605632.ssz (residue witness, one transaction)	update:001-finality-11605632.ssz	1ac599b9bea6508bde1eea60eca77c0cb710a720019cac2ff9c228af6e78d08a	9	11260	7300000	4	7046631	70556390	applied	signed/009.hex
+10	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11605632	attest:11605632	e76017ebe44a19f59f1bf1ebddfbc773964a9f62c5931ac72e6b8adf510d1c6d	10	6820	550000	4	501007	5064630	applied	signed/010.hex

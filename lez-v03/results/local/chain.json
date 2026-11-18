@@ -1,10 +1,10 @@
 {
  "chain": "sepolia",
  "layout": "gloas",
- "checkpoint": "2e9a9e273c77929932a95f7ce3e70c27647511da71db3aaad0a744d8e831b379",
- "bootstrap_slot": 11605312,
+ "checkpoint": "a3dbfb9dcb8fde50b3efe4ad407b6305119b78d8534f5996b0e89444bbcba641",
+ "bootstrap_slot": 11605568,
  "bootstrap_period": 1416,
- "fetched_utc": "2026-11-18T10:35:53Z",
+ "fetched_utc": "2026-11-18T11:32:10Z",
  "sources": {
   "bootstrap": "https://lodestar-sepolia.chainsafe.io",
   "root_check": "https://ethereum-sepolia-beacon-api.publicnode.com"
