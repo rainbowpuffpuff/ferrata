@@ -21,7 +21,16 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"; repo="$(cd "$here/.." && pwd)"
 fork=0; [ "${1:-}" = --fork ] && { fork=1; shift; }
 # The rehearsal's stages run as children of `--fork <run> all`, against its loopback fork.
-[ "${FERRATA_SEPOLIA_FORK:-}" = 1 ] && case "${SEPOLIA_RPC_URL:-}" in http://127.0.0.1:*) fork=2 ;; esac
+# Only for the anvil fork this script started itself (review finding 13): its process id, alive, an anvil forking on
+# port 8547; a loopback endpoint that is anything else (a node, a tunnel) keeps the send guard.
+own_fork() {
+  local pid="${FERRATA_SEPOLIA_FORK_PID:-}" cmd
+  [ -n "$pid" ] && [ -r "/proc/$pid/cmdline" ] || return 1
+  cmd="$(tr '\0' ' ' < "/proc/$pid/cmdline")"
+  case "$cmd" in *anvil*--fork-url*--port\ 8547*) ;; *) return 1 ;; esac
+  [ "${SEPOLIA_RPC_URL:-}" = http://127.0.0.1:8547 ]
+}
+[ "${FERRATA_SEPOLIA_FORK:-}" = 1 ] && own_fork && fork=2
 run="${1:?run directory}"; stage="${2:?stage}"; arg="${3:-}"
 mkdir -p "$run"; run="$(cd "$run" && pwd)"
 case "$run" in "$repo"/*) echo "sepolia.sh: the run directory must be outside the repository" >&2; exit 1 ;; esac
@@ -40,6 +49,7 @@ if [ "$fork" = 1 ]; then
   export SEPOLIA_RPC_URL=http://127.0.0.1:8547 FERRATA_UNLOCKED=1 FERRATA_SEPOLIA_FORK=1
   anvil --fork-url "$upstream" --port 8547 --auto-impersonate --silent > "$run/anvil-fork.log" 2>&1 &
   apid=$!; trap 'kill $apid 2>/dev/null || true' EXIT
+  export FERRATA_SEPOLIA_FORK_PID=$apid
   for _ in $(seq 1 60); do cast chain-id --rpc-url "$SEPOLIA_RPC_URL" > /dev/null 2>&1 && break; sleep 1; done
   cast rpc anvil_setBalance "$ETH_FROM" 0x56BC75E2D63100000 --rpc-url "$SEPOLIA_RPC_URL" > /dev/null   # 100 ETH, fork only
   say "fork of Sepolia at block $(cast block-number --rpc-url "$SEPOLIA_RPC_URL"), deployer $ETH_FROM impersonated"
@@ -50,7 +60,9 @@ if [ "$fork" = 1 ]; then
       # light client (FERRATA_LC_PROGRAM, default: that account) and instance, this vault; and the deposits' openings.
       drv="${BRIDGE03:-$here/target/release/bridge03}"; [ -x "$drv" ] || die "build the driver (cargo build --release -p driver03)"
       head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$run/payer.key"
-      "$drv" "$run" setup --sequencer https://testnet.lez.logos.co --payer "$run/payer.key" > "$run/setup.log"
+      # A throwaway wallet (no LEZ node is contacted): a random password, never written anywhere.
+      FERRATA_WALLET_PASSWORD="$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')" \
+        "$drv" "$run" setup --sequencer https://testnet.lez.logos.co --payer "$run/payer.key" > "$run/setup.log"
       "$drv" "$run" config --chain 11155111 --vault "$(jq -r .vault "$run/identity.json")" \
         --lc "${FERRATA_LC_PROGRAM:-$(jq -r .bridge "$run/run.json")}" \
         --instance "${FERRATA_LC_INSTANCE:-$(printf 'ferrata/lez-v03-bridge/fork-rehearsal' | sha256sum | cut -c1-64)}" \
@@ -102,10 +114,17 @@ case "$stage" in
     k="${arg:?deposit 0 or 1}"; vault="$(jq -r .vault "$run/identity.json")"
     [ -n "$(jq -r ".\"deposit-$k\" // empty" "$run/sepolia.json" 2>/dev/null)" ] && { say "deposit $k: done"; exit 0; }
     c="0x$(jq -r ".[$k].commitment" "$run/deposits.json")"
+    # A deposit whose send may have gone out is never sent again (review finding 4): the marker is written before the
+    # send, and a depositor counter other than the one the record expects stops the script (the vault takes any C at
+    # index == depositCount, so a second send would escrow again and shift every later leaf).
+    [ -f "$run/deposit-$k.sending" ] && die "deposit $k: a send began at $(cat "$run/deposit-$k.sending") and has no receipt here: check the depositor's depositCount and its transactions on chain, then record it or remove the marker"
     j="$(cast call "$vault" 'depositCount(address)(uint64)' "$ETH_FROM" "${rpc[@]}" | awk '{print $1}')"
-    [ "$j" = "$(jq -r ".[$k].leaf_index" "$run/deposits.json")" ] || say "note: depositor counter $j"
+    want="$(jq -r ".[$k].leaf_index" "$run/deposits.json")"
+    [ "$j" = "$want" ] || die "deposit $k: the depositor's counter is $j, the record expects $want: nothing sent"
+    date -u +%FT%TZ > "$run/deposit-$k.sending"
     r="$(cast send "$vault" 'depositETH(uint8,bytes32,uint64)' 0 "$c" "$j" --value "$total" --from "$ETH_FROM" \
         "${signer[@]}" "${rpc[@]}" --json)"
+    rm -f "$run/deposit-$k.sending"
     rec "deposit-$k" "$(echo "$r" | jq -c '{transactionHash, blockNumber, gasUsed, effectiveGasPrice, status}')"
     say "deposit $k: $(echo "$r" | jq -r '.transactionHash + " block " + .blockNumber + " gas " + .gasUsed')"
     ;;

@@ -208,7 +208,13 @@ async fn setup(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
             "seq_block_poll_max_amount": 100,
         }))?,
     )?;
-    let password = std::env::var("FERRATA_WALLET_PASSWORD").unwrap_or_else(|_| "ferrata-v03-bridge-local".into());
+    // A new wallet's password: the caller's; a public default only for a loopback (local) sequencer (finding 13).
+    let local = sequencer.starts_with("http://127.0.0.1:") || sequencer.starts_with("http://localhost:");
+    let password = match std::env::var("FERRATA_WALLET_PASSWORD") {
+        Ok(p) if !p.is_empty() => p,
+        _ if local => "ferrata-v03-bridge-local".into(),
+        _ => bail!("FERRATA_WALLET_PASSWORD is required for a new wallet of a non-local sequencer ({sequencer})"),
+    };
     let (mut w, _mnemonic) = WalletCore::new_init_storage(config_path, storage_path, None, &password)?;
     let payer_key = match arg(a, "payer")? {
         "testnet-a" => testnet_initial_state::initial_pub_accounts_private_keys()[0].pub_sign_key.clone(),

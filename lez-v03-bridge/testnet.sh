@@ -33,8 +33,20 @@ cmd="${1:-plan}"
 net="${FERRATA_NET:-local}"
 run="${FERRATA_RUN:-$spike/tmp/testnet-v03-bridge/$net-run}"
 case "$run" in "$repo"/*) echo "testnet.sh: FERRATA_RUN must be outside the repository" >&2; exit 1 ;; esac
-seed="${FERRATA_DEPOSIT_SEED:-ferrata/lez-v03-bridge: $net user bridge seed (test value)}"
-instance="${FERRATA_LC_INSTANCE:-$(printf 'ferrata/lez-v03-bridge/%s-instance' "$net" | sha256sum | cut -c1-64)}"
+# The deposits' and burns' wallet seed. A local run uses a public test value; on any other network it must be a secret
+# the caller supplies (review finding 2: from a public seed anyone computes every deposit's `s`, can spend its nullifier
+# first under a configuration of their own, and links the private transactions to their deposits).
+if [ "$net" = local ]; then
+  seed="${FERRATA_DEPOSIT_SEED:-ferrata/lez-v03-bridge: local user bridge seed (test value)}"
+  instance="${FERRATA_LC_INSTANCE:-$(printf 'ferrata/lez-v03-bridge/local-instance' | sha256sum | cut -c1-64)}"
+else
+  seed="${FERRATA_DEPOSIT_SEED:-}"; instance="${FERRATA_LC_INSTANCE:-}"
+fi
+need_secrets() { # a non-local network: the caller's secret seed and the light client's real instance, no defaults
+  [ "$net" = local ] && return 0
+  [ -n "$seed" ] || { echo "testnet.sh: FERRATA_DEPOSIT_SEED must be a secret you supply on $net (no default)" >&2; exit 2; }
+  [ -n "$instance" ] || { echo "testnet.sh: FERRATA_LC_INSTANCE (the light client's instance id) is required on $net" >&2; exit 2; }
+}
 eth_denomination=1000000000000000      # 0.001 ETH, the vault's ETH denomination 0 (deploy.sh)
 eth_total=1002000000000000             # with the 0.2% relay fee of schedule 0
 recipient="${FERRATA_RECIPIENT:-0x00000000000000000000000000000000000Fe77a}"
@@ -142,16 +154,24 @@ capture_args() { # --capture DIR --proof FILE --slot N for the run's capture
 # block: the wallet needs the private account's new commitment). Each step is recorded and skipped when done.
 run_testnet() {
   need_send
+  need_secrets
   jq -e .config "$run/run.json" > /dev/null 2>&1 || { echo "testnet.sh run: testnet.sh prepare first" >&2; exit 1; }
   : "${FERRATA_LC_SLOT:?FERRATA_LC_SLOT: the slot of the light client record of the captured block}" "${FERRATA_CAPTURE:?FERRATA_CAPTURE}"
   local n=2 cap="$FERRATA_CAPTURE" block home
   block="$(cd "$cap" && ls proof_0x*_*.json | head -1 | sed 's/.*_\([0-9]*\)\.json/\1/')"
   jq --argjson b "$block" --argjson n "$n" '.capture_block = $b | .capture_leaves = $n' "$run/run.json" > "$run/run.json.new" && mv "$run/run.json.new" "$run/run.json"
   home="$(jq -r '.wallet_home // empty' "$run/run.json")"; home="${home:-$run/wallet}"
-  b batch $(capture_args) --n "$n" --seed "$seed" --recipient "$recipient" --out "$run/batch.json"
-  if [ ! -f "$run/batch-record.json" ]; then
+  # Built and queued once (finding 12): the marker is written BEFORE ferrata_ops sends, so a re-run never rebuilds or
+  # re-queues it; after a rewind or an interrupted send, re-send the same signed bytes with
+  # `ferrata_ops resend --record $run/batch-record.json`.
+  if [ -f "$run/batch.queued" ]; then
+    log "the public batch was queued at $(cat "$run/batch.queued"): not rebuilt, not sent again"
+  else
+    local ops="${FERRATA_OPS:?FERRATA_OPS: testnet-ops ferrata_ops binary}"
+    b batch $(capture_args) --n "$n" --seed "$seed" --recipient "$recipient" --out "$run/batch.json"
     log "the public batch (deploy, Init, ImportRoot, Claim of deposit 0, the public burn) through ferrata_ops"
-    LEE_WALLET_HOME_DIR="$home" "${FERRATA_OPS:?FERRATA_OPS: testnet-ops ferrata_ops binary}" batch --file "$run/batch.json" \
+    date -u +%FT%TZ > "$run/batch.queued"
+    LEE_WALLET_HOME_DIR="$home" "$ops" batch --file "$run/batch.json" \
       --record "$run/batch-record.json" --wait-secs "${FERRATA_WAIT_SECS:-43200}"
   fi
   log "ClaimPrivately deposit 1 (real proof)"
@@ -199,23 +219,33 @@ run_all() {
   verify
 }
 
-record() { # the record without keys or the wallet, for results/<net>/
+record() { # results/<net>/: no key and no wallet; on a non-local network no secret-derived value either
   mkdir -p "$results"
-  jq 'del(.config)' "$run/run.json" > "$results/run.json"
-  cp "$run/state.json" "$results/state.json"
+  # A local run's seed is a public test value; elsewhere the deposits' s, dest and kind, the private holder and the
+  # nullifier accounts (functions of s) stay in the run directory (review finding 2).
+  local strip='del(.config, .wallet_home)'
+  [ "$net" = local ] || strip='del(.config, .wallet_home, .holder_private) | if .deposits then .deposits |= map(del(.s, .dest, .kind)) else . end'
+  jq "$strip" "$run/run.json" > "$results/run.json"
+  if [ "$net" = local ]; then cp "$run/state.json" "$results/state.json"; else
+    jq 'with_entries(select(.key | startswith("holder_private") | not)) | .accounts |= with_entries(select(.key | startswith("nullifier_") | not))' \
+      "$run/state.json" > "$results/state.json"
+  fi
   [ -f "$run/evm.json" ] && cp "$run/evm.json" "$results/evm.json"
-  [ -f "$run/deposits.json" ] && cp "$run/deposits.json" "$results/deposits.json"
+  [ -f "$run/deposits.json" ] && { [ "$net" = local ] && cp "$run/deposits.json" "$results/deposits.json" || jq 'map(del(.s, .dest, .kind))' "$run/deposits.json" > "$results/deposits.json"; }
   for k in 0 1; do [ -f "$run/deposit-$k.json" ] && cp "$run/deposit-$k.json" "$results/deposit-$k.json"; done
   [ -f "$run/deploy-vault.json" ] && cp "$run/deploy-vault.json" "$results/deploy-vault.json"
   [ -f "$run/capture.log" ] && cp -r "${FERRATA_CAPTURE:-$run/capture}" "$results/capture"
   for f in claim-private.time burn-private.time; do
     [ -f "$run/$f" ] && grep -E "Elapsed|Maximum resident" "$run/$f" > "$results/$f.txt" || true
   done
+  # No machine path in a committed file (finding 9): the run's and the repository's directories written relative.
+  grep -rlI -e "$spike/" "$results" 2>/dev/null | while read -r f; do sed -i "s#$spike/#spike/#g" "$f"; done
   log "record written to $results"
 }
 
 prepare() { # the public run's LEZ wallet, accounts and configuration, and the deposits' commitments: nothing sent
   [ "$net" = testnet ] || { echo "testnet.sh prepare: FERRATA_NET=testnet only (local runs do it in run)" >&2; exit 1; }
+  need_secrets
   mkdir -p "$run"
   if [ -n "${FERRATA_WALLET_HOME:-}" ]; then   # the queued sender's wallet home: one home signs every transaction
     b setup --sequencer "$lez" --wallet-home "$FERRATA_WALLET_HOME" --payer-id "${FERRATA_PAYER_ID:?FERRATA_PAYER_ID}" > "$run/setup.log"

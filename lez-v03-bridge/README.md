@@ -22,9 +22,9 @@ Merkle-Patricia proofs. `core/` holds its state, instructions, effects and check
 |---|---|---|
 | `Init { config, record, proof }` | the vault's slot 2 holds `configId` under a light client record: `config(cid)` written once | `Init` (4) |
 | `ImportRoot { config, record, root, n, proof }` | top-level only (D10); the vault's slots 0 and 1 hold the root and `n` under a record; `config(cid)` exists; `root(cid, n)` written once | `ImportRoot` (1) |
-| `Claim { config, root, witness }` | the claim statement under an imported root (guarded at `root(cid, n)`), public kind; `nullifier(chain, vault, N)` spent once; the denomination credited at `holder(dest)` | `Claim` (5) → `Issue` → `Spend` → `Mint` |
+| `Claim { config, root, witness }` | the claim statement under an imported root (guarded at `root(cid, n)`), public kind; `nullifier(cid, chain, vault, N)` spent once; the denomination credited at `holder(cid, dest)` | `Claim` (5) → `Issue` → `Spend` → `Mint` |
 | `ClaimPrivately { config, root, witness }` | the same for a private-kind deposit, run by its destination, a private account, inside a privacy-preserving transaction: its own shard credited; the root guard and the spend are the transaction's public part | `ClaimPrivately` (6) |
-| `Burn { config, note, from }` | top-level only, signed by the holder; one denomination debited from the holder's own shard (a private account) or its `holder(account)`; the note written once at `burn(cid, H(note))`; its leaf (`burn_leaf(cid, index, token, amount, COut, r)`) appended to the configuration's burn tree at `burns(cid)` | `Burn` (0) |
+| `Burn { config, note, from }` | top-level only, signed by the holder; one denomination debited from the holder's own shard (a private account) or its `holder(cid, account)`; the note written once at `burn(cid, H(note))`; its leaf (`burn_leaf(cid, index, token, amount, COut, r)`) appended to the configuration's burn tree at `burns(cid)` | `Burn` (0) |
 
 **The v0.3.1 model, and why the program looks different.** A v0.3.1 program has a *plan* that sees the
 instruction and its input accounts' metadata, never their data, and an *apply* that sees one effect and one
@@ -43,17 +43,38 @@ record (the layout of `lez-v03/wire`, branch `testnet-v03`: seed `H("ferrata-lez
 `RecordState { instance_id, chain_id, record }`). This is the brief's fallback to a chained `Attest`, and it is
 equivalent: a chained call cannot return data on v0.3.1 (an apply cannot emit calls, a plan sees no state), so a
 chained `Attest` could only assert facts the caller states, checked by the light client's apply against the same
-record and the same core (`attest_batch`); here the bridge's own apply checks that the record is the light client's,
-and its plan does the proof check, so the trust is the same: the record the light client wrote after verifying a
-finality update. The light client's own `Attest` (`lez-v03/wire`: a `Check` of a storage query at
+record with the same proof functions of `ferrata-core` (`attest_storage` per slot there, `attest_batch` here); the
+bridge's own apply checks that the record is the light client's, and its plan does the proof check, so the trust is
+the same: the record the light client wrote after verifying a finality update (or, at its `Init`, its checkpoint's). The light client's own `Attest` (`lez-v03/wire`: a `Check` of a storage query at
 `header(instance, slot)`, then one write-once `statement(instance, s)` account per statement) could be chained the
 same way; it is not, because it would add a written account per attested fact to every import and change nothing in
 what is checked. `guests/records` is a **STAND-IN** that writes any record it is given at the light client's layout,
 for the local round only (the light client needs a beacon chain, which a local anvil has not).
 
 **Balances.** The testnet ships no token program: wrapped balances stay in the bridge's own accounts, as the v0.4
-program does today (`../lez/BRIDGE.md` §3): `holder(account)` for public ones (a PDA whose seed names the account,
-review C-1), the private account's own shard of the bridge for private ones.
+program does today (`../lez/BRIDGE.md` §3): `holder(cid, account)` for public ones (a PDA whose seed names the
+configuration and the account, review C-1), the private account's own shard of the bridge for private ones.
+
+## Where the port departs from the v0.4 program
+
+Two changes after review-lez-v03-bridge (18 Nov 2026), both in this port only:
+
+1. **Nullifiers are keyed by the configuration**: `nullifier(cid, chain, vault, N)`. A configuration's light client
+   and instance are free fields, so anyone can make a second configuration of the same vault and chain whose
+   records it writes itself (any copy of `guests/records` will do). With v0.4's key `(chain, vault, N)`, such a
+   configuration could spend the nullifier of any deposit whose `s` it knows, and the configuration the vault pins
+   was then refused (250): the deposit frozen. Now the paired configuration's claim applies whatever another
+   configuration did; the rogue one only mints into its own holdings and burns into `burns(cid_rogue)`, which no
+   vault pins, so it gains nothing a vault would pay. `harness/tests/review_regressions.rs` R1 shows both.
+2. **Holdings are one account per configuration and destination**: `holder(cid, account)` holds only that
+   configuration's registered tokens (at most two), so no other configuration can fill a destination's account; and a
+   state over LEZ's shard limit is refused with 255 `CAPPED` instead of panicking and being charged the whole gas
+   limit (`apply`'s size check; the guest's write has no `expect` left). R2 shows both.
+
+**The v0.4 program still has both properties** (`../lez/guests/bridge`, the image id the live Sepolia vault pins:
+`nullifier(chain, vault, N)` with no configuration id, and one `holder(account)` for every configuration): a known
+issue recorded by this review on 18 Nov 2026, to be fixed in the proposal's milestone B1/B2 with the same two changes.
+`../lez/` is not changed here.
 
 ## Burn accumulator account
 

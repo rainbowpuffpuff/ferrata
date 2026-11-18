@@ -64,7 +64,8 @@ def main():
     a = ap.parse_args()
     load = lambda f: json.load(open(os.path.join(a.record, f)))
     run, state = load("run.json"), load("state.json")
-    print(f"LEZ {a.lez}, last block {rpc(a.lez, 'getLastBlockId', [])}; record {a.record}")
+    shown = os.sep.join(os.path.normpath(os.path.abspath(a.record)).split(os.sep)[-3:])   # no machine path in a record
+    print(f"LEZ {a.lez}, last block {rpc(a.lez, 'getLastBlockId', [])}; record …/{shown}")
 
     unsettled = False
     for step, s in sorted(run.get("steps", {}).items()):
