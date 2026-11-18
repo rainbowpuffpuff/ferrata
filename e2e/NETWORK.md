@@ -140,6 +140,16 @@ header and the light-client finality update.
   receipt of a transaction then found mined, and its message was classed permanent): since then a run that sent,
   with every fate known and good, counts as transient. Batch 6 on that final code (seeds 89-112, the runner's
   nightly, 30 s stage budget): **24 of 24 complete, 0 violations** (3,330 faults, 2 transient stops resumed).
+- Lying endpoints (after the independent review, 18 Nov): [`netfault/attacks/`](netfault/attacks/attacks.sh)
+  keeps the review's lying endpoint and cases (a selective stale-state liar on a guarded and an unguarded step, with
+  and without an honest second endpoint; a consistent liar; a first-stage revert without a journal; nonces one
+  behind; a broadcast refused but kept; a kill between journal and broadcast; two runs at once; an invented receipt;
+  a send around the proxy; another key's transaction): **14 of 14 pass** (laptop and build box). faultnet's fourth
+  endpoint is, by seed, a frozen-state liar, an invented-receipt liar, a nonce-behind liar or steady, and every seed
+  ends with replays of deposit 0, deposit 1 and release 0 with the journal skip off (through all endpoints, then the
+  liar and one honest endpoint only). On the final code (batch 8, seeds 301-324, the runner's Foundry): **24 of 24
+  complete, 0 violations**, 8,353 faults including 1,679 lies, 312 sends each journaled first, 15 transient stops
+  resumed; no replay sent anything (72 and 12 exit 0, 24 refused because no two endpoints agreed).
 - [`crown/test_send_guard.sh`](crown/test_send_guard.sh): a pending transaction of the deployer, a run killed right
   after its broadcast, a run started while that fate is unknown, the fate found, a replaced transaction and the
   operator's `ack` (anvil without mining, a stub forge that sends through the proxy). 8 of 8 pass.
