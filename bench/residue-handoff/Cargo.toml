@@ -1,0 +1,23 @@
+[package]
+name = "residue-handoff"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Experimental, unaudited: a committee handoff in one execution, the next committee adopted by its summary (bench only; no deployed program uses it; sound only under the light client's honest-supermajority assumption, bench/RESIDUE.md §10)"
+
+[dependencies]
+# The guests patch in RISC Zero's accelerated blst and SHA-256; natively, crates.io's. ferrata-core
+# is used unchanged (its public API only).
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false, features = ["blst"] }
+residue = { path = "../residue" }
+residue-agg = { path = "../residue-agg" }
+
+[dev-dependencies]
+ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }
+blst = "0.3"
+hex = "0.4"
+sha2 = "0.10"
+serde_yaml = "0.9"

@@ -372,11 +372,13 @@ fn main() {
         Some("profile") => agg::profile(),
         Some("measure-agg") => agg::measure(),
         Some("boundary") => agg::boundary(),
+        Some("measure-handoff") => handoff::measure(),
         _ => {
-            eprintln!("usage: residue-host measure | check | profile | measure-agg | boundary");
+            eprintln!("usage: residue-host measure | check | profile | measure-agg | boundary | measure-handoff");
             std::process::exit(2);
         }
     }
 }
 
 mod agg;
+mod handoff;

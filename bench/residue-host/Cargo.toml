@@ -8,6 +8,7 @@ publish = false
 residue-methods = { path = "../residue-methods" }
 residue = { path = "../residue" }
 residue-agg = { path = "../residue-agg" }
+residue-handoff = { path = "../residue-handoff" }
 # Executor only. Without the `prove` feature, default_executor() runs r0vm 3.0.5 over IPC.
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["client"] }
 ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }

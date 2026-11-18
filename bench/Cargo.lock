@@ -1901,6 +1901,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "residue-handoff"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "ferrata-spectests",
+ "hex",
+ "residue",
+ "residue-agg",
+ "serde_yaml",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "residue-host"
 version = "0.1.0"
 dependencies = [
@@ -1910,6 +1924,7 @@ dependencies = [
  "hex",
  "residue",
  "residue-agg",
+ "residue-handoff",
  "residue-methods",
  "risc0-zkvm",
  "sha2 0.10.9",
