@@ -264,6 +264,19 @@ class Net:
                 break
         return out
 
+    def anywhere(self, method: str, params: list):
+        """The first non-null answer of any endpoint (receipts, transactions by hash, blocks by number or hash): a
+        null from one node (behind, or with its history pruned) is not the chain's answer. None if no endpoint has it;
+        Transient if none answered at all."""
+        answered = False
+        for _, r in self.each(method, params):
+            answered = True
+            if r:
+                return r
+        if not answered:
+            return self.call(method, params)
+        return None
+
     def head(self) -> int:
         """The highest head of up to two endpoints (a lagging one reports less, never more)."""
         heads = [int(r, 16) for _, r in self.each("eth_blockNumber", [], n=2)]

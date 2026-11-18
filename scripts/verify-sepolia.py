@@ -34,6 +34,9 @@ import time
 import urllib.error
 import urllib.request
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pubnet  # noqa: E402  (scripts/pubnet.py: failover, backoff, transient/permanent; e2e/NETWORK.md)
+
 DEFAULT_RPC = "https://ethereum-sepolia-rpc.publicnode.com"
 CHAIN_ID = 11155111
 # The run's programs by the names this script gives them; the guests' own names (docs/image-ids.md, programs/ids.jsonl)
@@ -239,29 +242,32 @@ def proven_account(state_root: bytes, proof: dict) -> dict:
 # JSON-RPC
 # ---------------------------------------------------------------------------------------------------------------
 class RpcError(Exception):
-    pass
+    """The node's own answer: a revert, invalid input (pubnet: permanent)."""
+
+
+class RpcUnavailable(Exception):
+    """No endpoint answered within the budget (pubnet: transient). Not an RpcError: a check that expects a revert
+    must not count an outage as one."""
 
 
 class Rpc:
     def __init__(self, url: str):
+        # The given endpoint first; a public one is followed by the free public Sepolia endpoints
+        # (scripts/pubnet-endpoints.json), a local one is alone. Generic User-Agent, nothing about who asks.
         self.url, self.n = url, 0
+        self.net = pubnet.Net("sepolia", first=url, request_budget=float(os.environ.get("PUBNET_REQUEST_BUDGET_S", "120")))
 
     def __call__(self, method: str, *params):
-        body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": list(params)}).encode()
-        for attempt in range(5):
-            req = urllib.request.Request(self.url, data=body, headers={
-                "Content-Type": "application/json", "User-Agent": "ferrata-verify-sepolia/1"})
-            try:
-                with urllib.request.urlopen(req, timeout=30) as r:
-                    out = json.load(r)
-                self.n += 1
-                if "error" in out:
-                    raise RpcError(f"{method}: {out['error']}")
-                return out["result"]
-            except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-                if attempt == 4:
-                    raise RpcError(f"{method}: {e}") from e
-                time.sleep(1.5 * (attempt + 1))
+        self.n += 1
+        try:
+            if method in ("eth_getTransactionReceipt", "eth_getTransactionByHash", "eth_getBlockByHash") or (
+                    method == "eth_getBlockByNumber" and str(params[0]).startswith("0x")):
+                return self.net.anywhere(method, list(params))  # a null from a pruned or lagging node is not final
+            return self.net.call(method, list(params))
+        except pubnet.Permanent as e:
+            raise RpcError(f"{method}: {e}") from None
+        except pubnet.Transient as e:
+            raise RpcUnavailable(f"{method}: {e}") from None
 
     def call(self, to: str, sig: str, *args, block: str = "latest") -> str:
         data = "0x" + selector(sig) + "".join(enc_word(a) for a in args)
@@ -390,7 +396,7 @@ def check(name: str):
             status, detail = "PENDING", str(e)
         except Failed as e:
             status, detail = "FAIL", str(e)
-        except (RpcError, KeyError, ValueError, TypeError, OSError, IndexError) as e:
+        except (RpcError, RpcUnavailable, KeyError, ValueError, TypeError, OSError, IndexError) as e:
             status, detail = "FAIL", f"{type(e).__name__}: {e}"
         RESULTS.append(status)
         print(f"{status:<8} {name}: {detail}", flush=True)
