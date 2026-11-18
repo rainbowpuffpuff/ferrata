@@ -86,3 +86,15 @@ session	started	finished	status	generation_saved	sequencer_starts	block_phase_s	
 20261117T161706Z	1794932226	1794932317	ok	84	2	2	751	transactions: 748 sent; 748 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
 20261117T181706Z	1794939426	1794939567	ok	85	2	2	762	transactions: 759 sent; 759 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
 20261117T201707Z	1794946627	1794946717	ok	86	2	2	768	transactions: 765 sent; 765 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261117T221705Z	1794953825	1794953911	ok	87	1	6	774	transactions: 771 sent; 771 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T001705Z	1794961025	1794961120	ok	88	2	3	780	transactions: 777 sent; 777 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T021704Z	1794968224	1794968312	ok	89	1	6	786	transactions: 783 sent; 783 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T041704Z	1794975424	1794975508	ok	90	1	4	792	transactions: 789 sent; 789 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T061708Z	1794982628	1794982770	ok	91	1	3	803	transactions: 800 sent; 800 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T081703Z	1794989823	1794989908	ok	92	1	4	809	transactions: 806 sent; 806 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T101704Z	1794997024	1794997108	ok	93	1	4	815	transactions: 812 sent; 812 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T121706Z	1795004226	1795004317	ok	94	2	2	821	transactions: 818 sent; 818 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T141704Z	1795011424	1795011510	ok	95	1	6	827	transactions: 824 sent; 824 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T161707Z	1795018627	1795018716	ok	96	2	2	833	transactions: 830 sent; 830 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T181706Z	1795025826	1795025919	ok	97	2	2	839	transactions: 836 sent; 836 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
+20261118T201706Z	1795033026	1795033169	ok	98	2	2	850	transactions: 847 sent; 847 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished
