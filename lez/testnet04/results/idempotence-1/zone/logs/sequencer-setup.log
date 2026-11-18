@@ -1,0 +1,4 @@
+../tmp/testnet04/live/run/sequencer_home is set up
+  channel signing public key  de27896a6b608694963eb0c3e846e6bbf97b0dbc37ef3140752f35c1cdf2061f
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

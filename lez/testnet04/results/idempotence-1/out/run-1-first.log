@@ -1,0 +1,37 @@
+== 2026-11-18T20:02:20Z discover http://172.20.79.179:3041
+head block 4; health None
+fee state {"height": 4, "base_fee_exec": 8, "base_fee_stor": 8, "next_base_fee_exec_floor": 8, "next_base_fee_exec_ceiling": 9, "next_base_fee_stor_floor": 8, "next_base_fee_stor_ceiling": 9, "max_gas_exec": 10000000, "max_gas_stor": 1000000}
+channel 0101010101010101010101010101010101010101010101010101010101010101
+programs 1: privacy_preserving_circuit
+v0.4 network (getPublications known): True; cross-zone programs: none
+builtin programs against LEZ v0.4.0-rc3's: {"same": true, "only_here": [], "only_rc3": [], "different_ids": []}
+clock: {"head_block_ms": 1795032138873, "this_machine_ms": 1795032140801, "behind_s": 1.9}
+blocks read: {"1": {"block_id": 1, "hash": "415aa4df83becc1a13d77548c678b2c858675c7950f813271f8093c9afa389bc", "timestamp": 0, "bedrock_status": "Finalized", "bytes": 3882}, "4": {"block_id": 4, "hash": "59a6f65407b1ab5998abca3a9c90fdfee324da2b03dbb15068dae2025fc4b9cc", "timestamp": 1795032138873, "bedrock_status": "Pending", "bytes": 1255}}
+== 2026-11-18T20:02:21Z this deployment's accounts there: payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti balance 50000000000 ; daemon GT1xxPs9ekzGM6nDTZ1MLHhLCEbwHUGuKRztY8zQVK5B balance 50000000000
+== 2026-11-18T20:02:23Z (a) deploying the attestation program (0x816d1fef…)
+d139694c9199e5d987bec77331159277fc5e7cf616830c19328fa1fdeeb5836c     5396 B gas limit 2000000 max fee      128472064 deploy program: WriteSegment 7 of 7 (4816 bytes)
+6af9703ac0bbd15a6a94e52c526781deffe18fcec327296a0e306e131d5a0c47    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 6 of 7 (98304 bytes)
+7af6da5e34ca4fde7c2dde0bcb94b202cb7e1cf6d4f1805cac7dcc553fcfed63    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 5 of 7 (98304 bytes)
+5d2cbb9484cf7bda6e55a8ea490cf45910c0bb954cc01ec3d5266b72c4ae8c6f    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 4 of 7 (98304 bytes)
+93ce00ca1b564b43a4a7098439d37a6db01763e8ab107d31e3ea9ee4ccfe29cc    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 3 of 7 (98304 bytes)
+de02ae152ce98c9313dd1de058d6aeb4db4450e08d036a3ac9bd0f26e50ad6a1    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 2 of 7 (98304 bytes)
+b77aaef226d4dbaa689de333623d6258356bcc5603cd1f20abb507b45aa39398    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 1 of 7 (98304 bytes)
+e10e2eb2f0016dfc60ce93308e512614ad70eaf6f78a74810894d752f222a1cd      608 B gas limit 2000000 max fee      128196608 deploy program: CreateHeader (immutable) at 4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr
+stage deploy-program: 8 transactions signed for payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti from nonce 0; at the current base fees (8, 8) at most 132796000 if every one used its whole gas limit; the largest reserve 134455296
+[deploy-program] 00 deploy program: WriteSegment 7 of 7 (4816 bytes): "applied" in block 5 (exec gas 0, storage gas 5396, fee "43168")
+[deploy-program] 01 deploy program: WriteSegment 6 of 7 (98304 bytes): "applied" in block 7 (exec gas 4822, storage gas 98916, fee "829904")
+[deploy-program] 02 deploy program: WriteSegment 5 of 7 (98304 bytes): "applied" in block 9 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 03 deploy program: WriteSegment 4 of 7 (98304 bytes): "applied" in block 11 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 04 deploy program: WriteSegment 3 of 7 (98304 bytes): "applied" in block 13 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 05 deploy program: WriteSegment 2 of 7 (98304 bytes): "applied" in block 15 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 06 deploy program: WriteSegment 1 of 7 (98304 bytes): "applied" in block 17 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 07 deploy program: CreateHeader (immutable) at 4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr: "applied" in block 19 (exec gas 594874, storage gas 608, fee "4763856")
+stage deploy-program: every transaction applied in 158.4 s
+== 2026-11-18T20:05:03Z (b) Init of the Sepolia instance
+== 2026-11-18T20:05:03Z fetching a fresh finalized Sepolia checkpoint (Lodestar's bootstrap, publicnode's header at its slot)
+checkpoint: slot 11608159, period 1417, block root 0xbeea1d9683437ea46ac3019e140f62a73164fbb8d165eefbfe2b0693ac851efe
+5d6ab372dff2905ee071d31aa12b74568bdbed346e488898adeb0851ad506ed9     1699 B gas limit 4800000 max fee      307438848 Init (Sepolia, Gloas layout)
+stage init: 1 transactions signed for payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti from nonce 8; at the current base fees (8, 8) at most 38413592 if every one used its whole gas limit; the largest reserve 307438848
+[init] 00 Init (Sepolia, Gloas layout): "applied" in block 21 (exec gas 114811, storage gas 1699, fee "932080")
+stage init: every transaction applied in 19.1 s
+== 2026-11-18T20:05:23Z stopping after (b): FERRATA_DAY1_UNTIL=b

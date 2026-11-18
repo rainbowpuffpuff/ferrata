@@ -1,0 +1,11 @@
+binary 5b908a4686bd1519 ip-class private
+T1_read_unnamed: exit 1; dummy calls 0 []; last: Error: refusing to talk to 172.20.79.179: only a local sequencer (another needs FERRATA_SEQUENCER_REMOTE=http://172.20.79.179:18545)
+T2_read_named: exit 0; dummy calls 1 [ 1 getLastBlockId	auth=no;]; last: 
+T2b_named_other_spelling: exit 1; dummy calls 0 []; last: Error: refusing to talk to 172.20.79.179: only a local sequencer (another needs FERRATA_SEQUENCER_REMOTE=http://172.20.79.179:18545)
+T3_fund_named_nosend: exit 1; dummy calls 1 [ 1 getLastBlockId	auth=no;]; last: Error: refusing to send to http://172.20.79.179:18545: a sequencer not on this machine needs FERRATA_TESTNET_SEND=yes and FERRATA_SEQUENCER_REMOTE=http://172.20
+T3b_fund_named_send_no: exit 1; dummy calls 1 [ 1 getLastBlockId	auth=no;]; last: Error: refusing to send to http://172.20.79.179:18545: a sequencer not on this machine needs FERRATA_TESTNET_SEND=yes and FERRATA_SEQUENCER_REMOTE=http://172.20
+T4_fund_named_send: exit 1; dummy calls 2 [ 1 getAccountBalance	auth=no; 1 getLastBlockId	auth=no;]; last:     ErrorObject { code: MethodNotFound, message: "dummy", data: None }
+T5_send_unnamed_sendyes: exit 1; dummy calls 0 []; last: Error: refusing to talk to 172.20.79.179: only a local sequencer (another needs FERRATA_SEQUENCER_REMOTE=http://172.20.79.179:18545)
+T6_userinfo_read_unnamed: exit 1; dummy calls 0 []; last: Error: refusing http://127.0.0.1:1@172.20.79.179:18545: a userinfo (`...@`) is refused: the client would connect to the host after it
+T7_userinfo_fund_nosend: exit 1; dummy calls 0 []; last: Error: refusing http://127.0.0.1:1@172.20.79.179:18545: a userinfo (`...@`) is refused: the client would connect to the host after it
+T8_userinfo_localhost_read: exit 1; dummy calls 0 []; last: Error: refusing http://localhost:1@172.20.79.179:18545: a userinfo (`...@`) is refused: the client would connect to the host after it

@@ -30,9 +30,9 @@ any public network: Sepolia's beacon and execution APIs were only read.
 | (d) the attestation | 18:39:47-18:40:05 | once the instance had applied an update after its activation: the newest record (slot 11,607,488, execution block 12,162,964 `0x4683d675…83a5`), `eth_getProof` of the vault's slots 0 and 1 there, the verdict computed natively, sent, applied in block 67 |
 | (e) the bridge program | 18:40:27-19:02:47 | 7 stored transactions, applied in blocks 69-80; the owner-side Sepolia step written (`state/bridge-owner-step.md`), not sent |
 | `run` | 19:02:47 | "run done in 4128 s" (from 17:53:58; three node stalls of 20 minutes inside it, below) |
-| the daemon follows | 17:54:00-19:19:17 | 85 minutes; the sequencer stopped again at 18:10:54 (head block 131) and started at 18:11:44 |
-| verify | 19:17:13-19:17:17 | 23 of 23 checks, and the instance's finalized header canonical at publicnode: exit 0 (`out/verify.txt`, `state/verify.json`) |
-| end | 19:19:17 | the daemon stopped (SIGTERM), the zone stopped by `run.sh` |
+| the daemon follows | 17:54:00-19:19:17 | 85 minutes, **62 of them (18:15:01-19:17:13) with the rehearsal's hook paused by hand**, so that `run` and the daemon could go on past its 35-minute window (without the pause the hook would have run `verify` and stopped the daemon at about 18:28, before (d) and (e)); the sequencer stopped again at 18:10:54 (head block 131) and started at 18:11:44 |
+| verify | 19:17:13-19:17:17 | after the pause: 23 of 23 checks, and the instance's finalized header canonical at publicnode: exit 0 (`out/verify.txt`, `state/verify.json`) |
+| end | 19:19:17 | the daemon **killed** (SIGTERM, then SIGKILL after 120 s: it was waiting for its 13th transaction to settle in the fourth stall; `out/daemon-status-end.txt`), the zone stopped by `run.sh` |
 
 ## Figures (from the stored results, `state/tx/<stage>/NN.result.json`, and the daemon's `state/daemon/state/ledger/run.tsv`)
 
@@ -42,13 +42,15 @@ any public network: Sepolia's beacon and execution APIs were only read.
 | (b) `Init` (Sepolia, Gloas layout, 2 adoption parts) | 1, applied | 22 | 114,811 | 1,699 | 932,080 |
 | (d) `Attest`: the vault's account and slots 0 and 1 | 1, applied, 1 event | 67 | 251,015 | 6,409 | 2,059,392 |
 | (e) bridge program, 6 segments and an immutable header | 7, all applied | 69-80 | 1,022,882 | 564,664 | 12,700,368 |
-| (c) the daemon (its own key) | 11 in its journal, all applied (and one more, below) | 28-93 | 34,862,007 | 101,464 | 279,707,768 |
+| (c) the daemon (its own key): its journal | 11, all applied | 28-93 | 34,862,007 | 101,464 | 279,707,768 |
+| (c) the daemon key in all (its nonce and balance at `verify`) | **13 sent**: the 11 above, the first `Adopt` part and a `Finish` (below) | | | | 336,860,616 debited |
 
 - (a) equals, to the unit, what LEZ v0.4.0-rc3's sequencer charged the live driver for the same binary on 14 November
-  (EVIDENCE row 112; `lez/live/README.md`, "LEZ v0.4.0-rc3": 1,091,406 execution gas, 599,500 storage gas, 13,527,248 in base fees), from a different account
+  (`lez/live/README.md`, "LEZ v0.4.0-rc3": 1,091,406 execution gas, 599,500 storage gas, 13,527,248 in base fees; EVIDENCE row 112 states the first), from a different account
   layout and payer: the cost of the deployment is the binary's.
-- (d)'s verdict (`state/tx/attest/stage.json`), the program's own function on the record the zone holds, equal to what
-  the settled transaction emitted and to `eth_getProof`'s values (`state/fetch/proofs/11607488/proof.json`): the vault
+- (d)'s verdict (`state/tx/attest/stage.json`): the program's own function, computed natively on the record the zone
+  holds when the stage was signed, equals `eth_getProof`'s values (`state/fetch/proofs/11607488/proof.json`); the
+  transaction applied with one event, whose content was not compared (the follower keeps an event count): the vault
   `0x04eE…e44c` at Sepolia block 12,162,964 has nonce 1, balance 6,000,000,000,000 wei, slot 0 (the deposit root)
   `0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469`, slot 1 (the leaf count) 2, the crown run's two
   deposits. The record was the checkpoint's own (slot 11,607,488); its block was about an hour old when publicnode served
@@ -57,7 +59,11 @@ any public network: Sepolia's beacon and execution APIs were only read.
   signers; `Open`, `Miller`, two `Adopt` parts, `Finish`) and a finality update to slot 11,607,712 (493 of 512 signers;
   `Open` 2,507,676, `Miller` 3,305,374, `Finish` 3,721,523: 9,534,573 gas); a third (to 11,607,839) had `Open` and
   `Miller` applied when it was stopped. The instance's finalized header at the end, slot 11,607,712, root
-  `0xbc10e751…9803`, is publicnode's canonical block at that slot. Every fee equals what the payer's balance fell by.
+  `0xbc10e751…9803`, is publicnode's canonical block at that slot. Each journaled transaction's fee equals what the
+  daemon key's balance fell by; in all the key sent 13 (its nonce at `verify`) and was debited 336,860,616, 57,152,848
+  more than its journal's 279,707,768: two transactions have no journal row, the first `Adopt` part (below) and the
+  third update's `Finish` (nonce 12), sent at 19:05:36 into the fourth stall and still waiting when the daemon was
+  killed; whether it became final is not known (the zone stopped during that stall).
   `/health` read every minute: 85 probes, 83 answered (64 `ok`, 19 `degraded`), none `down`; the two unanswered were
   before the second start listened (`out/health.tsv`).
 
@@ -74,7 +80,7 @@ the sequencer gave up on them and rewound its head to the last final block (`zon
 
 and a fourth began at 19:05:07 (block 94) and lasted to the end. This is the stall rc3's sessions met (EVIDENCE row 112:
 "120 only after 1,214–1,216 s"; row 122: "Head rewound from 148 to 28"), here three times in an hour. Nothing was
-done by hand to the zone, the script or the daemon: transactions caught in a stall were included again after the
+done by hand about the stalls: transactions caught in a stall were included again after the
 rewind and settled (the daemon: "moved from block 54 to block 49: the head was rewound", settled after 1,179.4 s;
 `Miller` after 1,223.4 s). `day1.sh run` and the daemon rode both sequencer restarts: the script by trying its
 stage again and sending the stored bytes, the daemon by failing a round on the closed connection (five rounds) and
@@ -83,12 +89,17 @@ on the head disagreeing with the last final block (seven rounds), then carrying 
 One thing the restart did show: the daemon's first `Adopt` part, sent at 17:54:36 into the first stall, was waiting
 to settle when the sequencer stopped at 18:10:54; the wait ended with the connection, so the daemon's journal has no
 row for it, while the sequencer included it again after its rewind (18:13:04, its log) and the daemon read it as
-done from the chain and sent the second part (block 28). The journal of a daemon restarted mid-wait can miss a
-transaction the chain holds; the chain stays right.
+done from the chain and sent the second part (block 28). The same happened at the end, to the `Finish` in flight when
+`daemon-stop` killed the daemon after 120 s (its settling waits up to 3,000 s). A daemon stopped or cut mid-wait can
+leave a transaction the chain holds without a journal row, and its fee and budget counters then count less than
+was spent; no transaction is sent twice (the daemon decides from the chain), and the chain stays right.
 
-**The operator's one intervention**: the rehearsal's hook (`../../rehearse.sh`) was paused (SIGSTOP) from 18:15:01
-to 19:17:13, because the first stall had taken 20 of its 35 minutes of following; `/health` was sampled by a
-separate loop meanwhile (`out/events.tsv` says so). The zone, the script and the daemon were not touched.
+**What was done by hand** (`out/events.tsv`, `out/events-notes.txt`): at 17:53:23 the tool's binary was replaced by the
+fixed build and `day1.sh` fixed (below), and at 17:53:58 `day1.sh run` was started again; from 18:15:01 to 19:17:13
+the rehearsal's hook (`../../rehearse.sh`) was paused (SIGSTOP), because the first stall had taken 20 of its 35
+minutes of following: without the pause it would have run `verify` and stopped the daemon at about 18:28, before the
+attestation (18:39:47) and the bridge (19:02:47); `/health` was sampled by a separate loop meanwhile. `verify`'s 23 of
+23 depended on that pause. Nothing was done by hand about the stalls or the restarts.
 
 ## Found by the rehearsal, fixed (host code; commit `36cd3f5a`)
 
@@ -112,9 +123,14 @@ separate loop meanwhile (`out/events.tsv` says so). The zone, the script and the
 ## Re-check
 
 ```sh
-python3 -I -m json.tool lez/testnet04/results/rehearsal-1/state/verify.json   # the 24 checks as the run recorded them
-lez/testnet04/day1.sh verify URL    # against a running zone that holds this run (needs the keys, not committed)
+python3 -I lez/testnet04/recheck.py lez/testnet04/results/rehearsal-1
 ```
+
+recomputes from these files alone: each stage's and the daemon's figures; every hash of the stages and of the daemon's
+journal validated in the sequencer's log; the payer's debit equal to the stages' fees (29,219,088); the daemon key's
+13 transactions and 336,860,616 against its journal; the attestation's facts against `eth_getProof`'s answer; the
+checks `verify` recorded (it prints the figures; exit 0). The chain itself cannot be re-read: the zone was ours and
+is stopped, and the keys are not published (`day1.sh verify URL` needs both).
 
 The records here are the run's own: `out/` (the hook's logs and events), `state/` (what `day1.sh` kept: the stored
 transactions' metadata and results without their signed bytes, the plan, the checkpoint and the proofs fetched, the

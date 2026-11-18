@@ -72,10 +72,11 @@ with each fact is said beside it.
 ## 4. The wallet and the RPC
 
 - LEZ's wallet defaults to the public testnet: `sequencer_addr: "https://testnet.lez.logos.co"`
-  (`lez/wallet/src/config.rs:69-72`); its home is `LEE_WALLET_HOME_DIR` (`lez/wallet/src/lib.rs:70`). Ferrata's code
+  (`lez/wallet/src/config.rs:69-72`); its home is `LEE_WALLET_HOME_DIR` (`lez/wallet/src/lib.rs:71`). Ferrata's code
   always writes its own wallet configuration (`lez/live/driver/src/live.rs`, `open_wallet`) and talks only to a
   sequencer on its own machine unless `FERRATA_SEQUENCER_REMOTE` names the URL; sending there also needs
-  `FERRATA_TESTNET_SEND=yes` (`check_loopback`, `check_send`).
+  `FERRATA_TESTNET_SEND=yes` (`check_loopback`, `check_send`). The host is read strictly (`rpcurl.rs`: no userinfo, so
+  it is the host the client connects to); a loopback port forwarded elsewhere is beyond a URL check.
 - The sequencer's JSON-RPC (`lez/sequencer/service/rpc/src/lib.rs:47-170`): `sendTransaction`, `getFeeState`,
   `checkHealth`, `getBlock`, `getBlockRange`, `getLastBlockId`, `getAccountBalance`, `getTransaction`,
   `getAccountsNonces`, `getAccountView`, `getPublications`, `getMessagePath`, `getRecoveryBinding`, `getProofsAndRoot`,

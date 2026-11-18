@@ -63,7 +63,7 @@ ev run "day1.sh run (FERRATA_TESTNET_SEND=yes), in the background"
 FERRATA_TESTNET_SEND=yes "$D" run "$URL" > "$OUT/run.log" 2>&1 &
 RUN=$!
 # The sequencer stopped and started again while the program's segments are deployed (after the third one settled).
-for _ in $(seq 1 600); do [ -f "$STATE/tx/deploy-program/02.result.json" ] && break; kill -0 "$RUN" 2>/dev/null || break; sleep 1; done
+for _ in $(seq 1 600); do [ -f "$KEYS/tx/deploy-program/02.result.json" ] && break; kill -0 "$RUN" 2>/dev/null || break; sleep 1; done
 if kill -0 "$RUN" 2>/dev/null; then restart_sequencer 20; else ev restart-skipped "day1.sh run had ended"; fi
 wait "$RUN"; ev run-exit "$?"
 "$D" status "$URL" > "$OUT/status-after-run.txt" 2>&1
