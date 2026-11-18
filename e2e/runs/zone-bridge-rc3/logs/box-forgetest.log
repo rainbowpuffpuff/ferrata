@@ -1,0 +1,15 @@
+No files changed, compilation skipped
+
+Ran 5 tests for test/real/ZoneBridgeRc3.t.sol:ZoneBridgeRc3Test
+[PASS] test_gas_rc3() (gas: 523731)
+Logs:
+  rc3 return leg, 2 burns: submitCandidate 343581
+  rc3 return leg, 2 burns: finalizeAttested 181337
+
+[PASS] test_rc3_aFlippedSealByteIsRefused() (gas: 1952691)
+[PASS] test_rc3_aVaultPinningTheDeployedCheckpointBRefusesThisCheckpoint() (gas: 3773936)
+[PASS] test_rc3_checkpointThenBothReleases() (gas: 1237691)
+[PASS] test_rc3_theJournalIsOneOfOneOverTheZonesKey() (gas: 53767)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 15.68ms (24.90ms CPU time)
+
+Ran 1 test suite in 17.43ms (15.68ms CPU time): 5 tests passed, 0 failed, 0 skipped (5 total tests)

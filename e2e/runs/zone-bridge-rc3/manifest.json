@@ -20,6 +20,46 @@
         "to": "0x169e05ae832232b7b177b717d718bccac12f65b1",
         "contractAddress": null
       }
+    ],
+    "submit": [
+      {
+        "hash": "0x784f448ef466ce43ca75acc674aade407e3168972ed01e0c338ac89c1ad039f4",
+        "blockNumber": "0xb",
+        "status": "0x1",
+        "gasUsed": "0x5ba09",
+        "to": "0x169e05ae832232b7b177b717d718bccac12f65b1",
+        "contractAddress": null
+      }
+    ],
+    "finalizeAttested": [
+      {
+        "hash": "0x55bbd999f4790ba30e9533ef96af44c112dc6359026114f4b3eec5580f43dd23",
+        "blockNumber": "0xd",
+        "status": "0x1",
+        "gasUsed": "0x35511",
+        "to": "0x169e05ae832232b7b177b717d718bccac12f65b1",
+        "contractAddress": null
+      }
+    ],
+    "release-0": [
+      {
+        "hash": "0xb478ebdde8a8059919a5abec7c502c78cf4addb275a6bc1123ee08916aad49f8",
+        "blockNumber": "0xf",
+        "status": "0x1",
+        "gasUsed": "0x66af4",
+        "to": "0x169e05ae832232b7b177b717d718bccac12f65b1",
+        "contractAddress": null
+      }
+    ],
+    "release-1": [
+      {
+        "hash": "0x2143b3d580d74084f559ee6e3a0c19d2b6cbabaee980c39122138e1c583f7abb",
+        "blockNumber": "0x10",
+        "status": "0x1",
+        "gasUsed": "0x583a8",
+        "to": "0x169e05ae832232b7b177b717d718bccac12f65b1",
+        "contractAddress": null
+      }
     ]
   }
 }
