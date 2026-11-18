@@ -103,6 +103,9 @@ as the endpoint priced them then); the other eleven paid 19 to 21 wei per gas. T
   e2e/runs/crown-live-4 [--rpc URL]` (20:42Z, 20:43Z): **13 passed, 0 pending, 0 failed**, 61 RPC calls each, on both
   public endpoints; its image-id check names the second build of the checkpoint guests and reads 8 of 8 ids equal to
   docs/image-ids.md, its configId check reads `bedrockGenesisId` = the node's fork digest.
+- `sourcify-status.txt`: `vault/script/sourcify.sh status` with this run's `deploy.json` (read-only, 20:48Z): the vault,
+  its registry library and its emergency stop exact matches on Sourcify, the test token a match under another
+  contract's name (`MockUSDT`).
 - With `cast` (ethpandaops, 20:44–20:52Z): the 13 transactions above (status, block, sender, nonce, gas used, price, value)
   and the deployer's nonce.
 

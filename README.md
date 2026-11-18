@@ -49,7 +49,7 @@ Every document, one line each: [docs/README.md](docs/README.md).
 | Our seals on Ethereum mainnet, read-only | every Groth16 seal the tree records with its journal (66, the live round trip's among them) accepted by RISC Zero's own router and Groth16 verifier 3.0.0 on mainnet by `eth_call`; each seal, image id or journal with one byte changed refused | Ethereum mainnet, read-only, two public endpoints; nothing deployed, nothing sent | [149](docs/EVIDENCE.md) |
 | The return leg with several sequencers | the bridge program on a zone of four LEZ sequencers with an attestor beside each, its rule (B) checkpoint proven into the vault, and a rotation its committee proposed | a zone we ran; the vault on a local anvil, a stand-in beacon chain | [100, 101](docs/EVIDENCE.md) |
 | The return leg on LEZ v0.4.0-rc3 | the checkpoint guests' second build reads Logos Blockchain 0.3.5-rc.1's fork digest (the deployed ids unchanged); its rule (B) checkpoint over an rc3 zone's real blocks proven for real, wrapped and accepted by the vault, both burns released | rc3's sequencer (one) and node (one validator); CPUs of a Modal box; the vault on a local anvil | [129, 130](docs/EVIDENCE.md) |
-| The round trip on LEZ v0.4.0-rc3, live on Sepolia | Ethereum to LEZ and back with rc3's sequencer and its node 0.3.5-rc.1, the final LEZ programs and a new vault pinning the second build's `checkpoint_b`, real proofs; rehearsed on a fork first, verify 14 of 14 | Sepolia; an rc3 zone we ran, one sequencer, one validator | [141, 142](docs/EVIDENCE.md) |
+| The round trip on LEZ v0.4.0-rc3, live on Sepolia | Ethereum to LEZ and back with rc3's sequencer and its node 0.3.5-rc.1, the final LEZ programs and a new vault pinning the second build's `checkpoint_b`, real proofs; 13 transactions, verify 14 of 14 (rehearsed on a fork first) | Sepolia; an rc3 zone we ran, one sequencer, one validator | [141, 142](docs/EVIDENCE.md) |
 | M0 check 4: real proofs on the newest LEZ tag | the private update, attestation, claim and burn proven for real and applied by LEZ v0.4.0-rc3's own sequencer in final blocks (`just m0`: GO) | CPUs of a Modal box; rc3's sequencer and node | [123](docs/EVIDENCE.md) |
 | M0 check 2: the gas drop | a claimant with no native LEZ: the relayer's sealed credit for its receipt's `N`, then its private claim on the final bridge sweeps the credit and pays its fee from it, real proofs, applied by LEZ v0.4.0-rc3's sequencer in final blocks; the same claim without the credit refused (`just m0`: GO) | CPUs of a Modal box; rc3's sequencer and node | [124](docs/EVIDENCE.md) |
 | The privacy gate on real proofs | 20 users' round trip, every private claim, burn and release proven; an adversary pairing each side | one L4 GPU and CPUs on Modal | [89](docs/EVIDENCE.md) |
@@ -67,6 +67,7 @@ asks a public endpoint unless you give your own with `--rpc URL` or `SEPOLIA_RPC
 
 ```sh
 python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3
+python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-4    # the same round trip with the LEZ side on LEZ v0.4.0-rc3
 ```
 
 The light-client core on the official consensus vectors and real mainnet and Sepolia data (Rust, with curl and
@@ -136,7 +137,14 @@ the vault reviewers should check. The LEZ side was a devnet we ran (one validato
 any of it. The first live run, `crown-live-1` (11 November, EVIDENCE rows 41–42), made the same round trip on
 earlier versions of these programs.
 
-The runs in full, the three vaults deployed on Sepolia and what each check proves:
+On 18 November 2026 the same round trip ran live with the LEZ side on LEZ v0.4.0-rc3, the newest tag: rc3's own
+sequencer and its Logos Blockchain node 0.3.5-rc.1, one sequencer and one validator we ran, the same LEZ programs, and a
+new FerrataVault v5 pinning the second build of the checkpoint guests (which reads that node's fork digest) at
+[`0x80555Fe53CCcEf46951B23A3c75643a4C9283470`](https://sepolia.etherscan.io/address/0x80555Fe53CCcEf46951B23A3c75643a4C9283470),
+as `crown-live-4` (EVIDENCE rows 141–142; [`e2e/runs/crown-live-4/`](e2e/runs/crown-live-4/README.md)): 13 transactions,
+both private LEZ transactions and the checkpoint proven for real, both releases paid, verify 14 of 14.
+
+The runs in full, the four vaults deployed on Sepolia and what each check proves:
 [docs/sepolia.md](docs/sepolia.md) and [docs/guides/verify.md](docs/guides/verify.md).
 
 ## Components and their status
@@ -218,7 +226,7 @@ The design notes specify these; there is no code for them here. In short (in ful
 
 ## Not audited. Not for production.
 
-No part of this repository has been audited. Three vaults are deployed on a public network, all on Sepolia, with
+No part of this repository has been audited. Four vaults are deployed on a public network, all on Sepolia, with
 testnet parameters ([docs/sepolia.md](docs/sepolia.md)). No public LEZ network runs any of it: LEZ testnet 0.4
 does not exist. The deployment for the day it opens is one command, built and rehearsed on our own LEZ v0.4.0-rc3 zone
 ([lez/testnet04/](lez/testnet04/README.md), [row 148](docs/EVIDENCE.md)). The prototypes exist to measure and to test the design; the audit is planned for the code the

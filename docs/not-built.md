@@ -71,16 +71,15 @@ The design notes specify these; there is no code for them here:
   November 2026): bonded or restaked backing a consumer can require of a record (a co-signature slashed on Ethereum on
   proof that the header is not canonical), and anchoring to Ethereum's FFG finality instead of, or beside, the sync
   committee; sync-committee slashing itself (EIP-7657) is Stagnant upstream and not Ferrata's to build;
-- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a vault for such a
-  zone where it runs (the deployed checkpoint guests, whose ids the vault on Sepolia pins, read the `d480efc6` layout
-  and refuse it), a zone of several sequencers on it, and following a Bedrock era change (a deployment pins one fork
-  digest). The reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3
-  zone of one sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and
-  accepted by vault v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
-  [EVIDENCE](EVIDENCE.md) rows 129, 130); the whole round trip with such a zone (rc3's sequencer and node, a vault v5
-  pinning the second build's `checkpoint_b`) ran to DONE on an anvil fork of Sepolia, and its live run on Sepolia
-  (`crown-live-4`, one command) was started on 18 Nov 2026 and is not recorded here yet ([EVIDENCE](EVIDENCE.md) row 141,
-  [`e2e/crown/README.md`](../e2e/crown/README.md)).
+- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a zone of several
+  sequencers on it, Logos's devnet itself, and following a Bedrock era change (a deployment pins one fork digest). The
+  reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3 zone of one
+  sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and accepted by vault
+  v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
+  [EVIDENCE](EVIDENCE.md) rows 129, 130); a vault for such a zone runs on Sepolia (the earlier vaults' checkpoint ids
+  read the `d480efc6` layout and refuse it): the whole round trip with an rc3 zone we ran (rc3's sequencer and node, one
+  validator) through a new vault v5 pinning the second build's `checkpoint_b`, rehearsed on a fork and then live on
+  18 Nov 2026 as `crown-live-4` ([EVIDENCE](EVIDENCE.md) rows 141, 142, [`e2e/runs/crown-live-4/`](../e2e/runs/crown-live-4/README.md)).
 
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:

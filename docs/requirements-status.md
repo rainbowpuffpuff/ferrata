@@ -206,7 +206,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.11 | in part | Most hard rows name a test or run; S.4 and Sec.1 name none, documentation rows name drafts; not all in CI. | this file |
 | R.12 | in part | First drafts of the user guide, the consumer guide and the tool's README. | `docs/guides/user-guide.md`; `cli/README.md` |
 | R.13 | in part | First drafts of the tool's README, the operator guide and `monitor`'s README. | `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
-| R.14 | in part | Deployer guide is a first draft; three vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122 |
+| R.14 | in part | Deployer guide is a first draft; four vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122, 142 |
 
 ### Performance
 
@@ -224,7 +224,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and two round trips against devnets we ran. The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 148 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and three round trips against zones we ran (the third with LEZ v0.4.0-rc3's sequencer and node 0.3.5-rc.1). The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 142, 148 |
 | S.2 | in part | User-side proofs built and proven on macOS; the modules and the catalog on Linux x86-64 only. | 88, 59–62, 94–98 |
 | S.3 | in part | The release action's steps ran locally; nothing published, the action not run on a release. | 61 |
 | S.4 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the specification and notes. | `docs/how-it-was-built.md` |
