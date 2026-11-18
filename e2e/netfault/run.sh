@@ -23,7 +23,7 @@ for _ in $(seq 1 100); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && [ -s 
 mapfile -t P < "$w/ports"
 t0=$(date +%s)
 # The deployer: a fresh key in a keystore, funded on anvil only.
-cast wallet new "$w/key" --unsafe-password netfault > "$w/key.txt"
+mkdir -p "$w/key"; cast wallet new "$w/key" --unsafe-password netfault > "$w/key.txt"
 deployer="$(grep -o -E '0x[0-9a-fA-F]{40}' "$w/key.txt" | head -n 1)"
 printf netfault > "$w/pw"
 cast rpc anvil_setBalance "$deployer" 0x3635c9adc5dea00000 --rpc-url "$R" > /dev/null
