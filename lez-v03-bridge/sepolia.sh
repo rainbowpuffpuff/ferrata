@@ -66,16 +66,20 @@ case "$stage" in
     ;;
   deploy)
     cid="$(cat "$run/config_id.txt")"; vault="$(jq -r .vault "$run/identity.json")"
+    # forge reads and writes only under vault/deployments/ (vault/foundry.toml fs_permissions): fork-* (vault/.gitignore)
+    # for the rehearsal, v03bridge-* (the repository's .gitignore) for Sepolia; both copied into the run directory.
+    dep="$repo/vault/deployments/$([ "$fork" = 1 ] && echo fork-)v03bridge-$(basename "$run")"
     jq --arg cid "$cid" '.lezConfigId = $cid | ._source = "lez-v03-bridge/sepolia.sh: vault/script/params/sepolia.json with lez-v03-bridge'"'"'s testnet configuration id; the checkpoint and release image ids are the v0.4 programs'"'"' (no v0.3.1 checkpoint guest exists: RETURN.md)"' \
-      "$repo/vault/script/params/sepolia.json" > "$run/params.json"
-    out="$run/deploy-vault.json"
+      "$repo/vault/script/params/sepolia.json" > "$dep-params.json"
+    out="$dep.json"
     [ -f "$out" ] || jq -n --slurpfile c "$crown" --arg d "$ETH_FROM" \
       '{chainId: 11155111, mode: "B", deployer: $d, groth16Verifier: $c[0].groth16Verifier, registry: $c[0].registry, token: $c[0].token}' > "$out"
-    ( cd "$repo/vault" && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" \
+    ( cd "$repo/vault" && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$dep-params.json" \
         FERRATA_OUT="$out" FERRATA_LOG_DIR="$run/deploy-logs" FERRATA_GROTH16_VERIFIER="$(jq -r .groth16Verifier "$crown")" \
         script/deploy.sh ) 2>&1 | tee "$run/deploy-vault.log"
     [ "$(jq -r .vault "$out" | tr A-F a-f)" = "$(echo "$vault" | tr A-F a-f)" ] || die "the vault is not at the identity's address"
     [ "$(cast call "$vault" 'storedLezConfigId()(bytes32)' "${rpc[@]}")" = "$cid" ] || die "slot 2 is not the configuration id"
+    cp "$out" "$run/deploy-vault.json"; cp "$dep-params.json" "$run/params.json"
     rec deploy "$(jq -c . "$out")"
     ;;
   deposit)

@@ -51,6 +51,7 @@ case "$net" in
   *) echo "testnet.sh: FERRATA_NET=local or testnet" >&2; exit 1 ;;
 esac
 drv="${BRIDGE03:-$here/target/release/bridge03}"
+export SUPPRESS_VERBOSE_PRINTS=1   # LEZ's wallet would print every transaction in full
 b() { "$drv" "$run" "$@"; }
 log() { printf '== %s %s\n' "$(date -u +%T)" "$*"; }
 
@@ -99,12 +100,15 @@ evm_local() { # the vault on a plain local anvil, its two deposits, one capture
   fi
   b config --chain 31337 --vault "$vault" --instance "$instance" --eth "$eth_denomination" > "$run/config_id.txt"
   local cid; cid="$(cat "$run/config_id.txt")"
+  # forge reads and writes only under vault/deployments/ (vault/foundry.toml fs_permissions); fork-* is ignored there.
+  local dep="$repo/vault/deployments/fork-v03bridge-$(basename "$run")"
   if [ "$(jq -r '.complete // false' "$run/deploy-vault.json" 2>/dev/null)" != true ]; then
     jq --arg cid "$cid" '.lezConfigId = $cid | ._source = "lez-v03-bridge/testnet.sh: sepolia.json with this run'"'"'s v0.3.1 configuration id; the checkpoint and release image ids are the v0.4 programs'"'"' (no v0.3.1 checkpoint guest: the return leg is not built, RETURN.md)"' \
-      "$repo/vault/script/params/sepolia.json" > "$run/params.json"
+      "$repo/vault/script/params/sepolia.json" > "$dep-params.json"
     ( cd "$repo/vault" && FERRATA_MODE=B ETH_FROM="$from" FERRATA_UNLOCKED=1 FERRATA_RPC_URL="$eth" \
-        FERRATA_PARAMS="$run/params.json" FERRATA_OUT="$run/deploy-vault.json" FERRATA_LOG_DIR="$run/deploy-logs" \
+        FERRATA_PARAMS="$dep-params.json" FERRATA_OUT="$dep.json" FERRATA_LOG_DIR="$run/deploy-logs" \
         script/deploy.sh ) > "$run/deploy-vault.log" 2>&1 || { tail -20 "$run/deploy-vault.log"; exit 1; }
+    cp "$dep.json" "$run/deploy-vault.json"; cp "$dep-params.json" "$run/params.json"
   fi
   [ "$(jq -r .vault "$run/deploy-vault.json" | tr A-F a-f)" = "$(echo "$vault" | tr A-F a-f)" ] || { echo "vault address differs" >&2; exit 1; }
   [ "$(cast call "$vault" 'storedLezConfigId()(bytes32)' --rpc-url "$eth")" = "$cid" ] || { echo "slot 2 differs" >&2; exit 1; }
