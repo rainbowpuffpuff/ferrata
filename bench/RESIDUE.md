@@ -624,3 +624,147 @@ composition. A **period update** still does not fit at any participation (folded
 --features residue-experimental --test residue_experimental -- --nocapture --test-threads 1`, and the
 same with `--test residue_placements` (`RISC0_HOME`: the LEZ guest toolchain, as in §6; the charged
 gas depends on the guest binary it builds).
+
+## 10. A committee handoff in one transaction: the next committee adopted by its summary
+
+Written on 18 Nov 2026. **Experimental and unaudited, a bench measurement and two experimental program
+copies; it is sound only under the honest-supermajority assumption the light client already makes (at
+least two thirds of each sync committee honest, [`docs/trust.md`](../docs/trust.md) §2.2), and nothing
+deployed changed** (no program or guest with an image id in `docs/image-ids.md`, and `crates/ferrata-core`,
+are untouched).
+
+**Verdict on soundness.** Sound under that assumption. A period update (a handoff) carries the next
+committee as its summary, the root of its 512 key leaves (`pubkeys_root`) and its aggregate key
+(`aggregate_pubkey`), proven by `next_sync_committee_branch` in the state of the attested header that at
+least 342 of the 512 members of the signing committee signed (the policy's floor). The core adopts that
+summary only after a witness of the 512 uncompressed keys has shown that every key decodes and that the
+keys hash to the root and sum to the aggregate (`witness.rs`, `AdoptionProgress::add_part`). The summary
+adoption takes the proven summary as it is, in the same transaction as the update, and keeps every check
+made at use time: each non-signer's key is decoded canonically and proven against `pubkeys_root` (the
+core's composition or the multiproof of §9), and the aggregate is decoded. On every state the beacon
+chain's state transition produced, the two adopt the same summary: the aggregate there is the sum of the
+keys by construction, and every key passed `KeyValidate`. They differ only on a state in which the
+aggregate field is not the sum of the keys, which only 342 or more members of a committee, signing a state
+the transition did not produce, can bring; those signers can as well bring a committee of keys of their
+own whose aggregate is right, and the core's adoption accepts that. So the core's check refuses only a
+forgery no forger needs to make, and the summary adoption does not weaken the light client under its
+assumption. Without the assumption the light client is not sound with either adoption.
+
+Sources (read-only copies beside the repository under `spike/upstream/`): consensus-specs v1.7.0-beta.4
+(commit `aa16bb4c`, the version of the pinned `sync` vectors); the IETF BLS signature draft 04, which the
+specification names (`draft-irtf-cfrg-bls-signature-04.txt`, sha256 `3836b050…`); Helios tag 0.12.0
+(commit `2af9b418`); Lodestar tag v1.51.0 (commit `7923280c`; its light client now lives in
+`packages/state-transition/src/lightClient/`). Paths below are relative to each.
+
+### 10.1 What the core's adoption establishes that the summary adoption does not
+
+When applying an update adopts a committee (`apply_core_compact`: a store learns its next committee, or
+rotates and learns the one after), the core's `step1` gives the job an `AdoptionProgress` for the
+update's next-committee summary, and `apply` refuses the job until the adoption is complete
+(`AdoptionIncomplete`, 83). The adoption (`AdoptionProgress::add_part`) takes the 512 keys uncompressed
+and establishes, up to SHA-256 collisions:
+
+* **(A1)** every leaf under `pubkeys_root` is the leaf of the compressed form of a point on the curve that
+  is not the identity, given in canonical encoding (no subgroup check: `witness.rs`, as for every key the
+  core reads);
+* **(A2)** `aggregate_pubkey` is the compression of the sum of those 512 points.
+
+It does not establish where the committee comes from. In both designs that is the branch to the attested
+state root (`validate_compact`, refusal `NextCommitteeBranchInvalid`) and the signature over the
+attested header by the committee the store already holds. (A1) and (A2) are the internal consistency of a
+summary that is trusted for its provenance either way. The summary adoption keeps the provenance and drops
+(A1) and (A2).
+
+What the light client does with the summary afterwards: the key that verifies an update signed by the
+adopted committee is `aggregate_pubkey − Σ non-signers` (`steps.rs`, `signing_key`;
+`residue_agg::signing_key`). (A2) is what makes that the specification's key, the sum of the signers'
+keys. (A1) is not used by the composition: a signer's key is never decoded (it is inside the aggregate),
+and a non-signer's key is decoded where it is used, by the same checks as (A1) (`witness_key`,
+`residue_agg::key_point`), and refused otherwise (80).
+
+### 10.2 Why the difference does not matter under the light client's assumption
+
+The assumption: at least two thirds of each sync committee are honest, so at most 170 of 512 members are
+not, and any 342 signatures include signatures of honest members. An honest member signs the root of the
+block it holds as its head (`get_sync_committee_message`, `specs/altair/validator.md:363-375`, signing
+`block_root` at l. 368) and holds a block only if its `state_root` is the root of the state the state
+transition computes (`state_transition`, `specs/phase0/beacon-chain.md:1822-1835`, the assertion at
+l. 1835). The light client already relies on this for the finalized header it records and for
+`pubkeys_root`. The aggregate field is in the same `SyncCommittee` container, under the same branch
+(`CommitteeSummary::root` is `hash(pubkeys_root ‖ leaf(aggregate_pubkey))`): it is exactly as trustworthy
+as `pubkeys_root`.
+
+In a state the transition produced, `next_sync_committee` was set at a period boundary by
+`get_next_sync_committee` (`specs/altair/beacon-chain.md:356-363`), which computes
+`aggregate_pubkey = eth_aggregate_pubkeys(pubkeys)` (l. 362). `eth_aggregate_pubkeys`
+(`specs/altair/bls.md:36-52`) asserts `bls.KeyValidate` of every key (l. 47) and returns their sum
+(l. 49-52). `KeyValidate` (draft 04 §2.5, l. 578-603; the draft and ciphersuite the specification names
+at `specs/phase0/beacon-chain.md:1070-1084`) accepts a key only if it decodes to a point that is not the
+identity and is in the subgroup G1. So in every such state (A1) holds, in a stronger form (G1
+membership, which the core's adoption does not check), and (A2) holds by construction: the core's
+adoption would pass, and the summary adoption adopts the summary the core adopts. The store after the
+update is the same (tested on every handoff of the fixtures, §10.7).
+
+The beacon chain itself uses this field for the same purpose. The state transition verifies every
+block's sync aggregate (`process_sync_aggregate`, `specs/altair/beacon-chain.md:635-672`) with
+`state.current_sync_committee.aggregate_pubkey` as the key when all members participated (l. 640-641)
+and with `aggregate_pubkey − Σ non-participants` when more than half did (l. 643-655), and no step of the
+transition checks the field against the keys after `get_next_sync_committee` computed it. A node of the
+pinned specification trusts the field of its own state as the summary adoption trusts it in a signed
+state.
+
+### 10.3 What a wrong aggregate field would do
+
+It needs a state the transition did not produce, signed by at least 342 members of the committee the
+store already holds: the assumption has failed for that committee. If the adopted summary's aggregate is
+`Σ P_i + D` with `D ≠ 0` (the `P_i` the keys under `pubkeys_root`):
+
+* every later update signed by the adopted committee is checked against `Σ signers + D`: the honest
+  committee's signatures are refused (`SignatureInvalid`), and an aggregate field that does not decode
+  refuses every such update (`PubkeyInvalid`). The instance stalls until a new `Init` from a trusted
+  checkpoint;
+* whoever chose `D` signs for that committee alone: with `aggregate_pubkey` set to a key `Q` it holds,
+  an update with every bit set is verified against `Q`. The test of §10.7 builds both cases.
+
+The same signers can instead sign a state whose next committee is 512 keys of their own with the right
+aggregate. The core's adoption accepts that committee (it checks consistency, not provenance) and they
+hold the light client from then on, with either adoption. A wrong aggregate field gives them nothing that
+a consistent committee of their own does not. So the summary adoption changes what is accepted only on
+updates from states the transition did not produce: there the core refuses at adoption
+(`CommitteeInvalid`, 45) and the one-transaction path accepts (tested, §10.7). It changes nothing on an
+update of a real chain.
+
+### 10.4 Could a key of a real committee be invalid?
+
+Not in a state the transition produced, for two independent reasons.
+
+* A key enters the validator registry only with a valid proof of possession: `apply_deposit`
+  (`specs/phase0/beacon-chain.md:2525-2546`, "Verify the deposit signature (proof of possession) which is
+  not checked by the deposit contract", l. 2534, `bls.Verify` at l. 2543), and since Electra
+  `apply_deposit` (`specs/electra/beacon-chain.md:1754-1768`) and `apply_pending_deposit` (l. 1108-1121)
+  through `is_valid_deposit_signature` (l. 1786-1797, `bls.Verify` at l. 1797). In the proof-of-possession
+  scheme `Verify` is `CoreVerify` (draft 04 §3.3, l. 930-931), which returns INVALID unless
+  `KeyValidate(PK)` (§2.7 step 4, l. 655).
+* Whatever the way a validator entered (a test network's genesis tooling, for one), the committee's
+  aggregate is computed by `eth_aggregate_pubkeys`, which asserts `KeyValidate` of every key of the
+  committee (`specs/altair/bls.md:47`): a state that holds a committee with a key that is not a valid G1
+  point is not a state the transition produced.
+
+Every committee the tests adopt (§10.7) also passes the core's 512-key adoption: none of the fixtures'
+committees has a key the core refuses.
+
+### 10.5 What the specification, Helios and Lodestar do with the aggregate field
+
+| | how the next committee is adopted | what is done with `aggregate_pubkey` |
+|---|---|---|
+| specification, light client (`specs/altair/light-client/sync-protocol.md`) | the whole committee, after the branch (l. 458-467), stored as it is (`apply_light_client_update`, l. 494-504): no check of the aggregate against the keys, no `KeyValidate` at adoption | never read: the signature is checked by `FastAggregateVerify` over the participants' keys taken from the stored committee (l. 470-488) |
+| specification, state transition (`specs/altair/beacon-chain.md`) | computed by `get_next_sync_committee` (l. 356-363) | the verification key of every sync aggregate: the field itself when all participate (l. 640-641), the field minus the non-participants when more than half do (l. 643-655) |
+| Helios 0.12.0 (`ethereum/consensus-core/src/`) | the whole committee after the branch (`consensus_core.rs:325-349`), stored as it is (`consensus_core.rs:208-221`) | the verification key when more than half participate: the field minus the non-participants (`get_participating_aggregate_pubkey`, `utils.rs:60-84`, called at `consensus_core.rs:353-362`); never checked against the keys, so a committee whose field is not the sum makes it refuse that committee's honest updates (the departure pinned in [`docs/design/attestation.md`](../docs/design/attestation.md), "The Helios departures") |
+| Lodestar v1.51.0, light client (`packages/state-transition/src/lightClient/spec/`) | the whole committee, every key and the aggregate deserialized with the validation flag set (`PublicKey.fromBytes(…, true)`, `utils.ts:59` and `66-71`), adopted at `processLightClientUpdate.ts:95-96` | not used to verify: `fastAggregateVerify` over the participants (`validateLightClientUpdate.ts:103-113`); never checked against the keys. Lodestar's state transition computes the field (`epoch/processSyncCommitteeUpdates.ts:36-39`) and verifies sync aggregates over the participants' indices (`block/processSyncCommittee.ts:101-125`) |
+| Ferrata's core | the summary after the branch, and the 512-key witness: (A1), (A2) | the verification key: the field minus the non-signers |
+| this section (experimental) | the summary after the branch | the verification key: the field minus the non-signers, each non-signer's key proven against `pubkeys_root` and decoded |
+
+None of the three checks the aggregate field against the keys. The specification's state transition and
+Helios use it as the verification key, as Ferrata does; with the summary adoption Ferrata trusts it as
+Helios does, and still proves against the key root every non-signer key it subtracts (Helios takes them
+from the committee it stored after the branch, which is equivalent up to SHA-256 collisions).
