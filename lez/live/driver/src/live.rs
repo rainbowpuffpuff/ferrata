@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{bail, ensure, Result};
 use common::{block::BedrockStatus, transaction::LeeTransaction, HashType};
 use lee::{AccountId, Actor, PrivateKey};
 use sequencer_service_rpc::SequencerClient;
