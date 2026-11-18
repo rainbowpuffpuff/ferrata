@@ -33,3 +33,24 @@ live run, `crown-live-1`, ran programs built at the maintainer's checkout path (
 | release (`bridge/guests`): `release` | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` | `7be1349cba34b670c0ef63e2093c76885e648d9f9875f5d378ce1706b73f11bf` | 230,360 | `235b2b8441eeb8036a9558932e751814b3c5f97da66cd46a80f958c790d6e714` |
 | claim statement (`bridge/guests`): `claim` | `0xde8d67a46e07254f2fc31202cbae5a35d26f6bfc96e6e436ba732281015965f4` | `ca2c25bf41c307355c0f917427b35469d880b374c3ae16ab26017c73ad78bd02` | 229,408 | `48ab6ae540f4a292eedb6edd0845b93fb166167eacd71953284882f38d48bd2e` |
 | gas-drop receipt (`bridge/guests`): `gasdrop` | `0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4` | `c2119aee6f28359f383d8f1a2e14829f95bdc86e92d52790e442dd823cb43162` | 230,648 | `aa1f819bd46b25cac570db21b4abeb0d84b81c779dccbaad24e5a5fa50cb2114` |
+
+## For zones on Logos Blockchain 0.3.5-rc.1; not deployed on Sepolia
+
+The second build of the two checkpoint guests: `checkpoint/guests-0-3-5/` (their own workspace and lockfile; the
+lockfile is `checkpoint/guests/`'s with only the workspace members changed), built by `checkpoint/methods-0-3-5` with
+checkpoint-core's cargo feature `bedrock-0-3-5`, which is off by default and which the 14 guests above do not compile
+(their sources are byte for byte what they were). They read Bedrock transactions in the layout of Logos Blockchain
+0.3.5-rc.1 (`f6d4267f`, the node LEZ v0.4.0-rc3 pins): a 32-byte fork digest before the operations, hashed with them,
+required to equal the configuration's `bedrockGenesisId` (for such a zone, its fork digest); and a channel configuration
+with an unreachable threshold refused ([`checkpoint-core/src/bedrock_0_3_5/`](../checkpoint/crates/checkpoint-core/src/bedrock_0_3_5/mod.rs)).
+Built on 18 November 2026 on the Modal build box from this tree (RISC Zero 3.0.5, guest Rust 1.88.0, through
+`scripts/guest-rustc`), after `scripts/reproduce-image-ids.sh build` and `compare --vault 0x04eE…e44c` on the same tree
+and box gave 14 of 14 and 6 of 6 for the table above
+([`checkpoint/results/bedrock-0-3-5/`](../checkpoint/results/bedrock-0-3-5/box1-compare.log)). Rebuild:
+`cd checkpoint && cargo build --release -p methods-0-3-5 --locked`, then `python3 -I scripts/reproduce/guest_ids.py . OUT.tsv`
+from the root lists these two with the others.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| checkpoint, rule (A), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint`): `checkpoint_0_3_5` | `0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f` | `4e872fb563f99e176594889d382626144c4958e0a2cca5408178ff5a27569a0e` | 446,600 | `9f86858ee059cd28230b32c31d3f6f6b33ae46d7ce88976c34e38f6d89048f26` |
+| checkpoint, rule (B), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint-b`): `checkpoint_b_0_3_5` | `0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf` | `66ac3a9c20794dc36d35a2d21fedf18e78c79c442f82ac70a3e2d59cd5d8ec77` | 448,128 | `3fb2b8da3d82e9b454c7d4d73a56b61e68664e78e93401cded9b13189e131ff0` |

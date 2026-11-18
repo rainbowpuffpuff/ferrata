@@ -8,15 +8,16 @@
 #                          the upstream crates and checks the core's parsers against them; writes
 #                          the bench fixtures
 # methods-segment/, methods/  build the guests in guests/ (risc0-build 3.0.5) and embed them
+# methods-0-3-5/           builds the checkpoint guests of guests-0-3-5/ (zones on Logos Blockchain 0.3.5-rc.1)
 # host/                    executor bench, composition demo, proving
 #
 # guests/ is a workspace of its own so that its [patch.crates-io] (RISC Zero's accelerated sha2
 # and curve25519-dalek) applies there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-plain", "host", "realblocks", "attestor"]
+members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-0-3-5", "methods-plain", "host", "realblocks", "attestor"]
 default-members = ["crates/checkpoint-core", "crates/attestor-core"]
-exclude = ["guests", "guests-plain"]
+exclude = ["guests", "guests-plain", "guests-0-3-5"]
 
 [workspace.package]
 edition = "2021"
