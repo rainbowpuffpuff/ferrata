@@ -1,0 +1,121 @@
+{
+  "bridge": {
+    "binary": {
+      "chunks": 6,
+      "image_id": "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+      "on_chain_equal": false,
+      "sha256": "11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070"
+    },
+    "deployed": null,
+    "header": "9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+    "segments": [
+      {
+        "account": "FhYQcJYpT99EttzBrfi93TQiv67kghwfkqjXZvqvvDzx",
+        "empty": true
+      },
+      {
+        "account": "3HA2XVT7xixVcocdbG9bpRwysaFKDPCxmHoRXVmqBpD2",
+        "empty": true
+      },
+      {
+        "account": "C4ZV8oVi4VUDeM8VhtB6mo2EeuhXLRJW4chYBvbHZAFw",
+        "empty": true
+      },
+      {
+        "account": "DmsmWStxhH5MKucXSVByPDteSZGNkaoDbwySNKLndujj",
+        "empty": true
+      },
+      {
+        "account": "CCBuhZYCCt23XSMfzuMxk81BZTXwxj9Gi6huDcHakeMU",
+        "empty": true
+      },
+      {
+        "account": "HoPd54SUgkRAbsLmjydoRcceYn4EUysoDdSPx13YUiDp",
+        "empty": true
+      }
+    ]
+  },
+  "daemon": {
+    "account": "6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu",
+    "balance": "50000000000",
+    "nonce": "0"
+  },
+  "followed": 24,
+  "head": 30,
+  "instance": {
+    "active": false,
+    "applied": 0,
+    "config_matches": true,
+    "exists": true,
+    "finalized_header_ssz": "c01db1000000000079060000000000007060cf6fc0a8e463a86c94b857741c8c22ed386d16d36ff72efa6bc811921f9cb89854b468c9d59a1315780ccabcf0c5d62d608cd1448fe9db4590493bc9661796a82f44bf62332db060500e7f525303f9834099013792e3142003819b491aed",
+    "finalized_slot": 11607488,
+    "id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb",
+    "id_matches": true,
+    "root_id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb"
+  },
+  "payer": {
+    "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+    "balance": "49985540672",
+    "nonce": "9"
+  },
+  "program": {
+    "binary": {
+      "chunks": 7,
+      "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+      "on_chain_equal": true,
+      "sha256": "ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"
+    },
+    "deployed": {
+      "first_segment": "HqAQeu3UfwGdA9YWR2bsNpsenMsP17Mt1xX9Aa2fJ6qR",
+      "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+      "immutable": true
+    },
+    "header": "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+    "segments": [
+      {
+        "account": "HqAQeu3UfwGdA9YWR2bsNpsenMsP17Mt1xX9Aa2fJ6qR",
+        "bytes": 98304,
+        "next": "AfgksJdjtSfeeW5TAY3fVadwbbjVyG86MEHgtNspzSPd",
+        "sha256": "fb5662a1a88bfd0d69608c1dbd393ad59467835d148b8848c040a95268d33706"
+      },
+      {
+        "account": "AfgksJdjtSfeeW5TAY3fVadwbbjVyG86MEHgtNspzSPd",
+        "bytes": 98304,
+        "next": "6KJ3iWW9rZbjpZ1iyXwoWD6uMqZGfmY5mPdA7swUxfWP",
+        "sha256": "39f37b43acd4e1e5ff4cbd1fb97cdef491a8cd5ad1b32232e3c7916a6f60ade0"
+      },
+      {
+        "account": "6KJ3iWW9rZbjpZ1iyXwoWD6uMqZGfmY5mPdA7swUxfWP",
+        "bytes": 98304,
+        "next": "2Pg8cXR45gNEzTHmmQGc3Pfiofeu5E5ezXtmjYbW2Z8H",
+        "sha256": "1193c88828f1e6b2b8393aa93a5d76dacf14a02fb7168a5570bc910340d9bb8c"
+      },
+      {
+        "account": "2Pg8cXR45gNEzTHmmQGc3Pfiofeu5E5ezXtmjYbW2Z8H",
+        "bytes": 98304,
+        "next": "8z2BkeeaiBduhnGAHw1hLy2oBHjK3C6z5Vwmwo9h2NpH",
+        "sha256": "fb48a161eda0119cc3ebf30b986a5a22238d1443f8f91b74ae276084a04abe2a"
+      },
+      {
+        "account": "8z2BkeeaiBduhnGAHw1hLy2oBHjK3C6z5Vwmwo9h2NpH",
+        "bytes": 98304,
+        "next": "9MNSvn69wLtTW85K8FHQhzLBNu1uPM5yPx3E2GeFzQBa",
+        "sha256": "1445eb3666d15e4363181c02c58b62d4c678aa7ba599ffc9b2f39111c7c6f159"
+      },
+      {
+        "account": "9MNSvn69wLtTW85K8FHQhzLBNu1uPM5yPx3E2GeFzQBa",
+        "bytes": 98304,
+        "next": "C5oPE9YFeSv1JQLa62a9Z9XQAZ4P2fsYTyJVSJchPtTm",
+        "sha256": "5b620532e1c637228e4fe9c0965a54ccb9d107c30bc3b052bfcc7535117cbeb9"
+      },
+      {
+        "account": "C5oPE9YFeSv1JQLa62a9Z9XQAZ4P2fsYTyJVSJchPtTm",
+        "bytes": 4816,
+        "next": null,
+        "sha256": "6c4640be090d508a470553e6387036059b74968ac8da7d60a352819f104a54c1"
+      }
+    ]
+  },
+  "read_utc": "2026-11-18T17:53:59Z",
+  "rpc": "http://172.20.79.179:3041"
+}

@@ -1,0 +1,67 @@
+{
+  "fee_state": [
+    8,
+    8
+  ],
+  "first_nonce": "9",
+  "info": {
+    "block_hash": "0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5",
+    "eth_getProof": {
+      "address": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+      "balance": "0x574fbde6000",
+      "code_hash": "0x545565b8341a92de4b3c99c9c0d5b3f9fd7e42acbea0676a9ad836d19ceea30b",
+      "nonce": "0x1",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x2"
+        }
+      ],
+      "storage_hash": "0x67ccfd8eb6ed3ef9488cd62eda92166dc1297cb74ba453545ca7b3489c631f0a"
+    },
+    "record_slot": 11607488,
+    "verdict": {
+      "block_hash": "0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5",
+      "block_number": 12162964,
+      "chain_id": 11155111,
+      "event_data": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cba736aa00000000009497b90000000000bdf2f01d17150cb4e1233f962ee8e1a07d6cdc8f8db772e6e7865fdc8c455bcb75fb9c605c160eeb13dd5bd9529f1a1125d95fca55388939b13146cc4506a7b8f581fe3e40c1d0f228154d8859b816566edf2195a1dc0a87e06633ed04b3e70b",
+      "hops": 0,
+      "instance_id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb",
+      "slot": 11607488,
+      "statements": [
+        {
+          "fact": {
+            "account": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+            "balance": "0x00000000000000000000000000000000000000000000000000000574fbde6000",
+            "code_hash": "0x545565b8341a92de4b3c99c9c0d5b3f9fd7e42acbea0676a9ad836d19ceea30b",
+            "nonce": 1,
+            "storage_root": "0x67ccfd8eb6ed3ef9488cd62eda92166dc1297cb74ba453545ca7b3489c631f0a"
+          },
+          "id": "0xbdf2f01d17150cb4e1233f962ee8e1a07d6cdc8f8db772e6e7865fdc8c455bcb"
+        },
+        {
+          "fact": {
+            "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "storage": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+            "value": "0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"
+          },
+          "id": "0x75fb9c605c160eeb13dd5bd9529f1a1125d95fca55388939b13146cc4506a7b8"
+        },
+        {
+          "fact": {
+            "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+            "storage": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+            "value": "0x0000000000000000000000000000000000000000000000000000000000000002"
+          },
+          "id": "0xf581fe3e40c1d0f228154d8859b816566edf2195a1dc0a87e06633ed04b3e70b"
+        }
+      ]
+    }
+  },
+  "payer": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+  "stage": "attest"
+}

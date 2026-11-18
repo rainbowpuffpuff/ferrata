@@ -1,0 +1,11 @@
+== 2026-11-18T17:52:19Z discover http://172.20.79.179:3041
+head block 20; health None
+fee state {"height": 20, "base_fee_exec": 8, "base_fee_stor": 8, "next_base_fee_exec_floor": 8, "next_base_fee_exec_ceiling": 9, "next_base_fee_stor_floor": 8, "next_base_fee_stor_ceiling": 9, "max_gas_exec": 10000000, "max_gas_stor": 1000000}
+channel 0101010101010101010101010101010101010101010101010101010101010101
+programs 1: privacy_preserving_circuit
+v0.4 network (getPublications known): True; cross-zone programs: none
+builtin programs against LEZ v0.4.0-rc3's: "no reference"
+clock: {"head_block_ms": 1795024336147, "this_machine_ms": 1795024339210, "behind_s": 3.1}
+blocks read: {"1": {"block_id": 1, "hash": "e649dca02c73151f37759b5125f8330feb32d40d369b596403e9a14d00754faa", "timestamp": 0, "bedrock_status": "Finalized", "bytes": 3882}, "20": {"block_id": 20, "hash": "218f1dc8ca58e2e9aa200565d47c46eeadd7e031775ce08a0aa71c64a879e4b4", "timestamp": 1795024336147, "bedrock_status": "Pending", "bytes": 1319}}
+== 2026-11-18T17:52:19Z the tool could not read this endpoint (another LEZ version than it was built for?): Error: the sequencer and the follower disagree on the state of 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S@JAQ5MVHbCkSYRzXunsrNuM2m1LS859PGveHfoYPAmcvZ
+exit 0

@@ -113,7 +113,7 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia seven days. | 6, 21, 22, 99, 112, 123 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia seven days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
 | S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition, not a sequencer. | 6, 21, 76, 99; `lez/live/verify-run.sh` |
 | S.3 | in part | Consumer guide is a first draft; its worked example is tested in the harness with real handler proofs. | 39; `docs/guides/consumer-guide.md` |
 | S.4 | in part | The pattern's points run in two reference consumers in the harness; the guide's section is a first draft. | 39, 73; `docs/guides/consumer-guide.md` §6 |
@@ -224,7 +224,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and two round trips against devnets we ran. | 41, 91, 92, 122, 123 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and two round trips against devnets we ran. The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 148 |
 | S.2 | in part | User-side proofs built and proven on macOS; the modules and the catalog on Linux x86-64 only. | 88, 59–62, 94–98 |
 | S.3 | in part | The release action's steps ran locally; nothing published, the action not run on a release. | 61 |
 | S.4 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the specification and notes. | `docs/how-it-was-built.md` |

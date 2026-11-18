@@ -1,0 +1,14 @@
+{
+  "bytes": 1699,
+  "gas_limit": 4800000,
+  "hash": "f788b86abe744217c0da054646098b6884d5015442f1c8983a582e272430bd3e",
+  "label": "Init (Sepolia, Gloas layout)",
+  "max_fee": "307438848",
+  "signed_utc": "2026-11-18T17:48:42Z",
+  "signers": [
+    {
+      "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+      "nonce": "0"
+    }
+  ]
+}

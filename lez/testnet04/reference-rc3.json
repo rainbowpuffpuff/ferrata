@@ -1,0 +1,34 @@
+{
+ "what": "What LEZ v0.4.0-rc3's sequencer (bafd07be, LEZ's local.json network) answered to day1.sh discover in rehearsal 1 (results/rehearsal-1/state/discover.json, 18 November 2026); discover compares a network's getProgramIds with program_ids",
+ "tag": "v0.4.0-rc3",
+ "commit": "bafd07be0701398f9bc435f73ab05e9a7936c301",
+ "program_ids": {
+  "privacy_preserving_circuit": [
+   2517376867,
+   3464899159,
+   3300512099,
+   2206436585,
+   1795275722,
+   388007228,
+   3109164048,
+   940363666
+  ]
+ },
+ "channel_id_local_json": "0101010101010101010101010101010101010101010101010101010101010101",
+ "getPublications_probe": {
+  "code": -32602,
+  "message": "Invalid params",
+  "data": "No more params"
+ },
+ "fee_state_at_height_30": {
+  "height": 30,
+  "base_fee_exec": 8,
+  "base_fee_stor": 8,
+  "next_base_fee_exec_floor": 8,
+  "next_base_fee_exec_ceiling": 9,
+  "next_base_fee_stor_floor": 8,
+  "next_base_fee_stor_ceiling": 9,
+  "max_gas_exec": 10000000,
+  "max_gas_stor": 1000000
+ }
+}

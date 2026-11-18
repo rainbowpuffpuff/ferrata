@@ -375,7 +375,7 @@ scrub < "$RUN_DIR/sequencer_home/sequencer_config.json" > "$OUT/config/sequencer
 [ -f "$RUN_DIR/config/bedrock-node-config.diff" ] && cp "$RUN_DIR/config/bedrock-node-config.diff" "$OUT/config/"
 scrub < "$LOG/sequencer.log" > "$OUT/logs/sequencer.log"
 scrub < "$LOG/sequencer-setup.log" > "$OUT/logs/sequencer-setup.log"
-scrub < "$LOG/driver.log" > "$OUT/logs/driver.log"
+[ -f "$LOG/driver.log" ] && scrub < "$LOG/driver.log" > "$OUT/logs/driver.log"   # a hook-only run has none
 [ -f "$LOG/hook.log" ] && scrub < "$LOG/hook.log" > "$OUT/logs/hook.log"
 [ -f "$LOG/bedrock-gas-prices.log" ] && cp "$LOG/bedrock-gas-prices.log" "$OUT/logs/"
 if [ -f "$LOG/bedrock.log" ]; then

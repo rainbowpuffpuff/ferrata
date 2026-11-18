@@ -1,0 +1,6 @@
+utc	endpoint	request	file	note
+2026-11-18T17:52:31Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T17:52:32Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/bootstrap/0x430bcdd1ea31d4b02a45bd48e4916db1c2b8cd8c87b97282a8cdd00d3f238d1d	bootstrap.ssz	gloas
+2026-11-18T17:52:32Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11607488		
+2026-11-18T18:39:47Z	https://ethereum-sepolia-rpc.publicnode.com	eth_getBlockByHash ["0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5", false]	block.json	
+2026-11-18T18:39:48Z	https://rpc.sepolia.ethpandaops.io	eth_getProof ["0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c", ["0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000001"], "0xb99794"]	proof.json	
