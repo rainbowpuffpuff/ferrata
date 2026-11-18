@@ -106,7 +106,12 @@ header and the light-client finality update.
   `sepolia.sh` deploy, deposit 0, deposit 1, submit, finalize, release 0, release 1 through them with a fresh keystore
   (forge signs: the live path), the stand-in identity and the accept-all verifier of `crown-fork-3r`, resuming a
   transient stop up to 4 times as `drive.py` does; `check.py` then compares the chain (read from anvil directly) with
-  the journal. `many.sh 1 24 4` runs 24 seeds; results in [`netfault/results/`](netfault/results/).
+  the journal. `many.sh 1 24 4` runs 24 seeds; results in [`netfault/results/`](netfault/results/README.md).
+  On the build box (Modal), 18 Nov 2026, 48 seeds in two batches, **48 of 48 complete, 0 violations**: every seed
+  13 transactions, each journaled before it left, nonces without a gap, all succeeded, 2 deposits, 2 nullifiers and
+  6e12 wei left in the vault (crown-fork-3r's figures), no effect twice. Batch 1 (seeds 1-24, stage budget 90 s):
+  8,331 faults injected, 13 stage reruns, no transient stop. Batch 2 (seeds 25-48, stage budget 30 s, so that an
+  outage spends it): 7,453 faults, 6 stage reruns, 3 transient stops (exit 75) resumed and completed.
 - [`crown/test_send_guard.sh`](crown/test_send_guard.sh): a pending transaction of the deployer, a run killed right
   after its broadcast, a run started while that fate is unknown, the fate found, a replaced transaction and the
   operator's `ack` (anvil without mining, a stub forge that sends through the proxy). 8 of 8 pass.
