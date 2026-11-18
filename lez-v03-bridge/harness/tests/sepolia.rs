@@ -27,17 +27,20 @@ const SEPOLIA: u64 = 11_155_111;
 const VAULT: [u8; 20] = hex20("04ee8ff19cc11cee4ae65d03e12b9888043de44c");
 const DEPLOYER: [u8; 20] = hex20("79a95ae9a3f9000eb41f7cbab6a6f97826895c07");
 
+const fn nibble(c: u8) -> u8 {
+    match c {
+        b'0'..=b'9' => c - b'0',
+        b'a'..=b'f' => c - b'a' + 10,
+        _ => panic!("hex"),
+    }
+}
+
 const fn hex20(s: &str) -> [u8; 20] {
     let b = s.as_bytes();
     let mut out = [0u8; 20];
     let mut i = 0;
     while i < 20 {
-        let n = |c: u8| match c {
-            b'0'..=b'9' => c - b'0',
-            b'a'..=b'f' => c - b'a' + 10,
-            _ => panic!("hex"),
-        };
-        out[i] = n(b[2 * i]) << 4 | n(b[2 * i + 1]);
+        out[i] = nibble(b[2 * i]) << 4 | nibble(b[2 * i + 1]);
         i += 1;
     }
     out
@@ -146,5 +149,7 @@ fn sepolia_live_vault_under_its_own_finalized_blocks() {
         hex::encode(cid),
         render(&w.reports),
     );
-    std::fs::write(Path::new(env!("CARGO_MANIFEST_DIR")).join("../results/sepolia.md"), out).unwrap();
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../results");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("sepolia.md"), out).unwrap();
 }

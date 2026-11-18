@@ -237,6 +237,7 @@ fn inbound_and_burns_on_synthetic_storage() {
         tree.count,
         hex::encode(tree.root().unwrap()),
     );
-    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../results/synthetic.md");
-    std::fs::write(path, out).unwrap();
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../results");
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(dir.join("synthetic.md"), out).unwrap();
 }

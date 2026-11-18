@@ -412,6 +412,7 @@ async fn init(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
     ];
     let i = Instruction::Init { config, record: r, proof: c.pairing_proof() };
     let step = a.get("step").cloned().unwrap_or_else(|| "init".into());
+    run.rec["record_slot"] = json!(slot);
     public(run, &step, accounts, bridge, borsh::to_vec(&i)?).await
 }
 
@@ -545,43 +546,70 @@ async fn burn(run: &mut Run, a: &HashMap<String, String>, private: bool) -> Resu
     public(run, &step, accounts, bridge, borsh::to_vec(&i)?).await
 }
 
-/// Every account the run touched, read back from the sequencer, decoded.
+/// Every account the run touched, read back from the sequencer: its id, the bridge shard's bytes and
+/// their decoding. `state.json` of a run is this output; `../verify.py` compares the bytes again.
 async fn state(run: &Run) -> Result<()> {
     let bridge = run.acc("bridge")?;
     let cid = run.config_id()?;
     let config = run.config()?;
     let w = run.wallet()?;
-    let read = |id: AccountId| {
-        let w = &w;
-        async move {
-            let acc = w.get_account_public(id).await?;
-            let data = acc.data.shard(bridge);
-            Ok::<Value, anyhow::Error>(if data.is_empty() {
-                Value::Null
-            } else {
-                json!(format!("{:?}", BridgeState::decode(data).map_err(|c| anyhow!("{c}"))?))
-            })
-        }
-    };
-    let mut out = json!({ "config_id": h(&cid), "last_block": w.get_last_block_id().await? });
-    out["config"] = read(config_account(bridge, &cid)).await?;
-    for n in [1u64, 2, 3, 4] {
-        out[format!("root_{n}")] = read(root_account(bridge, &cid, n)).await?;
+    let mut ids: Vec<(String, AccountId, AccountId)> = vec![
+        ("config".into(), config_account(bridge, &cid), bridge),
+        ("burns".into(), burns_account(bridge, &cid), bridge),
+    ];
+    for n in [1u64, 2] {
+        ids.push((format!("root_{n}"), root_account(bridge, &cid, n), bridge));
     }
     if run.rec["deposits"].is_array() {
         for k in 0..2 {
             let d = deposit(run, k)?;
-            out[format!("nullifier_{k}")] = read(nullifier_account(bridge, config.evm_chain_id, &config.vault, &d.nullifier(config.evm_chain_id, &config.vault))).await?;
+            let nf = d.nullifier(config.evm_chain_id, &config.vault);
+            ids.push((format!("nullifier_{k}"), nullifier_account(bridge, config.evm_chain_id, &config.vault, &nf), bridge));
         }
     }
     let public_holder = run.acc("holder_public")?;
-    out["holder_public"] = read(holder_account(bridge, public_holder.value())).await?;
-    out["burns"] = read(burns_account(bridge, &cid)).await?;
+    ids.push(("holder_public".into(), holder_account(bridge, public_holder.value()), bridge));
+    if let Some(n) = run.rec["notes"].as_object() {
+        for (step, note) in n {
+            let hash: Root = unhex(note["hash"].as_str().unwrap_or_default())?;
+            ids.push((format!("note_{step}"), burn_account(bridge, &cid, &hash), bridge));
+        }
+    }
+    if let Some(slot) = run.rec["record_slot"].as_u64() {
+        ids.push(("record".into(), header_account(config.attestation, &config.instance_id, slot), config.attestation));
+    }
+    let mut accounts = serde_json::Map::new();
+    for (name, id, program) in ids {
+        let acc = w.get_account_public(id).await?;
+        let data = acc.data.shard(program);
+        let decoded = if data.is_empty() {
+            Value::Null
+        } else if program == bridge {
+            json!(format!("{:?}", BridgeState::decode(data).map_err(|c| anyhow!("{name}: {c}"))?))
+        } else {
+            json!("a light client record")
+        };
+        accounts.insert(name, json!({ "id": id.to_string(), "program": program.to_string(), "shard": h(data), "decoded": decoded }));
+    }
+    let mut out = json!({ "config_id": h(&cid), "bridge": bridge.to_string(), "last_block": w.get_last_block_id().await?, "accounts": accounts });
     if let Some(p) = w.get_account_private(run.acc("holder_private")?) {
         let data = p.data.shard(bridge);
-        out["holder_private (the wallet's decoded private state)"] =
+        out["holder_private (the wallet's decoded private state; on chain only its commitment)"] =
             if data.is_empty() { Value::Null } else { json!(format!("{:?}", BridgeState::decode(data).map_err(|c| anyhow!("{c}"))?)) };
+    }
+    if let Some(Ok(BridgeState::Burns(t))) =
+        accounts_shard(&out, "burns").map(|b| BridgeState::decode(&b))
+    {
+        out["burn_tree"] = json!({ "count": t.count, "root": h(&t.root().unwrap_or_default()) });
     }
     println!("{}", serde_json::to_string_pretty(&out)?);
     Ok(())
+}
+
+fn accounts_shard(out: &Value, name: &str) -> Option<Vec<u8>> {
+    let s = out["accounts"][name]["shard"].as_str()?;
+    if s.is_empty() {
+        return None;
+    }
+    hex::decode(s).ok()
 }
