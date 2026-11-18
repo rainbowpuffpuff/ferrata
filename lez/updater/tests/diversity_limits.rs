@@ -19,7 +19,7 @@ use ferrata_lez_wire::Config;
 use ferrata_updater::{
     chain::{decode_finality_update, decode_update, preset, root},
     config::{ClientMatch, Fees, File, Policy},
-    ledger::{HarnessLedger, Ledger},
+    ledger::HarnessLedger,
     source::{
         client_family, lab_record, load_entries, parse_header_answer, parse_version_answer, BeaconApi, Clock, Entry,
         HeaderWitness, Recorded, Source,
@@ -237,8 +237,11 @@ fn finalized_header_mode_sends_what_one_light_client_source_served() {
         let clock = Clock::new(n - 4);
         let payer = key(pk);
         let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
-        let witness =
-            HeaderWitness { name: "lighthouse-headers".into(), base: mock_headers(roots.clone(), answer("lighthouse")), timeout_secs: 5 };
+        let witness = HeaderWitness {
+            name: "lighthouse-headers".into(),
+            base: mock_headers(roots.clone(), answer("lighthouse")),
+            timeout_secs: 5,
+        };
         let sources: Vec<Box<dyn Source>> = vec![
             Box::new(r.reporting("nimbus", &clock, "nimbus", 0)),
             Box::new(r.reporting("lodestar-ahead", &clock, "lodestar", 3)),
@@ -308,7 +311,10 @@ fn one_provider_listed_twice_is_refused_by_the_configuration() {
         .replacen(rec_b, "name = \"record-b\"\n  url = \"https://lodestar-mainnet.chainsafe.io\"", 1);
     assert_ne!(text, base);
     let parsed = File::parse(&text);
-    println!("C2: the same url twice with min_distinct_clients = 2: {:#}", parsed.as_ref().err().map_or("accepted".to_string(), |e| format!("{e:#}")));
+    println!(
+        "C2: the same url twice with min_distinct_clients = 2: {:#}",
+        parsed.as_ref().err().map_or("accepted".to_string(), |e| format!("{e:#}"))
+    );
     assert!(parsed.is_err(), "the same url twice must be refused under the policy");
     let other_port = text.replacen(
         "url = \"https://lodestar-mainnet.chainsafe.io\"",

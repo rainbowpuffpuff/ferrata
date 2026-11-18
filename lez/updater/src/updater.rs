@@ -166,8 +166,9 @@ pub struct Metrics {
     pub period: u64,
     pub last_plan: String,
     pub last_error: String,
-    /// `policy.min_distinct_clients`: this round waits for clients, and the furthest verified update finalizes this many
-    /// slots past the instance (`None`: not waiting for clients). Beyond `max_lag_slots`, `/health` says so.
+    /// `policy.min_distinct_clients`: this round waits for clients, and the furthest update the sources serve that the
+    /// program would not refuse finalizes this many slots past the instance (`None`: not waiting for clients). Beyond
+    /// `max_lag_slots`, `/health` says so.
     pub client_wait: Option<u64>,
     pub sources: BTreeMap<String, SourceStats>,
 }
@@ -785,9 +786,15 @@ impl Updater {
         let mut useful: Vec<(usize, Box<Planned>, bool, Vec<u8>)> = Vec::new();
         let mut best_seen: BTreeMap<usize, u64> = BTreeMap::new();
         let mut seen_digests: BTreeMap<Root, bool> = BTreeMap::new();
+        // The furthest finalized slot a candidate the program would not refuse claims (verified, or signed by a
+        // committee the store does not hold yet): how far the sources are past the instance.
+        let mut seen_head = store.finalized.slot;
         for c in candidates {
             let digest = CompactUpdate::of(&c.update).digest(LcFork::Gloas);
             let verdict = self.evaluate(&store, &c.update);
+            if matches!(verdict, Verdict::Useful(_) | Verdict::Unverifiable) {
+                seen_head = seen_head.max(c.update.finalized_header.beacon.slot);
+            }
             match verdict {
                 Verdict::Useful(p) => {
                     let e = best_seen.entry(c.source).or_default();
@@ -892,7 +899,7 @@ impl Updater {
         let Some((pick, agreeing, clients)) = pick else {
             let (n, slot, clients, first_diverse) = first.expect("useful is not empty");
             // Waiting for clients (not for `min_agreeing`): how far the furthest verified update is past the instance.
-            self.metrics.client_wait = (!first_diverse).then(|| best.saturating_sub(store.finalized.slot));
+            self.metrics.client_wait = (!first_diverse).then(|| seen_head.saturating_sub(store.finalized.slot));
             let diversity = if k >= 2 {
                 let how = match self.policy.client_match {
                     ClientMatch::Bytes => "byte for byte",
@@ -1143,13 +1150,6 @@ impl Updater {
             self.metrics.skipped_done += 1;
             return Ok(None);
         }
-        if let Some(lag) = self.metrics.client_wait.filter(|lag| *lag > self.policy.max_lag_slots) {
-            why.push(format!(
-                "waiting for clients: a verified update {lag} slots past the instance is served by fewer than {} \
-                 clients (policy.min_distinct_clients)",
-                self.policy.min_distinct_clients
-            ));
-        }
         if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
             self.metrics.budget_stops += 1;
             bail!("budget reached: spent {} of {}", self.metrics.spent(), self.fees.budget);
@@ -1276,6 +1276,13 @@ impl Updater {
             } else if !s.available && s.requests > 0 {
                 why.push(format!("source {name} unavailable"));
             }
+        }
+        if let Some(lag) = self.metrics.client_wait.filter(|lag| *lag > self.policy.max_lag_slots) {
+            why.push(format!(
+                "waiting for clients: the sources serve updates {lag} slots past the instance, none sent: fewer than \
+                 {} clients agree (policy.min_distinct_clients)",
+                self.policy.min_distinct_clients
+            ));
         }
         if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
             why.push("budget reached".into());

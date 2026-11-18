@@ -110,7 +110,37 @@ second as by the `finalized-header` daemon, which had applied 15,683,264 at 17:4
   reads SSZ (README, "Not built"); it counted as a `headers` source.
 - A run of hours or on a LEZ sequencer: ten minutes, in process.
 
-## 5. Re-check
+## 5. After the review (18 November, 18:45Z)
+
+An independent review of the five commits above (its counterexamples are now `../../tests/diversity_limits.rs`) found
+the code doing what the README says and the measured figures re-deriving, and asked for these changes, made on the
+branch after merging `integration8`:
+
+- **`finalized-header` is weaker than said** (its F1): the update sent is one source's bytes, and a `headers` answer is
+  read for `canonical`, not `finalized`; an update that one light-client source alone serves, a forged next committee
+  among them, is sent when its finalized header is canonical (`finalized_header_mode_sends_what_one_light_client_source_served`,
+  `headers_answers_count_canonical_blocks_and_client_names_are_the_providers_text`). The README, trust.md §2.4 and
+  EVIDENCE row 147 now say so and recommend `bytes`.
+- **The EIP-7657 loss** (F2): about 536 ETH for the cheapest 342 seats and 12,095 ETH for all 512, with the source and
+  target penalties a slashed validator pays until withdrawable (`../../../../docs/forgery-cost/README.md`).
+- **One provider listed twice** (F4): under the policy the configuration refuses the same host twice
+  (`one_provider_listed_twice_is_refused_by_the_configuration`); two hosts of one provider still count twice.
+- **Waiting for clients is now an alarm** (F5): `/health` degraded and `ferrata_updater_client_wait_slots` when the
+  sources serve updates more than `max_lag_slots` past the instance and none is sent
+  (`waiting_for_clients_is_reported_in_health`).
+- The Waiting text no longer reads "2 of 1 sources" (F7); running the suite rewrites the tracked `../gate.txt` with the
+  grown record's figures: `git checkout` it afterwards (F10).
+
+The suite after these changes (box, 18:55–19:14Z; the sources of the commit that records this): **31 passed, 0
+failed** (6 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in `recorded.rs`), clippy `-D warnings`
+clean ([`suite/tests-after-review.txt`](suite/tests-after-review.txt), [`suite/run-after-review.txt`](suite/run-after-review.txt)).
+The four: `finalized-header` opened 11,600,416 and the period-1416 update 11,599,872, which only the source ahead served,
+while `bytes` held at 11,591,680; one backend listed twice under two names met `k = 2` in process (the updater cannot
+tell) and the configuration refused it ("the same host"); a `headers` answer with `finalized: false` confirms, and
+`Nimbus`, `Nimbus ` and `nimbus-eth2` are three client names; two sources of one client: 57 of 60 rounds waiting, `/health`
+degraded ("waiting for clients: the sources serve updates 50880 slots past the instance, none sent ...").
+
+## 6. Re-check
 
 ```sh
 python3 -I lez/updater/results/client-diversity-2026-11-18/probe.py OUT --net mainnet=URL,URL --rounds 20

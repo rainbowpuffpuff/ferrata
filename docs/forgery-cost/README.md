@@ -14,7 +14,7 @@ against `Lighthouse/v8.3.3-57c2abc/x86_64-linux` at slot 15,682,922 (epoch 490,0
 | | current committee (period 1914) | next committee (period 1915) |
 |---|---:|---:|
 | seats; distinct members (no member holds two seats) | 512; 512 | 512; 512 |
-| members of 32 ETH / 33–1,023 / 1,024–2,047 / 2,048 ETH effective balance | 276 / 32 / 161 / 43 | 289 / 25 / 156 / 42 |
+| members of at most 32 ETH / 33–1,023 / 1,024–2,047 / 2,048 ETH effective balance | 276 / 32 / 161 / 43 | 289 / 25 / 156 / 42 |
 | effective balance of all members | 409,755 ETH | 390,013 ETH |
 | the cheapest 342 seats (members by effective balance per seat) | 76,714 ETH | 58,397 ETH |
 | members exiting / exited / withdrawable; slashed | 4 / 2 / 1; 0 | 5 / 1 / 0; 0 |
@@ -37,18 +37,28 @@ with HTTP 429 (too many requests) at the committee's validator lookups
 | nominal stake of 342 seats | 342 × 32 ETH | 10,944 ETH |
 | EIP-7657's own threshold | 512 × 32 ETH (its Motivation) | 16,384 ETH |
 | two thirds / one third of the active stake | 44,343,611 × 2/3, × 1/3 | 29,562,407 / 14,781,204 ETH |
-| loss if the cheapest 342 seats were slashed together (EIP-7657, not live) | Electra: `effective_balance // 4096` at once, plus `effective_balance × min(3 × slashed, total) / total` | 18.7 + 398.1 ≈ 417 ETH |
-| ... all 512 together | the same | 100.0 + 11,359.0 ≈ 11,459 ETH |
+| slashing penalties if the cheapest 342 seats were slashed together (EIP-7657, not live) | Electra: `effective_balance // 4096` at once, plus `effective_balance × min(3 × slashed, total) / total` | 18.7 + 398.1 ≈ 417 ETH |
+| ... plus the missed-attestation penalties until withdrawable | a slashed validator stays eligible while `previous_epoch + 1 < withdrawable_epoch` (slashing epoch + 8,192) and, outside the unslashed participating set, pays the source and target penalties every epoch: `base_reward × 14 // 64 + base_reward × 26 // 64`, base reward 303 Gwei per ETH (`64 × 10**9 // isqrt(total)`), over 8,191 epochs | + 119.0 ≈ **536 ETH** |
+| ... all 512 together | the same | 100.0 + 11,359.0 + 635.6 ≈ **12,095 ETH** |
 | ... a third of the stake (conflicting FFG finality) | the same; `3 × slashed ≥ total`, so the whole balance | ≥ 14,781,204 ETH |
+
+The losses are an approximation over the totals: the floors are taken on the sum, not per validator; effective
+balances stay at today's (the 1/4,096 penalty and, at the midpoint, the correlation penalty lower them, and so the
+later epochs' penalties); the base reward stays at today's; no inactivity leak; a member already withdrawable (one in
+the current committee, a 32 ETH seat) could not be slashed (`is_slashable_validator`). The first figures of 18 November
+(417 and 11,459 ETH) counted the slashing penalties only; an independent review of the same day added the
+missed-attestation penalties, re-derived here from the same data and specifications.
 
 ## Sources (fetched read-only on 18 November 2026)
 
 - Consensus specifications, release `v1.6.1` (the latest release GitHub names; commit
   `5fa6edcca8ab4cf548653e6680b17b9d3e04d225`), under `https://github.com/ethereum/consensus-specs/blob/v1.6.1/specs/`:
   `phase0/beacon-chain.md` (`is_slashable_attestation_data`: double vote, surround vote; `process_proposer_slashing`,
-  `process_attester_slashing`, `slash_validator`); `altair/beacon-chain.md` (`BeaconBlockBody`: `proposer_slashings`,
+  `process_attester_slashing`, `slash_validator`; `get_eligible_validator_indices`, which keeps a slashed validator
+  until it is withdrawable; `EPOCHS_PER_SLASHINGS_VECTOR = 8192`); `altair/beacon-chain.md` (`BeaconBlockBody`: `proposer_slashings`,
   `attester_slashings`, `sync_aggregate`, no sync-committee slashing; `process_sync_aggregate`: the participant reward
-  and the penalty for a missing signature, nothing else); `altair/light-client/sync-protocol.md` (`is_better_update`,
+  and the penalty for a missing signature, nothing else; `get_flag_index_deltas`: the source and target penalties, 14 and
+  26 of 64, for an eligible validator outside the unslashed participating set); `altair/light-client/sync-protocol.md` (`is_better_update`,
   `process_light_client_update`: `sum(sync_committee_bits) * 3 >= len(sync_committee_bits) * 2`);
   `bellatrix/beacon-chain.md` (`PROPORTIONAL_SLASHING_MULTIPLIER_BELLATRIX = 3`); `electra/beacon-chain.md`
   (`MIN_SLASHING_PENALTY_QUOTIENT_ELECTRA = 4096`, `process_slashings` per increment, `get_next_sync_committee_indices`

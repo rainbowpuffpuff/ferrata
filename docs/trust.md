@@ -111,12 +111,12 @@ A forged finality update needs 342 of the 512 seats: Ferrata's step 1 refuses `p
 |---|---|---|---|
 | Signatures a forgery needs | 342 of 512 seats | the same | two thirds of the active stake: 29,562,407 ETH (derived) |
 | The stake behind them (measured) | the current committee (period 1914): 512 members, 409,755 ETH; its cheapest 342 seats 76,714 ETH (period 1915's: 390,013 and 58,397 ETH) | the same | the active stake, 44,343,611 ETH |
-| Slashable for a forgery | **nothing**: the specifications slash a proposer (two blocks for one slot) and an attester (FFG double and surround votes); a block carries `proposer_slashings` and `attester_slashings` and no sync-committee evidence (also in Gloas), so a member signs the canonical block for its reward and the forgery beside it | the 342 signers | at least a third of the active stake, 14,781,204 ETH (derived), whenever Ethereum finalizes the conflicting canonical checkpoint (accountable safety: two conflicting finalized checkpoints mean a third double- or surround-voted) |
-| Lost by the forger (derived, Electra's penalties) | **0** | about 417 ETH for the cheapest 342 seats (an immediate 1/4,096 of the balance plus the correlation penalty, three times the share of the stake slashed together: 0.52 % of 76,714 ETH); about 11,459 ETH if all 512 are slashed together | everything: from a third slashed together the correlation penalty is the whole effective balance, at least 14,781,204 ETH |
+| Slashable for a forgery | **nothing**: the specifications slash a proposer (two blocks for one slot) and an attester (FFG double and surround votes); a block carries `proposer_slashings` and `attester_slashings` and no sync-committee evidence (also in Gloas), so a member signs the canonical block for its reward and the forgery beside it | the 342 signers, those not yet withdrawable (`is_slashable_validator`; one member of the current committee already is, with a 32 ETH seat) | at least a third of the active stake, 14,781,204 ETH (derived), whenever Ethereum finalizes the conflicting canonical checkpoint (accountable safety: two conflicting finalized checkpoints mean a third double- or surround-voted) |
+| Lost by the forger (derived, Electra's penalties) | **0** | about 536 ETH for the cheapest 342 seats: 417 in slashing penalties (an immediate 1/4,096 of the balance plus the correlation penalty, three times the share of the stake slashed together: 0.52 % of 76,714 ETH) and 119 in the source and target penalties a slashed validator pays every epoch until it is withdrawable (8,192 epochs, about 36 days, at 40/64 of a base reward of 303 Gwei per ETH); about 12,095 ETH if all 512 are slashed together (11,459 + 636). An approximation over the totals: effective balances held at today's, no inactivity leak | everything: from a third slashed together the correlation penalty is the whole effective balance, at least 14,781,204 ETH |
 | Status | live since Altair | EIP-7657 is **Stagnant** (created 21 March 2024); its own text: use cases securing more than 512 × 32 = 16,384 ETH should combine the light client with other methods | Ethereum's own finality; nothing of Ferrata verifies it |
 
 The "342 × 32 = 10,944 ETH" sometimes quoted is a nominal floor: since Electra seats are drawn in proportion to
-effective balance up to 2,048 ETH, so the current committee's 512 members are 276 of 32 ETH, 32 of 33–1,023, 161 of
+effective balance up to 2,048 ETH, so the current committee's 512 members are 276 of at most 32 ETH, 32 of 33–1,023, 161 of
 1,024–2,047 and 43 of 2,048, and its 342 cheapest seats hold 76,714 ETH, none of which a forgery puts at risk. Four
 of its members are exiting, two have exited and one is withdrawable; their seats still sign. The active stake is Lighthouse's count for
 epoch 490,090 (publicnode's node); the sync reward per seat in the same block (25,627 Gwei) agrees through the reward
@@ -151,8 +151,10 @@ bond (an Ethereum contract, or restaked collateral) slashed on Ethereum on proof
 canonical block at its slot (EIP-4788 gives contracts the beacon block roots); a forgery then costs at least the bond,
 which the consumer sizes to its caps over the reaction window. It adds a bonded, trusted-for-cost party and a
 challenge path; nothing of it exists. (2) *EIP-7657, if Ethereum adopts it:* the signers' stake becomes slashable, but
-by the table about 417 ETH for today's cheapest supermajority, because the correlation penalty is small when few are
-slashed; Ferrata can only use it, not build it. (3) *FFG-based anchoring (future work):* follow Ethereum's own
+by the table about 536 ETH for today's cheapest supermajority, because the correlation penalty is small when few are
+slashed (and the source and target penalties until withdrawable add about 119 ETH); Ferrata can only use it, not build
+it. (The instance freeze on evidence of conflicting finality, below, stops an instance but takes nothing from the
+signers either.) (3) *FFG-based anchoring (future work):* follow Ethereum's own
 finality, two thirds of the active stake's attestations, beside or instead of the sync committee, so a forgery means a
 third of the stake slashed (about 14.8 million ETH today); the guest would check the whole validator set's
 attestations instead of 512 keys; not designed in detail, not measured.
@@ -251,10 +253,17 @@ rows 79–81). With `min_distinct_clients = k` (built 18 November 2026, row 147)
 sources reporting `k` different consensus clients at `/eth/v1/node/version` served byte for byte (`client_match =
 "bytes"`, the default) or agree on (`"finalized-header"`), from `k` different sources, and logs and names in `/health`
 two sources serving different bytes for the same update. An honest node of any client derives light-client data only
-from blocks its own fork choice imported, so a forged update that one client's node serves (a bug, or a captured
-committee's accomplice) is not sent. What it does not do: the client is the provider's own claim, which nothing
-authenticates (a provider behind a load balancer can answer from several clients); and it binds only this updater,
-since the program accepts the same update from anyone (§2.2, "What this means for the bridge"). Measured live on 18
+from blocks its own fork choice imported, so **with `client_match = "bytes"`** (the default, and the setting to use) a
+forged update that one client's node serves (a bug, or a captured committee's accomplice) is not sent, as long as the
+accomplice holds fewer than `k` of the configured sources. **With `"finalized-header"` it is**: that mode compares only
+the finalized header, and a `headers` node confirms a block canonical, not finalized, so an update one light-client
+source alone serves is sent when its finalized header is canonical, a forged next committee among them (a captured
+committee's forged handoff, §2.2). What it does not do in either mode: the client is the provider's own claim, which
+nothing authenticates (a provider behind a load balancer can answer from several clients); the updater counts `k`
+configured sources and cannot tell whether two of them are one provider (the configuration refuses the same host twice
+under the policy, not two hosts of one provider); and it binds only this updater, since the program accepts the same
+update from anyone (§2.2, "What this means for the bridge"). While it waits for clients and its sources serve updates
+more than `max_lag_slots` ahead, its `/health` says so. Measured live on 18
 November ([`lez/updater/results/client-diversity-2026-11-18/`](../lez/updater/results/client-diversity-2026-11-18/README.md)):
 Nimbus and Lodestar served the same bytes for every period update asked (five periods each on mainnet and Sepolia),
 but rarely the same finality update at the same moment, because they keep different ones (Lodestar the first of a

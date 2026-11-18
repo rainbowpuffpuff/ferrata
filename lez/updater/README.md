@@ -107,7 +107,9 @@ the 512 members, passes them, and the signers lose no stake for it ([`../../docs
 §2.2). An honest beacon node derives light-client data only from blocks its own fork choice imported, so it does not
 serve such an update; two implementations with the same bug are less likely than one. `min_distinct_clients = k` (0,
 the default: off; 1 is refused) makes the updater send an update only when sources of `k` different consensus clients
-agree on it:
+agree on it. Use it with `client_match = "bytes"`: only then is an update that one source alone serves never sent
+(while an accomplice holds fewer than `k` of the configured sources); `"finalized-header"` sends such an update when
+its finalized header is canonical (below).
 
 - **The client** is what a source reports at `GET /eth/v1/node/version`, asked every round, by its first word
   (`Nimbus/v26.10.2-0abc0d-stateofus`: `nimbus`), kept to printable ASCII. A source that does not answer counts under
@@ -121,10 +123,19 @@ agree on it:
   finalized checkpoint for the whole epoch, Nimbus the newest one each slot, so the two served the same bytes during
   one slot of each epoch ([`results/client-diversity-2026-11-18/`](results/client-diversity-2026-11-18/README.md)).
 - **`client_match = "finalized-header"`**: the update's finalized header, served by a light-client source or held
-  canonical at its slot by a `headers` source (the agreement `min_agreeing` counts), from `k` clients. Weaker (it
-  compares the header, not the signed update) and faster (any update finalizing that header counts).
+  canonical at its slot by a `headers` source (the agreement `min_agreeing` counts), from `k` clients. Weaker and
+  faster: it compares the header, not the signed update, and a `headers` answer is read for `canonical`, not
+  `finalized`, so **the update sent is one source's bytes**: one that a single light-client source serves is sent when
+  its finalized header is canonical, a period update with a next committee nobody else served among them (a captured
+  committee's forged handoff; `tests/diversity_limits.rs`, `finalized_header_mode_sends_what_one_light_client_source_served`).
 - **Refused otherwise:** no transaction; the plan is `Waiting` ("1 of 2 clients agree byte for byte (lodestar)"), and
-  the log names the best update not sent and the clients that served it.
+  the log names the best update not sent and the clients that served it. While it waits for clients and the sources serve
+  updates more than `max_lag_slots` past the instance (any the program would not refuse), `/health` is degraded ("waiting for clients: ...") and
+  `ferrata_updater_client_wait_slots` gives the distance: a policy the configured sources cannot meet (two of one
+  client, a node that does not answer `/eth/v1/node/version`) is an alarm, not a silent stall.
+- **Sources, not providers:** `k` clients from `k` configured sources. The updater cannot tell whether two sources are
+  one provider (its version answer and its data may come from different backends); under the policy the configuration
+  refuses the same host twice, not two hosts of one provider.
 - **Disagreements:** two sources serving different bytes for the same finality update (the same attested header and
   signature slot: one block's sync aggregate over its parent, which honest nodes derive alike) or for the same finished
   period are logged with both digests, counted once per update and source, and named in `/health` for that round. The
@@ -132,8 +143,8 @@ agree on it:
 - **Not covered:** the initialization (the bootstrap is bound to the checkpoint root by hashes) and the committees
   (bound to the summaries on chain); a job this updater opened continues (`finish_own_jobs`).
 - **What it does not give:** it binds this updater only. The program accepts the same update from anyone on its
-  signatures (VS.6): a forger submits it. The policy keeps an honest operator from paying for and relaying a forgery or
-  a buggy client's update, and its `/health` is the first alarm when its sources disagree.
+  signatures (VS.6): a forger submits it. The policy (with `bytes`) keeps an honest operator from paying for and relaying
+  a forgery or a buggy client's update, and its `/health` is the first alarm when its sources disagree.
 - **Off by default:** with `min_distinct_clients = 0` nothing changes: no version request, no new metric, the same
   plans (the A3 gate below ran with it off).
 
@@ -166,7 +177,8 @@ daemon is the same (`src/daemon.rs`, which the Logos module drives too). It reus
 `GET /health`: JSON per instance (`status` `ok`, `degraded` or `down`, the reasons, the finalized
 slot and period, the last plan and error); HTTP 503 when an instance has no usable source.
 `degraded`: a source demoted, lagging or unavailable, a `headers` source holding another block at a
-finalized header's slot, the budget reached, or the last round stuck.
+finalized header's slot, two sources serving other bytes for one update or waiting for clients beyond `max_lag_slots`
+(`min_distinct_clients`), the budget reached, or the last round stuck.
 
 `GET /metrics` (Prometheus text, labels `daemon`, `chain`, `source`): `ferrata_updater_rounds_total`,
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
@@ -176,8 +188,8 @@ finalized header's slot, the budget reached, or the last round stuck.
 `_source_requests_total`, `_source_errors_total`, `_source_refused_total`, `_source_lagging`,
 `_source_available`, `_source_demoted`, `_source_finalized_slot`, `_source_confirmed_total` and
 `_source_mismatches_total` (a `headers` source's confirmations and disagreements); with `min_distinct_clients`,
-`_source_client_info{client,version}`, `_source_client_changes_total` and `_source_disagreements_total`, and `/health`
-lists every source's reported client. Samples:
+`_source_client_info{client,version}`, `_source_client_changes_total`, `_source_disagreements_total` and
+`_client_wait_slots`, and `/health` lists every source's reported client. Samples:
 `results/demo-metrics.txt` (dev mode), `results/live-sepolia/metrics-last.txt` (the live run).
 
 ## Tested (measured; `cargo test -p ferrata-updater --features harness`, RISC0_DEV_MODE=1, on the mrun build box)
@@ -203,8 +215,9 @@ guest toolchain (Rust 1.91.1 in `RISC0_HOME`, `scripts/ci/install-risc0.sh`).
 | `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without), 12 November 2026 |
 
 **Client diversity** (18 November 2026, [`results/client-diversity-2026-11-18/`](results/client-diversity-2026-11-18/README.md)
-§2): on the tree of that change **27 tests pass** (6 in the library, 8 in `config.rs`, 13 in `recorded.rs`), clippy
-`-D warnings` clean. New: two clients serving the same bytes catch up as before and one client twice waits
+§2, §5): on the tree of that change **27 tests pass** (6 in the library, 8 in `config.rs`, 13 in `recorded.rs`), clippy
+`-D warnings` clean; after an independent review the same day **31** (with `tests/diversity_limits.rs`: its
+counterexamples, and its fixes: one host refused twice, `/health` degraded while waiting for clients). New: two clients serving the same bytes catch up as before and one client twice waits
 (`distinct_clients_must_serve_the_same_bytes`); a "Lodestar" source serving valid updates three entries ahead of the
 other client is followed without the policy (to 11,600,416) and held back with it (at 11,591,680) until the other
 serves the same bytes (`an_update_one_client_serves_is_held_back`); a forged-signature source claiming a second client
@@ -214,7 +227,9 @@ Lighthouse over HTTP, in both match modes (`clients_reported_over_http`); the co
 has grown since 13 November (mainnet 95, Sepolia 125 updates): `restart_mid_job_and_mid_period` now picks its stop
 point from the data (it had assumed the third entry from the end was a finality update), and the A3 gate's default
 run replays all **220** updates, each applied once, refused gas / applied 0.0603, honest-1's share 0.5027, 1,020
-rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table below keeps the 58-update runs).
+rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table below keeps the 58-update runs). Running
+the suite rewrites the tracked `results/gate.txt` with the grown record's figures; `git checkout` it afterwards to keep
+the 58-update file the README and EVIDENCE row 80 cite.
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
