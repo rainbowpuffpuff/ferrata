@@ -134,7 +134,7 @@ c5() { # two endpoints one transaction behind, their pending = their latest: the
   # nonce agreed below the chain's, the right transaction not refused as permanent, nothing journaled with nonce 0.
   local ok=1
   case "$agreed" in 0x*) [ "$((agreed))" = "$truth" ] || ok=0 ;; esac
-  grep -q 'permanent: nonce gap' <<< "$out" && ok=0
+  grep -q 'pubnet: permanent' <<< "$out" && ok=0
   grep -q -w '0' <<< "$wrong" && ok=0
   verdict c5 "$ok" "two endpoints behind, one right (chain nonce $truth): the proxy's pending nonce: ${agreed:0:60}; a tx with the right nonce: $out; cast send: $out2, journaled with nonce(s) [$wrong]"
   cleanup

@@ -50,8 +50,10 @@ The audit of every script that talks to a public network (18 tables, call by cal
    earlier timestamp.
 4. **Before a raw transaction leaves** (the proxy, `send_raw`): it must be signed by the sender (the signer is
    recovered from the signature); every endpoint is asked for the sender's latest and pending nonce, and the highest
-   value any of them reports must be both on two endpoints, and equal to the transaction's nonce (a lower value on an
-   endpoint is a node behind, outvoted; a higher one on one endpoint alone, or pending above latest, is waited out);
+   value any of them reports must be both on two endpoints, at least one past the nonce of the sender's last mined
+   transaction in the journal, and equal to the transaction's nonce (a lower value on an endpoint is a node behind,
+   outvoted; a higher one on one endpoint alone, pending above latest, or a transaction nonce above the agreed value is
+   waited out, transient);
    the balance at the pin, agreed by two endpoints, must cover value + gas x max fee; no journaled transaction may be
    without a known fate, and none reverted, replaced or rejected without an operator's `pubnet.py ack`; and no
    journaled transaction mined with status 1 may have the same `to`, value and calldata (the same step again: a plan

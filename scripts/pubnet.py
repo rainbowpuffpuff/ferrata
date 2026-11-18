@@ -976,6 +976,10 @@ class Proxy:
         above latest (a transaction in flight), is waited out (transient)."""
         need = self.net.need()
         deadline = time.monotonic() + self.net.budget
+        # The journal's own floor: one past the highest nonce of the sender's mined transactions (each from a receipt
+        # two endpoints gave alike); two endpoints agreeing below it are behind (or lying), not the chain.
+        mined = [t["nonce"] for t in self.journal.txs().values() if t["state"] == "mined" and t.get("nonce") is not None]
+        floor = max(mined) + 1 if mined else 0
         attempt, seen = 0, []
         while True:
             seen = []
@@ -993,7 +997,7 @@ class Proxy:
             # both the latest and the pending nonce on `need` endpoints (pending above latest: a transaction in flight).
             top = max([max(lat, pen) for _, lat, pen in seen] or [-1])
             agree = [ep for ep, lat, pen in seen if lat == pen == top]
-            if len(agree) >= need:
+            if len(agree) >= need and top >= floor:
                 return top, len(agree)
             attempt += 1
             pause = backoff(attempt, base=2.0, cap=8.0)
@@ -1043,8 +1047,9 @@ class Proxy:
             if tx["nonce"] < nonce:
                 raise Transient(f"pubnet: transient: stale plan: the transaction's nonce {tx['nonce']} is used (the"
                                 f" sender's nonce is {nonce}); planned on a block before the sender's last transaction")
-            if tx["nonce"] > nonce:
-                raise Permanent(f"pubnet: permanent: nonce gap: the transaction's nonce {tx['nonce']} > {nonce}")
+            if tx["nonce"] > nonce:  # the agreed view is behind the plan (two endpoints behind alike): wait it out
+                raise Transient(f"pubnet: transient: the transaction's nonce {tx['nonce']} is above the agreed {nonce}:"
+                                " the endpoints that agreed are behind")
             bal = int(self.state_read("eth_getBalance", [self.sender, "latest"]), 16)  # pinned, two endpoints alike
             need = tx["value"] + tx["gas"] * tx["maxFee"]
             if bal < need:
