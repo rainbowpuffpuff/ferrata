@@ -60,6 +60,7 @@ record() {
       + [$rows[] | select(.hash as $h | ($old | map(.hash) | index($h)) == null)])' "$manifest" > "$manifest.tmp"
   mv "$manifest.tmp" "$manifest"
   jq -e 'all(.status == "0x1")' <<<"$rows" > /dev/null || die "$name: a transaction failed: $rows"
+  say "$name: $(jq length <<<"$rows") transaction(s) mined, in the manifest: $(jq -r 'map(.hash) | join(" ")' <<<"$rows")"
 }
 
 crown() { # crown <signature> [args]: one transaction of Crown.s.sol (state-checked: a step already on chain is skipped)

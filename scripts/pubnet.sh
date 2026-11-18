@@ -8,9 +8,10 @@
 #        (a local fork only). PUBNET_LAG: how far behind the head reads at "latest" are pinned (default 3, 0 local).
 #   pubnet_down
 #   pubnet_stage <log> <command...>
-#        Runs a command that may send (forge script ... --rpc-url "$PUBNET_URL/<stage>") until it succeeds. After each
-#        run, first the fate of every transaction the journal holds (pubnet.py resolve: mined, replaced, rejected), so
-#        nothing is sent again before that is known; then a failed run is classified (pubnet.py classify): a transient
+#        Runs a command that may send (forge script ... --rpc-url "$PUBNET_URL/<stage>") until it succeeds. Before the
+#        first run and after each, the fate of every transaction the journal holds (pubnet.py resolve: mined, replaced,
+#        rejected), so nothing is sent again before that is known (a bad fate stops until an operator has looked:
+#        pubnet.py ack); then a failed run is classified (pubnet.py classify): a transient
 #        one runs again after an exponential backoff with jitter (15 s, 30 s, ... at most 300 s) while the stage's
 #        budget lasts (PUBNET_STAGE_BUDGET_S, default 1200); a permanent one stops. Returns 0, 1 (permanent: a human
 #        looks) or 75 (transient: the budget is spent with nothing in flight, or a fate is still unknown).
@@ -65,6 +66,9 @@ pubnet_stage() {
   local log="$1" t0 since attempt=0 rc cls pause budget="${PUBNET_STAGE_BUDGET_S:-1200}"
   shift
   t0="$(date +%s)"
+  # Before the first run too: a stage stopped (or killed) after a broadcast sends nothing until that fate is known.
+  pubnet_resolve || { local r0=$?; [ "$r0" = 3 ] && { _pubnet_say "an earlier transaction did not succeed (above): a human looks, then pubnet.py ack"; return 1; }
+    _pubnet_say "an earlier transaction's fate is still unknown: nothing is sent"; return 75; }
   while :; do
     if [ -n "$PUBNET_PID" ] && ! kill -0 "$PUBNET_PID" 2>/dev/null; then
       _pubnet_say "the proxy is gone; starting it again"

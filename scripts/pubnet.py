@@ -29,6 +29,8 @@ CLI:
                                                       exit 0: every journaled transaction has a fate and all were
                                                       mined with status 1; 3: one reverted, was replaced or rejected
                                                       (a human looks); 75: a fate is still unknown (try again later)
+  pubnet.py ack --journal F --hash H [--why TEXT]     an operator has looked at a transaction with a bad or unknown
+                                                      fate (reverted, replaced, rejected, lost): sends may go on
   pubnet.py rows --journal F --stage S                the stage's mined transactions as manifest rows (JSON)
   pubnet.py classify [--events F --since T] [LOG]     transient | permanent: why the last attempt failed
   pubnet.py selftest                                  keccak, RLP, classification
@@ -99,6 +101,10 @@ PERMANENT_RE = re.compile(
     r"execution reverted|revert|invalid (argument|params|opcode|sender|signature|transaction|chain)|"
     r"insufficient funds|nonce too (low|high)|intrinsic gas|gas required exceeds|exceeds block gas limit|"
     r"replacement transaction underpriced|max fee per gas less than|fee cap|pubnet: permanent", re.I)
+# A plan refused because the chain's time has not come yet (Crown.s.sol: "the candidate's wait is not over", "the
+# release delay is not over"): at a block pinned a few behind the head this can be true for a few slots more; forge
+# sent nothing, so it is tried again (transient), within the stage's budget.
+NOT_YET_RE = re.compile(r"wait is not over|delay is not over", re.I)
 UNSUPPORTED_RE = re.compile(r"method not found|not supported|unsupported|-32601\b|not whitelisted|not allowed|"
                             r"disabled|requires? (an )?api key|unauthori[sz]ed|forbidden|\b40[13]\b", re.I)
 
@@ -114,6 +120,8 @@ class Permanent(Exception):
 def classify(text: str) -> str:
     """transient | permanent. A message that names a revert, invalid input or missing funds is permanent even when
     it also names a timeout; an unknown message is permanent (a human looks rather than a loop)."""
+    if NOT_YET_RE.search(text or ""):
+        return "transient"
     if PERMANENT_RE.search(text or ""):
         return "permanent"
     if TRANSIENT_RE.search(text or ""):
@@ -394,7 +402,7 @@ def decode_tx(raw: bytes) -> dict:
 
 # ---- the journal ----------------------------------------------------------------------------------------------------
 
-FINAL = ("mined", "replaced", "rejected")
+FINAL = ("mined", "replaced", "rejected", "acked")
 
 
 class Journal:
@@ -443,6 +451,10 @@ class Journal:
                 elif r.get("event") == "fate":
                     cur.update(state=r["fate"], **{k: r[k] for k in ("status", "block", "gasUsed", "to",
                                                                          "contractAddress", "why") if k in r})
+                elif r.get("event") == "ack":  # an operator looked at a bad or unknown fate (pubnet.py ack)
+                    cur["acked"] = r.get("why", "")
+                    if cur["state"] not in FINAL:
+                        cur["state"] = "acked"
         return out
 
     def open_txs(self) -> list[dict]:
@@ -465,10 +477,9 @@ def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
     nonces = [int(r, 16) for _, r in net.each("eth_getTransactionCount", [sender, "latest"])]
     if t.get("nonce") is not None and nonces and max(nonces) > t["nonce"]:
         # The nonce is used. Ours, on a node that has no receipt yet, or another transaction with the same nonce:
-        # only after several looks over a minute with no receipt anywhere is it taken as replaced.
-        seen = t.get("_nonce_used_looks", 0)
-        if seen < 6:
-            t["_nonce_used_looks"] = seen + 1
+        # only after PUBNET_REPLACED_AFTER_S (60 s) of looks with no receipt anywhere is it taken as replaced.
+        since = t.setdefault("_nonce_used_since", time.monotonic())
+        if time.monotonic() - since < float(os.environ.get("PUBNET_REPLACED_AFTER_S", "60")):
             return "nonce-used"
         j.append({"event": "fate", "hash": h, "fate": "replaced",
                   "why": f"the sender's nonce is {max(nonces)} > {t['nonce']} and no endpoint has a receipt"})
@@ -504,10 +515,11 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> 
                 + ", ".join(t["hash"] for t in j.open_txs()))
             return TEMPFAIL
         time.sleep(pause)
-    bad = [t for t in j.txs().values() if t["state"] != "mined" or t.get("status") not in ("0x1", 1)]
+    bad = [t for t in j.txs().values()
+           if not t.get("acked") and (t["state"] != "mined" or t.get("status") not in ("0x1", 1))]
     for t in bad:
         log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}): {t['state']}, status {t.get('status')}"
-            f" {t.get('why', '')}".rstrip())
+            f" {t.get('why', '')}; once checked by a human: pubnet.py ack --journal {j.path} --hash {t['hash']}")
     return 3 if bad else 0
 
 
@@ -894,7 +906,8 @@ def selftest() -> int:
     for text, want in (("header not found", "transient"), ("HTTP 429", "transient"), ("-32001 block not found",
                        "transient"), ("execution reverted: x", "permanent"), ("insufficient funds for gas", "permanent"),
                        ("timeout; execution reverted", "permanent"), ("something odd", "permanent"),
-                       ("missing trie node abc", "transient"), ("HTTP 503", "transient")):
+                       ("missing trie node abc", "transient"), ("HTTP 503", "transient"),
+                       ("[Revert] the candidate's wait is not over", "transient")):
         assert classify(text) == want, (text, classify(text))
     print("pubnet selftest: keccak, RLP, classification OK")
     return 0
@@ -923,6 +936,10 @@ def main() -> int:
     r.add_argument("--sender", required=True)
     r.add_argument("--first")
     r.add_argument("--budget", type=float, default=float(os.environ.get("PUBNET_RESOLVE_BUDGET_S", "600")))
+    k = sub.add_parser("ack")
+    k.add_argument("--journal", required=True)
+    k.add_argument("--hash", required=True)
+    k.add_argument("--why", default="checked by the operator")
     w = sub.add_parser("rows")
     w.add_argument("--journal", required=True)
     w.add_argument("--stage", required=True)
@@ -941,6 +958,10 @@ def main() -> int:
     elif a.cmd == "resolve":
         return resolve_all(Net(a.network, first=a.first), Journal(a.journal), a.sender.lower(), a.budget,
                            log=lambda m: print(f"pubnet resolve: {m}", file=sys.stderr))
+    elif a.cmd == "ack":
+        if a.hash not in Journal(a.journal).txs():
+            sys.exit(f"pubnet: {a.hash} is not in {a.journal}")
+        Journal(a.journal).append({"event": "ack", "hash": a.hash, "why": a.why})
     elif a.cmd == "rows":
         rows = [{"hash": t["hash"], "blockNumber": hex(t["block"]), "status": t.get("status"),
                  "gasUsed": t.get("gasUsed"), "to": t.get("to"), "contractAddress": t.get("contractAddress")}
