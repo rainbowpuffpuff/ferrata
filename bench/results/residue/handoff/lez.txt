@@ -1,0 +1,19 @@
+test a_342_signer_handoff_in_one_transaction ... image ids in this build: experimental copy ea4b8f44fb5d7ceafb86d0b45eee6d225c7bc4345123852f4a99f2e80873b5f3, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, handoff signed by 341 of 512 | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 120590 | 120590 | 1.2% | 21149 | 1133912 | refused: exit 51 |
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every absent index odd (4g+3, and 4g+1 in groups 0..41): the costliest placement found): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8264428 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8341469 | 83.4% | 29085 | 66964432 | applied |
+handoff in one transaction at 342 of 512 (every absent index odd (4g+3, and 4g+1 in groups 0..41): the costliest placement found): 8341469 execution gas (83.4% of MAX_GAS_EXEC)
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every third member absent): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8256501 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8333542 | 83.3% | 29085 | 66901016 | applied |
+handoff in one transaction at 342 of 512 (every third member absent): 8333542 execution gas (83.3% of MAX_GAS_EXEC)
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every absent index odd, the chain of additions): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8599313 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8676354 | 86.8% | 29085 | 69643512 | applied |
+handoff in one transaction at 342 of 512 (every absent index odd, the chain of additions): 8676354 execution gas (86.8% of MAX_GAS_EXEC)
+test a_handoff_in_one_transaction_at_mainnet_participation ... image ids in this build: experimental copy ea4b8f44fb5d7ceafb86d0b45eee6d225c7bc4345123852f4a99f2e80873b5f3, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, handoff update_1 (510 of 512): one multiproof + residue witness + the 512 keys adopted |  | 10000000 | 100.0% | 54269 | 80434152 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
+| EXPERIMENTAL VerifyAll, handoff with one node of its next-committee branch altered | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 204819 | 204819 | 2.0% | 5117 | 1679488 | refused: exit 27 |
+| EXPERIMENTAL VerifyAll, handoff update_1 (510 of 512): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6544510 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6621551 | 66.2% | 5117 | 53013344 | applied |
+| EXPERIMENTAL VerifyAll, the same handoff again | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 217565 | 217565 | 2.2% | 5117 | 1781456 | refused: exit 52 |
+handoff in one transaction at 510 of 512: 6621551 execution gas (66.2% of MAX_GAS_EXEC); stale refusal code 52
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.55s

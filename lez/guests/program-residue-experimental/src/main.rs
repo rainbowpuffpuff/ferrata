@@ -6,10 +6,14 @@
 //! `VerifyAll` carries the signer witness followed by the residue witness `c` and the scaling
 //! factor `w` (576 bytes each); a signer witness that starts with the marker `0xffff` or `0xfffe` is
 //! a `residue_agg::NonSigners` witness (one multiproof for all non-signers, `bench/RESIDUE.md` §9),
-//! composed by `residue_agg::step1` (blst's batch addition, or one mixed addition per non-signer). Nothing else differs (`diff` it against `guests/program`). It
-//! exists only to measure what LEZ's state machine charges for a finality update verified in one
-//! transaction this way (`harness/tests/residue_experimental.rs`). Its image id is not in
-//! `docs/image-ids.md` and nothing may rely on it.
+//! composed by `residue_agg::step1` (blst's batch addition, or one mixed addition per non-signer); and
+//! a `VerifyAll` of an update that adopts a committee, given no adoption keys, adopts the next
+//! committee by its summary (`residue_handoff::adopt_summary`, `bench/RESIDUE.md` §10: sound only
+//! under the light client's honest-supermajority assumption), so that a handoff fits one transaction.
+//! Nothing else differs (`diff` it against `guests/program`). It exists only to measure what LEZ's
+//! state machine charges for an update verified in one transaction this way
+//! (`harness/tests/residue_experimental.rs`, `residue_placements.rs`, `residue_handoff.rs`). Its image
+//! id is not in `docs/image-ids.md` and nothing may rely on it.
 //!
 //! Ferrata on LEZ v0.4: an Ethereum sync-committee light client as one program of actors.
 //!
@@ -538,7 +542,12 @@ fn verify_all(
     residue::check_bytes(&f, c.try_into().unwrap(), w.try_into().unwrap())
         .map_err(|_| core(Error::SignatureInvalid))?;
     job.phase = steps::Phase::Verified;
-    if job.adoption_pending() {
+    if job.adoption_pending() && adoption.is_empty() {
+        // EXPERIMENTAL (bench/RESIDUE.md §10; sound only under the light client's honest-supermajority
+        // assumption): no adoption keys, so the update's next committee is adopted by its summary, the
+        // key root and aggregate key step 1 proved in the signed attested state.
+        residue_handoff::adopt_summary(&mut job).map_err(step)?;
+    } else if job.adoption_pending() {
         job.adopt(0, adoption, n).map_err(step)?;
     }
     let response = Response::keep_state().send(SyncMessage::new(

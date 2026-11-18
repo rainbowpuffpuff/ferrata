@@ -1,6 +1,7 @@
 # EXPERIMENTAL, UNAUDITED, BENCH-ONLY: a copy of guests/program whose VerifyAll checks the residue
-# witness (../../../bench/residue) instead of computing the final exponentiation, and takes a signer
-# witness with one multiproof (../../../bench/residue-agg) beside the core's. Not deployed; its
+# witness (../../../bench/residue) instead of computing the final exponentiation, takes a signer
+# witness with one multiproof (../../../bench/residue-agg) beside the core's, and adopts a handoff's
+# next committee by its summary when given no keys (../../../bench/residue-handoff, bench/RESIDUE.md §10). Not deployed; its
 # image id is not in docs/image-ids.md. Built by ../../methods-residue-experimental only.
 [package]
 name = "ferrata_lez_residue_experimental"
@@ -16,6 +17,7 @@ ferrata-lez-wire = { path = "../../wire" }
 ferrata-core = { path = "../../../crates/ferrata-core", default-features = false, features = ["blst"] }
 residue = { path = "../../../bench/residue" }
 residue-agg = { path = "../../../bench/residue-agg" }
+residue-handoff = { path = "../../../bench/residue-handoff" }
 lee_core = { path = "../../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
 borsh = { version = "=1.6.1", features = ["derive"] }
