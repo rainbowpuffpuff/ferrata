@@ -64,8 +64,13 @@ Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/
   record's account checked in the same transaction) or the next committee the instance adopted for its period
   (`Against::NextCommittee`); if it does, the instance is frozen with the evidence recorded, and refuses `Update`,
   `Continue`, `Attest` and `Evidence` from then on (`FROZEN`, 222), keeping its store and records. One transaction:
-  6,656,148 gas at 510 of 512 signers, 8,443,193 at 342 (the residue witness, one multiproof). An honest network
-  never produces such evidence (`MISBEHAVIOUR.md` §3); [`harness/tests/misbehaviour.rs`](harness/tests/misbehaviour.rs).
+  6,656,148 gas at 510 of 512 signers, 8,443,193 at 342 (the residue witness, one multiproof). For an instance started
+  from a finalized checkpoint (the assumption of [`../docs/trust.md`](../docs/trust.md) §2.1, which `Init` cannot
+  check) an honest network never produces such evidence (`MISBEHAVIOUR.md` §3). It carries an update's window and
+  must land while the instance is in the signing committee's period: an advancing `Update` landing first makes it
+  refuse 218 (plan it again), and after the instance's first update of the next period it is refused 23 for good
+  (`MISBEHAVIOUR.md` §5); [`harness/tests/misbehaviour.rs`](harness/tests/misbehaviour.rs),
+  [`harness/tests/misbehaviour_window.rs`](harness/tests/misbehaviour_window.rs).
 
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
 `apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
@@ -80,7 +85,9 @@ the regenerated tables in [`results/misbehaviour-regression/`](results/misbehavi
 stay those of `bac768a8…`). **The wire changed with it:** `Attest` now names the instance's account first, so a client
 built from this tree (which also deploys this tree's image) cannot attest under an instance of `8d3b59ff…` or
 `bac768a8…`, which refuse that account list (`WRONG_ACCOUNT`, 201); the prepared public-testnet run, signed in advance
-for `8d3b59ff…`, must keep the client and plan it was prepared with.
+for `8d3b59ff…`, must keep the client and plan it was prepared with. Re-running the earlier suites rewrites the committed
+tables of `results/` with this image's numbers: `git checkout -- results/` restores them (this image's are in
+`results/misbehaviour-regression/`).
 
 ## Through v0.3.1's block application, with real data
 
@@ -235,7 +242,7 @@ period), so none was changed; anyone can create the same instance, and the run a
 cd lez-v03
 scripts/build.sh --lez                       # program, harness, client; LEZ v0.3.1's sequencer_service and wallet
 cargo test --release --locked -p harness-v03 --test v03 --test third_party --test adversarial -- --nocapture --test-threads 4
-cargo test --release --locked -p harness-v03 --test misbehaviour -- --nocapture --test-threads 2   # evidence and the freeze (EXPERIMENTAL)
+cargo test --release --locked -p harness-v03 --test misbehaviour --test misbehaviour_window -- --nocapture --test-threads 2   # evidence and the freeze (EXPERIMENTAL)
 tests/sendguard.sh && tests/verifystatus.sh  # the script's send guard and verify, against stubs (no network, no keys)
 ./testnet.sh local                           # a v0.3.1 sequencer here, the whole queued sequence, verify
 ./testnet.sh plan                            # the public run, signed and simulated; sends nothing

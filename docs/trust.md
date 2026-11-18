@@ -123,12 +123,17 @@ anyone may send `Evidence`, one update valid under a committee the instance hold
 branch, the policy's checks, in the window an update would have) whose finalized header has the slot of a recorded
 header and another root, or whose next committee differs from the one the instance adopted for that period (both
 headers of the update in that period). The instance then refuses every update, attestation and further evidence
-(`FROZEN`), keeps its store and records, and records the evidence. An honest network never produces such evidence
+(`FROZEN`), keeps its store and records, and records the evidence. For an instance started from a finalized
+checkpoint (the assumption of §2.1, which `Init` cannot check) an honest network never produces such evidence
 (`MISBEHAVIOUR.md` §3: finalized checkpoints lie on one chain unless a third of the stake is slashable, and a
 period's next committee is fixed on a chain). Not detected: a conflicting header finalized at a slot the instance
 holds no record of (deciding its ancestry needs a proof into a recorded state's `block_roots`, not built), and one
 finalized above every record, which the instance accepts as an update (the light client checks no ancestry, as the
-specification's does not); evidence must be signed by a committee the instance still holds. It does not say who
+specification's does not). Evidence must be signed by a committee the instance holds when it lands, so it expires: a
+conflict signed in period Q can freeze the instance only until the instance's first update finalized in Q+1, which
+anyone may relay (and an `Update` that advances the store first makes the evidence be planned again); the
+attestation side's `monitor` (A1) must submit it as soon as it sees a conflict, re-plan it when an update lands first,
+and raise a conflict it can no longer submit as an alarm (`MISBEHAVIOUR.md` §5). It does not say who
 misbehaved, nothing is slashed, and a consumer that reads records or statements directly must read the instance's
 frozen flag ([EVIDENCE](EVIDENCE.md) row 144).
 
