@@ -87,3 +87,7 @@ __pycache__/
 # checkpoint/attestor/zone-bridge.sh: the Groth16 prover inputs and outputs between the box and mwrap (not records)
 /e2e/runs/zone-bridge-*/work/
 /e2e/runs/zone-bridge-*/logs/.mark-*
+# e2e/netfault/run.sh's runs (the summary: e2e/netfault/results/); the network proxy's scratch (scripts/pubnet.sh)
+/e2e/runs/netfault-*
+/e2e/runs/*/net/port
+/e2e/runs/*/net/*.lock

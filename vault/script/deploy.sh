@@ -25,6 +25,12 @@
 #   FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE, FERRATA_MIN_RELEASE_DELAY, FERRATA_RELEASE_DELAY: the testnet
 #     configuration (defaults: an address nobody holds a key for, the deployer, none, 600 s, 1 day, 30 days, 0, 120 s)
 #   FERRATA_LOG_DIR     one log per run (default broadcast/deploy-logs)
+#
+# The network (e2e/NETWORK.md): forge and cast talk to a local proxy (scripts/pubnet.sh) in front of FERRATA_RPC_URL
+# (and, for a public one, the free public endpoints of scripts/pubnet-endpoints.json); a caller's proxy (PUBNET_URL,
+# e2e/crown/sepolia.sh) is used as it is. Every signed transaction is journaled before it leaves (<log dir>/net/); a
+# failed run is run again only once the fate of what it may have sent is known, and only for a transient reason.
+# Exit status: 0 complete, 1 a permanent stop, 75 a transient stop with nothing in flight.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$here"
@@ -33,7 +39,13 @@ export FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 : "${ETH_FROM:?ETH_FROM: the deployer address}"
 rpc="${FERRATA_RPC_URL:-http://127.0.0.1:8545}"
 export FERRATA_GAS_MARGIN_PCT="${FERRATA_GAS_MARGIN_PCT:-125}"
-chain="$(cast chain-id --rpc-url "$rpc")"
+logs="${FERRATA_LOG_DIR:-broadcast/deploy-logs}"
+mkdir -p "$logs"
+# shellcheck source=../../scripts/pubnet.sh
+. "$here/../scripts/pubnet.sh"
+pubnet_up sepolia "$logs/net" "$ETH_FROM" "$rpc" || { echo "deploy.sh: the network proxy did not start" >&2; exit 75; }
+case "$rpc" in "$PUBNET_URL"*) ;; *) rpc="$PUBNET_URL/deploy" ;; esac
+chain="$(pubnet_read cast chain-id --rpc-url "$rpc")"
 [ "$chain" != 1 ] || { echo "deploy.sh: a test deployment, not on chain 1" >&2; exit 1; }
 export FERRATA_OUT="${FERRATA_OUT:-deployments/$chain-$FERRATA_MODE.json}"
 mkdir -p "$(dirname "$FERRATA_OUT")"
@@ -45,53 +57,17 @@ else
   : "${ETH_PASSWORD:?ETH_PASSWORD: a file holding the keystore password}"
   [ -f "$ETH_KEYSTORE" ] && [ -f "$ETH_PASSWORD" ] || { echo "deploy.sh: ETH_KEYSTORE, ETH_PASSWORD must be files" >&2; exit 1; }
 fi
-logs="${FERRATA_LOG_DIR:-broadcast/deploy-logs}"
-mkdir -p "$logs"
-# A load-balanced endpoint can announce a block that the node answering forge's next read does not have yet ("block
-# not found", crown-live-1 on 11 Nov 2026, twice right after a transaction). Such a run is run again, at most 5 times,
-# 24 s apart, only when the deployer's nonce (latest and pending) shows that nothing was sent; any later send uses that
-# same nonce, so at most one transaction per step can land.
-transient='-32001|block not found|header not found|failed to get account|failed to get storage|missing trie node'
-
-# The deployer's nonce at its freshest: the highest of three reads each of the latest and the pending nonce,
-# FERRATA_NONCE_GAP seconds apart (4). A node behind the chain reports an older nonce, never a newer one, so the
-# highest read is the closest to the truth: a run is retried only when even that equals the nonce before it and its
-# log shows nothing sent. (The endpoint is load-balanced; single reads disagreed and stopped crown-live-3.)
-nonce_max() {
-  local m=-1 k v
-  for k in 1 2 3; do
-    for v in "$(cast nonce "$ETH_FROM" --rpc-url "$rpc" 2>/dev/null || true)" \
-             "$(cast nonce "$ETH_FROM" --block pending --rpc-url "$rpc" 2>/dev/null || true)"; do
-      if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -gt "$m" ]; then m="$v"; fi
-    done
-    if [ "$k" -lt 3 ]; then sleep "${FERRATA_NONCE_GAP:-4}"; fi
-  done
-  echo "$m"
-}
 last=""
 for run in $(seq 1 12); do
   log="$logs/deploy-$chain-$FERRATA_MODE-$run.log"
-  tries=0
-  while :; do
-    n0="$(nonce_max)"
-    # forge would also read ETH_FROM as --froms, which --unlocked refuses: the sender is given as --sender.
-    if env -u ETH_FROM forge script script/DeployVault.s.sol:DeployVault --rpc-url "$rpc" --sender "$ETH_FROM" ${sign[@]+"${sign[@]}"} \
-        --broadcast --skip-simulation --slow --gas-estimate-multiplier "$FERRATA_GAS_MARGIN_PCT" -vv > "$log" 2>&1; then
-      break
-    fi
-    tail -n 25 "$log" >&2
-    if [ "$tries" -lt 5 ] && grep -q -E -e "$transient" "$log" \
-        && ! grep -q -E 'FERRATA_SENT|Hash: 0x|"hash": *"0x' "$log" \
-        && [ "$n0" -ge 0 ] && [ "$(nonce_max)" = "$n0" ]; then
-      tries=$((tries + 1))
-      mv "$log" "$log.transient-$tries"
-      echo "deploy.sh: run $run: the endpoint failed a read and nothing was sent (nonce still $n0); again in 24 s ($tries of 5)" >&2
-      sleep "${FERRATA_RETRY_SLEEP:-24}"
-      continue
-    fi
-    echo "deploy.sh: run $run failed; nothing more is sent (log $log)" >&2
-    exit 1
-  done
+  rc=0
+  # forge would also read ETH_FROM as --froms, which --unlocked refuses: the sender is given as --sender.
+  pubnet_stage "$log" env -u ETH_FROM forge script script/DeployVault.s.sol:DeployVault --rpc-url "$rpc" --sender "$ETH_FROM" \
+      ${sign[@]+"${sign[@]}"} --broadcast --skip-simulation --slow --gas-estimate-multiplier "$FERRATA_GAS_MARGIN_PCT" -vv || rc=$?
+  if [ "$rc" != 0 ]; then
+    echo "deploy.sh: run $run failed ($([ "$rc" = 75 ] && echo transient || echo permanent)); nothing more is sent (log $log)" >&2
+    exit "$rc"
+  fi
   step="$({ grep -o 'FERRATA_STEP [A-Za-z0-9]*' "$log" || true; } | tail -n 1 | cut -d' ' -f2)"
   grep -h -o -E 'FERRATA_(GAS|CREATED) .*' "$log" || true
   # The transaction as the node has it: forge must have sent it with the limit the script checked.
@@ -99,8 +75,8 @@ for run in $(seq 1 12); do
   if [ -n "$limit" ]; then
     hash="$(grep -o '"hash": *"0x[0-9a-fA-F]\{64\}"' "broadcast/DeployVault.s.sol/$chain/run-latest.json" | head -n 1 \
       | grep -o '0x[0-9a-fA-F]*')"
-    sent="$(cast tx "$hash" gas --rpc-url "$rpc")"
-    echo "FERRATA_SENT $step $hash gas limit $sent, used $(cast receipt "$hash" gasUsed --rpc-url "$rpc")"
+    sent="$(pubnet_read cast tx "$hash" gas --rpc-url "$rpc")"
+    echo "FERRATA_SENT $step $hash gas limit $sent, used $(pubnet_read cast receipt "$hash" gasUsed --rpc-url "$rpc")"
     if [ "$sent" != "$limit" ]; then
       echo "deploy.sh: forge sent a gas limit of $sent, not the checked $limit; stopping (log $log)" >&2
       exit 1
