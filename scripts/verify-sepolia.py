@@ -503,6 +503,14 @@ def main() -> int:
         if not os.path.isfile(a.image_ids):
             return out + f"; {a.image_ids} not found: the final programs not compared"
         final = image_ids_md(a.image_ids)
+        # A run on a zone of Logos Blockchain 0.3.5-rc.1 (input set rc3, e2e/crown/cloud/inputs.json) pins the second
+        # build of the checkpoint guests (docs/image-ids.md, "For zones on Logos Blockchain 0.3.5-rc.1"): its checkpoint_b
+        # and checkpoint are compared with those rows, the other programs with the final ones.
+        if ids.get("checkpoint_b") is not None and ids.get("checkpoint_b") == final.get("checkpoint_b_0_3_5"):
+            final = {**final, "checkpoint_b": final["checkpoint_b_0_3_5"]}
+            if "checkpoint_0_3_5" in final:
+                final["checkpoint"] = final["checkpoint_0_3_5"]
+            out += "; the second build of the checkpoint guests (zones on Logos Blockchain 0.3.5-rc.1)"
         common = [k for k in ids if k in final]
         if not common:
             return out + f"; none of its programs is in {a.image_ids}"
@@ -584,8 +592,14 @@ def main() -> int:
         cid = h(hashlib.sha256(pre).digest())
         need(cid == idn["configId"].lower(), f"sha256(config preimage) {cid}, identity {idn['configId']}")
         ds = os.path.join(R, "lez/session-a/deployment-settings.yaml")
+        fork = os.path.join(R, "lez/session-a/chain-fork.json")
         extra = ""
-        if os.path.isfile(ds):
+        if os.path.isfile(fork):  # a zone on Logos Blockchain 0.3.5-rc.1 (LEZ v0.4.0-rc3): bedrockGenesisId = its fork digest
+            d = "0x" + str(json.load(open(fork)).get("fork_digest", "")).lower().removeprefix("0x")
+            need(re.fullmatch(r"0x[0-9a-f]{64}", d) is not None, "lez/session-a/chain-fork.json: no fork digest")
+            need(d == sa["bedrockGenesisId"].lower(), f"the node's fork digest {d}, bedrockGenesisId {sa['bedrockGenesisId']}")
+            extra = "; bedrockGenesisId = the node's fork digest (GET /chain/fork, Logos Blockchain 0.3.5-rc.1)"
+        elif os.path.isfile(ds):
             with open(ds, "rb") as f:
                 got = h(hashlib.sha256(f.read()).digest())
             need(got == sa["bedrockGenesisId"].lower(), f"sha256(deployment settings) {got}")
