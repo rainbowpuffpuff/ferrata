@@ -1,0 +1,12 @@
+seq	label	tx_hash	block	bedrock_status	bytes	declared_gas	exec_gas_simulated	verdict
+0	deploy: WriteSegment 6 of 6 (73392 bytes)	acc9f2484f2aece73d72b4a661dfcad88605da4911c284bb07659839d6962a85	4	Pending	73688	100000	0	segment written
+1	deploy: WriteSegment 5 of 6 (98304 bytes)	e01814bdf00220150b157f71a44c52625aa87323dec9fe3b96ce53ee836b87a2	4	Pending	98696	100000	0	segment written
+2	deploy: WriteSegment 4 of 6 (98304 bytes)	33ffb66aae0160004ddfaa7cd668d25e06b0f5a865d67e653085b326314f692a	4	Pending	98696	100000	0	segment written
+3	deploy: WriteSegment 3 of 6 (98304 bytes)	38d1dff0b5a95e466bcd7110f12df892be6ad47fe4cda4c5901a87f5cc2d0ecd	4	Pending	98696	100000	0	segment written
+4	deploy: WriteSegment 2 of 6 (98304 bytes)	55e40358f308c83f5477891429ff99e7fced62e3b2ff50ca1846baa128a0c427	4	Pending	98696	100000	0	segment written
+5	deploy: WriteSegment 1 of 6 (98304 bytes)	634916accdf78656eb2fe3622855295a2de123f7ef313f4df591e69ee627e755	4	Pending	98696	100000	0	segment written
+6	deploy: CreateHeader (immutable)	625263d2302d1574ca6effe7ac4e7914c1746d70d53c0e085c00f76a384e1a68	4	Pending	820	100000	0	program at 7eewkCzYBtoHr6Q6UrVGRaKPPkid2Mi7Z2FQgQ6CbEvk, image 8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5
+7	Init (checkpoint, its 512 keys adopted)	080b4b09a06a7d17dbd963c6cb3994cf4ad0fd232aca13252cd3e4d2631e7e55	4	Pending	50887	8160000	7884541	instance 02cf6bf09f8b921a created, record of the checkpoint (slot 11605312)
+8	update 000-finality-11605344.ssz (residue witness, one transaction)	5a3d6e72ece3c163bad739c16fdc0b1dc817c9cafc4e132ac5b34796d3cded5e	5	Pending	11260	7300000	7046809	record of finalized slot 11605344 written
+9	update 001-finality-11605376.ssz (residue witness, one transaction)	0c24a8413b0552a700f2d746f200a262d912a5e90f2e1145aa58f843492f2895	6	Pending	16636	7730000	7472244	record of finalized slot 11605376 written
+10	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11605376	bc7e924af4f35ee65d7f57df3267b9fe456698bddc4094d09183ac9543a0e27c	6	Pending	6820	550000	501007	slot 0 = 0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469, slot 1 = 0x0000000000000000000000000000000000000000000000000000000000000002 at Sepolia block 12160907

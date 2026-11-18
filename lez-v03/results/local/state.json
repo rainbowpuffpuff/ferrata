@@ -1,0 +1,15 @@
+{
+  "elf_bytes": 597336,
+  "image_id": "8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5",
+  "payer": "BykMWdq8G4x3YMHN8s855dM49ePiKBdfDQxgEfchuGBY",
+  "program": "7eewkCzYBtoHr6Q6UrVGRaKPPkid2Mi7Z2FQgQ6CbEvk",
+  "segments": [
+    "GupURm5AKVaLLFgJLpmski8yKCtQbERVpfFei9eamHgr",
+    "BK7KoUQPktY9B9JXShamn5jJp9pG36vUWrxpK51Ge8rf",
+    "28TK3pT4dF8MyipY5GcYvGhkQVfBVVg8gucAAWGDaXwC",
+    "51b2NbFwwT667uW2WwB3t9dPFSYaH4xfr9gkor9G6yBV",
+    "8EKRBgmzYqAZBgqAB6eUjrw4B8AmmSYaAnbxSh2m7eZ4",
+    "8z3rWrkXTYg8b3RRDtKZ7z8KDmLNxzzr2u2oFphUoBav"
+  ],
+  "sequencer": "http://127.0.0.1:3040"
+}

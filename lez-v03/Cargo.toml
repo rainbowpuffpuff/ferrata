@@ -1,0 +1,16 @@
+# Ferrata's light client as a LEZ v0.3.1 program (README.md): EXPERIMENTAL, UNAUDITED. Its own
+# workspace, excluded from the repository's root workspace like lez/ and bench/. The guest under
+# guest/ is a workspace of its own. The LEZ crates are taken by path from a clone of tag v0.3.1
+# (commit 1a003bfb) at upstream/lez-v0.3.1 beside the repository; Cargo.lock started from
+# LEZ v0.3.1's own, so every crate the two share resolves to LEZ's version.
+[workspace]
+resolver = "2"
+members = ["wire", "methods", "harness", "client"]
+exclude = ["guest"]
+
+# BLS and the zkVM client are slow unoptimised; optimise dependencies even in test builds.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test]
+opt-level = 1

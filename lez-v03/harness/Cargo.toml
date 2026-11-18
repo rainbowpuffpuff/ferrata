@@ -1,0 +1,28 @@
+[package]
+name = "harness-v03"
+description = "Drives the LEZ v0.3.1 light-client program through LEZ v0.3.1's own block application (chain_state), with real Sepolia and mainnet data"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+ferrata-v03-wire = { path = "../wire" }
+methods-v03 = { path = "../methods" }
+ferrata-core = { path = "../../crates/ferrata-core" }
+# EXPERIMENTAL, UNAUDITED bench crates: the residue witness and the non-signers' multiproof.
+residue = { path = "../../bench/residue" }
+residue-agg = { path = "../../bench/residue-agg" }
+# LEZ v0.3.1 (tag v0.3.1, commit 1a003bfb), by path.
+lee = { path = "../../../upstream/lez-v0.3.1/lee/state_machine" }
+lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core", features = ["host"] }
+chain_state = { path = "../../../upstream/lez-v0.3.1/lez/chain_state" }
+common = { path = "../../../upstream/lez-v0.3.1/lez/common" }
+testnet_initial_state = { path = "../../../upstream/lez-v0.3.1/lez/testnet_initial_state" }
+program_loader_core = { path = "../../../upstream/lez-v0.3.1/lez/programs/program_loader/core" }
+fee_core = { path = "../../../upstream/lez-v0.3.1/lez/programs/fee/core" }
+risc0-binfmt = "3.0.2"
+borsh = { version = "1.5.7", features = ["derive"] }
+hex = "0.4"
+serde_json = "1"
+sha2 = "0.10"
