@@ -142,7 +142,7 @@ The runs in full, the three vaults deployed on Sepolia and what each check prove
 |---|---|---|---|
 | [Light-client core](crates/ferrata-core/README.md), `crates/` | Ethereum sync-committee light client and execution-layer proofs, `no_std` Rust | built and tested | [1, 40, 69](docs/EVIDENCE.md) |
 | [Guest benchmarks](bench/README.md), `bench/` | The core inside a RISC Zero guest: cycle counts on real mainnet data | measured | [2](docs/EVIDENCE.md) |
-| [LEZ program](lez/RESULTS.md), `lez/` | The light client as a LEZ program; accounts, storage slots and logs attested under its records | prototype; on LEZ sequencers we run | [3–6, 21, 22, 32, 38, 39, 70–73, 88](docs/EVIDENCE.md) |
+| [LEZ program](lez/RESULTS.md), `lez/` | The light client as a LEZ program; accounts, storage slots and logs attested under its records | prototype; on LEZ sequencers we run | [3–6, 21, 22, 32, 38, 39, 70–73, 88, 145](docs/EVIDENCE.md) |
 | [Bridge program](lez/BRIDGE-RESULTS.md), `lez/` | The RFP-022 bridge on LEZ: `ImportRoot`, private claims and burns, fees, caps, freezes | prototype; real proofs, a LEZ devnet | [8–10, 28, 30, 31, 33, 38, 74, 75, 78, 88, 91](docs/EVIDENCE.md) |
 | [Inbound crossing, live](lez/live/inbound/README.md), `lez/live/inbound/` | Ethereum to LEZ on a running LEZ sequencer and Logos Blockchain node | run: a Sepolia deposit claimed on LEZ | [11, 27, 41, 91](docs/EVIDENCE.md) |
 | [GPU proving](gpu-prover/RESULTS.md), `gpu-prover/` | A Modal app proving checkpoints, the LEZ update and the private attestation, claim and burn on a GPU | measured | [5, 10, 16, 17, 24](docs/EVIDENCE.md) |
@@ -190,8 +190,8 @@ The design notes specify these; there is no code for them here. In short (in ful
 - **The bridge program on LEZ:** a transfer that credits a private recipient privately, the admin's own handover,
   the switch to a v0.4 token program when one is released; the nullifier and holder accounts keyed by the
   configuration, which close the two tenant-isolation issues of 18 November ([row 136](docs/EVIDENCE.md)).
-- **The attestation program:** consumers bound to the root id, a chain of several EIP-2935 hops under a Gloas
-  record, the F.8 test.
+- **The attestation program:** consumers bound to the root id, the F.8 test. (Chains of EIP-2935 hops are built:
+  up to 32 in one transaction on real data, [row 145](docs/EVIDENCE.md).)
 - **Rule (B):** the watchers' `monitor` reading attestations.
 - **Daemons:** the relayer's root imports on a running LEZ sequencer, `monitor`'s client of the LEZ and Logos
   Blockchain nodes' RPCs, the attestation side's `monitor`, the A3 gate's three daemons on a running sequencer.

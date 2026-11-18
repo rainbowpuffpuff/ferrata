@@ -61,8 +61,9 @@ The design notes specify these; there is no code for them here:
   logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
-  reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
-  is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).
+  reference consumer still pin an instance); the F.8 test (`docs/design/attestation.md` §6.5, §15). Chains of
+  EIP-2935 hops are built (up to 32 in one transaction on real Sepolia data, four on mainnet; EVIDENCE row 145);
+  a private consumer's proof carrying more than one hop is not measured.
 - for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a vault for such a
   zone where it runs (the deployed checkpoint guests, whose ids the vault on Sepolia pins, read the `d480efc6` layout
   and refuse it), a zone of several sequencers on it, and following a Bedrock era change (a deployment pins one fork
