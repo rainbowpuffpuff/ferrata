@@ -16,6 +16,7 @@ import importlib.util
 import json
 import os
 import sys
+import urllib.parse
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -35,8 +36,9 @@ def main() -> None:
     ap.add_argument("--slot", action="append", required=True)
     ap.add_argument("out")
     a = ap.parse_args()
-    host = a.rpc.split("//", 1)[-1].split(":")[0].split("/")[0]
-    if host not in ("127.0.0.1", "localhost"):
+    u = urllib.parse.urlsplit(a.rpc)
+    host = u.hostname  # after any userinfo, as urllib connects; a userinfo itself is refused
+    if u.scheme != "http" or "@" in u.netloc or host not in ("127.0.0.1", "localhost"):
         raise SystemExit(f"refusing {host}: a local anvil only")
     os.makedirs(a.out)
     vault = a.vault.lower()

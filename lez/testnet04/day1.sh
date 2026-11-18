@@ -10,7 +10,8 @@
 #                            state: sizes, declared gas, maximum fees, the fees at the endpoint's base fees, the funds
 #                            the payer and the daemon key need and how to get them. Makes the deployment's fresh keys
 #                            (outside the repository, mode 600) if there are none. Sends nothing.
-#   day1.sh run URL          refuses unless FERRATA_TESTNET_SEND=yes. Driven by chain state, resumable, idempotent:
+#   day1.sh run URL          refuses unless FERRATA_TESTNET_SEND=yes. Resumable, driven by chain state and by what is
+#                            kept beside the keys (KEYS: the signed stages, the instance's checkpoint and id):
 #                            (a) deploy the attestation program (image 0x816d1fef…, byte for byte the file
 #                            scripts/reproduce-image-ids.sh builds: sha256 checked against docs/image-ids.md), immutable;
 #                            (b) `Init` a Sepolia instance from a fresh finalized checkpoint (Lodestar's bootstrap,
@@ -19,15 +20,25 @@
 #                            detached, with its own key; (d) one attestation of the live Sepolia vault 0x04eE…e44c's
 #                            slots 0 and 1 under the instance's newest record; (e) with FERRATA_DAY1_BRIDGE=1, the
 #                            bridge program (image 0xccde6171…) and the owner-side Sepolia step for its vault, prepared
-#                            (not sent). Every transaction is signed once and kept (STATE/tx/<stage>/NN.tx); after a
-#                            restart the same bytes are sent again, never a new transaction that could apply beside them.
+#                            (not sent). Every transaction is signed once and kept beside the keys
+#                            (KEYS/tx/<stage>/NN.tx); after a restart the same bytes are sent again, never a new
+#                            transaction that could apply beside them. The deployments are guarded by the chain too
+#                            (their fresh accounts sign at nonce 0); `Init` is signed only from the checkpoint kept in
+#                            KEYS/init/ and not at all when its instance exists on chain; the attestation only once per
+#                            KEYS. Keep KEYS: with it, a lost STATE (or another spelling of the URL) repeats nothing.
+#                            FERRATA_DAY1_UNTIL=a|b|c|d stops after that stage.
 #   day1.sh go URL           discover, plan, run, verify, in one command (what day one runs).
-#   day1.sh verify URL       re-read every verdict from the endpoint: the program's segments and header against the
-#                            binary, every stored transaction applied in the block recorded, the instance's id,
-#                            configuration and progress, the attestation's values against eth_getProof's. Exit 0 only
-#                            if all match.
+#   day1.sh verify URL       re-read from the endpoint: the program's segments and header against the binary, every
+#                            stored transaction applied in the block recorded, the instance's id, configuration and
+#                            progress, the attestation applied with an event (its event's content is not compared: the
+#                            verdict computed natively when it was signed is compared with eth_getProof's values), the
+#                            instance's finalized header against publicnode's canonical one. Exit 0 if all match, 1 if
+#                            one does not, 3 if a check could not be made (publicnode not answering).
 #   day1.sh status URL       the stored transactions' states and the daemon's /health
-#   day1.sh daemon-status    the daemon's process and /health;   day1.sh daemon-stop: SIGTERM, then wait
+#   day1.sh daemon-status URL   the daemon's process and /health (URL, FERRATA_DAY1_URL or FERRATA_DAY1_STATE names
+#                            the run; without one it refuses and lists the daemons running beside the repository)
+#   day1.sh daemon-stop URL  SIGTERM, then wait FERRATA_DAY1_STOP_SECONDS (default 120) and SIGKILL: a transaction the
+#                            daemon was settling then has no journal row (the chain holds it); wait longer in a stall
 #
 # Environment: FERRATA_DAY1_BIN (ferrata-day1 and ferrata-updater, built against the network's LEZ tag:
 #   README.md "Build"), FERRATA_DAY1_PROGRAMS (ferrata_lez.bin, ferrata_bridge.bin), FERRATA_DAY1_STATE (run data),
@@ -57,7 +68,13 @@ die() { echo "day1: $*" >&2; exit 1; }
 say() { echo "== $(date -u +%FT%TZ) $*"; }
 case "$cmd" in
   discover|plan|run|go|verify|status) URL="${1:-}"; [ -n "$URL" ] || die "usage: day1.sh $cmd URL" ;;
-  daemon-status|daemon-stop) URL="${1:-${FERRATA_DAY1_URL:-}}" ;;
+  daemon-status|daemon-stop) URL="${1:-${FERRATA_DAY1_URL:-}}"
+    if [ -z "$URL" ] && [ -z "${FERRATA_DAY1_STATE:-}" ]; then
+      for p in "$BESIDE"/tmp/testnet04/state/*/daemon/pid; do
+        [ -f "$p" ] && kill -0 "$(cat "$p")" 2>/dev/null && echo "running: pid $(cat "$p"), $(sed -n 's/^rpc = "\(.*\)"$/URL \1/p' "$(dirname "$p")/updater.toml" 2>/dev/null) ($(dirname "$(dirname "$p")"))" >&2
+      done
+      die "usage: day1.sh $cmd URL (the URL run was given; or FERRATA_DAY1_URL, or FERRATA_DAY1_STATE): without it the daemon's state is not known"
+    fi ;;
   *) sed -n '2,/^set -euo/p' "${BASH_SOURCE[0]}" | sed '$d' | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac
 slug() { printf '%s' "$1" | sed -E 's#^[a-z]+://##; s#[^A-Za-z0-9.-]+#_#g; s#_+$##'; }
@@ -91,6 +108,9 @@ check_programs() { # the binaries are the final programs of docs/image-ids.md, b
 }
 bins() { echo --bin "$PROGRAMS/ferrata_lez.bin" $([ "${FERRATA_DAY1_BRIDGE:-0}" = 1 ] && echo --bridge-bin "$PROGRAMS/ferrata_bridge.bin"); }
 tool() { "$TOOL" "$@" --rpc "$URL"; }
+until_stage() { # until_stage X: stop here when FERRATA_DAY1_UNTIL=X (a test's partial run)
+  if [ "${FERRATA_DAY1_UNTIL:-}" = "$1" ]; then say "stopping after ($1): FERRATA_DAY1_UNTIL=$1"; exit 0; fi
+}
 retry() { # retry LABEL COMMAND...: a stage that fails is tried again (the endpoint restarting, a rewind); its stored
   # bytes are what is sent again
   local label="$1"; shift; local i
@@ -214,11 +234,11 @@ plan() {
   local P="$STATE/plan"; rm -rf "$P"; mkdir -p "$P"
   fetch_checkpoint "$P/fetch"
   say "signing (not sending) every stage that can be signed now, in a scratch state ($P)"
-  tool sign --keys "$KEYS" --state "$P" --stage deploy-program --bin "$PROGRAMS/ferrata_lez.bin" | tee "$P/deploy-program.txt"
+  tool sign --keys "$KEYS" --state "$P" --store "$P" --stage deploy-program --bin "$PROGRAMS/ferrata_lez.bin" | tee "$P/deploy-program.txt"
   if [ "${FERRATA_DAY1_BRIDGE:-0}" = 1 ]; then
-    tool sign --keys "$KEYS" --state "$P" --stage deploy-bridge --bin "$PROGRAMS/ferrata_bridge.bin" | tee "$P/deploy-bridge.txt"
+    tool sign --keys "$KEYS" --state "$P" --store "$P" --stage deploy-bridge --bin "$PROGRAMS/ferrata_bridge.bin" | tee "$P/deploy-bridge.txt"
   fi
-  tool sign --keys "$KEYS" --state "$P" --stage init --fetch "$P/fetch" | tee "$P/init.txt"
+  tool sign --keys "$KEYS" --state "$P" --store "$P" --stage init --fetch "$P/fetch" | tee "$P/init.txt"
   python3 -I - "$P" "$KEYS/accounts.json" "$REPO" <<'EOF' | tee "$STATE/plan.txt"
 import json, os, sys, glob
 P, accounts, repo = sys.argv[1:4]
@@ -273,8 +293,8 @@ DAEMON_DIR="$STATE/daemon"
 daemon_pid() { [ -f "$DAEMON_DIR/pid" ] && kill -0 "$(cat "$DAEMON_DIR/pid")" 2>/dev/null && cat "$DAEMON_DIR/pid"; }
 daemon_config() { # the updater's configuration: the instance day1 initialized (same preset, layout, adoption parts)
   local program checkpoint
-  program="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["program"])' "$STATE/instance.json")"
-  checkpoint="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["checkpoint"])' "$STATE/instance.json")"
+  program="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["program"])' "$KEYS/instance.json")"
+  checkpoint="$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["checkpoint"])' "$KEYS/instance.json")"
   mkdir -p "$DAEMON_DIR"
   cat > "$DAEMON_DIR/updater.toml" <<EOF
 # Written by lez/testnet04/day1.sh: the day-one instance, followed on the public job path.
@@ -344,9 +364,15 @@ daemon_status() {
 daemon_stop() {
   local pid
   pid="$(daemon_pid)" || { echo "daemon: not running"; return 0; }
+  local wait="${FERRATA_DAY1_STOP_SECONDS:-120}"
   kill -TERM "$pid"
-  for _ in $(seq 1 120); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
-  kill -0 "$pid" 2>/dev/null && { kill -KILL "$pid"; echo "daemon: killed (it did not stop in 120 s)"; } || echo "daemon: stopped"
+  for _ in $(seq 1 "$wait"); do kill -0 "$pid" 2>/dev/null || break; sleep 1; done
+  if kill -0 "$pid" 2>/dev/null; then
+    kill -KILL "$pid"
+    echo "daemon: killed (it did not stop in $wait s): a transaction it was settling may have no journal row; the chain holds it"
+  else
+    echo "daemon: stopped"
+  fi
 }
 
 # ---- run ----------------------------------------------------------------------------------------------------------
@@ -354,8 +380,8 @@ inspect_json() { "$TOOL" inspect --keys "$KEYS" --state "$STATE" $(bins) --rpc "
 jq_py() { python3 -I -c "import json,sys; d=json.load(sys.stdin); print($1)"; }
 stage_send() { # stage_send STAGE SIGN-ARGS...: sign once (kept), then send the stored bytes until every one settled
   local stage="$1"; shift
-  if [ ! -d "$STATE/tx/$stage" ]; then tool sign --keys "$KEYS" --state "$STATE" --stage "$stage" "$@"; fi
-  tool send --state "$STATE" --stage "$stage"
+  if [ ! -d "$KEYS/tx/$stage" ]; then tool sign --keys "$KEYS" --state "$STATE" --stage "$stage" "$@"; fi
+  tool send --keys "$KEYS" --state "$STATE" --stage "$stage"
 }
 run() {
   [ "${FERRATA_TESTNET_SEND:-}" = yes ] || die "refusing to send to $URL: set FERRATA_TESTNET_SEND=yes (the owner's decision)"
@@ -379,16 +405,24 @@ run() {
     say "(a) deploying the attestation program (0x${PROGRAM_IMAGE:0:8}…)"
     retry "(a) deploy" stage_send deploy-program --bin "$PROGRAMS/ferrata_lez.bin"
   fi
-  # (b) Init from a fresh finalized checkpoint
-  fetch_checkpoint "$FETCH"
-  say "(b) Init of the Sepolia instance"
-  retry "(b) Init" stage_send init --fetch "$FETCH"
+  until_stage a
+  # (b) Init from a fresh finalized checkpoint, kept beside the keys at the first signing (KEYS/init/); nothing when
+  # the instance exists on chain
+  if [ -f "$KEYS/instance.json" ] && [ "$(inspect_json | jq_py 'd.get("instance",{}).get("exists")')" = True ]; then
+    say "(b) the instance $(jq_py 'd["instance_id"]' < "$KEYS/instance.json") exists on chain already: no Init"
+  else
+    [ -f "$KEYS/init/chain.json" ] || fetch_checkpoint "$FETCH"
+    say "(b) Init of the Sepolia instance"
+    retry "(b) Init" stage_send init --fetch "$FETCH"
+  fi
+  until_stage b
   # (c) the daemon (Adopt parts of the initial committee, then every update), detached
   say "(c) the updater daemon"
   daemon_start
+  until_stage c
   # (d) one attestation of the live vault's slots 0 and 1, under the newest record once the daemon has applied an
   # update after the activation (a record of a block Sepolia's execution APIs still serve proofs for)
-  if [ ! -f "$STATE/tx/attest/00.result.json" ]; then
+  if [ ! -f "$KEYS/tx/attest/00.result.json" ]; then
     say "(d) waiting for the instance to be active and to apply an update after its activation"
     local applied=0
     for _ in $(seq 1 240); do
@@ -397,7 +431,7 @@ run() {
       sleep 15
     done
     [ "${applied:-0}" -ge 2 ] || die "(d) the instance has not applied an update after 60 min: day1.sh daemon-status"
-    if [ ! -d "$STATE/tx/attest" ]; then
+    if [ ! -d "$KEYS/tx/attest" ]; then
       local target slot hash
       target="$(tool target --keys "$KEYS" --state "$STATE")"
       slot="$(echo "$target" | jq_py 'd["slot"]')"; hash="$(echo "$target" | jq_py 'd["block_hash"]')"
@@ -405,7 +439,7 @@ run() {
       python3 -I "$FETCH_PY" proof "$FETCH" "$slot" "$hash" "$VAULT" "$VAULT_SLOTS"
     fi
     retry "(d) attestation" stage_send attest --fetch "$FETCH"
-    python3 -I -c 'import json,sys; s=json.load(open(sys.argv[1])); print(json.dumps(s["info"]["verdict"], indent=1))' "$STATE/tx/attest/stage.json"
+    python3 -I -c 'import json,sys; s=json.load(open(sys.argv[1])); print(json.dumps(s["info"]["verdict"], indent=1))' "$KEYS/tx/attest/stage.json"
   else
     say "(d) the attestation is applied already"
   fi
@@ -418,11 +452,11 @@ run() {
     bridge_owner_step
   fi
   echo "run finished $(date -u +%FT%TZ), $(( $(date +%s) - t0 )) s" >> "$STATE/run-log.txt"
-  say "run done in $(( $(date +%s) - t0 )) s; the daemon follows Sepolia: day1.sh daemon-status"
+  say "run done in $(( $(date +%s) - t0 )) s; the daemon follows Sepolia: day1.sh daemon-status $URL (stop: day1.sh daemon-stop $URL)"
 }
 bridge_owner_step() { # what the owner's Sepolia step needs, written down; nothing is sent to Sepolia from here
   local acc="$KEYS/accounts.json" out="$STATE/bridge-owner-step.md"
-  python3 -I - "$acc" "$STATE/instance.json" "$BRIDGE_IMAGE" "$PROGRAM_IMAGE" "$out" <<'EOF'
+  python3 -I - "$acc" "$KEYS/instance.json" "$BRIDGE_IMAGE" "$PROGRAM_IMAGE" "$out" <<'EOF'
 import json, sys
 acc, inst, bridge_image, program_image, out = sys.argv[1:6]
 a, i = json.load(open(acc)), json.load(open(inst))
@@ -469,7 +503,7 @@ req = urllib.request.Request(f"https://ethereum-sepolia-beacon-api.publicnode.co
 try:
     got = json.loads(urllib.request.urlopen(req, timeout=30).read())["data"]["root"]
 except Exception as e:
-    print(f"[skip] the finalized header at slot {slot}: publicnode did not answer ({e})"); sys.exit(0)
+    print(f"[not checked] the finalized header at slot {slot}: publicnode did not answer ({e})"); sys.exit(3)
 ok = got == root
 print(f"[{'ok' if ok else 'FAIL'}] the instance's finalized header (slot {slot}) is publicnode's canonical block {got}")
 v["checks"].append({"check": "finalized header canonical at publicnode", "ok": ok, "detail": f"slot {slot} root {root}"})
@@ -487,7 +521,7 @@ case "$cmd" in
   status)
     need_tools
     for s in deploy-program deploy-bridge init attest; do
-      [ -d "$STATE/tx/$s" ] && { echo "-- $s"; tool status --state "$STATE" --stage "$s"; }
+      [ -d "$KEYS/tx/$s" ] && { echo "-- $s"; tool status --keys "$KEYS" --state "$STATE" --stage "$s"; }
     done
     daemon_status ;;
   daemon-status) daemon_status ;;

@@ -8,10 +8,16 @@
 //! so a restart never builds a second transaction that could be applied beside the first: a stored transaction is
 //! re-signed only with the same nonces (both can never apply), never with new ones.
 //!
+//! **The store** is where the signed stages and the instance's identity are kept: the keys' directory (`--keys`), or
+//! `--store` (the plan's scratch). It lasts as long as the keys: a run whose `--state` (the follower, fetched data)
+//! is lost or named otherwise (another spelling of the URL) still finds every stage it signed and sends those bytes
+//! again; `Init` is signed only from the checkpoint first kept there (`STORE/init/`), so a second signing is for the
+//! same instance, and not at all when that instance exists on chain.
+//!
 //! Commands (`--rpc URL` everywhere; read-only unless named `send` or `fund`):
 //!
 //!   keygen   --keys DIR --bin PROGRAM.bin [--bridge-bin BRIDGE.bin]      fresh keys (mode 600), `accounts.json`
-//!   sign     --keys DIR --state DIR --stage deploy-program|deploy-bridge|init|attest [--bin F] [--fetch DIR] [--vault A]
+//!   sign     --keys DIR --state DIR [--store DIR] --stage deploy-program|deploy-bridge|init|attest [--bin F] [--fetch DIR]
 //!   send     --state DIR --stage S                                       send the stage's stored bytes, settle each
 //!   status   --state DIR --stage S                                       each stored transaction: applied / pending / dead
 //!   target   --keys DIR --state DIR                                      the instance's newest record: slot, block hash
@@ -215,6 +221,14 @@ fn tx_meta(label: &str, tx: &LeeTransaction, signers: &[(AccountId, u128)], gas_
     })
 }
 
+/// The store (module comment): `--store`, or the keys' directory.
+fn store_of(a: &Args) -> Result<PathBuf> {
+    match a.get("store") {
+        Some(s) => Ok(PathBuf::from(s)),
+        None => a.path("keys").map_err(|_| anyhow!("--keys (or --store) is required for {}: the signed stages are kept beside the keys", a.cmd)),
+    }
+}
+
 fn stage_dir(state: &Path, stage: &str) -> PathBuf {
     state.join("tx").join(stage)
 }
@@ -349,8 +363,19 @@ fn instance_of(fetch: &Path) -> Result<(Config, Root, Vec<u8>, u64)> {
     Ok((config, checkpoint, bootstrap, slot))
 }
 
-fn sign_init(payer: &PrivateKey, n: u128, program: AccountId, fetch: &Path, quote: (u64, u64)) -> Result<(Vec<(LeeTransaction, Value)>, Value)> {
-    let (config, checkpoint, bytes, slot) = instance_of(fetch)?;
+fn sign_init(payer: &PrivateKey, n: u128, program: AccountId, store: &Path, fetch: &Path, quote: (u64, u64)) -> Result<(Vec<(LeeTransaction, Value)>, Value)> {
+    // The checkpoint is the store's once kept there: a second signing (the store's `tx/init` lost) is for the same
+    // instance, never a new one.
+    let kept = store.join("init");
+    if !kept.join("chain.json").exists() {
+        let part = store.join("init.part");
+        let _ = fs::remove_dir_all(&part);
+        fs::create_dir_all(&part)?;
+        fs::copy(fetch.join("chain.json"), part.join("chain.json"))?;
+        fs::copy(fetch.join("bootstrap.ssz"), part.join("bootstrap.ssz"))?;
+        fs::rename(&part, &kept)?;
+    }
+    let (config, checkpoint, bytes, slot) = instance_of(&kept)?;
     let fork = config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
     let b = LightClientBootstrap::decode(&bytes, fork, config.sync_committee_size as usize)
         .map_err(|e| anyhow!("bootstrap.ssz does not decode: {e:?}"))?;
@@ -597,6 +622,7 @@ fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
 async fn cmd_sign(a: &Args) -> Result<()> {
     let keys = a.path("keys")?;
     let state = a.path("state")?;
+    let store = store_of(a)?;
     let stage = a.need("stage")?;
     let payer = read_key(&keys.join("payer.key"))?;
     let live = connect(a, &state).await?;
@@ -611,11 +637,19 @@ async fn cmd_sign(a: &Args) -> Result<()> {
         }
         "init" => {
             let d = Deployment::load(&keys.join("program"))?;
-            sign_init(&payer, n, d.program(), &a.path("fetch")?, q)?
+            let (txs, info) = sign_init(&payer, n, d.program(), &store, &a.path("fetch")?, q)?;
+            // Read the chain before signing: an instance with this id exists already (an earlier run's `Init`, or
+            // anyone's for the same configuration and checkpoint): nothing to sign.
+            let id = ferrata_updater::chain::root(info["instance_id"].as_str().unwrap_or_default())?;
+            if instance_state(&live, d.program(), &id).await?.is_some() {
+                fs::write(store.join("instance.json"), serde_json::to_string_pretty(&info)? + "\n")?;
+                bail!("the instance {} exists on chain already: no Init signed (STORE/instance.json written)", hex::encode(id));
+            }
+            (txs, info)
         }
         "attest" => {
             let d = Deployment::load(&keys.join("program"))?;
-            let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+            let inst: Value = serde_json::from_str(&fs::read_to_string(store.join("instance.json"))?)?;
             let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
             let (slot, hr, _) = newest_record(&live, d.program(), &id).await?;
             let dir = a.path("fetch")?.join("proofs").join(slot.to_string());
@@ -633,12 +667,13 @@ async fn cmd_sign(a: &Args) -> Result<()> {
         }
         other => bail!("unknown stage {other}"),
     };
-    store_stage(&state, stage, &txs)?;
-    fs::write(stage_dir(&state, stage).join("stage.json"), serde_json::to_string_pretty(&json!({"stage": stage, "payer": id_of(&payer).to_string(),
-        "first_nonce": n.to_string(), "fee_state": [q.0, q.1], "info": info}))? + "\n")?;
     if stage == "init" {
-        fs::write(state.join("instance.json"), serde_json::to_string_pretty(&info)? + "\n")?;
+        // Before the stage: the instance's identity is in the store even if the stage's writing is cut.
+        fs::write(store.join("instance.json"), serde_json::to_string_pretty(&info)? + "\n")?;
     }
+    store_stage(&store, stage, &txs)?;
+    fs::write(stage_dir(&store, stage).join("stage.json"), serde_json::to_string_pretty(&json!({"stage": stage, "payer": id_of(&payer).to_string(),
+        "first_nonce": n.to_string(), "fee_state": [q.0, q.1], "info": info}))? + "\n")?;
     let mut reserve: u128 = 0;
     let mut expected: u128 = 0;
     for (tx, meta) in &txs {
@@ -654,10 +689,11 @@ async fn cmd_sign(a: &Args) -> Result<()> {
 
 async fn cmd_send(a: &Args) -> Result<()> {
     let state = a.path("state")?;
+    let store = store_of(a)?;
     let stage = a.need("stage")?;
     let mut live = connect(a, &state).await?;
     let t0 = Instant::now();
-    let ok = send_stage(&mut live, &state, stage).await?;
+    let ok = send_stage(&mut live, &store, stage).await?;
     live.save()?;
     println!("stage {stage}: {} in {:.1} s", if ok { "every transaction applied" } else { "NOT every transaction applied" }, t0.elapsed().as_secs_f64());
     ensure!(ok, "stage {stage}: a transaction was not applied");
@@ -666,9 +702,10 @@ async fn cmd_send(a: &Args) -> Result<()> {
 
 async fn cmd_status(a: &Args) -> Result<()> {
     let state = a.path("state")?;
+    let store = store_of(a)?;
     let stage = a.need("stage")?;
     let live = connect(a, &state).await?;
-    for (i, tx, meta) in stored(&state, stage)? {
+    for (i, tx, meta) in stored(&store, stage)? {
         let (st, block) = tx_state(&live, &tx, &meta).await?;
         println!("{i:02} {} {st}{} {}", tx.hash(), block.map(|b| format!(" (block {b})")).unwrap_or_default(), meta["label"].as_str().unwrap_or(""));
     }
@@ -678,8 +715,9 @@ async fn cmd_status(a: &Args) -> Result<()> {
 async fn cmd_target(a: &Args) -> Result<()> {
     let keys = a.path("keys")?;
     let state = a.path("state")?;
+    let store = store_of(a)?;
     let d = Deployment::load(&keys.join("program"))?;
-    let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+    let inst: Value = serde_json::from_str(&fs::read_to_string(store.join("instance.json"))?)?;
     let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
     let live = connect(a, &state).await?;
     let (slot, hr, st) = newest_record(&live, d.program(), &id).await?;
@@ -690,7 +728,6 @@ async fn cmd_target(a: &Args) -> Result<()> {
 /// Everything `verify` and `run` read: balances, nonces, the deployments' headers and segments, the instance.
 async fn inspect(a: &Args, live: &Live) -> Result<Value> {
     let keys = a.path("keys")?;
-    let state = a.path("state")?;
     let mut v = json!({"rpc": a.need("rpc")?, "head": live.head().await?, "followed": live.follower.height(), "read_utc": crate::utc()});
     for who in ["payer", "daemon"] {
         let id = id_of(&read_key(&keys.join(format!("{who}.key")))?);
@@ -724,8 +761,9 @@ async fn inspect(a: &Args, live: &Live) -> Result<Value> {
         }
         v[name] = entry;
     }
-    if state.join("instance.json").exists() {
-        let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+    let store = store_of(a)?;
+    if store.join("instance.json").exists() {
+        let inst: Value = serde_json::from_str(&fs::read_to_string(store.join("instance.json"))?)?;
         let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
         let program: AccountId = inst["program"].as_str().unwrap_or_default().parse().map_err(|e| anyhow!("{e:?}"))?;
         v["instance"] = match instance_state(live, program, &id).await? {
@@ -751,6 +789,7 @@ async fn cmd_inspect(a: &Args) -> Result<()> {
 /// Re-read every verdict from the endpoint and compare it with what the run recorded: exit 0 only if all match.
 async fn cmd_verify(a: &Args) -> Result<()> {
     let state = a.path("state")?;
+    let store = store_of(a)?;
     let mut live = connect(a, &state).await?;
     live.sync().await?;
     let v = inspect(a, &live).await?;
@@ -762,9 +801,9 @@ async fn cmd_verify(a: &Args) -> Result<()> {
         check("bridge deployed byte for byte", v["bridge"]["binary"]["on_chain_equal"] == true, format!("{}", v["bridge"]["deployed"]["image_id"]));
     }
     for stage in ["deploy-program", "deploy-bridge", "init", "attest"] {
-        let Ok(txs) = stored(&state, stage) else { continue };
+        let Ok(txs) = stored(&store, stage) else { continue };
         for (i, tx, meta) in txs {
-            let recorded: Option<Value> = fs::read_to_string(stage_dir(&state, stage).join(format!("{i:02}.result.json"))).ok().and_then(|t| serde_json::from_str(&t).ok());
+            let recorded: Option<Value> = fs::read_to_string(stage_dir(&store, stage).join(format!("{i:02}.result.json"))).ok().and_then(|t| serde_json::from_str(&t).ok());
             let served = live.wallet.get_transaction(tx.hash()).await?.map(|(_, b)| b);
             let receipt = live.follower.receipt(&tx.hash()).cloned();
             let ok = match (&recorded, served, &receipt) {
@@ -784,15 +823,18 @@ async fn cmd_verify(a: &Args) -> Result<()> {
     }
     // The attestation: the settled transaction emitted its event, and its verdict (the program's function on the
     // record) holds the values eth_getProof served for the vault's slots at that block.
-    if let Ok(stage) = fs::read_to_string(stage_dir(&state, "attest").join("stage.json")) {
+    if let Ok(stage) = fs::read_to_string(stage_dir(&store, "attest").join("stage.json")) {
         let s: Value = serde_json::from_str(&stage)?;
         let verdict = &s["info"]["verdict"];
         let got: Vec<&Value> = verdict["statements"].as_array().into_iter().flatten().filter_map(|st| st["fact"].get("value")).collect();
         let want: Vec<String> = s["info"]["eth_getProof"]["slots"].as_array().into_iter().flatten()
             .map(|e| format!("0x{}", hex::encode(word(&e["value"], "value").unwrap_or([0; 32])))).collect();
         let values_ok = got.len() == want.len() && got.iter().zip(&want).all(|(g, w)| g.as_str() == Some(w.as_str()));
-        let events_ok = stored(&state, "attest").ok().and_then(|t| t.first().map(|(_, tx, _)| tx.hash())).and_then(|h| live.follower.receipt(&h).cloned()).is_some_and(|r| r.events >= 1 && r.exit_code.is_none());
-        check("attestation: the slots' values equal eth_getProof's at the record's block, the event emitted", values_ok && events_ok,
+        let events_ok = stored(&store, "attest").ok().and_then(|t| t.first().map(|(_, tx, _)| tx.hash())).and_then(|h| live.follower.receipt(&h).cloned()).is_some_and(|r| r.events >= 1 && r.exit_code.is_none());
+        // What is compared: the verdict the program's own function computed natively on the record (kept when the
+        // stage was signed) against eth_getProof's values; from the chain, only that the transaction applied with an
+        // event (the follower keeps an event count, not the event's data).
+        check("attestation: the verdict computed natively on the record equals eth_getProof's values; the transaction applied with an event (its content not compared)", values_ok && events_ok,
               format!("block {} {}: {:?}", verdict["block_number"], verdict["block_hash"], got));
     }
     let failed = checks.iter().filter(|c| !c.1).count();

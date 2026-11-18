@@ -69,7 +69,8 @@ done_file="$run/stages.done"
 proof=cp-e2e-finalize
 export FERRATA_FIXTURE="$fixture" FERRATA_MANIFEST="$manifest"
 rpc=(--rpc-url "$SEPOLIA_RPC_URL")
-case "$SEPOLIA_RPC_URL" in http://127.0.0.1:* | http://localhost:*) local_endpoint=1 ;; *) local_endpoint=0 ;; esac
+# Local: a loopback host without a userinfo (in `http://127.0.0.1:1@HOST` cast would connect to HOST).
+case "$SEPOLIA_RPC_URL" in *@*) local_endpoint=0 ;; http://127.0.0.1:* | http://localhost:*) local_endpoint=1 ;; *) local_endpoint=0 ;; esac
 if [ "${FERRATA_FORK:-}" = 1 ]; then
   [ "$local_endpoint" = 1 ] || die "FERRATA_FORK=1 is for a local endpoint, not $SEPOLIA_RPC_URL"
   export FERRATA_UNLOCKED=1

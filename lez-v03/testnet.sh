@@ -43,7 +43,11 @@ WAIT_SECONDS="${FERRATA_WAIT:-1800}"
 cmd="${1:-}"; shift || true
 URL="${FERRATA_SEQUENCER:-$PUBLIC_URL}"
 [ "$cmd" = local ] && URL="${FERRATA_SEQUENCER:-http://127.0.0.1:3040}"
-is_loopback() { # the URL's host is this machine
+is_loopback() { # the URL's host is this machine; a userinfo (`http://127.0.0.1:1@HOST`, where curl and the wallet would
+  # connect to HOST) or anything but plain http is not
+  case "$1" in http://*) ;; *) return 1 ;; esac
+  local authority; authority="${1#http://}"; authority="${authority%%[/?#]*}"
+  case "$authority" in *@*|*\\*|*%*|"") return 1 ;; esac
   local host; host="$(printf '%s' "$1" | sed -E 's#^[a-z]+://(\[[^]]*\]|[^/:]*).*#\1#')"
   case "$host" in 127.*|localhost|"[::1]") return 0 ;; *) return 1 ;; esac
 }

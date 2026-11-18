@@ -209,7 +209,9 @@ async fn setup(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
         }))?,
     )?;
     // A new wallet's password: the caller's; a public default only for a loopback (local) sequencer (finding 13).
-    let local = sequencer.starts_with("http://127.0.0.1:") || sequencer.starts_with("http://localhost:");
+    // No userinfo: in `http://127.0.0.1:1@HOST` the client connects to HOST.
+    let local = (sequencer.starts_with("http://127.0.0.1:") || sequencer.starts_with("http://localhost:"))
+        && !sequencer.split("://").nth(1).unwrap_or("").split(['/', '?', '#']).next().unwrap_or("").contains('@');
     let password = match std::env::var("FERRATA_WALLET_PASSWORD") {
         Ok(p) if !p.is_empty() => p,
         _ if local => "ferrata-v03-bridge-local".into(),

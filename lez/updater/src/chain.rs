@@ -104,21 +104,25 @@ pub fn instance_config(preset_name: &str, adoption_parts: u8, layout: Option<&st
     Ok(config)
 }
 
+/// The URL guards' parser, shared with the live driver (`../../live/driver/src/rpcurl.rs`, standard library only):
+/// the host a URL names, read strictly, a userinfo refused.
+#[path = "../../live/driver/src/rpcurl.rs"]
+pub mod rpcurl;
+
 /// Only a sequencer on this machine (as the live driver's `check_loopback`): a LEZ wallet's default is a public
-/// network, and nothing here is meant for one.
+/// network, and nothing here is meant for one. The host is read strictly ([`rpcurl`]): `http://127.0.0.1:1@HOST` is
+/// refused, not taken for loopback.
 pub fn check_loopback(rpc: &str) -> Result<()> {
     // The day-one deployment's exception (as the live driver's `check_loopback`): another sequencer when
-    // `FERRATA_SEQUENCER_REMOTE` names exactly this URL; the sequencer backend then sends to it only with the owner's
-    // `FERRATA_TESTNET_SEND=yes` (`live.rs`, `check_send`).
+    // `FERRATA_SEQUENCER_REMOTE` names exactly this URL (and it reads strictly); the sequencer backend then sends to it
+    // only with the owner's `FERRATA_TESTNET_SEND=yes` (`live.rs`, `check_send`).
     if std::env::var("FERRATA_SEQUENCER_REMOTE").is_ok_and(|named| !named.is_empty() && named == rpc)
-        && (rpc.starts_with("http://") || rpc.starts_with("https://"))
+        && rpcurl::parse(rpc).is_ok()
     {
         return Ok(());
     }
-    let rest =
-        rpc.strip_prefix("http://").ok_or_else(|| anyhow!("{rpc}: the RPC address must be http://127.0.0.1:PORT"))?;
-    let host = rest.split([':', '/']).next().unwrap_or("");
-    ensure!(host == "127.0.0.1" || host == "localhost", "refusing to talk to {host}: only a sequencer on this machine");
+    let u = rpcurl::parse(rpc).map_err(|why| anyhow!("refusing {why}"))?;
+    ensure!(u.is_loopback(), "refusing to talk to {}: only a sequencer on this machine", u.host);
     Ok(())
 }
 

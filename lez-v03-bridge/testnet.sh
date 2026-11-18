@@ -54,6 +54,7 @@ results="$here/results/$net"
 case "$net" in
   local)
     lez="${LEZ_RPC:-http://127.0.0.1:3040}"; eth="${ETH_RPC:-http://127.0.0.1:8545}"
+    case "$eth$lez" in *@*) echo "testnet.sh: a userinfo in ETH_RPC or LEZ_RPC is refused (the client would connect to the host after the @)" >&2; exit 1 ;; esac
     case "$eth" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "testnet.sh: local ETH_RPC must be a loopback anvil" >&2; exit 1 ;; esac
     case "$lez" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "testnet.sh: local LEZ_RPC must be a loopback sequencer" >&2; exit 1 ;; esac
     ;;
