@@ -77,8 +77,13 @@ impl Run {
         account(self.get(key)?)
     }
 
+    /// The wallet home: the run's own (`<run>/wallet`), or an existing one named at setup
+    /// (`--wallet-home`, e.g. the queued sender's, so that one home signs every transaction).
     fn wallet_paths(&self) -> (PathBuf, PathBuf) {
-        let w = self.dir.join("wallet");
+        let w = match self.rec["wallet_home"].as_str() {
+            Some(home) => PathBuf::from(home),
+            None => self.dir.join("wallet"),
+        };
         (w.join("wallet_config.json"), w.join("storage.json"))
     }
 
@@ -142,6 +147,9 @@ async fn main() -> Result<()> {
         "burn" => burn(&mut run, &a, false).await,
         "burn-private" => burn(&mut run, &a, true).await,
         "state" => state(&run).await,
+        "batch" => batch(&mut run, &a),
+        "layout" => layout(&run),
+        "burns" => burns_file(&run),
         other => bail!("unknown command {other}"),
     }
 }
@@ -174,9 +182,18 @@ async fn setup(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
         println!("setup: already done ({})", run.dir.display());
         return Ok(());
     }
+    let sequencer = arg(a, "sequencer")?;
+    if let Some(home) = a.get("wallet-home") {
+        // An existing wallet home (its config names its network): this run's accounts are made there, and the
+        // payer is one of its public accounts (`--payer-id`).
+        run.rec["wallet_home"] = json!(home);
+        let mut w = run.wallet()?;
+        let payer = account(arg(a, "payer-id")?)?;
+        w.get_account_public_signing_key(payer).ok_or_else(|| anyhow!("the payer is not an account of {home}"))?;
+        return accounts(run, &mut w, sequencer, payer);
+    }
     let (config_path, storage_path) = run.wallet_paths();
     std::fs::create_dir_all(config_path.parent().unwrap())?;
-    let sequencer = arg(a, "sequencer")?;
     std::fs::write(
         &config_path,
         serde_json::to_vec_pretty(&json!({
@@ -198,15 +215,22 @@ async fn setup(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
     };
     let payer = AccountId::from(&lee::PublicKey::new_from_private_key(&payer_key));
     w.storage_mut().key_chain_mut().add_imported_public_account(payer_key);
+    accounts(run, &mut w, sequencer, payer)
+}
+
+/// The run's accounts, made in the wallet `w`: the programs' header and segment accounts, a public holder (it signs
+/// its burn) and a private holder.
+fn accounts(run: &mut Run, w: &mut WalletCore, sequencer: &str, payer: AccountId) -> Result<()> {
+    let w = &mut *w;
     let mut new_public = |w: &mut WalletCore| w.create_new_account_public(None).0.to_string();
     let segments = |w: &mut WalletCore, elf: &[u8]| -> Vec<String> {
         (0..elf.len().div_ceil(program_loader_segment())).map(|_| w.create_new_account_public(None).0.to_string()).collect()
     };
-    let bridge_header = new_public(&mut w);
-    let bridge_segments = segments(&mut w, &program_user_elf(BRIDGE_ELF)?);
-    let records_header = new_public(&mut w);
-    let records_segments = segments(&mut w, &program_user_elf(RECORDS_ELF)?);
-    let holder_public = new_public(&mut w);
+    let bridge_header = new_public(w);
+    let bridge_segments = segments(w, &program_user_elf(BRIDGE_ELF)?);
+    let records_header = new_public(w);
+    let records_segments = segments(w, &program_user_elf(RECORDS_ELF)?);
+    let holder_public = new_public(w);
     let holder_private = w.create_new_account_private(None).0.to_string();
     w.store_persistent_data()?;
     run.rec["sequencer"] = json!(sequencer);
@@ -445,6 +469,22 @@ async fn root_state(run: &Run, n: u64) -> Result<RootState> {
     }
 }
 
+/// The root state `ImportRoot` of the capture writes at `root(cid, n)` (the same fields, computed here).
+fn local_root(run: &Run, a: &HashMap<String, String>, n: u64) -> Result<RootState> {
+    let (c, slot) = captured(a)?;
+    let config = run.config()?;
+    let number = ferrata_core::exec::decode_header(&c.header).map_err(|e| anyhow!("header: {e:?}"))?.number;
+    Ok(RootState {
+        config_id: run.config_id()?,
+        evm_chain_id: config.evm_chain_id,
+        vault: config.vault,
+        leaf_count: n,
+        root: c.value(&bc::SLOT_ROOT),
+        record_slot: slot,
+        block_number: number,
+    })
+}
+
 /// The leaves of the vault, as `deposits` recorded them (`--leaves` more before them are given as
 /// hex, comma-separated, if the vault had earlier deposits).
 fn leaves(run: &Run, a: &HashMap<String, String>) -> Result<Vec<Root>> {
@@ -463,7 +503,12 @@ async fn claim(run: &mut Run, a: &HashMap<String, String>, private: bool) -> Res
     let n: u64 = arg(a, "n")?.parse()?;
     let config = run.config()?;
     let bridge = run.acc("bridge")?;
-    let root = root_state(run, n).await?;
+    // From the capture (the state `ImportRoot` writes, so a claim can be queued behind its import in one block),
+    // or as the sequencer holds it.
+    let root = match a.get("capture") {
+        Some(_) => local_root(run, a, n)?,
+        None => root_state(run, n).await?,
+    };
     let d = deposit(run, k)?;
     let mut w = d.witness(&leaves(run, a)?, n);
     if let Some(dest) = a.get("dest") {
@@ -525,7 +570,12 @@ async fn burn(run: &mut Run, a: &HashMap<String, String>, private: bool) -> Resu
     let step = format!("burn-{}", if private { "private" } else { "public" });
     let at_record = mention(burn_account(bridge, &cid, &note.hash()), bridge);
     let at_burns = mention(burns_account(bridge, &cid), bridge);
-    run.rec["notes"][&step] = json!({ "r": h(&note.r), "memo": h(&note.memo), "mac": h(&note.mac), "c_out": h(&note.c_out), "hash": h(&note.hash()) });
+    let sent = match run.rec["notes"][&step]["sent"].as_u64() {
+        Some(i) => i,
+        None => run.rec["notes"].as_object().map_or(0, |m| m.len()) as u64,
+    };
+    run.rec["notes"][&step] = json!({ "r": h(&note.r), "memo": h(&note.memo), "mac": h(&note.mac), "c_out": h(&note.c_out),
+        "token": h(&note.token), "amount": h(&note.amount), "hash": h(&note.hash()), "sent": sent });
     if private {
         if run.done(&step) {
             println!("{step}: done");
@@ -613,4 +663,152 @@ fn accounts_shard(out: &Value, name: &str) -> Option<Vec<u8>> {
         return None;
     }
     hex::decode(s).ok()
+}
+
+/// Declared gas limits of the public batch: the cycles measured through LEZ v0.3.1's state machine (results/,
+/// the largest of the synthetic and the real-Sepolia runs) times about 1.5, rounded up. A block admits a
+/// transaction only if the gas charged so far plus its declared limit stays within 10,000,000
+/// (spike/tmp/testnet-ops/FOR-SIBLINGS.md); a refused one is charged its cycles, a panic its whole limit.
+const GAS_INIT: u64 = 400_000; // 140,483 synthetic; 217,175 on Sepolia's real proofs (refused there at the end)
+const GAS_IMPORT: u64 = 450_000; // 173,632 synthetic; 285,125 on Sepolia's real proofs
+const GAS_CLAIM: u64 = 250_000; // 155,685
+const GAS_BURN: u64 = 420_000; // 279,815
+
+/// The public steps of a run as one batch for the queued sender (`ferrata_ops batch`, format of
+/// spike/tmp/testnet-ops/FOR-SIBLINGS.md), all for one block, in order: the bridge's deployment (if not done),
+/// `Init`, `ImportRoot`, the public claim of deposit 0, the public holder's burn (`--burn yes`, default; the claim
+/// must have landed first only for the holder to hold it: in one block, in order, it has). The private claim and the
+/// private burn are privacy-preserving transactions, proven and sent by `claim-private` and `burn-private` with the
+/// same wallet home (fee-exempt; the private burn after the private claim's block). Writes the program's ELF
+/// beside it. Nothing is sent.
+fn batch(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
+    let out = PathBuf::from(arg(a, "out")?);
+    let config = run.config()?;
+    let bridge = run.acc("bridge")?;
+    let cid = run.config_id()?;
+    let (c, slot) = captured(a)?;
+    let n: u64 = arg(a, "n")?.parse()?;
+    let r = record_ref(run, &c, slot)?;
+    let sh = |id: AccountId, p: AccountId| json!([id.to_string(), p.to_string()]);
+    let header = header_account(config.attestation, &config.instance_id, slot);
+    let call = |label: &str, shards: Vec<Value>, signers: Vec<String>, data: Vec<u8>, gas: u64| {
+        json!({ "call": { "label": label, "program": bridge.to_string(), "shards": shards, "signers": signers,
+                          "data_hex": h(&data), "gas_limit": gas } })
+    };
+    let mut steps = Vec::new();
+    if !run.done("deploy-bridge") {
+        let elf = run.dir.join("ferrata_bridge03.bin");
+        std::fs::write(&elf, BRIDGE_ELF)?;
+        steps.push(json!({ "deploy": { "elf": elf.display().to_string(), "header": run.get("bridge")?,
+                                        "segments": run.rec["bridge_segments"], "immutable": true } }));
+    }
+    let init = Instruction::Init { config: config.clone(), record: r.clone(), proof: c.pairing_proof() };
+    steps.push(call(
+        "init",
+        vec![sh(config_account(bridge, &cid), bridge), sh(header, config.attestation)],
+        vec![],
+        borsh::to_vec(&init)?,
+        GAS_INIT,
+    ));
+    let root = c.value(&bc::SLOT_ROOT);
+    let import = Instruction::ImportRoot { config: config.clone(), record: r, root, leaf_count: n, proof: c.import_proof() };
+    steps.push(call(
+        &format!("import-{n}"),
+        vec![sh(config_account(bridge, &cid), bridge), sh(header, config.attestation), sh(root_account(bridge, &cid, n), bridge)],
+        vec![],
+        borsh::to_vec(&import)?,
+        GAS_IMPORT,
+    ));
+    let root_state = local_root(run, a, n)?;
+    let d = deposit(run, 0)?;
+    let w = d.witness(&leaves(run, a)?, n);
+    let nf = deposits::nullifier_of(&w, root_state.evm_chain_id, &root_state.vault);
+    let claim = Instruction::Claim { config: config.clone(), root: root_state, witness: w.clone() };
+    steps.push(call(
+        "claim-0",
+        vec![
+            sh(root_account(bridge, &cid, n), bridge),
+            sh(nullifier_account(bridge, root_state.evm_chain_id, &root_state.vault, &nf), bridge),
+            sh(holder_account(bridge, &w.dest), bridge),
+        ],
+        vec![],
+        borsh::to_vec(&claim)?,
+        GAS_CLAIM,
+    ));
+    if a.get("burn").map_or(true, |b| b == "yes") {
+        let keys = deposits::keys(arg(a, "seed")?);
+        let recipient: [u8; 20] = unhex(arg(a, "recipient")?)?;
+        let note: Note = deposits::note(&keys, &cid, 0, config.evm_chain_id, config.vault, recipient, ETH, config.registry[0].amount);
+        let owner = run.acc("holder_public")?;
+        let burn = Instruction::Burn { config: config.clone(), note, from: BurnFrom::Holder };
+        steps.push(call(
+            "burn-public",
+            vec![
+                sh(owner, bridge),
+                sh(holder_account(bridge, owner.value()), bridge),
+                sh(burn_account(bridge, &cid, &note.hash()), bridge),
+                sh(burns_account(bridge, &cid), bridge),
+            ],
+            vec![owner.to_string()],
+            borsh::to_vec(&burn)?,
+            GAS_BURN,
+        ));
+    }
+    let declared: u64 = steps.iter().filter_map(|s| s["call"]["gas_limit"].as_u64()).sum();
+    let b = json!({ "payer": run.get("payer")?, "gas_limit": GAS_IMPORT, "steps": steps });
+    std::fs::write(&out, serde_json::to_vec_pretty(&b)?)?;
+    println!("batch: {} steps, declared execution gas {declared} (of 10,000,000 per block), written to {}", b["steps"].as_array().map_or(0, Vec::len), out.display());
+    Ok(())
+}
+
+/// The burn accumulator's layout for the release leg's stand-in attestor (`lez-v03-return/INTERFACE.md` of branch
+/// testnet-return, §1): `burns(cid)`'s bridge shard is borsh `BridgeState::Burns(BurnTree)`: tag 5 at 0, `config_id`
+/// at 1 (32), `count` at 33 (u64 little-endian), the frontier's length at 41 (u32, 32), the canonical frontier at 45
+/// (32 x 32 bytes, f[0] first); 1,069 bytes; no root (the frontier gives it).
+fn layout(run: &Run) -> Result<()> {
+    let bridge = run.acc("bridge")?;
+    let cid = run.config_id()?;
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({
+            "program": bridge.to_string(),
+            "account": burns_account(bridge, &cid).to_string(),
+            "count_endian": "little",
+            "burn_count": { "offset": 33, "length": 8 },
+            "burn_frontier": { "offset": 45, "length": 1024 },
+            "config_id": { "offset": 1, "length": 32 },
+        }))?
+    );
+    Ok(())
+}
+
+/// `burns.json` (the same interface, §2) from this run's notes, in the order they were sent: the order the
+/// accumulator holds them if they landed in that order (the comparison with the node's root decides).
+fn burns_file(run: &Run) -> Result<()> {
+    let cid = run.config_id()?;
+    let mut notes: Vec<(&String, &Value)> = run.rec["notes"].as_object().map(|m| m.iter().collect()).unwrap_or_default();
+    notes.sort_by_key(|(_, n)| n["sent"].as_u64().unwrap_or(0));
+    let mut tree = bc::BurnTree::new(cid);
+    let mut out = Vec::new();
+    for (i, (step, n)) in notes.iter().enumerate() {
+        let s = |k: &str| n[k].as_str().unwrap_or_default().to_owned();
+        let note = Note {
+            r: unhex(&s("r"))?,
+            memo: unhex(&s("memo"))?,
+            mac: unhex(&s("mac"))?,
+            token: unhex(&s("token"))?,
+            amount: unhex(&s("amount"))?,
+            c_out: unhex(&s("c_out"))?,
+        };
+        tree.append(&note).ok_or_else(|| anyhow!("tree"))?;
+        out.push(json!({ "burn_index": i, "token": format!("0x{}", s("token")), "amount": format!("0x{}", s("amount")),
+            "c_out": format!("0x{}", s("c_out")), "r": format!("0x{}", s("r")), "leaf": format!("0x{}", h(&note.leaf(&cid, i as u64))),
+            "block": run.rec["steps"][step.as_str()]["block"], "origin": step }));
+    }
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&json!({ "config_id": format!("0x{}", h(&cid)), "burn_count": out.len(),
+            "burn_root": format!("0x{}", h(&tree.root().unwrap_or_default())), "burns": out }))?
+    );
+    Ok(())
 }

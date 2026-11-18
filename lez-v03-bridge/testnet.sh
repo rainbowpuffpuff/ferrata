@@ -19,7 +19,9 @@
 #   gives FERRATA_VAULT, the deposits' leaf indices and FERRATA_CAPTURE (a capture of the finalized block that
 #   holds them, e2e/crown/capture.py). The light client is lez-v03's (branch testnet-v03), deployed and advanced on
 #   the testnet by its own testnet.sh: FERRATA_LC_PROGRAM, FERRATA_LC_INSTANCE and FERRATA_LC_SLOT (the slot of its
-#   record of the captured block). The payer is a key file (FERRATA_PAYER_KEY, 32 bytes hex) that the owner funds.
+#   record of the captured block). The public steps go as one batch for one block through testnet-ops's queued
+#   sender (FERRATA_OPS), signed by the wallet home FERRATA_WALLET_HOME whose funded public account FERRATA_PAYER_ID
+#   pays (prepare makes this run's accounts there); the private claim and burn follow, proven by the wallet.
 #
 # The run directory (FERRATA_RUN, default spike/tmp/testnet-v03-bridge/<net>-run beside the repository) holds the
 # keys, the wallet's storage and run.json: never inside the repository. results/<net>/ gets the record without keys.
@@ -128,7 +130,37 @@ capture_args() { # --capture DIR --proof FILE --slot N for the run's capture
   echo "--capture $dir --proof $proof --slot $slot"
 }
 
+# The public testnet: blocks hours apart, rewinds (spike/tmp/testnet-ops/FOR-SIBLINGS.md). So the public steps go as
+# ONE batch for one block, through testnet-ops's queued sender (FERRATA_OPS: ferrata_ops; explicit nonces, tight
+# declared gas), from the wallet home `prepare` made the accounts in; then the private claim (real proof, after the
+# batch's block, which wrote the root it is checked against at settlement) and the private burn (after the claim's
+# block: the wallet needs the private account's new commitment). Each step is recorded and skipped when done.
+run_testnet() {
+  need_send
+  jq -e .config "$run/run.json" > /dev/null 2>&1 || { echo "testnet.sh run: testnet.sh prepare first" >&2; exit 1; }
+  : "${FERRATA_LC_SLOT:?FERRATA_LC_SLOT: the slot of the light client record of the captured block}" "${FERRATA_CAPTURE:?FERRATA_CAPTURE}"
+  local n=2 cap="$FERRATA_CAPTURE" block home
+  block="$(cd "$cap" && ls proof_0x*_*.json | head -1 | sed 's/.*_\([0-9]*\)\.json/\1/')"
+  jq --argjson b "$block" --argjson n "$n" '.capture_block = $b | .capture_leaves = $n' "$run/run.json" > "$run/run.json.new" && mv "$run/run.json.new" "$run/run.json"
+  home="$(jq -r '.wallet_home // empty' "$run/run.json")"; home="${home:-$run/wallet}"
+  b batch $(capture_args) --n "$n" --seed "$seed" --recipient "$recipient" --out "$run/batch.json"
+  if [ ! -f "$run/batch-record.json" ]; then
+    log "the public batch (deploy, Init, ImportRoot, Claim of deposit 0, the public burn) through ferrata_ops"
+    LEE_WALLET_HOME_DIR="$home" "${FERRATA_OPS:?FERRATA_OPS: testnet-ops ferrata_ops binary}" batch --file "$run/batch.json" \
+      --record "$run/batch-record.json" --wait-secs "${FERRATA_WAIT_SECS:-43200}"
+  fi
+  log "ClaimPrivately deposit 1 (real proof)"
+  /usr/bin/time -v -o "$run/claim-private.time" "$drv" "$run" claim-private --deposit 1 --n "$n" $(capture_args)
+  log "Burn (private holder; real proof)"
+  /usr/bin/time -v -o "$run/burn-private.time" "$drv" "$run" burn-private --index 1 --recipient "$recipient" --seed "$seed"
+  log "state"; b state > "$run/state.json"
+  record
+  [ -f "$run/batch-record.json" ] && cp "$run/batch-record.json" "$results/batch-record.json"
+  verify
+}
+
 run_all() {
+  [ "$net" = testnet ] && { run_testnet; return; }
   need_send
   mkdir -p "$run" "$results"
   [ -x "$drv" ] || { echo "testnet.sh: build the driver first (cargo build --release -p driver03)" >&2; exit 1; }
@@ -180,7 +212,11 @@ record() { # the record without keys or the wallet, for results/<net>/
 prepare() { # the public run's LEZ wallet, accounts and configuration, and the deposits' commitments: nothing sent
   [ "$net" = testnet ] || { echo "testnet.sh prepare: FERRATA_NET=testnet only (local runs do it in run)" >&2; exit 1; }
   mkdir -p "$run"
-  b setup --sequencer "$lez" --payer "${FERRATA_PAYER_KEY:?FERRATA_PAYER_KEY: a key file, 32 bytes hex, outside the repository}" > "$run/setup.log"
+  if [ -n "${FERRATA_WALLET_HOME:-}" ]; then   # the queued sender's wallet home: one home signs every transaction
+    b setup --sequencer "$lez" --wallet-home "$FERRATA_WALLET_HOME" --payer-id "${FERRATA_PAYER_ID:?FERRATA_PAYER_ID}" > "$run/setup.log"
+  else
+    b setup --sequencer "$lez" --payer "${FERRATA_PAYER_KEY:?FERRATA_PAYER_KEY or FERRATA_WALLET_HOME}" > "$run/setup.log"
+  fi
   b config --chain 11155111 --vault "${FERRATA_VAULT:?FERRATA_VAULT: sepolia.sh identity}" \
     --lc "${FERRATA_LC_PROGRAM:?FERRATA_LC_PROGRAM: the light client program account on the testnet}" \
     --instance "$instance" --eth "$eth_denomination" > "$run/config_id.txt"
@@ -189,7 +225,8 @@ prepare() { # the public run's LEZ wallet, accounts and configuration, and the d
 }
 
 verify() {
-  python3 -I "$here/verify.py" --lez "$lez" --eth "$eth" "$results"
+  local any=(); [ "$net" = local ] && any=(--any-status)   # a standalone sequencer mocks Bedrock: no finality
+  python3 -I "$here/verify.py" "${any[@]}" --lez "$lez" --eth "$eth" "$results"
 }
 
 case "$cmd" in
@@ -197,5 +234,5 @@ case "$cmd" in
   prepare) prepare ;;
   run) run_all ;;
   verify) verify ;;
-  *) echo "usage: testnet.sh plan | run | verify" >&2; exit 1 ;;
+  *) echo "usage: testnet.sh plan | prepare | run | verify" >&2; exit 1 ;;
 esac

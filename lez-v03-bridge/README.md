@@ -52,6 +52,32 @@ finality update. The sibling's light client was not committed when this was buil
 program does today (`../lez/BRIDGE.md` §3): `holder(account)` for public ones (a PDA whose seed names the account,
 review C-1), the private account's own shard of the bridge for private ones.
 
+## Burn accumulator account
+
+What a release leg reads over RPC (`getAccount`), the layout the stand-in attestor of branch `testnet-return`
+(`lez-v03-return/INTERFACE.md`) takes as its layout file; `bridge03 <run> layout` prints it with a run's ids, and
+`bridge03 <run> burns` the run's `burns.json`.
+
+- **Account**: `burns(cid)` = `AccountId::for_public_pda(bridge, H("ferrata-lez/v1/bridge/burns" ‖ cid))`
+  (`core::burns_account`); **program shard**: the bridge program's id (where it is deployed).
+- **Shard bytes**: borsh `BridgeState::Burns(BurnTree { config_id, count, frontier })`, 1,069 bytes, fixed:
+
+| field | offset | length | content |
+|---|---:|---:|---|
+| tag | 0 | 1 | `5` (`BridgeState::Burns`) |
+| `config_id` | 1 | 32 | the configuration's `configId` |
+| `count` | 33 | 8 | burns appended, u64 little-endian |
+| frontier length | 41 | 4 | `32`, u32 little-endian |
+| `frontier` | 45 | 1,024 | the canonical frontier, `f[0]` first (`ferrata-bridge-core`'s `IncrementalTree::frontier`) |
+
+  No root is stored: `IncrementalTree::from_frontier(count, frontier).root()` gives it. Leaf `k` is the bridge core's
+  `burn_leaf(configId, k, token, amount, COut, r)`; `k` is assigned when the burn is applied (for a private burn, at
+  settlement), in the order the sequencer applies them.
+- **Each note**: `burn(cid, H(note))` holds `BridgeState::Burn(BurnRecord { config_id, note })` (tag 4, then
+  `config_id`, `r`, `memo` (20), `mac` (16), `token` (20), `amount` (32, big-endian), `COut`).
+- **The imported count** is not in this account: each import writes `root(cid, n)` (tag 1, then `config_id`, the
+  chain id (u64), the vault (20), `n` (u64 at offset 61), the root, the record's slot, the block number).
+
 ## Left out (each a v0.4 feature)
 
 Fees (mint, relay, burn and checkpoint fees; the fee schedules and `ImportFees`), caps and buckets, freezes, pauses,
@@ -94,6 +120,13 @@ python3 -I verify.py --lez http://127.0.0.1:3040 --eth http://127.0.0.1:8545 res
 ./testnet.sh plan                                               # FERRATA_NET=testnet ETH_RPC=<Sepolia>: read-only
 ```
 
-The public run (prepared, not sent): `sepolia.sh` (the vault paired with the testnet configuration and its two
-deposits; `--fork` rehearses it), `testnet.sh prepare` and `testnet.sh run` (refused unless
-`FERRATA_TESTNET_SEND=yes`), then `testnet.sh verify`.
+The public run (prepared, not sent): `testnet.sh prepare` (this run's LEZ accounts in the queued sender's wallet
+home, the configuration id, the deposits' commitments), the vault and its two deposits on Sepolia, then
+`testnet.sh run` (refused unless `FERRATA_TESTNET_SEND=yes`): the public steps as **one batch for one block** in
+the format of testnet-ops's queued sender (`bridge03 <run> batch`; `ferrata_ops batch` sends it with explicit nonces
+and tight declared gas: 400,000 for `Init`, 450,000 for `ImportRoot`, 250,000 for the claim, 420,000 for the burn,
+about 1.5 times the measured cycles), then the private claim and the private burn, proven by the wallet; then
+`testnet.sh verify`, which reports a check whose block is not final yet as PENDING. `sepolia.sh` deploys an
+inbound-only vault (mode B, RISC Zero's verifier: nothing releases without a real checkpoint proof) and rehearses on
+a fork (`--fork`); for the live run, branch `testnet-return`'s Sepolia vault (with a stand-in checkpoint verifier,
+so that testnet burns can be released) supersedes it; `sepolia.sh` stays as the inbound-only rehearsal.

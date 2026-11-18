@@ -39,12 +39,15 @@ zero-knowledge release (burn tree rebuilt from blocks, the tip inscribed on Bedr
 the top Bedrock header) ran locally only, on anvil and a Bedrock devnet; on v0.3.1 its tree leaves public burns out
 for the reason in item 1.
 
-**Recommendation.** Do not build the stand-in. Its trust is the rival's (one operator's key), it needs a new guest
-(item 1) and a new vault, and it would show nothing the crown run did not: the v0.4 round trip already released two
-burns on Sepolia from a real `checkpoint_b` proof over real LEZ blocks (with the attestation signed by the run's
-driver, a stand-in labelled as such there). Keep the public testnet to the leg that is trustless today, the inbound
-one (`testnet.sh`), and run the return leg where its rule can hold: on the v0.4 public network, with
-`ferrata_attestor` beside the zone's sequencer (rule (B)), which needs Logos to certify one attestation key per
-deployment. If a public-network release is wanted before that, label it exactly as above and count it as a
-demonstration of the vault's release path, not of the bridge's trust model. The two 0.001 ETH test deposits the
-inbound run escrows stay locked until then: refunds also need a finalised (sunset) checkpoint.
+**Recommendation, and what is being built.** As a demonstration of the vault's release path on public networks, the
+stand-in is reasonable *if labelled exactly as above*; as evidence of the bridge's trust model it adds nothing to
+the crown run, whose v0.4 round trip released two burns on Sepolia from a real `checkpoint_b` proof over real LEZ
+blocks (with the attestation signed by the run's driver, a stand-in labelled as such there). The owner chose to show
+it: branch `testnet-return` builds a Sepolia vault with a stand-in checkpoint verifier and a tool that signs a burn
+root only after reading this bridge's burn accumulator from a node (`lez-v03-return/INTERFACE.md`; the account and
+its layout are in [`README.md`](README.md), "Burn accumulator account"). That reads state instead of rebuilding the
+tree from blocks, which item 1 says a proof cannot do on v0.3.1, so its trust is the signing key's, and the node's
+it reads. The return leg whose rule can hold is v0.4's: on the v0.4 public network, with `ferrata_attestor` beside
+the zone's sequencer (rule (B)), which needs Logos to certify one attestation key per deployment. The inbound-only
+vault of `sepolia.sh` releases nothing (RISC Zero's verifier, no v0.3.1 checkpoint guest): its two 0.001 ETH test
+deposits would stay locked, refunds also needing a finalised (sunset) checkpoint.
