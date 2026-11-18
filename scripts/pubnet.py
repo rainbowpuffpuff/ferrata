@@ -96,7 +96,8 @@ TRANSIENT_RE = re.compile(
     r"non-archive|not available|state .*pruned|pruned|-32001\b|-32005\b|too many requests|rate.?limit|\b429\b|"
     r"\b50[0234]\b|bad gateway|service unavailable|gateway time|timed? ?out|timeout|connection (refused|reset|aborted)|"
     r"remote end closed|broken pipe|temporarily|try again|overloaded|no response|eof occurred|network is unreachable|"
-    r"name or service not known|temporary failure in name resolution|pubnet: transient", re.I)
+    r"name or service not known|temporary failure in name resolution|pubnet: transient|"
+    r"tx not found|transaction not found|receipt not found", re.I)  # asked only for hashes we sent: lag
 PERMANENT_RE = re.compile(
     r"execution reverted|revert|invalid (argument|params|opcode|sender|signature|transaction|chain)|"
     r"insufficient funds|nonce too (low|high)|intrinsic gas|gas required exceeds|exceeds block gas limit|"
@@ -282,11 +283,18 @@ class Net:
         return out
 
     def anywhere(self, method: str, params: list):
-        """The first non-null answer of any endpoint (receipts, transactions by hash, blocks by number or hash): a
-        null from one node (behind, or with its history pruned) is not the chain's answer. None if no endpoint has it;
-        Transient if none answered at all."""
+        """The first non-null answer of any endpoint, every one asked in turn, cooling ones last (receipts,
+        transactions by hash, blocks by number or hash): a null from one node (behind, or with its history pruned) is
+        not the chain's answer. None if no endpoint has it; Transient if none answered at all."""
         answered = False
-        for _, r in self.each(method, params):
+        for url in self.order():
+            try:
+                r = _rpc_once(url, method, params, self.timeout)
+                self.served(url)
+            except (Transient, Permanent) as e:
+                self.failed(url)
+                self.log(f"anywhere {method}: {e}")
+                continue
             answered = True
             if r:
                 return r
@@ -513,13 +521,16 @@ class Journal:
 def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
     """One look at a journaled transaction's fate; records it once known. Returns its state."""
     h = t["hash"]
-    for url, rc in net.each("eth_getTransactionReceipt", [h]):
-        if rc:
-            j.append({"event": "fate", "hash": h, "fate": "mined", "status": rc.get("status"),
-                      "block": int(rc["blockNumber"], 16), "gasUsed": rc.get("gasUsed"), "to": rc.get("to"),
-                      "contractAddress": rc.get("contractAddress")})
-            log(f"{h}: mined in block {int(rc['blockNumber'], 16)}, status {rc.get('status')} ({label(url)})")
-            return "mined"
+    try:
+        rc = net.anywhere("eth_getTransactionReceipt", [h])
+    except Transient:
+        rc = None
+    if rc:
+        j.append({"event": "fate", "hash": h, "fate": "mined", "status": rc.get("status"),
+                  "block": int(rc["blockNumber"], 16), "gasUsed": rc.get("gasUsed"), "to": rc.get("to"),
+                  "contractAddress": rc.get("contractAddress")})
+        log(f"{h}: mined in block {int(rc['blockNumber'], 16)}, status {rc.get('status')}")
+        return "mined"
     nonces = [int(r, 16) for _, r in net.each("eth_getTransactionCount", [sender, "latest"])]
     if t.get("nonce") is not None and nonces and max(nonces) > t["nonce"]:
         # The nonce is used. Ours, on a node that has no receipt yet, or another transaction with the same nonce:
@@ -531,7 +542,10 @@ def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
                   "why": f"the sender's nonce is {max(nonces)} > {t['nonce']} and no endpoint has a receipt"})
         log(f"{h}: replaced (nonce {t['nonce']} used by another transaction)")
         return "replaced"
-    known = any(r for _, r in net.each("eth_getTransactionByHash", [h]))
+    try:
+        known = bool(net.anywhere("eth_getTransactionByHash", [h]))
+    except Transient:
+        known = False
     if t.get("raw"):  # the same bytes again: at most one transaction can come of them
         for url in net.urls:
             try:
@@ -593,6 +607,7 @@ class Proxy:
         self._pin, self._pin_t = None, 0.0
         self.check_chains(chain_id(a.network) if not self.all_loopback else None)
         self.pin_lock, self.send_lock = threading.Lock(), threading.Lock()
+        self.last_bcast: dict[str, float] = {}
 
     def log(self, msg: str) -> None:
         print(f"[{time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
@@ -708,13 +723,13 @@ class Proxy:
                     f[key] = hex(self.pin())
             return self.net.call(method, [f])
         if method in ANYWHERE:
-            for url, r in self.net.each(method, params):
-                if r:
-                    if method == "eth_getTransactionReceipt" and self.sender \
-                            and str(r.get("from", "")).lower() == self.sender:
-                        self.bump(int(r["blockNumber"], 16))
-                    return r
-            return None
+            r = self.net.anywhere(method, params)
+            if r and method == "eth_getTransactionReceipt" and self.sender \
+                    and str(r.get("from", "")).lower() == self.sender:
+                self.bump(int(r["blockNumber"], 16))
+            if r is None and method == "eth_getTransactionReceipt" and params:
+                self.rebroadcast_if_due(params[0])
+            return r
         if method == "eth_sendRawTransaction":
             return self.send_raw(params[0], stage)
         if method == "eth_sendTransaction":
@@ -726,6 +741,20 @@ class Proxy:
             self._pin_t = 0.0  # the local chain moved (evm_mine, evm_increaseTime, ...): pin again
             return r
         return self.net.call(method, params)
+
+    def rebroadcast_if_due(self, h: str) -> None:
+        """A client waits for the receipt of a journaled transaction no endpoint has mined: the same bytes again
+        every PUBNET_REBROADCAST_S (30 s), in case every mempool lost them (a broadcast during an outage). At most one
+        transaction can come of them."""
+        now = time.monotonic()
+        if now - self.last_bcast.get(h, 0.0) < float(os.environ.get("PUBNET_REBROADCAST_S", "30")):
+            return
+        t = self.journal.txs().get(h)
+        if not t or t["state"] in FINAL or not t.get("raw"):
+            return
+        self.last_bcast[h] = now
+        self.log(f"{h}: no receipt yet; the same bytes again")
+        self.broadcast(t["raw"], h, quiet=True)
 
     def agreed_nonce(self) -> tuple[int, int]:
         """(nonce, how many endpoints): the latest and the pending nonce equal on two endpoints (one if only one is
@@ -800,7 +829,7 @@ class Proxy:
             self.event(kind="send", hash=h, nonce=tx["nonce"], stage=stage)
             return self.broadcast(raw_hex, h)
 
-    def broadcast(self, raw_hex: str, h: str) -> str:
+    def broadcast(self, raw_hex: str, h: str, quiet: bool = False) -> str:
         from concurrent.futures import ThreadPoolExecutor
 
         def send(url):  # the same bytes to every endpoint at once: a hanging one delays nothing
@@ -826,9 +855,12 @@ class Proxy:
                     unknown.append(msg[:160])  # perhaps these very bytes, mined through another endpoint
                 else:
                     rejected.append(msg[:160])
+        self.last_bcast[h] = time.monotonic()
         self.journal.append({"event": "broadcast", "hash": h, "accepted_by": accepted, "rejected": rejected,
                              "unknown": unknown})
         self.log(f"broadcast {h}: accepted by {accepted}, rejected {rejected}, unknown {unknown}")
+        if quiet:
+            return h
         if not accepted and not unknown:
             # Every endpoint refused it outright: it is in no mempool. Its fate is known once the chain agrees.
             st = resolve_one(self.net, self.journal, {"hash": h, "nonce": decode_tx(bytes.fromhex(raw_hex[2:]))["nonce"]},

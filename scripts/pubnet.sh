@@ -77,11 +77,14 @@ pubnet_stage() {
     fi
     since="$(date +%s.%N)"
     rc=0
-    "$@" > "$log" 2>&1 || rc=$?
+    # A run that hangs (forge waiting for a receipt no node will give) is ended after PUBNET_ATTEMPT_TIMEOUT_S: what
+    # it sent is in the journal, and its fate is found below before anything else.
+    timeout -k 30 "${PUBNET_ATTEMPT_TIMEOUT_S:-900}" "$@" > "$log" 2>&1 || rc=$?
     # Whatever happened, the fate of every journaled transaction first: nothing is sent while one is unknown.
     pubnet_resolve || { local r=$?; [ "$r" = 3 ] && return 1; _pubnet_say "a transaction's fate is still unknown"; return 75; }
     [ "$rc" = 0 ] && return 0
     cls="$(python3 -I "$PUBNET_PY" classify --events "$PUBNET_DIR/events.jsonl" --since "$since" "$log")"
+    if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then cls=transient; echo "pubnet: the run took longer than ${PUBNET_ATTEMPT_TIMEOUT_S:-900} s and was ended" >> "$log"; fi
     tail -n 12 "$log" | sed -e "s,${PUBNET_FIRST:-@@none@@},<endpoint>,g" >&2
     if [ "$cls" != transient ]; then
       _pubnet_say "the run failed for a permanent reason (log $log); nothing more is sent"

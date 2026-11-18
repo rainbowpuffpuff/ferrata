@@ -58,7 +58,8 @@ jq -n --arg v "$VAULT" --argjson cid "$cid" --arg c0 "$(h 'netfault c0')" --arg 
 export SEPOLIA_RPC_URL="http://127.0.0.1:${P[0]}" PUBNET_SEPOLIA_RPC="http://127.0.0.1:${P[0]},http://127.0.0.1:${P[1]},http://127.0.0.1:${P[2]}"
 export ETH_FROM="$deployer" ETH_KEYSTORE="$(ls "$w"/key/* | head -n 1)" ETH_PASSWORD="$w/pw"
 export PUBNET_LAG=2 PUBNET_TIMEOUT_S=3 PUBNET_REQUEST_BUDGET_S=20 PUBNET_PIN_TTL_S=2 PUBNET_BACKOFF_BASE_S=2 \
-  PUBNET_STAGE_BUDGET_S="${NETFAULT_STAGE_BUDGET_S:-90}" PUBNET_RESOLVE_BUDGET_S=60
+  PUBNET_STAGE_BUDGET_S="${NETFAULT_STAGE_BUDGET_S:-90}" PUBNET_RESOLVE_BUDGET_S=60 PUBNET_ATTEMPT_TIMEOUT_S=240 \
+  PUBNET_REBROADCAST_S=10
 resumes=0
 stage() {
   local k rc=0
