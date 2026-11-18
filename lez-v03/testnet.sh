@@ -139,10 +139,17 @@ payer (fresh key under $LEE_WALLET_HOME_DIR): $PAYER, balance now $(balance)
 program account (chosen before deployment): $(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["program"])' "$RUN/state.json")
 
 == funds
-The payer pays every fee. For each transaction the sequencer reserves gas_limit x base_fee_exec + bytes x base_fee_stor
-before running it and refunds what it does not charge in the same transaction; the payer must hold the largest reserve
-on top of the fees so far. Fund the payer with at least 150,000,000 native units (the plan's fees, about 21M at base
-fee 8, plus the largest reserve at a doubled base fee, with margin).
+$(python3 -I - "$data/plan.json" <<'PY'
+import json, sys
+p = json.load(open(sys.argv[1]))
+fees, reserve = int(p["fees_total"]), int(p["largest_reserve_at_base_fee_8"])
+need = (fees + 2 * reserve) * 3 // 2
+print(f"The plan's fees: {fees:,} native units at the simulated base fees; the largest reserve {reserve:,} at base fee 8.")
+print("For each transaction the sequencer reserves gas_limit x base_fee_exec + bytes x base_fee_stor before running it and")
+print("refunds what it does not charge in the same transaction, so the payer must hold that reserve on top of the fees so far.")
+print(f"Fund the payer with at least {need:,} native units (the fees plus the largest reserve at a doubled base fee, x1.5).")
+PY
+)
 How the LEZ docs say to get testnet funds (logos-docs, docs/lez/get-started/run-lez-wallet-via-cli.md, "Fund the sender
 account"): bridge tokens from the Logos Blockchain with a channel deposit (Basecamp; in Metadata, the payer's account id
 without its Public/ prefix), or have another testnet user transfer native tokens to it. This script never asks a faucet

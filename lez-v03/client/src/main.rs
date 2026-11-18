@@ -309,6 +309,11 @@ fn new_wallet(run: &Path, url: &str) -> Result<()> {
     let header = w.create_new_account_public(None).0;
     let segments: Vec<AccountId> = (0..segment_count()?).map(|_| w.create_new_account_public(None).0).collect();
     w.store_persistent_data()?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(home.join("storage.json"), fs::Permissions::from_mode(0o600))?;
+    }
     let mut s = read_or_empty(&run.join("state.json"))?;
     s["payer"] = json!(payer.to_string());
     s["program"] = json!(header.to_string());

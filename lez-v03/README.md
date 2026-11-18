@@ -126,7 +126,11 @@ funds needed and how the LEZ docs say to get them; `run` (refuses unless `FERRAT
 checkpoint, two finality updates and the vault's proofs, signs everything with explicit nonces and declared limits of
 the simulated gas plus 3% and 30,000, and queues it at once; `resend` sends the same signed bytes again (after a
 rewind); `verify` re-reads every verdict from state and the explorer (PENDING while a block is Pending on Bedrock).
-The same sequence is written as testnet-ops's `ferrata_ops batch` file (`batch.json`). Read-only calls only so far:
+The same sequence is written as testnet-ops's `ferrata_ops batch` file (`batch.json`). `./testnet.sh plan` on 18
+November ([`results/public-plan.txt`](results/public-plan.txt)): the eleven transactions signed for a fresh payer
+(`yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R`, program account `J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1`) on the
+local run's data and simulated: the same three blocks, 211,470,107 native units of fees at the simulated base fees
+(8, 9, 10), the largest reserve 65,687,096 at base fee 8; the payer needs at least 514,266,448. Read-only calls only so far:
 the public testnet answered `getLastBlockId` 83005 and its fee state (base fees 8 and 8, caps 10,000,000 and
 1,000,000) on 18 November; on that day it made a block every few hours and rewound one. **Nothing has been sent to it.**
 
