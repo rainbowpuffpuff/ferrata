@@ -424,7 +424,8 @@ struct Probe {
     report: TxReport,
     /// Cycles of the transitions at the holder (the `Mint` of a claim; the debit of a burn).
     at_holder: u64,
-    /// Gas of the setup steps (for the attacker's cost).
+    /// Gas of the setup steps (for the attacker's cost on the deployed program).
+    #[cfg_attr(feature = "bridge-next", allow(dead_code))]
     register_gas: u64,
 }
 

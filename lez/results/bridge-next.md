@@ -7,8 +7,9 @@ vault pins it.** The deployed program (`0xccde6171…71dd`, the image the live S
 still has both issues, until milestone B1 deploys this one with a new vault (a new `configId`: the image id is part
 of it).
 
-- **Where:** the Modal build box `ferrata-wt-bridge-next`, 18 November 2026 15:01–15:25 UTC (two jobs:
-  [`bridge-next/job1-tests.log`](bridge-next/job1-tests.log), [`bridge-next/reproduce/`](bridge-next/reproduce/status.txt));
+- **Where:** the Modal build box `ferrata-wt-bridge-next`, 18 November 2026 15:01–15:48 UTC (four jobs:
+  [`bridge-next/job1-tests.log`](bridge-next/job1-tests.log), [`bridge-next/reproduce/`](bridge-next/reproduce/status.txt),
+  [`bridge-next/job3-tests.log`](bridge-next/job3-tests.log), clippy);
   dev mode (the harness executes every transition and meters its cycles as LEZ does; no proofs).
 - **What is placed, not executed:** as in [`tenant.md`](tenant.md), the rogue configuration's record and the other
   configurations' holdings of R2 (below). Everything else is executed.
@@ -132,6 +133,13 @@ its own configurations only.
 | `privacy_suite.rs` (the LEZ half) | 1 of 1: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive), the bridge core recovers the 20 burn notes | `target/privacy-next/` on the box (not committed, as for the deployed program) |
 | `tenant.rs` | 3 of 3 (the second build's three tests above) | [`bridge-next/tenant/`](bridge-next/tenant/r1.txt) |
 | bridge-wire's unit tests with `config-keyed` | 2 of 2 | |
+
+Job 3 re-ran all of it, both builds, on the harness's final address helpers (commit `7b92fc25`, one test at a time):
+the same counts pass, and every record came out byte for byte as committed
+([`bridge-next/job3-tests.log`](bridge-next/job3-tests.log)). Clippy on `harness` and `ferrata-lez-bridge-wire`,
+all targets, both builds (with `RISC0_SKIP_BUILD=1`: under clippy-driver risc0-build's guest builds fail, which is
+not this code): no warning in either crate after one `allow(dead_code)` on a field that only the deployed program's R2
+test reads (job 4, on the final commit); rustfmt clean.
 
 One assertion differs between the builds and says so: `bridge_inbound.rs` expects the payer's holder account to hold
 two configurations' holdings on the deployed program and one each in `holder(A, payer)` and `holder(B, payer)` on the
