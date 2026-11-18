@@ -346,11 +346,17 @@ impl Default for Chain {
 impl Chain {
     /// LEZ v0.3.1's testnet genesis (no cross-zone programs), the test block producer, one payer.
     pub fn new() -> Self {
+        Self::with_accounts(vec![])
+    }
+
+    /// [`Chain::new`] with `extra` public accounts at genesis (to replay another chain's payer at its nonce).
+    pub fn with_accounts(extra: Vec<(AccountId, lee_core::account::Account)>) -> Self {
         let payer_key = derived_key("harness/payer");
         let payer = account_of(&payer_key);
         let mut state = testnet_initial_state::initial_state(false)
             .with_public_accounts([common::test_utils::producer_seed()])
-            .with_public_account_balances([(payer, PAYER_BALANCE)]);
+            .with_public_account_balances([(payer, PAYER_BALANCE)])
+            .with_public_accounts(extra);
         let genesis = common::test_utils::produce_dummy_block(1, None, vec![]);
         apply_block(None, &genesis, &mut state).expect("genesis applies");
         Self { state, tip: Tip::from(&genesis), next_block: 2, last_timestamp: 100, payer_key, payer, reports: vec![] }
@@ -450,6 +456,83 @@ impl Chain {
         report.status = status;
         self.reports.push(report.clone());
         report
+    }
+
+    /// Settle `txs` (label, signed transaction, declared gas limit) as LEZ v0.3.1's block builder
+    /// groups queued transactions (`lez/sequencer/core/src/lib.rs` 1783-1840): in order, a transaction
+    /// joins the current block only if the execution gas charged so far in the block plus its
+    /// *declared* limit is at most `MAX_GAS_EXEC` and the bytes fit `MAX_GAS_STOR`; otherwise it, and
+    /// everything behind it, waits for the next block. A transaction the settlement rejects (a nonce
+    /// mismatch, a fee it cannot reserve) is dropped, as the builder drops it. Every block is then
+    /// derived and applied as in [`Chain::settle`].
+    pub fn settle_queued(&mut self, txs: &[(String, PublicTransaction, u64)], timestamp_ms: u64) -> Vec<TxReport> {
+        use chain_state::apply::{opening_fee_state, settle_transaction};
+        let mut out = Vec::with_capacity(txs.len());
+        let mut i = 0;
+        while i < txs.len() {
+            let block_id = self.next_block;
+            let timestamp = timestamp_ms.max(self.last_timestamp + 1);
+            let opening = opening_fee_state(&self.state);
+            let mut scratch = self.state.clone();
+            let mut summary = fee_core::BlockFeeSummary::default();
+            let mut included: Vec<LeeTransaction> = vec![];
+            let mut reports: Vec<TxReport> = vec![];
+            while i < txs.len() {
+                let (label, tx, gas_limit) = &txs[i];
+                let wrapped = LeeTransaction::Public(tx.clone());
+                let bytes = borsh::to_vec(&wrapped).unwrap().len() as u64;
+                if summary.gas_used_exec + gas_limit > MAX_GAS_EXEC || summary.gas_used_stor + bytes > fee_core::market::MAX_GAS_STOR {
+                    if included.is_empty() {
+                        // Fits no block, not even an empty one: the builder drops it.
+                        out.push(TxReport { label: label.clone(), block: 0, status: "dropped: over the block caps".into(), exit: None, exec_gas: 0, stor_gas: bytes, cycles: 0, gas_limit: *gas_limit, fee: 0, base_fee_exec: opening.base_fee_exec, base_fee_stor: opening.base_fee_stor, timestamp_ms: timestamp });
+                        i += 1;
+                        continue;
+                    }
+                    break;
+                }
+                let pure = lee::ValidatedStateDiff::from_public_transaction_with_cycle_budget(tx, &scratch, block_id, timestamp, *gas_limit);
+                let (status, exit, cycles) = match &pure {
+                    Ok((_, charge)) => ("applied".to_owned(), None, charge.cycles),
+                    Err(LeeError::ProgramExitedWithCode { code, cycles }) => ("refused".to_owned(), Some(*code), *cycles),
+                    Err(e) => (format!("reverted: {e}"), None, 0),
+                };
+                drop(pure);
+                let payer = tx.message().fee.as_ref().map(|f| f.payer).unwrap_or(self.payer);
+                let paid_before = scratch.get_account_by_id(payer).data.native_balance().unwrap_or(0);
+                let (exec_before, stor_before) = (summary.gas_used_exec, summary.gas_used_stor);
+                let mut r = TxReport { label: label.clone(), block: block_id, status, exit, exec_gas: 0, stor_gas: bytes, cycles, gas_limit: *gas_limit, fee: 0, base_fee_exec: opening.base_fee_exec, base_fee_stor: opening.base_fee_stor, timestamp_ms: timestamp };
+                match settle_transaction(&wrapped, &mut scratch, &opening, block_id, timestamp, included.len() as u64, &mut summary) {
+                    Ok(_) => {
+                        r.exec_gas = summary.gas_used_exec - exec_before;
+                        r.stor_gas = summary.gas_used_stor - stor_before;
+                        r.fee = paid_before - scratch.get_account_by_id(payer).data.native_balance().unwrap_or(0);
+                        included.push(wrapped);
+                    }
+                    Err(e) => {
+                        r.block = 0;
+                        r.status = format!("dropped: {e}");
+                    }
+                }
+                reports.push(r);
+                i += 1;
+            }
+            if included.is_empty() {
+                out.extend(reports);
+                continue;
+            }
+            let (summary, payout) = derive_block_summary(&self.state, &included, block_id, timestamp).expect("the block's transactions settle");
+            let mut transactions = included;
+            transactions.push(LeeTransaction::Public(fee_invocation(summary, payout, common::test_utils::producer_account_for_testing())));
+            transactions.push(LeeTransaction::Public(clock_invocation(block_id, timestamp)));
+            let block = HashableBlockData { block_id, prev_block_hash: self.tip.hash, timestamp, transactions }.into_pending_block();
+            apply_block(Some(&self.tip), &block, &mut self.state).expect("a derived block applies");
+            self.tip = Tip::from(&block);
+            self.next_block += 1;
+            self.last_timestamp = timestamp;
+            self.reports.extend(reports.iter().cloned());
+            out.extend(reports);
+        }
+        out
     }
 
     pub fn submit(

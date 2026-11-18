@@ -12,7 +12,7 @@
                                                   against HASH) and eth_getProof of ADDR's SLOTS (comma-separated)
                                                   at it: proofs/<SLOT>/{block.json,header.rlp,proof.json}
 
-Every request goes to a public endpoint without an API key, with the User-Agent `ferrata-v03-fetch` and nothing
+Every request goes to a public endpoint without an API key, with the generic User-Agent `curl/8` and nothing
 else about who asks; each is listed in RUN/requests.tsv. Responses are stored byte for byte (the RLP header is
 rebuilt from the block's JSON by `scripts/fetch-mainnet-e2e.py`'s `header_rlp`, then checked). No transaction is
 sent anywhere.
@@ -38,7 +38,7 @@ def load(name, file):
 
 e2e = load("fetch_mainnet_e2e", "fetch-mainnet-e2e.py")
 g = load("fetch_sepolia_gloas", "fetch-sepolia-gloas.py")
-e2e.UA = "ferrata-v03-fetch"
+e2e.UA = "curl/8"  # a generic User-Agent: nothing about who asks
 
 LODESTAR = "https://lodestar-sepolia.chainsafe.io"
 SECOND = "https://ethereum-sepolia-beacon-api.publicnode.com"
