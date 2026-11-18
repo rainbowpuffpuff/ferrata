@@ -1,10 +1,10 @@
 # The bridge program on FerrataVault's own storage (`harness/tests/bridge_vault_storage.rs`)
 
-Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`. The blocks P and Q hold exactly the storage FerrataVault v5 wrote in `vault/test/RegistryStorage.t.sol` (`vault/test/vectors/registry-storage.json`: 139 and 149 slots, 3 and 6 leaves); `Init` under a synthetic block (the pairing is `bridge_inbound.rs`'s subject). Every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da`. The blocks P and Q hold exactly the storage FerrataVault v5 wrote in `vault/test/RegistryStorage.t.sol` (`vault/test/vectors/registry-storage.json`: 139 and 149 slots, 3 and 6 leaves); `Init` under a synthetic block (the pairing is `bridge_inbound.rs`'s subject). Every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init (pairing under a synthetic block: slot 2 = configId) | bridge Init 42,488 → Attest 75,407 → bridge (reply) 39,419 | 157,314 | 3% | 1,731 | 1,272,360 | applied |
+| 1 | Init (pairing under a synthetic block: slot 2 = configId) | bridge Init 42,567 → Attest 75,407 → bridge (reply) 39,419 | 157,393 | 3% | 1,731 | 1,272,992 | applied |
 | 2 | Register ETH with lezUnit ×10 (not the vault's entry) | bridge Register 106,255 → Attest 220,937 → bridge (reply) 50,657 | 377,849 | 8% | 4,974 | 3,062,584 | refused: exit 247 (IMPORT_MISMATCH) |
 | 3 | Register ETH with schedule 0 a second later | bridge Register 106,063 → Attest 220,937 → bridge (reply) 53,386 | 380,386 | 8% | 4,974 | 3,082,880 | refused: exit 247 (IMPORT_MISMATCH) |
 | 4 | Register ETH: the vault's entry and schedule 0 at P | bridge Register 106,063 → Attest 220,937 → bridge (reply) 74,463 → bridge WriteToken 32,147 | 433,610 | 9% | 4,974 | 3,508,672 | applied |
@@ -32,7 +32,7 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Init (pairing under a synthetic block: slot 2 = configId) | bridge Init | 42,488 | 1 | 1,278 | 1,204 | 0 | 2,706 | 390 | 0 |
+| Init (pairing under a synthetic block: slot 2 = configId) | bridge Init | 42,567 | 1 | 1,278 | 1,204 | 0 | 2,706 | 390 | 0 |
 | Init (pairing under a synthetic block: slot 2 = configId) | Attest | 75,407 | 1 | 1,444 | 941 | 365 | 1,907 | – | 0 |
 | Init (pairing under a synthetic block: slot 2 = configId) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
 | Register ETH with lezUnit ×10 (not the vault's entry) | bridge Register | 106,255 | 1 | 5,086 | 4,448 | 564 | 10,393 | 950 | 0 |

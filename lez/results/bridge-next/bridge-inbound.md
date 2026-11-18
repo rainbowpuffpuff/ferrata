@@ -1,13 +1,13 @@
 # The bridge program's inbound leg (`harness/tests/bridge_inbound.rs`)
 
-Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init A: vault A's slot 2 holds configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419 | 171,027 | 3% | 1,946 | 1,383,784 | applied |
-| 2 | Init B (another configuration, vault B) | bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419 | 168,316 | 3% | 1,882 | 1,361,584 | applied |
-| 3 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 32,198 | 163,806 | 3% | 1,946 | 1,326,016 | refused: exit 246 (PAIRING_MISMATCH) |
-| 4 | Init A again | bridge Init 39,401 | 39,401 | 1% | 1,946 | 330,776 | refused: exit 244 (ALREADY_WRITTEN) |
+| 1 | Init A: vault A's slot 2 holds configId(A) | bridge Init 44,897 → Attest 86,790 → bridge (reply) 39,419 | 171,106 | 3% | 1,946 | 1,384,416 | applied |
+| 2 | Init B (another configuration, vault B) | bridge Init 44,277 → Attest 84,699 → bridge (reply) 39,419 | 168,395 | 3% | 1,882 | 1,362,216 | applied |
+| 3 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init 44,897 → Attest 86,790 → bridge (reply) 32,198 | 163,885 | 3% | 1,946 | 1,326,648 | refused: exit 246 (PAIRING_MISMATCH) |
+| 4 | Init A again | bridge Init 39,481 | 39,481 | 1% | 1,946 | 331,416 | refused: exit 244 (ALREADY_WRITTEN) |
 | 5 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register 73,907 → Attest 151,273 → bridge (reply) 74,463 → bridge WriteToken 32,147 | 331,790 | 7% | 2,747 | 2,676,296 | applied |
 | 6 | Register ETH (B) | bridge Register 76,851 → Attest 156,184 → bridge (reply) 74,463 → bridge WriteToken 32,147 | 339,645 | 7% | 2,770 | 2,739,320 | applied |
 | 7 | ImportRoot A: slots 0 and 1 at block 100 (5 leaves) | bridge ImportRoot 50,128 → Attest 109,870 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 230,731 | 5% | 1,895 | 1,861,008 | applied |
@@ -41,16 +41,16 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Init A: vault A's slot 2 holds configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A: vault A's slot 2 holds configId(A) | bridge Init | 44,897 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
 | Init A: vault A's slot 2 holds configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
 | Init A: vault A's slot 2 holds configId(A) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
-| Init B (another configuration, vault B) | bridge Init | 44,198 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
+| Init B (another configuration, vault B) | bridge Init | 44,277 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
 | Init B (another configuration, vault B) | Attest | 84,699 | 1 | 1,595 | 1,092 | 365 | 2,058 | – | 0 |
 | Init B (another configuration, vault B) | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
-| Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge Init | 44,897 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
 | Init A' (vault A, another fee recipient): slot 2 is configId(A) | bridge (reply) | 32,198 | 1 | 898 | 370 | 390 | 0 | – | 246 |
-| Init A again | bridge Init | 39,401 | 1 | 2,122 | 1,484 | 564 | 0 | – | 244 |
+| Init A again | bridge Init | 39,481 | 1 | 2,122 | 1,484 | 564 | 0 | – | 244 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge Register | 73,907 | 1 | 2,859 | 2,221 | 564 | 5,939 | 950 | 0 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | Attest | 151,273 | 1 | 2,536 | 2,033 | 365 | 3,350 | – | 0 |
 | Register ETH (A): entry and schedule 0 attested at block 100 | bridge (reply) | 74,463 | 1 | 1,809 | 721 | 950 | 3,345 | 564 | 0 |

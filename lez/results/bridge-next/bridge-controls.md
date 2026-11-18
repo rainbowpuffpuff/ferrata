@@ -1,11 +1,11 @@
 # Registry, fees, caps, freezes and Sunset (`harness/tests/bridge_controls.rs`)
 
-Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
-| 1 | Init A | bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419 | 171,027 | 3% | 1,946 | 1,383,784 | applied |
-| 2 | Init B | bridge Init 44,198 → Attest 84,699 → bridge (reply) 39,419 | 168,316 | 3% | 1,882 | 1,361,584 | applied |
+| 1 | Init A | bridge Init 44,897 → Attest 86,790 → bridge (reply) 39,419 | 171,106 | 3% | 1,946 | 1,384,416 | applied |
+| 2 | Init B | bridge Init 44,277 → Attest 84,699 → bridge (reply) 39,419 | 168,395 | 3% | 1,882 | 1,362,216 | applied |
 | 3 | Tick A: block 102's record | bridge Tick 34,514 → Read 12,268 → bridge (reply) 33,846 | 80,628 | 2% | 505 | 649,064 | applied |
 | 4 | Tick B: block 102's record | bridge Tick 34,514 → Read 12,268 → bridge (reply) 33,846 | 80,628 | 2% | 505 | 649,064 | applied |
 | 5 | Register ETH (A): entry, schedules 0 and 1, count at block 100 | bridge Register 73,907 → Attest 151,273 → bridge (reply) 74,463 → bridge WriteToken 32,147 | 331,790 | 7% | 2,747 | 2,676,296 | applied |
@@ -87,10 +87,10 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 
 | transaction | handler | cycles | segments | input bytes (ReceiveInput) | of which message | of which pre-state | journal bytes | post-state bytes | exit |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Init A | bridge Init | 44,818 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
+| Init A | bridge Init | 44,897 | 1 | 1,493 | 1,419 | 0 | 3,136 | 390 | 0 |
 | Init A | Attest | 86,790 | 1 | 1,659 | 1,156 | 365 | 2,122 | – | 0 |
 | Init A | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
-| Init B | bridge Init | 44,198 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
+| Init B | bridge Init | 44,277 | 1 | 1,429 | 1,355 | 0 | 3,008 | 390 | 0 |
 | Init B | Attest | 84,699 | 1 | 1,595 | 1,092 | 365 | 2,058 | – | 0 |
 | Init B | bridge (reply) | 39,419 | 1 | 898 | 370 | 390 | 1,487 | 564 | 0 |
 | Tick A: block 102's record | bridge Tick | 34,514 | 1 | 681 | 43 | 564 | 1,354 | 575 | 0 |

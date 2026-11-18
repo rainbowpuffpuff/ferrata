@@ -1,6 +1,6 @@
 # Burns (`harness/tests/bridge_burn.rs`); the private burn in RISC Zero dev mode
 
-Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f`.
+Bridge program image `c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da`.
 
 ## Public burns and refusals
 
@@ -10,7 +10,7 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 | 2 | Burn: the same note again | bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 52,736 → bridge Admit 35,566 → bridge Burn 22,940 | 166,383 | 3% | 839 | 1,337,776 | refused: exit 244 (ALREADY_WRITTEN) |
 | 3 | Burn 0.5 ETH (not a denomination) | bridge Burn 24,804 → bridge Burn 30,337 → bridge Burn 32,513 | 87,654 | 2% | 839 | 707,944 | refused: exit 251 (NOT_REGISTERED) |
 | 4 | Burn 1 unit of another token (no holding of it) | bridge Burn 24,804 → bridge Burn 25,620 | 50,424 | 1% | 839 | 410,104 | refused: exit 254 (INSUFFICIENT_BALANCE) |
-| 5 | Burn 10 ETH with 9 held | bridge Burn 24,804 → bridge Burn 25,770 | 50,574 | 1% | 839 | 411,304 | refused: exit 254 (INSUFFICIENT_BALANCE) |
+| 5 | Burn 10 ETH with 9 held | bridge Burn 24,811 → bridge Burn 25,770 | 50,581 | 1% | 839 | 411,360 | refused: exit 254 (INSUFFICIENT_BALANCE) |
 | 6 | Burn at the vector's destination, not signed by it | bridge Burn 16,853 | 16,853 | 0% | 839 | 141,536 | refused: exit 253 (NOT_AUTHORIZED) |
 | 7 | Burn under a configuration the payer holds nothing of | bridge Burn 24,804 → bridge Burn 21,388 | 46,192 | 1% | 839 | 376,248 | refused: exit 254 (INSUFFICIENT_BALANCE) |
 | 8 | Burn sent to the burn account itself | bridge Burn 16,986 | 16,986 | 0% | 648 | 141,072 | refused: exit 243 (WRONG_SENDER) |
@@ -39,7 +39,7 @@ Bridge program image `7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56a
 | Burn 0.5 ETH (not a denomination) | bridge Burn | 32,513 | 1 | 1,354 | 185 | 1,031 | 0 | – | 251 |
 | Burn 1 unit of another token (no holding of it) | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
 | Burn 1 unit of another token (no holding of it) | bridge Burn | 25,620 | 1 | 397 | 185 | 74 | 0 | – | 254 |
-| Burn 10 ETH with 9 held | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 10 ETH with 9 held | bridge Burn | 24,811 | 1 | 259 | 185 | 0 | 569 | – | 0 |
 | Burn 10 ETH with 9 held | bridge Burn | 25,770 | 1 | 397 | 185 | 74 | 0 | – | 254 |
 | Burn at the vector's destination, not signed by it | bridge Burn | 16,853 | 1 | 259 | 185 | 0 | 0 | – | 253 |
 | Burn under a configuration the payer holds nothing of | bridge Burn | 24,804 | 1 | 259 | 185 | 0 | 569 | – | 0 |
@@ -84,4 +84,4 @@ One LEZ block holding the transactions below (the second burn marked reverted, a
 | private claim (leaf 5) | PrivateToPublic | 167 | ignored (variant 4 and up) | no |
 | private burn | PrivateToPublic | 185 | Burn | yes |
 
-NOut v2 of the first note: `88e67ac0a9c6f719ebb037323689fca35abbd7a70952b2e2fab257672d8768e3`.
+NOut v2 of the first note: `6c7221c50842ecf7255b4a4cf4af9ac6130facda5d8dfdf94516ab2a0c549b01`.

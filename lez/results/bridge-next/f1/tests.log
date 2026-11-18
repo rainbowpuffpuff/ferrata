@@ -1,0 +1,152 @@
+# Box job 1 (lez/results/bridge-next/f1/scripts/job1.sh), Modal build box ferrata-wt-bridge-next2, 18 Nov 2026;
+# LEZ v0.4.0-rc1 harness, RISC0_DEV_MODE=1. Lines kept from each step's log: test binaries, results, F1 prints.
+
+## step status (name, exit code, seconds, end time UTC)
+repro exit 0 469 s 18:13:43
+compare exit 0 0 s 18:13:43
+next exit 0 55 s 18:14:38
+ids15 exit 0 1 s 18:14:39
+second build: c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da
+634:const SECOND_BRIDGE: &str = "c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da";
+wire-next exit 0 31 s 18:15:11
+wire-default exit 0 1 s 18:15:12
+norun-default exit 0 55 s 18:16:07
+norun-next exit 0 24 s 18:16:31
+f1-default exit 0 10 s 18:16:41
+f1-next exit 0 10 s 18:16:51
+redteam-init-default exit 0 29 s 18:17:20
+redteam-init-next exit 0 35 s 18:17:55
+suites-next exit 0 224 s 18:21:39
+tenant-next exit 0 63 s 18:22:42
+privacy-next exit 0 86 s 18:24:08
+secfix-default exit 0 17 s 18:24:25
+clippy-wire exit 0 14 s 18:24:39
+clippy-harness-next exit 0 25 s 18:25:04
+clippy-harness-default exit 0 5 s 18:25:09
+ALL DONE 18:25:09
+
+## wire-next
+     Running unittests src/lib.rs (target/debug/deps/ferrata_lez_bridge_wire-406d84c22937157f)
+test tests::a_header_travels_in_front_of_the_account_proof ... ok
+test config_keyed::tests::init_refuses_the_admin_as_freeze_authority ... ok
+test config_keyed::tests::keyed_by_the_configuration ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+## wire-default
+     Running unittests src/lib.rs (target/debug/deps/ferrata_lez_bridge_wire-f4a59f1a624c3160)
+test tests::a_header_travels_in_front_of_the_account_proof ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+## f1-default
+     Running tests/bridge_secfix.rs (target/debug/deps/bridge_secfix-babd5c741c302d3a)
+F1 (deployed build): Init with the admin as freeze authority: ok true, exit None, execution gas 170246
+test f1_init_refuses_the_admin_as_freeze_authority ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 1.72s
+
+## f1-next
+     Running tests/bridge_secfix.rs (target/debug/deps/bridge_secfix-5c13ecf4e433d8ad)
+F1 (second build): Init with the admin as freeze authority: ok false, exit Some(240), execution gas 17402
+test f1_init_refuses_the_admin_as_freeze_authority ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 1.33s
+
+## redteam-init-default
+     Running tests/redteam_bridge.rs (target/debug/deps/redteam_bridge-574a50c0375cb00d)
+redteam_bridge.init: {"MISMATCH": 1, "PASS": 6} -> <worktree>/lez/harness/../results/redteam-2026-11-18/redteam_bridge.init.json
+test init ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 20.36s
+
+## redteam-init-next
+     Running tests/redteam_bridge.rs (target/debug/deps/redteam_bridge-4c31a2c717123004)
+redteam_bridge.init: {"PASS": 7} -> <worktree>/lez/harness/../results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json
+test init ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 26.02s
+
+## suites-next
+     Running tests/bridge_burn.rs (target/debug/deps/bridge_burn-d78c6d45b439204a)
+test burns_and_what_the_checkpoint_collects ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.09s
+     Running tests/bridge_controls.rs (target/debug/deps/bridge_controls-1a138778cf71b240)
+test registry_fees_caps_freezes_and_sunset ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 50.17s
+     Running tests/bridge_inbound.rs (target/debug/deps/bridge_inbound-479c8dd47f0b5b2c)
+test the_bridge_codes_are_its_own_block ... ok
+test inbound_under_a_gloas_record ... ok
+test inbound_configuration_import_and_plaintext_claim ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 19.26s
+     Running tests/bridge_private.rs (target/debug/deps/bridge_private-0ff5ba748d8f3f80)
+test a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read ... ok
+test a_private_claim_to_a_public_destination_and_the_refusals ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 11.74s
+     Running tests/bridge_roles.rs (target/debug/deps/bridge_roles-4bdbb2020d272a94)
+test a_private_holder_transfers ... ok
+test transfers_handover_multisig_watchers_and_keyless_sunset ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 43.14s
+     Running tests/bridge_secfix.rs (target/debug/deps/bridge_secfix-5c13ecf4e433d8ad)
+test c1_f_a_mint_is_accepted_only_at_its_holder ... ok
+F1 (second build): Init with the admin as freeze authority: ok false, exit Some(240), execution gas 17402
+test h1_b_import_with_a_sender_is_refused ... ok
+test f1_init_refuses_the_admin_as_freeze_authority ... ok
+test h1_a_nested_import_is_refused ... ok
+test c1_a_a_claim_cannot_block_init ... ok
+test c1_b_a_claim_cannot_block_register ... ok
+test c1_d_a_claim_cannot_block_an_import ... ok
+test c1_c_a_claim_cannot_destroy_a_pending_claim ... ok
+test c1_e_a_claim_cannot_block_a_burn ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.34s
+     Running tests/bridge_time.rs (target/debug/deps/bridge_time-5403aca95a2a2fd0)
+test freezes_and_caps_follow_attested_time_only ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 32.29s
+     Running tests/bridge_vault_storage.rs (target/debug/deps/bridge_vault_storage-b644ed586a6cf995)
+test the_bridge_reads_the_vaults_own_registry_fees_and_tree ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 20.66s
+
+## tenant-next
+     Running tests/tenant.rs (target/debug/deps/tenant-9db5f97abd7b54d0)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 55.47s
+
+## privacy-next
+     Running tests/privacy_suite.rs (target/debug/deps/privacy_suite-bcd8e297b672b006)
+privacy suite, LEZ half: proofs dev; bridge image c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da
+privacy suite, LEZ half: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive) in /target/privacy-next
+test privacy_suite_lez_half ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 76.87s
+
+## secfix-default
+     Running tests/bridge_secfix.rs (target/debug/deps/bridge_secfix-babd5c741c302d3a)
+test c1_f_a_mint_is_accepted_only_at_its_holder ... ok
+F1 (deployed build): Init with the admin as freeze authority: ok true, exit None, execution gas 170246
+test h1_b_import_with_a_sender_is_refused ... ok
+test f1_init_refuses_the_admin_as_freeze_authority ... ok
+test h1_a_nested_import_is_refused ... ok
+test c1_a_a_claim_cannot_block_init ... ok
+test c1_d_a_claim_cannot_block_an_import ... ok
+test c1_b_a_claim_cannot_block_register ... ok
+test c1_c_a_claim_cannot_destroy_a_pending_claim ... ok
+test c1_e_a_claim_cannot_block_a_burn ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.51s
+
+## clippy (RISC0_SKIP_BUILD=1): warnings by location
+clippy-wire: 1
+  --> <worktree>/crates/ferrata-core/src/bls/mod.rs:107:15  function `check_shape` is never used
+clippy-harness-next: 10
+  --> harness/tests/redteam_lc.rs:732:29  very complex type used. Consider factoring parts into `type` definitions
+  --> harness/tests/redteam_lc.rs:1209:9  unneeded late initialization
+  --> harness/tests/redteam_bridge.rs:1664:14  unused variable: `cid_a`
+  --> harness/tests/redteam_bridge.rs:589:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:625:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:838:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:890:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:1516:54  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:1540:31  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_attest.rs:367:36  using `chunks_exact` with a constant chunk size
+clippy-harness-default: 10
+  --> harness/tests/redteam_bridge.rs:1664:14  unused variable: `cid_a`
+  --> harness/tests/redteam_attest.rs:367:36  using `chunks_exact` with a constant chunk size
+  --> harness/tests/redteam_bridge.rs:589:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:625:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:838:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:890:41  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:1516:54  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_bridge.rs:1540:31  unnecessary use of `clone` to create a slice from a reference
+  --> harness/tests/redteam_lc.rs:732:29  very complex type used. Consider factoring parts into `type` definitions
+  --> harness/tests/redteam_lc.rs:1209:9  unneeded late initialization
