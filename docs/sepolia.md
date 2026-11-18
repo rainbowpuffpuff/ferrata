@@ -53,7 +53,10 @@ transaction `0x0a5c3a64b6357c76e273f3ecd91ad58078f9c872f3ab90e68dba521de0589f12`
 Deposit 0 was claimed on LEZ by the plaintext path: on a LEZ v0.4.0-rc1 sequencer we run, from a capture
 of Sepolia's finalized state, with the frozen bridge program, not this tree's
 ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md), "The real session"). No public LEZ network runs
-any of it: LEZ testnet 0.4 does not exist, and the round trip's LEZ side was a devnet we ran (one validator). The prototypes exist to measure and to test the design; the audit
+any of it: LEZ testnet 0.4 does not exist, and the round trip's LEZ side was a devnet we ran (one validator). The public
+LEZ testnet runs v0.3.1; an experimental port of the bridge's inbound leg and burn to it
+([`lez-v03-bridge/`](../lez-v03-bridge/README.md)) ran through v0.3.1's state machine, on Sepolia's real storage proofs, and
+on a local v0.3.1 sequencer with real proofs; its public run is prepared for the owner, not sent by us. The prototypes exist to measure and to test the design; the audit
 is planned for the code the proposal would deliver. A security review by an agent in a separate context
 (11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the frozen bridge program
 of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing

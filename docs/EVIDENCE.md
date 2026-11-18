@@ -159,7 +159,9 @@ side is a devnet we ran (LEZ testnet 0.4 does not exist).
   releases): on `integration5`'s programs (row 41, after three rehearsals on forks, row 31) and on the final programs
   (row 91, after the fork rehearsals of row 83). Its LEZ side is a devnet we ran: one
   validator, one channel key (n = t = 1), leader proofs in dev mode, the attestation signed by the run's driver; no
-  public LEZ network exists (LEZ testnet 0.4 does not). The vault there has testnet parameters (a 1-day revocation
+  public LEZ v0.4 network exists (LEZ testnet 0.4 does not). The public LEZ testnet runs v0.3.1: an experimental port of
+  the inbound leg and the burns to it ran on a local v0.3.1 sequencer with real proofs, and its public run is prepared,
+  not sent ([`lez-v03-bridge/`](../lez-v03-bridge/README.md), rows 132-133); its return leg is a design note there. The vault there has testnet parameters (a 1-day revocation
   window, a 120 s release delay, no caps, no watchers, a freeze authority without a key holder), not the proposal's
   production values, and one throwaway account was depositor, recipient and prover.
 - **The bridge program on a sequencer** has run only on devnets we ran (LEZ v0.4.0-rc1, one validator, dev-mode

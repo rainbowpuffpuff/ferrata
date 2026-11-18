@@ -1,0 +1,36 @@
+{
+  "network": "local anvil, no fork, chain id 31337 (STAND-IN: not finalized by any beacon chain)",
+  "block": 10,
+  "block_hash": "0xfb7dbcd70c69b458d878d1730aaa6cbef6ecdd8eaf62c6ef88a1c808ef039fd4",
+  "anvil_block_hash": "0xfb7dbcd70c69b458d878d1730aaa6cbef6ecdd8eaf62c6ef88a1c808ef039fd4",
+  "state_root_patched": false,
+  "timestamp": 1794999646,
+  "state_root": "0xff3cd33e2da34c946e00800ffdb832b344f8639e3eaa2bc027c22af75cda34db",
+  "storage": [
+    {
+      "address": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0x4664dcd3a8ae9eac625d53ddf6e52a192ec7b6d3d7bea24ed67958624d38821b"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000002"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "value": "0xf1059265e28569fe39749b63ee979e987af59cc6ea07d0e8f9536fd555fa7947"
+        }
+      ]
+    }
+  ],
+  "deposits": {
+    "vault": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
+    "from_block": 0,
+    "event": "Deposit(address,uint64,uint64,address,uint256,bytes32)",
+    "topic": "0x83d2d1c34c8825843c9af84bec80378e997084e8c1d6d5a3c2a6e758fe05538e",
+    "count": 2
+  },
+  "updates": []
+}
