@@ -161,10 +161,10 @@ class StandInTest(unittest.TestCase):
         NODE.head = 12
         lez = s.Lez(self.rpc)
         self.assertEqual(s.newest_final(lez)["id"], 7)
-        self.assertEqual(s.final_tip(lez, None, False)["id"], 7)
+        self.assertEqual(s.final_tip(lez, None)["id"], 7)
         with self.assertRaises(SystemExit):
-            s.final_tip(lez, 8, False)
-        self.assertEqual(s.final_tip(lez, 8, True)["status"], "Pending")
+            s.final_tip(lez, 8)
+        self.assertEqual(s.final_tip(lez, 8, show_only=True)["status"], "Pending")
 
     # ---- the accumulator against a natively computed root ----------------------------------------------------------
 
@@ -258,13 +258,35 @@ class StandInTest(unittest.TestCase):
         # The real block 83002 is Pending on the public node: a state read at that head is not attested.
         self.assertIn("83002 is Pending", self.checkpoint(block=None, ok=False).stderr)
 
-    def test_a_pending_tip_is_recorded_as_not_final_when_allowed(self):
-        out = json.loads(self.checkpoint("--allow-pending", block=None).stdout)
-        self.assertEqual(out["tipId"], 83002)
-        self.assertFalse(out["final_on_node"])
-        record = jl(self.path("checkpoint.json"))
-        self.assertEqual(record["source"]["tip"]["status"], "Pending")
-        self.assertFalse(record["source"]["final_on_node"])
+    def test_there_is_no_way_to_attest_a_pending_tip(self):
+        # Named outright it is refused as well, and no flag lifts the refusal.
+        self.assertIn("83002 is Pending", self.checkpoint(block=83002, ok=False).stderr)
+        p = self.checkpoint("--allow-pending", block=None, ok=False)
+        self.assertIn("unrecognized arguments", p.stderr)
+        # `tip` only shows it.
+        shown = json.loads(self.tool("tip", "--rpc", self.rpc, "--block", "83002").stdout)
+        self.assertEqual(shown["tip"]["status"], "Pending")
+
+    def test_the_wallets_burns_from_its_seed_are_the_drivers_notes(self):
+        out = os.path.join(self.dir, "wallet")
+        args = ["wallet-burns", "--identity", self.path("identity.json"), "--seed-text",
+                "ferrata/lez-v03-bridge: testnet user bridge seed (test value)", "--recipient", "0x" + "11" * 20,
+                "--out", out]
+        self.tool(*args)
+        burns = jl(os.path.join(out, "burns.json"))
+        notes = jl(os.path.join(out, "burn-notes.json"))
+        self.assertEqual([n["kind"] for n in notes], ["public", "private"])
+        # The bridge driver's record of what it sent: {"notes": {step: {r, memo, mac, c_out, hash}}}.
+        sent = {"notes": {f"burn-{n['kind']}": {"r": b["r"], "c_out": b["c_out"]} for n, b in zip(notes, burns["burns"])}}
+        s.write(self.path("driver.json"), sent)
+        self.assertTrue(json.loads(self.tool(*args, "--check", self.path("driver.json")).stdout)["checked"])
+        sent["notes"]["burn-public"]["r"] = s.hx(s.sha256(b"another tag"))
+        s.write(self.path("driver.json"), sent)
+        self.assertIn("not the notes", self.tool(*args, "--check", self.path("driver.json"), ok=False).stderr)
+        # The same wallet under the rehearsal's seed text is `native-burns`.
+        self.tool("wallet-burns", "--identity", self.path("identity.json"), "--seed-text", s.REHEARSAL_SEED_TEXT,
+                  "--recipient", "0x" + "11" * 20, "--out", out)
+        self.assertEqual(jl(os.path.join(out, "burns.json"))["burn_root"], self.root)
 
     def test_a_block_whose_hash_is_not_its_contents_is_refused(self):
         NODE.head = 83001

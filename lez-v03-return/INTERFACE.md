@@ -71,3 +71,34 @@ proofs are made from (`sOut` is the release secret: the file is the wallet's, an
 
 Nothing from the bridge: `getBlock` (`lez/sequencer/service/rpc/src/lib.rs:56`). See "What final means" in
 [`README.md`](README.md).
+
+## 4. As `lez-v03-bridge` has it (read in its source on 18 November 2026)
+
+The bridge port keeps the accumulator as this interface needs it, in its own layout, and `standin.py` derives the
+layout file from two values instead of asking for offsets (`standin.py layout --program <id> --config-id 0x<cid>
+--imported <n>`; `e2e/testnet-return.sh` does it when `FERRATA_LEZ_PROGRAM` is set):
+
+| What | Where (`lez-v03-bridge/core/src/lib.rs`) | As bytes |
+|---|---|---|
+| the account `burns(cid)` | `AccountId::for_public_pda(program, sha256("ferrata-lez/v1/bridge/" ‖ "burns" ‖ cid))`; LEZ v0.3.1's public PDA is `sha256("/LEE/v0.2/AccountId/PDA/" ‖ 8 zero bytes ‖ program ‖ seed)` (`lee/state_machine/core/src/program/mod.rs:242-257`) | 32 bytes, base58 for the RPC |
+| its shard under the bridge program | borsh of `BridgeState::Burns(BurnTree { config_id, count, frontier })` | `05` ‖ `config_id` (32, offset 1) ‖ `count` u64 little-endian (offset 33) ‖ `20 00 00 00` (offset 41) ‖ 32 frontier nodes (offset 45): 1,069 bytes |
+| the account `root(cid, n)` | the same PDA over `sha256("ferrata-lez/v1/bridge/" ‖ "root" ‖ cid ‖ n as u64 little-endian)` | |
+| its shard | borsh of `BridgeState::Root(RootState { config_id, evm_chain_id, vault, leaf_count, root, .. })` | `01` ‖ `config_id` (offset 1) ‖ chain id u64 (33) ‖ vault (41) ‖ `leaf_count` u64 (61) ‖ `root` (69) ‖ … |
+
+The frontier is the bridge core's canonical one, so it compares byte for byte. The derived layout also pins the two
+variant bytes, the frontier's length and `root(cid, n)`'s configuration, and the attestor compares `root(cid, n).root`
+with the vault's `depositRoot()` when LEZ imported every leaf. These offsets were read from the port's source, not
+checked against its binary; a wrong derivation finds an empty shard or a wrong byte, and the attestor then refuses.
+
+The wallet's notes: the port's driver makes burn `i` with `BurnNote::create` from keys
+`BridgeKeys::from_bridge_seed(sha256(<seed text>))` and records `{r, memo, mac, c_out, hash}` per burn, without the
+release secret. `standin.py wallet-burns --seed-text … --check <the driver's record>` recomputes the notes with their
+secrets from the same seed text and refuses unless they are the recorded ones.
+
+**One vault for both directions.** The vault that takes the testnet run's deposits must be the one
+`e2e/testnet-return.sh` deploys (verifier = the stand-in). The port's own `sepolia.sh` deploys a vault behind RISC
+Zero's verifier alone, with `checkpoint_b`'s image id: nothing can leave that vault until a checkpoint proof for the
+zone exists, and the stand-in cannot be added to it afterwards (the verifier is immutable). For a round trip the
+order is therefore: `e2e/testnet-return.sh plan` (the vault's address) → the port's configuration id and deposit
+commitments for that address → `plan` again with `FERRATA_LEZ_CONFIG_ID` and `FERRATA_DEPOSITS` → deploy and deposit
+here → the port's LEZ steps → `attest` here.

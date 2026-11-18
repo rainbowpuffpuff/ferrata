@@ -13,7 +13,7 @@ statement is [`docs/trust.md`](../docs/trust.md) §3.6.
 | [`standin.py`](standin.py) | the attestor: reads a LEZ v0.3.1 node (reads only), recomputes the burn root from the listed burns, compares it with the bridge's accumulator on the node, builds the vault's 17-word checkpoint journal, signs it with the stand-in keys (EIP-712, the stand-in verifier's domain) |
 | [`verify.py`](verify.py) | re-reads a run's verdicts from an Ethereum endpoint: every transaction, the deployment, the signed checkpoint, both release proofs through RISC Zero's verifier, the payments, the refusals |
 | [`INTERFACE.md`](INTERFACE.md) | what the attestor reads from the v0.3.1 bridge: the accumulator's layout, the burns, the tip |
-| [`test_standin.py`](test_standin.py) | 20 tests against a local stub of the node's RPC that serves three real testnet blocks and an accumulator computed natively |
+| [`test_standin.py`](test_standin.py) | 21 tests against a local stub of the node's RPC that serves three real testnet blocks and an accumulator computed natively |
 | [`fixtures/`](fixtures/) | three real blocks of the public LEZ testnet (83000, 83001 Finalized; 83002 Pending), read on 18 November 2026 |
 
 Standard library only (`python3 -I`): SHA-256 and HMAC from `hashlib`, Keccak-256 and secp256k1 signing written out
@@ -43,8 +43,9 @@ Before it signs, `standin.py checkpoint`:
 
 1. reads the bridge's accumulator between two reads of the head block id that agree, so that it is the state after
    that block, and takes that block (or a later one given with `--block`) as the tip;
-2. requires the node to report the tip `Finalized`. A `Pending` or `Safe` tip is refused; `--allow-pending` records it
-   anyway and writes `final_on_node: false` into the record, which every later document of the run then shows;
+2. requires the node to report the tip `Finalized`. A `Pending` or `Safe` tip is refused, and no option lifts the
+   refusal: on this network such blocks are replaced. Block 83006 (11 transactions, timestamp 18 November 2026,
+   08:50:23 UTC) was the node's `Pending` head at 08:54 UTC and was gone at 10:28 UTC, when the head was 83005 again;
 3. recomputes the tip's hash from the block's own bytes and requires it to link to its parent's hash;
 4. recomputes every burn leaf, the root and the frontier from the listed burns and requires the node's count, root
    (or frontier) and configuration to equal them (and, with `--deposit-root`, the deposit root the bridge imported to
@@ -56,9 +57,10 @@ What it does **not** check, and why the result is a stand-in:
 - **validity.** It executes nothing: the accumulator is what that node says the state is;
 - **the node.** One RPC endpoint, over TLS, no second source.
 
-On 18 November 2026 the public testnet's newest `Finalized` block was 83001 (17 November, 03:13 UTC), with five
-`Pending` blocks after it produced four to ten hours apart. A burn made there is final when that network makes it so;
-the Ethereum side adds about five minutes after the attestation is submitted.
+On 18 November 2026 the public testnet's newest `Finalized` block was 83001 (17 November, 03:13 UTC); the blocks
+after it were `Pending`, produced four to ten hours apart, and one of them was rolled back (above). A burn made there
+is final when that network makes it so, and until then the attestor signs nothing; the Ethereum side adds about five
+minutes after the attestation is submitted.
 
 ## The keys
 
@@ -76,12 +78,13 @@ The attestor on its own:
 python3 -I lez-v03-return/standin.py selftest
 python3 -I lez-v03-return/standin.py tip --rpc https://testnet.lez.logos.co            # the newest Finalized block
 python3 -I lez-v03-return/standin.py layout --program <bridge program id> --config-id 0x<cid> --imported 2 --out layout.json
-python3 -I lez-v03-return/standin.py burns-from-notes --identity identity.json --notes burn-notes.json --out burns.json
+python3 -I lez-v03-return/standin.py wallet-burns --identity identity.json --seed-text "<the wallet's seed text>" \
+    --recipient 0x<recipient> --check <the bridge driver's record> --out .       # burns.json and burn-notes.json
 python3 -I lez-v03-return/standin.py checkpoint --identity identity.json --burns burns.json \
     --parent-state 0x<the vault's finalState> --signers 0x..,0x..,0x.. --threshold 2 \
     --rpc https://testnet.lez.logos.co --layout layout.json --out checkpoint.json
 python3 -I lez-v03-return/standin.py sign --checkpoint checkpoint.json --verifier 0x<stand-in verifier> --keys DIR --out candidate.json
-python3 -I lez-v03-return/test_standin.py                                               # 20 tests, no network
+python3 -I lez-v03-return/test_standin.py                                               # 21 tests, no network
 ```
 
 It cannot send anything: the LEZ client refuses every RPC method that is not a `get*` read, and no Ethereum

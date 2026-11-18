@@ -12,12 +12,14 @@ no attestor. Never for production.
   standin.py genesis --rpc URL --signers A,B,C [--block N]  the vault's genesisState at that final block
   standin.py native-burns --identity ID.json --recipient 0x.. --out DIR
                                                             the rehearsal's two burns of a labelled test wallet
+  standin.py wallet-burns --identity ID.json --seed-text TEXT --recipient 0x.. [--indices 0,1] [--kinds public,private]
+        [--check DRIVER-NOTES.json] --out DIR               the burns of lez-v03-bridge's wallet, from its seed text
   standin.py burns-from-notes --identity ID.json --notes NOTES.json --out BURNS.json
                                                             burns.json from the LEZ wallet's notes (INTERFACE.md)
   standin.py layout --program ID --config-id 0x.. [--imported N] --out LAYOUT.json
                                                             where lez-v03-bridge keeps its burn accumulator
   standin.py checkpoint --identity ID.json --burns BURNS.json --parent-state 0x.. --signers A,B,C --threshold T
-        (--rpc URL [--layout LAYOUT.json] [--block N] [--allow-pending] | --tip-id N --tip-hash 0x..)
+        (--rpc URL [--layout LAYOUT.json] [--block N] | --tip-id N --tip-hash 0x..)
         [--imported N] [--deposit-root 0x..] --out CHECKPOINT.json
                                                             the vault's 17-word checkpoint journal for the burn root
   standin.py sign --checkpoint CHECKPOINT.json --verifier 0x.. --keys KEYS [--count K] --out CANDIDATE.json
@@ -432,13 +434,14 @@ def newest_final(lez: Lez) -> dict:
     return checked_block(lez, lo)
 
 
-def final_tip(lez: Lez, block_id: int | None, allow_pending: bool) -> dict:
-    """The tip the checkpoint is cut at. `block_id` None: the newest Finalized block. A block that is not Finalized
-    is refused unless `allow_pending`, and then the record says so."""
+def final_tip(lez: Lez, block_id: int | None, show_only: bool = False) -> dict:
+    """The tip a checkpoint is cut at. `block_id` None: the newest Finalized block. A block the node does not report
+    Finalized is refused: on the public testnet such blocks are replaced (block 83006 of 18 November 2026, 08:50 UTC,
+    was gone from the node two hours later). `show_only` (the `tip` command) returns it for display; nothing that
+    signs passes it."""
     tip = newest_final(lez) if block_id is None else checked_block(lez, block_id)
-    if tip["status"] != "Finalized" and not allow_pending:
-        raise SystemExit(f"block {tip['id']} is {tip['status']} on the node, not Finalized: nothing is attested "
-                         "(--allow-pending records a tip that is NOT final, and says so)")
+    if tip["status"] != "Finalized" and not show_only:
+        raise SystemExit(f"block {tip['id']} is {tip['status']} on the node, not Finalized: nothing is attested")
     parent = checked_block(lez, tip["id"] - 1) if tip["id"] > 1 else None
     if parent is not None and parent["hash"] != tip["prev"]:
         raise SystemExit(f"block {tip['id']} does not link to block {tip['id'] - 1}")
@@ -569,13 +572,13 @@ def tip_record(tip: dict) -> dict:
 
 def cmd_tip(a) -> None:
     lez = Lez(a.rpc)
-    tip = final_tip(lez, a.block, True)
+    tip = final_tip(lez, a.block, show_only=True)
     print(json.dumps({"rpc": a.rpc, "head": lez.head(), "tip": tip_record(tip)}))
 
 
 def cmd_genesis(a) -> None:
     lez = Lez(a.rpc)
-    tip = final_tip(lez, a.block, False)
+    tip = final_tip(lez, a.block)
     keys = signer_words(a.signers.split(","))
     state = lez_state(tip["id"], tip["hash"], key_set_hash(keys), bytes(32), 0, [bytes(32)] * TREE_DEPTH, 0, False)
     print(json.dumps({"genesisState": hx(state), "tip": tip_record(tip), "rpc": a.rpc,
@@ -589,27 +592,59 @@ def identity(path: str) -> dict:
     return {"chainId": int(d["chainId"]), "vault": unhex(d["vault"], 20), "configId": unhex(d["configId"], 32)}
 
 
-def cmd_native_burns(a) -> None:
-    """Two burns of a labelled test wallet, computed natively: the fork rehearsal's burn tree. NOT from LEZ blocks."""
-    ident = identity(a.identity)
-    seed = sha256(b"ferrata testnet-return rehearsal: bridge seed (test value)")
-    recipient, amount = unhex(a.recipient, 20), int(a.amount)
+REHEARSAL_SEED_TEXT = "ferrata testnet-return rehearsal: bridge seed (test value)"
+
+
+def wallet_burns(ident: dict, seed_text: str, recipient: bytes, amount: int, indices: list, kinds: list, origin: str,
+                 label: str, out: str) -> dict:
+    """The burns of the wallet whose bridge seed is sha256(seed_text) (lez-v03-bridge's `deposits::keys`), in the
+    order given (the accumulator's order): burns.json and burn-notes.json as `ferrata-e2e crown-release` reads them."""
+    seed = sha256(seed_text.encode())
     burns, notes, leaves = [], [], []
-    for i, kind in enumerate(["public", "private"]):
+    for k, (i, kind) in enumerate(zip(indices, kinds)):
         n = burn_note(seed, ident["configId"], i, ident["chainId"], ident["vault"], recipient, bytes(20), amount)
-        leaf = burn_leaf(ident["configId"], i, n["token"], n["amount"], n["c_out"], n["r"])
+        leaf = burn_leaf(ident["configId"], k, n["token"], n["amount"], n["c_out"], n["r"])
         leaves.append(leaf)
-        burns.append({"burn_index": i, "block": None, "origin": "STAND-IN (native test wallet, not a LEZ block)",
-                      "r": hx(n["r"]), "memo": hx(n["memo"]), "mac": hx(n["mac"]), "token": hx(n["token"]),
-                      "amount": hx(n["amount"]), "c_out": hx(n["c_out"]), "leaf": hx(leaf)})
+        burns.append({"burn_index": k, "block": None, "origin": origin, "r": hx(n["r"]), "memo": hx(n["memo"]),
+                      "mac": hx(n["mac"]), "token": hx(n["token"]), "amount": hx(n["amount"]), "c_out": hx(n["c_out"]),
+                      "leaf": hx(leaf)})
         notes.append({"i": i, "kind": kind, "r": hx(n["r"]), "sOut": hx(n["s_out"]), "cOut": hx(n["c_out"]),
                       "recipient": hx(recipient), "token": hx(n["token"]), "amount": str(amount), "denomIndex": 0})
-    label = "STAND-IN: two burns of a labelled test wallet computed natively (fork rehearsal), not from LEZ blocks"
-    os.makedirs(a.out, exist_ok=True)
-    write(os.path.join(a.out, "burns.json"), {"label": label, "config_id": hx(ident["configId"]),
-          "burn_count": 2, "burn_root": hx(tree_root(leaves)), "burns": burns})
-    write(os.path.join(a.out, "burn-notes.json"), notes)
-    print(json.dumps({"burn_root": hx(tree_root(leaves)), "burn_count": 2}))
+    os.makedirs(out, exist_ok=True)
+    write(os.path.join(out, "burns.json"), {"label": label, "config_id": hx(ident["configId"]),
+          "burn_count": len(burns), "burn_root": hx(tree_root(leaves)), "burns": burns})
+    write(os.path.join(out, "burn-notes.json"), notes)
+    return {"burn_root": hx(tree_root(leaves)), "burn_count": len(burns), "burns": burns}
+
+
+def cmd_native_burns(a) -> None:
+    """Two burns of a labelled test wallet, computed natively: the fork rehearsal's burn tree. NOT from LEZ blocks."""
+    got = wallet_burns(identity(a.identity), REHEARSAL_SEED_TEXT, unhex(a.recipient, 20), int(a.amount), [0, 1],
+                       ["public", "private"], "STAND-IN (native test wallet, not a LEZ block)",
+                       "STAND-IN: two burns of a labelled test wallet computed natively (fork rehearsal), not from "
+                       "LEZ blocks", a.out)
+    print(json.dumps({"burn_root": got["burn_root"], "burn_count": got["burn_count"]}))
+
+
+def cmd_wallet_burns(a) -> None:
+    """The burns a wallet made on LEZ, from the seed text its driver was given, in accumulator order. `--check`: the
+    bridge driver's record of the notes it sent ({step: {r, c_out, ..}}) must hold exactly these."""
+    indices = [int(x) for x in a.indices.split(",")]
+    kinds = a.kinds.split(",")
+    if len(indices) != len(kinds):
+        raise SystemExit("--indices and --kinds must have the same length")
+    got = wallet_burns(identity(a.identity), a.seed_text, unhex(a.recipient, 20), int(a.amount), indices, kinds,
+                       "the wallet's note (recomputed from its seed)",
+                       "the wallet's burns recomputed from its seed, in the order given (to be compared with the "
+                       "node's accumulator)", a.out)
+    if a.check:
+        sent = json.load(open(a.check))
+        sent = sent.get("notes", sent)
+        want = {(unhex(n["r"], 32), unhex(n["c_out"], 32)) for n in sent.values()}
+        have = {(unhex(b["r"], 32), unhex(b["c_out"], 32)) for b in got["burns"]}
+        if want != have:
+            raise SystemExit("the notes recomputed from the seed are not the notes the bridge driver recorded")
+    print(json.dumps({"burn_root": got["burn_root"], "burn_count": got["burn_count"], "checked": bool(a.check)}))
 
 
 def cmd_burns_from_notes(a) -> None:
@@ -685,7 +720,7 @@ def cmd_checkpoint(a) -> None:
                 raise SystemExit(f"the accumulator was read at head {chain['head']}, after block {block_id}")
         else:
             block_id = a.block
-        tip = final_tip(lez, block_id, a.allow_pending)
+        tip = final_tip(lez, block_id)
         source = {"kind": "LEZ node", "rpc": a.rpc, "tip": tip_record(tip), "final_on_node": tip["status"] == "Finalized",
                   "accumulator_checked_against_node": chain is not None,
                   "accumulator_read_at_head": None if chain is None else chain["head"],
@@ -802,12 +837,16 @@ def main() -> None:
     p = sub.add_parser("native-burns"); p.add_argument("--identity", required=True)
     p.add_argument("--recipient", required=True); p.add_argument("--amount", default="1000000000000000")
     p.add_argument("--out", required=True)
+    p = sub.add_parser("wallet-burns"); p.add_argument("--identity", required=True)
+    p.add_argument("--seed-text", required=True); p.add_argument("--recipient", required=True)
+    p.add_argument("--amount", default="1000000000000000"); p.add_argument("--indices", default="0,1")
+    p.add_argument("--kinds", default="public,private"); p.add_argument("--check"); p.add_argument("--out", required=True)
     p = sub.add_parser("burns-from-notes"); p.add_argument("--identity", required=True)
     p.add_argument("--notes", required=True); p.add_argument("--out", required=True)
     p = sub.add_parser("checkpoint"); p.add_argument("--identity", required=True); p.add_argument("--burns", required=True)
     p.add_argument("--parent-state", required=True); p.add_argument("--signers", required=True)
     p.add_argument("--threshold", type=int, required=True); p.add_argument("--rpc"); p.add_argument("--layout")
-    p.add_argument("--block", type=int); p.add_argument("--allow-pending", action="store_true")
+    p.add_argument("--block", type=int)
     p.add_argument("--tip-id", type=int); p.add_argument("--tip-hash"); p.add_argument("--imported", type=int)
     p.add_argument("--deposit-root"); p.add_argument("--out", required=True)
     p = sub.add_parser("layout"); p.add_argument("--program", required=True); p.add_argument("--config-id", required=True)
@@ -817,7 +856,8 @@ def main() -> None:
     p = sub.add_parser("check-seal"); p.add_argument("--candidate", required=True)
     a = ap.parse_args()
     {"selftest": cmd_selftest, "keygen": cmd_keygen, "signers": cmd_signers, "tip": cmd_tip, "genesis": cmd_genesis,
-     "native-burns": cmd_native_burns, "burns-from-notes": cmd_burns_from_notes, "checkpoint": cmd_checkpoint,
+     "native-burns": cmd_native_burns, "wallet-burns": cmd_wallet_burns, "burns-from-notes": cmd_burns_from_notes,
+     "checkpoint": cmd_checkpoint,
      "layout": cmd_layout, "sign": cmd_sign,
      "check-seal": cmd_check_seal}[a.cmd](a)
 

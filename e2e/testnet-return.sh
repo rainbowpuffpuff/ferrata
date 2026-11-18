@@ -38,11 +38,15 @@
 #                                        of lez-v03-bridge's burn accumulator is derived; or a layout file
 #                                        (lez-v03-return/INTERFACE.md). FERRATA_IMPORTED: the leaf count LEZ imported
 #                                        (default: the vault's)
-#   FERRATA_BURNS | FERRATA_BURN_NOTES   (live attest, prove) every burn of the accumulator in order (burns.json), or
-#                                        the LEZ wallet's notes when its burns are all of them (INTERFACE.md)
+#   FERRATA_WALLET_SEED_TEXT             (live attest, prove) the seed text lez-v03-bridge's driver burned with: the
+#                                        wallet's notes are recomputed from it, in accumulator order
+#                                        (FERRATA_BURN_INDICES, default 0,1; FERRATA_BURN_KINDS, default
+#                                        public,private; FERRATA_BURN_RECIPIENT, default ETH_FROM; FERRATA_DRIVER_NOTES:
+#                                        the driver's record of the notes it sent, compared). Or FERRATA_BURN_NOTES /
+#                                        FERRATA_BURNS: the wallet's notes, or every burn in order (INTERFACE.md)
 #   FERRATA_DEPOSITS                     the two deposits [{j, denomIndex, commitment, kind, dest}] of the LEZ side's
-#                                        plan. Unset: commitments to labelled test destinations (a rehearsal)
-#   FERRATA_ALLOW_PENDING=yes            attest a LEZ tip the node does not report Finalized; the record says so
+#                                        plan (lez-v03-bridge's deposits.json is read as it is). Unset: commitments
+#                                        to labelled test destinations (a rehearsal)
 #   FERRATA_REGISTRY                     a deployed FerrataRegistry to link (checked byte for byte); unset: deploy one
 #   FERRATA_RISC_ZERO_STOP               RISC Zero's emergency stop (default: crown-live-3's, owner renounced)
 #   FERRATA_DELTA, FERRATA_RELEASE_DELAY default 120 s each (crown-live-3: 3600 s and 120 s)
@@ -54,7 +58,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/.." && pwd)"
 mode="${1:-}"; name="${2:-}"
-case "$mode" in plan | fork | live | prove | verify | attest) ;; *) sed -n '2,52p' "$0" >&2; exit 2 ;; esac
+case "$mode" in plan | fork | live | prove | verify | attest) ;; *) sed -n '2,56p' "$0" >&2; exit 2 ;; esac
 [ -n "$name" ] || { echo "a run name" >&2; exit 2; }
 shift 2
 run="$here/runs/$name"
@@ -154,7 +158,13 @@ do_plan() {
     config="0x$(printf 'ferrata testnet-return: PLACEHOLDER lezConfigId (no LEZ v0.3.1 bridge configuration was given), vault %s' "${vault,,}" | sha256sum | cut -d' ' -f1)"
   fi
   # The deposits: the LEZ side's plan, or commitments to labelled test destinations (crown-live-3's test accounts).
-  if [ -n "${FERRATA_DEPOSITS:-}" ]; then deposits="$(jq -c . "$FERRATA_DEPOSITS")"; else
+  if [ -n "${FERRATA_DEPOSITS:-}" ]; then
+    # This script's list, or lez-v03-bridge's deposits.json (leaf_index, kind 1 private / 2 public, commitment bare hex).
+    deposits="$(jq -c 'to_entries | map(.key as $k | .value | {j: (.j // $k), denomIndex: (.denomIndex // 0),
+      commitment: (if (.commitment | startswith("0x")) then .commitment else "0x" + .commitment end),
+      kind: (if .kind == 1 then "private" elif .kind == 2 then "public" else .kind end), dest: .dest,
+      origin: (.origin // "the LEZ side'"'"'s plan")})' "$FERRATA_DEPOSITS")"
+  else
     local c0 c1 d0=0x54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a d1=0x2d6cb849edc6d8b1599c558ecd87bc09b4420bdc60f1b3be85547a5834b153fc
     c0="$(python3 -I "$here/crown/identity.py" commitment --chain-id "$chain" --vault "$vault" --depositor "$ETH_FROM" --j 0 --kind public --dest "$d0")"
     c1="$(python3 -I "$here/crown/identity.py" commitment --chain-id "$chain" --vault "$vault" --depositor "$ETH_FROM" --j 1 --kind private --dest "$d1")"
@@ -277,12 +287,20 @@ do_attest() {
   local cp="$run/checkpoint" parent signers args=() imported
   [ -f "$cp/candidate.json" ] && { say "attest: $cp/candidate.json exists"; return 0; }
   if [ -n "${FERRATA_BURNS:-}" ]; then cp "$FERRATA_BURNS" "$cp/burns.json"; fi
+  if [ ! -f "$cp/burns.json" ] && [ -n "${FERRATA_WALLET_SEED_TEXT:-}" ]; then
+    # lez-v03-bridge's wallet: its notes recomputed from the seed text its driver was given (INTERFACE.md §2).
+    local check=()
+    [ -n "${FERRATA_DRIVER_NOTES:-}" ] && check=(--check "$FERRATA_DRIVER_NOTES")
+    "${standin_py[@]}" wallet-burns --identity "$id" --seed-text "$FERRATA_WALLET_SEED_TEXT" \
+      --recipient "${FERRATA_BURN_RECIPIENT:-$ETH_FROM}" --indices "${FERRATA_BURN_INDICES:-0,1}" \
+      --kinds "${FERRATA_BURN_KINDS:-public,private}" "${check[@]}" --out "$cp"
+  fi
   if [ ! -f "$cp/burns.json" ] && [ -n "${FERRATA_BURN_NOTES:-}" ]; then
     cp "$FERRATA_BURN_NOTES" "$cp/burn-notes.json"
     "${standin_py[@]}" burns-from-notes --identity "$id" --notes "$cp/burn-notes.json" --out "$cp/burns.json"
   fi
   if [ ! -f "$cp/burns.json" ]; then
-    [ "${FERRATA_FORK:-}" = 1 ] || [ "${FERRATA_NATIVE_BURNS:-}" = yes ] || die "no burns: set FERRATA_BURNS or FERRATA_BURN_NOTES (INTERFACE.md)"
+    [ "${FERRATA_FORK:-}" = 1 ] || [ "${FERRATA_NATIVE_BURNS:-}" = yes ] || die "no burns: set FERRATA_WALLET_SEED_TEXT, FERRATA_BURN_NOTES or FERRATA_BURNS (INTERFACE.md)"
     say "attest: STAND-IN burns of a labelled test wallet, computed natively (a rehearsal; not from LEZ blocks)"
     "${standin_py[@]}" native-burns --identity "$id" --recipient "$ETH_FROM" --out "$cp"
   fi
@@ -312,7 +330,6 @@ do_attest() {
     [ -n "$imported" ] || imported="$(jq '.deposits | length' "$plan")"
   fi
   [ -n "$imported" ] && [ -z "${FERRATA_LEZ_PROGRAM:-}" ] && args+=(--imported "$imported")
-  [ "${FERRATA_ALLOW_PENDING:-}" = yes ] && args+=(--allow-pending)
   [ -n "${FERRATA_LEZ_BLOCK:-}" ] && args+=(--block "$FERRATA_LEZ_BLOCK")
   "${standin_py[@]}" checkpoint --identity "$id" --burns "$cp/burns.json" --parent-state "$parent" --signers "$signers" \
     --threshold "$(jq -r .standIn.threshold "$plan")" --rpc "$lez_rpc" "${args[@]}" --out "$cp/checkpoint.json"
@@ -437,8 +454,8 @@ live)
   stage="${1:?stage}"
   if [ "$stage" = all ]; then
     do_stage deploy; do_stage deposit 0; do_stage deposit 1
-    if [ ! -f "$run/checkpoint/candidate.json" ] && [ -z "${FERRATA_BURNS:-}${FERRATA_BURN_NOTES:-}" ]; then
-      say "the deposits are in the vault. Now the LEZ side: import, mint, burn. Then run this again with FERRATA_BURN_NOTES (or FERRATA_BURNS) and FERRATA_LEZ_PROGRAM (or FERRATA_LEZ_LAYOUT) set."
+    if [ ! -f "$run/checkpoint/candidate.json" ] && [ -z "${FERRATA_BURNS:-}${FERRATA_BURN_NOTES:-}${FERRATA_WALLET_SEED_TEXT:-}" ]; then
+      say "the deposits are in the vault. Now the LEZ side: import, mint, burn. Then run this again with FERRATA_WALLET_SEED_TEXT (or FERRATA_BURN_NOTES, FERRATA_BURNS) and FERRATA_LEZ_PROGRAM (or FERRATA_LEZ_LAYOUT) set; it stops unless the burns' block is Finalized on the LEZ node."
       exit 0
     fi
     do_stage attest; do_stage refusals pre-submit; do_stage submit; do_stage prove; do_stage refusals pre-final

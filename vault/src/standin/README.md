@@ -86,6 +86,11 @@ Chosen for the testnet run ([`e2e/testnet-return.sh`](../../../e2e/testnet-retur
   (`0x1dB3fa8041E8178f1608c2F7dF627d7EC16C8221`, owner renounced, around the Groth16 verifier
   `0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0`).
 
+**One vault for both directions.** Deposits can only leave the vault they went into, and a vault's verifier is
+immutable. A testnet round trip therefore makes its deposits into this deployment's vault; a vault behind RISC Zero's
+verifier alone keeps them until a checkpoint proof for the zone exists
+([`lez-v03-return/INTERFACE.md`](../../../lez-v03-return/INTERFACE.md) §4).
+
 ## Tests
 
 [`test/standin/`](../../test/standin/), 40 tests; the vault's own suites are untouched (504 passed, 1 skipped, with
