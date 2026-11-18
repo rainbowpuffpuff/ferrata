@@ -54,7 +54,7 @@ if [ "$fork" = 1 ]; then
   cast rpc anvil_setBalance "$ETH_FROM" 0x56BC75E2D63100000 --rpc-url "$SEPOLIA_RPC_URL" > /dev/null   # 100 ETH, fork only
   say "fork of Sepolia at block $(cast block-number --rpc-url "$SEPOLIA_RPC_URL"), deployer $ETH_FROM impersonated"
   if [ "$stage" = all ]; then
-    "$0" "$run" identity
+    "$here/sepolia.sh" "$run" identity
     if [ ! -f "$run/config_id.txt" ]; then
       # The rehearsal's own LEZ side, no network: a configuration of a bridge account the driver makes, a placeholder
       # light client (FERRATA_LC_PROGRAM, default: that account) and instance, this vault; and the deposits' openings.
@@ -69,7 +69,7 @@ if [ "$fork" = 1 ]; then
         --eth 1000000000000000 > "$run/config_id.txt"
       "$drv" "$run" deposits --seed "ferrata/lez-v03-bridge: fork rehearsal seed (test value)" --depositor "$ETH_FROM" > "$run/deposits.json"
     fi
-    for s in deploy "deposit 0" "deposit 1" status; do "$0" "$run" $s; done
+    for s in deploy "deposit 0" "deposit 1" status; do "$here/sepolia.sh" "$run" $s; done
     exit 0
   fi
 elif [ "$fork" = 0 ]; then

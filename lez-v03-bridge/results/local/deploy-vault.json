@@ -35,8 +35,8 @@
       "limit": 635045
     },
     "vault": {
-      "estimate": 5686739,
-      "limit": 7108423
+      "estimate": 5686727,
+      "limit": 7108408
     }
   },
   "gasMarginPct": 125,

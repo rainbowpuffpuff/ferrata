@@ -1,18 +1,18 @@
-[2026-11-18T11:13:30Z] fork of Sepolia at block 12161092, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07 impersonated
-FERRATA_GAS emergencyStop estimate 451744 limit 564680 cap 200000000
-FERRATA_SENT emergencyStop 0x75affef85979ccda7830de1c63ad2fdd6bd18f1ca72ed4ce0a76f5b10441f0de gas limit 564680, used 451744
-FERRATA_GAS vault estimate 5686715 limit 7108393 cap 200000000
-FERRATA_SENT vault 0x8f024dd4b226ba4b0dee0c71d1cdfc91addcab74df62977a7c99471ceea4965a gas limit 7108393, used 5686715
-FERRATA_GAS registerETH estimate 720001 limit 900001 cap 200000000
-FERRATA_SENT registerETH 0xf362e140b1852ec87acf25d1be71daee70cb5b0d0f3d5eed235f21e4e411f40a gas limit 900001, used 709314
-FERRATA_GAS registerToken estimate 720792 limit 900990 cap 200000000
-FERRATA_SENT registerToken 0x8519aa06904645028e2b51386a08382edb13d5a26ed8820c1db35feaf63a80b8 gas limit 900990, used 710092
-FERRATA_GAS renounceStopOwner estimate 30324 limit 37905 cap 200000000
-FERRATA_SENT renounceStopOwner 0x6f9451dea99b074264772ab17bb45fad71db68f7f03bc9c942d5885f46447e2f gas limit 37905, used 25524
-deploy.sh: complete; record spike/ferrata-wt-testnet-v03-bridge/vault/deployments/fork-v03bridge-fork1-run.json
-[2026-11-18T11:14:22Z] deposit 0: 0x2512ebf02713aad172c2640d0771004d7705e974566f4312105e3d3c91f88f2d block 0xb9904a gas 0x30f7c
-[2026-11-18T11:14:23Z] deposit 1: 0xb118ece3dbced6e55f53c1c7e72e77034db3304b2003a0118e0e70c8744d8e7a block 0xb9904b gas 0x24f6e
-slot 0: 0x608ffb1b7666ed7d9e6bc36e7fb0e14977a29b8f842e9e9dc8b95b039b677dbb
+[2026-11-18T12:36:23Z] fork of Sepolia at block 12161497, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07 impersonated
+FERRATA_GAS emergencyStop estimate 451744 limit 564680 cap 199804308
+FERRATA_SENT emergencyStop 0x030e444e3da3d1feb4a0199623b0a3a3c58cb68eb44265fb5af1678311b22859 gas limit 564680, used 451744
+FERRATA_GAS vault estimate 5686715 limit 7108393 cap 199804308
+FERRATA_SENT vault 0xf61bb7e61b8232204fe4a0a301fd273a4371703597db0781d7b8bc2df5537f9f gas limit 7108393, used 5686715
+FERRATA_GAS registerETH estimate 720001 limit 900001 cap 199804308
+FERRATA_SENT registerETH 0x6d66884259cea3d6e7f3ed6346ee010233be889d3c1cfeecb59b82db0b9d2f3e gas limit 900001, used 709314
+FERRATA_GAS registerToken estimate 720792 limit 900990 cap 199804308
+FERRATA_SENT registerToken 0xcdf7b3a81a1b9a96f15741513cfa30116239b4af6ccd4bba5e8ee8b697de4909 gas limit 900990, used 710092
+FERRATA_GAS renounceStopOwner estimate 30324 limit 37905 cap 199804308
+FERRATA_SENT renounceStopOwner 0x45067787bfe5a97f7b5eebf56a9236c75538da3d27a6cb7e17e1fd28c7e0a129 gas limit 37905, used 25524
+deploy.sh: complete; record spike/ferrata-wt-testnet-v03-bridge/vault/deployments/fork-v03bridge-fork2-run.json
+[2026-11-18T12:37:15Z] deposit 0: 0x44ad41f7ed474f1606ab8e1d7bc713133a16b0f7c2a89823a76e53ca67a43c37 block 0xb991df gas 0x30f7c
+[2026-11-18T12:37:15Z] deposit 1: 0xcb664a6d11da6f881ca4ba6f911108d5651d0d4fb28d803548877cbb4444255e block 0xb991e0 gas 0x24f6e
+slot 0: 0x861d4737db240b55d6924eb54c668e97da16f0db2689b27fb9535c02b00953ee
 slot 1: 0x0000000000000000000000000000000000000000000000000000000000000002
-slot 2: 0x50d1bd926a5fd81781975876cf85f87d91d68f70446175f15e233b2ab2f5a7ad
+slot 2: 0x3f73e675156c3ae510068dc414eb049c532917a15a8327be5a87c05eafc8c79a
 depositCount(0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07): 2

@@ -13,7 +13,7 @@ cat > "$B/bridge03" <<'S'
 #!/usr/bin/env bash
 run="$1"; cmd="$2"; echo "bridge03 $cmd" >> "$SG_LOG"; mkdir -p "$run"
 case "$cmd" in
-  setup) echo '{"payer":"P","wallet_home":"/home/someone/wallet","holder_private":"HP","holder_public":"HU","config":"c"}' > "$run/run.json" ;;
+  setup) echo '{"payer":"P","wallet_home":"/srv/someone/wallet","holder_private":"HP","holder_public":"HU","config":"c"}' > "$run/run.json" ;;
   config) echo 0xc1d ;;
   deposits) echo '[{"leaf_index":0,"s":"S0","dest":"D0","kind":2,"commitment":"aa","leaf":"L0"},{"leaf_index":1,"s":"S1","dest":"D1","kind":1,"commitment":"bb","leaf":"L1"}]' ;
             jq '.deposits = [{"leaf_index":0,"s":"S0","dest":"D0","kind":2},{"leaf_index":1,"s":"S1","dest":"D1","kind":1}]' "$run/run.json" > "$run/r" && mv "$run/r" "$run/run.json" ;;
@@ -69,7 +69,7 @@ tn FERRATA_TESTNET_SEND=yes FERRATA_DEPOSIT_SEED=secret FERRATA_LC_INSTANCE=11 F
   "$T/testnet.sh" run > "$W/out" 2>&1
 ok grep -q "ferrata_ops batch marked=yes" "$SG_LOG"; ok [ -f "$R/batch.queued" ]; ok grep -q "record written" "$W/out"
 ok [ -f "$T/results/testnet/run.json" ]
-nok grep -q -e '"s"' -e '"dest"' -e '"kind"' -e holder_private -e wallet_home -e /home/ "$T/results/testnet/run.json"
+nok grep -q -e '"s"' -e '"dest"' -e '"kind"' -e holder_private -e wallet_home -e /srv/ "$T/results/testnet/run.json"
 nok grep -q -e nullifier_ -e holder_private "$T/results/testnet/state.json"
 nok grep -q -e '"s"' -e '"dest"' "$T/results/testnet/deposits.json"
 case_ "testnet run again: a queued batch is neither rebuilt nor re-queued"

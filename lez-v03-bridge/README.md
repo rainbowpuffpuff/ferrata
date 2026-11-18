@@ -126,16 +126,17 @@ controls.
   transaction searched for its private inputs, burns (the same note twice, not a denomination, nothing held, not
   signed; the private holder's), the burn tree against the bridge core's. Gas per transaction.
 - [`results/sepolia.md`](results/sepolia.md): the crown run's live vault `0x04eE8FF1…e44c` under Sepolia's own
-  finalized blocks 12,119,428 and 12,119,519 (records placed) and 12,160,907 (**a record the v0.3.1 light client wrote
+  finalized blocks 12,119,428 and 12,119,519 (records placed) and 12,161,152 (**a record the v0.3.1 light client wrote
   itself**, from `lez-v03`'s local run): the program's check of the real storage proofs, `Init` refused (246: the vault
   pins the v0.4 configuration, the pairing working), each import's plan verifying the real proofs and then refused for
   want of a configuration (245), the claim refused (245).
 - [`results/local.md`](results/local.md): **the round to the burns on a local LEZ v0.3.1 standalone sequencer and
   anvil**: the vault deployed by `vault/script/deploy.sh`, two deposits, the stand-in's record, `Init`, `ImportRoot`,
   the public claim and two refusals, the private claim and the private burn **proven for real by LEZ's wallet**
-  (169.5 s and 157.8 s, 247,826 and 248,346 bytes, 9.3 GiB peak), the public burn; every verdict read back over RPC
-  (24 checks, 0 fail).
-- `results/fork/`: `sepolia.sh --fork` on a fork of Sepolia at block 12,161,092: the inbound-only vault paired with a
+  (178.0 s and 168.2 s, 247,826 and 248,346 bytes, 9.26 GiB peak), the public burn: 19 LEZ transactions; every
+  account the run touched read back over RPC and compared with the run's record, the two refusals inferred from
+  their fees and the state (24 checks: 9 of inclusion, 10 of state, 5 on anvil; 0 fail).
+- `results/fork/`: `sepolia.sh --fork` on a fork of Sepolia at block 12,161,497: the inbound-only vault paired with a
   v0.3.1 configuration (the crown run's verifier, library and token reused), its two deposits, slot 2 = `configId`.
 - `harness/tests/light_client_layout.rs`: the records the bridge reads are where, and as, the merged light client's
   wire crate (`lez-v03/wire`) writes them.
