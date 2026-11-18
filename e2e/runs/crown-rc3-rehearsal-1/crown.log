@@ -1,0 +1,53 @@
+[2026-11-18T14:21:25Z] drive.py crown-rc3-rehearsal-1 fork: done so far nothing
+[2026-11-18T14:21:29Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T14:21:33Z] anvil: FORK of Sepolia at block 12162003 (state new), head 12162003, every sender impersonated
+[2026-11-18T14:21:33Z] LEZ session A (attempt 1): lez_session, lez/crown/session.sh (sha256 a21559467bfc), chain stand-in
+[2026-11-18T14:26:19Z] LEZ session A: ok=True ran=True exit=0 generation=1 after 286 s
+[2026-11-18T14:26:19Z] session A: T0 = 23 0x97a776a767adeeab75385416b52b904ed010f9f17aa82abc289ba512ecd9761f, channel keys ['0x01695e8f8cd2eef224a3659aa945c94ee9f614a4909a04114ee880112aa6d7c4'], bedrockGenesisId 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (the node's fork digest, {"fork_digest":"c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"}), chain stand-in
+[2026-11-18T14:26:19Z] stage lez-a: done in 287 s
+[2026-11-18T14:26:22Z] identity: deployer nonce 36, vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (CREATE n+2), configId 0xccc88690b4260e283c15c775ee81247f2f1bbbe90e456c4523135837748df1f7, genesisState 0x0518d1919af56121c1dd2ad053a2da11171e35e37a1a34c91c27d998d195bca3, balance 498946585463094553 wei
+[2026-11-18T14:26:22Z] stage identity: done in 2 s
+[2026-11-18T14:27:32Z] deploy: vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470, registry 0x837F715d57299799C64dcF5ba84525319D5EeAfe, token 0xD599644B3515C2f86EC5414a1aBE5Fd0d25bAb43, stop 0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA
+[2026-11-18T14:27:32Z] stage deploy: done in 71 s
+[2026-11-18T14:27:41Z] deposit 0: block 12162011, leaves 1
+[2026-11-18T14:27:41Z] stage deposit0: done in 9 s
+[2026-11-18T14:27:42Z] capture 1: FORK capture of block 12162011 (capture-anvil.py, stand-in header), 6 slots proven against its state root
+[2026-11-18T14:27:42Z] stage capture1: done in 0 s
+[2026-11-18T14:27:50Z] deposit 1: block 12162012, leaves 2
+[2026-11-18T14:27:50Z] stage deposit1: done in 9 s
+[2026-11-18T14:27:51Z] capture 2: FORK capture of block 12162012 (capture-anvil.py, stand-in header), 6 slots proven against its state root
+[2026-11-18T14:27:51Z] stage capture2: done in 0 s
+[2026-11-18T14:27:51Z] crown-driver check of the captures: exit 0 (advisory; logs/lez-check.log)
+[2026-11-18T14:27:52Z] LEZ session B (attempt 1): lez_session, lez/crown/session.sh (sha256 a21559467bfc), chain stand-in
+[2026-11-18T15:03:09Z] LEZ session B: ok=True ran=True exit=0 generation=2 after 2117 s
+[2026-11-18T15:03:09Z] session B: T1 = 225 0xa81904bf53b00425de0965d7ab68ece3069973e1f5377a30a6fffa7e81cd891c, blocks {'from': 24, 'to': 225}, 2 claims, 2 burns
+[2026-11-18T15:03:09Z] stage lez-b: done in 2118 s
+[2026-11-18T15:03:09Z] checkpoint input crown-23-225: 682838 bytes, parent state 0x0518d1919af56121c1dd2ad053a2da11171e35e37a1a34c91c27d998d195bca3, new state 0x0c1b4706bf62c0f195bee9d01ae4d2ab9a2bdda6d4fcec317c426c343c196be7, 2 burns counted
+[2026-11-18T15:03:09Z] stage checkpoint-input: done in 0 s
+[2026-11-18T15:03:10Z] checkpoint exec: l_s":0.608913469,"image_id":"0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf","input_bytes":682838,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":22020096,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20],"segments":21,"user_cycles":19540105}
+[2026-11-18T15:03:10Z] stage checkpoint-exec: done in 1 s
+[2026-11-18T15:03:10Z] checkpoint prove: crown-23-225 queued on gpu_prove (one L4), call fc-01M7QJXSR4EBRM8XZMZHP41AW2; waiting up to 7200 s
+[2026-11-18T15:07:26Z] checkpoint prove: GPU ok=True gpu=NVIDIA L40S, 46068 MiB, 620.70.06, 8.9 prover_wall_s=33.9 total_s=33.770207477 segments=21 image_ids_equal=True inputs_equal=True
+[2026-11-18T15:07:26Z] stage checkpoint-prove: done in 257 s
+[2026-11-18T15:08:25Z] groth16_wrap: 14 s (20 s with the call)
+[2026-11-18T15:08:25Z] checkpoint wrap: seal 0x73c457ba26614ede... journal 544 bytes
+[2026-11-18T15:08:25Z] stage checkpoint-wrap: done in 58 s
+[2026-11-18T15:08:34Z] submit: block 12162013, the wait is over at block time 1795018046
+[2026-11-18T15:08:34Z] stage submit: done in 9 s
+[2026-11-18T15:09:01Z] release public-0: CPU proof in 27 s
+[2026-11-18T15:09:52Z] groth16_wrap: 11 s (13 s with the call)
+[2026-11-18T15:10:18Z] release private-1: CPU proof in 25 s
+[2026-11-18T15:11:15Z] groth16_wrap: 15 s (19 s with the call)
+[2026-11-18T15:11:15Z] releases: ['public-0', 'private-1'] proven and wrapped
+[2026-11-18T15:11:15Z] stage releases-prove: done in 161 s
+[2026-11-18T15:11:15Z] the candidate's wait W: FORK ONLY, block time moved 3601 s forward with evm_increaseTime
+[2026-11-18T15:11:15Z] stage wait: done in 0 s
+[2026-11-18T15:11:24Z] finalize: block 12162015, final state 0x0c1b4706bf62c0f195bee9d01ae4d2ab9a2bdda6d4fcec317c426c343c196be7
+[2026-11-18T15:11:24Z] stage finalize: done in 9 s
+[2026-11-18T15:11:24Z] release 0's delay: FORK ONLY, block time moved 121 s forward with evm_increaseTime
+[2026-11-18T15:11:33Z] release 0 (public-0): block 12162017
+[2026-11-18T15:11:33Z] stage release0: done in 9 s
+[2026-11-18T15:11:42Z] release 1 (private-1): block 12162018
+[2026-11-18T15:11:42Z] stage release1: done in 9 s
+[2026-11-18T15:11:45Z] verify: every check passed; DONE
+[2026-11-18T15:11:45Z] stage verify: done in 2 s

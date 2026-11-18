@@ -1,0 +1,25 @@
+{
+ "run": "crown-rc3-rehearsal-1",
+ "mode": "fork",
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "chainId": 11155111,
+ "created_at": "2026-11-18T14:17:51Z",
+ "label": "crown REHEARSAL (anvil fork of Sepolia)",
+ "inputs": "rc3",
+ "lez": "LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)",
+ "fork_upstream": "https://ethereum-sepolia-rpc.publicnode.com",
+ "fork_block": 12162003,
+ "deploy_from_block": 12162003,
+ "warped": [
+  {
+   "what": "the candidate's wait W",
+   "seconds": 3601,
+   "at": "2026-11-18T15:11:15Z"
+  },
+  {
+   "what": "release 0's delay",
+   "seconds": 121,
+   "at": "2026-11-18T15:11:24Z"
+  }
+ ]
+}
