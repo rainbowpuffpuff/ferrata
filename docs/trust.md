@@ -293,7 +293,9 @@ What still holds: a release needs a real proof for a burn leaf of this configura
 recipient; a signature is good for one journal, vault, verifier and chain; the wait, the release delay,
 nullifiers and RISC Zero's stop work as in §3.5. Status: rehearsed end to end on a fork of Sepolia
 ([`e2e/runs/testnet-return-fork-1/`](../e2e/runs/testnet-return-fork-1/README.md)); nothing of it had
-been sent to Sepolia or to the LEZ testnet when this was written (18 November 2026).
+been sent to Sepolia or to the LEZ testnet when this was written (18 November 2026). What a real
+checkpoint for that network would need, and what its public data already lets anyone check, is measured in
+[`lez-v03-return/STAGE2.md`](../lez-v03-return/STAGE2.md).
 
 ## 4. Roles and powers (RFP-022 Security #5, #7)
 

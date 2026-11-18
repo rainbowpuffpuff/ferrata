@@ -14,7 +14,8 @@ statement is [`docs/trust.md`](../docs/trust.md) §3.6.
 | [`verify.py`](verify.py) | re-reads a run's verdicts from an Ethereum endpoint: every transaction, the deployment, the signed checkpoint, both release proofs through RISC Zero's verifier, the payments, the refusals |
 | [`INTERFACE.md`](INTERFACE.md) | what the attestor reads from the v0.3.1 bridge: the accumulator's layout, the burns, the tip |
 | [`test_standin.py`](test_standin.py) | 21 tests against a local stub of the node's RPC that serves three real testnet blocks and an accumulator computed natively |
-| [`fixtures/`](fixtures/) | three real blocks of the public LEZ testnet (83000, 83001 Finalized; 83002 Pending), read on 18 November 2026 |
+| [`fixtures/`](fixtures/) | four real blocks of the public LEZ testnet (83000, 83001 Finalized; 83002, 83003 Pending), read on 18 November 2026, the transactions that inscribed them on the public Logos Blockchain testnet, and the channel's configuration |
+| [`STAGE2.md`](STAGE2.md), [`stage2.py`](stage2.py), [`test_stage2.py`](test_stage2.py) | a measurement, not part of the stand-in: how far a real checkpoint gets on that network's public data (the inscriptions' hashes, signatures and message chain recomputed natively), what a v0.3.1 checkpoint program would need, and how long finality takes there |
 
 Standard library only (`python3 -I`): SHA-256 and HMAC from `hashlib`, Keccak-256 and secp256k1 signing written out
 here (RFC 6979 nonces, low `s`; not constant-time, for throwaway testnet keys). Everything it computes is recomputed
@@ -53,7 +54,8 @@ Before it signs, `standin.py checkpoint`:
 
 What it does **not** check, and why the result is a stand-in:
 
-- **the inscription itself.** It trusts one node's flag, the node Logos runs;
+- **the inscription itself.** It trusts one node's flag, the node Logos runs. The inscription can be read and checked
+  from public Logos Blockchain data ([`STAGE2.md`](STAGE2.md) §1); its finality cannot (§3);
 - **validity.** It executes nothing: the accumulator is what that node says the state is;
 - **the node.** One RPC endpoint, over TLS, no second source.
 
