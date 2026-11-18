@@ -11,6 +11,7 @@
 #[allow(dead_code)]
 #[path = "../../harness/src/deposits.rs"]
 mod deposits;
+#[allow(dead_code)]
 #[path = "../../harness/src/eth.rs"]
 mod eth;
 
