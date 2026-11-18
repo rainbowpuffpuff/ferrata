@@ -1,6 +1,8 @@
-Ran on the Modal build box (one container), 18 Nov 2026, Rust 1.93.0:
+Ran on the Modal build box (one container), 18 Nov 2026 (re-run after an independent review; the same figures as the
+first run), Rust 1.93.0:
 cd bench && FERRATA_VECTORS=<consensus-spec-tests v1.7.0-beta.4>/tests/minimal cargo test --release -p misbehaviour -- --nocapture --test-threads 3
-(the vectors: scripts/fetch-vectors.sh). Build output omitted; the test output follows as printed.
+(the vectors: scripts/fetch-vectors.sh). tests/forks.rs was written by the independent review. Build output omitted;
+the test output follows as printed.
 
      Running unittests src/lib.rs (target/release/deps/misbehaviour-ed38aaa54e3aa601)
 
@@ -53,7 +55,24 @@ honest data submitted as evidence:
 | **all** | 474 | 418 (349) | 40313 | 0 | 23: 32711, 25: 232, 50: 189, 85: 7181 | 5487 (1694) | 26635 |
 test honest_data_never_freezes ... ok
 
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.77s
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.78s
+
+     Running tests/forks.rs (target/release/deps/forks-016cd88a7bc1da2f)
+
+running 1 test
+| honest fork or reorg (fabricated chain) | refused |
+|---|---|
+| orphaned head at the canonical head's slot, against f1's record | 85 |
+| orphaned head at the canonical head's slot, against the adopted committee | 85 |
+| orphaned head lagging finality (finalizes the checkpoint), against the checkpoint's record | 85 |
+| the same, against the adopted committee | 85 |
+| head reorg across the boundary (another committee for period + 2), against f1's record | 85 |
+| the same, against the adopted committee | 85 |
+| finality update without a next committee, orphaned head, against f1's record | 85 |
+| the same, against the adopted committee | 85 |
+test honest_forks_and_reorgs_are_not_evidence ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
 
    Doc-tests misbehaviour
 

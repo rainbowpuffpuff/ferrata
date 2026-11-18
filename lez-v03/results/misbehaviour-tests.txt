@@ -1,7 +1,8 @@
 Ran on the Modal build box (one container), 18 Nov 2026: LEZ v0.3.1 (tag v0.3.1, commit 1a003bfb) beside the repository,
 RISC0_HOME=<risc0-home-lez> (guest Rust 1.91.1), Rust 1.93.0. Build output omitted; the test output follows as printed.
+Re-run after an independent review (the same image and figures; misbehaviour_window.rs was written by that review).
 
-cd lez-v03 && cargo test --release -p harness-v03 --test misbehaviour -- --nocapture --test-threads 2
+cd lez-v03 && cargo test --release -p harness-v03 --test misbehaviour --test misbehaviour_window -- --nocapture --test-threads 2
 
      Running tests/misbehaviour.rs (target/release/deps/misbehaviour-c7fcc80441d0158f)
 
@@ -33,10 +34,24 @@ ONE-TX evidence (B) 510/512, residue witness: 6632378 execution gas (66.3% of MA
 the final exponentiation path applied: true
 test contradictions_freeze_and_frozen_refuses ... ok
 
-test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.78s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.41s
+
+     Running tests/misbehaviour_window.rs (target/release/deps/misbehaviour_window-9f2d66318afbc315)
+
+running 2 tests
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+front-run: Evidence (A), planned on the store at slot 81984	13	refused	218	121780	1.2%	4319	65355	10000000	1374132	11	8	1700986520001
+expiry: Evidence (A) signed in period 10, after the rotation	13	refused	23	164477	1.6%	3159	119121	10000000	1834519	11	8	1701082520001
+expiry: after the rotation the period-10 conflict is refused 23 for good; the instance live, the record kept
+test evidence_expires_when_the_instance_rotates ... ok
+front-run: Evidence (A), re-planned on the store at slot 82176	14	applied	-	6656022	66.6%	4319	6656022	10000000	66594772	10	8	1700986520002
+front-run: evidence planned before an advancing Update refused 218 (WRONG_WINDOW); re-planned: applied, frozen
+test evidence_front_run_by_an_update ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.61s
 
 EXIT 0
-
 
 The earlier suites with this image (the regenerated tables are in results/misbehaviour-regression/; the committed
 tables of rows 131 and 137 stay those of image bac768a8):
