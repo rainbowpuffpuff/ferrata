@@ -884,7 +884,10 @@ fn distinct_clients_must_serve_the_same_bytes() {
     assert_eq!(store(&u, &l).finalized.hash_tree_root(), r.last_finalized().1);
     assert_eq!(refused_total(&l), 0);
     let m = &u.metrics.sources;
-    assert_eq!((m["nimbus"].client.as_str(), m["lodestar"].client.as_str()), (version("nimbus").as_str(), version("lodestar").as_str()));
+    assert_eq!(
+        (m["nimbus"].client.as_str(), m["lodestar"].client.as_str()),
+        (version("nimbus").as_str(), version("lodestar").as_str())
+    );
     assert_eq!(m["nimbus"].disagreements + m["lodestar"].disagreements, 0);
     assert_eq!(u.health().0, "ok", "{:?}", u.health().1);
     let text = u.render_metrics();
@@ -989,7 +992,10 @@ fn a_lying_client_is_logged_and_does_not_count() {
     assert_eq!(status, "degraded");
     assert!(why.iter().any(|w| w.contains("lodestar(BadSignature) demoted")), "{why:?}");
     assert!(why.iter().any(|w| w.contains("nimbus serves other bytes than lodestar(BadSignature)")), "{why:?}");
-    println!("liar: {why:?}; disagreements nimbus {} liar {}", m["nimbus"].disagreements, m["lodestar(BadSignature)"].disagreements);
+    println!(
+        "liar: {why:?}; disagreements nimbus {} liar {}",
+        m["nimbus"].disagreements, m["lodestar(BadSignature)"].disagreements
+    );
 
     // A third client, honest: nimbus and teku agree byte for byte; the liar is still refused.
     let payer = key(0x37);
@@ -1038,8 +1044,10 @@ fn clients_reported_over_http() {
             base: mock_headers_reporting(roots.clone(), false, Some(answer(headers_client))),
             timeout_secs: 5,
         };
-        let sources: Vec<Box<dyn Source>> =
-            vec![Box::new(BeaconApi { name: "lodestar".into(), base: node("lodestar"), timeout_secs: 5 }), Box::new(witness)];
+        let sources: Vec<Box<dyn Source>> = vec![
+            Box::new(BeaconApi { name: "lodestar".into(), base: node("lodestar"), timeout_secs: 5 }),
+            Box::new(witness),
+        ];
         let pol = Policy { client_match: ClientMatch::FinalizedHeader, ..diverse(2) };
         let mut u = r.updater("http-header", payer, sources, None, pol);
         if ok {

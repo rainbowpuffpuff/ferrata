@@ -869,7 +869,11 @@ impl Updater {
                      policy.min_distinct_clients asks; not sent",
                     header.slot,
                     useful[i].1.update.attested_header.beacon.slot,
-                    if clients.is_empty() { "no client".to_string() } else { clients.iter().cloned().collect::<Vec<_>>().join(", ") },
+                    if clients.is_empty() {
+                        "no client".to_string()
+                    } else {
+                        clients.iter().cloned().collect::<Vec<_>>().join(", ")
+                    },
                     clients.len()
                 ));
             }

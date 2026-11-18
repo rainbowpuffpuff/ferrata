@@ -163,7 +163,8 @@ fn client_diversity_configuration() {
     let nimbus = format!("{rec_a}\n  client = \"Nimbus/v26.10.2-5628de-stateofus\"");
     let lodestar = format!("{rec_b}\n  client = \"Lodestar/v1.51.0/7923280\"");
     let url_lc = "name = \"record-b\"\n  url = \"https://lodestar-mainnet.chainsafe.io\"";
-    let url_headers = "name = \"record-b\"\n  url = \"https://ethereum-beacon-api.publicnode.com\"\n  kind = \"headers\"";
+    let url_headers =
+        "name = \"record-b\"\n  url = \"https://ethereum-beacon-api.publicnode.com\"\n  kind = \"headers\"";
     let f = File::parse(&base).unwrap();
     assert_eq!((f.policy.min_distinct_clients, f.policy.client_match), (0, ClientMatch::Bytes));
     for (policy, a, b) in [
@@ -181,7 +182,12 @@ fn client_diversity_configuration() {
         ("min_distinct_clients = 2", rec_a, lodestar.as_str(), "a recorded dir without a client cannot count"),
         ("min_distinct_clients = 3", nimbus.as_str(), lodestar.as_str(), "three clients from two sources"),
         ("min_distinct_clients = 2", nimbus.as_str(), url_headers, "a headers source serves no bytes to compare"),
-        ("", nimbus.as_str(), "name = \"record-b\"\n  url = \"https://x\"\n  client = \"Nimbus/v1\"", "client on a url source"),
+        (
+            "",
+            nimbus.as_str(),
+            "name = \"record-b\"\n  url = \"https://x\"\n  client = \"Nimbus/v1\"",
+            "client on a url source",
+        ),
         ("client_match = \"header\"", rec_a, rec_b, "an unknown client_match"),
     ] {
         let text = with(policy, a, b);

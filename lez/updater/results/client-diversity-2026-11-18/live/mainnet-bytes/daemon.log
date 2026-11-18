@@ -1,0 +1,59 @@
+2026-11-18T17:46:13Z [live-bytes mainnet] instance 0xa2168e46adf6abfc99548e0364ad7025e60b8f42f51dba4e35fd1e462aed0212 of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4 (checkpoint 0x76b355f991b2bf9bb8c2c29256d19c3a97dee49b954ecc424a1e7c80f03e6f62); payer 4ZyXXGxaw83mTWZc8fRRTnSDSR6Qhq9d8taM8QWhR9wd; ledger harness
+2026-11-18T17:46:13Z [live-bytes] /health and /metrics on http://127.0.0.1:9471
+2026-11-18T17:46:15Z [live-bytes mainnet] mainnet Init applied (exit None, gas 212960, fee 1703680, block 2)
+2026-11-18T17:46:27Z [live-bytes mainnet] mainnet init adopt 1/2 applied (exit None, gas 3424121, fee 27392968, block 3)
+2026-11-18T17:46:40Z [live-bytes mainnet] mainnet init adopt 2/2 applied (exit None, gas 3510683, fee 28085464, block 4)
+2026-11-18T17:46:55Z [live-bytes mainnet] job 0x526a816d829b0390: finalized slot 15672512 root 0x76b355f991b2bf9bb8c2c29256d19c3a97dee49b954ecc424a1e7c80f03e6f62 (attested slot 15672590, signature slot 15672591, 511 of 512 signers; adopts the next committee), served or confirmed by nimbus, lodestar; clients lodestar, nimbus
+2026-11-18T17:46:55Z [live-bytes mainnet] mainnet fin 15672512 Open applied (exit None, gas 2187426, fee 17499408, block 5)
+2026-11-18T17:47:07Z [live-bytes mainnet] job 0x526a816d829b0390 (finalized slot 15672512) is open: its miller first
+2026-11-18T17:47:08Z [live-bytes mainnet] mainnet fin 15672512 Miller applied (exit None, gas 3313771, fee 26510168, block 6)
+2026-11-18T17:47:20Z [live-bytes mainnet] job 0x526a816d829b0390 (finalized slot 15672512) is open: its adopt0 first
+2026-11-18T17:47:21Z [live-bytes mainnet] mainnet fin 15672512 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 7)
+2026-11-18T17:47:33Z [live-bytes mainnet] job 0x526a816d829b0390 (finalized slot 15672512) is open: its adopt1 first
+2026-11-18T17:47:33Z [live-bytes mainnet] mainnet fin 15672512 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 8)
+2026-11-18T17:47:45Z [live-bytes mainnet] job 0x526a816d829b0390 (finalized slot 15672512) is open: its finish first
+2026-11-18T17:47:46Z [live-bytes mainnet] mainnet fin 15672512 Finish applied (exit None, gas 3699561, fee 29596488, block 9)
+2026-11-18T17:48:01Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683336): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:48:01Z [live-bytes mainnet] job 0x675592d0b0f2117e: finalized slot 15679520 root 0xcd6fec0789ceab089ea24dbed3d6d32a2b106de6a6404e799d1b7b0ef4cf2796 (attested slot 15679593, signature slot 15679594, 511 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by nimbus, lodestar; clients lodestar, nimbus
+2026-11-18T17:48:02Z [live-bytes mainnet] mainnet fin 15679520 Open applied (exit None, gas 2188935, fee 17511480, block 10)
+2026-11-18T17:48:14Z [live-bytes mainnet] job 0x675592d0b0f2117e (finalized slot 15679520) is open: its miller first
+2026-11-18T17:48:15Z [live-bytes mainnet] mainnet fin 15679520 Miller applied (exit None, gas 3313771, fee 26510168, block 11)
+2026-11-18T17:48:27Z [live-bytes mainnet] job 0x675592d0b0f2117e (finalized slot 15679520) is open: its adopt0 first
+2026-11-18T17:48:27Z [live-bytes mainnet] mainnet fin 15679520 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 12)
+2026-11-18T17:48:39Z [live-bytes mainnet] job 0x675592d0b0f2117e (finalized slot 15679520) is open: its adopt1 first
+2026-11-18T17:48:40Z [live-bytes mainnet] mainnet fin 15679520 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 13)
+2026-11-18T17:48:52Z [live-bytes mainnet] job 0x675592d0b0f2117e (finalized slot 15679520) is open: its finish first
+2026-11-18T17:48:53Z [live-bytes mainnet] mainnet fin 15679520 Finish applied (exit None, gas 3737188, fee 29897504, block 14)
+2026-11-18T17:49:08Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683328): lodestar only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:49:08Z [live-bytes mainnet] round 14: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (lodestar)
+2026-11-18T17:49:25Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683343): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:49:25Z [live-bytes mainnet] round 15: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:49:40Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683345): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:49:40Z [live-bytes mainnet] round 16: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:50:01Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683346): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:50:01Z [live-bytes mainnet] round 17: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:50:16Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683348): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:50:16Z [live-bytes mainnet] round 18: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:50:36Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683349): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:50:36Z [live-bytes mainnet] round 19: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:51:01Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683328): lodestar only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:51:01Z [live-bytes mainnet] round 20: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (lodestar)
+2026-11-18T17:51:16Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683353): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:51:16Z [live-bytes mainnet] round 21: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:51:31Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683354): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:51:31Z [live-bytes mainnet] round 22: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:51:46Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683328): lodestar only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:51:46Z [live-bytes mainnet] round 23: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (lodestar)
+2026-11-18T17:52:00Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683356): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:52:00Z [live-bytes mainnet] round 24: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:52:15Z [live-bytes mainnet] update finalizing slot 15683264 (attested slot 15683358): nimbus only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:52:15Z [live-bytes mainnet] round 25: 2 of 1 sources serve finalized slot 15683264; 1 of 2 clients agree byte for byte (nimbus)
+2026-11-18T17:52:41Z [live-bytes mainnet] update finalizing slot 15683296 (attested slot 15683360): lodestar only, 1 of the 2 clients policy.min_distinct_clients asks; not sent
+2026-11-18T17:52:41Z [live-bytes mainnet] round 26: 1 of 1 sources serve finalized slot 15683296; 1 of 2 clients agree byte for byte (lodestar)
+2026-11-18T17:52:56Z [live-bytes mainnet] job 0xe6fd5ba0c085f55e: finalized slot 15683296 root 0xab78f2a4b08aa51c585b0716a67d5fa6be6aafae87907c84f2deb5b97bb52711 (attested slot 15683361, signature slot 15683362, 510 of 512 signers; advances), served or confirmed by nimbus, lodestar; clients lodestar, nimbus
+2026-11-18T17:52:57Z [live-bytes mainnet] mainnet fin 15683296 Open applied (exit None, gas 2198915, fee 17591320, block 15)
+2026-11-18T17:53:09Z [live-bytes mainnet] job 0xe6fd5ba0c085f55e (finalized slot 15683296) is open: its miller first
+2026-11-18T17:53:09Z [live-bytes mainnet] mainnet fin 15683296 Miller applied (exit None, gas 3308447, fee 26467576, block 16)
+2026-11-18T17:53:21Z [live-bytes mainnet] job 0xe6fd5ba0c085f55e (finalized slot 15683296) is open: its finish first
+2026-11-18T17:53:22Z [live-bytes mainnet] mainnet fin 15683296 Finish applied (exit None, gas 3727009, fee 29816072, block 17)
+2026-11-18T17:56:13Z [live-bytes mainnet] stopped at round 40: {"chain":"mainnet","clients":{"lodestar":"Lodestar/v1.51.0/7923280","nimbus":"Nimbus/v26.10.2-0abc0d-stateofus"},"daemon":"live-bytes","finalized_slot":15683296,"last_error":"","last_plan":"up-to-date","period":1914,"reasons":[],"round":40,"status":"ok"}

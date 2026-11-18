@@ -202,6 +202,20 @@ guest toolchain (Rust 1.91.1 in `RISC0_HOME`, `scripts/ci/install-risc0.sh`).
 | `config.rs` (5 tests) | the shipped `ferrata-updater.example.toml` and `dev/dev.toml` parse; an unknown preset, a non-hex checkpoint, a zero deferral window, a source with both `url` and `dir`, an unknown field, `ledger = "sequencer"` without `[sequencer]` or with a sequencer not on loopback, an unknown ledger, an unknown layout, a `headers` source without `url` are refused; the example's Sepolia chain (checkpoint `3b901f5e…`, layout `gloas`) is the crown run's instance `a5fb2591…`; a beacon node's header answer is read only when canonical at that slot; the `updates` stream splits under both length conventions | pass |
 | `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without), 12 November 2026 |
 
+**Client diversity** (18 November 2026, [`results/client-diversity-2026-11-18/`](results/client-diversity-2026-11-18/README.md)
+§2): on the tree of that change **27 tests pass** (6 in the library, 8 in `config.rs`, 13 in `recorded.rs`), clippy
+`-D warnings` clean. New: two clients serving the same bytes catch up as before and one client twice waits
+(`distinct_clients_must_serve_the_same_bytes`); a "Lodestar" source serving valid updates three entries ahead of the
+other client is followed without the policy (to 11,600,416) and held back with it (at 11,591,680) until the other
+serves the same bytes (`an_update_one_client_serves_is_held_back`); a forged-signature source claiming a second client
+sends nothing, is demoted, and both sides' disagreements (7 each) are logged and named in `/health`
+(`a_lying_client_is_logged_and_does_not_count`); the recorded `/eth/v1/node/version` answers of Nimbus, Lodestar and
+Lighthouse over HTTP, in both match modes (`clients_reported_over_http`); the configuration's checks. The lab's record
+has grown since 13 November (mainnet 95, Sepolia 125 updates): `restart_mid_job_and_mid_period` now picks its stop
+point from the data (it had assumed the third entry from the end was a finality update), and the A3 gate's default
+run replays all **220** updates, each applied once, refused gas / applied 0.0603, honest-1's share 0.5027, 1,020
+rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table below keeps the 58-update runs).
+
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
 replays one update at a time; each round is a block whose transactions settle in a shuffled order;
@@ -269,3 +283,7 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   with LEZ's node-side crates and their prebuilt circuit and rapidsnark libraries). It ran inside a headless Logos
   Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
+- Client diversity ran ten minutes live on mainnet, on the in-process chain (two daemons; Sepolia's run did not start:
+  Lodestar's API answered HTTP 500 for the bootstraps the run script asked both clients for), not on a sequencer and
+  not for days. A provider's reported client is not authenticated. Lighthouse's public node serves light-client data
+  as JSON only, which `BeaconApi` does not read (it counts as a `headers` source).

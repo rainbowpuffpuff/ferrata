@@ -238,7 +238,10 @@ November ([`lez/updater/results/client-diversity-2026-11-18/`](../lez/updater/re
 Nimbus and Lodestar served the same bytes for every period update asked (five periods each on mainnet and Sepolia),
 but rarely the same finality update at the same moment, because they keep different ones (Lodestar the first of a
 newly finalized checkpoint for the whole epoch, Nimbus the newest each slot); the updater remembers which clients
-served which bytes, so it matches them across rounds.
+served which bytes, so it matches them across rounds. Live for ten minutes on mainnet, on the in-process chain: with
+`k = 2` byte for byte (Nimbus, Lodestar) it applied two period updates and one finality update, each from both
+clients, and skipped one finalized checkpoint no two clients served alike; with `k = 3` on the finalized header
+(Lighthouse's node the third) it skipped none.
 
 ## 3. The return leg (RFP-022 outbound)
 
