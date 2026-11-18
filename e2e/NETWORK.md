@@ -119,7 +119,8 @@ header and the light-client finality update.
   polled, a run ends after `PUBNET_ATTEMPT_TIMEOUT_S`); batch 4 again on the fixed code: 12 of 12, 0 violations.
   Batch 5 (seeds 65-88, same code): 23 of 24, 0 violations; seed 75 stopped with nothing wrong (forge gave up on a
   receipt of a transaction then found mined, and its message was classed permanent): since then a run that sent,
-  with every fate known and good, counts as transient.
+  with every fate known and good, counts as transient. Batch 6 on that final code (seeds 89-112, the runner's
+  nightly, 30 s stage budget): **24 of 24 complete, 0 violations** (3,330 faults, 2 transient stops resumed).
 - [`crown/test_send_guard.sh`](crown/test_send_guard.sh): a pending transaction of the deployer, a run killed right
   after its broadcast, a run started while that fate is unknown, the fate found, a replaced transaction and the
   operator's `ack` (anvil without mining, a stub forge that sends through the proxy). 8 of 8 pass.
