@@ -1,0 +1,16 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+deploy ferrata-v03: WriteSegment 6 of 6 (74852 bytes)	2	applied	-	0	0.0%	75148	0	100000	601184	8	8	1100
+deploy ferrata-v03: WriteSegment 5 of 6 (98304 bytes)	3	applied	-	0	0.0%	98696	0	100000	789568	8	8	1101
+deploy ferrata-v03: WriteSegment 4 of 6 (98304 bytes)	4	applied	-	0	0.0%	98696	0	100000	789568	8	8	1102
+deploy ferrata-v03: WriteSegment 3 of 6 (98304 bytes)	5	applied	-	0	0.0%	98696	0	100000	789568	8	8	1103
+deploy ferrata-v03: WriteSegment 2 of 6 (98304 bytes)	6	applied	-	0	0.0%	98696	0	100000	789568	8	8	1104
+deploy ferrata-v03: WriteSegment 1 of 6 (98304 bytes)	7	applied	-	0	0.0%	98696	0	100000	789568	8	8	1105
+deploy ferrata-v03: CreateHeader (immutable)	8	applied	-	0	0.0%	820	0	100000	6560	8	8	1106
+Init	9	applied	-	7975075	79.8%	51196	7975075	10000000	64210168	8	8	1793503331000
+refusal: update_0 with one node of its next-committee branch altered	10	refused	27	255417	2.6%	3901	205165	10000000	2329961	9	8	1793504135000
+refusal: update_0 with the summary adoption and the 512 keys	11	refused	84	8279627	82.8%	53058	7150902	10000000	66661480	8	8	1793504135001
+update_0 (period, 512/512): Update (one multiproof, residue witness, committee adopted by its summary)	12	applied	-	6565465	65.7%	3901	6565465	10000000	59120393	9	8	1793504135002
+update_1 (period, 510/512): Update (one multiproof, residue witness, committee adopted by its summary)	13	applied	-	6636683	66.4%	4794	6636683	10000000	66405182	10	8	1793602439000
+update_2 (period, 510/512): Update (one multiproof, residue witness, committee adopted by its summary)	14	applied	-	6647863	66.5%	4964	6647863	10000000	73166205	11	8	1793700719000
+update_3 (period, 512/512): Update (one multiproof, residue witness, committee adopted by its summary)	15	applied	-	6597601	66.0%	4265	6597601	10000000	79205332	12	8	1793799023000
+refusal: update_0 again (stale)	16	refused	23	169997	1.7%	3901	119745	10000000	2241169	13	8	1793799023001

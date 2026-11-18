@@ -814,6 +814,7 @@ dependencies = [
  "lee_core",
  "residue",
  "residue-agg",
+ "residue-handoff",
  "risc0-zkvm",
  "sha2",
  "tiny-keccak",
@@ -1554,6 +1555,15 @@ dependencies = [
  "blst",
  "ferrata-core",
  "sha2",
+]
+
+[[package]]
+name = "residue-handoff"
+version = "0.1.0"
+dependencies = [
+ "ferrata-core",
+ "residue",
+ "residue-agg",
 ]
 
 [[package]]

@@ -1,7 +1,8 @@
 # EXPERIMENTAL, UNAUDITED: Ferrata's light client as a LEZ v0.3.1 program (../README.md). Its own
 # workspace, lockfile and [patch.crates-io], built by ../methods. Its finality update in one
 # transaction uses the residue witness of ../../bench/residue and, optionally, the multiproof of
-# ../../bench/residue-agg, both bench-only, experimental and unaudited.
+# ../../bench/residue-agg; a handoff in one transaction adopts the next committee by its summary
+# (../../bench/residue-handoff). All bench-only, experimental and unaudited.
 [package]
 name = "ferrata_v03"
 version = "0.1.0"
@@ -16,6 +17,7 @@ ferrata-v03-wire = { path = "../wire" }
 ferrata-core = { path = "../../crates/ferrata-core", default-features = false, features = ["blst"] }
 residue = { path = "../../bench/residue" }
 residue-agg = { path = "../../bench/residue-agg" }
+residue-handoff = { path = "../../bench/residue-handoff" }
 lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core" }
 # LEZ v0.3.1 pins risc0-zkvm 3.0.5.
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }

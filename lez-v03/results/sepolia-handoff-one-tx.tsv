@@ -1,0 +1,41 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+deploy ferrata-v03: WriteSegment 6 of 6 (74852 bytes)	2	applied	-	0	0.0%	75148	0	100000	601184	8	8	1100
+deploy ferrata-v03: WriteSegment 5 of 6 (98304 bytes)	3	applied	-	0	0.0%	98696	0	100000	789568	8	8	1101
+deploy ferrata-v03: WriteSegment 4 of 6 (98304 bytes)	4	applied	-	0	0.0%	98696	0	100000	789568	8	8	1102
+deploy ferrata-v03: WriteSegment 3 of 6 (98304 bytes)	5	applied	-	0	0.0%	98696	0	100000	789568	8	8	1103
+deploy ferrata-v03: WriteSegment 2 of 6 (98304 bytes)	6	applied	-	0	0.0%	98696	0	100000	789568	8	8	1104
+deploy ferrata-v03: WriteSegment 1 of 6 (98304 bytes)	7	applied	-	0	0.0%	98696	0	100000	789568	8	8	1105
+deploy ferrata-v03: CreateHeader (immutable)	8	applied	-	0	0.0%	820	0	100000	6560	8	8	1106
+Init	9	applied	-	7885681	78.9%	51202	7885681	10000000	63495064	8	8	1791196524000
+period 1378 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	10	applied	-	6592610	65.9%	4250	6592610	10000000	59367490	9	8	1791215748000
+period 1379 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	11	applied	-	6451696	64.5%	3664	6451696	10000000	64546272	10	8	1791300600000
+period 1380 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	12	applied	-	6448847	64.5%	3664	6448847	10000000	70966629	11	8	1791393912000
+period 1381 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	13	applied	-	6448722	64.5%	3664	6448722	10000000	77413976	12	8	1791494364000
+period 1382 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	14	applied	-	6448420	64.5%	3664	6448420	10000000	83858772	13	8	1791592692000
+period 1383 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	15	applied	-	6448671	64.5%	3664	6448671	10000000	90310706	14	8	1791688824000
+period 1384 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	16	applied	-	6448833	64.5%	3664	6448833	10000000	96761807	15	8	1791789300000
+period 1385 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	17	applied	-	6448610	64.5%	3664	6448610	10000000	103207072	16	8	1791885624000
+period 1386 (511/512): Update (one multiproof, residue witness, committee adopted by its summary)	18	applied	-	6475611	64.8%	4048	6475611	10000000	110117771	17	8	1791983736000
+period 1387 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	19	applied	-	6448783	64.5%	3664	6448783	10000000	116107406	18	8	1792083780000
+period 1388 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	20	applied	-	6448786	64.5%	3664	6448786	10000000	122556246	19	8	1792180476000
+period 1389 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	21	applied	-	6448546	64.5%	3664	6448546	10000000	129000232	20	8	1792310364000
+period 1390 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	22	applied	-	6448912	64.5%	3664	6448912	10000000	135456464	21	8	1792376952000
+period 1391 (511/512): Update (one multiproof, residue witness, committee adopted by its summary)	23	applied	-	6475011	64.8%	4048	6475011	10000000	142482626	22	8	1792475256000
+period 1392 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	24	applied	-	6448786	64.5%	3664	6448786	10000000	148351390	23	8	1792573560000
+period 1393 (511/512): Update (one multiproof, residue witness, committee adopted by its summary)	25	applied	-	6475257	64.8%	4048	6475257	10000000	155438552	24	8	1792671876000
+period 1394 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	26	applied	-	6448973	64.5%	3664	6448973	10000000	161253637	25	8	1792770168000
+period 1395 (507/512): Update (one multiproof, residue witness, committee adopted by its summary)	27	applied	-	6558177	65.6%	5168	6558177	10000000	170553946	26	8	1792868472000
+period 1396 (511/512): Update (one multiproof, residue witness, committee adopted by its summary)	28	applied	-	6474998	64.7%	4048	6474998	10000000	174857330	27	8	1792998744000
+period 1397 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	29	applied	-	6448722	64.5%	3664	6448722	10000000	180593528	28	8	1793131332000
+period 1398 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	30	applied	-	6448621	64.5%	3664	6448621	10000000	187039321	29	8	1793163384000
+period 1399 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	31	applied	-	6448736	64.5%	3664	6448736	10000000	193491392	30	8	1793261688000
+period 1400 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	32	applied	-	6448736	64.5%	3664	6448736	10000000	199940128	31	8	1793359992000
+period 1401 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	33	applied	-	6448610	64.5%	3664	6448610	10000000	206384832	32	8	1793458296000
+period 1402 (512/512): Update (one multiproof, residue witness, committee adopted by its summary)	34	applied	-	6448560	64.5%	3664	6448560	10000000	212831792	33	8	1793556600000
+period 1403 (506/512): Update (one multiproof, residue witness, committee adopted by its summary)	35	applied	-	6573800	65.7%	5360	6573800	10000000	223552080	34	8	1793654904000
+period 1404 (510/512): Update (one multiproof, residue witness, committee adopted by its summary)	36	applied	-	6495193	65.0%	4336	6495193	10000000	227366443	35	8	1793753592000
+period 1405 (506/512): Update (one multiproof, residue witness, committee adopted by its summary)	37	applied	-	6576774	65.8%	5424	6576774	10000000	236807256	36	8	1793858268000
+period 1406 (511/512): Update (one multiproof, residue witness, committee adopted by its summary)	38	applied	-	6475003	64.8%	4048	6475003	10000000	239607495	37	8	1793949816000
+period 1407 (506/512): Update (one multiproof, residue witness, committee adopted by its summary)	39	applied	-	6566875	65.7%	5200	6566875	10000000	249582850	38	8	1794048120000
+period 1408 (507/512): Update (one multiproof, residue witness, committee adopted by its summary)	40	applied	-	6557585	65.6%	5168	6557585	10000000	255787159	39	8	1794187548000
+period 1409 (508/512): Update (one multiproof, residue witness, committee adopted by its summary)	41	applied	-	6539372	65.4%	4912	6539372	10000000	261614176	40	8	1794244740000

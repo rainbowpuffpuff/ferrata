@@ -820,20 +820,28 @@ impl Instance {
     ) -> (Planned, Vec<Part>, Option<HeaderRecord>) {
         let layout = self.layout_for(self.native.core().fork, update);
         let (job, store) = self.native_job(update, layout).expect("the update opens a job natively");
+        let summary = matches!(verify, Verify::ResidueSummary { .. });
         let verify = match verify {
             Verify::Residue { .. } => {
                 let (c, w) = Self::residue_witness(&job);
                 Verify::Residue { c, w }
             }
+            // EXPERIMENTAL (bench/RESIDUE.md §10): a handoff's committee adopted by its summary in the
+            // same transaction, so no adoption parts.
+            Verify::ResidueSummary { .. } => {
+                let (c, w) = Self::residue_witness(&job);
+                Verify::ResidueSummary { c, w }
+            }
             v => v,
         };
         let parts = match (&job.adoption, update.next_sync_committee.pubkeys.iter().any(|k| *k != [0u8; 48])) {
-            (Some(_), true) => self.parts(&update.next_sync_committee),
+            (Some(_), true) if !summary => self.parts(&update.next_sync_committee),
             _ => vec![],
         };
         let (adopt, rest) = if adopt_now { (parts, vec![]) } else { (vec![], parts) };
         let (record, _) = self.expected_record(&job, &store);
-        let completes = matches!(verify, Verify::Core | Verify::Residue { .. }) && rest.is_empty();
+        let completes =
+            matches!(verify, Verify::Core | Verify::Residue { .. } | Verify::ResidueSummary { .. }) && rest.is_empty();
         let claim = if completes { record.as_ref().map(|r| self.claim(r)) } else { None };
         let mut accounts = vec![self.account()];
         if let Some(c) = &claim {

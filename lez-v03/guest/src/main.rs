@@ -4,9 +4,11 @@
 //! public LEZ testnet runs. The verification is `ferrata-core`'s, unchanged; the one-transaction
 //! finality update replaces the final exponentiation by the residue-witness check of
 //! `bench/residue` (`Verify::Residue`), and may compose the signing key from one multiproof of
-//! the non-signers (`bench/residue-agg`, a signer witness marked `0xffff`/`0xfffe`): both are
-//! bench code, experimental and unaudited. `Verify::Core` and the stepwise `Continue` path use the
-//! core alone.
+//! the non-signers (`bench/residue-agg`, a signer witness marked `0xffff`/`0xfffe`); with
+//! `Verify::ResidueSummary` a handoff adopts the next committee by its summary in the same
+//! transaction (`bench/residue-handoff`, `bench/RESIDUE.md` §10: sound only under the light client's
+//! honest-supermajority assumption). All three are bench code, experimental and unaudited.
+//! `Verify::Core` and the stepwise `Continue` path use the core alone.
 //!
 //! See `ferrata_v03_wire` for the accounts, instructions and effects. The plan sees no state: it
 //! checks that every account is the program's own shard at the address the instruction implies,
@@ -280,6 +282,15 @@ fn instance(
                 Verify::Residue { c, w } => {
                     job.step2().map_err(step)?;
                     residue_check(&mut job, &c, &w)?;
+                }
+                Verify::ResidueSummary { c, w } => {
+                    job.step2().map_err(step)?;
+                    residue_check(&mut job, &c, &w)?;
+                    if job.adoption_pending() {
+                        // EXPERIMENTAL (bench/RESIDUE.md §10; sound only under the light client's
+                        // honest-supermajority assumption): the next committee adopted by its summary.
+                        residue_handoff::adopt_summary(&mut job).map_err(step)?;
+                    }
                 }
             }
             advance(state, job, adopt, record)

@@ -3,9 +3,12 @@
 **EXPERIMENTAL AND UNAUDITED. Not the proposal's deliverable: the LEZ v0.4 programs of
 [`../lez/`](../lez/README.md) are.** Its one-transaction finality update replaces the final exponentiation by
 the residue-witness check of [`../bench/residue`](../bench/RESIDUE.md) and may compose the signing key from one
-multiproof of the non-signers ([`../bench/residue-agg`](../bench/RESIDUE.md)): bench code, experimental and
-unaudited, which nothing else in this repository deploys. No program or guest with an image id in
-[`../docs/image-ids.md`](../docs/image-ids.md) changed.
+multiproof of the non-signers ([`../bench/residue-agg`](../bench/RESIDUE.md)); with `Verify::ResidueSummary` a
+handoff is one transaction too, the next committee adopted by its summary instead of its 512 keys
+([`../bench/residue-handoff`](../bench/RESIDUE.md), §10), which is sound only under the honest-supermajority
+assumption the light client already makes. All of it is bench code, experimental and unaudited, which nothing else
+in this repository deploys. No program or guest with an image id in [`../docs/image-ids.md`](../docs/image-ids.md)
+changed; this program's own image id changed with the summary adoption (below, "Image id").
 
 Every program of this repository targets LEZ v0.4 (the actor model), which has no public network. The public LEZ
 testnet runs **v0.3.1** (`https://testnet.lez.logos.co`; its state machine, programs and wallet are the same in
@@ -68,22 +71,32 @@ the vault's proofs). Ran on the Modal build box, 18 November 2026; results in [`
 
 | transaction | execution gas | of the 10M cap | bytes |
 |---|---:|---:|---:|
-| **finality update in ONE transaction, residue witness** (mainnet update_1, 510 of 512) | **6,647,546** | 66.5% | 4,934 |
-| the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,660 and 6,530,554 | 65.3% | 4,732 |
-| finality update in one transaction by the core alone (mainnet update_4) | 9,103,128 | 91.0% | 3,390 |
-| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,001; 7,885,607 | 79.8%; 78.9% | 51,196; 51,202 |
-| handoff (period update): `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,497 + 7,707,328 | 65.7% + 77.1% | 3,897 + 49,486 |
-| handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,918, 3,337,230, 3,670,637, 7,704,852 | | |
-| handoff, steps 1-3 by the core in one transaction, then the adoption | 9,114,176 + 7,704,852 | 91.1% + 77.0% | |
-| handoff with the multiproof of the non-signers and the residue witness | 6,566,158 + 7,704,852 | | |
-| `Attest` of two slots (`depositRoot`, `nextLeafIndex`) under a Gloas record | 526,118 and 512,552 | 5.3% | 6,970; 6,991 |
-| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 567,988 in all |
+| **finality update in ONE transaction, residue witness** (mainnet update_1, 510 of 512) | **6,647,616** | 66.5% | 4,934 |
+| the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,729 and 6,530,623 | 65.3% | 4,732 |
+| finality update in one transaction by the core alone (mainnet update_4) | 9,103,198 | 91.0% | 3,390 |
+| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,075; 7,885,681 | 79.8%; 78.9% | 51,196; 51,202 |
+| **handoff (period update) in ONE transaction, the committee adopted by its summary** (`Verify::ResidueSummary`, one multiproof; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,565,465; 6,636,683; 6,647,863; 6,597,601** | 65.7% to 66.5% | 3,901 to 4,964 |
+| the same, Sepolia: the 32 handoffs of periods 1378 to 1409 (through the Gloas layout change) | 6,448,420 to **6,592,610** | at most 65.9% | 3,664 to 5,424 |
+| handoff with the 512 keys adopted: `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,571 + 7,707,411 | 65.7% + 77.1% | 3,897 + 49,486 |
+| handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,993, 3,337,313, 3,670,720, 7,704,931 | | |
+| handoff, steps 1-3 by the core in one transaction, then the adoption | 9,114,250 + 7,704,931 | 91.1% + 77.0% | |
+| handoff with the multiproof of the non-signers and the residue witness, then the adoption | 6,566,232 + 7,704,931 | | |
+| `Attest` of two slots (`depositRoot`, `nextLeafIndex`) under a Gloas record | 526,207 and 512,641 | 5.3% | 6,970; 6,991 |
+| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 569,448 in all |
 
 The v0.4 bench measured 6,629,246 for the same mainnet update in one transaction through LEZ v0.4's state machine
-([`../bench/RESIDUE.md`](../bench/RESIDUE.md), EVIDENCE row 127); v0.3.1 charges 6,647,546. A finality update by the
+([`../bench/RESIDUE.md`](../bench/RESIDUE.md), EVIDENCE row 127); v0.3.1 charges 6,647,616. A finality update by the
 core alone fits one transaction too at this participation; each non-signer adds about 25,000 cycles, so below about
 475 signers it does not (derived), and the residue path with the multiproof keeps it under the cap down to the
-policy's floor of 342 (row 128, measured on v0.4's state machine). The handoff does not fit one transaction (about 14M): two. Sepolia: 76 transactions
+policy's floor of 342 (row 128, measured on v0.4's state machine). With its 512 keys adopted the handoff does not fit one
+transaction (about 14M): two. With the next committee adopted by its summary (experimental; sound only under the
+light client's honest-supermajority assumption, [`../bench/RESIDUE.md`](../bench/RESIDUE.md) §10, EVIDENCE row 137) it
+is one (`handoffs_in_one_transaction_each`, `results/mainnet-handoff-one-tx.tsv` and `sepolia-handoff-one-tx.tsv`): after
+each, the instance's store is the native policy store's, whose adoption checks the 512 keys, and a header that advances
+is recorded; refused, nothing changed: a next-committee branch with one node altered (27), the summary adoption with
+the 512 keys sent beside it (84, `NoAdoption`), update_0 again (23). At 342 signers the handoff was measured on v0.4's
+state machine only (8,341,469 gas at the costliest placement found, row 137): this harness has no way to write a
+substituted committee into an instance's state. Sepolia: 76 transactions
 applied, 32 handoffs from period 1378 to 1409, the store upgrading itself to the Gloas layout at 1379, then the two
 finality updates and the attestations (slot 0 = `0xa5b5c43f…4875` and slot 1 = 1 of vault `0xd0b5…8af7` at block
 12,107,997; slot 0 = `0xfaad1232…579d` and slot 1 = 2 of vault `0xfe31…9e54` at block 12,112,773).
@@ -94,6 +107,13 @@ finalized header changed (26); a tampered residue witness (40); a wrong claimed 
 (218); an update while a verified job waits for its adoption (207); an attestation claiming a wrong value (220),
 with a changed proof node (110) or without the block's header under a Gloas record (215). A transaction sent before
 its signature slot is outside its window: v0.3.1 includes it and charges the whole declared limit.
+
+**Image id.** The summary adoption changed the program (it is deployed nowhere): this build's image id is
+`f8ec1b21e07f27372e999dc3cd839c75edc49179186b87a6eaced082bb1bfec2` (598,796 ELF bytes; its deployed segments are 1,460 bytes longer); the local
+sequencer run below used the program before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
+(`results/local/txs.tsv`). Every figure of the table above is from this build, 18 November 2026; each is 69 to 89 gas
+above the earlier build's for the same transaction (the earlier figures are in the history of `results/`); the local
+run's figures are the earlier build's.
 
 ## On a LEZ v0.3.1 sequencer
 

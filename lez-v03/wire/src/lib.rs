@@ -178,6 +178,11 @@ pub enum Verify {
     /// EXPERIMENTAL, UNAUDITED: steps 1 and 2, then the residue-witness check (`bench/residue`,
     /// `bench/RESIDUE.md`) instead of the final exponentiation; `c` and `w` are 576 bytes each.
     Residue { c: Vec<u8>, w: Vec<u8> },
+    /// EXPERIMENTAL, UNAUDITED: as `Residue`; then an update that adopts a committee (a handoff)
+    /// adopts it by its summary, the key root and aggregate key step 1 proved in the signed attested
+    /// state, without its keys (`bench/residue-handoff`, `bench/RESIDUE.md` §10: sound only under the
+    /// light client's honest-supermajority assumption), so that a handoff is one transaction.
+    ResidueSummary { c: Vec<u8>, w: Vec<u8> },
 }
 
 /// One step of the instance's job in progress (`Continue`).
