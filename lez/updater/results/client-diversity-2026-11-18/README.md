@@ -53,7 +53,10 @@ only, it would almost never send a finality update.
 change: **27 passed, 0 failed** (6 in the library, 8 in `config.rs`, 13 in `recorded.rs`; [`suite/tests.txt`](suite/tests.txt));
 `RISC0_SKIP_BUILD=1 cargo clippy -p ferrata-updater --features harness --all-targets -- -D warnings` clean
 ([`suite/clippy-summary.txt`](suite/clippy-summary.txt)); `cargo fmt` applied. Steps and seconds:
-[`suite/run-steps.txt`](suite/run-steps.txt). The new tests:
+[`suite/run-steps.txt`](suite/run-steps.txt); 17:45–18:01Z, the suite and the live runs of §3 at the same time. The box
+keeps no git history (`suite/run-env.txt` shows it); the sources it ran are those of commit `7c1784bb` (`5aa2e701` and
+the `cargo fmt` that ran first on the box, formatting only). A first run of the same suite at 16:13Z (all new tests
+passed) found the failing restart test below; a second was lost with its container. The new tests:
 
 | test | what it shows | result |
 |---|---|---|
