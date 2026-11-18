@@ -521,9 +521,9 @@ async fn claim(run: &mut Run, a: &HashMap<String, String>, private: bool) -> Res
     let nullifier = deposits::nullifier_of(&w, root.evm_chain_id, &root.vault);
     let step = a.get("step").cloned().unwrap_or_else(|| format!("claim-{k}"));
     let at_root = mention(root_account(bridge, &root.config_id, n), bridge);
-    let at_nullifier = mention(nullifier_account(bridge, root.evm_chain_id, &root.vault, &nullifier), bridge);
+    let at_nullifier = mention(nullifier_account(bridge, &root.config_id, root.evm_chain_id, &root.vault, &nullifier), bridge);
     if !private {
-        let accounts = vec![at_root, at_nullifier, mention(holder_account(bridge, &w.dest), bridge)];
+        let accounts = vec![at_root, at_nullifier, mention(holder_account(bridge, &root.config_id, &w.dest), bridge)];
         let i = Instruction::Claim { config, root, witness: w };
         return public(run, &step, accounts, bridge, borsh::to_vec(&i)?).await;
     }
@@ -593,7 +593,7 @@ async fn burn(run: &mut Run, a: &HashMap<String, String>, private: bool) -> Resu
     let owner = run.acc("holder_public")?;
     let accounts = vec![
         AccountIdentity::Public(owner).select_program_shard(bridge),
-        mention(holder_account(bridge, owner.value()), bridge),
+        mention(holder_account(bridge, &cid, owner.value()), bridge),
         at_record,
         at_burns,
     ];
@@ -619,11 +619,11 @@ async fn state(run: &Run) -> Result<()> {
         for k in 0..2 {
             let d = deposit(run, k)?;
             let nf = d.nullifier(config.evm_chain_id, &config.vault);
-            ids.push((format!("nullifier_{k}"), nullifier_account(bridge, config.evm_chain_id, &config.vault, &nf), bridge));
+            ids.push((format!("nullifier_{k}"), nullifier_account(bridge, &cid, config.evm_chain_id, &config.vault, &nf), bridge));
         }
     }
     let public_holder = run.acc("holder_public")?;
-    ids.push(("holder_public".into(), holder_account(bridge, public_holder.value()), bridge));
+    ids.push(("holder_public".into(), holder_account(bridge, &cid, public_holder.value()), bridge));
     if let Some(n) = run.rec["notes"].as_object() {
         for (step, note) in n {
             let hash: Root = unhex(note["hash"].as_str().unwrap_or_default())?;
@@ -732,8 +732,8 @@ fn batch(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
         "claim-0",
         vec![
             sh(root_account(bridge, &cid, n), bridge),
-            sh(nullifier_account(bridge, root_state.evm_chain_id, &root_state.vault, &nf), bridge),
-            sh(holder_account(bridge, &w.dest), bridge),
+            sh(nullifier_account(bridge, &cid, root_state.evm_chain_id, &root_state.vault, &nf), bridge),
+            sh(holder_account(bridge, &cid, &w.dest), bridge),
         ],
         vec![],
         borsh::to_vec(&claim)?,
@@ -754,7 +754,7 @@ fn batch(run: &mut Run, a: &HashMap<String, String>) -> Result<()> {
             "burn-public",
             vec![
                 sh(owner, bridge),
-                sh(holder_account(bridge, owner.value()), bridge),
+                sh(holder_account(bridge, &cid, owner.value()), bridge),
                 sh(burn_account(bridge, &cid, &note.hash()), bridge),
                 sh(burns_account(bridge, &cid), bridge),
             ],

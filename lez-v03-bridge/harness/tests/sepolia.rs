@@ -134,27 +134,35 @@ fn sepolia_live_vault_under_its_own_finalized_blocks() {
 
     // Under a record the v0.3.1 light client itself wrote (lez-v03/results/local, branch testnet-v03, merged): its
     // instance, bootstrapped from Sepolia and advanced through Sepolia's own finality updates on a local v0.3.1
-    // sequencer, wrote header(instance, 11,605,376), which binds block 12,160,907; the same run captured the vault's
+    // sequencer, wrote header(instance, slot) (its newest), which binds a block of Sepolia; the same run captured the vault's
     // slots 0 and 1 there. The record's bytes are placed at that account as the light client's program wrote them.
     let lc_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../lez-v03/results/local");
     let rec: serde_json::Value = serde_json::from_slice(&std::fs::read(lc_dir.join("record.json")).unwrap()).unwrap();
     let lc_program: AccountId = rec["program"].as_str().unwrap().parse().unwrap();
     let lc_instance: [u8; 32] = hex::decode(rec["instance"]["id"].as_str().unwrap()).unwrap().try_into().unwrap();
-    let lc_slot = 11_605_376u64;
-    let written = rec["records"].as_array().unwrap().iter().find(|r| r["slot"].as_u64() == Some(lc_slot)).unwrap();
+    // The record whose slot names the run's capture directory (lez-v03/results/local/proofs/<slot>/).
+    let written = rec["records"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|r| r["slot"].as_u64().is_some_and(|slot| lc_dir.join(format!("proofs/{slot}/proof.json")).exists()))
+        .expect("a record with its capture");
+    let lc_slot = written["slot"].as_u64().unwrap();
     let lc_account: AccountId = written["account"].as_str().unwrap().parse().unwrap();
     assert_eq!(ferrata_lez03_bridge_core::header_account(lc_program, &lc_instance, lc_slot), lc_account);
     let bytes = hex::decode(written["shard"].as_str().unwrap()).unwrap();
     let lc_record: ferrata_lez03_bridge_core::LcRecord = borsh::from_slice(&bytes).unwrap();
-    let c3 = Captured::load(&lc_dir.join("proofs/11605376"), "proof.json", lc_slot);
+    let c3 = Captured::load(&lc_dir.join(format!("proofs/{lc_slot}")), "proof.json", lc_slot);
+    let lc_block = ferrata_core::exec::decode_header(&c3.header).unwrap().number;
     assert_eq!(lc_record.record, ferrata_core::witness::HeaderRecord::decode(&lc_record.record).unwrap().encode());
     w.state.force_insert_account(lc_account, Account::default().with_shard(lc_program, ShardData::try_from(bytes.clone()).unwrap()));
     let lc_config = ferrata_lez03_bridge_core::BridgeConfig { attestation: lc_program, instance_id: lc_instance, ..config.clone() };
     let lc_ref = ferrata_lez03_bridge_core::RecordRef { slot: lc_slot, state: bytes };
     let i3 = c3.import_proof();
     let f3 = vault_facts(&lc_config, &lc_ref, &i3.account, [(SLOT_ROOT, i3.root_slot.as_slice()), (SLOT_COUNT, i3.count_slot.as_slice())]).unwrap();
-    assert_eq!((f3.block_number, f3.values), (12_160_907, [deposits::root(&leaves, 2), word_of(2)]));
-    let t = w.import_root("ImportRoot n = 2 under the v0.3.1 light client's own record of block 12,160,907 (proofs verified; no configuration)", &lc_config, &lc_ref, deposits::root(&leaves, 2), 2, i3);
+    assert_eq!((f3.block_number, f3.values), (lc_block, [deposits::root(&leaves, 2), word_of(2)]));
+    let label = format!("ImportRoot n = 2 under the v0.3.1 light client's own record of block {lc_block} (slot {lc_slot}; proofs verified; no configuration)");
+    let t = w.import_root(&label, &lc_config, &lc_ref, deposits::root(&leaves, 2), 2, i3);
     assert_eq!(t.code, Some(u32::from(code::NOT_FOUND)));
 
     let out = format!(
@@ -168,14 +176,17 @@ fn sepolia_live_vault_under_its_own_finalized_blocks() {
          Natively, the program's check (`vault_facts`) of both captures gives (block, root, count) = (12,119,428, \
          `{}`, 1) and (12,119,519, `{}`, 2), and the claim statement opens both deposits under the second root.\n\n\
          Under a record the v0.3.1 light client wrote itself (lez-v03/results/local: its instance `{}` advanced \
-         through Sepolia's own finality updates wrote header(instance, 11,605,376), binding block 12,160,907), the \
-         program's check of that run's capture gives (12,160,907, `{}`, 2): the same root, from a later finalized block.\n\n\
+         through Sepolia's own finality updates wrote header(instance, {}), binding block {}), the program's check \
+         of that run's capture gives ({}, `{}`, 2): the same root, from a later finalized block.\n\n\
          The vault pins the v0.4 configuration `{}`; this program's configuration is `{}`. So `Init` is refused \
          (246, the pairing working); each import's plan verifies both storage proofs and is then refused by the \
          configuration's guard (245); the claim is refused (245, no root imported).\n\n{}",
         hex::encode(f1.values[0]),
         hex::encode(f2.values[0]),
         hex::encode(lc_instance),
+        lc_slot,
+        lc_block,
+        lc_block,
         hex::encode(f3.values[0]),
         hex::encode(crown_config_id),
         hex::encode(cid),

@@ -457,8 +457,8 @@ impl World {
         let nullifier = deposits::nullifier_of(witness, root.evm_chain_id, &root.vault);
         let selectors = vec![
             self.sel(root_account(self.bridge, &root.config_id, root.leaf_count)),
-            self.sel(nullifier_account(self.bridge, root.evm_chain_id, &root.vault, &nullifier)),
-            self.sel(holder_account(self.bridge, &witness.dest)),
+            self.sel(nullifier_account(self.bridge, &root.config_id, root.evm_chain_id, &root.vault, &nullifier)),
+            self.sel(holder_account(self.bridge, &root.config_id, &witness.dest)),
         ];
         let i = Instruction::Claim { config: config.clone(), root: *root, witness: witness.clone() };
         self.public(label, &i, selectors, &[])
@@ -475,7 +475,7 @@ impl World {
         let nullifier = deposits::nullifier_of(witness, root.evm_chain_id, &root.vault);
         let public = vec![
             root_account(self.bridge, &root.config_id, root.leaf_count),
-            nullifier_account(self.bridge, root.evm_chain_id, &root.vault, &nullifier),
+            nullifier_account(self.bridge, &root.config_id, root.evm_chain_id, &root.vault, &nullifier),
         ];
         let amount = bc::u128_of(&witness.amount).unwrap_or(0);
         let effect = Effect::Credit { config_id: root.config_id, token: witness.token, amount };
@@ -489,7 +489,7 @@ impl World {
         let owner_id = account_of(owner);
         let selectors = vec![
             self.sel(owner_id),
-            self.sel(holder_account(self.bridge, owner_id.value())),
+            self.sel(holder_account(self.bridge, &cid, owner_id.value())),
             self.sel(burn_account(self.bridge, &cid, &note.hash())),
             self.sel(burns_account(self.bridge, &cid)),
         ];
@@ -513,9 +513,9 @@ impl World {
         self.private(label, &i, holder, &effect, public)
     }
 
-    /// The holding of `account` at `holder(account)`.
+    /// The holding of `account` at `holder(cid, account)`.
     pub fn public_holding(&self, config: &BridgeConfig, account: &Root, token: &[u8; 20]) -> u128 {
-        match self.bridge_state(holder_account(self.bridge, account)) {
+        match self.bridge_state(holder_account(self.bridge, &self.config_id(config), account)) {
             Some(BridgeState::Holder(h)) => h.holding(&self.config_id(config), token),
             _ => 0,
         }

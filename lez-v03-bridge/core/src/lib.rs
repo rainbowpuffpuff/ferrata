@@ -197,8 +197,11 @@ pub fn root_seed(config_id: &Root, leaf_count: u64) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"root", &[config_id, &leaf_count.to_le_bytes()]))
 }
 
-pub fn nullifier_seed(evm_chain_id: u64, vault: &Address, nullifier: &Root) -> PdaSeed {
-    PdaSeed::new(tagged_hash(b"nullifier", &[&chain_id_u256(evm_chain_id), vault, nullifier]))
+/// The nullifier's seed names the configuration (review of 18 Nov 2026, finding 1; v0.4 keys it by chain, vault and
+/// `N` only): a second configuration of the same vault and chain, whose light client its creator controls, spends
+/// only its own nullifiers and cannot freeze a deposit of the configuration the vault pins.
+pub fn nullifier_seed(config_id: &Root, evm_chain_id: u64, vault: &Address, nullifier: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"nullifier", &[config_id, &chain_id_u256(evm_chain_id), vault, nullifier]))
 }
 
 pub fn burn_seed(config_id: &Root, note_hash: &Root) -> PdaSeed {
@@ -210,8 +213,11 @@ pub fn burns_seed(config_id: &Root) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"burns", &[config_id]))
 }
 
-pub fn holder_seed(account: &Root) -> PdaSeed {
-    PdaSeed::new(tagged_hash(b"holder", &[account]))
+/// One holder account per configuration and destination (review of 18 Nov 2026, finding 3; v0.4 keeps one per
+/// destination for every configuration): only the configuration's registered tokens (at most
+/// [`MAX_DENOMINATIONS`]) are ever credited there, so no other configuration can fill it.
+pub fn holder_seed(config_id: &Root, account: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"holder", &[config_id, account]))
 }
 
 fn pda(program: AccountId, seed: &PdaSeed) -> AccountId {
@@ -228,9 +234,15 @@ pub fn root_account(program: AccountId, config_id: &Root, leaf_count: u64) -> Ac
     pda(program, &root_seed(config_id, leaf_count))
 }
 
-/// `nullifier(chain, vault, N)`: spent once by a claim. No `cid`: one namespace per vault.
-pub fn nullifier_account(program: AccountId, evm_chain_id: u64, vault: &Address, nullifier: &Root) -> AccountId {
-    pda(program, &nullifier_seed(evm_chain_id, vault, nullifier))
+/// `nullifier(cid, chain, vault, N)`: spent once by a claim under configuration `cid`.
+pub fn nullifier_account(
+    program: AccountId,
+    config_id: &Root,
+    evm_chain_id: u64,
+    vault: &Address,
+    nullifier: &Root,
+) -> AccountId {
+    pda(program, &nullifier_seed(config_id, evm_chain_id, vault, nullifier))
 }
 
 /// `burn(cid, H(note))`: a burn note, written once.
@@ -243,11 +255,11 @@ pub fn burns_account(program: AccountId, config_id: &Root) -> AccountId {
     pda(program, &burns_seed(config_id))
 }
 
-/// `holder(account)`: `account`'s public wrapped balances. Its seed carries the role, so it is
-/// never the address of another account of the program, whatever account a claim names (v0.4's
+/// `holder(cid, account)`: `account`'s public wrapped balances under configuration `cid`. Its seed carries the
+/// role, so it is never the address of another account of the program, whatever account a claim names (v0.4's
 /// security review C-1).
-pub fn holder_account(program: AccountId, account: &Root) -> AccountId {
-    pda(program, &holder_seed(account))
+pub fn holder_account(program: AccountId, config_id: &Root, account: &Root) -> AccountId {
+    pda(program, &holder_seed(config_id, account))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -415,7 +427,7 @@ pub struct RootState {
     pub block_number: u64,
 }
 
-/// `nullifier(chain, vault, N)`: what was claimed with it (v0.4's layout).
+/// `nullifier(cid, chain, vault, N)`: what was claimed with it (v0.4's layout).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct NullifierState {
     pub config_id: Root,
@@ -432,8 +444,9 @@ pub struct Holding {
     pub amount: u128,
 }
 
-/// Wrapped balances: at `holder(account)` (public), or in a private account's own shard of the
-/// bridge program (private). The testnet has no token program: the bridge keeps the balances.
+/// Wrapped balances: at `holder(cid, account)` (public, one configuration), or in a private account's own shard of
+/// the bridge program (private; only its owner's claims credit it). The testnet has no token program: the bridge
+/// keeps the balances.
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct HolderState {
     pub holdings: Vec<Holding>,
@@ -613,7 +626,7 @@ pub fn verify_claim(root: &RootState, w: &ClaimWitness) -> Result<Claimed, u8> {
 // ---------------------------------------------------------------------------------------------
 
 /// Where a burn debits: the holder account's own shard of the bridge (a private account's
-/// balance), or its `holder(account)` (a public account's balance).
+/// balance), or its `holder(cid, account)` (a public account's balance).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BurnFrom {
     Own,
@@ -627,10 +640,10 @@ pub enum BurnFrom {
 /// |---|---|
 /// | `Init` | `config(cid)`; the light client's `header(instance, slot)` (its shard) |
 /// | `ImportRoot` | `config(cid)`; `header(instance, slot)` (the light client's shard); `root(cid, n)` |
-/// | `Claim` | `root(cid, n)`; `nullifier(chain, vault, N)`; `holder(dest)` |
-/// | `ClaimPrivately` | the destination (a private account, authorised); `root(cid, n)`; `nullifier(chain, vault, N)` |
+/// | `Claim` | `root(cid, n)`; `nullifier(cid, chain, vault, N)`; `holder(cid, dest)` |
+/// | `ClaimPrivately` | the destination (a private account, authorised); `root(cid, n)`; `nullifier(cid, chain, vault, N)` |
 /// | `Burn`, `Own` | the holder (authorised); `burn(cid, H(note))`; `burns(cid)` |
-/// | `Burn`, `Holder` | the holder (authorised); `holder(holder)`; `burn(cid, H(note))`; `burns(cid)` |
+/// | `Burn`, `Holder` | the holder (authorised); `holder(cid, holder)`; `burn(cid, H(note))`; `burns(cid)` |
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum Instruction {
     /// Pair the configuration with its vault: the vault's slot 2 holds `configId` under the record.
@@ -638,7 +651,7 @@ pub enum Instruction {
     /// Import the vault's root and leaf count (slots 0 and 1) under the record. A top-level call
     /// only (D10).
     ImportRoot { config: BridgeConfig, record: RecordRef, root: Root, leaf_count: u64, proof: ImportProof },
-    /// The plaintext claim of a public-kind deposit to `holder(dest)`.
+    /// The plaintext claim of a public-kind deposit to `holder(cid, dest)`.
     Claim { config: BridgeConfig, root: RootState, witness: ClaimWitness },
     /// The claim of a private-kind deposit, run by its destination account (a private account,
     /// in a privacy-preserving transaction), crediting its own shard.
@@ -672,9 +685,20 @@ pub enum Effect {
     AppendBurn { config_id: Root, note: Note },
 }
 
+/// LEZ v0.3.1's limit on a shard (`lee_core::account::data::DATA_MAX_LENGTH`, 100 KiB).
+pub const SHARD_LIMIT: usize = 100 * 1024;
+
 /// Carry out `effect` on a shard holding `pre`: `Ok(None)` keeps it, `Ok(Some(bytes))` replaces it,
-/// `Err(code)` refuses the transaction.
+/// `Err(code)` refuses the transaction. A new state larger than a shard is a refusal ([`code::CAPPED`]), never a
+/// panic (review of 18 Nov 2026, finding 3).
 pub fn apply(effect: &Effect, pre: &[u8]) -> Result<Option<Vec<u8>>, u8> {
+    match apply_unbounded(effect, pre)? {
+        Some(post) if post.len() > SHARD_LIMIT => Err(code::CAPPED),
+        post => Ok(post),
+    }
+}
+
+fn apply_unbounded(effect: &Effect, pre: &[u8]) -> Result<Option<Vec<u8>>, u8> {
     let guard = |hash: &Root, absent: u8, other: u8| {
         if pre.is_empty() {
             Err(absent)
@@ -785,7 +809,7 @@ pub mod code {
         NOT_AUTHORIZED = 253;
         /// A holding smaller than the denomination burned.
         INSUFFICIENT_BALANCE = 254;
-        /// Not used (v0.4's caps).
+        /// A new account state larger than LEZ's shard limit (v0.4's caps are not ported; the same code, a capacity).
         CAPPED = 255;
     }
 }
@@ -869,6 +893,20 @@ mod tests {
         let d = Effect::Debit { config_id: [1; 32], token: ETH, amount: 5 };
         let empty = apply(&d, &after).unwrap().unwrap();
         assert_eq!(BridgeState::decode(&empty).unwrap(), BridgeState::Holder(HolderState::default()));
+    }
+
+    #[test]
+    fn a_state_over_the_shard_limit_is_a_refusal() {
+        let mut h = HolderState::default();
+        for i in 0..1505u32 {
+            h.holdings.push(Holding { config_id: sha256(&i.to_le_bytes()), token: ETH, amount: 1 });
+        }
+        let pre = BridgeState::Holder(h).encode();
+        assert!(pre.len() <= SHARD_LIMIT);
+        let credit = Effect::Credit { config_id: [7; 32], token: ETH, amount: 1 };
+        assert_eq!(apply(&credit, &pre), Err(code::CAPPED));
+        let debit = Effect::Debit { config_id: sha256(&0u32.to_le_bytes()), token: ETH, amount: 1 };
+        assert!(apply(&debit, &pre).unwrap().is_some());
     }
 
     #[test]

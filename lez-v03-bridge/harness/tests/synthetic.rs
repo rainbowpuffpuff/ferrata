@@ -200,7 +200,7 @@ fn inbound_and_burns_on_synthetic_storage() {
     let alice_acc = account_of(&alice);
     let selectors = vec![
         ProgramShardSelector::new(alice_acc, w.bridge),
-        ProgramShardSelector::new(ferrata_lez03_bridge_core::holder_account(w.bridge, alice_acc.value()), w.bridge),
+        ProgramShardSelector::new(ferrata_lez03_bridge_core::holder_account(w.bridge, &cid, alice_acc.value()), w.bridge),
         ProgramShardSelector::new(burn_account(w.bridge, &cid, &n3.hash()), w.bridge),
         ProgramShardSelector::new(ferrata_lez03_bridge_core::burns_account(w.bridge, &cid), w.bridge),
     ];

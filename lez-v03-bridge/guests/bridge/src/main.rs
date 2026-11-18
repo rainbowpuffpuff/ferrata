@@ -7,11 +7,12 @@
 //! * **`ImportRoot`** (top-level only): the vault's slots 0 and 1 hold the root and the count under a
 //!   record, `config(cid)` exists; `root(cid, n)` is written once.
 //! * **`Claim`**: a public-kind deposit's leaf under an imported root (the bridge core's claim
-//!   statement), its nullifier spent once, the denomination credited at `holder(dest)`.
+//!   statement), its nullifier `nullifier(cid, chain, vault, N)` spent once, the denomination credited at
+//!   `holder(cid, dest)` (both keyed by the configuration: the port departs from v0.4 there, README).
 //! * **`ClaimPrivately`**: the same for a private-kind deposit, run by its destination, a private
 //!   account, inside a privacy-preserving transaction; the credit is that account's own shard.
 //! * **`Burn`** (top-level only, signed by the holder): one denomination debited from the holder's own
-//!   shard (a private account) or its `holder(account)`; the note written once at `burn(cid, H(note))`
+//!   shard (a private account) or its `holder(cid, account)`; the note written once at `burn(cid, H(note))`
 //!   and its leaf appended to the configuration's burn tree at `burns(cid)`.
 //!
 //! The plan sees no account data; every account the v0.4 handler read is a guard here, checked
@@ -50,7 +51,11 @@ fn main() {
             let input: ApplyInput = borsh::from_slice(&payload).expect("the runtime's apply input decodes");
             let Ok(effect) = borsh::from_slice::<Effect>(&input.effect_data) else { env::exit(code::BAD_MESSAGE) };
             match apply(&effect, &input.pre_data) {
-                Ok(Some(data)) => apply_write(input, ShardData::try_from(data).expect("a state fits a shard")),
+                // `apply` refuses a state over the shard limit (CAPPED); this cannot fail after it.
+                Ok(Some(data)) => match ShardData::try_from(data) {
+                    Ok(data) => apply_write(input, data),
+                    Err(_) => env::exit(code::CAPPED),
+                },
                 Ok(None) => apply_keep(input),
                 Err(c) => env::exit(c),
             }
@@ -174,7 +179,7 @@ fn spent(root: &RootState, witness: &ClaimWitness, amount: u128) -> Effect {
     Effect::Spend(NullifierState { config_id: root.config_id, token: witness.token, leaf_count: root.leaf_count, amount })
 }
 
-/// The plaintext claim of a public-kind deposit: credited at `holder(dest)`.
+/// The plaintext claim of a public-kind deposit: credited at `holder(cid, dest)`.
 fn claim(input: &PlanInput, config: &BridgeConfig, root: &RootState, witness: &ClaimWitness) -> Result<Plan, Refusal> {
     let program = input.self_account_id;
     let (nullifier, amount, kind) = verified(program, config, root, witness)?;
@@ -186,8 +191,8 @@ fn claim(input: &PlanInput, config: &BridgeConfig, root: &RootState, witness: &C
     }
     let [at_root, at_nullifier, at_holder] = accounts::<3>(input)?;
     is(at_root, root_account(program, &root.config_id, root.leaf_count), program)?;
-    is(at_nullifier, nullifier_account(program, root.evm_chain_id, &root.vault, &nullifier), program)?;
-    is(at_holder, holder_account(program, &witness.dest), program)?;
+    is(at_nullifier, nullifier_account(program, &root.config_id, root.evm_chain_id, &root.vault, &nullifier), program)?;
+    is(at_holder, holder_account(program, &root.config_id, &witness.dest), program)?;
     let mut plan = Plan::new(input);
     plan.effect(at_root, &Effect::RootIs { hash: state_hash(&BridgeState::Root(*root)) });
     plan.effect(at_nullifier, &spent(root, witness, amount));
@@ -218,7 +223,7 @@ fn claim_privately(
     }
     is(at_dest, AccountId::new(witness.dest), program)?;
     is(at_root, root_account(program, &root.config_id, root.leaf_count), program)?;
-    is(at_nullifier, nullifier_account(program, root.evm_chain_id, &root.vault, &nullifier), program)?;
+    is(at_nullifier, nullifier_account(program, &root.config_id, root.evm_chain_id, &root.vault, &nullifier), program)?;
     let mut plan = Plan::new(input);
     plan.effect(at_dest, &Effect::Credit { config_id: root.config_id, token: witness.token, amount });
     plan.effect(at_root, &Effect::RootIs { hash: state_hash(&BridgeState::Root(*root)) });
@@ -244,7 +249,7 @@ fn burn(input: &PlanInput, config: &BridgeConfig, note: &Note, from: BurnFrom) -
         }
         BurnFrom::Holder => {
             let [owner, holder, record, burns] = accounts::<4>(input)?;
-            is(holder, holder_account(program, owner.account_id.value()), program)?;
+            is(holder, holder_account(program, &config_id, owner.account_id.value()), program)?;
             (owner, holder, record, burns)
         }
     };
