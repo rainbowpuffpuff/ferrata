@@ -91,3 +91,4 @@ __pycache__/
 /e2e/runs/netfault-*
 /e2e/runs/*/net/port
 /e2e/runs/*/net/*.lock
+/e2e/netfault/results/*.log

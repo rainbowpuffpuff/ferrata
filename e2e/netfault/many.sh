@@ -1,12 +1,24 @@
 #!/usr/bin/env bash
-# e2e/netfault/many.sh <first seed> <last seed> [parallel]: run.sh for each seed (some side by side), then a summary.
+# e2e/netfault/many.sh <first seed> <last seed> [lanes, at most 4]: run.sh for each seed, then a summary.
 set -uo pipefail
 here="$(cd "$(dirname "$0")/../.." && pwd)"
-first="${1:?first seed}"; last="${2:?last seed}"; par="${3:-4}"
+first="${1:?first seed}"; last="${2:?last seed}"; par="${3:-4}"; [ "$par" -le 4 ] || par=4
 out="$here/e2e/netfault/results"; mkdir -p "$out"
 ( cd "$here/vault" && forge build script/Crown.s.sol script/DeployVault.s.sol script/ForkRehearsal.s.sol ) > "$out/build.log" 2>&1 \
   || { tail -n 20 "$out/build.log"; exit 1; }
-seq "$first" "$last" | xargs -P "$par" -I{} bash -c '"$0/e2e/netfault/run.sh" {} > "$0/e2e/runs/netfault-{}.out" 2>&1 || echo "seed {}: run.sh exited $?"' "$here"
+# Lanes side by side, one per chain id DeployVault accepts (forge's broadcast files are per chain id: two seeds on the
+# same id must not run at once); the seeds of a lane one after another.
+ids=(31337 11155111 560048 17000)
+for lane in $(seq 0 $((par - 1))); do
+  (
+    for seed in $(seq "$first" "$last"); do
+      [ $(( (seed - first) % par )) = "$lane" ] || continue
+      NETFAULT_CHAIN_ID="${ids[$lane]}" "$here/e2e/netfault/run.sh" "$seed" > "$here/e2e/runs/netfault-$seed.out" 2>&1 \
+        || echo "seed $seed: run.sh exited $?"
+    done
+  ) &
+done
+wait
 python3 -I - "$out/seeds.jsonl" "$first" "$last" <<'PY'
 import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]

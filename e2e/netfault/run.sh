@@ -11,7 +11,7 @@ seed="${1:?seed}"
 name="netfault-$seed"; run="$here/e2e/runs/$name"; w="$run/w"
 rm -rf "$run" "$here/vault/deployments/crown-$name.json"; mkdir -p "$w"
 out="$here/e2e/netfault/results"; mkdir -p "$out"
-cid=$((1000000 + seed)) # a chain id per seed: forge's broadcast files of seeds run side by side do not meet
+cid="${NETFAULT_CHAIN_ID:-31337}" # DeployVault deploys on anvil, Sepolia, Hoodi, Holesky ids only (many.sh: one lane each)
 export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 TMPDIR="$w"
 free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 aport="$(free_port)"; R="http://127.0.0.1:$aport"
