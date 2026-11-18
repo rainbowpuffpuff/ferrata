@@ -63,7 +63,10 @@ The design notes specify these; there is no code for them here:
   digest). The reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3
   zone of one sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and
   accepted by vault v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
-  [EVIDENCE](EVIDENCE.md) rows 129, 130).
+  [EVIDENCE](EVIDENCE.md) rows 129, 130); the whole round trip with such a zone (rc3's sequencer and node, a vault v5
+  pinning the second build's `checkpoint_b`) ran to DONE on an anvil fork of Sepolia, and its live run on Sepolia
+  (`crown-live-4`, one command) was started on 18 Nov 2026 and is not recorded here yet ([EVIDENCE](EVIDENCE.md) row 141,
+  [`e2e/crown/README.md`](../e2e/crown/README.md)).
 
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:

@@ -45,6 +45,7 @@ Every document, one line each: [docs/README.md](docs/README.md).
 | The round trip, live on Sepolia | Ethereum to LEZ and back on the final programs, one public and one private crossing each way, through FerrataVault v5; anyone can check it from the committed records | Sepolia; a LEZ devnet we ran | [91, 92](docs/EVIDENCE.md) |
 | The return leg with several sequencers | the bridge program on a zone of four LEZ sequencers with an attestor beside each, its rule (B) checkpoint proven into the vault, and a rotation its committee proposed | a zone we ran; the vault on a local anvil, a stand-in beacon chain | [100, 101](docs/EVIDENCE.md) |
 | The return leg on LEZ v0.4.0-rc3 | the checkpoint guests' second build reads Logos Blockchain 0.3.5-rc.1's fork digest (the deployed ids unchanged); its rule (B) checkpoint over an rc3 zone's real blocks proven for real, wrapped and accepted by the vault, both burns released | rc3's sequencer and node, one validator; CPUs of a Modal box; the vault on a local anvil | [129, 130](docs/EVIDENCE.md) |
+| The round trip on LEZ v0.4.0-rc3, rehearsed | Ethereum to LEZ and back with rc3's sequencer and its node 0.3.5-rc.1, the final LEZ programs and a vault pinning the second build's `checkpoint_b`, real proofs, verify 14 of 14; session A also from the real Sepolia checkpoint; the live run is one command (started 18 Nov) | an anvil fork of Sepolia; an rc3 zone we ran, one validator | [141](docs/EVIDENCE.md) |
 | M0 check 4: real proofs on the newest LEZ tag | the private update, attestation, claim and burn proven for real and applied by LEZ v0.4.0-rc3's own sequencer in final blocks (`just m0`: GO) | CPUs of a Modal box; rc3's sequencer and node | [123](docs/EVIDENCE.md) |
 | M0 check 2: the gas drop | a claimant with no native LEZ: the relayer's sealed credit for its receipt's `N`, then its private claim on the final bridge sweeps the credit and pays its fee from it, real proofs, applied by LEZ v0.4.0-rc3's sequencer in final blocks; the same claim without the credit refused (`just m0`: GO) | CPUs of a Modal box; rc3's sequencer and node | [124](docs/EVIDENCE.md) |
 | The privacy gate on real proofs | 20 users' round trip, every private claim, burn and release proven; an adversary pairing each side | one L4 GPU and CPUs on Modal | [89](docs/EVIDENCE.md) |
@@ -200,7 +201,9 @@ The design notes specify these; there is no code for them here. In short (in ful
   view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side still reads, signs and sends
   through a stand-in service.
 - **Logos Blockchain 0.3.5-rc.1:** a vault for such a zone where it runs, and a Bedrock era change; the fork digest's
-  reading is built as a second build of the checkpoint guests and paid out on a local anvil ([rows 129, 130](docs/EVIDENCE.md)).
+  reading is built as a second build of the checkpoint guests and paid out on a local anvil ([rows 129, 130](docs/EVIDENCE.md)),
+  and the whole round trip with such a zone and a vault pinning that build is rehearsed on a fork of Sepolia, its live
+  run one command, started on 18 Nov 2026 ([row 141](docs/EVIDENCE.md), [e2e/crown/README.md](e2e/crown/README.md)).
 - **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop's sealed credit in the relayer daemon
   (it ran through `ferrata-gasdrop` and crown-driver on LEZ v0.4.0-rc3, [row 124](docs/EVIDENCE.md)) and for burns.
 

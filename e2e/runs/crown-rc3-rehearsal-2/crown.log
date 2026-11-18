@@ -1,0 +1,21 @@
+[2026-11-18T15:20:41Z] drive.py crown-rc3-rehearsal-2 fork: done so far nothing; halting after capture2
+[2026-11-18T15:20:43Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T15:20:45Z] anvil: FORK of Sepolia at block 12162293 (state new), head 12162293, every sender impersonated
+[2026-11-18T15:20:45Z] LEZ session A (attempt 1): lez_session, lez/crown/session.sh (sha256 a21559467bfc), chain stand-in
+[2026-11-18T15:25:49Z] LEZ session A: ok=True ran=True exit=0 generation=1 after 304 s
+[2026-11-18T15:25:49Z] session A: T0 = 23 0x311aab406b880fc5b62238fef815bad18f406255a09a4feb250ab8f58ed4c64d, channel keys ['0x3484db248a0a4250eed855babf6b5308c8c676a92cf518f4bb2fbb4808b3ea44'], bedrockGenesisId 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (the node's fork digest, {"fork_digest":"c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"}), chain stand-in
+[2026-11-18T15:25:49Z] stage lez-a: done in 304 s
+[2026-11-18T15:25:50Z] identity: deployer nonce 36, vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (CREATE n+2), configId 0xccc88690b4260e283c15c775ee81247f2f1bbbe90e456c4523135837748df1f7, genesisState 0x344af2e21a1e8e3f2c21f6f6449f46bd929f4c8de3cecc8bcef31bc76613e3a0, balance 498946585463094553 wei
+[2026-11-18T15:25:50Z] stage identity: done in 1 s
+[2026-11-18T15:27:00Z] deploy: vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470, registry 0x837F715d57299799C64dcF5ba84525319D5EeAfe, token 0xD599644B3515C2f86EC5414a1aBE5Fd0d25bAb43, stop 0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA
+[2026-11-18T15:27:00Z] stage deploy: done in 70 s
+[2026-11-18T15:27:09Z] deposit 0: block 12162301, leaves 1
+[2026-11-18T15:27:09Z] stage deposit0: done in 9 s
+[2026-11-18T15:27:09Z] capture 1: FORK capture of block 12162301 (capture-anvil.py, stand-in header), 6 slots proven against its state root
+[2026-11-18T15:27:09Z] stage capture1: done in 0 s
+[2026-11-18T15:27:18Z] deposit 1: block 12162302, leaves 2
+[2026-11-18T15:27:18Z] stage deposit1: done in 9 s
+[2026-11-18T15:27:18Z] capture 2: FORK capture of block 12162302 (capture-anvil.py, stand-in header), 6 slots proven against its state root
+[2026-11-18T15:27:18Z] stage capture2: done in 0 s
+[2026-11-18T15:27:18Z] halted after capture2 (CROWN_HALT_AFTER); `start` again continues
+[2026-11-18T16:13:52Z] drive.py crown-rc3-rehearsal-2 fork: done so far ['lez-a', 'identity', 'deploy', 'deposit0', 'capture1', 'deposit1', 'capture2']
