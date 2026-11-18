@@ -24,6 +24,7 @@ url=""; while [ $# -gt 0 ]; do [ "$1" = --rpc-url ] && url="$2"; shift; done
 v=$((100 + ${url##*-})) # one value per stage (deposit-j: 100 + j): each stage's call is its own step
 case "$(cat "$STUB/mode")" in
   noop) exit 0 ;;
+  revert) cast send --private-key "$KEY" --rpc-url "$url" "$REV" --gas-limit 60000 --timeout 30 ;;
   crash) cast send --async --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value "$v"; exit 1 ;;
   ok) cast send --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value "$v" --timeout 30 ;;
 esac
@@ -80,6 +81,20 @@ check "its nonce taken by another transaction: replaced, a permanent stop, nothi
 h="$(jq -r 'select(.event == "signed") | .hash' "$J" | tail -n 1)"
 python3 -I "$repo/scripts/pubnet.py" ack --journal "$J" --hash "$h" --why "test: replaced on purpose"
 check "after the operator's ack: the stage goes on" 1 noop 0 1 2 0 "deposit"
+
+# 6. (the independent review's round 2, v6) A stage whose transaction reverted on chain: a permanent stop; after the
+#    operator's `pubnet.py ack`, the stage runs again, once, and the manifest keeps only its successful transaction.
+cast rpc evm_setAutomine true --rpc-url "$R" > /dev/null
+REV="$(env -u ETH_FROM cast send --private-key 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 --rpc-url "$R" \
+  --create 0x6005600c60003960056000f360006000fd --json | jq -r .contractAddress)" # its runtime always reverts
+export REV
+check "a stage whose transaction reverted: a permanent stop" 2 revert 1 1 3 0 "a transaction failed"
+h="$(jq -r 'select(.event == "signed") | .hash' "$J" | tail -n 1)"
+python3 -I "$repo/scripts/pubnet.py" ack --journal "$J" --hash "$h" --why "test: the cause fixed"
+check "after the operator's ack of the reverted one: the stage runs again, once" 2 ok 0 1 4 0 "deposit-2"
+rows="$(jq -c '[.stages["deposit-2"][] | .status]' "$run/manifest.json" 2>/dev/null)"
+if [ "$rows" = '["0x1"]' ]; then echo "PASS  the manifest has deposit-2's successful transaction only"; pass=$((pass + 1));
+else echo "FAIL  the manifest's deposit-2 rows: $rows"; fail=$((fail + 1)); fi
 
 rm -rf "$run"
 echo "send guard: $pass passed, $fail failed"

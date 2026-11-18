@@ -3,7 +3,8 @@
 # regression cases, against a local anvil (nothing leaves the machine). liar.py is the misbehaving endpoint; model/ a
 # stand-in of the vault's deposit bookkeeping (guarded: like depositETH; open: an effect every time, like a DeployVault
 # creation step).
-#   bash e2e/netfault/attacks/attacks.sh [case ...]     cases c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 (default all)
+#   bash e2e/netfault/attacks/attacks.sh [case ...]     cases c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11, and the
+#   review's round 2: v1a v1b v2 v3 v4 v5 g1 (default all)
 # Each case prints PASS (the safe outcome) or FAIL with what was observed; exit 0 if all pass. Scratch:
 # $NETFAULT_SCRATCH (default ../tmp/netfault-attacks beside the repository).
 set -uo pipefail
@@ -235,7 +236,91 @@ c11() { # a transaction signed by another key, sent through a proxy whose --send
   verdict c11 "$([ "$(signed "$d")" = 0 ] && echo 1)" "another key's tx through the deployer's proxy: $out; journaled $(signed "$d") as from $(jq -r 'select(.event=="signed") | .from' "$d/net/journal.jsonl" 2>/dev/null)"
   cleanup
 }
-cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11)
+
+# ---- the review's round 2 (tests/r2/variants.sh), kept ------------------------------------------------------------
+dead_url() { echo "http://127.0.0.1:$(free_port)"; } # nothing listens: an endpoint that is down
+gone() { # gone <dir> <hash>: the operator's `pubnet.py gone` against the proxy's endpoints
+  PUBNET_SEPOLIA_RPC="$PUBNET_SEPOLIA_RPC" python3 -I "$WT/scripts/pubnet.py" gone --journal "$1/net/journal.jsonl" \
+    --hash "$2" --sender "$A1" 2>&1 | tail -n 1 | cut -c1-120
+}
+last_hash() { jq -r 'select(.event == "signed") | .hash' "$1/net/journal.jsonl" | tail -n 1; }
+v1a() { # two colluding liars (the same stale block), the honest endpoint down: the guarded deposit replayed
+  local d="$S/v1a"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2; L1="$(liar_up "$d" l1 stale-state)"; L2="$(liar_up "$d" l2 stale-state)"; proxy_up "$d" "$L1,$L2,$R"
+  local r1 r2 b; r1="$(stage "$d" deposit-0 'guarded(uint256)' 0)"; b="$(cast block-number --rpc-url "$R")"
+  echo "$b" > "$d/l1.ctl"; echo "$b" > "$d/l2.ctl"
+  kill -9 "$PUBNET_PID"; proxy_up "$d" "$L1,$L2,$(dead_url)"
+  r2="$(stage "$d" deposit-0-again 'guarded(uint256)' 0)"
+  verdict v1a "$([ "$(effects)" = 1 ] && [ "$(signed "$d")" = 1 ] && echo 1)" "two colluding liars, honest down, guarded deposit: exits $r1, $r2; sends $(signed "$d"); effects $(effects) (want 1)"
+  cleanup
+}
+v1b() { # the same pair, a step whose calldata carries the sender's nonce: NETWORK.md's documented limit
+  local d="$S/v1b"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2; L1="$(liar_up "$d" l1 stale-state)"; L2="$(liar_up "$d" l2 stale-state)"; proxy_up "$d" "$L1,$L2,$R"
+  local r1 r2 b; r1="$(stage "$d" step 'tagged(uint256)' 0)"; b="$(cast block-number --rpc-url "$R")"
+  echo "$b" > "$d/l1.ctl"; echo "$b" > "$d/l2.ctl"
+  kill -9 "$PUBNET_PID"; proxy_up "$d" "$L1,$L2,$(dead_url)"
+  r2="$(stage "$d" step-again 'tagged(uint256)' 0)"
+  # Two endpoints lying alike outvote the truth; a replay whose calldata differs is not the same call, so it can go
+  # out twice. PASS = the outcome is the one NETWORK.md's Limits state (at most twice), and they state it.
+  local doc=0; grep -q 'calldata varies between plans' "$WT/e2e/NETWORK.md" && doc=1
+  verdict v1b "$([ "$(effects)" -le 2 ] && [ "$doc" = 1 ] && echo 1)" "LIMIT (documented: $([ "$doc" = 1 ] && echo yes || echo NO)): two colluding liars, honest down, a nonce-tagged step: exits $r1, $r2; sends $(signed "$d"); effects $(effects)"
+  cleanup
+}
+v3() { # a legitimate second call with the same calldata (two equal deposits): refused, naming the remedy
+  local d="$S/v3"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  local r1 r2 why; r1="$(stage "$d" deposit-0 'open(uint256)' 0)"; r2="$(stage "$d" deposit-1 'open(uint256)' 1)"
+  why="$(grep -h -o 'needs its own journal or distinct calldata' "$d"/deposit-1.log* 2>/dev/null | head -n 1)"
+  verdict v3 "$([ "$(effects)" = 1 ] && [ "$r2" = 1 ] && [ -n "$why" ] && echo 1)" "LIMIT (documented): two equal deposits in one journal: exits $r1, $r2; effects $(effects); the refusal names the remedy: ${why:-NO}"
+  cleanup
+}
+v2() { # a reorg below the fence (the deposit's block rolled back): a stop naming gone; after the operator's gone, once
+  local d="$S/v2"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  local r1 r2 r3 h g; r1="$(stage "$d" deposit-0 'guarded(uint256)' 0)"; h="$(last_hash "$d")"
+  cast rpc anvil_rollback 1 --rpc-url "$R" > /dev/null 2>&1; cast rpc evm_mine --rpc-url "$R" > /dev/null
+  PUBNET_STAGE_BUDGET_S=10 r2="$(stage "$d" deposit-0 'guarded(uint256)' 0)"
+  local named=0; grep -q 'pubnet.py gone' "$d/deposit-0.stage.err" 2>/dev/null && named=1
+  g="$(gone "$d" "$h")"
+  PUBNET_STAGE_BUDGET_S=10 r3="$(stage "$d" deposit-0 'guarded(uint256)' 0)"
+  verdict v2 "$([ "$r2" != 0 ] && [ "$named" = 1 ] && [ "$r3" = 0 ] && [ "$(effects)" = 1 ] && echo 1)" "rolled back: the stage stops (exit $r2, names gone: $named); gone: $g; the stage again: exit $r3, effects $(effects) (want 1)"
+  cleanup
+}
+v4() { # the same journal on a new chain instance: a stop naming gone; after gone, the step on the new chain, once
+  local d="$S/v4"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  local r1 r2 r3 h g; r1="$(stage "$d" step 'open(uint256)' 0)"; h="$(last_hash "$d")"; kill -9 "$PUBNET_PID"; cleanup
+  anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  PUBNET_STAGE_BUDGET_S=10 r2="$(stage "$d" step 'open(uint256)' 0)"
+  local named=0; grep -q 'pubnet.py gone' "$d/step.stage.err" 2>/dev/null && named=1
+  g="$(gone "$d" "$h")"
+  PUBNET_STAGE_BUDGET_S=10 r3="$(stage "$d" step 'open(uint256)' 0)"
+  verdict v4 "$([ "$r2" != 0 ] && [ "$named" = 1 ] && [ "$r3" = 0 ] && [ "$(effects)" = 1 ] && echo 1)" "a fresh chain, the old journal: the stage stops (exit $r2, names gone: $named); gone: $g; the stage again: exit $r3, effects on the new chain $(effects) (want 1)"
+  cleanup
+}
+v5() { # drive.py fork mode's anvil killed within its 30 s state dump after a send, started again from the dump
+  local d="$S/v5"; mkdir -p "$d"; local p; p="$(free_port)"; R="http://127.0.0.1:$p"
+  anvil --port "$p" --chain-id 31337 --state "$d/state.json" --state-interval 30 > "$d/anvil1.log" 2>&1 & local AP=$!; PIDS+=($AP)
+  for _ in $(seq 1 100); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && break; sleep 0.1; done
+  deploy_dep; sleep 31 # the dump holds the model contract, not yet the deposit
+  proxy_up "$d" "$R"; local r1 h; r1="$(stage "$d" deposit-0 'guarded(uint256)' 0)"; h="$(last_hash "$d")"
+  kill -9 "$AP"; sleep 1
+  anvil --port "$p" --chain-id 31337 --state "$d/state.json" --state-interval 30 > "$d/anvil2.log" 2>&1 & PIDS+=($!)
+  for _ in $(seq 1 100); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && break; sleep 0.1; done
+  kill -9 "$PUBNET_PID"; proxy_up "$d" "$R"
+  local r2 r3 g; PUBNET_STAGE_BUDGET_S=10 r2="$(stage "$d" deposit-0 'guarded(uint256)' 0)"
+  local named=0; grep -q 'pubnet.py gone' "$d/deposit-0.stage.err" 2>/dev/null && named=1
+  g="$(gone "$d" "$h")"
+  PUBNET_STAGE_BUDGET_S=10 r3="$(stage "$d" deposit-0 'guarded(uint256)' 0)"
+  verdict v5 "$([ "$r2" != 0 ] && [ "$named" = 1 ] && [ "$r3" = 0 ] && [ "$(effects)" = 1 ] && echo 1)" "anvil reloaded below the fence: the stage stops (exit $r2, names gone: $named); gone: $g; the stage again: exit $r3, effects $(effects) (want 1)"
+  cleanup
+}
+g1() { # gone refuses a transaction still on chain (nothing may be sent twice)
+  local d="$S/g1"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  local r1 h g st; r1="$(stage "$d" deposit-0 'guarded(uint256)' 0)"; h="$(last_hash "$d")"
+  g="$(gone "$d" "$h")"; st="$(jq -r --arg h "$h" 'select(.hash == $h and .event == "gone") | .event' "$d/net/journal.jsonl" | head -n 1)"
+  verdict g1 "$([ -z "$st" ] && [ "$(effects)" = 1 ] && grep -q 'may still be on the chain' <<< "$g" && echo 1)" "gone on a mined transaction still on chain: $g; marked: ${st:-no}"
+  cleanup
+}
+cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1)
 for c in "${cases[@]}"; do "$c"; done
 echo "attacks: $(( ${#cases[@]} - FAILS )) of ${#cases[@]} pass"
 [ "$FAILS" = 0 ]

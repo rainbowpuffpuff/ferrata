@@ -54,11 +54,16 @@ signer=(); [ "${FERRATA_UNLOCKED:-}" = 1 ] && signer=(--unlocked)
 record() {
   local name="$1" rows
   [ -f "$manifest" ] || echo '{"chainId": '"$chain"', "stages": {}}' > "$manifest"
+  local acked
   rows="$(python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" --stage "$name")"
-  [ "$rows" != '[]' ] || { say "$name: nothing sent (already done)"; return 0; }
-  jq --arg s "$name" --argjson rows "$rows" '.stages[$s] = ((.stages[$s] // []) as $old | $old
-      + [$rows[] | select(.hash as $h | ($old | map(.hash) | index($h)) == null)])' "$manifest" > "$manifest.tmp"
+  acked="$(python3 -I "$PUBNET_PY" acked --journal "$PUBNET_DIR/journal.jsonl")"
+  # A transaction the operator acknowledged (pubnet.py ack: a reverted one, say) leaves the stage's rows.
+  jq --arg s "$name" --argjson rows "$rows" --argjson acked "$acked" '.stages[$s] = ([(.stages[$s] // [])[]
+      | select(.hash as $h | ($acked | index($h)) == null)] as $old | $old
+      + [$rows[] | select(.hash as $h | ($old | map(.hash) | index($h)) == null)])
+      | if .stages[$s] == [] then del(.stages[$s]) else . end' "$manifest" > "$manifest.tmp"
   mv "$manifest.tmp" "$manifest"
+  [ "$rows" != '[]' ] || { say "$name: nothing sent (already done)"; return 0; }
   jq -e 'all(.status == "0x1")' <<<"$rows" > /dev/null || die "$name: a transaction failed: $rows"
   say "$name: $(jq length <<<"$rows") transaction(s) mined, in the manifest: $(jq -r 'map(.hash) | join(" ")' <<<"$rows")"
 }
@@ -71,9 +76,11 @@ crown() { # crown <signature> [args]: one transaction of Crown.s.sol (state-chec
   # plan again, on the reads alone).
   pubnet_resolve || { rc=$?; [ "$rc" = 3 ] && die "$name: an earlier transaction did not succeed (above): a human looks, then pubnet.py ack"
     die_transient "$name: an earlier transaction's fate is still unknown"; }
-  if [ "${PUBNET_NO_JOURNAL_SKIP:-}" != 1 ] && [ "$(python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" \
-      --stage "$name")" != '[]' ]; then
-    say "$name: the journal holds this stage's mined transaction; not run again"
+  # Only a transaction that succeeded (status 0x1) makes the stage done: after a reverted one and the operator's
+  # `pubnet.py ack`, the stage runs again.
+  if [ "${PUBNET_NO_JOURNAL_SKIP:-}" != 1 ] && python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" \
+      --stage "$name" | jq -e 'any(.status == "0x1")' > /dev/null; then
+    say "$name: the journal holds this stage's successful transaction; not run again"
     record "$name"
     return 0
   fi

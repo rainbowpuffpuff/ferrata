@@ -6,7 +6,9 @@
   B  a permanent stop (any other exit status) stops at once (1), nothing resumed;
   C  a stage that stops transiently every time is resumed CROWN_AUTO_RESUMES (4) times, then stops (1);
   D  drive.py's own proxy (start_proxy) in front of a local anvil: its cast reads go through it (chain id, the pinned
-     block), the environment names it for sepolia.sh, and its journal directory is <run>/net.
+     block), the environment names it for sepolia.sh, and its journal directory is <run>/net;
+  E  fork mode's fence check: a journal whose last mined transaction is above the reloaded anvil's head stops the
+     run (permanent) naming `pubnet.py gone` and the transaction; at or above the fence it goes on.
 """
 import importlib.util
 import json
@@ -129,6 +131,22 @@ def main():
     finally:
         anvil.terminate()
         anvil.wait(timeout=10)
+    # E: the fence check after a reload (anvil's head stubbed)
+    d = load()
+    os.makedirs(f"{RUN}/net", exist_ok=True)
+    with open(f"{RUN}/net/journal.jsonl", "w") as f:
+        f.write(json.dumps({"event": "signed", "hash": "0x" + "ab" * 32, "nonce": 3, "stage": "deposit-0"}) + "\n")
+        f.write(json.dumps({"event": "fate", "hash": "0x" + "ab" * 32, "fate": "mined", "status": "0x1", "block": 50})
+                + "\n")
+    d.out = lambda cmd, **kw: "10"
+    try:
+        d.fence_check()
+        raise AssertionError("E: no stop with the fence above the head")
+    except d.Stop as e:
+        assert not e.transient and "pubnet.py gone" in str(e) and "0x" + "ab" * 32 in str(e), str(e)
+    d.out = lambda cmd, **kw: "50"
+    d.fence_check()  # at the fence: goes on
+    print("E: fork mode's fence above the reloaded head stops, naming pubnet.py gone; at the fence it goes on: ok")
     shutil.rmtree(RUN, ignore_errors=True)
     return 0
 

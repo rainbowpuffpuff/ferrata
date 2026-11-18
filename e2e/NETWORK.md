@@ -69,7 +69,14 @@ The audit of every script that talks to a public network (18 tables, call by cal
    reported. Where it is enforced: the proxy refuses a send while a fate is unknown or bad (4); `pubnet_stage`
    resolves before a stage's first run and after every run, runs a failed one again only for a transient reason, and
    stops (1) on a bad fate; `e2e/crown/sepolia.sh` does not run a single-transaction stage again when the journal
-   holds its mined transaction. An operator clears a bad fate with `pubnet.py ack --journal F --hash H`.
+   holds its successful (status 1) transaction. An operator clears a bad fate with `pubnet.py ack --journal F
+   --hash H`: the transaction leaves the stage's manifest rows, and a stage whose transaction reverted runs again. A
+   transaction recorded mined that is no longer on the chain (a reorg; a fork's anvil reloaded from a state dump older
+   than its last send) stops every stage (`resolve`: "not on the chain now"; at a fork-mode start, drive.py compares
+   the journal's fence with anvil's head) until an operator runs `pubnet.py gone --journal F --hash H --sender A`,
+   which marks it gone only after checking that no endpoint has its receipt and that the sender's nonce, agreed by
+   two endpoints, is not above it; it then leaves the fence, the nonce floor and the set of done calls, and its bytes
+   may be sent again as they are (they are one transaction).
 6. **Exit status** of `e2e/crown/sepolia.sh` and `vault/script/deploy.sh`: 0 done; 1 permanent (a human looks);
    75 transient with nothing in flight (the budget spent, or a fate still unknown).
 7. **The runner** (`e2e/crown/cloud/drive.py`) resumes a transient stop (75, or a read that failed transiently) by
@@ -159,6 +166,14 @@ header and the light-client finality update.
 
 - A contract someone else deployed in the last `lag` blocks is not seen yet (a pinned read is 3 blocks old); every
   prerequisite of the crown run is older.
+- Fee reads (`eth_gasPrice`, `eth_maxPriorityFeePerGas`, `eth_feeHistory`) are answered by one endpoint: a liar can
+  make forge pay more, or price a transaction so low that it stays pending (transient stops, rebroadcasts): cost or
+  time, not safety. The `finalized` and `safe` tags are the lower of two endpoints' blocks: a liar can delay a
+  capture, not hasten it.
+- One journal never holds two identical calls (the same `to`, value and calldata mined with status 1): a flow that
+  repeats a call on purpose (two equal top-ups, an `approve` before each token deposit) needs its own journal or
+  distinct calldata; the refusal says so. `deploy.sh` keeps one journal per deployment record
+  (`broadcast/deploy-logs/<record>/net/`, so per chain and mode by default), `sepolia.sh` one per run.
 - `eth_getLogs` is answered by one node; a node that clamps a range to its own head returns fewer logs. The crown
   run reads logs only where its manifest lacks a row.
 - `deploy.sh` compares forge's sent gas limit with the one DeployVault estimated; both estimates now run at the same
@@ -167,7 +182,11 @@ header and the light-client finality update.
   is journaled when the node returns it.
 - The journal holds the signed bytes of every transaction: public once broadcast; one that never left could still be
   broadcast by whoever holds the file, at its nonce, which is exactly the "fate unknown" state the scripts wait out.
-- Two endpoints that lie alike (the same wrong state, or both one transaction behind) outvote the truth. Then the
-  send checks (a used nonce or a repeated call is refused, a stale nonce agreed by two is never above the chain's)
-  and the journal still stop a second send, but a stage may stop instead of going on. With two endpoints in all, one
-  liar stops the stage (no two agree) rather than steering it.
+- Two endpoints that lie alike (the same wrong state, or both one transaction behind) outvote the truth: the reads
+  they agree on are believed. What still holds then: a replay that produces the same calldata as a mined transaction
+  is refused (the journal's rule above); the single-transaction crown stages are skipped from the journal; a nonce
+  below the journal's floor is never agreed, and a stale nonce agreed by two is never above the chain's. What does
+  not: a step whose calldata varies between plans (it carries the nonce, a computed address or a time) can go out
+  twice. No current DeployVault or Crown step does: DeployVault's calldata comes from its record and parameters,
+  Crown's from crown.json (`netfault/attacks` case v1b shows the limit with a model step). With two endpoints in
+  all, one liar stops the stage (no two agree) rather than steering it.

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 import {Dep} from "../src/Dep.sol";
-interface Vm { function broadcast() external; function envAddress(string calldata) external view returns (address); }
+interface Vm {
+    function broadcast() external;
+    function envAddress(string calldata) external view returns (address);
+    function getNonce(address) external view returns (uint64);
+}
 /// Crown.s.sol's deposit(j), state-checked the same way: a deposit already on chain is skipped.
 contract DepScript {
     bool public IS_SCRIPT = true;
@@ -19,5 +23,12 @@ contract DepScript {
         if (d.depositCount(msg.sender) > j) return;
         vm.broadcast();
         d.depositOpen();
+    }
+    function tagged(uint256 j) external { // calldata that carries the sender's nonce (a computed CREATE address, say)
+        Dep d = Dep(vm.envAddress("DEP"));
+        if (d.depositCount(msg.sender) > j) return;
+        uint64 n = vm.getNonce(msg.sender);
+        vm.broadcast();
+        d.depositTagged(n);
     }
 }

@@ -426,6 +426,7 @@ def start_anvil() -> None:
                 os.environ["SEPOLIA_RPC_URL"] = LOCAL_RPC
                 say(f"anvil: FORK of Sepolia at block {rj['fork_block']} (state {loaded}), head {cast('block-number')},"
                     " every sender impersonated")
+                fence_check()
                 return
             if ANVIL.poll() is not None:
                 break
@@ -435,6 +436,26 @@ def start_anvil() -> None:
         say(f"anvil attempt {attempt} failed (exit {ANVIL.returncode}); logs/anvil-{attempt}.log")
         time.sleep(15)
     die("anvil did not fork Sepolia in three attempts")
+
+
+def fence_check() -> None:
+    """Fork mode, once anvil has reloaded its state: the journal's fence (the block of the deployer's last mined
+    transaction) must not be above anvil's head. If it is, the transactions mined after anvil's last state dump (every
+    30 s) are gone from this fork; the run stops and names, for each, the check that marks it gone."""
+    j = pubnet.Journal(f"{RUN}/net/journal.jsonl")
+    t = j.fence_tx()
+    if t is None:
+        return
+    head = int(out(["cast", "block-number", "--rpc-url", LOCAL_RPC]))
+    if head >= t["block"]:
+        return
+    lost = sorted((x for x in j.txs().values() if x["state"] == "mined" and x.get("block", 0) > head),
+                  key=lambda x: x["block"])
+    die(f"anvil reloaded its state at block {head}, below the journal's fence (block {t['block']}): "
+        + ", ".join(f"{x['hash']} ({x.get('stage')}, block {x['block']})" for x in lost)
+        + " are not on this fork. Check each, then: python3 scripts/pubnet.py gone --journal"
+        f" {RUN}/net/journal.jsonl --hash <hash> --sender {os.environ.get('ETH_FROM', '<deployer>')} --first {LOCAL_RPC}"
+        " (it refuses while anvil still has the receipt); `start` again goes on from the chain as it is")
 
 
 def stop_anvil() -> None:

@@ -24,7 +24,8 @@
 #   FERRATA_FREEZE_AUTHORITY, FERRATA_FEE_RECIPIENT, FERRATA_WATCHERS (comma-separated, at most 3), FERRATA_DELTA,
 #   FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE, FERRATA_MIN_RELEASE_DELAY, FERRATA_RELEASE_DELAY: the testnet
 #     configuration (defaults: an address nobody holds a key for, the deployer, none, 600 s, 1 day, 30 days, 0, 120 s)
-#   FERRATA_LOG_DIR     one log per run (default broadcast/deploy-logs)
+#   FERRATA_LOG_DIR     one log per run, and the network journal in net/ (default broadcast/deploy-logs/<record
+#                       name>: one journal per deployment record, so per chain and mode by default)
 #
 # The network (e2e/NETWORK.md): forge and cast talk to a local proxy (scripts/pubnet.sh) in front of FERRATA_RPC_URL
 # (and, for a public one, the free public endpoints of scripts/pubnet-endpoints.json); a caller's proxy (PUBNET_URL,
@@ -39,16 +40,19 @@ export FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 : "${ETH_FROM:?ETH_FROM: the deployer address}"
 rpc="${FERRATA_RPC_URL:-http://127.0.0.1:8545}"
 export FERRATA_GAS_MARGIN_PCT="${FERRATA_GAS_MARGIN_PCT:-125}"
-logs="${FERRATA_LOG_DIR:-broadcast/deploy-logs}"
-mkdir -p "$logs"
 # shellcheck source=../../scripts/pubnet.sh
 . "$here/../scripts/pubnet.sh"
-pubnet_up sepolia "$logs/net" "$ETH_FROM" "$rpc" || { echo "deploy.sh: the network proxy did not start" >&2; exit 75; }
-case "$rpc" in "$PUBNET_URL"*) ;; *) rpc="$PUBNET_URL/deploy" ;; esac
+# The chain id first (a static answer, read before the proxy): it names the deployment record and with it the
+# journal. One journal per deployment record (default deployments/<chain>-<mode>.json, so per chain and mode): a
+# journal never holds two identical calls, and a second deployment's first step is the same call as the first's.
 chain="$(pubnet_read cast chain-id --rpc-url "$rpc")"
 [ "$chain" != 1 ] || { echo "deploy.sh: a test deployment, not on chain 1" >&2; exit 1; }
 export FERRATA_OUT="${FERRATA_OUT:-deployments/$chain-$FERRATA_MODE.json}"
 mkdir -p "$(dirname "$FERRATA_OUT")"
+logs="${FERRATA_LOG_DIR:-broadcast/deploy-logs/$(basename "$FERRATA_OUT" .json)}"
+mkdir -p "$logs"
+pubnet_up sepolia "$logs/net" "$ETH_FROM" "$rpc" || { echo "deploy.sh: the network proxy did not start" >&2; exit 75; }
+case "$rpc" in "$PUBNET_URL"*) ;; *) rpc="$PUBNET_URL/deploy" ;; esac
 sign=()
 if [ "${FERRATA_UNLOCKED:-0}" = 1 ]; then
   sign=(--unlocked)

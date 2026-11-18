@@ -35,7 +35,12 @@ CLI:
                                                       (a human looks); 75: a fate is still unknown (try again later)
   pubnet.py ack --journal F --hash H [--why TEXT]     an operator has looked at a transaction with a bad or unknown
                                                       fate (reverted, replaced, rejected, lost): sends may go on
-  pubnet.py rows --journal F --stage S                the stage's mined transactions as manifest rows (JSON)
+  pubnet.py gone --journal F --hash H --sender A      a journaled transaction checked absent from the chain (no
+                                                      endpoint has its receipt, the sender's nonce not above it) is
+                                                      marked gone: it leaves the fence, the nonce floor and the done
+                                                      set; refused if any endpoint still has its receipt
+  pubnet.py rows --journal F --stage S                the stage's mined transactions as manifest rows (JSON), those
+                                                      an operator acknowledged left out
   pubnet.py classify [--events F --since T] [LOG]     transient | permanent: why the last attempt failed
   pubnet.py selftest                                  keccak, RLP, classification
 """
@@ -101,7 +106,8 @@ TRANSIENT_RE = re.compile(
     r"\b50[0234]\b|bad gateway|service unavailable|gateway time|timed? ?out|timeout|connection (refused|reset|aborted)|"
     r"remote end closed|broken pipe|temporarily|try again|overloaded|no response|eof occurred|network is unreachable|"
     r"name or service not known|temporary failure in name resolution|pubnet: transient|"
-    r"tx not found|transaction not found|receipt not found|dropped from the mempool", re.I)  # hashes we sent: lag
+    r"tx not found|transaction not found|receipt not found|dropped from the mempool|"  # hashes we sent: lag
+    r"blockoutofrange|block height is \d+ but requested", re.I)  # anvil asked for a block it does not have yet
 PERMANENT_RE = re.compile(
     r"execution reverted|revert|invalid (argument|params|opcode|sender|signature|transaction|chain)|"
     r"insufficient funds|nonce too (low|high)|intrinsic gas|gas required exceeds|exceeds block gas limit|"
@@ -617,7 +623,7 @@ def decode_tx(raw: bytes) -> dict:
 
 # ---- the journal ----------------------------------------------------------------------------------------------------
 
-FINAL = ("mined", "replaced", "rejected", "acked")
+FINAL = ("mined", "replaced", "rejected", "acked", "gone")
 
 
 class Journal:
@@ -664,6 +670,9 @@ class Journal:
                     continue
                 cur = out.setdefault(h, {"hash": h, "state": "signed"})
                 if r.get("event") == "signed":
+                    if cur["state"] == "gone":  # the same bytes signed off again after an operator's gone: open again
+                        cur.update(state="signed")
+                        cur.pop("why", None)
                     cur.update({k: r[k] for k in ("raw", "nonce", "from", "stage", "at", "unlocked", "value",
                                                   "datahash", "to") if k in r})
                     if "raw" in r and "datahash" not in r:  # a line written before the step identity was recorded
@@ -682,6 +691,8 @@ class Journal:
                     cur["acked"] = r.get("why", "")
                     if cur["state"] not in FINAL:
                         cur["state"] = "acked"
+                elif r.get("event") == "gone":  # checked absent from the chain (pubnet.py gone): not mined after all
+                    cur.update(state="gone", why=r.get("why", ""))
         self._cache = ((st.st_mtime_ns, st.st_size), out)
         return {h: dict(v) for h, v in out.items()}
 
@@ -690,8 +701,13 @@ class Journal:
 
     def bad_txs(self) -> list[dict]:
         """Reverted, replaced or rejected, and not acknowledged by an operator (pubnet.py ack)."""
-        return [t for t in self.txs().values() if t["state"] in FINAL and t["state"] != "acked" and not t.get("acked")
-                and (t["state"] != "mined" or t.get("status") not in ("0x1", 1))]
+        return [t for t in self.txs().values() if not t.get("acked") and (t["state"] in ("replaced", "rejected") or (
+            t["state"] == "mined" and t.get("status") not in ("0x1", 1)))]
+
+    def fence_tx(self) -> dict | None:
+        """The sender's last mined transaction (the highest block): the journal's fence."""
+        mined = [t for t in self.txs().values() if t["state"] == "mined" and t.get("block") is not None]
+        return max(mined, key=lambda t: t["block"]) if mined else None
 
     def floor(self) -> int:
         """The fence: the block of the sender's last mined transaction (each fate from a receipt two endpoints gave
@@ -740,6 +756,35 @@ def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
     return "pending" if known else "unknown"
 
 
+def absent(net: Net, t: dict, sender: str) -> str | None:
+    """Why the journaled transaction t is not on the chain, or None if it may be: every endpoint asked for its receipt
+    (one that has it is enough to keep it), and the sender's nonce, agreed by two endpoints at the agreed head, not
+    above its nonce."""
+    for url in net.urls:
+        try:
+            r = _rpc_once(url, "eth_getTransactionReceipt", [t["hash"]], net.timeout)
+        except (Transient, Permanent):
+            return None  # an endpoint that does not answer might have it
+        if r:
+            return None
+    head = net.head()
+    n = int(net.quorum("eth_getTransactionCount", [sender, hex(head)]), 16)
+    if t.get("nonce") is None or n > t["nonce"]:
+        return None
+    return f"no endpoint has its receipt; the sender's nonce is {n} at block {head} (the transaction's {t['nonce']})"
+
+
+def fence_lost(net: Net, j: Journal, sender: str) -> dict | None:
+    """The journal's fence transaction, if it is no longer on the chain (else None)."""
+    t = j.fence_tx()
+    if t is None:
+        return None
+    try:
+        return t if absent(net, t, sender) else None
+    except Transient:
+        return None
+
+
 def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> int:
     """0: every transaction has a fate, all mined with status 1; 3: one reverted / replaced / rejected; 75: unknown."""
     deadline = time.monotonic() + budget
@@ -760,6 +805,14 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> 
                 + ", ".join(t["hash"] for t in j.open_txs()))
             return TEMPFAIL
         time.sleep(pause)
+    lost = fence_lost(net, j, sender)
+    if lost:
+        log(f"pubnet: permanent: the journal's last mined transaction {lost['hash']} (stage {lost.get('stage')}, block"
+            f" {lost.get('block')}, nonce {lost.get('nonce')}) is not on the chain now: no endpoint has its receipt and"
+            f" the sender's nonce is not above it (a reorg, or a chain reloaded from an older state). Nothing is sent"
+            f" until an operator has checked; then: pubnet.py gone --journal {j.path} --hash {lost['hash']} --sender"
+            f" {sender}" + (f" --network {net.network}" if net.network else ""))
+        return 3
     for t in j.bad_txs():  # a rejected or replaced one that a pool kept after all: look for its receipt once more
         if t["state"] in ("rejected", "replaced"):
             try:
@@ -855,7 +908,12 @@ class Proxy:
             if fence > head + 64:  # no block two endpoints have: a journal from before receipts needed two endpoints
                 self.log(f"pin: the journal's fence {fence} is far above the agreed head {head}: not used")
                 fence = 0
-            prev = self._pin if self._pin is not None and self._pin <= head + 64 else 0
+            # The previous pin is kept (a client's view never goes back) only while the agreed head is at or above it:
+            # a head below it means the chain lost blocks (a reorg, an anvil reloaded from an older state) or the
+            # endpoints fell behind; either way a pin above the head would be a block no endpoint has.
+            prev = self._pin if self._pin is not None and self._pin <= head else 0
+            if self._pin is not None and self._pin > head:
+                self.log(f"pin: the agreed head {head} is below the previous pin {self._pin}: pinned again from the head")
             p = max(head - self.lag, fence, prev)
             if self.sender and p < head:
                 at_p = int(self.net.quorum("eth_getTransactionCount", [self.sender, hex(p)]), 16)
@@ -914,6 +972,8 @@ class Proxy:
             return self.chain
         if method == "eth_blockNumber":
             return hex(self.pin())
+        if method == "eth_getBlockByNumber" and params and params[0] in ("finalized", "safe"):
+            return self.lowest_tagged(params)
         if method == "eth_getBlockByNumber" and params:
             tag = params[0]
             blockhash = lambda b: b.get("hash") if isinstance(b, dict) else b  # noqa: E731
@@ -954,6 +1014,22 @@ class Proxy:
             self._pin_t = 0.0  # the local chain moved (evm_mine, evm_increaseTime, ...): pin again
             return r
         return self.net.call(method, params)
+
+    def lowest_tagged(self, params: list):
+        """"finalized" / "safe": the lowest of the blocks `need` endpoints give (a node behind gives an older one,
+        which only delays; one endpoint claiming a later block final is outvoted)."""
+        deadline = time.monotonic() + self.net.budget
+        attempt = 0
+        while True:
+            blocks = [b for _, b in self.net.each("eth_getBlockByNumber", params) if isinstance(b, dict) and b.get("number")]
+            if len(blocks) >= self.net.need():
+                return min(blocks, key=lambda b: int(b["number"], 16))
+            attempt += 1
+            pause = backoff(attempt, base=1.0, cap=8.0)
+            if time.monotonic() + pause > deadline:
+                raise Transient(f"pubnet: transient: eth_getBlockByNumber {params[0]}: fewer than {self.net.need()}"
+                                " endpoints answer")
+            time.sleep(pause)
 
     def rebroadcast_if_due(self, h: str) -> None:
         """A client waits for the receipt of a journaled transaction no endpoint has mined: the same bytes again
@@ -1015,7 +1091,7 @@ class Proxy:
                             "; this proxy sends only the sender's")
         with self.send_lock:
             txs = self.journal.txs()
-            if h in txs:  # the same bytes again (a client retry): at most one transaction can come of them
+            if h in txs and txs[h]["state"] != "gone":  # the same bytes again (a retry): at most one transaction
                 if txs[h]["state"] not in FINAL:
                     self.broadcast(raw_hex, h)
                 return h
@@ -1037,7 +1113,10 @@ class Proxy:
                     and t.get("to") == tx["to"] and t.get("value") == tx["value"] and t.get("datahash") == tx["datahash"]]
             if done:
                 raise Permanent(f"pubnet: permanent: this step was sent and mined already ({done[0]['hash']}, stage"
-                                f" {done[0].get('stage')}): the same call again; its plan read a stale state")
+                                f" {done[0].get('stage')}): the same call again (to, value, calldata). Either its plan"
+                                " read a stale state, or the flow repeats a call on purpose: one journal never holds two"
+                                " identical calls, so such a flow needs its own journal or distinct calldata"
+                                " (e2e/NETWORK.md, Limits)")
             if not self.sender:
                 raise Permanent("pubnet: permanent: the proxy was started without --sender; it sends nothing")
             chain = int(self.dispatch("eth_chainId", [], stage), 16)
@@ -1289,6 +1368,14 @@ def main() -> int:
     k.add_argument("--journal", required=True)
     k.add_argument("--hash", required=True)
     k.add_argument("--why", default="checked by the operator")
+    g = sub.add_parser("gone")
+    g.add_argument("--journal", required=True)
+    g.add_argument("--hash", required=True)
+    g.add_argument("--sender", required=True)
+    g.add_argument("--network", default="sepolia")
+    g.add_argument("--first")
+    g.add_argument("--why", default="checked absent from the chain by the operator")
+    sub.add_parser("acked").add_argument("--journal", required=True)
     w = sub.add_parser("rows")
     w.add_argument("--journal", required=True)
     w.add_argument("--stage", required=True)
@@ -1311,10 +1398,28 @@ def main() -> int:
         if a.hash not in Journal(a.journal).txs():
             sys.exit(f"pubnet: {a.hash} is not in {a.journal}")
         Journal(a.journal).append({"event": "ack", "hash": a.hash, "why": a.why})
+    elif a.cmd == "gone":
+        jj = Journal(a.journal)
+        t = jj.txs().get(a.hash)
+        if t is None:
+            sys.exit(f"pubnet: {a.hash} is not in {a.journal}")
+        net = Net(a.network, first=a.first)
+        try:
+            why = absent(net, t, a.sender.lower())
+        except Transient as e:
+            sys.exit(f"pubnet: the chain could not be read ({e}): nothing marked")
+        if not why:
+            sys.exit(f"pubnet: {a.hash} may still be on the chain (an endpoint has its receipt, did not answer, or the"
+                     " sender's nonce is above it): not marked gone")
+        jj.append({"event": "gone", "hash": a.hash, "why": f"{a.why}: {why}"})
+        print(f"pubnet: {a.hash} marked gone ({why}); it leaves the fence, the nonce floor and the done set")
+    elif a.cmd == "acked":
+        print(json.dumps([h for h, t in Journal(a.journal).txs().items() if t.get("acked")]))
     elif a.cmd == "rows":
         rows = [{"hash": t["hash"], "blockNumber": hex(t["block"]), "status": t.get("status"),
                  "gasUsed": t.get("gasUsed"), "to": t.get("to"), "contractAddress": t.get("contractAddress")}
-                for t in Journal(a.journal).txs().values() if t.get("stage") == a.stage and t["state"] == "mined"]
+                for t in Journal(a.journal).txs().values()
+                if t.get("stage") == a.stage and t["state"] == "mined" and not t.get("acked")]
         print(json.dumps(rows))
     elif a.cmd == "classify":
         print(classify_failure(a.events, a.since, a.log))
