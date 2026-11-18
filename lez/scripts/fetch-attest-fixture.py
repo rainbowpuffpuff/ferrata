@@ -26,7 +26,7 @@ request with its endpoint and JSON-RPC method; SHA256SUMS pins every file.
 
 Python standard library only; the HTTP, Keccak, RLP and SSZ helpers are those of
 `scripts/fetch-mainnet-e2e.py`. Every request goes to a public endpoint without an API key, with
-the generic User-Agent `ferrata-fixture-fetch` and nothing else that identifies the caller.
+the generic User-Agent of scripts/pubnet.py (`curl/8`) and nothing else that identifies the caller.
 
 Usage: lez/scripts/fetch-attest-fixture.py OUTDIR      (OUTDIR must not exist yet)
 

@@ -310,16 +310,32 @@ class Net:
             time.sleep(pause)
 
 
+def transient_exception(e: BaseException) -> bool:
+    """An exception from a request (urllib, http.client, this module, a script's own RuntimeError with the node's
+    message) that a later attempt may not meet: HTTP 429 or 5xx, a timeout, a dropped connection, a lag message."""
+    import urllib.error
+    if isinstance(e, urllib.error.HTTPError):
+        return e.code == 429 or e.code >= 500
+    if isinstance(e, Transient):
+        return True
+    if isinstance(e, Permanent):
+        return False
+    if isinstance(e, (TimeoutError, ConnectionError, socket.timeout, urllib.error.URLError, http.client.HTTPException)):
+        return True
+    return classify(f"{type(e).__name__}: {e}") == "transient"
+
+
 def retrying(fn, budget: float = 120.0, what: str = "request"):
     """fn() again after a transient failure (same endpoint), backoff with jitter, within the budget: for scripts whose
-    provenance names one endpoint per answer (the fixture fetchers' cross-checks must not fail over silently)."""
+    provenance names one endpoint per answer (the fixture fetchers' cross-checks must not fail over silently). Any
+    other failure, or the budget spent, raises what fn raised."""
     deadline = time.monotonic() + budget
     attempt = 0
     while True:
         try:
             return fn()
         except Exception as e:  # noqa: BLE001 - classified below
-            if classify(f"{type(e).__name__}: {e}") != "transient" and not isinstance(e, (OSError, Transient)):
+            if not transient_exception(e):
                 raise
             attempt += 1
             pause = backoff(attempt, base=2.0, cap=30.0)
