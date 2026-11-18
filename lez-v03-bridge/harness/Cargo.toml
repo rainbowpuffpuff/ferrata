@@ -21,3 +21,7 @@ borsh = { version = "1.5.7", features = ["derive"] }
 hex = "0.4"
 serde_json = "1"
 sha2 = "0.10"
+
+[dev-dependencies]
+# The v0.3.1 light client's wire crate (branch testnet-v03, merged): the layout of the records the bridge reads.
+ferrata-v03-wire = { path = "../../lez-v03/wire" }

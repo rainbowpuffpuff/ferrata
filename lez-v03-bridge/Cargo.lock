@@ -2196,6 +2196,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-v03-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-core",
+ "lee_core",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ff"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2606,6 +2616,7 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez03-bridge-core",
  "ferrata-spectests",
+ "ferrata-v03-wire",
  "hex",
  "lee",
  "lee_core",
