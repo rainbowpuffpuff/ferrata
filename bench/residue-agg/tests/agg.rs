@@ -457,9 +457,9 @@ fn multiproofs_round_trip_and_every_tampering_is_refused() {
         assert_eq!(multiproof_root(&beyond, &[], depth), None, "an index beyond the tree");
         assert_eq!(multiproof_root(&[], &[], depth), None, "no leaves");
     }
-    // 170 non-signers of 512: every third member (the worst case) and the separate branches.
-    let worst: Vec<usize> = (0..512).filter(|i| i % 3 == 2).collect();
-    assert_eq!(hashes_for(&worst, 9), 425);
+    // 170 non-signers of 512: every third member (the most hashes) and the separate branches.
+    let every_third: Vec<usize> = (0..512).filter(|i| i % 3 == 2).collect();
+    assert_eq!(hashes_for(&every_third, 9), 425);
     println!(
         "multiproofs: {sets} leaf sets at depths 1-10 round trip; {tampered} tampered proofs refused; 170 \
               non-signers at every third index need 425 hashes (separate branches: 1,530)"

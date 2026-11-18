@@ -25,6 +25,7 @@ opening sections).
 | RISC Zero's proof system (and LEZ's privacy circuit) | that every accepted proof is true | anything a proof gates | the emergency stop, tripped only by RISC Zero's own proof of unsoundness | §5 |
 | Ferrata's own code (core, programs, guests, vault) | everything | depends on the bug | caps, freezes, `revokeFrom`; immutability means no fix in place | §6 |
 | Admin and freeze authority (multisigs) | liveness only: they cannot move escrow or accept anything | denial of service | freezes lapse after 30 days; keyless retirement; 14-day public role changes | §4 |
+| Until milestone B1: nobody who knows a public-kind deposit's `s` creates a second configuration of the same vault and chain, and nobody fills a destination's `holder(dest)` | that every public-kind deposit can be claimed under the paired configuration, and that a public destination can receive | that deposit is frozen: the paired configuration's claim is refused (250) and, once it has imported the deposit, the leaf is below the refund boundary, so its escrow stays in the vault; a filled destination can no longer be credited | no theft and no double mint: the second configuration's mints and burns are under its own id, which no vault pays; only the depositor or whoever sees a plaintext claim before inclusion knows `s` (a private claim, the CLI's default path, does not publish it; a private-kind deposit cannot be taken); the fix is planned for B1 ([`lez/results/tenant.md`](../lez/results/tenant.md)) | [`bridge.md`](design/bridge.md) §3 |
 | Everyone else (submitters, importers, provers, relayers, wrappers, RPC providers) | liveness only | refused, or replaced by anyone else | — | §2.4, §4 |
 
 ## 2. The light client and its attestations (RFP-021)
@@ -322,7 +323,7 @@ handover on LEZ is not built ([README](../README.md#specified-but-not-built), "S
 | Who | Provides | If it lies | If it stops | Learns |
 |---|---|---|---|---|
 | Root importer | one attestation per record | refused by the primitive | anyone else imports | public data |
-| Relayer | gas drops (the receipt and one credit per `N` built, EVIDENCE rows 47, 48; the sealed credit's sweep not built), submission | cannot redirect or overcharge: proofs bind destination, recipient and fee | the user picks another or submits directly | a time, a one-time address, the transaction it submits |
+| Relayer | gas drops (the receipt and one credit per `N` built, EVIDENCE rows 47, 48; the sealed credit's sweep not built), submission | cannot redirect or overcharge: proofs bind destination, recipient and fee; but a plaintext claim it is given carries `s`, with which it can freeze that deposit through a second configuration until B1 (EVIDENCE row 136) | the user picks another or submits directly | a time, a one-time address, the transaction it submits |
 | Checkpoint prover | candidate and finalisation proofs | refused by the vault | anyone with a prover and an x86 machine; a backlog is proven in pieces | public data |
 | Release wrapper | the Groth16 wrap | refused by the vault | another wrapper, or the user's own x86 machine | what the release publishes |
 | Accredited sequencers | LEZ blocks; attestations under (B) | `t` of them can forge a burn root (§3.5 bounds it) | the zone stops; finalisation needs `t` live keys under (B), `t + 1` under (A) | public transactions |
@@ -373,6 +374,7 @@ verification logic, which Security #8 forbids. The failsafe is stop-only
 | A bug in the vault | depends; no upgrade | depends | freezes, retirement; caps |
 | A wrong checkpoint not revoked within 7 days | the vault halts for good | every position not yet released | caps bound what the error itself released |
 | A LEZ change the configuration cannot follow | retirement before it; unimported deposits refunded | tokens never burned before the change stay backed in the vault but cannot be released | notice period asked of Logos (M0) |
+| A Bedrock era change under a zone on Logos Blockchain 0.3.5-rc.1 (its transactions then carry another fork digest) | the checkpoints stop: the second build of the checkpoint guests pins one digest through `lezConfigId` and refuses the new one ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md)); retirement as for a LEZ change | as the row above | the same notice period, asked for Bedrock's eras too |
 | Admin or freeze key compromised | denial of service within the bounds of §4 | none directly | lapsing freezes, 14-day public replacement, keyless retirement |
 | Every operator stops | no imports, checkpoints or relays | none: anyone can resume; claims never expire | keyless retirement and refunds after 30 days without checkpoint progress, from deployment on (operators keep a heartbeat checkpoint) |
 | A recipient that can never receive | its `owed` balance stays forever | that payee's amount | pull payments isolate it from everyone else |

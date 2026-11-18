@@ -1,7 +1,7 @@
 # Independent review of `ferrata-core` against the specifications (docs/REVIEW-core.md, 43 rows)
 
 Reviewer: a headless agent (Claude Code, Opus 5.5), 11 November 2026, 14:15–14:44 CET. Modal
-spend for this review (mrun ledger estimates, profile `deeferentleeg`): 0.30 USD over 11 calls.
+spend for this review (mrun ledger estimates, profile `ws-9`): 0.30 USD over 11 calls.
 Code: branch `integration6` at `c52eee4` (every `file:line` below is at that commit; the review
 branch changes no file of `ferrata-core`). Review branch: `review-core` in
 `spike/ferrata-wt-review-core` (tests and mutant scripts only; tip in §4).
@@ -14,7 +14,7 @@ identical to the branch tip); EIP-2935 (ethereum/EIPs master). Line numbers `alt
 to those files (`alt-sp` = `specs/altair/light-client/sync-protocol.md`, `cap-sp`, `den-sp`, `ele-sp`,
 `glo-sp` likewise; `*-fork` = the light-client `fork.md`).
 
-What ran (all on Modal, profile `deeferentleeg`, through `mrun`; measured):
+What ran (all on Modal, profile `ws-9`, through `mrun`; measured):
 - `scripts/fetch-vectors.sh && cargo test -p ferrata-core -p ferrata-spectests --locked`: **142 passed, 0
   failed** (log `spike/tmp/review-core/test1.log`). Every test a row names exists and passed.
 - New tests on the review branch, `crates/ferrata-spectests/tests/review_core.rs`: 6, all pass on
@@ -227,11 +227,11 @@ naming the row it mirrors and the equivalence test; add the S-mutants (or equiva
 ## 3. Sign-off checklist (one block per row; the "Reviewed" column is the owner's)
 
 Commands run from the worktree root on the build box:
-`M=…/spike/modal-build; $M/mrun --profile deeferentleeg -- '<command>'` (vectors fetched by
+`M=…/spike/modal-build; $M/mrun --profile ws-9 -- '<command>'` (vectors fetched by
 `scripts/fetch-vectors.sh`). `mut X Y` means `python3 scripts/mutants.py X Y` (each must print
 `killed`); `rmut X` means `python3 scripts/review-mutants.py own X`.
 
-`T <args>` = `$M/mrun --profile deeferentleeg -- 'cargo test -p ferrata-spectests --locked <args>'`.
+`T <args>` = `$M/mrun --profile ws-9 -- 'cargo test -p ferrata-spectests --locked <args>'`.
 
 **1 `validate_light_client_update`**
 - V:251-376 beside alt-sp:406-489: tick participation V:276, slot order V:286-291, period V:292-302, relevance V:305-310.
@@ -437,5 +437,5 @@ Commands run from the worktree root on the build box:
 `020112d`, `3d713da`, `12d3a68`, `6d6db6f` (tests that kill R03, R12, R07, S02/S03/S09), `428ab75`
 ("suggested fix, not merged": `docs/REVIEW-core.md` rows 11, 17, 18, 38 and the `steps.rs` scope
 note; docs only). `git diff c52eee4 -- crates/ferrata-core` is empty, so no image id changes.
-Not pushed. Run the review tests: `$M/mrun --profile deeferentleeg -- 'cargo test -p
+Not pushed. Run the review tests: `$M/mrun --profile ws-9 -- 'cargo test -p
 ferrata-spectests --locked --test review_core'` (6 pass).

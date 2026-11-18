@@ -1,0 +1,31 @@
+[package]
+name = "driver03"
+description = "Drives the Ferrata bridge program for LEZ v0.3.1 on a running sequencer through LEZ v0.3.1's wallet (experimental)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[[bin]]
+name = "bridge03"
+path = "src/main.rs"
+
+[dependencies]
+methods03 = { path = "../methods" }
+ferrata-lez03-bridge-core = { path = "../core" }
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }
+# LEZ v0.3.1's wallet: account keys and storage, the program loader, public sends, and the privacy-preserving
+# transaction it proves itself (the same `execute_and_prove` as the wallet CLI).
+wallet = { path = "../../../upstream/lez-v0.3.1/lez/wallet" }
+lee = { path = "../../../upstream/lez-v0.3.1/lee/state_machine" }
+lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core", features = ["host"] }
+common = { path = "../../../upstream/lez-v0.3.1/lez/common" }
+testnet_initial_state = { path = "../../../upstream/lez-v0.3.1/lez/testnet_initial_state" }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+anyhow = "1"
+borsh = { version = "1.5.7", features = ["derive"] }
+hex = "0.4"
+serde_json = "1"
+sha2 = "0.10"

@@ -1,0 +1,22 @@
+# Edge cases of residue_agg (bench/residue-agg/tests/edge_cases.rs), 18 Nov 2026
+
+EXPERIMENTAL, unaudited (bench/RESIDUE.md §9.5). Native, on the Modal build box. Command:
+`cd bench && cargo test --release -p residue-agg --test edge_cases -- --nocapture` (run here as part of
+`cargo test --release -p residue-agg -- --nocapture`). Lines as the tests printed them.
+
+running 7 tests
+decode: counts at n and n + 1, a trailing and a missing byte, empty and short inputs, a key count past the end: as specified
+test decode_edges ... ok
+identity: non-signers cancelling (contiguous, every third), signers cancelling (key = identity: SigningKeyIdentity by both sums), all keys cancelling, an undecodable aggregate (PubkeyInvalid), the empty set with a node (Witness), 61 copies of one key absent: as the reference
+test identity_cases ... ok
+multiproof: every non-empty leaf set at depths 1-4 (65808 sets) round trips, equals the per-leaf branches, siblings = hashes - leaves + 1 <= width; 142020 tamperings refused
+test multiproof_exhaustive_small_depths ... ok
+compressed() = blst on 20,000 random curve points outside G1 (both signs of y)
+test compressed_outside_g1 ... ok
+committees of 1, 2, 3, 5, 6, 7, 9, 12, 32 (minimal), 33, 100, 300, 511, 513 members: 224 bitfields; the honest multiproof accepted, the key = aggregate − Σ absent (batch and chain), the core's branches verify against the same root, an altered sibling refused
+test non_power_of_two_and_minimal_committees ... ok
+batch addition in G1: 6286 multisets (copies, blocks, alternations, shuffles, random to 600 points, 3130 summing to the identity) and 1,100 distinct points: batch = chain = scalar multiplications
+test batch_g1_copies_cancellations_and_large_sets ... ok
+batch addition outside G1: 4000 random multisets of curve points with order-3 shifts; 435 differ from the chain, always by (0, ±2); the pairing with a G2 point equal in every case (3 with a sum at the identity, the other then O or of order 3)
+test batch_outside_g1_differs_only_by_order_3_and_keeps_the_pairing ... ok
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 6.06s

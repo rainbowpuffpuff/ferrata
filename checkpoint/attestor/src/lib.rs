@@ -15,6 +15,12 @@
 //! `prev_block_hash`, the inscription's `parent` = the previous inscription's message id). The final
 //! tip is the last block of that linked run; its signer must be in `K`.
 //!
+//! **Logos Blockchain 0.3.5-rc.1.** A node of that release serves each transaction with its fork digest
+//! (`mantle_tx.fork_digest`); its bytes are then `fork_digest ‖ ops` and its hash covers the digest. The attestor reads
+//! either layout from the node's answers ([`Inscription::fork_digest`]), checks each inscription in its own layout
+//! (`checkpoint_core::bedrock_0_3_5` for 0.3.5-rc.1), and refuses a final tier whose inscriptions carry different
+//! digests. Inputs built from such answers are run natively with the second build's rule ([`run_b`]).
+//!
 //! **Signing.** Before it signs, the attestor checks that its certificate certifies its attestation
 //! key for this deployment, that its channel key is in `K` (a certificate dies with its key), and
 //! that the tip does not contradict what it signed before (a lower tip, or another hash at a height
@@ -35,8 +41,12 @@ use attestor_core::{key_set_hash, verify_certificate, Deployment, FinalTip, Sign
 use checkpoint_core::hash::{sha256_parts, threshold};
 use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::lez::{hash_parsed_block, parse_block, NoVisitor};
-use checkpoint_core::mantle::{inscription_msg_id, tx_hash, ElidedInscription, OP_CHANNEL_INSCRIBE, OP_TRANSFER};
-use checkpoint_core::rule_b::run_checkpoint_b;
+use checkpoint_core::bedrock_0_3_5;
+use checkpoint_core::mantle::{
+    inscription_msg_id, tx_hash, ChannelConfigOp, CheckedInscription, ConfigChange, ElidedInscription, OP_CHANNEL_INSCRIBE,
+    OP_TRANSFER,
+};
+use checkpoint_core::rule_b::{run_checkpoint_b, OutcomeB};
 use checkpoint_core::state::Config;
 use checkpoint_core::Hash;
 use ed25519_dalek::SigningKey;
@@ -210,14 +220,32 @@ fn encode_ops(ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
 pub struct Inscription {
     pub node_block: String,
     pub slot: u64,
+    /// The whole transaction: its operations, after its fork digest on Logos Blockchain 0.3.5-rc.1.
     pub ops: Vec<u8>,
     pub sig: [u8; 64],
     pub tx_hash: Hash,
+    /// The fork digest the transaction carries (a 0.3.5-rc.1 node's answer), or none (the `d480efc6` layout).
+    pub fork_digest: Option<Hash>,
 }
 
 impl Inscription {
     pub fn elided(&self) -> Result<ElidedInscription<'_>> {
-        ElidedInscription::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}"))
+        match self.fork_digest {
+            None => ElidedInscription::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}")),
+            Some(_) => {
+                bedrock_0_3_5::mantle::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}"))
+            }
+        }
+    }
+    /// The inscription of its own payload on `channel_id`, checked as the checkpoint program checks it, in its layout
+    /// (on 0.3.5-rc.1 with the digest it carries; the program also requires that digest to be the deployment's).
+    pub fn check(&self, channel_id: &Hash) -> Result<CheckedInscription> {
+        let e = self.elided()?;
+        let payload = self.payload()?;
+        match self.fork_digest {
+            None => e.check(payload, channel_id).map_err(|e| anyhow!("{e:?}")),
+            Some(d) => bedrock_0_3_5::mantle::check(&e, payload, channel_id, &d).map_err(|e| anyhow!("{e:?}")),
+        }
     }
     pub fn payload(&self) -> Result<&[u8]> {
         let e = self.elided()?;
@@ -236,6 +264,10 @@ pub fn final_inscriptions(answers: &NodeAnswers, channel_id: &Hash) -> Result<BT
         }
         for tx in b["transactions"].as_array().context("node block: transactions")? {
             let ops = tx["mantle_tx"]["ops"].as_array().context("ops")?;
+            let fork_digest = match &tx["mantle_tx"]["fork_digest"] {
+                Value::Null => None,
+                v => Some(hexa::<32>(v, "fork digest")?),
+            };
             let Some(first) = ops.first() else { continue };
             if first["opcode"].as_u64() != Some(u64::from(OP_CHANNEL_INSCRIBE))
                 || hexa::<32>(&first["payload"]["channel_id"], "channel")? != *channel_id
@@ -245,7 +277,8 @@ pub fn final_inscriptions(answers: &NodeAnswers, channel_id: &Hash) -> Result<BT
             let served: Hash = hexa(&tx["mantle_tx"]["hash"], "tx hash")?;
             let mut found = None;
             for rev in [false, true] {
-                let bytes = encode_ops(ops, rev)?;
+                let mut bytes = fork_digest.map(|d| d.to_vec()).unwrap_or_default();
+                bytes.extend(encode_ops(ops, rev)?);
                 if tx_hash(&bytes) == served {
                     found = Some(bytes);
                     break;
@@ -258,6 +291,7 @@ pub fn final_inscriptions(answers: &NodeAnswers, channel_id: &Hash) -> Result<BT
                 ops,
                 sig: hexa(&tx["ops_proofs"][0]["Ed25519Sig"], "inscription signature")?,
                 tx_hash: served,
+                fork_digest,
             };
             let payload = ins.payload()?;
             ensure!(payload.len() >= 8, "tx {}: payload shorter than a block id", hex::encode(served));
@@ -284,6 +318,8 @@ pub struct FinalTier {
     /// The linked run of LEZ blocks checked, first id and hashes by id.
     pub first_block: u64,
     pub hashes: BTreeMap<u64, Hash>,
+    /// The fork digest every inscription of the final tier carries (Logos Blockchain 0.3.5-rc.1), or none.
+    pub fork_digest: Option<Hash>,
 }
 
 /// Reads and checks the final tier (module docs).
@@ -299,6 +335,11 @@ pub fn final_tier(answers: &NodeAnswers, channel_id: &Hash) -> Result<FinalTier>
         u32::try_from(answers.channel["posting_timeframe"].as_u64().context("channel: posting_timeframe")?)?;
     let ins = final_inscriptions(answers, channel_id)?;
     ensure!(!ins.is_empty(), "no inscription of channel {} in the node's final tier", hex::encode(channel_id));
+    let fork_digest = ins.values().next().and_then(|i| i.fork_digest);
+    ensure!(
+        ins.values().all(|i| i.fork_digest == fork_digest),
+        "the final tier's inscriptions carry different fork digests (or some none)"
+    );
 
     let mut hashes = BTreeMap::new();
     let mut prev: Option<(u64, Hash, Hash)> = None; // id, block hash, message id
@@ -310,8 +351,7 @@ pub fn final_tier(answers: &NodeAnswers, channel_id: &Hash) -> Result<FinalTier>
             }
         }
         let payload = i.payload()?;
-        let c =
-            i.elided()?.check(payload, channel_id).map_err(|e| anyhow!("block {id}: inscription refused: {e:?}"))?;
+        let c = i.check(channel_id).map_err(|e| anyhow!("block {id}: inscription refused: {e}"))?;
         ensure!(c.tx_hash == i.tx_hash, "block {id}: the inscription's hash is not the node's");
         let s = parse_block(payload, &mut NoVisitor).map_err(|e| anyhow!("block {id}: parser refused it: {e:?}"))?;
         ensure!(s.header.block_id == id, "block {id}: carries id {}", s.header.block_id);
@@ -344,6 +384,7 @@ pub fn final_tier(answers: &NodeAnswers, channel_id: &Hash) -> Result<FinalTier>
         lib_slot: answers.lib_slot,
         first_block: *ins.keys().next().unwrap_or(&0),
         hashes,
+        fork_digest,
     })
 }
 
@@ -427,7 +468,7 @@ pub fn attestation_json(d: &Deployment, a: &SignedAttestation, tier: &FinalTier)
         "encoded": hex::encode(a.encode()),
         "node": {"lib_slot": tier.lib_slot, "tip_node_block": tier.tip_node_block, "tip_slot": tier.tip_slot,
                  "tip_signer": hex::encode(tier.tip_signer), "first_block": tier.first_block,
-                 "blocks_checked": tier.hashes.len()},
+                 "blocks_checked": tier.hashes.len(), "fork_digest": tier.fork_digest.map(hex::encode)},
     })
 }
 
@@ -473,7 +514,7 @@ pub fn collect(base: &[u8], attestations: &[SignedAttestation]) -> Result<Collec
     // program checks; the collector only needs the set the attestations must be over).
     let keys: Vec<Hash> = match input.config_changes.last() {
         None => input.parent.keys.clone(),
-        Some(change) => change.op().map_err(|e| anyhow!("rotation: {e:?}"))?.0.keys.iter().map(|k| **k).collect(),
+        Some(change) => config_op(&input, change)?.keys.iter().map(|k| **k).collect(),
     };
     let keys = &keys;
     let ksh = key_set_hash(keys, input.parent.posting_timeframe);
@@ -681,10 +722,40 @@ pub fn signers(answers: &NodeAnswers, channel_id: &Hash) -> Result<BTreeMap<u64,
     final_inscriptions(answers, channel_id)?
         .iter()
         .map(|(id, i)| {
-            let c = i.elided()?.check(i.payload()?, channel_id).map_err(|e| anyhow!("block {id}: {e:?}"))?;
+            let c = i.check(channel_id).map_err(|e| anyhow!("block {id}: {e}"))?;
             Ok((*id, c.signer))
         })
         .collect()
+}
+
+// ---- the two layouts of an input ------------------------------------------------------------------
+
+/// Whether `input`'s transactions are in Logos Blockchain 0.3.5-rc.1's layout: its `T` inscription starts with the
+/// configuration's `bedrockGenesisId`, which for such a zone is the fork digest (`checkpoint_core::bedrock_0_3_5`). A
+/// `d480efc6` transaction starts with its operation count, never with a 32-byte digest equal to that id.
+pub fn is_bedrock_0_3_5(input: &CheckpointInputB<'_>) -> bool {
+    input.producer.prefix.get(..32) == Some(input.config.bedrock_genesis_id.as_slice())
+}
+
+/// The native run of the program `input` is for: rule (B) of the default build, or of the second build for an input
+/// in the 0.3.5-rc.1 layout; a refusal as the guest would print it (`Debug`).
+pub fn run_b(input: &CheckpointInputB<'_>) -> std::result::Result<OutcomeB, String> {
+    if is_bedrock_0_3_5(input) {
+        bedrock_0_3_5::rule::run_checkpoint_b(input).map_err(|e| format!("{e:?}"))
+    } else {
+        run_checkpoint_b(input).map_err(|e| format!("{e:?}"))
+    }
+}
+
+/// A rotation's `ChannelConfigOp`, read in `input`'s layout.
+fn config_op<'a>(input: &CheckpointInputB<'a>, change: &ConfigChange<'a>) -> Result<ChannelConfigOp<'a>> {
+    if is_bedrock_0_3_5(input) {
+        Ok(bedrock_0_3_5::mantle::config_op(change, &input.config.bedrock_genesis_id)
+            .map_err(|e| anyhow!("rotation: {e:?}"))?
+            .0)
+    } else {
+        Ok(change.op().map_err(|e| anyhow!("rotation: {e:?}"))?.0)
+    }
 }
 
 // ---- fixtures for the checkpoint host ---------------------------------------------------------------
@@ -719,7 +790,7 @@ pub fn fixture_meta(name: &str, bytes: &[u8], description: &str, expect: Option<
             "attestation_key": hex::encode(x.att_key), "tip_id": x.tip.tip_id})).collect::<Vec<_>>(),
         "deployment": deployment_json(&deployment_of(&input.config)),
     });
-    match (run_checkpoint_b(&input), expect) {
+    match (run_b(&input), expect) {
         (Ok(outcome), None) => {
             let journal = outcome.journal.encode();
             meta["journal"] = json!(hex::encode(journal.as_slice()));
@@ -733,13 +804,17 @@ pub fn fixture_meta(name: &str, bytes: &[u8], description: &str, expect: Option<
             ));
         }
         (Err(e), Some(want)) => {
-            let got = format!("{e:?}");
-            ensure!(got.starts_with(want), "{name}: native run refused with {got}, expected {want}");
+            let got = e;
+            // The second build wraps the default build's refusals in `Core(..)` (checkpoint_core::bedrock_0_3_5::Error).
+            ensure!(
+                got.starts_with(want) || got.starts_with(&format!("Core({want}")),
+                "{name}: native run refused with {got}, expected {want}"
+            );
             meta["expect_refusal"] = json!(got);
             meta["native"] = json!(format!("refused: {got}"));
         }
         (Ok(_), Some(want)) => bail!("{name}: native run accepted an input expected to be refused ({want})"),
-        (Err(e), None) => bail!("{name}: native run refused: {e:?}"),
+        (Err(e), None) => bail!("{name}: native run refused: {e}"),
     }
     Ok(meta)
 }

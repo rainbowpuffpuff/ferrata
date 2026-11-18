@@ -74,7 +74,8 @@ pub fn random_bits(n: usize, absent: usize, seed: u64) -> Vec<bool> {
 }
 
 /// Every third member absent (indices 2, 5, …, 509): 170 non-signers, each in a pair of leaves
-/// of its own, so the multiproof needs the most nodes any 170 non-signers can need (425 hashes).
+/// of its own, so the multiproof needs the most hashes (425) and the most witness nodes (256) any
+/// 170 non-signers can need. Not the costliest placement: `tests/placements.rs`.
 fn every_third() -> Vec<bool> {
     (0..512).map(|i| i % 3 != 2).collect()
 }
@@ -151,7 +152,7 @@ pub fn profile() {
     let b = base();
     let mut raw = String::new();
     let choices: Vec<(String, Vec<bool>)> = vec![
-        ("342 signers, every third member absent (the multiproof's worst case)".into(), every_third()),
+        ("342 signers, every third member absent (the most hashes)".into(), every_third()),
         ("342 signers, 170 absent at random (seed 1)".into(), random_bits(512, 170, 1)),
         ("400 signers, 112 absent at random (seed 2)".into(), random_bits(512, 112, 2)),
         ("510 signers, update_1's bits".into(), b.finality.sync_aggregate.bits.clone()),
@@ -197,9 +198,9 @@ pub fn measure() {
         ("343 (169 absent at random, seed 4)".into(), random_bits(512, 169, 4), all.clone()),
         ("342 (170 absent at random, seed 1)".into(), random_bits(512, 170, 1), all.clone()),
     ];
-    let mut worst = all.clone();
-    worst.extend([(1, 2), (2, 2)]);
-    choices.push(("342 (every third member absent: the multiproof's worst case)".into(), every_third(), worst));
+    let mut with_chain = all.clone();
+    with_chain.extend([(1, 2), (2, 2)]);
+    choices.push(("342 (every third member absent: the most hashes)".into(), every_third(), with_chain));
     for (label, bits, runs) in choices {
         let u = signed(&b, &b.finality, bits);
         cases.push((

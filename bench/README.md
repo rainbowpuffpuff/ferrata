@@ -100,10 +100,22 @@ An experimental replacement of the final exponentiation, used by no deployed pro
 * `residue-agg/`: the signing key composed from one Merkle multiproof of all the non-signers (the
   core's `step1` with that one change; [`RESIDUE.md`](RESIDUE.md) §9) and its tests (`tests/agg.rs`:
   the core's `step1` compared on the vectors, the real chains and 2,288 committee/bitfield pairs;
-  refusals; forged multiproofs).
+  refusals; forged multiproofs; `tests/batch_g1.rs`: blst's batch addition on colliding G1 points;
+  `tests/edge_cases.rs`, from an independent review: small trees exhaustively, committees that are
+  not a power of two, the identity, the decoder's edges, the batch addition in and outside G1).
 * `guests/residue-agg-accel/`, built by `residue-methods/` beside `residue-accel`: one whole update
   with either composition of the signing key, and the profile of a non-signer's cost;
-  `residue-host profile`, `measure-agg` and `boundary` run it (into `results/residue/agg/`).
+  `residue-host profile`, `measure-agg` and `boundary` run it (into `results/residue/agg/`), and so
+  does `residue-host/tests/placements.rs` (from the same review: the 342-signer update at other
+  placements of the absent members, and 1 to 170 members absent).
+* `results/residue/agg/placements.md`: the cycle counts of those placements and participations
+  (every third member absent needs the most hashes but is not the costliest placement).
+* `results/residue/agg/placement-phases.txt`: the guest's phases for seven placements with the same
+  425 hashes and 256 witness nodes (the difference is in step 1).
+* `results/residue/agg/edge-cases.txt`: the lines `tests/edge_cases.rs` prints, with its counts.
+* `results/residue/agg/lez-placements.txt`: what LEZ's state machine charged the experimental copy
+  of the program at 12 placements, and what it refused (`../lez/harness/tests/residue_placements.rs`,
+  behind the harness's feature `residue-experimental`).
 
 ```sh
 cd bench && export TMPDIR=$PWD/../../tmp && mkdir -p "$TMPDIR"
@@ -115,6 +127,7 @@ cargo test --release -p residue-agg -- --nocapture     # RESIDUE.md §9.5
 ./target/release/residue-host profile                  # results/residue/agg/profile.txt
 ./target/release/residue-host measure-agg              # results/residue/agg/one-tx.txt, tables.md
 ./target/release/residue-host boundary                 # results/residue/agg/boundary.txt, boundary.md
+cargo test --release -p residue-host --test placements # results/residue/agg/placements.md, placement-phases.txt
 ```
 
 ## Notes

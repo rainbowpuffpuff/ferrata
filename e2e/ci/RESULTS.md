@@ -1,7 +1,7 @@
 # The CI jobs, proven on the build box
 
 The two jobs added to [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml) on 11 November 2026, run on the
-Modal build box (`spike/modal-build/mrun`, profile `indeea`, outside the repository) by their own scripts, exactly
+Modal build box (`spike/modal-build/mrun`, profile `ws-10`, outside the repository) by their own scripts, exactly
 as the workflow's `run:` steps call them. The box has no Docker; the scripts need none. Every number below was
 measured there unless marked otherwise; `nproc` in the box's container printed 2.
 

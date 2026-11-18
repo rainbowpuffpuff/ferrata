@@ -91,9 +91,12 @@ user cycles (5,911,714 with the witness folded into the Miller loop); at the few
 policy accepts (342 of 512) 10,809,028 (10,147,477 folded), and an update that adopts a committee
 11.9M to 16.8M: over the limit either way ([`bench/RESIDUE.md`](../bench/RESIDUE.md); EVIDENCE row
 127). With the non-signers' keys checked through one Merkle multiproof instead of a branch each (a
-non-signer then costs 9,418 cycles instead of 25,094), the 342-signer finality update fits: the
-experimental copy was charged **8,318,645** execution gas for it in one transaction (83.2%), and the
-bare guest takes 7,458,783 folded; with a branch per non-signer the fewest signers that fit are 386
+non-signer then costs 9,418 cycles instead of 25,094), the 342-signer finality update fits at every
+placement of the absent members that was measured: the experimental copy was charged **8,318,645**
+execution gas for it in one transaction with every third member absent (83.2%) and 8,326,572 (83.3%)
+at the costliest placement found (the maximum over all placements is not established; about 1.67M
+gas is left to the limit), and the bare guest takes 7,458,783 folded with every third absent; with a
+branch per non-signer the fewest signers that fit are 386
 (EVIDENCE row 128, [`bench/RESIDUE.md`](../bench/RESIDUE.md) §9). A period update still does not fit.
 The deployed programs are unchanged.
 
@@ -166,8 +169,8 @@ claim is estimated at about 58M accelerated user cycles).
 | the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 | proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
 
-**Gap:** the CPU, memory and bandwidth of the updater daemon and of `monitor` (both built, [EVIDENCE](EVIDENCE.md)
-rows 43–45, 79–81; not measured).
+**Gap:** the CPU, memory and bandwidth of the updater daemon, and the CPU and bandwidth of `monitor` (both built,
+[EVIDENCE](EVIDENCE.md) rows 43–45, 79–81; of `monitor` only memory is measured: 34,216 kB resident, row 43).
 
 ### P.7 State growth
 
@@ -339,7 +342,7 @@ on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoin
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 
 **Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
-measured) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
+measured, except `monitor`'s memory, 34,216 kB resident, row 43) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
 
 ### P.7 State growth at 1M and 10M operations
 

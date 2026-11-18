@@ -1,0 +1,43 @@
+# LEZ's state machine: the experimental copy with one multiproof, other placements of the 170 absent members (18 Nov 2026)
+
+EXPERIMENTAL, bench-only (bench/RESIDUE.md §9.6). In-process harness, LEZ v0.4.0-rc1 (lez/RESULTS.md §1), RISC Zero
+dev mode (public transactions are executed, not proven), on the Modal build box. In the same run the test of lez.txt
+(residue_experimental) printed lez.txt's 20 result lines unchanged, with the image ids experimental copy 4f1b2fa6…,
+deployed program 816d1fef…. Command:
+`cd lez && export RISC0_HOME=$PWD/../../risc0-home-lez && RISC0_DEV_MODE=1 cargo test -p harness --features residue-experimental --test residue_placements -- --nocapture --test-threads 1`
+(RISC0_HOME: the LEZ guest toolchain, as bench/RESIDUE.md §6). Each placement runs on a fresh instance whose store was given the
+bench's committee after update_0 (force_insert_account), as in lez.txt; every transaction below was applied and left the
+natively applied job's store. "sum": the marker 0xffff (blst's batch addition) or 0xfffe (the chain of additions).
+Lines as the test printed them (handlers: VerifyAll → ApplyVerified → Record). Every third member absent needs the most
+hashes (425) and witness nodes (256) but is not the costliest placement; the maximum over all placements and committees
+is not established.
+
+### test a_342_signer_update_at_other_placements
+| placement of the 170 absent members (342 of 512 sign) | sum | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | minus every third | witness bytes (with the marker) | result |
+|---|---|---|---:|---:|---:|---:|---|
+| every third (2, 5, ..., 509) | batch | 8243106 → 58187 → 17352 | 8318645 | 83.2% | 0 | 24518 | applied |
+| every absent index odd: 4g+3 in every group of four, and 4g+1 in groups 0..41 | batch | 8251033 → 58187 → 17352 | 8326572 | 83.3% | 7927 | 24518 | applied |
+| every absent index even: 4g in every group of four, and 4g+2 in groups 0..41 | batch | 8235037 → 58187 → 17352 | 8310576 | 83.1% | -8069 | 24518 | applied |
+| evenly spaced (the boundary's placement) | batch | 8242955 → 58187 → 17352 | 8318494 | 83.2% | -151 | 24518 | applied |
+| two per group of four (4g, 4g+2) in groups 0..41, one (4g+1) in the others | batch | 8240453 → 58187 → 17352 | 8315992 | 83.2% | -2653 | 24518 | applied |
+| first 170 absent (one block) | batch | 7938426 → 58187 → 17352 | 8013965 | 80.1% | -304680 | 16486 | applied |
+| last 170 absent (one block) | batch | 7938434 → 58187 → 17352 | 8013973 | 80.1% | -304672 | 16486 | applied |
+| random 170, seed 1 | batch | 8176247 → 58187 → 17352 | 8251786 | 82.5% | -66859 | 22758 | applied |
+| random 170, seed 11 | batch | 8181847 → 58187 → 17352 | 8257386 | 82.6% | -61259 | 22886 | applied |
+| random 170, seed 12 | batch | 8176436 → 58187 → 17352 | 8251975 | 82.5% | -66670 | 22758 | applied |
+| random 170, seed 13 | batch | 8171306 → 58187 → 17352 | 8246845 | 82.5% | -71800 | 22630 | applied |
+| random 170, seed 14 | batch | 8184804 → 58187 → 17352 | 8260343 | 82.6% | -58302 | 22982 | applied |
+| every third (2, 5, ..., 509) | chain | 8577991 → 58187 → 17352 | 8653530 | 86.5% | 0 | 24518 | applied |
+| every absent index odd: 4g+3 in every group of four, and 4g+1 in groups 0..41 | chain | 8585918 → 58187 → 17352 | 8661457 | 86.6% | 7927 | 24518 | applied |
+342 of 512 at 12 placements, blst's batch sum: every third 8318645 execution gas; the most 8326572 (83.3% of MAX_GAS_EXEC, 7927 more than every third, 1673428 below the limit): "every absent index odd: 4g+3 in every group of four, and 4g+1 in groups 0..41"; the least 8013965: "first 170 absent (one block)". The maximum over all placements and committees is not established.
+
+### test what_the_copy_refuses
+341 signers, one multiproof behind 0xffff: refused: exit 51
+341 signers, one multiproof behind 0xfffe: refused: exit 51
+341 signers, the core's witness: refused: exit 51
+342 signers, the multiproof witness without its marker: refused: exit 1
+342 signers, the core's witness behind 0xffff: refused: exit 1
+342 signers, the marker twice: refused: exit 1
+prefix sweep: 0 of 65,534 two-byte prefixes make the multiproof witness a valid SignerWitness encoding
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 88.52s

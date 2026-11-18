@@ -8,6 +8,8 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
   proofs were real, and the command that re-checks it.
 - [traceability.md](traceability.md): every requirement of RFP-021 and RFP-022 with its design, the evidence that
   exists today and the milestone that would deliver it.
+- [requirements-status.md](requirements-status.md): the status of every requirement row (shown, in part, not yet, waits on
+  Logos) with its reason, and the counts; the project's own strict classification of 18 November 2026.
 - [components.md](components.md): every component, where it ran, its status and its re-check command.
 - [not-built.md](not-built.md): what the design notes specify and this repository does not build yet, in full.
 - [sepolia.md](sepolia.md): the live runs on Sepolia, the three deployed vaults, and how to check them.

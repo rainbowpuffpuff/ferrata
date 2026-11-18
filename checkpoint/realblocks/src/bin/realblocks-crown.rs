@@ -34,6 +34,12 @@
 //!   against its hash), the parent's key set and configuration tip being session A's (`--session-a`); each block's
 //!   signer is checked against the key set in force at its node slot, and the attestations are over the set after it.
 //!
+//! A zone on Logos Blockchain 0.3.5-rc.1 (LEZ v0.4.0-rc3): its node serves every transaction with its fork digest
+//! (`mantle_tx.fork_digest`). The tool then reads the transactions in that layout (`fork_digest ‖ ops`), requires every
+//! one to carry the same digest and `bedrockGenesisId` (session A's, `crown-driver crown-a --fork-digest`) to be it in
+//! place of the deployment settings' SHA-256, checks them with checkpoint-core's second build
+//! (`checkpoint_core::bedrock_0_3_5`, the code of the `checkpoint_b_0_3_5` guest) and runs that build's rule (B).
+//!
 //! Every inscription the node holds for the channel is parsed strictly and re-hashed by
 //! `checkpoint-core` exactly as the guest does, framed, BLAKE2b-hashed and signature-checked, and the
 //! MsgId chain is followed. The attestor: the channel key certifies an attestation key whose secret
@@ -57,6 +63,7 @@ use checkpoint_core::lez::{hash_parsed_block, parse_block, Actor, NoVisitor, Ori
 use checkpoint_core::mantle::{
     inscription_msg_id, tx_hash, ConfigChange, ElidedInscription, OP_CHANNEL_CONFIG, OP_CHANNEL_INSCRIBE, OP_TRANSFER,
 };
+use checkpoint_core::bedrock_0_3_5;
 use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::state::{key_set_hash, Config, State};
 use checkpoint_core::tree::{burn_leaf, zero_hashes, Frontier};
@@ -85,6 +92,21 @@ fn hx(b: &[u8]) -> String {
 }
 
 // ---- the node's transactions (as checkpoint/realblocks/src/main.rs reads them) ---------------------
+
+/// The fork digest a node of Logos Blockchain 0.3.5-rc.1 serves with a transaction (`mantle_tx.fork_digest`), or none.
+fn fork_digest_of(tx: &Value) -> Result<Option<Hash>> {
+    match &tx["mantle_tx"]["fork_digest"] {
+        Value::Null => Ok(None),
+        v => Ok(Some(hexa::<32>(v, "fork digest")?)),
+    }
+}
+
+/// The whole transaction's bytes: its fork digest (0.3.5-rc.1), then its operations.
+fn encode_tx(fork_digest: Option<Hash>, ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
+    let mut out = fork_digest.map(|d| d.to_vec()).unwrap_or_default();
+    out.extend(encode_ops(ops, reverse_fr)?);
+    Ok(out)
+}
 
 /// The canonical encoding of a transaction's ops from the node's JSON; `reverse_fr`: whether 32-byte
 /// field elements are served in the opposite byte order (the transaction hash decides).
@@ -208,6 +230,7 @@ struct Cfg {
     op_index: u8,
     sigs: Vec<(u16, [u8; 64])>,
     tx_hash: Hash,
+    fork_digest: Option<Hash>,
 }
 
 impl Cfg {
@@ -238,9 +261,10 @@ fn load_configs(dir: &Path, channel: &Hash) -> Result<Vec<Cfg>> {
                     continue;
                 };
                 let served: Hash = hexa(&tx["mantle_tx"]["hash"], "tx hash")?;
+                let fork_digest = fork_digest_of(tx)?;
                 let bytes = [false, true]
                     .into_iter()
-                    .map(|rev| encode_ops(ops, rev))
+                    .map(|rev| encode_tx(fork_digest, ops, rev))
                     .collect::<Result<Vec<_>>>()?
                     .into_iter()
                     .find(|bytes| tx_hash(bytes) == served)
@@ -257,6 +281,7 @@ fn load_configs(dir: &Path, channel: &Hash) -> Result<Vec<Cfg>> {
                     op_index: u8::try_from(op_index)?,
                     sigs,
                     tx_hash: served,
+                    fork_digest,
                 });
             }
         }
@@ -271,11 +296,17 @@ struct Ins {
     ops: Vec<u8>,
     sig: [u8; 64],
     tx_hash: Hash,
+    fork_digest: Option<Hash>,
 }
 
 impl Ins {
     fn elided(&self) -> Result<ElidedInscription<'_>> {
-        ElidedInscription::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}"))
+        match self.fork_digest {
+            None => ElidedInscription::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}")),
+            Some(_) => {
+                bedrock_0_3_5::mantle::split(&self.ops, 0, &self.sig).map_err(|e| anyhow!("not an inscription: {e:?}"))
+            }
+        }
     }
     fn payload(&self) -> Result<&[u8]> {
         let e = self.elided()?;
@@ -303,9 +334,10 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
                     continue;
                 }
                 let served: Hash = hexa(&tx["mantle_tx"]["hash"], "tx hash")?;
+                let fork_digest = fork_digest_of(tx)?;
                 let mut found = None;
                 for rev in [false, true] {
-                    let bytes = encode_ops(ops, rev)?;
+                    let bytes = encode_tx(fork_digest, ops, rev)?;
                     if tx_hash(&bytes) == served {
                         found = Some(bytes);
                         break;
@@ -319,6 +351,7 @@ fn load_inscriptions(dir: &Path, channel: &Hash) -> Result<(BTreeMap<u64, Ins>, 
                     ops: bytes,
                     sig: hexa(&tx["ops_proofs"][0]["Ed25519Sig"], "inscription signature")?,
                     tx_hash: served,
+                    fork_digest,
                 };
                 let payload = ins.payload()?;
                 ensure!(payload.len() >= 8, "short payload");
@@ -408,12 +441,33 @@ fn main() -> Result<()> {
     ensure!(t0 >= 1 && t1 > t0, "need 1 <= T0 < T1");
 
     // ---- the run's configuration, checked against the node and the bridge wire's configId ------------
-    let genesis_bytes = fs::read(get("genesis")?)?;
-    let bedrock_genesis_id = sha256_parts(&[genesis_bytes.as_slice()]);
+    let (ins, node_blocks, other_txs) = load_inscriptions(&node.join("blocks"), &CHANNEL_ID)?;
+    // Logos Blockchain 0.3.5-rc.1: one fork digest on every transaction, and bedrockGenesisId is it.
+    let fork_digest = ins.values().next().and_then(|i| i.fork_digest);
     ensure!(
-        bedrock_genesis_id == hexa::<32>(&id["bedrockGenesisId"], "bedrockGenesisId")?,
-        "identity.bedrockGenesisId is not the SHA-256 of these deployment settings"
+        ins.values().all(|i| i.fork_digest == fork_digest),
+        "the channel's inscriptions carry different fork digests (or some none)"
     );
+    let bedrock_genesis_id = match fork_digest {
+        Some(d) => {
+            ensure!(
+                d == hexa::<32>(&id["bedrockGenesisId"], "bedrockGenesisId")?,
+                "identity.bedrockGenesisId is not the zone's fork digest {}",
+                hx(&d)
+            );
+            println!("Logos Blockchain 0.3.5-rc.1 layout: every transaction carries fork digest {} (= bedrockGenesisId)", hx(&d));
+            d
+        }
+        None => {
+            let genesis_bytes = fs::read(get("genesis")?)?;
+            let g = sha256_parts(&[genesis_bytes.as_slice()]);
+            ensure!(
+                g == hexa::<32>(&id["bedrockGenesisId"], "bedrockGenesisId")?,
+                "identity.bedrockGenesisId is not the SHA-256 of these deployment settings"
+            );
+            g
+        }
+    };
     ensure!(hexa::<32>(&id["channelId"], "channelId")? == CHANNEL_ID, "identity.channelId is not 0x01…01");
     let chain_id = id["chainId"].as_u64().context("identity.chainId")?;
     let mut evm_chain_id = [0u8; 32];
@@ -448,7 +502,6 @@ fn main() -> Result<()> {
     }
 
     // ---- every inscription of the channel the node holds as final, checked by checkpoint-core --------
-    let (ins, node_blocks, other_txs) = load_inscriptions(&node.join("blocks"), &CHANNEL_ID)?;
     let (first, last) = (*ins.keys().next().context("no inscriptions")?, *ins.keys().last().context("none")?);
     ensure!(
         ins.keys().copied().eq(first..=last),
@@ -483,7 +536,14 @@ fn main() -> Result<()> {
     let mut sets: Vec<(u64, Vec<Hash>)> = vec![(0, parent_keys.clone())];
     let mut cth = parent_config_tip;
     for c in &configs {
-        let (op, h) = c.change().op().map_err(|e| anyhow!("configuration tx {}: {e:?}", hx(&c.tx_hash)))?;
+        let (op, h) = match fork_digest {
+            None => c.change().op().map_err(|e| anyhow!("configuration tx {}: {e:?}", hx(&c.tx_hash)))?,
+            Some(d) => {
+                ensure!(c.fork_digest == Some(d), "configuration tx {}: another fork digest", hx(&c.tx_hash));
+                bedrock_0_3_5::mantle::config_op(&c.change(), &d)
+                    .map_err(|e| anyhow!("configuration tx {}: {e:?}", hx(&c.tx_hash)))?
+            }
+        };
         ensure!(h == c.tx_hash, "configuration tx: re-hash");
         ensure!(
             op.parent == &cth,
@@ -540,7 +600,11 @@ fn main() -> Result<()> {
         let h = hash_parsed_block(payload).map_err(|e| anyhow!("{e:?}"))?;
         ensure!(h == s.header.hash, "block {k}: re-hash {} != carried {}", hex::encode(h), hex::encode(s.header.hash));
         ensure!(k == first || s.header.prev_block_hash == prev_hash, "block {k}: not linked to {}", k - 1);
-        let c = e.check(payload, &CHANNEL_ID).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?;
+        let c = match fork_digest {
+            None => e.check(payload, &CHANNEL_ID).map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?,
+            Some(d) => bedrock_0_3_5::mantle::check(&e, payload, &CHANNEL_ID, &d)
+                .map_err(|e| anyhow!("block {k}: inscription refused: {e:?}"))?,
+        };
         ensure!(c.tx_hash == i.tx_hash, "block {k}: transaction hash");
         ensure!(k == first || c.parent == prev_msg, "block {k}: inscription parent is not block {}'s message", k - 1);
         ensure!(
@@ -714,7 +778,11 @@ fn main() -> Result<()> {
         attestations: attestations.clone(),
         segments: Vec::new(),
     };
-    let outcome = run_checkpoint_b(&input).map_err(|e| anyhow!("run_checkpoint_b refused the span: {e:?}"))?;
+    let outcome = match fork_digest {
+        None => run_checkpoint_b(&input).map_err(|e| anyhow!("run_checkpoint_b refused the span: {e:?}"))?,
+        Some(_) => bedrock_0_3_5::rule::run_checkpoint_b(&input)
+            .map_err(|e| anyhow!("the 0.3.5-rc.1 build's run_checkpoint_b refused the span: {e:?}"))?,
+    };
     let journal = outcome.journal.encode();
     let encoded = input.encode();
     ensure!(CheckpointInputB::decode(&encoded).is_ok(), "the input does not decode");

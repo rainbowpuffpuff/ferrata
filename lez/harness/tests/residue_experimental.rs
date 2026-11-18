@@ -303,9 +303,11 @@ fn a_finality_update_in_one_transaction_with_one_multiproof() {
 /// update_0, the instance's signing committee is replaced in its store by a committee whose keys
 /// the test holds (its summary, written with LEZ's `force_insert_account`: the substitution
 /// `residue-host measure` makes in the bench; the headers and branches stay real), and update_1 as
-/// a finality update is signed by 342 of its members, every third absent (the multiproof's worst
-/// case). Sent with the core's witness (a branch per non-signer): over the limit. With one node of
-/// the multiproof altered: refused. Honest: applied, the store equal to the natively applied job's.
+/// a finality update is signed by 342 of its members, every third absent (the placement that needs
+/// the most hashes, 425, and the most witness nodes, 256; not the costliest placement: other
+/// placements are in `residue_placements.rs`). Sent with the core's witness (a branch per
+/// non-signer): over the cycle budget. With one node of the multiproof altered: refused. Honest:
+/// applied, the store equal to the natively applied job's.
 #[test]
 fn a_342_signer_finality_update_in_one_transaction_with_one_multiproof() {
     let (mut w, fake, substituted) = world_with_the_bench_committee();

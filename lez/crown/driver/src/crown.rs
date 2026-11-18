@@ -117,6 +117,11 @@ pub fn address(text: &str) -> Result<[u8; 20]> {
     hex_n::<20>(text)
 }
 
+/// A 32-byte fork digest in hex (`0x` optional), as `GET /chain/fork` of a Logos Blockchain 0.3.5-rc.1 node answers it.
+pub fn fork_digest(text: &str) -> Result<[u8; 32]> {
+    hex_n::<32>(text)
+}
+
 fn now_ms() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
@@ -962,6 +967,10 @@ pub struct SessionA {
     pub genesis: PathBuf,
     pub identity_out: PathBuf,
     pub vault: Option<[u8; 20]>,
+    /// A zone on Logos Blockchain 0.3.5-rc.1: its node's fork digest (`GET /chain/fork`), which is then the
+    /// configuration's `bedrockGenesisId` (checkpoint-core's `bedrock_0_3_5` module docs: where the deployment pins
+    /// it) in place of the deployment settings' SHA-256.
+    pub fork_digest: Option<[u8; 32]>,
 }
 
 /// Session A: deploy, the instance and its catch-up, then the identity at the last final block.
@@ -1002,7 +1011,7 @@ pub async fn session_a(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
         chain: if chain.stand_in { "stand-in".into() } else { "sepolia".into() },
         tip_id,
         tip_hash,
-        bedrock_genesis_id: sha256(&fs::read(&a.genesis)?),
+        bedrock_genesis_id: match a.fork_digest { Some(d) => d, None => sha256(&fs::read(&a.genesis)?) },
         channel_id: CHANNEL_ID,
         channel_keys: keys,
         posting_timeframe: channel["posting_timeframe"].as_u64().ok_or_else(|| anyhow!("/channel: posting_timeframe"))?,

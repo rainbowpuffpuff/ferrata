@@ -1,0 +1,36 @@
+fresh keys were made under <spike>/tmp/testnet-v03/public/wallet (never in the repository)
+== plan: the run's transactions, signed for payer yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R and simulated on LEZ v0.3.1's state machine
+   (data: the committed local run's, results/local)
+seq	sim. block	label	bytes	declared gas	exec gas (simulated)	of 10M	fee (simulated, base fee)	tx hash
+0	1	deploy: WriteSegment 6 of 6 (73392 bytes)	73688	100000	0	0.0%	589504 (8)	14e3129384392a915e158c422f57e02a2305405a01a0802653fc6d622801317c
+1	1	deploy: WriteSegment 5 of 6 (98304 bytes)	98696	100000	0	0.0%	789568 (8)	21c4a892852a5b38a1bffaeb5f178ec2b8433510b8a405e5ff868366121ae2c3
+2	1	deploy: WriteSegment 4 of 6 (98304 bytes)	98696	100000	0	0.0%	789568 (8)	b0cddd2ad067fe920524062f8bc8521e29e27b0b8bbffa19b6e40d854c46b2f7
+3	1	deploy: WriteSegment 3 of 6 (98304 bytes)	98696	100000	0	0.0%	789568 (8)	c0e06b256c70ebc9a7c5deda4a4901f5223a3486f5f8ae5e6a8be591753ca7bc
+4	1	deploy: WriteSegment 2 of 6 (98304 bytes)	98696	100000	0	0.0%	789568 (8)	7da3af4cef85cc774a2ebc6bf2a4be0902fefdb9ad804693d1fb49a0060c84e0
+5	1	deploy: WriteSegment 1 of 6 (98304 bytes)	98696	100000	0	0.0%	789568 (8)	1f1e2af4469fe7da4f9c509d32c2ee69c5ace650f8440ffa00afdf666753f508
+6	1	deploy: CreateHeader (immutable)	820	100000	0	0.0%	6560 (8)	6c603bb50b1c9aae84f6cd15ff834896030f664e0318a9c91019074fae765a81
+7	1	Init (checkpoint, its 512 keys adopted)	50887	8160000	7884541	78.8%	63483424 (8)	32ddaf6e25b5cdbc363b2b733218c91fde7eba4377bdcb574e99e88996ac5e2c
+8	2	update 000-finality-11605344.ssz (residue witness, one transaction)	11260	7300000	7046809	70.5%	63522621 (9)	72e61c38cacde6f98c8c35858f993a019edee452239dc66df7a8753db6cc438d
+9	3	update 001-finality-11605376.ssz (residue witness, one transaction)	16636	7730000	7472244	74.7%	74855528 (10)	74e6517ce7df01269f2913ea896ef90e275e3f83701e8b5ccf4d88d3eaea1701
+10	3	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11605376	6820	550000	501007	5.0%	5064630 (10)	605497926c2c81910b41bab161531dc377e4c0e5dec734eaef3fd3a445ef296a
+queue: 11 transactions in 3 blocks (simulated), fees 211470107 native units at the simulated base fees, the largest reserve 65687096 at base fee 8; payer yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R holds 0
+queue --dry-run: nothing signed was kept, nothing sent
+
+== the target
+sequencer: https://testnet.lez.logos.co
+fee state now: {"jsonrpc":"2.0","id":1,"result":{"height":83005,"base_fee_exec":8,"base_fee_stor":8,"next_base_fee_exec_floor":8,"next_base_fee_exec_ceiling":9,"next_base_fee_stor_floor":8,"next_base_fee_stor_ceiling":9,"max_gas_exec":10000000,"max_gas_stor":1000000}}
+head: {"jsonrpc":"2.0","id":1,"result":83005}
+payer (fresh key under <spike>/tmp/testnet-v03/public/wallet): yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R, balance now 0
+program account (chosen before deployment): J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1
+
+== funds
+The plan's fees: 211,470,107 native units at the simulated base fees; the largest reserve 65,687,096 at base fee 8.
+For each transaction the sequencer reserves gas_limit x base_fee_exec + bytes x base_fee_stor before running it and
+refunds what it does not charge in the same transaction, so the payer must hold that reserve on top of the fees so far.
+Fund the payer with at least 514,266,448 native units (the fees plus the largest reserve at a doubled base fee, x1.5).
+How the LEZ docs say to get testnet funds (logos-docs, docs/lez/get-started/run-lez-wallet-via-cli.md, "Fund the sender
+account"): bridge tokens from the Logos Blockchain with a channel deposit (Basecamp; in Metadata, the payer's account id
+without its Public/ prefix), or have another testnet user transfer native tokens to it. This script never asks a faucet
+and never funds anything: the owner does.
+The same sequence for testnet-ops's queued sender: <spike>/tmp/testnet-v03/public/plan-data/batch.dry-run.json (its "elf" path: <spike>/tmp/testnet-v03/public/plan-data/ferrata_v03.bin).
+(written by ./testnet.sh plan on the Modal build box, 2026-11-18, against https://testnet.lez.logos.co with read-only calls; the funds paragraph as the corrected script prints it)

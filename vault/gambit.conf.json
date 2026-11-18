@@ -1,0 +1,28 @@
+[
+  {
+    "filename": "src/FerrataVault.sol",
+    "sourceroot": ".",
+    "solc": "solc",
+    "solc_remappings": [
+      "forge-std/=lib/forge-std/src/",
+      "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+      "risc0/=lib/risc0-ethereum/contracts/src/",
+      "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/"
+    ],
+    "outdir": "notes/gambit_out/vault",
+    "skip_validate": true
+  },
+  {
+    "filename": "src/FerrataRegistry.sol",
+    "sourceroot": ".",
+    "solc": "solc",
+    "solc_remappings": [
+      "forge-std/=lib/forge-std/src/",
+      "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+      "risc0/=lib/risc0-ethereum/contracts/src/",
+      "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/"
+    ],
+    "outdir": "notes/gambit_out/registry",
+    "skip_validate": true
+  }
+]

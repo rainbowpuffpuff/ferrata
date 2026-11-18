@@ -1,0 +1,14 @@
+# EXPERIMENTAL, UNAUDITED: the Ferrata bridge's inbound leg and burn as a LEZ v0.3.1 program, for the public
+# LEZ testnet (README.md). Its own workspace, like lez/ (v0.4), which stays the deliverable. The guest under
+# guests/ is a workspace of its own (methods/ builds it).
+[workspace]
+resolver = "2"
+members = ["core", "methods", "harness", "driver"]
+exclude = ["guests"]
+
+# The zkVM client and the Merkle-Patricia checks are slow unoptimised; optimise dependencies in test builds.
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.test]
+opt-level = 1

@@ -96,3 +96,6 @@ __pycache__/
 /e2e/runs/testnet-return-*/releases/receipts/*/receipt-*.bin
 /e2e/runs/testnet-return-*/releases/*.input
 /e2e/runs/testnet-return-*/checkpoint/burn-notes.json
+
+# lez-v03-bridge/sepolia.sh: Sepolia deployment records written where forge may write (vault/deployments/), copied to the run
+/vault/deployments/v03bridge-*

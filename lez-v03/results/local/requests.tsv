@@ -1,0 +1,27 @@
+utc	endpoint	request	file	note
+2026-11-18T11:32:09Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:32:09Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/bootstrap/0xa3dbfb9dcb8fde50b3efe4ad407b6305119b78d8534f5996b0e89444bbcba641	bootstrap.ssz	gloas
+2026-11-18T11:32:10Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11605568		
+2026-11-18T11:32:10Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:32:40Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:33:11Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:33:11Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11605600		
+2026-11-18T11:33:11Z	https://lodestar-sepolia.chainsafe.io	(kept)	000-finality-11605600.ssz	finalized 11605600 root 0x8aeb527d3e87e514246c96fd3cde7d645a3d3df92e605e9e15af97967ee5ee61, 492/512
+2026-11-18T11:33:11Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:33:42Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:34:12Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:34:43Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:35:13Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:35:43Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:36:14Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:36:44Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:37:15Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:37:45Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:38:15Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:38:46Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:39:16Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:39:46Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-18T11:39:47Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11605632		
+2026-11-18T11:39:47Z	https://lodestar-sepolia.chainsafe.io	(kept)	001-finality-11605632.ssz	finalized 11605632 root 0xe14e0c42830ada755146bf01fb0b6ec09674c455d5906eee9c87884fe1f2710a, 492/512
+2026-11-18T11:39:47Z	https://ethereum-sepolia-rpc.publicnode.com	eth_getBlockByHash ["0x9b20c6e7fd61077fbf7563aecb98f537ca1eb4743fbe964da4f844c6c884aec7", false]	block.json	
+2026-11-18T11:39:47Z	https://rpc.sepolia.ethpandaops.io	eth_getProof ["0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c", ["0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000001"], "0xb99080"]	proof.json	

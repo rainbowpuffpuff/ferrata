@@ -1,0 +1,2 @@
+kept 1 of 1 (n = 1, t = 1)
+zone-24-125-all: accepted: n = 1, t = 1, 1 attestations counted, producer 8e0f5f733af7483afd663f39851ca5bb00d840b5c3441c90b532036f808f0d06

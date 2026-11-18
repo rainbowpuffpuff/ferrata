@@ -22,12 +22,14 @@ machine of an experimental copy of the program (§6), made on 17 Nov 2026.
   spare**: LEZ's state machine charged an experimental copy of the program **6,629,246** execution
   gas for it (66.3% of `MAX_GAS_EXEC`), against 9,124,896 for the deployed `VerifyAll` in the same
   build (§6).
-* It does **not** fit at the worst participation the policy accepts (342 of 512), even folded: each
+* It does **not** fit at the lowest participation the policy accepts (342 of 512), even folded: each
   of the 170 non-signers costs 25,213 cycles (its key and its Merkle branch to the committee root in
   step 1, and its 384 bytes of witness), 4.3M in all, and on LEZ its input costs about 0.37M more
-  (§6). **With the non-signers' keys checked through one multiproof instead (§9), it fits**: LEZ's
-  state machine charged an experimental copy 8,318,645 execution gas (83.2%) for it; bare guest
-  7,458,783 folded. A **period update does not fit at any participation**: adopting 512 keys costs 5,991,991
+  (§6). **With the non-signers' keys checked through one multiproof instead (§9), it fits at every
+  placement of the absent members that was measured**: LEZ's state machine charged an experimental
+  copy 8,318,645 execution gas (83.2%) for it with every third member absent and 8,326,572 (83.3%)
+  at the costliest placement found (the maximum over all placements is not established, §9.6); bare
+  guest 7,458,783 folded (every third absent). A **period update does not fit at any participation**: adopting 512 keys costs 5,991,991
   cycles on top of the verification.
 * The deployed program already takes a finality update in one public transaction (`VerifyAll`,
   9,124,896 execution gas at 510 of 512 here, 91.2% of the limit; `lez/RESULTS.md` §2 has 9,121,514
@@ -219,7 +221,10 @@ Re-check: `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo
 --features residue-experimental --test residue_experimental -- --nocapture` (needs
 `spike/upstream/lez-v0.4.0-rc1` beside the repository, as every harness test). The copy and this test
 are behind the harness's feature `residue-experimental`: no ordinary build or test of the harness, or
-of what depends on it, builds the experimental guest.
+of what depends on it, builds the experimental guest. Its methods crate is a member of the `lez/`
+workspace, so `cargo build --workspace` (or `cargo test --workspace`) in `lez/` does build the
+experimental guest; the documented commands and the CI jobs, which name their packages with `-p`
+and do not set the feature, do not.
 
 Not run through the state machine: the folded variant (derived: 6,629,246 − 660,640 + 576 bytes
 of `c^−1` at 5.7 cycles each ≈ 5.97M, 60% of the limit), and the 342-signer and period cases (the
@@ -267,25 +272,34 @@ programs are unchanged.
 
 ## 9. The fewest signers in one transaction: one multiproof for the non-signers
 
-Measured on 17 Nov 2026, evening. **Experimental and unaudited, a bench measurement and an
+Measured on 17 Nov 2026, evening; other placements of the absent members on 18 Nov 2026, after an
+independent review. **Experimental and unaudited, a bench measurement and an
 experimental copy of the program; nothing deployed changed** (no program or guest with an image id
 in `docs/image-ids.md`, and `crates/ferrata-core`, are untouched).
 
 **Verdict.** With the signing key composed from one Merkle multiproof for all the non-signers
 (`bench/residue-agg`) instead of a branch per non-signer, a finality update signed by the fewest
-members the policy accepts (342 of 512, the 170 absent members placed so that the multiproof needs
-the most hashes) fits one LEZ transaction: LEZ's state machine charged the experimental copy of the
-program **8,318,645** execution gas (**83.2%** of `MAX_GAS_EXEC`) with the residue-witness check
-(§6), 8,653,530 (86.5%) with the non-signers summed by the core's chain of additions instead of blst's
-batch addition (exact for any points; the batch sum is exact for keys in G1, §9.3 (v)), and refused
-the same update with a branch per non-signer for exceeding the 10M budget. In the
-bare guest the whole update costs 8,120,369 user cycles with the witness check and **7,458,783**
-(74.6%) folded, against 10,788,327 and 10,126,621 with the core's composition in the same build.
+members the policy accepts (342 of 512) fits one LEZ transaction at every placement of the 170
+absent members that was measured. With every third member absent (the placement that needs the most
+hashes, 425, and the most witness nodes, 256) LEZ's state machine charged the experimental copy of
+the program **8,318,645** execution gas (**83.2%** of `MAX_GAS_EXEC`) with the residue-witness check
+(§6). That is not the costliest placement: of the 12 placements run through LEZ the costliest has
+every absent index odd, **8,326,572** gas (83.3%, 7,927 more), and the cheapest (the first 170
+members absent) 8,013,965. The maximum over all placements and committees is not established; the
+costliest measured leaves about 1.67M gas to the limit (§9.6). With the non-signers summed by the
+core's chain of additions instead of blst's batch addition (exact for any points; the batch sum is
+exact for keys in G1, §9.3 (v)) the charge is 8,653,530 (86.5%) with every third absent and 8,661,457
+(86.6%) at the odd placement. The same update with a branch per non-signer reverted on the cycle
+budget (10M). In the bare guest the whole update with every third member absent costs 8,120,369 user
+cycles with the witness check and **7,458,783** folded, against 10,788,327 and 10,126,621 with the
+core's composition in the same build (the folded figures are the bare guest's counts: the LEZ copy
+does not fold the check, and no folded run was made through LEZ).
 A non-signer now costs 9,418 cycles instead of 25,094. The composition makes the same checks on
 every key; §9.3 gives the argument. A period update still does not fit (13,482,391 folded at 342,
 11,913,877 at 510: the adoption of 512 keys is 5,991,991). With a branch per non-signer the fewest
 signers that fit are 386 through LEZ's state machine (bare guest: 348 folded, 374 with the witness
-check); with one multiproof every participation the policy accepts fits.
+check); with one multiproof the policy's floor of 342 fits at every placement measured, and in the
+bare guest so does every number of absent members from 1 to 170 (evenly spaced).
 
 ### 9.1 Where a non-signer's cycles went
 
@@ -299,7 +313,7 @@ non-signers of the 342-signer case (every third member absent), divided by 170.
 | not the identity | 110 | 0% |
 | re-compress the key (`blst_p1_affine_compress`: x out of Montgomery form, the sign of y) | 1,173 | 5% |
 | the key's SSZ leaf: SHA-256 of 64 bytes (sha2's streaming API) | 1,244 | 6% |
-| the branch: 9 SHA-256 nodes of 64 bytes (1,247 each) | 11,778 | 53% |
+| the branch: 9 SHA-256 nodes of 64 bytes (1,247 each) | 11,776 | 53% |
 | the sum: one `blst_p1_add_or_double_affine` | 4,839 | 22% |
 | bookkeeping (absent indices, count and length checks) | 44 | 0% |
 | **step 1, per non-signer** (the whole composition: 3,857,505 for 170, less the once-only 96,448) | **22,124** | |
@@ -308,8 +322,9 @@ non-signers of the 342-signer case (every third member absent), divided by 170.
 There is **no subgroup check** of a non-signer's key in the core (nor of any key at adoption:
 `witness.rs`, "it leaves out the per-key subgroup check", as `check_committee_onchain`); for
 comparison, `blst_p1_affine_in_g1` would cost 352,513 cycles per key. **Nothing else depends on the
-participation**: at 512, 511, 510, 450, 400, 343 and 342 signers the Miller loop (3,275,069) and the
-final check (1,108,036; folded 3,722,450 together) are the same, the job's encoding and application
+participation**: at 512, 511, 510, 450, 400, 343 and 342 signers the Miller loop (3,275,068 in this
+section's guest) and the final check (1,108,212; folded 3,722,450 together: `S2`, `S3w` and `S23f` in
+`results/residue/agg/one-tx.txt`) are the same, the job's encoding and application
 differ by under 50 cycles, and step 1 and the witness's decoding grow by a fixed amount per
 non-signer (§9.6). Unit costs in the guest: `blst_fp_mul` 205, `blst_fp_inverse` 244 (RISC Zero's
 accelerated inversion), one SHA-256 node by sha2's streaming API 1,247, by two compressions of an
@@ -336,7 +351,8 @@ the final check, `steps::apply`) is the core's code.
 3. **The batch addition** (`blst_p1s_add`, blst's `bulk_addition.c`): Montgomery's trick, the
    points added in pairs with one inversion per round; it handles a pair of equal points (doubling) and
    of opposite points (the identity), but not the identity paired with a point of order 3, (0, ±2), in
-   a later round: its pairwise step reads equal x-coordinates as a doubling or a cancellation. It is
+   a later round: the identity is stored as (0, 0), so its pairwise step sees equal x-coordinates with
+   y-coordinates that do not cancel and computes a doubling. It is
    exact for keys in G1, every Ethereum committee's (§9.3 (v)). The chain of mixed additions
    (`Sum::Chain`, the core's, exact for any points on the curve) is the conservative variant, measured
    too.
@@ -347,8 +363,9 @@ the final check, `steps::apply`) is the core's code.
 
 The witness (`NonSigners`): a `u16` key count, the keys (96 bytes each, in index order), a `u16` node
 count, the nodes (32 bytes each); strict (each count at most the committee size, the input consumed
-exactly). The `u16` counts hold every witness of a committee of up to 2^16 members (an honest
-multiproof needs fewer nodes than members); the mainnet committee has 512. At 342 signers it is at most 24,516 bytes (every third member absent; 22,756 at random
+exactly). The `u16` counts hold every witness of a committee of fewer than 2^16 members (an honest
+multiproof needs fewer nodes than members; 65,536 keys would not fit the count, and
+`NonSigners::encode` panics on them); the mainnet committee has 512. At 342 signers it is at most 24,516 bytes (every third member absent; 22,756 at random
 positions) instead of 65,282.
 
 ### 9.3 Why it is sound
@@ -430,9 +447,9 @@ by the flag check and kept (110 cycles).
 
 | candidate | status | effect at 342 (per non-signer) |
 |---|---|---|
-| (a) one multiproof for all non-signers | **kept**: sound (§9.3), tested | the branch work 11,778 → 2,460 (425 hashes for 170, at 984 with bookkeeping; random positions 2,141); witness 65,282 → 24,516 bytes |
+| (a) one multiproof for all non-signers | **kept**: sound (§9.3), tested | the branch work 11,776 → 2,460 (425 hashes for 170, at 984 with bookkeeping; random positions 2,141); witness 65,282 → 24,516 bytes |
 | (b) the smaller side | nothing to gain: under the floor the non-signers are always fewer | none |
-| (c) batched affine additions | **kept**: blst's own `blst_p1s_add`, exact for keys in G1 (every Ethereum committee; outside G1 its key can be off by a point of order 3, with the same verdict, §9.3 (v)); the core's chain, exact for any points, stays as the conservative variant: 342 on LEZ 8,653,530 gas (86.5%) | the sum 4,839 → 2,869 |
+| (c) batched affine additions | **kept**: blst's own `blst_p1s_add`, exact for keys in G1 (every Ethereum committee; outside G1 its key can be off by a point of order 3, with the same verdict, §9.3 (v)); the core's chain, exact for any points, stays as the conservative variant: 342 on LEZ 8,653,530 gas (86.5%) with every third absent, 8,661,457 (86.6%) at the costliest placement found (§9.6) | the sum 4,839 → 2,869 |
 | (c') an affine chain with one inversion per addition (inversion costs 244 cycles here) | **not done**: about 1,200 per addition by the unit costs, but new elliptic-curve code with its own edge cases to audit, for about 0.3M | estimated, not measured |
 | (d) dropping a check | **none dropped** (§9.3) | none |
 | the compressed key from the bytes | **kept**: equal to blst's on every accepted encoding | 1,173 → 307 |
@@ -443,7 +460,10 @@ by the flag check and kept (110 cycles).
 
 All on the Modal build box (`cargo test --release -p residue-agg`, 9 tests in `tests/agg.rs`, 22.3 s, and 1 in `tests/batch_g1.rs`, 9.6 s), 17 Nov 2026;
 the existing suites unchanged and passing (`cargo test --release -p residue`; the harness's test of
-§6).
+§6). On 18 Nov 2026 an independent review's tests were added (the last three rows) and run on the
+same box with `cargo test --release -p residue-agg` (9 + 1 + 7 tests pass: 21.5 s, 9.1 s, 6.1 s), the
+harness's `residue_experimental` (5 pass, every figure of `lez.txt` printed again unchanged) and
+`residue-host profile`, `measure-agg` and `boundary` (every figure unchanged).
 
 | test | what | count | result |
 |---|---|---:|---|
@@ -459,6 +479,9 @@ the existing suites unchanged and passing (`cargo test --release -p residue`; th
 | batch sum outside G1 | a committee with one key K + T (T = (0, 2), of order 3) and −K, members 2 to 31 cancelling in pairs, all 32 absent; a valid signature and a wrong message | 2 | the batch key differs from the core's (= the chain's) by (0, ±2); the same verdict under both |
 | guest | `residue-host profile`: the three compositions give the same key, `compressed` and `leaf` equal blst's and the core's on every key, the multiproof gives the key root, `node` equals `hash_pair` on a chain of 1,000 (4 bitfields); `residue-host measure-agg` and `boundary`: every one of the 70 executions gives the native new store (the signature verified with the key composed in the guest); 3 refusals in the guest (a node altered, a key outside the committee, another bitfield's witness: code 80) | 4 + 70 + 3 | pass |
 | LEZ | `lez/harness/tests/residue_experimental.rs`: 510 and 342 of 512 applied with one multiproof (batch sum), 342 also with the chain of additions, the store equal to the native one; at 342 a branch per non-signer over the budget and one altered node refused (exit 80); the fewest signers that fit with a branch per non-signer | 4 tests (and the test of §6, unchanged) | pass |
+| edge cases (18 Nov, from the review) | `tests/edge_cases.rs`, with references built in the test (output `results/residue/agg/edge-cases.txt`): every non-empty leaf set at depths 1 to 4 against one branch per leaf, with tamperings; committees of 1, 2, 3, 5, 6, 7, 9, 12, 32, 33, 100, 300, 511 and 513 members; the identity as the non-signers' sum, as the signing key and as the aggregate's encoding, an aggregate that does not decode, the empty set with a node, 61 copies of one key; `NonSigners::decode` at its edges; `blst_p1s_add` on G1 multisets to 600 points and on 1,100 distinct points; outside G1, random multisets of curve points shifted by the points of order 3; `compressed` on curve points outside G1 | 65,808 leaf sets, 142,020 tamperings; 224 bitfields; 6,286 G1 multisets (3,130 summing to the identity); 4,000 multisets outside G1; 20,000 points | round trips and refusals as specified; in G1 batch = chain = scalar multiplications; outside G1 435 of the 4,000 differ from the chain, always by (0, ±2), the pairing with a G2 point equal in every case |
+| placements, bare guest (18 Nov, from the review) | `residue-host/tests/placements.rs` (§9.6): the 342-signer update at 26 placements of the absent members, five of them also with the chain of additions, and 1 to 170 members absent, evenly spaced; the guest's phases for seven placements with 425 hashes; 171 absent | 248 accepted executions, each giving the natively applied job's store; 5 refusals in the guest (code 51) and natively by both compositions | pass (the cycle counts are written, not asserted) |
+| placements, LEZ (18 Nov, from the review) | `lez/harness/tests/residue_placements.rs` (§9.6): the 342-signer update at 12 placements with the batch sum and two with the chain; 341 signers under either marker and with the core's witness; the multiproof witness without its marker, the core's witness behind a marker, the marker twice; every other two-byte prefix before the multiproof witness | 14 transactions applied, the store the natively applied job's; 3 refused with exit 51, 3 with exit 1, the store unchanged; 0 of 65,534 prefixes give a valid `SignerWitness` | pass (the gas is printed, not asserted) |
 
 ### 9.6 Numbers
 
@@ -484,20 +507,56 @@ Execution user cycles of the whole execution (`SessionInfo::cycles`). With the c
 this guest reproduces §5's figures within 549 cycles at 510 and 512 signers; at 342 it gives about
 20,800 fewer (10,126,621 against 10,147,477 folded: another guest binary). Per non-signer (342, every third
 absent, against 512): **9,418** cycles in all (step 1 9,224, decoding the witness 181, reading it 13)
-instead of 25,094 (step 1 22,298, decoding 2,760, reading 35); at random positions 9,090. Every
-third member absent is the worst case among the updates the policy accepts: what depends on where
-the absent members sit is the multiproof's hashes (at most the sum over the levels of min(k, 2^ℓ),
-425 for k = 170) and its nodes (at most 256), both reached there; the rest grows with the number of
-non-signers, at most 170.
+instead of 25,094 (step 1 22,298, decoding 2,760, reading 35); at random positions 9,090.
+
+**Where the absent members sit** (18 Nov 2026, after an independent review; bare guest:
+`residue-host`'s test `tests/placements.rs`, outputs [`placements.md`](results/residue/agg/placements.md)
+and `placement-phases.txt`; through LEZ: `lez/harness/tests/residue_placements.rs`, output
+`results/residue/agg/lez-placements.txt`). Every third member absent is the placement with the most
+hashes (at most the sum over the levels of min(k, 2^ℓ), 425 for k = 170) and the most witness nodes
+(256). It is **not the costliest placement**. At 342 signers, with the witness check and blst's batch
+sum:
+
+| placement of the 170 absent members | hashes / witness nodes | bare guest, user cycles | LEZ, execution gas |
+|---|---:|---:|---:|
+| every third (2, 5, …, 509) | 425 / 256 | 8,120,369 | 8,318,645 (83.2%) |
+| every absent index odd (in each group of four members 4g … 4g+3 member 4g+3, and in groups 0 to 41 also 4g+1): the costliest found | 425 / 256 | 8,128,806 (+8,437) | **8,326,572** (83.3%, +7,927) |
+| every absent index even (4g, and in groups 0 to 41 also 4g+2) | 425 / 256 | 8,111,790 (−8,579) | 8,310,576 (−8,069) |
+| evenly spaced (the boundary's placement) | 425 / 256 | 8,120,212 (−157) | 8,318,494 (−151) |
+| the first 170 members (one block): the cheapest found | 174 / 5 | 7,866,334 (−254,035) | 8,013,965 (−304,680) |
+
+Placements tried in the bare guest: 26 (nine with 425 hashes and 256 nodes: 8,111,790 to 8,128,806;
+the odd indices 1 to 339: 8,042,978; four of one or two blocks: 7,866,334 to 7,871,363; 12 random:
+8,052,553 to 8,076,856). Through LEZ: 12 (five of those with 425 hashes and 256 nodes: 8,310,576
+to 8,326,572 gas; the first and the last 170: 8,013,965 and 8,013,973; five random: 8,246,845 to
+8,260,343); every one was applied and left the natively applied job's store. Among seven placements
+with the same 425 hashes and 256 nodes the whole difference is in step 1 (`placement-phases.txt`),
+ordered by where the absent members sit in their groups of four: 4g+3 (+8,437 and +8,423), 4g+1
+(+2,802), 4g+2 (−2,788), 4g (−8,579). With the chain of additions the odd placement costs the same
+amount more than every third: 8,463,357 cycles in the bare guest, 8,661,457 gas on LEZ (86.6%).
+**The maximum over all placements and committees is not established**: the placements were chosen,
+not searched, and what depends on the keys themselves was not bounded. The costliest measured leaves
+1,673,428 gas (about 1.67M) to the limit.
+
+**How many are absent.** The cost does not grow at every step with the number of non-signers. With
+1 to 170 members absent, evenly spaced (the most hashes for each count), the bare guest's whole
+update with the witness check costs less than with one member fewer absent at 16 (−6,713), 32
+(−11,656), 64 (−17,074), 128 (−22,639: 7,800,472 at 127, 7,777,833 at 128), 144 (−30) and 160
+(−1,214) absent (`placements.md`). Each of these is a count at which blst's batch addition adds fewer
+points one by one: it works in rounds, adding the points in pairs with one inversion per round while
+16 or more remain (an odd one singly) and the fewer than 16 left one by one (blst's
+`bulk_addition.c`), so that 127 points take 18 single additions and 128 take 8 (the column "single
+additions" of `placements.md`: that rule, not a measurement). Over 1 to 170 absent the maximum is at
+170 (8,120,212 for evenly spaced absences).
 
 **The fewest signers that fit one transaction** (`residue-host boundary`, `results/residue/agg/boundary.md`;
 absent members evenly spaced):
 
 | path | a branch per non-signer (before) | one multiproof (after) |
 |---|---|---|
-| witness folded, bare guest | **348** (9,976,122; 347: 10,001,188) | **342**, the policy's floor (7,458,783) |
-| witness check, bare guest | **374** (9,985,559; 373: 10,010,661) | **342** (8,120,369) |
-| witness check, LEZ's state machine (the copy of §6) | **386** (9,985,702 gas; 380 to 385: over the 10M budget) | **342** (8,318,645 gas) |
+| witness folded, bare guest | **348** (9,976,122; 347: 10,001,188) | **342**, the policy's floor (7,458,783 with every third absent; 7,467,220 at the costliest placement found) |
+| witness check, bare guest | **374** (9,985,559; 373: 10,010,661) | **342** (8,120,369 with every third absent; 8,128,806 at the costliest placement found) |
+| witness check, LEZ's state machine (the copy of §6) | **386** (9,985,702 gas; 380 to 385: over the 10M budget) | **342** (8,318,645 gas with every third absent; 8,326,572 at the costliest placement found) |
 | final exponentiation, bare guest | none at or below 512 | above 410 (410: 10,076,335): the final exponentiation alone is 3.6M |
 
 **Through LEZ's state machine** (`lez/harness/tests/residue_experimental.rs`, in-process harness, LEZ
@@ -516,16 +575,21 @@ bench's committee after update_0, as in the bench (§5), with LEZ's `force_inser
 | 510 of 512 (mainnet), one multiproof + residue witness | `VerifyAll` 6,531,161 → 58,187 → 17,352 | 6,606,700 | 66.1% | 5,037 | applied; the store equals the native store |
 | 510 of 512 (mainnet), a branch per non-signer + residue witness (§6's transaction) | `VerifyAll` 6,553,796 → 58,187 → 17,352 | 6,629,335 | 66.3% | 5,257 | applied (§6: 6,629,246 with the copy before this change) |
 
-At 342 signers LEZ charges 198,276 more than the bare guest's whole update (8,120,369): the
-handlers' envelope (about 6 cycles per input byte on 24,518 bytes of signer witness) and the two
-handlers after `VerifyAll`. Folded into the Miller loop (not in the copy) the bare guest saves another
-661,586 at 342, so about 7.66M on LEZ (derived, not run). The copy's image id changed with this
-change (`a097e928…` in §6's run, `4f1b2fa6…` in this build; both depend on the build path, and neither
-is in `docs/image-ids.md`); the deployed program's, printed by the same test, is still `816d1fef…`. The
+At 342 signers (every third absent) LEZ charges 198,276 more than the bare guest's whole update
+(8,120,369): the copy's `VerifyAll` alone is 122,737 above it, and the two handlers after it take
+58,187 and 17,352 (`lez.txt`). The difference is not a fixed charge per input byte: at 510 signers the
+copy's `VerifyAll` (6,531,161) is 20,694 below the bare guest's whole update (6,551,855). Folded into
+the Miller loop (not in the copy) the bare guest saves another 661,586 at 342, so about 7.66M on LEZ
+(derived, not run). The 342-signer rows above are for every third member absent; the costliest
+placement found was charged 8,326,572 (83.3%; "Where the absent members sit", above). The copy's image
+id changed with this change to its code (`a097e928…` in §6's run, `4f1b2fa6…` in this build and in the
+re-run of 18 Nov; neither is in `docs/image-ids.md`); the deployed program's, printed by the same
+test, is still `816d1fef…`, the id `docs/image-ids.md` lists. The
 copy reads `0xffff` as a `NonSigners` witness summed by blst's batch addition and `0xfffe` as one
-summed by a mixed addition each; both markers are counts no committee of fewer than 2^16 members has
-(mainnet: 512), and for a committee of 2^16 or more a `0xffff` count could be a valid `SignerWitness`
-(the copy is for 512).
+summed by a mixed addition each; both markers (65,535 and 65,534 as counts) are counts no committee of
+at most 65,533 members has (mainnet: 512). The copy's `check_config` takes only committee sizes that
+are powers of two; the next one that could have such a count is 65,536, and for a committee that large
+a marker could be the count of a valid `SignerWitness` (the copy is for 512).
 
 ### 9.7 What an auditor must check (in addition to §7)
 
@@ -542,6 +606,8 @@ summed by a mixed addition each; both markers are counts no committee of fewer t
    chain (`Sum::Chain`), exact for any points, at 335K cycles more at 342 signers.
 6. `residue_agg::step1` against `ferrata_core::steps::step1` at 510f05cf: `diff` shows the one change.
 7. The marker of the experimental copy, and that the copy refuses what the core refuses.
+8. The costliest update the policy accepts: the maximum over the placements of the absent members
+   and over committees is not established (§9.6); the costliest measured was charged 8,326,572 gas.
 
 ### 9.8 What this does not change
 
@@ -553,5 +619,8 @@ composition. A **period update** still does not fit at any participation (folded
 13,482,391 at 342 in the bare guest); the job path stays for it. Re-check:
 `cd bench && cargo test --release -p residue-agg && cargo build --release -p residue-host &&
 ./target/release/residue-host profile && ./target/release/residue-host measure-agg &&
-./target/release/residue-host boundary`; `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --features
-residue-experimental --test residue_experimental -- --nocapture --test-threads 1`.
+./target/release/residue-host boundary && cargo test --release -p residue-host --test placements`;
+`cd lez && export RISC0_HOME=$PWD/../../risc0-home-lez && RISC0_DEV_MODE=1 cargo test -p harness
+--features residue-experimental --test residue_experimental -- --nocapture --test-threads 1`, and the
+same with `--test residue_placements` (`RISC0_HOME`: the LEZ guest toolchain, as in §6; the charged
+gas depends on the guest binary it builds).
