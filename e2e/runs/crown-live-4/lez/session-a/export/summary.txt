@@ -1,0 +1,3 @@
+blocks: 1..=33
+transactions: 23 sent; 23 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+blocks finalized on Bedrock at export: 33 of 33

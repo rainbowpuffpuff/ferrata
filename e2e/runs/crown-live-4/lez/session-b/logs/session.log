@@ -1,0 +1,26 @@
+[17:51:28] crown LEZ session b (chain sepolia)
+[17:51:29] restored generation 1 (286M)
+[17:51:30] Bedrock node up: {"cryptarchia_info":{"lib":"dfece68b52eb0ec85aad0dc69af0a6ca585fc20f3fd567a2c06007d274350424","lib_slot":2380901,"tip":"d90d96a58bf58599f0a1f4be9ad7ae2fde98d91b2af2fc797eb559f92ce573ac","slot":2380904,"height":90,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[17:51:39] node slot 0 is unix second 1785493027 (slots of 4 s)
+[17:51:54] sequencer start 1: scheduler after 14 s; its blocks fall 6 s after an epoch second
+[17:51:54] sequencer up, head block 34
+[17:51:54] crown-b: real private proofs with RAYON_NUM_THREADS=32 (nproc 16)
+[19:01:28] driver exit 0
+[crown-b] private wallet at block 58: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 246.3 s (252267 bytes)
+[crown-b] 706ac950f44bdaf7c78904f8555c744f6a20759a6bf1a8b995f00d1d5693033c moved from block 84 to block 64: the head was rewound
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block   64 +1034.0s 706ac950f44bdaf7c78904f8555c744f6a20759a6bf1a8b995f00d1d5693033c
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block   66 + 19.8s 0634f7659a4e8368c137190febcbf83a77111d30f6cb5f3c6da4b453ed72a5aa
+Syncing to block 66. Blocks to sync: 8
+Synced to block 66 in 11.016938ms
+[crown-b] private test account 0 after the claim (wallet's view at block 66): Some(HolderState { holdings: [Holding { config_id: [170, 251, 203, 246, 130, 22, 215, 77, 164, 44, 66, 128, 48, 41, 136, 71, 218, 30, 18, 94, 178, 13, 249, 194, 251, 86, 20, 184, 230, 233, 137, 60], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 286.1 s (255031 bytes)
+[crown-b] 24bcc182ad57048b8bc16e99b23ced3b44756c1ed7fa2e12ae14b3bae749903b moved from block 97 to block 87: the head was rewound
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block   87 +1133.2s 24bcc182ad57048b8bc16e99b23ced3b44756c1ed7fa2e12ae14b3bae749903b
+[crown-b] blocks 34..=87 (T1 0x5570ddc89e694f56c99447c034386e04e04e9561e7203743816a26720f8ded90); 2 burn note(s) written to work/burn-notes.json
+[19:01:28] node dump: slots 2377819..=2383862, 13 windows, 4856533 bytes
+[19:01:29] sequencer stopped (exit 0)
+[19:01:38] node stopped (exit 143)
+[19:01:38] the sequencer's log reports a head rewind or an inscription given up
+[19:01:41] saved generation 2 (513919729 bytes; head block 88)
+[19:01:42] session b: ok

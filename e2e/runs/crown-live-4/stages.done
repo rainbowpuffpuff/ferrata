@@ -1,0 +1,19 @@
+lez-a 2026-11-18T15:44:09Z 499s
+identity 2026-11-18T15:44:11Z 2s
+deploy 2026-11-18T15:59:26Z 132s
+deposit0 2026-11-18T15:59:51Z 25s
+capture1 2026-11-18T16:21:03Z 1272s
+deposit1 2026-11-18T16:32:48Z 1s (already done)
+capture2 2026-11-18T16:40:24Z 456s
+lez-b 2026-11-18T19:01:53Z 8490s
+checkpoint-input 2026-11-18T19:01:54Z 0s
+checkpoint-exec 2026-11-18T19:01:54Z 0s
+checkpoint-prove 2026-11-18T19:04:05Z 131s
+checkpoint-wrap 2026-11-18T19:04:44Z 39s
+submit 2026-11-18T19:05:00Z 17s
+releases-prove 2026-11-18T19:06:49Z 108s
+wait 2026-11-18T20:05:13Z 3504s
+finalize 2026-11-18T20:07:03Z 110s
+release0 2026-11-18T20:14:38Z 19s
+release1 2026-11-18T20:15:37Z 59s
+verify 2026-11-18T20:15:43Z 6s

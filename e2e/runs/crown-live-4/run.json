@@ -1,0 +1,11 @@
+{
+ "run": "crown-live-4",
+ "mode": "live",
+ "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+ "chainId": 11155111,
+ "created_at": "2026-11-18T15:33:15Z",
+ "label": "crown run",
+ "inputs": "rc3",
+ "lez": "LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)",
+ "deploy_from_block": 12162413
+}
