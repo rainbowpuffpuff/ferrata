@@ -33,6 +33,15 @@ of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14
 [docs/guides/verify.md](guides/verify.md) says what each check proves and what it still trusts, and how to
 rebuild the programs to their image ids.
 
+**The same seals on Ethereum mainnet, read-only (EVIDENCE row 149).** On Sepolia the vaults check seals with our own
+deployment of RISC Zero's Groth16 verifier (`0x8f0A…`). On 18 November 2026 the crown-live-3 checkpoint, its two releases
+and every other Groth16 seal the tree records with its journal (66 in all) were also checked against RISC Zero's own
+contracts on Ethereum mainnet, the ones risc0-ethereum v3.0.0's `deployment.toml` names: the router
+`0x8EaB2D97Dfce405A1692a21b3ff3A172d593D319` and the Groth16 verifier 3.0.0 `0x2a098988600d87650Fb061FfAff08B97149Fa84D`.
+The checks were `eth_call` at block 26,443,464 on two public endpoints. All 66 verify, and each seal, image id or
+journal with one byte changed reverts. Nothing is deployed on mainnet and nothing was sent:
+`python3 -I scripts/verify-mainnet-risc0.py` ([`e2e/runs/mainnet-risc0-verify/`](../e2e/runs/mainnet-risc0-verify/README.md)).
+
 ## Not audited. Not for production.
 
 No part of this repository has been audited. Three vaults are deployed on a public network, all on Sepolia.
