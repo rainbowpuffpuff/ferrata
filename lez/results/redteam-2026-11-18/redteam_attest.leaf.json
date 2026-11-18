@@ -1,0 +1,141 @@
+{
+  "counts": {
+    "PASS": 7
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "leaf",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:BAD_QUERY",
+          "core:QueryInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 214,
+        "code_name": "prog:BAD_QUERY",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: leaf 1 with LeafQuery.root = 5 (two facts); native evaluate: refused prog:BAD_QUERY [AT-LEAF-01]",
+        "outcome": "refused"
+      },
+      "title": "leaf whose root is not a storage fact of the request",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:AccumulatorIndexOutOfRange"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 161,
+        "code_name": "core:AccumulatorIndexOutOfRange",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: leaf 1 and its path at index 2^32 + 1; native evaluate: refused core:AccumulatorIndexOutOfRange [AT-LEAF-02]",
+        "outcome": "refused"
+      },
+      "title": "leaf index 2^32",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:AccumulatorLeafEmpty"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 162,
+        "code_name": "core:AccumulatorLeafEmpty",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: the zero leaf at unused index 2 with that position's path in the tree (its sibling subtree empty); no count condition; native evaluate: refused core:AccumulatorLeafEmpty [AT-LEAF-03]",
+        "outcome": "refused"
+      },
+      "title": "the empty leaf",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:AccumulatorPathInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 160,
+        "code_name": "core:AccumulatorPathInvalid",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: leaf 1 with its path's last sibling dropped (31); native evaluate: refused core:AccumulatorPathInvalid [AT-LEAF-04]",
+        "outcome": "refused"
+      },
+      "title": "path of 31 siblings",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:AccumulatorRootMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 163,
+        "code_name": "core:AccumulatorRootMismatch",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: leaf 1, the last bit of sibling 0 flipped; native evaluate: refused core:AccumulatorRootMismatch [AT-LEAF-05]",
+        "outcome": "refused"
+      },
+      "title": "path sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:AccumulatorRootMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-LEAF-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 163,
+        "code_name": "core:AccumulatorRootMismatch",
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: leaf 1 and its path at index 1 ^ 1 = 0; native evaluate: refused core:AccumulatorRootMismatch [AT-LEAF-06]",
+        "outcome": "refused"
+      },
+      "title": "leaf index off by one (direction bits)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-LEAF-07",
+      "kind": "control",
+      "observed": {
+        "note": "FerrataVault v5's account and slot 0 (= its deposit root) under the Gloas record of block 12,112,773, then the leaf against fact 1: deposit leaf 1 with its path; native evaluate: accepted, 3 statements; AccumulatorLeaf fact; its identifier 765673e78878aa22 equals the spec formula (checked against acc-leaf.json's independent ids) [AT-LEAF-07]",
+        "outcome": "accepted"
+      },
+      "title": "a real deposit leaf under the attested root",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

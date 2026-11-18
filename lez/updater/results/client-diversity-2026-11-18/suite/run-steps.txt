@@ -1,0 +1,5 @@
+fmt ok 1s
+build ok 23s
+live ok 628s
+test ok 845s
+clippy ok 53s

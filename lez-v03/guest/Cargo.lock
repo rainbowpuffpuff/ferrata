@@ -812,6 +812,7 @@ dependencies = [
  "ferrata-core",
  "ferrata-v03-wire",
  "lee_core",
+ "misbehaviour",
  "residue",
  "residue-agg",
  "residue-handoff",
@@ -1229,6 +1230,17 @@ dependencies = [
  "log",
  "objc",
  "paste",
+]
+
+[[package]]
+name = "misbehaviour"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "residue",
+ "residue-agg",
+ "residue-handoff",
 ]
 
 [[package]]

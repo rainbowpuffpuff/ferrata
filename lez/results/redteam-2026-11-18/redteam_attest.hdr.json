@@ -1,0 +1,127 @@
+{
+  "counts": {
+    "PASS": 6
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "hdr",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:HEADER_REQUIRED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 215,
+        "code_name": "prog:HEADER_REQUIRED",
+        "note": "USDC storage request without the header, Gloas record (Stage 5); native evaluate: refused prog:HEADER_REQUIRED [AT-HDR-01]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record without the block header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HeaderHashMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 120,
+        "code_name": "core:HeaderHashMismatch",
+        "note": "the record binds block 12,105,936; no fixture holds its parent's (12,105,935) header, so another real block's header is sent: 12,103,422 (sepolia-gloas header.rlp); native evaluate: refused core:HeaderHashMismatch [AT-HDR-02]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record with another block's header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HeaderHashMismatch",
+          "core:RlpMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 120,
+        "code_name": "core:HeaderHashMismatch",
+        "note": "the record block's RLP header without its last byte; native evaluate: refused core:HeaderHashMismatch [AT-HDR-03]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record with a truncated header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HeaderHashMismatch",
+          "core:RlpMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 120,
+        "code_name": "core:HeaderHashMismatch",
+        "note": "the record block's RLP header with 0x00 appended; native evaluate: refused core:HeaderHashMismatch [AT-HDR-04]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record with an over-long header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HeaderHashMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 120,
+        "code_name": "core:HeaderHashMismatch",
+        "note": "the record block's header re-encoded with the state root of a state in which USDC's totalSupply_ is the real value + 1 (a state built for the attack, with consistent proofs of that value), asking Eq that value; native evaluate: refused core:HeaderHashMismatch [AT-HDR-05]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record with a header whose state root is changed",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "prog:BAD_QUERY"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HDR-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 214,
+        "code_name": "prog:BAD_QUERY",
+        "note": "WETH storage request with the record block's real RLP header, payload record; native evaluate: refused prog:BAD_QUERY [AT-HDR-06]",
+        "outcome": "refused"
+      },
+      "title": "payload record with a header in the request",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

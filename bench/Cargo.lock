@@ -1447,6 +1447,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "misbehaviour"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "ferrata-spectests",
+ "hex",
+ "residue",
+ "residue-agg",
+ "residue-handoff",
+ "serde_yaml",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "multiversion_no_op"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

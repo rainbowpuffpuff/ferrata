@@ -12,8 +12,9 @@ The design notes specify these; there is no code for them here:
   filled; [`bridge.md`](design/bridge.md) §3, [EVIDENCE](EVIDENCE.md) row 136). It changes the bridge program's
   image id, so deploying it is milestone B1's; it is built in the LEZ v0.3.1 port (branch `testnet-v03-bridge` at
   `ff453dcc`) and, for v0.4, in a second build of the bridge program that is not deployed (`lez/guests/bridge-next`,
-  image `0x7c7d2b3a…1e2f`, [EVIDENCE](EVIDENCE.md) row 143: the two keyed accounts; v0.4 has no state limit, so it
-  has no oversized-state code); the deployed program keeps both issues;
+  image `0xc5cad2cd…d6da`, [EVIDENCE](EVIDENCE.md) row 143: the two keyed accounts, and `Init` refusing a freeze
+  authority that is the admin, the red team's F1; v0.4 has no state limit, so it has no oversized-state code); the
+  deployed program keeps both issues, and F1;
 - rule (B): the watchers' `monitor` reading attestations (the four-sequencer zone has run the bridge program, both
   burns, their releases through a vault on a local anvil and a rotation its committee proposed,
   `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran
@@ -63,8 +64,13 @@ The design notes specify these; there is no code for them here:
   logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
-  reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
-  is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).
+  reference consumer still pin an instance); the F.8 test (`docs/design/attestation.md` §6.5, §15). Chains of
+  EIP-2935 hops are built (up to 32 in one transaction on real Sepolia data, four on mainnet; EVIDENCE row 145);
+  a private consumer's proof carrying more than one hop is not measured.
+- a cost for forging a light-client record ([`trust.md`](trust.md) §2.2, "What a forger loses", design only, added 18
+  November 2026): bonded or restaked backing a consumer can require of a record (a co-signature slashed on Ethereum on
+  proof that the header is not canonical), and anchoring to Ethereum's FFG finality instead of, or beside, the sync
+  committee; sync-committee slashing itself (EIP-7657) is Stagnant upstream and not Ferrata's to build;
 - for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a vault for such a
   zone where it runs (the deployed checkpoint guests, whose ids the vault on Sepolia pins, read the `d480efc6` layout
   and refuse it), a zone of several sequencers on it, and following a Bedrock era change (a deployment pins one fork

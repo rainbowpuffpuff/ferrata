@@ -24,13 +24,19 @@
 //! The seeds are the crate root's with `cid` in front, as the LEZ v0.3.1 port has them (branch `testnet-v03-bridge`,
 //! `lez-v03-bridge/core/src/lib.rs`). The program account differs from the deployed program's (another image), so
 //! none of these addresses is an address of the deployed program.
+//!
+//! Also here, and also the second build's only: [`check_init_roles`], the red team's finding F1
+//! (`docs/reviews/redteam-2026-11-18.md`, vector BR-INIT-05): the deployed program's `Init` checks only
+//! `Controls::check`, so it writes a configuration whose freeze authority is its admin, although SPEC-v2 §7 says the two
+//! must differ and `ProposeRoles` refuses the admin as a member (`FreezeAuthority::check`). The second build's `Init`
+//! refuses it with the same code.
 
 use lee_core::{
     account::{AccountId, Actor},
     program::PdaSeed,
 };
 
-use super::{chain_id_u256, pda, tagged_hash, Address, Root};
+use super::{chain_id_u256, pda, tagged_hash, Address, Controls, FreezeAuthority, Root};
 
 /// `nullifier(cid, chain, vault, N)`'s seed.
 pub fn nullifier_seed(config_id: &Root, evm_chain_id: u64, vault: &Address, nullifier: &Root) -> PdaSeed {
@@ -57,6 +63,13 @@ pub fn nullifier_actor(
 /// so it is never the address of another actor of the program, whatever account a claim names (security review C-1).
 pub fn holder_actor(program: AccountId, config_id: &Root, account: AccountId) -> Actor {
     pda(program, &holder_seed(config_id, account.value()))
+}
+
+/// F1: the roles `Init` would write, checked as `ProposeRoles` checks a proposed authority. `Roles::new` makes the
+/// configured key the live freeze authority (`FreezeAuthority::key`); [`FreezeAuthority::check`] refuses it with
+/// `BAD_MESSAGE` (240) if it is the admin (no account holds both roles, as on the vault, `RolesMustDiffer`).
+pub fn check_init_roles(controls: &Controls) -> Result<(), u8> {
+    FreezeAuthority::key(controls.freeze_authority).check(&controls.admin)
 }
 
 #[cfg(test)]
@@ -87,5 +100,25 @@ mod tests {
         );
         // The roles stay apart: a holder's address is never a nullifier's, whatever the account.
         assert_ne!(holder_seed(&a, &n), nullifier_seed(&a, 1, &vault, &n));
+    }
+
+    #[test]
+    fn init_refuses_the_admin_as_freeze_authority() {
+        let cap = crate::CapParams { capacity: 10, refill_per_second: 1 };
+        let ok = Controls {
+            admin: [0x21; 32],
+            freeze_authority: [0x22; 32],
+            fee_recipient: [0x23; 32],
+            floor: cap,
+            token_cap: cap,
+            global_cap: cap,
+        };
+        assert_eq!(check_init_roles(&ok), Ok(()));
+        let same = Controls { freeze_authority: ok.admin, ..ok };
+        assert_eq!(same.check(), Ok(()), "the deployed program's only check at Init lets it through");
+        assert_eq!(check_init_roles(&same), Err(crate::code::BAD_MESSAGE));
+        // The code ProposeRoles gives the admin as a member of a proposed authority.
+        let proposed = FreezeAuthority { members: alloc::vec![[0x24; 32], ok.admin], threshold: 1 };
+        assert_eq!(proposed.check(&ok.admin), Err(crate::code::BAD_MESSAGE));
     }
 }

@@ -25,7 +25,7 @@ Hard requirements:
 | RFP-021 | 17 | 35 | 4 | 3 | **59** |
 | RFP-022 | 27 | 37 | 2 | 2 | **68** |
 
-Soft requirements, counted apart (5 for each RFP): RFP-021 2 shown, 2 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
+Soft requirements, counted apart (5 for each RFP): RFP-021 3 shown, 1 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
 
 By section, hard requirements:
 
@@ -56,7 +56,7 @@ By section, hard requirements:
 | F.3 | shown | Account, storage slot and logs attested through the program on mainnet and Sepolia blocks; 32 refusals; roots only from the record. | 3, 71, 72; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
 | F.4 | in part | `=`, `≥`, `>`, `<` and a relation run through the program from the consumer's request; `≠` and `≤` not run through it. | `lez/harness/tests/attest_public.rs`; `lez/results/stage4-attest-refusals.md` |
 | F.5 | shown | One address on mainnet and Sepolia: each statement attested under its chain, the other chain's refused (140), in the harness. | 4; `lez/harness/tests/sepolia.rs`; `lez/results/stage5-attest-refusals.md` |
-| F.6 | shown | Identifiers returned by the program equal a second derivation; the reference consumer keys its nullifier on them. | `lez/harness/tests/attest_native.rs`; `lez/harness/tests/vault.rs`; `vectors/acc-leaf.json` |
+| F.6 | shown | Identifiers returned by the program equal a second derivation; the reference consumer keys its nullifier on them; a second build (not deployed) returns each one's nullifier-safety class beside it. | 145; `lez/harness/tests/attest_native.rs`; `lez/harness/tests/vault.rs`; `lez/harness/tests/history_hops.rs`; `vectors/acc-leaf.json` |
 | F.7 | waits on Logos | Names a testnet. Shown instead: same-transaction consumption in the harness and on rc1 and rc3 sequencers we ran. | 3, 27, 91, 123; `lez/results/stage4-attest-consumer.md` |
 | F.8 | in part | Private attestation proven for real and applied on rc3; byte searches find no query or account; the full-diff test is not built. | 5, 73, 123; `lez/harness/tests/attest_private.rs` |
 | F.9 | in part | Parameters fixed at Init; `verify_checkpoint` ran against Sepolia providers from Ferrata's module, not as an API of the Logos Ethereum module. | 69, 70, 105, 117 |
@@ -142,7 +142,7 @@ By section, hard requirements:
 |---|---|---|---|
 | Soft.1 | in part | In the bridge's own form only: `ImportRoot` records a root once; no generic recorded-statement account. | 27, 41, 91; `lez/harness/tests/bridge_inbound.rs` |
 | Soft.2 | shown | Four facts under one record in one call, 453,182 cycles, through the program. | 71; `lez/results/stage4-attest.md` |
-| Soft.3 | in part | One EIP-2935 hop through the program on mainnet and Sepolia; longer chains only in the native core. | 72; `lez/results/stage4-attest.md` |
+| Soft.3 | shown | Chains of EIP-2935 hops through the program on real data: up to 32 in one transaction under a Sepolia Gloas record (262,112 blocks back), four on mainnet; refusals with their codes. | 72, 145; `lez/results/history-hops-sepolia.md`; `lez/results/history-hops-mainnet.md` |
 | Soft.4 | shown | Conditions on four facts and a relation between two of them in one request, accepted and refused through the program. | `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
 | Soft.5 | not yet | A design note only; the protocol fee it would draw on starts at zero. | none |
 

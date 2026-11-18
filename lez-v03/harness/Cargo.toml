@@ -13,6 +13,8 @@ ferrata-core = { path = "../../crates/ferrata-core" }
 # EXPERIMENTAL, UNAUDITED bench crates: the residue witness and the non-signers' multiproof.
 residue = { path = "../../bench/residue" }
 residue-agg = { path = "../../bench/residue-agg" }
+# EXPERIMENTAL, UNAUDITED: evidence of conflicting finality (bench/MISBEHAVIOUR.md).
+misbehaviour = { path = "../../bench/misbehaviour" }
 # LEZ v0.3.1 (tag v0.3.1, commit 1a003bfb), by path.
 lee = { path = "../../../upstream/lez-v0.3.1/lee/state_machine" }
 lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core", features = ["host"] }
@@ -26,3 +28,7 @@ borsh = { version = "1.5.7", features = ["derive"] }
 hex = "0.4"
 serde_json = "1"
 sha2 = "0.10"
+
+[dev-dependencies]
+# Committees the tests hold the keys of, and fabricated headers and states (testkit).
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }

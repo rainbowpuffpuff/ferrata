@@ -1,0 +1,246 @@
+{
+  "counts": {
+    "PASS": 12
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "sig",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "update_2's signature on U [update_2's signature on U: Finish]",
+        "outcome": "refused"
+      },
+      "title": "aggregate signature of another update",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureMalformed",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 41,
+        "code_name": "core:SignatureMalformed",
+        "note": "last bit flipped [last bit flipped: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature bytes not a G2 point",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureMalformed",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "infinity signature [infinity signature: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature is the G2 point at infinity with signers present",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 41,
+        "code_name": "core:SignatureMalformed",
+        "note": "compression flag cleared [compression flag cleared: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature with the compression flag cleared",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 41,
+        "code_name": "core:SignatureMalformed",
+        "note": "x coordinate above the modulus [x coordinate above the modulus: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature x-coordinate not canonical (>= field modulus)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureMalformed",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 41,
+        "code_name": "core:SignatureMalformed",
+        "note": "point of E2 outside G2 [point of E2 outside G2: Open]",
+        "outcome": "refused"
+      },
+      "title": "signature on the curve but outside the prime-order subgroup",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "update_0 sent to an instance with genesis_validators_root 0x42… [update_0 at the other chain's instance Finish (step 3)]",
+        "outcome": "refused"
+      },
+      "title": "update for another chain's instance (other genesis_validators_root)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Witness",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 80,
+        "code_name": "step:Witness",
+        "note": "witness key 0 replaced [witness key replaced: Open]",
+        "outcome": "refused"
+      },
+      "title": "signer witness names a key that is not a committee member",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Witness",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 80,
+        "code_name": "step:Witness",
+        "note": "last non-signer dropped [witness entry dropped: Open]",
+        "outcome": "refused"
+      },
+      "title": "signer witness omits one non-signer",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Witness",
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 80,
+        "code_name": "step:Witness",
+        "note": "non-signer 0 listed twice, non-signer 1 dropped [witness entry duplicated: Open]",
+        "outcome": "refused"
+      },
+      "title": "signer witness lists one non-signer twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid",
+          "step:Witness"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "bit 197 set [bit set for a non-signer: Finish]",
+        "outcome": "refused"
+      },
+      "title": "participation bit set for a validator that did not sign",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-14",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "bit 0 cleared [bit cleared for a signer: Finish]",
+        "outcome": "refused"
+      },
+      "title": "participation bit cleared for a validator that signed",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

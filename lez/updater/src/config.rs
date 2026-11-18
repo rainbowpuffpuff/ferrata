@@ -112,6 +112,29 @@ pub struct Policy {
     /// job is finished or moot, so a restarted updater finishes it too.
     #[serde(default = "default_true")]
     pub finish_own_jobs: bool,
+    /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at
+    /// least this many different consensus clients agree on, as `client_match` says. A source's client is what it
+    /// reports at `/eth/v1/node/version`, asked every round, by its first word (`Lodestar/v1.51.0/7923280`:
+    /// `lodestar`); a source that does not answer it counts under none. The provider's own, unauthenticated claim.
+    /// The initialization and the committees are not subject to it: they are bound by hashes to the checkpoint and to
+    /// the summaries on chain.
+    #[serde(default)]
+    pub min_distinct_clients: usize,
+    /// What sources of different clients must agree on (with `min_distinct_clients`): `bytes` (default): the update's
+    /// SSZ, byte for byte, as each light-client source served it (a finality update with a finality update, a period
+    /// update with a period update); `finalized-header`: its finalized header, served by a light-client source or held
+    /// canonical at its slot by a `headers` source (the agreement `min_agreeing` counts).
+    #[serde(default)]
+    pub client_match: ClientMatch,
+}
+
+/// What `policy.min_distinct_clients` compares.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ClientMatch {
+    #[default]
+    Bytes,
+    FinalizedHeader,
 }
 
 impl Default for Policy {
@@ -126,6 +149,8 @@ impl Default for Policy {
             demote_rounds: 50,
             max_periods_per_request: 16,
             finish_own_jobs: true,
+            min_distinct_clients: 0,
+            client_match: ClientMatch::Bytes,
         }
     }
 }
@@ -175,6 +200,10 @@ pub struct SourceCfg {
     /// whose finalized header is the block it reports canonical at that slot.
     #[serde(default)]
     pub kind: SourceKind,
+    /// A recorded `dir` only (it has no `/eth/v1/node/version`): the client it stands for, as a node would report it
+    /// (`Nimbus/v26.10.2`), for `policy.min_distinct_clients`. A `url` source's client is what the node reports.
+    #[serde(default)]
+    pub client: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize)]
@@ -226,6 +255,9 @@ impl File {
         if self.policy.defer_window == 0 || self.policy.max_attempts == 0 {
             bail!("policy: defer_window and max_attempts must be at least 1");
         }
+        if self.policy.min_distinct_clients == 1 {
+            bail!("policy.min_distinct_clients = 1 asks nothing: 0 (off) or at least 2");
+        }
         match (self.daemon.ledger.as_str(), &self.sequencer) {
             ("sequencer", None) => bail!("daemon.ledger = \"sequencer\" needs a [sequencer] section"),
             ("sequencer", Some(s)) => {
@@ -266,7 +298,61 @@ impl File {
             if c.sources.iter().all(|s| s.kind == SourceKind::Headers) {
                 bail!("chain {}: no light-client source (every source is kind = \"headers\")", c.name);
             }
+            if let Some(s) = c.sources.iter().find(|s| s.client.is_some() && s.dir.is_none()) {
+                bail!(
+                    "chain {} source {}: client is set only for a recorded dir (a node reports its own at \
+                     /eth/v1/node/version)",
+                    c.name,
+                    s.name
+                );
+            }
+            let k = self.policy.min_distinct_clients;
+            if k >= 2 {
+                // Sources that can report a client: a node's API (light-client, or headers when the finalized header is
+                // what must agree), a recorded dir given one; not beacon_api_module, which fails over between providers.
+                let able = c
+                    .sources
+                    .iter()
+                    .filter(|s| s.via.is_none() && (s.url.is_some() || s.client.is_some()))
+                    .filter(|s| {
+                        s.kind == SourceKind::LightClient || self.policy.client_match == ClientMatch::FinalizedHeader
+                    })
+                    .count();
+                if able < k {
+                    bail!(
+                        "chain {}: policy.min_distinct_clients = {k} but only {able} source(s) can count towards it",
+                        c.name
+                    );
+                }
+                // One provider listed twice would count as two clients (its version answer and its data can come from
+                // different backends). Two hosts can still be one provider: the updater cannot tell.
+                let mut hosts: std::collections::BTreeMap<String, &str> = std::collections::BTreeMap::new();
+                for s in c.sources.iter() {
+                    let Some(url) = &s.url else { continue };
+                    let host = url_host(url);
+                    if let Some(other) = hosts.insert(host.clone(), &s.name) {
+                        bail!(
+                            "chain {} sources {other} and {}: the same host {host:?}; with policy.min_distinct_clients \
+                             one provider would count as two clients",
+                            c.name,
+                            s.name
+                        );
+                    }
+                }
+            }
         }
         Ok(())
     }
+}
+
+/// The host of a URL, lower case, without scheme, user, port or path (`https://A.example:8080/x` -> `a.example`).
+pub fn url_host(url: &str) -> String {
+    let rest = url.split_once("://").map_or(url, |(_, r)| r);
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let host_port = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let host = match host_port.strip_prefix('[') {
+        Some(v6) => v6.split(']').next().unwrap_or(""),
+        None => host_port.split(':').next().unwrap_or(""),
+    };
+    host.trim_end_matches('.').to_ascii_lowercase()
 }

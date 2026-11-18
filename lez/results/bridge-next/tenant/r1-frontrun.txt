@@ -2,10 +2,10 @@
 
 | transaction | outcome | gas_exec | gas_stor | fee_base |
 |---|---|---:|---:|---:|
-| B: Init (the attacker's record: slot 2 = configId(B)) | applied | 170246 | 1914 | 1377280 |
+| B: Init (the attacker's record: slot 2 = configId(B)) | applied | 170325 | 1914 | 1377912 |
 | B: Register ETH (the attacker's record) | applied | 328650 | 2619 | 2650152 |
 | B: ImportRoot n = 9 (A's 8 real leaves + 1 invented) | applied | 229165 | 1831 | 1847968 |
-| A: Init (the vault's slot 2 = configId(A)) | applied | 171027 | 1946 | 1383784 |
+| A: Init (the vault's slot 2 = configId(A)) | applied | 171106 | 1946 | 1384416 |
 | A: Register ETH | applied | 331790 | 2747 | 2676296 |
 | A: ImportRoot n = 8 | applied | 236224 | 2025 | 1905992 |
 | A: ImportFees ETH schedule 1 | applied | 269684 | 2206 | 2175120 |

@@ -1,0 +1,154 @@
+{
+  "counts": {
+    "PASS": 8
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "sto",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-STO-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "WETH balance-slot proof, node 1 byte 266 xor 0xff; native evaluate: refused core:ProofNodeMismatch [AT-STO-01]",
+        "outcome": "refused"
+      },
+      "title": "storage proof node byte flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch",
+          "core:ProofNodeInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-STO-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "slot keccak(0x0000000aa232009084bd71a5797d089aa4edfad4 ‖ 3) (balanceOf of another holder) with the proof of the fixture holder's slot; native evaluate: refused core:ProofNodeMismatch [AT-STO-02]",
+        "outcome": "refused"
+      },
+      "title": "storage proof of one slot presented for another slot",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-STO-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "condition Value = real value + 1 on WETH's balance slot; native evaluate: refused core:PredicateFailed [AT-STO-03]",
+        "outcome": "refused"
+      },
+      "title": "storage value predicate Eq a wrong value",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch",
+          "core:ProofIncomplete"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-STO-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "B-AT-MAIN = the e2e fixture's record (block 26,379,842; the attestation fixture has no USDC proof): WETH's account proof with USDC's proof of its balance slot 0x28c0…f8, asked as WETH's slot 0x28c0…f8; native evaluate: refused core:ProofNodeMismatch [AT-STO-04]",
+        "outcome": "refused"
+      },
+      "title": "storage proof under another account's storage root",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-STO-05",
+      "kind": "control",
+      "observed": {
+        "note": "condition Value != 0 on WETH's (non-zero) balance slot; native evaluate: accepted, 2 statements [AT-STO-05]",
+        "outcome": "accepted"
+      },
+      "title": "Ne predicate that holds",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-STO-06",
+      "kind": "control",
+      "observed": {
+        "note": "condition Value <= real value; native evaluate: accepted, 2 statements [AT-STO-06]",
+        "outcome": "accepted"
+      },
+      "title": "Le boundary holds at equality",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-STO-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "condition Value < real value; native evaluate: refused core:PredicateFailed [AT-STO-07]",
+        "outcome": "refused"
+      },
+      "title": "Lt boundary fails at equality",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-STO-08",
+      "kind": "control",
+      "observed": {
+        "note": "WETH slot 0xff with its exclusion proof, condition Value = 0; native evaluate: accepted, 2 statements [AT-STO-08]",
+        "outcome": "accepted"
+      },
+      "title": "absent slot reads zero",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}
