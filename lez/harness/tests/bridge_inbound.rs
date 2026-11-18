@@ -11,7 +11,7 @@ use ferrata_bridge_core::{
     BridgeKeys,
 };
 use ferrata_lez_bridge_wire::{
-    code, config_actor, holder_actor, holder_seed, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
+    code, config_actor, BridgeMessage, BridgeState, ConfigState, NullifierState, CODE_BLOCK,
 };
 use ferrata_lez_wire::{attest::evaluate, RecordState, CODE_BLOCKS};
 use harness::{
@@ -136,7 +136,7 @@ fn inbound_configuration_import_and_plaintext_claim() {
     run(r, None);
     assert_eq!(vector.nullifier(CHAIN_ID, &va), w.vector_n, "the vector's N");
     assert_eq!(
-        w.nullifier(&va, &w.vector_n),
+        w.nullifier(&cid_a, &va, &w.vector_n),
         Some(NullifierState { config_id: cid_a, token: ETH, leaf_count: 5, amount: DENOMINATIONS[1] })
     );
     assert_eq!(w.balance(w.vector_dest, &cid_a), DENOMINATIONS[1], "1 ETH minted to the vector's destination");
@@ -190,8 +190,9 @@ fn inbound_configuration_import_and_plaintext_claim() {
         holder: *payer.value(),
         amount: DENOMINATIONS[2],
     };
-    let holder = holder_actor(w.program, payer);
-    let evidence = vec![lee::PublicAccountEvidence::Pda { program: w.program, seed: holder_seed(payer.value()) }];
+    let holder = harness::bridge::holder_of(w.program, &cid_a, payer);
+    let seed = harness::bridge::holder_seed_of(&cid_a, payer.value());
+    let evidence = vec![lee::PublicAccountEvidence::Pda { program: w.program, seed }];
     let r = w.submit("Mint sent directly to a holder", holder, &mint, vec![holder], evidence);
     run(r, Some(code::WRONG_SENDER));
     assert_eq!(w.balance(payer, &cid_a), 0, "no refusal minted");
@@ -206,7 +207,13 @@ fn inbound_configuration_import_and_plaintext_claim() {
     let r = w.claim("Claim: vault B's deposit under root(B, 8)", &cid_b, 8, &VAULT_B, witness_b);
     run(r, None);
     assert_eq!(w.balance(payer, &cid_b), DENOMINATIONS[1], "a second configuration's holding");
-    assert_eq!(w.holder(payer).unwrap().holdings.len(), 2);
+    if harness::bridge::SECOND_BUILD {
+        // The second build: one holder account per configuration, each holding its own configuration's only.
+        assert_eq!(w.holder(&cid_a, payer).unwrap().holdings.len(), 1);
+        assert_eq!(w.holder(&cid_b, payer).unwrap().holdings.len(), 1);
+    } else {
+        assert_eq!(w.holder(&cid_a, payer).unwrap().holdings.len(), 2);
+    }
 
     // Every refused transaction changed nothing: the balances above are exactly the three claims.
     let table = render(&reports);
@@ -218,7 +225,7 @@ fn inbound_configuration_import_and_plaintext_claim() {
             "# The bridge program's inbound leg (`harness/tests/bridge_inbound.rs`)\n\n\
              Bridge program image `{}`; every transaction settled by LEZ's own functions in a block of its own.\n\n\
              {table}\n## Handler executions\n\n{transitions}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID)
+            harness::image_id_hex(harness::bridge::BRIDGE_ID)
         ),
     )
     .unwrap();
@@ -319,7 +326,7 @@ fn inbound_under_a_gloas_record() {
              Bridge program image `{}`; the record binds the hash of a real Sepolia header (block {number}) \
              whose state root is replaced by the synthetic state's; every transaction settled by LEZ's own \
              functions in a block of its own.\n\n{table}\n## Handler executions\n\n{transitions}",
-            harness::image_id_hex(methods::FERRATA_BRIDGE_ID)
+            harness::image_id_hex(harness::bridge::BRIDGE_ID)
         ),
     )
     .unwrap();

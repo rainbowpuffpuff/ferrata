@@ -37,8 +37,8 @@ use ferrata_core::{
     Root,
 };
 use ferrata_v03_wire::{
-    header_account, instance_account, instance_id, statement_account, Config, InstanceState, Instruction, Part,
-    RecordClaim, RecordState, SlotProof, Statement, Step, StorageQuery, Verify, Window,
+    header_account, instance_account, instance_id, statement_account, Against, Config, InstanceState, Instruction,
+    Part, RecordClaim, RecordState, SlotProof, Statement, Step, StorageQuery, Verify, Window,
 };
 use lee::{
     error::LeeError,
@@ -910,9 +910,10 @@ impl Instance {
             .collect()
     }
 
-    /// `Attest` of `query` under `header(id, slot)`, claiming `statements`.
+    /// `Attest` of `query` under `header(id, slot)`, claiming `statements` (the instance's account first: a
+    /// frozen instance refuses it).
     pub fn attest(&self, label: &str, slot: u64, query: StorageQuery, statements: Vec<Statement>, at_ms: u64) -> Planned {
-        let mut accounts = vec![self.header_account(slot)];
+        let mut accounts = vec![self.account(), self.header_account(slot)];
         accounts.extend(statements.iter().map(|s| statement_account(&self.program, &self.id, &s.id_at_block)));
         Planned {
             label: label.into(),
@@ -920,6 +921,50 @@ impl Instance {
             accounts,
             timestamp_ms: at_ms,
         }
+    }
+
+    /// EXPERIMENTAL (`bench/misbehaviour`, `bench/MISBEHAVIOUR.md`): `Evidence` of `update` against `against`,
+    /// in the layout a relayer would send it, the non-signers in one multiproof of the committee the native store
+    /// holds for its signature period; `Verify::Residue` gets the honest witness of the evidence's own Miller-loop
+    /// product, any other `verify` is sent as given. The window is an update's.
+    pub fn evidence(&self, label: &str, update: &LightClientUpdate, against: Against, verify: Verify) -> Planned {
+        let layout = self.layout_for(self.native.core().fork, update);
+        let stored = CompactStore::of(self.native.core());
+        let compact = CompactUpdate::of(update);
+        let committee = self.signing_committee(self.native.core(), update);
+        let non_signers = residue_agg::NonSigners::build(committee, &update.sync_aggregate.bits).unwrap_or_default();
+        let mut signers = vec![0xff, 0xff];
+        signers.extend_from_slice(&non_signers.encode());
+        let verify = match verify {
+            Verify::Residue { .. } => {
+                let store = steps::store_for_update(&stored, layout, update.attested_header.beacon.slot, &self.spec)
+                    .expect("a layout the schedule allows");
+                let gvr = &self.config.genesis_validators_root;
+                let (signer, root) = misbehaviour::validate_evidence(&store, &compact, update.signature_slot, &self.spec, gvr)
+                    .expect("the evidence passes the instance's checks natively");
+                let job = misbehaviour::signature_job(&store, &compact, signer, &root, &non_signers, residue_agg::Sum::Batch, &self.spec)
+                    .expect("its signing key");
+                let (c, w) = Self::residue_witness(&job);
+                Verify::Residue { c, w }
+            }
+            v => v,
+        };
+        let mut accounts = vec![self.account()];
+        if let Against::Record { slot, .. } = against {
+            accounts.push(self.header_account(slot));
+        }
+        let from_ms = Some(self.config.slot_start_ms(update.signature_slot));
+        let to_ms = self.config.ws_end_slot(stored.finalized.slot).map(|end| self.config.slot_start_ms(end));
+        let instruction = Instruction::Evidence {
+            instance_id: self.id,
+            update: compact.encode(layout),
+            signers,
+            verify,
+            against,
+            window: Window { from_ms, to_ms },
+        };
+        let timestamp_ms = self.config.slot_start_ms(update.signature_slot) + 12_000;
+        Planned { label: label.into(), instruction, accounts, timestamp_ms }
     }
 
     pub fn statement(&self, chain: &Chain, s: &Statement) -> Option<Statement> {

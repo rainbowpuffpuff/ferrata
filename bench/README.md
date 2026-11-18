@@ -84,6 +84,15 @@ cargo build --release -p exec-host      # compiles the two guests, then the host
 The host runs the light client natively to obtain the record of block 26,379,842, computes every
 expected result natively, and the guests assert them. Results and their reading: `RESULTS.md`.
 
+## Evidence of conflicting finality (`misbehaviour/`, experimental, unaudited)
+
+`misbehaviour/`: an update as evidence that a sync committee an instance holds signed finality contradicting its
+records (a recorded finalized header at its slot, or the next committee it adopted for its period), and the freeze
+that follows; used by the LEZ v0.3.1 port only, by no deployed program ([`MISBEHAVIOUR.md`](MISBEHAVIOUR.md)). Its
+tests (`tests/evidence.rs`; output `results/misbehaviour/tests.txt`): honest data never freezes (the vectors, the
+mainnet and Sepolia replays, the lab's record), contradictions on a fabricated chain freeze, griefing and replay
+refused. `cargo test --release -p misbehaviour -- --nocapture` (the vectors first: `../scripts/fetch-vectors.sh`).
+
 ## The residue-witness check (`residue/`, experimental, unaudited)
 
 An experimental replacement of the final exponentiation, used by no deployed program

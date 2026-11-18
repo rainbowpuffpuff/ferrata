@@ -1,0 +1,54 @@
+# Box job 3, Modal build box ferrata-wt-bridge-next, 18 Nov 2026 (on commit 7b92fc25: the harness's address helpers as cfg'd function pairs); LEZ v0.4.0-rc1 harness, RISC0_DEV_MODE=1, --test-threads 1
+# No record was rewritten with other bytes: mrun copied no file back.
+
+## step status (name, exit code, seconds, end time UTC)
+clippy-default exit 101 43 s 15:33:37
+clippy-next exit 101 28 s 15:34:05
+tests-next exit 0 300 s 15:39:05
+tests-default exit 0 344 s 15:44:49
+ALL DONE 15:44:49
+(clippy: the methods crates' guest builds fail inside risc0-build under clippy-driver; job 4 runs clippy with RISC0_SKIP_BUILD=1)
+
+## tests-next
+     Running tests/bridge_burn.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.09s
+     Running tests/bridge_controls.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 38.68s
+     Running tests/bridge_inbound.rs 
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.19s
+     Running tests/bridge_private.rs 
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.83s
+     Running tests/bridge_roles.rs 
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 39.42s
+     Running tests/bridge_secfix.rs 
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.26s
+     Running tests/bridge_time.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 24.10s
+     Running tests/bridge_vault_storage.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.08s
+     Running tests/privacy_suite.rs 
+bridge core recover_burns over the 20 LEZ notes (v2 mac): 20 found
+privacy suite, LEZ half: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive) in target/privacy-next
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 56.91s
+     Running tests/tenant.rs 
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 41.20s
+
+## tests-default
+     Running tests/bridge_burn.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.79s
+     Running tests/bridge_controls.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 39.42s
+     Running tests/bridge_inbound.rs 
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 18.31s
+     Running tests/bridge_private.rs 
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 15.61s
+     Running tests/bridge_roles.rs 
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 39.00s
+     Running tests/bridge_secfix.rs 
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 22.91s
+     Running tests/bridge_time.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.40s
+     Running tests/bridge_vault_storage.rs 
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.98s
+     Running tests/tenant.rs 
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 145.87s

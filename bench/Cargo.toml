@@ -3,7 +3,7 @@
 # methods/ builds them with risc0-build and embeds the ELFs, host/ runs them.
 [workspace]
 resolver = "2"
-members = ["host", "methods", "residue", "residue-agg", "residue-handoff", "residue-methods", "residue-host"]
+members = ["host", "methods", "residue", "residue-agg", "residue-handoff", "residue-methods", "residue-host", "misbehaviour"]
 # Each guest is a workspace of its own (own lockfile and [patch.crates-io]).
 exclude = ["guests"]
 

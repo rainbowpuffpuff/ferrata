@@ -1,0 +1,42 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+Init	10	applied	-	7974784	79.7%	51196	7974784	10000000	64207840	8	8	1793503331000
+honest: after Init: update_0 as Evidence against NextCommittee	11	refused	85	254656	2.5%	2737	215498	10000000	2313800	9	8	1793504135000
+honest: after Init: update_0 as Evidence against Record { slot: 15556608, root: [100, 181, 106, 55, 47, 140, 76, 204, 39, 77, 159, 66, 201, 180, 161, 217, 161, 137, 102, 162, 1, 136, 153, 43, 202, 193, 91, 28, 110, 125, 145, 172] }	12	refused	85	268594	2.7%	2841	225541	10000000	2171480	8	8	1793504135001
+honest: after Init: update_1 as Evidence against NextCommittee	13	refused	23	156056	1.6%	2721	117042	10000000	1270216	8	8	1793602439000
+honest: after Init: update_2 as Evidence against NextCommittee	14	refused	23	154465	1.5%	2731	117359	10000000	1257568	8	8	1793700719000
+honest: after Init: update_3 as Evidence against NextCommittee	15	refused	23	156490	1.6%	2736	117433	10000000	1273808	8	8	1793799023000
+honest: after Init: update_4 as Evidence against NextCommittee	16	refused	23	156049	1.6%	2721	117035	10000000	1270160	8	8	1793900099000
+update_0: Update (one transaction)	17	applied	-	6655639	66.6%	3901	6655639	10000000	53276320	8	8	1793900099001
+honest: after update_0: update_0 as Evidence against NextCommittee	18	refused	85	256605	2.6%	2737	217447	10000000	2331341	9	8	1793900099002
+honest: after update_0: update_0 as Evidence against Record { slot: 15556608, root: [100, 181, 106, 55, 47, 140, 76, 204, 39, 77, 159, 66, 201, 180, 161, 217, 161, 137, 102, 162, 1, 136, 153, 43, 202, 193, 91, 28, 110, 125, 145, 172] }	19	refused	85	269533	2.7%	2841	226480	10000000	2178992	8	8	1793900099003
+honest: after update_0: update_1 as Evidence against NextCommittee	20	refused	85	263281	2.6%	3265	218906	10000000	2132368	8	8	1793900099004
+honest: after update_0: update_2 as Evidence against NextCommittee	21	refused	23	163994	1.6%	3435	121029	10000000	1339432	8	8	1793900099005
+honest: after update_0: update_3 as Evidence against NextCommittee	22	refused	23	157437	1.6%	2736	118380	10000000	1281384	8	8	1793900099006
+honest: after update_0: update_4 as Evidence against NextCommittee	23	refused	23	162648	1.6%	3105	119853	10000000	1326024	8	8	1793900099007
+update_1: Update (one transaction)	24	applied	-	6725262	67.3%	4794	6725262	10000000	53840448	8	8	1793900099008
+honest: after update_1: update_0 as Evidence against NextCommittee	25	refused	23	157370	1.6%	2737	118212	10000000	1438226	9	8	1793900099009
+honest: after update_1: update_0 as Evidence against Record { slot: 15556608, root: [100, 181, 106, 55, 47, 140, 76, 204, 39, 77, 159, 66, 201, 180, 161, 217, 161, 137, 102, 162, 1, 136, 153, 43, 202, 193, 91, 28, 110, 125, 145, 172] }	26	refused	23	161663	1.6%	2841	118610	10000000	1316032	8	8	1793900099010
+honest: after update_1: update_1 as Evidence against NextCommittee	27	refused	85	264121	2.6%	3265	219746	10000000	2139088	8	8	1793900099011
+honest: after update_1: update_1 as Evidence against Record { slot: 15564800, root: [150, 148, 147, 80, 171, 254, 138, 4, 230, 241, 174, 34, 179, 6, 79, 220, 238, 23, 125, 236, 50, 19, 51, 72, 162, 166, 157, 32, 1, 81, 224, 154] }	28	refused	85	276592	2.8%	3369	228779	10000000	2239688	8	8	1793900099012
+honest: after update_1: update_2 as Evidence against NextCommittee	29	refused	85	262396	2.6%	3435	219431	10000000	2126648	8	8	1793900099013
+honest: after update_1: update_3 as Evidence against NextCommittee	30	refused	23	157437	1.6%	2736	118380	10000000	1281384	8	8	1793900099014
+honest: after update_1: update_4 as Evidence against NextCommittee	31	refused	23	162648	1.6%	3105	119853	10000000	1326024	8	8	1793900099015
+update_2: Update (one transaction)	32	applied	-	6735879	67.4%	4964	6735879	10000000	53926744	8	8	1793900099016
+honest: after update_2: update_0 as Evidence against NextCommittee	33	refused	23	157370	1.6%	2737	118212	10000000	1438226	9	8	1793900099017
+honest: after update_2: update_0 as Evidence against Record { slot: 15556608, root: [100, 181, 106, 55, 47, 140, 76, 204, 39, 77, 159, 66, 201, 180, 161, 217, 161, 137, 102, 162, 1, 136, 153, 43, 202, 193, 91, 28, 110, 125, 145, 172] }	34	refused	23	161663	1.6%	2841	118610	10000000	1316032	8	8	1793900099018
+honest: after update_2: update_1 as Evidence against NextCommittee	35	refused	23	164894	1.6%	3265	120519	10000000	1345272	8	8	1793900099019
+honest: after update_2: update_1 as Evidence against Record { slot: 15564800, root: [150, 148, 147, 80, 171, 254, 138, 4, 230, 241, 174, 34, 179, 6, 79, 220, 238, 23, 125, 236, 50, 19, 51, 72, 162, 166, 157, 32, 1, 81, 224, 154] }	36	refused	23	168730	1.7%	3369	120917	10000000	1376792	8	8	1793900099020
+honest: after update_2: update_2 as Evidence against NextCommittee	37	refused	85	263236	2.6%	3435	220271	10000000	2133368	8	8	1793900099021
+honest: after update_2: update_2 as Evidence against Record { slot: 15572992, root: [126, 39, 113, 177, 147, 154, 250, 32, 85, 64, 0, 56, 73, 188, 160, 176, 170, 110, 231, 29, 213, 167, 103, 204, 162, 227, 94, 8, 74, 0, 138, 76] }	38	refused	85	278043	2.8%	3539	229319	10000000	2252656	8	8	1793900099022
+honest: after update_2: update_3 as Evidence against NextCommittee	39	refused	85	255830	2.6%	2736	216773	10000000	2068528	8	8	1793900099023
+honest: after update_2: update_4 as Evidence against NextCommittee	40	refused	23	162648	1.6%	3105	119853	10000000	1326024	8	8	1793900099024
+update_3: Update (one transaction)	41	applied	-	6687590	66.9%	4265	6687590	10000000	53534840	8	8	1793900099025
+honest: after update_3: update_0 as Evidence against NextCommittee	42	refused	23	157370	1.6%	2737	118212	10000000	1438226	9	8	1793900099026
+honest: after update_3: update_0 as Evidence against Record { slot: 15556608, root: [100, 181, 106, 55, 47, 140, 76, 204, 39, 77, 159, 66, 201, 180, 161, 217, 161, 137, 102, 162, 1, 136, 153, 43, 202, 193, 91, 28, 110, 125, 145, 172] }	43	refused	23	161663	1.6%	2841	118610	10000000	1316032	8	8	1793900099027
+honest: after update_3: update_1 as Evidence against NextCommittee	44	refused	23	164894	1.6%	3265	120519	10000000	1345272	8	8	1793900099028
+honest: after update_3: update_1 as Evidence against Record { slot: 15564800, root: [150, 148, 147, 80, 171, 254, 138, 4, 230, 241, 174, 34, 179, 6, 79, 220, 238, 23, 125, 236, 50, 19, 51, 72, 162, 166, 157, 32, 1, 81, 224, 154] }	45	refused	23	168730	1.7%	3369	120917	10000000	1376792	8	8	1793900099029
+honest: after update_3: update_2 as Evidence against NextCommittee	46	refused	23	163994	1.6%	3435	121029	10000000	1339432	8	8	1793900099030
+honest: after update_3: update_2 as Evidence against Record { slot: 15572992, root: [126, 39, 113, 177, 147, 154, 250, 32, 85, 64, 0, 56, 73, 188, 160, 176, 170, 110, 231, 29, 213, 167, 103, 204, 162, 227, 94, 8, 74, 0, 138, 76] }	47	refused	23	170166	1.7%	3539	121442	10000000	1389640	8	8	1793900099031
+honest: after update_3: update_3 as Evidence against NextCommittee	48	refused	85	256670	2.6%	2736	217613	10000000	2075248	8	8	1793900099032
+honest: after update_3: update_3 as Evidence against Record { slot: 15581184, root: [231, 192, 174, 149, 221, 106, 130, 217, 236, 167, 217, 220, 78, 27, 66, 164, 200, 25, 127, 187, 14, 76, 216, 128, 188, 95, 150, 49, 222, 43, 153, 43] }	49	refused	85	269829	2.7%	2840	226647	10000000	2181352	8	8	1793900099033
+honest: after update_3: update_4 as Evidence against NextCommittee	50	refused	85	261035	2.6%	3105	218240	10000000	2113120	8	8	1793900099034

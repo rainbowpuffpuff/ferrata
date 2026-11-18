@@ -196,6 +196,19 @@ account 169,611 ([`attestation.md`](../design/attestation.md) §4.7; [`lez/RESUL
 §6). The private path under a Gloas record is built and measured too ([`lez/RESULTS.md`](../../lez/RESULTS.md)
 §6).
 
+### 4.4 Older blocks: chains of hops
+
+A request reaches a block older than its record's through `hops`, newest first: each hop is the
+history contract's `eth_getProof` (account proof and the proof of slot `n mod 8191`) in the state of
+the block the hop starts from, and block `n`'s RLP header; the program reads `n` from the header and
+requires it within the 8,191 blocks before that block. A chain of `k` hops reaches at most `8,191 k`
+blocks back; each hop costs about 223,000 to 229,000 execution gas, and 32 hops (262,112 blocks)
+fitted one transaction on Sepolia (7,528,832 gas), 42 by the slope under the 10,000,000 limit
+([`attestation.md`](../design/attestation.md) §5.7). Each hop after the first needs an archive
+node's `eth_getProof` at a past block; `lez/scripts/fetch-hop-chain.py` fetches one (`--chain`, or
+`--window-chain K` for K full windows).
+A log, an accumulator leaf or a value has the same identifier whichever chain reached its block.
+
 ## 5. Statement identifiers (F.6)
 
 Each fact has a domain-separated SHA-256 identifier over fixed-width fields. It does not depend on
@@ -215,6 +228,23 @@ leaf. A storage identifier suits "this value holds", not "this happened once". N
 root's identifier: one deposit lies under every later root, so that keying would allow one claim per
 root (bridge test: the same deposit claimed again under a second root, `root(A, 8)`, is refused, exit 250;
 [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2).
+
+**Which identifiers are safe to nullify: the statement class.** Whether an identifier may be spent
+once, as a nullifier, depends on the kind of fact it names, and the kind is fixed by the
+identifier's derivation. The deployed program's reply gives each fact's kind (its `Fact` variant)
+beside the identifier; the program's second build (`guests/program-class`, not deployed,
+[`attestation.md`](../design/attestation.md) §5.7) gives the class too, one byte after each
+identifier, in the reply and in the root-transaction event (`FRT-ATC1`):
+
+| Class (byte) | Facts | As a nullifier |
+|---|---|---|
+| `Event` (1) | `Fact::Log` | safe when you pin the emitting contract and the event (§6, rule 7): one identifier per emitted log, whichever record or chain of hops proved it |
+| `Leaf` (2) | `Fact::AccumulatorLeaf` | safe when you pin the contract and the slot that holds the root, and that contract writes each index once (the bridge pins its vault and slot 0); pinning the contract alone is not enough: one leaf under two slots has two identifiers |
+| `Value` (3) | `Fact::Account`, `Fact::Storage` | not alone: the default identifier is one for every block where the value holds (distinct events merge), the block-bound one is new at every block (a nullifier on it allows a claim per block) |
+
+A consumer that keys a nullifier takes its claim from an `Event` or a `Leaf` statement and uses a
+`Value` only in conditions beside it. On the deployed program,
+`ferrata_lez_wire_class::attest::StatementClass::of` gives the class of a reply's fact.
 
 Status (native tests): the log, storage and account identifiers equal an independent Python
 computation; through the program, those returned for the real mainnet block equal a derivation from

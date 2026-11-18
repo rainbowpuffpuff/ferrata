@@ -1,0 +1,282 @@
+{
+  "counts": {
+    "PASS": 14
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "step",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Phase"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 81,
+        "code_name": "step:Phase",
+        "note": " [Finish before Miller]",
+        "outcome": "refused"
+      },
+      "title": "Finish before Miller",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Phase"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 81,
+        "code_name": "step:Phase",
+        "note": " [Miller again]",
+        "outcome": "refused"
+      },
+      "title": "Miller replayed",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:NO_JOB"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 205,
+        "code_name": "prog:NO_JOB",
+        "note": " [Finish after apply]",
+        "outcome": "refused"
+      },
+      "title": "Finish after the job applied",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:NO_JOB"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 205,
+        "code_name": "prog:NO_JOB",
+        "note": "U's job id at another instance [Miller at the other instance's job address]",
+        "outcome": "refused"
+      },
+      "title": "Miller at a job address of another instance",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 202,
+        "code_name": "prog:WRONG_SENDER",
+        "note": " [Apply as the transaction root]",
+        "outcome": "refused"
+      },
+      "title": "Apply sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_SENDER",
+          "prog:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 202,
+        "code_name": "prog:WRONG_SENDER",
+        "note": " [JobOpen as the transaction root]",
+        "outcome": "refused"
+      },
+      "title": "JobOpen sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_SENDER",
+          "prog:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 202,
+        "code_name": "prog:WRONG_SENDER",
+        "note": "an outsider's Record for an unwritten slot [Record as the transaction root]",
+        "outcome": "refused"
+      },
+      "title": "Record sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 202,
+        "code_name": "prog:WRONG_SENDER",
+        "note": " [ApplyVerified from another program]",
+        "outcome": "refused"
+      },
+      "title": "ApplyVerified from an actor of another program",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_RECEIVER",
+          "prog:NO_INSTANCE",
+          "prog:BAD_STATE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 209,
+        "code_name": "prog:BAD_STATE",
+        "note": " [Open at a header actor]",
+        "outcome": "refused"
+      },
+      "title": "Open sent to a header actor",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:INSTANCE_INACTIVE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 206,
+        "code_name": "prog:INSTANCE_INACTIVE",
+        "note": "update_0 before the adoption [Open on an inactive instance]",
+        "outcome": "refused"
+      },
+      "title": "Open on an instance whose committee is not adopted yet",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:NO_INSTANCE",
+          "prog:WRONG_RECEIVER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 204,
+        "code_name": "prog:NO_INSTANCE",
+        "note": " [Open at an address with no instance]",
+        "outcome": "refused"
+      },
+      "title": "Open at an address with no instance",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 200,
+        "code_name": "prog:BAD_MESSAGE",
+        "note": " [7 random bytes]",
+        "outcome": "refused"
+      },
+      "title": "message bytes that do not decode",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": " [update encoding truncated by one byte]",
+        "outcome": "refused"
+      },
+      "title": "truncated update encoding",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:UNROUTABLE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-STEP-14",
+      "kind": "adversarial",
+      "observed": {
+        "code": 210,
+        "code_name": "prog:UNROUTABLE",
+        "note": " [Read as the transaction root]",
+        "outcome": "refused"
+      },
+      "title": "Read as a top-level call",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

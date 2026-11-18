@@ -1,0 +1,17 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+deploy ferrata-v03: WriteSegment 7 of 7 (3576 bytes)	2	applied	-	0	0.0%	3872	0	100000	30976	8	8	1100
+deploy ferrata-v03: WriteSegment 6 of 7 (98304 bytes)	3	applied	-	0	0.0%	98696	0	100000	789568	8	8	1101
+deploy ferrata-v03: WriteSegment 5 of 7 (98304 bytes)	4	applied	-	0	0.0%	98696	0	100000	789568	8	8	1102
+deploy ferrata-v03: WriteSegment 4 of 7 (98304 bytes)	5	applied	-	0	0.0%	98696	0	100000	789568	8	8	1103
+deploy ferrata-v03: WriteSegment 3 of 7 (98304 bytes)	6	applied	-	0	0.0%	98696	0	100000	789568	8	8	1104
+deploy ferrata-v03: WriteSegment 2 of 7 (98304 bytes)	7	applied	-	0	0.0%	98696	0	100000	789568	8	8	1105
+deploy ferrata-v03: WriteSegment 1 of 7 (98304 bytes)	8	applied	-	0	0.0%	98696	0	100000	789568	8	8	1106
+deploy ferrata-v03: CreateHeader (immutable)	9	applied	-	0	0.0%	884	0	100000	7072	8	8	1107
+Init	10	applied	-	7974784	79.7%	51196	7974784	10000000	64207840	8	8	1793503331000
+refusal: update_0 with one node of its next-committee branch altered	11	refused	27	257635	2.6%	3901	207450	10000000	2349923	9	8	1793504135000
+refusal: update_0 with the summary adoption and the 512 keys	12	refused	84	8371805	83.7%	53058	7243147	10000000	67398904	8	8	1793504135001
+update_0 (period, 512/512): Update (one multiproof, residue witness, committee adopted by its summary)	13	applied	-	6655639	66.6%	3901	6655639	10000000	59931959	9	8	1793504135002
+update_1 (period, 510/512): Update (one multiproof, residue witness, committee adopted by its summary)	14	applied	-	6725262	67.3%	4794	6725262	10000000	67290972	10	8	1793602439000
+update_2 (period, 510/512): Update (one multiproof, residue witness, committee adopted by its summary)	15	applied	-	6735879	67.4%	4964	6735879	10000000	74134381	11	8	1793700719000
+update_3 (period, 512/512): Update (one multiproof, residue witness, committee adopted by its summary)	16	applied	-	6687590	66.9%	4265	6687590	10000000	80285200	12	8	1793799023000
+refusal: update_0 again (stale)	17	refused	23	172216	1.7%	3901	122031	10000000	2270016	13	8	1793799023001

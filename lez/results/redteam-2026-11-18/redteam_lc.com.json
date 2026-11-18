@@ -1,0 +1,273 @@
+{
+  "counts": {
+    "MISMATCH": 2,
+    "PASS": 11
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "com",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NextCommitteeBranchInvalid",
+          "core:NextCommitteeMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 27,
+        "code_name": "core:NextCommitteeBranchInvalid",
+        "note": "next committee = the current one [next committee = the current one: Open]",
+        "outcome": "refused"
+      },
+      "title": "next committee replaced, branch kept",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NextCommitteeBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 27,
+        "code_name": "core:NextCommitteeBranchInvalid",
+        "note": "next committee branch node 0 [next committee branch node 0: Open]",
+        "outcome": "refused"
+      },
+      "title": "next committee branch sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NextCommitteeBranchInvalid",
+          "core:Malformed",
+          "core:PubkeyInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 27,
+        "code_name": "core:NextCommitteeBranchInvalid",
+        "note": "next committee aggregate key byte 47 [next committee aggregate key byte 47: Open]",
+        "outcome": "refused"
+      },
+      "title": "next committee's aggregate key altered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CommitteeInvalid",
+          "step:Witness"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 45,
+        "code_name": "core:CommitteeInvalid",
+        "note": "key 7 replaced [key 7 replaced: Adopt 1]",
+        "outcome": "refused"
+      },
+      "title": "adoption with one key replaced",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CommitteeInvalid",
+          "step:Witness"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 45,
+        "code_name": "core:CommitteeInvalid",
+        "note": "keys 0 and 1 swapped [keys 0 and 1 swapped: Adopt 1]",
+        "outcome": "refused"
+      },
+      "title": "adoption with two keys swapped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CommitteeInvalid",
+          "core:PubkeyInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 45,
+        "code_name": "core:CommitteeInvalid",
+        "note": "key 3 the identity [key 3 the identity: Adopt 0]",
+        "outcome": "refused"
+      },
+      "title": "adoption key is the identity point",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CommitteeInvalid",
+          "core:PubkeyInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 45,
+        "code_name": "core:CommitteeInvalid",
+        "note": "key 3's y changed [key 3's y changed: Adopt 0]",
+        "outcome": "refused"
+      },
+      "title": "adoption key not on the curve",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CommitteeInvalid",
+          "step:Witness",
+          "prog:BAD_MESSAGE",
+          "core:Malformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "part 0 with 255 keys [part 0 with 255 keys: Adopt 0]",
+        "outcome": "refused"
+      },
+      "title": "adoption part with 255 keys",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Phase",
+          "step:NoAdoption"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "part 0 twice [part 0 twice: Adopt 0]",
+        "outcome": "refused"
+      },
+      "title": "adoption part replayed",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:Phase"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "part 1 first [part 1 first: Adopt 1]",
+        "outcome": "refused"
+      },
+      "title": "adoption part 1 before part 0",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:AdoptionIncomplete",
+          "step:Phase"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 83,
+        "code_name": "step:AdoptionIncomplete",
+        "note": "Finish with the adoption not done [Finish before adoption]",
+        "outcome": "refused"
+      },
+      "title": "Finish of a rotating update before its adoption is complete",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:NoAdoption",
+          "step:Phase"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 84,
+        "code_name": "step:NoAdoption",
+        "note": "Adopt part 0 at U's job [Adopt on a finality job]",
+        "outcome": "refused"
+      },
+      "title": "Adopt on a job that adopts no committee",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid",
+          "step:Witness"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-14",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": "self-consistent update of a chain that never existed, 512 foreign signers [fabricated chain: Finish]",
+        "outcome": "refused"
+      },
+      "title": "fabricated chain: self-consistent update signed by a committee never handed off",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

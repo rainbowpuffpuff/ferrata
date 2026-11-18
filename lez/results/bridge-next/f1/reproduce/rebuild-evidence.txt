@@ -1,0 +1,36 @@
+guest binaries newer than fresh.txt (written before the build):
+bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/claim.bin
+bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/gasdrop.bin
+bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release
+bridge/target/riscv-guest/methods/ferrata-guests/riscv32im-risc0-zkvm-elf/release/release.bin
+checkpoint/target/riscv-guest/methods-segment/ferrata-segment-guest/riscv32im-risc0-zkvm-elf/release/segment
+checkpoint/target/riscv-guest/methods-segment/ferrata-segment-guest/riscv32im-risc0-zkvm-elf/release/segment.bin
+checkpoint/target/riscv-guest/methods/ferrata-checkpoint-b-guest/riscv32im-risc0-zkvm-elf/release/checkpoint_b
+checkpoint/target/riscv-guest/methods/ferrata-checkpoint-b-guest/riscv32im-risc0-zkvm-elf/release/checkpoint_b.bin
+checkpoint/target/riscv-guest/methods/ferrata-checkpoint-guest/riscv32im-risc0-zkvm-elf/release/checkpoint
+checkpoint/target/riscv-guest/methods/ferrata-checkpoint-guest/riscv32im-risc0-zkvm-elf/release/checkpoint.bin
+checkpoint/target/riscv-guest/methods/ferrata-micro-guest/riscv32im-risc0-zkvm-elf/release/micro.bin
+lez/target/riscv-guest/methods-bridge-next/ferrata_bridge_next/riscv32im-risc0-zkvm-elf/release/ferrata_bridge_next
+lez/target/riscv-guest/methods-bridge-next/ferrata_bridge_next/riscv32im-risc0-zkvm-elf/release/ferrata_bridge_next.bin
+lez/target/riscv-guest/methods/ferrata_bridge/riscv32im-risc0-zkvm-elf/release/ferrata_bridge
+lez/target/riscv-guest/methods/ferrata_bridge/riscv32im-risc0-zkvm-elf/release/ferrata_bridge.bin
+lez/target/riscv-guest/methods/ferrata_consumer/riscv32im-risc0-zkvm-elf/release/ferrata_consumer
+lez/target/riscv-guest/methods/ferrata_consumer/riscv32im-risc0-zkvm-elf/release/ferrata_consumer.bin
+lez/target/riscv-guest/methods/ferrata_consumer_keccak_accel/riscv32im-risc0-zkvm-elf/release/ferrata_consumer_keccak_accel
+lez/target/riscv-guest/methods/ferrata_consumer_keccak_accel/riscv32im-risc0-zkvm-elf/release/ferrata_consumer_keccak_accel.bin
+lez/target/riscv-guest/methods/ferrata_holdings/riscv32im-risc0-zkvm-elf/release/ferrata_holdings
+lez/target/riscv-guest/methods/ferrata_holdings/riscv32im-risc0-zkvm-elf/release/ferrata_holdings.bin
+lez/target/riscv-guest/methods/ferrata_lez/riscv32im-risc0-zkvm-elf/release/ferrata_lez
+lez/target/riscv-guest/methods/ferrata_lez/riscv32im-risc0-zkvm-elf/release/ferrata_lez.bin
+lez/target/riscv-guest/methods/ferrata_lez_keccak_soft/riscv32im-risc0-zkvm-elf/release/ferrata_lez_keccak_soft
+lez/target/riscv-guest/methods/ferrata_lez_keccak_soft/riscv32im-risc0-zkvm-elf/release/ferrata_lez_keccak_soft.bin
+lez/target/riscv-guest/methods/scripted/riscv32im-risc0-zkvm-elf/release/scripted.bin
+
+guest binaries NOT newer than fresh.txt (expected: none):
+
+Compiling lines per log:
+333 <spike>/tmp/bridge-next2/box/job1/repro/logs/bridge-methods.log
+140 <spike>/tmp/bridge-next2/box/job1/repro/logs/checkpoint-methods.log
+139 <spike>/tmp/bridge-next2/box/job1/repro/logs/lez-methods.log
+1 <spike>/tmp/bridge-next2/box/job1/next.log
+

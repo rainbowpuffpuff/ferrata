@@ -1,0 +1,83 @@
+Ran on the Modal build box (one container), 18 Nov 2026 (re-run after an independent review; the same figures as the
+first run), Rust 1.93.0:
+cd bench && FERRATA_VECTORS=<consensus-spec-tests v1.7.0-beta.4>/tests/minimal cargo test --release -p misbehaviour -- --nocapture --test-threads 3
+(the vectors: scripts/fetch-vectors.sh). tests/forks.rs was written by the independent review. Build output omitted;
+the test output follows as printed.
+
+     Running unittests src/lib.rs (target/release/deps/misbehaviour-ed38aaa54e3aa601)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/evidence.rs (target/release/deps/evidence-57a05823fc7ac849)
+
+running 3 tests
+(A) record at slot 136 contradicted: refused as an update (52), accepted as evidence: Freeze { contradiction: Finalized { slot: 136, recorded: [159, 107, 135, 203, 131, 0, 88, 149, 88, 68, 188, 182, 53, 53, 0, 150, 213, 176, 204, 4, 17, 45, 84, 126, 220, 94, 42, 120, 35, 243, 46, 54], conflicting: [66, 220, 89, 186, 101, 92, 147, 138, 119, 122, 12, 240, 5, 176, 188, 16, 52, 40, 233, 68, 75, 32, 218, 58, 119, 165, 127, 24, 223, 228, 80, 156] }, attested_root: [136, 251, 220, 34, 45, 173, 225, 2, 92, 163, 47, 35, 225, 177, 183, 112, 231, 121, 233, 0, 108, 40, 24, 79, 36, 192, 249, 43, 202, 218, 215, 237], signature_slot: 149, update_digest: [179, 169, 232, 205, 23, 255, 203, 181, 23, 14, 239, 245, 110, 165, 156, 107, 7, 14, 59, 239, 199, 155, 236, 26, 77, 95, 150, 74, 44, 148, 36, 118] }
+frozen: update 86, attest 86, evidence again 86; records and store unchanged
+(A) the checkpoint's record contradicted, 22 of 32 signers: accepted: Freeze { contradiction: Finalized { slot: 128, recorded: [14, 89, 18, 242, 45, 165, 181, 159, 11, 96, 244, 147, 169, 155, 149, 155, 4, 86, 245, 248, 122, 39, 149, 22, 167, 18, 100, 182, 30, 74, 103, 96], conflicting: [196, 49, 152, 43, 94, 152, 129, 252, 48, 142, 144, 227, 77, 176, 75, 47, 94, 181, 237, 252, 181, 192, 97, 220, 128, 137, 111, 255, 37, 252, 102, 28] }, attested_root: [45, 153, 13, 230, 133, 244, 10, 52, 92, 233, 54, 62, 126, 173, 110, 44, 216, 223, 73, 142, 77, 229, 161, 46, 10, 191, 75, 214, 214, 66, 134, 142], signature_slot: 134, update_digest: [102, 193, 82, 176, 9, 127, 92, 249, 8, 175, 253, 123, 232, 147, 103, 165, 28, 16, 21, 126, 55, 107, 237, 23, 65, 154, 42, 212, 155, 201, 186, 160] }
+(B) next committee contradicted: refused as an update (28), accepted as evidence: Freeze { contradiction: NextCommittee { period: 2, adopted: [233, 2, 15, 91, 189, 37, 108, 184, 36, 155, 128, 127, 72, 84, 123, 169, 243, 27, 220, 171, 174, 62, 216, 141, 81, 73, 125, 206, 114, 18, 140, 65], conflicting: [91, 254, 213, 153, 164, 36, 241, 20, 133, 26, 201, 229, 53, 224, 110, 248, 156, 39, 245, 129, 124, 237, 88, 72, 237, 158, 127, 14, 194, 144, 123, 243] }, attested_root: [188, 35, 33, 127, 107, 196, 228, 178, 81, 175, 199, 104, 39, 220, 251, 79, 48, 102, 161, 22, 113, 77, 116, 188, 144, 92, 241, 163, 214, 90, 113, 53], signature_slot: 159, update_digest: [163, 26, 65, 41, 50, 118, 219, 84, 135, 41, 23, 195, 232, 91, 149, 14, 51, 164, 115, 204, 154, 130, 60, 182, 163, 78, 149, 175, 175, 10, 170, 11] }
+(B) the same key root with another aggregate field: accepted
+(A) signed by the held next committee in the next period, residue-witness pairing: accepted
+test real_contradictions_freeze ... ok
+| evidence | result |
+|---|---|
+| signed two periods ahead (no committee held) | 23 |
+| signed in the previous period (that committee no longer held) | 23 |
+| the right period, another key set (signature by keys the instance does not hold) | 40 |
+| the next period, keys other than the adopted next committee | 40 |
+| no finality branch (an attested head only) | 50 |
+| 21 of 32 signers | 51 |
+| 22 of 32 signers (two thirds): accepted | accepted |
+| the update that wrote the record, replayed against it | 85 |
+| the same, against the adopted next committee | 85 |
+| a contradicting update against a record at another slot | 85 |
+| a slot with no record | 87 |
+| a finality branch node altered | 26 |
+| a signature slot after the slot the caller vouches for | 22 |
+| the genesis placeholder as the finalized header | 87 |
+| a signature over another attested header | 40 |
+| another next committee, finalized header in the previous period | 85 |
+| the adopted next committee again | 85 |
+| a next committee while the instance knows none | 85 |
+| past the weak-subjectivity period of the stored finalized header | 53 |
+| residue witness with one bit of c flipped | 40 |
+| residue witness, honest: accepted | accepted |
+test griefing_and_replay ... ok
+honest data submitted as evidence:
+| data | states | updates (applied) | evidence submitted | accepted | refused (code: count) | valid under the stored committee (of which at a recorded slot) | validate_evidence = validate_compact |
+|---|---:|---:|---:|---:|---|---:|---:|
+| official sync vectors (52 cases) | 212 | 160 (91) | 1374 | 0 | 23: 378, 25: 232, 50: 189, 85: 575 | 354 (221) | 613 |
+| mainnet replay (mainnet-p1899) | 6 | 5 (5) | 46 | 0 | 23: 30, 85: 16 | 10 (6) | 30 |
+| Sepolia through Gloas (sepolia-gloas-2026-11-10) | 34 | 33 (33) | 1683 | 0 | 23: 1581, 85: 102 | 68 (34) | 1122 |
+| lab record, mainnet | 96 | 95 (95) | 13585 | 0 | 23: 10372, 85: 3213 | 2513 (700) | 9120 |
+| lab record, sepolia | 126 | 125 (125) | 23625 | 0 | 23: 20350, 85: 3275 | 2542 (733) | 15750 |
+| **all** | 474 | 418 (349) | 40313 | 0 | 23: 32711, 25: 232, 50: 189, 85: 7181 | 5487 (1694) | 26635 |
+test honest_data_never_freezes ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.78s
+
+     Running tests/forks.rs (target/release/deps/forks-016cd88a7bc1da2f)
+
+running 1 test
+| honest fork or reorg (fabricated chain) | refused |
+|---|---|
+| orphaned head at the canonical head's slot, against f1's record | 85 |
+| orphaned head at the canonical head's slot, against the adopted committee | 85 |
+| orphaned head lagging finality (finalizes the checkpoint), against the checkpoint's record | 85 |
+| the same, against the adopted committee | 85 |
+| head reorg across the boundary (another committee for period + 2), against f1's record | 85 |
+| the same, against the adopted committee | 85 |
+| finality update without a next committee, orphaned head, against f1's record | 85 |
+| the same, against the adopted committee | 85 |
+test honest_forks_and_reorgs_are_not_evidence ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s
+
+   Doc-tests misbehaviour
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+EXIT 0

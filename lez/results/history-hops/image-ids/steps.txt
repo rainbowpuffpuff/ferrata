@@ -1,0 +1,7 @@
+16:21:49 source <spike>/ferrata-wt-history-hops (HEAD
+not a git tree); HOME ~; nproc 2
+16:21:49 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5, lez rust v1.91.1-rust-x86_64-unknown-linux-gnu v2024.1.5-cpp-x86_64-unknown-linux-gnu 
+16:33:10 build a ok
+16:33:10 build b ok
+16:33:10 build c ok
+16:33:14 programs: checkpoint.bin checkpoint_b.bin ferrata_bridge.bin ferrata_lez.bin release.bin segment.bin 

@@ -1,0 +1,161 @@
+{
+  "counts": {
+    "PASS": 8
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "syn",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": " [finalized header signed: Finish]",
+        "outcome": "refused"
+      },
+      "title": "signature over the finalized header instead of the attested header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SignatureInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SIG-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 40,
+        "code_name": "core:SignatureInvalid",
+        "note": " [domain of the fork at signature_slot: Finish]; the correctly signed twin verifies natively: true",
+        "outcome": "refused"
+      },
+      "title": "domain from the fork version at signature_slot instead of signature_slot - 1",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:BelowSupermajority"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-PART-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 51,
+        "code_name": "core:BelowSupermajority",
+        "note": "341 signers [341 of 512: Open]",
+        "outcome": "refused"
+      },
+      "title": "341 of 512 signers (one below two thirds)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-PART-03",
+      "kind": "control",
+      "observed": {
+        "note": "342 signers",
+        "outcome": "accepted"
+      },
+      "title": "342 of 512 signers (exactly two thirds or more)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:SlotOrderInvalid",
+          "core:FinalityBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SLOT-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 22,
+        "code_name": "core:SlotOrderInvalid",
+        "note": " [finalized after attested: Open]",
+        "outcome": "refused"
+      },
+      "title": "finalized slot above the attested slot",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NotFinalized"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-FIN-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 50,
+        "code_name": "core:NotFinalized",
+        "note": " [optimistic update: Open]",
+        "outcome": "refused"
+      },
+      "title": "update without finality (optimistic)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NextCommitteeUnexpected"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-COM-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 29,
+        "code_name": "core:NextCommitteeUnexpected",
+        "note": " [next committee, empty branch: Open]",
+        "outcome": "refused"
+      },
+      "title": "non-rotation update carrying a next committee",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:OutsideWeakSubjectivityPeriod",
+          "lez:validity-window"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-WS-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 53,
+        "code_name": "core:OutsideWeakSubjectivityPeriod",
+        "note": "ws_period_epochs 1; signature slot 15556738 (ws end slot 15556736) [VerifyAll after the ws end]",
+        "outcome": "refused"
+      },
+      "title": "VerifyAll of an update signed after the weak-subjectivity end",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}
