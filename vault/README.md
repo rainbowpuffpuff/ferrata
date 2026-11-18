@@ -57,8 +57,8 @@ export PATH="$HOME/.foundry/bin:$PATH"
 forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
-forge test                                               # everything, including the invariant campaign:
-                                                         # 464 passed, 1 skipped (PrivacySuite, without its LEZ half)
+forge test                                               # everything, including the invariant campaigns: 495 passed
+                                                         # (build box, 18 Nov; PrivacySuite skips without its LEZ half)
 forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
 forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
 forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
@@ -258,6 +258,58 @@ receipt for the zero claim digest) can trip it. The constructor refuses a verifi
 or is already stopped. A stop is one-way. After it, every call that needs a proof reverts (`submitCandidate`,
 `finalize`, `release`), and so do rule (B) finalisations and refunds (D13). Cancellation, `claimOwed`, revocation
 and role changes still work. Nothing can change what the vault accepts.
+
+### Under a broken verifier (measured, 18 November 2026)
+
+What the vault still guarantees if its proof verifier accepted any seal, so that anyone could finalise a checkpoint
+with a burn root of their choice and release against it with fresh nullifiers. The model: an unsound Groth16 verifier
+(`test/mocks/AcceptAllVerifier.sol`) behind RISC Zero's unmodified emergency stop, whose owner is renounced as at a
+deployment. Each statement is the code's, and each is checked by `test/BrokenVerifier.t.sol` (seven steps with their
+numbers, rules A and B) and `test/invariant/BrokenVerifierInvariants.t.sol` (eight invariants, rules A and B):
+
+- **Per-token escrow.** A release of a token debits `escrowed[token]` and is refused above it, so what leaves in a
+  token never exceeds what was deposited in it, and no token pays from another's escrow. Within a token nothing
+  says whose deposits go: a forgery takes any depositor's escrow of that token.
+- **The caps, over every window.** Releases and refunds both consume the token's release bucket and the global one
+  (value units), so in any window `[t1, t2]` they pay at most `capacity + refill × (t2 − t1)` of a capped token, and
+  at most the global bound in value over all tokens, while the admin leaves the caps alone (raising a cap raises the
+  bound). A token without a cap is bounded by the global bucket; with that unlimited too, only by its escrow. The
+  deployment script's testnet defaults leave the caps UNLIMITED ("Deployment" below): for such a deployment, only the
+  clocks below and the stop bound a broken verifier's loss.
+- **The clocks.** A forged checkpoint pays nothing before its wait `W` after its candidate (rule A: `delta + (t − 1) ×
+  turnSeconds`, rule B: `deltaAtSubmit`) plus the token's release delay after its finalisation. During `W` a watcher or
+  the freeze authority can cancel it; for `revokeWindow` after finalisation the freeze authority can revoke it, and no
+  release under a root whose checkpoints are all revoked is paid. With the delay equal to the window, no second in
+  which a revocation is possible is a release second, so a freeze authority that acts within the window acts first;
+  with a shorter delay, what was released before the revocation stays paid.
+- **Freezes.** No release in a global or per-token release freeze, no refund in a global one.
+- **The emergency stop.** `estop(receipt)` needs a verifying receipt for the all-zero claim digest, and a broken
+  verifier accepts a junk one, so **anyone** can then trip the stop; after it no candidate, finalisation, release or
+  refund (what was credited before can still be claimed).
+- **Refunds.** A forged sunset checkpoint makes leaves at or above its imported count refundable, but only once the
+  vault is retired and `revokeWindow` has passed; a refund pays the leaf's depositor (a Merkle path to `depositRoot`,
+  which no proof touches) its leaf's escrow, once, and draws on the release buckets. A finalised forged sunset also
+  stops deposits until it is revoked.
+- **Nullifiers** still pay once each, which bounds nothing here: a forger's nullifiers are fresh.
+
+Measured on the Modal build box: the seven steps pass under both rules (DAI: nothing before the 1 h delay, then
+40,000 DAI, the bucket; 10,000 more 1,000 s later; then refused by the cap and, after the revocation, by the root;
+ETH with the delay equal to the 3-day window: refused in the window's last second, in which the revocation lands;
+unrevoked, 15 ETH from the next second, the bucket; USDT, uncapped: 300,000, the global bucket, after which a DAI
+release is refused too; a USDC release refused for escrow with 30,000 DAI in the vault; a forged sunset's refund paid
+to its depositor, the bucket down by it; the stop's key gone, a junk receipt from anyone trips it, then release and
+`submitCandidate` revert). The campaign: 8 invariants on each rule, 256 runs × 100 calls (25,600 calls) each, all
+held; over the 2,055 runs logged per rule, under rule A 4,062 forged checkpoints were finalised, 3,054 forged releases
+and 121 refunds paid, 1,837 revocations and 1,095 cancellations made, the stop tripped in 141 runs; the fullest window
+reached 74.00% of the ETH bucket's bound (90.09% under rule B), and the uncapped USDT lost up to 94.4% of a run's
+deposits (99.4% under rule B), the escrow bound alone (`tools/broken_verifier_runs.py`). No invariant failed.
+
+```sh
+forge test --match-path test/BrokenVerifier.t.sol -vv                       # the seven steps, rules A and B
+rm -rf ../target/broken-verifier && mkdir -p ../target/broken-verifier
+FERRATA_BROKEN_VERIFIER_RUNS=1 forge test --match-path 'test/invariant/BrokenVerifier*' -vv
+python3 -I tools/broken_verifier_runs.py ../target/broken-verifier           # the campaign's totals
+```
 
 ### Freezes
 
@@ -763,6 +815,8 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `Caps.t.sol`, `Merkle.t.sol`, `Privacy.t.sol`, `TreeVectors.t.sol`, `GasScenarios.t.sol` | Rate limits; slots 0, 1 and 2 and tree algebra; LEZ-side data never appears in calldata, events or storage writes; vectors; gas |
 | `Fees.t.sol` (v5) | D13's fees, 22 tests: registration publishes the registry entry and schedule 0 at their slots (known answers, recomputed byte by byte) and emits them; the fee rules (1% ceiling, LEZ units, schedule 0 without mint or burn fee, twice the largest denomination in 128 bits); `announceFees` only by the admin and only for a registered token (fuzzed ceiling); a change in force seven days after its announcement and not a second earlier, a deposit after it sending the new total, a new announcement replacing the pending one, announcing the fees in force withdrawing it, a due change taking effect before the next announcement; `applyFees` permissionless, acting only when due; a refund returning the escrow of its leaf's schedule; releases paying the denomination less the relay, burn and checkpoint fees, with and without a relay fee, putting a due change in force, crediting nothing for zero fees, the checkpoint fee credited to the candidate's prover and never pushed, under rule (B) to the prover and not to the sender of `finalizeAttested` (review 2026-11-11 M-2); deposit buckets counting the whole escrow; fuzzed fee arithmetic |
 | `invariant/` | 14 invariants over 256 runs × 100 calls, on a rule (A) vault (`VaultInvariants`) and on a rule (B) vault (`VaultInvariantsB`), listed below |
+| `invariant/BrokenVerifier*` | The vault under a verifier that accepts every seal: an attacker forges checkpoints and releases at the earliest second while deposits go on and the freeze authority, a watcher and anyone with a junk proof of exploit sometimes react; 8 invariants on rules (A) and (B) ("Under a broken verifier") |
+| `BrokenVerifier.t.sol` | The same attack in seven steps with their numbers, rules (A) and (B) |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
 | `Roles.t.sol` (v4) | Watchers: a 12-hour pause that never shortens a freeze and that the freeze authority can lift, renewable only from now, no other power, every slot counts, nobody else pauses. The admin's role change: admin only, applied by anyone 14 days later and not a second earlier, the old roles holding until then, nothing to apply, address(0) keeping the freeze authority, an empty set removing the watchers, a new proposal restarting the clock, the admin never becoming freeze authority. Keyless retirement 30 days after deployment or the last finalisation, the freeze authority at any time. The release floor: the deployment's global bucket, the global and the per-token bucket in value units, saturation, registration, a fuzz test against hand-worked thresholds; deposits not floored. A verifier that is not an untripped stop refused; a renounced stop owner cannot stop it, a proof of exploit still can |
 | `SecurityReview.t.sol` | The vault findings of the security review of 11 November 2026, 12 tests that fail on `integration4`'s vault (bc4a2a6) and pass here: keyless retirement counted from the first finalisable moment, not shortened by a checkpoint freeze (lifted early or run to its end), not caused by one watcher pausing or cancelling (M-1); the checkpoint fee to the candidate's prover under both rules, nothing to a copied or proof-less finalisation (M-2); a stale candidate replaced (L-1); no deposit after a finalised sunset checkpoint, anyone retiring once it is irrevocable (L-3); the constructor's bound on `revokeWindow / deltaFloor` (I-7); the deployment script refusing mainnets (I-2) |

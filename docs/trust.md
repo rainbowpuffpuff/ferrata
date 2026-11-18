@@ -333,11 +333,22 @@ There is **no escrow-moving failsafe**: an escrow-moving recovery would need a p
 verification logic, which Security #8 forbids. The failsafe is stop-only
 ([`bridge.md`](design/bridge.md) §15).
 
+**If the verifier accepted any seal** (the proof system unsound), the vault's own checks still bound the loss, as
+measured with a verifier that accepts everything behind RISC Zero's real emergency stop, its owner renounced
+([`vault/README.md`](../vault/README.md) "Under a broken verifier": 8 invariants on both rules, a seven-step
+walkthrough, [EVIDENCE](EVIDENCE.md) row 138): a token pays only from its own escrow; releases and refunds in any
+window stay within the token's and the global release bucket (with caps UNLIMITED, as the deployment script's testnet
+defaults leave them, only the escrow bounds it); nothing pays before the candidate's wait and the token's release
+delay; a revoked root pays nothing, and with the release delay equal to the revocation window the revocation always
+comes first; freezes hold; and since the broken verifier also accepts a junk proof of exploit, anyone can trip the
+stop, after which nothing proven is accepted. Which depositors' escrow of a token goes is not bounded.
+
 | Failure | What happens | Positions lost | Bound |
 |---|---|---|---|
 | Sync committee captured (inbound) | forged records; invented deposits imported and minted | wrapped supply above escrow; the shortfall falls on late redeemers | LEZ mint caps until the freeze authority freezes mints |
 | `t` sequencer keys (outbound) | a forged burn root; releases of tokens never burned | escrow paid out against forged burns | wait + watchers; release delay with `revokeFrom`; release caps |
 | Rule (A) outside F1–F4, watchers down or eclipsed | a released burn later dropped on LEZ (double spend) | as above | the same |
+| Proof system unsound (the verifier accepts any seal) | forged checkpoints and releases, a forged sunset's refunds (to the leaves' depositors) | escrow, token by token, any depositor's | per-token escrow; the wait, cancel and revoke; the release delay; release caps; freezes; the stop, which anyone can then trip with a junk proof of exploit ([`vault/README.md`](../vault/README.md) "Under a broken verifier") |
 | Proof system unsound | anything a proof gates, until the stop trips | after the stop: every unreleased burn and unrefunded deposit stays in the vault | caps and freezes before; the stop after |
 | A bug in Ferrata's guests | depends on the bug | depends | release freeze and `revokeFrom` ([`bridge.md`](design/bridge.md) §14) |
 | A bug in the vault | depends; no upgrade | depends | freezes, retirement; caps |

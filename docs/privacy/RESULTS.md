@@ -52,6 +52,14 @@ bridge core's `recover_burns` finds all 20 notes (D12's v2 mac in the core, revi
 resolved); the informational claim → burn rate is 4.5% (two records drew a wrong singleton set; the rate moves
 with the build's ids).
 
+**Negative controls (18 November 2026, [`CONTROLS.md`](CONTROLS.md)).** The gate is shown to fail when it should:
+272 test-only copies of the public data, each with a value an operation must hide planted in a public field (constant,
+message, fresh-randomness or state; raw, byte-reversed, hex, first or last 16 bytes), are all caught, and each of 16
+weakened detectors (a field skipped, a prefix compared, an encoding ignored, a class widened, the adversary's windows
+lengthened ...) misses planted leaks the real one finds. The hidden-column search now looks for 680 values (the seed,
+`kAuth`, `kView`, `sOut`, `NOut` before the release, the memo pad and the holder added) in four encodings and every
+16-byte window; on this commit's run it finds 0 of 680. The tables below are the earlier runs' (320 values, verbatim).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
@@ -276,6 +284,12 @@ Everything public about the root import is §B6's "the vault's root at a block" 
 # from the repository root, on a machine with lez/'s and vault/'s toolchains (vault/lib installed)
 export RISC0_HOME=$PWD/../risc0-home-lez        # as lez/BRIDGE-RESULTS.md §10
 scripts/privacy/run.sh                          # LEZ half, Foundry half, analysis -> docs/privacy/generated/
+```
+
+The negative controls, on that run's raw data ([`CONTROLS.md`](CONTROLS.md); 68 s on 2 vCPU):
+
+```sh
+python3 -I scripts/privacy/controls.py target/privacy docs/privacy/controls
 ```
 
 Raw data (about 4.4 MB: `lez.json`, `eth.jsonl`, `scenario.json`, `truth.json`) goes to
