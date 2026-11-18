@@ -223,8 +223,20 @@ fn stale_and_down_sources_fall_back() {
 fn restart_mid_job_and_mid_period() {
     let r = rec("sepolia");
     let n = r.entries.len();
-    // Stop the clock three finality updates before the end: the store is inside period 1410.
-    let clock = Clock::new(n - 3);
+    let spec = r.config.spec();
+    // Stop the clock before the record's last finality update that moves the store inside its period (when this
+    // test was written, three entries before the end, in period 1410; the lab's record has grown since).
+    let head = |upto: usize| r.entries[..upto].iter().map(|e| e.finalized_slot).max().unwrap();
+    let stop = (2..n - 1)
+        .rev()
+        .find(|&s| {
+            let e = &r.entries[s];
+            !e.period_update
+                && e.finalized_slot > head(s)
+                && spec.period_at_slot(e.finalized_slot) == spec.period_at_slot(head(s))
+        })
+        .expect("a finality update inside a period");
+    let clock = Clock::new(stop);
     let payer = key(0x25);
     let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
     let dir = scratch("restart");
@@ -236,13 +248,13 @@ fn restart_mid_job_and_mid_period() {
         policy(1),
     );
     settle(&mut u1, &mut l, 400);
-    let spec = r.config.spec();
     let before = store(&u1, &l);
     let period = spec.period_at_slot(before.finalized.slot);
-    let next = &r.entries[n - 3];
+    let next = &r.entries[stop];
     assert!(!next.period_update);
     assert_eq!(spec.period_at_slot(next.finalized_slot), period, "the next update is in the same period");
-    clock.set(n - 2);
+    println!("restart: entry {stop} of {n}, finalized slot {} inside period {period}", next.finalized_slot);
+    clock.set(stop + 1);
     // Open and Miller, then the process dies.
     let mut sent = Vec::new();
     while sent.len() < 2 {

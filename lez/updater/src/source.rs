@@ -59,11 +59,8 @@ pub fn client_family(version: &str) -> Option<String> {
 pub fn parse_version_answer(body: &str) -> Result<String> {
     let v: serde_json::Value = serde_json::from_str(body).context("not JSON")?;
     let raw = v["data"]["version"].as_str().ok_or_else(|| anyhow!("no data.version"))?;
-    let clean: String = raw
-        .chars()
-        .take(100)
-        .map(|c| if c.is_ascii_graphic() && c != '"' && c != '\\' { c } else { '_' })
-        .collect();
+    let clean: String =
+        raw.chars().take(100).map(|c| if c.is_ascii_graphic() && c != '"' && c != '\\' { c } else { '_' }).collect();
     if client_family(&clean).is_none() {
         bail!("an empty version");
     }

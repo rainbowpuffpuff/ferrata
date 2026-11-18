@@ -18,7 +18,7 @@ opening sections).
 |---|---|---|---|---|
 | The starting checkpoint of an attestation instance | that the instance follows the real Ethereum | a false chain from the start | anyone can compare the checkpoint root with public Ethereum before relying on the instance | §2.1 |
 | The vault's deployment parameters: `genesisState` (the starting key set, turn length and tip), `lezConfigId`, the image ids, `turnSeconds`, `nMin`/`tMin` | that the vault follows the real LEZ channel from the right state with the right programs | a false LEZ history or program accepted from the start | anyone can check them before depositing: the channel's public state, `configId`'s preimage (it binds the vault's address), reproducible builds of the guests; the deployment script checks none of them and accepts `nMin = tMin = 1` (testnets only: it refuses every chain but anvil, Sepolia, Hoodi and Holesky) | §3.2, §4 |
-| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; the attestation side's `monitor` alarm (not built) | §2.2 |
+| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested; the signers lose no stake (none of it is slashable for this) | consumer caps and freezes; the attestation side's `monitor` alarm (not built) | §2.2 |
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
 | Rule (A)'s conditions F1–F4, or else a live, uneclipsed watcher | finality under rule (A) | as above, with fewer than `t` keys or none | the same; outside F1–F4 the watchers are trusted for safety | §3.4 |
@@ -101,6 +101,62 @@ sync-committee signature is neither slashed nor loses a reward, so the bribe has
 therefore **bounds the loss, not the cost**: a consumer sizes what its caps let through before a freeze to
 what it can afford to lose ([`attestation.md`](design/attestation.md) §11.2).
 
+**What a forger loses** (measured on mainnet on 18 November 2026, the rules from the consensus specifications v1.6.1
+and EIP-7657, fetched read-only that day; method, sources and the re-check: [`forgery-cost/`](forgery-cost/README.md)).
+A forged finality update needs 342 of the 512 seats: Ferrata's step 1 refuses `participants * 3 < 512 * 2`
+([`steps.rs`](../crates/ferrata-core/src/steps.rs), the specifications' supermajority; 342 × 3 = 1,026 ≥ 1,024, 341 × 3 =
+1,023). What stands behind those signatures, and what the signers lose:
+
+| | The sync committee, as Ferrata follows it | With EIP-7657 (sync-committee slashing) | Casper FFG over the whole validator set |
+|---|---|---|---|
+| Signatures a forgery needs | 342 of 512 seats | the same | two thirds of the active stake: 29,562,407 ETH (derived) |
+| The stake behind them (measured) | the current committee (period 1914): 512 members, 409,755 ETH; its cheapest 342 seats 76,714 ETH (period 1915's: 390,013 and 58,397 ETH) | the same | the active stake, 44,343,611 ETH |
+| Slashable for a forgery | **nothing**: the specifications slash a proposer (two blocks for one slot) and an attester (FFG double and surround votes); a block carries `proposer_slashings` and `attester_slashings` and no sync-committee evidence (also in Gloas), so a member signs the canonical block for its reward and the forgery beside it | the 342 signers | at least a third of the active stake, 14,781,204 ETH (derived), whenever Ethereum finalizes the conflicting canonical checkpoint (accountable safety: two conflicting finalized checkpoints mean a third double- or surround-voted) |
+| Lost by the forger (derived, Electra's penalties) | **0** | about 417 ETH for the cheapest 342 seats (an immediate 1/4,096 of the balance plus the correlation penalty, three times the share of the stake slashed together: 0.52 % of 76,714 ETH); about 11,459 ETH if all 512 are slashed together | everything: from a third slashed together the correlation penalty is the whole effective balance, at least 14,781,204 ETH |
+| Status | live since Altair | EIP-7657 is **Stagnant** (created 21 March 2024); its own text: use cases securing more than 512 × 32 = 16,384 ETH should combine the light client with other methods | Ethereum's own finality; nothing of Ferrata verifies it |
+
+The "342 × 32 = 10,944 ETH" sometimes quoted is a nominal floor: since Electra seats are drawn in proportion to
+effective balance up to 2,048 ETH, so the current committee's 512 members are 276 of 32 ETH, 32 of 33–1,023, 161 of
+1,024–2,047 and 43 of 2,048, and its 342 cheapest seats hold 76,714 ETH, none of which a forgery puts at risk. Four
+of its members are exiting, two have exited and one is withdrawable; their seats still sign. The active stake is Lighthouse's count for
+epoch 490,090 (publicnode's node); the sync reward per seat in the same block (25,627 Gwei) agrees through the reward
+formula. *Measured*: balances, counts, statuses; *derived*: the thirds and the losses.
+
+**What this means for the bridge.** A forgery costs bribes with no floor and no stake, so the bridge cannot price it;
+it bounds what one can take before someone freezes, as row 138's invariants measure under a stronger attacker:
+
+- **In:** a forged record's invented deposits mint wrapped tokens only up to LEZ's mint caps (per token and global
+  buckets, refilled on attested Ethereum time, which a captured committee alone does not advance: above), until the
+  freeze authority freezes mints.
+- **Out, the escrow:** the unbacked tokens can be burned on LEZ, and the burns are real, so their checkpoint is
+  honest: what protects the escrow is the vault's release caps (per token and global; the design's default at most
+  10 % of a token's escrow a day above an immutable floor, [`bridge.md`](design/bridge.md) §13) and the release delay
+  (`minReleaseDelay` 24 h, at most `revokeWindow`, 7 days), within which the freeze authority freezes releases or
+  revokes the root. [EVIDENCE](EVIDENCE.md) row 138 ran the vault under a verifier that accepts every seal (any
+  checkpoint, any release, at the earliest second allowed): releases and refunds stayed within the cap bound in every
+  window (the fullest 74.00 % of the ETH bucket's bound under rule (A), 90.09 % under rule (B)) and none came before the
+  delay; the uncapped USDT lost up to 94.4 % (rule (A)) and 99.4 % (rule (B)) of a run's deposits, and with the
+  deployment script's testnet defaults
+  (caps UNLIMITED) only the clocks and the emergency stop remain.
+- **Sizing:** a production deployment's caps × (the time to notice and freeze, at least the release delay) is what
+  a captured committee can take; set it to what the deployment accepts to lose. The live round trips of rows 41 and 91
+  ran with no caps and a 120 s delay (testnet values).
+- **The updater's client check does not change this** (§2.4): the program accepts an update from anyone on its
+  signatures (VS.6), so a forger submits it; an honest updater with `min_distinct_clients` only refuses to pay for and
+  relay one, and names the disagreeing sources in its `/health`.
+
+**Options, design only (not built).** (1) *Bonded backing, a consumer's choice:* a consumer (the bridge's
+configuration, or any other) accepts a record only when a bonded set co-signs its finalized header as canonical, the
+bond (an Ethereum contract, or restaked collateral) slashed on Ethereum on proof that a co-signed header is not the
+canonical block at its slot (EIP-4788 gives contracts the beacon block roots); a forgery then costs at least the bond,
+which the consumer sizes to its caps over the reaction window. It adds a bonded, trusted-for-cost party and a
+challenge path; nothing of it exists. (2) *EIP-7657, if Ethereum adopts it:* the signers' stake becomes slashable, but
+by the table about 417 ETH for today's cheapest supermajority, because the correlation penalty is small when few are
+slashed; Ferrata can only use it, not build it. (3) *FFG-based anchoring (future work):* follow Ethereum's own
+finality, two thirds of the active stake's attestations, beside or instead of the sync committee, so a forgery means a
+third of the stake slashed (about 14.8 million ETH today); the guest would check the whole validator set's
+attestations instead of 512 keys; not designed in detail, not measured.
+
 **What a captured committee can do (VS.4).** Sign a forged handoff and hold the instance until someone
 notices; sign finality updates for blocks that were never finalized, whose records then attest anything
 the forger put in their state. For the bridge, a forged record whose vault slot 0 holds invented deposits
@@ -166,6 +222,23 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
 From [`attestation.md`](design/attestation.md) §11.5. An update is accepted on validity alone, never on
 the submitter's identity (VS.6; §4.5 there). Apart from the checkpoint source, no participant can make
 the program accept a false record (VS.5).
+
+**The updater's sources.** `ferrata-updater` runs the program's own checks on every candidate before it pays for a
+step, demotes a source that serves what the program would refuse, and with `min_agreeing` waits until enough sources
+serve, or hold canonical, the update's finalized header ([`lez/updater/README.md`](../lez/updater/README.md), EVIDENCE
+rows 79–81). With `min_distinct_clients = k` (built 18 November 2026, row 147) it also sends only an update that
+sources reporting `k` different consensus clients at `/eth/v1/node/version` served byte for byte (`client_match =
+"bytes"`, the default) or agree on (`"finalized-header"`), from `k` different sources, and logs and names in `/health`
+two sources serving different bytes for the same update. An honest node of any client derives light-client data only
+from blocks its own fork choice imported, so a forged update that one client's node serves (a bug, or a captured
+committee's accomplice) is not sent. What it does not do: the client is the provider's own claim, which nothing
+authenticates (a provider behind a load balancer can answer from several clients); and it binds only this updater,
+since the program accepts the same update from anyone (§2.2, "What this means for the bridge"). Measured live on 18
+November ([`lez/updater/results/client-diversity-2026-11-18/`](../lez/updater/results/client-diversity-2026-11-18/README.md)):
+Nimbus and Lodestar served the same bytes for every period update asked (five periods each on mainnet and Sepolia),
+but rarely the same finality update at the same moment, because they keep different ones (Lodestar the first of a
+newly finalized checkpoint for the whole epoch, Nimbus the newest each slot); the updater remembers which clients
+served which bytes, so it matches them across rounds.
 
 ## 3. The return leg (RFP-022 outbound)
 
@@ -477,7 +550,8 @@ several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ a
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
 and its sweep inside the private claim; a rule (B) zone of Logos's sequencers with the attestor module beside
-each, its checkpoints on Sepolia, and a rotation that removes a key; the audit. Sources:
+each, its checkpoints on Sepolia, and a rotation that removes a key; a cost for forging a record: bonded or restaked
+backing that a consumer can require, or anchoring to Ethereum's FFG finality (§2.2, design only); the audit. Sources:
 [README](../README.md#specified-but-not-built), "Specified but not built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
 [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
 

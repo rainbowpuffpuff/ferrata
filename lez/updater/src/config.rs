@@ -314,7 +314,9 @@ impl File {
                     .sources
                     .iter()
                     .filter(|s| s.via.is_none() && (s.url.is_some() || s.client.is_some()))
-                    .filter(|s| s.kind == SourceKind::LightClient || self.policy.client_match == ClientMatch::FinalizedHeader)
+                    .filter(|s| {
+                        s.kind == SourceKind::LightClient || self.policy.client_match == ClientMatch::FinalizedHeader
+                    })
                     .count();
                 if able < k {
                     bail!(
