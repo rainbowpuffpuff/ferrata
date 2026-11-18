@@ -502,7 +502,7 @@ fn verify_all(
     }
     let (signers, residue_witness) = signers.split_at(signers.len() - WITNESS);
     // EXPERIMENTAL: a signer witness that starts with the marker 0xffff or 0xfffe (little-endian
-    // counts above the size of any committee of fewer than 2^16 members, so never a valid
+    // counts above the size of any committee of at most 65,533 members, so never a valid
     // `SignerWitness` for one) is a `residue_agg::NonSigners` witness: the non-signers' keys and one
     // multiproof of their leaves (bench/RESIDUE.md §9); the signing key is then composed by
     // `residue_agg::step1`, the points summed by blst's batch addition (0xffff) or by one mixed

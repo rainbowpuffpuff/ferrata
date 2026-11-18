@@ -1,4 +1,4 @@
-### PROFILE: the bench's committee, 342 signers, every third member absent (the multiproof's worst case)
+### PROFILE: the bench's committee, 342 signers, every third member absent (the most hashes)
         469468  D3 decode the core's witness (SignerWitness::decode)
          30958  D3n decode the multiproof witness (NonSigners::decode)
            170  info: non-signers
@@ -32,7 +32,7 @@
        4837406  U5 1,000 x blst_p1_add_or_double_affine
       84379704  EXECUTION user cycles (SessionInfo::cycles)
       88604672  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 85 segments)
-          3.12  executor wall-clock seconds
+          2.92  executor wall-clock seconds
 
 ### PROFILE: the bench's committee, 342 signers, 170 absent at random (seed 1)
         469468  D3 decode the core's witness (SignerWitness::decode)
@@ -68,7 +68,7 @@
        4837406  U5 1,000 x blst_p1_add_or_double_affine
       84215500  EXECUTION user cycles (SessionInfo::cycles)
       88604672  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 85 segments)
-          3.09  executor wall-clock seconds
+          2.90  executor wall-clock seconds
 
 ### PROFILE: the bench's committee, 400 signers, 112 absent at random (seed 2)
         309388  D3 decode the core's witness (SignerWitness::decode)
@@ -104,7 +104,7 @@
        4837406  U5 1,000 x blst_p1_add_or_double_affine
       59076288  EXECUTION user cycles (SessionInfo::cycles)
       62128128  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 60 segments)
-          2.13  executor wall-clock seconds
+          2.05  executor wall-clock seconds
 
 ### PROFILE: the bench's committee, 510 signers, update_1's bits
           5788  D3 decode the core's witness (SignerWitness::decode)
@@ -140,5 +140,5 @@
        4837406  U5 1,000 x blst_p1_add_or_double_affine
       10791445  EXECUTION user cycles (SessionInfo::cycles)
       11534336  EXECUTION total cycles incl. padding/paging (sum of 2^po2 over 11 segments)
-          0.40  executor wall-clock seconds
+          0.38  executor wall-clock seconds
 
