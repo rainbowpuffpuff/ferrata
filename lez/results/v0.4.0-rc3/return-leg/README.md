@@ -8,8 +8,9 @@ such a zone, in stages: a second build of the two checkpoint guests that reads t
 over the real blocks of an rc3 zone; the checkpoint proven, wrapped and paid out by FerrataVault v5 on a local anvil.
 Unaudited, not for production, as the rest of the repository.
 
-Everything ran on 18 November 2026 on the Modal build box of this worktree (workspace `carl`; a gVisor container
-listing 32 processors and 64 GiB; `nproc` reports 2, so the provers ran with `RAYON_NUM_THREADS=32`). Nothing was sent
+Everything ran on 18 November 2026 on a Modal build box (a gVisor container listing 32 processors and 64 GiB; `nproc`
+reports 2; the provers used rayon's default, 32 threads, as `available_parallelism`: the run's `prove.json` files record
+`"threads": 32` and `"rayon_num_threads": null`). Nothing was sent
 to a public network; the one network read was the Sepolia vault's immutables over public JSON-RPC (`compare --vault`).
 
 ## Stage 1: checkpoint-core reads the 0.3.5-rc.1 layout (a second build)
@@ -62,7 +63,7 @@ to a public network; the one network read was the Sepolia vault's immutables ove
 | Node answers | the attestor's final round: slots 2,375,341..=2,376,251, 4,081,638 bytes ([`zone-bridge-rc3/zone/node-answers.tar.zst`](../../../../e2e/runs/zone-bridge-rc3/zone/node-answers.tar.zst)) |
 | The input (`realblocks-crown`, from the node's answers and the attestation alone) | blocks 25..=125 (101 blocks, 217 transactions, 608,482 B), T = 125, n = 1, t = 1; all 125 final inscriptions parsed, re-hashed, linked, framed, BLAKE2b-hashed with their digest and `verify_strict`-checked by checkpoint-core's second build; **2 burns, burn root `0x78aae803…7759`**, imported leaf count 2; parent state `0x8805ccd3…` (= the vault's `genesisState`), new state `0x27848dc8…`; journal sha256 `2d3b8566…` |
 | r0vm executor (`checkpoint_b_0_3_5`) | **18,971,326 user cycles**, 21 segments; **journal equal to the native one**; 0 of 1 attestations: refused by the collector and by the guest (`Core(InsufficientAttestations { have: 0, need: 1 })`) |
-| The burn root is the bridge program's | `ferrata-e2e crown-release` recomputes the burn tree with the bridge core from the bridge program's two burns: each leaf and the root `0x78aae803…` equal the checkpoint's |
+| The burn root is the bridge core's recomputation from the bridge program's two burns | `ferrata-e2e crown-release` recomputes the burn tree with the bridge core from the bridge program's two burns: each leaf and the root `0x78aae803…` equal the checkpoint's |
 | The deployed `checkpoint_b` on the same input | refused in the executor: `UnsupportedOpcode { opcode: 37 }` (the digest's first byte read as the operation count, its second as an opcode) |
 
 One sequencer: the key set is one key (n = 1, t = 1) and its one attestor; a zone of several
@@ -99,9 +100,13 @@ sequencers, their attestors and a committee's rotation ran on rc1's node ([`chec
   zone's own records (`environment.md`, the blocks, `logs/`, the configuration diffs).
 - `cd vault && forge test --match-contract ZoneBridgeRc3Test` (the journal, the seals and the vault, offline).
 - Offline re-check (no node, no chain; from the worktree root, after `scripts/reproduce-image-ids.sh build --out OUT`
-  and `cd checkpoint && cargo build --release -p methods-0-3-5 --locked`, with the R0BF programs and their `ids.jsonl`
+  and `cd checkpoint && cargo build --release -p methods-0-3-5 --locked && cargo build --release --locked -p realblocks
+  --bin realblocks-crown` (the verify step runs it), with the R0BF programs and their `ids.jsonl`
   in one directory `P`, `ferrata-e2e program-binary` making the two new ones): `ZB_PROGRAMS=P
   ZB_CHECKPOINT_B=checkpoint_b_0_3_5 ZB_N_MIN=1 ZB_T_MIN=1 ZB_LEAVE_OUT=none bash checkpoint/attestor/zone-bridge.sh
   verify e2e/runs/zone-bridge-rc3` re-derives the input, the journal and `burns.json` from the recorded node answers
   and attestation and compares them, and verifies the six receipts; `cargo +1.88 test -p checkpoint-core --features bedrock-0-3-5` in `checkpoint/`.
-- The box scripts that ran it: `spike/tmp/rc3-return/box*.sh` beside the repository (not in it).
+- Not done (review, 18 Nov): the attestor does not compare the inscriptions' fork digest with the deployment's
+  `bedrockGenesisId`; the program's check of `T` refuses another chain's tip, so it is hardening, not a gap.
+- The box scripts that ran it, as run: [`e2e/runs/zone-bridge-rc3/scripts/`](../../../../e2e/runs/zone-bridge-rc3/scripts/) (they
+  expect the maintainer's layout: the worktree under `spike/`, scratch in `spike/tmp/` beside it).
