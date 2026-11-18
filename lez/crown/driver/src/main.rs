@@ -30,7 +30,8 @@
 //! --run-dir DIR (the driver's state: wallet, follower, manifest), --out DIR, --gas-limit N,
 //! --wait-final yes|no, --sequencer-log FILE.
 //! crown-a: --channel FILE (the node's /channel/<id> answer), --genesis FILE (deployment
-//! settings), --identity-out FILE, [--vault ADDR].
+//! settings), --identity-out FILE, [--vault ADDR], [--fork-digest HEX] (a zone on Logos Blockchain 0.3.5-rc.1: the
+//! node's fork digest becomes the configuration's bedrockGenesisId, as the checkpoint guests of guests-0-3-5 require).
 //! crown-b: --identity FILE, --capture DIR (repeatable, in order), [--eth-fees-at UNIX_S],
 //! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
 //! --notes-out FILE, [--operator-only yes] (the updates, Init, Register, ImportFees and ImportRoot only: the
@@ -306,6 +307,7 @@ async fn run(args: Args) -> Result<()> {
                 genesis: args.path("genesis")?,
                 identity_out: args.path("identity-out")?,
                 vault: args.get("vault").map(crown::address).transpose()?,
+                fork_digest: args.get("fork-digest").map(crown::fork_digest).transpose()?,
             };
             crown::session_a(&mut live, &program, &bridge, &chain, &a).await?;
         }

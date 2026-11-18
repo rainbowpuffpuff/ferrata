@@ -14,7 +14,7 @@ name = "ferrata_attestor"
 path = "src/main.rs"
 
 [dependencies]
-checkpoint-core = { path = "../crates/checkpoint-core", features = ["std"] }
+checkpoint-core = { path = "../crates/checkpoint-core", features = ["std", "bedrock-0-3-5"] }
 attestor-core = { path = "../crates/attestor-core" }
 ed25519-dalek = { version = "2.2.0", default-features = false }
 anyhow = "1"
