@@ -914,6 +914,106 @@ def shared_windows(blobs, controls=()):
     return out
 
 
+# ------------------------------------------------------------------------------------------------
+# Section B6's "Hidden" column: the values each step must hide, and the search for them
+# ------------------------------------------------------------------------------------------------
+
+# A value is searched for in a record's public bytes as it is, byte-reversed (a little-endian reading
+# of a big-endian value) and as hex text (lower and upper case); whole, and as every 16-byte window of
+# it (a truncated or shifted copy) that has at least 12 non-zero bytes, the adversary's rule for
+# hash-like content. A value without such a window (a small number: a leaf index, `j`) cannot be told
+# from unrelated bytes, and only the differential gate can see it (docs/privacy/CONTROLS.md).
+LEAK_FORMS = ("raw", "reversed", "hex", "HEX")
+
+
+def encode(v, form):
+    return {"raw": v, "reversed": v[::-1], "hex": v.hex().encode(), "HEX": v.hex().upper().encode()}[form]
+
+
+def leak_pieces(v, windows=True, window=N_WINDOW):
+    """The whole value and its 16-byte windows, those with at least 12 non-zero bytes."""
+    pieces = [v] + ([v[i:i + window] for i in range(len(v) - window + 1)] if windows and len(v) > window else [])
+    return [p for p in pieces if len(p) >= window and len(p) - p.count(0) >= 12]
+
+
+def find_leak(data, v, forms=LEAK_FORMS, windows=True):
+    """The form in which `v`, or one of its 16-byte windows, occurs in `data`; None if it does not."""
+    for piece in leak_pieces(v, windows):
+        for form in forms:
+            if encode(piece, form) in data:
+                return form
+    return None
+
+
+def everything(x):
+    """A record's whole public data: every blob and every named field."""
+    return b"".join(v for _, v in x.blobs) + b"".join(v for _, v in x.fields)
+
+
+def hidden_steps(G, T, users, meta):
+    """Per step of section B6: (step, group, ground-truth key, the values the record of a user must hide)."""
+    seeds = [b(u["bridge_seed"]) for u in users]
+    k_auth = [prf(sd, b"ferrata/auth/v1") for sd in seeds]
+    k_view = [prf(sd, b"ferrata/view/v1") for sd in seeds]
+    dest = [b(u["accounts"]["private"][0]) for u in users]
+    s_of = [prf(k_auth[i], b"ferrata/s/v1" + meta["chain"] + meta["vault"] + b(u["depositor"]) + u64(0))
+            for i, u in enumerate(users)]
+    dep_by_user = {T["deposit"][x.seq]: dict((norm(n), v) for n, v in x.fields) for x in G["deposit (A: private destinations)"]}
+    burn_by_user = {T["burn"][x.seq]: x for x in G["burn, private holding"]}
+
+    def keys(u):  # the seed and the two keys it derives (design note section 4): hidden everywhere
+        return [("bridge seed", seeds[u]), ("kAuth", k_auth[u]), ("kView", k_view[u])]
+
+    def deposit_secrets(u):
+        return [("destination", dest[u]), ("s", s_of[u])] + keys(u)
+
+    def claim_secrets(u):
+        d = dep_by_user[u]
+        leaf = deposit_leaf(u, d["event.Deposit.depositor"][12:], d["event.Deposit.token"][12:], d["event.Deposit.amount"], d["event.Deposit.commitment"])
+        return [("destination", dest[u]), ("s", s_of[u]), ("C", d["event.Deposit.commitment"]), ("leaf", leaf),
+                ("fid", fid_of(meta["chain"], meta["vault"], u, leaf)), ("depositor", d["event.Deposit.depositor"][12:])] + keys(u)
+
+    def burn_note(u):
+        x = burn_by_user[u]
+        g = lambda k: next(v for n, v in x.fields if n.endswith(k))
+        s_out = prf(k_auth[u], b"ferrata/s-out/v1" + meta["cid"] + g("Burn.r"))
+        return x, g, s_out, prf(k_view[u], b"ferrata/memo/v1" + g("Burn.r"))[:20]
+
+    def burn_secrets(u):
+        _, _, s_out, pad = burn_note(u)
+        return [("holder (private account)", dest[u]), ("recipient", b(users[u]["recipient"])), ("sOut", s_out),
+                ("NOut", sha(b"ferrata/nf-out/v2" + s_out)), ("memo pad", pad)] + keys(u)
+
+    def release_secrets(u):
+        x, g, s_out, pad = burn_note(u)
+        leaf = burn_leaf(meta["cid"], x.seq, g("Burn.token"), g("Burn.amount"), g("Burn.c_out"), g("Burn.r"))
+        return [("r", g("Burn.r")), ("COut", g("Burn.c_out")), ("memo", g("Burn.memo")), ("mac", g("Burn.mac")),
+                ("burn leaf", leaf), ("burnId", burn_id(meta["cid"], x.seq, leaf)), ("holder (private account)", dest[u]),
+                ("sOut", s_out), ("memo pad", pad)] + keys(u)
+
+    return [("deposit hides the LEZ destination", "deposit (A: private destinations)", "deposit", deposit_secrets),
+            ("claim hides which deposit and a private destination", "claim, private (default)", "claim", claim_secrets),
+            ("burn hides the holder and the recipient", "burn, private holding", "burn", burn_secrets),
+            ("release hides which burn", "release, NOut of the release statement", "release", release_secrets)]
+
+
+def hidden_check(steps, G, T, find=find_leak, data_of=everything):
+    """Searches every record of each step for the values its user must hide; counts what was found."""
+    hidden = {}
+    for step, gk, tk, values_of in steps:
+        found, checked = 0, 0
+        for x in G[gk]:
+            data = data_of(x)
+            for label, v in values_of(T[tk][x.seq]):
+                checked += 1
+                form = find(data, v)
+                if form:
+                    found += 1
+                    hidden.setdefault(step + ": FOUND", []).append(f"{x.id}: {label} ({form})")
+        hidden[step] = {"values searched": checked, "found": found}
+    return hidden
+
+
 def main():
     data_dir, out_dir = Path(sys.argv[1]), Path(sys.argv[2])
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -1148,42 +1248,7 @@ def main():
 
     # Section B6's "Hidden" column, checked: each record's whole public data searched for the
     # values that step must hide (the ground truth names them; the adversary never sees it).
-    def everything(x):
-        return b"".join(v for _, v in x.blobs) + b"".join(v for _, v in x.fields)
-
-    dest = [b(u["accounts"]["private"][0]) for u in users]
-    s_of = [prf(prf(b(u["bridge_seed"]), b"ferrata/auth/v1"), b"ferrata/s/v1" + meta["chain"] + meta["vault"] + b(u["depositor"]) + u64(0)) for u in users]
-    dep_by_user = {T["deposit"][x.seq]: dict((norm(n), v) for n, v in x.fields) for x in G["deposit (A: private destinations)"]}
-    burn_by_user = {T["burn"][x.seq]: x for x in G["burn, private holding"]}
-    hidden = {}
-    def check(step, recs, who, values_of):
-        found, checked = 0, 0
-        for x in recs:
-            data = everything(x)
-            for label, v in values_of(who[x.seq]):
-                checked += 1
-                if v in data:
-                    found += 1
-                    hidden.setdefault(step + ": FOUND", []).append(f"{x.id}: {label}")
-        hidden[step] = {"values searched": checked, "found": found}
-    check("deposit hides the LEZ destination", G["deposit (A: private destinations)"], T["deposit"],
-          lambda u: [("destination", dest[u]), ("s", s_of[u])])
-    def claim_secrets(u):
-        d = dep_by_user[u]
-        leaf = deposit_leaf(u, d["event.Deposit.depositor"][12:], d["event.Deposit.token"][12:], d["event.Deposit.amount"], d["event.Deposit.commitment"])
-        return [("destination", dest[u]), ("s", s_of[u]), ("C", d["event.Deposit.commitment"]), ("leaf", leaf),
-                ("fid", fid_of(meta["chain"], meta["vault"], u, leaf)), ("depositor", d["event.Deposit.depositor"][12:])]
-    check("claim hides which deposit and a private destination", G["claim, private (default)"], T["claim"], claim_secrets)
-    check("burn hides the holder and the recipient", G["burn, private holding"], T["burn"],
-          lambda u: [("holder (private account)", dest[u]), ("recipient", b(users[u]["recipient"]))])
-    def release_secrets(u):
-        x = burn_by_user[u]
-        g = lambda k: next(v for n, v in x.fields if n.endswith(k))
-        leaf = burn_leaf(meta["cid"], x.seq, g("Burn.token"), g("Burn.amount"), g("Burn.c_out"), g("Burn.r"))
-        return [("r", g("Burn.r")), ("COut", g("Burn.c_out")), ("memo", g("Burn.memo")), ("mac", g("Burn.mac")),
-                ("burn leaf", leaf), ("burnId", burn_id(meta["cid"], x.seq, leaf))]
-    check("release hides which burn", G["release, NOut of the release statement"], T["release"], release_secrets)
-    results["hidden"] = hidden
+    results["hidden"] = hidden_check(hidden_steps(G, T, users, meta), G, T)
     # Which commitment-set root each private transaction was proven against: the state's root just
     # before it (the newest), or an older one.
     newest, total = 0, 0
