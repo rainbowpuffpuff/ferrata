@@ -7,6 +7,9 @@
 # same wrapper, its id written into tenant.rs's SECOND_BRIDGE; (3) bridge-wire's unit tests; (4) the harness: the F1
 # regression test and the red team's `init` group against both builds, every bridge suite, the privacy suite's LEZ
 # half and the tenant test against the second build; (5) clippy. Steps log to ../tmp/bridge-next2/box/job1/.
+# The red team's redteam_bridge.rs did not compile on main 20af752a (five calls of World::nullifier in the two-argument
+# form the bridge-next merge replaced by nullifier(cid, vault, N)); this commit gives those five calls their
+# configuration (the deployed program's address does not depend on it).
 set -uo pipefail
 W="$PWD"; SP="$(cd "$W/.." && pwd)"; B="$SP/tmp/bridge-next2/box/job1"; mkdir -p "$B"; : > "$B/status.txt"
 R="$B/repro"
@@ -60,11 +63,15 @@ step norun-default bash -c 'cd lez && cargo test -p harness --locked --no-run'
 step norun-next bash -c 'cd lez && cargo test -p harness --locked --features bridge-next --no-run'
 step f1-default bash -c 'cd lez && cargo test -p harness --locked --test bridge_secfix f1_ -- --nocapture'
 step f1-next bash -c 'cd lez && cargo test -p harness --locked --features bridge-next --test bridge_secfix f1_ -- --nocapture'
-sha256sum lez/results/redteam-2026-11-18/redteam_bridge.init.json > "$B/redteam-init.sha256"
+INIT=lez/results/redteam-2026-11-18/redteam_bridge.init.json; NEXT=lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json
+# The deployed record as synced from the commit: the re-run must write the same bytes (mrun copies back only changes).
+H0="$(sha256sum < "$INIT")"
+{ echo "before:"; ls -l --time-style=+%FT%T "$INIT" "$NEXT" 2>&1; sha256sum "$INIT" "$NEXT" 2>&1; } > "$B/redteam-init.txt"
 step redteam-init-default bash -c 'cd lez && cargo test -p harness --locked --test redteam_bridge -- --exact init --nocapture'
 step redteam-init-next bash -c 'cd lez && cargo test -p harness --locked --features bridge-next --test redteam_bridge -- --exact init --nocapture'
-{ ls -l --time-style=+%T lez/results/redteam-2026-11-18/redteam_bridge.init.json lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json
-  sha256sum lez/results/redteam-2026-11-18/redteam_bridge.init.json lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json; } >> "$B/redteam-init.sha256" 2>&1
+{ echo "after:"; ls -l --time-style=+%FT%T "$INIT" "$NEXT" 2>&1; sha256sum "$INIT" "$NEXT" 2>&1
+  if [ "$(sha256sum < "$INIT")" = "$H0" ]; then echo "deployed record rewritten byte for byte as committed"; else echo "deployed record CHANGED"; fi
+} >> "$B/redteam-init.txt"
 step suites-next bash -c 'cd lez && cargo test -p harness --locked --features bridge-next --test bridge_inbound --test bridge_private \
   --test bridge_burn --test bridge_controls --test bridge_vault_storage --test bridge_roles --test bridge_secfix \
   --test bridge_time -- --nocapture'

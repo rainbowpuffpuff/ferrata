@@ -569,7 +569,7 @@ fn clm() {
             want(&mut f, "holder(dest) +denomination", w.balance(payer, &cid) - before.0, D2);
             want(&mut f, "fee recipient +mint fee", w.balance(fee_recipient(), &cid) - before.1, MINT_FEES_1[2]);
             want(&mut f, "R +relay fee", w.balance(relayer(), &cid) - before.2, RELAY_FEES[2]);
-            want(&mut f, "nullifier(chain, V, N)", w.nullifier(&va, &n), Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: D2 }));
+            want(&mut f, "nullifier(chain, V, N)", w.nullifier(&cid, &va, &n), Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: D2 }));
             f
         })
     });
@@ -682,7 +682,7 @@ fn clm() {
         let time = w.time;
         let res = w.chain.prove_and_settle_private(&other, me, borsh::to_vec(&message).unwrap(), publics, &catalog(), RESERVE, time);
         let n = private.nullifier(CHAIN_ID, &va);
-        let note = format!("leaf 5 by private account 0x61, not its destination; nullifier spent after: {}", w.nullifier(&va, &n).is_some());
+        let note = format!("leaf 5 by private account 0x61, not its destination; nullifier spent after: {}", w.nullifier(&cid, &va, &n).is_some());
         private_observed(&w, other.id(), &message, &cid, 8, &res, &note)
     });
     // BR-CLM-19: ClaimPrivately of the private-kind deposit by its destination (dev mode).
@@ -705,7 +705,7 @@ fn clm() {
         let credited = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holding);
         want(&mut f, "dest's own actor credited (its commitment holds 1 ETH)", credited.is_some(), true);
         let n = private.nullifier(CHAIN_ID, &va);
-        want(&mut f, "nullifier written", w.nullifier(&va, &n), Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: D1 }));
+        want(&mut f, "nullifier written", w.nullifier(&cid, &va, &n), Some(NullifierState { config_id: cid, token: ETH, leaf_count: 8, amount: D1 }));
         if f.is_empty() { observed } else { Observed::EffectMismatch { note: f.join("; ") } }
     });
     // BR-CLM-20: ClaimPrivately of the public-kind leaf 6 (dev mode), then its plaintext Claim.
@@ -1096,7 +1096,7 @@ fn int() {
         let at = nullifier_actor(program, CHAIN_ID, &va, &n);
         let ev = vec![PublicAccountEvidence::Pda { program, seed: nullifier_seed(CHAIN_ID, &va, &n) }];
         let rep = w.submit("Spend sent to nullifier(N) by the payer", at, &spend, vec![at, holder_actor(program, payer)], ev);
-        Observed::of_report(&rep, &format!("{outsider}; nullifier spent after: {}", w.nullifier(&va, &n).is_some()))
+        Observed::of_report(&rep, &format!("{outsider}; nullifier spent after: {}", w.nullifier(&cid, &va, &n).is_some()))
     });
     // BR-INT-03: WriteRoot{root of its choice} at root(A, 9).
     r.run("BR-INT-03", || {
@@ -1666,7 +1666,7 @@ fn ten() {
         let vector = w.vector.clone();
         ok(&w.claim("setup: B (rogue) claims A's leaf 2 with its s", &cid_b, 9, &va, fake.witness(&vector, 9)));
         let rep = claim_leaf2(&mut w, "A's Claim of leaf 2");
-        Observed::of_report(&rep, &format!("nullifier(chain, V, N) recorded under configId(B): {}", w.nullifier(&va, &w.vector_n).is_some_and(|s| s.config_id == cid_b)))
+        Observed::of_report(&rep, &format!("nullifier(chain, V, N) recorded under configId(B): {}", w.nullifier(&cid_b, &va, &w.vector_n).is_some_and(|s| s.config_id == cid_b)))
     });
     r.finish(&["bridge"], &["BR-TEN-"]);
 }
