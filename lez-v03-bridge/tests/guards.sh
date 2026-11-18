@@ -67,7 +67,7 @@ tn FERRATA_DEPOSIT_SEED=secret FERRATA_LC_INSTANCE=11 FERRATA_WALLET_HOME=/x FER
 mkcap
 tn FERRATA_TESTNET_SEND=yes FERRATA_DEPOSIT_SEED=secret FERRATA_LC_INSTANCE=11 FERRATA_LC_SLOT=5 FERRATA_CAPTURE="$R/cap" \
   "$T/testnet.sh" run > "$W/out" 2>&1
-ok grep -q "ferrata_ops batch marked=yes" "$SG_LOG"; ok [ -f "$R/batch.queued" ]
+ok grep -q "ferrata_ops batch marked=yes" "$SG_LOG"; ok [ -f "$R/batch.queued" ]; ok grep -q "record written" "$W/out"
 ok [ -f "$T/results/testnet/run.json" ]
 nok grep -q -e '"s"' -e '"dest"' -e '"kind"' -e holder_private -e wallet_home -e /home/ "$T/results/testnet/run.json"
 nok grep -q -e nullifier_ -e holder_private "$T/results/testnet/state.json"

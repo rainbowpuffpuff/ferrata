@@ -82,6 +82,9 @@ What a release leg reads over RPC (`getAccount`), the layout the stand-in attest
 (`lez-v03-return/INTERFACE.md`) takes as its layout file; `bridge03 <run> layout` prints it with a run's ids, and
 `bridge03 <run> burns` the run's `burns.json`.
 
+Unchanged by the review's fixes of 18 Nov 2026 (only the nullifier and holder accounts gained the configuration id,
+above); a new deployment has a new program account and image id (`d75d06ee…`), which the layout file names.
+
 - **Account**: `burns(cid)` = `AccountId::for_public_pda(bridge, H("ferrata-lez/v1/bridge/burns" ‖ cid))`
   (`core::burns_account`); **program shard**: the bridge program's id (where it is deployed).
 - **Shard bytes**: borsh `BridgeState::Burns(BurnTree { config_id, count, frontier })`, 1,069 bytes, fixed:
@@ -157,8 +160,14 @@ home, the configuration id, the deposits' commitments), the vault and its two de
 `testnet.sh run` (refused unless `FERRATA_TESTNET_SEND=yes`): the public steps as **one batch for one block** in
 the format of testnet-ops's queued sender (`bridge03 <run> batch`; `ferrata_ops batch` sends it with explicit nonces
 and tight declared gas: 400,000 for `Init`, 450,000 for `ImportRoot`, 250,000 for the claim, 420,000 for the burn,
-about 1.5 times the measured cycles), then the private claim and the private burn, proven by the wallet; then
-`testnet.sh verify`, which reports a check whose block is not final yet as PENDING. `sepolia.sh` deploys an
+1.84, 1.58, 1.60 and 1.50 times the largest cycles measured, 217,196, 285,133, 156,336 and 280,003), queued once
+(a marker written before it is sent: a re-run never rebuilds or re-queues it; after a rewind `ferrata_ops resend`
+re-sends the same signed bytes), then the private claim and the private burn, proven by the wallet; then
+`testnet.sh verify`, which reports a check whose block is not final yet as PENDING. Off the local network the caller
+must supply a secret `FERRATA_DEPOSIT_SEED` (from a public seed anyone computes every deposit's `s`) and the light
+client's `FERRATA_LC_INSTANCE`, a new wallet needs `FERRATA_WALLET_PASSWORD`, and `results/testnet/` keeps no
+secret-derived value (no `s`, destination, kind, private holder or nullifier account). `tests/guards.sh` checks these
+guards against stubs. `sepolia.sh` deploys an
 inbound-only vault (mode B, RISC Zero's verifier: nothing releases without a real checkpoint proof) and rehearses on
 a fork (`--fork`); for the live run, branch `testnet-return`'s Sepolia vault (with a stand-in checkpoint verifier,
 so that testnet burns can be released) supersedes it; `sepolia.sh` stays as the inbound-only rehearsal.

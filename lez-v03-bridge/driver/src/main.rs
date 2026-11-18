@@ -675,14 +675,16 @@ fn accounts_shard(out: &Value, name: &str) -> Option<Vec<u8>> {
     hex::decode(s).ok()
 }
 
-/// Declared gas limits of the public batch: the cycles measured through LEZ v0.3.1's state machine (results/,
-/// the largest of the synthetic and the real-Sepolia runs) times about 1.5, rounded up. A block admits a
+/// Declared gas limits of the public batch: the largest cycles measured through LEZ v0.3.1's state machine (results/:
+/// the synthetic and the real-Sepolia runs) times 1.50 to 1.84, rounded up. A block admits a
 /// transaction only if the gas charged so far plus its declared limit stays within 10,000,000
 /// (spike/tmp/testnet-ops/FOR-SIBLINGS.md); a refused one is charged its cycles, a panic its whole limit.
-const GAS_INIT: u64 = 400_000; // 140,483 synthetic; 217,175 on Sepolia's real proofs (refused there at the end)
-const GAS_IMPORT: u64 = 450_000; // 173,632 synthetic; 285,125 on Sepolia's real proofs
-const GAS_CLAIM: u64 = 250_000; // 155,685
-const GAS_BURN: u64 = 420_000; // 279,815
+// The largest cycles measured (results/, image d75d06ee…): Init 217,196 (Sepolia's real proofs, the plan's whole check),
+// ImportRoot 285,133 (Sepolia), Claim 156,336 (synthetic), public Burn 280,003 (synthetic): 1.84, 1.58, 1.60, 1.50 times.
+const GAS_INIT: u64 = 400_000;
+const GAS_IMPORT: u64 = 450_000;
+const GAS_CLAIM: u64 = 250_000;
+const GAS_BURN: u64 = 420_000;
 
 /// The public steps of a run as one batch for the queued sender (`ferrata_ops batch`, format of
 /// spike/tmp/testnet-ops/FOR-SIBLINGS.md), all for one block, in order: the bridge's deployment (if not done),

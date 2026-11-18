@@ -1,18 +1,18 @@
 {
   "network": "local anvil, no fork, chain id 31337 (STAND-IN: not finalized by any beacon chain)",
   "block": 10,
-  "block_hash": "0xfb7dbcd70c69b458d878d1730aaa6cbef6ecdd8eaf62c6ef88a1c808ef039fd4",
-  "anvil_block_hash": "0xfb7dbcd70c69b458d878d1730aaa6cbef6ecdd8eaf62c6ef88a1c808ef039fd4",
+  "block_hash": "0x2d02c5fb1506f4b0d2578b40b85ce05b60cf02659ba37a3fe4ca6a3223a7abd7",
+  "anvil_block_hash": "0x2d02c5fb1506f4b0d2578b40b85ce05b60cf02659ba37a3fe4ca6a3223a7abd7",
   "state_root_patched": false,
-  "timestamp": 1794999646,
-  "state_root": "0xff3cd33e2da34c946e00800ffdb832b344f8639e3eaa2bc027c22af75cda34db",
+  "timestamp": 1795003317,
+  "state_root": "0x6273118e309fdc62e17de3035a5a6317ea36ae2fc7250625f2cca4ce65193166",
   "storage": [
     {
       "address": "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
       "slots": [
         {
           "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "value": "0x4664dcd3a8ae9eac625d53ddf6e52a192ec7b6d3d7bea24ed67958624d38821b"
+          "value": "0xaaba01f1e1f56e8428e3a6758ce6231876a02014f2414b7b230f2a3c6256ab38"
         },
         {
           "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -20,7 +20,7 @@
         },
         {
           "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
-          "value": "0xf1059265e28569fe39749b63ee979e987af59cc6ea07d0e8f9536fd555fa7947"
+          "value": "0xe0425791fa84b753ca195de519698244fbfef92049fcbcb8cac071b42f369130"
         }
       ]
     }

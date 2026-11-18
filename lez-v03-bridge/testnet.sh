@@ -239,7 +239,7 @@ record() { # results/<net>/: no key and no wallet; on a non-local network no sec
     [ -f "$run/$f" ] && grep -E "Elapsed|Maximum resident" "$run/$f" > "$results/$f.txt" || true
   done
   # No machine path in a committed file (finding 9): the run's and the repository's directories written relative.
-  grep -rlI -e "$spike/" "$results" 2>/dev/null | while read -r f; do sed -i "s#$spike/#spike/#g" "$f"; done
+  { grep -rlI -e "$spike/" "$results" 2>/dev/null || true; } | while read -r f; do sed -i "s#$spike/#spike/#g" "$f"; done
   log "record written to $results"
 }
 
