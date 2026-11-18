@@ -31,26 +31,43 @@ The audit of every script that talks to a public network (18 tables, call by cal
    block a few slots longer). Permanent: a revert, invalid input or signature, insufficient funds, nonce too low or
    high, an unknown message. Only transient ones are retried: on the next endpoint at once, then after an exponential
    backoff with jitter (x0.5 to x1.5), within a budget: a request 30 s, a read in bash 5 min, a stage 20 min.
-3. **Reads pinned.** forge and cast talk to a local JSON-RPC proxy (`pubnet.py proxy`, started by `pubnet.sh`, one per
-   crown run in `drive.py`). It answers "latest" (and a missing block parameter) with a block `lag` behind the
-   highest head two endpoints report (3 on a public network, 0 locally), never below the block of the sender's last
-   mined transaction and never below an earlier pin. A read at an explicit block is either right or refused by a node
-   that does not have it, which then fails over; so every answer a client gets describes one block, and forge's
-   simulation runs on that block. That is safe because the plan is checked against the head before anything is sent
-   (4): if a transaction of the sender came after the pinned block, the nonce check refuses the send (nothing leaves)
-   and the stage plans again. Time checks become conservative: a block 36 s old has an earlier timestamp.
-4. **Before a raw transaction leaves**: its nonce must equal the sender's latest and its pending nonce on two
-   endpoints (a node that shows an older nonce is behind and ignored; a pending one above the latest means a
-   transaction in flight: wait); the balance must cover value + gas x max fee; no earlier transaction of the journal
-   may be without a known fate. Then the signed bytes and their hash are appended to `<run>/net/journal.jsonl` and
-   fsynced, and only then broadcast to every endpoint (the same bytes are one transaction however many nodes receive
-   them; "already known" counts as accepted). Receipts are asked of every endpoint; the first one found wins.
-5. **Fates before anything else.** `pubnet.py resolve` finds each journaled transaction's fate: mined (with its
-   status), replaced (its nonce used by another transaction and no receipt anywhere for 60 s), or rejected by every
-   endpoint; until then the same bytes are broadcast again. `pubnet_stage` resolves before a stage's first run and
-   after every run, and runs a failed one again only for a transient reason; a stage that may have broadcast never
-   sends again before it has found that transaction's fate. A mined transaction that reverted, a replaced or a
-   rejected one stops every later send until an operator has looked (`pubnet.py ack --journal F --hash H`).
+3. **Reads pinned, and agreed by two endpoints.** forge and cast talk to a local JSON-RPC proxy (`pubnet.py proxy`,
+   started by `pubnet.sh`, one per crown run in `drive.py`). Every read at "latest", "pending" or no block is
+   answered at the *pin*, recomputed at most every `PUBNET_PIN_TTL_S` (12 s; at once after a receipt of the sender):
+   max(agreed head − `lag`, the fence, the previous pin). The *agreed head* is the highest block two endpoints report
+   (the second-highest of their heads: one endpoint's claim alone never moves it); `lag` is 3 on a public network,
+   0 locally; the *fence* is the block of the sender's last mined transaction in the journal. A transaction of the
+   sender's sent around the proxy is seen at the next re-pin (the pin then moves to the head if the sender's nonce is
+   higher there); a plan made before that is refused at the send (4). Every read that a plan or a check decides on
+   — `eth_call`, `eth_getStorageAt`, `eth_getCode`, `eth_getBalance`, `eth_getTransactionCount`, `eth_getProof`,
+   `eth_estimateGas`, a block by number — must be given **alike by two endpoints at the same explicit block** (the
+   pin, or the block the client names: forge forks at the pin); an endpoint without that block, or with another
+   answer, is not used, and if no two agree the read fails (transient) and nothing is decided on it. Gas estimates
+   may differ a little between clients: two within 25 % agree and the larger is used. A receipt counts only when two
+   endpoints give it with the same block hash, number and status. So one stale, lagging or lying endpoint can delay a
+   stage but not steer it (the independent review's attacks c1-c3, c9: `netfault/attacks/`). Only a single
+   configured endpoint (a local chain) is trusted alone. Time checks are conservative: a block 36 s old has an
+   earlier timestamp.
+4. **Before a raw transaction leaves** (the proxy, `send_raw`): it must be signed by the sender (the signer is
+   recovered from the signature); every endpoint is asked for the sender's latest and pending nonce, and the highest
+   value any of them reports must be both on two endpoints, and equal to the transaction's nonce (a lower value on an
+   endpoint is a node behind, outvoted; a higher one on one endpoint alone, or pending above latest, is waited out);
+   the balance at the pin, agreed by two endpoints, must cover value + gas x max fee; no journaled transaction may be
+   without a known fate, and none reverted, replaced or rejected without an operator's `pubnet.py ack`; and no
+   journaled transaction mined with status 1 may have the same `to`, value and calldata (the same step again: a plan
+   that read a stale state; DeployVault's creation steps have no on-chain guard against that). Then the signed bytes
+   and their hash are appended to `<run>/net/journal.jsonl` and fsynced, and only then broadcast to every endpoint at
+   once (the same bytes are one transaction however many nodes receive them; "already known" counts as accepted).
+   While a client waits for the receipt, the bytes go out again every `PUBNET_REBROADCAST_S` (30 s).
+5. **Fates before anything else.** `pubnet.py resolve` finds each journaled transaction's fate: mined (a receipt two
+   endpoints give alike), replaced (its nonce, agreed by two endpoints at the agreed head, used by another
+   transaction, and no agreed receipt for `PUBNET_REPLACED_AFTER_S`, 60 s), or rejected (every endpoint answered the
+   broadcast with an error and no endpoint has the transaction, mined or in a pool; one found in a pool stays open);
+   until then the same bytes are broadcast again. A rejected or replaced one is looked up once more before it is
+   reported. Where it is enforced: the proxy refuses a send while a fate is unknown or bad (4); `pubnet_stage`
+   resolves before a stage's first run and after every run, runs a failed one again only for a transient reason, and
+   stops (1) on a bad fate; `e2e/crown/sepolia.sh` does not run a single-transaction stage again when the journal
+   holds its mined transaction. An operator clears a bad fate with `pubnet.py ack --journal F --hash H`.
 6. **Exit status** of `e2e/crown/sepolia.sh` and `vault/script/deploy.sh`: 0 done; 1 permanent (a human looks);
    75 transient with nothing in flight (the budget spent, or a fate still unknown).
 7. **The runner** (`e2e/crown/cloud/drive.py`) resumes a transient stop (75, or a read that failed transiently) by
@@ -138,3 +155,7 @@ header and the light-client finality update.
   is journaled when the node returns it.
 - The journal holds the signed bytes of every transaction: public once broadcast; one that never left could still be
   broadcast by whoever holds the file, at its nonce, which is exactly the "fate unknown" state the scripts wait out.
+- Two endpoints that lie alike (the same wrong state, or both one transaction behind) outvote the truth. Then the
+  send checks (a used nonce or a repeated call is refused, a stale nonce agreed by two is never above the chain's)
+  and the journal still stop a second send, but a stage may stop instead of going on. With two endpoints in all, one
+  liar stops the stage (no two agree) rather than steering it.

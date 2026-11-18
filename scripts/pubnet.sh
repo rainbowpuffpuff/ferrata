@@ -22,9 +22,21 @@ PUBNET_PID=""
 
 _pubnet_say() { echo "[$(date -u +%FT%TZ)] pubnet: $*" >&2; }
 
+# pubnet_alive [url]: a proxy answers there (pubnet_status, answered without the network) and it is the proxy of
+# this run's journal ($PUBNET_DIR), not some other run's.
 pubnet_alive() {
-  [ -n "${PUBNET_URL:-}" ] && curl -s -m 5 -o /dev/null -H 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","id":1,"method":"eth_chainId","params":[]}' "$PUBNET_URL/alive"
+  local url="${1:-${PUBNET_URL:-}}" j
+  [ -n "$url" ] || return 1
+  j="$(curl -s -m 5 -H 'Content-Type: application/json' \
+    --data '{"jsonrpc":"2.0","id":1,"method":"pubnet_status","params":[]}' "$url/alive" | jq -r '.result.journal // empty' 2>/dev/null)"
+  [ -n "$j" ] && { [ -z "${PUBNET_DIR:-}" ] || [ "$j" = "$(cd "$PUBNET_DIR" 2>/dev/null && pwd -P)/journal.jsonl" ] || [ "$j" = "$(cd "$PUBNET_DIR" 2>/dev/null && pwd)/journal.jsonl" ]; }
+}
+
+# The number of transactions the journal holds (0 when there is no journal yet).
+pubnet_sent() {
+  local n=0
+  [ -f "$PUBNET_DIR/journal.jsonl" ] && n="$(grep -c '"event": "signed"' "$PUBNET_DIR/journal.jsonl" || true)"
+  echo "${n:-0}"
 }
 
 pubnet_up() {
@@ -33,6 +45,11 @@ pubnet_up() {
   export PUBNET_FIRST="${PUBNET_FIRST:-$first}"
   if [ -n "${PUBNET_URL:-}" ] && pubnet_alive; then return 0; fi
   mkdir -p "$PUBNET_DIR"
+  # A proxy of this journal already running (a caller's whose URL was not passed down): use it, never take its port.
+  if [ -s "$PUBNET_DIR/port" ] && pubnet_alive "http://127.0.0.1:$(cat "$PUBNET_DIR/port")"; then
+    export PUBNET_URL="http://127.0.0.1:$(cat "$PUBNET_DIR/port")"
+    return 0
+  fi
   rm -f "$PUBNET_DIR/port"
   local args=(proxy --network "$network" --journal "$PUBNET_DIR/journal.jsonl" --port-file "$PUBNET_DIR/port")
   [ -n "$PUBNET_SENDER" ] && args+=(--sender "$PUBNET_SENDER")
@@ -43,7 +60,14 @@ pubnet_up() {
   PUBNET_PID=$!
   for k in $(seq 1 150); do
     [ -s "$PUBNET_DIR/port" ] && break
-    kill -0 "$PUBNET_PID" 2>/dev/null || { tail -n 5 "$PUBNET_DIR/proxy.log" >&2; return 1; }
+    if ! kill -0 "$PUBNET_PID" 2>/dev/null; then
+      tail -n 5 "$PUBNET_DIR/proxy.log" >&2
+      # another proxy holds the journal (it started meanwhile): use that one
+      if [ -s "$PUBNET_DIR/port" ] && pubnet_alive "http://127.0.0.1:$(cat "$PUBNET_DIR/port")"; then
+        PUBNET_PID=""; export PUBNET_URL="http://127.0.0.1:$(cat "$PUBNET_DIR/port")"; return 0
+      fi
+      return 1
+    fi
     sleep 0.2
   done
   [ -s "$PUBNET_DIR/port" ] || { _pubnet_say "the proxy did not start"; return 1; }
@@ -76,7 +100,7 @@ pubnet_stage() {
       pubnet_up "$PUBNET_NETWORK" "$PUBNET_DIR" "$PUBNET_SENDER" "$PUBNET_FIRST" || return 75
     fi
     since="$(date +%s.%N)"
-    local sent0; sent0="$(grep -c '"event": "signed"' "$PUBNET_DIR/journal.jsonl" 2>/dev/null || true)"
+    local sent0; sent0="$(pubnet_sent)"
     rc=0
     # A run that hangs (forge waiting for a receipt no node will give) is ended after PUBNET_ATTEMPT_TIMEOUT_S: what
     # it sent is in the journal, and its fate is found below before anything else.
@@ -88,7 +112,7 @@ pubnet_stage() {
     if [ "$rc" = 124 ] || [ "$rc" = 137 ]; then cls=transient; echo "pubnet: the run took longer than ${PUBNET_ATTEMPT_TIMEOUT_S:-900} s and was ended" >> "$log"; fi
     # The run sent, and every fate is now known and good (resolve above): whatever it failed on afterwards (a receipt
     # it gave up waiting for, a read), the next run plans on the chain as it now is.
-    if [ "$(grep -c '"event": "signed"' "$PUBNET_DIR/journal.jsonl" 2>/dev/null || true)" != "${sent0:-0}" ]; then cls=transient; fi
+    if [ "$(pubnet_sent)" != "$sent0" ]; then cls=transient; fi
     tail -n 12 "$log" | sed -e "s,${PUBNET_FIRST:-@@none@@},<endpoint>,g" >&2
     if [ "$cls" != transient ]; then
       _pubnet_say "the run failed for a permanent reason (log $log); nothing more is sent"

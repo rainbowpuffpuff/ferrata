@@ -66,6 +66,17 @@ record() {
 crown() { # crown <signature> [args]: one transaction of Crown.s.sol (state-checked: a step already on chain is skipped)
   local sig="$1"; shift
   local name="${sig%%(*}${1:+-$1}" rc=0
+  # The fate of everything sent so far first; then, one transaction per stage: if the journal holds this stage's
+  # mined transaction, the stage is done whatever an endpoint answers now (PUBNET_NO_JOURNAL_SKIP=1, for tests only:
+  # plan again, on the reads alone).
+  pubnet_resolve || { rc=$?; [ "$rc" = 3 ] && die "$name: an earlier transaction did not succeed (above): a human looks, then pubnet.py ack"
+    die_transient "$name: an earlier transaction's fate is still unknown"; }
+  if [ "${PUBNET_NO_JOURNAL_SKIP:-}" != 1 ] && [ "$(python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" \
+      --stage "$name")" != '[]' ]; then
+    say "$name: the journal holds this stage's mined transaction; not run again"
+    record "$name"
+    return 0
+  fi
   pubnet_stage "$run/logs/$name.log" env -u ETH_FROM FERRATA_CROWN="$run/crown.json" bash -c 'cd "$0/vault" && exec "$@"' \
       "$here" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" --rpc-url "$PUBNET_URL/$name" --sender "$ETH_FROM" \
       "${signer[@]}" --broadcast --skip-simulation --slow --gas-estimate-multiplier "$margin" || rc=$?

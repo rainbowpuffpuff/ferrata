@@ -10,16 +10,20 @@ proxy it runs for forge and cast, does five things about it:
   2. every error classified transient (lag, 429, 5xx, timeouts, connections) or permanent (revert, invalid, funds);
      only transient ones are retried: on the next endpoint, then after an exponential backoff with jitter, within a
      time budget (a request ~30 s; a stage, in pubnet.sh, 20 min);
-  3. reads at "latest" pinned to a block `lag` behind the highest head seen, and never below the block of the sender's
-     last mined transaction; a read at an explicit block is either right or fails (a node without the block says so),
-     so every answer a client gets describes one block. forge's simulation then runs on that block. That is safe
-     because a send is checked again against the chain's head before it leaves (4);
-  4. before a raw transaction leaves: its nonce equal to the sender's latest and pending nonce on two endpoints, the
-     balance enough for value + gas x max fee, no earlier transaction of the journal without a known fate; the signed
-     bytes and their hash written (fsync) to the journal BEFORE the first broadcast; then broadcast to every endpoint
-     (the same bytes are one transaction however often they arrive); receipts asked of every endpoint;
+  3. reads at "latest" answered at a pin: the agreed head (the highest block two endpoints report) minus `lag`,
+     never below the fence (the block of the sender's last mined transaction in the journal), recomputed at most
+     every PUBNET_PIN_TTL_S; every read a plan or check decides on (calls, storage, code, balances, nonces, proofs,
+     gas estimates, blocks) given alike by two endpoints at the same explicit block, or refused (transient); a
+     receipt counts only when two endpoints give it alike. One stale, lagging or lying endpoint can delay but not
+     steer (e2e/netfault/attacks);
+  4. before a raw transaction leaves: signed by the sender; its nonce the highest any endpoint reports, on two
+     endpoints as both latest and pending; the balance (two endpoints alike) enough for value + gas x max fee; no
+     journaled transaction without a known fate or with a bad one not acknowledged; no journaled mined transaction
+     with the same to, value and calldata (the same step again); the signed bytes and their hash written (fsync) to
+     the journal BEFORE the first broadcast; then broadcast to every endpoint at once, and again while a receipt is
+     awaited;
   5. a transaction whose fate is unknown blocks every later send until it is found mined, replaced or rejected
-     (`resolve`), so a stopped and resumed stage never sends twice.
+     (`resolve`), so a stopped and resumed stage never sends twice; a bad fate blocks them until `ack`.
 
 CLI:
   pubnet.py endpoints <network> [rpc|beacon]          the list, in order
@@ -302,12 +306,101 @@ class Net:
             return self.call(method, params)
         return None
 
+    def need(self) -> int:
+        """How many endpoints must give the same answer: 2, or 1 when only one is configured (a local chain)."""
+        return 1 if len(self.urls) == 1 else 2
+
+    def quorum(self, method: str, params: list, *, key=None, near=None, null_is_missing: bool = False,
+               budget: float | None = None):
+        """The answer `need` endpoints give alike to the same request (with its explicit block): one stale, lagging or
+        lying endpoint is outvoted, or, when no two agree, the request fails (transient) and nothing is decided on it.
+        A node's own refusal (a revert) is an answer too: two alike are raised as it. key(result): what is compared
+        (default the whole result); near(a, b): for numbers that may differ a little between clients (gas estimates),
+        two near ones agree and the larger is returned."""
+        need = self.need()
+        deadline = time.monotonic() + (budget or self.budget)
+        attempt = 0
+        while True:
+            oks: list[tuple[str, object]] = []
+            errs: dict[str, list] = {}
+            seen = []
+            for url in self.order():
+                try:
+                    r = _rpc_once(url, method, params, self.timeout)
+                    self.served(url)
+                except Transient as e:
+                    self.failed(url)
+                    seen.append(f"{label(url)}: {str(e)[len(label(url)) + 2:][:60]}")
+                    continue
+                except Permanent as e:
+                    err = getattr(e, "rpc_error", None)
+                    if not isinstance(err, dict):  # this endpoint refused the request itself (HTTP 4xx): not an answer
+                        self.failed(url)
+                        seen.append(f"{label(url)}: {str(e)[len(label(url)) + 2:][:60]}")
+                        continue
+                    k = str(err.get("data") or err.get("message") or "")[:200].lower()
+                    errs.setdefault(k, []).append(e)
+                    seen.append(f"{label(url)}: refused {k[:40]}")
+                    if len(errs[k]) >= need:
+                        raise errs[k][0]
+                    continue
+                if r is None and null_is_missing:
+                    seen.append(f"{label(url)}: null")
+                    continue
+                v = key(r) if key else r
+                seen.append(f"{label(url)}: {json.dumps(v)[:40]}")
+                if near is not None:
+                    match = [(u, o) for u, o in oks if near(o, r)]
+                    if len(match) + 1 >= need:
+                        return max([r] + [o for _, o in match], key=lambda x: int(x, 16))
+                elif len([1 for _, o in oks if (key(o) if key else o) == v]) + 1 >= need:
+                    return r
+                oks.append((url, r))
+            attempt += 1
+            pause = backoff(attempt, base=1.0, cap=8.0)
+            if time.monotonic() + pause > deadline:
+                raise Transient(f"pubnet: transient: {method}: no {need} endpoints give the same answer"
+                                f" ({'; '.join(seen[-6:])})")
+            time.sleep(pause)
+
     def head(self) -> int:
-        """The highest head of up to two endpoints (a lagging one reports less, never more)."""
-        heads = [int(r, 16) for _, r in self.each("eth_blockNumber", [], n=2)]
-        if not heads:
-            return int(self.call("eth_blockNumber", []), 16)
-        return max(heads)
+        """The agreed head: the highest block at least `need` endpoints report having (the need-th highest of their
+        heads). One endpoint's claim alone never moves it; a lagging one reports less."""
+        deadline = time.monotonic() + self.budget
+        attempt = 0
+        while True:
+            heads = sorted((int(r, 16) for _, r in self.each("eth_blockNumber", [])), reverse=True)
+            if len(heads) >= self.need():
+                return heads[self.need() - 1]
+            attempt += 1
+            pause = backoff(attempt, base=1.0, cap=8.0)
+            if time.monotonic() + pause > deadline:
+                raise Transient(f"pubnet: transient: eth_blockNumber: fewer than {self.need()} endpoints answer")
+            time.sleep(pause)
+
+    def receipt(self, h: str):
+        """The receipt of h as `need` endpoints give it (the same block hash, number and status); None while no two
+        agree (not mined, lagging nodes, or one endpoint inventing it). Transient if no endpoint answered."""
+        found: dict[tuple, list] = {}
+        answered = False
+        for url in self.order():
+            try:
+                r = _rpc_once(url, "eth_getTransactionReceipt", [h], self.timeout)
+                self.served(url)
+            except (Transient, Permanent) as e:
+                self.failed(url)
+                self.log(f"receipt {h[:12]}: {e}")
+                continue
+            answered = True
+            if not r:
+                continue
+            k = (r.get("blockHash"), r.get("blockNumber"), r.get("status"))
+            found.setdefault(k, []).append(r)
+            if len(found[k]) >= self.need():
+                return found[k][0]
+        if not answered:
+            raise Transient(f"pubnet: transient: eth_getTransactionReceipt: no endpoint answered")
+        return None
 
     def beacon(self, path: str, ssz: bool = False, urls: list[str] | None = None,
                budget: float | None = None) -> tuple[bytes, dict, str]:
@@ -432,26 +525,94 @@ def rlp_decode(b: bytes, i: int = 0):
     return out, s + n
 
 
+def rlp_encode(x) -> bytes:
+    def length(n: int, off: int) -> bytes:
+        if n < 56:
+            return bytes([off + n])
+        b = n.to_bytes((n.bit_length() + 7) // 8, "big")
+        return bytes([off + 55 + len(b)]) + b
+    if isinstance(x, (bytes, bytearray)):
+        return bytes(x) if len(x) == 1 and x[0] < 0x80 else length(len(x), 0x80) + bytes(x)
+    out = b"".join(rlp_encode(i) for i in x)
+    return length(len(out), 0xc0) + out
+
+
+# secp256k1, for the signer of a raw transaction (affine arithmetic: a few milliseconds per recovery)
+_P = 2 ** 256 - 2 ** 32 - 977
+_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+_G = (0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798,
+      0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8)
+
+
+def _ec_add(a, b):
+    if a is None:
+        return b
+    if b is None:
+        return a
+    if a[0] == b[0] and (a[1] + b[1]) % _P == 0:
+        return None
+    if a == b:
+        m = 3 * a[0] * a[0] * pow(2 * a[1], -1, _P) % _P
+    else:
+        m = (b[1] - a[1]) * pow(b[0] - a[0], -1, _P) % _P
+    x = (m * m - a[0] - b[0]) % _P
+    return x, (m * (a[0] - x) - a[1]) % _P
+
+
+def _ec_mul(k: int, pt):
+    out = None
+    while k:
+        if k & 1:
+            out = _ec_add(out, pt)
+        pt = _ec_add(pt, pt)
+        k >>= 1
+    return out
+
+
+def recover_address(z: int, r: int, s: int, parity: int) -> str:
+    """The address whose key signed the hash z with (r, s, y parity)."""
+    if not (0 < r < _N and 0 < s < _N):
+        raise Permanent("pubnet: permanent: an invalid signature")
+    y = pow((r * r * r + 7) % _P, (_P + 1) // 4, _P)
+    if y % 2 != parity:
+        y = _P - y
+    rinv = pow(r, -1, _N)
+    q = _ec_add(_ec_mul(s * rinv % _N, (r, y)), _ec_mul((-z * rinv) % _N, _G))
+    if q is None:
+        raise Permanent("pubnet: permanent: an invalid signature")
+    return "0x" + keccak256(q[0].to_bytes(32, "big") + q[1].to_bytes(32, "big"))[12:].hex()
+
+
 def decode_tx(raw: bytes) -> dict:
-    """nonce, gas, maxFee (gas price for legacy), value, chainId, to, type and hash of a signed transaction."""
+    """nonce, gas, maxFee (gas price for legacy), value, chainId, to, a hash of the data, type, hash and signer
+    (recovered from the signature) of a signed transaction."""
     u = lambda x: int.from_bytes(x, "big")  # noqa: E731
     if raw[0] >= 0xc0:
         f, _ = rlp_decode(raw)
         v = u(f[6])
+        if v >= 35:
+            cid, parity = (v - 35) // 2, (v - 35) % 2
+            z = keccak256(rlp_encode(f[:6] + [cid.to_bytes((cid.bit_length() + 7) // 8, "big"), b"", b""]))
+        else:
+            cid, parity = None, v - 27
+            z = keccak256(rlp_encode(f[:6]))
         return {"type": 0, "nonce": u(f[0]), "maxFee": u(f[1]), "gas": u(f[2]), "to": "0x" + f[3].hex(),
-                "value": u(f[4]), "chainId": (v - 35) // 2 if v >= 35 else None, "hash": "0x" + keccak256(raw).hex()}
+                "value": u(f[4]), "datahash": "0x" + keccak256(f[5]).hex(), "chainId": cid,
+                "hash": "0x" + keccak256(raw).hex(), "from": recover_address(u(z), u(f[7]), u(f[8]), parity)}
     t = raw[0]
     f, _ = rlp_decode(raw, 1)
     if t == 3 and isinstance(f[0], list):
         raise Permanent("pubnet: permanent: blob transactions in network form are not handled")
     if t == 1:
-        cid, nonce, fee, gas, to, value = f[0], f[1], f[2], f[3], f[4], f[5]
+        cid, nonce, fee, gas, to, value, data = f[0], f[1], f[2], f[3], f[4], f[5], f[6]
     elif t in (2, 3, 4):
-        cid, nonce, fee, gas, to, value = f[0], f[1], f[3], f[4], f[5], f[6]
+        cid, nonce, fee, gas, to, value, data = f[0], f[1], f[3], f[4], f[5], f[6], f[7]
     else:
         raise Permanent(f"pubnet: permanent: transaction type {t} is not handled")
+    z = keccak256(bytes([t]) + rlp_encode(f[:-3]))
     return {"type": t, "nonce": u(nonce), "maxFee": u(fee), "gas": u(gas), "to": "0x" + to.hex(), "value": u(value),
-            "chainId": u(cid), "hash": "0x" + keccak256(raw).hex()}
+            "datahash": "0x" + keccak256(data).hex(), "chainId": u(cid), "hash": "0x" + keccak256(raw).hex(),
+            "from": recover_address(u(z), u(f[-2]), u(f[-1]), u(f[-3]))}
 
 
 # ---- the journal ----------------------------------------------------------------------------------------------------
@@ -467,6 +628,7 @@ class Journal:
         self.path = path
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         self.lock = threading.Lock()
+        self._cache = (None, {})
 
     def append(self, rec: dict) -> None:
         rec = {"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), **rec}
@@ -480,10 +642,14 @@ class Journal:
                 os.close(fd)
 
     def txs(self) -> dict:
-        """hash -> folded record (the signed line's fields, the last fate)."""
+        """hash -> folded record (the signed line's fields, the last fate). Cached while the file is unchanged."""
+        try:
+            st = os.stat(self.path)
+        except FileNotFoundError:
+            return {}
+        if self._cache[0] == (st.st_mtime_ns, st.st_size):
+            return {h: dict(v) for h, v in self._cache[1].items()}
         out: dict[str, dict] = {}
-        if not os.path.isfile(self.path):
-            return out
         with open(self.path) as f:
             for line in f:
                 line = line.strip()
@@ -498,23 +664,38 @@ class Journal:
                     continue
                 cur = out.setdefault(h, {"hash": h, "state": "signed"})
                 if r.get("event") == "signed":
-                    cur.update({k: r[k] for k in ("raw", "nonce", "from", "stage", "at", "unlocked") if k in r})
+                    cur.update({k: r[k] for k in ("raw", "nonce", "from", "stage", "at", "unlocked", "value",
+                                                  "datahash", "to") if k in r})
+                    if "raw" in r and "datahash" not in r:  # a line written before the step identity was recorded
+                        try:
+                            d = decode_tx(bytes.fromhex(r["raw"][2:]))
+                            cur.update(to=d["to"], value=d["value"], datahash=d["datahash"])
+                        except Exception:  # noqa: BLE001 - an unreadable old line just has no step identity
+                            pass
                 elif r.get("event") == "broadcast":
                     cur["state"] = cur["state"] if cur["state"] in FINAL else "broadcast"
                     cur["accepted_by"] = r.get("accepted_by", [])
                 elif r.get("event") == "fate":
-                    cur.update(state=r["fate"], **{k: r[k] for k in ("status", "block", "gasUsed", "to",
+                    cur.update(state=r["fate"], **{k: r[k] for k in ("status", "block", "blockHash", "gasUsed",
                                                                          "contractAddress", "why") if k in r})
                 elif r.get("event") == "ack":  # an operator looked at a bad or unknown fate (pubnet.py ack)
                     cur["acked"] = r.get("why", "")
                     if cur["state"] not in FINAL:
                         cur["state"] = "acked"
-        return out
+        self._cache = ((st.st_mtime_ns, st.st_size), out)
+        return {h: dict(v) for h, v in out.items()}
 
     def open_txs(self) -> list[dict]:
         return [t for t in self.txs().values() if t["state"] not in FINAL]
 
+    def bad_txs(self) -> list[dict]:
+        """Reverted, replaced or rejected, and not acknowledged by an operator (pubnet.py ack)."""
+        return [t for t in self.txs().values() if t["state"] in FINAL and t["state"] != "acked" and not t.get("acked")
+                and (t["state"] != "mined" or t.get("status") not in ("0x1", 1))]
+
     def floor(self) -> int:
+        """The fence: the block of the sender's last mined transaction (each fate from a receipt two endpoints gave
+        alike)."""
         return max([t.get("block", 0) for t in self.txs().values() if t["state"] == "mined"] or [0])
 
 
@@ -522,17 +703,21 @@ def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
     """One look at a journaled transaction's fate; records it once known. Returns its state."""
     h = t["hash"]
     try:
-        rc = net.anywhere("eth_getTransactionReceipt", [h])
+        rc = net.receipt(h)  # two endpoints alike (block hash, number, status): one invented receipt is not a fate
     except Transient:
         rc = None
     if rc:
         j.append({"event": "fate", "hash": h, "fate": "mined", "status": rc.get("status"),
-                  "block": int(rc["blockNumber"], 16), "gasUsed": rc.get("gasUsed"), "to": rc.get("to"),
+                  "block": int(rc["blockNumber"], 16), "blockHash": rc.get("blockHash"), "gasUsed": rc.get("gasUsed"),
                   "contractAddress": rc.get("contractAddress")})
         log(f"{h}: mined in block {int(rc['blockNumber'], 16)}, status {rc.get('status')}")
         return "mined"
-    nonces = [int(r, 16) for _, r in net.each("eth_getTransactionCount", [sender, "latest"])]
-    if t.get("nonce") is not None and nonces and max(nonces) > t["nonce"]:
+    try:  # the nonce as two endpoints agree at the agreed head: one endpoint cannot declare the transaction replaced
+        n_head = int(net.quorum("eth_getTransactionCount", [sender, hex(net.head())]), 16)
+    except Transient:
+        n_head = None
+    if t.get("nonce") is not None and n_head is not None and n_head > t["nonce"]:
+        nonces = [n_head]
         # The nonce is used. Ours, on a node that has no receipt yet, or another transaction with the same nonce:
         # only after PUBNET_REPLACED_AFTER_S (60 s) of looks with no receipt anywhere is it taken as replaced.
         since = t.setdefault("_nonce_used_since", time.monotonic())
@@ -575,8 +760,18 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> 
                 + ", ".join(t["hash"] for t in j.open_txs()))
             return TEMPFAIL
         time.sleep(pause)
-    bad = [t for t in j.txs().values()
-           if not t.get("acked") and (t["state"] != "mined" or t.get("status") not in ("0x1", 1))]
+    for t in j.bad_txs():  # a rejected or replaced one that a pool kept after all: look for its receipt once more
+        if t["state"] in ("rejected", "replaced"):
+            try:
+                rc = net.receipt(t["hash"])
+            except Transient:
+                rc = None
+            if rc:
+                j.append({"event": "fate", "hash": t["hash"], "fate": "mined", "status": rc.get("status"),
+                          "block": int(rc["blockNumber"], 16), "blockHash": rc.get("blockHash"),
+                          "gasUsed": rc.get("gasUsed"), "contractAddress": rc.get("contractAddress")})
+                log(f"{t['hash']}: was {t['state']}, found mined in block {int(rc['blockNumber'], 16)}")
+    bad = j.bad_txs()
     for t in bad:
         log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}): {t['state']}, status {t.get('status')}"
             f" {t.get('why', '')}; once checked by a human: pubnet.py ack --journal {j.path} --hash {t['hash']}")
@@ -603,7 +798,6 @@ class Proxy:
         self.chain = None
         self.journal = Journal(a.journal)
         self.events = os.path.join(os.path.dirname(os.path.abspath(a.journal)), "events.jsonl")
-        self.floor = self.journal.floor()
         self._pin, self._pin_t = None, 0.0
         self.check_chains(chain_id(a.network) if not self.all_loopback else None)
         self.pin_lock, self.send_lock = threading.Lock(), threading.Lock()
@@ -648,32 +842,52 @@ class Proxy:
 
     # -- the pinned block --
     def pin(self) -> int:
+        """The block every read at latest/pending/no block is answered at, recomputed every PUBNET_PIN_TTL_S (and at
+        once after a receipt of the sender): max(agreed head - lag, the fence, the previous pin). The agreed head is
+        the highest block two endpoints report; the fence is the block of the sender's last mined transaction in the
+        journal (each from a receipt two endpoints gave alike). If the sender's nonce (two endpoints alike) is higher at
+        the head than at that block, a transaction of its came later (sent around the proxy): the pin is the head."""
         with self.pin_lock:
             if self._pin is not None and time.monotonic() - self._pin_t < self.pin_ttl:
                 return self._pin
             head = self.net.head()
-            self.floor = max(self.floor, self.journal.floor())  # fates `resolve` recorded since
-            p = max(head - self.lag, self.floor, self._pin or 0)
+            fence = self.journal.floor()
+            if fence > head + 64:  # no block two endpoints have: a journal from before receipts needed two endpoints
+                self.log(f"pin: the journal's fence {fence} is far above the agreed head {head}: not used")
+                fence = 0
+            prev = self._pin if self._pin is not None and self._pin <= head + 64 else 0
+            p = max(head - self.lag, fence, prev)
             if self.sender and p < head:
-                # The sender's nonce at p must be its nonce at the head: else one of its transactions came after p
-                # (sent by hand, or before this proxy started) and a client would plan on a state without it.
-                at_p = int(self.net.call("eth_getTransactionCount", [self.sender, hex(p)], must=True), 16)
-                at_h = max([int(r, 16) for _, r in self.net.each("eth_getTransactionCount", [self.sender, "latest"], 2)]
-                           or [at_p])
+                at_p = int(self.net.quorum("eth_getTransactionCount", [self.sender, hex(p)]), 16)
+                at_h = int(self.net.quorum("eth_getTransactionCount", [self.sender, hex(head)]), 16)
                 if at_h > at_p:
                     self.log(f"pin: the sender's nonce is {at_h} at the head, {at_p} at {p}: pin = head {head}")
                     p = head
             if p != self._pin:
-                self.event(kind="pin", block=p, head=head)
+                self.event(kind="pin", block=p, head=head, fence=fence)
             self._pin, self._pin_t = p, time.monotonic()
             return p
 
     def bump(self, block: int) -> None:
+        """A receipt of the sender's that two endpoints gave alike: reads from now on see its effects."""
         with self.pin_lock:
-            if block > self.floor:
-                self.floor = block
             if self._pin is None or block > self._pin:
                 self._pin, self._pin_t = block, time.monotonic()
+
+    def state_read(self, method: str, params: list):
+        """A read a plan or a check decides on: at an explicit block (the pin for latest/pending/none), the same
+        answer from two endpoints (pubnet.Net.quorum); an endpoint without the block, or with another answer, is not
+        used. Gas estimates may differ a little between clients: two within 25 % agree, the larger is returned."""
+        k = STATE_READS[method]
+        p = params + [None] * (k + 1 - len(params)) if len(params) <= k else list(params)
+        if p[k] in (None, "latest", "pending"):
+            p[k] = hex(self.pin())
+        elif isinstance(p[k], dict) and p[k].get("blockNumber") in ("latest", "pending"):
+            p[k] = {"blockNumber": hex(self.pin())}
+        near = None
+        if method == "eth_estimateGas":
+            near = lambda a, b: max(int(a, 16), int(b, 16)) <= 1.25 * min(int(a, 16), int(b, 16))  # noqa: E731
+        return self.net.quorum(method, p, near=near)
 
     # -- requests --
     def handle(self, req: dict, stage: str) -> dict:
@@ -691,6 +905,9 @@ class Proxy:
             return {"jsonrpc": "2.0", "id": rid, "error": {"code": -32000, "message": f"pubnet: permanent: {e}"}}
 
     def dispatch(self, method: str, params: list, stage: str):
+        if method == "pubnet_status":  # answered here, without the network: is this the proxy of that journal?
+            return {"journal": os.path.abspath(self.journal.path), "sender": self.sender, "pid": os.getpid(),
+                    "endpoints": len(self.net.urls)}
         if method == "eth_chainId":
             if self.chain is None:
                 self.chain = self.net.call("eth_chainId", [])
@@ -699,22 +916,17 @@ class Proxy:
             return hex(self.pin())
         if method == "eth_getBlockByNumber" and params:
             tag = params[0]
+            blockhash = lambda b: b.get("hash") if isinstance(b, dict) else b  # noqa: E731
             if tag in ("latest", "pending"):
-                return self.net.call(method, [hex(self.pin())] + params[1:], must=True)
+                return self.net.quorum(method, [hex(self.pin())] + params[1:], key=blockhash, null_is_missing=True)
             if isinstance(tag, str) and tag.startswith("0x") and int(tag, 16) <= (self._pin or 0):
-                return self.net.call(method, params, must=True)
+                return self.net.quorum(method, params, key=blockhash, null_is_missing=True)
             return self.net.call(method, params)
         if method == "eth_getTransactionCount" and params and self.sender and params[0].lower() == self.sender \
                 and (len(params) < 2 or params[1] == "pending"):
             return hex(self.agreed_nonce()[0])
         if method in STATE_READS:
-            k = STATE_READS[method]
-            p = params + [None] * (k + 1 - len(params)) if len(params) <= k else list(params)
-            if p[k] in (None, "latest", "pending"):
-                p[k] = hex(self.pin())
-            elif isinstance(p[k], dict) and p[k].get("blockNumber") in ("latest", "pending"):
-                p[k] = {"blockNumber": hex(self.pin())}
-            return self.net.call(method, p)
+            return self.state_read(method, params)
         if method == "eth_getLogs" and params and isinstance(params[0], dict):
             f = dict(params[0])
             for key in ("fromBlock", "toBlock"):
@@ -722,14 +934,15 @@ class Proxy:
                                                                     and "blockHash" not in f):
                     f[key] = hex(self.pin())
             return self.net.call(method, [f])
-        if method in ANYWHERE:
-            r = self.net.anywhere(method, params)
-            if r and method == "eth_getTransactionReceipt" and self.sender \
-                    and str(r.get("from", "")).lower() == self.sender:
+        if method == "eth_getTransactionReceipt" and params:
+            r = self.net.receipt(params[0])  # two endpoints alike, or none yet
+            if r and self.sender and str(r.get("from", "")).lower() == self.sender:
                 self.bump(int(r["blockNumber"], 16))
-            if r is None and method == "eth_getTransactionReceipt" and params:
+            if r is None:
                 self.rebroadcast_if_due(params[0])
             return r
+        if method in ANYWHERE:
+            return self.net.anywhere(method, params)
         if method == "eth_sendRawTransaction":
             return self.send_raw(params[0], stage)
         if method == "eth_sendTransaction":
@@ -757,9 +970,11 @@ class Proxy:
         self.broadcast(t["raw"], h, quiet=True)
 
     def agreed_nonce(self) -> tuple[int, int]:
-        """(nonce, how many endpoints): the latest and the pending nonce equal on two endpoints (one if only one is
-        configured); a disagreement is transient (a lagging node, or a transaction in flight)."""
-        need = 1 if len(self.net.urls) == 1 else 2
+        """(nonce, how many endpoints): every endpoint asked for the sender's latest and pending nonce; the highest
+        value any of them reports must be both the latest and the pending nonce on two of them (one if only one is
+        configured). Endpoints behind (a lower value) are outvoted; a higher value on one endpoint alone, or pending
+        above latest (a transaction in flight), is waited out (transient)."""
+        need = self.net.need()
         deadline = time.monotonic() + self.net.budget
         attempt, seen = 0, []
         while True:
@@ -774,9 +989,6 @@ class Proxy:
                     self.log(f"nonce: {e}")
                     continue
                 seen.append((label(url), lat, pen))
-                top = max(max(x[1], x[2]) for x in seen)
-                if len([1 for _, la, pe in seen if la == pe == top]) >= need:
-                    break
             # A lagging node shows an older nonce, never a newer one: the highest value is the chain's; it must be
             # both the latest and the pending nonce on `need` endpoints (pending above latest: a transaction in flight).
             top = max([max(lat, pen) for _, lat, pen in seen] or [-1])
@@ -794,6 +1006,9 @@ class Proxy:
         raw = bytes.fromhex(raw_hex[2:] if raw_hex.startswith("0x") else raw_hex)
         tx = decode_tx(raw)
         h = tx["hash"]
+        if self.sender and tx["from"] != self.sender:
+            raise Permanent(f"pubnet: permanent: the transaction is signed by {tx['from']}, not the sender {self.sender}"
+                            "; this proxy sends only the sender's")
         with self.send_lock:
             txs = self.journal.txs()
             if h in txs:  # the same bytes again (a client retry): at most one transaction can come of them
@@ -808,6 +1023,16 @@ class Proxy:
                 if open_:
                     raise Transient("pubnet: transient: an earlier transaction's fate is unknown: "
                                     + ", ".join(t["hash"] for t in open_))
+            bad = self.journal.bad_txs()
+            if bad:
+                raise Permanent(f"pubnet: permanent: an earlier transaction was {bad[0]['state']}"
+                                f" (status {bad[0].get('status')}): {bad[0]['hash']}; nothing is sent until an operator"
+                                f" has looked (pubnet.py ack --journal {self.journal.path} --hash {bad[0]['hash']})")
+            done = [t for t in txs.values() if t["state"] == "mined" and t.get("status") in ("0x1", 1)
+                    and t.get("to") == tx["to"] and t.get("value") == tx["value"] and t.get("datahash") == tx["datahash"]]
+            if done:
+                raise Permanent(f"pubnet: permanent: this step was sent and mined already ({done[0]['hash']}, stage"
+                                f" {done[0].get('stage')}): the same call again; its plan read a stale state")
             if not self.sender:
                 raise Permanent("pubnet: permanent: the proxy was started without --sender; it sends nothing")
             chain = int(self.dispatch("eth_chainId", [], stage), 16)
@@ -819,13 +1044,13 @@ class Proxy:
                                 f" sender's nonce is {nonce}); planned on a block before the sender's last transaction")
             if tx["nonce"] > nonce:
                 raise Permanent(f"pubnet: permanent: nonce gap: the transaction's nonce {tx['nonce']} > {nonce}")
-            bal = int(self.net.call("eth_getBalance", [self.sender, "latest"]), 16)
+            bal = int(self.state_read("eth_getBalance", [self.sender, "latest"]), 16)  # pinned, two endpoints alike
             need = tx["value"] + tx["gas"] * tx["maxFee"]
             if bal < need:
                 raise Permanent(f"pubnet: permanent: insufficient funds: balance {bal} < value + gas x max fee {need}")
             self.journal.append({"event": "signed", "hash": h, "raw": raw_hex, "nonce": tx["nonce"],
-                                 "from": self.sender, "stage": stage, "to": tx["to"], "gas": tx["gas"],
-                                 "nonce_agreed_by": n_ep})
+                                 "from": tx["from"], "stage": stage, "to": tx["to"], "value": tx["value"],
+                                 "datahash": tx["datahash"], "gas": tx["gas"], "nonce_agreed_by": n_ep})
             self.event(kind="send", hash=h, nonce=tx["nonce"], stage=stage)
             return self.broadcast(raw_hex, h)
 
@@ -862,24 +1087,31 @@ class Proxy:
         if quiet:
             return h
         if not accepted and not unknown:
-            # Every endpoint refused it outright: it is in no mempool. Its fate is known once the chain agrees.
+            # Every endpoint answered with an error. One may have kept the bytes all the same: only if no endpoint
+            # has them (no receipt, not known in any pool) is the fate "rejected"; otherwise it stays open.
             st = resolve_one(self.net, self.journal, {"hash": h, "nonce": decode_tx(bytes.fromhex(raw_hex[2:]))["nonce"]},
                              self.sender, self.log)
-            if st not in FINAL:
+            if st == "unknown":
                 self.journal.append({"event": "fate", "hash": h, "fate": "rejected", "why": "; ".join(rejected)[:300]})
-            raise Permanent(f"pubnet: permanent: every endpoint refused the transaction: {'; '.join(rejected)[:300]}")
+                raise Permanent(f"pubnet: permanent: every endpoint refused the transaction: {'; '.join(rejected)[:300]}")
+            self.log(f"broadcast {h}: every endpoint answered an error, but it is {st}: its fate stays open")
         return h
 
     def send_unlocked(self, tx: dict, stage: str) -> str:
         """eth_sendTransaction (a local fork that signs for an impersonated sender): one endpoint, journaled."""
         if not (self.allow_unlocked and self.all_loopback):
             raise Permanent("pubnet: permanent: eth_sendTransaction only to a local chain with --allow-unlocked")
+        if self.sender and str(tx.get("from", "")).lower() != self.sender:
+            raise Permanent(f"pubnet: permanent: eth_sendTransaction from {tx.get('from')}, not the sender {self.sender}")
         with self.send_lock:
             open_ = self.journal.open_txs()
             for t in open_:
                 resolve_one(self.net, self.journal, t, (t.get("from") or self.sender or ""), self.log)
             if self.journal.open_txs():
                 raise Transient("pubnet: transient: an earlier transaction's fate is unknown")
+            if self.journal.bad_txs():
+                raise Permanent("pubnet: permanent: an earlier transaction reverted, was replaced or rejected:"
+                                " nothing is sent until an operator has looked (pubnet.py ack)")
             h = _rpc_once(self.net.urls[0], "eth_sendTransaction", [tx], self.net.timeout)
             self.journal.append({"event": "signed", "hash": h, "nonce": int(tx["nonce"], 16) if "nonce" in tx else None,
                                  "from": tx.get("from", "").lower(), "stage": stage, "unlocked": True})
@@ -923,7 +1155,7 @@ def serve(a) -> None:
     srv.daemon_threads = True
     port = srv.server_address[1]
     proxy.log(f"pubnet proxy on 127.0.0.1:{port}: {len(proxy.net.urls)} endpoint(s) "
-              f"{[label(u) for u in proxy.net.urls]}, lag {proxy.lag}, sender {proxy.sender}, floor {proxy.floor}")
+              f"{[label(u) for u in proxy.net.urls]}, lag {proxy.lag}, sender {proxy.sender}, fence {proxy.journal.floor()}")
     if a.port_file:
         with open(a.port_file + ".part", "w") as f:
             f.write(f"{port}\n")
@@ -1003,13 +1235,24 @@ def selftest() -> int:
     assert keccak256(b"a" * 135).hex() == keccak256(bytes(b"a" * 135)).hex()
     assert keccak256(b"a" * 136).hex() != keccak256(b"a" * 135).hex()
     assert rlp_decode(bytes.fromhex("c88363617483646f67"))[0] == [b"cat", b"dog"]
+    assert rlp_encode([b"cat", b"dog"]).hex() == "c88363617483646f67" and rlp_encode(b"\x05") == b"\x05"
+    # signers recovered from transactions cast signed with anvil's second test key (legacy EIP-155, EIP-1559)
+    legacy = ("f86707843b9aca0082520894000000000000000000000000000000000000dead05808401546d72a0485ab50394ff291b025666f6"
+              "1d9518e4918c13d557ccc2c292e9d12849da5316a03f7f8a3ac3b95ca5cb2abb36f27998faa7494b543dd95e426301f9b86d36dc41")
+    eip1559 = ("02f89183aa36a708843b9aca00847735940082c35094000000000000000000000000000000000000dead80a4b3de648b00000000"
+               "0000000000000000000000000000000000000000000000000000002ac080a06eb283908c4da19f2c3e7d0e88d51a77cdc711c03d95"
+               "01e27f0d4febac7ff8eba0305817dceaf48292a993de17e4c88c91140ce7ff4d5fa1c5127959c5977cd199")
+    for raw, nonce in ((legacy, 7), (eip1559, 8)):
+        d = decode_tx(bytes.fromhex(raw))
+        assert d["from"] == "0x70997970c51812dc3a010c7d01b50e0d17dc79c8" and d["nonce"] == nonce, d
+        assert d["chainId"] == 11155111
     for text, want in (("header not found", "transient"), ("HTTP 429", "transient"), ("-32001 block not found",
                        "transient"), ("execution reverted: x", "permanent"), ("insufficient funds for gas", "permanent"),
                        ("timeout; execution reverted", "permanent"), ("something odd", "permanent"),
                        ("missing trie node abc", "transient"), ("HTTP 503", "transient"),
                        ("[Revert] the candidate's wait is not over", "transient")):
         assert classify(text) == want, (text, classify(text))
-    print("pubnet selftest: keccak, RLP, classification OK")
+    print("pubnet selftest: keccak, RLP, signer recovery, classification OK")
     return 0
 
 

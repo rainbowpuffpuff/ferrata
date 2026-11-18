@@ -14,8 +14,15 @@ generator seeded with S (one per endpoint), so a seed replays the same kinds and
   sends    eth_sendRawTransaction dropped (the hash answered, nothing forwarded), duplicated (forwarded twice), or
            forwarded with the answer lost (the connection closed); plus "block not found" now and then.
 
-and, shared by all three, outages: 0 to 2 windows (from the seed: 5-150 s after the start, 15-60 s long) in which
-every endpoint answers 503 or nothing, as when a provider or the machine's network is down.
+and a fourth, from the seed (seed % 4): a liar that answers wrong but valid-looking values
+  0 frozen    contract state (eth_call, getStorageAt, getCode, estimateGas, getProof) at any block >= F answered at
+              block F, F written by run.sh to <ctl> after the deployment (it "forgets" every deposit, submit and
+              release), while nonces and balances are honest: the independent review's selective liar;
+  1 receipts  a receipt (status 1, block 1,000,000,000) for any transaction without one;
+  2 nonce     the sender's nonce one lower than the chain's, latest and pending alike;
+  3 steady    no liar: an honest endpoint without faults;
+and, shared by all, outages: 0 to 2 windows (from the seed: 5-150 s after the start, 15-60 s long) in which every
+endpoint answers 503 or nothing, as when a provider or the machine's network is down.
 
 Which personality each port has is also drawn from the seed. Every fault is counted in the log (JSONL).
 """
@@ -56,11 +63,15 @@ class Upstream:
 
 
 OUTAGES = []  # (start, end) in monotonic time, shared by the endpoints
+SENDER = ""
+
+
+STATE = {"eth_call": 1, "eth_getStorageAt": 2, "eth_getCode": 1, "eth_estimateGas": 1, "eth_getProof": 2}
 
 
 class Endpoint:
-    def __init__(self, name, kind, rng, up, log, lag=0):
-        self.name, self.kind, self.rng, self.up, self.lag = name, kind, rng, up, lag
+    def __init__(self, name, kind, rng, up, log, lag=0, ctl=""):
+        self.name, self.kind, self.rng, self.up, self.lag, self.ctl = name, kind, rng, up, lag, ctl
         self.logf, self.lock = log, threading.Lock()
         r = rng.random
         self.p = {  # rates drawn once per seed
@@ -88,6 +99,39 @@ class Endpoint:
         h = self.up.head() - self.lag
         return h - self.rng.randint(1, 4) if self.p["backwards"] and self.roll("backwards") else h
 
+    def lie(self, req):
+        """The liar's answer, or None to answer honestly."""
+        method, params, rid = req.get("method", ""), list(req.get("params") or []), req.get("id")
+        if self.kind == "liar-frozen" and method in STATE and self.ctl and os.path.exists(self.ctl):
+            f = int(open(self.ctl).read().strip() or 0)
+            k = STATE[method]
+            if f and len(params) > k and isinstance(params[k], str) and params[k].startswith("0x") \
+                    and int(params[k], 16) >= f:
+                params[k] = hex(f)
+                self.count("lie-frozen", method)
+                r = self.up.call(method, params)
+                r["id"] = rid
+                return 200, r, 0
+        if self.kind == "liar-receipts" and method == "eth_getTransactionReceipt":
+            r = self.up.call(method, params)
+            if r.get("result") is None:
+                self.count("lie-receipt", method)
+                r["result"] = {"transactionHash": params[0], "blockNumber": hex(1_000_000_000),
+                               "blockHash": "0x" + "ab" * 32, "status": "0x1", "from": SENDER or "0x" + "00" * 20,
+                               "to": None, "gasUsed": "0x5208", "cumulativeGasUsed": "0x5208", "contractAddress": None,
+                               "logs": [], "logsBloom": "0x" + "00" * 256, "transactionIndex": "0x0",
+                               "effectiveGasPrice": "0x1", "type": "0x2"}
+            r["id"] = rid
+            return 200, r, 0
+        if self.kind == "liar-nonce" and method == "eth_getTransactionCount":
+            r = self.up.call(method, params)
+            if "result" in r and int(r["result"], 16) > 0:
+                self.count("lie-nonce", method)
+                r["result"] = hex(int(r["result"], 16) - 1)
+            r["id"] = rid
+            return 200, r, 0
+        return None
+
     def answer(self, req):
         """(status, body or None for a closed connection, delay before answering)."""
         method, params = req.get("method", ""), list(req.get("params") or [])
@@ -97,6 +141,13 @@ class Endpoint:
         if any(a <= now < b for a, b in OUTAGES):
             self.count("outage", method)
             return (503, b"service unavailable", 0) if self.rng.random() < 0.7 else (0, None, 0)
+        if self.kind.startswith("liar") or self.kind == "steady":
+            lied = self.lie(req) if self.kind.startswith("liar") else None
+            if lied is not None:
+                return lied
+            r = self.up.call(method, params)
+            r["id"] = rid
+            return 200, r, 0
         if self.roll("r429"):
             self.count("429", method)
             return 429, {"jsonrpc": "2.0", "id": rid, "error": {"code": -32005, "message": "Too Many Requests"}}, 0
@@ -200,7 +251,11 @@ def main():
     ap.add_argument("--seed", type=int, required=True)
     ap.add_argument("--port-file", required=True)
     ap.add_argument("--log", required=True)
+    ap.add_argument("--ctl", default="", help="the frozen liar's block F (a file run.sh writes after the deployment)")
+    ap.add_argument("--sender", default="")
     a = ap.parse_args()
+    global SENDER
+    SENDER = a.sender.lower()
     rng = random.Random(a.seed)
     kinds = ["flaky", "lagging", "sends"]
     rng.shuffle(kinds)
@@ -210,9 +265,10 @@ def main():
         OUTAGES.append((t0 + start, t0 + start + rng.uniform(15, 60)))
     up = Upstream(a.upstream)
     ports, desc = [], []
+    kinds.append(("liar-frozen", "liar-receipts", "liar-nonce", "steady")[a.seed % 4])
     for i, kind in enumerate(kinds):
         lag = rng.randint(2, 6) if kind == "lagging" else 0
-        ep = Endpoint(f"ep{i}", kind, random.Random(a.seed * 1000 + i), up, a.log, lag)
+        ep = Endpoint(f"ep{i}", kind, random.Random(a.seed * 1000 + i), up, a.log, lag, a.ctl)
         serve(ep, ports)
         desc.append({"ep": f"ep{i}", "port": ports[-1], "kind": kind, "lag": lag,
                      "rates": {k: round(v, 3) for k, v in ep.p.items() if v}})

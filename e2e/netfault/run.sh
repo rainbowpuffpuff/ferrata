@@ -17,16 +17,17 @@ export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 TMPDIR="$w"
 free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 aport="$(free_port)"; R="http://127.0.0.1:$aport"
 anvil --port "$aport" --chain-id "$cid" --block-time 1 --gas-limit 100000000 > "$w/anvil.log" 2>&1 & A=$!
+# The deployer: a fresh key in a keystore (funded on anvil below).
+mkdir -p "$w/key"; cast wallet new "$w/key" --unsafe-password netfault > "$w/key.txt"
+deployer="$(grep -o -E '0x[0-9a-fA-F]{40}' "$w/key.txt" | head -n 1)"
+printf netfault > "$w/pw"
 python3 -I "$here/e2e/netfault/faultnet.py" --upstream "$R" --seed "$seed" --port-file "$w/ports" --log "$w/faults.jsonl" \
+  --ctl "$w/liar.ctl" --sender "$deployer" \
   > "$w/faultnet.json" 2> "$w/faultnet.err" & F=$!
 trap 'kill $A $F 2>/dev/null || true; wait 2>/dev/null || true' EXIT
 for _ in $(seq 1 100); do cast chain-id --rpc-url "$R" > /dev/null 2>&1 && [ -s "$w/ports" ] && break; sleep 0.2; done
 mapfile -t P < "$w/ports"
 t0=$(date +%s)
-# The deployer: a fresh key in a keystore, funded on anvil only.
-mkdir -p "$w/key"; cast wallet new "$w/key" --unsafe-password netfault > "$w/key.txt"
-deployer="$(grep -o -E '0x[0-9a-fA-F]{40}' "$w/key.txt" | head -n 1)"
-printf netfault > "$w/pw"
 cast rpc anvil_setBalance "$deployer" 0x3635c9adc5dea00000 --rpc-url "$R" > /dev/null
 ACC0=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ( cd "$here/vault" && forge create script/ForkRehearsal.s.sol:RehearsalAcceptAllVerifier --rpc-url "$R" --unlocked \
@@ -55,7 +56,8 @@ jq -n --arg v "$VAULT" --argjson cid "$cid" --arg c0 "$(h 'netfault c0')" --arg 
   nullifier: (if $i == 0 then $n0 else $n1 end), seal: "0x73c457ba"}]}' > "$run/crown.json"
 
 # sepolia.sh through the three bad endpoints; the first is "the Secret's".
-export SEPOLIA_RPC_URL="http://127.0.0.1:${P[0]}" PUBNET_SEPOLIA_RPC="http://127.0.0.1:${P[0]},http://127.0.0.1:${P[1]},http://127.0.0.1:${P[2]}"
+export SEPOLIA_RPC_URL="http://127.0.0.1:${P[0]}"
+export PUBNET_SEPOLIA_RPC="http://127.0.0.1:${P[0]},http://127.0.0.1:${P[1]},http://127.0.0.1:${P[2]},http://127.0.0.1:${P[3]}"
 export ETH_FROM="$deployer" ETH_KEYSTORE="$(ls "$w"/key/* | head -n 1)" ETH_PASSWORD="$w/pw"
 export PUBNET_LAG=2 PUBNET_TIMEOUT_S=3 PUBNET_REQUEST_BUDGET_S=20 PUBNET_PIN_TTL_S=2 PUBNET_BACKOFF_BASE_S=2 \
   PUBNET_STAGE_BUDGET_S="${NETFAULT_STAGE_BUDGET_S:-90}" PUBNET_RESOLVE_BUDGET_S=60 PUBNET_ATTEMPT_TIMEOUT_S=240 \
@@ -78,8 +80,34 @@ for s in "deploy" "deposit 0" "deposit 1" "submit" "warp 3601" "finalize" "warp 
   case "$s" in warp*) warp "${s#warp }"; continue ;; esac
   # shellcheck disable=SC2086
   stage $s || { rc=$?; outcome="stopped-$([ "$rc" = 75 ] && echo transient || echo permanent)"; stopped="$s"; break; }
+  # From now on the frozen liar (seeds 0 mod 4) answers contract state as it was right after the deployment.
+  [ "$s" = deploy ] && cast block-number --rpc-url "$R" > "$w/liar.ctl"
 done
+# Replays, as a resumed stage plans again: the journal's skip off (PUBNET_NO_JOURNAL_SKIP=1), so only the reads (two
+# endpoints alike) and the journal's refusal of a repeated call stand between a stale read and a second deposit or
+# release. First through all four endpoints; then, for the liar seeds, through the liar and one honest endpoint only.
+replays=""
+if [ "$outcome" = complete ]; then
+  for s in "deposit 0" "deposit 1" "release 0"; do
+    rrc=0
+    # shellcheck disable=SC2086
+    PUBNET_NO_JOURNAL_SKIP=1 PUBNET_STAGE_BUDGET_S=20 "$here/e2e/crown/sepolia.sh" "$run" $s >> "$w/replays.log" 2>&1 || rrc=$?
+    replays+="all:${s// /}=$rrc,"
+  done
+  liar="$(jq -r '.endpoints[] | select(.kind | startswith("liar")) | .port' "$w/faultnet.json")"
+  honest="$(jq -r '.endpoints[] | select(.kind == "sends") | .port' "$w/faultnet.json")"
+  if [ -n "$liar" ]; then
+    for s in "deposit 0" "release 0"; do
+      rrc=0
+      # shellcheck disable=SC2086
+      SEPOLIA_RPC_URL="http://127.0.0.1:$liar" PUBNET_SEPOLIA_RPC="http://127.0.0.1:$liar,http://127.0.0.1:$honest" \
+        PUBNET_NO_JOURNAL_SKIP=1 PUBNET_STAGE_BUDGET_S=20 "$here/e2e/crown/sepolia.sh" "$run" $s >> "$w/replays.log" 2>&1 || rrc=$?
+      replays+="liar+1:${s// /}=$rrc,"
+    done
+  fi
+fi
 python3 -I "$here/e2e/netfault/check.py" --rpc "$R" --run "$run" --deployer "$deployer" --vault "$VAULT" \
   --outcome "$outcome" --stopped "$stopped" --resumes "$resumes" --seed "$seed" --seconds "$(( $(date +%s) - t0 ))" \
+  --replays "${replays%,}" --liar "$(jq -r '.endpoints[3].kind' "$w/faultnet.json")" \
   >> "$out/${NETFAULT_BATCH:-seeds}.jsonl"
 tail -n 1 "$out/${NETFAULT_BATCH:-seeds}.jsonl"

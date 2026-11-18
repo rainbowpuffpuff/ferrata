@@ -27,7 +27,7 @@ def call(url, to, data):
 
 def main():
     ap = argparse.ArgumentParser()
-    for k in ("rpc", "run", "deployer", "vault", "outcome", "stopped", "resumes", "seed", "seconds"):
+    for k in ("rpc", "run", "deployer", "vault", "outcome", "stopped", "resumes", "seed", "seconds", "replays", "liar"):
         ap.add_argument(f"--{k}", default="")
     a = ap.parse_args()
     dep = a.deployer.lower()
@@ -60,9 +60,13 @@ def main():
         stages[signed.get(t["hash"], {}).get("stage", "?")] += 1
     if any(x is None or x < 2 for x in agreed):
         v.append(f"a send without the nonce agreed by two endpoints: {agreed}")
+    on_chain = {t["hash"]: t for t in chain_txs}
     for h, f in fates.items():
         if f["fate"] != "mined":
             v.append(f"{h}: fate {f['fate']} ({f.get('why', '')})")
+        elif h not in on_chain or on_chain[h]["block"] != f.get("block"):
+            v.append(f"{h}: the journal says mined in block {f.get('block')}, the chain says"
+                     f" {on_chain.get(h, {}).get('block', 'not mined')}")  # an invented receipt taken as a fate
     for st, n in stages.items():
         if st != "deploy" and n != 1:
             v.append(f"stage {st}: {n} transactions on chain")
@@ -91,6 +95,7 @@ def main():
         events[e["kind"] + ("-" + e["cls"] if e.get("cls") else "")] += 1
     retries = sum(1 for _, _, fs in os.walk(os.path.join(a.run, "logs")) for f in fs if ".transient-" in f)
     print(json.dumps({"seed": int(a.seed), "outcome": a.outcome, "stopped_at": a.stopped or None,
+                      "fourth": a.liar or None, "replays": a.replays or None,
                       "resumes": int(a.resumes or 0), "stage_reruns": retries, "txs_on_chain": len(chain_txs),
                       "journaled": len(signed), "seconds": int(a.seconds or 0), "faults": dict(faults),
                       "proxy_events": dict(events), "facts": facts, "violations": v, "ok": not v}, sort_keys=True))

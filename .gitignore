@@ -92,3 +92,6 @@ __pycache__/
 /e2e/runs/*/net/port
 /e2e/runs/*/net/*.lock
 /e2e/netfault/results/*.log
+/e2e/netfault/attacks/model/out/
+/e2e/netfault/attacks/model/cache/
+/e2e/netfault/attacks/model/broadcast/

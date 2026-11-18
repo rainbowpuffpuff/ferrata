@@ -21,10 +21,11 @@ cat > "$scratch/bin/forge" << 'EOF2'
 #!/usr/bin/env bash
 echo "forge $*" >> "$STUB/forge.calls"
 url=""; while [ $# -gt 0 ]; do [ "$1" = --rpc-url ] && url="$2"; shift; done
+v=$((100 + ${url##*-})) # one value per stage (deposit-j: 100 + j): each stage's call is its own step
 case "$(cat "$STUB/mode")" in
   noop) exit 0 ;;
-  crash) cast send --async --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value 1; exit 1 ;;
-  ok) cast send --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value 1 --timeout 30 ;;
+  crash) cast send --async --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value "$v"; exit 1 ;;
+  ok) cast send --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value "$v" --timeout 30 ;;
 esac
 EOF2
 chmod +x "$scratch/bin/forge"
@@ -64,7 +65,7 @@ check "the run dies right after its broadcast: journaled, a transient stop" 0 cr
 check "a run while that fate is unknown: forge not called, nothing sent" 0 ok 75 0 1 1 "fate is still unknown"
 # 4. Mined: the stage goes on (Crown.s.sol would see the deposit made and send nothing) and records it.
 mine
-check "the fate known (mined): the stage goes on, records the transaction, sends nothing more" 0 noop 0 1 1 0 "deposit"
+check "the fate known (mined): the stage is done per the journal (forge not run), the transaction recorded" 0 noop 0 0 1 0 "deposit"
 rows="$(jq -c '.stages["deposit-0"] | length' "$run/manifest.json" 2>/dev/null)"
 if [ "$rows" = 1 ]; then echo "PASS  the manifest has deposit-0's one transaction (from the journal)"; pass=$((pass + 1));
 else echo "FAIL  the manifest has $rows rows for deposit-0"; fail=$((fail + 1)); fi
