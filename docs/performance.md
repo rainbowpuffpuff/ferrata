@@ -101,9 +101,9 @@ branch per non-signer the fewest signers that fit are 386
 fit with the next committee's 512 keys adopted (5,991,991 cycles for the adoption alone); adopted by its summary
 instead (its key root and aggregate key as the update's branch proves them in the signed attested state, which is
 sound only under the honest-supermajority assumption the light client already makes, `bench/RESIDUE.md` §10), it
-fits one transaction: the experimental copy was charged **6,621,551** execution gas (66.2%) for mainnet update_1 as a
-handoff and **8,341,469** (83.4%) for a 342-signer handoff at the costliest placement found, and the LEZ v0.3.1 port
-takes every handoff of the mainnet replay and of Sepolia's 32 periods in one transaction, at most 6,647,863
+fits one transaction: the experimental copy was charged **6,711,485** execution gas (67.1%) for mainnet update_1 as a
+handoff and **8,431,403** (84.3%) for a 342-signer handoff at the costliest placement found, and the LEZ v0.3.1 port
+takes every handoff of the mainnet replay and of Sepolia's 32 periods in one transaction, at most 6,737,794
 (EVIDENCE row 137). The deployed programs are unchanged.
 
 **Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private

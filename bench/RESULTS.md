@@ -452,16 +452,19 @@ assumption the light client already makes.** [`RESIDUE.md`](RESIDUE.md) §10 giv
 core's 512-key adoption establishes that this does not, why it does not matter under that assumption, what a wrong
 aggregate field would do, deposit proofs of possession, and what the consensus specification, Helios and Lodestar do
 with the aggregate field, at pinned commits). `residue-handoff` adopts a handoff's next committee by the summary step 1
-proved; `one_step` runs the whole update with one multiproof (§9) and the residue witness. Measured with
+proved, decoding its aggregate field (refused, 45, if it does not decode or is the identity, as the core refuses it);
+`one_step` runs the whole update with one multiproof (§9) and the residue witness. Measured with
 `residue-host measure-handoff` in the bench guest `guests/residue-agg-accel` (r0vm 3.0.5 executor), mainnet update_1
 as served (a handoff) against the store after update_0, on the Modal build box, 18 Nov 2026. Outputs:
-`results/residue/handoff/` ([`tables.md`](results/residue/handoff/tables.md), `one-tx.txt`, `tests.txt`, `lez.txt`).
+`results/residue/handoff/` ([`tables.md`](results/residue/handoff/tables.md), `one-tx.txt`, `tests.txt`,
+`adversarial.txt`, `lez.txt`). The figures are those of the second build of 18 Nov (after an independent review's
+findings 9 and 7: the aggregate field decoded at adoption, a zero-epoch period refused).
 
-* Execution user cycles of the whole handoff, witness check (folded): **6,578,036** (5,916,026) at 510 of 512 with the
-  real committee; at 342 signers, signed by the bench's committee, **8,154,987** (7,492,977) at the costliest placement
-  of the absent members found (every absent index odd) and 8,146,550 (7,484,540) with every third absent. With the
-  core's 512-key adoption instead: 12,575,468 (11,913,881) and 14,152,419. The summary adoption is 686 cycles, the
-  512-key adoption 5,991,991.
+* Execution user cycles of the whole handoff, witness check (folded): **6,667,967** (6,005,957) at 510 of 512 with the
+  real committee; at 342 signers, signed by the bench's committee, **8,244,918** (7,582,908) at the costliest placement
+  of the absent members found (every absent index odd) and 8,236,481 (7,574,471) with every third absent. With the
+  core's 512-key adoption instead: 12,575,468 (11,913,881) and 14,152,419. The summary adoption is 90,617 cycles (686
+  before the aggregate field was decoded), the 512-key adoption 5,991,991.
 * The store after the one-step path equals the core's after all its steps on every update of the official `sync`
   vectors (160: 91 accepted, 66 handoffs; 69 refused alike), the mainnet replay (5 handoffs) and Sepolia through Gloas
   (33, 32 handoffs); only the job's adoption progress differs. Refused alike: a bad next-committee branch (27), 341
@@ -473,12 +476,13 @@ as served (a handoff) against the store after update_0, on the Modal build box, 
   accepted "31 of 32" update). Since such a forged committee keeps the real `pubkeys_root`, a monitor or updater
   must compare the whole summary, not the key root alone.
 * Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1, the experimental copy, which adopts by the summary
-  when `VerifyAll` carries no adoption keys): **6,621,551** execution gas (66.2%) for the 510-signer handoff, applied;
-  **8,341,469** (83.4%) at 342 signers at the costliest placement found (8,333,542 with every third absent, 8,676,354
-  with the chain of additions); with the 512 keys in the same transaction it reverts on the 10M budget. The deployed
-  program's image id, printed by the same build, is still `816d1fef…`.
-* LEZ v0.3.1 (`lez-v03`, `Verify::ResidueSummary`): every handoff of the mainnet replay (at most 6,647,863) and of
-  Sepolia's 32 periods (at most 6,592,610) in one transaction; the port's image id changed (`f8ec1b21…`).
+  when `VerifyAll` carries no adoption keys): **6,711,485** execution gas (67.1%) for the 510-signer handoff, applied;
+  **8,431,403** (84.3%) at 342 signers at the costliest placement found (8,423,476 with every third absent, 8,766,288
+  with the chain of additions); with the 512 keys in the same transaction it reverts on the 10M budget; an `Init` with a
+  zero-epoch period is refused (212). The deployed program's image id, printed by the same build, is still `816d1fef…`.
+* LEZ v0.3.1 (`lez-v03`, `Verify::ResidueSummary`): every handoff of the mainnet replay (at most 6,737,794) and of
+  Sepolia's 32 periods (at most 6,682,541) in one transaction; the port's image id changed (`bac768a8…`; the reviewed
+  `8d3b59ff…`, which the prepared public-testnet run deploys, is unchanged there).
 * Re-check: `RESIDUE.md` §10.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)

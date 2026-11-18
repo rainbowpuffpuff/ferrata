@@ -37,9 +37,9 @@ honest-supermajority assumption.
 * **A period update (a committee handoff) in one transaction** (§10, 18 Nov 2026): with the next committee adopted by
   its summary (its key root and aggregate key as the update's branch proves them in the signed attested state) instead
   of its 512 keys, which is sound only under the honest-supermajority assumption the light client already makes,
-  LEZ's state machine charged an experimental copy **6,621,551** execution gas (66.2%) for mainnet update_1 as a
-  handoff and **8,341,469** (83.4%) for a 342-signer handoff at the costliest placement found; the bare guest takes
-  6,578,036 and 8,154,987 cycles. The rows of the table above with the 512-key adoption stand: that adoption alone is
+  LEZ's state machine charged an experimental copy **6,711,485** execution gas (67.1%) for mainnet update_1 as a
+  handoff and **8,431,403** (84.3%) for a 342-signer handoff at the costliest placement found; the bare guest takes
+  6,667,967 and 8,244,918 cycles. The rows of the table above with the 512-key adoption stand: that adoption alone is
   5,991,991 cycles.
 * The deployed program already takes a finality update in one public transaction (`VerifyAll`,
   9,124,896 execution gas at 510 of 512 here, 91.2% of the limit; `lez/RESULTS.md` §2 has 9,121,514
@@ -652,7 +652,8 @@ committee as its summary, the root of its 512 key leaves (`pubkeys_root`) and it
 least 342 of the 512 members of the signing committee signed (the policy's floor). The core adopts that
 summary only after a witness of the 512 uncompressed keys has shown that every key decodes and that the
 keys hash to the root and sum to the aggregate (`witness.rs`, `AdoptionProgress::add_part`). The summary
-adoption takes the proven summary as it is, in the same transaction as the update, and keeps every check
+adoption takes the proven summary as it is, in the same transaction as the update, decoding only its aggregate
+field (refused, 45, if it does not decode or is the identity, as the core refuses it), and keeps every check
 made at use time: each non-signer's key is decoded canonically and proven against `pubkeys_root` (the
 core's composition or the multiproof of §9), and the aggregate is decoded. On every state the beacon
 chain's state transition produced, the two adopt the same summary: the aggregate there is the sum of the
@@ -689,7 +690,8 @@ It does not establish where the committee comes from. In both designs that is th
 state root (`validate_compact`, refusal `NextCommitteeBranchInvalid`) and the signature over the
 attested header by the committee the store already holds. (A1) and (A2) are the internal consistency of a
 summary that is trusted for its provenance either way. The summary adoption keeps the provenance and drops
-(A1) and (A2).
+(A1) and (A2), but for one part of (A2) it keeps: the aggregate field must decode to a curve point that is not
+the identity (refused with the core's code, 45; an independent review's finding 9).
 
 What the light client does with the summary afterwards: the key that verifies an update signed by the
 adopted committee is `aggregate_pubkey − Σ non-signers` (`steps.rs`, `signing_key`;
@@ -736,9 +738,10 @@ store already holds: the assumption has failed for that committee. Say the adopt
 `pubkeys_root` (so the real keys `P_i` under it) and only its aggregate field is `Σ P_i + D` with `D ≠ 0`:
 
 * every later update signed by the adopted committee is checked against `Σ signers + D`: the honest
-  committee's signatures are refused (`SignatureInvalid`, 40), an aggregate field that does not decode
-  refuses every such update (`PubkeyInvalid`, 42), and the identity as the field gives 43 or 40. The
-  instance stalls until a new `Init` from a trusted checkpoint;
+  committee's signatures are refused (`SignatureInvalid`, 40), and the instance stalls until a new `Init`
+  from a trusted checkpoint (an aggregate field that does not decode, or the identity, is refused at the
+  adoption itself, 45, as by the core: before that check was added, every later update was refused, 42, or
+  43 and 40);
 * and the forger produces **forged signatures that are accepted**, not only a stall: with the field
   `Q + Σ_{j∈J} P_j` for a key `Q` it holds and a set `J` of members it chooses (it need not hold their
   secrets), an update with exactly the members of `J` absent is verified against `Q`, so the holder of `Q`
@@ -806,38 +809,49 @@ from the committee it stored after the branch, which is equivalent up to SHA-256
   the core's `steps::apply` then writes that summary into the store, as after the core's adoption. It
   refuses (`NoAdoption`, 84) a job that adopts nothing, one whose adoption is complete, and an
   initialization: the bootstrap's committee keeps the core's 512-key adoption (its trust is the
-  checkpoint, not a signature; not covered by this note). `one_step` runs a whole update as the
-  experimental programs do: `residue_agg::step1` (one multiproof), `Job::step2`, the residue-witness
-  check (`residue_check`, any failure `SignatureInvalid`, 40), `adopt_summary` if the update adopts a
-  committee, and `steps::apply`. Nothing of the core changed: its `Job`, `step1`, `apply` and the
-  adoption are used through their public API.
+  checkpoint, not a signature; not covered by this note). It decodes the summary's aggregate field
+  (blst's compressed decoding: canonical, on the curve; no subgroup check, as the core) and refuses one
+  that does not decode or is the identity with the core's code (`CommitteeInvalid`, 45): such a committee
+  could never verify an update (an independent review's finding 9, added after the review). `check_spec`
+  refuses a chain specification with zero slots per epoch or zero epochs per sync-committee period
+  (`Malformed`, 1), where the period arithmetic would divide by zero (the review's finding 7). `one_step`
+  runs a whole update as the experimental programs do: `check_spec`, `residue_agg::step1` (one
+  multiproof), `Job::step2`, the residue-witness check (`residue_check`, any failure `SignatureInvalid`,
+  40), `adopt_summary` if the update adopts a committee, and `steps::apply`. Nothing of the core changed:
+  its `Job`, `step1`, `apply` and the adoption are used through their public API.
 * The bench guest `guests/residue-agg-accel`: a period update given no adoption keys is adopted by its
   summary (`A2`); given the keys, by the core's adoption as before. `residue-host measure-handoff`
   (`src/handoff.rs`) measures it.
 * The LEZ v0.4 experimental copy (`lez/guests/program-residue-experimental`, behind the harness's
   feature `residue-experimental`, as §6): a `VerifyAll` of an update that adopts a committee, given an
-  empty `adoption`, adopts by the summary; given the 512 keys, as before. The wire (`ferrata-lez-wire`)
-  is unchanged, so the deployed program's image id is unchanged (printed by the test, §10.8).
+  empty `adoption`, adopts by the summary; given the 512 keys, as before. Its `check_config` also refuses
+  a sync-committee period of zero epochs (`BAD_CONFIG`, 212; the review's finding 7: such an instance's
+  every update would panic in the period arithmetic and be charged the whole gas limit; the deployed
+  program's `check_config`, `lez/guests/program/src/main.rs`, has the same gap and is unchanged, its image
+  id fixed). The wire (`ferrata-lez-wire`) is unchanged, so the deployed program's image id is unchanged
+  (printed by the test, §10.8).
 * The LEZ v0.3.1 port (`lez-v03/`, not deployed anywhere): a new `Verify::ResidueSummary { c, w }`,
-  appended to its wire's `Verify`, does the same in its `Update`; its image id changes (§10.8).
+  appended to its wire's `Verify`, does the same in its `Update`, and its `check_config` refuses the zero
+  period too (212); its image id changes (§10.8).
 
 ### 10.7 Tests
 
-All on the Modal build box, 18 Nov 2026 (`cargo test --release -p residue-handoff`: the 4 tests of
-`tests/handoff.rs` pass in 3.4 s, output [`results/residue/handoff/tests.txt`](results/residue/handoff/tests.txt); the
-4 of `tests/adversarial.rs`, written by an independent review, in 1.0 s, output
+All on the Modal build box, 18 Nov 2026 (`cargo test --release -p residue-handoff`: the 6 tests of
+`tests/handoff.rs` pass in 6.4 s, output [`results/residue/handoff/tests.txt`](results/residue/handoff/tests.txt); the
+4 of `tests/adversarial.rs`, written by an independent review, in 1.6 s, output
 [`results/residue/handoff/adversarial.txt`](results/residue/handoff/adversarial.txt)).
 
 | test | what | count | result |
 |---|---|---:|---|
 | the one-step path = the core's steps | on every update: `one_step` (one multiproof, the honest residue witness, the summary adoption; blst's batch sum and the chain of additions agree) against the core's own steps (a branch per non-signer, the final exponentiation, the 512-key adoption in two parts, `apply`): the official `sync` vectors (52 cases, consensus-specs v1.7.0-beta.4), the mainnet replay (5 updates as served), Sepolia through Gloas (32 period updates and the finality update); the policy store's `process_update` (`Adoption::OnChain`) moves alike | 198 updates: vectors 160 (91 accepted, **66 of them handoffs**; 69 refused alike), mainnet 5 (**5 handoffs**), Sepolia 33 (**32 handoffs**) | the same store and outcome, the same job but for its adoption progress (`None` against the core's completed `AdoptionProgress`), or the same refusal code |
 | refusals of a handoff | mainnet update_1 as served (a handoff, 510 of 512): a node of its next-committee branch altered (three positions), its next committee's aggregate or one of its keys replaced with the branch unchanged: 27; signed by the bench's committee, 341 signers: 51 (342: accepted alike); the handoff without finality: 50; the handoff again on the store it produced: 52; update_0 on that store: 23 | 10 | refused alike by both paths |
-| `adopt_summary` | a finality update's job (it adopts nothing), an initialization's (the bootstrap keeps the core's adoption), a handoff's job adopted twice | 3 | `NoAdoption` (84), nothing changed |
+| `adopt_summary` | a finality update's job (it adopts nothing), an initialization's (the bootstrap keeps the core's adoption), a handoff's job adopted twice; an aggregate field that does not decode, the identity, a flipped bit of the real field (refused if it no longer decodes) | 3 + 3 | `NoAdoption` (84); `CommitteeInvalid` (45) for all three fields (the flipped bit's x is not on the curve); a refused adoption changes nothing |
+| zero period | `one_step` and `check_spec` with zero epochs per sync-committee period, and with zero slots per epoch | 2 | `Malformed` (1), no panic |
 | the one difference (§10.3) | a chain that never existed (the store of the Electra `sync` vector case with a committee the test holds, fabricated updates as `ferrata-spectests`' `mutation_guards.rs`): a handoff to a next committee whose aggregate field is its first key; then an update of the next period signed by that committee | 1 handoff, 4 later updates | the core refuses at its adoption (45), the one-step path accepts; afterwards the committee's honest signature is refused (40) and its first member alone, every bit set, is accepted; from the consistent handoff (accepted alike) the reverse, and the next update alike by both paths |
-| adversarial (an independent review's, `tests/adversarial.rs`) | on a fabricated chain (32 members): next committees whose aggregate field is `Q + P_31` (the real keys and key root; `Q` held by the forger, member 31's secret not), the identity, or undecodable; then three later updates on each adopted store; refusals from the start store (not finalized 50; a signature, attested or finalized header a period later 23, three cases; 21 of 32 signers 51), the same handoff again (52), another next committee for the adopted period (28); `adopt_summary` on a tampered `pending` or progress; 160 mutations of the honest handoff | 4 handoffs, 12 later updates, 7 refusals, 4 guards, 160 mutations | the core refuses each forged field (45), the summary path adopts it; after `Q + P_31` the forger alone signs an accepted "31 of 32" update and the honest 31 are refused (40); identity 40/43, undecodable 42; once a store holds the field both paths give the same code on all 12; refusals alike; guards 84 and `apply`'s 81; the mutations 13 accepted alike (same store), 147 refused alike |
+| adversarial (an independent review's, `tests/adversarial.rs`) | on a fabricated chain (32 members): next committees whose aggregate field is `Q + P_31` (the real keys and key root; `Q` held by the forger, member 31's secret not), the identity, or undecodable; then three later updates on each adopted store; refusals from the start store (not finalized 50; a signature, attested or finalized header a period later 23, three cases; 21 of 32 signers 51), the same handoff again (52), another next committee for the adopted period (28); `adopt_summary` on a tampered `pending` or progress; 160 mutations of the honest handoff | 4 handoffs, 6 later updates, 7 refusals, 4 guards, 160 mutations | the core refuses each forged field (45); the summary path adopts `Q + P_31` and, since finding 9, refuses the identity and the undecodable field alike (45; as written, the review expected them adopted); after `Q + P_31` the forger alone signs an accepted "31 of 32" update and the honest 31 are refused (40), both paths alike on the adopted store; refusals alike; guards 84 and `apply`'s 81; the mutations 13 accepted alike (same store), 147 refused alike |
 | guest | `residue-host measure-handoff`: 18 executions of a handoff, each giving the store the core's steps give (natively also `one_step`, both sums); in the guest, a next-committee branch node flipped (27), 341 signers (51), the handoff again (52) | 18 + 3 | pass |
-| LEZ v0.4 | `lez/harness/tests/residue_handoff.rs` (2 tests, §10.8); the earlier `residue_experimental` tests with the changed copy (4; the fewest-signers search not re-run) | 2 + 4 | pass |
-| LEZ v0.3.1 | `lez-v03/harness/tests/v03.rs`, `handoffs_in_one_transaction_each` (§10.8); the other `v03` (4), `third_party` (4) and `adversarial` (5) tests with the new image; the client builds; `tests/sendguard.sh`, `tests/verifystatus.sh` | 1 + 13 + 2 scripts | pass |
+| LEZ v0.4 | `lez/harness/tests/residue_handoff.rs` (3 tests, §10.8; one is a zero-period `Init`, refused 212); the earlier `residue_experimental` (4; the fewest-signers search not re-run) and `residue_placements` (2) tests with the changed copy | 3 + 4 + 2 | pass |
+| LEZ v0.3.1 | `lez-v03/harness/tests/v03.rs`, `handoffs_in_one_transaction_each` (§10.8); the other `v03` (4), `third_party` (4) and `adversarial` (5) tests with the new image, where `review_zero_period_config` now asserts that the zero-period `Init` is refused (212); the client builds and `tests/sendguard.sh`, `tests/verifystatus.sh` pass (with the first image of this branch; the wire has not changed since) | 1 + 13 + 2 scripts | pass |
 
 ### 10.8 Numbers
 
@@ -848,48 +862,54 @@ All on the Modal build box, 18 Nov 2026 (`cargo test --release -p residue-handof
 
 | handoff | witness check | witness folded | witness check, chain of additions | with the core's 512-key adoption instead (witness; folded) |
 |---|---:|---:|---:|---:|
-| 510 of 512, the real committee | **6,578,036** (65.8%) | 5,916,026 (59.2%) | 6,577,593 | 12,575,468; 11,913,881 |
-| 512 of 512 | 6,545,429 | 5,883,419 | 6,545,429 | 12,542,861 |
-| 342, every third absent | 8,146,550 (81.5%) | 7,484,540 (74.8%) | 8,481,101 | 14,143,982 |
-| **342, every absent index odd (the costliest placement found, §9.6)** | **8,154,987** (81.5%) | **7,492,977** (74.9%) | 8,489,538 (84.9%) | 14,152,419 |
+| 510 of 512, the real committee | **6,667,967** (66.7%) | 6,005,957 (60.1%) | 6,667,524 | 12,575,468; 11,913,881 |
+| 512 of 512 | 6,635,360 | 5,973,350 | 6,635,360 | 12,542,861 |
+| 342, every third absent | 8,236,481 (82.4%) | 7,574,471 (75.7%) | 8,571,032 | 14,143,982 |
+| **342, every absent index odd (the costliest placement found, §9.6)** | **8,244,918** (82.4%) | **7,582,908** (75.8%) | 8,579,469 (85.8%) | 14,152,419 |
 
-The summary adoption costs **686** cycles (`A2`) where the 512-key adoption costs 5,991,991. A handoff then costs
-26,181 cycles more than the finality update at the same participation measured in §9.6 (6,551,855, 8,120,369 and
-8,128,806 there): the update carries the next committee's summary and its branch, which step 1 checks, and applying it
-writes the summary. With the final exponentiation and the core's composition (no residue witness), the 510-signer
-handoff with the summary adoption takes 9,102,704 (91.0%). The guest's change moved §9.6's period update (510, folded,
-512 keys) from 11,913,877 to 11,913,881.
+The summary adoption costs **90,617** cycles (`A2`), almost all of it the decoding of the aggregate field
+(686 without it, in the first build of this section); the 512-key adoption costs 5,991,991. A handoff then costs
+116,112 cycles more than the finality update at the same participation measured in §9.6 (6,551,855, 8,120,369
+and 8,128,806 there): the update carries the next committee's summary and its branch, which step 1 checks, the
+adoption decodes the aggregate field, and applying it writes the summary. With the final exponentiation and the
+core's composition (no residue witness), the 510-signer handoff with the summary adoption takes 9,192,635 (91.9%).
+The guest's change moved §9.6's period update (510, folded, 512 keys) from 11,913,877 to 11,913,881.
 
 **Through LEZ v0.4's state machine** (`lez/harness/tests/residue_handoff.rs`, in-process harness, LEZ v0.4.0-rc1,
 RISC Zero dev mode, as §6; output [`results/residue/handoff/lez.txt`](results/residue/handoff/lez.txt)); the
 342-signer rows give the instance's store the bench's committee after update_0, as §9.6:
 
-| transaction (`VerifyAll` at the experimental copy) | handlers run (cycles each) | execution gas | of `MAX_GAS_EXEC` | storage gas | result |
+| transaction (at the experimental copy) | handlers run (cycles each) | execution gas | of `MAX_GAS_EXEC` | storage gas | result |
 |---|---|---:|---:|---:|---|
 | handoff update_1 (510 of 512), one multiproof + residue witness + the 512 keys adopted | `VerifyAll` | 10,000,000 | 100% | 54,269 | reverted: "Execution exceeded its cycle budget of 10000000 cycles" |
-| the same, one node of its next-committee branch altered, summary | `VerifyAll` 204,819 | 204,819 | 2.0% | 5,117 | refused: exit 27 |
-| **the same, the committee adopted by its summary** | `VerifyAll` 6,544,510 → `ApplyVerified` 59,689 → `Record` 17,352 | **6,621,551** | **66.2%** | 5,117 | applied; the store is the native policy store's and the core's after all its steps (the 512-key adoption included); the record is written |
-| the same handoff again | `VerifyAll` 217,565 | 217,565 | 2.2% | 5,117 | refused: exit 52 |
-| signed by 341 of 512 (the bench's committee) | `VerifyAll` 120,590 | 120,590 | 1.2% | 21,149 | refused: exit 51 |
-| **342 of 512, every absent index odd (the costliest placement found), summary** | `VerifyAll` 8,264,428 → 59,689 → 17,352 | **8,341,469** | **83.4%** | 29,085 | applied; the store the core's after all its steps |
-| 342 of 512, every third absent, summary | `VerifyAll` 8,256,501 → 59,689 → 17,352 | 8,333,542 | 83.3% | 29,085 | applied |
-| 342 of 512, every absent index odd, the chain of additions, summary | `VerifyAll` 8,599,313 → 59,689 → 17,352 | 8,676,354 | 86.8% | 29,085 | applied |
+| the same, one node of its next-committee branch altered, summary | `VerifyAll` 204,822 | 204,822 | 2.0% | 5,117 | refused: exit 27 |
+| **the same, the committee adopted by its summary** | `VerifyAll` 6,634,444 → `ApplyVerified` 59,689 → `Record` 17,352 | **6,711,485** | **67.1%** | 5,117 | applied; the store is the native policy store's and the core's after all its steps (the 512-key adoption included); the record is written |
+| the same handoff again | `VerifyAll` 217,568 | 217,568 | 2.2% | 5,117 | refused: exit 52 |
+| signed by 341 of 512 (the bench's committee) | `VerifyAll` 120,593 | 120,593 | 1.2% | 21,149 | refused: exit 51 |
+| **342 of 512, every absent index odd (the costliest placement found), summary** | `VerifyAll` 8,354,362 → 59,689 → 17,352 | **8,431,403** | **84.3%** | 29,085 | applied; the store the core's after all its steps |
+| 342 of 512, every third absent, summary | `VerifyAll` 8,346,435 → 59,689 → 17,352 | 8,423,476 | 84.2% | 29,085 | applied |
+| 342 of 512, every absent index odd, the chain of additions, summary | `VerifyAll` 8,689,247 → 59,689 → 17,352 | 8,766,288 | 87.7% | 29,085 | applied |
+| `Init` with a sync-committee period of zero epochs | `Init` 17,641 | 17,641 | 0.2% | 1,896 | refused: exit 212 |
 
-At the costliest placement measured, 1,658,531 gas is left to the limit; as in §9.6, the maximum over all placements
-and committees is not established. The copy's image id is now `ea4b8f44…` (`4f1b2fa6…` in §9's build; neither is in
-`docs/image-ids.md`); the deployed program's, printed by the same test, is still `816d1fef…`. The earlier tests of §6
-and §9.6, re-run with this copy, give each figure 9 gas higher (8,318,654 for §9's 342-signer finality update, 6,606,709
-and 6,629,344 for the 510-signer one, 8,653,539 with the chain of additions); the deployed `VerifyAll` 9,124,896, as before.
+At the costliest placement measured, 1,568,597 gas is left to the limit; as in §9.6, the maximum over all placements
+and committees is not established. The copy's image id is now `e4ae0234…` (`ea4b8f44…` in this section's first
+build, `4f1b2fa6…` in §9's; none is in `docs/image-ids.md`); the deployed program's, printed by the same test, is
+still `816d1fef…`. The earlier tests of §6 and §9.6, re-run with this copy, give each figure 12 gas above §9's
+(8,318,657 for §9's 342-signer finality update, 6,606,712 and 6,629,347 for the 510-signer one, 8,653,542 with the
+chain of additions; the 12 placements of `residue_placements` 8,013,977 to 8,326,584, the differences between them
+unchanged); the deployed `VerifyAll` 9,124,896, as before.
 
 **Through LEZ v0.3.1's block application** (`lez-v03`, `handoffs_in_one_transaction_each`; `lez-v03/results/mainnet-handoff-one-tx.tsv`,
 `sepolia-handoff-one-tx.tsv`; [`../lez-v03/README.md`](../lez-v03/README.md)): every handoff in one `Update`
-(`Verify::ResidueSummary`, one multiproof): mainnet update_0 to update_3 (512, 510, 510, 512 signers) **6,565,465**,
-**6,636,683**, **6,647,863**, **6,597,601** execution gas (65.7% to 66.5%); Sepolia's 32 handoffs, periods 1378 to 1409
-through the Gloas layout change, 6,448,420 to **6,592,610** (at most 65.9%); after each the instance's store is the
+(`Verify::ResidueSummary`, one multiproof): mainnet update_0 to update_3 (512, 510, 510, 512 signers) **6,655,335**,
+**6,726,614**, **6,737,794**, **6,687,532** execution gas (66.6% to 67.4%); Sepolia's 32 handoffs, periods 1378 to 1409
+through the Gloas layout change, 6,538,351 to **6,682,541** (at most 66.8%); after each the instance's store is the
 native policy store's. Refused, nothing changed: a next-committee branch node altered (27), the summary adoption with
-the 512 keys beside it (84), update_0 again (23). The program's image id changed to `f8ec1b21…` (deployed nowhere; the
-local sequencer run of `lez-v03/README.md` used `8d3b59ff…`), and its other figures moved by 69 to 89 gas. The
-342-signer handoff was not run on v0.3.1: its harness cannot write a substituted committee into an instance's state.
+the 512 keys beside it (84), update_0 again (23), and an `Init` with a zero-epoch period (212). The program's image id
+changed to `bac768a8…` (deployed nowhere; the reviewed image `8d3b59ff…`, which the local sequencer run of
+`lez-v03/README.md` used and the prepared public-testnet run deploys, is unchanged there), and its other figures are
+69 to 89 gas above that image's. The 342-signer handoff was not run on v0.3.1: its harness cannot write a substituted
+committee into an instance's state.
 
 ### 10.9 What an auditor must check (in addition to §7 and §9.7)
 
@@ -899,7 +919,8 @@ local sequencer run of `lez-v03/README.md` used `8d3b59ff…`), and its other fi
    possession) at the pinned version.
 2. `adopt_summary`: that it is reached only after step 1's next-committee branch check, that the summary
    it lets `apply` write is the one that branch proved (`pending.next` equal to the progress's
-   committee), and that it refuses an initialization.
+   committee), that it refuses an initialization, and that it refuses an aggregate field that does not
+   decode or is the identity (45). `check_spec` and the copies' `check_config`: a zero-epoch period refused.
 3. That every use of the adopted summary keeps its checks: each non-signer's key decoded canonically and
    proven against `pubkeys_root` at the index of its clear bit (core or §9's multiproof), the aggregate
    decoded (`PubkeyInvalid` otherwise).
