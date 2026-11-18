@@ -6,7 +6,9 @@
 //! key read off its bytes, blst's batch addition); and the profile of what a non-signer costs. No
 //! deployed program runs this code. Every number is a delta of `env::cycle_count()` (user cycles).
 //!
-//! Modes: 0 one update (`one_tx`); 3 the profile of the non-signers' work (`profile`).
+//! Modes: 0 one update (`one_tx`); 3 the profile of the non-signers' work (`profile`). In mode 0 a
+//! period update given no adoption keys adopts the next committee by its summary
+//! (`residue_handoff::adopt_summary`, bench/RESIDUE.md §10).
 
 use std::hint::black_box;
 
@@ -231,7 +233,14 @@ fn verify(
     } else if path == 0 {
         rec.time("S3 step 3: final exponentiation and check (Blst::final_half)", || job.step3()).map_err(step)?;
     }
-    if job.adoption_pending() {
+    if job.adoption_pending() && keys_b.is_empty() {
+        // EXPERIMENTAL (bench/RESIDUE.md §10; sound only under the light client's honest-supermajority
+        // assumption): no keys given, the next committee is adopted by its summary as step 1 proved it.
+        rec.time("A2 adoption by the summary (no keys; residue_handoff::adopt_summary)", || {
+            residue_handoff::adopt_summary(&mut job)
+        })
+        .map_err(step)?;
+    } else if job.adoption_pending() {
         let keys: Vec<UncompressedPubkey> = rec.time("A0 the adoption keys into 96-byte arrays", || {
             keys_b.chunks_exact(96).map(|c| c.try_into().unwrap()).collect()
         });

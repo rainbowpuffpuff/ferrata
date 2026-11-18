@@ -1,0 +1,30 @@
+PASS the endpoint is the run's chain: chain id 11155111 (the rehearsal's local fork)
+PASS every recorded transaction is on chain as recorded: 10 transactions, 11,458,629 gas
+PASS the deployment's addresses are the deployer's CREATE addresses: stand-in 0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA (nonce 36), vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (nonce 38)
+PASS STAND-IN: the verifier is the stand-in, with the recorded key set, in front of RISC Zero's stop: 2 of 3 keys ['0x18db63ac69c84501d941bcb2fe1c9eeb472c288a', '0xb1b414dbd29c6e4f3e418973efe7ff2aae97b5c3', '0xdd8d87ed18c4e1d10d2a1fca5e60c5482a6bfe21']; RISC Zero's stop 0x1dB3fa8041E8178f1608c2F7dF627d7EC16C8221
+PASS the vault's immutables: the stand-in, the stand-in id, the REAL release program, rule (B): checkpointImageId 0x66ff80f9020fb4926743819c158cc5f797ee1a19777e27a472147bbaf6e2dc38 (no program's id), releaseImageId 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9
+PASS the vault's genesisState is the state at the recorded LEZ block with the stand-in key set: LEZ block 83001 0xdbfedc25395d6ae20ea5fcfbc6eb90b953a8b43ddb59ff3c456ca8092097505e (Finalized on the public node when planned)
+PASS the deposits: two leaves, the recorded commitments, the vault's root recomputed: 2 deposits of 0.001 ETH (one public, one private destination), root recomputed
+PASS STAND-IN: the checkpoint's journal, signed by a threshold of the key set, is what the vault finalised: burn root 0x23ae48da9fed2c13074cd1d94dbc7809d21ee9b66692c06b5d21ea1da8de4586 over 2 burns at LEZ block 83001; signed by ['0x18db63ac69c84501d941bcb2fe1c9eeb472c288a', '0xb1b414dbd29c6e4f3e418973efe7ff2aae97b5c3']; source: LEZ node http://127.0.0.1:8547, tip Finalized there, accumulator compared there after block 83003 (2 blocks between, none touching the bridge)
+PASS REAL: both release proofs verify in RISC Zero's Groth16 verifier, and the vault paid them: 2 proofs of image 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9; released [0.001, 0.001] ETH
+PASS vault: release 0 again (a replay): expected NullifierAlreadyUsed(), reverted 0xcad2ae02 (block 12162309)
+PASS vault: release 1 again (a replay): expected NullifierAlreadyUsed(), reverted 0xcad2ae02 (block 12162309)
+PASS stand-in: the recorded attestation (a threshold of the key set): expected accepted, accepted (block 12162309)
+PASS stand-in: one signature (below the threshold): expected BelowThreshold(), reverted 0xae274200 (block 12162309)
+PASS stand-in: one signature twice (a duplicated signer): expected SignersNotAscending(), reverted 0xaf390151 (block 12162309)
+PASS stand-in: the attestation for another journal: expected NotASigner(), reverted 0xda0357f7 (block 12162309)
+PASS stand-in: the attestation presented as a checkpoint_b proof: expected revert, reverted 0xb8b38d4c (block 12162309)
+PASS release 0: its proof verifies, through the stand-in: expected accepted, accepted (block 12162309)
+PASS release 0: its proof verifies, RISC Zero's emergency stop: expected accepted, accepted (block 12162309)
+PASS release 0: its proof verifies, RISC Zero's Groth16 verifier: expected accepted, accepted (block 12162309)
+PASS release 0: its proof for another journal: expected VerificationFailed(), reverted 0x439cc0cd (block 12162309)
+PASS release 0: the stand-in signatures as its proof: expected revert, reverted 0xb8b38d4c (block 12162309)
+PASS release 0: under a root nobody signed: expected BurnRootNotAccepted(), reverted 0x02d2e0be (block 12162309)
+PASS release 1: its proof verifies, through the stand-in: expected accepted, accepted (block 12162309)
+PASS release 1: its proof verifies, RISC Zero's emergency stop: expected accepted, accepted (block 12162309)
+PASS release 1: its proof verifies, RISC Zero's Groth16 verifier: expected accepted, accepted (block 12162309)
+PASS release 1: its proof for another journal: expected VerificationFailed(), reverted 0x439cc0cd (block 12162309)
+PASS release 1: the stand-in signatures as its proof: expected revert, reverted 0xb8b38d4c (block 12162309)
+PASS release 1: under a root nobody signed: expected BurnRootNotAccepted(), reverted 0x02d2e0be (block 12162309)
+PASS the refusals that stay true: replays, an unsigned root, below threshold, signatures as a proof: 19 calls answered as expected
+10 of 10 checks passed

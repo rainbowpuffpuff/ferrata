@@ -1,0 +1,9 @@
+a1b917f5f84fb82b979440487c08af2faab1832e7b8edc11e3016318ceb6ad91     5396 B gas limit 2000000 max fee      128472064 deploy program: WriteSegment 7 of 7 (4816 bytes)
+a66666421dc8112326a70f02e074809e19d531af3257b8972ad2b1c5d4d18998    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 6 of 7 (98304 bytes)
+e6b6d1b8ada666b9180ef7e207500c115164315f8a8e98611d2f5387dc408b8e    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 5 of 7 (98304 bytes)
+70198a0c1030d81685c094ee100a8334f5a14c811a4d058daa46642127957908    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 4 of 7 (98304 bytes)
+380b9d69c274da464b854c4319b88867e11aa12d98237b9b9df9b6192575c972    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 3 of 7 (98304 bytes)
+c142d30d5af57f32b411e897ccd124e1b7def0e99ac49c980dba2451151084e7    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 2 of 7 (98304 bytes)
+969913996d3ccea8551cbd1215411b13dd0ffff288297e2186792583db86eb85    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 1 of 7 (98304 bytes)
+4b9eef1b3240a9ec1ca83d721643dfe0e614d4976336c6bcadc91ee01b550542      608 B gas limit 2000000 max fee      128196608 deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+stage deploy-program: 8 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 0; at the current base fees (8, 8) at most 132796000 if every one used its whole gas limit; the largest reserve 134455296

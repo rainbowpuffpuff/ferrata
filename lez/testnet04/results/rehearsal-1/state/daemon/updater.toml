@@ -1,0 +1,47 @@
+# Written by lez/testnet04/day1.sh: the day-one instance, followed on the public job path.
+[daemon]
+name = "day1"
+state_dir = "state"
+poll_secs = 12
+listen = "127.0.0.1:9464"
+ledger = "sequencer"
+
+[sequencer]
+rpc = "http://172.20.79.179:3041"
+program = "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S"
+wait_final = true
+
+[keys]
+payer_key_file = "../tmp/testnet04/keys/rehearsal-1/daemon.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]                            # every field (the section has no per-field defaults); as the example's, but two sources
+defer_window = 8
+max_lag_slots = 64
+min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+finish_own_jobs = true
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+checkpoint = "430bcdd1ea31d4b02a45bd48e4916db1c2b8cd8c87b97282a8cdd00d3f238d1d"
+layout = "gloas"
+adoption_parts = 2
+  [[chain.source]]
+  name = "lodestar"
+  url = "https://lodestar-sepolia.chainsafe.io"
+  timeout_secs = 30
+  kind = "light-client"
+  [[chain.source]]
+  name = "publicnode"
+  url = "https://ethereum-sepolia-beacon-api.publicnode.com"
+  kind = "headers"

@@ -1,0 +1,14 @@
+-- deploy-program
+00 80a18d3cedfc47bb4f0bb3b992caa51b3cfa74c8b52464de6c59163caa4067b1 in-block (block 5) deploy program: WriteSegment 7 of 7 (4816 bytes)
+01 545af715d56335e0765481d5c5a1f758d28c289e12942bdaee2f38522bb2ec33 in-block (block 7) deploy program: WriteSegment 6 of 7 (98304 bytes)
+02 007834e9836978592c95090619b17e34ad9ebdb2777ef029dec9cd75f017e2f8 in-block (block 9) deploy program: WriteSegment 5 of 7 (98304 bytes)
+03 6eec0ba033e511490059359d5e86cab40ce19e48ce010387f1afed33026600f9 in-block (block 12) deploy program: WriteSegment 4 of 7 (98304 bytes)
+04 56954fa7edb45f4b7f750866329e1ded56489a46f26e55bb64881463e74859de in-block (block 14) deploy program: WriteSegment 3 of 7 (98304 bytes)
+05 3839757ac95ab1c90f699b63a20c0783cda68613eeb65607ddf55bef7ab3f6ec in-block (block 16) deploy program: WriteSegment 2 of 7 (98304 bytes)
+06 fe5241db2cb11b91f061fce82b8050c144eba920d601803cf86a3dd035c27612 in-block (block 18) deploy program: WriteSegment 1 of 7 (98304 bytes)
+07 f84887dea4e6e2f7053566759a722a2b0076d1cf6a9ede436b186a77e784c520 in-block (block 20) deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+-- init
+00 ff7e61aaf892f3691d02cb8c28b466446b18a1ad7e467f883e84d3df14e05f2e in-block (block 22) Init (Sepolia, Gloas layout)
+daemon: not running
+(no /health answer)
+

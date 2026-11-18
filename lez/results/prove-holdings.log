@@ -43,4 +43,4 @@ all 3 handler executions proven and verified; proving time in total 99.1 s
 	Page size (bytes): 4096
 	Exit status: 0
 
-Where: a Modal CPU container (mrun, profile indeea), 11 November 2026: 32 processors in /proc/cpuinfo (model not reported), nproc 2, 64 GB RAM, no GPU; r0vm 3.0.5; guests built with RISC Zero Rust 1.91.1; source as committed with this log (the image ids embed the build's absolute paths). The same image's previous run (this file's earlier version in the branch's history): 21.2 + 64.6 + 13.5 = 99.3 s of proving, 1:43.64 wall, peak RSS 4,939,312 kB.
+Where: a Modal CPU container (mrun, profile ws-10), 11 November 2026: 32 processors in /proc/cpuinfo (model not reported), nproc 2, 64 GB RAM, no GPU; r0vm 3.0.5; guests built with RISC Zero Rust 1.91.1; source as committed with this log (the image ids embed the build's absolute paths). The same image's previous run (this file's earlier version in the branch's history): 21.2 + 64.6 + 13.5 = 99.3 s of proving, 1:43.64 wall, peak RSS 4,939,312 kB.

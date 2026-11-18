@@ -20,7 +20,9 @@ use crate::*;
 
 pub static BLS: Blst = Blst::new(Aggregation::Auto);
 
-/// A chain with one instance, next to the native store.
+/// A chain with one instance, next to the native store. `Clone`, so that a test can fork one world
+/// into many (the red-team tests, `tests/redteam_lc.rs`).
+#[derive(Clone)]
 pub struct World {
     pub chain: Chain,
     pub inst: Instance,

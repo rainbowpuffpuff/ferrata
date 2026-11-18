@@ -1,0 +1,37 @@
+[mrun] box ferrata-wt-parity-b (ta-01M7QE9DX46H0VJDD131F7V4VR): no snapshot
+20 mutants selected, 20 to run, 20 workers
+vault-430     killed        35.3s src/FerrataVault.sol AssignmentMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 1 != 1000000] test_theKeylessClockStartsAtTheDeploymen
+vault-719     killed        35.4s src/FerrataVault.sol BinaryOpMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 2 != 3] test_aRootRevokedAtALaterCheckpointIsAcceptedA
+vault-1061    killed        35.3s src/FerrataVault.sol DeleteExpressionMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 1 != 0] test_revokingTheSunsetCheckpointClearsItsIndex
+vault-1063    killed        35.5s src/FerrataVault.sol AssignmentMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 1 != 0] test_revokingTheSunsetCheckpointClearsItsIndex
+vault-1367    killed        35.1s src/FerrataVault.sol BinaryOpMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 0 != 1] test_aSecondBeaconRequestInABlockReturnsThatBl
+vault-1373    killed        35.2s src/FerrataVault.sol AssignmentMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 2 != 1] test_aSecondBeaconRequestInABlockReturnsThatBl
+vault-1580    killed        35.1s src/FerrataVault.sol BinaryOpMutation test/Fees.t.sol:FeesTest [FAIL: assertion failed: 0 != 1000000000000000] test_release_checkpointFeeGoesToTheProverOfTheR
+vault-794     killed        36.6s src/FerrataVault.sol IfStatementMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: expected call to 0xF62849F9A0B5Bf2913b396098F7c7019b51A820a with data 0x
+registry-283  killed        35.6s src/FerrataRegistry.sol AssignmentMutation test/Fees.t.sol:FeesTest [FAIL: assertion failed: 10020000000000000000 != 10120000000000000000] test_feeChange_aRefundFi
+registry-484  killed        35.7s src/FerrataRegistry.sol IfStatementMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: a transfer to nobody] test_applyingAProposalThatKeepsTheFreezeAuthorityE
+registry-728  killed        35.6s src/FerrataRegistry.sol DeleteExpressionMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 900800000000000000000 != 899800000000000000000] test_a
+registry-1027 killed        35.0s src/FerrataRegistry.sol AssignmentMutation test/Fees.t.sol:FeesTest [FAIL: assertion failed: 0x5cdb677dc473878ddc7240cb1fcb5a5aa0bbd9d168cf1e8ba1f6de25a30906a4 != 
+registry-1021 killed        35.7s src/FerrataRegistry.sol AssignmentMutation test/Fees.t.sol:FeesTest [FAIL: assertion failed: 0xb6df87a855d769ef2f1bfd4b829bec4761249c5ccff2345ef24ba5502284a283 != 
+registry-731  killed        35.8s src/FerrataRegistry.sol AssignmentMutation test/MutationGaps.t.sol:MutationGapsTest [FAIL: assertion failed: 901799000000000000000 != 899800000000000000000] test_a
+registry-115  survived      94.8s src/FerrataRegistry.sol DeleteExpressionMutation 
+registry-116  survived      95.0s src/FerrataRegistry.sol AssignmentMutation 
+vault-1761    survived      95.5s src/FerrataVault.sol IfStatementMutation 
+registry-686  survived      95.0s src/FerrataRegistry.sol AssignmentMutation 
+registry-463  survived      95.3s src/FerrataRegistry.sol DeleteExpressionMutation 
+registry-118  survived      95.8s src/FerrataRegistry.sol AssignmentMutation 
+mutants: 3170; with a result: 20; without: 3150
+overall: killed 14, survived 6
+by file:
+  src/FerrataRegistry.sol: killed 6, survived 5
+  src/FerrataVault.sol: killed 8, survived 1
+by operator:
+  AssignmentMutation: killed 7, survived 3
+  BinaryOpMutation: killed 3
+  DeleteExpressionMutation: killed 2, survived 2
+  IfStatementMutation: killed 2, survived 1
+by stage: killed/suite 14, survived/invariant 6
+[mrun] 3 file(s) copied back: vault/results/mutation/run3-summary.txt, vault/results/mutation/run3-survivors.md, vault/results/mutation/run3.jsonl
+[mrun] snapshot 476 MiB in 11 s
+[mrun] exit 0, 223 s, 1.23 core-hours, about 0.07 USD (ledger 10.16 of 20.00 USD)
+exit 0

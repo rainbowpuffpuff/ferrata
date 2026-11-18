@@ -1,0 +1,18 @@
+{
+  "daemon": "GT1xxPs9ekzGM6nDTZ1MLHhLCEbwHUGuKRztY8zQVK5B",
+  "daemon_public_key": "933646561d33a970392ce4d398744eaffd69b1d74789d5d48fb78a96a9ea4e35",
+  "payer": "7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti",
+  "payer_public_key": "4471595d7a94622f6cbe39a1f7b5bc8d706507c648cb6a439b53902e8cb0f217",
+  "program": {
+    "header": "4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr",
+    "segments": [
+      "6v3jXcaJYoTZ9Que6UtjUYvH5hBjg5mJRBUVR6c8CSs9",
+      "9JDiPmh7bWzMDiQugzfu7aUJP28sUAqTxuAJD9Loc1YZ",
+      "C35tZyibgcSgxKJKwDSHxDakZ4WEzeECy7RzX6fiGGvg",
+      "K81vQa4U4Znh99SLcJo4D1wZDk8xXgrDoREoq2dPXBh",
+      "8xcNvnuv3xMsGyEX7D68EB9F3H72e11ddMtdwzvW8kGC",
+      "3oREnkBRG9sgqbYoHerCm1RvKDpGF3FPGkAkarWSP7RC",
+      "99Qaev9FYP94QWD8LTtc53XAa8u4ukgvDaT5rwBs5Qtc"
+    ]
+  }
+}

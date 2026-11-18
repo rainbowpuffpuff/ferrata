@@ -1,13 +1,13 @@
 label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
 third party: WriteSegment of junk into the run's segment 0	2	applied	-	0	0.0%	360	0	100000	2880	8	8	1000
-deploy run-2: WriteSegment 6 of 6 (73392 bytes)	3	applied	-	0	0.0%	73688	0	100000	589504	8	8	2000
+deploy run-2: WriteSegment 6 of 6 (74932 bytes)	3	applied	-	0	0.0%	75228	0	100000	601824	8	8	2000
 deploy run-2: WriteSegment 5 of 6 (98304 bytes)	4	applied	-	0	0.0%	98696	0	100000	789568	8	8	2001
 deploy run-2: WriteSegment 4 of 6 (98304 bytes)	5	applied	-	0	0.0%	98696	0	100000	789568	8	8	2002
 deploy run-2: WriteSegment 3 of 6 (98304 bytes)	6	applied	-	0	0.0%	98696	0	100000	789568	8	8	2003
 deploy run-2: WriteSegment 2 of 6 (98304 bytes)	7	applied	-	0	0.0%	98696	0	100000	789568	8	8	2004
 deploy run-2: WriteSegment 1 of 6 (98304 bytes)	8	applied	-	0	0.0%	98696	0	100000	789568	8	8	2005
 deploy run-2: CreateHeader (immutable)	9	applied	-	0	0.0%	820	0	100000	6560	8	8	2006
-Init	10	applied	-	7975001	79.8%	51196	7975001	10000000	64209576	8	8	1793503331000
-update update_0 (period) (residue witness)	11	applied	-	6567497	65.7%	3897	6567497	10000000	59138649	9	8	1793504135000
-update update_0 (period): Continue (adopt 512 keys, apply)	12	applied	-	7707328	77.1%	49486	7707328	10000000	77469168	10	8	1793504147000
-update update_1 (finality) (residue witness, one transaction)	13	applied	-	6647546	66.5%	4934	6647546	10000000	73162478	11	8	1793602439000
+Init	10	applied	-	7975077	79.8%	51196	7975077	10000000	64210184	8	8	1793503331000
+update update_0 (period) (residue witness)	11	applied	-	6567571	65.7%	3897	6567571	10000000	59139315	9	8	1793504135000
+update update_0 (period): Continue (adopt 512 keys, apply)	12	applied	-	7707411	77.1%	49486	7707411	10000000	77469998	10	8	1793504147000
+update update_1 (finality) (residue witness, one transaction)	13	applied	-	6647616	66.5%	4934	6647616	10000000	73163248	11	8	1793602439000

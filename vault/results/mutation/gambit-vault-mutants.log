@@ -1,0 +1,2021 @@
+1,BinaryOpMutation,src/FerrataVault.sol,219:45, ** ,+
+2,BinaryOpMutation,src/FerrataVault.sol,219:45, ** ,-
+3,BinaryOpMutation,src/FerrataVault.sol,219:45, ** ,*
+4,BinaryOpMutation,src/FerrataVault.sol,219:45, ** ,/
+5,BinaryOpMutation,src/FerrataVault.sol,219:45, ** ,%
+6,SwapArgumentsOperatorMutation,src/FerrataVault.sol,219:44,2 ** TREE_DEPTH,TREE_DEPTH ** 2
+7,DeleteExpressionMutation,src/FerrataVault.sol,565:9,_checkAdmin(),assert(true)
+8,DeleteExpressionMutation,src/FerrataVault.sol,570:9,_checkFreezeAuthority(),assert(true)
+9,IfStatementMutation,src/FerrataVault.sol,579:13,address(d.verifier).code.length == 0,true
+10,IfStatementMutation,src/FerrataVault.sol,579:13,address(d.verifier).code.length == 0,false
+11,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,+
+12,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,-
+13,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,*
+14,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,/
+15,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,%
+16,BinaryOpMutation,src/FerrataVault.sol,579:44, == ,**
+17,IfStatementMutation,src/FerrataVault.sol,581:13,"d.checkpointImageId == bytes32(0) || d.releaseImageId == bytes32(0)
+                || d.checkpointImageId == d.releaseImageId",true
+18,IfStatementMutation,src/FerrataVault.sol,581:13,"d.checkpointImageId == bytes32(0) || d.releaseImageId == bytes32(0)
+                || d.checkpointImageId == d.releaseImageId",false
+19,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",+
+20,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",-
+21,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",*
+22,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",/
+23,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",%
+24,BinaryOpMutation,src/FerrataVault.sol,581:80,"
+                || ",**
+25,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,+
+26,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,-
+27,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,*
+28,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,/
+29,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,%
+30,BinaryOpMutation,src/FerrataVault.sol,581:46, || ,**
+31,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,+
+32,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,-
+33,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,*
+34,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,/
+35,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,%
+36,BinaryOpMutation,src/FerrataVault.sol,581:32, == ,**
+37,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,+
+38,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,-
+39,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,*
+40,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,/
+41,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,%
+42,BinaryOpMutation,src/FerrataVault.sol,581:66, == ,**
+43,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,+
+44,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,-
+45,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,*
+46,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,/
+47,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,%
+48,BinaryOpMutation,src/FerrataVault.sol,582:39, == ,**
+49,IfStatementMutation,src/FerrataVault.sol,584:13,d.lezConfigId == bytes32(0),true
+50,IfStatementMutation,src/FerrataVault.sol,584:13,d.lezConfigId == bytes32(0),false
+51,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,+
+52,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,-
+53,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,*
+54,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,/
+55,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,%
+56,BinaryOpMutation,src/FerrataVault.sol,584:26, == ,**
+57,IfStatementMutation,src/FerrataVault.sol,585:13,d.genesisState == bytes32(0),true
+58,IfStatementMutation,src/FerrataVault.sol,585:13,d.genesisState == bytes32(0),false
+59,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,+
+60,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,-
+61,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,*
+62,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,/
+63,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,%
+64,BinaryOpMutation,src/FerrataVault.sol,585:27, == ,**
+65,IfStatementMutation,src/FerrataVault.sol,586:13,d.nMin == 0 || d.tMin == 0,true
+66,IfStatementMutation,src/FerrataVault.sol,586:13,d.nMin == 0 || d.tMin == 0,false
+67,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,+
+68,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,-
+69,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,*
+70,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,/
+71,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,%
+72,BinaryOpMutation,src/FerrataVault.sol,586:24, || ,**
+73,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,+
+74,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,-
+75,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,*
+76,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,/
+77,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,%
+78,BinaryOpMutation,src/FerrataVault.sol,586:19, == ,**
+79,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,+
+80,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,-
+81,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,*
+82,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,/
+83,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,%
+84,BinaryOpMutation,src/FerrataVault.sol,586:34, == ,**
+85,IfStatementMutation,src/FerrataVault.sol,587:13,d.deltaFloor == 0 || d.initialDelta < d.deltaFloor || d.initialDelta > MAX_DELTA,true
+86,IfStatementMutation,src/FerrataVault.sol,587:13,d.deltaFloor == 0 || d.initialDelta < d.deltaFloor || d.initialDelta > MAX_DELTA,false
+87,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,+
+88,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,-
+89,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,*
+90,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,/
+91,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,%
+92,BinaryOpMutation,src/FerrataVault.sol,587:63, || ,**
+93,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,+
+94,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,-
+95,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,*
+96,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,/
+97,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,%
+98,BinaryOpMutation,src/FerrataVault.sol,587:30, || ,**
+99,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,+
+100,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,-
+101,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,*
+102,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,/
+103,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,%
+104,BinaryOpMutation,src/FerrataVault.sol,587:25, == ,**
+105,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,+
+106,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,-
+107,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,*
+108,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,/
+109,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,%
+110,BinaryOpMutation,src/FerrataVault.sol,587:48, < ,**
+111,SwapArgumentsOperatorMutation,src/FerrataVault.sol,587:34,d.initialDelta < d.deltaFloor,d.deltaFloor < d.initialDelta
+112,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,+
+113,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,-
+114,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,*
+115,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,/
+116,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,%
+117,BinaryOpMutation,src/FerrataVault.sol,587:81, > ,**
+118,SwapArgumentsOperatorMutation,src/FerrataVault.sol,587:67,d.initialDelta > MAX_DELTA,MAX_DELTA > d.initialDelta
+119,IfStatementMutation,src/FerrataVault.sol,588:13,d.revokeWindow == 0 || d.revokeWindow / d.deltaFloor > MAX_REVOKE_SPAN,true
+120,IfStatementMutation,src/FerrataVault.sol,588:13,d.revokeWindow == 0 || d.revokeWindow / d.deltaFloor > MAX_REVOKE_SPAN,false
+121,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,+
+122,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,-
+123,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,*
+124,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,/
+125,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,%
+126,BinaryOpMutation,src/FerrataVault.sol,588:32, || ,**
+127,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,+
+128,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,-
+129,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,*
+130,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,/
+131,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,%
+132,BinaryOpMutation,src/FerrataVault.sol,588:27, == ,**
+133,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,+
+134,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,-
+135,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,*
+136,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,/
+137,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,%
+138,BinaryOpMutation,src/FerrataVault.sol,588:65, > ,**
+139,SwapArgumentsOperatorMutation,src/FerrataVault.sol,588:36,d.revokeWindow / d.deltaFloor > MAX_REVOKE_SPAN,MAX_REVOKE_SPAN > d.revokeWindow / d.deltaFloor
+140,BinaryOpMutation,src/FerrataVault.sol,588:50, / ,+
+141,BinaryOpMutation,src/FerrataVault.sol,588:50, / ,-
+142,BinaryOpMutation,src/FerrataVault.sol,588:50, / ,*
+143,BinaryOpMutation,src/FerrataVault.sol,588:50, / ,%
+144,BinaryOpMutation,src/FerrataVault.sol,588:50, / ,**
+145,SwapArgumentsOperatorMutation,src/FerrataVault.sol,588:36,d.revokeWindow / d.deltaFloor,d.deltaFloor / d.revokeWindow
+146,IfStatementMutation,src/FerrataVault.sol,589:13,d.maxFreeze == 0,true
+147,IfStatementMutation,src/FerrataVault.sol,589:13,d.maxFreeze == 0,false
+148,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,+
+149,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,-
+150,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,*
+151,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,/
+152,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,%
+153,BinaryOpMutation,src/FerrataVault.sol,589:24, == ,**
+154,IfStatementMutation,src/FerrataVault.sol,591:13,d.mode == Mode.A ? d.turnSeconds == 0 || d.turnSeconds > MAX_DELTA : d.turnSeconds != 0,true
+155,IfStatementMutation,src/FerrataVault.sol,591:13,d.mode == Mode.A ? d.turnSeconds == 0 || d.turnSeconds > MAX_DELTA : d.turnSeconds != 0,false
+156,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,+
+157,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,-
+158,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,*
+159,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,/
+160,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,%
+161,BinaryOpMutation,src/FerrataVault.sol,591:19, == ,**
+162,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,+
+163,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,-
+164,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,*
+165,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,/
+166,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,%
+167,BinaryOpMutation,src/FerrataVault.sol,591:95, != ,**
+168,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,+
+169,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,-
+170,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,*
+171,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,/
+172,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,%
+173,BinaryOpMutation,src/FerrataVault.sol,591:50, || ,**
+174,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,+
+175,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,-
+176,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,*
+177,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,/
+178,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,%
+179,BinaryOpMutation,src/FerrataVault.sol,591:45, == ,**
+180,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,+
+181,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,-
+182,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,*
+183,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,/
+184,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,%
+185,BinaryOpMutation,src/FerrataVault.sol,591:67, > ,**
+186,SwapArgumentsOperatorMutation,src/FerrataVault.sol,591:54,d.turnSeconds > MAX_DELTA,MAX_DELTA > d.turnSeconds
+187,IfStatementMutation,src/FerrataVault.sol,594:13,d.minReleaseDelay > d.revokeWindow || d.minReleaseDelay > MAX_RELEASE_DELAY,true
+188,IfStatementMutation,src/FerrataVault.sol,594:13,d.minReleaseDelay > d.revokeWindow || d.minReleaseDelay > MAX_RELEASE_DELAY,false
+189,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,+
+190,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,-
+191,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,*
+192,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,/
+193,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,%
+194,BinaryOpMutation,src/FerrataVault.sol,594:47, || ,**
+195,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,+
+196,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,-
+197,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,*
+198,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,/
+199,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,%
+200,BinaryOpMutation,src/FerrataVault.sol,594:30, > ,**
+201,SwapArgumentsOperatorMutation,src/FerrataVault.sol,594:13,d.minReleaseDelay > d.revokeWindow,d.revokeWindow > d.minReleaseDelay
+202,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,+
+203,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,-
+204,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,*
+205,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,/
+206,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,%
+207,BinaryOpMutation,src/FerrataVault.sol,594:68, > ,**
+208,SwapArgumentsOperatorMutation,src/FerrataVault.sol,594:51,d.minReleaseDelay > MAX_RELEASE_DELAY,MAX_RELEASE_DELAY > d.minReleaseDelay
+209,IfStatementMutation,src/FerrataVault.sol,597:13,d.admin == address(0) || d.freezeAuthority == address(0) || d.feeRecipient == address(0),true
+210,IfStatementMutation,src/FerrataVault.sol,597:13,d.admin == address(0) || d.freezeAuthority == address(0) || d.feeRecipient == address(0),false
+211,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,+
+212,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,-
+213,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,*
+214,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,/
+215,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,%
+216,BinaryOpMutation,src/FerrataVault.sol,597:69, || ,**
+217,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,+
+218,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,-
+219,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,*
+220,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,/
+221,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,%
+222,BinaryOpMutation,src/FerrataVault.sol,597:34, || ,**
+223,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,+
+224,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,-
+225,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,*
+226,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,/
+227,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,%
+228,BinaryOpMutation,src/FerrataVault.sol,597:20, == ,**
+229,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,+
+230,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,-
+231,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,*
+232,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,/
+233,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,%
+234,BinaryOpMutation,src/FerrataVault.sol,597:55, == ,**
+235,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,+
+236,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,-
+237,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,*
+238,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,/
+239,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,%
+240,BinaryOpMutation,src/FerrataVault.sol,597:87, == ,**
+241,IfStatementMutation,src/FerrataVault.sol,600:13,d.admin == d.freezeAuthority,true
+242,IfStatementMutation,src/FerrataVault.sol,600:13,d.admin == d.freezeAuthority,false
+243,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,+
+244,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,-
+245,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,*
+246,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,/
+247,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,%
+248,BinaryOpMutation,src/FerrataVault.sol,600:20, == ,**
+249,IfStatementMutation,src/FerrataVault.sol,603:17,stopped,true
+250,IfStatementMutation,src/FerrataVault.sol,603:17,stopped,false
+251,DeleteExpressionMutation,src/FerrataVault.sol,607:9,"FerrataRegistry.checkReleaseFloor(
+            d.globalReleaseCap.capacity,
+            d.globalReleaseCap.refillPerSecond,
+            1,
+            1,
+            d.releaseCapFloor.capacity,
+            d.releaseCapFloor.refillPerSecond
+        )",assert(true)
+252,DeleteExpressionMutation,src/FerrataVault.sol,616:9,verifier = d.verifier,assert(true)
+253,AssignmentMutation,src/FerrataVault.sol,616:20,d.verifier,0
+254,AssignmentMutation,src/FerrataVault.sol,616:20,d.verifier,(-1)
+255,AssignmentMutation,src/FerrataVault.sol,616:20,d.verifier,1
+256,AssignmentMutation,src/FerrataVault.sol,616:20,d.verifier,true
+257,AssignmentMutation,src/FerrataVault.sol,616:20,d.verifier,false
+258,DeleteExpressionMutation,src/FerrataVault.sol,617:9,checkpointImageId = d.checkpointImageId,assert(true)
+259,AssignmentMutation,src/FerrataVault.sol,617:29,d.checkpointImageId,0
+260,AssignmentMutation,src/FerrataVault.sol,617:29,d.checkpointImageId,(-1)
+261,AssignmentMutation,src/FerrataVault.sol,617:29,d.checkpointImageId,1
+262,AssignmentMutation,src/FerrataVault.sol,617:29,d.checkpointImageId,true
+263,AssignmentMutation,src/FerrataVault.sol,617:29,d.checkpointImageId,false
+264,DeleteExpressionMutation,src/FerrataVault.sol,618:9,releaseImageId = d.releaseImageId,assert(true)
+265,AssignmentMutation,src/FerrataVault.sol,618:26,d.releaseImageId,0
+266,AssignmentMutation,src/FerrataVault.sol,618:26,d.releaseImageId,(-1)
+267,AssignmentMutation,src/FerrataVault.sol,618:26,d.releaseImageId,1
+268,AssignmentMutation,src/FerrataVault.sol,618:26,d.releaseImageId,true
+269,AssignmentMutation,src/FerrataVault.sol,618:26,d.releaseImageId,false
+270,DeleteExpressionMutation,src/FerrataVault.sol,619:9,lezConfigId = d.lezConfigId,assert(true)
+271,AssignmentMutation,src/FerrataVault.sol,619:23,d.lezConfigId,0
+272,AssignmentMutation,src/FerrataVault.sol,619:23,d.lezConfigId,(-1)
+273,AssignmentMutation,src/FerrataVault.sol,619:23,d.lezConfigId,1
+274,AssignmentMutation,src/FerrataVault.sol,619:23,d.lezConfigId,true
+275,AssignmentMutation,src/FerrataVault.sol,619:23,d.lezConfigId,false
+276,DeleteExpressionMutation,src/FerrataVault.sol,620:9,storedLezConfigId = d.lezConfigId,assert(true)
+277,AssignmentMutation,src/FerrataVault.sol,620:29,d.lezConfigId,0
+278,AssignmentMutation,src/FerrataVault.sol,620:29,d.lezConfigId,(-1)
+279,AssignmentMutation,src/FerrataVault.sol,620:29,d.lezConfigId,1
+280,AssignmentMutation,src/FerrataVault.sol,620:29,d.lezConfigId,true
+281,AssignmentMutation,src/FerrataVault.sol,620:29,d.lezConfigId,false
+282,DeleteExpressionMutation,src/FerrataVault.sol,621:9,genesisState = d.genesisState,assert(true)
+283,AssignmentMutation,src/FerrataVault.sol,621:24,d.genesisState,0
+284,AssignmentMutation,src/FerrataVault.sol,621:24,d.genesisState,(-1)
+285,AssignmentMutation,src/FerrataVault.sol,621:24,d.genesisState,1
+286,AssignmentMutation,src/FerrataVault.sol,621:24,d.genesisState,true
+287,AssignmentMutation,src/FerrataVault.sol,621:24,d.genesisState,false
+288,DeleteExpressionMutation,src/FerrataVault.sol,622:9,nMin = d.nMin,assert(true)
+289,AssignmentMutation,src/FerrataVault.sol,622:16,d.nMin,0
+290,AssignmentMutation,src/FerrataVault.sol,622:16,d.nMin,(-1)
+291,AssignmentMutation,src/FerrataVault.sol,622:16,d.nMin,1
+292,AssignmentMutation,src/FerrataVault.sol,622:16,d.nMin,true
+293,AssignmentMutation,src/FerrataVault.sol,622:16,d.nMin,false
+294,DeleteExpressionMutation,src/FerrataVault.sol,623:9,tMin = d.tMin,assert(true)
+295,AssignmentMutation,src/FerrataVault.sol,623:16,d.tMin,0
+296,AssignmentMutation,src/FerrataVault.sol,623:16,d.tMin,(-1)
+297,AssignmentMutation,src/FerrataVault.sol,623:16,d.tMin,1
+298,AssignmentMutation,src/FerrataVault.sol,623:16,d.tMin,true
+299,AssignmentMutation,src/FerrataVault.sol,623:16,d.tMin,false
+300,DeleteExpressionMutation,src/FerrataVault.sol,624:9,deltaFloor = d.deltaFloor,assert(true)
+301,AssignmentMutation,src/FerrataVault.sol,624:22,d.deltaFloor,0
+302,AssignmentMutation,src/FerrataVault.sol,624:22,d.deltaFloor,(-1)
+303,AssignmentMutation,src/FerrataVault.sol,624:22,d.deltaFloor,1
+304,AssignmentMutation,src/FerrataVault.sol,624:22,d.deltaFloor,true
+305,AssignmentMutation,src/FerrataVault.sol,624:22,d.deltaFloor,false
+306,DeleteExpressionMutation,src/FerrataVault.sol,625:9,revokeWindow = d.revokeWindow,assert(true)
+307,AssignmentMutation,src/FerrataVault.sol,625:24,d.revokeWindow,0
+308,AssignmentMutation,src/FerrataVault.sol,625:24,d.revokeWindow,(-1)
+309,AssignmentMutation,src/FerrataVault.sol,625:24,d.revokeWindow,1
+310,AssignmentMutation,src/FerrataVault.sol,625:24,d.revokeWindow,true
+311,AssignmentMutation,src/FerrataVault.sol,625:24,d.revokeWindow,false
+312,DeleteExpressionMutation,src/FerrataVault.sol,626:9,maxFreeze = d.maxFreeze,assert(true)
+313,AssignmentMutation,src/FerrataVault.sol,626:21,d.maxFreeze,0
+314,AssignmentMutation,src/FerrataVault.sol,626:21,d.maxFreeze,(-1)
+315,AssignmentMutation,src/FerrataVault.sol,626:21,d.maxFreeze,1
+316,AssignmentMutation,src/FerrataVault.sol,626:21,d.maxFreeze,true
+317,AssignmentMutation,src/FerrataVault.sol,626:21,d.maxFreeze,false
+318,DeleteExpressionMutation,src/FerrataVault.sol,627:9,turnSeconds = d.turnSeconds,assert(true)
+319,AssignmentMutation,src/FerrataVault.sol,627:23,d.turnSeconds,0
+320,AssignmentMutation,src/FerrataVault.sol,627:23,d.turnSeconds,(-1)
+321,AssignmentMutation,src/FerrataVault.sol,627:23,d.turnSeconds,1
+322,AssignmentMutation,src/FerrataVault.sol,627:23,d.turnSeconds,true
+323,AssignmentMutation,src/FerrataVault.sol,627:23,d.turnSeconds,false
+324,DeleteExpressionMutation,src/FerrataVault.sol,628:9,minReleaseDelay = d.minReleaseDelay,assert(true)
+325,AssignmentMutation,src/FerrataVault.sol,628:27,d.minReleaseDelay,0
+326,AssignmentMutation,src/FerrataVault.sol,628:27,d.minReleaseDelay,(-1)
+327,AssignmentMutation,src/FerrataVault.sol,628:27,d.minReleaseDelay,1
+328,AssignmentMutation,src/FerrataVault.sol,628:27,d.minReleaseDelay,true
+329,AssignmentMutation,src/FerrataVault.sol,628:27,d.minReleaseDelay,false
+330,DeleteExpressionMutation,src/FerrataVault.sol,629:9,mode = d.mode,assert(true)
+331,AssignmentMutation,src/FerrataVault.sol,629:16,d.mode,0
+332,AssignmentMutation,src/FerrataVault.sol,629:16,d.mode,(-1)
+333,AssignmentMutation,src/FerrataVault.sol,629:16,d.mode,1
+334,AssignmentMutation,src/FerrataVault.sol,629:16,d.mode,true
+335,AssignmentMutation,src/FerrataVault.sol,629:16,d.mode,false
+336,DeleteExpressionMutation,src/FerrataVault.sol,630:9,releaseCapFloor = d.releaseCapFloor.capacity,assert(true)
+337,AssignmentMutation,src/FerrataVault.sol,630:27,d.releaseCapFloor.capacity,0
+338,AssignmentMutation,src/FerrataVault.sol,630:27,d.releaseCapFloor.capacity,(-1)
+339,AssignmentMutation,src/FerrataVault.sol,630:27,d.releaseCapFloor.capacity,1
+340,AssignmentMutation,src/FerrataVault.sol,630:27,d.releaseCapFloor.capacity,true
+341,AssignmentMutation,src/FerrataVault.sol,630:27,d.releaseCapFloor.capacity,false
+342,DeleteExpressionMutation,src/FerrataVault.sol,631:9,releaseRefillFloor = d.releaseCapFloor.refillPerSecond,assert(true)
+343,AssignmentMutation,src/FerrataVault.sol,631:30,d.releaseCapFloor.refillPerSecond,0
+344,AssignmentMutation,src/FerrataVault.sol,631:30,d.releaseCapFloor.refillPerSecond,(-1)
+345,AssignmentMutation,src/FerrataVault.sol,631:30,d.releaseCapFloor.refillPerSecond,1
+346,AssignmentMutation,src/FerrataVault.sol,631:30,d.releaseCapFloor.refillPerSecond,true
+347,AssignmentMutation,src/FerrataVault.sol,631:30,d.releaseCapFloor.refillPerSecond,false
+348,DeleteExpressionMutation,src/FerrataVault.sol,632:9,feeRecipient = d.feeRecipient,assert(true)
+349,AssignmentMutation,src/FerrataVault.sol,632:24,d.feeRecipient,0
+350,AssignmentMutation,src/FerrataVault.sol,632:24,d.feeRecipient,(-1)
+351,AssignmentMutation,src/FerrataVault.sol,632:24,d.feeRecipient,1
+352,AssignmentMutation,src/FerrataVault.sol,632:24,d.feeRecipient,true
+353,AssignmentMutation,src/FerrataVault.sol,632:24,d.feeRecipient,false
+354,DeleteExpressionMutation,src/FerrataVault.sol,633:9,_keylessSpan = (uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,assert(true)
+355,AssignmentMutation,src/FerrataVault.sol,633:24,(uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,0
+356,AssignmentMutation,src/FerrataVault.sol,633:24,(uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,(-1)
+357,AssignmentMutation,src/FerrataVault.sol,633:24,(uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,1
+358,AssignmentMutation,src/FerrataVault.sol,633:24,(uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,true
+359,AssignmentMutation,src/FerrataVault.sol,633:24,(uint256(d.tMin) - 1) * d.turnSeconds + KEYLESS_RETIREMENT,false
+360,BinaryOpMutation,src/FerrataVault.sol,633:61, + ,-
+361,BinaryOpMutation,src/FerrataVault.sol,633:61, + ,*
+362,BinaryOpMutation,src/FerrataVault.sol,633:61, + ,/
+363,BinaryOpMutation,src/FerrataVault.sol,633:61, + ,%
+364,BinaryOpMutation,src/FerrataVault.sol,633:61, + ,**
+365,BinaryOpMutation,src/FerrataVault.sol,633:45, * ,+
+366,BinaryOpMutation,src/FerrataVault.sol,633:45, * ,-
+367,BinaryOpMutation,src/FerrataVault.sol,633:45, * ,/
+368,BinaryOpMutation,src/FerrataVault.sol,633:45, * ,%
+369,BinaryOpMutation,src/FerrataVault.sol,633:45, * ,**
+370,BinaryOpMutation,src/FerrataVault.sol,633:40, - ,+
+371,BinaryOpMutation,src/FerrataVault.sol,633:40, - ,*
+372,BinaryOpMutation,src/FerrataVault.sol,633:40, - ,/
+373,BinaryOpMutation,src/FerrataVault.sol,633:40, - ,%
+374,BinaryOpMutation,src/FerrataVault.sol,633:40, - ,**
+375,SwapArgumentsOperatorMutation,src/FerrataVault.sol,633:25,uint256(d.tMin) - 1,1 - uint256(d.tMin)
+376,DeleteExpressionMutation,src/FerrataVault.sol,638:13,"emptySubtree = _hashNode(emptySubtree, emptySubtree)",assert(true)
+377,AssignmentMutation,src/FerrataVault.sol,638:28,"_hashNode(emptySubtree, emptySubtree)",0
+378,AssignmentMutation,src/FerrataVault.sol,638:28,"_hashNode(emptySubtree, emptySubtree)",(-1)
+379,AssignmentMutation,src/FerrataVault.sol,638:28,"_hashNode(emptySubtree, emptySubtree)",1
+380,AssignmentMutation,src/FerrataVault.sol,638:28,"_hashNode(emptySubtree, emptySubtree)",true
+381,AssignmentMutation,src/FerrataVault.sol,638:28,"_hashNode(emptySubtree, emptySubtree)",false
+382,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,+
+383,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,-
+384,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,*
+385,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,/
+386,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,%
+387,BinaryOpMutation,src/FerrataVault.sol,637:30, < ,**
+388,SwapArgumentsOperatorMutation,src/FerrataVault.sol,637:29,h < TREE_DEPTH,TREE_DEPTH < h
+389,DeleteExpressionMutation,src/FerrataVault.sol,637:45,h++,assert(true)
+390,UnaryOperatorMutation,src/FerrataVault.sol,637:46,++,--
+391,DeleteExpressionMutation,src/FerrataVault.sol,640:9,depositRoot = emptySubtree,assert(true)
+392,AssignmentMutation,src/FerrataVault.sol,640:23,emptySubtree,0
+393,AssignmentMutation,src/FerrataVault.sol,640:23,emptySubtree,(-1)
+394,AssignmentMutation,src/FerrataVault.sol,640:23,emptySubtree,1
+395,AssignmentMutation,src/FerrataVault.sol,640:23,emptySubtree,true
+396,AssignmentMutation,src/FerrataVault.sol,640:23,emptySubtree,false
+397,DeleteExpressionMutation,src/FerrataVault.sol,642:9,finalState = d.genesisState,assert(true)
+398,AssignmentMutation,src/FerrataVault.sol,642:22,d.genesisState,0
+399,AssignmentMutation,src/FerrataVault.sol,642:22,d.genesisState,(-1)
+400,AssignmentMutation,src/FerrataVault.sol,642:22,d.genesisState,1
+401,AssignmentMutation,src/FerrataVault.sol,642:22,d.genesisState,true
+402,AssignmentMutation,src/FerrataVault.sol,642:22,d.genesisState,false
+403,DeleteExpressionMutation,src/FerrataVault.sol,643:9,delta = d.initialDelta,assert(true)
+404,AssignmentMutation,src/FerrataVault.sol,643:17,d.initialDelta,0
+405,AssignmentMutation,src/FerrataVault.sol,643:17,d.initialDelta,(-1)
+406,AssignmentMutation,src/FerrataVault.sol,643:17,d.initialDelta,1
+407,AssignmentMutation,src/FerrataVault.sol,643:17,d.initialDelta,true
+408,AssignmentMutation,src/FerrataVault.sol,643:17,d.initialDelta,false
+409,DeleteExpressionMutation,src/FerrataVault.sol,644:9,admin = d.admin,assert(true)
+410,AssignmentMutation,src/FerrataVault.sol,644:17,d.admin,0
+411,AssignmentMutation,src/FerrataVault.sol,644:17,d.admin,(-1)
+412,AssignmentMutation,src/FerrataVault.sol,644:17,d.admin,1
+413,AssignmentMutation,src/FerrataVault.sol,644:17,d.admin,true
+414,AssignmentMutation,src/FerrataVault.sol,644:17,d.admin,false
+415,DeleteExpressionMutation,src/FerrataVault.sol,645:9,freezeAuthority = d.freezeAuthority,assert(true)
+416,AssignmentMutation,src/FerrataVault.sol,645:27,d.freezeAuthority,0
+417,AssignmentMutation,src/FerrataVault.sol,645:27,d.freezeAuthority,(-1)
+418,AssignmentMutation,src/FerrataVault.sol,645:27,d.freezeAuthority,1
+419,AssignmentMutation,src/FerrataVault.sol,645:27,d.freezeAuthority,true
+420,AssignmentMutation,src/FerrataVault.sol,645:27,d.freezeAuthority,false
+421,DeleteExpressionMutation,src/FerrataVault.sol,646:9,watchers = d.watchers,assert(true)
+422,AssignmentMutation,src/FerrataVault.sol,646:20,d.watchers,0
+423,AssignmentMutation,src/FerrataVault.sol,646:20,d.watchers,(-1)
+424,AssignmentMutation,src/FerrataVault.sol,646:20,d.watchers,1
+425,AssignmentMutation,src/FerrataVault.sol,646:20,d.watchers,true
+426,AssignmentMutation,src/FerrataVault.sol,646:20,d.watchers,false
+427,DeleteExpressionMutation,src/FerrataVault.sol,647:9,keylessFrom = uint64(block.timestamp),assert(true)
+428,AssignmentMutation,src/FerrataVault.sol,647:23,uint64(block.timestamp),0
+429,AssignmentMutation,src/FerrataVault.sol,647:23,uint64(block.timestamp),(-1)
+430,AssignmentMutation,src/FerrataVault.sol,647:23,uint64(block.timestamp),1
+431,AssignmentMutation,src/FerrataVault.sol,647:23,uint64(block.timestamp),true
+432,AssignmentMutation,src/FerrataVault.sol,647:23,uint64(block.timestamp),false
+433,DeleteExpressionMutation,src/FerrataVault.sol,648:9,"FerrataRegistry.initBucket(_globalDepositCap, d.globalDepositCap.capacity, d.globalDepositCap.refillPerSecond)",assert(true)
+434,DeleteExpressionMutation,src/FerrataVault.sol,649:9,"FerrataRegistry.initBucket(_globalReleaseCap, d.globalReleaseCap.capacity, d.globalReleaseCap.refillPerSecond)",assert(true)
+435,IfStatementMutation,src/FerrataVault.sol,677:13,token == ETH,true
+436,IfStatementMutation,src/FerrataVault.sol,677:13,token == ETH,false
+437,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,+
+438,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,-
+439,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,*
+440,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,/
+441,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,%
+442,BinaryOpMutation,src/FerrataVault.sol,677:18, == ,**
+443,DeleteExpressionMutation,src/FerrataVault.sol,686:9,"erc20.safeTransferFrom(msg.sender, address(this), total)",assert(true)
+444,IfStatementMutation,src/FerrataVault.sol,687:13,erc20.balanceOf(address(this)) != balanceBefore + total,true
+445,IfStatementMutation,src/FerrataVault.sol,687:13,erc20.balanceOf(address(this)) != balanceBefore + total,false
+446,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,+
+447,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,-
+448,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,*
+449,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,/
+450,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,%
+451,BinaryOpMutation,src/FerrataVault.sol,687:43, != ,**
+452,BinaryOpMutation,src/FerrataVault.sol,687:60, + ,-
+453,BinaryOpMutation,src/FerrataVault.sol,687:60, + ,*
+454,BinaryOpMutation,src/FerrataVault.sol,687:60, + ,/
+455,BinaryOpMutation,src/FerrataVault.sol,687:60, + ,%
+456,BinaryOpMutation,src/FerrataVault.sol,687:60, + ,**
+457,DeleteExpressionMutation,src/FerrataVault.sol,689:9,"_recordDeposit(token, amount, total, commitment, index)",assert(true)
+458,IfStatementMutation,src/FerrataVault.sol,696:13,msg.value != total,true
+459,IfStatementMutation,src/FerrataVault.sol,696:13,msg.value != total,false
+460,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,+
+461,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,-
+462,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,*
+463,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,/
+464,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,%
+465,BinaryOpMutation,src/FerrataVault.sol,696:22, != ,**
+466,DeleteExpressionMutation,src/FerrataVault.sol,697:9,"_recordDeposit(ETH, amount, total, commitment, index)",assert(true)
+467,IfStatementMutation,src/FerrataVault.sol,715:13,!retired,true
+468,IfStatementMutation,src/FerrataVault.sol,715:13,!retired,false
+469,UnaryOperatorMutation,src/FerrataVault.sol,715:13,!,++
+470,UnaryOperatorMutation,src/FerrataVault.sol,715:13,!,--
+471,UnaryOperatorMutation,src/FerrataVault.sol,715:13,!,~
+472,IfStatementMutation,src/FerrataVault.sol,716:13,_frozen(releasesFrozenUntil),true
+473,IfStatementMutation,src/FerrataVault.sol,716:13,_frozen(releasesFrozenUntil),false
+474,IfStatementMutation,src/FerrataVault.sol,717:13,_stopped(),true
+475,IfStatementMutation,src/FerrataVault.sol,717:13,_stopped(),false
+476,IfStatementMutation,src/FerrataVault.sol,718:13,!sunsetLeafCountSet || leafIndex < sunsetLeafCount,true
+477,IfStatementMutation,src/FerrataVault.sol,718:13,!sunsetLeafCountSet || leafIndex < sunsetLeafCount,false
+478,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,+
+479,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,-
+480,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,*
+481,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,/
+482,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,%
+483,BinaryOpMutation,src/FerrataVault.sol,718:32, || ,**
+484,UnaryOperatorMutation,src/FerrataVault.sol,718:13,!,++
+485,UnaryOperatorMutation,src/FerrataVault.sol,718:13,!,--
+486,UnaryOperatorMutation,src/FerrataVault.sol,718:13,!,~
+487,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,+
+488,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,-
+489,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,*
+490,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,/
+491,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,%
+492,BinaryOpMutation,src/FerrataVault.sol,718:45, < ,**
+493,SwapArgumentsOperatorMutation,src/FerrataVault.sol,718:36,leafIndex < sunsetLeafCount,sunsetLeafCount < leafIndex
+494,IfStatementMutation,src/FerrataVault.sol,719:13,block.timestamp < _refundsOpenAt(),true
+495,IfStatementMutation,src/FerrataVault.sol,719:13,block.timestamp < _refundsOpenAt(),false
+496,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,+
+497,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,-
+498,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,*
+499,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,/
+500,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,%
+501,BinaryOpMutation,src/FerrataVault.sol,719:28, < ,**
+502,SwapArgumentsOperatorMutation,src/FerrataVault.sol,719:13,block.timestamp < _refundsOpenAt(),_refundsOpenAt() < block.timestamp
+503,IfStatementMutation,src/FerrataVault.sol,720:13,refunded[leafIndex],true
+504,IfStatementMutation,src/FerrataVault.sol,720:13,refunded[leafIndex],false
+505,IfStatementMutation,src/FerrataVault.sol,726:13,amount > escrowed[token],true
+506,IfStatementMutation,src/FerrataVault.sol,726:13,amount > escrowed[token],false
+507,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,+
+508,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,-
+509,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,*
+510,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,/
+511,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,%
+512,BinaryOpMutation,src/FerrataVault.sol,726:19, > ,**
+513,SwapArgumentsOperatorMutation,src/FerrataVault.sol,726:13,amount > escrowed[token],escrowed[token] > amount
+514,DeleteExpressionMutation,src/FerrataVault.sol,728:9,"_consumeReleaseCaps(token, amount)",assert(true)
+515,DeleteExpressionMutation,src/FerrataVault.sol,729:9,refunded[leafIndex] = true,assert(true)
+516,AssignmentMutation,src/FerrataVault.sol,729:31,true,false
+517,DeleteExpressionMutation,src/FerrataVault.sol,730:9,escrowed[token] -= amount,assert(true)
+518,AssignmentMutation,src/FerrataVault.sol,730:28,amount,0
+519,AssignmentMutation,src/FerrataVault.sol,730:28,amount,(-1)
+520,AssignmentMutation,src/FerrataVault.sol,730:28,amount,1
+521,AssignmentMutation,src/FerrataVault.sol,730:28,amount,true
+522,AssignmentMutation,src/FerrataVault.sol,730:28,amount,false
+523,DeleteExpressionMutation,src/FerrataVault.sol,732:9,"_payOrCredit(token, depositor, amount)",assert(true)
+524,IfStatementMutation,src/FerrataVault.sol,742:13,mode != Mode.A,true
+525,IfStatementMutation,src/FerrataVault.sol,742:13,mode != Mode.A,false
+526,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,+
+527,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,-
+528,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,*
+529,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,/
+530,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,%
+531,BinaryOpMutation,src/FerrataVault.sol,742:17, != ,**
+532,IfStatementMutation,src/FerrataVault.sol,751:13,_frozen(checkpointsFrozenUntil),true
+533,IfStatementMutation,src/FerrataVault.sol,751:13,_frozen(checkpointsFrozenUntil),false
+534,IfStatementMutation,src/FerrataVault.sol,752:13,c.parentState != finalState,true
+535,IfStatementMutation,src/FerrataVault.sol,752:13,c.parentState != finalState,false
+536,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,+
+537,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,-
+538,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,*
+539,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,/
+540,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,%
+541,BinaryOpMutation,src/FerrataVault.sol,752:26, != ,**
+542,IfStatementMutation,src/FerrataVault.sol,753:13,c.echoNonce != bytes32(0),true
+543,IfStatementMutation,src/FerrataVault.sol,753:13,c.echoNonce != bytes32(0),false
+544,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,+
+545,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,-
+546,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,*
+547,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,/
+548,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,%
+549,BinaryOpMutation,src/FerrataVault.sol,753:24, != ,**
+550,DeleteExpressionMutation,src/FerrataVault.sol,754:9,_checkCommittee(c),assert(true)
+551,IfStatementMutation,src/FerrataVault.sol,759:13,existing.submittedAt != 0 && existing.epoch == epoch,true
+552,IfStatementMutation,src/FerrataVault.sol,759:13,existing.submittedAt != 0 && existing.epoch == epoch,false
+553,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,+
+554,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,-
+555,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,*
+556,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,/
+557,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,%
+558,BinaryOpMutation,src/FerrataVault.sol,759:38, && ,**
+559,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,+
+560,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,-
+561,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,*
+562,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,/
+563,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,%
+564,BinaryOpMutation,src/FerrataVault.sol,759:33, != ,**
+565,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,+
+566,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,-
+567,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,*
+568,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,/
+569,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,%
+570,BinaryOpMutation,src/FerrataVault.sol,759:56, == ,**
+571,DeleteExpressionMutation,src/FerrataVault.sol,761:9,"verifier.verify(seal, checkpointImageId, digest)",assert(true)
+572,DeleteExpressionMutation,src/FerrataVault.sol,763:9,"candidates[c.newState] = Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",assert(true)
+573,AssignmentMutation,src/FerrataVault.sol,763:34,"Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",0
+574,AssignmentMutation,src/FerrataVault.sol,763:34,"Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",(-1)
+575,AssignmentMutation,src/FerrataVault.sol,763:34,"Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",1
+576,AssignmentMutation,src/FerrataVault.sol,763:34,"Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",true
+577,AssignmentMutation,src/FerrataVault.sol,763:34,"Candidate({
+            journalDigest: digest,
+            tipHash: c.tipHash,
+            tipId: c.tipId,
+            t: c.t,
+            submittedAt: uint48(block.timestamp),
+            deltaAtSubmit: uint32(delta),
+            epoch: uint64(epoch),
+            prover: msg.sender
+        })",false
+578,DeleteExpressionMutation,src/FerrataVault.sol,773:9,keylessFrom = uint64(block.timestamp),assert(true)
+579,AssignmentMutation,src/FerrataVault.sol,773:23,uint64(block.timestamp),0
+580,AssignmentMutation,src/FerrataVault.sol,773:23,uint64(block.timestamp),(-1)
+581,AssignmentMutation,src/FerrataVault.sol,773:23,uint64(block.timestamp),1
+582,AssignmentMutation,src/FerrataVault.sol,773:23,uint64(block.timestamp),true
+583,AssignmentMutation,src/FerrataVault.sol,773:23,uint64(block.timestamp),false
+584,IfStatementMutation,src/FerrataVault.sol,774:13,mode == Mode.A,true
+585,IfStatementMutation,src/FerrataVault.sol,774:13,mode == Mode.A,false
+586,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,+
+587,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,-
+588,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,*
+589,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,/
+590,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,%
+591,BinaryOpMutation,src/FerrataVault.sol,774:17, == ,**
+592,DeleteExpressionMutation,src/FerrataVault.sol,774:29,_recordBeacon(),assert(true)
+593,DeleteExpressionMutation,src/FerrataVault.sol,775:9,_emitCandidateSubmitted(c),assert(true)
+594,IfStatementMutation,src/FerrataVault.sol,785:13,mode != Mode.A,true
+595,IfStatementMutation,src/FerrataVault.sol,785:13,mode != Mode.A,false
+596,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,+
+597,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,-
+598,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,*
+599,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,/
+600,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,%
+601,BinaryOpMutation,src/FerrataVault.sol,785:17, != ,**
+602,IfStatementMutation,src/FerrataVault.sol,787:13,beaconIndex >= beacons.length,true
+603,IfStatementMutation,src/FerrataVault.sol,787:13,beaconIndex >= beacons.length,false
+604,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,+
+605,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,-
+606,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,*
+607,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,/
+608,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,%
+609,BinaryOpMutation,src/FerrataVault.sol,787:24, >= ,**
+610,SwapArgumentsOperatorMutation,src/FerrataVault.sol,787:13,beaconIndex >= beacons.length,beacons.length >= beaconIndex
+611,IfStatementMutation,src/FerrataVault.sol,789:13,beacon.timestamp < cand.submittedAt + _wait(cand),true
+612,IfStatementMutation,src/FerrataVault.sol,789:13,beacon.timestamp < cand.submittedAt + _wait(cand),false
+613,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,+
+614,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,-
+615,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,*
+616,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,/
+617,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,%
+618,BinaryOpMutation,src/FerrataVault.sol,789:29, < ,**
+619,SwapArgumentsOperatorMutation,src/FerrataVault.sol,789:13,beacon.timestamp < cand.submittedAt + _wait(cand),cand.submittedAt + _wait(cand) < beacon.timestamp
+620,BinaryOpMutation,src/FerrataVault.sol,789:48, + ,-
+621,BinaryOpMutation,src/FerrataVault.sol,789:48, + ,*
+622,BinaryOpMutation,src/FerrataVault.sol,789:48, + ,/
+623,BinaryOpMutation,src/FerrataVault.sol,789:48, + ,%
+624,BinaryOpMutation,src/FerrataVault.sol,789:48, + ,**
+625,IfStatementMutation,src/FerrataVault.sol,790:13,c.echoNonce != beacon.nonce,true
+626,IfStatementMutation,src/FerrataVault.sol,790:13,c.echoNonce != beacon.nonce,false
+627,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,+
+628,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,-
+629,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,*
+630,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,/
+631,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,%
+632,BinaryOpMutation,src/FerrataVault.sol,790:24, != ,**
+633,DeleteExpressionMutation,src/FerrataVault.sol,791:9,_checkMonotone(c),assert(true)
+634,DeleteExpressionMutation,src/FerrataVault.sol,792:9,"verifier.verify(seal, checkpointImageId, _checkpointDigest(c, c.echoNonce))",assert(true)
+635,DeleteExpressionMutation,src/FerrataVault.sol,793:9,"_finalize(c, cand.prover)",assert(true)
+636,IfStatementMutation,src/FerrataVault.sol,800:13,mode != Mode.B,true
+637,IfStatementMutation,src/FerrataVault.sol,800:13,mode != Mode.B,false
+638,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,+
+639,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,-
+640,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,*
+641,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,/
+642,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,%
+643,BinaryOpMutation,src/FerrataVault.sol,800:17, != ,**
+644,IfStatementMutation,src/FerrataVault.sol,802:13,block.timestamp < cand.submittedAt + _wait(cand),true
+645,IfStatementMutation,src/FerrataVault.sol,802:13,block.timestamp < cand.submittedAt + _wait(cand),false
+646,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,+
+647,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,-
+648,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,*
+649,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,/
+650,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,%
+651,BinaryOpMutation,src/FerrataVault.sol,802:28, < ,**
+652,SwapArgumentsOperatorMutation,src/FerrataVault.sol,802:13,block.timestamp < cand.submittedAt + _wait(cand),cand.submittedAt + _wait(cand) < block.timestamp
+653,BinaryOpMutation,src/FerrataVault.sol,802:47, + ,-
+654,BinaryOpMutation,src/FerrataVault.sol,802:47, + ,*
+655,BinaryOpMutation,src/FerrataVault.sol,802:47, + ,/
+656,BinaryOpMutation,src/FerrataVault.sol,802:47, + ,%
+657,BinaryOpMutation,src/FerrataVault.sol,802:47, + ,**
+658,DeleteExpressionMutation,src/FerrataVault.sol,803:9,_checkMonotone(c),assert(true)
+659,IfStatementMutation,src/FerrataVault.sol,805:13,_stopped(),true
+660,IfStatementMutation,src/FerrataVault.sol,805:13,_stopped(),false
+661,DeleteExpressionMutation,src/FerrataVault.sol,806:9,"_finalize(c, cand.prover)",assert(true)
+662,DeleteExpressionMutation,src/FerrataVault.sol,813:9,"checkpoints.push(
+            FinalizedCheckpoint({
+                parentState: c.parentState,
+                newState: c.newState,
+                burnRoot: c.burnRoot,
+                burnCount: c.burnCount,
+                importedLeafCount: c.importedLeafCount,
+                sunset: c.sunset,
+                revoked: false,
+                parentImportedLeafCount: finalImportedLeafCount,
+                parentSunset: finalSunset,
+                finalizedAt: uint64(block.timestamp),
+                prover: prover
+            })
+        )",assert(true)
+663,DeleteExpressionMutation,src/FerrataVault.sol,828:9,finalState = c.newState,assert(true)
+664,AssignmentMutation,src/FerrataVault.sol,828:22,c.newState,0
+665,AssignmentMutation,src/FerrataVault.sol,828:22,c.newState,(-1)
+666,AssignmentMutation,src/FerrataVault.sol,828:22,c.newState,1
+667,AssignmentMutation,src/FerrataVault.sol,828:22,c.newState,true
+668,AssignmentMutation,src/FerrataVault.sol,828:22,c.newState,false
+669,DeleteExpressionMutation,src/FerrataVault.sol,829:9,finalImportedLeafCount = c.importedLeafCount,assert(true)
+670,AssignmentMutation,src/FerrataVault.sol,829:34,c.importedLeafCount,0
+671,AssignmentMutation,src/FerrataVault.sol,829:34,c.importedLeafCount,(-1)
+672,AssignmentMutation,src/FerrataVault.sol,829:34,c.importedLeafCount,1
+673,AssignmentMutation,src/FerrataVault.sol,829:34,c.importedLeafCount,true
+674,AssignmentMutation,src/FerrataVault.sol,829:34,c.importedLeafCount,false
+675,DeleteExpressionMutation,src/FerrataVault.sol,830:9,finalSunset = c.sunset,assert(true)
+676,AssignmentMutation,src/FerrataVault.sol,830:23,c.sunset,0
+677,AssignmentMutation,src/FerrataVault.sol,830:23,c.sunset,(-1)
+678,AssignmentMutation,src/FerrataVault.sol,830:23,c.sunset,1
+679,AssignmentMutation,src/FerrataVault.sol,830:23,c.sunset,true
+680,AssignmentMutation,src/FerrataVault.sol,830:23,c.sunset,false
+681,DeleteExpressionMutation,src/FerrataVault.sol,831:9,keylessFrom = uint64(block.timestamp),assert(true)
+682,AssignmentMutation,src/FerrataVault.sol,831:23,uint64(block.timestamp),0
+683,AssignmentMutation,src/FerrataVault.sol,831:23,uint64(block.timestamp),(-1)
+684,AssignmentMutation,src/FerrataVault.sol,831:23,uint64(block.timestamp),1
+685,AssignmentMutation,src/FerrataVault.sol,831:23,uint64(block.timestamp),true
+686,AssignmentMutation,src/FerrataVault.sol,831:23,uint64(block.timestamp),false
+687,IfStatementMutation,src/FerrataVault.sol,832:13,c.newState != c.parentState,true
+688,IfStatementMutation,src/FerrataVault.sol,832:13,c.newState != c.parentState,false
+689,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,+
+690,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,-
+691,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,*
+692,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,/
+693,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,%
+694,BinaryOpMutation,src/FerrataVault.sol,832:23, != ,**
+695,DeleteExpressionMutation,src/FerrataVault.sol,832:42,_stateChanges += 1,assert(true)
+696,AssignmentMutation,src/FerrataVault.sol,832:59,1,(-1)
+697,AssignmentMutation,src/FerrataVault.sol,832:59,1,0
+698,DeleteExpressionMutation,src/FerrataVault.sol,833:9,delete candidates[c.newState],assert(true)
+699,UnaryOperatorMutation,src/FerrataVault.sol,833:9,delete,++
+700,UnaryOperatorMutation,src/FerrataVault.sol,833:9,delete,--
+701,UnaryOperatorMutation,src/FerrataVault.sol,833:9,delete,~
+702,IfStatementMutation,src/FerrataVault.sol,836:13,previous == 0 || checkpoints[previous - 1].revoked,true
+703,IfStatementMutation,src/FerrataVault.sol,836:13,previous == 0 || checkpoints[previous - 1].revoked,false
+704,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,+
+705,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,-
+706,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,*
+707,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,/
+708,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,%
+709,BinaryOpMutation,src/FerrataVault.sol,836:26, || ,**
+710,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,+
+711,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,-
+712,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,*
+713,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,/
+714,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,%
+715,BinaryOpMutation,src/FerrataVault.sol,836:21, == ,**
+716,BinaryOpMutation,src/FerrataVault.sol,836:50, - ,+
+717,BinaryOpMutation,src/FerrataVault.sol,836:50, - ,*
+718,BinaryOpMutation,src/FerrataVault.sol,836:50, - ,/
+719,BinaryOpMutation,src/FerrataVault.sol,836:50, - ,%
+720,BinaryOpMutation,src/FerrataVault.sol,836:50, - ,**
+721,SwapArgumentsOperatorMutation,src/FerrataVault.sol,836:42,previous - 1,1 - previous
+722,DeleteExpressionMutation,src/FerrataVault.sol,836:65,burnRootCheckpoint[c.burnRoot] = index + 1,assert(true)
+723,AssignmentMutation,src/FerrataVault.sol,836:98,index + 1,0
+724,AssignmentMutation,src/FerrataVault.sol,836:98,index + 1,(-1)
+725,AssignmentMutation,src/FerrataVault.sol,836:98,index + 1,1
+726,AssignmentMutation,src/FerrataVault.sol,836:98,index + 1,true
+727,AssignmentMutation,src/FerrataVault.sol,836:98,index + 1,false
+728,BinaryOpMutation,src/FerrataVault.sol,836:103, + ,-
+729,BinaryOpMutation,src/FerrataVault.sol,836:103, + ,*
+730,BinaryOpMutation,src/FerrataVault.sol,836:103, + ,/
+731,BinaryOpMutation,src/FerrataVault.sol,836:103, + ,%
+732,BinaryOpMutation,src/FerrataVault.sol,836:103, + ,**
+733,IfStatementMutation,src/FerrataVault.sol,838:13,c.sunset && !sunsetLeafCountSet,true
+734,IfStatementMutation,src/FerrataVault.sol,838:13,c.sunset && !sunsetLeafCountSet,false
+735,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,+
+736,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,-
+737,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,*
+738,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,/
+739,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,%
+740,BinaryOpMutation,src/FerrataVault.sol,838:21, && ,**
+741,UnaryOperatorMutation,src/FerrataVault.sol,838:25,!,++
+742,UnaryOperatorMutation,src/FerrataVault.sol,838:25,!,--
+743,UnaryOperatorMutation,src/FerrataVault.sol,838:25,!,~
+744,DeleteExpressionMutation,src/FerrataVault.sol,839:13,sunsetLeafCountSet = true,assert(true)
+745,AssignmentMutation,src/FerrataVault.sol,839:34,true,false
+746,DeleteExpressionMutation,src/FerrataVault.sol,840:13,sunsetLeafCount = c.importedLeafCount,assert(true)
+747,AssignmentMutation,src/FerrataVault.sol,840:31,c.importedLeafCount,0
+748,AssignmentMutation,src/FerrataVault.sol,840:31,c.importedLeafCount,(-1)
+749,AssignmentMutation,src/FerrataVault.sol,840:31,c.importedLeafCount,1
+750,AssignmentMutation,src/FerrataVault.sol,840:31,c.importedLeafCount,true
+751,AssignmentMutation,src/FerrataVault.sol,840:31,c.importedLeafCount,false
+752,DeleteExpressionMutation,src/FerrataVault.sol,841:13,sunsetSetAt = index,assert(true)
+753,AssignmentMutation,src/FerrataVault.sol,841:27,index,0
+754,AssignmentMutation,src/FerrataVault.sol,841:27,index,(-1)
+755,AssignmentMutation,src/FerrataVault.sol,841:27,index,1
+756,AssignmentMutation,src/FerrataVault.sol,841:27,index,true
+757,AssignmentMutation,src/FerrataVault.sol,841:27,index,false
+758,DeleteExpressionMutation,src/FerrataVault.sol,842:13,sunsetFinalizedAt = block.timestamp,assert(true)
+759,AssignmentMutation,src/FerrataVault.sol,842:33,block.timestamp,0
+760,AssignmentMutation,src/FerrataVault.sol,842:33,block.timestamp,(-1)
+761,AssignmentMutation,src/FerrataVault.sol,842:33,block.timestamp,1
+762,AssignmentMutation,src/FerrataVault.sol,842:33,block.timestamp,true
+763,AssignmentMutation,src/FerrataVault.sol,842:33,block.timestamp,false
+764,DeleteExpressionMutation,src/FerrataVault.sol,845:9,"_emitCheckpointFinalized(index, c)",assert(true)
+765,DeleteExpressionMutation,src/FerrataVault.sol,861:9,"verifier.verify(seal, releaseImageId, _releaseJournalDigest(r, amount))",assert(true)
+766,DeleteExpressionMutation,src/FerrataVault.sol,863:9,nullifierUsed[r.nullifier] = true,assert(true)
+767,AssignmentMutation,src/FerrataVault.sol,863:38,true,false
+768,DeleteExpressionMutation,src/FerrataVault.sol,864:9,"_consumeReleaseCaps(r.token, amount)",assert(true)
+769,DeleteExpressionMutation,src/FerrataVault.sol,865:9,escrowed[r.token] -= amount,assert(true)
+770,AssignmentMutation,src/FerrataVault.sol,865:30,amount,0
+771,AssignmentMutation,src/FerrataVault.sol,865:30,amount,(-1)
+772,AssignmentMutation,src/FerrataVault.sol,865:30,amount,1
+773,AssignmentMutation,src/FerrataVault.sol,865:30,amount,true
+774,AssignmentMutation,src/FerrataVault.sol,865:30,amount,false
+775,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,+
+776,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,-
+777,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,*
+778,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,/
+779,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,%
+780,BinaryOpMutation,src/FerrataVault.sol,867:37, == ,**
+781,DeleteExpressionMutation,src/FerrataVault.sol,871:9,"_payOrCredit(r.token, r.recipient, amount - r.relayFee - deducted)",assert(true)
+782,BinaryOpMutation,src/FerrataVault.sol,871:63, - ,+
+783,BinaryOpMutation,src/FerrataVault.sol,871:63, - ,*
+784,BinaryOpMutation,src/FerrataVault.sol,871:63, - ,/
+785,BinaryOpMutation,src/FerrataVault.sol,871:63, - ,%
+786,BinaryOpMutation,src/FerrataVault.sol,871:63, - ,**
+787,SwapArgumentsOperatorMutation,src/FerrataVault.sol,871:44,amount - r.relayFee - deducted,deducted - amount - r.relayFee
+788,BinaryOpMutation,src/FerrataVault.sol,871:50, - ,+
+789,BinaryOpMutation,src/FerrataVault.sol,871:50, - ,*
+790,BinaryOpMutation,src/FerrataVault.sol,871:50, - ,/
+791,BinaryOpMutation,src/FerrataVault.sol,871:50, - ,%
+792,BinaryOpMutation,src/FerrataVault.sol,871:50, - ,**
+793,SwapArgumentsOperatorMutation,src/FerrataVault.sol,871:44,amount - r.relayFee,r.relayFee - amount
+794,IfStatementMutation,src/FerrataVault.sol,872:13,r.relayFee != 0,true
+795,IfStatementMutation,src/FerrataVault.sol,872:13,r.relayFee != 0,false
+796,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,+
+797,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,-
+798,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,*
+799,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,/
+800,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,%
+801,BinaryOpMutation,src/FerrataVault.sol,872:23, != ,**
+802,DeleteExpressionMutation,src/FerrataVault.sol,872:30,"_payOrCredit(r.token, feePayee, r.relayFee)",assert(true)
+803,DeleteExpressionMutation,src/FerrataVault.sol,878:9,"FerrataRegistry.claimOwed(owed, totalOwed, token)",assert(true)
+804,DeleteExpressionMutation,src/FerrataVault.sol,893:9,"FerrataRegistry.registerToken(
+            _tokens, _tokenDepositCap, _tokenReleaseCap, _releaseDelays, feeSchedules, token, p
+        )",assert(true)
+805,DeleteExpressionMutation,src/FerrataVault.sol,909:9,"FerrataRegistry.announceFees(_tokens, feeState, feeSchedules, token, mintFees, burnFees, checkpointFees)",assert(true)
+806,DeleteExpressionMutation,src/FerrataVault.sol,915:9,_feesInForce(token),assert(true)
+807,DeleteExpressionMutation,src/FerrataVault.sol,920:9,_requireRegistered(token),assert(true)
+808,DeleteExpressionMutation,src/FerrataVault.sol,921:9,_tokens[token].depositsEnabled = enabled,assert(true)
+809,AssignmentMutation,src/FerrataVault.sol,921:42,enabled,0
+810,AssignmentMutation,src/FerrataVault.sol,921:42,enabled,(-1)
+811,AssignmentMutation,src/FerrataVault.sol,921:42,enabled,1
+812,AssignmentMutation,src/FerrataVault.sol,921:42,enabled,true
+813,AssignmentMutation,src/FerrataVault.sol,921:42,enabled,false
+814,DeleteExpressionMutation,src/FerrataVault.sol,931:9,"FerrataRegistry.setTokenCap(
+            _tokens, _tokenDepositCap, _tokenReleaseCap, token, direction, capacity, refillPerSecond
+        )",assert(true)
+815,DeleteExpressionMutation,src/FerrataVault.sol,938:9,"FerrataRegistry.setGlobalCap(_globalDepositCap, _globalReleaseCap, direction, capacity, refillPerSecond)",assert(true)
+816,DeleteExpressionMutation,src/FerrataVault.sol,944:9,"FerrataRegistry.setReleaseDelay(_tokens, _releaseDelays, token, delay, checkpoints.length)",assert(true)
+817,IfStatementMutation,src/FerrataVault.sol,949:13,newDelta < delta,true
+818,IfStatementMutation,src/FerrataVault.sol,949:13,newDelta < delta,false
+819,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,+
+820,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,-
+821,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,*
+822,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,/
+823,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,%
+824,BinaryOpMutation,src/FerrataVault.sol,949:21, < ,**
+825,SwapArgumentsOperatorMutation,src/FerrataVault.sol,949:13,newDelta < delta,delta < newDelta
+826,IfStatementMutation,src/FerrataVault.sol,950:13,newDelta > MAX_DELTA,true
+827,IfStatementMutation,src/FerrataVault.sol,950:13,newDelta > MAX_DELTA,false
+828,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,+
+829,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,-
+830,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,*
+831,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,/
+832,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,%
+833,BinaryOpMutation,src/FerrataVault.sol,950:21, > ,**
+834,SwapArgumentsOperatorMutation,src/FerrataVault.sol,950:13,newDelta > MAX_DELTA,MAX_DELTA > newDelta
+835,DeleteExpressionMutation,src/FerrataVault.sol,951:9,delta = newDelta,assert(true)
+836,AssignmentMutation,src/FerrataVault.sol,951:17,newDelta,0
+837,AssignmentMutation,src/FerrataVault.sol,951:17,newDelta,(-1)
+838,AssignmentMutation,src/FerrataVault.sol,951:17,newDelta,1
+839,AssignmentMutation,src/FerrataVault.sol,951:17,newDelta,true
+840,AssignmentMutation,src/FerrataVault.sol,951:17,newDelta,false
+841,DeleteExpressionMutation,src/FerrataVault.sol,962:9,depositsFrozenUntil = _freezeUntil(frozen),assert(true)
+842,AssignmentMutation,src/FerrataVault.sol,962:31,_freezeUntil(frozen),0
+843,AssignmentMutation,src/FerrataVault.sol,962:31,_freezeUntil(frozen),(-1)
+844,AssignmentMutation,src/FerrataVault.sol,962:31,_freezeUntil(frozen),1
+845,AssignmentMutation,src/FerrataVault.sol,962:31,_freezeUntil(frozen),true
+846,AssignmentMutation,src/FerrataVault.sol,962:31,_freezeUntil(frozen),false
+847,DeleteExpressionMutation,src/FerrataVault.sol,967:9,releasesFrozenUntil = _freezeUntil(frozen),assert(true)
+848,AssignmentMutation,src/FerrataVault.sol,967:31,_freezeUntil(frozen),0
+849,AssignmentMutation,src/FerrataVault.sol,967:31,_freezeUntil(frozen),(-1)
+850,AssignmentMutation,src/FerrataVault.sol,967:31,_freezeUntil(frozen),1
+851,AssignmentMutation,src/FerrataVault.sol,967:31,_freezeUntil(frozen),true
+852,AssignmentMutation,src/FerrataVault.sol,967:31,_freezeUntil(frozen),false
+853,IfStatementMutation,src/FerrataVault.sol,975:13,until > block.timestamp,true
+854,IfStatementMutation,src/FerrataVault.sol,975:13,until > block.timestamp,false
+855,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,+
+856,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,-
+857,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,*
+858,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,/
+859,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,%
+860,BinaryOpMutation,src/FerrataVault.sol,975:18, > ,**
+861,SwapArgumentsOperatorMutation,src/FerrataVault.sol,975:13,until > block.timestamp,block.timestamp > until
+862,DeleteExpressionMutation,src/FerrataVault.sol,975:38,until = block.timestamp,assert(true)
+863,AssignmentMutation,src/FerrataVault.sol,975:46,block.timestamp,0
+864,AssignmentMutation,src/FerrataVault.sol,975:46,block.timestamp,(-1)
+865,AssignmentMutation,src/FerrataVault.sol,975:46,block.timestamp,1
+866,AssignmentMutation,src/FerrataVault.sol,975:46,block.timestamp,true
+867,AssignmentMutation,src/FerrataVault.sol,975:46,block.timestamp,false
+868,DeleteExpressionMutation,src/FerrataVault.sol,976:9,checkpointsFrozenUntil = frozen ? block.timestamp + maxFreeze : until,assert(true)
+869,AssignmentMutation,src/FerrataVault.sol,976:34,frozen ? block.timestamp + maxFreeze : until,0
+870,AssignmentMutation,src/FerrataVault.sol,976:34,frozen ? block.timestamp + maxFreeze : until,(-1)
+871,AssignmentMutation,src/FerrataVault.sol,976:34,frozen ? block.timestamp + maxFreeze : until,1
+872,AssignmentMutation,src/FerrataVault.sol,976:34,frozen ? block.timestamp + maxFreeze : until,true
+873,AssignmentMutation,src/FerrataVault.sol,976:34,frozen ? block.timestamp + maxFreeze : until,false
+874,BinaryOpMutation,src/FerrataVault.sol,976:58, + ,-
+875,BinaryOpMutation,src/FerrataVault.sol,976:58, + ,*
+876,BinaryOpMutation,src/FerrataVault.sol,976:58, + ,/
+877,BinaryOpMutation,src/FerrataVault.sol,976:58, + ,%
+878,BinaryOpMutation,src/FerrataVault.sol,976:58, + ,**
+879,DeleteExpressionMutation,src/FerrataVault.sol,981:9,_requireRegistered(token),assert(true)
+880,DeleteExpressionMutation,src/FerrataVault.sol,982:9,tokenDepositsFrozenUntil[token] = _freezeUntil(frozen),assert(true)
+881,AssignmentMutation,src/FerrataVault.sol,982:43,_freezeUntil(frozen),0
+882,AssignmentMutation,src/FerrataVault.sol,982:43,_freezeUntil(frozen),(-1)
+883,AssignmentMutation,src/FerrataVault.sol,982:43,_freezeUntil(frozen),1
+884,AssignmentMutation,src/FerrataVault.sol,982:43,_freezeUntil(frozen),true
+885,AssignmentMutation,src/FerrataVault.sol,982:43,_freezeUntil(frozen),false
+886,DeleteExpressionMutation,src/FerrataVault.sol,987:9,_requireRegistered(token),assert(true)
+887,DeleteExpressionMutation,src/FerrataVault.sol,988:9,tokenReleasesFrozenUntil[token] = _freezeUntil(frozen),assert(true)
+888,AssignmentMutation,src/FerrataVault.sol,988:43,_freezeUntil(frozen),0
+889,AssignmentMutation,src/FerrataVault.sol,988:43,_freezeUntil(frozen),(-1)
+890,AssignmentMutation,src/FerrataVault.sol,988:43,_freezeUntil(frozen),1
+891,AssignmentMutation,src/FerrataVault.sol,988:43,_freezeUntil(frozen),true
+892,AssignmentMutation,src/FerrataVault.sol,988:43,_freezeUntil(frozen),false
+893,IfStatementMutation,src/FerrataVault.sol,996:13,msg.sender != freezeAuthority && block.timestamp < retireOpensAt(),true
+894,IfStatementMutation,src/FerrataVault.sol,996:13,msg.sender != freezeAuthority && block.timestamp < retireOpensAt(),false
+895,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,+
+896,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,-
+897,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,*
+898,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,/
+899,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,%
+900,BinaryOpMutation,src/FerrataVault.sol,996:42, && ,**
+901,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,+
+902,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,-
+903,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,*
+904,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,/
+905,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,%
+906,BinaryOpMutation,src/FerrataVault.sol,996:23, != ,**
+907,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,+
+908,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,-
+909,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,*
+910,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,/
+911,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,%
+912,BinaryOpMutation,src/FerrataVault.sol,996:61, < ,**
+913,SwapArgumentsOperatorMutation,src/FerrataVault.sol,996:46,block.timestamp < retireOpensAt(),retireOpensAt() < block.timestamp
+914,IfStatementMutation,src/FerrataVault.sol,997:13,retired,true
+915,IfStatementMutation,src/FerrataVault.sol,997:13,retired,false
+916,DeleteExpressionMutation,src/FerrataVault.sol,998:9,retired = true,assert(true)
+917,AssignmentMutation,src/FerrataVault.sol,998:19,true,false
+918,IfStatementMutation,src/FerrataVault.sol,1009:13,checkpointsFrozenUntil > from,true
+919,IfStatementMutation,src/FerrataVault.sol,1009:13,checkpointsFrozenUntil > from,false
+920,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,+
+921,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,-
+922,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,*
+923,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,/
+924,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,%
+925,BinaryOpMutation,src/FerrataVault.sol,1009:35, > ,**
+926,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1009:13,checkpointsFrozenUntil > from,from > checkpointsFrozenUntil
+927,DeleteExpressionMutation,src/FerrataVault.sol,1009:44,from = checkpointsFrozenUntil,assert(true)
+928,AssignmentMutation,src/FerrataVault.sol,1009:51,checkpointsFrozenUntil,0
+929,AssignmentMutation,src/FerrataVault.sol,1009:51,checkpointsFrozenUntil,(-1)
+930,AssignmentMutation,src/FerrataVault.sol,1009:51,checkpointsFrozenUntil,1
+931,AssignmentMutation,src/FerrataVault.sol,1009:51,checkpointsFrozenUntil,true
+932,AssignmentMutation,src/FerrataVault.sol,1009:51,checkpointsFrozenUntil,false
+933,DeleteExpressionMutation,src/FerrataVault.sol,1010:9,opensAt = from + delta + _keylessSpan,assert(true)
+934,AssignmentMutation,src/FerrataVault.sol,1010:19,from + delta + _keylessSpan,0
+935,AssignmentMutation,src/FerrataVault.sol,1010:19,from + delta + _keylessSpan,(-1)
+936,AssignmentMutation,src/FerrataVault.sol,1010:19,from + delta + _keylessSpan,1
+937,AssignmentMutation,src/FerrataVault.sol,1010:19,from + delta + _keylessSpan,true
+938,AssignmentMutation,src/FerrataVault.sol,1010:19,from + delta + _keylessSpan,false
+939,BinaryOpMutation,src/FerrataVault.sol,1010:31, + ,-
+940,BinaryOpMutation,src/FerrataVault.sol,1010:31, + ,*
+941,BinaryOpMutation,src/FerrataVault.sol,1010:31, + ,/
+942,BinaryOpMutation,src/FerrataVault.sol,1010:31, + ,%
+943,BinaryOpMutation,src/FerrataVault.sol,1010:31, + ,**
+944,BinaryOpMutation,src/FerrataVault.sol,1010:23, + ,-
+945,BinaryOpMutation,src/FerrataVault.sol,1010:23, + ,*
+946,BinaryOpMutation,src/FerrataVault.sol,1010:23, + ,/
+947,BinaryOpMutation,src/FerrataVault.sol,1010:23, + ,%
+948,BinaryOpMutation,src/FerrataVault.sol,1010:23, + ,**
+949,IfStatementMutation,src/FerrataVault.sol,1011:13,sunsetLeafCountSet,true
+950,IfStatementMutation,src/FerrataVault.sol,1011:13,sunsetLeafCountSet,false
+951,IfStatementMutation,src/FerrataVault.sol,1013:17,sunsetOpens < opensAt,true
+952,IfStatementMutation,src/FerrataVault.sol,1013:17,sunsetOpens < opensAt,false
+953,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,+
+954,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,-
+955,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,*
+956,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,/
+957,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,%
+958,BinaryOpMutation,src/FerrataVault.sol,1013:28, < ,**
+959,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1013:17,sunsetOpens < opensAt,opensAt < sunsetOpens
+960,DeleteExpressionMutation,src/FerrataVault.sol,1013:40,opensAt = sunsetOpens,assert(true)
+961,AssignmentMutation,src/FerrataVault.sol,1013:50,sunsetOpens,0
+962,AssignmentMutation,src/FerrataVault.sol,1013:50,sunsetOpens,(-1)
+963,AssignmentMutation,src/FerrataVault.sol,1013:50,sunsetOpens,1
+964,AssignmentMutation,src/FerrataVault.sol,1013:50,sunsetOpens,true
+965,AssignmentMutation,src/FerrataVault.sol,1013:50,sunsetOpens,false
+966,BinaryOpMutation,src/FerrataVault.sol,1019:48, + ,-
+967,BinaryOpMutation,src/FerrataVault.sol,1019:48, + ,*
+968,BinaryOpMutation,src/FerrataVault.sol,1019:48, + ,/
+969,BinaryOpMutation,src/FerrataVault.sol,1019:48, + ,%
+970,BinaryOpMutation,src/FerrataVault.sol,1019:48, + ,**
+971,BinaryOpMutation,src/FerrataVault.sol,1019:33, + ,-
+972,BinaryOpMutation,src/FerrataVault.sol,1019:33, + ,*
+973,BinaryOpMutation,src/FerrataVault.sol,1019:33, + ,/
+974,BinaryOpMutation,src/FerrataVault.sol,1019:33, + ,%
+975,BinaryOpMutation,src/FerrataVault.sol,1019:33, + ,**
+976,IfStatementMutation,src/FerrataVault.sol,1028:13,msg.sender != freezeAuthority && !_isWatcher(msg.sender),true
+977,IfStatementMutation,src/FerrataVault.sol,1028:13,msg.sender != freezeAuthority && !_isWatcher(msg.sender),false
+978,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,+
+979,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,-
+980,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,*
+981,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,/
+982,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,%
+983,BinaryOpMutation,src/FerrataVault.sol,1028:42, && ,**
+984,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,+
+985,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,-
+986,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,*
+987,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,/
+988,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,%
+989,BinaryOpMutation,src/FerrataVault.sol,1028:23, != ,**
+990,UnaryOperatorMutation,src/FerrataVault.sol,1028:46,!,++
+991,UnaryOperatorMutation,src/FerrataVault.sol,1028:46,!,--
+992,UnaryOperatorMutation,src/FerrataVault.sol,1028:46,!,~
+993,DeleteExpressionMutation,src/FerrataVault.sol,1029:9,"FerrataRegistry.cancelCandidate(candidates, newState)",assert(true)
+994,IfStatementMutation,src/FerrataVault.sol,1035:13,!_isWatcher(msg.sender),true
+995,IfStatementMutation,src/FerrataVault.sol,1035:13,!_isWatcher(msg.sender),false
+996,UnaryOperatorMutation,src/FerrataVault.sol,1035:13,!,++
+997,UnaryOperatorMutation,src/FerrataVault.sol,1035:13,!,--
+998,UnaryOperatorMutation,src/FerrataVault.sol,1035:13,!,~
+999,BinaryOpMutation,src/FerrataVault.sol,1036:40, + ,-
+1000,BinaryOpMutation,src/FerrataVault.sol,1036:40, + ,*
+1001,BinaryOpMutation,src/FerrataVault.sol,1036:40, + ,/
+1002,BinaryOpMutation,src/FerrataVault.sol,1036:40, + ,%
+1003,BinaryOpMutation,src/FerrataVault.sol,1036:40, + ,**
+1004,IfStatementMutation,src/FerrataVault.sol,1037:13,until > checkpointsFrozenUntil,true
+1005,IfStatementMutation,src/FerrataVault.sol,1037:13,until > checkpointsFrozenUntil,false
+1006,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,+
+1007,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,-
+1008,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,*
+1009,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,/
+1010,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,%
+1011,BinaryOpMutation,src/FerrataVault.sol,1037:18, > ,**
+1012,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1037:13,until > checkpointsFrozenUntil,checkpointsFrozenUntil > until
+1013,DeleteExpressionMutation,src/FerrataVault.sol,1037:45,checkpointsFrozenUntil = until,assert(true)
+1014,AssignmentMutation,src/FerrataVault.sol,1037:70,until,0
+1015,AssignmentMutation,src/FerrataVault.sol,1037:70,until,(-1)
+1016,AssignmentMutation,src/FerrataVault.sol,1037:70,until,1
+1017,AssignmentMutation,src/FerrataVault.sol,1037:70,until,true
+1018,AssignmentMutation,src/FerrataVault.sol,1037:70,until,false
+1019,DeleteExpressionMutation,src/FerrataVault.sol,1047:9,"FerrataRegistry.revokeFrom(checkpoints, index, revokeWindow)",assert(true)
+1020,DeleteExpressionMutation,src/FerrataVault.sol,1049:9,finalState = first.parentState,assert(true)
+1021,AssignmentMutation,src/FerrataVault.sol,1049:22,first.parentState,0
+1022,AssignmentMutation,src/FerrataVault.sol,1049:22,first.parentState,(-1)
+1023,AssignmentMutation,src/FerrataVault.sol,1049:22,first.parentState,1
+1024,AssignmentMutation,src/FerrataVault.sol,1049:22,first.parentState,true
+1025,AssignmentMutation,src/FerrataVault.sol,1049:22,first.parentState,false
+1026,DeleteExpressionMutation,src/FerrataVault.sol,1050:9,finalImportedLeafCount = first.parentImportedLeafCount,assert(true)
+1027,AssignmentMutation,src/FerrataVault.sol,1050:34,first.parentImportedLeafCount,0
+1028,AssignmentMutation,src/FerrataVault.sol,1050:34,first.parentImportedLeafCount,(-1)
+1029,AssignmentMutation,src/FerrataVault.sol,1050:34,first.parentImportedLeafCount,1
+1030,AssignmentMutation,src/FerrataVault.sol,1050:34,first.parentImportedLeafCount,true
+1031,AssignmentMutation,src/FerrataVault.sol,1050:34,first.parentImportedLeafCount,false
+1032,DeleteExpressionMutation,src/FerrataVault.sol,1051:9,finalSunset = first.parentSunset,assert(true)
+1033,AssignmentMutation,src/FerrataVault.sol,1051:23,first.parentSunset,0
+1034,AssignmentMutation,src/FerrataVault.sol,1051:23,first.parentSunset,(-1)
+1035,AssignmentMutation,src/FerrataVault.sol,1051:23,first.parentSunset,1
+1036,AssignmentMutation,src/FerrataVault.sol,1051:23,first.parentSunset,true
+1037,AssignmentMutation,src/FerrataVault.sol,1051:23,first.parentSunset,false
+1038,DeleteExpressionMutation,src/FerrataVault.sol,1052:9,revocationEpoch += 1,assert(true)
+1039,AssignmentMutation,src/FerrataVault.sol,1052:28,1,(-1)
+1040,AssignmentMutation,src/FerrataVault.sol,1052:28,1,0
+1041,IfStatementMutation,src/FerrataVault.sol,1053:13,sunsetLeafCountSet && sunsetSetAt >= index,true
+1042,IfStatementMutation,src/FerrataVault.sol,1053:13,sunsetLeafCountSet && sunsetSetAt >= index,false
+1043,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,+
+1044,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,-
+1045,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,*
+1046,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,/
+1047,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,%
+1048,BinaryOpMutation,src/FerrataVault.sol,1053:31, && ,**
+1049,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,+
+1050,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,-
+1051,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,*
+1052,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,/
+1053,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,%
+1054,BinaryOpMutation,src/FerrataVault.sol,1053:46, >= ,**
+1055,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1053:35,sunsetSetAt >= index,index >= sunsetSetAt
+1056,DeleteExpressionMutation,src/FerrataVault.sol,1054:13,sunsetLeafCountSet = false,assert(true)
+1057,AssignmentMutation,src/FerrataVault.sol,1054:34,false,true
+1058,DeleteExpressionMutation,src/FerrataVault.sol,1055:13,sunsetLeafCount = 0,assert(true)
+1059,AssignmentMutation,src/FerrataVault.sol,1055:31,0,(-1)
+1060,AssignmentMutation,src/FerrataVault.sol,1055:31,0,1
+1061,DeleteExpressionMutation,src/FerrataVault.sol,1056:13,sunsetSetAt = 0,assert(true)
+1062,AssignmentMutation,src/FerrataVault.sol,1056:27,0,(-1)
+1063,AssignmentMutation,src/FerrataVault.sol,1056:27,0,1
+1064,DeleteExpressionMutation,src/FerrataVault.sol,1057:13,sunsetFinalizedAt = 0,assert(true)
+1065,AssignmentMutation,src/FerrataVault.sol,1057:33,0,(-1)
+1066,AssignmentMutation,src/FerrataVault.sol,1057:33,0,1
+1067,DeleteExpressionMutation,src/FerrataVault.sol,1069:9,pendingAdmin = newAdmin,assert(true)
+1068,AssignmentMutation,src/FerrataVault.sol,1069:24,newAdmin,0
+1069,AssignmentMutation,src/FerrataVault.sol,1069:24,newAdmin,(-1)
+1070,AssignmentMutation,src/FerrataVault.sol,1069:24,newAdmin,1
+1071,AssignmentMutation,src/FerrataVault.sol,1069:24,newAdmin,true
+1072,AssignmentMutation,src/FerrataVault.sol,1069:24,newAdmin,false
+1073,IfStatementMutation,src/FerrataVault.sol,1074:13,msg.sender != pendingAdmin,true
+1074,IfStatementMutation,src/FerrataVault.sol,1074:13,msg.sender != pendingAdmin,false
+1075,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,+
+1076,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,-
+1077,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,*
+1078,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,/
+1079,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,%
+1080,BinaryOpMutation,src/FerrataVault.sol,1074:23, != ,**
+1081,IfStatementMutation,src/FerrataVault.sol,1075:13,msg.sender == freezeAuthority,true
+1082,IfStatementMutation,src/FerrataVault.sol,1075:13,msg.sender == freezeAuthority,false
+1083,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,+
+1084,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,-
+1085,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,*
+1086,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,/
+1087,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,%
+1088,BinaryOpMutation,src/FerrataVault.sol,1075:23, == ,**
+1089,DeleteExpressionMutation,src/FerrataVault.sol,1077:9,admin = msg.sender,assert(true)
+1090,AssignmentMutation,src/FerrataVault.sol,1077:17,msg.sender,0
+1091,AssignmentMutation,src/FerrataVault.sol,1077:17,msg.sender,(-1)
+1092,AssignmentMutation,src/FerrataVault.sol,1077:17,msg.sender,1
+1093,AssignmentMutation,src/FerrataVault.sol,1077:17,msg.sender,true
+1094,AssignmentMutation,src/FerrataVault.sol,1077:17,msg.sender,false
+1095,DeleteExpressionMutation,src/FerrataVault.sol,1078:9,pendingAdmin = address(0),assert(true)
+1096,AssignmentMutation,src/FerrataVault.sol,1078:24,address(0),0
+1097,AssignmentMutation,src/FerrataVault.sol,1078:24,address(0),(-1)
+1098,AssignmentMutation,src/FerrataVault.sol,1078:24,address(0),1
+1099,AssignmentMutation,src/FerrataVault.sol,1078:24,address(0),true
+1100,AssignmentMutation,src/FerrataVault.sol,1078:24,address(0),false
+1101,DeleteExpressionMutation,src/FerrataVault.sol,1088:9,"FerrataRegistry.proposeRoles(roleProposal, newWatchers, newFreezeAuthority, admin)",assert(true)
+1102,IfStatementMutation,src/FerrataVault.sol,1094:13,newAuthority != address(0),true
+1103,IfStatementMutation,src/FerrataVault.sol,1094:13,newAuthority != address(0),false
+1104,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,+
+1105,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,-
+1106,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,*
+1107,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,/
+1108,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,%
+1109,BinaryOpMutation,src/FerrataVault.sol,1094:25, != ,**
+1110,DeleteExpressionMutation,src/FerrataVault.sol,1094:41,freezeAuthority = newAuthority,assert(true)
+1111,AssignmentMutation,src/FerrataVault.sol,1094:59,newAuthority,0
+1112,AssignmentMutation,src/FerrataVault.sol,1094:59,newAuthority,(-1)
+1113,AssignmentMutation,src/FerrataVault.sol,1094:59,newAuthority,1
+1114,AssignmentMutation,src/FerrataVault.sol,1094:59,newAuthority,true
+1115,AssignmentMutation,src/FerrataVault.sol,1094:59,newAuthority,false
+1116,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,+
+1117,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,-
+1118,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,*
+1119,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,/
+1120,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,%
+1121,BinaryOpMutation,src/FerrataVault.sol,1127:24, >> ,**
+1122,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1127:17,inbound >> 128,128 >> inbound
+1123,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,+
+1124,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,-
+1125,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,*
+1126,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,/
+1127,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,%
+1128,BinaryOpMutation,src/FerrataVault.sol,1127:59, >> ,**
+1129,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1127:51,outbound >> 128,128 >> outbound
+1130,IfStatementMutation,src/FerrataVault.sol,1146:13,entry == 0 || checkpoints[entry - 1].revoked,true
+1131,IfStatementMutation,src/FerrataVault.sol,1146:13,entry == 0 || checkpoints[entry - 1].revoked,false
+1132,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,+
+1133,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,-
+1134,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,*
+1135,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,/
+1136,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,%
+1137,BinaryOpMutation,src/FerrataVault.sol,1146:23, || ,**
+1138,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,+
+1139,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,-
+1140,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,*
+1141,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,/
+1142,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,%
+1143,BinaryOpMutation,src/FerrataVault.sol,1146:18, == ,**
+1144,BinaryOpMutation,src/FerrataVault.sol,1146:44, - ,+
+1145,BinaryOpMutation,src/FerrataVault.sol,1146:44, - ,*
+1146,BinaryOpMutation,src/FerrataVault.sol,1146:44, - ,/
+1147,BinaryOpMutation,src/FerrataVault.sol,1146:44, - ,%
+1148,BinaryOpMutation,src/FerrataVault.sol,1146:44, - ,**
+1149,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1146:39,entry - 1,1 - entry
+1150,BinaryOpMutation,src/FerrataVault.sol,1147:40, - ,+
+1151,BinaryOpMutation,src/FerrataVault.sol,1147:40, - ,*
+1152,BinaryOpMutation,src/FerrataVault.sol,1147:40, - ,/
+1153,BinaryOpMutation,src/FerrataVault.sol,1147:40, - ,%
+1154,BinaryOpMutation,src/FerrataVault.sol,1147:40, - ,**
+1155,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1147:35,entry - 1,1 - entry
+1156,IfStatementMutation,src/FerrataVault.sol,1195:13,retired || finalSunset,true
+1157,IfStatementMutation,src/FerrataVault.sol,1195:13,retired || finalSunset,false
+1158,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,+
+1159,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,-
+1160,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,*
+1161,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,/
+1162,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,%
+1163,BinaryOpMutation,src/FerrataVault.sol,1195:20, || ,**
+1164,IfStatementMutation,src/FerrataVault.sol,1196:13,_frozen(depositsFrozenUntil),true
+1165,IfStatementMutation,src/FerrataVault.sol,1196:13,_frozen(depositsFrozenUntil),false
+1166,IfStatementMutation,src/FerrataVault.sol,1198:13,!cfg.registered,true
+1167,IfStatementMutation,src/FerrataVault.sol,1198:13,!cfg.registered,false
+1168,UnaryOperatorMutation,src/FerrataVault.sol,1198:13,!,++
+1169,UnaryOperatorMutation,src/FerrataVault.sol,1198:13,!,--
+1170,UnaryOperatorMutation,src/FerrataVault.sol,1198:13,!,~
+1171,IfStatementMutation,src/FerrataVault.sol,1199:13,_frozen(tokenDepositsFrozenUntil[token]),true
+1172,IfStatementMutation,src/FerrataVault.sol,1199:13,_frozen(tokenDepositsFrozenUntil[token]),false
+1173,IfStatementMutation,src/FerrataVault.sol,1200:13,!cfg.depositsEnabled,true
+1174,IfStatementMutation,src/FerrataVault.sol,1200:13,!cfg.depositsEnabled,false
+1175,UnaryOperatorMutation,src/FerrataVault.sol,1200:13,!,++
+1176,UnaryOperatorMutation,src/FerrataVault.sol,1200:13,!,--
+1177,UnaryOperatorMutation,src/FerrataVault.sol,1200:13,!,~
+1178,IfStatementMutation,src/FerrataVault.sol,1201:13,denomIndex >= cfg.denominations.length,true
+1179,IfStatementMutation,src/FerrataVault.sol,1201:13,denomIndex >= cfg.denominations.length,false
+1180,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,+
+1181,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,-
+1182,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,*
+1183,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,/
+1184,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,%
+1185,BinaryOpMutation,src/FerrataVault.sol,1201:23, >= ,**
+1186,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1201:13,denomIndex >= cfg.denominations.length,cfg.denominations.length >= denomIndex
+1187,IfStatementMutation,src/FerrataVault.sol,1202:13,commitment == bytes32(0),true
+1188,IfStatementMutation,src/FerrataVault.sol,1202:13,commitment == bytes32(0),false
+1189,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,+
+1190,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,-
+1191,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,*
+1192,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,/
+1193,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,%
+1194,BinaryOpMutation,src/FerrataVault.sol,1202:23, == ,**
+1195,IfStatementMutation,src/FerrataVault.sol,1203:13,index != depositCount[msg.sender],true
+1196,IfStatementMutation,src/FerrataVault.sol,1203:13,index != depositCount[msg.sender],false
+1197,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,+
+1198,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,-
+1199,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,*
+1200,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,/
+1201,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,%
+1202,BinaryOpMutation,src/FerrataVault.sol,1203:18, != ,**
+1203,IfStatementMutation,src/FerrataVault.sol,1204:13,nextLeafIndex >= MAX_LEAVES,true
+1204,IfStatementMutation,src/FerrataVault.sol,1204:13,nextLeafIndex >= MAX_LEAVES,false
+1205,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,+
+1206,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,-
+1207,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,*
+1208,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,/
+1209,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,%
+1210,BinaryOpMutation,src/FerrataVault.sol,1204:26, >= ,**
+1211,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1204:13,nextLeafIndex >= MAX_LEAVES,MAX_LEAVES >= nextLeafIndex
+1212,DeleteExpressionMutation,src/FerrataVault.sol,1205:9,amount = cfg.denominations[denomIndex],assert(true)
+1213,AssignmentMutation,src/FerrataVault.sol,1205:18,cfg.denominations[denomIndex],0
+1214,AssignmentMutation,src/FerrataVault.sol,1205:18,cfg.denominations[denomIndex],(-1)
+1215,AssignmentMutation,src/FerrataVault.sol,1205:18,cfg.denominations[denomIndex],1
+1216,AssignmentMutation,src/FerrataVault.sol,1205:18,cfg.denominations[denomIndex],true
+1217,AssignmentMutation,src/FerrataVault.sol,1205:18,cfg.denominations[denomIndex],false
+1218,DeleteExpressionMutation,src/FerrataVault.sol,1207:9,total = amount + (inbound >> 128) + uint128(inbound),assert(true)
+1219,AssignmentMutation,src/FerrataVault.sol,1207:17,amount + (inbound >> 128) + uint128(inbound),0
+1220,AssignmentMutation,src/FerrataVault.sol,1207:17,amount + (inbound >> 128) + uint128(inbound),(-1)
+1221,AssignmentMutation,src/FerrataVault.sol,1207:17,amount + (inbound >> 128) + uint128(inbound),1
+1222,AssignmentMutation,src/FerrataVault.sol,1207:17,amount + (inbound >> 128) + uint128(inbound),true
+1223,AssignmentMutation,src/FerrataVault.sol,1207:17,amount + (inbound >> 128) + uint128(inbound),false
+1224,BinaryOpMutation,src/FerrataVault.sol,1207:42, + ,-
+1225,BinaryOpMutation,src/FerrataVault.sol,1207:42, + ,*
+1226,BinaryOpMutation,src/FerrataVault.sol,1207:42, + ,/
+1227,BinaryOpMutation,src/FerrataVault.sol,1207:42, + ,%
+1228,BinaryOpMutation,src/FerrataVault.sol,1207:42, + ,**
+1229,BinaryOpMutation,src/FerrataVault.sol,1207:23, + ,-
+1230,BinaryOpMutation,src/FerrataVault.sol,1207:23, + ,*
+1231,BinaryOpMutation,src/FerrataVault.sol,1207:23, + ,/
+1232,BinaryOpMutation,src/FerrataVault.sol,1207:23, + ,%
+1233,BinaryOpMutation,src/FerrataVault.sol,1207:23, + ,**
+1234,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,+
+1235,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,-
+1236,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,*
+1237,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,/
+1238,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,%
+1239,BinaryOpMutation,src/FerrataVault.sol,1207:34, >> ,**
+1240,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1207:27,inbound >> 128,128 >> inbound
+1241,DeleteExpressionMutation,src/FerrataVault.sol,1212:9,"_consumeDepositCaps(token, total)",assert(true)
+1242,DeleteExpressionMutation,src/FerrataVault.sol,1213:9,depositCount[msg.sender] = index + 1,assert(true)
+1243,AssignmentMutation,src/FerrataVault.sol,1213:36,index + 1,0
+1244,AssignmentMutation,src/FerrataVault.sol,1213:36,index + 1,(-1)
+1245,AssignmentMutation,src/FerrataVault.sol,1213:36,index + 1,1
+1246,AssignmentMutation,src/FerrataVault.sol,1213:36,index + 1,true
+1247,AssignmentMutation,src/FerrataVault.sol,1213:36,index + 1,false
+1248,BinaryOpMutation,src/FerrataVault.sol,1213:41, + ,-
+1249,BinaryOpMutation,src/FerrataVault.sol,1213:41, + ,*
+1250,BinaryOpMutation,src/FerrataVault.sol,1213:41, + ,/
+1251,BinaryOpMutation,src/FerrataVault.sol,1213:41, + ,%
+1252,BinaryOpMutation,src/FerrataVault.sol,1213:41, + ,**
+1253,DeleteExpressionMutation,src/FerrataVault.sol,1214:9,escrowed[token] += total,assert(true)
+1254,AssignmentMutation,src/FerrataVault.sol,1214:28,total,0
+1255,AssignmentMutation,src/FerrataVault.sol,1214:28,total,(-1)
+1256,AssignmentMutation,src/FerrataVault.sol,1214:28,total,1
+1257,AssignmentMutation,src/FerrataVault.sol,1214:28,total,true
+1258,AssignmentMutation,src/FerrataVault.sol,1214:28,total,false
+1259,DeleteExpressionMutation,src/FerrataVault.sol,1217:9,"_insertLeaf(leafIndex, _leafHash(leafIndex, msg.sender, token, amount, commitment))",assert(true)
+1260,IfStatementMutation,src/FerrataVault.sol,1232:17,((leafIndex >> h) & 1) == 1,true
+1261,IfStatementMutation,src/FerrataVault.sol,1232:17,((leafIndex >> h) & 1) == 1,false
+1262,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,+
+1263,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,-
+1264,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,*
+1265,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,/
+1266,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,%
+1267,BinaryOpMutation,src/FerrataVault.sol,1232:39, == ,**
+1268,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,+
+1269,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,-
+1270,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,*
+1271,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,/
+1272,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,%
+1273,BinaryOpMutation,src/FerrataVault.sol,1232:34, & ,**
+1274,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,+
+1275,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,-
+1276,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,*
+1277,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,/
+1278,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,%
+1279,BinaryOpMutation,src/FerrataVault.sol,1232:28, >> ,**
+1280,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1232:19,leafIndex >> h,h >> leafIndex
+1281,IfStatementMutation,src/FerrataVault.sol,1235:21,!branchSaved,true
+1282,IfStatementMutation,src/FerrataVault.sol,1235:21,!branchSaved,false
+1283,UnaryOperatorMutation,src/FerrataVault.sol,1235:21,!,++
+1284,UnaryOperatorMutation,src/FerrataVault.sol,1235:21,!,--
+1285,UnaryOperatorMutation,src/FerrataVault.sol,1235:21,!,~
+1286,DeleteExpressionMutation,src/FerrataVault.sol,1236:21,_branch[h] = node,assert(true)
+1287,AssignmentMutation,src/FerrataVault.sol,1236:34,node,0
+1288,AssignmentMutation,src/FerrataVault.sol,1236:34,node,(-1)
+1289,AssignmentMutation,src/FerrataVault.sol,1236:34,node,1
+1290,AssignmentMutation,src/FerrataVault.sol,1236:34,node,true
+1291,AssignmentMutation,src/FerrataVault.sol,1236:34,node,false
+1292,DeleteExpressionMutation,src/FerrataVault.sol,1237:21,branchSaved = true,assert(true)
+1293,AssignmentMutation,src/FerrataVault.sol,1237:35,true,false
+1294,DeleteExpressionMutation,src/FerrataVault.sol,1239:17,"node = _hashNode(node, emptySubtree)",assert(true)
+1295,AssignmentMutation,src/FerrataVault.sol,1239:24,"_hashNode(node, emptySubtree)",0
+1296,AssignmentMutation,src/FerrataVault.sol,1239:24,"_hashNode(node, emptySubtree)",(-1)
+1297,AssignmentMutation,src/FerrataVault.sol,1239:24,"_hashNode(node, emptySubtree)",1
+1298,AssignmentMutation,src/FerrataVault.sol,1239:24,"_hashNode(node, emptySubtree)",true
+1299,AssignmentMutation,src/FerrataVault.sol,1239:24,"_hashNode(node, emptySubtree)",false
+1300,DeleteExpressionMutation,src/FerrataVault.sol,1233:17,"node = _hashNode(_branch[h], node)",assert(true)
+1301,AssignmentMutation,src/FerrataVault.sol,1233:24,"_hashNode(_branch[h], node)",0
+1302,AssignmentMutation,src/FerrataVault.sol,1233:24,"_hashNode(_branch[h], node)",(-1)
+1303,AssignmentMutation,src/FerrataVault.sol,1233:24,"_hashNode(_branch[h], node)",1
+1304,AssignmentMutation,src/FerrataVault.sol,1233:24,"_hashNode(_branch[h], node)",true
+1305,AssignmentMutation,src/FerrataVault.sol,1233:24,"_hashNode(_branch[h], node)",false
+1306,DeleteExpressionMutation,src/FerrataVault.sol,1241:13,"emptySubtree = _hashNode(emptySubtree, emptySubtree)",assert(true)
+1307,AssignmentMutation,src/FerrataVault.sol,1241:28,"_hashNode(emptySubtree, emptySubtree)",0
+1308,AssignmentMutation,src/FerrataVault.sol,1241:28,"_hashNode(emptySubtree, emptySubtree)",(-1)
+1309,AssignmentMutation,src/FerrataVault.sol,1241:28,"_hashNode(emptySubtree, emptySubtree)",1
+1310,AssignmentMutation,src/FerrataVault.sol,1241:28,"_hashNode(emptySubtree, emptySubtree)",true
+1311,AssignmentMutation,src/FerrataVault.sol,1241:28,"_hashNode(emptySubtree, emptySubtree)",false
+1312,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,+
+1313,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,-
+1314,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,*
+1315,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,/
+1316,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,%
+1317,BinaryOpMutation,src/FerrataVault.sol,1231:30, < ,**
+1318,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1231:29,h < TREE_DEPTH,TREE_DEPTH < h
+1319,DeleteExpressionMutation,src/FerrataVault.sol,1231:45,h++,assert(true)
+1320,UnaryOperatorMutation,src/FerrataVault.sol,1231:46,++,--
+1321,DeleteExpressionMutation,src/FerrataVault.sol,1243:9,depositRoot = node,assert(true)
+1322,AssignmentMutation,src/FerrataVault.sol,1243:23,node,0
+1323,AssignmentMutation,src/FerrataVault.sol,1243:23,node,(-1)
+1324,AssignmentMutation,src/FerrataVault.sol,1243:23,node,1
+1325,AssignmentMutation,src/FerrataVault.sol,1243:23,node,true
+1326,AssignmentMutation,src/FerrataVault.sol,1243:23,node,false
+1327,DeleteExpressionMutation,src/FerrataVault.sol,1244:9,nextLeafIndex = leafIndex + 1,assert(true)
+1328,AssignmentMutation,src/FerrataVault.sol,1244:25,leafIndex + 1,0
+1329,AssignmentMutation,src/FerrataVault.sol,1244:25,leafIndex + 1,(-1)
+1330,AssignmentMutation,src/FerrataVault.sol,1244:25,leafIndex + 1,1
+1331,AssignmentMutation,src/FerrataVault.sol,1244:25,leafIndex + 1,true
+1332,AssignmentMutation,src/FerrataVault.sol,1244:25,leafIndex + 1,false
+1333,BinaryOpMutation,src/FerrataVault.sol,1244:34, + ,-
+1334,BinaryOpMutation,src/FerrataVault.sol,1244:34, + ,*
+1335,BinaryOpMutation,src/FerrataVault.sol,1244:34, + ,/
+1336,BinaryOpMutation,src/FerrataVault.sol,1244:34, + ,%
+1337,BinaryOpMutation,src/FerrataVault.sol,1244:34, + ,**
+1338,DeleteExpressionMutation,src/FerrataVault.sol,1257:9,index = beacons.length,assert(true)
+1339,AssignmentMutation,src/FerrataVault.sol,1257:17,beacons.length,0
+1340,AssignmentMutation,src/FerrataVault.sol,1257:17,beacons.length,(-1)
+1341,AssignmentMutation,src/FerrataVault.sol,1257:17,beacons.length,1
+1342,AssignmentMutation,src/FerrataVault.sol,1257:17,beacons.length,true
+1343,AssignmentMutation,src/FerrataVault.sol,1257:17,beacons.length,false
+1344,IfStatementMutation,src/FerrataVault.sol,1258:13,index != 0 && _lastBeaconBlock == block.number,true
+1345,IfStatementMutation,src/FerrataVault.sol,1258:13,index != 0 && _lastBeaconBlock == block.number,false
+1346,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,+
+1347,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,-
+1348,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,*
+1349,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,/
+1350,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,%
+1351,BinaryOpMutation,src/FerrataVault.sol,1258:23, && ,**
+1352,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,+
+1353,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,-
+1354,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,*
+1355,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,/
+1356,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,%
+1357,BinaryOpMutation,src/FerrataVault.sol,1258:18, != ,**
+1358,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,+
+1359,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,-
+1360,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,*
+1361,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,/
+1362,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,%
+1363,BinaryOpMutation,src/FerrataVault.sol,1258:43, == ,**
+1364,BinaryOpMutation,src/FerrataVault.sol,1258:73, - ,+
+1365,BinaryOpMutation,src/FerrataVault.sol,1258:73, - ,*
+1366,BinaryOpMutation,src/FerrataVault.sol,1258:73, - ,/
+1367,BinaryOpMutation,src/FerrataVault.sol,1258:73, - ,%
+1368,BinaryOpMutation,src/FerrataVault.sol,1258:73, - ,**
+1369,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1258:68,index - 1,1 - index
+1370,DeleteExpressionMutation,src/FerrataVault.sol,1259:9,_lastBeaconBlock = block.number,assert(true)
+1371,AssignmentMutation,src/FerrataVault.sol,1259:28,block.number,0
+1372,AssignmentMutation,src/FerrataVault.sol,1259:28,block.number,(-1)
+1373,AssignmentMutation,src/FerrataVault.sol,1259:28,block.number,1
+1374,AssignmentMutation,src/FerrataVault.sol,1259:28,block.number,true
+1375,AssignmentMutation,src/FerrataVault.sol,1259:28,block.number,false
+1376,DeleteExpressionMutation,src/FerrataVault.sol,1263:9,"beacons.push(Beacon({timestamp: block.timestamp, nonce: nonce}))",assert(true)
+1377,IfStatementMutation,src/FerrataVault.sol,1315:13,c.nMin != nMin || c.tMin != tMin,true
+1378,IfStatementMutation,src/FerrataVault.sol,1315:13,c.nMin != nMin || c.tMin != tMin,false
+1379,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,+
+1380,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,-
+1381,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,*
+1382,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,/
+1383,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,%
+1384,BinaryOpMutation,src/FerrataVault.sol,1315:27, || ,**
+1385,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,+
+1386,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,-
+1387,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,*
+1388,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,/
+1389,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,%
+1390,BinaryOpMutation,src/FerrataVault.sol,1315:19, != ,**
+1391,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,+
+1392,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,-
+1393,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,*
+1394,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,/
+1395,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,%
+1396,BinaryOpMutation,src/FerrataVault.sol,1315:37, != ,**
+1397,IfStatementMutation,src/FerrataVault.sol,1316:13,c.n < nMin || c.t < tMin,true
+1398,IfStatementMutation,src/FerrataVault.sol,1316:13,c.n < nMin || c.t < tMin,false
+1399,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,+
+1400,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,-
+1401,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,*
+1402,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,/
+1403,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,%
+1404,BinaryOpMutation,src/FerrataVault.sol,1316:23, || ,**
+1405,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,+
+1406,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,-
+1407,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,*
+1408,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,/
+1409,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,%
+1410,BinaryOpMutation,src/FerrataVault.sol,1316:16, < ,**
+1411,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1316:13,c.n < nMin,nMin < c.n
+1412,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,+
+1413,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,-
+1414,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,*
+1415,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,/
+1416,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,%
+1417,BinaryOpMutation,src/FerrataVault.sol,1316:30, < ,**
+1418,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1316:27,c.t < tMin,tMin < c.t
+1419,BinaryOpMutation,src/FerrataVault.sol,1323:43, + ,-
+1420,BinaryOpMutation,src/FerrataVault.sol,1323:43, + ,*
+1421,BinaryOpMutation,src/FerrataVault.sol,1323:43, + ,/
+1422,BinaryOpMutation,src/FerrataVault.sol,1323:43, + ,%
+1423,BinaryOpMutation,src/FerrataVault.sol,1323:43, + ,**
+1424,BinaryOpMutation,src/FerrataVault.sol,1323:67, * ,+
+1425,BinaryOpMutation,src/FerrataVault.sol,1323:67, * ,-
+1426,BinaryOpMutation,src/FerrataVault.sol,1323:67, * ,/
+1427,BinaryOpMutation,src/FerrataVault.sol,1323:67, * ,%
+1428,BinaryOpMutation,src/FerrataVault.sol,1323:67, * ,**
+1429,BinaryOpMutation,src/FerrataVault.sol,1323:62, - ,+
+1430,BinaryOpMutation,src/FerrataVault.sol,1323:62, - ,*
+1431,BinaryOpMutation,src/FerrataVault.sol,1323:62, - ,/
+1432,BinaryOpMutation,src/FerrataVault.sol,1323:62, - ,%
+1433,BinaryOpMutation,src/FerrataVault.sol,1323:62, - ,**
+1434,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1323:47,uint256(cand.t) - 1,1 - uint256(cand.t)
+1435,IfStatementMutation,src/FerrataVault.sol,1331:13,_frozen(checkpointsFrozenUntil),true
+1436,IfStatementMutation,src/FerrataVault.sol,1331:13,_frozen(checkpointsFrozenUntil),false
+1437,DeleteExpressionMutation,src/FerrataVault.sol,1332:9,cand = candidates[c.newState],assert(true)
+1438,AssignmentMutation,src/FerrataVault.sol,1332:16,candidates[c.newState],0
+1439,AssignmentMutation,src/FerrataVault.sol,1332:16,candidates[c.newState],(-1)
+1440,AssignmentMutation,src/FerrataVault.sol,1332:16,candidates[c.newState],1
+1441,AssignmentMutation,src/FerrataVault.sol,1332:16,candidates[c.newState],true
+1442,AssignmentMutation,src/FerrataVault.sol,1332:16,candidates[c.newState],false
+1443,IfStatementMutation,src/FerrataVault.sol,1333:13,cand.submittedAt == 0,true
+1444,IfStatementMutation,src/FerrataVault.sol,1333:13,cand.submittedAt == 0,false
+1445,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,+
+1446,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,-
+1447,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,*
+1448,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,/
+1449,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,%
+1450,BinaryOpMutation,src/FerrataVault.sol,1333:29, == ,**
+1451,IfStatementMutation,src/FerrataVault.sol,1334:13,cand.epoch != _epoch(),true
+1452,IfStatementMutation,src/FerrataVault.sol,1334:13,cand.epoch != _epoch(),false
+1453,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,+
+1454,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,-
+1455,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,*
+1456,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,/
+1457,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,%
+1458,BinaryOpMutation,src/FerrataVault.sol,1334:23, != ,**
+1459,IfStatementMutation,src/FerrataVault.sol,1335:13,"_checkpointDigest(c, echoNonce) != cand.journalDigest",true
+1460,IfStatementMutation,src/FerrataVault.sol,1335:13,"_checkpointDigest(c, echoNonce) != cand.journalDigest",false
+1461,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,+
+1462,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,-
+1463,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,*
+1464,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,/
+1465,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,%
+1466,BinaryOpMutation,src/FerrataVault.sol,1335:44, != ,**
+1467,BinaryOpMutation,src/FerrataVault.sol,1341:31, + ,-
+1468,BinaryOpMutation,src/FerrataVault.sol,1341:31, + ,*
+1469,BinaryOpMutation,src/FerrataVault.sol,1341:31, + ,/
+1470,BinaryOpMutation,src/FerrataVault.sol,1341:31, + ,%
+1471,BinaryOpMutation,src/FerrataVault.sol,1341:31, + ,**
+1472,IfStatementMutation,src/FerrataVault.sol,1347:13,c.importedLeafCount < finalImportedLeafCount,true
+1473,IfStatementMutation,src/FerrataVault.sol,1347:13,c.importedLeafCount < finalImportedLeafCount,false
+1474,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,+
+1475,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,-
+1476,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,*
+1477,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,/
+1478,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,%
+1479,BinaryOpMutation,src/FerrataVault.sol,1347:32, < ,**
+1480,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1347:13,c.importedLeafCount < finalImportedLeafCount,finalImportedLeafCount < c.importedLeafCount
+1481,IfStatementMutation,src/FerrataVault.sol,1348:13,finalSunset && (!c.sunset || c.importedLeafCount != finalImportedLeafCount),true
+1482,IfStatementMutation,src/FerrataVault.sol,1348:13,finalSunset && (!c.sunset || c.importedLeafCount != finalImportedLeafCount),false
+1483,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,+
+1484,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,-
+1485,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,*
+1486,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,/
+1487,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,%
+1488,BinaryOpMutation,src/FerrataVault.sol,1348:24, && ,**
+1489,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,+
+1490,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,-
+1491,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,*
+1492,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,/
+1493,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,%
+1494,BinaryOpMutation,src/FerrataVault.sol,1348:38, || ,**
+1495,UnaryOperatorMutation,src/FerrataVault.sol,1348:29,!,++
+1496,UnaryOperatorMutation,src/FerrataVault.sol,1348:29,!,--
+1497,UnaryOperatorMutation,src/FerrataVault.sol,1348:29,!,~
+1498,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,+
+1499,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,-
+1500,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,*
+1501,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,/
+1502,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,%
+1503,BinaryOpMutation,src/FerrataVault.sol,1348:61, != ,**
+1504,IfStatementMutation,src/FerrataVault.sol,1349:13,c.importedLeafCount > nextLeafIndex,true
+1505,IfStatementMutation,src/FerrataVault.sol,1349:13,c.importedLeafCount > nextLeafIndex,false
+1506,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,+
+1507,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,-
+1508,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,*
+1509,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,/
+1510,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,%
+1511,BinaryOpMutation,src/FerrataVault.sol,1349:32, > ,**
+1512,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1349:13,c.importedLeafCount > nextLeafIndex,nextLeafIndex > c.importedLeafCount
+1513,IfStatementMutation,src/FerrataVault.sol,1358:13,_frozen(releasesFrozenUntil),true
+1514,IfStatementMutation,src/FerrataVault.sol,1358:13,_frozen(releasesFrozenUntil),false
+1515,IfStatementMutation,src/FerrataVault.sol,1360:13,!cfg.registered,true
+1516,IfStatementMutation,src/FerrataVault.sol,1360:13,!cfg.registered,false
+1517,UnaryOperatorMutation,src/FerrataVault.sol,1360:13,!,++
+1518,UnaryOperatorMutation,src/FerrataVault.sol,1360:13,!,--
+1519,UnaryOperatorMutation,src/FerrataVault.sol,1360:13,!,~
+1520,IfStatementMutation,src/FerrataVault.sol,1361:13,_frozen(tokenReleasesFrozenUntil[r.token]),true
+1521,IfStatementMutation,src/FerrataVault.sol,1361:13,_frozen(tokenReleasesFrozenUntil[r.token]),false
+1522,IfStatementMutation,src/FerrataVault.sol,1362:13,r.denomIndex >= cfg.denominations.length,true
+1523,IfStatementMutation,src/FerrataVault.sol,1362:13,r.denomIndex >= cfg.denominations.length,false
+1524,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,+
+1525,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,-
+1526,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,*
+1527,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,/
+1528,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,%
+1529,BinaryOpMutation,src/FerrataVault.sol,1362:25, >= ,**
+1530,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1362:13,r.denomIndex >= cfg.denominations.length,cfg.denominations.length >= r.denomIndex
+1531,DeleteExpressionMutation,src/FerrataVault.sol,1363:9,amount = cfg.denominations[r.denomIndex],assert(true)
+1532,AssignmentMutation,src/FerrataVault.sol,1363:18,cfg.denominations[r.denomIndex],0
+1533,AssignmentMutation,src/FerrataVault.sol,1363:18,cfg.denominations[r.denomIndex],(-1)
+1534,AssignmentMutation,src/FerrataVault.sol,1363:18,cfg.denominations[r.denomIndex],1
+1535,AssignmentMutation,src/FerrataVault.sol,1363:18,cfg.denominations[r.denomIndex],true
+1536,AssignmentMutation,src/FerrataVault.sol,1363:18,cfg.denominations[r.denomIndex],false
+1537,IfStatementMutation,src/FerrataVault.sol,1364:13,r.recipient == address(0),true
+1538,IfStatementMutation,src/FerrataVault.sol,1364:13,r.recipient == address(0),false
+1539,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,+
+1540,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,-
+1541,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,*
+1542,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,/
+1543,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,%
+1544,BinaryOpMutation,src/FerrataVault.sol,1364:24, == ,**
+1545,IfStatementMutation,src/FerrataVault.sol,1367:13,entry == 0 || checkpoints[entry - 1].revoked,true
+1546,IfStatementMutation,src/FerrataVault.sol,1367:13,entry == 0 || checkpoints[entry - 1].revoked,false
+1547,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,+
+1548,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,-
+1549,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,*
+1550,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,/
+1551,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,%
+1552,BinaryOpMutation,src/FerrataVault.sol,1367:23, || ,**
+1553,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,+
+1554,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,-
+1555,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,*
+1556,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,/
+1557,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,%
+1558,BinaryOpMutation,src/FerrataVault.sol,1367:18, == ,**
+1559,BinaryOpMutation,src/FerrataVault.sol,1367:44, - ,+
+1560,BinaryOpMutation,src/FerrataVault.sol,1367:44, - ,*
+1561,BinaryOpMutation,src/FerrataVault.sol,1367:44, - ,/
+1562,BinaryOpMutation,src/FerrataVault.sol,1367:44, - ,%
+1563,BinaryOpMutation,src/FerrataVault.sol,1367:44, - ,**
+1564,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1367:39,entry - 1,1 - entry
+1565,BinaryOpMutation,src/FerrataVault.sol,1368:56, - ,+
+1566,BinaryOpMutation,src/FerrataVault.sol,1368:56, - ,*
+1567,BinaryOpMutation,src/FerrataVault.sol,1368:56, - ,/
+1568,BinaryOpMutation,src/FerrataVault.sol,1368:56, - ,%
+1569,BinaryOpMutation,src/FerrataVault.sol,1368:56, - ,**
+1570,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1368:51,entry - 1,1 - entry
+1571,DeleteExpressionMutation,src/FerrataVault.sol,1369:9,prover = checkpoints[entry - 1].prover,assert(true)
+1572,AssignmentMutation,src/FerrataVault.sol,1369:18,checkpoints[entry - 1].prover,0
+1573,AssignmentMutation,src/FerrataVault.sol,1369:18,checkpoints[entry - 1].prover,(-1)
+1574,AssignmentMutation,src/FerrataVault.sol,1369:18,checkpoints[entry - 1].prover,1
+1575,AssignmentMutation,src/FerrataVault.sol,1369:18,checkpoints[entry - 1].prover,true
+1576,AssignmentMutation,src/FerrataVault.sol,1369:18,checkpoints[entry - 1].prover,false
+1577,BinaryOpMutation,src/FerrataVault.sol,1369:35, - ,+
+1578,BinaryOpMutation,src/FerrataVault.sol,1369:35, - ,*
+1579,BinaryOpMutation,src/FerrataVault.sol,1369:35, - ,/
+1580,BinaryOpMutation,src/FerrataVault.sol,1369:35, - ,%
+1581,BinaryOpMutation,src/FerrataVault.sol,1369:35, - ,**
+1582,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1369:30,entry - 1,1 - entry
+1583,BinaryOpMutation,src/FerrataVault.sol,1370:61, + ,-
+1584,BinaryOpMutation,src/FerrataVault.sol,1370:61, + ,*
+1585,BinaryOpMutation,src/FerrataVault.sol,1370:61, + ,/
+1586,BinaryOpMutation,src/FerrataVault.sol,1370:61, + ,%
+1587,BinaryOpMutation,src/FerrataVault.sol,1370:61, + ,**
+1588,BinaryOpMutation,src/FerrataVault.sol,1370:44, - ,+
+1589,BinaryOpMutation,src/FerrataVault.sol,1370:44, - ,*
+1590,BinaryOpMutation,src/FerrataVault.sol,1370:44, - ,/
+1591,BinaryOpMutation,src/FerrataVault.sol,1370:44, - ,%
+1592,BinaryOpMutation,src/FerrataVault.sol,1370:44, - ,**
+1593,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1370:39,entry - 1,1 - entry
+1594,IfStatementMutation,src/FerrataVault.sol,1372:13,delay == revokeWindow,true
+1595,IfStatementMutation,src/FerrataVault.sol,1372:13,delay == revokeWindow,false
+1596,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,+
+1597,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,-
+1598,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,*
+1599,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,/
+1600,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,%
+1601,BinaryOpMutation,src/FerrataVault.sol,1372:18, == ,**
+1602,DeleteExpressionMutation,src/FerrataVault.sol,1372:36,opensAt += 1,assert(true)
+1603,AssignmentMutation,src/FerrataVault.sol,1372:47,1,(-1)
+1604,AssignmentMutation,src/FerrataVault.sol,1372:47,1,0
+1605,IfStatementMutation,src/FerrataVault.sol,1373:13,block.timestamp < opensAt,true
+1606,IfStatementMutation,src/FerrataVault.sol,1373:13,block.timestamp < opensAt,false
+1607,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,+
+1608,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,-
+1609,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,*
+1610,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,/
+1611,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,%
+1612,BinaryOpMutation,src/FerrataVault.sol,1373:28, < ,**
+1613,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1373:13,block.timestamp < opensAt,opensAt < block.timestamp
+1614,IfStatementMutation,src/FerrataVault.sol,1374:13,nullifierUsed[r.nullifier],true
+1615,IfStatementMutation,src/FerrataVault.sol,1374:13,nullifierUsed[r.nullifier],false
+1616,IfStatementMutation,src/FerrataVault.sol,1376:13,r.relayFee != 0 && r.relayFee != cfg.relayFees[r.denomIndex],true
+1617,IfStatementMutation,src/FerrataVault.sol,1376:13,r.relayFee != 0 && r.relayFee != cfg.relayFees[r.denomIndex],false
+1618,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,+
+1619,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,-
+1620,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,*
+1621,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,/
+1622,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,%
+1623,BinaryOpMutation,src/FerrataVault.sol,1376:28, && ,**
+1624,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,+
+1625,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,-
+1626,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,*
+1627,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,/
+1628,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,%
+1629,BinaryOpMutation,src/FerrataVault.sol,1376:23, != ,**
+1630,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,+
+1631,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,-
+1632,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,*
+1633,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,/
+1634,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,%
+1635,BinaryOpMutation,src/FerrataVault.sol,1376:42, != ,**
+1636,IfStatementMutation,src/FerrataVault.sol,1377:13,amount > escrowed[r.token],true
+1637,IfStatementMutation,src/FerrataVault.sol,1377:13,amount > escrowed[r.token],false
+1638,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,+
+1639,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,-
+1640,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,*
+1641,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,/
+1642,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,%
+1643,BinaryOpMutation,src/FerrataVault.sol,1377:19, > ,**
+1644,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1377:13,amount > escrowed[r.token],escrowed[r.token] > amount
+1645,BinaryOpMutation,src/FerrataVault.sol,1408:39, / ,+
+1646,BinaryOpMutation,src/FerrataVault.sol,1408:39, / ,-
+1647,BinaryOpMutation,src/FerrataVault.sol,1408:39, / ,*
+1648,BinaryOpMutation,src/FerrataVault.sol,1408:39, / ,%
+1649,BinaryOpMutation,src/FerrataVault.sol,1408:39, / ,**
+1650,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1408:27,(low + high) / 2,2 / (low + high)
+1651,BinaryOpMutation,src/FerrataVault.sol,1408:31, + ,-
+1652,BinaryOpMutation,src/FerrataVault.sol,1408:31, + ,*
+1653,BinaryOpMutation,src/FerrataVault.sol,1408:31, + ,/
+1654,BinaryOpMutation,src/FerrataVault.sol,1408:31, + ,%
+1655,BinaryOpMutation,src/FerrataVault.sol,1408:31, + ,**
+1656,IfStatementMutation,src/FerrataVault.sol,1409:17,changes[mid].fromCheckpoint <= checkpointIndex,true
+1657,IfStatementMutation,src/FerrataVault.sol,1409:17,changes[mid].fromCheckpoint <= checkpointIndex,false
+1658,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,+
+1659,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,-
+1660,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,*
+1661,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,/
+1662,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,%
+1663,BinaryOpMutation,src/FerrataVault.sol,1409:44, <= ,**
+1664,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1409:17,changes[mid].fromCheckpoint <= checkpointIndex,checkpointIndex <= changes[mid].fromCheckpoint
+1665,DeleteExpressionMutation,src/FerrataVault.sol,1410:18,high = mid,assert(true)
+1666,AssignmentMutation,src/FerrataVault.sol,1410:25,mid,0
+1667,AssignmentMutation,src/FerrataVault.sol,1410:25,mid,(-1)
+1668,AssignmentMutation,src/FerrataVault.sol,1410:25,mid,1
+1669,AssignmentMutation,src/FerrataVault.sol,1410:25,mid,true
+1670,AssignmentMutation,src/FerrataVault.sol,1410:25,mid,false
+1671,DeleteExpressionMutation,src/FerrataVault.sol,1409:65,low = mid + 1,assert(true)
+1672,AssignmentMutation,src/FerrataVault.sol,1409:71,mid + 1,0
+1673,AssignmentMutation,src/FerrataVault.sol,1409:71,mid + 1,(-1)
+1674,AssignmentMutation,src/FerrataVault.sol,1409:71,mid + 1,1
+1675,AssignmentMutation,src/FerrataVault.sol,1409:71,mid + 1,true
+1676,AssignmentMutation,src/FerrataVault.sol,1409:71,mid + 1,false
+1677,BinaryOpMutation,src/FerrataVault.sol,1409:74, + ,-
+1678,BinaryOpMutation,src/FerrataVault.sol,1409:74, + ,*
+1679,BinaryOpMutation,src/FerrataVault.sol,1409:74, + ,/
+1680,BinaryOpMutation,src/FerrataVault.sol,1409:74, + ,%
+1681,BinaryOpMutation,src/FerrataVault.sol,1409:74, + ,**
+1682,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,+
+1683,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,-
+1684,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,*
+1685,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,/
+1686,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,%
+1687,BinaryOpMutation,src/FerrataVault.sol,1407:19, < ,**
+1688,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1407:16,low < high,high < low
+1689,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,+
+1690,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,-
+1691,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,*
+1692,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,/
+1693,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,%
+1694,BinaryOpMutation,src/FerrataVault.sol,1412:19, == ,**
+1695,BinaryOpMutation,src/FerrataVault.sol,1412:42, - ,+
+1696,BinaryOpMutation,src/FerrataVault.sol,1412:42, - ,*
+1697,BinaryOpMutation,src/FerrataVault.sol,1412:42, - ,/
+1698,BinaryOpMutation,src/FerrataVault.sol,1412:42, - ,%
+1699,BinaryOpMutation,src/FerrataVault.sol,1412:42, - ,**
+1700,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1412:39,low - 1,1 - low
+1701,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,+
+1702,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,-
+1703,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,*
+1704,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,/
+1705,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,%
+1706,BinaryOpMutation,src/FerrataVault.sol,1418:26, == ,**
+1707,IfStatementMutation,src/FerrataVault.sol,1419:13,!paid,true
+1708,IfStatementMutation,src/FerrataVault.sol,1419:13,!paid,false
+1709,UnaryOperatorMutation,src/FerrataVault.sol,1419:13,!,++
+1710,UnaryOperatorMutation,src/FerrataVault.sol,1419:13,!,--
+1711,UnaryOperatorMutation,src/FerrataVault.sol,1419:13,!,~
+1712,DeleteExpressionMutation,src/FerrataVault.sol,1419:20,"_credit(payee, token, amount)",assert(true)
+1713,DeleteExpressionMutation,src/FerrataVault.sol,1423:9,owed[payee][token] += amount,assert(true)
+1714,AssignmentMutation,src/FerrataVault.sol,1423:31,amount,0
+1715,AssignmentMutation,src/FerrataVault.sol,1423:31,amount,(-1)
+1716,AssignmentMutation,src/FerrataVault.sol,1423:31,amount,1
+1717,AssignmentMutation,src/FerrataVault.sol,1423:31,amount,true
+1718,AssignmentMutation,src/FerrataVault.sol,1423:31,amount,false
+1719,DeleteExpressionMutation,src/FerrataVault.sol,1424:9,totalOwed[token] += amount,assert(true)
+1720,AssignmentMutation,src/FerrataVault.sol,1424:29,amount,0
+1721,AssignmentMutation,src/FerrataVault.sol,1424:29,amount,(-1)
+1722,AssignmentMutation,src/FerrataVault.sol,1424:29,amount,1
+1723,AssignmentMutation,src/FerrataVault.sol,1424:29,amount,true
+1724,AssignmentMutation,src/FerrataVault.sol,1424:29,amount,false
+1725,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,+
+1726,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,-
+1727,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,*
+1728,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,/
+1729,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,%
+1730,BinaryOpMutation,src/FerrataVault.sol,1432:35, >> ,**
+1731,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1432:27,outbound >> 128,128 >> outbound
+1732,IfStatementMutation,src/FerrataVault.sol,1434:13,burnFee != 0,true
+1733,IfStatementMutation,src/FerrataVault.sol,1434:13,burnFee != 0,false
+1734,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,+
+1735,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,-
+1736,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,*
+1737,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,/
+1738,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,%
+1739,BinaryOpMutation,src/FerrataVault.sol,1434:20, != ,**
+1740,DeleteExpressionMutation,src/FerrataVault.sol,1434:27,"_credit(feeRecipient, token, burnFee)",assert(true)
+1741,IfStatementMutation,src/FerrataVault.sol,1435:13,checkpointFee != 0,true
+1742,IfStatementMutation,src/FerrataVault.sol,1435:13,checkpointFee != 0,false
+1743,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,+
+1744,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,-
+1745,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,*
+1746,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,/
+1747,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,%
+1748,BinaryOpMutation,src/FerrataVault.sol,1435:26, != ,**
+1749,DeleteExpressionMutation,src/FerrataVault.sol,1435:33,"_credit(prover, token, checkpointFee)",assert(true)
+1750,BinaryOpMutation,src/FerrataVault.sol,1436:23, + ,-
+1751,BinaryOpMutation,src/FerrataVault.sol,1436:23, + ,*
+1752,BinaryOpMutation,src/FerrataVault.sol,1436:23, + ,/
+1753,BinaryOpMutation,src/FerrataVault.sol,1436:23, + ,%
+1754,BinaryOpMutation,src/FerrataVault.sol,1436:23, + ,**
+1755,DeleteExpressionMutation,src/FerrataVault.sol,1442:9,index = st.current,assert(true)
+1756,AssignmentMutation,src/FerrataVault.sol,1442:17,st.current,0
+1757,AssignmentMutation,src/FerrataVault.sol,1442:17,st.current,(-1)
+1758,AssignmentMutation,src/FerrataVault.sol,1442:17,st.current,1
+1759,AssignmentMutation,src/FerrataVault.sol,1442:17,st.current,true
+1760,AssignmentMutation,src/FerrataVault.sol,1442:17,st.current,false
+1761,IfStatementMutation,src/FerrataVault.sol,1444:13,pendingAt != 0 && block.timestamp >= pendingAt,true
+1762,IfStatementMutation,src/FerrataVault.sol,1444:13,pendingAt != 0 && block.timestamp >= pendingAt,false
+1763,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,+
+1764,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,-
+1765,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,*
+1766,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,/
+1767,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,%
+1768,BinaryOpMutation,src/FerrataVault.sol,1444:27, && ,**
+1769,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,+
+1770,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,-
+1771,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,*
+1772,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,/
+1773,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,%
+1774,BinaryOpMutation,src/FerrataVault.sol,1444:22, != ,**
+1775,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,+
+1776,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,-
+1777,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,*
+1778,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,/
+1779,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,%
+1780,BinaryOpMutation,src/FerrataVault.sol,1444:46, >= ,**
+1781,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1444:31,block.timestamp >= pendingAt,pendingAt >= block.timestamp
+1782,DeleteExpressionMutation,src/FerrataVault.sol,1445:13,"index = FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",assert(true)
+1783,AssignmentMutation,src/FerrataVault.sol,1445:21,"FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",0
+1784,AssignmentMutation,src/FerrataVault.sol,1445:21,"FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",(-1)
+1785,AssignmentMutation,src/FerrataVault.sol,1445:21,"FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",1
+1786,AssignmentMutation,src/FerrataVault.sol,1445:21,"FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",true
+1787,AssignmentMutation,src/FerrataVault.sol,1445:21,"FerrataRegistry.applyFees(_tokens, feeState, feeSchedules, token)",false
+1788,IfStatementMutation,src/FerrataVault.sol,1463:13,"!_tryConsume(_tokenDepositCap[token], amount)",true
+1789,IfStatementMutation,src/FerrataVault.sol,1463:13,"!_tryConsume(_tokenDepositCap[token], amount)",false
+1790,UnaryOperatorMutation,src/FerrataVault.sol,1463:13,!,++
+1791,UnaryOperatorMutation,src/FerrataVault.sol,1463:13,!,--
+1792,UnaryOperatorMutation,src/FerrataVault.sol,1463:13,!,~
+1793,IfStatementMutation,src/FerrataVault.sol,1464:13,"!_tryConsume(_globalDepositCap, _valueUnits(token, amount))",true
+1794,IfStatementMutation,src/FerrataVault.sol,1464:13,"!_tryConsume(_globalDepositCap, _valueUnits(token, amount))",false
+1795,UnaryOperatorMutation,src/FerrataVault.sol,1464:13,!,++
+1796,UnaryOperatorMutation,src/FerrataVault.sol,1464:13,!,--
+1797,UnaryOperatorMutation,src/FerrataVault.sol,1464:13,!,~
+1798,IfStatementMutation,src/FerrataVault.sol,1468:13,"!_tryConsume(_tokenReleaseCap[token], amount)",true
+1799,IfStatementMutation,src/FerrataVault.sol,1468:13,"!_tryConsume(_tokenReleaseCap[token], amount)",false
+1800,UnaryOperatorMutation,src/FerrataVault.sol,1468:13,!,++
+1801,UnaryOperatorMutation,src/FerrataVault.sol,1468:13,!,--
+1802,UnaryOperatorMutation,src/FerrataVault.sol,1468:13,!,~
+1803,IfStatementMutation,src/FerrataVault.sol,1469:13,"!_tryConsume(_globalReleaseCap, _valueUnits(token, amount))",true
+1804,IfStatementMutation,src/FerrataVault.sol,1469:13,"!_tryConsume(_globalReleaseCap, _valueUnits(token, amount))",false
+1805,UnaryOperatorMutation,src/FerrataVault.sol,1469:13,!,++
+1806,UnaryOperatorMutation,src/FerrataVault.sol,1469:13,!,--
+1807,UnaryOperatorMutation,src/FerrataVault.sol,1469:13,!,~
+1808,BinaryOpMutation,src/FerrataVault.sol,1477:39, / ,+
+1809,BinaryOpMutation,src/FerrataVault.sol,1477:39, / ,-
+1810,BinaryOpMutation,src/FerrataVault.sol,1477:39, / ,*
+1811,BinaryOpMutation,src/FerrataVault.sol,1477:39, / ,%
+1812,BinaryOpMutation,src/FerrataVault.sol,1477:39, / ,**
+1813,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1477:16,amount * cfg.unitWeight / cfg.lezUnit,cfg.lezUnit / amount * cfg.unitWeight
+1814,BinaryOpMutation,src/FerrataVault.sol,1477:22, * ,+
+1815,BinaryOpMutation,src/FerrataVault.sol,1477:22, * ,-
+1816,BinaryOpMutation,src/FerrataVault.sol,1477:22, * ,/
+1817,BinaryOpMutation,src/FerrataVault.sol,1477:22, * ,%
+1818,BinaryOpMutation,src/FerrataVault.sol,1477:22, * ,**
+1819,IfStatementMutation,src/FerrataVault.sol,1482:13,b.capacity == UNLIMITED,true
+1820,IfStatementMutation,src/FerrataVault.sol,1482:13,b.capacity == UNLIMITED,false
+1821,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,+
+1822,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,-
+1823,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,*
+1824,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,/
+1825,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,%
+1826,BinaryOpMutation,src/FerrataVault.sol,1482:23, == ,**
+1827,IfStatementMutation,src/FerrataVault.sol,1484:13,amount > level,true
+1828,IfStatementMutation,src/FerrataVault.sol,1484:13,amount > level,false
+1829,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,+
+1830,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,-
+1831,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,*
+1832,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,/
+1833,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,%
+1834,BinaryOpMutation,src/FerrataVault.sol,1484:19, > ,**
+1835,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1484:13,amount > level,level > amount
+1836,DeleteExpressionMutation,src/FerrataVault.sol,1485:9,b.level = level - amount,assert(true)
+1837,AssignmentMutation,src/FerrataVault.sol,1485:19,level - amount,0
+1838,AssignmentMutation,src/FerrataVault.sol,1485:19,level - amount,(-1)
+1839,AssignmentMutation,src/FerrataVault.sol,1485:19,level - amount,1
+1840,AssignmentMutation,src/FerrataVault.sol,1485:19,level - amount,true
+1841,AssignmentMutation,src/FerrataVault.sol,1485:19,level - amount,false
+1842,BinaryOpMutation,src/FerrataVault.sol,1485:24, - ,+
+1843,BinaryOpMutation,src/FerrataVault.sol,1485:24, - ,*
+1844,BinaryOpMutation,src/FerrataVault.sol,1485:24, - ,/
+1845,BinaryOpMutation,src/FerrataVault.sol,1485:24, - ,%
+1846,BinaryOpMutation,src/FerrataVault.sol,1485:24, - ,**
+1847,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1485:19,level - amount,amount - level
+1848,DeleteExpressionMutation,src/FerrataVault.sol,1486:9,b.lastUpdate = block.timestamp,assert(true)
+1849,AssignmentMutation,src/FerrataVault.sol,1486:24,block.timestamp,0
+1850,AssignmentMutation,src/FerrataVault.sol,1486:24,block.timestamp,(-1)
+1851,AssignmentMutation,src/FerrataVault.sol,1486:24,block.timestamp,1
+1852,AssignmentMutation,src/FerrataVault.sol,1486:24,block.timestamp,true
+1853,AssignmentMutation,src/FerrataVault.sol,1486:24,block.timestamp,false
+1854,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,+
+1855,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,-
+1856,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,*
+1857,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,/
+1858,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,%
+1859,BinaryOpMutation,src/FerrataVault.sol,1491:26, == ,**
+1860,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,+
+1861,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,-
+1862,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,*
+1863,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,/
+1864,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,%
+1865,BinaryOpMutation,src/FerrataVault.sol,1495:25, == ,**
+1866,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,+
+1867,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,-
+1868,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,*
+1869,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,/
+1870,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,%
+1871,BinaryOpMutation,src/FerrataVault.sol,1499:25, == ,**
+1872,BinaryOpMutation,src/FerrataVault.sol,1507:40, + ,-
+1873,BinaryOpMutation,src/FerrataVault.sol,1507:40, + ,*
+1874,BinaryOpMutation,src/FerrataVault.sol,1507:40, + ,/
+1875,BinaryOpMutation,src/FerrataVault.sol,1507:40, + ,%
+1876,BinaryOpMutation,src/FerrataVault.sol,1507:40, + ,**
+1877,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,+
+1878,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,-
+1879,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,*
+1880,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,/
+1881,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,%
+1882,BinaryOpMutation,src/FerrataVault.sol,1511:31, < ,**
+1883,SwapArgumentsOperatorMutation,src/FerrataVault.sol,1511:16,block.timestamp < until,until < block.timestamp
+1884,IfStatementMutation,src/FerrataVault.sol,1515:13,msg.sender != admin,true
+1885,IfStatementMutation,src/FerrataVault.sol,1515:13,msg.sender != admin,false
+1886,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,+
+1887,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,-
+1888,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,*
+1889,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,/
+1890,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,%
+1891,BinaryOpMutation,src/FerrataVault.sol,1515:23, != ,**
+1892,IfStatementMutation,src/FerrataVault.sol,1519:13,msg.sender != freezeAuthority,true
+1893,IfStatementMutation,src/FerrataVault.sol,1519:13,msg.sender != freezeAuthority,false
+1894,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,+
+1895,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,-
+1896,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,*
+1897,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,/
+1898,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,%
+1899,BinaryOpMutation,src/FerrataVault.sol,1519:23, != ,**
+1900,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,+
+1901,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,-
+1902,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,*
+1903,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,/
+1904,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,%
+1905,BinaryOpMutation,src/FerrataVault.sol,1523:56, || ,**
+1906,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,+
+1907,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,-
+1908,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,*
+1909,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,/
+1910,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,%
+1911,BinaryOpMutation,src/FerrataVault.sol,1523:34, || ,**
+1912,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,+
+1913,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,-
+1914,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,*
+1915,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,/
+1916,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,%
+1917,BinaryOpMutation,src/FerrataVault.sol,1523:19, == ,**
+1918,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,+
+1919,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,-
+1920,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,*
+1921,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,/
+1922,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,%
+1923,BinaryOpMutation,src/FerrataVault.sol,1523:41, == ,**
+1924,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,+
+1925,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,-
+1926,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,*
+1927,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,/
+1928,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,%
+1929,BinaryOpMutation,src/FerrataVault.sol,1523:63, == ,**
+1930,IfStatementMutation,src/FerrataVault.sol,1532:13,!_tokens[token].registered,true
+1931,IfStatementMutation,src/FerrataVault.sol,1532:13,!_tokens[token].registered,false
+1932,UnaryOperatorMutation,src/FerrataVault.sol,1532:13,!,++
+1933,UnaryOperatorMutation,src/FerrataVault.sol,1532:13,!,--
+1934,UnaryOperatorMutation,src/FerrataVault.sol,1532:13,!,~

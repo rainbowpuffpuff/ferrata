@@ -1051,6 +1051,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "residue-handoff"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "residue",
+ "residue-agg",
+]
+
+[[package]]
 name = "residue_agg_accel"
 version = "0.1.0"
 dependencies = [
@@ -1058,6 +1068,7 @@ dependencies = [
  "ferrata-core",
  "residue",
  "residue-agg",
+ "residue-handoff",
  "risc0-zkvm",
  "sha2",
 ]

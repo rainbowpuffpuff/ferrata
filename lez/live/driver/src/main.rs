@@ -168,6 +168,8 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
         gas_limit: args.get("gas-limit").map(str::parse).transpose()?.unwrap_or(4_000_000),
         wait_final: args.get("wait-final") != Some("no"),
     };
+    // This driver sends through LEZ's wallet directly too: a sequencer not on this machine only as `check_send` allows.
+    crate::live::check_send(&opts.rpc)?;
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
     Ok(Run { live, fixtures: fixtures(args)?, program, scripted, bridge, consumer, payers: payer_keys.iter().map(account_of).collect() })

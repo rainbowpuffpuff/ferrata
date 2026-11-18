@@ -44,8 +44,8 @@ default. In short:
 | `[sequencer]` | `rpc` (the sequencer's JSON-RPC; loopback only), `program` (the attestation program's account, base58 or 0x-hex), `wait_final` (default `true`: read the chain and settle transactions only in blocks final on Bedrock), `run_dir` (the backend's follower and manifest; default `state_dir/ledger`), `log` (the sequencer's log, for the reason of a dropped transaction) |
 | `[keys]` | `payer_key_file`: a 32-byte secret key in hex. It signs and pays every transaction and needs no other role: no step of the program checks a sender |
 | `[fees]` | `gas_limit` declared by every step (default 4,800,000; the largest step measured is 3,731,712), `max_fee_per_tx`, `budget` (the daemon stops sending at it and says so in `/health`) |
-| `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request`, `finish_own_jobs` (default `true`) |
-| `[[chain]]` | `name`, `preset` (`mainnet`, `sepolia`), `checkpoint` (the instance's trusted block root), `layout` (the checkpoint bootstrap's light-client layout, `electra` by default, `gloas` for a Gloas-era bootstrap; the instance id hashes it), `adoption_parts`; `[[chain.source]]` with `url` (a beacon node's REST API) or `dir` (a recorded directory in the lab's layout), and `kind`: `light-client` (default) or `headers` (a node that serves no light-client data, only `/eth/v1/beacon/headers/{slot}`: it confirms the finalized header, below) |
+| `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request`, `finish_own_jobs` (default `true`), `min_distinct_clients` (default 0, off) and `client_match` (`bytes` or `finalized-header`): [client diversity](#client-diversity-policymin_distinct_clients) |
+| `[[chain]]` | `name`, `preset` (`mainnet`, `sepolia`), `checkpoint` (the instance's trusted block root), `layout` (the checkpoint bootstrap's light-client layout, `electra` by default, `gloas` for a Gloas-era bootstrap; the instance id hashes it), `adoption_parts`; `[[chain.source]]` with `url` (a beacon node's REST API) or `dir` (a recorded directory in the lab's layout), and `kind`: `light-client` (default) or `headers` (a node that serves no light-client data, only `/eth/v1/beacon/headers/{slot}`: it confirms the finalized header, below); `client`: a recorded `dir`'s client, as a node would report it (a node's is what it reports) |
 
 SIGTERM or SIGINT: the round in hand finishes, the backend saves what it keeps (the sequencer
 backend: its follower of the chain; the harness: nothing), then the daemon exits 0. The updater itself
@@ -77,6 +77,8 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    (publicnode's answers 404 to `light_client/finality_update`), so a second, independent provider
    is a `headers` source; one that holds another block there is counted (`mismatches`) and named in
    `/health`, and nothing is sent until enough sources agree.
+   With `min_distinct_clients = k` the update must also come from `k` different consensus clients
+   ([below](#client-diversity-policymin_distinct_clients)); otherwise the updater waits.
 6. **Choice.** Adopting the next committee first when the store lacks it; then the furthest
    finalized header; then the most signers.
 7. **The job's next step, from the chain.** A job's id hashes the instance, its starting store and
@@ -96,6 +98,55 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    before every retry the chain is read again: a step another updater sent meanwhile is not sent.
    Every sent transaction is a line of `state_dir/<chain>/journal.tsv` (round, step, job, finalized
    slot, result, exit code, execution and storage gas, fee, block, the time it settled, its label).
+
+## Client diversity (`policy.min_distinct_clients`)
+
+Built 18 November 2026 (EVIDENCE row 147). The program's checks (step 4) refuse what the sync committee did not
+sign, not what a captured committee signs: a finality update for a block that was never finalized, signed by 342 of
+the 512 members, passes them, and the signers lose no stake for it ([`../../docs/trust.md`](../../docs/trust.md)
+§2.2). An honest beacon node derives light-client data only from blocks its own fork choice imported, so it does not
+serve such an update; two implementations with the same bug are less likely than one. `min_distinct_clients = k` (0,
+the default: off; 1 is refused) makes the updater send an update only when sources of `k` different consensus clients
+agree on it. Use it with `client_match = "bytes"`: only then is an update that one source alone serves never sent
+(while an accomplice holds fewer than `k` of the configured sources); `"finalized-header"` sends such an update when
+its finalized header is canonical (below).
+
+- **The client** is what a source reports at `GET /eth/v1/node/version`, asked every round, by its first word
+  (`Nimbus/v26.10.2-0abc0d-stateofus`: `nimbus`), kept to printable ASCII. A source that does not answer counts under
+  none that round; a change of answer is counted and logged. It is the provider's own claim: nothing authenticates
+  it, and a provider behind a load balancer can answer from nodes of several clients. A recorded `dir` has `client`
+  in the configuration; `beacon_api_module` reports none (it fails over between providers).
+- **`client_match = "bytes"`** (default): the update's SSZ, byte for byte, as each light-client source served it (a
+  finality update with a finality update, a period update with a period update), from `k` clients on `k` different
+  sources. The updater remembers which (client, source) pairs served which bytes (at most 4,096 updates), because
+  implementations keep different finality updates: on 18 November Lodestar served the first update of a newly
+  finalized checkpoint for the whole epoch, Nimbus the newest one each slot, so the two served the same bytes during
+  one slot of each epoch ([`results/client-diversity-2026-11-18/`](results/client-diversity-2026-11-18/README.md)).
+- **`client_match = "finalized-header"`**: the update's finalized header, served by a light-client source or held
+  canonical at its slot by a `headers` source (the agreement `min_agreeing` counts), from `k` clients. Weaker and
+  faster: it compares the header, not the signed update, and a `headers` answer is read for `canonical`, not
+  `finalized`, so **the update sent is one source's bytes**: one that a single light-client source serves is sent when
+  its finalized header is canonical, a period update with a next committee nobody else served among them (a captured
+  committee's forged handoff; `tests/diversity_limits.rs`, `finalized_header_mode_sends_what_one_light_client_source_served`).
+- **Refused otherwise:** no transaction; the plan is `Waiting` ("1 of 2 clients agree byte for byte (lodestar)"), and
+  the log names the best update not sent and the clients that served it. While it waits for clients and the sources serve
+  updates more than `max_lag_slots` past the instance (any the program would not refuse), `/health` is degraded ("waiting for clients: ...") and
+  `ferrata_updater_client_wait_slots` gives the distance: a policy the configured sources cannot meet (two of one
+  client, a node that does not answer `/eth/v1/node/version`) is an alarm, not a silent stall.
+- **Sources, not providers:** `k` clients from `k` configured sources. The updater cannot tell whether two sources are
+  one provider (its version answer and its data may come from different backends); under the policy the configuration
+  refuses the same host twice, not two hosts of one provider.
+- **Disagreements:** two sources serving different bytes for the same finality update (the same attested header and
+  signature slot: one block's sync aggregate over its parent, which honest nodes derive alike) or for the same finished
+  period are logged with both digests, counted once per update and source, and named in `/health` for that round. The
+  updater does not decide who is right; an update the program would refuse demotes its source as before.
+- **Not covered:** the initialization (the bootstrap is bound to the checkpoint root by hashes) and the committees
+  (bound to the summaries on chain); a job this updater opened continues (`finish_own_jobs`).
+- **What it does not give:** it binds this updater only. The program accepts the same update from anyone on its
+  signatures (VS.6): a forger submits it. The policy (with `bytes`) keeps an honest operator from paying for and relaying
+  a forgery or a buggy client's update, and its `/health` is the first alarm when its sources disagree.
+- **Off by default:** with `min_distinct_clients = 0` nothing changes: no version request, no new metric, the same
+  plans (the A3 gate below ran with it off).
 
 ## The sequencer backend (`sequencer/`)
 
@@ -126,7 +177,8 @@ daemon is the same (`src/daemon.rs`, which the Logos module drives too). It reus
 `GET /health`: JSON per instance (`status` `ok`, `degraded` or `down`, the reasons, the finalized
 slot and period, the last plan and error); HTTP 503 when an instance has no usable source.
 `degraded`: a source demoted, lagging or unavailable, a `headers` source holding another block at a
-finalized header's slot, the budget reached, or the last round stuck.
+finalized header's slot, two sources serving other bytes for one update or waiting for clients beyond `max_lag_slots`
+(`min_distinct_clients`), the budget reached, or the last round stuck.
 
 `GET /metrics` (Prometheus text, labels `daemon`, `chain`, `source`): `ferrata_updater_rounds_total`,
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
@@ -135,7 +187,9 @@ finalized header's slot, the budget reached, or the last round stuck.
 `_finalized_slot`, `_period`, `_health` (0 ok, 1 degraded, 2 down), and per source
 `_source_requests_total`, `_source_errors_total`, `_source_refused_total`, `_source_lagging`,
 `_source_available`, `_source_demoted`, `_source_finalized_slot`, `_source_confirmed_total` and
-`_source_mismatches_total` (a `headers` source's confirmations and disagreements). Samples:
+`_source_mismatches_total` (a `headers` source's confirmations and disagreements); with `min_distinct_clients`,
+`_source_client_info{client,version}`, `_source_client_changes_total`, `_source_disagreements_total` and
+`_client_wait_slots`, and `/health` lists every source's reported client. Samples:
 `results/demo-metrics.txt` (dev mode), `results/live-sepolia/metrics-last.txt` (the live run).
 
 ## Tested (measured; `cargo test -p ferrata-updater --features harness`, RISC0_DEV_MODE=1, on the mrun build box)
@@ -159,6 +213,23 @@ guest toolchain (Rust 1.91.1 in `RISC0_HOME`, `scripts/ci/install-risc0.sh`).
 | `own_job_is_finished_when_the_source_moves_on` | the source moves on to a newer finality update after this updater's `Open` (as a beacon node serves only its newest); with `finish_own_jobs`, without, and with it after a restart on the same state directory | with it: `Miller` of its own job next (also after the restart, from `state_dir/mainnet/open/`), both updates applied, 14 transactions; without: the newer update's `Open`, the first job left open, 12 transactions; nothing refused, no kept job left at the end |
 | `config.rs` (5 tests) | the shipped `ferrata-updater.example.toml` and `dev/dev.toml` parse; an unknown preset, a non-hex checkpoint, a zero deferral window, a source with both `url` and `dir`, an unknown field, `ledger = "sequencer"` without `[sequencer]` or with a sequencer not on loopback, an unknown ledger, an unknown layout, a `headers` source without `url` are refused; the example's Sepolia chain (checkpoint `3b901f5e…`, layout `gloas`) is the crown run's instance `a5fb2591…`; a beacon node's header answer is read only when canonical at that slot; the `updates` stream splits under both length conventions | pass |
 | `gate_two_honest_one_adversary` | proposal A3's done gate (below) | passes in all eight runs (seven with the adversary, one without), 12 November 2026 |
+
+**Client diversity** (18 November 2026, [`results/client-diversity-2026-11-18/`](results/client-diversity-2026-11-18/README.md)
+§2, §5): on the tree of that change **27 tests pass** (6 in the library, 8 in `config.rs`, 13 in `recorded.rs`), clippy
+`-D warnings` clean; after an independent review the same day **31** (with `tests/diversity_limits.rs`: its
+counterexamples, and its fixes: one host refused twice, `/health` degraded while waiting for clients). New: two clients serving the same bytes catch up as before and one client twice waits
+(`distinct_clients_must_serve_the_same_bytes`); a "Lodestar" source serving valid updates three entries ahead of the
+other client is followed without the policy (to 11,600,416) and held back with it (at 11,591,680) until the other
+serves the same bytes (`an_update_one_client_serves_is_held_back`); a forged-signature source claiming a second client
+sends nothing, is demoted, and both sides' disagreements (7 each) are logged and named in `/health`
+(`a_lying_client_is_logged_and_does_not_count`); the recorded `/eth/v1/node/version` answers of Nimbus, Lodestar and
+Lighthouse over HTTP, in both match modes (`clients_reported_over_http`); the configuration's checks. The lab's record
+has grown since 13 November (mainnet 95, Sepolia 125 updates): `restart_mid_job_and_mid_period` now picks its stop
+point from the data (it had assumed the third entry from the end was a finality update), and the A3 gate's default
+run replays all **220** updates, each applied once, refused gas / applied 0.0603, honest-1's share 0.5027, 1,020
+rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table below keeps the 58-update runs). Running
+the suite rewrites the tracked `results/gate.txt` with the grown record's figures; `git checkout` it afterwards to keep
+the 58-update file the README and EVIDENCE row 80 cite.
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
@@ -227,3 +298,7 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   with LEZ's node-side crates and their prebuilt circuit and rapidsnark libraries). It ran inside a headless Logos
   Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
+- Client diversity ran ten minutes live on mainnet, on the in-process chain (two daemons; Sepolia's run did not start:
+  Lodestar's API answered HTTP 500 for the bootstraps the run script asked both clients for), not on a sequencer and
+  not for days. A provider's reported client is not authenticated. Lighthouse's public node serves light-client data
+  as JSON only, which `BeaconApi` does not read (it counts as a `headers` source).

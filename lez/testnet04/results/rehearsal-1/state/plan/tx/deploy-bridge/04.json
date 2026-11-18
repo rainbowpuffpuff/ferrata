@@ -1,0 +1,18 @@
+{
+  "bytes": 98916,
+  "gas_limit": 2000000,
+  "hash": "0c3c9087417636b5ee0d87eb98aa459e3c8ca95a9f65ecb8b58202c1b45f9f11",
+  "label": "deploy bridge: WriteSegment 2 of 6 (98304 bytes)",
+  "max_fee": "134455296",
+  "signed_utc": "2026-11-18T17:48:42Z",
+  "signers": [
+    {
+      "account": "3HA2XVT7xixVcocdbG9bpRwysaFKDPCxmHoRXVmqBpD2",
+      "nonce": "0"
+    },
+    {
+      "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+      "nonce": "4"
+    }
+  ]
+}

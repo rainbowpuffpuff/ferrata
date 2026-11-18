@@ -1,0 +1,15 @@
+== 2026-11-18T20:05:46Z discover http://172.20.79.179:3041
+head block 24; health None
+fee state {"height": 24, "base_fee_exec": 8, "base_fee_stor": 8, "next_base_fee_exec_floor": 8, "next_base_fee_exec_ceiling": 9, "next_base_fee_stor_floor": 8, "next_base_fee_stor_ceiling": 9, "max_gas_exec": 10000000, "max_gas_stor": 1000000}
+channel 0101010101010101010101010101010101010101010101010101010101010101
+programs 1: privacy_preserving_circuit
+v0.4 network (getPublications known): True; cross-zone programs: none
+builtin programs against LEZ v0.4.0-rc3's: {"same": true, "only_here": [], "only_rc3": [], "different_ids": []}
+clock: {"head_block_ms": 1795032338873, "this_machine_ms": 1795032346582, "behind_s": 7.7}
+blocks read: {"1": {"block_id": 1, "hash": "415aa4df83becc1a13d77548c678b2c858675c7950f813271f8093c9afa389bc", "timestamp": 0, "bedrock_status": "Finalized", "bytes": 3882}, "24": {"block_id": 24, "hash": "b9915ff368bb56def0b5d5504a09b94c3863172f43545cdbba4173eba1c2bc27", "timestamp": 1795032338873, "bedrock_status": "Pending", "bytes": 711}}
+== 2026-11-18T20:05:52Z this deployment's accounts there: payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti balance 49985540672 ; daemon GT1xxPs9ekzGM6nDTZ1MLHhLCEbwHUGuKRztY8zQVK5B balance 50000000000
+== 2026-11-18T20:05:57Z (a) the program is deployed already, byte for byte
+== 2026-11-18T20:05:57Z (b) Init of the Sepolia instance
+Error: the instance f32f9e031b840c3bdfccefcd6913e373889984966dc6c40b89dbccfaca1e40d4 exists on chain already: no Init signed (STORE/instance.json written)
+== 2026-11-18T20:06:09Z (b) the instance exists on chain: no Init
+== 2026-11-18T20:06:09Z stopping after (b): FERRATA_DAY1_UNTIL=b

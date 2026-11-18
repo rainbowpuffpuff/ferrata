@@ -1,0 +1,13 @@
+{
+  "adoption_parts": 2,
+  "chain_id": 11155111,
+  "checkpoint": "beea1d9683437ea46ac3019e140f62a73164fbb8d165eefbfe2b0693ac851efe",
+  "checkpoint_slot": 11608159,
+  "init_job_id": "d893bc0df4c6f80629580f6b708f55a5563127e312485d1d4968095b2da82b01",
+  "instance_id": "f32f9e031b840c3bdfccefcd6913e373889984966dc6c40b89dbccfaca1e40d4",
+  "layout": "gloas",
+  "preset": "sepolia",
+  "program": "4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr",
+  "ws_end_ms": 1796387808000,
+  "ws_period_epochs": 3532
+}

@@ -1,0 +1,4 @@
+== 2026-11-18T17:48:40Z discover http://172.20.79.179:3041
+Traceback (most recent call last):
+  File "<stdin>", line 22, in <module>
+AttributeError: 'str' object has no attribute 'get'

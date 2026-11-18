@@ -130,8 +130,22 @@ case "$step" in
     [ "$(call 'mode()(uint8)')" = 1 ] || die "the vault is not rule (B)"
     say "deploy complete: vault $vault, configId and genesisState as the run's identity"
     ;;
-  deposit|release)
-    [ -n "$arg" ] || die "$step needs an index"
+  deposit)
+    [ -n "$arg" ] || die "deposit needs an index"
+    # A deposit whose send may have gone out is never sent again. Crown.deposit(j) skips a deposit only once it is
+    # MINED (depositCount > j); a run stopped between the broadcast and the receipt would otherwise escrow a second
+    # time at the next nonce and shift every later leaf. So: no transaction of the depositor pending, and a marker
+    # written before the send, removed once the stage has returned; a marker left behind stops every later run.
+    sending="$run/logs/deposit-$arg.sending"
+    [ ! -f "$sending" ] || die "deposit $arg: a send began ($(cat "$sending")) and did not finish here: check the depositor's depositCount and its transactions on chain, then remove $sending (nothing sent)"
+    nonces_agree || die "deposit $arg: the depositor has a pending transaction (a deposit may be in flight): nothing sent"
+    echo "$(date -u +%FT%TZ), depositor nonce $(cast nonce "$ETH_FROM" "${rpc[@]}")" > "$sending"
+    touch "$run/logs/.mark-$step-$arg"
+    crown "$step(uint256)" "$arg"
+    rm -f "$sending"
+    ;;
+  release)
+    [ -n "$arg" ] || die "release needs an index"
     touch "$run/logs/.mark-$step-$arg"
     crown "$step(uint256)" "$arg"
     ;;

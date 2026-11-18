@@ -1,0 +1,37 @@
+# Written by live.py: the checkpoint is the finalized header of period 1913's update (slot 15672512).
+[daemon]
+name = "live-bytes"
+state_dir = "state"
+poll_secs = 12
+listen = "127.0.0.1:9471"
+ledger = "harness"
+
+[keys]
+payer_key_file = "spike/ferrata-wt-source-diversity/lez/updater/dev/payer.key"
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 1
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+min_distinct_clients = 2
+client_match = "bytes"
+
+[[chain]]
+name = "mainnet"
+preset = "mainnet"
+checkpoint = "76b355f991b2bf9bb8c2c29256d19c3a97dee49b954ecc424a1e7c80f03e6f62"
+adoption_parts = 2
+
+
+  [[chain.source]]
+  name = "nimbus"
+  url = "http://testing.mainnet.beacon-api.nimbus.team"
+
+  [[chain.source]]
+  name = "lodestar"
+  url = "https://lodestar-mainnet.chainsafe.io"

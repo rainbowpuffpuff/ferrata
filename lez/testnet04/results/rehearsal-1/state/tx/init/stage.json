@@ -1,0 +1,22 @@
+{
+  "fee_state": [
+    8,
+    8
+  ],
+  "first_nonce": "8",
+  "info": {
+    "adoption_parts": 2,
+    "chain_id": 11155111,
+    "checkpoint": "430bcdd1ea31d4b02a45bd48e4916db1c2b8cd8c87b97282a8cdd00d3f238d1d",
+    "checkpoint_slot": 11607488,
+    "init_job_id": "9e40d80e2d6a03cae7a412adc919794fb1b50fa76a9f72318aa9fe502c1dee38",
+    "instance_id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb",
+    "layout": "gloas",
+    "preset": "sepolia",
+    "program": "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+    "ws_end_ms": 1796380128000,
+    "ws_period_epochs": 3532
+  },
+  "payer": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+  "stage": "init"
+}

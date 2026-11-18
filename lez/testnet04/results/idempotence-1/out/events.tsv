@@ -1,0 +1,16 @@
+utc	event	detail
+2026-11-18T20:02:00Z	url	http://172.20.79.179:3041
+2026-11-18T20:02:02Z	plan-exit	0
+2026-11-18T20:02:20Z	fund-exit	0
+2026-11-18T20:05:23Z	run-1-first-exit	0; == 2026-11-18T20:02:23Z (a) deploying the attestation program (0x816d1fef…) stage deploy-program: 8 transactions signed for payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti from nonce 0; at the current base fees (8, 8) at most 132796000 if every one used its whole gas limit; the largest reserve 
+2026-11-18T20:05:24Z	nonce-after-first	9
+2026-11-18T20:05:24Z	state-lost	../tmp/testnet04/state/idem-1 removed
+2026-11-18T20:05:40Z	run-2-state-lost-exit	0; == 2026-11-18T20:05:35Z (a) the program is deployed already, byte for byte == 2026-11-18T20:05:35Z (b) Init of the Sepolia instance == 2026-11-18T20:05:40Z (b) the instance f32f9e031b840c3bdfccefcd6913e373889984966dc6c40b89dbccfaca1e40d4 exists on chain: no Init == 2026-11-18T20:05:40Z stopping afte
+2026-11-18T20:05:46Z	nonce	9
+2026-11-18T20:05:46Z	init-lost	KEYS/tx/init and KEYS/instance.json set aside, KEYS/init (the checkpoint) kept; state removed
+2026-11-18T20:06:09Z	run-3-init-lost-exit	0; == 2026-11-18T20:05:57Z (a) the program is deployed already, byte for byte == 2026-11-18T20:05:57Z (b) Init of the Sepolia instance Error: the instance f32f9e031b840c3bdfccefcd6913e373889984966dc6c40b89dbccfaca1e40d4 exists on chain already: no Init signed (STORE/instance.json written) == 2026-11-18
+2026-11-18T20:06:15Z	nonce	9
+2026-11-18T20:06:34Z	run-4-other-url-exit	0; == 2026-11-18T20:06:27Z (a) the program is deployed already, byte for byte == 2026-11-18T20:06:27Z (b) Init of the Sepolia instance == 2026-11-18T20:06:34Z (b) the instance f32f9e031b840c3bdfccefcd6913e373889984966dc6c40b89dbccfaca1e40d4 exists on chain: no Init == 2026-11-18T20:06:34Z stopping afte
+2026-11-18T20:06:40Z	nonce	9
+2026-11-18T20:06:40Z	init-not-resigned	no new Init stage in KEYS
+2026-11-18T20:06:40Z	RESULT	pass: the payer's nonce stayed 9 through three repeated runs; no second Init

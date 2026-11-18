@@ -1,0 +1,32 @@
+{
+ "label": "STAND-IN: two burns of a labelled test wallet computed natively (fork rehearsal), not from LEZ blocks",
+ "config_id": "0x168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa",
+ "burn_count": 2,
+ "burn_root": "0x23ae48da9fed2c13074cd1d94dbc7809d21ee9b66692c06b5d21ea1da8de4586",
+ "burns": [
+  {
+   "burn_index": 0,
+   "block": null,
+   "origin": "STAND-IN (native test wallet, not a LEZ block)",
+   "r": "0x9320be8184bbd2e8c925a260eee0e2641768b2c3a424dbdf0dee7f1740ae485d",
+   "memo": "0xd8e630c2f1b3723865f1c7eaad0520819af0646f",
+   "mac": "0xfb3002bba72ef3c556ecbf1436f720da",
+   "token": "0x0000000000000000000000000000000000000000",
+   "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+   "c_out": "0xbef684718acf1dd1fe6c875c2bbaed03915a8d6d03ebc450b2d4f215136ed1fd",
+   "leaf": "0x93ed84a3081bb82ca5b3b09b426a6b0b06bce54c2f16db878fc5248a5007fdd9"
+  },
+  {
+   "burn_index": 1,
+   "block": null,
+   "origin": "STAND-IN (native test wallet, not a LEZ block)",
+   "r": "0xf07749dd4ef0e03714263a7cdf7f4f6810c6bd8baa973653b32bd157670ff37a",
+   "memo": "0x73170b85728e0d7d7e5dd27e2b341a4be81c50b1",
+   "mac": "0x4dab57774c36ec23fc3f864b16bd4605",
+   "token": "0x0000000000000000000000000000000000000000",
+   "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+   "c_out": "0x122a9243d73079db45af302c9bde496a5765a0d5df1ea496dddbac62a08cbe03",
+   "leaf": "0xa40fd9971f1d2a3991178ba4c18d99314065073450d0d392b77a823325293f6b"
+  }
+ ]
+}

@@ -11,6 +11,7 @@ pragma solidity ^0.8.26;
 // Zero's real Groth16 verifier behind its emergency stop, at the address and chain id the journal names. The fixture:
 // ZB_FIXTURE=zone-bridge-rc3 checkpoint/attestor/zone-bridge.sh fixture.
 
+import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
 import {console2} from "forge-std/Test.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
@@ -140,7 +141,7 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         FerrataVault.Checkpoint memory c = _checkpoint();
         _deploy(FerrataVault.Mode.B, CHECKPOINT_B_IMAGE_ID, _state(keys), 1, 1);
         assertEq(vault.checkpointImageId(), CHECKPOINT_B_IMAGE_ID);
-        vm.expectRevert();
+        vm.expectRevert(VerificationFailed.selector);
         vault.submitCandidate{gas: TAMPERED_CALL_GAS}(c, seal);
         _deploy(FerrataVault.Mode.B, CHECKPOINT_B_0_3_5_IMAGE_ID, _state(keys), 1, 1);
         vault.submitCandidate(c, seal);
@@ -150,7 +151,7 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         FerrataVault.Checkpoint memory c = _checkpoint();
         bytes memory bad = bytes.concat(seal);
         bad[bad.length - 1] = bad[bad.length - 1] ^ 0x01;
-        vm.expectRevert();
+        vm.expectRevert(VerificationFailed.selector);
         vault.submitCandidate{gas: TAMPERED_CALL_GAS}(c, bad);
     }
 

@@ -1,0 +1,24 @@
+{
+  "chainId": 11155111,
+  "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "standIn": {
+    "riscZero": "0x1dB3fa8041E8178f1608c2F7dF627d7EC16C8221",
+    "signers": [
+      "0x18db63ac69c84501d941bcb2fe1c9eeb472c288a",
+      "0xb1b414dbd29c6e4f3e418973efe7ff2aae97b5c3",
+      "0xdd8d87ed18c4e1d10d2a1fca5e60c5482a6bfe21"
+    ],
+    "threshold": 2
+  },
+  "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+  "lezConfigId": "0x168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa",
+  "genesisState": "0x9688c65fc1ce382bf478cb2f83ffd286ad7fb74ea0e8694cd2d2452fd3d5b268",
+  "delta": 120,
+  "releaseDelay": 120,
+  "revokeWindow": 86400,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "expect": {
+    "standIn": "0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA",
+    "vault": "0x80555Fe53CCcEf46951B23A3c75643a4C9283470"
+  }
+}

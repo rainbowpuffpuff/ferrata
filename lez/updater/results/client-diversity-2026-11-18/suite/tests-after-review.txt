@@ -1,0 +1,71 @@
+running 6 tests
+test lc_json::tests::a_wrong_shape_is_refused ... ok
+test lc_json::tests::finality_update_json_is_the_served_ssz ... ok
+test updater::tests::distinct_clients_from_distinct_sources ... ok
+test lc_json::tests::bootstrap_json_is_the_served_ssz ... ok
+test lc_json::tests::updates_json_is_the_served_ssz ... ok
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 8 tests
+test header_answers_and_utc ... ok
+test a_beacon_api_module_source_parses ... ok
+test sepolia_gloas_instance_is_the_crown_instance ... ok
+test updates_stream_splits_with_either_length_convention ... ok
+nimbus: Nimbus/v26.10.2-0abc0d-stateofus
+test bad_configurations_are_refused ... ok
+test client_diversity_configuration ... ok
+lodestar: Lodestar/v1.51.0/7923280
+lighthouse: Lighthouse/v8.3.3-57c2abc/x86_64-linux
+test node_version_answers ... ok
+test shipped_configurations_parse ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+running 4 tests
+C3: headers answer with finalized=false, canonical=true -> Some("1111111111111111111111111111111111111111111111111111111111111111")
+C3: families (Some("nimbus"), Some("nimbus_"), Some("nimbus-eth2"))
+test headers_answers_count_canonical_blocks_and_client_names_are_the_providers_text ... ok
+C1: nimbus serves entries 1..=121 (head 11599200); lodestar-ahead also (seq, period?, finalized) [(121, false, 11599776), (122, true, 11599872), (123, false, 11600416)] (head 11600416)
+C4: 57 of 60 rounds waiting, applied 1, store finalized 15625920 (record's end 15676800); health degraded ["waiting for clients: the sources serve updates 50880 slots past the instance, none sent: fewer than 2 clients agree (policy.min_distinct_clients)"]; health_json status "degraded", last_plan "waiting: finalized slot 15622144: 2 sources serve it; 1 of 2 clients agree byte for byte (lodestar)"
+test waiting_for_clients_is_reported_in_health ... ok
+C2: one backend, same URL twice: store finalized 15676800 (record's end 15676800), 8 jobs opened, applied 9, last Some(UpToDate); clients a=Nimbus/v26.10.2-0abc0d-stateofus b=Lodestar/v1.51.0/7923280; client_changes a=0 b=0; health ("ok", [])
+C2: the same url twice with min_distinct_clients = 2: chain mainnet sources record-a and record-b: the same host "lodestar-mainnet.chainsafe.io"; with policy.min_distinct_clients one provider would count as two clients
+test one_provider_listed_twice_is_refused_by_the_configuration ... ok
+C1 Bytes: store finalized 11591680; opened 38 jobs; opened beyond what nimbus serves (only lodestar-ahead served them): []; refused 0; last plan Some(Waiting("finalized slot 11600416: 2 sources serve it; 1 of 2 clients agree byte for byte (lodestar)"))
+C1 FinalizedHeader: store finalized 11600416; opened 41 jobs; opened beyond what nimbus serves (only lodestar-ahead served them): [11600416, 11599872]; refused 0; last plan Some(UpToDate)
+test finalized_header_mode_sends_what_one_light_client_source_served ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 275.35s
+running 13 tests
+liar: ["source lodestar(BadSignature) demoted (served what the program refuses)", "source nimbus serves other bytes than lodestar(BadSignature) for the period-1912 update", "waiting for clients: the sources serve updates 50880 slots past the instance, none sent: fewer than 2 clients agree (policy.min_distinct_clients)"]; disagreements nimbus 7 liar 7
+test fee_limits_are_declared_and_enforced ... ok
+test own_job_is_finished_when_the_source_moves_on ... ok
+test lying_source_is_refused_without_gas ... ok
+two clients: 9 applied, finalized 15676800
+http: finalized 15676800 via 26 requests to `up`, 26 errors from `down`
+test beacon_api_sources_over_http ... ok
+liar among three: caught up to 15676800
+test a_lying_client_is_logged_and_does_not_count ... ok
+http, bytes: caught up to 15676800
+test headers_source_confirms_or_holds_back ... ok
+one client twice: 27 rounds waiting: finalized slot 15622144: 2 sources serve it; 1 of 2 clients agree byte for byte (lodestar)
+test distinct_clients_must_serve_the_same_bytes ... ok
+http, finalized header, lodestar + lighthouse: caught up to 15676800
+http, finalized header, lodestar twice: finalized slot 15622144: 2 sources serve it; 1 of 2 clients agree its finalized header (lodestar)
+test clients_reported_over_http ... ok
+restart: entry 123 of 125, finalized slot 11600416 inside period 1416
+k = 0: followed the source ahead to 11600416 (the other serves up to 11599200)
+test restart_mid_job_and_mid_period ... ok
+test catches_up_mainnet_and_sepolia_from_recorded_data ... ok
+k = 2: held at 11591680 (the other client serves up to 11599200): finalized slot 11600416: 1 sources serve it; 1 of 2 clients agree byte for byte (lodestar)
+test stale_and_down_sources_fall_back ... ok
+k = 2: both serve the record's end: 11600992
+test an_update_one_client_serves_is_held_back ... ok
+gate	rounds	1020	seed	default	adversary	true	salt	
+honest-1	applied tx	167	refused tx	45	gas applied	513942929	gas refused	31221776	fee	4361317640	deferrals	1274
+honest-2	applied tx	163	refused tx	52	gas applied	508864151	gas refused	30477295	fee	4314731568	deferrals	1271
+honest refused gas / applied gas	0.0603	(gate <= 0.10)
+honest-1 share of honest fees	0.5027	honest-2	0.4973	(gate 0.35-0.65 each)
+updates	220	adversary junk Opens	434	ledger transactions	1354
+test gate_two_honest_one_adversary ... ok
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 801.83s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

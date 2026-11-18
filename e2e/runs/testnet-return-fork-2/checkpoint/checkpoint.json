@@ -1,0 +1,77 @@
+{
+ "what": "STAND-IN checkpoint: the vault's journal for a burn root that stand-in keys attest; no zero-knowledge proof of LEZ blocks stands behind it",
+ "checkpoint": {
+  "chainId": 11155111,
+  "vault": "0x80555fe53cccef46951b23a3c75643a4c9283470",
+  "lezConfigId": "0x168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa",
+  "nMin": 3,
+  "tMin": 2,
+  "parentState": "0x9688c65fc1ce382bf478cb2f83ffd286ad7fb74ea0e8694cd2d2452fd3d5b268",
+  "newState": "0xf8b273f442d62fd10d5faf1ecd4b5db8371a8aa577803c656a67f8d9a75c832b",
+  "burnRoot": "0x23ae48da9fed2c13074cd1d94dbc7809d21ee9b66692c06b5d21ea1da8de4586",
+  "burnCount": 2,
+  "importedLeafCount": 2,
+  "sunset": false,
+  "echoNonce": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tipId": 83001,
+  "tipHash": "0xdbfedc25395d6ae20ea5fcfbc6eb90b953a8b43ddb59ff3c456ca8092097505e",
+  "n": 3,
+  "t": 2
+ },
+ "journal": "0xbdb3b52df781536a6bcce7088d156b3951a00a45ec8bcf2805ba8406fbeb5ec70000000000000000000000000000000000000000000000000000000000aa36a700000000000000000000000080555fe53cccef46951b23a3c75643a4c9283470168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000029688c65fc1ce382bf478cb2f83ffd286ad7fb74ea0e8694cd2d2452fd3d5b268f8b273f442d62fd10d5faf1ecd4b5db8371a8aa577803c656a67f8d9a75c832b23ae48da9fed2c13074cd1d94dbc7809d21ee9b66692c06b5d21ea1da8de458600000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014439dbfedc25395d6ae20ea5fcfbc6eb90b953a8b43ddb59ff3c456ca8092097505e00000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002",
+ "journalDigest": "0x14967a49585e5e51a8384d309d4e1484c4cfd6ee46e9e93dca43ec208bc3ecce",
+ "signers": [
+  "0x18db63ac69c84501d941bcb2fe1c9eeb472c288a",
+  "0xb1b414dbd29c6e4f3e418973efe7ff2aae97b5c3",
+  "0xdd8d87ed18c4e1d10d2a1fca5e60c5482a6bfe21"
+ ],
+ "threshold": 2,
+ "source": {
+  "kind": "LEZ node",
+  "rpc": "http://127.0.0.1:8547",
+  "tip": {
+   "id": 83001,
+   "hash": "0xdbfedc25395d6ae20ea5fcfbc6eb90b953a8b43ddb59ff3c456ca8092097505e",
+   "prev": "0xb606b09e0fc2a89fb49ea316ae00c732d65f6fe3e1e822a22116b52facb3c129",
+   "timestamp_ms": 1794885220602,
+   "status": "Finalized",
+   "tx_count": 2,
+   "bytes": 714,
+   "sha256": "4e4ffdd66d7bd516f426027035052425f3531d2a20a810b843e724de4bbad950",
+   "hash_recomputed_from_contents": true
+  },
+  "final_on_node": true,
+  "accumulator_checked_against_node": true,
+  "accumulator_read_at_head": 83003,
+  "accumulator_read_at_hash": "0x3eaa4adf16f43fe4c2c636592367657cb4d5ed54e8b5a103f6e9a73525f12725",
+  "blocks_between_tip_and_read": [
+   {
+    "id": 83002,
+    "hash": "0xd062b3fe076099201005d5ad4eb14cc625d2ecc3521f634d7215cc03bd4ff49b",
+    "status": "Pending",
+    "transactions": 2,
+    "root_programs": [
+     "2TsGdKDWTY92X4vSBZzjzemZpThhyqNEdZJj3xBrQ9AZ",
+     "2hwaRW8sMnyKLLRbDRw8k68tiv9bnfq98oxcdtcp157Z"
+    ]
+   },
+   {
+    "id": 83003,
+    "hash": "0x3eaa4adf16f43fe4c2c636592367657cb4d5ed54e8b5a103f6e9a73525f12725",
+    "status": "Pending",
+    "transactions": 9,
+    "root_programs": [
+     "11111111111111111111111111111111",
+     "2TsGdKDWTY92X4vSBZzjzemZpThhyqNEdZJj3xBrQ9AZ",
+     "2hwaRW8sMnyKLLRbDRw8k68tiv9bnfq98oxcdtcp157Z",
+     "99GUyPapsAwpRKEoEQKFNAT4WJtJJyCdBnSby7Ht7qp4",
+     "9x2KRzv2VK8BTm73rg6yzfjm3CKPmFvvzXjTNd6htJTs",
+     "D7ADNV9oTPsS1qT5swbLsec4SZfsHodvJqkw4QqYGMBV",
+     "HAxY9SiqUjJQHdtvazFDWFCxn1Jw1dtbUGio8DMC4bBw"
+    ]
+   }
+  ],
+  "imported_root_is_the_vaults": true,
+  "why_the_read_is_the_tips": "no transaction in the blocks between the tip and the read names the bridge program or an account of the accumulator, every one of them is read in full, and the bridge changes the accumulator only in a root call: the accumulator after the tip is the one read (lez-v03-return/README.md)"
+ }
+}

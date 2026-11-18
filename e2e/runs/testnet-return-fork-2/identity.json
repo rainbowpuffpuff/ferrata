@@ -1,0 +1,10 @@
+{
+  "label": "testnet-return (stand-in)",
+  "chainId": 11155111,
+  "vault": "0x80555Fe53CCcEf46951B23A3c75643a4C9283470",
+  "configId": "0x168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa",
+  "genesisState": "0x9688c65fc1ce382bf478cb2f83ffd286ad7fb74ea0e8694cd2d2452fd3d5b268",
+  "delta": 120,
+  "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "firstNonce": 36
+}

@@ -1,0 +1,18 @@
+[package]
+name = "ferrata-lez03-bridge-core"
+description = "State, instructions, effects and checks of the Ferrata bridge program on LEZ v0.3.1 (guest and host; experimental)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The bridge core (SPEC-v2): configId's preimage, commitments, leaves, the claim statement, burn leaves, trees.
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
+# The light client's core: the record's encoding and the Merkle-Patricia proofs of the vault's storage.
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+# LEZ v0.3.1 (tag v0.3.1, commit 1a003bf), by path: the clone must sit at upstream/lez-v0.3.1 beside the
+# repository (../../../upstream from here).
+lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core" }
+borsh = { version = "1.5.7", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }

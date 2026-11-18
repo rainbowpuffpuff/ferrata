@@ -78,6 +78,8 @@ impl Ledger for SequencerLedger {
 }
 
 async fn submit(live: &mut Live, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+    // A sequencer not on this machine: only the day-one deployment's, with the owner's FERRATA_TESTNET_SEND=yes.
+    crate::live::check_send(&live.opts.rpc)?;
     live.sync().await?;
     let payer_id = AccountId::from(&PublicKey::new_from_private_key(payer));
     let nonce =

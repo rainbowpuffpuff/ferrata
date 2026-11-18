@@ -1,0 +1,60 @@
+Error: configuration
+
+Caused by:
+    TOML parse error at line 22, column 1
+       |
+    22 | [policy]
+       | ^^^^^^^^
+    missing field `defer_window`
+    
+2026-11-18T17:54:06Z [sequencer] http://172.20.79.179:3041: head block 31, following to block 24 (final on Bedrock: true) in 5.9 s; payer 6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu balance 50000000000; records in state/ledger
+2026-11-18T17:54:06Z [day1 sepolia] instance 0x11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb of program 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S (checkpoint 0x430bcdd1ea31d4b02a45bd48e4916db1c2b8cd8c87b97282a8cdd00d3f238d1d); payer 6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu; ledger sequencer
+2026-11-18T17:54:06Z [day1] /health and /metrics on http://127.0.0.1:9464
+2026-11-18T18:10:55Z [day1 sepolia] sepolia init adopt 1/2: client error (SendRequest): connection closed before message completed; retry 1 in 500 ms
+2026-11-18T18:10:55Z [day1 sepolia] round 3: client error (SendRequest): connection closed before message completed
+2026-11-18T18:11:07Z [day1 sepolia] round 4: client error (SendRequest): connection closed before message completed
+2026-11-18T18:11:19Z [day1 sepolia] round 5: client error (SendRequest): connection closed before message completed
+2026-11-18T18:11:31Z [day1 sepolia] round 6: client error (SendRequest): connection closed before message completed
+2026-11-18T18:11:43Z [day1 sepolia] round 7: client error (SendRequest): connection closed before message completed
+2026-11-18T18:11:55Z [day1 sepolia] round 8: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:12:07Z [day1 sepolia] round 9: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:12:19Z [day1 sepolia] round 10: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:12:31Z [day1 sepolia] round 11: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:12:43Z [day1 sepolia] round 12: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:12:55Z [day1 sepolia] round 13: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+2026-11-18T18:13:07Z [day1 sepolia] round 14: the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+[updater] sepolia init adopt 2/2                                     applied        gas   3480132 block   28 + 15.7s e1001d272b78ea89915f960569241b780c7158eb79348bb01b0fa1c8c6f149f6
+2026-11-18T18:13:48Z [day1 sepolia] sepolia init adopt 2/2 applied (exit None, gas 3505240, fee 28041920, block 28)
+2026-11-18T18:15:19Z [day1 sepolia] job 0x61a25b352311a9d5: finalized slot 11599872 root 0x3256972bbbec2328a3ef603bde6ffa247e8d1f68fbb1635cc1dc42513ac87ebd (attested slot 11599938, signature slot 11599939, 506 of 512 signers; adopts the next committee), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11599872 Open                                  applied        gas   2177348 block   39 + 20.2s e4d885f7e999ce94016c4ee2bcc350d79d66769dbf3d42cd64901f4528e8b173
+2026-11-18T18:15:39Z [day1 sepolia] sepolia fin 11599872 Open applied (exit None, gas 2182015, fee 17456120, block 39)
+2026-11-18T18:16:41Z [day1 sepolia] job 0x61a25b352311a9d5 (finalized slot 11599872) is open: its miller first
+[updater] sepolia fin 11599872 Miller                                applied        gas   3310470 block   47 + 18.7s 3fedefe48e65690c82ebb27a8d282aeb97909abb0c43932a9c3fac7656b7623f
+2026-11-18T18:16:59Z [day1 sepolia] sepolia fin 11599872 Miller applied (exit None, gas 3310869, fee 26486952, block 47)
+2026-11-18T18:17:48Z [day1 sepolia] job 0x61a25b352311a9d5 (finalized slot 11599872) is open: its adopt0 first
+[updater] 9c463509b2af5bde52e0e379f773234b212b2d9b4de1581cb14f8d05ddc36fd2 moved from block 54 to block 49: the head was rewound
+[updater] sepolia fin 11599872 adopt 1/2                             applied        gas   3408111 block   49 +1179.4s 9c463509b2af5bde52e0e379f773234b212b2d9b4de1581cb14f8d05ddc36fd2
+2026-11-18T18:37:27Z [day1 sepolia] sepolia fin 11599872 adopt 1/2 applied (exit None, gas 3433091, fee 27464728, block 49)
+2026-11-18T18:38:29Z [day1 sepolia] job 0x61a25b352311a9d5 (finalized slot 11599872) is open: its adopt1 first
+[updater] sepolia fin 11599872 adopt 2/2                             applied        gas   3415303 block   57 + 18.8s 1b60a482b4a4067a5df78d7f4f2e10ad904d59cf5332424bcad99e6c9ec97252
+2026-11-18T18:38:47Z [day1 sepolia] sepolia fin 11599872 adopt 2/2 applied (exit None, gas 3440283, fee 27522264, block 57)
+2026-11-18T18:39:12Z [day1 sepolia] job 0x61a25b352311a9d5 (finalized slot 11599872) is open: its finish first
+[updater] sepolia fin 11599872 Finish                                applied        gas   3696140 block   61 + 15.9s ab79efe111e5dd1c049169eb40e83b1e2f6dae81c5fdbafe6d4976a936f38c8b
+2026-11-18T18:39:28Z [day1 sepolia] sepolia fin 11599872 Finish applied (exit None, gas 3696603, fee 29572824, block 61)
+2026-11-18T18:40:20Z [day1 sepolia] job 0x26c5552cca108f2c: finalized slot 11607712 root 0xbc10e7512a0a213bf69e6386bc6ec0b070c1c5cf1dd5f523046468c09eae9803 (attested slot 11607786, signature slot 11607788, 493 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11607712 Open                                  applied        gas   2507676 block   68 + 19.3s 4f43cf094533064048d60c8f9a8c190563c0bc4c98071fbf556861526c623f0a
+2026-11-18T18:40:40Z [day1 sepolia] sepolia fin 11607712 Open applied (exit None, gas 2517255, fee 20138040, block 68)
+2026-11-18T18:41:04Z [day1 sepolia] job 0x26c5552cca108f2c (finalized slot 11607712) is open: its miller first
+[updater] 1ae4904e6f04d19c2d48b9a1141766864f2fd4855b2fa4155c85663fbdd38786 moved from block 73 to block 72: the head was rewound
+[updater] sepolia fin 11607712 Miller                                applied        gas   3305374 block   72 +1223.4s 1ae4904e6f04d19c2d48b9a1141766864f2fd4855b2fa4155c85663fbdd38786
+2026-11-18T19:01:27Z [day1 sepolia] sepolia fin 11607712 Miller applied (exit None, gas 3305773, fee 26446184, block 72)
+2026-11-18T19:02:16Z [day1 sepolia] job 0x26c5552cca108f2c (finalized slot 11607712) is open: its finish first
+[updater] sepolia fin 11607712 Finish                                applied        gas   3721523 block   79 + 23.7s 495872cb379d10c8ce26d8465dae89fffa13f3fd2ff45b1a3355570333364136
+2026-11-18T19:02:40Z [day1 sepolia] sepolia fin 11607712 Finish applied (exit None, gas 3722050, fee 29776400, block 79)
+2026-11-18T19:03:20Z [day1 sepolia] job 0x2a9e2511ea2a728b: finalized slot 11607839 root 0x9daf77ae76f953fcf08018b8cbf05c411a3ab2d5d7aa74eafead75729e450924 (attested slot 11607911, signature slot 11607913, 492 of 512 signers; advances), served or confirmed by lodestar, publicnode
+[updater] sepolia fin 11607839 Open                                  applied        gas   2534556 block   85 + 19.9s a774a7b7c9674234cf820c678f861104e500b37faea0680179eaf3405be0d45d
+2026-11-18T19:03:39Z [day1 sepolia] sepolia fin 11607839 Open applied (exit None, gas 2544519, fee 20356152, block 85)
+2026-11-18T19:04:41Z [day1 sepolia] job 0x2a9e2511ea2a728b (finalized slot 11607839) is open: its miller first
+[updater] sepolia fin 11607839 Miller                                applied        gas   3305374 block   93 + 18.8s d452f33a956773bf7873b9737e61cd014989f52a735f51afd1d769637a6c6ae9
+2026-11-18T19:04:59Z [day1 sepolia] sepolia fin 11607839 Miller applied (exit None, gas 3305773, fee 26446184, block 93)
+2026-11-18T19:05:36Z [day1 sepolia] job 0x2a9e2511ea2a728b (finalized slot 11607839) is open: its finish first

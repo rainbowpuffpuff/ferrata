@@ -1,0 +1,45 @@
+== 2026-11-18T20:02:00Z discover http://172.20.79.179:3041
+head block 2; health None
+fee state {"height": 2, "base_fee_exec": 8, "base_fee_stor": 8, "next_base_fee_exec_floor": 8, "next_base_fee_exec_ceiling": 9, "next_base_fee_stor_floor": 8, "next_base_fee_stor_ceiling": 9, "max_gas_exec": 10000000, "max_gas_stor": 1000000}
+channel 0101010101010101010101010101010101010101010101010101010101010101
+programs 1: privacy_preserving_circuit
+v0.4 network (getPublications known): True; cross-zone programs: none
+builtin programs against LEZ v0.4.0-rc3's: {"same": true, "only_here": [], "only_rc3": [], "different_ids": []}
+clock: {"head_block_ms": 1795032118873, "this_machine_ms": 1795032120604, "behind_s": 1.7}
+blocks read: {"1": {"block_id": 1, "hash": "415aa4df83becc1a13d77548c678b2c858675c7950f813271f8093c9afa389bc", "timestamp": 0, "bedrock_status": "Pending", "bytes": 3882}, "2": {"block_id": 2, "hash": "fe3575fdde0042c914599b0ea8ab9e69fc499902b353719ed2366fdaa2ff74cc", "timestamp": 1795032118873, "bedrock_status": "Pending", "bytes": 711}}
+== 2026-11-18T20:02:00Z fresh keys at ../tmp/testnet04/keys/idem-1
+== 2026-11-18T20:02:00Z fetching a fresh finalized Sepolia checkpoint (Lodestar's bootstrap, publicnode's header at its slot)
+checkpoint: slot 11608128, period 1417, block root 0x226d62397309d88e4d7f5012cb0ff722aecb62a462f2073761142829b6e398a8
+== 2026-11-18T20:02:01Z signing (not sending) every stage that can be signed now, in a scratch state (../tmp/testnet04/state/idem-1/plan)
+466da4bc21a320cf938e892233b1bd08161b84cad7896802cd44ad6ea6830653     5396 B gas limit 2000000 max fee      128472064 deploy program: WriteSegment 7 of 7 (4816 bytes)
+576a3a1c63fa7873cc950b7af31f137c1d332c24e9cf539181752632b7e6a5ff    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 6 of 7 (98304 bytes)
+b9f7b2427dc72a47f28972eea7b220caf06663cc60f3d8c7cbd3968549e131d2    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 5 of 7 (98304 bytes)
+748e9c8adc877f69c779cd2dbe5477f3522e505e26454c5dc93bb5f4af992d02    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 4 of 7 (98304 bytes)
+db424f499bd31351ccad03408865fd8e17fcc4c3d137e8128cf4e4c91c25af51    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 3 of 7 (98304 bytes)
+9a6d98939abd6c2432afaff186f5647430f12518863f3de3aa2fbb317667c6a0    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 2 of 7 (98304 bytes)
+ef0d55af9d0e3444c1d0ad889f15cfa01e7c2fad770e18a6e99adf5191898d5c    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 1 of 7 (98304 bytes)
+c619f564ab0a0eb545967ab1389bb57e8144892681a0249d820f58634d2600e0      608 B gas limit 2000000 max fee      128196608 deploy program: CreateHeader (immutable) at 4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr
+stage deploy-program: 8 transactions signed for payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti from nonce 0; at the current base fees (8, 8) at most 132796000 if every one used its whole gas limit; the largest reserve 134455296
+fa90129403e54aaa915152fdbfa473ef80c37dd337d6bfcd4d6218d1fb2ca959     1699 B gas limit 4800000 max fee      307438848 Init (Sepolia, Gloas layout)
+stage init: 1 transactions signed for payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti from nonce 0; at the current base fees (8, 8) at most 38413592 if every one used its whole gas limit; the largest reserve 307438848
+stage           bytes   gas limit   fee at base fees (if the whole limit is used)   max fee   transaction
+deploy-program     5396     2000000         16043168        128472064   deploy program: WriteSegment 7 of 7 (4816 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 6 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 5 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 4 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 3 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 2 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 1 of 7 (98304 bytes)
+deploy-program      608     2000000         16004864        128196608   deploy program: CreateHeader (immutable) at 4VWXS5zDFapr6skPMpfKmSSiPxJQ8DAC1mRALSnzX6xr
+init               1699     4800000         38413592        307438848   Init (Sepolia, Gloas layout)
+attest          ~  7599     2000000         16072000   (estimated: a slot attestation measured 276607 gas, 7599 B)
+
+base fees at the endpoint now: execution 8, storage 8
+payer 7U6JL9QNgqzR3QUQr8cQcNnLTVzW9FfTThmATgeDaMti (public key 4471595d7a94622f6cbe39a1f7b5bc8d706507c648cb6a439b53902e8cb0f217): at most 187281592 in fees if every transaction used its whole gas limit; the sequencer holds each transaction's maximum fee (at most 307438848) while it runs: fund it with at least 802159288
+daemon key GT1xxPs9ekzGM6nDTZ1MLHhLCEbwHUGuKRztY8zQVK5B (public key 933646561d33a970392ce4d398744eaffd69b1d74789d5d48fb78a96a9ea4e35): about 72976000 per finality update at these base fees, at most 16419600000 a day: fund it with at least 32839200000 for two days
+
+How to fund them on a LEZ v0.4 network (lez/testnet04/NOTES.md, Funds): native tokens reach a zone only through its
+bridge's Deposit: at genesis (the network's genesis actions) or from Logos Blockchain: a Channel Deposit of wallet
+notes to the zone's channel with the account id as the deposit's metadata (logos-docs, 'Bridge assets from Logos
+Blockchain to a Zone'; credited about an hour after the deposit's block). Send nothing before reading discover.json.
+== 2026-11-18T20:02:02Z plan written: ../tmp/testnet04/state/idem-1/plan.txt (nothing was sent)

@@ -1,0 +1,25 @@
+[package]
+name = "misbehaviour"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "Experimental, unaudited: evidence that a sync committee the instance holds signed finality contradicting its records, and the freeze that follows (bench and the v0.3.1 port only; no deployed program has it; bench/MISBEHAVIOUR.md)"
+
+[dependencies]
+# ferrata-core is used unchanged (its public API only). The v0.3.1 guest patches in RISC Zero's accelerated blst
+# and SHA-256; natively, crates.io's.
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false, features = ["blst"] }
+residue = { path = "../residue" }
+residue-agg = { path = "../residue-agg" }
+residue-handoff = { path = "../residue-handoff" }
+blst = "0.3"
+
+[dev-dependencies]
+ferrata-core = { path = "../../crates/ferrata-core", features = ["blst"] }
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }
+blst = "0.3"
+hex = "0.4"
+sha2 = "0.10"
+serde_yaml = "0.9"

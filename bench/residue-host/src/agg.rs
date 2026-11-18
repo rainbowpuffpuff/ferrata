@@ -24,13 +24,13 @@ use super::{
     as_finality, bench_dir, fixture, get, mainnet, native, report, root, signing_committee, Case, Run, GVR, TRUSTED,
 };
 
-const MODE_ONE_TX: u32 = 0;
+pub(crate) const MODE_ONE_TX: u32 = 0;
 const MODE_PROFILE: u32 = 3;
 
 /// The executions of one case: (path, aggregation) pairs.
 type Runs = Vec<(u32, u32)>;
 
-fn execute(mode: u32, words: &[u32], blobs: &[&[u8]]) -> Run {
+pub(crate) fn execute(mode: u32, words: &[u32], blobs: &[&[u8]]) -> Run {
     let mut b = ExecutorEnv::builder();
     b.write(&mode).unwrap();
     for w in words {
@@ -76,24 +76,24 @@ pub fn random_bits(n: usize, absent: usize, seed: u64) -> Vec<bool> {
 /// Every third member absent (indices 2, 5, …, 509): 170 non-signers, each in a pair of leaves
 /// of its own, so the multiproof needs the most hashes (425) and the most witness nodes (256) any
 /// 170 non-signers can need. Not the costliest placement: `tests/placements.rs`.
-fn every_third() -> Vec<bool> {
+pub(crate) fn every_third() -> Vec<bool> {
     (0..512).map(|i| i % 3 != 2).collect()
 }
 
 /// The store after mainnet update_0, update_1 as a finality update (or as served, a period
 /// update), the real signing committee, and the bench's committee substituted in the store.
-struct Base {
-    spec: ChainSpec,
-    gvr: Root,
-    store: ferrata_core::witness::CompactStore,
-    substituted: ferrata_core::witness::CompactStore,
-    real: ferrata_core::types::SyncCommittee,
-    fake: ferrata_spectests::testkit::FakeCommittee,
-    finality: LightClientUpdate,
-    period: LightClientUpdate,
+pub(crate) struct Base {
+    pub(crate) spec: ChainSpec,
+    pub(crate) gvr: Root,
+    pub(crate) store: ferrata_core::witness::CompactStore,
+    pub(crate) substituted: ferrata_core::witness::CompactStore,
+    pub(crate) real: ferrata_core::types::SyncCommittee,
+    pub(crate) fake: ferrata_spectests::testkit::FakeCommittee,
+    pub(crate) finality: LightClientUpdate,
+    pub(crate) period: LightClientUpdate,
 }
 
-fn base() -> Base {
+pub(crate) fn base() -> Base {
     let spec = mainnet();
     let gvr = root(GVR);
     let bls = Blst::new(Aggregation::Auto);
@@ -120,7 +120,7 @@ fn base() -> Base {
 }
 
 /// The update signed by the bench's committee with `bits`.
-fn signed(b: &Base, update: &LightClientUpdate, bits: Vec<bool>) -> LightClientUpdate {
+pub(crate) fn signed(b: &Base, update: &LightClientUpdate, bits: Vec<bool>) -> LightClientUpdate {
     let bls = Blst::new(Aggregation::Auto);
     let ctx = Context { spec: &b.spec, genesis_validators_root: b.gvr, bls: &bls };
     let signing_root = sync_committee_signing_root(update, &ctx);
@@ -132,7 +132,7 @@ fn signed(b: &Base, update: &LightClientUpdate, bits: Vec<bool>) -> LightClientU
 
 /// The case's `NonSigners` witness, after checking natively that `residue_agg::step1` (batch and
 /// chain) gives the job the core's `step1` gives.
-fn agg_witness(case: &Case, spec: &ChainSpec, gvr: &Root) -> Vec<u8> {
+pub(crate) fn agg_witness(case: &Case, spec: &ChainSpec, gvr: &Root) -> Vec<u8> {
     let bits = &case.update.sync_aggregate.bits;
     let old = SignerWitness::build(&case.committee, bits).unwrap();
     let new = NonSigners::build(&case.committee, bits).unwrap();

@@ -1,0 +1,93 @@
+{
+ "url": "http://172.20.79.179:3041",
+ "read_utc": "2026-11-18T17:53:59Z",
+ "checkHealth": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": null
+ },
+ "getLastBlockId": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": 30
+ },
+ "getFeeState": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+   "height": 30,
+   "base_fee_exec": 8,
+   "base_fee_stor": 8,
+   "next_base_fee_exec_floor": 8,
+   "next_base_fee_exec_ceiling": 9,
+   "next_base_fee_stor_floor": 8,
+   "next_base_fee_stor_ceiling": 9,
+   "max_gas_exec": 10000000,
+   "max_gas_stor": 1000000
+  }
+ },
+ "getProgramIds": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+   "privacy_preserving_circuit": [
+    2517376867,
+    3464899159,
+    3300512099,
+    2206436585,
+    1795275722,
+    388007228,
+    3109164048,
+    940363666
+   ]
+  }
+ },
+ "getChannelId": {
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": "0101010101010101010101010101010101010101010101010101010101010101"
+ },
+ "blocks": {
+  "1": {
+   "block_id": 1,
+   "hash": "e649dca02c73151f37759b5125f8330feb32d40d369b596403e9a14d00754faa",
+   "timestamp": 0,
+   "bedrock_status": "Finalized",
+   "bytes": 3882
+  },
+  "30": {
+   "block_id": 30,
+   "hash": "c14efac4abbed3d282afab422a740f2ce9ff0f6cddefa4ac52fbb473c724fad4",
+   "timestamp": 1795024436147,
+   "bedrock_status": "Pending",
+   "bytes": 711
+  }
+ },
+ "v04_probe": {
+  "method": "getPublications",
+  "answer": {
+   "code": -32602,
+   "message": "Invalid params",
+   "data": "No more params"
+  }
+ },
+ "is_v04": true,
+ "cross_zone_programs": [],
+ "builtins_vs_rc3": "no reference",
+ "clock": {
+  "head_block_ms": 1795024436147,
+  "this_machine_ms": 1795024439115,
+  "behind_s": 3.0
+ },
+ "node_info": {
+  "cryptarchia_info": {
+   "lib": "4701840e9793b5328dab5e763ac1417de6ce55b964b0ff0ecb7bdcabddc2ba80",
+   "lib_slot": 2382850,
+   "tip": "ab410697cebbf2e124efaa279dd9ab9f1973566da78682a52e61d540d5cf277a",
+   "slot": 2382853,
+   "height": 82,
+   "state": "Online"
+  },
+  "phase": "Following"
+ }
+}

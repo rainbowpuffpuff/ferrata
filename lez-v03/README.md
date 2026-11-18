@@ -3,9 +3,12 @@
 **EXPERIMENTAL AND UNAUDITED. Not the proposal's deliverable: the LEZ v0.4 programs of
 [`../lez/`](../lez/README.md) are.** Its one-transaction finality update replaces the final exponentiation by
 the residue-witness check of [`../bench/residue`](../bench/RESIDUE.md) and may compose the signing key from one
-multiproof of the non-signers ([`../bench/residue-agg`](../bench/RESIDUE.md)): bench code, experimental and
-unaudited, which nothing else in this repository deploys. No program or guest with an image id in
-[`../docs/image-ids.md`](../docs/image-ids.md) changed.
+multiproof of the non-signers ([`../bench/residue-agg`](../bench/RESIDUE.md)); with `Verify::ResidueSummary` a
+handoff is one transaction too, the next committee adopted by its summary instead of its 512 keys
+([`../bench/residue-handoff`](../bench/RESIDUE.md), §10), which is sound only under the honest-supermajority
+assumption the light client already makes. All of it is bench code, experimental and unaudited, which nothing else
+in this repository deploys. No program or guest with an image id in [`../docs/image-ids.md`](../docs/image-ids.md)
+changed; this program's own image id changed with the summary adoption (below, "Image id").
 
 Every program of this repository targets LEZ v0.4 (the actor model), which has no public network. The public LEZ
 testnet runs **v0.3.1** (`https://testnet.lez.logos.co`; its state machine, programs and wallet are the same in
@@ -32,29 +35,59 @@ apply at the instance (or at the record) checks the claim against what it verifi
 reverts the whole transaction. The timestamp validity window, which the plan sets without seeing the store, is
 claimed the same way and must equal v0.4's (from the signature slot to the end of the weak-subjectivity period of
 the stored finalized header). Refusals exit with a code, so v0.3.1 charges the cycles used, not the gas limit,
-with one exception an independent review found: `check_config` (`guest/src/main.rs:362-372`, identical to the v0.4
-program's, `../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync_committee_period = 0`; such an
-instance's `Init` applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`)
-and is charged the whole gas limit. Only that instance is affected, created with that config by whoever chose it, and
-no state changes ([`harness/tests/adversarial.rs`](harness/tests/adversarial.rs), `review_zero_period_config`). Not
-fixed: the check would move the image id. The guest's own doc comment (`guest/src/main.rs:15-17`) says refusals never
-panic; it is left unchanged for the same reason.
+with one exception an independent review found in the reviewed image `8d3b59ff…` (the one the prepared
+public-testnet run deploys): its `check_config` (identical to the v0.4 program's,
+`../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync_committee_period = 0`; such an instance's `Init`
+applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`) and is charged the
+whole gas limit. Only that instance is affected, created with that config by whoever chose it, and no state changes.
+It was not fixed in `8d3b59ff…` because the check would have moved that image's id. **This branch's image
+`bac768a8…` fixes it**: its `check_config` (`guest/src/main.rs`) refuses a zero-epoch period at `Init` (`BAD_CONFIG`,
+212), and [`harness/tests/adversarial.rs`](harness/tests/adversarial.rs) (`review_zero_period_config`) now asserts that
+refusal. The deployed v0.4 program keeps the gap (its image id is fixed).
 
 Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/src/main.rs)):
 
 - `Init { config, checkpoint, bootstrap, adopt, record, window }`: the same trusted checkpoint and `Config` as the
   v0.4 program; with the committee's 512 keys in `adopt` it is one transaction.
 - `Update { instance_id, update, signers, verify, adopt, record, window }`, `verify` one of `Open` (step 1),
-  `Miller` (steps 1-2), `Core` (steps 1-3, the core alone), `Residue { c, w }` (steps 1-2 and the residue check).
+  `Miller` (steps 1-2), `Core` (steps 1-3, the core alone), `Residue { c, w }` (steps 1-2 and the residue check),
+  `ResidueSummary { c, w }` (as `Residue`; a handoff's next committee then adopted by its summary, which is sound only
+  under the light client's honest-supermajority assumption, [`../bench/RESIDUE.md`](../bench/RESIDUE.md) §10).
 - `Continue { instance_id, steps, record }`: the job's next steps (Miller, FinalExp, Residue, Adopt).
 - `Attest { instance_id, slot, query, statements }`: storage slots of one account under `header(id, slot)`
   (`ferrata_core::attest::attest_storage`, the block's RLP header for a Gloas record), each written to
-  `statement(id, s)`.
+  `statement(id, s)`. Its accounts start with `instance(id)` (since the evidence below: an apply there refuses a
+  frozen instance and writes nothing).
+- `Evidence { instance_id, update, signers, verify, against, window }` (EXPERIMENTAL, UNAUDITED,
+  [`../bench/MISBEHAVIOUR.md`](../bench/MISBEHAVIOUR.md)): anyone may send an update that a committee the instance
+  holds signed, as evidence that it contradicts a recorded finalized header at its slot (`Against::Record`, the
+  record's account checked in the same transaction) or the next committee the instance adopted for its period
+  (`Against::NextCommittee`); if it does, the instance is frozen with the evidence recorded, and refuses `Update`,
+  `Continue`, `Attest` and `Evidence` from then on (`FROZEN`, 222), keeping its store and records. One transaction:
+  6,656,148 gas at 510 of 512 signers, 8,443,193 at 342 (the residue witness, one multiproof). For an instance started
+  from a finalized checkpoint (the assumption of [`../docs/trust.md`](../docs/trust.md) §2.1, which `Init` cannot
+  check) an honest network never produces such evidence (`MISBEHAVIOUR.md` §3). It carries an update's window and
+  must land while the instance is in the signing committee's period: an advancing `Update` landing first makes it
+  refuse 218 (plan it again), and after the instance's first update of the next period it is refused 23 for good
+  (`MISBEHAVIOUR.md` §5); [`harness/tests/misbehaviour.rs`](harness/tests/misbehaviour.rs),
+  [`harness/tests/misbehaviour_window.rs`](harness/tests/misbehaviour_window.rs).
 
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
-`apply`, `store_for_update`). Image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`, 597,336 ELF
-bytes, 6 segments; built through the repository's `scripts/guest-rustc`, so the id does not depend on the build
-path.
+`apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
+reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, 6 segments),
+the image the local sequencer run below used. This branch builds `bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e`
+(598,876 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and the zero-period
+check, and has not run on a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
+path. Since the evidence (`Instruction::Evidence`, the frozen flag, `Attest`'s instance account) this branch builds
+`155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f` (625,824 ELF bytes, 7 segments), deployed nowhere;
+the earlier tests pass on it with the same results and codes ([`results/misbehaviour-tests.txt`](results/misbehaviour-tests.txt),
+the regenerated tables in [`results/misbehaviour-regression/`](results/misbehaviour-regression/); the tables above
+stay those of `bac768a8…`). **The wire changed with it:** `Attest` now names the instance's account first, so a client
+built from this tree (which also deploys this tree's image) cannot attest under an instance of `8d3b59ff…` or
+`bac768a8…`, which refuse that account list (`WRONG_ACCOUNT`, 201); the prepared public-testnet run, signed in advance
+for `8d3b59ff…`, must keep the client and plan it was prepared with. Re-running the earlier suites rewrites the committed
+tables of `results/` with this image's numbers: `git checkout -- results/` restores them (this image's are in
+`results/misbehaviour-regression/`).
 
 ## Through v0.3.1's block application, with real data
 
@@ -68,22 +101,32 @@ the vault's proofs). Ran on the Modal build box, 18 November 2026; results in [`
 
 | transaction | execution gas | of the 10M cap | bytes |
 |---|---:|---:|---:|
-| **finality update in ONE transaction, residue witness** (mainnet update_1, 510 of 512) | **6,647,546** | 66.5% | 4,934 |
-| the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,660 and 6,530,554 | 65.3% | 4,732 |
-| finality update in one transaction by the core alone (mainnet update_4) | 9,103,128 | 91.0% | 3,390 |
-| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,001; 7,885,607 | 79.8%; 78.9% | 51,196; 51,202 |
-| handoff (period update): `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,497 + 7,707,328 | 65.7% + 77.1% | 3,897 + 49,486 |
-| handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,918, 3,337,230, 3,670,637, 7,704,852 | | |
-| handoff, steps 1-3 by the core in one transaction, then the adoption | 9,114,176 + 7,704,852 | 91.1% + 77.0% | |
-| handoff with the multiproof of the non-signers and the residue witness | 6,566,158 + 7,704,852 | | |
-| `Attest` of two slots (`depositRoot`, `nextLeafIndex`) under a Gloas record | 526,118 and 512,552 | 5.3% | 6,970; 6,991 |
-| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 567,988 in all |
+| **finality update in ONE transaction, residue witness** (mainnet update_1, 510 of 512) | **6,647,616** | 66.5% | 4,934 |
+| the same, Sepolia (509 of 512, finalized slots 11,551,744 and 11,556,608) | 6,528,729 and 6,530,623 | 65.3% | 4,732 |
+| finality update in one transaction by the core alone (mainnet update_4) | 9,103,198 | 91.0% | 3,390 |
+| `Init` with the committee's 512 keys adopted, one transaction (mainnet; Sepolia) | 7,975,077; 7,885,683 | 79.8%; 78.9% | 51,196; 51,202 |
+| **handoff (period update) in ONE transaction, the committee adopted by its summary, sound only under the light client's honest-supermajority assumption** (`Verify::ResidueSummary`, one multiproof; image `bac768a8…`; mainnet update_0 to update_3: 512, 510, 510, 512 signers) | **6,655,335; 6,726,614; 6,737,794; 6,687,532** | 66.6% to 67.4% | 3,901 to 4,964 |
+| the same, Sepolia: the 32 handoffs of periods 1378 to 1409 (through the Gloas layout change) | 6,538,351 to **6,682,541** | at most 66.8% | 3,664 to 5,424 |
+| handoff with the 512 keys adopted: `Update` (residue) + `Continue` (adopt 512 keys, apply) | 6,567,571 + 7,707,411 | 65.7% + 77.1% | 3,897 + 49,486 |
+| handoff by the core alone, stepwise: Open, Miller, FinalExp, then the adoption | 2,232,993, 3,337,313, 3,670,720, 7,704,931 | | |
+| handoff, steps 1-3 by the core in one transaction, then the adoption | 9,114,250 + 7,704,931 | 91.1% + 77.0% | |
+| handoff with the multiproof of the non-signers and the residue witness, then the adoption | 6,566,232 + 7,704,931 | | |
+| `Attest` of two slots (`depositRoot`, `nextLeafIndex`) under a Gloas record | 526,207 and 512,641 | 5.3% | 6,970; 6,991 |
+| deployment: 6 `WriteSegment` + `CreateHeader` (the loader is native) | 0 | | 569,528 in all |
 
 The v0.4 bench measured 6,629,246 for the same mainnet update in one transaction through LEZ v0.4's state machine
-([`../bench/RESIDUE.md`](../bench/RESIDUE.md), EVIDENCE row 127); v0.3.1 charges 6,647,546. A finality update by the
+([`../bench/RESIDUE.md`](../bench/RESIDUE.md), EVIDENCE row 127); v0.3.1 charges 6,647,616. A finality update by the
 core alone fits one transaction too at this participation; each non-signer adds about 25,000 cycles, so below about
 475 signers it does not (derived), and the residue path with the multiproof keeps it under the cap down to the
-policy's floor of 342 (row 128, measured on v0.4's state machine). The handoff does not fit one transaction (about 14M): two. Sepolia: 76 transactions
+policy's floor of 342 (row 128, measured on v0.4's state machine). With its 512 keys adopted the handoff does not fit one
+transaction (about 14M): two. With the next committee adopted by its summary (experimental; sound only under the
+light client's honest-supermajority assumption, [`../bench/RESIDUE.md`](../bench/RESIDUE.md) §10, EVIDENCE row 137) it
+is one (`handoffs_in_one_transaction_each`, `results/mainnet-handoff-one-tx.tsv` and `sepolia-handoff-one-tx.tsv`): after
+each, the instance's store is the native policy store's, whose adoption checks the 512 keys, and a header that advances
+is recorded; refused, nothing changed: a next-committee branch with one node altered (27), the summary adoption with
+the 512 keys sent beside it (84, `NoAdoption`), update_0 again (23). At 342 signers the handoff was measured on v0.4's
+state machine only (8,431,403 gas at the costliest placement found, row 137): this harness has no way to write a
+substituted committee into an instance's state. Sepolia: 76 transactions
 applied, 32 handoffs from period 1378 to 1409, the store upgrading itself to the Gloas layout at 1379, then the two
 finality updates and the attestations (slot 0 = `0xa5b5c43f…4875` and slot 1 = 1 of vault `0xd0b5…8af7` at block
 12,107,997; slot 0 = `0xfaad1232…579d` and slot 1 = 2 of vault `0xfe31…9e54` at block 12,112,773).
@@ -92,8 +135,18 @@ Refused, each with its code and nothing changed: a replayed `Init` (203); a stal
 replayed as sent (218, its window is the old store's); a participation bit cleared (40, `SignatureInvalid`); a
 finalized header changed (26); a tampered residue witness (40); a wrong claimed record (219); a widened window
 (218); an update while a verified job waits for its adoption (207); an attestation claiming a wrong value (220),
-with a changed proof node (110) or without the block's header under a Gloas record (215). A transaction sent before
+with a changed proof node (110) or without the block's header under a Gloas record (215); an `Init` whose
+sync-committee period is zero epochs (212, this branch's image; 1,705,891 gas). A transaction sent before
 its signature slot is outside its window: v0.3.1 includes it and charges the whole declared limit.
+
+**Image id.** The summary adoption and the zero-period check changed the program: this branch's image is
+`bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e` (598,876 ELF bytes; its deployed segments are 1,540
+bytes longer; this branch's first build, before the zero-period check and the aggregate field's decoding, was
+`f8ec1b21…`), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the prepared
+public-testnet run deploys, the reviewed image before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
+(`results/local/txs.tsv`). Every figure of the table above is from this build, 18 November 2026; each is 69 to 89 gas
+above the earlier build's for the same transaction (the earlier figures are in the history of `results/`); the local
+run's figures are the earlier build's.
 
 ## On a LEZ v0.3.1 sequencer
 
@@ -189,6 +242,7 @@ period), so none was changed; anyone can create the same instance, and the run a
 cd lez-v03
 scripts/build.sh --lez                       # program, harness, client; LEZ v0.3.1's sequencer_service and wallet
 cargo test --release --locked -p harness-v03 --test v03 --test third_party --test adversarial -- --nocapture --test-threads 4
+cargo test --release --locked -p harness-v03 --test misbehaviour --test misbehaviour_window -- --nocapture --test-threads 2   # evidence and the freeze (EXPERIMENTAL)
 tests/sendguard.sh && tests/verifystatus.sh  # the script's send guard and verify, against stubs (no network, no keys)
 ./testnet.sh local                           # a v0.3.1 sequencer here, the whole queued sequence, verify
 ./testnet.sh plan                            # the public run, signed and simulated; sends nothing

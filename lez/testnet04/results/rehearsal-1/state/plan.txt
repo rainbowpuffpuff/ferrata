@@ -1,0 +1,27 @@
+stage           bytes   gas limit   fee at base fees (if the whole limit is used)   max fee   transaction
+deploy-program     5396     2000000         16043168        128472064   deploy program: WriteSegment 7 of 7 (4816 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 6 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 5 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 4 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 3 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 2 of 7 (98304 bytes)
+deploy-program    98916     2000000         16791328        134455296   deploy program: WriteSegment 1 of 7 (98304 bytes)
+deploy-program      608     2000000         16004864        128196608   deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+deploy-bridge     69476     2000000         16555808        132573184   deploy bridge: WriteSegment 6 of 6 (68896 bytes)
+deploy-bridge     98916     2000000         16791328        134455296   deploy bridge: WriteSegment 5 of 6 (98304 bytes)
+deploy-bridge     98916     2000000         16791328        134455296   deploy bridge: WriteSegment 4 of 6 (98304 bytes)
+deploy-bridge     98916     2000000         16791328        134455296   deploy bridge: WriteSegment 3 of 6 (98304 bytes)
+deploy-bridge     98916     2000000         16791328        134455296   deploy bridge: WriteSegment 2 of 6 (98304 bytes)
+deploy-bridge     98916     2000000         16791328        134455296   deploy bridge: WriteSegment 1 of 6 (98304 bytes)
+deploy-bridge       608     2000000         16004864        128196608   deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD
+init               1699     4800000         38413592        307438848   Init (Sepolia, Gloas layout)
+attest          ~  7599     2000000         16072000   (estimated: a slot attestation measured 276607 gas, 7599 B)
+
+base fees at the endpoint now: execution 8, storage 8
+payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja (public key 1f4c357c20a175544f104cfd8100113be8835fc7d43f29a681b840731934650b): at most 303798904 in fees if every transaction used its whole gas limit; the sequencer holds each transaction's maximum fee (at most 307438848) while it runs: fund it with at least 918676600
+daemon key 6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu (public key 0f00ef049fb1c7ad70baa11641071032082df02cfdd41922b1f6299587c1f584): about 72976000 per finality update at these base fees, at most 16419600000 a day: fund it with at least 32839200000 for two days
+
+How to fund them on a LEZ v0.4 network (lez/testnet04/NOTES.md, Funds): native tokens reach a zone only through its
+bridge's Deposit: at genesis (the network's genesis actions) or from Logos Blockchain: a Channel Deposit of wallet
+notes to the zone's channel with the account id as the deposit's metadata (logos-docs, 'Bridge assets from Logos
+Blockchain to a Zone'; credited about an hour after the deposit's block). Send nothing before reading discover.json.

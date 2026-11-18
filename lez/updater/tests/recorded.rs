@@ -223,8 +223,20 @@ fn stale_and_down_sources_fall_back() {
 fn restart_mid_job_and_mid_period() {
     let r = rec("sepolia");
     let n = r.entries.len();
-    // Stop the clock three finality updates before the end: the store is inside period 1410.
-    let clock = Clock::new(n - 3);
+    let spec = r.config.spec();
+    // Stop the clock before the record's last finality update that moves the store inside its period (when this
+    // test was written, three entries before the end, in period 1410; the lab's record has grown since).
+    let head = |upto: usize| r.entries[..upto].iter().map(|e| e.finalized_slot).max().unwrap();
+    let stop = (2..n - 1)
+        .rev()
+        .find(|&s| {
+            let e = &r.entries[s];
+            !e.period_update
+                && e.finalized_slot > head(s)
+                && spec.period_at_slot(e.finalized_slot) == spec.period_at_slot(head(s))
+        })
+        .expect("a finality update inside a period");
+    let clock = Clock::new(stop);
     let payer = key(0x25);
     let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
     let dir = scratch("restart");
@@ -236,13 +248,13 @@ fn restart_mid_job_and_mid_period() {
         policy(1),
     );
     settle(&mut u1, &mut l, 400);
-    let spec = r.config.spec();
     let before = store(&u1, &l);
     let period = spec.period_at_slot(before.finalized.slot);
-    let next = &r.entries[n - 3];
+    let next = &r.entries[stop];
     assert!(!next.period_update);
     assert_eq!(spec.period_at_slot(next.finalized_slot), period, "the next update is in the same period");
-    clock.set(n - 2);
+    println!("restart: entry {stop} of {n}, finalized slot {} inside period {period}", next.finalized_slot);
+    clock.set(stop + 1);
     // Open and Miller, then the process dies.
     let mut sent = Vec::new();
     while sent.len() < 2 {
@@ -500,6 +512,11 @@ fn gate_two_honest_one_adversary() {
 /// A beacon node on loopback serving a recorded chain over the beacon API (SSZ, the `updates`
 /// endpoint's length-prefixed chunks), or failing every request with `status`.
 fn mock_beacon(rec: Recorded, fail_status: Option<u16>) -> String {
+    mock_beacon_reporting(rec, fail_status, None)
+}
+
+/// As [`mock_beacon`], also answering `/eth/v1/node/version` with `version` (a recorded answer, JSON).
+fn mock_beacon_reporting(rec: Recorded, fail_status: Option<u16>, version: Option<String>) -> String {
     use std::{
         io::{BufRead, BufReader, Write},
         net::TcpListener,
@@ -527,6 +544,8 @@ fn mock_beacon(rec: Recorded, fail_status: Option<u16>) -> String {
             let mut r = rec.lock().unwrap();
             let body: Result<Vec<u8>, ()> = if fail_status.is_some() {
                 Err(())
+            } else if path == "/eth/v1/node/version" {
+                version.clone().map(String::into_bytes).ok_or(())
             } else if let Some(root) = path.strip_prefix("/eth/v1/beacon/light_client/bootstrap/0x") {
                 r.bootstrap(&root_of(root)).map_err(|_| ())
             } else if path == "/eth/v1/beacon/light_client/finality_update" {
@@ -652,6 +671,11 @@ fn finalized_roots(r: &Rec) -> std::collections::BTreeMap<u64, Root> {
 /// A beacon node on loopback that serves only `/eth/v1/beacon/headers/{slot}` (JSON, as publicnode's): the recorded
 /// finalized headers' roots, or (`lie`) another root at every slot.
 fn mock_headers(roots: std::collections::BTreeMap<u64, Root>, lie: bool) -> String {
+    mock_headers_reporting(roots, lie, None)
+}
+
+/// As [`mock_headers`], also answering `/eth/v1/node/version` with `version` (a recorded answer, JSON).
+fn mock_headers_reporting(roots: std::collections::BTreeMap<u64, Root>, lie: bool, version: Option<String>) -> String {
     use std::{
         io::{BufRead, BufReader, Write},
         net::TcpListener,
@@ -674,6 +698,10 @@ fn mock_headers(roots: std::collections::BTreeMap<u64, Root>, lie: bool) -> Stri
             }
             let path = line.split_whitespace().nth(1).unwrap_or("/").to_string();
             let slot = path.strip_prefix("/eth/v1/beacon/headers/").and_then(|s| s.parse::<u64>().ok());
+            if let (true, Some(v)) = (path == "/eth/v1/node/version", &version) {
+                let _ = write!(stream, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{v}", v.len());
+                continue;
+            }
             let (status, body) = match slot.and_then(|s| roots.get(&s).map(|r| (s, *r))) {
                 Some((s, mut r)) => {
                     if lie {
@@ -793,5 +821,247 @@ fn own_job_is_finished_when_the_source_moves_on() {
             next,
             l.log.len()
         );
+    }
+}
+
+// ---- client diversity (`policy.min_distinct_clients`) ------------------------------------------------------------
+
+/// `/eth/v1/node/version` as three public beacon APIs answered it on 18 November 2026 (`fixtures/node-version/`,
+/// `../results/client-diversity-2026-11-18/`).
+fn answer(client: &str) -> String {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/node-version");
+    fs::read_to_string(dir.join(format!("{client}.json"))).unwrap()
+}
+
+/// What a node with that recorded answer reports.
+fn version(client: &str) -> String {
+    ferrata_updater::source::parse_version_answer(&answer(client)).unwrap()
+}
+
+fn diverse(k: usize) -> Policy {
+    Policy { min_distinct_clients: k, ..policy(1) }
+}
+
+impl Rec {
+    /// A recorded source reporting `client`'s recorded version, `ahead` entries ahead of the clock.
+    fn reporting(&self, label: &str, clock: &Clock, client: &str, ahead: usize) -> Recorded {
+        let mut s = self.source(label, clock, 0);
+        s.client = Some(version(client));
+        s.ahead = ahead;
+        s
+    }
+}
+
+/// Rounds until the updater waits (or is up to date); the plans it made.
+fn until_waiting(u: &mut Updater, l: &mut HarnessLedger, max: usize) -> Vec<Plan> {
+    let mut plans = Vec::new();
+    for _ in 0..max {
+        let p = u.tick(l).unwrap();
+        let stop = matches!(p, Plan::UpToDate | Plan::Waiting(_));
+        plans.push(p);
+        if stop {
+            break;
+        }
+    }
+    plans
+}
+
+/// Two sources of different clients that serve the same bytes: the updater catches up exactly as without the policy.
+/// Two sources of the same client: after the initialization (not subject to it) nothing is sent, the updater waits.
+#[test]
+fn distinct_clients_must_serve_the_same_bytes() {
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let payer = key(0x31);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let sources: Vec<Box<dyn Source>> = vec![
+        Box::new(r.reporting("nimbus", &clock, "nimbus", 0)),
+        Box::new(r.reporting("lodestar", &clock, "lodestar", 0)),
+    ];
+    let mut u = r.updater("div", payer, sources, None, diverse(2));
+    settle(&mut u, &mut l, 200);
+    assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+    assert_eq!(store(&u, &l).finalized.hash_tree_root(), r.last_finalized().1);
+    assert_eq!(refused_total(&l), 0);
+    let m = &u.metrics.sources;
+    assert_eq!(
+        (m["nimbus"].client.as_str(), m["lodestar"].client.as_str()),
+        (version("nimbus").as_str(), version("lodestar").as_str())
+    );
+    assert_eq!(m["nimbus"].disagreements + m["lodestar"].disagreements, 0);
+    assert_eq!(u.health().0, "ok", "{:?}", u.health().1);
+    let text = u.render_metrics();
+    assert!(text.contains(&format!(
+        "ferrata_updater_source_client_info{{daemon=\"div\",chain=\"mainnet\",source=\"lodestar\",client=\"lodestar\",version=\"{}\"}} 1",
+        version("lodestar")
+    )), "{text}");
+    assert_eq!(u.health_json()["clients"]["nimbus"], version("nimbus"));
+    println!("two clients: {} applied, finalized {}", applied(&u, &l), store(&u, &l).finalized.slot);
+
+    // The same client twice is one client.
+    let payer = key(0x32);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let sources: Vec<Box<dyn Source>> = vec![
+        Box::new(r.reporting("lodestar-a", &clock, "lodestar", 0)),
+        Box::new(r.reporting("lodestar-b", &clock, "lodestar", 0)),
+    ];
+    let mut u = r.updater("div", payer, sources, None, diverse(2));
+    let mut waiting = Vec::new();
+    for _ in 0..30 {
+        if let Plan::Waiting(w) = u.tick(&mut l).unwrap() {
+            waiting.push(w);
+        }
+    }
+    assert!(waiting.len() >= 25, "{} rounds waiting", waiting.len());
+    assert_eq!(applied(&u, &l), 1, "only the initialisation");
+    assert!(waiting[0].contains("1 of 2 clients agree byte for byte (lodestar)"), "{}", waiting[0]);
+    assert_eq!(refused_total(&l), 0);
+    println!("one client twice: {} rounds waiting: {}", waiting.len(), waiting[0]);
+}
+
+/// A source that serves valid updates no other client serves (the stand-in for a fork that one implementation, or a
+/// captured committee's accomplice, serves: the program's checks pass it). Without the policy the updater follows
+/// it; with `min_distinct_clients = 2` it holds at what both clients serve byte for byte, then follows once the other
+/// client serves the same updates.
+#[test]
+fn an_update_one_client_serves_is_held_back() {
+    let r = rec("sepolia");
+    let n = r.entries.len();
+    let head = |upto: usize| r.entries[..upto].iter().map(|e| e.finalized_slot).max().unwrap();
+    let (honest_head, ahead_head) = (head(n - 4), head(n - 1));
+    assert!(ahead_head > honest_head, "the record moves on within those entries");
+    for k in [0, 2] {
+        let clock = Clock::new(n - 4);
+        let payer = key(0x33 + k as u8);
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let sources: Vec<Box<dyn Source>> = vec![
+            Box::new(r.reporting("nimbus", &clock, "nimbus", 0)),
+            Box::new(r.reporting("lodestar-ahead", &clock, "lodestar", 3)),
+        ];
+        let mut u = r.updater("fork", payer, sources, None, diverse(k));
+        let plans = until_waiting(&mut u, &mut l, 400);
+        let held = store(&u, &l).finalized.slot;
+        assert_eq!(refused_total(&l), 0);
+        if k == 0 {
+            assert!(held > honest_head, "without the policy, the updater follows the one source beyond the other");
+            println!("k = 0: followed the source ahead to {held} (the other serves up to {honest_head})");
+            continue;
+        }
+        assert!(held <= honest_head, "held {held}, the other client serves up to {honest_head}");
+        let Some(Plan::Waiting(why)) = plans.last() else { panic!("{:?}", plans.last()) };
+        assert!(why.contains("1 of 2 clients agree byte for byte (lodestar)"), "{why}");
+        println!("k = 2: held at {held} (the other client serves up to {honest_head}): {why}");
+        // The other client catches up: the same updates, byte for byte.
+        clock.set(n);
+        settle(&mut u, &mut l, 400);
+        assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+        assert_eq!(refused_total(&l), 0);
+        println!("k = 2: both serve the record's end: {}", store(&u, &l).finalized.slot);
+    }
+}
+
+/// A source that lies (forged signatures) while claiming a second client: the updater sends nothing after the
+/// initialization (one honest client is not two), the liar is demoted by the program's checks, both sources' bytes
+/// for the same updates are logged as a disagreement and named in `/health`. A third, honest client restores
+/// progress.
+#[test]
+fn a_lying_client_is_logged_and_does_not_count() {
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let liar = |r: &Rec| -> Box<dyn Source> {
+        Box::new(Faulty::new(r.reporting("lodestar", &clock, "lodestar", 0), Fault::BadSignature, r.config.clone()))
+    };
+    let payer = key(0x36);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let sources: Vec<Box<dyn Source>> = vec![Box::new(r.reporting("nimbus", &clock, "nimbus", 0)), liar(&r)];
+    let mut u = r.updater("liar", payer, sources, None, diverse(2));
+    let mut health = None;
+    for round in 0..30 {
+        let p = u.tick(&mut l).unwrap();
+        if round == 3 {
+            health = Some(u.health());
+        }
+        assert!(!matches!(p, Plan::UpToDate), "never up to date: the liar's updates are refused, one client remains");
+    }
+    assert_eq!(applied(&u, &l), 1, "only the initialisation");
+    assert_eq!(refused_total(&l), 0);
+    let m = &u.metrics.sources;
+    assert!(m["lodestar(BadSignature)"].refused >= 1, "demoted by the program's checks");
+    assert!(m["nimbus"].disagreements >= 1 && m["lodestar(BadSignature)"].disagreements >= 1, "{m:?}");
+    let (status, why) = health.unwrap();
+    assert_eq!(status, "degraded");
+    assert!(why.iter().any(|w| w.contains("lodestar(BadSignature) demoted")), "{why:?}");
+    assert!(why.iter().any(|w| w.contains("nimbus serves other bytes than lodestar(BadSignature)")), "{why:?}");
+    println!(
+        "liar: {why:?}; disagreements nimbus {} liar {}",
+        m["nimbus"].disagreements, m["lodestar(BadSignature)"].disagreements
+    );
+
+    // A third client, honest: nimbus and teku agree byte for byte; the liar is still refused.
+    let payer = key(0x37);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let mut teku = r.reporting("teku", &clock, "nimbus", 0);
+    teku.client = Some("teku/stand-in (no recorded answer)".into());
+    let sources: Vec<Box<dyn Source>> =
+        vec![Box::new(r.reporting("nimbus", &clock, "nimbus", 0)), liar(&r), Box::new(teku)];
+    let mut u = r.updater("liar3", payer, sources, None, diverse(2));
+    settle(&mut u, &mut l, 200);
+    assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+    assert_eq!(refused_total(&l), 0);
+    println!("liar among three: caught up to {}", store(&u, &l).finalized.slot);
+}
+
+/// Over HTTP: beacon nodes on loopback answering `/eth/v1/node/version` with the recorded answers of Nimbus, Lodestar
+/// and Lighthouse. Bytes: a Nimbus and a Lodestar node serving the recorded chain. Finalized header: a Lodestar
+/// light-client node and a Lighthouse `headers` node; then the `headers` node reporting Lodestar too (one client).
+#[test]
+fn clients_reported_over_http() {
+    use ferrata_updater::{
+        config::ClientMatch,
+        source::{BeaconApi, HeaderWitness},
+    };
+    let r = rec("mainnet");
+    let clock = Clock::new(r.entries.len());
+    let node = |client: &str| mock_beacon_reporting(r.source("node", &clock, 0), None, Some(answer(client)));
+    let payer = key(0x38);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let sources: Vec<Box<dyn Source>> = vec![
+        Box::new(BeaconApi { name: "nimbus".into(), base: node("nimbus"), timeout_secs: 5 }),
+        Box::new(BeaconApi { name: "lodestar".into(), base: node("lodestar"), timeout_secs: 5 }),
+    ];
+    let mut u = r.updater("http-bytes", payer, sources, None, diverse(2));
+    settle(&mut u, &mut l, 100);
+    assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+    assert_eq!(u.metrics.sources["lodestar"].client, version("lodestar"));
+    println!("http, bytes: caught up to {}", store(&u, &l).finalized.slot);
+
+    let roots = finalized_roots(&r);
+    for (headers_client, ok) in [("lighthouse", true), ("lodestar", false)] {
+        let payer = key(if ok { 0x39 } else { 0x3a });
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let witness = HeaderWitness {
+            name: "headers".into(),
+            base: mock_headers_reporting(roots.clone(), false, Some(answer(headers_client))),
+            timeout_secs: 5,
+        };
+        let sources: Vec<Box<dyn Source>> = vec![
+            Box::new(BeaconApi { name: "lodestar".into(), base: node("lodestar"), timeout_secs: 5 }),
+            Box::new(witness),
+        ];
+        let pol = Policy { client_match: ClientMatch::FinalizedHeader, ..diverse(2) };
+        let mut u = r.updater("http-header", payer, sources, None, pol);
+        if ok {
+            settle(&mut u, &mut l, 100);
+            assert_eq!(store(&u, &l).finalized.slot, r.last_finalized().0);
+            assert_eq!(u.metrics.sources["headers"].client, version("lighthouse"));
+            println!("http, finalized header, lodestar + lighthouse: caught up to {}", store(&u, &l).finalized.slot);
+        } else {
+            let plans = until_waiting(&mut u, &mut l, 30);
+            let Some(Plan::Waiting(why)) = plans.last() else { panic!("{:?}", plans.last()) };
+            assert!(why.contains("1 of 2 clients agree its finalized header (lodestar)"), "{why}");
+            assert_eq!(applied(&u, &l), 1, "only the initialisation");
+            println!("http, finalized header, lodestar twice: {why}");
+        }
+        assert_eq!(refused_total(&l), 0);
     }
 }

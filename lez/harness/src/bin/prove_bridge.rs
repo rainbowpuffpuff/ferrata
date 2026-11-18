@@ -34,8 +34,8 @@ use ferrata_bridge_core::{
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_mac_v2, holder_actor, own_actor, token_actor, word_of_u128, BridgeMessage, BridgeState,
-    BurnRecord, HolderState, Holding, Note,
+    burn_actor, burn_mac_v2, own_actor, token_actor, word_of_u128, BridgeMessage, BridgeState, BurnRecord, HolderState,
+    Holding, Note,
 };
 use harness::{
     bridge::{
@@ -88,10 +88,10 @@ fn main() {
         }
     }
     let dev = dev_mode();
-    let bridge_image = image_id_hex(methods::FERRATA_BRIDGE_ID);
+    let bridge_image = image_id_hex(harness::bridge::BRIDGE_ID);
     println!(
         "bridge image {bridge_image} ({} ELF bytes); RISC0_DEV_MODE {}; shape {}",
-        methods::FERRATA_BRIDGE_ELF.len(),
+        harness::bridge::BRIDGE_ELF.len(),
         if dev { "on" } else { "off" },
         shape.name()
     );
@@ -134,7 +134,7 @@ fn main() {
         None => prove(&mut w, "private claim", &account, me, &claim_message, claim_actors, claim_out.as_deref(), shape),
     };
     assert!(claim.charge.revert.is_none(), "the claim's public part reverted: {:?}", claim.charge.revert);
-    assert!(w.nullifier(&vault, &n).is_some(), "the nullifier account is written");
+    assert!(w.nullifier(&cid, &vault, &n).is_some(), "the nullifier account is written");
     let holding =
         HolderState { holdings: vec![Holding { config_id: cid, token: ETH, amount: DENOMINATIONS[1] }], pending: None };
     let claimed = private_post_state(&w.chain, &private_keys(seed), &account.account, RESERVE, &holding)
@@ -238,7 +238,7 @@ fn private_transfer(
     let run = match settle_path {
         Some(path) => settle(w, path, "private transfer"),
         None => {
-            let publics = vec![token_actor(program, &cid, &ETH), holder_actor(program, recipient)];
+            let publics = vec![token_actor(program, &cid, &ETH), harness::bridge::holder_of(program, &cid, recipient)];
             prove(w, "private transfer", &holder, me, &message, publics, out, shape)
         }
     };
@@ -353,7 +353,7 @@ fn settle(w: &mut World, path: &str, what: &str) -> PrivateRun {
     let LeeTransaction::PrivacyPreserving(tx) = &lee_tx else { panic!("{path} holds a public transaction") };
     let claims_bridge = tx.message.execution.program_image_claims.iter().any(|claim| {
         matches!(claim, ProgramImageClaim::Disclosed { account_id, image_id }
-            if *account_id == bridge_account() && *image_id == methods::FERRATA_BRIDGE_ID)
+            if *account_id == bridge_account() && *image_id == harness::bridge::BRIDGE_ID)
     });
     assert!(claims_bridge, "{path}: the transaction does not claim this binary's bridge image");
     let view = classify(&lee_tx).expect("classifies");

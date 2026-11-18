@@ -1,0 +1,23 @@
+test a_342_signer_handoff_in_one_transaction ... image ids in this build: experimental copy e4ae023442685922de8f67f1d81063c5c6b8b9797cb673de63865c16d12d2709, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, handoff signed by 341 of 512 | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 120593 | 120593 | 1.2% | 21149 | 1133936 | refused: exit 51 |
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every absent index odd (4g+3, and 4g+1 in groups 0..41): the costliest placement found): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8354362 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8431403 | 84.3% | 29085 | 67683904 | applied |
+handoff in one transaction at 342 of 512 (every absent index odd (4g+3, and 4g+1 in groups 0..41): the costliest placement found): 8431403 execution gas (84.3% of MAX_GAS_EXEC)
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every third member absent): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8346435 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8423476 | 84.2% | 29085 | 67620488 | applied |
+handoff in one transaction at 342 of 512 (every third member absent): 8423476 execution gas (84.2% of MAX_GAS_EXEC)
+| EXPERIMENTAL VerifyAll, handoff signed by 342 of 512 (every absent index odd, the chain of additions): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 8689247 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 8766288 | 87.7% | 29085 | 70362984 | applied |
+handoff in one transaction at 342 of 512 (every absent index odd, the chain of additions): 8766288 execution gas (87.7% of MAX_GAS_EXEC)
+test a_handoff_in_one_transaction_at_mainnet_participation ... image ids in this build: experimental copy e4ae023442685922de8f67f1d81063c5c6b8b9797cb673de63865c16d12d2709, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL VerifyAll, handoff update_1 (510 of 512): one multiproof + residue witness + the 512 keys adopted |  | 10000000 | 100.0% | 54269 | 80434152 | reverted: Execution exceeded its cycle budget of 10000000 cycles |
+| EXPERIMENTAL VerifyAll, handoff with one node of its next-committee branch altered | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 204822 | 204822 | 2.0% | 5117 | 1679512 | refused: exit 27 |
+| EXPERIMENTAL VerifyAll, handoff update_1 (510 of 512): one multiproof + residue witness + the summary adopted | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 6634444 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 59689 → program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17352 | 6711485 | 67.1% | 5117 | 53732816 | applied |
+| EXPERIMENTAL VerifyAll, the same handoff again | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 217568 | 217568 | 2.2% | 5117 | 1781480 | refused: exit 52 |
+handoff in one transaction at 510 of 512: 6711485 execution gas (67.1% of MAX_GAS_EXEC); stale refusal code 52
+test a_zero_period_config_is_refused_at_init ... image ids in this build: experimental copy e4ae023442685922de8f67f1d81063c5c6b8b9797cb673de63865c16d12d2709, deployed program 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
+| transaction | handlers run (cycles each) | execution gas | of MAX_GAS_EXEC 10M | storage gas (tx bytes) | base fee | result |
+|---|---|---:|---:|---:|---:|---|
+| EXPERIMENTAL zero-period Init | program 7MNnTJmxb2vJ7WWi15fNMHYhwvmvJyY5XMegUjDKEKKT 17641 | 17641 | 0.2% | 1896 | 156296 | refused: exit 212 |
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.70s

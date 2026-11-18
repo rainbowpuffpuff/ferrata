@@ -1,0 +1,25 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+refusal: instance A: the contradicting update sent as an Update	12	refused	52	262381	2.6%	4219	211663	10000000	2657562	10	8	1700984264000
+refusal: instance A: evidence claiming a root the record does not hold	13	refused	219	6653851	66.5%	4319	23079	10000000	59919211	9	8	1700984264001
+refusal: instance A: evidence against a slot the instance holds no record of	14	refused	213	6640148	66.4%	4319	9376	10000000	66436032	10	8	1700984264002
+refusal: instance A: the update that wrote the record, replayed against it	15	refused	85	273926	2.7%	3239	227817	10000000	3039098	11	8	1700984264003
+refusal: instance A: the same, against the adopted next committee	16	refused	85	259204	2.6%	3135	218784	10000000	2617120	10	8	1700984264004
+refusal: instance A: signed two periods ahead (no committee held)	17	refused	23	164477	1.6%	3159	119121	10000000	1505565	9	8	1701179696000
+refusal: instance A: the right period, keys the instance does not hold	18	refused	40	9066448	90.7%	3159	9021092	10000000	72556856	8	8	1701179696001
+refusal: instance A: no finality branch (an attested head only)	19	refused	50	104735	1.0%	3159	59379	10000000	967887	9	8	1701179696002
+refusal: instance A: 341 of 512 signers	20	refused	51	306206	3.1%	19287	109607	10000000	2603944	8	8	1701179696003
+refusal: instance A: Verify::Open (not one transaction)	21	refused	223	70843	0.7%	3159	25488	10000000	592016	8	8	1701179696004
+refusal: instance A: a signer witness that is not one multiproof	22	refused	223	88793	0.9%	4317	33247	10000000	744880	8	8	1701179696005
+refusal: instance A: the residue witness with one bit of c flipped	23	refused	40	6581344	65.8%	4319	6524919	10000000	52685304	8	8	1701179696006
+refusal: instance A: a window other than an update's	24	refused	218	102742	1.0%	3151	57546	10000000	949886	9	8	1701179696007
+refusal: instance A: the record account of another slot	25	refused	201	29363	0.3%	3159	29363	10000000	260176	8	8	1701179696008
+Evidence (A): record at slot 81984 contradicted, 510/512, residue witness	26	applied	-	6656148	66.6%	4319	6656148	10000000	53283736	8	8	1701179696009
+refusal: frozen: Update (512/512)	27	refused	222	86251	0.9%	4136	27664	10000000	809347	9	8	1701179696010
+refusal: frozen: Continue	28	refused	222	30120	0.3%	329	18230	10000000	243592	8	8	1701179697010
+refusal: frozen: Attest under the record	29	refused	222	46280	0.5%	772	16463	10000000	376416	8	8	1701179698010
+refusal: frozen: the same Evidence again	30	refused	222	84604	0.8%	4319	28179	10000000	711384	8	8	1701179699010
+Evidence (A): 510/512, final exponentiation	33	applied	-	9139244	91.4%	3159	9139244	10000000	91417712	10	8	1701179699013
+Evidence (A): 342/512 (every absent index odd), residue witness	36	applied	-	8443193	84.4%	25759	8443193	10000000	109967581	13	8	1701179699016
+refusal: live instance B: the same dummy Attest (not refused as frozen)	39	refused	111	69992	0.7%	772	22971	10000000	1126048	16	8	1701179700018
+refusal: instance B: the contradicting update sent as an Update	40	refused	28	250662	2.5%	4299	199161	10000000	3794322	15	8	1701179700019
+Evidence (B): the adopted next committee contradicted, 510/512, residue witness	41	applied	-	6632378	66.3%	4295	6632378	10000000	92887652	14	8	1701179700020

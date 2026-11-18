@@ -1,0 +1,140 @@
+{
+ "rows": [
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 7 of 7 (4816 bytes)",
+   5396,
+   2000000,
+   16043168,
+   128472064
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 6 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 5 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 4 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 3 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 2 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: WriteSegment 1 of 7 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-program",
+   "deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+   608,
+   2000000,
+   16004864,
+   128196608
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 6 of 6 (68896 bytes)",
+   69476,
+   2000000,
+   16555808,
+   132573184
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 5 of 6 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 4 of 6 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 3 of 6 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 2 of 6 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: WriteSegment 1 of 6 (98304 bytes)",
+   98916,
+   2000000,
+   16791328,
+   134455296
+  ],
+  [
+   "deploy-bridge",
+   "deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+   608,
+   2000000,
+   16004864,
+   128196608
+  ],
+  [
+   "init",
+   "Init (Sepolia, Gloas layout)",
+   1699,
+   4800000,
+   38413592,
+   307438848
+  ]
+ ],
+ "fee_state": [
+  8,
+  8
+ ],
+ "need_payer": 918676600,
+ "need_daemon": 32839200000,
+ "payer": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+ "daemon": "6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu"
+}

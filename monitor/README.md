@@ -112,7 +112,7 @@ MONITOR_KEY=… target/release/monitor run --rpc http://127.0.0.1:8545 --vault 0
 
 ## Tested
 
-All runs were on the Modal build box (`mrun --profile yasmeen`), never on the laptop.
+All runs were on the Modal build box (`mrun --profile ws-13`), never on the laptop.
 
 - `cargo test --release`: 15 tests in [`tests/check.rs`](tests/check.rs). They cover the rule (B)
   and (A) verdicts, the margin before the deadline, key-set rotation, the state fields, several

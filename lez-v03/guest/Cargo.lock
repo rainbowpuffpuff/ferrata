@@ -812,8 +812,10 @@ dependencies = [
  "ferrata-core",
  "ferrata-v03-wire",
  "lee_core",
+ "misbehaviour",
  "residue",
  "residue-agg",
+ "residue-handoff",
  "risc0-zkvm",
  "sha2",
  "tiny-keccak",
@@ -1231,6 +1233,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "misbehaviour"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "residue",
+ "residue-agg",
+ "residue-handoff",
+]
+
+[[package]]
 name = "ml-kem"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1554,6 +1567,16 @@ dependencies = [
  "blst",
  "ferrata-core",
  "sha2",
+]
+
+[[package]]
+name = "residue-handoff"
+version = "0.1.0"
+dependencies = [
+ "blst",
+ "ferrata-core",
+ "residue",
+ "residue-agg",
 ]
 
 [[package]]

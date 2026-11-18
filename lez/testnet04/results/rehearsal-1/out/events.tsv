@@ -1,0 +1,21 @@
+utc	event	detail
+2026-11-18T17:48:40Z	url	http://172.20.79.179:3041 (forward.py to the zone's http://127.0.0.1:3040)
+2026-11-18T17:48:40Z	discover	
+2026-11-18T17:48:40Z	discover-exit	1
+2026-11-18T17:48:40Z	plan	
+2026-11-18T17:48:42Z	plan-exit	0
+2026-11-18T17:48:42Z	fund	stand-in: LEZ's published local test account pays the payer and the daemon key
+2026-11-18T17:49:00Z	fund-exit	0
+2026-11-18T17:49:00Z	run	day1.sh run (FERRATA_TESTNET_SEND=yes), in the background
+2026-11-18T17:50:04Z	sequencer-stop	pid 15286, head 10
+2026-11-18T17:50:37Z	sequencer-start	pid 24826, head 10
+2026-11-18T17:52:54Z	run-exit	1
+2026-11-18T17:52:54Z	follow	until 35 min after the daemon's start (17:52:52)
+2026-11-18T18:10:54Z	sequencer-stop	pid 24826, head 131
+2026-11-18T18:11:45Z	sequencer-start	pid 3694, head 131
+2026-11-18T18:15:01Z	hook-paused	SIGSTOP by the operator: the node stalled 17:53:15-18:14:19 (no block final), so the follow window is extended; /health sampled by a separate loop meanwhile
+2026-11-18T19:17:13Z	hook-resumed	SIGCONT by the operator: the run done (19:02:47), the daemon applied two updates; a fourth stall since 19:05:07
+2026-11-18T19:17:13Z	verify	
+2026-11-18T19:17:17Z	verify-exit	0
+2026-11-18T19:19:17Z	daemon-stopped	
+2026-11-18T19:19:17Z	done	

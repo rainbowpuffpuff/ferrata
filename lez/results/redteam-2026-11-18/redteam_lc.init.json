@@ -1,0 +1,223 @@
+{
+  "counts": {
+    "PASS": 11
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "init",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CheckpointMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 10,
+        "code_name": "core:CheckpointMismatch",
+        "note": "checkpoint of another block [checkpoint of another block]",
+        "outcome": "refused"
+      },
+      "title": "bootstrap header does not hash to the checkpoint",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CurrentCommitteeBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 12,
+        "code_name": "core:CurrentCommitteeBranchInvalid",
+        "note": "committee branch node 0 [committee branch node 0]",
+        "outcome": "refused"
+      },
+      "title": "bootstrap committee branch sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:CurrentCommitteeBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 12,
+        "code_name": "core:CurrentCommitteeBranchInvalid",
+        "note": "committee replaced by period 1900's [committee replaced by period 1900's]",
+        "outcome": "refused"
+      },
+      "title": "bootstrap committee replaced",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:BootstrapHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 11,
+        "code_name": "core:BootstrapHeaderInvalid",
+        "note": "bootstrap execution state root [bootstrap execution state root]",
+        "outcome": "refused"
+      },
+      "title": "bootstrap header execution part tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:ALREADY_INITIALIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 203,
+        "code_name": "prog:ALREADY_INITIALIZED",
+        "note": "the same Init after the instance exists [Init again]",
+        "outcome": "refused"
+      },
+      "title": "Init of an existing instance",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_CONFIG"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 212,
+        "code_name": "prog:BAD_CONFIG",
+        "note": "store_fork = 7 [store_fork = 7]",
+        "outcome": "refused"
+      },
+      "title": "unknown store layout byte",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_CONFIG",
+          "prog:BAD_MESSAGE",
+          "core:Malformed",
+          "core:OutsideWeakSubjectivityPeriod",
+          "lez:validity-window"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 212,
+        "code_name": "prog:BAD_CONFIG",
+        "note": "ws_period_epochs = 0 [ws_period_epochs = 0]",
+        "outcome": "refused"
+      },
+      "title": "weak-subjectivity period of zero",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "core:ForkMismatch",
+          "core:BootstrapHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 61,
+        "code_name": "core:ForkMismatch",
+        "note": "Electra-layout bootstrap with store_fork = 1 (Capella) [Electra-layout bootstrap with store_fork = 1 (Capella)]",
+        "outcome": "refused"
+      },
+      "title": "bootstrap in another fork's layout than config.store_fork",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "lez:validity-window",
+          "core:OutsideWeakSubjectivityPeriod"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-09",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Execution outside of the validity window",
+        "note": "Init at the end of the bootstrap's weak-subjectivity period [Init at the end of the bootstrap's weak-subjectivity period]",
+        "outcome": "refused"
+      },
+      "title": "Init whose checkpoint is outside the weak-subjectivity period by the sequencer clock",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-INIT-10",
+      "kind": "control",
+      "observed": {
+        "note": "both instances active, ids differ",
+        "outcome": "accepted"
+      },
+      "title": "a second instance with the same checkpoint and another chain id coexists",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "prog:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-INIT-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "empty bootstrap bytes [empty bootstrap bytes]",
+        "outcome": "refused"
+      },
+      "title": "empty bootstrap bytes",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

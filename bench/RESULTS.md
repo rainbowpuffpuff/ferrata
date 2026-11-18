@@ -5,7 +5,9 @@
 final exponentiation measured on 17 Nov 2026, has one too: "2026-11-17: one update in one
 transaction with a residue witness", and its own note, [`RESIDUE.md`](RESIDUE.md); so does the
 signing key composed from one multiproof of the non-signers, measured the same evening: "2026-11-17:
-the fewest signers in one transaction".)
+the fewest signers in one transaction"; and a committee handoff in one transaction, the next committee adopted by its
+summary, 18 Nov 2026, sound only under the light client's honest-supermajority assumption: "2026-11-18: a
+committee handoff in one transaction".)
 
 **Former name.** Measured at commit f030475, before the project was renamed Ferrata, when the core
 was `crates/plumbline-core`; the earlier snapshot run below used commit 25aa07e. At the rename commit
@@ -442,6 +444,46 @@ the rest with every figure unchanged, 18 Nov 2026. Outputs: `results/residue/agg
   ./target/release/residue-host boundary && cargo test --release -p residue-host --test placements`
   (on the build box on 18 Nov, with its build cache warm and the guests already built: 83 s to
   `boundary`, 130 s for the placements test; a clean build was not timed); LEZ: `RESIDUE.md` §9.8.
+
+## 2026-11-18: a committee handoff in one transaction, the next committee adopted by its summary, sound only under the light client's honest-supermajority assumption (experimental, unaudited)
+
+**Not in any deployed program; `crates/ferrata-core` unchanged; sound only under the honest-supermajority
+assumption the light client already makes.** [`RESIDUE.md`](RESIDUE.md) §10 gives the soundness argument (what the
+core's 512-key adoption establishes that this does not, why it does not matter under that assumption, what a wrong
+aggregate field would do, deposit proofs of possession, and what the consensus specification, Helios and Lodestar do
+with the aggregate field, at pinned commits). `residue-handoff` adopts a handoff's next committee by the summary step 1
+proved, decoding its aggregate field (refused, 45, if it does not decode or is the identity, as the core refuses it);
+`one_step` runs the whole update with one multiproof (§9) and the residue witness. Measured with
+`residue-host measure-handoff` in the bench guest `guests/residue-agg-accel` (r0vm 3.0.5 executor), mainnet update_1
+as served (a handoff) against the store after update_0, on the Modal build box, 18 Nov 2026. Outputs:
+`results/residue/handoff/` ([`tables.md`](results/residue/handoff/tables.md), `one-tx.txt`, `tests.txt`,
+`adversarial.txt`, `lez.txt`). The figures are those of the second build of 18 Nov (after an independent review's
+findings 9 and 7: the aggregate field decoded at adoption, a zero-epoch period refused).
+
+* Execution user cycles of the whole handoff, witness check (folded): **6,667,967** (6,005,957) at 510 of 512 with the
+  real committee; at 342 signers, signed by the bench's committee, **8,244,918** (7,582,908) at the costliest placement
+  of the absent members found (every absent index odd) and 8,236,481 (7,574,471) with every third absent. With the
+  core's 512-key adoption instead: 12,575,468 (11,913,881) and 14,152,419. The summary adoption is 90,617 cycles (686
+  before the aggregate field was decoded), the 512-key adoption 5,991,991.
+* The store after the one-step path equals the core's after all its steps on every update of the official `sync`
+  vectors (160: 91 accepted, 66 handoffs; 69 refused alike), the mainnet replay (5 handoffs) and Sepolia through Gloas
+  (33, 32 handoffs); only the job's adoption progress differs. Refused alike: a bad next-committee branch (27), 341
+  signers (51), no finality (50), stale (52, 23). The one difference: a next committee whose aggregate field is not the
+  sum of its keys (only a state the beacon chain's transition did not produce holds one) is refused by the core (45)
+  and accepted here; then the honest committee is refused, and the forger alone produces accepted updates in a
+  participation pattern fixed at the forged handoff (`RESIDUE.md` §10.3; the adversarial tests of an independent
+  review, `residue-handoff/tests/adversarial.rs`: with the field `Q + P_31` the holder of `Q` alone signs an
+  accepted "31 of 32" update). Since such a forged committee keeps the real `pubkeys_root`, a monitor or updater
+  must compare the whole summary, not the key root alone.
+* Through LEZ's state machine (in-process harness, LEZ v0.4.0-rc1, the experimental copy, which adopts by the summary
+  when `VerifyAll` carries no adoption keys): **6,711,485** execution gas (67.1%) for the 510-signer handoff, applied;
+  **8,431,403** (84.3%) at 342 signers at the costliest placement found (8,423,476 with every third absent, 8,766,288
+  with the chain of additions); with the 512 keys in the same transaction it reverts on the 10M budget; an `Init` with a
+  zero-epoch period is refused (212). The deployed program's image id, printed by the same build, is still `816d1fef…`.
+* LEZ v0.3.1 (`lez-v03`, `Verify::ResidueSummary`): every handoff of the mainnet replay (at most 6,737,794) and of
+  Sepolia's 32 periods (at most 6,682,541) in one transaction; the port's image id changed (`bac768a8…`; the reviewed
+  `8d3b59ff…`, which the prepared public-testnet run deploys, is unchanged there).
+* Re-check: `RESIDUE.md` §10.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
 

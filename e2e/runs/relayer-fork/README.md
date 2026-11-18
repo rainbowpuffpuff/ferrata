@@ -13,7 +13,7 @@ Proofs, all real and checked by the deployed verifier on the fork:
   (2 × 10¹² wei): `notes-paid.json` is `crown-live-1/lez/session-b/burn-notes.json`'s note 0 (the test wallet's, the
   holder's side) with `relayer` and `relay_fee` added; `ferrata-e2e crown-release` built the statement, `prove` the
   succinct receipt (77,736 cycles, 14.4 s), `p254` the identity_p254 step (21.1 s), RISC Zero's prover image the
-  Groth16 proof (15 s, Modal function on the testerer workspace), `groth16` the seal (`seal.hex`, selector
+  Groth16 proof (15 s, Modal function on the ws-11 workspace), `groth16` the seal (`seal.hex`, selector
   `0x73c457ba`), `verify` checked it against the release image `0x17257f91…f5cd` (`journal_equals_native`).
 
 What happened (`results.json`, `test.log`; the same transactions and gas in every run):

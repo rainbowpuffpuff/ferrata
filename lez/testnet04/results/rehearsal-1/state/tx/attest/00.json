@@ -1,0 +1,14 @@
+{
+  "bytes": 6409,
+  "gas_limit": 2000000,
+  "hash": "2d668b3184b2652fcfae5bf09f2bfaebfbf645f64ef2bbeaae1e79706878366b",
+  "label": "Attest: the vault's slots 0 and 1 under header(11d23518, 11607488)",
+  "max_fee": "128544384",
+  "signed_utc": "2026-11-18T18:39:59Z",
+  "signers": [
+    {
+      "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+      "nonce": "9"
+    }
+  ]
+}

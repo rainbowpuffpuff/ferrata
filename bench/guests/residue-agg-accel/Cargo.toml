@@ -16,6 +16,7 @@ publish = false
 ferrata-core = { path = "../../../crates/ferrata-core", default-features = false, features = ["blst"] }
 residue = { path = "../../residue" }
 residue-agg = { path = "../../residue-agg" }
+residue-handoff = { path = "../../residue-handoff" }
 risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
 # Pin the versions the patches provide, so the resolver selects them (as guests/blst-accel).
 sha2 = "=0.10.8"

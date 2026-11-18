@@ -1,0 +1,4 @@
+label	block	status	exit	exec_gas	of_max_gas_exec	stor_gas	cycles	gas_limit	fee	base_fee_exec	base_fee_stor	timestamp_ms
+front-run: an ordinary Update (finalizes slot 82176)	12	applied	-	6621068	66.2%	4584	6621068	10000000	66247352	10	8	1700986520000
+front-run: Evidence (A), planned on the store at slot 81984	13	refused	218	121780	1.2%	4319	65355	10000000	1374132	11	8	1700986520001
+front-run: Evidence (A), re-planned on the store at slot 82176	14	applied	-	6656022	66.6%	4319	6656022	10000000	66594772	10	8	1700986520002

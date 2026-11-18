@@ -1,0 +1,29 @@
+running 9 tests
+test chain::rpcurl::tests::hosts_read ... ok
+test chain::rpcurl::tests::loopback_hosts ... ok
+test chain::rpcurl::tests::not_loopback ... ok
+test lc_json::tests::a_wrong_shape_is_refused ... ok
+test lc_json::tests::finality_update_json_is_the_served_ssz ... ok
+test lc_json::tests::bootstrap_json_is_the_served_ssz ... ok
+test lc_json::tests::uint256_is_little_endian ... ok
+test updater::tests::distinct_clients_from_distinct_sources ... ok
+test lc_json::tests::updates_json_is_the_served_ssz ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 8 tests
+test a_beacon_api_module_source_parses ... ok
+test bad_configurations_are_refused ... ok
+test header_answers_and_utc ... ok
+test node_version_answers ... ok
+test client_diversity_configuration ... ok
+test updates_stream_splits_with_either_length_convention ... ok
+test shipped_configurations_parse ... ok
+test sepolia_gloas_instance_is_the_crown_instance ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

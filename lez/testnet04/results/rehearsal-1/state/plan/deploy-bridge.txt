@@ -1,0 +1,8 @@
+53faf7ce690172383ea901e92bc58f28d28e2fed60d8b008bd64242862a84941    69476 B gas limit 2000000 max fee      132573184 deploy bridge: WriteSegment 6 of 6 (68896 bytes)
+3de6a939a05529f390cf0938c28b640c2f2ff9f800d96cd13a14a1a07fc9729b    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 5 of 6 (98304 bytes)
+7ef3e18b86a6112cf8f968d8bd440f04ae7849190866cea9859df46a8fd07e05    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 4 of 6 (98304 bytes)
+a5e5adb1367e09e4c55ebd5ff09fab291aa70620a45990bf90949ee4199af20e    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 3 of 6 (98304 bytes)
+0c3c9087417636b5ee0d87eb98aa459e3c8ca95a9f65ecb8b58202c1b45f9f11    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 2 of 6 (98304 bytes)
+7b5a835fdcbace81e448a06678650395f8f0630d9899ddd5e6efeac5a32bbd5d    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 1 of 6 (98304 bytes)
+6ca5aad8926e2483bb0d49afa39e2418f9a71f8a958c922da9916f2388a70fc7      608 B gas limit 2000000 max fee      128196608 deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD
+stage deploy-bridge: 7 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 0; at the current base fees (8, 8) at most 116517312 if every one used its whole gas limit; the largest reserve 134455296

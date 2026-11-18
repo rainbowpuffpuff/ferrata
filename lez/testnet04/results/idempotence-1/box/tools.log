@@ -1,0 +1,10 @@
+    Blocking waiting for file lock on package cache
+warning: lee@0.1.0: Generated module at ../tmp/testnet04/live/target/release/build/lee-c854e17799f6fff2/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/testnet04/live/target/release/build/programs-37892babc3304bfe/out/lez/programs/mod.rs
+   Compiling ferrata-updater v0.1.0 (../ferrata-wt-testnet04-rc3/lez/updater)
+   Compiling ferrata-updater-sequencer v0.1.0 (../ferrata-wt-testnet04-rc3/lez/updater/sequencer)
+    Finished `release` profile [optimized] target(s) in 13.70s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+5b908a4686bd1519afd6c0bc85dfdd51e171c8590e96f420e0aeeca086082dc6  ../tmp/testnet04/bin2/ferrata-day1
+f445ca48ecae36b840c052d1230da55d2a062bb930f335354c524e1886f5d412  ../tmp/testnet04/bin2/ferrata-updater
