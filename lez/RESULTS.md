@@ -81,7 +81,9 @@ image ids change, by the name of the LEZ tree hashed into the guests and by one 
 code does not. The harness on rc3 passes 56 of 56 tests, and 1,119 of 1,120 table rows equal the rc1 run of the same
 source on the same box (the other is an identifier derived from the image id). rc3 lets a program read the clock;
 the weak-subjectivity bound stays a validity window. Logos Blockchain 0.3.5-rc.1 puts a fork digest in every
-transaction, which the checkpoint guests do not read yet. Real proofs on rc3 (16 November): the private update,
+transaction, which the deployed checkpoint guests do not read; a second build of them does, and its rule (B)
+checkpoint over an rc3 zone was proven, wrapped and paid out by vault v5 on a local anvil
+([`results/v0.4.0-rc3/return-leg/`](results/v0.4.0-rc3/return-leg/README.md)). Real proofs on rc3 (16 November): the private update,
 attestation, claim and burn proven for real and applied by rc3's sequencer in final blocks
 ([`results/v0.4.0-rc3/real-proofs/`](results/v0.4.0-rc3/real-proofs/README.md); M0 check 4).
 

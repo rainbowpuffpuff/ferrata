@@ -57,10 +57,13 @@ The design notes specify these; there is no code for them here:
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
   reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
   is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).
-- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): the checkpoint
-  guests' reading of a transaction's fork digest, so checkpoints over such a zone
-  ([`lez/results/v0.4.0-rc3/README.md`](../lez/results/v0.4.0-rc3/README.md); today checkpoint-core refuses that
-  framing, `checkpoint/crates/checkpoint-core/tests/bedrock_0_3_5.rs`).
+- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a vault for such a
+  zone where it runs (the deployed checkpoint guests, whose ids the vault on Sepolia pins, read the `d480efc6` layout
+  and refuse it), a zone of several sequencers on it, and following a Bedrock era change (a deployment pins one fork
+  digest). The reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3
+  zone of one sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and
+  accepted by vault v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
+  [EVIDENCE](EVIDENCE.md) rows 129, 130).
 
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:

@@ -65,8 +65,19 @@ to a public network; the one network read was the Sepolia vault's immutables ove
 | The burn root is the bridge program's | `ferrata-e2e crown-release` recomputes the burn tree with the bridge core from the bridge program's two burns: each leaf and the root `0x78aae803…` equal the checkpoint's |
 | The deployed `checkpoint_b` on the same input | refused in the executor: `UnsupportedOpcode { opcode: 37 }` (the digest's first byte read as the operation count, its second as an opcode) |
 
-One sequencer, as the brief allows: the key set is one key (n = 1, t = 1) and its one attestor; a zone of several
+One sequencer: the key set is one key (n = 1, t = 1) and its one attestor; a zone of several
 sequencers, their attestors and a committee's rotation ran on rc1's node ([`checkpoint/attestor/RESULTS.md`](../../../../checkpoint/attestor/RESULTS.md) §8, §9).
+
+## Stage 3: proven for real and paid out
+
+| | |
+|---|---|
+| The checkpoint's proof | `checkpoint_b_0_3_5` (`0xafbf4023…`) proven by r0vm 3.0.5 on the box's CPU (32 threads), **not dev mode**: 18,971,326 user cycles, 21 segments, **1,488.1 s**, succinct receipt 224,314 B, verified against the image id, journal equal to the native one; identity_p254 18.6 s; the Groth16 step 13 s in RISC Zero's own prover image (`risc0-groth16-prover:v2025-04-03.1`, a Modal function, `mwrap`); seal 260 B, verified |
+| The releases' proofs | `ferrata-e2e crown-release`: one release statement per burn (the burn tree recomputed by the bridge core, equal to the checkpoint's); `release` (`0xb64900bc…`) proven for real, 77,736 user cycles each, 13.9 s (public burn) and 13.7 s (private burn) on the CPU; identity_p254 18.4 s and 19.2 s; Groth16 13 s each |
+| The vault (the run's anvil restored from its saved state) | FerrataVault v5 in mode (B) behind **RISC Zero's real Groth16 verifier** and its emergency stop (`checkpointImageId()` = `checkpoint_b_0_3_5`'s id): `submitCandidate` **375,305 gas**; W warped (`evm_increaseTime` 3,601 s); `finalizeAttested` **218,385**; `finalState` = the journal's new state `0x27848dc8…`; burn root `0x78aae803…` accepted; the release delay warped (121 s); `release` 0 (**420,596** gas) and 1 (**361,384**) each paid **999,000,000,000,000 wei** (0.001 ETH less the 0.1 % checkpoint fee) to the recipient its burn named; 6,000,000,000,000 wei left (the relay and checkpoint fees) ([`vault-checks.json`](../../../../e2e/runs/zone-bridge-rc3/vault-checks.json)) |
+| Refused on that anvil ([`box-refusals.log`](../../../../e2e/runs/zone-bridge-rc3/logs/box-refusals.log)) | the checkpoint's seal and journal digest, under the deployed `checkpoint_b`'s id (the d480efc6 layout, which the vault on Sepolia pins), at RISC Zero's verifier: `VerificationFailed()` (it verifies under `checkpoint_b_0_3_5`'s); release 0 again, the same request and seal, called on the vault: `NullifierAlreadyUsed()` |
+| `vault/test/real/ZoneBridgeRc3.t.sol` (fixture `zone-bridge-rc3.json`, the run's journal and seals in a vault built as DeployVault builds it, at the journal's address and chain id) | **5 of 5**: the journal is 1 of 1 over the zone's key, two burns, two imported leaves; final after the hour and not before, the burn root accepted, both releases paid as the anvil paid them, each a second time refused; the same vault pinning the deployed `checkpoint_b` at the same address refuses this checkpoint (RISC Zero's verifier); a flipped seal byte refused |
+| `zone-bridge.sh verify` | the input, the journal and `burns.json` re-derived from the recorded node answers and attestation: equal; the six receipts (succinct and Groth16 of the checkpoint and the two releases) verify; `crown.json`'s candidate seal is the verified receipt's |
 
 ## What this does not show
 
@@ -75,6 +86,8 @@ sequencers, their attestors and a committee's rotation ran on rc1's node ([`chec
   delay are warped. Not a public network, not testnet 0.4.
 - A Bedrock era change: the zone ran in one era, one digest throughout; what happens at an era change is reasoned (the
   program refuses the new digest), not run.
+- The vault on Sepolia following such a zone: it pins the first build's ids (it cannot follow); a zone on 0.3.5-rc.1
+  needs a vault deployed with the second build's ids, as here on the anvil.
 - Rule (A) over this zone (built and tested in the second build, not run here), a rotation on 0.3.5-rc.1 (the
   threshold check is tested on hand-built and upstream fixtures only), several sequencers on 0.3.5-rc.1.
 
@@ -84,10 +97,11 @@ sequencers, their attestors and a committee's rotation ran on rc1's node ([`chec
   `params.json`, `crown.json`, `deploy.json`; `lez/` the sessions; `zone/` the attestor's records and the node's
   answers; `checkpoint/` the input, its meta, the executor runs; `logs/`). [`zone/`](zone/environment.md) here: the
   zone's own records (`environment.md`, the blocks, `logs/`, the configuration diffs).
+- `cd vault && forge test --match-contract ZoneBridgeRc3Test` (the journal, the seals and the vault, offline).
 - Offline re-check (no node, no chain; from the worktree root, after `scripts/reproduce-image-ids.sh build --out OUT`
   and `cd checkpoint && cargo build --release -p methods-0-3-5 --locked`, with the R0BF programs and their `ids.jsonl`
   in one directory `P`, `ferrata-e2e program-binary` making the two new ones): `ZB_PROGRAMS=P
   ZB_CHECKPOINT_B=checkpoint_b_0_3_5 ZB_N_MIN=1 ZB_T_MIN=1 ZB_LEAVE_OUT=none bash checkpoint/attestor/zone-bridge.sh
   verify e2e/runs/zone-bridge-rc3` re-derives the input, the journal and `burns.json` from the recorded node answers
-  and attestation and compares them; `cargo +1.88 test -p checkpoint-core --features bedrock-0-3-5` in `checkpoint/`.
+  and attestation and compares them, and verifies the six receipts; `cargo +1.88 test -p checkpoint-core --features bedrock-0-3-5` in `checkpoint/`.
 - The box scripts that ran it: `spike/tmp/rc3-return/box*.sh` beside the repository (not in it).
