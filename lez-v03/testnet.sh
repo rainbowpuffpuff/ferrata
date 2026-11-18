@@ -41,7 +41,10 @@ RECORD="$HERE/results/$target"
 export LEE_WALLET_HOME_DIR="$STATE/wallet"
 mkdir -p "$STATE"
 
-need_client() { [ -x "$CLIENT" ] || { echo "build first: scripts/build.sh --lez" >&2; exit 2; }; }
+need_client() {
+  [ -x "$CLIENT" ] || { echo "build first: scripts/build.sh --lez" >&2; exit 2; }
+  { "$CLIENT" 2>&1 || true; } | grep -q 'usage' || { echo "$CLIENT is not the ferrata-v03 client: scripts/build.sh --lez" >&2; exit 2; }
+}
 
 rpc() { # rpc METHOD PARAMS_JSON: one read-only JSON-RPC call to the sequencer
   curl -sS -m 30 -A "$UA" -H 'Content-Type: application/json' \
@@ -56,9 +59,12 @@ ensure_wallet() {
   fi
   [ -f "$STATE/payer" ] || python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["payer"])' "$RUN/state.json" > "$STATE/payer"
   PAYER="$(cat "$STATE/payer")"
+  [ -n "$PAYER" ] || { echo "no payer account: $STATE/payer is empty" >&2; exit 1; }
 }
 
-balance() { rpc getAccountBalance "[\"$PAYER\"]" | python3 -I -c 'import json,sys; print(json.load(sys.stdin).get("result", 0))'; }
+balance() { rpc getAccountBalance "[\"$PAYER\"]" 2>/dev/null | python3 -I -c 'import json,sys
+try: print(json.load(sys.stdin).get("result", "?"))
+except Exception: print("?")'; }
 
 copy_record() { # the run's record, without keys, into the repository's results
   mkdir -p "$RECORD"
