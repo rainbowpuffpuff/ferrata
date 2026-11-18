@@ -105,9 +105,22 @@ retry() { # retry LABEL COMMAND...: a stage that fails is tried again (the endpo
 # ---- discover ----------------------------------------------------------------------------------------------------
 discover() {
   say "discover $URL"
-  python3 -I - "$URL" "$UA" "$STATE/discover.json" "${FERRATA_DAY1_NODE:-}" "$HERE/reference-rc3.json" <<'EOF'
-import json, sys, time, urllib.request, urllib.error
+  local rc=0
+  python3 -I - "$URL" "$UA" "$STATE/discover.json" "${FERRATA_DAY1_NODE:-}" "$HERE/reference-rc3.json" <<'EOF' || rc=$?
+import base64, json, struct, sys, time, urllib.request, urllib.error
 url, ua, out, node, ref_path = sys.argv[1:6]
+STATUS = ["Pending", "Safe", "Finalized"]   # common::block::BedrockStatus (lez/common/src/block.rs:80-84 at rc3)
+def block_fields(r):
+    """A block as getBlock serves it: base64 of its borsh (rc1-rc3: the header's block_id u64, prev_block_hash,
+    hash, timestamp u64 ms first; the Bedrock status, a one-byte enum, last). A JSON object is read as it is."""
+    if isinstance(r, dict):
+        h = r.get("header", {})
+        return {"timestamp": h.get("timestamp"), "hash": h.get("hash"), "bedrock_status": r.get("bedrock_status")}
+    if isinstance(r, str):
+        b = base64.b64decode(r)
+        return {"block_id": struct.unpack("<Q", b[0:8])[0], "hash": b[40:72].hex(), "timestamp": struct.unpack("<Q", b[72:80])[0],
+                "bedrock_status": STATUS[b[-1]] if b[-1] < len(STATUS) else f"tag {b[-1]}", "bytes": len(b)}
+    return {"unreadable": repr(r)[:80]}
 def call(method, params=None):
     body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params if params is not None else []}).encode()
     req = urllib.request.Request(url, data=body, headers={"Content-Type": "application/json", "User-Agent": ua})
@@ -125,10 +138,10 @@ head = d["getLastBlockId"].get("result")
 blocks = {}
 if isinstance(head, int):
     for b in sorted({max(head - 30, 1), head}):
-        r = call("getBlock", [b]).get("result") or {}
-        h = r.get("header", {}) if isinstance(r, dict) else {}
-        blocks[b] = {"timestamp": h.get("timestamp"), "hash": h.get("hash"), "bedrock_status": r.get("bedrock_status"),
-                     "transactions": len((r.get("body") or {}).get("transactions", []))}
+        try:
+            blocks[b] = block_fields(call("getBlock", [b]).get("result"))
+        except Exception as e:
+            blocks[b] = {"unreadable": str(e)}
 d["blocks"] = blocks
 # v0.4 has getPublications (lez/sequencer/service/rpc/src/lib.rs at v0.4.0-rc1..rc3); v0.3.1 answers "method not found".
 probe = call("getPublications", [])
@@ -145,7 +158,7 @@ try:
                             "different_ids": sorted(k for k in set(progs) & set(rp) if progs[k] != rp[k])}
 except FileNotFoundError:
     d["builtins_vs_rc3"] = "no reference"
-ts = [blocks[b]["timestamp"] for b in sorted(blocks) if blocks[b]["timestamp"]]
+ts = [blocks[b]["timestamp"] for b in sorted(blocks) if blocks[b].get("timestamp")]
 if ts:
     d["clock"] = {"head_block_ms": ts[-1], "this_machine_ms": int(time.time() * 1000), "behind_s": round((time.time() * 1000 - ts[-1]) / 1000, 1)}
     if len(ts) == 2 and len(blocks) == 2:
@@ -165,9 +178,11 @@ print(f"programs {len(progs)}: {', '.join(sorted(progs))}")
 print(f"v0.4 network (getPublications known): {d['is_v04']}; cross-zone programs: {d['cross_zone_programs'] or 'none'}")
 print(f"builtin programs against LEZ v0.4.0-rc3's: {json.dumps(d['builtins_vs_rc3'])}")
 print(f"clock: {json.dumps(d.get('clock'))}")
+print(f"blocks read: {json.dumps(blocks)}")
 if not d["is_v04"]:
     sys.exit(3)
 EOF
+  [ "$rc" = 0 ] || { say "discover: not a v0.4 network, or not readable (exit $rc)"; return "$rc"; }
   if [ -x "$TOOL" ] && [ -d "$KEYS" ]; then
     "$TOOL" inspect --keys "$KEYS" --state "$STATE" $(bins) --rpc "$URL" > "$STATE/inspect-discover.json" 2> "$STATE/inspect-discover.err" \
       && say "this deployment's accounts there: $(python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); print("payer", d["payer"]["account"], "balance", d["payer"]["balance"], "; daemon", d["daemon"]["account"], "balance", d["daemon"]["balance"])' "$STATE/inspect-discover.json")" \
@@ -283,8 +298,16 @@ gas_limit = 4800000
 max_fee_per_tx = ${FERRATA_DAY1_DAEMON_MAX_FEE:-1000000000}
 budget = ${FERRATA_DAY1_DAEMON_BUDGET:-1000000000000}
 
-[policy]
+[policy]                            # every field (the section has no per-field defaults); as the example's, but two sources
+defer_window = 8
+max_lag_slots = 64
 min_agreeing = 2
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+finish_own_jobs = true
 
 [[chain]]
 name = "sepolia"
@@ -339,6 +362,8 @@ run() {
   need_tools; check_programs
   ensure_keys
   discover || die "discover: not a v0.4 network (or not answering): nothing sent"
+  [ "$(python3 -I -c 'import json,sys; print(json.load(open(sys.argv[1]))["is_v04"])' "$STATE/discover.json")" = True ] \
+    || die "discover: $URL is not a v0.4 network: nothing sent"
   local t0; t0=$(date +%s)
   {
     echo "run started $(date -u +%FT%TZ) against $URL"

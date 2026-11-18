@@ -392,8 +392,15 @@ fn sign_init(payer: &PrivateKey, n: u128, program: AccountId, fetch: &Path, quot
 
 // ---- stage: attest --------------------------------------------------------------------------------------------------
 
+/// An actor's state as of the newest block final on Bedrock: the follower's, replayed from the endpoint's blocks with
+/// LEZ's own block application. (`Live::actor_state` also requires the sequencer's head state to equal it, which fails
+/// while transactions are in flight, as when the daemon sends.)
+fn final_state(live: &Live, actor: Actor) -> Vec<u8> {
+    live.follower.state.get_account_by_id(actor.account_id).data.actor_state(actor.program_account_id).to_vec()
+}
+
 async fn instance_state(live: &Live, program: AccountId, id: &Root) -> Result<Option<InstanceState>> {
-    let bytes = live.actor_state(instance_actor(program, id)).await?;
+    let bytes = final_state(live, instance_actor(program, id));
     if bytes.is_empty() {
         return Ok(None);
     }
@@ -424,7 +431,7 @@ async fn newest_record(live: &Live, program: AccountId, id: &Root) -> Result<(u6
     ensure!(state.active, "the instance is not active yet (its committee adoption is pending)");
     let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
     let slot = store.finalized.slot;
-    let bytes = live.actor_state(header_actor(program, id, slot)).await?;
+    let bytes = final_state(live, header_actor(program, id, slot));
     ensure!(!bytes.is_empty(), "no record at header({}, {slot})", hex::encode(id));
     let rec: RecordState = borsh::from_slice(&bytes)?;
     let hr = rec.header().map_err(|c| anyhow!("record does not decode ({c})"))?;
@@ -694,11 +701,11 @@ async fn inspect(a: &Args, live: &Live) -> Result<Value> {
             continue;
         }
         let d = Deployment::load(&keys.join(name))?;
-        let header_state = live.actor_state(Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID)).await?;
+        let header_state = final_state(live, Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID));
         let header = crate::programs::program_header(&header_state);
         let mut segs = Vec::new();
         for k in &d.segments {
-            let s = live.actor_state(Actor::new(id_of(k), PROGRAM_LOADER_ACCOUNT_ID)).await?;
+            let s = final_state(live, Actor::new(id_of(k), PROGRAM_LOADER_ACCOUNT_ID));
             segs.push(match segment_of(&s) {
                 Some(seg) => json!({"account": id_of(k).to_string(), "bytes": seg.bytecode.len(), "sha256": sha256_hex(&seg.bytecode),
                                     "next": seg.next_segment.map(|n| n.to_string())}),
