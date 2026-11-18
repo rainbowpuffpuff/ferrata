@@ -1255,6 +1255,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-wire-class"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-core",
+ "ferrata-lez-wire",
+]
+
+[[package]]
 name = "ferrata-spectests"
 version = "0.0.1"
 dependencies = [
@@ -1453,11 +1462,13 @@ dependencies = [
  "ferrata-lez-bridge-wire",
  "ferrata-lez-holdings-wire",
  "ferrata-lez-wire",
+ "ferrata-lez-wire-class",
  "ferrata-spectests",
  "hex",
  "lee",
  "lee_core",
  "methods",
+ "methods-program-class",
  "methods-residue-experimental",
  "programs",
  "residue",
@@ -1842,6 +1853,13 @@ dependencies = [
 
 [[package]]
 name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
+
+[[package]]
+name = "methods-program-class"
 version = "0.1.0"
 dependencies = [
  "risc0-build",

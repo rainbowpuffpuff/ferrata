@@ -1,0 +1,6 @@
+before the build:
+target absent
+lez/target absent
+checkpoint/target absent
+bridge/target absent
+no guest target
