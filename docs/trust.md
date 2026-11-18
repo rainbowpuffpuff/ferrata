@@ -343,6 +343,7 @@ verification logic, which Security #8 forbids. The failsafe is stop-only
 | A bug in the vault | depends; no upgrade | depends | freezes, retirement; caps |
 | A wrong checkpoint not revoked within 7 days | the vault halts for good | every position not yet released | caps bound what the error itself released |
 | A LEZ change the configuration cannot follow | retirement before it; unimported deposits refunded | tokens never burned before the change stay backed in the vault but cannot be released | notice period asked of Logos (M0) |
+| A Bedrock era change under a zone on Logos Blockchain 0.3.5-rc.1 (its transactions then carry another fork digest) | the checkpoints stop: the second build of the checkpoint guests pins one digest through `lezConfigId` and refuses the new one ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md)); retirement as for a LEZ change | as the row above | the same notice period, asked for Bedrock's eras too |
 | Admin or freeze key compromised | denial of service within the bounds of §4 | none directly | lapsing freezes, 14-day public replacement, keyless retirement |
 | Every operator stops | no imports, checkpoints or relays | none: anyone can resume; claims never expire | keyless retirement and refunds after 30 days without checkpoint progress, from deployment on (operators keep a heartbeat checkpoint) |
 | A recipient that can never receive | its `owed` balance stays forever | that payee's amount | pull payments isolate it from everyone else |

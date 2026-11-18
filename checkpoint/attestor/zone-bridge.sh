@@ -36,7 +36,10 @@
 #
 # Environment: ZB_BUNDLE (the crown-live-3 LEZ bundle: binaries, the final LEZ programs, the fixture), ZB_PROGRAMS (R0BF
 # checkpoint_b.bin, checkpoint.bin, release.bin, ids.jsonl of docs/image-ids.md), ZB_DRIVER, ZB_TMP (box scratch),
-# ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last), ZB_ROTATE, ZB_ROTATE_RUN_S, ZB_FIXTURE.
+# ZB_ROUND_S (60), ZB_LEAVE_OUT (the attestor left out; default the last; `none`: all of them), ZB_ROTATE,
+# ZB_ROTATE_RUN_S, ZB_FIXTURE; for the stages after `zone`: ZB_CHECKPOINT_B (the rule (B) program's name in ZB_PROGRAMS,
+# default checkpoint_b; checkpoint_b_0_3_5 for a zone on Logos Blockchain 0.3.5-rc.1, whose `zone` stage is
+# lez/live/hooks/return-leg.sh), ZB_N_MIN and ZB_T_MIN (the vault's floors, default 4 and 3).
 set -euo pipefail
 STAGE="${1:?stage}"; RUN_ARG="${2:?run dir (under e2e/runs/)}"
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -53,6 +56,7 @@ ATT="$REPO/checkpoint/target/release/ferrata_attestor"
 RC="$REPO/checkpoint/target/release/realblocks-crown"
 E="$REPO/bridge/target/release/ferrata-e2e"
 ROUND_S="${ZB_ROUND_S:-60}"
+CKB="${ZB_CHECKPOINT_B:-checkpoint_b}"
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
 FUND=2e03b2eff5a45478e7e79668d2a146cf2c5c7925bce927f2b1c67f2ab4fc0d26   # the dev node's funded key (compose default)
 PORT=18080; API="http://127.0.0.1:$PORT"; R=http://127.0.0.1:8545
@@ -237,7 +241,7 @@ attest_loop() { # i: a round every ROUND_S s while the zone runs; each new tip k
 
 stage_zone() {
   [ -e "$RUN/identity.json" ] && { echo "$RUN holds a run already (a new run directory, please)"; exit 2; }
-  for f in "$DRV" "$ATT" "$E" "$BUNDLE" "$PROGRAMS/checkpoint_b.bin"; do [ -e "$f" ] || { echo "missing $f (stage build, --put)"; exit 2; }; done
+  for f in "$DRV" "$ATT" "$E" "$BUNDLE" "$PROGRAMS/$CKB.bin"; do [ -e "$f" ] || { echo "missing $f (stage build, --put)"; exit 2; }; done
   rm -rf "$W"; mkdir -p "$W/bundle" "$W/bedrock" "$W/logs" "$W/inputs" "$RUN/zone" "$RUN/lez/session-a" "$RUN/lez/session-b" "$RUN/lez/inputs"
   trap zone_cleanup EXIT
   log "zone-bridge $NAME: bundle sha256 $(sha256sum "$BUNDLE" | cut -c1-64)"
@@ -443,7 +447,7 @@ tip_of_attestors() { jq -r .tip_id "$RUN/zone/attestor-0/final.json"; }
 rc_args() { # realblocks-crown's arguments over the run's records (attestation files in $1, comma-separated)
   printf '%s\0' --node "$2" --genesis "$RUN/lez/session-a/deployment-settings.yaml" --session-a "$RUN/lez/session-a/session-a.json" \
     --vault "$(jq -r .vault "$RUN/identity.json")" --config-id "$(jq -r .configId "$RUN/identity.json")" \
-    --genesis-state "$(jq -r .genesisState "$RUN/identity.json")" --tip "$(tip_of_attestors)" --n-min 4 --t-min 3 --att "$1"
+    --genesis-state "$(jq -r .genesisState "$RUN/identity.json")" --tip "$(tip_of_attestors)" --n-min "${ZB_N_MIN:-4}" --t-min "${ZB_T_MIN:-3}" --att "$1"
 }
 n_att() { find "$RUN/zone" -maxdepth 1 -name 'attestor-*' -type d | wc -l; }
 t_of() { python3 -I -c 'import sys; n = int(sys.argv[1]); print(max(1, min(-(-2 * n // 3), n - 1)))' "$1"; }
@@ -474,12 +478,12 @@ stage_input() {
   echo "$(( tt - 1 )) of $na: refused by the collector: $(tail -n 1 "$C/collect-below.txt")" | tee -a "$C/collect-below.txt"
   "$ATT" assemble --base "$C/$n.input" "${below[@]}" --out "$T/$n-below.input" --meta "$C/$n-below.json" --name "$n-below" \
     --expect InsufficientAttestations | tee -a "$C/collect-below.txt"
-  "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n.input" --meta "$C/$n.json" | tee "$C/exec.json"
+  "$E" exec --program "$PROGRAMS/$CKB.bin" --input "$C/$n.input" --meta "$C/$n.json" | tee "$C/exec.json"
   jq -e '.journal_equals_native' "$C/exec.json" > /dev/null
-  "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-all.input" --meta "$C/$n-all.json" | tee "$C/exec-all.json"
+  "$E" exec --program "$PROGRAMS/$CKB.bin" --input "$T/$n-all.input" --meta "$C/$n-all.json" | tee "$C/exec-all.json"
   # (the meta of an input the program must refuse has no journal; the executor is given a placeholder one)
   jq -n '{kind: "checkpoint-b", journal: "00"}' > "$T/two-exec-meta.json"
-  if "$E" exec --program "$PROGRAMS/checkpoint_b.bin" --input "$T/$n-below.input" --meta "$T/two-exec-meta.json" > "$C/exec-below.txt" 2>&1; then
+  if "$E" exec --program "$PROGRAMS/$CKB.bin" --input "$T/$n-below.input" --meta "$T/two-exec-meta.json" > "$C/exec-below.txt" 2>&1; then
     die "the guest accepted t - 1 attestations"; fi
   grep -o 'checkpoint refused: [^"]*' "$C/exec-below.txt" | head -n 1 | tee -a "$C/exec-below.txt"
 }
@@ -488,9 +492,9 @@ stage_input() {
 stage_prove() {
   local C="$RUN/checkpoint" n; n="$(cname)"
   mkdir -p "$C/receipts" "$W/work/checkpoint"
-  "$E" prove --program "$PROGRAMS/checkpoint_b.bin" --input "$C/$n.input" --meta "$C/$n.json" --out-dir "$C/receipts" | tee "$C/prove.json"
-  "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of checkpoint_b)" --meta "$C/$n.json"
-  "$E" p254 --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of checkpoint_b)" --out-dir "$W/work/checkpoint" | tee "$C/p254.txt"
+  "$E" prove --program "$PROGRAMS/$CKB.bin" --input "$C/$n.input" --meta "$C/$n.json" --out-dir "$C/receipts" | tee "$C/prove.json"
+  "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
+  "$E" p254 --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of "$CKB")" --out-dir "$W/work/checkpoint" | tee "$C/p254.txt"
   mkdir -p "$RUN/work/checkpoint"; cp "$W/work/checkpoint/input.json" "$RUN/work/checkpoint/input.json"
 }
 
@@ -511,7 +515,7 @@ stage_releases() {
 stage_groth16() {
   local p="${3:?proof: checkpoint | release-<name>}" succ d meta img
   case "$p" in
-    checkpoint) succ="$RUN/checkpoint/receipts/receipt-succinct.bin"; d="$RUN/checkpoint/receipts"; meta="$RUN/checkpoint/$(cname).json"; img="$(id_of checkpoint_b)" ;;
+    checkpoint) succ="$RUN/checkpoint/receipts/receipt-succinct.bin"; d="$RUN/checkpoint/receipts"; meta="$RUN/checkpoint/$(cname).json"; img="$(id_of "$CKB")" ;;
     release-*) succ="$RUN/releases/receipts/$p/receipt-succinct.bin"; d="$RUN/releases/receipts/$p"; meta="$RUN/releases/$p.json"; img="$(id_of release)" ;;
     *) die "groth16: checkpoint or release-<name>" ;;
   esac
@@ -577,7 +581,7 @@ stage_fixture() {
   n="$(cname)"
   jq -n --slurpfile m "$C/$n.json" --slurpfile a "$A" --slurpfile cj "$RUN/crown.json" --slurpfile id "$RUN/identity.json" \
     --slurpfile vc "$RUN/vault-checks.json" --arg j "0x$(hexfile "$C/receipts/journal.hex")" --arg s "0x$(hexfile "$C/receipts/seal.hex")" \
-    --arg img "$(id_of checkpoint_b)" --arg rimg "$(id_of release)" --arg src "e2e/runs/$NAME" '
+    --arg img "$(id_of "$CKB")" --arg rimg "$(id_of release)" --arg src "e2e/runs/$NAME" '
     ($m[0]) as $m | ($a[0]) as $a | ($cj[0]) as $cj | ($vc[0]) as $vc |
     {_source: ("checkpoint/attestor/zone-bridge.sh fixture over " + $src), imageId: $img, releaseImageId: $rimg,
      journal: $j, journalSha256: ("0x" + $m.journal_sha256), seal: $s,
@@ -601,9 +605,9 @@ stage_verify() {
   [ "$(jq -r .journal "$v/$n.json")" = "$(jq -r .journal "$C/$n.json")" ] || die "the re-derived journal differs"
   cmp -s "$v/burns.json" "$C/burns.json" || die "the re-derived burns.json differs"
   echo "checkpoint input, journal and burns re-derived from the recorded node answers and attestations: equal"
-  "$E" image-id "$PROGRAMS/checkpoint_b.bin" "$PROGRAMS/release.bin"
-  "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of checkpoint_b)" --meta "$C/$n.json"
-  "$E" verify --receipt "$C/receipts/receipt-groth16.bin" --image-id "$(id_of checkpoint_b)" --meta "$C/$n.json"
+  "$E" image-id "$PROGRAMS/$CKB.bin" "$PROGRAMS/release.bin"
+  "$E" verify --receipt "$C/receipts/receipt-succinct.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
+  "$E" verify --receipt "$C/receipts/receipt-groth16.bin" --image-id "$(id_of "$CKB")" --meta "$C/$n.json"
   for m in "$RUN"/releases/release-*.json; do
     case "$m" in *.exec.json|*.prove.json) continue ;; esac
     p="$(basename "$m" .json)"
