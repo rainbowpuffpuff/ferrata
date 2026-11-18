@@ -71,48 +71,53 @@ pub fn bridge_account() -> AccountId {
 
 /// `holder(account)` of the deployed program (`cid` is not part of its address), `holder(cid, account)` of the
 /// second build.
+#[cfg(not(feature = "bridge-next"))]
+pub fn holder_of(program: AccountId, _cid: &Hash, account: AccountId) -> Actor {
+    bw::holder_actor(program, account)
+}
+
+/// `holder(account)` of the deployed program, `holder(cid, account)` of the second build (this one).
+#[cfg(feature = "bridge-next")]
 pub fn holder_of(program: AccountId, cid: &Hash, account: AccountId) -> Actor {
-    #[cfg(feature = "bridge-next")]
-    return bw::config_keyed::holder_actor(program, cid, account);
-    #[cfg(not(feature = "bridge-next"))]
-    {
-        let _ = cid;
-        bw::holder_actor(program, account)
-    }
+    bw::config_keyed::holder_actor(program, cid, account)
 }
 
 /// The seed of [`holder_of`].
+#[cfg(not(feature = "bridge-next"))]
+pub fn holder_seed_of(_cid: &Hash, account: &Hash) -> PdaSeed {
+    bw::holder_seed(account)
+}
+
+/// The seed of [`holder_of`].
+#[cfg(feature = "bridge-next")]
 pub fn holder_seed_of(cid: &Hash, account: &Hash) -> PdaSeed {
-    #[cfg(feature = "bridge-next")]
-    return bw::config_keyed::holder_seed(cid, account);
-    #[cfg(not(feature = "bridge-next"))]
-    {
-        let _ = cid;
-        bw::holder_seed(account)
-    }
+    bw::config_keyed::holder_seed(cid, account)
 }
 
 /// `nullifier(chain, vault, N)` of the deployed program (`cid` is not part of its address), `nullifier(cid, chain,
 /// vault, N)` of the second build.
+#[cfg(not(feature = "bridge-next"))]
+pub fn nullifier_of(program: AccountId, _cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
+    bw::nullifier_actor(program, chain_id, vault, n)
+}
+
+/// `nullifier(chain, vault, N)` of the deployed program, `nullifier(cid, chain, vault, N)` of the second build (this
+/// one).
+#[cfg(feature = "bridge-next")]
 pub fn nullifier_of(program: AccountId, cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
-    #[cfg(feature = "bridge-next")]
-    return bw::config_keyed::nullifier_actor(program, cid, chain_id, vault, n);
-    #[cfg(not(feature = "bridge-next"))]
-    {
-        let _ = cid;
-        bw::nullifier_actor(program, chain_id, vault, n)
-    }
+    bw::config_keyed::nullifier_actor(program, cid, chain_id, vault, n)
 }
 
 /// The seed of [`nullifier_of`].
+#[cfg(not(feature = "bridge-next"))]
+pub fn nullifier_seed_of(_cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
+    bw::nullifier_seed(chain_id, vault, n)
+}
+
+/// The seed of [`nullifier_of`].
+#[cfg(feature = "bridge-next")]
 pub fn nullifier_seed_of(cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
-    #[cfg(feature = "bridge-next")]
-    return bw::config_keyed::nullifier_seed(cid, chain_id, vault, n);
-    #[cfg(not(feature = "bridge-next"))]
-    {
-        let _ = cid;
-        bw::nullifier_seed(chain_id, vault, n)
-    }
+    bw::config_keyed::nullifier_seed(cid, chain_id, vault, n)
 }
 
 /// The bridge program's image id as 32 bytes (risc0's little-endian words).

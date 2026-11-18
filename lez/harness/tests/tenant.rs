@@ -834,7 +834,13 @@ fn r1_next_a_copied_plaintext_claim_no_longer_blocks_the_owner() {
 /// `holder(cid, account)`. Returns the bytes placed, in all.
 #[cfg(feature = "bridge-next")]
 fn place_others(w: &mut World, _cid_a: &[u8; 32], account: lee::AccountId, k: usize) -> usize {
-    fillers(k).into_iter().map(|h| place_holder(w, &h.config_id.clone(), account, vec![h])).sum()
+    fillers(k)
+        .into_iter()
+        .map(|h| {
+            let cid = h.config_id;
+            place_holder(w, &cid, account, vec![h])
+        })
+        .sum()
 }
 
 /// R2 against the second build: other configurations' holdings for a destination sit in other accounts, so a claim
