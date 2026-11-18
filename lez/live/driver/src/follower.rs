@@ -121,7 +121,9 @@ impl Follower {
     /// `local.json` configures it.
     pub fn new() -> Self {
         Self {
-            state: testnet_initial_state::initial_state(false),
+            // LEZ's pre-genesis state; a zone with the cross-zone programs (`FERRATA_FOLLOWER_CROSS_ZONE=1`, for a
+            // network whose `getProgramIds` lists them: `lez/testnet04/day1.sh discover`) starts from that one.
+            state: testnet_initial_state::initial_state(std::env::var("FERRATA_FOLLOWER_CROSS_ZONE").as_deref() == Ok("1")),
             tip: None,
             blocks: Vec::new(),
             chain: Vec::new(),

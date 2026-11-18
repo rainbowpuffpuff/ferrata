@@ -107,6 +107,14 @@ pub fn instance_config(preset_name: &str, adoption_parts: u8, layout: Option<&st
 /// Only a sequencer on this machine (as the live driver's `check_loopback`): a LEZ wallet's default is a public
 /// network, and nothing here is meant for one.
 pub fn check_loopback(rpc: &str) -> Result<()> {
+    // The day-one deployment's exception (as the live driver's `check_loopback`): another sequencer only when the
+    // owner allowed sending (`FERRATA_TESTNET_SEND=yes`) and `FERRATA_SEQUENCER_REMOTE` names exactly this URL.
+    if std::env::var("FERRATA_TESTNET_SEND").as_deref() == Ok("yes")
+        && std::env::var("FERRATA_SEQUENCER_REMOTE").is_ok_and(|named| !named.is_empty() && named == rpc)
+        && (rpc.starts_with("http://") || rpc.starts_with("https://"))
+    {
+        return Ok(());
+    }
     let rest =
         rpc.strip_prefix("http://").ok_or_else(|| anyhow!("{rpc}: the RPC address must be http://127.0.0.1:PORT"))?;
     let host = rest.split([':', '/']).next().unwrap_or("");

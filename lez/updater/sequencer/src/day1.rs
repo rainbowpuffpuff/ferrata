@@ -1,0 +1,867 @@
+//! `ferrata-day1`: the transactions of the day-one deployment on a LEZ v0.4 network, signed once, kept, and sent
+//! again byte for byte (`lez/testnet04/day1.sh` drives it; `lez/testnet04/README.md`).
+//!
+//! Every transaction is built here as the updater's `SequencerLedger` builds its own (`ledger.rs`: actors, admission
+//! evidence, explicit nonces, a fee declaration with a declared gas limit and maximum fee, the signers' signatures) and
+//! written to `STATE/tx/<stage>/NN.tx` (the borsh `LeeTransaction`) with `NN.json` (its hash, signers and nonces,
+//! limits) **before** it is sent. A stage is signed once; `send` sends the stored bytes again until each is in a block,
+//! so a restart never builds a second transaction that could be applied beside the first: a stored transaction is
+//! re-signed only with the same nonces (both can never apply), never with new ones.
+//!
+//! Commands (`--rpc URL` everywhere; read-only unless named `send` or `fund`):
+//!
+//!   keygen   --keys DIR --bin PROGRAM.bin [--bridge-bin BRIDGE.bin]      fresh keys (mode 600), `accounts.json`
+//!   sign     --keys DIR --state DIR --stage deploy-program|deploy-bridge|init|attest [--bin F] [--fetch DIR] [--vault A]
+//!   send     --state DIR --stage S                                       send the stage's stored bytes, settle each
+//!   status   --state DIR --stage S                                       each stored transaction: applied / pending / dead
+//!   target   --keys DIR --state DIR                                      the instance's newest record: slot, block hash
+//!   inspect  --keys DIR --state DIR [--bin F] [--bridge-bin F]           balances, nonces, program, instance (JSON)
+//!   verify   --keys DIR --state DIR --bin F [--bridge-bin F]            re-read every verdict; exit 0 only if all match
+//!   fund     --keys DIR --amount N                                       rehearsal only: LEZ's published local test
+//!                                                                        account pays the payer and the daemon key
+//!
+//! Sending to anything but a sequencer on this machine needs `FERRATA_TESTNET_SEND=yes` and
+//! `FERRATA_SEQUENCER_REMOTE=<that exact URL>` (`live.rs`, `check_loopback`); the read-only commands read through
+//! the same client and never call `sendTransaction`.
+
+use std::{
+    collections::BTreeMap,
+    fs,
+    io::{Read as _, Write as _},
+    os::unix::fs::OpenOptionsExt as _,
+    path::{Path, PathBuf},
+    time::Instant,
+};
+
+use anyhow::{anyhow, bail, ensure, Context as _, Result};
+use common::transaction::LeeTransaction;
+use ferrata_core::{
+    steps,
+    types::{BeaconBlockHeader, LightClientBootstrap},
+    witness::{CompactBootstrap, CompactStore, ExecutionSummary, HeaderRecord},
+    Root,
+};
+use ferrata_lez_wire::{
+    attest, header_actor, header_seed, instance_actor, instance_id, instance_seed, job_actor, job_id, Config,
+    InstanceState, Message, RecordState,
+};
+use lee::{
+    public_transaction::{Message as PublicMessage, WitnessSet},
+    AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicKey, PublicTransaction,
+};
+use lee_core::{account::Nonce, program::PROGRAM_LOADER_ACCOUNT_ID};
+use program_loader_core::Message as LoaderMessage;
+use serde_json::{json, Value};
+
+use crate::{
+    live::{Live, Options},
+    programs::{image_id_hex, sha256_hex, GuestBinary},
+};
+
+/// Declared execution gas of a loader transaction (the wallet's default; the live driver deployed the final programs
+/// with it on rc1, rc2 and rc3).
+const LOADER_GAS: u64 = 2_000_000;
+/// Declared execution gas of `Init` (the updater's default for every step, `ferrata-updater.example.toml`).
+const INIT_GAS: u64 = 4_800_000;
+/// Declared execution gas of the attestation (a slot attestation measured 276,607: `lez/ATTEST-CLI.md`).
+const ATTEST_GAS: u64 = 2_000_000;
+/// The base fee each maximum fee is sized against, at least: the wallet's own assumption (8 times the genesis minimum,
+/// `lez/wallet/src/lib.rs` `ASSUMED_BASE_FEE`), or 8 times the fee state's when that is higher.
+const ASSUMED_BASE_FEE: u64 = 64;
+/// The chain the instance follows: Sepolia, the Gloas layout (as the updater's example and the crown run's instance).
+pub const PRESET: &str = "sepolia";
+pub const LAYOUT: &str = "gloas";
+pub const ADOPTION_PARTS: u8 = 2;
+const SEPOLIA_CHAIN_ID: u64 = 11_155_111;
+
+// ---- arguments ---------------------------------------------------------------------------------------------------
+
+struct Args {
+    cmd: String,
+    opts: BTreeMap<String, String>,
+}
+
+impl Args {
+    fn parse() -> Result<Self> {
+        let mut it = std::env::args().skip(1);
+        let cmd = it.next().ok_or_else(|| anyhow!("usage: ferrata-day1 COMMAND [--name value ...] (see src/day1.rs)"))?;
+        let mut opts = BTreeMap::new();
+        while let Some(a) = it.next() {
+            let k = a.strip_prefix("--").ok_or_else(|| anyhow!("unexpected argument {a}"))?;
+            let v = it.next().ok_or_else(|| anyhow!("--{k} needs a value"))?;
+            opts.insert(k.to_string(), v);
+        }
+        Ok(Self { cmd, opts })
+    }
+    fn get(&self, k: &str) -> Option<&str> {
+        self.opts.get(k).map(String::as_str)
+    }
+    fn need(&self, k: &str) -> Result<&str> {
+        self.get(k).ok_or_else(|| anyhow!("--{k} is required for {}", self.cmd))
+    }
+    fn path(&self, k: &str) -> Result<PathBuf> {
+        self.need(k).map(PathBuf::from)
+    }
+}
+
+// ---- keys ----------------------------------------------------------------------------------------------------------
+
+fn fresh_key() -> Result<PrivateKey> {
+    let mut f = fs::File::open("/dev/urandom").context("/dev/urandom")?;
+    loop {
+        let mut b = [0u8; 32];
+        f.read_exact(&mut b)?;
+        if let Ok(k) = PrivateKey::try_new(b) {
+            return Ok(k);
+        }
+    }
+}
+
+fn write_key(path: &Path, key: &PrivateKey) -> Result<()> {
+    if let Some(d) = path.parent() {
+        fs::create_dir_all(d)?;
+    }
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .with_context(|| format!("{}: exists already (keys are never overwritten)", path.display()))?;
+    writeln!(f, "{}", hex::encode(key.value()))?;
+    Ok(())
+}
+
+fn read_key(path: &Path) -> Result<PrivateKey> {
+    let text = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+    let bytes: [u8; 32] = hex::decode(text.trim())?.try_into().map_err(|_| anyhow!("{}: not 32 bytes", path.display()))?;
+    PrivateKey::try_new(bytes).map_err(|e| anyhow!("{}: not a key: {e}", path.display()))
+}
+
+fn id_of(key: &PrivateKey) -> AccountId {
+    AccountId::from(&PublicKey::new_from_private_key(key))
+}
+
+/// The keys of one deployment: the header's and one per segment.
+struct Deployment {
+    header: PrivateKey,
+    segments: Vec<PrivateKey>,
+}
+
+impl Deployment {
+    fn load(dir: &Path) -> Result<Self> {
+        let header = read_key(&dir.join("header.key"))?;
+        let mut segments = Vec::new();
+        while dir.join(format!("segment-{:02}.key", segments.len())).exists() {
+            segments.push(read_key(&dir.join(format!("segment-{:02}.key", segments.len())))?);
+        }
+        Ok(Self { header, segments })
+    }
+    fn program(&self) -> AccountId {
+        id_of(&self.header)
+    }
+    fn json(&self) -> Value {
+        json!({"header": self.program().to_string(),
+               "segments": self.segments.iter().map(|k| id_of(k).to_string()).collect::<Vec<_>>()})
+    }
+}
+
+fn keygen(a: &Args) -> Result<()> {
+    let dir = a.path("keys")?;
+    ensure!(!dir.join("payer.key").exists(), "{}: keys exist already; a new deployment needs a new directory", dir.display());
+    fs::create_dir_all(&dir)?;
+    fs::set_permissions(&dir, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
+    write_key(&dir.join("payer.key"), &fresh_key()?)?;
+    write_key(&dir.join("daemon.key"), &fresh_key()?)?;
+    for (name, opt) in [("program", "bin"), ("bridge", "bridge-bin")] {
+        let Some(bin) = a.get(opt) else { continue };
+        let binary = GuestBinary::load(name, Path::new(bin))?;
+        write_key(&dir.join(name).join("header.key"), &fresh_key()?)?;
+        for i in 0..binary.chunks().len() {
+            write_key(&dir.join(name).join(format!("segment-{i:02}.key")), &fresh_key()?)?;
+        }
+    }
+    let accounts = accounts_json(&dir)?;
+    fs::write(dir.join("accounts.json"), serde_json::to_string_pretty(&accounts)? + "\n")?;
+    println!("{}", serde_json::to_string_pretty(&accounts)?);
+    Ok(())
+}
+
+fn accounts_json(dir: &Path) -> Result<Value> {
+    let mut v = json!({
+        "payer": id_of(&read_key(&dir.join("payer.key"))?).to_string(),
+        "payer_public_key": hex::encode(PublicKey::new_from_private_key(&read_key(&dir.join("payer.key"))?).value()),
+        "daemon": id_of(&read_key(&dir.join("daemon.key"))?).to_string(),
+        "daemon_public_key": hex::encode(PublicKey::new_from_private_key(&read_key(&dir.join("daemon.key"))?).value()),
+    });
+    for name in ["program", "bridge"] {
+        if dir.join(name).join("header.key").exists() {
+            v[name] = Deployment::load(&dir.join(name))?.json();
+        }
+    }
+    Ok(v)
+}
+
+// ---- the stored transactions ---------------------------------------------------------------------------------------
+
+/// What `NN.json` holds beside `NN.tx`.
+fn tx_meta(label: &str, tx: &LeeTransaction, signers: &[(AccountId, u128)], gas_limit: u64, max_fee: u128) -> Value {
+    json!({
+        "label": label,
+        "hash": tx.hash().to_string(),
+        "bytes": borsh::to_vec(tx).map(|b| b.len()).unwrap_or(0),
+        "signers": signers.iter().map(|(a, n)| json!({"account": a.to_string(), "nonce": n.to_string()})).collect::<Vec<_>>(),
+        "gas_limit": gas_limit,
+        "max_fee": max_fee.to_string(),
+        "signed_utc": crate::utc(),
+    })
+}
+
+fn stage_dir(state: &Path, stage: &str) -> PathBuf {
+    state.join("tx").join(stage)
+}
+
+/// The stage's stored transactions, in order: (index, bytes, meta).
+fn stored(state: &Path, stage: &str) -> Result<Vec<(usize, LeeTransaction, Value)>> {
+    let dir = stage_dir(state, stage);
+    let mut out = Vec::new();
+    for i in 0.. {
+        let tx_path = dir.join(format!("{i:02}.tx"));
+        if !tx_path.exists() {
+            break;
+        }
+        let tx: LeeTransaction = borsh::from_slice(&fs::read(&tx_path)?)?;
+        let meta: Value = serde_json::from_str(&fs::read_to_string(dir.join(format!("{i:02}.json")))?)?;
+        ensure!(meta["hash"].as_str() == Some(tx.hash().to_string().as_str()), "{}: hash mismatch", tx_path.display());
+        out.push((i, tx, meta));
+    }
+    Ok(out)
+}
+
+/// Write the stage's transactions, all or nothing (a `.part` directory renamed at the end).
+fn store_stage(state: &Path, stage: &str, txs: &[(LeeTransaction, Value)]) -> Result<()> {
+    let dir = stage_dir(state, stage);
+    ensure!(!dir.exists(), "{}: the stage is signed already (its bytes are sent again by `send`)", dir.display());
+    let part = dir.with_extension("part");
+    let _ = fs::remove_dir_all(&part);
+    fs::create_dir_all(&part)?;
+    for (i, (tx, meta)) in txs.iter().enumerate() {
+        fs::write(part.join(format!("{i:02}.tx")), borsh::to_vec(tx)?)?;
+        fs::write(part.join(format!("{i:02}.json")), serde_json::to_string_pretty(meta)? + "\n")?;
+    }
+    fs::rename(&part, &dir)?;
+    Ok(())
+}
+
+fn public_tx(
+    root: Actor,
+    message: Vec<u8>,
+    actors: Vec<Actor>,
+    evidence: Vec<PublicAccountEvidence>,
+    signers: &[(&PrivateKey, u128)],
+    payer: &PrivateKey,
+    gas_limit: u64,
+    max_fee: u128,
+) -> (LeeTransaction, Vec<(AccountId, u128)>) {
+    let nonces: BTreeMap<AccountId, Nonce> = signers.iter().map(|(k, n)| (id_of(k), Nonce(*n))).collect();
+    let msg = PublicMessage::new(root, message, actors, nonces, Some(FeeDeclaration::new(id_of(payer), gas_limit, 0, max_fee)), evidence);
+    let keys: Vec<&PrivateKey> = signers.iter().map(|(k, _)| *k).collect();
+    let ws = WitnessSet::for_message(&msg, &keys);
+    let tx = LeeTransaction::Public(PublicTransaction::new(msg, ws));
+    (tx, signers.iter().map(|(k, n)| (id_of(k), *n)).collect())
+}
+
+/// The maximum fee of a transaction: its declared gas and its bytes at the larger of the wallet's assumed base fee
+/// and 8 times the fee state's.
+fn max_fee(gas_limit: u64, bytes: usize, quote: (u64, u64)) -> u128 {
+    let exec = ASSUMED_BASE_FEE.max(quote.0.saturating_mul(8));
+    let stor = ASSUMED_BASE_FEE.max(quote.1.saturating_mul(8));
+    u128::from(gas_limit) * u128::from(exec) + (bytes as u128 + 2_048) * u128::from(stor)
+}
+
+// ---- the connection ------------------------------------------------------------------------------------------------
+
+async fn connect(a: &Args, state: &Path) -> Result<Live> {
+    let run_dir = state.join("ledger");
+    let opts = Options {
+        rpc: a.need("rpc")?.to_string(),
+        out_dir: run_dir.clone(),
+        run_dir,
+        harness_results: PathBuf::from("/nonexistent"),
+        sequencer_log: a.get("sequencer-log").map(PathBuf::from),
+        gas_limit: INIT_GAS,
+        wait_final: a.get("wait-final") != Some("no"),
+    };
+    let mut live = Live::open(opts, &[]).await?;
+    live.phase = "day1".into();
+    Ok(live)
+}
+
+async fn nonce_of(live: &Live, account: AccountId) -> Result<u128> {
+    Ok(live.wallet.get_accounts_nonces(&[account]).await?.first().ok_or_else(|| anyhow!("no nonce served"))?.0)
+}
+
+async fn quote(live: &Live) -> Result<(u64, u64)> {
+    use wallet::WalletSequencerClient as _;
+    let q = live.wallet.client().get_fee_state().await?;
+    Ok((q.base_fee_exec, q.base_fee_stor))
+}
+
+// ---- stage: deploy --------------------------------------------------------------------------------------------------
+
+/// `WriteSegment` for every chunk of the user ELF, last first (each links to the next, which must exist), then
+/// `CreateHeader` (immutable); the payer co-signs each with consecutive nonces, each segment's own fresh key signs its
+/// write (LEZ v0.4's loader: the target must be authorized, `program_loader/core/src/lib.rs`).
+fn sign_deploy(payer: &PrivateKey, payer_nonce: u128, d: &Deployment, binary: &GuestBinary, quote: (u64, u64)) -> Result<Vec<(LeeTransaction, Value)>> {
+    let chunks = binary.chunks();
+    ensure!(chunks.len() == d.segments.len(), "{}: {} chunks, {} segment keys", binary.name, chunks.len(), d.segments.len());
+    let seg_ids: Vec<AccountId> = d.segments.iter().map(id_of).collect();
+    let mut out = Vec::new();
+    let mut n = payer_nonce;
+    for i in (0..chunks.len()).rev() {
+        let msg = LoaderMessage::WriteSegment { bytecode: chunks[i].to_vec(), next_segment: seg_ids.get(i + 1).copied() };
+        let actor = Actor::new(seg_ids[i], PROGRAM_LOADER_ACCOUNT_ID);
+        let bytes_guess = chunks[i].len() + 512;
+        let fee = max_fee(LOADER_GAS, bytes_guess, quote);
+        let (tx, signers) = public_tx(actor, borsh::to_vec(&msg)?, vec![actor], vec![], &[(&d.segments[i], 0), (payer, n)], payer, LOADER_GAS, fee);
+        let label = format!("deploy {}: WriteSegment {} of {} ({} bytes)", binary.name, i + 1, chunks.len(), chunks[i].len());
+        out.push((tx.clone(), tx_meta(&label, &tx, &signers, LOADER_GAS, fee)));
+        n += 1;
+    }
+    let msg = LoaderMessage::CreateHeader { first_segment: seg_ids[0], immutable: true };
+    let actor = Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID);
+    let fee = max_fee(LOADER_GAS, 1_024, quote);
+    let (tx, signers) = public_tx(actor, borsh::to_vec(&msg)?, vec![actor], vec![], &[(&d.header, 0), (payer, n)], payer, LOADER_GAS, fee);
+    let label = format!("deploy {}: CreateHeader (immutable) at {}", binary.name, d.program());
+    out.push((tx.clone(), tx_meta(&label, &tx, &signers, LOADER_GAS, fee)));
+    Ok(out)
+}
+
+// ---- stage: init ----------------------------------------------------------------------------------------------------
+
+/// The instance's configuration and checkpoint, from `FETCH/chain.json` (written by `lez-v03/scripts/fetch.py
+/// checkpoint`: Lodestar's bootstrap, its root checked against publicnode's header at the same slot).
+fn instance_of(fetch: &Path) -> Result<(Config, Root, Vec<u8>, u64)> {
+    let chain: Value = serde_json::from_str(&fs::read_to_string(fetch.join("chain.json"))?)?;
+    ensure!(chain["layout"].as_str() == Some(LAYOUT), "chain.json: layout {} (expected {LAYOUT})", chain["layout"]);
+    let checkpoint = ferrata_updater::chain::root(chain["checkpoint"].as_str().ok_or_else(|| anyhow!("chain.json: no checkpoint"))?)?;
+    let slot = chain["bootstrap_slot"].as_u64().ok_or_else(|| anyhow!("chain.json: no bootstrap_slot"))?;
+    let config = ferrata_updater::chain::instance_config(PRESET, ADOPTION_PARTS, Some(LAYOUT))?;
+    let bootstrap = fs::read(fetch.join("bootstrap.ssz"))?;
+    Ok((config, checkpoint, bootstrap, slot))
+}
+
+fn sign_init(payer: &PrivateKey, n: u128, program: AccountId, fetch: &Path, quote: (u64, u64)) -> Result<(Vec<(LeeTransaction, Value)>, Value)> {
+    let (config, checkpoint, bytes, slot) = instance_of(fetch)?;
+    let fork = config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
+    let b = LightClientBootstrap::decode(&bytes, fork, config.sync_committee_size as usize)
+        .map_err(|e| anyhow!("bootstrap.ssz does not decode: {e:?}"))?;
+    ensure!(b.header.beacon.slot == slot, "bootstrap.ssz is not chain.json's slot");
+    let compact = CompactBootstrap::of(&b);
+    // The program's own `Init` checks, natively: the bootstrap's header is the checkpoint, its committee branch holds.
+    let (store, job) = steps::initialize(&checkpoint, &compact, fork, &config.spec(), config.adoption_parts)
+        .map_err(|e| anyhow!("the program's Init checks refuse this bootstrap: {e:?}"))?;
+    // The weak-subjectivity bound: every transaction that creates or extends the instance is valid only before the
+    // period of its finalized header ends (`Config::ws_end_ms`, by the sequencer's clock). Refuse a checkpoint within a
+    // day of that end.
+    let ws_end_ms = config.ws_end_ms(store.finalized.slot).ok_or_else(|| anyhow!("no weak-subjectivity end"))?;
+    let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis() as u64;
+    ensure!(ws_end_ms > now_ms + 86_400_000, "the checkpoint's weak-subjectivity period ends within a day ({ws_end_ms} ms): fetch a fresh one");
+    let id = instance_id(&config, &checkpoint);
+    let jid = job_id(&id, &job.store_digest, &job.update_digest);
+    let root = instance_actor(program, &id);
+    let message = borsh::to_vec(&Message::Init { config: config.clone(), checkpoint, bootstrap: compact.encode(fork) })?;
+    let bytes_guess = message.len() + 512;
+    let fee = max_fee(INIT_GAS, bytes_guess, quote);
+    let (tx, signers) = public_tx(
+        root,
+        message,
+        vec![root, job_actor(program, &id, &jid)],
+        vec![PublicAccountEvidence::Pda { program, seed: instance_seed(&id) }],
+        &[(payer, n)],
+        payer,
+        INIT_GAS,
+        fee,
+    );
+    let info = json!({
+        "instance_id": hex::encode(id), "checkpoint": hex::encode(checkpoint), "checkpoint_slot": slot,
+        "preset": PRESET, "layout": LAYOUT, "adoption_parts": ADOPTION_PARTS, "chain_id": config.chain_id,
+        "ws_period_epochs": config.ws_period_epochs, "ws_end_ms": ws_end_ms, "program": program.to_string(),
+        "init_job_id": hex::encode(jid),
+    });
+    Ok((vec![(tx.clone(), tx_meta("Init (Sepolia, Gloas layout)", &tx, &signers, INIT_GAS, fee))], info))
+}
+
+// ---- stage: attest --------------------------------------------------------------------------------------------------
+
+async fn instance_state(live: &Live, program: AccountId, id: &Root) -> Result<Option<InstanceState>> {
+    let bytes = live.actor_state(instance_actor(program, id)).await?;
+    if bytes.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(borsh::from_slice(&bytes)?))
+}
+
+fn block_hash_of(r: &HeaderRecord) -> Result<Root> {
+    match &r.execution {
+        ExecutionSummary::BlockHash(h) => Ok(*h),
+        ExecutionSummary::Payload { block_hash, .. } => Ok(*block_hash),
+        ExecutionSummary::None => bail!("the record has no execution block"),
+    }
+}
+
+fn header_ssz(h: &BeaconBlockHeader) -> Vec<u8> {
+    let mut v = Vec::with_capacity(112);
+    v.extend_from_slice(&h.slot.to_le_bytes());
+    v.extend_from_slice(&h.proposer_index.to_le_bytes());
+    v.extend_from_slice(&h.parent_root);
+    v.extend_from_slice(&h.state_root);
+    v.extend_from_slice(&h.body_root);
+    v
+}
+
+/// The instance's newest record: `header(id, finalized slot)`.
+async fn newest_record(live: &Live, program: AccountId, id: &Root) -> Result<(u64, HeaderRecord, InstanceState)> {
+    let state = instance_state(live, program, id).await?.ok_or_else(|| anyhow!("no instance {} yet", hex::encode(id)))?;
+    ensure!(state.active, "the instance is not active yet (its committee adoption is pending)");
+    let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
+    let slot = store.finalized.slot;
+    let bytes = live.actor_state(header_actor(program, id, slot)).await?;
+    ensure!(!bytes.is_empty(), "no record at header({}, {slot})", hex::encode(id));
+    let rec: RecordState = borsh::from_slice(&bytes)?;
+    let hr = rec.header().map_err(|c| anyhow!("record does not decode ({c})"))?;
+    Ok((slot, hr, state))
+}
+
+fn unhex(v: &Value, what: &str) -> Result<Vec<u8>> {
+    let s = v.as_str().ok_or_else(|| anyhow!("{what}: not a string"))?;
+    hex::decode(s.trim_start_matches("0x")).with_context(|| format!("{what}: not hex"))
+}
+
+fn word(v: &Value, what: &str) -> Result<[u8; 32]> {
+    let s = v.as_str().ok_or_else(|| anyhow!("{what}: not a string"))?.trim_start_matches("0x");
+    let s = if s.len() % 2 == 1 { format!("0{s}") } else { s.to_string() };
+    let b = hex::decode(&s)?;
+    ensure!(b.len() <= 32, "{what}: longer than a word");
+    let mut w = [0u8; 32];
+    w[32 - b.len()..].copy_from_slice(&b);
+    Ok(w)
+}
+
+fn nodes(v: &Value, what: &str) -> Result<Vec<Vec<u8>>> {
+    v.as_array().ok_or_else(|| anyhow!("{what}: not a list"))?.iter().map(|n| unhex(n, what)).collect()
+}
+
+/// The request: the vault's account and its slots, under the record, from `eth_getProof` at the record's block
+/// (`FETCH/proofs/<slot>/proof.json`) and the block's RLP header (`header.rlp`, rebuilt and checked by fetch.py).
+fn attest_request(id: &Root, dir: &Path) -> Result<(attest::Request, Value)> {
+    let proof: Value = serde_json::from_str(&fs::read_to_string(dir.join("proof.json"))?)?;
+    let p = if proof.get("result").is_some() { &proof["result"] } else { &proof };
+    let address: [u8; 20] = unhex(&p["address"], "address")?.try_into().map_err(|_| anyhow!("address: not 20 bytes"))?;
+    let mut slots = Vec::new();
+    let mut values = Vec::new();
+    for e in p["storageProof"].as_array().ok_or_else(|| anyhow!("no storageProof"))? {
+        slots.push(attest::SlotQuery { slot: word(&e["key"], "key")?, proof: nodes(&e["proof"], "storage proof")?, conditions: vec![] });
+        values.push(json!({"slot": e["key"], "value": e["value"]}));
+    }
+    let request = attest::Request {
+        instance_id: *id,
+        chain_id: SEPOLIA_CHAIN_ID,
+        header: Some(fs::read(dir.join("header.rlp"))?),
+        hops: vec![],
+        accounts: vec![attest::AccountQuery { address, proof: nodes(&p["accountProof"], "account proof")?, conditions: vec![], slots }],
+        logs: vec![],
+        leaves: vec![],
+        relations: vec![],
+    };
+    Ok((request, json!({"address": p["address"], "slots": values, "balance": p["balance"], "nonce": p["nonce"],
+                         "storage_hash": p["storageHash"], "code_hash": p["codeHash"]})))
+}
+
+fn attestation_json(at: &attest::Attestation) -> Value {
+    let statements: Vec<Value> = at
+        .statements
+        .iter()
+        .map(|s| {
+            let fact = match &s.fact {
+                attest::Fact::Account { address, nonce, balance, storage_root, code_hash } => json!({"account": format!("0x{}", hex::encode(address)),
+                    "nonce": nonce, "balance": format!("0x{}", hex::encode(balance)), "storage_root": format!("0x{}", hex::encode(storage_root)),
+                    "code_hash": format!("0x{}", hex::encode(code_hash))}),
+                attest::Fact::Storage { address, slot, value } => json!({"storage": format!("0x{}", hex::encode(address)),
+                    "slot": format!("0x{}", hex::encode(slot)), "value": format!("0x{}", hex::encode(value))}),
+                other => json!({"other": format!("{other:?}")}),
+            };
+            json!({"id": format!("0x{}", hex::encode(s.id)), "fact": fact})
+        })
+        .collect();
+    json!({"instance_id": hex::encode(at.instance_id), "chain_id": at.chain_id, "slot": at.slot, "block_number": at.block_number,
+           "block_hash": format!("0x{}", hex::encode(at.block_hash)), "hops": at.hops, "statements": statements,
+           "event_data": hex::encode(at.event_data())})
+}
+
+// ---- sending -----------------------------------------------------------------------------------------------------
+
+/// A stored transaction's state on the chain: in a block (applied or reverted), still applicable (every signer's nonce
+/// not yet used: its bytes are sent again), or dead (a signer's nonce used by another transaction: these bytes can
+/// never apply).
+async fn tx_state(live: &Live, tx: &LeeTransaction, meta: &Value) -> Result<(&'static str, Option<u64>)> {
+    if let Some((_, block)) = live.wallet.get_transaction(tx.hash()).await? {
+        return Ok(("in-block", Some(block)));
+    }
+    for s in meta["signers"].as_array().into_iter().flatten() {
+        let account: AccountId = s["account"].as_str().unwrap_or_default().parse().map_err(|e| anyhow!("{e:?}"))?;
+        let nonce: u128 = s["nonce"].as_str().unwrap_or("0").parse()?;
+        if nonce_of(live, account).await? > nonce {
+            return Ok(("dead", None));
+        }
+    }
+    Ok(("pending", None))
+}
+
+async fn send_stage(live: &mut Live, state: &Path, stage: &str) -> Result<bool> {
+    use wallet::WalletSequencerClient as _;
+    let txs = stored(state, stage)?;
+    ensure!(!txs.is_empty(), "stage {stage}: nothing signed (run `sign` first)");
+    let mut all_applied = true;
+    for (i, tx, meta) in txs {
+        let result_path = stage_dir(state, stage).join(format!("{i:02}.result.json"));
+        if result_path.exists() {
+            let r: Value = serde_json::from_str(&fs::read_to_string(&result_path)?)?;
+            println!("[{stage}] {i:02} {}: {} in block {} (recorded)", meta["label"].as_str().unwrap_or(""), r["status"], r["block"]);
+            all_applied &= r["status"] == "applied";
+            continue;
+        }
+        let label = meta["label"].as_str().unwrap_or("").to_string();
+        let mut attempts = 0;
+        loop {
+            let (st, block) = tx_state(live, &tx, &meta).await?;
+            match st {
+                "dead" => bail!("[{stage}] {i:02} {label}: dead (a signer's nonce was used by another transaction; it never applied). Stop: decide by hand (`status`)"),
+                "pending" => {
+                    attempts += 1;
+                    ensure!(attempts <= 6, "[{stage}] {i:02} {label}: sent {attempts} times, never included");
+                    let since_head = live.head().await?;
+                    match live.wallet.client().send_transaction(tx.clone()).await {
+                        Ok(h) => ensure!(h == tx.hash(), "the sequencer returned another hash"),
+                        Err(e) => println!("[{stage}] {i:02} {label}: the sequencer answered {e} (attempt {attempts}); waiting"),
+                    }
+                    let (included, seen) = live.wait_settled(tx.hash(), since_head).await?;
+                    if included.is_none() {
+                        println!("[{stage}] {i:02} {label}: not included within {} blocks; the same bytes again", crate::live::drop_after_blocks());
+                        continue;
+                    }
+                    if seen.len() > 1 {
+                        println!("[{stage}] {i:02} {label}: included again after a rewind (blocks {seen:?})");
+                    }
+                }
+                _ => {
+                    // In a block: wait until the follower holds it (final on Bedrock).
+                    let head = live.head().await?;
+                    live.wait_settled(tx.hash(), head).await?;
+                    let _ = block;
+                }
+            }
+            let receipt = live.follower.receipt(&tx.hash()).cloned().ok_or_else(|| anyhow!("no receipt after settling"))?;
+            let r = json!({"hash": tx.hash().to_string(), "block": receipt.block_id, "status": receipt.status(),
+                           "exit_code": receipt.exit_code, "reason": receipt.reason, "gas_exec": receipt.gas_exec,
+                           "gas_stor": receipt.gas_stor, "fee_base": receipt.fee_base, "events": receipt.events,
+                           "tx_bytes": receipt.tx_bytes, "settled_utc": crate::utc()});
+            fs::write(&result_path, serde_json::to_string_pretty(&r)? + "\n")?;
+            println!("[{stage}] {i:02} {label}: {} in block {} (exec gas {}, storage gas {}, fee {})", r["status"], r["block"], r["gas_exec"], r["gas_stor"], r["fee_base"]);
+            all_applied &= receipt.status() == "applied";
+            live.save()?;
+            break;
+        }
+    }
+    Ok(all_applied)
+}
+
+/// A segment's loader actor state: tagged from LEZ v0.4.0-rc2 on (#943), untagged on rc1 (as `programs.rs`).
+#[cfg(feature = "lez-rc2")]
+fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
+    program_loader_core::ProgramSegment::from_loader_actor_state(s)
+}
+#[cfg(not(feature = "lez-rc2"))]
+fn segment_of(s: &[u8]) -> Option<program_loader_core::ProgramSegment> {
+    program_loader_core::ProgramSegment::from_bytes(s)
+}
+
+// ---- commands --------------------------------------------------------------------------------------------------
+
+async fn cmd_sign(a: &Args) -> Result<()> {
+    let keys = a.path("keys")?;
+    let state = a.path("state")?;
+    let stage = a.need("stage")?;
+    let payer = read_key(&keys.join("payer.key"))?;
+    let live = connect(a, &state).await?;
+    let q = quote(&live).await?;
+    let n = nonce_of(&live, id_of(&payer)).await?;
+    let (txs, info) = match stage {
+        "deploy-program" | "deploy-bridge" => {
+            let name = if stage == "deploy-program" { "program" } else { "bridge" };
+            let d = Deployment::load(&keys.join(name))?;
+            let binary = GuestBinary::load(name, &a.path("bin")?)?;
+            (sign_deploy(&payer, n, &d, &binary, q)?, json!({"program": d.program().to_string(), "image_id": binary.image_hex(), "sha256": binary.sha256()}))
+        }
+        "init" => {
+            let d = Deployment::load(&keys.join("program"))?;
+            sign_init(&payer, n, d.program(), &a.path("fetch")?, q)?
+        }
+        "attest" => {
+            let d = Deployment::load(&keys.join("program"))?;
+            let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+            let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
+            let (slot, hr, _) = newest_record(&live, d.program(), &id).await?;
+            let dir = a.path("fetch")?.join("proofs").join(slot.to_string());
+            ensure!(dir.join("proof.json").exists(), "no proofs for slot {slot} in {} (fetch them first)", dir.display());
+            let (request, sources) = attest_request(&id, &dir)?;
+            // The verdict, natively: the function the program runs (ferrata_lez_wire::attest::evaluate) on the record
+            // the zone holds.
+            let verdict = attest::evaluate(&id, SEPOLIA_CHAIN_ID, &hr, &request).map_err(|c| anyhow!("the program would refuse with code {c}"))?;
+            let root = header_actor(d.program(), &id, slot);
+            let message = borsh::to_vec(&Message::Attest { request })?;
+            let fee = max_fee(ATTEST_GAS, message.len() + 512, q);
+            let (tx, signers) = public_tx(root, message, vec![root], vec![PublicAccountEvidence::Pda { program: d.program(), seed: header_seed(&id, slot) }], &[(&payer, n)], &payer, ATTEST_GAS, fee);
+            let info = json!({"record_slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "verdict": attestation_json(&verdict), "eth_getProof": sources});
+            (vec![(tx.clone(), tx_meta(&format!("Attest: the vault's slots 0 and 1 under header({}, {slot})", &hex::encode(id)[..8]), &tx, &signers, ATTEST_GAS, fee))], info)
+        }
+        other => bail!("unknown stage {other}"),
+    };
+    store_stage(&state, stage, &txs)?;
+    fs::write(stage_dir(&state, stage).join("stage.json"), serde_json::to_string_pretty(&json!({"stage": stage, "payer": id_of(&payer).to_string(),
+        "first_nonce": n.to_string(), "fee_state": [q.0, q.1], "info": info}))? + "\n")?;
+    if stage == "init" {
+        fs::write(state.join("instance.json"), serde_json::to_string_pretty(&info)? + "\n")?;
+    }
+    let mut reserve: u128 = 0;
+    let mut expected: u128 = 0;
+    for (tx, meta) in &txs {
+        let bytes = borsh::to_vec(tx)?.len() as u128;
+        let mf: u128 = meta["max_fee"].as_str().unwrap_or("0").parse()?;
+        reserve = reserve.max(mf);
+        expected += u128::from(meta["gas_limit"].as_u64().unwrap_or(0)) * u128::from(q.0) + bytes * u128::from(q.1);
+        println!("{} {:>8} B gas limit {:>9} max fee {:>14} {}", meta["hash"].as_str().unwrap_or(""), bytes, meta["gas_limit"], mf, meta["label"].as_str().unwrap_or(""));
+    }
+    println!("stage {stage}: {} transactions signed for payer {} from nonce {n}; at the current base fees ({}, {}) at most {expected} if every one used its whole gas limit; the largest reserve {reserve}", txs.len(), id_of(&payer), q.0, q.1);
+    Ok(())
+}
+
+async fn cmd_send(a: &Args) -> Result<()> {
+    let state = a.path("state")?;
+    let stage = a.need("stage")?;
+    let mut live = connect(a, &state).await?;
+    let t0 = Instant::now();
+    let ok = send_stage(&mut live, &state, stage).await?;
+    live.save()?;
+    println!("stage {stage}: {} in {:.1} s", if ok { "every transaction applied" } else { "NOT every transaction applied" }, t0.elapsed().as_secs_f64());
+    ensure!(ok, "stage {stage}: a transaction was not applied");
+    Ok(())
+}
+
+async fn cmd_status(a: &Args) -> Result<()> {
+    let state = a.path("state")?;
+    let stage = a.need("stage")?;
+    let live = connect(a, &state).await?;
+    for (i, tx, meta) in stored(&state, stage)? {
+        let (st, block) = tx_state(&live, &tx, &meta).await?;
+        println!("{i:02} {} {st}{} {}", tx.hash(), block.map(|b| format!(" (block {b})")).unwrap_or_default(), meta["label"].as_str().unwrap_or(""));
+    }
+    Ok(())
+}
+
+async fn cmd_target(a: &Args) -> Result<()> {
+    let keys = a.path("keys")?;
+    let state = a.path("state")?;
+    let d = Deployment::load(&keys.join("program"))?;
+    let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+    let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
+    let live = connect(a, &state).await?;
+    let (slot, hr, st) = newest_record(&live, d.program(), &id).await?;
+    println!("{}", json!({"slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "applied": st.applied}));
+    Ok(())
+}
+
+/// Everything `verify` and `run` read: balances, nonces, the deployments' headers and segments, the instance.
+async fn inspect(a: &Args, live: &Live) -> Result<Value> {
+    let keys = a.path("keys")?;
+    let state = a.path("state")?;
+    let mut v = json!({"rpc": a.need("rpc")?, "head": live.head().await?, "followed": live.follower.height(), "read_utc": crate::utc()});
+    for who in ["payer", "daemon"] {
+        let id = id_of(&read_key(&keys.join(format!("{who}.key")))?);
+        v[who] = json!({"account": id.to_string(), "balance": live.balance(id).await?.to_string(), "nonce": nonce_of(live, id).await?.to_string()});
+    }
+    for (name, opt) in [("program", "bin"), ("bridge", "bridge-bin")] {
+        if !keys.join(name).join("header.key").exists() {
+            continue;
+        }
+        let d = Deployment::load(&keys.join(name))?;
+        let header_state = live.actor_state(Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID)).await?;
+        let header = crate::programs::program_header(&header_state);
+        let mut segs = Vec::new();
+        for k in &d.segments {
+            let s = live.actor_state(Actor::new(id_of(k), PROGRAM_LOADER_ACCOUNT_ID)).await?;
+            segs.push(match segment_of(&s) {
+                Some(seg) => json!({"account": id_of(k).to_string(), "bytes": seg.bytecode.len(), "sha256": sha256_hex(&seg.bytecode),
+                                    "next": seg.next_segment.map(|n| n.to_string())}),
+                None => json!({"account": id_of(k).to_string(), "empty": s.is_empty()}),
+            });
+        }
+        let mut entry = json!({"header": d.program().to_string(), "segments": segs,
+            "deployed": header.as_ref().map(|h| json!({"image_id": image_id_hex(h.image_id), "immutable": h.immutable, "first_segment": h.program_first_segment.to_string()}))});
+        if let Some(bin) = a.get(opt) {
+            let binary = GuestBinary::load(name, Path::new(bin))?;
+            let expected: Vec<String> = binary.chunks().iter().map(|c| sha256_hex(c)).collect();
+            let matches = header.as_ref().is_some_and(|h| h.image_id == binary.image_id && h.immutable)
+                && segs.iter().zip(&expected).all(|(s, e)| s["sha256"].as_str() == Some(e.as_str()))
+                && segs.len() == expected.len();
+            entry["binary"] = json!({"image_id": binary.image_hex(), "sha256": binary.sha256(), "chunks": expected.len(), "on_chain_equal": matches});
+        }
+        v[name] = entry;
+    }
+    if state.join("instance.json").exists() {
+        let inst: Value = serde_json::from_str(&fs::read_to_string(state.join("instance.json"))?)?;
+        let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
+        let program: AccountId = inst["program"].as_str().unwrap_or_default().parse().map_err(|e| anyhow!("{e:?}"))?;
+        v["instance"] = match instance_state(live, program, &id).await? {
+            None => json!({"id": hex::encode(id), "exists": false}),
+            Some(s) => {
+                let store = CompactStore::decode(&s.store).map_err(|e| anyhow!("store: {e:?}"))?;
+                let config_ok = s.config == ferrata_updater::chain::instance_config(PRESET, ADOPTION_PARTS, Some(LAYOUT))?;
+                json!({"id": hex::encode(id), "exists": true, "id_matches": s.id == id, "config_matches": config_ok, "active": s.active,
+                       "applied": s.applied, "finalized_slot": store.finalized.slot, "finalized_header_ssz": hex::encode(header_ssz(&store.finalized)),
+                       "root_id": hex::encode(s.root_id)})
+            }
+        };
+    }
+    Ok(v)
+}
+
+async fn cmd_inspect(a: &Args) -> Result<()> {
+    let live = connect(a, &a.path("state")?).await?;
+    println!("{}", serde_json::to_string_pretty(&inspect(a, &live).await?)?);
+    Ok(())
+}
+
+/// Re-read every verdict from the endpoint and compare it with what the run recorded: exit 0 only if all match.
+async fn cmd_verify(a: &Args) -> Result<()> {
+    let state = a.path("state")?;
+    let mut live = connect(a, &state).await?;
+    live.sync().await?;
+    let v = inspect(a, &live).await?;
+    let mut checks: Vec<(String, bool, String)> = Vec::new();
+    let mut check = |name: &str, ok: bool, detail: String| checks.push((name.to_string(), ok, detail));
+    check("program deployed byte for byte (image id, every segment, immutable)", v["program"]["binary"]["on_chain_equal"] == true,
+          format!("{} at {}", v["program"]["deployed"]["image_id"], v["program"]["header"]));
+    if a.get("bridge-bin").is_some() {
+        check("bridge deployed byte for byte", v["bridge"]["binary"]["on_chain_equal"] == true, format!("{}", v["bridge"]["deployed"]["image_id"]));
+    }
+    for stage in ["deploy-program", "deploy-bridge", "init", "attest"] {
+        let Ok(txs) = stored(&state, stage) else { continue };
+        for (i, tx, meta) in txs {
+            let recorded: Option<Value> = fs::read_to_string(stage_dir(&state, stage).join(format!("{i:02}.result.json"))).ok().and_then(|t| serde_json::from_str(&t).ok());
+            let served = live.wallet.get_transaction(tx.hash()).await?.map(|(_, b)| b);
+            let receipt = live.follower.receipt(&tx.hash()).cloned();
+            let ok = match (&recorded, served, &receipt) {
+                (Some(r), Some(b), Some(rc)) => r["block"] == json!(b) && rc.block_id == b && r["status"] == json!(rc.status()) && rc.status() == "applied",
+                _ => false,
+            };
+            check(&format!("{stage} {i:02} {}", meta["label"].as_str().unwrap_or("")), ok,
+                  format!("{} block {:?}, now {}", tx.hash(), served, receipt.as_ref().map(|r| r.status()).unwrap_or("not followed")));
+        }
+    }
+    if v["instance"].is_object() {
+        let i = &v["instance"];
+        check("instance exists with the recorded id and configuration", i["exists"] == true && i["id_matches"] == true && i["config_matches"] == true, format!("{}", i["id"]));
+        check("instance active (committee adopted)", i["active"] == true, format!("applied {}", i["applied"]));
+        let min_applied = a.get("min-applied").and_then(|s| s.parse::<u64>().ok()).unwrap_or(1);
+        check(&format!("instance applied at least {min_applied} jobs (the daemon follows Sepolia)"), i["applied"].as_u64().unwrap_or(0) >= min_applied, format!("applied {}, finalized slot {}", i["applied"], i["finalized_slot"]));
+    }
+    // The attestation: the settled transaction emitted its event, and its verdict (the program's function on the
+    // record) holds the values eth_getProof served for the vault's slots at that block.
+    if let Ok(stage) = fs::read_to_string(stage_dir(&state, "attest").join("stage.json")) {
+        let s: Value = serde_json::from_str(&stage)?;
+        let verdict = &s["info"]["verdict"];
+        let got: Vec<&Value> = verdict["statements"].as_array().into_iter().flatten().filter_map(|st| st["fact"].get("value")).collect();
+        let want: Vec<String> = s["info"]["eth_getProof"]["slots"].as_array().into_iter().flatten()
+            .map(|e| format!("0x{}", hex::encode(word(&e["value"], "value").unwrap_or([0; 32])))).collect();
+        let values_ok = got.len() == want.len() && got.iter().zip(&want).all(|(g, w)| g.as_str() == Some(w.as_str()));
+        let events_ok = stored(&state, "attest").ok().and_then(|t| t.first().map(|(_, tx, _)| tx.hash())).and_then(|h| live.follower.receipt(&h).cloned()).is_some_and(|r| r.events >= 1 && r.exit_code.is_none());
+        check("attestation: the slots' values equal eth_getProof's at the record's block, the event emitted", values_ok && events_ok,
+              format!("block {} {}: {:?}", verdict["block_number"], verdict["block_hash"], got));
+    }
+    let failed = checks.iter().filter(|c| !c.1).count();
+    for (name, ok, detail) in &checks {
+        println!("[{}] {name}: {detail}", if *ok { "ok" } else { "FAIL" });
+    }
+    let report = json!({"checks": checks.iter().map(|(n, ok, d)| json!({"check": n, "ok": ok, "detail": d})).collect::<Vec<_>>(), "inspect": v, "verified_utc": crate::utc()});
+    if let Some(out) = a.get("out") {
+        fs::write(out, serde_json::to_string_pretty(&report)? + "\n")?;
+    }
+    println!("verify: {} of {} checks match", checks.len() - failed, checks.len());
+    ensure!(failed == 0 && !checks.is_empty(), "verify: {failed} check(s) do not match");
+    Ok(())
+}
+
+/// Rehearsal only (`FERRATA_DAY1_REHEARSAL=yes`): LEZ's published local test account (funded by the genesis of LEZ's
+/// `local.json`, `lez/live/driver/src/keys.rs`) pays the payer and the daemon key, as the owner's deposit would on a
+/// public network.
+async fn cmd_fund(a: &Args) -> Result<()> {
+    use wallet::program_facades::{native_token_transfer::NativeTokenTransfer, CreditDelivery};
+    ensure!(std::env::var("FERRATA_DAY1_REHEARSAL").as_deref() == Ok("yes"), "fund is the rehearsal's stand-in for the owner's deposit: FERRATA_DAY1_REHEARSAL=yes");
+    let keys = a.path("keys")?;
+    let amount: u128 = a.need("amount")?.parse()?;
+    let state = a.path("state")?;
+    let faucet = crate::keys_local_test()?;
+    let run_dir = state.join("faucet");
+    let opts = Options {
+        rpc: a.need("rpc")?.to_string(),
+        out_dir: run_dir.clone(),
+        run_dir,
+        harness_results: PathBuf::from("/nonexistent"),
+        sequencer_log: None,
+        gas_limit: INIT_GAS,
+        wait_final: true,
+    };
+    let live = Live::open(opts, &[faucet.clone()]).await?;
+    for who in ["payer", "daemon"] {
+        let key = read_key(&keys.join(format!("{who}.key")))?;
+        let to = id_of(&key);
+        let before = live.balance(to).await?;
+        let (hash, _) = NativeTokenTransfer(&live.wallet)
+            .transfer(wallet::AccountIdentity::Public(id_of(&faucet)), wallet::AccountIdentity::PublicForeign(PublicKey::new_from_private_key(&key)), amount, CreditDelivery::Automatic)
+            .await
+            .map_err(|e| anyhow!("the transfer to the {who} was not sent: {e:?}"))?;
+        let t0 = Instant::now();
+        loop {
+            let now = live.balance(to).await?;
+            if now >= before + amount {
+                println!("fund: {who} {to} holds {now} ({hash}, {:.1} s)", t0.elapsed().as_secs_f64());
+                break;
+            }
+            ensure!(t0.elapsed().as_secs() < 600, "fund: {who} holds {now} after 600 s");
+            tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+        }
+    }
+    Ok(())
+}
+
+pub fn main() -> Result<()> {
+    let a = Args::parse()?;
+    let rt = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+    rt.block_on(async {
+        match a.cmd.as_str() {
+            "keygen" => keygen(&a),
+            "accounts" => {
+                println!("{}", serde_json::to_string_pretty(&accounts_json(&a.path("keys")?)?)?);
+                Ok(())
+            }
+            "sign" => cmd_sign(&a).await,
+            "send" => cmd_send(&a).await,
+            "status" => cmd_status(&a).await,
+            "target" => cmd_target(&a).await,
+            "inspect" => cmd_inspect(&a).await,
+            "verify" => cmd_verify(&a).await,
+            "fund" => cmd_fund(&a).await,
+            other => bail!("unknown command {other}: keygen accounts sign send status target inspect verify fund"),
+        }
+    })
+}

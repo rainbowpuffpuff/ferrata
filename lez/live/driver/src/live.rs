@@ -57,12 +57,28 @@ pub struct Live {
     pub phase: String,
 }
 
-/// Only a sequencer on this machine: the wallet's own default is LEZ's public testnet.
+/// Only a sequencer on this machine: the wallet's own default is LEZ's public testnet. The one exception is the
+/// day-one deployment (`lez/testnet04/day1.sh`): another sequencer only when both `FERRATA_TESTNET_SEND=yes` and
+/// `FERRATA_SEQUENCER_REMOTE` naming exactly that URL are in the environment (the script sets the second for the URL
+/// it was given, and refuses to send unless the owner set the first).
 pub fn check_loopback(rpc: &str) -> Result<()> {
+    if remote_allowed(rpc) {
+        return Ok(());
+    }
     let rest = rpc.strip_prefix("http://").ok_or_else(|| anyhow!("the RPC address must be http://127.0.0.1:PORT"))?;
     let host = rest.split([':', '/']).next().unwrap_or("");
-    ensure!(host == "127.0.0.1" || host == "localhost", "refusing to talk to {host}: only a local sequencer");
+    ensure!(
+        host == "127.0.0.1" || host == "localhost",
+        "refusing to talk to {host}: only a local sequencer (another needs FERRATA_TESTNET_SEND=yes and FERRATA_SEQUENCER_REMOTE={rpc})"
+    );
     Ok(())
+}
+
+/// `rpc` is the sequencer the owner named for the day-one deployment, and sending to it is allowed.
+pub fn remote_allowed(rpc: &str) -> bool {
+    std::env::var("FERRATA_TESTNET_SEND").as_deref() == Ok("yes")
+        && std::env::var("FERRATA_SEQUENCER_REMOTE").is_ok_and(|named| !named.is_empty() && named == rpc)
+        && (rpc.starts_with("http://") || rpc.starts_with("https://"))
 }
 
 fn wallet_config_json(rpc: &str, gas_limit: u64) -> String {
