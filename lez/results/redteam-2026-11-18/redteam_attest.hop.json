@@ -1,0 +1,128 @@
+{
+  "counts": {
+    "PASS": 6
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "hop",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HistoryOutOfWindow"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HOP-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 150,
+        "code_name": "core:HistoryOutOfWindow",
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge). No fixture has a header of n − 8192; the hop is taken from R = m1 = n − 16 (reached by a valid first hop) to block R − 8192 = 26,371,634 (its real header). The slot proof of (R − 8192) mod 8191 = 0x12c5 was not fetched; the hop carries the only history slot proof at m1, 0x12c6 (the slot of R − 8191); native evaluate: refused core:HistoryOutOfWindow [AT-HOP-01]",
+        "outcome": "refused"
+      },
+      "title": "hop to a block outside the EIP-2935 window",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HistoryOutOfWindow",
+          "core:HistoryHashMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HOP-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 150,
+        "code_name": "core:HistoryOutOfWindow",
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge): hop with block n's own header and the history proofs of the parent's slot, then WETH's slot at n; native evaluate: refused core:HistoryOutOfWindow [AT-HOP-02]",
+        "outcome": "refused"
+      },
+      "title": "hop to the record's own block",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HistoryHashMismatch",
+          "core:ProofIncomplete",
+          "core:ProofNodeMismatch",
+          "core:RlpMalformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HOP-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 151,
+        "code_name": "core:HistoryHashMismatch",
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge): hop to the parent k = n − 1 whose header's extra data has its first byte xor 0x01 (same length), then a log of k; native evaluate: refused core:HistoryHashMismatch [AT-HOP-03]",
+        "outcome": "refused"
+      },
+      "title": "hop header tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:HistoryContractMissing",
+          "core:ProofNodeMismatch",
+          "core:ProofIncomplete"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HOP-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge): hop to k with WETH's account proof at n in place of the history contract's (history slot proof and k's header unchanged); native evaluate: refused core:ProofNodeMismatch [AT-HOP-04]",
+        "outcome": "refused"
+      },
+      "title": "hop through an account that is not the history contract",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-HOP-05",
+      "kind": "control",
+      "observed": {
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge): hop to k = n − 1 with the history contract's proofs; no fixture has a storage proof at k, so the fact there is a log of k (receipts of k); native evaluate: accepted, 1 statements; event and reply name block 26379841 = R − 1, reply.hops = 1 [AT-HOP-05]",
+        "outcome": "accepted"
+      },
+      "title": "one hop to the parent block",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch",
+          "core:ProofIncomplete"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-HOP-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "B-AT-MAIN = the e2e fixture's record of block n = 26,379,842 (the attestation fixture has neither the parent block nor the window's edge): valid hop to k = n − 1, then WETH's account and balance-slot proofs taken at n; native evaluate: refused core:ProofNodeMismatch [AT-HOP-06]",
+        "outcome": "refused"
+      },
+      "title": "hop proven, fact proven under the record's block instead of the hop's",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

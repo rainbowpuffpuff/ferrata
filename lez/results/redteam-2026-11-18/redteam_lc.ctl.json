@@ -1,0 +1,101 @@
+{
+  "counts": {
+    "PASS": 6
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "ctl",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-01",
+      "kind": "control",
+      "observed": {
+        "note": "instance active, first record written",
+        "outcome": "accepted"
+      },
+      "title": "Init and adoption from the real checkpoint",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-02",
+      "kind": "control",
+      "observed": {
+        "note": "three transactions, record written",
+        "outcome": "accepted"
+      },
+      "title": "a real finality update through the public job",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-03",
+      "kind": "control",
+      "observed": {
+        "note": "5 transactions",
+        "outcome": "accepted"
+      },
+      "title": "a real rotation (handoff) through the public job",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-04",
+      "kind": "control",
+      "observed": {
+        "note": " [VerifyAll U]",
+        "outcome": "accepted"
+      },
+      "title": "a real finality update through VerifyAll",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-05",
+      "kind": "control",
+      "observed": {
+        "note": "one fresh account signs every step",
+        "outcome": "accepted"
+      },
+      "title": "submitter with no prior relationship advances the instance",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-CTL-06",
+      "kind": "control",
+      "observed": {
+        "note": "three fresh accounts, one per step",
+        "outcome": "accepted"
+      },
+      "title": "the three steps sent by three different accounts",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

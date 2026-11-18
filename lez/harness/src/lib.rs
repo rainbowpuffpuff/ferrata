@@ -274,6 +274,7 @@ impl TxReport {
 
 /// A LEZ state with the fee program, a funded fee payer, the Ferrata program (and its twin), the
 /// consumer and LEZ's `scripted` test program. Each transaction is settled in a block of its own.
+#[derive(Clone)]
 pub struct Chain {
     pub state: V03State,
     payer_key: PrivateKey,

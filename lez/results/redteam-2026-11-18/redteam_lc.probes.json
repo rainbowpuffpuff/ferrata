@@ -1,0 +1,20 @@
+{
+  "control_current_store": {
+    "applied": true,
+    "code_name": null,
+    "exit_code": null,
+    "gas_exec": 9068520,
+    "label": "VerifyAll U2 on the current store",
+    "revert": null
+  },
+  "probe": "LC-NEW-06's property on the synthetic chain",
+  "stale_store": {
+    "applied": false,
+    "code_name": "step:StoreChanged",
+    "exit_code": 82,
+    "gas_exec": 9025666,
+    "label": "VerifyAll U2 on the pre-U1 store",
+    "revert": "Program exited with non-zero code 82 after 30686 cycles"
+  },
+  "test": "lez/harness/tests/redteam_lc.rs"
+}
