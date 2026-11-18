@@ -60,6 +60,7 @@ The audit of every script that talks to a public network (18 tables, call by cal
    recorded too); `<run>/net/events.jsonl` lists every pin and every error the proxy gave a client.
 
 Knobs (environment): `PUBNET_LAG`, `PUBNET_PIN_TTL_S` (12 s), `PUBNET_TIMEOUT_S` (15 s per try),
+`PUBNET_ATTEMPT_TIMEOUT_S` (900: a stage's run is ended after it), `PUBNET_REBROADCAST_S` (30),
 `PUBNET_REQUEST_BUDGET_S` (30), `PUBNET_READ_BUDGET_S` (300), `PUBNET_STAGE_BUDGET_S` (1200),
 `PUBNET_RESOLVE_BUDGET_S` (600), `PUBNET_BACKOFF_BASE_S` (15), `PUBNET_REPLACED_AFTER_S` (60), `CROWN_AUTO_RESUMES` (4),
 `PUBNET_<NETWORK>_RPC` / `_BEACON` / `_BEACON_LC` (replace a list; the tests use them).
@@ -111,7 +112,11 @@ header and the light-client finality update.
   13 transactions, each journaled before it left, nonces without a gap, all succeeded, 2 deposits, 2 nullifiers and
   6e12 wei left in the vault (crown-fork-3r's figures), no effect twice. Batch 1 (seeds 1-24, stage budget 90 s):
   8,331 faults injected, 13 stage reruns, no transient stop. Batch 2 (seeds 25-48, stage budget 30 s, so that an
-  outage spends it): 7,453 faults, 6 stage reruns, 3 transient stops (exit 75) resumed and completed.
+  outage spends it): 7,453 faults, 6 stage reruns, 3 transient stops (exit 75) resumed and completed. With the
+  crown runner image's own Foundry (nightly a4d66e8e): batch 3, 4 of 4; a batch 4 on a later change found two defects
+  (a mined transaction looked up only on the lagging endpoint; a broadcast lost in an outage and never sent again,
+  forge waiting 23 min), both fixed (067519c7: lookups ask every endpoint, the bytes go out again while a receipt is
+  polled, a run ends after `PUBNET_ATTEMPT_TIMEOUT_S`); batch 4 again on the fixed code: 12 of 12, 0 violations.
 - [`crown/test_send_guard.sh`](crown/test_send_guard.sh): a pending transaction of the deployer, a run killed right
   after its broadcast, a run started while that fate is unknown, the fate found, a replaced transaction and the
   operator's `ack` (anvil without mining, a stub forge that sends through the proxy). 8 of 8 pass.
