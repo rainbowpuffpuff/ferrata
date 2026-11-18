@@ -1,0 +1,23 @@
+[package]
+name = "harness03"
+description = "Drives the Ferrata bridge program for LEZ v0.3.1 through LEZ v0.3.1's state machine (experimental)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+methods03 = { path = "../methods" }
+ferrata-lez03-bridge-core = { path = "../core" }
+ferrata-bridge-core = { path = "../../bridge/crates/ferrata-bridge-core" }
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+# The reference Merkle-Patricia trie, header encoder and eth_getProof reader of the core's test crate.
+ferrata-spectests = { path = "../../crates/ferrata-spectests" }
+# LEZ v0.3.1 by path (see ../core/Cargo.toml). `test-utils` exposes `force_insert_account`, with which the
+# harness places the light client's records; it refuses to build without debug assertions.
+lee = { path = "../../../upstream/lez-v0.3.1/lee/state_machine", features = ["test-utils"] }
+lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core", features = ["host", "test_utils"] }
+borsh = { version = "1.5.7", features = ["derive"] }
+hex = "0.4"
+serde_json = "1"
+sha2 = "0.10"
