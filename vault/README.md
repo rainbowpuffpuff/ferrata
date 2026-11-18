@@ -550,7 +550,10 @@ is within the cap of `FERRATA_GAS_RULE`: `eip7825` (the default) caps the limit 
 6 October 2026) caps it at the block gas limit and 2^32 − 1, the node's estimate having already refused anything
 whose execution gas exceeds 2^24. `FERRATA_TX_GAS_CAP` lowers the cap further. forge then sends the transaction with
 `--skip-simulation --gas-estimate-multiplier` at the same margin, so its limit is the node's estimate times the
-margin; `deploy.sh` reads the sent limit back from the node and stops if it differs. One transaction per run is what
+margin; `deploy.sh` reads the sent limit back from the node and stops if it differs. forge and cast reach the node
+through the local network proxy of `scripts/pubnet.sh` ([`../e2e/NETWORK.md`](../e2e/NETWORK.md): reads pinned a few
+blocks behind the head, failover and backoff on transient errors only, every signed transaction journaled before it
+leaves, a failed run run again only once the fate of what it sent is known). One transaction per run is what
 makes every estimate real: a transaction that depends on the previous one can only be estimated once that one is
 mined. On today's Sepolia the creations cost 7.80 M (verifier), 2.98 M (stop), 18.30 M (library), 39.54 M (vault) and
 3.34 M (token) gas: `GAS.md`, "Creating the contracts on today's Sepolia"; the receipts of the crown run's deployment

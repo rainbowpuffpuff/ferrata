@@ -140,6 +140,19 @@ The LEZ bundle of these programs: 139,311,009 bytes, sha256 `7cc85db0266aa1ee…
 beside the repository; the R0BF programs and `ids.jsonl` in `spike/tmp/integ5/crown/r0bf/`). The checkpoint decoder reads bridge variants 0-3 (Burn, ImportRoot, Sunset, Echo), byte-identical
 in the merged wire (`checkpoint/crates/checkpoint-core/src/wire.rs`, `lez/harness/tests/bridge_burn.rs`).
 
+## The network (since 18 Nov 2026: [`../NETWORK.md`](../NETWORK.md))
+
+`drive.py` runs one local proxy for the whole run (`scripts/pubnet.py`) in front of the Secret's `SEPOLIA_RPC_URL` and
+the free public Sepolia endpoints (on a fork: anvil alone); its own reads, `sepolia.sh`'s forge and cast and
+`verify.py` go through it. Reads at "latest" are pinned 3 blocks behind the head and never before the deployer's last
+mined transaction; transient errors fail over and back off; before a send the nonce must agree on two endpoints and
+the signed bytes are written to `<run>/net/journal.jsonl` before they are broadcast to every endpoint. `sepolia.sh`
+runs a stage again only for a transient reason and only once the fate of everything it sent is known (exit 75 when its
+20 minutes are spent with nothing in flight, 1 for a permanent stop); `drive.py` resumes a transient stop itself after
+2, 4, 8, 16 minutes (`CROWN_AUTO_RESUMES`, default 4; `crown.log`, `run.json` `auto_resumes`); a permanent one waits
+for the owner. A transaction found reverted, replaced or rejected stops every later send until the owner has looked
+and run `python3 scripts/pubnet.py ack --journal <run>/net/journal.jsonl --hash <h>`.
+
 ## Stages and where each runs
 
 our Modal workspace, app `ferrata-crown` (CPU runner, GPU session, wrap), Volume `ferrata-crown`. Builds on

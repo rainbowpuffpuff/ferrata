@@ -19,7 +19,7 @@ for lane in $(seq 0 $((par - 1))); do
   ) &
 done
 wait
-python3 -I - "$out/seeds.jsonl" "$first" "$last" <<'PY'
+python3 -I - "$out/${NETFAULT_BATCH:-seeds}.jsonl" "$first" "$last" <<'PY'
 import json, sys
 rows = [json.loads(l) for l in open(sys.argv[1]) if l.strip()]
 rows = [r for r in rows if int(sys.argv[2]) <= r["seed"] <= int(sys.argv[3])]

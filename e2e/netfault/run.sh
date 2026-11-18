@@ -4,7 +4,8 @@
 # (forge signs: raw transactions, the live path). Stand-in identity and the accept-all verifier as crown-fork-3r
 # (e2e/runs/crown-fork-3r/README.md). A transient stop (exit 75) is resumed up to 4 times, as drive.py does. Then
 # check.py compares the chain (read from anvil directly) with the network journal. One JSON line per seed is appended
-# to e2e/netfault/results/seeds.jsonl. Nothing here talks to a public network.
+# to e2e/netfault/results/$NETFAULT_BATCH.jsonl (default seeds). NETFAULT_STAGE_BUDGET_S (90): a stage's budget; a
+# small one turns the outages into transient stops (exit 75) and resumes. Nothing here talks to a public network.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/../.." && pwd)"
 seed="${1:?seed}"
@@ -79,5 +80,5 @@ for s in "deploy" "deposit 0" "deposit 1" "submit" "warp 3601" "finalize" "warp 
 done
 python3 -I "$here/e2e/netfault/check.py" --rpc "$R" --run "$run" --deployer "$deployer" --vault "$VAULT" \
   --outcome "$outcome" --stopped "$stopped" --resumes "$resumes" --seed "$seed" --seconds "$(( $(date +%s) - t0 ))" \
-  >> "$out/seeds.jsonl"
-tail -n 1 "$out/seeds.jsonl"
+  >> "$out/${NETFAULT_BATCH:-seeds}.jsonl"
+tail -n 1 "$out/${NETFAULT_BATCH:-seeds}.jsonl"
