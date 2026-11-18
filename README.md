@@ -191,7 +191,8 @@ The design notes specify these; there is no code for them here. In short (in ful
   the switch to a v0.4 token program when one is released; the nullifier and holder accounts keyed by the
   configuration, which close the two tenant-isolation issues of 18 November ([row 136](docs/EVIDENCE.md)).
 - **The attestation program:** consumers bound to the root id, a chain of several EIP-2935 hops under a Gloas
-  record, the F.8 test.
+  record, the F.8 test; a cost for forging a record (bonded backing a consumer can require, or anchoring to Ethereum's
+  FFG finality: [docs/trust.md](docs/trust.md) §2.2, design only).
 - **Rule (B):** the watchers' `monitor` reading attestations.
 - **Daemons:** the relayer's root imports on a running LEZ sequencer, `monitor`'s client of the LEZ and Logos
   Blockchain nodes' RPCs, the attestation side's `monitor`, the A3 gate's three daemons on a running sequencer.
