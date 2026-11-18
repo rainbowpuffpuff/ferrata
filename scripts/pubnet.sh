@@ -41,7 +41,7 @@ pubnet_up() {
   [ "${FERRATA_UNLOCKED:-}" = 1 ] && args+=(--allow-unlocked)
   python3 -I "$PUBNET_PY" "${args[@]}" >> "$PUBNET_DIR/proxy.log" 2>&1 &
   PUBNET_PID=$!
-  for k in $(seq 1 100); do
+  for k in $(seq 1 150); do
     [ -s "$PUBNET_DIR/port" ] && break
     kill -0 "$PUBNET_PID" 2>/dev/null || { tail -n 5 "$PUBNET_DIR/proxy.log" >&2; return 1; }
     sleep 0.2

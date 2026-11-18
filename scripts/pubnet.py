@@ -215,13 +215,28 @@ class Net:
         self.urls = urls or endpoints(network, "rpc", first)
         self.budget = request_budget or float(os.environ.get("PUBNET_REQUEST_BUDGET_S", "30"))
         self.timeout = timeout or float(os.environ.get("PUBNET_TIMEOUT_S", "15"))
-        self.cool: dict[str, float] = {}  # endpoint -> monotonic time before which it is skipped
+        self.cool: dict[str, float] = {}  # endpoint -> monotonic time before which it goes last
+        self.fails: dict[str, int] = {}  # endpoint -> failures in a row
         self.log = log or (lambda msg: None)
+
+    def failed(self, url: str) -> None:
+        """An endpoint that keeps failing waits longer each time (5 s, 10 s, ... 300 s) before it is tried first again."""
+        n = self.fails[url] = self.fails.get(url, 0) + 1
+        self.cool[url] = time.monotonic() + min(300.0, 5.0 * 2 ** (n - 1))
+
+    def served(self, url: str) -> None:
+        self.fails.pop(url, None)
+        self.cool.pop(url, None)
 
     def order(self) -> list[str]:
         now = time.monotonic()
         ready = [u for u in self.urls if self.cool.get(u, 0) <= now]
         return ready + [u for u in self.urls if u not in ready]
+
+    def ready(self) -> list[str]:
+        """The endpoints not cooling, or all of them if every one is."""
+        now = time.monotonic()
+        return [u for u in self.urls if self.cool.get(u, 0) <= now] or list(self.urls)
 
     def call(self, method: str, params: list, *, must=False, urls: list[str] | None = None,
              budget: float | None = None, accept=None):
@@ -237,10 +252,11 @@ class Net:
                         raise Transient(f"{label(url)}: null (the node does not have it yet)")
                     if accept is not None and not accept(r):
                         raise Transient(f"{label(url)}: an answer refused as inconsistent")
+                    self.served(url)
                     return r
                 except Transient as e:
                     last = str(e)
-                    self.cool[url] = time.monotonic() + 5
+                    self.failed(url)
                     self.log(f"transient {method}: {last}")
                 if time.monotonic() > deadline:
                     break
@@ -254,11 +270,12 @@ class Net:
     def each(self, method: str, params: list, n: int | None = None) -> list[tuple[str, object]]:
         """Up to n answers from different endpoints (errors skipped), in list order."""
         out = []
-        for url in self.order():
+        for url in self.ready():
             try:
                 out.append((url, _rpc_once(url, method, params, self.timeout)))
+                self.served(url)
             except (Transient, Permanent) as e:
-                self.cool[url] = time.monotonic() + 5
+                self.failed(url)
                 self.log(f"each {method}: {e}")
             if n and len(out) >= n:
                 break
@@ -581,13 +598,23 @@ class Proxy:
         print(f"[{time.strftime('%H:%M:%S')}] {msg}", file=sys.stderr, flush=True)
 
     def check_chains(self, want: int | None) -> None:
-        """Every endpoint on the same chain (the network's, or the first answer's); one on another chain is dropped."""
-        keep = []
-        for url in self.net.urls:
+        """Every endpoint on the same chain (the network's, or the first answer's); one on another chain is dropped. All
+        asked at once, 5 s each: a hanging endpoint does not delay the start."""
+        from concurrent.futures import ThreadPoolExecutor
+
+        def ask(url):
             try:
-                cid = int(_rpc_once(url, "eth_chainId", [], self.net.timeout), 16)
-            except (Transient, Permanent) as e:
-                self.log(f"chain id of {label(url)} unknown now ({str(e)[:100]}); kept")
+                return int(_rpc_once(url, "eth_chainId", [], min(5.0, self.net.timeout)), 16)
+            except (Transient, Permanent, ValueError) as e:
+                return e
+
+        with ThreadPoolExecutor(max_workers=len(self.net.urls)) as ex:
+            answers = list(ex.map(ask, self.net.urls))
+        keep = []
+        for url, cid in zip(self.net.urls, answers):
+            if isinstance(cid, Exception):
+                self.log(f"chain id of {label(url)} unknown now ({str(cid)[:100]}); kept")
+                self.net.failed(url)
                 keep.append(url)
                 continue
             if want is None:
@@ -712,7 +739,9 @@ class Proxy:
                 try:
                     lat = int(_rpc_once(url, "eth_getTransactionCount", [self.sender, "latest"], self.net.timeout), 16)
                     pen = int(_rpc_once(url, "eth_getTransactionCount", [self.sender, "pending"], self.net.timeout), 16)
+                    self.net.served(url)
                 except (Transient, Permanent) as e:
+                    self.net.failed(url)
                     self.log(f"nonce: {e}")
                     continue
                 seen.append((label(url), lat, pen))
@@ -772,14 +801,24 @@ class Proxy:
             return self.broadcast(raw_hex, h)
 
     def broadcast(self, raw_hex: str, h: str) -> str:
-        accepted, rejected, unknown = [], [], []
-        for url in self.net.urls:
+        from concurrent.futures import ThreadPoolExecutor
+
+        def send(url):  # the same bytes to every endpoint at once: a hanging one delays nothing
             try:
                 _rpc_once(url, "eth_sendRawTransaction", [raw_hex], self.net.timeout)
+                return url, None
+            except (Transient, Permanent) as e:
+                return url, e
+
+        with ThreadPoolExecutor(max_workers=len(self.net.urls)) as ex:
+            results = list(ex.map(send, self.net.urls))
+        accepted, rejected, unknown = [], [], []
+        for url, e in results:
+            if e is None:
                 accepted.append(label(url))
-            except Transient as e:
+            elif isinstance(e, Transient):
                 unknown.append(str(e)[:160])
-            except Permanent as e:
+            else:
                 msg = str(e)
                 if re.search(r"already known|known transaction|already imported|alreadyknown", msg, re.I):
                     accepted.append(label(url))
