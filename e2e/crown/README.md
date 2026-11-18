@@ -1,5 +1,9 @@
 # The crown run: the whole round trip on the final programs (design)
 
+Status (18 Nov 2026): the same run with the LEZ side on LEZ v0.4.0-rc3 (input set `rc3`, a vault pinning the second
+build of the checkpoint guests) is rehearsed to DONE on a fork and ready to start live as `crown-live-4`: "On LEZ
+v0.4.0-rc3" below.
+
 Status (12 Nov 2026, 16:23Z): **run live on Sepolia to DONE on the final programs** as `crown-live-3`
 ([`e2e/runs/crown-live-3/`](../runs/crown-live-3/README.md): the records, the two starts and what each of the 13
 transactions shows; EVIDENCE rows 91 and 92): FerrataVault v5 `0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`, the
@@ -33,6 +37,64 @@ the crown build path and rehearsed to DONE on them first (`e2e/runs/crown-rehear
 rehearsals 1 and 2 ran the earlier programs. Commands: "Commands" below. One cloud run, resumed by the same `start`
 after a stop, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify
 script that re-checks every step from public data and the recorded blocks.
+
+## On LEZ v0.4.0-rc3: input set `rc3`, the live run `crown-live-4` (ready to start, 18 Nov 2026)
+
+The same round trip as `crown-live-3`, with the LEZ side on LEZ v0.4.0-rc3: its own `sequencer_service` and the
+Logos Blockchain node it pins, 0.3.5-rc.1 (one sequencer, one validator, dev-mode leader proofs, as before), and a new
+FerrataVault v5 in mode (B) that pins the second build of the checkpoint guests (the deployed vaults' checkpoint ids
+read the `d480efc6` layout and cannot follow such a zone: EVIDENCE rows 129, 130). The cloud app keeps one input set per
+LEZ side ([`cloud/inputs.json`](cloud/inputs.json)): `rc1` is the Volume's `inputs/` (crown-live-1 to -3, untouched);
+`rc3` is `inputs-rc3/`. A run records its set in `run.json`; `setup` and `start` take `--inputs`.
+
+| | crown-live-3 (input set `rc1`) | crown-live-4 (input set `rc3`) |
+|---|---|---|
+| LEZ sequencer | v0.4.0-rc1 `sequencer_service` | v0.4.0-rc3 `sequencer_service` (`bafd07be`), sha256 `be2ac354…`: the same bytes as rc3-return's build |
+| Bedrock node | Logos Blockchain `d480efc6`, 1-s slots | 0.3.5-rc.1 (release asset of `f6d4267f`, LEZ's resolver), sha256 `2f301729…`; 4-s slots, a 240-s epoch; serves `GET /chain/fork` |
+| LEZ's configuration | rc1's `local.json`, `node-config.yaml`, `deployment-settings.yaml` | rc3's (bundle `lez-config/`, `lez-tag.txt`) |
+| crown-driver | built on rc1 | built with `lez/scripts/lez-select.sh v0.4.0-rc3` (feature `lez-rc3`), sha256 `37f3369d…` |
+| attestation, bridge programs | `0x816d1fef…03df`, `0xccde6171…71dd` | unchanged: the same files, byte for byte from crown-live-3's bundle (they ran unchanged on rc3: EVIDENCE rows 123, 124) |
+| `bedrockGenesisId` | SHA-256 of the deployment settings | the node's fork digest (`crown-a --fork-digest`, read by `session.sh a` from `GET /chain/fork`), which every Mantle transaction carries |
+| vault immutables | `checkpoint_b` `0xf8116722…626e` | `checkpoint_b_0_3_5` `0xafbf4023…3bcf` (params: rule (A)'s `checkpoint_0_3_5` `0x259cd89e…9b0f`); release `0xb64900bc…29e9` unchanged |
+| the light client's checkpoint | `sepolia-2026-11-12` (period 1411; an `Init` valid until 28 Nov 2026 03:13 UTC) | [`sepolia-2026-11-18`](../../crates/ferrata-spectests/fixtures/sepolia-2026-11-18/SOURCE.md) (Gloas bootstrap at slot 11,599,872, period 1416; an `Init` valid until **3 Dec 2026 09:05:36 UTC**: `crown-driver check --chain sepolia`) |
+| LEZ bundle | 138,872,352 B, sha256 `0013bab1…` | 142,517,880 B, sha256 `2b79196a…` (`lez/crown/build.sh rebase` of crown-live-3's bundle) |
+
+Host changes for rc3 (no program or guest changed): `session.sh` reads the node's slot length from the deployment
+settings (it had assumed 1-s slots, so on rc3 it would have placed the sequencer's blocks against a wrong epoch clock)
+and passes the fork digest to crown-a, recording `chain-fork.json`; `drive.py` takes the programs by role from the
+run's input set; `verify.py` checks `bedrockGenesisId` against the recorded fork digest and runs the second build's
+`checkpoint_b`; `realblocks-crown` reads the 0.3.5-rc.1 layout by itself (rc3-return). `ctl.py`'s upload guard now
+refuses untracked or modified secret-looking files only: since main gained committed records whose names contain
+"keystore" and a test zone's committed devnet channel key, `start` had refused every upload from this tree.
+
+Rehearsed on an anvil fork of Sepolia to DONE as [`crown-rc3-rehearsal-1`](../runs/crown-rc3-rehearsal-1/README.md)
+(18 Nov 2026, commit 799b4297: 19 stages in 53 min 23 s, verify 14 of 14; session A 287 s, session B 2,118 s with the
+private claim and burn proven in 773.9 s and 938.5 s, the `checkpoint_b_0_3_5` proof 33.9 s on an L40S over blocks
+24..=225, 19,540,105 user cycles). Session A on the real Sepolia checkpoint and session B after the live run's long
+pause: [`crown-rc3-rehearsal-2`](../runs/crown-rc3-rehearsal-2/README.md) and
+[`crown-rc3-sessiona-sepolia-1`](../runs/crown-rc3-sessiona-sepolia-1/README.md).
+
+Commands for `crown-live-4` (for the owner; nothing has been sent). From this tree's root, with `vault/lib` present
+(git ignores it; `start` packs it) and no `ferrata-sepolia` runner active:
+
+```
+export CROWN_MODAL_PROFILE=<your Modal profile>   # the workspace of the app, its Volume and the Secret
+e2e/crown.sh start --inputs rc3 crown-live-4     # the live run: prints the sender, its nonce N, the vault CREATE(N+2),
+                                                 #   the 13 transactions, the LEZ side and the pinned ids; type yes
+e2e/crown.sh status crown-live-4                 # any time
+e2e/crown.sh fetch --lez crown-live-4            # e2e/runs/crown-live-4/ (curate before committing: the runs above)
+e2e/crown.sh verify crown-live-4                 # the chain checks again from this machine (read-only)
+```
+
+`setup` need not run again: input set `rc3` is on the Volume since 18 Nov 2026 14:16Z (`setup --inputs rc3 --bundle
+FILE --programs DIR` uploads it again, checking every program's sha256 and image id). The `Init` must be sent before
+3 Dec 2026 09:05:36 UTC (after it: a fresh fixture, `lez/crown/build.sh rebase`, `setup`). What to expect, from
+crown-live-3's measured run and this rehearsal (derived): 13 transactions from the deployer's next nonce (36 on
+18 Nov 2026: the stop, the library and the vault at 36, 37 and 38, the vault then `0x80555Fe53CCcEf46951B23A3c75643a4C9283470`),
+about 75 M gas (crown-live-3: 74,947,202; the same code and transactions; anvil's figures in the rehearsal do not price
+the deployment as Sepolia does), 2 x 0.001002 ETH of deposits, of which each release pays 0.001 ETH back to the
+deployer (the Release events of crown-live-3 and of the rehearsal); the identity stage refuses below 0.003004 ETH. About 2.5 to 3 hours: crown-live-3's 2 h 9 min of runner time with session B as on rc3
+(35 min in the rehearsal, 13 min on rc1), longer if no GPU is free.
 
 ## Programs (built on the build box; since `integration7` the ids do not depend on the build path)
 
