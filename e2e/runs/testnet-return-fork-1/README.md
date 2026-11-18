@@ -5,6 +5,12 @@ A rehearsal of the Ethereum side of the leg back from the public LEZ testnet (LE
 **Nothing was sent to Sepolia or to the LEZ testnet.** The arrangement is a testnet stand-in, not Ferrata's design
 ([`vault/src/standin/README.md`](../../../vault/src/standin/README.md), [`docs/trust.md`](../../../docs/trust.md) §3.6).
 
+> **Kept as it was; superseded by [`testnet-return-fork-2`](../testnet-return-fork-2/README.md).** This run's
+> checkpoint was cut before the attestor was required to compare the burns with the bridge's state on the LEZ node:
+> its `source` records `accumulator_checked_against_node: false`, which `standin.py sign` and `verify.py` now refuse
+> (an independent review, finding A1). It was also signed by keys a live run would have used; the live run now takes
+> fresh ones (finding A5).
+
 **Real in this run:** the unchanged FerrataVault (rule (B)) and FerrataRegistry; RISC Zero's Groth16 verifier and
 emergency stop, which are Sepolia's own contracts on the fork (`0x8f0A…2A0` behind `0x1dB3…8221`); two deposits; two
 proofs of the unchanged `release` program (image `0xb64900bc…29e9`, [`docs/image-ids.md`](../../../docs/image-ids.md)),
