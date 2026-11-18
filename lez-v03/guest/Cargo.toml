@@ -1,0 +1,37 @@
+# EXPERIMENTAL, UNAUDITED: Ferrata's light client as a LEZ v0.3.1 program (../README.md). Its own
+# workspace, lockfile and [patch.crates-io], built by ../methods. Its finality update in one
+# transaction uses the residue witness of ../../bench/residue and, optionally, the multiproof of
+# ../../bench/residue-agg, both bench-only, experimental and unaudited.
+[package]
+name = "ferrata_v03"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+ferrata-v03-wire = { path = "../wire" }
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false, features = ["blst"] }
+residue = { path = "../../bench/residue" }
+residue-agg = { path = "../../bench/residue-agg" }
+lee_core = { path = "../../../upstream/lez-v0.3.1/lee/state_machine/core" }
+# LEZ v0.3.1 pins risc0-zkvm 3.0.5.
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "1.5.7", features = ["derive"] }
+# Pin the versions the patches provide, so the resolver selects them.
+sha2 = "=0.10.8"
+blst = "=0.3.16"
+tiny-keccak = "=2.0.2"
+
+[patch.crates-io]
+# RISC Zero's accelerated blst, SHA-256 and Keccak (as ../../lez/guests/program).
+blst = { git = "https://github.com/risc0/blst", tag = "v0.3.16-risczero.0" }
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+tiny-keccak = { git = "https://github.com/risc0/tiny-keccak", tag = "tiny-keccak/v2.0.2-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
