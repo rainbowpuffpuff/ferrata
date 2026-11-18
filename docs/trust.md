@@ -18,7 +18,7 @@ opening sections).
 |---|---|---|---|---|
 | The starting checkpoint of an attestation instance | that the instance follows the real Ethereum | a false chain from the start | anyone can compare the checkpoint root with public Ethereum before relying on the instance | §2.1 |
 | The vault's deployment parameters: `genesisState` (the starting key set, turn length and tip), `lezConfigId`, the image ids, `turnSeconds`, `nMin`/`tMin` | that the vault follows the real LEZ channel from the right state with the right programs | a false LEZ history or program accepted from the start | anyone can check them before depositing: the channel's public state, `configId`'s preimage (it binds the vault's address), reproducible builds of the guests; the deployment script checks none of them and accepts `nMin = tMin = 1` (testnets only: it refuses every chain but anvil, Sepolia, Hoodi and Holesky) | §3.2, §4 |
-| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; the attestation side's `monitor` alarm (not built) | §2.2 |
+| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested | consumer caps and freezes; the attestation side's `monitor` alarm (not built); an instance freeze on evidence of conflicting finality (experimental, the v0.3.1 port only, not deployed) | §2.2 |
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
 | Rule (A)'s conditions F1–F4, or else a live, uneclipsed watcher | finality under rule (A) | as above, with fewer than `t` keys or none | the same; outside F1–F4 the watchers are trusted for safety | §3.4 |
@@ -115,6 +115,22 @@ and feed consumers' freeze authorities, is **not built** (the watchers' `monitor
 EVIDENCE rows 43–45) ([`attestation.md`](design/attestation.md) §11.3). A deeper inbound
 finality setting would not help: it delays honest claimants, not a captured committee
 ([`bridge.md`](design/bridge.md) §5.4).
+
+**What is now detected (experimental, unaudited; the deployed program does not have it).** A committee that signs
+finality contradicting what an instance recorded can be caught by the instance itself, in the LEZ v0.3.1 port
+(`lez-v03/`, deployed nowhere with this change) and the bench ([`bench/MISBEHAVIOUR.md`](../bench/MISBEHAVIOUR.md)):
+anyone may send `Evidence`, one update valid under a committee the instance holds (two thirds signed, the finality
+branch, the policy's checks, in the window an update would have) whose finalized header has the slot of a recorded
+header and another root, or whose next committee differs from the one the instance adopted for that period (both
+headers of the update in that period). The instance then refuses every update, attestation and further evidence
+(`FROZEN`), keeps its store and records, and records the evidence. An honest network never produces such evidence
+(`MISBEHAVIOUR.md` §3: finalized checkpoints lie on one chain unless a third of the stake is slashable, and a
+period's next committee is fixed on a chain). Not detected: a conflicting header finalized at a slot the instance
+holds no record of (deciding its ancestry needs a proof into a recorded state's `block_roots`, not built), and one
+finalized above every record, which the instance accepts as an update (the light client checks no ancestry, as the
+specification's does not); evidence must be signed by a committee the instance still holds. It does not say who
+misbehaved, nothing is slashed, and a consumer that reads records or statements directly must read the instance's
+frozen flag ([EVIDENCE](EVIDENCE.md) row 144).
 
 **Evidence that a non-captured committee is required (VS.1, VS.2).** A self-consistent update about a
 chain that never existed is refused on the signature alone (the fabricated-chain test, consensus half,
@@ -477,7 +493,9 @@ several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ a
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
 and its sweep inside the private claim; a rule (B) zone of Logos's sequencers with the attestor module beside
-each, its checkpoints on Sepolia, and a rotation that removes a key; the audit. Sources:
+each, its checkpoints on Sepolia, and a rotation that removes a key; in the deployed light-client program, the freeze
+of an instance on evidence of conflicting finality (an experimental, unaudited version exists in the bench and the
+v0.3.1 port, [EVIDENCE](EVIDENCE.md) row 144); the audit. Sources:
 [README](../README.md#specified-but-not-built), "Specified but not built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
 [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
 

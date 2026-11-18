@@ -84,8 +84,9 @@ audited. **Anyone can submit evidence**: no key, no role; the submitter only pay
   least two thirds of a committee the instance trusted signed, contradict each other. Which side is the canonical
   chain, and whether the signers of the record or of the evidence are dishonest (or Ethereum's finality itself
   failed, §3), is outside what the instance can decide.
-* **Nothing is slashed.** A sync-committee signature on a wrong state is not slashable in the protocol (only
-  proposer and attester offences are, `specs/phase0/beacon-chain.md`), and the instance holds no stake.
+* **Nothing is slashed.** A sync-committee signature on a wrong state is not slashable in the protocol (the block
+  operations slash proposers and attesters only: `process_proposer_slashing` and `process_attester_slashing`,
+  `specs/phase0/beacon-chain.md:2422` and `:2449`), and the instance holds no stake.
 * It does not revoke what consumers already did with earlier records or statements. A consumer that reads a record
   or a statement directly must read the instance's frozen flag too.
 * It does not unfreeze. Resuming is a new instance from a new trusted checkpoint, a new trust decision (as after the
@@ -166,7 +167,93 @@ instance past its period (whose committee may no longer be bonded) cannot be fro
 * **Evidence against a frozen instance:** `FROZEN` (222); the first evidence stays recorded.
 * **Cost to the submitter:** one transaction, about the gas of a finality update (§8); a refusal is cheaper.
 
-## 6. What an auditor must check
+## 6. What was built
+
+* **`bench/misbehaviour`** (new; [`src/lib.rs`](misbehaviour/src/lib.rs)): `validate_evidence`, `contradiction`,
+  `signature_job` and `verify_signature`, `check_evidence` (§4), and `Instance`, a model of an instance (its compact
+  store, the root of every header it recorded by slot, the freeze) whose updates run as the v0.3.1 port's
+  one-transaction `Update` with `Verify::ResidueSummary`, and which refuses updates, attestations and evidence once
+  frozen (`FROZEN`, 86 in the model). `ferrata-core` is used through its public API, unchanged.
+* **The LEZ v0.3.1 port** (`lez-v03/`, deployed nowhere with this change): `Instruction::Evidence { instance_id,
+  update, signers, verify, against, window }`, `against` either `Against::Record { slot, root }` (the account
+  `header(id, slot)` follows the instance's, and an apply there checks that it holds a record of the instance whose
+  beacon header has `root`: `NO_RECORD`, 213, or `WRONG_RECORD`, 219, otherwise) or `Against::NextCommittee`; one
+  transaction, `verify` `Core` or `Residue`, the non-signers as one multiproof (`EVIDENCE_FORM`, 223, otherwise).
+  `InstanceState` gains `frozen: Option<Freeze>`; `Update`, `Continue`, `Attest` and `Evidence` refuse a frozen
+  instance with `FROZEN` (222). `Attest` now names the instance's account first (an apply there checks it is not
+  frozen and writes nothing), so its account list changed; the harness's and the client's builder follow. The wire,
+  the guest, the harness and the program's image id changed (§8); the reviewed image `8d3b59ff…` that the prepared
+  public-testnet run deploys is a recorded binary of its own, unchanged.
+* **Not built:** the v0.4 experimental copy (`lez/guests/program-residue-experimental`) shares its state layout
+  with the deployed program through `ferrata-lez-wire`, whose change would move the deployed program's image id; a
+  frozen flag there needs a wire of its own. Evidence of a conflict at an unrecorded slot (§1.1). A monitor that
+  watches for evidence and sends it.
+
+## 7. Tests
+
+**Bench** (`cargo test --release -p misbehaviour`, Modal build box, 18 Nov 2026; output
+[`results/misbehaviour/tests.txt`](results/misbehaviour/tests.txt)): 3 tests pass in 7.8 s.
+
+| test | what | result |
+|---|---|---|
+| `honest_data_never_freezes` | at every state of five replays (the official `sync` vectors, 52 cases; the mainnet replay `mainnet-p1899`; Sepolia through Gloas, `sepolia-gloas-2026-11-10`; **the lab's record**, every update the lab's mainnet and Sepolia instances applied on its LEZ sequencer, `lez/lab/results/record/net/`), every update of that replay submitted as evidence against the record at its finalized slot (if the instance holds one) and against the adopted next committee | **40,313 submitted, 0 accepted**: 32,711 refused `PeriodSkipped` (23, a committee the instance does not hold), 232 `FinalizedHeaderInvalid` (25, the vectors' genesis placeholder), 189 `NotFinalized` (50), **7,181 `NoContradiction` (85)**. Of the (state, update) pairs, **5,487 pass every check of §4 and their signature verifies under the stored committee** (1,694 of them at a recorded slot, the same root): honest updates are refused for contradicting nothing, not for a failing signature. `validate_evidence` equals the core's `validate_compact` on all 26,635 pairs where the update passes the policy, but where `validate_compact` refuses for one of the two checks evidence drops. 418 updates, 349 of them applied by the replays' policy stores (every one of the real chains') |
+| `real_contradictions_freeze` | a chain that never existed (32 members whose keys the test holds, the Electra minimal preset of the `sync` vectors, a fabricated checkpoint): an update that finalizes slot 136 and adopts a next committee; another finalizing slot 136 with another root | refused as an update (`NotNewer`, 52), refused against the adopted committee (85), **accepted as evidence (A)**; the frozen instance refuses an update, an attestation and the evidence again (86), its records and store unchanged (a live copy applies the same update and attests the record). Also accepted: the checkpoint's own record contradicted (22 of 32 signers); **(B)** a next committee other than the adopted one, both headers in the store's period (refused as an update, `NextCommitteeMismatch`, 28); (B) with only the aggregate field changed (the same key root); (A) signed by the held next committee in the next period, through the residue-witness pairing |
+| `griefing_and_replay` | 21 submissions on the instance after its first update | refused: signed two periods ahead, or in the previous period (23: committees the instance does not hold); the right period or the next with other keys (40); no finality branch (50); 21 of 32 signers (51); the update that wrote the record replayed against it, and against the adopted committee (85); a contradicting update against a record at another slot (85); a slot with no record (87); a finality branch node altered (26); a signature slot after the slot the caller vouches for (22); a signature over another attested header (40); another next committee whose finalized header is in the previous period, the adopted committee again, a next committee while the instance knows none (85); past the weak-subjectivity period (53); a residue witness with one bit flipped (40). Accepted: 22 of 32 signers (two thirds), the honest residue witness. Every refused submission left the instance unchanged |
+
+**Through LEZ v0.3.1's block application** (`lez-v03/harness/tests/misbehaviour.rs`, the harness of
+[`../lez-v03/README.md`](../lez-v03/README.md): every transaction public, with a fee, settled in a block as v0.3.1's
+sequencer settles it; Modal build box, 18 Nov 2026; output [`../lez-v03/results/misbehaviour-tests.txt`](../lez-v03/results/misbehaviour-tests.txt),
+tables `misbehaviour.tsv` and `misbehaviour-honest.tsv` beside it): 2 tests pass in 37.8 s.
+
+* `contradictions_freeze_and_frozen_refuses`, on a chain that never existed (a 512-member committee whose keys the
+  test holds, mainnet's preset and fork versions with Electra from genesis, a fabricated checkpoint at slot 81,920;
+  each instance initialized in one transaction with the 512 keys, then one update in one transaction that finalizes
+  slot 81,984 and adopts a next committee by its summary): (A) refused as an `Update` (52), then applied as
+  `Evidence` at 510 and at 342 signers with the residue witness and at 510 with the final exponentiation; (B) refused
+  as an `Update` (28), applied as `Evidence`. The instance's `frozen` field holds the expected `Freeze`; its store,
+  its count of applied jobs and its records are unchanged. The frozen instance refuses `Update` (222), `Continue`
+  (222), `Attest` under its record (222; the same attestation on a live instance is refused by the record's check,
+  111) and the same `Evidence` again (222). Refused, the instance unchanged: the contradicting update as an `Update`
+  (52); evidence claiming a root the record does not hold (219) and against a slot with no record (213), both
+  refused at the record account after the instance's check passed; the update that wrote the record, replayed
+  against it and against the adopted committee (85); signed two periods ahead (23); the right period, other keys
+  (40); no finality branch (50); 341 signers (51); `Verify::Open` and a signer witness without the multiproof marker
+  (223); the residue witness with one bit flipped (40); a window other than an update's (218); the record account of
+  another slot (201).
+* `honest_mainnet_replay_never_freezes`: the mainnet replay (`Init`, then update_0 to update_3 as one-transaction
+  handoffs), and after each of the five steps each of update_0 to update_4 sent as `Evidence` against the record at
+  its finalized slot (when the instance holds one) and against the adopted next committee: **36 sent, 36 refused**
+  (22 `PeriodSkipped`, 14 `NoContradiction`), never frozen.
+* With this image the earlier suites pass unchanged (`v03` 5, `third_party` 4, `adversarial` 5): the same 166
+  transactions with the same results and exit codes; execution gas moved by −36,048 to +25,742 (an `Attest` now
+  costs about 21,000 to 26,000 gas more: its apply at the instance's account; the tables are in
+  [`../lez-v03/results/misbehaviour-regression/`](../lez-v03/results/misbehaviour-regression/); the committed tables
+  of EVIDENCE rows 131 and 137 stay those of the image `bac768a8…`).
+
+## 8. Numbers
+
+Execution gas, LEZ v0.3.1's block application (zkVM cycles of the transaction, of `MAX_GAS_EXEC` = 10,000,000;
+measured, Modal build box, 18 Nov 2026):
+
+| transaction (one, public) | execution gas | of `MAX_GAS_EXEC` | storage gas (bytes) | result |
+|---|---:|---:|---:|---|
+| **`Evidence` (A), 510 of 512, residue witness** | **6,656,148** | **66.6%** | 4,319 | applied, frozen |
+| `Evidence` (A), 510 of 512, final exponentiation | 9,139,244 | 91.4% | 3,159 | applied, frozen |
+| **`Evidence` (A), 342 of 512 (every absent index odd), residue witness** | **8,443,193** | **84.4%** | 25,759 | applied, frozen |
+| **`Evidence` (B), 510 of 512, residue witness** | **6,632,378** | **66.3%** | 4,295 | applied, frozen |
+| `Evidence` claiming a root the record does not hold | 6,653,851 | 66.5% | 4,319 | refused, 219 |
+| `Evidence`, the honest update against its own record | 273,926 | 2.7% | 3,239 | refused, 85 |
+| `Evidence` signed two periods ahead | 164,477 | 1.6% | 3,159 | refused, 23 |
+| `Update` of a frozen instance | 86,251 | 0.9% | 4,136 | refused, 222 |
+| `Attest` under a record of a frozen instance | 46,280 | 0.5% | 772 | refused, 222 |
+
+Evidence fits one transaction like a finality update (`bench/RESIDUE.md` §6 and §9.6: 6,629,246 and 8,318,645 on the
+LEZ v0.4 copy; `lez-v03/README.md`: a finality update in one transaction on v0.3.1): the same signature check, plus
+its contradiction check and, for kind (A), one apply at the record. A refusal before the signature costs under 3% of
+the limit. The program's image id is now `155b7317…635f` (625,824 ELF bytes, 7 segments; `bac768a8…` before this
+change; deployed nowhere; none of them is in `docs/image-ids.md`).
+
+## 9. What an auditor must check
 
 1. That `validate_evidence` differs from `steps::validate_compact` in the two checks of §4.2 only (the differential
    test of §7 compares them on every update of the data sets).
@@ -176,3 +263,9 @@ instance past its period (whose committee may no longer be bonded) cannot be fro
    the account derived from the claimed slot, and that a frozen instance refuses `Update`, `Continue`, `Attest` and
    `Evidence` before any other work.
 4. That every consumer of records or statements reads the instance's frozen flag.
+
+## Re-check
+
+`cd bench && cargo test --release -p misbehaviour -- --nocapture` (the vectors first: `scripts/fetch-vectors.sh`);
+`cd lez-v03 && export RISC0_HOME=$PWD/../../risc0-home-lez && cargo test --release -p harness-v03 --test misbehaviour
+-- --nocapture --test-threads 2` (LEZ v0.3.1 checked out beside the repository: `lez-v03/README.md`, "Re-check").
