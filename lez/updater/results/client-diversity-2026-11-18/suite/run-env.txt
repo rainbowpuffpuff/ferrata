@@ -1,0 +1,41 @@
+fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+HEAD
+?? .cargo/
+?? .github/
+?? .gitignore
+?? Cargo.lock
+?? Cargo.toml
+?? LICENSE-APACHE
+?? LICENSE-MIT
+?? README.md
+?? SECURITY.md
+?? admin/
+?? bench/
+?? bridge/
+?? checkpoint/
+?? cli/
+?? crates/
+?? deny.toml
+?? docs/
+?? e2e/
+?? fuzz/
+?? gpu-prover/
+?? idl/
+?? justfile
+?? lez-v03-bridge/
+?? lez-v03-return/
+?? lez-v03/
+?? lez/
+?? modules/
+?? monitor/
+?? releases/
+?? rustfmt.toml
+?? scripts/
+?? vault/
+?? vectors/
+Wed Nov 18 17:45:22 UTC 2026
+2
+cargo 1.98.1 (797e8a9bc 2026-08-05)
+rustc 1.98.1 (48a229cea 2026-09-01)

@@ -1,0 +1,16 @@
+crown run crown-live-4 (live), vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470, deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07
+PASS chain: chain id 11155111, head 12163730
+PASS configId from session A's fields: 0xaafbcbf68216d74da42c428030298847da1e125eb20df9c2fb5614b8e6e9893c = the vault's storedLezConfigId
+PASS bedrockGenesisId = sha256(deployment settings), or the zone's fork digest (Logos Blockchain 0.3.5-rc.1): 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac = the node's fork digest (GET /chain/fork at session A and B)
+PASS genesisState from T0 and the channel: 0xdaa0ae2af14a8898a65af4195822befb1e2e3ca04edb7214a02373cf16c2ffab (T0 = 33) = the vault's
+PASS vault: code, CREATE address, rule (B), image ids = the run's records: CREATE(deployer, nonce 38), mode B; checkpointImageId 0xafbf4023… and releaseImageId 0xb64900bc… = the run's (params.json, programs/ids.jsonl)
+PASS every recorded transaction succeeded, sent by the deployer: 6 transactions of 6 stages (deposit-0, deposit-1, submit, finalizeAttested, release-0, release-1)
+PASS deposits: two logs, commitments recomputed: j0 leaf 0 1000000000000000 wei public; j1 leaf 1 1000000000000000 wei private
+PASS captures: headers are the chain's blocks; every slot proven: capture 1: block 12162496, 6 slots; capture 2: block 12162621, 6 slots
+PASS LEZ session records: T0 33 -> T1 87, 9 steps, claims ['private', 'public'], 2 burn notes
+PASS checkpoint journal fields: parent = genesisState, tip T1 87, burns 2, imported leaves 2
+PASS checkpoint final on the vault, its seal verified by RISC Zero's verifier (eth_call): final state 0x99ebd54008df4dc6478fe0ab1a94b30cb5f757aef270b61d6d04a0d14a22df71, seal accepted (a changed seal refused), burn root 0x09b6106d47aaaae23b3bbf69b06829c90eb771f3fbdc5711c2189d5fb0c5c75f accepted
+PASS releases: paid once, seals verified on chain, events: public-0: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; private-1: 1000000000000000 wei to 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07; vault balance now 6000000000000 wei
+PASS checkpoint input rebuilt from the node's recorded blocks = the proven input; guest re-executed: input sha256 b764fc49b12c7782... = proven; executed again: ,"journal_equals_native":true,"padded_cycles":20971520,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20],"segments":20,"user_cycles":18773532}
+PASS Groth16 receipts verify locally (ferrata-e2e verify): 3 receipts
+14 of 14 checks passed

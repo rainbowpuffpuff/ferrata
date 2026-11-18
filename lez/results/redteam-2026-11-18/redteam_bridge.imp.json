@@ -1,0 +1,200 @@
+{
+  "counts": {
+    "PASS": 10
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "imp",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 247,
+        "code_name": "bridge:IMPORT_MISMATCH",
+        "note": "baseline: A paired, ETH registered, root(A, 5) imported; decisive import: block 101 (8 leaves) [ImportRoot A at block 101, root with one bit flipped]",
+        "outcome": "refused"
+      },
+      "title": "root that is not the vault's slot 0",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 247,
+        "code_name": "bridge:IMPORT_MISMATCH",
+        "note": "baseline: A paired, ETH registered, root(A, 5) imported; decisive import: block 101 (8 leaves) [ImportRoot A at block 101, leaf_count 9 (slot 1 holds 8)]",
+        "outcome": "refused"
+      },
+      "title": "leaf count off by one",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_WRITTEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": "root(A, 5) already imported [ImportRoot A n=5 again]",
+        "outcome": "refused"
+      },
+      "title": "the same root imported twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_FOUND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 245,
+        "code_name": "bridge:NOT_FOUND",
+        "note": "no Init [ImportRoot A n=5 before Init]",
+        "outcome": "refused"
+      },
+      "title": "ImportRoot before Init",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": "baseline: A paired, ETH registered, root(A, 5) imported; decisive import: block 101 (8 leaves) [ImportRoot A at block 101 after Sunset]",
+        "outcome": "refused"
+      },
+      "title": "ImportRoot after Sunset",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch",
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "baseline: A paired, ETH registered, root(A, 5) imported; decisive import: block 101 (8 leaves); byte 68 of node 1 of the slot-0 proof flipped [ImportRoot A at block 101, slot-0 proof tampered]",
+        "outcome": "refused"
+      },
+      "title": "slot-0 storage proof tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "baseline: A paired, ETH registered, root(A, 5) imported; decisive import: block 101 (8 leaves) [ImportRoot as a nested call from another program]",
+        "outcome": "refused"
+      },
+      "title": "ImportRoot as a nested call from another program",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "prog:NO_RECORD",
+          "bridge:NOT_FOUND",
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 213,
+        "code_name": "prog:NO_RECORD",
+        "note": "admission evidence for the empty header(instance, 1) supplied [ImportRoot A naming slot 1 (no record)]",
+        "outcome": "refused"
+      },
+      "title": "ImportRoot naming a slot with no record",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-IMP-09",
+      "kind": "control",
+      "observed": {
+        "note": "n = 5; n+1 = 6 (older record), n+2 = 7 (newer record) [ImportRoot A n=6 under an older record, after n=7]",
+        "outcome": "accepted"
+      },
+      "title": "an older root imported after a newer one",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "core:HeaderHashMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-IMP-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 120,
+        "code_name": "core:HeaderHashMismatch",
+        "note": "B-BR on vault G under Gloas records (root(G, 1) imported); the parent header: the served block's fields with number - 1, timestamp - 12, another parentHash, and the state root the proofs verify against [ImportRoot G n=2 with the parent block's header]",
+        "outcome": "refused"
+      },
+      "title": "Gloas record with another block's header in front of the account proof",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

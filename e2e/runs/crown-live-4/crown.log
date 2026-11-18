@@ -1,0 +1,82 @@
+[2026-11-18T15:35:46Z] drive.py crown-live-4 live: done so far nothing
+[2026-11-18T15:35:50Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T15:35:50Z] LEZ session A (attempt 1): lez_session, lez/crown/session.sh (sha256 1441727e26a4), chain sepolia
+[2026-11-18T15:44:09Z] LEZ session A: ok=True ran=True exit=0 generation=1 after 499 s
+[2026-11-18T15:44:09Z] session A: T0 = 33 0x55a85964ef75f62b15df91efa4e01222d9e7889df1759635bacf39ad0b614008, channel keys ['0x1027fd67caef75a43474784fcba5c9c6fe6217ec49c8641732cd40fd4be26538'], bedrockGenesisId 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (the node's fork digest, {"fork_digest":"c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"}), chain sepolia
+[2026-11-18T15:44:09Z] stage lez-a: done in 499 s
+[2026-11-18T15:44:11Z] identity: deployer nonce 36, vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (CREATE n+2), configId 0xaafbcbf68216d74da42c428030298847da1e125eb20df9c2fb5614b8e6e9893c, genesisState 0xdaa0ae2af14a8898a65af4195822befb1e2e3ca04edb7214a02373cf16c2ffab, balance 498946585463094553 wei
+[2026-11-18T15:44:11Z] stage identity: done in 2 s
+[2026-11-18T15:49:25Z] STOP: bash exited 1 (logs/sepolia-deploy.log):
+    - database error: failed to get account for 0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0: server returned an error response: error code -32001: block not found: 0xb9957f
+    deploy.sh: run 3: the endpoint failed a read and nothing was sent (nonce still 38); again in 24 s (1 of 5)
+    No files changed, compilation skipped
+    2026-11-18T15:48:42.825542Z ERROR sharedbackend: Failed to send/recv `basic` err=failed to get account for 0x0C67C0f33Baba3d1bE81A69242bc18c51DA27b03: server returned an error response: error code -32001: block not found: 0xb99583 address=0x0C67C0f33Baba3d1bE81A69242bc18c51DA27b03
+    Error: Failed to deploy script:
+    EVM error; database error: failed to get account for 0x0C67C0f33Baba3d1bE81A69242bc18c51DA27b03: server returned an error response: error code -32001: block not found: 0xb99583
+    deploy.sh: run 3: the endpoint failed a read and nothing was sent (nonce still 38); again in 24 s (2 of 5)
+    No files changed, compilation skipped
+    2026-11-18T15:49:25.556475Z ERROR foundry_evm_core::fork::init: It looks like you're trying to fork from an older block with a non-archive node which is not supported. Please try to change your RPC url to an archive node if the issue persists.
+    Error: could not instantiate forked environment with provider ethereum-sepolia-rpc.publicnode.com; failed to get block for block number: 12162439; latest block number: 12162439
+    deploy.sh: run 3 failed; nothing more is sent (log spike/ferrata-wt-crown-rc3/e2e/runs/crown-live-4/logs/deploy/deploy-11155111-B-3.log)
+    [2026-11-18T15:49:25Z] STOP: deploy
+[2026-11-18T15:57:13Z] drive.py crown-live-4 live: done so far ['lez-a', 'identity']
+[2026-11-18T15:57:14Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T15:59:26Z] deploy: vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470, registry 0x837F715d57299799C64dcF5ba84525319D5EeAfe, token 0xD599644B3515C2f86EC5414a1aBE5Fd0d25bAb43, stop 0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA
+[2026-11-18T15:59:26Z] stage deploy: done in 132 s
+[2026-11-18T15:59:51Z] deposit 0: block 12162489, leaves 1
+[2026-11-18T15:59:51Z] stage deposit0: done in 25 s
+[2026-11-18T15:59:51Z] capture 1: waiting for block 12162489 (deposit 0) to be finalized
+[2026-11-18T16:14:29Z] capture 1, attempt 1: not covered yet; the next finality update in about 6.4 minutes
+[2026-11-18T16:21:03Z] capture 1: block 12162496, leaves 1, 6 slots proven; registry 0x898160360b5b4aab..., fees 0 0xdd26504865631e64..., 1 0x0000000000000000...
+[2026-11-18T16:21:03Z] stage capture1: done in 1272 s
+[2026-11-18T16:21:37Z] STOP: deposit 1: the vault counts 1 deposits of the deployer
+[2026-11-18T16:32:45Z] drive.py crown-live-4 live: done so far ['lez-a', 'identity', 'deploy', 'deposit0', 'capture1']
+[2026-11-18T16:32:47Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T16:32:48Z] capture 2: waiting for block 12162595 (deposit 1) to be finalized
+[2026-11-18T16:40:24Z] capture 2: block 12162621, leaves 2, 6 slots proven; registry 0x898160360b5b4aab..., fees 0 0xdd26504865631e64..., 1 0x0000000000000000...
+[2026-11-18T16:40:24Z] stage capture2: done in 456 s
+[2026-11-18T16:40:24Z] crown-driver check of the captures: exit 0 (advisory; logs/lez-check.log)
+[2026-11-18T16:40:24Z] LEZ session B (attempt 1): lez_session, lez/crown/session.sh (sha256 1441727e26a4), chain sepolia
+[2026-11-18T19:01:53Z] LEZ session B: ok=True ran=True exit=0 generation=2 after 8489 s
+[2026-11-18T19:01:53Z] session B: T1 = 87 0x5570ddc89e694f56c99447c034386e04e04e9561e7203743816a26720f8ded90, blocks {'from': 34, 'to': 87}, 2 claims, 2 burns
+[2026-11-18T19:01:53Z] stage lez-b: done in 8490 s
+[2026-11-18T19:01:54Z] checkpoint input crown-33-87: 606621 bytes, parent state 0xdaa0ae2af14a8898a65af4195822befb1e2e3ca04edb7214a02373cf16c2ffab, new state 0x99ebd54008df4dc6478fe0ab1a94b30cb5f757aef270b61d6d04a0d14a22df71, 2 burns counted
+[2026-11-18T19:01:54Z] stage checkpoint-input: done in 0 s
+[2026-11-18T19:01:54Z] checkpoint exec: wall_s":0.408031397,"image_id":"0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf","input_bytes":606621,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":20971520,"po2":[20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20],"segments":20,"user_cycles":18773532}
+[2026-11-18T19:01:54Z] stage checkpoint-exec: done in 0 s
+[2026-11-18T19:01:55Z] checkpoint prove: crown-33-87 queued on gpu_prove (one L4), call fc-01M7R0JZ1EWWFSKGYG68HZ5CVV; waiting up to 7200 s
+[2026-11-18T19:04:05Z] checkpoint prove: GPU ok=True gpu=NVIDIA L4, 23034 MiB, 610.57.04, 8.9 prover_wall_s=67.6 total_s=67.421775191 segments=20 image_ids_equal=True inputs_equal=True
+[2026-11-18T19:04:05Z] stage checkpoint-prove: done in 131 s
+[2026-11-18T19:04:43Z] groth16_wrap: 15 s (18 s with the call)
+[2026-11-18T19:04:44Z] checkpoint wrap: seal 0x73c457ba1eb96530... journal 544 bytes
+[2026-11-18T19:04:44Z] stage checkpoint-wrap: done in 39 s
+[2026-11-18T19:05:00Z] submit: block 12163384, the wait is over at block time 1795032300
+[2026-11-18T19:05:00Z] stage submit: done in 17 s
+[2026-11-18T19:05:17Z] release public-0: CPU proof in 17 s
+[2026-11-18T19:05:52Z] groth16_wrap: 11 s (14 s with the call)
+[2026-11-18T19:06:09Z] release private-1: CPU proof in 17 s
+[2026-11-18T19:06:49Z] groth16_wrap: 16 s (19 s with the call)
+[2026-11-18T19:06:49Z] releases: ['public-0', 'private-1'] proven and wrapped
+[2026-11-18T19:06:49Z] stage releases-prove: done in 108 s
+[2026-11-18T19:06:49Z] the candidate's wait W: waiting 3492 s (until block time 1795032300)
+[2026-11-18T20:05:13Z] stage wait: done in 3504 s
+[2026-11-18T20:07:03Z] finalize: block 12163687, final state 0x99ebd54008df4dc6478fe0ab1a94b30cb5f757aef270b61d6d04a0d14a22df71
+[2026-11-18T20:07:03Z] stage finalize: done in 110 s
+[2026-11-18T20:07:04Z] release 0's delay: waiting 120 s (until block time 1795032540)
+[2026-11-18T20:09:14Z] STOP: bash exited 1 (logs/sepolia-release-0.log):
+    [2026-11-18T20:09:04Z] $ bash spike/ferrata-wt-crown-rc3/e2e/crown/sepolia.sh spike/ferrata-wt-crown-rc3/e2e/runs/crown-live-4 release 0
+    No files changed, compilation skipped
+    2026-11-18T20:09:14.021363Z ERROR foundry_evm_core::fork::init: It looks like you're trying to fork from an older block with a non-archive node which is not supported. Please try to change your RPC url to an archive node if the issue persists.
+    Error: could not instantiate forked environment with provider ethereum-sepolia-rpc.publicnode.com
+    
+    Context:
+    - failed to get block for block number: 12163698; latest block number: 12163698
+    [2026-11-18T20:09:14Z] STOP: release-0
+[2026-11-18T20:14:17Z] drive.py crown-live-4 live: done so far ['lez-a', 'identity', 'deploy', 'deposit0', 'capture1', 'deposit1', 'capture2', 'lez-b', 'checkpoint-input', 'checkpoint-exec', 'checkpoint-prove', 'checkpoint-wrap', 'submit', 'releases-prove', 'wait', 'finalize']
+[2026-11-18T20:14:18Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T20:14:38Z] release 0 (public-0): block 12163725
+[2026-11-18T20:14:38Z] stage release0: done in 19 s
+[2026-11-18T20:15:37Z] release 1 (private-1): block 12163730
+[2026-11-18T20:15:37Z] stage release1: done in 59 s
+[2026-11-18T20:15:43Z] verify: every check passed; DONE
+[2026-11-18T20:15:43Z] stage verify: done in 6 s

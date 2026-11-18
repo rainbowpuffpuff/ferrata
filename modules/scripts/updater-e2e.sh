@@ -4,9 +4,9 @@
 # lists it), fed the lab's recorded mainnet and Sepolia light-client data by two sources each
 # (lez/lab/results/record/net/). From the checkpoints to the newest recorded updates: the instances
 # initialised, every update verified by the program's own steps before it is paid for, the public job
-# driven to the end; the finalized roots must be the lab's (lez/lab/README.md, the session of 11 Nov
-# 14:17 UTC: mainnet slot 15,631,808 `530599ec…2328`, Sepolia 11,556,000 `d31b7d34…f3cc`), with no
-# transaction refused.
+# driven to the end; the finalized slots and roots must be the lab's own instances' (the record grows
+# while the lab runs: lez/lab/results/record/instances.tsv, mainnet slot 15,631,808 `530599ec…2328` and
+# Sepolia 11,556,000 `d31b7d34…f3cc` on 11 Nov 14:17 UTC), with no transaction refused.
 #
 #   modules/scripts/updater-e2e.sh OUT_DIR                  natively: `run` until up to date
 #   CALL=logosctl LOGOSCTL=BIN SESSION=DIR modules/scripts/updater-e2e.sh OUT_DIR
@@ -26,8 +26,12 @@ M=ferrata_updater_module
 export RISC0_DEV_MODE=1
 summary="$out/summary.md"
 fails=0
-MAINNET_ROOT=530599ec91a6ce70948d70d1066bb35a2a0cb999ad8e2cb6229452dcb7102328
-SEPOLIA_ROOT=d31b7d34c2e6b6d8c3430dcdc763375d0ba9a9b201554164326133367aa3f3cc
+lab() { # CHAIN COLUMN: the lab's instance of CHAIN in its record
+  awk -F'\t' -v c="$1" -v k="$2" 'NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i; next } $1 == c { print $col[k] }' \
+    "$repo/lez/lab/results/record/instances.tsv"
+}
+MAINNET_SLOT=$(lab mainnet finalized_slot) MAINNET_ROOT=$(lab mainnet finalized_root)
+SEPOLIA_SLOT=$(lab sepolia finalized_slot) SEPOLIA_ROOT=$(lab sepolia finalized_root)
 PROGRAM_ID=$(grep 'attestation program (`lez/guests/program`)' "$repo/docs/image-ids.md" | grep -oE '0x[0-9a-f]{64}' | head -n 1)
 echo "# ferrata_updater_module on the in-process LEZ chain with the lab's records ($CALL, $(date -u +%FT%TZ))" > "$summary"
 echo >> "$summary"
@@ -98,10 +102,10 @@ seconds=$(( $(date +%s) - t0 ))
 f="$out/rep/final.json"
 inst() { jq -r --arg c "$1" ".instances[] | select(.chain == \$c) | $2" "$f"; }
 check "up to date after $(jq .round "$f") rounds ($seconds s)" '[ "$(jq -r .up_to_date "$f")" = true ]'
-check "mainnet: finalized slot 15,631,808, root = the lab's ($MAINNET_ROOT)" \
-  '[ "$(inst mainnet .finalized_slot)" = 15631808 ] && [ "$(inst mainnet .finalized_root)" = "$MAINNET_ROOT" ]'
-check "sepolia: finalized slot 11,556,000, root = the lab's ($SEPOLIA_ROOT)" \
-  '[ "$(inst sepolia .finalized_slot)" = 11556000 ] && [ "$(inst sepolia .finalized_root)" = "$SEPOLIA_ROOT" ]'
+check "mainnet: finalized slot $MAINNET_SLOT, root = the lab's ($MAINNET_ROOT)" \
+  '[ "$(inst mainnet .finalized_slot)" = "$MAINNET_SLOT" ] && [ "$(inst mainnet .finalized_root)" = "$MAINNET_ROOT" ]'
+check "sepolia: finalized slot $SEPOLIA_SLOT, root = the lab's ($SEPOLIA_ROOT)" \
+  '[ "$(inst sepolia .finalized_slot)" = "$SEPOLIA_SLOT" ] && [ "$(inst sepolia .finalized_root)" = "$SEPOLIA_ROOT" ]'
 check "health: both instances ok" '[ "$(jq -c "[.health[].status]" "$f")" = "[\"ok\",\"ok\"]" ]'
 applied=$(awk '/^ferrata_updater_tx_total\{/ && /result="applied"/ {s += $NF} END {print s + 0}' "$out/metrics.txt")
 refused=$(awk '/^ferrata_updater_tx_total\{/ && /result="refused"/ {s += $NF} END {print s + 0}' "$out/metrics.txt")

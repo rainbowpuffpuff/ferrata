@@ -1,0 +1,53 @@
+{
+ "what": "lez-v03-bridge's state as its core crate lays it out (borsh); derived, to be checked against the node",
+ "program": "2Xw45ovqWvSzamTWNhc2t7ovad3MLoJFsqSeRjzsya4r",
+ "account": "8g8CJyNXgufHBw5VQL7E4u3P5ikTh25ouoCshjJhS6Fz",
+ "count_endian": "little",
+ "changes_only_in_root_calls": "lez-v03-bridge writes burns(cid) only in Burn and root(cid, n) only in ImportRoot, and both refuse a caller (guests/bridge/src/main.rs:125, 237)",
+ "config_id": {
+  "offset": 1,
+  "length": 32
+ },
+ "burn_count": {
+  "offset": 33,
+  "length": 8
+ },
+ "burn_frontier": {
+  "offset": 45,
+  "length": 1024
+ },
+ "expect": [
+  {
+   "offset": 0,
+   "hex": "05",
+   "what": "burns(cid) holds BridgeState::Burns (variant 5)"
+  },
+  {
+   "offset": 41,
+   "hex": "20000000",
+   "what": "the frontier has 32 nodes"
+  },
+  {
+   "account": "HLTchLWmaP8QdNajKPP7azebJWyeQzWJbr2MW3jBX79Z",
+   "offset": 0,
+   "hex": "01",
+   "what": "root(cid, 2) holds BridgeState::Root"
+  },
+  {
+   "account": "HLTchLWmaP8QdNajKPP7azebJWyeQzWJbr2MW3jBX79Z",
+   "offset": 1,
+   "hex": "168eb622c20414e34993e8e3aba898bde406a64e2df5412a71b2930af2375daa",
+   "what": "root(cid, n) is of this configuration"
+  }
+ ],
+ "imported_leaf_count": {
+  "account": "HLTchLWmaP8QdNajKPP7azebJWyeQzWJbr2MW3jBX79Z",
+  "offset": 61,
+  "length": 8
+ },
+ "imported_root": {
+  "account": "HLTchLWmaP8QdNajKPP7azebJWyeQzWJbr2MW3jBX79Z",
+  "offset": 69,
+  "length": 32
+ }
+}

@@ -1,0 +1,18 @@
+{
+  "bytes": 608,
+  "gas_limit": 2000000,
+  "hash": "6ca5aad8926e2483bb0d49afa39e2418f9a71f8a958c922da9916f2388a70fc7",
+  "label": "deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+  "max_fee": "128196608",
+  "signed_utc": "2026-11-18T17:48:42Z",
+  "signers": [
+    {
+      "account": "9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+      "nonce": "0"
+    },
+    {
+      "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+      "nonce": "6"
+    }
+  ]
+}

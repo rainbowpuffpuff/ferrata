@@ -11,9 +11,9 @@
 //!   configuration changes. Each is framed and hashed with its digest here ([`mantle`]), and its digest must be the
 //!   deployment's ([`fork_digest`]): an inscription signed on another chain, or under another era's rules, is refused.
 //! - A `ChannelConfigOp` whose `configuration_threshold` exceeds its key count does not decode on 0.3.5-rc.1
-//!   (logos-blockchain #3781, `ChannelConfigOp::new`), so Bedrock never applies it; this build refuses it too, so that
-//!   the key set the program follows stays the channel's. (The `d480efc6` node applied such a configuration; the
-//!   default build follows that node and accepts it.)
+//!   (logos-blockchain #3781, `ChannelConfigOp::new`), so Bedrock never applies it; this build refuses it too. The
+//!   rotation rule still accepts `threshold(n)` signatures, not the channel's own threshold, and does not check that
+//!   Bedrock applied the change (as the default build). (The `d480efc6` node applied such a configuration.)
 //!
 //! The operations' own encodings are unchanged for the five opcodes the program reads (upstream's codec fixtures of a
 //! transfer, an inscription, a channel withdrawal and a channel transfer are byte for byte equal at both revisions; the

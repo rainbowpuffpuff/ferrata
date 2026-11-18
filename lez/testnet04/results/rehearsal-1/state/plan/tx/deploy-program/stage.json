@@ -1,0 +1,14 @@
+{
+  "fee_state": [
+    8,
+    8
+  ],
+  "first_nonce": "0",
+  "info": {
+    "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+    "program": "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+    "sha256": "ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"
+  },
+  "payer": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+  "stage": "deploy-program"
+}

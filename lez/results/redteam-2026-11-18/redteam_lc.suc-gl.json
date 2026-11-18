@@ -1,0 +1,333 @@
+{
+  "counts": {
+    "PASS": 16,
+    "UNSUPPORTED": 1
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "suc-gl",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_SUCCESSOR"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 216,
+        "code_name": "prog:BAD_SUCCESSOR",
+        "note": "Gloas added, chain id changed [Gloas added, chain id changed]",
+        "outcome": "refused"
+      },
+      "title": "successor changes the chain id",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_SUCCESSOR"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 216,
+        "code_name": "prog:BAD_SUCCESSOR",
+        "note": " [the parent's own config]",
+        "outcome": "refused"
+      },
+      "title": "successor with no change",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_SUCCESSOR"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 216,
+        "code_name": "prog:BAD_SUCCESSOR",
+        "note": "Gloas added, Electra version changed [Gloas added, Electra version changed]",
+        "outcome": "refused"
+      },
+      "title": "successor changes a fork at or before the checkpoint epoch",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_SUCCESSOR"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 216,
+        "code_name": "prog:BAD_SUCCESSOR",
+        "note": "Gloas before Fulu [Gloas before Fulu]",
+        "outcome": "refused"
+      },
+      "title": "successor schedule out of activation order",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:STALE_CHECKPOINT"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 217,
+        "code_name": "prog:STALE_CHECKPOINT",
+        "note": " [checkpoint = the bootstrap's (older) record]",
+        "outcome": "refused"
+      },
+      "title": "successor from a checkpoint that is not the latest record",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:BAD_SUCCESSOR"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 216,
+        "code_name": "prog:BAD_SUCCESSOR",
+        "note": "Gloas added, ws period + 1 [Gloas added, ws period + 1]",
+        "outcome": "refused"
+      },
+      "title": "successor changes the weak-subjectivity period",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-SUC-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 202,
+        "code_name": "prog:WRONG_SENDER",
+        "note": " [Spawn sent directly]",
+        "outcome": "refused"
+      },
+      "title": "Spawn sent by an outside account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-SUC-08",
+      "kind": "control",
+      "observed": {
+        "note": "successor active, root id = parent id [Succeed adding Gloas]",
+        "outcome": "accepted"
+      },
+      "title": "valid successor adding Gloas",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-GL-01",
+      "kind": "control",
+      "observed": {
+        "note": "UPGRADED 3 -> 4 emitted",
+        "outcome": "accepted"
+      },
+      "title": "first Gloas-era update upgrades the store",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:ForkMismatch"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 61,
+        "code_name": "core:ForkMismatch",
+        "note": " [Gloas update, schedule without Gloas: Open]",
+        "outcome": "refused"
+      },
+      "title": "Gloas-era update to an instance whose schedule lacks Gloas",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 25,
+        "code_name": "core:FinalizedHeaderInvalid",
+        "note": " [Gloas finalized block hash flipped: Open]",
+        "outcome": "refused"
+      },
+      "title": "Gloas finalized header: execution_block_hash tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:FinalizedHeaderInvalid",
+          "core:FinalityBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-04",
+      "kind": "adversarial",
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "no zero padding node in the first Gloas update's branches"
+      },
+      "title": "Gloas finalized header: non-zero padding in a normalized branch",
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "core:ForkMismatch",
+          "core:AttestedHeaderInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": "the Gloas encoding with the Electra layout byte [Gloas update labelled Electra]",
+        "outcome": "refused"
+      },
+      "title": "Gloas-era update encoded in the Electra layout",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NotNewer",
+          "core:ForkMismatch",
+          "core:UpdateIrrelevant"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 61,
+        "code_name": "core:ForkMismatch",
+        "note": " [period 1378 again, after the upgrade: Open]",
+        "outcome": "refused"
+      },
+      "title": "pre-Gloas update replayed after the store upgraded",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:Malformed",
+          "core:FinalityBranchInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 1,
+        "code_name": "core:Malformed",
+        "note": " [Gloas finality branch of 7 nodes: Open]",
+        "outcome": "refused"
+      },
+      "title": "Gloas finality branch truncated to the Electra depth",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:ForkMismatch",
+          "core:SignatureInvalid",
+          "core:Malformed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-GL-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 61,
+        "code_name": "core:ForkMismatch",
+        "note": " [Gloas one period late in the schedule: Open]",
+        "outcome": "refused"
+      },
+      "title": "instance whose Gloas epoch is later than the chain's",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "lez:validity-window",
+          "core:OutsideWeakSubjectivityPeriod"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-WS-01",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Execution outside of the validity window",
+        "note": "timestamp = ws end (exclusive) [Open at the end of the period]",
+        "outcome": "refused"
+      },
+      "title": "Open after the weak-subjectivity period of the store's header",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

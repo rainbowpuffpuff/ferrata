@@ -1,0 +1,70 @@
+# Box job 1, Modal build box ferrata-wt-bridge-next, 18 Nov 2026 15:01:08Z start; LEZ v0.4.0-rc1 harness, RISC0_DEV_MODE=1
+# toolchains: cargo 1.93.0 (083ac5135 2025-12-15) risc0-r0vm 3.0.5 
+
+## step status (name, exit code, seconds, end time UTC)
+lock exit 0 6 s 15:01:14
+guest exit 0 60 s 15:02:14
+wire exit 0 24 s 15:02:38
+norun-default exit 0 270 s 15:07:08
+norun-next exit 0 14 s 15:07:22
+tenant-default exit 0 156 s 15:09:58
+suites-next exit 0 160 s 15:12:38
+privacy-next exit 0 62 s 15:13:40
+ALL DONE 15:13:40
+
+## the second build's id (risc0-build's methods.rs)
+pub const FERRATA_BRIDGE_NEXT_ID: [u32; 8] = [975928700, 3843567564, 4238954353, 3172282452, 3469061453, 724262242, 3041979581, 790542186];
+
+## wire
+     Running unittests src/lib.rs 
+test tests::a_header_travels_in_front_of_the_account_proof ... ok
+test config_keyed::tests::keyed_by_the_configuration ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+## suites-next
+     Running tests/bridge_burn.rs 
+test burns_and_what_the_checkpoint_collects ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 17.46s
+     Running tests/bridge_controls.rs 
+test registry_fees_caps_freezes_and_sunset ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 36.76s
+     Running tests/bridge_inbound.rs 
+test the_bridge_codes_are_its_own_block ... ok
+test inbound_under_a_gloas_record ... ok
+test inbound_configuration_import_and_plaintext_claim ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 13.72s
+     Running tests/bridge_private.rs 
+test a_private_claim_publishes_only_the_nullifier_the_denomination_and_the_root_read ... ok
+test a_private_claim_to_a_public_destination_and_the_refusals ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.36s
+     Running tests/bridge_roles.rs 
+test a_private_holder_transfers ... ok
+test transfers_handover_multisig_watchers_and_keyless_sunset ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.24s
+     Running tests/bridge_secfix.rs 
+test c1_f_a_mint_is_accepted_only_at_its_holder ... ok
+test h1_b_import_with_a_sender_is_refused ... ok
+test h1_a_nested_import_is_refused ... ok
+test c1_a_a_claim_cannot_block_init ... ok
+test c1_d_a_claim_cannot_block_an_import ... ok
+test c1_b_a_claim_cannot_block_register ... ok
+test c1_c_a_claim_cannot_destroy_a_pending_claim ... ok
+test c1_e_a_claim_cannot_block_a_burn ... ok
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.82s
+     Running tests/bridge_time.rs 
+test freezes_and_caps_follow_attested_time_only ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 23.34s
+     Running tests/bridge_vault_storage.rs 
+test the_bridge_reads_the_vaults_own_registry_fees_and_tree ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.80s
+
+## privacy-next
+     Running tests/privacy_suite.rs 
+bridge core recover_burns over the 20 LEZ notes (v2 mac): 20 found
+privacy suite, LEZ half: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive) in target/privacy-next
+test privacy_suite_lez_half ... ok
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 56.63s
+
+## tenant-default
+     Running tests/tenant.rs 
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 150.15s

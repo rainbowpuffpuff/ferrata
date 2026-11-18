@@ -1,0 +1,103 @@
+{
+  "test": "bridge/crates/ferrata-bridge-core/tests/redteam.rs (not written)",
+  "counts": {
+    "UNSUPPORTED": 6
+  },
+  "results": [
+    {
+      "id": "BC-01",
+      "area": "bridge-core",
+      "kind": "control",
+      "title": "NOut does not depend on the burn index",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "BC-02",
+      "area": "bridge-core",
+      "kind": "adversarial",
+      "title": "COut opened with another recipient",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "any"
+        ]
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "BC-03",
+      "area": "bridge-core",
+      "kind": "adversarial",
+      "title": "memo changed under a v2 mac",
+      "expected": {
+        "outcome": "refused",
+        "codes": [
+          "any"
+        ]
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "BC-04",
+      "area": "bridge-core",
+      "kind": "control",
+      "title": "burn leaf binds the configuration",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "BC-05",
+      "area": "bridge-core",
+      "kind": "control",
+      "title": "deposit nullifier is the same under every root",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    },
+    {
+      "id": "BC-06",
+      "area": "bridge-core",
+      "kind": "control",
+      "title": "deposit secret binds chain and vault",
+      "expected": {
+        "outcome": "accepted",
+        "codes": []
+      },
+      "observed": {
+        "outcome": "unsupported",
+        "reason": "not implemented in this run (budget)"
+      },
+      "verdict": "UNSUPPORTED"
+    }
+  ],
+  "note": "the lead stopped the run for budget before this group's test was written; every vector UNSUPPORTED"
+}

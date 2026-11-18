@@ -1,0 +1,64 @@
+{
+  "counts": {
+    "PASS": 3
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "rel",
+  "results": [
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:PredicateFailed"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-REL-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 130,
+        "code_name": "core:PredicateFailed",
+        "note": "fact 0 = the EIP-2935 history contract's account (balance 0x0000000000000000000000000000000000000000000000000000000000000000), fact 1 = its slot 0x658 (a block hash, 0x6563fc5beca4…); relation fact0.Balance > fact1.Value is false; native evaluate: refused core:PredicateFailed [AT-REL-01]",
+        "outcome": "refused"
+      },
+      "title": "relation between two facts that does not hold",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [
+          "core:QueryInvalid"
+        ],
+        "outcome": "refused"
+      },
+      "id": "AT-REL-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 131,
+        "code_name": "core:QueryInvalid",
+        "note": "WETH account and balance slot (2 facts), relation fact9.Value = fact1.Value; native evaluate: refused core:QueryInvalid [AT-REL-02]",
+        "outcome": "refused"
+      },
+      "title": "relation naming a fact index out of range",
+      "verdict": "PASS"
+    },
+    {
+      "area": "attest",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "AT-REL-03",
+      "kind": "control",
+      "observed": {
+        "note": "(a) fact1.Value = fact1.Value (the balance slot with itself): applied (native evaluate: accepted, 3 statements); (b) fact1.Value > fact2.Value (balance slot > slot 0xff): applied (native evaluate: accepted, 3 statements)",
+        "outcome": "accepted"
+      },
+      "title": "relation between two facts that holds",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_attest.rs"
+}

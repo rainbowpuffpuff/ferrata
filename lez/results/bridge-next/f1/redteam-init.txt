@@ -1,0 +1,11 @@
+before:
+ls: cannot access 'lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json': No such file or directory
+-rw-r--r-- 1 ubuntu ubuntu 3915 2026-11-18T17:54:34 lez/results/redteam-2026-11-18/redteam_bridge.init.json
+7281340a3376f343a5ff1a3b89e27ee00842a9d09ab9ea8e060f048d0cd6bfb4  lez/results/redteam-2026-11-18/redteam_bridge.init.json
+sha256sum: lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json: No such file or directory
+after:
+-rw-r--r-- 1 root   root   3896 2026-11-18T18:17:55 lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json
+-rw-r--r-- 1 ubuntu ubuntu 3915 2026-11-18T18:17:20 lez/results/redteam-2026-11-18/redteam_bridge.init.json
+7281340a3376f343a5ff1a3b89e27ee00842a9d09ab9ea8e060f048d0cd6bfb4  lez/results/redteam-2026-11-18/redteam_bridge.init.json
+67bed31a87b3ef78ab16575337e8ea8c9c1074c29dab58d114e733ea461516a8  lez/results/bridge-next/redteam-2026-11-18/redteam_bridge.init.json
+deployed record rewritten byte for byte as committed

@@ -324,7 +324,9 @@ frozen_a=$(cast call --rpc-url "$rpc" "$vault" "checkpointsFrozenUntil()(uint256
 check "A4 final tier stalled: alert and the watcher's 12 h pause (rule A)" '[ -n "$(jq -c "select(.kind==\"final-tier-stalled\")" "$alerts")" ] && [ $((frozen_a - $(now))) -gt 43000 ]'
 
 # R: the node view from a real LEZ v0.4.0-rc1 sequencer's record (lez/lab/results/record/chain.tsv), offline.
-"$mon" node-view --chain-tsv "$here/../lez/lab/results/record/chain.tsv" --label lab-devnet > "$out/node-view-lab.json"
+# The record grows while the lab runs and only appends: R uses its header line and first 258 blocks.
+head -n 259 "$here/../lez/lab/results/record/chain.tsv" > "$run/lab-chain-258.tsv"
+"$mon" node-view --chain-tsv "$run/lab-chain-258.tsv" --label lab-devnet > "$out/node-view-lab.json"
 real_tip=$(jq -r '.finalBlocks["258"]' "$out/node-view-lab.json")
 rcand() { # TIPID TIPHASH
   jq -n --arg z "$zero" --argjson id "$1" --arg h "$2" '{newState: $z, parentState: $z, burnRoot: $z, burnCount: 0,

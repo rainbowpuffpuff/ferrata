@@ -90,7 +90,10 @@ def main():
     add(Mo, "monitor_check_stale_set", "check", {"rule": "B", "candidate": cand(3, h("33"), 3, 2), "nodes": [view], "now": 1010},
         {"verdict": "cancel", "reason.kind": "keySetNotLive"})
     add(Mo, "monitor_check_wait", "check", {"rule": "B", "candidate": cand(5, h("55")), "nodes": [view], "now": 1010}, {"verdict": "wait"})
-    add(Mo, "monitor_node_view_lab", "node_view", {"chain_tsv_file": str(REPO / "lez/lab/results/record/chain.tsv"), "label": "lab-devnet"},
+    # The lab's record grows while the lab runs and only appends: its header line and first 258 blocks.
+    lab = out.resolve() / "lab-chain-258.tsv"
+    lab.write_text("".join(f"{line}\n" for line in (REPO / "lez/lab/results/record/chain.tsv").read_text().splitlines()[:259]))
+    add(Mo, "monitor_node_view_lab", "node_view", {"chain_tsv_file": str(lab), "label": "lab-devnet"},
         {"verdict": "ok", "view.finalHeight": 258})
     add(Mo, "monitor_run_unbounded", "run", {"args": ["--rpc", "http://127.0.0.1:9", "--vault", "0x" + "00" * 19 + "01",
         "--node", "file:/nonexistent", "--state", str(out / "monitor-state.json")]}, {"verdict": "invalid_request"})

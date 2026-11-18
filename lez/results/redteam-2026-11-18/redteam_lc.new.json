@@ -1,0 +1,145 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PANIC": 1,
+    "PASS": 5
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "new",
+  "results": [
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NotNewer"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 52,
+        "code_name": "core:NotNewer",
+        "note": "U sent again after it applied [U again: Open]",
+        "outcome": "refused"
+      },
+      "title": "replay of an applied update",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NotNewer",
+          "core:UpdateIrrelevant"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 23,
+        "code_name": "core:PeriodSkipped",
+        "note": "U (period 1900) after update_2 (store period 1901) [stale U: Open]",
+        "outcome": "refused"
+      },
+      "title": "stale update (older finalized header than the store)",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "prog:JOB_EXISTS"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 207,
+        "code_name": "prog:JOB_EXISTS",
+        "note": "the second Open of the same job [Open U again]",
+        "outcome": "refused"
+      },
+      "title": "duplicate Open of the same job",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:StoreChanged",
+          "core:NotNewer"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 82,
+        "code_name": "step:StoreChanged",
+        "note": "update_1's job opened on the pre-U store, finished after U applied [Finish (stale job)]",
+        "outcome": "refused"
+      },
+      "title": "two valid updates opened on one store, the later finished second",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "LC-NEW-05",
+      "kind": "control",
+      "observed": {
+        "note": "update_1 opened again on the store U advanced",
+        "outcome": "accepted"
+      },
+      "title": "a stale job's update reopened on the new store",
+      "verdict": "PASS"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "step:StoreChanged",
+          "core:NotNewer"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-06",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Execution exceeded its cycle budget of 10000000 cycles",
+        "note": "update_1 verified against the pre-U store after U applied [VerifyAll on a stale store]",
+        "outcome": "refused"
+      },
+      "title": "VerifyAll against a stale store snapshot",
+      "verdict": "PANIC"
+    },
+    {
+      "area": "lc",
+      "expected": {
+        "codes": [
+          "core:NotNewer",
+          "step:StoreChanged"
+        ],
+        "outcome": "refused"
+      },
+      "id": "LC-NEW-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 82,
+        "code_name": "step:StoreChanged",
+        "note": "the same VerifyAll in a second transaction [VerifyAll U again]",
+        "outcome": "refused"
+      },
+      "title": "VerifyAll replayed after it applied",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_lc.rs"
+}

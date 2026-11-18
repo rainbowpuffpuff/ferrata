@@ -1,0 +1,7 @@
+fmt ok 0s
+test ok 1088s
+clippy ok 3s
+      1 warning: lee@0.1.0: Generated module at spike/ferrata-wt-source-diversity/lez/target/clippy/debug/build/lee-dfdc2111f5fa7777/out/lee/privacy_preserving_circuit/mod.rs
+      1 warning: programs@0.1.0: Generated module at spike/ferrata-wt-source-diversity/lez/target/clippy/debug/build/programs-799db9a570e9c8db/out/lez/programs/mod.rs
+    Checking ferrata-updater v0.1.0 (spike/ferrata-wt-source-diversity/lez/updater)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.80s

@@ -32,6 +32,8 @@ __pycache__/
 /vectors/*
 !/vectors/acc-leaf.json
 !/vectors/vault-tree-v2.json
+# The blind red-team vectors of 18 Nov 2026 (docs/reviews/redteam-2026-11-18.md), written by hand, committed.
+!/vectors/redteam-2026-11-18/
 
 # Generated fixtures, prover scratch and re-runs the sub-projects do not commit
 /checkpoint/fixtures/
@@ -95,3 +97,15 @@ __pycache__/
 /e2e/netfault/attacks/model/out/
 /e2e/netfault/attacks/model/cache/
 /e2e/netfault/attacks/model/broadcast/
+
+# The stand-in return leg for the public LEZ testnet (e2e/testnet-return.sh): local deployment records, logs, the
+# prover's scratch, the receipts' binaries (the seals, journals and records beside them are committed), and the
+# wallet's burn notes and the release inputs made from them (they hold the release secrets)
+/vault/deployments/standin-*
+/e2e/runs/testnet-return-*/logs/
+/e2e/runs/testnet-return-*/releases/receipts/*/receipt-*.bin
+/e2e/runs/testnet-return-*/releases/*.input
+/e2e/runs/testnet-return-*/checkpoint/burn-notes.json
+
+# lez-v03-bridge/sepolia.sh: Sepolia deployment records written where forge may write (vault/deployments/), copied to the run
+/vault/deployments/v03bridge-*

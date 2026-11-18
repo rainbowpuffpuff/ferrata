@@ -1,0 +1,84 @@
+Ran on the Modal build box (one container), 18 Nov 2026: LEZ v0.3.1 (tag v0.3.1, commit 1a003bfb) beside the repository,
+RISC0_HOME=<risc0-home-lez> (guest Rust 1.91.1), Rust 1.93.0. Build output omitted; the test output follows as printed.
+Re-run after an independent review (the same image and figures; misbehaviour_window.rs was written by that review).
+
+cd lez-v03 && cargo test --release -p harness-v03 --test misbehaviour --test misbehaviour_window -- --nocapture --test-threads 2
+
+     Running tests/misbehaviour.rs (target/release/deps/misbehaviour-c7fcc80441d0158f)
+
+running 2 tests
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+refused (52): the contradicting update sent as an Update: 262381 execution gas
+refused (219): evidence claiming a root the record does not hold: 6653851 execution gas
+refused (213): evidence against a slot the instance holds no record of: 6640148 execution gas
+refused (85): the update that wrote the record, replayed against it: 273926 execution gas
+refused (85): the same, against the adopted next committee: 259204 execution gas
+refused (23): signed two periods ahead (no committee held): 164477 execution gas
+refused (40): the right period, keys the instance does not hold: 9066448 execution gas
+refused (50): no finality branch (an attested head only): 104735 execution gas
+refused (51): 341 of 512 signers: 306206 execution gas
+refused (223): Verify::Open (not one transaction): 70843 execution gas
+refused (223): a signer witness that is not one multiproof: 88793 execution gas
+refused (40): the residue witness with one bit of c flipped: 6581344 execution gas
+refused (218): a window other than an update's: 102742 execution gas
+refused (201): the record account of another slot: 29363 execution gas
+(A) 510/512 with the final exponentiation: TxReport { label: "Evidence (A): 510/512, final exponentiation", block: 33, status: "applied", exit: None, exec_gas: 9139244, stor_gas: 3159, cycles: 9139244, gas_limit: 10000000, fee: 91417712, base_fee_exec: 10, base_fee_stor: 8, timestamp_ms: 1701179699013 }
+honest mainnet replay as evidence, refusals by exit code: {23: 22, 85: 14}
+test honest_mainnet_replay_never_freezes ... ok
+the dummy Attest on a live instance: exit Some(111)
+ONE-TX evidence (A) 510/512, residue witness: 6656148 execution gas (66.6% of MAX_GAS_EXEC)
+ONE-TX evidence (A) 510/512, final exponentiation: 9139244 execution gas (91.4% of MAX_GAS_EXEC)
+ONE-TX evidence (A) 342/512, residue witness: 8443193 execution gas (84.4% of MAX_GAS_EXEC)
+ONE-TX evidence (B) 510/512, residue witness: 6632378 execution gas (66.3% of MAX_GAS_EXEC)
+the final exponentiation path applied: true
+test contradictions_freeze_and_frozen_refuses ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 37.41s
+
+     Running tests/misbehaviour_window.rs (target/release/deps/misbehaviour_window-9f2d66318afbc315)
+
+running 2 tests
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+program YEoJNNgbExpgV2PWuq3gwE9tE7yqgX7dUFRLUo6NNcE image 155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f (625824 ELF bytes)
+front-run: Evidence (A), planned on the store at slot 81984	13	refused	218	121780	1.2%	4319	65355	10000000	1374132	11	8	1700986520001
+expiry: Evidence (A) signed in period 10, after the rotation	13	refused	23	164477	1.6%	3159	119121	10000000	1834519	11	8	1701082520001
+expiry: after the rotation the period-10 conflict is refused 23 for good; the instance live, the record kept
+test evidence_expires_when_the_instance_rotates ... ok
+front-run: Evidence (A), re-planned on the store at slot 82176	14	applied	-	6656022	66.6%	4319	6656022	10000000	66594772	10	8	1700986520002
+front-run: evidence planned before an advancing Update refused 218 (WRONG_WINDOW); re-planned: applied, frozen
+test evidence_front_run_by_an_update ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.61s
+
+EXIT 0
+
+The earlier suites with this image (the regenerated tables are in results/misbehaviour-regression/; the committed
+tables of rows 131 and 137 stay those of image bac768a8):
+cd lez-v03 && cargo test --release -p harness-v03 --test v03 --test third_party --test adversarial -- --nocapture --test-threads 4
+
+     Running tests/adversarial.rs (target/release/deps/adversarial-c0e103ef11d1c887)
+test review_atomic_init_record_conflict ... ok
+test review_init_front_run_without_adoption ... ok
+test review_zero_period_config ... ok
+test review_init_window_end_enforced_and_exclusive ... ok
+test review_atomic_update_record_conflict ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.70s
+     Running tests/third_party.rs (target/release/deps/third_party-00f04b1e2aca127d)
+test an_update_someone_else_applied_is_skipped ... ok
+test a_squatted_segment_account_makes_the_run_choose_fresh_accounts ... ok
+test a_pending_handoff_is_adopted_by_the_run ... ok
+test an_instance_created_without_its_committee_is_adopted ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.17s
+     Running tests/v03.rs (target/release/deps/v03-5edb3461c2cf1b34)
+test mainnet_one_transaction_finality_update_and_handoffs ... ok
+test mainnet_tampered_updates_are_refused ... ok
+test mainnet_every_verification_path ... ok
+test handoffs_in_one_transaction_each ... ok
+test sepolia_through_gloas_finality_updates_and_attestations has been running for over 60 seconds
+test sepolia_through_gloas_finality_updates_and_attestations ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 104.85s
+EXIT 0
+
+The client with this image: cargo build --release -p client-v03 --bins: exit 0; tests/sendguard.sh: 6 PASS, exit 0;
+tests/verifystatus.sh: 4 PASS, exit 0 (Modal build box, 18 Nov 2026).

@@ -22,6 +22,19 @@ were path-independent) through the vault
 ([`e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)). The LEZ side was a devnet we ran (one validator): no
 public LEZ network runs any of it ("Not audited. Not for production.", below).
 
+On 18 November 2026 (EVIDENCE rows 141–142) the same round trip ran live with the LEZ side on LEZ v0.4.0-rc3, as
+`crown-live-4`: rc3's own `sequencer_service` and its Logos Blockchain node 0.3.5-rc.1 (one sequencer, one validator,
+dev-mode leader proofs, a zone we ran), the same LEZ programs, LEZ's light client started from the fresh checkpoint
+`sepolia-2026-11-18`, and a fourth vault, FerrataVault v5 in mode (B) at
+[`0x80555Fe53CCcEf46951B23A3c75643a4C9283470`](https://sepolia.etherscan.io/address/0x80555Fe53CCcEf46951B23A3c75643a4C9283470),
+pinning the second build of the checkpoint guests (`checkpoint_b_0_3_5` `0xafbf4023…3bcf`,
+[`image-ids.md`](image-ids.md)), which reads the fork digest every transaction of that node carries; the earlier vaults'
+checkpoint ids cannot follow such a zone. 13 transactions (nonces 36–48), 74.9M gas, four starts (three stops on the
+public endpoint's lagging reads, each resumed), both private LEZ transactions and the checkpoint proven for real, both
+releases paid, verify 14 of 14 ([`e2e/runs/crown-live-4/`](../e2e/runs/crown-live-4/README.md)), rehearsed first on a
+fork of Sepolia ([`e2e/runs/crown-rc3-rehearsal-1/`](../e2e/runs/crown-rc3-rehearsal-1/README.md)).
+`python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-4`: 13 passed on two public endpoints.
+
 Anyone can re-check it from the committed records against a JSON-RPC endpoint of their choice:
 `python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3` (13 passed on two public endpoints; `e2e/runs/crown-live-1`
 the same). It checks every recorded transaction, the deployment's CREATE addresses, the vault's immutables (image ids,
@@ -33,9 +46,18 @@ of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14
 [docs/guides/verify.md](guides/verify.md) says what each check proves and what it still trusts, and how to
 rebuild the programs to their image ids.
 
+**The same seals on Ethereum mainnet, read-only (EVIDENCE row 149).** On Sepolia the vaults check seals with our own
+deployment of RISC Zero's Groth16 verifier (`0x8f0A…`). On 18 November 2026 the crown-live-3 checkpoint, its two releases
+and every other Groth16 seal the tree records with its journal (66 in all) were also checked against RISC Zero's own
+contracts on Ethereum mainnet, the ones risc0-ethereum v3.0.0's `deployment.toml` names: the router
+`0x8EaB2D97Dfce405A1692a21b3ff3A172d593D319` and the Groth16 verifier 3.0.0 `0x2a098988600d87650Fb061FfAff08B97149Fa84D`.
+The checks were `eth_call` at block 26,443,464 on two public endpoints. All 66 verify, and each seal, image id or
+journal with one byte changed reverts. Nothing is deployed on mainnet and nothing was sent:
+`python3 -I scripts/verify-mainnet-risc0.py` ([`e2e/runs/mainnet-risc0-verify/`](../e2e/runs/mainnet-risc0-verify/README.md)).
+
 ## Not audited. Not for production.
 
-No part of this repository has been audited. Three vaults are deployed on a public network, all on Sepolia.
+No part of this repository has been audited. Four vaults are deployed on a public network, all on Sepolia.
 FerrataVault v5 of `vault/` (rule (B)) with the final programs is at
 [`0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`](https://sepolia.etherscan.io/address/0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c)
 (created by transaction `0xa67bfa471825f0dad32e8243444700635a08f39d85b328672f5959b122c12822`, block 12,119,409), with
@@ -73,3 +95,9 @@ row 122). Etherscan keeps its own records and shows the same twelve as verified 
 exact matches (eight contracts by their source, four by its match to an identical contract among them). Its page for a
 v5 vault adds "Heuristics suggest this may be a proxy contract": the vault calls its linked library by DELEGATECALL at
 an address fixed in its bytecode. It is not a proxy and the address cannot be changed.
+The fourth deployment (`crown-live-4`, 18 November 2026), read on Sourcify the same day
+(`FERRATA_FIXTURE=../e2e/runs/crown-live-4/deploy.json vault/script/sourcify.sh status`, read-only, 20:48Z;
+[`e2e/runs/crown-live-4/sourcify-status.txt`](../e2e/runs/crown-live-4/sourcify-status.txt)): its vault
+[`0x8055…`](https://repo.sourcify.dev/11155111/0x80555Fe53CCcEf46951B23A3c75643a4C9283470), its registry library
+`0x837F…` and its emergency stop `0xB249…` are exact matches, and its test token `0xD599…` a match under another
+contract's name (`MockUSDT`: Sourcify's own match to identical code somebody verified); Etherscan not read.

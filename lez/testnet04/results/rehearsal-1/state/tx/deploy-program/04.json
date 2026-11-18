@@ -1,0 +1,18 @@
+{
+  "bytes": 98916,
+  "gas_limit": 2000000,
+  "hash": "56954fa7edb45f4b7f750866329e1ded56489a46f26e55bb64881463e74859de",
+  "label": "deploy program: WriteSegment 3 of 7 (98304 bytes)",
+  "max_fee": "134455296",
+  "signed_utc": "2026-11-18T17:49:04Z",
+  "signers": [
+    {
+      "account": "6KJ3iWW9rZbjpZ1iyXwoWD6uMqZGfmY5mPdA7swUxfWP",
+      "nonce": "0"
+    },
+    {
+      "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+      "nonce": "4"
+    }
+  ]
+}

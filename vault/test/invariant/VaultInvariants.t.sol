@@ -110,6 +110,21 @@ contract VaultInvariants is VaultTestBase {
         }
     }
 
+    /// @dev The shrunk sequence on which a campaign of 18 November 2026 failed `invariant_feesFollowTheAnnouncedSchedules`
+    ///      on the unmutated vault (vault/MUTATION.md): setUp announced ETH's fees from seed 7, the fuzzer announced
+    ///      them again from seed 7, so the very fees in force, which the vault takes as withdrawing the pending
+    ///      announcement (FerrataRegistry.announceFees), while the model put them in force 14 days on, and the claim
+    ///      found the vault's published schedules short of the model's. A model bug, fixed in VaultHandler.announceFees.
+    function test_announcingTheFeesInForceIsAWithdrawalInTheModelToo() public {
+        handler.announceFees(728, 7);
+        handler.proposeRoles(44_335_508_471_956_861_007_151_275_394_978_974_235_394_894_334_407_351_505_521_737_520);
+        handler.applyRoles(7427);
+        handler.applyFees(7508);
+        handler.claim(12_688);
+        assertEq(handler.ghostPublishedMismatches(), 0);
+        assertEq(handler.ghostFeeMismatches(), 0);
+    }
+
     /// @notice D13: every deposit escrowed, every release paid and credited, every refund returned exactly what the
     ///         fee model says; every published schedule hash is the model's preimage; no claimed deposit was refunded.
     function invariant_feesFollowTheAnnouncedSchedules() public view {

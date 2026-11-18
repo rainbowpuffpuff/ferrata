@@ -95,3 +95,16 @@ session	chain	seq	kind	period	attested_slot	signature_slot	finalized_slot	layout
 20261117T161706Z	mainnet	93	finality	1913	15675680	15675681	15675616	electra	false	true	false	63daecabd1b057faaca8fb544343d0f6f07f26cf65dd57978912a38006d1984e	3	749	751	applied	finality_update
 20261117T181706Z	mainnet	94	finality	1913	15676256	15676257	15676192	electra	false	true	false	a58ce3f58a195a8769c3ff6598fe41e1c380c28996d9ad45a3fa7f0cbe8ea89d	3	760	762	applied	finality_update
 20261117T201707Z	mainnet	95	finality	1913	15676864	15676865	15676800	electra	false	true	false	f754606720cab2e0f56525bfcef6979d562c9b0ede672a9ddb7d825738414a2f	3	766	768	applied	finality_update
+20261117T221705Z	mainnet	96	finality	1913	15677473	15677474	15677408	electra	false	true	false	9175fb10d72d851b13b47274b23b1e2fedf5a1b06ff700f2465cbc2274a076bd	3	772	774	applied	finality_update
+20261118T001705Z	mainnet	97	finality	1913	15678080	15678081	15678016	electra	false	true	false	9e9bad10dc55d71cd90dee9ead4eff968fd845d5c67597578b7541824f580b55	3	778	780	applied	finality_update
+20261118T021704Z	mainnet	98	finality	1913	15678659	15678660	15678592	electra	false	true	false	bcad32f1d091903500d3587b6504dfe5adebfcd1ef2f47ef2f616392eda2af2b	3	784	786	applied	finality_update
+20261118T041704Z	mainnet	99	finality	1913	15679265	15679266	15679200	electra	false	true	false	30a7eabf85b5d9b8ad034eb76adbf599aea86eada34bfbaa9fc7cdafea008cc7	3	790	792	applied	finality_update
+20261118T061708Z	mainnet	100	period	1914	15679593	15679594	15679520	electra	true	true	true	182a951e08718bf69499345881ac065436fdf41ed3dbcbb581eaa1923a77812c	5	796	800	applied	update 001914.ssz
+20261118T061708Z	mainnet	101	finality	1914	15679872	15679873	15679808	electra	false	true	false	cb3ae64fed10dad441914d85ccba13f860bff29011ecba5ab66e863d9f71a13d	3	801	803	applied	finality_update
+20261118T081703Z	mainnet	102	finality	1914	15680480	15680481	15680416	electra	false	true	false	6daefe0e2527027c8a9e23af746616d389b42541f08882b2bab94b3a7918f6df	3	807	809	applied	finality_update
+20261118T101704Z	mainnet	103	finality	1914	15681056	15681057	15680992	electra	false	true	false	e097a0644ea84b24a067cbfb69124a3526f6fd85eddfad67aa341655f2708328	3	813	815	applied	finality_update
+20261118T121706Z	mainnet	104	finality	1914	15681665	15681666	15681600	electra	false	true	false	cbfb103fa217ddec7beb21ccf27b35f9cf2b1380ccbf58f74e4f2928ee927b9d	3	819	821	applied	finality_update
+20261118T141704Z	mainnet	105	finality	1914	15682273	15682274	15682208	electra	false	true	false	3e2a5b3d4211655accda749cf6b6599811001bada4c54d20a0f346a28fe34eda	3	825	827	applied	finality_update
+20261118T161707Z	mainnet	106	finality	1914	15682880	15682881	15682816	electra	false	true	false	b65014e36cc1cf66d0134150c14993fee1a579666178cfb2b0c0e26538a84fdc	3	831	833	applied	finality_update
+20261118T181706Z	mainnet	107	finality	1914	15683458	15683459	15683392	electra	false	true	false	b297aab73d816d43d3e621e001d17543eac27d76ba3c2d1a59c52b39fbc9ea8f	3	837	839	applied	finality_update
+20261118T201706Z	mainnet	108	finality	1914	15684064	15684065	15684000	electra	false	true	false	151d42bf0c2c60414a81fecdc7afa7ad2a3c7235d0760ced7c8b156fce5210cb	3	848	850	applied	finality_update

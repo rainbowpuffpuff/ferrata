@@ -1,0 +1,92 @@
+{
+ "beacon": "https://ethereum-beacon-api.publicnode.com",
+ "block_root": "0x10d50b625746bcc79aefe7aa1a4605992337f96a6b3372f454a9a9eaaad7d2ef",
+ "current_committee": {
+  "cheapest_342_seats": {
+   "effective_balance_eth": 76714.0,
+   "members": 342,
+   "seats": 342
+  },
+  "distinct_members": 512,
+  "effective_balance_by_status_eth": {
+   "active_exiting": 2040.0,
+   "active_ongoing": 407619.0,
+   "exited_unslashed": 64.0,
+   "withdrawal_possible": 32.0
+  },
+  "effective_balance_of_members_eth": 409755.0,
+  "effective_balance_over_seats_eth": 409755.0,
+  "max_seats_of_one_member": 1,
+  "members_by_effective_balance_eth": {
+   "1024-2047": 161,
+   "2048": 43,
+   "32": 276,
+   "33-1023": 32
+  },
+  "members_by_status": {
+   "active_exiting": 4,
+   "active_ongoing": 505,
+   "exited_unslashed": 2,
+   "withdrawal_possible": 1
+  },
+  "members_with_several_seats": 0,
+  "seats": 512,
+  "slashed_members": 0
+ },
+ "ended": "2026-11-18T16:25:10Z",
+ "epoch": 490091,
+ "lighthouse_validator_inclusion": {
+  "current_epoch_active_eth": 44343611.0,
+  "current_epoch_active_gwei": 44343611000000000,
+  "epoch": 490090
+ },
+ "next_committee": {
+  "cheapest_342_seats": {
+   "effective_balance_eth": 58397.0,
+   "members": 342,
+   "seats": 342
+  },
+  "distinct_members": 512,
+  "effective_balance_by_status_eth": {
+   "active_exiting": 160.0,
+   "active_ongoing": 389821.0,
+   "exited_unslashed": 32.0
+  },
+  "effective_balance_of_members_eth": 390013.0,
+  "effective_balance_over_seats_eth": 390013.0,
+  "max_seats_of_one_member": 1,
+  "members_by_effective_balance_eth": {
+   "1024-2047": 156,
+   "2048": 42,
+   "32": 289,
+   "33-1023": 25
+  },
+  "members_by_status": {
+   "active_exiting": 5,
+   "active_ongoing": 506,
+   "exited_unslashed": 1
+  },
+  "members_with_several_seats": 0,
+  "seats": 512,
+  "slashed_members": 0
+ },
+ "node_version": "Lighthouse/v8.3.3-57c2abc/x86_64-linux",
+ "period": 1914,
+ "slot": 15682922,
+ "started": "2026-11-18T16:24:56Z",
+ "sync_rewards": {
+  "block_root": "0x10d50b625746bcc79aefe7aa1a4605992337f96a6b3372f454a9a9eaaad7d2ef",
+  "members_rewarded": 512,
+  "participant_reward_gwei": 25627,
+  "total_active_balance_eth_intervals": [
+   [
+    44197134,
+    44198858
+   ],
+   [
+    44342999,
+    44344728
+   ]
+  ]
+ }
+}

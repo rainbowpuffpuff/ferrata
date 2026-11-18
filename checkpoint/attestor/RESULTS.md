@@ -2,7 +2,7 @@
 
 What ran on 11 November 2026, and where. Every number below comes from a command named here; the logs and
 records are in `runs/`. **Where:** the Modal build box of this worktree (`spike/modal-build/mrun`, a gVisor
-container on up to 16 cores), workspace `carl`, between about 16:15 and 16:46 UTC; the Groth16 prover step
+container on up to 16 cores), workspace `ws-7`, between about 16:15 and 16:46 UTC; the Groth16 prover step
 in RISC Zero's own prover image (`risczero/risc0-groth16-prover:v2025-04-03.1`, the `groth16_wrap` function
 of the same Modal app); the vault in Foundry's local EVM on the same box. Nothing ran on a public network.
 
@@ -82,7 +82,7 @@ Refused in the guest (`Guest panicked: checkpoint refused: …`, no receipt): `r
 |---|---|---|
 | `host prove rbm-lab-n3-t2` (succinct) | build box CPU | **347.48 s** wall, 6 segments, 4,750,279 user / 5,373,952 total cycles, receipt 224,314 B (sha256 `59835dd6…e876`); verified against the image id, journal equal to the native one |
 | `ferrata-e2e p254` (identity_p254, bridge/) | build box, r0vm | 18.4 s, seal 222,668 B |
-| Groth16 prover image (`groth16_wrap`, carl) | Modal | 20 s, about 0.01 USD |
+| Groth16 prover image (`groth16_wrap`, ws-7) | Modal | 20 s, about 0.01 USD |
 | `ferrata-e2e groth16` | build box | Groth16 receipt verified; on-chain seal 260 B, selector `0x73c457ba`; journal sha256 `498dd53d…0f09` |
 | the rotation checkpoint `rbm-lab-rot`: `host prove`, p254, Groth16, receipt | build box CPU; Modal | **517.77 s**, 7 segments, 6,539,536 user cycles, receipt sha256 `662306e0…be53`; p254 19.1 s; Groth16 16 s; journal sha256 `b399dc40…8ccf`, parent `8ef5578a…5194`, new state `926b9292…1d75` (`runs/devnet-n3/proof-rotation/`) |
 
@@ -151,7 +151,7 @@ Run of 11 November, 18:59:05–19:04:29 UTC, 300 s of sequencing (`zone.log`, th
 | Attestors | each sequencer's channel key (the staked devnet key) certifies an attestation key (`cert-0..3.json`); the four attestors check blocks 2..=30 and sign tip 30 `c7b81252…b01e` (final message `1cf04ac6…e33d`, the channel's own `tip_message`); all four verify |
 | Input (`base`) | final blocks 3..=30 (28 blocks, 56 transactions, 23,492 bytes), parent block 2, `K` = the channel's four keys, posting timeframe 60, configuration tip `e502602b…224c`; nMin 4, tMin 3; bridge values of the configuration are stand-ins (no bridge program runs): `lezConfigId` `21effc46…523e`, parent state `60dfe488…e559` |
 | Collected | sequencers 0, 1, 2 (sequencer 3 silent): **n = 4, t = 3**, accepted, 6,261,183 user cycles (7 segments); all four: accepted, 7,950,701 (9 segments); two of four: refused in the guest, `InsufficientAttestations { have: 2, need: 3 }` |
-| Proof | `host prove rbz-zone-n4-t3` (box CPU): **513.54 s**, 7 segments, 6,261,183 user cycles, receipt sha256 `3293f702…0f6c`; identity_p254 18.2 s; Groth16 prover image (carl) 17 s; seal 260 bytes, journal sha256 `57d90e16…c985` (`runs/zone/proof/`, `prove.jsonl`) |
+| Proof | `host prove rbz-zone-n4-t3` (box CPU): **513.54 s**, 7 segments, 6,261,183 user cycles, receipt sha256 `3293f702…0f6c`; identity_p254 18.2 s; Groth16 prover image (ws-7) 17 s; seal 260 bytes, journal sha256 `57d90e16…c985` (`runs/zone/proof/`, `prove.jsonl`) |
 | Vault | `RuleBZoneTest` (FerrataVault v5 in mode (B), nMin 4, tMin 3, genesis = the parent state over the four keys, RISC Zero's real Groth16 verifier): the journal is 3 of 4; candidate, then final after the wait and not before; a journal claiming t = 2 refused (`KeySetBelowFloor`); a vault with floors (3, 2) refuses it (`WrongCommitteeFloor`); **343,581 + 161,437 gas** |
 
 **A silent sequencer** (`SILENT=3 SILENT_AFTER=60 attestor/zone.sh …`, `runs/zone-silent/`, 19:22:41–19:28:05

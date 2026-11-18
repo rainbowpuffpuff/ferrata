@@ -122,12 +122,11 @@ impl Daemon {
                         base: url.clone(),
                         timeout_secs: s.timeout_secs,
                     })),
-                    (_, Some(dir), _) => sources.push(Box::new(Recorded::open(
-                        &s.name,
-                        &at(&base, dir),
-                        &config,
-                        Clock::new(usize::MAX),
-                    )?)),
+                    (_, Some(dir), _) => {
+                        let mut r = Recorded::open(&s.name, &at(&base, dir), &config, Clock::new(usize::MAX))?;
+                        r.client = s.client.clone();
+                        sources.push(Box::new(r))
+                    }
                     _ => unreachable!("checked by config"),
                 }
             }

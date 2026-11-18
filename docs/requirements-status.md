@@ -25,7 +25,7 @@ Hard requirements:
 | RFP-021 | 17 | 35 | 4 | 3 | **59** |
 | RFP-022 | 27 | 37 | 2 | 2 | **68** |
 
-Soft requirements, counted apart (5 for each RFP): RFP-021 2 shown, 2 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
+Soft requirements, counted apart (5 for each RFP): RFP-021 3 shown, 1 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
 
 By section, hard requirements:
 
@@ -51,12 +51,12 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| F.1 | shown | Init and updates settle in the harness and on rc1 and rc3 sequencers we ran; real proofs applied; a seven-day run. | 6, 21, 123; `lez/results/stage1-replay.md` |
+| F.1 | shown | Init and updates settle in the harness and on rc1 and rc3 sequencers we ran; real proofs applied; an eight-day run. | 6, 21, 123; `lez/results/stage1-replay.md` |
 | F.2 | in part | Records exist only for finalised headers (213 otherwise) through LEZ; a forged finality branch is refused in native step tests only. | 39; `crates/ferrata-spectests/tests/steps.rs`; `lez/results/holdings.md` |
 | F.3 | shown | Account, storage slot and logs attested through the program on mainnet and Sepolia blocks; 32 refusals; roots only from the record. | 3, 71, 72; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
 | F.4 | in part | `=`, `≥`, `>`, `<` and a relation run through the program from the consumer's request; `≠` and `≤` not run through it. | `lez/harness/tests/attest_public.rs`; `lez/results/stage4-attest-refusals.md` |
 | F.5 | shown | One address on mainnet and Sepolia: each statement attested under its chain, the other chain's refused (140), in the harness. | 4; `lez/harness/tests/sepolia.rs`; `lez/results/stage5-attest-refusals.md` |
-| F.6 | shown | Identifiers returned by the program equal a second derivation; the reference consumer keys its nullifier on them. | `lez/harness/tests/attest_native.rs`; `lez/harness/tests/vault.rs`; `vectors/acc-leaf.json` |
+| F.6 | shown | Identifiers returned by the program equal a second derivation; the reference consumer keys its nullifier on them; a second build (not deployed) returns each one's nullifier-safety class beside it. | 145; `lez/harness/tests/attest_native.rs`; `lez/harness/tests/vault.rs`; `lez/harness/tests/history_hops.rs`; `vectors/acc-leaf.json` |
 | F.7 | waits on Logos | Names a testnet. Shown instead: same-transaction consumption in the harness and on rc1 and rc3 sequencers we ran. | 3, 27, 91, 123; `lez/results/stage4-attest-consumer.md` |
 | F.8 | in part | Private attestation proven for real and applied on rc3; byte searches find no query or account; the full-diff test is not built. | 5, 73, 123; `lez/harness/tests/attest_private.rs` |
 | F.9 | in part | Parameters fixed at Init; `verify_checkpoint` ran against Sepolia providers from Ferrata's module, not as an API of the Logos Ethereum module. | 69, 70, 105, 117 |
@@ -88,7 +88,7 @@ By section, hard requirements:
 | R.4 | shown | Daemon killed inside a job resumes from chain state, no second Open, in the harness and on a sequencer; the lab restarted. | 79, 99, 104; `lez/lab/README.md` |
 | R.5 | shown | A down source and dropped connections handled; restarted mid-job, the daemon finishes with no second Open, harness and sequencer. | 79, 99, 104 |
 | R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against vectors and Helios, not audited. | 1; `crates/ferrata-spectests/tests/helios_oracle.rs` |
-| R.7 | in part | Lab instances caught up and ran seven days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
+| R.7 | in part | Lab instances caught up and ran eight days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
 | R.9 | in part | Two honest daemons and an adversary: refused-step gas 5.7–8.7% of applied, in the in-process chain; not run on a sequencer. | 80; `lez/updater/tests/recorded.rs` |
 | R.10 | in part | Fee share 0.39–0.47 over 58 updates in the in-process chain; the latency effect is derived in a first-draft guide. | 80; `docs/guides/operator-guide.md` §3 |
@@ -113,7 +113,7 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia seven days. | 6, 21, 22, 99, 112, 123 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia eight days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
 | S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition, not a sequencer. | 6, 21, 76, 99; `lez/live/verify-run.sh` |
 | S.3 | in part | Consumer guide is a first draft; its worked example is tested in the harness with real handler proofs. | 39; `docs/guides/consumer-guide.md` |
 | S.4 | in part | The pattern's points run in two reference consumers in the harness; the guide's section is a first draft. | 39, 73; `docs/guides/consumer-guide.md` §6 |
@@ -142,7 +142,7 @@ By section, hard requirements:
 |---|---|---|---|
 | Soft.1 | in part | In the bridge's own form only: `ImportRoot` records a root once; no generic recorded-statement account. | 27, 41, 91; `lez/harness/tests/bridge_inbound.rs` |
 | Soft.2 | shown | Four facts under one record in one call, 453,182 cycles, through the program. | 71; `lez/results/stage4-attest.md` |
-| Soft.3 | in part | One EIP-2935 hop through the program on mainnet and Sepolia; longer chains only in the native core. | 72; `lez/results/stage4-attest.md` |
+| Soft.3 | shown | Chains of EIP-2935 hops through the program on real data: up to 32 in one transaction under a Sepolia Gloas record (262,112 blocks back), four on mainnet; refusals with their codes. | 72, 145; `lez/results/history-hops-sepolia.md`; `lez/results/history-hops-mainnet.md` |
 | Soft.4 | shown | Conditions on four facts and a relation between two of them in one request, accepted and refused through the program. | `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
 | Soft.5 | not yet | A design note only; the protocol fee it would draw on starts at zero. | none |
 
@@ -171,7 +171,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | F.13 | in part | Mint fee paid on LEZ, burn fee taken at release on the vault; rates capped at 1%; claims show their schedule's range. | 8, 9, 41, 91; `vault/test/Fees.t.sol` |
 | F.14 | shown | All 32 freeze combinations on the vault; LEZ freezes per token or globally (242) in the harness; both in Ferrata's own code. | 8, 43, 74; `vault/test/Freeze.t.sol` |
 | F.15 | shown | `Init` refuses another configuration (246) and foreign proofs (110); vault journals bind every field; the live vault holds the devnet's `configId`. | 8, 91, 92; `vault/test/JournalBinding.t.sol` |
-| F.16 | in part | A vault-A deposit under configuration B's root is refused (249); no malicious-tenant test; the switching text is a first draft. | 8; `docs/guides/deployer-guide.md` §7 |
+| F.16 | in part | A vault-A deposit under configuration B's root is refused (249), but the configurations are not strictly separated: the malicious-tenant test shows that a second configuration of the same vault can freeze a public-kind deposit whose `s` it knows (the paired one's claim refused, 250) and fill a destination's shared holder account; the fix changes the image id (B1); the switching text is a first draft. | 8, 136; `lez/harness/tests/tenant.rs`; `docs/guides/deployer-guide.md` §7 |
 | F.17 | shown | USDT-style deposits and releases pass on a local EVM and through the tool; fee-on-transfer and false-returning tokens rejected. | 12, 85; `vault/test/Deposit.t.sol`; `vault/test/Release.t.sol` |
 
 ### Usability
@@ -206,7 +206,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.11 | in part | Most hard rows name a test or run; S.4 and Sec.1 name none, documentation rows name drafts; not all in CI. | this file |
 | R.12 | in part | First drafts of the user guide, the consumer guide and the tool's README. | `docs/guides/user-guide.md`; `cli/README.md` |
 | R.13 | in part | First drafts of the tool's README, the operator guide and `monitor`'s README. | `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
-| R.14 | in part | Deployer guide is a first draft; three vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122 |
+| R.14 | in part | Deployer guide is a first draft; four vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122, 142 |
 
 ### Performance
 
@@ -224,7 +224,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and two round trips against devnets we ran. | 41, 91, 92, 122, 123 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and three round trips against zones we ran (the third with LEZ v0.4.0-rc3's sequencer and node 0.3.5-rc.1). The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 142, 148 |
 | S.2 | in part | User-side proofs built and proven on macOS; the modules and the catalog on Linux x86-64 only. | 88, 59–62, 94–98 |
 | S.3 | in part | The release action's steps ran locally; nothing published, the action not run on a release. | 61 |
 | S.4 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the specification and notes. | `docs/how-it-was-built.md` |

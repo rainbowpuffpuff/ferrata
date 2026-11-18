@@ -1,0 +1,22 @@
+[session 20261118T201706Z] sequencer head 839, follower at block 839
+[deploy] already deployed at A21ic7TofHbrABepXwsDDU2U2E8E1RKcTiNn228gNNUs: image 61b7b70dee5a5020af54b3107cef5298861fadd301c9dc0b063c80d88ca42f9a
+[sepolia] update 001416.ssz (attested 11599938, finalized 11599872): not applied, the native client refuses it: UpdateIrrelevant
+[20261118T201706Z] sepolia #137 period p1417 fin 11608064 Open (step 1)       applied        gas   2502233 block  840 + 11.6s 7ea4f1b7918de1b7c395d8b535e797cdb00c27f81cda1ca86127bb572e3fdc4d
+[20261118T201706Z] sepolia #137 period p1417 fin 11608064 Miller (step 2)     applied        gas   3310385 block  841 +  9.9s 8c27f2d731336689fc61bb9bfb75c128ca478fd438a9f03bd447089452f1ed77
+[20261118T201706Z] sepolia #137 period p1417 fin 11608064 adopt 1/2           applied        gas   3408020 block  842 + 11.2s 77d247c668d1b2828c0cf8e593fb8cf3624618b1bd4d9a011c3cf65abeb325e3
+[20261118T201706Z] sepolia #137 period p1417 fin 11608064 adopt 2/2           applied        gas   3415212 block  843 +  8.7s e31dc169088c3ea24d5cc5c221334e8ea8fa1a5cea76ba6021054e35731eb8f1
+[20261118T201706Z] sepolia #137 period p1417 fin 11608064 Finish (step 3)     applied        gas   3728633 block  844 + 11.6s a4df31d27e898d516c4a855958f28183a95d688591b723330dabd7d9e73e483f
+[sepolia] sepolia #137 period p1417 fin 11608064: applied (5 transactions, blocks 840-844); rotated true advanced true adopted true
+[20261118T201706Z] sepolia #138 finality p1417 fin 11608192 Open (step 1)     applied        gas   2533160 block  845 +  8.7s 24ada91ccc10e923415e8c734ab979218d7ac3103d07e66d14ed9e90cdec4140
+[20261118T201706Z] sepolia #138 finality p1417 fin 11608192 Miller (step 2)   applied        gas   3305289 block  846 +  9.8s b6354e1c6ae844a0746bc53e4ff25f23f008bbec4c29da41da640a1df50219c1
+[20261118T201706Z] sepolia #138 finality p1417 fin 11608192 Finish (step 3)   applied        gas   3718605 block  847 + 11.3s e6d1a5e04867c968d194732a66a25a073ee06e37e695147e6005c843ee075d5c
+[sepolia] sepolia #138 finality p1417 fin 11608192: applied (3 transactions, blocks 845-847); rotated false advanced true adopted false
+[sepolia] 2 job(s) applied this session, 1 committee handoff(s)
+[mainnet] update 001914.ssz (attested 15679593, finalized 15679520): not applied, the native client refuses it: UpdateIrrelevant
+[20261118T201706Z] mainnet #108 finality p1914 fin 15684000 Open (step 1)     applied        gas   2165651 block  848 +  8.5s 221973b99e4804e026b1e63eb8c7385926d4b24b74ec11c86f35198137763cce
+[20261118T201706Z] mainnet #108 finality p1914 fin 15684000 Miller (step 2)   applied        gas   3307963 block  849 +  9.7s 71f2bffff392bfeb0da78d05ec89bd3e7d852f39adf88f9f356993447df24518
+[20261118T201706Z] mainnet #108 finality p1914 fin 15684000 Finish (step 3)   applied        gas   3723564 block  850 + 11.7s d54492f6fbea9502e52b33a1b903e13e48c83402b16922cd00f5cf574117b86d
+[mainnet] mainnet #108 finality p1914 fin 15684000: applied (3 transactions, blocks 848-850); rotated false advanced true adopted false
+[mainnet] 1 job(s) applied this session, 0 committee handoff(s)
+blocks: 1..=850 (every one final on Bedrock)
+transactions: 847 sent; 847 applied, 0 refused with an exit code, 0 reverted otherwise, 0 dropped, 0 rejected at the RPC, 0 unfinished

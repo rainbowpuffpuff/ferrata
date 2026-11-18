@@ -262,6 +262,19 @@ def call_until(want: str, sig: str, *a: str, tries: int = 8, gap: int = 10) -> b
     return False
 
 
+def read_until(read, ok, tries: int = 8, gap: int = 10):
+    """read() until ok(value), as call_until: after a transaction it sent, the run reads the chain again for up to 70 s
+    before it concludes anything (crown-live-4, 18 Nov 2026: deposit 1 read as not counted right after its send, and
+    was counted on two endpoints a minute later; the run had stopped)."""
+    v = read()
+    for _ in range(tries - 1):
+        if ok(v):
+            return v
+        time.sleep(gap)
+        v = read()
+    return v
+
+
 def has_code(addr: str) -> bool:
     return cast("code", addr) not in ("0x", "")
 
@@ -614,8 +627,9 @@ def st_deposit(j: int) -> bool:
     if deposit_count() > j:
         return False
     sepolia("deposit", str(j), log=f"sepolia-deposit-{j}.log")
-    if deposit_count() <= j:
-        die(f"deposit {j}: the vault counts {deposit_count()} deposits of the deployer")
+    count = read_until(deposit_count, lambda c: c > j)
+    if count <= j:
+        die(f"deposit {j}: the vault counts {count} deposits of the deployer (read 8 times over 70 s)")
     say(f"deposit {j}: block {manifest_block(f'deposit-{j}')}, leaves {first_int(call('nextLeafIndex()(uint64)'))}")
     return True
 
@@ -989,8 +1003,8 @@ def st_finalize() -> bool:
     if final_state() == new_state():
         return False
     sepolia("finalize", log="sepolia-finalize.log")
-    if final_state() != new_state():
-        die("after finalizeAttested the vault's final state is not the candidate's new state")
+    if read_until(final_state, lambda v: v == new_state()) != new_state():
+        die("after finalizeAttested the vault's final state is not the candidate's new state (read 8 times over 70 s)")
     say(f"finalize: block {manifest_block('finalizeAttested')}, final state {new_state()}")
     return True
 

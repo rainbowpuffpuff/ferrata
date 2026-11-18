@@ -343,3 +343,103 @@ fn sepolia_through_gloas_finality_updates_and_attestations() {
     println!("Sepolia: {} transactions applied, the largest {} gas", summary.len(), summary.iter().max().unwrap());
     write_results("sepolia", &chain.reports);
 }
+
+/// EXPERIMENTAL (`bench/RESIDUE.md` §10; sound only under the light client's honest-supermajority
+/// assumption): every handoff in ONE transaction, the next committee adopted by its summary
+/// (`Verify::ResidueSummary`), with the residue witness and one multiproof of the non-signers:
+/// mainnet update_0 to update_3 (each a period update) and Sepolia's 32 handoffs through the Gloas
+/// layout change. After each, the instance's store is the native policy store's (whose adoption
+/// checks the 512 keys) and the record is written. Refused: a next-committee branch with one node
+/// altered (27), adoption parts sent beside the summary adoption (`NoAdoption`, 84), a stale
+/// handoff. Writes `results/mainnet-handoff-one-tx.tsv` and `results/sepolia-handoff-one-tx.tsv`.
+#[test]
+fn handoffs_in_one_transaction_each() {
+    let summary = || Verify::ResidueSummary { c: vec![], w: vec![] };
+
+    // Mainnet.
+    let (mut chain, program) = chain_with_program();
+    let bootstrap = mainnet_bootstrap();
+    let updates = mainnet_updates();
+    let mut inst = Instance::new(program, mainnet_config(1), root(MAINNET_CHECKPOINT), &bootstrap);
+    init(&mut chain, &inst, &bootstrap);
+    let mut first = None;
+    for (i, u) in updates.iter().enumerate().take(4) {
+        let label = format!(
+            "update_{i} (period, {}/512): Update (one multiproof, residue witness, committee adopted by its summary)",
+            u.sync_aggregate.participants()
+        );
+        let (p, rest, record) = inst.update(&label, u, summary(), Signers::Multiproof, false);
+        assert!(rest.is_empty(), "{label}: one transaction");
+        // A record is written when the update advances the finalized header.
+        println!("{label}: writes a record: {}", record.is_some());
+        if i == 0 {
+            let mut tampered = u.clone();
+            tampered.next_sync_committee_branch[1][4] ^= 1;
+            let mut bad = p.clone();
+            if let Instruction::Update { update, .. } = &mut bad.instruction {
+                *update = CompactUpdate::of(&tampered).encode(LcFork::Electra);
+            }
+            bad.label = "refusal: update_0 with one node of its next-committee branch altered".into();
+            let r = inst.send(&mut chain, &bad, GAS_LIMIT);
+            assert!(r.refused_with(core_code(Error::NextCommitteeBranchInvalid)), "{r:?}");
+            let mut both = p.clone();
+            if let Instruction::Update { adopt, .. } = &mut both.instruction {
+                *adopt = inst.parts(&u.next_sync_committee);
+            }
+            both.label = "refusal: update_0 with the summary adoption and the 512 keys".into();
+            let r = inst.send(&mut chain, &both, GAS_LIMIT);
+            assert!(r.refused_with(84), "NoAdoption: {r:?}");
+        }
+        let r = inst.send(&mut chain, &p, GAS_LIMIT);
+        assert!(r.ok(), "{label}: {r:?}");
+        assert!(r.exec_gas < MAX_GAS_EXEC);
+        assert!(inst.follow(u).adopted, "{label}: a handoff");
+        inst.assert_in_step(&chain);
+        println!(
+            "ONE-TX handoff (mainnet update_{i}, {}/512): {} execution gas ({:.1}% of MAX_GAS_EXEC)",
+            u.sync_aggregate.participants(),
+            r.exec_gas,
+            r.exec_gas as f64 / 1e5
+        );
+        first.get_or_insert(p);
+    }
+    let mut stale = first.unwrap();
+    if let Instruction::Update { window, .. } = &mut stale.instruction {
+        let finalized = inst.native.core().finalized_header.beacon.slot;
+        window.to_ms = inst.config.ws_end_slot(finalized).map(|e| inst.config.slot_start_ms(e));
+    }
+    stale.label = "refusal: update_0 again (stale)".into();
+    let r = inst.send(&mut chain, &stale, GAS_LIMIT);
+    assert!([23u8, 24, 52].iter().any(|c| r.refused_with(*c)), "stale: {r:?}");
+    inst.assert_in_step(&chain);
+    write_results("mainnet-handoff-one-tx", &chain.reports);
+
+    // Sepolia: periods 1378 to 1409, the store upgrading itself to the Gloas layout at 1379.
+    let (mut chain, program) = chain_with_program();
+    let bootstrap = sepolia_bootstrap();
+    let mut inst = Instance::new(program, sepolia_config(1), root(SEPOLIA_CHECKPOINT), &bootstrap);
+    init(&mut chain, &inst, &bootstrap);
+    let (mut most, mut handoffs) = (0u64, 0usize);
+    for period in SEPOLIA_FIRST_PERIOD..=SEPOLIA_LAST_PERIOD {
+        let u = sepolia_update(period);
+        let label = format!(
+            "period {period} ({}/512): Update (one multiproof, residue witness, committee adopted by its summary)",
+            u.sync_aggregate.participants()
+        );
+        let (p, rest, _) = inst.update(&label, &u, summary(), Signers::Multiproof, false);
+        assert!(rest.is_empty(), "{label}: one transaction");
+        let r = inst.send(&mut chain, &p, GAS_LIMIT);
+        assert!(r.ok(), "{label}: {r:?}");
+        most = most.max(r.exec_gas);
+        handoffs += usize::from(inst.follow(&u).adopted);
+        inst.assert_in_step(&chain);
+        let expected = if period < SEPOLIA_GLOAS_PERIOD { LcFork::Electra } else { LcFork::Gloas };
+        assert_eq!(inst.store(&chain).fork, expected, "period {period}: the layout");
+    }
+    assert_eq!(handoffs, (SEPOLIA_LAST_PERIOD - SEPOLIA_FIRST_PERIOD + 1) as usize, "every period update is a handoff");
+    println!(
+        "ONE-TX handoffs on Sepolia: {handoffs} periods, one transaction each; the most execution gas {most} ({:.1}% of MAX_GAS_EXEC)",
+        most as f64 / 1e5
+    );
+    write_results("sepolia-handoff-one-tx", &chain.reports);
+}

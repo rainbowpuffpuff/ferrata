@@ -1,0 +1,24 @@
+[
+  {
+    "burnRoot": "0x09b6106d47aaaae23b3bbf69b06829c90eb771f3fbdc5711c2189d5fb0c5c75f",
+    "denomIndex": 0,
+    "name": "public-0",
+    "nullifier": "0x7eafbcad5ad0c7f198afa70905471c0502d91a22e38341aae31ea90dcac8b7d9",
+    "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "relayFee": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "relayer": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "seal": null,
+    "token": "0x0000000000000000000000000000000000000000"
+  },
+  {
+    "burnRoot": "0x09b6106d47aaaae23b3bbf69b06829c90eb771f3fbdc5711c2189d5fb0c5c75f",
+    "denomIndex": 0,
+    "name": "private-1",
+    "nullifier": "0xe4e4dafff964019ed22f256a0e4465b379567628382e3a1a6ff9ac84539304a0",
+    "recipient": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "relayFee": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "relayer": "0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07",
+    "seal": null,
+    "token": "0x0000000000000000000000000000000000000000"
+  }
+]

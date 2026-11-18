@@ -6,8 +6,8 @@ use std::path::PathBuf;
 use ferrata_lez_wire::instance_id;
 use ferrata_updater::{
     chain::{instance_config, root, split_chunks},
-    config::{File, SourceKind},
-    source::parse_header_answer,
+    config::{url_host, ClientMatch, File, SourceKind},
+    source::{client_family, parse_header_answer, parse_version_answer},
     utc,
 };
 
@@ -145,4 +145,87 @@ fn header_answers_and_utc() {
     assert_eq!(utc(1_794_481_349), "2026-11-12T11:02:29Z");
     assert_eq!(utc(0), "1970-01-01T00:00:00Z");
     assert_eq!(utc(1_709_208_000), "2024-02-29T12:00:00Z");
+}
+
+/// `policy.min_distinct_clients`: off by default; 1 is refused; at least that many sources must be able to count (a node
+/// reports its client; a recorded dir needs `client`; a `headers` source counts only with `client_match =
+/// "finalized-header"`); `client` is for a recorded dir only.
+#[test]
+fn client_diversity_configuration() {
+    let base = std::fs::read_to_string(here("dev/dev.toml")).unwrap();
+    let rec_a = "name = \"record-a\"\n  dir = \"../../lab/results/record/net/mainnet\"";
+    let rec_b = "name = \"record-b\"\n  dir = \"../../lab/results/record/net/mainnet\"";
+    let with = |policy: &str, a: &str, b: &str| {
+        base.replacen("max_periods_per_request = 16", &format!("max_periods_per_request = 16\n{policy}"), 1)
+            .replacen(rec_a, a, 1)
+            .replacen(rec_b, b, 1)
+    };
+    let nimbus = format!("{rec_a}\n  client = \"Nimbus/v26.10.2-5628de-stateofus\"");
+    let lodestar = format!("{rec_b}\n  client = \"Lodestar/v1.51.0/7923280\"");
+    let url_lc = "name = \"record-b\"\n  url = \"https://lodestar-mainnet.chainsafe.io\"";
+    let url_headers =
+        "name = \"record-b\"\n  url = \"https://ethereum-beacon-api.publicnode.com\"\n  kind = \"headers\"";
+    let f = File::parse(&base).unwrap();
+    assert_eq!((f.policy.min_distinct_clients, f.policy.client_match), (0, ClientMatch::Bytes));
+    for (policy, a, b) in [
+        ("min_distinct_clients = 2", nimbus.as_str(), lodestar.as_str()),
+        ("min_distinct_clients = 2", nimbus.as_str(), url_lc),
+        ("min_distinct_clients = 2\nclient_match = \"finalized-header\"", nimbus.as_str(), url_headers),
+    ] {
+        let f = File::parse(&with(policy, a, b)).unwrap_or_else(|e| panic!("{policy}: {e:#}"));
+        assert_eq!(f.policy.min_distinct_clients, 2);
+    }
+    for (url, host) in [
+        ("https://lodestar-mainnet.chainsafe.io", "lodestar-mainnet.chainsafe.io"),
+        ("http://User@Testing.Mainnet.Beacon-API.nimbus.team:5052/eth?x=1", "testing.mainnet.beacon-api.nimbus.team"),
+        ("http://[::1]:5052", "::1"),
+        ("127.0.0.1:9000/x", "127.0.0.1"),
+    ] {
+        assert_eq!(url_host(url), host, "{url}");
+    }
+    let f = File::parse(&with("min_distinct_clients = 2", &nimbus, &lodestar)).unwrap();
+    assert_eq!(f.chains[0].sources[1].client.as_deref(), Some("Lodestar/v1.51.0/7923280"));
+    for (policy, a, b, why) in [
+        ("min_distinct_clients = 1", nimbus.as_str(), lodestar.as_str(), "1 asks nothing"),
+        ("min_distinct_clients = 2", rec_a, lodestar.as_str(), "a recorded dir without a client cannot count"),
+        ("min_distinct_clients = 3", nimbus.as_str(), lodestar.as_str(), "three clients from two sources"),
+        ("min_distinct_clients = 2", nimbus.as_str(), url_headers, "a headers source serves no bytes to compare"),
+        (
+            "",
+            nimbus.as_str(),
+            "name = \"record-b\"\n  url = \"https://x\"\n  client = \"Nimbus/v1\"",
+            "client on a url source",
+        ),
+        ("client_match = \"header\"", rec_a, rec_b, "an unknown client_match"),
+        (
+            "min_distinct_clients = 2",
+            "name = \"record-a\"\n  url = \"https://lodestar-mainnet.chainsafe.io/\"",
+            url_lc,
+            "one host twice",
+        ),
+    ] {
+        let text = with(policy, a, b);
+        assert_ne!(text, base, "{why}: the substitution applies");
+        assert!(File::parse(&text).is_err(), "{why} must be refused");
+    }
+}
+
+/// `/eth/v1/node/version` answers recorded from public beacon APIs on 18 November 2026 (`fixtures/node-version/`), the
+/// client family read from each, and a provider's hostile or empty answer.
+#[test]
+fn node_version_answers() {
+    for (client, family) in [("nimbus", "nimbus"), ("lodestar", "lodestar"), ("lighthouse", "lighthouse")] {
+        let body = std::fs::read_to_string(here(&format!("tests/fixtures/node-version/{client}.json"))).unwrap();
+        let v = parse_version_answer(&body).unwrap();
+        assert_eq!(client_family(&v).as_deref(), Some(family), "{v}");
+        println!("{client}: {v}");
+    }
+    assert_eq!(client_family("teku/v25.11.0/linux-x86_64").as_deref(), Some("teku"));
+    let v = parse_version_answer("{\"data\":{\"version\":\"Evil\\\"} 1\\n# x/1\"}}").unwrap();
+    assert!(v.chars().all(|c| c.is_ascii_graphic() && c != '"' && c != '\\'), "{v}");
+    assert_eq!(client_family(&v).as_deref(), Some("evil_}_1_#_x"));
+    assert!(parse_version_answer("{\"data\":{\"version\":\"\"}}").is_err());
+    assert!(parse_version_answer("{\"data\":{\"version\":\"/v1\"}}").is_err());
+    assert!(parse_version_answer("{\"data\":{}}").is_err());
+    assert!(parse_version_answer("<html>").is_err());
 }

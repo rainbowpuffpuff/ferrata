@@ -1,0 +1,13 @@
+warning: lee@0.1.0: Generated module at ../tmp/testnet04/target-rc1-check/debug/build/lee-466cc68629dde99f/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at ../tmp/testnet04/target-rc1-check/debug/build/programs-a82c90796ec1f05d/out/lez/programs/mod.rs
+warning: unexpected `cfg` condition value: `lez-rc2`
+warning: unexpected `cfg` condition value: `lez-rc2`
+warning: unexpected `cfg` condition value: `lez-rc2`
+warning: unexpected `cfg` condition value: `lez-rc2`
+warning: `lab-driver` (bin "lab-driver" test) generated 4 warnings
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+running 3 tests
+test live::rpcurl::tests::hosts_read ... ok
+test live::rpcurl::tests::not_loopback ... ok
+test live::rpcurl::tests::loopback_hosts ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

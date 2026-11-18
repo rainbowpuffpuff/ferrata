@@ -1,0 +1,61 @@
+== 2026-11-18T17:49:01Z discover http://172.20.79.179:3041
+Traceback (most recent call last):
+  File "<stdin>", line 22, in <module>
+AttributeError: 'str' object has no attribute 'get'
+== 2026-11-18T17:49:02Z this deployment's accounts there: payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja balance 50000000000 ; daemon 6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu balance 50000000000
+== 2026-11-18T17:49:03Z (a) deploying the attestation program (0x816d1fef…)
+80a18d3cedfc47bb4f0bb3b992caa51b3cfa74c8b52464de6c59163caa4067b1     5396 B gas limit 2000000 max fee      128472064 deploy program: WriteSegment 7 of 7 (4816 bytes)
+545af715d56335e0765481d5c5a1f758d28c289e12942bdaee2f38522bb2ec33    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 6 of 7 (98304 bytes)
+007834e9836978592c95090619b17e34ad9ebdb2777ef029dec9cd75f017e2f8    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 5 of 7 (98304 bytes)
+6eec0ba033e511490059359d5e86cab40ce19e48ce010387f1afed33026600f9    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 4 of 7 (98304 bytes)
+56954fa7edb45f4b7f750866329e1ded56489a46f26e55bb64881463e74859de    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 3 of 7 (98304 bytes)
+3839757ac95ab1c90f699b63a20c0783cda68613eeb65607ddf55bef7ab3f6ec    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 2 of 7 (98304 bytes)
+fe5241db2cb11b91f061fce82b8050c144eba920d601803cf86a3dd035c27612    98916 B gas limit 2000000 max fee      134455296 deploy program: WriteSegment 1 of 7 (98304 bytes)
+f84887dea4e6e2f7053566759a722a2b0076d1cf6a9ede436b186a77e784c520      608 B gas limit 2000000 max fee      128196608 deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S
+stage deploy-program: 8 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 0; at the current base fees (8, 8) at most 132796000 if every one used its whole gas limit; the largest reserve 134455296
+[deploy-program] 00 deploy program: WriteSegment 7 of 7 (4816 bytes): "applied" in block 5 (exec gas 0, storage gas 5396, fee "43168")
+[deploy-program] 01 deploy program: WriteSegment 6 of 7 (98304 bytes): "applied" in block 7 (exec gas 4822, storage gas 98916, fee "829904")
+[deploy-program] 02 deploy program: WriteSegment 5 of 7 (98304 bytes): "applied" in block 9 (exec gas 98342, storage gas 98916, fee "1578064")
+Error: client error (SendRequest)
+
+Caused by:
+    connection closed before message completed
+== 2026-11-18T17:50:04Z (a) deploy failed (attempt 1 of 40); again in 15 s
+Error: client error (SendRequest)
+
+Caused by:
+    connection closed before message completed
+== 2026-11-18T17:50:19Z (a) deploy failed (attempt 2 of 40); again in 15 s
+Error: client error (SendRequest)
+
+Caused by:
+    connection closed before message completed
+== 2026-11-18T17:50:34Z (a) deploy failed (attempt 3 of 40); again in 15 s
+[deploy-program] 00 deploy program: WriteSegment 7 of 7 (4816 bytes): "applied" in block 5 (recorded)
+[deploy-program] 01 deploy program: WriteSegment 6 of 7 (98304 bytes): "applied" in block 7 (recorded)
+[deploy-program] 02 deploy program: WriteSegment 5 of 7 (98304 bytes): "applied" in block 9 (recorded)
+[deploy-program] 03 deploy program: WriteSegment 4 of 7 (98304 bytes): "applied" in block 12 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 04 deploy program: WriteSegment 3 of 7 (98304 bytes): "applied" in block 14 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 05 deploy program: WriteSegment 2 of 7 (98304 bytes): "applied" in block 16 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 06 deploy program: WriteSegment 1 of 7 (98304 bytes): "applied" in block 18 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-program] 07 deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S: "applied" in block 20 (exec gas 594874, storage gas 608, fee "4763856")
+stage deploy-program: every transaction applied in 102.0 s
+== 2026-11-18T17:52:31Z fetching a fresh finalized Sepolia checkpoint (Lodestar's bootstrap, publicnode's header at its slot)
+checkpoint: slot 11607488, period 1416, block root 0x430bcdd1ea31d4b02a45bd48e4916db1c2b8cd8c87b97282a8cdd00d3f238d1d
+== 2026-11-18T17:52:32Z (b) Init of the Sepolia instance
+ff7e61aaf892f3691d02cb8c28b466446b18a1ad7e467f883e84d3df14e05f2e     1699 B gas limit 4800000 max fee      307438848 Init (Sepolia, Gloas layout)
+stage init: 1 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 8; at the current base fees (8, 8) at most 38413592 if every one used its whole gas limit; the largest reserve 307438848
+[init] 00 Init (Sepolia, Gloas layout): "applied" in block 22 (exec gas 114811, storage gas 1699, fee "932080")
+stage init: every transaction applied in 19.1 s
+== 2026-11-18T17:52:51Z (c) the updater daemon
+== 2026-11-18T17:52:52Z starting the updater daemon (detached): ../tmp/testnet04/state/rehearsal-1/daemon, /health on 127.0.0.1:9464
+Error: configuration
+
+Caused by:
+    TOML parse error at line 22, column 1
+       |
+    22 | [policy]
+       | ^^^^^^^^
+    missing field `defer_window`
+    
+day1: the daemon exited at once

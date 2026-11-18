@@ -1,0 +1,25 @@
+test adopt_summary_guards ... world: store finalized slot 16 (period 0), next known false; handoff slots finalized 24 attested 40 signature 41 current 41; period length 64
+adopt_summary refuses a tampered pending/progress (84); a job adopted before its signature verified is refused by apply (81)
+test differential_mutations_of_a_handoff ... world: store finalized slot 16 (period 0), next known false; handoff slots finalized 24 attested 40 signature 41 current 41; period length 64
+differential: 160 mutations: 13 accepted alike (same store), 147 refused alike, codes {22: 4, 23: 15, 26: 43, 27: 48, 40: 21, 41: 16}
+test forged_aggregates_after_summary_adoption ... world: store finalized slot 16 (period 0), next known false; handoff slots finalized 24 attested 40 signature 41 current 41; period length 64
+handoff with aggregate field Q + P_31: core Some(45), summary path None
+handoff with aggregate field identity: core Some(45), summary path Some(45)
+handoff with aggregate field undecodable: core Some(45), summary path Some(45)
+handoff with aggregate field consistent: core None, summary path None
+after adopting [Q + P_31]: honest 31 of 32: summary path Some(40), core steps on the same store Some(40)
+after adopting [Q + P_31]: forger alone as 31 of 32: summary path None, core steps on the same store None
+after adopting [Q + P_31]: honest 32 of 32: summary path Some(40), core steps on the same store Some(40)
+after adopting [consistent]: honest 31 of 32: summary path None, core steps on the same store None
+after adopting [consistent]: forger alone as 31 of 32: summary path Some(40), core steps on the same store Some(40)
+after adopting [consistent]: honest 32 of 32: summary path None, core steps on the same store None
+forged aggregate Q + P_31 adopted by the summary; the forger alone (secret of Q only) signs an update with 31 of 32 bits set, accepted; the honest 31 refused (40)
+test period_finality_and_replay_refusals ... world: store finalized slot 16 (period 0), next known false; handoff slots finalized 24 attested 40 signature 41 current 41; period length 64
+from the start store: not finalized: core Some(50), summary path Some(50)
+from the start store: signature one period later (next unknown): core Some(23), summary path Some(23)
+from the start store: attested and signature one period later: core Some(23), summary path Some(23)
+from the start store: finalized one period later (next unknown): core Some(23), summary path Some(23)
+from the start store: 341-equivalent: 21 of 32: core Some(51), summary path Some(51)
+the same handoff again: core Some(52), summary Some(52)
+another next committee for the adopted period: core Some(28), summary Some(28)
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.62s

@@ -1,0 +1,46 @@
+{
+  "chainId": 11155111,
+  "complete": true,
+  "deployer": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "emergencyStop": "0xB24905b767c1b50dDe6b1B33aDb119CA7E2dEfCA",
+  "feeRecipient": "0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07",
+  "freezeAuthority": "0xC820e2326A3371a3569E0131b93dC0D40698129f",
+  "gas": {
+    "emergencyStop": {
+      "estimate": 2977632,
+      "limit": 3722040
+    },
+    "registerETH": {
+      "estimate": 3218360,
+      "limit": 4022950
+    },
+    "registerToken": {
+      "estimate": 3219659,
+      "limit": 4024573
+    },
+    "registry": {
+      "estimate": 19700914,
+      "limit": 24626142
+    },
+    "renounceStopOwner": {
+      "estimate": 31788,
+      "limit": 39735
+    },
+    "token": {
+      "estimate": 3342971,
+      "limit": 4178713
+    },
+    "vault": {
+      "estimate": 39559872,
+      "limit": 49449840
+    }
+  },
+  "gasMarginPct": 125,
+  "gasRule": "eip8037",
+  "groth16Verifier": "0x8f0Af3Bf302C64d57f840127F94d9c123a8Fa2A0",
+  "lastStep": "done",
+  "mode": "B",
+  "registry": "0x837F715d57299799C64dcF5ba84525319D5EeAfe",
+  "token": "0xD599644B3515C2f86EC5414a1aBE5Fd0d25bAb43",
+  "vault": "0x80555Fe53CCcEf46951B23A3c75643a4C9283470"
+}

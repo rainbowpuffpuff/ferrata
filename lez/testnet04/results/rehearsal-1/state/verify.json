@@ -1,0 +1,262 @@
+{
+ "checks": [
+  {
+   "check": "program deployed byte for byte (image id, every segment, immutable)",
+   "detail": "\"816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df\" at \"3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S\"",
+   "ok": true
+  },
+  {
+   "check": "bridge deployed byte for byte",
+   "detail": "\"ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd\"",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 00 deploy program: WriteSegment 7 of 7 (4816 bytes)",
+   "detail": "80a18d3cedfc47bb4f0bb3b992caa51b3cfa74c8b52464de6c59163caa4067b1 block Some(5), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 01 deploy program: WriteSegment 6 of 7 (98304 bytes)",
+   "detail": "545af715d56335e0765481d5c5a1f758d28c289e12942bdaee2f38522bb2ec33 block Some(7), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 02 deploy program: WriteSegment 5 of 7 (98304 bytes)",
+   "detail": "007834e9836978592c95090619b17e34ad9ebdb2777ef029dec9cd75f017e2f8 block Some(9), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 03 deploy program: WriteSegment 4 of 7 (98304 bytes)",
+   "detail": "6eec0ba033e511490059359d5e86cab40ce19e48ce010387f1afed33026600f9 block Some(12), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 04 deploy program: WriteSegment 3 of 7 (98304 bytes)",
+   "detail": "56954fa7edb45f4b7f750866329e1ded56489a46f26e55bb64881463e74859de block Some(14), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 05 deploy program: WriteSegment 2 of 7 (98304 bytes)",
+   "detail": "3839757ac95ab1c90f699b63a20c0783cda68613eeb65607ddf55bef7ab3f6ec block Some(16), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 06 deploy program: WriteSegment 1 of 7 (98304 bytes)",
+   "detail": "fe5241db2cb11b91f061fce82b8050c144eba920d601803cf86a3dd035c27612 block Some(18), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-program 07 deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+   "detail": "f84887dea4e6e2f7053566759a722a2b0076d1cf6a9ede436b186a77e784c520 block Some(20), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 00 deploy bridge: WriteSegment 6 of 6 (68896 bytes)",
+   "detail": "aeb19b7fe28d6319f13395de18d2f5e7f7b5d7598475526d9b7fb0c12c466177 block Some(69), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 01 deploy bridge: WriteSegment 5 of 6 (98304 bytes)",
+   "detail": "66319b03c76972a04a3e7c67c8dd2d316e27d8c7ecb989dc52548aff82b63006 block Some(71), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 02 deploy bridge: WriteSegment 4 of 6 (98304 bytes)",
+   "detail": "50ead56fbc233bd44dd3ba579b5235a296dca682555f66287bc5cd2963c36953 block Some(72), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 03 deploy bridge: WriteSegment 3 of 6 (98304 bytes)",
+   "detail": "c5d08b187fe041ebc7212f26b3a09fdc7e1a1b83bc57e53e64846ef1371002f4 block Some(74), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 04 deploy bridge: WriteSegment 2 of 6 (98304 bytes)",
+   "detail": "3a6e42131e10fab8435dea815daed848b5867a7eebc4c85c48a2780cde2779b1 block Some(76), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 05 deploy bridge: WriteSegment 1 of 6 (98304 bytes)",
+   "detail": "a2f67db0e519f07a446a33cc122f3629eab1d31907203664b6ae0c4f735cce29 block Some(78), now applied",
+   "ok": true
+  },
+  {
+   "check": "deploy-bridge 06 deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+   "detail": "a127954027e7c141591707c4b4603456269aae467745d82e959dc3f8dd0c5201 block Some(80), now applied",
+   "ok": true
+  },
+  {
+   "check": "init 00 Init (Sepolia, Gloas layout)",
+   "detail": "ff7e61aaf892f3691d02cb8c28b466446b18a1ad7e467f883e84d3df14e05f2e block Some(22), now applied",
+   "ok": true
+  },
+  {
+   "check": "attest 00 Attest: the vault's slots 0 and 1 under header(11d23518, 11607488)",
+   "detail": "2d668b3184b2652fcfae5bf09f2bfaebfbf645f64ef2bbeaae1e79706878366b block Some(67), now applied",
+   "ok": true
+  },
+  {
+   "check": "instance exists with the recorded id and configuration",
+   "detail": "\"11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb\"",
+   "ok": true
+  },
+  {
+   "check": "instance active (committee adopted)",
+   "detail": "applied 3",
+   "ok": true
+  },
+  {
+   "check": "instance applied at least 3 jobs (the daemon follows Sepolia)",
+   "detail": "applied 3, finalized slot 11607712",
+   "ok": true
+  },
+  {
+   "check": "attestation: the slots' values equal eth_getProof's at the record's block, the event emitted",
+   "detail": "block 12162964 \"0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5\": [String(\"0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469\"), String(\"0x0000000000000000000000000000000000000000000000000000000000000002\")]",
+   "ok": true
+  },
+  {
+   "check": "finalized header canonical at publicnode",
+   "ok": true,
+   "detail": "slot 11607712 root 0xbc10e7512a0a213bf69e6386bc6ec0b070c1c5cf1dd5f523046468c09eae9803"
+  }
+ ],
+ "inspect": {
+  "bridge": {
+   "binary": {
+    "chunks": 6,
+    "image_id": "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+    "on_chain_equal": true,
+    "sha256": "11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070"
+   },
+   "deployed": {
+    "first_segment": "FhYQcJYpT99EttzBrfi93TQiv67kghwfkqjXZvqvvDzx",
+    "image_id": "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+    "immutable": true
+   },
+   "header": "9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+   "segments": [
+    {
+     "account": "FhYQcJYpT99EttzBrfi93TQiv67kghwfkqjXZvqvvDzx",
+     "bytes": 98304,
+     "next": "3HA2XVT7xixVcocdbG9bpRwysaFKDPCxmHoRXVmqBpD2",
+     "sha256": "e11f34ac98b1c97708ddd516ca48eeb29013ad8dfdd5bbad6c418a1bb84f95fd"
+    },
+    {
+     "account": "3HA2XVT7xixVcocdbG9bpRwysaFKDPCxmHoRXVmqBpD2",
+     "bytes": 98304,
+     "next": "C4ZV8oVi4VUDeM8VhtB6mo2EeuhXLRJW4chYBvbHZAFw",
+     "sha256": "3f3a6fa0948fd023ad1c61b97e9264ef6cc7099105517aa9a07afd48f630f469"
+    },
+    {
+     "account": "C4ZV8oVi4VUDeM8VhtB6mo2EeuhXLRJW4chYBvbHZAFw",
+     "bytes": 98304,
+     "next": "DmsmWStxhH5MKucXSVByPDteSZGNkaoDbwySNKLndujj",
+     "sha256": "4dd0aefadd40d78f10a6213174c5d77b41e49d3ee10692ccfdecef4b9f44087a"
+    },
+    {
+     "account": "DmsmWStxhH5MKucXSVByPDteSZGNkaoDbwySNKLndujj",
+     "bytes": 98304,
+     "next": "CCBuhZYCCt23XSMfzuMxk81BZTXwxj9Gi6huDcHakeMU",
+     "sha256": "4f84627a688665ce7744fc4003f3277c74133cc7ef9bd1630279671dd4129560"
+    },
+    {
+     "account": "CCBuhZYCCt23XSMfzuMxk81BZTXwxj9Gi6huDcHakeMU",
+     "bytes": 98304,
+     "next": "HoPd54SUgkRAbsLmjydoRcceYn4EUysoDdSPx13YUiDp",
+     "sha256": "91ef07cc6e5d96fce98c167e5a4c95016d722148c345e5af8345dd46ce02ab47"
+    },
+    {
+     "account": "HoPd54SUgkRAbsLmjydoRcceYn4EUysoDdSPx13YUiDp",
+     "bytes": 68896,
+     "next": null,
+     "sha256": "e0d82a03a3f99b5bd30ed72278c29fae75e9453159d97ad8c3ba764c9a0bf3f8"
+    }
+   ]
+  },
+  "daemon": {
+   "account": "6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu",
+   "balance": "49663139384",
+   "nonce": "13"
+  },
+  "followed": 94,
+  "head": 168,
+  "instance": {
+   "active": true,
+   "applied": 3,
+   "config_matches": true,
+   "exists": true,
+   "finalized_header_ssz": "a01eb100000000004c0300000000000064801788931a2b70f124fe07a6e2847fe72594feb7a83e145c8c3df4c9fd23a8f87b05ea2b783ebaf025034ed094179d1368eecb8e210b6e399c696aa6ae00c3da7ab58776bdd43fa488bde9f7a9036cdc1b927467318c925bdf26df81f0e9d4",
+   "finalized_slot": 11607712,
+   "id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb",
+   "id_matches": true,
+   "root_id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb"
+  },
+  "payer": {
+   "account": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+   "balance": "49970780912",
+   "nonce": "17"
+  },
+  "program": {
+   "binary": {
+    "chunks": 7,
+    "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+    "on_chain_equal": true,
+    "sha256": "ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"
+   },
+   "deployed": {
+    "first_segment": "HqAQeu3UfwGdA9YWR2bsNpsenMsP17Mt1xX9Aa2fJ6qR",
+    "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+    "immutable": true
+   },
+   "header": "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+   "segments": [
+    {
+     "account": "HqAQeu3UfwGdA9YWR2bsNpsenMsP17Mt1xX9Aa2fJ6qR",
+     "bytes": 98304,
+     "next": "AfgksJdjtSfeeW5TAY3fVadwbbjVyG86MEHgtNspzSPd",
+     "sha256": "fb5662a1a88bfd0d69608c1dbd393ad59467835d148b8848c040a95268d33706"
+    },
+    {
+     "account": "AfgksJdjtSfeeW5TAY3fVadwbbjVyG86MEHgtNspzSPd",
+     "bytes": 98304,
+     "next": "6KJ3iWW9rZbjpZ1iyXwoWD6uMqZGfmY5mPdA7swUxfWP",
+     "sha256": "39f37b43acd4e1e5ff4cbd1fb97cdef491a8cd5ad1b32232e3c7916a6f60ade0"
+    },
+    {
+     "account": "6KJ3iWW9rZbjpZ1iyXwoWD6uMqZGfmY5mPdA7swUxfWP",
+     "bytes": 98304,
+     "next": "2Pg8cXR45gNEzTHmmQGc3Pfiofeu5E5ezXtmjYbW2Z8H",
+     "sha256": "1193c88828f1e6b2b8393aa93a5d76dacf14a02fb7168a5570bc910340d9bb8c"
+    },
+    {
+     "account": "2Pg8cXR45gNEzTHmmQGc3Pfiofeu5E5ezXtmjYbW2Z8H",
+     "bytes": 98304,
+     "next": "8z2BkeeaiBduhnGAHw1hLy2oBHjK3C6z5Vwmwo9h2NpH",
+     "sha256": "fb48a161eda0119cc3ebf30b986a5a22238d1443f8f91b74ae276084a04abe2a"
+    },
+    {
+     "account": "8z2BkeeaiBduhnGAHw1hLy2oBHjK3C6z5Vwmwo9h2NpH",
+     "bytes": 98304,
+     "next": "9MNSvn69wLtTW85K8FHQhzLBNu1uPM5yPx3E2GeFzQBa",
+     "sha256": "1445eb3666d15e4363181c02c58b62d4c678aa7ba599ffc9b2f39111c7c6f159"
+    },
+    {
+     "account": "9MNSvn69wLtTW85K8FHQhzLBNu1uPM5yPx3E2GeFzQBa",
+     "bytes": 98304,
+     "next": "C5oPE9YFeSv1JQLa62a9Z9XQAZ4P2fsYTyJVSJchPtTm",
+     "sha256": "5b620532e1c637228e4fe9c0965a54ccb9d107c30bc3b052bfcc7535117cbeb9"
+    },
+    {
+     "account": "C5oPE9YFeSv1JQLa62a9Z9XQAZ4P2fsYTyJVSJchPtTm",
+     "bytes": 4816,
+     "next": null,
+     "sha256": "6c4640be090d508a470553e6387036059b74968ac8da7d60a352819f104a54c1"
+    }
+   ]
+  },
+  "read_utc": "2026-11-18T19:17:16Z",
+  "rpc": "http://172.20.79.179:3041"
+ },
+ "verified_utc": "2026-11-18T19:17:16Z"
+}

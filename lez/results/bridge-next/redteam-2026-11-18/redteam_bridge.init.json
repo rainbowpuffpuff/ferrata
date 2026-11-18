@@ -1,0 +1,145 @@
+{
+  "counts": {
+    "PASS": 7
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "init",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:PAIRING_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 246,
+        "code_name": "bridge:PAIRING_MISMATCH",
+        "note": "before any Init; block 100's record [Init A' (another salt) against vault A (slot 2 = configId(A))]",
+        "outcome": "refused"
+      },
+      "title": "vault slot 2 holds another configuration's id",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_WRITTEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": "B-BR, then A's Init again [Init A again]",
+        "outcome": "refused"
+      },
+      "title": "Init twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "core:ProofNodeMismatch",
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 110,
+        "code_name": "core:ProofNodeMismatch",
+        "note": "byte 68 of node 1 (of 2) of the slot-2 proof flipped [Init A, slot-2 proof tampered]",
+        "outcome": "refused"
+      },
+      "title": "pairing proof tampered",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_SENDER"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 243,
+        "code_name": "bridge:WRONG_SENDER",
+        "note": "A's Init at config(cid_a2) [Init A sent to config(configId(A'))]",
+        "outcome": "refused"
+      },
+      "title": "Init sent to an address that is not config(cid)",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault 0xc5..c5 whose slot 2 holds this configuration's id [Init: controls.freeze_authority = controls.admin]",
+        "outcome": "refused"
+      },
+      "title": "controls with the admin as freeze authority",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault 0xc6..c6 whose slot 2 holds this configuration's id [Init: token_cap.capacity = floor.capacity - 1]",
+        "outcome": "refused"
+      },
+      "title": "token cap below the floor",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:PAIRING_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-INIT-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 246,
+        "code_name": "bridge:PAIRING_MISMATCH",
+        "note": "B-BR (A paired); A' = A with another fee recipient [Init A' against vault A's record of block 101 (slot 2 = configId(A))]",
+        "outcome": "refused"
+      },
+      "title": "a second configuration of the same vault pairs only if the vault names it",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

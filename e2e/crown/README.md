@@ -1,8 +1,9 @@
 # The crown run: the whole round trip on the final programs (design)
 
-Status (18 Nov 2026): the same run with the LEZ side on LEZ v0.4.0-rc3 (input set `rc3`, a vault pinning the second
-build of the checkpoint guests) is rehearsed to DONE on a fork and ready to start live as `crown-live-4`: "On LEZ
-v0.4.0-rc3" below.
+Status (18 Nov 2026, 20:15Z): the same run with the LEZ side on LEZ v0.4.0-rc3 (input set `rc3`, a vault pinning the
+second build of the checkpoint guests) **ran live on Sepolia to DONE as `crown-live-4`**
+([`e2e/runs/crown-live-4/`](../runs/crown-live-4/README.md): vault `0x80555Fe53CCcEf46951B23A3c75643a4C9283470`, 13
+transactions, verify 14 of 14; EVIDENCE rows 141, 142), after a rehearsal on a fork: "On LEZ v0.4.0-rc3" below.
 
 Status (12 Nov 2026, 16:23Z): **run live on Sepolia to DONE on the final programs** as `crown-live-3`
 ([`e2e/runs/crown-live-3/`](../runs/crown-live-3/README.md): the records, the two starts and what each of the 13
@@ -38,7 +39,7 @@ rehearsals 1 and 2 ran the earlier programs. Commands: "Commands" below. One clo
 after a stop, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify
 script that re-checks every step from public data and the recorded blocks.
 
-## On LEZ v0.4.0-rc3: input set `rc3`, the live run `crown-live-4` (ready to start, 18 Nov 2026)
+## On LEZ v0.4.0-rc3: input set `rc3`, the live run `crown-live-4` (DONE, 18 Nov 2026)
 
 The same round trip as `crown-live-3`, with the LEZ side on LEZ v0.4.0-rc3: its own `sequencer_service` and the
 Logos Blockchain node it pins, 0.3.5-rc.1 (one sequencer, one validator, dev-mode leader proofs, as before), and a new
@@ -74,7 +75,8 @@ private claim and burn proven in 773.9 s and 938.5 s, the `checkpoint_b_0_3_5` p
 pause: [`crown-rc3-rehearsal-2`](../runs/crown-rc3-rehearsal-2/README.md) and
 [`crown-rc3-sessiona-sepolia-1`](../runs/crown-rc3-sessiona-sepolia-1/README.md).
 
-Commands for `crown-live-4` (for the owner; nothing has been sent). From this tree's root, with `vault/lib` present
+Commands for `crown-live-4` (the run is DONE: [`e2e/runs/crown-live-4/`](../runs/crown-live-4/README.md), four starts,
+three of them resumes after the public endpoint's lagging reads). From this tree's root, with `vault/lib` present
 (git ignores it; `start` packs it) and no `ferrata-sepolia` runner active:
 
 ```
@@ -95,6 +97,14 @@ about 75 M gas (crown-live-3: 74,947,202; the same code and transactions; anvil'
 the deployment as Sepolia does), 2 x 0.001002 ETH of deposits, of which each release pays 0.001 ETH back to the
 deployer (the Release events of crown-live-3 and of the rehearsal); the identity stage refuses below 0.003004 ETH. About 2.5 to 3 hours: crown-live-3's 2 h 9 min of runner time with session B as on rc3
 (35 min in the rehearsal, 13 min on rc1), longer if no GPU is free.
+
+Measured in `crown-live-4` (18 Nov 2026, 15:33Z–20:15Z, 4 h 41 min 50 s of wall time over four starts; three stops on
+the public endpoint's lagging reads, each resumed with the same `start`): session A 499 s (23 transactions); the
+deployment's seven transactions in two parts; the capture stages 1,272 s and 456 s; session B 8,490 s, of
+which its first container's 70 minutes were lost and the second's 70 minutes ran it whole (the private claim proven and
+sent in 246.3 s, the private burn in 286.1 s, with the prover's threads set; three transactions final on the
+0.3.5-rc.1 node only after 1,034–1,227 s); the checkpoint 67.6 s on an L4 (131 s with the queue); W 58 min; 74,947,310
+gas in all, 0.0000114 ETH ([`e2e/runs/crown-live-4/`](../runs/crown-live-4/README.md)).
 
 ## Programs (built on the build box; since `integration7` the ids do not depend on the build path)
 

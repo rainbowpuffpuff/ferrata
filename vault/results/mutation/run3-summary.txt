@@ -1,0 +1,11 @@
+mutants: 3170; with a result: 20; without: 3150
+overall: killed 14, survived 6
+by file:
+  src/FerrataRegistry.sol: killed 6, survived 5
+  src/FerrataVault.sol: killed 8, survived 1
+by operator:
+  AssignmentMutation: killed 7, survived 3
+  BinaryOpMutation: killed 3
+  DeleteExpressionMutation: killed 2, survived 2
+  IfStatementMutation: killed 2, survived 1
+by stage: killed/suite 14, survived/invariant 6

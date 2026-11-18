@@ -1,0 +1,16 @@
+daemon: running, pid 34924
+[
+  {
+    "chain": "sepolia",
+    "daemon": "day1",
+    "finalized_slot": 11607712,
+    "last_error": "the sequencer and the follower disagree on the state of 5aURBNpqQdJdVn859vviqPbBRQ3GiMq1froyVf2HYiDV@3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S",
+    "last_plan": "deferred finish",
+    "period": 1416,
+    "reasons": [],
+    "round": 59,
+    "status": "ok"
+  }
+]
+
+daemon: killed (it did not stop in 120 s)

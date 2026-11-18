@@ -1,0 +1,13 @@
+{
+ "_source": "crown run: configId and genesisState of LEZ session A's devnet, image ids of the crown build",
+ "checkpointImageIdA": "0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f",
+ "checkpointImageIdB": "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf",
+ "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+ "lezConfigId": "0xaafbcbf68216d74da42c428030298847da1e125eb20df9c2fb5614b8e6e9893c",
+ "genesisState": "0xdaa0ae2af14a8898a65af4195822befb1e2e3ca04edb7214a02373cf16c2ffab",
+ "nMin": 1,
+ "tMin": 1,
+ "postingTimeframe": 0,
+ "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+ "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

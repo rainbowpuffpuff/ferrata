@@ -20,6 +20,7 @@ mod plan;
 #[path = "../../../live/driver/src/programs.rs"]
 mod programs;
 
+pub mod day1;
 pub mod ledger;
 
 use std::path::{Path, PathBuf};
@@ -67,4 +68,18 @@ fn program_account(s: &str) -> Result<AccountId> {
         return Ok(AccountId::new(bytes));
     }
     s.parse().map_err(|e| anyhow!("sequencer.program {s:?}: {e:?}"))
+}
+
+/// The time now, as the updater writes it.
+pub(crate) fn utc() -> String {
+    ferrata_updater::utc_now()
+}
+
+/// The faucet of the rehearsal (`day1 fund`): one of the two keys LEZ's Justfile imports (`wallet-import-test-accounts`),
+/// funded by the genesis of LEZ's `lez/sequencer/service/networks/local.json` (`../../live/driver/src/keys.rs`).
+pub(crate) fn keys_local_test() -> Result<PrivateKey> {
+    let bytes: [u8; 32] = hex::decode("f434f8741720014586ae43356d2aec6257da086222f604ddb75d69733b86fc4c")?
+        .try_into()
+        .map_err(|_| anyhow!("the test key is not 32 bytes"))?;
+    PrivateKey::try_new(bytes).map_err(|e| anyhow!("the test key is not a scalar: {e}"))
 }

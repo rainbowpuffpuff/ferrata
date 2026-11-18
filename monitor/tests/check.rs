@@ -321,14 +321,21 @@ fn state_file_round_trip_and_vault_guard() {
 }
 
 /// The node view from a real LEZ v0.4.0-rc1 sequencer's record (the lab's devnet, `lez/lab/results/record`).
+/// The record grows while the lab runs and only appends, so the checks use its first 258 blocks.
 #[test]
 fn a_real_sequencer_record_as_the_node_view() {
     let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../lez/lab/results/record/chain.tsv");
-    let text = std::fs::read_to_string(path).unwrap();
+    let full = std::fs::read_to_string(path).unwrap();
+    let tip: H32 = "0xad17ee54bb76f415fb16862d9d09c328424fa10d481ea507662335658e3a9db2".parse().unwrap();
+    // The whole record: block 258 keeps its hash and the final tier reaches at least that far.
+    let all = NodeView::from_chain_tsv("lab", &full, Vec::new()).unwrap();
+    assert!(all.final_height >= 258);
+    assert_eq!(all.final_blocks[&258], tip);
+    // The header line and blocks 1 to 258.
+    let text: String = full.lines().take(259).map(|l| format!("{l}\n")).collect();
     let v = NodeView::from_chain_tsv("lab", &text, Vec::new()).unwrap();
     assert_eq!(v.final_height, 258);
     assert_eq!(v.final_blocks.len(), 258);
-    let tip: H32 = "0xad17ee54bb76f415fb16862d9d09c328424fa10d481ea507662335658e3a9db2".parse().unwrap();
     assert_eq!(v.final_blocks[&258], tip);
     // No key sets in the record: the key-set check is skipped, the tip checks apply.
     assert_eq!(evaluate(&B, &cand(258, tip, 1, 1, T0), std::slice::from_ref(&v), T0), Verdict::Pass);

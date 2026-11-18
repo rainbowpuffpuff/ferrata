@@ -153,6 +153,8 @@ async fn open(args: &Args, phase: &str, program: &GuestBinary, bridge: &GuestBin
         wait_final: args.get("wait-final") != Some("no"),
     };
     fs::create_dir_all(&opts.harness_results)?;
+    // This driver sends through LEZ's wallet directly too: a sequencer not on this machine only as `check_send` allows.
+    crate::live::check_send(&opts.rpc)?;
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
     Ok(live)

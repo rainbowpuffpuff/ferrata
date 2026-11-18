@@ -4,9 +4,14 @@
 //! public LEZ testnet runs. The verification is `ferrata-core`'s, unchanged; the one-transaction
 //! finality update replaces the final exponentiation by the residue-witness check of
 //! `bench/residue` (`Verify::Residue`), and may compose the signing key from one multiproof of
-//! the non-signers (`bench/residue-agg`, a signer witness marked `0xffff`/`0xfffe`): both are
-//! bench code, experimental and unaudited. `Verify::Core` and the stepwise `Continue` path use the
-//! core alone.
+//! the non-signers (`bench/residue-agg`, a signer witness marked `0xffff`/`0xfffe`); with
+//! `Verify::ResidueSummary` a handoff adopts the next committee by its summary in the same
+//! transaction (`bench/residue-handoff`, `bench/RESIDUE.md` §10: sound only under the light client's
+//! honest-supermajority assumption). All three are bench code, experimental and unaudited.
+//! `Verify::Core` and the stepwise `Continue` path use the core alone. `Instruction::Evidence` (also
+//! experimental and unaudited, `bench/misbehaviour`, `bench/MISBEHAVIOUR.md`) freezes an instance on
+//! evidence that a sync committee it holds signed finality contradicting its records; a frozen instance
+//! refuses `Update`, `Continue`, `Attest` and `Evidence` (`FROZEN`).
 //!
 //! See `ferrata_v03_wire` for the accounts, instructions and effects. The plan sees no state: it
 //! checks that every account is the program's own shard at the address the instruction implies,
@@ -24,8 +29,9 @@ use ferrata_core::{
     Error, Root,
 };
 use ferrata_v03_wire::{
-    code, header_account, instance_account, instance_id, statement_account, Config, Effect, InstanceOp,
-    InstanceState, Instruction, Part, RecordClaim, RecordState, Statement, Step, StorageQuery, Verify, Window,
+    code, header_account, instance_account, instance_id, statement_account, Against, Config, Effect, Freeze,
+    InstanceOp, InstanceState, Instruction, Part, RecordClaim, RecordState, Statement, Step, StorageQuery, Verify,
+    Window,
 };
 use lee_core::{
     account::{AccountId, ShardData},
@@ -107,6 +113,10 @@ fn plan(input: PlanInput) -> Result<PlanOutput, Refusal> {
         Instruction::Attest { instance_id, slot, query, statements } => {
             (attest_effects(accounts, &program, &instance_id, slot, query, statements)?, Window::default())
         }
+        Instruction::Evidence { instance_id, update, signers, verify, against, window } => {
+            let op = InstanceOp::Evidence { instance_id, update, signers, verify, against };
+            (evidence_effects(accounts, &program, &instance_id, op, against, window)?, window)
+        }
     };
     let timestamps: TimestampValidityWindow =
         (window.from_ms, window.to_ms).try_into().map_err(|_| code::WRONG_WINDOW)?;
@@ -142,7 +152,8 @@ fn advance_effects(
     Ok(effects)
 }
 
-/// `header(id, slot)` checks the query; each `statement(id, s)` takes its claimed statement.
+/// `instance(id)` must not be frozen (EXPERIMENTAL; nothing is written there); `header(id, slot)` checks
+/// the query; each `statement(id, s)` takes its claimed statement.
 fn attest_effects(
     accounts: &[AccountMeta],
     program: &AccountId,
@@ -152,20 +163,51 @@ fn attest_effects(
     statements: Vec<Statement>,
 ) -> Result<Vec<ShardEffect>, Refusal> {
     if statements.is_empty()
-        || accounts.len() != 1 + statements.len()
-        || accounts[0].account_id != header_account(program, id, slot)
+        || accounts.len() != 2 + statements.len()
+        || accounts[0].account_id != instance_account(program, id)
+        || accounts[1].account_id != header_account(program, id, slot)
     {
         return Err(code::WRONG_ACCOUNT);
     }
     let mut written = Vec::with_capacity(statements.len());
-    for (s, account) in statements.iter().zip(&accounts[1..]) {
+    for (s, account) in statements.iter().zip(&accounts[2..]) {
         if account.account_id != statement_account(program, id, &s.id_at_block) {
             return Err(code::WRONG_ACCOUNT);
         }
         written.push(ShardEffect::new(account, &Effect::Statement(s.clone())));
     }
-    let mut effects = vec![ShardEffect::new(&accounts[0], &Effect::Check { instance_id: *id, query, statements })];
+    let mut effects = vec![
+        ShardEffect::new(&accounts[0], &Effect::Live { instance_id: *id }),
+        ShardEffect::new(&accounts[1], &Effect::Check { instance_id: *id, query, statements }),
+    ];
     effects.extend(written);
+    Ok(effects)
+}
+
+/// EXPERIMENTAL: `instance(id)` checks the evidence and freezes; for evidence against a record,
+/// `header(id, slot)` checks that it holds a header of the claimed root (nothing is written there).
+fn evidence_effects(
+    accounts: &[AccountMeta],
+    program: &AccountId,
+    id: &Root,
+    op: InstanceOp,
+    against: Against,
+    window: Window,
+) -> Result<Vec<ShardEffect>, Refusal> {
+    let record = match against {
+        Against::Record { slot, root } => Some((slot, root)),
+        Against::NextCommittee => None,
+    };
+    if accounts.len() != 1 + usize::from(record.is_some()) || accounts[0].account_id != instance_account(program, id) {
+        return Err(code::WRONG_ACCOUNT);
+    }
+    let mut effects = vec![ShardEffect::new(&accounts[0], &Effect::Instance { op, record: None, window })];
+    if let Some((slot, root)) = record {
+        if accounts[1].account_id != header_account(program, id, slot) {
+            return Err(code::WRONG_ACCOUNT);
+        }
+        effects.push(ShardEffect::new(&accounts[1], &Effect::Recorded { instance_id: *id, slot, root }));
+    }
     Ok(effects)
 }
 
@@ -203,7 +245,36 @@ fn apply(input: &ApplyInput) -> Result<Option<ShardData>, Refusal> {
             }
             write_once(pre, encode(&s))
         }
+        Effect::Live { instance_id } => {
+            if instance_state(&program, &account, pre, &instance_id)?.frozen.is_some() {
+                return Err(code::FROZEN);
+            }
+            Ok(None)
+        }
+        Effect::Recorded { instance_id, slot, root } => {
+            recorded(&program, &account, pre, &instance_id, slot, &root)?;
+            Ok(None)
+        }
     }
+}
+
+/// EXPERIMENTAL: `header(id, slot)` holds a record of the instance whose beacon header has `root`.
+fn recorded(program: &AccountId, account: &AccountId, pre: &[u8], id: &Root, slot: u64, root: &Root) -> Result<(), Refusal> {
+    if *account != header_account(program, id, slot) {
+        return Err(code::WRONG_ACCOUNT);
+    }
+    if pre.is_empty() {
+        return Err(code::NO_RECORD);
+    }
+    let state: RecordState = borsh::from_slice(pre).map_err(|_| code::BAD_STATE)?;
+    if state.instance_id != *id {
+        return Err(code::WRONG_INSTANCE);
+    }
+    let held = HeaderRecord::decode(&state.record).map_err(|_| code::BAD_STATE)?;
+    if held.beacon.slot != slot || held.beacon.hash_tree_root() != *root {
+        return Err(code::WRONG_RECORD);
+    }
+    Ok(())
 }
 
 /// Write `data` to an empty shard; keep a shard that holds exactly `data`; refuse any other.
@@ -247,12 +318,23 @@ fn instance(
             // The checkpoint must be inside its own weak-subjectivity period when the instance is
             // created (as on LEZ v0.4).
             expect_window(window, Window { from_ms: None, to_ms: config.ws_end_ms(bootstrap.header.beacon.slot) })?;
-            let state =
-                InstanceState { id, config, checkpoint, active: false, store: store.encode(), applied: 0, job: None };
+            let state = InstanceState {
+                id,
+                config,
+                checkpoint,
+                active: false,
+                store: store.encode(),
+                applied: 0,
+                job: None,
+                frozen: None,
+            };
             advance(state, job, adopt, record)
         }
         InstanceOp::Update { instance_id, update, signers, verify, adopt } => {
             let state = instance_state(program, account, pre, &instance_id)?;
+            if state.frozen.is_some() {
+                return Err(code::FROZEN);
+            }
             if !state.active {
                 return Err(code::INSTANCE_INACTIVE);
             }
@@ -281,11 +363,23 @@ fn instance(
                     job.step2().map_err(step)?;
                     residue_check(&mut job, &c, &w)?;
                 }
+                Verify::ResidueSummary { c, w } => {
+                    job.step2().map_err(step)?;
+                    residue_check(&mut job, &c, &w)?;
+                    if job.adoption_pending() {
+                        // EXPERIMENTAL (bench/RESIDUE.md §10; sound only under the light client's
+                        // honest-supermajority assumption): the next committee adopted by its summary.
+                        residue_handoff::adopt_summary(&mut job).map_err(step)?;
+                    }
+                }
             }
             advance(state, job, adopt, record)
         }
         InstanceOp::Continue { instance_id, steps: list } => {
             let state = instance_state(program, account, pre, &instance_id)?;
+            if state.frozen.is_some() {
+                return Err(code::FROZEN);
+            }
             if window != Window::default() {
                 return Err(code::WRONG_WINDOW);
             }
@@ -301,7 +395,87 @@ fn instance(
             }
             advance(state, job, Vec::new(), record)
         }
+        InstanceOp::Evidence { instance_id, update, signers, verify, against } => {
+            let mut state = instance_state(program, account, pre, &instance_id)?;
+            if state.frozen.is_some() {
+                return Err(code::FROZEN);
+            }
+            if !state.active {
+                return Err(code::INSTANCE_INACTIVE);
+            }
+            if record.is_some() {
+                return Err(code::WRONG_RECORD);
+            }
+            let freeze = evidence(&state, &update, &signers, verify, against, window)?;
+            state.frozen = Some(freeze);
+            Ok(state)
+        }
     }
+}
+
+/// EXPERIMENTAL, UNAUDITED (`bench/misbehaviour`, `bench/MISBEHAVIOUR.md`): check `update` as evidence
+/// against `against` on the instance's store (as an update: in the layout it names, the store upgraded to
+/// it if later), in the window an update would have; the freeze it records.
+fn evidence(
+    state: &InstanceState,
+    update: &[u8],
+    signers: &[u8],
+    verify: Verify,
+    against: Against,
+    window: Window,
+) -> Result<Freeze, Refusal> {
+    let config = &state.config;
+    let spec = config.spec();
+    let n = config.sync_committee_size as usize;
+    let pairing = match verify {
+        Verify::Core => misbehaviour::Pairing::FinalExp,
+        Verify::Residue { c, w } => {
+            let (Ok(c), Ok(w)) = (<[u8; residue::FP12_BYTES]>::try_from(c), <[u8; residue::FP12_BYTES]>::try_from(w))
+            else {
+                return Err(code::BAD_WITNESS);
+            };
+            misbehaviour::Pairing::Residue { c, w }
+        }
+        _ => return Err(code::EVIDENCE_FORM),
+    };
+    let (rest, sum) = match signers {
+        [0xff, 0xff, rest @ ..] => (rest, residue_agg::Sum::Batch),
+        [0xfe, 0xff, rest @ ..] => (rest, residue_agg::Sum::Chain),
+        _ => return Err(code::EVIDENCE_FORM),
+    };
+    let signers = residue_agg::NonSigners::decode(rest, n).map_err(core)?;
+    let stored = CompactStore::decode(&state.store).map_err(|_| code::BAD_STATE)?;
+    let (update, store) = update_and_store(&stored, update, n, &spec)?;
+    expect_window(window, update_window(config, stored.finalized.slot, update.signature_slot)?)?;
+    let against = match against {
+        Against::Record { slot, root } => misbehaviour::Against::Record { slot, root },
+        Against::NextCommittee => misbehaviour::Against::NextCommittee,
+    };
+    let f = misbehaviour::check_evidence(
+        &store,
+        &update,
+        &signers,
+        sum,
+        &against,
+        update.signature_slot,
+        &pairing,
+        &spec,
+        &config.genesis_validators_root,
+    )
+    .map_err(|e| e.code() as Refusal)?;
+    let (kind, at, held, conflicting) = match f.contradiction {
+        misbehaviour::Contradiction::Finalized { slot, recorded, conflicting } => (1, slot, recorded, conflicting),
+        misbehaviour::Contradiction::NextCommittee { period, adopted, conflicting } => (2, period, adopted, conflicting),
+    };
+    Ok(Freeze {
+        kind,
+        at,
+        held,
+        conflicting,
+        attested_root: f.attested_root,
+        signature_slot: f.signature_slot,
+        update_digest: f.update_digest,
+    })
 }
 
 /// Adopt `adopt`; if the job is then complete, apply it to the store and check the claimed
@@ -366,6 +540,11 @@ fn check_config(config: &Config) -> Result<(), Refusal> {
         return Err(code::BAD_CONFIG);
     }
     if config.ws_period_epochs == 0 || config.seconds_per_slot == 0 || config.slots_per_epoch == 0 {
+        return Err(code::BAD_CONFIG);
+    }
+    // An independent review's finding 7: a sync-committee period of zero epochs would make every update
+    // panic in the period arithmetic (a division by zero) and be charged the whole gas limit; refused at `Init`.
+    if config.epochs_per_sync_committee_period == 0 {
         return Err(code::BAD_CONFIG);
     }
     Ok(())

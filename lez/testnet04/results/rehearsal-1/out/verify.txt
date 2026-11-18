@@ -1,0 +1,25 @@
+[ok] program deployed byte for byte (image id, every segment, immutable): "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df" at "3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S"
+[ok] bridge deployed byte for byte: "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd"
+[ok] deploy-program 00 deploy program: WriteSegment 7 of 7 (4816 bytes): 80a18d3cedfc47bb4f0bb3b992caa51b3cfa74c8b52464de6c59163caa4067b1 block Some(5), now applied
+[ok] deploy-program 01 deploy program: WriteSegment 6 of 7 (98304 bytes): 545af715d56335e0765481d5c5a1f758d28c289e12942bdaee2f38522bb2ec33 block Some(7), now applied
+[ok] deploy-program 02 deploy program: WriteSegment 5 of 7 (98304 bytes): 007834e9836978592c95090619b17e34ad9ebdb2777ef029dec9cd75f017e2f8 block Some(9), now applied
+[ok] deploy-program 03 deploy program: WriteSegment 4 of 7 (98304 bytes): 6eec0ba033e511490059359d5e86cab40ce19e48ce010387f1afed33026600f9 block Some(12), now applied
+[ok] deploy-program 04 deploy program: WriteSegment 3 of 7 (98304 bytes): 56954fa7edb45f4b7f750866329e1ded56489a46f26e55bb64881463e74859de block Some(14), now applied
+[ok] deploy-program 05 deploy program: WriteSegment 2 of 7 (98304 bytes): 3839757ac95ab1c90f699b63a20c0783cda68613eeb65607ddf55bef7ab3f6ec block Some(16), now applied
+[ok] deploy-program 06 deploy program: WriteSegment 1 of 7 (98304 bytes): fe5241db2cb11b91f061fce82b8050c144eba920d601803cf86a3dd035c27612 block Some(18), now applied
+[ok] deploy-program 07 deploy program: CreateHeader (immutable) at 3bVFfqdLnQwN5vbn5vB59ZDSwLWjeqeN9qGHP5aSAR8S: f84887dea4e6e2f7053566759a722a2b0076d1cf6a9ede436b186a77e784c520 block Some(20), now applied
+[ok] deploy-bridge 00 deploy bridge: WriteSegment 6 of 6 (68896 bytes): aeb19b7fe28d6319f13395de18d2f5e7f7b5d7598475526d9b7fb0c12c466177 block Some(69), now applied
+[ok] deploy-bridge 01 deploy bridge: WriteSegment 5 of 6 (98304 bytes): 66319b03c76972a04a3e7c67c8dd2d316e27d8c7ecb989dc52548aff82b63006 block Some(71), now applied
+[ok] deploy-bridge 02 deploy bridge: WriteSegment 4 of 6 (98304 bytes): 50ead56fbc233bd44dd3ba579b5235a296dca682555f66287bc5cd2963c36953 block Some(72), now applied
+[ok] deploy-bridge 03 deploy bridge: WriteSegment 3 of 6 (98304 bytes): c5d08b187fe041ebc7212f26b3a09fdc7e1a1b83bc57e53e64846ef1371002f4 block Some(74), now applied
+[ok] deploy-bridge 04 deploy bridge: WriteSegment 2 of 6 (98304 bytes): 3a6e42131e10fab8435dea815daed848b5867a7eebc4c85c48a2780cde2779b1 block Some(76), now applied
+[ok] deploy-bridge 05 deploy bridge: WriteSegment 1 of 6 (98304 bytes): a2f67db0e519f07a446a33cc122f3629eab1d31907203664b6ae0c4f735cce29 block Some(78), now applied
+[ok] deploy-bridge 06 deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD: a127954027e7c141591707c4b4603456269aae467745d82e959dc3f8dd0c5201 block Some(80), now applied
+[ok] init 00 Init (Sepolia, Gloas layout): ff7e61aaf892f3691d02cb8c28b466446b18a1ad7e467f883e84d3df14e05f2e block Some(22), now applied
+[ok] attest 00 Attest: the vault's slots 0 and 1 under header(11d23518, 11607488): 2d668b3184b2652fcfae5bf09f2bfaebfbf645f64ef2bbeaae1e79706878366b block Some(67), now applied
+[ok] instance exists with the recorded id and configuration: "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb"
+[ok] instance active (committee adopted): applied 3
+[ok] instance applied at least 3 jobs (the daemon follows Sepolia): applied 3, finalized slot 11607712
+[ok] attestation: the slots' values equal eth_getProof's at the record's block, the event emitted: block 12162964 "0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5": [String("0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"), String("0x0000000000000000000000000000000000000000000000000000000000000002")]
+verify: 23 of 23 checks match
+[ok] the instance's finalized header (slot 11607712) is publicnode's canonical block 0xbc10e7512a0a213bf69e6386bc6ec0b070c1c5cf1dd5f523046468c09eae9803

@@ -1,0 +1,2 @@
+hotfix installed 17:53:23
+run-2 started 17:53:58: day1.sh run again from the worktree, [policy] completed

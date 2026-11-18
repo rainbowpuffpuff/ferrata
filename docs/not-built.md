@@ -5,7 +5,16 @@ The README keeps a short form of it.
 
 The design notes specify these; there is no code for them here:
 - in the bridge program on LEZ (`lez/BRIDGE-RESULTS.md` §9): a transfer that credits a private recipient
-  privately, the admin's own handover, the switch to a v0.4 token program when one is released;
+  privately, the admin's own handover, the switch to a v0.4 token program when one is released; the nullifier
+  account keyed by the configuration id, a holder account per configuration and destination, and an oversized state
+  refused with a code: the change that closes the two known issues of 18 November 2026 (a second configuration of
+  the same vault can freeze a public-kind deposit whose `s` it knows; a destination's shared holder account can be
+  filled; [`bridge.md`](design/bridge.md) §3, [EVIDENCE](EVIDENCE.md) row 136). It changes the bridge program's
+  image id, so deploying it is milestone B1's; it is built in the LEZ v0.3.1 port (branch `testnet-v03-bridge` at
+  `ff453dcc`) and, for v0.4, in a second build of the bridge program that is not deployed (`lez/guests/bridge-next`,
+  image `0xc5cad2cd…d6da`, [EVIDENCE](EVIDENCE.md) row 143: the two keyed accounts, and `Init` refusing a freeze
+  authority that is the admin, the red team's F1; v0.4 has no state limit, so it has no oversized-state code); the
+  deployed program keeps both issues, and F1;
 - rule (B): the watchers' `monitor` reading attestations (the four-sequencer zone has run the bridge program, both
   burns, their releases through a vault on a local anvil and a rotation its committee proposed,
   `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran
@@ -55,15 +64,22 @@ The design notes specify these; there is no code for them here:
   logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
-  reference consumer still pin an instance); a chain of several EIP-2935 hops under a Gloas record (one hop
-  is attested); the F.8 test (`docs/design/attestation.md` §6.5, §15).
-- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a vault for such a
-  zone where it runs (the deployed checkpoint guests, whose ids the vault on Sepolia pins, read the `d480efc6` layout
-  and refuse it), a zone of several sequencers on it, and following a Bedrock era change (a deployment pins one fork
-  digest). The reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3
-  zone of one sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and
-  accepted by vault v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
-  [EVIDENCE](EVIDENCE.md) rows 129, 130).
+  reference consumer still pin an instance); the F.8 test (`docs/design/attestation.md` §6.5, §15). Chains of
+  EIP-2935 hops are built (up to 32 in one transaction on real Sepolia data, four on mainnet; EVIDENCE row 145);
+  a private consumer's proof carrying more than one hop is not measured.
+- a cost for forging a light-client record ([`trust.md`](trust.md) §2.2, "What a forger loses", design only, added 18
+  November 2026): bonded or restaked backing a consumer can require of a record (a co-signature slashed on Ethereum on
+  proof that the header is not canonical), and anchoring to Ethereum's FFG finality instead of, or beside, the sync
+  committee; sync-committee slashing itself (EIP-7657) is Stagnant upstream and not Ferrata's to build;
+- for Logos Blockchain 0.3.5-rc.1 (the node LEZ v0.4.0-rc3 pins, which Logos's devnet runs): a zone of several
+  sequencers on it, Logos's devnet itself, and following a Bedrock era change (a deployment pins one fork digest). The
+  reading itself is built, as a second build of the two checkpoint guests, and ran end to end over an rc3 zone of one
+  sequencer and one local validator: the rule (B) checkpoint proven for real, wrapped to Groth16 and accepted by vault
+  v5 on a local anvil, both burns released ([`lez/results/v0.4.0-rc3/return-leg/`](../lez/results/v0.4.0-rc3/return-leg/README.md),
+  [EVIDENCE](EVIDENCE.md) rows 129, 130); a vault for such a zone runs on Sepolia (the earlier vaults' checkpoint ids
+  read the `d480efc6` layout and refuse it): the whole round trip with an rc3 zone we ran (rc3's sequencer and node, one
+  validator) through a new vault v5 pinning the second build's `checkpoint_b`, rehearsed on a fork and then live on
+  18 Nov 2026 as `crown-live-4` ([EVIDENCE](EVIDENCE.md) rows 141, 142, [`e2e/runs/crown-live-4/`](../e2e/runs/crown-live-4/README.md)).
 
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:

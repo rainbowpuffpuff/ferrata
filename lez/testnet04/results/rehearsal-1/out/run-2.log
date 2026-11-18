@@ -1,0 +1,83 @@
+== 2026-11-18T17:53:58Z discover http://172.20.79.179:3041
+head block 30; health None
+fee state {"height": 30, "base_fee_exec": 8, "base_fee_stor": 8, "next_base_fee_exec_floor": 8, "next_base_fee_exec_ceiling": 9, "next_base_fee_stor_floor": 8, "next_base_fee_stor_ceiling": 9, "max_gas_exec": 10000000, "max_gas_stor": 1000000}
+channel 0101010101010101010101010101010101010101010101010101010101010101
+programs 1: privacy_preserving_circuit
+v0.4 network (getPublications known): True; cross-zone programs: none
+builtin programs against LEZ v0.4.0-rc3's: "no reference"
+clock: {"head_block_ms": 1795024436147, "this_machine_ms": 1795024439115, "behind_s": 3.0}
+blocks read: {"1": {"block_id": 1, "hash": "e649dca02c73151f37759b5125f8330feb32d40d369b596403e9a14d00754faa", "timestamp": 0, "bedrock_status": "Finalized", "bytes": 3882}, "30": {"block_id": 30, "hash": "c14efac4abbed3d282afab422a740f2ce9ff0f6cddefa4ac52fbb473c724fad4", "timestamp": 1795024436147, "bedrock_status": "Pending", "bytes": 711}}
+== 2026-11-18T17:53:59Z this deployment's accounts there: payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja balance 49985540672 ; daemon 6oqjQnsj6z6mVVUezd1dqWf8Xyds2Chnh6Rp8E1cTDuu balance 50000000000
+== 2026-11-18T17:54:00Z (a) the program is deployed already, byte for byte
+== 2026-11-18T17:54:00Z (b) Init of the Sepolia instance
+[init] 00 Init (Sepolia, Gloas layout): "applied" in block 22 (recorded)
+stage init: every transaction applied in 0.0 s
+== 2026-11-18T17:54:00Z (c) the updater daemon
+== 2026-11-18T17:54:00Z starting the updater daemon (detached): ../tmp/testnet04/state/rehearsal-1/daemon, /health on 127.0.0.1:9464
+== 2026-11-18T17:54:02Z (d) waiting for the instance to be active and to apply an update after its activation
+== 2026-11-18T18:39:47Z (d) the newest record: slot 11607488, execution block 0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5; eth_getProof of 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c's slots 0,1 there
+proof: 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c slots 0,1 at block 12162964 (0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5)
+2d668b3184b2652fcfae5bf09f2bfaebfbf645f64ef2bbeaae1e79706878366b     6409 B gas limit 2000000 max fee      128544384 Attest: the vault's slots 0 and 1 under header(11d23518, 11607488)
+stage attest: 1 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 9; at the current base fees (8, 8) at most 16051272 if every one used its whole gas limit; the largest reserve 128544384
+[attest] 00 Attest: the vault's slots 0 and 1 under header(11d23518, 11607488): "applied" in block 67 (exec gas 251015, storage gas 6409, fee "2059392")
+stage attest: every transaction applied in 18.1 s
+{
+ "block_hash": "0x4683d6750a265ef65d9e48092437043e7d053cfe898fef9baf6da34bdcc983a5",
+ "block_number": 12162964,
+ "chain_id": 11155111,
+ "event_data": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cba736aa00000000009497b90000000000bdf2f01d17150cb4e1233f962ee8e1a07d6cdc8f8db772e6e7865fdc8c455bcb75fb9c605c160eeb13dd5bd9529f1a1125d95fca55388939b13146cc4506a7b8f581fe3e40c1d0f228154d8859b816566edf2195a1dc0a87e06633ed04b3e70b",
+ "hops": 0,
+ "instance_id": "11d23518f276148be8ef4448980c9edc682414f12e46eb69ff9e603610cc43cb",
+ "slot": 11607488,
+ "statements": [
+  {
+   "fact": {
+    "account": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+    "balance": "0x00000000000000000000000000000000000000000000000000000574fbde6000",
+    "code_hash": "0x545565b8341a92de4b3c99c9c0d5b3f9fd7e42acbea0676a9ad836d19ceea30b",
+    "nonce": 1,
+    "storage_root": "0x67ccfd8eb6ed3ef9488cd62eda92166dc1297cb74ba453545ca7b3489c631f0a"
+   },
+   "id": "0xbdf2f01d17150cb4e1233f962ee8e1a07d6cdc8f8db772e6e7865fdc8c455bcb"
+  },
+  {
+   "fact": {
+    "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "storage": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+    "value": "0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"
+   },
+   "id": "0x75fb9c605c160eeb13dd5bd9529f1a1125d95fca55388939b13146cc4506a7b8"
+  },
+  {
+   "fact": {
+    "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+    "storage": "0x04ee8ff19cc11cee4ae65d03e12b9888043de44c",
+    "value": "0x0000000000000000000000000000000000000000000000000000000000000002"
+   },
+   "id": "0xf581fe3e40c1d0f228154d8859b816566edf2195a1dc0a87e06633ed04b3e70b"
+  }
+ ]
+}
+== 2026-11-18T18:40:27Z (e) the bridge program (0xccde6171…)
+aeb19b7fe28d6319f13395de18d2f5e7f7b5d7598475526d9b7fb0c12c466177    69476 B gas limit 2000000 max fee      132573184 deploy bridge: WriteSegment 6 of 6 (68896 bytes)
+66319b03c76972a04a3e7c67c8dd2d316e27d8c7ecb989dc52548aff82b63006    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 5 of 6 (98304 bytes)
+50ead56fbc233bd44dd3ba579b5235a296dca682555f66287bc5cd2963c36953    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 4 of 6 (98304 bytes)
+c5d08b187fe041ebc7212f26b3a09fdc7e1a1b83bc57e53e64846ef1371002f4    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 3 of 6 (98304 bytes)
+3a6e42131e10fab8435dea815daed848b5867a7eebc4c85c48a2780cde2779b1    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 2 of 6 (98304 bytes)
+a2f67db0e519f07a446a33cc122f3629eab1d31907203664b6ae0c4f735cce29    98916 B gas limit 2000000 max fee      134455296 deploy bridge: WriteSegment 1 of 6 (98304 bytes)
+a127954027e7c141591707c4b4603456269aae467745d82e959dc3f8dd0c5201      608 B gas limit 2000000 max fee      128196608 deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD
+stage deploy-bridge: 7 transactions signed for payer 7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja from nonce 10; at the current base fees (8, 8) at most 116517312 if every one used its whole gas limit; the largest reserve 134455296
+[deploy-bridge] 00 deploy bridge: WriteSegment 6 of 6 (68896 bytes): "applied" in block 69 (exec gas 0, storage gas 69476, fee "555808")
+[deploy-bridge] 01 deploy bridge: WriteSegment 5 of 6 (98304 bytes): "applied" in block 71 (exec gas 68902, storage gas 98916, fee "1342544")
+[day1] 50ead56fbc233bd44dd3ba579b5235a296dca682555f66287bc5cd2963c36953 moved from block 73 to block 72: the head was rewound
+[deploy-bridge] 02 deploy bridge: WriteSegment 4 of 6 (98304 bytes): included again after a rewind (blocks [73, 72])
+[deploy-bridge] 02 deploy bridge: WriteSegment 4 of 6 (98304 bytes): "applied" in block 72 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-bridge] 03 deploy bridge: WriteSegment 3 of 6 (98304 bytes): "applied" in block 74 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-bridge] 04 deploy bridge: WriteSegment 2 of 6 (98304 bytes): "applied" in block 76 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-bridge] 05 deploy bridge: WriteSegment 1 of 6 (98304 bytes): "applied" in block 78 (exec gas 98342, storage gas 98916, fee "1578064")
+[deploy-bridge] 06 deploy bridge: CreateHeader (immutable) at 9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD: "applied" in block 80 (exec gas 560612, storage gas 608, fee "4489760")
+stage deploy-bridge: every transaction applied in 1339.4 s
+../tmp/testnet04/state/rehearsal-1/bridge-owner-step.md
+== 2026-11-18T19:02:47Z (e) the owner-side Sepolia step: ../tmp/testnet04/state/rehearsal-1/bridge-owner-step.md (not sent)
+== 2026-11-18T19:02:47Z run done in 4128 s; the daemon follows Sepolia: day1.sh daemon-status
+lez/testnet04/day1.sh: line 335: 34924 Killed                  FERRATA_TESTNET_SEND=yes setsid bash -c 'echo $$ > pid; exec "$0" --config updater.toml' "$UPDATER" >> daemon.log 2>&1 < /dev/null

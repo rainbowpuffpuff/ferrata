@@ -1,0 +1,14 @@
+{
+  "fee_state": [
+    8,
+    8
+  ],
+  "first_nonce": "0",
+  "info": {
+    "image_id": "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+    "program": "9Qaf4Mnt7E8jTWfP3PzUH4ghTo9y49QXQxCKsVeDomSD",
+    "sha256": "11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070"
+  },
+  "payer": "7ns45qGiipkVrLeiGEPR5yWBb5GNjrGNN5mitLGNPHja",
+  "stage": "deploy-bridge"
+}

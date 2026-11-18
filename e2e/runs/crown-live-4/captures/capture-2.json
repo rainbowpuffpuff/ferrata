@@ -1,0 +1,61 @@
+{
+ "vault": "0x80555fe53cccef46951b23a3c75643a4c9283470",
+ "block": 12162621,
+ "finalized_slot": 11607136,
+ "min_block": 12162595,
+ "expect_leaves": 2,
+ "leaves": 2,
+ "updates_from": 1417,
+ "slots": [
+  {
+   "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "what": "slot 0",
+   "getter": "depositRoot()",
+   "value": "0x1cbb91ceeb49cf54c3ce8eb3ab5badd31fd4a9fecd6379d01eafd3a995661da1"
+  },
+  {
+   "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+   "what": "slot 1",
+   "getter": "nextLeafIndex()",
+   "value": "0x0000000000000000000000000000000000000000000000000000000000000002"
+  },
+  {
+   "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+   "what": "slot 2",
+   "getter": "storedLezConfigId()",
+   "value": "0xaafbcbf68216d74da42c428030298847da1e125eb20df9c2fb5614b8e6e9893c"
+  },
+  {
+   "slot": "0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c",
+   "what": "registry entry of ETH",
+   "getter": null,
+   "value": "0x898160360b5b4aab318e281b88c160e31bf1f284aba2a0c877c3033809b2ce30"
+  },
+  {
+   "slot": "0x9aa0b42bfab58f5661a89501a520051162e6336036c5c42663bd4f8f1ac012ce",
+   "what": "fee schedule 0 of ETH",
+   "getter": null,
+   "value": "0xdd26504865631e64738cbbda9a10278b0e691ece3df8780416616ac9d183f272"
+  },
+  {
+   "slot": "0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432",
+   "what": "fee schedule 1 of ETH",
+   "getter": null,
+   "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ],
+ "checks": {
+  "block >= min_block": true,
+  "deposits.count == slot 1": true,
+  "leaves as expected": true
+ },
+ "driver_checked": true,
+ "proofs": {
+  "block": 12162621,
+  "hash": "0x7df02c58ff79bc4266dd4f029f955afad808b21b4ab64128dcf338ccdafd9979",
+  "standIn": false,
+  "stateRoot": "0x155209be7548676cc1cfb6a45a67938c37b7638507b05e6b56df49110633e8fb",
+  "codeHash": "0xc5aa3a98358b5c7b7c75c2dd3a4438d7527d703a8a23354e76f75fb42ea170f1",
+  "slots_proven": 6
+ }
+}

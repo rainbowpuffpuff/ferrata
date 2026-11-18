@@ -1,0 +1,80 @@
+{
+  "counts": {
+    "HARNESS-ERROR": 2,
+    "PASS": 2
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "ten",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-TEN-01",
+      "kind": "adversarial",
+      "observed": {
+        "message": "setup step setup: Register ETH (B'): Some(\"Program exited with non-zero code 101 after 131032 cycles\") (exit Some(101))",
+        "outcome": "harness-error"
+      },
+      "title": "another configuration's admin sets this one's cap",
+      "verdict": "HARNESS-ERROR"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-TEN-02",
+      "kind": "adversarial",
+      "observed": {
+        "message": "setup step setup: Register ETH (B'): Some(\"Program exited with non-zero code 101 after 131032 cycles\") (exit Some(101))",
+        "outcome": "harness-error"
+      },
+      "title": "another configuration's freeze authority freezes this one",
+      "verdict": "HARNESS-ERROR"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-TEN-03",
+      "kind": "control",
+      "observed": {
+        "note": "two burns of one note",
+        "outcome": "accepted"
+      },
+      "title": "burns of two configurations land in separate accounts",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_CLAIMED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-TEN-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 250,
+        "code_name": "bridge:ALREADY_CLAIMED",
+        "note": "nullifier(chain, V, N) recorded under configId(B): true [A's Claim of leaf 2]",
+        "outcome": "refused"
+      },
+      "title": "a deposit already minted by a second configuration of the same vault (R1)",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}
