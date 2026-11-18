@@ -259,9 +259,15 @@ def pack(run: str) -> tuple[str, str, str, dict]:
     files = [p for p in git("ls-files", "-co", "--exclude-standard", "-z", binary=True).decode().split("\0") if p]
     files = [p for p in files if not p.startswith("e2e/runs/") and os.path.lexists(os.path.join(REPO, p))]
     deleted = [p for p in git("ls-files", "-d", "-z", binary=True).decode().split("\0") if p]
-    bad = [p for p in files if p.endswith(".env") or "keystore" in p.lower() or os.path.basename(p) == "channel_signing_key"]
+    # A secret lying in the worktree (an .env, a keystore, a channel key) is never uploaded. Committed files that are
+    # unchanged are public already and travel in the git bundle anyway (the repository's own records, such as
+    # modules/results/*/build-keystore_module-tail.txt or a test zone's committed channel_signing_key): only untracked and
+    # modified files are refused.
+    loose = set(p for p in git("ls-files", "-o", "-m", "--exclude-standard", "-z", binary=True).decode().split("\0") if p)
+    bad = [p for p in files if p in loose and (p.endswith(".env") or "keystore" in p.lower()
+                                               or os.path.basename(p) == "channel_signing_key")]
     if bad:
-        die(f"refusing to upload {bad}")
+        die(f"refusing to upload {bad} (untracked or modified)")
     for d in IGNORED_INPUTS:
         if not os.path.isdir(os.path.join(REPO, d)) or not os.listdir(os.path.join(REPO, d)):
             die(f"{d} is missing (the vault's Foundry libraries: forge-std 1.10.0, openzeppelin 5.4.0, risc0-ethereum 3.0.0)")
