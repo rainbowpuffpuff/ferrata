@@ -1,0 +1,150 @@
+{
+  "bridge": "6bqUQFL6dGtHfxGY97jtjFnXDxLeZZf7QMsB14EuVcim",
+  "bridge_segments": [
+    "7aXZPayNRhuukfV57oU7AK1sR2E9zQ8sJ3nmgvmFMQnE",
+    "C8euLzL14y5WfESRpZJNbTXz9cahMnzRRNPQwP9hT9Ez",
+    "HVS59DirKPTBYx3B5bEL2tG1ReMDPkxktkguWBhaJ7GZ",
+    "G7LvNPynxWjBKhNjgYF43qMSP6vqWGBTJgACvuzRAziC",
+    "B7qePz7ZJ2m8v4oLh3PN1HgBuHA6fzhn3QWb2bYAVA1s"
+  ],
+  "capture_block": 10,
+  "capture_leaves": 2,
+  "config_id": "00e18245791caf3994730c95a59184600d3255c833596f4cf036d0c3f0187261",
+  "config_json": {
+    "attestation": "25wVSJXPCULkEVRaaz8JoRNHZDgUmc9we6S5npuqqkGK",
+    "bridge": "6bqUQFL6dGtHfxGY97jtjFnXDxLeZZf7QMsB14EuVcim",
+    "bridge_image_id": "d75d06ee1b7d2d5af561f2f6547463d0219590466e8afa51512a68696e137e10",
+    "chain": 31337,
+    "instance": "d23426b7a627a561ba3eb7f242816cf743e9af0c9e241e808be482b885c3d02c",
+    "registry": [
+      {
+        "amount": "1000000000000000",
+        "token": "0000000000000000000000000000000000000000"
+      }
+    ],
+    "vault": "cf7ed3acca5a467e9e704c703e8d87f634fb0fc9"
+  },
+  "deposits": [
+    {
+      "amount": "1000000000000000",
+      "commitment": "5bf45abdbc960192696d728f6eb3397cda0677365326dd4fc69d4410a69d9b01",
+      "depositor": "f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "dest": "4614cb1411f978741e772409d069569adbdec801b4b32247a90931a1957a62aa",
+      "kind": 2,
+      "leaf": "971d6d700e1bbc2ff8efcc38002046ba324298f9e8f8f3223b477eb8c6cff5f4",
+      "leaf_index": 0,
+      "s": "6b81b9645505ebac36ae6f64bb4d87de3a30b076ef16266432659d426cbe7e67"
+    },
+    {
+      "amount": "1000000000000000",
+      "commitment": "8d34f37568bf5d77e88c267f4abe3810744218996b36400408c395ef9632592d",
+      "depositor": "f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "dest": "973f8c4a8e5bfc6f1240ff34be9e2412da5674a9351fb3762ca815a43d1cd27f",
+      "kind": 1,
+      "leaf": "d6775fd4e3144a7fdb65da6fa64b9b227a91c2f566419371bca30f719ff71d54",
+      "leaf_index": 1,
+      "s": "3d2c7556886c59728e67ee0e5917160995ffb06e4861ca65849c9f4185e1ffb9"
+    }
+  ],
+  "holder_private": "BBQmLwC6fbAbQN2oF3ThesxK2Rit2Fnx1ZgRSatYDiZC",
+  "holder_public": "5iZvrYcMkVfxBBXJj3LEchmhfT9Sk6bKm6BFRjtKSMsX",
+  "notes": {
+    "burn-private": {
+      "amount": "00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "c_out": "cb84f75670a5eeab8833a439ce46260eb831d29a083d36a7d8e97fbc9b46ff9e",
+      "hash": "21e4ff95e00b5ff8f0cd5f1977594fadfd9d9e380d9a6c5ef55360a1e789c59b",
+      "mac": "35573b902f28cce4e5f5080fce6bf227",
+      "memo": "7e645f6450f7ba370fea50663d0f7bdd16f273af",
+      "r": "86e230ab14c9de5f1fd93385e3fdf294e9e1da434ce796cc9b37ea5c98b004ed",
+      "sent": 1,
+      "token": "0000000000000000000000000000000000000000"
+    },
+    "burn-public": {
+      "amount": "00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "c_out": "fd8c02fe0a5815d3171e49dd3c39429b229261f228325bc9d043b9d04300163e",
+      "hash": "b209da55d2e92b399d785faa9e30d638ee725b693d61be4c9db85b592e30bfd6",
+      "mac": "22819a6f39edeb5a76f9077d613adee5",
+      "memo": "ab9d4110fb6d66fdd987e7d67ff8bcede65ca26e",
+      "r": "484f4419a0320bf226f24191d7f662745ab862fbdc609098641b8af712a2d865",
+      "sent": 0,
+      "token": "0000000000000000000000000000000000000000"
+    }
+  },
+  "payer": "9yYgUvx2nLgDuVvbZbBWvhsxdy9P9vjFwbKcJNWrWCvp",
+  "record_slot": 10,
+  "records": "25wVSJXPCULkEVRaaz8JoRNHZDgUmc9we6S5npuqqkGK",
+  "records_segments": [
+    "EEno92guQpJNFVBDdzBxeQKjFVwx4bSFr1iwW2SQWm2d",
+    "J3fDKPC2T4adg9bPuzPQLQUwens7qm7ZsU4UX89oX9vu",
+    "CmEaAi7A8zjbSXSpy8ikgXN14BtAET6TsBcjsUe7MYAx"
+  ],
+  "sequencer": "http://127.0.0.1:3040",
+  "steps": {
+    "burn-private": {
+      "block": 66,
+      "bytes": 248346,
+      "dev_mode": false,
+      "proven_and_sent_seconds": 168.232256524,
+      "tx": "9dd167d2e72197e9ac4637fb00e906827a1db5e9abb899cd5a7439e8eb0ea034"
+    },
+    "burn-public": {
+      "block": 53,
+      "bytes": 976,
+      "fee": "2229280",
+      "tx": "f5da62d983da1b95703ecd7f527f5f871d40ea234e468d262c8398b21eae7cfe"
+    },
+    "claim-0": {
+      "block": 33,
+      "bytes": 1936,
+      "fee": "1233296",
+      "tx": "c7eadb18086e7e58febf2a2840d4d1a1b7aaf97f3e09e65fd9f7f2650356cd46"
+    },
+    "claim-0-other-dest": {
+      "block": 37,
+      "bytes": 1936,
+      "fee": "812560",
+      "tx": "e4e09bfe333eed6f1c382e70e73af8228a1f7d266fb13f31a1083f58ea6f1641"
+    },
+    "claim-0-replay": {
+      "block": 35,
+      "bytes": 1936,
+      "fee": "1153240",
+      "tx": "6975aba3a9560be220c9c644e911fb9f68e80d9afe7abdb71730859718c2dde8"
+    },
+    "claim-1": {
+      "block": 51,
+      "bytes": 247826,
+      "dev_mode": false,
+      "proven_and_sent_seconds": 178.041407691,
+      "tx": "16a77ec4fc2e6ddad43aaafde95d9b71c2db399e8ed8b9f9ff0041eb616f66e1"
+    },
+    "deploy-bridge": {
+      "block": 13,
+      "header": "6bqUQFL6dGtHfxGY97jtjFnXDxLeZZf7QMsB14EuVcim",
+      "seconds": 180.27712722
+    },
+    "deploy-records": {
+      "block": 21,
+      "header": "25wVSJXPCULkEVRaaz8JoRNHZDgUmc9we6S5npuqqkGK",
+      "seconds": 120.074795685
+    },
+    "import-2": {
+      "block": 31,
+      "bytes": 3792,
+      "fee": "1800496",
+      "tx": "5aa69cdfb57d2f68fffecb5283547f138b0259e6eca3ade60fc769e3244c94ab"
+    },
+    "init": {
+      "block": 29,
+      "bytes": 2839,
+      "fee": "1293496",
+      "tx": "be5e6b1cd4730d2933554e3e9488f55dbc3873eb6a98b3435755c6bb7cd858d5"
+    },
+    "record-10": {
+      "block": 27,
+      "bytes": 555,
+      "fee": "177208",
+      "tx": "d2eee2761e5132b45703bb2d594b7111eb5f9017e012369349bd7a3843eaa577"
+    }
+  }
+}
