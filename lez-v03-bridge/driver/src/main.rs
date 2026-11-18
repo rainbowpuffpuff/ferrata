@@ -128,13 +128,15 @@ fn arg<'a>(a: &'a HashMap<String, String>, key: &str) -> Result<&'a str> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let argv: Vec<String> = std::env::args().collect();
+    if argv.get(1).map(String::as_str) == Some("ids") {
+        return ids();
+    }
     if argv.len() < 3 {
-        bail!("usage: bridge03 <run dir> <command> [--key value]...");
+        bail!("usage: bridge03 ids | bridge03 <run dir> <command> [--key value]...");
     }
     let mut run = Run::open(PathBuf::from(&argv[1]))?;
     let a = args(&argv[3..])?;
     match argv[2].as_str() {
-        "ids" => ids(),
         "setup" => setup(&mut run, &a).await,
         "deploy" => deploy(&mut run, arg(&a, "program")?).await,
         "config" => config(&mut run, &a),
