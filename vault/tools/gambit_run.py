@@ -5,7 +5,8 @@ Gambit (tag v1.0.7) writes the mutants of src/FerrataVault.sol and src/FerrataRe
 `gambit mutate --json gambit.conf.json` (into notes/gambit_out/vault/ and notes/gambit_out/registry/, each with
 gambit_results.json and mutants.log; a mutant is named <dir>-<Gambit's id>, e.g. vault-12). This
 script gives each worker its own scratch copy of the project (notes/gambit-ws/w<k>: foundry.toml, src/, test/,
-script/, lib/ symlinked) and, for each mutant:
+script/, lib/ symlinked), runs forge inside it (so the failures forge records stay there, and are cleared before each
+mutant) and, for each mutant:
 
 1. writes the mutated file into the copy (the other source file stays original) and builds with the project's own
    settings (optimizer on, 200 runs, cancun), except that no CBOR metadata is appended (cbor_metadata = false,
@@ -52,9 +53,9 @@ TIMEOUT_B = int(os.environ.get("GAMBIT_RUN_TIMEOUT_B", "600"))
 ENV = dict(os.environ, FOUNDRY_DISABLE_NIGHTLY_WARNING="1")
 
 
-def sh(cmd: list, timeout: int) -> tuple:
+def sh(cmd: list, timeout: int, cwd: str) -> tuple:
     """(exit code or None on timeout, output). Kills the whole process group (forge and its solc) on timeout."""
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=ENV,
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=ENV, cwd=cwd,
                          start_new_session=True)
     try:
         out, _ = p.communicate(timeout=timeout)
@@ -98,16 +99,26 @@ def first_fail(output: str) -> str:
 
 
 def build(work: str) -> tuple:
-    return sh(["forge", "build", "--root", work, "--threads", THREADS], TIMEOUT_A)
+    return sh(["forge", "build", "--root", work, "--threads", THREADS], TIMEOUT_A, work)
+
+
+def forget_failures(work: str) -> None:
+    """forge records a failing fuzz input or invariant sequence (cache/fuzz, cache/invariant, relative to the working
+    directory) and replays it first on the next run; each mutant starts from none, as a fresh checkout does."""
+    for d in ("fuzz", "invariant"):
+        shutil.rmtree(os.path.join(work, "cache", d), ignore_errors=True)
 
 
 def suite_a(work: str) -> tuple:
+    forget_failures(work)
     return sh(["forge", "test", "--root", work, "--threads", THREADS, "--fail-fast",
-               "--no-match-path", "test/invariant/*"], TIMEOUT_A)
+               "--no-match-path", "test/invariant/*"], TIMEOUT_A, work)
 
 
 def suite_b(work: str) -> tuple:
-    return sh(["forge", "test", "--root", work, "--threads", THREADS, "--match-path", "test/invariant/*"], TIMEOUT_B)
+    forget_failures(work)
+    return sh(["forge", "test", "--root", work, "--threads", THREADS, "--match-path", "test/invariant/*"], TIMEOUT_B,
+              work)
 
 
 def target_of(m: dict) -> str:
