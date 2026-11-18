@@ -3,7 +3,7 @@
 # guests/ is a workspace of its own (methods/ builds it).
 [workspace]
 resolver = "2"
-members = ["core", "methods", "harness"]
+members = ["core", "methods", "harness", "driver"]
 exclude = ["guests"]
 
 # The zkVM client and the Merkle-Patricia checks are slow unoptimised; optimise dependencies in test builds.

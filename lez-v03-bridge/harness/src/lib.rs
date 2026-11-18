@@ -274,7 +274,7 @@ impl World {
     /// writes it after verifying a finality update; the reference an instruction carries.
     pub fn place_record(&mut self, instance_id: Root, chain_id: u64, record: &HeaderRecord) -> RecordRef {
         let slot = record.beacon.slot;
-        let state = LcRecord { instance_id, chain_id, record: record.encode(), root_id: instance_id };
+        let state = LcRecord { instance_id, chain_id, record: record.encode() };
         let bytes = borsh::to_vec(&state).unwrap();
         let account = header_account(self.light_client, &instance_id, slot);
         let held = Account::default().with_shard(self.light_client, ShardData::try_from(bytes.clone()).unwrap());

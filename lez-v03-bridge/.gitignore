@@ -1,0 +1,3 @@
+# Build outputs (cargo; the guests are workspaces of their own)
+/target
+/guests/*/target

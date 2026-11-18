@@ -28,7 +28,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_bridge_core::{
     chain_id_u256,
     encoding::{config_id_preimage, ConfigIdentity},
-    inbound, outbound, sha256,
+    inbound, outbound,
     tree::{IncrementalTree, MerklePath, TREE_DEPTH},
 };
 use ferrata_core::{
@@ -254,10 +254,11 @@ pub fn holder_account(program: AccountId, account: &Root) -> AccountId {
 // The light client's record (a thin interface until the v0.3.1 light client is committed)
 // ---------------------------------------------------------------------------------------------
 
-/// `header(instance, slot)`'s seed in the light client program (`lez/wire`'s, v0.4).
+/// `header(instance, slot)`'s seed in the v0.3.1 light client program (`lez-v03/wire`'s
+/// `header_seed`, branch `testnet-v03`: `H("ferrata-lez-v03/v1/header" ‖ instance ‖ slot)`).
 pub fn header_seed(instance_id: &Root, slot: u64) -> PdaSeed {
     let mut h = Sha256::new();
-    h.update(b"ferrata-lez/v1/");
+    h.update(b"ferrata-lez-v03/v1/");
     h.update(b"header");
     h.update(instance_id);
     h.update(slot.to_le_bytes());
@@ -270,15 +271,13 @@ pub fn header_account(attestation: AccountId, instance_id: &Root, slot: u64) -> 
 }
 
 /// What the light client keeps in its shard of `header(instance, slot)`, written once after it
-/// verified a finality update (`lez/wire`'s `RecordState`, the same borsh layout).
+/// verified a finality update (`lez-v03/wire`'s `RecordState`, the same borsh layout).
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct LcRecord {
     pub instance_id: Root,
     pub chain_id: u64,
     /// `ferrata_core::witness::HeaderRecord`'s strict encoding.
     pub record: Vec<u8>,
-    /// The root id of the instance that wrote the record.
-    pub root_id: Root,
 }
 
 /// The record an instruction relies on: the beacon slot it is keyed by and the exact bytes of the
@@ -351,7 +350,7 @@ pub fn vault_facts<const K: usize>(
     slots: [(Word, &[Vec<u8>]); K],
 ) -> Result<VaultFacts<K>, u8> {
     let state: LcRecord = borsh::from_slice(&record.state).map_err(|_| lc_code::BAD_STATE)?;
-    if state.instance_id != config.instance_id && state.root_id != config.instance_id {
+    if state.instance_id != config.instance_id {
         return Err(lc_code::WRONG_INSTANCE);
     }
     if state.chain_id != config.evm_chain_id {
@@ -369,7 +368,7 @@ pub fn vault_facts<const K: usize>(
         }
         (ExecutionSummary::BlockHash(_), None) => return Err(lc_code::HEADER_REQUIRED),
         (ExecutionSummary::Payload { .. }, Some(_)) => return Err(lc_code::BAD_QUERY),
-        (ExecutionSummary::Payload { .. } | ExecutionSummary::None, None) => {
+        (ExecutionSummary::Payload { .. } | ExecutionSummary::None, _) => {
             proven::HeaderRecord::from_recorded(&recorded, chain)
         }
     }

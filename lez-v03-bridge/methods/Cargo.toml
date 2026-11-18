@@ -9,4 +9,4 @@ publish = false
 risc0-build = { version = "=3.0.5" }
 
 [package.metadata.risc0]
-methods = ["../guests/bridge"]
+methods = ["../guests/bridge", "../guests/records"]
