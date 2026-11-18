@@ -1,0 +1,20 @@
+{
+ "chainId": 11155111,
+ "vault": "0x80555Fe53CCcEf46951B23A3c75643a4C9283470",
+ "deposits": [
+  {
+   "j": 0,
+   "denomIndex": 0,
+   "commitment": "0xb1f1e6eea6131e8381171b16ae53118606f11610520060e981e42d1dfa6ebc67",
+   "kind": "public",
+   "dest": "0x54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a"
+  },
+  {
+   "j": 1,
+   "denomIndex": 0,
+   "commitment": "0x224c3cbdd732a343fe6e38c35990b4132949874dbfb07bd89eb68a7e9123af8f",
+   "kind": "private",
+   "dest": "0x2d6cb849edc6d8b1599c558ecd87bc09b4420bdc60f1b3be85547a5834b153fc"
+  }
+ ]
+}

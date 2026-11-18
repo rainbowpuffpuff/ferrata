@@ -1,0 +1,10 @@
+[2026-11-18T15:30:09Z] drive.py crown-rc3-sessiona-sepolia-1 fork: done so far nothing; halting after identity
+[2026-11-18T15:30:10Z] inputs (set rc3: LEZ v0.4.0-rc3 (sequencer_service bafd07be) and Logos Blockchain node 0.3.5-rc.1 (f6d4267f)): LEZ bundle sha256 2b79196a6e9d8798..., programs checkpoint_b (checkpoint_b_0_3_5) 0xafbf4023..., checkpoint (checkpoint_0_3_5) 0x259cd89e..., segment (segment) 0x11e888e9..., release (release) 0xb64900bc...
+[2026-11-18T15:30:12Z] anvil: FORK of Sepolia at block 12162339 (state new), head 12162339, every sender impersonated
+[2026-11-18T15:30:13Z] LEZ session A (attempt 1): lez_session, lez/crown/session.sh (sha256 1441727e26a4), chain sepolia
+[2026-11-18T15:36:51Z] LEZ session A: ok=True ran=True exit=0 generation=1 after 398 s
+[2026-11-18T15:36:51Z] session A: T0 = 33 0x69b3bc08bf64c6d26efcec5432e8b4748252ff5efc3825c20feaa07e925ddd4b, channel keys ['0x548bc739e33b9c8bfd22f8f303897f0348f02e06f30fc3c8ccc889a8b8c6e3f6'], bedrockGenesisId 0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (the node's fork digest, {"fork_digest":"c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"}), chain sepolia
+[2026-11-18T15:36:51Z] stage lez-a: done in 398 s
+[2026-11-18T15:36:52Z] identity: deployer nonce 36, vault 0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (CREATE n+2), configId 0xaafbcbf68216d74da42c428030298847da1e125eb20df9c2fb5614b8e6e9893c, genesisState 0x4c7f24b1443f390d719fb0f2c2bd0c4b89bd325f1435789e5ff0936afe613bd0, balance 498946585463094553 wei
+[2026-11-18T15:36:52Z] stage identity: done in 1 s
+[2026-11-18T15:36:52Z] halted after identity (CROWN_HALT_AFTER); `start` again continues
