@@ -268,6 +268,39 @@ silent sequencer stalls releases for `n ≤ 5`; it needs an unpredictable `prevr
 No bridge signer, relayer or prover is trusted, and a prover cannot leave out a visible burn
 ([`bridge.md`](design/bridge.md) §8.2, §14).
 
+### 3.6 A testnet stand-in for the checkpoint proof (public LEZ testnet, v0.3.1)
+
+**Not part of the design above, and not for production.** On the public LEZ testnet neither rule can run:
+its blocks are LEZ v0.3.1 (the checkpoint programs read v0.4), and its sequencer, which Logos runs, runs
+no attestor and has certified no key for us. To show a burn made there released on Sepolia, one test
+deployment replaces the checkpoint proof and nothing else
+([`vault/src/standin/README.md`](../vault/src/standin/README.md),
+[`lez-v03-return/README.md`](../lez-v03-return/README.md)):
+
+- **Real:** the unchanged vault under rule (B) with all its rules, the deposits, and every release, which
+  still needs a zero-knowledge proof of the unchanged `release` program, checked by RISC Zero's Groth16
+  verifier, that the burn is under the accepted root.
+- **Stand-in:** the burn root. The vault's verifier is `StandInCheckpointVerifier`, which for one constant
+  id that is no program's (`0x66ff80f9…dc38`, the vault's `checkpointImageId`) accepts the signatures of 2
+  of 3 keys **that the operator of the run holds**, over the vault's own journal digest, and sends every
+  other id to RISC Zero's verifier. The keys sign only through an attestor that has compared the burns with
+  the bridge's state on Logos's public node and cut the checkpoint at a block that node reports final, the
+  blocks after it read and none touching the bridge (`standin.py sign` refuses a checkpoint without both
+  checks). The vault refuses equal checkpoint and release ids, so the stand-in id can never be the release
+  id; the live run's keys are fresh ones that have signed nothing else.
+
+**You trust the operator's keys for everything outbound in that deployment:** two of them can make the
+vault accept any burn root, then prove releases of burns that never happened under it, and take the escrow
+(two 0.001 ETH test deposits). Nothing checks LEZ blocks, their validity or their inscriptions; V1–V3 and
+the finality assumptions of §3.3 and §3.4 are replaced by the operator's honesty and by one node's answer.
+What still holds: a release needs a real proof for a burn leaf of this configuration, token, amount and
+recipient; a signature is good for one journal, vault, verifier and chain; the wait, the release delay,
+nullifiers and RISC Zero's stop work as in §3.5. Status: rehearsed end to end on a fork of Sepolia
+([`e2e/runs/testnet-return-fork-1/`](../e2e/runs/testnet-return-fork-1/README.md)); nothing of it had
+been sent to Sepolia or to the LEZ testnet when this was written (18 November 2026). What a real
+checkpoint for that network would need, and what its public data already lets anyone check, is measured in
+[`lez-v03-return/STAGE2.md`](../lez-v03-return/STAGE2.md).
+
 ## 4. Roles and powers (RFP-022 Security #5, #7)
 
 From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/bridge.md) §14;

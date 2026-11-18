@@ -88,5 +88,14 @@ __pycache__/
 /e2e/runs/zone-bridge-*/work/
 /e2e/runs/zone-bridge-*/logs/.mark-*
 
+# The stand-in return leg for the public LEZ testnet (e2e/testnet-return.sh): local deployment records, logs, the
+# prover's scratch, the receipts' binaries (the seals, journals and records beside them are committed), and the
+# wallet's burn notes and the release inputs made from them (they hold the release secrets)
+/vault/deployments/standin-*
+/e2e/runs/testnet-return-*/logs/
+/e2e/runs/testnet-return-*/releases/receipts/*/receipt-*.bin
+/e2e/runs/testnet-return-*/releases/*.input
+/e2e/runs/testnet-return-*/checkpoint/burn-notes.json
+
 # lez-v03-bridge/sepolia.sh: Sepolia deployment records written where forge may write (vault/deployments/), copied to the run
 /vault/deployments/v03bridge-*
