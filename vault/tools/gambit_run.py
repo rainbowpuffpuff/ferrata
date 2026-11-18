@@ -275,7 +275,7 @@ def cmd_summary(gdirs: str, result_files: list, survivors: str) -> int:
         with open(survivors, "w", encoding="utf-8") as f:
             for i in sorted(res, key=sort_key):
                 r = res[i]
-                if r["status"] in ("survived", "timeout", "invalid"):
+                if r["status"] in ("survived", "timeout"):
                     m = mutants[i]
                     f.write(f"## {i} {r['status']} {r['file']}:{changed_line(m['diff'])} {r['op']}\n\n```diff\n")
                     f.write("\n".join(m["diff"].splitlines()[2:]) + "\n```\n\n")
