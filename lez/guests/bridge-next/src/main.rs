@@ -3,7 +3,10 @@
 //! `config-keyed`): `nullifier(cid, chain, vault, N)` and `holder(cid, account)`, the fix of the two known issues of
 //! `docs/design/bridge.md` §3 (R1: a second configuration of a vault froze the paired one's deposits by spending
 //! their nullifiers; R2: one `holder(account)` for every configuration could be filled until a claim exceeded the gas
-//! limit). Everything else is `guests/bridge`'s, line for line (`lez/results/bridge-next.md`).
+//! limit). And one check more at `Init`: a configuration whose freeze authority is its admin is refused with 240
+//! (`BAD_MESSAGE`, the code `ProposeRoles` gives the admin as a member), the red team's finding F1
+//! (`docs/reviews/redteam-2026-11-18.md`, BR-INIT-05; `config_keyed::check_init_roles`). Everything else is
+//! `guests/bridge`'s, line for line (`lez/results/bridge-next.md`).
 //!
 //! (`ferrata_lez_bridge_wire`; the plan is `lez/BRIDGE.md`.)
 //!
@@ -41,7 +44,7 @@
 
 use ferrata_lez_bridge_wire::{
     burn_actor, burn_seed, check_fees, check_import, check_pairing, check_register, check_retired, code, config_actor,
-    config_keyed::{holder_actor, holder_seed, nullifier_actor, nullifier_seed},
+    config_keyed::{check_init_roles, holder_actor, holder_seed, nullifier_actor, nullifier_seed},
     fees_slots, import_request, own_actor, pairing_request, record_time, register_slots, root_actor, root_seed,
     token_actor, token_seed, u128_of, vault_request, verify_claim, Address, BridgeConfig, BridgeMessage, BridgeState,
     BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, CosignedAction, DestKind, FeeSchedule, Gate,
@@ -251,6 +254,8 @@ fn init(
     proof: &PairingProof,
 ) -> Result<Response, Refusal> {
     config.controls.check()?;
+    // F1 (second build only): the freeze authority `Roles::new` would make live is not the admin (SPEC-v2 §7).
+    check_init_roles(&config.controls)?;
     let config_id = config.id(program);
     if input.receiver != config_actor(program, &config_id) {
         return Err(code::WRONG_SENDER);

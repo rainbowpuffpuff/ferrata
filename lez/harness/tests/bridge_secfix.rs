@@ -12,16 +12,21 @@
 //!
 //! **H-1.** `ImportRoot` must run only as a call the checkpoint sees: a nested call from another
 //! program, and a delivery that carries a sender (an asynchronous message), are refused.
+//!
+//! **F1** (the red team of 18 November 2026, BR-INIT-05; `docs/reviews/redteam-2026-11-18.md`). `Init` with
+//! controls whose freeze authority is the admin: the second build (`--features bridge-next`) refuses it with the code
+//! `ProposeRoles` gives the admin as a member; the deployed program accepts it (the known finding, unchanged until B1).
 
 use ferrata_bridge_core::{inbound::DestKind, Hash};
 use ferrata_lez_bridge_wire::{
     burn_actor, burn_seed, code, config_actor, config_seed, root_actor, root_seed, token_actor, token_seed,
-    word_of_u128, BridgeConfig, BridgeMessage, BridgeState, Controls, Note,
+    word_of_u128, BridgeConfig, BridgeMessage, BridgeState, ConfigState, Controls, FreezeAuthority, Note,
 };
 use harness::{
     bridge::{
         bridge_program, config, controls, eth_entry, fee_recipient, holder_of, nullifier_of, nullifier_seed_of,
-        registry_slots, Block, Deposit, Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE, RELAY_FEES,
+        registry_slots, Block, Deposit, Vault, VaultSlots, World, ADMIN_SEED, CHAIN_ID, DENOMINATIONS, ETH, INSTANCE,
+        RELAY_FEES, SECOND_BUILD,
     },
     TxReport,
 };
@@ -422,5 +427,52 @@ fn c1_f_a_mint_is_accepted_only_at_its_holder() {
             message: borsh::to_vec(&mint).unwrap(),
         };
         assert_eq!(harness::attest::execute(what, elf.elf(), &input).exit_code, want, "{what}");
+    }
+}
+
+const F1_VAULT: [u8; 20] = [0xc5; 20];
+
+/// F1: `Init` of a configuration whose freeze authority is its admin, against a vault whose slot 2 holds that
+/// configuration's id (BR-INIT-05). The second build refuses it with 240 (`BAD_MESSAGE`) and writes nothing; the
+/// deployed program applies it and its live freeze authority is the admin. On both, `ProposeRoles` with the admin as a
+/// member is refused with 240 (BR-CTL-13), the code the second build's `Init` now gives.
+#[test]
+fn f1_init_refuses_the_admin_as_freeze_authority() {
+    require_dev_mode();
+    let mut w = World::new();
+    let (program, admin) = (w.program, controls().admin);
+    let payer_id = *w.chain.payer.value();
+    let bad = vault(&mut w, F1_VAULT, Controls { freeze_authority: admin, ..controls() }, &[payer_id], 9_200_010);
+    let init = w.init("Init: controls.freeze_authority = controls.admin", &bad.config, bad.block);
+    println!(
+        "F1 ({} build): Init with the admin as freeze authority: ok {}, exit {:?}, execution gas {}",
+        if SECOND_BUILD { "second" } else { "deployed" },
+        init.ok(),
+        init.exit_code,
+        init.charge.gas_exec
+    );
+    if SECOND_BUILD {
+        expect(&init, Some(code::BAD_MESSAGE));
+        assert!(w.config_state(&bad.cid).is_none(), "the refused Init wrote nothing at config(cid)");
+    } else {
+        expect(&init, None);
+        match w.config_state(&bad.cid) {
+            Some(ConfigState::Ready { roles, .. }) => assert_eq!(roles.freeze_authority, FreezeAuthority::key(admin)),
+            other => panic!("the deployed program's Init wrote {other:?}"),
+        }
+    }
+    // The code ProposeRoles gives the admin as a member, on configuration A (distinct roles, paired as always).
+    let (a, cid_a) = (w.config_a.clone(), w.cid_a);
+    expect(&w.init("Init A", &a, 0), None);
+    let propose = BridgeMessage::ProposeRoles {
+        config_id: cid_a,
+        freeze_authority: FreezeAuthority { members: vec![admin, controls().freeze_authority], threshold: 1 },
+        watchers: vec![],
+        record: w.blocks[2].time_record(),
+    };
+    let r = w.role("ProposeRoles with the admin as a member", ADMIN_SEED, &propose, config_actor(program, &cid_a));
+    expect(&r, Some(code::BAD_MESSAGE));
+    if SECOND_BUILD {
+        assert_eq!(init.exit_code, r.exit_code, "Init refuses with ProposeRoles' code");
     }
 }
