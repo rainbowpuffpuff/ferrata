@@ -31,6 +31,7 @@ ACC0=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 ( cd "$here/vault" && forge create script/ForkRehearsal.s.sol:RehearsalAcceptAllVerifier --rpc-url "$R" --unlocked \
     --from "$ACC0" --broadcast ) > "$w/verifier.log" 2>&1
 VER="$(grep -o 'Deployed to: 0x[0-9a-fA-F]*' "$w/verifier.log" | awk '{print $3}')"
+sleep 5 # the verifier older than the pinned block (reads lag 2 blocks): on Sepolia the verifier is months old
 VAULT="$(cast compute-address "$deployer" --nonce 2 | awk '{print $NF}')"
 h() { printf '%s' "$1" | sha256sum | cut -c1-64 | sed 's/^/0x/'; }
 CID="$(h 'netfault: stand-in configId')"; TIP="$(h 'netfault: stand-in tip')"; KEY="$(h 'netfault: stand-in key')"
@@ -56,7 +57,7 @@ jq -n --arg v "$VAULT" --argjson cid "$cid" --arg c0 "$(h 'netfault c0')" --arg 
 export SEPOLIA_RPC_URL="http://127.0.0.1:${P[0]}" PUBNET_SEPOLIA_RPC="http://127.0.0.1:${P[0]},http://127.0.0.1:${P[1]},http://127.0.0.1:${P[2]}"
 export ETH_FROM="$deployer" ETH_KEYSTORE="$(ls "$w"/key/* | head -n 1)" ETH_PASSWORD="$w/pw"
 export PUBNET_LAG=2 PUBNET_TIMEOUT_S=3 PUBNET_REQUEST_BUDGET_S=20 PUBNET_PIN_TTL_S=2 PUBNET_BACKOFF_BASE_S=2 \
-  PUBNET_STAGE_BUDGET_S="${NETFAULT_STAGE_BUDGET_S:-300}" PUBNET_RESOLVE_BUDGET_S=120
+  PUBNET_STAGE_BUDGET_S="${NETFAULT_STAGE_BUDGET_S:-90}" PUBNET_RESOLVE_BUDGET_S=60
 resumes=0
 stage() {
   local k rc=0

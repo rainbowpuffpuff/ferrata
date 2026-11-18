@@ -14,6 +14,9 @@ generator seeded with S (one per endpoint), so a seed replays the same kinds and
   sends    eth_sendRawTransaction dropped (the hash answered, nothing forwarded), duplicated (forwarded twice), or
            forwarded with the answer lost (the connection closed); plus "block not found" now and then.
 
+and, shared by all three, outages: 0 to 2 windows (from the seed: 5-150 s after the start, 15-60 s long) in which
+every endpoint answers 503 or nothing, as when a provider or the machine's network is down.
+
 Which personality each port has is also drawn from the seed. Every fault is counted in the log (JSONL).
 """
 import argparse
@@ -52,6 +55,9 @@ class Upstream:
             return self._head
 
 
+OUTAGES = []  # (start, end) in monotonic time, shared by the endpoints
+
+
 class Endpoint:
     def __init__(self, name, kind, rng, up, log, lag=0):
         self.name, self.kind, self.rng, self.up, self.lag = name, kind, rng, up, lag
@@ -87,6 +93,10 @@ class Endpoint:
         method, params = req.get("method", ""), list(req.get("params") or [])
         rid = req.get("id")
         err = lambda code, msg: (200, {"jsonrpc": "2.0", "id": rid, "error": {"code": code, "message": msg}}, 0)  # noqa
+        now = time.monotonic()
+        if any(a <= now < b for a, b in OUTAGES):
+            self.count("outage", method)
+            return (503, b"service unavailable", 0) if self.rng.random() < 0.7 else (0, None, 0)
         if self.roll("r429"):
             self.count("429", method)
             return 429, {"jsonrpc": "2.0", "id": rid, "error": {"code": -32005, "message": "Too Many Requests"}}, 0
@@ -194,6 +204,10 @@ def main():
     rng = random.Random(a.seed)
     kinds = ["flaky", "lagging", "sends"]
     rng.shuffle(kinds)
+    t0 = time.monotonic()
+    for _ in range(rng.choice((0, 1, 1, 2))):
+        start = rng.uniform(5, 150)
+        OUTAGES.append((t0 + start, t0 + start + rng.uniform(15, 60)))
     up = Upstream(a.upstream)
     ports, desc = [], []
     for i, kind in enumerate(kinds):
@@ -205,7 +219,8 @@ def main():
     with open(a.port_file + ".part", "w") as f:
         f.write("\n".join(map(str, ports)) + "\n")
     os.replace(a.port_file + ".part", a.port_file)
-    print(json.dumps({"seed": a.seed, "endpoints": desc}), flush=True)
+    print(json.dumps({"seed": a.seed, "endpoints": desc,
+                      "outages_s": [[round(x - t0), round(y - t0)] for x, y in OUTAGES]}), flush=True)
     while True:
         time.sleep(3600)
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """The invariants of one netfault seed (e2e/netfault/run.sh), read from anvil directly and from the network journal:
 every transaction of the deployer on chain is in the journal (signed and journaled before it left), all succeeded,
-nonces have no gap, and no step's effect happened twice: when the run completed, 19 transactions (13 deploy steps,
-2 deposits, submit, finalize, 2 releases), 2 deposits, both nullifiers used once, 6e12 wei left in the vault
-(crown-fork-3r's figure: 2 relay fees + 2 checkpoint fees). Prints one JSON line."""
+nonces have no gap, and no step's effect happened twice: when the run completed, 13 transactions (7 deploy steps,
+2 deposits, submit, finalize, 2 releases: crown-fork-3r's 13), 2 deposits, both nullifiers used once, 6e12 wei left in
+the vault (crown-fork-3r's figure: 2 relay fees + 2 checkpoint fees). Prints one JSON line."""
 import argparse
 import json
 import os
@@ -76,8 +76,8 @@ def main():
         crown = json.load(open(os.path.join(a.run, "crown.json")))
         facts["nullifiers_used"] = sum(int(call(a.rpc, a.vault, sel("nullifierUsed(bytes32)") + r["nullifier"][2:]), 16)
                                        for r in crown["releases"])
-        if len(chain_txs) != 19:
-            v.append(f"{len(chain_txs)} transactions on chain, 19 expected")
+        if len(chain_txs) != 13:
+            v.append(f"{len(chain_txs)} transactions on chain, 13 expected")
         if facts["deposits"] != 2 or facts["nullifiers_used"] != 2 or facts["vault_balance"] != 6 * 10**12:
             v.append(f"effects: {facts}")
     faults = Counter()
