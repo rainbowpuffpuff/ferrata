@@ -51,7 +51,7 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| F.1 | shown | Init and updates settle in the harness and on rc1 and rc3 sequencers we ran; real proofs applied; a seven-day run. | 6, 21, 123; `lez/results/stage1-replay.md` |
+| F.1 | shown | Init and updates settle in the harness and on rc1 and rc3 sequencers we ran; real proofs applied; an eight-day run. | 6, 21, 123; `lez/results/stage1-replay.md` |
 | F.2 | in part | Records exist only for finalised headers (213 otherwise) through LEZ; a forged finality branch is refused in native step tests only. | 39; `crates/ferrata-spectests/tests/steps.rs`; `lez/results/holdings.md` |
 | F.3 | shown | Account, storage slot and logs attested through the program on mainnet and Sepolia blocks; 32 refusals; roots only from the record. | 3, 71, 72; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
 | F.4 | in part | `=`, `≥`, `>`, `<` and a relation run through the program from the consumer's request; `≠` and `≤` not run through it. | `lez/harness/tests/attest_public.rs`; `lez/results/stage4-attest-refusals.md` |
@@ -88,7 +88,7 @@ By section, hard requirements:
 | R.4 | shown | Daemon killed inside a job resumes from chain state, no second Open, in the harness and on a sequencer; the lab restarted. | 79, 99, 104; `lez/lab/README.md` |
 | R.5 | shown | A down source and dropped connections handled; restarted mid-job, the daemon finishes with no second Open, harness and sequencer. | 79, 99, 104 |
 | R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against vectors and Helios, not audited. | 1; `crates/ferrata-spectests/tests/helios_oracle.rs` |
-| R.7 | in part | Lab instances caught up and ran seven days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
+| R.7 | in part | Lab instances caught up and ran eight days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
 | R.9 | in part | Two honest daemons and an adversary: refused-step gas 5.7–8.7% of applied, in the in-process chain; not run on a sequencer. | 80; `lez/updater/tests/recorded.rs` |
 | R.10 | in part | Fee share 0.39–0.47 over 58 updates in the in-process chain; the latency effect is derived in a first-draft guide. | 80; `docs/guides/operator-guide.md` §3 |
@@ -113,7 +113,7 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia seven days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
+| S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia eight days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
 | S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition, not a sequencer. | 6, 21, 76, 99; `lez/live/verify-run.sh` |
 | S.3 | in part | Consumer guide is a first draft; its worked example is tested in the harness with real handler proofs. | 39; `docs/guides/consumer-guide.md` |
 | S.4 | in part | The pattern's points run in two reference consumers in the harness; the guide's section is a first draft. | 39, 73; `docs/guides/consumer-guide.md` §6 |
