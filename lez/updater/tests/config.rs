@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use ferrata_lez_wire::instance_id;
 use ferrata_updater::{
     chain::{instance_config, root, split_chunks},
-    config::{ClientMatch, File, SourceKind},
+    config::{url_host, ClientMatch, File, SourceKind},
     source::{client_family, parse_header_answer, parse_version_answer},
     utc,
 };
@@ -175,6 +175,14 @@ fn client_diversity_configuration() {
         let f = File::parse(&with(policy, a, b)).unwrap_or_else(|e| panic!("{policy}: {e:#}"));
         assert_eq!(f.policy.min_distinct_clients, 2);
     }
+    for (url, host) in [
+        ("https://lodestar-mainnet.chainsafe.io", "lodestar-mainnet.chainsafe.io"),
+        ("http://User@Testing.Mainnet.Beacon-API.nimbus.team:5052/eth?x=1", "testing.mainnet.beacon-api.nimbus.team"),
+        ("http://[::1]:5052", "::1"),
+        ("127.0.0.1:9000/x", "127.0.0.1"),
+    ] {
+        assert_eq!(url_host(url), host, "{url}");
+    }
     let f = File::parse(&with("min_distinct_clients = 2", &nimbus, &lodestar)).unwrap();
     assert_eq!(f.chains[0].sources[1].client.as_deref(), Some("Lodestar/v1.51.0/7923280"));
     for (policy, a, b, why) in [
@@ -189,6 +197,12 @@ fn client_diversity_configuration() {
             "client on a url source",
         ),
         ("client_match = \"header\"", rec_a, rec_b, "an unknown client_match"),
+        (
+            "min_distinct_clients = 2",
+            "name = \"record-a\"\n  url = \"https://lodestar-mainnet.chainsafe.io/\"",
+            url_lc,
+            "one host twice",
+        ),
     ] {
         let text = with(policy, a, b);
         assert_ne!(text, base, "{why}: the substitution applies");

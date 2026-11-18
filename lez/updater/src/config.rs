@@ -324,8 +324,35 @@ impl File {
                         c.name
                     );
                 }
+                // One provider listed twice would count as two clients (its version answer and its data can come from
+                // different backends). Two hosts can still be one provider: the updater cannot tell.
+                let mut hosts: std::collections::BTreeMap<String, &str> = std::collections::BTreeMap::new();
+                for s in c.sources.iter() {
+                    let Some(url) = &s.url else { continue };
+                    let host = url_host(url);
+                    if let Some(other) = hosts.insert(host.clone(), &s.name) {
+                        bail!(
+                            "chain {} sources {other} and {}: the same host {host:?}; with policy.min_distinct_clients \
+                             one provider would count as two clients",
+                            c.name,
+                            s.name
+                        );
+                    }
+                }
             }
         }
         Ok(())
     }
+}
+
+/// The host of a URL, lower case, without scheme, user, port or path (`https://A.example:8080/x` -> `a.example`).
+pub fn url_host(url: &str) -> String {
+    let rest = url.split_once("://").map_or(url, |(_, r)| r);
+    let authority = rest.split(['/', '?', '#']).next().unwrap_or("");
+    let host_port = authority.rsplit_once('@').map_or(authority, |(_, h)| h);
+    let host = match host_port.strip_prefix('[') {
+        Some(v6) => v6.split(']').next().unwrap_or(""),
+        None => host_port.split(':').next().unwrap_or(""),
+    };
+    host.trim_end_matches('.').to_ascii_lowercase()
 }

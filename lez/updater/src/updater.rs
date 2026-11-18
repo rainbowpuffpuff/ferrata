@@ -166,6 +166,9 @@ pub struct Metrics {
     pub period: u64,
     pub last_plan: String,
     pub last_error: String,
+    /// `policy.min_distinct_clients`: this round waits for clients, and the furthest verified update finalizes this many
+    /// slots past the instance (`None`: not waiting for clients). Beyond `max_lag_slots`, `/health` says so.
+    pub client_wait: Option<u64>,
     pub sources: BTreeMap<String, SourceStats>,
 }
 
@@ -192,7 +195,7 @@ use ferrata_advance::{Planned, Verdict};
 
 /// What two sources must serve byte for byte when both serve it (`policy.min_distinct_clients`): a finality update,
 /// by its attested header's root and its signature slot (one block's sync aggregate over its parent: honest nodes
-/// derive the same bytes), or the update of a finished sync-committee period (`false`, zero, period: the best update of
+/// derive the same bytes), or the update of a finished sync-committee period (`true`, zero, period: the best update of
 /// a period no longer changes once the period is over).
 type UpdateKey = (bool, Root, u64);
 
@@ -669,6 +672,9 @@ impl Updater {
             self.first_due.retain(|_, r| *r >= horizon);
         }
         let plan = self.plan_inner(ledger);
+        if !matches!(plan, Ok(Plan::Waiting(_))) {
+            self.metrics.client_wait = None;
+        }
         self.metrics.last_plan = match &plan {
             Ok(Plan::UpToDate) => "up-to-date".into(),
             Ok(Plan::Deferred(s)) => format!("deferred {}", s.name()),
@@ -877,14 +883,16 @@ impl Updater {
                     clients.len()
                 ));
             }
-            first.get_or_insert((agreeing.len(), header.slot, clients.clone()));
+            first.get_or_insert((agreeing.len(), header.slot, clients.clone(), diverse));
             if agreeing.len() >= self.policy.min_agreeing && diverse {
                 pick = Some((i, agreeing, clients));
                 break;
             }
         }
         let Some((pick, agreeing, clients)) = pick else {
-            let (n, slot, clients) = first.expect("useful is not empty");
+            let (n, slot, clients, first_diverse) = first.expect("useful is not empty");
+            // Waiting for clients (not for `min_agreeing`): how far the furthest verified update is past the instance.
+            self.metrics.client_wait = (!first_diverse).then(|| best.saturating_sub(store.finalized.slot));
             let diversity = if k >= 2 {
                 let how = match self.policy.client_match {
                     ClientMatch::Bytes => "byte for byte",
@@ -898,10 +906,12 @@ impl Updater {
             } else {
                 String::new()
             };
-            return Ok(Plan::Waiting(format!(
-                "{n} of {} sources serve finalized slot {slot}{diversity}",
-                self.policy.min_agreeing
-            )));
+            let served = if n >= self.policy.min_agreeing {
+                format!("finalized slot {slot}: {n} sources serve it")
+            } else {
+                format!("{n} of {} sources serve finalized slot {slot}", self.policy.min_agreeing)
+            };
+            return Ok(Plan::Waiting(format!("{served}{diversity}")));
         };
         let (_, chosen, period_update, raw) = useful.swap_remove(pick);
         let chosen = *chosen;
@@ -1133,6 +1143,13 @@ impl Updater {
             self.metrics.skipped_done += 1;
             return Ok(None);
         }
+        if let Some(lag) = self.metrics.client_wait.filter(|lag| *lag > self.policy.max_lag_slots) {
+            why.push(format!(
+                "waiting for clients: a verified update {lag} slots past the instance is served by fewer than {} \
+                 clients (policy.min_distinct_clients)",
+                self.policy.min_distinct_clients
+            ));
+        }
         if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
             self.metrics.budget_stops += 1;
             bail!("budget reached: spent {} of {}", self.metrics.spent(), self.fees.budget);
@@ -1304,6 +1321,9 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_jobs_finished_total{{{l}}} {}", m.jobs_finished);
         let _ = writeln!(o, "ferrata_updater_finalized_slot{{{l}}} {}", m.finalized_slot);
         let _ = writeln!(o, "ferrata_updater_period{{{l}}} {}", m.period);
+        if self.policy.min_distinct_clients >= 2 {
+            let _ = writeln!(o, "ferrata_updater_client_wait_slots{{{l}}} {}", m.client_wait.unwrap_or(0));
+        }
         for (name, s) in &m.sources {
             let sl = format!("{l},source=\"{name}\"");
             let _ = writeln!(o, "ferrata_updater_source_requests_total{{{sl}}} {}", s.requests);
