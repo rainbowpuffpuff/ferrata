@@ -1,0 +1,50 @@
+# R1: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, frozen bridge ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd)
+
+configId(A) f25abf0963f20203ca11d2782bd641659f0de977bb453ec3809f41c27a2489eb
+configId(B) f788c652288881bc69acac9fbc88751eb11f01e9202024cf02806bcbfe4bb09e (A's fields, instance bebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebe)
+
+| transaction | outcome | gas_exec | gas_stor | fee_base |
+|---|---|---:|---:|---:|
+| B: Init (the attacker's record: slot 2 = configId(B)) | applied | 170246 | 1914 | 1377280 |
+| B: Register ETH (the attacker's record) | applied | 328676 | 2619 | 2650360 |
+| B: ImportRoot n = 9 (A's 8 real leaves + 1 invented) | applied | 229165 | 1831 | 1847968 |
+| B: Claim of A's deposit (leaf 2, public kind) with its s | applied | 257798 | 2053 | 2078808 |
+| A: Init (the vault's slot 2 = configId(A)) | applied | 171027 | 1946 | 1383784 |
+| A: Register ETH | applied | 331816 | 2747 | 2676504 |
+| A: ImportRoot n = 8 | applied | 236224 | 2025 | 1905992 |
+| A: ImportFees ETH schedule 1 | applied | 269684 | 2206 | 2175120 |
+| A: ImportFees ETH, no schedule 2 | applied | 250335 | 1945 | 2018240 |
+| A: Claim of the same deposit (leaf 2) by its owner | refused, exit 250 (ALREADY_CLAIMED) | 213992 | 2053 | 1728360 |
+| A: Claim of A's other deposit (leaf 6, 10 ETH) | applied | 291250 | 2053 | 2346424 |
+| B: Claim of the invented deposit (leaf 8, 1 ETH to the payer) | applied | 268225 | 2053 | 2162224 |
+| B: Burn of the invented 1 ETH by the payer | applied | 162063 | 839 | 1303216 |
+| B: Claim of A's private-kind deposit (leaf 5), s guessed | refused, exit 249 (CLAIM_INVALID) | 94768 | 2053 | 774568 |
+| B: the same as a public-kind deposit to the attacker, s guessed | refused, exit 249 (CLAIM_INVALID) | 94768 | 2053 | 774568 |
+| B: plaintext Claim of leaf 5 with its real s | refused, exit 252 (WRONG_DESTINATION) | 98394 | 2053 | 803576 |
+| B: ClaimPrivately of leaf 5 with its real s, run as the attacker's own account | refused, exit 252 (WRONG_DESTINATION) | 157256 | 2229 | 1275880 |
+
+A's refused claim: exit Some(250), gas_exec 213992, fee_base 1728360 (charged to its sender)
+holder(dest of leaf 2): [Holding { config_id: [247, 136, 198, 82, 40, 136, 129, 188, 105, 172, 172, 159, 188, 136, 117, 30, 177, 31, 1, 233, 32, 32, 36, 207, 2, 128, 107, 203, 254, 75, 176, 158], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000000 }]
+nullifier(chain, vault, N of leaf 2): Some(NullifierState { config_id: [247, 136, 198, 82, 40, 136, 129, 188, 105, 172, 172, 159, 188, 136, 117, 30, 177, 31, 1, 233, 32, 32, 36, 207, 2, 128, 107, 203, 254, 75, 176, 158], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], leaf_count: 9, amount: 1000000000000000000 })
+burn(configId(B), H(note)): written; burn(configId(A), H(note)): empty
+nullifier of the private-kind deposit (leaf 5): unspent
+
+| # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
+|---|---|---|---:|---:|---:|---:|---|
+| 1 | B: Init (the attacker's record: slot 2 = configId(B)) | bridge Init 44,532 → Attest 86,295 → bridge (reply) 39,419 | 170,246 | 3% | 1,914 | 1,377,280 | applied |
+| 2 | B: Register ETH (the attacker's record) | bridge Register 72,711 → Attest 149,342 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 328,676 | 7% | 2,619 | 2,650,360 | applied |
+| 3 | B: ImportRoot n = 9 (A's 8 real leaves + 1 invented) | bridge ImportRoot 49,508 → Attest 108,924 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 229,165 | 5% | 1,831 | 1,847,968 | applied |
+| 4 | B: Claim of A's deposit (leaf 2, public kind) with its s | bridge Claim 107,702 → bridge Issue 47,293 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 18,161 → bridge Mint 18,161 | 257,798 | 5% | 2,053 | 2,078,808 | applied |
+| 5 | A: Init (the vault's slot 2 = configId(A)) | bridge Init 44,818 → Attest 86,790 → bridge (reply) 39,419 | 171,027 | 3% | 1,946 | 1,383,784 | applied |
+| 6 | A: Register ETH | bridge Register 73,920 → Attest 151,273 → bridge (reply) 74,476 → bridge WriteToken 32,147 | 331,816 | 7% | 2,747 | 2,676,504 | applied |
+| 7 | A: ImportRoot n = 8 | bridge ImportRoot 51,721 → Attest 113,770 → bridge (reply) 53,650 → bridge WriteRoot 17,083 | 236,224 | 5% | 2,025 | 1,905,992 | applied |
+| 8 | A: ImportFees ETH schedule 1 | bridge ImportFees 55,929 → Attest 113,770 → bridge (reply) 58,259 → bridge ExtendFees 41,726 | 269,684 | 5% | 2,206 | 2,175,120 | applied |
+| 9 | A: ImportFees ETH, no schedule 2 | bridge ImportFees 50,198 → Attest 108,223 → bridge (reply) 52,487 → bridge ExtendFees 39,427 | 250,335 | 5% | 1,945 | 2,018,240 | applied |
+| 10 | A: Claim of the same deposit (leaf 2) by its owner | bridge Claim 107,702 → bridge Issue 51,166 → bridge Admit 35,565 → bridge Spend 19,559 | 213,992 | 4% | 2,053 | 1,728,360 | refused: exit 250 (ALREADY_CLAIMED) |
+| 11 | A: Claim of A's other deposit (leaf 6, 10 ETH) | bridge Claim 107,702 → bridge Issue 51,586 → bridge Admit 35,565 → bridge Spend 37,291 → bridge Mint 18,161 → bridge Mint 18,161 → bridge Mint 22,784 | 291,250 | 6% | 2,053 | 2,346,424 | applied |
+| 12 | B: Claim of the invented deposit (leaf 8, 1 ETH to the payer) | bridge Claim 107,702 → bridge Issue 47,293 → bridge Admit 35,565 → bridge Spend 30,916 → bridge Mint 22,784 → bridge Mint 23,965 | 268,225 | 5% | 2,053 | 2,162,224 | applied |
+| 13 | B: Burn of the invented 1 ETH by the payer | bridge Burn 24,662 → bridge Burn 31,355 → bridge Burn 48,868 → bridge Admit 35,566 → bridge Burn 21,612 | 162,063 | 3% | 839 | 1,303,216 | applied |
+| 14 | B: Claim of A's private-kind deposit (leaf 5), s guessed | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 15 | B: the same as a public-kind deposit to the attacker, s guessed | bridge Claim 94,768 | 94,768 | 2% | 2,053 | 774,568 | refused: exit 249 (CLAIM_INVALID) |
+| 16 | B: plaintext Claim of leaf 5 with its real s | bridge Claim 98,394 | 98,394 | 2% | 2,053 | 803,576 | refused: exit 252 (WRONG_DESTINATION) |
+| 17 | B: ClaimPrivately of leaf 5 with its real s, run as the attacker's own account | bridge ClaimPrivately 41,736 → bridge Read 15,292 → bridge (reply) 100,228 | 157,256 | 3% | 2,229 | 1,275,880 | refused: exit 252 (WRONG_DESTINATION) |

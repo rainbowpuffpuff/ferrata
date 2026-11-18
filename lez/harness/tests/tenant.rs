@@ -261,7 +261,10 @@ fn r1_a_rogue_configuration_freezes_a_public_kind_deposit() {
     let burn = w.send("B: Burn of the invented 1 ETH by the payer", own, &BridgeMessage::burn(cid_b, &note), actors);
     step(&mut log, burn, None);
     let record = w.chain.actor_state(burn_actor(program, &cid_b, &note.hash()));
-    assert_eq!(borsh::from_slice::<BridgeState>(&record).unwrap(), BridgeState::Burn(BurnRecord { config_id: cid_b, note }));
+    assert_eq!(
+        borsh::from_slice::<BridgeState>(&record).unwrap(),
+        BridgeState::Burn(BurnRecord { config_id: cid_b, note })
+    );
     assert!(w.chain.actor_state(burn_actor(program, &cid_a, &note.hash())).is_empty(), "nothing under configId(A)");
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "A's holding untouched");
 
