@@ -1,4 +1,4 @@
-# The bridge program's second build: nullifier and holder accounts keyed by the configuration (18 November 2026)
+# The bridge program's second build: nullifier and holder accounts keyed by the configuration, and F1 refused at `Init` (18 November 2026)
 
 The fix of the two known issues of the deployed v0.4 bridge program ([`docs/design/bridge.md`](../../docs/design/bridge.md)
 §3, "Known issues, 18 November 2026"; [`tenant.md`](tenant.md)), built as a **second build** of the program beside
@@ -7,10 +7,16 @@ vault pins it.** The deployed program (`0xccde6171…71dd`, the image the live S
 still has both issues, until milestone B1 deploys this one with a new vault (a new `configId`: the image id is part
 of it).
 
+Since the evening of 18 November the second build also refuses, at `Init`, a configuration whose freeze authority is its
+admin: the red team's finding F1 ([below](#f1-init-refuses-a-freeze-authority-that-is-the-admin)). That check changed
+its image id to **`0xc5cad2cd…d6da`** (the build before it was `0x7c7d2b3a…1e2f`). The figures in this file are the
+current build's: the F1 round re-ran every suite against it, and only `Init`'s cost moved (+79 execution gas).
+
 - **Where:** the Modal build box `ferrata-wt-bridge-next`, 18 November 2026 15:01–15:48 UTC (four jobs:
   [`bridge-next/job1-tests.log`](bridge-next/job1-tests.log), [`bridge-next/reproduce/`](bridge-next/reproduce/status.txt),
-  [`bridge-next/job3-tests.log`](bridge-next/job3-tests.log), clippy);
-  dev mode (the harness executes every transition and meters its cycles as LEZ does; no proofs).
+  [`bridge-next/job3-tests.log`](bridge-next/job3-tests.log), clippy); the F1 round on the box `ferrata-wt-bridge-next2`,
+  18 November 18:05–18:25 UTC (one job: [`bridge-next/f1/tests.log`](bridge-next/f1/tests.log),
+  [`bridge-next/f1/reproduce/`](bridge-next/f1/reproduce/compare.log)); dev mode (the harness executes every transition and meters its cycles as LEZ does; no proofs).
 - **What is placed, not executed:** as in [`tenant.md`](tenant.md), the rogue configuration's record and the other
   configurations' holdings of R2 (below). Everything else is executed.
 
@@ -20,8 +26,9 @@ of it).
 |---|---|---|
 | nullifier account | `nullifier(chain, vault, N)`, one for every configuration | `nullifier(cid, chain, vault, N)` |
 | holder account | `holder(account)`, one for every configuration | `holder(cid, account)` |
-| image id | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `0x7c7d2b3acc2f18e5714fa9fc543015bd4dadc5ce625d2b2bbdec50b56ab71e2f` |
-| binary (R0BF) | 592,840 bytes | 593,224 bytes |
+| `Init` with a freeze authority that is the admin (F1) | applied | refused, 240 (`BAD_MESSAGE`, the code of `ProposeRoles`) |
+| image id | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `0xc5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da` (before F1: `0x7c7d2b3a…1e2f`) |
+| binary (R0BF) | 592,840 bytes | 593,384 bytes (before F1: 593,224) |
 
 - [`bridge-wire/src/config_keyed.rs`](../bridge-wire/src/config_keyed.rs): the keyed seeds and actors (the crate
   root's tags with `cid` in front, as the LEZ v0.3.1 port has them), behind bridge-wire's cargo feature
@@ -32,8 +39,8 @@ of it).
   addresses wherever a nullifier or holder account is named: `Mint`'s sender and receiver checks, `Issue`'s spend
   target, `Spend`'s receiver check and mints, `Burn`'s forward to and check at the holder account, `Transfer`'s
   credit, check and forward, `Credit`'s receiver check (`diff lez/guests/bridge/src/main.rs
-  lez/guests/bridge-next/src/main.rs`: those lines and comments only). Every message, state and other check is the
-  deployed program's. Its lockfile is `guests/bridge`'s with the package's name changed; `methods-bridge-next`
+  lez/guests/bridge-next/src/main.rs`: those lines and comments only, and F1's check in `init`). Every message, state
+  and other check is the deployed program's. Its lockfile is `guests/bridge`'s with the package's name changed; `methods-bridge-next`
   builds it apart from `methods`.
 - What the fix rests on: `holder(cid, ·)` is credited only by `Mint` from `nullifier(cid, …)` and by `Credit` from
   `token(cid, token)`, and each checks that it runs at `holder(cid, to)` of the message's own `cid`. A holder account
@@ -47,6 +54,8 @@ of it).
   program's records are never overwritten.
 
 ## The deployed guests are unchanged: a real rebuild in fresh target directories
+
+The first round (15:15 UTC, the build before F1, `0x7c7d2b3a…1e2f`); the F1 round's rebuild is in [its section](#f1-init-refuses-a-freeze-authority-that-is-the-admin).
 
 On the box, after the second build's tests (job 1), job 2 moved the target directories job 1 had filled out of the
 tree (`lez/target`; `checkpoint/` and `bridge/` had none on this box) and wrote
@@ -74,9 +83,9 @@ configuration B (configuration A's fields, another attestation instance whose re
 
 | step | deployed program ([`tenant/r1.txt`](tenant/r1.txt)) | second build: outcome | execution gas |
 |---|---|---|---:|
-| B: `Init`, `Register` ETH, `ImportRoot` n = 9 | applied | applied | 170,246; 328,650; 229,165 |
+| B: `Init`, `Register` ETH, `ImportRoot` n = 9 | applied | applied | 170,325; 328,650; 229,165 |
 | B: claim of A's public-kind deposit (leaf 2) with its `s` | applied | applied, at `nullifier(B, …)` and `holder(B, dest)` | 260,855 |
-| A: `Init`, `Register`, `ImportRoot` n = 8, two `ImportFees` | applied | applied | 171,027 to 331,790 |
+| A: `Init`, `Register`, `ImportRoot` n = 8, two `ImportFees` | applied | applied | 171,106 to 331,790 |
 | **A: claim of the same deposit by its owner** | **refused, 250** (213,992 gas) | **applied**: 1 ETH under A at `holder(A, dest)` | **264,728** |
 | A: the same claim again | (not run) | refused, 250 `ALREADY_CLAIMED`: once per configuration | 215,563 |
 | A: claim of leaf 6 (10 ETH) | applied | applied | 294,762 |
@@ -118,7 +127,9 @@ its own configurations only.
 
 ## Every bridge suite against the second build
 
-`--features bridge-next`, job 1 ([`bridge-next/job1-tests.log`](bridge-next/job1-tests.log)) and job 2 (`tenant`):
+`--features bridge-next`, job 1 ([`bridge-next/job1-tests.log`](bridge-next/job1-tests.log)) and job 2 (`tenant`); all of
+it again on the current build (with F1's check) in the F1 round ([`bridge-next/f1/tests.log`](bridge-next/f1/tests.log)),
+with the counts below:
 
 | suite | tests passed against the second build | its record (second build) |
 |---|---:|---|
@@ -128,11 +139,11 @@ its own configurations only.
 | `bridge_controls.rs` | 1 of 1 | [`bridge-controls.md`](bridge-next/bridge-controls.md) |
 | `bridge_vault_storage.rs` | 1 of 1 | [`bridge-vault-storage.md`](bridge-next/bridge-vault-storage.md) |
 | `bridge_roles.rs` | 2 of 2 | [`bridge-roles.md`](bridge-next/bridge-roles.md), [`bridge-transfer-private.md`](bridge-next/bridge-transfer-private.md) |
-| `bridge_secfix.rs` | 8 of 8 | (asserts only) |
+| `bridge_secfix.rs` | 9 of 9 (F1's test the ninth) | (asserts only) |
 | `bridge_time.rs` | 1 of 1 | [`bridge-time.md`](bridge-next/bridge-time.md) |
 | `privacy_suite.rs` (the LEZ half) | 1 of 1: 82 records (20 private claims, 20 burns, 20 plaintext claims, 20 naive), the bridge core recovers the 20 burn notes | `target/privacy-next/` on the box (not committed, as for the deployed program) |
 | `tenant.rs` | 3 of 3 (the second build's three tests above) | [`bridge-next/tenant/`](bridge-next/tenant/r1.txt) |
-| bridge-wire's unit tests with `config-keyed` | 2 of 2 | |
+| bridge-wire's unit tests with `config-keyed` | 3 of 3 (F1's the third) | |
 
 Job 3 re-ran all of it, both builds, on the harness's final address helpers (commit `7b92fc25`, one test at a time):
 the same counts pass, and every record came out byte for byte as committed
@@ -156,11 +167,63 @@ second build.
   (#32, vault B's deposit to the payer: 267,044 → 260,855), since `holder(B, payer)` holds B's alone;
 - a public burn: −1,422 (`bridge-burn.md` #1: 166,477 → 165,055): `holder(A, payer)` holds A's holding only, 74
   bytes of state where the deployed program's `holder(payer)` held 142 (A's and B's);
-- a transfer: +429 (`bridge-roles.md` #12: 94,664 → 95,093); `Register`: −26; `Init` and `ImportRoot`: unchanged.
+- a transfer: +429 (`bridge-roles.md` #12: 94,664 → 95,093); `Register`: −26; `ImportRoot`: unchanged; `Init`: +79 since
+  the F1 check (`bridge-inbound.md` #1, Init A: 171,027 → 171,106), unchanged before it.
+
+## F1: `Init` refuses a freeze authority that is the admin
+
+**The finding** ([`docs/reviews/redteam-2026-11-18.md`](../../docs/reviews/redteam-2026-11-18.md), F1, vector
+BR-INIT-05): `Init` checks only `Controls::check` (caps above the floor), so it writes a configuration whose live freeze
+authority (`Roles::new`: `FreezeAuthority::key(controls.freeze_authority)`) is its admin; SPEC-v2 §7 says the two must
+differ, `ProposeRoles` refuses the admin as a member (`FreezeAuthority::check`), and the vault refuses it at
+construction (`RolesMustDiffer`, `vault/src/FerrataVault.sol` 600).
+
+**The fix, second build only.** [`config_keyed::check_init_roles`](../bridge-wire/src/config_keyed.rs) runs
+`FreezeAuthority::check(&controls.admin)` on the authority `Init` would make live, the check `ProposeRoles` runs on a
+proposed one, and the second build's `init` calls it right after `Controls::check`: refused with 240 (`BAD_MESSAGE`).
+It is in the feature-gated module, so nothing the deployed guest compiles moved (`git diff 20af752a --
+lez/guests/bridge lez/bridge-wire/src/lib.rs lez/methods`: empty), and the rebuild below gives the deployed ids again.
+
+| | deployed program `ccde6171…71dd` | second build `c5cad2cd…d6da` |
+|---|---|---|
+| `bridge_secfix.rs`, `f1_init_refuses_the_admin_as_freeze_authority`: `Init` with `freeze_authority = admin` against a vault whose slot 2 holds that configuration's id | **applied** (170,246 execution gas); live freeze authority = the admin, threshold 1: the known finding | **refused, 240** (17,402 gas); `config(cid)` stays empty |
+| the same test: `ProposeRoles` with the admin as a member, on configuration A | refused, 240 | refused, 240; the test asserts `Init`'s code equals it |
+| the red team's `init` group, BR-INIT-01 to 07 (`redteam_bridge.rs`, `--exact init`) | 6 PASS, BR-INIT-05 MISMATCH (accepted): [the committed record](redteam-2026-11-18/redteam_bridge.init.json) rewritten byte for byte (sha256 `7281340a…6bfb4` before and after, [`f1/redteam-init.txt`](bridge-next/f1/redteam-init.txt)) | **7 PASS**, BR-INIT-05 refused 240 `bridge:BAD_MESSAGE`, the code the vector lists ([record](bridge-next/redteam-2026-11-18/redteam_bridge.init.json)) |
+| bridge-wire's unit test `init_refuses_the_admin_as_freeze_authority` (with `config-keyed`) | | pass |
+
+The red team's `redteam_bridge.rs` did not compile on main `20af752a` (E0061 at five calls of `World::nullifier` in the
+two-argument form that the bridge-next merge had replaced by `nullifier(cid, vault, N)`); the five calls now name their
+configuration (the deployed program's nullifier address does not depend on it, and its `init` record came out
+unchanged), and the harness compiles both ways. Only the `init` group was run against the second build: the other
+groups compute the deployed program's addresses with the wire's root helpers.
+
+**The deployed ids, rebuilt in a fresh target.** The box `ferrata-wt-bridge-next2` was new: its container had restored
+no snapshot, and before the build [`f1/reproduce/env.txt`](bridge-next/f1/reproduce/env.txt) records no `target`,
+`lez/target`, `checkpoint/target` or `bridge/target` directory, no `sccache`, no `CARGO_TARGET_DIR`, and as the only
+rustc wrapper the tree's `scripts/guest-rustc` (it remaps paths for zkVM units and caches nothing);
+[`fresh.txt`](bridge-next/f1/reproduce/fresh.txt) was written before the build, every guest binary in the three target
+directories is newer than it and none older ([`rebuild-evidence.txt`](bridge-next/f1/reproduce/rebuild-evidence.txt)).
+
+| step | result |
+|---|---|
+| `scripts/reproduce-image-ids.sh build --out …` | 469 s, every guest compiled from source ([`repro-steps.txt`](bridge-next/f1/reproduce/repro-steps.txt)) |
+| `compare --out … --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` | **6 of 6** of the crown run's programs, the vault's `checkpointImageId` and `releaseImageId` equal to the rebuilt ids (two read-only calls over public JSON-RPC); **14 of 14** guests equal `docs/image-ids.md` ([`compare.log`](bridge-next/f1/reproduce/compare.log)) |
+| `cargo build -p methods-bridge-next --locked`, same fresh `lez/target`, same wrapper | 55 s (the guest compiled in it); `ferrata_bridge_next` `0xc5cad2cd…d6da`, binary sha256 `222bfcdb…f11d`, 593,384 bytes |
+| `guest_ids.py`, then `compare` against `docs/image-ids.md` with the new row | **15 of 15** ([`compare15.log`](bridge-next/f1/reproduce/compare15.log); this comparison ran on the laptop, on the box's id lists) |
+
+The deployed bridge program rebuilt as `0xccde6171…71dd`, binary sha256 `11d83248…6070`, 592,840 bytes, as recorded.
+A first run of this job (17:42 UTC) was lost with its container after its client was stopped; it had reached the same
+id. The run recorded here started again with no target directory.
+
+**What moved on the second build** ([`compare.md`](bridge-next/compare.md) and the records' diff against the build
+before F1): every `Init` +79 execution gas and +79 cycles in the bridge's `Init` handler (a repeated `Init`, refused,
++80); one refused burn +7 cycles (`bridge-burn.md` #5, 24,804 → 24,811, a layout effect of the new image); and the
+configuration ids and program addresses, which commit to the image id. Every other figure is equal.
 
 ## Not done
 
-- **Not deployed**, not proven for real (dev mode only), not run on a LEZ sequencer; no vault pins it.
+- **Not deployed**, not proven for real (dev mode only), not run on a LEZ sequencer; no vault pins it. The deployed
+  program still accepts F1's configuration (B1).
 - The CLI, the relayer and the bridge module still compute the deployed program's `holder(account)` and
   `nullifier(chain, vault, N)` (`cli/src/lez.rs`, which the relayer's `relayerd.rs` uses, `cli/wallet/src/claim.rs`,
   `cli/src/flow.rs`, `cli/src/bin/seqnet_chain.rs`, `cli/examples/miniapp_devnet.rs`;
@@ -179,11 +242,15 @@ RISC0_DEV_MODE=1 cargo test -p harness --locked --features bridge-next --test br
   --test bridge_burn --test bridge_controls --test bridge_vault_storage --test bridge_roles --test bridge_secfix \
   --test bridge_time --test privacy_suite -- --nocapture
 cargo test -p ferrata-lez-bridge-wire --locked --features config-keyed --lib
+# F1 (without --features bridge-next: the deployed program, the known finding)
+RISC0_DEV_MODE=1 cargo test -p harness --locked --features bridge-next --test bridge_secfix f1_ -- --nocapture
+RISC0_DEV_MODE=1 cargo test -p harness --locked --features bridge-next --test redteam_bridge -- --exact init --nocapture
 python3 -I scripts/compare-tables.py results results/bridge-next "deployed program (ccde6171…71dd)" \
-  "second build (7c7d2b3a…1e2f)" > results/bridge-next/compare.md
+  "second build (c5cad2cd…d6da)" > OUT.md   # outside results/bridge-next/, which it reads
 ```
 
 The ids, from the root (a fresh checkout has no target directories): `scripts/reproduce-image-ids.sh build --out OUT`,
 `scripts/reproduce-image-ids.sh compare --out OUT --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c`, then
 `(cd lez && cargo build -p methods-bridge-next --locked)` and `python3 -I scripts/reproduce/guest_ids.py . OUT/ids.tsv`
-and `compare` again (15 rows). The box jobs' scripts: [`bridge-next/scripts/`](bridge-next/scripts/job2.sh).
+and `compare` again (15 rows). The box jobs' scripts: [`bridge-next/scripts/`](bridge-next/scripts/job2.sh), and the F1
+round's [`bridge-next/f1/scripts/job1.sh`](bridge-next/f1/scripts/job1.sh).
