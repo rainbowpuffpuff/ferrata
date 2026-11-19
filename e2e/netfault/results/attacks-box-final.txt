@@ -1,0 +1,45 @@
+Error: server returned an error response: error code -32000: pubnet: transient: pubnet: transient: eth_call: no 2 endpoints give the same answer (http://127.0.0.1:19451: "0x0000000000000000000000000000000000000; http://127.0.0.1:55687: "0x0000000000000000000000000000000000000)
+PASS  c1: selective liar, guarded deposit: first run exit 0, drive.py's pre-check through the proxy reads depositCount= (truth 1), second run exit 75; journaled sends 1 (want 1); fates: mined:0x1 ; effects on chain 1
+e2e/netfault/attacks/attacks.sh: line 82: 63809 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 82: 64094 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c1b: the liar alone, guarded deposit: exits 0, 1; journaled sends 1 (want 1); effects 1; refusal: 
+e2e/netfault/attacks/attacks.sh: line 72: 64917 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 72: 65202 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c2: selective liar, unguarded step: exits 0, 75; journaled sends 1; fates: mined:0x1 ; effects on chain 1 (want 1)
+e2e/netfault/attacks/attacks.sh: line 92:    73 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 92:   358 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c2b: the liar alone, unguarded step: exits 0, 1; journaled sends 1; effects on chain 1 (want 1)
+e2e/netfault/attacks/attacks.sh: line 102:  1112 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 102:  1397 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c3: consistent liar: exits 0, 75; journaled sends 1; effects 1; refusal: 
+e2e/netfault/attacks/attacks.sh: line 112:  1796 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 112:  2081 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c4: execution reverted, no journal file: exit 1 (want 1), forge-like command run 1 time(s) in 0 s; the same with an empty journal file: exit 1, run 1 time(s)
+e2e/netfault/attacks/attacks.sh: line 123:  2525 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+Error: server returned an error response: error code -32000: pubnet: transient: pubnet: transient: the sender's latest and pending nonces do not agree on 2 endpoints: [('http://127.0.0.1:33320', 0, 0), ('http://127.0.0.1:42970', 0, 0), ('http://127.0.0.1:65212', 1, 1)]
+PASS  c5: two endpoints behind, one right (chain nonce 1): the proxy's pending nonce: ; a tx with the right nonce: Error: server returned an error response: error code -32000: pubnet: transient: pubnet: transient: the sender's latest and pending nonces do; cast send: Error: server returned an error response: error code -32000: pubnet: transient: , journaled with nonce(s) []
+e2e/netfault/attacks/attacks.sh: line 142:  2729 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 142:  2973 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c5b: one endpoint behind first in the list: chain nonce 1, agreed 1
+e2e/netfault/attacks/attacks.sh: line 151:  3335 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 151:  3579 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c6: client told: 0xaa61de793dc22308ebb05affa2f46282cf9db6603074c5f230a738f412ff23e3; the journal's fate: mined:0x1 ; on chain: status 1 (success); resolve exit 0; manifest rows of the stage: [{"hash": "0xaa61de793dc22308ebb05affa2f46282cf9db6603074c5f230a738f412ff23e3", "blockNumber": "0x1", "status": "0x1", "gasUsed": "0x5208", "to": "0x000000000000000000000000000000000000dead", "contractAddress": null}]
+e2e/netfault/attacks/attacks.sh: line 166:  3726 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 166:  3904 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 38:  4514 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c7: killed between journal and broadcast (chain nonce then 0): the stage again exit 0; journaled 1; fates mined:0x1 ; effects 1 (want 1)
+e2e/netfault/attacks/attacks.sh: line 181:  4229 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 181:  4712 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c8: two runs: effects 5 (want 5), depositCount 5, sends a 0 + b 5 = 5, fates a: | b: mined:0x1 mined:0x1 mined:0x1 mined:0x1 mined:0x1 | exits: a 0 exit 0 a 1 exit 0 a 2 exit 0 a 3 exit 0 a 4 exit 0 b 0 exit 0 b 1 exit 0 b 2 exit 0 b 3 exit 0 b 4 exit 0 
+e2e/netfault/attacks/attacks.sh: line 195:  4896 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 195:  5176 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 195:  5183 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 38:  6705 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c9: fake receipt: the proxy's head then 0; resolve exit 75, fate (the tx still pending upstream: pool 0x1); after a restart with an honest endpoint: block-number 0; balance: 10000000000000000000000
+e2e/netfault/attacks/attacks.sh: line 211:  6532 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 211:  6993 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" >> "$d/net/proxy.log" 2>&1
+PASS  c10: lag 3, re-pin every 3 s: own nonce right after the send 1 (want 1); a contract just created through the proxy: code 0x602a600052...; sent around the proxy: chain nonce 3, through the proxy after the re-pin 3
+e2e/netfault/attacks/attacks.sh: line 230:  7211 Killed                  anvil --port "$p" --chain-id 31337 "$@" > "$d/anvil.log" 2>&1
+e2e/netfault/attacks/attacks.sh: line 230:  7379 Killed                  PUBNET_SEPOLIA_RPC="$2" python3 -I "$WT/scripts/pubnet.py" proxy --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --port-file "$d/net/port" --lag "$PUBNET_LAG" >> "$d/net/proxy.log" 2>&1
+PASS  c11: another key's tx through the deployer's proxy: Error: server returned an error response: error code -32000: pubnet: permanent: ; journaled 0 as from 
+attacks: 14 of 14 pass

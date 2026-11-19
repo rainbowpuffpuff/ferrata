@@ -19,8 +19,11 @@ finalized block is already 64 to 95 blocks old, so the state-dependent requests 
    and the canonical roots of both beacon blocks from a second beacon provider.
 
 Python standard library only. Every request goes to a public endpoint without an API key, with the
-generic User-Agent `ferrata-fixture-fetch` and nothing else that identifies the caller. Each
-response is saved byte for byte, and SOURCE.md and SHA256SUMS are written at the end.
+generic User-Agent of scripts/pubnet.py (`curl/8`) and nothing else that identifies the caller. A
+transient failure (429, 5xx, a timeout, a dropped connection) is tried again on the same endpoint
+after a backoff with jitter (pubnet.retrying), so the provenance of every answer stays one endpoint;
+when every execution provider failed transiently, the round is tried again. Each response is saved
+byte for byte, and SOURCE.md and SHA256SUMS are written at the end.
 
 Usage: scripts/fetch-mainnet-e2e.py OUTDIR      (OUTDIR must not exist yet)
 """
@@ -29,10 +32,14 @@ import hashlib
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.request
 
-UA = "ferrata-fixture-fetch"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pubnet  # noqa: E402  (scripts/pubnet.py: transient/permanent, backoff; e2e/NETWORK.md)
+
+UA = pubnet.UA
 BEACON = ["https://lodestar-mainnet.chainsafe.io", "https://ethereum-beacon-api.publicnode.com"]
 EXECUTION = [
     "https://ethereum-rpc.publicnode.com",
@@ -224,7 +231,9 @@ class Fetcher:
 
     def beacon(self, endpoint, path, name, ssz):
         at = now()
-        data, headers = http(endpoint + path, accept="application/octet-stream" if ssz else "application/json")
+        data, headers = pubnet.retrying(
+            lambda: http(endpoint + path, accept="application/octet-stream" if ssz else "application/json"),
+            budget=float(os.environ.get("PUBNET_REQUEST_BUDGET_S", "180")), what=f"GET {path}")
         version = headers.get("Eth-Consensus-Version") or headers.get("eth-consensus-version") or ""
         LOG.append({"at": at, "endpoint": endpoint, "request": f"GET {path}", "file": name, "note": version})
         if name:
@@ -246,12 +255,17 @@ class Fetcher:
 
     def rpc_any(self, method, params, name, providers=EXECUTION):
         errors = []
-        for endpoint in providers:
-            try:
-                return self.rpc(endpoint, method, params, name), endpoint
-            except (RuntimeError, urllib.error.URLError, TimeoutError, json.JSONDecodeError) as e:
-                errors.append(f"{endpoint}: {e}")
-        raise SystemExit(f"no provider served {method} {params}:\n  " + "\n  ".join(errors))
+        for round_ in range(1, 4):  # every provider once per round; another round only if all failed transiently
+            for endpoint in providers:
+                try:
+                    return self.rpc(endpoint, method, params, name), endpoint
+                except (RuntimeError, OSError, TimeoutError, json.JSONDecodeError, ValueError) as e:
+                    errors.append((endpoint, e))
+            last = errors[-len(providers):]
+            if round_ == 3 or not all(pubnet.transient_exception(e) for _, e in last):
+                break
+            time.sleep(pubnet.backoff(round_, base=4.0, cap=30.0))
+        raise SystemExit(f"no provider served {method} {params}:\n  " + "\n  ".join(f"{u}: {e}" for u, e in errors))
 
 
 def mapping_slot(holder, base):

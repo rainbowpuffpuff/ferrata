@@ -1,5 +1,8 @@
 # The return leg, end to end
 
+(Public networks: [`NETWORK.md`](NETWORK.md) says what fails on free public endpoints, what `scripts/pubnet.py` /
+`pubnet.sh` do about it, and which scripts use them: the crown run's, `verify-sepolia.py` and the fixture fetchers.)
+
 One run of LEZ → Ethereum in which the three prototypes of the return leg meet: the checkpoint
 program ([`checkpoint/`](../checkpoint/)), the release program and the bridge core
 ([`bridge/`](../bridge/)) and the v3 vault ([`vault/`](../vault/)). Before this, the vault's tests

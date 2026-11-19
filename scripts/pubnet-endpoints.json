@@ -1,0 +1,38 @@
+{
+  "_about": "Free public endpoints without an API key, in the order scripts/pubnet.py and scripts/pubnet.sh try them. Probed read-only on 2026-11-18 16:17-16:20Z (python3 -I scripts/pubnet.py probe <network>); e2e/NETWORK.md has the results and the endpoints that did not answer. A script's own endpoint (the Secret's SEPOLIA_RPC_URL) goes first; a local one is the only one; PUBNET_<NETWORK>_RPC / _BEACON / _BEACON_LC (comma-separated) replace a list (tests). beacon_lc: the ones that serve the light-client routes (/eth/v1/beacon/light_client/...).",
+  "sepolia": {
+    "chainId": 11155111,
+    "rpc": [
+      "https://ethereum-sepolia-rpc.publicnode.com",
+      "https://rpc.sepolia.ethpandaops.io",
+      "https://ethereum-sepolia-public.nodies.app",
+      "https://sepolia.rpc.thirdweb.com",
+      "https://api.zan.top/eth-sepolia"
+    ],
+    "beacon": [
+      "https://lodestar-sepolia.chainsafe.io",
+      "https://ethereum-sepolia-beacon-api.publicnode.com",
+      "https://beacon.sepolia.ethpandaops.io"
+    ],
+    "beacon_lc": [
+      "https://lodestar-sepolia.chainsafe.io"
+    ]
+  },
+  "mainnet": {
+    "chainId": 1,
+    "rpc": [
+      "https://ethereum-rpc.publicnode.com",
+      "https://eth.drpc.org",
+      "https://rpc.mevblocker.io",
+      "https://eth.rpc.blxrbdn.com"
+    ],
+    "beacon": [
+      "https://ethereum-beacon-api.publicnode.com",
+      "https://lodestar-mainnet.chainsafe.io"
+    ],
+    "beacon_lc": [
+      "https://ethereum-beacon-api.publicnode.com",
+      "https://lodestar-mainnet.chainsafe.io"
+    ]
+  }
+}

@@ -20,7 +20,7 @@ Gloas a light-client header binds only the execution block hash of the bid's par
 
 Python standard library only; it reuses the helpers of `fetch-mainnet-e2e.py` (Keccak, RLP,
 requests). Every request goes to a public endpoint without an API key, with the generic
-User-Agent `ferrata-fixture-fetch` and nothing else that identifies the caller.
+User-Agent of scripts/pubnet.py (`curl/8`) and nothing else that identifies the caller.
 
 Usage: scripts/fetch-sepolia-gloas.py OUTDIR      (OUTDIR must not exist yet)
 """

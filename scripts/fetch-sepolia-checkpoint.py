@@ -20,7 +20,7 @@ from a checkpoint older than the period reverts ("Execution outside of the valid
 
 Python standard library only; it reuses the helpers of `fetch-mainnet-e2e.py` and the parsers of
 `fetch-sepolia-gloas.py`. Every request goes to a public endpoint without an API key, with the generic User-Agent
-`ferrata-fixture-fetch` and nothing else that identifies the caller.
+of scripts/pubnet.py (`curl/8`) and nothing else that identifies the caller.
 
 Usage: scripts/fetch-sepolia-checkpoint.py OUTDIR      (OUTDIR must not exist yet)
 """

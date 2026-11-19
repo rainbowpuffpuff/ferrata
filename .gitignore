@@ -89,6 +89,14 @@ __pycache__/
 # checkpoint/attestor/zone-bridge.sh: the Groth16 prover inputs and outputs between the box and mwrap (not records)
 /e2e/runs/zone-bridge-*/work/
 /e2e/runs/zone-bridge-*/logs/.mark-*
+# e2e/netfault/run.sh's runs (the summary: e2e/netfault/results/); the network proxy's scratch (scripts/pubnet.sh)
+/e2e/runs/netfault-*
+/e2e/runs/*/net/port
+/e2e/runs/*/net/*.lock
+/e2e/netfault/results/*.log
+/e2e/netfault/attacks/model/out/
+/e2e/netfault/attacks/model/cache/
+/e2e/netfault/attacks/model/broadcast/
 
 # The stand-in return leg for the public LEZ testnet (e2e/testnet-return.sh): local deployment records, logs, the
 # prover's scratch, the receipts' binaries (the seals, journals and records beside them are committed), and the

@@ -18,109 +18,102 @@
 # DeployVault's record is written to vault/deployments/crown-<run name>.json and copied to <run>/deploy.json.
 # Inputs in <run>: identity.json (vault, configId, genesisState, ...), params.json (DeployVault's), crown.json
 # (deposits, candidate, releases). Records: deploy.json, manifest.json (every transaction: stage, hash, nonce,
-# block, gasLimit, gasUsed, status), logs/.
+# block, gasLimit, gasUsed, status), logs/, net/ (the network journal: every signed transaction before it left).
+#
+# The network (e2e/NETWORK.md): forge and cast talk only to a local proxy (scripts/pubnet.sh, pubnet.py) in front of
+# SEPOLIA_RPC_URL and the free public Sepolia endpoints (scripts/pubnet-endpoints.json): reads at "latest" pinned a
+# few blocks behind the head (never before the deployer's last transaction), failover and backoff on transient errors,
+# the nonce checked on two endpoints and the signed bytes journaled before a broadcast to every endpoint. A failed run
+# is run again only after the fate of everything it may have sent is known, and only if it failed for a transient
+# reason, within PUBNET_STAGE_BUDGET_S (1200 s). Exit status: 0 done, 1 a permanent stop (a human looks), 75 a
+# transient stop with nothing in flight (e2e/crown/cloud/drive.py resumes those by itself).
 set -euo pipefail
 here="$(cd "$(dirname "$0")/../.." && pwd)"
 run="$(cd "${1:?run directory}" && pwd)"; step="${2:?stage}"; arg="${3:-}"
 : "${SEPOLIA_RPC_URL:?set SEPOLIA_RPC_URL}" "${ETH_FROM:?set ETH_FROM}"
 export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 TMPDIR="${TMPDIR:-$here/../tmp}"
+mkdir -p "$TMPDIR"
 margin="${FERRATA_GAS_MARGIN_PCT:-125}"
-rpc=(--rpc-url "$SEPOLIA_RPC_URL")
 id="$run/identity.json"; manifest="$run/manifest.json"; mkdir -p "$run/logs"
+export PUBNET_MANIFEST="$manifest" # where resolve records a transaction marked gone that shows up mined after all
 say() { echo "[$(date -u +%FT%TZ)] $*"; }
 die() { say "STOP: $*"; exit 1; }
-chain="$(cast chain-id "${rpc[@]}")"
+die_transient() { say "STOP (transient, nothing in flight): $*"; exit 75; }
+# shellcheck source=../../scripts/pubnet.sh
+. "$here/scripts/pubnet.sh"
+pubnet_up sepolia "$run/net" "$ETH_FROM" "$SEPOLIA_RPC_URL" || die_transient "the network proxy did not start"
+rpc=(--rpc-url "$PUBNET_URL/$step${arg:+-$arg}")
+rd() { local rc=0; pubnet_read "$@" || rc=$?; [ "$rc" = 0 ] || { [ "$rc" = 75 ] && die_transient "a read failed: $*"; die "a read failed: $*"; }; }
+chain="$(rd cast chain-id "${rpc[@]}")"
 [ "$chain" = "$(jq -r .chainId "$id")" ] || die "chain id $chain is not the run's"
 vault="$(jq -r .vault "$id")"
-call() { cast call "$vault" "$@" "${rpc[@]}"; }
+call() { rd cast call "$vault" "$@" "${rpc[@]}"; }
 signer=(); [ "${FERRATA_UNLOCKED:-}" = 1 ] && signer=(--unlocked)
 
-# Appends the receipts of a forge broadcast file to the manifest under the stage's name.
+# Appends the stage's mined transactions, from the network journal, to the manifest under the stage's name (each hash
+# once); a transaction that did not succeed stops the run.
 record() {
-  local name="$1" bfile="$2" rows='[]' h r
+  local name="$1" rows
   [ -f "$manifest" ] || echo '{"chainId": '"$chain"', "stages": {}}' > "$manifest"
-  for h in $(jq -r '.transactions[].hash' "$bfile"); do
-    r="$(cast receipt "$h" --json "${rpc[@]}")"
-    rows="$(jq -c --argjson r "$r" --arg h "$h" '. + [{hash: $h, blockNumber: ($r.blockNumber), status: ($r.status),
-      gasUsed: ($r.gasUsed), to: ($r.to), contractAddress: ($r.contractAddress)}]' <<<"$rows")"
-    [ "$(jq -r .status <<<"$r")" = 0x1 ] || die "$name: transaction $h failed (status $(jq -r .status <<<"$r"))"
-  done
-  jq --arg s "$name" --argjson rows "$rows" '.stages[$s] = ((.stages[$s] // []) + $rows)' "$manifest" > "$manifest.tmp"
+  local acked
+  rows="$(python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" --stage "$name")"
+  acked="$(python3 -I "$PUBNET_PY" acked --journal "$PUBNET_DIR/journal.jsonl")"
+  # A transaction the operator acknowledged (pubnet.py ack) that did not succeed (reverted, or gone) leaves the stage's
+  # rows; one mined with status 0x1 stays (`acked` never lists it: an acknowledged find of a gone one mined after all).
+  jq --arg s "$name" --argjson rows "$rows" --argjson acked "$acked" '.stages[$s] = ([(.stages[$s] // [])[]
+      | select(.hash as $h | ($acked | index($h)) == null)] as $old | $old
+      + [$rows[] | select(.hash as $h | ($old | map(.hash) | index($h)) == null)])
+      | if .stages[$s] == [] then del(.stages[$s]) else . end' "$manifest" > "$manifest.tmp"
   mv "$manifest.tmp" "$manifest"
+  [ "$rows" != '[]' ] || { say "$name: nothing sent (already done)"; return 0; }
+  jq -e 'all(.status == "0x1")' <<<"$rows" > /dev/null || die "$name: a transaction failed: $rows"
+  say "$name: $(jq length <<<"$rows") transaction(s) mined, in the manifest: $(jq -r 'map(.hash) | join(" ")' <<<"$rows")"
 }
 
-# The endpoint failed a read (a load-balanced node behind the block another announced; deploy.sh says more): the
-# stage runs again, at most 5 times, 24 s apart, only while the deployer's nonce (latest and pending) is unchanged.
-transient='-32001|block not found|header not found|failed to get account|failed to get storage|missing trie node'
-
-# The deployer's nonce at its freshest (vault/script/deploy.sh says why): the highest of three reads each of the latest
-# and the pending nonce, FERRATA_NONCE_GAP seconds apart (4).
-nonce_max() {
-  local m=-1 k v
-  for k in 1 2 3; do
-    for v in "$(cast nonce "$ETH_FROM" "${rpc[@]}" 2>/dev/null || true)" \
-             "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}" 2>/dev/null || true)"; do
-      if [[ "$v" =~ ^[0-9]+$ ]] && [ "$v" -gt "$m" ]; then m="$v"; fi
-    done
-    if [ "$k" -lt 3 ]; then sleep "${FERRATA_NONCE_GAP:-4}"; fi
-  done
-  echo "$m"
-}
-# No transaction of the deployer pending: the latest and the pending nonce agree in one of five reads, 4 s apart (a
-# lagging node can report an older latest nonce than another node's pending one).
-nonces_agree() {
-  local k
-  for k in 1 2 3 4 5; do
-    [ "$(cast nonce "$ETH_FROM" "${rpc[@]}" 2>/dev/null || echo x)" = "$(cast nonce "$ETH_FROM" --block pending "${rpc[@]}" 2>/dev/null || echo y)" ] && return 0
-    sleep "${FERRATA_NONCE_GAP:-4}"
-  done
-  return 1
-}
-
-crown() { # crown <signature> [args]: one transaction of Crown.s.sol
+crown() { # crown <signature> [args]: one transaction of Crown.s.sol (state-checked: a step already on chain is skipped)
   local sig="$1"; shift
-  local name="${sig%%(*}${1:+-$1}" log="$run/logs/${sig%%(*}${1:+-$1}.log" tries=0 n0
-  while :; do
-    n0="$(nonce_max)"
-    ( cd "$here/vault" && env -u ETH_FROM FERRATA_CROWN="$run/crown.json" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" \
-        "${rpc[@]}" --sender "$ETH_FROM" "${signer[@]}" --broadcast --skip-simulation --slow \
-        --gas-estimate-multiplier "$margin" ) > "$log" 2>&1 && break
-    tail -n 25 "$log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"
-    if [ "$tries" -lt 5 ] && grep -q -E -e "$transient" "$log" \
-        && ! grep -q -E 'Hash: 0x|"hash": *"0x' "$log" \
-        && [ "$n0" -ge 0 ] && [ "$(nonce_max)" = "$n0" ]; then
-      tries=$((tries + 1))
-      mv "$log" "$log.transient-$tries"
-      say "$name: the endpoint failed a read and nothing was sent (nonce still $n0); again in 24 s ($tries of 5)"
-      sleep "${FERRATA_RETRY_SLEEP:-24}"
-      continue
-    fi
-    die "$name"
-  done
-  local b="$here/vault/broadcast/Crown.s.sol/$chain/${sig%%(*}-latest.json"
-  if [ -f "$b" ] && [ "$(find "$b" -newer "$run/logs/.mark-$name" 2>/dev/null)" ]; then
-    record "$name" "$b"
-  else
-    say "$name: nothing sent (already done)"
+  local name="${sig%%(*}${1:+-$1}" rc=0
+  # The fate of everything sent so far first; then, one transaction per stage: if the journal holds this stage's
+  # mined transaction, the stage is done whatever an endpoint answers now (PUBNET_NO_JOURNAL_SKIP=1, for tests only:
+  # plan again, on the reads alone).
+  pubnet_resolve || { rc=$?; [ "$rc" = 3 ] && die "$name: an earlier transaction did not succeed (above): a human looks, then pubnet.py ack"
+    die_transient "$name: an earlier transaction's fate is still unknown"; }
+  # Only a transaction that succeeded (status 0x1) makes the stage done: after a reverted one and the operator's
+  # `pubnet.py ack`, the stage runs again.
+  if [ "${PUBNET_NO_JOURNAL_SKIP:-}" != 1 ] && python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" \
+      --stage "$name" | jq -e 'any(.status == "0x1")' > /dev/null; then
+    say "$name: the journal holds this stage's successful transaction; not run again"
+    record "$name"
+    return 0
   fi
+  pubnet_stage "$run/logs/$name.log" env -u ETH_FROM FERRATA_CROWN="$run/crown.json" bash -c 'cd "$0/vault" && exec "$@"' \
+      "$here" forge script script/Crown.s.sol:Crown --sig "$sig" "$@" --rpc-url "$PUBNET_URL/$name" --sender "$ETH_FROM" \
+      "${signer[@]}" --broadcast --skip-simulation --slow --gas-estimate-multiplier "$margin" || rc=$?
+  record "$name"
+  [ "$rc" = 0 ] || { [ "$rc" = 75 ] && die_transient "$name"; die "$name"; }
 }
 
 case "$step" in
   status)
-    say "chain $chain block $(cast block-number "${rpc[@]}") deployer nonce $(cast nonce "$ETH_FROM" "${rpc[@]}")"
-    if [ "$(cast code "$vault" "${rpc[@]}")" = 0x ]; then say "vault $vault: not deployed"; exit 0; fi
+    say "chain $chain block $(rd cast block-number "${rpc[@]}") (pinned) deployer nonce $(rd cast nonce "$ETH_FROM" "${rpc[@]}")"
+    if [ "$(rd cast code "$vault" "${rpc[@]}")" = 0x ]; then say "vault $vault: not deployed"; exit 0; fi
     say "vault $vault: finalState $(call 'finalState()(bytes32)') leaves $(call 'nextLeafIndex()(uint64)')" \
       "checkpoints $(call 'checkpointCount()(uint256)')"
     ;;
   deploy)
-    nonces_agree || die "the deployer has pending transactions"
     # identity.json without .groth16Verifier (a fresh local chain: checkpoint/attestor/zone-bridge.sh): DeployVault deploys one.
+    # deploy.sh uses this proxy (PUBNET_URL): its runs are journaled with the other stages', one transaction per run.
     gv="$(jq -r '.groth16Verifier // empty' "$id")"
+    rc=0
     ( cd "$here/vault" && if [ -n "$gv" ]; then export FERRATA_GROTH16_VERIFIER="$gv"; fi && FERRATA_MODE=B FERRATA_GAS_RULE=eip8037 FERRATA_GAS_MARGIN_PCT="$margin" \
-        FERRATA_RPC_URL="$SEPOLIA_RPC_URL" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="deployments/crown-$(basename "$run").json" \
+        FERRATA_RPC_URL="$PUBNET_URL/deploy" FERRATA_PARAMS="$run/params.json" FERRATA_OUT="deployments/crown-$(basename "$run").json" \
         FERRATA_DELTA="$(jq -r .delta "$id")" \
-        FERRATA_LOG_DIR="$run/logs/deploy" script/deploy.sh ) > "$run/logs/deploy.log" 2>&1 ||
-      { tail -n 30 "$run/logs/deploy.log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"; die deploy; }
+        FERRATA_LOG_DIR="$run/logs/deploy" script/deploy.sh ) > "$run/logs/deploy.log" 2>&1 || rc=$?
+    if [ "$rc" != 0 ]; then
+      tail -n 30 "$run/logs/deploy.log" | sed "s,$SEPOLIA_RPC_URL,<endpoint>,g"
+      [ "$rc" = 75 ] && die_transient deploy
+      die deploy
+    fi
     cp "$here/vault/deployments/crown-$(basename "$run").json" "$run/deploy.json"
     [ "$(jq -r .complete "$run/deploy.json")" = true ] || die "deploy.json is not complete"
     got="$(jq -r .vault "$run/deploy.json")"
@@ -130,29 +123,13 @@ case "$step" in
     [ "$(call 'mode()(uint8)')" = 1 ] || die "the vault is not rule (B)"
     say "deploy complete: vault $vault, configId and genesisState as the run's identity"
     ;;
-  deposit)
-    [ -n "$arg" ] || die "deposit needs an index"
-    # A deposit whose send may have gone out is never sent again. Crown.deposit(j) skips a deposit only once it is
-    # MINED (depositCount > j); a run stopped between the broadcast and the receipt would otherwise escrow a second
-    # time at the next nonce and shift every later leaf. So: no transaction of the depositor pending, and a marker
-    # written before the send, removed once the stage has returned; a marker left behind stops every later run.
-    sending="$run/logs/deposit-$arg.sending"
-    [ ! -f "$sending" ] || die "deposit $arg: a send began ($(cat "$sending")) and did not finish here: check the depositor's depositCount and its transactions on chain, then remove $sending (nothing sent)"
-    nonces_agree || die "deposit $arg: the depositor has a pending transaction (a deposit may be in flight): nothing sent"
-    echo "$(date -u +%FT%TZ), depositor nonce $(cast nonce "$ETH_FROM" "${rpc[@]}")" > "$sending"
-    touch "$run/logs/.mark-$step-$arg"
-    crown "$step(uint256)" "$arg"
-    rm -f "$sending"
-    ;;
-  release)
-    [ -n "$arg" ] || die "release needs an index"
-    touch "$run/logs/.mark-$step-$arg"
+  deposit|release)
+    [ -n "$arg" ] || die "$step needs an index"
     crown "$step(uint256)" "$arg"
     ;;
   submit|finalize)
     sig=submit; [ "$step" = finalize ] && sig=finalizeAttested
-    touch "$run/logs/.mark-$sig"
     crown "$sig()"
     ;;
-  *) sed -n 2,20p "$0"; exit 2 ;;
+  *) sed -n 2,29p "$0"; exit 2 ;;
 esac
