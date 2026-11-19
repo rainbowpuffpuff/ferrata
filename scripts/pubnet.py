@@ -845,9 +845,10 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print, man
             return TEMPFAIL
         time.sleep(pause)
     # Transactions marked gone, looked at again with gone's own rule inverted: every endpoint is asked for the receipt
-    # and the transaction; ANY one that has either stops the run (3), the find is recorded (journal, manifest), and the
-    # stop is sticky: every later resolve stops again until an operator's `pubnet.py ack`. An endpoint that errs here
-    # stops the run too (transient): a check that could not be made never passes.
+    # and the transaction; ANY one that has either stops the run (3) and the find is recorded in the journal; only a
+    # receipt `need` endpoints give alike makes it mined (its fate, and a manifest row). The stop is sticky: every later
+    # resolve stops again until an operator's `pubnet.py ack`; after that ack the hash is not asked about again. An
+    # endpoint that errs here stops the run too (transient): a check that could not be made never passes.
     for t in j.txs().values():
         if t["state"] != "gone" or (t.get("regained_at") is not None and t.get("ack_at", -1) > t["regained_at"]):
             continue
@@ -873,21 +874,21 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print, man
             continue
         j.append({"event": "regained", "hash": t["hash"], "by": found})
         agreed = [v[0] for v in receipts.values() if len(v) >= net.need()]
-        if agreed:  # two endpoints alike (or the only one): it is mined, its fate recorded
+        if agreed:  # two endpoints alike (or the only one): it is mined, its fate and manifest row recorded
             rc = agreed[0]
             j.append({"event": "fate", "hash": t["hash"], "fate": "mined", "status": rc.get("status"),
                       "block": int(rc["blockNumber"], 16), "blockHash": rc.get("blockHash"),
                       "gasUsed": rc.get("gasUsed"), "contractAddress": rc.get("contractAddress")})
-        if manifest:
-            rc = agreed[0] if agreed else next((v[0] for v in receipts.values()), {})
-            add_to_manifest(manifest, [{**t, "rc": {**rc, "regained": found}}])
+            if manifest:  # one endpoint's receipt alone (perhaps invented) never becomes a row
+                add_to_manifest(manifest, [{**t, "rc": {**rc, "regained": found}}])
     sticky = [t for t in j.txs().values()
               if t.get("regained_at") is not None and t.get("ack_at", -1) < t["regained_at"]]
     if sticky:
         for t in sticky:
             log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}, nonce {t.get('nonce')}) was marked gone, and"
                 f" an endpoint knows it after all ({'; '.join(t.get('regained_by', []))}); recorded in the journal"
-                + (" and the manifest" if manifest else "") + ". Its step may have gone out twice: check the chain, then"
+                + (" and the manifest" if manifest and t["state"] == "mined" else "")
+                + ". Its step may have gone out twice: check the chain, then"
                 f" `pubnet.py ack --journal {j.path} --hash {t['hash']}`; until then every resolve stops here")
         return 3
     lost = fence_lost(net, j, sender)
@@ -1500,8 +1501,9 @@ def main() -> int:
                      " sender's nonce is above it): not marked gone")
         jj.append({"event": "gone", "hash": a.hash, "why": f"{a.why}: {why}"})
         print(f"pubnet: {a.hash} marked gone ({why}); it leaves the fence, the nonce floor and the done set")
-    elif a.cmd == "acked":
-        print(json.dumps([h for h, t in Journal(a.journal).txs().items() if t.get("acked")]))
+    elif a.cmd == "acked":  # acknowledged and not succeeded (reverted, gone, ...): never one mined with status 1
+        print(json.dumps([h for h, t in Journal(a.journal).txs().items()
+                          if t.get("acked") and not (t["state"] == "mined" and t.get("status") in ("0x1", 1))]))
     elif a.cmd == "rows":
         rows = [{"hash": t["hash"], "blockNumber": hex(t["block"]), "status": t.get("status"),
                  "gasUsed": t.get("gasUsed"), "to": t.get("to"), "contractAddress": t.get("contractAddress")}

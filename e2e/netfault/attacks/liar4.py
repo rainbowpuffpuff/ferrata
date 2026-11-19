@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """An endpoint in front of anvil whose lies are switched by files beside --ctl: the independent review's round 4
-(liar3.py plus .head, .slow, .notx), kept as regression cases (attacks.sh g7b g7c g7s g7e):
+(liar3.py plus .head, .slow, .notx), kept as regression cases (attacks.sh g7b g7c g7s g7e), and round 5's .fakercpt
+(attacks.sh g7e5):
   <ctl>.hide   eth_getTransactionReceipt answered null (a node with pruned history, or a liar)
   <ctl>.nlow   eth_getTransactionCount answered one lower than the truth (any block)
   <ctl>.stale  holds a block B: eth_call / getStorageAt / getCode / estimateGas at an explicit block >= B answered at B-1
@@ -8,6 +9,7 @@
   <ctl>.head   holds a number: eth_blockNumber answered with it (a liar's head)
   <ctl>.slow   eth_getTransactionCount answered after 20 s (a timeout)
   <ctl>.notx   eth_getTransactionByHash answered null
+  <ctl>.fakercpt  eth_getTransactionReceipt answered with an invented receipt (another block hash, status 1)
 Everything else is forwarded honestly."""
 import argparse, http.client, json, os, threading, time, urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -32,6 +34,9 @@ def answer(q):
     r = up(m, p)
     if m == "eth_getTransactionByHash" and on("notx"):
         r["result"] = None
+    if m == "eth_getTransactionReceipt" and on("fakercpt"):
+        r["result"] = {"transactionHash": p[0], "blockNumber": "0x5", "blockHash": "0x" + "ee" * 32, "status": "0x1",
+                       "from": "0x" + "00" * 20, "to": None, "gasUsed": "0x5208", "contractAddress": None, "logs": []}
     if m == "eth_getTransactionReceipt" and on("hide"):
         r["result"] = None
     if m == "eth_getTransactionCount" and on("nlow") and "result" in r:

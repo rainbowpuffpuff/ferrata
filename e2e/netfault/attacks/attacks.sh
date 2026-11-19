@@ -6,7 +6,8 @@
 #   bash e2e/netfault/attacks/attacks.sh [case ...]     cases c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11, and the
 #   review's round 2: v1a v1b v2 v3 v4 v5 g1, and round 3 (attacks on `pubnet.py gone`, liar3.py): g2 g4 g4b g4c g5
 #   g6, and g7 (a gone transaction mined after all), and round 4 (the re-check of gone transactions, liar4.py): g7b
-#   g7c g7s g7e (default all)
+#   g7c g7s g7e, and round 5 (what the re-check records, tests/r5): g7e5 (the review's g7e: this file's g7e is
+#   round 4's) g7h (default all)
 # Each case prints PASS (the safe outcome) or FAIL with what was observed; exit 0 if all pass. Scratch:
 # $NETFAULT_SCRATCH (default ../tmp/netfault-attacks beside the repository).
 set -uo pipefail
@@ -448,7 +449,64 @@ g7e() { # an endpoint that errs during the re-check stops the run (transient), n
   verdict g7e "$([ "$rc" = 75 ] && echo 1)" "marked gone ('${g:20:28}'), then one endpoint down: resolve exit $rc (want 75: transient, never 0)"
   cleanup
 }
-cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1 g2 g4 g4b g4c g5 g6 g7 g7b g7c g7s g7e)
+
+# ---- the review's round 5 (tests/r5): what the re-check of a gone transaction records, kept --------------------------
+g7e5() { # the review's g7e: a gone transaction never mined; one of two endpoints invents its receipt: the run stops (3)
+         # and the find is in the journal, but no fate is recorded and the manifest is left as it was
+  local d="$S/g7e5"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L P; L="$(l4_up "$d" l)"; P="$(l4_up "$d" p)"; proxy_up "$d" "$L,$P"
+  cast rpc evm_setAutomine false --rpc-url "$R" > /dev/null
+  (cd "$T/model" && timeout 20 forge script script/Dep.s.sol:DepScript --sig 'guarded(uint256)' 0 --rpc-url "$PUBNET_URL/deposit-0" \
+     --sender "$A1" --private-key "$K1" --broadcast --skip-simulation --slow > "$d/first.log" 2>&1)
+  local h g rc ev same; h="$(last_hash "$d")"; cast rpc anvil_dropAllTransactions --rpc-url "$R" > /dev/null
+  g="$(gone "$d" "$h")"; touch "$d/l.fakercpt"
+  echo '{"chainId": 31337, "stages": {}}' > "$d/manifest.json"; cp "$d/manifest.json" "$d/manifest.before"
+  rc="$(resolve_rc "$d")"
+  ev="$(jq -r --arg h "$h" 'select(.hash == $h and (.event == "regained" or .event == "fate")) | .event' "$d/net/journal.jsonl" | tr '\n' ' ')"
+  same=0; cmp -s "$d/manifest.json" "$d/manifest.before" && same=1
+  verdict g7e5 "$([ "$rc" = 3 ] && [ "$ev" = "regained " ] && [ "$same" = 1 ] && echo 1)" "gone ('${g:20:28}'), never mined (pool $(cast rpc txpool_status --rpc-url "$R" | jq -r .pending)); one endpoint invents its receipt: resolve exit $rc (want 3); journal: ${ev}(want regained, no fate); manifest $([ "$same" = 1 ] && echo unchanged || echo "rows $(jq -c '[.stages[][] | {blockNumber, status}]' "$d/manifest.json") (want unchanged)")"
+  cleanup
+}
+stub_forge() { # stub_forge <dir>: <dir>/bin/forge, as test_send_guard.sh's: "async" sends one transfer through the
+               # --rpc-url it is given (the proxy) without waiting and fails; "noop" sends nothing
+  mkdir -p "$1/bin" "$1/stub"
+  cat > "$1/bin/forge" << 'EOF2'
+#!/usr/bin/env bash
+echo "forge $*" >> "$STUB/forge.calls"
+url=""; while [ $# -gt 0 ]; do [ "$1" = --rpc-url ] && url="$2"; shift; done
+case "$(cat "$STUB/mode")" in
+  async) cast send --async --private-key "$KEY" --rpc-url "$url" 0x000000000000000000000000000000000000dEaD --value 7; exit 1 ;;
+  noop) exit 0 ;;
+esac
+EOF2
+  chmod +x "$1/bin/forge"
+}
+crown_sh() { # crown_sh <dir> <forge mode> <out>: e2e/crown/sepolia.sh <dir>/run deposit 0 with the stub forge; anvil is
+             # its only endpoint (its own proxy, none of an earlier case's); prints the exit status
+  echo "$2" > "$1/stub/mode"; local rc=0
+  env -u PUBNET_URL -u PUBNET_DIR -u PUBNET_SENDER PUBNET_SEPOLIA_RPC="$R" PATH="$1/bin:$PATH" STUB="$1/stub" KEY="$K1" \
+    SEPOLIA_RPC_URL="$R" ETH_FROM="$A1" bash "$WT/e2e/crown/sepolia.sh" "$1/run" deposit 0 > "$1/$3.out" 2>&1 || rc=$?
+  echo "$rc"
+}
+g7h() { # the review's g7h, through e2e/crown/sepolia.sh: a deposit sent, gone, mined after all (status 1): the stage
+        # stops (1) with its manifest row; after the operator's ack the stage runs again, sends nothing, and the row stays
+  local d="$S/g7h"; mkdir -p "$d/run"; anvil_up "$d"; stub_forge "$d"
+  echo '{"chainId": 31337, "vault": "0x00000000000000000000000000000000000000aa"}' > "$d/run/identity.json"
+  local J="$d/run/net/journal.jsonl" M="$d/run/manifest.json" rc1 rc2 rc3 h raw g m2 m3 n0 n1
+  cast rpc evm_setAutomine false --rpc-url "$R" > /dev/null
+  rc1="$(crown_sh "$d" async 1)"; h="$(last_hash "$d/run")"; raw="$(jq -r 'select(.event == "signed") | .raw' "$J" | tail -n 1)"
+  cast rpc anvil_dropAllTransactions --rpc-url "$R" > /dev/null
+  g="$(PUBNET_SEPOLIA_RPC="$R" python3 -I "$WT/scripts/pubnet.py" gone --journal "$J" --hash "$h" --sender "$A1" --first "$R" 2>&1 | tail -n 1 | cut -c1-120)"
+  cast publish "$raw" --async --rpc-url "$R" > /dev/null 2>&1; cast rpc evm_mine --rpc-url "$R" > /dev/null
+  cast rpc evm_setAutomine true --rpc-url "$R" > /dev/null
+  rc2="$(crown_sh "$d" noop 2)"; m2="$(jq -c '.stages["deposit-0"] // [] | map(.hash)' "$M" 2>/dev/null)"
+  python3 -I "$WT/scripts/pubnet.py" ack --journal "$J" --hash "$h" --why "test: checked, it is mined" > /dev/null
+  n0="$(signed "$d/run")"; rc3="$(crown_sh "$d" noop 3)"; n1="$(signed "$d/run")"
+  m3="$(jq -c '.stages["deposit-0"] // [] | map(.hash)' "$M" 2>/dev/null)"
+  verdict g7h "$([ "$rc2" = 1 ] && [ "$m2" = "[\"$h\"]" ] && [ "$rc3" = 0 ] && [ "$m3" = "$m2" ] && [ "$n1" = "$n0" ] && echo 1)" "sent, forge failed: exit $rc1; gone ('${g:20:28}'); mined after all (status $(cast receipt "$h" status --rpc-url "$R" 2>/dev/null | head -n 1)): exit $rc2 (want 1), manifest deposit-0 rows $(jq -c 'map(.[0:10])' <<< "${m2:-[]}"); after the operator's ack: exit $rc3 (want 0), rows $(jq -c 'map(.[0:10])' <<< "${m3:-[]}") (want the same), sends $n0 -> $n1"
+  cleanup
+}
+cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1 g2 g4 g4b g4c g5 g6 g7 g7b g7c g7s g7e g7e5 g7h)
 for c in "${cases[@]}"; do "$c"; done
 echo "attacks: $(( ${#cases[@]} - FAILS )) of ${#cases[@]} pass"
 [ "$FAILS" = 0 ]

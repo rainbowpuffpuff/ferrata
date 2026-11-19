@@ -58,7 +58,8 @@ record() {
   local acked
   rows="$(python3 -I "$PUBNET_PY" rows --journal "$PUBNET_DIR/journal.jsonl" --stage "$name")"
   acked="$(python3 -I "$PUBNET_PY" acked --journal "$PUBNET_DIR/journal.jsonl")"
-  # A transaction the operator acknowledged (pubnet.py ack: a reverted one, say) leaves the stage's rows.
+  # A transaction the operator acknowledged (pubnet.py ack) that did not succeed (reverted, or gone) leaves the stage's
+  # rows; one mined with status 0x1 stays (`acked` never lists it: an acknowledged find of a gone one mined after all).
   jq --arg s "$name" --argjson rows "$rows" --argjson acked "$acked" '.stages[$s] = ([(.stages[$s] // [])[]
       | select(.hash as $h | ($acked | index($h)) == null)] as $old | $old
       + [$rows[] | select(.hash as $h | ($old | map(.hash) | index($h)) == null)])
