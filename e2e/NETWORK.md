@@ -202,3 +202,13 @@ header and the light-client finality update.
   step whose calldata varies between plans (it carries the nonce, a computed address or a time) can go out twice. No current DeployVault or Crown step does: DeployVault's calldata comes from its record and parameters,
   Crown's from crown.json (`netfault/attacks` case v1b shows the limit with a model step). With two endpoints in
   all, one liar stops the stage (no two agree) rather than steering it.
+- A transaction marked gone that only one endpoint later reports mined: after the operator's `ack` of that find, the
+  journal keeps it as gone, the manifest has no row and the hash is not checked again; it stays outside the done
+  set, the fence and the nonce floor, so only the nonce rule and the pin moving to the head keep its step from going
+  out again. Before acknowledging a find that one endpoint alone reports, check the chain yourself.
+- With two or more transactions marked gone, a `resolve` that meets an endpoint error exits 75 and may not report
+  another hash's unacknowledged find (exit 3) on that call; nothing is sent either way, and the 3 returns once every
+  endpoint answers.
+- Where this file says two endpoints must agree on a receipt, they must agree on its block hash, block number and
+  status; with one endpoint configured, its answer alone is used. The re-check of gone transactions runs on every
+  `resolve` that reaches it (a call that stops earlier does not).
