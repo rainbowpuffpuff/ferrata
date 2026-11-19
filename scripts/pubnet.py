@@ -657,7 +657,7 @@ class Journal:
             return {h: dict(v) for h, v in self._cache[1].items()}
         out: dict[str, dict] = {}
         with open(self.path) as f:
-            for line in f:
+            for i, line in enumerate(f):
                 line = line.strip()
                 if not line:
                     continue
@@ -689,10 +689,14 @@ class Journal:
                                                                          "contractAddress", "why") if k in r})
                 elif r.get("event") == "ack":  # an operator looked at a bad or unknown fate (pubnet.py ack)
                     cur["acked"] = r.get("why", "")
+                    cur["ack_at"] = i
                     if cur["state"] not in FINAL:
                         cur["state"] = "acked"
                 elif r.get("event") == "gone":  # checked absent from the chain (pubnet.py gone): not mined after all
                     cur.update(state="gone", why=r.get("why", ""))
+                elif r.get("event") == "regained":  # a transaction marked gone that an endpoint knows after all
+                    cur["regained_at"] = i
+                    cur["regained_by"] = r.get("by", [])
         self._cache = ((st.st_mtime_ns, st.st_size), out)
         return {h: dict(v) for h, v in out.items()}
 
@@ -809,8 +813,11 @@ def add_to_manifest(path: str, txs: list) -> None:
         rc = t["rc"]
         rows = m.setdefault("stages", {}).setdefault(t.get("stage") or "-", [])
         if t["hash"] not in [r.get("hash") for r in rows]:
-            rows.append({"hash": t["hash"], "blockNumber": rc.get("blockNumber"), "status": rc.get("status"),
-                         "gasUsed": rc.get("gasUsed"), "to": rc.get("to"), "contractAddress": rc.get("contractAddress")})
+            row = {"hash": t["hash"], "blockNumber": rc.get("blockNumber"), "status": rc.get("status"),
+                   "gasUsed": rc.get("gasUsed"), "to": rc.get("to"), "contractAddress": rc.get("contractAddress")}
+            if rc.get("regained"):
+                row["regained"] = rc["regained"]  # marked gone, then known to an endpoint: see the journal
+            rows.append(row)
     with open(path + ".part", "w") as f:
         json.dump(m, f, indent=1)
         f.write("\n")
@@ -837,25 +844,51 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print, man
                 + ", ".join(t["hash"] for t in j.open_txs()))
             return TEMPFAIL
         time.sleep(pause)
-    regained = []
-    for t in [x for x in j.txs().values() if x["state"] == "gone"]:  # one marked gone that shows up mined after all
-        try:
-            rc = net.receipt(t["hash"])
-        except Transient:
-            rc = None
-        if rc:
+    # Transactions marked gone, looked at again with gone's own rule inverted: every endpoint is asked for the receipt
+    # and the transaction; ANY one that has either stops the run (3), the find is recorded (journal, manifest), and the
+    # stop is sticky: every later resolve stops again until an operator's `pubnet.py ack`. An endpoint that errs here
+    # stops the run too (transient): a check that could not be made never passes.
+    for t in j.txs().values():
+        if t["state"] != "gone" or (t.get("regained_at") is not None and t.get("ack_at", -1) > t["regained_at"]):
+            continue
+        found, receipts, errs = [], {}, []
+        for url in net.urls:
+            try:
+                rc = _rpc_once(url, "eth_getTransactionReceipt", [t["hash"]], net.timeout)
+                tx = None if rc else _rpc_once(url, "eth_getTransactionByHash", [t["hash"]], net.timeout)
+            except (Transient, Permanent) as e:
+                errs.append(f"{label(url)}: {str(e)[:100]}")
+                continue
+            if rc:
+                found.append(f"{label(url)}: receipt, block {int(rc['blockNumber'], 16)}, status {rc.get('status')}")
+                k = (rc.get("blockHash"), rc.get("blockNumber"), rc.get("status"))
+                receipts.setdefault(k, []).append(rc)
+            elif tx:
+                found.append(f"{label(url)}: the transaction" + (" (pending)" if not tx.get("blockNumber") else ""))
+        if not found:
+            if errs:
+                log(f"pubnet: transient: {t['hash']} is marked gone and not every endpoint could be asked about it"
+                    f" ({'; '.join(errs)}): the run waits until every endpoint has answered")
+                return TEMPFAIL
+            continue
+        j.append({"event": "regained", "hash": t["hash"], "by": found})
+        agreed = [v[0] for v in receipts.values() if len(v) >= net.need()]
+        if agreed:  # two endpoints alike (or the only one): it is mined, its fate recorded
+            rc = agreed[0]
             j.append({"event": "fate", "hash": t["hash"], "fate": "mined", "status": rc.get("status"),
                       "block": int(rc["blockNumber"], 16), "blockHash": rc.get("blockHash"),
                       "gasUsed": rc.get("gasUsed"), "contractAddress": rc.get("contractAddress")})
-            regained.append({**t, "status": rc.get("status"), "block": int(rc["blockNumber"], 16), "rc": rc})
-    if regained:
         if manifest:
-            add_to_manifest(manifest, regained)
-        for t in regained:
+            rc = agreed[0] if agreed else next((v[0] for v in receipts.values()), {})
+            add_to_manifest(manifest, [{**t, "rc": {**rc, "regained": found}}])
+    sticky = [t for t in j.txs().values()
+              if t.get("regained_at") is not None and t.get("ack_at", -1) < t["regained_at"]]
+    if sticky:
+        for t in sticky:
             log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}, nonce {t.get('nonce')}) was marked gone, and"
-                f" the endpoints now give its receipt (two alike, or the only one): mined in block {t['block']}, status {t['status']}. Recorded in"
-                f" the journal" + (" and the manifest" if manifest else "") + "; its step may have gone out twice:"
-                " check the chain before going on")
+                f" an endpoint knows it after all ({'; '.join(t.get('regained_by', []))}); recorded in the journal"
+                + (" and the manifest" if manifest else "") + ". Its step may have gone out twice: check the chain, then"
+                f" `pubnet.py ack --journal {j.path} --hash {t['hash']}`; until then every resolve stops here")
         return 3
     lost = fence_lost(net, j, sender)
     if lost:

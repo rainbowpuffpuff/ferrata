@@ -5,7 +5,8 @@
 # creation step).
 #   bash e2e/netfault/attacks/attacks.sh [case ...]     cases c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11, and the
 #   review's round 2: v1a v1b v2 v3 v4 v5 g1, and round 3 (attacks on `pubnet.py gone`, liar3.py): g2 g4 g4b g4c g5
-#   g6, and g7 (a gone transaction mined after all) (default all)
+#   g6, and g7 (a gone transaction mined after all), and round 4 (the re-check of gone transactions, liar4.py): g7b
+#   g7c g7s g7e (default all)
 # Each case prints PASS (the safe outcome) or FAIL with what was observed; exit 0 if all pass. Scratch:
 # $NETFAULT_SCRATCH (default ../tmp/netfault-attacks beside the repository).
 set -uo pipefail
@@ -394,7 +395,60 @@ g7() { # a transaction marked gone (written into the journal as an older check m
   verdict g7 "$([ "$rc" = 3 ] && [ "$rows" = 1 ] && grep -q 'was marked gone' <<< "$msg" && echo 1)" "marked gone, mined after all: resolve exit $rc; manifest rows of the stage $rows; $(grep -o 'was marked gone.*' <<< "$msg" | cut -c1-90)"
   cleanup
 }
-cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1 g2 g4 g4b g4c g5 g6 g7)
+
+# ---- the review's round 4 (tests/r4/gone4.sh): the re-check of transactions marked gone, kept -----------------------
+l4_up() { # l4_up <dir> <name>: a liar4 endpoint (liar3's switches plus .head, .slow, .notx); its URL
+  local d="$1" n="$2"; python3 -I "$T/liar4.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!)
+  waitfile "$d/$n.port"; echo "http://127.0.0.1:$(cat "$d/$n.port")"; }
+gone_then_mined() { # gone_then_mined <dir> <sig>: a deposit sent, dropped from every pool, rightly marked gone (H, GONE),
+                    # then its bytes mined after all (a third party rebroadcast them)
+  local d="$1" sig="$2" raw
+  cast rpc evm_setAutomine false --rpc-url "$R" > /dev/null
+  (cd "$T/model" && timeout 20 forge script script/Dep.s.sol:DepScript --sig "$sig" 0 --rpc-url "$PUBNET_URL/deposit-0" \
+     --sender "$A1" --private-key "$K1" --broadcast --skip-simulation --slow > "$d/first.log" 2>&1)
+  H="$(last_hash "$d")"; raw="$(jq -r 'select(.event == "signed") | .raw' "$d/net/journal.jsonl" | tail -n 1)"
+  cast rpc anvil_dropAllTransactions --rpc-url "$R" > /dev/null
+  GONE="$(gone "$d" "$H")"
+  cast publish "$raw" --async --rpc-url "$R" > /dev/null 2>&1; cast rpc evm_mine --rpc-url "$R" > /dev/null; sleep 1
+  cast rpc evm_setAutomine true --rpc-url "$R" > /dev/null
+}
+resolve_rc() { local rc=0; python3 -I "$WT/scripts/pubnet.py" resolve --network sepolia --journal "$1/net/journal.jsonl" \
+  --sender "$A1" --budget 5 --manifest "$1/manifest.json" > "$1/resolve.out" 2>&1 || rc=$?; echo "$rc"; }
+g7b() { # gone rightly, mined later; two liars hide its receipt and transaction and serve the state from before it:
+        # the re-check (any one endpoint knows it) must stop, and nothing is sent again
+  local sig="${G7SIG:-guarded(uint256)}" nm="${G7NAME:-g7b}"; local d="$S/$nm"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2 P; L1="$(l4_up "$d" l1)"; L2="$(l4_up "$d" l2)"; P="$(l4_up "$d" p)"; proxy_up "$d" "$L1,$L2,$P"
+  gone_then_mined "$d" "$sig"; local b; b="$(cast block-number --rpc-url "$R")"
+  touch "$d/l1.hide" "$d/l1.notx" "$d/l2.hide" "$d/l2.notx"; echo "$b" > "$d/l1.stale"; echo "$b" > "$d/l2.stale"
+  local rc1 n0 n1 r; rc1="$(resolve_rc "$d")"; n0="$(signed "$d")"
+  kill -9 "$PUBNET_PID"; proxy_up "$d" "$L1,$L2,$P"
+  r="$(stage "$d" deposit-0-again "$sig" 0)"; n1="$(signed "$d")"
+  verdict "$nm" "$([ "$rc1" = 3 ] && [ "$n1" = "$n0" ] && [ "$(effects)" = 1 ] && echo 1)" "$sig: gone -> '${GONE:20:28}'; mined later, receipt hidden by two liars: resolve exit $rc1 (want 3); the stage again: exit $r, sends $n0 -> $n1; effects $(effects) (want 1)"
+  cleanup
+}
+g7c() { G7SIG='open(uint256)' G7NAME=g7c g7b; } # the same, an unguarded step
+g7s() { # the stop is sticky: every resolve stops again until the operator's ack; after it, nothing more is sent
+  local d="$S/g7s"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  gone_then_mined "$d" 'guarded(uint256)'
+  local rc1 rc2 rc3 rc4 n0 n1 r; rc1="$(resolve_rc "$d")"; rc2="$(resolve_rc "$d")"
+  python3 -I "$WT/scripts/pubnet.py" ack --journal "$d/net/journal.jsonl" --hash "$H" --why "test: checked" > /dev/null
+  rc3="$(resolve_rc "$d")"; rc4="$(resolve_rc "$d")"; n0="$(signed "$d")"
+  r="$(stage "$d" deposit-0-again 'guarded(uint256)' 0)"; n1="$(signed "$d")"
+  verdict g7s "$([ "$rc1" = 3 ] && [ "$rc2" = 3 ] && [ "$rc3" = 0 ] && [ "$rc4" = 0 ] && [ "$n1" = "$n0" ] && echo 1)" "a gone transaction mined after all: resolve $rc1, again $rc2 (want 3, 3); after the ack $rc3, $rc4 (want 0, 0); manifest rows $(jq -c '[.stages[][] | .status]' "$d/manifest.json" 2>/dev/null); the stage again: exit $r, sends $n0 -> $n1"
+  cleanup
+}
+g7e() { # an endpoint that errs during the re-check stops the run (transient), never passes it
+  local d="$S/g7e"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local P D; P="$(l4_up "$d" p)"; D="$(l4_up "$d" dn)"; proxy_up "$d" "$P,$D"
+  cast rpc evm_setAutomine false --rpc-url "$R" > /dev/null
+  (cd "$T/model" && timeout 20 forge script script/Dep.s.sol:DepScript --sig 'guarded(uint256)' 0 --rpc-url "$PUBNET_URL/deposit-0" \
+     --sender "$A1" --private-key "$K1" --broadcast --skip-simulation --slow > "$d/first.log" 2>&1)
+  local h g rc; h="$(last_hash "$d")"; cast rpc anvil_dropAllTransactions --rpc-url "$R" > /dev/null
+  g="$(gone "$d" "$h")"; touch "$d/dn.down"; rc="$(resolve_rc "$d")"
+  verdict g7e "$([ "$rc" = 75 ] && echo 1)" "marked gone ('${g:20:28}'), then one endpoint down: resolve exit $rc (want 75: transient, never 0)"
+  cleanup
+}
+cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1 g2 g4 g4b g4c g5 g6 g7 g7b g7c g7s g7e)
 for c in "${cases[@]}"; do "$c"; done
 echo "attacks: $(( ${#cases[@]} - FAILS )) of ${#cases[@]} pass"
 [ "$FAILS" = 0 ]

@@ -80,8 +80,11 @@ The audit of every script that talks to a public network (18 tables, call by cal
    null: not mined, not in a pool), and report the sender's nonce at or below the transaction's at the highest head
    any endpoint reports (each must serve that block); one endpoint that disagrees refuses. Then the transaction leaves
    the fence, the nonce floor and the set of done calls, and its bytes may be sent again as they are (they are one
-   transaction). `resolve` looks for a receipt of every transaction marked gone; one that shows up mined after all is
-   recorded (journal and manifest) and stops the run loudly: its step may have gone out twice.
+   transaction). `resolve` asks every endpoint, on every call, for the receipt and the transaction of each hash marked
+   gone (gone's rule inverted): if any one endpoint has either, the run stops (exit 3), the find is recorded in the
+   journal and the manifest (its fate as mined when two endpoints give the receipt alike), and every later `resolve`
+   stops again until an operator's `pubnet.py ack` for that hash; an endpoint that errs during this check stops the
+   run too (transient), never passes it. Its step may have gone out twice: the stop is for an operator to check.
 6. **Exit status** of `e2e/crown/sepolia.sh` and `vault/script/deploy.sh`: 0 done; 1 permanent (a human looks);
    75 transient with nothing in flight (the budget spent, or a fate still unknown).
 7. **The runner** (`e2e/crown/cloud/drive.py`) resumes a transient stop (75, or a read that failed transiently) by
@@ -190,8 +193,8 @@ header and the light-client finality update.
 - Two endpoints that lie alike (the same wrong state, or both one transaction behind) outvote the truth: the reads
   they agree on are believed. What still holds then: a replay that produces the same calldata as a mined transaction
   is refused (the journal's rule above); the single-transaction crown stages are skipped from the journal; a nonce
-  below the journal's floor is never agreed, and a stale nonce agreed by two is never above the chain's. What does
-  not: a step whose calldata varies between plans (it carries the nonce, a computed address or a time) can go out
-  twice. No current DeployVault or Crown step does: DeployVault's calldata comes from its record and parameters,
+  below the journal's floor is never agreed, and a stale nonce agreed by two is never above the chain's; a
+  transaction marked gone that any one endpoint still knows stops the run (the re-check above). What does not: a
+  step whose calldata varies between plans (it carries the nonce, a computed address or a time) can go out twice. No current DeployVault or Crown step does: DeployVault's calldata comes from its record and parameters,
   Crown's from crown.json (`netfault/attacks` case v1b shows the limit with a model step). With two endpoints in
   all, one liar stops the stage (no two agree) rather than steering it.
