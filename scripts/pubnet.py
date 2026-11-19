@@ -853,7 +853,7 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print, man
             add_to_manifest(manifest, regained)
         for t in regained:
             log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}, nonce {t.get('nonce')}) was marked gone, and"
-                f" two endpoints now give its receipt: mined in block {t['block']}, status {t['status']}. Recorded in"
+                f" the endpoints now give its receipt (two alike, or the only one): mined in block {t['block']}, status {t['status']}. Recorded in"
                 f" the journal" + (" and the manifest" if manifest else "") + "; its step may have gone out twice:"
                 " check the chain before going on")
         return 3
