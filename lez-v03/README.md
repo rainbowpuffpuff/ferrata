@@ -1,7 +1,7 @@
 # Ferrata's light client on LEZ v0.3.1, the public LEZ testnet's version
 
 **EXPERIMENTAL AND UNAUDITED. Not the proposal's deliverable: the LEZ v0.4 programs of
-[`../lez/`](../lez/README.md) are.** Its one-transaction finality update replaces the final exponentiation by
+[`../lez/`](../lez/) are.** Its one-transaction finality update replaces the final exponentiation by
 the residue-witness check of [`../bench/residue`](../bench/RESIDUE.md) and may compose the signing key from one
 multiproof of the non-signers ([`../bench/residue-agg`](../bench/RESIDUE.md)); with `Verify::ResidueSummary` a
 handoff is one transaction too, the next committee adopted by its summary instead of its 512 keys
