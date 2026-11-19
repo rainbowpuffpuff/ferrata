@@ -24,7 +24,9 @@ export PUBNET_REQUEST_BUDGET_S=5 PUBNET_TIMEOUT_S=3 PUBNET_STAGE_BUDGET_S=20 PUB
   PUBNET_RESOLVE_BUDGET_S=10 PUBNET_REPLACED_AFTER_S=2 PUBNET_ATTEMPT_TIMEOUT_S=60 PUBNET_NETWORK=sepolia PUBNET_FIRST=
 . "$WT/scripts/pubnet.sh"
 PIDS=()
-cleanup() { for p in "${PIDS[@]}"; do kill -9 "$p" 2>/dev/null; done; PIDS=(); }
+# The endpoints are started inside $(...) (a subshell, whose PIDS+= is lost), so each start also writes its pid to
+# $S/pids; cleanup kills both lists.
+cleanup() { for p in "${PIDS[@]}" $(cat "$S/pids" 2>/dev/null); do kill -9 "$p" 2>/dev/null; done; PIDS=(); : > "$S/pids"; }
 trap cleanup EXIT
 free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 waitfile() { for _ in $(seq 1 100); do [ -s "$1" ] && return 0; sleep 0.1; done; return 1; }
@@ -36,7 +38,7 @@ anvil_up() { # anvil_up <dir> [anvil args]: R=its URL
 liar_up() { # liar_up <dir> <name> <mode>: prints its URL
   local d="$1" n="$2" m="$3"
   python3 -I "$T/liar.py" --upstream "$R" --mode "$m" --ctl "$d/$n.ctl" --port-file "$d/$n.port" --log "$d/$n.jsonl" \
-    --sender "${A1,,}" > "$d/$n.err" 2>&1 & PIDS+=($!)
+    --sender "${A1,,}" > "$d/$n.err" 2>&1 & PIDS+=($!); echo "$!" >> "$S/pids"
   waitfile "$d/$n.port"; echo "http://127.0.0.1:$(cat "$d/$n.port")"
 }
 proxy_up() { # proxy_up <dir> <endpoints csv>: exports PUBNET_URL PUBNET_DIR PUBNET_SENDER PUBNET_PID
@@ -326,7 +328,7 @@ g1() { # gone refuses a transaction still on chain (nothing may be sent twice)
 
 # ---- the review's round 3 (tests/r3/gone.sh): attacks on `pubnet.py gone`, kept -----------------------------------
 l3_up() { # l3_up <dir> <name>: a liar3 endpoint (lies switched by files <dir>/<name>.hide|.nlow|.stale|.down); its URL
-  local d="$1" n="$2"; python3 -I "$T/liar3.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!)
+  local d="$1" n="$2"; python3 -I "$T/liar3.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!); echo "$!" >> "$S/pids"
   waitfile "$d/$n.port"; echo "http://127.0.0.1:$(cat "$d/$n.port")"; }
 not_marked() { case "$1" in *"marked gone"*) ;; *) echo 1 ;; esac; }
 g2() { # gone on a transaction still in a pool (not mined yet): refused; if it were granted and the tx then mined, the
@@ -399,7 +401,7 @@ g7() { # a transaction marked gone (written into the journal as an older check m
 
 # ---- the review's round 4 (tests/r4/gone4.sh): the re-check of transactions marked gone, kept -----------------------
 l4_up() { # l4_up <dir> <name>: a liar4 endpoint (liar3's switches plus .head, .slow, .notx); its URL
-  local d="$1" n="$2"; python3 -I "$T/liar4.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!)
+  local d="$1" n="$2"; python3 -I "$T/liar4.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!); echo "$!" >> "$S/pids"
   waitfile "$d/$n.port"; echo "http://127.0.0.1:$(cat "$d/$n.port")"; }
 gone_then_mined() { # gone_then_mined <dir> <sig>: a deposit sent, dropped from every pool, rightly marked gone (H, GONE),
                     # then its bytes mined after all (a third party rebroadcast them)
