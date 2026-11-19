@@ -73,10 +73,15 @@ The audit of every script that talks to a public network (18 tables, call by cal
    --hash H`: the transaction leaves the stage's manifest rows, and a stage whose transaction reverted runs again. A
    transaction recorded mined that is no longer on the chain (a reorg; a fork's anvil reloaded from a state dump older
    than its last send) stops every stage (`resolve`: "not on the chain now"; at a fork-mode start, drive.py compares
-   the journal's fence with anvil's head) until an operator runs `pubnet.py gone --journal F --hash H --sender A`,
-   which marks it gone only after checking that no endpoint has its receipt and that the sender's nonce, agreed by
-   two endpoints, is not above it; it then leaves the fence, the nonce floor and the set of done calls, and its bytes
-   may be sent again as they are (they are one transaction).
+   the journal's fence with anvil's head) until an operator runs `pubnet.py gone --journal F --hash H --sender A`.
+   Marking a transaction gone forgets its protections, so `gone` (and the check that prompts it) is unanimous and
+   fails closed: **every** configured endpoint must answer every question (an error, a timeout or a missing answer
+   refuses), and every one must return no receipt **and** no transaction for the hash (`eth_getTransactionByHash`
+   null: not mined, not in a pool), and report the sender's nonce at or below the transaction's at the highest head
+   any endpoint reports (each must serve that block); one endpoint that disagrees refuses. Then the transaction leaves
+   the fence, the nonce floor and the set of done calls, and its bytes may be sent again as they are (they are one
+   transaction). `resolve` looks for a receipt of every transaction marked gone; one that shows up mined after all is
+   recorded (journal and manifest) and stops the run loudly: its step may have gone out twice.
 6. **Exit status** of `e2e/crown/sepolia.sh` and `vault/script/deploy.sh`: 0 done; 1 permanent (a human looks);
    75 transient with nothing in flight (the budget spent, or a fate still unknown).
 7. **The runner** (`e2e/crown/cloud/drive.py`) resumes a transient stop (75, or a read that failed transiently) by

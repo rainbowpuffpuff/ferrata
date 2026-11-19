@@ -35,6 +35,7 @@ export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 TMPDIR="${TMPDIR:-$here/../tmp}"
 mkdir -p "$TMPDIR"
 margin="${FERRATA_GAS_MARGIN_PCT:-125}"
 id="$run/identity.json"; manifest="$run/manifest.json"; mkdir -p "$run/logs"
+export PUBNET_MANIFEST="$manifest" # where resolve records a transaction marked gone that shows up mined after all
 say() { echo "[$(date -u +%FT%TZ)] $*"; }
 die() { say "STOP: $*"; exit 1; }
 die_transient() { say "STOP (transient, nothing in flight): $*"; exit 75; }

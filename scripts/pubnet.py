@@ -757,21 +757,35 @@ def resolve_one(net: Net, j: Journal, t: dict, sender: str, log=print) -> str:
 
 
 def absent(net: Net, t: dict, sender: str) -> str | None:
-    """Why the journaled transaction t is not on the chain, or None if it may be: every endpoint asked for its receipt
-    (one that has it is enough to keep it), and the sender's nonce, agreed by two endpoints at the agreed head, not
-    above its nonce."""
+    """Why the journaled transaction t is not on the chain, or None if it may be. Unanimous and fail-closed, because
+    marking a transaction gone forgets its protections (the done set, the journal skip, the nonce floor): EVERY
+    configured endpoint must answer every question (an error, a timeout or a missing answer: None), and every one must
+    have no receipt and no transaction for the hash, and report the sender's nonce at or below the transaction's at
+    the highest head any endpoint reports (which each must serve: a node behind it cannot vouch). One endpoint that
+    disagrees is enough to keep the transaction. (Not an agreed head, the second-highest: two endpoints lying alike
+    could lower that one below the transaction's block.)"""
+    if t.get("nonce") is None:
+        return None
+    h, heads = t["hash"], []
     for url in net.urls:
         try:
-            r = _rpc_once(url, "eth_getTransactionReceipt", [t["hash"]], net.timeout)
-        except (Transient, Permanent):
-            return None  # an endpoint that does not answer might have it
-        if r:
+            if _rpc_once(url, "eth_getTransactionReceipt", [h], net.timeout):
+                return None
+            if _rpc_once(url, "eth_getTransactionByHash", [h], net.timeout):
+                return None  # known to a node: mined, or still in its pool
+            heads.append(int(_rpc_once(url, "eth_blockNumber", [], net.timeout), 16))
+        except (Transient, Permanent, ValueError, TypeError):
             return None
-    head = net.head()
-    n = int(net.quorum("eth_getTransactionCount", [sender, hex(head)]), 16)
-    if t.get("nonce") is None or n > t["nonce"]:
-        return None
-    return f"no endpoint has its receipt; the sender's nonce is {n} at block {head} (the transaction's {t['nonce']})"
+    top = max(heads)
+    for url in net.urls:
+        try:
+            n = int(_rpc_once(url, "eth_getTransactionCount", [sender, hex(top)], net.timeout), 16)
+        except (Transient, Permanent, ValueError, TypeError):
+            return None
+        if n > t["nonce"]:
+            return None
+    return (f"every endpoint ({len(net.urls)}) answered: no receipt, no transaction for the hash, the sender's nonce"
+            f" at block {top} at or below the transaction's ({t['nonce']})")
 
 
 def fence_lost(net: Net, j: Journal, sender: str) -> dict | None:
@@ -785,7 +799,25 @@ def fence_lost(net: Net, j: Journal, sender: str) -> dict | None:
         return None
 
 
-def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> int:
+def add_to_manifest(path: str, txs: list) -> None:
+    """Rows for transactions found mined (manifest.json's format: stages -> rows), each hash once."""
+    try:
+        m = json.load(open(path))
+    except (OSError, json.JSONDecodeError):
+        m = {"stages": {}}
+    for t in txs:
+        rc = t["rc"]
+        rows = m.setdefault("stages", {}).setdefault(t.get("stage") or "-", [])
+        if t["hash"] not in [r.get("hash") for r in rows]:
+            rows.append({"hash": t["hash"], "blockNumber": rc.get("blockNumber"), "status": rc.get("status"),
+                         "gasUsed": rc.get("gasUsed"), "to": rc.get("to"), "contractAddress": rc.get("contractAddress")})
+    with open(path + ".part", "w") as f:
+        json.dump(m, f, indent=1)
+        f.write("\n")
+    os.replace(path + ".part", path)
+
+
+def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print, manifest: str | None = None) -> int:
     """0: every transaction has a fate, all mined with status 1; 3: one reverted / replaced / rejected; 75: unknown."""
     deadline = time.monotonic() + budget
     cache: dict[str, dict] = {}
@@ -805,6 +837,26 @@ def resolve_all(net: Net, j: Journal, sender: str, budget: float, log=print) -> 
                 + ", ".join(t["hash"] for t in j.open_txs()))
             return TEMPFAIL
         time.sleep(pause)
+    regained = []
+    for t in [x for x in j.txs().values() if x["state"] == "gone"]:  # one marked gone that shows up mined after all
+        try:
+            rc = net.receipt(t["hash"])
+        except Transient:
+            rc = None
+        if rc:
+            j.append({"event": "fate", "hash": t["hash"], "fate": "mined", "status": rc.get("status"),
+                      "block": int(rc["blockNumber"], 16), "blockHash": rc.get("blockHash"),
+                      "gasUsed": rc.get("gasUsed"), "contractAddress": rc.get("contractAddress")})
+            regained.append({**t, "status": rc.get("status"), "block": int(rc["blockNumber"], 16), "rc": rc})
+    if regained:
+        if manifest:
+            add_to_manifest(manifest, regained)
+        for t in regained:
+            log(f"pubnet: permanent: {t['hash']} (stage {t.get('stage')}, nonce {t.get('nonce')}) was marked gone, and"
+                f" two endpoints now give its receipt: mined in block {t['block']}, status {t['status']}. Recorded in"
+                f" the journal" + (" and the manifest" if manifest else "") + "; its step may have gone out twice:"
+                " check the chain before going on")
+        return 3
     lost = fence_lost(net, j, sender)
     if lost:
         log(f"pubnet: permanent: the journal's last mined transaction {lost['hash']} (stage {lost.get('stage')}, block"
@@ -1364,6 +1416,8 @@ def main() -> int:
     r.add_argument("--sender", required=True)
     r.add_argument("--first")
     r.add_argument("--budget", type=float, default=float(os.environ.get("PUBNET_RESOLVE_BUDGET_S", "600")))
+    r.add_argument("--manifest", default=os.environ.get("PUBNET_MANIFEST"),
+                   help="where a transaction marked gone but found mined is recorded (sepolia.sh sets it)")
     k = sub.add_parser("ack")
     k.add_argument("--journal", required=True)
     k.add_argument("--hash", required=True)
@@ -1393,7 +1447,7 @@ def main() -> int:
         serve(a)
     elif a.cmd == "resolve":
         return resolve_all(Net(a.network, first=a.first), Journal(a.journal), a.sender.lower(), a.budget,
-                           log=lambda m: print(f"pubnet resolve: {m}", file=sys.stderr))
+                           log=lambda m: print(f"pubnet resolve: {m}", file=sys.stderr), manifest=a.manifest)
     elif a.cmd == "ack":
         if a.hash not in Journal(a.journal).txs():
             sys.exit(f"pubnet: {a.hash} is not in {a.journal}")

@@ -4,7 +4,8 @@
 # stand-in of the vault's deposit bookkeeping (guarded: like depositETH; open: an effect every time, like a DeployVault
 # creation step).
 #   bash e2e/netfault/attacks/attacks.sh [case ...]     cases c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11, and the
-#   review's round 2: v1a v1b v2 v3 v4 v5 g1 (default all)
+#   review's round 2: v1a v1b v2 v3 v4 v5 g1, and round 3 (attacks on `pubnet.py gone`, liar3.py): g2 g4 g4b g4c g5
+#   g6, and g7 (a gone transaction mined after all) (default all)
 # Each case prints PASS (the safe outcome) or FAIL with what was observed; exit 0 if all pass. Scratch:
 # $NETFAULT_SCRATCH (default ../tmp/netfault-attacks beside the repository).
 set -uo pipefail
@@ -320,7 +321,80 @@ g1() { # gone refuses a transaction still on chain (nothing may be sent twice)
   verdict g1 "$([ -z "$st" ] && [ "$(effects)" = 1 ] && grep -q 'may still be on the chain' <<< "$g" && echo 1)" "gone on a mined transaction still on chain: $g; marked: ${st:-no}"
   cleanup
 }
-cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1)
+
+# ---- the review's round 3 (tests/r3/gone.sh): attacks on `pubnet.py gone`, kept -----------------------------------
+l3_up() { # l3_up <dir> <name>: a liar3 endpoint (lies switched by files <dir>/<name>.hide|.nlow|.stale|.down); its URL
+  local d="$1" n="$2"; python3 -I "$T/liar3.py" --upstream "$R" --ctl "$d/$n" --port-file "$d/$n.port" > "$d/$n.err" 2>&1 & PIDS+=($!)
+  waitfile "$d/$n.port"; echo "http://127.0.0.1:$(cat "$d/$n.port")"; }
+not_marked() { case "$1" in *"marked gone"*) ;; *) echo 1 ;; esac; }
+g2() { # gone on a transaction still in a pool (not mined yet): refused; if it were granted and the tx then mined, the
+       # record would lose it
+  local d="$S/g2"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; cast rpc evm_setAutomine false --rpc-url "$R" > /dev/null
+  proxy_up "$d" "$R"
+  (cd "$T/model" && timeout 25 forge script script/Dep.s.sol:DepScript --sig 'guarded(uint256)' 0 --rpc-url "$PUBNET_URL/deposit-0" \
+     --sender "$A1" --private-key "$K1" --broadcast --skip-simulation --slow > "$d/first.log" 2>&1)
+  local h g; h="$(last_hash "$d")"; g="$(gone "$d" "$h")"
+  cast rpc evm_mine --rpc-url "$R" > /dev/null; sleep 1
+  local rc=0 rows; PUBNET_RESOLVE_BUDGET_S=5 python3 -I "$WT/scripts/pubnet.py" resolve --network sepolia \
+    --journal "$d/net/journal.jsonl" --sender "$A1" --budget 5 > /dev/null 2>&1 || rc=$?
+  rows="$(python3 -I "$WT/scripts/pubnet.py" rows --journal "$d/net/journal.jsonl" --stage deposit-0)"
+  verdict g2 "$([ "$(not_marked "$g")" = 1 ] && [ "$rows" != '[]' ] && echo 1)" "a tx in the pool, not mined: gone -> '$g'; then mined; resolve exit $rc; the stage's rows ${rows:0:60}"
+  cleanup
+}
+g4() { # two colluding liars hide the receipt and report a nonce one lower, the honest endpoint's receipts are pruned:
+       # gone on a MINED deposit must be refused (else the liars serve the old state and the step goes out again)
+  local sig="${G4SIG:-guarded(uint256)}" nm="${G4NAME:-g4}"; local d="$S/$nm"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2 P; L1="$(l3_up "$d" l1)"; L2="$(l3_up "$d" l2)"; P="$(l3_up "$d" p)"; proxy_up "$d" "$L1,$L2,$P"
+  local r1 h b g r2; r1="$(stage "$d" deposit-0 "$sig" 0)"; h="$(last_hash "$d")"; b="$(cast block-number --rpc-url "$R")"
+  touch "$d/l1.hide" "$d/l1.nlow" "$d/l2.hide" "$d/l2.nlow" "$d/p.hide"
+  g="$(gone "$d" "$h")"
+  rm -f "$d/l1.nlow" "$d/l2.nlow"; echo "$b" > "$d/l1.stale"; echo "$b" > "$d/l2.stale"
+  kill -9 "$PUBNET_PID"; proxy_up "$d" "$L1,$L2,$P"
+  r2="$(stage "$d" deposit-0-again "$sig" 0)"
+  verdict "$nm" "$([ "$(signed "$d")" = 1 ] && [ "$(not_marked "$g")" = 1 ] && echo 1)" "$sig: two liars + pruned honest receipts: gone -> '$g'; the stage again: exit $r2; sends $(signed "$d") (want 1); effects $(effects)"
+  cleanup
+}
+g4b() { G4SIG='open(uint256)' G4NAME=g4b g4; } # the same, an unguarded step
+g4c() { # the same liars, no operator yet: the stage's own resolve must not call the mined deposit lost
+  local d="$S/g4c"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2 P; L1="$(l3_up "$d" l1)"; L2="$(l3_up "$d" l2)"; P="$(l3_up "$d" p)"; proxy_up "$d" "$L1,$L2,$P"
+  stage "$d" deposit-0 'guarded(uint256)' 0 > /dev/null
+  touch "$d/l1.hide" "$d/l1.nlow" "$d/l2.hide" "$d/l2.nlow" "$d/p.hide"
+  local rc=0 msg; msg="$(python3 -I "$WT/scripts/pubnet.py" resolve --network sepolia --journal "$d/net/journal.jsonl" --sender "$A1" --budget 5 2>&1)" || rc=$?
+  verdict g4c "$([ "$rc" != 3 ] && echo 1)" "the deposit on chain, resolve through two liars: exit $rc $(grep -o 'not on the chain now' <<< "$msg")"
+  cleanup
+}
+g5() { # gone with one endpoint down (it might have the receipt): refused
+  local d="$S/g5"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2; L1="$(l3_up "$d" l1)"; L2="$(l3_up "$d" l2)"; proxy_up "$d" "$L1,$L2"
+  stage "$d" deposit-0 'guarded(uint256)' 0 > /dev/null; local h; h="$(last_hash "$d")"
+  touch "$d/l1.hide" "$d/l1.nlow" "$d/l2.down"
+  local g; g="$(gone "$d" "$h")"
+  verdict g5 "$(not_marked "$g")" "one endpoint down, the other hides the receipt and lies low: gone -> '$g'"
+  cleanup
+}
+g6() { # receipts pruned on every endpoint, nonces honest: the used nonce refuses gone
+  local d="$S/g6"; mkdir -p "$d"; anvil_up "$d"; deploy_dep
+  local L1 L2; L1="$(l3_up "$d" l1)"; L2="$(l3_up "$d" l2)"; proxy_up "$d" "$L1,$L2"
+  stage "$d" deposit-0 'guarded(uint256)' 0 > /dev/null; local h; h="$(last_hash "$d")"
+  touch "$d/l1.hide" "$d/l2.hide"
+  local g; g="$(gone "$d" "$h")"
+  verdict g6 "$(not_marked "$g")" "no endpoint has the receipt, the nonce is used: gone -> '$g'"
+  cleanup
+}
+g7() { # a transaction marked gone (written into the journal as an older check might have) that is mined after all:
+       # resolve stops loudly (3) and records it in the journal and the manifest
+  local d="$S/g7"; mkdir -p "$d"; anvil_up "$d"; deploy_dep; proxy_up "$d" "$R"
+  stage "$d" deposit-0 'guarded(uint256)' 0 > /dev/null; local h; h="$(last_hash "$d")"
+  printf '{"event": "gone", "hash": "%s", "why": "test: an older check"}\n' "$h" >> "$d/net/journal.jsonl"
+  echo '{"stages": {}}' > "$d/manifest.json"
+  local rc=0 msg; msg="$(python3 -I "$WT/scripts/pubnet.py" resolve --network sepolia --journal "$d/net/journal.jsonl" \
+    --sender "$A1" --budget 5 --manifest "$d/manifest.json" 2>&1)" || rc=$?
+  local rows; rows="$(jq -c '.stages["deposit-0"] | length' "$d/manifest.json")"
+  verdict g7 "$([ "$rc" = 3 ] && [ "$rows" = 1 ] && grep -q 'was marked gone' <<< "$msg" && echo 1)" "marked gone, mined after all: resolve exit $rc; manifest rows of the stage $rows; $(grep -o 'was marked gone.*' <<< "$msg" | cut -c1-90)"
+  cleanup
+}
+cases=("$@"); [ ${#cases[@]} -gt 0 ] || cases=(c1 c1b c2 c2b c3 c4 c5 c5b c6 c7 c8 c9 c10 c11 v1a v1b v2 v3 v4 v5 g1 g2 g4 g4b g4c g5 g6 g7)
 for c in "${cases[@]}"; do "$c"; done
 echo "attacks: $(( ${#cases[@]} - FAILS )) of ${#cases[@]} pass"
 [ "$FAILS" = 0 ]
