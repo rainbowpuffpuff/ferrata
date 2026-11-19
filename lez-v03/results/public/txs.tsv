@@ -1,0 +1,12 @@
+seq	label	tx_hash	block	bedrock_status	bytes	declared_gas	exec_gas_simulated	verdict
+0	deploy: WriteSegment 6 of 6 (73392 bytes)	b4606d58d403feda163757a166f0fb9535113c4cfb8a6cff21aedf3d728d1767	83019	Pending	73688	100000	0	segment holds its chunk
+1	deploy: WriteSegment 5 of 6 (98304 bytes)	5d77eed2a979a75a955609f4800eb50f06fb084fb157a44a346a25af3ebe4c4f	83019	Pending	98696	100000	0	segment holds its chunk
+2	deploy: WriteSegment 4 of 6 (98304 bytes)	9b226680fc577b1a2eb15c329b9583f7e894503123639996530af16c3ecc98cd	83019	Pending	98696	100000	0	segment holds its chunk
+3	deploy: WriteSegment 3 of 6 (98304 bytes)	52ebe87d2fb2969a5a4fa30c97f8199bcce457592375069b4f94e350e1b6b270	83019	Pending	98696	100000	0	segment holds its chunk
+4	deploy: WriteSegment 2 of 6 (98304 bytes)	d616532d223541f79b3e99c1e461a5062bf27637a6d2e1f3ff697b77bc6404b5	83019	Pending	98696	100000	0	segment holds its chunk
+5	deploy: WriteSegment 1 of 6 (98304 bytes)	b49d2dfd59f1cd3a7acdb8eb371cc6becbabcff3f7a560978feac99e908a2d25	83019	Pending	98696	100000	0	segment holds its chunk
+6	deploy: CreateHeader (immutable)	042e117eca845240b7c82a522f55b9a7c2ad9c538ac2236fbd301b0600f756a0	83019	Pending	820	100000	0	program at J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1, image 8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5, immutable
+7	Init	834f78cb118c99ad313bc8b4399c4ead535ccd90c6bb8c8b0f496dd75e41e8df	83019	Pending	50887	8160000	7884541	instance 26caef1f2a5cfc93 active; record of the checkpoint (slot 11606336) equal to the bootstrap's; initial store 21153159d9100a8a
+8	update 000-finality-11606368.ssz (residue witness, one transaction)	5a86e718013eaff360fc49b4056e2adfaf3c68293eeaf92abbd6c83eb7f76347	83020	Pending	11260	7300000	7046803	record of finalized slot 11606368 equal to the update's header
+9	update 001-finality-11606400.ssz (residue witness, one transaction)	7ee4a19de52426422f5b71c8bf3b558dee4aefa0098b3d2f74d83b8b8a6ae2a7	83021	Pending	17020	7760000	7502303	record of finalized slot 11606400 equal to the update's header
+10	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11606400	e6fe291d5a2b851c310c06974abcafd7942301d2dd07b8d0c714e1e77171e1d8	83021	Pending	6820	550000	501007	slot 0 = 0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469, slot 1 = 0x0000000000000000000000000000000000000000000000000000000000000002 at Sepolia block 12161902

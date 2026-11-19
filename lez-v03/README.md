@@ -183,7 +183,7 @@ Record: [`results/local/`](results/local/) (`signed/` and `signed.tsv`: every si
 verdicts; `record.json`; `run-log.tsv`; the data and `requests.tsv`; `batch.json`; the sequencer's configuration and
 log).
 
-## The public testnet: prepared, not sent
+## The public testnet: prepared, then sent
 
 [`testnet.sh`](testnet.sh) `plan` signs the whole run for a fresh payer (keys under `spike/tmp/testnet-v03/`, never in
 the repository) and prints every transaction with its block, size, declared and simulated gas and fee, and the
@@ -202,7 +202,10 @@ November ([`results/public-plan.txt`](results/public-plan.txt)): the eleven tran
 local run's data and simulated: the same three blocks, 211,470,107 native units of fees at the simulated base fees
 (8, 9, 10), the largest reserve 65,687,096 at base fee 8; the payer needs at least 514,266,448. Read-only calls only so far:
 the public testnet answered `getLastBlockId` 83005 and its fee state (base fees 8 and 8, caps 10,000,000 and
-1,000,000) on 18 November; on that day it made a block every few hours and rewound one. **Nothing has been sent to it.**
+1,000,000) on 18 November; on that day it made a block every few hours and rewound one. **Sent on 19 November 2026** (signed on 18 November,
+by the client and image of commit `ea13bfb4`): the eleven transactions in blocks 83019-83021, all `Finalized` at the re-check of
+11:21 UTC; what was sent, when, the status and how to re-check it: [`results/public/`](results/public/README.md)
+(EVIDENCE row 150).
 
 ## What a third party can do to the public instance, and what the run does
 
@@ -226,8 +229,8 @@ period), so none was changed; anyone can create the same instance, and the run a
 
 ## What it does not show
 
-- No public run yet: the owner decides it (see the main session's runbook); until then no public LEZ network runs any
-  of Ferrata.
+- One public run ([`results/public/`](results/public/README.md)): the deployment, `Init`, two finality updates and one
+  attestation; nothing keeps the public instance current since.
 - No bridge on v0.3.1, no private path (v0.3.1's privacy circuit is not used), no successors; the LEZ v0.4 programs
   remain the proposal's deliverable.
 - The one-transaction finality update rests on the experimental residue check (and, optionally, the multiproof):

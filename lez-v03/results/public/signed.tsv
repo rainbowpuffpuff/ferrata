@@ -1,0 +1,12 @@
+seq	label	kind	tx_hash	payer_nonce	bytes	gas_limit	sim_block	sim_exec_gas	sim_fee	sim_status	file
+0	deploy: WriteSegment 6 of 6 (73392 bytes)	segment:5	b4606d58d403feda163757a166f0fb9535113c4cfb8a6cff21aedf3d728d1767	0	73688	100000	2	0	589504	applied	signed/000.hex
+1	deploy: WriteSegment 5 of 6 (98304 bytes)	segment:4	5d77eed2a979a75a955609f4800eb50f06fb084fb157a44a346a25af3ebe4c4f	1	98696	100000	2	0	789568	applied	signed/001.hex
+2	deploy: WriteSegment 4 of 6 (98304 bytes)	segment:3	9b226680fc577b1a2eb15c329b9583f7e894503123639996530af16c3ecc98cd	2	98696	100000	2	0	789568	applied	signed/002.hex
+3	deploy: WriteSegment 3 of 6 (98304 bytes)	segment:2	52ebe87d2fb2969a5a4fa30c97f8199bcce457592375069b4f94e350e1b6b270	3	98696	100000	2	0	789568	applied	signed/003.hex
+4	deploy: WriteSegment 2 of 6 (98304 bytes)	segment:1	d616532d223541f79b3e99c1e461a5062bf27637a6d2e1f3ff697b77bc6404b5	4	98696	100000	2	0	789568	applied	signed/004.hex
+5	deploy: WriteSegment 1 of 6 (98304 bytes)	segment:0	b49d2dfd59f1cd3a7acdb8eb371cc6becbabcff3f7a560978feac99e908a2d25	5	98696	100000	2	0	789568	applied	signed/005.hex
+6	deploy: CreateHeader (immutable)	header	042e117eca845240b7c82a522f55b9a7c2ad9c538ac2236fbd301b0600f756a0	6	820	100000	2	0	6560	applied	signed/006.hex
+7	Init	init	834f78cb118c99ad313bc8b4399c4ead535ccd90c6bb8c8b0f496dd75e41e8df	7	50887	8160000	2	7884541	63483424	applied	signed/007.hex
+8	update 000-finality-11606368.ssz (residue witness, one transaction)	update:000-finality-11606368.ssz	5a86e718013eaff360fc49b4056e2adfaf3c68293eeaf92abbd6c83eb7f76347	8	11260	7300000	3	7046803	63522567	applied	signed/008.hex
+9	update 001-finality-11606400.ssz (residue witness, one transaction)	update:001-finality-11606400.ssz	7ee4a19de52426422f5b71c8bf3b558dee4aefa0098b3d2f74d83b8b8a6ae2a7	9	17020	7760000	4	7502303	75159190	applied	signed/009.hex
+10	Attest 2 slot(s) of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c under slot 11606400	attest:11606400	e6fe291d5a2b851c310c06974abcafd7942301d2dd07b8d0c714e1e77171e1d8	10	6820	550000	4	501007	5064630	applied	signed/010.hex
