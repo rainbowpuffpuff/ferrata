@@ -211,8 +211,8 @@ instance past its period (whose committee may no longer be bonded) cannot be fro
   `InstanceState` gains `frozen: Option<Freeze>`; `Update`, `Continue`, `Attest` and `Evidence` refuse a frozen
   instance with `FROZEN` (222). `Attest` now names the instance's account first (an apply there checks it is not
   frozen and writes nothing), so its account list changed; the harness's and the client's builder follow. The wire,
-  the guest, the harness and the program's image id changed (§8); the reviewed image `8d3b59ff…` that the prepared
-  public-testnet run deploys is a recorded binary of its own, unchanged.
+  the guest, the harness and the program's image id changed (§8); the reviewed image `8d3b59ff…` that the
+  public-testnet run deployed (EVIDENCE row 150) is a recorded binary of its own, unchanged.
 * **Not built:** the v0.4 experimental copy (`lez/guests/program-residue-experimental`) shares its state layout
   with the deployed program through `ferrata-lez-wire`, whose change would move the deployed program's image id; a
   frozen flag there needs a wire of its own. Evidence of a conflict at an unrecorded slot (§1.1). A monitor that

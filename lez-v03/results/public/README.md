@@ -5,15 +5,16 @@
 one public run of [`../../testnet.sh`](../../testnet.sh): Ferrata's Ethereum sync-committee light client as a LEZ
 v0.3.1 program ([`../../README.md`](../../README.md)) on the public LEZ testnet, sequencer
 `https://testnet.lez.logos.co` (LEZ v0.3.1), explorer `https://explorer.testnet.lez.logos.co`. Every file is as the
-run wrote it; this README is the only addition. Every figure below is read from these files, except the payer's
-balance before the send, which the run printed on its console (below).
+run wrote it; this README is the only addition. Every figure below is read from these files, except what the runs
+printed on their consoles and the watcher wrote in its log, neither committed: the payer's balance before each run,
+run 1's refusal (`Incorrect fee`), run 2's start, and the watcher's reads of the head and the balance (below).
 
 ## What was sent
 
 Eleven public transactions from one payer, `yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R`, with its nonces 0 to 10
 ([`signed.tsv`](signed.tsv); the signed bytes in [`signed/`](signed/)). Blocks and verdicts from
-[`txs.tsv`](txs.tsv); execution gas is the run's simulation on v0.3.1's state machine (v0.3.1's RPC reports neither
-gas nor status), of the 10,000,000 cap:
+[`txs.tsv`](txs.tsv); execution gas is the run's simulation on v0.3.1's state machine (v0.3.1's RPC reports neither a
+transaction's gas nor whether it succeeded), of the 10,000,000 cap:
 
 | # | transaction | hash | block | bytes | declared gas | execution gas (simulated) |
 |---:|---|---|---:|---:|---:|---:|
@@ -29,10 +30,11 @@ gas nor status), of the 10,000,000 cap:
 | 9 | **finality update, one transaction** (residue witness), finalized slot 11,606,400 | `7ee4a19de52426422f5b71c8bf3b558dee4aefa0098b3d2f74d83b8b8a6ae2a7` | 83021 | 17,020 | 7,760,000 | 7,502,303 (75.0%) |
 | 10 | **`Attest`** of two storage slots of the vault under slot 11,606,400 | `e6fe291d5a2b851c310c06974abcafd7942301d2dd07b8d0c714e1e77171e1d8` | 83021 | 6,820 | 550,000 | 501,007 (5.0%) |
 
-- **The program**: image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, six
-  segments, 567,988 bytes of deployment transactions), immutable, at `J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1`
-  ([`state.json`](state.json)): the reviewed image of [EVIDENCE](../../../docs/EVIDENCE.md) row 131, not this tree's newer one
-  ([`../../README.md`](../../README.md), "Two images").
+- **The program**: image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (a 597,336-byte program
+  binary whose 564,912-byte user ELF fills six segments, 567,988 bytes of deployment transactions), immutable, at
+  `J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1` ([`state.json`](state.json)): the reviewed image of
+  [EVIDENCE](../../../docs/EVIDENCE.md) row 131, not this tree's newer one ([`../../README.md`](../../README.md), "Two
+  images").
 - **The checkpoint** ([`chain.json`](chain.json), [`bootstrap.ssz`](bootstrap.ssz)): Sepolia slot 11,606,336
   (period 1416), block root `0x8ef0115979d741ba168ce2e8d6dbc5efc4f41d571473b624145f9fb8465462c1`, fetched from
   Lodestar's public Sepolia endpoint and its root checked against publicnode's beacon header. The instance
@@ -46,7 +48,7 @@ gas nor status), of the 10,000,000 cap:
   block the record of slot 11,606,400 binds: slot 0 (`depositRoot`) =
   `0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469`, slot 1 (`nextLeafIndex`) = 2, each written to
   its statement account.
-- **The fees**: the payer's balance fell from 200,000,000,000 to 199,788,226,285 native units
+- **The fees**: the payer's balance fell from 200,000,000,000 (as the run printed it) to 199,788,226,285 native units
   ([`run-log.tsv`](run-log.tsv)), by 211,773,715, the sum of the simulated fees in `signed.tsv`.
 
 ## When, and by what command
@@ -72,15 +74,16 @@ stayed beside the run's state, outside the repository.
 
 **In the sequencer's blocks 83019, 83020 and 83021, and in its state (29 of 29 checks match), and the three blocks
 Finalized**: the sequencer reports each one's status on the Logos Blockchain (Bedrock) as `Finalized`, and the explorer,
-which shows a block once it is final there, shows each of the eleven transactions on its own page and on its block's
-page. When the run wrote [`txs.tsv`](txs.tsv) (19 November, 00:05 UTC) all three blocks were `Pending`, the state in
-which a rollback of the testnet can remove a block (on 18 November the payer's funds came and went with block 83006). `Finalized`
-is the sequencer's and the explorer's word: we did not check the Logos Blockchain itself, and a public testnet run by
-others can still be reset.
+which shows a block once it is final there (in LEZ v0.3.1's code), shows each of the eleven transactions on its own
+page and on its block's page. When the run wrote [`txs.tsv`](txs.tsv) (19 November, 00:05 UTC) all three blocks were
+`Pending`, the state in which a rollback of the testnet can remove a block (on 18 November the payer's funds came and
+went with block 83006). `Finalized` is the sequencer's and the explorer's word: we did not check the Logos Blockchain
+itself, and a public testnet run by others can still be reset.
 
 `./testnet.sh verify`, run on the Modal build box from the run's own tree (commit `ea13bfb4`, this folder in it, the
-client the run built), 11:21:21 to 11:21:52 UTC, exit 0; read-only (RPC reads of the sequencer, two explorer pages
-per transaction); paths shortened to `<state>` and `<worktree>`:
+client the run built and the run's wallet home, which `verify` only reads the chain through), 11:21:21 to 11:21:52
+UTC, exit 0; read-only (RPC reads of the sequencer, two explorer pages per transaction); paths shortened to `<state>`
+and `<worktree>`:
 
 ```text
 MATCH    program image id
@@ -131,13 +134,18 @@ verify: every check matches the record (<worktree>/lez-v03/results/public); 11 t
 ## Re-check
 
 From the run's commit, with this folder in place (a client built from a later tree is not the one the run was
-signed with: the wire changed after it, [`../../README.md`](../../README.md), "Two images"):
+signed with: the wire changed after it, [`../../README.md`](../../README.md), "Two images"). The build needs
+`libpcsclite-dev` (`pcsc-lite-devel` on Fedora; LEZ v0.3.1's wallet links PC/SC), RISC Zero's guest Rust 1.91.1
+(`RISC0_HOME`) and `r0vm` 3.0.5 on `PATH` (`scripts/build.sh`). `verify` reads the chain through LEZ v0.3.1's wallet
+library, which needs a wallet: the `new-wallet` line makes a throwaway one (local keys, never funded; nothing is sent).
 
 ```sh
 git worktree add ../ferrata-public-run ea13bfb4
 cp -r lez-v03/results/public ../ferrata-public-run/lez-v03/results/
 cd ../ferrata-public-run/lez-v03
 scripts/build.sh --lez     # the client ferrata-v03, on LEZ v0.3.1's wallet (the README's Re-check at that commit)
+export FERRATA_STATE="$PWD/../../ferrata-public-recheck"    # a new folder outside the repository
+LEE_WALLET_HOME_DIR="$FERRATA_STATE/wallet" target/release/ferrata-v03 new-wallet "$FERRATA_STATE/run" https://testnet.lez.logos.co > /dev/null
 ./testnet.sh verify        # read-only; never sends
 ```
 

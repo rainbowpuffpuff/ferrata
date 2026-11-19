@@ -13,8 +13,9 @@ changed; this program's own image id changed with the summary adoption (below, "
 Every program of this repository targets LEZ v0.4 (the actor model), which has no public network. The public LEZ
 testnet runs **v0.3.1** (`https://testnet.lez.logos.co`; its state machine, programs and wallet are the same in
 v0.3.2). This directory is Ferrata's Ethereum sync-committee light client as a v0.3.1 program, its tests through
-v0.3.1's own block application, a run on a v0.3.1 sequencer, and the script that would run it on the public
-testnet. What v0.3.1 is, read from its source with file and line: [`NOTES.md`](NOTES.md).
+v0.3.1's own block application, a run on a v0.3.1 sequencer, and the script that ran it on the public testnet once,
+18-19 November 2026 ([`results/public/`](results/public/README.md)). What v0.3.1 is, read from its source with file
+and line: [`NOTES.md`](NOTES.md).
 
 ## The program
 
@@ -35,15 +36,15 @@ apply at the instance (or at the record) checks the claim against what it verifi
 reverts the whole transaction. The timestamp validity window, which the plan sets without seeing the store, is
 claimed the same way and must equal v0.4's (from the signature slot to the end of the weak-subjectivity period of
 the stored finalized header). Refusals exit with a code, so v0.3.1 charges the cycles used, not the gas limit,
-with one exception an independent review found in the reviewed image `8d3b59ff…` (the one the prepared
-public-testnet run deploys): its `check_config` (identical to the v0.4 program's,
+with one exception an independent review found in the reviewed image `8d3b59ff…` (the one the public-testnet run
+deployed, EVIDENCE row 150): its `check_config` (identical to the v0.4 program's,
 `../lez/guests/program/src/main.rs:129-140`) accepts `epochs_per_sync_committee_period = 0`; such an instance's `Init`
 applies, and every update of it panics (a division by zero in `ferrata-core`'s `period_at_slot`) and is charged the
 whole gas limit. Only that instance is affected, created with that config by whoever chose it, and no state changes.
-It was not fixed in `8d3b59ff…` because the check would have moved that image's id. **This branch's image
-`bac768a8…` fixes it**: its `check_config` (`guest/src/main.rs`) refuses a zero-epoch period at `Init` (`BAD_CONFIG`,
-212), and [`harness/tests/adversarial.rs`](harness/tests/adversarial.rs) (`review_zero_period_config`) now asserts that
-refusal. The deployed v0.4 program keeps the gap (its image id is fixed).
+It was not fixed in `8d3b59ff…` because the check would have moved that image's id. **This branch's image `bac768a8…`
+fixes it**: its `check_config` (`guest/src/main.rs`) refuses a zero-epoch period at `Init` (`BAD_CONFIG`, 212), and
+[`harness/tests/adversarial.rs`](harness/tests/adversarial.rs) (`review_zero_period_config`) now asserts that refusal.
+The deployed v0.4 program keeps the gap (its image id is fixed).
 
 Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/src/main.rs)):
 
@@ -73,21 +74,23 @@ Instructions ([`wire/src/lib.rs`](wire/src/lib.rs), [`guest/src/main.rs`](guest/
   [`harness/tests/misbehaviour_window.rs`](harness/tests/misbehaviour_window.rs).
 
 The verification is `ferrata-core`'s, unchanged (`steps::initialize`, `step1`, `Job::step2`, `step3`, `adopt`,
-`apply`, `store_for_update`). **Two images.** The public-testnet run (prepared, sent by its own watcher) deploys the
-reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, 6 segments),
-the image the local sequencer run below used. This branch builds `bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e`
-(598,876 ELF bytes, 6 segments), which adds the one-transaction handoff (`Verify::ResidueSummary`) and the zero-period
-check, and has not run on a sequencer. Both are built through the repository's `scripts/guest-rustc`, so an id does not depend on the build
-path. Since the evidence (`Instruction::Evidence`, the frozen flag, `Attest`'s instance account) this branch builds
+`apply`, `store_for_update`). **Two images.** The public-testnet run (sent by its own watcher, 18-19 November 2026)
+deployed the reviewed image `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5` (597,336 ELF bytes, 6
+segments), the image the local sequencer run below used. This branch builds
+`bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e` (598,876 ELF bytes, 6 segments), which adds the
+one-transaction handoff (`Verify::ResidueSummary`) and the zero-period check, and has not run on a sequencer. Both are
+built through the repository's `scripts/guest-rustc`, so an id does not depend on the build path. Since the evidence
+(`Instruction::Evidence`, the frozen flag, `Attest`'s instance account) this branch builds
 `155b731726cb78311814c3d773813ef8a103f57d5c65e35da5f0afb39181635f` (625,824 ELF bytes, 7 segments), deployed nowhere;
-the earlier tests pass on it with the same results and codes ([`results/misbehaviour-tests.txt`](results/misbehaviour-tests.txt),
-the regenerated tables in [`results/misbehaviour-regression/`](results/misbehaviour-regression/); the tables above
-stay those of `bac768a8…`). **The wire changed with it:** `Attest` now names the instance's account first, so a client
-built from this tree (which also deploys this tree's image) cannot attest under an instance of `8d3b59ff…` or
-`bac768a8…`, which refuse that account list (`WRONG_ACCOUNT`, 201); the prepared public-testnet run, signed in advance
-for `8d3b59ff…`, must keep the client and plan it was prepared with. Re-running the earlier suites rewrites the committed
-tables of `results/` with this image's numbers: `git checkout -- results/` restores them (this image's are in
-`results/misbehaviour-regression/`).
+the earlier tests pass on it with the same results and codes
+([`results/misbehaviour-tests.txt`](results/misbehaviour-tests.txt), the regenerated tables in
+[`results/misbehaviour-regression/`](results/misbehaviour-regression/); the tables above stay those of `bac768a8…`).
+**The wire changed with it:** `Attest` now names the instance's account first, so a client built from this tree (which
+also deploys this tree's image) cannot attest under an instance of `8d3b59ff…` or `bac768a8…`, which refuse that
+account list (`WRONG_ACCOUNT`, 201); the public-testnet run, signed for `8d3b59ff…`, is re-checked with the client of
+its own commit, `ea13bfb4` ([`results/public/`](results/public/README.md)). Re-running the earlier suites rewrites the
+committed tables of `results/` with this image's numbers: `git checkout -- results/` restores them (this image's are
+in `results/misbehaviour-regression/`).
 
 ## Through v0.3.1's block application, with real data
 
@@ -142,8 +145,8 @@ its signature slot is outside its window: v0.3.1 includes it and charges the who
 **Image id.** The summary adoption and the zero-period check changed the program: this branch's image is
 `bac768a8026f14b05dcf3736e5a2bbbe029c89224e5459d0fff9cfcc5466d36e` (598,876 ELF bytes; its deployed segments are 1,540
 bytes longer; this branch's first build, before the zero-period check and the aggregate field's decoding, was
-`f8ec1b21…`), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the prepared
-public-testnet run deploys, the reviewed image before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
+`f8ec1b21…`), deployed nowhere and not run on a sequencer. The local sequencer run below used, and the public-testnet
+run deployed, the reviewed image before it, `8d3b59ff9b4bf6992f80e797e7e25fad1ed372c4b4e1386d96e6dd33ba8e1bb5`
 (`results/local/txs.tsv`). Every figure of the table above is from this build, 18 November 2026; each is 69 to 89 gas
 above the earlier build's for the same transaction (the earlier figures are in the history of `results/`); the local
 run's figures are the earlier build's.
@@ -200,12 +203,14 @@ The same sequence is written as testnet-ops's `ferrata_ops batch` file (`batch.j
 November ([`results/public-plan.txt`](results/public-plan.txt)): the eleven transactions signed for a fresh payer
 (`yEnfeJdX68Qrihb5yz3cxcidYZK13aupgYR1T2R3C3R`, program account `J4G2Leu5WUVu66FF23nKqQM7apUajyV5Av7mmGeKrFj1`) on the
 local run's data and simulated: the same three blocks, 211,470,107 native units of fees at the simulated base fees
-(8, 9, 10), the largest reserve 65,687,096 at base fee 8; the payer needs at least 514,266,448. Read-only calls only so far:
-the public testnet answered `getLastBlockId` 83005 and its fee state (base fees 8 and 8, caps 10,000,000 and
-1,000,000) on 18 November; on that day it made a block every few hours and rewound one. **Sent on 19 November 2026** (signed on 18 November,
-by the client and image of commit `ea13bfb4`): the eleven transactions in blocks 83019-83021, all `Finalized` at the re-check of
-11:21 UTC; what was sent, when, the status and how to re-check it: [`results/public/`](results/public/README.md)
-(EVIDENCE row 150).
+(8, 9, 10), the largest reserve 65,687,096 at base fee 8; the payer needs at least 514,266,448. Before the run,
+read-only calls only: the public testnet answered `getLastBlockId` 83005 and its fee state (base fees 8 and 8, caps
+10,000,000 and 1,000,000) on 18 November; on that day it made a block every few hours and rewound one. **Sent on 19
+November 2026** (signed on 18 November, by the client and image of commit `ea13bfb4`; the first send that day was
+refused, `Incorrect fee`): the eleven transactions in blocks 83019-83021, all three `Finalized` as the sequencer and
+the explorer reported them at the re-check of 19 November, 11:21 UTC (we did not check the Logos Blockchain itself);
+what was sent, when, the status and how to re-check it: [`results/public/`](results/public/README.md) (EVIDENCE row
+150).
 
 ## What a third party can do to the public instance, and what the run does
 

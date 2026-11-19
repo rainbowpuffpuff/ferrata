@@ -907,9 +907,9 @@ through the Gloas layout change, 6,538,351 to **6,682,541** (at most 66.8%); aft
 native policy store's. Refused, nothing changed: a next-committee branch node altered (27), the summary adoption with
 the 512 keys beside it (84), update_0 again (23), and an `Init` with a zero-epoch period (212). The program's image id
 changed to `bac768a8…` (deployed nowhere; the reviewed image `8d3b59ff…`, which the local sequencer run of
-`lez-v03/README.md` used and the prepared public-testnet run deploys, is unchanged there), and its other figures are
-69 to 89 gas above that image's. The 342-signer handoff was not run on v0.3.1: its harness cannot write a substituted
-committee into an instance's state.
+`lez-v03/README.md` used and the public-testnet run deployed (EVIDENCE row 150), is unchanged there), and its other
+figures are 69 to 89 gas above that image's. The 342-signer handoff was not run on v0.3.1: its harness cannot write a
+substituted committee into an instance's state.
 
 ### 10.9 What an auditor must check (in addition to §7 and §9.7)
 

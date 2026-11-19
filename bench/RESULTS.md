@@ -482,7 +482,7 @@ findings 9 and 7: the aggregate field decoded at adoption, a zero-epoch period r
   zero-epoch period is refused (212). The deployed program's image id, printed by the same build, is still `816d1fef…`.
 * LEZ v0.3.1 (`lez-v03`, `Verify::ResidueSummary`): every handoff of the mainnet replay (at most 6,737,794) and of
   Sepolia's 32 periods (at most 6,682,541) in one transaction; the port's image id changed (`bac768a8…`; the reviewed
-  `8d3b59ff…`, which the prepared public-testnet run deploys, is unchanged there).
+  `8d3b59ff…`, which the public-testnet run deployed (EVIDENCE row 150), is unchanged there).
 * Re-check: `RESIDUE.md` §10.
 
 ## 2026-11-09: the execution layer, with and without accelerated Keccak (commit 643e31b)
