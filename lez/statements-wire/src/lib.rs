@@ -134,9 +134,9 @@ pub fn use_seed(config: &Root, statement_id: &Root) -> PdaSeed {
 pub fn use_actor(reader: AccountId, config: &Root, statement_id: &Root) -> Actor {
     Actor::new(AccountId::for_public_pda(&reader, &use_seed(config, statement_id)), reader)
 }
-
 /// Messages of the recorder.
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[allow(clippy::large_enum_variant)]
 pub enum StatementsMessage {
     /// Record the statements `request` yields at `header(ferrata, request.instance_id, slot)`.
     Record { ferrata: AccountId, slot: u64, request: Request },

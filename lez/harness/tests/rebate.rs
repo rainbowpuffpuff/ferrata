@@ -240,7 +240,8 @@ fn an_empty_pool_blocks_nothing_and_refusals_pay_nothing() {
             actors.extend([p, Actor::native_balance(p.account_id), Actor::native_balance(op)]);
             let message = RebateMessage::Land { job_id, payee: op };
             let evidence = vec![PublicAccountEvidence::Pda { program: rebate(), seed }];
-            chain.submit(label, p, borsh::to_vec(&message).unwrap(), actors, evidence, time)
+            let label = label.replace("Finish (step 3)", "Land (Finish through the pool)");
+            chain.submit(&label, p, borsh::to_vec(&message).unwrap(), actors, evidence, time)
         },
     );
     refused(run.reports.last().expect("the last step"), u32::from(rb::NOT_CONFIGURED));

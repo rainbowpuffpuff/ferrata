@@ -74,8 +74,8 @@ Its safety claims, and what shows each:
 ## What the next vault and program need, so that the switch is LEZ-side only
 
 **None of this is built; every claim in this section is unproven.** The vault redeployment already required for the
-deployed program's two known issues (B1, [`bridge.md`](bridge.md) §3, "Known issues, 18 November 2026") is the moment
-to add it.
+deployed program's known issues (R1, R2 and F1, [`bridge.md`](bridge.md) §3, "Known issues, 18 November 2026";
+milestone B1) is the moment to add it.
 
 1. **A hand-over of claims that is not a sunset.** A one-way `HandOver { successor }` on the bridge program, approved
    as `Sunset` is, after which the program refuses every `Claim` and `ClaimPrivately` for good (unlike a freeze, it

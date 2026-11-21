@@ -586,6 +586,42 @@ def main():
         sent = pg.sent_params()
         check(all(x.get("chainId") == "0xaa36a7" for x in sent), f"n: every transaction the page sent carries the chain id ({len(sent)})")
 
+        # ---- (p) the wallet switches account while a sent deposit is pending: the page must not say that nothing was
+        # sent; it says the deposit was with the wallet (its hash), and once mined that it was mined
+        log("\n(p) the wallet switches account while a sent deposit is pending")
+        tp = ticket(3)
+        pg.fill_ticket(tp)
+        pg.check()
+        check(pg.refusal() == "" and page.locator("#senddeposit").is_visible(), "p: checked, the deposit can be sent")
+        sent_before = len(pg.sent_params())
+        rpc("evm_setAutomine", [False])
+        try:
+            page.click("#senddeposit")
+            wait_until(lambda: len(pg.sent_params()) == sent_before + 1, "the wallet to receive the deposit")
+            wait_until(lambda: " is sent, waiting for its receipt" in pg.text("#status"), "the page to hold the hash")
+            m = re.search(r"0x[0-9a-f]{64}", pg.text("#status"))
+            h = m.group(0) if m else ""
+            check(h != "" and rpc("eth_getTransactionByHash", [h]) is not None
+                  and rpc("eth_getTransactionReceipt", [h]) is None and deposit_count(ACCOUNT) == 3,
+                  "p: the deposit is sent (its hash shown) and pending, not mined; the vault still holds 3 deposits")
+            pg.switch("account", accounts[2].lower(), True)
+            wait_until(lambda: "changed while the deposit" in pg.refusal(), "the page to react to accountsChanged")
+            r = pg.refusal()
+            check("nothing was sent" not in r and h in r and "nothing more is sent" in r,
+                  "p: the page says the deposit was with the wallet (its hash), not that nothing was sent")
+            check(not page.locator("#senddeposit").is_visible(), "p: the send button is gone")
+            rpc("evm_mine", [])
+        finally:
+            rpc("evm_setAutomine", [True])
+        wait_until(lambda: pg.text("#status").startswith("done:") or "failed" in pg.refusal(), "the receipt")
+        r = pg.refusal()
+        check("leaf index 3" in pg.text("#result") and deposit_count(ACCOUNT) == 4,
+              "p: mined: the page shows leaf index 3; the vault holds 4 deposits")
+        check("it was mined in block" in r and h in r and "nothing was sent" not in r,
+              "p: after the receipt the page says the deposit was mined, not that nothing was sent")
+        check(deposit_logs()[3]["commitment"] == tp["commitment"], "p: the Deposit event carries this ticket's C")
+        pg.switch("account", ACCOUNT, False)
+
         # ---- (i) the page's hygiene: no request of its own, only allowed wallet methods
         log("\n(i) the page's own traffic and the wallet methods")
         origins = sorted({u.split("/")[0] + "//" + u.split("/")[2] for u in requests})
@@ -603,7 +639,7 @@ def main():
 
         browser.close()
 
-    log("\nall 15 case groups passed")
+    log("\nall 16 case groups passed")
     OUT_TXT.write_text("\n".join(log_lines) + "\n")
     print(f"\nwrote web/depositor/results/{OUT_TXT.name}")
     print(f"wrote web/depositor/results/{OUT_PNG.name} ({OUT_PNG.stat().st_size} bytes)")

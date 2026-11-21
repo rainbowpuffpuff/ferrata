@@ -116,7 +116,8 @@ fn the_other_programs_codes_are_blocks_of_their_own() {
     use ferrata_lez_bridge_wire::{code as bridge, CODE_BLOCK as BRIDGE};
     use ferrata_lez_rebate_wire::{code as rebate, CODE_BLOCK as REBATE};
     use ferrata_lez_statements_wire::{code as statements, CODE_BLOCK as STATEMENTS};
-    let own: [(&str, RangeInclusive<u8>, &[(&str, u8)]); 3] =
+    type OwnBlock = (&'static str, RangeInclusive<u8>, &'static [(&'static str, u8)]);
+    let own: [OwnBlock; 3] =
         [("statements", STATEMENTS, statements::ALL), ("rebate", REBATE, rebate::ALL), ("bridge", BRIDGE, bridge::ALL)];
     let overlaps = |a: &RangeInclusive<u8>, b: &RangeInclusive<u8>| a.start() <= b.end() && b.start() <= a.end();
     for (i, (name, block, codes)) in own.iter().enumerate() {

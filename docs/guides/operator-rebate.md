@@ -8,8 +8,8 @@ not make it exclusive."
 **Status: built and tested in the in-process harness (LEZ v0.4.0-rc1's state machine, dev mode, five real mainnet
 updates); not deployed, not run on a sequencer.** Code: [`lez/rebate-wire/`](../../lez/rebate-wire/src/lib.rs) (the
 design, in its module comment), [`lez/guests/rebate/`](../../lez/guests/rebate/src/main.rs) (`ferrata_rebate`), the
-test [`lez/harness/tests/rebate.rs`](../../lez/harness/tests/rebate.rs), its record
-[`lez/results/rebate.md`](../../lez/results/rebate.md). The attestation program and the bridge program are unchanged;
+test [`lez/harness/tests/rebate.rs`](../../lez/harness/tests/rebate.rs), its records
+[`lez/results/rebate.md`](../../lez/results/rebate.md) and [`lez/results/rebate-terms.md`](../../lez/results/rebate-terms.md). The attestation program and the bridge program are unchanged;
 no deployed image id moves.
 
 ## The mechanism
@@ -35,11 +35,20 @@ no deployed image id moves.
 - **Permissionless.** Any account may call `Land` and name any payee. Any account may still send `Finish` directly,
   exactly as before, and is paid nothing. An empty pool pays nothing and blocks nothing. The program grants no role and
   keeps no list of operators: it makes operating attractive, not exclusive.
+- **What an update costs, to size a rebate.** In the test, update 1's five transactions (`Open`, `Miller`, two
+  `Adopt`s and the `Land`) paid 130,034,496 native units in base fees (17,733,944 + 26,510,168 + 27,487,800 +
+  27,545,352 + 30,757,232: [`rebate.md`](../../lez/results/rebate.md), rows 8 to 12; the harness's fee state, not a
+  live network's), so the test's rebate of 1,000,000 is 0.77 % of it (derived). A rebate below an update's cost only
+  offsets part of the gas; to make operating attractive by itself it has to cover the cost and a margin.
 
 ## What it does not do, and its limits
 
-- Progress made directly, or before the pool existed, earns nobody a rebate (the pool reads the instance before and
-  after `Finish`; at `Configure` the instance's finalized slot is taken as already paid for).
+- Progress made directly, or before the pool existed, is not paid for itself (the pool reads the instance before and
+  after `Finish`; at `Configure` the instance's finalized slot is taken as already paid for). Progress the pool did not
+  pay for after `Configure`, made directly or landed below the gap, still counts toward `min_gap`: once the gap is
+  reached, the next landing through the pool is paid the full rebate, whatever its own advance (in
+  [`rebate-terms.md`](../../lez/results/rebate-terms.md), update 2 advances one period and is paid against a gap of
+  two, because update 1's unpaid period counted). The bound above is unaffected.
 - A paid advance pays the same whatever its size above `min_gap`.
 - **No withdrawal.** What a pool holds leaves only as rebates. A pool whose instance is succeeded (a successor instance
   has other terms, so another pool), or whose instance never advances again, keeps its balance for good: fund a pool

@@ -67,14 +67,17 @@ and the test shows each refusing what it must (`the_reader_makes_the_four_consum
    actor. Tested: an entry another program answered (placed as the recorder would write it, claiming a balance of
    2^256 − 1) is never read under the genuine program's configuration (68), while a configuration that names that
    other program reads it, which is the trust that check is about; at the actor the genuine configuration derives, an
-   entry naming another program or another key (placed: the recorder never writes one there) is refused (69).
+   entry naming another program or another key (placed: the recorder never writes one there) is refused (69). The
+   recorder's half of the check is not exercised by a case of its own (every use names the genuine recorder): it
+   follows from the configuration hashing the recorder's id, as it hashes the attestation program's.
 2. **Derive `statement(key)` from your own question, and accept a reply only from it.** Statement identifiers do not
    encode the predicate, the key does: an entry for "balance ≥ 0" holds the very statements, under the same
    identifiers, as one for "balance ≥ 1 WETH". The reader derives the key from the question in its configuration.
    Tested: with only the weaker question recorded, a use under the stronger one is refused (68) and its configuration
    stays empty, while the weaker question's own consumer is served in its own actors; once the stronger question is
    recorded, the two entries carry the same identifiers and the stronger consumer is served. A forged entry sent to a
-   waiting reader by any other actor is refused (65; the wait is placed, since it never outlives its transaction).
+   waiting reader with no sender, as a transaction's root, is refused (65; the wait is placed, since it never outlives
+   its transaction). The reader refuses any sender but the recorder's actor; only the case with no sender is tested.
 3. **Check the entry's instance and chain id, and the statement identifier**, as for a direct attestation. Tested:
    another instance (69), another chain (69), a statement the entry does not hold (70).
 4. **Check `block_number`.** An entry is a statement about one finalized block, recorded once; it never becomes more
