@@ -5,7 +5,7 @@
   "type": "core",
   "interface": "cdylib",
   "category": "ethereum",
-  "description": "Ferrata (prototype): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
+  "description": "Ferrata (prototype, unaudited, not for production): dry-run an Ethereum attestation against a header record and verify a light-client checkpoint, with the program's verification core",
   "main": "ferrata_attest_module_plugin",
   "dependencies": [],
 
