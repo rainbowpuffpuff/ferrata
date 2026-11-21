@@ -844,8 +844,10 @@ impl Chain {
         let call = &made["vault_call"];
         let data = unhex(call["data"].as_str().ok_or("vault_call.data")?)?;
         let total = price["total"].as_str().ok_or("price.total")?.to_string();
-        let calls = [crate::send::Call { to: fixed(&call["to"], "vault_call.to")?, value: total.clone(), data,
-                                         label: format!("Ferrata deposit: {} wei into the vault", total) }];
+        let to: [u8; 20] = fixed(&call["to"], "vault_call.to")?;
+        // The vault's refusal (a frozen token, a disabled deposit, a cap) is named before anything is asked or signed.
+        crate::user::preflight(&mut v, &depositor, &to, &data, &total)?;
+        let calls = [crate::send::Call { to, value: total.clone(), data, label: format!("Ferrata deposit: {} wei into the vault", total) }];
         let user = e["user"].as_str().ok_or("user")?.to_string();
         let (receipt, send, hashes) = self.send_logos(&e, &mut v, &user, &calls,
             &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"))?;
@@ -919,6 +921,7 @@ impl Chain {
         let sender = e["release_sender"].as_str().ok_or("release_sender")?.to_string();
         let before = v.balance(&recipient)?;
         let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
+        crate::user::preflight(&mut v, &fixed(&json!(sender), "release_sender")?, &vault, &data, "0")?;
         let calls = [crate::send::Call { to: vault, value: "0".into(), data, label: "Ferrata release to the burn's recipient".into() }];
         let (receipt, send, hashes) = self.send_logos(&e, &mut v, &sender, &calls,
             "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)")?;
@@ -959,13 +962,17 @@ impl Chain {
             }
         }
         let lez = if present("config_state") { w::registry_of(&req)? } else { Value::Null };
+        let controls = &lez["config"]["controls"];
         Ok(json!({
+            // The LEZ configuration's roles and floor, as the view's LEZ section shows them (the devnet backend's shape).
+            "floor": if controls["floor"].is_null() { json!({ "capacity": "?" }) } else { controls["floor"].clone() },
             "vault_roles": roles,
             "vault": vault_registry,
             "lez": lez,
             "registry": registry,
             "senders": { "admin": e["admin"], "freeze_authority": e["freeze_authority"] },
-            "admin": roles["admin"], "freeze_authority": roles["freeze_authority"], "fee_recipient": roles["fee_recipient"],
+            // The view's LEZ section (the bridge program's roles); the vault's are `vault_roles`.
+            "admin": controls["admin"], "freeze_authority": controls["freeze_authority"], "fee_recipient": controls["fee_recipient"],
             "eth": v.report(),
         }))
     }

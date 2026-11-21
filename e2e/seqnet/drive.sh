@@ -22,6 +22,11 @@ RPC=http://127.0.0.1:8545
 DEPLOYER=0x000000000000000000000000000000005E9DE901
 RELAYER=0x70997970C51812dc3A010C7d01b50e0d17dc79C8
 DEPOSITOR=0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC  # the user's Ethereum account (a keystore of anvil's 3rd key)
+# logoseth mode: the vault's admin (the deployer offers it the role; it accepts through the module and Logos's send stack),
+# its freeze authority, and the account the user's release goes out from: anvil's 4th, 5th and 6th dev accounts, their
+# keys imported into Logos Core's keystore_module by hook-logoseth.sh.
+ADMIN=0x90F79bf6EB2c4f870365E785982E1f101E93b906; FREEZER=0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65
+RELEASE_SENDER=0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc
 ANVIL_MNEMONIC="test test test test test test test test test test test junk"   # anvil's published dev mnemonic
 PHRASE="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"  # the user's
 # LEZ seed: the published BIP-39 test phrase (as the mini-app's devnet), never a wallet
@@ -78,8 +83,15 @@ jq -n --arg c "$CID" --arg g "$GS" --arg a "$CHECKPOINT_A_ID" --arg b "$CHECKPOI
     postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
 jq -n --arg v "$VAULT" '{chainId: 11155111, vault: $v, deposits: []}' > "$RUN/crown.json"
 say "vault $VAULT (mock verifier $MOCK), configId $CID, genesisState $GS"
+[ "$MODE" = logoseth ] && export FERRATA_FREEZE_AUTHORITY=$FREEZER
 SEPOLIA_RPC_URL=$RPC ETH_FROM=$DEPLOYER FERRATA_UNLOCKED=1 FERRATA_NONCE_GAP=0 bash "$REPO/e2e/crown/sepolia.sh" "$RUN" deploy \
   > "$W/deploy.log" 2>&1 || { tail -n 30 "$W/deploy.log"; die "vault deployment"; }
+if [ "$MODE" = logoseth ]; then
+  # The deployer (impersonated: nobody holds its key) offers the admin role; the admin accepts it through the module.
+  cast send --unlocked --from $DEPLOYER --rpc-url $RPC "$VAULT" "transferAdmin(address)" $ADMIN > "$W/transfer-admin.log" 2>&1 \
+    || { tail -n 5 "$W/transfer-admin.log"; die "transferAdmin"; }
+  say "logoseth: the vault's freeze authority $(cast call "$VAULT" 'freezeAuthority()(address)' --rpc-url $RPC), pending admin $(cast call "$VAULT" 'pendingAdmin()(address)' --rpc-url $RPC)"
+fi
 tail -n 1 "$W/deploy.log" | tee -a "$RUN/run.log"
 rm -f "$REPO/vault/deployments/crown-seqnet-$NAME.json"   # the same record is $RUN/deploy.json
 
@@ -94,6 +106,7 @@ KEYSTORE="$U/keystore/depositor"
 cat > "$W/env.sh" <<EOF
 RUN=$RUN; W=$W; VOL=$VOL; BIN=$BIN; R0BF=$R0BF; PROOFS=$PROOFS; RPC=$RPC; MODE=$MODE; NAME=$NAME; REPO=$REPO; T=$T
 DEPLOYER=$DEPLOYER; RELAYER=$RELAYER; DEPOSITOR=$DEPOSITOR; KEYSTORE=$KEYSTORE; U=$U
+ADMIN=$ADMIN; FREEZER=$FREEZER; RELEASE_SENDER=$RELEASE_SENDER
 VAULT=$VAULT; MOCK=$MOCK; CID=$CID; GS=$GS; FROM=$FROM; SA=$SA; BRIDGE=$BRIDGE; ATTEST=$ATTEST
 CHECKPOINT_B_ID=$CHECKPOINT_B_ID; RELEASE_ID=$RELEASE_ID; BESIDE_SHORT=$(dirname "$T")/mseq
 EOF
@@ -132,7 +145,7 @@ cp "$VOL/session-a/logs/driver.log" "$RUN/lez/crown-a.log" 2>/dev/null || true
 [ -f "$VOL/session-x/export/chain.tsv" ] && cp "$VOL/session-x/export/chain.tsv" "$VOL/session-x/export/programs.tsv" "$RUN/lez/" 2>/dev/null
 
 # ---- 5. Ethereum's transactions ---------------------------------------------------------------------
-python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT,mock verifier=$MOCK" \
+python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT,mock verifier=$MOCK,admin=$ADMIN,freeze authority=$FREEZER,release sender=$RELEASE_SENDER" \
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \

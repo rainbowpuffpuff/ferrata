@@ -8,6 +8,9 @@
 // random delay has passed, a private burn to a fresh address, the checkpoint (operator), the release by a relayer
 // once its delays have passed. No default is changed and no delay is overridden; the user's waiting is the view's
 // clock moved on (and Ethereum's, anvil's, where the vault counts it).
+// With SEQNET_ETH=logos (hook-logoseth.sh) the session's Ethereum side goes through Logos Core's own modules: the vault
+// read through eth_rpc_module, the deposit, the release and the vault's admin calls sent through tx_sender_module, each
+// approved by the person at Logos's approver evm_signer_cli (ops.sh approve), the keys in keystore_module.
 import QtQuick
 import QtTest
 
@@ -32,6 +35,20 @@ Item {
             var r = wallet("open", { chain: seqnet.env("SEQNET_CHAIN_URL") });
             verify(r.ok, "the module's wallet session: " + r.error);
             console.log("SESSION " + JSON.stringify(r.result));
+            var lezParams = seqnet.env("SEQNET_LEZ_PARAMS");
+            if (lezParams !== "") {
+                // LEZ through Logos Core's lez_core: the user's LEZ wallet opened inside it (hook-logoseth.sh).
+                var lz = wallet("lez", JSON.parse(lezParams));
+                verify(lz.ok, "the session's LEZ path through lez_core: " + lz.error);
+                console.log("LEZ " + JSON.stringify(lz.result).substring(0, 400));
+            }
+            if (logosEth()) {
+                var e = wallet("eth", { via: "eth_rpc_module", chain_id: 11155111, from_block: Number(seqnet.env("SEQNET_FROM_BLOCK")),
+                                        release_sender: seqnet.env("SEQNET_RELEASE_SENDER"), admin: seqnet.env("SEQNET_ADMIN"),
+                                        freeze_authority: seqnet.env("SEQNET_FREEZE_AUTHORITY") });
+                verify(e.ok, "the session's Ethereum path through Logos Core: " + e.error);
+                console.log("ETH " + JSON.stringify(e.result));
+            }
             var c = Qt.createComponent(Qt.resolvedUrl("../qml/Main.qml"));
             if (c.status === Component.Error) fail(c.errorString());
             host.app = c.createObject(host);
@@ -54,6 +71,15 @@ Item {
             idle();
         }
         function ops(args) { var rc = seqnet.ops(args); verify(rc === 0, "ops " + args + ": " + seqnet.last()); }
+        function logosEth() { return seqnet.env("SEQNET_ETH") === "logos"; }
+        // The person at the Logos signer: the view shows the request its send waits for; the approver approves it.
+        function signer(name, shotName) {
+            if (!logosEth()) return;
+            tryVerify(function () { return host.app.approvalText !== ""; }, 120000, "the send waits for the Logos signer: " + host.app.lastError);
+            verify(has(el("header.job").text, "Approve this"), el("header.job").text);
+            if (shotName) shot(shotName);
+            ops("approve " + name);
+        }
         // The user waits: the view's clock moves on to just past `until` (ms).
         function waitUntil(until) { var ms = Math.max(0, until - host.app.now()) + 1000; host.app.clockOffset += ms; return ms; }
 
@@ -89,6 +115,7 @@ Item {
             shot("04-deposit-defaults");
             click("deposit.review");
             approve("Deposit", "05-deposit-approval");
+            signer("deposit", "05b-deposit-awaits-the-logos-signer");
             tryVerify(function () { return has(host.app.depositText, "Deposited"); }, 120000, "deposit sent: " + host.app.lastError);
             verify(has(host.app.depositText, "private account"), host.app.depositText);
             console.log("DEPOSIT " + host.app.depositText);
@@ -186,6 +213,7 @@ Item {
             verify(el("release.submit").enabled, "releasable once the delay has passed");
             click("release.submit");
             approve("Release", "16-release-approval");
+            signer("release", "16b-release-awaits-the-logos-signer");
             tryVerify(function () { return has(host.app.releaseText, "Released:"); }, 600000, "release: " + host.app.releaseText + " " + host.app.lastError);
             verify(has(host.app.releaseText.toLowerCase(), host.privateRecipient.toLowerCase()), "paid to the private burn's fresh recipient: " + host.app.releaseText);
             console.log("RELEASE " + host.app.releaseText);
@@ -196,6 +224,49 @@ Item {
             verify(has(el("positions.summary").text, "0 not released"), el("positions.summary").text);
             verify(has(el("positions.summary").text, "0 not claimed"), el("positions.summary").text);
             shot("18-positions-after-private-round-trip");
+        }
+
+        // The vault's admin functions through the module and Logos Core's send stack (SEQNET_ETH=logos): the admin role
+        // the deployer offered is accepted from the admin's account, the cap set from the admin tab, ETH deposits frozen
+        // and the freeze lifted by the freeze authority; each send approved at the Logos signer.
+        function test_07b_vault_admin_through_the_send_stack() {
+            if (!logosEth()) skip("the vault's admin through the send stack runs with SEQNET_ETH=logos");
+            var a = wallet("admin.vault", { action: "accept_admin", params: {} });
+            verify(a.ok, "accept_admin started: " + a.error);
+            ops("approve accept-admin");
+            tryVerify(function () { var j = wallet("job", { id: a.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 120000, "accept_admin done");
+            var j = wallet("job", { id: a.result.job.id }).result;
+            compare(j.state, "settled", "the admin role accepted through the send stack: " + j.error);
+            tab("admin");
+            click("admin.refresh");
+            idle();
+            tryVerify(function () { return host.app.admin && host.app.admin.vault_roles; }, 30000, "the vault's roles read through eth_rpc_module");
+            compare(String(host.app.admin.vault_roles.admin).toLowerCase(), seqnet.env("SEQNET_ADMIN").toLowerCase(), "the admin is the keystore's account");
+            shot("20-admin-vault-roles");
+            click("admin.vault.setcap");
+            approve("setTokenCap", "21-admin-setcap-approval");
+            signer("admin-setcap", "22-admin-setcap-awaits-the-logos-signer");
+            tryVerify(function () { return has(host.app.adminText, "Vault cap set"); }, 120000, "cap: " + host.app.adminText + " " + host.app.lastError);
+            click("admin.vault.freeze");
+            approve("setTokenDepositsFrozen", "");
+            signer("admin-freeze", "");
+            tryVerify(function () { return has(host.app.adminText, "ETH deposits frozen"); }, 120000, "freeze: " + host.app.adminText + " " + host.app.lastError);
+            idle();
+            tryVerify(function () { return host.app.admin && host.app.admin.vault && host.app.admin.vault.token.deposits_frozen_until !== "0"; }, 30000, "the freeze read back");
+            shot("23-admin-vault-frozen");
+            // A deposit while frozen: refused by the module before anything is signed (the vault's error by eth_call).
+            tab("deposit");
+            click("deposit.review");
+            approve("Deposit", "");
+            tryVerify(function () { return host.app.ethJob && host.app.jobOver(host.app.ethJob); }, 60000, "the frozen deposit's job ended");
+            verify(has(host.app.lastError, "TokenDepositsAreFrozen"), "refused before signing: " + host.app.lastError);
+            shot("24-deposit-refused-while-frozen");
+            tab("admin");
+            click("admin.vault.unfreeze");
+            approve("setTokenDepositsFrozen(false)", "");
+            signer("admin-unfreeze", "");
+            tryVerify(function () { return has(host.app.adminText, "accepted again"); }, 120000, "unfreeze: " + host.app.adminText + " " + host.app.lastError);
+            shot("25-admin-vault-unfrozen");
         }
 
         // The module's jobs (ferrata_bridge_module calls/src/jobs.rs): the claim and the burn above were jobs the view
