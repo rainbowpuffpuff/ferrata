@@ -141,7 +141,8 @@ python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "d
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \
-  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$HOME/#~/#g" {} +
+  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#~/${W#"$HOME"/}/#<work>/#g" \
+     -e "s#~/${T#"$HOME"/}/#<tmp>/#g" -e "s#~/${REPO#"$HOME"/}/#<repo>/#g" -e "s#$HOME/#~/#g" {} +   # crown-driver writes ~/ paths
 python3 -I "$HERE/summary.py" "$RUN" | tee -a "$RUN/run.log" || true
 [ "$xrc" = 0 ] || die "session X (hook) exit $xrc"
 say "seqnet $NAME: DONE"

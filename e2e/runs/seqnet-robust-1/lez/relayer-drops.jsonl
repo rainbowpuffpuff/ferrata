@@ -1,0 +1,10 @@
+{"chainId":11155111,"configId":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","event":"start","finalState":"0xf42b969073d94310397a8e3ec042e7f58875e6960ff6de0eafcd5b6dab18a84e","gasDrops":true,"importEvery":3600,"importRoots":false,"relayer":"0x70997970c51812dc3a010c7d01b50e0d17dc79c8","sendVia":"plain","t":1795296246,"vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516","zone":"sequencer"}
+Latest block is 27
+Syncing to block 27. Blocks to sync: 1
+Synced to block 27 in 2.04747ms
+{"event":"job-done","job":"gas-drop-cd6efdc213344cb4.json","result":{"amount":"50000000","kind":"gas-drop","nullifier":"0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad","oneTimeAddress":"0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3","sealed":true,"tx":"ca6ffffa371605d7d71d291de100b4132e276d7452a16bda37c41263df141f84"},"t":1795296248}
+Latest block is 33
+Syncing to block 33. Blocks to sync: 6
+Synced to block 33 in 5.29518ms
+{"event":"job-done","job":"gas-drop-5b6d7098ea0f5ce1.json","result":{"amount":"50000000","kind":"gas-drop","nullifier":"0x5b6d7098ea0f5ce1cc42c4004dfd2f6f9bf31b22cf674ac90205ef9946e3cd19","oneTimeAddress":"0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213","sealed":true,"tx":"9ddf66e23b5cb5b16e7553a979bc6e35f014b51f8ef5991640abb6905b7f9df9"},"t":1795296303}
+{"event":"stop","reason":"SIGTERM","rounds":37,"t":1795296321}

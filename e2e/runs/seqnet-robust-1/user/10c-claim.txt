@@ -1,0 +1,52 @@
+$ env RISC0_DEV_MODE=1 ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d claim --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin --relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 --gas-drop-inbox <work>/relayer-inbox-drops --gas-drop-elf gasdrop.bin --send --yes
+
+claim on LEZ (configuration 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c):
+  deposit      0.001 ETH (1000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 2)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d
+  nullifier N  0x5b6d7098ea0f5ce1cc42c4004dfd2f6f9bf31b22cf674ac90205ef9946e3cd19
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.000002 ETH (2000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by a one-time private account the relayer's gas drop funds
+  delay        4 h after the deposit: from Ethereum block 1210 (now 1211), passed
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+Latest block is 33
+Syncing to block 33. Blocks to sync: 1
+Synced to block 33 in 1.80042ms
+Latest block is 33
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+Latest block is 33
+Latest block is 33
+Latest block is 33
+Latest block is 33
+Latest block is 34
+Syncing to block 34. Blocks to sync: 1
+Synced to block 34 in 2.11357ms
+Latest block is 34
+gas drop: one-time account 0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213 (new); the relayer's credit of 50000000 native LEZ, sealed, pending to it after 9 s (receipt proven in 0.0 s)
+  the job (receipt and the account's public keys) went to <work>/relayer-inbox-drops/gas-drop-5b6d7098ea0f5ce1.json
+Latest block is 34
+Dry run: nothing proven or sent
+  public cycles:  144086
+  base fees:      exec 8 / stor 8 (height 34)
+  fee at head:    6223304
+  headroom:       5 blocks, up to exec 13 / stor 13 (10112869)
+  reserve:        10112869 (surplus refunded)
+  fee payer:      EU2oiXmtQBhfTG6HMwxDhDEH7t7zghhQpYgg36iZCyML
+  claims:         1 pending credit(s), 50000000 to the payer
+  refund to:      the payer's alias
+(the dry run above: the LEZ fee paid by the one-time account EU2oiXmtQBhfTG6HMwxDhDEH7t7zghhQpYgg36iZCyML, from the credit it claims)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: 3fdb60f5dfaad0bf1da17876f0ae99eebfe3f9c27f01d2ae38f4c5b9803e0394

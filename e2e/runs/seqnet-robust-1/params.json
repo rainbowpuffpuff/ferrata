@@ -1,0 +1,13 @@
+{
+  "_source": "seqnet (the final programs of docs/image-ids.md; a stand-in identity from a real devnet session A)",
+  "checkpointImageIdA": "0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84",
+  "checkpointImageIdB": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+  "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+  "lezConfigId": "0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c",
+  "genesisState": "0xf42b969073d94310397a8e3ec042e7f58875e6960ff6de0eafcd5b6dab18a84e",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
