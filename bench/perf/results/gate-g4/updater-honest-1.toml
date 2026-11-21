@@ -1,0 +1,43 @@
+# bench/perf/gate-hook.sh: honest-1
+[daemon]
+name = "honest-1"
+state_dir = "state"
+poll_secs = 4
+listen = "127.0.0.1:9701"
+ledger = "sequencer"
+
+[sequencer]
+rpc = "http://127.0.0.1:13041"
+program = "0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c"
+wait_final = true
+log = "work/logs/sequencer.log"
+
+[keys]
+payer_key_file = "payer.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 1000000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 1
+retry_base_ms = 1000
+retry_max_ms = 60000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 4
+finish_own_jobs = true
+
+[[chain]]
+name = "mainnet"
+preset = "mainnet"
+checkpoint = "4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "replay"
+  url = "http://127.0.0.1:9601"
+  timeout_secs = 30

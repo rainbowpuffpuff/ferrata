@@ -1,0 +1,25 @@
+[16:18:24] crown LEZ session a (chain stand-in)
+[16:18:25] a new zone
+[16:18:26] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[16:18:29] node slot 0 is unix second 1785493027 (slots of 1 s)
+[16:18:32] sequencer start 1: scheduler after 2 s; its blocks fall 4 s after an epoch second
+[16:18:32] sequencer up, head block 1
+[16:18:32] channel: {"accredited_keys":["2181146bd67a4043e7799ff1d3c0339bb3657ec728691e1242939a48467d9e3c"],"configuration_threshold":1,"tip_message":"ef7394a41ae92c88dd5a2ebbb5217d2958a12964fa562d2ac308b919b90d47c3","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":9784884
+[16:18:32] the node serves no /chain/fork: bedrockGenesisId = sha256(deployment settings)
+[16:21:39] driver exit 0
+[crown-a] deploy bridge: WriteSegment 4 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   12
+[crown-a] deploy bridge: WriteSegment 3 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   13
+[crown-a] deploy bridge: WriteSegment 2 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   14
+[crown-a] deploy bridge: WriteSegment 1 of 6 (98304 bytes)           applied   gas         0 +   98916 bytes, block   15
+[crown-a] deploy bridge: CreateHeader (immutable) at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp applied   gas         0 +     608 bytes, block   16
+[deploy] bridge: image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd at AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp (computed by the sequencer's loader), immutable
+[crown-a] crown STAND-IN: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+[crown-a] crown STAND-IN Init Init                                   applied        gas    114811 block   17 + 10.4s a61307767208a8f2321788b4b969eff1e6bbea60b274a6a06fc44bddd47d0c63
+[crown-a] crown STAND-IN Init adopt 1/2                              applied        gas   3397076 block   18 + 10.2s 1c5e81b546842a73e9c30df22099980d88d6a75f49aabe6443ecf190990771e8
+[crown-a] crown STAND-IN Init adopt 2/2                              applied        gas   3480132 block   19 + 11.2s 5de00b6f4361e745d87a117d19a4de9a57273ec78c514ef4b28cb70c3a92c7f1
+[crown-a] the channel accredits 1 key(s)
+[crown-a] T0 = block 19 0x79311d8a5fd1a76311f40c0b5956315c2d25a7cacd527a424ba58bd889c2b876; identity written to work/session-a.json
+[16:21:40] sequencer stopped (exit 0)
+[16:21:48] node stopped (exit 143)
+[16:21:49] saved generation 1 (36073401 bytes; head block 19)
+[16:21:49] session a: ok
