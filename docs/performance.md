@@ -1,6 +1,6 @@
 # Ferrata: performance report (RFP-021 P.1–P.9, RFP-022 P.1–P.7)
 
-**First draft, 11 November 2026.** Each requirement with the measured figures, where and how they were
+**Second draft, 21 November 2026** (the first: 11 November). Each requirement with the measured figures, where and how they were
 measured, and the gaps. Paths are relative to the repository root. `just bench` regenerates the vault's gas, the light
 client's cycles and a real release proof from a fresh checkout and records the hardware ([EVIDENCE](EVIDENCE.md)
 row 49; `just bench-user`, the user-side proofs at the declared minimum, row 50); every other number comes
@@ -490,9 +490,10 @@ private transaction are LEZ's and not counted.
 
 ## Gaps, in one list
 
-user-side proofs on a laptop (cloud CPUs held to 8 and 16 CPUs, and Mac minis under macOS, padded as LEZ's wallet
-pads: P.4); latency measured end to end on the inbound leg (the outbound once, on testnet parameters: P.5); the
-recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
-against state size; v5's ERC-20 calls and refunds on Sepolia's gas rules; an import under a mainnet state root; LEZ account
-overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;
-[`bridge.md`](design/bridge.md) §18.6; [`docs/traceability.md`](traceability.md)).
+User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
+measured; the owner's run is `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); a proven committee handoff (dev mode
+only: RFP-021 P.2, P.3); the importer's LEZ-side resources as a daemon (RFP-022 P.6); v5's ERC-20 calls and refunds
+on Sepolia's gas rules (RFP-022 P.3); an import under a mainnet state root (RFP-022 P.2); the source-chain finality of
+LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a devnet). Every one is a milestone
+deliverable ([`attestation.md`](design/attestation.md) §13; [`bridge.md`](design/bridge.md) §18.6;
+[`docs/traceability.md`](traceability.md)).
