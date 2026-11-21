@@ -17,13 +17,22 @@
 use std::{collections::BTreeSet, fs};
 
 use anyhow::{bail, Result};
-use ferrata_core::Root;
+use ferrata_advance::{job_step, layout_for, signer_witness, Planned};
+use ferrata_core::{
+    merkle::{compute_merkle_branch_root, floorlog2, subtree_index, EXECUTION_PAYLOAD_GINDEX},
+    steps,
+    store::ApplyOutcome,
+    types::{Execution, LightClientUpdate, SyncCommittee},
+    validate::{finalized_root_gindex_at_slot, get_lc_execution_root},
+    witness::{CommitteeSummary, CompactStore, CompactUpdate},
+    Error, Root,
+};
 use ferrata_lez_wire::{
     attest::{evaluate, Attestation, Request},
-    instance_id, Config, Message, RecordState,
+    code, instance_id, job_id, Config, Message, RecordState,
 };
 use ferrata_updater::{
-    chain::{preset, root},
+    chain::{decode_finality_update, preset, root},
     config::{Fees, Policy},
     ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, Clock, Fault, Faulty, Recorded, Source},
@@ -61,14 +70,15 @@ fn policy() -> Policy {
 }
 
 /// A beacon node serving the fixture: the bootstrap of its checkpoint (`any_root`: for whatever root is asked, as a
-/// careless or lying node would) and its finality update. It serves no period update: the bootstrap and the update
-/// are in one sync-committee period.
+/// careless or lying node would) and its finality update (`behind`: not yet, as a node that lags the chain and has
+/// not seen it). It serves no period update: the bootstrap and the update are in one sync-committee period.
 struct FixtureNode {
     label: String,
     checkpoint: Root,
     bootstrap: Vec<u8>,
     finality: Vec<u8>,
     any_root: bool,
+    behind: bool,
 }
 
 impl Source for FixtureNode {
@@ -85,6 +95,9 @@ impl Source for FixtureNode {
         Ok(vec![])
     }
     fn finality_update(&mut self) -> Result<Vec<u8>> {
+        if self.behind {
+            bail!("{}: no finality update newer than the checkpoint yet (404)", self.label)
+        }
         Ok(self.finality.clone())
     }
 }
@@ -112,10 +125,14 @@ impl Fx {
             bootstrap: self.bootstrap.clone(),
             finality: self.finality.clone(),
             any_root: false,
+            behind: false,
         }
     }
     fn honest(&self, label: &str) -> Box<dyn Source> {
         Box::new(self.node(label))
+    }
+    fn lagging(&self, label: &str) -> Box<dyn Source> {
+        Box::new(FixtureNode { behind: true, ..self.node(label) })
     }
     fn faulty(&self, label: &str, fault: Fault) -> Box<dyn Source> {
         Box::new(Faulty::new(self.node(label), fault, self.config.clone()))
@@ -206,10 +223,103 @@ fn sent_by(l: &HarnessLedger, k: &PrivateKey) -> usize {
     l.log.iter().filter(|(p, _, _)| *p == id_of(k)).count()
 }
 
+/// The job an adversary opens for `update` on `inst`, built as an honest submitter builds it: the layout, the
+/// compact update, the signer witness from the full committee that signs it (`committee`, which must be the one the
+/// store summarises) and the job id over the store the job starts from. Only the update is the adversary's.
+fn job_for(f: &Fx, inst: &Instance, store: &CompactStore, committee: &SyncCommittee, update: &LightClientUpdate) -> Planned {
+    let spec = f.config.spec();
+    let layout = layout_for(&f.config, store.fork, update).expect("a layout at the update's slot");
+    let store_u = steps::store_for_update(store, layout, update.attested_header.beacon.slot, &spec).unwrap();
+    let compact = CompactUpdate::of(update);
+    let jid = job_id(&inst.id, &store_u.digest(), &compact.digest(layout));
+    Planned {
+        update: update.clone(),
+        layout,
+        compact,
+        witness: signer_witness(committee, update),
+        jid,
+        outcome: ApplyOutcome { advanced: true, ..ApplyOutcome::default() },
+    }
+}
+
+/// `step` of the job `p` as a transaction (time: a slot after the update's signature slot, as the updater sends it).
+fn step_tx(f: &Fx, inst: &Instance, p: &Planned, step: Step) -> Tx {
+    let t = job_step(inst.program, &inst.id, &f.config, p, step).unwrap();
+    Tx {
+        label: format!("forged {}", step.name()),
+        root: t.root,
+        message: t.message,
+        actors: t.actors,
+        evidence: vec![],
+        time_ms: f.config.slot_start_ms(p.update.signature_slot) + 12_000,
+    }
+}
+
+/// The program's checks on the job `p`, run natively step by step (`Open` is step 1, `Miller` the Miller loops,
+/// `Finish` the final exponentiation): the first step that refuses and its code, or `None` if every step passes.
+fn native_refusal(f: &Fx, store: &CompactStore, p: &Planned) -> Option<(Step, u16)> {
+    let spec = f.config.spec();
+    let store_u = steps::store_for_update(store, p.layout, p.update.attested_header.beacon.slot, &spec).unwrap();
+    let opened = steps::step1(
+        &store_u,
+        &p.compact,
+        &p.witness,
+        p.update.signature_slot,
+        &spec,
+        &f.config.genesis_validators_root,
+        f.config.adoption_parts,
+    );
+    let mut job = match opened {
+        Ok(job) => job,
+        Err(e) => return Some((Step::Open, e.code())),
+    };
+    if let Err(e) = job.step2() {
+        return Some((Step::Miller, e.code()));
+    }
+    job.step3().err().map(|e| (Step::Finish, e.code()))
+}
+
+/// `update` with a false finalized header that every Merkle check accepts: the execution state root replaced (the
+/// root every attested fact is proven against), the finalized header's `body_root` recomputed from its execution
+/// branch, and the attested header's `state_root` recomputed from the finality branch. The sync aggregate is the
+/// committee's genuine one, which signed the real attested header: only the signature check can tell.
+fn with_false_state_root(f: &Fx, update: &LightClientUpdate, layout: ferrata_core::fork::LcFork) -> LightClientUpdate {
+    let spec = f.config.spec();
+    let mut u = update.clone();
+    let Execution::Payload { header, .. } = &mut u.finalized_header.execution else {
+        panic!("the fixture's headers carry an execution payload header")
+    };
+    header.state_root = [0x42; 32];
+    let execution_root = get_lc_execution_root(&u.finalized_header, layout, &spec);
+    let Execution::Payload { branch, .. } = &u.finalized_header.execution else { unreachable!() };
+    u.finalized_header.beacon.body_root = compute_merkle_branch_root(
+        &execution_root,
+        branch,
+        floorlog2(EXECUTION_PAYLOAD_GINDEX),
+        subtree_index(EXECUTION_PAYLOAD_GINDEX),
+    )
+    .unwrap();
+    let gindex = finalized_root_gindex_at_slot(u.attested_header.beacon.slot, layout, &spec);
+    let depth = floorlog2(gindex);
+    let padding = u.finality_branch.len() - depth;
+    u.attested_header.beacon.state_root = compute_merkle_branch_root(
+        &u.finalized_header.beacon.hash_tree_root(),
+        &u.finality_branch[padding..],
+        depth,
+        subtree_index(gindex),
+    )
+    .unwrap();
+    u
+}
+
 /// Submitters (updater operators): liveness only. Whoever ran the updater stops after `Init`; an account that never
 /// touched the instance, with no state and no registration, carries it to the newest finalized header and the
-/// attestation is produced. A forged update sent by anyone, the way an adversary sends it (no native check), is
-/// refused by the program on its signature alone and changes nothing. As a class: when every operator stops, the
+/// attestation is produced. Forged updates sent by anyone, with no native check and with everything but the
+/// signature right (the store's committee, the update's signer witness, the job id), are refused by the program's
+/// signature check and change nothing: a signature with one byte flipped at `Open` (41, not a point of G2's
+/// subgroup), and the committee's genuine signature over a false finalized header whose every Merkle branch was
+/// recomputed to verify at `Finish` (40, the pairing check), each with the code the native steps give, while the
+/// genuine update with the same witness passes every step natively. As a class: when every operator stops, the
 /// consumer runs the same daemon with its own key (the stranger here).
 #[test]
 fn submitters_any_account_advances_none_is_needed() {
@@ -227,17 +337,52 @@ fn submitters_any_account_advances_none_is_needed() {
     drop(a); // the first operator stops for good
     assert_eq!(sent_by(&l, &stranger), 0, "the stranger has never sent anything");
 
-    // A forged update: the fixture's finality update with one byte of its signature flipped, opened unchecked.
+    // Forged updates, sent the way an adversary sends them: no native check, and everything but the signature right.
+    let inst = f.instance();
+    let store = inst.store(&l).unwrap().expect("the instance is active");
+    let committee = &f.fx.bootstrap.current_sync_committee;
+    assert_eq!(CommitteeSummary::of(committee), store.current, "the bootstrap's committee is the store's");
+    let state_before = l.actor_state(inst.actor()).unwrap();
+    let (genuine, _) = decode_finality_update(&f.finality, &f.config).unwrap();
+    let honest = job_for(&f, &inst, &store, committee, &genuine);
+    assert!(!honest.witness.keys.is_empty(), "the update has non-signers, so its witness is not empty");
+    assert_eq!(native_refusal(&f, &store, &honest), None, "the genuine update passes every step with this witness");
+    const MALFORMED: u16 = Error::SignatureMalformed.code();
+    const INVALID: u16 = Error::SignatureInvalid.code();
+
+    // (a) One byte of the signature flipped: a signature present, and not a point of G2's prime-order subgroup.
     let liar = Faulty::new(f.node("x"), Fault::BadSignature, f.config.clone());
-    let forged_bytes = liar.flip_signature(f.finality.clone(), false);
-    let (forged, _) = ferrata_updater::chain::decode_finality_update(&forged_bytes, &f.config).unwrap();
-    let probe = f.updater("forger", forger.clone(), vec![f.honest("node-x")]);
-    let store_before = probe.inst.store(&l).unwrap().map(|s| (s.finalized.slot, s.finalized.hash_tree_root()));
-    let tx = probe.open_unchecked(&l, &forged).unwrap();
-    let out = l.submit(&forger, &tx, GAS, MAX_FEE).unwrap();
-    let store_after = probe.inst.store(&l).unwrap().map(|s| (s.finalized.slot, s.finalized.hash_tree_root()));
-    assert_eq!(store_after, store_before, "a forged update moves nothing");
-    println!("forged update: Open applied {} (exit {:?}); the store did not move", out.applied, out.exit_code);
+    let (flipped, _) = decode_finality_update(&liar.flip_signature(f.finality.clone(), false), &f.config).unwrap();
+    assert_ne!(flipped.sync_aggregate.signature, genuine.sync_aggregate.signature);
+    let a = job_for(&f, &inst, &store, committee, &flipped);
+    assert_eq!(a.witness, honest.witness, "the same signer witness as the genuine update");
+    assert_eq!(native_refusal(&f, &store, &a), Some((Step::Open, MALFORMED)));
+    let out_a = l.submit(&forger, &step_tx(&f, &inst, &a, Step::Open), GAS, MAX_FEE).unwrap();
+    assert!(!out_a.applied, "a flipped signature opens no job: {out_a:?}");
+    assert_eq!(out_a.exit_code, Some(u32::from(MALFORMED)), "refused by the signature check (SignatureMalformed)");
+    assert!(l.actor_state(inst.job(&a.jid)).unwrap().is_empty(), "no job account");
+
+    // (b) The committee's genuine signature over a false finalized header (another execution state root) whose
+    // execution and finality branches were recomputed to verify: well-formed, and wrong for what it is sent with.
+    let false_header = with_false_state_root(&f, &genuine, honest.layout);
+    let b = job_for(&f, &inst, &store, committee, &false_header);
+    assert_eq!(b.witness, honest.witness);
+    assert_eq!(native_refusal(&f, &store, &b), Some((Step::Finish, INVALID)), "every check passes but the pairing");
+    for step in [Step::Open, Step::Miller] {
+        let out = l.submit(&forger, &step_tx(&f, &inst, &b, step), GAS, MAX_FEE).unwrap();
+        assert!(out.applied, "{} of the false header: {out:?}", step.name());
+    }
+    let out_b = l.submit(&forger, &step_tx(&f, &inst, &b, Step::Finish), GAS, MAX_FEE).unwrap();
+    assert!(!out_b.applied, "the false header is not applied: {out_b:?}");
+    assert_eq!(out_b.exit_code, Some(u32::from(INVALID)), "refused by the pairing check (SignatureInvalid)");
+    assert_eq!(l.actor_state(inst.actor()).unwrap(), state_before, "the instance, store included, did not move");
+    assert!(record_at(&l, inst.header(f.fx.finalized_slot)).is_none(), "no record of the false header");
+    println!(
+        "forged updates with the signer witness right: a flipped signature byte refused at Open (exit {:?}); the \
+         genuine signature over a false execution state root, every branch recomputed: Open and Miller applied, \
+         Finish refused (exit {:?}); the instance unchanged, no record",
+        out_a.exit_code, out_b.exit_code
+    );
 
     let mut b = f.updater("stranger", stranger.clone(), vec![f.honest("node-b")]);
     settle(&mut b, &mut l, 50);
@@ -273,10 +418,11 @@ fn provers_none_is_needed_on_the_public_job() {
     println!("provers: {} public transactions, none proven: {labels:?}", labels.len());
 }
 
-/// Beacon API providers: liveness only. One serves forged signatures, one a bootstrap of another block, one is
-/// down; nothing they serve reaches the chain (no gas refused) and the honest one carries the instance. As a
-/// class: with every third-party provider lying or down the instance holds still (no false header, no gas wasted);
-/// the consumer adds its own node and the attestation is produced.
+/// Beacon API providers: liveness only. One serves forged signatures, one a bootstrap of another block, one lags
+/// (it has the checkpoint but not yet the newest finality update), one is down; nothing they serve reaches the chain
+/// (no gas refused) and the honest one carries the instance. As a class: with every third-party provider lying,
+/// lagging or down the instance holds still (no false header, no gas wasted); the consumer adds its own node and the
+/// attestation is produced.
 #[test]
 fn beacon_providers_lie_lag_or_stop() {
     let f = Fx::load();
@@ -288,6 +434,7 @@ fn beacon_providers_lie_lag_or_stop() {
         vec![
             f.faulty("liar-signature", Fault::BadSignature),
             f.faulty("liar-bootstrap", Fault::WrongBootstrap),
+            f.lagging("lagging"),
             f.faulty("down", Fault::Down),
             f.honest("honest"),
         ],
@@ -305,7 +452,7 @@ fn beacon_providers_lie_lag_or_stop() {
     let mut v = f.updater(
         "third-parties-only",
         op2.clone(),
-        vec![f.faulty("liar-signature", Fault::BadSignature), f.faulty("down", Fault::Down)],
+        vec![f.faulty("liar-signature", Fault::BadSignature), f.lagging("lagging"), f.faulty("down", Fault::Down)],
     );
     for _ in 0..20 {
         let _ = v.tick(&mut l2).ok();
@@ -321,13 +468,18 @@ fn beacon_providers_lie_lag_or_stop() {
     let mut w = f.updater(
         "with-own-node",
         op2.clone(),
-        vec![f.faulty("liar-signature", Fault::BadSignature), f.faulty("down", Fault::Down), f.honest("own-node")],
+        vec![
+            f.faulty("liar-signature", Fault::BadSignature),
+            f.lagging("lagging"),
+            f.faulty("down", Fault::Down),
+            f.honest("own-node"),
+        ],
     );
     settle(&mut w, &mut l2, 60);
     attestation_produced(&mut l2, &f, &w.inst, &op2);
     println!(
-        "beacon providers: liars and a down node beside an honest one: 0 refused; third parties only: held with {held} \
-         transactions sent, then the consumer's own node: attestation produced"
+        "beacon providers: liars, a lagging and a down node beside an honest one: 0 refused; third parties only: held \
+         with {held} transactions sent, then the consumer's own node: attestation produced"
     );
 }
 
@@ -529,6 +681,7 @@ fn deployer_holds_nothing_after_deployment() {
     let before = l.actor_state(u.inst.actor()).unwrap();
     let again = l.submit(&deployer, &init, GAS, MAX_FEE).unwrap();
     assert!(!again.applied, "a second Init is refused: {again:?}");
+    assert_eq!(again.exit_code, Some(u32::from(code::ALREADY_INITIALIZED)), "203: the instance exists");
     let mut other_chain = init.clone();
     let Message::Init { mut config, checkpoint, bootstrap } = borsh::from_slice(&init.message).unwrap() else {
         panic!("an Init")
@@ -537,6 +690,11 @@ fn deployer_holds_nothing_after_deployment() {
     other_chain.message = borsh::to_vec(&Message::Init { config, checkpoint, bootstrap }).unwrap();
     let rewrite = l.submit(&deployer, &other_chain, GAS, MAX_FEE).unwrap();
     assert!(!rewrite.applied, "an Init with another configuration is refused: {rewrite:?}");
+    assert_eq!(
+        rewrite.exit_code,
+        Some(u32::from(code::WRONG_RECEIVER)),
+        "201: another configuration is another instance, not this one"
+    );
     assert_eq!(l.actor_state(u.inst.actor()).unwrap(), before, "the instance is unchanged");
     attestation_produced(&mut l, &f, &u.inst, &deployer);
     println!(
@@ -546,9 +704,13 @@ fn deployer_holds_nothing_after_deployment() {
 }
 
 /// `docs/trust.md` §2.4 names, in its last column, the scenario that walks each party; every scenario of this file
-/// is named there once, and every row names one of them.
+/// is named there once, every row names one of them, and every name is a test of this file (a renamed test fails).
 #[test]
 fn trust_md_lists_exactly_the_parties_walked_here() {
+    let this = include_str!("every_party.rs");
+    for name in WALKED {
+        assert!(this.contains(&format!("#[test]\nfn {name}()")), "{name} is not a test of every_party.rs");
+    }
     let doc = include_str!("../../../docs/trust.md");
     let start = doc.find("### 2.4").expect("trust.md §2.4");
     let rest = &doc[start..];
