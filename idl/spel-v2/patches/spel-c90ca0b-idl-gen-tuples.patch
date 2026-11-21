@@ -1,0 +1,34 @@
+--- a/spel-framework-core/src/idl_gen.rs
++++ b/spel-framework-core/src/idl_gen.rs
+@@ -419,7 +419,30 @@
+                     array: (Box::new(self.idl_type(&array.elem, used_by, depth)?), len),
+                 })
+             },
+-            _ => Err(unsupported("only paths and arrays are supported")),
++            // A tuple is Borsh-encoded as its elements in order, exactly as a struct with positional fields is:
++            // describe it as such a struct, named after its element types (`(Root, u128)` -> `Tuple_Root_u128`),
++            // so that the IDL's grammar needs no new form and every decoder already reads it.
++            Type::Tuple(tuple) if !tuple.elems.is_empty() => {
++                let mut fields = Vec::with_capacity(tuple.elems.len());
++                let mut parts = Vec::with_capacity(tuple.elems.len());
++                for (position, elem) in tuple.elems.iter().enumerate() {
++                    parts.push(quote_type(elem).replace(|c: char| !c.is_ascii_alphanumeric(), ""));
++                    fields.push(IdlField {
++                        name: position.to_string(),
++                        type_: self.idl_type(elem, used_by, depth)?,
++                        docs: None,
++                    });
++                }
++                let name = format!("Tuple_{}", parts.join("_"));
++                self.done.entry(name.clone()).or_insert_with(|| IdlTypeDef {
++                    name: name.clone(),
++                    kind: "struct".to_owned(),
++                    fields,
++                    variants: vec![],
++                });
++                Ok(IdlType::Defined { defined: name })
++            },
++            _ => Err(unsupported("only paths, arrays and tuples are supported")),
+         }
+     }
+ }

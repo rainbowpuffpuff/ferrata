@@ -1,0 +1,20 @@
+# SPEL's LEZ v0.4 line (logos-co/spel PR #301, head c90ca0b, 16 Nov 2026: LEZ v0.4.0-rc3) generates the programs'
+# IDLs from their core crates and decodes with them. `spel-framework-core` (features idl-gen, decode) by path: the PR's
+# tree exported beside the repository at upstream/spel-c90ca0b (`git archive`); its `lee_core` (git tag v0.4.0-rc3)
+# patched to the same tag's tree at upstream/lez-v0.4.0-rc3. See idl/README.md.
+[package]
+name = "ferrata-idl-spel-v2"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+spel-framework-core = { path = "../../../upstream/spel-c90ca0b/spel-framework-core", features = ["idl-gen", "decode"] }
+serde_json = "1"
+hex = "0.4"
+
+[patch."https://github.com/logos-blockchain/logos-execution-zone.git"]
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc3/lee/state_machine/core" }
