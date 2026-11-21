@@ -25,13 +25,16 @@ STACK="$T/logoseth/stack"; LEZ_PATCHED="$T/logos/lgx-lez_core-patched"
 [ -x "$LOGOSCTL" ] && [ -d "$LGX_DIR" ] && [ -x "$RUNNER" ] && [ -d "$STACK/lgx-tx_sender_module" ] \
   || die "run.sh build-logoseth first (logosctl, the module's .lgx, the send stack's, the qmltest runner)"
 
-# 1. The chain service: LEZ's history and the release's stand-in prover (the module reads and sends Ethereum itself).
+# 1. The chain service: LEZ's history and the release's stand-in prover (the module reads and sends Ethereum itself);
+#    its LEZ wallet also holds the configuration's role keys (the crown's derived throwaway keys), the stand-in for the
+#    roles' own LEZ wallets: it signs and sends the LEZ admin messages the module builds (module.submit).
 mkdir -p "$W/relayer-inbox"
 "${PROVE[@]}" "$BIN/seqnet-chain" --listen "127.0.0.1:$CHAIN_PORT" --eth-rpc "$RPC" --chain-id 11155111 --vault "$VAULT" --from-block "$FROM" \
   --keystore "$KEYSTORE" --password-file "$U/eth.pass" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" \
   --lez-password-file "$U/lez.pass" --bridge-account "$BRIDGE" --bridge-program "$BRIDGE_BIN" --relayer-bin "$BIN/ferrata-relayer" \
   --relayer "$RELAYER" --relayer-state "$W/relayer" --relayer-inbox "$W/relayer-inbox" --mock "$MOCK" --prover "$DEPLOYER" \
-  --release-image-id "$RELEASE_ID" --log "$M/chain-calls.jsonl" --proofs "$PROOFS" > "$W/seqnet-chain.log" 2>&1 &
+  --release-image-id "$RELEASE_ID" --log "$M/chain-calls.jsonl" --proofs "$PROOFS" \
+  --lez-role-key crown/admin --lez-role-key crown/freeze-authority > "$W/seqnet-chain.log" 2>&1 &
 CHAIN_PID=$!
 for _ in $(seq 120); do curl -fsS -m 2 -d '{"method":"module.info","params":{"lez_only":true}}' "http://127.0.0.1:$CHAIN_PORT/" > /dev/null 2>&1 && break; sleep 1; done
 kill -0 $CHAIN_PID 2>/dev/null || { tail -n 20 "$W/seqnet-chain.log"; die "seqnet-chain did not start"; }

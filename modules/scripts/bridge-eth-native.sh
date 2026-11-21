@@ -103,7 +103,8 @@ for w in roots released refunded; do
   X=$(m "{\"action\":\"read\",\"what\":\"$w\",\"vault\":\"$V\",\"eth\":$E}")
   check "read $w: answered (nothing yet)" "0" "$(echo "$X" | jq -r '.value | if type == "object" then (.roots | length) else length end')"
 done
-L2=$(m "{\"action\":\"lez_set_cap\",\"program\":\"0x$(printf '22%.0s' $(seq 32))\",\"config_id\":\"0x$(printf '33%.0s' $(seq 32))\",\"params\":{\"token\":null,\"mints\":true,\"capacity\":\"11000000000\",\"refill_per_second\":\"10000000\"}}")
-check "LEZ SetCap message built (variant 18)" "built 0x12" "$(echo "$L2" | jq -r '.verdict + " " + (.message[0:4])')"
+L2=$(m "{\"action\":\"lez_set_cap\",\"program\":\"0x$(printf '22%.0s' $(seq 32))\",\"config_id\":\"0x$(printf '33%.0s' $(seq 32))\",\"signer\":\"0x$(printf '44%.0s' $(seq 32))\",\"params\":{\"token\":null,\"mints\":true,\"capacity\":\"11000000000\",\"refill_per_second\":\"10000000\"}}")
+check "LEZ SetCap built (variant 18) at the admin's own actor (the signer), then config(cid)" "built 0x12 signer 0x$(printf '44%.0s' $(seq 32)) public" \
+  "$(echo "$L2" | jq -r '.verdict + " " + (.message[0:4]) + " " + .accounts[0].kind + " " + .accounts[0].account + " " + .accounts[1].kind')"
 echo "checks: $pass passed, $fail failed" | tee "$OUT/summary.txt"
 [ "$fail" -eq 0 ]

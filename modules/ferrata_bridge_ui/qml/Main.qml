@@ -776,7 +776,7 @@ Rectangle {
                 objectName: "page.admin"
                 spacing: 8
                 Heading { text: "Admin" }
-                Note { text: "The admin sets caps, never below the immutable floor, and cannot freeze; the freeze authority freezes mints and burns for at most 30 days at a time and runs Sunset. Neither can move escrow or raise a fee past the ceiling. On the devnet the harness holds both roles' keys; a deployment uses its multisig." }
+                Note { text: "The admin sets caps, never below the immutable floor, and cannot freeze; the freeze authority freezes mints and burns for at most 30 days at a time and runs Sunset. Neither can move escrow or raise a fee past the ceiling. " + (onModule() ? "Here the module builds each LEZ message at the role's own actor and the role's LEZ wallet signs it (in this run a stand-in wallet holds the role keys); each vault call is approved in the Logos signer by the role's Ethereum account." : "On the devnet the harness holds both roles' keys; a deployment uses its multisig.") }
                 Button { objectName: "admin.refresh"; text: "Load roles and controls"; onClicked: refreshAdmin() }
                 Box {
                     Label { objectName: "admin.roles"; text: admin ? "Admin " + Fmt.short(admin.admin) + " · freeze authority " + Fmt.short(admin.freeze_authority) + " · fee recipient " + Fmt.short(admin.fee_recipient) + " · cap floor " + admin.floor.capacity + " LEZ units" : "Not loaded."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
@@ -799,11 +799,18 @@ Rectangle {
                             rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the configuration's admin"], ["Asset", "ETH"], ["Cap", capCapacity.text + " LEZ units, refill " + capRefill.text + "/s on " + (capMints.checked ? "mints" : "burns")], ["Program", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")]],
                             effects: ["Changes the token's rate limit; refused below the floor", "Moves no funds"]
                         }, function () {
-                            call("admin.set_cap", { mints: capMints.checked, capacity: capCapacity.text, refill_per_second: capRefill.text }, function (ok, v) { adminText = !ok ? "" : (v.verdict === "built" ? "SetCap built by ferrata_bridge_module for the admin's LEZ wallet to sign: message " + Fmt.short(v.message) + " to " + Fmt.short(v.to) + "." : "Cap set: " + v.capacity + " LEZ units on " + (v.mints ? "mints" : "burns") + "."); if (ok) refreshRegistry(); });
+                            ethStep("admin_lez", "admin.set_cap", { mints: capMints.checked, capacity: capCapacity.text, refill_per_second: capRefill.text }, function (ok, v) {
+                                adminText = !ok ? "Not done: " + v
+                                    : (v.tx_hash ? "LEZ cap set: " + v.what + " (transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", built by ferrata_bridge_module at the admin's own actor, signed by the admin's LEZ key)."
+                                                 : "Cap set: " + v.capacity + " LEZ units on " + (v.mints ? "mints" : "burns") + ".");
+                                refreshRegistry();
+                            });
                         })
                     }
                 }
+                Note { visible: onModule(); text: "LEZ Freeze and its lifting: ferrata_bridge_module builds them (admin lez_freeze) but does not send them on this path yet: their attested time record needs the execution block's header, which the module does not fetch." }
                 Box {
+                    visible: !onModule()
                     Label { text: "Freeze (freeze authority)"; font.bold: true }
                     RowLayout {
                         CheckBox { id: frMints; objectName: "admin.freeze.mints"; text: "mints"; checked: true }
@@ -823,6 +830,7 @@ Rectangle {
                     }
                 }
                 Box {
+                    visible: !onModule()
                     Label { text: "Lift a freeze (freeze authority)"; font.bold: true }
                     Button {
                         objectName: "admin.unfreeze"; text: "Lift the freeze"; enabled: busy === 0
@@ -835,7 +843,7 @@ Rectangle {
                         })
                     }
                 }
-                Note { text: "On Ethereum the vault's own controls (fee changes announced seven days ahead, watchers, the 14-day role change, retirement) are listed in the registry and run from the operator's tools; this view sends the bridge program's." }
+                Note { visible: !logosEth(); text: "On Ethereum the vault's own controls (fee changes announced seven days ahead, watchers, the 14-day role change, retirement) are listed in the registry and run from the operator's tools; this view sends the bridge program's." }
                 // The vault's side (Ethereum): the module builds the call, checks the role and the call from the role's
                 // account, and sends it through Logos Core's send stack; the admin or the freeze authority approves it
                 // in the Logos signer. Shown when the module's session reads and sends Ethereum through Logos Core.

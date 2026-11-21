@@ -14,14 +14,19 @@
 //!   (`tx_sender_module`; the admin approves in the Logos signer; `send.rs`). Without `send` it answers the call for any
 //!   other signer (a multisig, `cast`).
 //! - **Administering the bridge program on LEZ**: the admin's `SetCap`, the freeze authority's `Freeze` (and lifting
-//!   it), a watcher's `Pause`, anyone's `Tick` and the freeze authority's `Sunset`: the program's Borsh message and the
-//!   account it is sent to, for the role's LEZ wallet to sign (`ferrata_lez_bridge_wire`, the program's own types).
+//!   it) and `Sunset`, a watcher's `Pause`, anyone's `Tick`: the program's Borsh message and the accounts of the public
+//!   transaction that carries it, as the program takes it (`lez/guests/bridge/src/main.rs` `role_message`): a role's
+//!   message is a top-level call at the role's OWN actor (`own_actor(program, signer)`, signed by the role's key), which
+//!   forwards it to `config(cid)`, which checks the role and forwards it to `token(cid, token)` when it names one; a
+//!   `Freeze` or `Pause` also names the attestation program's `header(instance, slot)` it reads its time from. A
+//!   message sent to `config(cid)` or `token(cid, token)` directly is refused (`NOT_AUTHORIZED`). `Tick` is anyone's
+//!   top-level call at the gate it advances. The module builds; the role's LEZ wallet signs and sends.
 
 use std::time::Duration;
 
 use ferrata_bridge_core::{Address, Hash};
-use ferrata_lez_bridge_wire::{self as bw, BridgeMessage, CapParams, TimeRecord};
-use ferrata_wallet::AccountId;
+use ferrata_lez_bridge_wire::{self as bw, BridgeMessage, BridgeState, CapParams, ConfigState, TimeRecord};
+use ferrata_wallet::{AccountId, Mention};
 use serde_json::{json, Value};
 
 use crate::evm::{self, as_address, as_u128, calldata, dec, selector, Abi, Vault};
@@ -236,16 +241,37 @@ fn preflight(v: &mut Vault, from: &Address, data: &[u8]) -> Result<(), String> {
     }
 }
 
-/// The LEZ message of an admin `action` on the bridge program: (message, the account it goes to, the role).
-fn lez_action(action: &str, req: &Value) -> Result<(BridgeMessage, AccountId, &'static str), String> {
+/// A LEZ admin call as the bridge program takes it.
+struct LezAdmin {
+    message: BridgeMessage,
+    /// The transaction's accounts, the root (index 0) first.
+    mentions: Vec<Mention>,
+    role: &'static str,
+    signer: Option<AccountId>,
+    what: String,
+    /// Whether `signer` holds `role` in the configuration's state (when the request gives it).
+    holds: Option<bool>,
+    holder: Value,
+}
+
+/// The configuration's state, when the request gives it (`config_state`, hex of the bridge program's state).
+fn config_state(req: &Value) -> Result<Option<ConfigState>, String> {
+    let Some(text) = req["config_state"].as_str().filter(|t| t.len() > 2) else { return Ok(None) };
+    match borsh::from_slice::<BridgeState>(&unhex(text)?) {
+        Ok(BridgeState::Config(c)) => Ok(Some(c)),
+        _ => Err("config_state: not a bridge configuration's state".into()),
+    }
+}
+
+/// The LEZ admin call of `action` (`lez_set_cap`, `lez_freeze`, `lez_pause`, `lez_tick`, `lez_sunset`), from `signer`
+/// (the role's LEZ account, `req.signer`), in the configuration of `req.config_id` of the program at `req.program`.
+fn lez_action(action: &str, req: &Value) -> Result<LezAdmin, String> {
     let p = &req["params"];
     let program = AccountId::new(fixed::<32>(&req["program"], "program (the bridge program's account)")?);
     let cid: Hash = fixed(&req["config_id"], "config_id")?;
     let token: Option<Address> = if p["token"].is_null() { None } else { Some(fixed(&p["token"], "params.token")?) };
-    let target = || match &token {
-        Some(t) => bw::token_actor(program, &cid, t).account_id,
-        None => bw::config_actor(program, &cid).account_id,
-    };
+    let state = config_state(req)?;
+    let signer = if req["signer"].is_null() { None } else { Some(AccountId::new(fixed::<32>(&req["signer"], "signer (the role's LEZ account)")?)) };
     let record = || -> Result<TimeRecord, String> {
         let r = &p["record"];
         Ok(TimeRecord {
@@ -253,39 +279,70 @@ fn lez_action(action: &str, req: &Value) -> Result<(BridgeMessage, AccountId, &'
             header: if r["header"].is_null() { None } else { Some(unhex(r["header"].as_str().ok_or("params.record.header: hex")?)?) },
         })
     };
+    // The attestation program's record a `Freeze`, `Pause` or `Tick` reads its time from.
+    let header = |slot: u64| -> Result<Mention, String> {
+        let (attestation, instance) = match &state {
+            Some(c) => (c.config().attestation, c.config().instance_id),
+            None => (AccountId::new(fixed::<32>(&req["attestation"], "attestation (or config_state)")?), fixed::<32>(&req["instance_id"], "instance_id (or config_state)")?),
+        };
+        Ok(Mention::Public(ferrata_lez_wire::header_actor(attestation, &instance, slot)))
+    };
     let u128_of = |v: &Value, what: &str| -> Result<u128, String> { as_u128(&u256(v, what)?) };
-    Ok(match action {
-        "lez_set_cap" => (
-            BridgeMessage::SetCap {
-                config_id: cid,
-                token,
-                mints: flag(&p["mints"], "params.mints")?,
-                cap: CapParams { capacity: u128_of(&p["capacity"], "params.capacity")?, refill_per_second: u128_of(&p["refill_per_second"], "params.refill_per_second")? },
-            },
-            target(),
-            "admin",
-        ),
-        "lez_freeze" => (
-            BridgeMessage::Freeze {
-                config_id: cid,
-                token,
-                mints: flag(&p["mints"], "params.mints")?,
-                burns: flag(&p["burns"], "params.burns")?,
-                until_ms: uint(&p["until_ms"], "params.until_ms (0 lifts the freeze)")?,
-                record: record()?,
-            },
-            target(),
-            "freeze_authority",
-        ),
+    let (message, role, what) = match action {
+        "lez_set_cap" => {
+            let mints = flag(&p["mints"], "params.mints")?;
+            let cap = CapParams { capacity: u128_of(&p["capacity"], "params.capacity")?, refill_per_second: u128_of(&p["refill_per_second"], "params.refill_per_second")? };
+            let what = format!("SetCap: {} cap {} LEZ units, refill {}/s", if mints { "mint" } else { "burn" }, cap.capacity, cap.refill_per_second);
+            (BridgeMessage::SetCap { config_id: cid, token, mints, cap }, "admin", what)
+        }
+        "lez_freeze" => {
+            let until_ms = uint(&p["until_ms"], "params.until_ms (0 lifts the freeze)")?;
+            let (mints, burns) = (flag(&p["mints"], "params.mints")?, flag(&p["burns"], "params.burns")?);
+            let what = if until_ms == 0 { "Freeze lifted".to_string() } else { format!("Freeze until {until_ms} ms") };
+            (BridgeMessage::Freeze { config_id: cid, token, mints, burns, until_ms, record: record()? }, "freeze_authority", what)
+        }
         "lez_pause" => (
             BridgeMessage::Pause { config_id: cid, token, mints: flag(&p["mints"], "params.mints")?, burns: flag(&p["burns"], "params.burns")?, record: record()? },
-            bw::config_actor(program, &cid).account_id,
             "watcher",
+            "Pause (12 hours)".to_string(),
         ),
-        "lez_tick" => (BridgeMessage::Tick { config_id: cid, token, record: record()? }, target(), "anyone"),
-        "lez_sunset" => (BridgeMessage::Sunset { config_id: cid }, bw::config_actor(program, &cid).account_id, "freeze_authority"),
+        "lez_tick" => (BridgeMessage::Tick { config_id: cid, token, record: record()? }, "anyone", "Tick".to_string()),
+        "lez_sunset" => (BridgeMessage::Sunset { config_id: cid }, "freeze_authority", "Sunset".to_string()),
         other => return Err(format!("unknown LEZ action {other}")),
-    })
+    };
+    let config_at = bw::config_actor(program, &cid);
+    let gate = |t: &Option<Address>| match t {
+        Some(t) => (bw::token_actor(program, &cid, t), bw::token_seed(&cid, t)),
+        None => (config_at, bw::config_seed(&cid)),
+    };
+    let mut mentions = Vec::new();
+    if role == "anyone" {
+        // `Tick`: a top-level call at the gate it advances, then the record.
+        let (at, seed) = gate(&token);
+        mentions.push(Mention::Pda { actor: at, seed });
+    } else {
+        let signer = signer.ok_or_else(|| format!("signer: the LEZ account of the configuration's {role} (the message is sent at its own actor)"))?;
+        mentions.push(Mention::Signer(bw::own_actor(program, signer)));
+        mentions.push(Mention::Public(config_at));
+        if let Some(t) = &token {
+            mentions.push(Mention::Public(bw::token_actor(program, &cid, t)));
+        }
+    }
+    if let BridgeMessage::Freeze { record, .. } | BridgeMessage::Pause { record, .. } | BridgeMessage::Tick { record, .. } = &message {
+        mentions.push(header(record.record_slot)?);
+    }
+    // Whether the signer holds the role, from the configuration's state (the program's own checks decide).
+    let (holds, holder) = match (&state, signer) {
+        (Some(ConfigState::Ready { config, roles, .. }), Some(s)) => match role {
+            "admin" => (Some(config.controls.admin == *s.value()), json!(hex(&config.controls.admin))),
+            "freeze_authority" => (Some(roles.freeze_authority.single(s.value())),
+                                   json!(roles.freeze_authority.members.iter().map(|m| hex(m)).collect::<Vec<_>>())),
+            "watcher" => (Some(roles.watchers.contains(s.value())), json!(roles.watchers.iter().map(|m| hex(m)).collect::<Vec<_>>())),
+            _ => (None, Value::Null),
+        },
+        _ => (None, Value::Null),
+    };
+    Ok(LezAdmin { message, mentions, role, signer, what, holds, holder })
 }
 
 fn timeout(send: &Value) -> Duration {
@@ -343,15 +400,24 @@ pub(crate) fn vault_admin(v: &mut Vault, action: &str, p: &Value, sender: &Value
 pub(crate) fn admin_of(req: &Value) -> Result<Value, String> {
     let action = req["action"].as_str().ok_or("action: status, a vault action or a LEZ action (lez_*)")?;
     if action.starts_with("lez_") {
-        let (message, target, role) = lez_action(action, req)?;
-        let bytes = borsh::to_vec(&message).map_err(|e| e.to_string())?;
+        let l = lez_action(action, req)?;
+        let bytes = borsh::to_vec(&l.message).map_err(|e| e.to_string())?;
         return Ok(json!({
             "verdict": "built",
+            "what": l.what,
             "message": hex(&bytes),
-            "to": hex(target.value()),
+            "accounts": crate::wallet::mentions_json(&l.mentions),
+            "root_index": 0,
             "program": req["program"],
-            "role": role,
-            "note": "the bridge program's message as its admin, freeze authority or watcher signs it with their LEZ wallet (a public transaction at the account `to`)",
+            "role": l.role,
+            "signer": l.signer.map(|s| hex(s.value())),
+            "signer_holds_role": l.holds,
+            "role_holder": l.holder,
+            "note": if l.role == "anyone" {
+                "a public transaction rooted at accounts[0] (the gate), sent by anyone"
+            } else {
+                "a public transaction rooted at accounts[0], the role's own actor, signed by `signer`: the program forwards it to config(cid), which checks the role"
+            },
         }));
     }
     let vault: Address = fixed(&req["vault"], "vault")?;
@@ -452,26 +518,55 @@ mod tests {
         assert!(vault_action("nonsense", &json!({})).is_err());
     }
 
+    /// The program's rule (main.rs `role_message`): the root is the role's own actor (account = the signer, owned by
+    /// the program), never `config(cid)` or `token(cid, t)`; config(cid) comes next, then the token, then the record.
     #[test]
-    fn lez_admin_messages_are_the_programs_own() {
-        let req = json!({
-            "program": format!("0x{}", "22".repeat(32)),
-            "config_id": format!("0x{}", "33".repeat(32)),
-            "params": { "token": null, "mints": true, "capacity": "11000000000", "refill_per_second": "10000000" },
-        });
-        let (m, to, role) = lez_action("lez_set_cap", &req).unwrap();
-        assert_eq!(role, "admin");
-        let bytes = borsh::to_vec(&m).unwrap();
-        let back: BridgeMessage = borsh::from_slice(&bytes).unwrap();
-        assert_eq!(back, m);
+    fn lez_role_messages_are_rooted_at_the_roles_own_actor() {
         let program = AccountId::new([0x22; 32]);
-        assert_eq!(to, bw::config_actor(program, &[0x33; 32]).account_id);
-        let freeze = json!({ "program": req["program"], "config_id": req["config_id"],
-                             "params": { "token": format!("0x{}", "00".repeat(20)), "mints": true, "burns": false, "until_ms": 0,
-                                         "record": { "record_slot": 9 } } });
-        let (m, to, role) = lez_action("lez_freeze", &freeze).unwrap();
-        assert_eq!(role, "freeze_authority");
-        assert!(matches!(m, BridgeMessage::Freeze { until_ms: 0, record: TimeRecord { record_slot: 9, header: None }, .. }));
-        assert_eq!(to, bw::token_actor(program, &[0x33; 32], &[0u8; 20]).account_id);
+        let signer = [0x44u8; 32];
+        let attestation = [0x55u8; 32];
+        let base = json!({
+            "program": format!("0x{}", "22".repeat(32)), "config_id": format!("0x{}", "33".repeat(32)),
+            "signer": format!("0x{}", "44".repeat(32)),
+            "attestation": format!("0x{}", "55".repeat(32)), "instance_id": format!("0x{}", "66".repeat(32)),
+        });
+        let mut cap = base.clone();
+        cap["action"] = json!("lez_set_cap");
+        cap["params"] = json!({ "token": format!("0x{}", "00".repeat(20)), "mints": true, "capacity": "11000000000", "refill_per_second": "10000000" });
+        let out = admin_of(&cap).unwrap();
+        let acc = out["accounts"].as_array().unwrap();
+        assert_eq!(acc.len(), 3);
+        assert_eq!((acc[0]["kind"].as_str(), acc[0]["account"].as_str()), (Some("signer"), Some(format!("0x{}", "44".repeat(32)).as_str())));
+        assert_eq!(acc[0]["program"], json!(format!("0x{}", "22".repeat(32))), "the actor of the bridge program's state in the signer's account");
+        assert_ne!(acc[0]["account"], acc[1]["account"]);
+        assert_eq!(acc[1]["kind"], "public");
+        assert_eq!(acc[1]["account"], json!(hex(bw::config_actor(program, &[0x33; 32]).account_id.value())));
+        assert_eq!(acc[2]["account"], json!(hex(bw::token_actor(program, &[0x33; 32], &[0u8; 20]).account_id.value())));
+        assert_eq!(out["root_index"], 0);
+        let m: BridgeMessage = borsh::from_slice(&unhex(out["message"].as_str().unwrap()).unwrap()).unwrap();
+        assert!(matches!(m, BridgeMessage::SetCap { token: Some(_), mints: true, cap: CapParams { capacity: 11_000_000_000, .. }, .. }));
+        // Without the role's account there is nothing to sign at: refused, not built at the configuration.
+        let mut unsigned = cap.clone();
+        unsigned["signer"] = Value::Null;
+        assert!(admin_of(&unsigned).unwrap_err().starts_with("signer:"));
+        // A freeze also names the attestation program's record its time is read from (the last account).
+        let mut fr = base.clone();
+        fr["action"] = json!("lez_freeze");
+        fr["params"] = json!({ "token": format!("0x{}", "00".repeat(20)), "mints": true, "burns": false, "until_ms": 0, "record": { "record_slot": 9 } });
+        let out = admin_of(&fr).unwrap();
+        let acc = out["accounts"].as_array().unwrap();
+        assert_eq!(acc.len(), 4);
+        assert_eq!(acc[3]["account"], json!(hex(ferrata_lez_wire::header_actor(AccountId::new(attestation), &[0x66; 32], 9).account_id.value())));
+        assert_eq!(acc[3]["program"], json!(format!("0x{}", "55".repeat(32))));
+        assert_eq!(out["role"], "freeze_authority");
+        let _ = signer;
+        // Tick: anyone's call at the gate (a PDA root with its seed), no signer.
+        let mut tick = base.clone();
+        tick["action"] = json!("lez_tick");
+        tick["signer"] = Value::Null;
+        tick["params"] = json!({ "token": null, "record": { "record_slot": 9 } });
+        let out = admin_of(&tick).unwrap();
+        assert_eq!(out["accounts"][0]["kind"], "pda");
+        assert_eq!(out["accounts"][0]["account"], json!(hex(bw::config_actor(program, &[0x33; 32]).account_id.value())));
     }
 }

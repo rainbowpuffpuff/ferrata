@@ -108,6 +108,30 @@ struct Args {
     log: PathBuf,
     #[arg(long, default_value = "dev")]
     proofs: String,
+    /// A LEZ role's key, by its label in the run's key derivation (`lez/live/driver/src/keys.rs`, the crown's
+    /// `crown/admin` and `crown/freeze-authority`), imported into the LEZ wallet so that the module's LEZ admin messages
+    /// can be signed and sent in the run (`module.submit`). Repeatable. A stand-in for the role's own wallet.
+    #[arg(long = "lez-role-key")]
+    lez_role_keys: Vec<String>,
+}
+
+/// The run's throwaway key of `label`: SHA-256 of `ferrata-live/v1/key/`, the label and a counter (the first that is
+/// a valid scalar), as `lez/live/driver/src/keys.rs` derives the crown's role keys (a copy: that crate is not a
+/// dependency of this tool).
+fn derived_key(label: &str) -> lee::PrivateKey {
+    use sha2::{Digest, Sha256};
+    let mut counter = 0u32;
+    loop {
+        let mut h = Sha256::new();
+        h.update(b"ferrata-live/v1/key/");
+        h.update(label.as_bytes());
+        h.update(counter.to_le_bytes());
+        let bytes: [u8; 32] = h.finalize().into();
+        if let Ok(key) = lee::PrivateKey::try_new(bytes) {
+            return key;
+        }
+        counter += 1;
+    }
 }
 
 struct Chain {
@@ -474,7 +498,17 @@ impl Chain {
             self.seq.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the LEZ wallet: {e}"))?;
         }
         let t0 = Instant::now();
-        let hash = self.seq.submit(&call).await?;
+        // `payer`: a public account of this wallet that pays the LEZ fee and co-signs, when the call's own signer is
+        // unfunded (a LEZ admin message's role account in this run).
+        let payer = match params["payer"].as_str() {
+            Some(p) => Some(AccountId::new(h32(p)?)),
+            None => None,
+        };
+        let next = payer.or(self.seq.payer);
+        let saved = std::mem::replace(&mut self.seq.payer, next);
+        let hash = self.seq.submit(&call).await;
+        self.seq.payer = saved;
+        let hash = hash?;
         let send_ms = t0.elapsed().as_millis() as u64;
         let (block, reverted, tx) = self.wait_applied(&hash, since).await?;
         let tx_bytes = borsh::to_vec(&tx).map(|b| b.len()).unwrap_or(0);
@@ -685,7 +719,13 @@ fn main() -> Result<()> {
         ensure!(chain_id == a.chain_id, "the Ethereum RPC serves chain {chain_id}, not {}", a.chain_id);
         let eth = flow::Eth { p, vault: a.vault, chain_id, from_block: a.from_block, chunk: 10_000 };
         let seed = Seed::from_file(&a.seed)?;
-        let wallet = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
+        let mut wallet = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
+        for label in &a.lez_role_keys {
+            let key = derived_key(label);
+            let account = AccountId::from(&lee::PublicKey::new_from_private_key(&key));
+            wallet.storage_mut().key_chain_mut().add_imported_public_account(key);
+            eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account})");
+        }
         let program = AccountId::new(h32(&a.bridge_account)?);
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
         let ctx = Context { program, cid: cid.0, chain_id, vault: eth.vault.into_array() };

@@ -132,7 +132,7 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     if let Some(job) = crate::jobs::active() {
         // A deposit or a vault admin call through the send stack is itself a job: started again it answers that job,
         // and jobs.rs refuses it while another job runs.
-        if !matches!(method, "info" | "price" | "deposit" | "claim" | "burn" | "admin.vault" | "eth_report") {
+        if !matches!(method, "info" | "price" | "deposit" | "claim" | "burn" | "admin.vault" | "admin.set_cap" | "admin.lez" | "eth_report") {
             return Err(crate::jobs::busy(method, &job));
         }
     }
@@ -182,10 +182,14 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         "release" => c.release(params),
         "admin.status" if eth_path().is_some() => c.admin_status(),
         "admin.vault" if eth_path().is_some() => crate::jobs::start("admin", params, move |p| c.admin_vault(p)),
-        "admin.set_cap" | "admin.lez" => c.admin_lez(method, params),
+        // A LEZ admin message built by the module and sent as a public transaction (one block): a job.
+        "admin.set_cap" | "admin.lez" => {
+            let m = method.to_string();
+            crate::jobs::start("admin_lez", params, move |p| c.admin_lez(&m, p))
+        }
         "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
         m if m.starts_with("admin.") => Err(format!(
-            "{m}: on a sequencer the module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds the LEZ admin messages (admin.set_cap, admin.lez); a LEZ freeze needs an attested time record (the module's `admin` with params.record)"
+            "{m}: not on this path. The module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds and sends the LEZ SetCap (admin.set_cap, admin.lez). A LEZ Freeze, Pause or Tick it builds (the module's `admin` lez_freeze with params.record) but does not send yet: their time record in the Gloas layout needs the execution block's RLP header, which the module does not fetch"
         )),
         "relay" | "checkpoint" | "advance_time" => {
             Err(format!("{method} is a devnet stand-in: on a sequencer the relayer and the checkpoint prover do it, and time passes"))
@@ -1007,17 +1011,85 @@ impl Chain {
         Ok(out)
     }
 
-    /// A LEZ admin message built by the module (`admin.rs`), with the session's program and configuration.
+    /// A LEZ admin message built by the module (`admin.rs`: at the role's own actor, with config(cid), the token and,
+    /// for a freeze, the record) and sent as a public transaction through the chain service, as the session's other
+    /// public calls are (`submit`: lez_core's public send has no account kind for the bridge program's PDAs). The
+    /// signer is the configuration's role holder read from config(cid)'s state, or `params.signer` (an account id, or
+    /// `"user"`: the wallet's first public account). A signer that does not hold the role is refused here before
+    /// anything is sent, unless `params.unchecked` asks to send it anyway (to show the program's own refusal).
     fn admin_lez(&self, method: &str, params: &Value) -> Result<Value, String> {
         let (action, p) = if method == "admin.set_cap" {
-            ("lez_set_cap", json!({ "token": null, "mints": params["mints"].as_bool().unwrap_or(true),
-                                    "capacity": params["capacity"], "refill_per_second": params["refill_per_second"] }))
+            ("lez_set_cap".to_string(), json!({ "token": ETH, "mints": params["mints"].as_bool().unwrap_or(true),
+                                                "capacity": params["capacity"], "refill_per_second": params["refill_per_second"] }))
         } else {
-            (params["action"].as_str().ok_or("admin.lez needs an action (lez_*)")?, params["params"].clone())
+            (params["action"].as_str().ok_or("admin.lez needs an action (lez_*)")?.to_string(), params["params"].clone())
         };
-        let req = json!({ "action": action, "program": self.s["program"], "config_id": self.s["config_id"], "params": p });
-        crate::admin::admin_of(&req)
+        let mut inputs = self.post("module.inputs", json!({ "token": ETH, "lez_only": true }))?;
+        if crate::lez::active() {
+            // The program's states read again through lez_core (Logos Core's LEZ wallet), compared with the service's.
+            crate::lez::verify_inputs(&mut inputs, &self.s, None)?;
+        }
+        let config_state = inputs["config_state"].as_str().filter(|h| h.len() > 2).ok_or("the bridge has no configuration on LEZ yet")?.to_string();
+        let mut req = json!({ "action": action, "program": self.s["program"], "config_id": self.s["config_id"], "params": p,
+                              "config_state": config_state });
+        // Who signs: first the role holder the configuration names (the module's own reading of its state).
+        let probe = { let mut r = req.clone(); r["signer"] = json!(format!("0x{}", "00".repeat(32))); crate::admin::admin_of(&r)? };
+        let signer = match params["signer"].as_str() {
+            Some("user") => self.account("public", 0)?,
+            Some(a) => a.to_string(),
+            None => match &probe["role_holder"] {
+                Value::String(h) => h.clone(),
+                Value::Array(m) if m.len() == 1 => m[0].as_str().unwrap_or_default().to_string(),
+                other => return Err(format!("the configuration's {} is not one key ({other}): sign it with the role's own wallet", probe["role"])),
+            },
+        };
+        req["signer"] = json!(signer);
+        let built = crate::admin::admin_of(&req)?;
+        if built["signer_holds_role"] == false && params["unchecked"] != true {
+            return Err(format!("refused before sending: {signer} is not the configuration's {} ({})", built["role"], built["role_holder"]));
+        }
+        let what = format!("{} (admin view)", built["what"].as_str().unwrap_or("LEZ admin"));
+        // The role's account holds no LEZ: the wallet's public account /0 pays the fee and co-signs (outside the
+        // message's accounts), a stand-in for the role's own funded wallet.
+        let payer = self.account("public", 0)?;
+        crate::jobs::phase("sent", json!({ "by": "the chain service's LEZ wallet", "signer": signer, "payer": payer }));
+        let sent = self.post("module.submit", json!({ "message": built["message"], "accounts": built["accounts"],
+                                                       "root_index": built["root_index"], "what": what, "payer": payer }))?;
+        let settled = sent["settled"] == true;
+        let mut out = built;
+        out["settled"] = json!(settled);
+        out["tx_hash"] = sent["tx_hash"].clone();
+        out["block"] = sent["block"].clone();
+        out["sent"] = sent;
+        out["signed_by"] = json!("the chain service's LEZ wallet (seqnet-chain, LEZ's wallet library), holding the role's key in this run: the stand-in for the role's own LEZ wallet or multisig");
+        out["fee_paid_by"] = json!(payer);
+        if settled {
+            if action == "lez_set_cap" {
+                out["after"] = self.registry()?["tokens"][0]["lez"].clone();
+            }
+        } else {
+            out["what"] = json!(format!("refused by the bridge program: the transaction {} was included in block {} and reverted (signer {signer}, the configuration's {}: {})",
+                                        out["tx_hash"].as_str().unwrap_or("?"), out["block"], out["role"], out["role_holder"]));
+        }
+        Ok(out)
     }
+}
+
+/// A token's LEZ side as the registry view shows it (token(cid, token)'s gate), or null when it has none.
+fn lez_token(t: &Value) -> Value {
+    if t.is_null() {
+        return Value::Null;
+    }
+    json!({
+        "now_ms": t["gate"]["now_ms"],
+        "mints_frozen_until_ms": t["gate"]["mints_until"],
+        "burns_frozen_until_ms": t["gate"]["burns_until"],
+        "mint_cap": t["gate"]["mint"],
+        "burn_cap": t["gate"]["burn"],
+        "known_until_leaf": t["known_until"],
+        "fee_schedules": t["schedules"].as_array().map(|a| a.len()),
+        "decoded_by": "ferrata_bridge_module registry (token(cid, token) with the bridge program's types)",
+    })
 }
 
 /// Who made a send: the module, and who executed, proved and sent it.

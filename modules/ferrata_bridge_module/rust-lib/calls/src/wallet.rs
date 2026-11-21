@@ -90,7 +90,7 @@ fn refused(r: Refusal) -> Value {
     }
 }
 
-fn mentions_json(mentions: &[Mention]) -> Value {
+pub(crate) fn mentions_json(mentions: &[Mention]) -> Value {
     Value::Array(
         mentions
             .iter()
