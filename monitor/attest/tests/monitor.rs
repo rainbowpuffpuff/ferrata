@@ -81,7 +81,7 @@ fn sepolia_genesis() -> String {
         .unwrap()
         .iter()
         .find(|r| r["url"].as_str().is_some_and(|u| u.ends_with("/eth/v1/beacon/genesis")))
-        .map(|r| r["body"].as_str().map(str::to_string).unwrap_or_else(|| r["body"].to_string()))
+        .map(|r| r["response"].as_str().expect("the recorded answer").to_string())
         .expect("a recorded genesis answer")
 }
 
