@@ -729,7 +729,8 @@ fn lc_committees() {
     r.run("LC-COM-02", || rotation(&|x, _| flip(&mut x.next_sync_committee_branch[0]), "next committee branch node 0"));
     r.run("LC-COM-03", || rotation(&|x, _| x.next_sync_committee.aggregate_pubkey[47] ^= 1, "next committee aggregate key byte 47"));
     // LC-COM-04: synthetic. LC-COM-05..11: the Init adoption job.
-    let adoption = |mutate: &dyn Fn(&mut Vec<[u8; 96]>, &mut Vec<[u8; 96]>) -> Vec<(u8, bool)>, label: &str| {
+    type Mutate<'a> = dyn Fn(&mut Vec<[u8; 96]>, &mut Vec<[u8; 96]>) -> Vec<(u8, bool)> + 'a;
+    let adoption = |mutate: &Mutate<'_>, label: &str| {
         let (mut w, job, time) = init_only();
         let keys = uncompressed_keys(&w.bootstrap.current_sync_committee).unwrap();
         let (mut p0, mut p1) = (keys[..256].to_vec(), keys[256..].to_vec());
@@ -1206,18 +1207,17 @@ fn lc_successors_and_forks() {
         // the fork, carries its execution branch with leading zero nodes; else the finality branch.
         let mut w = gw.clone();
         let mut x = u1379.clone();
-        let note;
-        match &mut x.finalized_header.execution {
+        let note = match &mut x.finalized_header.execution {
             Execution::BlockHash { branch, .. } if branch[0] == ZERO => {
                 branch[0] = [1; 32];
-                note = "padding node 0 of the finalized header's execution branch set to 0x01…";
+                "padding node 0 of the finalized header's execution branch set to 0x01…"
             }
             _ if x.finality_branch[0] == ZERO => {
                 x.finality_branch[0] = [1; 32];
-                note = "padding node 0 of the finality branch set to 0x01…";
+                "padding node 0 of the finality branch set to 0x01…"
             }
             _ => return Observed::Unsupported { reason: "no zero padding node in the first Gloas update's branches".into() },
-        }
+        };
         Observed::of_reports(&job_for(&mut w, &x, "non-zero padding"), note)
     });
     r.run("LC-GL-05", || {

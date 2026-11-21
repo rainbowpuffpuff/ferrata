@@ -462,8 +462,8 @@ fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Resu
     {
         return Err(format!("{label}: a note of another size"));
     }
-    po.nullifier = pa.nullifier.clone();
-    po.commitment = pa.commitment.clone();
+    po.nullifier = pa.nullifier;
+    po.commitment = pa.commitment;
     po.encrypted_post_state = pa.encrypted_post_state.clone();
     Ok(())
 }

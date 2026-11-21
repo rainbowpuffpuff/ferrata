@@ -586,7 +586,7 @@ fn clm() {
         let mut w = base();
         let (cid, va, payer) = (w.cid_a, w.vault_a.address, *w.chain.payer.value());
         let d = public(8, [0xc3; 20], ETH, D0, [0x03; 32], payer);
-        let (i, ext) = extend_a(&mut w, &[d.clone()]);
+        let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         ok(&w.import_fees("setup: ImportFees ETH (A): no schedule 2 at 9 leaves", &cid, i, ETH, 2, None, &va));
         let range = w.range(&cid, &ETH, 8);
         let rep = w.claim_with("Claim leaf 8 against root(A, 8)", &cid, 8, &va, ext.witness(&d, 9), range, Some(*relayer().value()));
@@ -622,7 +622,7 @@ fn clm() {
         let mut w = base();
         let (cid, va, payer) = (w.cid_a, w.vault_a.address, *w.chain.payer.value());
         let d = public(8, [0xc4; 20], ETH, D0, [0x11; 32], payer);
-        let (i, ext) = extend_a(&mut w, &[d.clone()]);
+        let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         let n = open_extended(&mut w, i, &ext);
         let mut wit = ext.witness(&d, n);
         wit.amount = word_of_u128(D1);
@@ -835,7 +835,7 @@ fn clm() {
         let (cid, va, program) = (w.cid_a, w.vault_a.address, w.program);
         let target = config_actor(program, &cid);
         let d = public(8, [0xc9; 20], ETH, D0, [0x29; 32], *target.account_id.value());
-        let (i, ext) = extend_a(&mut w, &[d.clone()]);
+        let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         let n = open_extended(&mut w, i, &ext);
         let before = w.chain.actor_state(target).to_vec();
         let rep = w.claim("Claim leaf 8: dest = config(A)'s account id", &cid, n, &va, ext.witness(&d, n));
@@ -887,7 +887,7 @@ fn clm() {
         let mut w = base();
         let (cid, va, program, payer) = (w.cid_a, w.vault_a.address, w.program, w.chain.payer);
         let d = public(8, [0xd1; 20], U, D0, [0x31; 32], *payer.value());
-        let (i, ext) = extend_a(&mut w, &[d.clone()]);
+        let (i, ext) = extend_a(&mut w, std::slice::from_ref(&d));
         let n = open_extended(&mut w, i, &ext);
         let wit = ext.witness(&d, n);
         let range = w.range(&cid, &U, 8);
@@ -1513,7 +1513,7 @@ fn reg() {
             let (cid, va) = (w.cid_a, w.vault_a.address);
             ok(&w.register("setup: Register T3 (A) at block 100", &cid, 0, &t3_entry(), &va));
             let mut extra = registry_slots(&eth_entry(), &[eth_schedule_one()]);
-            extra.extend(registry_slots(&t3_entry(), &[schedule.clone()]));
+            extra.extend(registry_slots(&t3_entry(), std::slice::from_ref(&schedule)));
             let slots = VaultSlots { address: va, root: w.vault_a.root(8), count: 8, config_id: cid, extra };
             let i = add(&mut w, slots);
             let rep = w.import_fees(&format!("ImportFees T3 (A) index 1: {what}"), &cid, i, T3, 1, Some(schedule.clone()), &va);
@@ -1537,7 +1537,7 @@ fn reg() {
             add(w, slots)
         };
         let x = at(&mut w, k, &[]);
-        let y = at(&mut w, 4, &[one.clone()]);
+        let y = at(&mut w, 4, std::slice::from_ref(&one));
         ok(&w.init("setup: Init D", &c, x));
         ok(&w.register("setup: Register ETH (D)", &cid, x, &eth_entry(), &VD));
         ok(&w.import("setup: ImportRoot D n=2", &cid, x, vault.root(2), 2, &VD));
@@ -1661,7 +1661,7 @@ fn ten() {
     // BR-TEN-04: B-BR plus the rogue configuration B of vault A, which claimed A's leaf 2 with its s; A's claim.
     r.run("BR-TEN-04", || {
         let mut w = base();
-        let (cid_a, va) = (w.cid_a, w.vault_a.address);
+        let va = w.vault_a.address;
         let (cid_b, fake) = rogue(&mut w);
         let vector = w.vector.clone();
         ok(&w.claim("setup: B (rogue) claims A's leaf 2 with its s", &cid_b, 9, &va, fake.witness(&vector, 9)));
