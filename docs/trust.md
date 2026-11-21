@@ -1,7 +1,8 @@
 # Ferrata: trust assumptions
 
-**The trust document of RFP-021 (S.6, VS.4, VS.5) and RFP-022 (Security #1–#9, R.9, Privacy #4,
-#6). First draft, 11 November 2026.** It says who is trusted for what, what each failure does, what
+**The trust document of RFP-021 (S.6, F.12, VS.4, VS.5) and RFP-022 (Security #1–#9, R.9, Privacy #4,
+#6). Revised for delivery on 21 November 2026, against the tree at this commit; it replaces the first draft of
+11 November.** It says who is trusted for what, what each failure does, what
 bounds the loss, and what an observer can still learn. It covers the light client and its
 attestations (inbound) and the return leg from LEZ to Ethereum (outbound). Every statement cites its
 source; paths are relative to the repository root. The code is a prototype, **not audited and not
@@ -11,6 +12,36 @@ logic, the vault, the bridge program and the proof programs is planned and not d
 Labels as in the design notes: **measured**, **derived**, **estimated**, **not built**
 ([`docs/design/attestation.md`](design/attestation.md), [`docs/design/bridge.md`](design/bridge.md),
 opening sections).
+
+## 0. The verification model in one paragraph (RFP-021 VS.5, RFP-022 Security #7)
+
+Nothing in Ferrata takes a party's word for a fact. An attestation is accepted because the LEZ program itself
+verifies Ethereum's sync-committee signatures, from a checkpoint the consumer pinned, and the Merkle proofs under
+the record it wrote; a claim, because the bridge program proves the deposit under a root the attestation program
+attested; a release, because the vault verifies a zero-knowledge proof of the burn under a checkpoint it accepted.
+Every off-chain participant (updaters, provers, root importers, relayers, wrappers, RPC providers) only carries data
+that these checks accept or refuse: if it lies it is refused, and if it stops anyone else, the user included, can
+take its place. Its role is **liveness only**. Three assumptions remain, stated rather than hidden: the starting
+checkpoint, until it is checked (§2.1); two thirds of each sync committee, for the inbound leg (§2.2); and fewer
+than `t` accredited LEZ sequencer keys, for the return leg, where under rule (A) the watchers also hold a safety
+role outside its conditions (§3).
+
+**Where each clause is answered.**
+
+| RFP clause | Section |
+|---|---|
+| RFP-021 S.6: the honest supermajority and the cost of the attack it admits | §2.2 |
+| RFP-021 S.6: the weak-subjectivity checkpoint, who supplies it, how a verifier confirms it | §2.1 |
+| RFP-021 S.6: what an attestation does and does not prove | §2.3 |
+| RFP-021 S.6: what every off-chain participant can observe, and whether it affects safety or only liveness | §2.4 (light client), §4.2 (bridge) |
+| RFP-021 S.6: when the guarantees degrade or fail | §2.5, §6 |
+| RFP-021 F.12: every off-chain participant, and why none of them, alone or as a class, blocks an attestation | §2.4, each row walked by a test |
+| RFP-021 VS.4: a compromised committee, and how a consumer bounds its exposure | §2.2 |
+| RFP-021 VS.5, RFP-022 Security #7: the trustless model and liveness-only roles | §0, §2.4, §4.2 |
+| RFP-022 R.9: outages and malfunctions of third-party components, their effect and mitigation | §4.3 |
+| RFP-022 Security #8, #9: no swap of verification logic; the failsafe | §6; the [deployer guide](guides/deployer-guide.md) §9 |
+| RFP-022 Privacy #4: every component that handles user data | §8.1 |
+| RFP-022 Privacy #6: what a party submitting for the user learns, and switching per operation | §8.2 |
 
 ## 1. Summary
 
@@ -26,7 +57,7 @@ opening sections).
 | Ferrata's own code (core, programs, guests, vault) | everything | depends on the bug | caps, freezes, `revokeFrom`; immutability means no fix in place | §6 |
 | Admin and freeze authority (multisigs) | liveness only: they cannot move escrow or accept anything | denial of service | freezes lapse after 30 days; keyless retirement; 14-day public role changes | §4 |
 | Until milestone B1: nobody who knows a public-kind deposit's `s` creates a second configuration of the same vault and chain, and nobody fills a destination's `holder(dest)` | that every public-kind deposit can be claimed under the paired configuration, and that a public destination can receive | that deposit is frozen: the paired configuration's claim is refused (250) and, once it has imported the deposit, the leaf is below the refund boundary, so its escrow stays in the vault; a filled destination can no longer be credited | no theft and no double mint: the second configuration's mints and burns are under its own id, which no vault pays; only the depositor or whoever sees a plaintext claim before inclusion knows `s` (a private claim, the CLI's default path, does not publish it; a private-kind deposit cannot be taken); the fix is planned for B1 ([`lez/results/tenant.md`](../lez/results/tenant.md)) | [`bridge.md`](design/bridge.md) §3 |
-| Everyone else (submitters, importers, provers, relayers, wrappers, RPC providers) | liveness only | refused, or replaced by anyone else | — | §2.4, §4 |
+| Everyone else (submitters, importers, provers, relayers, wrappers, RPC providers) | liveness only | refused, or replaced by anyone else | — | §2.4, §4.2 |
 
 ## 2. The light client and its attestations (RFP-021)
 
@@ -199,8 +230,11 @@ frozen flag ([EVIDENCE](EVIDENCE.md) row 144).
 chain that never existed is refused on the signature alone (the fabricated-chain test, consensus half,
 native); participation at 21, 22, 23 and 32 of 32 is tested; an update for another chain's instance is
 refused with 40; 107 hand-picked mutants are killed; Helios is a differential oracle on 33 of the 52
-official cases ([`attestation.md`](design/attestation.md) §3.4, §12). The inclusion half of VS.1 and VS.2
-through the program are **not built** (milestone A2).
+official cases ([`attestation.md`](design/attestation.md) §3.4, §12). Through the program, at this commit: a
+forged signature is refused from any sender (VS.6), and forged state and receipts roots, another chain and a
+predicate over uncovered state are refused (`lez/results/stage4-attest-refusals.md`); the fabricated chain itself,
+and committee, participation and finality forgeries, are refused in the native core's tests
+([`requirements-status.md`](requirements-status.md), VS.1 and VS.2, says what is shown where).
 
 **The policy's liveness limit.** A header enters only through a finality update; the program keeps no
 optimistic header. If Ethereum finalizes nothing through a whole sync-committee period, the instance stops
@@ -283,6 +317,19 @@ served which bytes, so it matches them across rounds. Live for ten minutes on ma
 `k = 2` byte for byte (Nimbus, Lodestar) it applied two period updates and one finality update, each from both
 clients, and skipped one finalized checkpoint no two clients served alike; with `k = 3` on the finalized header
 (Lighthouse's node the third) it skipped none.
+
+### 2.5 When the light client's guarantees degrade or fail
+
+| Condition | What happens | What a consumer does | Where |
+|---|---|---|---|
+| A captured sync committee (342 of 512 seats signing a header off the canonical chain) | forged records; facts about blocks that never existed are attested | size caps and freezes to what it can lose; the instance freeze on conflicting finality exists only in the experimental v0.3.1 port | §2.2 |
+| A false checkpoint, not checked before use | the instance follows a false chain from its start | check the checkpoint (`verify_checkpoint`, §2.1) before pinning an instance; a pinned instance id pins its checkpoint | §2.1, §2.4 |
+| The weak-subjectivity bound passed; a whole sync-committee period without Ethereum finality; a third of one committee withholding its signatures for a period | the instance refuses every update (53, or no update to apply) and stops safely; records already written stay valid | move to a replacement instance from a fresh checkpoint, a new trust decision ([consumer guide](guides/consumer-guide.md) §9) | §2.1, §2.2 |
+| A fork that is not in the schedule fixed at `Init` | the instance cannot follow it; a successor instance under the same root id can | accept the successor ([consumer guide](guides/consumer-guide.md) §9) | [`attestation.md`](design/attestation.md) §3.5 |
+| A consumer holding the program's id in mutable state | whoever controls that pointer substitutes a program that attests to anything | pin the program; derive every actor from constants ([consumer guide](guides/consumer-guide.md) §2) | VS.3 |
+| An unsound proof system (RISC Zero, LEZ's privacy circuit) | private reads, private consumers and the proven update path can be forged; the public job path does not depend on it | caps and freezes | §5 |
+| A bug in Ferrata's core or program | depends on the bug; the deployed program cannot be patched | move to a new deployment ([consumer guide](guides/consumer-guide.md) §9) | §6 |
+| A LEZ zone that includes nothing | no update, no attestation, for every program on the zone | wait; the instance resumes from its own state | §2.4 |
 
 ## 3. The return leg (RFP-022 outbound)
 
@@ -420,6 +467,8 @@ checkpoint for that network would need, and what its public data already lets an
 
 ## 4. Roles and powers (RFP-022 Security #5, #7)
 
+### 4.1 Roles
+
 From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/bridge.md) §14;
 [`lez/BRIDGE.md`](../lez/BRIDGE.md) §5:
 
@@ -444,19 +493,41 @@ table says it cannot. `configId` commits to the controls, so this is visible bef
 the same pair at construction (`RolesMustDiffer`). The program's second build (not deployed) refuses such an `Init`
 (240; [`lez/results/bridge-next.md`](../lez/results/bridge-next.md), "F1"); milestone B1 deploys it.
 
-**Off-chain participants of the bridge** (after [`bridge.md`](design/bridge.md) §6, §12.3, §14):
+### 4.2 Off-chain participants of the bridge (RFP-022 Security #7)
 
-| Who | Provides | If it lies | If it stops | Learns |
+(After [`bridge.md`](design/bridge.md) §6, §12.3, §14.)
+
+| Who | Provides | Can affect | If it lies | If it stops | Learns |
+|---|---|---|---|---|---|
+| Root importer | one attestation per record | liveness only | refused by the primitive | anyone else imports | public data |
+| Relayer | gas drops, submission | liveness only | cannot redirect or overcharge: proofs bind destination, recipient and fee; but a plaintext claim it is given carries `s`, with which it can freeze that deposit through a second configuration (the deployed program; fixed in the second build, not deployed: EVIDENCE rows 136, 143) | the user picks another or submits directly | §8.2 |
+| Checkpoint prover | candidate and finalisation proofs | liveness only | refused by the vault | anyone with a prover and an x86 machine; a backlog is proven in pieces | public data |
+| Release wrapper | the Groth16 wrap | liveness only | refused by the vault | another wrapper, or the user's own x86 machine | what the release publishes |
+| Watchers (`monitor`) | cancellations, 12-hour pauses | liveness under rule (B); **safety** under rule (A) outside its conditions F1–F4 (§3.4) | delay finalisation until the admin replaces them | rule (B): the release delay and revocation still catch a bad candidate | public data |
+| Accredited sequencers and their attestors | LEZ blocks; attestations under (B) | **safety** for the return leg: `t` of them can forge a burn root (§3.2; §3.5 bounds it) | as said | the zone stops; finalisation needs `t` live keys under (B), `t + 1` under (A) | public transactions |
+| RPC and LEZ nodes | chain data | liveness only | refused: checked against roots and records | another node | request metadata; recovery downloads whole lists, never per item |
+
+Under rule (B) every off-chain role apart from the accredited sequencers is liveness-only (Security #7); under rule
+(A) the watchers also have the safety role of §3.4.
+
+### 4.3 Outages and malfunctions of third-party components (RFP-022 R.9)
+
+Each component a third party is expected to run, what its outage and its malfunction do, the mitigation that is
+built, and the test or recorded run that shows the mitigation.
+
+| Component | Outage: effect | Malfunction: effect | Mitigation (built) | Shown by |
 |---|---|---|---|---|
-| Root importer | one attestation per record | refused by the primitive | anyone else imports | public data |
-| Relayer | gas drops (the receipt and one credit per `N` built, EVIDENCE rows 47, 48; the sealed credit's sweep not built), submission | cannot redirect or overcharge: proofs bind destination, recipient and fee; but a plaintext claim it is given carries `s`, with which it can freeze that deposit through a second configuration until B1 (EVIDENCE row 136) | the user picks another or submits directly | a time, a one-time address, the transaction it submits |
-| Checkpoint prover | candidate and finalisation proofs | refused by the vault | anyone with a prover and an x86 machine; a backlog is proven in pieces | public data |
-| Release wrapper | the Groth16 wrap | refused by the vault | another wrapper, or the user's own x86 machine | what the release publishes |
-| Accredited sequencers | LEZ blocks; attestations under (B) | `t` of them can forge a burn root (§3.5 bounds it) | the zone stops; finalisation needs `t` live keys under (B), `t + 1` under (A) | public transactions |
-| RPC and LEZ nodes | chain data | refused: checked against roots and records | another node | request metadata; recovery downloads whole lists, never per item |
+| Light-client updater | no fresh records: claims of newer deposits wait | a wrong update is refused by the program | anyone runs one (no permission); the user runs its own | §2.4's tests; EVIDENCE rows 79, 80 |
+| Root importer | deposits after the last import cannot be claimed yet | an import the attestation does not prove is refused (110, 244, 247), so nothing wrong is written | `ImportRoot` is permissionless: `ferrata-relayer --import-roots`, `ferrata_bridge_module.import_root`, or the user (who then dates its deposit, as the user guide warns) | `lez/harness/tests/bridge_inbound.rs`; EVIDENCE row 106 (refused before sending, nothing spent) |
+| Relayer, inbound (gas drop) | a first private claim has no native LEZ for its fee | it cannot redirect: the receipt binds `N`, the one-time address and the relayer; one credit per `N` | another relayer per claim; or native LEZ from elsewhere, a correlation the client states | EVIDENCE rows 47, 48, 124 (M0 check 2 on LEZ v0.4.0-rc3: the credit sealed to a one-time private account and swept by the claim) |
+| Relayer, outbound (release submission) | the release is not sent | a release with the recipient, the relayer or the fee changed is refused by RISC Zero's verifier; a replay by `NullifierAlreadyUsed` | any relayer can send the job (relayer address 0 by default), or `ferrata release --self-send` | EVIDENCE row 46 (`e2e/runs/relayer-fork/`); `cli/tests/e2e.rs` (`--self-send`, row 85) |
+| Release wrapper | no Groth16 seal | a wrong seal is refused by the vault | another wrapper, or the user's own x86 machine (`ferrata release --prove`, then any wrapper) | `cli/tests/relayer.sh` (a succinct receipt wrapped by the daemon, row 46) |
+| Checkpoint prover | releases wait; after 30 days without checkpoint progress anyone may retire the vault and refunds open | an invalid proof is refused; a prover cannot leave out a burn | anyone with a prover; a backlog proven in pieces; keyless retirement and refunds | `vault/test/` (refunds, retirement: row 12); `checkpoint/RESULTS.md` §3, §5 |
+| Watchers (`monitor`) | rule (B): a bad candidate is still caught by the release delay and revocation; rule (A): §3.4 | cancels honest candidates: a delay, until the admin replaces it (14 days) | up to three watchers; restart from the chain; a failed cancellation retried | EVIDENCE rows 43–45 (`monitor/tests/anvil-e2e.sh`: kill and restart, lost state, no gas money, a forked node) |
+| Rule (B) attestors (beside each sequencer) | up to `n − t` silent sequencers are tolerated | fewer than `t` keys cannot forge a checkpoint; an uncertified key or another deployment's is refused | the threshold | EVIDENCE rows 66 (a silent sequencer on a four-sequencer zone), 68 (refusals in the guest) |
+| Ethereum RPC and LEZ nodes | the client cannot read or send | data checked against the vault's roots and the zone's records; a wrong chain or a missing vault refused | any endpoint, by option or in the view | `cli/tests/e2e.rs` (an endpoint that does not answer, another chain, no vault: row 85); the mini-app's editable endpoints (row 62) |
+| Admin and freeze authority (multisigs) | no new tokens or caps; no freeze | denial of service within §4's bounds | freezes lapse after 30 days; 14-day public role changes; keyless retirement | `vault/test/Freeze.t.sol`, `vault/test/Roles.t.sol` (row 12); `lez/harness/tests/bridge_controls.rs` (row 74) |
 
-Under rule (B) every off-chain role is liveness-only (Security #7); under rule (A) the watchers have the
-safety role of §3.4.
 
 ## 5. The proof system
 
@@ -554,17 +625,46 @@ transaction dumps of [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3 and
 | the root a claim reads | the deposit is at least that old | read the newest root |
 | a retry after a cap rejection | the first attempt's time | the client checks caps before proving |
 | a fee-schedule change | splits sets by date: the claim's fee range shows which schedule applied | schedules change rarely, with 7 days' notice |
-| the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; gas drop (its receipt and the relayer's credit built, EVIDENCE rows 47, 48; the sealed credit to a private one-time account and its sweep not built) |
+| the fee payer of a private transaction | the payer appears as a fresh alias with its reserve in plaintext; a first claim funded from a faucet or a purchase links to that source until the gas drop exists | fixed reserve per operation type; the gas drop: its receipt and the relayer's one credit per `N` (EVIDENCE rows 47, 48), and the credit sealed to a one-time private account and swept by the claim, with LEZ's wallet on v0.4.0-rc3 (row 124; not yet in the relayer daemon) |
 | a private read of a record | which record and which consumer program | read the newest record; hop inside the proof |
 | the plaintext claim | which deposit paid which mint | private by default; the client warns before allowing it |
 | network metadata | IP addresses to RPC endpoints and sequencers | out of scope; editable endpoints (U.9: the mini-app's, EVIDENCE row 62) |
 | an adversary's own deposits | subtracted from any anonymity set | none |
 
-**Who handles user data (Privacy #4).** Only the wallet holds the seed, `s`, `C`'s opening, destinations,
-`sOut` and recipients; none of them is in any submitted transaction (searched byte by byte in the measured
-dumps). A relayer learns a time, a one-time address and what it submits; a wrapper what the release
-publishes; RPC providers which blocks are fetched (recovery downloads whole lists, never per item). The
-`kView` key reveals burns and recipients but cannot claim or release ([`bridge.md`](design/bridge.md) §4, §6).
+### 8.1 Every component that handles user data (Privacy #4)
+
+The values that would connect the two legs are the seed and what derives from it: `kAuth`, `kView`, a deposit's
+secret `s` and the opening of its commitment `C` (`s`, the destination's kind, the destination), a burn's `r`,
+`sOut` and recipient, and the burn counter. **None of them leaves the user's machine, and none is in any submitted
+transaction**: the privacy suite searched every public byte of both chains over 20 round trips for 320 such values
+and found none, in dev mode and on real proofs of the final programs (EVIDENCE rows 23, 89;
+[`privacy/RESULTS.md`](privacy/RESULTS.md); every public field, step by step:
+[`privacy/generated/fields.md`](privacy/generated/fields.md)).
+
+| Component | Who runs it | What of the user's it handles | Where it stays | In a submitted transaction |
+|---|---|---|---|---|
+| The `ferrata` tool, the mini-app and `ferrata_bridge_module` | the user | the seed (a file, `chmod 600`), every derived key and secret above, the deposit tree and burn notes it downloads | the user's machine; the module returns no `kAuth`, `kView`, `s` or `sOut`, except `s` inside a claim message (plaintext: by the user's explicit choice; private: as the input of the private execution, never sent) ([`modules/README.md`](../modules/README.md)) | no linking value (rows 23, 89) |
+| LEZ's wallet (the prover of private claims and burns) | the user | the witness of a private claim or burn: the leaf, its path, `s`, the destination | on the user's machine; only the proof and the transaction's public parts leave | the nullifier `N`, the root read, the fee alias: §10 of the [user guide](guides/user-guide.md) |
+| Relayer (gas drop; release submission) | any third party, per operation | the gas-drop receipt; a release job | its state directory | only what the step publishes anyway: §8.2 |
+| Release wrapper | any x86 machine, the user's included | a succinct release receipt | its machine | what the release publishes (the journal) |
+| Root importer, checkpoint prover, updater | any third party | nothing of the user's | — | — |
+| Ethereum RPC providers, LEZ nodes | any provider; the user may run its own | request metadata: the IP address, the time, which blocks and lists are read (recovery downloads whole lists, never one item) | the provider | — |
+| Ethereum (the deposit) | public chain | the depositor, the token, the denomination, `C`, the pair (depositor, `j`) | public by design | yes, by design: the deposit is the public leg |
+
+The `kView` key reveals burns and recipients but cannot claim or release ([`bridge.md`](design/bridge.md) §4, §6).
+
+### 8.2 What a party submitting for the user learns, and switching it per operation (Privacy #6)
+
+| Party | Receives | Learns beyond what the chain then publishes | Never learns | Switched per operation by | Shown by |
+|---|---|---|---|---|---|
+| Gas-drop relayer (a first private claim's fee) | the gas-drop receipt: its journal `DROP_DOMAIN ‖ root ‖ evmChainId ‖ vault ‖ N ‖ oneTimeAddress ‖ relayer` (212 bytes) | that a claim spending `N` under that root will follow, the one-time address, the time of the request, the requester's IP address | which deposit, its depositor, its destination | the receipt names one relayer and the claimant picks it per claim; another relayer refuses a receipt naming someone else | EVIDENCE rows 47, 48, 124 |
+| The relayer a claim names (relay fee) | nothing: it is named inside the claim the user proves | nothing beyond the published claim, which names it and mints it the relay fee | which deposit | `ferrata claim --relayer`, per claim | `cli/tests/e2e.rs` (row 84) |
+| Release relayer | the job: the release journal and its seal, or the succinct receipt | the job's fields are exactly what the release publishes (chain, vault, configuration, root, `NOut`, token, amount, recipient, relayer, fee); in addition the time it received the job and the sender's IP address | `sOut`, `r`, the burn's index, the seed: which burn | a job naming relayer address 0 (the default) can be sent by any relayer, which the vault pays; `--relayer` names one; `--self-send` needs none | EVIDENCE row 46 (`e2e/runs/relayer-fork/`: another relayer's daemon refuses a job naming a different relayer); `cli/tests/e2e.rs` (rows 84, 85) |
+| Release wrapper | a succinct receipt | the journal, as above | the witness (succinct receipts are zero-knowledge, §5) | any wrapper, or the user's own x86 machine | `cli/tests/relayer.sh` (row 46) |
+
+What every submitting party appears as on chain, measured: a claim names its relayer and mints it the relay fee
+publicly; a release names its relayer; every private claim and burn names the account the unspent fee reserve is
+refunded to ([`privacy/generated/fields.md`](privacy/generated/fields.md)).
 
 ## 9. CROPS review
 
@@ -575,10 +675,10 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
   except watchers and the multisigs is permissionless; freezes lapse; claims never expire. User escape:
   submit directly; pick another relayer per operation; refunds after retirement, which anyone can trigger
   after 30 days without a checkpoint.
-- **Open.** Risk: the daemons' Logos modules do not exist yet (guest image ids reproduce at any path since
-  `integration7`, §5).
-  Mitigation: the whole stack is in this repository; the deployment is scripted and rehearsed. User
-  escape: run your own updater, importer, prover and wrapper from the repository.
+- **Open.** Risk: no module catalog is published yet, and an operator builds from source. Mitigation: the whole
+  stack is in this repository, every daemon also as a Logos module ([`modules/`](../modules/README.md)), guest image
+  ids reproduce at any path (§5), the deployment is scripted and rehearsed. User escape: run your own updater,
+  importer, prover, relayer and wrapper from the repository.
 - **Free.** The repository is licensed MIT OR Apache-2.0, at the user's option ([`README.md`](../README.md); [`LICENSE-APACHE`](../LICENSE-APACHE),
   [`LICENSE-MIT`](../LICENSE-MIT)); the licences of reused upstream components are not recorded here.
 - **Privacy.** Risk: §8's residual correlations. Mitigation: commitments and nullifiers, fixed
@@ -598,8 +698,9 @@ publishes; RPC providers which blocks are fetched (recovery downloads whole list
 the upstream pull request is not opened); the attestation side's `monitor` (records against
 several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
-instance); on LEZ, the admin's own handover; the gas drop's sealed credit to a private one-time account
-and its sweep inside the private claim; a rule (B) zone of Logos's sequencers with the attestor module beside
+instance); on LEZ, the admin's own handover; the gas drop inside the relayer daemon (the sealed credit and its sweep
+by the claim ran with LEZ's wallet on v0.4.0-rc3, EVIDENCE row 124; the daemon's own credit is a public transfer that
+no private claim can sweep); a rule (B) zone of Logos's sequencers with the attestor module beside
 each, its checkpoints on Sepolia, and a rotation that removes a key; in the deployed light-client program, the freeze
 of an instance on evidence of conflicting finality (an experimental, unaudited version exists in the bench and the
 v0.3.1 port, [EVIDENCE](EVIDENCE.md) row 144); a cost for forging a record: bonded or restaked backing that a consumer
@@ -607,10 +708,11 @@ can require, or anchoring to Ethereum's FFG finality (§2.2, design only); the a
 [README](../README.md#specified-but-not-built), "Specified but not built"; [`attestation.md`](design/attestation.md) §15; [`bridge.md`](design/bridge.md) §19;
 [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §9.
 
-Built since this list's first draft, with their evidence: the weak-subjectivity bound, successors and root
+Built since the first draft of 11 November, with their evidence: the weak-subjectivity bound, successors and root
 ids ([EVIDENCE](EVIDENCE.md) rows 69, 70); the watchers' `monitor` (rows 43–45); the rule (B) attestor
 program (rows 63–68); the attestor and the watchers' `monitor`, also as Logos modules (rows 94–96); on LEZ,
 watchers, an M-of-N freeze authority, the 14-day handover and the keyless `Sunset` (row 74); the gas-drop receipt
 (rows 47, 48); a zone of four sequencers running the bridge program, its checkpoint proven and both burns
 released, and a rotation its committee proposed (rows 100, 101); the relayer's root imports and its Logos module
-(rows 106, 107).
+(rows 106, 107); the gas drop's sealed credit swept by a private claim, on LEZ v0.4.0-rc3 (row 124); the test that
+walks every off-chain party of the attestation side (§2.4).
