@@ -28,11 +28,16 @@ import {VaultTestBase} from "./utils/VaultTestBase.sol";
 ///         already escrowed or owed - a recovery needing someone to choose new verification logic would be the
 ///         backdoor Security #8 forbids;
 ///         - for the migration rehearsal itself (Migration.t.sol step 3): a bug in the VERIFIER takes this stop
-///         instead of the freeze-and-retire path, and after it there is no b1-on-v1 left to honour.
+///         instead of the freeze-and-retire path, and after it there is no b1-on-v1 left to honour;
+///         - a bug in one of Ferrata's own guests cannot trip the stop (RISC Zero is sound: there is no proof of
+///         exploit to give it): the answer is the release freeze, the checkpoint freeze and `revokeFrom` (D13,
+///         `docs/trust.md` section 6), each lasting `maxFreeze` unless renewed. The `test_guestBug_*` tests show
+///         what that does to the in-flight positions (MIGRATION.md section 4).
 contract MigrationFailsafeTest is VaultTestBase {
     bytes32 internal constant ROOT0 = keccak256("failsafe burn root 0 (the released burn)");
     bytes32 internal constant ROOT1 = keccak256("failsafe burn root 1 (the burn in flight at the stop)");
     bytes32 internal constant ROOT_NONE = keccak256("failsafe root of a candidate never finalised");
+    bytes32 internal constant ROOT_FORGED = keccak256("failsafe burn root a buggy checkpoint guest let through");
     /// @notice A junk seal: after the stop no proof is checked at all, and before it none was made.
     bytes internal constant JUNK = hex"6a756e6b";
 
@@ -435,5 +440,144 @@ contract MigrationFailsafeTest is VaultTestBase {
         assertEq(vault.escrowed(ETH), escrowAtStop);
         assertEq(address(vault).balance, vault.escrowed(ETH) + vault.totalOwed(ETH));
         assertTrue(vault.retired() && estop.paused());
+    }
+
+    // ------------------------------------------------------------------------------------------------------------
+    // A bug in one of Ferrata's own guests: the freezes and revokeFrom, not the stop (D13; MIGRATION.md section 4)
+    // ------------------------------------------------------------------------------------------------------------
+
+    /// @dev The positions of the guest-bug tests: d1 imported and burned on LEZ (b1, its root finalised by an honest
+    ///      checkpoint), d2 never imported; the vault retired and sunset, the sunset's revocation window over, so
+    ///      that b1's release and d2's refund would both pay now. Returns d2's leaf index.
+    function _guestBugWorld() internal returns (uint64 d2) {
+        _dep(alice, 1, keccak256("d1: imported; burned on LEZ as b1"));
+        d2 = _dep(bob, 0, keccak256("d2: never imported"));
+        _acceptRoot(ROOT1); // b1's burn root, finalised by an honest checkpoint
+        vm.prank(freezer);
+        vault.retire();
+        FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT0, 1, true);
+        _submit(sunset);
+        _finalizeAfterDelta(sunset);
+        vm.warp(vault.sunsetFinalizedAt() + REVOKE_WINDOW + 1);
+    }
+
+    /// @notice A bug in the RELEASE guest (a release nobody burned for would verify). The stop cannot be tripped (no
+    ///         proof of exploit exists for a sound RISC Zero), so the freeze authority freezes releases, which stops
+    ///         every release and every refund, and checkpoints. Each freeze lasts `maxFreeze` (30 days) and is
+    ///         renewed by setting it again: renewed, it holds; left to lapse, the forged release pays. So the runbook
+    ///         renews it until v2 is live, and while it holds b1 is not released and d2 not refunded.
+    function test_guestBug_releaseFreezeHoldsReleasesAndRefundsOnlyWhileRenewed() public {
+        uint64 d2 = _guestBugWorld();
+        vm.startPrank(freezer);
+        vault.setReleasesFrozen(true);
+        vault.setCheckpointsFrozen(true);
+        vm.stopPrank();
+
+        // what the buggy guest lets anyone prove: a release of b1's root to an address no burn names
+        FerrataVault.ReleaseRequest memory forged = _request(ETH, 1, eve, ROOT1, keccak256("a forged nullifier"));
+        _proveRelease(_releaseJournal(forged));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
+        vault.release(forged, SEAL);
+        // b1's own release waits too
+        FerrataVault.ReleaseRequest memory b1 = _request(ETH, 1, alice, ROOT1, keccak256("b1's nullifier"));
+        _proveRelease(_releaseJournal(b1));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
+        vault.release(b1, SEAL);
+        // and so does d2's refund, which the global release freeze stops
+        bytes32[32] memory p2 = _path(d2);
+        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
+        vault.refund(d2, bob, ETH, leafData[d2].denomIndex, leafData[d2].commitment, p2);
+        // no new checkpoint either
+        FerrataVault.Checkpoint memory next = _nextCheckpoint(keccak256("a root proven after the announcement"));
+        _proveCheckpoint(_checkpointJournal(next));
+        vm.expectRevert(FerrataVault.CheckpointsAreFrozen.selector);
+        vault.submitCandidate(next, SEAL);
+
+        // renewed one second before it would lapse, the freeze holds another 30 days
+        vm.warp(block.timestamp + MAX_FREEZE - 1);
+        vm.prank(freezer);
+        vault.setReleasesFrozen(true);
+        vm.warp(block.timestamp + MAX_FREEZE - 1);
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.ReleasesAreFrozen.selector);
+        vault.release(forged, SEAL);
+        assertEq(eve.balance, 0);
+
+        // left to lapse, it lets the forged release through: why the runbook renews it until v2 is live
+        vm.warp(block.timestamp + 2);
+        vm.prank(relayer);
+        vault.release(forged, SEAL);
+        assertGt(eve.balance, 0, "a lapsed release freeze reopens the forged path");
+    }
+
+    /// @notice Still a RELEASE-guest bug: refunds do not run the release guest (a refund is a Merkle path to the
+    ///         frozen deposit root, checked by the vault itself), and the per-token release freeze stops releases
+    ///         but not refunds. Freezing every token's releases instead of releases globally keeps the forged path
+    ///         shut and lets d2 be refunded to its depositor; b1, which only the buggy guest can prove, stays on v1.
+    function test_guestBug_tokenReleaseFreezesKeepReleasesShutWhileD2IsRefunded() public {
+        uint64 d2 = _guestBugWorld();
+        vm.startPrank(freezer);
+        vault.setTokenReleasesFrozen(ETH, true); // every registered token's, in a real deployment
+        vault.setCheckpointsFrozen(true);
+        vm.stopPrank();
+
+        FerrataVault.ReleaseRequest memory forged = _request(ETH, 1, eve, ROOT1, keccak256("a forged nullifier"));
+        _proveRelease(_releaseJournal(forged));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(forged, SEAL);
+
+        uint256 bobBefore = bob.balance;
+        vault.refund(d2, bob, ETH, leafData[d2].denomIndex, leafData[d2].commitment, _path(d2));
+        assertEq(bob.balance - bobBefore, 0.1 ether + 0.1 ether / 500, "d2 refunded to its depositor, whole escrow");
+        assertTrue(vault.refunded(d2));
+
+        FerrataVault.ReleaseRequest memory b1 = _request(ETH, 1, alice, ROOT1, keccak256("b1's nullifier"));
+        _proveRelease(_releaseJournal(b1));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(b1, SEAL);
+        assertEq(eve.balance, 0);
+    }
+
+    /// @notice A bug in the CHECKPOINT guest (a checkpoint carrying a burn root nobody burned into would verify,
+    ///         and finalises). The freeze authority freezes checkpoints and releases and, within the revocation
+    ///         window, revokes the wrong checkpoint and every later one. The forged root then pays nothing; b1's root,
+    ///         finalised by an honest checkpoint before it, still does once releases are unfrozen; checkpoints stay
+    ///         frozen (renewed) until v2 is live, since the guest that would make the next one is the buggy one.
+    function test_guestBug_checkpointGuest_revokeTakesBackTheForgedRootAndB1StillReleases() public {
+        _dep(alice, 1, keccak256("d1: imported; burned on LEZ as b1"));
+        _dep(bob, 1, keccak256("another deposit, so escrow could cover a forged release"));
+        _acceptRoot(ROOT1); // b1's root, honest
+        uint256 forgedIndex = _acceptRoot(ROOT_FORGED); // what the buggy checkpoint guest let finalise
+
+        vm.startPrank(freezer);
+        vault.setCheckpointsFrozen(true);
+        vault.setReleasesFrozen(true);
+        vault.revokeFrom(forgedIndex);
+        vm.stopPrank();
+        (bool forgedAccepted,) = vault.burnRootStatus(ROOT_FORGED);
+        assertFalse(forgedAccepted, "the forged root no longer counts");
+
+        // the honest checkpoints are checked against the chain; then releases reopen, checkpoints stay frozen
+        vm.prank(freezer);
+        vault.setReleasesFrozen(false);
+        FerrataVault.ReleaseRequest memory forged = _request(ETH, 1, eve, ROOT_FORGED, keccak256("a forged nullifier"));
+        _proveRelease(_releaseJournal(forged));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.BurnRootNotAccepted.selector);
+        vault.release(forged, SEAL);
+        assertEq(eve.balance, 0);
+
+        uint256 aliceBefore = alice.balance;
+        _release(_request(ETH, 1, alice, ROOT1, keccak256("b1's nullifier")));
+        assertGt(alice.balance, aliceBefore, "b1 released to the recipient its burn names");
+
+        FerrataVault.Checkpoint memory next = _nextCheckpoint(keccak256("a root after the announcement"));
+        _proveCheckpoint(_checkpointJournal(next));
+        vm.expectRevert(FerrataVault.CheckpointsAreFrozen.selector);
+        vault.submitCandidate(next, SEAL);
     }
 }

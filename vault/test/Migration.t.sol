@@ -252,12 +252,13 @@ contract MigrationTest is VaultTestBase {
     // Step 3: stop new activity
     // ------------------------------------------------------------------------------------------------------------
 
-    /// @notice Step 3: stop new activity. When the bug is not in v1's verifier - a bug in a Ferrata guest, a LEZ
-    ///         change, any planned migration - the freeze authority freezes deposits at once and then retires the
-    ///         vault, and new deposits revert. When the bug IS in the verifier, the emergency stop applies instead
+    /// @notice Step 3: stop new activity. For a LEZ change or any planned migration - v1's verifier and Ferrata's
+    ///         guests sound - the freeze authority freezes deposits at once and then retires the vault, and new
+    ///         deposits revert. When the bug IS in the verifier, the emergency stop applies instead
     ///         (EmergencyStop.t.sol; MigrationFailsafe.t.sol rehearses it): after it nothing more is released or
-    ///         refunded (D13), so the freeze-and-retire path below is the only one in which v1 can still honour an
-    ///         in-flight burn.
+    ///         refunded (D13). When it is in one of Ferrata's own guests, releases and checkpoints are frozen too,
+    ///         and wrong checkpoints revoked (MigrationFailsafe.t.sol, test_guestBug_*; MIGRATION.md section 4). So
+    ///         the freeze-and-retire path below is the one in which v1 honours every in-flight burn.
     function test_migration_step3_freezeThenRetireStopsNewDepositsForever() public {
         _setupInflight();
 
