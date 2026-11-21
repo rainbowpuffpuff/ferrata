@@ -10,7 +10,8 @@
 #    modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch, from the clone beside the repository;
 # 3. Logos Core's beacon_api_module (logos-evm-beacon-api-module aca138e) with builder 5f74cdb's own locks
 #    (modules/scripts/graft_builder_lock.py, as verified-proxy.sh build-logos-graft does);
-# 4. /nix saved to the box's scratch (spike/tmp/rfp-b/nix-store.tar.zst), which the setup script restores in a new container.
+# 4. /nix saved to LOGOS_NIX_SNAPSHOT (default OUT/nix-store.tar.zst; none: not saved), for a box's setup script
+#    (spike/modal-build/setup/<worktree>.sh) to restore in a new container: set it to the path that script names.
 # A step whose output exists is not run again. OUT/steps.md lists each step, its result and seconds.
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
@@ -71,8 +72,11 @@ if [ ! -e "$out/lgx-beacon_api_module" ]; then
 fi
 
 # 4. /nix for the next container.
-snap="$spike/tmp/rfp-b/nix-store.tar.zst"
-step save-nix bash -c "tar -C / -cf - nix | zstd -q -T0 -3 -o '$snap.part' -f && mv '$snap.part' '$snap' && ls -la '$snap'"
+snap=${LOGOS_NIX_SNAPSHOT:-$out/nix-store.tar.zst}
+if [ "$snap" != none ]; then
+  mkdir -p "$(dirname "$snap")"
+  step save-nix bash -c "tar -C / -cf - nix | zstd -q -T0 -3 -o '$snap.part' -f && mv '$snap.part' '$snap' && ls -la '$snap'"
+fi
 
 ( cd "$out" && for f in check/lgx-ferrata_attest_module/*.lgx lgx-lez_core-patched/*.lgx lgx-beacon_api_module/*.lgx; do
     [ -e "$f" ] && sha256sum "$f"; done; [ -e check/logos/bin/logosctl ] && check/logos/bin/logosctl --version 2>&1 | head -1 ) \
