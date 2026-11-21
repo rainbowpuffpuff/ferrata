@@ -19,7 +19,7 @@ program before this extension. **Since branch `lez-time-fix`** (§12) the progra
 run on attested Ethereum time instead of a caller's, and **since the security fixes of 11 November**
 (§13) public balances sit at `holder(account)` PDAs and `ImportRoot` is accepted only as a visible
 top-level call. The merged program (both changes) was image
-`cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path. Every `results/bridge-*.md` is now of this tree's program, `ccde6171…` (592,840 ELF bytes, the same built at any path: [`../docs/image-ids.md`](../docs/image-ids.md)), recorded on 12 November 2026; it adds §14's controls and answers through the attestation program of milestones A1 and A2.
+`cf41b7e5c0583686a273b5114368f4873bbd614249647f43604a6caf8e675390` (541,464 ELF bytes) at the `integration5` worktree's path. Every `results/bridge-*.md` is of the program the live runs deployed, `ccde6171…` (592,840 ELF bytes, the same built at any path from `f13faee2`: [`../docs/image-ids.md`](../docs/image-ids.md)), recorded on 12 November 2026 (since milestone B1 this tree builds `ac1fb59b…`, whose records are [`results/b1/`](results/b1/README.md)); it adds §14's controls and answers through the attestation program of milestones A1 and A2.
 §12 gives each operation before and after the time fix (that branch alone: `d0c11833…23cd` at its
 worktree's path), §13 before and after the security fixes (that branch alone: `fe2f2487…946d`); the text
 of §1–§5 and §8a keeps the figures of the program before both (`f11b1aba…58eb`), and §8's rows on caps,
@@ -50,7 +50,7 @@ comes later.
 
 ## 1. The operations, before and after
 
-| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after | this tree's program as recorded now (`results/`, `ccde6171…`, 12 November): execution gas; storage gas |
+| operation | handlers run, after (cycles each) | execution gas, before → after | storage gas (tx bytes), before → after | the deployed program as recorded (`results/`, `ccde6171…`, 12 November): execution gas; storage gas |
 |---|---|---:|---:|---|
 | `Init`: attest the vault's slot 2 = `configId`, write `config(cid)` | Init 43,668 → Attest 85,725 → reply 39,214 | 154,529 → 168,607 | 1,726 → 1,946 | 171,027; 1,946 |
 | `ImportRoot` (8 leaves): attest slots 0 and 1, write `root(cid, n)` | ImportRoot 49,536 → Attest 112,749 → reply 52,945 → WriteRoot 16,328 | 203,620 → 231,558 | 1,703 → 2,025 | 236,224; 2,025 |
@@ -663,7 +663,7 @@ every refusal below; a refusal reverts its whole transaction, and the test check
 each step (balances, the live roles, the gates' freezes, `sunset`). Image
 `43615dc48098b3731990de7700204d2a1bea0e9f963ee7c4dd629048dd5ef19c` (591,084 ELF bytes) at this
 worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `cf41b7e5…5390` at
-`integration5`'s path). The table below is `results/bridge-roles.md` as re-recorded on 12 November 2026 with this tree's program (`ccde6171…`): every result and code as on `43615dc4…`; the steps that read or attest a record cost 837 to 1,117 more execution gas, the attestation program now being that of milestones A1 and A2.
+`integration5`'s path). The table below is `results/bridge-roles.md` as re-recorded on 12 November 2026 with the deployed program (`ccde6171…`): every result and code as on `43615dc4…`; the steps that read or attest a record cost 837 to 1,117 more execution gas, the attestation program now being that of milestones A1 and A2.
 
 **Design, in short** (the reasons are in `BRIDGE.md` §5):
 - *Keyless `Sunset`.* Anyone sends `AttestRetired`: `config(cid)` attests the vault's slot 37 (the

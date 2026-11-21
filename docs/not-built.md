@@ -11,10 +11,11 @@ The design notes specify these; there is no code for them here:
   the same vault can freeze a public-kind deposit whose `s` it knows; a destination's shared holder account can be
   filled; [`bridge.md`](design/bridge.md) §3, [EVIDENCE](EVIDENCE.md) row 136). It changes the bridge program's
   image id, so deploying it is milestone B1's; it is built in the LEZ v0.3.1 port (branch `testnet-v03-bridge` at
-  `ff453dcc`) and, for v0.4, in a second build of the bridge program that is not deployed (`lez/guests/bridge-next`,
-  image `0xc5cad2cd…d6da`, [EVIDENCE](EVIDENCE.md) row 143: the two keyed accounts, and `Init` refusing a freeze
-  authority that is the admin, the red team's F1; v0.4 has no state limit, so it has no oversized-state code); the
-  deployed program keeps both issues, and F1;
+  `ff453dcc`) and, for v0.4, in the bridge program since milestone B1 (`lez/guests/bridge`, image `0xac1fb59b…442e`,
+  [`image-ids.md`](image-ids.md): the two keyed accounts, `Init` refusing a freeze authority that is the admin, the red
+  team's F1, and `SetDepth` and `AttestListing`; v0.4 has no state limit, so it has no oversized-state code; its first
+  build, `lez/guests/bridge-next`, image `0xc5cad2cd…d6da`, [EVIDENCE](EVIDENCE.md) row 143, is at `f13faee2`), which
+  no vault pins yet; the deployed program keeps both issues, and F1;
 - rule (B): the watchers' `monitor` reading attestations (the four-sequencer zone has run the bridge program, both
   burns, their releases through a vault on a local anvil and a rotation its committee proposed,
   `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran

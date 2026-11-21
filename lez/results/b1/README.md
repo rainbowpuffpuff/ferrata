@@ -36,8 +36,11 @@ Without `FERRATA_LEZ_RESULTS_DIR` the suites write beside this folder, over the 
 
 ## What changed against the deployed program's records
 
-Every suite's figures moved by a few hundred cycles at most (the program's own code moved); every outcome is the same,
-except where B1 changed the behaviour on purpose:
+Every outcome is the same, except where B1 changed the behaviour on purpose (below). The figures moved with the
+program's code: over the 267 transactions the two programs' `bridge-*.md` records share, execution gas changed by
+−5,272 to +4,718 a transaction (derived from the committed records: the largest fall `bridge-inbound.md` row 32, a
+claim of vault B's deposit, 267,044 → 261,772; the largest rise `bridge-vault-storage.md` row 23, a claim of leaf 5,
+296,766 → 301,484), the keyed accounts changing what a claim, a mint and a burn derive and check.
 
 - **The red team's bridge vectors** (118; `redteam-2026-11-18/`, against `lez/results/redteam-2026-11-18/`): 113 PASS,
   3 MISMATCH, 2 HARNESS-ERROR on both programs, with two verdicts swapped. BR-INIT-05 is now PASS: `Init` refuses a

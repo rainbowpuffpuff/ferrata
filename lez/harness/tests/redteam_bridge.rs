@@ -1666,7 +1666,8 @@ fn ten() {
         let vector = w.vector.clone();
         ok(&w.claim("setup: B (rogue) claims A's leaf 2 with its s", &cid_b, 9, &va, fake.witness(&vector, 9)));
         let rep = claim_leaf2(&mut w, "A's Claim of leaf 2");
-        Observed::of_report(&rep, &format!("nullifier(chain, V, N) recorded under configId(B): {}", w.nullifier(&cid_b, &va, &w.vector_n).is_some_and(|s| s.config_id == cid_b)))
+        // Since B1 each configuration spends its own nullifier(cid, chain, V, N): B's is B's, and A's claim spends A's.
+        Observed::of_report(&rep, &format!("nullifier(configId(B), chain, V, N) recorded by B's claim: {}", w.nullifier(&cid_b, &va, &w.vector_n).is_some_and(|s| s.config_id == cid_b)))
     });
     r.finish(&["bridge"], &["BR-TEN-"]);
 }

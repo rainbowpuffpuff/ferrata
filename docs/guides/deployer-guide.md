@@ -288,15 +288,16 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
 - **Delisting** (since B1). The admin delists a token on the vault (`setDepositsEnabled(token, false)`): its
   deposits stop, and the vault writes 1 at `sha256("ferrata/vault/listing/v1" ‖ token)` (0 when relisted). Anyone
   then attests that slot on LEZ (`AttestListing`), and `token(cid, token)` records the delisting and the record it
-  came from, so LEZ-side clients can show it; an older record never undoes a newer listing. Claims of deposits made
+  came from, which a LEZ-side client can read (none does yet: the `ferrata` tool reads the vault's
+`depositsEnabled`); an older record never undoes a newer listing. Claims of deposits made
   before it, burns, transfers and releases are untouched, so users lose nothing and need do nothing; to end a token
   for good, delist it and let holders burn (`vault/test/Listing.t.sol`, `lez/harness/tests/bridge_delist.rs`).
 
-Measured costs of these steps (in-process harness, this tree's program): `Init` 171,027 execution gas;
-`Register` 331,816 (431,512–455,116 on the vault's real storage); `ImportFees` 269,684; `SetCap` 91,019;
-`Freeze` 140,609 (it reads the newest attested record); `Sunset` 44,193
-([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column; `lez/results/bridge-*.md`). All under LEZ's 5M
-execution target.
+Measured costs of these steps (in-process harness, the bridge program since milestone B1, `lez/results/b1/`):
+`Init` 171,418 execution gas; `Register` 333,303 (433,020–456,729 on the vault's real storage); `ImportFees` 271,623;
+`SetCap` 91,833; `Freeze` 140,383 (it reads the newest attested record); `Sunset` 44,695 (`bridge-inbound.md`,
+`bridge-controls.md`, `bridge-vault-storage.md` there; the deployed program's, within 2,000 of these:
+[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column). All under LEZ's 5M execution target.
 
 ## 6. Pairing (F.15)
 

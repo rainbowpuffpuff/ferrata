@@ -15,4 +15,18 @@ with `RUSTC_BOOTSTRAP=1` for the one nightly feature its source enables (`result
 
 No result points at `publishListing` or `setDepositsEnabled`; the findings near them (`FerrataRegistry.sol:581`'s
 `abi.encodePacked` of three equal-length arrays, `applyFees` ignoring `_feesInForce`'s return value) are 11 November's,
-triaged there. Re-run: `SECTOOLS_OUT=$PWD/vault/results/sectools-b1 scripts/security-tools.sh install slither aderyn`.
+triaged there. Re-run from the repository root. Aderyn 0.6.8's release has no binary for Linux and the crate is not on
+crates.io, so `scripts/security-tools.sh install` cannot fetch it; it was built from the release's source archive
+(`source.tar.gz` of tag `aderyn-v0.6.8`, sha256 checked; its code uses one nightly feature, which `RUSTC_BOOTSTRAP=1`
+allows on the stable compiler):
+
+```sh
+export SECTOOLS_DIR=$PWD/target/sectools SECTOOLS_OUT=$PWD/vault/results/sectools-b1
+A=$SECTOOLS_DIR/aderyn-0.6.8 && mkdir -p "$A/src" "$SECTOOLS_DIR/bin"
+curl -fLo "$A/source.tar.gz" https://github.com/Cyfrin/aderyn/releases/download/aderyn-v0.6.8/source.tar.gz
+echo "2d4afdb52bae30f8488e5d9470a281d284c0b286455b61b474e6c2e7dafe343a  $A/source.tar.gz" | sha256sum -c -
+tar -xzf "$A/source.tar.gz" -C "$A/src" --strip-components=1
+RUSTC_BOOTSTRAP=1 cargo install --locked --root "$SECTOOLS_DIR/aderyn-src" --path "$A/src/aderyn"
+ln -sf "$SECTOOLS_DIR/aderyn-src/bin/aderyn" "$SECTOOLS_DIR/bin/aderyn"
+scripts/security-tools.sh install slither && scripts/security-tools.sh slither aderyn
+```

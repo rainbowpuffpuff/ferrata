@@ -1,5 +1,11 @@
 # The bridge program's second build: nullifier and holder accounts keyed by the configuration, and F1 refused at `Init` (18 November 2026)
 
+> Since milestone B1 (21 November 2026) this second build is the bridge program itself (`lez/guests/bridge`,
+> [`docs/image-ids.md`](../../docs/image-ids.md) `ferrata_bridge_b1`, with `SetDepth` and `AttestListing` added; its
+> records: [`b1/`](b1/README.md)). Its separate sources (`lez/guests/bridge-next`, `lez/methods-bridge-next`,
+> bridge-wire's `config-keyed` feature) are gone from this tree: the files, the cargo feature and the commands below
+> are those of commit `f13faee2`, where they re-run as written.
+
 The fix of the two known issues of the deployed v0.4 bridge program ([`docs/design/bridge.md`](../../docs/design/bridge.md)
 §3, "Known issues, 18 November 2026"; [`tenant.md`](tenant.md)), built as a **second build** of the program beside
 the deployed one and run through LEZ v0.4.0-rc1's state machine and fee settlement (the harness). **Not deployed: no
@@ -30,12 +36,12 @@ current build's: the F1 round re-ran every suite against it, and only `Init`'s c
 | image id | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `0xc5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da` (before F1: `0x7c7d2b3a…1e2f`) |
 | binary (R0BF) | 592,840 bytes | 593,384 bytes (before F1: 593,224) |
 
-- [`bridge-wire/src/config_keyed.rs`](../bridge-wire/src/config_keyed.rs): the keyed seeds and actors (the crate
+- [`bridge-wire/src/config_keyed.rs`](https://github.com/rainbowpuffpuff/ferrata/blob/f13faee2/lez/bridge-wire/src/config_keyed.rs) (at `f13faee2`): the keyed seeds and actors (the crate
   root's tags with `cid` in front, as the LEZ v0.3.1 port has them), behind bridge-wire's cargo feature
   `config-keyed`, off by default. It is declared on the last lines of `lib.rs`, so the deployed program compiles the
   same sources line for line (a panic's location is in the binary). Its unit test checks that two configurations get
   two accounts and that the tagging is the deployed program's.
-- [`guests/bridge-next/src/main.rs`](../guests/bridge-next/src/main.rs): `guests/bridge/src/main.rs` with the keyed
+- [`guests/bridge-next/src/main.rs`](https://github.com/rainbowpuffpuff/ferrata/blob/f13faee2/lez/guests/bridge-next/src/main.rs) (at `f13faee2`): `guests/bridge/src/main.rs` with the keyed
   addresses wherever a nullifier or holder account is named: `Mint`'s sender and receiver checks, `Issue`'s spend
   target, `Spend`'s receiver check and mints, `Burn`'s forward to and check at the holder account, `Transfer`'s
   credit, check and forward, `Credit`'s receiver check (`diff lez/guests/bridge/src/main.rs
@@ -178,7 +184,7 @@ authority (`Roles::new`: `FreezeAuthority::key(controls.freeze_authority)`) is i
 differ, `ProposeRoles` refuses the admin as a member (`FreezeAuthority::check`), and the vault refuses it at
 construction (`RolesMustDiffer`, `vault/src/FerrataVault.sol` 600).
 
-**The fix, second build only.** [`config_keyed::check_init_roles`](../bridge-wire/src/config_keyed.rs) runs
+**The fix, second build only.** [`config_keyed::check_init_roles`](https://github.com/rainbowpuffpuff/ferrata/blob/f13faee2/lez/bridge-wire/src/config_keyed.rs) runs
 `FreezeAuthority::check(&controls.admin)` on the authority `Init` would make live, the check `ProposeRoles` runs on a
 proposed one, and the second build's `init` calls it right after `Controls::check`: refused with 240 (`BAD_MESSAGE`).
 It is in the feature-gated module, so nothing the deployed guest compiles moved (`git diff 20af752a --

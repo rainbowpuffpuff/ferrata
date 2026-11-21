@@ -214,8 +214,10 @@ size.
 
 ### P.1 Claim and mint in one LEZ public transaction
 
-**Met.** In-process harness, this tree's bridge program (image `ccde6171…`, the same built at any path:
-[`image-ids.md`](image-ids.md)), synthetic vault storage (tables `lez/results/bridge-*.md`, recorded on 12 November 2026):
+**Met.** In-process harness, the bridge program the live runs deployed (image `ccde6171…`, the same built at any path
+from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `ac1fb59b…`, its records in
+`lez/results/b1/`, execution gas within −5,272 and +4,718 of these), synthetic vault storage (tables
+`lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |
 |---|---|---:|---:|

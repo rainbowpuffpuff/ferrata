@@ -4,8 +4,9 @@
 //! The registry's source is the vault: the admin delists a token there (`setDepositsEnabled(token, false)`, which
 //! stops its deposits and writes 1 at the SHA-256 slot `sha256("ferrata/vault/listing/v1" ‖ token)`; relisting writes
 //! 0). On LEZ, anyone attests that slot (`AttestListing`) and `token(cid, token)` then holds whether the token is
-//! delisted, and from which record: the LEZ registry follows the vault's, so a LEZ-side client (the bridge module,
-//! the mini-app, the CLI) shows the delisting and offers no deposit of the token. The impact on users is nil by
+//! delisted, and from which record: the LEZ registry follows the vault's, a mirror a LEZ-side client without an
+//! Ethereum view can read (no program path reads it, and no client of this tree does yet: the CLI reads the vault's
+//! `depositsEnabled`, the bridge module and the mini-app nothing of it). The impact on users is nil by
 //! construction, and this test asserts it: claims of deposits made before the delisting, burns and transfers of the
 //! token go on after it (R.4: a valid claim stays valid), and an older record cannot undo a delisting or a relisting.
 //!
