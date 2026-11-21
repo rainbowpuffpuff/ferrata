@@ -28,7 +28,8 @@ import modal
 
 CPU = float(os.environ.get("P4_CPU", "8"))  # request = limit
 MEM_MIB = int(os.environ.get("P4_MEM_MIB", "16384"))  # request = limit (hard)
-REPO = pathlib.Path(__file__).resolve().parents[2]
+HERE = pathlib.Path(__file__).resolve()
+REPO = HERE.parents[2] if len(HERE.parents) > 2 else None  # inside the container the module sits at /root
 FILES = ["bench/perf/p4-laptop-owner.sh", "bench/perf/summarize_p4.py", "lez/results/p4-minimum/summarize.py",
          "lez/results/p4-minimum/summarize_scale.py"]
 
@@ -37,8 +38,9 @@ vol = modal.Volume.from_name("p4-owner", create_if_missing=True)
 image = modal.Image.from_registry("ubuntu:24.04", add_python="3.12").apt_install(
     "time", "procps", "util-linux", "ca-certificates"
 ).run_commands("useradd -m -s /bin/bash owner")
-for f in FILES:
-    image = image.add_local_file(REPO / f, f"/opt/ferrata/{f}")
+if modal.is_local():
+    for f in FILES:
+        image = image.add_local_file(REPO / f, f"/opt/ferrata/{f}")
 
 
 def facts() -> dict:
