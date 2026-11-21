@@ -18,7 +18,7 @@ sequencers' heights were equal at every poll through the rotation.
 while seq-0's own height went on rising (101 → 105, the others at 93–94): seq-0's blocks of its second turn were not
 inscribed before the run stopped. The cause was not determined (the logs keep their last 300 lines); rc3's known
 stalls (LEZ issue 1109: storage gas price step at an epoch, then a rewind) match the pattern, and our single-sequencer
-rc3 runs met them too (`notes` decision log 16 Nov). A run that relies on the zone must ride through it, as the crown
+rc3 runs met them too ([`lez/results/v0.4.0-rc3/gas-drop/README.md`](../../../lez/results/v0.4.0-rc3/gas-drop/README.md)). A run that relies on the zone must ride through it, as the crown
 drivers do.
 
 **What this does and does not show for F.7:** LEZ rc3 allows a multi-key zone with rotating turns, so the t-of-n

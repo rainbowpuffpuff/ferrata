@@ -32,7 +32,7 @@ What was missing: the freeze refusal was exercised in the mini-app only. Now, in
 | Clause | Test | Result |
 |---|---|---|
 | frozen, program-wide and per token, deposit side | `cli/tests/e2e.rs` (`deposit_scan_claim_burn_release_and_recovery`): the vault's freeze authority `setDepositsFrozen`, then `setTokenDepositsFrozen(ETH)`; `ferrata deposit` (the binary) | `refused: vault error DepositsAreFrozen() (checked before sending: frozen until Ethereum time … (UTC date), unless the freeze authority lifts it sooner): deposits are frozen for the whole vault; nothing is sent: retry once the freeze ends (`ferrata status` shows it)`, and `TokenDepositsAreFrozen()` likewise; lifted, the dry run passes |
-| frozen, claims (mints), whole configuration and token | the bridge program's freeza authority `Freeze` (token, then none); `claim` on the plaintext path, then the private path before its proof | `refused: LEZ bridge program exit code 242 FROZEN (checked before sending: mints (claims) of this token are frozen until Ethereum time …; nothing is sent and nothing is consumed: the deposit stays claimable): … retry once the freeze ends`; lifted, the same claim settles |
+| frozen, claims (mints), whole configuration and token | the bridge program's freeze authority `Freeze` (token, then none); `claim` on the plaintext path, then the private path before its proof | `refused: LEZ bridge program exit code 242 FROZEN (checked before sending: mints (claims) of this token are frozen until Ethereum time …; nothing is sent and nothing is consumed: the deposit stays claimable): … retry once the freeze ends`; lifted, the same claim settles |
 | frozen, burns | `Freeze` of burns (token, then configuration); `burn` | `… 242 FROZEN (checked before sending: burns of this token are frozen until …; nothing is sent and nothing is burned: the holding stays yours) …`; lifted, the burn settles |
 | frozen, releases | `setReleasesFrozen`, `setTokenReleasesFrozen(ETH)`; `release` | `refused: vault error ReleasesAreFrozen() (checked before sending: frozen until …): releases are frozen for the whole vault; the burn stays releasable: retry once the freeze ends …`; lifted, released |
 | no deposit or burn named | every refusal above checked with the test's `names_nothing` (no run of 40+ hex digits, no leaf index, no burn counter) | 9 of 9 |
@@ -92,7 +92,25 @@ tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT` | `e2e/runs/rela
 
 ## U.3 and R.7: the seqnet robust run
 
-ROBUST_RUN_PLACEHOLDER
+Built, not yet run to the end (the next piece): `e2e/seqnet/run.sh robust NAME` (`e2e/seqnet/hook-robust.sh`, commit
+`c7f1b352`). Its first run (`robust-1`) stopped in LEZ session A because a concurrent rc3 zone on the same box held
+the node's port (the stream's own scheduling error, not a defect of the run); a second run was stopped at the
+stream's hand-back. Proposed statuses wait for that run; what it checks, as PASS/FAIL lines in
+`e2e/runs/seqnet-robust-NAME/robust.md`:
+
+- **U.3, "the relayer's root imports on a running sequencer remain"**: crown-b `--operator-only yes --import-roots no`
+  (the finality update, Init, Register; no ImportRoot); then `ferrata-relayer --sequencer --import-roots` (its own LEZ
+  wallet, its public account funded by `seqnet-fund --public-only`) imports root(cid, 2) on LEZ v0.4.0-rc1's running
+  sequencer; SIGTERM gives its `stop` line; nothing left in flight. With rows 43–48, 96, 106–107, 120 this would cover
+  the row's remaining clause.
+- **R.7, "a client killed between proof and sending"**: `ferrata claim --send --yes` with its sequencer endpoint
+  behind `e2e/netfault/holdproxy.py`, which traps the claim's `sendTransaction` (built and proven, never forwarded);
+  SIGKILL; no new private transaction on the zone, recovery from the seed finds the deposit claimable; the same
+  command again claims it once (both deposits claimed once each). A burn killed after its sending (the answer held,
+  the burn applied): the same command again finds the burn its record names on the zone and burns nothing more (the
+  tool's new interrupted-burn record, `<LEZ wallet home>/ferrata-pending-burn.json`: a burn's note and tag are
+  deterministic in its counter and the program refuses a repeated tag, so a second run that reuses the counter can
+  never burn twice). With row 126 (a view closed during a proof, in Basecamp) this would cover the row.
 
 ## U.5: the fee-payer mitigation inside the relayer daemon — stays **in part**
 
@@ -111,7 +129,12 @@ New: LEZ v0.4.0-rc3 runs upstream's four-sequencer devnet (`lez/configs/docker-a
 rc1) with its own node 0.3.5-rc.1: `checkpoint/attestor/zone.sh` (now with `ZONE_LEZ`, `ZONE_BEDROCK=bundle`) with
 crown-rc3's bundle.
 
-RC3_ZONE_PLACEHOLDER
+Run (`e2e/runs/zone-rc3-four-keys/`, 1,080 s, commit `fe05ed9a`): four keys accredited (configuration threshold 3,
+posting timeframe 60 slots = 240 s at rc3's 4 s slots), the turn rotating in their order, every key inscribing: 93
+inscriptions in the node's final blocks, 24/23/23/23 (`inscriptions.json`, every inscription's slot and signer). In
+the last ~2 minutes the channel's tip stalled after one full rotation (cause not determined; rc3's known stalls
+match). A 300 s run sees only two turns (the turn is 240 s on rc3), which is why the earlier 300 s rc1 runs saw all
+four keys and a 300 s rc3 run does not.
 
 Still missing for **shown**: the bridge program on an rc3 multi-key zone, a t-of-n `checkpoint_b_0_3_5` proof over its
 blocks with an attestor beside each sequencer, and the releases through RISC Zero's verifier (rows 100–101 did exactly
@@ -121,4 +144,11 @@ t of the zone's n sequencer keys either way (`docs/trust.md` §3.2), as the matr
 
 ## Commits
 
-COMMITS_PLACEHOLDER
+`dfd4e2e4` U.08 freezes in the tool, the relayer's in-flight journal, fence and lock; `389dfc6e` U.08 run recorded;
+`01b57e13` R.06 tests and records, the fixes the tests found; `c7f1b352` the seqnet robust mode, the interrupted-burn
+record, crown-b `--import-roots no`, `seqnet-fund --public-only`; `fe05ed9a` the rc3 four-key zone, zone.sh's
+overrides, this file's draft; and the hand-back commit after it.
+
+Files of other streams changed, minimal and default-preserving: `lez/crown/driver/src/{main,crown}.rs`
+(`--import-roots no`), `checkpoint/attestor/zone.sh` (`ZONE_LEZ`, `ZONE_BEDROCK`), `e2e/seqnet/{run,drive}.sh` (the
+`robust` mode).
