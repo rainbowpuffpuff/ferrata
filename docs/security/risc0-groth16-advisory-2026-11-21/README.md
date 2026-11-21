@@ -96,8 +96,12 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 2. Done here on 21 November 2026: this note; the README, EVIDENCE row 149, [docs/sepolia.md](../../sepolia.md),
    [verify.md](../../guides/verify.md), the mainnet run's README, [lez-v0.4-findings.md](../../design/lez-v0.4-findings.md),
    [SECURITY.md](../../../SECURITY.md) and [e2e/README.md](../../../e2e/README.md) corrected.
-3. The move to risc0 3.1.0 and verifier 3.1.0, with new vaults: [risc0-3.1-migration.md](../../design/risc0-3.1-migration.md).
-4. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
+3. Next, once the open branches that edit them have merged: [`trust.md`](../../trust.md), Security #9 in
+   [`traceability.md`](../../traceability.md), [`bridge.md`](../../design/bridge.md) §14-15,
+   [`vault/README.md`](../../../vault/README.md) and the operator guide say that the stop did not trip under this
+   advisory (the paragraph "The emergency stop did not trip" above).
+4. The move to risc0 3.1.0 and verifier 3.1.0, with new vaults: [risc0-3.1-migration.md](../../design/risc0-3.1-migration.md).
+5. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
 
 ```sh
 # The owner runs this with the deployer key (0x79A9…5C07); nothing here has been sent.
