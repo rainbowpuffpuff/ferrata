@@ -6,8 +6,9 @@ on the branch, as the brief asked: README row 50 and two dated sentences, EVIDEN
 (commit `43e31d01`); the security note `docs/security/risc0-groth16-advisory-2026-11-21/` and the migration plan
 `docs/design/risc0-3.1-migration.md` (`de60ab91`). After the branch's review, commits `c4f9f99d` to `73691970`
 change, directly, only files no open branch edits (the note and its scripts, the migration plan, this file,
-`docs/sepolia.md`, `e2e/README.md`, `e2e/runs/mainnet-risc0-verify/README.md`); what shared files need is proposed
-below.
+`docs/sepolia.md`, `e2e/README.md`, `e2e/runs/mainnet-risc0-verify/README.md`), except `docs/sepolia.md` and
+`docs/guides/verify.md` (the latter edited in `43e31d01`), which `rfp-bridge-hardening` also edits (other paragraphs;
+`git merge-tree` clean); what shared files need is proposed below.
 
 ## Requirement rows (proposed)
 
@@ -18,24 +19,24 @@ below.
 | RFP-022 Sec.3 | shown | in part | A forged release journal can name any recipient and fee under verifier 3.0.0 (rehearsed on a fork, new row below). The binding is right; the verifier under it is not. Ethereum side shown again after phase 1; LEZ side (the redirected claim refused on LEZ rests on LEZ's risc0 3.0.5) after phase 2 (waits on Logos). |
 | RFP-022 Sec.6 | in part | in part (reason extended; evidence adds 154) | Add: "under verifier 3.0.0 a release without a valid burn succeeds: row 154's fork, with the forgery stood in for." |
 | RFP-022 Sec.8 | in part | in part (reason extended) | Add: the four Sepolia vaults cannot change their verifier; the migration is retirement and new vaults (`docs/design/risc0-3.1-migration.md` §3). |
-| RFP-022 Sec.9 | in part | in part (reason extended; evidence adds 154) | Add: "21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; stop owners renounced or keyless); only the admin's caps contain a forgery there (154)." |
+| RFP-022 Sec.9 | in part | in part (reason extended; evidence adds 154) | Add: "21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there (154)." |
 | RFP-021 rows on the private path (those citing EVIDENCE rows 5, 73, 123, 152) | as they are | no change proposed | Their clauses are about the program's checks and privacy, which hold; the soundness of LEZ's privacy circuit at rc1/rc3 is Logos's. Flag for review if a clause is about proving. |
 
-Applied, these move RFP-022's hard rows from 27 shown and 37 in part to 24 and 40 (R.8, Sec.2 and Sec.3; the counts of `docs/requirements-status.md` at `5cf1e8e7`).
+Applied, these move RFP-022's hard rows from 27 shown and 37 in part to 24 and 40 (R.8, Sec.2 and Sec.3; the counts of `docs/requirements-status.md` at `5cf1e8e7`). The by-section table moves as well: RFP-022 Reliability 5/9 → 4/10 (shown/in part); Security 3/5/1 → 1/7/1 (shown/in part/not yet).
 
 ## New EVIDENCE row (number: the next free one, 154 at `5cf1e8e7`)
 
 To paste as is into `docs/EVIDENCE.md`'s table (same columns; the link is written for that file):
 
 ```markdown
-| 154 | **The Sepolia vaults under RISC Zero's Groth16 advisory (GHSA-mm6c-35cm-g4x2): what a forgery could take, and what stops it**, read-only and on a local fork; nothing sent | Sepolia block 12,183,432 (21 Nov 2026 18:00:48 UTC), two endpoints, identical answers: the four vaults verify through their own stops (owner renounced; for the v3 vault the keyless `0xC820…`) around our verifier `0x8f0A…A2A0` (`VERSION()` "3.0.0", `SELECTOR()` `0x73c457ba`); freeze authority `0xC820…129f` (no key), no watchers, caps unlimited with a zero floor, none frozen or retired, admin the deployer on all four. The v5 vaults hold 6·10^12 wei each (escrow 4·10^12, below the smallest denomination of 10^15: nothing reachable); the v3 vault 10^15, reachable after a forged rule (A) checkpoint (wait ≥ 1,500 s, delay 120 s). The owner's controls by `eth_estimateGas` (nothing sent): `setGlobalCap` release 66,941 and deposit 63,396 gas per v5 vault, 59,005 and 58,982 for the v3 vault (508,998 in all; base fee 16 wei); `proposeRoles` 369,833, applied 14 days later. Fork (anvil 1.5.1 at the same block, the verifier's code replaced by STOP as the forgery's stand-in): two 0.001 ETH deposits taken by a stranger (a release against the existing burn root; one against a forged checkpoint finalised after 3,600 s); after the admin's two calls the same releases revert `GlobalReleaseCapExceeded`, a deposit `GlobalDepositCapExceeded`, another address's call `NotAdmin`, and all four vaults accept both calls; through the timelock a new freeze authority freezes releases and checkpoints and retires the vault, until the freeze lapses after 30 days | Sepolia, read-only (`eth_call`, `eth_getBalance`, `eth_estimateGas`) on publicnode and ethpandaops; an anvil fork of Sepolia; laptop, 21 Nov 2026; $0 | none (the forgery is stood in for, not built) | `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT`; `estimate.sh URL OUT`; `fork-rehearsal.sh URL BLOCK OUTDIR`; for `reads.sh` and `fork-rehearsal.sh`, URL must serve historical state at BLOCK (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`; publicnode refuses past blocks, and `reads.sh` then exits 1) | [`docs/security/risc0-groth16-advisory-2026-11-21/`](security/risc0-groth16-advisory-2026-11-21/README.md) |
+| 154 | **The Sepolia vaults under RISC Zero's Groth16 advisory (GHSA-mm6c-35cm-g4x2): what a forgery could take, and what stops it**, read-only and on a local fork; nothing sent | Sepolia block 12,183,432 (21 Nov 2026 18:00:48 UTC), two endpoints, identical answers: the four vaults verify through their own stops (owner renounced; for the v3 vault the keyless `0xC820…`) around our verifier `0x8f0A…A2A0` (`VERSION()` "3.0.0", `SELECTOR()` `0x73c457ba`); freeze authority `0xC820…129f` (no key), no watchers, caps unlimited (the v5 vaults' release floor zero), none frozen or retired, admin the deployer on all four. The v5 vaults hold 6·10^12 wei each (escrow 4·10^12, below the smallest denomination of 10^15: nothing reachable); the v3 vault 10^15, reachable after a forged rule (A) checkpoint (wait ≥ 1,500 s, delay 120 s). The owner's controls by `eth_estimateGas` (nothing sent): `setGlobalCap` release 66,941 and deposit 63,396 gas per v5 vault, 59,005 and 58,982 for the v3 vault (508,998 in all; base fee 16 wei); `proposeRoles` 369,833, applied 14 days later. Fork (anvil 1.5.1 at the same block, the verifier's code replaced by STOP as the forgery's stand-in): two 0.001 ETH deposits taken by a stranger (a release against the existing burn root; one against a forged checkpoint finalised after 3,600 s); after the admin's two calls the same releases revert `GlobalReleaseCapExceeded`, a deposit `GlobalDepositCapExceeded`, another address's call `NotAdmin`, and all four vaults accept both calls; through the timelock a new freeze authority freezes releases and checkpoints and retires the vault, until the freeze lapses after 30 days | Sepolia, read-only (`eth_call`, `eth_getBalance`, `eth_estimateGas`) on publicnode and ethpandaops; an anvil fork of Sepolia; laptop, 21 Nov 2026; $0 | none (the forgery is stood in for, not built) | `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT`; `estimate.sh URL OUT`; `fork-rehearsal.sh URL BLOCK OUTDIR`; for `reads.sh` and `fork-rehearsal.sh`, URL must serve historical state at BLOCK (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`; publicnode refuses past blocks, and `reads.sh` then exits 1) | [`docs/security/risc0-groth16-advisory-2026-11-21/`](security/risc0-groth16-advisory-2026-11-21/README.md) |
 ```
 
 ## One-line notes for other EVIDENCE rows (proposed)
 
-- Rows 41, 91, 92, 141, 142 (the live round trips), at the end of "What it shows": "The vault verifies through our
-  verifier 3.0.0, which accepts forged claims (GHSA-mm6c-35cm-g4x2, 11 Nov 2026): the seal checks show the seals are
-  well-formed; see the security note."
+- Rows 41, 42, 91, 92, 141, 142 (the live round trips, their checks, and the rc3 rehearsal), at the end of "What it
+  shows": "The vault verifies through our verifier 3.0.0, which accepts forged claims (GHSA-mm6c-35cm-g4x2, 11 Nov
+  2026): the seal checks show the seals are well-formed; see the security note."
 - The EVIDENCE header's list of transactions sent to a public network: once the owner has sent the cap transactions,
   add them ("and the owner's eight `setGlobalCap` transactions of <date>, which closed the four vaults").
 - The security note's "Status" line, README's security sentence and `docs/sepolia.md`'s note: change when the caps
@@ -119,7 +120,7 @@ credited before can still be claimed)."), add:
 unsoundness)":
 
 ```markdown
-| A RISC Zero advisory against the pinned verifier with no proof of exploit (as on 11 November 2026) | the stop does not trip; forged checkpoints and releases can be accepted | the admin sets the release and deposit caps to zero (`setGlobalCap`); the freeze authority freezes releases and checkpoints; then retire the vault and deploy a new one | [security note](../security/risc0-groth16-advisory-2026-11-21/README.md) |
+| A RISC Zero advisory against the pinned verifier with no proof of exploit (as on 11 November 2026) | the stop does not trip; forged checkpoints and releases can be accepted | the freeze authority freezes releases and checkpoints at once; the admin sets the deposit cap to zero and the release cap to its floor (zero only where `releaseCapFloor` is zero, as on the Sepolia testnet vaults); then retire the vault and deploy a new one | [security note](../security/risc0-groth16-advisory-2026-11-21/README.md) |
 ```
 
 `docs/EVIDENCE.md`, row 138, after "anyone trips the stop with a junk proof of exploit)", add: ` (the accept-all

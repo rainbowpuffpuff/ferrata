@@ -10,7 +10,9 @@
 #
 # Usage: fork-rehearsal.sh FORK_RPC_URL BLOCK OUTDIR
 # FORK_RPC_URL must serve historical state at BLOCK (an archive node, e.g. https://rpc.sepolia.ethpandaops.io);
-# publicnode does not, and anvil then exits at start.
+# publicnode does not, and anvil then exits at start. At BLOCK 12183432 the transcript is compared with the committed
+# fork-rehearsal.txt beside this script: only line 1 (anvil's version) and releasesFrozenUntil (the run's time) may
+# differ, and the script exits 1 if anything else does. At another block nothing is compared.
 set -u
 FORK_URL="$1"; B="$2"; OUT="$3"
 PORT=18645
@@ -168,4 +170,8 @@ say "releasesFrozenUntil: $(call $V3 'releasesFrozenUntil()(uint256)') (maxFreez
 warp $((30*86400 + 1))
 say "after 30 days + 1 s without renewal, forged release: $(send $ATTACKER $V3 "$RSIG" "$(release_req $ROOT $(cast keccak n4))" 0x6a756e6b)"
 say ""
+if [ "$B" = 12183432 ]; then
+  diff <(sed '1d;/^releasesFrozenUntil/d;/^# done$/d' "$(dirname "$0")/fork-rehearsal.txt") <(sed '1d;/^releasesFrozenUntil/d' "$LOG") >/dev/null ||
+    { echo "differs from the committed fork-rehearsal.txt" >&2; exit 1; }
+fi
 say "# done"

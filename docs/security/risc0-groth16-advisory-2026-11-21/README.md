@@ -46,7 +46,14 @@ vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia 
 12,183,475, where the estimates ran. Slower: on the v5 vaults the admin can install a freeze authority and a watcher
 with `proposeRoles`, applied 14 days later (369,833 gas each); the v3 vault has no such path. A stop can also be
 tripped by anyone holding a receipt the verifier accepts for the all-zero claim digest (`estop(receipt)`); whether the
-forgery reaches that digest is not established, and none was built.
+forgery reaches that digest is not established, and none was built. None is public: RISC Zero stopped its own 3.0.0
+deployments with their owner's key, not with a receipt (`estop()` on Sepolia at block 12,171,230, 19 November 2026
+22:11:12 UTC, transaction `0x6a1ca0f4c05d24f9a47331449989c4a5da04fb9a8e4cb7ecb86e0b3718e33286`; on mainnet at block
+26,452,086, 22:21:11 UTC, `0xe3085eef2649076f40175f54e91e10f9390b565350971b8d0de52664ea6df31c`; no transaction sent to
+either stop calls `estop(receipt)`). If one is ever published, anyone can trip our four stops with it: our verifier has
+RISC Zero's 3.0.0 `SELECTOR()`, control root and BN254 control id, so it accepts the same receipts. A tripped stop
+closes every release, checkpoint and refund of its vault for good, a forgery's included, but not its deposits, and the
+escrow stays locked; the deposit cap is needed either way.
 
 **The emergency stop did not trip.** On 21 November 2026 our trust model ([`trust.md`](../../trust.md) §5 and §6,
 [`bridge.md`](../../design/bridge.md) §15, Security #9 in [`traceability.md`](../../traceability.md)) named the stop
@@ -120,7 +127,9 @@ done                                                           # expect 0, 0, 0 
 ```
 
 Re-check, sending nothing: `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT` and
-`fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`). Both need an endpoint that serves historical state
+`fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`; at block 12,183,432 it compares its transcript with
+[`fork-rehearsal.txt`](fork-rehearsal.txt), where only line 1 and `releasesFrozenUntil` may differ, and exits 1 if
+anything else does). Both need an endpoint that serves historical state
 at that block (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`); publicnode refuses reads at past blocks
 (8 of 205 on a re-run of 21 November 2026), and `reads.sh` then exits 1. `estimate.sh URL OUT` estimates at the
 latest block.

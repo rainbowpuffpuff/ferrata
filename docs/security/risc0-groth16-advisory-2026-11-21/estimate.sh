@@ -18,5 +18,5 @@ for pair in live3:0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c live1:0xfE3199fa263
   est $n.setDepositsEnabled.ETH $V "setDepositsEnabled(address,bool)" $ETH false
   [ $n = v3 ] || est $n.proposeRoles $V "proposeRoles(address[3],address)" "[$W,$ETH,$ETH]" $FA
 done
-FAILED=$(grep -c -E $'\t(ERROR|Error|$)' "$OUT")
+FAILED=$(grep -c -E $'\t(ERROR|Error| ?$)' "$OUT")
 [ "$FAILED" -eq 0 ] || { echo "estimate.sh: $FAILED lines of $OUT have no value or an error" >&2; exit 1; }

@@ -13,7 +13,7 @@ crates.io (versions and yank flags), read on 21 November 2026.
 | zkVM | risc0-zkvm 3.0.5 (yanked); risc0-build 3.0.5 (not yanked); risc0-circuit-recursion 4.0.4 or 4.0.5 and risc0-groth16 3.0.4 or 3.0.5 (all yanked), locked in 15 and 27 of the 51 lockfiles; three `lez-v03` guest lockfiles already lock 4.1.0 and 3.0.6 beside risc0-zkvm 3.0.5 | risc0-zkvm 3.1.0, risc0-build 3.0.7 (there is no 3.1.0), risc0-circuit-rv32im 4.1.0, risc0-circuit-recursion 4.1.0, risc0-zkp 3.0.6, risc0-groth16 3.0.6 |
 | Toolchains (rzup) | cargo-risczero 3.0.5, r0vm 3.0.5 | cargo-risczero 3.1.0, r0vm 3.1.0 |
 | Groth16 prover image | `risczero/risc0-groth16-prover:v2025-04-03.1` | `v2026-10-20.1` (risc0 v3.1.0, `risc0/groth16/src/prove/docker.rs`), new trusted setup |
-| Ethereum verifier | risc0-ethereum v3.0.0, `RiscZeroGroth16Verifier` 3.0.0, selector `0x73c457ba`, `CONTROL_ROOT` `a54dc85a…1f56` | risc0-ethereum v3.1.0 (commit `ff30da77`), verifier 3.1.0, selector `0xe71e6620`, `CONTROL_ROOT` `e6feef13…551d`, `BN254_CONTROL_ID` `0ac2eaf9…81de` |
+| Ethereum verifier | risc0-ethereum v3.0.0, `RiscZeroGroth16Verifier` 3.0.0, selector `0x73c457ba`, `CONTROL_ROOT` `a54dc85a…1f56` | risc0-ethereum v3.1.0 (commit `ff30da77`), verifier 3.1.0, selector `0xe71e6620` (not the stopped 3.1.0 `0x8b38038c`), `CONTROL_ROOT` `e6feef13…551d`, `BN254_CONTROL_ID` `0ac2eaf9…81de` |
 | RISC Zero on Sepolia (`contracts/deployment.toml`, `main` at `13754b01`) | 3.0.0 at `0x2a09…a84D`, estop `0x724d…7797`: stopped | 3.1.0 at `0x8c915b5071206C6E328BC18529586c513408aB3b`, estop `0xA1DCB16cb765b3CA71605339F0C37Bfe0F60bA29`; router `0x925d…9187` (timelock 1 s) |
 
 "The rv32im seal format and circuit identifier changed, so receipts produced by earlier versions do not verify under
@@ -96,10 +96,12 @@ unsound, only the admin's caps could stop them, and only because the testnet flo
   broken verifier is answered by the freeze authority (releases and checkpoints frozen at once, renewable every 30
   days), the caps bound what leaves before it acts, and `estop(receipt)` stays open to a proof of exploit.
 - **(b) RISC Zero's own 3.1.0 estop** (`0xA1DC…bA29` on Sepolia). No vault change (the vault requires `paused()`, which
-  a stop answers and the router does not); RISC Zero's guardian halts it on an advisory. But RISC Zero's stop of
-  verifier 3.0.0 on mainnet was not yet paused on 18 November 17:32 UTC (EVIDENCE row 149's read), at least 7.7 days
-  after the advisory was published, and a halt is permanent: no release and no refund afterwards (D13), so the escrow
-  stays locked.
+  a stop answers and the router does not); RISC Zero's guardian halts it on an advisory. But RISC Zero halted verifier
+  3.0.0 8 days 22 hours after publishing the advisory, with its owner key and no proof of exploit (`estop()` on 19
+  November 2026: mainnet 22:21:11 UTC, transaction `0xe308…f31c`; Sepolia 22:11:12 UTC, `0x6a1c…3286`); the owner of
+  RISC Zero's stops, 3.1.0's included, is one externally owned account per network (`0xF616…d412` on mainnet,
+  `0x3a54…387D` on Sepolia); and a halt is permanent: no release and no refund afterwards (D13), so the escrow stays
+  locked.
 - **(c) Our own stop with an owner (a multisig).** A permanent halt we control; the freeze authority already gives a
   reversible one.
 
