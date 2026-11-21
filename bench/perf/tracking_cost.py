@@ -57,7 +57,7 @@ def main():
     print("the execution gas, storage gas and fee its sequencer charged (`run.tsv`, read back from the chain: lez/lab/README.md).")
     print("Fees are in LEZ's native unit at the base fees the lab's chain had (8 per unit of each gas). The public job path")
     print("(three transactions an update, five at a handoff: lez/results/stage1-*.md). The lab's program is an earlier image")
-    print("than this tree's (lez/lab/README.md); this tree's per-step gas is within 0.3% of it (`lez/results/perf-state.md` §3).\n")
+    print("than this tree's (lez/lab/README.md); this tree's per-step gas (`lez/results/perf-state.md` §3) differs from the lab's (`lez/lab/results/record/run.tsv`) by +85 to +2,391 per step (`Miller` +85, a finality `Finish` +2,391 of 3.72M: under 0.1%).\n")
 
     print("## Per update (each job of the record)\n")
     print("| chain | kind | jobs | transactions each | exec gas per job (median) | min – max | storage gas per job | fee per job (median) | refused |")

@@ -6,7 +6,7 @@ from 20261110T185145Z to 20261118T201706Z (98 sessions, 8.1 days; one session ev
 the execution gas, storage gas and fee its sequencer charged (`run.tsv`, read back from the chain: lez/lab/README.md).
 Fees are in LEZ's native unit at the base fees the lab's chain had (8 per unit of each gas). The public job path
 (three transactions an update, five at a handoff: lez/results/stage1-*.md). The lab's program is an earlier image
-than this tree's (lez/lab/README.md); this tree's per-step gas is within 0.3% of it (`lez/results/perf-state.md` §3).
+than this tree's (lez/lab/README.md); this tree's per-step gas (`lez/results/perf-state.md` §3) differs from the lab's (`lez/lab/results/record/run.tsv`) by +85 to +2,391 per step (`Miller` +85, a finality `Finish` +2,391 of 3.72M: under 0.1%).
 
 ## Per update (each job of the record)
 
