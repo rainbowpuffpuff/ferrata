@@ -191,8 +191,8 @@ Where each ran, the measurements, the command that re-checks each and the toolch
   [deployer guide](docs/guides/deployer-guide.md).
 
 The guides and the trust document were revised for delivery on 21 November 2026 (`docs/performance.md` is still
-the first draft of 11 November); every statement cites the file it rests on, and each says what is not built. The design notes, the trust and performance documents, the reviews and the rest:
-[docs/README.md](docs/README.md).
+the first draft of 11 November); every statement cites the file it rests on, and each says what is not built. The
+design notes, the trust and performance documents, the reviews and the rest: [docs/README.md](docs/README.md).
 
 ## Specified but not built
 
