@@ -9,6 +9,8 @@
 | [`vectors/`](vectors/) | Borsh vectors written by the Rust wire crates, each with its Rust `Debug` text |
 | [`check.py`](check.py) | The check CI runs: decodes every vector with the IDL alone |
 | [`tools/build_idl.py`](tools/build_idl.py) | How the JSON was written (by hand, in Python); the error lists are read from the Rust sources |
+| [`generated/`](generated/) | The IDLs (version 2) that SPEL's LEZ v0.4 line generates from the programs' core crates, and the run that checks them ([SPEL v0.4 generates them](#spel-v04-generates-them)) |
+| [`spel-v2/`](spel-v2/) | That check: SPEL PR #301's generator and decoder, run against both programs |
 
 ## Format
 
@@ -118,6 +120,46 @@ display choice; the bytes and the structure are what is checked.
 ```sh
 cd idl/spel-check && cargo run --locked -- [RECORDED.json]      # exit status 1 on any failure
 ```
+
+## SPEL v0.4 generates them
+
+SPEL's LEZ v0.4 line is logos-co/spel pull request #301 (head `c90ca0b`, 16 November 2026, branch
+`refactor/lez-v0.4.x`, pinned to LEZ v0.4.0-rc3; not merged or released as of 21 November). It retires the
+`#[lez_program]` framework and generates an IDL (version 2) from a program's core crate, reading its source with
+`syn`: the program carries no annotations (`spel generate-idl <crate> --message <Enum> [--state <Type>]`;
+`spel_framework_core::idl_gen::generate_idl`). [`spel-v2/`](spel-v2/) runs that generator and SPEL's own decoder
+(`decode::decode_named`) against both programs' core crates, `lez/wire` and `lez/bridge-wire`, unchanged:
+
+1. **The attestation program**, with SPEL as the pull request has it: the IDL of `Message` (15 messages) and of the
+   actor states `InstanceState`, `RecordState`, `JobState` (no enum unites them, so it is generated once per state and
+   the types merged; a fourth generation with `Attestation`, the reply and event payload, adds its types). Compared
+   with [`ferrata_attestation.idl.json`](ferrata_attestation.idl.json), docs and `x-` annotations aside: every
+   message (name, tag, fields and their types) and every type (kind, fields, variants), both ways: **0 differences
+   in 33 messages and types**. SPEL's decoder, on the generated IDL, decodes every committed vector (21 of 21) and
+   **905 of 905 messages recorded on LEZ zones** (the lab's 838 and the live run's 67, `lez/live/driver`'s
+   `idl-recorded`), each consuming every byte, and refuses each one a byte short, a byte long or with tag 255.
+2. **The bridge program**: SPEL as the pull request has it stops at `BridgeMessage::Spend`'s `fees: Vec<(Root, u128)>`
+   ("cannot describe `(Root , u128)`: only paths and arrays are supported"). With
+   [`spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch`](spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch) (23
+   lines: a tuple described as a struct with positional fields, `Tuple_Root_u128`, which Borsh encodes the same way,
+   so the IDL's grammar and every decoder are unchanged; drafted for SPEL, not opened) it generates 28 messages and
+   32 types: **0 differences in 60** against [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) (whose name for
+   that tuple is `FeeShare`), and decodes 50 of 50 committed vectors.
+
+Messages are decoded as SPEL's version 2 defines them (the tag byte, then the fields): the check adds the IDL's
+`messages` as an enum type for `decode_named`. Record: [`generated/spel-v2.txt`](generated/spel-v2.txt) (Modal
+build box, 21 November 2026, tree `13d04666`); the generated files are [`generated/ferrata_attestation.idl-v2.json`](generated/ferrata_attestation.idl-v2.json)
+and [`generated/ferrata_bridge.idl-v2.json`](generated/ferrata_bridge.idl-v2.json).
+
+```sh
+# the PR's tree exported beside the repository (git -C upstream/spel fetch origin pull/301/head:pr-301;
+# git -C upstream/spel archive pr-301 | tar -x -C upstream/spel-c90ca0b), and LEZ v0.4.0-rc3 at upstream/lez-v0.4.0-rc3
+RECORDED=idl-recorded.json bash idl/spel-v2/run.sh        # writes idl/generated/; exit status non-zero on any failure
+```
+
+What it does not do: the `spel` binary of the pull request links LEZ v0.4.0-rc3's wallet, which this check does not
+build, so SPEL's encoder (`spel encode`) is not run here; the hand-written IDL's encoding direction is `check.py`'s
+(every vector re-encoded to the same bytes).
 
 ## Results
 
