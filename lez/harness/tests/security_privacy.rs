@@ -421,13 +421,23 @@ fn f8_two_deposits_full_diff() {
     }
     out.push_str(&format!("Searched in each transaction's bytes:\n\n{searched}\n"));
 
-    // 3. Events and charges.
+    // 3. Events and charges: the same, once D's N and claim address read as A's.
     assert_eq!(ra.events.len(), rd.events.len(), "the same number of events");
-    let events_equal = ra.events == rd.events;
-    assert!(events_equal, "the events differ: {:?} against {:?}", ra.events, rd.events);
+    let mut n_in_events = 0;
+    for (ea, ed) in ra.events.iter().zip(&rd.events) {
+        let account_same =
+            ea.account_id == ed.account_id || (ea.account_id == ca.account_id && ed.account_id == cd.account_id);
+        let mut data = ed.event.data.clone();
+        n_in_events += replace_all(&mut data, &dep.d.3, &dep.a.3);
+        n_in_events += replace_all(&mut data, cd.account_id.value(), ca.account_id.value());
+        assert!(
+            account_same && ea.event.selector == ed.event.selector && ea.event.data == data,
+            "the events differ: {ea:?} against {ed:?}"
+        );
+    }
     assert_eq!(ra.charge, rd.charge, "the same charge");
     out.push_str(&format!(
-        "## Events and charges\n\nEvents: {} in each, identical. Charge: identical (execution gas {}, of which public part {} cycles; storage gas {}; base fee {}), so the three hops inside D's proof cost nothing visible.\n\n",
+        "## Events and charges\n\nEvents: {} in each, identical once D's N reads as A's ({n_in_events} occurrence(s) of N or its address). Charge: identical (execution gas {}, of which public part {} cycles; storage gas {}; base fee {}), so the three hops inside D's proof cost nothing visible.\n\n",
         ra.events.len(),
         grouped(ra.charge.gas_exec as usize),
         grouped(ra.charge.cycles as usize),
@@ -439,15 +449,21 @@ fn f8_two_deposits_full_diff() {
     let (after_a, after_d) = (public_accounts(&chain_a), public_accounts(&chain_d));
     let (diff_a, diff_d) = (diff(&before, &after_a), diff(&before, &after_d));
     assert_eq!(diff_a.len(), diff_d.len(), "the same number of public accounts change");
+    // Keyed by account, D's claim(pool, N) read as A's.
+    let keyed = |d: &[(AccountId, Option<Account>, Option<Account>)], from: AccountId, to: AccountId| {
+        d.iter()
+            .map(|(id, b, a)| (if *id == from { to } else { *id }, (b.clone(), a.clone())))
+            .collect::<BTreeMap<AccountId, (Option<Account>, Option<Account>)>>()
+    };
+    let (ka, kd) = (keyed(&diff_a, ca.account_id, ca.account_id), keyed(&diff_d, cd.account_id, ca.account_id));
+    assert!(
+        ka.contains_key(&ca.account_id) && diff_d.iter().any(|(id, _, _)| *id == cd.account_id),
+        "each claim writes its N's account"
+    );
+    assert_eq!(ka, kd, "the same public accounts change, the same way");
     let mut rows = String::from("| Public account | Before | After (A) | Same in D |\n|---|---|---|---|\n");
-    for ((ida, ba, aa), (idd, bd, ad)) in diff_a.iter().zip(&diff_d) {
+    for (ida, (ba, aa)) in &ka {
         let is_claim = *ida == ca.account_id;
-        if is_claim {
-            assert_eq!(*idd, cd.account_id, "the other claim's account sits where N_D puts it");
-        } else {
-            assert_eq!(ida, idd, "the same account changes");
-        }
-        assert_eq!((ba, aa), (bd, ad), "account {ida}: the same before and after");
         let name = if is_claim {
             "claim(pool, N) — its address is N's".to_string()
         } else if *ida == system_accounts::fee_inbox_account_id() {
@@ -668,6 +684,23 @@ fn r11_several_private_reads_in_one_block() {
 /// The instance's store in `snapshot`.
 fn snapshot_store(snapshot: &Chain, s: &Synth) -> ferrata_core::witness::CompactStore {
     s.w.inst.store(snapshot)
+}
+
+/// Replace every occurrence of `from` in `bytes` by `to` (same length); returns how many.
+fn replace_all(bytes: &mut [u8], from: &[u8], to: &[u8]) -> usize {
+    assert_eq!(from.len(), to.len());
+    let mut count = 0;
+    let mut i = 0;
+    while i + from.len() <= bytes.len() {
+        if &bytes[i..i + from.len()] == from {
+            bytes[i..i + from.len()].copy_from_slice(to);
+            count += 1;
+            i += from.len();
+        } else {
+            i += 1;
+        }
+    }
+    count
 }
 
 fn grouped(n: usize) -> String {

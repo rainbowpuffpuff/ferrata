@@ -1048,6 +1048,7 @@ fn random_mutations_of_real_updates_agree_with_helios() {
     // region -> (mutations, all three refuse, spec store and Helios accept, policy refuses what both accept)
     let mut tally: std::collections::BTreeMap<String, [usize; 4]> = std::collections::BTreeMap::new();
     let mut disagreements = Vec::new();
+    let mut accepted = Vec::new();
     for i in 0..5 {
         let original = fixture("mainnet-p1899", &format!("update_{i}.ssz"));
         let u32_at = |o: usize| u32::from_le_bytes(original[o..o + 4].try_into().unwrap()) as usize;
@@ -1073,13 +1074,15 @@ fn random_mutations_of_real_updates_agree_with_helios() {
             let (name, start, len) = regions[rng.below(regions.len())];
             let mut bytes = original.clone();
             let flips = 1 + rng.below(3);
-            let mut at = Vec::new();
-            for _ in 0..flips {
-                let offset = start + rng.below(len);
-                let bit = rng.below(8);
-                bytes[offset] ^= 1 << bit;
-                at.push((offset, bit));
+            let mut at: Vec<(usize, usize)> = Vec::new();
+            while at.len() < flips {
+                let flip = (start + rng.below(len), rng.below(8));
+                if !at.contains(&flip) {
+                    bytes[flip.0] ^= 1 << flip.1;
+                    at.push(flip);
+                }
             }
+            assert_ne!(bytes, original, "a mutation changes the bytes");
             let mut p = pair.clone();
             let (policy, spec, helios) = p.submit(&bytes, electra);
             let t = tally.entry(name.to_string()).or_default();
@@ -1092,6 +1095,7 @@ fn random_mutations_of_real_updates_agree_with_helios() {
                 if !policy {
                     t[3] += 1;
                 }
+                accepted.push(format!("update {i} mutation {m} ({name}, flips {at:?}): policy {policy}"));
                 if !p.agree() {
                     disagreements.push(format!(
                         "update {i} mutation {m} ({name}, flips {at:?}): both accept, the headers differ"
@@ -1117,6 +1121,10 @@ fn random_mutations_of_real_updates_agree_with_helios() {
     );
     for (name, t) in &tally {
         out.push_str(&format!("{name} | {} | {} | {} | {}\n", t[0], t[1], t[2], t[3]));
+    }
+    out.push_str(&format!("mutations accepted by both (each with the same heads in both):\n"));
+    for a in &accepted {
+        out.push_str(&format!("  {a}\n"));
     }
     out.push_str(&format!("disagreements: {}\n", disagreements.len()));
     for d in &disagreements {

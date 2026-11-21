@@ -725,8 +725,8 @@ fn vs1_a_fabricated_chain_is_refused_through_the_program() {
         Verdict::of(&[r]),
         "no record exists there",
     );
-    let r =
-        attest_root(&mut s.w.chain, "canonical: Attest at the real record", s.header(s0), &request(victim.id), time);
+    let real_header = s.header(s0);
+    let r = attest_root(&mut s.w.chain, "canonical: Attest at the real record", real_header, &request(victim.id), time);
     check(
         &mut rows,
         "the fabricated proofs at the canonical instance's real record (block 26,384,851)",
