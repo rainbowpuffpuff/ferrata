@@ -345,7 +345,8 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   [`patches/lez_core-cc73ebf-authorizes-public-pda.patch`](patches/lez_core-cc73ebf-authorizes-public-pda.patch):
   as merged it mentions no account authorizing and has no PDA account kind) when the session says so
   (`wallet lez`; [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/)); the other modules' requests
-  and the zone's history do not go through it. The modules build each program message and name the account it goes
+  and the zone's history do not go through it, except `ferrata_attest_module`'s `lez_read` and `lez_submit` (its actor
+  states read and its transactions sent through `lez_core`: run r6, [`../cli/results/attest-seq-r6/`](../cli/results/attest-seq-r6/README.md)). The modules build each program message and name the account it goes
   to; apart from those two private sends they do not sign or submit LEZ transactions. Ethereum transactions go
   through Logos Core's send stack for the two daemons that send them, behind a flag: `monitor run --send-via logos`
   and `ferrata-relayer --send-via logos` (as modules, started with `start`) hand each call to `tx_sender_module`, which
@@ -368,10 +369,10 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   logos`; the updater's sources are beacon API URLs or recorded directories unless its configuration names
   `beacon_api_module`.
 - **`ferrata_attest_module`:** `advance` plans a job for an active instance (`Open`, `Miller`, `Adopt`,
-  `Finish`); an instance's initialization (`Init` and its committee's `Adopt` parts) is not planned, nor
-  the updater's own work around the plan (several sources cross-checked, cooperation with other updaters,
-  retries); the instance's configuration is read from its state (`read_instance`), which comes in the
-  request; the dry run still lacks the program-only checks (`WRONG_INSTANCE` is shown by the program in
+  `Finish`); an instance's initialization (`Init` and its committee's `Adopt` parts) is not planned (the `ferrata`
+  tool's `ferrata attest init` does it), nor the updater's own work around the plan (several sources cross-checked,
+  cooperation with other updaters, retries); the instance's configuration is read from its state (`read_instance`),
+  which comes in the request or through `lez_core` (`lez_read`); the dry run still lacks the program-only checks (`WRONG_INSTANCE` is shown by the program in
   `e2e.sh`); no history hops, batches, conditions or relations, no accumulator leaves; no `KeyValidate` on
   the committee (§11.4 of the attestation note).
 - **`ferrata_bridge_module`:** the private claim is built and checked by the module (`ClaimPrivately`),
