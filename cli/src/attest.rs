@@ -683,6 +683,16 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
         }
         AttestCmd::Wallet { .. } => unreachable!("handled before the zone is opened"),
         AttestCmd::Receipt { txs } => {
+            // Wait (up to --settle-timeout) until every transaction is in a block the follower has applied.
+            let wanted: Vec<String> = txs.iter().map(|t| t.trim().trim_start_matches("0x").to_lowercase()).collect();
+            let started = Instant::now();
+            while !wanted.iter().all(|w| z.follower.receipts.keys().any(|h| h.trim_start_matches("0x").to_lowercase() == *w))
+                && started.elapsed() < Duration::from_secs(a.settle_timeout)
+            {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                z.sync().await?;
+            }
+            let (tip, _) = z.tip();
             let mut status = 0;
             for t in txs {
                 let want = t.trim().trim_start_matches("0x").to_lowercase();
