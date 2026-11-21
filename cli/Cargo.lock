@@ -1995,6 +1995,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "chain_state"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh",
+ "common",
+ "fee_core",
+ "futures",
+ "lee",
+ "lee_core",
+ "log",
+ "logos-blockchain-core",
+ "logos-blockchain-zone-sdk",
+ "serde",
+ "system_accounts",
+ "thiserror 2.0.18",
+ "tokio",
+]
+
+[[package]]
 name = "chkstk_stub"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3191,6 +3211,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-advance"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "borsh",
+ "ferrata-core",
+ "ferrata-lez-wire",
+ "lee_core",
+]
+
+[[package]]
 name = "ferrata-bridge-core"
 version = "0.2.0"
 dependencies = [
@@ -3207,12 +3238,16 @@ dependencies = [
  "bincode",
  "bip39",
  "borsh",
+ "chain_state",
  "clap",
  "common",
+ "fee_core",
+ "ferrata-advance",
  "ferrata-bridge-core",
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-wire",
+ "ferrata-spectests",
  "ferrata-wallet",
  "harness",
  "hex",
@@ -3227,6 +3262,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.9",
+ "testnet_initial_state",
  "tokio",
  "url",
  "wallet",
@@ -5889,6 +5925,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "logos-blockchain-key-management-system-operators"
+version = "0.0.0"
+source = "git+https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6bbb48fb493c10fe9afefd84c18a04f02"
+dependencies = [
+ "async-trait",
+ "logos-blockchain-blend-proofs",
+ "logos-blockchain-core",
+ "logos-blockchain-groth16",
+ "logos-blockchain-key-management-system-keys",
+ "logos-blockchain-log-targets",
+ "logos-blockchain-poseidon2",
+ "logos-blockchain-utils",
+ "logos-blockchain-utxotree",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "logos-blockchain-key-management-system-service"
+version = "0.0.0"
+source = "git+https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6bbb48fb493c10fe9afefd84c18a04f02"
+dependencies = [
+ "async-trait",
+ "logos-blockchain-key-management-system-keys",
+ "logos-blockchain-key-management-system-operators",
+ "logos-blockchain-log-targets",
+ "logos-blockchain-tracing",
+ "overwatch",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "logos-blockchain-ledger"
 version = "0.0.0"
 source = "git+https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6bbb48fb493c10fe9afefd84c18a04f02"
@@ -6280,6 +6351,31 @@ dependencies = [
  "serde-big-array",
  "serde_json",
  "thiserror 2.0.18",
+ "tracing",
+]
+
+[[package]]
+name = "logos-blockchain-zone-sdk"
+version = "0.0.0"
+source = "git+https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6bbb48fb493c10fe9afefd84c18a04f02"
+dependencies = [
+ "async-trait",
+ "futures",
+ "hex",
+ "logos-blockchain-common-http-client",
+ "logos-blockchain-core",
+ "logos-blockchain-groth16",
+ "logos-blockchain-http-api-common",
+ "logos-blockchain-key-management-system-service",
+ "logos-blockchain-log-targets",
+ "logos-blockchain-time",
+ "rand 0.8.6",
+ "reqwest 0.12.28",
+ "rpds",
+ "serde",
+ "thiserror 2.0.18",
+ "time",
+ "tokio",
  "tracing",
 ]
 
