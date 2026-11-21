@@ -3,51 +3,53 @@
 `modules/scripts/release-publish.sh` prepares the whole publication — the generated `logos-repo.json`,
 the module repositories, the assembled catalog — and, with `--yes`, creates and pushes it on GitHub and
 then stops before the release ([`../RELEASE.md`](../RELEASE.md)). This is what it did on 21 November 2026
-(source commit `e7ede725`) with `--dry-run` and a throwaway key: every repository a **local bare git
+(source commit `811d7b3f`) with `--dry-run` and a throwaway key: every repository a **local bare git
 repository** under the dry-run directory, the catalog's submodules pointing at them over `file://`
 remotes, **no network command run**, exit 0:
 
 ```sh
 openssl genpkey -algorithm ed25519 -out <scratch>/k.pem            # throwaway key, made into the JWK
 # ... with RELEASE.md's recipe (d and x: the last 32 bytes of the DER encodings, base64url) ...
-MODULES="ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_relayer_module" \
-  modules/scripts/release-publish.sh example-org ferrata-modules <scratch>/release-key.jwk \
-    --dry-run <scratch>/publish-dry
+modules/scripts/release-publish.sh example-org ferrata-modules <scratch>/release-key.jwk \
+  --modules "ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_relayer_module" \
+  --dry-run <scratch>/publish-dry
 ```
 
 (Machine-specific paths — the scratch directory, the key file — are `<scratch>` here; the run printed the
-real ones. `MODULES` names five of the six modules: **`ferrata_updater_module` was not exported**, because
+real ones. `--modules` names five of the six modules: **`ferrata_updater_module` was not exported**, because
 its staging wants lez/methods' risc0-build output (`lez/target`, built on the build box by `cd lez &&
 cargo build --locked -p methods` with `RISC0_HOME` as `lez/RESULTS.md` says), which this worktree does not
 have. The published catalog takes all six. Every path of the script, `--yes` included, also runs against a
 stub `gh` in [`../../scripts/test-release-publish.sh`](../../scripts/test-release-publish.sh), CI job
 `release-publish`.)
 
-**All six, on the build box.** The same dry run with no `MODULES` (all six modules), on the build box where
+**All six, on the build box.** The same dry run with no subset named (all six modules), on the build box where
 lez/methods' guests are built, 21 November 2026: exit 0 in 21 s, seven bare repositories, the updater's export
 staging the linux-x86_64 circuits (`logos-blockchain-circuits-v0.5.7`) and rapidsnark (`v0.0.8`) and the guests,
 `ferrata_lez` among them at `816d1fef…` as in `docs/image-ids.md`. The box's copy of the tree carries no git
 metadata, so its staged records name the source commit `unknown` and its export commits differ from the laptop's
-below; the laptop's run is the record of a source commit.
+below (a dry run allows that; `--yes` refuses a tree without a git commit); the laptop's run is the record of a
+source commit.
 
 ## The repositories created (bare, `<scratch>/publish-dry/`, each with `HEAD` on `main`)
 
 | Repository | `main` | Tag `v0.1.0` (annotated) |
 |---|---|---|
-| `ferrata_attest_module.git` | `363d84de1af2d1f593d35f978c0186292f2812f4` | `e2c9a950d4e8543ec2e97046a2699f1746d1d084` |
-| `ferrata_bridge_module.git` | `5235b1a1a4d83e5554b150e886c0e874bddff8fb` | `a45971a12d654389c6d6897b8576e64ba5db1da4` |
-| `ferrata_attestor_module.git` | `1aa499c7247acc104d91847dc4c3e78411e9b9a0` | `8a0e5082ebfcf24a0dc822ef17389f260e59d772` |
-| `ferrata_monitor_module.git` | `d1108ddc0fe3f1201f89a63974edb309098f4f46` | `303eb20bfbacf262275337c7deaefd422d188380` |
-| `ferrata_relayer_module.git` | `f7df038efa90e470fc43aed04058229f93e187a0` | `3b434ff2b207adde94e86ac41e7bbb6b4f28c26e` |
-| `ferrata-modules.git` | `080bade491321b7ce9c977290675c75cf2427202` (the assembled catalog) | — |
+| `ferrata_attest_module.git` | `22321a9a9f40cc0eda20b06d1721eec942db2bbd` | `f39e5c6666fdda8ad9af246cfa92cbf984ba7b01` |
+| `ferrata_bridge_module.git` | `1b26b7394e16333d7ea5516247abd9730efbc006` | `85b5cd9f8a0c60945ba886e87a302a7c88817562` |
+| `ferrata_attestor_module.git` | `70501820e1c963f2f796d565e1577f313019d8ea` | `6f9b0ad0a0a4732967138afe1bb977da93a70ad8` |
+| `ferrata_monitor_module.git` | `f511c552722200a7afdfd25071a1928c0c05c836` | `e429606f161f46e801b1f160b9540d4e1c2f765e` |
+| `ferrata_relayer_module.git` | `d52c8162380c0b2dc352d378ef238353c5d6da6f` | `37a6b84862b7d84b6657690a411785fba64c7e5d` |
+| `ferrata-modules.git` | `2e9f3f42255ab424f0a92ea3d613dc50b756d615` (the assembled catalog) | — |
 
 Each module repository is what [`export.sh`](../../scripts/export.sh) writes (the module with its staged
 crate committed). The export is reproducible: its commit carries a fixed identity and the source commit's
 date, so the same source commit gives these same commit ids on any machine (with the same LEZ v0.4.0-rc1
 tree beside the repository, which the attestation, bridge and relayer modules vendor parts of); a
 different source commit gives different ones, since every staged `STAGED.json` records the source commit
-it came from (this run: a clone of the branch at `e7ede725`). The catalog's commit is not reproducible
-elsewhere in a dry run: its `.gitmodules` names the dry-run directory's `file://` URLs (on GitHub, the
+it came from. This run is from a clean clone of the branch at `811d7b3f`; a second run from it into another
+directory, with `SOURCE_DATE_EPOCH=315532800` inherited from the shell (ignored, as the script says), gave
+the same five module commits and tags. The catalog's commit is not reproducible elsewhere in a dry run: its `.gitmodules` names the dry-run directory's `file://` URLs (on GitHub, the
 organization's). A clone of the catalog (`git clone file://<scratch>/publish-dry/ferrata-modules.git`,
 then `git submodule update --init` with `protocol.file.allow=always`) checks out every module at exactly
 the pushed commits.
