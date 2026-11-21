@@ -1,7 +1,7 @@
 # Operating Ferrata: the updater, the importer, the checkpoint prover and relayer, watchers
 
 **Operator guide (RFP-021 U.3, S.5, S.7, R.9, R.10, P.6; RFP-022 U.3, R.6, R.9, R.13, P.6). First
-draft, 11 November 2026.** For anyone who keeps Ferrata live: advancing an attestation instance,
+draft, 11 November 2026; §3.4's deferral strategy and its measured effect on a sequencer: final, 21 November 2026.** For anyone who keeps Ferrata live: advancing an attestation instance,
 importing the vault's deposit roots, proving and finalising LEZ checkpoints for the vault, relaying
 users' transactions, and watching for wrong candidates. It says what each role needs, what it costs
 (cycles, gas on Foundry's rules and on Sepolia, proof times on CPU and GPU), how concurrent operators
@@ -129,9 +129,29 @@ two-hour cadence (§2).
   | 600 s | 300 s | 0.033 | 0.049 | 0.081 | 0.155 |
   | 1,800 s | 900 s | 0.011 | 0.017 | 0.027 | 0.054 |
 
-  Derived by arithmetic from that formula; not measured. A duplicate costs the 2.2M step above.
+  Derived by arithmetic from that formula. A duplicate costs the 2.2M step above.
   `ferrata-updater` defers per step rather than per update: each (job, step) waits
-  `H(key, job, step) mod W` rounds, and any updater continues any open job.
+  `H(key, job, step) mod W` rounds, `key` the daemon's own (so the wait differs per daemon and per step), reads the
+  job's account just before sending, and any updater continues any open job.
+- **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 November 2026;
+  [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md), `bash bench/perf/gate-sequencer.sh`): two honest
+  daemons following recorded mainnet updates, configured to poll every 4 s, the window `W` in rounds. Latency: a
+  revealed finality update to the first `Finish`, final on Bedrock, that leaves the instance at least as fresh. Gas:
+  all execution gas, abandoned jobs (opened, then overtaken by another job) and refused steps included.
+
+  | run | `W` (rounds; measured s per round) | reveal step | latency median / p90 | updates covered: own job / a later one | execution gas per revealed update | total / completed-job gas | honest waste: refused and abandoned / completed | A3's ratio: refused / applied | honest-1's fee share |
+  |---|---|---:|---|---|---:|---:|---:|---:|---:|
+  | G4 | 1 (17.6 s) | 60 s | 105 / 106 s | 20 / 1 | 16.0M | 1.721 | 0.721 | 0.149 | 0.493 |
+  | G3 | 8 (5.9–6.2 s) | 60 s | 126 / 176 s | 12 / 9 | 8.1M | 1.222 | 0.222 | 0.102 | 0.563 |
+  | G5 | 30 (4.6–4.8 s) | 90 s | 306 / 576 s | 5 / 12 | 4.6M | 1.081 | 0.081 | 0.0036 | 0.609 |
+  | G2: G3 with a daemon that never defers | 8 (4.8–5.0 s) | 60 s | 35 / 45 s | 26 / 0 | 11.1M | 1.095 | 1.311 | 1.311 | 0.588 |
+
+  A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
+  covers them). Caveats: the replay reveals updates 80 to 120 times faster than mainnet (about two hours apart there),
+  so jobs overlap more than in operation; G5's 90-s reveal step against 60 s confounds its comparison with G3 and G4;
+  the runs hold 11 to 42 jobs, under A3's planned 100 updates. Most of the waste at short windows is abandoned jobs: a
+  daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
+  not opening a job on a store another party's open job will change (join or wait) would remove it; it is not built.
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
   updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: that is all
   the recorded data), each round a block settled in a shuffled order, `W` = 8 rounds: every update
