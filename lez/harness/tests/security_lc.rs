@@ -24,13 +24,14 @@ use ferrata_core::{
     policy::{Adoption, FinalizedStore},
     steps,
     types::{Execution, LightClientUpdate},
-    witness::{uncompressed_keys, CompactUpdate, HeaderRecord},
+    witness::{uncompressed_keys, CompactBootstrap, CompactUpdate, HeaderRecord},
     Root,
 };
 use ferrata_lez_wire::{
     attest::{evaluate, AccountQuery, Address, Cmp, Condition, Field, LogQuery, Operand, Relation, Request, Word},
     consumer::{balance_actor, claim_actor, claim_seed, nullifier, ConsumerMessage, ConsumerState},
-    header_actor, header_seed, job_actor, job_id, Message, ATTESTED_SELECTOR,
+    header_actor, header_seed, instance_actor, instance_seed, job_actor, job_id, successor_id, Message,
+    ATTESTED_SELECTOR,
 };
 use ferrata_spectests::{
     execkit::relink,
@@ -942,6 +943,62 @@ fn weak_subjectivity_cases() -> Vec<Row> {
     let v = Verdict::of(&reports);
     assert!(matches!(&v, Verdict::Lez { revert, .. } if revert.contains("validity window")), "{}", v.show());
     rows.push(row("a valid update sent after the end of the period by the sequencer's clock", "refused by LEZ on the program's validity window (no program code)", v, "LEZ's own refusal: the transaction is outside the window `[signature slot, weak-subjectivity end)` the program declared; the dry run of the same transaction gives the same refusal"));
+    // `Init` from a checkpoint whose period has ended by the sequencer's clock: the program
+    // declares the window `[.., end of the checkpoint's period)` at `Init`, and LEZ refuses the
+    // transaction outside it. Control: the same `Init` one millisecond before the end applies.
+    let init_at = |time: u64, label: &str| {
+        let mut chain = harness::Chain::new();
+        let inst = Instance::new(ferrata_account(), config.clone(), base.w.inst.checkpoint);
+        let compact = CompactBootstrap::of(&base.w.bootstrap);
+        let fork = inst.fork();
+        let (_, job) = steps::initialize(&inst.checkpoint, &compact, fork, &config.spec(), config.adoption_parts)
+            .expect("the bootstrap verifies");
+        let jid = job_id(&inst.id, &job.store_digest, &job.update_digest);
+        let init =
+            Message::Init { config: config.clone(), checkpoint: inst.checkpoint, bootstrap: compact.encode(fork) };
+        chain.submit(
+            label,
+            inst.actor(),
+            borsh::to_vec(&init).unwrap(),
+            vec![inst.actor(), job_actor(inst.program, &inst.id, &jid)],
+            vec![PublicAccountEvidence::Pda { program: inst.program, seed: instance_seed(&inst.id) }],
+            time,
+        )
+    };
+    let end_ms = config.ws_end_ms(slot0).expect("a period that ends");
+    let control = init_at(end_ms - 1, "Init one millisecond before the checkpoint's period ends");
+    assert!(control.ok(), "the control Init: {:?}", control.charge.revert);
+    let v = Verdict::of(&[init_at(end_ms, "Init from a checkpoint whose period has ended")]);
+    assert!(matches!(&v, Verdict::Lez { revert, .. } if revert.contains("validity window")), "{}", v.show());
+    rows.push(row(
+        "`Init` from a checkpoint whose weak-subjectivity period has ended, by the sequencer's clock",
+        "refused by LEZ on the program's validity window (no program code)",
+        v,
+        "LEZ's own refusal: the program declares the window `[.., end of the checkpoint's period)` at `Init`; the same `Init` one millisecond before the end applies",
+    ));
+    // A successor (`Succeed`) from a checkpoint that is not the instance's latest record.
+    let mut s = synth(0x64, 2);
+    let u = in_period(&s, 512, None);
+    assert_eq!(apply(&mut s.w, &u, "a finality update (the latest record moves)"), Verdict::Applied);
+    let parent = s.w.inst.clone();
+    let root_id = parent.state(&s.w.chain).expect("the instance").root_id;
+    let earlier = s.w.bootstrap.header.beacon.hash_tree_root();
+    let successor = instance_actor(parent.program, &successor_id(&root_id, &parent.id, &parent.config, &earlier));
+    let r = s.w.chain.submit(
+        "Succeed from an earlier record",
+        parent.actor(),
+        borsh::to_vec(&Message::Succeed { config: parent.config.clone(), checkpoint: earlier }).unwrap(),
+        vec![parent.actor(), successor],
+        vec![],
+        s.time(&u),
+    );
+    check(
+        &mut rows,
+        "a successor (`Succeed`) from the instance's checkpoint after a later record was written",
+        Some(u32::from(ferrata_lez_wire::code::STALE_CHECKPOINT)),
+        Verdict::of(&[r]),
+        "a stale checkpoint: a successor starts only from its parent's latest record",
+    );
     rows
 }
 

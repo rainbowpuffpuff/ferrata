@@ -1,0 +1,30 @@
+# Light-client verification security through the attestation program (RFP-021)
+
+Each file is written by a test of `lez/harness/tests/security_lc.rs` or `security_privacy.rs` (the shared code is
+`tests/security_common/`): every case is sent as the transactions a submitter or a consumer sends, settled by LEZ
+v0.4.0-rc1's own state machine and fee settlement in process (the harness), and judged by the exit code the program
+returns or by LEZ's own refusal. RISC Zero dev mode: the guests and LEZ's privacy-preserving circuit are executed, not
+proven (proving is not what these requirements are about; the private transactions of the same kinds were proven for
+real elsewhere, EVIDENCE rows 5, 73 and 123).
+
+| File | Requirement | Test |
+|---|---|---|
+| [`vs1-fabricated-chain.md`](vs1-fabricated-chain.md) | VS.1, the fabricated chain | `security_lc::vs1_a_fabricated_chain_is_refused_through_the_program` |
+| [`vs2-forgeries.md`](vs2-forgeries.md) | VS.2, the six forgeries | `security_lc::vs2_and_f2_forgeries_are_refused_through_the_program` |
+| [`f2-finalised-only.md`](f2-finalised-only.md) | F.2, finalised headers only | the same test |
+| [`u5-failure-modes.md`](u5-failure-modes.md) | U.5, each listed failure mode, its code and the IDL's message | `security_lc::u5_every_listed_failure_mode_returns_its_code_through_the_program` |
+| [`f4-comparisons.md`](f4-comparisons.md) | F.4, `=, ≠, <, ≤, >, ≥` against a constant and between facts, from the consumer | `security_lc::f4_every_comparison_from_the_consumer` |
+| [`r3-rotations.md`](r3-rotations.md) | R.3, records valid after committee rotations | `security_lc::r3_records_stay_valid_after_committee_rotations` |
+| [`f8-full-diff.md`](f8-full-diff.md) | F.8, the full-diff test (two deposits, no hop and three hops) | `security_privacy::f8_two_deposits_full_diff` |
+| [`r11-one-block.md`](r11-one-block.md) | R.11, several private statements in one block | `security_privacy::r11_several_private_reads_in_one_block` |
+
+Re-run (from `lez/`, with `RISC0_HOME` set as `lez/RESULTS.md` §6 says):
+
+```sh
+RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc --test security_privacy -- --test-threads 4
+```
+
+Ran on the build box (a Modal CPU container), 21 November 2026: `security_lc` 5 of 5 and `security_privacy` 2 of 2
+passed; with them the red team's `redteam_lc` (11) and `redteam_attest` (11), which share the test kit these tests
+extended, passed unchanged. Every file here is the output of that run (`u5-failure-modes.md` of its re-run after the
+two stale-checkpoint cases were added). No program, guest or image id changed.
