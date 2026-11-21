@@ -30,13 +30,14 @@ wording), and the rows below say what changed.
 | Clause | Shown by |
 |---|---|
 | "An instance left unadvanced does not lose safety: attestations against already-verified headers continue to verify" | Three attestations under record R (slot 11,549,664, Sepolia block 12,105,936): a storage slot with a condition (279,157 execution gas), an ERC-20 `Transfer` log (97,794), an account's code hash (170,523). Asked again after 706,020 s (8.2 days) with no update, at the resume's block time: applied, identical statements and identifiers; the instance unchanged by them. Asked again after eight committee rotations: identical. |
-| "a stalled instance resumes correctly when any party submits the outstanding updates" | The 106 updates Sepolia produced after R (recorded by the lab from Sepolia's beacon nodes, periods 1410 to 1417), each checked natively first as an updater does, all sent late at one block time: 106 jobs applied, 334 transactions, none refused; finalized slot 11,549,664 → 11,608,192; two records written on the way equal a second provider's canonical roots. |
+| "a stalled instance resumes correctly when any party submits the outstanding updates" | The 106 updates Sepolia produced after R (recorded by the lab from Sepolia's beacon nodes, periods 1410 to 1417), each checked natively first as an updater does, all sent late at one block time: 106 jobs applied, 334 transactions, none refused; finalized slot 11,549,664 → 11,608,192; two records written on the way equal a second provider's canonical roots (asserted since `bce25e02`). |
 | "with no manual repair" | No instruction other than the jobs `Open`, `Miller`, `Adopt`, `Finish`: no re-`Init`, no repair message (the program has none). |
 | "and no gap in the verified handoff chain" | A committee adopted from the update of every period 1410 to 1417, in order, none missing (asserted). The newest period's update sent first is refused at `Open` with exit 23 `PeriodSkipped` and changes nothing. |
 
 - Test: `lez/harness/tests/stall.rs` (`a_stalled_instance_keeps_attesting_and_resumes_without_repair`), commit `80a55d7d`;
   `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1 RISC0_DEV_MODE=1 cargo test -p harness --locked --test stall -- --nocapture`;
-  1 passed, 297.9 s (Modal build box). Record: [`lez/results/r7-stall.md`](../../lez/results/r7-stall.md).
+  1 passed, 297.9 s (Modal build box); run again after the review at `bce25e02` (the second-provider comparison now
+  asserted): the same output, 1 passed, 315.8 s. Record: [`lez/results/r7-stall.md`](../../lez/results/r7-stall.md).
 - Data: `sepolia-gloas-2026-11-10` and `sepolia-attest-2026-11-10` (the instance and R), `lez/lab/results/record/net/sepolia/updates/` (the outstanding updates), real Sepolia only.
 - Limits: LEZ's state machine in process, not a sequencer; the stall stays inside R's weak-subjectivity period (it ends at slot 11,662,720; past it the instance is replaced, F.10).
 - Also evidence for **R.3** (not this stream's row): an old record read after later committee rotations (eight), identical.

@@ -11,7 +11,7 @@ records written on the resume compared with a second provider's canonical roots:
 after the resume: storage slot (USDC totalSupply_ = value): applied, 279157 execution gas, 2 statement(s)
 after the resume: log (ERC-20 Transfer): applied, 97794 execution gas, 1 statement(s)
 after the resume: account (Multicall3): applied, 170523 execution gas, 1 statement(s)
-wrote $REPO/monitor/attest/tests/fixtures/stall.json
+wrote monitor/attest/tests/fixtures/stall.json
 test a_stalled_instance_keeps_attesting_and_resumes_without_repair ... ok
 
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 297.86s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 315.75s
