@@ -1,0 +1,40 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.34s
+     Running tests/helios_oracle.rs (target/debug/deps/helios_oracle-daec2bd694324df0)
+
+running 1 test
+2000 seeded mutations (seed 0x261121f8, 400 per update) of mainnet periods 1899-1903's five updates:
+region | mutations | refused by all three | accepted by spec store and Helios (same heads) | of those, refused by the policy store
+attested beacon header | 127 | 127 | 0 | 0
+attested execution branch and offset | 158 | 158 | 0 | 0
+attested payload | 138 | 138 | 0 | 0
+finality branch | 149 | 149 | 0 | 0
+finalized beacon header | 131 | 131 | 0 | 0
+finalized execution branch and offset | 154 | 154 | 0 | 0
+finalized payload | 143 | 143 | 0 | 0
+next committee | 131 | 131 | 0 | 0
+next-committee branch | 148 | 148 | 0 | 0
+offset of the attested header | 146 | 146 | 0 | 0
+offset of the finalized header | 146 | 146 | 0 | 0
+participation bits | 156 | 156 | 0 | 0
+signature | 124 | 124 | 0 | 0
+signature slot | 149 | 136 | 13 | 0
+mutations accepted by both (each with the same heads in both):
+  update 0 mutation 10 (signature slot, flips [(25209, 3)]): policy true
+  update 0 mutation 101 (signature slot, flips [(25209, 4), (25209, 2)]): policy true
+  update 0 mutation 119 (signature slot, flips [(25208, 0), (25208, 3)]): policy true
+  update 0 mutation 339 (signature slot, flips [(25209, 0)]): policy true
+  update 0 mutation 341 (signature slot, flips [(25208, 4)]): policy true
+  update 1 mutation 35 (signature slot, flips [(25208, 7)]): policy true
+  update 1 mutation 149 (signature slot, flips [(25208, 7)]): policy true
+  update 1 mutation 346 (signature slot, flips [(25209, 0)]): policy true
+  update 2 mutation 178 (signature slot, flips [(25208, 5)]): policy true
+  update 2 mutation 205 (signature slot, flips [(25208, 7)]): policy true
+  update 2 mutation 305 (signature slot, flips [(25209, 0)]): policy true
+  update 3 mutation 211 (signature slot, flips [(25208, 4)]): policy true
+  update 4 mutation 322 (signature slot, flips [(25208, 4), (25208, 3)]): policy true
+disagreements: 0
+
+test random_mutations_of_real_updates_agree_with_helios ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 16.04s
+

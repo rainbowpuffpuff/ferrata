@@ -8,10 +8,13 @@ use ferrata_core::{
     bls::DST,
     fork::LcFork,
     hash::{hash_pair, sha256},
-    merkle::{EXECUTION_PAYLOAD_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA, NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA, ZERO},
+    merkle::{
+        CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA, EXECUTION_PAYLOAD_GINDEX, FINALIZED_ROOT_GINDEX_ELECTRA,
+        NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA, ZERO,
+    },
     types::{
-        BeaconBlockHeader, BlsSignature, Execution, ExecutionPayloadHeader, LightClientHeader, LightClientUpdate,
-        SyncAggregate, SyncCommittee,
+        BeaconBlockHeader, BlsSignature, Execution, ExecutionPayloadHeader, LightClientBootstrap, LightClientHeader,
+        LightClientUpdate, SyncAggregate, SyncCommittee,
     },
     validate::{sync_committee_signing_root, Context},
     Root,
@@ -121,7 +124,12 @@ pub fn payload_header(slot: u64, tag: u64) -> ExecutionPayloadHeader {
 
 /// An Electra-layout header whose execution branch verifies against its own body root.
 pub fn fabricated_header(slot: u64, tag: u64) -> LightClientHeader {
-    let payload = payload_header(slot, tag);
+    header_with_payload(slot, tag, payload_header(slot, tag))
+}
+
+/// An Electra-layout header carrying `payload` (any execution state: a test's own tries), whose
+/// execution branch verifies against its own body root.
+pub fn header_with_payload(slot: u64, tag: u64, payload: ExecutionPayloadHeader) -> LightClientHeader {
     let (body_root, branches) = sparse_tree(&[(EXECUTION_PAYLOAD_GINDEX, payload.hash_tree_root_deneb())], tag);
     LightClientHeader {
         beacon: BeaconBlockHeader {
@@ -150,31 +158,59 @@ pub struct Fabrication<'a> {
 /// An Electra-layout update about a chain that never existed: every branch verifies, and the
 /// signature is by `fake` under `ctx`'s chain and fork schedule.
 pub fn fabricated_update(f: &Fabrication<'_>, fake: &FakeCommittee, ctx: &Context<'_>) -> LightClientUpdate {
-    let n = fake.committee.pubkeys.len();
     let finalized = f.finalized_slot.map(|slot| fabricated_header(slot, 40 + slot));
-    let mut attested = fabricated_header(f.attested_slot, 80 + f.attested_slot);
+    let attested = fabricated_header(f.attested_slot, 80 + f.attested_slot);
+    update_over(finalized, attested, f.next_committee, f.signature_slot, f.signers, fake, ctx)
+}
+
+/// An Electra-layout update over the given headers (`None`: an update without finality): the
+/// attested state proves the finalized header and `next_committee`, and the first `signers`
+/// members of `fake` sign at `signature_slot` under `ctx`'s chain and fork schedule.
+pub fn update_over(
+    finalized: Option<LightClientHeader>,
+    mut attested: LightClientHeader,
+    next_committee: Option<&SyncCommittee>,
+    signature_slot: u64,
+    signers: usize,
+    fake: &FakeCommittee,
+    ctx: &Context<'_>,
+) -> LightClientUpdate {
+    let n = fake.committee.pubkeys.len();
     let mut leaves = Vec::new();
     if let Some(h) = &finalized {
         leaves.push((FINALIZED_ROOT_GINDEX_ELECTRA, h.beacon.hash_tree_root()));
     }
-    if let Some(c) = f.next_committee {
+    if let Some(c) = next_committee {
         leaves.push((NEXT_SYNC_COMMITTEE_GINDEX_ELECTRA, c.hash_tree_root()));
     }
-    let (state_root, branches) = sparse_tree(&leaves, 7_000 + f.attested_slot);
+    let (state_root, branches) = sparse_tree(&leaves, 7_000 + attested.beacon.slot);
     attested.beacon.state_root = state_root;
     let mut branches = branches.into_iter();
     let finality_branch = if finalized.is_some() { branches.next().unwrap() } else { vec![ZERO; 7] };
-    let next_sync_committee_branch = if f.next_committee.is_some() { branches.next().unwrap() } else { vec![ZERO; 6] };
-    let bits: Vec<bool> = (0..n).map(|i| i < f.signers).collect();
+    let next_sync_committee_branch = if next_committee.is_some() { branches.next().unwrap() } else { vec![ZERO; 6] };
+    let bits: Vec<bool> = (0..n).map(|i| i < signers).collect();
     let mut update = LightClientUpdate {
         attested_header: attested,
-        next_sync_committee: f.next_committee.cloned().unwrap_or_else(|| SyncCommittee::empty(n)),
+        next_sync_committee: next_committee.cloned().unwrap_or_else(|| SyncCommittee::empty(n)),
         next_sync_committee_branch,
         finalized_header: finalized.unwrap_or_else(|| LightClientHeader::empty(LcFork::Electra)),
         finality_branch,
         sync_aggregate: SyncAggregate { bits: bits.clone(), signature: [0; 96] },
-        signature_slot: f.signature_slot,
+        signature_slot,
     };
     update.sync_aggregate.signature = sign(fake, &bits, &sync_committee_signing_root(&update, ctx));
     update
+}
+
+/// A bootstrap at `header` whose state proves `fake`'s committee as the current one (Electra
+/// layout): a checkpoint of a chain whose keys the test holds.
+pub fn fabricated_bootstrap(mut header: LightClientHeader, fake: &FakeCommittee, salt: u64) -> LightClientBootstrap {
+    let (state_root, branches) =
+        sparse_tree(&[(CURRENT_SYNC_COMMITTEE_GINDEX_ELECTRA, fake.committee.hash_tree_root())], salt);
+    header.beacon.state_root = state_root;
+    LightClientBootstrap {
+        header,
+        current_sync_committee: fake.committee.clone(),
+        current_sync_committee_branch: branches[0].clone(),
+    }
 }

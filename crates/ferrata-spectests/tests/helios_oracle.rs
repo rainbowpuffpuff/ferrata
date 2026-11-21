@@ -1027,3 +1027,205 @@ fn where_helios_departs_from_the_specification() {
     let (mut ours5, mut theirs5) = chain5.stores();
     assert_eq!(chain5.submit(&mut ours5, &mut theirs5, &signed_by_half, 82), (Ok(()), true), "half signing");
 }
+
+/// The seed and size of the random mutations below.
+const MUTATION_SEED: u64 = 0x2611_21f8;
+const MUTATIONS_PER_UPDATE: usize = 400;
+/// The trusted root of the `mainnet-p1899` fixture's bootstrap.
+const P1899_TRUSTED: &str = "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac";
+
+/// One seeded mutation of one of mainnet periods 1899-1903's five real updates.
+struct RandomMutation {
+    /// Which update (0 to 4) it mutates.
+    update: usize,
+    /// Its index among that update's mutations.
+    index: usize,
+    region: &'static str,
+    /// (byte, bit) of every flip.
+    flips: Vec<(usize, usize)>,
+    bytes: Vec<u8>,
+}
+
+/// The five real updates of mainnet periods 1899-1903, as served.
+fn p1899_updates() -> Vec<Vec<u8>> {
+    (0..5).map(|i| fixture("mainnet-p1899", &format!("update_{i}.ssz"))).collect()
+}
+
+/// [`MUTATIONS_PER_UPDATE`] seeded mutations of each of the five updates: one to three distinct
+/// bits flipped (never the same bit twice, so no flip cancels another), in a region of the
+/// update's SSZ encoding chosen uniformly (the two offsets, the next committee and its branch, the
+/// finality branch, the participation bits, the signature, the signature slot, and each header's
+/// beacon fields, execution branch and payload), at a uniform offset in it.
+fn random_mutations(originals: &[Vec<u8>]) -> Vec<RandomMutation> {
+    use ferrata_spectests::execkit::Rng;
+    let mut rng = Rng::new(MUTATION_SEED);
+    let mut out = Vec::new();
+    for (i, original) in originals.iter().enumerate() {
+        let u32_at = |o: usize| u32::from_le_bytes(original[o..o + 4].try_into().unwrap()) as usize;
+        let (att, fin) = (u32_at(0), u32_at(layout::NEXT_BRANCH + 6 * 32));
+        assert_eq!((att, fin > att), (layout::FIXED, true), "update {i}: the offsets");
+        let regions: [(&str, usize, usize); 14] = [
+            ("offset of the attested header", 0, 4),
+            ("next committee", layout::NEXT_COMMITTEE, 513 * 48),
+            ("next-committee branch", layout::NEXT_BRANCH, 6 * 32),
+            ("offset of the finalized header", layout::NEXT_BRANCH + 6 * 32, 4),
+            ("finality branch", layout::FINALITY_BRANCH, 7 * 32),
+            ("participation bits", layout::BITS, 64),
+            ("signature", layout::SIGNATURE, 96),
+            ("signature slot", layout::SIGNATURE_SLOT, 8),
+            ("attested beacon header", att, 112),
+            ("attested execution branch and offset", att + 112, 132),
+            ("attested payload", att + 244, fin - att - 244),
+            ("finalized beacon header", fin, 112),
+            ("finalized execution branch and offset", fin + 112, 132),
+            ("finalized payload", fin + 244, original.len() - fin - 244),
+        ];
+        for index in 0..MUTATIONS_PER_UPDATE {
+            let (region, start, len) = regions[rng.below(regions.len())];
+            let mut bytes = original.clone();
+            let count = 1 + rng.below(3);
+            let mut flips: Vec<(usize, usize)> = Vec::new();
+            while flips.len() < count {
+                let flip = (start + rng.below(len), rng.below(8));
+                if !flips.contains(&flip) {
+                    bytes[flip.0] ^= 1 << flip.1;
+                    flips.push(flip);
+                }
+            }
+            assert_ne!(&bytes, original, "a mutation changes the bytes");
+            out.push(RandomMutation { update: i, index, region, flips, bytes });
+        }
+    }
+    out
+}
+
+/// Seeded random mutations of every real update of mainnet periods 1899 to 1903 ([`random_mutations`]),
+/// each against the stores as they stand just before that update. ferrata's spec store and Helios
+/// must give the same verdict; where both accept, the same finalized and optimistic headers;
+/// ferrata's policy store (what the program runs) may accept only what the spec store accepts.
+/// Prints the tally by region.
+#[test]
+fn random_mutations_of_real_updates_agree_with_helios() {
+    let originals = p1899_updates();
+    let mutations = random_mutations(&originals);
+    let mut pair = Pair::mainnet("mainnet-p1899", P1899_TRUSTED);
+    let electra = Data::Update(LcFork::Electra);
+    // region -> (mutations, all three refuse, spec store and Helios accept, policy refuses what both accept)
+    let mut tally: std::collections::BTreeMap<String, [usize; 4]> = std::collections::BTreeMap::new();
+    let mut disagreements = Vec::new();
+    let mut accepted = Vec::new();
+    for (i, original) in originals.iter().enumerate() {
+        for RandomMutation { index: m, region: name, flips: at, bytes, .. } in
+            mutations.iter().filter(|x| x.update == i)
+        {
+            let mut p = pair.clone();
+            let (policy, spec, helios) = p.submit(bytes, electra);
+            let t = tally.entry(name.to_string()).or_default();
+            t[0] += 1;
+            if !policy && !spec && !helios {
+                t[1] += 1;
+            }
+            if spec && helios {
+                t[2] += 1;
+                if !policy {
+                    t[3] += 1;
+                }
+                accepted.push(format!("update {i} mutation {m} ({name}, flips {at:?}): policy {policy}"));
+                if !p.agree() {
+                    disagreements.push(format!(
+                        "update {i} mutation {m} ({name}, flips {at:?}): both accept, the headers differ"
+                    ));
+                }
+            }
+            if spec != helios {
+                disagreements.push(format!(
+                    "update {i} mutation {m} ({name}, flips {at:?}): spec store {spec}, Helios {helios}"
+                ));
+            }
+            if policy && !spec {
+                disagreements.push(format!("update {i} mutation {m} ({name}, flips {at:?}): the policy store accepts what the spec store refuses"));
+            }
+        }
+        assert_eq!(pair.submit(original, electra), (true, true, true), "update {i}");
+        assert!(pair.agree());
+    }
+    let mut out = format!(
+        "{} seeded mutations (seed {MUTATION_SEED:#x}, {MUTATIONS_PER_UPDATE} per update) of mainnet periods 1899-1903's five updates:\n\
+         region | mutations | refused by all three | accepted by spec store and Helios (same heads) | of those, refused by the policy store\n",
+        mutations.len()
+    );
+    for (name, t) in &tally {
+        out.push_str(&format!("{name} | {} | {} | {} | {}\n", t[0], t[1], t[2], t[3]));
+    }
+    out.push_str("mutations accepted by both (each with the same heads in both):\n");
+    for a in &accepted {
+        out.push_str(&format!("  {a}\n"));
+    }
+    out.push_str(&format!("disagreements: {}\n", disagreements.len()));
+    for d in &disagreements {
+        out.push_str(&format!("  {d}\n"));
+    }
+    println!("{out}");
+    assert!(disagreements.is_empty(), "{out}");
+}
+
+/// Writes the corpus of [`random_mutations`] for a client other than Helios to judge
+/// (`lodestar/diff.mjs` runs Lodestar's light client over it; see `HELIOS-DIFFERENTIAL.md`), into
+/// the directory `FERRATA_DIFF_CORPUS` names: `meta.json`, the bootstrap, `corpus.bin` (the five
+/// updates as served, then the mutations; each record four little-endian `u32`s, kind (0 an
+/// update as served, 1 a mutation), update, mutation index, length, then the bytes) and
+/// `ferrata.tsv` (every record's verdicts in ferrata's policy store, its spec store and Helios,
+/// and the spec store's finalized and optimistic headers after it where it accepts).
+#[test]
+#[ignore = "writes a corpus for lodestar/diff.mjs; run with FERRATA_DIFF_CORPUS=<dir> and --ignored"]
+fn export_random_mutations_for_a_second_client() {
+    let dir = std::path::PathBuf::from(std::env::var("FERRATA_DIFF_CORPUS").expect("FERRATA_DIFF_CORPUS"));
+    fs::create_dir_all(&dir).unwrap();
+    let originals = p1899_updates();
+    let mutations = random_mutations(&originals);
+    let electra = Data::Update(LcFork::Electra);
+    let mut pair = Pair::mainnet("mainnet-p1899", P1899_TRUSTED);
+    let mut corpus = Vec::new();
+    let mut tsv = String::from(
+        "kind\tupdate\tmutation\tregion\tpolicy\tspec\thelios\tfinalized_slot\tfinalized_root\toptimistic_slot\toptimistic_root\n",
+    );
+    let record = |corpus: &mut Vec<u8>, kind: u32, update: usize, index: usize, bytes: &[u8]| {
+        for v in [kind, update as u32, index as u32, bytes.len() as u32] {
+            corpus.extend_from_slice(&v.to_le_bytes());
+        }
+        corpus.extend_from_slice(bytes);
+    };
+    let row = |kind: u32, update: usize, index: usize, region: &str, v: (bool, bool, bool), p: &Pair| {
+        let heads = if v.1 {
+            let ((fs, fr, _), (os, or, _)) = ours(&p.spec_store, &p.spec);
+            format!("{fs}\t{}\t{os}\t{}", hex::encode(fr), hex::encode(or))
+        } else {
+            "-\t-\t-\t-".to_string()
+        };
+        format!("{kind}\t{update}\t{index}\t{region}\t{}\t{}\t{}\t{heads}\n", v.0 as u8, v.1 as u8, v.2 as u8)
+    };
+    for (i, original) in originals.iter().enumerate() {
+        for m in mutations.iter().filter(|x| x.update == i) {
+            let mut p = pair.clone();
+            let v = p.submit(&m.bytes, electra);
+            record(&mut corpus, 1, i, m.index, &m.bytes);
+            tsv.push_str(&row(1, i, m.index, m.region, v, &p));
+        }
+        let v = pair.submit(original, electra);
+        assert_eq!(v, (true, true, true), "update {i}");
+        record(&mut corpus, 0, i, 0, original);
+        tsv.push_str(&row(0, i, 0, "as served", v, &pair));
+    }
+    fs::write(dir.join("corpus.bin"), &corpus).unwrap();
+    fs::write(dir.join("ferrata.tsv"), &tsv).unwrap();
+    fs::write(dir.join("bootstrap.ssz"), fixture("mainnet-p1899", "bootstrap.ssz")).unwrap();
+    fs::write(
+        dir.join("meta.json"),
+        format!(
+            "{{\"chain\": \"mainnet\", \"genesis_validators_root\": \"0x{GVR}\", \"trusted_root\": \"{P1899_TRUSTED}\", \"seed\": \"{MUTATION_SEED:#x}\", \"per_update\": {MUTATIONS_PER_UPDATE}, \"records\": {}}}\n",
+            originals.len() + mutations.len()
+        ),
+    )
+    .unwrap();
+    println!("{} records ({} bytes) written to {}", originals.len() + mutations.len(), corpus.len(), dir.display());
+}
