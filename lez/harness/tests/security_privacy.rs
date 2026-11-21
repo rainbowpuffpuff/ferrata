@@ -15,7 +15,7 @@
 
 mod security_common;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use borsh::BorshDeserialize;
 use fee_core::BlockFeeSummary;
@@ -36,7 +36,7 @@ use harness::{
     Chain, EXPECTED_FINALIZED,
 };
 use lee::{Account, AccountId, Actor, PrivacyPreservingTransaction};
-use lee_core::execution_state::BoundaryStep;
+use lee_core::{execution_state::BoundaryStep, PrivateAction};
 use security_common::*;
 
 const VAULT: Address = [0x5a; 20];
@@ -219,11 +219,12 @@ impl Deposits {
 // ---------------------------------------------------------------------------------------------
 
 /// Align `d` to `a`: every field that may differ (fresh randomness: the private side's actors,
-/// the private actions' nullifiers, commitments and encrypted notes, the recovery bindings; and
-/// the claim's nullifier N, in `Spend` and in the address and PDA seed of `claim(pool, N)`) is
-/// taken from `a`, after checking it has the same encoded length in both. Returns the log of what
-/// was aligned, or the first difference no rule allows. The caller then requires the two
-/// messages' encodings to be byte-identical.
+/// the private actions' nullifiers, commitments and encrypted notes, the recovery bindings, the
+/// fee fallback's private action and the payer alias's crossing in its boundary; and the claim's
+/// nullifier N, in `Spend` and in the address and PDA seed of `claim(pool, N)`) is taken from
+/// `a`, after checking it has the same encoded length in both. Every other field must already be
+/// equal. Returns the log of what was aligned, or the first difference no rule allows, by field.
+/// The caller then requires the two messages' encodings to be byte-identical.
 fn align(
     a: &PrivacyPreservingTransaction,
     d: &PrivacyPreservingTransaction,
@@ -231,7 +232,6 @@ fn align(
 ) -> Result<(PrivacyPreservingTransaction, Vec<String>), String> {
     let mut out = d.clone();
     let mut log = Vec::new();
-    let (ea, eo) = (&a.message.execution, &mut out.message.execution);
     // Public context: the claim actor is N's.
     if let Some((ca, cd)) = claims {
         if out.message.public_context.actors.remove(&cd) {
@@ -240,88 +240,15 @@ fn align(
         }
     }
     let publics = a.message.public_context.actors.clone();
-    // The boundary, step by step.
-    if ea.boundary.len() != eo.boundary.len() {
-        return Err(format!("boundary: {} steps against {}", ea.boundary.len(), eo.boundary.len()));
-    }
-    for (i, (sa, so)) in ea.boundary.iter().zip(eo.boundary.iter_mut()).enumerate() {
-        let (da, dd) = match (sa, so) {
-            (BoundaryStep::PrivateToPublic(x), BoundaryStep::PrivateToPublic(y))
-            | (BoundaryStep::PublicToPrivate(x), BoundaryStep::PublicToPrivate(y)) => (x, y),
-            (x, y) if x == y => continue,
-            _ => return Err(format!("boundary step {i}: another kind of step")),
-        };
-        for (which, xa, xd) in
-            [("from", da.envelope.from, &mut dd.envelope.from), ("to", da.envelope.to, &mut dd.envelope.to)]
-        {
-            if xa == *xd {
-                continue;
-            }
-            let claim = claims.is_some_and(|(ca, cd)| xa == ca && *xd == cd);
-            let private_side = !publics.contains(&xa) && !publics.contains(xd);
-            if !(claim || private_side) {
-                return Err(format!("boundary step {i}: `{which}` differs"));
-            }
-            *xd = xa;
-            log.push(format!(
-                "boundary step {i}: `{which}` ({})",
-                if claim { "claim(pool, N)" } else { "an alias of the private account (fresh)" }
-            ));
-        }
-        if da.envelope.message != dd.envelope.message {
-            let (ma, md) = (
-                ConsumerMessage::try_from_slice(&da.envelope.message),
-                ConsumerMessage::try_from_slice(&dd.envelope.message),
-            );
-            match (ma, md) {
-                (
-                    Ok(ConsumerMessage::Spend { pool_id: pa, credit: ra, .. }),
-                    Ok(ConsumerMessage::Spend { pool_id: pd, credit: rd, .. }),
-                ) if pa == pd && ra == rd && da.envelope.message.len() == dd.envelope.message.len() => {
-                    dd.envelope.message = da.envelope.message.clone();
-                    log.push(format!("boundary step {i}: `Spend`'s nullifier N"));
-                }
-                _ => {
-                    return Err(format!(
-                        "boundary step {i}: the message differs ({} bytes against {})",
-                        da.envelope.message.len(),
-                        dd.envelope.message.len()
-                    ))
-                }
-            }
-        }
-        if da.pda_seeds != dd.pda_seeds {
-            if da.pda_seeds.len() != dd.pda_seeds.len() {
-                return Err(format!("boundary step {i}: PDA seeds"));
-            }
-            dd.pda_seeds = da.pda_seeds.clone();
-            log.push(format!("boundary step {i}: the PDA seed of claim(pool, N)"));
-        }
-        if da.inherited_authorizations != dd.inherited_authorizations {
-            if da.inherited_authorizations.len() != dd.inherited_authorizations.len() {
-                return Err(format!("boundary step {i}: inherited authorizations"));
-            }
-            dd.inherited_authorizations = da.inherited_authorizations.clone();
-            log.push(format!("boundary step {i}: inherited authorizations (the private account's alias)"));
-        }
-    }
+    let (ea, eo) = (&a.message.execution, &mut out.message.execution);
+    align_boundary("boundary", &ea.boundary, &mut eo.boundary, &publics, claims, &mut log)?;
     // Private actions: fresh nullifiers, commitments and notes, of equal sizes; the commitment
     // root they were proven against must be the same.
     if ea.private_actions.len() != eo.private_actions.len() {
         return Err("private actions: another count".into());
     }
     for (i, (pa, po)) in ea.private_actions.iter().zip(eo.private_actions.iter_mut()).enumerate() {
-        if pa.root != po.root {
-            return Err(format!("private action {i}: another commitment root"));
-        }
-        if borsh::to_vec(&pa.encrypted_post_state).unwrap().len()
-            != borsh::to_vec(&po.encrypted_post_state).unwrap().len()
-        {
-            return Err(format!("private action {i}: a note of another size"));
-        }
-        po.nullifier = pa.nullifier.clone();
-        po.commitment = pa.commitment.clone();
-        po.encrypted_post_state = pa.encrypted_post_state.clone();
+        align_action(&format!("private action {i}"), pa, po)?;
     }
     log.push(format!(
         "{} private actions: nullifier, commitment and encrypted note (fresh; same sizes, same root)",
@@ -339,12 +266,158 @@ fn align(
     if !ea.recovery_bindings.is_empty() {
         log.push(format!("{} recovery binding(s) of the fee refund (fresh; same sizes)", ea.recovery_bindings.len()));
     }
+    // The fee: the same refund target; its fallback (the payer's transition after the fee
+    // transfer alone) is a private action of its own and the payer alias's crossing.
+    match (&ea.fee, &mut eo.fee) {
+        (None, None) => {}
+        (Some(fa), Some(fo)) => {
+            if fa.refund_to != fo.refund_to {
+                return Err("the fee's refund target differs".into());
+            }
+            match (&fa.fallback, &mut fo.fallback) {
+                (None, None) => {}
+                (Some(xa), Some(xo)) => {
+                    align_action("the fee fallback's private action", &xa.action, &mut xo.action)?;
+                    align_boundary(
+                        "the fee fallback's boundary",
+                        &xa.boundary,
+                        &mut xo.boundary,
+                        &publics,
+                        claims,
+                        &mut log,
+                    )?;
+                    log.push(
+                        "the fee fallback's private action: nullifier, commitment and encrypted note (fresh; same \
+                         sizes, same root)"
+                            .to_string(),
+                    );
+                }
+                _ => return Err("the fee fallback is in one transaction only".into()),
+            }
+        }
+        _ => return Err("the fee is in one transaction only".into()),
+    }
     let (ba, bo) = (borsh::to_vec(&a.message).unwrap(), borsh::to_vec(&out.message).unwrap());
     if ba != bo {
         let at = ba.iter().zip(&bo).position(|(x, y)| x != y).unwrap_or(ba.len().min(bo.len()));
-        return Err(format!("the messages differ at byte {at} of {} / {} after alignment", ba.len(), bo.len()));
+        let (ma, mo) = (&a.message, &out.message);
+        let (xa, xo) = (&ma.execution, &mo.execution);
+        let fields: [(&str, Vec<u8>, Vec<u8>); 11] = [
+            ("public_context", borsh::to_vec(&ma.public_context).unwrap(), borsh::to_vec(&mo.public_context).unwrap()),
+            ("execution.boundary", borsh::to_vec(&xa.boundary).unwrap(), borsh::to_vec(&xo.boundary).unwrap()),
+            ("execution.async_messages", borsh::to_vec(&xa.async_messages).unwrap(), borsh::to_vec(&xo.async_messages).unwrap()),
+            ("execution.recovery_bindings", borsh::to_vec(&xa.recovery_bindings).unwrap(), borsh::to_vec(&xo.recovery_bindings).unwrap()),
+            ("execution.public_root", borsh::to_vec(&xa.public_root).unwrap(), borsh::to_vec(&xo.public_root).unwrap()),
+            ("execution.private_actions", borsh::to_vec(&xa.private_actions).unwrap(), borsh::to_vec(&xo.private_actions).unwrap()),
+            ("execution.validity", borsh::to_vec(&xa.validity).unwrap(), borsh::to_vec(&xo.validity).unwrap()),
+            ("execution.program_image_claims", borsh::to_vec(&xa.program_image_claims).unwrap(), borsh::to_vec(&xo.program_image_claims).unwrap()),
+            ("execution.fee", borsh::to_vec(&xa.fee).unwrap(), borsh::to_vec(&xo.fee).unwrap()),
+            ("nonces", borsh::to_vec(&ma.nonces).unwrap(), borsh::to_vec(&mo.nonces).unwrap()),
+            ("admission_evidence", borsh::to_vec(&ma.admission_evidence).unwrap(), borsh::to_vec(&mo.admission_evidence).unwrap()),
+        ];
+        let field = fields.iter().find(|(_, x, y)| x != y).map_or("an unnamed field", |(name, _, _)| name);
+        return Err(format!(
+            "the messages differ at byte {at} of {} / {} after alignment, in `{field}`",
+            ba.len(),
+            bo.len()
+        ));
     }
     Ok((out, log))
+}
+
+/// Align one boundary of `d` to `a`'s, step by step: an actor may differ only where it is the
+/// claim's (`claims`) or on the private side (in neither transaction's public context, so a
+/// fresh alias); a message only as `Spend`'s nullifier; PDA seeds and inherited authorizations
+/// only at equal sizes.
+fn align_boundary(
+    label: &str,
+    ba: &[BoundaryStep],
+    bo: &mut [BoundaryStep],
+    publics: &BTreeSet<Actor>,
+    claims: Option<(Actor, Actor)>,
+    log: &mut Vec<String>,
+) -> Result<(), String> {
+    if ba.len() != bo.len() {
+        return Err(format!("{label}: {} steps against {}", ba.len(), bo.len()));
+    }
+    for (i, (sa, so)) in ba.iter().zip(bo.iter_mut()).enumerate() {
+        let (da, dd) = match (sa, so) {
+            (BoundaryStep::PrivateToPublic(x), BoundaryStep::PrivateToPublic(y))
+            | (BoundaryStep::PublicToPrivate(x), BoundaryStep::PublicToPrivate(y)) => (x, y),
+            (x, y) if x == y => continue,
+            _ => return Err(format!("{label} step {i}: another kind of step")),
+        };
+        for (which, xa, xd) in
+            [("from", da.envelope.from, &mut dd.envelope.from), ("to", da.envelope.to, &mut dd.envelope.to)]
+        {
+            if xa == *xd {
+                continue;
+            }
+            let claim = claims.is_some_and(|(ca, cd)| xa == ca && *xd == cd);
+            let private_side = !publics.contains(&xa) && !publics.contains(xd);
+            if !(claim || private_side) {
+                return Err(format!("{label} step {i}: `{which}` differs"));
+            }
+            *xd = xa;
+            log.push(format!(
+                "{label} step {i}: `{which}` ({})",
+                if claim { "claim(pool, N)" } else { "an alias of the private account (fresh)" }
+            ));
+        }
+        if da.envelope.message != dd.envelope.message {
+            let (ma, md) = (
+                ConsumerMessage::try_from_slice(&da.envelope.message),
+                ConsumerMessage::try_from_slice(&dd.envelope.message),
+            );
+            match (ma, md) {
+                (
+                    Ok(ConsumerMessage::Spend { pool_id: pa, credit: ra, .. }),
+                    Ok(ConsumerMessage::Spend { pool_id: pd, credit: rd, .. }),
+                ) if pa == pd && ra == rd && da.envelope.message.len() == dd.envelope.message.len() => {
+                    dd.envelope.message = da.envelope.message.clone();
+                    log.push(format!("{label} step {i}: `Spend`'s nullifier N"));
+                }
+                _ => {
+                    return Err(format!(
+                        "{label} step {i}: the message differs ({} bytes against {})",
+                        da.envelope.message.len(),
+                        dd.envelope.message.len()
+                    ))
+                }
+            }
+        }
+        if da.pda_seeds != dd.pda_seeds {
+            if da.pda_seeds.len() != dd.pda_seeds.len() {
+                return Err(format!("{label} step {i}: PDA seeds"));
+            }
+            dd.pda_seeds = da.pda_seeds.clone();
+            log.push(format!("{label} step {i}: the PDA seed of claim(pool, N)"));
+        }
+        if da.inherited_authorizations != dd.inherited_authorizations {
+            if da.inherited_authorizations.len() != dd.inherited_authorizations.len() {
+                return Err(format!("{label} step {i}: inherited authorizations"));
+            }
+            dd.inherited_authorizations = da.inherited_authorizations.clone();
+            log.push(format!("{label} step {i}: inherited authorizations (the private account's alias)"));
+        }
+    }
+    Ok(())
+}
+
+/// Align one private action of `d` to `a`'s: the same commitment root, a note of the same size;
+/// the nullifier, commitment and note are fresh.
+fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Result<(), String> {
+    if pa.root != po.root {
+        return Err(format!("{label}: another commitment root"));
+    }
+    if borsh::to_vec(&pa.encrypted_post_state).unwrap().len() != borsh::to_vec(&po.encrypted_post_state).unwrap().len()
+    {
+        return Err(format!("{label}: a note of another size"));
+    }
+    po.nullifier = pa.nullifier.clone();
+    po.commitment = pa.commitment.clone();
+    po.encrypted_post_state = pa.encrypted_post_state.clone();
+    Ok(())
 }
 
 #[test]
