@@ -35,7 +35,11 @@ MODS="eth_rpc_module logos-evm-eth-rpc-module 6965f3252986eef02e9342198a0625fa72
 fee_module logos-evm-fee-module f2065e787eebcd7fa49f6cf6ab1dc39457cba981
 keystore_module logos-evm-keystore-module e83a899a1718ed52e3173dc85d06b15b9c68f41a
 signer_manager_module logos-signer-manager-module bd5c84d21ced71246c4bf44d137aa1c597496fb0
-tx_sender_module logos-evm-tx-sender-module f1754c3b13c7c580ee449116ba8982ca193e114d"
+tx_sender_module logos-evm-tx-sender-module f1754c3b13c7c580ee449116ba8982ca193e114d
+evm_signer_cli logos-evm-signer-cli 2cb46d8d2a8456afa01b26906ffb206d064e26ec
+evm_keystore_cli logos-evm-keystore-cli c6db2ad320f6e14d938d63d5d3fe4977ec909ca5"
+# evm_signer_cli and evm_keystore_cli (the headless approver and custodian, pinning the same signer manager, keystore
+# and builder a99b32a as tx_sender_module) are built the same way; modules/scripts/bridge-send-stack.sh uses them.
 # Built with their own lock (no graft): the pair upstream tests together.
 OWN_LOCK="beacon_api_module logos-evm-beacon-api-module aca138e5c211a370654700f4f8f2779ea5081c86
 verified_proxy_module logos-verified-proxy-module fa984790c5c5d7b39f37ed42d7b66abfc9e72b67"

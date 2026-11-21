@@ -49,12 +49,17 @@ pub(crate) struct Call {
 
 impl Call {
     pub(crate) fn to_json(&self) -> Value {
-        json!({ "to": hex(&self.to), "value": self.value, "data": hex(&self.data), "label": self.label })
+        json!({ "to": crate::evm::checksum(&self.to), "value": self.value, "data": hex(&self.data), "label": self.label })
     }
 }
 
 /// The request `tx_sender_module.send` takes: the chain, the account, the calls in order, the purpose (one line).
 pub(crate) fn request(chain_id: u64, from: &str, calls: &[Call], purpose: &str) -> Value {
+    // The account as EIP-55 text when it parses (tx_sender_module keys its per-account history by the text it prints).
+    let from = crate::unhex(from)
+        .ok()
+        .and_then(|b| <[u8; 20]>::try_from(b).ok())
+        .map_or_else(|| from.to_string(), |a| crate::evm::checksum(&a));
     json!({
         "chainId": chain_id,
         "from": from,
@@ -202,6 +207,7 @@ mod tests {
         assert!(sent["handle"].as_str().unwrap().starts_with("smh_"));
         let last = fake::SENT.lock().unwrap().last().cloned().unwrap();
         assert_eq!(last["chainId"], 11155111);
+        assert_eq!(last["from"], "0x0000000000000000000000000000000000000003");
         assert_eq!(last["calls"][1]["data"], "0xdead");
         let s = wait(sent["requestId"].as_str().unwrap(), Duration::from_secs(1), |_| {}).unwrap();
         assert_eq!(broadcast_hashes(&s).unwrap().len(), 2);

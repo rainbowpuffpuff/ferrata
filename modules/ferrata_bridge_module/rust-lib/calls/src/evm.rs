@@ -28,6 +28,18 @@ pub(crate) fn keccak(data: &[u8]) -> [u8; 32] {
     out
 }
 
+/// An address in EIP-55 mixed case (what `tx_sender_module` and the signer manager key accounts by when they print them).
+pub(crate) fn checksum(a: &Address) -> String {
+    let lower: String = a.iter().map(|b| format!("{b:02x}")).collect();
+    let h = keccak(lower.as_bytes());
+    let mut out = String::from("0x");
+    for (i, c) in lower.chars().enumerate() {
+        let nibble = (h[i / 2] >> if i % 2 == 0 { 4 } else { 0 }) & 0xf;
+        out.push(if c.is_ascii_alphabetic() && nibble >= 8 { c.to_ascii_uppercase() } else { c });
+    }
+    out
+}
+
 /// A function's selector: the first four bytes of the Keccak-256 of its signature.
 pub(crate) fn selector(signature: &str) -> [u8; 4] {
     let h = keccak(signature.as_bytes());
@@ -158,6 +170,14 @@ pub(crate) fn dec(w: &[u8; 32]) -> String {
     }
     digits.reverse();
     String::from_utf8(digits).expect("ASCII digits")
+}
+
+/// A decimal amount as hex digits without leading zeros (`0` for zero), as JSON-RPC quantities are written.
+pub(crate) fn dec_to_hex(decimal: &str) -> Result<String, String> {
+    let w = crate::u256(&json!(decimal), "an amount")?;
+    let h: String = w.iter().map(|b| format!("{b:02x}")).collect();
+    let t = h.trim_start_matches('0');
+    Ok(if t.is_empty() { "0".to_string() } else { t.to_string() })
 }
 
 /// The dynamic `uint256[]` whose offset is head word `i` of `data`.
@@ -597,6 +617,15 @@ mod tests {
         assert_eq!(as_u64(&word(&b, 0).unwrap()).unwrap(), 0x20);
         assert_eq!(as_u64(&word(&b, 1).unwrap()).unwrap(), 2);
         assert_eq!(&b[64..66], &[0x5e, 0xa1]);
+    }
+
+    #[test]
+    fn eip55_checksums() {
+        // EIP-55's own examples and anvil's first account.
+        let a = |h: &str| -> Address { crate::unhex(h).unwrap().try_into().unwrap() };
+        assert_eq!(checksum(&a("5aaeb6053f3e94c9b9a09f33669435e7ef1beaed")), "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed");
+        assert_eq!(checksum(&a("fb6916095ca1df60bb79ce92ce3ea74c37c5d359")), "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359");
+        assert_eq!(checksum(&a("f39fd6e51aad88f6f4ce6ab8827279cfffb92266")), "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
     }
 
     #[test]

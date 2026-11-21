@@ -25,6 +25,7 @@ mod lez;
 mod rpc;
 mod send;
 mod session;
+mod user;
 mod wallet;
 
 pub use lez::{set_lez_core, LezCoreCall};
@@ -67,8 +68,9 @@ pub fn version() -> String {
 }
 
 /// `deposit(request)`: the commitment and the vault call of a deposit.
+/// With `send`, the deposit is sent through Logos Core's send stack from the depositor's account (`user.rs`).
 pub fn deposit(request: &str) -> String {
-    reply(parse(request).and_then(|r| deposit_of(&r)))
+    reply(parse(request).and_then(|r| if r["send"].is_null() { deposit_of(&r) } else { user::deposit_and_send(&r) }))
 }
 
 /// `claim(request)`: the claim of one deposit against a deposit root.
@@ -88,12 +90,18 @@ pub fn burn(request: &str) -> String {
 }
 
 /// `release(request)`: the release of one burn against a checkpointed burn root.
+/// With `send` (and the proof's `seal`), a releasable one is sent through Logos Core's send stack (`user.rs`).
 pub fn release(request: &str) -> String {
     reply(parse(request).and_then(|r| {
-        if r["roots"].is_null() {
-            release_explicit(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _, _)| v))
+        let made = if r["roots"].is_null() {
+            release_explicit(&r).map(|x| x.map(|(v, _, _)| v))
         } else {
-            wallet::release_by_rule(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _)| v))
+            wallet::release_by_rule(&r).map(|x| x.map(|(v, _)| v))
+        }?;
+        match made {
+            Ok(v) if !r["send"].is_null() => user::release_and_send(&r, &v),
+            Ok(v) => Ok(v),
+            Err(refusal) => Ok(refusal),
         }
     }))
 }

@@ -892,10 +892,10 @@ impl Chain {
         let denominations = reg["token"]["denominations"].as_array().cloned().unwrap_or_default();
         // The position's amount is decimal already (positions: word_dec).
         let amount = b["amount"].as_str().ok_or("the burn's amount")?.to_string();
-        let (denom_index, relay_fee) = denominations
+        let relay_fee = denominations
             .iter()
             .find(|d| d["amount"].as_str() == Some(amount.as_str()))
-            .map(|d| (d["index"].as_u64().unwrap_or(0), d["relay_fee"].clone()))
+            .map(|d| d["relay_fee"].clone())
             .ok_or("the burn's amount is not one of the vault's denominations")?;
         let mut req = self.seed_fields();
         req["relay_fee"] = relay_fee;
@@ -915,20 +915,7 @@ impl Chain {
         crate::jobs::phase("proving", json!({ "by": "the stand-in prover (seqnet-chain): the vault tests' mock verifier is told to accept the exact journal; no Groth16 wrap here" }));
         let proof = self.post("module.prove_release", json!({ "release": r }))?;
         let seal = unhex(proof["seal"].as_str().ok_or("the prover's seal")?)?;
-        let p = &r["public"];
-        let token: [u8; 20] = fixed(&p["token"], "public.token")?;
-        let recipient: [u8; 20] = fixed(&p["recipient"], "public.recipient")?;
-        use crate::evm::Abi;
-        let request = Abi::Tup(vec![
-            Abi::addr(&token),
-            Abi::uint(u128::from(denom_index)),
-            Abi::addr(&recipient),
-            Abi::addr(&fixed(&p["relayer"], "public.relayer")?),
-            Abi::W(fixed(&p["relay_fee"], "public.relay_fee")?),
-            Abi::W(fixed(&r["burn_root"], "burn_root")?),
-            Abi::W(fixed(&r["nullifier"], "nullifier")?),
-        ]);
-        let data = crate::evm::calldata("release((address,uint8,address,address,uint256,bytes32,bytes32),bytes)", &[request, Abi::Bytes(seal)]);
+        let (data, recipient) = crate::user::release_call(&mut v, &r, &seal)?;
         let sender = e["release_sender"].as_str().ok_or("release_sender")?.to_string();
         let before = v.balance(&recipient)?;
         let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
