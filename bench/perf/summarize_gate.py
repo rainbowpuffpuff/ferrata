@@ -105,6 +105,28 @@ def summarize(run):
     twice = {k: v for k, v in applied.items() if len(v) > 1}
     jobs = {k[0] for k in applied}
     print(f"\nJobs with an applied step: {len(jobs)}; steps applied: {len(applied)}; applied more than once: {len(twice)}.")
+    # Refused steps: which step, what it cost, and whether it was sent before the applied one was in a block (the same
+    # block: concurrent submission, invisible to a re-check) or after (a re-check that missed a final step).
+    blk = {(r["job"], r["step"]): r["block"] for n in names for r in J[n] if r["status"] == "applied"}
+    ref = [(n, r) for n in names for r in J[n] if r["status"] == "refused"]
+    if ref:
+        by = {}
+        for n, r in ref:
+            k = (n.startswith("honest"), r["step"], r["exit"])
+            e = by.setdefault(k, [0, 0, 0])
+            e[0] += 1
+            e[1] += r["gas_exec"]
+            e[2] += 1 if blk.get((r["job"], r["step"])) == r["block"] else 0
+        print("\n| refused steps of | step | exit code | count | exec gas (total) | in the same block as the applied step |")
+        print("|---|---|---:|---:|---:|---:|")
+        for (h, step, code), (c, gas, same) in sorted(by.items(), key=lambda kv: -kv[1][1]):
+            print(f"| {'honest daemons' if h else 'adversary'} | {step} | {code} | {c} | {g(gas)} | {same} of {c} |")
+    tot_a = sum(r["gas_exec"] for n in names for r in J[n] if r["status"] == "applied")
+    tot_r = sum(r["gas_exec"] for n in names for r in J[n] if r["status"] == "refused")
+    if tot_a:
+        key["mult"] = (tot_a + tot_r) / tot_a
+        print(f"\nAll daemons together: execution gas on applied steps {g(tot_a)}, on refused steps {g(tot_r)}: the updates "
+              f"cost **{key['mult']:.3f}** times what one submitter would pay.")
     key.update(jobs=len(jobs), twice=len(twice))
 
     # Latency: an entry's appearance to the first applied Finish whose finalized slot reaches it.
@@ -154,13 +176,13 @@ def main():
     keys = [summarize(run) for run in sys.argv[1:]]
     if len(keys) > 1:
         print("## The runs side by side\n")
-        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | R.9 refused / applied | R.10 honest-1's share |")
-        print("|---|---|---|---:|---:|---|---|---:|---:|")
+        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | gas multiple (all daemons) | R.9 honest refused / applied | R.10 honest-1's share |")
+        print("|---|---|---|---:|---:|---|---|---:|---:|---:|")
         for k in keys:
             fmt = lambda v, f: (f.format(v) if v is not None else "—")
             print(f"| {k['run']} | {k.get('window', '?')} of {k.get('poll', '?')} | {'yes' if k.get('adversary') else 'no'} | "
                   f"{k.get('jobs', 0)} | {k.get('twice', 0)} | {fmt(k.get('lat_med'), '{:.0f}')} / {fmt(k.get('lat_p90'), '{:.0f}')} | "
-                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | {fmt(k.get('r9'), '{:.4f}')} | "
+                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | {fmt(k.get('mult'), '{:.3f}')} | {fmt(k.get('r9'), '{:.4f}')} | "
                   f"{fmt(k.get('share'), '{:.3f}')} |")
 
 
