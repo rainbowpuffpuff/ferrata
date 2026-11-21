@@ -11,8 +11,8 @@
 //! Ethereum, eight sync-committee handoffs. They are submitted late, all at once, at one block time after the
 //! newest of them was signed, as a party that comes back to a stalled instance would submit them.
 //!
-//! `FERRATA_STALL_FIXTURES=DIR` writes the instance's state and records at the stall and after the resume, for
-//! the attestation side's `monitor` tests (`monitor/tests/fixtures/attest/`).
+//! `FERRATA_STALL_FIXTURES=DIR` writes the instance's state and records at the stall and after the resume to
+//! `DIR/stall.json`, for the attestation side's `monitor` tests (`monitor/attest/tests/fixtures/stall.json`).
 
 use std::{fs, path::PathBuf};
 
@@ -339,6 +339,7 @@ fn a_stalled_instance_keeps_attesting_and_resumes_without_repair() {
         }
     }
     println!("records written on the resume compared with a second provider's canonical roots: {checked}");
+    assert!(checked >= 2, "at least two records written on the resume equal a second provider's canonical roots ({checked})");
 
     // 5. After the resume (eight rotations later), the old record R still attests, unchanged (R.3).
     s.time = t_resume + 12_000;
@@ -367,7 +368,11 @@ fn a_stalled_instance_keeps_attesting_and_resumes_without_repair() {
             },
             "ws_end_slot_of_stalled": ws_end,
         });
-        fs::write(dir.join("stall.json"), serde_json::to_string_pretty(&summary).unwrap()).unwrap();
-        println!("wrote {}", dir.join("stall.json").display());
+        let out = dir.join("stall.json");
+        fs::write(&out, serde_json::to_string_pretty(&summary).unwrap()).unwrap();
+        // Shown relative to the repository (no machine path in a record), else by its file name.
+        let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap();
+        let shown = out.canonicalize().ok().and_then(|p| p.strip_prefix(&repo).ok().map(|r| r.display().to_string()));
+        println!("wrote {}", shown.unwrap_or_else(|| "stall.json".into()));
     }
 }
