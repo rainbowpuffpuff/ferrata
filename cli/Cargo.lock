@@ -3268,6 +3268,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-rebate-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-core",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "ferrata-lez-statements-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "ferrata-lez-wire",
+ "lee_core",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-lez-wire"
 version = "0.1.0"
 dependencies = [
@@ -3773,6 +3794,8 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-holdings-wire",
+ "ferrata-lez-rebate-wire",
+ "ferrata-lez-statements-wire",
  "ferrata-lez-wire",
  "ferrata-spectests",
  "hex",
