@@ -14,8 +14,9 @@ box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "mea
 | RFP-021 VS.4 | in part | in part (the monitor gap closed; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence alarm and the consumer's freeze hook built and tested |
 | RFP-021 U.4 | waits on Logos | **shown** (with SPEL's v0.4 pull request; see the caveat) | SPEL PR #301's own generator makes the attestation program's IDL from `lez/wire`: 0 differences from ours; SPEL's decoder reads 905 of 905 recorded messages |
 | RFP-022 U.4 | waits on Logos | in part | The same generator stops at a tuple in `BridgeMessage::Spend`; with our 23-line SPEL patch (drafted, not opened) it makes the bridge's IDL, 0 differences from ours |
+| RFP-021 U.2 | in part | **shown** | `ferrata attest` (cli/) on a LEZ v0.4.0-rc1 zone we ran: configuration read, updates submitted, attestations of slot, account and log tuples with predicates, dry runs whose codes (0, 130, 124, 23, 52) equal the zone's for every sent transaction (24 of 24 steps) |
 
-(U.1, U.2, U.3, F.9, F.7: below, filled as their runs land.)
+(U.1, F.9: below. U.3, F.7: unchanged, below.)
 
 ## RFP-021 R.7: a stalled instance keeps safety and resumes
 
@@ -111,3 +112,27 @@ towards it, and what is shown instead:
   `ferrata_updater_module` (sequencer backend) and `beacon_api_module` into a Logos Core beside the zone, with
   `beacon_api_module`'s providers on loopback serving the lab's recorded light-client data
   (`lez/lab/results/record/net/sepolia/`), and `attest-monitor watch` on the instance during the run.
+
+## RFP-021 U.2: the CLI: attest, dry run with the on-chain codes, submit updates, read configuration
+
+**Proposed: shown.** `ferrata attest` (`cli/src/attest.rs`, the `ferrata` tool's subcommand; reference
+[`lez/ATTEST-CLI.md`](../../lez/ATTEST-CLI.md), "On a running sequencer"), run against a LEZ v0.4.0-rc1 sequencer we started
+(`bash cli/tests/attest-seq.sh r4`, Modal build box, tree `2523e3ce`; record
+[`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md)):
+
+| Clause | Shown by (run r4) |
+|---|---|
+| "producing an attestation for a given (chain, contract, storage slot or log, predicate) tuple" | `attest --storage ADDRESS:SLOT:CMP:VALUE`, `--account ADDRESS:codehash`, `--log TX:LOG:emitter=ADDRESS` under the mainnet record of block 26,384,851 (chain 1), proofs over JSON-RPC: applied on the zone (WETH balance slot `eq` and `ge`, a USDC `Transfer` log with its emitter, WETH's code hash, a slot and a log together) |
+| "verifying one off-chain as a dry run" | every command without `--send`: the program's function natively and the signed transaction settled on a copy of the zone's state; a dry run changes nothing (status before and after) |
+| "submitting a consensus-state update" | `advance --send --yes`: two real Sepolia updates (8 transactions) and a mainnet finality update applied; `init` of an instance |
+| "reading an instance's configuration" | `config`: chain id, committee, fork schedule, layout, bound; the instance id derived again from it and the checkpoint, equal (both instances) |
+| "The dry run must report the same typed error codes the on-chain path returns" | refusals 130 `PredicateFailed` (twice), 124 `ReceiptFailed`, 23 `PeriodSkipped`, 52 `NotNewer`: the verdict, the dry run and the zone's receipt equal for each; every sent transaction equal to its dry run in exit code, execution gas, storage gas and events (24 of 24 steps as expected) |
+
+Limits: a zone we ran (LEZ's local configuration, one sequencer), not a public network; the zone's outcome read by
+following its blocks with LEZ's block application (the sequencer's RPC has no receipts), as every sequencer row of the
+table is read.
+
+Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52; every sent transaction equal to its dry run (exit, execution and storage gas, events); 24 of 24 steps as expected | `bash cli/tests/attest-seq.sh r4` (tree `2523e3ce`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
+
+The same run read the zone's mainnet instance with `attest-monitor` through the sequencer's `getAccount` (S.7):
+divergence confirmed, no alert at the record's time; `ws-half` at the run's time (the record is 11 days old).

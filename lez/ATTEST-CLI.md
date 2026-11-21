@@ -151,6 +151,25 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
 Run on a zone we started (`cli/tests/attest-seq.sh`: crown session A, then the commands in `cli/tests/attest-seq-hook.sh`):
 see [Results on a sequencer](#results-on-a-sequencer).
 
+## Results on a sequencer
+
+Run r4 of `cli/tests/attest-seq.sh` (Modal build box, 21 November 2026; record and table:
+[`../cli/results/attest-seq-r4/`](../cli/results/attest-seq-r4/README.md)): on a LEZ v0.4.0-rc1 zone we started, with the
+final attestation program, 24 commands, each with the exit status expected; **every sent transaction equal to its dry run**
+(exit code, execution gas, storage gas, events), read from the zone's final blocks:
+
+- `config` of the zone's Sepolia instance (its id derived again: equal); `status` before and after.
+- `advance` with real Sepolia updates of 12 November (the lab's record): a finality update (3 transactions) and the
+  period-1412 update (5, adopting a committee); finalized slot 11,562,112 → 11,567,104. A dry run alone changed nothing.
+- `init` of a mainnet instance from the attestation fixture's bootstrap (3 transactions), `advance` with its finality
+  update (the record of block 26,384,851), `config` (id equal).
+- `attest`, the proofs fetched over JSON-RPC (recorded mainnet responses): WETH's balance slot with `eq` (applied,
+  275,925 gas), with a wrong value (130 `PredicateFailed`), with `ge` (applied); a USDC `Transfer` log with its emitter
+  (applied, 94,795), with another emitter (130); WETH's code hash (applied, 166,249); a failed transaction's log (124
+  `ReceiptFailed`); a slot and a log in one request (applied, 349,917).
+- Refusals of updates: an update of an earlier period (23 `PeriodSkipped`) and a replayed one (52 `NotNewer`), each the
+  program's step 1 natively, the dry run and the zone alike.
+
 ## Not done
 
 - Live endpoints for the in-process tool: `ferrata-attest` reads recorded responses; `ferrata attest` (above) is the
