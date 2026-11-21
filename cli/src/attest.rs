@@ -151,6 +151,13 @@ pub enum AttestCmd {
         #[arg(long = "committee")]
         committees: Vec<String>,
     },
+    /// The zone's receipts of transactions (sent by anyone, for instance through Logos Core's `lez_core`), from the
+    /// follower: applied or refused with the program's code, execution and storage gas, events.
+    Receipt {
+        /// Transaction hashes (hex); repeat.
+        #[arg(long = "tx", required = true)]
+        txs: Vec<String>,
+    },
     /// Attest under the record `header(instance, --record-slot)`: storage slots, accounts, logs, each with its predicate.
     Attest {
         #[arg(long)]
@@ -642,6 +649,25 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                 run.log(json!({ "what": "advance", "phase": "after", "finalized_slot": st2.finalized.slot, "applied": after.applied }));
             }
             Ok(st)
+        }
+        AttestCmd::Receipt { txs } => {
+            let mut status = 0;
+            for t in txs {
+                let want = t.trim().trim_start_matches("0x").to_lowercase();
+                match z.follower.receipts.iter().find(|(h, _)| h.trim_start_matches("0x").to_lowercase() == want) {
+                    Some((h, r)) => {
+                        let o = Outcome { reverted: r.reverted, exit_code: r.exit_code, gas_exec: r.gas_exec, gas_stor: r.gas_stor, events: r.events, event_data: vec![] };
+                        println!("receipt {h}: block {}: {}", r.block_id, o.show());
+                        run.log(json!({ "what": "receipt", "tx": h, "block": r.block_id, "reverted": r.reverted, "exit_code": r.exit_code,
+                                        "gas_exec": r.gas_exec, "gas_stor": r.gas_stor, "events": r.events }));
+                    }
+                    None => {
+                        println!("receipt {t}: not in a block the follower applied (to block {tip})");
+                        status = 1;
+                    }
+                }
+            }
+            Ok(status)
         }
         AttestCmd::Attest { instance, record_slot, eth, block, storage, account, log, header_rlp } => {
             let id = root_arg(instance)?;

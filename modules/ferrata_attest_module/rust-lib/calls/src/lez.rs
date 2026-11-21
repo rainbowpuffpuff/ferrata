@@ -185,6 +185,8 @@ pub(crate) fn lez_read(request: &Value) -> Result<Value, String> {
             let r: RecordState = borsh::from_slice(&bytes).map_err(|e| format!("record: {e}"))?;
             out["decoded"] = json!({ "instance_id": hex(&r.instance_id), "chain_id": r.chain_id,
                 "header": r.header().map(|h| format!("{:?}", h.execution)).unwrap_or_else(|e| format!("{e:?}")) });
+            // As `dry_run_attest` takes a record read from LEZ: `{chain_id, encoded}`.
+            out["record"] = json!({ "chain_id": r.chain_id, "encoded": hex(&r.record) });
         }
         _ => {
             let j: JobState = borsh::from_slice(&bytes).map_err(|e| format!("job: {e}"))?;

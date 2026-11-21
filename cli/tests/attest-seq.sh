@@ -15,7 +15,8 @@
 #    zone's sequencer, on real data only (Sepolia's updates as the lab recorded them; mainnet's bootstrap, finality
 #    update and proofs of the attestation fixture of 10 Nov 2026, served over JSON-RPC by modules/scripts/recorded_rpc.py),
 #    each a dry run first and then sent; then attest-monitor reads the zone's instance through the sequencer's RPC.
-# Records: cli/results/attest-seq-NAME/ (synced back by mrun).
+# Records: cli/results/attest-seq-NAME/ (synced back by mrun). ATTEST_SEQ_HOOK names another hook (the Logos Core run:
+# modules/ferrata_attest_module/scripts/logos-run-hook.sh, which runs this one first).
 set -euo pipefail
 NAME="${1:?usage: attest-seq.sh NAME}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,12 +44,12 @@ say "build: crown-driver"
     && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/build-driver.log" 2>&1 \
   || { grep -E -A7 '^error' "$L/build-driver.log" | head -40; die "crown-driver build"; }
 say "build: ferrata (cli, --features seqnet)"
-( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata ) > "$L/build-cli.log" 2>&1 \
+( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata --bin seqnet-fund ) > "$L/build-cli.log" 2>&1 \
   || { grep -E -A7 '^error' "$L/build-cli.log" | head -60; die "cli build"; }
 say "build: attest-monitor"
 ( cd "$REPO/monitor/attest" && cargo build --release --locked ) > "$L/build-monitor.log" 2>&1 \
   || { grep -E -A7 '^error' "$L/build-monitor.log" | head -40; die "attest-monitor build"; }
-cp "$TGT/release/crown-driver" "$TGT/release/ferrata" "$REPO/monitor/attest/target/release/attest-monitor" "$T/bin/"
+cp "$TGT/release/crown-driver" "$TGT/release/ferrata" "$TGT/release/seqnet-fund" "$REPO/monitor/attest/target/release/attest-monitor" "$T/bin/"
 say "build: the zone's bundle (crown-live-3's, this tree's crown-driver and session.sh)"
 mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
 CROWN_LEZ_TMP="$T/crown-lez" bash "$REPO/lez/crown/build.sh" repack "$IN/bundle-crown-live-3.tar.zst" > "$L/repack.log" 2>&1 \
@@ -68,7 +69,7 @@ say "session A: attestation program $(jq -r .attestation.account "$SA") (image $
 # ---- 3. the zone with the hook -----------------------------------------------------------------------
 say "session X: ferrata attest against the zone's sequencer"
 ATTEST_SEQ_RUN="$RUN" ATTEST_SEQ_BIN="$T/bin" ATTEST_SEQ_REPO="$REPO" ATTEST_SEQ_SA="$SA" ATTEST_SEQ_WORK="$W/hook" \
-  CROWN_HOOK="$HERE/attest-seq-hook.sh" CROWN_DEADLINE_MIN=150 \
+  CROWN_HOOK="${ATTEST_SEQ_HOOK:-$HERE/attest-seq-hook.sh}" CROWN_DEADLINE_MIN=150 \
   bash "$REPO/lez/crown/session.sh" x > "$L/session-x.log" 2>&1 || say "session X exited with $?"
 cp "$W/zone/logs/hook.log" "$RUN/hook.log" 2>/dev/null || true
 grep -E 'STOP|hook' "$L/session-x.log" | tail -n 5 | tee -a "$RUN/run.log" || true
