@@ -1,0 +1,19 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 0 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d status --token 0x6C5b88dce55360480283824492346731ac899612
+
+vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516: 1 deposits, root 0x8de765294b027c36b584555c3d6c7be04f5b0267bcab662682c8d0a7bef3393a, configId 0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 0; final imported leaf count 0
+  global deposit cap: capacity 10000000000 value units, refill 115740 value units/s, available 10000000000 value units
+  global release cap: capacity unlimited, refill 0 value units/s, available unlimited
+token 0x6C5b88dce55360480283824492346731ac899612 (TUSD): registered true, deposits enabled true, lezUnit 1
+  [0] 50 TUSD (50000000 base units, 6 decimals)  mint fee 0 TUSD (0 base units, 6 decimals)  relay fee 0.25 TUSD (250000 base units, 6 decimals)  burn fee 0 TUSD (0 base units, 6 decimals)  checkpoint fee 0.1 TUSD (100000 base units, 6 decimals)
+  [1] 500 TUSD (500000000 base units, 6 decimals)  mint fee 0 TUSD (0 base units, 6 decimals)  relay fee 2.5 TUSD (2500000 base units, 6 decimals)  burn fee 0 TUSD (0 base units, 6 decimals)  checkpoint fee 1 TUSD (1000000 base units, 6 decimals)
+  deposits frozen until 0; releases frozen until 0; release delay 600 s after a checkpoint
+  deposit cap: capacity 5000 TUSD (5000000000 base units, 6 decimals), refill 0.05787 TUSD (57870 base units, 6 decimals)/s, available 5000 TUSD (5000000000 base units, 6 decimals)
+  release cap: capacity 5000 TUSD (5000000000 base units, 6 decimals), refill 0.05787 TUSD (57870 base units, 6 decimals)/s, available 5000 TUSD (5000000000 base units, 6 decimals)
+zone: configuration ready, sunset false; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+  gate Gate { now_ms: 0, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 9000000000, refill_per_second: 104166, level: 9000000000, last_ms: 0 }, burn: Bucket { capacity: 9000000000, refill_per_second: 104166, level: 9000000000, last_ms: 0 } }
+  instance: active true, 2 jobs applied, finalized slot 11542656
+  newest record: header(id, 11542656): Gloas record, bound block hash 0x9a9aeeca7451cd8bfca3109cff5d57f1fa29b986926ecac577a0e4b38b1ed469
+  newest imported root: root(cid, 1) (1 imports), from header(id, 11542656): Gloas record, bound block hash 0x9a9aeeca7451cd8bfca3109cff5d57f1fa29b986926ecac577a0e4b38b1ed469
+  burns published: 0

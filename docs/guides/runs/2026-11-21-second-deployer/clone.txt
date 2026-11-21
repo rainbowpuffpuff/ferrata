@@ -1,0 +1,3 @@
+2026-11-21T14:32:10Z
+6a191ce0 Deployer guide step 0: libpcsclite's development files, which the first walkthrough from a fresh clone lacked (R.14)
+0

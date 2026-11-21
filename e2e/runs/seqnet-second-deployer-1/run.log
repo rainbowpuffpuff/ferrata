@@ -1,0 +1,33 @@
+[14:38:16] seqnet second-deployer-1: mode deployer, private proofs dev
+[14:38:16] LEZ session A: a new zone, the programs, the stand-in instance
+[14:41:41] session A: tip {"hash":"0x9d941dfbe54f723fb5714eb6e506c6365646f0470782544bfc65e6758411eaf9","id":19}; bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d (image 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd), attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df)
+[14:41:43] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier ), configId 0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0, genesisState 0xc66feca4e1a13782a79b3ffa786cd555f012968211d55993e60858fb85c66cd5
+[2026-11-21T14:41:50Z] deploy complete: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId and genesisState as the run's identity
+[14:41:51] capture-1: capture of block 9 0x9a9aeeca7451cd8bfca3109cff5d57f1fa29b986926ecac577a0e4b38b1ed469 (state root patched: False): 1 deposit(s), 6 slot(s)
+[14:41:52] crown-driver check: [check] stage 1: configId 0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0 in slot 2; pairing, import and register requests accepted natively
+[14:41:52] LEZ session X: the zone restored and running; hook-deployer.sh
+[14:42:32] LEZ configuration: configId 0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0; admin 0xb74cb315a1b1312b3b0f7a6b3c31b5d9bbeffc41ae0d5dc5f5473d02e0e29e80, freeze authority 0x6b541af436bb54510607a7ccfda9cd78b4de986a622a8f06e97b02a30e98667f (keys derived from the label 'deployer-two')
+[14:42:32] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 + 10.0s 07210b3833e3ed0477d30608c671857ff1e99c54b9dc9922cee86c6eefb4e7a8
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   25 +  9.9s 07c1c7f1ffe65cce01d62db16e97fe454e89c40802baff5ac6e6799ae1fb8075
+[crown-b] blocks 20..=25 (T1 0xbb1c34036c95c0221e35c17330e7faefc4d496d9aea04e0d68b754079c5d8957); 0 burn note(s) written to <work>/notes.json
+[14:43:40] vault: registerToken(address,(uint256[],uint256[],uint256,uint256,(uint256,uint256),(uint256,uint256),uint256,bytes32,uint8,uint256[])) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setTokenCap(address,uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setTokenCap(address,uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setGlobalCap(uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: announceFees(address,uint256[],uint256[],uint256[]) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] anvil's clock moved on 604801 s: the fee schedule's seven days (Ethereum time now 1795877021)
+[14:43:41] vault: transferAdmin(address) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:41] vault: acceptAdmin() (from 0x5ec0d000000000000000000000000000000ad001)
+[14:43:43] the zone: 83 transactions in blocks 1..=26
+[14:43:43] checks: 27 passed, 0 failed (checks.txt)
+[14:43:43] hook-deployer: done
+[14:42:32] hook <repo>/e2e/seqnet/hook-deployer.sh
+[14:43:43] driver exit 0
+[14:43:44] sequencer stopped (exit 0)
+[14:43:52] node stopped (exit 143)
+[14:43:52] saved generation 2 (21868488 bytes; head block 26)
+[14:43:52] session x: ok
+seqnet-second-deployer-1: 83 LEZ and 18 Ethereum transactions, 7 user commands, 0 view calls
+[14:43:53] seqnet second-deployer-1: DONE
