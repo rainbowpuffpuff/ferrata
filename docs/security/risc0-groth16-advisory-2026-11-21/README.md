@@ -13,7 +13,8 @@ new trusted setup and verifier 3.1.0 (selector `0xe71e6620`); receipts made by e
 "Applications that call a `RiscZeroGroth16Verifier` address directly must switch to the 3.1.0 verifier."
 
 Everything in this repository that proves is built on risc0-zkvm 3.0.5, and every Groth16 seal it records carries the
-selector `0x73c457ba`. The advisories were not known to this project until a code review of 21 November 2026.
+selector `0x73c457ba`. Links to both advisories were in public material this project saved on 19 November 2026; the
+project did not act on them until a code review raised them on 21 November 2026.
 
 ## Affected
 
