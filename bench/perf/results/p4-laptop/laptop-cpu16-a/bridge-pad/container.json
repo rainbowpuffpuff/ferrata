@@ -1,0 +1,113 @@
+{
+ "declared": {
+  "modal_cpu_request_and_limit": 16.0,
+  "modal_memory_mib_request_and_limit": 16384
+ },
+ "nproc": "16",
+ "nproc_all": "16",
+ "os_cpu_count": 16,
+ "sched_getaffinity": 16,
+ "cpuinfo_processors": 16,
+ "cpuinfo_model_names": [
+  "unknown"
+ ],
+ "cpuinfo_ids": [
+  [
+   "bogomips",
+   "3103.55"
+  ],
+  [
+   "cache size",
+   "8192 KB"
+  ],
+  [
+   "cpu family",
+   "25"
+  ],
+  [
+   "model",
+   "1"
+  ],
+  [
+   "stepping",
+   "unknown"
+  ],
+  [
+   "vendor_id",
+   "AuthenticAMD"
+  ]
+ ],
+ "cpuinfo_siblings": [
+  "16"
+ ],
+ "cpuinfo_cpu_cores": [
+  "16"
+ ],
+ "cpu_flags": [
+  "adx",
+  "avx2",
+  "bmi2",
+  "ht",
+  "sha_ni"
+ ],
+ "cgroup": {
+  "cgroup.controllers": null,
+  "cpu.max": null,
+  "cpu.weight": null,
+  "cpuset.cpus.effective": null,
+  "memory.max": null,
+  "memory.high": null,
+  "memory.current": null,
+  "memory.peak": null,
+  "memory.swap.max": null,
+  "memory.events": null,
+  "memory/memory.limit_in_bytes": "17179869184",
+  "memory/memory.max_usage_in_bytes": null,
+  "memory/memory.usage_in_bytes": "70504448",
+  "cpu/cpu.cfs_quota_us": "1600000",
+  "cpu/cpu.cfs_period_us": "100000",
+  "cpuset/cpuset.cpus": "0-15"
+ },
+ "proc_self_cgroup": "7:pids:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n6:memory:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n5:job:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n4:devices:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n3:cpuset:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n2:cpuacct:/ta-01M7Z3HB4HK1KB5XAX9W090NER\n1:cpu:/ta-01M7Z3HB4HK1KB5XAX9W090NER",
+ "meminfo_kib": {
+  "MemTotal": 16777216,
+  "MemFree": 16708320,
+  "MemAvailable": 16708320,
+  "Cached": 31100,
+  "SwapTotal": 0,
+  "SwapFree": 0,
+  "Shmem": 0
+ },
+ "kernel": "Linux version 4.19.0-gvisor #1 SMP Sun Jan 10 15:06:54 PST 2016",
+ "os": "Ubuntu 24.04.5 LTS",
+ "glibc": "ldd (Ubuntu GLIBC 2.39-0ubuntu8.9) 2.39",
+ "env": {
+  "MODAL_REGION": "us-west",
+  "MODAL_CLOUD_PROVIDER": "CLOUD_PROVIDER_AZURE"
+ },
+ "job": "bridge-pad",
+ "tag": "laptop-cpu16-a",
+ "affinity": 0,
+ "manifest": {
+  "binary_from": "lez/target/debug/prove_bridge",
+  "ferrata_commit": "2993debd",
+  "ferrata_uncommitted_changes": 0,
+  "expected_bridge_image_id": "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd",
+  "prove_command": "FERRATA_EXPECT_BRIDGE_IMAGE_ID=<expected_bridge_image_id> RISC0_DEV_MODE=0 RISC0_SERVER_PATH=<r0vm 3.0.5 built with CUDA> /usr/bin/time -v ./prove_bridge --claim-out bridge-private-claim-tx.borsh --burn-out bridge-private-burn-tx.borsh > prove-bridge.log 2>&1",
+  "files": {
+   "prove_bridge": {
+    "bytes": 13121760,
+    "sha256": "d6be46659d4996a9d6ee8e7cbe2672746e8d4b8f2af67b95341b3893017d8a88"
+   }
+  }
+ },
+ "input_hashes_equal_manifest": true,
+ "r0vm_version": "risc0-r0vm 3.0.5",
+ "r0vm_sha256": "36c016a5bb2ded5bd1f8f92cc487e6ffaeb1e95ec05850c983081a0f716b515b",
+ "image_ids": "bridge image ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd (592840 ELF bytes); RISC0_DEV_MODE off; shape wallet",
+ "env_set": {
+  "RISC0_DEV_MODE": "0",
+  "RISC0_INFO": "1",
+  "RUST_LOG": "info"
+ }
+}
