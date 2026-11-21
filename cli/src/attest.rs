@@ -151,6 +151,14 @@ pub enum AttestCmd {
         #[arg(long = "committee")]
         committees: Vec<String>,
     },
+    /// An actor state of the program as the zone holds it (hex of its Borsh encoding): `instance(id)`, or with --slot
+    /// the record `header(id, slot)`.
+    State {
+        #[arg(long)]
+        instance: String,
+        #[arg(long)]
+        slot: Option<u64>,
+    },
     /// Write a LEZ wallet (LEZ's own storage, encrypted under the password) holding the payer's key (--key), as Logos
     /// Core's `lez_core` opens one (`open(config, storage, password, force_rpc)`); no zone is read.
     Wallet {
@@ -691,6 +699,16 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             Ok(st)
         }
         AttestCmd::Wallet { .. } => unreachable!("handled before the zone is opened"),
+        AttestCmd::State { instance, slot } => {
+            let id = root_arg(instance)?;
+            let actor = match slot {
+                Some(s) => header_actor(program, &id, *s),
+                None => instance_actor(program, &id),
+            };
+            let bytes = z.actor_state(actor).await?;
+            println!("{}", hx(&bytes));
+            Ok(if bytes.is_empty() { 1 } else { 0 })
+        }
         AttestCmd::Receipt { txs } => {
             // Wait (up to --settle-timeout) until every transaction is in a block the follower has applied.
             let wanted: Vec<String> = txs.iter().map(|t| t.trim().trim_start_matches("0x").to_lowercase()).collect();

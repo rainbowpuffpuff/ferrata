@@ -90,20 +90,33 @@ read_state() { # instance kind [slot] -> reply
   call ferrata_attest_module lez_read "$(jq -c -n --arg p "$ATTEST" --arg i "$1" --arg k "$2" --argjson s "${3:-0}" \
     '{program: $p, instance_id: $i, kind: $k, slot: $s}')"
 }
+# Each read compared byte for byte with the plain path's (the follower's state of the zone's final blocks).
+compare() { # label instance [slot]: the last lez_read reply against `ferrata attest state`
+  local plain via
+  plain="$("${CLI[@]}" state --instance "$2" ${3:+--slot "$3"} 2>/dev/null | tail -n 1)"
+  via="$(R | jq -r .state)"
+  if [ "$plain" = "$via" ]; then echo "equal"; else echo "DIFFERENT"; fi
+  echo -e "$1\t$(R | jq -r .bytes)\t$( [ "$plain" = "$via" ] && echo equal || echo different)" >> "$M/reads.tsv"
+}
+echo -e "read\tbytes\tagainst the plain path" > "$M/reads.tsv"
 read_state "$SEP" instance
-SEP_STATE="$(R | jq -r .state)"; SEP_SLOT="$(R | jq -r '.decoded.store.finalized_slot // .decoded.store.slot // empty')"
-"${CLI[@]}" status --instance "$SEP" > "$M/cli-sepolia-status-before.txt" 2>&1
-say "logos: Sepolia instance through lez_core: $(R | jq -r .bytes) bytes; the plain path: $(grep -o 'finalized slot [0-9]*' "$M/cli-sepolia-status-before.txt")"
+SEP_STATE="$(R | jq -r .state)"
+say "logos: Sepolia instance through lez_core: $(R | jq -r .bytes) bytes, $(compare sepolia-instance "$SEP") to the plain path's"
 if [ -n "$MID" ]; then
   read_state "$MID" instance
+  say "logos: mainnet instance through lez_core: $(R | jq -r .bytes) bytes, $(compare mainnet-instance "$MID") to the plain path's"
   read_state "$MID" record 15624480
   MREC="$(R | jq -c .record)"
+  say "logos: mainnet record through lez_core: $(R | jq -r .bytes) bytes, $(compare mainnet-record "$MID" 15624480) to the plain path's"
 fi
 # An update of the Sepolia instance planned by the module on the state lez_core read, sent through lez_core.
 UPD="$LAB/00065.finality.gloas.ssz"
+# The committee that signs it (period 1412): update_1411's next committee, the keys then the aggregate key (a Gloas
+# LightClientUpdate is fixed-size: the attested header's 496 bytes, then the next committee's 513 x 48).
+C1412="$(python3 -I -c 'import sys; print(open(sys.argv[1], "rb").read()[496:496 + 513 * 48].hex())' "$S12/update_1411.ssz")"
 call ferrata_attest_module advance "$(jq -c -n --arg p "$ATTEST" --arg st "$SEP_STATE" --arg u "0x$(hexof "$UPD")" \
-  --arg b "0x$(hexof "$S12/bootstrap.ssz")" \
-  '{program_id: $p, instance_state: $st, finality_update: $u, bootstrap: $b}')"
+  --arg b "0x$(hexof "$S12/bootstrap.ssz")" --arg c "0x$C1412" \
+  '{program_id: $p, instance_state: $st, finality_update: $u, bootstrap: $b, committees: [$c]}')"
 cp "$W/reply-$n.json" "$M/advance-plan.json"
 if [ "$(R | jq -r .verdict)" = useful ]; then
   STEPS="$(R | jq -c .steps)"
@@ -112,6 +125,7 @@ if [ "$(R | jq -r .verdict)" = useful ]; then
   HASHES=($(R | jq -r '.steps[].tx_hash // empty'))
   [ ${#HASHES[@]} -gt 0 ] && "${CLI[@]}" receipt $(printf -- '--tx %s ' "${HASHES[@]}") > "$M/cli-advance-receipts.txt" 2>&1
   read_state "$SEP" instance
+  say "logos: the Sepolia instance read again through lez_core: $(R | jq -r .bytes) bytes, $(compare sepolia-instance-after "$SEP") to the plain path's"
   "${CLI[@]}" status --instance "$SEP" > "$M/cli-sepolia-status-after.txt" 2>&1
   say "logos: after the job sent through lez_core: $(grep -o 'finalized slot [0-9]*' "$M/cli-sepolia-status-after.txt") (plain path); receipts: $(grep -c applied "$M/cli-advance-receipts.txt" 2>/dev/null || echo 0) applied"
 else
