@@ -176,6 +176,10 @@ pub struct History {
     pub burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
+    /// The deposit leaves (`inbound::deposit_leaf`) that plaintext claims have published, under any configuration of
+    /// the program (a witness names its leaf index and `s`): they leave every private claim's anonymity set (F.8,
+    /// `ferrata_wallet::claim::anonymity_set`). Another vault's leaves match none of this vault's deposits.
+    pub opened: HashSet<Hash>,
     /// Public accounts named by applied privacy-preserving transactions: the nullifier accounts of
     /// private claims among them.
     pub touched_privately: HashSet<AccountId>,
@@ -196,12 +200,15 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
                 let burn_index = h.burns.len() as u64;
                 h.burns.push(PublishedBurn { burn_index, note: BurnNote { r, memo, mac, token, amount, c_out } });
             }
-            BridgeMessage::Claim { config_id, witness: w, .. } if config_id == ctx.cid => {
+            BridgeMessage::Claim { config_id, witness: w, .. } => {
                 let Some(kind) = DestKind::from_byte(w.kind) else { continue };
                 let c = inbound::commitment(&w.s, kind, &w.dest);
                 let leaf = inbound::deposit_leaf(w.leaf_index, &w.depositor, &w.token, &w.amount, &c);
-                let fid = inbound::deposit_id(&chain, &ctx.vault, w.leaf_index, &leaf);
-                h.claimed.insert(inbound::nullifier(&w.s, &fid));
+                h.opened.insert(leaf);
+                if config_id == ctx.cid {
+                    let fid = inbound::deposit_id(&chain, &ctx.vault, w.leaf_index, &leaf);
+                    h.claimed.insert(inbound::nullifier(&w.s, &fid));
+                }
             }
             _ => {}
         }
@@ -851,5 +858,41 @@ pub fn reveals(call: &LezCall) -> &'static str {
              not the Ethereum recipient (encrypted in the memo)"
         }
         _ => "the whole message",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ferrata_lez_bridge_wire::{ClaimWitness, ScheduleRange};
+
+    /// F.8: a plaintext claim publishes its deposit's leaf under any configuration of the program, so the leaf leaves
+    /// every later private claim's anonymity set; only this configuration's claims spend a nullifier here.
+    #[test]
+    fn plaintext_claims_open_their_leaves_under_every_configuration() {
+        let program = AccountId::new([7; 32]);
+        let ctx = Context { program, cid: [1; 32], chain_id: 11_155_111, vault: [0xaa; 20] };
+        let claim = |cid: Hash, leaf_index: u64, s: u8| {
+            let witness = ClaimWitness {
+                depositor: [0xd1; 20],
+                token: [0; 20],
+                amount: [2; 32],
+                leaf_index,
+                path: vec![[0; 32]; 32],
+                s: [s; 32],
+                kind: DestKind::Public as u8,
+                dest: [9; 32],
+            };
+            let range = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
+            let message = BridgeMessage::Claim { config_id: cid, leaf_count: 10, witness, range, relayer: None };
+            Applied { to: config_actor(program, &cid), message: borsh::to_vec(&message).unwrap() }
+        };
+        let leaf = |leaf_index: u64, s: u8| {
+            let c = inbound::commitment(&[s; 32], DestKind::Public, &[9; 32]);
+            inbound::deposit_leaf(leaf_index, &[0xd1; 20], &[0; 20], &[2; 32], &c)
+        };
+        let h = history(&ctx, &[claim([1; 32], 3, 5), claim([2; 32], 4, 6)]);
+        assert_eq!(h.opened, HashSet::from([leaf(3, 5), leaf(4, 6)]));
+        assert_eq!(h.claimed.len(), 1, "only this configuration's claim spends a nullifier here");
     }
 }

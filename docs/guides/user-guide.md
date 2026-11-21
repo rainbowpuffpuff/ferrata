@@ -294,9 +294,13 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 | Burn from | a private holding | a public holding: the holder is visible |
 | Root read | the newest imported root | an older root dates your deposit (it shows the deposit is at least that old) |
 
-The client shows the **anonymity set** a claim would have: the deposits of that token and
-denomination under the root it reads, less those already claimed in plaintext, which are public (derived; design:
-[`docs/traceability.md`](../traceability.md), row F.8; **not built**).
+The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
+1): the deposits of that token and denomination under the root it reads and within the fee schedule range it names,
+less those already claimed in plaintext, which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
+measured over both halves, with plaintext and with private claims:
+[`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.
+This tree's tools speak the bridge program since milestone B1 only; the deployments of November 2026 run the earlier
+program and need the tools of `f13faee2` ([`docs/image-ids.md`](../image-ids.md)).
 
 ## 10. What is public at each step (U.7)
 
@@ -418,7 +422,8 @@ private claim, `ImportRoot`, registry reads and release proving are **not built*
 §18.6, §19; [`vault/README.md`](../../vault/README.md), status paragraph)
 
 - a wallet integration; in `ferrata_bridge_module`, the private claim, `ImportRoot`, registry reads and
-  release proving (the module is built: EVIDENCE row 59); the anonymity-set view; the `ferrata` tool's LEZ commands
+  release proving (the module is built: EVIDENCE row 59); the anonymity-set view in a wallet (the `ferrata` tool
+  shows it); the `ferrata` tool's LEZ commands
   against a live sequencer (its tests use the LEZ harness);
 - the gas drop's sealed credit to a private one-time account and its sweep inside the private claim, and
   the relayer's root imports (the gas-drop receipt and the relayer daemon `ferrata-relayer`, which also

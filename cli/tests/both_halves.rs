@@ -10,7 +10,9 @@
 //!   redirected releases. After every step, read from the vault and the zone: the vault's balance is its escrow plus
 //!   what it owes; the zone's wrapped supply is what it minted less what it burnt; and **the wrapped supply plus the
 //!   unminted deposits plus the unreleased burns is the vault's escrow**, so the supply never exceeds the vault's
-//!   holdings. Each claim's anonymity set (the client's `anonymity_set`) is recorded per denomination.
+//!   holdings. For each claim, the anonymity set a private claim of its deposit would have at that moment (the client's
+//!   `anonymity_set`) is recorded per denomination, twice: as run (every claim of these runs is plaintext and publishes
+//!   its deposit, which leaves every later set) and as if every earlier claim had been private (nothing published).
 //! * `migration_rehearsal_honours_positions_in_flight` (Sec.8, R.4, Sec.9): an old vault and configuration with
 //!   deposits imported or not, claimed or not, and burns before and after the retirement; the freeze authority retires
 //!   the old vault; the zone attests it and runs the keyless `Sunset`; one sunset checkpoint; every burn released, every
@@ -22,12 +24,13 @@
 //!   the mint fee of its leaf's schedule (to the fee recipient on LEZ) and the relay fee; every release pays the
 //!   denomination less the burn and checkpoint fees of the schedule in force, credited on the vault. Fees are equal
 //!   for every claim and release of a denomination under one schedule; the client's anonymity set of a claim counts
-//!   the deposits of its schedule's range, so a fee change splits the set, and the test records by how much.
+//!   the deposits of its schedule's range, so a fee change splits the set, and the test records by how much (before
+//!   any claim, and at each plaintext claim, which publishes its deposit).
 //!
 //! Runs only with `FERRATA_E2E=1` and the built tools in `FERRATA_CI_ZONE`, `FERRATA_CI_CHECKPOINT_B_ELF` and
 //! `FERRATA_CI_RELEASE_ELF` (`e2e/both-halves/run.sh` builds and sets them). Writes `e2e/both-halves/results/`.
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, HashSet},
     fmt::Write as _,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -575,8 +578,9 @@ fn refusal_code(e: &anyhow::Error) -> Option<u32> {
 
 /// The plaintext claim of the user's deposit at `leaf`; with `forge`, a tampered copy (another `s`) first, refused
 /// with 249, and after it the same claim again, refused (250, or 255 when the token's bucket is spent first: the
-/// program admits the value before it reaches the nullifier). Returns the claim's anonymity set, or `None` when the
-/// mint bucket refused it (255): the deposit stays claimable and a later step claims it (R.4: a cap only delays).
+/// program admits the value before it reaches the nullifier). Returns the anonymity set a private claim of the deposit
+/// would have at that moment, or `None` when the mint bucket refused it (255): the deposit stays claimable and a later
+/// step claims it (R.4: a cap only delays). The plaintext claim itself shows the client's 1: it names its deposit.
 async fn claim(
     p: &DynProvider,
     zone: &mut HarnessLedger,
@@ -593,7 +597,14 @@ async fn claim(
     let plan = lez::plan_claim(&*zone, &side.ctx, &leaves, &row.owned, &history, false, None, None).await?;
     let BridgeMessage::Claim { range, .. } = &plan.call.message else { bail!("a plaintext claim") };
     let d = &row.owned.deposit;
-    let set = ferrata_wallet::claim::anonymity_set(&list.deposits, &d.token, &d.amount, plan.leaf_count, range);
+    // F.8: the deposits of the same token and amount under the root and range the claim names, less those that earlier
+    // plaintext claims published (`History.opened`, which must hold exactly the claims applied so far); beside it, the
+    // set had every earlier claim been private (nothing published).
+    ensure!(history.opened.len() as u64 == log.claims, "the client's history: one published leaf per plaintext claim");
+    let set = ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, range);
+    let set_private =
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &HashSet::new(), &d.token, &d.amount, plan.leaf_count, range);
+    ensure!(1 <= set && set <= set_private, "the deposit's own set: {set}, {set_private}");
     if forge {
         let mut tampered = plan.call.clone();
         if let BridgeMessage::Claim { witness, .. } = &mut tampered.message {
@@ -619,6 +630,7 @@ async fn claim(
     }
     log.claims += 1;
     log.sets.entry(amount).or_default().push(set);
+    log.sets_private.entry(amount).or_default().push(set_private);
     Ok(Some(set))
 }
 
@@ -821,7 +833,9 @@ struct Log {
     releases: u64,
     forged: u64,
     capped: u64,
+    /// Per denomination, each claim's set as run and had every earlier claim been private.
     sets: BTreeMap<u128, Vec<usize>>,
+    sets_private: BTreeMap<u128, Vec<usize>>,
 }
 
 /// xorshift64*: deterministic per seed, no dependency.
@@ -877,6 +891,7 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
     let user = Seed::from_phrase(USER)?;
     let mut report = String::new();
     let mut all_sets: BTreeMap<u128, Vec<usize>> = BTreeMap::new();
+    let mut all_private: BTreeMap<u128, Vec<usize>> = BTreeMap::new();
     for seed in &seeds {
         let port = free_port()?;
         let rpc = format!("http://127.0.0.1:{port}");
@@ -970,6 +985,9 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
         for (d, v) in log.sets {
             all_sets.entry(d).or_default().extend(v);
         }
+        for (d, v) in log.sets_private {
+            all_private.entry(d).or_default().extend(v);
+        }
         println!(
             "[{:>6.1} s] seed {seed}: {} steps, invariants held {} times",
             t0.elapsed().as_secs_f64(),
@@ -986,26 +1004,48 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          supply + unminted deposits + unreleased burns == escrowed.\n\n\
          | seed | steps | deposits | imports | claims | claims capped (claimed later) | burns | releases | forgeries refused | \
          unminted at the end | unreleased at the end | invariant checks |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n{report}\n\
-         ## Anonymity sets of the claims (F.8)\n\nThe set the client shows for each claim (`ferrata_wallet::claim::\
-         anonymity_set`: the deposits of the same token and amount under the root and fee schedule range it names), by \
-         denomination over every run.\n\n| denomination (ETH) | claims | smallest | median | largest |\n|---:|---:|---:|---:|---:|\n",
+         ## Anonymity sets of the claims (F.8)\n\nFor each claim, the set a private claim of its deposit would have at \
+         that moment (`ferrata_wallet::claim::anonymity_set`, what `ferrata claim` shows for a private claim: the \
+         deposits of the same token and amount under the root and fee schedule range it names, less those a plaintext \
+         claim has published), by denomination over every run. Every claim of these runs is plaintext, for which the \
+         client shows 1 (it names its deposit), and each leaves every later set: \"as run\". Beside it, the same \
+         claims had every earlier claim been private, the default, which publishes no deposit: \"all private\". \
+         Median: the lower and the upper middle of the sorted sets (the same when the count is odd).\n\n\
+         | denomination (ETH) | claims | as run: smallest | median | largest | sets of 1 | all private: smallest | \
+         median | largest | sets of 1 |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n",
         harness::image_id_hex(hb::BRIDGE_ID),
         images.0,
         images.1,
         t0.elapsed().as_secs()
     );
-    for (d, mut v) in all_sets {
+    // Smallest, median (lower and upper middle), largest and how many are 1, of one list of sets.
+    let stats = |v: &mut Vec<usize>| -> String {
         v.sort_unstable();
-        let _ = writeln!(
-            out,
-            "| {} | {} | {} | {} | {} |",
-            d as f64 / 1e18,
-            v.len(),
+        let n = v.len();
+        let (lo, hi) = if n == 0 { (0, 0) } else { (v[(n - 1) / 2], v[n / 2]) };
+        let median = if lo == hi { lo.to_string() } else { format!("{lo}, {hi}") };
+        format!(
+            "{} | {median} | {} | {}",
             v.first().copied().unwrap_or(0),
-            v.get(v.len() / 2).copied().unwrap_or(0),
-            v.last().copied().unwrap_or(0)
-        );
+            v.last().copied().unwrap_or(0),
+            v.iter().filter(|s| **s == 1).count()
+        )
+    };
+    let (mut ones_run, mut ones_private, mut shrink, mut claims) = (0, 0, 0, 0);
+    for (d, mut v) in all_sets {
+        let mut w = all_private.remove(&d).unwrap_or_default();
+        ensure!(v.len() == w.len(), "one pair of sets per claim");
+        shrink += v.iter().zip(&w).filter(|(a, b)| a < b).count();
+        ones_run += v.iter().filter(|s| **s == 1).count();
+        ones_private += w.iter().filter(|s| **s == 1).count();
+        claims += v.len();
+        let _ = writeln!(out, "| {} | {} | {} | {} |", d as f64 / 1e18, v.len(), stats(&mut v), stats(&mut w));
     }
+    let _ = writeln!(
+        out,
+        "\nSets of 1 (the claim's amount alone links it): {ones_run} of {claims} claims as run, {ones_private} of \
+         {claims} had every earlier claim been private; the plaintext claims made {shrink} of the {claims} sets smaller."
+    );
     println!("{out}");
     std::fs::write(results_dir().join("randomised.md"), out)?;
     Ok(())
@@ -1345,7 +1385,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     zone.keep(r, "ImportRoot")?;
     let early = FeeSchedule { effective_at: announced_at + 7 * 24 * 3600 - 1, ..s1.clone() };
     let r = zone.world.import_fees(
-        "A: ImportFees ETH schedule 1, a day early (forged)",
+        "A: ImportFees ETH schedule 1, a second early (forged)",
         &cid,
         b,
         [0; 20],
@@ -1353,7 +1393,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
         Some(early),
         &a.vault.into_array(),
     );
-    ensure!(!r.ok(), "a schedule the vault does not hold is refused: {:?}", r.exit_code);
+    ensure!(r.exit_code == Some(247), "a schedule the vault does not hold is refused (247): {:?}", r.exit_code);
     let r = zone.world.import_fees(
         "A: ImportFees ETH schedule 1",
         &cid,
@@ -1369,9 +1409,33 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     zone.keep(r, "ImportFees 2")?;
     a.imported = n;
 
+    // The set a private claim of each deposit has once the six are imported and none is claimed (a private claim
+    // publishes nothing, so this is every private claim's): the deposits of 1 ETH in its schedule's range.
+    let mut pre_sets: BTreeMap<u64, usize> = BTreeMap::new();
+    {
+        let (list, leaves_now, rows_now) = rows(&p, &zone, &a, &user).await?;
+        let history = lez::history(&a.ctx, &zone.applied(a.ctx.program).await?);
+        ensure!(history.opened.is_empty(), "no claim yet");
+        for leaf in &leaves {
+            let row = rows_now.iter().find(|r| r.owned.deposit.leaf_index == *leaf).context("the user's deposit")?;
+            let plan = lez::plan_claim(&zone, &a.ctx, &leaves_now, &row.owned, &history, false, None, None).await?;
+            let BridgeMessage::Claim { range, .. } = &plan.call.message else { bail!("a plaintext claim") };
+            let d = &row.owned.deposit;
+            let set = ferrata_wallet::claim::anonymity_set(
+                &list.deposits,
+                &history.opened,
+                &d.token,
+                &d.amount,
+                plan.leaf_count,
+                range,
+            );
+            pre_sets.insert(*leaf, set);
+        }
+    }
+
     // Claims: each mints its deposit's escrow; the fees are those of its leaf's schedule.
     let mut table = String::from(
-        "| leaf | schedule | mint fee (wei, to the fee recipient on LEZ) | relay fee (wei) | claim's anonymity set |\n|---:|---:|---:|---:|---:|\n",
+        "| leaf | schedule | mint fee (wei, to the fee recipient on LEZ) | relay fee (wei) | set before any claim | set at this claim |\n|---:|---:|---:|---:|---:|---:|\n",
     );
     let fee_holder = hb::fee_recipient();
     let mut by_schedule: BTreeMap<u64, Vec<(u128, u128, usize)>> = BTreeMap::new();
@@ -1386,22 +1450,24 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
             relay_fee == 1_000_000 * 1_000_000_000,
             "the relay fee of 1 ETH (to the fee recipient: no relayer named)"
         );
-        by_schedule.entry(schedule).or_default().push((mint_fee, relay_fee, set));
-        let _ = writeln!(table, "| {leaf} | {schedule} | {mint_fee} | {relay_fee} | {set} |");
+        by_schedule.entry(schedule).or_default().push((mint_fee, relay_fee, pre_sets[leaf]));
+        let _ = writeln!(table, "| {leaf} | {schedule} | {mint_fee} | {relay_fee} | {} | {set} |", pre_sets[leaf]);
         invariants(&p, &zone, &mut a, &user).await?;
     }
     for (schedule, claims) in &by_schedule {
         ensure!(
             claims.windows(2).all(|w| w[0] == w[1]),
-            "schedule {schedule}: every claim pays the same fees and shows the same set"
+            "schedule {schedule}: every claim pays the same fees and, before any claim, has the same set"
         );
     }
     out.push_str("## Claims (plaintext, 1 ETH each)\n\n");
     out.push_str(&table);
     let _ = writeln!(
         out,
-        "\nWithin a schedule every claim of 1 ETH mints the same fees and has the same anonymity set ({} with the change; \
-         {} deposits of 1 ETH under the root): the fee change splits the set at leaf {from_leaf}.\n",
+        "\nWithin a schedule every claim of 1 ETH mints the same fees, and before any claim a private claim of any of its \
+         deposits has the same anonymity set ({} with the change; {} deposits of 1 ETH under the root): the fee change \
+         splits the set at leaf {from_leaf}. These claims are plaintext, so each publishes its deposit and the next claim \
+         of the schedule has one fewer (\"set at this claim\"); private claims would leave it whole.\n",
         by_schedule.values().map(|v| v[0].2.to_string()).collect::<Vec<_>>().join(" and "),
         leaves.len()
     );

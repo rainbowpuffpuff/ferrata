@@ -2,8 +2,10 @@
 //! (`verify_claim`, the token's registry entry and fee schedules, the nullifier), the accounts it
 //! names and its message, plaintext `Claim` or private `ClaimPrivately`.
 
+use std::collections::HashSet;
+
 use ferrata_bridge_core::{
-    inbound::{DestKind, OwnedDeposit, VaultDeposit},
+    inbound::{deposit_leaf, DestKind, OwnedDeposit, VaultDeposit},
     tree::{MerklePath, Tree},
     Hash,
 };
@@ -31,11 +33,15 @@ pub fn pick_import(imported: &[u64], leaf_index: u64) -> Result<u64, Refusal> {
 /// tell it apart from. A private claim shows the token and the denomination (its fees and the token's buckets), the
 /// imported root it reads (`root(cid, n)`, so leaf indexes below `n`) and the fee schedule range it names (its `Issue`
 /// to the token is public); it hides the leaf, the depositor and the commitment. So the set is the deposits of the same
-/// token and amount whose leaf index lies in `[range.from_leaf, min(range.until_leaf, leaf_count))`, the claimed ones
-/// among them included: their nullifiers do not say which leaves they spent. Timing is not counted here: a claim made
-/// soon after its deposit narrows the set by time, which the claim delay (`ferrata scan`) spreads.
+/// token and amount whose leaf index lies in `[range.from_leaf, min(range.until_leaf, leaf_count))`, less the deposits
+/// `opened`: those whose leaf (`deposit_leaf`) a plaintext claim has published, under any configuration of the program
+/// (its witness names the leaf index and `s`, so an observer can tell whether a claim spends that deposit). Deposits
+/// claimed privately stay in: their nullifiers do not say which leaves they spent. A refunded deposit needs no
+/// exclusion: a refund is of a leaf no imported root covers. Timing is not counted here: a claim made soon after its
+/// deposit narrows the set by time, which the claim delay (`ferrata scan`) spreads.
 pub fn anonymity_set(
     deposits: &[VaultDeposit],
+    opened: &HashSet<Hash>,
     token: &[u8; 20],
     amount: &[u8; 32],
     leaf_count: u64,
@@ -46,6 +52,7 @@ pub fn anonymity_set(
         .iter()
         .filter(|d| d.token == *token && d.amount == *amount)
         .filter(|d| d.leaf_index >= range.from_leaf && d.leaf_index < until)
+        .filter(|d| !opened.contains(&deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)))
         .count()
 }
 
@@ -256,15 +263,26 @@ mod tests {
         .map(|(i, t, a)| d(i, t, a))
         .collect();
         let all = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
-        assert_eq!(anonymity_set(&list, &eth, &word(1), 10, &all), 6);
-        assert_eq!(anonymity_set(&list, &eth, &word(1), 6, &all), 4, "only the leaves under root(cid, 6)");
-        assert_eq!(anonymity_set(&list, &eth, &word(2), 10, &all), 2);
-        assert_eq!(anonymity_set(&list, &other, &word(1), 10, &all), 2);
+        let none = HashSet::new();
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(1), 10, &all), 6);
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(1), 6, &all), 4, "only the leaves under root(cid, 6)");
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(2), 10, &all), 2);
+        assert_eq!(anonymity_set(&list, &none, &other, &word(1), 10, &all), 2);
         let schedule_1 = ScheduleRange { index: 1, from_leaf: 5, until_leaf: 9 };
         assert_eq!(
-            anonymity_set(&list, &eth, &word(1), 10, &schedule_1),
+            anonymity_set(&list, &none, &eth, &word(1), 10, &schedule_1),
             2,
             "leaves 5 and 8: the range splits the set"
         );
+        // Plaintext claims published leaves 2 and 8 (and a leaf of another vault, which matches none of this list):
+        // an observer sees which deposits those claims spent, so they leave every later claim's set.
+        let leaf = |d: &VaultDeposit| deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment);
+        let mut elsewhere = list[2].clone();
+        elsewhere.commitment = [0xee; 32];
+        let opened: HashSet<Hash> = [leaf(&list[2]), leaf(&list[8]), leaf(&elsewhere)].into();
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 10, &all), 4, "leaves 0, 3, 5 and 9");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 6, &all), 3, "leaves 0, 3 and 5");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 10, &schedule_1), 1, "leaf 5 alone");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(2), 10, &all), 2, "no deposit of 2 opened");
     }
 }
