@@ -17,6 +17,17 @@ capped configuration), `5274dcf2` (the vault: listing slot, capped deployment, r
 analysis, vault README), `bddb26e9` (the client's anonymity view), `a6b54add` (both halves at once), `a7bd249a`
 (documents), and this file's.
 
+**The critical review of tip `67b4aa77` (21 November 2026) and its fixes.** The review found the B1 program change
+sound and every cited test green, and blocked on one High and three Medium findings: B1's entry in `docs/image-ids.md`
+took the deployed program's name, which broke the public re-check of the live Sepolia runs (H1); the client's
+anonymity set counted deposits a plaintext claim had already published (M1, F.8); the deployment script's outbound
+wait defaulted to 600 s, not the recommended depth (M2, F.12); and a crown run as documented would have failed at its
+LEZ claims after its Sepolia deposits (M3). Each status below is the review's verdict; where a fix since answers the
+review's reason, the row says so, with its commit, and proposes the status for the next review. Fix commits:
+`b8fd47b1` (H1), `fb5d340f` (M3), `c7299b2b` and `3300df8a` (M1: the client and the measurements), `a8e93009` (M2,
+with L3, L4, L13), `9a365920` (L2), `04253a36` (L1, L6, L7, L9, L10), `8f5944b7` (the both-halves test's deployments
+one transaction at a time), `beaf57b7` (run 9's records), and this file's.
+
 Runs, all on the build box on 21 November 2026 (the run numbers below):
 
 | Run | What | Outcome |
@@ -26,6 +37,8 @@ Runs, all on the build box on 21 November 2026 (the run numbers below):
 | 5 | `cd vault && forge test --no-match-contract PrivacySuite` | 587 passed, 0 failed (58 suites), every invariant at 256 runs × 100 calls |
 | 6 | `FERRATA_BOTH_HALVES_SEEDS=1,2,3,4,5,6,7,8 FERRATA_BOTH_HALVES_STEPS=60 e2e/both-halves/run.sh`; `scripts/security-tools.sh slither aderyn`; `cd fuzz/programs && cargo +1.98.1 check --all-targets`; the bridge module's calls (`cargo test -p ferrata-bridge-calls` on the staged crate) | randomised and fees passed (the migration test could not bind its port: run 7); static analysis as `vault/results/sectools-b1/README.md`; the fuzz programs compile; the module's calls 18 of 18 |
 | 7 | Slither on this branch's and on `f13faee2`'s vault; `cli/tests/e2e.sh`; `e2e/both-halves/run.sh migration` | the same 38 results; the e2e test passed with the anonymity assertion; the migration rehearsal passed |
+| 8 (fixes) | `python3 -I scripts/test_image_ids.py`; `cd lez/crown/driver && cargo test`; `cd vault && forge test --no-match-contract PrivacySuite`; `script/DeployVault.s.sol` run step by step on a local anvil (chain 31337) for rule (B), rule (A) and `FERRATA_DELTA=600`; `scripts/reproduce-image-ids.sh build` then `compare` (no `--vault`); `ferrata-e2e image-id` on the rebuilt LEZ programs and `lez/crown/build.sh`'s bundle check on them; `scripts/privacy/real.sh build` and its dev step's LEZ half; the wallet's and the tool's unit tests; `cli/tests/e2e.sh`; `e2e/both-halves/run.sh`; `redteam_bridge` into `lez/results/b1/`; `e2e/ci/run.sh` | 6 of 6; 9 of 9; 589 passed, 0 failed (58 suites; FerrataVault 24,369 bytes, 207 under EIP-170); complete with the script's own checks, Δ read back 3,600 s, 10,860 s and 600 s, the release floor's refill 3,473 a second; 14 of 14 guests equal `docs/image-ids.md`, 5 of the crown run's 6 programs equal its records and the bridge equal to B1's (`ferrata_bridge_b1`), exit 0; both ids equal the docs' rows, B1's binary accepted, another refused; the expected bridge `0xac1fb59b…442e`, the suite's id assertion passed; 4 and 17 passed; passed; the fee and randomised tests passed, the migration test hung on two transactions anvil never mined (run 9); 9 of 9; passed |
+| 9 (fixes) | `e2e/both-halves/run.sh` with the deployments one transaction at a time; `scripts/privacy/real.sh dev`'s three steps, the analysis into scratch (not `docs/privacy/real/dev`, the deployed program's baseline) | the three tests passed (389 s with the build): the migration rehearsal (five deposits, burns before and after `Sunset`, two refunds whole, A's emergency stop refusing a proven release and a refund while B goes on; the books checked 6 times on A and 2 on B, 9 forgeries refused), the randomised runs (the same tables as run 8) and the fee test; the privacy suite's LEZ half with the expected bridge `0xac1fb59b…442e`, its Foundry half and the analysis passed: the private games at 5.0 % among 20, the naive variants at 100 %, recovery 10 of 10 and 10 of 10 |
 
 ## The image id change (B1)
 
@@ -35,14 +48,14 @@ Runs, all on the build box on 21 November 2026 (the run numbers below):
 | Bridge program, since B1 | `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`, 607,608 bytes, binary sha256 `5f47b065…7fd8` ([image-ids.md](../image-ids.md)); the harness build of run 3 (21 Nov, build box) computed the same id |
 | What moved it | `nullifier(cid, chain, vault, N)` and `holder(cid, account)` (F.16); `Init` refuses a freeze authority that is the admin (the red team's F1); `SetDepth` (F.12); `AttestListing` / `SetListing` (F.10) |
 | Unchanged ids | the attestation program `0x816d1fef…03df`, the checkpoint guests, the release guest: the vault pins the checkpoint and release ids; the bridge's id enters only `configId` |
-| Consumers updated | the CLI and its wallet, the crown driver, the fuzz programs, the bridge module's calls, the IDL and its vectors (`9fa33b7e`); `docs/image-ids.md`, `e2e/seqnet/drive.sh` and `run.sh`'s inputs, `e2e/crown/cloud/app.py`, `lez/testnet04/day1.sh` (`2e6a35a6`) |
-| Live deployments | The four Sepolia v5 vaults and the LEZ programs on our devnets pin configuration ids that commit to `0xccde6171…`: they keep that program and its two known issues ([`bridge.md`](../design/bridge.md) §3). B1 takes effect only with a new vault and a new configuration. This branch's CLI and module address B1's accounts, so operating the old deployments needs the tools at `f13faee2`. |
+| Consumers updated | the CLI and its wallet, the crown driver, the fuzz programs, the bridge module's calls, the IDL and its vectors (`9fa33b7e`); `docs/image-ids.md`, `e2e/seqnet/drive.sh` and `run.sh`'s inputs, `e2e/crown/cloud/app.py`, `lez/testnet04/day1.sh` (`2e6a35a6`). Since the review (H1, M3): `docs/image-ids.md` records B1 as `ferrata_bridge_b1` and keeps the deployed program's `ferrata_bridge` row as it was; `scripts/verify-sepolia.py` holds the live vaults to the deployed row and a run of B1 to its own, `scripts/reproduce/compare_ids.py` and `scripts/privacy/real.sh` hold this tree's build to B1's (`b8fd47b1`); the crown runner (`e2e/crown/cloud/drive.py`), the crown driver and `lez/crown/build.sh` refuse a bridge program other than B1's before anything is deployed or sent (`fb5d340f`); `scripts/test_image_ids.py` (CI job `image-ids`) checks all of it offline |
+| Live deployments | The four Sepolia v5 vaults and the LEZ programs on our devnets pin configuration ids that commit to `0xccde6171…`: they keep that program and its two known issues ([`bridge.md`](../design/bridge.md) §3). B1 takes effect only with a new vault and a new configuration. This branch's CLI and module address B1's accounts, so operating the old deployments needs the tools at `f13faee2`. Their public re-check works on this tree: `verify-sepolia.py`'s image-id check passes for crown-live-1, -3 and -4 (offline: `scripts/test_image_ids.py`), and a rebuild of this tree gives the crown run's other five programs and the vault's two immutables; the deployed bridge program rebuilds from `f13faee2`, where `compare --vault 0x04eE…e44c` gives 6 of 6 (EVIDENCE row 92's command: on this tree 5 of 6 and B1's own record) |
 
 ## Rows
 
 ### F.16: strictly separated configurations; documented client switching
 
-**Proposed: in part, now only for the document** (the switching text is in the deployer guide, a first draft); every
+**Proposed: in part, now only for the document** (the review agrees; the switching text is in the deployer guide, a first draft); every
 other clause shown. If the owner takes the guide as final, **shown**.
 
 | Clause | Shown by |
@@ -61,26 +74,32 @@ in-process harness, build box, 21 Nov 2026. Proofs: none (dev mode). Re-check: a
 
 ### Sec.6: soundness of supply
 
-**Proposed: shown.**
+**Proposed: shown** (the review: shown, with the wording fixed below, L12).
 
 | Clause | Shown by |
 |---|---|
-| Total wrapped supply on LEZ never exceeds the vault's holdings | `cli/tests/both_halves.rs`, `randomised_runs_keep_supply_within_holdings`: eight seeds of 60 random steps (run 6, 21 Nov, build box: 141 deposits of the three denominations from three depositors, 44 root imports, 81 claims, 59 burns, one checkpoint per seed, 25 releases); the invariants held at all 496 checks (62 per seed: before the first step, after every step, at the end). After every step, read from the vault on anvil and the zone: the vault's balance is `escrowed + totalOwed`; the zone's supply is what it minted less what it burnt; supply ≤ `escrowed`; supply + unminted deposits + unreleased burns = `escrowed`. On the vault alone: `vault/test/invariant/` (256 runs × 100 calls, run 5) |
+| Total wrapped supply on LEZ never exceeds the vault's holdings | `cli/tests/both_halves.rs`, `randomised_runs_keep_supply_within_holdings`: eight seeds of 60 random steps (runs 6 and 8, 21 Nov, build box: 141 deposits of the three denominations from three depositors, 44 root imports, 81 claims, 59 burns, one checkpoint per seed, 25 releases); the invariants held at all 496 checks (62 per seed: before the first step, after every step, at the end). After every step: read from the vault on anvil, its ETH balance, `escrowed` and `totalOwed`; read from the zone, the wrapped balances, under the configuration, of the ten accounts the test mints to (the user's eight public accounts, the fee recipient and the relayer: every mint of these runs lands there), which make the supply; and the test's own books, kept from the transactions it sends and checked against those reads: minted, burnt, the deposits not yet minted and the burns not yet released. Checked: balance = `escrowed + totalOwed`; supply = minted − burnt; supply ≤ `escrowed`; supply + unminted + unreleased = `escrowed`. Stand-ins: the vault's verifier is the tests' mock behind RISC Zero's real emergency stop, accepting exactly the journals the guests committed; LEZ reads the vault through synthetic attestation records filled with the vault's real storage (the light client stood in). Limits: plaintext claims to public destinations only (no private claim or burn), one checkpoint per seed, no bucket filled (0 capped claims), ETH only, one user seed. On the vault alone: `vault/test/invariant/` (256 runs × 100 calls, runs 5 and 8) |
 | Minting without a valid deposit fails | the runs' forged claims: a tampered witness (another `s`) refused with 249; `bridge_inbound.rs` and `redteam_bridge.rs` (claims under another root, vault or configuration) |
-| Minting twice from one deposit fails | the runs' replayed claims: refused (250, or 255 when the bucket is spent first: the program admits the value before it reaches the nullifier); `bridge_refusals.rs` |
+| Minting twice from one deposit fails | within a configuration: the runs' replayed claims, refused (250, or 255 when the bucket is spent first: the program admits the value before it reaches the nullifier); `bridge_refusals.rs`. Since B1 a second configuration of the same vault can mint for the same deposit, once, its own token, which no vault releases (a release binds the vault's `lezConfigId`; the red team's BR-TEN-04, by design): the soundness above is per vault-pinned configuration, and a client takes the configuration from the vault |
 | Releasing without a valid burn fails | the runs' releases no guest proved (refused by the verifier), replayed releases and releases redirected to another recipient (refused); `vault/test/Release.t.sol` |
 
 Command: `e2e/both-halves/run.sh` (builds what CI's round trip builds; `FERRATA_BOTH_HALVES_SEEDS=1,2,3,4,5,6,7,8
 FERRATA_BOTH_HALVES_STEPS=60 e2e/both-halves/run.sh randomised`). Results: `e2e/both-halves/results/randomised.md`.
 
-Proposed EVIDENCE row: **Supply never exceeds the vault's holdings, over both real halves at once (Sec.6, F.8).**
-Numbers: eight seeds of 60 random steps: 141 deposits, 81 claims, 59 burns, 25 releases, 93 forgeries refused (tampered and replayed claims; unproven, replayed and redirected releases); the four cross-side invariants held at all 496 checks. Where it ran: anvil (chain id 1) and the in-process harness, guests in dev mode, build
-box, 21 Nov 2026. Proofs: dev mode (the vault's verifier is the tests' mock behind RISC Zero's emergency stop,
-accepting exactly the journals the guests committed). Re-check: as above. Details: `e2e/both-halves/results/randomised.md`.
+Proposed EVIDENCE row: **Supply never exceeds the vault's holdings, over both real halves at once (Sec.6).**
+Numbers: eight seeds of 60 random steps: 141 deposits, 81 claims, 59 burns, 25 releases, 93 forgeries refused
+(tampered and replayed claims; unproven, replayed and redirected releases); at all 496 checks the vault's balance was
+its escrow plus what it owes, the zone's supply (the wrapped balances of the ten accounts the runs mint to) was what
+was minted less what was burnt, and supply + unminted deposits + unreleased burns was the vault's escrow; per
+vault-pinned configuration (since B1 another configuration of the vault mints only its own, unredeemable token). Where
+it ran: anvil (chain id 1) and the in-process harness, guests in dev mode, build box, 21 Nov 2026. Proofs: dev mode
+(the vault's verifier is the tests' mock behind RISC Zero's emergency stop, accepting exactly the journals the guests
+committed; LEZ reads the vault through synthetic attestation records of its real storage). Limits: plaintext claims to
+public destinations, ETH, no bucket filled. Re-check: as above. Details: `e2e/both-halves/results/randomised.md`.
 
 ### Priv.5: refused, repeated and capped claims indistinguishable as to deposit
 
-**Proposed: shown.**
+**Proposed: shown** (the review: shown).
 
 | Clause | Shown by |
 |---|---|
@@ -97,27 +116,34 @@ refusals revert with 4 bytes. Where it ran: in-process harness and local EVM, bu
 
 ### F.8: amounts do not identify mints or burns; anonymity-set size
 
-**Proposed: shown.**
+**Status: in part** (the review of `67b4aa77`, M1: the client counted deposits a plaintext claim had already
+published, the measured medians were inflated, and the user guide still said the view was not built). **Fixed since**
+(`c7299b2b`, measured again in `3300df8a`): the set leaves out every deposit a plaintext claim has published, under
+any configuration of the program, as the user guide defines it; the tables are measured again both ways and labelled
+for what they are; the user guide says the view is built. **Proposed: shown, for the next review.**
 
 | Clause | Shown by |
 |---|---|
 | Amounts visible on Ethereum do not identify which mint or burn | fixed denominations on both sides (`vault/test/Deposit.t.sol`; 251 for a non-denomination on LEZ); the privacy suite on the program since B1 (run 4; `lez/results/b1/privacy/`): an adversary reading every public byte of 20 users' round trips pairs deposits with private claims, and burns with releases, at chance (0.05); the naive variants at 1.0 |
-| State the mechanism and its effect on anonymity-set size | the client's view: `ferrata claim` prints the claim's anonymity set, the deposits of the same token and amount under the root and fee schedule range it names (`ferrata_wallet::claim::anonymity_set`, unit test `the_anonymity_set_is_the_same_token_and_amount_under_the_root_and_range`), with a warning when the deposit is the only one of its amount (`cli/tests/e2e.rs` asserts the line: its only 1 ETH deposit, set 1; run 7). Measured per denomination over both halves: `randomised.md`'s table (over the 81 claims of the eight runs, 0.1 ETH: 33 claims, sets 1 to 10, median 4; 1 ETH: 28 claims, 1 to 7, median 4; 10 ETH: 20 claims, 1 to 6, median 3); a fee change splits a set at its first leaf: `fees.md` (6 deposits of 1 ETH, sets 3 and 3) |
+| State the mechanism and its effect on anonymity-set size | the client's view: `ferrata claim` prints the claim's anonymity set, the deposits of the same token and amount under the root and fee schedule range it names, less those a plaintext claim has published (`ferrata_wallet::claim::anonymity_set`; unit tests `the_anonymity_set_is_the_same_token_and_amount_under_the_root_and_range`, now with two published leaves and one of another vault, and the tool's `plaintext_claims_open_their_leaves_under_every_configuration`), with a warning when the deposit is the only one of its amount (`cli/tests/e2e.rs` asserts the line: its only 1 ETH deposit, set 1; runs 7 and 8). Measured per denomination over both halves (`randomised.md`, run 8; every claim of these runs is plaintext, so the table gives, for each of the 81 claims, the set a private claim of that deposit would have had at that moment): as run, median 2, 2 and 2 for 0.1, 1 and 10 ETH (largest 7, 6, 5), and 27 of the 81 sets are 1; had every earlier claim been private (the default, which publishes no deposit), median 4, 4 and 3 (largest 10, 7, 6) and 10 sets of 1; the plaintext claims made 57 of the 81 sets smaller (the review counted 58 with its own instrumentation; medians and sets of 1 agree). A fee change splits a set at its first leaf: `fees.md` (6 deposits of 1 ETH: before any claim every deposit's set is 3 under either schedule) |
 
 Proposed EVIDENCE row: **The anonymity set of a claim, shown by the client and measured per denomination (F.8).**
-Numbers: over 81 claims of eight randomised runs the median set is 4 (0.1 ETH), 4 (1 ETH) and 3 (10 ETH), the smallest 1 (a claim right after the first deposit of its amount, which the client then warns of); with a fee change at leaf 3 of 6 deposits of 1 ETH, every claim's set is 3; the privacy
-suite on B1 pairs at chance (0.05 among 20). Where it ran: anvil and the in-process harness, build box, 21 Nov 2026.
-Details: `e2e/both-halves/results/randomised.md`, `fees.md`; `lez/results/b1/privacy/summary.md`.
+Numbers: over 81 claims of eight randomised runs, the set a private claim of each deposit would have had at that
+moment: with every claim plaintext, as the runs made them, median 2 for each of 0.1, 1 and 10 ETH and 27 sets of 1
+(the amount alone links the claim, which the client warns of); had every earlier claim been private, the default,
+medians 4, 4 and 3 and 10 sets of 1; before any claim, a fee change at leaf 3 of 6 deposits of 1 ETH leaves sets of 3
+and 3; the privacy suite on B1 pairs at chance (0.05 among 20). Where it ran: anvil and the in-process harness, build
+box, 21 Nov 2026. Details: `e2e/both-halves/results/randomised.md`, `fees.md`; `lez/results/b1/privacy/summary.md`.
 
 ### Sec.4: caps bound value at risk; recommended defaults
 
-**Proposed: in part, now only for the document** (the recommended default and its reasoning are in the deployer
-guide §2 and the design note §13; the guide is a first draft). The deployments' default is capped since B1.
+**Proposed: in part, now only for the document** (the review: in part, agreed). The deployments' default is capped
+since B1; the reasoning for its size is in the deployer guide §2 since the review (L3), a first draft.
 
 | Clause | Shown by |
 |---|---|
 | Caps bound the value at risk in any rolling window | the buckets on both sides (`vault/test/Caps.t.sol`; `bridge_controls.rs`, `bridge_time.rs`; row 138's broken-verifier invariants) |
-| The recommended default, deployed by default | `vault/script/DeployVault.s.sol` (what `script/deploy.sh` and the crown's Sepolia stage send): per token and day 100 times its largest denomination, globally their sum, an immutable release floor of one largest denomination a day; `FERRATA_UNCAPPED=1` for the uncapped testnet deployments of November 2026. `vault/test/DeployDefaults.t.sol` (run 5) builds a vault from exactly what the script sends and fills the day: 99 deposits of 0.1 ETH (each escrowing 0.1002 ETH) pass, the 100th is refused, the bucket is whole a day later; no release cap below the floor. LEZ: the crown driver's configuration is capped likewise (`the_configuration_is_capped_by_default`, run 4) |
+| A capped default, deployed by default | `vault/script/DeployVault.s.sol` (what `script/deploy.sh`, the crown's Sepolia stage and `scripts/deploy-testnet.sh` send): per token and day 100 times its largest denomination, globally their sum, an immutable release floor of one largest denomination a day (its refill rounded up since L13: 3,473 a second, as the crown driver's); `FERRATA_UNCAPPED=1` for the uncapped testnet deployments of November 2026. This is the ceiling part of the design's recommendation, "the smaller of 10 % of escrow and a ceiling": a new vault has no escrow, so the 10 % term is the admin's to apply as escrow grows (deployer guide §2, "Why the caps are 100 largest denominations a day"). `vault/test/DeployDefaults.t.sol` (runs 5 and 8) builds a vault from exactly what the script sends and fills the day: 99 deposits of 0.1 ETH (each escrowing 0.1002 ETH) pass, the 100th is refused, the bucket is whole a day later; no release cap below the floor; run 8 deployed it step by step on a local anvil, the script's own checks passing. LEZ: the crown driver's configuration is capped likewise (`the_configuration_is_capped_by_default`, runs 4 and 8). Not capped: `vault/script/RoundTrip.s.sol`, the single-script round trip of the earlier testnet runs (`e2e/sepolia-live.sh`, `script/roundtrip.sh`), as its header says (L4) |
 | Document the defaults and the reasoning | the deployer guide §2 (this branch updates its row), `docs/design/bridge.md` §13, `docs/trust.md` §2 ("What this means for the bridge"): the loss accepted before a freeze. First draft |
 
 Proposed EVIDENCE row: **Capped by default (Sec.4).** Numbers: the deployment script's vault refuses the deposit past
@@ -128,23 +154,30 @@ Re-check: `cd vault && forge test --match-contract DeployDefaultsTest`. Details:
 
 ### F.12: configurable finality depth; changes never invalidate valid claims
 
-**Proposed: shown.**
+**Status: in part** (the review of `67b4aa77`, M2: the deployment script deployed the outbound wait Δ at its testnet
+600 s, not the recommended depth). **Fixed since** (`a8e93009`): the script deploys the design's wait for the rule by
+default, 3 h 01 min under rule (A) and 1 h under rule (B), and `FERRATA_DELTA` sets another for a test run. **Proposed:
+shown, for the next review.**
 
 | Clause | Shown by |
 |---|---|
 | Inbound depth configurable by the admin per deployment, defaulting to the recommended depth | `lez/harness/tests/bridge_depth.rs` (run 3; `lez/results/b1/bridge-depth.md`): depth 0 (Ethereum finality) at `Init`; `SetDepth` by the freeze authority or an outsider refused (253), above 216,000 slots refused (240); at 65 an import under a record 32 or 64 slots behind the configuration's tip held (242), at 64 applied |
-| Outbound depth configurable | the vault's wait Δ (admin, up only, at most 30 days) and per-token release delay: `Checkpoint.t.sol` (`test_finalize_deltaRaiseAppliesToLaterCandidates`, `test_raiseDelta_onlyUpAndBelowTheCeiling`), `ReleaseDelay.t.sol` |
+| Outbound depth configurable, defaulting to the recommended one | the vault's wait Δ: `script/DeployVault.s.sol` deploys `deltaFloor` = initial `delta` = 10,860 s under rule (A) and 3,600 s under rule (B) unless `FERRATA_DELTA` names another, reads it back in its checks and records `delta` and `designDelta` (`DeployDefaults.t.sol`, `test_deploymentDefault_waitIsTheDesignsForTheRule`, `test_delta_otherOnlyWhenGiven`; run 8: deployed step by step on a local anvil, read back 3,600, 10,860 and, with `FERRATA_DELTA=600`, 600 with a warning). The admin configures it per deployment upward only (`raiseDelta`, at most 30 days; the immutable floor is deliberate: a lower wait would shorten the window to react to a wrong candidate, deployer guide §2): `Checkpoint.t.sol` (`test_finalize_deltaRaiseAppliesToLaterCandidates`, `test_raiseDelta_onlyUpAndBelowTheCeiling`). The per-token release delay, a hold while a checkpoint can still be revoked, is configurable too (`ReleaseDelay.t.sol`); the scripts deploy its testnet 120 s, not the design's 24 h or more |
 | A change never invalidates a valid claim or release | `bridge_depth.rs`: at the maximum depth, claims against roots imported at depths 0 and 64 apply; a Δ raise does not touch a submitted candidate (`test_finalize_deltaRaiseDoesNotAffectASubmittedCandidate`) |
 
-Proposed EVIDENCE row: **The admin's inbound finality depth (F.12).** Numbers: `SetDepth` only by the admin, at most
-216,000 slots; an import held (242) until the configuration's tip is that many slots past its record; claims under roots
-imported earlier apply at any depth. Where it ran: in-process harness, build box, 21 Nov 2026. Re-check: `cd lez &&
-RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_depth`. Details: `lez/results/b1/bridge-depth.md`.
+Proposed EVIDENCE row: **Finality depth configurable in both directions, recommended by default (F.12).** Numbers:
+inbound, `SetDepth` only by the admin, at most 216,000 slots, default 0 (Ethereum finality); an import held (242) until
+the configuration's tip is that many slots past its record; claims under roots imported earlier apply at any depth.
+Outbound, the deployment script's vault waits 10,860 s under rule (A) and 3,600 s under rule (B) unless told
+otherwise, read back from a deployment on a local anvil; raise-only afterwards. Where it ran: in-process harness, local
+EVM and anvil, build box, 21 Nov 2026. Re-check: `cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test
+bridge_depth`; `cd vault && forge test --match-contract DeployDefaultsTest`. Details: `lez/results/b1/bridge-depth.md`.
 
 ### F.10: register and deregister tokens; document registry changes
 
-**Proposed: in part, now only for the document** (delisting is in the deployer and user guides, first drafts); the
-behaviour is shown.
+**Proposed: in part, now only for the document** (the review: in part, agreed; delisting is in the deployer and user
+guides, first drafts). The behaviour is shown; on LEZ the delisting is a recorded mirror (`TokenState.delisted`) that
+no program path and no client of this tree reads yet (the `ferrata` tool reads the vault's `depositsEnabled`; L1).
 
 | Clause | Shown by |
 |---|---|
@@ -160,7 +193,7 @@ harness; build box, 21 Nov 2026. Details: `lez/results/b1/bridge-delist.md`.
 
 ### R.4: valid claims never invalidated by later chain activity
 
-**Proposed: in part** (unchanged), with a narrower reason: every later act of any party only delays (caps, freezes,
+**Proposed: in part** (unchanged; the review agrees), with a narrower reason: every later act of any party only delays (caps, freezes,
 a depth change, delisting, a fee change, a sunset of the root imports), over both halves; two disclosed exceptions
 remain, neither closable without changeable verification logic, which Sec.8 forbids: after RISC Zero's emergency stop
 (tripped only by a proof that its proof system is unsound) nothing more is released or refunded, and tokens not burned
@@ -178,7 +211,7 @@ before a LEZ change the immutable checkpoint program cannot follow lose their ba
 
 ### F.13: protocol fees on mint and burn, not fingerprinting
 
-**Proposed: in part** (unchanged), with what the tests now show over both halves and what remains a design question
+**Proposed: in part** (unchanged; the review agrees), with what the tests now show over both halves and what remains a design question
 for the owner: within one fee schedule every claim and every release of a denomination pays the same fees, so the fee
 singles no user out; across a fee change a claim shows which schedule its deposit falls under (its range), which
 splits the anonymity set at the change, by deposit time, as the RFP's timing signal does. The client counts it.
@@ -186,17 +219,17 @@ splits the anonymity set at the change, by deposit time, as the RFP's timing sig
 | Clause | Shown by |
 |---|---|
 | A fee on minting and on burning, in the wrapped token, at a rate the admin configures per deployment | `fee_schedules_over_both_halves` (run 6; `e2e/both-halves/results/fees.md`): the admin announces mint 0.5 %, burn 0.2 % and checkpoint 0.1 % fees on the vault; seven days later they are in force from leaf 3 and attested on LEZ (`ImportFees`; a forged copy a second early refused); each claim mints its deposit's escrow: under schedule 0 the denomination and the relay fee, under schedule 1 the mint fee too, to the fee recipient on LEZ; each release pays 1 ETH less 0.003 ETH, the burn and checkpoint fees credited on the vault (`totalOwed`). The burn fee is taken at the release (the RFP's Fee structure §3 allows "at burn or at release"). `vault/test/Fees.t.sol`; `bridge_vault_storage.rs` |
-| The fee value does not distinguish a user's transaction from others | the same test: every claim of 1 ETH under one schedule mints the same fees and has the same anonymity set (3 and 3), every release the same payout. Across a change, see above |
+| The fee value does not distinguish a user's transaction from others | the same test: every claim of 1 ETH under one schedule mints the same fees, every release pays the same, and before any claim a private claim of any deposit of a schedule has the same anonymity set (3 and 3; run 8). The test's claims are plaintext, so each publishes its deposit and the next one of its schedule has one fewer (3, 2, 1), which private claims would not do. Across a change, see above |
 | The admin can set either fee to zero | `Fees.t.sol` (`test_release_zeroFeesCreditNothing`; schedule 0 charges no protocol fee); the 1 % ceiling fuzzed |
 
 Proposed EVIDENCE row: **Fees over both halves (F.13).** Numbers: schedule 1 in force from leaf 3, seven days and
 1 s after its announcement; claims under it mint 0.005 ETH more, to the fee recipient on LEZ; each release
-pays 0.997 ETH, and the vault's `totalOwed` rises by 0.003 ETH a release; sets 3 and 3. Where it ran: anvil and the
+pays 0.997 ETH, and the vault's `totalOwed` rises by 0.003 ETH a release; before any claim, sets of 3 and 3. Where it ran: anvil and the
 in-process harness, guests in dev mode, build box, 21 Nov 2026. Details: `e2e/both-halves/results/fees.md`.
 
 ### Sec.8: verification logic cannot be swapped; migration and in-flight positions
 
-**Proposed: in part, now only for the document** (the deployer guide §9, a first draft): the migration was not run
+**Proposed: in part, now only for the document** (the review agrees; the deployer guide §9, a first draft): the migration was not run
 before and is now rehearsed over both halves.
 
 | Clause | Shown by |
@@ -211,10 +244,24 @@ Details: `e2e/both-halves/results/migration.md`.
 
 ### Sec.9: a failsafe that is not a backdoor, or why none
 
-**Proposed: in part, now only for the document** (`docs/trust.md` §6, a first draft, says why the failsafe is
+**Proposed: in part, now only for the document** (the review agrees; `docs/trust.md` §6, a first draft, says why the failsafe is
 stop-only); the stop's behaviour is shown on both halves.
 
 | Clause | Shown by |
 |---|---|
 | The failsafe stops; it never moves funds | `migration_rehearsal_honours_positions_in_flight`: RISC Zero's emergency stop on vault A's verifier (as a proof of unsoundness would trip it): a proven release and a refund refused, A's escrow untouched and its books still balanced; configuration B's vault goes on. `EmergencyStop.t.sol`; Halmos: nothing released after the stop (row 35); the stop's owner renounced at deployment (rows 41, 91) |
 | Why no recovery | `docs/trust.md` §6. First draft |
+
+## For the integrator
+
+- EVIDENCE row 143 names `lez/guests/bridge-next`, which this branch removed (the program is `lez/guests/bridge`
+  since B1; the second build's sources are at `f13faee2`, as `lez/results/bridge-next.md` now says).
+- EVIDENCE rows 91, 92 and 142 re-check the live runs with `scripts/verify-sepolia.py`, which works on this tree again
+  (H1); row 92's `scripts/reproduce-image-ids.sh compare --vault 0x04eE…e44c` gives 6 of 6 at `f13faee2`, and on this
+  tree the other five programs and the vault's two immutables equal, with the bridge equal to B1's own record.
+- The red team's records on B1 (`lez/results/b1/redteam-2026-11-18/`): BR-TEN-04 stays MISMATCH by design (its
+  vector encodes one nullifier namespace per vault, which B1 drops); its note now names B's own
+  `nullifier(configId(B), chain, V, N)` (L9). The vector's expectation is the 18 November corpus's and is not changed.
+- Every Low of the review is addressed; three by wording rather than code: L1 (the LEZ delisting flag, which no client
+  reads, is described as such), L9 (the vector's expectation is kept), L11 (the tools say they speak only B1's accounts;
+  they do not check the program's image id).
