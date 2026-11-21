@@ -23,8 +23,8 @@ use ferrata_core::Root;
 use ferrata_lez_wire::{
     attest::{evaluate, Address},
     consumer::{
-        claim_actor, commitment, secret_nullifier, ConsumerMessage, DepositProof, NullifierState, Pool, VaultPool,
-        KIND_PRIVATE,
+        claim_actor, claim_seed, commitment, secret_nullifier, ConsumerMessage, DepositProof, NullifierState, Pool,
+        VaultPool, KIND_PRIVATE,
     },
     header_actor,
 };
@@ -36,7 +36,7 @@ use harness::{
     Chain, EXPECTED_FINALIZED,
 };
 use lee::{Account, AccountId, Actor, PrivacyPreservingTransaction};
-use lee_core::{execution_state::BoundaryStep, PrivateAction};
+use lee_core::{execution_state::BoundaryStep, program::PdaSeed, PrivateAction};
 use security_common::*;
 
 const VAULT: Address = [0x5a; 20];
@@ -218,22 +218,42 @@ impl Deposits {
 // The comparison
 // ---------------------------------------------------------------------------------------------
 
+/// What the claim's nullifier fixes in each transaction (A's, then D's): N itself, as `Spend`
+/// carries it, and the actor and PDA seed of `claim(pool, N)`.
+#[derive(Clone, Copy)]
+struct Claims {
+    nullifier: (Root, Root),
+    actor: (Actor, Actor),
+    seed: (PdaSeed, PdaSeed),
+}
+
+impl Claims {
+    fn new(program: AccountId, pool_id: &Root, n_a: &Root, n_d: &Root) -> Self {
+        Claims {
+            nullifier: (*n_a, *n_d),
+            actor: (claim_actor(program, pool_id, n_a), claim_actor(program, pool_id, n_d)),
+            seed: (claim_seed(pool_id, n_a), claim_seed(pool_id, n_d)),
+        }
+    }
+}
+
 /// Align `d` to `a`: every field that may differ (fresh randomness: the private side's actors,
 /// the private actions' nullifiers, commitments and encrypted notes, the recovery bindings, the
 /// fee fallback's private action and the payer alias's crossing in its boundary; and the claim's
 /// nullifier N, in `Spend` and in the address and PDA seed of `claim(pool, N)`) is taken from
-/// `a`, after checking it has the same encoded length in both. Every other field must already be
-/// equal. Returns the log of what was aligned, or the first difference no rule allows, by field.
+/// `a`, after checking it has the same encoded length in both (and, for N, that it is each
+/// transaction's own: `Spend`'s nullifier and the PDA seed of `claim(pool, N)`). Every other field
+/// must already be equal. Returns the log of what was aligned, or the first difference no rule allows, by field.
 /// The caller then requires the two messages' encodings to be byte-identical.
 fn align(
     a: &PrivacyPreservingTransaction,
     d: &PrivacyPreservingTransaction,
-    claims: Option<(Actor, Actor)>,
+    claims: Option<Claims>,
 ) -> Result<(PrivacyPreservingTransaction, Vec<String>), String> {
     let mut out = d.clone();
     let mut log = Vec::new();
     // Public context: the claim actor is N's.
-    if let Some((ca, cd)) = claims {
+    if let Some(Claims { actor: (ca, cd), .. }) = claims {
         if out.message.public_context.actors.remove(&cd) {
             out.message.public_context.actors.insert(ca);
             log.push("public_context.actors: claim(pool, N) (the nullifier's address)".to_string());
@@ -347,14 +367,15 @@ fn align(
 
 /// Align one boundary of `d` to `a`'s, step by step: an actor may differ only where it is the
 /// claim's (`claims`) or on the private side (in neither transaction's public context, so a
-/// fresh alias); a message only as `Spend`'s nullifier; PDA seeds and inherited authorizations
-/// only at equal sizes.
+/// fresh alias); a message only as `Spend`'s nullifier, each transaction's own N; PDA seeds only
+/// as the seed of each transaction's own `claim(pool, N)`; inherited authorizations only at equal
+/// sizes.
 fn align_boundary(
     label: &str,
     ba: &[BoundaryStep],
     bo: &mut [BoundaryStep],
     publics: &BTreeSet<Actor>,
-    claims: Option<(Actor, Actor)>,
+    claims: Option<Claims>,
     log: &mut Vec<String>,
 ) -> Result<(), String> {
     if ba.len() != bo.len() {
@@ -373,7 +394,7 @@ fn align_boundary(
             if xa == *xd {
                 continue;
             }
-            let claim = claims.is_some_and(|(ca, cd)| xa == ca && *xd == cd);
+            let claim = claims.is_some_and(|c| xa == c.actor.0 && *xd == c.actor.1);
             let private_side = !publics.contains(&xa) && !publics.contains(xd);
             if !(claim || private_side) {
                 return Err(format!("{label} step {i}: `{which}` differs"));
@@ -391,9 +412,13 @@ fn align_boundary(
             );
             match (ma, md) {
                 (
-                    Ok(ConsumerMessage::Spend { pool_id: pa, credit: ra, .. }),
-                    Ok(ConsumerMessage::Spend { pool_id: pd, credit: rd, .. }),
-                ) if pa == pd && ra == rd && da.envelope.message.len() == dd.envelope.message.len() => {
+                    Ok(ConsumerMessage::Spend { pool_id: pa, nullifier: na, credit: ra }),
+                    Ok(ConsumerMessage::Spend { pool_id: pd, nullifier: nd, credit: rd }),
+                ) if pa == pd
+                    && ra == rd
+                    && claims.is_some_and(|c| (na, nd) == c.nullifier)
+                    && da.envelope.message.len() == dd.envelope.message.len() =>
+                {
                     dd.envelope.message = da.envelope.message.clone();
                     log.push(format!("{label} step {i}: `Spend`'s nullifier N"));
                 }
@@ -407,7 +432,10 @@ fn align_boundary(
             }
         }
         if da.pda_seeds != dd.pda_seeds {
-            if da.pda_seeds.len() != dd.pda_seeds.len() {
+            let own = claims.is_some_and(|c| {
+                da.pda_seeds == BTreeSet::from([c.seed.0]) && dd.pda_seeds == BTreeSet::from([c.seed.1])
+            });
+            if !own {
                 return Err(format!("{label} step {i}: PDA seeds"));
             }
             dd.pda_seeds = da.pda_seeds.clone();
@@ -447,7 +475,8 @@ fn f8_two_deposits_full_diff() {
     let s0 = dep.s.w.chain.clone();
     let before = public_accounts(&s0);
     let program = consumer_account();
-    let (ca, cd) = (claim_actor(program, &dep.pool.id(), &dep.a.3), claim_actor(program, &dep.pool.id(), &dep.d.3));
+    let claims = Claims::new(program, &dep.pool.id(), &dep.a.3, &dep.d.3);
+    let (ca, cd) = claims.actor;
 
     // The two private claims, each from the same state.
     let (mut chain_a, mut chain_d) = (s0.clone(), s0.clone());
@@ -479,7 +508,7 @@ fn f8_two_deposits_full_diff() {
     let (bytes_a, bytes_d) = (borsh::to_vec(&ta).unwrap(), borsh::to_vec(&td).unwrap());
     assert_eq!(bytes_a.len(), bytes_d.len(), "the same transaction size");
     assert_eq!(ra.proof_bytes, rd.proof_bytes, "the same proof size");
-    let (_, log) = align(&ra.tx, &rd.tx, Some((ca, cd))).unwrap_or_else(|e| panic!("the two claims differ: {e}"));
+    let (_, log) = align(&ra.tx, &rd.tx, Some(claims)).unwrap_or_else(|e| panic!("the two claims differ: {e}"));
     let differing = bytes_a.iter().zip(&bytes_d).filter(|(x, y)| x != y).count();
     out.push_str(&format!(
         "## The transactions\n\nBoth are {} bytes (proof field {} bytes). {} of those bytes differ. After taking from A every \
