@@ -22,6 +22,7 @@ set -uo pipefail
 RUN="${ATTEST_SEQ_RUN:?}"; BIN="${ATTEST_SEQ_BIN:?}"; REPO="${ATTEST_SEQ_REPO:?}"; SA="${ATTEST_SEQ_SA:?}"; W="${ATTEST_SEQ_WORK:?}"
 LB="${ATTEST_LOGOS_BUILD:?the OUT of modules/ferrata_attest_module/scripts/logos-build.sh}"
 M="$RUN/logos"; mkdir -p "$M" "$W"
+hexof() { python3 -I -c 'import sys; print(open(sys.argv[1], "rb").read().hex())' "$1"; }
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$RUN/run.log"; }
 
 # ---- 1. the plain path ----------------------------------------------------------------------------------------------
@@ -100,8 +101,8 @@ if [ -n "$MID" ]; then
 fi
 # An update of the Sepolia instance planned by the module on the state lez_core read, sent through lez_core.
 UPD="$LAB/00065.finality.gloas.ssz"
-call ferrata_attest_module advance "$(jq -c -n --arg p "$ATTEST" --arg st "$SEP_STATE" --arg u "0x$(xxd -p "$UPD" | tr -d '\n')" \
-  --arg b "0x$(xxd -p "$S12/bootstrap.ssz" | tr -d '\n')" \
+call ferrata_attest_module advance "$(jq -c -n --arg p "$ATTEST" --arg st "$SEP_STATE" --arg u "0x$(hexof "$UPD")" \
+  --arg b "0x$(hexof "$S12/bootstrap.ssz")" \
   '{program_id: $p, instance_state: $st, finality_update: $u, bootstrap: $b}')"
 cp "$W/reply-$n.json" "$M/advance-plan.json"
 if [ "$(R | jq -r .verdict)" = useful ]; then
@@ -168,7 +169,7 @@ sleep 1
 jq -c -n --argjson p "$providers" '{providers: $p, proxyRequired: false}' > "$W/beacon-config.json"
 callv beacon_api_module set_beacon_config 11155111 "@$W/beacon-config.json"
 callv beacon_api_module list_providers 11155111
-VREQ="$(jq -c --arg b "0x$(xxd -p "$S12/bootstrap.ssz" | tr -d '\n')" \
+VREQ="$(jq -c --arg b "0x$(hexof "$S12/bootstrap.ssz")" \
   '.bootstrap = $b | .providers = {via: "beacon_api_module", chain_id: 11155111} | del(.execution) | .min_providers = 3' \
   "$REPO/modules/ferrata_attest_module/rust-lib/calls/tests/fixtures/verify-checkpoint-sepolia.json")"
 call ferrata_attest_module verify_checkpoint "$VREQ"
