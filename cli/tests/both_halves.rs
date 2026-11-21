@@ -429,10 +429,13 @@ async fn deploy(
     let genesis = ci_zone(&["genesis", "--identity", identity_path.to_str().context("path")?])?;
     ensure!(h32(&genesis, "configId")?.0 == cid, "the checkpoint's configId is the bridge program's");
     let genesis_state = h32(&genesis, "genesisState")?;
-    let out = Command::new("forge")
+    // One transaction at a time, each after the previous one's receipt (--slow), and at most 15 minutes: on the build
+    // box (21 Nov 2026) the second deployment of the migration test once left its last two transactions pending on
+    // anvil for an hour, never mined (not even by evm_mine), while forge waited for their receipts.
+    let out = Command::new("timeout")
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault"))
-        .args(["script", "script/CiRoundTrip.s.sol:CiRoundTrip", "--rpc-url", rpc, "--broadcast", "--unlocked"])
-        .args(["--sender", &deployer.to_string()])
+        .args(["900", "forge", "script", "script/CiRoundTrip.s.sol:CiRoundTrip", "--rpc-url", rpc, "--broadcast", "--slow"])
+        .args(["--unlocked", "--sender", &deployer.to_string()])
         .env("FERRATA_CID", hx(&cid))
         .env("FERRATA_GENESIS_STATE", genesis_state.to_string())
         .env("FERRATA_CHECKPOINT_IMAGE_ID", images.0.to_string())
