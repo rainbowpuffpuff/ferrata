@@ -218,6 +218,7 @@ if [ -n "$yes" ]; then
   "$gh" auth status > /dev/null 2>&1 || fail "gh is not logged in (gh auth login); nothing was created"
   [ "$("$gh" api "orgs/$org" --jq .login 2> /dev/null | tr 'A-Z' 'a-z')" = "$(echo "$org" | tr 'A-Z' 'a-z')" ] \
     || fail "$org is not a GitHub organization this login can see (the catalog belongs under an organization, RELEASE.md rule 7); nothing was created"
+  echo "  gh logged in; $org is an organization; git must push to github.com as the same login (gh auth setup-git)"
   for n in "${names[@]}"; do
     d=$(wsdir_of "$n")
     if "$gh" repo view "$org/$n" --json name > /dev/null 2>&1; then

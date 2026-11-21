@@ -35,7 +35,8 @@ printf '{"crv":"Ed25519","d":"%s","kty":"OKP","x":"%s"}\n' "$d" "$x" > ferrata-r
 ```
 
 The script needs bash (3.2 or later, so macOS's own will do), git, jq and python3, and `gh` logged in to an
-account that can create repositories in `ORG`. It writes only to a workspace it makes with `mktemp` (under
+account that can create repositories in `ORG`, with git pushing to github.com as that account (`gh auth
+setup-git` does it). It writes only to a workspace it makes with `mktemp` (under
 `TMPDIR` when that is set) and prints its path. Without `--yes` it prepares everything and prints the plan;
 with `--dry-run DIR` it also pushes everything into local bare repositories under `DIR` (`file://`
 remotes, no network command; the recorded run is [`dry-run-publish/README.md`](dry-run-publish/README.md)).
