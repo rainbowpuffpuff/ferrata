@@ -65,22 +65,53 @@ target ([`lez/RESULTS.md`](../lez/RESULTS.md) §5, "What is not built").
 
 ### P.2 Cost by program action: cycles, gas, proof time, proof size
 
-**Advancing the tracked state** (in-process harness, mainnet periods 1899–1903;
-[`attestation.md`](design/attestation.md) §4.2–§4.3):
+**Every program action and statement type, proven for real** ([`perf-proofs.md`](../lez/results/perf-proofs.md),
+21 November 2026): the 37 guest executions of the test suite's scenarios (`lez/results/stage1-*.md`,
+`stage4-attest.md`), each with the exact input LEZ v0.4.0-rc1 gives it, proven by r0vm 3.0.5 on a cloud container held
+to 16 CPUs and 32 GiB (one container per transition, `bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs
+the same `perf_prove --prove` on one machine): a composite receipt verified against the image id with its journal
+equal to the executor's, then compressed to one succinct receipt and verified again. LEZ v0.4 does not prove public
+transactions (every node re-executes them): these are the proofs a prover of the same execution would make, RFP-020's
+method. Execution gas equals the user cycles proven in every row. Proof times are sums over a transaction's
+transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts):
 
-| Action | Transactions | Cycles per step | Execution gas (total) | Storage gas | Proof |
-|---|---:|---|---:|---:|---|
-| `Init` (bootstrap, adoption in two parts) | 3 | largest 3,479,974 | 7,085,450 | 51,968 | none (public execution) |
-| finality update, public job | 3 | `Open` 2.13–2.18M, `Miller` 3.31M, `Finish` 3.65M | 9,216,121 | 4,451 | none |
-| update that rotates and adopts a committee | 5 | adoption 3.40–3.42M per 256 keys | 16,076,120 | 54,491 | none |
-| finality update, one public transaction (`VerifyAll`) | 1 | 9,115,325 | 9,115,325 | 4,089 | none |
-| finality update, proven path | 1 | public part 70,090 | 479,854 | 224,063 | 9,045,235 user cycles: **3,240.5 s** laptop CPU, peak 9.18 GiB, receipt **227,080 B** |
+| action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Init (bootstrap): Init | 2 | 210,666 | 1,896 | 210,666 | 2 | 66.5 | 19.2 | 497,440 | 225,833 + 224,519 | 4.60 |
+| Init (bootstrap): adopt 1/2 | 1 | 3,399,141 | 24,980 | 3,399,141 | 4 | 469.2 | 71.0 | 1,177,113 | 249,068 | 9.19 |
+| Init (bootstrap): adopt 2/2 | 3 | 3,485,575 | 25,108 | 3,485,575 | 6 | 488.1 | 86.6 | 1,649,283 | 249,201 + 225,511 + 224,041 | 9.19 |
+| committee handoff (update_0): Open (step 1) | 2 | 2,156,300 | 2,853 | 2,156,300 | 4 | 290.6 | 57.9 | 1,089,152 | 227,532 + 225,865 | 9.19 |
+| committee handoff (update_0): Miller (step 2) | 1 | 3,313,372 | 399 | 3,313,372 | 4 | 415.5 | 69.3 | 1,117,523 | 225,897 | 9.19 |
+| committee handoff (update_0): adopt 1/2 | 1 | 3,410,995 | 24,980 | 3,410,995 | 4 | 464.6 | 70.3 | 1,180,189 | 250,606 | 9.19 |
+| committee handoff (update_0): adopt 2/2 | 1 | 3,418,189 | 24,980 | 3,418,189 | 4 | 467.8 | 73.4 | 1,180,317 | 250,670 | 9.19 |
+| committee handoff (update_0): Finish (step 3) | 2 | 3,699,098 | 463 | 3,699,098 | 5 | 471.8 | 55.5 | 1,378,633 | 225,614 + 225,254 | 9.19 |
+| finality update: Open (step 1) | 2 | 2,194,902 | 3,525 | 2,194,902 | 4 | 307.9 | 60.3 | 1,089,102 | 228,025 + 225,347 | 9.19 |
+| finality update: Miller (step 2) | 1 | 3,308,048 | 399 | 3,308,048 | 4 | 410.1 | 70.5 | 1,116,487 | 225,379 | 9.19 |
+| finality update: Finish (step 3) | 3 | 3,725,955 | 527 | 3,725,955 | 6 | 514.0 | 89.3 | 1,600,717 | 224,968 + 225,461 + 224,041 | 9.19 |
+| statement: account: the WETH contract (nonce, balance, storage root, code hash) | 1 | 168,909 | 4,424 | 168,909 | 1 | 67.2 | 19.6 | 488,178 | 227,717 | 3.47 |
+| statement: storage slot: a WETH balance, value >= 1 | 1 | 275,865 | 7,338 | 275,865 | 1 | 81.0 | 16.0 | 506,294 | 230,663 | 4.60 |
+| statement: storage slot: an absent slot is zero | 1 | 270,580 | 7,291 | 270,580 | 1 | 87.7 | 17.5 | 506,200 | 230,616 | 4.60 |
+| statement: account: an address without an account | 1 | 151,829 | 4,150 | 151,829 | 1 | 68.2 | 19.8 | 487,630 | 227,443 | 3.47 |
+| statement: event log: an ERC-20 Transfer (receipt with 7 logs) | 1 | 97,485 | 2,623 | 97,485 | 1 | 71.0 | 20.7 | 484,576 | 225,916 | 3.47 |
+| statement: event log: a Transfer in the block's largest receipt (306 logs) | 1 | 1,619,960 | 58,812 | 1,619,960 | 2 | 277.1 | 40.7 | 903,717 | 282,105 | 9.18 |
+| statement: storage slot 16 blocks back: one EIP-2935 hop, then the slot | 1 | 499,277 | 13,578 | 499,277 | 1 | 162.4 | 21.1 | 532,022 | 236,903 | 9.15 |
+| statement: four facts in one call (account, two slots, a log) and a relation | 1 | 454,255 | 12,309 | 454,255 | 1 | 134.7 | 16.5 | 529,612 | 235,698 | 9.15 |
+| consumer: a public actor calls Attest: storage slot | 3 | 386,181 | 7,507 | 386,181 | 3 | 136.9 | 42.0 | 1,014,414 | 237,300 + 231,045 + 224,122 | 4.61 |
+| consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
+| consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
 
-The same proven update (a later image) took **49.5 s** on one L4, and **895.6 s** on a cloud
-container's CPU with 32 prover threads, where a live sequencer verified and applied it (receipt 237,412 B)
-([`lez/RESULTS.md`](../lez/RESULTS.md) §9). Public transactions need no proof on v0.4: every node
-re-executes them ([`bridge.md`](design/bridge.md) §7). A handler pays 5.7 cycles per byte it receives and
-about 3.4 per byte it sends on ([`attestation.md`](design/attestation.md) §4.3).
+**The proven update path** (one private transaction proving a whole finality update, `VerifyAll`, this tree's
+program): PENDING_PRIVATE
+
+**The private attestation** (the consumer's read of a record and LEZ's privacy circuit, padded as the wallet pads
+it): 633.5 s at 16 CPUs and 1,254.8 s at 8 (3.34M user cycles, 6 segments), receipt 239,246 B, transaction 255,366 B,
+peak 9.19 GiB (P.4, [`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)); unpadded, of an earlier image, 16.1 s on
+one L4 (receipt 227,170 B; [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), run `gpu-l4-attest-2`). A handler
+pays 5.7 cycles per byte it receives and about 3.4 per byte it sends ([`attestation.md`](design/attestation.md) §4.3).
+
+**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`, `attest_private.rs` and
+`sepolia.rs` write the cycle and gas tables (`lez/RESULTS.md` §8); `perf_prove --dump` captures the same scenarios'
+guest inputs and `bench/perf/prove-actions.sh` (or `prove_modal.py`) proves each one.
 
 **One public transaction with a residue witness (experimental, not deployed).** An unaudited copy of
 the program whose `VerifyAll` checks a residue witness (Novakovic and Eagen; `c ≠ 0`, `w ∈ Fp6`,
@@ -105,20 +136,6 @@ fits one transaction: the experimental copy was charged **6,711,485** execution 
 handoff and **8,431,403** (84.3%) for a 342-signer handoff at the costliest placement found, and the LEZ v0.3.1 port
 takes every handoff of the mainnet replay and of Sepolia's 32 periods in one transaction, at most 6,737,794
 (EVIDENCE row 137). The deployed programs are unchanged.
-
-**Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private
-attestation of a `Transfer`, 380,577 user cycles for the consumer's two transitions plus LEZ's privacy
-circuit, proven on one L4 in **16.1 s**, receipt **227,170 B**, transaction 231,214 B, peak host memory
-0.76 GiB ([`lez/RESULTS.md`](../lez/RESULTS.md) §5; [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md),
-run `gpu-l4-attest-2`). **Bare guest** (executor): storage 210,502, a log 42,445–432,102, a hop 182,627, an
-identifier 1,629 user cycles ([`attestation.md`](design/attestation.md) §5.1).
-
-**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`,
-`attest_private.rs`, `sepolia.rs` and the commands of [`lez/RESULTS.md`](../lez/RESULTS.md) §8 write the
-`results/*.md` tables.
-
-**Gaps:** proof time and size per public attestation are not applicable (no proof); a private
-attestation was not proven on a CPU; a proven handoff was not proven for real (dev mode only).
 
 ### P.3 Tracking cost, apart from attestation cost
 
