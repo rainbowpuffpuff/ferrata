@@ -1,0 +1,86 @@
+keys: two throwaway Ed25519 keys from openssl
+ok   jwk_did.py: the key's DID is did:jwk of its public half
+ok   no arguments: exit 2 with the usage
+ok   no arguments: the usage names the flags
+ok   unknown argument: exit 2
+ok   --dry-run with --yes: exit 2
+ok   ORG with a slash: exit 2
+ok   key not-json: exit 2
+ok   key not-json: d never printed
+ok   key no-d: exit 2
+ok   key no-d: d never printed
+ok   key mismatch: exit 2
+ok   key mismatch: d never printed
+ok   key short-d: exit 2
+ok   key short-d: d never printed
+ok   key mismatch: names x and d
+ok   bad keys: no gh call at all
+ok   bad keys: no workspace made
+ok   default mode: exit 0
+ok   default mode: no gh call
+ok   default mode: prints the release trigger as the owner's last step
+ok   MODULES without --yes: exit 0
+ok   MODULES without --yes: the subset it names
+ok   MODULES with --yes: refused, exit 2
+ok   MODULES with --yes: says to name the subset with --modules
+ok   MODULES with --yes: no gh call at all
+ok   dry run: exit 0
+ok   dry run: no gh call
+ok   dry run: ferrata_attestor_module.git's HEAD is main
+ok   dry run: ferrata_monitor_module.git's HEAD is main
+ok   dry run: ferrata-modules.git's HEAD is main
+ok   dry run: the catalog clones with its files checked out
+ok   dry run: .gitmodules URLs are absolute file:// URLs
+ok   dry run: the submodules check out at the exported commits
+ok   dry run: logos-repo.json declares the key's DID
+ok   dry run: logos-repo.json's indexUrl
+ok   dry run: README says to add the key to the keyring
+ok   dry run: README says to require signatures
+ok   dry run: module tags pushed
+ok   dry run: the key nowhere in the workspace or the repositories
+ok   dry run again into the same directory: exit 0, its own repositories replaced
+ok   dry run into a foreign <name>.git: refused, exit 2
+ok   dry run into a foreign <name>.git: says so
+ok   dry run into a foreign <name>.git: left as it was
+ok   dry run into a foreign <name>.git: nothing else made
+ok   --yes without gh: exit 1
+ok   --yes not logged in: exit 1
+ok   --yes when ORG is not an organization: exit 1
+ok   --yes when a repository holds another main: exit 1
+ok   --yes when a repository holds another main: says so
+ok   --yes when a version tag exists elsewhere: exit 1
+ok   --yes when a version tag exists elsewhere: says so
+ok   --yes when a version tag exists elsewhere: nothing created
+ok   --yes when git cannot read an existing repository: exit 1
+ok   --yes when git cannot read an existing repository: says so
+ok   --yes when git cannot read an existing repository: nothing created
+ok   --yes refusals: no repository created
+ok   --yes refusals: no secret set
+ok   --yes: exit 0
+ok   --yes: three repositories created
+ok   --yes: checks (auth, org) come before the first create
+ok   --yes: the release trigger is not run
+ok   --yes: the secret is the key file, read from standard input
+ok   --yes: ferrata_attestor_module's main is the export
+ok   --yes: ferrata_attestor_module's version tag pushed
+ok   --yes: ferrata_monitor_module's main is the export
+ok   --yes: ferrata_monitor_module's version tag pushed
+ok   --yes: the catalog's main is the assembled catalog
+ok   --yes: the catalog's submodules point at https://github.com/example-org
+ok   --yes: the browser steps come before the trigger in the output
+ok   --yes: the key nowhere in the workspace or the repositories
+ok   rerun: exit 0
+ok   rerun: no repository created
+ok   rerun: every ref as before (exports reproducible)
+ok   rerun: an inherited SOURCE_DATE_EPOCH and FERRATA_COMMIT ignored, and said so
+ok   secret step fails: exit 1
+ok   secret step fails: says a rerun resumes
+ok   secret step fails: no secret
+ok   resume: exit 0
+ok   resume: no repository created again
+ok   resume: the secret set
+ok   no TMPDIR: exit 0
+ok   no TMPDIR: the workspace in the system default
+ok   export.sh: two exports a second apart, one commit
+
+test-release-publish.sh: 83 passed, 0 failed (bash 3.2.57(2)-release; scratch <box4-work>/trp)

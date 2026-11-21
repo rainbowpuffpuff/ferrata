@@ -1,0 +1,12 @@
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+git version 2.43.0
+jq-1.7
+Python 3.12.1
+OpenSSL 3.0.13 30 Jan 2024 (Library: OpenSSL 3.0.13 30 Jan 2024)
+download exit 0 sha256 3fa9daf85ebf35068f090ce51283ddeeb3c75eb5bc70b1a4a7cb05868bfe06a4
+configure exit 0
+bison: bison (GNU Bison) 3.8.2
+make exit 0
+built: bash 3.2.57(2)-release
+throwaway checkout: 553 files, HEAD f595906
+test-release-publish.sh under 3.2.57(2)-release: exit 0 (29 s): test-release-publish.sh: 83 passed, 0 failed
