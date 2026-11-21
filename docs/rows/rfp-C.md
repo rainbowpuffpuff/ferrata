@@ -74,42 +74,44 @@ CPUs (2 runs) and 633.5 s at 16; claim 1,093.0 / 639.2 s; burn 932.8 / 534.5 s; 
 CPUs and 16 GiB hard (gVisor; mostly AMD Zen 3) | real | `lez/results/p4-minimum/minimum.py` jobs `attest-pad`,
 `bridge-pad`; `python3 -I bench/perf/summarize_p4.py bench/perf/results/p4-laptop` | `lez/results/perf-p4-laptop.md` |
 
-### P.5 — proposed **shown** (was in part)
+### P.5 — proposed **shown** (was in part; the review agrees)
 
 | clause | shown by |
 |---|---|
-| end-to-end latency, from the Ethereum event to a verified statement usable on LEZ | `lez/results/perf-latency-e2e.md`, from the live run of 12–13 November (EVIDENCE row 99: real Sepolia, Lodestar's public light-client data, a running LEZ v0.4.0-rc1 sequencer and Logos Blockchain node): every slot of 5.4 hours of continuous operation taken as an event's block, **median 18.1 min**, p90 20.7, max 22.1 |
+| end-to-end latency, from the Ethereum event to a verified statement usable on LEZ | `lez/results/perf-latency-e2e.md`, from the live run of 12–13 November (EVIDENCE row 99: real Sepolia, Lodestar's public light-client data, a running LEZ v0.4.0-rc1 sequencer and Logos Blockchain node, one validator, 10-s blocks): every slot of 5.4 hours of continuous operation taken as an event's block, **median 18.1 min**, p90 20.7, max 22.1 |
 | broken down by finality wait | 13.0 min median (the finalized header to the signature slot of the update proving it), plus the wait for the next finalized header (3.1 min median) |
 | … update availability | 0.2 min median (the beacon node serving it, the daemon's poll) |
-| … on-chain verification | the update applied (three transactions, each final on Bedrock: 1.5 min) and the consuming transaction (0.3 min: the run's median send-to-final time; the statement is verified inside it, P.1) |
+| … on-chain verification | the update applied (three transactions, each final on Bedrock: 1.5 min) and the consuming transaction: 0.3 min, a **proxy** (no consuming transaction was sent: the run's median send-to-final time of its 159 update transactions; the statement is verified inside the consuming transaction, P.1); an event between two records' headers needs one EIP-2935 hop, about 223k execution gas more |
 
-Command: `python3 -I bench/perf/latency_e2e.py lez/updater/results/live-sepolia` (commit `eecd5208`). Caveat: the
-consuming transaction's latency is the run's measured send-to-final time of a transaction, not one consuming
-transaction per event.
+Command: `python3 -I bench/perf/latency_e2e.py lez/updater/results/live-sepolia` (commit `eecd5208`).
 
 Proposed EVIDENCE row: | new | RFP-021 P.5's end-to-end latency, from the live run's own records | event to statement
 usable on LEZ: median 18.1 min, p10 15.6, p90 20.7, max 22.1 (1,632 slots, 51 updates); finality 13.0 min, the next
-finalized header 3.1, availability 0.2, the update on LEZ 1.5, the consuming transaction 0.3; with the run's outages
-median 19.6, p90 86.7 | the live run of row 99 | — | `python3 -I bench/perf/latency_e2e.py
-lez/updater/results/live-sepolia` | `lez/results/perf-latency-e2e.md` |
+finalized header 3.1, availability 0.2, the update on LEZ 1.5, the consuming transaction 0.3 (a proxy: the run's median
+send-to-final time); with the run's outages median 19.6, p90 86.7 | the live run of row 99 (one-validator devnet) | — |
+`python3 -I bench/perf/latency_e2e.py lez/updater/results/live-sepolia` | `lez/results/perf-latency-e2e.md` |
 
-### P.6 — proposed **shown** (was in part)
+### P.6 — stays **in part** (the review: in part)
 
 | clause | shown by |
 |---|---|
-| CPU, RAM, time of every off-chain component the design requires | the updater daemon on a running LEZ v0.4.0-rc1 sequencer (gate G2, `lez/results/perf-gate-sequencer.md`): 151 CPU-seconds in 1,849 s (0.08 of one core) per daemon, peak RSS 57.5 MiB (median 37–38 MiB), beacon API 9.0–10.4 MB down in 604–666 requests, sequencer RPC 0.57–0.60 MB up and 7.4–7.6 MB down, at a 4-s poll; the proven path's prover: 1,673.6 s on 16 CPUs, 9.21 GiB per update (P.2); the lab's zone (`lez/lab/README.md`) |
+| CPU, RAM, time of every off-chain component the design requires | the updater daemon on a running LEZ v0.4.0-rc1 sequencer, gates G2–G5 (`lez/results/perf-gate-sequencer.md`): **0.043–0.092 of one core** per daemon, peak RSS **57.3–57.8 MiB**; G2's honest daemons 650 and 666 beacon requests, 10.3 and 10.4 MB; sequencer RPC 0.57–2.07 MB up and 7.4–19.6 MB down per daemon (more for the daemons that did the work); updates replayed 80 to 120 times faster than mainnet, so no per-day figure is given; the proven path's prover: 1,673.6 s on 16 CPUs, 9.21 GiB per update (P.2); the lab's zone (`lez/lab/README.md`) |
 
-Commands: `GATE_ENTRIES=30 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=1 bash bench/perf/gate-sequencer.sh
-g2` on the build box after `bash bench/perf/gate-build.sh BUNDLE`; `python3 -I bench/perf/gate_report.py
-bench/perf/results/gate-g2 …`. Records `bench/perf/results/gate-g2/` (commit `7e854f33`).
+**What is short:** the `ferrata-attest` CLI and the `ferrata_attest_module` (the consumer's off-chain side,
+`docs/design/attestation.md` §8) are not measured; the §8 `monitor` is not built. The three sentences the review found
+unsupported ("hardly depend on the work", "the cost is its poll", "a slower poll divides it") are deleted.
 
-Proposed EVIDENCE row: in the R.9 row below (the same runs).
+Commands: `GATE_* bash bench/perf/gate-sequencer.sh gN` on the build box after `bash bench/perf/gate-build.sh BUNDLE`;
+`python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 … gate-g5`. Records `bench/perf/results/gate-g*/`
+(commits `7e854f33`, `8e0fd144`, `225e3b65`, `e1d7630e`); summarizer fixed in `1b12fbc2` (each daemon's beacon traffic
+read from its own port). EVIDENCE: in the R.9 row below.
 
-### P.7 — proposed **shown** (was in part)
+### P.7 — proposed **shown** (was in part; the review's M7 fixed)
 
 | clause | shown by |
 |---|---|
 | growth rate of module state that accumulates with usage, committee tracking in particular | `lez/results/perf-state.md` (`bash bench/perf/state.sh`): sizes in LEZ v0.4.0-rc1's serialized state, key and `Account` overhead included: a record 453 B (+453.0 B per record measured from 0 to 100,000 records), the instance 593 B constant (committees as summaries), an open job 1,110 B (cleared by `Finish`); the rate in operation: 106 records in 8.06 days on mainnet (`perf-tracking.md`) |
+| … failed and abandoned jobs | each leaves its `job` account (1,110 B; clean-up not built): the lab, one operator, 0 of 248 jobs; the gates G3, G4, G5 (two daemons racing at about 100 times mainnet's pace) 8, 19 and 3; at the design's cadence at most 10.1 MB a year if every job were abandoned (*derived*); the reference consumer's per-claim accounts are the consumer's state, not the module's (`docs/performance.md` RFP-021 §P.7) |
 | on-chain storage cost | LEZ v0.4 charges storage gas on a transaction's bytes, not on state: each update's storage gas is in `perf-tracking.md` (4,592 per finality job, 54,252 per handoff); the state itself is disk on every node, sized above |
 | projections over one and five years | `lez/results/perf-projections.md` (`python3 -I bench/perf/projections.py`, *derived* from the measured sizes and rate): 2.18 / 10.88 MB as the lab ran, 4.12 / 20.58 MB at the design's cadence, 37.23 / 186.14 MB at one update per epoch |
 
@@ -122,11 +124,11 @@ size | record 453 B, instance 593 B, job 1,110 B; nullifier 165 B, burn record 2
 storage gas at 0, 1,000, 10,000 and 100,000 records (asserted) | the build box, in-process harness (LEZ's state
 machine) | — | `bash bench/perf/state.sh` | `lez/results/perf-state.md`, `lez/results/perf-projections.md` |
 
-### P.8 — proposed **shown** (was in part)
+### P.8 — proposed **shown** (was in part; the review agrees; its L12 wording fixed)
 
 | clause | shown by |
 |---|---|
-| the cycle-count delta between the in-program BLS12-381 path and a hypothetical native precompile | `lez/results/perf-precompile.md` (`python3 -I bench/perf/precompile_model.py bench/perf/results`): modelled at time parity from measured inputs (blst 0.3.16's native times for hash-to-G2, the Miller loops and the final exponentiation on the build box; the executor's own throughput on the same steps, 11.3–14.5 Mcycles/s): BLS 8,344,139 of a finality update's 9,228,905 cycles, 17,841 as a precompile, **delta 8,326,298**; a finality update about 902,607 cycles instead of 9,228,905, a handoff about 845,451 instead of 15,997,954 |
+| the cycle-count delta between the in-program BLS12-381 path and a hypothetical native precompile | `lez/results/perf-precompile.md` (`python3 -I bench/perf/precompile_model.py bench/perf/results`): modelled at time parity from measured inputs (blst 0.3.16's native times for hash-to-G2, the Miller loops and the final exponentiation on the build box; the executor's own throughput on the same steps, 11.3–14.5 Mcycles/s): BLS 8,344,139 of a finality update's 9,228,905 cycles, 17,841 as a precompile, **delta 8,326,298**; a finality update about 902,607 cycles instead of 9,228,905, a handoff about 845,451 instead of 15,997,954 (lower bounds: `Miller` and the adoption parts counted whole as BLS work); the `Open` and `Finish` phase figures are the bare guest's with the same accelerated blst; the adoption's native time is a median of 50 runs and its executor rate 15.4 Mcycles/s |
 | a precompile is reachable only from public transactions, which the comparison must state | stated: the proven path and every private consumer run inside the zkVM proof and would not change |
 
 Commit `7732e416`.
@@ -137,74 +139,101 @@ and in-program costs | in-program BLS 8,344,139 cycles per finality update (`Ope
 the build box (blst native, one thread, median of 300; the executor on the same CPU) | — | `python3 -I
 bench/perf/precompile_model.py bench/perf/results` | `lez/results/perf-precompile.md` |
 
-### P.9 — proposed **shown** (was in part)
+### P.9 — stays **in part** (the review: in part)
 
 `lez/results/perf-state.md` §2 and §3: with 0, 1,000, 10,000 and 100,000 records held (the serialized state from 2.8 MB
-to 48.1 MB), five statement types and every step of a handoff and of a finality update were charged the same execution
-and storage gas at every size, asserted by `perf_state` (not only printed); in operation the lab's 98 mainnet finality
-updates stayed within 1.2% of their median as records accumulated (`perf-tracking.md`). Command `bash
-bench/perf/state.sh`; commits `2993debd`, `d14ad6c9`. EVIDENCE: the P.7 row above.
+to 48.1 MB), five statement types (account, slot with a predicate, `Transfer` log, the 306-log receipt's log, a slot
+through one hop) and every step of a handoff and of a finality update were charged the same execution and storage gas
+at every size (asserted by `perf_state`). The copies sit at keys no measured action reads, so this shows LEZ's metering
+does not depend on unrelated state; that no action reads a growing account holds by construction (each reads the
+instance, 593 B, its job, a record, a root or a nullifier, each fixed-size and keyed) and in operation: the lab's
+`Miller` (3,307,963) and `Finish` (3,723,564) were charged identically in all 98 mainnet finality jobs while 106
+records accumulated (`lez/lab/results/record/run.tsv`). **What is short:** not measured at different sizes: `Init`,
+the public `VerifyAll`, the private update path, the absent-account, absent-slot and four-facts statements,
+`CallAttest`, the reference consumer's claim, `Succeed` and `Spawn`, and the bridge's actions. Next piece: extend
+`perf_state`'s K loop to every action and print each action's read set. Command `bash bench/perf/state.sh`; commits
+`2993debd`, `d14ad6c9`; wording `9d6c58ef`. EVIDENCE: the P.7 row above (its "every statement and update step"
+reads "five statement types and every update step").
 
-### R.9 — stays **in part** (narrower: run on a sequencer)
+### R.9 — stays **in part** (the review agrees; figures corrected)
 
 Gates on a running LEZ v0.4.0-rc1 sequencer (`lez/results/perf-gate-sequencer.md`, `bash bench/perf/gate-sequencer.sh`,
-records `bench/perf/results/gate-g*/`): G2 two honest daemons (window 8 rounds of 4 s) and an adversary that never
-defers and polls twice as often, 30 recorded mainnet updates; G3 the two honest daemons alone, window 8; G4 the same
-without deferral (window 1); G5 the two honest daemons at window 30 (120 s), 20 updates revealed every 90 s.
+records `bench/perf/results/gate-g*/`): G2 two honest daemons (window 8 rounds) and an adversary that never defers,
+30 recorded mainnet updates; G3 the two honest daemons alone, window 8; G4 window 1 (no deferral); G5 window 30, 20
+updates revealed every 90 s. The replay reveals updates recorded about two hours apart every 60 or 90 s, 80 to 120
+times faster than mainnet and faster than two daemons apply one (median latency 105–306 s): jobs overlap by
+construction. Rounds took 4.6–6.2 s (G4 17.6 s) against a configured 4-s poll.
 
 | clause | shown by |
 |---|---|
-| checks whether an update is still needed immediately before submitting | every refused step of every run landed in the same block as the step it raced (G2 26 of 26, G3 9 of 10, G4 35 of 35, G5 1 of 1; the one exception, G3, an `Open` whose store another daemon's `Finish` changed in that same block): no daemon sent a step after another's was final |
+| checks whether an update is still needed immediately before submitting | every refused step landed in the same block as the step it raced (G2 26 of 26, G3 9 of 10, G4 35 of 35, G5 1 of 1; the G3 exception an `Open` whose store another daemon's `Finish` changed in that block): no daemon sent a step after another's was final. The daemon reads the instance at the start of each round and the job's account just before sending |
 | does not submit one another party has already applied | every step applied exactly once in every run (G2 99 steps, G3 60, G4 113, G5 31) |
-| several instances must not multiply the gas spent on an update beyond what contention makes unavoidable | the refused gas is all same-block contention (above); the updates cost 1.095 (G2), 1.102 (G3), 1.149 (G4), **1.004 (G5)** times their applied gas; execution gas per revealed update 11.1M (G2), 8.1M (G3), 16.0M (G4: without deferral the daemons also open jobs for updates a deferring daemon skips), 4.6M (G5) |
+| several instances must not multiply the gas spent beyond what contention makes unavoidable | total / completed-job execution gas (abandoned jobs, opened then overtaken, counted with refused steps): **1.095 (G2), 1.222 (G3), 1.721 (G4), 1.081 (G5)**; counting refused steps only, 1.095 / 1.102 / 1.149 / 1.004; jobs completed / abandoned 31 / 0, 16 / 8, 23 / 19, 8 / 3; execution gas per revealed update 11.1M / 8.1M / 16.0M / 4.6M |
 
-**What is short:** A3's numeric gate (the honest daemons' gas on refused steps at most 10% of their gas on applied
-steps), met in the in-process chain (EVIDENCE row 80), is met on the sequencer by two honest daemons at window 30
-(**0.0036**) but not at window 8 (**0.102**) or without deferral (**0.149**), and not with the adversary (**1.31** at
-window 8: it did 93 of 99 steps and the honest daemons paid 12 duplicate `Open`s; the adversary was not run against
-window 30). The cause, measured: the program refuses a duplicate `Open` only after step 1 has run
-(2.13–2.30M execution gas each, exit 207, in `job_open` after the instance's step 1), so each same-block race costs
-2.2M; one `Open` whose store changed in the same block reverted at the whole gas limit (4.8M). Mitigations, not built:
-check the job's existence before step 1 (a program change that moves the image id; a duplicate would then cost about
-the 19,050–26,464 cycles of `JobOpen`, *derived*), a window long against the block interval (G5), a lower gas limit for
-`Open`. Against a daemon that never defers, the honest daemons' ratio stays high whatever their window as long as a
-duplicate costs 2.2M, since that daemon does almost all the work.
+**What is short:** A3's gate (the honest daemons' gas on refused steps at most 10% of their gas on applied steps), met
+in the in-process chain (EVIDENCE row 80), is met on the sequencer at window 30 (**0.0036**), not at window 8
+(**0.102**) or 1 (**0.149**), and not with the adversary (**1.31**). Counting abandoned jobs as waste too, the honest
+daemons' waste is 0.081 (G5), 0.222 (G3), 0.721 (G4), 1.311 (G2). Two causes, measured: (1) a duplicate `Open` costs
+2.13–2.30M execution gas, because the program refuses it only in `job_open`, after the instance's step 1 has run;
+one `Open` whose store changed in the same block reverted at the whole gas limit (4.8M); (2) abandoned jobs, the
+larger waste in G4 and G5: a daemon that lost a race opens a job for the next revealed update on the store the
+winner's `Finish` is about to change. **Mitigations, not built:** (1) needs a program restructure: `open` runs at the
+instance actor, and LEZ v0.4 gives a handler only its receiver's `pre_state`, so `open` cannot see whether the job
+account exists; either the job actor becomes the transaction's root (it refuses a non-empty `pre_state`, then asks
+the instance to run step 1) or the instance records its open job (an `InstanceState` layout change: deployed
+instances would not decode). Either moves the attestation image id `0x816d1fef…` (a new `Message` variant may also
+move the bridge, consumer and holdings guests); the pinned consumers to update are `docs/image-ids.md`,
+`lez/testnet04/day1.sh`, `e2e/seqnet/drive.sh`, `e2e/seqnet/run.sh`, `e2e/crown/cloud/app.py` and
+`lez/harness/tests/residue_handoff.rs`, and existing instances must be re-bootstrapped. A refused duplicate would then
+cost its handler's decoding and the check, of the order of `JobOpen`'s 19,050–26,464 cycles (*estimated*, not
+measured after a restructure). It is planned with the RISC Zero 3.1.0 rebuild, which moves the image ids anyway. (2)
+needs no image change: an updater policy that does not open a job on a store another party's open job will change
+(join it or wait). A lower gas limit for `Open` would cap the same-block revert. Against a daemon that never defers,
+the honest daemons' ratio stays high whatever their window while a duplicate costs 2.2M.
 
 Proposed EVIDENCE row: | new | RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer: two honest `ferrata-updater`
-daemons with an adversary (window 8) and alone (windows 1, 8, 30), following recorded mainnet updates | every step
-applied once in every run; refused steps all in the same block as the step they raced; gas multiple 1.095 / 1.149 /
-1.102 / 1.004 (G2 adversary / G4 window 1 / G3 window 8 / G5 window 30); honest refused / applied 1.31 / 0.149 /
-0.102 / 0.0036 (A3's gate 0.10); honest-1's fee share 0.588 / 0.493 / 0.563 / 0.609; latency median 35 / 105 / 126
-/ 306 s, p90 45 / 106 / 176 / 576 s; each daemon 0.04–0.09 of a core, 57.3–57.8 MiB peak | the build box: LEZ v0.4.0-rc1 sequencer and Logos
-Blockchain node (LEZ's local configuration) | — | `GATE_* bash bench/perf/gate-sequencer.sh gN`; `python3 -I
-bench/perf/gate_report.py bench/perf/results/gate-g2 …` | `lez/results/perf-gate-sequencer.md` |
+daemons with an adversary (window 8) and alone (windows 1, 8, 30), following recorded mainnet updates replayed 80 to
+120 times faster than mainnet | every step applied once in every run; refused steps all in the same block as the step
+they raced; total / completed-job gas 1.095 / 1.721 / 1.222 / 1.081 (G2 adversary / G4 window 1 / G3 window 8 / G5
+window 30; refused steps only 1.095 / 1.149 / 1.102 / 1.004); jobs abandoned 0 / 19 / 8 / 3; A3's ratio honest
+refused / applied 1.31 / 0.149 / 0.102 / 0.0036 (gate 0.10); honest-1's fee share 0.588 / 0.493 / 0.563 / 0.609;
+latency median 35 / 105 / 126 / 306 s, p90 45 / 106 / 176 / 576 s; each daemon 0.043–0.092 of a core, 57.3–57.8 MiB
+peak | the build box: LEZ v0.4.0-rc1 sequencer and Logos Blockchain node (LEZ's local configuration) | — | `GATE_* bash
+bench/perf/gate-sequencer.sh gN`; `python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 …` |
+`lez/results/perf-gate-sequencer.md` |
 
-### R.10 — proposed **shown** (was in part)
+### R.10 — stays **in part** (the review: in part)
 
 | clause | shown by |
 |---|---|
-| submission timing must not systematically concentrate cost on whichever party reacts fastest; spread across the operators over many updates | honest-1's share of the honest daemons' fees on a sequencer: 0.563 (G3, 24 updates), 0.493 (G4), 0.609 (G5, 11 jobs), 0.588 (G2, with the adversary); in the in-process chain 0.39–0.47 over 58 updates (EVIDENCE row 80) |
-| the component defers by an interval it varies per instance | each (job, step) waits `H(key, job, step) mod W` rounds, `key` the daemon's own (`lez/updater/src/updater.rs`, `defer`); documented in the operator guide §3.4 |
-| still submitting promptly once the deferral elapses and no other party has acted | every update applied: latency from the update's appearance to its `Finish` final on Bedrock, median 126 s at window 8 (G3) |
-| document the deferral strategy and its effect on update latency | measured on the sequencer: without deferral (window 1) median 105 s, p90 106 s; window 8 (32 s) median 126 s, p90 176 s; window 30 (120 s) median 306 s, p90 576 s; the execution gas per revealed update falls with the window, 16.0M → 8.1M → 4.6M (duplicates avoided and intermediate updates skipped), the refused share 0.149 → 0.102 → 0.0036 |
+| submission timing must not systematically concentrate cost on whichever party reacts fastest; spread across the operators over many updates | honest-1's share of the honest daemons' fees on a sequencer: 0.563 (G3, 16 completed jobs), 0.493 (G4, 23), 0.609 (G5, 8), 0.588 (G2, with the adversary, 31); in the in-process chain 0.39–0.47 over 58 updates (EVIDENCE row 80) |
+| the component defers by an interval it varies per instance | each (job, step) waits `H(key, job, step) mod W` rounds, `key` the daemon's own (`lez/updater/src/updater.rs`, `defer`); documented in the operator guide §3.4 (final for that section) |
+| still submitting promptly once the deferral elapses and no other party has acted | every revealed finality update covered (the instance at least as fresh, final on Bedrock): G3 12 by its own job and 9 by a later update's, G4 20 / 1, G5 5 / 12, G2 26 / 0; median 126 s at window 8 (G3) |
+| document the deferral strategy and its effect on update latency | operator guide §3.4's measured table (window, rounds actually run, reveal step, latency, coverage, gas): window 1 (rounds 17.6 s) median 105 s, p90 106; window 8 (5.9–6.2 s) 126 / 176 s; window 30 (4.6–4.8 s) 306 / 576 s; execution gas per revealed update 16.0M → 8.1M → 4.6M; total / completed-job gas 1.721 → 1.222 → 1.081 |
 
-Same runs and EVIDENCE row as R.9.
+**What is short:** the runs hold 11 to 42 jobs (8 to 31 completed), under A3's gate of 100 updates
+(`docs/traceability.md` R.10); G5's 90-s reveal step (G3 and G4: 60 s) confounds the window comparison; windows in
+seconds are nominal (rounds ran 4.6–17.6 s). Next piece: one 100-update run per window, reveals at one step.
+Commits `8e0fd144`, `225e3b65`, `e1d7630e` (runs), `1b12fbc2` (summarizer), `9d6c58ef` (guide §3.4). Same EVIDENCE row
+as R.9.
 
 ## RFP-022
 
-### P.2 — proposed **shown** (was in part)
+### P.2 — proposed **shown** (was in part; the review's M2 fixed)
 
 | clause | shown by |
 |---|---|
-| the compute-unit cost of any additional LEZ-side verification beyond the per-claim path | the root import, measured: `lez/results/perf-state.md` §4a (this tree's bridge program, in-process harness): 230,731 execution gas covering 5 leaves, 236,224 covering 8, 236,202 for another vault's 8: flat in the deposits covered; on Sepolia's real state in the live round trip 432,182 (`e2e/runs/crown-live-3`) |
-| its amortised per-deposit cost at the recommended operating cadence | measured per newly covered deposit: 46,146 (5), 78,741 (3), 29,525 (8); at one import an hour (*derived* from the measured import): 432,182 per deposit at one deposit an hour, 43,218 at ten, 4,322 at a hundred (`docs/performance.md` RFP-022 §P.2) |
+| the compute-unit cost of any additional LEZ-side verification beyond the per-claim path | the root import: `lez/results/perf-state.md` §4a (this tree's bridge program, in-process harness): 230,731 execution gas covering 5 leaves, 236,224 covering 8, 236,202 for another vault's 8: flat in the deposits covered; on Sepolia's real state in the live round trip 432,182 (`e2e/runs/crown-live-3`); under a mainnet state root *estimated* at about 450k (P.1's account statement: 167,882 under the mainnet record, 148,948 under Sepolia's without its header) |
+| its amortised per-deposit cost at the recommended operating cadence | `docs/performance.md` RFP-022 §P.2 (*derived* from the measured figures): import only, 432,182 / N per deposit at N deposits an hour (432,182, 43,218, 4,322 at 1, 10, 100); with the hourly light-client update the cadence runs for the bridge, when the bridge is the instance's only consumer, (9,225,372 + 432,182) / N: **9.66M, 0.97M, 96.6k**; on the proven path (485,298 + 432,182) / N: 917,480, 91,748, 9,175, plus 224,063 storage gas an hour. Per newly covered deposit in the harness (*derived*, a division): 46,146 (5), 78,741 (3), 29,525 (8) |
 
-Command `bash bench/perf/state.sh`; commit `d14ad6c9`.
+Command `bash bench/perf/state.sh`; commits `d14ad6c9`, `9d6c58ef` (text).
 
-Proposed EVIDENCE row: | new | RFP-022 P.2: a root import's cost against the deposits it covers | 230,731 / 236,224
-/ 236,202 execution gas for imports newly covering 5 / 3 / 8 deposits (46,146 / 78,741 / 29,525 per deposit); a
-lagging import 236,224 | the build box, in-process harness | — | `bash bench/perf/state.sh` |
-`lez/results/perf-state.md` §4a |
+Proposed EVIDENCE row: | new | RFP-022 P.2: a root import's cost against the deposits it covers, and per deposit at
+the hourly cadence | 230,731 / 236,224 / 236,202 execution gas for imports newly covering 5 / 3 / 8 deposits; 432,182
+on Sepolia's real state; per deposit at the hourly cadence with the hourly update (bridge as the only consumer)
+9.66M / 0.97M / 96.6k at 1 / 10 / 100 deposits an hour, import only 432,182 / 43,218 / 4,322 (derived) | the build box,
+in-process harness; the live round trip of row 91 | — | `bash bench/perf/state.sh` | `lez/results/perf-state.md` §4a,
+`docs/performance.md` RFP-022 §P.2 |
 
 ### P.4 — stays **in part**
 
@@ -213,22 +242,23 @@ The private claim and burn of this tree's bridge program, padded, at a laptop's 
 (`lez/results/perf-p4-laptop.md`). Short: the real laptop (the owner's step, as RFP-021 P.4). EVIDENCE: RFP-021 P.4's
 row above.
 
-### P.5 — proposed **shown** (was in part)
+### P.5 — proposed **shown** (was in part; the review's M8 fixed)
 
 | clause | shown by |
 |---|---|
 | deposit latency (deposit to LEZ mint) | `lez/results/perf-latency-bridge.md` (`python3 -I bench/perf/latency_bridge.py e2e/runs/crown-live-3`): the live round trip on Sepolia with testnet parameters (EVIDENCE row 91), from the run's own records: deposit 1 to its private claim applied **32.9 min** as it ran (29.8 min without the runner's other work) |
-| redemption latency (burn to Ethereum release) | the same run: the private burn final on LEZ to the release in a Sepolia block **66.2 min** (W = 1 h, release delay 120 s) |
-| each broken down by source-chain finality wait, proof generation, any privacy-motivated delay, and on-chain verification | inbound: Ethereum finality 18.6 min (*derived*: two epochs after the checkpoint's slot), the update served and the capture 6.6 min, LEZ steps 39.6 s, the claim's proof 231.9 s, privacy delay 0 (the client's choice), verification 8.3 s; outbound: proof generation 167 s (checkpoint on an L40S, wrap), verification 37 s, W 3,607 s, release delay and transaction 156 s, privacy delay 0, LEZ's own finality before the checkpoint's input (devnet) |
+| redemption latency (burn to Ethereum release) | the same run: the private burn's proof started to the release in a Sepolia block **71.0 min** (66.3 from its sending, 66.2 from it final on LEZ; W = 1 h, release delay 120 s) |
+| each broken down by source-chain finality wait, proof generation, any privacy-motivated delay, and on-chain verification | inbound: Ethereum finality 18.6 min (*derived*: two epochs after the checkpoint's slot), the update served and the capture 6.6 min, LEZ steps 39.6 s, the claim's proof 231.9 s (the crown runner's CPU; 1,093 s at a laptop's shape), verification 8.3 s; outbound: the burn's proof 282.8 s, the source chain's finality (the burn sent to final on LEZ, a one-validator devnet) 7.0 s, the checkpoint and wrap 167 s, verification 37 s, W 3,607 s, release delay and transaction 156 s; privacy-motivated delay: none in this run, the client's default holds a claim 1–12 h after its deposit (inbound about 1.5–12.5 h, *derived*) and a release waits for the vault's release delay |
 
-Commit `aa2204ca`. Caveat: LEZ ran on a devnet (LEZ v0.4.0-rc1's sequencer, one validator; testnet 0.4 is not
-released); production parameters (W, the 24-h release delay) are stated, not run.
+Commits `aa2204ca`, `175dda9f`. Caveat: LEZ ran on a devnet (one validator; testnet 0.4 is not released); production
+parameters (W, the 24-h release delay) are stated, not run.
 
 Proposed EVIDENCE row: | new | RFP-022 P.5: deposit to mint and burn to release on Sepolia with testnet parameters,
 from the live round trip's records | inbound 32.9 min (finality 18.6, availability and capture 6.6, LEZ steps 0.7,
-proof 3.9, verification 0.1, the runner's other work 3.0); outbound 66.2 min (proofs 2.8, W 60.1, release 2.6, verification 0.6) | the live round
-trip of row 91 | real (its proofs) | `python3 -I bench/perf/latency_bridge.py e2e/runs/crown-live-3` |
-`lez/results/perf-latency-bridge.md` |
+proof 3.9, verification 0.1, the runner's other work 3.0); outbound 71.0 min from the burn's proving (burn proof 4.7,
+LEZ finality 0.1, checkpoint and wrap 2.8, W 60.1, release 2.6, verification 0.6); the client's default claim hold of
+1–12 h would make the inbound about 1.5–12.5 h (derived) | the live round trip of row 91 | real (its proofs) |
+`python3 -I bench/perf/latency_bridge.py e2e/runs/crown-live-3` | `lez/results/perf-latency-bridge.md` |
 
 ### P.6 — proposed **in part** (narrower gap than before)
 
@@ -237,7 +267,10 @@ a candidate's check and finalisation (`lez/results/perf-daemons.md`, `bash bench
 `bench/perf/results/daemons-anvil/`, commit `7e854f33`): `monitor` 0.53 CPU-seconds in 1,284 s, peak 14.0 MiB, 86 KB
 up / 254 KB down; the relayer 0.87 CPU-seconds, peak 20.3 MiB, 408 KB / 976 KB; the updater whose records the
 imports need (RFP-021 P.6); the provers (existing). **Short:** the importer's LEZ-side work (the relayer's root
-imports, a prototype) was not measured as a daemon.
+imports, a prototype) was not measured as a daemon (the relayer ran with `importRoots: false`); `ferrata_attestor`
+(rule (B): an attestor beside every sequencer) was not measured; `monitor`'s LEZ view came from a file
+(`--node file:`), so its traffic to a LEZ node is not measured. `bench/perf/results/daemons-anvil/anvil.log` prints
+anvil's built-in test mnemonic and keys (public, the same in every anvil).
 
 Proposed EVIDENCE row: | new | RFP-022 P.6: the Ethereum-side daemons' CPU, memory and bandwidth | `monitor` 0.53
 CPU-s in 1,284 s (0.0004 of a core), 14.0 MiB peak, 86,265 / 254,218 B; relayer 0.87 CPU-s (0.0007), 20.3 MiB,
@@ -245,13 +278,13 @@ CPU-s in 1,284 s (0.0004 of a core), 14.0 MiB peak, 86,265 / 254,218 B; relayer 
 bench/perf/daemons-anvil.sh OUT 10`; `python3 -I bench/perf/summarize_daemons.py bench/perf/results/daemons-anvil` |
 `lez/results/perf-daemons.md` |
 
-### P.7 — proposed **shown** (was in part)
+### P.7 — proposed **shown** (was in part; the review's L14 fixed)
 
 | clause | shown by |
 |---|---|
 | growth rate of all bridge state that accumulates with usage | LEZ: a nullifier 165 B and a burn record 273 B in the serialized state (+165.00 and +273.00 B per record measured to 100,000), a root 205 B per import (`perf-state.md` §4, §5); Ethereum: one vault slot per release, one per new depositor (plus at most 32 frontier slots ever), about ten per checkpoint (`lez/results/perf-state-ethereum.txt`, `vault/test/StateGrowth.t.sol`, Foundry's state-diff recording) |
 | on-chain storage cost | Ethereum: each new slot is paid inside the deposit and release gas of P.3 (20,000 + cold access on mainnet's rules; 97,920 state gas on Sepolia's Glamsterdam rules); LEZ: storage gas on transaction bytes, not on state |
-| projected at 1M and 10M operations | `lez/results/perf-projections.md`: nullifiers 165 MB / 1.65 GB, burn records 273 MB / 2.73 GB, Ethereum release slots 1,000,000 / 10,000,000 (64 / 640 MB of keys and values), deposit slots one per new depositor |
+| projected at 1M and 10M operations | `lez/results/perf-projections.md`: nullifiers 165 MB / 1.65 GB, burn records 273 MB / 2.73 GB, Ethereum release slots 1,000,000 / 10,000,000 (64 / 640 MB of keys and values), deposit slots one per new depositor; LEZ holder accounts at most one per claim, at most 162 MB / 1.62 GB (+162 B per new holder, `docs/performance.md` RFP-022 §P.7) |
 
 Commits `2993debd`, `7732e416`, `af7a0923`. EVIDENCE: RFP-021 P.7's row above, and | new | the vault's storage
 growth per operation (Foundry state diffs) | release 1 slot, a new depositor's first deposit 1 (28 for 25 with the
