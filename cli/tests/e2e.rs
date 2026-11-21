@@ -1157,9 +1157,12 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
             && out.text().contains("ClaimPrivately")
             && out.text().contains("privacy of these choices: Minimal")
             && out.text().contains(", passed")
-            && out.text().contains("not sent: a dry run"),
-        "the default claim's dry run"
+            && out.text().contains("not sent: a dry run")
+            && out.text().lines().any(|l| l.starts_with("  anonymity    1 deposit of 1 ETH")
+                && l.contains("its amount alone links this claim to it")),
+        "the default claim's dry run, with its anonymity set (F.8): the only deposit of 1 ETH under the root"
     );
+    println!("{}", out.text().lines().find(|l| l.starts_with("  anonymity")).unwrap_or_default());
     copts.send = true;
     let claimed_p = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
     println!("private claim: {:?}", claimed_p.sent);

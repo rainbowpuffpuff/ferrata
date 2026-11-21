@@ -389,6 +389,28 @@ pub async fn claim<L: Ledger>(
         hx(ctx.program.value())
     ));
     out.line(format!("  nullifier N  {}", hx(&plan.nullifier)));
+    // F.8: the deposits this claim cannot be told apart from on chain (the same token and amount under the root and
+    // the fee schedule range it names); a plaintext claim names its own.
+    let range = match &plan.call.message {
+        ferrata_lez_bridge_wire::BridgeMessage::Claim { range, .. }
+        | ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { range, .. } => *range,
+        _ => bail!("a claim plan holds a claim"),
+    };
+    let set = ferrata_wallet::claim::anonymity_set(&list.deposits, &d.token, &d.amount, plan.leaf_count, &range);
+    let among = format!(
+        "of {} under root(cid, {}) in leaves {}..{}",
+        show(amount),
+        plan.leaf_count,
+        range.from_leaf,
+        range.until_leaf.min(plan.leaf_count)
+    );
+    out.line(match (private, set) {
+        (false, _) => "  anonymity    1: a plaintext claim names its deposit".into(),
+        (true, 0 | 1) => format!(
+            "  anonymity    1 deposit {among}: the only one, so its amount alone links this claim to it; a later root with more deposits of the amount widens the set"
+        ),
+        (true, _) => format!("  anonymity    {set} deposits {among}: on chain this claim could be any one of them"),
+    });
     out.line(format!(
         "  cost         nothing more in {symbol}: the mint fee {} and the relay fee {} were paid with the deposit; the LEZ fee is paid {}",
         show(plan.mint_fee),
