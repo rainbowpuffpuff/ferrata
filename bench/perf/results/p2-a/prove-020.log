@@ -1,0 +1,46 @@
+[2m2026-11-21T15:13:37.019161Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::exec::executor[0m[2m:[0m execution time: 13.243019ms
+[2m2026-11-21T15:13:37.023218Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m number of segments: 1
+[2m2026-11-21T15:13:37.023231Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 262144 total cycles
+[2m2026-11-21T15:13:37.023237Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 168909 user cycles (64.43%)
+[2m2026-11-21T15:13:37.023243Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 72195 paging cycles (27.54%)
+[2m2026-11-21T15:13:37.023248Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 21040 reserved cycles (8.03%)
+[2m2026-11-21T15:13:37.023253Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m ecalls
+[2m2026-11-21T15:13:37.023258Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	265 Sha2 calls, 23894 cycles, (9.11%)
+[2m2026-11-21T15:13:37.023272Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	78 Read calls, 865 cycles, (0.33%)
+[2m2026-11-21T15:13:37.023277Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Terminate calls, 2 cycles, (0.00%)
+[2m2026-11-21T15:13:37.023282Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Write calls, 0 cycles, (0.00%)
+[2m2026-11-21T15:13:37.023286Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 User calls, 0 cycles, (0.00%)
+[2m2026-11-21T15:13:37.023291Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 Poseidon2 calls, 0 cycles, (0.00%)
+[2m2026-11-21T15:13:37.023295Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 BigInt calls, 0 cycles, (0.00%)
+[2m2026-11-21T15:13:37.023299Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m syscalls
+[2m2026-11-21T15:13:37.023304Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	30 Keccak calls
+[2m2026-11-21T15:13:37.023309Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	6 Read calls
+[2m2026-11-21T15:13:37.023313Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 Write calls
+[2m2026-11-21T15:13:37.023318Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 VerifyIntegrity2 calls
+[2m2026-11-21T15:13:37.023322Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	1 ProveKeccak calls
+[2m2026-11-21T15:13:37.023327Z[0m [32m INFO[0m [2mrisc0_zkvm::host::server::session[0m[2m:[0m 	0 VerifyIntegrity calls
+image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df (Attest)
+RESULT	20	168909	262144	1	67.18	488178	19.59	227717	232331	44.6
+	Command being timed: "/root/p2/bin/perf_prove --prove /root/p2/dump 20"
+	User time (seconds): 1219.47
+	System time (seconds): 7.98
+	Percent of CPU this job got: 1410%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:27.04
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 3639764
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 284007
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

@@ -1,0 +1,1 @@
+Modal containers, one per transition: 16 CPUs and 32768 MiB each (request = limit), at most 8 at a time; r0vm 3.0.5 (CPU); started 2026-11-21T15:02:09Z
