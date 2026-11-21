@@ -10,12 +10,15 @@ on the branch, as the brief asked: README row 50 and two dated sentences, EVIDEN
 
 | Row | Now | Proposed | Why |
 |---|---|---|---|
-| RFP-022 R.8 | shown | in part | The clause asks for mature, audited proof systems; the pinned versions (risc0-zkvm 3.0.5, verifier 3.0.0) are yanked and accept forged claims (GHSA-g6qg-9j8p-7j87). Shown again when phase 1 of the migration lands (3.1.0, verifier `0xe71e6620`), by the same tests on regenerated seals. |
-| RFP-022 Sec.2 | shown | in part | "Both sides reject invalid proofs": tampered honest seals are refused (rows 12, 42, 46, 75), but verifier 3.0.0 accepts a forged claim, and LEZ rc1/rc3 verify private transactions with risc0 3.0.5 (Logos to confirm). Ethereum side shown again after phase 1; LEZ side waits on Logos. |
-| RFP-022 Sec.3 | shown | in part | A forged release journal can name any recipient and fee under verifier 3.0.0 (rehearsed on a fork, new row below). The binding is right; the verifier under it is not. Shown again after phase 1. |
+| RFP-022 R.8 | shown | in part | The clause asks for mature, audited proof systems, not new ZK primitives. The integration is RISC Zero's code, unmodified (rows 12, 19, 41, 91), but the versions pinned today accept forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2): risc0-zkvm 3.0.5 is yanked, and RISC Zero has stopped its own deployments of verifier 3.0.0. Ethereum side shown again after phase 1 of the migration (risc0-zkvm 3.1.0, verifier 3.1.0 `0xe71e6620`), by the same tests on regenerated seals; LEZ side (private transactions, and the `claim` and `gasdrop` receipts, which stay on 3.0.5 until then) after phase 2, which waits on a LEZ tag on risc0 3.1 (Logos). |
+| RFP-022 Sec.2 | shown | in part | "Both sides reject invalid proofs": tampered honest seals are refused (rows 12, 42, 46, 75), but verifier 3.0.0 accepts a forged claim, and LEZ rc1/rc3 verify private transactions with risc0 3.0.5 (Logos to confirm). Ethereum side shown again after phase 1; LEZ side after phase 2 (waits on Logos). |
+| RFP-022 Sec.3 | shown | in part | A forged release journal can name any recipient and fee under verifier 3.0.0 (rehearsed on a fork, new row below). The binding is right; the verifier under it is not. Ethereum side shown again after phase 1; LEZ side (the redirected claim refused on LEZ rests on LEZ's risc0 3.0.5) after phase 2 (waits on Logos). |
+| RFP-022 Sec.6 | in part | in part (reason extended; evidence adds 154) | Add: "under verifier 3.0.0 a release without a valid burn succeeds: row 154's fork, with the forgery stood in for." |
 | RFP-022 Sec.8 | in part | in part (reason extended) | Add: the four Sepolia vaults cannot change their verifier; the migration is retirement and new vaults (`docs/design/risc0-3.1-migration.md` §3). |
 | RFP-022 Sec.9 | in part | in part (reason extended; evidence adds 154) | Add: "21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; stop owners renounced or keyless); only the admin's caps contain a forgery there (154)." |
 | RFP-021 rows on the private path (those citing EVIDENCE rows 5, 73, 123, 152) | as they are | no change proposed | Their clauses are about the program's checks and privacy, which hold; the soundness of LEZ's privacy circuit at rc1/rc3 is Logos's. Flag for review if a clause is about proving. |
+
+Applied, these move RFP-022's hard rows from 27 shown and 37 in part to 24 and 40 (R.8, Sec.2 and Sec.3; the counts of `docs/requirements-status.md` at `5cf1e8e7`).
 
 ## New EVIDENCE row (number: the next free one, 154 at `5cf1e8e7`)
 
