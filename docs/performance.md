@@ -20,6 +20,8 @@ evidence with its commands.
 | **laptop CPU** | AMD Ryzen 9 7940HS, 8 cores, 16 threads, no GPU; shared with other jobs, so wall times state the load | [`docs/design/bridge.md`](design/bridge.md) §18 |
 | **cloud GPU** | one NVIDIA L4 (24 GB) on Modal, 4 CPU cores, 32 GiB; r0vm 3.0.5 built with CUDA | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | **simulation** | the Python model of the v0.4 sequencer and Logos Blockchain code | `docs/design/finality-rule/RESULTS.md` |
+| **cloud CPU container** | a Modal container held to the CPUs and memory named (request = limit; gVisor; mostly AMD Zen 3 servers, the host named per run), r0vm 3.0.5 on CPU; "8 CPUs, 16 GiB" is the mid-range laptop's shape | [`lez/results/perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md); [`lez/results/perf-proofs.md`](../lez/results/perf-proofs.md) |
+| **build box, zone** | the Modal build box (16 CPUs of quota, 64 GiB) running a LEZ v0.4.0-rc1 zone we started (sequencer and Logos Blockchain node, LEZ's local configuration) or a local anvil | [`lez/results/perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); [`lez/results/perf-daemons.md`](../lez/results/perf-daemons.md) |
 
 LEZ's limits on v0.4: a block, and so a transaction, may use 10M execution cycles (`MAX_GAS_EXEC`); the
 base fee stops rising at 5M (`TARGET_GAS_EXEC`); a private transaction costs a flat 409,764 execution
