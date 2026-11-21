@@ -36,13 +36,16 @@ attest-monitor watch --state lez:http://127.0.0.1:3040 --program 0x... --instanc
 - `--provider NAME=URL`: a beacon node's REST API: `/eth/v1/beacon/genesis`, `/eth/v1/beacon/headers/{slot}`,
   `/eth/v1/beacon/headers/finalized`. `--views FILE` instead: the providers' answers as JSON (offline).
 - Alerts go, one JSON line each, to standard error, `--alert-log` and `--alert-cmd` (`sh -c`, the JSON on standard
-  input, at or above `--alert-cmd-level`), as the watchers' `monitor`'s do. Nothing else is sent anywhere.
+  input, at or above `--alert-cmd-level`), as the watchers' `monitor`'s do. Nothing else is sent anywhere. In `watch`,
+  an alert the command did not take (it exited non-zero) is emitted again at the next poll, not only after `--repeat`;
+  and an outage is not a recovery: a poll that cannot read the instance, has too few providers for a verdict, or has
+  no provider's finalized slot holds what was raised (no `recovered`) until a poll can judge it.
 - `--state-file` keeps every finalized header the instance has shown with the providers' verdict, across restarts;
   `--status-file` is the latest assessment.
 
 ## Tested
 
-`cargo test --locked` (`tests/monitor.rs`): 10 tests, all pass (Modal build box, 21 November 2026). They run the binary
+`cargo test --locked` (`tests/monitor.rs`): 11 tests, all pass (Modal build box, 21 November 2026). They run the binary
 against providers on loopback that serve what Sepolia's public providers served (publicnode's header at slot
 11,549,664 from the attestation fixture, Lodestar's genesis from `verify_checkpoint`'s recorded run, publicnode's root at
 11,608,192 from the lab's session of 18 November), on the instance states the R.7 test wrote with LEZ's state machine
@@ -59,6 +62,7 @@ against providers on loopback that serve what Sepolia's public providers served 
 | `a_provider_behind_the_instance_is_not_counted` | 1 honest provider + 2 finalized 32 slots before the instance's header (404 at its slot) + 1 without a finalized answer: `provider-behind` ×2, `provider-unavailable`, `unconfirmed`, no divergence (counted, the two would have raised a false critical); the two once finalized past the slot, still no block there: `diverged` |
 | `unreachable_and_wrong_chain_providers_are_not_counted` | a closed port and an HTTP 503: `provider-unavailable` ×2; mainnet's genesis: `provider-wrong-chain`; one honest left: `instance-unconfirmed` |
 | `reads_the_instance_from_a_lez_sequencers_get_account` | `lez:`: one `getAccount`, the account built with LEZ's own types as the sequencer serves it; an instance the account does not hold: exit 1 |
+| `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook` | `watch` on the forged header with a freeze tool that fails until it is "up": `instance-diverged` emitted again at each poll while the tool fails, taken once the tool is up; then the instance unreadable (`instance-unreadable`) and every provider down (`provider-unavailable` ×3): the divergence held, no `recovered`, not emitted again; providers back and the honest header: `recovered` |
 | `the_daemon_alerts_on_change_recovers_and_stops_on_sigterm` | `watch`: `instance-stalled` and `ws-half` once each (not repeated within `--repeat`), `recovered` for both when the instance resumes, the status and state files, SIGTERM: `stopped`, exit 0 |
 
 Not done: a run against a running LEZ sequencer and public beacon providers (the `lez:` reader is tested against

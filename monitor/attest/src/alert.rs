@@ -61,8 +61,9 @@ pub struct Sink {
 
 impl Sink {
     /// Emits `{ts, level, kind, message, ...fields}`. A failure to deliver is reported on standard error and never
-    /// stops the monitor.
-    pub fn emit(&self, alert: &Alert) {
+    /// stops the monitor. Returns false when the alert command was due and did not take the alert (it failed to start,
+    /// or exited non-zero), so that the daemon can emit the alert again at its next poll.
+    pub fn emit(&self, alert: &Alert) -> bool {
         let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or_default();
         let mut line = serde_json::json!({ "ts": ts });
         if let (Some(obj), Ok(Value::Object(a))) = (line.as_object_mut(), serde_json::to_value(alert)) {
@@ -80,20 +81,30 @@ impl Sink {
                 eprintln!("attest-monitor: alert log {}: {e}", path.display());
             }
         }
+        let mut delivered = true;
         if let Some(cmd) = &self.cmd {
             if alert.level >= self.cmd_level.unwrap_or(Level::Warn) {
                 let sent = Command::new("sh").arg("-c").arg(cmd).stdin(Stdio::piped()).spawn().and_then(|mut child| {
                     if let Some(mut stdin) = child.stdin.take() {
-                        stdin.write_all(text.as_bytes())?;
+                        // A command that exits without reading its input closes the pipe: its exit status decides,
+                        // and the child is always waited for.
+                        let _ = stdin.write_all(text.as_bytes());
                     }
                     child.wait()
                 });
                 match sent {
                     Ok(s) if s.success() => {}
-                    Ok(s) => eprintln!("attest-monitor: alert command exited with {s}"),
-                    Err(e) => eprintln!("attest-monitor: alert command: {e}"),
+                    Ok(s) => {
+                        eprintln!("attest-monitor: alert command exited with {s}");
+                        delivered = false;
+                    }
+                    Err(e) => {
+                        eprintln!("attest-monitor: alert command: {e}");
+                        delivered = false;
+                    }
                 }
             }
         }
+        delivered
     }
 }

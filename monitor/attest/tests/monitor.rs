@@ -592,3 +592,75 @@ fn the_daemon_alerts_on_change_recovers_and_stops_on_sigterm() {
     assert_eq!(seen[s1.to_string()]["divergence"], "confirmed");
     println!("daemon: {} alerts; seen {}", lines.len(), seen);
 }
+
+#[test]
+fn the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook() {
+    let f = fx();
+    let d = scratch("outage");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let ps: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot + 64)).collect();
+    let current = d.join("current.hex");
+    let forged_file = write_state(&d, "forged.hex", &forged(&state_of(&f.stalled)));
+    let healthy = write_state(&d, "healthy.hex", &state_of(&f.stalled));
+    std::fs::copy(&forged_file, &current).unwrap();
+    let (log, freeze, up) = (d.join("alerts.jsonl"), d.join("freeze-requests.jsonl"), d.join("freeze-tool-up"));
+    // The consumer's freeze tool fails until `up` exists (a pager or a signer's service that is down).
+    let tool = format!("test -e {} && cat >> {}", up.display(), freeze.display());
+    let mut cmd = Command::new(bin());
+    cmd.arg("watch")
+        .args(["--state", &format!("cmd:cat {}", current.display())])
+        .args(["--now", &(secs(&f.stalled["time_ms"]) + 60).to_string(), "--interval", "1", "--repeat", "3600", "--timeout", "3"])
+        .args(["--alert-log", &log.display().to_string(), "--alert-cmd", &tool, "--alert-cmd-level", "critical"]);
+    for (i, p) in ps.iter().enumerate() {
+        cmd.args(["--provider", &format!("p{i}={}", p.url)]);
+    }
+    let mut child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+    let lines = || -> Vec<Value> {
+        std::fs::read_to_string(&log).unwrap_or_default().lines().filter_map(|l| serde_json::from_str(l).ok()).collect()
+    };
+    let wait_for = |what: &str, pred: &dyn Fn(&[Value]) -> bool| -> Vec<Value> {
+        for _ in 0..150 {
+            let l = lines();
+            if pred(&l) {
+                return l;
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+        panic!("timed out waiting for {what}: {}", std::fs::read_to_string(&log).unwrap_or_default());
+    };
+    let count = |l: &[Value], kind: &str| l.iter().filter(|x| x["kind"] == kind).count();
+    let recovered = |l: &[Value], kind: &str| l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == kind);
+    let freeze_lines = || std::fs::read_to_string(&freeze).map(|t| t.lines().count()).unwrap_or(0);
+    // 1. The divergence is raised; the freeze tool fails, so the alert is emitted again at the next polls, not only
+    //    after --repeat (an hour); once the tool is up it takes the alert, once.
+    wait_for("the divergence emitted twice", &|l| count(l, "instance-diverged") >= 2);
+    assert_eq!(freeze_lines(), 0);
+    std::fs::write(&up, "").unwrap();
+    let l = wait_for("the freeze tool to take it", &|_| freeze_lines() == 1);
+    let emitted = count(&l, "instance-diverged");
+    // 2. The instance cannot be read for a while: `instance-unreadable`, and the divergence is held.
+    std::fs::write(&current, "not a state\n").unwrap();
+    wait_for("instance-unreadable", &|l| count(l, "instance-unreadable") >= 1);
+    std::thread::sleep(Duration::from_millis(2500));
+    // 3. Readable again, every provider down: no verdict, the divergence still held.
+    for p in &ps {
+        p.set("/eth/v1/beacon/genesis", 503, "{}".into());
+    }
+    std::fs::copy(&forged_file, &current).unwrap();
+    wait_for("the providers down", &|l| count(l, "provider-unavailable") >= 3 && recovered(l, "instance-unreadable"));
+    std::thread::sleep(Duration::from_millis(2500));
+    let l = lines();
+    assert!(!recovered(&l, "instance-diverged"), "an outage is not a recovery: {l:?}");
+    assert_eq!(count(&l, "instance-diverged"), emitted, "held, and not emitted again within --repeat once delivered");
+    assert_eq!(freeze_lines(), 1, "the freeze tool ran once after it came up");
+    // 4. Providers back and the forged header replaced by the honest one: now it has cleared.
+    for p in &ps {
+        p.set("/eth/v1/beacon/genesis", 200, g.clone());
+    }
+    std::fs::copy(&healthy, &current).unwrap();
+    let l = wait_for("the divergence recovered", &|l| recovered(l, "instance-diverged"));
+    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
+    assert!(child.wait().unwrap().success());
+    println!("outage: {} alerts, instance-diverged emitted {emitted} times (failed tool retried), freeze tool ran once", l.len());
+}

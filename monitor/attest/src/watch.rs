@@ -1,9 +1,12 @@
 //! The daemon: poll, assess, alert on changes, keep a status file and the headers seen, stop cleanly.
 //!
-//! An alert is emitted when it is first raised, again every `repeat_s` while it holds, and a `recovered` alert
-//! (info) when it clears. Each finalized header the instance shows is remembered with the verdict the providers gave
-//! it (`state_file`), so a header seen once and replaced later still has its verdict on record. The loop ends after
-//! `max_polls`, or on the stop flag (SIGTERM or SIGINT in the binary) after the poll in hand.
+//! An alert is emitted when it is first raised, again every `repeat_s` while it holds, again at the next poll while
+//! the alert command fails to take it, and a `recovered` alert (info) when a poll that can judge it no longer raises
+//! it. An outage is not a recovery: a poll that cannot read the instance judges nothing, one with too few providers
+//! for a verdict judges no divergence, and one without any provider's finalized slot judges no stall, so what was
+//! raised is held through it. Each finalized header the instance shows is remembered with the verdict the providers
+//! gave it (`state_file`), so a header seen once and replaced later still has its verdict on record. The loop ends
+//! after `max_polls`, or on the stop flag (SIGTERM or SIGINT in the binary) after the poll in hand.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -81,6 +84,28 @@ pub fn poll(state: &StateSource, target: Option<&Target>, providers: &[Provider]
     assess(&s, &views, now_s, policy)
 }
 
+/// An alert raised and not cleared: the latest of it, when it was last emitted, and whether the alert command took it.
+struct Raised {
+    alert: Alert,
+    last: u64,
+    delivered: bool,
+}
+
+/// The alert kinds a poll could not judge, whose raised alerts it holds.
+enum Unjudged {
+    All,
+    Kinds(Vec<&'static str>),
+}
+
+impl Unjudged {
+    fn holds(&self, kind: &str) -> bool {
+        match self {
+            Unjudged::All => true,
+            Unjudged::Kinds(k) => k.contains(&kind),
+        }
+    }
+}
+
 fn key(a: &Alert) -> String {
     let who = a.fields.get("provider").and_then(|v| v.as_str()).unwrap_or("");
     format!("{}:{who}", a.kind)
@@ -100,7 +125,7 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
             summary.seen = serde_json::from_str(&text).unwrap_or_default();
         }
     }
-    let mut active: BTreeMap<String, (Alert, u64)> = BTreeMap::new();
+    let mut active: BTreeMap<String, Raised> = BTreeMap::new();
     let start = Alert::new(Level::Info, "started", "the attestation monitor started")
         .with("providers", w.providers.iter().map(|p| p.name.clone()).collect::<Vec<_>>())
         .with("interval_s", w.interval_s);
@@ -108,7 +133,7 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
     summary.emitted.push(start);
     loop {
         let now = w.clock.now();
-        let alerts = match poll(&w.state, w.target.as_ref(), &w.providers, &w.policy, now, w.timeout_s) {
+        let (alerts, unjudged) = match poll(&w.state, w.target.as_ref(), &w.providers, &w.policy, now, w.timeout_s) {
             Ok(a) => {
                 let entry = summary.seen.entry(a.finalized_slot).or_insert(Seen {
                     root: a.finalized_root.clone(),
@@ -119,30 +144,48 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
                 if entry.divergence != a.divergence && a.divergence != Divergence::Unconfirmed {
                     entry.divergence = a.divergence;
                 }
+                let mut unjudged = Vec::new();
+                if a.divergence == Divergence::Unconfirmed {
+                    unjudged.extend(["instance-diverged", "providers-disagree"]);
+                }
+                if a.lag_s.is_none() {
+                    unjudged.push("instance-stalled");
+                }
                 let alerts = a.alerts.clone();
                 if let Some(p) = &w.status_file {
                     write_atomic(p, &serde_json::to_string_pretty(&a).unwrap_or_default());
                 }
                 summary.last = Some(a);
-                alerts
+                (alerts, Unjudged::Kinds(unjudged))
             }
-            Err(e) => vec![Alert::new(Level::Warn, "instance-unreadable", "the instance's state could not be read").with("error", format!("{e:#}"))],
+            Err(e) => (
+                vec![Alert::new(Level::Warn, "instance-unreadable", "the instance's state could not be read").with("error", format!("{e:#}"))],
+                Unjudged::All,
+            ),
         };
-        let current: BTreeMap<String, Alert> = alerts.into_iter().map(|a| (key(&a), a)).collect();
+        let mut current: BTreeMap<String, Alert> = alerts.into_iter().map(|a| (key(&a), a)).collect();
+        // Held: raised before, and not judged by this poll.
+        for (k, r) in &active {
+            if !current.contains_key(k) && unjudged.holds(&r.alert.kind) {
+                current.insert(k.clone(), r.alert.clone());
+            }
+        }
         for (k, a) in &current {
             let due = match active.get(k) {
                 None => true,
-                Some((_, last)) => now.saturating_sub(*last) >= w.repeat_s,
+                Some(r) => !r.delivered || now.saturating_sub(r.last) >= w.repeat_s,
             };
             if due {
-                w.sink.emit(a);
+                let delivered = w.sink.emit(a);
                 summary.emitted.push(a.clone());
-                active.insert(k.clone(), (a.clone(), now));
+                active.insert(k.clone(), Raised { alert: a.clone(), last: now, delivered });
+            } else if let Some(r) = active.get_mut(k) {
+                r.alert = a.clone();
             }
         }
         let cleared: Vec<String> = active.keys().filter(|k| !current.contains_key(*k)).cloned().collect();
         for k in cleared {
-            let (was, _) = active.remove(&k).unwrap();
+            let was = active.remove(&k).unwrap().alert;
             let a = Alert::new(Level::Info, "recovered", "an alert cleared").with("cleared", &was.kind).with("was", &was);
             w.sink.emit(&a);
             summary.emitted.push(a);
