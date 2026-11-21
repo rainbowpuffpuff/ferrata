@@ -28,12 +28,12 @@ As it ran: **32.9 min** from the deposit to the mint. Broken down as RFP-022 P.5
 | the finality update served and read, the capture's proofs | 396.0 | 20% | measured (the runner's first attempt was not yet covered and waited one update, about 6.4 min) |
 | LEZ: the light-client update (3 transactions) | 29.6 | 2% | measured, each send to final on Bedrock |
 | LEZ: the root import | 10.0 | 1% | measured |
-| proof generation: the private claim | 231.9 | 12% | measured, LEZ's wallet on the runner's CPU, a cloud container (laptop-sized: lez/results/perf-p4-laptop.md) |
-| privacy-motivated delay | 0.0 | 0% | none in this run: the client's choice (the CLI and the mini-app propose a random delay) |
+| proof generation: the private claim | 231.9 | 12% | measured, LEZ's wallet on the crown runner's CPU (a cloud container of 16 to 32 CPUs, not a laptop: at a laptop's shape the claim takes 1,093 s, lez/results/perf-p4-laptop.md) |
+| privacy-motivated delay | 0.0 | 0% | none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h after its deposit (docs/guides/user-guide.md, "Choice" table), which would add that much |
 | on-chain verification: the claim, send to final | 8.3 | 0% | measured; the claim is verified inside it (P.1) |
 | the runner's other work in session B | 180.7 | 9% | zone start and wallet sync, deposit 0's update, import and claim, done first |
 
-Without the runner's other work (an operator already following the chain, the deposit's root imported at once): **29.8 min**, of which Ethereum's finality and the update's availability 25.2 min. Deposit 0 (public kind) as it ran: included 14:24:02Z, minted 15:07:02Z, 43.0 min (it waited for deposit 1's capture, which the runner did first).
+Without the runner's other work (an operator already following the chain, the deposit's root imported at once): **29.8 min**, of which Ethereum's finality and the update's availability 25.2 min. Deposit 0 (public kind) as it ran: included 14:24:02Z, minted 15:07:02Z, 43.0 min (it waited for deposit 1's capture, which the runner did first). With the client's default hold of 1 to 12 h after the deposit, the inbound is about 92.9 min to 752.9 min (*derived*).
 
 ## Outbound: the private burn to its release on Ethereum
 
@@ -48,15 +48,17 @@ Without the runner's other work (an operator already following the chain, the de
 | finalize | 16:20:25Z | 15 | 63.5 min | `finalizeAttested` included |
 | release0 | 16:23:01Z | 156 | 66.2 min | the release delay (120 s), then `release` included (the release proof verified on chain) |
 
-The burn: `bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)`, proven in 282.8 s and final on LEZ in 7.0 s (block 90, the last of session B, 15:16:52Z). From the burn final on LEZ to the release in an Ethereum block: **66.2 min**. The user's release proof and its wrap (137 s, ended 15:22:19Z) ran during W, off the critical path. Broken down:
+The burn: `bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)`, proven in 282.8 s and final on LEZ in 7.0 s (block 90, the last of session B, 15:16:52Z). From the start of the burn's proof to the release in an Ethereum block: **71.0 min**; from its sending 66.3 min; from it final on LEZ 66.2 min. The user's release proof and its wrap (137 s, ended 15:22:19Z) ran during W, off the critical path. Broken down:
 
 | component | s | share |
 |---|---:|---:|
+| proof generation: the private burn (the user's, LEZ's wallet on the runner's CPU) | 283 | 7% |
+| source-chain finality wait: the burn sent to final on LEZ (Bedrock; a one-validator devnet) | 7 | 0% |
 | proof generation (checkpoint and wrap) | 167 | 4% |
 | on-chain verification (`submitCandidate`, `finalizeAttested`) | 37 | 1% |
-| the vault's wait W (rule B; testnet value 1 h), `submitCandidate` to the wait's end | 3607 | 91% |
+| the vault's wait W (rule B; testnet value 1 h), `submitCandidate` to the wait's end | 3607 | 85% |
 | release delay and the release transaction | 156 | 4% |
-| privacy-motivated delay | 0 | 0% |
+| privacy-motivated delay (none in this run; the client's default waits for the vault's release delay) | 0 | 0% |
 | the checkpoint's input and execution, the runner | 2 | 0% |
 
 The source chain here is LEZ: the burn's block was final on Bedrock before the checkpoint's input was cut (the devnet's own finality; LEZ testnet 0.4's is not measured). With production parameters the vault's wait and the release delay dominate: W is 1 h in rule (B) and 3 h 16 min to 4 h 31 min in rule (A) at the default floor, and the release delay at least 24 h outside testnets (docs/design/bridge.md §11.6, §13).

@@ -109,8 +109,8 @@ def main():
         ("the finality update served and read, the capture's proofs", c2_end - fin_t, "measured (the runner's first attempt was not yet covered and waited one update, about 6.4 min)"),
         ("LEZ: the light-client update (3 transactions)", lez_upd, "measured, each send to final on Bedrock"),
         ("LEZ: the root import", imp2["final_s"], "measured"),
-        ("proof generation: the private claim", claim1["proof_s"], "measured, LEZ's wallet on the runner's CPU, a cloud container (laptop-sized: lez/results/perf-p4-laptop.md)"),
-        ("privacy-motivated delay", 0.0, "none in this run: the client's choice (the CLI and the mini-app propose a random delay)"),
+        ("proof generation: the private claim", claim1["proof_s"], "measured, LEZ's wallet on the crown runner's CPU (a cloud container of 16 to 32 CPUs, not a laptop: at a laptop's shape the claim takes 1,093 s, lez/results/perf-p4-laptop.md)"),
+        ("privacy-motivated delay", 0.0, "none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h after its deposit (docs/guides/user-guide.md, \"Choice\" table), which would add that much"),
         ("on-chain verification: the claim, send to final", claim1["final_s"], "measured; the claim is verified inside it (P.1)"),
         ("the runner's other work in session B", other_b, "zone start and wallet sync, deposit 0's update, import and claim, done first"),
     ]
@@ -120,7 +120,9 @@ def main():
     print(f"\nWithout the runner's other work (an operator already following the chain, the deposit's root imported at once):"
           f" **{mins(steady)}**, of which Ethereum's finality and the update's availability {mins(c2_end - d1_end)}. "
           f"Deposit 0 (public kind) as it ran: included {iso(stages['deposit0'][0])}, minted {iso(claim0['at'])}, "
-          f"{mins(claim0['at'] - stages['deposit0'][0])} (it waited for deposit 1's capture, which the runner did first).\n")
+          f"{mins(claim0['at'] - stages['deposit0'][0])} (it waited for deposit 1's capture, which the runner did first). "
+          f"With the client's default hold of 1 to 12 h after the deposit, the inbound is about {mins(total_in + 3600)} to "
+          f"{mins(total_in + 12 * 3600)} (*derived*).\n")
 
     print("## Outbound: the private burn to its release on Ethereum\n")
     order = ["checkpoint-input", "checkpoint-exec", "checkpoint-prove", "checkpoint-wrap", "submit", "wait", "finalize", "release0"]
@@ -137,26 +139,32 @@ def main():
     print("| stage | ended | s | from the burn | what |")
     print("|---|---|---:|---:|---|")
     t_burn = b_end
+    t_sent = b_end - burn["final_s"]
+    t_proving = t_sent - burn["proof_s"]
     for s in order:
         end, dur = stages[s]
         print(f"| {s} | {iso(end)} | {dur:.0f} | {mins(end - t_burn)} | {what[s]} |")
     rp = stages["releases-prove"]
-    total_out = stages["release0"][0] - t_burn
+    total_out = stages["release0"][0] - t_proving
     print(f"\nThe burn: `{burn['label']}`, proven in {burn['proof_s']:.1f} s and final on LEZ in {burn['final_s']:.1f} s "
-          f"(block {burn['block']}, the last of session B, {iso(t_burn)}). From the burn final on LEZ to the release in an "
-          f"Ethereum block: **{mins(total_out)}**. The user's release proof and its wrap ({rp[1]:.0f} s, ended {iso(rp[0])}) ran "
-          f"during W, off the critical path. Broken down:\n")
+          f"(block {burn['block']}, the last of session B, {iso(t_burn)}). From the start of the burn's proof to the release "
+          f"in an Ethereum block: **{mins(total_out)}**; from its sending {mins(stages['release0'][0] - t_sent)}; from it final "
+          f"on LEZ {mins(stages['release0'][0] - t_burn)}. The user's release proof and its wrap ({rp[1]:.0f} s, ended "
+          f"{iso(rp[0])}) ran during W, off the critical path. Broken down:\n")
     prove = stages["checkpoint-prove"][1] + stages["checkpoint-wrap"][1]
     verify = stages["submit"][1] + stages["finalize"][1]
     # W runs from submitCandidate's block; the runner proved the releases (stage releases-prove) inside it.
     w = stages["wait"][0] - stages["submit"][0]
     rel = stages["release0"][1]
-    rest = total_out - prove - verify - w - rel
+    rest = total_out - burn["proof_s"] - burn["final_s"] - prove - verify - w - rel
     print("| component | s | share |")
     print("|---|---:|---:|")
-    for name, s in [("proof generation (checkpoint and wrap)", prove), ("on-chain verification (`submitCandidate`, `finalizeAttested`)", verify),
+    for name, s in [("proof generation: the private burn (the user's, LEZ's wallet on the runner's CPU)", burn["proof_s"]),
+                    ("source-chain finality wait: the burn sent to final on LEZ (Bedrock; a one-validator devnet)", burn["final_s"]),
+                    ("proof generation (checkpoint and wrap)", prove), ("on-chain verification (`submitCandidate`, `finalizeAttested`)", verify),
                     ("the vault's wait W (rule B; testnet value 1 h), `submitCandidate` to the wait's end", w), ("release delay and the release transaction", rel),
-                    ("privacy-motivated delay", 0.0), ("the checkpoint's input and execution, the runner", rest)]:
+                    ("privacy-motivated delay (none in this run; the client's default waits for the vault's release delay)", 0.0),
+                    ("the checkpoint's input and execution, the runner", rest)]:
         print(f"| {name} | {s:.0f} | {s / total_out:.0%} |")
     print("\nThe source chain here is LEZ: the burn's block was final on Bedrock before the checkpoint's input was cut "
           "(the devnet's own finality; LEZ testnet 0.4's is not measured). With production parameters the vault's wait and "
