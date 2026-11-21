@@ -145,9 +145,48 @@ and storage gas at every size, asserted by `perf_state` (not only printed); in o
 updates stayed within 1.2% of their median as records accumulated (`perf-tracking.md`). Command `bash
 bench/perf/state.sh`; commits `2993debd`, `d14ad6c9`. EVIDENCE: the P.7 row above.
 
-### R.9 — PENDING (gates G3–G5)
+### R.9 — stays **in part** (narrower: run on a sequencer)
 
-### R.10 — PENDING (gates G3–G5)
+Gates on a running LEZ v0.4.0-rc1 sequencer (`lez/results/perf-gate-sequencer.md`, `bash bench/perf/gate-sequencer.sh`,
+records `bench/perf/results/gate-g*/`): G2 two honest daemons (window 8 rounds of 4 s) and an adversary that never
+defers and polls twice as often, 30 recorded mainnet updates; G3 the two honest daemons alone, window 8; G4 the same
+without deferral (window 1); G5 window 30 (G5_RESULT).
+
+| clause | shown by |
+|---|---|
+| checks whether an update is still needed immediately before submitting | every refused step of every run landed in the same block as the step it raced (G2 26 of 26, G3 9 of 10, G4 35 of 35; the one exception, G3, an `Open` whose store another daemon's `Finish` changed in that same block): no daemon sent a step after another's was final |
+| does not submit one another party has already applied | every step applied exactly once in every run (G2 99 steps, G3 60, G4 113) |
+| several instances must not multiply the gas spent on an update beyond what contention makes unavoidable | the refused gas is all same-block contention (above); the updates cost 1.095 (G2), 1.102 (G3), 1.149 (G4) times their applied gas; execution gas per revealed update 11.1M (G2), 8.1M (G3), 16.0M (G4: without deferral the daemons also open jobs for updates a deferring daemon skips) |
+
+**What is short:** A3's numeric gate (the honest daemons' gas on refused steps at most 10% of their gas on applied
+steps), met in the in-process chain (EVIDENCE row 80), is not met on the sequencer: **1.31** with the adversary (it
+did 93 of 99 steps; the honest daemons paid 12 duplicate `Open`s), **0.102** with two honest daemons at window 8,
+**0.149** without deferral. The cause, measured: the program refuses a duplicate `Open` only after step 1 has run
+(2.13–2.30M execution gas each, exit 207, in `job_open` after the instance's step 1), so each same-block race costs
+2.2M; one `Open` whose store changed in the same block reverted at the whole gas limit (4.8M). Mitigations, not built:
+check the job's existence before step 1 (a program change that moves the image id; a duplicate would then cost about
+the 19,050–26,464 cycles of `JobOpen`, *derived*), a window long against the block interval (G5), a lower gas limit for
+`Open`.
+
+Proposed EVIDENCE row: | new | RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer: two honest `ferrata-updater`
+daemons with and without an adversary, and without deferral, following recorded mainnet updates | every step applied
+once in every run; refused steps all in the same block as the step they raced; gas multiple 1.095 / 1.102 / 1.149
+(G2 adversary / G3 window 8 / G4 window 1); honest refused / applied 1.31 / 0.102 / 0.149 (A3's gate 0.10); honest-1's
+fee share 0.588 / 0.563 / 0.493; latency median 35 / 126 / 105 s, p90 45 / 176 / 106 s; each daemon 0.07–0.09 of a core,
+57.3–57.8 MiB peak, 1.6–10.4 MB from the beacon API per run | the build box: LEZ v0.4.0-rc1 sequencer and Logos
+Blockchain node (LEZ's local configuration) | — | `GATE_* bash bench/perf/gate-sequencer.sh gN`; `python3 -I
+bench/perf/gate_report.py bench/perf/results/gate-g2 …` | `lez/results/perf-gate-sequencer.md` |
+
+### R.10 — proposed **shown** (was in part)
+
+| clause | shown by |
+|---|---|
+| submission timing must not systematically concentrate cost on whichever party reacts fastest; spread across the operators over many updates | honest-1's share of the honest daemons' fees on a sequencer: 0.563 (G3, 24 updates), 0.588 (G2, with the adversary), 0.493 (G4); in the in-process chain 0.39–0.47 over 58 updates (EVIDENCE row 80) |
+| the component defers by an interval it varies per instance | each (job, step) waits `H(key, job, step) mod W` rounds, `key` the daemon's own (`lez/updater/src/updater.rs`, `defer`); documented in the operator guide §3.4 |
+| still submitting promptly once the deferral elapses and no other party has acted | every update applied: latency from the update's appearance to its `Finish` final on Bedrock, median 126 s at window 8 (G3) |
+| document the deferral strategy and its effect on update latency | measured on the sequencer: without deferral (window 1) median 105 s, p90 106 s; window 8 (32 s) median 126 s, p90 176 s; window 30 G5_LATENCY; the deferral halves the gas per update (16.0M → 8.1M, the jobs a deferring daemon skips) |
+
+Same runs and EVIDENCE row as R.9.
 
 ## RFP-022
 
