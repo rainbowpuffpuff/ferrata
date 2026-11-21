@@ -29,8 +29,8 @@ fi
 r0vm="$(readlink -f "$(command -v r0vm)")"
 {
   echo "date: $(date -u +%FT%TZ)"
-  echo "head: $(git -C "$root" rev-parse HEAD)"
-  echo "uncommitted changes: $(git -C "$root" status --porcelain --untracked-files=no | wc -l)"
+  # The build box's copy of the tree holds no .git: pass FERRATA_HEAD there.
+  echo "head: ${FERRATA_HEAD:-$(git -C "$root" rev-parse HEAD 2>/dev/null || echo unknown)}"
   echo "r0vm: $(r0vm --version) $(sha256sum "$r0vm" | cut -c1-64)"
   echo "transitions: $(($(wc -l < "$stage/dump/index.tsv") - 1))"
 } > "$stage/stage.txt"
