@@ -305,15 +305,35 @@ fn align(
         let fields: [(&str, Vec<u8>, Vec<u8>); 11] = [
             ("public_context", borsh::to_vec(&ma.public_context).unwrap(), borsh::to_vec(&mo.public_context).unwrap()),
             ("execution.boundary", borsh::to_vec(&xa.boundary).unwrap(), borsh::to_vec(&xo.boundary).unwrap()),
-            ("execution.async_messages", borsh::to_vec(&xa.async_messages).unwrap(), borsh::to_vec(&xo.async_messages).unwrap()),
-            ("execution.recovery_bindings", borsh::to_vec(&xa.recovery_bindings).unwrap(), borsh::to_vec(&xo.recovery_bindings).unwrap()),
+            (
+                "execution.async_messages",
+                borsh::to_vec(&xa.async_messages).unwrap(),
+                borsh::to_vec(&xo.async_messages).unwrap(),
+            ),
+            (
+                "execution.recovery_bindings",
+                borsh::to_vec(&xa.recovery_bindings).unwrap(),
+                borsh::to_vec(&xo.recovery_bindings).unwrap(),
+            ),
             ("execution.public_root", borsh::to_vec(&xa.public_root).unwrap(), borsh::to_vec(&xo.public_root).unwrap()),
-            ("execution.private_actions", borsh::to_vec(&xa.private_actions).unwrap(), borsh::to_vec(&xo.private_actions).unwrap()),
+            (
+                "execution.private_actions",
+                borsh::to_vec(&xa.private_actions).unwrap(),
+                borsh::to_vec(&xo.private_actions).unwrap(),
+            ),
             ("execution.validity", borsh::to_vec(&xa.validity).unwrap(), borsh::to_vec(&xo.validity).unwrap()),
-            ("execution.program_image_claims", borsh::to_vec(&xa.program_image_claims).unwrap(), borsh::to_vec(&xo.program_image_claims).unwrap()),
+            (
+                "execution.program_image_claims",
+                borsh::to_vec(&xa.program_image_claims).unwrap(),
+                borsh::to_vec(&xo.program_image_claims).unwrap(),
+            ),
             ("execution.fee", borsh::to_vec(&xa.fee).unwrap(), borsh::to_vec(&xo.fee).unwrap()),
             ("nonces", borsh::to_vec(&ma.nonces).unwrap(), borsh::to_vec(&mo.nonces).unwrap()),
-            ("admission_evidence", borsh::to_vec(&ma.admission_evidence).unwrap(), borsh::to_vec(&mo.admission_evidence).unwrap()),
+            (
+                "admission_evidence",
+                borsh::to_vec(&ma.admission_evidence).unwrap(),
+                borsh::to_vec(&mo.admission_evidence).unwrap(),
+            ),
         ];
         let field = fields.iter().find(|(_, x, y)| x != y).map_or("an unnamed field", |(name, _, _)| name);
         return Err(format!(

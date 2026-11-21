@@ -1115,7 +1115,9 @@ fn random_mutations_of_real_updates_agree_with_helios() {
     let mut disagreements = Vec::new();
     let mut accepted = Vec::new();
     for (i, original) in originals.iter().enumerate() {
-        for RandomMutation { index: m, region: name, flips: at, bytes, .. } in mutations.iter().filter(|x| x.update == i) {
+        for RandomMutation { index: m, region: name, flips: at, bytes, .. } in
+            mutations.iter().filter(|x| x.update == i)
+        {
             let mut p = pair.clone();
             let (policy, spec, helios) = p.submit(bytes, electra);
             let t = tally.entry(name.to_string()).or_default();
