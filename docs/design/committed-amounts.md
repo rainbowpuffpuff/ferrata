@@ -109,7 +109,7 @@ fails or yields another nullifier) and the nullifier is a function of the deposi
 
 ## The run that shows the tests cited here pass
 
-Measured on the Modal build box, 21 November 2026, branch `rfp-softs` at `47773fff` with this note's text only
+Measured on the Modal build box, 21 November 2026, branch `rfp-softs` at `37143315` with this note's text only
 changed; nothing was sent to any network:
 
 | Command (from the directory named) | Result |
