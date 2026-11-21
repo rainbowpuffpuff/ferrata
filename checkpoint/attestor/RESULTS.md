@@ -248,6 +248,27 @@ What the rotation here is not: the key set grew (no key was removed, so "a key r
 applied" is still shown only on the lab's chain with stand-in keys, §2); the new sequencer's stake came from a test
 account through a CLI, not from an operator's own funds.
 
+## 10. Review fixes of 21 November: the LEZ check, withdrawals, garbage, the state (branch `fix-attestor`)
+
+The code reviews of 21 November (H-2, M-3, M-4 of the bridge review; M7, L7, L8 of the modules review)
+found that the attestor signed the Bedrock node's view alone, stopped on withdrawals and on one garbage
+inscription, re-read the whole chain each round, and lost its two-histories guard when the read was
+narrowed. All on the build box (`mrun`), measured:
+
+| Run | Result |
+|---|---|
+| Probe of the unchanged code (`5cf1e8e7`, a test file copied in for one run) | **H-2**: attestor 2 signed `F` = block 201 `59041fd0…205e`, a well-formed block on 200 by k1 that no LEZ node applied; **M-3**: `opcode 0x14 … not one LEZ sends`; **M-4**: a 5-byte payload and a second "block 200" each refuse the whole tier; **M7**: with the read starting at 201, it signed 202 although the signed 200 (another hash) is not its ancestor |
+| `cargo test -p ferrata-attestor --locked` (after) | 24 passed: `attestor.rs` 12 (ported), `lez_check.rs` 7, `withdrawals.rs` 3, `io.rs` 2; `cargo clippy --all-targets -- -D warnings` clean |
+| The forged turn (`h2_a_block_that_lez_parked_is_never_signed_and_the_forgery_needs_it`) | with F final on Bedrock and parked by LEZ, every attestor signs 200; once the honest 201 and 202 are final, 202 (LEZ decides at 201); the program accepts T = F with two forced signatures of F (so the attestor is the gate) and refuses it with the honest ones (`NotADescendant { tip_id: 200 }`) |
+| Random rounds with restarts (`m7_never_two_histories_across_restarts`, 4 seeds x 150 rounds) | 117-127 rounds signed per seed, 23-33 refused (outages, compromised LEZ nodes), 19-26 forged turns, 22-30 compromised views; never two blocks signed at one height, every signed tip descends from the last, every honest round signs the LEZ node's final tip; signed up to 313-334 |
+| Mutants (one guard removed at a time) | fork taken without the LEZ node: 2 tests fail; end of the run unconfirmed: 4; guard partial: 1; tripwire off: 1. No mutant survives |
+| Rounds against a local node stub over curl (`io.rs`) | round 1 asks 15 windows from slot 8,848,857; round 2 one window from the signed tip's slot 8,856,117, same signature; the saved answers replay to the same tier; a reused directory and a LEZ node that does not answer are node errors |
+| `devnet.sh`, `zone-attest.sh` re-run (outputs in scratch; recorded runs have no LEZ answers, stood in) | both exit 0 with their refusals; the zone's four attestations are byte-identical to `runs/zone/att-*.json`; the 3-of-4 input is identical to the proven `rbz-zone-n4-t3.input` |
+| `ferrata_attestor_module` calls (`the_zone_replayed_gives_the_proven_input`, in a scratch workspace laid out like the module) | 2 passed; without LEZ answers the module's `attest` refuses |
+
+Not re-run: `zone.sh`, `zone-bridge.sh`, `live-node.sh` (live nodes; `live-node.sh` now needs a LEZ node), the
+module's `attestor-e2e.sh` and `attestor-zone-live.sh` (they must now pass a LEZ node or a stand-in: open).
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
