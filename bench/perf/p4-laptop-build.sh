@@ -3,10 +3,11 @@
 # step 1, on the build box (mrun), from lez/: build prove_attest and prove_bridge, their dev-mode dry runs (cycles,
 # the transactions settle), strip and stage them for lez/results/p4-minimum/minimum.py (jobs attest-pad, bridge-pad),
 # with r0vm 3.0.5 beside them. As lez/results/p4-minimum/box-build-pad.sh, without the padding test and the
-# yardstick. Output: spike/tmp/rfp-C/p4 (bring it to the laptop with mrun --get). Steps 2 and 3 (from the laptop):
-# docs in lez/results/perf-p4-laptop.md.
+# yardstick. Output: spike/tmp/perf-p4 (bring it to the laptop with mrun --get); stage/ is the owner's bundle for
+# bench/perf/p4-laptop-owner.sh (attest-pad/, bridge-pad/, r0vm/r0vm and its SHA256SUMS). Steps 2 and 3 (from the
+# laptop): docs in lez/results/perf-p4-laptop.md.
 set -u
-S=../../tmp/rfp-C/p4
+S=../../tmp/perf-p4
 rm -rf "$S"; mkdir -p "$S/stripped" "$S/dry" "$S/stage/r0vm"
 export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1
 R0=$(readlink -f "$(command -v r0vm)")
@@ -27,6 +28,8 @@ echo "bridge dry exit $?: $(grep -E 'DRY RUN' "$S/dry/bridge.log" | cut -c1-200 
 for b in prove_attest prove_bridge; do strip -o "$S/stripped/$b" target/debug/$b; done
 scripts/stage-prove-attest.sh "$S/stage/attest-pad" "$S/stripped/prove_attest" > "$S/stage-attest.out" 2>&1; echo "stage attest exit $?"
 scripts/stage-prove-bridge.sh "$S/stage/bridge-pad" "$S/stripped/prove_bridge" > "$S/stage-bridge.out" 2>&1; echo "stage bridge exit $?"
-cp "$R0" "$S/stage/r0vm/r0vm"
+cp "$R0" "$S/stage/r0vm/r0vm"; (cd "$S/stage/r0vm" && sha256sum r0vm > SHA256SUMS)
+# The staging scripts write the GPU jobs' command; this bundle is proven on a CPU, padded as the wallet pads.
+python3 -I ../bench/perf/p4_manifest.py "$S/stage"
 gzip -f "$S/dry/attest.log" "$S/dry/bridge.log"
 du -sh "$S/stage"/*

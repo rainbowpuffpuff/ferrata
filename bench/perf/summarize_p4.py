@@ -47,13 +47,17 @@ def owner(root: pathlib.Path):
         log = (d / "prove.log").read_text(errors="replace")
         parsed = parse_log(log, "private attestation")
         rss = re.search(r"Maximum resident set size \(kbytes\): (\d+)", log)
-        used = max((int(l.split()[1]) for l in (d / "samples.txt").read_text().splitlines() if len(l.split()) == 3),
-                   default=0) * 1024 / GIB
-        settled = "settle exit 0" in (d / "exit.txt").read_text()
+        samples = d / "samples.txt"
+        used = [int(l.split()[1]) for l in (samples.read_text().splitlines() if samples.exists() else [])
+                if len(l.split()) == 3]
+        used_s = f"{max(used) * 1024 / GIB:.2f}" if used else "n/a"
+        rss_s = f"{int(rss.group(1)) * 1024 / GIB:.2f}" if rss else "n/a"
+        exit_txt = (d / "exit.txt").read_text() if (d / "exit.txt").exists() else ""
+        settled = "yes" if "settle exit 0" in exit_txt else ("not run" if not exit_txt else "no")
         for pr in parsed["proofs"]:
             print(f"| {pr['label']} | {shape} (laptop) | {pr['execute_and_prove_s']:.1f} | {pr['execute_and_prove_s']:.1f} | "
-                  f"{pr['user_cycles']:,} ({pr['segments']}) | {int(rss.group(1)) * 1024 / GIB if rss else 0:.2f} / {used:.2f} (machine) | "
-                  f"{pr['receipt_bytes']:,} | {pr['tx_bytes']:,} | {'yes' if settled else 'no'} |")
+                  f"{pr['user_cycles']:,} ({pr['segments']}) | {rss_s} / {used_s} (machine) | "
+                  f"{pr['receipt_bytes']:,} | {pr['tx_bytes']:,} | {settled} |")
 
 
 def main():
