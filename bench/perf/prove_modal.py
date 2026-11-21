@@ -38,7 +38,7 @@ CPU = float(os.environ.get("P2_CPU", "16"))
 MEM_MIB = int(os.environ.get("P2_MEM_MIB", "32768"))
 CONTAINERS = int(os.environ.get("P2_CONTAINERS", "8"))
 VOLUME = "p4-minimum"
-BUNDLE = "/vol" + os.environ.get("P2_BUNDLE", "/bundle/p2")
+BUNDLE = "/vol" + os.environ.get("P2_BUNDLE", "/bundle/p2")  # read locally; passed to the functions
 
 app = modal.App("perf-proofs")
 vol = modal.Volume.from_name(VOLUME)
@@ -67,14 +67,14 @@ def _machine() -> dict:
 
 @app.function(image=image, cpu=(CPU, CPU), memory=(MEM_MIB, MEM_MIB), volumes={"/vol": vol}, timeout=3 * 3600,
               max_containers=CONTAINERS, single_use_containers=True, retries=1)
-def prove(n: int, tag: str) -> dict:
+def prove(n: int, tag: str, bundle: str = "/vol/bundle/p2") -> dict:
     out = f"/vol/results/p2-{tag}"
     os.makedirs(out, exist_ok=True)
     log = f"{out}/prove-{n:03d}.log"
     if "\nRESULT\t" in "\n" + _read(log):
         return {"n": n, "skipped": True}
     work = "/root/p2"
-    shutil.copytree(BUNDLE, work, dirs_exist_ok=True)
+    shutil.copytree(bundle, work, dirs_exist_ok=True)
     r0vm = shutil.copy("/vol/bundle/r0vm/r0vm", f"{work}/bin/r0vm")
     for b in (r0vm, f"{work}/bin/perf_prove"):
         os.chmod(b, 0o755)
@@ -97,7 +97,7 @@ def prove(n: int, tag: str) -> dict:
 
 @app.function(image=image, cpu=(CPU, CPU), memory=(MEM_MIB, MEM_MIB), volumes={"/vol": vol}, timeout=3 * 3600,
               max_containers=CONTAINERS, single_use_containers=True, retries=1)
-def prove_private(i: int, tag: str, handoff: bool = False) -> dict:
+def prove_private(i: int, tag: str, handoff: bool = False, bundle: str = "/vol/bundle/p2") -> dict:
     out = f"/vol/results/p2-{tag}"
     os.makedirs(out, exist_ok=True)
     name = f"private-handoff-{i}" if handoff else f"private-{i}"
@@ -106,7 +106,7 @@ def prove_private(i: int, tag: str, handoff: bool = False) -> dict:
     if "SETTLED" in _read(log):
         return {"private": i, "skipped": True}
     work = "/root/p2"
-    shutil.copytree(BUNDLE, work, dirs_exist_ok=True)
+    shutil.copytree(bundle, work, dirs_exist_ok=True)
     r0vm = shutil.copy("/vol/bundle/r0vm/r0vm", f"{work}/bin/r0vm")
     for b in (r0vm, f"{work}/bin/prove_private"):
         os.chmod(b, 0o755)
@@ -146,7 +146,7 @@ def write(tag: str, files: dict) -> None:
 @app.local_entrypoint()
 def main(tag: str, index: str = "", only: str = "", private: int = 0, handoff: bool = False):
     if private:
-        for r in prove_private.starmap([(i, tag, handoff) for i in range(1, private + 1)], return_exceptions=True):
+        for r in prove_private.starmap([(i, tag, handoff, BUNDLE) for i in range(1, private + 1)], return_exceptions=True):
             print(json.dumps(r if isinstance(r, dict) else {"error": repr(r)}), flush=True)
         return
     rows = [l.split("\t") for l in open(index).read().splitlines()]
@@ -160,5 +160,5 @@ def main(tag: str, index: str = "", only: str = "", private: int = 0, handoff: b
     machine = (f"Modal containers, one per transition: {CPU:g} CPUs and {MEM_MIB} MiB each (request = limit), "
                f"at most {CONTAINERS} at a time; r0vm 3.0.5 (CPU); started {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}")
     write.remote(tag, {"index.tsv": open(index).read(), "machine.txt": machine + "\n"})
-    for r in prove.starmap([(int(r[col["n"]]), tag) for r in rows], return_exceptions=True):
+    for r in prove.starmap([(int(r[col["n"]]), tag, BUNDLE) for r in rows], return_exceptions=True):
         print(json.dumps(r if isinstance(r, dict) else {"error": repr(r)}), flush=True)
