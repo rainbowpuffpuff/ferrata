@@ -1,0 +1,7 @@
+{"account":"2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2","home":"$SPIKE/tmp/attest-seq/work-r6/hook/lez-wallet","what":"wallet"}
+{"block":51,"events":0,"exit_code":null,"gas_exec":2209930,"gas_stor":5355,"reverted":false,"tx":"2841a981628196163dc2f6e85c5af41cfc1c0dfe69c58d448b5bc2c4bbdb11ed","what":"receipt"}
+{"block":52,"events":0,"exit_code":null,"gas_exec":3305374,"gas_stor":399,"reverted":false,"tx":"1aac9b662d4f9207fdf1a43dda19e542edb9dfeb25a63464d9c262d4c23e867e","what":"receipt"}
+{"block":53,"events":1,"exit_code":null,"gas_exec":3721523,"gas_stor":527,"reverted":false,"tx":"0dfc48dbc2cd46d8e63574db08606c9d39cbc3baab76711fd39d70f7242e5563","what":"receipt"}
+{"applied":5,"block":53,"finalized_slot":11567392,"instance":"0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5","root":"0x6de4eab8db8ef9b2450684fb314c7a7faad600374ebed0101cbfbd2823958148","what":"status"}
+{"block":54,"events":1,"exit_code":null,"gas_exec":93316,"gas_stor":2519,"reverted":false,"tx":"0b11edc505701debd0dbff85e7d5c09c2aa25257c1435bcc109e9a420a498501","what":"receipt"}
+{"block":55,"events":0,"exit_code":110,"gas_exec":30766,"gas_stor":2519,"reverted":true,"tx":"92ba86043d92b19807a3e5a2322b65d74ffdfbafbfe75bdb2b7cc6a4e89e44e2","what":"receipt"}

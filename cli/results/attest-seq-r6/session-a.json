@@ -1,0 +1,18 @@
+{
+  "tip": {
+    "hash": "0x24727bf3927376d3b4621507d32f609e1eea08a21caa1316b1efb686cd324f85",
+    "id": 24
+  },
+  "instance": {
+    "checkpoint": "0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c",
+    "id": "0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5"
+  },
+  "attestation": {
+    "account": "0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c",
+    "imageId": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
+  },
+  "bridge": {
+    "header": "0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d",
+    "imageId": "0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd"
+  }
+}

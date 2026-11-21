@@ -1,0 +1,9 @@
+Daemon started (pid 47485)
+Logs: $SPIKE/tmp/attest-seq/work-r6/hook/core/logs/daemon.log
+{"affected_loaded":[],"changes":[{"action":"install","file":"$REPO/../tmp/rfp-b/logos-build/lgx-lez_core-patched/logos-lez_core-module-lib.lgx","fromVersion":"","name":"lez_core","signature":"unsigned","toVersion":"0.6.0"}],"installed":["lez_core"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"$REPO/../tmp/rfp-b/logos-build/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx","fromVersion":"","name":"beacon_api_module","signature":"unsigned","toVersion":"0.2.0"}],"installed":["beacon_api_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"$REPO/../tmp/rfp-b/logos-build/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx","fromVersion":"","name":"ferrata_attest_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_attest_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"lez_core","status":"ok","version":"0.6.0"}
+{"dependencies_loaded":[],"module":"beacon_api_module","status":"ok","version":"0.2.0"}
+{"dependencies_loaded":[],"module":"ferrata_attest_module","status":"ok","version":"0.1.0"}
+{"message":"Daemon shutting down.","status":"ok"}

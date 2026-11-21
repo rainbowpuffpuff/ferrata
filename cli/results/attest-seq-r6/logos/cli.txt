@@ -1,0 +1,1 @@
+wallet $SPIKE/tmp/attest-seq/work-r6/hook/lez-wallet: config $SPIKE/tmp/attest-seq/work-r6/hook/lez-wallet/wallet_config.json, storage $SPIKE/tmp/attest-seq/work-r6/hook/lez-wallet/storage.json, public account 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 (the payer)

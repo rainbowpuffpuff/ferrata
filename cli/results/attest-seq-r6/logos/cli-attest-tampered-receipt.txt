@@ -1,0 +1,2 @@
+zone http://127.0.0.1:3040: followed to block 54 (final on Bedrock)
+receipt 92ba86043d92b19807a3e5a2322b65d74ffdfbafbfe75bdb2b7cc6a4e89e44e2: block 55: refused with 110 ProofNodeMismatch (Inclusion proof: a node's Keccak-256 differs from the root or from its parent's reference.); execution gas 30766, storage gas 2519, 0 event(s)

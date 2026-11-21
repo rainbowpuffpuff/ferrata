@@ -1,0 +1,56 @@
+[17:42:33] zone http://127.0.0.1:3040; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c; session A's Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[17:42:45] sepolia-config: exit 0 (expected 0)
+[17:42:45] sepolia-status: exit 0 (expected 0)
+[17:42:46] sepolia-advance-finality-dry-run: exit 0 (expected 0)
+[17:42:46] sepolia-status-after-dry-run: exit 0 (expected 0)
+[17:43:20] sepolia-advance-finality: exit 0 (expected 0)
+[17:44:10] sepolia-advance-period-1412: exit 0 (expected 0)
+[17:44:20] sepolia-advance-replayed: exit 3 (expected 3)
+[17:44:20] sepolia-status-after: exit 0 (expected 0)
+[17:44:50] mainnet-init: exit 0 (expected 0)
+[17:44:50] mainnet instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+[17:45:20] mainnet-advance-finality: exit 0 (expected 0)
+[17:45:20] mainnet-config: exit 0 (expected 0)
+[17:45:21] mainnet-status: exit 0 (expected 0)
+[17:45:21] attest-storage-dry-run: exit 0 (expected 0)
+[17:45:30] attest-storage: exit 0 (expected 0)
+[17:45:40] attest-storage-predicate-fails: exit 3 (expected 3)
+[17:45:50] attest-storage-ge: exit 0 (expected 0)
+[17:46:00] attest-log-transfer: exit 0 (expected 0)
+[17:46:10] attest-log-wrong-emitter: exit 3 (expected 3)
+[17:46:20] attest-account-codehash: exit 0 (expected 0)
+[17:46:30] attest-log-failed-tx: exit 3 (expected 3)
+[17:46:40] attest-storage-and-log: exit 0 (expected 0)
+[17:46:50] mainnet-advance-replayed: exit 3 (expected 3)
+[17:46:51] attest-monitor (at-the-record): exit 0, divergence confirmed, alerts []
+[17:46:51] attest-monitor (now): exit 20, divergence confirmed, alerts ["ws-half"]
+[17:46:51] hook done: 24 steps
+[17:46:51] logos: zone http://127.0.0.1:3040; program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c; Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5; mainnet instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+[17:47:00] logos: lez_core (patched), beacon_api_module and ferrata_attest_module installed from their .lgx and loaded
+[17:47:01] logos: ferrata_attest_module.lez: {"head":"50","open_reply":"0","public_accounts":["0x15145aee2e6c9c57d2847b8ca2e100937f11ee76fdfd75fcb588488aa2064547","0x9d3f5872133d9a28528aa2f7daeb1e6af559fe234e416e9b69181ad02b806b42"],"sequencer":"http://127.0.0.1:3040/","verdict":"open
+[17:47:01] logos: ferrata_attest_module.lez_read: {"account":"0x1bb55c9e2d14e225a85330ccc92bc2c1e381b33e220ebd9ad92e0dd53e0f5df8","actor_states":1,"bytes":585,"kind":"instance","ms":3,"verdict":"read","via":"lez_core.get_account_public"}
+[17:47:01] logos: Sepolia instance through lez_core: 585 bytes, equal to the plain path's
+[17:47:02] logos: ferrata_attest_module.lez_read: {"account":"0x8fc98d86947f7730d03f10daa7a5764e2fc25464fc4e12bb3b407fc6d59d264e","actor_states":1,"bytes":505,"kind":"instance","ms":2,"verdict":"read","via":"lez_core.get_account_public"}
+[17:47:02] logos: mainnet instance through lez_core: 505 bytes, equal to the plain path's
+[17:47:02] logos: ferrata_attest_module.lez_read: {"account":"0x286833373dd571f200df1d340675201dd9440e26c256af30deefddcfaef5ede1","actor_states":1,"bytes":365,"kind":"record","ms":2,"record":{"chain_id":1,"encoded":"0x2069ee0000000000593608000000000022354b63ec0220ba248fa10e261711ba02385ae9
+[17:47:02] logos: mainnet record through lez_core: 365 bytes, equal to the plain path's
+[17:47:02] logos: ferrata_attest_module.advance: {"committees":{"current_known":true,"next_known":false},"instance_id":"0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5","job_id":"0x787a80a66f36de89b24729cee3f799dd428c12946f3c3b95eb1a11f8e18e93f8","layout":"Gloas","outco
+[17:47:24] logos: ferrata_attest_module.lez_submit: {"verdict":"sent","via":"lez_core.send_generic_public_transaction"}
+[17:47:31] logos: ferrata_attest_module.lez_read: {"account":"0x1bb55c9e2d14e225a85330ccc92bc2c1e381b33e220ebd9ad92e0dd53e0f5df8","actor_states":1,"bytes":585,"kind":"instance","ms":2,"verdict":"read","via":"lez_core.get_account_public"}
+[17:47:31] logos: the Sepolia instance read again through lez_core: 585 bytes, equal to the plain path's
+[17:47:31] logos: after the job sent through lez_core: finalized slot 11567392 (plain path); receipts: 3 applied
+[17:47:32] logos: ferrata_attest_module.fetch_log_proof: {"block":26384851,"block_hash":"0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce","eth":{"calls":2,"routes":["http","http"],"rpc_url":"http://127.0.0.1:8646/","via":"http"},"log":{"log_index":0,"receipt_proof":["0xf90131a0
+[17:47:32] logos: ferrata_attest_module.dry_run_attest: {"block_hash":"0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce","block_number":26384851,"chain_id":1,"code":0,"fact":{"address":"0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48","data":"0x00000000000000000000000000000000000000
+[17:47:33] logos: ferrata_attest_module.build_attest_tx: {"account":"0x286833373dd571f200df1d340675201dd9440e26c256af30deefddcfaef5ede1","accounts":["0x286833373dd571f200df1d340675201dd9440e26c256af30deefddcfaef5ede1"],"chain_id":1,"facts":1,"instance_id":"0x599a0de5f1dc6248b4e369c2aa066e2c66370f
+[17:47:34] logos: ferrata_attest_module.lez_submit: {"verdict":"sent","via":"lez_core.send_generic_public_transaction"}
+[17:47:40] logos: attest (good): the module's dry run {"verdict":"attested","code":0}; the zone: receipt 0b11edc505701debd0dbff85e7d5c09c2aa25257c1435bcc109e9a420a498501: block 54: applied; execution gas 93316, storage gas 2519, 1 event(s)
+[17:47:40] logos: ferrata_attest_module.fetch_log_proof: {"block":26384851,"block_hash":"0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce","eth":{"calls":2,"routes":["http","http"],"rpc_url":"http://127.0.0.1:8646/","via":"http"},"log":{"log_index":0,"receipt_proof":["0xf90131a0
+[17:47:40] logos: ferrata_attest_module.dry_run_attest: {"code":110,"error":"ProofNodeMismatch","record":{"anchor_slot":15624480,"block_hash":"0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce","block_number":26384851,"chain_id":1,"receipts_root":"0x9f7aae4f6f937ea551a4ca11c31e7
+[17:47:41] logos: ferrata_attest_module.build_attest_tx: {"account":"0x286833373dd571f200df1d340675201dd9440e26c256af30deefddcfaef5ede1","accounts":["0x286833373dd571f200df1d340675201dd9440e26c256af30deefddcfaef5ede1"],"chain_id":1,"facts":1,"instance_id":"0x599a0de5f1dc6248b4e369c2aa066e2c66370f
+[17:47:44] logos: ferrata_attest_module.lez_submit: {"verdict":"sent","via":"lez_core.send_generic_public_transaction"}
+[17:47:50] logos: attest (tampered): the module's dry run {"verdict":"refused","code":110}; the zone: receipt 92ba86043d92b19807a3e5a2322b65d74ffdfbafbfe75bdb2b7cc6a4e89e44e2: block 55: refused with 110 ProofNodeMismatch (Inclusion proof: a node's Keccak-256 differs from the root or from its parent's reference.); execution gas 30766, storage gas 2519, 0 event(s)
+[17:47:51] logos: beacon_api_module.set_beacon_config: {"chainId":11155111,"config":{"providers":[{"enabled":true,"endpoint":"http://127.0.0.1:8711","id":"lodestar","source":"external"},{"enabled":true,"endpoint":"http://127.0.0.1:8712","id":"publicnode","source":"external"},{"enabled":true,"en
+[17:47:52] logos: beacon_api_module.list_providers: {"chainId":11155111,"network":"sepolia","ok":true}
+[17:47:52] logos: ferrata_attest_module.verify_checkpoint: {"chain_pair":{"network":"sepolia","status":"known"},"checkpoint":"0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c","execution":null,"failed":[],"instance_id":"0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9
+[17:47:52] logos: verify_checkpoint through beacon_api_module: {"verdict":"ok","failed":[],"providers_agreeing":3,"providers":[{"name":"lodestar","verdict":"agrees","via":"beacon_api_module.raw_get","slot":11562112},{"name":"publicnode","verdict":"agrees","via":"beacon_api_module.raw_get","slot":11562112},{"name":"nimbus","verdict":"agrees","via":"beacon_api_module.raw_get","slot":11562112}]}
+[17:47:52] logos: done (18 module calls)

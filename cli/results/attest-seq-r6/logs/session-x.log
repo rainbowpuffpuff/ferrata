@@ -1,0 +1,12 @@
+[17:41:50] crown LEZ session x (chain sepolia)
+[17:41:52] restored generation 1 (227M)
+[17:41:52] Bedrock node up: {"cryptarchia_info":{"lib":"0a883706a0f0d71d8f065ac56fe0ebe702c607d1ac77826ef114fe952e3f027d","lib_slot":9789877,"tip":"6076c1b3bb3f0a7dd47b6509e4ae8acc99b65fa9ef51a8bde9c59ed1372d70c5","slot":9789882,"height":316,"state":"Online"},"phase":"InitialBlockDownload"}
+[17:41:55] node slot 0 is unix second 1785493027 (slots of 1 s)
+[17:42:33] sequencer start 1: scheduler after 38 s; its blocks fall 6 s after an epoch second
+[17:42:33] sequencer up, head block 24
+[17:42:33] hook $REPO/modules/ferrata_attest_module/scripts/logos-run-hook.sh
+[17:47:53] driver exit 0
+[17:48:14] sequencer stopped (exit 0)
+[17:48:22] node stopped (exit 143)
+[17:48:23] saved generation 2 (94580757 bytes; head block 58)
+[17:48:23] session x: ok
