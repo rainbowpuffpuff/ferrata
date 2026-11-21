@@ -416,6 +416,25 @@ fn the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2()
 }
 
 #[test]
+fn the_stall_resists_one_lying_provider_with_three_providers_not_with_two() {
+    let f = fx();
+    let d = scratch("stall-median");
+    let (s0, s1) = (f.stalled["finalized_slot"].as_u64().unwrap(), f.resumed["finalized_slot"].as_u64().unwrap());
+    let now = secs(&f.resumed["time_ms"]);
+    let g = sepolia_genesis();
+    let state = write_state(&d, "stalled.hex", &state_of(&f.stalled));
+    // Honest providers have finalized 11,608,192; a liar claims the instance's own slot as its finalized one.
+    let honest = [provider(&g, s0, Some(header_11549664()), s1), provider(&g, s0, Some(header_11549664()), s1)];
+    let liar = provider(&g, s0, Some(header_11549664()), s0);
+    let o = check(&args(&state, &[&honest[0], &honest[1], &liar], now));
+    assert!(kinds(&o.report).contains(&"instance-stalled".to_string()), "three providers: the liar cannot hide it: {}", o.report);
+    // With two providers the lower finalized slot counts: the liar hides the stall (the README's stated limit).
+    let o = check(&args(&state, &[&honest[0], &liar], now));
+    assert!(!kinds(&o.report).contains(&"instance-stalled".to_string()), "{}", o.report);
+    assert_eq!(o.report["chain_finalized_slot"].as_u64(), Some(s0));
+}
+
+#[test]
 fn unreachable_and_wrong_chain_providers_are_not_counted() {
     let f = fx();
     let d = scratch("unavailable");

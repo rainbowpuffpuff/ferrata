@@ -133,8 +133,7 @@ pub struct Assessment {
     pub now_slot: u64,
     /// Age of the finalized header by the chain's clock.
     pub age_s: u64,
-    /// The providers' finalized slot (the median of those that answered on the instance's chain), and the instance's
-    /// lag behind it.
+    /// The providers' finalized slot (the median of those counted, the lower of two), and the instance's lag behind it.
     pub chain_finalized_slot: Option<u64>,
     pub lag_s: Option<u64>,
     /// The weak-subjectivity period of the finalized header: the first slot outside it, and the halfway slot.
@@ -302,7 +301,8 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
         ),
     }
 
-    // The stall: against the providers' finalized slot (the median, so that one provider cannot raise or hide it).
+    // The stall: against the providers' finalized slot, the median (the lower of two): with three or more providers,
+    // one provider can neither raise nor hide it; with two, either can hide it.
     finalized.sort_unstable();
     let chain_finalized_slot = (!finalized.is_empty()).then(|| finalized[(finalized.len() - 1) / 2]);
     let lag_s = chain_finalized_slot.map(|f| f.saturating_sub(slot) * sps);
