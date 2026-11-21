@@ -48,6 +48,10 @@ struct Args {
     public_amount: u128,
     #[arg(long, default_value_t = 2_000_000_000_000)]
     private_amount: u128,
+    /// Only step 1: native LEZ to the seed's public account /0 (a relayer's own account, which pays the fees of
+    /// its public calls; e2e/seqnet's relayer root imports).
+    #[arg(long)]
+    public_only: bool,
 }
 
 fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_service_rpc::SequencerClient>, AccountId)> {
@@ -114,9 +118,13 @@ async fn main() -> Result<()> {
     println!(
         "{}",
         json!({"step": "faucet public transfer (stand-in for the gas drop)", "tx": hash.to_string(),
-               "from": faucet_id.to_string(), "to_public_0": public0.to_string(), "amount": a.public_amount.to_string(),
+               "from": faucet_id.to_string(), "to_public_0": public0.to_string(),
+               "to_public_0_hex": format!("0x{}", hex::encode(public0.value())), "amount": a.public_amount.to_string(),
                "balance_before": before.to_string(), "balance_after": after.to_string(), "send_ms": send_ms, "seen_ms": wait_ms})
     );
+    if a.public_only {
+        return Ok(());
+    }
 
     // 2. The user's own wallet moves part of it to its private account /0, proven by LEZ's wallet.
     let mut user = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;

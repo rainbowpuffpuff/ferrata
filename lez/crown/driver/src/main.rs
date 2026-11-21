@@ -35,7 +35,8 @@
 //! crown-b: --identity FILE, --capture DIR (repeatable, in order), [--eth-fees-at UNIX_S],
 //! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
 //! --notes-out FILE, [--operator-only yes] (the updates, Init, Register, ImportFees and ImportRoot only: the
-//! claims and burns are a user's wallet's, e2e/seqnet).
+//! claims and burns are a user's wallet's, e2e/seqnet), [--import-roots no] (no ImportRoot either: the relayer
+//! daemon imports the roots, e2e/seqnet with SEQNET_RELAYER_IMPORTS=1).
 
 #![allow(dead_code)]
 
@@ -324,6 +325,7 @@ async fn run(args: Args) -> Result<()> {
                 session_out: args.path("session-out")?,
                 notes_out: args.path("notes-out")?,
                 operator_only: args.get("operator-only") == Some("yes"),
+                import_roots: args.get("import-roots") != Some("no"),
             };
             crown::session_b(&mut live, &program, &bridge, &chain, &b).await?;
         }

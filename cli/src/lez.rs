@@ -377,6 +377,45 @@ pub async fn plan_burn<L: Ledger>(
     recipient: [u8; 20],
     history: &History,
 ) -> Result<BurnPlan> {
+    plan_burn_at(ledger, ctx, keys, holder, token, amount, recipient, history, None).await
+}
+
+/// The burn with counter `i` of `amount` of `token` to `recipient` as its note was built (deterministic in the
+/// counter), for describing a burn an earlier run sent (R.07); its call names no account and is never sent.
+pub fn described_burn(
+    ctx: &Context,
+    keys: &BridgeKeys,
+    i: u64,
+    token: [u8; 20],
+    amount: u128,
+    recipient: [u8; 20],
+) -> BurnPlan {
+    let target = ReleaseTarget { chain_id: chain_id_u256(ctx.chain_id), vault: ctx.vault, recipient };
+    let note = BurnNote::create(keys, &ctx.cid, i, &target, token, u128_to_word(amount));
+    let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
+    let call = LezCall {
+        what: format!("burn with tag counter {i} (sent by an earlier run)"),
+        mentions: Vec::new(),
+        root_index: 0,
+        message: BridgeMessage::burn(ctx.cid, &wire),
+    };
+    BurnPlan { call, note, i }
+}
+
+/// [`plan_burn`] with the burn counter given (`Some(i)`: an interrupted burn's, so that its note and tag are the same
+/// and the bridge program, which refuses a repeated tag, applies at most one of the two) or the next free one.
+#[allow(clippy::too_many_arguments)]
+pub async fn plan_burn_at<L: Ledger>(
+    ledger: &L,
+    ctx: &Context,
+    keys: &BridgeKeys,
+    holder: BurnFrom,
+    token: [u8; 20],
+    amount: u128,
+    recipient: [u8; 20],
+    history: &History,
+    counter: Option<u64>,
+) -> Result<BurnPlan> {
     let t = token_state(ledger, ctx, &token).await?;
     if t.entry.index_of(amount).is_none() {
         bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
@@ -397,7 +436,10 @@ pub async fn plan_burn<L: Ledger>(
         bail!(r);
     }
     let chain = chain_id_u256(ctx.chain_id);
-    let next_i = recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i;
+    let next_i = match counter {
+        Some(i) => i,
+        None => recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i,
+    };
     let target = ReleaseTarget { chain_id: chain, vault: ctx.vault, recipient };
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };

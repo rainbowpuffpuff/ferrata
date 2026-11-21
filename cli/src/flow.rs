@@ -471,11 +471,56 @@ pub struct BurnOpts {
     pub recipient: Address,
     pub send: bool,
     pub yes: bool,
+    /// The interrupted-burn record (R.07), `<LEZ wallet home>/ferrata-pending-burn.json` on the sequencer path:
+    /// written before a burn is proven and sent, removed once it is sent.
+    pub pending: Option<PathBuf>,
+}
+
+/// A burn started and not known to have been sent (the tool killed while it proved or sent it): its counter, so a
+/// second run uses the same one (the same tag: the program applies at most one of the two) or, finding that burn on
+/// the zone, does not burn again. Kept beside LEZ's wallet, which holds the user's keys already.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PendingBurn {
+    pub i: u64,
+    pub token: Address,
+    pub amount: String,
+    pub recipient: Address,
+    pub r: String,
+    pub at: u64,
+}
+
+impl PendingBurn {
+    pub fn load(path: &std::path::Path) -> Result<Option<Self>> {
+        match std::fs::read(path) {
+            Ok(b) => Ok(Some(serde_json::from_slice(&b).with_context(|| format!("reading {}", path.display()))?)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn save(&self, path: &std::path::Path) -> Result<()> {
+        use std::io::Write as _;
+        let tmp = path.with_extension("tmp");
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(&serde_json::to_vec_pretty(self)?)?;
+        f.sync_all()?;
+        std::fs::rename(&tmp, path)?;
+        Ok(())
+    }
+
+    fn clear(path: &std::path::Path) -> Result<()> {
+        match std::fs::remove_file(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        }
+    }
 }
 
 pub struct Burned {
     pub plan: lez::BurnPlan,
     pub sent: Option<String>,
+    /// An earlier run had sent this burn (R.07): nothing was sent now.
+    pub already: bool,
 }
 
 /// The holding of private account `id` under `ctx`, as the wallet sees it.
@@ -519,9 +564,47 @@ pub async fn burn<L: Ledger>(
         (BurnFrom::Private { account: id, held }, format!("private account /{}", o.account))
     };
     let history = lez::history_of(ledger, ctx).await?;
-    let plan =
-        lez::plan_burn(ledger, ctx, &seed.bridge_keys(), from, token, amount, o.recipient.into_array(), &history)
-            .await?;
+    // An interrupted burn (R.07): found on the zone, it was sent and applied, and the same burn is not made again;
+    // not found, this burn takes its counter, so the two cannot both be applied.
+    let mut counter = None;
+    if let Some(path) = &o.pending {
+        if let Some(rec) = PendingBurn::load(path)? {
+            let keys = seed.bridge_keys();
+            let tag = ferrata_bridge_core::outbound::burn_tag(&keys.view, &ctx.cid, rec.i);
+            let applied = history.burns.iter().any(|b| b.note.r == tag);
+            let same = rec.token == o.token && rec.amount == o.amount && rec.recipient == o.recipient;
+            if applied {
+                out.line(format!(
+                    "an earlier run's burn (counter {}, {} {} to {}) was sent and is on the zone",
+                    rec.i, rec.amount, symbol, rec.recipient
+                ));
+                PendingBurn::clear(path)?;
+                if same {
+                    out.line("not burning again: that burn is the one asked for (`ferrata release` releases it)");
+                    let plan = lez::described_burn(ctx, &keys, rec.i, token, amount, o.recipient.into_array());
+                    return Ok(Burned { plan, sent: None, already: true });
+                }
+            } else {
+                out.line(format!(
+                    "an earlier run's burn (counter {}) did not reach the zone: this burn takes its counter, so at most one of the two can be applied",
+                    rec.i
+                ));
+                counter = Some(rec.i);
+            }
+        }
+    }
+    let plan = lez::plan_burn_at(
+        ledger,
+        ctx,
+        &seed.bridge_keys(),
+        from,
+        token,
+        amount,
+        o.recipient.into_array(),
+        &history,
+        counter,
+    )
+    .await?;
     let (_, burn_fee, checkpoint_fee, relay_fee) = release_fees(eth, o.token, amount).await?;
     let list = eth::deposit_list(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
     let fresh = !list.deposits.iter().any(|d| d.depositor == o.recipient.into_array());
@@ -552,13 +635,28 @@ pub async fn burn<L: Ledger>(
         bail!("refusing to burn from a public account without --i-accept-public-account: the holder, its balance and the burn are public on LEZ; burn from a private account (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if let Some(path) = &o.pending {
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+            let rec = PendingBurn {
+                i: plan.i,
+                token: o.token,
+                amount: o.amount.clone(),
+                recipient: o.recipient,
+                r: hx(&plan.note.r),
+                at: now,
+            };
+            rec.save(path)?;
+        }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));
+        if let Some(path) = &o.pending {
+            PendingBurn::clear(path)?;
+        }
         Some(h)
     } else {
         None
     };
-    Ok(Burned { plan, sent })
+    Ok(Burned { plan, sent, already: false })
 }
 
 // ---- release -------------------------------------------------------------------------------------
