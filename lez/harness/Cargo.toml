@@ -48,6 +48,13 @@ methods-bridge-next = { path = "../methods-bridge-next", optional = true }
 # `program-class`, so that no ordinary build or test of this crate builds the second guest.
 methods-program-class = { path = "../methods-program-class", optional = true }
 ferrata-lez-wire-class = { path = "../wire-class", optional = true }
+# The recorded-statement program and its reader (guests/statements, guests/statements-reader; RFP-021 soft
+# requirement 1, tests/statements.rs). Optional, behind the feature `statements`, so that no ordinary build builds them.
+methods-statements = { path = "../methods-statements", optional = true }
+ferrata-lez-statements-wire = { path = "../statements-wire", optional = true }
+# The rebate program (guests/rebate; RFP-021 soft requirement 5, tests/rebate.rs). Optional, behind the feature `rebate`.
+methods-rebate = { path = "../methods-rebate", optional = true }
+ferrata-lez-rebate-wire = { path = "../rebate-wire", optional = true }
 
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
@@ -68,3 +75,7 @@ residue-experimental = ["dep:methods-residue-experimental", "dep:residue", "dep:
 bridge-next = ["dep:methods-bridge-next", "ferrata-lez-bridge-wire/config-keyed"]
 # The attestation program's second build at `CLASSED` (tests/history_hops.rs, docs/design/attestation.md §5.7).
 program-class = ["dep:methods-program-class", "dep:ferrata-lez-wire-class"]
+# The recorded-statement path (tests/statements.rs, docs/guides/recorded-statements.md).
+statements = ["dep:methods-statements", "dep:ferrata-lez-statements-wire"]
+# The operator rebate (tests/rebate.rs, docs/guides/operator-guide.md).
+rebate = ["dep:methods-rebate", "dep:ferrata-lez-rebate-wire"]
