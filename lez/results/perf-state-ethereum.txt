@@ -1,0 +1,39 @@
+forge Version: 1.3.6-v1.3.6
+Compiling 1 files with Solc 0.8.26
+Solc 0.8.26 finished in 6.69s
+Compiler run successful!
+
+Ran 1 test for test/StateGrowth.t.sol:StateGrowthTest
+[PASS] test_stateGrowth() (gas: 216419775)
+Logs:
+  GROWTH	deposit, the address's first	ops / vault slots created / cleared / rewritten / created in the token
+  1 4 0
+  1 2
+  GROWTH	deposit, a later one by the same address	ops / vault slots created / cleared / rewritten / created in the token
+  1 1 0
+  4 0
+  GROWTH	deposit, another address's first	ops / vault slots created / cleared / rewritten / created in the token
+  1 1 0
+  4 0
+  GROWTH	deposits by 25 new addresses (total)	ops / vault slots created / cleared / rewritten / created in the token
+  25 28 0
+  5 0
+  GROWTH	deposits by the same 25 addresses again (total)	ops / vault slots created / cleared / rewritten / created in the token
+  25 1 0
+  33 0
+  GROWTH	checkpoint: submitCandidate + finalisation	ops / vault slots created / cleared / rewritten / created in the token
+  1 15 0
+  2 0
+  GROWTH	release, the first	ops / vault slots created / cleared / rewritten / created in the token
+  1 3 0
+  5 1
+  GROWTH	releases, 25 more (total)	ops / vault slots created / cleared / rewritten / created in the token
+  25 25 0
+  5 0
+  GROWTH	checkpoint, a later one	ops / vault slots created / cleared / rewritten / created in the token
+  1 10 0
+  5 0
+
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 176.39ms (172.27ms CPU time)
+
+Ran 1 test suite in 178.72ms (176.39ms CPU time): 1 tests passed, 0 failed, 0 skipped (1 total tests)

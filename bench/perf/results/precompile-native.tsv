@@ -1,0 +1,10 @@
+op	median_ns	runs
+hash_to_g2	228232	300
+aggregate_subtract_2	5992	300
+aggregate_subtract_170	175400	300
+miller_loops_2_and_mul	651411	300
+final_exp_and_is_one	425494	300
+adopt_256_uncompressed	269402	300
+g1_subgroup_check	56089	300
+g2_subgroup_check	62060	300
+fast_aggregate_verify_512	1820189	300
