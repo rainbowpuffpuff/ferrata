@@ -11,6 +11,14 @@ program's guest in RISC Zero dev mode, and real Sepolia data recorded in fixture
 the daemons that will run it against a live sequencer and live Ethereum endpoints are separate
 deliverables (`modules/`, the updater).
 
+**What you trust when you use it (VS.5).** The verdict the tool prints is the program's own function run on the
+record the zone holds, and the program accepts a statement only after verifying Ethereum's sync-committee signatures
+from the instance's checkpoint and the Merkle proofs under its record. You trust that checkpoint (check it once:
+`verify_checkpoint`, [`docs/trust.md`](../docs/trust.md) §2.1) and two thirds of each sync committee; whoever runs the
+updater, serves the light-client data or the proofs, or sends the transaction only carries data the program accepts
+or refuses, a liveness role and nothing more ([`docs/trust.md`](../docs/trust.md) §0, §2.4, each such party walked by
+a test).
+
 ## The core user journey (RFP-021 U.2, S.5)
 
 The four things the RFP asks of the CLI, each a command, in the order a user meets them. Run at this commit on the
