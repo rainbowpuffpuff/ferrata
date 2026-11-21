@@ -585,6 +585,26 @@ impl Instance {
         full: &StoreCore,
         label: &str,
     ) -> JobRun {
+        self.update_in_with(chain, update, layout, full, label, |chain, label, _job_id, job_actor, actors, time| {
+            chain.submit(label, job_actor, borsh::to_vec(&Message::Finish).unwrap(), actors, vec![], time)
+        })
+    }
+
+    /// [`Instance::update_in`] with the last step sent by `finish(chain, label, job id, job actor, the actors `Finish`
+    /// needs, time)`: `Finish` itself, or a message to another program that sends it (the rebate pool's `Land`,
+    /// tests/rebate.rs).
+    pub fn update_in_with<F>(
+        &self,
+        chain: &mut Chain,
+        update: &LightClientUpdate,
+        layout: LcFork,
+        full: &StoreCore,
+        label: &str,
+        finish: F,
+    ) -> JobRun
+    where
+        F: FnOnce(&mut Chain, &str, Root, Actor, Vec<Actor>, u64) -> TxReport,
+    {
         let fork = layout;
         let spec = self.config.spec();
         let stored = self.store(chain);
@@ -630,14 +650,7 @@ impl Instance {
         if outcome.is_some_and(|o| o.advanced) {
             actors.push(header_actor(self.program, &self.id, update.finalized_header.beacon.slot));
         }
-        reports.push(chain.submit(
-            &format!("{label} Finish (step 3)"),
-            job_actor,
-            borsh::to_vec(&Message::Finish).unwrap(),
-            actors,
-            vec![],
-            time,
-        ));
+        reports.push(finish(chain, &format!("{label} Finish (step 3)"), jid, job_actor, actors, time));
         JobRun { job_id: jid, reports, outcome }
     }
 }
