@@ -39,7 +39,7 @@ sides; full ids in [`run.log`](run.log).
 
 What this found on the way: the first version of the new vector extraction listed directories too, and GNU
 tar then reports the files under a listed directory as "Not found in archive" (exit 2); it lists files
-only now. The same comparison against the scripts as they were before (`git show 292799f0:…`) is what
+only now. The same comparison against the scripts as they were before (`git show 12e9cc46:…`) is what
 `scripts/ci/check-portable.py` reports on them: `tar --wildcards`, `sed -i` (3), `find -printf`,
 `sha256sum` (6), `declare -A`.
 

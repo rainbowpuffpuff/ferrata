@@ -3,7 +3,7 @@
 `modules/scripts/release-publish.sh` prepares the whole publication — the generated `logos-repo.json`,
 the module repositories, the assembled catalog — and, with `--yes`, creates and pushes it on GitHub and
 then stops before the release ([`../RELEASE.md`](../RELEASE.md)). This is what it did on 21 November 2026
-(source commit `ec4b932d`) with `--dry-run` and a throwaway key: every repository a **local bare git
+(source commit `e7ede725`) with `--dry-run` and a throwaway key: every repository a **local bare git
 repository** under the dry-run directory, the catalog's submodules pointing at them over `file://`
 remotes, **no network command run**, exit 0:
 
@@ -34,21 +34,23 @@ below; the laptop's run is the record of a source commit.
 
 | Repository | `main` | Tag `v0.1.0` (annotated) |
 |---|---|---|
-| `ferrata_attest_module.git` | `027a6c0a846bf6efbc4c84c2394918b5e0bbd7cc` | `623cdcda3949a3d93411f5c06fa686722135f917` |
-| `ferrata_bridge_module.git` | `71f10e040b0a3d5bbc52780bfa548c55abe0b8ef` | `7f542ee1d94c34fb97c42a922320469ab8108a99` |
-| `ferrata_attestor_module.git` | `e4c2746dcab8f7d7da2592b0b6ef2e5334703e5c` | `d605fe2566c52211448f8ebb2cbd8c95565fa762` |
-| `ferrata_monitor_module.git` | `2067745dd50cb3926f2f24bb09fe552ddc1d4330` | `9cf0bc071e8b3c31d3a39d5658bb4f9579d2ed86` |
-| `ferrata_relayer_module.git` | `b9058b9c4cd3a0c3ccfd26567a55da507ace4dbe` | `1da5db5adde3da68351e053fa94f8f1ed2324d1d` |
-| `ferrata-modules.git` | `c0d11ee34d2aa5de6f3e900ca7dd65e66b46ddf3` (the assembled catalog) | — |
+| `ferrata_attest_module.git` | `363d84de1af2d1f593d35f978c0186292f2812f4` | `e2c9a950d4e8543ec2e97046a2699f1746d1d084` |
+| `ferrata_bridge_module.git` | `5235b1a1a4d83e5554b150e886c0e874bddff8fb` | `a45971a12d654389c6d6897b8576e64ba5db1da4` |
+| `ferrata_attestor_module.git` | `1aa499c7247acc104d91847dc4c3e78411e9b9a0` | `8a0e5082ebfcf24a0dc822ef17389f260e59d772` |
+| `ferrata_monitor_module.git` | `d1108ddc0fe3f1201f89a63974edb309098f4f46` | `303eb20bfbacf262275337c7deaefd422d188380` |
+| `ferrata_relayer_module.git` | `f7df038efa90e470fc43aed04058229f93e187a0` | `3b434ff2b207adde94e86ac41e7bbb6b4f28c26e` |
+| `ferrata-modules.git` | `080bade491321b7ce9c977290675c75cf2427202` (the assembled catalog) | — |
 
 Each module repository is what [`export.sh`](../../scripts/export.sh) writes (the module with its staged
 crate committed). The export is reproducible: its commit carries a fixed identity and the source commit's
 date, so the same source commit gives these same commit ids on any machine (with the same LEZ v0.4.0-rc1
 tree beside the repository, which the attestation, bridge and relayer modules vendor parts of); a
 different source commit gives different ones, since every staged `STAGED.json` records the source commit
-it came from. A clone of the catalog (`git clone file://<scratch>/publish-dry/ferrata-modules.git`, then
-`git submodule update --init` with `protocol.file.allow=always`) checks out every module at exactly the
-pushed commits.
+it came from (this run: a clone of the branch at `e7ede725`). The catalog's commit is not reproducible
+elsewhere in a dry run: its `.gitmodules` names the dry-run directory's `file://` URLs (on GitHub, the
+organization's). A clone of the catalog (`git clone file://<scratch>/publish-dry/ferrata-modules.git`,
+then `git submodule update --init` with `protocol.file.allow=always`) checks out every module at exactly
+the pushed commits.
 
 ## The generated `logos-repo.json` (the assembled catalog's)
 
