@@ -123,6 +123,8 @@ def summarize(run):
             print(f"| {'honest daemons' if h else 'adversary'} | {step} | {code} | {c} | {g(gas)} | {same} of {c} |")
     tot_a = sum(r["gas_exec"] for n in names for r in J[n] if r["status"] == "applied")
     tot_r = sum(r["gas_exec"] for n in names for r in J[n] if r["status"] == "refused")
+    key["total_gas"] = tot_a + tot_r
+    key["revealed"] = len(reveals)
     if tot_a:
         key["mult"] = (tot_a + tot_r) / tot_a
         print(f"\nAll daemons together: execution gas on applied steps {g(tot_a)}, on refused steps {g(tot_r)}: the updates "

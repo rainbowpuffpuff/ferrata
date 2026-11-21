@@ -43,13 +43,14 @@ def main():
     print(out.getvalue())
     if len(keys) > 1:
         print("## The runs side by side\n")
-        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | gas multiple (all daemons) | honest refused / applied (A3's gate: at most 0.10) | honest-1's share of the honest fees (A3's gate: 0.35–0.65) |")
-        print("|---|---|---|---:|---:|---|---|---:|---:|---:|")
+        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | execution gas, all daemons, per recorded update revealed | gas multiple over the applied steps | honest refused / applied (A3's gate: at most 0.10) | honest-1's share of the honest fees (A3's gate: 0.35–0.65) |")
+        print("|---|---|---|---:|---:|---|---|---:|---:|---:|---:|")
         fmt = lambda v, f: f.format(v) if v is not None else "—"
         for k in keys:
             print(f"| {k['run']} | {k.get('window', '?')} of {k.get('poll', '?')} | {'yes' if k.get('adversary') else 'no'} | "
                   f"{k.get('jobs', 0)} | {k.get('twice', 0)} | {fmt(k.get('lat_med'), '{:.0f}')} / {fmt(k.get('lat_p90'), '{:.0f}')} | "
-                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | {fmt(k.get('mult'), '{:.3f}')} | "
+                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | "
+                  f"{fmt(k['total_gas'] / k['revealed'] if k.get('revealed') else None, '{:,.0f}')} | {fmt(k.get('mult'), '{:.3f}')} | "
                   f"{fmt(k.get('r9'), '{:.4f}')} | {fmt(k.get('share'), '{:.3f}')} |")
 
 
