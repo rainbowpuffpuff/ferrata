@@ -228,8 +228,10 @@ cancels it ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints"; [`bri
 §9, §11.6, §13). You do nothing here; the operator guide covers it.
 
 **Release delay.** Once the root holding your burn is final, the token's release delay must pass:
-at least 24 hours outside testnets (0 allowed on testnets), at most the 7-day revocation window. It is
-the window in which an accepted error can still be revoked ([`bridge.md`](../design/bridge.md) §13).
+at least the vault's `minReleaseDelay`, at most its revocation window `revokeWindow` (both immutable
+deployment parameters: 24 hours and 7 days by the design's defaults, 0 and 1 day in the deploy
+script's testnet configuration; read them from the vault you use). It is the window in which an
+accepted error can still be revoked ([`bridge.md`](../design/bridge.md) §13).
 
 **Release.** You (or a relayer) call `release(r, seal)` with the request `{token, denomIndex,
 recipient, relayer, relayFee, burnRoot, nullifier}`. The proof shows, in zero knowledge, that a burn
@@ -430,16 +432,22 @@ messages for each code.
 [`bridge.md`](../design/bridge.md) §14–§16, §20)
 
 - **Frozen** (deposits, releases, mints or burns, globally or per token): your position waits. Every
-  freeze lapses after at most 30 days unless renewed; the admin cannot unfreeze.
+  freeze lapses unless renewed: on the vault after its `maxFreeze` (an immutable deployment parameter
+  that the vault requires only to be above zero: 30 days by default; read it from the vault you use),
+  on LEZ at most 30 days after the newest attested Ethereum time (a constant of the bridge program).
+  The admin cannot unfreeze.
 - **Retired** (`retire()` on the vault, `Sunset` on LEZ): deposits stop forever and root imports stop;
   claims against imported roots, burns and releases continue; unimported deposits become refundable
-  after a final sunset checkpoint and its 7-day revocation window. Anyone may retire once no checkpoint
-  has been finalised for 30 days.
+  after a final sunset checkpoint and its revocation window (`revokeWindow`, 7 days by the design's
+  default). Anyone may retire once no checkpoint has been finalised for 30 days plus one candidate
+  wait, time under a checkpoint freeze or a watchers' pause not counting (`retireOpensAt()` on the
+  vault).
 - **Verifier stopped** (only by RISC Zero's own proof that its proof system is unsound): nothing more
   is released or refunded; owed balances stay claimable with `claimOwed` (vault v5; the sentence of
   [`bridge.md`](../design/bridge.md) §15 that refunds still work after a stop describes an earlier
   prototype: in v5 `refund` requires no verifier stop, [`vault/README.md`](../../vault/README.md), "Refunds").
-- **A wrong checkpoint not revoked within 7 days halts the vault for good.** What bounds your loss is
+- **A wrong checkpoint not revoked within the revocation window (7 days by the design's default)
+  halts the vault for good.** What bounds your loss is
   in [`docs/trust.md`](../trust.md).
 
 ## 13. For developers: integrating both flows through the core module (R.12)

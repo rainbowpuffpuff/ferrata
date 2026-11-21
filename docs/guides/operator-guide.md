@@ -588,7 +588,7 @@ CPU, memory and bandwidth over days are **not measured**.
 | Prover backlog | larger proofs | split into 180-block segments proven in parallel | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md) §3 |
 | Candidate cancelled | one more wait | submit again; it waits a full `W` | [`vault/README.md`](../../vault/README.md) |
 | Silent sequencers | rule (B) needs `t` live keys; rule (A) `t + 1`, so one silent key stalls (A) for `n ≤ 5` | — | [`bridge.md`](../design/bridge.md) §9, §20 |
-| A wrong checkpoint not revoked within 7 days | the vault halts for good: no honest checkpoint can follow it | revoke within the window (freeze authority) | [`bridge.md`](../design/bridge.md) §20 |
+| A wrong checkpoint not revoked within the revocation window (`revokeWindow`, 7 days by the design's default) | the vault halts for good: no honest checkpoint can follow it | revoke within the window (freeze authority) | [`bridge.md`](../design/bridge.md) §20 |
 | Verifier stop tripped (RISC Zero's proof of unsoundness) | no more releases or refunds | — | [`vault/README.md`](../../vault/README.md), "Verifier and stop" |
 | Ethereum gas mispriced (Glamsterdam state gas) | out-of-gas | take every limit from the node's estimate × 1.25 | [`deployer-guide.md`](deployer-guide.md) §4.1 |
 
@@ -621,7 +621,8 @@ fees owed). See [`admin/README.md`](../../admin/README.md) for each value's gett
 
 The vault and the checkpoint program parse LEZ v0.4 blocks; a LEZ change they cannot follow (including a
 change of turn or slot length) needs a retirement first. The freeze authority, or **anyone once no
-checkpoint has finalised for 30 days**, calls `retire()` on the vault; on LEZ the freeze authority sends `Sunset`,
+checkpoint has finalised for 30 days plus one candidate wait** (time under a checkpoint freeze or a watchers' pause
+not counting: `retireOpensAt()`), calls `retire()` on the vault; on LEZ the freeze authority sends `Sunset`,
 or anyone does once the vault's `retired` flag is attested there (the keyless `Sunset`, EVIDENCE row 74). After that: no deposits, no root imports;
 claims against imported roots, burns, checkpoints and releases continue. The first non-revoked final
 checkpoint carrying the sunset sets the refund boundary at its imported leaf count; once its revocation

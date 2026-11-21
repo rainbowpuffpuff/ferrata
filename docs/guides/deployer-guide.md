@@ -278,7 +278,8 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   attestation program has recorded, never on a caller's time. `Tick` and `Freeze` read a record; claims and `SetCap`
   carry no time ([EVIDENCE](../EVIDENCE.md) row 28). A freeze therefore holds while the light client stalls.
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
-  ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
+  after the newest attested Ethereum time (a constant of the program; on the vault the bound is its
+  `maxFreeze`, §2); the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
 
 Measured costs of these steps (in-process harness, this tree's program): `Init` 171,027 execution gas;
 `Register` 331,816 (431,512–455,116 on the vault's real storage); `ImportFees` 269,684; `SetCap` 91,019;
@@ -342,7 +343,8 @@ program that is not deployed (row 143); and a second deployer's own configuratio
 
 The vault and the checkpoint program are immutable and parse LEZ v0.4 blocks, so a configuration is
 retired before a LEZ change it cannot follow (including a change of turn or slot length). The freeze
-authority, or anyone once no checkpoint has finalised for 30 days, calls `retire()` on the vault
+authority, or anyone once no checkpoint has finalised for 30 days plus one candidate wait (time under a
+checkpoint freeze or a watchers' pause not counting: `retireOpensAt()`), calls `retire()` on the vault
 (deposits stop forever) and `Sunset` on LEZ (imports stop). Holders burn and release as usual; deposits
 LEZ never imported become refundable after a final sunset checkpoint and its revocation window. A new
 version is a new configuration, deployed as above, that holders move to by burning and depositing

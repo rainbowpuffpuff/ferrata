@@ -162,7 +162,8 @@ it bounds what one can take before someone freezes, as row 138's invariants meas
 - **Out, the escrow:** the unbacked tokens can be burned on LEZ, and the burns are real, so their checkpoint is
   honest: what protects the escrow is the vault's release caps (per token and global; the design's default at most
   10 % of a token's escrow a day above an immutable floor, [`bridge.md`](design/bridge.md) §13) and the release delay
-  (`minReleaseDelay` 24 h, at most `revokeWindow`, 7 days), within which the freeze authority freezes releases or
+  (at least `minReleaseDelay`, at most `revokeWindow`: immutable deployment parameters, 24 h and 7 days by the
+  design's defaults), within which the freeze authority freezes releases or
   revokes the root. [EVIDENCE](EVIDENCE.md) row 138 ran the vault under a verifier that accepts every seal (any
   checkpoint, any release, at the earliest second allowed): releases and refunds stayed within the cap bound in every
   window (the fullest 74.00 % of the ETH bucket's bound under rule (A), 90.09 % under rule (B)) and none came before the
@@ -419,7 +420,9 @@ silent sequencer stalls releases for `n ≤ 5`; it needs an unpredictable `prevr
    before it can finalise; any of up to three watchers cancels it if the tip is not final in its own
    nodes (rule (A): also if the key set lags the live one). A cancelled state waits again in full.
 2. **The release delay.** Once a root is final, releases against it wait the token's delay: at least
-   24 h outside testnets, at most the 7-day revocation window. In it the freeze authority can
+   at least `minReleaseDelay` and at most the revocation window `revokeWindow` (immutable deployment parameters:
+   24 h and 7 days by the design's defaults, 0 and 1 day in the deploy script's testnet configuration). In it
+   the freeze authority can
    `revokeFrom` the checkpoint and every later one; used nullifiers stay used. The release nullifier is
    D13's `NOut = H("ferrata/nf-out/v2" ‖ sOut)`, which does not depend on the burn's index, so a burn
    that a revoked checkpoint collected at one index and the canonical branch at another is released
