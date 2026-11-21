@@ -770,6 +770,7 @@ pub fn exit_name(code: u32) -> String {
         st::WRONG_SOURCE => "statements: WrongSource",
         st::NO_SUCH_STATEMENT => "statements: NoSuchStatement",
         st::ALREADY_USED => "statements: AlreadyUsed",
+        st::STALE => "statements: Stale",
         rb::BAD_MESSAGE => "rebate: BadMessage",
         rb::BAD_STATE => "rebate: BadState",
         rb::WRONG_RECEIVER => "rebate: WrongReceiver",

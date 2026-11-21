@@ -10,19 +10,26 @@
 //! `Read`, from any actor, is answered with the entry (a [`Recorded`], borsh) and changes nothing.
 //!
 //! **Who is trusted.** A consumer that reads an entry trusts the program that wrote it. Here that is this recorder's
-//! code, which writes only the reply of the attestation program named in the entry's key: no submitter can write an
-//! entry. A consumer must therefore fix the recorder's program id and the attestation program's id in immutable
-//! state (the rule of RFP-021 Verification Security #3 applies to both), derive the entry's actor itself, and check
-//! the entry's instance and chain as it would check a direct attestation. The direct path asks no trust in a
-//! recorder at all. An entry is a statement about one finalized block, recorded once: it does not become more
-//! recent; a consumer that needs a recent block checks `block_number`, as with the direct path.
+//! code, which writes only the reply of the attestation program named in the entry's key. Anyone may `Record` naming
+//! any program as the attestation program, including one of their own that answers whatever they like; that entry
+//! sits at a key containing that program's id, and a consumer that fixed the genuine program's id never reads it. A
+//! consumer must therefore fix the recorder's program id and the attestation program's id in immutable state (the
+//! rule of RFP-021 Verification Security #3 applies to both), derive the entry's actor itself from the question it
+//! asks (the predicate included: statement identifiers do not encode it), and check the entry's instance and chain as
+//! it would check a direct attestation. The direct path asks no trust in a recorder at all. An entry is a statement
+//! about one finalized block, recorded once: it does not become more recent; a consumer that needs a recent block
+//! checks `block_number`, as with the direct path.
 //!
-//! **The reader** (`ferrata_statements_reader`): `Use { recorder, key, ferrata, instance_id, chain_id,
-//! statement_id, tag }` at `use(config, statement_id)`, `config` = [`use_config`] of everything it trusts: sends
-//! `Read` to `statement(key)` of `recorder`, accepts the reply only from that actor, checks the entry's program, key,
-//! instance and chain and that it holds `statement_id`, and keeps [`Used`]. The actor is keyed on the statement
-//! identifier (RFP-021 Functionality #6) under one trust configuration, so a statement is used once per
-//! configuration: the consumer pattern's nullifier, on the recorded path.
+//! **The reader** (`ferrata_statements_reader`), a reference consumer that makes those four checks: `Use { recorder,
+//! ferrata, instance_id, chain_id, question, min_block, slot, statement_id, tag }` at `use(config, statement_id)`,
+//! `config` = [`use_config`] of everything it fixes (the recorder, the attestation program, the instance, the chain,
+//! the question's [`question_id`], the oldest block it accepts, its namespace `tag`). It derives the entry's key from
+//! the question and the record's slot itself, sends `Read` to `statement(key)` of `recorder`, accepts the reply only
+//! from that actor, checks the entry's program, key, instance and chain, that it holds `statement_id` and that its
+//! block is not older than `min_block`, and keeps [`Used`]. An entry recorded for another question (a weaker
+//! predicate, with the same statement identifiers) sits at another key, which no `Use` under this configuration
+//! reads. The actor is keyed on the statement identifier (RFP-021 Functionality #6) under one configuration, so a
+//! statement is used once per configuration: the consumer pattern's nullifier, on the recorded path.
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use ferrata_lez_wire::attest::{Attestation, Request};
@@ -86,11 +93,37 @@ pub fn statement_actor(recorder: AccountId, key: &Root) -> Actor {
     Actor::new(AccountId::for_public_pda(&recorder, &statement_seed(key)), recorder)
 }
 
+/// The identifier of a question: the request without its proofs ([`query`]), predicate and all.
+pub fn question_id(question: &Request) -> Root {
+    let q = borsh::to_vec(&query(question)).expect("borsh serialization is infallible");
+    tagged_hash(b"question", &[&q])
+}
+
 /// The reader's trust configuration as one value: the recorder and attestation program it reads, the instance and
-/// chain it accepts, and the consumer's own namespace `tag`. Its use actors are keyed on it, so an entry from any
-/// other recorder, program, instance or chain can only ever land in another configuration's actors.
-pub fn use_config(recorder: &AccountId, ferrata: &AccountId, instance_id: &Root, chain_id: u64, tag: &Root) -> Root {
-    tagged_hash(b"use-config", &[recorder.as_ref(), ferrata.as_ref(), instance_id, &chain_id.to_be_bytes(), tag])
+/// chain it accepts, the question it asks ([`question_id`]), the oldest execution block it accepts and the consumer's
+/// own namespace `tag`. Its use actors are keyed on it, so a use under any other recorder, program, instance, chain,
+/// question or freshness bound can only ever land in another configuration's actors.
+pub fn use_config(
+    recorder: &AccountId,
+    ferrata: &AccountId,
+    instance_id: &Root,
+    chain_id: u64,
+    question: &Root,
+    min_block: u64,
+    tag: &Root,
+) -> Root {
+    tagged_hash(
+        b"use-config",
+        &[
+            recorder.as_ref(),
+            ferrata.as_ref(),
+            instance_id,
+            &chain_id.to_be_bytes(),
+            question,
+            &min_block.to_be_bytes(),
+            tag,
+        ],
+    )
 }
 
 pub fn use_seed(config: &Root, statement_id: &Root) -> PdaSeed {
@@ -137,13 +170,19 @@ pub enum StatementsState {
 /// Messages of the reader.
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum ReaderMessage {
-    /// Use `statement_id` from `statement(key)` of `recorder`, once per `tag`.
+    /// Use `statement_id` from the entry of `recorder` for `question` at `header(ferrata, instance_id, slot)`, once per
+    /// configuration ([`use_config`]): the reader derives the entry's key itself.
     Use {
         recorder: AccountId,
-        key: Root,
         ferrata: AccountId,
         instance_id: Root,
         chain_id: u64,
+        /// The question (a request; its proofs are ignored).
+        question: Request,
+        /// The oldest execution block accepted.
+        min_block: u64,
+        /// The record the entry was made at (any slot: its block is checked against `min_block`).
+        slot: u64,
         statement_id: Root,
         tag: Root,
     },
@@ -158,6 +197,7 @@ pub struct Waiting {
     pub instance_id: Root,
     pub chain_id: u64,
     pub statement_id: Root,
+    pub min_block: u64,
 }
 
 /// A statement used once: what the reader keeps.
@@ -212,6 +252,8 @@ pub mod code {
         NO_SUCH_STATEMENT = 70;
         /// The reader: the statement was already used under this configuration.
         ALREADY_USED = 71;
+        /// The reader: the entry's execution block is older than the configuration accepts.
+        STALE = 72;
     }
 }
 
@@ -226,6 +268,9 @@ pub fn accept(w: &Waiting, entry: &Recorded) -> Result<Used, u8> {
     }
     if !entry.attestation.statements.iter().any(|s| s.id == w.statement_id) {
         return Err(code::NO_SUCH_STATEMENT);
+    }
+    if entry.attestation.block_number < w.min_block {
+        return Err(code::STALE);
     }
     Ok(Used {
         statement_id: w.statement_id,

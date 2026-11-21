@@ -1,15 +1,17 @@
 //! `ferrata_statements_reader`: a consumer of recorded statements (RFP-021 soft requirement 1).
 //! `ferrata_lez_statements_wire` has the whole design.
 //!
-//! * `Use { recorder, key, ferrata, instance_id, chain_id, statement_id, tag }` at `use(config, statement_id)`: send
+//! * `Use { recorder, ferrata, instance_id, chain_id, question, min_block, slot, statement_id, tag }` at
+//!   `use(config, statement_id)`, `config` fixing all but the slot: derive `key` from the question and the slot, send
 //!   `Read` to `statement(key)` of `recorder`.
 //! * The reply, accepted only from that actor while this one waits: `accept` (the entry's program, key, instance
-//!   and chain, and the statement in it), then keep `Used`. A second `Use` of the statement under the same trust
-//!   configuration finds `Used` and is refused: the nullifier keyed on the statement identifier.
+//!   and chain, the statement in it, its block not older than `min_block`), then keep `Used`. A second `Use` of the
+//!   statement under the same configuration finds `Used` and is refused: the nullifier keyed on the statement
+//!   identifier.
 
 use ferrata_lez_statements_wire::{
-    accept, code, statement_actor, use_actor, use_config, ReaderMessage, ReaderState, Recorded, StatementsMessage,
-    Waiting,
+    accept, code, question_id, statement_actor, statement_key, use_actor, use_config, ReaderMessage, ReaderState,
+    Recorded, StatementsMessage, Waiting,
 };
 use lee_core::program::{read_input_frame, ReceiveInput, Response};
 use risc0_zkvm::guest::env;
@@ -47,14 +49,26 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
         }
         Some(ReaderState::Used(_)) => Err(code::ALREADY_USED),
         None => {
-            let ReaderMessage::Use { recorder, key, ferrata, instance_id, chain_id, statement_id, tag } =
-                borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)?;
-            let config = use_config(&recorder, &ferrata, &instance_id, chain_id, &tag);
+            let ReaderMessage::Use {
+                recorder,
+                ferrata,
+                instance_id,
+                chain_id,
+                question,
+                min_block,
+                slot,
+                statement_id,
+                tag,
+            } = borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)?;
+            let config =
+                use_config(&recorder, &ferrata, &instance_id, chain_id, &question_id(&question), min_block, &tag);
             if input.receiver != use_actor(program, &config, &statement_id) {
                 return Err(code::WRONG_RECEIVER);
             }
+            // The entry this configuration's question has at that record: derived here, never taken from the caller.
+            let key = statement_key(&ferrata, slot, &question);
             let entry = statement_actor(recorder, &key);
-            let waiting = Waiting { entry, key, ferrata, instance_id, chain_id, statement_id };
+            let waiting = Waiting { entry, key, ferrata, instance_id, chain_id, statement_id, min_block };
             Ok(Response::set_state(encode(&ReaderState::Waiting(waiting))).send_sync(entry, &StatementsMessage::Read))
         }
     }
