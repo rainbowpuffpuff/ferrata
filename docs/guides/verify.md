@@ -102,6 +102,11 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
   Two v5 vaults are live on Sepolia. crown-live-3's, `0x04eE…e44c`, holds the final programs: `--vault` on it gives 6
   of 6 (below). crown-live-1's, `0xfE3199fa…9E54`, ran programs built before the wrapper (below): `--vault` on it
   prints DIFFER for `checkpoint_b` and `release` and exits 1, as expected.
+  Since milestone B1 (21 November 2026) the bridge program of this tree is not the crown run's: `compare` holds it to
+  [`docs/image-ids.md`](../image-ids.md)'s `ferrata_bridge_b1` and prints the crown run's beside it, so on a tree since
+  B1 it gives 5 of 6 crown programs equal to the crown run's, the bridge equal to its own record, and 14 of 14 guests;
+  the vault's two immutables (`checkpoint_b`, `release`) are unchanged. To rebuild the bridge program the live runs
+  deployed (`0xccde6171…71dd`), check out `f13faee2`, the tree before B1, where `compare --vault` gives 6 of 6.
 
 | Program | Where its id is used |
 |---|---|

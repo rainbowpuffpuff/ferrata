@@ -1,11 +1,13 @@
 # Image ids of the guests at `integration7`
 
 > **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
-> program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below
-> (`0xac1fb59b…442e`), not the `0xccde6171…71dd` of the first table. The first table's bridge row stays as the record
-> of the program the live runs of November 2026 deployed (`crown-live-3`, the LEZ sequencers we ran), which those
-> deployments keep: its source is at commit `f13faee2`. `scripts/reproduce-image-ids.sh compare` on this tree reports
-> that row as changed until the table is moved to B1's program.
+> program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below,
+> recorded there as `ferrata_bridge_b1` (`0xac1fb59b…442e`). The first table's `ferrata_bridge` row stays the program the
+> live runs of November 2026 deployed (`crown-live-3`, `crown-live-4`, the LEZ sequencers we ran), which those
+> deployments keep; its source is at commit `f13faee2`, which rebuilds it. The tools resolve the two by name:
+> `scripts/verify-sepolia.py` holds the live vaults to `ferrata_bridge` and a run of B1's program to `ferrata_bridge_b1`;
+> `scripts/reproduce-image-ids.sh compare` and `scripts/privacy/real.sh` expect this tree's build to be
+> `ferrata_bridge_b1` (the crown run's other five programs and the other 13 guests are unchanged).
 
 
 Every guest program of this tree, built on 12 November 2026 from commit 9b9bbd4 (`scripts/reproduce-image-ids.sh build`,
@@ -28,7 +30,7 @@ live run, `crown-live-1`, ran programs built at the maintainer's checkout path (
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
 | attestation program (`lez/guests/program`): `ferrata_lez` | `0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df` | `ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9` | 627,064 | `468754dd15a24c73eaa256aecd1c683531b17286f5db2592590b804fb086bedc` |
-| bridge program (`lez/guests/bridge`): `ferrata_bridge` | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070` | 592,840 | `6d038fd3628c9ba97f8d1ec2c35326696dcb92867eab7894f6f703e901d8604b` |
+| bridge program (`lez/guests/bridge` before B1, at `f13faee2`; the live runs'): `ferrata_bridge` | `0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd` | `11d832482ff0a26c8f283edda1a35b262274c066734895c62f696394dcab6070` | 592,840 | `6d038fd3628c9ba97f8d1ec2c35326696dcb92867eab7894f6f703e901d8604b` |
 | reference consumer (`lez/guests/consumer`): `ferrata_consumer` | `0x8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96` | `d02e4aa394f73702fec3e9983f32e8c9743dbaa1a41d2d705fc06f1b63e94ca5` | 471,408 | `a403d4b2eca1ae9c205cbb87222a57f381ec512810403cf899d9036560eed754` |
 | second consumer (`lez/guests/holdings`): `ferrata_holdings` | `0xa79e3f5c4496f2707ab6f55a980efb00dd80aaf562b51f5a504349e9a97c5591` | `504a67c071a103b5d99de10163ae97f925151b09b59c49048e50f3d315b710c5` | 307,504 | `74f7215ac2641e2772f78ac994b62bd52c9807970df947514a272e03505e4deb` |
 | attestation program, software Keccak (cycle comparison): `ferrata_lez_keccak_soft` | `0xefe9c58caa0eacd4c837815d7dbb3c003011b478f9cc5b85fca083b6f0a5cb3e` | `727c5cda08f88274128e873badafd441b9112a5885a407ca6e829f9b53bc1995` | 630,292 | `025acb90bc29fd32472a59a3aeb3eb1330d1e9b446b40e2e695f3e1db3cb6004` |
@@ -79,7 +81,7 @@ first table rebuilt to its recorded id `0x816d1fef…03df`; `r0vm --elf ferrata_
 
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
-| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge` | `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e` | `5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8` | 607,608 | `e240c82e5c4c39e2b5dcb00ea98f09baabf5b387051523f76650b503a8b5d6ee` |
+| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge_b1` | `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e` | `5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8` | 607,608 | `e240c82e5c4c39e2b5dcb00ea98f09baabf5b387051523f76650b503a8b5d6ee` |
 
 ## The attestation program with statement classes; not deployed
 

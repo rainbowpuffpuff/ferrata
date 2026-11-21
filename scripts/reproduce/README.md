@@ -98,7 +98,9 @@ RISC Zero's toolchains above.
   RISC Zero's own Docker image; [EVIDENCE](../../docs/EVIDENCE.md) gives the runs that made them.
 - **The live vaults' programs.** The `guest-ids` check compares with the recorded tables, not with a vault; add
   `--vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` to `scripts/reproduce-image-ids.sh compare` to compare with the
-  live vault of the final programs (crown-live-3: 6 of 6, [verify.md](../../docs/guides/verify.md) §2). The first live
+  live vault of the final programs (crown-live-3: 6 of 6 at `f13faee2`; since milestone B1 this tree's bridge program is
+  B1's, held to `docs/image-ids.md`'s `ferrata_bridge_b1`: the other five and the vault's two immutables still equal,
+  [verify.md](../../docs/guides/verify.md) §2). The first live
   vault, `0xfE3199fa…9E54`, gives 4 of 6: crown-live-1 ran programs built at the maintainer's path before guest builds
   were made path-independent. `verify-sepolia` checks both live runs from their committed records,
   crown-live-3 (the final programs) first, each vault pinned to the image ids it was deployed with.

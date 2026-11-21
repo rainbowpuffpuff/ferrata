@@ -471,8 +471,9 @@ safety role of §3.4.
   [`guides/verify.md`](guides/verify.md) §2); what must match is the pinned toolchains. The first live run's programs
   (`crown-live-1`) were built before this, at the maintainer's checkout path, and reproduce only there (6 of 6 on the
   build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses, and
-  the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6,
-  [`guides/verify.md`](guides/verify.md) §2).
+  the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6 at
+  `f13faee2`, [`guides/verify.md`](guides/verify.md) §2; since milestone B1 this tree's bridge program is B1's, which
+  no live vault pins, and the deployed one rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 

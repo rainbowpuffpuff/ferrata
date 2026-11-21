@@ -23,9 +23,16 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 T="$root/target/privacy/real"; S="$T/stage"  # under target/privacy: the vault's fs_permissions
 step="${1:?step}"; RUN="${2:-}"
-expect_id() {  # the image id docs/image-ids.md records for a program named in its first column
-  grep -F ": \`$1\` |" "$root/docs/image-ids.md" | awk -F'|' '{gsub(/[` ]/, "", $3); print $3}'
+expect_id() {  # the image id docs/image-ids.md records for a program named in its first column: exactly one row
+  local ids
+  ids="$(grep -F ": \`$1\` |" "$root/docs/image-ids.md" | awk -F'|' '{gsub(/[` ]/, "", $3); print $3}')"
+  [ -n "$ids" ] && [ "$(printf '%s\n' "$ids" | wc -l)" = 1 ] \
+    || { echo "docs/image-ids.md: not exactly one row for \`$1\`" >&2; return 1; }
+  printf '%s\n' "$ids"
 }
+# This tree's bridge program: since milestone B1 docs/image-ids.md's `ferrata_bridge_b1` (its `ferrata_bridge` row is
+# the program the live runs deployed, at f13faee2).
+BRIDGE_ENTRY=ferrata_bridge_b1
 E="$S/ferrata-e2e"
 
 case "$step" in
@@ -43,7 +50,7 @@ build)
   cp "$bin" "$S/privacy_suite" && strip --strip-debug "$S/privacy_suite"
   cp "$root/bridge/target/release/ferrata-e2e" "$E" && strip --strip-debug "$E"
   "$E" program-binary "$elf" "$S/release.bin" > "$T/logs/release-id.json"
-  got="$(jq -r .image_id "$T/logs/release-id.json")"; want="$(expect_id release)"; bridge="$(expect_id ferrata_bridge)"
+  got="$(jq -r .image_id "$T/logs/release-id.json")"; want="$(expect_id release)"; bridge="$(expect_id $BRIDGE_ENTRY)"
   echo "release program: $got (docs/image-ids.md: $want); bridge program expected: $bridge"
   [ "$got" = "$want" ] || { echo "the release program's id is not docs/image-ids.md's" >&2; exit 1; }
   python3 -I - "$S" "$want" "$bridge" "${FERRATA_COMMIT:-$(git -C "$root" rev-parse HEAD 2> /dev/null || echo unknown)}" "$root/gpu-prover/logs/bin-meta/r0vm-cuda.json" <<'EOF'
@@ -63,7 +70,7 @@ EOF
   ;;
 dev)
   D="$T/dev-data"; rm -rf "$D"; mkdir -p "$D" "$T/logs"
-  bridge="$(expect_id ferrata_bridge)"
+  bridge="$(expect_id $BRIDGE_ENTRY)"
   ( cd "$T" && FERRATA_PRIVACY_DIR="$D" RISC0_DEV_MODE=1 FERRATA_EXPECT_BRIDGE_IMAGE_ID="$bridge" \
       "$S/privacy_suite" --exact privacy_suite_lez_half --nocapture --test-threads 1 ) > "$T/logs/dev-lez.log" 2>&1
   ( cd "$root/vault" && FERRATA_PRIVACY_DIR="$D" forge test --match-contract PrivacySuiteTest -vv ) > "$T/logs/dev-forge.log" 2>&1
