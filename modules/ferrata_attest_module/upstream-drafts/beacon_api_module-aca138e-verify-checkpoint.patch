@@ -1,0 +1,339 @@
+diff --git a/rust-lib/src/beacon.rs b/rust-lib/src/beacon.rs
+--- a/rust-lib/src/beacon.rs
++++ b/rust-lib/src/beacon.rs
+@@ -425,7 +425,7 @@
+         first
+     }
+ 
+-    fn client(&self) -> Result<reqwest::blocking::Client, BeaconError> {
++    pub(crate) fn client(&self) -> Result<reqwest::blocking::Client, BeaconError> {
+         build_client(&self.cfg.proxy_config()).map_err(|e| BeaconError::Proxy(e.to_string()))
+     }
+ 
+@@ -600,6 +600,20 @@
+     }
+ }
+ 
++/// One GET of a JSON document: `None` on HTTP 404, an error naming why for any other failure (`checkpoint.rs`).
++pub(crate) fn get_path(
++    client: &reqwest::blocking::Client,
++    base: &str,
++    path: &str,
++    timeout: Duration,
++) -> Result<Option<Value>, String> {
++    match get(client, base, path, timeout) {
++        Ok(body) => serde_json::from_str(&body).map(Some).map_err(|e| format!("not JSON: {e}")),
++        Err(e) if e == "HTTP 404" => Ok(None),
++        Err(e) => Err(e),
++    }
++}
++
+ /// One GET. Anything but a 200 whose body fits [`MAX_BODY`] is an error naming why.
+ fn get(client: &reqwest::blocking::Client, base: &str, path: &str, timeout: Duration) -> Result<String, String> {
+     get_with_fork(client, base, path, timeout).map(|(_, body)| body)
+diff --git a/rust-lib/src/checkpoint.rs b/rust-lib/src/checkpoint.rs
+new file mode 100644
+--- /dev/null
++++ b/rust-lib/src/checkpoint.rs
+@@ -0,0 +1,157 @@
++//! `verify_checkpoint`: check a light client's trusted checkpoint (a block root) against this chain's providers before
++//! relying on it. The answers of the providers are not trusted one by one: each is asked, pinned (no failover), whether
++//! the root is a canonical block, the canonical block at its own slot, at or below what it has finalized, on the chain
++//! the caller expects (genesis, deposit chain id); the checkpoint passes when enough providers on distinct hosts agree and
++//! none disagrees. A provider that cannot answer is not counted either way.
++//!
++//! This is the check a light client deployed elsewhere (for instance an Ethereum light client inside a LEZ program)
++//! needs before anyone binds to it: an independent verification of its weak-subjectivity checkpoint against public
++//! Ethereum sources.
++
++use std::collections::BTreeSet;
++
++use serde::Deserialize;
++use serde_json::{json, Value};
++
++use crate::beacon::{get_path, network, Plan};
++
++/// What the caller expects of the chain. Unset fields are taken from the chain's known network where there is one
++/// (`genesis_time`; the deposit chain id is the chain id), and otherwise not checked.
++#[derive(Clone, Debug, Default, Deserialize)]
++pub struct CheckpointExpect {
++    pub genesis_validators_root: Option<String>,
++    pub genesis_time: Option<u64>,
++    pub deposit_chain_id: Option<u64>,
++    /// Agreeing providers on distinct hosts needed (default 3).
++    pub min_providers: Option<usize>,
++}
++
++fn norm(h: &str) -> String {
++    format!("0x{}", h.trim().trim_start_matches("0x").trim_start_matches("0X").to_ascii_lowercase())
++}
++
++fn num(v: &Value) -> Option<u64> {
++    v.as_str().and_then(|s| s.parse().ok()).or_else(|| v.as_u64())
++}
++
++fn host(endpoint: &str) -> String {
++    url::Url::parse(endpoint)
++        .ok()
++        .and_then(|u| u.host_str().map(|h| match u.port() {
++            Some(p) => format!("{h}:{p}"),
++            None => h.to_string(),
++        }))
++        .unwrap_or_else(|| endpoint.to_string())
++}
++
++/// One provider's answers, judged.
++struct Judged {
++    agree: bool,
++    disagree: Vec<String>,
++    unavailable: Vec<String>,
++    slot: Option<u64>,
++    finalized_slot: Option<u64>,
++}
++
++impl Plan {
++    /// Every enabled provider asked about the block root `root` (see the module documentation).
++    /// `{ ok, chainId, root, verdict: "ok" | "failed", agreeing, needed, slot, providers: [...] }`.
++    pub fn verify_checkpoint(&self, root: &str, expect: &CheckpointExpect) -> Value {
++        let root = norm(root);
++        let known = network(self.chain_id);
++        let genesis_time = expect.genesis_time.or(known.map(|n| n.genesis_time));
++        let deposit_chain_id = expect.deposit_chain_id.or(Some(self.chain_id));
++        let gvr = expect.genesis_validators_root.as_deref().map(norm);
++        let needed = expect.min_providers.unwrap_or(3);
++        let client = match self.client() {
++            Ok(c) => c,
++            Err(e) => return json!({ "ok": false, "error": e.to_string() }),
++        };
++        let timeout = std::time::Duration::from_secs(self.cfg.timeout_secs);
++        let mut providers = Vec::new();
++        let mut agreeing_hosts = BTreeSet::new();
++        let mut slots = BTreeSet::new();
++        let mut any_disagree = false;
++        for p in self.cfg.providers.iter().filter(|p| p.enabled) {
++            let ask = |path: &str| get_path(&client, &p.endpoint, path, timeout);
++            let mut j = Judged { agree: false, disagree: vec![], unavailable: vec![], slot: None, finalized_slot: None };
++            // 1. The root: a canonical block.
++            match ask(&format!("/eth/v1/beacon/headers/{root}")) {
++                Ok(Some(v)) => {
++                    let d = &v["data"];
++                    if d["root"].as_str().map(norm) != Some(root.clone()) {
++                        j.disagree.push("answers another root for it".into());
++                    } else if d["canonical"].as_bool() == Some(false) {
++                        j.disagree.push("not canonical".into());
++                    }
++                    j.slot = num(&d["header"]["message"]["slot"]);
++                }
++                Ok(None) => j.disagree.push("does not know the root".into()),
++                Err(e) => j.unavailable.push(format!("headers/{{root}}: {e}")),
++            }
++            // 2. The canonical block at its slot is the root.
++            if let (Some(slot), true) = (j.slot, j.disagree.is_empty() && j.unavailable.is_empty()) {
++                match ask(&format!("/eth/v1/beacon/headers/{slot}")) {
++                    Ok(Some(v)) if v["data"]["root"].as_str().map(norm) == Some(root.clone()) => {}
++                    Ok(Some(_)) | Ok(None) => j.disagree.push(format!("another block (or none) at slot {slot}")),
++                    Err(e) => j.unavailable.push(format!("headers/{slot}: {e}")),
++                }
++                // 3. Finalized there.
++                match ask("/eth/v1/beacon/headers/finalized") {
++                    Ok(Some(v)) => {
++                        j.finalized_slot = num(&v["data"]["header"]["message"]["slot"]);
++                        if j.finalized_slot.is_none_or(|f| f < slot) {
++                            j.disagree.push(format!("has not finalized slot {slot}"));
++                        }
++                    }
++                    Ok(None) => j.unavailable.push("headers/finalized: HTTP 404".into()),
++                    Err(e) => j.unavailable.push(format!("headers/finalized: {e}")),
++                }
++            }
++            // 4. The chain: its genesis and deposit chain id.
++            match ask("/eth/v1/beacon/genesis") {
++                Ok(Some(v)) => {
++                    let d = &v["data"];
++                    if gvr.as_ref().is_some_and(|g| d["genesis_validators_root"].as_str().map(norm).as_ref() != Some(g)) {
++                        j.disagree.push("another genesis_validators_root".into());
++                    }
++                    if genesis_time.is_some_and(|t| num(&d["genesis_time"]) != Some(t)) {
++                        j.disagree.push("another genesis_time".into());
++                    }
++                }
++                Ok(None) => j.unavailable.push("genesis: HTTP 404".into()),
++                Err(e) => j.unavailable.push(format!("genesis: {e}")),
++            }
++            match ask("/eth/v1/config/spec") {
++                Ok(Some(v)) => {
++                    if deposit_chain_id.is_some_and(|c| num(&v["data"]["DEPOSIT_CHAIN_ID"]) != Some(c)) {
++                        j.disagree.push("another DEPOSIT_CHAIN_ID".into());
++                    }
++                }
++                Ok(None) => j.unavailable.push("config/spec: HTTP 404".into()),
++                Err(e) => j.unavailable.push(format!("config/spec: {e}")),
++            }
++            let verdict = if !j.disagree.is_empty() {
++                any_disagree = true;
++                "disagrees"
++            } else if !j.unavailable.is_empty() {
++                "unavailable"
++            } else {
++                j.agree = true;
++                "agrees"
++            };
++            if j.agree {
++                agreeing_hosts.insert(host(&p.endpoint));
++                if let Some(s) = j.slot {
++                    slots.insert(s);
++                }
++            }
++            providers.push(json!({ "id": p.id, "endpoint": p.endpoint, "verdict": verdict, "slot": j.slot,
++                                   "finalized_slot": j.finalized_slot, "disagree": j.disagree, "unavailable": j.unavailable }));
++        }
++        let ok = agreeing_hosts.len() >= needed && !any_disagree && slots.len() <= 1;
++        json!({ "ok": true, "chainId": self.chain_id, "root": root, "verdict": if ok { "ok" } else { "failed" },
++                "agreeing": agreeing_hosts.len(), "needed": needed, "slot": slots.iter().next(),
++                "providers": providers })
++    }
++}
+diff --git a/rust-lib/src/glue.rs b/rust-lib/src/glue.rs
+--- a/rust-lib/src/glue.rs
++++ b/rust-lib/src/glue.rs
+@@ -51,6 +51,10 @@
+     fn finalized_header(&self, chain_id: i64) -> String;
+     /// A GET under `/eth/v1/` or `/eth/v2/`, for diagnostics. `{ ok, provider, result }`.
+     fn raw_get(&self, chain_id: i64, path: String, provider: String) -> String;
++    /// Check a trusted checkpoint (a block root) against every enabled provider, each pinned: canonical, the canonical
++    /// block at its slot, finalized there, on the expected chain (`expect_json`: `{ genesis_validators_root?,
++    /// genesis_time?, deposit_chain_id?, min_providers? }`). `{ ok, verdict, agreeing, needed, slot, providers }`.
++    fn verify_checkpoint(&self, chain_id: i64, root: String, expect_json: String) -> String;
+ 
+     fn on_context_ready(&self, _ctx: &RustModuleContext) {}
+ }
+@@ -267,6 +271,21 @@
+             Err(e) => e,
+         }
+     }
++
++    fn verify_checkpoint(&self, chain_id: i64, root: String, expect_json: String) -> String {
++        let expect: crate::CheckpointExpect = if expect_json.trim().is_empty() {
++            crate::CheckpointExpect::default()
++        } else {
++            match serde_json::from_str(&expect_json) {
++                Ok(e) => e,
++                Err(e) => return err(format!("expect_json: {e}")),
++            }
++        };
++        match self.plan(chain_id) {
++            Ok(plan) => plan.verify_checkpoint(&root, &expect).to_string(),
++            Err(e) => e,
++        }
++    }
+ }
+ 
+ #[no_mangle]
+diff --git a/rust-lib/src/lib.rs b/rust-lib/src/lib.rs
+--- a/rust-lib/src/lib.rs
++++ b/rust-lib/src/lib.rs
+@@ -6,6 +6,7 @@
+ //! default `logos_module` feature.
+ 
+ mod beacon;
++mod checkpoint;
+ mod proxy;
+ 
+ pub use beacon::{
+@@ -13,6 +14,7 @@
+     BuiltinProvider, ChainConfig, ConfigSource, Fetched, Health, HealthBook, LcRequest, Network, Plan, Provider,
+     DEFAULT_PROVIDERS, MAX_HEAD_LAG_SLOTS, NETWORKS,
+ };
++pub use checkpoint::CheckpointExpect;
+ 
+ #[cfg(test)]
+ mod tests;
+diff --git a/rust-lib/src/tests.rs b/rust-lib/src/tests.rs
+--- a/rust-lib/src/tests.rs
++++ b/rust-lib/src/tests.rs
+@@ -404,3 +404,85 @@
+         assert!(!text.contains("Client::builder") && !text.contains("Client::new"), "{}", path.display());
+     }
+ }
++
++// ---- verify_checkpoint (checkpoint.rs) ----------------------------------------------------------------------------
++
++const CP_ROOT: &str = "0x3b901f5e0000000000000000000000000000000000000000000000000000ccf7c0";
++const CP_SLOT: u64 = 11_562_112;
++const SEPOLIA_GVR: &str = "0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078";
++
++/// A Sepolia provider: the checkpoint's block canonical at its slot, finalized at `finalized`, Sepolia's genesis and
++/// spec; `other_at_slot` puts another block at the slot.
++fn cp_provider(finalized: u64, other_at_slot: bool, genesis_time: u64) -> Server {
++    serve(move |path| {
++        let header = |root: &str, slot: u64| json!({ "data": { "root": root, "canonical": true,
++            "header": { "message": { "slot": slot.to_string() } } } }).to_string();
++        let root = &CP_ROOT[..66];
++        if path == format!("/eth/v1/beacon/headers/{root}") {
++            (200, header(root, CP_SLOT), 0)
++        } else if path == format!("/eth/v1/beacon/headers/{CP_SLOT}") {
++            let r = if other_at_slot { format!("0x{}", "ab".repeat(32)) } else { root.to_string() };
++            (200, header(&r, CP_SLOT), 0)
++        } else if path == "/eth/v1/beacon/headers/finalized" {
++            (200, header(&format!("0x{}", "cd".repeat(32)), finalized), 0)
++        } else if path == "/eth/v1/beacon/genesis" {
++            (200, json!({ "data": { "genesis_validators_root": SEPOLIA_GVR, "genesis_time": genesis_time.to_string() } }).to_string(), 0)
++        } else if path == "/eth/v1/config/spec" {
++            (200, json!({ "data": { "DEPOSIT_CHAIN_ID": "11155111" } }).to_string(), 0)
++        } else {
++            (404, "{}".into(), 0)
++        }
++    })
++}
++
++fn cp_expect() -> crate::CheckpointExpect {
++    crate::CheckpointExpect { genesis_validators_root: Some(SEPOLIA_GVR.into()), ..Default::default() }
++}
++
++#[test]
++fn verify_checkpoint_three_providers_agree() {
++    let s: Vec<Server> = (0..3).map(|_| cp_provider(CP_SLOT + 6240, false, 1_655_733_600)).collect();
++    let p = plan(11_155_111, s.iter().enumerate().map(|(i, x)| provider(&format!("p{i}"), &x.base)).collect());
++    let v = p.verify_checkpoint(&CP_ROOT[..66], &cp_expect());
++    assert_eq!(v["verdict"], "ok", "{v:#}");
++    assert_eq!(v["agreeing"], 3);
++    assert_eq!(v["slot"], CP_SLOT);
++    for x in &s {
++        assert!(x.hits().iter().any(|h| h.ends_with(&format!("/headers/{CP_SLOT}"))), "pinned, each provider asked");
++    }
++}
++
++#[test]
++fn verify_checkpoint_refuses_another_block_unfinalized_or_another_chain() {
++    let root = &CP_ROOT[..66];
++    for (label, bad) in [
++        ("another block at the slot", cp_provider(CP_SLOT + 6240, true, 1_655_733_600)),
++        ("not finalized there", cp_provider(CP_SLOT - 32, false, 1_655_733_600)),
++        ("another genesis", cp_provider(CP_SLOT + 6240, false, 1_606_824_023)),
++    ] {
++        let good: Vec<Server> = (0..3).map(|_| cp_provider(CP_SLOT + 6240, false, 1_655_733_600)).collect();
++        let mut list: Vec<Provider> = good.iter().enumerate().map(|(i, x)| provider(&format!("g{i}"), &x.base)).collect();
++        list.push(provider("bad", &bad.base));
++        let v = plan(11_155_111, list).verify_checkpoint(root, &cp_expect());
++        assert_eq!(v["verdict"], "failed", "{label}: {v:#}");
++        let b = v["providers"].as_array().unwrap().iter().find(|x| x["id"] == "bad").unwrap().clone();
++        assert_eq!(b["verdict"], "disagrees", "{label}: {b:#}");
++    }
++}
++
++#[test]
++fn verify_checkpoint_counts_hosts_and_skips_the_unavailable() {
++    let root = &CP_ROOT[..66];
++    let a = cp_provider(CP_SLOT + 6240, false, 1_655_733_600);
++    let b = cp_provider(CP_SLOT + 6240, false, 1_655_733_600);
++    // Two ids for one endpoint count once; a provider that cannot be reached is not counted.
++    let list = vec![provider("a", &a.base), provider("a2", &a.base), provider("b", &b.base), provider("down", "http://127.0.0.1:9")];
++    let v = plan(11_155_111, list).verify_checkpoint(root, &cp_expect());
++    assert_eq!(v["agreeing"], 2, "{v:#}");
++    assert_eq!(v["verdict"], "failed");
++    let down = v["providers"].as_array().unwrap().iter().find(|x| x["id"] == "down").unwrap().clone();
++    assert_eq!(down["verdict"], "unavailable");
++    let v = plan(11_155_111, vec![provider("a", &a.base), provider("b", &b.base)])
++        .verify_checkpoint(root, &crate::CheckpointExpect { min_providers: Some(2), ..cp_expect() });
++    assert_eq!(v["verdict"], "ok", "{v:#}");
++}
