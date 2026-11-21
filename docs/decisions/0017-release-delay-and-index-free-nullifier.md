@@ -16,7 +16,8 @@ burn at another index than the revoked checkpoint did.
    *Recorded:* docs/design/spec/bridge-spec-v2.md (the release's `releaseDelay(token)`, `revokeFrom`, `NOut`);
    bridge/RESULTS.md ("v2 allows 0").
 2. A per-token release delay between `minReleaseDelay` (immutable; recommended 24 h outside testnets) and the
-   revocation window (immutable; 7 days by default), in which the freeze authority may `revokeFrom`;
+   revocation window (immutable; 7 days as the design's default, 1 day in the deploy script's testnet configuration),
+   in which the freeze authority may `revokeFrom`;
    `NOut = H("ferrata/nf-out/v2" ‖ sOut)`.
 
 ## Decision
