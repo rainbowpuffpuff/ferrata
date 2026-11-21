@@ -723,7 +723,9 @@ pub fn import_proofs(answer: &serde_json::Value) -> Result<(Vec<Vec<u8>>, (Vec<V
 
 /// The relayer's root import (bridge.md §6): the configuration's newest record on the zone (the
 /// instance's finalized header, `header(id, slot)`), the vault's slots 0 and 1 at that record's block
-/// (`eth_getProof` from the relayer's Ethereum endpoint, the block's hash checked against the record),
+/// (`eth_getProof` from the relayer's Ethereum endpoint, the block's hash checked against the record;
+/// under a Gloas record, which binds the block's hash only, the block's header rebuilt from the endpoint,
+/// checked against that hash and sent in front of the account proof),
 /// and, when its count is above the newest imported one, `ImportRoot` built and dry-run with
 /// `ferrata_wallet::import` (the attestation program's `evaluate` and the bridge program's
 /// `check_import`, natively): an import the programs would refuse is an error here, and nothing is sent.
@@ -774,12 +776,34 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
         .map_err(|e| anyhow!("header(id, {slot}) holds no record: {e}"))?;
     let header =
         record.header().map_err(|code| anyhow!("header(id, {slot})'s record does not decode (code {code})"))?;
-    let (block_number, block_hash) = match header.execution {
-        ExecutionSummary::Payload { block_number, block_hash, .. } => (block_number, block_hash),
-        ExecutionSummary::BlockHash(_) => {
-            return waiting(format!(
-                "header(id, {slot}) is a Gloas record (the block's hash only): this relayer does not fetch the block's header yet"
-            ))
+    let (block_number, block_hash, rlp_header) = match header.execution {
+        ExecutionSummary::Payload { block_number, block_hash, .. } => (block_number, block_hash, None),
+        ExecutionSummary::BlockHash(hash) => {
+            // A Gloas record binds the block's hash only: the import carries the block's RLP header in front of the
+            // account proof (the programs take the state root from it), rebuilt here from the endpoint's block and
+            // checked against the recorded hash.
+            let block: serde_json::Value = p
+                .raw_request("eth_getBlockByHash".into(), (hx(&hash), false))
+                .await
+                .with_context(|| format!("eth_getBlockByHash {}", hx(&hash)))?;
+            if block.is_null() {
+                return waiting(format!(
+                    "header(id, {slot}) records block {}, which the Ethereum endpoint does not serve",
+                    hx(&hash)
+                ));
+            }
+            let rlp = header_rlp(&block).with_context(|| format!("the header of block {}", hx(&hash)))?;
+            let rebuilt = alloy::primitives::keccak256(&rlp);
+            if rebuilt.0 != hash {
+                bail!(
+                    "the Ethereum endpoint's block {} rebuilds to a header hashing to {}: refused",
+                    hx(&hash),
+                    hx(&rebuilt.0)
+                );
+            }
+            let number = ferrata_lez_bridge_wire::u64_of(&quantity(&block["number"])?.to_be_bytes::<32>())
+                .ok_or_else(|| anyhow!("block {}: its number is above 2^64", hx(&hash)))?;
+            (number, hash, Some(rlp))
         }
         ExecutionSummary::None => return waiting(format!("header(id, {slot}) is an Altair record: no execution block")),
     };
@@ -809,7 +833,7 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
             "the newest record, header(id, {slot}) of block {block_number}, holds {leaf_count} deposits, {imported} are imported, the vault holds {vault_count}: waiting for a later record"
         ));
     }
-    let proof = import::import_proof(account, root_nodes, count_nodes, None);
+    let proof = import::import_proof(account, root_nodes, count_nodes, rlp_header);
     let writes = import::dry_run_import(&ctx.cid, &config, &record, slot, root, leaf_count, &proof).map_err(|code| {
         anyhow!(crate::codes::program_refusal(
             u32::from(code),
@@ -839,6 +863,73 @@ pub async fn plan_root_import<L: crate::lez::Ledger>(
 
 fn word_of(n: u64) -> Hash {
     U256::from(n).to_be_bytes::<32>()
+}
+
+/// The header fields of an `eth_getBlockBy*` answer in the header's order (`true`: an integer); a block
+/// carries a prefix of them (each fork appends), as `scripts/fetch-mainnet-e2e.py` rebuilds headers.
+const HEADER_FIELDS: [(&str, bool); 23] = [
+    ("parentHash", false),
+    ("sha3Uncles", false),
+    ("miner", false),
+    ("stateRoot", false),
+    ("transactionsRoot", false),
+    ("receiptsRoot", false),
+    ("logsBloom", false),
+    ("difficulty", true),
+    ("number", true),
+    ("gasLimit", true),
+    ("gasUsed", true),
+    ("timestamp", true),
+    ("extraData", false),
+    ("mixHash", false),
+    ("nonce", false),
+    ("baseFeePerGas", true),
+    ("withdrawalsRoot", false),
+    ("blobGasUsed", true),
+    ("excessBlobGas", true),
+    ("parentBeaconBlockRoot", false),
+    ("requestsHash", false),
+    ("blockAccessListHash", false),
+    ("slotNumber", true),
+];
+
+/// A block's RLP header, rebuilt from an `eth_getBlockByHash` (or `ByNumber`) answer; the caller
+/// checks its keccak against the hash it expects. Refuses fields that are not a prefix of the known order.
+pub fn header_rlp(block: &serde_json::Value) -> Result<Vec<u8>> {
+    fn prefix(len: usize, offset: u8) -> Vec<u8> {
+        if len < 56 {
+            return vec![offset + len as u8];
+        }
+        let be: Vec<u8> = (len as u64).to_be_bytes().into_iter().skip_while(|b| *b == 0).collect();
+        let mut out = vec![offset + 55 + be.len() as u8];
+        out.extend(be);
+        out
+    }
+    fn item(b: &[u8]) -> Vec<u8> {
+        if b.len() == 1 && b[0] < 0x80 {
+            return b.to_vec();
+        }
+        let mut out = prefix(b.len(), 0x80);
+        out.extend_from_slice(b);
+        out
+    }
+    let present = HEADER_FIELDS.iter().take_while(|(name, _)| !block[*name].is_null()).count();
+    if let Some((late, _)) = HEADER_FIELDS[present..].iter().find(|(name, _)| !block[*name].is_null()) {
+        bail!("the block's header fields are not a prefix of the known order ({late} without the fields before it)");
+    }
+    ensure!(present >= 15, "the block has {present} of a header's 15 fields at least");
+    let mut payload = Vec::new();
+    for (name, int) in &HEADER_FIELDS[..present] {
+        let bytes = if *int {
+            quantity(&block[*name])?.to_be_bytes::<32>().into_iter().skip_while(|b| *b == 0).collect()
+        } else {
+            unhex(block[*name].as_str().ok_or_else(|| anyhow!("the block's {name} is not hex"))?)?
+        };
+        payload.extend(item(&bytes));
+    }
+    let mut out = prefix(payload.len(), 0xc0);
+    out.extend(payload);
+    Ok(out)
 }
 
 /// A job file in the relayer's inbox (`<inbox>/*.json`), handed over by a user who opts in or by
@@ -874,6 +965,25 @@ pub fn require_chain(view: &VaultView, chain_id: Option<u64>) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn header_rlp_rebuilds_the_block_hash() {
+        // A mainnet block of 9 Nov 2026 (Prague fields up to requestsHash), as eth_getBlockByNumber served it.
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../crates/ferrata-spectests/fixtures/mainnet-e2e-2026-11-09/block_26371634.json"
+        ))
+        .unwrap();
+        let block = &fixture["result"];
+        let rlp = header_rlp(block).unwrap();
+        assert_eq!(hx(&alloy::primitives::keccak256(&rlp).0), block["hash"].as_str().unwrap());
+        // A field after a missing one is refused; a changed field changes the hash (the caller refuses it).
+        let mut gap = block.clone();
+        gap.as_object_mut().unwrap().remove("withdrawalsRoot");
+        assert!(header_rlp(&gap).unwrap_err().to_string().contains("not a prefix"));
+        let mut other = block.clone();
+        other["gasUsed"] = serde_json::json!("0x1");
+        assert_ne!(alloy::primitives::keccak256(header_rlp(&other).unwrap()), alloy::primitives::keccak256(&rlp));
+    }
 
     #[test]
     fn import_proofs_read_an_eth_get_proof_answer() {
