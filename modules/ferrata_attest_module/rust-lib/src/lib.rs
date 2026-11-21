@@ -93,6 +93,21 @@ fn lez_core_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, St
     })
 }
 
+/// Logos Core's `beacon_api_module` (logos-evm-beacon-api-module), called by name: `verify_checkpoint`'s beacon checks
+/// when the request says `"providers": {"via": "beacon_api_module", "chain_id": N}` (`list_providers`, then each
+/// provider pinned through `raw_get`). Not declared a dependency, for the same reason as above.
+fn beacon_api_module_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, String> {
+    let args: serde_json::Value = serde_json::from_str(args).map_err(|e| format!("beacon_api_module.{method}: arguments: {e}"))?;
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("beacon_api_module")
+        .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("beacon_api_module.{method} did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
 #[derive(Default)]
 struct FerrataAttest;
 
@@ -153,5 +168,6 @@ impl FerrataAttestModule for FerrataAttest {
 pub extern "Rust" fn logos_module_install() {
     ferrata_attest_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     ferrata_attest_calls::set_lez_core(lez_core_call);
+    ferrata_attest_calls::set_beacon_api_module(beacon_api_module_call);
     install::<FerrataAttest>();
 }
