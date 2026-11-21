@@ -5,7 +5,7 @@
 # 145.0.7632.6, page opened from http://127.0.0.1:18646/
 
 (o) the served page: its bytes, its headers, no framing
-    ok: o: the server sends index.html byte for byte (sha256 dc8ea8b58b145982842edbf8fbd08f153e6310607b31b02173d3f93d0f0c3af8)
+    ok: o: the server sends index.html byte for byte (sha256 41219f0d71ad7e7f6b617d789ff85ef766381e88cfba46bcb081901d44b5c5e1)
     ok: o: the CSP header forbids framing and allows only the page's own script, by its hash
     ok: o: X-Frame-Options DENY, nosniff, no-referrer
     ok: o: the page's own <meta> CSP allows its script by the same hash, not 'unsafe-inline'
@@ -120,6 +120,15 @@
     ok: n: the depositor paid the total; the allowance is spent to 0
     ok: n: every transaction the page sent carries the chain id (7)
 
+(p) the wallet switches account while a sent deposit is pending
+    ok: p: checked, the deposit can be sent
+    ok: p: the deposit is sent (its hash shown) and pending, not mined; the vault still holds 3 deposits
+    ok: p: the page says the deposit was with the wallet (its hash), not that nothing was sent
+    ok: p: the send button is gone
+    ok: p: mined: the page shows leaf index 3; the vault holds 4 deposits
+    ok: p: after the receipt the page says the deposit was mined, not that nothing was sent
+    ok: p: the Deposit event carries this ticket's C
+
 (i) the page's own traffic and the wallet methods
     ok: i: the page requested nothing but itself (and the browser its favicon, which is 404) (origins: ['http://127.0.0.1:18646'], 1 requests)
     ok: i: only allowed wallet methods were called (eth_accounts, eth_blockNumber, eth_call, eth_chainId, eth_getBlockByNumber, eth_getCode, eth_getTransactionReceipt, eth_requestAccounts, eth_sendTransaction)
@@ -127,4 +136,4 @@
     ok: i: the wallet client refuses a method outside its allowlist
     wallet methods called: eth_accounts, eth_blockNumber, eth_call, eth_chainId, eth_getBlockByNumber, eth_getCode, eth_getTransactionReceipt, eth_requestAccounts, eth_sendTransaction
 
-all 15 case groups passed
+all 16 case groups passed

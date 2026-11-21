@@ -16,7 +16,8 @@ public network.
 
 [`index.html`](index.html) is one static page. It makes a bridge **deposit** (ETH, or a registered ERC-20 with its
 `approve` first) from the account in the user's own wallet: MetaMask or any wallet that injects `window.ethereum`
-(EIP-1193). It has no server, no build step and no dependency; all its JavaScript is inline.
+(EIP-1193). It has no back end (`serve.py` only hands the file to your own browser), no build step and no
+dependency; all its JavaScript is inline.
 
 It does **not** claim, burn, release or recover. Those stay in the Logos tool (`ferrata`) or the bridge module in
 Basecamp. The browser never holds a LEZ key and never sees the bridge seed.
@@ -48,7 +49,7 @@ Basecamp. The browser never holds a LEZ key and never sees the bridge seed.
    ```
 
    The copy in this repository, as changed on 21 November 2026, hashes to
-   `dc8ea8b58b145982842edbf8fbd08f153e6310607b31b02173d3f93d0f0c3af8`; a release states the hash of its own copy.
+   `41219f0d71ad7e7f6b617d789ff85ef766381e88cfba46bcb081901d44b5c5e1`; a release states the hash of its own copy.
    [`serve.py`](serve.py) reads the page once, serves exactly those bytes and nothing else, listens on 127.0.0.1 only,
    answers only requests addressed to 127.0.0.1 or localhost, and sends the page's Content-Security-Policy as a header
    with `frame-ancestors 'none'` (no other site may frame the page). Stop it with Ctrl-C when you are done.
@@ -64,8 +65,10 @@ Basecamp. The browser never holds a LEZ key and never sees the bridge seed.
    ERC-20 balance does not cover the total. The check holds only for the chain and account it was made on: if the
    wallet announces a switch of either (EIP-1193 `chainChanged`, `accountsChanged`), the page drops the summary; and
    right before each transaction it asks the wallet again for its chain and account and sends nothing if either
-   changed. Every transaction it asks for carries the ticket's `chainId`, which wallets such as MetaMask refuse to sign
-   on another chain.
+   changed. If the wallet changes while a transaction is with it (awaiting your signature, or sent and not yet mined),
+   the page says so, with the transaction's hash once the wallet returned it, sends nothing more, and reports the
+   transaction's outcome when its receipt arrives. Every transaction it asks for carries the ticket's `chainId`, which
+   wallets such as MetaMask refuse to sign on another chain.
 4. **Read the summary, then sign in the wallet.** It shows the chain, vault, token, denomination, fees and total (priced
    exactly as the `ferrata` tool prices it), `j`, `C`, the exact calldata of each transaction the wallet will ask you
    to sign, and what becomes public on Ethereum (your address, the token, the amount, `C`, the time) and what stays
@@ -98,7 +101,7 @@ limits it:
 | A compromised wallet extension | Sign anything | Out of the page's reach; the Logos modules avoid this by holding keys in Basecamp, which is why they remain the primary path |
 | Loss of privacy in the browser | A page or extension sees which account deposits and when | All of it is public on Ethereum anyway; the LEZ destination is never in the browser: the seed and the destination stay in the Logos tool, which only hands over `C` |
 | The local server, and the way the page is opened | Another site framing the page to trick clicks; a site that resolves its own name to 127.0.0.1 (DNS rebinding) serving the page under its own origin; an extension given "Allow access to file URLs" reading local files | `serve.py`: `frame-ancestors 'none'` and `X-Frame-Options: DENY`; requests that name any host but 127.0.0.1 or localhost get 421; it serves only the bytes it read and hashed at start. The page holds no secret, so a local process that reads it learns nothing. Serving on 127.0.0.1 avoids the file-access permission altogether |
-| A wallet switched after the check | A deposit sent to the same address on another chain (where the vault may not exist), or from another account | Checked again right before every send; dropped on the wallet's change events; `chainId` in every transaction |
+| A wallet switched after the check | A deposit sent to the same address on another chain (where the vault may not exist), or from another account | Checked again right before every send; dropped on the wallet's change events; `chainId` in every transaction; a change while a transaction is pending is reported with that transaction's hash and outcome, never as "nothing was sent" |
 
 What the design gives up against the Logos module: the user's eye on `C` and the vault is the last check before the
 funds leave. What it keeps: the seed and every LEZ key stay out of the browser, so a compromised page cannot claim,
@@ -117,16 +120,18 @@ registered ERC-20 test token and a registered Tether-style token,
 change a non-zero allowance into another), serves the page with `serve.py` on `http://127.0.0.1:18646/` as step 2 says,
 and opens it in headless Chromium (Python Playwright) with a stand-in EIP-1193 wallet that forwards to anvil, can
 switch its chain or account with or without announcing it, and refuses a transaction whose `chainId` is not its chain.
-Fifteen groups of cases: what the server sends (the file byte for byte, the CSP header with the script's hash and
+Sixteen groups of cases: what the server sends (the file byte for byte, the CSP header with the script's hash and
 `frame-ancestors 'none'`, a request naming another host refused, a page of another origin unable to frame it); an ETH
 deposit and an ERC-20 deposit (approve, then deposit) checked on chain, each transaction carrying the chain id;
 refusals for a wrong chain, another account, a stale index, a zero commitment, an unregistered token; a wallet
 rejection (EIP-1193 4001: shown, nothing retried); the wallet switching chain, then account, after the check, once
 announced and once silently (each time: nothing sent); a Tether-style deposit with an allowance of 1 left over (reset to
-0, approve, deposit, checked on chain); and the page's own traffic (nothing but itself) and wallet methods (only the
+0, approve, deposit, checked on chain); the wallet switching account while a sent deposit is still pending (anvil's
+automine off: the page shows the deposit's hash and that nothing more is sent, never "nothing was sent", and once the
+block is mined, that the deposit was mined, checked on chain); and the page's own traffic (nothing but itself) and wallet methods (only the
 allowed ones). The test first checks its Python derivations of `s` and `C` against all three cases of
 [`bridge/vectors/inbound-v2.json`](../../bridge/vectors/inbound-v2.json). The record is named after the run's UTC date:
-run of 21 November 2026 (on the Modal build box), [`results/anvil-2026-11-21.txt`](results/anvil-2026-11-21.txt), 90
+run of 21 November 2026 (on the Modal build box), [`results/anvil-2026-11-21.txt`](results/anvil-2026-11-21.txt), 97
 checks, every one passed, and a screenshot of the summary section,
 [`results/anvil-2026-11-21.png`](results/anvil-2026-11-21.png).
 
