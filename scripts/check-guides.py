@@ -9,7 +9,8 @@ Checks:
      of the attestation program's IDL (idl/ferrata_attestation.idl.json), with what a client does about it
      (RFP-021 S.4, "handling each typed error code").
   2. docs/guides/user-guide.md, between `<!-- ui-privacy:begin -->` and `<!-- ui-privacy:end -->`: what the `ferrata`
-     tool prints before each step (cli/src/privacy.rs, the mini-app's privacy.js table), word for word (RFP-022 U.7).
+     tool prints before each step (cli/src/privacy.rs), word for word (RFP-022 U.7); and the mini-app's table
+     (modules/ferrata_bridge_ui/qml/js/privacy.js) is the tool's, word for word, for each of its four steps.
   3. docs/guides/user-guide.md §11 names every code of the bridge program's IDL (idl/ferrata_bridge.idl.json).
   4. No guide, README or trust document of the documentation set still calls itself a first draft, and neither
      README.md, docs/README.md nor the attestation design note calls a guide one (they may say so of
@@ -76,7 +77,9 @@ def advice(code, name):
         return "a consumer's client", "fix the request: it does not decode or asks for something the program cannot serve"
     if 110 <= code <= 113:
         return "a consumer's client", "refetch the proof at the record's block number; another block's proof never verifies"
-    if code in (120, 121, 215):
+    if code == 121:
+        return "a consumer's client", "none: the block's header layout is not one the program decodes; do not resend"
+    if code in (120, 215):
         return "a consumer's client", "send the RLP header of the record's own block (a Gloas record binds the hash only)"
     if 122 <= code <= 125:
         return "a consumer's client", "this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log"
@@ -86,9 +89,15 @@ def advice(code, name):
         return "a consumer", "configuration error: the request names another chain or instance; do not retry"
     if code == 141:
         return "a consumer's client", "use a record whose finalized header carries the execution binding"
-    if 150 <= code <= 152:
+    if code == 152:
+        return "a consumer's client", "no EIP-2935 contract in that record's state: no hop from it; use a later record"
+    if 150 <= code <= 151:
         return "a consumer's client", "hop from a nearer record, or chain hops (§4.4)"
-    if 160 <= code <= 163:
+    if code == 161:
+        return "a consumer's client", "none: no leaf has an index of 2^32 or more; the request is wrong, do not retry"
+    if code == 162:
+        return "a consumer's client", "none: the empty leaf is no deposit; there is nothing to attest"
+    if code in (160, 163):
         return "a consumer's client", "rebuild the accumulator path against the attested root"
     if code == 201:
         return "any sender", "send the message to the actor it is for (derive it: §2)"
@@ -136,6 +145,38 @@ def codes_block():
 
 # ---- 2. what the tool prints before each step ----------------------------------------------------------------------
 
+def rs_steps():
+    """cli/src/privacy.rs's steps: title -> {public_eth, public_lez, hidden}, each a list of strings."""
+    src = (ROOT / "cli/src/privacy.rs").read_text()
+    steps = {}
+    for m in re.finditer(r"pub const [A-Z_]+: Step = Step \{(.*?)\n\};", src, re.S):
+        body = m.group(1)
+        title = re.search(r'title: "([^"]*)"', body).group(1)
+        steps[title] = {}
+        for name in ("public_eth", "public_lez", "hidden"):
+            f = re.search(name + r": &\[(.*?)\]", body, re.S)
+            steps[title][name] = re.findall(r'"((?:[^"\\]|\\.)*)"', f.group(1)) if f else []
+    return steps
+
+
+def js_findings(js_src, steps):
+    """The mini-app's STEPS (privacy.js) against the tool's: every step a step of privacy.rs, its lists equal."""
+    out, n = [], 0
+    for m in re.finditer(r'(\w+): \{\s*title: "([^"]*)",\s*publicEth: \[(.*?)\],\s*publicLez: \[(.*?)\],'
+                         r'\s*hidden: \[(.*?)\]\s*\}', js_src, re.S):
+        n += 1
+        key, title = m.group(1), m.group(2)
+        if title not in steps:
+            out.append(f"privacy.js: step {key} ('{title}') is not a step of cli/src/privacy.rs")
+            continue
+        for name, raw in zip(("public_eth", "public_lez", "hidden"), m.groups()[2:]):
+            if re.findall(r'"((?:[^"\\]|\\.)*)"', raw) != steps[title][name]:
+                out.append(f"privacy.js: step {key}'s {name} differs from cli/src/privacy.rs's '{title}'")
+    if n < 4:
+        out.append(f"privacy.js: {n} steps found, four expected")
+    return out
+
+
 def ui_block():
     src = (ROOT / "cli/src/privacy.rs").read_text()
     out = ["| Step, as the tool titles it | Public on Ethereum | Public on LEZ | Kept private |", "|---|---|---|---|"]
@@ -177,6 +218,8 @@ def main():
     write = "--write" in sys.argv[1:]
     sync_block("docs/guides/consumer-guide.md", "codes", codes_block(), write)
     sync_block("docs/guides/user-guide.md", "ui-privacy", ui_block(), write)
+    for f in js_findings((ROOT / "modules/ferrata_bridge_ui/qml/js/privacy.js").read_text(), rs_steps()):
+        finding(f)
 
     # 3. the bridge's codes in the user guide's §11
     bridge = json.loads((ROOT / "idl/ferrata_bridge.idl.json").read_text())

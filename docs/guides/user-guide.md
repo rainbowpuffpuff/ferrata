@@ -25,9 +25,10 @@ proved from Ethereum's own finality, inside the claim's transaction; your releas
 a zero-knowledge proof of your burn under a checkpoint it accepted. The parties who import roots, prove checkpoints,
 relay, wrap proofs or serve chain data are **liveness only**: if one lies, the programs or the vault refuse what it
 sent; if one stops, anyone else, you included, can do its job; none can redirect your funds, because each proof binds
-your destination, recipient and fees. What you do trust, stated in [`docs/trust.md`](../trust.md) §0: two thirds of
-each Ethereum sync committee for the way in, fewer than `t` of the zone's accredited sequencer keys for the way out
-(under rule (A) also the watchers, outside its conditions), and the code itself, which is not audited.
+your destination, recipient and fees. What you do trust, stated in [`docs/trust.md`](../trust.md) §0 and §1: the
+checkpoint the configuration's attestation instance started from (anyone can compare it with public Ethereum), two
+thirds of each Ethereum sync committee for the way in, fewer than `t` of the zone's accredited sequencer keys for the
+way out (under rule (A) also the watchers, outside its conditions), and the code itself, which is not audited.
 
 | Clause | Where |
 |---|---|
@@ -353,7 +354,8 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
 
 **What the tool and the mini-app print before each step** (U.7). Before it sends anything, every command's dry run
 prints this table for its step, then what your own choices add ("privacy of these choices", §9); the mini-app shows
-the same table (`cli/src/privacy.rs` is its `privacy.js`). Generated from `cli/src/privacy.rs` by
+the same table for its four steps (`qml/js/privacy.js`, word for word `cli/src/privacy.rs`'s; the mini-app offers no
+plaintext claim). Generated from `cli/src/privacy.rs` by
 `python3 -I scripts/check-guides.py --write`, which fails when the two part; the tool's end-to-end test checks that
 each dry run prints it (EVIDENCE row 84, `cli/tests/e2e.rs`).
 
@@ -444,7 +446,8 @@ messages for each code.
 
 `ferrata_bridge_module` is the bridge's core module: the user's side of both flows, recovery and the registry, as
 eleven methods a Logos ui module or a client calls ([`modules/README.md`](../../modules/README.md),
-"`ferrata_bridge_module`"). It derives every key from the wallet's seed and never returns `kAuth`, `kView`, `s` or
+"`ferrata_bridge_module`"); the nine of the flows are below, and `wallet` (the LEZ wallet's accounts) and `version`
+are described there. It derives every key from the wallet's seed and never returns `kAuth`, `kView`, `s` or
 `sOut` (a claim message carries `s` as the private execution's input, or in the clear on the plaintext path the user
 chose). It builds what is to be signed and sent; the user's Ethereum wallet signs the vault calls, and LEZ's wallet
 proves and sends the private ones. In a headless Logos Core each method takes one JSON request:

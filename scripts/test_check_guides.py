@@ -50,5 +50,28 @@ class FirstDrafts(unittest.TestCase):
         self.assertEqual(cg.first_draft_findings(texts), [])
 
 
+class MiniAppTable(unittest.TestCase):
+    """Check 2's second half: the mini-app's privacy.js against cli/src/privacy.rs."""
+
+    STEPS = {"Deposit (Ethereum)": {"public_eth": ["your depositor address", "the token"], "public_lez": [],
+                                    "hidden": ["the LEZ account"]}}
+    JS = ('var STEPS = {\n    deposit: {\n        title: "Deposit (Ethereum)",\n'
+          '        publicEth: ["your depositor address", "the token"],\n        publicLez: [],\n'
+          '        hidden: ["the LEZ account"]\n    }\n};\n')
+
+    def test_a_word_changed_in_the_mini_app(self):
+        out = cg.js_findings(self.JS.replace('"the token"', '"the amount"'), self.STEPS)
+        self.assertTrue(any("public_eth differs" in f for f in out), out)
+
+    def test_a_step_the_tool_does_not_have(self):
+        out = cg.js_findings(self.JS.replace("Deposit (Ethereum)", "Deposit (LEZ)"), self.STEPS)
+        self.assertTrue(any("is not a step of cli/src/privacy.rs" in f for f in out), out)
+
+    def test_the_repository_agrees(self):
+        root = os.path.dirname(HERE)
+        with open(os.path.join(root, "modules/ferrata_bridge_ui/qml/js/privacy.js"), encoding="utf-8") as f:
+            self.assertEqual(cg.js_findings(f.read(), cg.rs_steps()), [])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -43,7 +43,8 @@ RISC0_DEV_MODE=1 target/debug/ferrata-attest --follow-to 1408 --message-out OUT/
 ```
 
 Exit status 3 (one command refused, as its dry run predicted); following Sepolia took 86.9 s; 169 transactions in
-all, every one as its dry run said. Where it runs: the in-process chain with recorded Sepolia data (below); against
+all, of which the commands' own 11 were each sent as its dry run said (the rest are the follow phase's `Init` and
+updates, which no dry run precedes). Where it runs: the in-process chain with recorded Sepolia data (below); against
 a live sequencer and live endpoints the same journey goes through the Logos module and the updater (§"Not done").
 
 ## What one run does

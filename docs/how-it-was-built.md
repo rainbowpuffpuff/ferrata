@@ -65,6 +65,9 @@ repository. The decisions that shape the code are written into the repository wh
 specification's changes D1 to D13 ([`bridge-spec-v3-changes.md`](design/spec/bridge-spec-v3-changes.md)),
 the design notes ([`attestation.md`](design/attestation.md), [`bridge.md`](design/bridge.md)), the
 "Decisions" items of [`lez/RESULTS.md`](../lez/RESULTS.md) §5, and each directory's README and RESULTS file.
+Since 21 November 2026 the major ones are also gathered in [`decisions/`](decisions/README.md), one record per
+decision with its context, options, choice and rationale (RFP-021 S.11, RFP-022 S.4), reconstructed from those
+files; the private log was not copied into it.
 The proposal names the decision log among the ways one person's work stays checkable, beside weekly notes,
 reproducible builds and a re-check command for every result.
 

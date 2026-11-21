@@ -495,7 +495,7 @@ and the [user guide](user-guide.md) §11.
 | 112 | `ProofTrailingNodes` | Inclusion proof: elements remain after the walk ended. | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
 | 113 | `ProofNodeInvalid` | Inclusion proof: a node is not a canonical trie node (item count, hex-prefix flag or padding, empty extension path, child reference, empty value, or a node shorter than 32 bytes referenced by hash). | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
 | 120 | `HeaderHashMismatch` | keccak256 of an RLP block header differs from the hash it must match. | a consumer's client | send the RLP header of the record's own block (a Gloas record binds the hash only) |
-| 121 | `HeaderUnsupported` | A block header that is not of the Cancun (20 fields), Prague/Osaka (21) or Amsterdam (23) layout. | a consumer's client | send the RLP header of the record's own block (a Gloas record binds the hash only) |
+| 121 | `HeaderUnsupported` | A block header that is not of the Cancun (20 fields), Prague/Osaka (21) or Amsterdam (23) layout. | a consumer's client | none: the block's header layout is not one the program decodes; do not resend |
 | 122 | `ReceiptNotIncluded` | The receipts trie has no receipt at the requested transaction index. | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
 | 123 | `ReceiptUnsupported` | A pre-Byzantium receipt (state root instead of status) or an unknown receipt type. | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
 | 124 | `ReceiptFailed` | The transaction failed (receipt status 0). | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
@@ -506,10 +506,10 @@ and the [user guide](user-guide.md) §11.
 | 141 | `BindingMismatch` | The finalized header does not carry the execution binding the record constructor reads. | a consumer's client | use a record whose finalized header carries the execution binding |
 | 150 | `HistoryOutOfWindow` | EIP-2935: the older block is not among the 8191 blocks before the record's block. | a consumer's client | hop from a nearer record, or chain hops (§4.4) |
 | 151 | `HistoryHashMismatch` | EIP-2935: the history slot does not hold keccak256 of the supplied header. | a consumer's client | hop from a nearer record, or chain hops (§4.4) |
-| 152 | `HistoryContractMissing` | EIP-2935: no history contract with the specified code in the record's state. | a consumer's client | hop from a nearer record, or chain hops (§4.4) |
+| 152 | `HistoryContractMissing` | EIP-2935: no history contract with the specified code in the record's state. | a consumer's client | no EIP-2935 contract in that record's state: no hop from it; use a later record |
 | 160 | `AccumulatorPathInvalid` | Accumulator: the path does not have 32 siblings. | a consumer's client | rebuild the accumulator path against the attested root |
-| 161 | `AccumulatorIndexOutOfRange` | Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits). | a consumer's client | rebuild the accumulator path against the attested root |
-| 162 | `AccumulatorLeafEmpty` | Accumulator: the leaf is the empty leaf (32 zero bytes). | a consumer's client | rebuild the accumulator path against the attested root |
+| 161 | `AccumulatorIndexOutOfRange` | Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits). | a consumer's client | none: no leaf has an index of 2^32 or more; the request is wrong, do not retry |
+| 162 | `AccumulatorLeafEmpty` | Accumulator: the leaf is the empty leaf (32 zero bytes). | a consumer's client | none: the empty leaf is no deposit; there is nothing to attest |
 | 163 | `AccumulatorRootMismatch` | Accumulator: the path does not hash the leaf to the attested root. | a consumer's client | rebuild the accumulator path against the attested root |
 | 200 | `BAD_MESSAGE` | The message does not decode. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
 | 201 | `WRONG_RECEIVER` | The receiver is not the actor the message is for. | any sender | send the message to the actor it is for (derive it: §2) |
