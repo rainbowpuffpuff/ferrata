@@ -102,8 +102,8 @@ gh secret set LOGOS_SIGNING_KEY --repo example-org/ferrata-modules < <the signin
 ```
 
 Before any of them, `--yes` checks read-only that `gh` is logged in, that `example-org` is an
-organization and that no repository already holds a different `main` or version tag, and creates nothing
-if a check fails; a repository that exists is not created again. After them it stops and prints the
+organization and that every repository that already exists can be read by git and holds no different
+`main` or version tag, and creates nothing if a check fails; a repository that exists is not created again. After them it stops and prints the
 owner's remaining steps in order: the browser settings (immutable releases, a ruleset protecting
 `refs/tags/*`, organization 2FA), and only then the release, `gh workflow run release-all.yml --repo
 example-org/ferrata-modules`, which it does not run.

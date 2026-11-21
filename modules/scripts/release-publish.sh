@@ -8,15 +8,17 @@
 # first release, so the release trigger is printed as the owner's last command, not run.
 # The lambda-prize release-integrity mapping is modules/catalog/RELEASE.md.
 #
-#   modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE [--dry-run DIR | --yes]
+#   modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE [--modules 'M ...'] [--dry-run DIR | --yes]
 #
 #   (no flag)      prepare everything locally and print the plan; nothing leaves this machine
 #   --dry-run DIR  the same, then push everything to local bare repositories under DIR (file://
-#                  remotes, the catalog's submodules pointing at them); no network command runs
+#                  remotes, the catalog's submodules pointing at them); no network command runs; a
+#                  DIR/<name>.git that an earlier dry run made is replaced, any other is refused
 #   --yes          check first, read-only, that the remote side can take every step (gh logged in,
-#                  ORG an organization, no repository holding other commits or tags), and only then
-#                  create the repositories, push, tag and set the secret; every step is idempotent,
-#                  so a rerun after a failure resumes
+#                  ORG an organization, every existing repository readable by git and holding no
+#                  different main or version tag), and only then create the repositories, push, tag
+#                  and set the secret; every step is idempotent, so a rerun after a failure resumes
+#   --modules 'M ...'  only these modules (default: all of them); with --yes the only way to name a subset
 #
 # ORG/CATALOG_REPO: the GitHub organization and the catalog repository to publish under
 #   (e.g. ferrata-co ferrata-modules). SIGNING_KEY_FILE: the Ed25519 private key whose public half
@@ -26,7 +28,11 @@
 #   be the public key of d), read at run time to derive the DID and, with --yes, fed to
 #   `gh secret set` on its standard input; it is never copied, never printed, never written under any
 #   repository. Everything else the script writes goes to a workspace made with mktemp (under TMPDIR
-#   when it is set). MODULES (environment) names a subset of the modules; the default is all of them.
+#   when it is set). MODULES (environment) also names a subset, without --yes only: with --yes a MODULES
+#   set in the environment is refused, so an inherited one cannot narrow a publication unseen.
+# What is published is the source commit (HEAD of this repository), dated with that commit's date: an
+#   inherited SOURCE_DATE_EPOCH or FERRATA_COMMIT is ignored, so the module commits are the ones anyone
+#   exports again from that commit (releases/RELEASE-INTEGRITY.template.md); --yes needs a git checkout.
 # Needs bash (3.2 or later), git, jq, python3; gh only with --yes (RELEASE_PUBLISH_GH names another gh
 # binary: the tests' stub, modules/scripts/test-release-publish.sh).
 set -euo pipefail
@@ -37,7 +43,7 @@ CATALOG_DIR=$repo/modules/catalog
 gh=${RELEASE_PUBLISH_GH:-gh}
 
 usage() {
-  sed -n '11,19p' "$0" | sed 's/^# \{0,1\}//' >&2
+  sed -n '/^#   modules\/scripts\/release-publish\.sh ORG/,/^#   --modules/p' "$0" | sed 's/^# \{0,1\}//' >&2
   exit 2
 }
 bad() { echo "release-publish.sh: $*" >&2; exit 2; }     # bad input: nothing was done
@@ -45,10 +51,11 @@ fail() { echo "release-publish.sh: $*" >&2; exit 1; }    # a step failed
 
 [ $# -ge 3 ] || usage
 org=$1; catalog_repo=$2; key_file=$3; shift 3
-dry_dir=; yes=
+dry_dir=; yes=; modules_arg=; modules_given=
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) [ $# -ge 2 ] && [ -n "$2" ] || usage; dry_dir=$2; shift 2 ;;
+    --modules) [ $# -ge 2 ] && [ -n "$2" ] || usage; modules_arg=$2; modules_given=1; shift 2 ;;
     --yes) yes=1; shift ;;
     -h|--help) usage ;;
     *) echo "release-publish.sh: unknown argument '$1'" >&2; usage ;;
@@ -68,17 +75,24 @@ key_abs=$(cd "$(dirname "$key_file")" && pwd)/$(basename "$key_file")
 did=$(python3 -I "$here/jwk_did.py" "$key_abs") || exit 2
 case "$did" in did:jwk:*) ;; *) bad "deriving the DID failed" ;; esac
 
-# The modules: every modules/<name>/metadata.json (MODULES names a subset, e.g. when one module's
-# export needs an artifact this machine does not have: ferrata_updater_module's stage wants lez/methods'
-# built guests - `cd lez && cargo build --locked -p methods`, RISC0_HOME as lez/RESULTS.md says; the
-# published catalog takes all six).
+# The modules: every modules/<name>/metadata.json (--modules, or MODULES without --yes, names a subset,
+# e.g. when one module's export needs an artifact this machine does not have: ferrata_updater_module's
+# stage wants lez/methods' built guests - `cd lez && cargo build --locked -p methods`, RISC0_HOME as
+# lez/RESULTS.md says; the published catalog takes all six).
+all_modules=()
+for d in "$MODULES_DIR"/*_module; do
+  if [ -f "$d/metadata.json" ]; then all_modules+=("$(basename "$d")"); fi
+done
 modules=()
-if [ -n "${MODULES:-}" ]; then
+if [ -n "$modules_given" ]; then
+  for m in $modules_arg; do modules+=("$m"); done
+elif [ -n "${MODULES:-}" ]; then
+  if [ -n "$yes" ]; then
+    bad "MODULES is set in the environment ('$MODULES'); with --yes a subset is named on the command line (--modules '...'), or unset MODULES to publish all ${#all_modules[@]}; nothing was done"
+  fi
   for m in $MODULES; do modules+=("$m"); done
 else
-  for d in "$MODULES_DIR"/*_module; do
-    if [ -f "$d/metadata.json" ]; then modules+=("$(basename "$d")"); fi
-  done
+  if [ ${#all_modules[@]} -gt 0 ]; then modules=("${all_modules[@]}"); fi
 fi
 [ ${#modules[@]} -gt 0 ] || bad "no modules found under $MODULES_DIR"
 for m in "${modules[@]}"; do
@@ -89,11 +103,32 @@ for m in "${modules[@]}"; do
   [ "$m" != "$catalog_repo" ] || bad "CATALOG_REPO must differ from every module name"
 done
 version_of() { jq -r .version "$MODULES_DIR/$1/metadata.json"; }
+names=("${modules[@]}" "$catalog_repo")
 
+# A dry run replaces only bare repositories an earlier dry run made (they carry release-publish.dryRun in
+# their configuration); any other DIR/<name>.git is refused before anything is done.
+made_by_dry_run() { [ "$(git config --file "$1/config" --get release-publish.dryRun 2> /dev/null)" = true ]; }
 if [ -n "$dry_dir" ]; then
   mkdir -p "$dry_dir"
   dry_dir=$(cd "$dry_dir" && pwd)
+  for n in "${names[@]}"; do
+    if { [ -e "$dry_dir/$n.git" ] || [ -L "$dry_dir/$n.git" ]; } && ! made_by_dry_run "$dry_dir/$n.git"; then
+      bad "$dry_dir/$n.git exists and was not made by a dry run of this script; nothing was done (choose another DIR, or remove it yourself)"
+    fi
+  done
 fi
+
+# The source: this repository's HEAD and its date (see the header: inherited SOURCE_DATE_EPOCH and
+# FERRATA_COMMIT ignored).
+src_commit=$(git -C "$repo" rev-parse --verify -q HEAD 2> /dev/null || true)
+if [ -n "$yes" ] && [ -z "$src_commit" ]; then
+  bad "$repo is not a git checkout: --yes publishes a source commit, which the module exports record; nothing was done"
+fi
+src_epoch=$(git -C "$repo" log -1 --format=%ct HEAD 2> /dev/null || echo 0)
+ignored=
+if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then ignored="$ignored SOURCE_DATE_EPOCH=$SOURCE_DATE_EPOCH"; fi
+if [ -n "${FERRATA_COMMIT:-}" ]; then ignored="$ignored FERRATA_COMMIT=$FERRATA_COMMIT"; fi
+unset SOURCE_DATE_EPOCH FERRATA_COMMIT
 
 # The workspace: everything the script writes (exported repositories, the assembled catalog) goes here,
 # outside every repository. New on each run; the private key is never written into it.
@@ -102,13 +137,13 @@ mkdir -p "$ws/src"
 
 # The commits this script makes (the catalog's, the module tags) carry the source commit's date, as
 # export.sh's do: the same source gives the same commits, so a rerun pushes nothing new.
-src_epoch=${SOURCE_DATE_EPOCH:-$(git -C "$repo" log -1 --format=%ct HEAD 2> /dev/null || echo 0)}
 export GIT_AUTHOR_DATE="$src_epoch +0000" GIT_COMMITTER_DATE="$src_epoch +0000"
 export GIT_AUTHOR_NAME=ferrata-release-publish GIT_AUTHOR_EMAIL=publish@localhost
 export GIT_COMMITTER_NAME=ferrata-release-publish GIT_COMMITTER_EMAIL=publish@localhost
 
 echo "release-publish.sh: publishing $org/$catalog_repo"
-echo "  modules (${#modules[@]}): ${modules[*]}"
+echo "  modules (${#modules[@]} of ${#all_modules[@]}): ${modules[*]}"
+echo "  source commit: ${src_commit:-unknown (no git checkout)}, date $src_epoch${ignored:+ (from the environment, ignored:$ignored)}"
 echo "  signer DID: $did"
 echo "  workspace: $ws"
 if [ -n "$dry_dir" ]; then echo "  DRY RUN: every repository a local bare repository under $dry_dir; no network command runs"; fi
@@ -117,7 +152,8 @@ if [ -n "$yes" ]; then echo "  --yes: checks the remote side first, then creates
 # ── 1. Export each module as its own repository ────────────────────────────────────────────────
 for m in "${modules[@]}"; do
   echo "  export $m"
-  SOURCE_DATE_EPOCH=$src_epoch "$here/export.sh" "$m" "$ws/src/$m" > /dev/null || fail "export.sh $m failed"
+  SOURCE_DATE_EPOCH=$src_epoch FERRATA_COMMIT=${src_commit:-unknown} "$here/export.sh" "$m" "$ws/src/$m" > /dev/null \
+    || fail "export.sh $m failed"
   git -C "$ws/src/$m" branch -M main
   git -C "$ws/src/$m" tag -a "v$(version_of "$m")" -m "$m $(version_of "$m"), exported from the Ferrata repository"
 done
@@ -202,13 +238,6 @@ gh_step() {   # a gh command of the owner step: run with --yes, printed otherwis
   show gh "$@"
   if [ -n "$yes" ]; then "$gh" "$@"; fi
 }
-remote_main() {   # the commit a remote's main holds, or nothing
-  git ls-remote "$1" refs/heads/main 2> /dev/null | awk '{print $1}'
-}
-remote_tag() {    # the object a remote's tag holds, or nothing
-  git ls-remote "$1" "refs/tags/$2" 2> /dev/null | awk '$2 == "refs/tags/'"$2"'" {print $1}'
-}
-names=("${modules[@]}" "$catalog_repo")
 wsdir_of() { if [ "$1" = "$catalog_repo" ]; then echo "$ws/catalog"; else echo "$ws/src/$1"; fi; }
 
 if [ -n "$yes" ]; then
@@ -222,14 +251,18 @@ if [ -n "$yes" ]; then
   for n in "${names[@]}"; do
     d=$(wsdir_of "$n")
     if "$gh" repo view "$org/$n" --json name > /dev/null 2>&1; then
-      have=$(remote_main "$(url_of "$n")")
+      # What it holds, read by git (as the pushes will be): a repository git cannot read stops it here.
+      if ! GIT_TERMINAL_PROMPT=0 git ls-remote "$(url_of "$n")" > "$ws/refs-$n" 2> "$ws/refs-$n.err"; then
+        fail "$org/$n exists but git cannot read it ($(tail -n 1 "$ws/refs-$n.err")); nothing was created (git must reach github.com as the gh login: gh auth setup-git)"
+      fi
+      have=$(awk '$2 == "refs/heads/main" {print $1}' "$ws/refs-$n")
       want=$(git -C "$d" rev-parse HEAD)
       if [ -n "$have" ] && [ "$have" != "$want" ]; then
         fail "$org/$n exists and its main is $have, not this export's $want; nothing was created (publish into new repositories, or remove the old ones yourself)"
       fi
       if [ "$n" != "$catalog_repo" ]; then
         t="v$(version_of "$n")"
-        have=$(remote_tag "$(url_of "$n")" "$t")
+        have=$(awk -v ref="refs/tags/$t" '$2 == ref {print $1}' "$ws/refs-$n")
         want=$(git -C "$d" rev-parse "refs/tags/$t")
         if [ -n "$have" ] && [ "$have" != "$want" ]; then
           fail "$org/$n already has a tag $t at $have, not this export's $want; nothing was created (a published version is never moved: bump the module's version)"
@@ -255,9 +288,13 @@ for n in "${names[@]}"; do
   if [ "$n" = "$catalog_repo" ]; then desc="Ferrata's Logos module catalog (prototype, unaudited)"
   else desc="Ferrata $n - Logos Core module (prototype, unaudited)"; fi
   if [ -n "$dry_dir" ]; then
-    rm -rf "$dry_dir/$n.git"   # a previous dry run's repository of the same name: replaced
+    if [ -e "$dry_dir/$n.git" ] || [ -L "$dry_dir/$n.git" ]; then   # an earlier dry run's (checked above, and here): replaced
+      made_by_dry_run "$dry_dir/$n.git" || fail "$dry_dir/$n.git is not a dry run's repository; left as it is"
+      rm -rf "$dry_dir/$n.git"
+    fi
     git init -q --bare "$dry_dir/$n.git"
     git -C "$dry_dir/$n.git" symbolic-ref HEAD refs/heads/main
+    git -C "$dry_dir/$n.git" config release-publish.dryRun true
   fi
   if [ -n "$yes" ] && "$gh" repo view "$org/$n" --json name > /dev/null 2>&1; then
     echo "  $org/$n exists"

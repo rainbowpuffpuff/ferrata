@@ -8,12 +8,16 @@
 #
 # Cases: usage errors; bad keys (not JSON, no d, x not d's public key, short d), refused before
 # anything and without ever printing d; --dry-run with --yes; the default mode (prints, runs no gh);
-# a dry run into a relative directory (absolute file:// URLs, HEAD on main, the catalog clones with its
-# submodules, the generated logos-repo.json and README); --yes refused before anything is created when
-# gh is missing, not logged in, ORG not an organization, a repository holding another main, or another
-# tag; --yes on a fresh organization (every step in order, the secret from the key file, the release
-# trigger not run, the key nowhere on disk); a rerun (nothing created, nothing moved); a failure at the
-# secret step, then the rerun that finishes; no TMPDIR at all; two exports of a module, one commit.
+# MODULES from the environment honoured without --yes and refused with it; a dry run into a relative
+# directory (absolute file:// URLs, HEAD on main, the catalog clones with its submodules, the generated
+# logos-repo.json and README), run again into the same directory, and refused when the directory holds
+# a <name>.git no dry run made; --yes refused before anything is created when gh is missing, not logged
+# in, ORG not an organization, a repository holding another main, another tag (on the second module, so
+# that a refusal turned into a warning would create the first), or one git cannot read; --yes on a fresh
+# organization (every step in order, the secret from the key file, the release trigger not run, the key
+# nowhere on disk); a rerun with SOURCE_DATE_EPOCH and FERRATA_COMMIT inherited (ignored: nothing
+# created, nothing moved); a failure at the secret step, then the rerun that finishes; no TMPDIR at all;
+# two exports of a module a second apart, one commit.
 #
 #   bash modules/scripts/test-release-publish.sh [SCRATCH-DIR]   (default: a new directory under TMPDIR)
 set -euo pipefail
@@ -22,7 +26,7 @@ repo=$(cd "$here/../.." && pwd)
 S=${1:-$(mktemp -d "${TMPDIR:-/tmp}/test-release-publish.XXXXXX")}
 mkdir -p "$S"
 S=$(cd "$S" && pwd)
-rm -rf "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports" "$S/other" "$S/clone" "$S/reldry"
+rm -rf "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports" "$S/other" "$S/clone" "$S/reldry" "$S/otherdry"
 mkdir -p "$S/github" "$S/bin" "$S/keys" "$S/runs" "$S/systmp" "$S/exports"
 P=$here/release-publish.sh
 MODS="ferrata_attestor_module ferrata_monitor_module"
@@ -90,7 +94,7 @@ export RELEASE_PUBLISH_GH=$S/bin/gh
 export GIT_ALLOW_PROTOCOL=file
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.file://$S/github/.insteadOf" GIT_CONFIG_VALUE_0=https://github.com/
 export TMPDIR=$S/runs
-export MODULES=$MODS
+unset MODULES SOURCE_DATE_EPOCH FERRATA_COMMIT
 : > "$S/github/gh.log"
 
 # ── Keys ─────────────────────────────────────────────────────────────────────────────────────────
@@ -126,11 +130,15 @@ DID=$(python3 -I "$here/jwk_did.py" "$S/keys/key.jwk")
 check "jwk_did.py: the key's DID is did:jwk of its public half" \
   test "$DID" = "did:jwk:$(printf '{"crv":"Ed25519","kty":"OKP","x":"%s"}' "$(jq -r .x "$S/keys/key.jwk")" | b64u)"
 
-run() { # NAME ARGS...: run release-publish.sh, output to runs/NAME.out, exit status to runs/NAME.rc
+run_bare() { # NAME ARGS...: run release-publish.sh, output to runs/NAME.out, exit status to runs/NAME.rc
   local name=$1; shift
   local rc=0
   bash "$P" "$@" > "$S/runs/$name.out" 2>&1 || rc=$?
   echo "$rc" > "$S/runs/$name.rc"
+}
+run() { # NAME ARGS...: the same with --modules "$MODS" (the two modules standing for the six)
+  local name=$1; shift
+  run_bare "$name" "$@" --modules "$MODS"
 }
 rc() { cat "$S/runs/$1.rc"; }
 out_has() { grep -q -F -- "$2" "$S/runs/$1.out"; }
@@ -162,6 +170,15 @@ check "default mode: exit 0" test "$(rc plan)" = 0
 check "default mode: no gh call" test ! -s "$S/github/gh.log"
 check "default mode: prints the release trigger as the owner's last step" out_has plan "gh workflow run release-all.yml"
 
+# ── MODULES from the environment: a subset without --yes; refused with --yes ──────────────────────
+MODULES=ferrata_monitor_module run_bare envplan "$ORG" "$CAT" "$S/keys/key.jwk"
+check "MODULES without --yes: exit 0" test "$(rc envplan)" = 0
+check "MODULES without --yes: the subset it names" out_has envplan "modules (1 of "
+MODULES=ferrata_monitor_module run_bare envyes "$ORG" "$CAT" "$S/keys/key.jwk" --yes
+check "MODULES with --yes: refused, exit 2" test "$(rc envyes)" = 2
+check "MODULES with --yes: says to name the subset with --modules" out_has envyes "MODULES is set in the environment"
+check "MODULES with --yes: no gh call at all" test ! -s "$S/github/gh.log"
+
 # ── The dry run, into a relative directory ─────────────────────────────────────────────────────
 (cd "$S" && run dry "$ORG" "$CAT" "$S/keys/key.jwk" --dry-run reldry)
 DRY=$S/reldry
@@ -184,6 +201,15 @@ check "dry run: README says to require signatures" grep -q -F "signature_policy:
 check "dry run: module tags pushed" test -n "$(git -C "$DRY/ferrata_monitor_module.git" tag -l 'v*')"
 WS_DRY=$(sed -n 's/^  workspace: //p' "$S/runs/dry.out")
 check "dry run: the key nowhere in the workspace or the repositories" no_d_in "$WS_DRY" "$DRY"
+(cd "$S" && run dryagain "$ORG" "$CAT" "$S/keys/key.jwk" --dry-run reldry)
+check "dry run again into the same directory: exit 0, its own repositories replaced" test "$(rc dryagain)" = 0
+# A directory holding a <name>.git that no dry run made: refused before anything, left as it was.
+mkdir -p "$S/otherdry/ferrata_monitor_module.git" && echo keep > "$S/otherdry/ferrata_monitor_module.git/keep"
+run dryforeign "$ORG" "$CAT" "$S/keys/key.jwk" --dry-run "$S/otherdry"
+check "dry run into a foreign <name>.git: refused, exit 2" test "$(rc dryforeign)" = 2
+check "dry run into a foreign <name>.git: says so" out_has dryforeign "was not made by a dry run of this script"
+check "dry run into a foreign <name>.git: left as it was" test -f "$S/otherdry/ferrata_monitor_module.git/keep"
+check "dry run into a foreign <name>.git: nothing else made" test "$(ls "$S/otherdry")" = ferrata_monitor_module.git
 
 # ── --yes refused before anything is created ───────────────────────────────────────────────────
 RELEASE_PUBLISH_GH=$S/no-such-gh run nogh "$ORG" "$CAT" "$S/keys/key.jwk" --yes
@@ -200,15 +226,24 @@ run othermain "$ORG" "$CAT" "$S/keys/key.jwk" --yes
 check "--yes when a repository holds another main: exit 1" test "$(rc othermain)" = 1
 check "--yes when a repository holds another main: says so" out_has othermain "exists and its main is"
 rm -rf "$S/github/$ORG/ferrata_monitor_module.git"
-# A module repository whose version tag is another object.
-git init -q --bare "$S/github/$ORG/ferrata_attestor_module.git"
-V=$(jq -r .version "$repo/modules/ferrata_attestor_module/metadata.json")
+# A module repository whose version tag is another object: the SECOND module (attestor comes first), so
+# that the refusal is what stops it, not the tag push that would fail after the first create.
+git init -q --bare "$S/github/$ORG/ferrata_monitor_module.git"
+V=$(jq -r .version "$repo/modules/ferrata_monitor_module/metadata.json")
 git -C "$S/other" -c user.name=t -c user.email=t@localhost tag -a "v$V" -m other
-git -C "$S/other" push -q "file://$S/github/$ORG/ferrata_attestor_module.git" "refs/tags/v$V"
+git -C "$S/other" push -q "file://$S/github/$ORG/ferrata_monitor_module.git" "refs/tags/v$V"
 run othertag "$ORG" "$CAT" "$S/keys/key.jwk" --yes
 check "--yes when a version tag exists elsewhere: exit 1" test "$(rc othertag)" = 1
 check "--yes when a version tag exists elsewhere: says so" out_has othertag "already has a tag v$V"
-rm -rf "$S/github/$ORG/ferrata_attestor_module.git"
+check "--yes when a version tag exists elsewhere: nothing created" test "$(creates)" = 0
+rm -rf "$S/github/$ORG/ferrata_monitor_module.git"
+# A repository that gh sees and git cannot read.
+mkdir -p "$S/github/$ORG/ferrata_monitor_module.git"
+run unreadable "$ORG" "$CAT" "$S/keys/key.jwk" --yes
+check "--yes when git cannot read an existing repository: exit 1" test "$(rc unreadable)" = 1
+check "--yes when git cannot read an existing repository: says so" out_has unreadable "exists but git cannot read it"
+check "--yes when git cannot read an existing repository: nothing created" test "$(creates)" = 0
+rm -rf "$S/github/$ORG/ferrata_monitor_module.git"
 check "--yes refusals: no repository created" test "$(creates)" = 0
 check "--yes refusals: no secret set" test ! -d "$S/github/secrets"
 
@@ -240,11 +275,13 @@ check "--yes: the key nowhere in the workspace or the repositories" no_d_in "$WS
 refs_now() { for n in $MODS "$CAT"; do git -C "$S/github/$ORG/$n.git" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null || echo "$n missing"; done; }
 before=$(refs_now)
 : > "$S/github/gh.log"
-run yes2 "$ORG" "$CAT" "$S/keys/key.jwk" --yes
+SOURCE_DATE_EPOCH=315532800 FERRATA_COMMIT=0000000000000000000000000000000000000000 run yes2 "$ORG" "$CAT" "$S/keys/key.jwk" --yes
 after=$(refs_now)
 check "rerun: exit 0" test "$(rc yes2)" = 0
 check "rerun: no repository created" test "$(creates)" = 0
 check "rerun: every ref as before (exports reproducible)" test "$before" = "$after"
+check "rerun: an inherited SOURCE_DATE_EPOCH and FERRATA_COMMIT ignored, and said so" \
+  out_has yes2 "(from the environment, ignored: SOURCE_DATE_EPOCH=315532800 FERRATA_COMMIT=0000000000000000000000000000000000000000)"
 
 # ── A failure at the secret step, then the rerun that finishes ─────────────────────────────────
 rm -rf "$S/github/$ORG" "$S/github/secrets"
@@ -266,8 +303,9 @@ check "no TMPDIR: the workspace in the system default" test -n "$(sed -n "s#^  w
 
 # ── export.sh: the same source gives the same commit ───────────────────────────────────────────
 bash "$here/export.sh" ferrata_monitor_module "$S/exports/a" > /dev/null
+sleep 1   # a time-stamped export would now differ
 bash "$here/export.sh" ferrata_monitor_module "$S/exports/b" > /dev/null
-check "export.sh: two exports, one commit" test "$(git -C "$S/exports/a" rev-parse HEAD)" = "$(git -C "$S/exports/b" rev-parse HEAD)"
+check "export.sh: two exports a second apart, one commit" test "$(git -C "$S/exports/a" rev-parse HEAD)" = "$(git -C "$S/exports/b" rev-parse HEAD)"
 
 echo
 echo "test-release-publish.sh: $npass passed, $nfail failed (bash $BASH_VERSION; scratch $S)"

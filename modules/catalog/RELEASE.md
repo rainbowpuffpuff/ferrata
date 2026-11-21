@@ -39,7 +39,12 @@ account that can create repositories in `ORG`, with git pushing to github.com as
 setup-git` does it). It writes only to a workspace it makes with `mktemp` (under
 `TMPDIR` when that is set) and prints its path. Without `--yes` it prepares everything and prints the plan;
 with `--dry-run DIR` it also pushes everything into local bare repositories under `DIR` (`file://`
-remotes, no network command; the recorded run is [`dry-run-publish/README.md`](dry-run-publish/README.md)).
+remotes, no network command; it replaces only the repositories an earlier dry run made there and refuses
+any other; the recorded run is [`dry-run-publish/README.md`](dry-run-publish/README.md)). It publishes
+this repository's `HEAD`: every export records that commit and carries its date (a `SOURCE_DATE_EPOCH` or
+`FERRATA_COMMIT` inherited from the environment is ignored, and said so), so run it from a clean checkout
+of the commit to publish. `--modules 'M ...'` names a subset; with `--yes` it is the only way (a `MODULES`
+variable in the environment is refused there, so an inherited one cannot narrow the publication unseen).
 [`test-release-publish.sh`](../scripts/test-release-publish.sh) runs every path of it, `--yes` included,
 against a stub `gh` with no network (CI job `release-publish`).
 
@@ -63,8 +68,8 @@ What it does, in order:
    export additionally needs lez/methods' risc0-build output, `lez/target` — `cd lez && cargo build
    --locked -p methods`, `RISC0_HOME` as `lez/RESULTS.md` says; on the machine the publish runs from.)
 4. **With `--yes`, checks the remote side before creating anything**, read-only: `gh` is there and logged
-   in, `ORG` is an organization, and no repository of the seven already holds a different `main` or a
-   different version tag. Any failure stops it with nothing created.
+   in, `ORG` is an organization, and every one of the seven that already exists can be read by git and
+   holds no different `main` and no different version tag. Any failure stops it with nothing created.
 5. **Then creates, pushes and sets the secret**, each step idempotent (a rerun after a failure resumes and
    moves nothing): create the seven repositories; push each module's `main` and its `v<version>` tag; push
    the catalog; set the `LOGOS_SIGNING_KEY` Actions secret from the key file on standard input (`gh secret
