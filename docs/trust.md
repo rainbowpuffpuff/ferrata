@@ -232,19 +232,30 @@ the chain id in its identifier ([`attestation.md`](design/attestation.md) §2, �
 - freshness relative to the weak-subjectivity period, beyond what the bound enforces (a store past its
   period refuses every update; a record's own age is not bounded: §2.1).
 
-### 2.4 Off-chain participants of the light client
+### 2.4 Off-chain participants of the light client (RFP-021 F.12)
 
-| Who | Provides | Can affect | If it lies | If it stops | Observes |
-|---|---|---|---|---|---|
-| Any submitter or prover | updates | liveness only | refused: signatures are checked | anyone else submits | public data |
-| Beacon and execution providers | light-client data, proofs, receipts | liveness only | refused: checked against signatures and records | another provider, or your own node | which blocks are fetched |
-| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root; `verify_checkpoint` (built, with its provider checks: §2.1) or a manual comparison catches it | nothing to stop | nothing |
-| LEZ sequencers | inclusion, block timestamps | liveness only: the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot forge a record | the zone stops | public transactions |
-| Deployer | the immutable deployment | nothing after deployment | — | — | nothing |
+Every off-chain participant the attestation side requires, what it can affect, and why none of them, alone or as a
+class, can stop an attestation from eventually being produced. Each row is walked by one test of
+[`lez/updater/tests/every_party.rs`](../lez/updater/tests/every_party.rs), named in the last column: the party lies,
+lags, stops or censors, and the test still ends with `Attest` applied on a record the instance wrote (the updater
+daemon against LEZ v0.4.0-rc1's state machine in process, the mainnet fixture of 10 November 2026, dev mode). A
+further test fails if a row is added here without its scenario, or the reverse.
+
+| Who | Provides | Can affect | If it lies | If it stops | Observes | Why it cannot block an attestation | Walked by |
+|---|---|---|---|---|---|---|---|
+| Submitters (updater operators) | light-client updates, as the public job's transactions | liveness only | refused: the program checks every update's signatures and branches, whoever sends it (VS.6); a forged update moves no store | anyone else submits; an account with no prior relationship to the instance advances it | public chain data | submitting is permissionless and needs only LEZ gas: when every operator stops, the consumer runs the same daemon with its own key | `submitters_any_account_advances_none_is_needed` |
+| Provers (the proven path only) | a proof of an update's verification (`VerifyAll`, then `ApplyVerified`) | liveness only | refused: LEZ verifies the receipt | nobody needs one | the update, which is public | not required: the public job (`Init`, `Adopt`, `Open`, `Miller`, `Finish`) advances the instance with no proof | `provers_none_is_needed_on_the_public_job` |
+| Beacon API providers | bootstraps and updates | liveness only | refused by the updater before it pays (the source is demoted), and by the program if sent anyway | another provider, or the consumer's own beacon node | which light-client data is fetched, and when; the updater's IP address | light-client data is public: any beacon node serves it, the consumer's own included | `beacon_providers_lie_lag_or_stop` |
+| Execution RPC providers | `eth_getProof`, receipts and headers for a request | liveness only | refused: a proof is checked against the record's state or receipts root (110 and the other codes of the [consumer guide](guides/consumer-guide.md) §8) | another provider, or the consumer's own node | which accounts, slots and logs a consumer asks about; its IP address | proofs are public data: any full or archive node serves them | `execution_providers_cannot_forge_a_fact` |
+| Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root: `verify_checkpoint` (built, with its provider checks: §2.1) or a manual comparison catches it; a root no honest node serves a bootstrap for gives no instance; an instance from another checkpoint has another id, which a consumer pinned to the instance it checked refuses (211) | nothing to stop: a checkpoint is public | nothing | a finalized block root is public: anyone initialises an instance from one it checked | `checkpoint_source_misleads_only_until_checked` |
+| LEZ sequencers | inclusion, ordering, block timestamps | liveness only, for Ferrata: the zone's execution is LEZ's own trust, as for every program on it; the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot make the program accept an invalid update; can leave transactions out | the zone stops for every program; the instance resumes from its own state when the zone does (R.7) | public transactions; senders' IP addresses | a censored submitter is replaced by another; a zone that includes nothing is an outage of LEZ itself | `sequencers_censor_or_stall_the_instance_still_advances` |
+| Deployer (the program and an instance's `Init`) | the immutable deployment | nothing after deployment | — | — | nothing | it keeps no power: the program is immutable (LEZ v0.4's loader) and no instruction rewrites an instance (F.13); its own `Init` sent again, or with another chain id, is refused | `deployer_holds_nothing_after_deployment` |
 
 From [`attestation.md`](design/attestation.md) §11.5. An update is accepted on validity alone, never on
 the submitter's identity (VS.6; §4.5 there). Apart from the checkpoint source, no participant can make
-the program accept a false record (VS.5).
+the program accept a false record (VS.5). The consumer's own client (the wallet, the `ferrata-attest` tool, a
+module) is the user, not a third party; the attestation side's `monitor`, which would compare records with several
+providers and warn before the weak-subjectivity bound, is not built (§10) and is not required for an attestation.
 
 **The updater's sources.** `ferrata-updater` runs the program's own checks on every candidate before it pays for a
 step, demotes a source that serves what the program would refuse, and with `min_agreeing` waits until enough sources
