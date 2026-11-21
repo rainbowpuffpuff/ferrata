@@ -3,7 +3,10 @@
 Branch `rfp-attest-integration` (from `f13faee2`). Proposals for the integrator: the new status of each row, the test or
 run that shows each clause, and an EVIDENCE row text. Nothing here edits `docs/EVIDENCE.md`,
 `docs/requirements-status.md` or `docs/traceability.md`. Every number below comes from a command run on the Modal build
-box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "measured" unless marked.
+box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "measured" unless marked. An independent
+review of the branch (21 November) reran every cited test and run on a fresh box and reproduced them; its findings are
+fixed on the branch after `d2d937a1` (the monitor's divergence rule, the relayer module's build, the U.4 statuses,
+wording), and the rows below say what changed.
 
 ## Summary
 
@@ -11,12 +14,12 @@ box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "mea
 |---|---|---|---|
 | RFP-021 R.7 | in part | **shown** | `lez/harness/tests/stall.rs`: attestations verify during an 8.2-day stall and after it; the 106 outstanding real Sepolia updates (8 handoffs) applied in order by a late submitter, no repair, no gap |
 | RFP-021 S.7 | in part | in part (the monitor gap closed; only the first-draft guide remains) | `monitor/attest`: the stall and half-weak-subjectivity alarms built and tested on the R.7 states |
-| RFP-021 VS.4 | in part | in part (the monitor gap closed; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence alarm and the consumer's freeze hook built and tested |
-| RFP-021 U.4 | waits on Logos | **shown** (with SPEL's v0.4 pull request; see the caveat) | SPEL PR #301's own generator makes the attestation program's IDL from `lez/wire`: 0 differences from ours; SPEL's decoder reads 905 of 905 recorded messages |
-| RFP-022 U.4 | waits on Logos | in part | The same generator stops at a tuple in `BridgeMessage::Spend`; with our 23-line SPEL patch (drafted, not opened) it makes the bridge's IDL, 0 differences from ours |
-| RFP-021 U.1 | in part | **shown** | `ferrata_attest_module` in a headless Logos Core beside `lez_core` on a LEZ zone we ran: its LEZ reads through `lez_core` byte-equal to the plain path; an update's job and attestations sent through `lez_core`, applied or refused on the zone as the module's dry runs said |
+| RFP-021 VS.4 | in part | in part (the monitor gap closed; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence alarm and the consumer's freeze hook built and tested, including one provider colluding with the forger (the alarm stays critical, the freeze hook runs) |
+| RFP-021 U.4 | waits on Logos | **waits on Logos** (shown instead: SPEL's v0.4 generator, at its open pull request, on our programs) | SPEL's LEZ v0.4 line is an open pull request (#301), not a release: the table files that under "waits on Logos". Shown instead: its own generator makes the attestation program's messages and types from `lez/wire`, 0 differences from ours; its decoder reads 905 of 905 recorded messages |
+| RFP-022 U.4 | waits on Logos | **waits on Logos** (shown instead: the same generator with our tuple patch) | The same open pull request, which stops at a tuple in `BridgeMessage::Spend`; with our 23-line SPEL patch (drafted, not opened) it makes the bridge's messages and types, 0 differences from ours |
+| RFP-021 U.1 | in part | **shown** (two conditions stated) | `ferrata_attest_module` in a headless Logos Core beside `lez_core` on a LEZ zone we ran: its LEZ reads through `lez_core` byte-equal to the plain path; an update's job and attestations sent through `lez_core`, applied or refused on the zone as the module's dry runs said. Conditions: `lez_core` runs with our patch (as merged it cannot send these transactions), and a sent transaction's outcome is not observable through Logos Core (`lez_core` reports inclusion; the run read verdicts with the CLI's follower) |
 | RFP-021 F.9 | in part | in part (blocked on Logos for the last clause) | `verify_checkpoint`'s beacon checks through Logos Core's `beacon_api_module`, live in Logos Core (3 of 3 agree); the same check drafted as a method of Logos's `beacon_api_module` (applies, 32 of 32 tests) |
-| RFP-021 U.2 | in part | **shown** | `ferrata attest` (cli/) on a LEZ v0.4.0-rc1 zone we ran: configuration read, updates submitted, attestations of slot, account and log tuples with predicates, dry runs whose codes (0, 130, 124, 23, 52) equal the zone's for every sent transaction (24 of 24 steps) |
+| RFP-021 U.2 | in part | **shown** | `ferrata attest` (cli/) on a LEZ v0.4.0-rc1 zone we ran: configuration read, updates submitted, attestations of slot, account and log tuples with predicates, dry runs whose codes (0, 130, 124, 23, 52) equal the zone's for every sent transaction (22 commands) |
 
 (U.3, F.7: unchanged, below.)
 
@@ -46,50 +49,58 @@ Proposed EVIDENCE row: | new (rfp-B 1) | **A stalled instance keeps attesting an
 first draft (rfp-H's). What this stream adds:
 
 - `attest-monitor` ([`monitor/attest/`](../../monitor/attest/README.md)): `instance-stalled` (the instance's finalized header behind the providers' median finalized header by more than `--stall-after`), `ws-half` (past half its weak-subjectivity period by the chain's clock), `ws-expired` (must be replaced), with alerts to a log, a command and standard error, a daemon with a status file and a clean stop.
-- Tested on real data (`monitor/attest/tests/monitor.rs`, 8 of 8 pass): the R.7 test's stalled instance at the resume's time gives lag 702,336 s, `instance-stalled` and `ws-half` (half at slot 11,606,192: the real 8.2-day stall crossed it); the resumed instance gives no alarm and its root equals publicnode's recorded `0x23362d57…5466`; the daemon raises each alarm once, clears both with `recovered` when the instance resumes, stops on SIGTERM.
-- Proposed text for the operator guide §3.5 (for rfp-H): "Run `attest-monitor watch --state lez:<sequencer> --program <program> --instance <id> --provider … --provider … --provider …` (three or more beacon providers of different clients). It warns `instance-stalled` when the instance's finalized header lags the providers' finalized header by more than `--stall-after` (default 15,300 s, two missed two-hour sessions plus finality), and raises `ws-half` (critical) when the header is older than half its weak-subjectivity period: submit the outstanding updates then; anyone may, and the instance resumes with no repair (R.7). Past the period it raises `ws-expired`: the instance must be replaced (§ on replacement). Nobody is obliged to run an updater or this monitor."
+- Tested on real data (`monitor/attest/tests/monitor.rs`, 12 of 12 pass after the review's fixes; 8 of 8 before): the R.7 test's stalled instance at the resume's time gives lag 702,336 s, `instance-stalled` and `ws-half` (half at slot 11,606,192: the real 8.2-day stall crossed it); the resumed instance gives no alarm and its root equals publicnode's recorded `0x23362d57…5466`; the daemon raises each alarm once, clears both with `recovered` when the instance resumes, stops on SIGTERM.
+- Proposed text for the operator guide §3.5 (for rfp-H): "Run `attest-monitor watch --state lez:<sequencer> --program <program> --instance <id> --provider … --provider … --provider …` (three or more beacon providers of different clients). It warns `instance-stalled` when the instance's finalized header lags the providers' finalized header (their median: with three or more providers no single one can raise or hide it) by more than `--stall-after` (default 15,300 s, two missed two-hour sessions plus finality), and raises `ws-half` (critical) when the header is older than half its weak-subjectivity period: submit the outstanding updates then; anyone may, and the instance resumes with no repair (R.7). Past the period it raises `ws-expired`: the instance must be replaced (§ on replacement). Nobody is obliged to run an updater or this monitor."
 
-Proposed EVIDENCE row: | new (rfp-B 2) | **The attestation side's `monitor`: stall, weak-subjectivity and divergence alarms** (S.7, VS.4): `attest-monitor` reads an instance (a LEZ sequencer's `getAccount`, or a file or command) and several beacon providers; on the R.7 test's real Sepolia instance states and providers serving Sepolia's recorded answers: healthy (3 agree), the real 8.2-day stall (`instance-stalled`, lag 702,336 s; `ws-half`), past the period (`ws-expired`), a forged finalized header (`instance-diverged`, the consumer's freeze hook run once with the instance id), a lying provider (`providers-disagree`, no false divergence), unreachable and other-chain providers not counted, the daemon's alerts on change, `recovered`, SIGTERM | `monitor/attest/tests/monitor.rs`: 8 of 8 pass | Modal build box | [`monitor/attest/README.md`](../../monitor/attest/README.md) |
+Proposed EVIDENCE row: | new (rfp-B 2) | **The attestation side's `monitor`: stall, weak-subjectivity and divergence alarms** (S.7, VS.4): `attest-monitor` reads an instance (a LEZ sequencer's `getAccount`, or a file or command) and several beacon providers; on the R.7 test's real Sepolia instance states and providers serving Sepolia's recorded answers: healthy (3 agree), the real 8.2-day stall (`instance-stalled`, lag 702,336 s; `ws-half`), past the period (`ws-expired`), a forged finalized header (`instance-diverged`, the consumer's freeze hook run once with the instance id), the forged header with one provider colluding (still critical, the hook runs, the colluder named), the stated rule with `--diverge-at`, providers behind the instance's slot, unreachable or on another chain not counted, the daemon's alerts on change, an outage held (no false `recovered`), a failed freeze hook retried at the next poll, SIGTERM | `monitor/attest/tests/monitor.rs`: 12 of 12 pass | Modal build box | [`monitor/attest/README.md`](../../monitor/attest/README.md) |
 
 ## RFP-021 VS.4: committee-compromise failure modes and what a consumer can do
 
 **Proposed: in part; the monitor gap is closed.** The documentation (`docs/trust.md` §2, §6) is a first draft (rfp-H's).
 What this stream adds: the alarm the documentation tells consumers to wire to their freeze authority exists and is tested.
 
-- `instance-diverged` (critical) when at least `--min-agreeing` providers report another root (or no block) at the instance's finalized slot and none reports the instance's: what a captured committee's forged handoff or finality leaves. Test `a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_hook`: the instance's finalized header altered as a captured committee would leave it; the alert names all three providers and the instance; the alert command (the consumer's freeze tool) ran exactly once. One lying provider cannot raise a divergence; one colluding with a forged instance turns it into `providers-disagree` (a warning), not silence (`one_lying_provider_cannot_raise_or_hide_a_divergence`).
-- Proposed text for `trust.md` §2.2 (for rfp-H): "The attestation side's monitor (`monitor/attest`, `attest-monitor`) compares the instance's finalized header with several beacon providers' canonical roots and raises `instance-diverged` when they do not have it. A consumer runs it with three or more providers of different clients and wires `--alert-cmd` (at level critical) to its freeze authority, and treats `providers-disagree` as a page too. What can pass before the freeze is the consumer's caps over the time the alarm and the freeze take; size the caps to what it can afford to lose."
-- Limits: the divergence is shown on an altered state against loopback providers serving recorded answers, not a real captured committee; the monitor has not run against public providers.
+- `instance-diverged` (critical) when at least `--diverge-at` providers (default 1: any provider) report another root, or no block, at the instance's finalized slot, a slot they have finalized, whatever the others report: what a captured committee's forged handoff or finality leaves. A provider that reports the instance's root does not cancel it (it may collude with the forger; the alert names it under `agreeing`). The rule, with `n` providers answering: `f` lying providers raise it when `f` ≥ `--diverge-at`; `f` providers colluding with a forged instance hide it only when `f` > `n` − `--diverge-at` (by default, only when every provider that answers colludes). By default one provider can raise it (a false freeze costs a pause); with `--diverge-at 2` and three or more providers one provider can neither raise nor hide it.
+- Tests: `a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_hook` (the header altered as a captured committee would leave it; the alert names all three providers and the instance; the consumer's freeze tool ran exactly once); `one_colluding_provider_cannot_hide_a_divergence_from_the_freeze_hook` (two honest providers and one reporting the forged root, the freeze tool wired at level critical as the README says: exit 20, the tool ran once, the colluder named; two colluding of three: still critical; only colluding providers answering: confirmed, the stated limit); `the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2`; `a_provider_behind_the_instance_is_not_counted` (providers that have not finalized the slot raise no false divergence); `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook`.
+- Before the review's fix (`ac5a78d5`), one colluding provider turned the critical alarm into a warning, so a freeze tool wired at level critical did not run; the earlier text here and in the monitor's README claimed it could not be hidden.
+- Proposed text for `trust.md` §2.2 (for rfp-H): "The attestation side's monitor (`monitor/attest`, `attest-monitor`) compares the instance's finalized header with several beacon providers' canonical roots and raises `instance-diverged` (critical) when any of them (by default; `--diverge-at N` for N) has another block at that slot, whatever the others say: a provider that agrees with a forged header may be colluding with the forger. A consumer runs it with three or more providers of different clients, operated by different parties, and wires `--alert-cmd` at level critical to its freeze authority; one dishonest provider can then raise a false alarm, which costs a pause, but cannot hide a real one, which only every provider together can. What can pass before the freeze is the consumer's caps over the time the alarm and the freeze take; size the caps to what it can afford to lose."
+- Limits: the divergence is shown on an altered state against loopback providers serving recorded answers, not a real captured committee; the monitor has not run against public providers; a provider past the slot that no longer serves it (pruned history) counts as disagreeing.
 
 ## RFP-021 U.4 and RFP-022 U.4: an IDL through the SPEL framework
 
 SPEL's LEZ v0.4 line is logos-co/spel pull request #301 (head `c90ca0b`, 16 Nov 2026, LEZ v0.4.0-rc3; open, not
-released). It generates an IDL (version 2) from a program's core crate with no annotations. Run against our crates,
-unchanged ([`idl/README.md`](../../idl/README.md), "SPEL v0.4 generates them"; record
-[`idl/generated/spel-v2.txt`](../../idl/generated/spel-v2.txt); `bash idl/spel-v2/run.sh`, tree `13d04666`):
+released: `gh pr view 301 -R logos-co/spel` gave `OPEN`, head `c90ca0b`, on 21 Nov). The status table's header files an
+upstream component that is not released under **waits on Logos**, so both rows stay there; what the pull request's own
+code does with our programs is the "shown instead". It generates an IDL (version 2) from a program's core crate with no
+annotations. Run against our crates, unchanged ([`idl/README.md`](../../idl/README.md), "SPEL v0.4 generates them";
+record [`idl/generated/spel-v2.txt`](../../idl/generated/spel-v2.txt); `RECORDED=… bash idl/spel-v2/run.sh`, tree
+`18fc505c`, the same results as the first run; reproduced by the review on a fresh box):
 
-- **RFP-021 U.4, proposed shown** (caveat: SPEL's code at an open pull request, the only SPEL that targets LEZ v0.4):
-  `generate_idl` on `lez/wire` gives 15 messages and 18 types; compared with `idl/ferrata_attestation.idl.json`, both ways,
-  docs aside: **0 differences in 33 messages and types**. SPEL's own decoder on the generated IDL decodes 21 of 21 committed
-  vectors and **905 of 905 messages recorded on LEZ zones** (the lab's 838, the live run's 67), each consuming every byte,
-  and refuses each one a byte short, a byte long or with tag 255. The generated file:
-  [`idl/generated/ferrata_attestation.idl-v2.json`](../../idl/generated/ferrata_attestation.idl-v2.json). If the integrator
-  reads "using the SPEL framework" as a released SPEL, this stays "waits on Logos" with this as "shown instead".
-- **RFP-022 U.4, proposed in part**: the same generator refuses `BridgeMessage::Spend`'s `fees: Vec<(Root, u128)>` ("only
+- **RFP-021 U.4, proposed waits on Logos; shown instead**: `generate_idl` on `lez/wire` gives 15 messages and 18 types;
+  compared with `idl/ferrata_attestation.idl.json`, both ways, docs aside: **0 differences in 33 messages and types**.
+  SPEL's own decoder on the generated IDL decodes 21 of 21 committed vectors and **905 of 905 messages recorded on LEZ
+  zones** (the lab's 838, the live run's 67; `idl-recorded` leaves out 8 more of an older wire, which today's Rust wire
+  does not decode either), each consuming every byte, and refuses each one a byte short, a byte long or with tag 255.
+  The comparison covers messages and types: SPEL's version 2 format has no `errors`, `instructions` or `accounts`
+  sections, so the hand-written IDL's 71 error codes stay in it alone. The generated file:
+  [`idl/generated/ferrata_attestation.idl-v2.json`](../../idl/generated/ferrata_attestation.idl-v2.json). Moves to shown
+  when SPEL releases its v0.4 line with this generator.
+- **RFP-022 U.4, proposed waits on Logos; shown instead**: the same generator refuses `BridgeMessage::Spend`'s `fees: Vec<(Root, u128)>` ("only
   paths and arrays are supported"). With [`idl/spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch`](../../idl/spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch)
   (a tuple described as a struct with positional fields; Borsh encodes both alike) it gives 28 messages and 32 types: 0
-  differences in 60 against `idl/ferrata_bridge.idl.json`, 50 of 50 vectors decoded. Remains: SPEL taking tuple support
-  (the patch is drafted for upstream, not opened), or the bridge's wire naming that tuple (which would move the bridge's image id).
+  differences in 60 messages and types against `idl/ferrata_bridge.idl.json` (its 16 error codes not compared, as
+  above), 50 of 50 vectors decoded. Remains: SPEL releasing its v0.4 line and taking tuple support (the patch is
+  drafted for upstream, not opened), or the bridge's wire naming that tuple (which would move the bridge's image id).
 
-Proposed EVIDENCE row: | new (rfp-B 3) | **SPEL's LEZ v0.4 generator makes both programs' IDLs from their core crates** (U.4): logos-co/spel PR #301 (`c90ca0b`, LEZ v0.4.0-rc3) `generate_idl` on `lez/wire`: the attestation program's IDL equal to the hand-written one (0 differences in 33 messages and types); SPEL's decoder on it: 21 of 21 vectors and 905 of 905 recorded messages exactly, mutants refused; on `lez/bridge-wire` it stops at a tuple; with our 23-line SPEL patch (tuples as positional structs, not opened) the bridge's IDL equal to ours (0 in 60), 50 of 50 vectors | `bash idl/spel-v2/run.sh` | Modal build box | [`idl/generated/spel-v2.txt`](../../idl/generated/spel-v2.txt) |
+Proposed EVIDENCE row: | new (rfp-B 3) | **SPEL's LEZ v0.4 generator, at its open pull request, makes both programs' messages and types from their core crates** (U.4, shown instead; the rows wait on SPEL's release): logos-co/spel PR #301 (`c90ca0b`, LEZ v0.4.0-rc3, open) `generate_idl` on `lez/wire`: the attestation program's messages and types equal to the hand-written IDL's (0 differences in 33; SPEL's version 2 format has no error, instruction or account sections, not compared); SPEL's decoder on it: 21 of 21 vectors and 905 of 905 recorded messages exactly, mutants refused; on `lez/bridge-wire` it stops at a tuple; with our 23-line SPEL patch (tuples as positional structs, not opened) the bridge's messages and types equal to ours (0 in 60), 50 of 50 vectors | `RECORDED=… bash idl/spel-v2/run.sh` (tree `18fc505c`) | Modal build box | [`idl/generated/spel-v2.txt`](../../idl/generated/spel-v2.txt) |
 
 ## RFP-021 F.7: the program on testnet, consumed inside the consuming transaction
 
 **Proposed: waits on Logos (unchanged).** LEZ testnet 0.4 does not exist (as of 21 Nov 2026). What this stream adds
 towards it, and what is shown instead:
 
-- **The published interface any consuming program can call** is now generated by SPEL's own v0.4 tooling from the
-  program's core crate and equal to ours (U.4 above): a consumer's client or program can be written from
-  `idl/generated/ferrata_attestation.idl-v2.json`.
+- **The published interface any consuming program can call** is now generated by SPEL's own v0.4 tooling (its open
+  pull request) from the program's core crate, its messages and types equal to ours (U.4 above): a consumer's client or
+  program can be written from `idl/generated/ferrata_attestation.idl-v2.json` (the error codes from the hand-written IDL).
 - **The calls a consuming program makes, against a running sequencer** (`ferrata attest`, U.2 below): an `Attest` to
   `header(id, slot)` dry-run and sent on a zone we ran, its code equal to the zone's.
 - Shown instead (unchanged): same-transaction consumption in the harness and on rc1 and rc3 sequencers we ran (the
@@ -128,13 +139,16 @@ towards it, and what is shown instead:
 | "verifying one off-chain as a dry run" | every command without `--send`: the program's function natively and the signed transaction settled on a copy of the zone's state; a dry run changes nothing (status before and after) |
 | "submitting a consensus-state update" | `advance --send --yes`: two real Sepolia updates (8 transactions) and a mainnet finality update applied; `init` of an instance |
 | "reading an instance's configuration" | `config`: chain id, committee, fork schedule, layout, bound; the instance id derived again from it and the checkpoint, equal (both instances) |
-| "The dry run must report the same typed error codes the on-chain path returns" | refusals 130 `PredicateFailed` (twice), 124 `ReceiptFailed`, 23 `PeriodSkipped`, 52 `NotNewer`: the verdict, the dry run and the zone's receipt equal for each; every sent transaction equal to its dry run in exit code, execution gas, storage gas and events (24 of 24 steps as expected) |
+| "The dry run must report the same typed error codes the on-chain path returns" | refusals 130 `PredicateFailed` (twice), 124 `ReceiptFailed`, 23 `PeriodSkipped`, 52 `NotNewer`: the verdict, the dry run and the zone's code equal for each (the CLI exits 1 on any difference); every sent transaction equal to its dry run in exit code, execution gas, storage gas and number of events (receipts carry no event data) |
 
 Limits: a zone we ran (LEZ's local configuration, one sequencer), not a public network; the zone's outcome read by
 following its blocks with LEZ's block application (the sequencer's RPC has no receipts), as every sequencer row of the
-table is read.
+table is read: the code is LEZ's own re-execution of the included transaction, anchored to the sequencer by its reverted
+list and fee totals. Run r4's 24 lines are 22 commands and 2 monitor reads; its hook checked each command's exit status
+(0 or 3), and the codes above are read from the outputs. After the review the hook expects each refusal's code itself
+(`d3aff4e2`; run `rf1` below).
 
-Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52; every sent transaction equal to its dry run (exit, execution and storage gas, events); 24 of 24 steps as expected | `bash cli/tests/attest-seq.sh r4` (tree `4db5d1d2`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
+Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52 equal across verdict, dry run and zone; every sent transaction equal to its dry run (exit, execution and storage gas, number of events); 22 of 22 commands as expected | `bash cli/tests/attest-seq.sh r4` (tree `4db5d1d2`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
 
 The same run read the zone's mainnet instance with `attest-monitor` through the sequencer's `getAccount` (S.7):
 divergence confirmed, no alert at the record's time; `ws-half` at the run's time (the record is 11 days old).
@@ -147,7 +161,8 @@ changed) is shown as before (rows 18, 69, 70, 91; F.13). What this stream adds t
 
 - `ferrata_attest_module.verify_checkpoint` now reads **every Ethereum source through Logos Core's own Ethereum
   modules** when asked: the beacon checks through `beacon_api_module` (`"providers": {"via": "beacon_api_module",
-  "chain_id": N}`: its providers for the chain, each asked pinned through `raw_get`, counted by endpoint host), the
+  "chain_id": N}`: its providers for the chain, each asked pinned through `raw_get`, counted by endpoint, host and port: run r6's three
+  are three ports of 127.0.0.1), the
   execution check through `eth_rpc_module` (row 117, `verified_proxy_module` in `required` mode). Test
   `the_beacon_checks_through_beacon_api_module_give_the_plain_paths_verdicts` (calls crate, 22 of 22 pass): with
   `beacon_api_module` answering from the live run's record of Lodestar, publicnode and Nimbus
@@ -164,8 +179,9 @@ changed) is shown as before (rows 18, 69, 70, 91; F.13). What this stream adds t
   `ferrata_attest_module.verify_checkpoint` with `providers: {via: beacon_api_module}`: verdict ok, the three agree
   through `beacon_api_module.raw_get` (slot 11,562,112). With row 117 (the execution check through `eth_rpc_module` and
   `verified_proxy_module`), every Ethereum read of the check goes through Logos Core's own Ethereum modules.
-- Remains: the API being Logos's own (the drafted change above, to be opened and merged by Logos), and a live run
-  against public providers (the brief of this stream allows recorded data only).
+- Remains: the API being Logos's own (the drafted change above, to be opened and merged by Logos; its glue method is
+  compiled only by the module builder, which no run built: drafted and unit-tested), and a live run against public
+  providers (the brief of this stream allows recorded data only).
 
 Proposed EVIDENCE row: | new (rfp-B 5) | **The checkpoint check's beacon reads through Logos Core's `beacon_api_module`, and the check drafted as a method of it** (F.9): `ferrata_attest_module.verify_checkpoint` in a headless Logos Core with `beacon_api_module` (aca138e, built from source), its three providers on loopback answering the recorded answers of Lodestar, publicnode and Nimbus: verdict ok, 3 of 3 agree through `raw_get`; replay test against the same record equal to the plain path; `beacon_api_module.verify_checkpoint` drafted for upstream (canonical, canonical at its slot, finalized, genesis and deposit chain id; hosts counted), applies to aca138e, 32 of 32 tests of its crate pass | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh`; `cargo test` (calls crate, 22 of 22); `cargo test --no-default-features` (beacon_api_module with the patch) | Modal build box; recorded provider answers | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md), [`modules/ferrata_attest_module/upstream-drafts/`](../../modules/ferrata_attest_module/upstream-drafts/README.md) |
 
@@ -199,9 +215,13 @@ submitting a consensus-state update, and reading the checkpoint and chain config
 | submitting a consensus-state update | `advance` on the instance state read through `lez_core`, its job (`Open`, `Miller`, `Finish`) sent through `lez_core`: applied; finalized slot 11,567,104 → 11,567,392 |
 | reading the checkpoint and chain configuration | `lez_read` through `lez_core.get_account_public`: the Sepolia instance (585 bytes), the mainnet instance (505) and record (365), each byte-equal to the plain path's; decoded as `read_instance` decodes them (configuration, store, id) |
 
-Limits: one zone we ran; `lez_core` built from its merged v0.4 state with our patch (as merged, a generic send mentions
-no account authorizing: the patch is the bridge stream's, `modules/patches/`); the payer is a public account of a wallet
-holding LEZ's published local test key; the zone's verdicts read from its receipts (`ferrata attest receipt`), since
-`lez_core` reports inclusion, not outcomes.
+Conditions of "shown", stated with it: (1) `lez_core` runs with our patch: built from its merged v0.4 state, a generic
+send mentions no account authorizing, so as merged it cannot send these transactions (the patch is the bridge stream's,
+`modules/patches/`); (2) a sent transaction's outcome is not observable through Logos Core: `lez_core` reports
+inclusion only, so the run read every verdict with the CLI's follower (`ferrata attest receipt`), and a UI module
+learns an `Attest`'s result only from the dry run beforehand. Limits: one zone we ran; the payer is a public account of
+a wallet holding LEZ's published local test key. The packages' hashes in the run's record are what ran: rebuilt from
+scratch by the review, the module package was bit-identical, while `lez_core`'s and `beacon_api_module`'s were not
+(their builds are not bit-reproducible across boxes).
 
 Proposed EVIDENCE row: | new (rfp-B 6) | **The attestation module's LEZ reads and sends through Logos Core's own `lez_core`** (U.1): `ferrata_attest_module` in a headless Logos Core (`logosctl` 66d098d) beside `lez_core` (cc73ebf, patched) and `beacon_api_module`, on a LEZ v0.4.0-rc1 zone with the final attestation program: three actor states read through `lez_core.get_account_public`, each byte-equal to the plain path's; an update's job (3 transactions) planned by the module on that state and sent through `lez_core.send_generic_public_transaction`, applied (slot 11,567,104 → 11,567,392); a log attested through the module and sent through `lez_core`, applied (93,316 gas); a tampered one refused on the zone with 110, as the module's dry run said | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh` (tree `002ebb96`); packages from `logos-build.sh` | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md) |

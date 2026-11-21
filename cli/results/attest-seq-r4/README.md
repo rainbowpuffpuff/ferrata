@@ -31,4 +31,7 @@ Files: `run.log` (each step: exit status, expected), `cli/NN-*.txt` (each comman
 | 22 | the mainnet finality update again | step 1 natively: 52 `NotNewer`; dry run 52; the zone 52 (229,560), equal |
 | monitor | `attest-monitor check --state lez:… --instance 0x599a0de5…` (two loopback providers serving publicnode's recorded header at slot 15,624,480) | at the record's time: divergence `confirmed`, no alert (exit 0); at the run's time: `ws-half` (the record is 11 days old: past half its weak-subjectivity period), exit 20 |
 
-All 24 steps gave the expected exit status; every sent transaction equalled its dry run.
+All 22 commands gave the expected exit status (the hook of this run checked the status, 0 or 3; the refusal codes in
+the table are read from the outputs, where the CLI itself compares verdict, dry run and zone and exits 1 on a
+difference); every sent transaction equalled its dry run in exit code, execution and storage gas and number of events.
+The two monitor reads have no expectation. (After the review the hook expects each refusal's code: run `rf1`.)

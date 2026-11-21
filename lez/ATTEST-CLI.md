@@ -144,7 +144,7 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   followed state (exit code, execution and storage gas, events). The tool checks the two agree.
 - **`--send --yes`** sends the same signed bytes, waits for the block that includes each to be final on Bedrock, and
   compares the zone's receipt (the follower's: the sequencer's RPC reports no outcome) with the dry run: exit code,
-  execution gas, storage gas, events.
+  execution gas, storage gas, number of events (the receipt carries no event data).
 - Proofs come from an Ethereum JSON-RPC endpoint (`--eth`: `eth_getProof`, `eth_getBlockReceipts`); the program checks
   them against the record, so the endpoint is not trusted.
 - Exit status: 0 applied (or would be); 3 refused, as the dry run said; 1 the dry run and the zone disagree, or the

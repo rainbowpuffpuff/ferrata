@@ -7,8 +7,8 @@ on the Modal build box, tree `002ebb96`, with the packages of
 logos-module-builder 5f74cdb), Logos Core's `lez_core` (logos-execution-zone-module cc73ebf with
 `modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch`, built from source in 1,620 s) and `beacon_api_module`
 (logos-evm-beacon-api-module aca138e, builder 5f74cdb's locks, 152 s), `logosctl` 66d098d. The zone is U.2's (a LEZ
-v0.4.0-rc1 zone we started, the final attestation program); the run first repeats U.2's 24 commands (`cli/`, 24 of 24
-as expected), then drives the module in the Logos Core. Nothing was sent to or read from a public network.
+v0.4.0-rc1 zone we started, the final attestation program); the run first repeats U.2's 22 commands and 2 monitor reads (`cli/`, 22 of 22
+commands with the expected exit status), then drives the module in the Logos Core. Nothing was sent to or read from a public network.
 
 | Step | Through | Result (measured) |
 |---|---|---|
