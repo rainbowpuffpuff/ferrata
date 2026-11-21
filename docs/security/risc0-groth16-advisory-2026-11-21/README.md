@@ -44,6 +44,17 @@ days later (369,833 gas each); the v3 vault has no such path. A stop can also be
 the verifier accepts for the all-zero claim digest (`estop(receipt)`); whether the forgery reaches that digest is not
 established, and none was built.
 
+**The emergency stop did not trip.** On 21 November 2026 our trust model ([`trust.md`](../../trust.md) §5 and §6,
+[`bridge.md`](../../design/bridge.md) §15, Security #9 in [`traceability.md`](../../traceability.md)) named the stop
+as the answer to an unsound proof system: whoever holds the proof of unsoundness trips it, and nothing more is
+released. This advisory is that case, and none of the four stops tripped (`paused()` false on all four at block
+12,183,432). The advisories include no proof of exploit. The forgery makes the verifier accept a chosen claim, not
+every seal, so the model of [`vault/README.md`](../../../vault/README.md) ("Under a broken verifier", where a junk
+receipt trips the stop) does not describe it, and whether it reaches the all-zero claim digest is not established.
+No owner with a key can call `estop()`: it is renounced on the v5 vaults' stops and the keyless `0xC820…` on the v3
+vault's. On these four vaults only the admin's caps stop a forgery; decision D1 of the
+[migration plan](../../design/risc0-3.1-migration.md) §4 changes the wiring for new vaults.
+
 **Rehearsed on a local fork** ([`fork-rehearsal.txt`](fork-rehearsal.txt), [`fork-rehearsal.sh`](fork-rehearsal.sh)):
 anvil, forked from Sepolia at the same block, nothing sent to Sepolia; the forgery stood in for by replacing the
 verifier's code on the fork with one STOP opcode, which accepts every seal as the advisory says a forged proof is
