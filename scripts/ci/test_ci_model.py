@@ -7,6 +7,7 @@ and refuse a claim that it runs what it does not. Standard library only; run by 
 
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -133,11 +134,15 @@ checker = HERE / "check-row-tests.py"
 real = (HERE / "row-tests.toml").read_text(encoding="utf-8")
 
 
-def run_checker(text, *args):
+def run_checker(text, *args, traceability=None):
     with tempfile.TemporaryDirectory() as d:
         path = pathlib.Path(d) / "row-tests.toml"
         path.write_text(text, encoding="utf-8")
-        p = subprocess.run([sys.executable, "-I", str(checker), "--map", str(path), *args],
+        extra = []
+        if traceability is not None:
+            (pathlib.Path(d) / "traceability.md").write_text(traceability, encoding="utf-8")
+            extra = ["--traceability", str(pathlib.Path(d) / "traceability.md")]
+        p = subprocess.run([sys.executable, "-I", str(checker), "--map", str(path), *extra, *args],
                            capture_output=True, text=True)
         return p.returncode, p.stdout + p.stderr
 
@@ -154,9 +159,59 @@ else:
     check("checker: the map still names vault/test/Refund.t.sol for the vault job", False)
 rc, out = run_checker(real.replace('kind = "document"', 'kind = "doc"', 1))
 check("checker: an unknown kind is refused", rc == 1 and "is none of test, record, document" in out)
+
+# ── R.11's numbers and gate: what counts as a test CI runs ──────────────────────────────────────────
+# The real map's counts, as docs/rows/G.md states them: update these lines with the map (a row that gains a
+# test CI runs moves both numbers).
+rc, out = run_checker(real, "--list")
+check("checker: the real map, RFP-022: 46 of 68 hard rows with a test CI runs",
+      "RFP-022: 68 hard rows; 46 with a test CI runs; 22 without one" in out)
+check("checker: the real map, RFP-021: 23 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 23 with a test CI runs; 36 without one" in out)
+listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
+rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
+check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
 rc, out = run_checker(real, "--require-ci", "RFP-022")
-check("checker: --require-ci exits 1 while a row lacks a CI test, and says how many",
-      (rc == 1 and "without a test CI runs" in out) or (rc == 0 and "every hard row has a test CI runs" in out))
+check("checker: --require-ci RFP-022 exits 1 on the real map and counts the rows without a test CI runs",
+      rc == 1 and "--require-ci RFP-022: 22 hard row(s) without a test CI runs" in out)
+
+# Synthetic maps: the real one with a test the vault job runs added to some RFP-022 rows (a row may have
+# several [[row]] blocks; the checker joins them).
+IN_CI = '{ path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" }'
+IN_MANUAL_JOB = '{ path = "scripts/ci/sequencer-attest.sh", kind = "test", ci = "sequencer-attest" }'
+
+
+def with_tests(text, ids, test=IN_CI):
+    return text + "".join(f'\n[[row]]\nid = "{rid}"\ntests = [ {test} ]\n' for rid in ids)
+
+
+rc, out = run_checker(with_tests(real, rows022), "--require-ci", "RFP-022")
+check("checker: --require-ci RFP-022 exits 0 once every RFP-022 row has a test CI runs",
+      rc == 0 and "RFP-022: 68 hard rows; 68 with a test CI runs; 0 without one" in out
+      and "--require-ci RFP-022: every hard row has a test CI runs" in out)
+# F.4 has tests on the build box only in the real map
+others = [rid for rid in rows022 if rid != "RFP-022 F.4"]
+rc, out = run_checker(with_tests(real, others), "--require-ci", "RFP-022")
+check("checker: a row whose tests run on the box only is not counted as CI, and the gate names it",
+      rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
+      and "tests run on the build box or by hand only (1): F.4" in out
+      and "--require-ci RFP-022: 1 hard row(s) without a test CI runs" in out)
+rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 F.4"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
+check("checker: a test in a job started by hand only is counted as manual, not as CI",
+      rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
+      and "a test in a workflow started by hand only (1): F.4" in out)
+# The matrices must hold 59 and 68 hard rows: one RFP-022 row taken out of a copy of traceability.md.
+lines, rfp, dropped = [], None, False
+for line in (ROOT / "docs" / "traceability.md").read_text(encoding="utf-8").splitlines(keepends=True):
+    if line.startswith("## "):
+        rfp = line[3:10]
+    if rfp == "RFP-022" and not dropped and re.match(r"^\|\s*F\.4\s*\|", line):
+        dropped = True
+        continue
+    lines.append(line)
+rc, out = run_checker(real, traceability="".join(lines))
+check("checker: a matrix holding 67 hard rows for RFP-022 is refused",
+      dropped and rc == 1 and "traceability.md holds 67 hard rows for RFP-022, expected 68" in out)
 
 print()
 print(f"test_ci_model.py: {npass} passed, {nfail} failed")

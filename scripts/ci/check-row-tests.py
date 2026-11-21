@@ -29,7 +29,8 @@ exits 1 while any hard row of that RFP lacks a test CI runs: the gate RFP-022 R.
 set (docs/traceability.md, "one named test per hard requirement, passing in CI").
 
 Standard library only. Usage: python3 -I scripts/ci/check-row-tests.py [--list] [--require-ci RFP] [--map FILE]
-(--map reads another copy of the map: scripts/ci/test_ci_model.py uses it).
+[--traceability FILE] (--map and --traceability read other copies of the map and of the matrices:
+scripts/ci/test_ci_model.py uses them).
 """
 
 import pathlib
@@ -56,12 +57,12 @@ RUNNABLE = re.compile(r"\.(rs|sol|sh|py|mjs|js)$|^\.github/workflows/[^/]+\.yml$
 MUST_BE_TEST = re.compile(r"\.t\.sol$|(^|/)tests/[^/]+\.rs$")
 
 
-def hard_rows():
+def hard_rows(traceability=TRACEABILITY):
     """The hard row IDs of both RFPs, from traceability.md's matrices (soft rows excluded)."""
     rows = {rfp: [] for rfp in EXPECTED}
     rfp = section = None
     in_soft = False
-    for line in TRACEABILITY.read_text(encoding="utf-8").splitlines():
+    for line in traceability.read_text(encoding="utf-8").splitlines():
         heading = HEADING.match(line)
         if heading:
             level, text = len(heading.group(1)), heading.group(2)
@@ -123,8 +124,15 @@ def main(argv):
         i = argv.index("--map")
         row_tests = pathlib.Path(argv[i + 1]) if i + 1 < len(argv) else None
         if row_tests is None:
-            print("usage: check-row-tests.py [--list] [--require-ci RFP] [--map FILE]", file=sys.stderr)
+            print("usage: check-row-tests.py [--list] [--require-ci RFP] [--map FILE] [--traceability FILE]", file=sys.stderr)
             return 2
+    traceability = TRACEABILITY
+    if "--traceability" in argv:
+        i = argv.index("--traceability")
+        if i + 1 >= len(argv):
+            print("usage: check-row-tests.py [--list] [--require-ci RFP] [--map FILE] [--traceability FILE]", file=sys.stderr)
+            return 2
+        traceability = pathlib.Path(argv[i + 1])
     require = None
     if "--require-ci" in argv:
         i = argv.index("--require-ci")
@@ -133,7 +141,7 @@ def main(argv):
             print("usage: check-row-tests.py [--list] [--require-ci RFP-021|RFP-022|all]", file=sys.stderr)
             return 2
 
-    rows = hard_rows()
+    rows = hard_rows(traceability)
     problems = []
     known = {rfp: set(ids) for rfp, ids in rows.items()}
     for rfp, ids in rows.items():
