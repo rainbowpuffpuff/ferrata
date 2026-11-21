@@ -147,7 +147,10 @@ following its blocks with LEZ's block application (the sequencer's RPC has no re
 table is read: the code is LEZ's own re-execution of the included transaction, anchored to the sequencer by its reverted
 list and fee totals. Run r4's 24 lines are 22 commands and 2 monitor reads; its hook checked each command's exit status
 (0 or 3), and the codes above are read from the outputs. After the review the hook expects each refusal's code itself
-(`d3aff4e2`; run `rf1` below).
+(`d3aff4e2`): run again so (`bash cli/tests/attest-seq.sh rf1`, tree `d3aff4e2`; record
+[`cli/results/attest-seq-rf1/`](../../cli/results/attest-seq-rf1/README.md)), 22 of 22 commands as expected with the
+zone's codes 23, 130, 130, 124 and 52; the 52 outcome lines (verdict, execution and storage gas, number of events)
+identical to r4's; the records written with no machine path by the scripts.
 
 Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52 equal across verdict, dry run and zone; every sent transaction equal to its dry run (exit, execution and storage gas, number of events); 22 of 22 commands as expected | `bash cli/tests/attest-seq.sh r4` (tree `4db5d1d2`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
 

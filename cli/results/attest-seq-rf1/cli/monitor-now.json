@@ -1,0 +1,47 @@
+{
+  "instance_id": "0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd",
+  "chain_id": 1,
+  "active": true,
+  "applied_jobs": 2,
+  "finalized_slot": 15624480,
+  "finalized_root": "0x46d069655d60786d109a3abec9a63e4db77560b9ca7e588c82f13ef988a4f40f",
+  "store_period": 1907,
+  "next_committee_known": false,
+  "now_s": 1795297398,
+  "now_slot": 15706114,
+  "age_s": 979615,
+  "chain_finalized_slot": 15624544,
+  "lag_s": 768,
+  "ws_end_slot": 15737536,
+  "ws_half_slot": 15681008,
+  "divergence": "confirmed",
+  "providers": [
+    {
+      "name": "p1",
+      "standing": "agrees",
+      "root_at_slot": "0x46d069655d60786d109a3abec9a63e4db77560b9ca7e588c82f13ef988a4f40f",
+      "finalized_slot": 15624544,
+      "note": null
+    },
+    {
+      "name": "p2",
+      "standing": "agrees",
+      "root_at_slot": "0x46d069655d60786d109a3abec9a63e4db77560b9ca7e588c82f13ef988a4f40f",
+      "finalized_slot": 15624544,
+      "note": null
+    }
+  ],
+  "alerts": [
+    {
+      "level": "critical",
+      "kind": "ws-half",
+      "message": "the instance's finalized header is past half its weak-subjectivity period: submit the outstanding updates now",
+      "instance": "0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd",
+      "now_slot": 15706114,
+      "seconds_left": 377064,
+      "slot": 15624480,
+      "ws_end_slot": 15737536,
+      "ws_half_slot": 15681008
+    }
+  ]
+}

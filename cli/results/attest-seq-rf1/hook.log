@@ -1,0 +1,27 @@
+[21:39:01] zone http://127.0.0.1:3040; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c; session A's Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[21:39:12] sepolia-config: exit 0 (expected 0): as expected
+[21:39:12] sepolia-status: exit 0 (expected 0): as expected
+[21:39:13] sepolia-advance-finality-dry-run: exit 0 (expected 0): as expected
+[21:39:13] sepolia-status-after-dry-run: exit 0 (expected 0): as expected
+[21:39:47] sepolia-advance-finality: exit 0 (expected 0): as expected
+[21:40:37] sepolia-advance-period-1412: exit 0 (expected 0): as expected
+[21:40:47] sepolia-advance-replayed: exit 3, refused with 23 (expected 3:23): as expected
+[21:40:47] sepolia-status-after: exit 0 (expected 0): as expected
+[21:41:17] mainnet-init: exit 0 (expected 0): as expected
+[21:41:17] mainnet instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+[21:41:48] mainnet-advance-finality: exit 0 (expected 0): as expected
+[21:41:48] mainnet-config: exit 0 (expected 0): as expected
+[21:41:48] mainnet-status: exit 0 (expected 0): as expected
+[21:41:48] attest-storage-dry-run: exit 0 (expected 0): as expected
+[21:41:57] attest-storage: exit 0 (expected 0): as expected
+[21:42:07] attest-storage-predicate-fails: exit 3, refused with 130 (expected 3:130): as expected
+[21:42:17] attest-storage-ge: exit 0 (expected 0): as expected
+[21:42:27] attest-log-transfer: exit 0 (expected 0): as expected
+[21:42:37] attest-log-wrong-emitter: exit 3, refused with 130 (expected 3:130): as expected
+[21:42:47] attest-account-codehash: exit 0 (expected 0): as expected
+[21:42:57] attest-log-failed-tx: exit 3, refused with 124 (expected 3:124): as expected
+[21:43:07] attest-storage-and-log: exit 0 (expected 0): as expected
+[21:43:17] mainnet-advance-replayed: exit 3, refused with 52 (expected 3:52): as expected
+[21:43:18] attest-monitor (at-the-record): exit 0, divergence confirmed, alerts []
+[21:43:18] attest-monitor (now): exit 20, divergence confirmed, alerts ["ws-half"]
+[21:43:18] hook done: 22 of 22 commands as expected (exit status and the zone's refusal code); 2 monitor reads

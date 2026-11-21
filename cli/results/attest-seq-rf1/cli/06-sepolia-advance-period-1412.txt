@@ -1,0 +1,17 @@
+$ ferrata attest advance --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 --update $REPO/lez/lab/results/record/net/sepolia/updates/00064.period.gloas.ssz --committee update:$REPO/crates/ferrata-spectests/fixtures/sepolia-2026-11-12/update_1411.ssz --committee bootstrap:$REPO/crates/ferrata-spectests/fixtures/sepolia-2026-11-12/bootstrap.ssz --send --yes
+zone http://127.0.0.1:3040: followed to block 28 (final on Bedrock)
+advance: update attested at slot 11567172, signed at slot 11567173, finalizing slot 11567104; the store is at slot 11563200
+advance: useful: job 0x0592729ce26020beca3ffa94c97686b303fa40d17ed40d4f53681441b2d17f58, layout Gloas, advanced true, adopted true, rotated true
+advance: dry run of 5 transaction(s) on the zone's state at block 28 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  open                         5435 bytes; would be applied; execution gas 2233176, storage gas 5435, 0 event(s)
+  miller                       399 bytes; would be applied; execution gas 3310470, storage gas 399, 0 event(s)
+  adopt0                       24980 bytes; would be applied; execution gas 3408111, storage gas 24980, 0 event(s)
+  adopt1                       24980 bytes; would be applied; execution gas 3415303, storage gas 24980, 0 event(s)
+  finish                       527 bytes; would be applied; execution gas 3731558, storage gas 527, 1 event(s)
+  the verdict and the zone's execution agree: applied
+  open                         block 29 (8 s): applied; execution gas 2233176, storage gas 5435, 0 event(s); equal to its dry run
+  miller                       block 30 (10 s): applied; execution gas 3310470, storage gas 399, 0 event(s); equal to its dry run
+  adopt0                       block 31 (10 s): applied; execution gas 3408111, storage gas 24980, 0 event(s); equal to its dry run
+  adopt1                       block 32 (10 s): applied; execution gas 3415303, storage gas 24980, 0 event(s); equal to its dry run
+  finish                       block 33 (11 s): applied; execution gas 3731558, storage gas 527, 1 event(s); equal to its dry run
+advance: the instance's finalized slot is now 11567104 (jobs applied 4)
