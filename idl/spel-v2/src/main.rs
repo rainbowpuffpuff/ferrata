@@ -18,7 +18,11 @@
 //! `cargo run --locked -- OUT_DIR [RECORDED.json]` (from `idl/spel-v2`): writes `OUT_DIR/<name>.idl-v2.json`; exit 1
 //! on any failure.
 
-use std::{fs, path::PathBuf, process::ExitCode};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::ExitCode,
+};
 
 use serde_json::{json, Value};
 use spel_framework_core::{
@@ -173,8 +177,27 @@ fn compare(name: &str, generated: &Value, hand: &Value, failures: &mut Vec<Strin
     compared
 }
 
-fn decode_file(idl: &SpelIdl, label: &str, path: &PathBuf, failures: &mut Vec<String>) -> (usize, usize) {
-    let file: Value = serde_json::from_str(&fs::read_to_string(path).expect("vectors")).expect("JSON");
+/// The repository: `FERRATA_REPO`, else two levels above this crate.
+fn repo_dir() -> PathBuf {
+    std::env::var_os("FERRATA_REPO")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+        .canonicalize()
+        .unwrap()
+}
+
+/// A path as the record shows it: relative to the repository, or its file name when outside it (no machine paths).
+fn shown(p: &Path) -> String {
+    let abs = p.canonicalize().unwrap_or_else(|_| p.to_path_buf());
+    match abs.strip_prefix(repo_dir()) {
+        Ok(r) => r.display().to_string(),
+        Err(_) => p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default(),
+    }
+}
+
+fn decode_file(idl: &SpelIdl, label: &str, path: &Path, failures: &mut Vec<String>) -> (usize, usize) {
+    let text = fs::read_to_string(path).unwrap_or_else(|e| panic!("{label}: {}: {e}", shown(path)));
+    let file: Value = serde_json::from_str(&text).unwrap_or_else(|e| panic!("{label}: {}: {e}", shown(path)));
     let (mut ok, mut n) = (0, 0);
     for v in file["vectors"].as_array().expect("vectors") {
         n += 1;
@@ -215,11 +238,7 @@ fn decode_file(idl: &SpelIdl, label: &str, path: &PathBuf, failures: &mut Vec<St
 }
 
 fn main() -> ExitCode {
-    let repo = std::env::var_os("FERRATA_REPO")
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
-        .canonicalize()
-        .unwrap();
+    let repo = repo_dir();
     let (mut out, mut recorded, mut only, mut expect_fail) = (None, None, None, None);
     let mut args = std::env::args().skip(1);
     while let Some(a) = args.next() {
@@ -256,7 +275,7 @@ fn main() -> ExitCode {
         );
         let path = out.join(format!("{}.idl-v2.json", p.name));
         fs::write(&path, serde_json::to_string_pretty(&generated).unwrap() + "\n").unwrap();
-        println!("  wrote {}", path.display());
+        println!("  wrote {}", shown(&path));
         let hand: Value =
             serde_json::from_str(&fs::read_to_string(repo.join(format!("idl/{}.idl.json", p.name))).unwrap()).unwrap();
         let before = failures.len();
