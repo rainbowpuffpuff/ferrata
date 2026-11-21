@@ -138,6 +138,10 @@ SPEL's LEZ v0.4 line is logos-co/spel pull request #301 (head `c90ca0b`, 16 Nove
    in 33 messages and types**. SPEL's decoder, on the generated IDL, decodes every committed vector (21 of 21) and
    **905 of 905 messages recorded on LEZ zones** (the lab's 838 and the live run's 67, `lez/live/driver`'s
    `idl-recorded`), each consuming every byte, and refuses each one a byte short, a byte long or with tag 255.
+   `idl-recorded` leaves out 8 more recorded messages (2 of the lab's, 6 of the live run's) of an older wire, which
+   today's Rust wire does not decode either. The comparison covers messages and types: SPEL's version 2 format has no
+   `errors`, `instructions` or `accounts` sections, so the hand-written IDLs' error codes (71 for the attestation
+   program, 16 for the bridge) and account lists are not compared, and stay in the hand-written IDLs only.
 2. **The bridge program**: SPEL as the pull request has it stops at `BridgeMessage::Spend`'s `fees: Vec<(Root, u128)>`
    ("cannot describe `(Root , u128)`: only paths and arrays are supported"). With
    [`spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch`](spel-v2/patches/spel-c90ca0b-idl-gen-tuples.patch) (23
@@ -148,12 +152,15 @@ SPEL's LEZ v0.4 line is logos-co/spel pull request #301 (head `c90ca0b`, 16 Nove
 
 Messages are decoded as SPEL's version 2 defines them (the tag byte, then the fields): the check adds the IDL's
 `messages` as an enum type for `decode_named`. Record: [`generated/spel-v2.txt`](generated/spel-v2.txt) (Modal
-build box, 21 November 2026, tree `13d04666`); the generated files are [`generated/ferrata_attestation.idl-v2.json`](generated/ferrata_attestation.idl-v2.json)
+build box, 21 November 2026, tree `18fc505c`; the first run, on an uncommitted tree, gave the same results and the
+same generated files); the generated files are [`generated/ferrata_attestation.idl-v2.json`](generated/ferrata_attestation.idl-v2.json)
 and [`generated/ferrata_bridge.idl-v2.json`](generated/ferrata_bridge.idl-v2.json).
 
 ```sh
-# the PR's tree exported beside the repository (git -C upstream/spel fetch origin pull/301/head:pr-301;
-# git -C upstream/spel archive pr-301 | tar -x -C upstream/spel-c90ca0b), and LEZ v0.4.0-rc3 at upstream/lez-v0.4.0-rc3
+# the PR's tree at c90ca0b exported beside the repository, and LEZ v0.4.0-rc3 at upstream/lez-v0.4.0-rc3:
+#   git -C upstream/spel fetch origin pull/301/head && mkdir -p upstream/spel-c90ca0b \
+#     && git -C upstream/spel archive c90ca0b | tar -x -C upstream/spel-c90ca0b
+# idl-recorded.json: the idl-recorded command above (OUT.json); a relative path is taken from where run.sh is run
 RECORDED=idl-recorded.json bash idl/spel-v2/run.sh        # writes idl/generated/; exit status non-zero on any failure
 ```
 
