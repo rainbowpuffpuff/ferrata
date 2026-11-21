@@ -108,13 +108,18 @@ pub(crate) fn lez(request: &Value) -> Result<Value, String> {
     let password = password.trim_end_matches(['\n', '\r']).to_string();
     *SESSION.lock().map_err(|_| "poisoned")? = Some(Session::default());
     let (opened, _) = call("open", &json!([config, storage, password, true]), READ_MS)?;
+    // Anything but 0 is a refusal, including "a wallet is already open" (lez_core keeps one per process): going on
+    // would read and sign with whichever wallet that is, not the one asked for.
+    if opened.trim() != "0" {
+        *SESSION.lock().map_err(|_| "poisoned")? = None;
+        return Err(format!(
+            "lez_core did not open the wallet (open answered {}: a wallet already open in this Logos Core, or the wallet refused)",
+            opened.trim()
+        ));
+    }
     let (addr, _) = call("get_sequencer_addr", &json!([]), READ_MS)?;
     let (height, _) = call("get_current_block_height", &json!([]), READ_MS)?;
     let (accounts, _) = call("list_accounts", &json!([]), READ_MS)?;
-    if opened.trim() != "0" && height.trim() == "0" {
-        *SESSION.lock().map_err(|_| "poisoned")? = None;
-        return Err(format!("lez_core did not open the wallet (open answered {opened}; block height {height})"));
-    }
     let list: Value = serde_json::from_str(&accounts).unwrap_or(Value::Null);
     let public: Vec<String> = list
         .as_array()
@@ -258,11 +263,15 @@ pub(crate) fn lez_submit(request: &Value) -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicI64, Ordering};
+
+    /// What the fake `lez_core.open` answers (0: opened).
+    static OPEN_REPLY: AtomicI64 = AtomicI64::new(0);
 
     fn fake(method: &str, args: &str, _t: u64) -> Result<String, String> {
         let a: Value = serde_json::from_str(args).unwrap();
         Ok(match method {
-            "open" => "0".into(),
+            "open" => OPEN_REPLY.load(Ordering::SeqCst).to_string(),
             "get_sequencer_addr" => "http://127.0.0.1:3040".into(),
             "get_current_block_height" => "12".into(),
             "list_accounts" => json!([{ "account_id": "aa".repeat(32), "is_public": true }]).to_string(),
@@ -296,5 +305,12 @@ mod tests {
         assert_eq!(s["verdict"], "sent");
         let r = lez_read(&json!({ "program": program, "instance_id": "0x".to_string() + &"04".repeat(32), "kind": "instance" })).unwrap();
         assert_eq!(r["verdict"], "absent");
+        // `open` refused while the chain has blocks (lez_core's "a wallet is already open" answers 99,
+        // FfiOperationError::InternalError in LEZ's core_ffi): an error, and the path closed, not "opened" on another wallet.
+        OPEN_REPLY.store(99, Ordering::SeqCst);
+        let e = lez(&json!({ "via": "lez_core", "wallet": { "config": "c", "storage": "s", "password_file": pw } })).unwrap_err();
+        OPEN_REPLY.store(0, Ordering::SeqCst);
+        assert!(e.contains("did not open the wallet (open answered 99"), "{e}");
+        assert!(lez_submit(&json!({ "program": program, "payer": "aa".repeat(32), "steps": [step] })).is_err());
     }
 }

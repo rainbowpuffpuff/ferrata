@@ -45,13 +45,14 @@ pub trait FerrataAttestModule: Send + 'static {
     /// (`Open`, `Miller`, `Adopt`, `Finish`) with their accounts. JSON in and out (modules/README.md).
     fn advance(&mut self, request: String) -> String;
 
-    /// Called once the module is wired to the host.
     /// Open (or close) the path through Logos Core's own LEZ module, `lez_core`: a LEZ wallet opened inside it.
     fn lez(&mut self, request: String) -> String;
     /// An instance, a record or a job of the attestation program read through `lez_core.get_account_public`.
     fn lez_read(&mut self, request: String) -> String;
     /// Transactions (the steps of `advance`, or `build_attest_tx`'s) sent through `lez_core.send_generic_public_transaction`.
     fn lez_submit(&mut self, request: String) -> String;
+
+    /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
 
