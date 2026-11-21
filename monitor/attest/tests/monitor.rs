@@ -445,6 +445,37 @@ fn unreachable_and_wrong_chain_providers_are_not_counted() {
 }
 
 #[test]
+fn a_provider_behind_the_instance_is_not_counted() {
+    let f = fx();
+    let d = scratch("behind");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let now = secs(&f.stalled["time_ms"]) + 60;
+    let state = write_state(&d, "s.hex", &state_of(&f.stalled));
+    // One honest provider and two that have finalized only up to 32 slots before the instance's header: they answer
+    // 404 at its slot (a block they have not seen), which is not a disagreement. Counted, they would have raised a
+    // false divergence (critical) by default.
+    let honest = provider(&g, slot, Some(header_11549664()), slot + 64);
+    let lagging = [provider(&g, slot, None, slot - 32), provider(&g, slot, None, slot - 32)];
+    // And one that answers the slot but not what it has finalized: not counted either.
+    let no_finalized = provider(&g, slot, Some(header_11549664()), slot + 64);
+    no_finalized.set("/eth/v1/beacon/headers/finalized", 404, "{}".into());
+    let o = check(&args(&state, &[&honest, &lagging[0], &lagging[1], &no_finalized], now));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (10, Some("unconfirmed")), "{}", o.report);
+    let k = kinds(&o.report);
+    assert_eq!(k.iter().filter(|k| *k == "provider-behind").count(), 2, "{k:?}");
+    assert_eq!(k.iter().filter(|k| *k == "provider-unavailable").count(), 1, "{k:?}");
+    assert!(!k.contains(&"instance-diverged".to_string()), "{k:?}");
+    // Once they have finalized past the slot and still have no block there, they do disagree: the instance's header is
+    // not on their chain.
+    for p in &lagging {
+        p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 64));
+    }
+    let o = check(&args(&state, &[&honest, &lagging[0], &lagging[1]], now));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (20, Some("diverged")), "{}", o.report);
+}
+
+#[test]
 fn reads_the_instance_from_a_lez_sequencers_get_account() {
     let f = fx();
     let program = AccountId::new(hex::decode(f.program.trim_start_matches("0x")).unwrap().try_into().unwrap());

@@ -160,6 +160,28 @@ pub fn query_provider(p: &Provider, slot: u64, timeout_s: u64) -> ProviderView {
             return v;
         }
     }
+    // Its finalized slot first: an answer at the instance's slot counts only once the provider has finalized that slot
+    // (before, a 404 there may be a block it has not seen yet, and a root may still be reorganised away).
+    match get_json(&format!("{}/eth/v1/beacon/headers/finalized", p.url), timeout_s) {
+        Ok(Some(j)) => match j["data"]["header"]["message"]["slot"].as_str().and_then(|s| s.parse::<u64>().ok()) {
+            Some(f) => v.finalized_slot = Some(f),
+            None => {
+                v.error = Some("headers/finalized: no slot in the answer".into());
+                return v;
+            }
+        },
+        Ok(None) => {
+            v.error = Some("headers/finalized: HTTP 404".into());
+            return v;
+        }
+        Err(e) => {
+            v.error = Some(format!("headers/finalized: {e}"));
+            return v;
+        }
+    }
+    if v.finalized_slot.is_some_and(|f| f < slot) {
+        return v; // behind the instance: not counted (assess)
+    }
     match get_json(&format!("{}/eth/v1/beacon/headers/{slot}", p.url), timeout_s) {
         Ok(Some(j)) => {
             let d = &j["data"];
@@ -178,10 +200,6 @@ pub fn query_provider(p: &Provider, slot: u64, timeout_s: u64) -> ProviderView {
             v.error = Some(format!("headers/{slot}: {e}"));
             return v;
         }
-    }
-    // The provider's finalized slot is only for the stall measure; without it the provider still counts.
-    if let Ok(Some(j)) = get_json(&format!("{}/eth/v1/beacon/headers/finalized", p.url), timeout_s) {
-        v.finalized_slot = j["data"]["header"]["message"]["slot"].as_str().and_then(|s| s.parse().ok());
     }
     v
 }

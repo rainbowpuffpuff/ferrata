@@ -23,7 +23,8 @@
 //!   (§3.6); `ws-expired` (critical): past the period the program refuses every update and the instance must be
 //!   replaced by a fresh one (F.10);
 //! * the providers themselves: one that cannot be reached, answers for another chain (its genesis is not the
-//!   instance's), or contradicts the others is reported, and is never counted towards a verdict.
+//!   instance's), or has not finalized the instance's slot (behind or syncing: its answer there is not final, and an
+//!   HTTP 404 may be a block it has not seen) is reported, and is never counted towards a verdict.
 //!
 //! [`assess`] is the whole decision, a pure function of the instance's state, the providers' answers and the clock;
 //! [`source`] reads the instance (a LEZ sequencer's `getAccount`, a file or a command) and the providers (beacon API,
@@ -52,7 +53,8 @@ pub struct ProviderView {
     /// The canonical block root at the instance's finalized slot (`/eth/v1/beacon/headers/{slot}`): `Some(None)` when
     /// the provider has no canonical block at that slot (HTTP 404, or a header it marks `canonical: false`).
     pub root_at_slot: Option<Option<Root>>,
-    /// The provider's finalized slot (`/eth/v1/beacon/headers/finalized`).
+    /// The provider's finalized slot (`/eth/v1/beacon/headers/finalized`). A provider counts only when it is at or past
+    /// the instance's finalized slot.
     pub finalized_slot: Option<u64>,
 }
 
@@ -216,8 +218,29 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
             verdicts.push(verdict);
             continue;
         }
-        if let Some(f) = v.finalized_slot {
-            finalized.push(f);
+        // A provider counts once it has finalized the instance's slot: before that, its answer there is not final, and
+        // an HTTP 404 may be a block it has not seen yet (a provider that is behind, or still syncing).
+        match v.finalized_slot {
+            Some(f) if f >= slot => finalized.push(f),
+            Some(f) => {
+                verdict.note = Some(format!("behind: finalized slot {f}, before the instance's {slot}"));
+                alerts.push(
+                    Alert::new(Level::Warn, "provider-behind", "a beacon provider has not finalized the instance's slot; not counted")
+                        .with("provider", &v.name)
+                        .with("finalized_slot", f)
+                        .with("slot", slot),
+                );
+                verdicts.push(verdict);
+                continue;
+            }
+            None => {
+                verdict.note = Some("no finalized slot".into());
+                alerts.push(Alert::new(Level::Warn, "provider-unavailable", "a beacon provider gave no usable answer")
+                    .with("provider", &v.name)
+                    .with("error", "no finalized slot"));
+                verdicts.push(verdict);
+                continue;
+            }
         }
         match &v.root_at_slot {
             None => {
