@@ -1,0 +1,47 @@
+# Stream F: the Ethereum side through Logos Core's own modules, proposed statuses
+
+For the integrator of `docs/requirements-status.md`, `docs/traceability.md` and `docs/EVIDENCE.md`. Branch
+`rfp-logos-core-eth` from `f13faee2`. Nothing was pushed or sent to a public network. Box runs: the Modal build box
+(Linux x86-64, 16 cores); local chains only (anvil with chain id 11155111; a LEZ v0.4.0-rc1 zone we ran).
+
+What changed: `ferrata_bridge_module` reads the vault through Logos Core's `eth_rpc_module` and sends every Ethereum
+transaction (the user's deposit, ETH or an ERC-20's `approve` + `deposit` in one bundle; the user's release; the vault
+admin's and freeze authority's calls) through Logos's send stack: `tx_sender_module` -> one approval at the Logos signer
+(`evm_signer_cli` headless; `evm_signer_ui` in Basecamp) -> `keystore_module` signs -> `send_status` broadcasts through
+`eth_rpc_module`. The module holds no Ethereum key. It gained `admin(request)`: the vault's admin and freeze-authority
+functions (built, role-checked, `eth_call`-checked from the sender, sent through the send stack) and the bridge program's
+LEZ admin messages (`SetCap`, `Freeze`, `Pause`, `Tick`, `Sunset`). The mini-app's deposit, release and a new vault
+section of its admin tab go through these sends as jobs that wait for the person's approval.
+
+## RFP-022
+
+| ID | Proposed | Clause by clause | Evidence (path; command; where, commit) |
+|---|---|---|---|
+| U.1 | shown | *Core functionalities for users and admin in a Logos core module*: **depositing** through the module and Logos's send stack, ETH and ERC-20 (`deposit` with `send`; the session's `deposit`); **claiming on LEZ** and **redeeming** (burn) through the module, LEZ through Logos Core's `lez_core` (EVIDENCE 113, 114, 125, 126; [`e2e/runs/seqnet-logoseth-1/`](../../e2e/runs/seqnet-logoseth-1/README.md)); **releasing on Ethereum**: the module's `release` sent through the send stack (`release` with `send` and the proof's `seal`; in the mini-app's round trip the session's release, sent from the user's release account after its approval, paid the burn's fresh recipient (`e2e/runs/seqnet-logoseth-1/`, block 17)); **recovering from credentials**: `recover`/`scan` from the seed (EVIDENCE 59, 84); **reading and administering the supported-token registry and its permitted amounts**: `admin status` reads the vault's registry (denominations = the permitted amounts, fees, caps and their use, freezes, roles) through `eth_rpc_module`; the admin's `registerToken` (an ERC-20 with two denominations), `setTokenCap`, `setDepositsEnabled`, `announceFees`, `setReleaseDelay`, the freeze authority's freezes, sent through the send stack after the role's approval. *All off-chain software as Logos modules*: the module, Logos's own Ethereum modules and approver, `lez_core`. **Conditions, stated:** `lez_core` runs with our patch (`modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch`, accounts that authorize and a PDA account kind; upstream PR drafted); the zone's history (imported roots, published burns) is still read by the chain service, since `lez_core`'s wallet side serves no blocks; the LEZ admin messages are built by the module and signed by the role's LEZ wallet outside it (`lez_core` holds the user's wallet); the LEZ mirror of a vault registration (`Register`, from the vault's attested state) is the relayer's step; upstream's `configure` of the keystore and the signer manager is ungated. | Native against the real vault on anvil, 26 of 26: `modules/scripts/bridge-eth-native.sh OUT` (after `MODULES=ferrata_bridge_module modules/scripts/native.sh`), `modules/results/bridge-send-stack-2026-11-21/native/`. One headless Logos Core with the send stack, `evm_signer_cli`, `evm_keystore_cli` and the module on anvil, 37 of 37: `modules/scripts/bridge-send-stack.sh build OUT && … run OUT`, `modules/results/bridge-send-stack-2026-11-21/README.md` (box, 21 Nov 2026, commits `4dce62c8`, results `a1efedc7`). The user's round trip through the module in one Logos Core with the send stack and `lez_core` (patched), driven by the mini-app: [`e2e/runs/seqnet-logoseth-1/`](../../e2e/runs/seqnet-logoseth-1/README.md), 11 of 11 (`e2e/seqnet/run.sh build && run.sh build-logoseth && run.sh logoseth NAME`; box, 21 Nov 2026, commits `6a3ee5f9` and `5062cc8c`). |
+| U.2 | shown (condition: a headless host, not Basecamp) | *A mini-app covering deposit and redemption end to end, position recovery, a registry view with supported tokens, permitted amounts, caps and utilisation*: the mini-app's round trip with its Ethereum side through Logos Core's own modules (reads through `eth_rpc_module`; the deposit and the release through `tx_sender_module`, each approved at the Logos signer) and its LEZ side through `lez_core` ([`e2e/runs/seqnet-logoseth-1/`](../../e2e/runs/seqnet-logoseth-1/README.md)); the registry view as before (EVIDENCE 62). *A UI for the admin functionality*: the admin tab's new vault section (the admin's `setTokenCap`, the freeze authority's freeze and its lifting, through the send stack) and its LEZ section (`SetCap` built by the module; the devnet's `SetCap` and `Freeze`, EVIDENCE 62). **Conditions:** the view ran in the headless Qt Quick Test host with Logos Core behind it (as EVIDENCE 103), not inside Basecamp: Basecamp's Signer app (`evm_signer_ui`, raised by the intent `evm.signing.approve`, which the view sends when the host offers intents) was not run; the approval was given at `evm_signer_cli` by a script playing the person. | [`e2e/runs/seqnet-logoseth-1/`](../../e2e/runs/seqnet-logoseth-1/README.md): the view (`modules/ferrata_bridge_ui/qml/Main.qml`) driven by `modules/ferrata_bridge_ui/qmltest-logos/tst_miniapp_logos.qml` with `SEQNET_ETH=logos` (hook `e2e/seqnet/hook-logoseth.sh`), 11 of 11 test functions, 179 s; the run 468 s. Every Ethereum transaction and its sender in `eth/transactions.tsv`; what the approver showed in `approver/`; LEZ through `lez_core`: 162 reads and 15 private reads equal to the chain service's, the private claim and burn sent (`miniapp/lez-report.json`); screenshots `miniapp/screenshots/` (05b, 16b: waiting for the Logos signer; 20-25: the vault's admin). Box, 21 Nov 2026, commit `5062cc8c`. Earlier: inside Basecamp with LEZ through `lez_core` and the Ethereum side a stand-in (EVIDENCE 125, 126). |
+| R.10 | in part (unchanged) | Not advanced by this stream: the round trip against a standalone sequencer in CI needs the zone start (`lez/crown/session.sh`) on LEZ's mock Bedrock built from source, and a rule (B) checkpoint input made from the standalone sequencer's own blocks (inscribed with test keys, as `ci_zone` does for the harness's transactions), since in standalone mode no Logos Blockchain node holds the inscriptions `realblocks-crown` reads. Stream G reaches the same conclusion (its `docs/rows/G.md`). The plan is in `spike/tmp/rfp-F/REPORT.md` (not in the repository). | EVIDENCE 41, 76, 91, 100, 102 (as before). |
+
+## RFP-021
+
+| ID | Proposed | Clause by clause | Evidence |
+|---|---|---|---|
+| U.1 (send half) | in part (unchanged) | Not advanced: the attestation module builds its `Attest` and update transactions but does not send them; sending them through Logos Core means `lez_core`. Its public send takes no PDA mention (the record accounts the program creates through a seed), so the route is the private update and attestation through `send_generic_private_transaction_with_accounts` with our patch's `public_pda` kind, as the bridge module's private claim and burn already go (EVIDENCE 113, 114). The pieces and their order are in `spike/tmp/rfp-F/REPORT.md`. | (as before) |
+
+## Proposed EVIDENCE rows
+
+- **Bridge module, Ethereum through Logos Core's send stack (anvil).** `ferrata_bridge_module` in one headless Logos
+  Core with Logos's `eth_rpc_module`, `fee_module`, `keystore_module`, `signer_manager_module`, `tx_sender_module` and
+  its headless approver and custodian `evm_signer_cli`, `evm_keystore_cli` (built from source at the revisions
+  `tx_sender_module` f1754c3 pins, builder 5f74cdb): the vault's admin registers an ERC-20 and sets its cap, the user
+  deposits ETH and the ERC-20 (`approve` + `deposit`, one approval), a deposit rejected at the approver, the freeze
+  authority freezes and lifts ETH deposits and a deposit is refused before signing while frozen; every send approved at
+  `evm_signer_cli`, every read through `eth_rpc_module`; 37 of 37 checks against `cast`; native 26 of 26. Build box,
+  21 Nov 2026; anvil, mock verifier; `modules/results/bridge-send-stack-2026-11-21/`.
+- **The mini-app's round trip, Ethereum through Logos Core's own modules, LEZ through `lez_core`.** The view driven
+  headless (Qt Quick Test) calling `ferrata_bridge_module` in one Logos Core with Logos's Ethereum send stack, its
+  headless approver and custodian, and `lez_core` (patched), on a LEZ v0.4.0-rc1 zone we ran and anvil: the private
+  deposit, the private claim and burn (through `lez_core`), the release to a fresh address and the vault's admin
+  (`acceptAdmin`, `setTokenCap`, a freeze and its lifting, a deposit refused while frozen); every Ethereum send through
+  `tx_sender_module` approved at `evm_signer_cli`, every vault read through `eth_rpc_module`; 11 of 11. Stand-ins: the
+  committee finalizing anvil's blocks, the operator's import and checkpoint, the mock verifier, `seqnet-chain` for the
+  zone's history, the gas drop. Build box, 21 Nov 2026; dev-mode private proofs; `e2e/runs/seqnet-logoseth-1/`.
