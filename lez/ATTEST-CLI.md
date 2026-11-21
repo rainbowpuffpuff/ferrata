@@ -115,11 +115,46 @@ code, cycles, execution and storage gas, base fee, size and events. The IDL alon
 The wire carries one receipt proof per log, so attesting a whole receipt repeats its proof: the
 39-log receipt is 345,894 bytes and 9,968,157 cycles, just under v0.4's 10M execution gas cap.
 
+## On a running sequencer: `ferrata attest`
+
+The same commands against a running LEZ v0.4 sequencer are in the `ferrata` tool (`cli/`, source
+[`../cli/src/attest.rs`](../cli/src/attest.rs)): `ferrata attest SUBCOMMAND`, built with `cargo build --release` in
+`cli/` (LEZ v0.4.0-rc1's wallet library and node-side crates, as the tool's other sequencer commands).
+
+```sh
+F="ferrata attest --lez-rpc http://127.0.0.1:3040 --program 0x<program account> --key payer.key --state-dir follower/ --record run.jsonl"
+$F config  --instance 0x<id> [--checkpoint 0x<root>]          # the instance's configuration; its id derived again
+$F status  --instance 0x<id>                                  # store, finalized slot and root, newest record
+$F init    --preset mainnet|sepolia --bootstrap bootstrap.ssz --checkpoint 0x<root> [--layout electra|gloas] [--parts 2] [--send --yes]
+$F advance --instance 0x<id> --update update.ssz [--finality] --committee bootstrap:FILE|update:FILE ... [--send --yes]
+$F attest  --instance 0x<id> --record-slot S --eth URL --block N \
+           [--storage ADDRESS:SLOT[:eq|ne|ge|gt|le|lt:VALUE]] [--account ADDRESS[:codehash]] [--log TX:LOG[:emitter=ADDRESS]] \
+           [--header-rlp FILE] [--send --yes]
+```
+
+- **Reads** come from the zone: the tool follows the sequencer's blocks with LEZ's own block application
+  (`lez/live/driver/src/follower.rs`, included), only those final on Bedrock unless `--wait-final no`, and checks each
+  actor state it reads against the sequencer's `getAccount`. `--state-dir` keeps the followed state between runs.
+- **Every command that sends is a dry run** unless `--send --yes` (which may follow the command). The dry run gives the
+  verdict of the program's own function natively (`attest::evaluate`; for an update `ferrata_advance::evaluate` and the
+  program's step code; for an instance `steps::initialize`), with the program's code and its name from the IDL, and the
+  zone's execution: the exact signed transaction settled by LEZ's `settle_transaction` on a scratch copy of the
+  followed state (exit code, execution and storage gas, events). The tool checks the two agree.
+- **`--send --yes`** sends the same signed bytes, waits for the block that includes each to be final on Bedrock, and
+  compares the zone's receipt (the follower's: the sequencer's RPC reports no outcome) with the dry run: exit code,
+  execution gas, storage gas, events.
+- Proofs come from an Ethereum JSON-RPC endpoint (`--eth`: `eth_getProof`, `eth_getBlockReceipts`); the program checks
+  them against the record, so the endpoint is not trusted.
+- Exit status: 0 applied (or would be); 3 refused, as the dry run said; 1 the dry run and the zone disagree, or the
+  verdict and the dry run; 2 a usage error.
+
+Run on a zone we started (`cli/tests/attest-seq.sh`: crown session A, then the commands in `cli/tests/attest-seq-hook.sh`):
+see [Results on a sequencer](#results-on-a-sequencer).
+
 ## Not done
 
-- Live endpoints: the tool reads recorded responses; fetching `eth_getProof`, receipts and
-  light-client data from an endpoint, and sending to a sequencer, is the module's and the
-  updater's work (it would replace `Stage5` and `Chain::submit` with RPC clients).
+- Live endpoints for the in-process tool: `ferrata-attest` reads recorded responses; `ferrata attest` (above) is the
+  sequencer and live-endpoint tool.
 - The private placement (`VerifyAll`, the proven path) has no command; `advance` sends the public job.
 - Accumulator leaves and EIP-2935 hops are in the request format (and in the IDL) but have no
   command.
