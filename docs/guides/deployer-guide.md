@@ -385,8 +385,9 @@ Blockchain node, one validator). One stand-in, named: anvil has no beacon chain,
 holds finalizes anvil's blocks for LEZ's light client (`CROWN_CHAIN=stand-in`); everything else is the deployment as
 §3 describes it. Nothing is sent to any public network.
 
-**Step 0. The tree and what it builds.** A Linux machine with about 16 cores, 64 GB of memory and 60 GB of disk
-(the build box's size; the builds below take about an hour there), Rust ([`rustup`](https://rustup.rs): each
+**Step 0. The tree and what it builds.** A Linux x86-64 machine with about 20 GB of free disk (on our build box,
+which had 64 GB of memory and reports 2 CPUs to `nproc`, the steps below took 62 minutes and left 14 GB beside and in
+the clone), Rust ([`rustup`](https://rustup.rs): each
 directory's `rust-toolchain.toml` picks its version), Foundry 1.3.6, `git`, `jq`, `curl`, `zstd`, `python3`,
 `clang`, `cmake`, `protobuf-compiler`, `pkg-config`, `libssl-dev`, and libpcsclite's development files (`sudo apt-get
 install libpcsclite-dev` on Debian or Ubuntu, `pcsc-lite-devel` on Fedora): LEZ's wallet, which the `ferrata` tool

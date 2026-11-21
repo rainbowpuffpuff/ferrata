@@ -1,0 +1,29 @@
+PASS vault admin (handed over): 0x5Ec0D000000000000000000000000000000aD001
+PASS vault freeze authority: 0x5eC0d000000000000000000000000000000F2001
+PASS vault fee recipient: 0x5ec0D000000000000000000000000000000Fee01
+PASS vault watcher 0: 0x5Ec0D000000000000000000000000000000a7001
+PASS vault watcher 1: 0x5eC0d000000000000000000000000000000a7002
+PASS vault finality depth: delta (the candidate's wait, s): 5400
+PASS vault finality depth: deltaFloor (s): 5400
+PASS vault revocation window (s): 172800
+PASS vault minimum release delay (s): 300
+PASS vault release delay of ETH (s): 600
+PASS vault release delay of the second token (s): 600
+PASS vault mode (1 = rule B): 1
+PASS vault lezConfigId = the LEZ configuration's id: 0xa756b23c91016504170f00bdc449b16384c059dcd35a4f4e8e1df592f168adc7
+PASS second token: denominations: [50000000, 500000000]
+PASS second token denomination 0: mint, relay, burn, checkpoint fees: 0 250000 0 100000
+PASS second token denomination 1: mint, relay, burn, checkpoint fees: 0 2500000 0 1000000
+PASS second token: deposit cap (capacity): 5000000000
+PASS ETH: release cap (capacity): 1000000000000000000
+PASS ETH fee schedule in force (feeState.current): 1
+PASS ETH fee schedule 1, denomination 0: mint, relay, burn, checkpoint: 1000000000000 2000000000000 1000000000000 2000000000000
+PASS ETH fee schedule 1, denomination 1: mint, relay, burn, checkpoint: 10000000000000 20000000000000 10000000000000 20000000000000
+PASS ETH fee schedule 1, denomination 2: mint, relay, burn, checkpoint: 100000000000000 200000000000000 100000000000000 200000000000000
+PASS LEZ admin in configId = the deployer's own account: 0xfc74ff623b78d968a8f42a036d4bb7d5a7ee1d761efd0ac4bd5139222134d6c6
+PASS LEZ freeze authority in configId = the deployer's own account: 0x55e067552e771049226507c1977aa4c5af2374fdaf1909290cc7aab877748833
+PASS the roles and caps enter configId (another configId than the default's): yes
+PASS LEZ token cap in configId (value units): 3000000000
+PASS LEZ global cap in configId (value units): 9000000000
+PASS LEZ global cap read from the zone (the gate's mint and burn buckets): 9000000000 9000000000
+PASS LEZ configuration initialised under this configId: yes

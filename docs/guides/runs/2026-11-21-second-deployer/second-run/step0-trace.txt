@@ -1,0 +1,24 @@
++ [18:02:35] scripts/fetch-upstream.sh
++ [18:02:52] RISC0_HOME_LEZ=<the clone>/../risc0-home-lez
++ [18:02:52] scripts/ci/install-risc0.sh
++ [18:03:59] export PATH=~/.risc0/bin:~/.cargo/bin:~/.risc0/bin:~/.foundry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ [18:03:59] PATH=~/.risc0/bin:~/.cargo/bin:~/.risc0/bin:~/.foundry/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
++ [18:03:59] cd vault
++ [18:03:59] forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
++ [18:04:15] FOUNDRY_OFFLINE=false
++ [18:04:15] forge build
++ [18:05:09] scripts/reproduce-image-ids.sh build --out ../tmp/programs
++ [18:15:16] scripts/reproduce-image-ids.sh compare --out ../tmp/programs
++ [18:15:16] FERRATA_LIVE_JOBS=2
++ [18:15:16] FERRATA_LIVE_NICE=0
++ [18:15:16] FERRATA_LIVE_TMP=<the clone>/../tmp/crown/live
++ [18:15:16] bash lez/live/run.sh build-sequencer
++ [18:37:48] FERRATA_LIVE_JOBS=2
++ [18:37:48] FERRATA_LIVE_NICE=0
++ [18:37:48] FERRATA_LIVE_TMP=<the clone>/../tmp/crown/live
++ [18:37:48] bash lez/live/run.sh build-bedrock
++ [19:01:38] CROWN_PROGRAMS=<the clone>/../tmp/programs/programs
++ [19:01:38] bash lez/crown/build.sh all
++ [19:04:11] export SEQNET_BUNDLE=<the clone>/../tmp/crown-lez/bundle.tar.zst SEQNET_R0BF=<the clone>/../tmp/programs/r0bf
++ [19:04:11] SEQNET_BUNDLE=<the clone>/../tmp/crown-lez/bundle.tar.zst
++ [19:04:11] SEQNET_R0BF=<the clone>/../tmp/programs/r0bf

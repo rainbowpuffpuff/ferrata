@@ -1,0 +1,4 @@
+323M	<beside>/upstream
+3.1G	<beside>/risc0-home-lez
+4.9G	<beside>/tmp
+5.7G	<the clone>
