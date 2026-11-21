@@ -45,6 +45,13 @@ import {TestToken} from "./TestToken.sol";
 ///         releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
 ///         the live testnet runs of November 2026 did; the record says which (`uncapped`).
 ///
+///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
+///         §13): `deltaFloor` = `initialDelta` = the design's default for the rule, 3 h 01 min under rule (A), 1 h under
+///         rule (B), unless FERRATA_DELTA names another (seconds; the testnet runs of November 2026 used 600 s, the crown
+///         runs 3,600 s). The admin raises it later (`setDelta`, never below the floor); the record gives `delta` and the
+///         rule's `designDelta`. The other timers stay testnet values unless set: revocation window 1 day, release delay
+///         120 s, minimum release delay 0 (the design's: 7 days, a delay between the minimum and the window, 24 h).
+///
 ///         Keys: none is read here. forge signs with Foundry's own keystore variables (ETH_KEYSTORE, ETH_PASSWORD:
 ///         files) or, on a local fork, with --unlocked. Refused: chain 1, forge's default sender (no key given), and,
 ///         except on chain 31337, the public anvil test accounts.
@@ -73,6 +80,9 @@ contract DeployVault is Script {
 
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
+    /// @dev The design's wait Δ per rule (docs/design/bridge.md §13): (A) 2 h + 1 h + 1 min, (B) 1 h.
+    uint256 internal constant RULE_A_DELTA = 3 hours + 1 minutes;
+    uint256 internal constant RULE_B_DELTA = 1 hours;
     uint256 internal constant EIP7825_TX_GAS_CAP = 1 << 24;
     uint256 internal constant EIP8037_TX_TOTAL_GAS_CAP = (1 << 32) - 1;
     string internal constant LIBRARY_ID = "src/FerrataRegistry.sol:FerrataRegistry";
@@ -88,6 +98,7 @@ contract DeployVault is Script {
     string internal gasRule;
     uint256 internal gasCap;
     bool internal uncapped;
+    uint256 internal deltaGiven; // FERRATA_DELTA; 0: the design's wait for the rule
 
     function run() external {
         _init();
@@ -168,6 +179,10 @@ contract DeployVault is Script {
         params = vm.readFile(vm.envOr("FERRATA_PARAMS", string("script/params/sepolia.json")));
         uncapped = vm.envOr("FERRATA_UNCAPPED", false);
         if (uncapped) console2.log("warning: FERRATA_UNCAPPED=1: no deposit or release caps (a test deployment only)");
+        deltaGiven = vm.envOr("FERRATA_DELTA", uint256(0));
+        if (deltaGiven != 0 && deltaGiven < _designDelta()) {
+            console2.log("warning: FERRATA_DELTA is below the design's wait for the rule (a test deployment only)");
+        }
         outPath =
             vm.envOr("FERRATA_OUT", string.concat("deployments/", vm.toString(block.chainid), "-", modeName, ".json"));
         marginPct = vm.envOr("FERRATA_GAS_MARGIN_PCT", uint256(125));
@@ -258,10 +273,21 @@ contract DeployVault is Script {
         return _paramOr(".releaseFloorDailyValue", ethLargest < tokenLargest ? ethLargest : tokenLargest);
     }
 
-    /// @dev The testnet configuration of script/RoundTrip.s.sol, under either rule. Rule (B) has no turn term.
+    /// @dev The design's wait Δ for the rule.
+    function _designDelta() internal view returns (uint256) {
+        return mode == FerrataVault.Mode.A ? RULE_A_DELTA : RULE_B_DELTA;
+    }
+
+    /// @dev The wait this deployment uses: FERRATA_DELTA if given, else the design's for the rule.
+    function _delta() internal view returns (uint256) {
+        return deltaGiven != 0 ? deltaGiven : _designDelta();
+    }
+
+    /// @dev The deployment under either rule: the design's wait and capped by default; the other timers testnet values
+    ///      (the header). Rule (B) has no turn term.
     function _deployment(address stop) internal view returns (FerrataVault.Deployment memory d) {
         bool ruleA = mode == FerrataVault.Mode.A;
-        uint256 delta = vm.envOr("FERRATA_DELTA", uint256(600));
+        uint256 delta = _delta();
         d.verifier = IRiscZeroVerifier(stop);
         d.checkpointImageId = vm.parseJsonBytes32(params, ruleA ? ".checkpointImageIdA" : ".checkpointImageIdB");
         d.releaseImageId = vm.parseJsonBytes32(params, ".releaseImageId");
@@ -281,9 +307,8 @@ contract DeployVault is Script {
         d.globalReleaseCap = uncapped ? _unlimited() : _daily(_globalDaily());
         d.mode = mode;
         d.watchers = _watchers();
-        d.releaseCapFloor = uncapped
-            ? FerrataVault.CapParams({capacity: 0, refillPerSecond: 0})
-            : FerrataVault.CapParams({capacity: _releaseFloorDaily(), refillPerSecond: _releaseFloorDaily() / 1 days});
+        d.releaseCapFloor =
+            uncapped ? FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}) : _daily(_releaseFloorDaily());
         d.feeRecipient = vm.envOr("FERRATA_FEE_RECIPIENT", deployer);
     }
 
@@ -486,6 +511,7 @@ contract DeployVault is Script {
         require(vault.mode() == mode, "check: the vault's rule");
         require(vault.admin() == deployer, "check: admin");
         require(vault.freezeAuthority() == _freezeAuthority(), "check: freeze authority");
+        require(vault.deltaFloor() == _delta() && vault.delta() == _delta(), "check: the wait");
         _checkToken(vault, ETH, _ethParams());
         _checkToken(vault, r.token, _tokenParams());
         _checkCaps(vault, r.token);
@@ -565,6 +591,8 @@ contract DeployVault is Script {
         vm.serializeAddress(o, "feeRecipient", vm.envOr("FERRATA_FEE_RECIPIENT", deployer));
         vm.serializeString(o, "gasRule", gasRule);
         vm.serializeBool(o, "uncapped", uncapped);
+        vm.serializeUint(o, "delta", _delta());
+        vm.serializeUint(o, "designDelta", _designDelta());
         if (!uncapped) {
             vm.serializeUint(o, "ethDailyCap", _ethParams().depositCap.capacity);
             vm.serializeUint(o, "tokenDailyCap", _tokenParams().depositCap.capacity);

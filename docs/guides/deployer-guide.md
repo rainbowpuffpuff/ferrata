@@ -42,7 +42,7 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 |---|---|---|---|
 | Outbound finality rule, `mode` | (B) if the zone's sequencers run `ferrata_attestor`; otherwise (A) | (A) for the Sepolia runs; (B) rehearsed | vault immutable |
 | Committee floors `nMin`, `tMin` | at least 3 and 2 outside testnets; (A) recommends `n ≥ 6` | 3 and 2 (`script/params/sepolia.json`) | vault immutable |
-| Wait: `deltaFloor` and initial `delta` (Δ) | (A): 3 h 01 min; (B): 1 h | 600 s (`FERRATA_DELTA`) | `deltaFloor` immutable; `delta` raise-only, ≤ 30 days |
+| Wait: `deltaFloor` and initial `delta` (Δ) | (A): 3 h 01 min; (B): 1 h | the design default for the rule since milestone B1 (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_DELTA` sets another for a test run (the testnet runs of November 2026: 600 s; the crown runs: 3,600 s); `script/RoundTrip.s.sol`: 600 s | `deltaFloor` immutable; `delta` raise-only (`raiseDelta`), ≤ 30 days |
 | `turnSeconds` (the channel's posting timeframe) | 900 s on testnet values | 900 | vault immutable |
 | `revokeWindow` | 7 days | 1 day | immutable |
 | `maxFreeze` | 30 days | 30 days | immutable |
@@ -52,7 +52,7 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 | Watchers | up to three hot addresses, each with its own nodes | none | admin's proposal, 14 days later |
 | Fee recipient | the deployer's choice | the deployer | vault immutable |
 | Tokens, denominations, relay and checkpoint fees, `lezUnit`, `unitWeight` | three denominations per token; fees ≤ 1% each | ETH 0.001/0.01/0.1, relay 0.2%, checkpoint 0.1%; test token 100/1,000/10,000, 0.25% and 0.1% | write-once per token |
-| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | capped by default since milestone B1: per token and day 100 times its largest denomination (10 ETH, 1,000,000 test-token units; `ethDailyCap`, `tokenDailyCap` in the params), globally their sum, an immutable release floor of one largest denomination a day (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_UNCAPPED=1` deploys without caps, as the live runs of November 2026 did | admin, never below the floor |
+| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | capped by default since milestone B1: per token and day 100 times its largest denomination (10 ETH, 1,000,000 test-token units; `ethDailyCap`, `tokenDailyCap` in the params), globally their sum, an immutable release floor of one largest denomination a day (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_UNCAPPED=1` deploys without caps, as the live runs of November 2026 did; `script/RoundTrip.s.sol` (the earlier runs' single-script round trip) deploys none. Why 100 times: below | admin, never below the floor |
 | Attestation instance (its root id) | an instance whose checkpoint you verified | the Sepolia period-1378 bootstrap | inside `configId` |
 | Inbound finality depth | Ethereum finality, no extra epochs (depth 0) | 0 | the admin's `SetDepth` on LEZ, in beacon slots beyond finality, at most 216,000; it applies to later imports only (since B1) |
 
@@ -63,9 +63,24 @@ Sources: [`bridge.md`](../design/bridge.md) §9, §13; [`vault/README.md`](../..
 deeper setting delays honest claimants but not a captured sync committee, whose defence is caps and
 freezes ([`bridge.md`](../design/bridge.md) §5.4). The admin sets it with `SetDepth`; roots already imported stay
 imported, so no valid claim is lost (`lez/harness/tests/bridge_depth.rs`). Outbound, the depth is the vault's wait (Δ, plus
-`(t − 1) × turnSeconds` under (A)) and the per-token release delay; a change applies only to candidates
-submitted, or roots finalised, after it ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints",
+`(t − 1) × turnSeconds` under (A)), by default the design's for the rule, 3 h 01 min under (A) and 1 h under (B), which
+`script/DeployVault.s.sol` deploys as `deltaFloor` and initial `delta` unless `FERRATA_DELTA` names another
+(`test/DeployDefaults.t.sol`). The admin can only raise it (`raiseDelta`, at most 30 days): a lower wait would shorten
+the window to react to a wrong candidate ([`bridge.md`](../design/bridge.md) §9), so the floor is immutable; a raise
+applies only to candidates submitted after it. The per-token release delay holds a finalised root's releases while the checkpoint can still be revoked
+(between `minReleaseDelay` and `revokeWindow`; a change applies to roots finalised after it); the scripts deploy the
+testnet 120 s, not the design's 24 h or more ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints",
 "Releases and pull payments").
+
+**Why the caps are 100 largest denominations a day.** The design bounds a day's loss by the smaller of 10 % of escrow
+and a ceiling the deployer sets, above an immutable release floor. A vault's buckets hold fixed capacities the admin
+sets (`setTokenCap`, `setGlobalCap`, never a release cap below the floor), so a deployment can only start from the
+ceiling: 10 % of the zero escrow of a new vault would refuse its first deposit. The script's ceiling, 100 times a
+token's largest denomination a day, lets a day of deposits and releases through at the largest size (99 of them once
+each counts its fees: `test/DeployDefaults.t.sol`) and is the most a broken verifier or a stolen key can take in a day
+before a freeze. 10 % of escrow is the smaller bound until escrow passes 1,000 largest denominations; until then the
+admin should lower the caps toward it as escrow grows (derived: 100 = 10 % of 1,000). The release floor, one largest
+denomination a day, is what no admin can throttle releases below.
 
 **Choosing the rule.** Rule (A) needs an unpredictable `prevrandao` (Ethereum and its testnets); on a
 chain whose `prevrandao` or timestamp is constant or sequencer-chosen, deploy rule (B). Rule (B) also

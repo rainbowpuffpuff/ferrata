@@ -25,6 +25,16 @@ contract DeployVaultExposed is DeployVault {
     function tokenParams_() external view returns (FerrataVault.TokenParams memory) {
         return _tokenParams();
     }
+
+    /// @dev What `_init` read from the environment, set by the tests instead (vm.setEnv is process-wide and tests run
+    ///      in parallel).
+    function set_(FerrataVault.Mode m, bool uncapped_, uint256 deltaGiven_) external {
+        mode = m;
+        if (m == FerrataVault.Mode.A) modeName = "A";
+        else modeName = "B";
+        uncapped = uncapped_;
+        deltaGiven = deltaGiven_;
+    }
 }
 
 /// @notice RFP-022 Sec.4 ("Caps bound the maximum value at risk in any rolling window; proposals must document
@@ -32,17 +42,28 @@ contract DeployVaultExposed is DeployVault {
 ///         script would send (its own `Deployment` and registrations, on the default params) refuses the deposit
 ///         that would pass its token's daily ceiling (100 times the largest denomination, counted on each deposit's
 ///         whole escrow), refills over a day, and keeps every release cap above an immutable floor; the uncapped
-///         deployment of the earlier testnet runs needs FERRATA_UNCAPPED=1.
+///         deployment of the earlier testnet runs needs FERRATA_UNCAPPED=1. RFP-022 F.12: the wait Δ, the outbound
+///         finality depth, is the design's for the rule by default (3 h 01 min under (A), 1 h under (B)); FERRATA_DELTA
+///         sets another for a test run.
 contract DeployDefaultsTest is VaultTestBase {
     DeployVaultExposed internal script;
     FerrataVault internal deployed;
     MockERC20 internal testToken;
 
     function _deploy(bool uncapped) internal {
-        vm.setEnv("FERRATA_MODE", "B");
-        vm.setEnv("FERRATA_UNCAPPED", uncapped ? "true" : "false");
+        _deploy(FerrataVault.Mode.B, uncapped, 0);
+    }
+
+    /// @dev The script as `_init` leaves it, with the rule, the caps and FERRATA_DELTA (0: not given) set directly.
+    function _script(FerrataVault.Mode m, bool uncapped, uint256 deltaGiven) internal {
+        vm.setEnv("FERRATA_MODE", "B"); // _init requires it; every test sets the same value
         script = new DeployVaultExposed();
         script.init_(); // the deployer (admin) is this test contract
+        script.set_(m, uncapped, deltaGiven);
+    }
+
+    function _deploy(FerrataVault.Mode m, bool uncapped, uint256 deltaGiven) internal {
+        _script(m, uncapped, deltaGiven);
         deployed = new FerrataVault(script.deployment_(address(estop)));
         testToken = new MockERC20("Test", "TT", 6);
         deployed.registerToken(ETH, script.ethParams_());
@@ -66,7 +87,7 @@ contract DeployDefaultsTest is VaultTestBase {
         assertEq(capacity, 30_000_000_000 + 1_000_000_000_000);
         // The immutable release floor: one 0.1 ETH a day in value units (ETH's largest is worth less than the token's).
         assertEq(deployed.releaseCapFloor(), 300_000_000);
-        assertEq(deployed.releaseRefillFloor(), uint256(300_000_000) / 1 days);
+        assertEq(deployed.releaseRefillFloor(), (uint256(300_000_000) + 1 days - 1) / 1 days, "rounded up: whole in a day");
 
         // A deposit counts its whole escrow (0.1 ETH and its 0.2 % relay fee) against the bucket: 99 of 0.1 ETH fill
         // the day; the 100th is refused; a day later the bucket is whole again.
@@ -93,6 +114,32 @@ contract DeployDefaultsTest is VaultTestBase {
         vm.expectRevert(FerrataVault.CapBelowFloor.selector);
         deployed.setGlobalCap(FerrataVault.Direction.Release, 299_999_999, 1 ether);
         deployed.setTokenCap(ETH, FerrataVault.Direction.Release, 0.1 ether, uint256(10 ether) / 1 days);
+    }
+
+    /// @notice F.12: by default the vault waits the design's Δ for its rule, as floor and initial value.
+    function test_deploymentDefault_waitIsTheDesignsForTheRule() public {
+        _deploy(FerrataVault.Mode.B, false, 0);
+        assertEq(deployed.deltaFloor(), 1 hours, "rule (B): 1 h");
+        assertEq(deployed.delta(), 1 hours);
+        _deploy(FerrataVault.Mode.A, false, 0);
+        assertEq(uint8(deployed.mode()), uint8(FerrataVault.Mode.A));
+        assertEq(deployed.deltaFloor(), 3 hours + 1 minutes, "rule (A): 3 h 01 min");
+        assertEq(deployed.delta(), 3 hours + 1 minutes);
+        // The admin raises it for later candidates, never lowers it (Checkpoint.t.sol: a raise does not touch a
+        // submitted candidate).
+        vm.expectRevert(FerrataVault.DeltaCanOnlyRise.selector);
+        deployed.raiseDelta(3 hours);
+        deployed.raiseDelta(4 hours);
+        assertEq(deployed.delta(), 4 hours);
+    }
+
+    /// @notice FERRATA_DELTA sets another wait for a test run (the testnet runs: 600 s, the crown runs: 3,600 s).
+    function test_delta_otherOnlyWhenGiven() public {
+        _deploy(FerrataVault.Mode.B, false, 600);
+        assertEq(deployed.deltaFloor(), 600);
+        assertEq(deployed.delta(), 600);
+        _deploy(FerrataVault.Mode.A, false, 3600);
+        assertEq(deployed.deltaFloor(), 3600);
     }
 
     function test_uncapped_onlyWhenAskedFor() public {
