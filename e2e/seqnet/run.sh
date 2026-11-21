@@ -88,7 +88,7 @@ build_miniapp() {
   cp "$T/qmltest-build/ferrata_miniapp_logos" "$T/bin/"
   say "ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh"
   local O="$T/modcheck"
-  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="${SEQNET_SHORT:-$(dirname "$T")/mseq}" RISC0_DEV_MODE=1 \
     bash "$REPO/modules/scripts/check.sh" "$O" > "$L/check.log" 2>&1 || { tail -n 40 "$L/check.log"; die "check.sh"; }
   tail -n 12 "$O/report/summary.md" 2>/dev/null
   mkdir -p "$T/logos"; rm -rf "$T/logos/lgx-ferrata_bridge_module"
@@ -136,7 +136,7 @@ build_lezcore() {
     [ -e "$T/logos/lez_core-tests-upstream" ] || try lez_core-tests-upstream "${NB[@]}" "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#unit-tests" -o "$T/logos/lez_core-tests-upstream"
     [ -e "$T/logos/lez_core-tests-patched" ] || try lez_core-tests-patched "${NB[@]}" "path:$P#unit-tests" -o "$T/logos/lez_core-tests-patched"
     # ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh.
-    try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+    try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="${SEQNET_SHORT:-$(dirname "$T")/mseq}" RISC0_DEV_MODE=1 \
       bash "$REPO/modules/scripts/check.sh" "$O"
     tail -n 12 "$O/report/summary.md" 2>/dev/null
     if [ -d "$O/lgx-ferrata_bridge_module" ]; then
