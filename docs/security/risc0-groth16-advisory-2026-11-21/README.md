@@ -36,17 +36,17 @@ ether of the deployer's own.** Deposits are open on all four, so whatever anyone
 forged release on a v5 vault needs no forged checkpoint, only the burn root it already accepted and a fresh nullifier
 (the v3 vault has accepted none, so there a forged checkpoint comes first).
 
-**What stops it.** No key-less control does: the freeze authority has no key holder, no stop has an owner with a key, and
-no watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every release
-on all four, and every refund on the three v5 vaults (the v3 vault's `refund` does not draw on the caps, but it needs a
-retired vault, and only the keyless freeze authority can retire the v3 vault, so it never opens refunds), and
-`setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both. Estimated on Sepolia
+**What stops it.** No key-less control does: the freeze authority has no key holder, no stop has an owner with a key,
+and no watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every
+release on all four, and every refund on the three v5 vaults (the v3 vault's `refund` does not draw on the caps, but
+it needs a retired vault, and only the keyless freeze authority can retire the v3 vault, so it never opens refunds),
+and `setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both. Estimated on Sepolia
 (`eth_estimateGas`, nothing sent, [`estimate-publicnode.tsv`](estimate-publicnode.tsv)): 66,941 and 63,396 gas per v5
-vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at the base fee of 16 wei of
-block 12,183,475, where the estimates ran. Slower: on the v5 vaults the admin can install a freeze authority and a watcher with `proposeRoles`, applied 14
-days later (369,833 gas each); the v3 vault has no such path. A stop can also be tripped by anyone holding a receipt
-the verifier accepts for the all-zero claim digest (`estop(receipt)`); whether the forgery reaches that digest is not
-established, and none was built.
+vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at the base fee of 16 wei of block
+12,183,475, where the estimates ran. Slower: on the v5 vaults the admin can install a freeze authority and a watcher
+with `proposeRoles`, applied 14 days later (369,833 gas each); the v3 vault has no such path. A stop can also be
+tripped by anyone holding a receipt the verifier accepts for the all-zero claim digest (`estop(receipt)`); whether the
+forgery reaches that digest is not established, and none was built.
 
 **The emergency stop did not trip.** On 21 November 2026 our trust model ([`trust.md`](../../trust.md) §5 and §6,
 [`bridge.md`](../../design/bridge.md) §15, Security #9 in [`traceability.md`](../../traceability.md)) named the stop
@@ -54,9 +54,9 @@ as the answer to an unsound proof system: whoever holds the proof of unsoundness
 released. This advisory is that case, and none of the four stops tripped (`paused()` false on all four at block
 12,183,432). The advisories include no proof of exploit. The forgery makes the verifier accept a chosen claim, not
 every seal, so the model of [`vault/README.md`](../../../vault/README.md) ("Under a broken verifier", where a junk
-receipt trips the stop) does not describe it, and whether it reaches the all-zero claim digest is not established.
-No owner with a key can call `estop()`: it is renounced on the v5 vaults' stops and the keyless `0xC820…` on the v3
-vault's. On these four vaults only the admin's caps stop a forgery; decision D1 of the
+receipt trips the stop) does not describe it, and whether it reaches the all-zero claim digest is not established
+(above). No owner with a key can call `estop()`: the v5 vaults' stops have renounced owners, and the v3 vault's stop
+is owned by the keyless `0xC820…`. On these four vaults only the admin's caps stop a forgery; decision D1 of the
 [migration plan](../../design/risc0-3.1-migration.md) §4 changes the wiring for new vaults.
 
 **Rehearsed on a local fork** ([`fork-rehearsal.txt`](fork-rehearsal.txt), [`fork-rehearsal.sh`](fork-rehearsal.sh)):
