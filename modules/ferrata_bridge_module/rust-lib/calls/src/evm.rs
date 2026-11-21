@@ -217,6 +217,7 @@ fn parse_quantity(v: &Value, what: &str) -> Result<u64, String> {
 pub(crate) const EV_DEPOSIT: &str = "Deposit(address,uint64,uint64,address,uint256,bytes32)";
 pub(crate) const EV_RELEASE: &str = "Release(bytes32,address,address,uint256,address,uint256,bytes32)";
 pub(crate) const EV_REFUND: &str = "Refund(uint64,address,address,uint256)";
+pub(crate) const EV_TOKEN_REGISTERED: &str = "TokenRegistered(address,uint256[],uint256[],uint256,uint256)";
 pub(crate) const EV_FINALIZED: &str =
     "CheckpointFinalized(uint256,bytes32,bytes32,bytes32,uint64,uint64,bool,uint64,bytes32,uint32,uint32)";
 
@@ -418,6 +419,8 @@ impl Vault {
                 "vault_release_cap": self.cap(Some(token), 1)?,
                 "deposits_frozen_until": dec(&token_deposits_frozen),
                 "releases_frozen_until": dec(&token_releases_frozen),
+                // The delay a release under the next checkpoints waits (a change by setReleaseDelay applies to those).
+                "release_delay_next": if registered { json!(self.release_delay_for(token, u64::MAX)?) } else { Value::Null },
             },
             "vault": {
                 "deposits_frozen_until": dec(&self.getter("depositsFrozenUntil")?),
@@ -430,6 +433,37 @@ impl Vault {
                 "global_release_cap": self.cap(None, 1)?,
             },
         }))
+    }
+
+    /// Every token the vault registered, ETH first: the `TokenRegistered` logs from `from_block`, and ETH when its
+    /// entry is registered (whatever block registered it).
+    pub fn registered_tokens(&mut self) -> Result<Vec<Address>, String> {
+        let to = self.block_number()?;
+        let mut out: Vec<Address> = Vec::new();
+        if self.token_config(&[0u8; 20])?.0 {
+            out.push([0u8; 20]);
+        }
+        for log in self.logs(EV_TOKEN_REGISTERED, to)? {
+            let t = as_address(&hex32(&log["topics"][1], "TokenRegistered's token")?);
+            if !out.contains(&t) {
+                out.push(t);
+            }
+        }
+        Ok(out)
+    }
+
+    /// An ERC-20's `symbol()` and `decimals()` (`eth_call`), or a short address and 18 when it does not answer them.
+    pub fn erc20_meta(&mut self, token: &Address) -> (String, u8) {
+        let short = format!("{}…", &hex(token)[..8]);
+        let decimals = self.call_at(token, &calldata("decimals()", &[]), None).ok()
+            .and_then(|d| word(&d, 0).ok()).and_then(|w| as_u64(&w).ok()).and_then(|d| u8::try_from(d).ok()).unwrap_or(18);
+        let symbol = self.call_at(token, &calldata("symbol()", &[]), None).ok().and_then(|d| {
+            // An ABI string: offset, length, bytes.
+            let len = as_u64(&word(&d, 1).ok()?).ok()? as usize;
+            let bytes = d.get(64..64 + len)?;
+            std::str::from_utf8(bytes).ok().filter(|t| !t.is_empty() && t.len() <= 32).map(str::to_string)
+        });
+        (symbol.unwrap_or(short), decimals)
     }
 
     /// The vault's roles: admin, pending admin, freeze authority, the three watchers, the fee recipient.

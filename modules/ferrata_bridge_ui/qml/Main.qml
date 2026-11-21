@@ -742,17 +742,20 @@ Rectangle {
                 Repeater {
                     model: registry ? registry.tokens : []
                     Box {
+                        id: tokBox
+                        property int tokDecimals: modelData.decimals !== undefined ? modelData.decimals : 18
+                        property string tokSymbol: modelData.symbol ? modelData.symbol : "ETH"
                         Label { objectName: "registry.token." + index; text: modelData.symbol + "  " + (modelData.registered ? "registered" : "not registered") + " · deposits " + (modelData.deposits_enabled ? "open" : "closed") + " · escrowed " + Fmt.units(modelData.escrowed, modelData.decimals, modelData.symbol); font.bold: true }
                         Repeater {
                             model: modelData.denominations
-                            Label { text: "Denomination " + Fmt.eth(modelData.amount) + ": mint fee " + Fmt.eth(modelData.mint_fee) + ", relay fee " + Fmt.eth(modelData.relay_fee) + ", burn fee " + Fmt.eth(modelData.burn_fee) + ", checkpoint fee " + Fmt.eth(modelData.checkpoint_fee) }
+                            Label { text: "Denomination " + Fmt.units(modelData.amount, tokBox.tokDecimals, tokBox.tokSymbol) + ": mint fee " + Fmt.units(modelData.mint_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", relay fee " + Fmt.units(modelData.relay_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", burn fee " + Fmt.units(modelData.burn_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", checkpoint fee " + Fmt.units(modelData.checkpoint_fee, tokBox.tokDecimals, tokBox.tokSymbol) }
                         }
                         Label {
-                            text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, 18, "ETH") + "/s"
+                            text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, tokBox.tokDecimals, tokBox.tokSymbol) + "/s" + (modelData.release_delay_next !== undefined && modelData.release_delay_next !== null ? "; release delay " + modelData.release_delay_next + " s" : "")
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
                         Label {
-                            text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
+                            text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
                         Label {
@@ -900,6 +903,50 @@ Rectangle {
                                     refreshAdmin();
                                 });
                             })
+                        }
+                    }
+                }
+                // Every vault action of the module (admin.rs): the admin's registerToken, setDepositsEnabled (delisting),
+                // setTokenCap, setGlobalCap, setReleaseDelay, announceFees, raiseDelta, transferAdmin, proposeRoles; the
+                // freeze authority's freezes and revokeFrom; anyone's applyFees, applyRoles, acceptAdmin, retire. The token
+                // is any the vault registered; the parameters are the call's own (prefilled per action). The module
+                // checks the role and the call before anything is asked; the role's account approves in the Logos signer.
+                ColumnLayout {
+                    visible: logosEth() && !!(admin && admin.vault_roles)
+                    Label { text: "Any vault action (every token, every setting)"; font.bold: true }
+                    RowLayout {
+                        ComboBox {
+                            id: vaultAction; objectName: "admin.any.action"; Layout.preferredWidth: 260
+                            model: ["set_deposits_enabled", "set_token_cap", "set_global_cap", "set_release_delay", "announce_fees", "apply_fees", "register_token",
+                                    "set_token_deposits_frozen", "set_token_releases_frozen", "set_deposits_frozen", "set_releases_frozen", "set_checkpoints_frozen",
+                                    "revoke_from", "raise_delta", "transfer_admin", "accept_admin", "propose_roles", "apply_roles", "retire"]
+                            onCurrentTextChanged: vaultParams.text = JSON.stringify(vaultTemplate(currentText))
+                        }
+                        ComboBox {
+                            id: vaultToken; objectName: "admin.any.token"; Layout.preferredWidth: 300
+                            model: registry && registry.tokens ? registry.tokens.map(function (t) { return t.symbol + " " + t.token; }) : []
+                        }
+                    }
+                    TextField { id: vaultParams; objectName: "admin.any.params"; Layout.fillWidth: true; text: JSON.stringify(vaultTemplate("set_deposits_enabled")) }
+                    Button {
+                        objectName: "admin.any.send"; text: "Send (the role approves in the Logos signer)"; enabled: busy === 0 && !jobRunning()
+                        onClicked: {
+                            var p = {};
+                            try { p = JSON.parse(vaultParams.text); } catch (e) { adminText = "Not sent: the parameters are not JSON (" + e + ")."; return; }
+                            var tokenOf = registry && registry.tokens && registry.tokens[vaultToken.currentIndex] ? registry.tokens[vaultToken.currentIndex].token : "";
+                            if (vaultTokenActions.indexOf(vaultAction.currentText) >= 0) p.token = tokenOf;
+                            var q = { action: vaultAction.currentText, params: p };
+                            if (vaultGas.text !== "") q.gas_limit = vaultGas.text;
+                            propose({
+                                title: vaultAction.currentText + " on the Ferrata vault",
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Action", vaultAction.currentText], ["Token", p.token || "(none)"], ["Parameters", JSON.stringify(p)], ["Sent by", "Logos Core's tx_sender_module, after the role's approval in the Logos signer"]],
+                                effects: ["Changes the vault's settings as the parameters say", "Moves no funds"]
+                            }, function () {
+                                ethStep("admin", "admin.vault", q, function (ok, v) {
+                                    adminText = ok ? "Vault: " + v.call.what + " (transaction " + Fmt.short(v.tx_hash) + ", block " + v.block + ")." : "Not done: " + v;
+                                    refreshAdmin();
+                                });
+                            });
                         }
                     }
                 }

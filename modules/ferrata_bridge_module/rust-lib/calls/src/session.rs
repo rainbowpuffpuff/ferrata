@@ -399,10 +399,10 @@ impl Chain {
     }
 
     fn registry(&self) -> Result<Value, String> {
-        let r = match eth_path() {
-            Some(e) => self.vault(&e)?.registry(&[0u8; 20])?,
-            None => self.post("module.registry", json!({ "token": ETH }))?,
-        };
+        if let Some(e) = eth_path() {
+            return self.registry_logos(&e);
+        }
+        let r = self.post("module.registry", json!({ "token": ETH }))?;
         let inputs = self.inputs(json!({ "token": ETH }))?;
         let mut token = r["token"].clone();
         token["symbol"] = json!("ETH");
@@ -417,22 +417,42 @@ impl Chain {
             }
         }
         let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
-        let t = &lez["token"];
-        token["lez"] = if t.is_null() {
-            Value::Null
-        } else {
-            json!({
-                "now_ms": t["gate"]["now_ms"],
-                "mints_frozen_until_ms": t["gate"]["mints_until"],
-                "burns_frozen_until_ms": t["gate"]["burns_until"],
-                "mint_cap": t["gate"]["mint"],
-                "burn_cap": t["gate"]["burn"],
-                "known_until_leaf": t["known_until"],
-                "fee_schedules": t["schedules"].as_array().map(|a| a.len()),
-                "decoded_by": "ferrata_bridge_module registry (token(cid, ETH) with the bridge program's types)",
-            })
-        };
+        token["lez"] = lez_token(&lez["token"]);
         Ok(json!({ "tokens": [token], "vault": r["vault"], "lez_config": lez["config"], "imported_root": lez["root"] }))
+    }
+
+    /// The registry through Logos Core's eth_rpc_module: EVERY token the vault registered (its `TokenRegistered` logs),
+    /// each with its denominations (the permitted amounts), fees, caps and their use and freezes, its symbol and
+    /// decimals read from the token, and its LEZ side (token(cid, token)'s gate) when the bridge program has one.
+    fn registry_logos(&self, e: &Value) -> Result<Value, String> {
+        let mut v = self.vault(e)?;
+        let mut tokens = Vec::new();
+        let mut vault_side = Value::Null;
+        let (mut lez_config, mut imported_root) = (Value::Null, Value::Null);
+        for t in v.registered_tokens()? {
+            let r = v.registry(&t)?;
+            vault_side = r["vault"].clone();
+            let mut token = r["token"].clone();
+            let (symbol, decimals) = if t == [0u8; 20] { ("ETH".to_string(), 18) } else { v.erc20_meta(&t) };
+            token["symbol"] = json!(symbol);
+            token["decimals"] = json!(decimals);
+            let inputs = self.post("module.inputs", json!({ "token": hex(&t), "lez_only": true }))?;
+            let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
+            let mut req = json!({ "bridge_header": self.s["program"] });
+            for k in ["token_state", "config_state", "root_state"] {
+                if present(k) {
+                    req[k] = inputs[k].clone();
+                }
+            }
+            let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
+            if lez_config.is_null() {
+                lez_config = lez["config"].clone();
+                imported_root = lez["root"].clone();
+            }
+            token["lez"] = lez_token(&lez["token"]);
+            tokens.push(token);
+        }
+        Ok(json!({ "tokens": tokens, "vault": vault_side, "lez_config": lez_config, "imported_root": imported_root, "eth": v.report() }))
     }
 
     fn deposit(&self, params: &Value) -> Result<Value, String> {

@@ -300,6 +300,88 @@ Item {
             shot("25-admin-vault-unfrozen");
         }
 
+        // The rest of the admin functions through the module (SEQNET_ETH=logos). On LEZ: the admin's SetCap built by
+        // the module at the admin's own actor (with config(cid) and the token), signed by the admin's LEZ key and sent
+        // to the sequencer, accepted and read back from token(cid, ETH); the same message from an account that is not the
+        // admin, refused by the bridge program. On the vault, from the admin tab's panel for any action: delisting the
+        // second token and listing it again, a fee schedule announced and a release delay set, each read back.
+        function test_07c_admin_lez_and_every_vault_setting() {
+            if (!logosEth()) skip("the admin functions through the module run with SEQNET_ETH=logos");
+            tab("admin");
+            click("admin.refresh");
+            idle();
+            tryVerify(function () { return host.app.admin && host.app.admin.vault_roles; }, 30000, "roles loaded");
+            el("admin.cap.capacity").text = "12000000000";
+            click("admin.setcap");
+            approve("SetCap", "26-admin-lez-setcap-approval");
+            tryVerify(function () { return host.app.ethJob && host.app.jobOver(host.app.ethJob); }, 300000, "the LEZ SetCap's job ended: " + host.app.lastError);
+            verify(has(host.app.adminText, "LEZ cap set"), "accepted by the bridge program: " + host.app.adminText + " " + host.app.lastError);
+            console.log("LEZ SETCAP " + host.app.adminText);
+            tab("registry");
+            click("registry.refresh");
+            idle();
+            tryVerify(function () { return host.app.registry && host.app.registry.tokens[0].lez && host.app.registry.tokens[0].lez.mint_cap.capacity === "12000000000"; },
+                      60000, "the mint cap read back from token(cid, ETH): " + JSON.stringify(host.app.registry ? host.app.registry.tokens[0].lez : null));
+            shot("27-registry-lez-cap-and-every-token");
+            verify(host.app.registry.tokens.length >= 2, "the registry lists every token the vault registered: " + host.app.registry.tokens.length);
+            // The same SetCap signed by the wallet's own public account (not the admin), sent anyway: refused on LEZ.
+            var r = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: "user", unchecked: true });
+            verify(r.ok, "started: " + r.error);
+            tryVerify(function () { var j = wallet("job", { id: r.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 300000, "the refused SetCap's job ended");
+            var jr = wallet("job", { id: r.result.job.id }).result;
+            compare(jr.state, "failed", "a SetCap from a non-admin account is not applied");
+            verify(has(jr.error, "refused by the bridge program") && jr.result && jr.result.sent && jr.result.sent.reverted === true, "reverted in a block: " + JSON.stringify(jr).substring(0, 600));
+            console.log("LEZ SETCAP REFUSED " + jr.error);
+            // Unchecked off: the module refuses it before anything is sent.
+            var r2 = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: "user" });
+            verify(r2.ok, "started: " + r2.error);
+            tryVerify(function () { var j = wallet("job", { id: r2.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 60000, "the checked SetCap's job ended");
+            verify(has(wallet("job", { id: r2.result.job.id }).result.error, "refused before sending"), "the module's own role check");
+            // The vault: every setting from the panel.
+            tab("admin");
+            click("admin.refresh");
+            idle();
+            tryVerify(function () { return host.app.registry && host.app.registry.tokens.length >= 2; }, 30000, "both tokens");
+            var t1 = host.app.registry.tokens[1];
+            function anyAction(action, tokenIndex, params, title) {
+                var combo = el("admin.any.action");
+                combo.currentIndex = combo.model.indexOf(action);
+                el("admin.any.token").currentIndex = tokenIndex;
+                el("admin.any.params").text = JSON.stringify(params);
+                click("admin.any.send");
+                approve(action, "");
+                signer("admin-" + action.replace(/_/g, "-") + "-" + tokenIndex, "");
+                tryVerify(function () { return host.app.ethJob && host.app.jobOver(host.app.ethJob) && host.app.ethJob.kind === "admin"; }, 120000, action + " ended");
+                verify(has(host.app.adminText, "Vault: "), action + ": " + host.app.adminText + " " + host.app.lastError);
+                idle();
+            }
+            anyAction("set_deposits_enabled", 1, { enabled: false }, "delist");
+            tryVerify(function () { return host.app.registry.tokens[1].deposits_enabled === false; }, 30000, "the second token delisted (read back)");
+            shot("28-admin-token-delisted");
+            anyAction("set_deposits_enabled", 1, { enabled: true }, "list again");
+            tryVerify(function () { return host.app.registry.tokens[1].deposits_enabled === true; }, 30000, "listed again (read back)");
+            // A schedule that differs from the one in force (announcing the same fees withdraws a pending one): the mint
+            // fee one LEZ unit higher, the rest as they are.
+            var t0 = host.app.registry.tokens[0];
+            // Decimal strings added digit by digit (wei amounts pass 2^53; no BigInt assumed in the QML engine).
+            var add = function (a, b) {
+                a = String(a); b = String(b); var out = "", carry = 0;
+                for (var i = a.length - 1, j = b.length - 1; i >= 0 || j >= 0 || carry; i--, j--) {
+                    var d = (i >= 0 ? a.charCodeAt(i) - 48 : 0) + (j >= 0 ? b.charCodeAt(j) - 48 : 0) + carry;
+                    out = String(d % 10) + out; carry = d >= 10 ? 1 : 0;
+                }
+                return out.replace(/^0+(?=\d)/, "");
+            };
+            anyAction("announce_fees", 0, { mint_fees: t0.denominations.map(function (d) { return add(d.mint_fee, t0.lez_unit); }),
+                                            burn_fees: t0.denominations.map(function (d) { return d.burn_fee; }),
+                                            checkpoint_fees: t0.denominations.map(function (d) { return d.checkpoint_fee; }) }, "fees");
+            tryVerify(function () { return Number(host.app.registry.tokens[0].fee_schedule_pending_at) > 0; }, 30000, "the announced schedule read back: " + host.app.registry.tokens[0].fee_schedule_pending_at);
+            anyAction("set_release_delay", 0, { delay: "7200" }, "delay");
+            tryVerify(function () { return host.app.registry.tokens[0].release_delay_next === 7200; }, 30000, "the release delay read back: " + host.app.registry.tokens[0].release_delay_next);
+            shot("29-admin-every-setting");
+            console.log("VAULT SETTINGS " + JSON.stringify({ token1: t1.token, delisted_and_listed: true, fee_pending_at: host.app.registry.tokens[0].fee_schedule_pending_at, release_delay_next: host.app.registry.tokens[0].release_delay_next }));
+        }
+
         // The module's jobs (ferrata_bridge_module calls/src/jobs.rs): the claim and the burn above were jobs the view
         // started and polled. Then: a view opened afresh finds them (the burn's with its release delay); an unknown job
         // id; a failed job's error reaching the view.
