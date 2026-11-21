@@ -634,7 +634,7 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                         verdict = Some(Ok(p));
                         break;
                     }
-                    ferrata_advance::Verdict::NoChange => verdict = Some(Err("no change: it would not move the store (duplicate or stale); the program refuses it at Open with 52 NotNewer".to_string())),
+                    ferrata_advance::Verdict::NoChange => verdict = Some(Err("no change: it would not move the store (duplicate, stale or of an earlier period)".to_string())),
                     ferrata_advance::Verdict::Unverifiable => {
                         verdict.get_or_insert(Err("unverifiable: its signing committee is not known to the store".to_string()));
                     }
@@ -653,6 +653,15 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                     let witness = candidates.first().map(|c| ferrata_advance::signer_witness(c, &u)).unwrap_or_default();
                     let store_u = steps::store_for_update(&store, layout, u.attested_header.beacon.slot, &s.config.spec()).unwrap_or(store.clone());
                     let jid = job_id(&id, &store_u.digest(), &compact.digest(layout));
+                    // The program's step 1 natively (what `Open` runs): its code is the verdict the zone must match.
+                    let native = steps::step1(&store_u, &compact, &witness, u.signature_slot, &s.config.spec(),
+                        &s.config.genesis_validators_root, s.config.adoption_parts)
+                        .err()
+                        .map(|e| u32::from(e.code()));
+                    match native {
+                        Some(c) => println!("advance: the program's step 1, natively: refused with {c} {}", code_name(c)),
+                        None => println!("advance: the program's step 1, natively: passes (a later step or the policy refuses)"),
+                    }
                     let open = Step {
                         label: "Open".into(),
                         root: instance_actor(program, &id),
@@ -660,7 +669,7 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                         actors: vec![instance_actor(program, &id), job_actor(program, &id, &jid)],
                         evidence: vec![],
                     };
-                    let st = transact(&mut z, &a, &run, "advance", vec![open], None).await?;
+                    let st = transact(&mut z, &a, &run, "advance", vec![open], native).await?;
                     return Ok(if st == 0 { 1 } else { st });
                 }
                 None => bail!("--committee: at least one full committee the store summarises"),
