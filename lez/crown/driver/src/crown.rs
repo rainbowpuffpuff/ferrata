@@ -101,6 +101,30 @@ fn h(bytes: &[u8]) -> String {
     format!("0x{}", hex::encode(bytes))
 }
 
+/// The bridge program this driver speaks: since milestone B1 (docs/image-ids.md `ferrata_bridge_b1`) every account
+/// is keyed by the configuration, `holder(cid, account)` and `nullifier(cid, chain, vault, N)`. The bridge program of
+/// the live runs of November 2026 (`ferrata_bridge`, `0xccde6171…`) has neither: with it session B's claims would be
+/// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
+/// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
+/// milestone B1"); the live runs' program needs the driver of `f13faee2`.
+pub const BRIDGE_IMAGE_ID: &str = "ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e";
+
+/// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
+pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
+    ensure!(
+        hex::encode(image_id) == BRIDGE_IMAGE_ID,
+        "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
+         `ferrata_bridge_b1`): its accounts differ; the bridge program of the live runs needs the driver of f13faee2",
+        hex::encode(image_id)
+    );
+    Ok(())
+}
+
+/// [`check_bridge_image`] of a loaded `--bridge-bin`.
+pub fn check_bridge_bin(bridge_bin: &GuestBinary) -> Result<()> {
+    check_bridge_image(image_bytes(bridge_bin.image_id))
+}
+
 fn image_bytes(id: [u32; 8]) -> [u8; 32] {
     let mut out = [0u8; 32];
     for (i, w) in id.iter().enumerate() {
@@ -1382,6 +1406,29 @@ mod tests {
         assert_eq!(c.token_cap, CapParams { capacity: 30_000_000_000, refill_per_second: 347_223 });
         assert_eq!(c.global_cap, c.token_cap);
         assert_ne!(c.token_cap.capacity, UNLIMITED);
+    }
+
+    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_b1`; the live runs' program, and
+    /// any other, is refused.
+    #[test]
+    fn the_driver_speaks_the_bridge_program_since_b1_only() {
+        let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../docs/image-ids.md")).unwrap();
+        let id_of = |name: &str| -> [u8; 32] {
+            let rows: Vec<&str> = doc.lines().filter(|l| l.contains(&format!("`{name}` | `0x"))).collect();
+            assert_eq!(rows.len(), 1, "one row for {name}");
+            let mut id = [0u8; 32];
+            hex::decode_to_slice(&rows[0].split(" | `0x").nth(1).unwrap()[..64], &mut id).unwrap();
+            id
+        };
+        let b1 = id_of("ferrata_bridge_b1");
+        assert_eq!(hex::encode(b1), BRIDGE_IMAGE_ID);
+        assert!(check_bridge_image(b1).is_ok());
+        let live = id_of("ferrata_bridge");
+        assert_ne!(live, b1);
+        assert!(check_bridge_image(live).is_err(), "the live runs' bridge program is refused");
+        let mut other = b1;
+        other[31] ^= 1;
+        assert!(check_bridge_image(other).is_err());
     }
 
     #[test]

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """The laptop side of e2e/crown.sh (which sets MODAL_PROFILE, FERRATA_REPO and TMPDIR).
 
-    ctl.py setup [--inputs rc1|rc3] [--bundle FILE|none] [--programs DIR]  deploy ferrata-crown; the LEZ bundle and the
+    ctl.py setup [--inputs rc1|rc3|rc3-b1] [--bundle FILE|none] [--programs DIR]  deploy ferrata-crown; the LEZ bundle and the
                     R0BF programs to the Volume, under the input set's directory (e2e/crown/cloud/inputs.json: rc1 =
                     inputs/, crown-live-1 to -3's; rc3 = inputs-rc3/, LEZ v0.4.0-rc3 and the second build of the checkpoint
                     guests), checked: sha256, image ids; the other sets untouched; a ping
-    ctl.py start <run> live|fork|selftest [--inputs rc1|rc3] [--yes] [--halt-after STAGE] [--lez-chain sepolia]
+    ctl.py start <run> live|fork|selftest [--inputs rc1|rc3|rc3-b1] [--yes] [--halt-after STAGE] [--lez-chain sepolia]
                     (--inputs: a new run's input set, recorded in its run.json; default rc1; a resume keeps its own)
                     (--lez-chain sepolia: a fork run whose session A uses the real Sepolia checkpoint of the bundle's
                     fixture instead of the stand-in; it ends after identity, so --halt-after lez-a|identity)

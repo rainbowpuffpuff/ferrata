@@ -54,7 +54,7 @@ VAULT="0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c"      # FerrataVault v5 on Sep
 VAULT_SLOTS="0,1"                                       # depositRoot, nextLeafIndex
 PROGRAM_SHA256="ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"   # docs/image-ids.md
 PROGRAM_IMAGE="816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
-BRIDGE_SHA256="5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8"   # since B1
+BRIDGE_SHA256="5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8"   # since B1: docs/image-ids.md ferrata_bridge_b1
 BRIDGE_IMAGE="ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e"
 FETCH_PY="$REPO/lez-v03/scripts/fetch.py"               # public beacon and execution APIs, generic User-Agent
 TOOL_DIR="${FERRATA_DAY1_BIN:-$BESIDE/tmp/testnet04/bin}"
@@ -99,7 +99,7 @@ need_tools() {
 check_programs() { # the binaries are the final programs of docs/image-ids.md, byte for byte
   echo "$PROGRAM_SHA256  $PROGRAMS/ferrata_lez.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_lez.bin is not the final attestation program"
   if [ "${FERRATA_DAY1_BRIDGE:-0}" = 1 ]; then
-    echo "$BRIDGE_SHA256  $PROGRAMS/ferrata_bridge.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_bridge.bin is not the final bridge program"
+    echo "$BRIDGE_SHA256  $PROGRAMS/ferrata_bridge.bin" | sha256sum -c --quiet - || die "$PROGRAMS/ferrata_bridge.bin is not the bridge program since milestone B1 (docs/image-ids.md ferrata_bridge_b1; one built before B1 is the live runs' program)"
   fi
   if command -v r0vm > /dev/null; then
     [ "$(r0vm --elf "$PROGRAMS/ferrata_lez.bin" --id | tail -n 1)" = "$PROGRAM_IMAGE" ] || die "image id of ferrata_lez.bin"

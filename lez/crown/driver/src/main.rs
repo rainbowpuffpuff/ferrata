@@ -112,11 +112,11 @@ impl Args {
     }
 }
 
+/// The two programs; the bridge program only if it is the one this driver speaks (`crown::check_bridge_bin`).
 fn binaries(args: &Args) -> Result<(GuestBinary, GuestBinary)> {
-    Ok((
-        GuestBinary::load(crown::ATTEST, &args.path("program-bin")?)?,
-        GuestBinary::load(crown::BRIDGE, &args.path("bridge-bin")?)?,
-    ))
+    let bridge = GuestBinary::load(crown::BRIDGE, &args.path("bridge-bin")?)?;
+    crown::check_bridge_bin(&bridge)?;
+    Ok((GuestBinary::load(crown::ATTEST, &args.path("program-bin")?)?, bridge))
 }
 
 /// The base chain of the run (`--chain`): Sepolia from the repository fixture's bootstrap, or the
@@ -274,6 +274,7 @@ async fn run(args: Args) -> Result<()> {
     match args.command.as_str() {
         "config-id" => {
             let identity = crown::Identity::load(&args.path("identity")?)?;
+            crown::check_bridge_image(identity.bridge_image_id)?;
             let vault = crown::address(args.get("vault").ok_or_else(|| anyhow!("--vault is required"))?)?;
             println!("{}", serde_json::to_string_pretty(&identity.config_json(vault))?);
             return Ok(());
