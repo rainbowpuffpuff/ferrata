@@ -75,8 +75,10 @@ key_protocol = { path = "../../upstream/lez-v0.4.0-rc1/lee/key_protocol", option
 chain_state = { path = "../../upstream/lez-v0.4.0-rc1/lez/chain_state", optional = true }
 fee_core = { path = "../../upstream/lez-v0.4.0-rc1/lez/programs/fee/core", optional = true }
 testnet_initial_state = { path = "../../upstream/lez-v0.4.0-rc1/lez/testnet_initial_state", optional = true }
-ferrata-advance = { path = "../lez/advance" }
-ferrata-spectests = { path = "../crates/ferrata-spectests" }
+# Only with `lez-wallet` (src/attest.rs): ferrata_relayer_module builds the library without it and stages only the
+# crates it then links (modules/scripts/stage-relayer.sh; scripts/ci/modules-resolve.sh checks it).
+ferrata-advance = { path = "../lez/advance", optional = true }
+ferrata-spectests = { path = "../crates/ferrata-spectests", optional = true }
 
 # Ethereum: keystore, signing, JSON-RPC and ABI.
 alloy = { version = "1", features = ["contract", "provider-http", "rpc-types", "signer-local", "signer-keystore", "network"] }
@@ -105,7 +107,7 @@ url = "2.5"
 # zone's reads and the bridge calls over any `lez::Ledger`, and the relayer daemon with the devnet zone:
 # ferrata_relayer_module builds it so (modules/scripts/stage-relayer.sh).
 default = ["lez-wallet"]
-lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_protocol", "dep:chain_state", "dep:fee_core", "dep:testnet_initial_state"]
+lez-wallet = ["dep:wallet", "dep:common", "dep:sequencer_service_rpc", "dep:key_protocol", "dep:chain_state", "dep:fee_core", "dep:testnet_initial_state", "dep:ferrata-advance", "dep:ferrata-spectests"]
 # The devnet tools of e2e/seqnet (seqnet-fund, seqnet-txs, seqnet-chain): they sign, send and sync with LEZ's
 # wallet library.
 seqnet = ["lez-wallet"]
