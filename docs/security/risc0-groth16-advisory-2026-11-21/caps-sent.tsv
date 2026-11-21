@@ -1,0 +1,13 @@
+# The owner's eight setGlobalCap transactions on Sepolia (chain id 11155111), 21 November 2026, from the vaults' admin, the deployer 0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07.
+# Read back on publicnode and ethpandaops (transactions and receipts only; nothing sent by this check): every one status 1, with one GlobalCapSet(direction, 0, 0) log from its vault. Check one: cast receipt HASH --rpc-url URL
+nonce	vault	call	transaction	block	time_utc	status	gas_used
+49	0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c (crown-live-3)	setGlobalCap(Release, 0, 0)	0x8b2aa9351110da81dde2a9f9981294992590450b2aef9ce3193bca577488ddaa	12184549	2026-11-21 21:52:00	1	52923
+50	0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c (crown-live-3)	setGlobalCap(Deposit, 0, 0)	0x7d891ae6749cf14b617d2d3d3b1a98c5fceb8429edd540d4fcaffa4984006d98	12184550	2026-11-21 21:52:12	1	50034
+51	0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 (crown-live-1)	setGlobalCap(Release, 0, 0)	0x2fce2e1c2e49d5fb4345be873672453bd1fbbcc9dda7f7b8601f0270b449ef76	12184551	2026-11-21 21:52:24	1	52923
+52	0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 (crown-live-1)	setGlobalCap(Deposit, 0, 0)	0x10a5c7baa1e01124a97b9aad1e67eb55fbbe26fd782e8ea938eaecf015ca35dc	12184552	2026-11-21 21:52:36	1	50034
+53	0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (crown-live-4)	setGlobalCap(Release, 0, 0)	0xabc3ec8d3e988d04d96fc19dfc53d9e62002782a8ba6e96c8aaa0b909c31cb3e	12184553	2026-11-21 21:52:48	1	52923
+54	0x80555Fe53CCcEf46951B23A3c75643a4C9283470 (crown-live-4)	setGlobalCap(Deposit, 0, 0)	0x30d6293da10beacfd0e8a355a19b61bdcbf3950ccc996c396af21bfc84fcda4b	12184554	2026-11-21 21:53:00	1	50034
+55	0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7 (v3)	setGlobalCap(Release, 0, 0)	0xddf006bc6aee1e12dd5ce4fa44d98f81d09efbfcb5f301ae749473632518e472	12184555	2026-11-21 21:53:12	1	46839
+56	0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7 (v3)	setGlobalCap(Deposit, 0, 0)	0x66e5e36025fe559ad05896dcebcb12f6b32623c37b7049f9edafaf9da0dc486b	12184573	2026-11-21 21:57:00	1	46820
+# 402530 gas in all; fees 26279278897270 wei, by which the admin's balance fell between blocks 12183432 and 12184587 (reads-ethpandaops.tsv, reads-capped-ethpandaops.tsv).
+# Read back at block 12184587 (block.txt): globalCap(Deposit) and globalCap(Release) 0|0|0 on all four vaults; every other read as at 12183432 but the admin's balance.

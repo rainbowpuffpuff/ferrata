@@ -150,8 +150,9 @@ The runs in full, the four vaults deployed on Sepolia and what each check proves
 
 **Security note, 21 November 2026.** The four Sepolia vaults verify through our own deployment of RISC Zero's Groth16
 verifier 3.0.0, which accepts forged claims (RISC Zero's advisory GHSA-mm6c-35cm-g4x2 of 11 November 2026), with
-no stop anyone can trip today, no freeze key and no cap. At Sepolia block 12,183,432 a forgery could take 0.001
-Sepolia ETH and nothing more; the deployer's admin key can close all four. What is affected, what is not, and the plan:
+no stop anyone can trip today and no freeze key. At Sepolia block 12,183,432 a forgery could take 0.001 Sepolia ETH
+and nothing more. The same day the deployer's admin key closed all four: every release and deposit cap reads zero
+(eight transactions, read back at block 12,184,587). What is affected, what is not, and the plan:
 [docs/security/risc0-groth16-advisory-2026-11-21/](docs/security/risc0-groth16-advisory-2026-11-21/README.md).
 
 ## Components and their status

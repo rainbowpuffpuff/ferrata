@@ -31,16 +31,17 @@ Sepolia block 12,183,432 (18:00:48 UTC), read-only, on two public endpoints with
 | [`0x8055…3470`](https://sepolia.etherscan.io/address/0x80555Fe53CCcEf46951B23A3c75643a4C9283470) (crown-live-4) | `0xB249…EfCA`, the same | the same | none | the same | nothing, the same |
 | [`0xd0B5…8AF7`](https://sepolia.etherscan.io/address/0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7) (v3, end-to-end fixture) | `0xe483…1139`, owner `0xC820…` (no key), not paused | `0xC820…`, none | none | 10^15 (deposit 0) | 0.001 Sepolia ETH, after a forged rule (A) checkpoint: a wait of at least 1,500 s, then a 120 s release delay |
 
-No vault is frozen or retired; the test tokens' balances are 0. **What is at stake today: 0.001 Sepolia ETH, test
-ether of the deployer's own.** Deposits are open on all four, so whatever anyone deposits from now on is exposed: a
-forged release on a v5 vault needs no forged checkpoint, only the burn root it already accepted and a fresh nullifier
-(the v3 vault has accepted none, so there a forged checkpoint comes first).
+No vault is frozen or retired; the test tokens' balances are 0. **What was at stake at that block: 0.001 Sepolia ETH,
+test ether of the deployer's own.** Deposits were open on all four until the owner's caps (Status, below), so whatever
+anyone deposited was exposed: a forged release on a v5 vault needs no forged checkpoint, only the burn root it already
+accepted and a fresh nullifier (the v3 vault has accepted none, so there a forged checkpoint comes first).
 
 **What stops it.** No key-less control does: the freeze authority has no key holder, no stop has an owner with a key,
 and no watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every
 release on all four, and every refund on the three v5 vaults (the v3 vault's `refund` does not draw on the caps, but
 it needs a retired vault, and only the keyless freeze authority can retire the v3 vault, so it never opens refunds),
-and `setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both. Estimated on Sepolia
+and `setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both (sent on 21 November 2026: Status,
+below). Estimated on Sepolia
 (`eth_estimateGas`, nothing sent, [`estimate-publicnode.tsv`](estimate-publicnode.tsv)): 66,941 and 63,396 gas per v5
 vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at the base fee of 16 wei of block
 12,183,475, where the estimates ran. Slower: on the v5 vaults the admin can install a freeze authority and a watcher
@@ -75,8 +76,17 @@ calls: the same releases revert `GlobalReleaseCapExceeded`, a deposit `GlobalDep
 other address `NotAdmin`; the four vaults accept both calls. Through the timelock: a new freeze authority freezes
 releases and checkpoints and retires the vault, until the freeze lapses after 30 days unless renewed.
 
-**Status, 21 November 2026:** the owner has not sent the cap transactions; the caps are unlimited, as read at block
-12,183,432. This line changes when the caps read zero on chain.
+**Status, 21 November 2026: closed.** The owner sent the eight cap transactions from the deployer, release then deposit
+on each vault (nonces 49–56, Sepolia blocks 12,184,549 to 12,184,573, 21:52:00 to 21:57:00 UTC, all status 1, 402,530
+gas in all; listed under Plan and in [`caps-sent.tsv`](caps-sent.tsv)). Read back at block 12,184,587 (21:59:48 UTC,
+the finalized head at the read) on both endpoints, with identical answers
+([`reads-capped-publicnode.tsv`](reads-capped-publicnode.tsv),
+[`reads-capped-ethpandaops.tsv`](reads-capped-ethpandaops.tsv)): `globalCap(Release)` and `globalCap(Deposit)` are
+0, 0, 0 (capacity, refill per second, available) on all four vaults, and every other read is as at block 12,183,432
+but the admin's balance, lower by the eight transactions' fees. No release or deposit goes through on the four vaults,
+nor a refund on the v5 vaults, until the admin raises a cap. Caps do not gate checkpoints: on the fork, after the two
+calls, a forged checkpoint was still submitted and finalised on `0x04eE…e44c` (part B), but nothing could be released
+against it.
 
 **2. Our proofs as evidence.** Our provers made every seal and receipt in this tree from the recorded inputs, but a
 3.0.x verifier accepting one no longer shows anyone else that its claim is true. EVIDENCE row 149 (our seals accepted
@@ -97,9 +107,10 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 
 ## Plan
 
-1. Now, the owner: the two cap calls on each of the four vaults (below). Retire the v5 vaults for good when keyless
-   retirement opens (`retireOpensAt`: 11, 12 and 18 December 2026, if no checkpoint is submitted before), or through a
-   freeze authority after the timelock. They will not be used again.
+1. Done by the owner on 21 November 2026: the two cap calls on each of the four vaults (below; read back in the Status
+   line). Next: retire the v5 vaults for good when keyless retirement opens (`retireOpensAt`: 11, 12 and 18 December
+   2026, if no checkpoint is submitted before), or through a freeze authority after the timelock. They will not be used
+   again.
 2. Done here on 21 November 2026: this note; the README, EVIDENCE row 149, [docs/sepolia.md](../../sepolia.md),
    [verify.md](../../guides/verify.md), the mainnet run's README, [lez-v0.4-findings.md](../../design/lez-v0.4-findings.md),
    [SECURITY.md](../../../SECURITY.md) and [e2e/README.md](../../../e2e/README.md) corrected.
@@ -111,7 +122,7 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 5. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
 
 ```sh
-# The owner runs this with the deployer key (0x79A9…5C07); nothing here has been sent.
+# The owner sent these calls with the deployer key (0x79A9…5C07) on 21 November 2026, in this order: the table below.
 export ETH_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 export ETH_KEYSTORE=/path/to/deployer-keystore      # cast prompts for its password, or add --password-file FILE
 # --chain 11155111: with a wrong ETH_RPC_URL the node refuses the transaction rather than running it on another chain
@@ -126,10 +137,25 @@ for V in 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c 0xfE3199fa2634413CbAC3173710
 done                                                           # expect 0, 0, 0 for each
 ```
 
-Re-check, sending nothing: `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT` and
-`fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`; at block 12,183,432 it compares its transcript with
-[`fork-rehearsal.txt`](fork-rehearsal.txt), where only line 1 and `releasesFrozenUntil` may differ, and exits 1 if
-anything else does). Both need an endpoint that serves historical state
-at that block (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`); publicnode refuses reads at past blocks
-(8 of 205 on a re-run of 21 November 2026), and `reads.sh` then exits 1. `estimate.sh URL OUT` estimates at the
-latest block.
+| Nonce | Vault | Call | Transaction | Block | Time (UTC) | Gas |
+|---|---|---|---|---|---|---|
+| 49 | `0x04eE…e44c` (crown-live-3) | `setGlobalCap(Release, 0, 0)` | `0x8b2aa9351110da81dde2a9f9981294992590450b2aef9ce3193bca577488ddaa` | 12,184,549 | 21:52:00 | 52,923 |
+| 50 | `0x04eE…e44c` | `setGlobalCap(Deposit, 0, 0)` | `0x7d891ae6749cf14b617d2d3d3b1a98c5fceb8429edd540d4fcaffa4984006d98` | 12,184,550 | 21:52:12 | 50,034 |
+| 51 | `0xfE31…9E54` (crown-live-1) | `setGlobalCap(Release, 0, 0)` | `0x2fce2e1c2e49d5fb4345be873672453bd1fbbcc9dda7f7b8601f0270b449ef76` | 12,184,551 | 21:52:24 | 52,923 |
+| 52 | `0xfE31…9E54` | `setGlobalCap(Deposit, 0, 0)` | `0x10a5c7baa1e01124a97b9aad1e67eb55fbbe26fd782e8ea938eaecf015ca35dc` | 12,184,552 | 21:52:36 | 50,034 |
+| 53 | `0x8055…3470` (crown-live-4) | `setGlobalCap(Release, 0, 0)` | `0xabc3ec8d3e988d04d96fc19dfc53d9e62002782a8ba6e96c8aaa0b909c31cb3e` | 12,184,553 | 21:52:48 | 52,923 |
+| 54 | `0x8055…3470` | `setGlobalCap(Deposit, 0, 0)` | `0x30d6293da10beacfd0e8a355a19b61bdcbf3950ccc996c396af21bfc84fcda4b` | 12,184,554 | 21:53:00 | 50,034 |
+| 55 | `0xd0B5…8AF7` (v3) | `setGlobalCap(Release, 0, 0)` | `0xddf006bc6aee1e12dd5ce4fa44d98f81d09efbfcb5f301ae749473632518e472` | 12,184,555 | 21:53:12 | 46,839 |
+| 56 | `0xd0B5…8AF7` | `setGlobalCap(Deposit, 0, 0)` | `0x66e5e36025fe559ad05896dcebcb12f6b32623c37b7049f9edafaf9da0dc486b` | 12,184,573 | 21:57:00 | 46,820 |
+
+On publicnode and on ethpandaops each is status 1 with one `GlobalCapSet(direction, 0, 0)` log from its vault. In all:
+402,530 gas and 26,279,278,897,270 wei (about 0.000026 Sepolia ETH), by which the admin's balance fell between blocks
+12,183,432 and 12,184,587. The read-back: the Status line above.
+
+Re-check, sending nothing: `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT` (at 12,183,432,
+and at 12,184,587 after the caps) and `fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`; at block
+12,183,432 it compares its transcript with [`fork-rehearsal.txt`](fork-rehearsal.txt), where only line 1 and
+`releasesFrozenUntil` may differ, and exits 1 if anything else does). Both need an endpoint that serves historical
+state at that block (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`); publicnode refuses reads at past
+blocks (8 of 205 on a re-run of 21 November 2026), and `reads.sh` then exits 1. `estimate.sh URL OUT` estimates at the
+latest block. Each transaction above: `cast receipt HASH --rpc-url URL`.
