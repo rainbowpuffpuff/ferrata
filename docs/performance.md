@@ -225,13 +225,15 @@ window, measured on a sequencer in [`perf-gate-sequencer.md`](../lez/results/per
 
 ### P.6 Off-chain compute
 
-| Component | Resources measured | Source |
-|---|---|---|
-| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
-| proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
+| Component | CPU | Memory | Time, bandwidth | Source |
+|---|---|---|---|---|
+| **the updater daemon** (`ferrata-updater`, sequencer backend), two honest instances and an adversary following 30 recorded mainnet updates on a LEZ v0.4.0-rc1 zone, polling every 4 s (the adversary every 2 s) | **151 CPU-seconds in 1,849 s: 0.08 of one core** per daemon (the adversary 149) | **57.5 MiB peak**, 37–38 MiB median resident | beacon API 604–666 requests, **9.0–10.4 MB down**; sequencer RPC 0.57–0.60 MB up, 7.4–7.6 MB down (each daemon behind its own counting proxy). Per day at this rate (*derived*): 2.0 CPU-hours, 0.5 GB from the beacon API, 0.4 GB of RPC traffic, most of it the 4-s poll | measured, gate G2 ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)) |
+| the proven path's prover (one private transaction per update) | 16 CPUs for 1,673.6 s (7.4 CPU-hours) per update | 9.21 GiB peak | 49.5 s on one L4 (earlier image) | measured (P.2, [`perf-proofs.md`](../lez/results/perf-proofs.md)) |
+| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested | — | a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 
-**Gap:** the CPU, memory and bandwidth of the updater daemon, and the CPU and bandwidth of `monitor` (both built,
-[EVIDENCE](EVIDENCE.md) rows 43–45, 79–81; of `monitor` only memory is measured: 34,216 kB resident, row 43).
+The updater's resources hardly depend on the work: the adversary, which sent 99 transactions, used as much CPU as the
+honest daemons, which sent 15 and 11; the daemon's cost is its poll (sources, the follower of the chain, the program's
+checks run natively on every candidate). A slower poll divides it accordingly (the live Sepolia run polled every 12 s).
 
 ### P.7 State growth
 
@@ -444,9 +446,13 @@ min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../
 | rule (B) checkpoint of the live run on the final programs (`crown-live-3`: LEZ blocks 25..=90, 2 burns, 18,499,940 user cycles, 20 segments) | one L40S | — | 31.9 s prover wall (119 s with the queue and transfers) | [`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md) |
 | Groth16 wrap of a checkpoint | x86 | 7.3 GiB | 195.1–215.2 s (laptop); recursion 18.7 s on 16 cores + 14 s Groth16 (end-to-end run) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`bridge.md`](design/bridge.md) §18.7 |
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
+| `monitor` (the watchers' daemon), idle and while it checks a candidate, polling every 12 s | 0.53 CPU-seconds in 1,284 s (0.0004 of a core) | **14.0 MiB peak** | JSON-RPC 86 KB up, 254 KB down (about 23 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
+| `ferrata-relayer run` (releases and finalisations), idle and while it finalises a checkpoint | 0.87 CPU-seconds in 1,284 s (0.0007 of a core) | **20.3 MiB peak** | JSON-RPC 408 KB up, 976 KB down (about 93 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
+| the updater, whose records the root imports need | 0.08 of one core at a 4-s poll | 57.5 MiB peak | 9–10 MB from the beacon API in 31 min | RFP-021 P.6 |
 
-**Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
-measured, except `monitor`'s memory, 34,216 kB resident, row 43) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
+Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVault v5 (12-s blocks; ten idle minutes, a
+candidate checked and finalised, ten idle minutes). **Gap:** the importer's LEZ-side work (the relayer's root imports, a
+prototype, EVIDENCE row 106) was not measured as a daemon; one import transaction is P.2's.
 
 ### P.7 State growth at 1M and 10M operations
 
