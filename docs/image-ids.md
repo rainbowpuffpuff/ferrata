@@ -100,3 +100,23 @@ the root after `run-image-ids.sh`, or `cd lez && cargo build -p methods-program-
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
 | attestation program with statement classes (`lez/guests/program-class`): `ferrata_lez_class` | `0x0927560f3e6e6c795ede77041f872458f7802a4a4e1c84450b114fa9147f942c` | `0480cc6d1338ed4d45d5825b94ff9c776a313da342d7bfb9b4e22f6ab5ee478e` | 628,228 | `84f191eb2f447d9202631fac15fc4ae03e5a67311dd8300dc1c74570ab07e74e` |
+
+## The recorded-statement programs and the rebate program; not deployed
+
+`lez/guests/statements` (`ferrata_statements`), `lez/guests/statements-reader` (`ferrata_statements_reader`; RFP-021
+soft requirement 1, [`docs/guides/recorded-statements.md`](guides/recorded-statements.md)) and `lez/guests/rebate`
+(`ferrata_rebate`; soft requirement 5, [`docs/guides/operator-rebate.md`](guides/operator-rebate.md)): new programs
+beside the attestation program, which none of them changes; built by `lez/methods-statements` and `lez/methods-rebate`
+behind the harness features `statements` and `rebate`, and run only in the in-process harness. Built on 21 November
+2026 on the Modal build box from branch `rfp-softs` after the review's fixes (exit codes 62–79, the reader's
+configuration, the pool's terms), through `scripts/guest-rustc` like every guest of this tree; their path independence
+was not shown separately (the two-path build above covers the 14 guests of the first table). The same build gave the
+attestation program `0x816d1fef…03df`, the bridge program `0xccde6171…71dd` and the other LEZ guests of the first
+table unchanged. Rebuild: `cd lez && cargo build -p harness --features statements,rebate --locked --tests`, then
+`python3 -I scripts/reproduce/guest_ids.py . OUT.tsv` from the root.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| recorded statements (`lez/guests/statements`): `ferrata_statements` | `0x86acef86dc73be13b76de63d21d41ac928639f3be7144132f22f14831d5bc663` | `439f6ac628ef691f321545b77b1819136fcef6965b7a4b31b031568f4c63a0fa` | 318,504 | `27220d1b3ca1ff253ef346af26ee3c7516bb2e682259199ed05fbfb8d914fd89` |
+| their reference reader (`lez/guests/statements-reader`): `ferrata_statements_reader` | `0xd2a8b082f1e4326daad8aad58c2a525f76f17001bb362040fec67260d4d3e73d` | `a74b740eb72c18a06d62a8f55c845fa88a171c913604bf3bdb5d9e2c0d39aa18` | 316,572 | `8a804edfc5b9fa054717ca5c69e7552b2dd58b843f29461fccd6fcff00cf1acf` |
+| the operator rebate (`lez/guests/rebate`): `ferrata_rebate` | `0xe8f1c1c1381a08faf284fd33226ae11fcb4b7b7d3c397faa113b76d9c7e6d902` | `9891fe89165220ae46fd5d1ad6f285b750ceb2b65a431b030356bee1b6e5b1bd` | 290,528 | `f800cf60d551e0a24e0161665205b7b94dfa8da0dd840392361eaa06e9560b04` |
