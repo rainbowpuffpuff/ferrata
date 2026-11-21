@@ -26,7 +26,8 @@
 //! instance (`World::add_block`); everything from the rogue configuration's `Init` on is executed.
 //!
 //! Re-run: `RISC0_DEV_MODE=1 cargo test -p harness --locked --test tenant -- --nocapture --test-threads 1` (in `lez/`).
-//! Each test writes its figures to `lez/results/tenant/b1/`.
+//! Each test writes its figures to `lez/results/tenant/` (the records of this branch: `lez/results/b1/tenant/`, with
+//! `FERRATA_LEZ_RESULTS_DIR`; `lez/results/b1/README.md`).
 
 use std::fmt::Write as _;
 
@@ -97,7 +98,7 @@ fn table(reports: &[TxReport]) -> String {
 }
 
 fn save(name: &str, text: &str) {
-    let dir = harness::results_dir().join("tenant").join("b1");
+    let dir = harness::results_dir().join("tenant");
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join(name), text).unwrap();
     println!("{text}");
@@ -255,7 +256,8 @@ fn claim_with_others(k: usize, place: fn(&mut World, &[u8; 32], lee::AccountId, 
     let dest = w.vector_dest;
     let bytes = place(&mut w, &cid_a, dest, k);
     let witness = w.vault_a.witness(&w.vector.clone(), 5);
-    let label = format!("A: Claim to dest, {k} other configurations' holdings for it (each at its own holder(cid, dest))");
+    let label =
+        format!("A: Claim to dest, {k} other configurations' holdings for it (each at its own holder(cid, dest))");
     let report = w.claim(&label, &cid_a, 5, &va, witness);
     if report.ok() {
         assert_eq!(w.balance(dest, &cid_a), DENOMINATIONS[1]);
@@ -287,7 +289,8 @@ fn burn_with_others(k: usize, place: fn(&mut World, &[u8; 32], lee::AccountId, u
     };
     let actors = w.public_burn_actors(payer, &cid_a, &note);
     let own = own_actor(w.program, payer);
-    let label = format!("A: the owner's Burn of 1 ETH, {k} other configurations' holdings for it (each at its own holder)");
+    let label =
+        format!("A: the owner's Burn of 1 ETH, {k} other configurations' holdings for it (each at its own holder)");
     let report = w.send(&label, own, &BridgeMessage::burn(cid_a, &note), actors);
     let left = if report.ok() { DENOMINATIONS[2] - DENOMINATIONS[1] } else { DENOMINATIONS[2] };
     assert_eq!(w.balance(payer, &cid_a), left);
@@ -494,9 +497,8 @@ fn r1_a_copied_plaintext_claim_does_not_block_the_owner() {
     assert_eq!(w.balance(w.chain.payer, &cid_a), DENOMINATIONS[2], "the payer holds its 10 ETH under A");
     assert_eq!(w.balance(w.chain.payer, &cid_b), DENOMINATIONS[2], "and B's copy under B, which no vault pays");
 
-    let mut out = String::from(
-        "# R1: front-run of a plaintext claim (one transaction per block, in submission order)\n\n",
-    );
+    let mut out =
+        String::from("# R1: front-run of a plaintext claim (one transaction per block, in submission order)\n\n");
     let _ = writeln!(out, "bridge program {image}\n");
     out.push_str(&table(&log));
     let _ = writeln!(
@@ -736,8 +738,22 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
                 record: record.clone(),
             },
             4 => BridgeMessage::CancelRoles { config_id: cid },
-            5 => BridgeMessage::Freeze { config_id: cid, token: None, mints: true, burns: true, until_ms: until, record: record.clone() },
-            6 => BridgeMessage::Freeze { config_id: cid, token: Some(ETH), mints: true, burns: true, until_ms: until, record: record.clone() },
+            5 => BridgeMessage::Freeze {
+                config_id: cid,
+                token: None,
+                mints: true,
+                burns: true,
+                until_ms: until,
+                record: record.clone(),
+            },
+            6 => BridgeMessage::Freeze {
+                config_id: cid,
+                token: Some(ETH),
+                mints: true,
+                burns: true,
+                until_ms: until,
+                record: record.clone(),
+            },
             7 => BridgeMessage::Pause { config_id: cid, token: None, mints: true, burns: true, record: record.clone() },
             _ => BridgeMessage::Sunset { config_id: cid },
         }
@@ -755,9 +771,7 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
         (7, "Pause (global)", T_FREEZE_SEED, false),
         (8, "Sunset", T_FREEZE_SEED, true),
     ];
-    let mut matrix = String::from(
-        "| message | sent by | naming A: outcome | naming T: outcome |\n|---|---|---|---|\n",
-    );
+    let mut matrix = String::from("| message | sent by | naming A: outcome | naming T: outcome |\n|---|---|---|---|\n");
     for (which, what, seed, at_t) in rows {
         let who = if seed == T_ADMIN_SEED { "T's admin" } else { "T's freeze authority" };
         let target_a = match &for_cid(cid_a, which) {
@@ -794,7 +808,12 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
         let _ = writeln!(matrix, "| {what} | T's freeze authority | {} | |", verdict(&r));
     }
     // A top-level Sunset at config(A) by anyone: A's vault is not attested retired, A's multisig approved nothing.
-    let r = w.send("anyone: Sunset at config(A) itself", config_at_a, &BridgeMessage::Sunset { config_id: cid_a }, vec![config_at_a]);
+    let r = w.send(
+        "anyone: Sunset at config(A) itself",
+        config_at_a,
+        &BridgeMessage::Sunset { config_id: cid_a },
+        vec![config_at_a],
+    );
     let r = step(&mut log, r, Some(code::NOT_AUTHORIZED));
     let _ = writeln!(matrix, "| Sunset at config(A) itself | anyone | {} | |", verdict(&r));
     // T's records cannot feed A: an import naming A under T's record slot reads A's own instance there (nothing).
@@ -811,7 +830,12 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
         proof: forged.import_proof(&va),
     };
     let header = header_actor(ferrata_account(), &harness::bridge::INSTANCE, forged.slot);
-    let r = w.send("anyone: ImportRoot naming A under T's record slot", config_at_a, &import, vec![config_at_a, header, root_actor(program, &cid_a, 9)]);
+    let r = w.send(
+        "anyone: ImportRoot naming A under T's record slot",
+        config_at_a,
+        &import,
+        vec![config_at_a, header, root_actor(program, &cid_a, 9)],
+    );
     assert!(!r.ok(), "{}: {}", r.label, verdict(&r));
     log.push(r.clone());
     assert!(w.root_state(&cid_a, 9).is_none(), "nothing imported under A");
@@ -858,33 +882,88 @@ fn separation_another_configurations_roles_and_accounts_reach_nothing() {
         holder: *dest.value(),
         amount: DENOMINATIONS[1],
     };
-    let credit = |cid: [u8; 32]| BridgeMessage::Credit { config_id: cid, token: ETH, amount: DENOMINATIONS[1], to: *dest.value() };
-    let extend = |cid: [u8; 32]| BridgeMessage::ExtendFees { config_id: cid, token: ETH, index: 2, schedule: None, count: 9 };
-    let listing = |cid: [u8; 32]| BridgeMessage::SetListing { config_id: cid, token: ETH, delisted: true, record_slot: u64::MAX };
+    let credit = |cid: [u8; 32]| BridgeMessage::Credit {
+        config_id: cid,
+        token: ETH,
+        amount: DENOMINATIONS[1],
+        to: *dest.value(),
+    };
+    let extend =
+        |cid: [u8; 32]| BridgeMessage::ExtendFees { config_id: cid, token: ETH, index: 2, schedule: None, count: 9 };
+    let listing =
+        |cid: [u8; 32]| BridgeMessage::SetListing { config_id: cid, token: ETH, delisted: true, record_slot: u64::MAX };
     let admit = |cid: [u8; 32]| BridgeMessage::Admit { config_id: cid, token: ETH, mints: true, value: 1 };
     let (cfg, tok) = (|cid: &[u8; 32]| config_actor(program, cid), |cid: &[u8; 32]| token_actor(program, cid, &ETH));
     let null = |cid: &[u8; 32]| nullifier_of(program, cid, CHAIN_ID, &va, &n);
     let hold = |cid: &[u8; 32]| holder_of(program, cid, dest);
     let wrong = u32::from(code::WRONG_SENDER);
     let cases: Vec<(&str, lee::Actor, lee::Actor, BridgeMessage, u32)> = vec![
-        ("WriteRoot under A, from config(T), at root(A, 9)", root_actor(program, &cid_a, 9), cfg(&cid_t), BridgeMessage::WriteRoot { root: root_of(cid_a) }, wrong),
-        ("WriteRoot under T, from config(T), at root(A, 9)", root_actor(program, &cid_a, 9), cfg(&cid_t), BridgeMessage::WriteRoot { root: root_of(cid_t) }, wrong),
-        ("WriteRoot under A, from config(A), at root(A, 9) (control)", root_actor(program, &cid_a, 9), cfg(&cid_a), BridgeMessage::WriteRoot { root: root_of(cid_a) }, 0),
-        ("WriteToken under A, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), BridgeMessage::WriteToken { state: token_of(cid_a) }, wrong),
-        ("WriteToken under A, from config(A), at token(A, ETH) (control)", tok(&cid_a), cfg(&cid_a), BridgeMessage::WriteToken { state: token_of(cid_a) }, 0),
+        (
+            "WriteRoot under A, from config(T), at root(A, 9)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_t),
+            BridgeMessage::WriteRoot { root: root_of(cid_a) },
+            wrong,
+        ),
+        (
+            "WriteRoot under T, from config(T), at root(A, 9)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_t),
+            BridgeMessage::WriteRoot { root: root_of(cid_t) },
+            wrong,
+        ),
+        (
+            "WriteRoot under A, from config(A), at root(A, 9) (control)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_a),
+            BridgeMessage::WriteRoot { root: root_of(cid_a) },
+            0,
+        ),
+        (
+            "WriteToken under A, from config(T), at token(A, ETH)",
+            tok(&cid_a),
+            cfg(&cid_t),
+            BridgeMessage::WriteToken { state: token_of(cid_a) },
+            wrong,
+        ),
+        (
+            "WriteToken under A, from config(A), at token(A, ETH) (control)",
+            tok(&cid_a),
+            cfg(&cid_a),
+            BridgeMessage::WriteToken { state: token_of(cid_a) },
+            0,
+        ),
         ("ExtendFees under A, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), extend(cid_a), wrong),
         ("ExtendFees under T, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), extend(cid_t), wrong),
         ("SetListing under A, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), listing(cid_a), wrong),
         ("SetListing under T, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), listing(cid_t), wrong),
-        ("SetListing under A, from config(A), at token(A, ETH) (control: no token state)", tok(&cid_a), cfg(&cid_a), listing(cid_a), u32::from(code::NOT_REGISTERED)),
+        (
+            "SetListing under A, from config(A), at token(A, ETH) (control: no token state)",
+            tok(&cid_a),
+            cfg(&cid_a),
+            listing(cid_a),
+            u32::from(code::NOT_REGISTERED),
+        ),
         ("Admit under A, from token(T, ETH), at config(A)", cfg(&cid_a), tok(&cid_t), admit(cid_a), wrong),
         ("Admit under T, from token(T, ETH), at config(A)", cfg(&cid_a), tok(&cid_t), admit(cid_t), wrong),
-        ("Admit under A, from token(A, ETH), at config(A) (control: no configuration state)", cfg(&cid_a), tok(&cid_a), admit(cid_a), u32::from(code::NOT_FOUND)),
+        (
+            "Admit under A, from token(A, ETH), at config(A) (control: no configuration state)",
+            cfg(&cid_a),
+            tok(&cid_a),
+            admit(cid_a),
+            u32::from(code::NOT_FOUND),
+        ),
         ("Spend under A, from token(T, ETH), at nullifier(A, ...)", null(&cid_a), tok(&cid_t), spend(cid_a), wrong),
         ("Spend under T, from token(T, ETH), at nullifier(A, ...)", null(&cid_a), tok(&cid_t), spend(cid_t), wrong),
         ("Mint under A, from nullifier(T, ...), at holder(A, dest)", hold(&cid_a), null(&cid_t), mint(cid_a), wrong),
         ("Mint under T, from nullifier(T, ...), at holder(A, dest)", hold(&cid_a), null(&cid_t), mint(cid_t), wrong),
-        ("Mint under A, from nullifier(A, ...), at holder(A, dest) (control)", hold(&cid_a), null(&cid_a), mint(cid_a), 0),
+        (
+            "Mint under A, from nullifier(A, ...), at holder(A, dest) (control)",
+            hold(&cid_a),
+            null(&cid_a),
+            mint(cid_a),
+            0,
+        ),
         ("Credit under A, from token(T, ETH), at holder(A, dest)", hold(&cid_a), tok(&cid_t), credit(cid_a), wrong),
         ("Credit under T, from token(T, ETH), at holder(A, dest)", hold(&cid_a), tok(&cid_t), credit(cid_t), wrong),
     ];

@@ -1,0 +1,79 @@
+# Separation of configurations (LEZ v0.4.0-rc1 state machine, bridge program ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e)
+
+configId(A) d25e5f070e01458580d7c14bd5b382c5d2df185f60e9b7f86f6576e29871463b (vault A's own; roles: the world's admin and freeze authority)
+configId(T) 305591dc5c09ff31fed096130cd9f5a19e5642804adcef93984eab8411bea884 (vault A, an instance its creator controls; roles: accounts of seeds 0x41 and 0x42)
+
+## T's roles
+
+| message | sent by | naming A: outcome | naming T: outcome |
+|---|---|---|---|
+| SetCap (global mints) | T's admin | refused, exit 253 (NOT_AUTHORIZED) | applied |
+| SetCap (ETH burns) | T's admin | refused, exit 253 (NOT_AUTHORIZED) | applied |
+| SetDepth 216,000 | T's admin | refused, exit 253 (NOT_AUTHORIZED) | applied |
+| ProposeRoles | T's admin | refused, exit 253 (NOT_AUTHORIZED) | (not sent: it reads a record, and T's are its own instance's) |
+| CancelRoles | T's admin | refused, exit 253 (NOT_AUTHORIZED) | (not sent: it reads a record, and T's are its own instance's) |
+| Freeze (global) | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | (not sent: it reads a record, and T's are its own instance's) |
+| Freeze (ETH) | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | (not sent: it reads a record, and T's are its own instance's) |
+| Pause (global) | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | (not sent: it reads a record, and T's are its own instance's) |
+| Sunset | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | applied |
+| Cosigned Sunset naming A | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | |
+| Cosigned Freeze (global) naming A | T's freeze authority | refused, exit 253 (NOT_AUTHORIZED) | |
+| Sunset at config(A) itself | anyone | refused, exit 253 (NOT_AUTHORIZED) | |
+| ImportRoot naming A under T's record slot | anyone | failed, no exit code: Program violated execution rules | |
+
+A's configuration and ETH token state after every attempt: identical to before.
+
+## Internal messages
+
+| delivered (the program's executor) | exit code |
+|---|---:|
+| WriteRoot under A, from config(T), at root(A, 9) | 243 |
+| WriteRoot under T, from config(T), at root(A, 9) | 243 |
+| WriteRoot under A, from config(A), at root(A, 9) (control) | 0 |
+| WriteToken under A, from config(T), at token(A, ETH) | 243 |
+| WriteToken under A, from config(A), at token(A, ETH) (control) | 0 |
+| ExtendFees under A, from config(T), at token(A, ETH) | 243 |
+| ExtendFees under T, from config(T), at token(A, ETH) | 243 |
+| SetListing under A, from config(T), at token(A, ETH) | 243 |
+| SetListing under T, from config(T), at token(A, ETH) | 243 |
+| SetListing under A, from config(A), at token(A, ETH) (control: no token state) | 251 |
+| Admit under A, from token(T, ETH), at config(A) | 243 |
+| Admit under T, from token(T, ETH), at config(A) | 243 |
+| Admit under A, from token(A, ETH), at config(A) (control: no configuration state) | 245 |
+| Spend under A, from token(T, ETH), at nullifier(A, ...) | 243 |
+| Spend under T, from token(T, ETH), at nullifier(A, ...) | 243 |
+| Mint under A, from nullifier(T, ...), at holder(A, dest) | 243 |
+| Mint under T, from nullifier(T, ...), at holder(A, dest) | 243 |
+| Mint under A, from nullifier(A, ...), at holder(A, dest) (control) | 0 |
+| Credit under A, from token(T, ETH), at holder(A, dest) | 243 |
+| Credit under T, from token(T, ETH), at holder(A, dest) | 243 |
+
+## Every transaction
+
+| transaction | outcome | gas_exec | gas_stor | fee_base |
+|---|---|---:|---:|---:|
+| A: Init (the vault's slot 2 = configId(A)) | applied | 171418 | 1946 | 1386912 |
+| A: Register ETH | applied | 333303 | 2747 | 2688400 |
+| A: ImportRoot n = 8 | applied | 237140 | 2025 | 1913320 |
+| A: ImportFees ETH schedule 1 | applied | 271623 | 2206 | 2190632 |
+| A: ImportFees ETH, no schedule 2 | applied | 252393 | 1945 | 2034704 |
+| T: Init (its creator's record: slot 2 = configId(T)) | applied | 170637 | 1914 | 1380408 |
+| T: Register ETH | applied | 330163 | 2619 | 2662256 |
+| T: ImportRoot n = 8 | applied | 230069 | 1831 | 1855200 |
+| T's admin: SetCap (global mints) naming A | refused, exit 253 (NOT_AUTHORIZED) | 39052 | 705 | 318056 |
+| T's admin: SetCap (global mints) naming T | applied | 46746 | 705 | 379608 |
+| T's admin: SetCap (ETH burns) naming A | refused, exit 253 (NOT_AUTHORIZED) | 44463 | 789 | 362016 |
+| T's admin: SetCap (ETH burns) naming T | applied | 87935 | 789 | 709792 |
+| T's admin: SetDepth 216,000 naming A | refused, exit 253 (NOT_AUTHORIZED) | 38002 | 679 | 309448 |
+| T's admin: SetDepth 216,000 naming T | applied | 44973 | 679 | 365216 |
+| T's admin: ProposeRoles naming A | refused, exit 253 (NOT_AUTHORIZED) | 41187 | 817 | 336032 |
+| T's admin: CancelRoles naming A | refused, exit 253 (NOT_AUTHORIZED) | 37731 | 671 | 307216 |
+| T's freeze authority: Freeze (global) naming A | refused, exit 253 (NOT_AUTHORIZED) | 38818 | 755 | 316584 |
+| T's freeze authority: Freeze (ETH) naming A | refused, exit 253 (NOT_AUTHORIZED) | 44359 | 839 | 361584 |
+| T's freeze authority: Pause (global) naming A | refused, exit 253 (NOT_AUTHORIZED) | 38646 | 747 | 315144 |
+| T's freeze authority: Sunset naming A | refused, exit 253 (NOT_AUTHORIZED) | 37735 | 671 | 307248 |
+| T's freeze authority: Sunset naming T | applied | 44695 | 671 | 362928 |
+| T's freeze authority: Cosigned Sunset naming A | refused, exit 253 (NOT_AUTHORIZED) | 40681 | 708 | 331112 |
+| T's freeze authority: Cosigned Freeze (global) naming A | refused, exit 253 (NOT_AUTHORIZED) | 41382 | 792 | 337392 |
+| anyone: Sunset at config(A) itself | refused, exit 253 (NOT_AUTHORIZED) | 23045 | 431 | 187808 |
+| anyone: ImportRoot naming A under T's record slot | failed, no exit code: Program violated execution rules | 10000000 | 1831 | 80014648 |

@@ -12,15 +12,14 @@
 //! `ReleaseDelay.t.sol`.)
 //!
 //! Re-run (in `lez/`): `RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_depth -- --nocapture`. Writes
-//! `lez/results/bridge-depth.md`.
+//! `lez/results/bridge-depth.md` (the records of this branch: `lez/results/b1/`, with
+//! `FERRATA_LEZ_RESULTS_DIR`; `lez/results/b1/README.md`).
 
 use std::{fs, path::PathBuf};
 
 use ferrata_lez_bridge_wire::{code, config_actor, BridgeMessage, ConfigState, MAX_INBOUND_DEPTH_SLOTS};
 use harness::{
-    bridge::{
-        eth_entry, eth_schedule_one, render, World, ADMIN_SEED, DENOMINATIONS, ETH, FREEZE_SEED, OUTSIDER_SEED,
-    },
+    bridge::{eth_entry, eth_schedule_one, render, World, ADMIN_SEED, DENOMINATIONS, ETH, FREEZE_SEED, OUTSIDER_SEED},
     render_transitions, TxReport,
 };
 
@@ -63,12 +62,23 @@ fn the_admin_sets_the_inbound_depth_and_no_valid_claim_is_lost() {
     assert_eq!(depth(&w, &cid_a), (0, 0), "Init: depth 0 (Ethereum finality); no record read yet");
 
     // Depth 0: an import under any finalized record, with no record read by the clock.
-    let r = w.import("ImportRoot root(A, 5) under block 100 (slot 9,000,000), depth 0", &cid_a, 0, w.vault_a.root(5), 5, &va);
+    let r = w.import(
+        "ImportRoot root(A, 5) under block 100 (slot 9,000,000), depth 0",
+        &cid_a,
+        0,
+        w.vault_a.root(5),
+        5,
+        &va,
+    );
     run(&mut reports, r, None);
 
     // Only the admin sets the depth, within its bound.
     let set = |slots: u64| BridgeMessage::SetDepth { config_id: cid_a, slots };
-    run(&mut reports, w.role("SetDepth 65 by the freeze authority", FREEZE_SEED, &set(65), at), Some(code::NOT_AUTHORIZED));
+    run(
+        &mut reports,
+        w.role("SetDepth 65 by the freeze authority", FREEZE_SEED, &set(65), at),
+        Some(code::NOT_AUTHORIZED),
+    );
     run(&mut reports, w.role("SetDepth 65 by an outsider", OUTSIDER_SEED, &set(65), at), Some(code::NOT_AUTHORIZED));
     let r = w.role("SetDepth 216,001 by the admin", ADMIN_SEED, &set(MAX_INBOUND_DEPTH_SLOTS + 1), at);
     run(&mut reports, r, Some(code::BAD_MESSAGE));

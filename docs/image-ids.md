@@ -1,5 +1,13 @@
 # Image ids of the guests at `integration7`
 
+> **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
+> program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below
+> (`0xac1fb59b…442e`), not the `0xccde6171…71dd` of the first table. The first table's bridge row stays as the record
+> of the program the live runs of November 2026 deployed (`crown-live-3`, the LEZ sequencers we ran), which those
+> deployments keep: its source is at commit `f13faee2`. `scripts/reproduce-image-ids.sh compare` on this tree reports
+> that row as changed until the table is moved to B1's program.
+
+
 Every guest program of this tree, built on 12 November 2026 from commit 9b9bbd4 (`scripts/reproduce-image-ids.sh build`,
 on the Modal build box: RISC Zero 3.0.5, guest Rust 1.88.0 for `checkpoint/` and `bridge/`, 1.91.1 for `lez/`). Guest
 builds are **independent of the build path**: [`scripts/guest-rustc`](../scripts/guest-rustc) (cargo's
@@ -55,31 +63,23 @@ from the root lists these two with the others.
 | checkpoint, rule (A), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint`): `checkpoint_0_3_5` | `0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f` | `4e872fb563f99e176594889d382626144c4958e0a2cca5408178ff5a27569a0e` | 446,600 | `9f86858ee059cd28230b32c31d3f6f6b33ae46d7ce88976c34e38f6d89048f26` |
 | checkpoint, rule (B), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint-b`): `checkpoint_b_0_3_5` | `0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf` | `66ac3a9c20794dc36d35a2d21fedf18e78c79c442f82ac70a3e2d59cd5d8ec77` | 448,128 | `3fb2b8da3d82e9b454c7d4d73a56b61e68664e78e93401cded9b13189e131ff0` |
 
-## The bridge program's second build: nullifier and holder accounts keyed by the configuration, F1 refused; not deployed
+## The bridge program since milestone B1: every account keyed by the configuration
 
-`lez/guests/bridge-next/` (a workspace of its own; its lockfile is `lez/guests/bridge/`'s with only the package's name
-changed), built by `lez/methods-bridge-next`: the bridge program above with `nullifier(cid, chain, vault, N)` and
-`holder(cid, account)` in place of `nullifier(chain, vault, N)` and `holder(account)` (bridge-wire's cargo feature
-`config-keyed`, off by default, which the deployed program does not compile: `lez/bridge-wire/src/config_keyed.rs`,
-declared at the end of `lib.rs`, so no line of the deployed program's sources moved). It fixes the two known issues
-of [`docs/design/bridge.md`](design/bridge.md) §3 ([`lez/results/bridge-next.md`](../lez/results/bridge-next.md),
-[EVIDENCE](EVIDENCE.md) row 143), and, since the evening of 18 November, the red team's finding F1: its `Init` refuses
-a configuration whose freeze authority is its admin (240, the code `ProposeRoles` gives;
-`config_keyed::check_init_roles`, also behind `config-keyed`). **Not deployed: no vault pins it**; milestone B1 would
-deploy it with a new vault, whose `configId` commits to this image id. Built on 18 November 2026 on the Modal build box
-`ferrata-wt-bridge-next2` from this tree (RISC Zero 3.0.5, guest Rust 1.91.1, through `scripts/guest-rustc`), in the
-same fresh target directories in which `scripts/reproduce-image-ids.sh build` had rebuilt every guest of the first
-table (14), and after `compare --vault 0x04eE…e44c` had compared them: 14 of 14 and 6 of 6, the vault's
-`checkpointImageId` and `releaseImageId` equal to the rebuilt ids; then 15 of 15 with this one
-([`lez/results/bridge-next/f1/reproduce/`](../lez/results/bridge-next/f1/reproduce/compare.log); no target directory
-existed when the build started: [`lez/results/bridge-next.md`](../lez/results/bridge-next.md), "F1"). Its first build,
-without the F1 check, was `0x7c7d2b3a…1e2f` ([`lez/results/bridge-next/reproduce/`](../lez/results/bridge-next/reproduce/compare15.log)). Rebuild: `cd lez && cargo build -p methods-bridge-next --locked` (with `RISC0_HOME` the
-LEZ RISC Zero home, as for `methods`), then `python3 -I scripts/reproduce/guest_ids.py . OUT.tsv` from the root lists it
-with the others.
+`lez/guests/bridge` since B1: the second build of 18 November (`0xc5cad2cd…d6da`: `nullifier(cid, chain, vault, N)`
+and `holder(cid, account)`, `Init` refusing a freeze authority that is the admin), now the program itself, with the
+inbound finality depth set by the admin (`SetDepth`, RFP-022 F.12) and the LEZ mirror of the vault's delisting
+(`AttestListing`, F.10) added; `lez/guests/bridge-next` and `lez/methods-bridge-next` are gone (their source is at
+`f13faee2`). [`docs/design/bridge.md`](design/bridge.md) §3, "Known issues, 18 November 2026", describes what it fixes;
+the regression tests are `lez/harness/tests/tenant.rs`. **Not deployed: no vault pins it.** A deployment of B1 deploys
+it with a new vault, whose `configId` commits to this image id; the vaults and LEZ programs deployed before keep the
+first table's program (their configuration ids commit to it), with its known issues. Built on 21 November 2026 on the
+Modal build box from this tree (`cd lez && cargo test -p harness --no-run --locked`: RISC Zero 3.0.5, guest Rust 1.91.1,
+through `scripts/guest-rustc`, in a target directory that did not exist before), where the attestation program of the
+first table rebuilt to its recorded id `0x816d1fef…03df`; `r0vm --elf ferrata_bridge.bin --id` gives the same id.
 
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
-| bridge program, second build (`lez/guests/bridge-next`): `ferrata_bridge_next` | `0xc5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da` | `222bfcdb82509ac969801f2a347a46988eb56b389ef33eade3ae8ae9997ff11d` | 593,384 | `2ccf2060ad2721b818b432fd3292ac97a174e9404b204682b21e8ca62d3fe854` |
+| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge` | `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e` | `5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8` | 607,608 | `e240c82e5c4c39e2b5dcb00ea98f09baabf5b387051523f76650b503a8b5d6ee` |
 
 ## The attestation program with statement classes; not deployed
 

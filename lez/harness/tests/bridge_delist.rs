@@ -10,7 +10,8 @@
 //! token go on after it (R.4: a valid claim stays valid), and an older record cannot undo a delisting or a relisting.
 //!
 //! Re-run (in `lez/`): `RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_delist -- --nocapture`. Writes
-//! `lez/results/bridge-delist.md`.
+//! `lez/results/bridge-delist.md` (the records of this branch: `lez/results/b1/`, with
+//! `FERRATA_LEZ_RESULTS_DIR`; `lez/results/b1/README.md`).
 
 use std::{fs, path::PathBuf};
 
@@ -42,13 +43,7 @@ fn vault_a_block(w: &mut World, word: Option<u64>) -> usize {
     let number = 1_100 + w.blocks.len() as u64;
     let seconds = w.newest_record_seconds() + 12;
     let extra = word.map(|v| vec![(listing_slot(&ETH), word_of(v))]).unwrap_or_default();
-    let slots = VaultSlots {
-        address: w.vault_a.address,
-        root: w.vault_a.root(8),
-        count: 8,
-        config_id: w.cid_a,
-        extra,
-    };
+    let slots = VaultSlots { address: w.vault_a.address, root: w.vault_a.root(8), count: 8, config_id: w.cid_a, extra };
     w.add_block(Block::new(slot, number, &[slots]).at(seconds))
 }
 
@@ -70,12 +65,20 @@ fn delisting_is_mirrored_on_lez_and_takes_no_claim_or_holding() {
 
     // The payer's deposit (leaf 6, 10 ETH) is claimed before the delisting.
     let witness = w.vault_a.witness(&w.payer_deposit.clone(), 8);
-    run(&mut reports, w.claim("Claim of leaf 6 (10 ETH to the payer), before the delisting", &cid_a, 8, &va, witness), None);
+    run(
+        &mut reports,
+        w.claim("Claim of leaf 6 (10 ETH to the payer), before the delisting", &cid_a, 8, &va, witness),
+        None,
+    );
 
     // The vault delists ETH: the listing slot holds 1.
     let delisted = vault_a_block(&mut w, Some(1));
     let slot = w.blocks[delisted].slot;
-    run(&mut reports, w.attest_listing("AttestListing ETH: the vault's slot holds 1", &cid_a, ETH, delisted, &va), None);
+    run(
+        &mut reports,
+        w.attest_listing("AttestListing ETH: the vault's slot holds 1", &cid_a, ETH, delisted, &va),
+        None,
+    );
     assert_eq!((token(&w).delisted, token(&w).listing_slot), (true, slot), "delisted, from that record");
     // Neither an older record (block 101: the slot never written) nor the same one again undoes it.
     let r = w.attest_listing("AttestListing ETH under block 101 (older, slot unwritten)", &cid_a, ETH, 1, &va);
@@ -99,7 +102,8 @@ fn delisting_is_mirrored_on_lez_and_takes_no_claim_or_holding() {
     };
     let actors = w.public_burn_actors(payer, &cid_a, &note);
     let own = own_actor(program, payer);
-    let burn = w.send("Burn of 1 ETH by the payer, after the delisting", own, &BridgeMessage::burn(cid_a, &note), actors);
+    let burn =
+        w.send("Burn of 1 ETH by the payer, after the delisting", own, &BridgeMessage::burn(cid_a, &note), actors);
     run(&mut reports, burn, None);
     let dest = w.vector_dest;
     let r = w.transfer("Transfer of 1 ETH from the payer, after the delisting", &cid_a, ETH, DENOMINATIONS[1], dest);
@@ -109,12 +113,20 @@ fn delisting_is_mirrored_on_lez_and_takes_no_claim_or_holding() {
 
     // A listing word other than 0 or 1 is not the vault's.
     let odd = vault_a_block(&mut w, Some(2));
-    run(&mut reports, w.attest_listing("AttestListing ETH: the slot holds 2", &cid_a, ETH, odd, &va), Some(code::IMPORT_MISMATCH));
+    run(
+        &mut reports,
+        w.attest_listing("AttestListing ETH: the slot holds 2", &cid_a, ETH, odd, &va),
+        Some(code::IMPORT_MISMATCH),
+    );
 
     // The vault relists ETH (the slot back to 0): attested from a newer record.
     let relisted = vault_a_block(&mut w, None);
     let slot = w.blocks[relisted].slot;
-    run(&mut reports, w.attest_listing("AttestListing ETH: relisted (the slot holds 0)", &cid_a, ETH, relisted, &va), None);
+    run(
+        &mut reports,
+        w.attest_listing("AttestListing ETH: relisted (the slot holds 0)", &cid_a, ETH, relisted, &va),
+        None,
+    );
     assert_eq!((token(&w).delisted, token(&w).listing_slot), (false, slot));
     // The delisting's record, now older, cannot bring it back.
     let r = w.attest_listing("AttestListing ETH under the delisting's record (now older)", &cid_a, ETH, delisted, &va);

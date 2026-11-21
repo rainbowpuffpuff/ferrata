@@ -25,7 +25,9 @@
 # Inputs (beside the repository, spike/tmp/miniapp-sequencer/inputs/, put on the box with mrun --put): the crown-live-3
 # LEZ bundle (bundle-crown-live-3.tar.zst, sha256 0013bab1...: sequencer_service, the node, r0vm, the final programs
 # ferrata_lez.bin 0x816d1fef... and ferrata_bridge.bin 0xccde6171...) and the final R0BF programs (r0bf/checkpoint_b.bin
-# 0xf8116722..., r0bf/release.bin 0xb64900bc...), docs/image-ids.md.
+# 0xf8116722..., r0bf/release.bin 0xb64900bc...), docs/image-ids.md. Since milestone B1 the bundle's ferrata_bridge.bin
+# must be the program of lez/guests/bridge (0xac1fb59b..., sha256 5f47b065..., docs/image-ids.md), which drive.sh checks:
+# the CLI of this tree keys its accounts by the configuration and no longer talks to the 0xccde6171... program.
 #
 # Environment: SEQNET_PROOFS=dev (default: the sequencer accepts RISC Zero dev-mode receipts and LEZ's wallet makes
 # fake ones) or real (the sequencer verifies, LEZ's wallet proves every private transaction on this machine's CPU).

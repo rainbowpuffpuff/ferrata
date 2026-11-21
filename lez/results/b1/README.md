@@ -1,0 +1,56 @@
+# Records of the bridge program since milestone B1
+
+The bridge program of `lez/guests/bridge` since milestone B1 (image
+`0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`, [`docs/image-ids.md`](../../../docs/image-ids.md)):
+every account keyed by the configuration (`nullifier(cid, chain, vault, N)`, `holder(cid, account)`), `Init` refusing a
+freeze authority that is the admin, the admin's inbound finality depth (`SetDepth`, RFP-022 F.12) and the LEZ mirror
+of the vault's delisting (`AttestListing`, F.10). Not deployed anywhere: no vault pins it.
+
+The files beside this folder (`lez/results/bridge-*.md`, `lez/results/tenant/`, `lez/results/redteam-2026-11-18/`)
+are the records of the program the live runs of November 2026 deployed (`0xccde6171…71dd`, source at commit
+`f13faee2`), which the evidence index cites; they are kept as they were. This folder holds the same suites run
+against the program since B1, and the suites B1 added:
+
+| File | Suite (`lez/harness/tests/`) | RFP-022 |
+|---|---|---|
+| `bridge-depth.md` | `bridge_depth.rs` | F.12 (the inbound depth) |
+| `bridge-delist.md` | `bridge_delist.rs` | F.10, R.4 (delisting on LEZ) |
+| `bridge-refusals.md` | `bridge_refusals.rs` | Priv.5 (refused, repeated and capped claims) |
+| `tenant/` | `tenant.rs` | F.16 (the malicious-tenant attacks and the separation matrix) |
+| `redteam-2026-11-18/` | `redteam_bridge.rs` | the blind red team's bridge vectors, re-run |
+| `privacy/` | `privacy_suite.rs` with `scripts/privacy/run.sh` | the privacy suite (F.2, F.8, Privacy #1–#7) |
+| `bridge-burn.md`, `bridge-controls.md`, `bridge-gloas.md`, `bridge-inbound.md`, `bridge-private-claim.md`, `bridge-roles.md`, `bridge-time.md`, `bridge-transfer-private.md`, `bridge-vault-storage.md` | the suites of the same names | as their records beside this folder |
+
+Where: LEZ v0.4.0-rc1's own state machine and a copy of its fee settlement (the in-process harness), every transaction
+in a block of its own, RISC Zero dev mode; the build box. Re-run (in `lez/`, with `RISC0_HOME` the LEZ RISC Zero home):
+
+```sh
+FERRATA_LEZ_RESULTS_DIR="$PWD/results/b1" RISC0_DEV_MODE=1 cargo test -p harness --locked \
+  --test tenant --test bridge_depth --test bridge_delist --test bridge_refusals --test bridge_inbound \
+  --test bridge_controls --test bridge_burn --test bridge_private --test bridge_roles --test bridge_secfix \
+  --test bridge_time --test bridge_vault_storage --test redteam_bridge
+scripts/privacy/run.sh lez/results/b1/privacy        # from the repository root
+```
+
+Without `FERRATA_LEZ_RESULTS_DIR` the suites write beside this folder, over the records of the deployed program.
+
+## What changed against the deployed program's records
+
+Every suite's figures moved by a few hundred cycles at most (the program's own code moved); every outcome is the same,
+except where B1 changed the behaviour on purpose:
+
+- **The red team's bridge vectors** (118; `redteam-2026-11-18/`, against `lez/results/redteam-2026-11-18/`): 113 PASS,
+  3 MISMATCH, 2 HARNESS-ERROR on both programs, with two verdicts swapped. BR-INIT-05 is now PASS: `Init` refuses a
+  freeze authority that is the admin (240; the red team's F1). BR-TEN-04 is now MISMATCH, by design: the vector expects
+  a deposit that a second configuration of the same vault claimed first to be refused (250) under the paired
+  configuration, that is one nullifier namespace per vault. B1 removes exactly that: each configuration spends its own
+  `nullifier(cid, chain, vault, N)`, so a second configuration can no longer block the paired one's claim (R1, F.16's
+  "as if each were a fully separate deployment"); what the second configuration mints is its own token, which no vault
+  releases (a release binds the vault's `lezConfigId`). Unchanged: BR-CLM-29 (the vector expects no state change at
+  `config(A)`, where the claim's value is admitted to the global bucket), BR-PRV-01 (a private claim's `Issue` names
+  its fee schedule range, `from_leaf` 6 to 8 in this world, which holds the leaf index's value; the client counts the
+  range in the claim's anonymity set, `cli/wallet/src/claim.rs`), BR-TEN-01/02 (HARNESS-ERROR: their setup's `Register`
+  of a configuration of vault `0xe5…e5` exits 101 in its `Attest` step, as before; `tenant.rs`'s separation matrix
+  sends both vectors' messages, another configuration's `SetCap` and `Freeze` naming A, and both are refused, 253).
+- **`tenant/`**: every attack of `lez/results/tenant.md` fails (`r1.txt`, `r1-frontrun.txt`, `r2.txt`), and
+  `separation.txt` holds the separation matrix (new).

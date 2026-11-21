@@ -1,0 +1,512 @@
+{
+  "counts": {
+    "PASS": 27
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "ctl",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "record: block 102 [Freeze ETH (A) mints by the admin]",
+        "outcome": "refused"
+      },
+      "title": "Freeze by an account that is not the freeze authority",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "t = block 102's time, the record the freeze names [Freeze ETH (A) mints until t + 30 d + 1 ms]",
+        "outcome": "refused"
+      },
+      "title": "freeze longer than 30 days",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "gate at block 102's time [Freeze ETH (A) mints until the gate's time - 1]",
+        "outcome": "refused"
+      },
+      "title": "freeze ending in the past",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "capacity floor - 1 [SetCap ETH (A) mints below the floor]",
+        "outcome": "refused"
+      },
+      "title": "cap below the immutable floor",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": " [SetCap ETH (A) by the freeze authority]",
+        "outcome": "refused"
+      },
+      "title": "SetCap by the freeze authority",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": "pause: applied true exit None; mints_until after it Some(1702935224000) (freeze end 1702935224000) [the base claim 13 h after the pause]",
+        "outcome": "refused"
+      },
+      "title": "a watcher's pause cannot shorten a longer freeze",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "no watchers set [Pause ETH (A) mints by a signer with no role]",
+        "outcome": "refused"
+      },
+      "title": "Pause by an account that is not a watcher",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": " [ProposeRoles by the freeze authority]",
+        "outcome": "refused"
+      },
+      "title": "role proposal by a non-admin",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": " [ApplyRoles with a record 13 days later]",
+        "outcome": "refused"
+      },
+      "title": "role proposal applied before 14 days",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_FOUND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 245,
+        "code_name": "bridge:NOT_FOUND",
+        "note": " [ApplyRoles, nothing proposed]",
+        "outcome": "refused"
+      },
+      "title": "ApplyRoles with no proposal",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": " [ProposeRoles with 4 watchers]",
+        "outcome": "refused"
+      },
+      "title": "four watchers",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": " [ProposeRoles with threshold 0]",
+        "outcome": "refused"
+      },
+      "title": "freeze authority threshold of zero",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": " [ProposeRoles with the admin as a member]",
+        "outcome": "refused"
+      },
+      "title": "admin named as a freeze-authority member",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-14",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "signed by the payer and m1 [Cosigned freeze, signers [m1]]",
+        "outcome": "refused"
+      },
+      "title": "multisig freeze with fewer signers than the threshold",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-15",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "signed by the payer and m1 [Cosigned freeze, signers [m1, m1]]",
+        "outcome": "refused"
+      },
+      "title": "multisig freeze with a repeated signer",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-16",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "vault not attested retired, no approval [Sunset sent to config(A) by the payer]",
+        "outcome": "refused"
+      },
+      "title": "keyless Sunset before the vault is attested retired",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-17",
+      "kind": "adversarial",
+      "observed": {
+        "code": 247,
+        "code_name": "bridge:IMPORT_MISMATCH",
+        "note": "slot 37 = 0x..fafa (freeze authority), byte 11 = 0 [AttestRetired A: slot 37, retired byte 0]",
+        "outcome": "refused"
+      },
+      "title": "AttestRetired of a vault that is not retired",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_WRITTEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-18",
+      "kind": "adversarial",
+      "observed": {
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": " [Sunset A again]",
+        "outcome": "refused"
+      },
+      "title": "Sunset twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CTL-19",
+      "kind": "control",
+      "observed": {
+        "note": " [the base claim after Sunset]",
+        "outcome": "accepted"
+      },
+      "title": "Sunset by the freeze authority stops imports, not claims",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CTL-20",
+      "kind": "control",
+      "observed": {
+        "note": "t1 = 1699997600000, t2 = 1699997624000 [Tick A with block 100's (older) record]",
+        "outcome": "accepted"
+      },
+      "title": "the clock never moves back",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "lez:validity-window"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-21",
+      "kind": "adversarial",
+      "observed": {
+        "lez_revert": "Execution outside of the validity window",
+        "note": " [Tick A with a record an hour ahead of the block]",
+        "outcome": "refused"
+      },
+      "title": "Tick in a block stamped before the record's time",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_FOUND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-22",
+      "kind": "adversarial",
+      "observed": {
+        "code": 245,
+        "code_name": "bridge:NOT_FOUND",
+        "note": "admission evidence for the empty header(instance, 1) supplied [Tick A naming slot 1 (no record)]",
+        "outcome": "refused"
+      },
+      "title": "Tick naming a slot with no record",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-23",
+      "kind": "adversarial",
+      "observed": {
+        "code": 247,
+        "code_name": "bridge:IMPORT_MISMATCH",
+        "note": "LEZ block stamped after the record's time [Tick A: a Gloas record without its header]",
+        "outcome": "refused"
+      },
+      "title": "Tick on a Gloas record without its header",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CTL-24",
+      "kind": "control",
+      "observed": {
+        "note": "record time = u exactly [the base claim at attested time u]",
+        "outcome": "accepted"
+      },
+      "title": "a freeze lapses at its end",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-25",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "holder(H) after: 100000000000000000 [Transfer 0 by H]",
+        "outcome": "refused"
+      },
+      "title": "transfer of zero",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:INSUFFICIENT_BALANCE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-26",
+      "kind": "adversarial",
+      "observed": {
+        "code": 254,
+        "code_name": "bridge:INSUFFICIENT_BALANCE",
+        "note": "holder(H) after: 100000000000000000 [Transfer 2 d0 by H (holds d0)]",
+        "outcome": "refused"
+      },
+      "title": "transfer more than held",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_AUTHORIZED",
+          "lez:any"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CTL-27",
+      "kind": "adversarial",
+      "observed": {
+        "code": 253,
+        "code_name": "bridge:NOT_AUTHORIZED",
+        "note": "holder(H) after: 100000000000000000 [X sends Transfer at H's own actor]",
+        "outcome": "refused"
+      },
+      "title": "transfer not authorised by its holder",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

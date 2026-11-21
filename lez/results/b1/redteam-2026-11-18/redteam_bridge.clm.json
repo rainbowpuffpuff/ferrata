@@ -1,0 +1,601 @@
+{
+  "counts": {
+    "MISMATCH": 1,
+    "PASS": 31
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "clm",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-01",
+      "kind": "control",
+      "observed": {
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [Claim A's leaf 6 under root(A, 8)]",
+        "outcome": "accepted"
+      },
+      "title": "plaintext claim of a public-kind deposit",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_CLAIMED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 250,
+        "code_name": "bridge:ALREADY_CLAIMED",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [the same Claim again]",
+        "outcome": "refused"
+      },
+      "title": "the same deposit claimed twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:LEAF_NOT_IMPORTED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 248,
+        "code_name": "bridge:LEAF_NOT_IMPORTED",
+        "note": "vault A's 9th leaf (public, 0.1 ETH; its record not imported), path from the 9-leaf tree, range ScheduleRange { index: 1, from_leaf: 6, until_leaf: 9 } [Claim leaf 8 against root(A, 8)]",
+        "outcome": "refused"
+      },
+      "title": "leaf index at the root's leaf count",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.s with one bit flipped [Claim: witness.s with one bit flipped]",
+        "outcome": "refused"
+      },
+      "title": "wrong secret s",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.dest = the attacker's account [Claim: witness.dest = the attacker's account]",
+        "outcome": "refused"
+      },
+      "title": "destination redirected",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID",
+          "bridge:WRONG_DESTINATION"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.kind = 0x01 (private) for a public-kind deposit [Claim: witness.kind = 0x01 (private) for a public-kind deposit]",
+        "outcome": "refused"
+      },
+      "title": "kind byte switched public to private",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.kind = 0x03 [Claim: witness.kind = 0x03]",
+        "outcome": "refused"
+      },
+      "title": "kind byte that is no kind",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: one bit of witness.path[5] flipped [Claim: one bit of witness.path[5] flipped]",
+        "outcome": "refused"
+      },
+      "title": "path sibling flipped",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.leaf_index = 6 ^ 1 = 7 [Claim: witness.leaf_index = 6 ^ 1 = 7]",
+        "outcome": "refused"
+      },
+      "title": "leaf index changed, path kept",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:LEAF_NOT_IMPORTED",
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 248,
+        "code_name": "bridge:LEAF_NOT_IMPORTED",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.leaf_index = 6 + 2^32 [Claim: witness.leaf_index = 6 + 2^32]",
+        "outcome": "refused"
+      },
+      "title": "leaf index aliased by 2^32",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-13",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.depositor = another address [Claim: witness.depositor = another address]",
+        "outcome": "refused"
+      },
+      "title": "depositor changed",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID",
+          "bridge:LEAF_NOT_IMPORTED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-32",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; mutation: witness.kind = 0x09 and leaf_index = 8 (the count) [Claim: witness.kind = 0x09 and leaf_index = 8 (the count)]",
+        "outcome": "refused"
+      },
+      "title": "unknown kind together with a leaf index above the count",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-11",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "vault A extended by a d0 deposit at leaf 8; root(A, 9) imported [Claim leaf 8 (a d0 deposit) with amount d1]",
+        "outcome": "refused"
+      },
+      "title": "amount changed to another registered denomination",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID",
+          "bridge:NOT_REGISTERED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; T3 registered in A; ETH's range kept [Claim: witness.token = T3]",
+        "outcome": "refused"
+      },
+      "title": "token changed",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_FOUND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-14",
+      "kind": "adversarial",
+      "observed": {
+        "code": 245,
+        "code_name": "bridge:NOT_FOUND",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; leaf_count 15 (admission evidence for the empty root PDA) [Claim at root(A, 15), never imported]",
+        "outcome": "refused"
+      },
+      "title": "claim against a root that was never imported",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:LEAF_NOT_IMPORTED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-15",
+      "kind": "adversarial",
+      "observed": {
+        "code": 248,
+        "code_name": "bridge:LEAF_NOT_IMPORTED",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [Claim leaf 6 with range {0, 0, 6}]",
+        "outcome": "refused"
+      },
+      "title": "fee schedule range that does not cover the leaf",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:LEAF_NOT_IMPORTED",
+          "bridge:NOT_REGISTERED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-16",
+      "kind": "adversarial",
+      "observed": {
+        "code": 248,
+        "code_name": "bridge:LEAF_NOT_IMPORTED",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; range {index 5, from_leaf 6, until_leaf 8} [Claim leaf 6 with range {5, 6, 8}]",
+        "outcome": "refused"
+      },
+      "title": "fee schedule range beyond the imported schedules",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_DESTINATION"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-17",
+      "kind": "adversarial",
+      "observed": {
+        "code": 252,
+        "code_name": "bridge:WRONG_DESTINATION",
+        "note": "A's leaf 5 (1 ETH, private kind) under root(A, 8) [Claim leaf 5 (private kind) in plaintext]",
+        "outcome": "refused"
+      },
+      "title": "plaintext claim of a private-kind deposit",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:WRONG_DESTINATION"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-18",
+      "kind": "adversarial",
+      "observed": {
+        "code": 252,
+        "code_name": "bridge:WRONG_DESTINATION",
+        "note": "leaf 5 by private account 0x61, not its destination; nullifier spent after: false; private transitions in the executor exit [0, 252]; not provable: proving failed: Program exited with non-zero code 252 after 100310 cycles",
+        "outcome": "refused"
+      },
+      "title": "private-kind claim run by another account",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-19",
+      "kind": "control",
+      "observed": {
+        "note": "leaf 5 by its destination's private account (private transaction settled)",
+        "outcome": "accepted"
+      },
+      "title": "private-kind claim by its destination",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_CLAIMED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-20",
+      "kind": "adversarial",
+      "observed": {
+        "code": 250,
+        "code_name": "bridge:ALREADY_CLAIMED",
+        "note": "leaf 6 claimed privately by private account 0x51 first [plaintext Claim of leaf 6 after its private claim]",
+        "outcome": "refused"
+      },
+      "title": "deposit claimed privately, then in plaintext",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-21",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [the base claim while ETH (A) mints are frozen]",
+        "outcome": "refused"
+      },
+      "title": "claim while the token's mints are frozen",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:FROZEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-22",
+      "kind": "adversarial",
+      "observed": {
+        "code": 242,
+        "code_name": "bridge:FROZEN",
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [the base claim while A's mints are frozen]",
+        "outcome": "refused"
+      },
+      "title": "claim while the configuration's mints are frozen",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CAPPED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-23",
+      "kind": "adversarial",
+      "observed": {
+        "code": 255,
+        "code_name": "bridge:CAPPED",
+        "note": "token mint bucket level before: Some(0) [Claim leaf 2 (1.001 ETH) with ETH's mint bucket drained at the floor]",
+        "outcome": "refused"
+      },
+      "title": "claim above the token's mint bucket",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CAPPED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-24",
+      "kind": "adversarial",
+      "observed": {
+        "code": 255,
+        "code_name": "bridge:CAPPED",
+        "note": "global mint bucket level before: Some(0) [Claim leaf 2 with A's global mint bucket drained]",
+        "outcome": "refused"
+      },
+      "title": "claim above the global mint bucket",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-25",
+      "kind": "control",
+      "observed": {
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R [the base claim with relayer None]",
+        "outcome": "accepted"
+      },
+      "title": "plaintext claim with no relayer",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-26",
+      "kind": "control",
+      "observed": {
+        "note": "the base claim: A's leaf 6 (10 ETH, public kind, schedule 1) under root(A, 8), relayer R; the first claim: exit Some(249) [the correct base claim]",
+        "outcome": "accepted"
+      },
+      "title": "a rejected claim consumes nothing",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-27",
+      "kind": "control",
+      "observed": {
+        "note": "vault A extended: leaf 8 the victim's 0.1 ETH, leaf 9 the attacker's copy of its C [the victim's Claim of leaf 8]",
+        "outcome": "accepted"
+      },
+      "title": "a copied commitment cannot block the original",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:CLAIM_INVALID"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-28",
+      "kind": "adversarial",
+      "observed": {
+        "code": 249,
+        "code_name": "bridge:CLAIM_INVALID",
+        "note": "s guessed; kind and destination as in the copied C [the attacker's Claim of its copy (leaf 9) with a guessed s]",
+        "outcome": "refused"
+      },
+      "title": "attacker claims the copied-C leaf without s",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-CLM-29",
+      "kind": "control",
+      "observed": {
+        "effect_mismatch": "vault A extended by leaf 8 (0.1 ETH to config(A)'s id) [Claim leaf 8: dest = config(A)'s account id]: config(A)'s state changed: still a ready configuration; global mint bucket level 200000000000 -> 199899400000 (this claim's value, Admit); everything else equal: true",
+        "outcome": "accepted"
+      },
+      "title": "a destination that is another role's PDA is credited only at holder(dest)",
+      "verdict": "MISMATCH"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_FOUND"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-30",
+      "kind": "adversarial",
+      "observed": {
+        "code": 245,
+        "code_name": "bridge:NOT_FOUND",
+        "note": "delivered at root(A, 7) (empty; admission evidence supplied); only root(B, 7) exists [Claim{config A, leaf_count 7} of B's deposit]",
+        "outcome": "refused"
+      },
+      "title": "claim against another configuration's root",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:NOT_REGISTERED"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-CLM-31",
+      "kind": "adversarial",
+      "observed": {
+        "code": 251,
+        "code_name": "bridge:NOT_REGISTERED",
+        "note": "vault A extended by a 0.1-unit deposit of U at leaf 8, root(A, 9) imported; admission evidence for token(A, U) supplied [Claim leaf 8 (token U, not registered in A)]",
+        "outcome": "refused"
+      },
+      "title": "token not registered in this configuration",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

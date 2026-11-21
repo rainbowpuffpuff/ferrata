@@ -13,7 +13,8 @@
 //!   codes; each publishes the same fields of the deposit as a successful plaintext claim, and nothing more.
 //!
 //! Re-run (in `lez/`): `RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_refusals -- --nocapture`.
-//! Writes `lez/results/bridge-refusals.md`.
+//! Writes `lez/results/bridge-refusals.md` (the records of this branch: `lez/results/b1/`, with
+//! `FERRATA_LEZ_RESULTS_DIR`; `lez/results/b1/README.md`).
 
 use std::{fmt::Write as _, fs, path::PathBuf};
 
@@ -78,9 +79,8 @@ fn rejected_repeated_and_capped_claims_reveal_no_deposit() {
     assert_eq!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1"), "run with RISC0_DEV_MODE=1");
     let mut w = World::with_roots();
     let (program, cid, va) = (w.program, w.cid_a, w.vault_a.address);
-    let mut out = String::from(
-        "# Refused, repeated and capped claims (`harness/tests/bridge_refusals.rs`, RFP-022 Priv.5)\n\n",
-    );
+    let mut out =
+        String::from("# Refused, repeated and capped claims (`harness/tests/bridge_refusals.rs`, RFP-022 Priv.5)\n\n");
     let _ = writeln!(out, "Bridge program image `{}`.\n", harness::image_id_hex(harness::bridge::BRIDGE_ID));
 
     // ---- The private claim: the default path ------------------------------------------------------------------
@@ -115,7 +115,11 @@ fn rejected_repeated_and_capped_claims_reveal_no_deposit() {
         let after = watched(w, deposit);
         let changed = before.iter().zip(&after).filter(|(b, a)| b.1 != a.1).count();
         assert_eq!(changed, 0, "{label}: no public state changed");
-        let _ = writeln!(rows, "| {label} | refused before any proof ({}) | 0 | 0 |", harness::bridge::code_name(u32::from(c)).unwrap());
+        let _ = writeln!(
+            rows,
+            "| {label} | refused before any proof ({}) | 0 | 0 |",
+            harness::bridge::code_name(u32::from(c)).unwrap()
+        );
     };
     // Rejected: a wrong s (no leaf opens).
     let mut wrong = w.vault_a.witness(&payer_deposit, 8);
@@ -150,42 +154,40 @@ fn rejected_repeated_and_capped_claims_reveal_no_deposit() {
         "## The plaintext claim (opt-out)\n\n| claim | exit code | transaction bytes | gas_exec | deposit fields in the transaction |\n\
          |---|---:|---:|---:|---|\n",
     );
-    let mut plain = |w: &mut World, label: &str, deposit: &Deposit, witness: ClaimWitness, want: Option<u8>| -> TxReport {
-        let r = w.claim(label, &cid, 8, &va, witness);
-        match want {
-            None => assert!(r.ok(), "{label}: {:?}", r.exit_code),
-            Some(c) => assert_eq!(r.exit_code, Some(u32::from(c)), "{label}"),
-        }
-        let bytes = w.chain.last_tx.clone();
-        let _ = writeln!(
-            table,
-            "| {label} | {} | {} | {} | {} |",
-            r.exit_code.map_or("0 (applied)".into(), |c| c.to_string()),
-            bytes.len(),
-            r.charge.gas_exec,
-            names(&bytes, deposit, &va)
-        );
-        r
-    };
+    let mut plain =
+        |w: &mut World, label: &str, deposit: &Deposit, witness: ClaimWitness, want: Option<u8>| -> TxReport {
+            let r = w.claim(label, &cid, 8, &va, witness);
+            match want {
+                None => assert!(r.ok(), "{label}: {:?}", r.exit_code),
+                Some(c) => assert_eq!(r.exit_code, Some(u32::from(c)), "{label}"),
+            }
+            let bytes = w.chain.last_tx.clone();
+            let _ = writeln!(
+                table,
+                "| {label} | {} | {} | {} | {} |",
+                r.exit_code.map_or("0 (applied)".into(), |c| c.to_string()),
+                bytes.len(),
+                r.charge.gas_exec,
+                names(&bytes, deposit, &va)
+            );
+            r
+        };
     let set_cap = |w: &mut World, label: &str, cap: CapParams| {
         let message = BridgeMessage::SetCap { config_id: cid, token: Some(ETH), mints: true, cap };
         let r = w.role(label, ADMIN_SEED, &message, token_actor(program, &cid, &ETH));
         assert!(r.ok(), "{label}: {:?}", r.exit_code);
     };
-    // The cap lifted (the token checks its bucket before the nullifier is reached), then rejected and repeated.
-    set_cap(&mut w, "SetCap: ETH mints back to the default", harness::bridge::TOKEN_CAP);
+    // A world of its own (a lifted cap refills only with attested time): rejected, applied, repeated, capped.
+    let mut w = World::with_roots();
     let mut wrong = w.vault_a.witness(&vector, 8);
     wrong.s = [0x42; 32];
     plain(&mut w, "rejected: leaf 2 with a wrong s", &vector, wrong, Some(code::CLAIM_INVALID));
     let witness = w.vault_a.witness(&payer_deposit, 8);
-    plain(&mut w, "repeated: leaf 6 (claimed privately above)", &payer_deposit, witness, Some(code::ALREADY_CLAIMED));
-    // Capped, then the same claim applied once the cap is lifted again.
+    plain(&mut w, "leaf 6, applied (for comparison)", &payer_deposit, witness.clone(), None);
+    plain(&mut w, "repeated: leaf 6 again", &payer_deposit, witness, Some(code::ALREADY_CLAIMED));
     set_cap(&mut w, "SetCap: ETH mints at the floor", FLOOR);
     let witness = w.vault_a.witness(&vector, 8);
     plain(&mut w, "capped: leaf 2", &vector, witness, Some(code::CAPPED));
-    set_cap(&mut w, "SetCap: ETH mints back to the default", harness::bridge::TOKEN_CAP);
-    let witness = w.vault_a.witness(&vector, 8);
-    plain(&mut w, "leaf 2, applied (for comparison)", &vector, witness, None);
     out.push_str(&table);
     out.push_str(
         "\nA plaintext claim carries its witness, so every plaintext claim, applied or refused, names its deposit (`s`, \
