@@ -1,0 +1,56 @@
+# anvil fork of Sepolia at block 12183432 (11155111), client "anvil/v1.5.1"
+# vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c: ETH fee schedule 0, 0.001 ETH denomination: mint 0, relay 2000000000000, burn 0, checkpoint 1000000000000; a deposit sends 1002000000000000 wei
+# the burn root its one checkpoint accepted: 0xf353b9c3981bd55127d3557b670f900fcce984ba24ca02ded50f9b3512a20043
+
+## A. Exposure: the advisory's forgery against vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c as deployed (stand-in: verifier code replaced by STOP)
+victim deposit 0 (0.001 ETH): ok gas=151394
+victim deposit 1 (0.001 ETH): ok gas=153528
+escrowed ETH now: 2008000000000000 [2.008e15] 
+forged release against the accepted root, fresh nullifier, attacker as recipient, junk seal: ok gas=129999
+attacker balance change (wei, after its gas): 998869999050015
+forged checkpoint submitCandidate (junk seal): ok gas=146805
+finalizeAttested after the 3600 s wait: ok gas=201285
+forged release against the forged root: ok gas=147111
+attacker balance change in A (wei, after gas): 1997374792108215; escrowed ETH left: 8000000000000 [8e12] 
+
+## B. The deployer key (vault admin), now: release and deposit caps to zero
+victim deposit 0 before the change (value already in the vault): ok gas=151394
+0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c setGlobalCap(Release, 0, 0) by the admin: ok gas=40753
+0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c setGlobalCap(Deposit, 0, 0) by the admin: ok gas=37394
+0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c globalCap(Release) now: 0 0 0 
+0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 setGlobalCap(Release, 0, 0) by the admin: ok gas=40753
+0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 setGlobalCap(Deposit, 0, 0) by the admin: ok gas=37394
+0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 globalCap(Release) now: 0 0 0 
+0x80555Fe53CCcEf46951B23A3c75643a4C9283470 setGlobalCap(Release, 0, 0) by the admin: ok gas=40753
+0x80555Fe53CCcEf46951B23A3c75643a4C9283470 setGlobalCap(Deposit, 0, 0) by the admin: ok gas=37394
+0x80555Fe53CCcEf46951B23A3c75643a4C9283470 globalCap(Release) now: 0 0 0 
+0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7 setGlobalCap(Release, 0, 0) by the admin: ok gas=34599
+0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7 setGlobalCap(Deposit, 0, 0) by the admin: ok gas=34580
+0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7 globalCap(Release) now: 0 0 0 
+the same call from another address: REVERT NotAdmin
+forged release against the accepted root: REVERT GlobalReleaseCapExceeded
+new victim deposit: REVERT GlobalDepositCapExceeded
+forged checkpoint submitCandidate (caps do not stop checkpoints): ok gas=146805
+finalizeAttested: ok gas=201285
+forged release against the forged root: REVERT GlobalReleaseCapExceeded
+escrowed ETH still held: 1006000000000000 [1.006e15] 
+reversible: setGlobalCap(Release, UNLIMITED, 0) by the admin: ok gas=65191
+then the forged release goes through again: ok gas=129999
+
+## C. The deployer key, slower: a freeze authority and a watcher through the 14-day role timelock
+victim deposit 0: ok gas=151394
+proposeRoles([watcher,0,0], new freeze authority) by the admin: ok gas=103295
+applyRoles at once: REVERT TimelockNotOver
+applyRoles after 14 days + 1 s (anyone): ok gas=69056
+freezeAuthority now: 0x3333333333333333333333333333333333333333 , watchers[0]: 0x4444444444444444444444444444444444444444 
+setReleasesFrozen(true): ok gas=47347
+setCheckpointsFrozen(true): ok gas=47381
+retire(): ok gas=27409
+watcher pauseCheckpoints(): ok gas=27251
+forged release: REVERT ReleasesAreFrozen
+forged checkpoint: REVERT CheckpointsAreFrozen
+deposit: REVERT VaultRetired
+releasesFrozenUntil: 1799085651 [1.799e9]  (maxFreeze later; renewed by freezing again)
+after 30 days + 1 s without renewal, forged release: ok gas=129987
+
+# done
