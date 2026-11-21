@@ -12,7 +12,7 @@
 # Records: e2e/runs/seqnet-NAME/ (committed); work: spike/tmp/miniapp-sequencer/w-NAME/ (not committed).
 set -euo pipefail
 REPO="$SEQNET_REPO"; T="$SEQNET_T"; NAME="$SEQNET_NAME"; MODE="$SEQNET_MODE"
-HERE="$REPO/e2e/seqnet"
+HERE="$REPO/e2e/seqnet"; BESIDE="$(cd "$REPO/.." && pwd)"
 RUN="$REPO/e2e/runs/seqnet-$NAME"
 W="$T/w-$NAME"; VOL="$W/vol"; BIN="$T/bin"; R0BF="$T/inputs/r0bf"
 PROOFS="${SEQNET_PROOFS:-dev}"
@@ -149,7 +149,8 @@ python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "d
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \
-  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$HOME/#~/#g" {} +
+  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$BESIDE/#<spike>/#g" \
+     -e "s#${REPO/#$HOME/\~}/#<repo>/#g" -e "s#${BESIDE/#$HOME/\~}/#<spike>/#g" -e "s#$HOME/#~/#g" {} +
 python3 -I "$HERE/summary.py" "$RUN" | tee -a "$RUN/run.log" || true
 [ "$xrc" = 0 ] || die "session X (hook) exit $xrc"
 say "seqnet $NAME: DONE"
