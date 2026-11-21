@@ -34,7 +34,7 @@ macros. It uses SPEL's fields as SPEL defines them:
   gets other accounts.
 - `accounts` (top level): the actor states, for decoding an account's data (`spel inspect --type`).
 - `errors`: every one-byte exit code the program refuses with, with the source's first doc line.
-  The attestation program passes on the core's codes (1-79, 100-199) and the step API's (80-99)
+  The attestation program passes on the core's codes (1-61, 100-199) and the step API's (80-99)
   beside its own (200-219); the bridge program's are 240-255.
 - Fields SPEL does not define (`docs`, `internal`, `x-rust`) are ignored by SPEL's deserializer.
   `internal: true` marks a message the program accepts only from another of its own actors.

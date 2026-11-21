@@ -11,7 +11,7 @@
     "The attestation program of Ferrata on LEZ v0.4 (RFP-021). Hand-written IDL in SPEL's format: SPEL's stable release targets LEZ v0.2.4, so the program is written against LEZ v0.4 directly, and this IDL describes its borsh interface.",
     "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
     "PDA seeds: an actor's seed is SHA-256(\"ferrata-lez/v1/\" || tag || parts), with u64 parts little-endian; its account is LEZ v0.4's AccountId::for_public_pda(program, seed). instance_id = SHA-256(\"ferrata-lez/v1/instance-id\" || borsh(Config) || checkpoint).",
-    "Refusals exit with one byte: 1-79 and 100-199 the core's, 80-99 the step API's, 200-217 this program's (lez/wire CODE_BLOCKS). A refusal reverts the whole transaction on v0.4.",
+    "Refusals exit with one byte: 1-61 and 100-199 the core's, 80-99 the step API's, 200-217 this program's (lez/wire CODE_BLOCKS). A refusal reverts the whole transaction on v0.4.",
     "Events: FRT-FIN1 (finalized header advanced), FRT-UPG1 (store moved to a later fork's layout), FRT-ATT1 (Attest as a transaction's root: instance id, chain id, block number LE, then each statement id)."
   ],
   "instructions": [

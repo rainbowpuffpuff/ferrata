@@ -1,0 +1,17 @@
+[package]
+name = "ferrata-lez-rebate-wire"
+description = "Messages, actor state and keys of ferrata_rebate, a LEZ program that pays a fixed rebate from a pool anyone funds to whoever lands a light-client update through it (RFP-021 soft requirement 5); guest and host"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The attestation program's public interface: `Message::{Finish, Read}`, `InstanceState`, `job_actor`, `instance_actor`.
+ferrata-lez-wire = { path = "../wire" }
+# `CompactStore`, the instance's store encoding, for its finalized slot.
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+# LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml).
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }

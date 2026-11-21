@@ -1,0 +1,130 @@
+# web/depositor: the deposit page in headless Chromium, against a local anvil (chain id 11155111)
+# run of 2026-11-21 (UTC); page web/depositor/index.html served by web/depositor/serve.py at http://127.0.0.1:18646/
+# vault 0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9, test token 0x5fc8d32690cc91d4c39d9d3abcbd16989f875707, Tether-style token 0x2279b7a0a67db372996a5fab50d91eaa73d2ebe6, the wallet answers for 0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+# the s and C derivations reproduce all 3 cases of bridge/vectors/inbound-v2.json
+# 145.0.7632.6, page opened from http://127.0.0.1:18646/
+
+(o) the served page: its bytes, its headers, no framing
+    ok: o: the server sends index.html byte for byte (sha256 dc8ea8b58b145982842edbf8fbd08f153e6310607b31b02173d3f93d0f0c3af8)
+    ok: o: the CSP header forbids framing and allows only the page's own script, by its hash
+    ok: o: X-Frame-Options DENY, nosniff, no-referrer
+    ok: o: the page's own <meta> CSP allows its script by the same hash, not 'unsafe-inline'
+    ok: o: the browser received the same CSP header
+    ok: o: a request naming another host is refused (421)
+    ok: o: a page of another origin cannot frame the depositor (it stays blank)
+
+(a) ETH deposit, index 0
+    ok: the vault starts with no ETH and the depositor's count is 0
+    ok: a: no refusal
+    ok: a: the summary shows the exact depositETH calldata
+    ok: a: the summary shows the exact ETH value
+    ok: a: the summary shows C and the total
+    ok: a: the summary states what is public and what is private
+    ok: a: a screenshot of the summary section (123585 bytes)
+    ok: a: the page shows leaf index 0
+    ok: a: the page checked the logged commitment and depositor
+    ok: a: exactly one Deposit event on chain
+    ok: a: the event carries the ticket's C and depositor
+    ok: a: the event's leaf index, j, denomination and token are right
+    ok: a: depositCount is 1
+    ok: a: the vault's balance is up by the exact total
+    ok: a: the receipt is a success from the depositor to the vault
+    ok: a: the transaction the page asked the wallet to sign carries chainId 0xaa36a7
+    deposit tx 0x8b3da3c9fa16b6392266d259e62232d5802f50450ed16b1ac2d84b7256115f04
+
+(b) ERC-20 deposit, approve then deposit, index 1
+    ok: b: the depositor was minted test tokens and the vault has no allowance
+    ok: b: no refusal
+    ok: b: the summary shows the exact approve calldata (the total, not unlimited)
+    ok: b: the summary shows the exact deposit calldata
+    ok: b: the page asks to approve first
+    ok: b: the allowance is exactly the total
+    ok: b: the deposit can now be sent
+    ok: b: the page shows leaf index 1
+    ok: b: the event carries this ticket's C at j=1, leaf 1
+    ok: b: the event's denomination and token are right
+    ok: b: depositCount is 2
+    ok: b: the depositor paid and the vault escrowed the total
+    ok: b: the deposit spent the allowance down to zero (the approve was for the exact total)
+    deposit tx 0x3f09935081c6cadb768d42fc5568a02db4b57930398f5c222edcce051e624780
+
+(c) wrong chain id in the ticket
+    ok: c: the page refused ('chain' shown)
+    ok: c: the refusal says nothing was sent
+    ok: c: no eth_sendTransaction was called
+
+(d) ticket depositor is not the connected account
+    ok: d: the page refused ('depositor' shown)
+    ok: d: the refusal says nothing was sent
+    ok: d: no eth_sendTransaction was called
+
+(e) stale index (already used)
+    ok: e: the page refused ('stale' shown)
+    ok: e: the refusal says nothing was sent
+    ok: e: no eth_sendTransaction was called
+
+(f) zero commitment (typed one field at a time)
+    ok: f: the page refused ('zero' shown)
+    ok: f: the refusal says nothing was sent
+    ok: f: no eth_sendTransaction was called
+
+(g) unregistered token
+    ok: g: the page refused ('not registered' shown)
+    ok: g: the refusal says nothing was sent
+    ok: g: no eth_sendTransaction was called
+
+(h) the wallet rejects the deposit
+    ok: h: the checks passed (the refusal comes from the wallet)
+    ok: h: the page refused ('4001' shown)
+    ok: h: the refusal says nothing was sent
+    ok: h: exactly one eth_sendTransaction, retried nothing
+    ok: h: the send button is gone; nothing more can be sent
+    ok: h: the vault still holds 2 deposits
+
+(j) the wallet switches chain after the check, announcing it
+    ok: j: checked, the deposit can be sent
+    ok: j: the send button is gone
+    ok: j: the page refused ('network changed' shown)
+    ok: j: the refusal says nothing was sent
+    ok: j: nothing sent; the vault still holds 2 deposits
+
+(k) the wallet switches chain silently after the check
+    ok: k: checked again, the deposit can be sent
+    ok: k: the page refused ('now on chain 1' shown)
+    ok: k: the refusal says nothing was sent
+    ok: k: the page says nothing was sent
+    ok: k: no eth_sendTransaction; the vault still holds 2 deposits
+
+(l) the wallet switches account after the check, announcing it
+    ok: l: checked again
+    ok: l: the page refused ('account changed' shown)
+    ok: l: the refusal says nothing was sent
+    ok: l: the send button is gone; nothing sent
+
+(m) the wallet switches account silently after the check
+    ok: m: checked again
+    ok: m: the page refused ('account is now 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc' shown)
+    ok: m: the refusal says nothing was sent
+    ok: m: no eth_sendTransaction; the vault still holds 2 deposits
+
+(n) Tether-style token, an allowance of 1 base unit left over: reset, approve, deposit
+    ok: n: the depositor left an allowance of 1 (a failed deposit's leftover)
+    ok: n: the token refuses a non-zero allowance changed into another (as USDT)
+    ok: n: no refusal
+    ok: n: the summary shows the reset to 0 before the exact approve
+    ok: n: the page asks for the reset first
+    ok: n: the allowance is 0; the approve is next
+    ok: n: the allowance is exactly the total
+    ok: n: the page shows leaf index 2
+    ok: n: the event carries this ticket's C, the token and j = 2
+    ok: n: the depositor paid the total; the allowance is spent to 0
+    ok: n: every transaction the page sent carries the chain id (7)
+
+(i) the page's own traffic and the wallet methods
+    ok: i: the page requested nothing but itself (and the browser its favicon, which is 404) (origins: ['http://127.0.0.1:18646'], 1 requests)
+    ok: i: only allowed wallet methods were called (eth_accounts, eth_blockNumber, eth_call, eth_chainId, eth_getBlockByNumber, eth_getCode, eth_getTransactionReceipt, eth_requestAccounts, eth_sendTransaction)
+    ok: i: no script or console errors ([])
+    ok: i: the wallet client refuses a method outside its allowlist
+    wallet methods called: eth_accounts, eth_blockNumber, eth_call, eth_chainId, eth_getBlockByNumber, eth_getCode, eth_getTransactionReceipt, eth_requestAccounts, eth_sendTransaction
+
+all 15 case groups passed

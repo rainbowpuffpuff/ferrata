@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-ac4teYaUyPrl+BO/VldAAUbrw0QDJMlDursb3LJ5gN0='; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>Ferrata web depositor: a bridge deposit from your own wallet</title>
+<style>
+  :root { color-scheme: light dark; --fg:#1b1f24; --bg:#fbfbfa; --muted:#5f6b76; --line:#d9dde1; --bad:#b3261e; --ok:#1e6b35; --warn:#8a5a00; --code:#f1f2f3; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#e6e8ea; --bg:#15181b; --muted:#9aa5ae; --line:#30363c; --bad:#ff8a80; --ok:#7bd88f; --warn:#ffcc66; --code:#1f2428; } }
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--fg); background: var(--bg); margin: 0 auto; max-width: 1080px; padding: 16px 20px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  h2 { font-size: 16px; margin: 26px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  p.lead { color: var(--muted); margin: 0 0 10px; max-width: 900px; }
+  p.err, p.ok, p.warn, p.note { margin: 3px 0; max-width: 1000px; }
+  .err { color: var(--bad); font-weight: 600; } .ok { color: var(--ok); } .warn { color: var(--warn); } .note { color: var(--muted); }
+  label { color: var(--muted); display: block; margin: 6px 0 2px; }
+  textarea, input[type=text] { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 5px 7px; width: 100%; max-width: 760px; box-sizing: border-box; }
+  textarea { min-height: 84px; }
+  button { font-size: 14px; padding: 6px 18px; margin: 8px 6px 2px 0; }
+  button:disabled { opacity: 0.5; }
+  table { border-collapse: collapse; margin: 4px 0 10px; font-size: 13px; }
+  td, th { border-bottom: 1px solid var(--line); padding: 3px 12px 3px 0; text-align: left; vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.k { color: var(--muted); white-space: nowrap; }
+  td.v { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  pre { background: var(--code); padding: 10px; overflow-x: auto; font-size: 12px; margin: 6px 0; }
+  pre.calldata { padding: 6px 10px; }
+  .cols { display: grid; grid-template-columns: repeat(2, minmax(280px, 460px)); gap: 0 24px; }
+  #status { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted); min-height: 1.4em; margin: 8px 0; }
+</style>
+</head>
+<body>
+<h1>Ferrata web depositor</h1>
+<p class="lead">One static page that sends a Ferrata bridge deposit from your own Ethereum wallet (anything that injects
+<code>window.ethereum</code>: MetaMask, Rabby, &hellip;), so funds do not have to sit in Basecamp first. It makes
+<b>no request of its own</b> &mdash; no fetch, no external script, font or image &mdash; and reaches the chain only through
+the wallet. <b>Deposits only:</b> claiming stays in your Logos wallet (the tool or Basecamp), because the browser must
+never hold your LEZ seed. The deposit ticket (the commitment <code>C</code> and its index <code>j</code>) comes from
+your own Logos tool; the seed never enters this page.</p>
+
+<section>
+<h2>1. The wallet</h2>
+<p class="note" id="wnote">No wallet connected yet. The page will ask it only for: <code>eth_requestAccounts</code>,
+<code>eth_accounts</code>, <code>eth_chainId</code>, <code>eth_call</code>, <code>eth_getCode</code>,
+<code>eth_getBlockByNumber</code>, <code>eth_blockNumber</code>, <code>eth_sendTransaction</code>,
+<code>eth_getTransactionReceipt</code> &mdash; and refuses every other method.</p>
+<button type="button" id="connect">Connect</button>
+</section>
+
+<section>
+<h2>2. The deposit ticket from your Logos tool</h2>
+<p class="note">Make it with a dry run of the Logos tool (it sends nothing):
+<code>ferrata deposit --from &lt;your wallet address&gt; --denomination N</code>. It prints the commitment
+<code>C</code> and <code>j</code>; the vault and the chain are on its first line. Paste the ticket as JSON, or type
+the fields below. For native ETH the token is the vault's ETH constant, <code>0x0000&hellip;0000</code>.</p>
+<p class="note"><code>{"version":1,"chainId":11155111,"vault":"0x&hellip;","token":"0x&hellip;","denomIndex":0,
+"commitment":"0x&hellip; 32 bytes","depositor":"0x&hellip;","index":0}</code></p>
+<label for="ticket">the ticket as JSON</label>
+<textarea id="ticket" spellcheck="false" placeholder='{"version":1,"chainId":11155111,"vault":"0x…","token":"0x…","denomIndex":0,"commitment":"0x…","depositor":"0x…","index":0}'></textarea>
+<p class="note">&hellip;or the same fields one by one (the JSON above wins when it is not empty):</p>
+<div class="cols">
+  <div><label for="t-chainid">chain id</label><input type="text" id="t-chainid" autocomplete="off"></div>
+  <div><label for="t-vault">vault</label><input type="text" id="t-vault" autocomplete="off" placeholder="0x…"></div>
+  <div><label for="t-token">token (0x000…000 = ETH)</label><input type="text" id="t-token" autocomplete="off" placeholder="0x…"></div>
+  <div><label for="t-denom">denomIndex</label><input type="text" id="t-denom" autocomplete="off" placeholder="0"></div>
+  <div><label for="t-commitment">commitment C</label><input type="text" id="t-commitment" autocomplete="off" placeholder="0x… 32 bytes"></div>
+  <div><label for="t-depositor">depositor</label><input type="text" id="t-depositor" autocomplete="off" placeholder="0x…"></div>
+  <div><label for="t-index">index j</label><input type="text" id="t-index" autocomplete="off" placeholder="0"></div>
+</div>
+<button type="button" id="check">Check the ticket and price the deposit</button>
+</section>
+
+<div id="status"></div>
+<div id="refusal"></div>
+
+<section id="summarysec" hidden>
+<h2>3. The summary &mdash; check it before you sign</h2>
+<div id="summary"></div>
+<button type="button" id="sendreset" hidden>Send the allowance reset (approve 0)</button>
+<button type="button" id="sendapprove" hidden>Send the approve (exactly the total)</button>
+<button type="button" id="senddeposit" hidden>Send the deposit</button>
+</section>
+
+<section id="resultsec" hidden>
+<h2>4. Sent</h2>
+<div id="result"></div>
+</section>
+
+<script id="ferrata-depositor">
+(function () {
+'use strict';
+
+// =====================================================================================================
+// Constants
+// =====================================================================================================
+const VERSION = 'ferrata-depositor 1';
+// The only methods this page's wallet client may ever send to the injected wallet. Anything else is refused here,
+// before the wallet is called (EIP-1193 names from MetaMask's docs; eth_requestAccounts/eth_accounts fall back to
+// each other per EIP-1193).
+const ALLOWED_METHODS = [
+  'eth_requestAccounts', 'eth_accounts', 'eth_chainId', 'eth_call', 'eth_getCode',
+  'eth_getBlockByNumber', 'eth_blockNumber', 'eth_sendTransaction', 'eth_getTransactionReceipt'];
+const ETH = '0x0000000000000000000000000000000000000000'; // FerrataVault.ETH: the sentinel token address
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000';
+const ZERO32 = '0x' + '0'.repeat(64);
+const CHAINS = { 1: 'Ethereum mainnet', 11155111: 'Sepolia', 17000: 'Holesky', 560048: 'Hoodi', 31337: 'local dev chain' };
+// The one event this page decodes (FerrataVault, v5).
+const DEPOSIT_EVENT_DEF = 'Deposit(address indexed depositor, uint64 index, uint64 leafIndex, address indexed token, uint256 amount, bytes32 commitment)';
+
+// =====================================================================================================
+// Bytes, hex, UTF-8 (copied from admin/index.html)
+// =====================================================================================================
+function strip0x(h) { return (h.startsWith('0x') || h.startsWith('0X')) ? h.slice(2) : h; }
+function fromHex(h) {
+  if (typeof h !== 'string') throw new Error('expected a hex string, got ' + typeof h);
+  const s = strip0x(h);
+  if (s.length % 2) throw new Error('odd-length hex: ' + h.slice(0, 24));
+  if (!/^[0-9a-fA-F]*$/.test(s)) throw new Error('not hex: ' + h.slice(0, 24));
+  const out = new Uint8Array(s.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(s.substr(2 * i, 2), 16);
+  return out;
+}
+function toHex(b) { let s = '0x'; for (let i = 0; i < b.length; i++) s += (b[i] < 16 ? '0' : '') + b[i].toString(16); return s; }
+function concatBytes(parts) {
+  let n = 0; for (const p of parts) n += p.length;
+  const out = new Uint8Array(n); let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+function uintBytes(v, n) {
+  let x = BigInt(v);
+  if (x < 0n) throw new Error('negative value where unsigned expected');
+  const out = new Uint8Array(n);
+  for (let i = n - 1; i >= 0; i--) { out[i] = Number(x & 0xffn); x >>= 8n; }
+  if (x !== 0n) throw new Error('value does not fit in ' + n + ' bytes');
+  return out;
+}
+function addrBytes(a) { const b = fromHex(a); if (b.length !== 20) throw new Error('not a 20-byte address: ' + a); return b; }
+function b32Bytes(h) { const b = fromHex(h); if (b.length !== 32) throw new Error('not 32 bytes: ' + h); return b; }
+function hexToBig(h) { const s = strip0x(h); return s.length ? BigInt('0x' + s) : 0n; }
+function hx(n) { return '0x' + BigInt(n).toString(16); }
+function utf8Encode(s) {
+  const out = [];
+  for (let i = 0; i < s.length; i++) {
+    let c = s.charCodeAt(i);
+    if (c >= 0xd800 && c <= 0xdbff && i + 1 < s.length) {
+      const d = s.charCodeAt(i + 1);
+      if (d >= 0xdc00 && d <= 0xdfff) { c = 0x10000 + ((c - 0xd800) << 10) + (d - 0xdc00); i++; }
+    }
+    if (c < 0x80) out.push(c);
+    else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+    else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+  }
+  return Uint8Array.from(out);
+}
+function utf8Decode(b) {
+  let s = '';
+  for (let i = 0; i < b.length;) {
+    const x = b[i]; let c, n;
+    if (x < 0x80) { c = x; n = 1; } else if ((x & 0xe0) === 0xc0) { c = x & 0x1f; n = 2; }
+    else if ((x & 0xf0) === 0xe0) { c = x & 0x0f; n = 3; } else if ((x & 0xf8) === 0xf0) { c = x & 0x07; n = 4; }
+    else { s += '�'; i++; continue; }
+    if (i + n > b.length) { s += '�'; break; }
+    for (let k = 1; k < n; k++) c = (c << 6) | (b[i + k] & 0x3f);
+    try { s += String.fromCodePoint(c); } catch (e) { s += '�'; }
+    i += n;
+  }
+  return s;
+}
+function asBytes(x) { return typeof x === 'string' ? utf8Encode(x) : x; }
+
+// =====================================================================================================
+// Keccak-256 (the original Keccak padding 0x01, as Ethereum uses; not FIPS-202 SHA3-256) — copied from admin/index.html
+// =====================================================================================================
+const MASK64 = 0xffffffffffffffffn;
+const KECCAK_RC = [
+  0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+  0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+  0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+  0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+  0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+  0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n];
+const KECCAK_ROT = [0, 1, 62, 28, 27, 36, 44, 6, 55, 20, 3, 10, 43, 25, 39, 41, 45, 15, 21, 8, 18, 2, 61, 56, 14].map(BigInt);
+function rotl64(x, n) { return n === 0n ? x : ((x << n) | (x >> (64n - n))) & MASK64; }
+function keccakF1600(A) {
+  const C = new Array(5), B = new Array(25);
+  for (let round = 0; round < 24; round++) {
+    for (let x = 0; x < 5; x++) C[x] = A[x] ^ A[x + 5] ^ A[x + 10] ^ A[x + 15] ^ A[x + 20];
+    for (let x = 0; x < 5; x++) {
+      const D = C[(x + 4) % 5] ^ rotl64(C[(x + 1) % 5], 1n);
+      for (let y = 0; y < 25; y += 5) A[y + x] ^= D;
+    }
+    for (let x = 0; x < 5; x++) for (let y = 0; y < 5; y++) B[y + 5 * ((2 * x + 3 * y) % 5)] = rotl64(A[x + 5 * y], KECCAK_ROT[x + 5 * y]);
+    for (let y = 0; y < 25; y += 5) for (let x = 0; x < 5; x++) A[y + x] = B[y + x] ^ ((B[y + (x + 1) % 5] ^ MASK64) & B[y + (x + 2) % 5]);
+    A[0] ^= KECCAK_RC[round];
+  }
+}
+function keccak256(input) {
+  const bytes = asBytes(input);
+  const rate = 136;
+  const total = (Math.floor(bytes.length / rate) + 1) * rate;
+  const p = new Uint8Array(total);
+  p.set(bytes);
+  p[bytes.length] ^= 0x01;
+  p[total - 1] ^= 0x80;
+  const A = new Array(25).fill(0n);
+  for (let off = 0; off < total; off += rate) {
+    for (let i = 0; i < rate / 8; i++) {
+      let lane = 0n;
+      for (let k = 7; k >= 0; k--) lane = (lane << 8n) | BigInt(p[off + 8 * i + k]);
+      A[i] ^= lane;
+    }
+    keccakF1600(A);
+  }
+  const out = new Uint8Array(32);
+  for (let i = 0; i < 4; i++) { let lane = A[i]; for (let k = 0; k < 8; k++) { out[8 * i + k] = Number(lane & 0xffn); lane >>= 8n; } }
+  return out;
+}
+function keccak256Hex(input) { return toHex(keccak256(input)); }
+const _selCache = new Map();
+function selector(sig) {
+  let s = _selCache.get(sig);
+  if (!s) { s = toHex(keccak256(sig).slice(0, 4)); _selCache.set(sig, s); }
+  return s;
+}
+function eventTopic(sig) { return keccak256Hex(sig); }
+function toChecksumAddress(a) {
+  const s = strip0x(a).toLowerCase();
+  if (!/^[0-9a-f]{40}$/.test(s)) throw new Error('not an address: ' + a);
+  const h = toHex(keccak256(s)).slice(2);
+  let out = '0x';
+  for (let i = 0; i < 40; i++) out += parseInt(h[i], 16) >= 8 ? s[i].toUpperCase() : s[i];
+  return out;
+}
+
+// =====================================================================================================
+// Minimal ABI: static arguments for calls; decoding of static types, string/bytes, T[] and T[k] of static T
+// (copied from admin/index.html)
+// =====================================================================================================
+function parseSig(sig) {
+  const m = /^([A-Za-z_$][A-Za-z0-9_$]*)\((.*)\)$/.exec(sig.replace(/\s+/g, ''));
+  if (!m) throw new Error('bad signature: ' + sig);
+  return { name: m[1], types: m[2] ? m[2].split(',') : [] };
+}
+function isDynamic(t) {
+  if (t === 'string' || t === 'bytes' || t.endsWith('[]')) return true;
+  const m = /^(.*)\[(\d+)\]$/.exec(t);
+  return m ? isDynamic(m[1]) : false;
+}
+function headSize(t) {
+  if (isDynamic(t)) return 32;
+  const m = /^(.*)\[(\d+)\]$/.exec(t);
+  return m ? Number(m[2]) * headSize(m[1]) : 32;
+}
+function encodeWord(t, v) {
+  let m;
+  if (t === 'address') { const b = new Uint8Array(32); b.set(addrBytes(v), 12); return b; }
+  if (t === 'bool') return uintBytes(v ? 1 : 0, 32);
+  if ((m = /^uint(\d*)$/.exec(t))) {
+    const bits = BigInt(m[1] || 256), x = BigInt(v);
+    if (x < 0n || x >= (1n << bits)) throw new Error(t + ' out of range: ' + v);
+    return uintBytes(x, 32);
+  }
+  if ((m = /^int(\d*)$/.exec(t))) {
+    const bits = BigInt(m[1] || 256), x = BigInt(v);
+    if (x < -(1n << (bits - 1n)) || x >= (1n << (bits - 1n))) throw new Error(t + ' out of range: ' + v);
+    return uintBytes(x < 0n ? (1n << 256n) + x : x, 32);
+  }
+  if ((m = /^bytes(\d+)$/.exec(t))) {
+    const n = Number(m[1]), b = fromHex(v);
+    if (b.length !== n) throw new Error(t + ' needs ' + n + ' bytes: ' + v);
+    const w = new Uint8Array(32); w.set(b, 0); return w;
+  }
+  throw new Error('encoding of ' + t + ' is not supported here');
+}
+/** Call data for `sig` with static arguments: selector || one word per argument. */
+function encodeCall(sig, args) {
+  const { types } = parseSig(sig);
+  if (types.length !== (args || []).length) throw new Error(sig + ': ' + types.length + ' arguments expected');
+  return toHex(concatBytes([fromHex(selector(sig))].concat(types.map((t, i) => encodeWord(t, args[i])))));
+}
+function readWord(b, pos) {
+  if (pos < 0 || pos + 32 > b.length) throw new Error('ABI data too short: word at ' + pos + ' of ' + b.length + ' bytes');
+  let x = 0n;
+  for (let i = 0; i < 32; i++) x = (x << 8n) | BigInt(b[pos + i]);
+  return x;
+}
+function readOffset(b, pos) {
+  const x = readWord(b, pos);
+  if (x > BigInt(b.length)) throw new Error('ABI offset/length out of range: ' + x);
+  return Number(x);
+}
+function decodeStatic(t, b, pos) {
+  let m;
+  if ((m = /^(.*)\[(\d+)\]$/.exec(t))) {
+    const out = [], k = Number(m[2]), es = headSize(m[1]);
+    for (let i = 0; i < k; i++) out.push(decodeStatic(m[1], b, pos + i * es));
+    return out;
+  }
+  const w = readWord(b, pos);
+  if (t === 'address') { if (w >> 160n) throw new Error('address word has high bits set'); return '0x' + w.toString(16).padStart(40, '0'); }
+  if (t === 'bool') { if (w > 1n) throw new Error('bool word is ' + w); return w === 1n; }
+  if ((m = /^uint(\d*)$/.exec(t))) { const bits = BigInt(m[1] || 256); if (bits < 256n && (w >> bits)) throw new Error(t + ' word out of range'); return w; }
+  if ((m = /^int(\d*)$/.exec(t))) { const x = w >= (1n << 255n) ? w - (1n << 256n) : w; const bits = BigInt(m[1] || 256); if (x < -(1n << (bits - 1n)) || x >= (1n << (bits - 1n))) throw new Error(t + ' word out of range'); return x; }
+  if ((m = /^bytes(\d+)$/.exec(t))) { const n = Number(m[1]); return toHex(b.slice(pos, pos + n)); }
+  throw new Error('decoding of ' + t + ' is not supported here');
+}
+function decodeAt(t, b, pos, base) {
+  if (!isDynamic(t)) return decodeStatic(t, b, pos);
+  const at = base + readOffset(b, pos);
+  if (t === 'string' || t === 'bytes') {
+    const n = readOffset(b, at);
+    if (at + 32 + n > b.length) throw new Error('ABI ' + t + ' runs past the data');
+    const data = b.slice(at + 32, at + 32 + n);
+    return t === 'string' ? utf8Decode(data) : toHex(data);
+  }
+  if (t.endsWith('[]')) {
+    const et = t.slice(0, -2), n = readOffset(b, at), start = at + 32, out = [];
+    for (let i = 0; i < n; i++) out.push(decodeAt(et, b, start + i * headSize(et), start));
+    return out;
+  }
+  throw new Error('decoding of ' + t + ' is not supported here');
+}
+/** Decodes ABI data (hex or bytes) of the tuple `types`; returns an array of values (BigInt for integers). */
+function decodeAbi(types, data) {
+  const b = typeof data === 'string' ? fromHex(data) : data;
+  const out = []; let pos = 0;
+  for (const t of types) { out.push(decodeAt(t, b, pos, 0)); pos += headSize(t); }
+  return out;
+}
+/** A raw return that is an ABI string or a bytes32 symbol (tokens that predate the string return), as admin reads them. */
+function textResult(ret) {
+  try { return decodeAbi(['string'], ret)[0]; } catch (e) { /* not an ABI string */ }
+  try { const b = fromHex(ret); if (b.length === 32) return utf8Decode(b.filter((x) => x !== 0)); } catch (e) { /* fall through */ }
+  throw new Error('undecodable return data ' + String(ret).slice(0, 40));
+}
+
+// The vault's custom errors (vault/src/FerrataVault.sol) and a few OpenZeppelin ones, as in admin/index.html, so a
+// revert in an eth_call or a failed send is named.
+const VAULT_ERRORS = ('NotAdmin NotFreezeAuthority NotPendingAdmin ZeroAddress RolesMustDiffer VerifierHasNoCode InvalidImageIds ' +
+  'InvalidLezConfigId InvalidGenesisState InvalidCommitteeFloor InvalidDelta InvalidRevokeWindow InvalidMaxFreeze InvalidTurnSeconds ' +
+  'InvalidMinReleaseDelay VerifierNotStop TokenAlreadyRegistered TokenNotRegistered TokenHasNoCode InvalidDenominations InvalidLezUnit ' +
+  'DenominationNotMultipleOfLezUnit InvalidUnitWeight RelayFeeTooHigh RelayFeeCountMismatch FeeTooHigh FeeCountMismatch ' +
+  'FeeNotMultipleOfLezUnit ReleaseDelayOutOfRange CapBelowFloor DeltaCanOnlyRise DeltaTooLong VaultRetired AlreadyRetired RetireNotOpen ' +
+  'DepositsAreFrozen TokenDepositsAreFrozen DepositsDisabled UseDepositETH InvalidDenominationIndex ZeroCommitment WrongDepositIndex ' +
+  'WrongEthAmount TransferAmountMismatch TreeFull TokenDepositCapExceeded GlobalDepositCapExceeded CheckpointsAreFrozen WrongMode ' +
+  'WaitNotOver ImportedLeafCountTooHigh VerifierStopped NotWatcher NoProposal TimelockNotOver ParentNotFinal EchoNonceNotZero ' +
+  'WrongCommitteeFloor KeySetBelowFloor ImportedLeafCountDecreased SunsetIsFinal CandidateAlreadySubmitted UnknownCandidate ' +
+  'StaleCandidate CandidateMismatch UnknownBeacon BeaconTooEarly EchoNonceMismatch UnknownCheckpoint CheckpointAlreadyRevoked ' +
+  'RevokeWindowPassed NotRetired NotRefundable RefundNotYetOpen UnknownLeaf AlreadyRefunded InvalidMerklePath ReleasesAreFrozen ' +
+  'TokenReleasesAreFrozen BurnRootNotAccepted ReleaseDelayNotElapsed NullifierAlreadyUsed InvalidRelayFee ZeroRecipient ' +
+  'InsufficientEscrow TokenReleaseCapExceeded GlobalReleaseCapExceeded EthTransferFailed NothingOwed DirectEthNotAccepted FunctionNotFound')
+  .split(/\s+/).map((n) => n + '()')
+  .concat(['EnforcedPause()', 'ExpectedPause()', 'ReentrancyGuardReentrantCall()', 'OwnableUnauthorizedAccount(address)', 'SafeERC20FailedOperation(address)']);
+let _errBySel = null;
+function decodeRevert(data) {
+  if (!data || data === '0x') return 'reverted without data';
+  if (!_errBySel) { _errBySel = new Map(); for (const e of VAULT_ERRORS) _errBySel.set(selector(e), e); }
+  const sel = data.slice(0, 10).toLowerCase(), rest = '0x' + data.slice(10);
+  try {
+    if (sel === '0x08c379a0') return 'Error("' + decodeAbi(['string'], rest)[0] + '")';
+    if (sel === '0x4e487b71') return 'Panic(0x' + decodeAbi(['uint256'], rest)[0].toString(16) + ')';
+  } catch (e) { /* fall through to the raw selector */ }
+  const known = _errBySel.get(sel);
+  return known ? 'reverted with ' + known : 'reverted with unknown error ' + sel + ' (' + ((data.length - 2) / 2) + ' bytes)';
+}
+
+// The Deposit event of FerrataVault v5 (parseEventDef/decodeLog as in admin/index.html, one event only).
+function parseEventDef(def) {
+  const m = /^([A-Za-z_]\w*)\((.*)\)$/.exec(def.trim());
+  const params = m[2].trim() ? m[2].split(',').map((p) => {
+    const w = p.trim().split(/\s+/);
+    return { type: w[0], indexed: w.length === 3 && w[1] === 'indexed', name: w[w.length - 1] };
+  }) : [];
+  const signature = m[1] + '(' + params.map((p) => p.type).join(',') + ')';
+  return { name: m[1], params, signature, topic: eventTopic(signature) };
+}
+const DEPOSIT_EVENT = parseEventDef(DEPOSIT_EVENT_DEF);
+/** Decodes a Deposit log of the vault; returns null for any other topic. */
+function decodeDepositLog(log) {
+  if (((log.topics && log.topics[0]) || '').toLowerCase() !== DEPOSIT_EVENT.topic) return null;
+  const args = {}; let ti = 1;
+  const dataTypes = DEPOSIT_EVENT.params.filter((p) => !p.indexed).map((p) => p.type);
+  const dataVals = decodeAbi(dataTypes, log.data);
+  let di = 0;
+  for (const p of DEPOSIT_EVENT.params) {
+    if (p.indexed) {
+      const topic = log.topics[ti++];
+      if (!topic) throw new Error('Deposit: missing topic for ' + p.name);
+      args[p.name] = decodeStatic(p.type, fromHex(topic), 0);
+    } else args[p.name] = dataVals[di++];
+  }
+  return { event: DEPOSIT_EVENT.name, args, block: Number(hexToBig(log.blockNumber || '0x0')), tx: log.transactionHash };
+}
+
+// =====================================================================================================
+// The wallet client: the allowlist is the only channel to the chain
+// =====================================================================================================
+function errText(e) { return e && e.message ? e.message : String(e); }
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+/** An EIP-1193 error as text, with code 4001 named as the user's rejection and revert data decoded. */
+function walletErrorText(e) {
+  const code = e && typeof e.code === 'number' ? e.code : null;
+  const data = e && typeof e.data === 'string' ? e.data : (e && e.data && typeof e.data.data === 'string' ? e.data.data : null);
+  if (code === 4001) return 'you rejected the request in the wallet (EIP-1193 code 4001)';
+  let m = errText(e);
+  if (data && /^0x[0-9a-fA-F]+$/.test(data) && data.length > 2) m = decodeRevert(data) + ' (as the wallet reported it)';
+  return m + (code !== null ? ' (EIP-1193 code ' + code + ')' : '');
+}
+
+/** The page's wallet client over an injected EIP-1193 provider. Only ALLOWED_METHODS pass through. */
+function walletClient(ethereum) {
+  const stats = { requests: 0, byMethod: {} };
+  async function request(method, params) {
+    if (ALLOWED_METHODS.indexOf(method) < 0)
+      throw new Error('refused: ' + method + ' is not one of the wallet methods this page allows');
+    stats.requests++; stats.byMethod[method] = (stats.byMethod[method] || 0) + 1;
+    return await ethereum.request({ method, params: params || [] });
+  }
+  return { request, stats };
+}
+
+// =====================================================================================================
+// The ticket
+// =====================================================================================================
+const U64_MAX = (1n << 64n) - 1n;
+function checkAddress(x, what) {
+  if (typeof x !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(x)) throw new Error(what + ' must be 0x and 40 hex digits, got ' + JSON.stringify(x));
+  return x.toLowerCase();
+}
+function checkUint(x, max, what) {
+  let v;
+  if (typeof x === 'number' && Number.isInteger(x)) v = BigInt(x);
+  else if (typeof x === 'bigint') v = x;
+  else if (typeof x === 'string' && /^(0x[0-9a-fA-F]+|[0-9]+)$/.test(x.trim())) v = BigInt(x.trim()); // BigInt reads 0x… and decimal
+  else throw new Error(what + ' must be a whole number, got ' + JSON.stringify(x));
+  if (v < 0n || v > max) throw new Error(what + ' is out of range: ' + x);
+  return v;
+}
+/** Validates the ticket fields (already-JS values, decimals or 0x…); returns the normalised ticket. */
+function validateTicket(t) {
+  if (!t || typeof t !== 'object') throw new Error('the ticket must be a JSON object');
+  const version = checkUint(t.version, 1n, 'version');
+  if (version !== 1n) throw new Error('the ticket\'s version is ' + t.version + '; this page reads version 1');
+  let denomIndex = t.denomIndex;
+  if (typeof denomIndex === 'string' && /^\d+$/.test(denomIndex.trim())) denomIndex = Number(denomIndex.trim());
+  if (typeof denomIndex !== 'number' || !Number.isInteger(denomIndex) || denomIndex < 0 || denomIndex > 255)
+    throw new Error('denomIndex must be a whole number from 0 to 255, got ' + JSON.stringify(t.denomIndex));
+  const ticket = {
+    version: 1,
+    chainId: checkUint(t.chainId, U64_MAX, 'chainId'),
+    vault: checkAddress(t.vault, 'the vault address'),
+    token: checkAddress(t.token, 'the token address'),
+    denomIndex: denomIndex,
+    commitment: (() => {
+      if (typeof t.commitment !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(t.commitment))
+        throw new Error('the commitment must be 0x and 64 hex digits (32 bytes), got ' + JSON.stringify(String(t.commitment).slice(0, 24)) + '…');
+      return t.commitment.toLowerCase();
+    })(),
+    depositor: checkAddress(t.depositor, 'the depositor address'),
+    index: checkUint(t.index, U64_MAX, 'index'),
+  };
+  ticket.isEth = ticket.token === ETH;
+  return ticket;
+}
+/** The ticket from a JSON string. */
+function parseTicket(text) {
+  let t;
+  try { t = JSON.parse(text); } catch (e) { throw new Error('the ticket is not JSON: ' + errText(e)); }
+  return validateTicket(t);
+}
+/** The ticket from the seven fields as typed text (chainId and index may be decimal or 0x…). */
+function ticketFromFields(f) {
+  const missing = ['chainId', 'vault', 'token', 'denomIndex', 'commitment', 'depositor', 'index'].filter((k) => !String(f[k] || '').trim());
+  if (missing.length) throw new Error('the ' + missing.join(', ') + ' field' + (missing.length > 1 ? 's are' : ' is') + ' empty: paste the ticket JSON or fill every field');
+  return validateTicket(Object.assign({ version: 1 }, f));
+}
+
+// =====================================================================================================
+// Reads and the price, exactly as cli/src/eth.rs deposit_price computes it
+// =====================================================================================================
+function isEthToken(token) { return String(token).toLowerCase() === ETH; }
+function chainName(chainId) { return CHAINS[Number(chainId)] || 'unknown chain'; }
+
+/** eth_call of `sig` on `to`, decoded as `outTypes` ([] means: return the raw hex). */
+async function callOn(client, to, sig, args, outTypes) {
+  const ret = await client.request('eth_call', [{ to: to.toLowerCase(), data: encodeCall(sig, args || []) }, 'latest']);
+  if (!outTypes || !outTypes.length) return ret;
+  if (!ret || ret === '0x') throw new Error(sig + ' returned no data (no such function at ' + to + '?)');
+  const v = decodeAbi(outTypes, ret);
+  return outTypes.length === 1 ? v[0] : v;
+}
+/** What a deposit of `denomIndex` of `token` costs now (cli/src/eth.rs `deposit_price`), plus the vault's config. */
+async function priceDeposit(client, vault, token, denomIndex, cfg) {
+  const config = cfg || await callOn(client, vault, 'tokenConfig(address)', [token], ['bool', 'bool', 'uint256', 'uint256', 'uint256[]']);
+  const denomination = (config[4] || [])[denomIndex];
+  if (denomination === undefined) throw new Error('InvalidDenominationIndex: the vault has ' + (config[4] || []).length + ' denominations, the ticket names ' + denomIndex);
+  const state = await callOn(client, vault, 'feeState(address)', [token], ['uint64', 'uint64']);
+  const block = Number(hexToBig(await client.request('eth_blockNumber', [])));
+  const b = await client.request('eth_getBlockByNumber', [hx(block), false]);
+  if (!b || b.timestamp === undefined) throw new Error('eth_getBlockByNumber of block ' + block + ' returned no block');
+  const now = hexToBig(b.timestamp);
+  // cli/src/eth.rs: current + 1 once the announced schedule is due, else the schedule in force.
+  const schedule = (state[1] !== 0n && now >= state[1]) ? state[0] + 1n : state[0];
+  const fees = await callOn(client, vault, 'fees(address,uint256,uint8)', [token, schedule, denomIndex], ['uint256', 'uint256', 'uint256', 'uint256']);
+  const mintFee = fees[0], relayFee = fees[1];
+  return { denomination, mintFee, relayFee, schedule, total: denomination + mintFee + relayFee, blockTimestamp: now, feeState: { current: state[0], pendingAt: state[1] } };
+}
+
+// =====================================================================================================
+// The checks: each refusal is a string; nothing is sent unless there is none
+// =====================================================================================================
+/** Runs every pre-send check (see the README and the RFP clause); returns {ok, refusals, …reads}. */
+async function checkTicket(client, ticket) {
+  const out = { ticket, refusals: [], chain: null, account: null, vaultCodeSize: null, config: null, price: null, meta: null, balance: null, allowance: null, count: null };
+  const refuse = (m) => out.refusals.push(m);
+
+  // Phase 1: what the wallet says, before anything is read.
+  try { out.chain = hexToBig(await client.request('eth_chainId', [])); }
+  catch (e) { refuse('cannot read the wallet\'s chain id: ' + walletErrorText(e)); return out; }
+  if (out.chain !== ticket.chainId)
+    refuse('the wallet is on chain ' + Number(out.chain) + ' (' + chainName(out.chain) + '), the ticket is for chain ' + Number(ticket.chainId) + ' (' + chainName(ticket.chainId) + '): switch the wallet to the ticket\'s chain');
+  try {
+    const accounts = await client.request('eth_accounts', []);
+    out.account = accounts && accounts.length ? String(accounts[0]).toLowerCase() : null;
+  } catch (e) { refuse('cannot ask which account is connected: ' + walletErrorText(e)); }
+  if (out.account && out.account !== ticket.depositor.toLowerCase())
+    refuse('the connected account ' + out.account + ' is not the ticket\'s depositor ' + ticket.depositor + ': connect the wallet account the ticket was made for');
+  else if (!out.account)
+    refuse('no account is connected: press Connect, or connect the wallet account the ticket was made for');
+  if (ticket.commitment === ZERO32)
+    refuse('the commitment C is zero: C must commit to your LEZ destination; make a fresh ticket with your Logos tool');
+  if (out.refusals.length) return out; // reads on the wrong chain or from the wrong account would mislead
+
+  // Phase 2: reads. Each is independent; every failure is a refusal.
+  try {
+    const code = await client.request('eth_getCode', [ticket.vault, 'latest']);
+    out.vaultCodeSize = (code.length - 2) / 2;
+    if (!out.vaultCodeSize) refuse('the vault ' + ticket.vault + ' has no contract code on chain ' + Number(out.chain) + ': not a Ferrata vault there');
+  } catch (e) { refuse('cannot read the vault\'s code: ' + walletErrorText(e)); }
+
+  let registered = false, inRange = false;
+  try {
+    out.config = await callOn(client, ticket.vault, 'tokenConfig(address)', [ticket.token], ['bool', 'bool', 'uint256', 'uint256', 'uint256[]']);
+    registered = out.config[0];
+    if (!registered) refuse('the token ' + ticket.token + ' is not registered in the vault');
+    else if (!out.config[1]) refuse('deposits of the token ' + ticket.token + ' are disabled in the vault');
+    if (registered && (ticket.denomIndex >= (out.config[4] || []).length))
+      refuse('denomination index ' + ticket.denomIndex + ' is out of range: the vault has ' + (out.config[4] || []).length + ' denominations for this token');
+    else inRange = true;
+  } catch (e) { refuse('cannot read the token\'s registration: ' + walletErrorText(e)); }
+
+  try {
+    out.count = await callOn(client, ticket.vault, 'depositCount(address)', [ticket.depositor], ['uint64']);
+    if (out.count !== ticket.index) {
+      const which = ticket.index < out.count ? 'the index is stale (already used)' : 'the index is ahead of the vault';
+      refuse('the ticket says index j = ' + ticket.index + ', but the vault\'s depositCount for this depositor is ' + out.count + ': ' + which + '; make a fresh ticket with your Logos tool');
+    }
+  } catch (e) { refuse('cannot read the depositor\'s depositCount: ' + walletErrorText(e)); }
+
+  if (registered && inRange) {
+    try { out.price = await priceDeposit(client, ticket.vault, ticket.token, ticket.denomIndex, out.config); }
+    catch (e) { refuse('cannot price the deposit: ' + walletErrorText(e)); }
+    try {
+      out.meta = ticket.isEth
+        ? { symbol: 'ETH', name: 'Ether', decimals: 18, source: 'native token' }
+        : { symbol: textResult(await callOn(client, ticket.token, 'symbol()', [], [])),
+            name: textResult(await callOn(client, ticket.token, 'name()', [], [])),
+            decimals: Number(await callOn(client, ticket.token, 'decimals()', [], ['uint8'])), source: 'token contract' };
+    } catch (e) { refuse('cannot read the token\'s symbol or decimals: ' + walletErrorText(e)); }
+    if (!ticket.isEth) {
+      try {
+        out.balance = await callOn(client, ticket.token, 'balanceOf(address)', [ticket.depositor], ['uint256']);
+        if (out.price && out.balance < out.price.total)
+          refuse('the depositor\'s balance ' + units(out.balance, out.meta ? out.meta.decimals : null) + ' of the token is below the total ' + units(out.price.total, out.meta ? out.meta.decimals : null));
+      } catch (e) { refuse('cannot read the depositor\'s token balance: ' + walletErrorText(e)); }
+      try { out.allowance = await callOn(client, ticket.token, 'allowance(address,address)', [ticket.depositor, ticket.vault], ['uint256']); }
+      catch (e) { refuse('cannot read the vault\'s allowance: ' + walletErrorText(e)); }
+    }
+  }
+  out.ok = out.refusals.length === 0;
+  return out;
+}
+
+/** The transactions the wallet will be asked to sign, in order: when the allowance is short, a reset to zero if it is not
+ *  zero (tokens such as USDT refuse to change one non-zero allowance into another), then an exact-total approve; then
+ *  the deposit. */
+function buildPlan(checked) {
+  const t = checked.ticket, p = checked.price;
+  const approveNeeded = !t.isEth && (checked.allowance === null || checked.allowance < p.total);
+  const resetNeeded = approveNeeded && checked.allowance !== null && checked.allowance > 0n;
+  return {
+    reset: resetNeeded ? {
+      label: 'reset the vault\'s allowance to zero first (it is ' + checked.allowance + ' base units, below the total; tokens such as USDT refuse to change one non-zero allowance into another)',
+      to: t.token, value: 0n,
+      data: encodeCall('approve(address,uint256)', [t.vault, 0n]),
+    } : null,
+    approve: approveNeeded ? {
+      label: 'approve the vault for exactly the total (never unlimited)',
+      to: t.token, value: 0n,
+      data: encodeCall('approve(address,uint256)', [t.vault, p.total]),
+    } : null,
+    deposit: t.isEth ? {
+      label: 'depositETH: escrow the denomination and the fees',
+      to: t.vault, value: p.total,
+      data: encodeCall('depositETH(uint8,bytes32,uint64)', [t.denomIndex, t.commitment, t.index]),
+    } : {
+      label: 'deposit: escrow the denomination and the fees',
+      to: t.vault, value: 0n,
+      data: encodeCall('deposit(address,uint8,bytes32,uint64)', [t.token, t.denomIndex, t.commitment, t.index]),
+    },
+  };
+}
+
+/** What the wallet says now, against the ticket: the refusals (none when the chain and the account are the ticket's). */
+async function walletStillMatches(client, chainId, from) {
+  const refusals = [];
+  const chain = hexToBig(await client.request('eth_chainId', []));
+  if (chain !== BigInt(chainId))
+    refusals.push('the wallet is now on chain ' + Number(chain) + ' (' + chainName(chain) + '), not the ticket\'s chain ' + Number(chainId) + ' (' + chainName(chainId) + ')');
+  const accounts = await client.request('eth_accounts', []);
+  const account = accounts && accounts.length ? String(accounts[0]).toLowerCase() : null;
+  if (account !== String(from).toLowerCase())
+    refusals.push('the wallet\'s account is now ' + (account || 'none') + ', not the ticket\'s depositor ' + from);
+  return refusals;
+}
+
+/** Sends one transaction through the wallet and waits for its receipt (a status of 0 is an error). Right before the
+ *  send it asks the wallet again for its chain and account and refuses, sending nothing, if either is no longer the
+ *  ticket's; the transaction carries the chain id, which wallets such as MetaMask refuse to sign on another chain.
+ *  An error after the wallet returned a hash carries `afterSend` (the transaction may be on chain). */
+async function sendTx(client, from, tx, chainId) {
+  const changed = await walletStillMatches(client, chainId, from);
+  if (changed.length) {
+    const e = new Error(changed.join('; ') + ': press Check again after switching back');
+    e.walletChanged = true;
+    throw e;
+  }
+  const hash = await client.request('eth_sendTransaction', [{ from: from.toLowerCase(), to: tx.to.toLowerCase(), value: hx(tx.value), data: tx.data, chainId: hx(chainId) }]);
+  if (typeof hash !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(hash))
+    throw new Error('the wallet returned something that is not a transaction hash: ' + String(hash).slice(0, 50));
+  try {
+    const deadline = Date.now() + 300000;
+    for (;;) {
+      const rc = await client.request('eth_getTransactionReceipt', [hash]);
+      if (rc) {
+        if (rc.status !== '0x1') throw new Error('the transaction ' + hash + ' was mined but reverted (status ' + rc.status + '): nothing more is sent; check the block in your wallet');
+        return { hash, receipt: rc };
+      }
+      if (Date.now() > deadline) throw new Error('no receipt for ' + hash + ' after 300 s');
+      await sleep(1500);
+    }
+  } catch (e) { e.afterSend = hash; throw e; }
+}
+
+/** The vault's Deposit event in a receipt, or null when the receipt holds none of the vault. */
+function depositFromReceipt(receipt, vault) {
+  for (const log of (receipt.logs || [])) {
+    if (String(log.address || '').toLowerCase() !== vault.toLowerCase()) continue;
+    const d = decodeDepositLog(log);
+    if (d) return d;
+  }
+  return null;
+}
+
+// =====================================================================================================
+// Formatting (as admin/index.html renders amounts)
+// =====================================================================================================
+function units(raw, dec) {
+  const x = BigInt(raw);
+  if (dec === null || dec === undefined || !Number.isInteger(dec)) return x.toString();
+  const d = 10n ** BigInt(dec), i = x / d, f = x % d;
+  const fs = dec > 0 ? f.toString().padStart(dec, '0').replace(/0+$/, '') : '';
+  return i.toString() + (fs ? '.' + fs : '');
+}
+function amt(raw, dec, symbol) { return units(raw, dec) + ' ' + (symbol || '') + ' [' + BigInt(raw).toString() + ' base units]'; }
+
+// =====================================================================================================
+// Exports: all logic is pure and reachable without a DOM (node, tests)
+// =====================================================================================================
+globalThis.FerrataDepositor = {
+  VERSION, ALLOWED_METHODS, ETH, ZERO_ADDR, ZERO32, CHAINS, DEPOSIT_EVENT_DEF,
+  fromHex, toHex, concatBytes, uintBytes, addrBytes, b32Bytes, hexToBig, hx, utf8Encode, utf8Decode,
+  keccak256, keccak256Hex, selector, eventTopic, toChecksumAddress,
+  parseSig, encodeCall, decodeAbi, decodeRevert, textResult, parseEventDef, DEPOSIT_EVENT, decodeDepositLog,
+  walletClient, walletErrorText, errText, sleep,
+  parseTicket, ticketFromFields, validateTicket, isEthToken, chainName,
+  callOn, priceDeposit, checkTicket, buildPlan, walletStillMatches, sendTx, depositFromReceipt,
+  units, amt,
+};
+
+// =====================================================================================================
+// The page (only in a browser)
+// =====================================================================================================
+if (typeof document !== 'undefined') {
+  const $ = (id) => document.getElementById(id);
+  const ethereum = globalThis.ethereum;
+  let client = null, state = null, plan = null;
+
+  function setStatus(m) { $('status').textContent = m || ''; }
+  function renderLines(el, lines) {
+    el.innerHTML = '';
+    for (const [cls, text] of lines) { const p = document.createElement('p'); p.className = cls; p.textContent = text; el.appendChild(p); }
+  }
+  function renderRefusals(refusals, sentHash) {
+    const lines = [];
+    for (const r of refusals) lines.push(['err', 'refused: ' + r]);
+    if (sentHash) lines.push(['err', 'the wallet did send transaction ' + sentHash + ': check it in your wallet before anything else; nothing more is sent']);
+    else lines.push(['err', 'nothing was sent']);
+    lines.push(['note', 'fix the ticket or the wallet, then press "Check the ticket and price the deposit" again']);
+    renderLines($('refusal'), lines);
+  }
+  function fatalWalletError(action, e) {
+    renderRefusals([action + ' failed: ' + walletErrorText(e)], e && e.afterSend);
+    setStatus('');
+  }
+  function hideSends() {
+    for (const id of ['sendreset', 'sendapprove', 'senddeposit']) { $(id).hidden = true; $(id).disabled = true; }
+  }
+  // The checked summary holds for the chain and the account it was checked on only: a wallet that announces a change
+  // (EIP-1193 chainChanged, accountsChanged) drops it, and sendTx asks the wallet again right before every send.
+  function walletChanged(what) {
+    if (!state && !plan) return;
+    state = null; plan = null;
+    hideSends();
+    renderRefusals(['the wallet\'s ' + what + ' changed after the check: the summary no longer holds']);
+    setStatus('the wallet changed: press Check again');
+  }
+
+  function kwTable(rows) {
+    let h = '<table>';
+    for (const [k, v, cls] of rows) h += '<tr><td class="k">' + esc(k) + '</td><td class="v' + (cls ? ' ' + cls : '') + '">' + esc(v) + '</td></tr>';
+    return h + '</table>';
+  }
+  function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  function readTicketFromDom() {
+    const text = $('ticket').value.trim();
+    if (text) return parseTicket(text);
+    return ticketFromFields({
+      chainId: $('t-chainid').value, vault: $('t-vault').value, token: $('t-token').value,
+      denomIndex: $('t-denom').value, commitment: $('t-commitment').value,
+      depositor: $('t-depositor').value, index: $('t-index').value,
+    });
+  }
+
+  async function connect() {
+    $('refusal').innerHTML = '';
+    setStatus('asking the wallet for an account…');
+    try {
+      const accounts = await client.request('eth_requestAccounts', []);
+      const chainId = hexToBig(await client.request('eth_chainId', []));
+      const a = accounts && accounts.length ? toChecksumAddress(String(accounts[0]).toLowerCase()) : '(none)';
+      $('wnote').textContent = 'Connected: ' + a + ', chain ' + Number(chainId) + ' (' + chainName(chainId) + '). The page asks the wallet only for the methods listed above.';
+      $('wnote').className = 'ok';
+      setStatus('connected');
+    } catch (e) { fatalWalletError('connecting', e); }
+  }
+
+  async function runCheck() {
+    $('refusal').innerHTML = ''; $('summary').innerHTML = '';
+    $('summarysec').hidden = true; $('resultsec').hidden = true;
+    hideSends();
+    state = null; plan = null;
+    let ticket;
+    try { ticket = readTicketFromDom(); }
+    catch (e) { renderRefusals(['cannot read the ticket: ' + errText(e)]); setStatus(''); return; }
+    setStatus('checking the ticket (wallet chain, account, vault, registration, index, price)…');
+    let checked;
+    try { checked = await checkTicket(client, ticket); }
+    catch (e) { renderRefusals(['the checks failed: ' + walletErrorText(e)]); setStatus(''); return; }
+    state = checked;
+    if (!checked.ok) { renderRefusals(checked.refusals); setStatus('refused before anything was sent'); return; }
+    plan = buildPlan(checked);
+    renderSummary(checked, plan);
+    $('summarysec').hidden = false;
+    // A new check shows and enables the first step's button only: a previous deposit left them all disabled.
+    const first = plan.reset ? 'sendreset' : plan.approve ? 'sendapprove' : 'senddeposit';
+    $(first).hidden = false; $(first).disabled = false;
+    setStatus('checked: nothing refused; read the summary, then sign in the wallet.');
+  }
+
+  function renderSummary(c, pl) {
+    const t = c.ticket, p = c.price, m = c.meta;
+    const dec = m ? m.decimals : null, sym = m ? m.symbol : '?';
+    const rows = [
+      ['chain', Number(t.chainId) + ' (' + chainName(t.chainId) + ')'],
+      ['vault', toChecksumAddress(t.vault) + (c.vaultCodeSize !== null ? ' (' + c.vaultCodeSize + ' bytes of code)' : '')],
+      ['token', t.isEth ? 'native ETH (' + ETH + '), 18 decimals' : (m ? m.symbol + ' ' + toChecksumAddress(t.token) + ', ' + m.decimals + ' decimals' : t.token)],
+      ['denomination', p ? amt(p.denomination, dec, t.isEth ? 'ETH' : sym) : '?'],
+      ['mint fee', p ? amt(p.mintFee, dec, t.isEth ? 'ETH' : sym) + ' (fee schedule #' + p.schedule + ')' : '?'],
+      ['relay fee', p ? amt(p.relayFee, dec, t.isEth ? 'ETH' : sym) + ' (paid to the relayer that submits your claim)' : '?'],
+      ['total to escrow', p ? amt(p.total, dec, t.isEth ? 'ETH' : sym) : '?'],
+      ['depositor', toChecksumAddress(t.depositor)],
+      ['index j', t.index.toString()],
+      ['commitment C', t.commitment],
+    ];
+    if (!t.isEth) rows.push(['allowance now', c.allowance !== null ? amt(c.allowance, dec, sym) : '?']);
+    let h = '<p class="note">What your wallet will be asked to sign, in this order (token transfers go only to the vault, and the approve is for the exact total, never unlimited). Right before each, the page asks the wallet again for its chain and account and sends nothing if either changed:</p>';
+    h += kwTable(rows);
+    const txs = [pl.reset, pl.approve, pl.deposit].filter(Boolean);
+    for (const tx of txs) {
+      h += '<p class="note">' + esc(tx.label) + '</p>';
+      h += '<pre class="calldata">to    ' + esc(toChecksumAddress(tx.to)) + '\nvalue ' + esc(hx(tx.value)) + ' wei\ndata  ' + esc(tx.data) + '</pre>';
+    }
+    h += '<p class="warn">Before you sign: compare the vault address and the commitment C shown here and in the wallet\'s confirmation with what your Logos tool printed. If they differ, do not sign &mdash; a swapped C sends the tokens to someone else\'s LEZ account, and nothing on Ethereum can undo it.</p>';
+    h += '<p class="note">What becomes public on Ethereum (the Deposit transaction): your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking). What stays private: the LEZ account that will receive the tokens (C commits to it); which later claim spends it. The approve, when there is one, is public too, and shows the same addresses, token and amount.</p>';
+    $('summary').innerHTML = h;
+  }
+
+  // One allowance step (the reset to zero, or the exact approve): send it, then read the allowance back on chain.
+  async function runSendAllowance(step) {
+    if (!state || !plan || !plan[step]) return;
+    const st = state, pl = plan, t = st.ticket;
+    hideSends();
+    $('refusal').innerHTML = '';
+    setStatus('sending the ' + (step === 'reset' ? 'allowance reset' : 'approve') + ', waiting for its receipt…');
+    try {
+      const sent = await sendTx(client, t.depositor, pl[step], t.chainId);
+      const block = sent.receipt.blockNumber ? Number(hexToBig(sent.receipt.blockNumber)) : null;
+      const allowance = await callOn(client, t.token, 'allowance(address,address)', [t.depositor, t.vault], ['uint256']);
+      if (plan !== pl) return; // the wallet changed meanwhile: walletChanged has said so
+      const ok = step === 'reset' ? allowance === 0n : allowance >= st.price.total;
+      if (!ok) {
+        state = null; plan = null;
+        renderRefusals(['the ' + step + ' is in (' + sent.hash + ', block ' + block + ') but the allowance is ' + allowance + ' base units, not what it should be: nothing more is sent'], sent.hash);
+        setStatus(''); return;
+      }
+      pl[step] = null;
+      const next = pl.approve ? 'sendapprove' : 'senddeposit';
+      $(next).hidden = false; $(next).disabled = false;
+      setStatus((step === 'reset' ? 'the allowance reset' : 'the approve') + ' is in block ' + block + ' (' + sent.hash + '); the allowance is ' + allowance + ' base units; sign the ' + (pl.approve ? 'approve' : 'deposit') + ' when ready.');
+    } catch (e) {
+      state = null; plan = null;
+      hideSends();
+      fatalWalletError('sending the ' + (step === 'reset' ? 'allowance reset' : 'approve'), e);
+    }
+  }
+
+  async function runSendDeposit() {
+    if (!state || !plan) return;
+    const st = state, pl = plan;
+    hideSends();
+    $('refusal').innerHTML = '';
+    setStatus('sending the deposit, waiting for its receipt…');
+    try {
+      const t = st.ticket;
+      const sent = await sendTx(client, t.depositor, pl.deposit, t.chainId);
+      setStatus('decoding the vault\'s Deposit event…');
+      const ev = await Promise.resolve(depositFromReceipt(sent.receipt, t.vault));
+      if (!ev) { throw new Error('the receipt of ' + sent.hash + ' holds no Deposit event of the vault'); }
+      if (ev.args.commitment.toLowerCase() !== t.commitment || ev.args.depositor.toLowerCase() !== t.depositor) {
+        renderRefusals(['the deposit the vault logged does not match the ticket: its commitment or depositor differs. Nothing more is sent; check the deposit with your Logos tool (ferrata scan) and the transaction ' + sent.hash + ' in your wallet.'], sent.hash);
+        setStatus('');
+        state = null; plan = null;
+        return;
+      }
+      const dec = st.meta ? st.meta.decimals : null, sym = t.isEth ? 'ETH' : (st.meta ? st.meta.symbol : '?');
+      const block = Number(hexToBig(sent.receipt.blockNumber));
+      const lines = [
+        ['ok', 'the deposit is in: leaf index ' + ev.args.leafIndex + ' of the deposit tree, transaction ' + sent.hash + ', block ' + block],
+        ['note', 'the vault logged depositor ' + ev.args.depositor + ', j = ' + ev.args.index + ', amount ' + amt(ev.args.amount, dec, sym) + ', commitment C ' + ev.args.commitment + ' — the commitment and the depositor match the ticket (checked)'],
+        ['note', 'your LEZ account receives the tokens when your Logos wallet claims this deposit (after the claim delay the tool printed); the browser never held your LEZ keys.'],
+        ['note', 'check it from the tool any time with: ferrata scan (it downloads the vault\'s whole deposit list and matches C)'],
+      ];
+      renderLines($('result'), lines);
+      $('resultsec').hidden = false;
+      setStatus('done: deposit at leaf index ' + ev.args.leafIndex);
+      state = null; plan = null;
+    } catch (e) {
+      state = null; plan = null;
+      hideSends();
+      fatalWalletError('sending the deposit', e);
+    }
+  }
+
+  if (!ethereum) {
+    $('wnote').className = 'err';
+    $('wnote').textContent = 'No injected wallet (window.ethereum) found. This page needs an EIP-1193 wallet such as MetaMask or Rabby, from a browser extension or an in-app browser. Without one, use the Logos tool\'s own deposit command instead.';
+    $('connect').disabled = true; $('check').disabled = true;
+  } else {
+    client = walletClient(ethereum);
+    $('connect').addEventListener('click', connect);
+    $('check').addEventListener('click', runCheck);
+    $('sendreset').addEventListener('click', () => runSendAllowance('reset'));
+    $('sendapprove').addEventListener('click', () => runSendAllowance('approve'));
+    $('senddeposit').addEventListener('click', runSendDeposit);
+    if (typeof ethereum.on === 'function') {
+      ethereum.on('chainChanged', () => walletChanged('network'));
+      ethereum.on('accountsChanged', () => walletChanged('account'));
+    }
+    setStatus('ready.');
+  }
+}
+})();
+</script>
+</body>
+</html>

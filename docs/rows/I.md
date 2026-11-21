@@ -1,0 +1,92 @@
+# Stream I: the soft requirements, proposed statuses
+
+For the integrator of `docs/requirements-status.md`, `docs/traceability.md` and `docs/EVIDENCE.md`. Branch `rfp-softs`
+from `f13faee2`, after the independent review `review-rfp-I` (its verdicts are the baseline below) and the fixes of
+every finding it made. Box runs: the box (Modal, workspace of the cloud lab, nothing in the lab touched), RISC Zero
+dev mode, LEZ v0.4.0-rc1's state machine in process (the harness); nothing sent to any network. Every number below is
+measured unless it says derived.
+
+| Row | Review's verdict | Proposed now | Why it moved, or not |
+|---|---|---|---|
+| RFP-021 Soft.1 | shown once M-1 and M-4 are fixed | **shown** | M-1 (the reader makes and tests all four consumer checks; an entry for a weaker predicate is never read) and M-4 (codes 62–72, out of the light client's block) are fixed |
+| RFP-021 Soft.5 | in part (a pool's terms could be squatted) | **shown** | the pool's address commits to its terms; a test shows the squat refused, one advance paying one rebate, split progress paid once per gap (M-2, L-1) |
+| RFP-022 Soft.1 | not yet (the plan was unsound) | **in part** (the documentation clause only) | the migration path is rewritten soundly (H-1): the deployed vault cannot adopt committed amounts on either leg; nothing is implemented |
+| RFP-022 Soft.2 | in part | **in part** | unchanged status; the privacy claim corrected (M-5, L-11) |
+| RFP-022 Soft.5 | in part (stand-in wallet) | **in part** | M-3 and M-6 fixed and tested, but the only wallet in any run is still a stand-in EIP-1193 provider, not a wallet extension |
+
+## RFP-021
+
+| ID | Proposed | Clause by clause | Evidence (path; command; where, commit) |
+|---|---|---|---|
+| Soft.1 | shown | *A consumption path that evaluates a predicate and records the resulting verified statement to a public account*: `ferrata_statements`' `Record` sends the attestation program's own `Attest` (predicate and all) and keeps the reply, once, at `statement(key)`, the key being the request without its proofs; `Read` returns it to any program. *So cost can be amortised when many consumers care about the same Ethereum state*: two consumers use one recorded statement; one `Use` 74,518 cycles against 432,128 for a direct attestation and 393,331 for the `Record`; the recorded path is cheaper from two consumers (derived: 542,367 against 864,256). *Sharing a single verification core with the direct path, following the pattern in RFP-020*: the recorder is a thin wrapper that calls the shared verifier and writes a canonical account (RFP-020's push aggregator); the test asserts the recorded reply equals the attestation program's own answer and carries the identifier the direct path's consumer keys on. *Document that a consumer reading such an account trusts whoever wrote it*: [`docs/guides/recorded-statements.md`](../guides/recorded-statements.md), "What a consumer of a recorded statement trusts": four checks a consumer must make, each made by the reference reader and each shown refusing what it must. | `lez/harness/tests/statements.rs`, 3 of 3: `RISC0_DEV_MODE=1 cargo test -p harness --features statements --locked --test statements -- --nocapture` (from `lez/`); box, 21 Nov 2026, commit `8cd8f296`; records `lez/results/statements.md`, `lez/results/statements-checks.md`. Refusals: false predicate (the attestation program's 130), `Record` at another actor 64, a second `Record` 67, `Use` before `Record` 68, a `Read` no program sent 65, a second use 71; the checks: a weaker question recorded, the stronger consumer refused 68 (same statement identifiers in both entries); a forged reply to a waiting reader 65; a bound one block above the entry's 72; another instance 69, another chain 69, an absent statement 70; another program's entry never read under the genuine configuration 68; at the derived actor an entry naming another program or key 69 (placed rows: states no honest transaction leaves). Exit codes: `tests/exit_codes.rs` 4 of 4 (commit `7a943d63`). |
+| Soft.5 | shown | *Propose a mechanism that rewards whoever advances the consensus state*: `ferrata_rebate` pays a fixed rebate from a pool anyone funds (the bridge's fee recipient by policy, after converting wrapped fee tokens to the native token) to whoever lands an advance through `Land`, which sends the update's own `Finish` and pays only if the finalized slot advanced in that transaction, by at least the pool's `min_gap` since the last advance it paid for. The pool's address commits to its terms (instance, rebate, `min_gap`): nobody can set another pool's terms, one advance pays one rebate, and over `progress` slots a pool pays at most `rebate × (1 + progress / min_gap)`. *So that liveness does not rest solely on interested parties choosing to spend the gas*: the rebate is paid out of the pool's own account (`custody_transfer`), not by the updater. *Must preserve the permissionless property of Functionality #11; may make operating attractive, but not exclusive*: anyone may call `Land` naming any payee; `Finish` sent directly still applies the update (tested: nobody paid, nothing refused); an empty pool blocks nothing. Design and limits (the last step's sender is paid; no withdrawal; funding needs a conversion): [`docs/guides/operator-rebate.md`](../guides/operator-rebate.md). | `lez/harness/tests/rebate.rs`, 4 of 4: `RISC0_DEV_MODE=1 cargo test -p harness --features rebate --locked --test rebate -- --nocapture`; box, 21 Nov 2026, commit `8b0a967e`; records `lez/results/rebate.md`, `lez/results/rebate-terms.md`. On five real mainnet updates (periods 1899–1903): operator 1 paid 1,000,000 for 15,556,608 → 15,564,800; a direct update paid nobody; operator 2 paid for its own advance only. The review's attacks: a squatter's `Configure` (rebate 2^128 − 1, no gap) at the funder's pool address refused 75; the funder's pool (3,000,000) pays one advance 1,000,000 and keeps 2,000,000; four landings over 24,576 slots with `min_gap` 16,384 paid once. Refusals: `Configure` twice 78, at another instance's actor with its own evidence 75, `Land` at no pool 79, `Land` of no job 205 (the attestation program's). `Land` 3,843,871 execution gas against 3,736,661 for a direct `Finish` (another update). |
+
+## RFP-022
+
+| ID | Proposed | Clause by clause | Evidence |
+|---|---|---|---|
+| Soft.1 | in part (the documentation clause only) | *Record transferred values on the LEZ side as value commitments*: **not implemented.** *Designed so this can be adopted later without redeploying the vault or resetting accumulated anonymity*: **not met by the deployed design**: on either leg committed amounts need a new vault, and a new vault starts a new deposit tree. Three facts of the deployed code, each tested, rule out handing claims to a second LEZ program: `Sunset` stops imports but not claims and freezes lapse (double mint); a sunset checkpoint opens retirement and refunds (the vault ends, refund plus claim); the vault releases only its own configuration's burns (no exit for a second program's tokens). *Document the intended migration path even if it is not implemented*: [`docs/design/committed-amounts.md`](../design/committed-amounts.md): the path for the deployed system (a new vault, the old one retired: every old leaf claimable or refundable, never both) with each safety claim's test, the one claim not shown as a single test marked so, and what the next vault and program need for a LEZ-side-only switch (not built; unproven). An earlier version of this row ("inbound adoptable without the vault", `a005299a`) was wrong and is withdrawn. | The cited tests, rerun on the box, 21 Nov 2026, commit `8b0a967e` (the note's text only changed after): `lez/`: `RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls --test bridge_inbound --test bridge_time` 1 + 3 + 1; `vault/`: `forge test --offline --match-test` the eight named tests, 8 of 8; `checkpoint/`: `cargo test -p checkpoint-core --locked --test redteam` 1 of 1 (CKP-12); `bridge/`: `cargo test -p ferrata-bridge-core --locked --test inbound --test vectors` 9 + 7. Note commit `f2f8eeb5`. |
+| Soft.2 | in part | *Optional viewing keys allowing a user to voluntarily disclose their own bridge activity to a chosen third party*: a disclosure document from the user's own keys: `kView` for the burns (existing scan), per deposit the declared destination and, once its nullifier is spent, the deposit secret `s` and `N`; the third party verifies it against public chain data alone. It is a bearer document (it proves knowledge of the secrets, not who wrote it), its burns are complete, its deposits the user's selection. *Without weakening privacy for anyone else*: **not met absolutely, and no disclosure of a link can meet it**: no other user's secret is revealed (tested), but each disclosed pair leaves the candidates other users hide among, as the recipient sees them (exactly, in a pool of two), and against everyone if the recipient publishes (stated, not measured). *Without any protocol-level disclosure capability*: wallet-side only; no guest, program or vault change. Why `s` only after the claim: [`docs/privacy/viewing-keys.md`](../privacy/viewing-keys.md). **Why in part:** the clause above; a library with no user-facing command; the tests build the public view with the core's own functions, not from a recorded round trip's chain data. Next: a `ferrata disclose` command, and a replay on the CI round trip (fixed test seed, anvil's deposit events, the harness's nullifiers and burn notes). | `bridge/crates/ferrata-disclose/tests/disclose.rs`, 5 of 5, clippy clean: `cd bridge && cargo test -p ferrata-disclose`; laptop, 21 Nov 2026, commit `c849186f` (rerun by the review on the box: 5 of 5); text corrected in `0a230543`. |
+| Soft.5 | in part (stand-in wallet) | *A supplementary approach compatible with common Ethereum wallet software, such as a web application*: [`web/depositor/index.html`](../../web/depositor/index.html), one static page (no build step, no dependency) that makes a deposit from the account in any wallet injecting `window.ethereum` (EIP-1193), ETH or an ERC-20 with its exact `approve` (after a reset to zero when an allowance is left over, as USDT needs); served to the user's own browser by [`web/depositor/serve.py`](../../web/depositor/serve.py) on 127.0.0.1, so extensions inject into it without the file-access permission. *In addition to the Logos modules*: deposits only; claims, burns, releases and recovery stay in the `ferrata` tool or Basecamp; the page takes the commitment `C` and index `j` from the tool's dry run, so the seed and the LEZ destination never enter the browser. *Document its security trade-offs (malicious or compromised extensions, injected scripts, phishing front ends)*: [`web/depositor/README.md`](../../web/depositor/README.md), "Security trade-offs" (each threat, what it could do, what limits it, what the design gives up against the module; the local server; a wallet switched after the check). **Why in part:** the only wallet in any run is a stand-in EIP-1193 provider that forwards to anvil, not a wallet extension: the status header counts an in-process stand-in for a component the requirement names ("common Ethereum wallet software") as in part. Next: the same run with a wallet extension loaded. | `bash web/depositor/test/run.sh`: headless Chromium (Python Playwright 1.58.0, Chromium 145.0.7632.6), the page served by `serve.py`, a local anvil (chain id 11155111) with the vault, a registered ERC-20 and a registered Tether-style token; 15 case groups, 90 checks, all passed: the served bytes and headers (CSP with the script's hash and `frame-ancestors 'none'`; a foreign Host refused; a foreign page cannot frame it); ETH, ERC-20 and Tether-style (reset, approve, deposit) deposits checked on chain, each transaction carrying `chainId`; refusals for wrong chain, other account, stale index, zero `C`, unregistered token, a wallet rejection (4001, nothing retried); the wallet's chain or account switched after the check, announced or silent (nothing sent each time); the page's own traffic (only itself) and wallet methods (only the allowed ones). Its Python `s` and `C` reproduce `bridge/vectors/inbound-v2.json`. Box, 21 Nov 2026, commit `49f9f2b4`; record `web/depositor/results/anvil-2026-11-21.txt`. |
+
+## Proposed EVIDENCE rows
+
+1. **Recorded statements (RFP-021 Soft.1).** `ferrata_statements` records the attestation program's own `Attest`
+   reply once at `statement(key)` (the key is the request without its proofs); `ferrata_statements_reader`, a
+   reference consumer, uses one statement of it once per configuration, which fixes the recorder, the attestation
+   program, the instance, the chain, the question and the oldest block accepted, and derives the key itself. Stage 4
+   chain, mainnet block 26,384,851, WETH balance of Uniswap v2's USDC/WETH pair ≥ 1 WETH: the recorded reply equals the
+   program's own answer and its storage statement carries the identifier `ferrata_holdings` keys on; two consumers use
+   it; the guide's four consumer checks each refuse what they must (an entry for the weaker question "≥ 0", with the
+   same statement identifiers, is never read under the stronger one); every refusal changes nothing. Cycles: direct
+   path 432,128, `Record` 393,331, one `Use` 74,518. 3 of 3. Box, 21 Nov 2026, dev mode. `RISC0_DEV_MODE=1 cargo test
+   -p harness --features statements --locked --test statements -- --nocapture`. `lez/results/statements.md`,
+   `lez/results/statements-checks.md`, `docs/guides/recorded-statements.md`.
+2. **The operator rebate (RFP-021 Soft.5).** `ferrata_rebate`: a pool, at an address committing to its terms
+   (instance, rebate, least advance paid for), funded by an ordinary native transfer, pays the rebate to whoever lands
+   an advance through `Land` (`Finish` relayed, the instance read before and after, paid out of the pool's own
+   account). Five real mainnet updates: no advance, no pay; operator 1 paid 1,000,000 for 15,556,608 → 15,564,800; a
+   direct update pays nobody and is not refused; operator 2 paid for its own advance only; an empty pool blocks
+   nothing; half a rebate pays half. The review's attacks: a squatter's terms at the funder's address refused (75);
+   one advance pays one rebate of a 3,000,000 pool; four landings over 24,576 slots with a gap of 16,384 paid once.
+   `Land` 3,843,871 execution gas, a direct `Finish` 3,736,661. 4 of 4. Box, 21 Nov 2026, dev mode. `RISC0_DEV_MODE=1
+   cargo test -p harness --features rebate --locked --test rebate -- --nocapture`. `lez/results/rebate.md`,
+   `lez/results/rebate-terms.md`, `docs/guides/operator-rebate.md`.
+3. **Voluntary disclosure (RFP-022 Soft.2).** `bridge/crates/ferrata-disclose`: Alice's document lists her deposits
+   with destinations, the claim of each claimed one, and her burns with recipients; nothing of Bob's; ten kinds of
+   tampering refused, each by its named error; no `kAuth`, seed or `sOut` in it; JSON round trip. 5 of 5. Laptop, 21
+   Nov 2026. `cd bridge && cargo test -p ferrata-disclose`. `docs/privacy/viewing-keys.md` (what a recipient learns:
+   each disclosed link shrinks the others' anonymity sets against it).
+4. **A web depositor for common Ethereum wallets (RFP-022 Soft.5).** `web/depositor/index.html`, a static page using
+   the user's injected wallet (EIP-1193), served on 127.0.0.1 by `web/depositor/serve.py`: ticket (`C`, `j`) from the
+   Logos tool's dry run, checks before sending and again right before each send, the tool's pricing, exact calldata
+   shown, exact `approve` (reset first when needed), `chainId` in every transaction, the `Deposit` event decoded; CSP
+   `default-src 'none'` with the script pinned by hash, `frame-ancestors 'none'` from the server. Headless Chromium
+   against anvil with a stand-in EIP-1193 wallet: 15 case groups, 90 checks passed. Box, 21 Nov 2026. `bash
+   web/depositor/test/run.sh`. `web/depositor/README.md` (security trade-offs),
+   `web/depositor/results/anvil-2026-11-21.txt`.
+5. **Committed amounts, the migration path (RFP-022 Soft.1, documentation clause).** `docs/design/committed-amounts.md`:
+   the deployed vault cannot adopt committed amounts without a new vault (three facts of the deployed code, each
+   tested); the sound path (a new vault, the old one retired) with each safety claim's test; what a next vault needs
+   (unproven). The cited tests rerun on the box, 21 Nov 2026: 5 harness, 8 vault, 1 checkpoint red-team, 16 bridge-core,
+   all passed.
+
+## Files outside this stream's own
+
+New outside `lez/` and `bridge/`: `web/depositor/` (with `serve.py`), `vault/script/WebDepositorLocal.s.sol` and
+`vault/script/TestTetherToken.sol` (a local deployment and a Tether-style test token for the page's test; the vault
+unchanged), `docs/guides/recorded-statements.md`, `docs/guides/operator-rebate.md`, `docs/design/committed-amounts.md`,
+`docs/privacy/viewing-keys.md`. Changed, minimally: `lez/Cargo.toml` (four workspace members), `lez/harness/Cargo.toml`
+(optional guest crates behind the features `statements` and `rebate`, off by default; their two wire crates ordinary
+dependencies), `lez/harness/src/lib.rs` (`Instance::update_in_with`; `exit_name` names the new codes),
+`lez/harness/src/scenarios.rs` (`World::apply_with`), `lez/harness/src/bin/ferrata-attest.rs` (names the blocks
+62–72 and 73–79), `lez/harness/tests/exit_codes.rs` (a test of the programs' own blocks), `lez/wire/src/lib.rs`
+(`CODE_BLOCKS`' light-client block 1..=61 and its comment, edited in place with the same line count: the deployed
+attestation program's image id is unchanged, rebuilt on the box), `idl/ferrata_attestation.idl.json`,
+`idl/tools/build_idl.py`, `idl/README.md` (the description's 1-61), `docs/guides/consumer-guide.md` §8.2,
+`docs/design/attestation.md`, `lez/RESULTS.md` (the code-block tables), `docs/image-ids.md` (a section for the three
+new programs), `bridge/Cargo.toml` (one member), `bridge/Cargo.lock`, `lez/Cargo.lock`. No deployed guest or program
+changed; no image id of `docs/image-ids.md`'s deployed tables moved. The new programs (`ferrata_statements`,
+`ferrata_statements_reader`, `ferrata_rebate`) are not deployed anywhere; their exit codes (62–72, 73–79) lie in no
+other program's block (`tests/exit_codes.rs`). `docs/traceability.md` row U.5 still names the core's block as 1–79:
+the integrator's edit (1–61).

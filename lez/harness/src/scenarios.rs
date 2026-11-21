@@ -104,6 +104,16 @@ impl World {
     /// upgraded here by hand, as a light client does at a fork, and keeps the upgrade only if
     /// the update is accepted.
     pub fn apply(&mut self, update: &LightClientUpdate, label: &str) -> JobRun {
+        self.apply_with(update, label, |chain, label, _job_id, job_actor, actors, time| {
+            chain.submit(label, job_actor, borsh::to_vec(&Message::Finish).unwrap(), actors, vec![], time)
+        })
+    }
+
+    /// [`World::apply`] with the job's last step sent by `finish` ([`Instance::update_in_with`]).
+    pub fn apply_with<F>(&mut self, update: &LightClientUpdate, label: &str, finish: F) -> JobRun
+    where
+        F: FnOnce(&mut Chain, &str, Root, Actor, Vec<Actor>, u64) -> TxReport,
+    {
         let layout = self.inst.layout_for(&self.inst.store(&self.chain), update);
         let mut next = self.native.clone();
         if layout > next.core().fork {
@@ -113,7 +123,7 @@ impl World {
         let ctx =
             Context { spec: &self.spec, genesis_validators_root: self.inst.config.genesis_validators_root, bls: &BLS };
         let native = next.process_update(update, update.signature_slot + 1, &ctx);
-        let run = self.inst.update_in(&mut self.chain, update, layout, &before, label);
+        let run = self.inst.update_in_with(&mut self.chain, update, layout, &before, label, finish);
         let all_ok = run.reports.iter().all(TxReport::ok);
         match native {
             Ok(outcome) => {

@@ -1,0 +1,16 @@
+[package]
+name = "ferrata-disclose"
+version = "0.1.0"
+description = "Ferrata bridge: wallet-side voluntary disclosure of a user's deposits, claims and burns to a chosen third party (RFP-022 soft requirement 2; prototype, unaudited)"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+ferrata-bridge-core = { path = "../ferrata-bridge-core" }
+hex = "0.4"
+serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+serde_json = "1"

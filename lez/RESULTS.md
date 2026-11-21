@@ -144,7 +144,8 @@ on the core's and the step API's codes as they are, so every code has one owner:
 
 | codes | owner | defined in | in use |
 |---|---|---|---|
-| 1–79 | core: the light client | `ferrata_core::Error` | 1, 10–12, 20–29, 40–43, 45, 50–52, 60–61 |
+| 1–61 | core: the light client | `ferrata_core::Error` | 1, 10–12, 20–29, 40–43, 45, 50–52, 60–61 |
+| 62–79 | programs of their own: `ferrata_statements` and its reader 62–72, `ferrata_rebate` 73–79 (since 21 November 2026; until then the light client's block was 1–79) | `statements-wire`, `rebate-wire` | 62–79 |
 | 80–99 | step API | `ferrata_core::steps::StepError` | 80–84 |
 | 100–199 | core: the execution layer (from `main`) | `ferrata_core::Error` | 100–101, 110–113, 120–125, 130–131, 140–141, 150–152, 160–163 |
 | 200–219 | the program's own refusals | `wire/src/lib.rs`, `code` | 200–214 (213 and 214 are `Attest`'s: no record at the actor; a request it cannot serve) |

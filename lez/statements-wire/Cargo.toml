@@ -1,0 +1,16 @@
+[package]
+name = "ferrata-lez-statements-wire"
+description = "Messages, actor state and keys of ferrata_statements (a LEZ program that records Ferrata's verified statements to public accounts, RFP-021 soft requirement 1) and of ferrata_statements_reader, a consumer that reads them (guest and host)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# The attestation program's public interface (`attest::Request`, `Attestation`, `header_actor`, `Message::Attest`):
+# the recorder sends the attestation program's own `Attest`, so both paths share one verification core.
+ferrata-lez-wire = { path = "../wire" }
+# LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml).
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }

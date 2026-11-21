@@ -1,0 +1,13 @@
+[package]
+name = "methods-statements"
+description = "Builds ferrata_statements (the recorded-statement program, RFP-021 soft requirement 1) and ferrata_statements_reader (a consumer that reads its accounts) with risc0-build 3.0.5, apart from `methods`, whose guests (the deployed programs among them) it leaves as they are"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+
+[package.metadata.risc0]
+methods = ["../guests/statements", "../guests/statements-reader"]

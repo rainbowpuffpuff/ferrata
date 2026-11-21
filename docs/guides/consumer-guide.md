@@ -364,7 +364,9 @@ Each code has one owner, and a test fails if two owners share one
 
 | Block | Owner | Defined in |
 |---|---|---|
-| 1–79 (1–61 in use) | `ferrata-core`, light client | [`crates/ferrata-core/src/error.rs`](../../crates/ferrata-core/src/error.rs) |
+| 1–61 (all in use) | `ferrata-core`, light client | [`crates/ferrata-core/src/error.rs`](../../crates/ferrata-core/src/error.rs) |
+| 62–72 (62–72) | `ferrata_statements` and its reader (recorded statements; not deployed) | `code` in [`lez/statements-wire/src/lib.rs`](../../lez/statements-wire/src/lib.rs) |
+| 73–79 (all seven) | `ferrata_rebate` (the operator rebate; not deployed) | `code` in [`lez/rebate-wire/src/lib.rs`](../../lez/rebate-wire/src/lib.rs) |
 | 80–99 (80–84) | the step API of the public job | `StepError` in [`crates/ferrata-core/src/steps.rs`](../../crates/ferrata-core/src/steps.rs) |
 | 100–199 (100–163) | `ferrata-core`, execution layer and attestations | `error.rs` |
 | 200–219 (200–215) | the attestation program | `code` in [`lez/wire/src/lib.rs`](../../lez/wire/src/lib.rs) |

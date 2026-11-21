@@ -106,3 +106,36 @@ fn the_tables_name_every_core_code() {
         assert!(!harness::exit_name(u32::from(value)).starts_with("code "), "{name} has no name in the tables");
     }
 }
+
+/// The programs with blocks of their own: `ferrata_statements` and its reader, `ferrata_rebate` (the two run the
+/// attestation program in their transactions and pass its codes on) and the bridge program. Each block lies outside
+/// every block of `CODE_BLOCKS` and outside the others; every code of each lies in its own block, once; the tables
+/// name every one.
+#[test]
+fn the_other_programs_codes_are_blocks_of_their_own() {
+    use ferrata_lez_bridge_wire::{code as bridge, CODE_BLOCK as BRIDGE};
+    use ferrata_lez_rebate_wire::{code as rebate, CODE_BLOCK as REBATE};
+    use ferrata_lez_statements_wire::{code as statements, CODE_BLOCK as STATEMENTS};
+    let own: [(&str, RangeInclusive<u8>, &[(&str, u8)]); 3] =
+        [("statements", STATEMENTS, statements::ALL), ("rebate", REBATE, rebate::ALL), ("bridge", BRIDGE, bridge::ALL)];
+    let overlaps = |a: &RangeInclusive<u8>, b: &RangeInclusive<u8>| a.start() <= b.end() && b.start() <= a.end();
+    for (i, (name, block, codes)) in own.iter().enumerate() {
+        for (owner, attestation) in &CODE_BLOCKS {
+            assert!(!overlaps(block, attestation), "{name} {block:?} overlaps {owner:?} {attestation:?}");
+        }
+        for (other, other_block, _) in &own[i + 1..] {
+            assert!(!overlaps(block, other_block), "{name} {block:?} overlaps {other} {other_block:?}");
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for (code, value) in *codes {
+            assert!(block.contains(value), "{name}: {code} = {value} is outside {block:?}");
+            assert!(seen.insert(*value), "{name}: {value} twice");
+            if *name != "bridge" {
+                assert!(!harness::exit_name(u32::from(*value)).starts_with("code "), "{name}: {code} has no name");
+            }
+        }
+    }
+    // The light client's block ends where the statements' begins: no core code is in 62–79.
+    assert!(core_codes_in_source().iter().all(|(_, v)| !(62..=79).contains(v)));
+    assert_eq!((STATEMENTS.start(), REBATE.end()), (&62, &79));
+}

@@ -241,7 +241,7 @@ EIP-2935 keeps the last 8,191 block hashes in a system contract. One hop proves 
 
 One enum of stable numeric codes is shared by the program and the dry run, covering the U.5 failure modes. Codes seen in the measured program runs are listed in §4.4.
 
-Each code has one owner: the core's are 1–79 and 100–199, the step API's 80–99, the program's own 200–217 (all in use; 216 `BAD_SUCCESSOR` and 217 `STALE_CHECKPOINT` since milestone A1) and the reference consumer's 218–229 (230–239 are `ferrata_holdings`'s, 240–255 the bridge program's), and a test fails if two owners share a code (`lez/harness/tests/exit_codes.rs`). The table of §4.4 was measured before the program's codes moved from 100–112 to 200–212; it gives the current code with the one measured beside it.
+Each code has one owner: the core's are 1–61 and 100–199, the step API's 80–99, the program's own 200–217 (all in use; 216 `BAD_SUCCESSOR` and 217 `STALE_CHECKPOINT` since milestone A1) and the reference consumer's 218–229 (62–72 are the recorded-statement programs', 73–79 the rebate program's, 230–239 `ferrata_holdings`'s, 240–255 the bridge program's), and a test fails if two owners share a code (`lez/harness/tests/exit_codes.rs`). The table of §4.4 was measured before the program's codes moved from 100–112 to 200–212; it gives the current code with the one measured beside it.
 
 ### 5.6 No scan (P.9)
 
