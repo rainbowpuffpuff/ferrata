@@ -5,10 +5,16 @@
 //! several beacon providers report:
 //!
 //! * **divergence** (`instance-diverged`, critical): the instance's finalized header is not the canonical block at
-//!   its slot by the providers' account (at least `min_agreeing` of them report another root, or no block, and none
-//!   reports the instance's). This is what a captured or colluding sync committee leaves behind: a forged handoff or
-//!   finality the program could not tell apart (`docs/trust.md` §2). The program cannot see it; a consumer wires this
-//!   alarm to its freeze authority (the alert command) and sizes its caps to what may pass before the freeze;
+//!   its slot by the account of at least `diverge_at` providers (default 1: any one of them), whatever the others
+//!   report: they have another root there, or no block. This is what a captured or colluding sync committee leaves
+//!   behind: a forged handoff or finality the program could not tell apart (`docs/trust.md` §2). The program cannot
+//!   see it; a consumer wires this alarm to its freeze authority (the alert command) and sizes its caps to what may
+//!   pass before the freeze. A provider that reports the instance's root does not suppress the alarm: it may be
+//!   colluding with the forger. The exact rule, with `n` providers answering: `f` lying providers raise the alarm on a
+//!   healthy instance when `f >= diverge_at`; `f` providers colluding with a forged instance hide it only when the
+//!   honest ones that answer are fewer than `diverge_at`, that is `f > n - diverge_at` (by default, only when every
+//!   provider that answers colludes). With `diverge_at` 2 and three or more providers, one provider can neither
+//!   raise nor hide it;
 //! * **stall** (`instance-stalled`, warning): the instance's finalized header lags the providers' finalized header
 //!   by more than `stall_after_s`. Nobody is obliged to advance an instance (S.7): the alarm tells whoever cares that
 //!   updates are outstanding. Anyone can submit them, and the instance resumes (R.7);
@@ -52,9 +58,14 @@ pub struct ProviderView {
 
 /// The decision's parameters.
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Policy {
-    /// Agreeing providers needed to confirm a header, and disagreeing ones (with none agreeing) to call it diverged.
+    /// Agreeing providers needed (with none disagreeing) to confirm a header.
     pub min_agreeing: usize,
+    /// Disagreeing providers that call the instance diverged (`instance-diverged`, critical), whatever the number that
+    /// agree. Default 1: any provider that disagrees. 2, with three or more providers: no single provider can raise
+    /// the alarm or hide it. Read as 1 when 0.
+    pub diverge_at: usize,
     /// The lag of the instance's finalized header behind the providers' finalized header that raises the stall alarm.
     pub stall_after_s: u64,
 }
@@ -62,7 +73,7 @@ pub struct Policy {
 impl Default for Policy {
     fn default() -> Self {
         // Two missed sessions of the lab's two-hour cadence (operator guide §3), plus finality.
-        Self { min_agreeing: 2, stall_after_s: 4 * 3600 + 15 * 60 }
+        Self { min_agreeing: 2, diverge_at: 1, stall_after_s: 4 * 3600 + 15 * 60 }
     }
 }
 
@@ -95,9 +106,9 @@ pub struct ProviderVerdict {
 pub enum Divergence {
     /// At least `min_agreeing` providers agree and none disagrees.
     Confirmed,
-    /// At least `min_agreeing` providers disagree and none agrees: the instance is not on the providers' chain.
+    /// At least `diverge_at` providers disagree, whatever the number that agree: the instance is not on their chain.
     Diverged,
-    /// Providers agree and disagree at once: no verdict, the providers are at fault or the network is split.
+    /// Fewer than `diverge_at` providers disagree and some agree (only when `diverge_at` is above 1): no verdict.
     Contested,
     /// Too few usable answers for either verdict.
     Unconfirmed,
@@ -225,14 +236,19 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
     }
     let agree = verdicts.iter().filter(|v| v.standing == Standing::Agrees).count();
     let disagree = verdicts.iter().filter(|v| v.standing == Standing::Disagrees).count();
-    let divergence = match (agree, disagree) {
-        (a, 0) if a >= p.min_agreeing => Divergence::Confirmed,
-        (0, d) if d >= p.min_agreeing => Divergence::Diverged,
-        (a, d) if a > 0 && d > 0 => Divergence::Contested,
-        _ => Divergence::Unconfirmed,
+    // Disagreement decides: an agreeing provider never cancels a disagreeing one (it may collude with a forger).
+    let diverge_at = p.diverge_at.max(1);
+    let divergence = if disagree >= diverge_at {
+        Divergence::Diverged
+    } else if disagree > 0 && agree > 0 {
+        Divergence::Contested
+    } else if disagree == 0 && agree >= p.min_agreeing {
+        Divergence::Confirmed
+    } else {
+        Divergence::Unconfirmed
     };
-    let dissent: Vec<String> =
-        verdicts.iter().filter(|v| v.standing == Standing::Disagrees).map(|v| v.name.clone()).collect();
+    let names = |s: Standing| -> Vec<String> { verdicts.iter().filter(|v| v.standing == s).map(|v| v.name.clone()).collect() };
+    let (dissent, assent) = (names(Standing::Disagrees), names(Standing::Agrees));
     match divergence {
         Divergence::Confirmed => {}
         Divergence::Diverged => alerts.push(
@@ -244,13 +260,16 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
             .with("instance", &id)
             .with("slot", slot)
             .with("instance_root", hex0x(&root))
-            .with("providers", serde_json::json!(dissent)),
+            .with("providers", serde_json::json!(dissent))
+            .with("agreeing", serde_json::json!(assent))
+            .with("diverge_at", diverge_at),
         ),
         Divergence::Contested => alerts.push(
-            Alert::new(Level::Warn, "providers-disagree", "providers disagree about the instance's finalized header; no verdict")
+            Alert::new(Level::Warn, "providers-disagree", "providers disagree about the instance's finalized header, fewer than --diverge-at against it")
                 .with("slot", slot)
                 .with("agree", agree)
-                .with("disagree", serde_json::json!(dissent)),
+                .with("disagree", serde_json::json!(dissent))
+                .with("diverge_at", diverge_at),
         ),
         Divergence::Unconfirmed => alerts.push(
             Alert::new(Level::Warn, "instance-unconfirmed", "too few providers answered to confirm the instance's finalized header")

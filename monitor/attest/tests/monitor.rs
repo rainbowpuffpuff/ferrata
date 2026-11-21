@@ -320,42 +320,98 @@ fn a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_ho
     println!("freeze hook got: {}", lines[0]);
 }
 
+/// The forged instance's finalized root, as a provider colluding with the forger reports it.
+fn forged_root(forged_state: &InstanceState) -> String {
+    format!("0x{}", hex::encode(CompactStore::decode(&forged_state.store).unwrap().finalized.hash_tree_root()))
+}
+
+fn names(alert: &Value, field: &str) -> Vec<String> {
+    alert[field].as_array().unwrap().iter().map(|n| n.as_str().unwrap().to_string()).collect()
+}
+
 #[test]
-fn one_lying_provider_cannot_raise_or_hide_a_divergence() {
+fn one_colluding_provider_cannot_hide_a_divergence_from_the_freeze_hook() {
+    let f = fx();
+    let d = scratch("colluder");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let now = secs(&f.stalled["time_ms"]) + 60;
+    let forged_state = forged(&state_of(&f.stalled));
+    let fstate = write_state(&d, "f.hex", &forged_state);
+    let honest = [
+        provider(&g, slot, Some(header_11549664()), slot + 64),
+        provider(&g, slot, Some(header_11549664()), slot + 64),
+    ];
+    let colluders = [
+        provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64),
+        provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64),
+    ];
+    // A captured committee's forged header, two honest providers and one that colludes with the forger, wired as
+    // the README says (the freeze tool at level critical): the alarm is critical and the freeze tool runs, once.
+    let freeze = d.join("freeze-requests.jsonl");
+    let mut a = args(&fstate, &[&honest[0], &honest[1], &colluders[0]], now);
+    a.extend(["--alert-cmd".into(), format!("cat >> {}", freeze.display()), "--alert-cmd-level".into(), "critical".into()]);
+    let o = check(&a);
+    assert_eq!(o.code, 20, "{}", o.report);
+    assert_eq!(o.report["divergence"], "diverged");
+    assert_eq!(kinds(&o.report), vec!["instance-diverged"]);
+    let lines: Vec<Value> =
+        std::fs::read_to_string(&freeze).unwrap().lines().map(|l| serde_json::from_str(l).unwrap()).collect();
+    assert_eq!(lines.len(), 1, "the freeze hook ran once");
+    assert_eq!(lines[0]["kind"], "instance-diverged");
+    assert_eq!(names(&lines[0], "providers"), vec!["p0", "p1"], "the honest providers, which disagree");
+    assert_eq!(names(&lines[0], "agreeing"), vec!["p2"], "the colluder, named");
+    println!("colluder: freeze hook got {}", lines[0]);
+    // Two colluders of three: one honest provider still raises it (the default, --diverge-at 1).
+    let o = check(&args(&fstate, &[&honest[0], &colluders[0], &colluders[1]], now));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (20, Some("diverged")), "{}", o.report);
+    // The stated limit: when every provider that answers colludes, the forgery is not visible to the monitor.
+    let o = check(&args(&fstate, &[&colluders[0], &colluders[1]], now));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (0, Some("confirmed")), "{}", o.report);
+}
+
+#[test]
+fn the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2() {
     let f = fx();
     let d = scratch("liar");
     let slot = f.stalled["finalized_slot"].as_u64().unwrap();
     let g = sepolia_genesis();
+    let now = secs(&f.stalled["time_ms"]) + 60;
     let honest = header_11549664();
     let lie = header_json(&other_root(&honest), slot);
-    // An honest instance, two honest providers and a liar: no divergence is called.
     let ps = [
         provider(&g, slot, Some(honest.clone()), slot + 64),
         provider(&g, slot, Some(honest.clone()), slot + 64),
         provider(&g, slot, Some(lie), slot + 64),
     ];
     let state = write_state(&d, "s.hex", &state_of(&f.stalled));
-    let o = check(&args(&state, &ps.iter().collect::<Vec<_>>(), secs(&f.stalled["time_ms"]) + 60));
-    assert_eq!(o.code, 10, "{}", o.report);
-    assert_eq!(o.report["divergence"], "contested");
+    let with = |a: Vec<String>, n: &str| -> Vec<String> { a.into_iter().chain(["--diverge-at".to_string(), n.to_string()]).collect() };
+    // A healthy instance, two honest providers and a liar. By default any disagreeing provider raises the alarm (a
+    // false freeze costs a pause); the alert names the liar and the two that agree.
+    let o = check(&args(&state, &ps.iter().collect::<Vec<_>>(), now));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (20, Some("diverged")), "{}", o.report);
+    let alert = &o.report["alerts"][0];
+    assert_eq!((names(alert, "providers"), names(alert, "agreeing")), (vec!["p2".to_string()], vec!["p0".to_string(), "p1".to_string()]));
+    // --diverge-at 2: one liar cannot raise it, only a warning.
+    let o = check(&with(args(&state, &ps.iter().collect::<Vec<_>>(), now), "2"));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (10, Some("contested")), "{}", o.report);
     assert_eq!(kinds(&o.report), vec!["providers-disagree"]);
-    // A forged instance and one provider that colludes with it: the divergence is not hidden, it is contested (a
-    // warning to act on), and with the colluder gone it is called.
+    // --diverge-at 2 on a forged instance: one colluder of three cannot hide it (two honest still disagree) ...
     let forged_state = forged(&state_of(&f.stalled));
-    let forged_root = format!(
-        "0x{}",
-        hex::encode(CompactStore::decode(&forged_state.store).unwrap().finalized.hash_tree_root())
-    );
-    let colluder = provider(&g, slot, Some(header_json(&forged_root, slot)), slot + 64);
     let fstate = write_state(&d, "f.hex", &forged_state);
-    let o = check(&args(&fstate, &[&ps[0], &ps[1], &colluder], secs(&f.stalled["time_ms"]) + 60));
-    assert_eq!(o.code, 10, "{}", o.report);
-    assert_eq!(o.report["divergence"], "contested");
-    let o = check(&args(&fstate, &[&ps[0], &ps[1]], secs(&f.stalled["time_ms"]) + 60));
-    assert_eq!(o.report["divergence"], "diverged");
-    // A liar cannot raise the stall alarm alone: the stall is measured against the providers' median finalized slot.
+    let colluder = |_: usize| provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64);
+    let (c0, c1) = (colluder(0), colluder(1));
+    let o = check(&with(args(&fstate, &[&ps[0], &ps[1], &c0], now), "2"));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (20, Some("diverged")), "{}", o.report);
+    // ... two of three can (f > n - diverge_at): the rule the README states.
+    let o = check(&with(args(&fstate, &[&ps[0], &c0, &c1], now), "2"));
+    assert_eq!((o.code, o.report["divergence"].as_str()), (10, Some("contested")), "{}", o.report);
+    // --diverge-at 0 is refused (a usage error).
+    let out = Command::new(bin()).arg("check").args(with(args(&state, &[&ps[0]], now), "0")).output().unwrap();
+    assert_eq!(out.status.code(), Some(2));
+    // A liar cannot raise the stall alarm alone: the stall is measured against the median of three finalized slots.
     let far = provider(&g, slot, Some(honest), slot + 1_000_000);
-    let o = check(&args(&state, &[&ps[0], &ps[1], &far], secs(&f.stalled["time_ms"]) + 60));
+    let o = check(&args(&state, &[&ps[0], &ps[1], &far], now));
     assert!(!kinds(&o.report).contains(&"instance-stalled".to_string()), "{}", o.report);
 }
 

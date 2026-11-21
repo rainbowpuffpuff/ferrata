@@ -40,8 +40,13 @@ struct Common {
     /// Instead of asking providers: their answers as JSON (a list of `ProviderView`), for offline checks.
     #[arg(long, conflicts_with = "providers")]
     views: Option<PathBuf>,
+    /// Agreeing providers needed, with none disagreeing, to confirm the instance's finalized header.
     #[arg(long, default_value_t = 2)]
     min_agreeing: usize,
+    /// Disagreeing providers that raise `instance-diverged` (critical), whatever the number agreeing. 1 (default): any
+    /// provider that disagrees. 2, with three or more providers: no single provider can raise the alarm or hide it.
+    #[arg(long, default_value_t = 1, value_parser = clap::value_parser!(u64).range(1..))]
+    diverge_at: u64,
     /// Lag behind the providers' finalized header that raises `instance-stalled`.
     #[arg(long, default_value_t = Policy::default().stall_after_s)]
     stall_after: u64,
@@ -69,7 +74,7 @@ impl Common {
         })
     }
     fn policy(&self) -> Policy {
-        Policy { min_agreeing: self.min_agreeing, stall_after_s: self.stall_after }
+        Policy { min_agreeing: self.min_agreeing, diverge_at: self.diverge_at as usize, stall_after_s: self.stall_after }
     }
     fn sink(&self) -> Sink {
         Sink { log: self.alert_log.clone(), cmd: self.alert_cmd.clone(), cmd_level: Some(self.alert_cmd_level) }
