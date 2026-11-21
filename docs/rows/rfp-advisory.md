@@ -10,8 +10,8 @@ change, directly, only files no open branch edits (the note and its scripts, the
 `docs/guides/verify.md` (the latter edited in `43e31d01`), which `rfp-bridge-hardening` also edits (other paragraphs;
 `git merge-tree` clean); what shared files need is proposed below. After the second review, the later commits change
 the note, its records and scripts, the migration plan, this file, and the security paragraphs this branch added to
-`README.md` (which `rfp-docs-final` also edits) and `docs/sepolia.md` (other paragraphs; `git merge-tree` clean with
-both).
+`README.md` (which `rfp-docs-final` also edits) and `docs/sepolia.md` (other paragraphs: both files merge cleanly
+with both branches; `rfp-docs-final` conflicts with main alone in two files this branch does not touch).
 
 ## Requirement rows (proposed)
 
