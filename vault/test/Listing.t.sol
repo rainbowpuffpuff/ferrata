@@ -22,7 +22,8 @@ contract ListingTest is VaultTestBase {
         assertEq(_listingSlot(ETH), bytes32(0x04c4682ff8c82caf0fbc6c2bb47b594076f1f707d8d119512ddbbe285ed4c481));
     }
 
-    function test_delistAndRelist_publishTheSlot_releasesUnaffected() public {
+    /// @dev Releases of a delisted token go on: `Release.t.sol`, `test_release_worksForDelistedToken`.
+    function test_delistAndRelist_publishTheSlot() public {
         bytes32 slot = _listingSlot(ETH);
         assertEq(vm.load(address(vault), slot), bytes32(0), "never written: listed");
         _deposit(alice, ETH, 1, bytes32(uint256(1)));
