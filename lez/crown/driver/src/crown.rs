@@ -130,21 +130,32 @@ fn now_ms() -> u64 {
 // The configuration
 // ---------------------------------------------------------------------------------------------
 
-/// The roles of the configuration and its caps: no floor, unlimited caps (e2e/crown/README.md
-/// "Identity of the configuration"). The admin and the freeze authority are throwaway accounts of
-/// derived keys (they act by signing, which admits their accounts); the fee recipient only
-/// receives, and a public account must exist to be admitted, so it is the second of the funded
+/// The roles of the configuration and its caps. The admin and the freeze authority are throwaway
+/// accounts of derived keys (they act by signing, which admits their accounts); the fee recipient
+/// only receives, and a public account must exist to be admitted, so it is the second of the funded
 /// test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
+/// Caps (RFP-022 Sec.4, as `vault/script/DeployVault.s.sol` deploys the vault): per token and day 100
+/// times ETH's largest denomination in value units, refilled over a day, the global cap the same (one
+/// token), and an immutable floor of one largest denomination a day. `FERRATA_UNCAPPED=1` gives the
+/// unlimited caps and zero floor of the live runs of November 2026, whose configuration ids commit to
+/// those (e2e/crown/README.md "Identity of the configuration").
 pub fn controls() -> Controls {
-    let unlimited = CapParams { capacity: UNLIMITED, refill_per_second: 0 };
     let fee_recipient = account_of(&lez_test_payers().expect("LEZ's test keys")[3]);
+    let (floor, cap) = if std::env::var("FERRATA_UNCAPPED").is_ok_and(|v| v == "1") {
+        (CapParams { capacity: 0, refill_per_second: 0 }, CapParams { capacity: UNLIMITED, refill_per_second: 0 })
+    } else {
+        let e = eth_entry();
+        let largest = *e.denominations.last().expect("a denomination");
+        let daily = |v: u128| CapParams { capacity: v, refill_per_second: v.div_ceil(86_400) };
+        (daily(e.value(largest).expect("fits")), daily(e.value(100 * largest).expect("fits")))
+    };
     Controls {
         admin: *account_of(&derived_key("crown/admin")).value(),
         freeze_authority: *account_of(&derived_key("crown/freeze-authority")).value(),
         fee_recipient: *fee_recipient.value(),
-        floor: CapParams { capacity: 0, refill_per_second: 0 },
-        token_cap: unlimited,
-        global_cap: unlimited,
+        floor,
+        token_cap: cap,
+        global_cap: cap,
     }
 }
 
@@ -1358,6 +1369,19 @@ mod tests {
             .map(|(p, u)| native_apply(&mut native, &chain.config, u, &format!("period {p}")).expect("update"))
             .collect();
         (native, outcomes)
+    }
+
+    /// Sec.4: the configuration's caps are finite by default (the vault's defaults, in value units), above the floor,
+    /// and the unlimited caps of the earlier live runs need FERRATA_UNCAPPED=1.
+    #[test]
+    fn the_configuration_is_capped_by_default() {
+        let c = controls();
+        assert_eq!(c.check(), Ok(()));
+        // ETH: 0.1 ETH / 1e12 x 3000 = 3e8 value units a day for the floor; 100 times that for the caps.
+        assert_eq!(c.floor, CapParams { capacity: 300_000_000, refill_per_second: 3_473 });
+        assert_eq!(c.token_cap, CapParams { capacity: 30_000_000_000, refill_per_second: 347_223 });
+        assert_eq!(c.global_cap, c.token_cap);
+        assert_ne!(c.token_cap.capacity, UNLIMITED);
     }
 
     #[test]
