@@ -65,12 +65,13 @@ After a review found that the first run needed files only the author had, and LE
 was rewritten to build every input in the clone (Ferrata's programs from source; LEZ's sequencer and the Logos
 Blockchain node from their pinned sources, their zk-circuit libraries downloaded prebuilt by their builds) and the
 walkthrough to make fresh random LEZ roles by default
-(commits `7974fd64`, `203db290`). This run executed the guide's §11 as printed: a script took the three `sh` blocks
+(commits `3573205a`, `26ad3564`). This run executed the guide's §11 as printed: a script took the three `sh` blocks
 from the clone's own guide and ran them in order (step 0 without its `git clone` line, done first from a bundle of the
 branch, which is not pushed); nothing was placed beside the clone ([`second-run/clone.txt`](second-run/clone.txt) lists
 the directory: the clone alone).
 
-- **The clone.** Branch `rfp-docs-final` at `203db290`, 0 files changed, on the build box (Linux x86-64, Ubuntu 24.04
+- **The clone.** Branch `rfp-docs-final` at `26ad3564` (`second-run/clone.txt` prints `203db290`, its id before
+  the branch's messages-only rewrite of 21 November 2026; the tree is the same), 0 files changed, on the build box (Linux x86-64, Ubuntu 24.04
   with the packages of step 0's *What was tested*; `nproc` 2, 64 GB of memory, libpcsclite 2.0.3 as step 0 names it;
   Foundry 1.3.6, cargo 1.93.0; RISC Zero already in `~/.risc0`, a filled cargo registry).
 - **Step 0**, 21 November 2026, 18:02–19:04 UTC: exit 0 after 3,696 s ([`second-run/step0-trace.txt`](second-run/step0-trace.txt),
