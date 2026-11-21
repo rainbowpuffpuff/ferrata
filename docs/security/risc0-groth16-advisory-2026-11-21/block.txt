@@ -1,0 +1,13 @@
+block 12183432
+timestamp 1795284048 (2026-11-21 18:00:48 UTC)
+hash publicnode 0x98149ff8c7d1838ad990e4c9d18e032f5d2ff6817f1965fbb86e3793ae3764b3
+hash ethpandaops 0x98149ff8c7d1838ad990e4c9d18e032f5d2ff6817f1965fbb86e3793ae3764b3
+v3 vault extra reads at this block:
+ethereum-sepolia-rpc.publicnode.com: turnSeconds=900 nMin=3 tMin=2 deltaFloor=600 minReleaseDelay=0
+rpc.sepolia.ethpandaops.io: turnSeconds=900 nMin=3 tMin=2 deltaFloor=600 minReleaseDelay=0
+
+read-back after the owner's eight cap transactions (reads-capped-*.tsv, caps-sent.tsv):
+block 12184587 (the finalized head at the read, 21 Nov 2026 22:13 UTC)
+timestamp 1795298388 (2026-11-21 21:59:48 UTC)
+hash publicnode 0x6cb4e0dd506c71aac0dabcbd3815e4dffc4783e36e22479ea2746fe2b7291a04
+hash ethpandaops 0x6cb4e0dd506c71aac0dabcbd3815e4dffc4783e36e22479ea2746fe2b7291a04

@@ -23,7 +23,7 @@ Hard requirements:
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
 | RFP-021 | 25 | 29 | 2 | 3 | **59** |
-| RFP-022 | 27 | 37 | 2 | 2 | **68** |
+| RFP-022 | 24 | 40 | 2 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 1 shown, 4 in part.
 
@@ -39,10 +39,10 @@ By section, hard requirements:
 | RFP-021 | Verification Security | 3 | 3 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 11 | 6 | 0 | 0 | 17 |
 | RFP-022 | Usability | 2 | 7 | 0 | 1 | 10 |
-| RFP-022 | Reliability | 5 | 9 | 0 | 0 | 14 |
+| RFP-022 | Reliability | 4 | 10 | 0 | 0 | 14 |
 | RFP-022 | Performance | 2 | 5 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 2 | 1 | 1 | 4 |
-| RFP-022 | Security | 3 | 5 | 1 | 0 | 9 |
+| RFP-022 | Security | 1 | 7 | 1 | 0 | 9 |
 | RFP-022 | Privacy Preservation | 4 | 3 | 0 | 0 | 7 |
 
 ## RFP-021: Trustless Ethereum State Attestation
@@ -200,7 +200,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.5 | shown | A wiped client finds 10 of 10 unclaimed deposits and unreleased burns from the seed, also with real proofs. | 23, 84, 89, 102 |
 | R.6 | in part | `monitor` killed and restarted makes exactly one cancellation; the relayer keeps its gas-drop record; no relayer kill mid-checkpoint. | 43, 46, 47, 96 |
 | R.7 | in part | A view closed during a proof resumed its job once, in Basecamp; no test of a client killed between proof and sending. | 126; `e2e/runs/seqnet-basecamp-final-real/SUMMARY.md` |
-| R.8 | shown | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. | 12, 19, 41, 91; `bridge/evm-verify/test/v2/Groth16Verify.t.sol` |
+| R.8 | in part | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. "Mature, audited" is not met by the versions pinned today: risc0-zkvm 3.0.5 is yanked and verifier 3.0.0 accepts forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2); RISC Zero has stopped its own 3.0.0 deployments. Shown again after the move to 3.1: the Ethereum side after phase 1, the LEZ side after phase 2 (a LEZ tag on risc0 3.1, Logos). | 12, 19, 41, 91, 154; `bridge/evm-verify/test/v2/Groth16Verify.t.sol`; `docs/design/risc0-3.1-migration.md` |
 | R.9 | in part | Documented in first drafts of `trust.md` and the operator guide. | `docs/trust.md` §1, §4; `docs/guides/operator-guide.md` §10 |
 | R.10 | in part | CI runs the round trip over the state transition and anvil; sequencer round trips, twice live on Sepolia, are by hand. | 41, 76, 91, 100, 102 |
 | R.11 | in part | Most hard rows name a test or run; S.4 and Sec.1 name none, documentation rows name drafts; not all in CI. | this file |
@@ -234,14 +234,14 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | Sec.1 | not yet | No audit; it depends on Logos contracting one. Static analysis, symbolic checks and an internal review are not an audit. | none (tooling: 30, 35, 54) |
-| Sec.2 | shown | Flipped proof and journal words, wrong inputs and replays refused by the real verifier; altered claims and receipts refused on LEZ. | 12, 42, 46, 75; `lez/BRIDGE-RESULTS.md` §2 |
-| Sec.3 | shown | Redirected, fee-raised and replayed releases refused by the real verifier; a redirected claim refused on LEZ (249, 252). | 46, 47, 76; `lez/harness/tests/bridge_inbound.rs` |
+| Sec.2 | in part | Flipped proof and journal words, wrong inputs and replays refused by the real verifier; altered claims and receipts refused on LEZ. But verifier 3.0.0 accepts a forged claim (GHSA-mm6c-35cm-g4x2): on a fork, with the forgery stood in for, releases without a valid burn are paid (154); LEZ rc1 and rc3 verify private transactions with risc0 3.0.5 (Logos to confirm). The Ethereum side shown again after phase 1 of the move to 3.1, the LEZ side after phase 2. | 12, 42, 46, 75, 154; `lez/BRIDGE-RESULTS.md` §2 |
+| Sec.3 | in part | The release journal binds recipient, relayer and fee: redirected, fee-raised and replayed releases refused by the real verifier; a redirected claim refused on LEZ (249, 252). But under verifier 3.0.0 a forged release journal can name any recipient and fee (on a fork, a stranger takes two deposits: 154), and the refusal on LEZ rests on LEZ's risc0 3.0.5. The Ethereum side shown again after phase 1 of the move to 3.1, the LEZ side after phase 2 (waits on Logos). | 46, 47, 76, 154; `lez/harness/tests/bridge_inbound.rs` |
 | Sec.4 | in part | Buckets tested on both sides; the recommended default is in a first-draft guide; live vaults ran without caps. | 8, 28; `vault/test/Caps.t.sol`; `docs/guides/deployer-guide.md` §2 |
 | Sec.5 | shown | Each half freezes by its own authority in tests that run without the other half. | 8, 28, 74; `vault/test/Freeze.t.sol`; `lez/harness/tests/bridge_controls.rs` |
-| Sec.6 | in part | Vault invariants hold over 256 runs × 100 calls; invalid mints and releases refused; no randomised run over both real halves. | 12, 42; `vault/test/invariant` |
+| Sec.6 | in part | Vault invariants hold over 256 runs × 100 calls; invalid mints and releases refused; no randomised run over both real halves. Under verifier 3.0.0 a release without a valid burn succeeds (154's fork, with the forgery stood in for). | 12, 42, 154; `vault/test/invariant` |
 | Sec.7 | in part | Stated in first drafts of the user guide and `trust.md`. | `docs/guides/user-guide.md`; `docs/trust.md` |
-| Sec.8 | in part | Image ids and verifier are immutables, read back on Sepolia; migration text is a first draft; no migration run. | 74, 91, 92; `docs/guides/deployer-guide.md` §9 |
-| Sec.9 | in part | Stop-only failsafe tested, its owner renounced live on Sepolia; why no fund recovery exists is a first-draft document. | 35, 41, 91; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
+| Sec.8 | in part | Image ids and verifier are immutables, read back on Sepolia; migration text is a first draft; no migration run. The four Sepolia vaults cannot change their verifier: the move to RISC Zero 3.1 is retirement and new vaults. | 74, 91, 92; `docs/guides/deployer-guide.md` §9; `docs/design/risc0-3.1-migration.md` §3 |
+| Sec.9 | in part | Stop-only failsafe tested, its owner renounced live on Sepolia; why no fund recovery exists is a first-draft document. 21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there, and the owner set them to zero on 21 Nov 2026. | 35, 41, 91, 154; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
 
 ### Privacy Preservation
 
