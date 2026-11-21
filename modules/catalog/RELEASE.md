@@ -52,7 +52,7 @@ What it does, in order:
 
 1. **Checks its inputs.** The key file must be the JWK the action's signing expects (an Ed25519 OKP with
    `d` and `x`), and `x` must be the public key of `d` (computed by [`jwk_did.py`](../scripts/jwk_did.py),
-   standard-library Python checked against RFC 8032's test vector), or the signer the catalog declares
+   standard-library Python, its own curve arithmetic, checked against RFC 8032's test vectors), or the signer the catalog declares
    would not be the key that signs; it refuses anything else before doing anything, and no message ever
    shows `d`.
 2. **Derives the signer's `did:jwk:`** from the public half (`did:jwk:` + base64url of
