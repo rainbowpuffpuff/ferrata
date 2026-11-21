@@ -63,7 +63,7 @@ every bridge code named, no guide left a first draft) and `python3 scripts/check
 
 ## Files outside this stream's own
 
-New: `lez/updater/tests/every_party.rs`, `lez/updater/tests/replacement.rs`, `scripts/check-guides.py`,
+New: `lez/updater/tests/every_party.rs`, `lez/updater/tests/replacement.rs`, `scripts/check-guides.py`, `scripts/check-decisions.py`,
 `e2e/seqnet/hook-deployer.sh`, `docs/guides/runs/`. Changed, minimally: `lez/crown/driver/src/crown.rs` (the
 configuration's roles and caps from `CROWN_ROLES_LABEL`, `CROWN_TOKEN_CAP`, `CROWN_GLOBAL_CAP`, defaults unchanged;
 `config-id` prints the controls), `e2e/seqnet/run.sh` (mode `deployer`; the log directory created first, a defect a
