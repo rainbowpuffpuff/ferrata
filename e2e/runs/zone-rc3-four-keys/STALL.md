@@ -37,15 +37,16 @@ At `f6d4267f`, an inscription is valid when its parent is the channel's `tip_mes
 slot 2447759, timeframe 60, timeout 25), `round_robin` gives key 0 at slots 2447819 and 2447820, and seq-0's block 94
 names the tip as parent. **So seq-0's inscription passes both channel checks at both slots: what removed it was
 another check of its transaction.** seq-1's block 94 fails the signer check from slot 2447819 on (key 3), which by
-itself explains one of the two removals. The leader removes a transaction from the mempool whenever
-`try_add_transaction` fails with any error other than the gas limits (`services/chain/chain-leader/src/tx_selection.rs`,
-`select_transactions`); a dependent transaction whose parent was never applied fails the parent check, which explains
+itself explains one of the two removals. The leader evicts from the mempool every transaction still not applicable
+when it finishes assembling a block: any ledger error, a failed deferred proof (signatures), an execution gas above
+the block's limit; only a block full of gas keeps the rest (`services/chain/chain-leader/src/tx_selection.rs`,
+`select_transactions`). A dependent transaction whose parent was never applied fails the parent check, which explains
 the removal of seq-0's whole lineage once its block 94 was gone.
 
 ## What is unknown, and the candidates
 
-**Unknown: the error that removed seq-0's block 94.** The leader logs it only at TRACE level (`tx_selection`, "%err"),
-and this run's node logged at INFO. The candidates the evidence allows:
+**Unknown: the error that removed seq-0's block 94.** The leader logs it only at TRACE level (`tx_selection`: "not
+(yet) applicable during block assembly: {err}"), and this run's node logged at INFO. The candidates the evidence allows:
 
 - **The fee inputs.** All four sequencers pay their inscriptions from one funding key (`attestor/zone.sh`: every
   `sequencer_service setup … --funding-public-key $FUND`, the dev node's funded key). seq-1's late block 94 and seq-0's
