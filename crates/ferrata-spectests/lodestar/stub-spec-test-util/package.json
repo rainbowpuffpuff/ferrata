@@ -1,5 +1,7 @@
 {
   "name": "@lodestar/spec-test-util",
   "version": "1.43.0",
+  "private": true,
+  "license": "MIT OR Apache-2.0",
   "description": "Empty stand-in: @lodestar/config 1.43.0 lists @lodestar/spec-test-util (a test helper) as a dependency, and every published spec-test-util since 1.39.0 depends on vitest through a pnpm `catalog:` specifier that npm cannot install. Nothing here imports it at run time."
 }

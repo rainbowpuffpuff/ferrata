@@ -1,12 +1,14 @@
 {
   "name": "ferrata-lodestar-differential",
   "private": true,
+  "license": "MIT OR Apache-2.0",
   "type": "module",
-  "description": "Lodestar's light client (TypeScript) as a second differential oracle for ferrata-core: see ../HELIOS-DIFFERENTIAL.md. The overrides pin Lodestar 1.43.0's own packages and the @chainsafe SSZ packages to the versions published before it (the newer @chainsafe/ssz refuses a list limit @lodestar/types 1.43.0 declares), and replace @lodestar/spec-test-util (a test helper @lodestar/config lists as a dependency) by an empty stand-in.",
+  "description": "Lodestar's light client (TypeScript) as a second differential oracle for ferrata-core: see ../HELIOS-DIFFERENTIAL.md. The overrides pin Lodestar 1.43.0's own packages and the @chainsafe SSZ packages to the versions published before it (the newer @chainsafe/ssz refuses a list limit @lodestar/types 1.43.0 declares), and replace @lodestar/spec-test-util (a test helper @lodestar/config lists as a dependency) by an empty stand-in, a dependency of this package that the override points every other dependent at.",
   "dependencies": {
     "@lodestar/config": "1.43.0",
     "@lodestar/light-client": "1.43.0",
     "@lodestar/params": "1.43.0",
+    "@lodestar/spec-test-util": "file:stub-spec-test-util",
     "@lodestar/types": "1.43.0"
   },
   "overrides": {
@@ -16,7 +18,7 @@
     "@lodestar/api": "1.43.0",
     "@lodestar/config": "1.43.0",
     "@lodestar/params": "1.43.0",
-    "@lodestar/spec-test-util": "file:./stub-spec-test-util",
+    "@lodestar/spec-test-util": "$@lodestar/spec-test-util",
     "@lodestar/types": "1.43.0",
     "@lodestar/utils": "1.43.0"
   }

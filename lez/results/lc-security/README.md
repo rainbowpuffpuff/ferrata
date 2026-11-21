@@ -30,3 +30,9 @@ extended, passed unchanged. Every file here is the output of that run, except `u
 after the two stale-checkpoint cases were added) and `f8-full-diff.md` (re-run at the branch's last commit; only the
 count of differing bytes moves between runs, as fresh random bytes sometimes coincide). No program, guest or image id
 changed.
+
+Run again at the integration (build box, 21 November 2026), after two changes to the tests: F.2's text names the two
+other ways of offering a header and where they are refused, and F.8's alignment requires the nullifier and the PDA
+seed it takes from A to be each claim's own. The four suites passed (5, 2, 11, 11); seven of the eight files here were
+byte-identical, and `f8-full-diff.md` differed only in that count (29,786); the red team's 22 output files were
+byte-identical to the committed ones.

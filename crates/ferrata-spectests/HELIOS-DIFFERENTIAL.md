@@ -107,12 +107,17 @@ pinned to 1.43.0, and the `@chainsafe` SSZ packages to the versions published be
 `persistent-merkle-tree` 1.3.0, `as-sha256` 1.2.4: the newer `ssz` refuses a list limit `@lodestar/types` 1.43.0
 declares). `@lodestar/config` 1.43.0 lists `@lodestar/spec-test-util` (a test helper) as a dependency, and every
 `spec-test-util` since 1.39.0 depends on `vitest` through a pnpm `catalog:` specifier npm cannot install, so an empty
-stand-in replaces it (`lodestar/stub-spec-test-util`; nothing imports it at run time).
+stand-in replaces it: `lodestar/stub-spec-test-util`, a dependency of the manifest itself, which the override
+(`$@lodestar/spec-test-util`) gives `@lodestar/config` too; `npm ci` links `node_modules/@lodestar/spec-test-util` to
+it, and nothing imports it at run time. The lockfile also holds `tar` 6.2.1 and `glob` 10.5.0, which npm marks
+deprecated: they reach the tree only through `node-gyp`, which `@chainsafe/blst` uses at install time, and no step of
+the differential runs them. Run again from this lockfile (build box, 21 November 2026, `npm ci`): the same output but
+for the elapsed time (326.2 s).
 
 ```sh
 cargo build --locked -p ferrata-spectests --tests
 FERRATA_DIFF_CORPUS=<dir> cargo test --locked -p ferrata-spectests --test helios_oracle export_random -- --ignored
-cd crates/ferrata-spectests/lodestar && npm install && node diff.mjs <dir>     # exits 1 on any disagreement
+cd crates/ferrata-spectests/lodestar && npm ci && node diff.mjs <dir>     # exits 1 on any disagreement
 ```
 
 ## Re-run
