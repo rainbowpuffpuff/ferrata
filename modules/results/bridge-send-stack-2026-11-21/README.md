@@ -1,5 +1,9 @@
 # ferrata_bridge_module's Ethereum side through Logos Core's own modules, 21 November 2026
 
+**Superseded (22 Nov 2026).** This 37/37 did not reproduce at `d12dd396`: the review's four reruns gave 35/37 each, an
+approved `setTokenCap` reverting for want of gas (sent with the bare estimate, no margin), and the module reported
+reverts as done. Fixed in `787b5448`; the record of the fixed module is `../bridge-send-stack-r2/`.
+
 RFP-022 Usability #1 asks for the user's and the admin's functions in a Logos core module, and the RFP's platform
 dependency says "the Ethereum side must use the Logos Ethereum core module". Until this run the bridge module built its
 Ethereum calls and a stand-in service (`seqnet-chain`) read the vault and signed and sent them. Here the module reads the
@@ -11,8 +15,10 @@ Sepolia's, as Logos's own doc-test uses), nothing sent to any public network.
 
 ## Where it ran
 
-The Modal build box (`spike/modal-build/mrun`, 16 cores), one command: `../tmp/rfp-F/box-stack.sh` (native checks,
-`modules/scripts/bridge-send-stack.sh build`, then `run`). Tree: branch `rfp-logos-core-eth` at `4dce62c8` (the module
+The Modal build box (`spike/modal-build/mrun`, 16 cores), from the worktree's root, as run: `MODULES=ferrata_bridge_module
+bash modules/scripts/native.sh`; `bash modules/scripts/bridge-eth-native.sh <scratch>/eth-native`;
+`NIX_SAVE=<scratch>/nix-store.tar.zst bash modules/scripts/bridge-send-stack.sh build <scratch>/bss`; then
+`bash modules/scripts/bridge-send-stack.sh run <scratch>/bss`. Tree: branch `rfp-logos-core-eth` at `4dce62c8` (the module
 code) with the scripts of the same commit. Foundry 1.3.6 (anvil, cast, forge), Nix 2.28.3.
 
 | What | Revision | Built with |

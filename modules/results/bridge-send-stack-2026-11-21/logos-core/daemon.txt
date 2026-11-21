@@ -1,2 +1,2 @@
 Daemon started (pid 42925)
-Logs: <spike>/tmp/rfp-F/bss/session/logs/daemon.log
+Logs: <out>/session/logs/daemon.log

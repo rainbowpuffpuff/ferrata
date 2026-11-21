@@ -4,7 +4,7 @@
 [19:14:09] node slot 0 is unix second 1785493027 (slots of 1 s)
 [19:14:41] sequencer start 1: scheduler after 32 s; its blocks fall 4 s after an epoch second
 [19:14:41] sequencer up, head block 19
-[19:14:41] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-rfp-f/e2e/seqnet/hook-logoseth.sh
+[19:14:41] hook <repo>/e2e/seqnet/hook-logoseth.sh
 [19:18:01] driver exit 0
 [19:18:01] export failed (1)
 [19:18:02] sequencer stopped (exit 0)
