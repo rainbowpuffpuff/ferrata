@@ -124,7 +124,9 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
     deposit root itself), and the per-token release freeze stops releases but not refunds, so once the sunset
     checkpoint is final and its revocation window has passed, holding every registered token's releases frozen in
     place of the global release freeze refunds d2 to its depositor while no release can pay. Deposits LEZ imported
-    and nobody burned stay claimable on LEZ. — `test_guestBug_releaseFreezeHoldsReleasesAndRefundsOnlyWhileRenewed`
+    and nobody burned stay claimable on LEZ. What forged releases paid before the freeze is lost, bounded by the
+    release buckets (the caps) and by the release delay of the root they drew on; nothing recovers it (§5).
+    — `test_guestBug_releaseFreezeHoldsReleasesAndRefundsOnlyWhileRenewed`
     (the freeze holds releases and refunds while renewed; left to lapse, the forged release pays),
     `test_guestBug_tokenReleaseFreezesKeepReleasesShutWhileD2IsRefunded`.
   - *in a checkpoint guest* (burn roots, imported leaf counts and the sunset flag all come from it): **checkpoints
@@ -136,7 +138,10 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
     honest checkpoint are not released on v1, and d2 is refunded only if an honest sunset checkpoint was already
     final (otherwise one sunset candidate would have to be let through under the watchers' cancel and the
     revocation window - a judgement on the bug, not something the vault decides). A wrong checkpoint finalised
-    longer ago than the revocation window cannot be revoked and halts the vault for good (trust.md §6).
+    longer ago than the revocation window cannot be revoked and halts the vault for good (trust.md §6). A forged
+    root pays nothing before its token's release delay; with the delay equal to the revocation window (the
+    recommended setting) the revocation always comes first, and with a shorter one what it paid in between is
+    lost, bounded by the caps.
     — `test_guestBug_checkpointGuest_revokeTakesBackTheForgedRootAndB1StillReleases`.
 - **A bug in the proof system itself** (the verifier would accept a forged seal): the emergency stop applies, as
   [`test/EmergencyStop.t.sol`](test/EmergencyStop.t.sol) shows. It is RISC Zero's unmodified
