@@ -11,7 +11,7 @@ amounts need a new vault, and a new vault starts a new deposit tree, so the anon
 carried over. This note is the migration path the clause asks for, checked against the code: why a second LEZ program
 cannot take over claims from the deployed vault, the path that works for the deployed system (a new vault, the old one
 retired), and what the next vault and program need so that a later switch is LEZ-side only. An earlier version of this
-note (commit `ff64e72f`) said the inbound leg was adoptable without the vault; that was wrong, and the next section
+note (commit `a005299a`) said the inbound leg was adoptable without the vault; that was wrong, and the next section
 says why.
 
 ## What shows an amount today
@@ -109,7 +109,7 @@ fails or yields another nullifier) and the nullifier is a function of the deposi
 
 ## The run that shows the tests cited here pass
 
-Measured on the Modal build box, 21 November 2026, branch `rfp-softs` at `37143315` with this note's text only
+Measured on the Modal build box, 21 November 2026, branch `rfp-softs` at `8b0a967e` with this note's text only
 changed; nothing was sent to any network:
 
 | Command (from the directory named) | Result |
