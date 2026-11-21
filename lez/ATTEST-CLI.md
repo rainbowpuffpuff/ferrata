@@ -1,6 +1,7 @@
 # `ferrata-attest`: the attestation side's command-line tool
 
-**Prototype, unaudited.** Milestone A3 ("the CLI with dry runs returning the program's codes").
+**Prototype, unaudited.** Milestone A3 ("the CLI with dry runs returning the program's codes"); the CLI's document
+for RFP-021 U.2 and S.5, revised for delivery on 21 November 2026 against the tree at this commit.
 Source: [`harness/src/bin/ferrata-attest.rs`](harness/src/bin/ferrata-attest.rs).
 
 `ferrata-attest` advances an attestation instance with a light-client update, and attests a
@@ -9,6 +10,33 @@ attestation program, end to end; by default it only says what it would do. Today
 program's guest in RISC Zero dev mode, and real Sepolia data recorded in fixtures. The module and
 the daemons that will run it against a live sequencer and live Ethereum endpoints are separate
 deliverables (`modules/`, the updater).
+
+## The core user journey (RFP-021 U.2, S.5)
+
+The four things the RFP asks of the CLI, each a command, in the order a user meets them. Run at this commit on the
+build box ([`../docs/guides/runs/2026-11-21-lez/`](../docs/guides/runs/2026-11-21-lez/README.md): the output, the
+messages, the exit status); every number below is from that run.
+
+| The user wants to | Command | What the run showed |
+|---|---|---|
+| read an instance's configuration | `config` | chain 11,155,111, 512 keys, Sepolia's fork schedule (Gloas from epoch 353,024), layout at `Init` Electra, the committee adopted in 2 parts; the instance id derived again from the configuration and the checkpoint, equal |
+| submit a consensus-state update | `advance --period 1409`, then the same with `--send`; `advance --finality --send` | the dry run settled the whole job on a scratch copy: step 1 accepts, five transactions, 15,990,289 execution gas; sent: five applied, finalized slot 11,537,760 → 11,542,528, equal to the dry run; the finality update: three applied, → 11,549,664 |
+| produce an attestation for a (chain, contract, storage slot or log, predicate) tuple | `slot --send` (USDC's slot 11 on Sepolia), `log --send` (the block's first ERC-20 `Transfer`) | two statements (the account, the slot), 277,795 execution gas, applied, its `FRT-ATT1` event naming the dry run's identifiers; the log: one statement, 96,434, applied |
+| verify one off chain, as a dry run, with the on-chain path's typed codes | the same commands without `--send`; `slot --expect-eq 0x01` | each dry run gave the verdict of the program's own `attest::evaluate`; the predicate `== 0x01` was refused with 130 `PredicateFailed` by the dry run, and the transaction sent then reverted with the same 130, cycles, gas and fee |
+
+```sh
+cd lez
+export RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1    # as for the harness (RESULTS.md §8)
+cargo build -p harness --locked --bin ferrata-attest
+RISC0_DEV_MODE=1 target/debug/ferrata-attest --follow-to 1408 --message-out OUT/attest-messages \
+  config --then advance --period 1409 --then advance --period 1409 --send --then advance --finality --send \
+  --then slot --then slot --send --then slot --expect-eq 0x01 --then slot --expect-eq 0x01 --send \
+  --then log --then log --send --then status
+```
+
+Exit status 3 (one command refused, as its dry run predicted); following Sepolia took 86.9 s; 169 transactions in
+all, every one as its dry run said. Where it runs: the in-process chain with recorded Sepolia data (below); against
+a live sequencer and live endpoints the same journey goes through the Logos module and the updater (§"Not done").
 
 ## What one run does
 
@@ -117,9 +145,10 @@ The wire carries one receipt proof per log, so attesting a whole receipt repeats
 
 ## Not done
 
-- Live endpoints: the tool reads recorded responses; fetching `eth_getProof`, receipts and
-  light-client data from an endpoint, and sending to a sequencer, is the module's and the
-  updater's work (it would replace `Stage5` and `Chain::submit` with RPC clients).
+- Live endpoints in this tool: it reads recorded responses. Fetching `eth_getProof`, receipts and light-client data
+  from an endpoint is `ferrata_attest_module`'s (`fetch_log_proof`, also through Logos Core's `eth_rpc_module`:
+  EVIDENCE rows 60, 108; the [consumer guide](../docs/guides/consumer-guide.md) §13), and following a live chain on a
+  running sequencer is the updater's (EVIDENCE row 99).
 - The private placement (`VerifyAll`, the proven path) has no command; `advance` sends the public job.
 - Accumulator leaves and EIP-2935 hops are in the request format (and in the IDL) but have no
   command.

@@ -1,0 +1,14 @@
+warning: lee@0.1.0: Generated module at <repo>/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <repo>/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<repo>/lez/methods)
+   Compiling harness v0.1.0 (<repo>/lez/harness)
+   Compiling ferrata-updater v0.1.0 (<repo>/lez/updater)
+    Finished `test` profile [optimized + debuginfo] target(s) in 5.78s
+     Running tests/replacement.rs (target/debug/deps/replacement-51e003213cf72165)
+
+running 1 test
+replacement: statement 7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d attested under instance 599a0de5 and its replacement 663f8cbc with the same identifier; each binding refused at the other's record (211); the old record still attests; reference-consumer nullifiers bc8dde6d (old pool) and 15cb99ed (new pool) differ
+test a_consumer_moves_to_a_replacement_instance ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.13s
+

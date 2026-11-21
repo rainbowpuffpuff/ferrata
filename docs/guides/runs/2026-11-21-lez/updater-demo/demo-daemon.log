@@ -1,0 +1,60 @@
+2026-11-21T12:56:14Z [dev mainnet] instance 0x2fb72006428ae094f21dbbc4e15c0e22e02a927f93dcf92b22b63c1f8b6b707f of program 9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4 (checkpoint 0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff); payer 4ZyXXGxaw83mTWZc8fRRTnSDSR6Qhq9d8taM8QWhR9wd; ledger harness
+2026-11-21T12:56:14Z [dev] /health and /metrics on http://127.0.0.1:9464
+2026-11-21T12:56:15Z [dev mainnet] mainnet Init applied (exit None, gas 212355, fee 1698840, block 2)
+2026-11-21T12:56:16Z [dev mainnet] mainnet init adopt 1/2 applied (exit None, gas 3424121, fee 27392968, block 3)
+2026-11-21T12:56:18Z [dev mainnet] mainnet init adopt 2/2 applied (exit None, gas 3510683, fee 28085464, block 4)
+2026-11-21T12:56:19Z [dev mainnet] job 0x996406f8ba2da632: finalized slot 15622144 root 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433 (attested slot 15622208, signature slot 15622209, 511 of 512 signers; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:19Z [dev mainnet] mainnet fin 15622144 Open applied (exit None, gas 2188091, fee 17504728, block 5)
+2026-11-21T12:56:20Z [dev mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its miller first
+2026-11-21T12:56:21Z [dev mainnet] mainnet fin 15622144 Miller applied (exit None, gas 3313771, fee 26510168, block 6)
+2026-11-21T12:56:22Z [dev mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its adopt0 first
+2026-11-21T12:56:22Z [dev mainnet] mainnet fin 15622144 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 7)
+2026-11-21T12:56:23Z [dev mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its adopt1 first
+2026-11-21T12:56:24Z [dev mainnet] mainnet fin 15622144 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 8)
+2026-11-21T12:56:25Z [dev mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its finish first
+2026-11-21T12:56:25Z [dev mainnet] mainnet fin 15622144 Finish applied (exit None, gas 3699561, fee 29596488, block 9)
+2026-11-21T12:56:26Z [dev mainnet] job 0xa6d7d1fecf7cf00c: finalized slot 15630720 root 0x6668f903ff936abe7be11a6cac2421d0e74a374849f6de5a76029c6661411895 (attested slot 15630809, signature slot 15630810, 511 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:27Z [dev mainnet] mainnet fin 15630720 Open applied (exit None, gas 2188424, fee 17507392, block 10)
+2026-11-21T12:56:28Z [dev mainnet] job 0xa6d7d1fecf7cf00c (finalized slot 15630720) is open: its miller first
+2026-11-21T12:56:28Z [dev mainnet] mainnet fin 15630720 Miller applied (exit None, gas 3313771, fee 26510168, block 11)
+2026-11-21T12:56:30Z [dev mainnet] job 0xa6d7d1fecf7cf00c (finalized slot 15630720) is open: its adopt0 first
+2026-11-21T12:56:30Z [dev mainnet] mainnet fin 15630720 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 12)
+2026-11-21T12:56:31Z [dev mainnet] job 0xa6d7d1fecf7cf00c (finalized slot 15630720) is open: its adopt1 first
+2026-11-21T12:56:31Z [dev mainnet] mainnet fin 15630720 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 13)
+2026-11-21T12:56:32Z [dev mainnet] job 0xa6d7d1fecf7cf00c (finalized slot 15630720) is open: its finish first
+2026-11-21T12:56:33Z [dev mainnet] mainnet fin 15630720 Finish applied (exit None, gas 3737188, fee 29897504, block 14)
+2026-11-21T12:56:34Z [dev mainnet] job 0xdbc790b6766ef5ec: finalized slot 15638592 root 0x3323d1442d6ecb25b2f46c4894cd179defbe794eccddb33d2b5e579c3e323112 (attested slot 15638676, signature slot 15638677, 509 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:35Z [dev mainnet] mainnet fin 15638592 Open applied (exit None, gas 2244721, fee 17957768, block 15)
+2026-11-21T12:56:36Z [dev mainnet] job 0xdbc790b6766ef5ec (finalized slot 15638592) is open: its miller first
+2026-11-21T12:56:36Z [dev mainnet] mainnet fin 15638592 Miller applied (exit None, gas 3313771, fee 26510168, block 16)
+2026-11-21T12:56:37Z [dev mainnet] job 0xdbc790b6766ef5ec (finalized slot 15638592) is open: its adopt0 first
+2026-11-21T12:56:38Z [dev mainnet] mainnet fin 15638592 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 17)
+2026-11-21T12:56:39Z [dev mainnet] job 0xdbc790b6766ef5ec (finalized slot 15638592) is open: its adopt1 first
+2026-11-21T12:56:39Z [dev mainnet] mainnet fin 15638592 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 18)
+2026-11-21T12:56:40Z [dev mainnet] job 0xdbc790b6766ef5ec (finalized slot 15638592) is open: its finish first
+2026-11-21T12:56:41Z [dev mainnet] mainnet fin 15638592 Finish applied (exit None, gas 3737188, fee 29897504, block 19)
+2026-11-21T12:56:42Z [dev mainnet] job 0x8786f68fca052cba: finalized slot 15646720 root 0xc3f7341bf7fea072f60118375b9103d1a8548f9bd343f1ad3c30098abdc70230 (attested slot 15646786, signature slot 15646787, 512 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:43Z [dev mainnet] mainnet fin 15646720 Open applied (exit None, gas 2159248, fee 17273984, block 20)
+2026-11-21T12:56:44Z [dev mainnet] job 0x8786f68fca052cba (finalized slot 15646720) is open: its miller first
+2026-11-21T12:56:44Z [dev mainnet] mainnet fin 15646720 Miller applied (exit None, gas 3313771, fee 26510168, block 21)
+2026-11-21T12:56:45Z [dev mainnet] job 0x8786f68fca052cba (finalized slot 15646720) is open: its adopt0 first
+2026-11-21T12:56:46Z [dev mainnet] mainnet fin 15646720 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 22)
+2026-11-21T12:56:47Z [dev mainnet] job 0x8786f68fca052cba (finalized slot 15646720) is open: its adopt1 first
+2026-11-21T12:56:47Z [dev mainnet] mainnet fin 15646720 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 23)
+2026-11-21T12:56:48Z [dev mainnet] job 0x8786f68fca052cba (finalized slot 15646720) is open: its finish first
+2026-11-21T12:56:49Z [dev mainnet] mainnet fin 15646720 Finish applied (exit None, gas 3737188, fee 29897504, block 24)
+2026-11-21T12:56:50Z [dev mainnet] job 0xa31179634232be2b: finalized slot 15654944 root 0x0f9fe57817f7dca99e588579ee93b345a2e1029ab8b8356f7afe9bb2c662465c (attested slot 15655016, signature slot 15655017, 509 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:50Z [dev mainnet] mainnet fin 15654944 Open applied (exit None, gas 2242733, fee 17941864, block 25)
+2026-11-21T12:56:51Z [dev mainnet] job 0xa31179634232be2b (finalized slot 15654944) is open: its miller first
+2026-11-21T12:56:52Z [dev mainnet] mainnet fin 15654944 Miller applied (exit None, gas 3313771, fee 26510168, block 26)
+2026-11-21T12:56:53Z [dev mainnet] job 0xa31179634232be2b (finalized slot 15654944) is open: its adopt0 first
+2026-11-21T12:56:53Z [dev mainnet] mainnet fin 15654944 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 27)
+2026-11-21T12:56:54Z [dev mainnet] job 0xa31179634232be2b (finalized slot 15654944) is open: its adopt1 first
+2026-11-21T12:56:55Z [dev mainnet] mainnet fin 15654944 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 28)
+2026-11-21T12:56:56Z [dev mainnet] job 0xa31179634232be2b (finalized slot 15654944) is open: its finish first
+2026-11-21T12:56:57Z [dev mainnet] mainnet fin 15654944 Finish applied (exit None, gas 3737188, fee 29897504, block 29)
+2026-11-21T12:56:58Z [dev mainnet] job 0xadf351658055cd2e: finalized slot 15663232 root 0x5bd5c7450adb03520cb650f2e2cd3b336f90b5c394843a618326fbaae34a0273 (attested slot 15663315, signature slot 15663316, 511 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by record-a, record-b
+2026-11-21T12:56:58Z [dev mainnet] mainnet fin 15663232 Open applied (exit None, gas 2189580, fee 17516640, block 30)
+2026-11-21T12:56:59Z [dev mainnet] job 0xadf351658055cd2e (finalized slot 15663232) is open: its miller first
+2026-11-21T12:57:00Z [dev mainnet] mainnet fin 15663232 Miller applied (exit None, gas 3313771, fee 26510168, block 31)
+2026-11-21T12:57:00Z [dev mainnet] stopped at round 30: {"chain":"mainnet","daemon":"dev","finalized_slot":15654944,"last_error":"","last_plan":"send mainnet fin 15663232 Miller","period":1911,"reasons":[],"round":30,"status":"ok"}
