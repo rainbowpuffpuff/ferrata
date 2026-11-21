@@ -797,26 +797,13 @@ impl Chain {
         Ok(inputs)
     }
 
-    /// Sends `calls` from `from` through `tx_sender_module`, waits for the person's approval and the broadcast (the
-    /// job's phases), and reads the first call's receipt back through `eth_rpc_module`.
+    /// Sends `calls` from `from` through `tx_sender_module` (gas limits with the margin, send.rs), waits for the
+    /// person's approval and the broadcast (the job's phases), and reads every call's receipt back through
+    /// `eth_rpc_module`; `reverted` says which call reverted, if one did.
     fn send_logos(&self, e: &Value, v: &mut crate::evm::Vault, from: &str, calls: &[crate::send::Call], purpose: &str)
-        -> Result<(Value, Value, Vec<String>), String> {
+        -> Result<crate::send::Sent, String> {
         let chain_id = e["chain_id"].as_u64().ok_or("chain_id")?;
-        let req = crate::send::request(chain_id, from, calls, purpose);
-        let asked = crate::send::send(&req, Duration::from_secs(60))?;
-        let id = asked["requestId"].as_str().unwrap_or_default().to_string();
-        crate::jobs::phase("awaiting_approval", json!({
-            "requestId": id, "handle": asked["handle"], "from": from,
-            "approve_in": "the Logos signer: evm_signer_ui in Basecamp (intent evm.signing.approve {handle}), or headless evm_signer_cli approve <handle> <bundle_id> @password-file",
-        }));
-        let mut statuses = Vec::new();
-        let st = crate::send::wait(&id, Duration::from_secs(900), |s| statuses.push(s["status"].clone()))?;
-        let hashes = crate::send::broadcast_hashes(&st)?;
-        crate::jobs::phase("sent", json!({ "tx_hash": hashes[hashes.len() - 1], "by": "tx_sender_module (keystore_module signed after the approval; broadcast through eth_rpc_module)" }));
-        let receipt = v.receipt(&hashes[hashes.len() - 1], 120)?;
-        let send = json!({ "via": crate::send::TX_SENDER, "requestId": id, "handle": asked["handle"], "statuses": statuses,
-                           "final": st["status"], "hashes": hashes, "from": from });
-        Ok((receipt, send, hashes))
+        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), json!({}))
     }
 
     /// The deposit through Logos Core's send stack: the module's commitment and vault call, the price and the
@@ -847,18 +834,23 @@ impl Chain {
         let to: [u8; 20] = fixed(&call["to"], "vault_call.to")?;
         // The vault's refusal (a frozen token, a disabled deposit, a cap) is named before anything is asked or signed.
         crate::user::preflight(&mut v, &depositor, &to, &data, &total)?;
-        let calls = [crate::send::Call { to, value: total.clone(), data, label: format!("Ferrata deposit: {} wei into the vault", total) }];
+        let calls = [crate::send::Call::new(to, total.clone(), data, format!("Ferrata deposit: {} wei into the vault", total))];
         let user = e["user"].as_str().ok_or("user")?.to_string();
-        let (receipt, send, hashes) = self.send_logos(&e, &mut v, &user, &calls,
+        let sent = self.send_logos(&e, &mut v, &user, &calls,
             &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"))?;
-        let (ok, block, event) = crate::evm::receipt_summary(&receipt)?;
-        let event = event.ok_or("the receipt has no Deposit event")?;
+        if let Some(why) = &sent.reverted {
+            return Ok(json!({ "settled": false, "what": format!("{why}; nothing was deposited"), "tx_hash": sent.last_hash(),
+                              "send": sent.record, "eth": v.report() }));
+        }
+        let receipt = sent.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
+        let (ok, block, event) = crate::evm::receipt_summary(&receipt, &to)?;
+        let event = event.ok_or("the receipt has no Deposit event of the vault")?;
         if event.commitment != fixed::<32>(&made["commitment"], "commitment")? {
             return Err("the Deposit event's commitment is not the module's".into());
         }
         Ok(json!({
             "settled": ok,
-            "tx_hash": hashes[0],
+            "tx_hash": sent.last_hash(),
             "block": block,
             "gas_used": receipt["gasUsed"],
             "leaf_index": event.leaf_index,
@@ -869,7 +861,7 @@ impl Chain {
             "kind": kind,
             "account": a,
             "made_by": "ferrata_bridge_module deposit (the commitment and the vault call), sent through Logos Core's tx_sender_module after one approval in the Logos signer; keystore_module signed",
-            "send": send,
+            "send": sent.record,
             "eth": v.report(),
             "public_on_ethereum": ["the depositor address", "the token", "the denomination and fees", "the time", "the commitment C"],
             "hidden": ["the LEZ destination (C commits to it)"],
@@ -922,15 +914,21 @@ impl Chain {
         let before = v.balance(&recipient)?;
         let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
         crate::user::preflight(&mut v, &fixed(&json!(sender), "release_sender")?, &vault, &data, "0")?;
-        let calls = [crate::send::Call { to: vault, value: "0".into(), data, label: "Ferrata release to the burn's recipient".into() }];
-        let (receipt, send, hashes) = self.send_logos(&e, &mut v, &sender, &calls,
+        let calls = [crate::send::Call::new(vault, "0", data, "Ferrata release to the burn's recipient")];
+        let sent = self.send_logos(&e, &mut v, &sender, &calls,
             "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)")?;
-        let (ok, block, _) = crate::evm::receipt_summary(&receipt)?;
+        if let Some(why) = &sent.reverted {
+            return Ok(json!({ "settled": false, "what": format!("{why}; nothing was released"), "tx_hash": sent.last_hash(),
+                              "recipient": hex(&recipient), "paid_wei": "0", "send": sent.record, "eth": v.report() }));
+        }
+        let receipt = sent.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
+        let (ok, block, _) = crate::evm::receipt_summary(&receipt, &vault)?;
         let after = v.balance(&recipient)?;
         let paid = crate::evm::as_u128(&after)?.saturating_sub(crate::evm::as_u128(&before)?);
         Ok(json!({
             "settled": ok && paid > 0,
-            "tx_hash": hashes[0],
+            "what": if ok && paid > 0 { Value::Null } else { json!(format!("the release in block {block} paid the recipient nothing")) },
+            "tx_hash": sent.last_hash(),
             "block": block,
             "gas_used": receipt["gasUsed"],
             "recipient": hex(&recipient),
@@ -938,7 +936,7 @@ impl Chain {
             "sent_by": format!("{sender} through Logos Core's tx_sender_module (one approval in the Logos signer)"),
             "picked": r["picked"],
             "journal_sha256": r["journal_sha256"],
-            "send": send,
+            "send": sent.record,
             "eth": v.report(),
             "made_by": "ferrata_bridge_module release (the wallet's rule over the accepted roots read through eth_rpc_module; the journal; the vault call), sent through tx_sender_module",
             "public_on_ethereum": ["the recipient", "the token and amount", "NOut (the release nullifier)", "the burn root used", "the time", "the sender"],
@@ -991,9 +989,14 @@ impl Chain {
             return Err(format!("no account for the vault's {role} in the session's Ethereum path"));
         }
         let mut v = self.vault(&e)?;
-        let sender = json!({ "via": crate::send::TX_SENDER, "from": from, "wait": true, "timeout_s": 900 });
+        // `gas_limit`: the admin's own limit for the call (the view's field); absent, the stack's estimate + the margin.
+        let sender = json!({ "via": crate::send::TX_SENDER, "from": from, "wait": true, "timeout_s": 900, "gas_limit": params["gas_limit"] });
         let mut out = crate::admin::vault_admin(&mut v, action, &params["params"], &sender, e["chain_id"].as_u64().unwrap_or(0))?;
         out["settled"] = json!(out["verdict"] == "settled");
+        if out["settled"] != true {
+            // jobs.rs fails the job with this sentence: the view shows it where the admin acted.
+            out["what"] = out["error"].clone();
+        }
         Ok(out)
     }
 

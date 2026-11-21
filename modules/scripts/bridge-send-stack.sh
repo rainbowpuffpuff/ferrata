@@ -4,7 +4,9 @@
 # approve + deposit as one bundle) and the admin's and the freeze authority's vault calls sent by the module through
 # tx_sender_module, each approved by a person at Logos's headless approver evm_signer_cli (keys imported with
 # Logos's evm_keystore_cli into keystore_module; the module holds none); a refused approval; a frozen token's deposit
-# refused before anything is signed. Every effect read back with Foundry's cast.
+# refused before anything is signed; a send forced to revert after its approval (its own gas limit too low), reported
+# as reverted; every other send with the margin over the stack's estimate (send.rs). Every effect read back with
+# Foundry's cast.
 #
 #   modules/scripts/bridge-send-stack.sh build OUT   the send stack and the two CLIs (send-stack.sh build, builder
 #                                                    5f74cdb grafted), ferrata_bridge_module's dev .lgx and logosctl
@@ -153,11 +155,44 @@ run() {
   send_through admin-cap admin "{\"action\":\"set_token_cap\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"direction\":\"deposit\",\"capacity\":\"2000000000000\",\"refill_per_second\":\"5000\"},\"send\":$SEND1}" approve "$PW"
   check "admin set_token_cap: settled" "settled" "$(jq -r .verdict "$R/admin-cap.json")"
   check "admin set_token_cap: cast reads it" "2000000000000" "$(cast call $V 'tokenCap(address,uint8)(uint256,uint256,uint256)' $T 0 --rpc-url $RPC | head -1 | awk '{print $1}')"
+  # The limit it was sent with: the stack's own estimate + 25% + 20000 (send.rs margin), above what it used.
+  check "admin set_token_cap: sent with the estimate + 25% + 20000" "yes" \
+    "$(jq -r '.send.gas[0] | if .limit == (.estimate + (.estimate / 4 | floor) + 20000) then "yes" else "no: \(.)" end' "$R/admin-cap.json")"
+  check "admin set_token_cap: the receipt's gas used below its limit (cast)" "yes" \
+    "$(u=$(cast receipt "$(jq -r .tx_hash "$R/admin-cap.json")" gasUsed --rpc-url $RPC); l=$(cast tx "$(jq -r .tx_hash "$R/admin-cap.json")" gas --rpc-url $RPC); [ "$u" -lt "$l" ] && echo yes || echo "no: used $u of $l")"
+
+  # 3b. A send approved, broadcast, mined and REVERTED (forced: the caller's own gas limit of 30000, below what
+  # setTokenCap needs): the module must report it as reverted, naming the call, and nothing must change.
+  send_through admin-cap-reverts admin "{\"action\":\"set_token_cap\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"direction\":\"deposit\",\"capacity\":\"3000000000000\",\"refill_per_second\":\"5000\"},\"send\":{\"via\":\"tx_sender_module\",\"from\":\"$A1\",\"chain_id\":$CHAIN,\"gas_limit\":30000}}" approve "$PW"
+  check "forced revert: the module reports it reverted" "reverted false" "$(jq -r '"\(.verdict) \(.settled)"' "$R/admin-cap-reverts.json")"
+  check "forced revert: the error names the call and its limit" "yes" "$(jq -r '.error // ""' "$R/admin-cap-reverts.json" | grep -q 'reverted: call 1 of 1.*of its limit 30000' && echo yes)"
+  check "forced revert: the receipt's status is 0 (cast)" "0" "$(cast receipt "$(jq -r .tx_hash "$R/admin-cap-reverts.json")" status --rpc-url $RPC 2>/dev/null | awk '{print $1}')"
+  check "forced revert: the cap is unchanged (cast)" "2000000000000" "$(cast call $V 'tokenCap(address,uint8)(uint256,uint256,uint256)' $T 0 --rpc-url $RPC | head -1 | awk '{print $1}')"
+
+  # 3c. The admin's other settings through the stack, each read back with cast: delisting the token and listing it
+  # again, a fee schedule announced (a mint fee of 0.1%: announcing the fees already in force withdraws a pending
+  # schedule instead, FerrataRegistry.announceFees), a release delay set.
+  send_through admin-delist admin "{\"action\":\"set_deposits_enabled\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"enabled\":false},\"send\":$SEND1}" approve "$PW"
+  check "admin set_deposits_enabled(false): settled, deposits disabled (cast)" "settled false" \
+    "$(jq -r .verdict "$R/admin-delist.json") $(cast call $V 'tokenConfig(address)(bool,bool,uint256,uint256,uint256[])' $T --rpc-url $RPC | sed -n 2p)"
 
   # 4. the user's ETH deposit, built and sent by the module (one approval).
   local SEED="0x$(printf '5e%.0s' $(seq 32))" DEST="0x$(printf 'de%.0s' $(seq 32))"
   local SEND3="{\"via\":\"tx_sender_module\",\"from\":\"$A3\",\"chain_id\":$CHAIN}"
   local DEP="\"bridge_seed\":\"$SEED\",\"chain_id\":$CHAIN,\"vault\":\"$V\",\"depositor\":\"$A3\",\"kind\":\"private\",\"dest\":\"$DEST\",\"eth\":$E"
+  # While the token is delisted the module refuses its deposit before anything is asked (the vault's views).
+  local DL; DL=$(j ferrata_bridge_module deposit "{$DEP,\"token\":\"$T\",\"denom_index\":0,\"send\":$SEND3}")
+  echo "$DL" > "$R/deposit-delisted.json"
+  check "delisted: the module refuses the ERC-20 deposit before signing" "DepositsDisabled" "$(jq -r '.error // ""' <<< "$DL" | grep -o DepositsDisabled | head -1)"
+  send_through admin-list admin "{\"action\":\"set_deposits_enabled\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"enabled\":true},\"send\":$SEND1}" approve "$PW"
+  check "admin set_deposits_enabled(true): settled, deposits enabled (cast)" "settled true" \
+    "$(jq -r .verdict "$R/admin-list.json") $(cast call $V 'tokenConfig(address)(bool,bool,uint256,uint256,uint256[])' $T --rpc-url $RPC | sed -n 2p)"
+  send_through admin-fees admin "{\"action\":\"announce_fees\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"mint_fees\":[\"1000\",\"10000\"],\"burn_fees\":[\"0\",\"0\"],\"checkpoint_fees\":[\"0\",\"0\"]},\"send\":$SEND1}" approve "$PW"
+  check "admin announce_fees: settled, a schedule pending (cast feeState: pending time > 0)" "settled yes" \
+    "$(jq -r .verdict "$R/admin-fees.json") $(p=$(cast call $V 'feeState(address)(uint64,uint64)' $T --rpc-url $RPC | sed -n 2p | awk '{print $1}'); [ "${p:-0}" -gt 0 ] && echo yes || echo "no ($p)")"
+  send_through admin-delay admin "{\"action\":\"set_release_delay\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$T\",\"delay\":\"600\"},\"send\":$SEND1}" approve "$PW"
+  check "admin set_release_delay(600): settled, the next checkpoints' delay (cast)" "settled 600" \
+    "$(jq -r .verdict "$R/admin-delay.json") $(cast call $V 'releaseDelayFor(address,uint256)(uint256)' $T 18446744073709551615 --rpc-url $RPC | awk '{print $1}')"
   local escrow0; escrow0=$(cast balance $V --rpc-url $RPC)
   send_through deposit-eth deposit "{$DEP,\"token\":\"$ETH\",\"denom_index\":0,\"send\":$SEND3}" approve "$PW"
   check "deposit ETH: settled through tx_sender_module" "settled" "$(jq -r .verdict "$R/deposit-eth.json")"
@@ -195,6 +230,14 @@ run() {
   check "deposit list through eth_rpc_module: 2 deposits, root = depositRoot" "2 $(cast call $V 'depositRoot()(bytes32)' --rpc-url $RPC)" "$(jq -r '"\(.value.deposits | length) \(.value.root)"' <<< "$L")"
   check "the reads' route: eth_rpc_module, direct" "eth_rpc_module direct" "$(jq -r '"\(.eth.via) \(.eth.routes[0])"' <<< "$L")"
 
+  # Every broadcast send's receipts read back by the module: all successful but the forced revert; and every call carried
+  # a limit above its own estimate (or the caller's own).
+  local bad=""
+  for f in "$R"/admin-*.json "$R"/deposit-eth.json "$R"/deposit-erc20.json "$R"/freeze.json "$R"/unfreeze.json; do
+    case "$f" in *.request.json|*admin-cap-reverts.json) continue ;; esac
+    jq -e '(.send.receipts | length) > 0 and all(.send.receipts[]; .status == "success" and .gas_used < .gas_limit)' "$f" > /dev/null 2>&1 || bad="$bad $(basename "$f")"
+  done
+  check "every other send: every receipt successful, gas used below its limit" "" "${bad# }"
   for f in "$R"/*.ms; do printf '%s\t%s\n' "$(basename "$f" .ms)" "$(cat "$f")"; done > "$R/send-ms.tsv"
   j tx_sender_module live_sends > "$R/live-sends.json"
   kill $watch_pid 2>/dev/null

@@ -225,9 +225,11 @@ Rectangle {
         if (!ethJob || !jobOver(ethJob) || appliedJobs[ethJob.id]) return;
         var a = {}; for (var k in appliedJobs) a[k] = appliedJobs[k]; a[ethJob.id] = true; appliedJobs = a;
         approvalText = "";
-        var hasReply = ethJob.result !== null && ethJob.result !== undefined;
-        if (!hasReply) { lastError = String(ethJob.error); lastOk = false; }
-        if (ethFinished) ethFinished(hasReply, hasReply ? ethJob.result : ethJob.error, ethJob);
+        // Done means settled: a failed job (refused, or a send that was approved, mined and REVERTED, whose reply
+        // jobs.rs keeps beside the error) is a failure, said where the person acted (the finished callbacks).
+        var settled = ethJob.state === "settled" && ethJob.result !== null && ethJob.result !== undefined;
+        if (!settled) { lastError = String(ethJob.error); lastOk = false; }
+        if (ethFinished) ethFinished(settled, settled ? ethJob.result : String(ethJob.error), ethJob);
         if (positionsDeferred && !jobRunning()) { positionsDeferred = false; refreshPositions(); }
     }
     function pollEthJob() {
@@ -826,16 +828,20 @@ Rectangle {
                         TextField { id: vaultCap; objectName: "admin.vault.cap"; text: "50000000000000000000"; Layout.preferredWidth: 220 }
                         Label { text: "refill/s" }
                         TextField { id: vaultRefill; objectName: "admin.vault.refill"; text: "1000000000000000"; Layout.preferredWidth: 160 }
+                        Label { text: "gas limit" }
+                        TextField { id: vaultGas; objectName: "admin.vault.gas"; text: ""; placeholderText: "estimated + 25% + 20000"; Layout.preferredWidth: 170 }
                         Button {
                             objectName: "admin.vault.setcap"; text: "Set the vault's cap (admin)"; enabled: busy === 0 && !jobRunning()
                             onClicked: propose({
                                 title: "setTokenCap on the Ferrata vault (admin)",
-                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the vault's admin " + (admin ? Fmt.short(admin.vault_roles.admin) : "")], ["Asset", "ETH"], ["Cap", vaultCap.text + " wei, refill " + vaultRefill.text + " wei/s on deposits"], ["Sent by", "Logos Core's tx_sender_module, after the admin's approval in the Logos signer"]],
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the vault's admin " + (admin ? Fmt.short(admin.vault_roles.admin) : "")], ["Asset", "ETH"], ["Cap", vaultCap.text + " wei, refill " + vaultRefill.text + " wei/s on deposits"], ["Gas limit", vaultGas.text !== "" ? vaultGas.text + " (yours)" : "the send stack's estimate + 25% + 20000"], ["Sent by", "Logos Core's tx_sender_module, after the admin's approval in the Logos signer"]],
                                 effects: ["Changes how much ETH the vault accepts per refill period", "Moves no funds"]
                             }, function () {
-                                ethStep("admin", "admin.vault", { action: "set_token_cap", params: { token: "0x0000000000000000000000000000000000000000", direction: "deposit", capacity: vaultCap.text, refill_per_second: vaultRefill.text } }, function (ok, v) {
-                                    adminText = ok ? "Vault cap set: " + v.call.what + " (transaction " + Fmt.short(v.tx_hash) + ", request " + v.send.requestId + ")." : "";
-                                    if (ok) refreshAdmin();
+                                var q = { action: "set_token_cap", params: { token: "0x0000000000000000000000000000000000000000", direction: "deposit", capacity: vaultCap.text, refill_per_second: vaultRefill.text } };
+                                if (vaultGas.text !== "") q.gas_limit = vaultGas.text;
+                                ethStep("admin", "admin.vault", q, function (ok, v) {
+                                    adminText = ok ? "Vault cap set: " + v.call.what + " (transaction " + Fmt.short(v.tx_hash) + ", request " + v.send.requestId + ")." : "Not done: " + v;
+                                    refreshAdmin();
                                 });
                             })
                         }
@@ -849,8 +855,8 @@ Rectangle {
                                 effects: ["Stops new ETH deposits; releases and claims continue", "Moves no funds"]
                             }, function () {
                                 ethStep("admin", "admin.vault", { action: "set_token_deposits_frozen", params: { token: "0x0000000000000000000000000000000000000000", frozen: true } }, function (ok, v) {
-                                    adminText = ok ? "Vault: ETH deposits frozen (transaction " + Fmt.short(v.tx_hash) + ")." : "";
-                                    if (ok) refreshAdmin();
+                                    adminText = ok ? "Vault: ETH deposits frozen (transaction " + Fmt.short(v.tx_hash) + ")." : "Not done: " + v;
+                                    refreshAdmin();
                                 });
                             })
                         }
@@ -862,8 +868,8 @@ Rectangle {
                                 effects: ["Accepts ETH deposits again"]
                             }, function () {
                                 ethStep("admin", "admin.vault", { action: "set_token_deposits_frozen", params: { token: "0x0000000000000000000000000000000000000000", frozen: false } }, function (ok, v) {
-                                    adminText = ok ? "Vault: ETH deposits accepted again (transaction " + Fmt.short(v.tx_hash) + ")." : "";
-                                    if (ok) refreshAdmin();
+                                    adminText = ok ? "Vault: ETH deposits accepted again (transaction " + Fmt.short(v.tx_hash) + ")." : "Not done: " + v;
+                                    refreshAdmin();
                                 });
                             })
                         }
@@ -943,7 +949,7 @@ Rectangle {
                 effects: ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"]
             }, function () {
                 ethStep("deposit", "deposit", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok2, v) {
-                    if (!ok2) { depositText = ""; return; }
+                    if (!ok2) { depositText = "Not deposited: " + v; return; }
                     var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
                     if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
                     heldUntil = h;
@@ -1010,7 +1016,7 @@ Rectangle {
             effects: ["The vault pays the burn's amount to the recipient", "Spends the burn's release nullifier NOut; does not say which burn"]
         }, function () {
             ethStep("release", "release", { burn_index: releaseBurn }, function (ok, v) {
-                if (!ok) { releaseText = ""; return; }
+                if (!ok) { releaseText = "Not released: " + v; return; }
                 releaseText = "Released: " + Fmt.eth(v.paid_wei) + " paid to " + v.recipient + " in block " + v.block + " (transaction " + Fmt.short(v.tx_hash) + "), sent by " + v.sent_by + ".";
                 refreshPositions();
             });

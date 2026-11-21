@@ -35,31 +35,41 @@ pub(crate) fn preflight(v: &mut Vault, from: &Address, to: &Address, data: &[u8]
     }
 }
 
-/// Sends `calls` from `from` through the send stack; with `wait` (the default), waits for the person's approval and
-/// the broadcast and reads the last call's receipt. `(the send's record, the receipt or null)`.
-pub(crate) fn send_bundle(v: &mut Vault, sender: &Value, from: &Address, calls: &[Call], purpose: &str)
-    -> Result<(Value, Value), String> {
+/// Sends `calls` from `from` through the send stack ([`send::through_stack`]); with `wait` (the default) waits for the
+/// person's approval and the broadcast and reads every call's receipt.
+fn send_bundle(v: &mut Vault, sender: &Value, from: &Address, calls: &[Call], purpose: &str) -> Result<send::Sent, String> {
     let chain_id = sender["chain_id"].as_u64().ok_or("send.chain_id: the chain tx_sender_module sends on")?;
-    let req = send::request(chain_id, &hex(from), calls, purpose);
-    let asked = send::send(&req, Duration::from_secs(60))?;
-    let id = asked["requestId"].as_str().unwrap_or_default().to_string();
-    crate::jobs::phase("awaiting_approval", json!({ "requestId": id, "handle": asked["handle"], "from": hex(from),
-        "approve_in": "the Logos signer: evm_signer_ui in Basecamp (intent evm.signing.approve {handle}), or headless evm_signer_cli" }));
-    let mut record = json!({ "via": send::TX_SENDER, "requestId": id, "handle": asked["handle"], "from": hex(from),
-                             "calls": calls.iter().map(Call::to_json).collect::<Vec<_>>() });
-    if sender["wait"] == false {
-        record["state"] = json!("awaiting_approval");
-        return Ok((record, Value::Null));
+    let timeout = Duration::from_secs(sender["timeout_s"].as_u64().unwrap_or(900));
+    send::through_stack(v, chain_id, &hex(from), calls, purpose, sender["wait"] != false, timeout, json!({}))
+}
+
+/// An ERC-20 deposit's checks before the person is asked (its `deposit` cannot be run with `eth_call` before the
+/// `approve` it follows is mined): the token registered, its deposits enabled and neither it nor the vault frozen,
+/// and the depositor holding `total`. A refusal names the vault's error the deposit would revert with.
+fn erc20_preflight(v: &mut Vault, from: &Address, token: &Address, total: &str) -> Result<(), String> {
+    let refuse = |name: &str| -> Result<(), String> { Err(format!("refused: vault error {name}() (checked with the vault's views before sending; nothing was signed)")) };
+    let (registered, enabled, _, _, _) = v.token_config(token)?;
+    if !registered {
+        return refuse("TokenNotRegistered");
     }
-    let mut statuses = Vec::new();
-    let st = send::wait(&id, Duration::from_secs(sender["timeout_s"].as_u64().unwrap_or(900)), |s| statuses.push(s["status"].clone()))?;
-    record["statuses"] = json!(statuses);
-    record["final"] = st["status"].clone();
-    let hashes = send::broadcast_hashes(&st)?;
-    crate::jobs::phase("sent", json!({ "tx_hash": hashes[hashes.len() - 1], "by": "tx_sender_module (keystore_module signed after the approval)" }));
-    record["hashes"] = json!(hashes);
-    let receipt = v.receipt(&hashes[hashes.len() - 1], 120)?;
-    Ok((record, receipt))
+    if !enabled {
+        return refuse("DepositsDisabled");
+    }
+    let now = u128::from(v.now()?);
+    if evm::as_u128(&v.getter("depositsFrozenUntil")?)? > now {
+        return refuse("DepositsAreFrozen");
+    }
+    let vault = v.vault;
+    let until = evm::word(&v.call_at(&vault, &calldata("tokenDepositsFrozenUntil(address)", &[Abi::addr(token)]), None)?, 0)?;
+    if evm::as_u128(&until)? > now {
+        return refuse("TokenDepositsAreFrozen");
+    }
+    let balance = evm::word(&v.call_at(token, &calldata("balanceOf(address)", &[Abi::addr(from)]), None)?, 0)?;
+    let want: u128 = total.parse().map_err(|_| format!("price.total {total}: not a decimal amount"))?;
+    if evm::as_u128(&balance)? < want {
+        return Err(format!("refused: the depositor holds {} base units of {}, the deposit costs {want} (nothing was signed)", evm::dec(&balance), hex(token)));
+    }
+    Ok(())
 }
 
 /// `deposit(request)` with `send`: the deposit built by the module and sent through the send stack.
@@ -85,24 +95,35 @@ pub(crate) fn deposit_and_send(req: &Value) -> Result<Value, String> {
     let eth = token.iter().all(|b| *b == 0);
     let mut calls = Vec::new();
     if !eth {
+        erc20_preflight(&mut v, &from, &token, &total)?;
         let approve = calldata("approve(address,uint256)", &[Abi::addr(&vault), Abi::W(u256(&json!(total), "total")?)]);
-        calls.push(Call { to: token, value: "0".into(), data: approve, label: format!("Allow the Ferrata vault to take {total} base units") });
+        calls.push(Call::new(token, "0", approve, format!("Allow the Ferrata vault to take {total} base units")));
     } else {
         preflight(&mut v, &from, &vault, &data, &total)?;
     }
-    calls.push(Call { to: vault, value: if eth { total.clone() } else { "0".into() }, data,
-                      label: format!("Ferrata deposit: denomination {d} ({} base units) into the vault", price["denomination"].as_str().unwrap_or("?")) });
+    let mut deposit = Call::new(vault, if eth { total.clone() } else { "0".into() }, data,
+                                format!("Ferrata deposit: denomination {d} ({} base units) into the vault", price["denomination"].as_str().unwrap_or("?")));
+    deposit.gas_limit = send::given_limit(sender)?;
+    calls.push(deposit);
     let purpose = format!("Ferrata Bridge deposit of denomination {d}; the LEZ destination stays hidden in the commitment");
-    let (record, receipt) = send_bundle(&mut v, sender, &from, &calls, &purpose)?;
+    let s = send_bundle(&mut v, sender, &from, &calls, &purpose)?;
     let mut out = made;
     out["price"] = price;
-    if receipt.is_null() {
+    let Some(receipt) = s.last().cloned() else {
         out["verdict"] = json!("awaiting_approval");
-        out["send"] = record;
+        out["send"] = s.record;
+        return Ok(out);
+    };
+    if let Some(why) = s.reverted.clone() {
+        out["verdict"] = json!("reverted");
+        out["settled"] = json!(false);
+        out["error"] = json!(format!("{why}; nothing was deposited"));
+        out["send"] = s.record;
+        out["eth"] = v.report();
         return Ok(out);
     }
-    let (ok, block, event) = evm::receipt_summary(&receipt)?;
-    let event = event.ok_or("the receipt has no Deposit event")?;
+    let (ok, block, event) = evm::receipt_summary(&receipt, &vault)?;
+    let event = event.ok_or("the receipt has no Deposit event of the vault")?;
     if hex(&event.commitment) != out["commitment"].as_str().unwrap_or("").to_lowercase() {
         return Err("the Deposit event's commitment is not the module's".into());
     }
@@ -114,9 +135,9 @@ pub(crate) fn deposit_and_send(req: &Value) -> Result<Value, String> {
         out[k] = with_leaf[k].clone();
     }
     out["verdict"] = json!(if ok { "settled" } else { "reverted" });
-    out["sent"] = json!({ "tx_hash": record["hashes"].as_array().and_then(|h| h.last()).cloned(), "block": block,
-                          "gas_used": receipt["gasUsed"], "leaf_index": event.leaf_index, "j": event.j });
-    out["send"] = record;
+    out["settled"] = json!(ok);
+    out["sent"] = json!({ "tx_hash": s.last_hash(), "block": block, "gas_used": receipt["gasUsed"], "leaf_index": event.leaf_index, "j": event.j });
+    out["send"] = s.record;
     out["eth"] = v.report();
     Ok(out)
 }
@@ -156,20 +177,25 @@ pub(crate) fn release_and_send(req: &Value, r: &Value) -> Result<Value, String> 
     let (data, recipient) = release_call(&mut v, r, &seal)?;
     preflight(&mut v, &from, &vault, &data, "0")?;
     let before = v.balance(&recipient)?;
-    let calls = [Call { to: vault, value: "0".into(), data, label: "Ferrata release to the burn's recipient".into() }];
-    let (record, receipt) = send_bundle(&mut v, sender, &from, &calls, "Ferrata Bridge release: the vault pays a burn's recipient")?;
+    let mut c = Call::new(vault, "0", data, "Ferrata release to the burn's recipient");
+    c.gas_limit = send::given_limit(sender)?;
+    let s = send_bundle(&mut v, sender, &from, &[c], "Ferrata Bridge release: the vault pays a burn's recipient")?;
     let mut out = r.clone();
-    if receipt.is_null() {
+    let Some(receipt) = s.last().cloned() else {
         out["verdict"] = json!("awaiting_approval");
-        out["send"] = record;
+        out["send"] = s.record;
         return Ok(out);
-    }
-    let (ok, block, _) = evm::receipt_summary(&receipt)?;
+    };
+    let (ok, block, _) = evm::receipt_summary(&receipt, &vault)?;
     let paid = evm::as_u128(&v.balance(&recipient)?)?.saturating_sub(evm::as_u128(&before)?);
-    out["verdict"] = json!(if ok { "settled" } else { "reverted" });
-    out["sent"] = json!({ "tx_hash": record["hashes"].as_array().and_then(|h| h.last()).cloned(), "block": block,
-                          "gas_used": receipt["gasUsed"], "paid_wei": paid.to_string() });
-    out["send"] = record;
+    let settled = ok && s.reverted.is_none();
+    out["verdict"] = json!(if settled { "settled" } else { "reverted" });
+    out["settled"] = json!(settled);
+    if let Some(why) = s.reverted.clone() {
+        out["error"] = json!(format!("{why}; nothing was released"));
+    }
+    out["sent"] = json!({ "tx_hash": s.last_hash(), "block": block, "gas_used": receipt["gasUsed"], "paid_wei": paid.to_string() });
+    out["send"] = s.record;
     out["eth"] = v.report();
     Ok(out)
 }

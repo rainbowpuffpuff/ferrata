@@ -312,31 +312,31 @@ pub(crate) fn vault_admin(v: &mut Vault, action: &str, p: &Value, sender: &Value
                           "note": "not sent: give send {via: tx_sender_module, from, chain_id} to send it through Logos Core's send stack" }));
     }
     let from = from.ok_or("send.from: the role's Ethereum account (held by keystore_module)")?;
-    let calls = [Call { to: v.vault, value: "0".into(), data: data.clone(), label: format!("Ferrata vault: {what}") }];
-    let req = send::request(chain_id, &hex(&from), &calls, &format!("Ferrata bridge admin ({}): {what}", role.name()));
-    let asked = send::send(&req, Duration::from_secs(60))?;
-    let id = asked["requestId"].as_str().unwrap_or_default().to_string();
-    crate::jobs::phase("awaiting_approval", json!({ "requestId": id, "handle": asked["handle"], "from": hex(&from), "role": role.name(),
-        "approve_in": "the Logos signer: evm_signer_ui in Basecamp (intent evm.signing.approve {handle}), or headless evm_signer_cli" }));
-    if sender["wait"] == false {
-        return Ok(json!({ "verdict": "awaiting_approval", "call": call, "send": asked,
-                          "approve_in": "the Logos signer: evm_signer_ui (Basecamp, intent evm.signing.approve {handle}) or evm_signer_cli" }));
+    let mut c = Call::new(v.vault, "0", data.clone(), format!("Ferrata vault: {what}"));
+    c.gas_limit = send::given_limit(sender)?;
+    let wait_for_it = sender["wait"] != false;
+    let s = send::through_stack(v, chain_id, &hex(&from), &[c], &format!("Ferrata bridge admin ({}): {what}", role.name()),
+                                wait_for_it, timeout(sender), json!({ "role": role.name() }))?;
+    if !wait_for_it {
+        return Ok(json!({ "verdict": "awaiting_approval", "call": call, "send": s.record, "approve_in": send::APPROVE_IN }));
     }
-    let mut seen = Vec::new();
-    let st = send::wait(&id, timeout(sender), |s| seen.push(s["status"].clone()))?;
-    let hashes = send::broadcast_hashes(&st)?;
-    crate::jobs::phase("sent", json!({ "tx_hash": hashes[0], "by": "tx_sender_module (keystore_module signed after the approval)" }));
-    let receipt = v.receipt(&hashes[0], 120)?;
-    let (ok, block, _) = evm::receipt_summary(&receipt)?;
-    Ok(json!({
-        "verdict": if ok { "settled" } else { "reverted" },
+    let receipt = s.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
+    let (ok, block, _) = evm::receipt_summary(&receipt, &v.vault)?;
+    let settled = ok && s.reverted.is_none();
+    let mut out = json!({
+        "verdict": if settled { "settled" } else { "reverted" },
+        "settled": settled,
         "call": call,
-        "tx_hash": hashes[0],
+        "tx_hash": s.last_hash(),
         "block": block,
         "gas_used": receipt["gasUsed"],
-        "send": { "via": send::TX_SENDER, "requestId": id, "handle": asked["handle"], "statuses": seen, "final": st["status"] },
+        "send": s.record,
         "eth": v.report(),
-    }))
+    });
+    if !settled {
+        out["error"] = json!(s.reverted.unwrap_or_else(|| format!("reverted: the vault call was mined in block {block} and reverted")));
+    }
+    Ok(out)
 }
 
 /// `admin(request)`.

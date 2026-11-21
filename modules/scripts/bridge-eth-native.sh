@@ -75,6 +75,7 @@ check "freeze: built and checked from the freeze authority" "built" "$(echo "$F"
 cast send $V "$(echo "$F" | jq -r .call.data)" --from $A2 --unlocked --rpc-url $RPC > "$OUT/send-freeze.log" 2>&1
 S=$(m "{\"action\":\"read\",\"what\":\"registry\",\"token\":\"$ETH\",\"vault\":\"$V\",\"eth\":$E}")
 check "freeze: the module reads the vault's until" "$(cast call $V 'tokenDepositsFrozenUntil(address)(uint256)' $ETH --rpc-url $RPC | awk '{print $1}')" "$(echo "$S" | jq -r .value.token.deposits_frozen_until)"
+check "freeze: it froze (until later than the latest block's time)" "yes" "$(u=$(echo "$S" | jq -r .value.token.deposits_frozen_until); n=$(cast block latest --field timestamp --rpc-url $RPC); [ "$u" -gt "$n" ] && echo yes || echo "no: until $u, now $n")"
 F=$(m "{\"action\":\"set_token_deposits_frozen\",\"vault\":\"$V\",\"eth\":$E,\"params\":{\"token\":\"$ETH\",\"frozen\":false},\"send\":{\"from\":\"$A2\"}}")
 cast send $V "$(echo "$F" | jq -r .call.data)" --from $A2 --unlocked --rpc-url $RPC > "$OUT/send-unfreeze.log" 2>&1
 check "unfreeze: lifted" "0" "$(cast call $V 'tokenDepositsFrozenUntil(address)(uint256)' $ETH --rpc-url $RPC | awk '{print $1}')"

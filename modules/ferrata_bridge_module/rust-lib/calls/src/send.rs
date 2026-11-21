@@ -38,19 +38,46 @@ pub(crate) const TX_SENDER: &str = "tx_sender_module";
 const CALL_TIMEOUT_MS: u64 = 60_000;
 const POLL: Duration = Duration::from_millis(500);
 
-/// One call of a bundle: `to`, `value` in wei (decimal), `data`, and the line the person reads.
+/// One call of a bundle: `to`, `value` in wei (decimal), `data`, the line the person reads, and the gas limit when the
+/// caller gives one (`None`: the stack's own estimate with the margin of [`margin`], set by [`with_limits`]).
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Call {
     pub to: [u8; 20],
     pub value: String,
     pub data: Vec<u8>,
     pub label: String,
+    pub gas_limit: Option<u64>,
 }
 
 impl Call {
-    pub(crate) fn to_json(&self) -> Value {
-        json!({ "to": crate::evm::checksum(&self.to), "value": self.value, "data": hex(&self.data), "label": self.label })
+    pub(crate) fn new(to: [u8; 20], value: impl Into<String>, data: Vec<u8>, label: impl Into<String>) -> Self {
+        Call { to, value: value.into(), data, label: label.into(), gas_limit: None }
     }
+
+    pub(crate) fn to_json(&self) -> Value {
+        let mut v = json!({ "to": crate::evm::checksum(&self.to), "value": self.value, "data": hex(&self.data), "label": self.label });
+        if let Some(g) = self.gas_limit {
+            // A decimal STRING: tx_sender_module f1754c3 reads a call's `gasLimit` as `Option<String>` (glue.rs
+            // `CallSpec`); a JSON number is refused as an invalid request, whatever its README says.
+            v["gasLimit"] = json!(g.to_string());
+        }
+        v
+    }
+}
+
+/// EIP-7825's cap on one transaction's gas (Osaka): no limit above it is sent.
+pub(crate) const TX_GAS_CAP: u64 = 1 << 24;
+
+/// The limit a call is sent with when the caller gives none: the stack's estimate plus a quarter plus 20,000 gas.
+/// The estimate is the least gas the call needed when it was estimated, but it is included later: after the person's
+/// approval, in another block, with another timestamp and perhaps after other transactions. The vault's rate-limit
+/// buckets write `lastUpdate = block.timestamp` (a no-op in the second the bucket was last touched, a real write a
+/// second later: about 2,800 gas, measured as a 2,525-gas gap that reverted an approved `setTokenCap`), and a deposit's
+/// Merkle insertion writes a different branch slot at each leaf index (up to ~17,000 gas more when the slot is still
+/// empty). The margin covers these; unused gas is not paid for (the fee is gas used times the price), it only raises
+/// the fee ceiling the account must hold.
+pub(crate) fn margin(estimate: u64) -> u64 {
+    estimate.saturating_add(estimate / 4).saturating_add(20_000).min(TX_GAS_CAP).max(estimate)
 }
 
 /// The request `tx_sender_module.send` takes: the chain, the account, the calls in order, the purpose (one line).
@@ -80,16 +107,63 @@ fn why(v: &Value) -> String {
     format!("{code}{}", error.unwrap_or_else(|| v.to_string()))
 }
 
-/// `tx_sender_module.send`: the request id and the signer manager's handle (`{requestId, handle, request}`).
-/// Asked again while the account's history opens (`unavailable`), for at most `open_timeout`.
+/// A quantity as `tx_sender_module` answers it: a JSON number, or a decimal or `0x` string.
+fn quantity(v: &Value) -> Option<u64> {
+    match v {
+        Value::Number(n) => n.as_u64(),
+        Value::String(t) => match t.strip_prefix("0x") {
+            Some(h) => u64::from_str_radix(h, 16).ok(),
+            None => t.parse().ok(),
+        },
+        _ => None,
+    }
+}
+
+/// The request with a `gasLimit` on every call: a caller's own limit as given; otherwise the stack's own estimate
+/// (`tx_sender_module.prepare`: `fee_module` estimates each call as the chain will find it, an ERC-20 `approve` earlier
+/// in the bundle applied to the calls after it) plus [`margin`]. `prepare` reserves nothing and asks nobody, so a call
+/// that would revert is refused here, before the person is asked. `(the request, [{estimate, limit, source}] per call)`.
+pub(crate) fn with_limits(req: &Value) -> Result<(Value, Value), String> {
+    let calls = req["calls"].as_array().ok_or("the request has no calls")?;
+    let given: Vec<Option<u64>> = calls.iter().map(|c| quantity(&c["gasLimit"])).collect();
+    let mut out = req.clone();
+    if given.iter().all(Option::is_some) {
+        let gas = given.iter().map(|g| json!({ "limit": g, "source": "given by the caller" })).collect::<Vec<_>>();
+        return Ok((out, json!(gas)));
+    }
+    let p = module_call("prepare", json!([req.to_string()]))?;
+    if p["ok"] != true {
+        return Err(format!("{TX_SENDER}.prepare refused (nothing was asked or signed): {}", why(&p)));
+    }
+    let legs = p["legs"].as_array().ok_or("tx_sender_module.prepare answered no legs")?;
+    if legs.len() != calls.len() {
+        return Err(format!("tx_sender_module.prepare priced {} calls, not {}", legs.len(), calls.len()));
+    }
+    let mut gas = Vec::new();
+    for (i, leg) in legs.iter().enumerate() {
+        let estimate = quantity(&leg["gasLimit"]).filter(|g| *g > 0).ok_or_else(|| format!("tx_sender_module.prepare: no gasLimit for call {}", i + 1))?;
+        let (limit, source) = match given[i] {
+            Some(g) => (g, "given by the caller".to_string()),
+            None => (margin(estimate), format!("the stack's estimate ({}) + 25% + 20000", leg["gasSource"].as_str().unwrap_or("?"))),
+        };
+        out["calls"][i]["gasLimit"] = json!(limit.to_string());
+        gas.push(json!({ "estimate": estimate, "limit": limit, "source": source }));
+    }
+    Ok((out, json!(gas)))
+}
+
+/// `tx_sender_module.send`, every call given its gas limit first ([`with_limits`]): the request id and the signer
+/// manager's handle (`{requestId, handle, request, gas}`). Asked again while the account's history opens
+/// (`unavailable`), for at most `open_timeout`.
 pub(crate) fn send(req: &Value, open_timeout: Duration) -> Result<Value, String> {
     let t0 = Instant::now();
+    let (req, gas) = with_limits(req)?;
     let text = req.to_string();
     loop {
         let v = module_call("send", json!([text]))?;
         if v["ok"] == true {
             let id = v["requestId"].as_str().ok_or("tx_sender_module.send answered no requestId")?;
-            return Ok(json!({ "requestId": id, "handle": v["handle"], "pending": v["pending"], "request": req,
+            return Ok(json!({ "requestId": id, "handle": v["handle"], "pending": v["pending"], "request": req, "gas": gas,
                               "asked_ms": t0.elapsed().as_millis() as u64 }));
         }
         if v["code"] != "unavailable" || t0.elapsed() > open_timeout {
@@ -105,12 +179,28 @@ pub(crate) fn status(request_id: &str) -> Result<Value, String> {
 }
 
 /// `send_status` polled until the send is final (`broadcast`, `rejected`, `cancelled`, `failed`, `stuck`) or
-/// `timeout` passes; each status seen is passed to `seen` (the job's phases). The final reply.
+/// `timeout` passes; each status seen is passed to `seen` (the job's phases). The final reply. On the timeout, or when
+/// three reads in a row fail, the request is withdrawn (`cancel_send`) so that it cannot still be approved and sent
+/// untracked; the error says what the withdrawal answered.
 pub(crate) fn wait(request_id: &str, timeout: Duration, mut seen: impl FnMut(&Value)) -> Result<Value, String> {
     let t0 = Instant::now();
     let mut last = String::new();
+    let mut failed_reads = 0;
     loop {
-        let s = status(request_id)?;
+        let s = match status(request_id) {
+            Ok(s) => {
+                failed_reads = 0;
+                s
+            }
+            Err(e) => {
+                failed_reads += 1;
+                if failed_reads >= 3 {
+                    return Err(format!("{TX_SENDER}.send_status failed three times ({e}); {}", withdraw(request_id)));
+                }
+                std::thread::sleep(POLL);
+                continue;
+            }
+        };
         let state = s["status"].as_str().unwrap_or("").to_string();
         if state != last {
             seen(&s);
@@ -120,9 +210,18 @@ pub(crate) fn wait(request_id: &str, timeout: Duration, mut seen: impl FnMut(&Va
             return Ok(s);
         }
         if t0.elapsed() > timeout {
-            return Err(format!("{TX_SENDER}: request {request_id} not final after {} s (last: {})", timeout.as_secs(), why(&s)));
+            return Err(format!("{TX_SENDER}: request {request_id} not final after {} s (last: {}); {}", timeout.as_secs(), why(&s), withdraw(request_id)));
         }
         std::thread::sleep(POLL);
+    }
+}
+
+/// `cancel_send`, as one sentence for an error.
+fn withdraw(request_id: &str) -> String {
+    match cancel(request_id) {
+        Ok(v) if v["ok"] == true => format!("the request {request_id} was withdrawn (cancel_send): nothing more will be signed for it"),
+        Ok(v) => format!("withdrawing the request {request_id} was refused ({}): it may still be approved in the Logos signer", why(&v)),
+        Err(e) => format!("withdrawing the request {request_id} failed ({e}): it may still be approved in the Logos signer"),
     }
 }
 
@@ -153,8 +252,94 @@ pub(crate) fn broadcast_hashes(s: &Value) -> Result<Vec<String>, String> {
     })
 }
 
-/// Installs a stand-in of `tx_sender_module` for the tests: it approves (or rejects) every send as soon as it is
-/// asked and answers the hashes it is given.
+/// The gas limit a request gives for its vault call (`send.gas_limit`: a number or a decimal string), if any. Used
+/// verbatim, as `tx_sender_module` uses a caller's own limit: a limit below what the call needs is approved, mined and
+/// reverts (which the replies then report).
+pub(crate) fn given_limit(sender: &Value) -> Result<Option<u64>, String> {
+    match &sender["gas_limit"] {
+        Value::Null => Ok(None),
+        v => quantity(v).filter(|g| *g > 0).map(Some).ok_or_else(|| "send.gas_limit: a positive number of gas".to_string()),
+    }
+}
+
+/// Where the person approves a send.
+pub(crate) const APPROVE_IN: &str = "the Logos signer: evm_signer_ui in Basecamp (intent evm.signing.approve {handle}), or headless evm_signer_cli approve <handle> <bundle_id> @password-file";
+
+/// What one send through the stack did.
+pub(crate) struct Sent {
+    /// `{via, requestId, handle, from, calls (with their gas limits), gas, statuses, final, hashes, receipts, reverted?}`.
+    pub record: Value,
+    /// Every call's receipt, in the calls' order; empty when the caller did not wait.
+    pub receipts: Vec<Value>,
+    /// The first call whose receipt has status 0, as one sentence.
+    pub reverted: Option<String>,
+}
+
+impl Sent {
+    /// The last call's receipt (the vault's call of a bundle); `None` when the caller did not wait.
+    pub(crate) fn last(&self) -> Option<&Value> {
+        self.receipts.last()
+    }
+
+    /// The last call's transaction hash.
+    pub(crate) fn last_hash(&self) -> Value {
+        self.record["hashes"].as_array().and_then(|h| h.last()).cloned().unwrap_or(Value::Null)
+    }
+}
+
+/// One send through Logos Core's send stack: `calls` from `from` on `chain_id`, each with its gas limit
+/// ([`with_limits`]); the person's approval in the Logos signer (the job's `awaiting_approval` phase, with `detail`'s
+/// fields added); then, when `wait_for_it`, the broadcast and EVERY call's receipt read back through `v`'s Ethereum
+/// path. A receipt with status 0 is not a success: `reverted` names the call, its block and the gas it used of its
+/// limit. `wait_for_it` false answers at the approval request (`record.state` `awaiting_approval`).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str, calls: &[Call], purpose: &str,
+                            wait_for_it: bool, timeout: Duration, detail: Value) -> Result<Sent, String> {
+    let req = request(chain_id, from, calls, purpose);
+    let asked = send(&req, Duration::from_secs(60))?;
+    let id = asked["requestId"].as_str().unwrap_or_default().to_string();
+    let mut phase = json!({ "requestId": id, "handle": asked["handle"], "from": from, "gas": asked["gas"], "approve_in": APPROVE_IN });
+    for (k, x) in detail.as_object().into_iter().flatten() {
+        phase[k] = x.clone();
+    }
+    crate::jobs::phase("awaiting_approval", phase);
+    let mut record = json!({ "via": TX_SENDER, "requestId": id, "handle": asked["handle"], "from": from,
+                             "calls": asked["request"]["calls"], "gas": asked["gas"] });
+    if !wait_for_it {
+        record["state"] = json!("awaiting_approval");
+        return Ok(Sent { record, receipts: Vec::new(), reverted: None });
+    }
+    let mut statuses = Vec::new();
+    let st = wait(&id, timeout, |s| statuses.push(s["status"].clone()))?;
+    record["statuses"] = json!(statuses);
+    record["final"] = st["status"].clone();
+    let hashes = broadcast_hashes(&st)?;
+    crate::jobs::phase("sent", json!({ "tx_hash": hashes[hashes.len() - 1], "by": "tx_sender_module (keystore_module signed after the approval; broadcast through eth_rpc_module)" }));
+    record["hashes"] = json!(hashes);
+    let (mut receipts, mut summary, mut reverted) = (Vec::new(), Vec::new(), None);
+    for (i, h) in hashes.iter().enumerate() {
+        let r = v.receipt(h, 120)?;
+        let ok = r["status"].as_str() == Some("0x1");
+        let (used, block, limit) = (quantity(&r["gasUsed"]), quantity(&r["blockNumber"]), asked["gas"][i]["limit"].as_u64());
+        summary.push(json!({ "hash": h, "status": if ok { "success" } else { "reverted" }, "block": block, "gas_used": used, "gas_limit": limit }));
+        if !ok && reverted.is_none() {
+            let n = |x: Option<u64>| x.map_or_else(|| "?".to_string(), |x| x.to_string());
+            reverted = Some(format!(
+                "reverted: call {} of {} ({}), transaction {h}, was mined in block {} and reverted, using {} gas of its limit {}: approved and paid for, but it did nothing",
+                i + 1, hashes.len(), calls.get(i).map_or("?", |c| c.label.as_str()), n(block), n(used), n(limit)));
+        }
+        receipts.push(r);
+    }
+    record["receipts"] = json!(summary);
+    if let Some(r) = &reverted {
+        record["reverted"] = json!(r);
+    }
+    Ok(Sent { record, receipts, reverted })
+}
+
+/// Installs a stand-in of `tx_sender_module` for the tests: `prepare` estimates every limitless call at [`ESTIMATE`],
+/// `send` records the request, `send_status` approves (or rejects) it at once and answers hashes `0x…abc0`, `…abc1` ...;
+/// and a stand-in of `eth_rpc_module` whose receipts have the status [`STATUS`] (`0x1`, or `0x0`: reverted).
 #[cfg(test)]
 pub(crate) mod fake {
     use super::*;
@@ -162,10 +347,21 @@ pub(crate) mod fake {
 
     pub(crate) static SENT: Mutex<Vec<Value>> = Mutex::new(Vec::new());
     pub(crate) static VERDICT: Mutex<&'static str> = Mutex::new("broadcast");
+    pub(crate) static ESTIMATE: Mutex<u64> = Mutex::new(48_564);
+    pub(crate) static STATUS: Mutex<&'static str> = Mutex::new("0x1");
+    pub(crate) static CANCELLED: Mutex<Vec<String>> = Mutex::new(Vec::new());
 
     fn call(module: &str, method: &str, args: &Value, _t: u64) -> Result<String, String> {
         assert_eq!(module, TX_SENDER);
         match method {
+            "prepare" => {
+                let req: Value = serde_json::from_str(args[0].as_str().unwrap()).unwrap();
+                let legs: Vec<Value> = req["calls"].as_array().unwrap().iter().map(|c| match quantity(&c["gasLimit"]) {
+                    Some(g) => json!({ "gasLimit": g, "gasSource": "given" }),
+                    None => json!({ "gasLimit": *ESTIMATE.lock().unwrap(), "gasSource": "estimated" }),
+                }).collect();
+                Ok(json!({ "ok": true, "legs": legs }).to_string())
+            }
             "send" => {
                 let req: Value = serde_json::from_str(args[0].as_str().unwrap()).unwrap();
                 let mut sent = SENT.lock().unwrap();
@@ -178,42 +374,120 @@ pub(crate) mod fake {
                 let hashes: Vec<String> = (0..SENT.lock().unwrap()[n - 1]["calls"].as_array().unwrap().len())
                     .map(|k| format!("0x{:064x}", 0xabc0 + k))
                     .collect();
-                Ok(json!({ "ok": true, "requestId": args[0], "status": verdict, "final": true, "hashes": if verdict == "broadcast" { json!(hashes) } else { json!([]) } }).to_string())
+                let fin = verdict != "awaitingApproval";
+                Ok(json!({ "ok": true, "requestId": args[0], "status": verdict, "final": fin, "hashes": if verdict == "broadcast" { json!(hashes) } else { json!([]) } }).to_string())
+            }
+            "cancel_send" => {
+                CANCELLED.lock().unwrap().push(args[0].as_str().unwrap_or("").to_string());
+                Ok(json!({ "ok": true, "status": "cancelled" }).to_string())
             }
             other => Err(format!("unexpected {other}")),
         }
     }
 
+    fn eth(_chain: i64, method: &str, params: &str, _t: u64) -> Result<String, String> {
+        let p: Value = serde_json::from_str(params).unwrap();
+        match method {
+            "eth_getTransactionReceipt" => Ok(json!({ "ok": true, "route": "direct", "result": {
+                "transactionHash": p[0], "status": *STATUS.lock().unwrap(), "blockNumber": "0x8", "gasUsed": "0xbc91", "logs": [] } }).to_string()),
+            other => Ok(json!({ "ok": false, "code": "test", "error": format!("unexpected {other}") }).to_string()),
+        }
+    }
+
     pub(crate) fn install() {
         set_module_call(call);
+        crate::rpc::set_eth_rpc_module(eth);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::jobs::tests::serial;
+
+    fn calls() -> Vec<Call> {
+        vec![
+            Call::new([1; 20], "0", vec![0x09, 0x5e, 0xa7, 0xb3], "approve"),
+            Call::new([2; 20], "0", vec![0xde, 0xad], "deposit"),
+        ]
+    }
+
+    fn vault() -> crate::evm::Vault {
+        crate::evm::Vault::new(&json!({ "via": "eth_rpc_module", "chain_id": 11155111 }), [2; 20], 0).unwrap()
+    }
 
     #[test]
-    fn a_bundle_is_sent_and_its_hashes_collected() {
+    fn the_margin_covers_the_gap_that_reverted_an_approved_cap() {
+        // Measured (review-rfp-F): setTokenCap estimated 48,564, needed 48,273 + 2,525 when mined a second later.
+        assert_eq!(margin(48_564), 48_564 + 12_141 + 20_000);
+        assert!(margin(48_564) > 48_273 + 2_525);
+        // The ETH deposit (estimate = used = 200,572): a second-later branch write (~17k) still fits.
+        assert!(margin(200_572) >= 200_572 + 17_100);
+        assert_eq!(margin(u64::MAX / 2), TX_GAS_CAP.max(u64::MAX / 2));
+        assert_eq!(margin(20_000_000), 20_000_000, "never below the estimate");
+        assert_eq!(margin(16_000_000), TX_GAS_CAP);
+    }
+
+    #[test]
+    fn every_call_is_sent_with_a_string_gas_limit_above_the_estimate_or_the_callers_own() {
+        let _g = serial();
         fake::install();
         *fake::VERDICT.lock().unwrap() = "broadcast";
-        let calls = vec![
-            Call { to: [1; 20], value: "0".into(), data: vec![0x09, 0x5e, 0xa7, 0xb3], label: "approve".into() },
-            Call { to: [2; 20], value: "0".into(), data: vec![0xde, 0xad], label: "deposit".into() },
-        ];
-        let req = request(11155111, "0x0000000000000000000000000000000000000003", &calls, "Ferrata deposit");
+        let mut c = calls();
+        c[0].gas_limit = Some(60_000);
+        let req = request(11155111, "0x0000000000000000000000000000000000000003", &c, "Ferrata deposit");
         let sent = send(&req, Duration::from_secs(1)).unwrap();
         assert!(sent["requestId"].as_str().unwrap().starts_with("req-"));
-        assert!(sent["handle"].as_str().unwrap().starts_with("smh_"));
         let last = fake::SENT.lock().unwrap().last().cloned().unwrap();
         assert_eq!(last["chainId"], 11155111);
-        assert_eq!(last["from"], "0x0000000000000000000000000000000000000003");
         assert_eq!(last["calls"][1]["data"], "0xdead");
-        let s = wait(sent["requestId"].as_str().unwrap(), Duration::from_secs(1), |_| {}).unwrap();
-        assert_eq!(broadcast_hashes(&s).unwrap().len(), 2);
+        // The caller's own limit verbatim; the other the estimate + 25% + 20000; both as decimal strings.
+        assert_eq!(last["calls"][0]["gasLimit"], json!("60000"));
+        assert_eq!(last["calls"][1]["gasLimit"], json!(margin(48_564).to_string()));
+        assert_eq!(sent["gas"][1]["estimate"], 48_564);
+        assert!(sent["gas"][0]["source"].as_str().unwrap().starts_with("given"));
+    }
+
+    #[test]
+    fn a_bundle_is_sent_and_every_receipt_checked() {
+        let _g = serial();
+        fake::install();
+        *fake::VERDICT.lock().unwrap() = "broadcast";
+        *fake::STATUS.lock().unwrap() = "0x1";
+        let mut v = vault();
+        let s = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "Ferrata deposit", true,
+                              Duration::from_secs(1), json!({})).unwrap();
+        assert_eq!(s.receipts.len(), 2);
+        assert!(s.reverted.is_none());
+        assert_eq!(s.record["receipts"][1]["status"], "success");
+        assert_eq!(s.record["receipts"][1]["gas_limit"], margin(48_564));
+        // A forced revert (status 0, e.g. a too-low limit): reported, naming the call, the block, the gas.
+        *fake::STATUS.lock().unwrap() = "0x0";
+        let s = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "Ferrata deposit", true,
+                              Duration::from_secs(1), json!({})).unwrap();
+        let why = s.reverted.clone().unwrap();
+        assert!(why.starts_with("reverted: call 1 of 2 (approve)"), "{why}");
+        assert!(why.contains("block 8") && why.contains("using 48273 gas"), "{why}");
+        assert_eq!(s.record["receipts"][0]["status"], "reverted");
+        *fake::STATUS.lock().unwrap() = "0x1";
+        // Refused at the approver: nothing broadcast, said so.
         *fake::VERDICT.lock().unwrap() = "rejected";
-        let s = wait(sent["requestId"].as_str().unwrap(), Duration::from_secs(1), |_| {}).unwrap();
-        assert!(broadcast_hashes(&s).unwrap_err().starts_with("rejected"));
+        let e = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "x", true, Duration::from_secs(1), json!({}))
+            .err().unwrap();
+        assert!(e.starts_with("rejected"), "{e}");
+        *fake::VERDICT.lock().unwrap() = "broadcast";
+    }
+
+    #[test]
+    fn a_request_still_open_at_the_timeout_is_withdrawn() {
+        let _g = serial();
+        fake::install();
+        *fake::VERDICT.lock().unwrap() = "awaitingApproval";
+        let sent = send(&request(1, "0x0000000000000000000000000000000000000003", &calls(), "x"), Duration::from_secs(1)).unwrap();
+        let id = sent["requestId"].as_str().unwrap().to_string();
+        let e = wait(&id, Duration::from_millis(10), |_| {}).unwrap_err();
+        assert!(e.contains("withdrawn (cancel_send)"), "{e}");
+        assert_eq!(fake::CANCELLED.lock().unwrap().last(), Some(&id));
         *fake::VERDICT.lock().unwrap() = "broadcast";
     }
 }

@@ -247,6 +247,28 @@ Item {
             approve("setTokenCap", "21-admin-setcap-approval");
             signer("admin-setcap", "22-admin-setcap-awaits-the-logos-signer");
             tryVerify(function () { return has(host.app.adminText, "Vault cap set"); }, 120000, "cap: " + host.app.adminText + " " + host.app.lastError);
+            // The cap read back from the vault (through eth_rpc_module), not the view's text: a reverted send must fail here.
+            tryVerify(function () { return host.app.admin && host.app.admin.vault && host.app.admin.vault.token.vault_deposit_cap.capacity === el("admin.vault.cap").text; },
+                      30000, "the cap read back: " + JSON.stringify(host.app.admin && host.app.admin.vault ? host.app.admin.vault.token.vault_deposit_cap : null));
+            // A send that is approved, mined and REVERTS (forced: the admin's own gas limit of 30000, below what
+            // setTokenCap needs): the module reports it, the job fails, the view says so where the admin acted, and
+            // the cap stays as it was.
+            var capBefore = host.app.admin.vault.token.vault_deposit_cap.capacity;
+            el("admin.vault.gas").text = "30000";
+            el("admin.vault.cap").text = "60000000000000000000";
+            click("admin.vault.setcap");
+            approve("setTokenCap", "");
+            signer("admin-setcap-reverts", "");
+            tryVerify(function () { return has(host.app.adminText, "Not done:"); }, 120000, "the forced revert reported: " + host.app.adminText);
+            verify(has(host.app.adminText, "reverted: call 1 of 1") && has(host.app.adminText, "of its limit 30000"), host.app.adminText);
+            verify(!has(host.app.adminText, "Vault cap set"), host.app.adminText);
+            idle();
+            tryVerify(function () { return host.app.admin && host.app.admin.vault; }, 30000, "the vault read again");
+            compare(host.app.admin.vault.token.vault_deposit_cap.capacity, capBefore, "the reverted cap changed nothing");
+            shot("22b-admin-setcap-reverted-reported");
+            console.log("REVERTED " + host.app.adminText);
+            el("admin.vault.gas").text = "";
+            el("admin.vault.cap").text = capBefore;
             click("admin.vault.freeze");
             approve("setTokenDepositsFrozen", "");
             signer("admin-freeze", "");
@@ -266,6 +288,8 @@ Item {
             approve("setTokenDepositsFrozen(false)", "");
             signer("admin-unfreeze", "");
             tryVerify(function () { return has(host.app.adminText, "accepted again"); }, 120000, "unfreeze: " + host.app.adminText + " " + host.app.lastError);
+            idle();
+            tryVerify(function () { return host.app.admin && host.app.admin.vault && host.app.admin.vault.token.deposits_frozen_until === "0"; }, 30000, "the lift read back");
             shot("25-admin-vault-unfrozen");
         }
 

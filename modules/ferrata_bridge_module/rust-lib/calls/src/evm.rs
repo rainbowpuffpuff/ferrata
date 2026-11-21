@@ -570,12 +570,17 @@ impl Vault {
     }
 }
 
-/// A receipt's status (`0x1`), block number and the vault's `Deposit` event in it, if any.
-pub(crate) fn receipt_summary(r: &Value) -> Result<(bool, u64, Option<DepositEvent>), String> {
+/// A receipt's status (`0x1`), block number and the `Deposit` event `vault` emitted in it, if any (a log of the same
+/// shape from any other address is not the vault's).
+pub(crate) fn receipt_summary(r: &Value, vault: &Address) -> Result<(bool, u64, Option<DepositEvent>), String> {
     let status = r["status"].as_str() == Some("0x1");
     let block = parse_quantity(&r["blockNumber"], "the receipt's blockNumber")?;
     let mut deposit = None;
     for log in r["logs"].as_array().into_iter().flatten() {
+        let from_vault = log["address"].as_str().and_then(|a| unhex(a).ok()).is_some_and(|a| a.as_slice() == vault.as_slice());
+        if !from_vault {
+            continue;
+        }
         if let Some(d) = deposit_of_log(log)? {
             deposit = Some(d);
         }
