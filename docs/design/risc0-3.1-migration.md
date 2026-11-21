@@ -3,13 +3,14 @@
 Written 21 November 2026, after RISC Zero's advisories GHSA-g6qg-9j8p-7j87 and GHSA-mm6c-35cm-g4x2 (11 November
 2026; [security note](../security/risc0-groth16-advisory-2026-11-21/README.md)). Nothing here is built yet: this is
 the plan, its order, what waits on Logos and the tests that close it. Every count below comes from this tree at
-`5cf1e8e7` (`git grep`, `git ls-files`); every RISC Zero fact from its repositories, read on 21 November 2026.
+`5cf1e8e7` (`git grep`, `git ls-files`, a scan of the lockfiles); every RISC Zero fact from its repositories and
+crates.io (versions and yank flags), read on 21 November 2026.
 
 ## 1. What changes upstream
 
 | | Today (3.0.x) | After (3.1) |
 |---|---|---|
-| zkVM | risc0-zkvm 3.0.5, risc0-build 3.0.5, risc0-circuit-recursion 4.0.5, risc0-groth16 3.0.5 (all yanked) | risc0-zkvm 3.1.0, risc0-circuit-rv32im 4.1.0, risc0-circuit-recursion 4.1.0, risc0-zkp 3.0.6, risc0-groth16 3.0.6 |
+| zkVM | risc0-zkvm 3.0.5 (yanked); risc0-build 3.0.5 (not yanked); risc0-circuit-recursion 4.0.4 or 4.0.5 and risc0-groth16 3.0.4 or 3.0.5 (all yanked), locked in 15 and 27 of the 51 lockfiles; three `lez-v03` guest lockfiles already lock 4.1.0 and 3.0.6 beside risc0-zkvm 3.0.5 | risc0-zkvm 3.1.0, risc0-build 3.0.7 (there is no 3.1.0), risc0-circuit-rv32im 4.1.0, risc0-circuit-recursion 4.1.0, risc0-zkp 3.0.6, risc0-groth16 3.0.6 |
 | Toolchains (rzup) | cargo-risczero 3.0.5, r0vm 3.0.5 | cargo-risczero 3.1.0, r0vm 3.1.0 |
 | Groth16 prover image | `risczero/risc0-groth16-prover:v2025-04-03.1` | `v2026-10-20.1` (risc0 v3.1.0, `risc0/groth16/src/prove/docker.rs`), new trusted setup |
 | Ethereum verifier | risc0-ethereum v3.0.0, `RiscZeroGroth16Verifier` 3.0.0, selector `0x73c457ba`, `CONTROL_ROOT` `a54dc85a…1f56` | risc0-ethereum v3.1.0 (commit `ff30da77`), verifier 3.1.0, selector `0xe71e6620`, `CONTROL_ROOT` `e6feef13…551d`, `BN254_CONTROL_ID` `0ac2eaf9…81de` |
@@ -35,7 +36,7 @@ LEZ tag on 3.1.
 
 | Component | Where | Change |
 |---|---|---|
-| Checkpoint guests, rule (A) and (B), their 0.3.5-rc.1 builds, the segment guest (composed with `env::verify`), plain and micro builds | `checkpoint/guests`, `checkpoint/guests-0-3-5`, `checkpoint/guests-plain`, `checkpoint/methods*`, `checkpoint/host` | manifests to 3.1.0, lockfiles regenerated, rebuilt: **ids move** (`checkpoint`, `checkpoint_b`, `checkpoint_0_3_5`, `checkpoint_b_0_3_5`, `segment`, `micro`) |
+| Checkpoint guests, rule (A) and (B), their 0.3.5-rc.1 builds, the segment guest (composed with `env::verify`), plain and micro builds | `checkpoint/guests`, `checkpoint/guests-0-3-5`, `checkpoint/guests-plain`, `checkpoint/methods*`, `checkpoint/host` | manifests to risc0-zkvm 3.1.0 and risc0-build 3.0.7, lockfiles regenerated, rebuilt: **ids move** (`checkpoint`, `checkpoint_b`, `checkpoint_0_3_5`, `checkpoint_b_0_3_5`, `segment`, `micro`) |
 | Release guest | `bridge/guests` (`release`), `bridge/methods`, `bridge/host`, `bridge/e2e` | the same: **`release` id moves**. `claim` and `gasdrop` are built in the same workspace but verified by LEZ-linked processes (the relayer): their new ids are recorded now and used from phase 2 |
 | Ethereum-side prover outside LEZ-linked processes | `bridge/host` (`prove`, `groth16`), `checkpoint/host`, `gpu-prover/prover`, `e2e/cloud/app.py`, the build box's `mwrap` | 3.1.0, prover image `v2026-10-20.1`; until phase 2 the CLI and the bridge module call such a separate prover for release seals instead of `ferrata_wallet::release::prove` |
 | Verifier and vault | `vault/README.md:57`, `.github/workflows/ci.yml:147`, `e2e/ci/run.sh:32`, `cli/tests/e2e.sh:11` (`forge install risc0/risc0-ethereum@v3.0.0`); `vault/script/DeployVault.s.sol` (takes `ControlID` from the library) | risc0-ethereum v3.1.0 and a recorded commit (`ff30da77`); vault source unchanged unless decision D1 (section 4) changes the wiring; new deployments only (the four on Sepolia cannot change their immutable `verifier`) |
