@@ -39,22 +39,39 @@ Basecamp. The browser never holds a LEZ key and never sees the bridge seed.
    ```
 
    `token` is the vault's `ETH` constant for ether.
-2. **Open a copy of the page you checked**, from disk (`file://…/web/depositor/index.html`). Check its hash first:
+2. **Serve the copy of the page you checked to your own browser, and open it there.** Check its hash, then start the
+   server beside it (Python 3, standard library only):
 
    ```sh
    sha256sum web/depositor/index.html
+   python3 -I web/depositor/serve.py      # prints the hash of what it serves; then open http://127.0.0.1:8645/
    ```
 
-   At the commit that added this README it is `d0b3ed7f607b072739d3d9ca0914fbeb5c050558a0a3660bd02afbf1b469d58a`; a
-   release states the hash of its own copy.
+   The copy in this repository, as changed on 21 November 2026, hashes to
+   `dc8ea8b58b145982842edbf8fbd08f153e6310607b31b02173d3f93d0f0c3af8`; a release states the hash of its own copy.
+   [`serve.py`](serve.py) reads the page once, serves exactly those bytes and nothing else, listens on 127.0.0.1 only,
+   answers only requests addressed to 127.0.0.1 or localhost, and sends the page's Content-Security-Policy as a header
+   with `frame-ancestors 'none'` (no other site may frame the page). Stop it with Ctrl-C when you are done.
+
+   Why not open the file directly (`file://…/index.html`): Chromium-based browsers run an extension's scripts in
+   `file://` pages only after you turn on that extension's "Allow access to file URLs", which is off by default, so a
+   wallet such as MetaMask injects nothing there and the page shows "No injected wallet". Turning the switch on works,
+   but it also lets that extension read every local file the browser can open; serving the page on 127.0.0.1 needs no
+   such permission. (Neither way has been tried with a real wallet extension yet: the test uses a stand-in wallet.)
 3. **Connect, paste the ticket, press Check.** The page refuses, and sends nothing, if the wallet is on another chain,
    the connected account is not the ticket's depositor, the vault has no code, the token is not registered or the
    denomination index is out of range, `j` is not the vault's `depositCount` for the depositor, `C` is zero, or an
-   ERC-20 balance does not cover the total.
+   ERC-20 balance does not cover the total. The check holds only for the chain and account it was made on: if the
+   wallet announces a switch of either (EIP-1193 `chainChanged`, `accountsChanged`), the page drops the summary; and
+   right before each transaction it asks the wallet again for its chain and account and sends nothing if either
+   changed. Every transaction it asks for carries the ticket's `chainId`, which wallets such as MetaMask refuse to sign
+   on another chain.
 4. **Read the summary, then sign in the wallet.** It shows the chain, vault, token, denomination, fees and total (priced
    exactly as the `ferrata` tool prices it), `j`, `C`, the exact calldata of each transaction the wallet will ask you
    to sign, and what becomes public on Ethereum (your address, the token, the amount, `C`, the time) and what stays
-   private (your LEZ destination, inside `C`). An ERC-20 is approved for exactly the total, never more.
+   private (your LEZ destination, inside `C`). An ERC-20 is approved for exactly the total, never more. If an allowance
+   below the total is left over (from a deposit that failed after a fee rise), the page first resets it to zero:
+   tokens such as USDT refuse to change one non-zero allowance into another.
 5. After the receipt, the page decodes the vault's `Deposit` event, shows the leaf index, and checks that the logged
    commitment and depositor are the ticket's. Check the deposit again with your Logos tool (`ferrata status`,
    `ferrata scan`), then claim with it as usual.
@@ -63,8 +80,11 @@ Basecamp. The browser never holds a LEZ key and never sees the bridge seed.
 
 Only to the wallet, through `window.ethereum`. Its wallet client allows `eth_requestAccounts`, `eth_accounts`,
 `eth_chainId`, `eth_call`, `eth_getCode`, `eth_getBlockByNumber`, `eth_blockNumber`, `eth_sendTransaction` and
-`eth_getTransactionReceipt`, and refuses anything else. Its Content-Security-Policy (`default-src 'none'`) forbids the
-page any network request of its own: no fetch, no WebSocket, no external script, font or image.
+`eth_getTransactionReceipt`, and refuses anything else. Its Content-Security-Policy (`default-src 'none'`, and its
+one inline script allowed by its SHA-256 hash rather than any inline script) forbids the page any network request of
+its own (no fetch, no WebSocket, no external script, font or image) and any script but its own. `serve.py` sends the
+same policy as a header, with `frame-ancestors 'none'`. A CSP limits what the page itself loads and runs; it stops
+neither a navigation the user makes to another site nor anything a browser extension does.
 
 ## Security trade-offs
 
@@ -77,6 +97,8 @@ limits it:
 | A malicious or compromised extension, or an injected script | Rewrite the page's DOM or the transaction before the wallet shows it: the same swaps of `C` or the vault, or an unlimited `approve` | The wallet's own confirmation shows the real calldata: check `C` and the vault there, not in the page; the page only ever asks for an `approve` of exactly the total, so an unlimited one is a sign of tampering; deposit from an account that holds only what you mean to bridge |
 | A compromised wallet extension | Sign anything | Out of the page's reach; the Logos modules avoid this by holding keys in Basecamp, which is why they remain the primary path |
 | Loss of privacy in the browser | A page or extension sees which account deposits and when | All of it is public on Ethereum anyway; the LEZ destination is never in the browser: the seed and the destination stay in the Logos tool, which only hands over `C` |
+| The local server, and the way the page is opened | Another site framing the page to trick clicks; a site that resolves its own name to 127.0.0.1 (DNS rebinding) serving the page under its own origin; an extension given "Allow access to file URLs" reading local files | `serve.py`: `frame-ancestors 'none'` and `X-Frame-Options: DENY`; requests that name any host but 127.0.0.1 or localhost get 421; it serves only the bytes it read and hashed at start. The page holds no secret, so a local process that reads it learns nothing. Serving on 127.0.0.1 avoids the file-access permission altogether |
+| A wallet switched after the check | A deposit sent to the same address on another chain (where the vault may not exist), or from another account | Checked again right before every send; dropped on the wallet's change events; `chainId` in every transaction |
 
 What the design gives up against the Logos module: the user's eye on `C` and the vault is the last check before the
 funds leave. What it keeps: the seed and every LEZ key stay out of the browser, so a compromised page cannot claim,
@@ -89,15 +111,28 @@ bash web/depositor/test/run.sh
 ```
 
 Starts a local anvil (chain id 11155111, port 18645, loopback only), deploys the vault with
-[`vault/script/WebDepositorLocal.s.sol`](../../vault/script/WebDepositorLocal.s.sol) (the CLI test's vault and a
-registered ERC-20 test token), opens the page from `file://` in headless Chromium (Python Playwright) with a stand-in
-EIP-1193 wallet that forwards to anvil, and runs nine groups of cases: an ETH deposit and an ERC-20 deposit (approve,
-then deposit) checked on chain; refusals for a wrong chain, another account, a stale index, a zero commitment, an
-unregistered token; a wallet rejection (EIP-1193 4001: shown, nothing retried); and the page's own traffic (nothing but
-its `file://` URL) and wallet methods (only the allowed ones). The test first checks its Python derivations of `s` and
-`C` against all three cases of [`bridge/vectors/inbound-v2.json`](../../bridge/vectors/inbound-v2.json). Record of 21
-November 2026: [`results/anvil-2026-11-21.txt`](results/anvil-2026-11-21.txt), 53 checks, every one passed, and a
-screenshot of the summary, [`results/anvil-2026-11-21.png`](results/anvil-2026-11-21.png).
+[`vault/script/WebDepositorLocal.s.sol`](../../vault/script/WebDepositorLocal.s.sol) (the CLI test's vault, a
+registered ERC-20 test token and a registered Tether-style token,
+[`vault/script/TestTetherToken.sol`](../../vault/script/TestTetherToken.sol): `approve` returns nothing and refuses to
+change a non-zero allowance into another), serves the page with `serve.py` on `http://127.0.0.1:18646/` as step 2 says,
+and opens it in headless Chromium (Python Playwright) with a stand-in EIP-1193 wallet that forwards to anvil, can
+switch its chain or account with or without announcing it, and refuses a transaction whose `chainId` is not its chain.
+Fifteen groups of cases: what the server sends (the file byte for byte, the CSP header with the script's hash and
+`frame-ancestors 'none'`, a request naming another host refused, a page of another origin unable to frame it); an ETH
+deposit and an ERC-20 deposit (approve, then deposit) checked on chain, each transaction carrying the chain id;
+refusals for a wrong chain, another account, a stale index, a zero commitment, an unregistered token; a wallet
+rejection (EIP-1193 4001: shown, nothing retried); the wallet switching chain, then account, after the check, once
+announced and once silently (each time: nothing sent); a Tether-style deposit with an allowance of 1 left over (reset to
+0, approve, deposit, checked on chain); and the page's own traffic (nothing but itself) and wallet methods (only the
+allowed ones). The test first checks its Python derivations of `s` and `C` against all three cases of
+[`bridge/vectors/inbound-v2.json`](../../bridge/vectors/inbound-v2.json). The record is named after the run's UTC date:
+run of 21 November 2026 (on the Modal build box), [`results/anvil-2026-11-21.txt`](results/anvil-2026-11-21.txt), 90
+checks, every one passed, and a screenshot of the summary section,
+[`results/anvil-2026-11-21.png`](results/anvil-2026-11-21.png).
 
-Needs Foundry, Python 3 with Playwright and its Chromium. Foundry runs `--offline` (a networked `forge script` waited
-on a lookup here) and deploys one transaction at a time (`--slow`).
+What the test does not show: the page working with a real wallet extension. The stand-in answers `eth_chainId` and
+`eth_accounts` itself and forwards everything else to anvil; a wallet's own confirmation screen, its network
+switching and its injection rules are not exercised.
+
+Needs Foundry, Python 3 with Playwright and its Chromium, and `curl`. Foundry runs `--offline` (a networked `forge
+script` waited on a lookup here) and deploys one transaction at a time (`--slow`).

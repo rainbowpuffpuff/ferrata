@@ -4,20 +4,24 @@
 #   bash web/depositor/test/run.sh
 #
 # Starts a local anvil (chain id 11155111, port 18645, loopback only), builds the vault once, deploys
-# script/WebDepositorLocal.s.sol (the CLI e2e vault plus a registered ERC-20 test token minted to anvil's
-# account 1), then runs depositor_test.py: headless Chromium, an injected EIP-1193 wallet that forwards to
-# anvil, the deposit page opened from file://. The run's output goes to web/depositor/results/anvil-<date>.txt
-# and one screenshot to web/depositor/results/anvil-<date>.png. Exits non-zero on any failure; anvil is
-# stopped on exit. No network request leaves this machine: foundry talks only to the loopback anvil, and the
-# page talks only to the injected wallet.
+# script/WebDepositorLocal.s.sol (the CLI e2e vault plus two registered test tokens, an ERC-20 and a
+# Tether-style one, minted to anvil's account 1), serves the page with web/depositor/serve.py on
+# http://127.0.0.1:18646/ (as the README says to open it), then runs depositor_test.py: headless Chromium, an
+# injected EIP-1193 wallet that forwards to anvil. The run's output goes to
+# web/depositor/results/anvil-<the run's UTC date>.txt and one screenshot of the summary to
+# web/depositor/results/anvil-<date>.png. Exits non-zero on any failure; anvil and the server are stopped on
+# exit. No network request leaves this machine: foundry talks only to the loopback anvil, the browser only to
+# the loopback server, and the page only to the injected wallet.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 PORT=18645
 CHAIN_ID=11155111
 RPC="http://127.0.0.1:$PORT"
+PAGE_PORT=18646
 RESULTS="$ROOT/web/depositor/results"
-RECORD="$RESULTS/anvil-2026-11-21.txt"
+DATE="$(date -u +%Y-%m-%d)"
+RECORD="$RESULTS/anvil-$DATE.txt"
 ANVIL_LOG="$RESULTS/anvil-$PORT.log"
 DEPLOY_LOG="$RESULTS/deploy-$PORT.log"
 
@@ -32,7 +36,11 @@ mkdir -p "$RESULTS"
 # ---- anvil, local only; the code-size limit is the one the CLI's e2e test uses (the linked vault is large)
 anvil --port "$PORT" --chain-id "$CHAIN_ID" --code-size-limit 100000 >"$ANVIL_LOG" 2>&1 &
 ANVIL_PID=$!
-cleanup() { kill "$ANVIL_PID" 2>/dev/null || true; wait "$ANVIL_PID" 2>/dev/null || true; }
+SERVE_PID=""
+cleanup() {
+  kill "$ANVIL_PID" 2>/dev/null || true; wait "$ANVIL_PID" 2>/dev/null || true
+  if [ -n "$SERVE_PID" ]; then kill "$SERVE_PID" 2>/dev/null || true; wait "$SERVE_PID" 2>/dev/null || true; fi
+}
 trap cleanup EXIT
 
 jrpc() { curl -s -H 'Content-Type: application/json' -d "$1" "$RPC"; }
@@ -69,17 +77,31 @@ echo "forge script: deploying script/WebDepositorLocal.s.sol"
 deployed_label() { grep -Eo "$1 0x[0-9a-fA-F]{40}" "$DEPLOY_LOG" | head -1 | awk '{print $2}' || true; }
 VAULT="$(deployed_label FERRATA_WEB_VAULT)"
 TOKEN="$(deployed_label FERRATA_WEB_TOKEN)"
-[ -n "$VAULT" ] && [ -n "$TOKEN" ] || { echo "could not read the deployed addresses from $DEPLOY_LOG" >&2; exit 1; }
+TETHER="$(deployed_label FERRATA_WEB_TETHER)"
+[ -n "$VAULT" ] && [ -n "$TOKEN" ] && [ -n "$TETHER" ] || { echo "could not read the deployed addresses from $DEPLOY_LOG" >&2; exit 1; }
 CODE="$(jfield "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getCode\",\"params\":[\"$VAULT\",\"latest\"]}")"
 [ "$CODE" != "0x" ] && [ "$CODE" != "MISSING" ] || { echo "the vault $VAULT has no code on anvil" >&2; exit 1; }
-echo "deployed: vault $VAULT, test token $TOKEN"
+echo "deployed: vault $VAULT, test token $TOKEN, Tether-style token $TETHER"
+
+# ---- the page, served as the README says (127.0.0.1 only)
+SERVE_LOG="$RESULTS/serve-$PAGE_PORT.log"
+python3 -I "$ROOT/web/depositor/serve.py" --port "$PAGE_PORT" >"$SERVE_LOG" 2>&1 &
+SERVE_PID=$!
+PAGE_URL="http://127.0.0.1:$PAGE_PORT/"
+for _ in $(seq 1 50); do
+  curl -s -o /dev/null "$PAGE_URL" && break
+  sleep 0.2
+done
+curl -s -o /dev/null "$PAGE_URL" || { echo "serve.py did not answer; see $SERVE_LOG" >&2; exit 1; }
+echo "serve.py: $(head -1 "$SERVE_LOG")"
 
 # ---- the browser test
 echo
-FERRATA_RPC="$RPC" FERRATA_VAULT="$VAULT" FERRATA_TOKEN="$TOKEN" FERRATA_ACCOUNT="$DEPOSITOR" \
+FERRATA_RPC="$RPC" FERRATA_VAULT="$VAULT" FERRATA_TOKEN="$TOKEN" FERRATA_TETHER="$TETHER" FERRATA_ACCOUNT="$DEPOSITOR" \
+  FERRATA_PAGE_URL="$PAGE_URL" FERRATA_RECORD_DATE="$DATE" \
   python3 "$ROOT/web/depositor/test/depositor_test.py"
 
 # ---- keep the scratch logs only when something failed
-rm -f "$ANVIL_LOG" "$DEPLOY_LOG" "$RESULTS/build-$PORT.log"
+rm -f "$ANVIL_LOG" "$DEPLOY_LOG" "$RESULTS/build-$PORT.log" "$SERVE_LOG"
 echo
 echo "ok: every case passed; the record is $RECORD"

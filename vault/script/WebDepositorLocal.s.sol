@@ -9,6 +9,7 @@ import {IRiscZeroVerifier} from "../src/interfaces/IRiscZeroVerifier.sol";
 import {MockRiscZeroVerifier} from "../test/mocks/MockVerifiers.sol";
 import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 import {TestToken} from "./TestToken.sol";
+import {TestTetherToken} from "./TestTetherToken.sol";
 
 /// @notice The vault of the web depositor page's test (web/depositor/test/run.sh), on a local anvil only: the same
 ///         deployment as the CLI's end-to-end vault (script/CliLocal.s.sol — the vault tests' MockRiscZeroVerifier
@@ -103,9 +104,29 @@ contract WebDepositorLocal is Script {
             })
         );
         token.mint(depositor, 1_000_000_000); // 1,000 TUSD
+        // A Tether-style token (approve returns nothing and refuses to change a non-zero allowance into another), so
+        // that the page's allowance reset is exercised; the same denominations and fees.
+        TestTetherToken tether = new TestTetherToken();
+        vault.registerToken(
+            address(tether),
+            FerrataVault.TokenParams({
+                denominations: denominations,
+                relayFees: relayFees,
+                lezUnit: 1,
+                unitWeight: 1,
+                depositCap: unlimited,
+                releaseCap: unlimited,
+                releaseDelay: 120,
+                lezDefinition: bytes32(0),
+                decimals: 6,
+                checkpointFees: checkpointFees
+            })
+        );
+        tether.mint(depositor, 1_000_000_000); // 1,000 TUSDT
         vm.stopBroadcast();
         console2.log("FERRATA_WEB_VAULT", address(vault));
         console2.log("FERRATA_WEB_TOKEN", address(token));
+        console2.log("FERRATA_WEB_TETHER", address(tether));
         console2.log("FERRATA_WEB_DEPOSITOR", depositor);
     }
 }
