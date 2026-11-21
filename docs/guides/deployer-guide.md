@@ -375,7 +375,9 @@ holds finalizes anvil's blocks for LEZ's light client (`CROWN_CHAIN=stand-in`); 
 [`quickstart.md`](quickstart.md)) and the zone's inputs where [`e2e/seqnet/run.sh`](../../e2e/seqnet/run.sh) looks for
 them (`../tmp/miniapp-sequencer/inputs/`: the LEZ bundle of the live run, with LEZ's sequencer and node and the final
 programs of [`image-ids.md`](../image-ids.md), and the final checkpoint and release programs); Foundry 1.3.6, Rust,
-`jq`, `curl`.
+`jq`, `curl`, and libpcsclite's development files (`sudo apt-get install libpcsclite-dev` on Debian or Ubuntu,
+`pcsc-lite-devel` on Fedora): LEZ's wallet, which the `ferrata` tool links, builds keycard support. The first
+walkthrough from a fresh clone stopped at that build without them; CI's `roundtrip` job installs them too.
 
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata.git && cd ferrata
