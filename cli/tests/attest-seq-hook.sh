@@ -16,16 +16,21 @@ SEP_CP="$(jq -r '.instance.checkpoint // empty' "$SA")"
 # (lez/live/driver/src/keys.rs); it holds nothing of value.
 echo f434f8741720014586ae43356d2aec6257da086222f604ddb75d69733b86fc4c > "$W/payer.key"
 COMMON=(--lez-rpc "$LEZ" --program "$ATTEST" --key "$W/payer.key" --state-dir "$W/follower" --record "$RUN/attest.jsonl")
-echo -e "step\texit\texpected" > "$RUN/cli/summary.tsv"
+echo -e "step\texit\texpected\tcode\tresult" > "$RUN/cli/summary.tsv"
 n=0
-step() { # name expected-exit args...
+step() { # name expected args...; expected: 0 (applied, or nothing sent), or 3:CODE (sent and refused on the zone with CODE)
   local name="$1" expected="$2"; shift 2
   n=$((n + 1)); local f; f="$RUN/cli/$(printf %02d $n)-$name.txt"
-  echo "\$ ferrata attest $*" > "$f"
+  local shown="$*"; shown="${shown//"$REPO"/\$REPO}"
+  echo "\$ ferrata attest $shown" > "$f"
   "$BIN/ferrata" attest "${COMMON[@]}" "$@" >> "$f" 2>&1
   local rc=$?
-  echo -e "$name\t$rc\t$expected" >> "$RUN/cli/summary.tsv"
-  say "$name: exit $rc (expected $expected)"
+  # The code the zone refused the last sent transaction with ("block N (T s): refused with CODE ..."), if any.
+  local code; code=$(grep -o 'block [0-9]* ([0-9]* s): refused with [0-9]*' "$f" | tail -n 1 | awk '{print $NF}')
+  local result="as expected"
+  [ "$rc${code:+:$code}" = "$expected" ] || result="NOT as expected"
+  echo -e "$name\t$rc\t$expected\t${code:--}\t$result" >> "$RUN/cli/summary.tsv"
+  say "$name: exit $rc${code:+, refused with $code} (expected $expected): $result"
   tail -n 4 "$f" | sed 's/^/    /' | tee -a "$RUN/run.log" > /dev/null
   return 0
 }
@@ -41,7 +46,7 @@ step sepolia-advance-finality 0 advance --instance "$SEP" --update "$LAB/00057.f
   --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
 step sepolia-advance-period-1412 0 advance --instance "$SEP" --update "$LAB/00064.period.gloas.ssz" \
   --committee "update:$S12/update_1411.ssz" --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
-step sepolia-advance-replayed 3 advance --instance "$SEP" --update "$LAB/00057.finality.gloas.ssz" --finality \
+step sepolia-advance-replayed 3:23 advance --instance "$SEP" --update "$LAB/00057.finality.gloas.ssz" --finality \
   --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
 step sepolia-status-after 0 status --instance "$SEP"
 
@@ -65,14 +70,14 @@ FAILED="$(jq -r .failed_tx "$M/fixture.json")"
 A=(attest --instance "$MID" --record-slot 15624480 --eth "$ETH" --block 26384851)
 step attest-storage-dry-run 0 "${A[@]}" --storage "$WETH:$SLOT:eq:$BAL"
 step attest-storage 0 "${A[@]}" --storage "$WETH:$SLOT:eq:$BAL" --send --yes
-step attest-storage-predicate-fails 3 "${A[@]}" --storage "$WETH:$SLOT:eq:0x01" --send --yes
+step attest-storage-predicate-fails 3:130 "${A[@]}" --storage "$WETH:$SLOT:eq:0x01" --send --yes
 step attest-storage-ge 0 "${A[@]}" --storage "$WETH:$SLOT:ge:0x01" --send --yes
 step attest-log-transfer 0 "${A[@]}" --log "0:0:emitter=$USDC" --send --yes
-step attest-log-wrong-emitter 3 "${A[@]}" --log "0:0:emitter=$WETH" --send --yes
+step attest-log-wrong-emitter 3:130 "${A[@]}" --log "0:0:emitter=$WETH" --send --yes
 step attest-account-codehash 0 "${A[@]}" --account "$WETH:codehash" --send --yes
-step attest-log-failed-tx 3 "${A[@]}" --log "$FAILED:0" --send --yes
+step attest-log-failed-tx 3:124 "${A[@]}" --log "$FAILED:0" --send --yes
 step attest-storage-and-log 0 "${A[@]}" --storage "$WETH:$SLOT:eq:$BAL" --log "0:0:emitter=$USDC" --send --yes
-step mainnet-advance-replayed 3 advance --instance "$MID" --update "$M/finality_update.ssz" --finality \
+step mainnet-advance-replayed 3:52 advance --instance "$MID" --update "$M/finality_update.ssz" --finality \
   --committee "bootstrap:$M/bootstrap.ssz" --send --yes
 
 # ---- the attestation side's monitor reads the mainnet instance through the sequencer's getAccount -------------------
@@ -105,7 +110,7 @@ for mode in at-the-record now; do
   [ "$mode" = at-the-record ] && args+=(--now "$REC_TIME")
   "$BIN/attest-monitor" "${args[@]}" > "$f" 2> "$RUN/cli/monitor-$mode.alerts"
   rc=$?
-  echo -e "monitor-$mode\t$rc\t-" >> "$RUN/cli/summary.tsv"
+  echo -e "monitor-$mode\t$rc\t-\t-\ta read, no expectation" >> "$RUN/cli/summary.tsv"
   say "attest-monitor ($mode): exit $rc, divergence $(jq -r .divergence "$f"), alerts $(jq -c '[.alerts[].kind]' "$f")"
 done
-say "hook done: $(($(wc -l < "$RUN/cli/summary.tsv") - 1)) steps"
+say "hook done: $(grep -c $'\tas expected$' "$RUN/cli/summary.tsv") of $n commands as expected (exit status and the zone's refusal code); $(grep -c '^monitor-' "$RUN/cli/summary.tsv") monitor reads"

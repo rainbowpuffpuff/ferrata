@@ -15,8 +15,9 @@
 #    zone's sequencer, on real data only (Sepolia's updates as the lab recorded them; mainnet's bootstrap, finality
 #    update and proofs of the attestation fixture of 10 Nov 2026, served over JSON-RPC by modules/scripts/recorded_rpc.py),
 #    each a dry run first and then sent; then attest-monitor reads the zone's instance through the sequencer's RPC.
-# Records: cli/results/attest-seq-NAME/ (synced back by mrun). ATTEST_SEQ_HOOK names another hook (the Logos Core run:
-# modules/ferrata_attest_module/scripts/logos-run-hook.sh, which runs this one first).
+# Records: cli/results/attest-seq-NAME/ (synced back by mrun), with no machine paths: the repository's absolute path is
+# written $REPO, its parent's $REPO/.. (build logs, full of them, stay in the work directory). ATTEST_SEQ_HOOK names
+# another hook (the Logos Core run: modules/ferrata_attest_module/scripts/logos-run-hook.sh, which runs this one first).
 set -euo pipefail
 NAME="${1:?usage: attest-seq.sh NAME}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,15 +32,33 @@ VOL="$W/vol"
 export CARGO_TERM_COLOR=never PATH="$HOME/.cargo/bin:$PATH"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$RUN/run.log"; }
 die() { say "STOP: $*"; exit 1; }
-rm -rf "$RUN" "$W"; mkdir -p "$RUN/cli" "$RUN/logs" "$W" "$VOL/inputs" "$T/bin"
+rm -rf "$RUN" "$W"; mkdir -p "$RUN/cli" "$RUN/logs" "$W/logs" "$VOL/inputs" "$T/bin"
+# However the run ends: the records written with $REPO for the repository's path (and anything the zone's tools print).
+scrub() {
+  python3 -I - "$RUN" "$REPO" "$BESIDE" <<'SCRUB'
+import os, sys
+run, repo, beside = sys.argv[1:4]
+for d, _, files in os.walk(run):
+    for n in files:
+        p = os.path.join(d, n)
+        try:
+            t = open(p, encoding="utf-8").read()
+        except (UnicodeDecodeError, OSError):
+            continue
+        u = t.replace(repo, "$REPO").replace(beside, "$REPO/..")
+        if u != t:
+            open(p, "w", encoding="utf-8").write(u)
+SCRUB
+}
+trap scrub EXIT
 dpkg -s libpcsclite-dev > /dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq libpcsclite-dev > /dev/null; }
 command -v zstd > /dev/null || { apt-get update -qq && apt-get install -y -qq zstd > /dev/null; }
 command -v jq > /dev/null || { apt-get update -qq && apt-get install -y -qq jq > /dev/null; }
 say "attest-seq $NAME"
 
 # ---- 1. build ----------------------------------------------------------------------------------------
-L="$RUN/logs"
-say "build: crown-driver"
+L="$W/logs"
+say "build: crown-driver (build logs in the work directory)"
 ( cd "$REPO/lez/crown/driver" && { [ -f Cargo.lock ] || cp "$REPO/lez/live/driver/Cargo.lock" Cargo.lock; } \
     && CARGO_TARGET_DIR="$TGT" cargo build --release ) > "$L/build-driver.log" 2>&1 \
   || { grep -E -A7 '^error' "$L/build-driver.log" | head -40; die "crown-driver build"; }
@@ -61,7 +80,7 @@ echo "bundle sha256 $(sha256sum "$VOL/bundle.tar.zst" | cut -c1-64)" >> "$RUN/bi
 # ---- 2. LEZ session A --------------------------------------------------------------------------------
 export CROWN_LEZ_VOL="$VOL" CROWN_LEZ_WORK="$W/zone" CROWN_CHAIN=sepolia
 say "LEZ session A: a new zone, the final programs, the Sepolia instance from sepolia-2026-11-12"
-bash "$REPO/lez/crown/session.sh" a > "$L/session-a.log" 2>&1 || { tail -n 30 "$L/session-a.log"; die "session A"; }
+bash "$REPO/lez/crown/session.sh" a > "$RUN/logs/session-a.log" 2>&1 || { tail -n 30 "$RUN/logs/session-a.log"; die "session A"; }
 SA="$VOL/session-a/session-a.json"
 jq '{tip, instance: .instance, attestation, bridge}' "$SA" > "$RUN/session-a.json"
 say "session A: attestation program $(jq -r .attestation.account "$SA") (image $(jq -r .attestation.imageId "$SA")), Sepolia instance $(jq -r '.instance.id // .instance' "$SA")"
@@ -70,7 +89,7 @@ say "session A: attestation program $(jq -r .attestation.account "$SA") (image $
 say "session X: ferrata attest against the zone's sequencer"
 ATTEST_SEQ_RUN="$RUN" ATTEST_SEQ_BIN="$T/bin" ATTEST_SEQ_REPO="$REPO" ATTEST_SEQ_SA="$SA" ATTEST_SEQ_WORK="$W/hook" \
   CROWN_HOOK="${ATTEST_SEQ_HOOK:-$HERE/attest-seq-hook.sh}" CROWN_DEADLINE_MIN=150 \
-  bash "$REPO/lez/crown/session.sh" x > "$L/session-x.log" 2>&1 || say "session X exited with $?"
+  bash "$REPO/lez/crown/session.sh" x > "$RUN/logs/session-x.log" 2>&1 || say "session X exited with $?"
 cp "$W/zone/logs/hook.log" "$RUN/hook.log" 2>/dev/null || true
-grep -E 'STOP|hook' "$L/session-x.log" | tail -n 5 | tee -a "$RUN/run.log" || true
+grep -E 'STOP|hook' "$RUN/logs/session-x.log" | tail -n 5 | tee -a "$RUN/run.log" || true
 say "done: $(grep -c . "$RUN/attest.jsonl" 2>/dev/null || echo 0) records in attest.jsonl"
