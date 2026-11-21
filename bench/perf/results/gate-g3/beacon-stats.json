@@ -1,0 +1,34 @@
+{
+ "revealed": 24,
+ "last": 24,
+ "per_port": {
+  "9602": {
+   "bootstrap": {
+    "requests": 1,
+    "bytes": 25875
+   },
+   "finality_update": {
+    "requests": 175,
+    "bytes": 402348
+   },
+   "updates": {
+    "requests": 177,
+    "bytes": 5310256
+   }
+  },
+  "9601": {
+   "bootstrap": {
+    "requests": 1,
+    "bytes": 25875
+   },
+   "finality_update": {
+    "requests": 135,
+    "bytes": 310170
+   },
+   "updates": {
+    "requests": 137,
+    "bytes": 3821439
+   }
+  }
+ }
+}
