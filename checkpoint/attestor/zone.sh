@@ -13,13 +13,17 @@
 # sequencer: its turns come and nobody of its key posts).
 #
 # Hooks (modules/scripts/attestor-zone-live.sh uses them to run ferrata_attestor_module beside each sequencer):
+# Another LEZ tag (RFP-022 F.7 on rc3): ZONE_LEZ names the LEZ tree whose devnet configuration is used (default
+# upstream/lez-v0.4.0-rc1; rc3's is the same), ZONE_BEDROCK the directory of the node's node-config.yaml and
+# deployment-settings.yaml (default the tree's bedrock/; `bundle`: the bundle's lez-config/, as crown-rc3's bundle has).
+#
 # ZONE_DURING is run (bash -c) once the sequencers are started, ZONE_AFTER once the answers are saved and
 # while the node still runs; both with ZONE_API (the node's HTTP API), ZONE_CHANNEL and ZONE_OUT (<out dir>)
 # in their environment, their output in <out dir>/during.log and after.log. ZONE_AFTER's exit status is
 # the script's.
 set -euo pipefail
 bundle="$(realpath "$1")"; out="$(realpath -m "$2")"; secs="${3:-300}"
-lez="$(realpath ../../upstream/lez-v0.4.0-rc1)"; dev="$lez/lez/configs/docker-all-in-one/devnet"
+lez="$(realpath "${ZONE_LEZ:-../../upstream/lez-v0.4.0-rc1}")"; dev="$lez/lez/configs/docker-all-in-one/devnet"
 work="${TMPDIR:?}/attestor-zone"; rm -rf "$work"; mkdir -p "$work/bundle" "$work/bedrock" "$out"
 zstd -q -d -c "$bundle" | tar -C "$work/bundle" -xf -
 ( cd "$work/bundle" && sha256sum -c --quiet SHA256SUMS )
@@ -30,7 +34,8 @@ CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
 PORT=18080; api="http://127.0.0.1:$PORT"
 log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$out/zone.log"; }
 
-cp "$lez/bedrock/node-config.yaml" "$lez/bedrock/deployment-settings.yaml" "$work/bedrock/"
+bedrock_src="${ZONE_BEDROCK:-$lez/bedrock}"; [ "$bedrock_src" = bundle ] && bedrock_src="$work/bundle/lez-config"
+cp "$bedrock_src/node-config.yaml" "$bedrock_src/deployment-settings.yaml" "$work/bedrock/"
 sed -i -e "s#listen_address: 0.0.0.0:18080#listen_address: 127.0.0.1:$PORT#" \
        -e 's#^    swarm:$#    swarm:\n      host: 127.0.0.1#' "$work/bedrock/node-config.yaml"
 sha256sum "$work/bedrock/deployment-settings.yaml" | cut -d' ' -f1 > "$out/deployment-settings.sha256"

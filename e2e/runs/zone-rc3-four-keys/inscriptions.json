@@ -1,0 +1,524 @@
+{
+ "_source": "the node's final blocks (cryptarchia/blocks) of zone.sh's run on LEZ v0.4.0-rc3, channel inscriptions with their signer",
+ "nodeBlocks": 273,
+ "inscriptions": 93,
+ "perSequencer": {
+  "seq-0": 24,
+  "seq-2": 23,
+  "seq-3": 23,
+  "seq-1": 23
+ },
+ "turns": [
+  {
+   "sequencer": "seq-0",
+   "inscriptions": 24,
+   "fromSlot": 2447579,
+   "toSlot": 2447637
+  },
+  {
+   "sequencer": "seq-2",
+   "inscriptions": 23,
+   "fromSlot": 2447642,
+   "toSlot": 2447697
+  },
+  {
+   "sequencer": "seq-3",
+   "inscriptions": 23,
+   "fromSlot": 2447702,
+   "toSlot": 2447757
+  },
+  {
+   "sequencer": "seq-1",
+   "inscriptions": 23,
+   "fromSlot": 2447762,
+   "toSlot": 2447817
+  }
+ ],
+ "accreditedKeys": [
+  {
+   "key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "key": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "key": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  }
+ ],
+ "configurationThreshold": 3,
+ "postingTimeframeSlots": 60,
+ "inscriptionsList": [
+  {
+   "slot": 2447579,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447582,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447585,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447587,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447590,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447592,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447595,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447597,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447600,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447602,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447605,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447607,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447610,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447612,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447615,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447617,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447620,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447622,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447625,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447627,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447630,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447632,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447635,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447637,
+   "signer": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+   "sequencer": "seq-0"
+  },
+  {
+   "slot": 2447642,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447644,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447647,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447649,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447652,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447654,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447657,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447659,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447662,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447664,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447667,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447669,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447672,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447674,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447677,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447679,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447682,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447684,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447687,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447689,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447692,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447694,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447697,
+   "signer": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+   "sequencer": "seq-2"
+  },
+  {
+   "slot": 2447702,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447704,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447707,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447709,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447712,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447714,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447717,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447719,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447722,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447724,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447727,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447729,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447732,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447734,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447737,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447740,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447742,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447744,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447747,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447749,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447752,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447754,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447757,
+   "signer": "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+   "sequencer": "seq-3"
+  },
+  {
+   "slot": 2447762,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447764,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447767,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447769,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447772,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447774,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447777,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447779,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447782,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447784,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447787,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447789,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447792,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447794,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447797,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447799,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447802,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447804,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447807,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447809,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447812,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447814,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  },
+  {
+   "slot": 2447817,
+   "signer": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+   "sequencer": "seq-1"
+  }
+ ]
+}
