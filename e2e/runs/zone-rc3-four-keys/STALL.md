@@ -2,8 +2,9 @@
 
 Sources: [`stall-excerpts.txt`](stall-excerpts.txt) (the lines quoted below, from the run's logs, which keep their last
 300 lines each, and the channel's state at the end), [`inscriptions.json`](inscriptions.json) (the node's final
-blocks), and Logos Blockchain at `f6d4267f` (9 Nov 2026), the revision LEZ v0.4.0-rc3's `Cargo.lock` pins (crates
-0.3.5-rc.5; the node of crown-rc3's bundle reports 0.3.5-rc.1). Read on 21 November 2026; nothing re-run.
+blocks), and Logos Blockchain at `f6d4267f` (9 Nov 2026): the commit of the node this run used (crown-rc3's bundle,
+`node/metadata.json`: release `0.3.5-rc.1`, `release_commit` `f6d4267f…`, binary sha256 `2f301729…`) and the revision LEZ
+v0.4.0-rc3's `Cargo.lock` pins. Read on 21 November 2026; nothing re-run.
 
 ## What happened (measured, from the logs)
 
@@ -66,7 +67,8 @@ the removal of seq-0's whole lineage once its block 94 was gone.
 ## How to settle it
 
 Run the same zone (`ZONE_BEDROCK=bundle bash attestor/zone.sh <crown-rc3 bundle> OUT 1800`) with the node's tracing at
-TRACE for `chain-leader` (the removed transaction's error) and long enough to pass two posting timeouts after a stall
+TRACE for `chain-leader` (the removed transaction's error; the bundle's `node-config.yaml` has `tracing: level: "INFO",
+filter: None`, which `zone.sh` copies as it is) and long enough to pass two posting timeouts after a stall
 (≥ 30 minutes); separately, one funding key per sequencer, to see whether the stall needs the shared key. The race
 needs one sequencer to publish in the last slot of its turn and the next in the first slot of its own, which a 10 s
 block interval against 4 s slots produces now and then; a run cannot force it.
