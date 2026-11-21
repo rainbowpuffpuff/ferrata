@@ -32,8 +32,12 @@ ATTEST_ID=0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
 BRIDGE_ID=0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
 Z=0x0000000000000000000000000000000000000000000000000000000000000000
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
-# This machine's paths, as the records write them (the same rewrite as at the end, for what is printed meanwhile).
-scrub() { sed -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$HOME/#~/#g"; }
+# This machine's paths, as the records write them (the same rewrite as at the end, for what is printed meanwhile), in
+# both forms: absolute, and under `~/` as LEZ's session logs write them.
+tilde() { case "$1" in "$HOME"/*) echo "~/${1#"$HOME"/}" ;; *) echo "$1" ;; esac; }
+SCRUB=(-e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$(tilde "$W")/#<work>/#g"
+       -e "s#$(tilde "$T")/#<tmp>/#g" -e "s#$(tilde "$REPO")/#<repo>/#g" -e "s#$HOME/#~/#g")
+scrub() { sed "${SCRUB[@]}"; }
 say() { echo "[$(date -u +%H:%M:%S)] $*" | scrub | tee -a "$RUN/run.log"; }
 die() { say "STOP: $*"; exit 1; }
 rm -rf "$W" "$RUN"; mkdir -p "$W" "$VOL/inputs" "$RUN/user" "$RUN/lez" "$RUN/eth" "$RUN/logs"
@@ -163,9 +167,11 @@ python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "d
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \
-  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$HOME/#~/#g" {} +
+  -exec sed -i "${SCRUB[@]}" {} +
 python3 -I "$HERE/summary.py" "$RUN" | scrub | tee -a "$RUN/run.log" || true
 # The records are to be committed: none may keep a path of this machine.
-if grep -rIl -F -e "$REPO/" -e "$T/" -e "$W/" -e "$HOME/" "$RUN"; then die "the files above keep a path of this machine"; fi
+if grep -rIl -F -e "$REPO/" -e "$T/" -e "$W/" -e "$HOME/" -e "$(tilde "$REPO")/" -e "$(tilde "$T")/" "$RUN"; then
+  die "the files above keep a path of this machine"
+fi
 [ "$xrc" = 0 ] || die "session X (hook) exit $xrc"
 say "seqnet $NAME: DONE"
