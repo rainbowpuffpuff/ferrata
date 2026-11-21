@@ -192,11 +192,20 @@ pub fn controls() -> Controls {
 /// Two fresh keys from the operating system's randomness, for the configuration's admin and freeze authority:
 /// written to `out` (`lez-admin.key`, `lez-freeze-authority.key`: 32 bytes in hex, mode 600), their accounts returned
 /// as `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY` take them. Nothing derives them: only `out` holds them.
+///
+/// Neither file may exist yet, not even as a symbolic link, and both are checked before either is written. Each is
+/// created by the same call that opens it, with mode 600 from the start (`O_CREAT | O_EXCL`, never following a link),
+/// so no other local user can read a key between its creation and its first byte.
 pub fn new_role_keys(out: &Path) -> Result<Value> {
-    use std::io::Read;
+    use std::io::{Read, Write};
     fs::create_dir_all(out)?;
+    let paths: Vec<PathBuf> =
+        ["lez-admin", "lez-freeze-authority"].iter().map(|name| out.join(format!("{name}.key"))).collect();
+    for path in &paths {
+        ensure!(fs::symlink_metadata(path).is_err(), "{} exists: keep it, or move it away first", path.display());
+    }
     let mut ids = Vec::new();
-    for name in ["lez-admin", "lez-freeze-authority"] {
+    for path in &paths {
         let key = loop {
             let mut bytes = [0u8; 32];
             fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
@@ -204,14 +213,21 @@ pub fn new_role_keys(out: &Path) -> Result<Value> {
                 break (key, bytes);
             }
         };
-        let path = out.join(format!("{name}.key"));
-        ensure!(!path.exists(), "{} exists: keep it, or move it away first", path.display());
-        fs::write(&path, hex::encode(key.1))?;
+        let mut open = fs::OpenOptions::new();
+        open.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            open.mode(0o600);
+        }
+        let mut file = open.open(path).with_context(|| format!("{}: not created", path.display()))?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
-            fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+            file.set_permissions(fs::Permissions::from_mode(0o600))?;
         }
+        file.write_all(hex::encode(key.1).as_bytes())?;
+        file.sync_all()?;
         ids.push(h(account_of(&key.0).value()));
     }
     Ok(json!({ "admin": ids[0], "freezeAuthority": ids[1], "keys": out.display().to_string() }))
@@ -1482,6 +1498,48 @@ mod tests {
         let (end, end_ms) = ws_end(&chain.config, chain.bootstrap.header.beacon.slot).unwrap();
         assert_eq!((end, utc(end_ms).as_str()), (11_401_632, "2026-10-21T03:26:24Z"));
         assert!(end_ms < chain.config.slot_start_ms(11_562_112));
+    }
+
+    /// `new-role-keys` (review of 21 November 2026, L-4): both key files are created with mode 600 from the start
+    /// and hold 32 bytes in hex; a second call refuses and changes nothing; a dangling symbolic link at the second
+    /// path is refused before the first key is written, and nothing is written through it.
+    #[cfg(unix)]
+    #[test]
+    fn new_role_keys_private_from_creation_and_never_overwritten() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join(format!("role-keys-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let mode = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+
+        let k1 = root.join("k1");
+        let out = new_role_keys(&k1).expect("new-role-keys");
+        let (admin, freeze) = (k1.join("lez-admin.key"), k1.join("lez-freeze-authority.key"));
+        for p in [&admin, &freeze] {
+            assert_eq!(mode(p), 0o600, "{}", p.display());
+            let text = fs::read_to_string(p).unwrap();
+            assert_eq!(text.len(), 64);
+            assert!(hex::decode(&text).is_ok());
+        }
+        assert_ne!(out["admin"], out["freezeAuthority"]);
+        assert_ne!(fs::read(&admin).unwrap(), fs::read(&freeze).unwrap());
+
+        let before = (fs::read(&admin).unwrap(), fs::read(&freeze).unwrap());
+        let again = new_role_keys(&k1).unwrap_err().to_string();
+        assert!(again.contains("lez-admin.key exists"), "{again}");
+        assert_eq!((fs::read(&admin).unwrap(), fs::read(&freeze).unwrap()), before);
+
+        let k2 = root.join("k2");
+        fs::create_dir_all(&k2).unwrap();
+        let target = root.join("elsewhere.key");
+        symlink(&target, k2.join("lez-freeze-authority.key")).unwrap();
+        let linked = new_role_keys(&k2).unwrap_err().to_string();
+        assert!(linked.contains("lez-freeze-authority.key exists"), "{linked}");
+        assert!(fs::symlink_metadata(k2.join("lez-admin.key")).is_err(), "the first key was written before the check");
+        assert!(fs::symlink_metadata(&target).is_err(), "a key was written through the link");
+
+        fs::remove_dir_all(&root).unwrap();
     }
 
     /// The stand-in's fixed bootstrap slot (rehearsals) is bounded the same way.
