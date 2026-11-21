@@ -2,25 +2,38 @@ name: macos
 
 # RFP-022 Supportability #2: "The modules work on both Linux and MacOS platforms." Linux is ci.yml and
 # modules/scripts/release-local.sh; this workflow runs the light crates a user's machine runs and builds
-# every module's .lgx for macOS (arm64) the way release-local.sh builds them for linux-amd64:
-# modules/scripts/export.sh, `nix build .#lgx-portable`, `lgx verify`. The .lgx files are uploaded as
-# artifacts. Groth16 wrapping still needs Linux x86 (docs/traceability.md, RFP-022 S.2), so the wrap is
-# not run here. Third-party actions are pinned by major tag only: no 40-character SHA exists anywhere in
-# this worktree to pin them by (checked with git grep); each carries a TODO until the owner runs
-# `python3 scripts/ci/pin-actions.py --write` (scripts/ci/README.md).
+# five of the six modules' .lgx for macOS (arm64) the way release-local.sh builds them for linux-amd64:
+# modules/scripts/export.sh, `nix build .#lgx-portable`, `lgx verify`; the .lgx files are uploaded as
+# artifacts. ferrata_updater_module is left out: it vendors the linux-x86_64 builds of
+# logos-blockchain-circuits and rapidsnark (modules/scripts/stage-updater.sh), so it builds for x86-64
+# Linux only. Groth16 wrapping still needs Linux x86 (docs/traceability.md, RFP-022 S.2), so the wrap is
+# not run here.
+#
+# GitHub's macOS runners have BSD tar, sed and find, no GNU coreutils, and bash 3.2: every script these
+# steps run is checked for GNU-only commands and bash-4 constructs by scripts/ci/check-portable.py (CI's
+# links job), and was run under a FreeBSD userland with bash 3.2 (scripts/ci/README.md). It has not run on
+# GitHub yet: until a first green run it runs on pushes to main and when started by hand, one run per
+# branch at a time, not on every pull request. Third-party actions are pinned by major tag only: no
+# 40-character SHA of them exists in this worktree to pin them by (checked with git grep); each carries a
+# TODO until the owner runs `python3 scripts/ci/pin-actions.py --write` (scripts/ci/README.md).
 
 on:
   push:
-  pull_request:
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   # The light crates a user's machine runs (RFP-022 S.2): the root workspace (ferrata-core,
-  # ferrata-spectests - the same commands and caches as ci.yml's `test` job, none of its steps needing
-  # a Linux-only tool) and the bridge core ferrata-bridge-core.
+  # ferrata-spectests - the same commands and caches as ci.yml's `test` job; scripts/fetch-vectors.sh
+  # extracts the vectors by name, as BSD tar does too, and hashes with shasum where sha256sum is absent)
+  # and the bridge core ferrata-bridge-core.
   user-side:
     runs-on: macos-14
     timeout-minutes: 90
@@ -30,8 +43,7 @@ jobs:
         with:
           components: clippy, rustfmt
           targets: riscv32im-unknown-none-elf
-      # Only the downloaded vectors: vectors/acc-leaf.json is committed and must come from git
-      # (scripts/fetch-vectors.sh works on macOS: it falls back to shasum where sha256sum is absent).
+      # Only the downloaded vectors: vectors/acc-leaf.json is committed and must come from git.
       - uses: actions/cache@v4 # TODO: pin to a commit SHA
         with:
           path: |
@@ -53,43 +65,31 @@ jobs:
       - name: no_std build for the RISC Zero guest ISA
         run: cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked
 
-  # Every module as an .lgx for macOS, the way modules/scripts/release-local.sh builds linux-amd64:
-  # export each module as its own repository (export.sh, which stages the crates and needs the LEZ
-  # guests built), `nix build .#lgx-portable` in it, then `lgx verify` with the lgx tool of the pinned
-  # logos-package. Nix flakes need a larger stack than a macOS runner's default.
+  # Five modules as .lgx for macOS, the way modules/scripts/release-local.sh builds linux-amd64: export
+  # each module as its own repository (export.sh, which stages the crates: LEZ's lee_core and, for the
+  # relayer, the LEZ tree, from the upstream sources), `nix build .#lgx-portable` in it, then `lgx verify`
+  # with the lgx tool of the pinned logos-package. Nix builds the crates itself, so no Rust or RISC Zero
+  # toolchain is installed here. Nix flakes need a larger stack than a macOS runner's default.
   modules:
     runs-on: macos-14
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4 # TODO: pin to a commit SHA
-      - uses: dtolnay/rust-toolchain@stable # TODO: pin to a commit SHA
-      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain; lez/'s rust-toolchain.toml)
-        run: rustup toolchain install 1.98.1 --profile minimal
       - name: Install Nix
         uses: cachix/install-nix-action@v31 # TODO: pin to a commit SHA
-      - name: Cache RISC Zero's toolchains
-        uses: actions/cache@v4 # TODO: pin to a commit SHA
-        with:
-          path: |
-            ~/.risc0
-            ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
-      - name: RISC Zero toolchains (rzup)
-        run: scripts/ci/install-risc0.sh
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
         uses: actions/cache@v4 # TODO: pin to a commit SHA
         with:
           path: ${{ github.workspace }}/../upstream
           key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
-      - name: Fetch the upstream sources (the LEZ tree the updater and relayer modules vendor)
+      - name: Fetch the upstream sources (the LEZ tree the attestation, bridge and relayer modules vendor parts of)
         run: scripts/fetch-upstream.sh
-      - name: Build the LEZ guests the updater module embeds
-        run: RISC0_HOME="$HOME/risc0-home-lez" cargo build --locked -p methods
-        working-directory: lez
-      - name: Every module as an .lgx for macOS (export.sh, nix build .#lgx-portable, lgx verify)
+      - name: jq (export.sh reads metadata.json with it)
+        run: command -v jq > /dev/null || brew install jq
+      - name: Five modules as .lgx for macOS (export.sh, nix build .#lgx-portable, lgx verify)
         env:
           LGX_PACKAGE: github:logos-co/logos-package/4bdd9041ebfbd06c2b22134afdcd27fce8a43f3c
-          MODULES: ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_updater_module ferrata_relayer_module
+          MODULES: ferrata_attest_module ferrata_bridge_module ferrata_attestor_module ferrata_monitor_module ferrata_relayer_module
         run: |
           set -euo pipefail
           ulimit -s 65536 2>/dev/null || ulimit -s hard

@@ -157,8 +157,14 @@ jobs:
         run: python3 -I scripts/check-links.py
       # RFP-022 Reliability #11: every hard row of both RFPs has at least one named test
       # (scripts/ci/row-tests.toml); RFP-022 R.11, RFP-021 S.8 / RFP-022 Sec.1 (the audit promise).
+      # RFP-022 S.2: the shell macos.yml runs has no GNU-only command and nothing newer than bash 3.2
+      # (scripts/ci/ci_model.py reads the workflows; checked against yq where the runner has it).
       - name: Every hard requirement of both RFPs has at least one test (scripts/ci/row-tests.toml)
         run: python3 -I scripts/ci/check-row-tests.py
+      - name: The workflows read as yq reads them
+        run: if command -v yq > /dev/null; then python3 -I scripts/ci/ci_model.py --compare-yq; else echo "yq not on this runner; skipped"; fi
+      - name: The shell that runs on macOS is portable (scripts/ci/check-portable.py)
+        run: python3 -I scripts/ci/check-portable.py
       - name: The code is marked unaudited / not for production until the audit reports are published
         run: bash scripts/ci/check-unaudited.sh
       # scripts/ci/check-actions-pinned.py joins this job once the owner has pinned the actions by commit
