@@ -347,7 +347,8 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   (`wallet lez`; [`results/lez-core-v04-2026-11-14/`](results/lez-core-v04-2026-11-14/)); the other modules' requests
   and the zone's history do not go through it, except `ferrata_attest_module`'s `lez_read` and `lez_submit` (its actor
   states read and its transactions sent through `lez_core`: run r6, [`../cli/results/attest-seq-r6/`](../cli/results/attest-seq-r6/README.md)). The modules build each program message and name the account it goes
-  to; apart from those two private sends they do not sign or submit LEZ transactions. Ethereum transactions go
+  to; apart from those two private sends and `ferrata_attest_module`'s `lez_submit` (public transactions sent through
+  `lez_core`, the payer's key held by the wallet opened in it), they do not sign or submit LEZ transactions. Ethereum transactions go
   through Logos Core's send stack for the two daemons that send them, behind a flag: `monitor run --send-via logos`
   and `ferrata-relayer --send-via logos` (as modules, started with `start`) hand each call to `tx_sender_module`, which
   has `keystore_module` sign it through `signer_manager_module` and broadcasts it through `eth_rpc_module`; the plain

@@ -133,8 +133,10 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
 ```
 
 - **Reads** come from the zone: the tool follows the sequencer's blocks with LEZ's own block application
-  (`lez/live/driver/src/follower.rs`, included), only those final on Bedrock unless `--wait-final no`, and checks each
-  actor state it reads against the sequencer's `getAccount`. `--state-dir` keeps the followed state between runs.
+  (`lez/live/driver/src/follower.rs`, included), only those final on Bedrock unless `--wait-final no`, and compares each
+  actor state it reads with the sequencer's `getAccount`: a difference is noted on standard error (the sequencer's head
+  can be ahead of the last final block) and the followed state is used. `--state-dir` keeps the followed state between
+  runs.
 - **Every command that sends is a dry run** unless `--send --yes` (which may follow the command). The dry run gives the
   verdict of the program's own function natively (`attest::evaluate`; for an update `ferrata_advance::evaluate` and the
   program's step code; for an instance `steps::initialize`), with the program's code and its name from the IDL, and the
