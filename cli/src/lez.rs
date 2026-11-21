@@ -237,6 +237,65 @@ async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> 
     }
 }
 
+/// The freezes a mint (`mints`) or a burn of `token` meets, as the bridge program checks them: the token's
+/// gate, then the configuration's (`Gate::admit` at `token(cid, token)` and at `config(cid)`), each frozen while
+/// its attested clock is before the freeze's end. `None` when neither is frozen. The refusal says until when
+/// and what to do, and names no deposit and no burn (U.08).
+pub async fn gate_refusal<L: Ledger>(
+    ledger: &L,
+    ctx: &Context,
+    token: &TokenState,
+    mints: bool,
+) -> Result<Option<crate::codes::Refusal>> {
+    let what = if mints { "mints (claims)" } else { "burns" };
+    let consumed = if mints {
+        "nothing is sent and nothing is consumed: the deposit stays claimable"
+    } else {
+        "nothing is sent and nothing is burned: the holding stays yours"
+    };
+    let frozen = |g: &bw::Gate| {
+        let until = if mints { g.mints_until } else { g.burns_until };
+        (g.now_ms < until).then_some(until)
+    };
+    let mut scopes = vec![("of this token", frozen(&token.gate))];
+    if let Some(BridgeState::Config(bw::ConfigState::Ready { gate, .. })) =
+        read(ledger, config_actor(ctx.program, &ctx.cid)).await?
+    {
+        scopes.push(("of the whole configuration", frozen(&gate)));
+    }
+    Ok(scopes.into_iter().find_map(|(scope, until)| {
+        until.map(|until| {
+            program_refusal(
+                bw::code::FROZEN as u32,
+                format!(
+                    "checked before sending: {what} {scope} are frozen until Ethereum time {} ({} as the bridge's \
+                     attested clock counts it; a freeze authority may lift it sooner); {consumed}",
+                    until / 1000,
+                    crate::units::utc(until / 1000)
+                ),
+            )
+        })
+    }))
+}
+
+/// One gate's freezes in words, for `status`.
+pub fn gate_line(scope: &str, g: &bw::Gate) -> String {
+    let one = |until: u64| {
+        if g.now_ms < until {
+            format!("frozen until {} ({})", until / 1000, crate::units::utc(until / 1000))
+        } else {
+            "not frozen".to_string()
+        }
+    };
+    format!(
+        "  {scope}: mints {}; burns {}; clock {} ({})",
+        one(g.mints_until),
+        one(g.burns_until),
+        g.now_ms / 1000,
+        crate::units::utc(g.now_ms / 1000)
+    )
+}
+
 /// A claim, built and checked.
 #[derive(Clone, Debug)]
 pub struct ClaimPlan {
@@ -267,6 +326,9 @@ pub async fn plan_claim<L: Ledger>(
         _ => bail!(program_refusal(245, format!("checked before sending: root(cid, {n}) is not on the zone"))),
     };
     let token = token_state(ledger, ctx, &owned.deposit.token).await?;
+    if let Some(r) = gate_refusal(ledger, ctx, &token, true).await? {
+        bail!(r);
+    }
     let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
     let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
@@ -330,6 +392,9 @@ pub async fn plan_burn<L: Ledger>(
     };
     if held < amount {
         bail!(program_refusal(254, format!("checked before sending: the holding is {held} base units")));
+    }
+    if let Some(r) = gate_refusal(ledger, ctx, &t, false).await? {
+        bail!(r);
     }
     let chain = chain_id_u256(ctx.chain_id);
     let next_i = recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i;
@@ -793,6 +858,10 @@ pub async fn zone_status<L: Ledger>(ledger: &L, ctx: &Context, history: &History
                 hx(config.attestation.value()),
                 hx(&config.instance_id)
             ));
+            out.push(gate_line("freezes of the whole configuration", &gate));
+            if let Some(BridgeState::Token(t)) = read(ledger, token_actor(ctx.program, &ctx.cid, &[0; 20])).await? {
+                out.push(gate_line("freezes of ETH", &t.gate));
+            }
             out.push(format!("  gate {gate:?}"));
             config
         }

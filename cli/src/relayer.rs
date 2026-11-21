@@ -152,7 +152,7 @@ pub const LOG_CHUNK: u64 = 10_000;
 
 /// Vault errors after which a job may succeed later (a root not final yet, a delay, a freeze, a cap), and
 /// transport failures: the daemon keeps such a job in its inbox and retries it next round.
-pub const TEMPORARY: [&str; 10] = [
+pub const TEMPORARY: [&str; 11] = [
     "BurnRootNotAccepted",
     "ReleaseDelayNotElapsed",
     "ReleasesAreFrozen",
@@ -163,6 +163,8 @@ pub const TEMPORARY: [&str; 10] = [
     "error sending request",
     "timed out",
     "connection",
+    // A transaction of the relayer's that may still be mined (relayerd's in-flight record).
+    "in flight",
 ];
 
 /// Whether a job that failed with `reason` should be retried rather than refused for good.
@@ -188,16 +190,30 @@ pub struct VaultView {
     pub cid: B256,
     pub final_state: B256,
     pub now: u64,
+    /// The block every read of the round is made at (`None`: the node's latest). The daemon pins a round to one
+    /// block at or above its own last mined transaction's, so a node that answers from an older state now and
+    /// then (a load balancer's lagging backend) cannot make it plan from before its own effects (R.06).
+    pub block: Option<u64>,
 }
 
 impl Relayer {
     /// Reads the vault's chain, configuration, final state and the latest block's time.
     pub async fn view(&self, p: &DynProvider) -> Result<VaultView> {
+        self.view_at(p, None).await
+    }
+
+    /// The same at block `at` (`None`: latest); the block must exist on the node.
+    pub async fn view_at(&self, p: &DynProvider, at: Option<u64>) -> Result<VaultView> {
         let chain_id = p.get_chain_id().await?;
-        let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, None).await?;
-        let final_state = eth::view(p, self.vault, IRelayVault::finalStateCall {}, None).await?;
-        let now = p.get_block(BlockId::latest()).await?.map(|b| b.header.timestamp).unwrap_or(0);
-        Ok(VaultView { chain_id, cid, final_state, now })
+        let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, at).await?;
+        let final_state = eth::view(p, self.vault, IRelayVault::finalStateCall {}, at).await?;
+        let id = at.map_or(BlockId::latest(), BlockId::number);
+        let now = p
+            .get_block(id)
+            .await?
+            .map(|b| b.header.timestamp)
+            .ok_or_else(|| anyhow!("the node has no block {at:?} yet (it is behind)"))?;
+        Ok(VaultView { chain_id, cid, final_state, now, block: at })
     }
 
     /// Checks a release job (journal and seal from a holder who opts in) and builds the vault call.
@@ -225,12 +241,12 @@ impl Relayer {
         ensure!(!fee.is_zero() || self.accept_unpaid, "refused: the proof pays no relay fee");
         let nullifier = B256::from(j.nullifier);
         ensure!(
-            !eth::view(p, self.vault, IVault::nullifierUsedCall { nullifier }, None).await?,
+            !eth::view(p, self.vault, IVault::nullifierUsedCall { nullifier }, v.block).await?,
             "refused: NOut {nullifier} is already released"
         );
         let token = Address::from(j.token);
         let amount = U256::from_be_bytes(j.amount);
-        let cfg = eth::view(p, self.vault, IVault::tokenConfigCall { token }, None).await?;
+        let cfg = eth::view(p, self.vault, IVault::tokenConfigCall { token }, v.block).await?;
         let denom_index = cfg
             .denominations_
             .iter()
@@ -262,7 +278,7 @@ impl Relayer {
             c.parentState,
             v.final_state
         );
-        let cand = eth::view(p, self.vault, IRelayVault::candidatesCall { newState: c.newState }, None).await?;
+        let cand = eth::view(p, self.vault, IRelayVault::candidatesCall { newState: c.newState }, v.block).await?;
         ensure!(cand.submittedAt.is_zero(), "skipped: {} is already a candidate", c.newState);
         Ok(IRelayVault::submitCandidateCall { c: c.clone(), seal }.abi_encode().into())
     }
@@ -270,8 +286,21 @@ impl Relayer {
     /// Live candidates on the vault (any submitter's), rebuilt from their `CandidateSubmitted` events
     /// and the vault's committee floors, each checked against the journal digest the vault stored.
     pub async fn candidates(&self, p: &DynProvider, from_block: u64) -> Result<Vec<(IRelayVault::Checkpoint, u64)>> {
+        self.candidates_at(p, from_block, None).await
+    }
+
+    /// The same, read at block `at` (`None`: latest).
+    pub async fn candidates_at(
+        &self,
+        p: &DynProvider,
+        from_block: u64,
+        at: Option<u64>,
+    ) -> Result<Vec<(IRelayVault::Checkpoint, u64)>> {
         // In ranges of LOG_CHUNK blocks: public endpoints limit the range of one eth_getLogs.
-        let latest = p.get_block_number().await?;
+        let latest = match at {
+            Some(b) => b,
+            None => p.get_block_number().await?,
+        };
         let mut logs = Vec::new();
         let mut start = from_block;
         while start <= latest {
@@ -284,10 +313,10 @@ impl Relayer {
             logs.extend(p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))?);
             start = end + 1;
         }
-        let n_min = eth::view(p, self.vault, IRelayVault::nMinCall {}, None).await?;
-        let t_min = eth::view(p, self.vault, IRelayVault::tMinCall {}, None).await?;
+        let n_min = eth::view(p, self.vault, IRelayVault::nMinCall {}, at).await?;
+        let t_min = eth::view(p, self.vault, IRelayVault::tMinCall {}, at).await?;
         let chain_id = p.get_chain_id().await?;
-        let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, None).await?;
+        let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, at).await?;
         let mut out = Vec::new();
         let mut seen = BTreeSet::new();
         for log in logs.iter().rev() {
@@ -314,7 +343,7 @@ impl Relayer {
                 n: e.n,
                 t: e.t,
             };
-            let cand = eth::view(p, self.vault, IRelayVault::candidatesCall { newState: c.newState }, None).await?;
+            let cand = eth::view(p, self.vault, IRelayVault::candidatesCall { newState: c.newState }, at).await?;
             if cand.submittedAt.is_zero() {
                 continue; // finalised, cancelled or replaced
             }
@@ -362,6 +391,21 @@ pub fn wrap_release(
     let id = Digest::from_bytes(release_image);
     receipt.verify(id).map_err(|e| anyhow!("refused: the receipt does not verify against the release image: {e}"))?;
     let succinct = receipt.inner.succinct().map_err(|e| anyhow!("refused: not a succinct receipt: {e}"))?;
+    let (input, proof) = (work.join("input.json"), work.join("proof.json"));
+    let params = Groth16ReceiptVerifierParameters::default().digest();
+    let finish = |proof_json: &str| -> Result<Vec<u8>> {
+        let pj: risc0_groth16::ProofJson = serde_json::from_str(proof_json)?;
+        let seal: risc0_groth16::Seal = pj.try_into().map_err(|e| anyhow!("proof.json: {e:?}"))?;
+        let groth16 = Groth16Receipt::new(seal.to_vec(), succinct.claim.clone(), params);
+        let wrapped = Receipt::new(InnerReceipt::Groth16(groth16), receipt.journal.bytes.clone());
+        wrapped.verify(id).map_err(|e| anyhow!("the wrapped receipt does not verify: {e}"))?;
+        Ok([&params.as_bytes()[..4], seal.to_vec().as_slice()].concat())
+    };
+    // A seal wrapped before a restart (the daemon killed between the wrap and the release) is used again once it
+    // verifies: the wrap is not done twice (R.06).
+    if let Some(seal) = std::fs::read_to_string(&proof).ok().and_then(|t| finish(&t).ok()) {
+        return Ok(seal);
+    }
     let asset = Asset::Inline(bincode::serialize(succinct)?.into());
     let p254 = ApiClient::from_env()
         .map_err(|e| anyhow!("r0vm: {e}"))?
@@ -369,7 +413,6 @@ pub fn wrap_release(
         .map_err(|e| anyhow!("identity_p254: {e}"))?;
     let seal_bytes = p254.get_seal_bytes();
     std::fs::create_dir_all(work)?;
-    let (input, proof) = (work.join("input.json"), work.join("proof.json"));
     std::fs::write(&input, risc0_groth16::prove::to_json(&seal_bytes).map_err(|e| anyhow!("input.json: {e}"))?)?;
     let status = std::process::Command::new(wrap_command)
         .arg(&input)
@@ -377,13 +420,7 @@ pub fn wrap_release(
         .status()
         .with_context(|| format!("running {}", wrap_command.display()))?;
     ensure!(status.success(), "the Groth16 prover failed ({status})");
-    let pj: risc0_groth16::ProofJson = serde_json::from_str(&std::fs::read_to_string(&proof)?)?;
-    let seal: risc0_groth16::Seal = pj.try_into().map_err(|e| anyhow!("proof.json: {e:?}"))?;
-    let params = Groth16ReceiptVerifierParameters::default().digest();
-    let groth16 = Groth16Receipt::new(seal.to_vec(), succinct.claim.clone(), params);
-    let wrapped = Receipt::new(InnerReceipt::Groth16(groth16), receipt.journal.bytes.clone());
-    wrapped.verify(id).map_err(|e| anyhow!("the wrapped receipt does not verify: {e}"))?;
-    Ok([&params.as_bytes()[..4], seal.to_vec().as_slice()].concat())
+    finish(&std::fs::read_to_string(&proof)?)
 }
 
 /// What a `Release` event paid this relayer (the relay fee), if it is the payee.

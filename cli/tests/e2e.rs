@@ -78,6 +78,13 @@ sol! {
         function setTokenCap(address token, uint8 direction, uint256 capacity, uint256 refillPerSecond) external;
         function releaseImageId() external view returns (bytes32);
     }
+    #[allow(missing_docs)]
+    interface IFreeze {
+        function setDepositsFrozen(bool frozen) external;
+        function setReleasesFrozen(bool frozen) external;
+        function setTokenDepositsFrozen(address token, bool frozen) external;
+        function setTokenReleasesFrozen(address token, bool frozen) external;
+    }
 }
 
 /// BIP-39 test phrases (published test values, never wallets): the user, and another user.
@@ -301,6 +308,64 @@ async fn anvil_send(p: &DynProvider, to: Address, input: Vec<u8>, value: U256) -
     let receipt = p.send_transaction(tx).await?.get_receipt().await?;
     ensure!(receipt.status(), "a stand-in transaction reverted");
     Ok(())
+}
+
+/// CliLocal's freeze authority: an address no one holds a key for (stand-in for the freeze authority's multisig),
+/// impersonated by anvil.
+fn freeze_authority() -> Address {
+    Address::from_slice(&alloy::primitives::keccak256(b"ferrata cli e2e: freeze authority (no key)")[12..])
+}
+
+/// The vault's freeze authority sends `input` to the vault.
+async fn freezer_send(p: &DynProvider, vault: Address, input: Vec<u8>) -> Result<()> {
+    let f = freeze_authority();
+    p.raw_request::<_, serde_json::Value>("anvil_impersonateAccount".into(), (f,)).await?;
+    p.raw_request::<_, serde_json::Value>("anvil_setBalance".into(), (f, U256::from(ETH_1))).await?;
+    let tx = TransactionRequest::default().with_from(f).with_to(vault).with_input(input);
+    let receipt = p.send_transaction(tx).await?.get_receipt().await?;
+    ensure!(receipt.status(), "the freeze authority's transaction reverted");
+    Ok(())
+}
+
+/// The bridge program's freeze authority (the harness's role key) freezes, or with `lift` unfreezes, the mints
+/// (`mints`) or the burns of `token`, or of the whole configuration (`None`), for an hour, against a record of
+/// Ethereum's current time (as the mini-app's admin view does, `admin.freeze`).
+async fn lez_freeze(
+    zone: &mut HarnessLedger,
+    p: &DynProvider,
+    cid: &Hash,
+    token: Option<[u8; 20]>,
+    mints: bool,
+    lift: bool,
+) -> Result<()> {
+    let now = eth::now(p).await?.max(zone.world.newest_record_seconds() + 1);
+    let newest = zone.world.finalize(now);
+    let (t, record) = (zone.world.blocks[newest].time_ms(), zone.world.blocks[newest].time_record());
+    let until_ms = if lift { 0 } else { t + 3_600_000 };
+    let message = BridgeMessage::Freeze { config_id: *cid, token, mints, burns: !mints, until_ms, record };
+    let program = zone.world.program;
+    let target = match token {
+        Some(t) => ferrata_lez_bridge_wire::token_actor(program, cid, &t),
+        None => ferrata_lez_bridge_wire::config_actor(program, cid),
+    };
+    let label = if lift { "Freeze lifted (freeze authority)" } else { "Freeze (freeze authority)" };
+    let r = zone.world.role(label, hb::FREEZE_SEED, &message, target);
+    zone.record(&r);
+    ensure!(r.ok(), "{label} refused with exit code {:?}", r.exit_code);
+    Ok(())
+}
+
+/// A refusal that names no deposit and no burn: no hash, commitment, nullifier or address (no run of 40 or more
+/// hex digits), no leaf index and no burn counter (U.08's last sentence).
+fn names_nothing(text: &str) -> bool {
+    let mut run = 0usize;
+    for c in text.chars() {
+        run = if c.is_ascii_hexdigit() { run + 1 } else { 0 };
+        if run >= 40 {
+            return false;
+        }
+    }
+    !text.contains("leaf ") && !text.contains("tag counter") && !text.contains("j = ")
 }
 
 async fn slot(p: &DynProvider, vault: Address, key: [u8; 32]) -> Result<[u8; 32]> {
@@ -621,6 +686,39 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "the cap, from eth_call: {capped}"
     );
     anvil_send(&p, vault, set_cap(U256::MAX).abi_encode(), U256::ZERO).await?;
+    // Freezes through the binary (U.08, "program or per-token frozen"): the vault's freeze authority freezes the
+    // deposits of the whole vault, then ETH's; each dry run is refused before signing with the vault's error, the
+    // time the freeze ends and what to do, naming no deposit; lifted, the dry run passes again.
+    let refusal_line = |e: &anyhow::Error| {
+        e.to_string().lines().find(|l| l.contains("refused:")).unwrap_or_default().to_string()
+    };
+    for (freeze, lift, want) in [
+        (
+            IFreeze::setDepositsFrozenCall { frozen: true }.abi_encode(),
+            IFreeze::setDepositsFrozenCall { frozen: false }.abi_encode(),
+            "DepositsAreFrozen",
+        ),
+        (
+            IFreeze::setTokenDepositsFrozenCall { token: Address::ZERO, frozen: true }.abi_encode(),
+            IFreeze::setTokenDepositsFrozenCall { token: Address::ZERO, frozen: false }.abi_encode(),
+            "TokenDepositsAreFrozen",
+        ),
+    ] {
+        freezer_send(&p, vault, freeze).await?;
+        let e = dry_deposit(&["--denomination", "0"]).expect_err("a deposit while frozen");
+        let line = refusal_line(&e);
+        println!("FREEZE (vault, deposit): {line}");
+        ensure!(
+            line.contains(&format!("vault error {want}()"))
+                && line.contains("checked before sending: frozen until Ethereum time")
+                && line.contains("retry once the freeze ends")
+                && names_nothing(&line),
+            "the frozen deposit's refusal: {e}"
+        );
+        freezer_send(&p, vault, lift).await?;
+        let passes = dry_deposit(&["--denomination", "0"])?;
+        ensure!(passes.contains("not sent") && !passes.contains("Frozen"), "lifted: {passes}");
+    }
     let seed_arg = seed_user.display().to_string();
     let vault_arg = vault.to_string();
     let no_rpc = ferrata(&["--seed", &seed_arg, "--eth-rpc", "http://127.0.0.1:9", "--vault", &vault_arg, "scan"])
@@ -865,6 +963,27 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "the plaintext claim warns, names its exposure and is refused without its acknowledgement"
     );
     copts.accept_plaintext = true;
+    // Freezes on LEZ (U.08): the bridge program's freeze authority freezes the mints of ETH, then of the whole
+    // configuration; the tool refuses the claim before anything is proven or sent, with the program's code, the
+    // freeze's end and what to do, naming no deposit; lifted, the same claim goes through below (nothing consumed).
+    for token in [Some([0u8; 20]), None] {
+        lez_freeze(&mut zone, &p, &cid, token, true, false).await?;
+        let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+            .await
+            .err()
+            .context("a claim while mints are frozen")?;
+        let scope = if token.is_some() { "of this token" } else { "of the whole configuration" };
+        println!("FREEZE (LEZ, claim, mints {scope}): {e}");
+        ensure!(
+            e.to_string().contains("exit code 242 FROZEN")
+                && e.to_string().contains(&format!("mints (claims) {scope} are frozen until Ethereum time"))
+                && e.to_string().contains("the deposit stays claimable")
+                && e.to_string().contains("retry once the freeze ends")
+                && names_nothing(&e.to_string()),
+            "the frozen claim's refusal: {e}"
+        );
+        lez_freeze(&mut zone, &p, &cid, token, true, true).await?;
+    }
     let claimed0 = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
     let plan = claimed0.plan;
     println!("claim: {:?}; N {}", claimed0.sent, hx(&plan.nullifier));
@@ -923,6 +1042,25 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "the public burn warns and is refused without its acknowledgement: {unacked}"
     );
     bopts.accept_public = true;
+    // Freezes on LEZ (U.08): the burns of ETH, then of the whole configuration, frozen: the tool refuses the burn
+    // before sending, naming no burn; lifted, the same burn goes through.
+    for token in [Some([0u8; 20]), None] {
+        lez_freeze(&mut zone, &p, &cid, token, false, false).await?;
+        let e = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut flow::Out::new(true))
+            .await
+            .err()
+            .context("a burn while burns are frozen")?;
+        let scope = if token.is_some() { "of this token" } else { "of the whole configuration" };
+        println!("FREEZE (LEZ, burn, burns {scope}): {e}");
+        ensure!(
+            e.to_string().contains("exit code 242 FROZEN")
+                && e.to_string().contains(&format!("burns {scope} are frozen until Ethereum time"))
+                && e.to_string().contains("nothing is burned: the holding stays yours")
+                && names_nothing(&e.to_string()),
+            "the frozen burn's refusal: {e}"
+        );
+        lez_freeze(&mut zone, &p, &cid, token, false, true).await?;
+    }
     flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut flow::Out::new(true)).await?;
     for _ in 0..10 {
         let history = lez::history(&ctx, &zone.applied(program).await?);
@@ -1030,6 +1168,44 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let before = p.get_balance(recipient).await?;
     let sp = eth::signing_provider(&rpc, eth::keystore_signer(other_ks, &password)?)?;
     let sender = flow::Signer { p: sp.clone(), address: keystores[1].1 };
+    // Freezes on Ethereum (U.08): the vault's releases, then ETH's, frozen by its freeze authority: the tool refuses
+    // the release before signing with the vault's error, the freeze's end and what to do, naming no burn; lifted,
+    // the same release is sent below.
+    for (freeze, lift, want) in [
+        (
+            IFreeze::setReleasesFrozenCall { frozen: true }.abi_encode(),
+            IFreeze::setReleasesFrozenCall { frozen: false }.abi_encode(),
+            "ReleasesAreFrozen",
+        ),
+        (
+            IFreeze::setTokenReleasesFrozenCall { token: Address::ZERO, frozen: true }.abi_encode(),
+            IFreeze::setTokenReleasesFrozenCall { token: Address::ZERO, frozen: false }.abi_encode(),
+            "TokenReleasesAreFrozen",
+        ),
+    ] {
+        freezer_send(&p, vault, freeze).await?;
+        let e = flow::release_burn(
+            &eth_side,
+            &user,
+            &mut zone,
+            &ctx,
+            Some(&sender),
+            &self_opts(Some(Bytes::from(SEAL.to_vec())), true),
+            &mut flow::Out::new(true),
+        )
+        .await
+        .err()
+        .context("a release while releases are frozen")?;
+        println!("FREEZE (vault, release): {e}");
+        ensure!(
+            e.to_string().contains(&format!("vault error {want}()"))
+                && e.to_string().contains("checked before sending: frozen until Ethereum time")
+                && e.to_string().contains("the burn stays releasable")
+                && names_nothing(&e.to_string()),
+            "the frozen release's refusal: {e}"
+        );
+        freezer_send(&p, vault, lift).await?;
+    }
     let mut out = flow::Out::new(true);
     let sent = flow::release_burn(
         &eth_side,
@@ -1161,6 +1337,21 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "the default claim's dry run"
     );
     copts.send = true;
+    // The private path meets the same freeze (U.08): mints of the whole configuration frozen, the private claim
+    // refused before it is proven; lifted, it is proven and settled below.
+    lez_freeze(&mut zone, &p, &cid, None, true, false).await?;
+    let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("a private claim while mints are frozen")?;
+    println!("FREEZE (LEZ, private claim): {e}");
+    ensure!(
+        e.to_string().contains("exit code 242 FROZEN")
+            && e.to_string().contains("the deposit stays claimable")
+            && names_nothing(&e.to_string()),
+        "the frozen private claim's refusal: {e}"
+    );
+    lez_freeze(&mut zone, &p, &cid, None, true, true).await?;
     let claimed_p = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
     println!("private claim: {:?}", claimed_p.sent);
     let held_p = flow::private_holding(&mut zone, &ctx, private0, &[0; 20]).await?;

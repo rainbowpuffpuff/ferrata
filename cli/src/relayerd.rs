@@ -23,6 +23,15 @@
 //!    count; if there are any and no live candidate, `<state>/needs-checkpoint.json` tells the
 //!    checkpoint prover (a separate process: `e2e/crown`, stage 7) to cut one.
 //!
+//! **Exactly once across kills and lost connections** (RFP-022 R.06). The daemon sends one Ethereum transaction
+//! at a time. Before it is sent, `<state>/inflight.json` names it (what it does, the inbox job it books, its
+//! calldata and the nonce it takes), and its hash once the node has it; the record goes only once the effect is
+//! booked (the job moved to `done/`, the line written). Every round first resolves a record left by a killed or
+//! cut-off daemon: mined, it books what the transaction did (`"recovered": true`); still pending, the round waits;
+//! lost (not mined and unknown to the node, its nonce unspent), the same call is sent again **with the same
+//! nonce**, so at most one of the two can ever be mined. One daemon per state directory (`<state>/lock`). A root
+//! import sent to LEZ is kept the same way (`<state>/root-import-inflight.json`) until `root(cid, n)` holds it.
+//!
 //! Keys: an Ethereum keystore file (`--keystore`, `--password-file`), or, on a local anvil only,
 //! `--unlocked` (the node signs). The LEZ side: a sequencer through LEZ's wallet with the relayer's own
 //! seed (`--sequencer`, feature `lez-wallet`), or the mini-app devnet's zone (`--lez-devnet`, a stand-in
@@ -33,11 +42,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use alloy::network::TransactionBuilder as _;
-use alloy::primitives::{Address, Bytes};
+use alloy::primitives::{Address, Bytes, B256};
 use alloy::providers::{DynProvider, Provider};
 use alloy::rpc::types::{TransactionReceipt, TransactionRequest};
 use alloy::sol_types::SolCall;
-use anyhow::{anyhow, bail, Context as _, Result};
+use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use clap::{Parser, Subcommand};
 use ferrata_lez_bridge_wire::BridgeState;
 use serde_json::{json, Value};
@@ -124,6 +133,18 @@ pub struct Cli {
     /// Seconds a job may wait in the inbox for a temporary condition (root not final, delay, freeze, cap).
     #[arg(long, default_value_t = 7 * 24 * 3600, global = true)]
     pub max_job_age: u64,
+    /// Seconds to wait for a sent transaction's receipt within a round. Past it the transaction stays in flight
+    /// (`<state>/inflight.json`): the next rounds wait for it, or send the same call again with the same nonce
+    /// once the node has lost it.
+    #[arg(long, default_value_t = 180, global = true)]
+    pub receipt_timeout: u64,
+    /// Seconds a root import sent to LEZ may stay unapplied before it is planned again.
+    #[arg(long, default_value_t = 600, global = true)]
+    pub import_wait: u64,
+    /// Seconds the daemon waits at start for its Ethereum endpoint to answer (an endpoint down at start is
+    /// waited for, not a reason to stop).
+    #[arg(long, default_value_t = 600, global = true)]
+    pub startup_wait: u64,
     /// Where the relayer's Ethereum transactions go: `plain` (signed here, or by a local anvil with --unlocked, and
     /// sent over --eth-rpc; the default) or `logos` (Logos Core's `tx_sender_module`, signed by `keystore_module`
     /// through `signer_manager_module`; only when the relayer runs as `ferrata_relayer_module`). With `logos` and a
@@ -176,6 +197,99 @@ fn log(sink: &Sink, event: &str, fields: Value) {
     sink(line(event, fields));
 }
 
+fn unix_now() -> u64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// Writes `bytes` to `path` through a temporary file beside it, synced before the rename: after a crash the
+/// path holds the old or the new content, never a part.
+fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write as _;
+    let tmp = path.with_extension("tmp");
+    let mut f = std::fs::File::create(&tmp)?;
+    f.write_all(bytes)?;
+    f.sync_all()?;
+    std::fs::rename(&tmp, path)?;
+    if let Some(dir) = path.parent() {
+        if let Ok(d) = std::fs::File::open(dir) {
+            let _ = d.sync_all();
+        }
+    }
+    Ok(())
+}
+
+/// The Ethereum transaction in flight (one at most): written before it is sent, removed once its effect is
+/// booked (module documentation).
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+pub struct Inflight {
+    /// What it does: `submitCandidate:<newState>`, `finalizeAttested:<newState>`, `release:<NOut>`,
+    /// `claimOwed:<token>`.
+    pub key: String,
+    pub label: String,
+    /// The inbox job it books (its file name), if it came from the inbox.
+    pub job: Option<String>,
+    /// Its calldata to the vault.
+    pub input: Bytes,
+    /// The nonce it takes; a lost transaction is sent again with it.
+    pub nonce: u64,
+    /// Its hash, once the node has answered the send.
+    pub hash: Option<B256>,
+    /// When the record was written (Unix seconds).
+    pub at: u64,
+    /// The node's head when it was written: the transaction is in a later block.
+    #[serde(default)]
+    pub from_block: u64,
+}
+
+impl Inflight {
+    pub fn path(state: &Path) -> PathBuf {
+        state.join("inflight.json")
+    }
+
+    pub fn load(state: &Path) -> Result<Option<Self>> {
+        match std::fs::read(Self::path(state)) {
+            Ok(b) => Ok(Some(serde_json::from_slice(&b).context("inflight.json")?)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn save(&self, state: &Path) -> Result<()> {
+        write_atomic(&Self::path(state), &serde_json::to_vec_pretty(self)?)
+    }
+
+    fn clear(state: &Path) -> Result<()> {
+        match std::fs::remove_file(Self::path(state)) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        }
+    }
+}
+
+/// The block of the relayer's last mined transaction and the nonce after it (`<state>/fence.json`): a round reads
+/// at a block at or above it, and a nonce below it is never used again, whatever a lagging node answers.
+#[derive(Clone, Copy, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Fence {
+    pub block: u64,
+    pub next_nonce: u64,
+}
+
+impl Fence {
+    fn load(state: &Path) -> Self {
+        std::fs::read(state.join("fence.json")).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
+    }
+}
+
+/// A root import sent to LEZ, until `root(cid, n)` holds what its dry run said it writes.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+struct ImportInflight {
+    leaf_count: u64,
+    /// `borsh(RootState)` the import writes.
+    writes: Bytes,
+    tx: String,
+    at: u64,
+}
+
 struct Daemon {
     p: DynProvider,
     r: Relayer,
@@ -193,6 +307,12 @@ struct Daemon {
     max_job_age: u64,
     /// The Groth16 prover command (wrapping), if any.
     wrap_command: Option<PathBuf>,
+    /// `--receipt-timeout`, `--import-wait`.
+    receipt_timeout: u64,
+    import_wait: u64,
+    /// See [`Fence`]; and the block this round reads at.
+    fence: Fence,
+    at: Option<u64>,
     /// `--import-roots`.
     import_roots: bool,
     /// `--import-every` (seconds; 0: every round).
@@ -208,10 +328,16 @@ impl Daemon {
     /// One transaction to the vault: [`Relayer::submit`] (the plain path), or through `tx_sender_module` after the
     /// same `eth_call`, the receipt then read on the relayer's own node; what `tx_sender_module` did not broadcast
     /// goes the plain way when the relayer has a key here too (the fallback).
-    async fn send(&self, input: Bytes, label: &'static str) -> Result<(TransactionReceipt, crate::logos_send::Via)> {
+    async fn send(
+        &mut self,
+        input: Bytes,
+        label: &'static str,
+        key: &str,
+        job: Option<&str>,
+    ) -> Result<(TransactionReceipt, crate::logos_send::Via)> {
         use crate::logos_send::{Outcome, Via};
         let Some(route) = self.logos.clone() else {
-            return Ok((self.r.submit(&self.p, input).await?, Via::Plain));
+            return Ok((self.send_plain(input, label, key, job).await?, Via::Plain));
         };
         let fallback = route.fallback;
         let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(input.clone());
@@ -248,9 +374,243 @@ impl Daemon {
         }
     }
 
+    /// A mined transaction of the relayer's moves the fence (and keeps it on disk).
+    fn mined(&mut self, rc: &TransactionReceipt, nonce: u64) -> Result<()> {
+        let block = rc.block_number.unwrap_or(self.fence.block);
+        self.fence = Fence { block: self.fence.block.max(block), next_nonce: self.fence.next_nonce.max(nonce + 1) };
+        write_atomic(&self.state.join("fence.json"), &serde_json::to_vec(&self.fence)?)
+    }
+
+    /// The vault as of the node's head, if the head is at or above the fence; `None` (the round waits) if the node
+    /// is behind the relayer's own last transaction.
+    async fn pinned_view(&mut self) -> Result<Option<relayer::VaultView>> {
+        let head = self.p.get_block_number().await?;
+        if head < self.fence.block {
+            log(&self.sink, "node-behind", json!({ "head": head, "fence": self.fence.block }));
+            return Ok(None);
+        }
+        self.at = Some(head);
+        Ok(Some(self.r.view_at(&self.p, Some(head)).await?))
+    }
+
+    /// The plain path, journaled: the vault's own checks (`eth_call`: a refusal is reported with the vault's
+    /// error and nothing is signed), the in-flight record with the nonce, the send, the hash recorded, the
+    /// receipt. The record is removed by the caller once the effect is booked ([`Inflight::clear`]).
+    async fn send_plain(&mut self, input: Bytes, label: &str, key: &str, job: Option<&str>) -> Result<TransactionReceipt> {
+        let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(input.clone());
+        let at = self.at.map_or(alloy::eips::BlockId::latest(), alloy::eips::BlockId::number);
+        if let Err(e) = self.p.call(tx.clone()).block(at).await {
+            match eth::refusal_of(&e, "eth_call before sending") {
+                Some(r) => bail!(r),
+                None => bail!("the vault would revert: {e}"),
+            }
+        }
+        let nonce = match Inflight::load(&self.state)? {
+            // The same call, lost by the node, sent again: with its nonce, at most one of them can be mined.
+            Some(f) if f.key == key => f.nonce,
+            Some(f) => bail!("{} is still in flight (nonce {}): nothing else is sent before it resolves", f.key, f.nonce),
+            None => self.p.get_transaction_count(self.r.me).pending().await?.max(self.fence.next_nonce),
+        };
+        let mut f = Inflight {
+            key: key.to_string(),
+            label: label.to_string(),
+            job: job.map(str::to_string),
+            input: input.clone(),
+            nonce,
+            hash: None,
+            at: unix_now(),
+            from_block: self.at.unwrap_or(self.fence.block),
+        };
+        f.save(&self.state)?;
+        let pending = self.p.send_transaction(tx.with_nonce(nonce)).await.map_err(|e| {
+            match eth::refusal_of(&e, "eth_sendTransaction") {
+                Some(r) => anyhow!(r),
+                None => anyhow!("sending (kept in flight, resolved next round): {e}"),
+            }
+        })?;
+        f.hash = Some(*pending.tx_hash());
+        f.save(&self.state)?;
+        let rc = self.wait_receipt(f.hash.expect("set")).await?;
+        self.mined(&rc, nonce)?;
+        ensure!(rc.status(), "the transaction {} reverted", rc.transaction_hash);
+        Ok(rc)
+    }
+
+    /// The receipt of `hash`, polled for `--receipt-timeout` seconds; transport errors meanwhile are waited out.
+    async fn wait_receipt(&self, hash: B256) -> Result<TransactionReceipt> {
+        let t0 = std::time::Instant::now();
+        loop {
+            if let Ok(Some(rc)) = self.p.get_transaction_receipt(hash).await {
+                return Ok(rc);
+            }
+            if t0.elapsed() > Duration::from_secs(self.receipt_timeout) {
+                bail!("{hash:#x} not mined within {} s: kept in flight, resolved next round", self.receipt_timeout);
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+    }
+
+    /// The relayer's transaction with `f`'s nonce in the blocks since `f` was written (at most 2,000), and its
+    /// receipt, if it carries `f`'s calldata to the vault.
+    async fn find_mined(&self, f: &Inflight) -> Result<Option<TransactionReceipt>> {
+        use alloy::consensus::Transaction as _;
+        use alloy::network::TransactionResponse as _;
+        let head = self.p.get_block_number().await?;
+        let start = f.from_block.max(head.saturating_sub(2_000));
+        for n in start..=head {
+            let Some(block) = self.p.get_block_by_number(n.into()).full().await? else { continue };
+            for tx in block.transactions.txns() {
+                if tx.from() == self.r.me && tx.nonce() == f.nonce {
+                    if tx.to() != Some(self.r.vault) || tx.input() != &f.input {
+                        return Ok(None);
+                    }
+                    return Ok(self.p.get_transaction_receipt(tx.tx_hash()).await?);
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Whether the effect of `f` is on the vault: for a nonce spent without a receipt for the recorded hash.
+    async fn effect_done(&self, f: &Inflight) -> Result<bool> {
+        let word = |k: &str| -> Result<B256> {
+            k.split_once(':').map(|(_, w)| w).ok_or_else(|| anyhow!("key {k}"))?.parse().map_err(|e| anyhow!("{e}"))
+        };
+        let (p, vault) = (&self.p, self.r.vault);
+        Ok(match f.label.as_str() {
+            "submitCandidate" => {
+                let new_state = word(&f.key)?;
+                !eth::view(p, vault, IRelayVault::candidatesCall { newState: new_state }, None).await?.submittedAt.is_zero()
+                    || eth::view(p, vault, IRelayVault::finalStateCall {}, None).await? == new_state
+            }
+            "finalizeAttested" => {
+                let new_state = word(&f.key)?;
+                eth::view(p, vault, IRelayVault::candidatesCall { newState: new_state }, None).await?.submittedAt.is_zero()
+            }
+            "release" => eth::view(p, vault, IVault::nullifierUsedCall { nullifier: word(&f.key)? }, None).await?,
+            "claimOwed" => {
+                let token: Address = f.key.split_once(':').map(|(_, t)| t).unwrap_or_default().parse()?;
+                eth::view(p, vault, IRelayVault::owedCall { payee: self.r.me, token }, None).await?.is_zero()
+            }
+            _ => false,
+        })
+    }
+
+    /// Books what a resolved in-flight transaction did: its job moved to `done/` (or `refused/` if it reverted)
+    /// when still in the inbox, and the line the uninterrupted daemon would have written, with `"recovered": true`.
+    fn book_recovered(&self, inbox: &Path, f: &Inflight, rc: Option<&TransactionReceipt>, done: bool) -> Result<()> {
+        let s = &self.sink;
+        let tx = rc.map(|r| json!(r.transaction_hash)).unwrap_or(Value::Null);
+        let gas = rc.map(|r| json!(r.gas_used)).unwrap_or(Value::Null);
+        match &f.job {
+            Some(name) => {
+                let dir = if done { "done" } else { "refused" };
+                let file = inbox.join(name);
+                if file.exists() {
+                    std::fs::create_dir_all(self.state.join(dir))?;
+                    std::fs::rename(&file, self.state.join(dir).join(name))?;
+                }
+                if done {
+                    log(
+                        s,
+                        "job-done",
+                        json!({ "job": name, "recovered": true, "result": { "kind": f.label, "key": f.key, "tx": tx, "gasUsed": gas } }),
+                    );
+                } else {
+                    log(s, "job-refused", json!({ "job": name, "recovered": true, "reason": format!("{} reverted", f.key), "tx": tx }));
+                }
+            }
+            None => {
+                let event = match (f.label.as_str(), done) {
+                    ("finalizeAttested", true) => "finalized",
+                    ("claimOwed", true) => "fees-collected",
+                    (_, true) => "sent",
+                    (_, false) => "reverted",
+                };
+                log(s, event, json!({ "key": f.key, "recovered": true, "tx": tx, "gasUsed": gas }));
+            }
+        }
+        Ok(())
+    }
+
+    /// Resolves the in-flight record a killed or cut-off daemon left (module documentation). `Ok(false)`: it
+    /// is still pending, and nothing is sent this round.
+    async fn resolve_inflight(&mut self, inbox: &Path) -> Result<bool> {
+        let Some(mut f) = Inflight::load(&self.state)? else { return Ok(true) };
+        let s = self.sink.clone();
+        if let Some(hash) = f.hash {
+            if let Some(rc) = self.p.get_transaction_receipt(hash).await? {
+                self.mined(&rc, f.nonce)?;
+                self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
+                Inflight::clear(&self.state)?;
+                return Ok(true);
+            }
+        }
+        let latest = self.p.get_transaction_count(self.r.me).latest().await?;
+        if latest > f.nonce {
+            // The nonce is spent and no receipt names the recorded hash (the daemon was killed before it had the
+            // hash, or sent the call again): the transaction mined under the nonce, found in the blocks since the
+            // record, is this call when its calldata is; otherwise this call was never mined.
+            match self.find_mined(&f).await? {
+                Some(rc) => {
+                    self.mined(&rc, f.nonce)?;
+                    log(&s, "inflight-found", json!({ "key": f.key, "nonce": f.nonce, "tx": rc.transaction_hash }));
+                    self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
+                }
+                None => {
+                    let done = self.effect_done(&f).await?;
+                    log(&s, "inflight-nonce-spent", json!({ "key": f.key, "nonce": f.nonce, "effectOnVault": done }));
+                    if done {
+                        self.book_recovered(inbox, &f, None, true)?;
+                    }
+                }
+            }
+            self.fence.next_nonce = self.fence.next_nonce.max(f.nonce + 1);
+            Inflight::clear(&self.state)?;
+            return Ok(true);
+        }
+        let known = match f.hash {
+            Some(h) => self.p.get_transaction_by_hash(h).await?.is_some(),
+            None => false,
+        };
+        let pending = self.p.get_transaction_count(self.r.me).pending().await?;
+        if known || pending > f.nonce {
+            log(&s, "inflight-pending", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash, "ageSecs": unix_now().saturating_sub(f.at) }));
+            return Ok(false);
+        }
+        // Lost: neither mined nor known to the node, its nonce unspent. The same call again, with the same nonce.
+        log(&s, "inflight-lost", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash }));
+        let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(f.input.clone());
+        if let Err(e) = self.p.call(tx.clone()).await {
+            // The call no longer passes (another relayer did it, a freeze, ...): dropped; its job is planned again.
+            let reason = eth::refusal_of(&e, "eth_call before sending again").map_or_else(|| e.to_string(), |r| r.to_string());
+            log(&s, "inflight-dropped", json!({ "key": f.key, "reason": reason }));
+            Inflight::clear(&self.state)?;
+            return Ok(true);
+        }
+        let sent = self
+            .p
+            .send_transaction(tx.with_nonce(f.nonce))
+            .await
+            .map_err(|e| anyhow!("sending {} again (kept in flight): {e}", f.key))?;
+        f.hash = Some(*sent.tx_hash());
+        f.at = unix_now();
+        f.save(&self.state)?;
+        log(&s, "inflight-resent", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash }));
+        let rc = self.wait_receipt(f.hash.expect("set")).await?;
+        self.mined(&rc, f.nonce)?;
+        self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
+        Inflight::clear(&self.state)?;
+        Ok(true)
+    }
+
     async fn round(&mut self, inbox: &Path) -> Result<()> {
         let s = self.sink.clone();
-        let v = self.r.view(&self.p).await?;
+        // A transaction a killed or cut-off daemon left in flight comes first; while it is pending nothing is sent.
+        if !self.resolve_inflight(inbox).await? {
+            return Ok(());
+        }
+        let Some(v) = self.pinned_view().await? else { return Ok(()) };
         // 0. Root imports, once per period: before the inbox, whose gas drops check the imported roots.
         let period = if self.import_every == 0 { None } else { Some(v.now / self.import_every) };
         if self.import_roots && (period.is_none() || period != self.import_done) {
@@ -299,14 +659,17 @@ impl Daemon {
             };
             std::fs::create_dir_all(self.state.join(dir))?;
             std::fs::rename(&file, self.state.join(dir).join(&name))?;
+            if Inflight::load(&self.state)?.is_some_and(|f| f.job.as_deref() == Some(name.as_str())) {
+                Inflight::clear(&self.state)?;
+            }
             match outcome {
                 Ok(fields) => log(&s, "job-done", json!({ "job": name, "result": fields })),
                 Err(e) => log(&s, "job-refused", json!({ "job": name, "reason": format!("{e:#}") })),
             }
         }
         // 2. Candidates whose wait is over.
-        let v = self.r.view(&self.p).await?;
-        for (c, ready_at) in self.r.candidates(&self.p, self.from_block).await? {
+        let Some(v) = self.pinned_view().await? else { return Ok(()) };
+        for (c, ready_at) in self.r.candidates_at(&self.p, self.from_block, v.block).await? {
             if !self.rule_b {
                 // Rule (A) finalises with a second proof echoing a beacon: the checkpoint prover's job.
                 log(
@@ -321,37 +684,53 @@ impl Daemon {
                 continue;
             }
             let input: Bytes = IRelayVault::finalizeAttestedCall { c: c.clone() }.abi_encode().into();
-            match self.send(input, "finalizeAttested").await {
-                Ok((rc, via)) => log(
-                    &s,
-                    "finalized",
-                    json!({ "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
-                ),
-                Err(e) => log(&s, "finalize-refused", json!({ "newState": c.newState, "reason": format!("{e:#}") })),
+            let key = format!("finalizeAttested:{:#x}", c.newState);
+            match self.send(input, "finalizeAttested", &key, None).await {
+                Ok((rc, via)) => {
+                    log(
+                        &s,
+                        "finalized",
+                        json!({ "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
+                    );
+                    Inflight::clear(&self.state)?;
+                }
+                Err(e) => {
+                    log(&s, "finalize-refused", json!({ "newState": c.newState, "reason": format!("{e:#}") }));
+                    self.after_failed_send(&key).await?;
+                    break;
+                }
             }
         }
         // 3. Fees credited to this relayer (checkpoint fees always; a relay fee whose push failed).
         for token in self.tokens.clone() {
             let owed =
-                eth::view(&self.p, self.r.vault, IRelayVault::owedCall { payee: self.r.me, token }, None).await?;
+                eth::view(&self.p, self.r.vault, IRelayVault::owedCall { payee: self.r.me, token }, v.block).await?;
             if owed.is_zero() {
                 continue;
             }
             let input: Bytes = IRelayVault::claimOwedCall { token }.abi_encode().into();
-            match self.send(input, "claimOwed").await {
-                Ok((rc, via)) => log(
-                    &s,
-                    "fees-collected",
-                    json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
-                ),
-                Err(e) => log(&s, "fees-refused", json!({ "token": token, "reason": format!("{e:#}") })),
+            let key = format!("claimOwed:{token:#x}");
+            match self.send(input, "claimOwed", &key, None).await {
+                Ok((rc, via)) => {
+                    log(
+                        &s,
+                        "fees-collected",
+                        json!({ "token": token, "amount": owed.to_string(), "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
+                    );
+                    Inflight::clear(&self.state)?;
+                }
+                Err(e) => {
+                    log(&s, "fees-refused", json!({ "token": token, "reason": format!("{e:#}") }));
+                    self.after_failed_send(&key).await?;
+                    break;
+                }
             }
         }
         // 4. Burns on LEZ past the newest accepted burn count.
         if let Some((zone, ctx)) = &self.zone {
             let history = lez::history_of(zone, ctx).await?;
             let accepted = eth::accepted_burn_roots(&self.p, self.r.vault, self.from_block, 10_000).await?;
-            let live = self.r.candidates(&self.p, self.from_block).await?;
+            let live = self.r.candidates_at(&self.p, self.from_block, v.block).await?;
             let path = self.state.join("needs-checkpoint.json");
             if let Some((burns, covered)) =
                 relayer::checkpoint_needed(history.burns.len() as u64, &accepted, live.len())
@@ -374,7 +753,31 @@ impl Daemon {
     /// `Ok(true)` when the period's import is done (sent and applied, or nothing to import, or closed).
     async fn import_root(&mut self) -> Result<bool> {
         let s = self.sink.clone();
+        let (state_dir, import_wait) = (self.state.clone(), self.import_wait);
         let Some((zone, ctx)) = self.zone.as_mut() else { return Ok(true) };
+        // An import sent before a kill or a lost answer: applied, it is booked; within --import-wait it is waited
+        // for; older, it is planned again (a second ImportRoot of the same count is refused by the program).
+        let inflight = state_dir.join("root-import-inflight.json");
+        if let Ok(bytes) = std::fs::read(&inflight) {
+            let f: ImportInflight = serde_json::from_slice(&bytes).context("root-import-inflight.json")?;
+            let at = ferrata_lez_bridge_wire::root_actor(ctx.program, &ctx.cid, f.leaf_count);
+            let applied = match lez::read(&*zone, at).await? {
+                Some(BridgeState::Root(r)) => borsh::to_vec(&r)? == f.writes.to_vec(),
+                _ => false,
+            };
+            let age = unix_now().saturating_sub(f.at);
+            if applied {
+                log(&s, "root-imported", json!({ "leafCount": f.leaf_count, "tx": f.tx, "applied": true, "recovered": true }));
+                std::fs::remove_file(&inflight)?;
+                return Ok(true);
+            }
+            if age < import_wait {
+                log(&s, "root-import-pending", json!({ "leafCount": f.leaf_count, "tx": f.tx, "ageSecs": age }));
+                return Ok(false);
+            }
+            log(&s, "root-import-expired", json!({ "leafCount": f.leaf_count, "tx": f.tx, "ageSecs": age }));
+            std::fs::remove_file(&inflight)?;
+        }
         let history = lez::history_of(&*zone, ctx).await?;
         let vault_count = eth::view(&self.p, self.r.vault, IVault::nextLeafIndexCall {}, None).await?;
         let imported = history.roots.iter().copied().max().unwrap_or(0);
@@ -398,12 +801,25 @@ impl Daemon {
                     "block": plan.block_number, "blockHash": hx(&plan.block_hash), "previous": plan.imported,
                     "vaultCount": vault_count, "accounts": plan.call.mentions.len(),
                 });
+                // Kept from before the send: a kill or a lost answer after it is resolved by the next rounds.
+                let mut record = ImportInflight {
+                    leaf_count: plan.leaf_count,
+                    writes: borsh::to_vec(&plan.writes)?.into(),
+                    tx: "sending".into(),
+                    at: unix_now(),
+                };
+                write_atomic(&inflight, &serde_json::to_vec_pretty(&record)?)?;
                 match zone.submit(&plan.call).await {
                     Ok(tx) => {
+                        record.tx = tx.clone();
+                        write_atomic(&inflight, &serde_json::to_vec_pretty(&record)?)?;
                         // Applied when root(cid, n) holds what the dry run said the import writes.
                         let at = ferrata_lez_bridge_wire::root_actor(ctx.program, &ctx.cid, plan.leaf_count);
                         let applied =
                             matches!(lez::read(&*zone, at).await?, Some(BridgeState::Root(r)) if r == plan.writes);
+                        if applied {
+                            std::fs::remove_file(&inflight)?;
+                        }
                         fields["tx"] = json!(tx);
                         fields["applied"] = json!(applied);
                         log(&s, if applied { "root-imported" } else { "root-import-unconfirmed" }, fields);
@@ -411,6 +827,7 @@ impl Daemon {
                     }
                     Err(e) => {
                         fields["reason"] = json!(format!("{e:#}"));
+                        fields["keptInFlight"] = json!(true);
                         log(&s, "root-import-failed", fields);
                         false
                     }
@@ -428,13 +845,31 @@ impl Daemon {
         Ok(done)
     }
 
+    /// After a send that failed: a reverted transaction is resolved now (its record goes, nothing more comes of
+    /// it); one that may still be mined stays in flight for the next round.
+    async fn after_failed_send(&self, key: &str) -> Result<()> {
+        if let Some(f) = Inflight::load(&self.state)?.filter(|f| f.key == key) {
+            if let Some(h) = f.hash {
+                if let Ok(Some(rc)) = self.p.get_transaction_receipt(h).await {
+                    if !rc.status() {
+                        Inflight::clear(&self.state)?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     async fn job(&mut self, file: &Path, v: &relayer::VaultView) -> Result<serde_json::Value> {
         let job: Job = serde_json::from_slice(&std::fs::read(file)?).context("not a relayer job")?;
+        let name = file.file_name().map(|n| n.to_string_lossy().into_owned());
+        let name = name.as_deref();
         match job {
             Job::Release { journal, seal } => {
                 let (req, input) =
                     self.r.plan_release(&self.p, v, &relayer::unhex(&journal)?, relayer::unhex(&seal)?.into()).await?;
-                let (rc, via) = self.send(input, "release").await?;
+                let key = format!("release:{:#x}", req.nullifier);
+                let (rc, via) = self.send(input, "release", &key, name).await?;
                 self.tokens.insert(req.token);
                 let paid = relayer::relay_fee_paid(&rc, self.r.me);
                 Ok(json!({
@@ -457,7 +892,8 @@ impl Daemon {
                 let seal = tokio::task::block_in_place(|| relayer::wrap_release(&receipt, image.0, &cmd, &work))?;
                 let wrap_s = started.elapsed().as_secs_f64();
                 let (req, input) = self.r.plan_release(&self.p, v, &journal, seal.into()).await?;
-                let (rc, via) = self.send(input, "release").await?;
+                let key = format!("release:{:#x}", req.nullifier);
+                let (rc, via) = self.send(input, "release", &key, name).await?;
                 self.tokens.insert(req.token);
                 let paid = relayer::relay_fee_paid(&rc, self.r.me);
                 Ok(json!({
@@ -470,8 +906,9 @@ impl Daemon {
             Job::Checkpoint { journal, seal } => {
                 let journal = relayer::unhex(&journal)?;
                 let input = self.r.plan_candidate(&self.p, v, &journal, relayer::unhex(&seal)?.into()).await?;
-                let (rc, via) = self.send(input, "submitCandidate").await?;
                 let c = relayer::checkpoint_from_journal(&journal)?.checkpoint;
+                let key = format!("submitCandidate:{:#x}", c.newState);
+                let (rc, via) = self.send(input, "submitCandidate", &key, name).await?;
                 Ok(
                     json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
                 )
@@ -538,6 +975,25 @@ fn sequencer(_cli: &Cli, _rpc: &str) -> Result<Zone> {
 pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Option<String>>) -> Result<()> {
     let url = cli.eth_rpc.clone().ok_or_else(|| anyhow!("--eth-rpc is required"))?;
     let vault = cli.vault.ok_or_else(|| anyhow!("--vault is required"))?;
+    // An endpoint that does not answer at start is waited for, up to --startup-wait seconds (R.06).
+    {
+        let probe = eth::provider(&url)?;
+        let t0 = std::time::Instant::now();
+        let mut delay = 1u64;
+        loop {
+            match probe.get_chain_id().await {
+                Ok(_) => break,
+                Err(e) if t0.elapsed().as_secs() < cli.startup_wait && stop.borrow().is_none() => {
+                    log(&sink, "waiting-for-rpc", json!({ "reason": e.to_string(), "waitedSecs": t0.elapsed().as_secs() }));
+                    tokio::time::sleep(Duration::from_secs(delay)).await;
+                    delay = (delay * 2).min(30);
+                }
+                Err(e) => {
+                    return Err(anyhow!("the Ethereum endpoint did not answer within {} s: {e}", cli.startup_wait))
+                }
+            }
+        }
+    }
     let logos = cli.send_via == "logos";
     let (p, me) = match (&cli.keystore, &cli.password_file, cli.unlocked) {
         (None, None, None) if logos => {
@@ -583,6 +1039,15 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         None
     };
     std::fs::create_dir_all(&cli.state)?;
+    // One daemon per state directory: two would each think the in-flight record theirs.
+    let _lock = if matches!(cli.command, Command::Run { .. }) {
+        let lock = std::fs::OpenOptions::new().create(true).truncate(false).write(true).open(cli.state.join("lock"))?;
+        lock.try_lock()
+            .map_err(|_| anyhow!("another ferrata-relayer runs on {} (its lock is held)", cli.state.display()))?;
+        Some(lock)
+    } else {
+        None
+    };
 
     let zone = match (&cli.sequencer, &cli.lez_devnet) {
         (None, None) => None,
@@ -616,6 +1081,10 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         rule_b: eth::view(&p_mode, vault, IRelayVault::modeCall {}, None).await? == 1,
         max_job_age: cli.max_job_age,
         wrap_command: cli.wrap_command.clone(),
+        receipt_timeout: cli.receipt_timeout,
+        import_wait: cli.import_wait,
+        fence: Fence::load(&cli.state),
+        at: None,
         import_roots: cli.import_roots,
         import_every: cli.import_every,
         import_done: std::fs::read(cli.state.join("root-import.json"))

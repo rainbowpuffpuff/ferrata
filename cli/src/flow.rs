@@ -107,6 +107,25 @@ fn vault_refusal(name: &str, how: &str) -> anyhow::Error {
     anyhow!(codes::vault_refusal(&codes::selector(name), how).expect("a known vault error"))
 }
 
+/// The vault's freezes of `pairs` (a `*FrozenUntil` value and its error), checked before sending against the
+/// latest block's time: the first one in force, as the vault's own error, with the time it ends (U.08).
+async fn vault_freeze(eth: &Eth, pairs: [(U256, &str); 2]) -> Result<()> {
+    let now = eth::now(&eth.p).await?;
+    for (until, name) in pairs {
+        if until > U256::from(now) {
+            let at = u64::try_from(until).unwrap_or(u64::MAX);
+            return Err(vault_refusal(
+                name,
+                &format!(
+                    "checked before sending: frozen until Ethereum time {at} ({}), unless the freeze authority lifts it sooner",
+                    units::utc(at)
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// The fees a release of `amount` of `token` pays now: (denomination index, burn fee, checkpoint
 /// fee, relay fee) of the fee schedule in force.
 pub async fn release_fees(eth: &Eth, token: Address, amount: u128) -> Result<(u8, u128, u128, u128)> {
@@ -171,6 +190,17 @@ pub async fn deposit(
         o.gap
     );
     let price = eth::deposit_price(&eth.p, eth.vault, o.token, o.denomination).await?;
+    vault_freeze(
+        eth,
+        [
+            (eth::view(&eth.p, eth.vault, IVault::depositsFrozenUntilCall {}, None).await?, "DepositsAreFrozen"),
+            (
+                eth::view(&eth.p, eth.vault, IVault::tokenDepositsFrozenUntilCall { token: o.token }, None).await?,
+                "TokenDepositsAreFrozen",
+            ),
+        ],
+    )
+    .await?;
     let (decimals, symbol) = eth::token_meta(&eth.p, o.token).await?;
     let j = eth::view(&eth.p, eth.vault, IVault::depositCountCall { depositor }, None).await?;
     let keys = seed.bridge_keys();
@@ -643,18 +673,17 @@ pub async fn release_burn<L: Ledger>(
     }
     let token = Address::from(row.owned.burn.note.token);
     let amount = units::word_to_u128(&row.owned.burn.note.amount)?;
-    let now = eth::now(&eth.p).await?;
-    for (until, name) in [
-        (eth::view(&eth.p, eth.vault, IVault::releasesFrozenUntilCall {}, None).await?, "ReleasesAreFrozen"),
-        (
-            eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?,
-            "TokenReleasesAreFrozen",
-        ),
-    ] {
-        if until > U256::from(now) {
-            return Err(vault_refusal(name, &format!("checked before sending: frozen until Ethereum time {until}")));
-        }
-    }
+    vault_freeze(
+        eth,
+        [
+            (eth::view(&eth.p, eth.vault, IVault::releasesFrozenUntilCall {}, None).await?, "ReleasesAreFrozen"),
+            (
+                eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?,
+                "TokenReleasesAreFrozen",
+            ),
+        ],
+    )
+    .await?;
     let (root, delay) = pick_root(eth, token, row.owned.burn.burn_index).await?;
     let (k, burn_fee, checkpoint_fee, registered_relay_fee) = release_fees(eth, token, amount).await?;
     let (relayer, fee) = match &o.via {
