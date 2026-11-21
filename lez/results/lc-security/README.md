@@ -26,5 +26,7 @@ RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc --test securi
 
 Ran on the build box (a Modal CPU container), 21 November 2026: `security_lc` 5 of 5 and `security_privacy` 2 of 2
 passed; with them the red team's `redteam_lc` (11) and `redteam_attest` (11), which share the test kit these tests
-extended, passed unchanged. Every file here is the output of that run (`u5-failure-modes.md` of its re-run after the
-two stale-checkpoint cases were added). No program, guest or image id changed.
+extended, passed unchanged. Every file here is the output of that run, except `u5-failure-modes.md` (its re-run
+after the two stale-checkpoint cases were added) and `f8-full-diff.md` (re-run at the branch's last commit; only the
+count of differing bytes moves between runs, as fresh random bytes sometimes coincide). No program, guest or image id
+changed.
