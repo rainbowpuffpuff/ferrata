@@ -154,7 +154,7 @@ struct CommandCredit {
 }
 
 impl relayer::Credit for CommandCredit {
-    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
+    async fn credit(&mut self, to: Hash, _keys: Option<&relayer::OneTimeKeys>, amount: u128) -> Result<String> {
         let command = self.template.replace("{to}", &hex::encode(to)).replace("{amount}", &amount.to_string());
         let out = std::process::Command::new("bash")
             .arg("-c")
@@ -204,12 +204,13 @@ async fn relay(
             DropRefusal::RootNotImported => "RootNotImported",
             DropRefusal::AlreadyClaimed => "AlreadyClaimed",
             DropRefusal::AlreadyDropped => "AlreadyDropped",
+            DropRefusal::KeysMismatch => "KeysMismatch",
         };
         return Ok((json!({ "step": "relay", "decision": "refused", "refusal": code, "reason": refusal.to_string(), "at": now }), false));
     }
     let mut credit = CommandCredit { template: credit_command.to_string() };
     let started = Instant::now();
-    let (j, tx) = relayer::gas_drop(&receipt_json, &ctx, |n| claimed.contains(n), &mut book, book_path, &mut credit, amount, now).await?;
+    let (j, tx) = relayer::gas_drop(&receipt_json, None, &ctx, |n| claimed.contains(n), &mut book, book_path, &mut credit, amount, now).await?;
     Ok((
         json!({
             "step": "relay", "decision": "sent", "at": now, "amount": amount.to_string(), "tx": tx,

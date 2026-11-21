@@ -107,9 +107,14 @@ pub struct Cli {
     /// The bridge program's account id on LEZ (32-byte hex).
     #[arg(long, env = "FERRATA_BRIDGE_ACCOUNT", global = true)]
     pub bridge_account: Option<String>,
-    /// The relayer's LEZ public account (32-byte hex): pays gas drops, named in gas-drop receipts.
+    /// The relayer's LEZ public account (32-byte hex): pays the fees of its public transactions (root
+    /// imports), named in gas-drop receipts and paid the relay fee by the claims.
     #[arg(long, env = "FERRATA_RELAYER_LEZ_ACCOUNT", global = true)]
     pub lez_account: Option<String>,
+    /// The private account of the relayer's seed that gas drops are sent from, sealed to each claimant's
+    /// one-time account (default: private account /0).
+    #[arg(long, default_value_t = 0, global = true)]
+    pub drop_from_private: u32,
     /// The gas-drop guest's image id (32-byte hex).
     #[arg(long, env = "FERRATA_GASDROP_IMAGE_ID", global = true)]
     pub gasdrop_image_id: Option<String>,
@@ -932,7 +937,9 @@ impl Daemon {
                     json!({ "kind": "candidate", "newState": c.newState, "burnRoot": c.burnRoot, "burnCount": c.burnCount, "tx": rc.transaction_hash, "gasUsed": rc.gas_used, "via": via.to_json() }),
                 )
             }
-            Job::GasDrop { receipt } => {
+            Job::GasDrop { receipt, one_time_npk, one_time_vpk } => {
+                let keys = relayer::OneTimeKeys::from_hex(&one_time_npk, &one_time_vpk)
+                    .context("the job's one-time account keys (oneTimeNpk, oneTimeVpk)")?;
                 let (Some((zone, ctx)), Some(image_id), Some(me)) =
                     (self.zone.as_mut(), self.gasdrop_image_id, self.lez_me)
                 else {
@@ -952,6 +959,7 @@ impl Daemon {
                 let claimed = |n: &[u8; 32]| lez::is_claimed(&ctx2, &history, n);
                 let (j, tx) = relayer::gas_drop(
                     &serde_json::to_vec(&receipt)?,
+                    Some(&keys),
                     &dctx,
                     claimed,
                     &mut book,
@@ -962,7 +970,7 @@ impl Daemon {
                 )
                 .await?;
                 Ok(
-                    json!({ "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address), "amount": self.drop_amount.to_string(), "tx": tx }),
+                    json!({ "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address), "amount": self.drop_amount.to_string(), "sealed": true, "tx": tx }),
                 )
             }
         }
@@ -981,7 +989,18 @@ fn sequencer(cli: &Cli, rpc: &str) -> Result<Zone> {
         &seed,
     )?;
     let payer = cli.lez_account.as_deref().map(account).transpose()?;
-    Ok(Zone::Sequencer(lez::Sequencer { wallet, payer, bridge_program: None, synced: false }))
+    let drop_from = seed
+        .private_account_ids(cli.drop_from_private + 1)?
+        .pop()
+        .ok_or_else(|| anyhow!("no private account /{} in the relayer's seed", cli.drop_from_private))?;
+    Ok(Zone::Sequencer(lez::Sequencer {
+        wallet,
+        payer,
+        bridge_program: None,
+        synced: false,
+        private_fee_payer: None,
+        drop_from: Some(drop_from),
+    }))
 }
 
 #[cfg(not(feature = "lez-wallet"))]

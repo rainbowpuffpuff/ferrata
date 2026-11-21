@@ -851,7 +851,12 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         use ferrata_cli::relayer::{self as rl, DropBook, DropContext, DropRefusal};
         struct Credits(Vec<([u8; 32], u128)>);
         impl rl::Credit for Credits {
-            async fn credit(&mut self, to: [u8; 32], amount: u128) -> Result<String> {
+            async fn credit(
+                &mut self,
+                to: [u8; 32],
+                _keys: Option<&rl::OneTimeKeys>,
+                amount: u128,
+            ) -> Result<String> {
                 // Stand-in: the harness does not model LEZ's native token program; the sequencer
                 // implementation (`impl Credit for lez::Sequencer`) sends a native transfer.
                 self.0.push((to, amount));
@@ -916,10 +921,10 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         let replay = rl::check_gas_drop(&receipt_json, &DropContext { me: [0x77; 32], ..dctx }, claimed, &book);
         ensure!(replay == Err(DropRefusal::OtherRelayer), "a receipt replayed to another relayer: {replay:?}");
         let (j, tx) =
-            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 0).await?;
+            rl::gas_drop(&receipt_json, None, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 0).await?;
         ensure!(j.nullifier == big.owned.nullifier, "the receipt's N is leaf 0's");
         let second =
-            rl::gas_drop(&receipt_json, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 1).await;
+            rl::gas_drop(&receipt_json, None, &dctx, claimed, &mut book, &book_path, &mut credits, 1_000_000, 1).await;
         ensure!(second.is_err() && credits.0.len() == 1, "one drop per N");
         println!(
             "GAS DROP: N {} -> one-time address {} ({tx}); replay to another relayer and a second drop refused",
@@ -941,6 +946,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         gap: 8,
         send: true,
         yes: true,
+        gas_drop: None,
     };
     let held = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
         .await
@@ -1312,6 +1318,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         gap: 8,
         send: true,
         yes: true,
+        gas_drop: None,
     };
     let held = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
         .await

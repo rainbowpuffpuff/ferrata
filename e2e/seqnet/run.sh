@@ -19,8 +19,8 @@
 #                         private holding and the private claim and burn through lez_core, each beside the plain path
 #                         (seqnet-chain) (hook-lezcore.sh)
 #   run.sh robust NAME    the cli round trip with two deposits, the relayer daemon's root import on the sequencer
-#                         (U.03), a claim killed between its proof and its sending and a burn killed after its sending
-#                         (R.07) (hook-robust.sh)
+#                         (U.03), the claims' fees paid from the relayer daemon's gas drops (U.05), a claim killed
+#                         between its proof and its sending and a burn killed after its sending (R.07) (hook-robust.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
@@ -61,7 +61,13 @@ build() {
     || { grep -E -A7 '^error' "$L/realblocks.log" | head -40; die "realblocks-crown build"; }
   ( cd "$REPO/bridge" && cargo build --release -p ferrata-e2e ) > "$L/e2e.log" 2>&1 \
     || { grep -E -A7 '^error' "$L/e2e.log" | head -40; die "ferrata-e2e build"; }
+  say "the gas-drop guest (bridge/guests' gasdrop, built by bridge's host crate with ~/.risc0, as cli/tests/relayer.sh)"
+  ( cd "$REPO/bridge" && env -u RISC0_HOME cargo build --release -p host ) > "$L/gasdrop.log" 2>&1 \
+    || { grep -E -A7 '^error' "$L/gasdrop.log" | head -40; die "the gas-drop guest build"; }
+  local gd; gd="$(find "$REPO/bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' | head -n 1)"
+  [ -n "$gd" ] || die "no gasdrop.bin under bridge/target"
   mkdir -p "$T/bin"
+  cp "$gd" "$T/bin/gasdrop.bin"
   cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
      "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
   say "the zone's bundle: crown-live-3's, with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"

@@ -503,6 +503,9 @@ pub enum DropRefusal {
     AlreadyClaimed,
     /// This relayer already sent the drop for this `N`.
     AlreadyDropped,
+    /// The one-time account's public keys do not derive the receipt's one-time address: the sealed
+    /// credit would go to another account than the one the receipt binds.
+    KeysMismatch,
 }
 
 impl std::fmt::Display for DropRefusal {
@@ -515,6 +518,9 @@ impl std::fmt::Display for DropRefusal {
             DropRefusal::RootNotImported => "refused: the root is not an imported root of this configuration",
             DropRefusal::AlreadyClaimed => "refused: the deposit with this N is already claimed",
             DropRefusal::AlreadyDropped => "refused: this N already had its drop",
+            DropRefusal::KeysMismatch => {
+                "refused: the one-time account's public keys do not derive the receipt's one-time address"
+            }
         };
         f.write_str(text)
     }
@@ -585,50 +591,119 @@ pub fn check_gas_drop(
     Ok(j)
 }
 
+/// The public keys of a gas drop's one-time private account, which the claimant hands over with the
+/// receipt: the relayer seals its credit to them, and they must derive the receipt's one-time address.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct OneTimeKeys {
+    /// The nullifier public key.
+    pub npk: Hash,
+    /// The viewing public key (its bytes as LEZ serialises it).
+    pub vpk: Vec<u8>,
+}
+
+impl OneTimeKeys {
+    /// From the job's hex fields.
+    pub fn from_hex(npk: &str, vpk: &str) -> Result<Self> {
+        Ok(Self { npk: crate::h32(npk)?, vpk: unhex(vpk)? })
+    }
+
+    /// The private account (LEZ's regular kind) these keys derive.
+    pub fn account_id(&self) -> Result<Hash> {
+        let vpk = lee_core::encryption::ViewingPublicKey::from_bytes(self.vpk.clone())
+            .map_err(|e| anyhow!("the one-time account's viewing key: {e:?}"))?;
+        let id = lee::AccountId::for_private_account(
+            &lee_core::NullifierPublicKey(self.npk),
+            &vpk,
+            &lee_core::PrivateAccountKind::Regular,
+        );
+        Ok(*id.value())
+    }
+}
+
 /// Sends the native credit of a gas drop.
 #[allow(async_fn_in_trait)]
 pub trait Credit {
-    /// Credits `amount` native LEZ to `to` from the relayer's account; returns the transaction (hex).
-    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String>;
+    /// Credits `amount` native LEZ to the one-time account `to` (whose public keys are `keys`, when the
+    /// request carries them) from the relayer's account; returns the transaction (hex).
+    async fn credit(&mut self, to: Hash, keys: Option<&OneTimeKeys>, amount: u128) -> Result<String>;
 }
 
-/// A sequencer endpoint through LEZ's wallet: a native transfer from the relayer's public account to
-/// the one-time address (an asynchronous credit the claim sweeps).
+/// A sequencer endpoint through LEZ's wallet: one native transfer from the relayer's private account,
+/// sealed to the one-time private account (`seal_destination` with its public keys), left pending for
+/// the claim, which sweeps it into its fee payer in the same proof (bridge.md §6; as LEZ v0.4.0-rc3's run,
+/// `lez/crown/driver/src/gasdrop.rs`). A public transfer would not do: no private claim can sweep it.
 #[cfg(feature = "lez-wallet")]
 impl Credit for crate::lez::Sequencer {
-    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
-        use wallet::program_facades::{native_token_transfer::NativeTokenTransfer, CreditDelivery};
-        let payer = self.payer.ok_or_else(|| anyhow!("no LEZ payer account for gas drops"))?;
-        let (hash, _) = NativeTokenTransfer(&self.wallet)
-            .transfer(
-                wallet::AccountIdentity::Public(payer),
-                wallet::AccountIdentity::PublicNoSign(lee::AccountId::new(to)),
-                amount,
-                CreditDelivery::Automatic,
+    async fn credit(&mut self, to: Hash, keys: Option<&OneTimeKeys>, amount: u128) -> Result<String> {
+        use lee::privacy_preserving_transaction::circuit::ProgramCatalog;
+        use lee_core::native_token::{self, NATIVE_TOKEN_PROGRAM_ID};
+        use wallet::AccountIdentity;
+        let keys = keys.ok_or_else(|| {
+            anyhow!("refused: no public keys of the one-time account (oneTimeNpk, oneTimeVpk): the credit is sealed to that private account")
+        })?;
+        ensure!(keys.account_id()? == to, "{}", DropRefusal::KeysMismatch);
+        let from = self
+            .drop_from
+            .ok_or_else(|| anyhow!("no private LEZ account of this relayer to send gas drops from"))?;
+        let npk = lee_core::NullifierPublicKey(keys.npk);
+        let vpk = lee_core::encryption::ViewingPublicKey::from_bytes(keys.vpk.clone())
+            .map_err(|e| anyhow!("the one-time account's viewing key: {e:?}"))?;
+        // The relayer's own notes and pending credits, as the zone holds them now.
+        self.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the relayer's LEZ wallet: {e}"))?;
+        let recipient = AccountIdentity::PrivateForeign { npk, vpk, kind: lee_core::PrivateAccountKind::Regular };
+        let (_, mut delivery) = self
+            .wallet
+            .seal_destination(recipient.select_program_actor_state(NATIVE_TOKEN_PROGRAM_ID))
+            .map_err(|e| anyhow!("sealing the credit to the one-time account: {e}"))?;
+        // As LEZ's native transfer facade does for a credit left pending (program_facades/mod.rs).
+        delivery.promotions.listed_only = true;
+        let message = lee::program::Program::serialize_message(native_token::Message::Transfer {
+            to: lee::AccountId::new(to),
+            amount,
+        })
+        .map_err(|e| anyhow!("the transfer's message: {e:?}"))?;
+        // Without NativeTokenTransfer's pre-check of the note balance: the send claims the relayer's pending
+        // credits first (a freshly funded account holds only those).
+        let sent = self
+            .wallet
+            .send_tx_with_pre_check(
+                vec![AccountIdentity::PrivateOwned(from).balance()],
+                0,
+                message,
+                &ProgramCatalog::default(),
+                None,
+                delivery,
+                None,
+                |_| Ok(()),
             )
-            .await
-            .map_err(|e| anyhow!("the native transfer failed: {e:?}"))?;
-        Ok(format!("{hash:?}"))
+            .await;
+        self.synced = false;
+        let (hash, _) = sent.map_err(|e| anyhow!("the sealed credit was not sent: {e}: {e:?}"))?;
+        Ok(hash.to_string())
     }
 }
 
 /// The relayer's zone: a sequencer sends the credit; the devnet's zone (a stand-in) sends none.
 impl Credit for crate::lez::Zone {
-    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
+    async fn credit(&mut self, to: Hash, keys: Option<&OneTimeKeys>, amount: u128) -> Result<String> {
         match self {
             #[cfg(feature = "lez-wallet")]
-            crate::lez::Zone::Sequencer(s) => s.credit(to, amount).await,
+            crate::lez::Zone::Sequencer(s) => s.credit(to, keys, amount).await,
             crate::lez::Zone::Devnet(_) => {
-                let _ = (to, amount);
+                let _ = (to, keys, amount);
                 bail!("refused: the devnet's zone sends no native credit (gas drops need a sequencer)")
             }
         }
     }
 }
 
-/// Checks a gas-drop request and, if it passes, sends the credit and records it (one per `N`).
+/// Checks a gas-drop request and, if it passes, sends the credit and records it (one per `N`). `keys`,
+/// the one-time account's public keys, must derive the receipt's one-time address (checked before the
+/// drop is recorded).
+#[allow(clippy::too_many_arguments)]
 pub async fn gas_drop<C: Credit>(
     receipt_json: &[u8],
+    keys: Option<&OneTimeKeys>,
     ctx: &DropContext<'_>,
     claimed: impl Fn(&Hash) -> bool,
     book: &mut DropBook,
@@ -638,13 +713,18 @@ pub async fn gas_drop<C: Credit>(
     now: u64,
 ) -> Result<(GasDropJournal, String)> {
     let j = check_gas_drop(receipt_json, ctx, claimed, book).map_err(|r| anyhow!("{r}"))?;
+    if let Some(k) = keys {
+        if k.account_id()? != j.one_time_address {
+            bail!("{}", DropRefusal::KeysMismatch);
+        }
+    }
     // Recorded before the credit is sent: a crash between the two cannot lead to a second drop for this N
     // after a restart. A credit that fails stays recorded as failed (it may have been sent); the operator
     // removes the entry only knowing it was not.
     let record = |tx: String| DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx };
     book.record(&j.nullifier, record("pending".into()));
     book.save(book_path)?;
-    match credit.credit(j.one_time_address, amount).await {
+    match credit.credit(j.one_time_address, keys, amount).await {
         Ok(tx) => {
             book.record(&j.nullifier, record(tx.clone()));
             book.save(book_path)?;
@@ -943,8 +1023,15 @@ pub enum Job {
     ReleaseSuccinct { receipt: serde_json::Value },
     /// A rule (B) checkpoint: the checkpoint journal and the Groth16 seal (hex).
     Checkpoint { journal: String, seal: String },
-    /// A gas drop: the receipt (JSON).
-    GasDrop { receipt: serde_json::Value },
+    /// A gas drop: the receipt (JSON) and the one-time private account's public keys (hex), which derive
+    /// the receipt's one-time address and which the relayer seals its credit to.
+    GasDrop {
+        receipt: serde_json::Value,
+        #[serde(rename = "oneTimeNpk")]
+        one_time_npk: String,
+        #[serde(rename = "oneTimeVpk")]
+        one_time_vpk: String,
+    },
 }
 
 /// Bytes from hex (with or without `0x`).

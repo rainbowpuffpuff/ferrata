@@ -7,16 +7,24 @@
 #      ImportRoot); then ferrata-relayer itself, --sequencer --import-roots (its own LEZ wallet: a published BIP-39 test
 #      phrase, never a wallet; its public account /0 paid native LEZ by seqnet-fund --public-only), run as a daemon until
 #      root(cid, 2) holds its import, then stopped with SIGTERM (its clean stop line)
-#   b. the gas drop's stand-in (seqnet-fund): native LEZ to the user's private account /0 for its fees
+#   b. U.05, the gas drop in the relayer daemon: ferrata-relayer run with --gasdrop-image-id and --drop-amount (its
+#      private account /0 funded by seqnet-fund); every claim of the user names that relayer and its inbox
+#      (--gas-drop-inbox): the tool makes a one-time private account, proves the gas-drop receipt over the claim's
+#      witness, hands the job (the receipt and the account's public keys) to the relayer's inbox, waits for the
+#      relayer's credit sealed to that account and sends the claim with that account as fee payer (its dry run must
+#      sweep the credit); no stand-in pays a claim's fee. One drop per deposit; the daemon stopped by SIGTERM after
+#      the claims. The burn's fee: the stand-in (seqnet-fund) still pays it (burns with a drop are not built)
 #   c. R.07, a claim killed between its proof and its sending: `ferrata claim --send --yes` with its sequencer endpoint
 #      behind e2e/netfault/holdproxy.py, which traps the claim's sendTransaction (built and proven by LEZ's wallet,
-#      never forwarded); the tool SIGKILLed; the zone holds no new transaction and the deposit is unclaimed; the same
-#      command again, straight to the sequencer: the deposit claimed once (the second deposit claimed after it)
+#      never forwarded; the gas drop's credit already applied); the tool SIGKILLed; the zone holds no new transaction
+#      and the deposit is unclaimed; the same command again, straight to the sequencer: the drop an earlier run
+#      recorded reused (no second job), the deposit claimed once (the second deposit, with its own drop, after it)
 #   d. R.07, a burn killed after its sending: `ferrata burn --amount 0.001` (of the 0.002 the two claims minted) with
 #      holdproxy holding its sendTransaction's answer (the burn reaches the sequencer, the tool never learns it); the
 #      tool SIGKILLed; the burn applied; the same command again: the tool finds the burn its record names on the zone
 #      and does not burn again (the private holding 0.001 less, once)
 #   e. the checkpoint, the release through the relayer, recover and status (as hook-cli.sh)
+# SEQNET_GAS_DROP=0: the claims' fees from the stand-in (seqnet-fund) instead of the relayer's drops (b skipped).
 # PASS/FAIL lines in $RUN/robust.md, the facts in $RUN/robust.json.
 set -uo pipefail
 . "$SEQNET_ENV"
@@ -30,6 +38,8 @@ pass=0; fail=0
 ok() { echo "- PASS $*" | tee -a "$R7"; pass=$((pass + 1)); say "PASS $*"; }
 bad() { echo "- FAIL $*" | tee -a "$R7"; fail=$((fail + 1)); say "FAIL $*"; }
 fact() { jq -n -c --arg k "$1" --argjson v "$2" '{($k): $v}' >> "$RJ"; }
+# The daemons' JSON lines (LEZ's wallet prints its sync, plain text, to the same standard output).
+jl() { grep '^{' "$1" 2>/dev/null; }
 # The zone's privacy-preserving transactions (the user's claims and burns are; the operator's, the relayer's and any
 # clock update are public), from seqnet-txs (LEZ's wallet library, a throwaway home and no keys).
 zone_txs() { "$BIN/seqnet-txs" --sequencer "$SEQ" --home "$W/txs-wallet-r7" --bridge-account "$BRIDGE" --attest-account "$ATTEST" 2>/dev/null \
@@ -56,11 +66,11 @@ say "operator: crown-driver crown-b --operator-only yes --import-roots no over c
 grep -E '^\[crown-b\]' "$RUN/lez/crown-b-operator.log" | tail -n 4 | tee -a "$RUN/run.log"
 RL="$W/relayer-lez"; mkdir -p "$RL"
 printf '%s\n' "$RELAYER_PHRASE" > "$RL/seed.txt"; printf 'seqnet-relayer\n' > "$RL/lez.pass"; chmod 600 "$RL/seed.txt" "$RL/lez.pass"
-"$BIN/seqnet-fund" --sequencer "$SEQ" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
-  --faucet-home "$W/faucet-relayer" --public-only > "$RL/fund.out" 2> "$RL/fund.err" || { tail -n 20 "$RL/fund.err"; die "seqnet-fund (the relayer)"; }
+"${PROVE[@]}" "$BIN/seqnet-fund" --sequencer "$SEQ" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
+  --faucet-home "$W/faucet-relayer" > "$RL/fund.out" 2> "$RL/fund.err" || { tail -n 20 "$RL/fund.err"; die "seqnet-fund (the relayer)"; }
 RELAYER_LEZ="$(grep '^{' "$RL/fund.out" | jq -r '.to_public_0_hex' | head -n 1)"
 grep '^{' "$RL/fund.out" > "$RUN/lez/relayer-fund.jsonl"
-say "the relayer's LEZ public account $RELAYER_LEZ funded (seqnet-fund --public-only)"
+say "the relayer's LEZ public account $RELAYER_LEZ and its private account /0 (its gas drops' source) funded (seqnet-fund)"
 RD_LOG="$RUN/lez/relayer-daemon.jsonl"
 "$BIN/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
   --state "$W/relayer" --sequencer "$SEQ" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
@@ -69,36 +79,60 @@ RD_LOG="$RUN/lez/relayer-daemon.jsonl"
 RD=$!
 imported=""
 for _ in $(seq 1 180); do
-  imported="$(jq -c 'select(.event == "root-imported" and .applied == true)' "$RD_LOG" 2>/dev/null | head -n 1)"
+  imported="$(jl "$RD_LOG" | jq -c 'select(.event == "root-imported" and .applied == true)' 2>/dev/null | head -n 1)"
   [ -n "$imported" ] && break
   kill -0 "$RD" 2>/dev/null || break
   sleep 5
 done
 kill -TERM "$RD" 2>/dev/null; wait "$RD" 2>/dev/null
-stopline="$(jq -c 'select(.event == "stop")' "$RD_LOG" 2>/dev/null | tail -n 1)"
+stopline="$(jl "$RD_LOG" | jq -c 'select(.event == "stop")' 2>/dev/null | tail -n 1)"
 if [ -n "$imported" ]; then
-  ok "U.03: ferrata-relayer imported root(cid, $(echo "$imported" | jq -r .leafCount)) on the running sequencer (tx $(echo "$imported" | jq -r .tx), record slot $(echo "$imported" | jq -r '.recordSlot // "?"'), recovered $(echo "$imported" | jq -r '.recovered // false')); $(jq -s 'map(select(.event == "root-import-unconfirmed" or .event == "root-import-pending")) | length' "$RD_LOG") rounds before it was applied"
+  ok "U.03: ferrata-relayer imported root(cid, $(echo "$imported" | jq -r .leafCount)) on the running sequencer (tx $(echo "$imported" | jq -r .tx), recovered $(echo "$imported" | jq -r '.recovered // false')); $(jl "$RD_LOG" | jq -s 'map(select(.event == "root-import-unconfirmed" or .event == "root-import-pending")) | length') rounds before it was applied"
   fact rootImport "$imported"
 else
-  bad "U.03: no root-imported line from the relayer daemon ($(tail -n 3 "$RD_LOG" | jq -c '{event, reason}' 2>/dev/null | tr '\n' ' '); $(tail -n 3 "$W/relayer-daemon.err"))"
+  bad "U.03: no root-imported line from the relayer daemon ($(jl "$RD_LOG" | tail -n 3 | jq -c '{event, reason}' 2>/dev/null | tr '\n' ' '); $(tail -n 3 "$W/relayer-daemon.err"))"
   die "the relayer's root import"
 fi
 if [ -n "$stopline" ] && [ "$(echo "$stopline" | jq -r .reason)" = SIGTERM ]; then ok "U.03: SIGTERM: a clean stop line ($stopline)"; else bad "U.03: no clean stop line on SIGTERM ($stopline)"; fi
 [ ! -e "$W/relayer/root-import-inflight.json" ] && ok "U.03: nothing left in flight in the relayer's state" || bad "U.03: an import left in flight"
 
-fund_private                                                               # b
+# ---- b. U.05: the relayer daemon's gas drops ---------------------------------------------------------------------------
+GAS_DROP="${SEQNET_GAS_DROP:-1}"
+if [ "$GAS_DROP" = 1 ]; then
+GASDROP_ELF="$BIN/gasdrop.bin"
+GASDROP_ID="$(r0vm --id --elf "$GASDROP_ELF" 2>/dev/null | tail -n 1)"
+[ -n "$GASDROP_ID" ] || die "the gas-drop guest's image id ($GASDROP_ELF)"
+DROP_AMOUNT=50000000
+DI="$W/relayer-inbox-drops"; mkdir -p "$DI"
+DD_LOG="$RUN/lez/relayer-drops.jsonl"
+say "the relayer daemon for gas drops: guest $GASDROP_ID, $DROP_AMOUNT native LEZ per drop, inbox $DI"
+"${PROVE[@]}" "$BIN/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" \
+  --state "$W/relayer" --sequencer "$SEQ" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" \
+  --lez-account "$RELAYER_LEZ" --bridge-account "$BRIDGE" --gasdrop-image-id "$GASDROP_ID" --drop-amount "$DROP_AMOUNT" \
+  run --inbox "$DI" --poll-secs 2 > "$DD_LOG" 2> "$W/relayer-drops.err" &
+DD=$!
+GD=(--relayer "$RELAYER_LEZ" --gas-drop-inbox "$DI" --gas-drop-elf "$GASDROP_ELF")
+else
+  fund_private; GD=()
+fi
 u 06-scan "${F[@]}" scan || die "scan"
 u 07-status "${F[@]}" status || die "status"
-u 08-claim-held "${F[@]}" claim --bridge-program "$BRIDGE_BIN" && die "the claim was not held by its delay"
+u 08-claim-held "${F[@]}" claim --bridge-program "$BRIDGE_BIN" "${GD[@]}" && die "the claim was not held by its delay"
+if [ "$GAS_DROP" = 1 ]; then
+  grep -q '^fee payer: a fresh one-time private account' "$RUN/user/08-claim-held.txt" \
+    && ok "U.05: the claim's dry run preselects the gas drop: $(grep -m1 '^fee payer:' "$RUN/user/08-claim-held.txt" | cut -c1-120)" \
+    || bad "U.05: the claim's dry run does not name the gas drop as its fee payer"
+fi
 let_claim_delay_pass "$RUN/user/08-claim-held.txt"
 
 # ---- c. R.07: a claim killed between its proof and its sending -----------------------------------------------------
-n0="$(zone_txs)"
 h="$(hits)"; echo "trap sendTransaction" > "$PX/ctl"
-say "R.07: the claim, its sendTransaction trapped by the proxy"
-( "${PROVE[@]}" "${FP[@]}" claim --bridge-program "$BRIDGE_BIN" --send --yes > "$RUN/user/09-claim-killed.txt" 2>&1 ) &
+say "R.07: the claim (its gas drop first), its sendTransaction trapped by the proxy"
+( "${PROVE[@]}" "${FP[@]}" claim --bridge-program "$BRIDGE_BIN" "${GD[@]}" --send --yes > "$RUN/user/09-claim-killed.txt" 2>&1 ) &
 CP=$!
+n0=""
 if wait_hit "$h"; then
+  n0="$(zone_txs)"   # the gas drop's credit is applied by now (the claim waits for it); the claim itself never left
   sleep 1; kill -9 "$CP" 2>/dev/null; wait "$CP" 2>/dev/null
   ok "R.07 claim: the tool SIGKILLed after its proof, with the claim's sendTransaction held unsent ($(tail -n 1 "$PX/ctl.hit"))"
 else
@@ -108,20 +142,46 @@ echo pass > "$PX/ctl"
 sleep 40   # more than two of the zone's blocks
 n1="$(zone_txs)"
 u 09b-recover-after-kill "${F[@]}" recover || die "recover"
-if [ "$n1" = "$n0" ] && grep -q 'unclaimed, claimable' "$RUN/user/09b-recover-after-kill.txt"; then
+if [ -n "$n0" ] && [ "$n1" = "$n0" ] && grep -q 'unclaimed, claimable' "$RUN/user/09b-recover-after-kill.txt"; then
   ok "R.07 claim: nothing reached the zone ($n0 private transactions before and after) and recovery from the seed still finds the deposit claimable"
 else
   bad "R.07 claim: the zone went from $n0 to $n1 private transactions, or the deposit is no longer claimable"
 fi
-u 10-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" --send --yes || die "the private claim"
+u 10-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" "${GD[@]}" --send --yes || die "the private claim"
 wait_tx "$RUN/user/10-claim.txt"
-# The second deposit (its own delay).
-if ! u 10b-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" --send --yes; then
-  let_claim_delay_pass "$RUN/user/10b-claim.txt"
-  u 10c-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" --send --yes || die "the second private claim"
-  wait_tx "$RUN/user/10c-claim.txt"
+if [ "$GAS_DROP" != 1 ]; then :
+elif grep -q 'recorded for this deposit by an earlier run' "$RUN/user/10-claim.txt" && grep -q '^  no new job' "$RUN/user/10-claim.txt"; then
+  ok "R.07 claim + U.05: the claim again reused the one-time account and the credit the killed run had (no second job): $(grep -m1 '^gas drop:' "$RUN/user/10-claim.txt" | cut -c1-150)"
 else
-  wait_tx "$RUN/user/10b-claim.txt"
+  bad "R.07 claim + U.05: the claim again did not reuse the earlier run's drop ($(grep -m1 '^gas drop:' "$RUN/user/10-claim.txt" | cut -c1-150))"
+fi
+# The second deposit (its own delay, its own drop).
+if ! u 10b-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" "${GD[@]}" --send --yes; then
+  let_claim_delay_pass "$RUN/user/10b-claim.txt"
+  u 10c-claim "${PROVE[@]}" "${F[@]}" claim --bridge-program "$BRIDGE_BIN" "${GD[@]}" --send --yes || die "the second private claim"
+  C2="$RUN/user/10c-claim.txt"
+else
+  C2="$RUN/user/10b-claim.txt"
+fi
+wait_tx "$C2"
+if [ "$GAS_DROP" = 1 ]; then
+kill -TERM "$DD" 2>/dev/null; wait "$DD" 2>/dev/null
+drops="$(jl "$DD_LOG" | jq -s -c '[.[] | select(.event == "job-done" and .result.kind == "gas-drop") | .result]' 2>/dev/null)"
+ndrops="$(echo "${drops:-[]}" | jq 'length')"
+nsealed="$(echo "${drops:-[]}" | jq '[.[] | select(.sealed == true)] | length')"
+nref="$(jl "$DD_LOG" | jq -s '[.[] | select(.event == "job-refused")] | length' 2>/dev/null)"
+fact gasDrops "${drops:-[]}"
+# LEZ's wallet prints each claim's dry run: its fee payer (the one-time account) and the pending credit it claims.
+sweeps="$(cat "$RUN/user/10-claim.txt" "$C2" | grep -c -E 'claims: +1 pending credit\(s\), [1-9][0-9]* to the payer' || true)"
+fact claimSweeps "${sweeps:-0}"
+if [ "$ndrops" = 2 ] && [ "$nsealed" = 2 ] && [ "$sweeps" = 2 ] && grep -q '^gas drop: .*(new).*sealed' "$C2"; then
+  ok "U.05: the relayer daemon sent 2 gas drops, one per deposit, each sealed to the claim's one-time account (${nref:-0} jobs refused); both claims' dry runs claim that credit to their one-time fee payer, and both applied: $(grep -m1 '^gas drop:' "$C2" | cut -c1-150)"
+else
+  bad "U.05: the daemon's gas drops: $ndrops ($nsealed sealed, ${nref:-0} refused); claims sweeping a credit: $sweeps of 2; the second claim: $(grep -m1 '^gas drop:' "$C2" | cut -c1-150)"
+fi
+dstop="$(jl "$DD_LOG" | jq -c 'select(.event == "stop")' 2>/dev/null | tail -n 1)"
+[ -n "$dstop" ] && ok "U.05: the gas-drop daemon stopped cleanly on SIGTERM ($dstop)" || bad "U.05: no stop line from the gas-drop daemon"
+fund_private   # the burn's fee: the stand-in (burns with a drop are not built)
 fi
 u 11-recover "${F[@]}" recover || die "recover"
 claimed="$(grep -c '  claimed$' "$RUN/user/11-recover.txt" || true)"

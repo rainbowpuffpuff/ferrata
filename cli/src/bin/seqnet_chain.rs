@@ -616,7 +616,14 @@ fn main() -> Result<()> {
         let program = AccountId::new(h32(&a.bridge_account)?);
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
         let ctx = Context { program, cid: cid.0, chain_id, vault: eth.vault.into_array() };
-        let seq = Sequencer { wallet, payer: None, bridge_program: Some(a.bridge_program.clone()), synced: false };
+        let seq = Sequencer {
+            wallet,
+            payer: None,
+            bridge_program: Some(a.bridge_program.clone()),
+            synced: false,
+            private_fee_payer: None,
+            drop_from: None,
+        };
         let user = eth::keystore_signer(&a.keystore, &a.password_file)?.address();
         anyhow::Ok(Chain { a, eth, seq, ctx, seed, user })
     })?;

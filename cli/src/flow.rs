@@ -338,6 +338,49 @@ pub struct ClaimOpts {
     pub gap: u32,
     pub send: bool,
     pub yes: bool,
+    /// A private claim's LEZ fee paid from that relayer's gas drop (bridge.md §6): on whenever the relayer's
+    /// inbox is known; `None`: paid by the private account that proves.
+    pub gas_drop: Option<GasDropOpts>,
+}
+
+/// Where a claim's gas drop is asked for ([`lez::GasDropAsk`]).
+#[derive(Clone, Debug)]
+pub struct GasDropOpts {
+    /// The relayer's inbox (a directory).
+    pub inbox: PathBuf,
+    /// The gas-drop guest (ELF).
+    pub elf: PathBuf,
+    /// The record of this wallet's drops, beside LEZ's wallet.
+    pub record: PathBuf,
+    /// How long to wait for the relayer's credit.
+    pub wait_secs: u64,
+}
+
+/// The gas-drop receipt's claim part: the private claim's witness under its root, with the configuration's
+/// chain and vault (the claim proves the same statement).
+fn claim_input(ctx: &Context, plan: &lez::ClaimPlan) -> Result<ferrata_bridge_core::encoding::ClaimInput> {
+    use ferrata_bridge_core::{encoding::ClaimInput, inbound::ClaimWitness, tree::MerklePath};
+    let ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { witness: w, .. } = &plan.call.message else {
+        bail!("a gas drop pays a private claim's fee: this claim is not private");
+    };
+    let siblings: [Hash; 32] =
+        w.path.clone().try_into().map_err(|_| anyhow!("the claim's path is not 32 siblings"))?;
+    let kind = DestKind::from_byte(w.kind).ok_or_else(|| anyhow!("the claim's destination kind {}", w.kind))?;
+    Ok(ClaimInput {
+        root: plan.root,
+        chain_id: chain_id_u256(ctx.chain_id),
+        vault: ctx.vault,
+        witness: ClaimWitness {
+            depositor: w.depositor,
+            token: w.token,
+            amount: w.amount,
+            leaf_index: w.leaf_index,
+            path: MerklePath { directions: w.leaf_index as u32, siblings },
+            s: w.s,
+            kind,
+            dest: w.dest,
+        },
+    })
 }
 
 pub struct Claimed {
@@ -398,6 +441,10 @@ pub async fn claim<L: Ledger>(
         .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
         .collect();
     let plan = lez::plan_claim(ledger, ctx, &leaves, &row.owned, &history, private, o.relayer, prover).await?;
+    let drop = if private { o.gas_drop.as_ref() } else { None };
+    if drop.is_some() && o.relayer.is_none() {
+        bail!("a gas drop is asked of the relayer the claim names: add --relayer (its LEZ account), or --no-gas-drop to pay the LEZ fee from your own private account");
+    }
     let (decimals, symbol) = eth::token_meta(&eth.p, Address::from(d.token)).await?;
     let show = |x: u128| units::show(x, decimals, &symbol);
     let amount = units::word_to_u128(&d.amount)?;
@@ -423,7 +470,11 @@ pub async fn claim<L: Ledger>(
         "  cost         nothing more in {symbol}: the mint fee {} and the relay fee {} were paid with the deposit; the LEZ fee is paid {}",
         show(plan.mint_fee),
         show(plan.relay_fee),
-        if private { "inside the proof, by the private account that proves" } else { "by the payer account, in public" }
+        match (private, drop) {
+            (true, Some(_)) => "inside the proof, by a one-time private account the relayer's gas drop funds",
+            (true, None) => "inside the proof, by the private account that proves",
+            (false, _) => "by the payer account, in public",
+        }
     ));
     out.line(format!(
         "  delay        {hours} h after the deposit: from Ethereum block {from_block} (now {}){}",
@@ -438,6 +489,12 @@ pub async fn claim<L: Ledger>(
         fee_hidden: private,
     });
     out.extend(privacy::render(if private { &privacy::CLAIM } else { &privacy::CLAIM_PLAINTEXT }, &leaks));
+    if private {
+        out.line(match drop {
+            Some(_) => "fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit",
+            None => "fee payer: your private account that proves; its native LEZ came from somewhere (a faucet or a purchase can link it to you); a relayer's gas drop avoids that (--gas-drop-inbox)",
+        });
+    }
     out.line(format!("public: {}", lez::reveals(&plan.call)));
     if held && !o.no_delay {
         bail!(
@@ -449,6 +506,31 @@ pub async fn claim<L: Ledger>(
         bail!("refusing the plaintext path without --i-accept-plaintext-links-deposit: it links this mint to its deposit for everyone; claim privately (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if let Some(g) = drop {
+            let ask = lez::GasDropAsk {
+                claim: claim_input(ctx, &plan)?,
+                nullifier: plan.nullifier,
+                relayer: o.relayer.expect("checked above"),
+                inbox: g.inbox.clone(),
+                elf: g.elf.clone(),
+                record: g.record.clone(),
+                wait_secs: g.wait_secs,
+            };
+            let done = ledger.gas_drop_fee_payer(&ask).await?;
+            out.line(format!(
+                "gas drop: one-time account {} ({}); the relayer's credit of {} native LEZ{} pending to it after {:.0} s{}",
+                hx(done.one_time.value()),
+                if done.resumed { "recorded for this deposit by an earlier run" } else { "new" },
+                done.credit,
+                if done.sealed { ", sealed," } else { "" },
+                done.secs,
+                done.prove_secs.map(|p| format!(" (receipt proven in {p:.1} s)")).unwrap_or_default()
+            ));
+            match &done.job {
+                Some(j) => out.line(format!("  the job (receipt and the account's public keys) went to {}", j.display())),
+                None => out.line("  no new job: an earlier run had handed this deposit's job to the relayer"),
+            }
+        }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));
         Some(h)

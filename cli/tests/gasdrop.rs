@@ -18,7 +18,7 @@ fn artifacts() -> PathBuf {
 #[derive(Default)]
 struct Recorded(Vec<([u8; 32], u128)>);
 impl Credit for Recorded {
-    async fn credit(&mut self, to: [u8; 32], amount: u128) -> Result<String> {
+    async fn credit(&mut self, to: [u8; 32], _keys: Option<&relayer::OneTimeKeys>, amount: u128) -> Result<String> {
         self.0.push((to, amount));
         Ok(format!("credit {}", self.0.len()))
     }
@@ -65,17 +65,29 @@ async fn one_drop_per_n_on_a_real_receipt() -> Result<()> {
     let redirected = serde_json::to_vec(&redirected)?;
     assert!(matches!(relayer::check_gas_drop(&redirected, &ctx, |_| false, &book), Err(DropRefusal::BadReceipt(_))));
 
+    // The one-time account's public keys must derive the receipt's one-time address (the credit is sealed to
+    // them): another account's keys are refused before anything is recorded or sent.
+    let vpk = lee_core::encryption::ViewingPublicKey::from_seed(&[1; 32], &[2; 32]);
+    let stranger = relayer::OneTimeKeys { npk: [3; 32], vpk: vpk.to_bytes().to_vec() };
+    assert_ne!(stranger.account_id()?, j.one_time_address);
+    let refused =
+        relayer::gas_drop(&receipt, Some(&stranger), &ctx, |_| false, &mut book, &book_path, &mut credit, 50_000, 1)
+            .await;
+    assert!(refused.unwrap_err().to_string().contains("do not derive the receipt's one-time address"));
+    assert!(credit.0.is_empty(), "nothing sent");
+    assert_eq!(relayer::check_gas_drop(&receipt, &ctx, |_| false, &DropBook::load(&book_path)?).map(|_| ()), Ok(()));
+
     // The drop: sent once, recorded on disk; the second request for the same N is refused, also after a restart.
     let (dropped, tx) =
-        relayer::gas_drop(&receipt, &ctx, |_| false, &mut book, &book_path, &mut credit, 50_000, 1).await?;
+        relayer::gas_drop(&receipt, None, &ctx, |_| false, &mut book, &book_path, &mut credit, 50_000, 1).await?;
     assert_eq!(dropped, j);
     assert_eq!(credit.0, vec![(j.one_time_address, 50_000)]);
     println!("drop sent: N {} -> {} ({tx})", ferrata_cli::hx(&j.nullifier), ferrata_cli::hx(&j.one_time_address));
-    let again = relayer::gas_drop(&receipt, &ctx, |_| false, &mut book, &book_path, &mut credit, 50_000, 2).await;
+    let again = relayer::gas_drop(&receipt, None, &ctx, |_| false, &mut book, &book_path, &mut credit, 50_000, 2).await;
     assert!(again.unwrap_err().to_string().contains("already had its drop"));
     let reloaded = DropBook::load(&book_path)?;
     assert_eq!(relayer::check_gas_drop(&receipt, &ctx, |_| false, &reloaded).unwrap_err(), DropRefusal::AlreadyDropped);
     assert_eq!(credit.0.len(), 1, "one credit per N");
-    println!("gas drop: 1 credit for N; refused: other relayer, other configuration, root not imported, claimed, wrong image, changed journal, second drop (also after restart)");
+    println!("gas drop: 1 credit for N; refused: other relayer, other configuration, root not imported, claimed, wrong image, changed journal, keys of another account, second drop (also after restart)");
     Ok(())
 }
