@@ -43,6 +43,17 @@ Modal containers, one per transition: 16 CPUs and 32768 MiB each (request = limi
 | consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
 
+## The proven update path: a whole finality update in one private transaction
+
+`prove_private` (`lez/harness/src/bin/prove_private.rs`, `lez/RESULTS.md` §3): the program's `VerifyAll`
+transition (step 1, Miller loops, final exponentiation, `ApplyVerified`) at a private account's actor, the fee
+transfer, and LEZ's privacy-preserving circuit over both, proven for real (`execute_and_prove`), then settled
+through LEZ's state machine with the receipt verified; the update is mainnet's (period 1899 fixture).
+
+| run | private transition: user cycles (segments) | `execute_and_prove` s | peak RSS GiB | receipt B | transaction B | settled: execution gas / storage gas | settle exit | machine |
+|---|---:|---:|---:|---:|---:|---|---:|---|
+| 1 | 9,049,362 (10) | 1673.6 | 9.21 | 227,120 | 231,114 | 485,298 / 224,063 then 485,298 / 224,063 | 0 | AMD Zen 3, 16 CPUs |
+
 ## Per transition
 
 | n | action | handler | exec cycles | user cycles | total cycles (padded) | segments | composite s | composite B | succinct s | succinct InnerReceipt B | succinct Receipt B | verify ms | peak RSS GiB | CPU % | machine |

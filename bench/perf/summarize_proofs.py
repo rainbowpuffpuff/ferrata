@@ -108,7 +108,7 @@ def main():
             i = log.stem.split("-")[1]
             cyc = re.search(r"private transition \(VerifyAll, finality update\): ([\d,]+) user cycles, (\d+) segments", text)
             proof = re.search(r"REAL PROOF: execute_and_prove ([\d.]+) s.*?receipt \(.*?\) (\d+) bytes; transaction (\d+) bytes", text)
-            settled = re.findall(r"settled: execution gas ([\d,]+) .*?storage gas ([\d,]+)", text)
+            settled = re.findall(r"settled: execution gas ([\d,]*\d) .*?storage gas ([\d,]*\d)", text)
             sx = re.search(r"settle exit (\d+)", text)
             rss, _, _ = gnu_time(text)
             mp = out / f"machine-private-{i}.json"

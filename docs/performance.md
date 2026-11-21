@@ -100,8 +100,14 @@ transitions; each transition's machine is in the results file (mostly AMD Zen 3 
 | consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
 
-**The proven update path** (one private transaction proving a whole finality update, `VerifyAll`, this tree's
-program): PENDING_PRIVATE
+**The proven update path** (one private transaction proving a whole finality update, `VerifyAll` at a private
+account's actor, this tree's program `0x816d1fef…`; [`perf-proofs.md`](../lez/results/perf-proofs.md)): the private
+transition 9,049,362 user cycles in 10 segments, `execute_and_prove` **1,673.6 s** on a 16-CPU container (AMD Zen 3),
+peak **9.21 GiB**, receipt **227,120 B**, transaction 231,114 B; settled through LEZ's state machine with the receipt
+verified, charged **485,298** execution gas (the flat 409,764 plus a 75,534-cycle public part) and 224,063 storage
+gas. Earlier images: 3,240.5 s on the laptop CPU (16 threads, shared), 49.5 s on one L4, 895.6 s on a cloud CPU with
+32 prover threads ([`lez/RESULTS.md`](../lez/RESULTS.md) §3, §9). The same update in one public transaction
+(`VerifyAll`) is charged 9,115,325 execution gas and needs no proof.
 
 **The private attestation** (the consumer's read of a record and LEZ's privacy circuit, padded as the wallet pads
 it): 633.5 s at 16 CPUs and 1,254.8 s at 8 (3.34M user cycles, 6 segments), receipt 239,246 B, transaction 255,366 B,
@@ -139,22 +145,35 @@ takes every handoff of the mainnet replay and of Sepolia's 32 periods in one tra
 
 ### P.3 Tracking cost, apart from attestation cost
 
-Tracking (shared by every consumer of an instance) and attestation (per fact) are reported apart. Per
-update: public 9.2M execution gas (16.1M at a handoff), proven 0.70M with execution and storage gas added
-([`attestation.md`](design/attestation.md) §10). **Amortised** at the recommended cadence (one update per
-sync-committee period, plus one per hour while roots are imported; derived):
+**Measured over eight days of operation** ([`lez/results/perf-tracking.md`](../lez/results/perf-tracking.md), written by
+`python3 -I bench/perf/tracking_cost.py lez/lab/results/record`): every transaction the lab sent to its LEZ v0.4.0-rc1
+sequencer while it followed mainnet and Sepolia, one session every two hours from 10 to 18 November 2026, with the gas
+and the fee that sequencer charged (read back from the chain, [`lez/lab/README.md`](../lez/lab/README.md)). Public job
+path; fees in LEZ's native unit at the chain's base fee of 8. Steady state (the 97 sessions after the first, 8.06 days):
 
-| Cadence | Path | Execution gas | Storage gas |
-|---|---|---:|---:|
-| once per period (a handoff) | public | 16,076,120 per period, about 5.16 billion a year | 54,491 per period |
-| once per period (handoff, no new header) | proven | 448,530 per period | 224,063 per period |
-| once per hour while importing | public | 221,186,904 per day | 106,824 per day |
-| once per hour while importing | proven | 11,516,496 per day | 5,377,512 per day |
+| | mainnet | Sepolia |
+|---|---:|---:|
+| a finality update (3 transactions): execution gas, median of 98 (range) | 9,225,372 (9,169,394–9,333,584) | 9,097,182 |
+| a handoff (5 transactions): execution gas, median | 16,060,242 | 15,903,846 |
+| per day, as the lab ran: execution gas; fees | **127,294,275; 1,019,185,463** | 126,556,100; 1,013,454,096 |
+| per sync-committee period (27.3 h): execution gas; fees | 144,832,597; 1,159,606,572 | 143,992,718; 1,153,085,549 |
 
-Per attestation: the interval's cost divided by the attestations its records serve. **Measured in
-operation:** the lab followed Sepolia and mainnet on a live sequencer every two hours; its program
-transactions used 208,951 to 3,733,713 execution gas ([`lez/lab/README.md`](../lez/lab/README.md)). **Gap:** the figure at the
-recommended cadence with real proving and recorded hardware (milestone A4).
+**Per attestation** (mainnet, as the lab ran): an instance's tracking divided by the attestations that use its records,
+127,294,275 / N execution gas a day: 12.7M at 10 attestations a day, 1.27M at 100, 127,294 at 1,000, 12,729 at 10,000;
+**apart from each attestation's own verification**, which its consumer pays whatever N is: 93,316 execution gas for a
+`Transfer` log, 166,249 for an account, 275,865 for a storage slot, 499,277 for a slot through one EIP-2935 hop
+([`perf-state.md`](../lez/results/perf-state.md) §2, this tree's program). At the design's cadence (one update an
+hour while roots are imported, plus each period's) the measured per-update figures give 24 × 9,225,372 + 0.88 handoffs
+× 16,060,242 ≈ 235.5M execution gas a day (*derived* from the measured medians; every one of the 98 measured finality
+updates was within 1.2% of the median).
+
+**The proven path, with real proving** (this tree's program, P.2): an update is one private transaction, charged
+485,298 execution gas and 224,063 storage gas (709,361 gas; fee 5,674,888 at the base fee its settlement saw), after a
+proof of **1,673.6 s on 16 CPUs** (about 7.4 CPU-hours) or 49.5 s on one L4 (earlier image). For the design's 24
+hourly updates a day that is 11.6M execution and 5.4M storage gas a day, and 179 CPU-hours or 20 L4-minutes of proving
+(*derived* from the measured update; each period's handoff adds one more transaction, proven in dev mode only:
+448,530 execution gas). Per attestation, at N attestations a day: 235.5M / N execution gas on the public path at the
+design's cadence, or 11.6M / N plus 179 / N CPU-hours of proving on the proven path.
 
 ### P.4 User proving (RFP-021)
 
