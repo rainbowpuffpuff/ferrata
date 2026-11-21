@@ -136,3 +136,43 @@ Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running
 
 The same run read the zone's mainnet instance with `attest-monitor` through the sequencer's `getAccount` (S.7):
 divergence confirmed, no alert at the record's time; `ws-half` at the run's time (the record is 11 days old).
+
+## RFP-021 F.9: parameters fixed at Init; an API of the Logos Ethereum core module to verify a checkpoint
+
+**Proposed: in part, blocked on Logos for its last clause** (the API must be Logos's module's; we drafted and tested the
+change, not opened). The first clause (checkpoint, chain, chain id and finality parameters written at `Init`, never
+changed) is shown as before (rows 18, 69, 70, 91; F.13). What this stream adds to the second:
+
+- `ferrata_attest_module.verify_checkpoint` now reads **every Ethereum source through Logos Core's own Ethereum
+  modules** when asked: the beacon checks through `beacon_api_module` (`"providers": {"via": "beacon_api_module",
+  "chain_id": N}`: its providers for the chain, each asked pinned through `raw_get`, counted by endpoint host), the
+  execution check through `eth_rpc_module` (row 117, `verified_proxy_module` in `required` mode). Test
+  `the_beacon_checks_through_beacon_api_module_give_the_plain_paths_verdicts` (calls crate, 22 of 22 pass): with
+  `beacon_api_module` answering from the live run's record of Lodestar, publicnode and Nimbus
+  (`calls/tests/fixtures/verify-checkpoint-sepolia.record.json`), the three agree, with the plain path's slot and
+  verdict each; pinned to two of them, two agree and the check fails; an id the module does not have is refused.
+- **The upstream change, drafted and tested**: [`modules/ferrata_attest_module/upstream-drafts/beacon_api_module-aca138e-verify-checkpoint.patch`](../../modules/ferrata_attest_module/upstream-drafts/README.md)
+  adds `verify_checkpoint(chain_id, root, expect_json)` to Logos's `beacon_api_module` itself (every enabled provider
+  pinned: canonical, canonical at its slot, finalized there, genesis and deposit chain id; agreeing hosts counted); it
+  applies to `aca138e` and the crate's tests pass with it (32 of 32, three new). With it merged, the API is the Logos
+  module's.
+- The live run in a headless Logos Core (`beacon_api_module` built from source with our builder's locks, providers on
+  loopback serving the recorded answers): see U.1 below (same run).
+
+## RFP-021 U.1: the attestation functionality in a Logos core module; LEZ through Logos Core's modules
+
+**Proposed: shown if the Logos Core run below passes; in part until then.** The module already produced, verified and
+read (rows 59, 60, 93, 108, 116); its Ethereum reads already went through `eth_rpc_module`. What was missing: its LEZ
+reads and sends through Logos Core's modules. Built in this stream:
+
+- `ferrata_attest_module.lez` (opens a LEZ wallet inside Logos Core's `lez_core`), `lez_read` (an instance, a record or a
+  job through `lez_core.get_account_public`), `lez_submit` (the steps of `advance`, or `build_attest_tx`'s transaction,
+  through `lez_core.send_generic_public_transaction`, each waited for with `poll_transaction_status`); unit test of the
+  calls' shapes (calls crate, 22 of 22 pass).
+- The run: `modules/ferrata_attest_module/scripts/logos-build.sh` (the module's dev `.lgx` and `logosctl` through
+  `modules/scripts/check.sh`; `lez_core` cc73ebf with our patch; `beacon_api_module` aca138e with builder 5f74cdb's
+  locks), then `cli/tests/attest-seq.sh` with `ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh`:
+  the zone of U.2, the module and `lez_core` in a headless Logos Core, the Sepolia instance read through `lez_core`, an
+  update planned by the module on that state and its job sent through `lez_core`, a log attested through the module and
+  sent through `lez_core`, a refused one the same way, each transaction's verdict read from the zone's receipts
+  (`ferrata attest receipt`).
