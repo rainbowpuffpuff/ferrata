@@ -162,7 +162,7 @@ impl Chain {
     async fn call(&mut self, method: &str, params: &Value) -> Result<Value> {
         match method {
             "module.session" => self.session(),
-            "module.info" => self.info().await,
+            "module.info" => self.info(params).await,
             "module.registry" => self.registry(params).await,
             "module.price" => self.price(params).await,
             "module.deposit_inputs" => self.deposit_inputs().await,
@@ -173,6 +173,7 @@ impl Chain {
             "module.tx" => self.tx(params).await,
             "module.vault_roots" => self.vault_roots(params).await,
             "module.vault_release" => self.vault_release(params).await,
+            "module.prove_release" => self.prove_release(params).await,
             "module.stop" => Ok(json!({ "stopping": true })),
             m => bail!("unknown method {m}"),
         }
@@ -197,8 +198,13 @@ impl Chain {
         }))
     }
 
-    async fn info(&self) -> Result<Value> {
+    /// `lez_only`: the module reads Ethereum itself through Logos Core's `eth_rpc_module` (its `eth` path), so this
+    /// service answers for LEZ alone.
+    async fn info(&self, params: &Value) -> Result<Value> {
         let head = self.seq.wallet.client().get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
+        if params["lez_only"] == true {
+            return Ok(json!({ "lez_head": head, "relayer": self.a.relayer.to_string() }));
+        }
         Ok(json!({
             "eth_block": self.eth.p.get_block_number().await?,
             "eth_time": self.eth_time().await?,
@@ -295,6 +301,11 @@ impl Chain {
         let program = self.ctx.program;
         let token = token_of(params)?;
         let history = lez::history_of(&self.seq, &self.ctx).await?;
+        if params["lez_only"] == true {
+            // The module's `eth` path: Ethereum's part (the deposit list, released nullifiers, refunds, time) is read
+            // by the module through Logos Core's `eth_rpc_module`; this service answers for LEZ alone.
+            return self.lez_inputs(params, &history).await;
+        }
         let (p, v, from, chunk) = (&self.eth.p, self.eth.vault, self.eth.from_block, self.eth.chunk);
         let list = eth::deposit_list(p, v, from, chunk).await?;
         let leaves: Vec<String> = list
@@ -353,6 +364,68 @@ impl Chain {
             out["public_holder_states"] = json!(states);
         }
         Ok(out)
+    }
+
+    /// `inputs`' LEZ part alone (the module's `eth` path reads the vault itself).
+    async fn lez_inputs(&self, params: &Value, history: &lez::History) -> Result<Value> {
+        let program = self.ctx.program;
+        let token = token_of(params)?;
+        let mut touched: Vec<String> = history.touched_privately.iter().map(|a| hx(a.value())).collect();
+        touched.sort();
+        let mut out = json!({
+            "program": hx(program.value()),
+            "config_id": hx(&self.ctx.cid),
+            "chain_id": self.ctx.chain_id,
+            "vault": hx(&self.ctx.vault),
+            "config_state": self.state_hex(config_actor(program, &self.ctx.cid)).await?,
+            "token_state": self.state_hex(token_actor(program, &self.ctx.cid, &token)).await?,
+            "imported": history.roots,
+            "burns": history.burns.iter().map(|b| json!({ "burn_index": b.burn_index, "note": note_value(&b.note) })).collect::<Vec<_>>(),
+            "touched_privately": touched,
+            "claimed_plaintext": history.claimed.iter().map(|n| hx(n)).collect::<Vec<_>>(),
+            "lez_only": true,
+        });
+        let n = params["leaf_count"].as_u64().or_else(|| history.roots.last().copied());
+        if let Some(n) = n {
+            out["leaf_count"] = json!(n);
+            out["root_state"] = json!(self.state_hex(bw::root_actor(program, &self.ctx.cid, n)).await?);
+        }
+        if let Some(nf) = params["nullifier"].as_str() {
+            let nf = h32(nf)?;
+            out["nullifier_state"] =
+                json!(self.state_hex(bw::nullifier_actor(program, self.ctx.chain_id, &self.ctx.vault, &nf)).await?);
+        }
+        if let Some(holders) = params["public_holders"].as_array() {
+            let mut states = Vec::new();
+            for h in holders {
+                let id = AccountId::new(h32(h.as_str().context("a public holder")?)?);
+                states.push(
+                    json!({ "account": hx(id.value()), "state": self.state_hex(bw::holder_actor(program, id)).await? }),
+                );
+            }
+            out["public_holder_states"] = json!(states);
+        }
+        Ok(out)
+    }
+
+    /// The stand-in prover alone (the module's `eth` path sends the release itself through Logos Core's send stack):
+    /// the vault tests' mock verifier is told to accept the exact release journal; the seal the vault passes it.
+    async fn prove_release(&self, params: &Value) -> Result<Value> {
+        let journal = hex_bytes(&params["release"]["journal"], "release.journal")?;
+        let image = B256::from(h32(&self.a.release_image_id)?);
+        let data = {
+            use alloy::sol_types::SolCall as _;
+            IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(&journal)) }.abi_encode()
+        };
+        let tx =
+            TransactionRequest::default().with_from(self.a.prover).with_to(self.a.mock).with_input(Bytes::from(data));
+        let receipt = self.eth.p.send_transaction(tx).await?.get_receipt().await?;
+        ensure!(receipt.status(), "the stand-in prover's accept reverted");
+        Ok(json!({
+            "seal": "0x5ea15ea1",
+            "stand_in_prover": { "tx": receipt.transaction_hash.to_string(), "from": self.a.prover.to_string(),
+                                 "what": "the vault tests' mock verifier accepts the release journal (no Groth16 wrap here)" },
+        }))
     }
 
     /// The wallet's own view of one of its private accounts (LEZ's wallet decrypts it after a sync).

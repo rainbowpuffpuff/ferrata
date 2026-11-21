@@ -18,14 +18,18 @@
 
 use std::fmt::Write as _;
 
+mod admin;
+mod evm;
 mod jobs;
 mod lez;
 mod rpc;
+mod send;
 mod session;
 mod wallet;
 
 pub use lez::{set_lez_core, LezCoreCall};
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
+pub use send::{set_module_call, ModuleCall};
 
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -56,7 +60,8 @@ pub fn version() -> String {
         "staged": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
         "spec": "v2",
         "tool_code": "ferrata-wallet (claim with LEZ state, release rule, release guest run, root import)",
-        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry", "wallet"],
+        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry", "wallet", "admin"],
+        "ethereum": "reads through Logos Core's eth_rpc_module (or a plain http:// endpoint); sends through Logos Core's tx_sender_module (one approval in the Logos signer per send); the module holds no Ethereum key",
     })
     .to_string()
 }
@@ -118,6 +123,13 @@ pub fn recover(request: &str) -> String {
 /// `status(request)`: where each deposit and burn stands.
 pub fn status(request: &str) -> String {
     reply(parse(request).and_then(|r| status_of(&r)))
+}
+
+/// `admin(request)`: the bridge's admin and freeze-authority functions (`admin.rs`): `status` (both sides' roles,
+/// registry and controls), a vault action built, checked and (with `send`) sent through Logos Core's send stack, or a
+/// LEZ action's message (`lez_*`).
+pub fn admin(request: &str) -> String {
+    reply(parse(request).and_then(|r| admin::admin_of(&r)))
 }
 
 /// `wallet(request)`: one call of the mini-app's view (`{"method", "params"}`), run with this module's
