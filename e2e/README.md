@@ -156,7 +156,9 @@ and both releases succeed with balances checked; every negative case is refused 
 through RISC Zero's emergency stop `0x724d375B5b622e15f0E64e9Deb76a4cB17877797`; checked at block
 12,105,706). The ETH release's seal with the token release's journal digest, and the candidate's
 seal with the finalisation's, are refused there with `VerificationFailed()`. No transaction was
-sent for this.
+sent for this. (21 November 2026: verifier 3.0.0 accepts forged claims (GHSA-mm6c-35cm-g4x2), and
+RISC Zero has since paused the stop `0x724d…7797`; the check shows the seals are well-formed, no
+more: [security note](../docs/security/risc0-groth16-advisory-2026-11-21/README.md).)
 
 **Nothing of this run is on a public network.** On Sepolia the first attempt
 ([`runs/sepolia-live/`](runs/sepolia-live/README.md)) sent one transaction, which ran out of gas ("What the round
