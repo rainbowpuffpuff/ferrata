@@ -14,7 +14,7 @@ to persist and to be driven on a schedule. Nothing of LEZ or of the node is modi
 
 | | |
 |---|---|
-| where | Modal, workspace `rainbowpuffpuff`: app `ferrata-lab`, one function `session`, a Volume `ferrata-lab` |
+| where | Modal, the lab's own workspace (`LAB_PROFILE`): app `ferrata-lab`, one function `session`, a Volume `ferrata-lab` |
 | how often | every two hours, at minute 17 (cron `17 */2 * * *`, UTC); at most one session at a time |
 | a session | restores the newest saved state of the zone from the Volume, starts the node and the sequencer, fetches the newest light-client data, submits it to both instances, waits until every transaction is in a block final on Bedrock, stops both processes, saves a new state generation, writes the record (`session.sh`) |
 | the zone | LEZ's `sequencer_service` at tag `v0.4.0-rc1` (`1806e87`), unmodified, with LEZ's `local.json` (sockets on loopback, 10 s blocks: as `../live/`); a Logos Blockchain node at `d480efc6` (the revision LEZ pins, built by LEZ's resolver) with LEZ's `node-config.yaml` and `deployment-settings.yaml`, `POL_PROOF_DEV_MODE=true` as LEZ's container sets it: **one validator, leader proofs in dev mode** |
@@ -62,7 +62,8 @@ again and continues from what the chain holds.
 
 ## Operate
 
-From the repository, on a machine with the Modal client and the `rainbowpuffpuff` profile:
+From the repository, on a machine with the Modal client and `LAB_PROFILE` set to the Modal profile of the lab's workspace
+(a local `verify`, with `LAB_VERIFY_BIN`, needs neither):
 
 ```sh
 lez/lab/lab.sh deploy     # upload the bundle if it changed, deploy the app: the schedule starts
@@ -113,7 +114,7 @@ the record). The Volume keeps the state after `stop`; `modal volume delete ferra
 | 17 Nov fetch | the record to the session of 17 Nov 20:17 UTC (fetched at 20:22 UTC): 87 sessions, 86 ok; the 85 scheduled from 10 Nov 20:17 UTC to 17 Nov 20:17 UTC, seven days apart, all ran at their two-hour marks (83–142 s each; 30 of them started the sequencer twice, the script's own phase alignment, `session.log`), none missed, none failed; 765 transactions, all applied, blocks 1–768; since the 15 Nov fetch Sepolia's live handoffs into periods 1,415 (16 Nov 14:17) and 1,416 (17 Nov 18:17), mainnet's into 1,912 (16 Nov 00:17) and 1,913 (17 Nov 02:17). `lab.sh verify` (the driver of 66f6bbbd, on the build box): 768 blocks replay, 765 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,600,992 (period 1,416, Gloas layout), root `a062b3c8…47fc`, mainnet at 15,676,800 (period 1,913), root `4429b5f5…d9e7`, both equal to the native client after 125 and 95 kept updates; every session's applied finality update has the finalized header root that session's second provider reported (`python3 -I lez/lab/roots.py lez/lab/results`: 172 of 172, both chains) |
 | 18 Nov fetch | the record to the session of 18 Nov 20:17 UTC (fetched at 20:34 UTC): 99 sessions, 98 ok; the 97 scheduled from 10 Nov 20:17 UTC to 18 Nov 20:17 UTC, eight days apart, all ran at their two-hour marks (83–143 s each; 35 of them started the sequencer twice, the script's own phase alignment, `session.log`), none missed, none failed; 847 transactions, all applied, blocks 1–850; since the 17 Nov fetch Sepolia's live handoff into period 1,417 (18 Nov 20:17) and mainnet's into 1,914 (18 Nov 06:17). `lab.sh verify` (the driver of 66f6bbbd, on the build box): 850 blocks replay, 847 manifest rows equal LEZ's charges; Sepolia at finalized slot 11,608,192 (period 1,417, Gloas layout), root `23362d57…5466`, mainnet at 15,684,000 (period 1,914), root `c8e94b89…a8fc`, both equal to the native client after 138 and 108 kept updates; every session's applied finality update has the finalized header root that session's second provider reported (`python3 -I lez/lab/roots.py lez/lab/results`: 196 of 196, both chains) |
 | state | generation 2: 20,402,011 bytes compressed (node 52M, sequencer 48M, driver 5.6M on disk); generation 3: 30,970,636 bytes. It grows with the node's and the sequencer's write-ahead logs; `sessions/<id>/session.log` lists the largest files at every save |
-| cost | billed by Modal (`modal.billing`, hourly buckets, workspace `rainbowpuffpuff`): the build box 0.1967 USD in the hour of the builds (18:00 UTC), then 0.0802 and 0.0522 USD (packing, the first two `lab.sh verify` runs, and the 20 minutes the box stays warm after each call); the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested); the scheduled session of 20:17 UTC 0.0064 USD (the whole 20:00 hour of the app). At twelve such sessions a day: about 0.08 USD a day, 0.54 USD to 17 November (derived) |
+| cost | billed by Modal (`modal.billing`, hourly buckets, the lab's workspace): the build box 0.1967 USD in the hour of the builds (18:00 UTC), then 0.0802 and 0.0522 USD (packing, the first two `lab.sh verify` runs, and the 20 minutes the box stays warm after each call); the lab's failed start and catch-up session together 0.0642 USD (31 min, two physical cores requested); the scheduled session of 20:17 UTC 0.0064 USD (the whole 20:00 hour of the app). At twelve such sessions a day: about 0.08 USD a day, 0.54 USD to 17 November (derived) |
 
 ## The claim that can be made today
 

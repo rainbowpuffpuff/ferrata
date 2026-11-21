@@ -17,7 +17,10 @@ LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$LAB_DIR/../.." && pwd)"
 BESIDE="$(cd "$REPO/.." && pwd)"
 LAB_TMP="${LAB_TMP:-$BESIDE/tmp/lab}"
-export MODAL_PROFILE="${LAB_PROFILE:-rainbowpuffpuff}"
+# LAB_PROFILE: the Modal profile of the lab's workspace; every step needs it but a local verify (LAB_VERIFY_BIN).
+need_profile() { [ -n "${LAB_PROFILE:-}" ] || { echo "lab.sh: set LAB_PROFILE to the Modal profile of the lab's workspace" >&2; exit 2; }; }
+case "${1:-}" in deploy|run|status|fetch|stop) need_profile ;; verify) [ -n "${LAB_VERIFY_BIN:-}" ] || need_profile ;; esac
+export MODAL_PROFILE="${LAB_PROFILE:-}"
 VOLUME=ferrata-lab
 RESULTS="$LAB_DIR/results"
 mkdir -p "$LAB_TMP/pull"
