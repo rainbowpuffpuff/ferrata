@@ -1,0 +1,24 @@
+INFO:Printers:
+Compiled with Foundry
+Total number of contracts in source files: 5
+Number of contracts in dependencies: 7
+Source lines of code (SLOC) in source files: 1623
+Source lines of code (SLOC) in dependencies: 304
+Number of  assembly lines: 0
+Number of optimization issues: 1
+Number of informational issues: 11
+Number of low issues: 19
+Number of medium issues: 5
+Number of high issues: 2
+ERCs: ERC165, ERC1363, ERC20
+
++---------------------------+-------------+------+------------+--------------+--------------------+
+| Name                      | # functions | ERCS | ERC20 info | Complex code | Features           |
++---------------------------+-------------+------+------------+--------------+--------------------+
+| FerrataRegistry           | 35          |      |            | No           | Assembly           |
+| FerrataVault              | 84          |      |            | Yes          | Receive ETH        |
+|                           |             |      |            |              | Tokens interaction |
+|                           |             |      |            |              | Assembly           |
+| StandInCheckpointVerifier | 9           |      |            | Yes          | Ecrecover          |
++---------------------------+-------------+------+------------+--------------+--------------------+
+INFO:Slither:. analyzed (12 contracts)

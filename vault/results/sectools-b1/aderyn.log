@@ -1,0 +1,66 @@
+
+--------------------------------------------------------------------------------------
+# Configuration
+--------------------------------------------------------------------------------------
+Root - ./vault
+Source - ./vault/src
+Remappings - [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "risc0/=lib/risc0-ethereum/contracts/src/",
+    "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/",
+]
+EVM version - cancun
+--------------------------------------------------------------------------------------
+# Source Scope
+--------------------------------------------------------------------------------------
+Include Filepaths Containing - No specific criteria.
+Exclude Filepaths Containing - No specific criteria.
+Auto Excluding - No Files.
+--------------------------------------------------------------------------------------
+# Compiling Abstract Syntax Trees
+--------------------------------------------------------------------------------------
+Ingesting 5 compiled files [solc : v0.8.26]
+--------------------------------------------------------------------------------------
+# Scanning Contracts
+--------------------------------------------------------------------------------------
+Running 88 detectors
+Detectors run, printing report.
+Report printed to ./vault/results/sectools-b1/aderyn.md
+
+Aderyn saved you hours of headaches.
+☕ Buy us a virtual coffee with a GitHub star:
+https://github.com/Cyfrin/aderyn
+
+--------------------------------------------------------------------------------------
+# Configuration
+--------------------------------------------------------------------------------------
+Root - ./vault
+Source - ./vault/src
+Remappings - [
+    "forge-std/=lib/forge-std/src/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "risc0/=lib/risc0-ethereum/contracts/src/",
+    "openzeppelin/=lib/risc0-ethereum/lib/openzeppelin-contracts/",
+]
+EVM version - cancun
+--------------------------------------------------------------------------------------
+# Source Scope
+--------------------------------------------------------------------------------------
+Include Filepaths Containing - No specific criteria.
+Exclude Filepaths Containing - No specific criteria.
+Auto Excluding - No Files.
+--------------------------------------------------------------------------------------
+# Compiling Abstract Syntax Trees
+--------------------------------------------------------------------------------------
+Ingesting 5 compiled files [solc : v0.8.26]
+--------------------------------------------------------------------------------------
+# Scanning Contracts
+--------------------------------------------------------------------------------------
+Running 88 detectors
+Detectors run, printing report.
+Report printed to ./vault/results/sectools-b1/aderyn.json
+
+✔ Aderyn did its job. Solidity's a bit safer now.
+💫 Like the tool? A star on GitHub goes a long way:
+https://github.com/Cyfrin/aderyn
