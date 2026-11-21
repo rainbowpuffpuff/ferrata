@@ -1,0 +1,105 @@
+# Excerpts of the run's logs around the stall (zone.sh's logs/, last 300 lines each; ANSI colours removed)
+
+## zone.sh's poll (zone.log)
+[18:04:01] channel keys/tip_sequencer/tip_slot: 4 3 2447802 | heights: 87/87/87/87 | alive 4 | lib 2447800
+[18:04:21] channel keys/tip_sequencer/tip_slot: 4 3 2447807 | heights: 89/89/89/89 | alive 4 | lib 2447805
+[18:04:41] channel keys/tip_sequencer/tip_slot: 4 3 2447812 | heights: 91/91/91/91 | alive 4 | lib 2447810
+[18:05:01] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 93/93/93/93 | alive 4 | lib 2447815
+[18:05:21] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 95/94/93/93 | alive 4 | lib 2447820
+[18:05:41] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 97/94/93/93 | alive 4 | lib 2447825
+[18:06:01] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 99/94/93/93 | alive 4 | lib 2447830
+[18:06:22] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 101/94/93/93 | alive 4 | lib 2447835
+[18:06:42] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 103/94/93/93 | alive 4 | lib 2447840
+[18:07:02] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 105/94/93/93 | alive 4 | lib 2447845
+[18:07:27] sequencers stopped; waiting for the LIB to pass the channel's tip
+[18:07:27] channel tip slot 2447817, lib 2447852
+[18:07:27] answers saved: 1 windows, 479854 bytes; channel: {"accredited_keys":["fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096","6462ecf103d4074bbdbed0
+
+## turn updates, every sequencer (logs/seq-N.log)
+seq-0 [2026-11-21T17:57:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447699), ends_at_slot=Some(2447759)
+seq-0 [2026-11-21T18:01:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447759), ends_at_slot=Some(2447819)
+seq-0 [2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+seq-0 [2026-11-21T18:06:35Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2447842), ends_at_slot=Some(2447902)
+seq-1 [2026-11-21T17:57:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447699), ends_at_slot=Some(2447759)
+seq-1 [2026-11-21T18:01:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2447759), ends_at_slot=Some(2447819)
+seq-1 [2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+seq-1 [2026-11-21T18:06:35Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447842), ends_at_slot=Some(2447902)
+seq-2 [2026-11-21T17:57:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447699), ends_at_slot=Some(2447759)
+seq-2 [2026-11-21T18:01:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447759), ends_at_slot=Some(2447819)
+seq-2 [2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+seq-2 [2026-11-21T18:06:35Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447842), ends_at_slot=Some(2447902)
+seq-3 [2026-11-21T17:57:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2447699), ends_at_slot=Some(2447759)
+seq-3 [2026-11-21T18:01:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447759), ends_at_slot=Some(2447819)
+seq-3 [2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+seq-3 [2026-11-21T18:06:35Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447842), ends_at_slot=Some(2447902)
+
+## seq-1 at the end of its turn (logs/seq-1.log)
+[2026-11-21T18:04:52Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:04:52Z INFO  sequencer_core] Publishing block 93 on pin 43cd45d15aca9a61671be9a6670e876382ce6f8caa2a8a3ebfa4ceeae16e90b0
+[2026-11-21T18:04:52Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([96, 224, 93, 185, 157, 40, 12, 48, 97, 12, 151, 59, 131, 0, 192, 199, 152, 248, 7, 93, 115
+[2026-11-21T18:04:52Z INFO  sequencer_bedrock_actor::actor] Published block 93 with the size of 711 bytes
+[2026-11-21T18:04:52Z INFO  sequencer_executor_actor::actor] Block with id 93 created by 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+[2026-11-21T18:04:55Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 92..=92 (1), head Some(93)
+[2026-11-21T18:05:02Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:05:02Z INFO  sequencer_core] Publishing block 94 on pin 385ff440eaba445cb4d805237b05cc96a0c984e5ca60c9f5d369285b483b5fcb
+[2026-11-21T18:05:02Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([84, 90, 92, 216, 234, 83, 121, 228, 209, 231, 91, 232, 186, 14, 16, 230, 242, 19, 170, 205
+[2026-11-21T18:05:02Z INFO  sequencer_bedrock_actor::actor] Published block 94 with the size of 711 bytes
+[2026-11-21T18:05:02Z INFO  sequencer_executor_actor::actor] Block with id 94 created by 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+[2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=false, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+[2026-11-21T18:05:07Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 93..=93 (1), head Some(94)
+
+## seq-0 at the start of its turn (logs/seq-0.log)
+[2026-11-21T18:04:55Z INFO  sequencer_core::logging] Channel update: adopted 93..=93 (1), finalized 92..=92 (1), head Some(92)
+[2026-11-21T18:04:55Z INFO  sequencer_core] Channel pin moved to 385ff440eaba445cb4d805237b05cc96a0c984e5ca60c9f5d369285b483b5fcb
+[2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Turn update: our_turn=true, starting_slot=Some(2447819), ends_at_slot=Some(2447879)
+[2026-11-21T18:05:03Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:05:03Z INFO  sequencer_core] Publishing block 94 on pin 385ff440eaba445cb4d805237b05cc96a0c984e5ca60c9f5d369285b483b5fcb
+[2026-11-21T18:05:03Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([95, 118, 2, 198, 113, 229, 34, 11, 250, 198, 37, 7, 32, 186, 204, 96, 212, 111, 130, 37, 2
+[2026-11-21T18:05:03Z INFO  sequencer_bedrock_actor::actor] Published block 94 with the size of 711 bytes
+[2026-11-21T18:05:03Z INFO  sequencer_executor_actor::actor] Block with id 94 created by fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[2026-11-21T18:05:07Z INFO  sequencer_core::logging] Channel update: adopted none, finalized 93..=93 (1), head Some(94)
+[2026-11-21T18:05:13Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:05:13Z INFO  sequencer_core] Publishing block 95 on pin b7b4e857be7a96491b4d55fe768742e3c4cbb938df08230570b127900048749b
+[2026-11-21T18:05:13Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([69, 195, 179, 166, 28, 160, 95, 146, 142, 253, 159, 195, 31, 253, 71, 158, 237, 119, 46, 1
+[2026-11-21T18:05:13Z INFO  sequencer_bedrock_actor::actor] Published block 95 with the size of 711 bytes
+[2026-11-21T18:05:13Z INFO  sequencer_executor_actor::actor] Block with id 95 created by fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[2026-11-21T18:05:23Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:05:23Z INFO  sequencer_core] Publishing block 96 on pin c811e4770f96059426c24927fbd50d4d1493b6b5691339fc0e38f65e2fb860e8
+[2026-11-21T18:05:23Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([67, 107, 183, 73, 84, 112, 31, 5, 15, 109, 32, 108, 132, 36, 148, 203, 215, 138, 20, 60, 1
+[2026-11-21T18:05:23Z INFO  sequencer_bedrock_actor::actor] Published block 96 with the size of 711 bytes
+[2026-11-21T18:05:23Z INFO  sequencer_executor_actor::actor] Block with id 96 created by fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[2026-11-21T18:05:33Z INFO  sequencer_core] Created block with 2 transactions in 0 seconds
+[2026-11-21T18:05:33Z INFO  sequencer_core] Publishing block 97 on pin 67aa81506ae151cd1894d4cb3be8c8204506be288ec99ce6541dedb291a50d06
+[2026-11-21T18:05:33Z INFO  logos_blockchain::zone_sdk::sequencer] Submitted tx including inscription TxHash([141, 124, 191, 224, 114, 41, 128, 26, 66, 47, 62, 75, 120, 48, 47, 185, 231, 11, 206, 180,
+[2026-11-21T18:05:33Z INFO  sequencer_bedrock_actor::actor] Published block 97 with the size of 711 bytes
+[2026-11-21T18:05:33Z INFO  sequencer_executor_actor::actor] Block with id 97 created by fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+
+## the node's leader (logs/bedrock.log): every proposal 18:04:43-18:06:00, and the epoch transition
+2026-11-21T18:04:43.117266Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 1 transactions (0 removed)
+2026-11-21T18:04:47.110294Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:04:51.115598Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:04:55.114399Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 1 transactions (0 removed)
+2026-11-21T18:04:59.112813Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:03.111533Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (1 removed)
+2026-11-21T18:05:07.004868Z  INFO logos_blockchain::ledger::cryptarchia: epoch transition slot=Slot(2447820)
+2026-11-21T18:05:07.004972Z  INFO logos_blockchain::ledger::cryptarchia: epoch transition slot=Slot(2447820)
+2026-11-21T18:05:07.005013Z  INFO logos_blockchain::ledger::cryptarchia: epoch transition slot=Slot(2447820)
+2026-11-21T18:05:07.110374Z  INFO logos_blockchain::ledger::cryptarchia: epoch transition slot=Slot(2447820)
+2026-11-21T18:05:07.113926Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (1 removed)
+2026-11-21T18:05:07.113973Z  INFO logos_blockchain::ledger::cryptarchia: epoch transition slot=Slot(2447820)
+2026-11-21T18:05:11.105294Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:15.106274Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (2 removed)
+2026-11-21T18:05:19.117224Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (2 removed)
+2026-11-21T18:05:23.105869Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:27.106008Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (3 removed)
+2026-11-21T18:05:31.145049Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:35.108008Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (4 removed)
+2026-11-21T18:05:39.102594Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:43.112661Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (4 removed)
+2026-11-21T18:05:47.108884Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (5 removed)
+2026-11-21T18:05:51.110135Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+2026-11-21T18:05:55.114399Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (6 removed)
+2026-11-21T18:05:59.154348Z  INFO logos_blockchain::chain::leader: proposed block HeaderId(..) with 0 transactions (0 removed)
+
+## the channel at the end (answers/channel.json)
+{"accredited_keys":["fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096","6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac","90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729","99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"],"configuration_threshold":3,"tip_message":"385ff440eaba445cb4d805237b05cc96a0c984e5ca60c9f5d369285b483b5fcb","config_tip_hash":"e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c","tip_slot":2447817,"tip_sequencer":3,"tip_sequencer_starting_slot":2447759,"posting_timeframe":60,"posting_timeout":25,"transfer_threshold":3}
