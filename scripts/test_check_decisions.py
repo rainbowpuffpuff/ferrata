@@ -122,7 +122,7 @@ D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13
         for what in ("names no day, month and year", "status cites a branch", "'Security' is not a requirement ID",
                      "'#99' is not a requirement ID", "'trust' is not a requirement ID", "'Context' says too little",
                      "option 1 says too little",
-                     "option 1 is neither recorded", "README.md is not a tracked file", "cites a branch ('branch nowhere",
+                     "option 1 is neither recorded", "README.md is not a tracked file", "- README.md - branch nowhere, commit deadbeef",
                      "docs/not/there.rs is not a tracked file", "title 'Something else' differs",
                      "date '1 January 2020' differs", "requirements 'RFP-021 F.2' differs",
                      "D1 is cited in no record's Sources"):  # "D1 … D13" in the rationale no longer counts
@@ -181,6 +181,69 @@ D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13
         out = findings({"0001-one-core.md": GOOD, "0003-other.md": GOOD.replace("ADR 0001", "ADR 0003")})
         self.assertTrue(any("without a gap" in f for f in out), out)
         self.assertTrue(any("ADR 0003 is linked 0 times" in f for f in out), out)
+
+
+class Strictness(unittest.TestCase):
+    """The review of 21 November 2026 (L-1) mutated one record thirteen ways; nine passed the check then. Each of the
+    eight that a check can catch (a false statement in the record's own words cannot be) fails now."""
+
+    def flags(self, bad, what, files=None):
+        out = findings({"0001-one-core.md": bad}, files=files)
+        self.assertTrue(any(what in f for f in out), (what, out))
+
+    def test_a_path_under_a_directory_the_repository_lacks(self):
+        self.flags(GOOD.replace("- src/core.rs (`evaluate`)", "- src/core.rs (`evaluate`), `lib/Nope.sol`"),
+                   "lib/Nope.sol is not a tracked file")
+        self.flags(GOOD.replace("one crate to audit.", "one crate to audit, `lib/Nope.sol`."),
+                   "names lib/Nope.sol, which is not a tracked file")
+
+    def test_a_line_past_the_end_of_its_file(self):
+        self.flags(GOOD.replace("- src/core.rs (`evaluate`)", "- src/core.rs:999999 (`evaluate`)"),
+                   "src/core.rs:999999 is not within its 1 lines")
+        self.flags(GOOD.replace("one crate to audit.", "one crate to audit (`core.rs:2-3`)."),
+                   "src/core.rs:2-3 is not within its 1 lines")
+        self.assertEqual(findings({"0001-one-core.md": GOOD.replace("- src/core.rs (", "- src/core.rs:1 (")}), [])
+
+    def test_a_bare_file_name_no_tracked_file_has(self):
+        self.flags(GOOD.replace("one crate to audit.", "one crate to audit, in `NotThere.rs`."),
+                   "names NotThere.rs, which no tracked file is called")
+        self.assertEqual(findings({"0001-one-core.md": GOOD.replace("one crate to audit.", "one crate, `core.rs`.")}),
+                         [])
+
+    def test_a_branch_anywhere_in_the_record(self):
+        self.flags(GOOD.replace("The fourth.", "The fourth, built on branch rfp-softs and not merged yet."),
+                   "names a branch")
+        self.flags(GOOD.replace("one crate to audit.", "one crate to audit; on the branches it is the same."),
+                   "names a branch")
+        chain = GOOD.replace("one crate to audit.", "one crate to audit; the canonical branch and the finality "
+                             "branches are a chain's, not git's.")
+        self.assertEqual(findings({"0001-one-core.md": chain}), [])
+
+    def test_a_link_to_a_branch_on_github(self):
+        self.flags(GOOD.replace("one crate to audit.", "one crate to audit: https://github.com/o/r/tree/rfp-softs/lez."),
+                   "links to GitHub at 'rfp-softs', not at a commit")
+        self.assertEqual(findings({"0001-one-core.md": GOOD.replace(
+            "one crate to audit.", "one crate: https://github.com/o/r/blob/0123456789abcdef0123456789abcdef01234567/x.")}),
+            [])
+
+    def test_a_section_of_a_file_that_is_not_markdown(self):
+        self.flags(GOOD.replace("- src/core.rs (`evaluate`)", "- src/core.rs §99 (`evaluate`)"),
+                   "a § of src/core.rs, which is not Markdown")
+
+    def test_an_ellipsis_quote_whose_parts_are_apart_or_out_of_order(self):
+        files = dict(FILES, **{"docs/design/long.md": "# Long\n\nalpha beta " + "filler " * 60 + "gamma delta.\n"})
+        near = GOOD.replace('("The proven path needs a\n   prover")', '("The proven path … the public job does")')
+        self.assertEqual(findings({"0001-one-core.md": near}, files=files), [])
+        apart = GOOD.replace("- src/core.rs (`evaluate`)", '- docs/design/long.md ("alpha beta … gamma delta")')
+        self.flags(apart, 'does not contain "alpha beta … gamma delta" (its parts in order, near)', files=files)
+        joined = GOOD.replace("- src/core.rs (`evaluate`)", '- docs/design/long.md ("alpha beta" … "gamma delta")')
+        self.flags(joined, "(its parts in order, near)", files=files)
+        backwards = GOOD.replace('("The proven path needs a\n   prover")', '("the public job … The proven path")')
+        self.flags(backwards, "(its parts in order, near)", files=files)
+
+    def test_a_name_that_is_only_part_of_a_word(self):
+        self.flags(GOOD.replace("src/core.rs (`evaluate`)", "src/core.rs (`valuate`)"),
+                   "src/core.rs does not contain `valuate` (as a whole word)")
 
 
 class RepositoryLog(unittest.TestCase):

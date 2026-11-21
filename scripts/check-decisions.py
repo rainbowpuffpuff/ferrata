@@ -15,16 +15,27 @@ decisions are made and current at each milestone delivery". This check fails (ex
   last) does not say where it is recorded (`*Recorded:*`, `*Recorded later:*`), which RFP clause rules it out
   (`*Ruled out:*`), or that it is `*Reconstructed for contrast*`; a recorded option must name a source that resolves,
   a ruled-out one an RFP requirement that exists; "records no alternative" is not an option;
-* a source, or a path anywhere in a record, names a file the repository does not track, a section (§n) its file has
-  no heading for, a quoted heading or a `name` its file does not contain, an EVIDENCE row that docs/EVIDENCE.md does
-  not have, a change Dn the bridge specification does not have, or a branch (a record describes only work in this
-  tree);
+* a source, or a path anywhere in a record, names a file the repository does not track (a path with a slash under
+  any top-level directory, or under an unknown one when it ends in a file extension; in the text, a bare file name
+  such as `FerrataVault.sol` that no tracked file has), a line (`path:N`, `path:N-M`) past the end of its file, a
+  section (§n) its Markdown file has no heading for or a § of a file that is not Markdown, a quoted phrase its file
+  does not contain (a quote with "…", or quotes joined by one, must have its parts in order, each within 300
+  characters of the one before), a
+  `name` its file does not contain as a whole word, an EVIDENCE row that docs/EVIDENCE.md does not have, or a change
+  Dn the bridge specification does not have;
+* a record names a git branch anywhere ("branch" or "branches", except a chain's or a proof's: canonical, Merkle,
+  finality, execution, proof), or links to GitHub at a ref that is not a commit (`/tree/`, `/blob/`, `/commits/`,
+  `/compare/` with a name): a record describes only work in this tree;
 * a requirement is not an ID of docs/traceability.md (F.1, Sec.8, Soft.3, ...) under the RFP named before it;
 * a record or the README names an ADR (`ADR 0029`, `ADRs 0003 and 0011`, `ADRs 0027–0031`) that is not in the log;
 * the README's index does not link every record exactly once, or one of its cells (title, date, status,
   requirements) differs from the record's;
 * a change D1, D2, ... of the bridge specification (docs/design/spec/bridge-spec-v3-changes.md) is cited in no
   record's Sources.
+
+It checks form and references, not truth: a false statement in a record's own words passes, as does a line number
+that exists but says something else, a quote taken out of its context, or a source that exists but is beside the
+point. Those are for the reviewer.
 
     python3 -I scripts/check-decisions.py
 
@@ -45,6 +56,11 @@ DATE = re.compile(rf"\b\d{{1,2}}(?:[–-]\d{{1,2}})? (?:{MONTHS}) \d{{4}}\b")
 MARK = re.compile(r"\*(Recorded|Recorded later|Ruled out):\*|\*Reconstructed for contrast\*")
 PATH = re.compile(r"(?<![\w./-])((?:[\w.-]+/)+(?:[\w.-]+)?|[\w.-]+\.(?:md|rs|sol|sh|py|toml|json))(?![\w-])")
 SKIP_PATH = re.compile(r"^(https?:|[\d.]+$|v\d)|\.\.\.")
+FILE_EXT = re.compile(r"\.(?:md|rs|sol|sh|py|toml|json|ya?ml|txt|tsv|csv|js|ts|lock|nix|html)$")
+LINES = re.compile(r":(\d+)(?:[–-](\d+))?(?!\w)")
+CHAIN_BRANCH = {"canonical", "merkle", "finality", "execution", "proof"}
+GIT_REF = re.compile(r"https?://github\.com/[^/\s]+/[^/\s]+/(?:tree|blob|commits?|compare)/([^/\s)>\]#]+)")
+NEAR = 300
 ADR_REF = re.compile(r"\bADRs? (\d{4}(?:(?:, | and | or |[–-]| to )\d{4})*)")
 
 
@@ -71,6 +87,9 @@ class Repo:
         self.spec = spec                # bridge-spec-v3-changes.md
         self.read = read                # path -> text of a tracked file
         self.tops = {f.split("/")[0] for f in files if "/" in f}
+        self.basenames = {}
+        for f in files:
+            self.basenames.setdefault(f.rsplit("/", 1)[-1], []).append(f)
 
 
 def sections(text):
@@ -127,22 +146,67 @@ def path_ok(p, repo):
 
 
 def paths_in(text, repo):
-    """The repository paths a text names: tokens with a slash under a top-level directory, or a file name."""
-    out = []
-    for m in PATH.finditer(text.replace("`", " ")):
+    """The repository paths a text names, with the lines it gives after a colon (or None): tokens with a slash under a
+    top-level directory, or under any directory when they end in a file extension, and file names."""
+    out, flat = [], text.replace("`", " ")
+    for m in PATH.finditer(flat):
         p = m.group(1)
-        if SKIP_PATH.search(p) or ("/" in p and p.split("/")[0] not in repo.tops):
+        if SKIP_PATH.search(p) or ("/" in p and p.split("/")[0] not in repo.tops and not FILE_EXT.search(p)):
             continue
-        out.append((m.start(1), p))
+        lm = LINES.match(flat, m.end(1))
+        lines = tuple(int(x) for x in lm.groups() if x) if lm else None
+        out.append((m.start(1), p, lines))
     return out
+
+
+def line_findings(where, path, lines, repo):
+    if not lines or path.rstrip("/") not in repo.files:
+        return []
+    n = len(repo.read(path).splitlines())
+    if max(lines) > n or min(lines) < 1 or (len(lines) == 2 and lines[0] > lines[1]):
+        return [f"{where}: {path}:{'-'.join(map(str, lines))} is not within its {n} lines"]
+    return []
+
+
+def branch_findings(where, text):
+    """A git branch named in the text (a chain's or a proof's branch is not one)."""
+    out = []
+    for m in re.finditer(r"\bbranch(?:es)?\b", text, re.I):
+        before = re.search(r"([\w'’]+)[^\w'’]*$", text[:m.start()])
+        if before and before.group(1).lower() in CHAIN_BRANCH:
+            continue
+        lo = max(0, m.start() - 30)
+        out.append(f"{where}: names a branch ('…{plain(text[lo:m.end() + 30])}…'): a record describes only work in "
+                   f"this tree")
+    for m in GIT_REF.finditer(text):
+        if not re.fullmatch(r"[0-9a-f]{7,40}", m.group(1)):
+            out.append(f"{where}: links to GitHub at '{m.group(1)}', not at a commit: a record describes only work in "
+                       f"this tree")
+    return out
+
+
+def quote_found(q, text):
+    """The quote's parts (split at "…") in the text, in order, each within NEAR characters of the one before."""
+    parts = [x.strip() for x in plain(q).split("…") if x.strip()]
+    hay = plain(text)
+    starts = [m.start() for m in re.finditer(re.escape(parts[0]), hay)] if parts else []
+    for s in starts:
+        end, ok = s + len(parts[0]), True
+        for x in parts[1:]:
+            k = hay.find(x, end)
+            if k < 0 or k - end > NEAR:
+                ok = False
+                break
+            end = k + len(x)
+        if ok:
+            return True
+    return not parts
 
 
 def ref_findings(where, ref, repo, need_source):
     """A reference (a source bullet, or the text after an option's mark): each path it names, and what it says of the
     path up to the next one: its sections (§n), quoted headings or phrases, `names`, and changes Dn."""
     out = []
-    if re.search(r"\bbranch\b", ref):
-        out.append(f"{where}: cites a branch ('{ref[:60]}'): a record describes only work in this tree")
     rows = re.search(r"\bEVIDENCE rows? ([\d–, -]+)", ref)
     if rows:
         for r in re.findall(r"\d+", rows.group(1)):
@@ -154,13 +218,15 @@ def ref_findings(where, ref, repo, need_source):
     paths = paths_in(ref, repo)
     if need_source and not paths and not rows and not rfp:
         out.append(f"{where}: names no source ('{ref[:60]}')")
-    for k, (at, path) in enumerate(paths):
+    for k, (at, path, lines) in enumerate(paths):
         if not path_ok(path, repo):
             out.append(f"{where}: {path} is not a tracked file")
             continue
+        out += line_findings(where, path, lines, repo)
         if path.rstrip("/") not in repo.files:
             continue
         seg = ref[at + len(path): paths[k + 1][0] if k + 1 < len(paths) else len(ref)]
+        seg = re.sub(r'"\s*…\s*"', " … ", seg)  # "a" … "b" is one quote with a gap
         quotes = re.findall(r'"([^"]{4,})"', seg)
         bare = re.sub(r'"[^"]*"', " ", seg)
         text = repo.read(path)
@@ -169,17 +235,18 @@ def ref_findings(where, ref, repo, need_source):
             for sec in re.findall(r"§\s?(\d+(?:\.\d+)*)", bare):
                 if not any(re.match(rf"^#{{1,6}}\s+§?{re.escape(sec)}(?:\.|\s)", h) for h in heads):
                     out.append(f"{where}: {path} has no §{sec}")
+        elif "§" in bare:
+            out.append(f"{where}: a § of {path}, which is not Markdown (only Markdown headings are numbered)")
         if path == "docs/design/spec/bridge-spec-v3-changes.md":
             for d in re.findall(r"\bD(\d+)\b", bare):
                 if not re.search(rf"^#+ D{d}\.", text, re.M):
                     out.append(f"{where}: the bridge specification has no change D{d}")
         for q in quotes:
-            parts = [x.strip() for x in plain(q).split("…") if x.strip()]
-            if any(x not in plain(text) for x in parts):
-                out.append(f'{where}: {path} does not contain "{q[:50]}"')
+            if not quote_found(q, text):
+                out.append(f'{where}: {path} does not contain "{q[:50]}"' + (" (its parts in order, near)" if "…" in q else ""))
         for name in re.findall(r"`([A-Za-z_][A-Za-z0-9_]{3,})`", bare):
-            if name not in text:
-                out.append(f"{where}: {path} does not contain `{name}`")
+            if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}(?![A-Za-z0-9_])", text):
+                out.append(f"{where}: {path} does not contain `{name}` (as a whole word)")
     return out
 
 
@@ -254,11 +321,16 @@ def check(repo):
             findings.append(f"{name}: no source listed")
         for src in srcs:
             findings += ref_findings(f"{name} source", src, repo, need_source=True)
-        # Any other path the record names.
+        # Any other path the record names; a branch or a link to one anywhere but in the status (checked above).
         body = "\n".join(v for k, v in sec.items() if k not in ("Sources", "Options considered"))
-        for _, p in paths_in(body, repo):
+        for _, p, lines in paths_in(body, repo):
             if "/" in p and not path_ok(p, repo):
                 findings.append(f"{name}: names {p}, which is not a tracked file")
+            elif "/" not in p and not path_ok(p, repo) and p not in repo.basenames:
+                findings.append(f"{name}: names {p}, which no tracked file is called")
+            elif "/" in p or len(repo.basenames.get(p, [])) == 1:
+                findings += line_findings(name, p if "/" in p else repo.basenames[p][0], lines, repo)
+        findings += branch_findings(name, re.sub(r"^- \*\*Status:\*\*.*$", "", text, flags=re.M))
     if numbers != list(range(1, len(numbers) + 1)):
         findings.append(f"record numbers are not 1..{len(numbers)} without a gap: {numbers}")
     # The index: every record once, every cell equal to the record's; every ADR it names in the log.
