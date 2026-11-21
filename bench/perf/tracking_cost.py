@@ -60,13 +60,14 @@ def main():
     print("than this tree's (lez/lab/README.md); this tree's per-step gas is within 0.3% of it (`lez/results/perf-state.md` §3).\n")
 
     print("## Per update (each job of the record)\n")
-    print("| chain | kind | jobs | transactions each | exec gas per job (median) | storage gas per job | fee per job (median) | refused |")
-    print("|---|---|---:|---:|---:|---:|---:|---:|")
+    print("| chain | kind | jobs | transactions each | exec gas per job (median) | min – max | storage gas per job | fee per job (median) | refused |")
+    print("|---|---|---:|---:|---:|---|---:|---:|---:|")
     per = defaultdict(list)
     for j in jobs.values():
         per[(j["chain"], j["kind"])].append(j)
     for (chain, kind), js in sorted(per.items()):
         print(f"| {chain} | {kind} | {len(js)} | {statistics.median(j['tx'] for j in js):.0f} | {g(statistics.median(j['exec'] for j in js))} | "
+              f"{g(min(j['exec'] for j in js))} – {g(max(j['exec'] for j in js))} | "
               f"{g(statistics.median(j['stor'] for j in js))} | {g(statistics.median(j['fee'] for j in js))} | {sum(j['refused'] for j in js)} |")
 
     print("\n## Per day and per period, as the lab ran (one finality update every two hours, each period's update when served)\n")

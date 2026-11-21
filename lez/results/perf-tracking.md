@@ -10,12 +10,12 @@ than this tree's (lez/lab/README.md); this tree's per-step gas is within 0.3% of
 
 ## Per update (each job of the record)
 
-| chain | kind | jobs | transactions each | exec gas per job (median) | storage gas per job | fee per job (median) | refused |
-|---|---|---:|---:|---:|---:|---:|---:|
-| mainnet | finality | 98 | 3 | 9,225,372 | 4,592 | 73,839,652 | 0 |
-| mainnet | period | 10 | 5 | 16,060,242 | 54,252 | 128,915,952 | 0 |
-| sepolia | finality | 98 | 3 | 9,097,182 | 4,491 | 72,813,380 | 0 |
-| sepolia | period | 40 | 5 | 15,903,846 | 53,763 | 127,660,868 | 0 |
+| chain | kind | jobs | transactions each | exec gas per job (median) | min – max | storage gas per job | fee per job (median) | refused |
+|---|---|---:|---:|---:|---|---:|---:|---:|
+| mainnet | finality | 98 | 3 | 9,225,372 | 9,169,394 – 9,333,584 | 4,592 | 73,839,652 | 0 |
+| mainnet | period | 10 | 5 | 16,060,242 | 9,216,439 – 16,115,031 | 54,252 | 128,915,952 | 0 |
+| sepolia | finality | 98 | 3 | 9,097,182 | 9,042,588 – 9,990,044 | 4,491 | 72,813,380 | 0 |
+| sepolia | period | 40 | 5 | 15,903,846 | 15,875,565 – 16,364,483 | 53,763 | 127,660,868 | 0 |
 
 ## Per day and per period, as the lab ran (one finality update every two hours, each period's update when served)
 

@@ -228,8 +228,22 @@ fn note(keys: &BridgeKeys, cid: &Hash, vault: &[u8; 20], i: u64, token: [u8; 20]
 }
 
 fn bridge_state() {
-    println!("\n## 4. Bridge program: accounts created by real transactions\n");
     let mut w = bridge::World::with_roots();
+    // RFP-022 P.2: each root import of the scenario, the deposits it newly covers and its cost per deposit.
+    println!("\n## 4a. Bridge program: root imports and the deposits each covers (RFP-022 P.2)\n");
+    println!("| import | leaves it covers | newly covered | exec gas | storage gas | exec gas per newly covered deposit |\n|---|---:|---:|---:|---:|---:|");
+    let mut covered = std::collections::BTreeMap::<[u8; 32], u64>::new();
+    for r in w.chain.reports.iter().filter(|r| r.label.starts_with("ImportRoot")) {
+        assert!(r.ok(), "{}: applied", r.label);
+        let n: u64 = r.label.split("n=").nth(1).and_then(|s| s.split_whitespace().next()).and_then(|s| s.parse().ok()).unwrap();
+        let cid = if r.label.contains(" A ") { w.cid_a } else { w.cid_b };
+        let before = covered.get(&cid).copied().unwrap_or(0);
+        let new = n.saturating_sub(before);
+        covered.insert(cid, before.max(n));
+        let per = if new > 0 { grouped(r.charge.gas_exec / new) } else { "— (none new)".into() };
+        println!("| {} | {n} | {new} | {} | {} | {per} |", r.label, grouped(r.charge.gas_exec), grouped(r.charge.gas_stor));
+    }
+    println!("\n## 4. Bridge program: accounts created by real transactions\n");
     let program = w.program;
     let (cid_a, vault_a) = (w.cid_a, w.vault_a.address);
     println!(
