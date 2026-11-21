@@ -9,6 +9,8 @@
 # returns success for every call, so every seal is accepted, as the advisory says a forged one is.
 #
 # Usage: fork-rehearsal.sh FORK_RPC_URL BLOCK OUTDIR
+# FORK_RPC_URL must serve historical state at BLOCK (an archive node, e.g. https://rpc.sepolia.ethpandaops.io);
+# publicnode does not, and anvil then exits at start.
 set -u
 FORK_URL="$1"; B="$2"; OUT="$3"
 PORT=18645
@@ -22,7 +24,9 @@ anvil --fork-url "$FORK_URL" --fork-block-number "$B" --port "$PORT" --auto-impe
   --silent > "$OUT/anvil.log" 2>&1 &
 APID=$!
 trap 'kill $APID 2>/dev/null; wait $APID 2>/dev/null' EXIT
-for i in $(seq 1 60); do cast chain-id --rpc-url "$L" >/dev/null 2>&1 && break; sleep 1; done
+for i in $(seq 1 60); do cast chain-id --rpc-url "$L" >/dev/null 2>&1 && break; kill -0 $APID 2>/dev/null || break; sleep 1; done
+kill -0 $APID 2>/dev/null || { echo "anvil exited: $(tail -n 3 "$OUT/anvil.log" | tr '\n' ' ')" >&2
+  echo "the fork needs a reachable endpoint that serves historical state at block $B" >&2; exit 1; }
 CV=$(cast rpc --rpc-url "$L" web3_clientVersion 2>&1)
 case "$CV" in *anvil*) ;; *) echo "not anvil: $CV"; exit 1 ;; esac
 say "# anvil fork of Sepolia at block $B ($(cast chain-id --rpc-url "$L")), client $CV"

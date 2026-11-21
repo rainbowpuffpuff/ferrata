@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Read-only state of the four Sepolia vaults, their emergency stops and the shared Groth16 verifier.
-# eth_call / eth_getBalance / eth_estimateGas only, at one pinned block, on one endpoint per run.
+# eth_call / eth_getBalance only, at one pinned block, on one endpoint per run.
 # Usage: reads.sh RPC_URL BLOCK OUTFILE
+# A past BLOCK needs an endpoint that serves historical state (an archive node, e.g. https://rpc.sepolia.ethpandaops.io);
+# publicnode refuses such reads. Exits 1, with "# N reads failed" as the last line of OUTFILE, if any read failed.
 # Nothing is signed or sent: no `cast send`, no private key, no keystore.
 set -u
 RPC="$1"; B="$2"; OUT="$3"
@@ -137,4 +139,10 @@ q $n.maxFreeze $V "maxFreeze()(uint256)"
 q $n.checkpointCount $V "checkpointCount()(uint256)"
 q $n.nextLeafIndex $V "nextLeafIndex()(uint64)"
 q $n.releaseDelay.ETH $V "releaseDelay(address)(uint256)" $ETH
+FAILED=$(grep -c $'\tERROR' "$OUT")
+if [ "$FAILED" -gt 0 ]; then
+  echo "# $FAILED reads failed" >> "$OUT"
+  echo "reads.sh: $FAILED reads failed (the ERROR lines of $OUT); a past block needs an endpoint that serves historical state" >&2
+  exit 1
+fi
 echo "# done" >> "$OUT"

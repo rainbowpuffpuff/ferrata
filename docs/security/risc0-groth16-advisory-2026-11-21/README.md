@@ -111,4 +111,7 @@ done                                                           # expect 0, 0, 0 
 ```
 
 Re-check, sending nothing: `docs/security/risc0-groth16-advisory-2026-11-21/reads.sh URL BLOCK OUT` and
-`fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`).
+`fork-rehearsal.sh URL BLOCK OUTDIR` (Foundry's `cast` and `anvil`). Both need an endpoint that serves historical state
+at that block (an archive node, e.g. `https://rpc.sepolia.ethpandaops.io`); publicnode refuses reads at past blocks
+(8 of 205 on a re-run of 21 November 2026), and `reads.sh` then exits 1. `estimate.sh URL OUT` estimates at the
+latest block.
