@@ -223,9 +223,9 @@ The verification row is the run's own median send-to-final time of a transaction
 the statement is verified inside that transaction). With the run's two outages included (the zone stopped when its
 Bedrock funds ran out) the median is 19.6 min and the p90 86.7 min. At a slower cadence the header wait grows: an
 operator updating once an hour adds up to 60 minutes to it (*derived*); deferral (R.10) adds a random share of the
-window: on a sequencer two daemons applied an update in 105 s (median; p90 106 s) without deferral and 126 s (p90
-176 s) with a 32-s window, which halved the gas spent per update
-([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)).
+window: on a sequencer two daemons applied an update in 105 s (median; p90 106 s) without deferral, 126 s (p90 176 s)
+with a 32-s window and 306 s (p90 576 s) with a 120-s window, while the gas spent per update fell from 16.0M to 8.1M
+and 4.6M ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)).
 
 ### P.6 Off-chain compute
 
