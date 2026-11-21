@@ -1,0 +1,17 @@
+before the stall: storage slot (USDC totalSupply_ = value): applied, 279157 execution gas, 2 statement(s)
+before the stall: log (ERC-20 Transfer): applied, 97794 execution gas, 1 statement(s)
+before the stall: account (Multicall3): applied, 170523 execution gas, 1 statement(s)
+stall: R at slot 11549664; 106 updates recorded after it (period updates of {1410, 1411, 1412, 1413, 1414, 1415, 1416, 1417}); resume at slot 11608565 (706020 s = 8.2 days after the last attestation); weak-subjectivity bound 3532 epochs, R's period ends at slot 11662720
+during the stall: storage slot (USDC totalSupply_ = value): applied, 279157 execution gas, 2 statement(s)
+during the stall: log (ERC-20 Transfer): applied, 97794 execution gas, 1 statement(s)
+during the stall: account (Multicall3): applied, 170523 execution gas, 1 statement(s)
+out of order: 00137.period.gloas.ssz refused at Open with exit Some(23)
+resume: 106 jobs applied (334 transactions), 0 recorded updates not needed; committees adopted from the updates of periods [1410, 1411, 1412, 1413, 1414, 1415, 1416, 1417]; finalized slot 11549664 -> 11608192
+records written on the resume compared with a second provider's canonical roots: 2
+after the resume: storage slot (USDC totalSupply_ = value): applied, 279157 execution gas, 2 statement(s)
+after the resume: log (ERC-20 Transfer): applied, 97794 execution gas, 1 statement(s)
+after the resume: account (Multicall3): applied, 170523 execution gas, 1 statement(s)
+wrote $REPO/monitor/attest/tests/fixtures/stall.json
+test a_stalled_instance_keeps_attesting_and_resumes_without_repair ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 297.86s
