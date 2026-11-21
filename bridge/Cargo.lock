@@ -952,6 +952,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-disclose"
+version = "0.1.0"
+dependencies = [
+ "ferrata-bridge-core",
+ "hex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "ferrata-e2e"
 version = "0.1.0"
 dependencies = [

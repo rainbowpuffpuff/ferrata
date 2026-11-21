@@ -10,7 +10,7 @@
 # sha2) applies to ferrata-bridge-core there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/ferrata-bridge-core", "methods", "host", "e2e"]
+members = ["crates/ferrata-bridge-core", "crates/ferrata-disclose", "methods", "host", "e2e"]
 default-members = ["crates/ferrata-bridge-core"]
 exclude = ["guests"]
 
