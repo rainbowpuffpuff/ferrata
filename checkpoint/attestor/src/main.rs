@@ -28,9 +28,10 @@
 //!                                              from the node); the later blocks become the path after T
 //! tier    --answers DIR [--channel HEX]        the Bedrock node's view alone (not signable): tip, key
 //!                                              set, blocks per signer
-//! devnet-lez-standin --answers DIR [--channel HEX]
+//! devnet-lez-standin --answers DIR [--channel HEX] [--out DIR2]
 //!                                              devnet replays of recorded runs without a LEZ node: saves
-//!                                              every inscribed block as the LEZ node's final block
+//!                                              every inscribed block as the LEZ node's final block, in
+//!                                              DIR2/lez (default DIR/lez), for attest --lez-answers
 //! base    --answers DIR --genesis FILE --from A --to T --n-min N --t-min T --out IN
 //!                                              devnet set-up: an input over final blocks A..=T from the
 //!                                              node's answers alone (bridge values are stand-ins)
@@ -193,12 +194,13 @@ fn cmd_lez_standin(a: &Args) -> Result<()> {
     let channel: Hash = hex_str(a.opt("channel").unwrap_or(DEFAULT_CHANNEL), "channel")?;
     let answers = NodeAnswers::load(dir)?;
     let lez = devnet_lez_standin(&answers, &channel)?;
-    save_lez_answers(dir, &lez)?;
+    let out = a.opt("out").map_or(dir, Path::new);
+    save_lez_answers(out, &lez)?;
     eprintln!(
         "devnet stand-in: {} inscribed blocks saved as the LEZ node's final blocks under {}/lez (this assumes every \
          inscribed block applied: replays of recorded honest runs only)",
         lez.len(),
-        dir.display()
+        out.display()
     );
     Ok(())
 }

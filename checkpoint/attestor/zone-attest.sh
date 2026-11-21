@@ -23,12 +23,14 @@ $bin base --answers "$z/answers" --genesis "$z/deployment-settings.yaml" --from 
 $bin deployment --input "$work/base.input" --out "$z/deployment.json"
 
 echo "== each sequencer's channel key certifies its attestor's key; the attestors sign"
+# The zone run recorded no LEZ node's answers; its blocks (all applied there) stand in as final.
+$bin devnet-lez-standin --answers "$z/answers" --out "$work"
 for i in 0 1 2 3; do
   a=$($bin keygen --seed-label "zone-attestation-$i" --out "$work/attestation-$i.key")
   $bin certify --channel-key "$dev/seq-$i/channel_signing_key" --att-pub "$a" --deployment "$z/deployment.json" \
     --out "$z/cert-$i.json"
   $bin attest --deployment "$z/deployment.json" --cert "$z/cert-$i.json" --att-key "$work/attestation-$i.key" \
-    --answers "$z/answers" --state "$work/state-$i.json" --out "$z/att-$i.json"
+    --answers "$z/answers" --lez-answers "$work" --state "$work/state-$i.json" --out "$z/att-$i.json"
 done
 $bin verify --deployment "$z/deployment.json" --att "$z/att-0.json" --att "$z/att-1.json" --att "$z/att-2.json" --att "$z/att-3.json"
 

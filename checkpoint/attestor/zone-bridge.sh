@@ -220,7 +220,8 @@ attest_round() { # i out: one attestation of the node's final tier by attestor i
   local i="$1" out="$2" A="$W/att-$i" rc=0
   rm -rf "$A/answers"; mkdir -p "$A/answers"
   "$ATT" attest --deployment "$W/deployment.json" --cert "$A/cert.json" --att-key "$A/key" --node "$API" \
-    --save "$A/answers" --slot-from "$FROM" --state "$A/state.json" --out "$out" >> "$A/attest.log" 2>&1 || rc=$?
+    --lez "http://127.0.0.1:$((19300 + i))" --save "$A/answers" --slot-from "$FROM" --state "$A/state.json" \
+    --out "$out" >> "$A/attest.log" 2>&1 || rc=$?
   return "$rc"
 }
 

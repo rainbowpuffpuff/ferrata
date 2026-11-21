@@ -28,14 +28,18 @@ echo "node up: $(curl -fsS -m 3 "$api/cryptarchia/info")"
 
 echo "== the lab sequencer's attestor asks its node and signs"
 python3 -I -c 'import hashlib,sys; open(sys.argv[1],"wb").write(hashlib.sha256(b"ferrata/realblocks/attestation-key/v1").digest())' "$work/attestation-0.key"
-$bin attest --node "$api" --save "$work/answers-0" --slot-from 8843000 --deployment "$runs/deployment.json" \
+# Since the LEZ check (review H-2) a live attestor also asks its LEZ node: LEZ names one that follows this
+# node's channel (the lab's sequencer); the run recorded in runs/live-node predates the check.
+lez="${LEZ:?LEZ: the RPC of a LEZ node that follows this channel}"
+$bin attest --node "$api" --lez "$lez" --save "$work/answers-0" --slot-from 8843000 --deployment "$runs/deployment.json" \
   --cert "$runs/cert-0.json" --att-key "$work/attestation-0.key" \
   --state "$work/state-0.json" --out "$out/live-att-0.json"
 $bin verify --deployment "$runs/deployment.json" --att "$out/live-att-0.json"
 echo "== a stand-in sequencer's attestor asks the same node: its channel key is not in the live set"
 python3 -I -c 'import hashlib,sys; open(sys.argv[1],"wb").write(hashlib.sha256(b"ferrata/attestor/devnet-key/attestation-1").digest())' "$work/attestation-1.key"
-if $bin attest --node "$api" --save "$work/answers-1" --slot-from 8843000 --deployment "$runs/deployment.json" \
-    --cert "$runs/cert-1.json" --att-key "$work/attestation-1.key" --out "$work/live-att-1.json" 2> "$work/refusal.txt"; then
+if $bin attest --node "$api" --lez "$lez" --save "$work/answers-1" --slot-from 8843000 --deployment "$runs/deployment.json" \
+    --cert "$runs/cert-1.json" --att-key "$work/attestation-1.key" --state "$work/state-1.json" \
+    --out "$work/live-att-1.json" 2> "$work/refusal.txt"; then
   echo "UNEXPECTED: signed"; exit 1
 else
   tail -n 1 "$work/refusal.txt"
