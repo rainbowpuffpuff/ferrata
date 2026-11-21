@@ -122,6 +122,15 @@ unsoundness)":
 `docs/EVIDENCE.md`, row 138, after "anyone trips the stop with a junk proof of exploit)", add: ` (the accept-all
 model; RISC Zero's advisory of 11 Nov 2026 is narrower, and the live stops did not trip: row 154)`.
 
+## README.md's opening (proposed; review L9; `rfp-docs-final` edits README.md)
+
+The README first mentions the advisory in "Live on Sepolia". After the opening's "What is here are prototypes and
+their measurements. **Not audited. Not for production.**", a new paragraph (links written for the root `README.md`):
+
+```markdown
+**21 November 2026:** every proof here is made with RISC Zero 3.0.5, whose Groth16 verifier accepts forged claims (RISC Zero's advisories of 11 November 2026), and the Sepolia vaults stay exposed until the owner closes them: [security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md).
+```
+
 ## docs/README.md (proposed lines; `rfp-docs-final` edits this file)
 
 - Under the design documents:
