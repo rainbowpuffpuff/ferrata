@@ -6,8 +6,9 @@ Covers every workflow of this repository (.github/workflows/*.yml) and of the mo
 
   - pinned: `owner/repo@<40 hex>` (or a local path), which passes;
   - local: a path (anything with no `@`, our own workflows), reported separately, never a failure;
-  - todo: the line carries a TODO marker (a tag with a "# TODO: pin to a commit SHA" comment is the
-    documented stopgap while no SHA is available in this tree), reported separately, never a failure;
+  - todo: a tag followed by the exact comment "# TODO: pin to a commit SHA" (the documented stopgap
+    while no SHA is available in this tree), reported separately, never a failure; a TODO anywhere
+    else on the line does not count;
   - unpinned: anything else - a tag, a branch, a short SHA - and a failure: a moving target in CI.
 
 Prints one line per finding and the three lists; exits 1 if any unpinned use remains, 0 otherwise.
@@ -26,6 +27,7 @@ SCOPES = [
 ]
 USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(\S+)\s*(.*)$")
 SHA = re.compile(r"^[0-9a-f]{40}$", re.IGNORECASE)
+TODO = re.compile(r"#\s*TODO: pin to a commit SHA")
 
 
 def main():
@@ -47,7 +49,7 @@ def main():
                     pinned.append(f"{where}: {use}")
                 elif ref is None:
                     local.append(f"{where}: {use}")
-                elif "TODO" in line:
+                elif TODO.fullmatch(rest.strip()):
                     todo.append(f"{where}: {use}")
                 else:
                     unpinned.append(f"{where}: {use}  (ref \"{ref}\" is not a 40-character SHA)")

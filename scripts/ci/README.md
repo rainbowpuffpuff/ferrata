@@ -93,11 +93,13 @@ Run by CI's `links` job on every push and pull request.
 
 That **every third-party action a workflow uses is pinned to a full 40-character commit SHA**, in
 `.github/workflows/*.yml` and `modules/catalog/.github/workflows/*.yml`. A moving tag in CI is a
-supply-chain hole. Local workflow paths (no `@`) and TODO-marked lines (a tag today, carrying
-`# TODO: pin to a commit SHA`) are reported separately and do not fail; anything else unpinned fails.
-No SHA can be checked offline here, so the workflows still use tags (the new ones TODO-marked), and this check
-fails today (22 unpinned uses on 21 November 2026). It joins CI's `links` job once the owner has run
-`pin-actions.py --write`. Standard library only.
+supply-chain hole. Local workflow paths (no `@`) are reported separately; so is a tag followed by exactly the
+comment `# TODO: pin to a commit SHA` (a TODO anywhere else on the line does not count); anything else
+unpinned fails. The SHAs of most actions cannot be resolved offline here: the two pinned uses (the release
+action at `bbdc5287`, `v1.8`, and the `actions/checkout` commit that action itself uses) were taken from the
+local clone of `logos-modules-release-action`. On 21 November 2026 it counts 2 pinned, 7 local, 13
+TODO-marked (`macos.yml`, `sequencer.yml`) and **21 unpinned** (all in `ci.yml`), so it fails today; it joins
+CI's `links` job once the owner has run `pin-actions.py --write`. Standard library only.
 
 ```sh
 python3 -I scripts/ci/check-actions-pinned.py

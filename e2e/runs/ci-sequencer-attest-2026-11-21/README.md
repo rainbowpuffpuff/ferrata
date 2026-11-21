@@ -28,4 +28,11 @@ it holds, as the live driver's `inbound --chain stand-in` phase and the crown's 
 ([`lez/live/driver/src/inbound.rs`](../../../lez/live/driver/src/inbound.rs)), so that every `Init` and update is
 inside its window whenever CI runs. Not done here.
 
-Machine paths in the logs are replaced by `<spike>`; the cargo build lines are cut from the log.
+Machine paths in the logs are replaced by `<spike>`; the cargo build lines are cut from the log. (The script then
+scrubbed paths only on success; since then it scrubs its whole results directory on every exit,
+`scripts/ci/sequencer-records.sh`.)
+
+`records/programs.tsv` lists a `consumer` row although the consumer was never deployed in this run (the phase that
+deploys it, `attest-private`, did not start): the driver writes that row whenever it is given `--consumer-bin`. The
+script's check that the consumer was deployed now reads `run.tsv` instead (its `CreateHeader` and every segment
+applied), and says no for this run (`scripts/ci/test-sequencer-records.sh`).

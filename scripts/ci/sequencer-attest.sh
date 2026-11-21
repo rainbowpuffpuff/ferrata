@@ -57,6 +57,11 @@ mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
 LOG="$OUT/sequencer-attest.log"
 : > "$LOG"
+# shellcheck source=scripts/ci/sequencer-records.sh
+. "$REPO/scripts/ci/sequencer-records.sh"
+# No path of the machine that ran this in what it leaves behind, on every exit: CI uploads the directory
+# whether the run passed or failed.
+trap 'scrub_paths "$OUT" "$BESIDE" "$HOME"' EXIT
 
 T0=$(date +%s)
 say() { echo "[sequencer-attest $(date -u +%T)] $*"; }
@@ -187,8 +192,7 @@ CONSUMER_BLOCK="$(printf '%s' "$CONSUMER_ROW" | awk -F'\t' '{print $4}')"
 CONSUMER_GAS="$(printf '%s' "$CONSUMER_ROW" | awk -F'\t' '{print "execution gas " $8 ", storage gas " $9 ", fee " $13}')"
 
 # The consumer was deployed, and its attestation instance is active at the fixture's finalized slot.
-consumer_deployed() { awk -F'\t' '$1 == "consumer" { found = 1 } END { exit !found }' "$1"; }
-check 'programs.tsv names the consumer deployment' consumer_deployed "$RECORDS/programs.tsv"
+check 'the consumer deployed through the loader (its header and every segment applied)' consumer_deployed "$RECORDS"
 SLOT="$(python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))["finalized_slot"])' "$REPO/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/fixture.json")"
 INST_ROW="$(awk -F'\t' 'NR > 1 && $1 ~ /^attest-mainnet/' "$RECORDS/instances.tsv")"
 if [ -z "$INST_ROW" ]; then
@@ -237,8 +241,6 @@ FINISHED="$(sed -n 's/^- started .*finished \(.*\) (UTC).*/\1/p' "$RECORDS/envir
   echo "ones by lez/live/run-live.sh and by this script."
 } > "$OUT/README.md"
 
-# No path of the machine that ran this in the results directory.
-sed -i -e "s#$BESIDE/#../#g" -e "s#$HOME/#~/#g" "$LOG"
 
 echo "== summary: $TOTAL transactions sent; $APPLIED applied, $REFUSED refused with an exit code, $REVERTED reverted, $DROPPED dropped, $REJECTED rejected, $UNFINISHED unfinished"
 echo "== the reference consumer's AttestPrivately: applied in block $CONSUMER_BLOCK (transaction $CONSUMER_TX, $CONSUMER_GAS); its instance active at the fixture's finalized slot $SLOT"
