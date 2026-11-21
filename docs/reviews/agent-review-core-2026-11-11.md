@@ -4,8 +4,8 @@ Reviewer: a headless agent (Claude Code, Opus 5.5), 11 November 2026, 14:15–14
 spend for this review (mrun ledger estimates, profile `ws-9`): 0.30 USD over 11 calls.
 Code: branch `integration6` at `c52eee4` (every `file:line` below is at that commit; the review
 branch changes no file of `ferrata-core`). Review branch: `review-core` in
-`spike/ferrata-wt-review-core` (tests and mutant scripts only; tip in §4).
-Spec text used (kept under `spike/tmp/review-core/spec/`, with `SOURCES.txt`): consensus-specs
+a separate worktree (tests and mutant scripts only; tip in §4).
+Spec text used (kept outside the repository, with `SOURCES.txt`): consensus-specs
 `v1.7.0-beta.4` (light-client `sync-protocol.md` and `fork.md` of Altair, Capella, Deneb, Electra,
 Gloas; `phase0/beacon-chain.md`; `altair/beacon-chain.md`; `altair/bls.md`; `gloas/beacon-chain.md`); the SSZ text of
 consensus-specs `v1.6.0` (the `ssz/` directory is gone at `v1.7.0-beta.4`); execution-specs
@@ -16,7 +16,7 @@ to those files (`alt-sp` = `specs/altair/light-client/sync-protocol.md`, `cap-sp
 
 What ran (all on Modal, profile `ws-9`, through `mrun`; measured):
 - `scripts/fetch-vectors.sh && cargo test -p ferrata-core -p ferrata-spectests --locked`: **142 passed, 0
-  failed** (log `spike/tmp/review-core/test1.log`). Every test a row names exists and passed.
+  failed** (log `test1.log`, outside the repository). Every test a row names exists and passed.
 - New tests on the review branch, `crates/ferrata-spectests/tests/review_core.rs`: 6, all pass on
   `c52eee4`'s code (they pin what the code does where a row says otherwise or where nothing pinned it).
 - New mutants, `scripts/review-mutants.py` (same runner as `scripts/mutants.py`, whole workspace):
@@ -133,7 +133,7 @@ accepts, on any input that reaches it on the shipped path.
 ### 2.3 Test gaps: six plausible bugs survived the suite (all closed on the review branch)
 
 24 extra mutants (`scripts/review-mutants.py`, run on Modal with the whole workspace; log
-`spike/tmp/review-core/mutants-review.log` and `mutants-steps.log`):
+`mutants-review.log` and `mutants-steps.log`, outside the repository):
 
 | Id | File | Change | First run | With the new tests |
 |---|---|---|---|---|

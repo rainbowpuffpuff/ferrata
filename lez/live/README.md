@@ -289,7 +289,7 @@ What the 0.3.5-rc.1 node showed: 61 blocks were final 14–24 s after the sequen
 120, in two runs of 60, only 1,214–1,216 s after (about 300 slots of 4 s), and one public transaction waited
 1,219.6 s to settle (the other 76: 19.1–36.8 s, mean 35.6 s over all 77). Not traced: the sequencer's log has no
 rewind and one skipped turn; the node's storage gas price rose 1 → 7 over the run (rc2: 1 → 3). Figures from
-`results/v0.4.0-rc3/logs/` by the same count as rc2's (`spike/tmp/rc2/tools/latency.py`, beside the repository).
+`results/v0.4.0-rc3/logs/` by the same count as rc2's (`latency.py`, beside the repository, not in it).
 
 Reproduce on rc3 as on rc2 above, with `v0.4.0-rc3` for the tag, the final binaries for `FERRATA_PROGRAM_BIN` and
 `FERRATA_SCRIPTED_BIN` (`scripts/reproduce-image-ids.sh build` makes them), `FERRATA_LIVE_HARNESS_RESULTS` at

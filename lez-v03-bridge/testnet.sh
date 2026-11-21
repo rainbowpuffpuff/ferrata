@@ -148,7 +148,7 @@ capture_args() { # --capture DIR --proof FILE --slot N for the run's capture
   echo "--capture $dir --proof $proof --slot $slot"
 }
 
-# The public testnet: blocks hours apart, rewinds (spike/tmp/testnet-ops/FOR-SIBLINGS.md). So the public steps go as
+# The public testnet: blocks hours apart, rewinds (testnet-ops's notes, outside the repository). So the public steps go as
 # ONE batch for one block, through testnet-ops's queued sender (FERRATA_OPS: ferrata_ops; explicit nonces, tight
 # declared gas), from the wallet home `prepare` made the accounts in; then the private claim (real proof, after the
 # batch's block, which wrote the root it is checked against at settlement) and the private burn (after the claim's

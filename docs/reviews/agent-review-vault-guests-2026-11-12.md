@@ -1,7 +1,7 @@
 # Independent review of the vault and the guests against the specifications (docs/REVIEW-vault.md, 52 rows; docs/REVIEW-guests.md, 55 rows)
 
 Reviewer: a headless agent (Claude Code, Opus 5.5), 12 November 2026, 19:50–20:50 CET. Code: `89e6d6d` (every
-`file:line` below is at that commit). Review branch: `review-vault` in `spike/ferrata-wt-review-vault` (the two
+`file:line` below is at that commit). Review branch: `review-vault` in a separate worktree (the two
 tables, three vault tests, three checkpoint-core tests, two mutant runners, a docs-only suggested fix; tip in §5).
 The branch changes no source file of `vault/src`, `bridge/guests`, `bridge/crates`, `checkpoint/crates`,
 `checkpoint/guests`, `lez/guests` or the wire crates (it adds one test file under
@@ -24,7 +24,7 @@ are this review's (§3).
 What ran (Modal build box of the worktree, through `mrun`; measured):
 - `cd vault && forge test` with the review's test file: **454 passed, 0 failed, 1 skipped in 44 suites** (26.8 s;
   without the review's file: 451 passed, 1 skipped, 43 suites, of which 61 tests with real proofs in 15 suites under
-  `test/real/`). Log `spike/tmp/review-vault/mut/full-suite.log`.
+  `test/real/`). Log `mut/full-suite.log`, outside the repository.
 - `vault/test/ReviewVault.t.sol`: 3 new tests, all pass on `89e6d6d`'s vault (they pin what the code does where
   nothing pinned it or where a comment says otherwise).
 - `checkpoint/crates/checkpoint-core/tests/review_guests.rs`: 3 new tests, all pass on `89e6d6d`'s checkpoint core
@@ -198,7 +198,7 @@ any input that reaches it on the shipped path.
   tests the program against a synthetic slot 37 (`bridge_roles.rs:105-108`), not against the vault.
 - **Test.** VR25 declares `retired` before `freezeAuthority`: it survived every suite and the invariant campaign
   (§3.1). New tests `ReviewVault::test_review_slot37_holdsTheFreezeAuthorityAndTheRetiredByteTheLezSideReads` and
-  `test_review_slot37_keylessRetirementSetsTheSameByte` pass on `89e6d6d` and kill VR25 (both fail on it; `spike/tmp/review-vault/run3.log`).
+  `test_review_slot37_keylessRetirementSetsTheSameByte` pass on `89e6d6d` and kill VR25 (both fail on it; log `run3.log`, outside the repository).
 - **Impact.** None on v5 or on the live round trip. A later vault whose layout moves `retired` breaks the keyless
   `Sunset` either way. With a zero at byte 11 it never opens: if the freeze key is also lost, LEZ can never be
   sunset, so no sunset checkpoint, so deposits LEZ never imported are never refundable (the case D13's keyless path
@@ -286,7 +286,7 @@ any input that reaches it on the shipped path.
   `forge test` at `89e6d6d`: 451 passed, 1 skipped, 43 suites; 61 tests with real proofs in 15 suites under
   `test/real/` (measured, log above). `vault/README.md` already says 451. The coverage and mutant figures of the row
   were not re-measured here.
-- **Fix suggested.** The row text in `spike/tmp/review-vault/REPORT.md` (the owner edits EVIDENCE).
+- **Fix suggested.** The row text in the reviewer's report, outside the repository (the owner edits EVIDENCE).
 
 ### 2.8 Smaller notes (no verdict change)
 
@@ -315,8 +315,8 @@ any input that reaches it on the shipped path.
 ### 3.1 Vault (VR01–VR25, `vault/tools/review_mutants.py`)
 
 First run against the suite as it was (`REVIEW_WITHOUT_NEW_TESTS=1`): 24 killed, 1 survived, 117 s for five slices
-of five on the box (logs `spike/tmp/review-vault/mut/vr-*.log`). Re-check of the survivor with the new tests:
-killed by both slot-37 tests (19 s, `spike/tmp/review-vault/run3.log`).
+of five on the box (logs `mut/vr-*.log`, outside the repository). Re-check of the survivor with the new tests:
+killed by both slot-37 tests (19 s, `run3.log`).
 
 | Id | Change | Result (first run) | Killed by (first failing test) |
 |---|---|---|---|
@@ -352,7 +352,7 @@ is not a behaviour of the vault but its layout, which another program reads.
 ### 3.2 Guests (G01–G18, `scripts/review-guest-mutants.py`)
 
 Baselines: `ferrata-bridge-core`, `attestor-core` and `checkpoint-core` pass. 18 mutants, 165 s on the box (log
-`spike/tmp/review-vault/run3.log`; the re-check `run4.log`); the runner restored every source (the local tree's
+`run3.log`, outside the repository; the re-check `run4.log`); the runner restored every source (the local tree's
 `git diff` of the guests' sources is empty after both runs). First run: 14 killed, 4 survived the two crates' own
 tests; with `review_guests.rs` one more is killed; the other three are pinned by rule (A)'s tests in
 `checkpoint/fidelity/tests/rule.rs`, which I read but did not run.

@@ -81,7 +81,7 @@ answer; `FERRATA_DAY1_UNTIL=a|b|c|d` stops after a stage.
 - The bridge's configuration needs the vault, which the owner deploys on Sepolia in a separate step: stage (e) stops
   at writing that step down. No private transaction (the private placement, a private claim) is part of day one.
 - It keeps the daemon running only as long as its machine runs: on a Modal box, a keepalive must ping it (the
-  rehearsal's: `spike/tmp/testnet04/keepalive.sh`, beside the repository).
+  rehearsal's: `keepalive.sh`, beside the repository, not in it).
 
 ## Files
 

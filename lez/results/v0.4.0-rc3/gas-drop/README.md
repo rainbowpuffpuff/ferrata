@@ -102,7 +102,7 @@ python3 -I lez/scripts/gas-drop-summary.py lez/results/v0.4.0-rc3/gas-drop   # e
 python3 -I scripts/m0.py                                                     # M0.2 from summary.json
 ```
 
-Run it again (a build box; about 45 min, two real proofs of about 5 min): `spike/tmp/m0-gasdrop/boxG.sh` beside the
-repository does the builds and `lez/live/run.sh run` with `FERRATA_LIVE_HOOK=lez/live/hooks/gasdrop.sh`,
+Run it again (a build box; about 45 min, two real proofs of about 5 min): `boxG.sh` beside the
+repository (not in it) does the builds and `lez/live/run.sh run` with `FERRATA_LIVE_HOOK=lez/live/hooks/gasdrop.sh`,
 `FERRATA_LIVE_PHASES="info hook export"`, `GASDROP_ELF` (the `gasdrop` guest), `GASDROP_TOOL` (`ferrata-gasdrop`), the
 final `ferrata_lez.bin` and `ferrata_bridge.bin`, LEZ v0.4.0-rc3 selected (`lez/scripts/lez-select.sh v0.4.0-rc3`).

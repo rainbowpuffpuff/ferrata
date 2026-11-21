@@ -1,5 +1,5 @@
 //! Regression tests of review-lez-v03-bridge (18 Nov 2026), through LEZ v0.3.1's block application; R1 and R2 are
-//! the reviewer's tests (spike/tmp/review-lez-v03-bridge/tests/review_bridge.rs), turned around to show the fixes.
+//! the reviewer's tests (`review_bridge.rs`, kept outside the repository), turned around to show the fixes.
 //!
 //! R1. A configuration B of the SAME vault and chain whose light client is a program its creator controls (here the
 //!     repository's own stand-in record writer, `guests/records`, which anyone can deploy) inits, imports the real

@@ -279,7 +279,7 @@ From the tree's root (`e2e/sepolia-live.env`, if present, is read for SEPOLIA_RP
 public endpoint and the known deployer are used, read-only, by `start`):
 
 ```
-cd spike/ferrata-wt-integ7
+cd <repo>
 export CROWN_MODAL_PROFILE=<your Modal profile>  # every command needs it (the run's Modal workspace)
 e2e/crown.sh start crown-live-3                 # the live run: prints sender, nonce, vault address, the 13
                                                 #   transactions, the gas price; type yes

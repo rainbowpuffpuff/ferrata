@@ -1,7 +1,7 @@
 # crown-live-3: the round trip on the final programs, live, Sepolia -> LEZ -> Sepolia, to DONE (12 Nov 2026)
 
 The owner's `e2e/crown.sh start crown-live-3` on our Modal workspace (app `ferrata-crown`, function `runner`),
-from the tree `spike/ferrata-wt-integ7`, branch `integration7`, signing on Sepolia with the throwaway deployer
+from a worktree of branch `integration7`, signing on Sepolia with the throwaway deployer
 `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` (keystore in the Modal Secret `ferrata-sepolia-key`). The programs are
 the final ones, [`docs/image-ids.md`](../../../docs/image-ids.md), which any checkout rebuilds to the same ids
 (`scripts/reproduce-image-ids.sh`); the light client starts from the fresh checkpoint

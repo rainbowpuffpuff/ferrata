@@ -29,7 +29,7 @@ deployments are 6 and 4 transactions (segments and header), then 9 others.
 
 Execution gas is derived from the fee the payer was charged (its balance before and after): fee = 8 x execution gas +
 8 x bytes at this chain's base fees (8 and 8, the floor); a deployment's fee was not read (it charges storage gas only:
-testnet-ops, `spike/tmp/testnet-ops/FOR-SIBLINGS.md`). Privacy-preserving transactions are fee-exempt on v0.3.1.
+testnet-ops's notes, outside the repository). Privacy-preserving transactions are fee-exempt on v0.3.1.
 **The two real proofs** (LEZ's wallet, `execute_and_prove` on the box's CPU, r0vm 3.0.5): the private claim
 178.0 s to prove and send, 247,826 bytes, peak memory 9.26 GiB (GNU time of the whole command,
 3:28.10 with the wait for its block); the private burn 168.2 s, 248,346 bytes, 9.26 GiB (3:18.29).

@@ -1,6 +1,6 @@
 # crown-live-2: stopped at its first stage, nothing sent (12 Nov 2026)
 
-The owner's `e2e/crown.sh start crown-live-2` on our Modal workspace, from the tree `spike/ferrata-wt-integ7`,
+The owner's `e2e/crown.sh start crown-live-2` on our Modal workspace, from a worktree of
 branch `integration7`, commit a8076be (the final programs of [`docs/image-ids.md`](../../../docs/image-ids.md);
 `programs/ids.jsonl` is byte for byte `crown-live-3`'s). One runner, `fc-01M77G3GHWYAE1M7T2KCSH7ARY`, started
 09:06:03Z; it stopped itself at 09:19:05Z in stage `lez-a`, LEZ session A, before any other stage (`state.json`: done

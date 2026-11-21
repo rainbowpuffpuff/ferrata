@@ -41,7 +41,7 @@ program reads attested Ethereum time), so a proof has no deadline from the claim
 still parsed by the driver and has no effect.
 
 ## Interface
-`spike/tmp/crown/interfaces/lez.md` (beside the repository) fixes the environment, the Volume layout and the files.
+The crown's interface note (beside the repository, not in it) fixes the environment, the Volume layout and the files.
 
 ## Rehearsed (results/README.md)
 On the build box: the whole of A and B against a STAND-IN (an anvil fork of Sepolia with the real v5 vault, a beacon

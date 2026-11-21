@@ -18,7 +18,7 @@ after a failed read. That property is kept; the rest is below.
 | 429, 5xx, timeouts, dropped connections | always | Foundry retries only what alloy classes as retryable (429, -32005, "header not found" exactly, rate-limit texts); "block not found", "missing trie node" and timeouts are not |
 
 The audit of every script that talks to a public network (18 tables, call by call) is in
-`spike/tmp/rpc-robust/REPORT.md` beside the repository; its summary is in the commit history of this file.
+its full report, kept beside the repository (not in it); its summary is in the commit history of this file.
 
 ## What the scripts do now (`scripts/pubnet.py`, `scripts/pubnet.sh`)
 

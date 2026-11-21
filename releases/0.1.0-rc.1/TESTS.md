@@ -4,8 +4,8 @@ Built on the Modal build box (`spike/modal-build/mrun`, workspace ws-14) on 11 N
 `fa1d453cb831c9303abedc27f04082d1974b4966` with `just release 0.1.0-rc.1 <out>` (just 1.36.0): the six guests at the
 crown build path (`scripts/reproduce-image-ids.sh build`), the vault (forge 1.3.6, solc 0.8.26, sources only), the CLI
 (Rust 1.98.1). Tarball `ferrata-0.1.0-rc.1-x86_64-linux.tar.gz`, sha256
-`617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7` (not committed; on the box and in
-`spike/tmp/release-eng/rel/` beside the repository).
+`617c0117400aa1422c5d6c120b17d5ff7ce70b87253316d32137dca0a9a5fcd7` (not committed; on the box and
+beside the repository).
 
 | Program | Image id | Equal to the crown run's (e2e/crown/README.md) |
 |---|---|---|

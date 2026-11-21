@@ -71,7 +71,7 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
 ## Commands
 
 ```sh
-cd spike/ferrata-wt-<name>                       # a worktree; the inputs beside it in spike/tmp/miniapp-sequencer/inputs/
+cd <repo>                                        # a worktree; the inputs beside it in ../tmp/miniapp-sequencer/inputs/
 ../modal-build/mrun --profile <yours> --put ../tmp/miniapp-sequencer/inputs -- 'bash e2e/seqnet/run.sh build'
 ../modal-build/mrun --profile <yours> -- 'bash e2e/seqnet/run.sh build-miniapp'        # Nix: the module, logosctl
 ../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh cli cli-N'
