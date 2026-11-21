@@ -5,7 +5,7 @@
 # a laptop; nothing is sent to any public network: the beacon data is bench/perf/beacon_replay.py's replay of the
 # lab's record on loopback). After bench/perf/gate-build.sh.
 #
-#   bash bench/perf/gate-sequencer.sh NAME          # records in bench/perf/results/gate-NAME/
+#   bash bench/perf/gate-sequencer.sh NAME          # records in bench/perf/results/gate-NAME/ (at the end)
 #   python3 -I bench/perf/summarize_gate.py bench/perf/results/gate-NAME
 #
 # Environment: GATE_ENTRIES (recorded updates replayed, default 24), GATE_STEP (seconds between them, 150),
@@ -18,10 +18,12 @@ set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 T="${PERF_GATE_TMP:-$REPO/../tmp/rfp-C/gate}"
 NAME="${1:?usage: gate-sequencer.sh NAME}"
-W="$T/w-$NAME"; VOL="$W/vol"; OUT="$REPO/bench/perf/results/gate-$NAME"
+# The run writes to scratch and its records are copied into the worktree at the end: a synced mrun call during the run
+# would put the worktree's older copies back over files the daemons hold open.
+W="$T/w-$NAME"; VOL="$W/vol"; OUT="$W/out"; FINAL="$REPO/bench/perf/results/gate-$NAME"
 say() { echo "[$(date -u +%H:%M:%S)] $*"; }
 [ -x "$T/bin/ferrata-updater" ] && [ -f "$T/crown-lez/bundle.tar.zst" ] || { say "run bench/perf/gate-build.sh first"; exit 1; }
-rm -rf "$W" "$OUT"; mkdir -p "$VOL/inputs" "$OUT"
+rm -rf "$W"; mkdir -p "$VOL/inputs" "$OUT"
 cp "$T/crown-lez/bundle.tar.zst" "$VOL/bundle.tar.zst"
 {
   echo "date: $(date -u +%FT%TZ)"; echo "nproc --all: $(nproc --all)"; grep -m1 'model name' /proc/cpuinfo; grep MemTotal /proc/meminfo
@@ -37,8 +39,10 @@ say "session X: the daemons (hook bench/perf/gate-hook.sh)"
 xrc=0
 GATE_OUT="$OUT" GATE_UPDATER_BIN="$T/bin/ferrata-updater" CROWN_HOOK="$REPO/bench/perf/gate-hook.sh" \
   CROWN_DEADLINE_MIN=$(( ${GATE_DEADLINE_MIN:-150} + 15 )) bash "$REPO/lez/crown/session.sh" x > "$W/session-x.log" 2>&1 || xrc=$?
-cp "$VOL/session-x/logs/hook.log" "$OUT/hook.log" 2>/dev/null || true
+cp "$VOL/session-x/logs/hook.log" "$OUT/hook.log" 2>/dev/null || cp "$W/zone/logs/hook.log" "$OUT/hook.log" 2>/dev/null || true
 cp "$VOL/session-x/logs/session.log" "$OUT/session-x.log" 2>/dev/null || true
 cp "$VOL/session-a/logs/session.log" "$OUT/session-a.log" 2>/dev/null || true
 say "session X rc=$xrc"
 tail -n 6 "$OUT/hook.log" 2>/dev/null || tail -n 30 "$W/session-x.log"
+rm -rf "$FINAL"; mkdir -p "$(dirname "$FINAL")"; cp -r "$OUT" "$FINAL"
+say "records in $FINAL"

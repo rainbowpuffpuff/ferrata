@@ -151,11 +151,13 @@ def handler(replay, port):
             if path == "/eth/v1/beacon/light_client/updates":
                 start, count = int(q.get("start_period", 0)), int(q.get("count", 1))
                 out = b""
+                # Every period of the range the record holds, an absent one skipped (as lez/updater's Recorded
+                # source does): the updater asks for the period before its store's, which a record that starts at
+                # the store's period does not hold.
                 for p in range(start, start + min(count, 128)):
                     e = replay.period_update(p)
-                    if e is None:
-                        break
-                    out += struct.pack("<Q", len(e["ssz"]) + 4) + b"\x00\x00\x00\x00" + e["ssz"]
+                    if e is not None:
+                        out += struct.pack("<Q", len(e["ssz"]) + 4) + b"\x00\x00\x00\x00" + e["ssz"]
                 return self.send(200, out, "application/octet-stream", "updates")
             return self.send(404, b'{"code":404}', "application/json", "other")
 

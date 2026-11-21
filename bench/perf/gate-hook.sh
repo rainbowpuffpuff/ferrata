@@ -66,9 +66,19 @@ SAMPLER=$!
 say "daemons ${pids[*]}; sampler ${sargs[*]}"
 
 # Done when every entry has been revealed and the newest revealed finalized slot is applied by someone, or at the deadline.
-t0=$(date +%s); done=0
+t0=$(date +%s); done=0; tick=0
 while [ $(( $(date +%s) - t0 )) -lt $(( DEADLINE_MIN * 60 )) ]; do
   sleep 30
+  # Every minute, each daemon's /health and /metrics as it serves them (what it waits for, its counters).
+  tick=$((tick + 1))
+  if [ $((tick % 2)) = 0 ]; then
+    for i in $(seq 0 $((n - 1))); do
+      now=$(date +%s)
+      h="$(curl -fsS -m 5 "http://127.0.0.1:$((9701 + i))/health" 2>/dev/null | tr -d '\n')"
+      echo "{\"t\": $now, \"health\": ${h:-null}}" >> "$OUT/health-${names[$i]}.jsonl"
+      { echo "# t=$now"; curl -fsS -m 5 "http://127.0.0.1:$((9701 + i))/metrics" 2>/dev/null | grep -v '^#'; } >> "$OUT/metrics-series-${names[$i]}.txt"
+    done
+  fi
   revealed=$(( $(wc -l < "$OUT/reveals.tsv") - 1 ))
   want="$(awk -F'\t' -v n="$ENTRIES" 'NR == n + 1 { print $5 }' "$OUT/reveals.tsv")"
   got="$(cat "$ZONE_WORK"/gate/*/state/*/journal.tsv 2>/dev/null | awk -F'\t' '$2 == "finish" && $5 == "applied" { if ($4 > m) m = $4 } END { print m + 0 }')"
