@@ -1,0 +1,8 @@
+module	revision	result	seconds
+eth_rpc_module	6965f3252986	ok (attempt 6)	341
+fee_module	f2065e787eeb	ok (attempt 2)	45
+keystore_module	e83a899a1718	ok (attempt 2)	144
+signer_manager_module	bd5c84d21ced	ok (attempt 2)	120
+tx_sender_module	f1754c3b13c7	ok (attempt 2)	78
+evm_signer_cli	2cb46d8d2a84	ok (attempt 2)	78
+evm_keystore_cli	c6db2ad320f6	ok (attempt 2)	56
