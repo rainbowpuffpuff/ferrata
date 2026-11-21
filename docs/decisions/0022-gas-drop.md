@@ -2,7 +2,7 @@
 
 - **Date:** 10 November 2026 (D13); run on LEZ v0.4.0-rc3 on 16 November 2026
 - **Status:** accepted; built and run with LEZ's wallet; not yet in the relayer daemon
-- **Requirements:** RFP-022 U.5, Privacy #6
+- **Requirements:** RFP-022 U.5, Priv.6
 
 ## Context
 
@@ -11,7 +11,8 @@ faucet or a purchase links to that source.
 
 ## Options considered
 
-1. Accept the link.
+1. Accept the link: the claim's fee paid from an account tied to the user. *Reconstructed for contrast* (not recorded as
+   an option at the time); the reason against it is docs/design/bridge.md §6's: "The fee payer is a correlation point".
 2. A gas-drop receipt binding `(N, oneTimeAddress, relayer)`; the relayer sends one credit per `N` to a fresh one-time
    private account; the claim sweeps it and pays its fee from it.
 

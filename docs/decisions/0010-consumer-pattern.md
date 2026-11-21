@@ -13,6 +13,8 @@ deposit.
 ## Options considered
 
 1. A nullifier on the identifier alone (as the reference consumer's public claim keeps it, with no private claim).
+   *Recorded:* docs/design/attestation.md §7 ("A nullifier that is a function of the identifier alone is computable
+   from public Ethereum data").
 2. Three added rules: the fact commits to a depositor's secret; the nullifier hashes that secret with the identifier;
    exactly one kind of fact counts as the deposit.
 

@@ -2,7 +2,7 @@
 
 - **Date:** 12 November 2026
 - **Status:** accepted; built
-- **Requirements:** RFP-021 R.4, R.5, R.8–R.10, U.3
+- **Requirements:** RFP-021 R.4, R.5, R.8, R.9, R.10, U.3
 
 ## Context
 
@@ -11,8 +11,10 @@ fall on the fastest operator.
 
 ## Options considered
 
-1. Race (the fastest pays every time, duplicates frequent).
-2. A coordinator or a role (forbidden by F.11).
+1. Race (the fastest pays every time, duplicates frequent). *Ruled out:* RFP-021 R.10 ("Submission timing must not
+   systematically concentrate cost on whichever party reacts fastest").
+2. A coordinator or a role. *Ruled out:* RFP-021 F.11 ("submission carries no access control, allowlist, role, or
+   registration").
 3. Each daemon waits `H(key, job, step) mod W` rounds, re-checks the chain, sends; any updater continues any open job;
    an updater finishes the job it opened before opening another (`finish_own_jobs`).
 

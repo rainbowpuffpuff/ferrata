@@ -11,7 +11,8 @@ reverts the whole transaction (`check_exit_code`), so a consumer's code never ru
 
 ## Options considered
 
-1. Return error values to the consumer (impossible on v0.4 without changing LEZ).
+1. Return error values to the consumer (impossible on v0.4 without changing LEZ). *Recorded:* lez/RESULTS.md §5,
+   "Decisions" item 4 ("a non-zero exit of any handler reverts the whole transaction").
 2. Let the code be the transaction's outcome; give clients the same codes before sending (dry runs) and a table of
    what to do for each.
 

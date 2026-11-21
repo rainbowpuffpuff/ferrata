@@ -1,8 +1,8 @@
 # ADR 0013: Deposit and burn secrets derive from the LEZ wallet seed; recovery scans whole lists
 
-- **Date:** 10 November 2026 (SPEC-v2)
+- **Date:** 9 November 2026 (SPEC-v2)
 - **Status:** accepted; built
-- **Requirements:** RFP-022 F.2, F.5, F.9, R.5, Privacy #4
+- **Requirements:** RFP-022 F.2, F.5, F.9, R.5, Priv.4
 
 ## Context
 
@@ -11,7 +11,8 @@ which items are the user's.
 
 ## Options considered
 
-1. Keep per-deposit secrets in local state (lost with the machine).
+1. Keep per-deposit secrets in local state (lost with the machine). *Ruled out:* RFP-022 R.5 (a restored client with
+   no local state must find all positions) and F.9 (recovery from existing credentials only).
 2. Derive `kAuth` and `kView` from the wallet seed under labels disjoint from LEZ's own; `s`, `C`, `N`, burn tags,
    `sOut` and the memo from them; recover by downloading whole lists and matching.
 

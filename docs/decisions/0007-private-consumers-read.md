@@ -12,6 +12,7 @@ and the sending program. A private consumer calling `Attest` would publish its w
 ## Options considered
 
 1. A private call to `Attest` (measured: the token, sender, amount and identifier appear in the transaction).
+   *Recorded:* docs/design/attestation.md §6.3 ("Why not a private call").
 2. A private read of the write-once record (`Read`, one byte), then `attest::evaluate` inside the consumer's own
    execution.
 

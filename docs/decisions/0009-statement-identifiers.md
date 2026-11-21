@@ -11,7 +11,7 @@ later root; the same fact may be proven under two instances or by different chai
 
 ## Options considered
 
-1. One identifier for any fact.
+1. One identifier for any fact. *Reconstructed for contrast* (not recorded as an option at the time).
 2. Domain-separated identifiers per kind (log, storage, account, accumulator leaf), over fixed-width fields, without
    the instance; and a class (`Event`, `Leaf`, `Value`) telling which are safe to nullify.
 

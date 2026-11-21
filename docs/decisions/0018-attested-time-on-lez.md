@@ -2,7 +2,7 @@
 
 - **Date:** 11 November 2026
 - **Status:** accepted; built
-- **Requirements:** RFP-022 F.11, F.14, Security #4, #5
+- **Requirements:** RFP-022 F.11, F.14, Sec.4, Sec.5
 
 ## Context
 
@@ -11,8 +11,10 @@ chosen.
 
 ## Options considered
 
-1. A caller-supplied time.
-2. The producer's timestamp (rc3 only, and chosen by the producer).
+1. A caller-supplied time. *Recorded:* lez/BRIDGE.md §6 (the flaw it replaces: "the program took its time from the
+   caller").
+2. The producer's timestamp (rc3 only, and chosen by the producer). *Recorded later:* lez/results/v0.4.0-rc3/README.md
+   (rc3 was examined on 14 November, after this decision; Ferrata does not use it).
 3. The newest Ethereum execution timestamp the attestation program has recorded, read from a record.
 
 ## Decision
@@ -29,3 +31,4 @@ block producer also stamps its block that far ahead. The cost: buckets refill on
 - lez/BRIDGE.md §6
 - docs/guides/deployer-guide.md §5
 - EVIDENCE row 28
+- lez/results/v0.4.0-rc3/README.md

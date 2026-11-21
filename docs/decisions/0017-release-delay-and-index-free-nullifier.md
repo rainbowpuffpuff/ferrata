@@ -2,7 +2,7 @@
 
 - **Date:** 10 November 2026 (D13); the guest on 11 November 2026 (security review M-3)
 - **Status:** accepted; built
-- **Requirements:** RFP-022 R.3, Security #4, #6
+- **Requirements:** RFP-022 R.3, Sec.4, Sec.6, Soft.3
 
 ## Context
 
@@ -11,9 +11,13 @@ burn at another index than the revoked checkpoint did.
 
 ## Options considered
 
-1. Release at once on a final root; `NOut` over the burn's index (SPEC-v2).
-2. A per-token release delay between `minReleaseDelay` (24 h outside testnets) and the 7-day revocation window, in
-   which the freeze authority may `revokeFrom`; `NOut = H("ferrata/nf-out/v2" ‖ sOut)`.
+1. SPEC-v2: a per-token release delay with no lower bound (0 allowed, so a release could pay before its checkpoint
+   stops being revocable), and `NOut = H("ferrata/nf-out/v1" ‖ sOut ‖ burnId)`, which changes with the burn's index.
+   *Recorded:* docs/design/spec/bridge-spec-v2.md (the release's `releaseDelay(token)`, `revokeFrom`, `NOut`);
+   bridge/RESULTS.md ("v2 allows 0").
+2. A per-token release delay between `minReleaseDelay` (immutable; recommended 24 h outside testnets) and the
+   revocation window (immutable; 7 days by default), in which the freeze authority may `revokeFrom`;
+   `NOut = H("ferrata/nf-out/v2" ‖ sOut)`.
 
 ## Decision
 
@@ -35,4 +39,6 @@ through its cycle count (D12).
 
 - docs/design/spec/bridge-spec-v3-changes.md D5, D11, D12, D13
 - docs/trust.md §3.5
+- docs/design/spec/bridge-spec-v2.md
+- bridge/RESULTS.md
 - bridge/crates/ferrata-bridge-core/src/encoding.rs (`TAG_NF_OUT`)

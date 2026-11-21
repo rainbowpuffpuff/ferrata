@@ -12,15 +12,15 @@ two nullifiers.
 
 ## Options considered
 
-1. Bound the index everywhere: `leafIndex < 2^32`. The vault refuses a deposit once the tree is full, the core
+1. Leave the index unbounded. *Recorded:* docs/design/spec/bridge-spec-v3-changes.md D9 ("Otherwise indices `i` and
+   `i + 2^32` would share a path and give one leaf two identifiers and two nullifiers").
+2. Bound the index everywhere: `leafIndex < 2^32`. The vault refuses a deposit once the tree is full, the core
    refuses an accumulator-leaf fact with an index of 2^32 or more, and the claim recomputes the leaf from a preimage
    that binds the claimed index.
-2. The source records no alternative; the obvious one is to leave the index unbounded, and indices `i` and `i + 2^32`
-   then share a path, giving one leaf two identifiers and two nullifiers.
 
 ## Decision
 
-The first.
+The second.
 
 ## Rationale and trade-offs
 

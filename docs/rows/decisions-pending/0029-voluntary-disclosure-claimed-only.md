@@ -13,15 +13,14 @@ proves knowledge of (ADR 0013).
 
 ## Options considered
 
-1. A zero-knowledge disclosure proof per deposit (a new guest), revealing the destination and the nullifier
-   without `s`.
-2. A new derivation of `s` under a separate deposit-viewing key (changes recovery of existing deposits).
-3. A disclosure document from the wallet: `kView` for burns, and per deposit the declared destination, with `s` and
+1. Keep `kView` burns-only. *Recorded:* docs/design/bridge.md §4 ("so soft #2 is met outbound only"); bridge/RESULTS.md
+   ("SPEC-v2: what I believe is wrong, unsafe or underspecified", point 4).
+2. A disclosure document from the wallet: `kView` for burns, and per deposit the declared destination, with `s` and
    `N` only once `N` is spent; the third party checks it against public chain data.
 
 ## Decision
 
-The third.
+The second.
 
 ## Rationale and trade-offs
 
@@ -34,4 +33,5 @@ deposit-to-claim pair, that pair leaves everyone else's candidate set.
 ## Sources
 
 - branch rfp-softs, commit b5c54fda: bridge/crates/ferrata-disclose, docs/privacy/viewing-keys.md
-- bridge/RESULTS.md (the limits, point 4)
+- bridge/RESULTS.md ("SPEC-v2: what I believe is wrong, unsafe or underspecified", point 4)
+- docs/design/bridge.md §4

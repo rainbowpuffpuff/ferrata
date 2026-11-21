@@ -2,7 +2,7 @@
 
 - **Date:** 18 November 2026
 - **Status:** accepted; built, off by default
-- **Requirements:** RFP-021 R.6, F.12; trust
+- **Requirements:** RFP-021 F.12, S.6, VS.4
 
 ## Context
 
@@ -11,7 +11,8 @@ of the updater when its signatures do, and the program accepts updates on signat
 
 ## Options considered
 
-1. Trust any one source.
+1. Trust any one source that passes the program's own checks. *Recorded:* lez/updater/README.md, "Client diversity"
+   (`min_distinct_clients` "0, the default: off").
 2. `min_distinct_clients = k`: send only an update that sources reporting `k` different clients served byte for byte
    (or agree on the finalized header).
 

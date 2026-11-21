@@ -2,7 +2,7 @@
 
 - **Date:** 18 November 2026 (measured); the caps from 10 November 2026
 - **Status:** accepted; caps and freezes built; bonded backing design only
-- **Requirements:** RFP-021 VS.4; RFP-022 Security #4
+- **Requirements:** RFP-021 VS.4; RFP-022 Sec.4
 
 ## Context
 
@@ -11,7 +11,8 @@ stagnant), so a bribe has no floor.
 
 ## Options considered
 
-1. Claim an attack cost the protocol does not enforce.
+1. Claim an attack cost the protocol does not enforce. *Recorded:* docs/design/attestation.md §11.2 (bribery "has no
+   protocol cost … so the bribe has no floor").
 2. Size per-token and global caps, the release delay and freezes so that what passes before a freeze is what a
    deployment accepts to lose; record bonded backing and FFG anchoring as future options.
 
@@ -28,5 +29,6 @@ testnet scripts leave caps unlimited, so a production deployment must set them (
 ## Sources
 
 - docs/trust.md §2.2
+- docs/design/attestation.md §11.2
 - docs/forgery-cost/README.md
 - EVIDENCE row 138

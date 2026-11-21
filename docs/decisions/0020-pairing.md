@@ -1,6 +1,6 @@
 # ADR 0020: Pairing by one configuration id that both halves check; the vault's address by plain CREATE
 
-- **Date:** 10 November 2026 (SPEC-v3 D2)
+- **Date:** 9 November 2026 (SPEC-v2: the pairing); plain CREATE 10 November 2026 (SPEC-v3 D2)
 - **Status:** accepted; built
 - **Requirements:** RFP-022 F.15, F.16
 
@@ -10,9 +10,11 @@ A vault and a LEZ configuration must name each other, and a front-run `Init` mus
 
 ## Options considered
 
-1. Registration of the vault on LEZ by an admin.
+1. CREATE2, for a vault address known before deployment. *Recorded:* docs/design/spec/bridge-spec-v3-changes.md D2
+   ("CREATE2 is not usable: the init code contains `lezConfigId`, which contains the vault address").
 2. `configId = H("ferrata/config/v1" ‖ bedrockGenesisId ‖ channelId ‖ bridgeHeader ‖ bridgeImageId ‖ evmChainId ‖ vault ‖ attestationRootId
-   ‖ salt)`, `salt` committing to the LEZ roles and caps; the vault holds it in slot 2; LEZ `Init` attests that slot.
+   ‖ salt)`, `salt` committing to the LEZ roles and caps; the vault holds it in slot 2; LEZ `Init` attests that slot;
+   the vault's address by plain CREATE.
 
 ## Decision
 
@@ -25,6 +27,7 @@ cost: the vault's address is predicted from the deployer's nonce, and a configur
 
 ## Sources
 
+- docs/design/spec/bridge-spec-v2.md
 - docs/design/spec/bridge-spec-v3-changes.md D2
 - docs/design/bridge.md §3
 - docs/guides/deployer-guide.md §3, §6, §11

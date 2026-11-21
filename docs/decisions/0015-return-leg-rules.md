@@ -2,7 +2,7 @@
 
 - **Date:** 10 November 2026 (SPEC-v3 D1, D3, D4, D7)
 - **Status:** accepted; both built; (B) proposed to Logos
-- **Requirements:** RFP-022 F.6, F.7, Security #2, #7
+- **Requirements:** RFP-022 F.6, F.7, F.12, Sec.2, Sec.7
 
 ## Context
 
@@ -12,9 +12,12 @@ than `t` keys.
 
 ## Options considered
 
-1. A bridge committee signing releases (a trusted party).
+1. A validity and finality proof of LEZ blocks, as the light client has for Ethereum. *Recorded:*
+   docs/design/bridge.md §7 (on v0.4 a block's validity is provable "nowhere: no state root", its finality "with no
+   certificate") and §21 (what it would need upstream).
 2. Rule (A): inferred support (`t` other keys' inscriptions after the tip) and a wait `W = Δ + (t − 1) × turn` with a
-   random beacon, made twice.
+   random beacon, made twice. *Recorded:* docs/design/bridge.md §8.4, §11; docs/design/spec/bridge-spec-v3-changes.md
+   D3, D6.
 3. Rule (B): `t` final-tier attestations by keys the channel keys certified, plus the tip's inscription check, one
    proof and a 1-hour wait.
 

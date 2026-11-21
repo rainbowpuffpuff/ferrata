@@ -12,8 +12,11 @@ what is rewritten.
 
 ## Options considered
 
-1. Adopt Helios `consensus-core` as code.
-2. Separate implementations for the program and the tools.
+1. Adopt Helios `consensus-core` as code. *Recorded:* docs/design/attestation.md §14 (Helios "not adopted as code;
+   kept as a test oracle").
+2. Separate implementations for the program and the tools. *Reconstructed for contrast* (not recorded as an option at
+   the time); the reason against it is docs/design/attestation.md §5's: "One crate everywhere means verdicts and error
+   codes cannot drift."
 3. One core (`ferrata-core`, `no_std`) with `attest::evaluate` in the wire crate, called by every path; `blst` (NCC
    Group audit, 2021) for BLS in RISC Zero's accelerated fork; RISC Zero's own components; an own, strict
    transcription of the light-client specification, with Helios and alloy kept as differential oracles.

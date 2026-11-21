@@ -11,7 +11,8 @@ commits to the execution chain id.
 
 ## Options considered
 
-1. Leave the chain id out and rely on `genesis_validators_root` alone.
+1. Leave the chain id out and rely on `genesis_validators_root` alone. *Recorded:* lez/RESULTS.md §5, "Decisions"
+   item 1 (the program had no chain id; "nothing a light client verifies commits to the execution chain id").
 2. Put it in `Config` (so in the instance id) and in every record, and check it against the providers off chain.
 
 ## Decision

@@ -11,16 +11,16 @@ anyone advance it. LEZ v0.4 caps a transaction at 10M execution gas and runs pub
 
 ## Options considered
 
-1. A zero-knowledge proof of a light-client update made off chain and verified on LEZ (a prover becomes a required
-   party for every update).
-2. The specification's full light client, including optimistic headers and force updates (headers enter on weaker
-   evidence).
-3. The sync committee followed in the program on **finality updates only**, with a two-thirds supermajority floor.
+1. The specification's full light client, including optimistic headers and force updates (headers enter on weaker
+   evidence). *Recorded:* docs/design/attestation.md §4.1 ("The program keeps no optimistic header and never forces
+   one").
+2. The sync committee followed in the program on **finality updates only**, with a two-thirds supermajority floor.
 
 ## Decision
 
-The third. A header enters only through a finality update signed by at least 342 of 512 members (`participants * 3 >=
-512 * 2`); the program keeps no optimistic header and has no force update.
+The second (whether an update is also proven off chain is ADR 0003). A header enters only through a finality update
+signed by at least 342 of 512 members (`participants * 3 >= 512 * 2`); the program keeps no optimistic header and has no
+force update.
 
 ## Rationale and trade-offs
 

@@ -2,7 +2,7 @@
 
 - **Date:** 10 November 2026 (Stage 4)
 - **Status:** accepted; built
-- **Requirements:** RFP-021 F.3, F.4, F.7, soft #4
+- **Requirements:** RFP-021 F.3, F.4, F.7, Soft.4
 
 ## Context
 
@@ -11,7 +11,8 @@ over several facts of one block.
 
 ## Options considered
 
-1. Reply with the record and let each consumer verify.
+1. Reply with the record and let each consumer verify. *Recorded:* lez/RESULTS.md §5, "Decisions" item 3 ("The
+   design's table (§3.2, §6.1) had `Attest` reply with the actor's state").
 2. Reply with an `Attestation` (instance, chain, block, each fact with its identifier), keep `Read` for the raw
    record, and let one request carry accounts, slots, logs, leaves, conditions, relations and hops.
 
