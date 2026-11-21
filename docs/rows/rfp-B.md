@@ -119,7 +119,7 @@ towards it, and what is shown instead:
 
 **Proposed: shown.** `ferrata attest` (`cli/src/attest.rs`, the `ferrata` tool's subcommand; reference
 [`lez/ATTEST-CLI.md`](../../lez/ATTEST-CLI.md), "On a running sequencer"), run against a LEZ v0.4.0-rc1 sequencer we started
-(`bash cli/tests/attest-seq.sh r4`, Modal build box, tree `2523e3ce`; record
+(`bash cli/tests/attest-seq.sh r4`, Modal build box, tree `4db5d1d2`; record
 [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md)):
 
 | Clause | Shown by (run r4) |
@@ -134,7 +134,7 @@ Limits: a zone we ran (LEZ's local configuration, one sequencer), not a public n
 following its blocks with LEZ's block application (the sequencer's RPC has no receipts), as every sequencer row of the
 table is read.
 
-Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52; every sent transaction equal to its dry run (exit, execution and storage gas, events); 24 of 24 steps as expected | `bash cli/tests/attest-seq.sh r4` (tree `2523e3ce`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
+Proposed EVIDENCE row: | new (rfp-B 4) | **The attestation CLI against a running LEZ sequencer** (U.2): `ferrata attest` on a LEZ v0.4.0-rc1 zone with the final attestation program: `config` (ids derived again, equal), `advance` with real Sepolia updates (8 transactions, slot 11,562,112 → 11,567,104) and a mainnet finality update, `init` of a mainnet instance, `attest` of slot, account and log tuples with predicates over JSON-RPC proofs (applied: 94,795 to 349,917 gas), refusals 130, 124, 23 and 52; every sent transaction equal to its dry run (exit, execution and storage gas, events); 24 of 24 steps as expected | `bash cli/tests/attest-seq.sh r4` (tree `4db5d1d2`) | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r4/`](../../cli/results/attest-seq-r4/README.md) |
 
 The same run read the zone's mainnet instance with `attest-monitor` through the sequencer's `getAccount` (S.7):
 divergence confirmed, no alert at the record's time; `ws-half` at the run's time (the record is 11 days old).
@@ -188,7 +188,7 @@ modules, is built and was run (run r6 below). Built in this stream:
   (`ferrata attest receipt`).
 
 Run r6 ([`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md); `ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh
-bash cli/tests/attest-seq.sh r6`, Modal build box, tree `a333c7e1`), clause by clause ("Build the attestation
+bash cli/tests/attest-seq.sh r6`, Modal build box, tree `002ebb96`), clause by clause ("Build the attestation
 functionality for consumers and operators in a Logos core module ...: producing an attestation, verifying one,
 submitting a consensus-state update, and reading the checkpoint and chain configuration of an instance"):
 
@@ -204,4 +204,4 @@ no account authorizing: the patch is the bridge stream's, `modules/patches/`); t
 holding LEZ's published local test key; the zone's verdicts read from its receipts (`ferrata attest receipt`), since
 `lez_core` reports inclusion, not outcomes.
 
-Proposed EVIDENCE row: | new (rfp-B 6) | **The attestation module's LEZ reads and sends through Logos Core's own `lez_core`** (U.1): `ferrata_attest_module` in a headless Logos Core (`logosctl` 66d098d) beside `lez_core` (cc73ebf, patched) and `beacon_api_module`, on a LEZ v0.4.0-rc1 zone with the final attestation program: three actor states read through `lez_core.get_account_public`, each byte-equal to the plain path's; an update's job (3 transactions) planned by the module on that state and sent through `lez_core.send_generic_public_transaction`, applied (slot 11,567,104 → 11,567,392); a log attested through the module and sent through `lez_core`, applied (93,316 gas); a tampered one refused on the zone with 110, as the module's dry run said | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh` (tree `a333c7e1`); packages from `logos-build.sh` | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md) |
+Proposed EVIDENCE row: | new (rfp-B 6) | **The attestation module's LEZ reads and sends through Logos Core's own `lez_core`** (U.1): `ferrata_attest_module` in a headless Logos Core (`logosctl` 66d098d) beside `lez_core` (cc73ebf, patched) and `beacon_api_module`, on a LEZ v0.4.0-rc1 zone with the final attestation program: three actor states read through `lez_core.get_account_public`, each byte-equal to the plain path's; an update's job (3 transactions) planned by the module on that state and sent through `lez_core.send_generic_public_transaction`, applied (slot 11,567,104 → 11,567,392); a log attested through the module and sent through `lez_core`, applied (93,316 gas); a tampered one refused on the zone with 110, as the module's dry run said | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh` (tree `002ebb96`); packages from `logos-build.sh` | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md) |

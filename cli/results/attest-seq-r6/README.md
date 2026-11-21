@@ -2,7 +2,7 @@
 
 RFP-021 U.1 (LEZ reads and sends through Logos Core's modules) and F.9 (the checkpoint check's beacon reads through Logos
 Core's `beacon_api_module`). `ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh bash cli/tests/attest-seq.sh r6`
-on the Modal build box, tree `a333c7e1`, with the packages of
+on the Modal build box, tree `002ebb96`, with the packages of
 `modules/ferrata_attest_module/scripts/logos-build.sh` (`logos/lgx-sha256.txt`): `ferrata_attest_module` (dev `.lgx`,
 logos-module-builder 5f74cdb), Logos Core's `lez_core` (logos-execution-zone-module cc73ebf with
 `modules/patches/lez_core-cc73ebf-authorizes-public-pda.patch`, built from source in 1,620 s) and `beacon_api_module`
