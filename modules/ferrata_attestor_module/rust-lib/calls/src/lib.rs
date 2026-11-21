@@ -10,8 +10,11 @@
 //! `error` (the node could not be read), or the method's own success verdict.
 //!
 //! [`Daemon`] is the attestor as a daemon inside the module: a thread that asks its node every
-//! `poll_secs`, checks the final tier, signs the tip, keeps its state file (it never signs two
-//! histories) and publishes each attestation as a file (`att-<tip>.json`, `latest.json`).
+//! `poll_secs` (from the signed tip's slot on), checks the final tier against its LEZ node (`lez`: it
+//! signs only a tip the LEZ node holds final, so never a block LEZ parked), signs the tip, records it in
+//! its state file before publishing (it never signs two histories, across restarts too) and publishes
+//! each attestation as a file (`att-<tip>.json`, `latest.json`). One round is `ferrata_attestor::round`,
+//! the same code as the command-line program's `attest --node`.
 
 use std::collections::VecDeque;
 use std::fs;
@@ -28,9 +31,10 @@ use checkpoint_core::hash::sha256_parts;
 use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::Hash;
 use ferrata_attestor::{
-    assemble_unchecked, attestation_from_json, attestation_json, base_from_answers, collect as collect_atts,
-    deployment_from_json, deployment_json, deployment_of, final_tier, fixture_meta, hex_str, hexa, read_key, signers,
-    Attestor, LastSigned, NodeAnswers,
+    assemble_unchecked, attestation_from_json, attestation_json, base_from_answers, bedrock_tier,
+    collect as collect_atts, deployment_from_json, deployment_json, deployment_of, final_tier, fixture_meta, hex_str,
+    hexa, read_key, read_state, round, scan_from, signers, write_atomic, write_state, Attestor, AttestorState, LezNode,
+    LezRpc, LezSaved, NodeAnswers, RoundError,
 };
 use serde_json::{json, Value};
 
@@ -326,7 +330,7 @@ pub fn certify(request: &str) -> String {
 }
 
 fn tier_json(answers: &NodeAnswers, channel: &Hash) -> Result<Value> {
-    let tier = final_tier(answers, channel)?;
+    let tier = bedrock_tier(answers, channel)?;
     let signed_by = signers(answers, channel)?;
     let mut per: std::collections::BTreeMap<String, Vec<u64>> = std::collections::BTreeMap::new();
     for (id, k) in &signed_by {
@@ -342,8 +346,9 @@ fn tier_json(answers: &NodeAnswers, channel: &Hash) -> Result<Value> {
     }))
 }
 
-/// `tier(request)`: `{answers_dir | node + save_dir [+ slot_from], channel?, out?}`: the node's final
-/// tier as the attestor checks it (tip, key set, blocks per signer), as the CLI's `tier` prints it.
+/// `tier(request)`: `{answers_dir | node + save_dir [+ slot_from], channel?, out?}`: the Bedrock node's
+/// view of the final tier alone (tip, key set, blocks per signer), as the CLI's `tier` prints it: a
+/// diagnostic, not what the attestor signs (that is checked against its LEZ node, `attest`).
 pub fn tier(request: &str) -> String {
     reply((|| {
         let r = parse(request)?;
@@ -368,23 +373,36 @@ fn attestor_from(d: Deployment, cert: &Value, att_key_file: &Path) -> Result<Att
     })
 }
 
-fn read_last(state: Option<&Path>) -> Result<Option<LastSigned>> {
-    match state {
-        Some(p) if p.exists() => {
-            let s = read_json(p)?;
-            Ok(Some(LastSigned {
-                tip_id: s["tip_id"].as_u64().context("state tip_id")?,
-                tip_hash: hexa(&s["tip_hash"], "state tip_hash")?,
-            }))
+/// The reads `attest` signs from: a running node over HTTP (`node`, saved under `save_dir`, from the
+/// signed tip's slot or `slot_from`) with the attestor's own LEZ node (`lez`, JSON-RPC), or saved answers
+/// (`answers_dir`, with the LEZ node's saved answers in `lez_dir`, default `answers_dir`).
+fn attest_reads(
+    r: &Value,
+    channel: &Hash,
+    state: Option<&AttestorState>,
+) -> Result<(NodeAnswers, Box<dyn LezNode>, Value), Fail> {
+    match (opt_text(r, "node"), opt_text(r, "answers_dir")) {
+        (Some(node), None) => {
+            let save = text(r, "save_dir").bad()?;
+            let lez = text(r, "lez").bad()?;
+            let from = scan_from(state, opt_u64(r, "slot_from").bad()?.unwrap_or(0));
+            let a = NodeAnswers::fetch(node, channel, from, Path::new(save)).fault()?;
+            let l = LezRpc::new(lez, Path::new(save)).fault()?;
+            Ok((a, Box::new(l), json!({ "node": node, "lez": lez, "saved_to": save, "slot_from": from })))
         }
-        _ => Ok(None),
+        (None, Some(dir)) => {
+            let lez_dir = opt_text(r, "lez_dir").unwrap_or(dir);
+            let a = NodeAnswers::load(Path::new(dir)).bad()?;
+            Ok((a, Box::new(LezSaved::new(Path::new(lez_dir))), json!({ "answers_dir": dir, "lez_dir": lez_dir })))
+        }
+        _ => Err(Fail::Invalid(anyhow!("exactly one of node (with lez and save_dir) or answers_dir"))),
     }
 }
 
-/// `attest(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, answers_dir |
-/// node + save_dir [+ slot_from], channel?, state_file?, out?}`: read the node's final tier, check it,
-/// sign its tip (the CLI's `attest`). With `state_file`, refuses a tip below or beside the one signed
-/// before and records the new one.
+/// `attest(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, answers_dir [+ lez_dir] |
+/// node + lez + save_dir [+ slot_from], channel?, state_file?, out?}`: read the node's final tier, check
+/// its tip against the LEZ node, sign it (the CLI's `attest`). With `state_file`, the read starts at the
+/// signed tip, refuses a tip that does not descend from it, and records the new one before `out` is written.
 pub fn attest(request: &str) -> String {
     reply((|| {
         let r = parse(request)?;
@@ -392,22 +410,27 @@ pub fn attest(request: &str) -> String {
         let cert = cert_req(&r).bad()?;
         let attestor = attestor_from(d, &cert, Path::new(text(&r, "att_key_file").bad()?)).bad()?;
         let state = opt_text(&r, "state_file").map(PathBuf::from);
-        let last = read_last(state.as_deref()).bad()?;
-        let (answers, source) = answers_req(&r, &d.channel_id)?;
-        let tier = final_tier(&answers, &d.channel_id).no()?;
-        let att = attestor.attest(&tier, last).no()?;
+        let before = match &state {
+            Some(p) => read_state(p, &d.channel_id).bad()?,
+            None => None,
+        };
+        let (answers, mut lez, source) = attest_reads(&r, &d.channel_id, before.as_ref())?;
+        let tier = final_tier(&answers, lez.as_mut(), &d.channel_id, before.as_ref()).no()?;
+        let att = attestor.attest(&tier, before.as_ref().map(|s| s.last)).no()?;
         let record = attestation_json(&d, &att, &tier);
-        if let Some(out) = opt_text(&r, "out") {
-            write_json(Path::new(out), &record).fault()?;
-        }
         if let Some(p) = &state {
-            write_json(p, &json!({"tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash)})).fault()?;
+            write_state(p, &d.channel_id, &AttestorState::of(&tier)).fault()?;
+        }
+        if let Some(out) = opt_text(&r, "out") {
+            let text = serde_json::to_string_pretty(&record).map_err(anyhow::Error::from).fault()? + "\n";
+            write_atomic(Path::new(out), text.as_bytes()).fault()?;
         }
         Ok(json!({
             "verdict": "attested", "tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash),
             "final_msg_id": hex::encode(att.tip.final_msg_id), "lib_slot": tier.lib_slot,
             "blocks_checked": tier.hashes.len(), "first_block": tier.first_block, "n": tier.keys.len(),
             "key_set_hash": hex::encode(tier.key_set_hash), "source": source, "attestation": record,
+            "notes": tier.notes,
         }))
     })())
 }
@@ -503,7 +526,7 @@ pub fn base(request: &str) -> String {
         let (from, to) = match (opt_u64(&r, "from").bad()?, opt_u64(&r, "to").bad()?) {
             (Some(f), Some(t)) => (f, t),
             (None, None) => {
-                let tier = final_tier(&answers, &channel).no()?;
+                let tier = bedrock_tier(&answers, &channel).no()?;
                 (tier.first_block + 1, tier.tip.tip_id)
             }
             _ => return Err(Fail::Invalid(anyhow!("give both from and to, or neither"))),
@@ -528,6 +551,7 @@ pub fn base(request: &str) -> String {
 struct DaemonCfg {
     attestor: Attestor,
     node: String,
+    lez: String,
     slot_from: u64,
     work_dir: PathBuf,
     publish_dir: PathBuf,
@@ -561,8 +585,8 @@ pub struct Daemon {
 }
 
 impl Daemon {
-    /// `start(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, node, work_dir,
-    /// publish_dir, state_file, poll_secs? (10), slot_from? (0), max_rounds?, keep_rounds? (2)}`.
+    /// `start(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, node, lez, work_dir,
+    /// publish_dir, state_file, poll_secs? (10), slot_from? (0, a first read only), max_rounds?, keep_rounds? (2)}`.
     /// Refuses at once a certificate that does not certify the key for this deployment.
     pub fn start(request: &str) -> Result<Self, String> {
         let r = parse(request).map_err(|f| reply(Err(f)))?;
@@ -583,6 +607,7 @@ impl Daemon {
         }
         let cfg = DaemonCfg {
             node: text(r, "node").bad()?.to_string(),
+            lez: text(r, "lez").bad()?.to_string(),
             slot_from: opt_u64(r, "slot_from").bad()?.unwrap_or(0),
             work_dir: PathBuf::from(text(r, "work_dir").bad()?),
             publish_dir: PathBuf::from(text(r, "publish_dir").bad()?),
@@ -595,7 +620,7 @@ impl Daemon {
         fs::create_dir_all(&cfg.work_dir).with_context(|| cfg.work_dir.display().to_string()).fault()?;
         fs::create_dir_all(&cfg.publish_dir).with_context(|| cfg.publish_dir.display().to_string()).fault()?;
         let config = json!({
-            "node": cfg.node, "slot_from": cfg.slot_from, "work_dir": cfg.work_dir, "publish_dir": cfg.publish_dir,
+            "node": cfg.node, "lez": cfg.lez, "slot_from": cfg.slot_from, "work_dir": cfg.work_dir, "publish_dir": cfg.publish_dir,
             "state_file": cfg.state_file, "poll_ms": cfg.poll.as_millis() as u64, "max_rounds": cfg.max_rounds,
             "channel_key": hex::encode(cfg.attestor.channel_key), "attestation_key": hex::encode(att_pub),
             "deployment": deployment_json(&d),
@@ -722,36 +747,28 @@ enum Round {
     Error(anyhow::Error),
 }
 
-fn one_round(cfg: &DaemonCfg, round: u64, published: &mut Option<u64>) -> Round {
+fn one_round(cfg: &DaemonCfg, n: u64, published: &mut Option<u64>) -> Round {
     let d = cfg.attestor.deployment;
-    let dir = cfg.work_dir.join(format!("round-{round}"));
+    let dir = cfg.work_dir.join(format!("round-{n}"));
     let _ = fs::remove_dir_all(&dir);
-    let answers = match NodeAnswers::fetch(&cfg.node, &d.channel_id, cfg.slot_from, &dir) {
-        Ok(a) => a,
-        Err(e) => return Round::Error(e.context("reading the node")),
+    // Read from the signed tip's slot, check against the LEZ node, sign, record the state: then publish.
+    let r = match round(&cfg.attestor, &cfg.node, &cfg.lez, &dir, &cfg.state_file, cfg.slot_from) {
+        Ok(r) => r,
+        Err(RoundError::Refused(e)) => return Round::Refused(e),
+        Err(RoundError::Node(e)) => return Round::Error(e.context("reading the nodes")),
+        Err(RoundError::State(e)) => return Round::Error(e.context("the state file")),
     };
-    let tier = match final_tier(&answers, &d.channel_id) {
-        Ok(t) => t,
-        Err(e) => return Round::Refused(e.context("the node's final tier")),
-    };
-    let last = match read_last(Some(&cfg.state_file)) {
-        Ok(l) => l,
-        Err(e) => return Round::Error(e.context("the state file")),
-    };
-    let att = match cfg.attestor.attest(&tier, last) {
-        Ok(a) => a,
-        Err(e) => return Round::Refused(e),
-    };
-    let record = attestation_json(&d, &att, &tier);
+    let (att, tier) = (&r.attestation, &r.tier);
+    let record = attestation_json(&d, att, tier);
     let tip = att.tip.tip_id;
     let new = *published != Some(tip);
     let file = cfg.publish_dir.join(format!("att-{tip}.json"));
     let written = (|| -> Result<()> {
-        write_json(&cfg.state_file, &json!({"tip_id": tip, "tip_hash": hex::encode(att.tip.tip_hash)}))?;
+        let bytes = serde_json::to_string_pretty(&record)? + "\n";
         if new {
-            write_json(&file, &record)?;
+            write_atomic(&file, bytes.as_bytes())?;
         }
-        write_json(&cfg.publish_dir.join("latest.json"), &record)
+        write_atomic(&cfg.publish_dir.join("latest.json"), bytes.as_bytes())
     })();
     if let Err(e) = written {
         return Round::Error(e.context("publishing"));
@@ -759,7 +776,8 @@ fn one_round(cfg: &DaemonCfg, round: u64, published: &mut Option<u64>) -> Round 
     *published = Some(tip);
     Round::Attested(
         json!({ "tip_id": tip, "tip_hash": hex::encode(att.tip.tip_hash), "lib_slot": tier.lib_slot,
-                "blocks_checked": tier.hashes.len(), "n": tier.keys.len(), "file": file, "answers": dir }),
+                "blocks_checked": tier.hashes.len(), "n": tier.keys.len(), "file": file, "answers": dir,
+                "read_from_slot": r.scanned_from, "notes": tier.notes }),
         new,
     )
 }
@@ -804,20 +822,34 @@ mod tests {
         let _ = fs::remove_dir_all(&tmp);
         fs::create_dir_all(&tmp).unwrap();
         let answers = zone.join("answers");
+        // The zone run recorded no LEZ node's answers: its blocks, all applied there, stood in as final.
+        let recorded = NodeAnswers::load(&answers).unwrap();
+        let standin =
+            ferrata_attestor::devnet_lez_standin(&recorded, &hex_str(DEFAULT_CHANNEL, "channel").unwrap()).unwrap();
+        ferrata_attestor::save_lez_answers(&tmp, &standin).unwrap();
         let base_file = tmp.join("base.input");
-        let b = call(base, json!({"answers_dir": answers, "genesis_file": zone.join("deployment-settings.yaml"),
-            "n_min": 4, "t_min": 3, "out": base_file}));
+        let b = call(
+            base,
+            json!({"answers_dir": answers, "genesis_file": zone.join("deployment-settings.yaml"),
+            "n_min": 4, "t_min": 3, "out": base_file}),
+        );
         assert_eq!(b["verdict"], "ok", "{b}");
         let dep = b["deployment"].clone();
         let mut atts = Vec::new();
         for i in 0..4 {
             let key = tmp.join(format!("attestation-{i}.key"));
             let k = call(keygen, json!({"out": key, "seed_label": format!("zone-attestation-{i}")}));
-            let c = call(certify, json!({"channel_key_file": dev.join(format!("seq-{i}/channel_signing_key")),
-                "att_pub": k["public_key"], "deployment": dep}));
+            let c = call(
+                certify,
+                json!({"channel_key_file": dev.join(format!("seq-{i}/channel_signing_key")),
+                "att_pub": k["public_key"], "deployment": dep}),
+            );
             assert_eq!(c["verdict"], "certified", "{c}");
-            let a = call(attest, json!({"deployment": dep, "cert": c["cert"], "att_key_file": key,
-                "answers_dir": answers, "state_file": tmp.join(format!("state-{i}.json"))}));
+            let a = call(
+                attest,
+                json!({"deployment": dep, "cert": c["cert"], "att_key_file": key,
+                "answers_dir": answers, "lez_dir": tmp, "state_file": tmp.join(format!("state-{i}.json"))}),
+            );
             assert_eq!(a["verdict"], "attested", "{a}");
             atts.push(a["attestation"].clone());
         }
@@ -833,11 +865,30 @@ mod tests {
         let st = tmp.join("state-ahead.json");
         fs::write(&st, json!({"tip_id": 1000, "tip_hash": "00".repeat(32)}).to_string()).unwrap();
         let key0 = tmp.join("attestation-0.key");
-        let c0 = call(certify, json!({"channel_key_file": dev.join("seq-0/channel_signing_key"),
-            "att_pub": call(pubkey, json!({"key_file": key0}))["public_key"], "deployment": dep}));
-        let behind = call(attest, json!({"deployment": dep, "cert": c0["cert"], "att_key_file": key0,
-            "answers_dir": answers, "state_file": st}));
+        let c0 = call(
+            certify,
+            json!({"channel_key_file": dev.join("seq-0/channel_signing_key"),
+            "att_pub": call(pubkey, json!({"key_file": key0}))["public_key"], "deployment": dep}),
+        );
+        let behind = call(
+            attest,
+            json!({"deployment": dep, "cert": c0["cert"], "att_key_file": key0,
+            "answers_dir": answers, "lez_dir": tmp, "state_file": st}),
+        );
         assert_eq!(behind["verdict"], "refused", "{behind}");
+        // Without the LEZ node's answers nothing is final there: refused.
+        let k1 = tmp.join("attestation-1.key");
+        let c1 = call(
+            certify,
+            json!({"channel_key_file": dev.join("seq-1/channel_signing_key"),
+            "att_pub": call(pubkey, json!({"key_file": k1}))["public_key"], "deployment": dep}),
+        );
+        let no_lez = call(
+            attest,
+            json!({"deployment": dep, "cert": c1["cert"], "att_key_file": k1,
+            "answers_dir": answers}),
+        );
+        assert_eq!(no_lez["verdict"], "refused", "{no_lez}");
         let _ = fs::remove_dir_all(&tmp);
     }
 }
