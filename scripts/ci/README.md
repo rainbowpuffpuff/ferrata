@@ -6,24 +6,72 @@ The checks that live under `scripts/ci/` and what runs them. `install-risc0.sh` 
 
 ## check-row-tests.py
 
-That **every hard requirement of RFP-021 (59 rows) and RFP-022 (68 rows) has at least one named test**
-(RFP-022 Reliability #11; the A4/B4 gates' "one named test per hard requirement" of
-[`docs/traceability.md`](../../docs/traceability.md)). It parses the hard row IDs out of
-traceability.md's matrices and checks the counts, then reads the map
-[`row-tests.toml`](row-tests.toml): every hard row has at least one entry; every entry names a path
-tracked by git (entries on another branch are printed as pending and not required to exist here);
-every `ci` names a workflow job under `.github/workflows/` or is `box`/`local`, a box entry naming
-its exact `run` command. The summary lists the rows of each RFP, how many have a test that CI runs,
-the rows with box or local tests only, and the pending entries. Standard library only.
+**Every hard requirement of RFP-021 (59 rows) and RFP-022 (68 rows) mapped to its tests, and which of them CI
+really runs** (RFP-022 Reliability #11; the A4/B4 gates' "one named test per hard requirement, passing in CI"
+of [`docs/traceability.md`](../../docs/traceability.md)). It parses the hard row IDs out of traceability.md's
+matrices and checks the counts, then reads the map [`row-tests.toml`](row-tests.toml), where every entry is a
+`test` (it runs and fails when the requirement breaks: a Rust or Foundry test file, a test script, a workflow
+whose job is the test), a `record` (a run's results or log) or a `document`. It fails when a hard row has no
+entry, a path is not tracked (entries on another branch are reported as pending), a kind is unknown, a test
+path is nothing that can run, a test file is listed as a record, a box or local test has no `run` command,
+or **a test is said to run in a CI job that does not run it**: the job's `run:` steps and the shell scripts
+they call are read ([`ci_model.py`](ci_model.py)), and one command must select the file — a `cargo test`
+whose directory, packages, targets, features, name filters and environment select it (a test that skips
+itself unless, say, `FERRATA_E2E` is set needs the command to set it), a `forge test` whose project and
+filters select it (inherited test functions included), the script itself invoked, or the job being defined
+in the named workflow. A job that runs only when started by hand counts as manual, not as CI.
+
+The summary gives, per RFP, the rows with a test CI runs and the others by what they have instead (a test in
+a manual workflow; tests on the build box or by hand; records and documents only); `--list` prints every
+row. `--require-ci RFP-022` (or `RFP-021`, `all`) also fails while any hard row of that RFP lacks a test CI
+runs: that is RFP-022 R.11's gate, and it fails today. Standard library only.
 
 ```sh
-python3 -I scripts/ci/check-row-tests.py
+python3 -I scripts/ci/check-row-tests.py                          # the map is consistent (CI)
+python3 -I scripts/ci/check-row-tests.py --require-ci RFP-022     # the R.11 gate: exit 1 while rows lack a CI test
+```
+
+Run by CI's `links` job on every push and pull request, with its tests (below).
+[`row-tests.toml`](row-tests.toml) is the map itself, one `[[row]]` per hard row (IDs as in traceability.md;
+the rows of the two RFPs that are addressed on branch `rfp-docs-final` carry `branch = "rfp-docs-final"`,
+reported as pending until that branch merges; their `ci = "links"` entries need the links job to run
+`check-guides.py` and `check-decisions.py` by then, or the check fails).
+
+## ci_model.py and test_ci_model.py
+
+[`ci_model.py`](ci_model.py) is what the two checks above and below read the workflows with: a parser for the
+YAML they are written in (standard library; `python3 -I scripts/ci/ci_model.py --compare-yq` compares it with
+`yq` on all eleven workflows of the repository and the catalog: the same triggers, jobs, steps, commands,
+directories and environments, 11 of 11 on 21 November 2026), the trace of the commands a job runs, and the
+cargo and forge selection rules. It reads statically: every command of a script counts as run whatever
+condition guards it, and a directory it cannot resolve makes the commands after it count nowhere.
+[`test_ci_model.py`](test_ci_model.py) tests both (YAML forms; what the real jobs run and do not run; made-up
+`cargo test` and `forge test` commands; and the checker refusing a test claimed for a job that does not run
+it, a test file listed as a record, an unknown kind). `python3 -I scripts/ci/ci_model.py --trace [JOB...]`
+prints a job's commands with their directories.
+
+```sh
+python3 -I scripts/ci/test_ci_model.py
+python3 -I scripts/ci/ci_model.py --compare-yq      # needs yq (mikefarah, v4)
+```
+
+## check-portable.py
+
+**The shell that runs on macOS is portable** (RFP-022 Supportability #2): the `run:` steps of
+`.github/workflows/macos.yml`, every shell script they run (followed through `ci_model.py`'s trace), and the
+owner's publish script `modules/scripts/release-publish.sh` with what it calls, are checked line by line for
+GNU-only commands and options (`sed -i`, `sed -r`, `find -printf`, `tar --wildcards`, `sha256sum` without the
+`shasum` fallback, `readlink -f`, `stat -c`, `date -d`, `grep -P`, `xargs -r`, `nproc`, `timeout`...) and for
+anything newer than macOS's bash 3.2 (`declare -A`, `mapfile`, `${x,,}`, `|&`...). On the branch's scripts
+before the fixes of 21 November 2026 it reports eleven, the four of the review among them. It does not run
+anything; the scripts themselves were run under a FreeBSD userland with bash 3.2, and their exports compared
+with GNU's, byte for byte: [`modules/results/bsd-userland-2026-11-21/`](../../modules/results/bsd-userland-2026-11-21/README.md).
+
+```sh
+python3 -I scripts/ci/check-portable.py
 ```
 
 Run by CI's `links` job on every push and pull request.
-[`row-tests.toml`](row-tests.toml) is the map itself, read by the check, with one `[[row]]` per hard
-row (IDs as in traceability.md; the rows of the two RFPs that are addressed on branch `rfp-docs-final`
-carry `branch = "rfp-docs-final"`, printed as pending until that branch merges).
 
 ## check-unaudited.sh
 
