@@ -454,7 +454,6 @@ From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](..
 
 - consumers bound to the root id rather than to an instance (the reference consumer, `ferrata_holdings`
   and the bridge still pin one); migration tooling;
-- the F.8 test (two deposits whose private claims must be indistinguishable);
 - a chain of several hops through the program (one hop is attested, also under a Gloas record);
 - joining an open job, clean-up of failed jobs, deployment by `program_loader`; a consumer's own
   `Attest` on a running sequencer (the attestation program ran on LEZ's own sequencer at an image

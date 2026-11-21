@@ -978,8 +978,9 @@ segments) was not proven at all.
 
 - **Rules 5 to 7 of the consumer pattern and a private claim** (decision 7) are built since
   milestone A2 on the vault's `Deposit` event, with the native-ETH pool (§6, "The reference consumer
-  with the Recommended Consumer Pattern"); still missing: the F.8 test of §6.5 of the design
-  note (two deposits whose transactions must be indistinguishable).
+  with the Recommended Consumer Pattern"); the F.8 test of §6.5 of the design note (two deposits
+  whose transactions must be indistinguishable) is built since 21 November 2026
+  ([`results/lc-security/f8-full-diff.md`](results/lc-security/f8-full-diff.md)).
 - **Accumulator leaves on real data** are attested since milestone A2 (§6, "The vault on Sepolia,
   on real data"); before that they ran on a synthetic state holding the vault's own deposits under
   a record placed in LEZ's state.
@@ -1221,7 +1222,7 @@ checks both openings against the commitments on chain.
   private state; what is public is `Read` to the record, `Spend` of `N` with no credit, and the fee;
   the transaction holds none of the secret, the statement identifier, the commitment, the depositor,
   the destination, the deposit block's header or the receipt proof. The same claim again cannot be
-  proven (223). Not built: the F.8 test (§6.5 of the design note).
+  proven (223). The F.8 test (§6.5 of the design note): [`results/lc-security/f8-full-diff.md`](results/lc-security/f8-full-diff.md).
 - **The private claim with a real proof** (`results/prove-vault-claim.log`,
   `harness/src/bin/prove_vault_claim.rs`): the same transaction, the consumer's two transitions, the
   fee transfer and LEZ's privacy-preserving circuit proven by r0vm 3.0.5 on the build box's CPU (16

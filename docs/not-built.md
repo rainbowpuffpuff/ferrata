@@ -64,7 +64,8 @@ The design notes specify these; there is no code for them here:
   logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;
 - in the attestation program: consumers bound to the root id (the bridge, `ferrata_holdings` and the
-  reference consumer still pin an instance); the F.8 test (`docs/design/attestation.md` §6.5, §15). Chains of
+  reference consumer still pin an instance). The F.8 full-diff test (`docs/design/attestation.md` §6.5) is built
+  (EVIDENCE row 152). Chains of
   EIP-2935 hops are built (up to 32 in one transaction on real Sepolia data, four on mainnet; EVIDENCE row 145);
   a private consumer's proof carrying more than one hop is not measured.
 - a cost for forging a light-client record ([`trust.md`](trust.md) §2.2, "What a forger loses", design only, added 18

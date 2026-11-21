@@ -1,7 +1,7 @@
 # Requirement status, row by row
 
 The status of every row of [traceability.md](traceability.md): 64 rows for RFP-021 and 73 for RFP-022. The
-classification is the project's own, made on 18 November 2026 from the matrix as it stands at this commit, and
+classification is the project's own, made on 18 November 2026 and updated on 21 November 2026 from the matrix as it stands at this commit, and
 it is strict on purpose. A row is **shown** only if every clause of the requirement, as the RFP words it, is
 demonstrated today by a named test or a recorded run on real code: LEZ v0.4 release candidates' own state
 machine (the in-process harness) or one of their sequencers for the LEZ side, a local EVM or Sepolia for the
@@ -22,7 +22,7 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 17 | 35 | 4 | 3 | **59** |
+| RFP-021 | 25 | 29 | 2 | 3 | **59** |
 | RFP-022 | 27 | 37 | 2 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 3 shown, 1 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
@@ -31,12 +31,12 @@ By section, hard requirements:
 
 | RFP | Section | shown | in part | not yet | waits on Logos | total |
 |---|---|---:|---:|---:|---:|---:|
-| RFP-021 | Functionality | 8 | 6 | 0 | 1 | 15 |
-| RFP-021 | Usability | 1 | 4 | 0 | 1 | 6 |
-| RFP-021 | Reliability | 6 | 4 | 2 | 0 | 12 |
+| RFP-021 | Functionality | 11 | 3 | 0 | 1 | 15 |
+| RFP-021 | Usability | 2 | 3 | 0 | 1 | 6 |
+| RFP-021 | Reliability | 8 | 4 | 0 | 0 | 12 |
 | RFP-021 | Performance | 1 | 8 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 0 | 8 | 2 | 1 | 11 |
-| RFP-021 | Verification Security | 1 | 5 | 0 | 0 | 6 |
+| RFP-021 | Verification Security | 3 | 3 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 11 | 6 | 0 | 0 | 17 |
 | RFP-022 | Usability | 2 | 7 | 0 | 1 | 10 |
 | RFP-022 | Reliability | 5 | 9 | 0 | 0 | 14 |
@@ -52,13 +52,13 @@ By section, hard requirements:
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | F.1 | shown | Init and updates settle in the harness and on rc1 and rc3 sequencers we ran; real proofs applied; an eight-day run. | 6, 21, 123; `lez/results/stage1-replay.md` |
-| F.2 | in part | Records exist only for finalised headers (213 otherwise) through LEZ; a forged finality branch is refused in native step tests only. | 39; `crates/ferrata-spectests/tests/steps.rs`; `lez/results/holdings.md` |
+| F.2 | shown | A header enters only by a verified finality update. Through the program, updates offering a header without verified finality are refused (50; 26, 1; 26; 25), and so is a proof against an attested, never-finalised header (213, 110); a header sent with a request or as an EIP-2935 hop is refused too (215, 120; 150, 151). | 39, 151; `lez/results/lc-security/f2-finalised-only.md`; `lez/results/stage5-attest-refusals.md`; `lez/results/stage4-attest-refusals.md` |
 | F.3 | shown | Account, storage slot and logs attested through the program on mainnet and Sepolia blocks; 32 refusals; roots only from the record. | 3, 71, 72; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
-| F.4 | in part | `=`, `≥`, `>`, `<` and a relation run through the program from the consumer's request; `≠` and `≤` not run through it. | `lez/harness/tests/attest_public.rs`; `lez/results/stage4-attest-refusals.md` |
+| F.4 | shown | All six comparisons (`=`, `≠`, `<`, `≤`, `>`, `≥`), against a constant and as relations between two attested facts, carried in the reference consumer's request through the program: 36 cases on a real mainnet record, each applied where it holds and refused (130) where it fails, at the boundary. | 151; `lez/results/lc-security/f4-comparisons.md` |
 | F.5 | shown | One address on mainnet and Sepolia: each statement attested under its chain, the other chain's refused (140), in the harness. | 4; `lez/harness/tests/sepolia.rs`; `lez/results/stage5-attest-refusals.md` |
 | F.6 | shown | Identifiers returned by the program equal a second derivation; the reference consumer keys its nullifier on them; a second build (not deployed) returns each one's nullifier-safety class beside it. | 145; `lez/harness/tests/attest_native.rs`; `lez/harness/tests/vault.rs`; `lez/harness/tests/history_hops.rs`; `vectors/acc-leaf.json` |
 | F.7 | waits on Logos | Names a testnet. Shown instead: same-transaction consumption in the harness and on rc1 and rc3 sequencers we ran. | 3, 27, 91, 123; `lez/results/stage4-attest-consumer.md` |
-| F.8 | in part | Private attestation proven for real and applied on rc3; byte searches find no query or account; the full-diff test is not built. | 5, 73, 123; `lez/harness/tests/attest_private.rs` |
+| F.8 | shown | The full-diff test: two private claims (a deposit in the recorded block, one three hops back), byte-identical once only fresh randomness and the claim's nullifier are taken from one; events, charges and every public account's change identical; no secret, statement id, account, vault address, receipt proof's last node or hop header in either; the calling variant fails the same test. Private attestation proven for real and applied on rc3. | 5, 73, 123, 152; `lez/results/lc-security/f8-full-diff.md` |
 | F.9 | in part | Parameters fixed at Init; `verify_checkpoint` ran against Sepolia providers from Ferrata's module, not as an API of the Logos Ethereum module. | 69, 70, 105, 117 |
 | F.10 | in part | Bound and successors run in the harness; a stale checkpoint was refused live; the migration text is a first draft. | 69, 70, 91; `docs/guides/consumer-guide.md` §9 |
 | F.11 | shown | No step checks its sender; three updaters with their own keys advanced the same instances in the harness. | 80; `lez/harness/tests/private_placement.rs`; `lez/updater/tests/recorded.rs` |
@@ -75,7 +75,7 @@ By section, hard requirements:
 | U.2 | in part | CLI attests, dry-runs with the program's codes, advances and reads configuration against the in-process chain only, not a sequencer. | 56; `lez/ATTEST-CLI.md` |
 | U.3 | in part | Daemon and module followed Sepolia on sequencers we ran; operator journey is a first draft; Ethereum data partly outside Logos Core. | 79, 81, 97, 99, 104, 118 |
 | U.4 | waits on Logos | SPEL's release targets LEZ v0.2.4. Shown instead: a hand-written IDL in SPEL's format that SPEL's crate parses and decodes. | 55, 58; `idl/check.py` |
-| U.5 | in part | Codes through the program for most listed failures; no recorded refusal of a committee handoff through LEZ; messages in the harness CLI. | 39, 56, 69, 70; `lez/results/stage4-attest-refusals.md` |
+| U.5 | shown | Every listed failure mode refused through the program with its code (22 cases, a committee handoff refused with 27, 45 and 23 among them), each code's name and message from the IDL the CLI prints. A checkpoint stale by the sequencer's clock is refused by LEZ with its own text before the program runs, on the window the program declares; the 53 message applies when the update is signed after the end. | 39, 56, 69, 70, 151; `lez/results/lc-security/u5-failure-modes.md` |
 | U.6 | shown | ERC-20 `Transfer` and native-ETH deposit consumers credit once in the harness, public and private claims, on real mainnet and Sepolia data. | 3, 73; `lez/harness/tests/attest_public.rs`; `lez/harness/tests/vault_consumer.rs` |
 
 ### Reliability
@@ -84,15 +84,15 @@ By section, hard requirements:
 |---|---|---|---|
 | R.1 | shown | Step API equals `process_update` on 52 sync cases and the mainnet replay; vectors identical under two BLS libraries. | 1; `crates/ferrata-spectests/tests/steps.rs` |
 | R.2 | shown | Each refusal leaves state unchanged; a refused attestation reverts the consumer's transaction and the same claim then succeeds. | `lez/results/stage1-refusals.md`; `lez/results/stage4-attest-refusals.md` |
-| R.3 | not yet | Records are write-once, but no test reads an old record after later committee rotations. | none |
+| R.3 | shown | Two records attested after each of four committee rotations and ten years later, statements byte-identical and records unchanged (synthetic chain); five real mainnet records read after four real rotations and ten years later; a real Sepolia record attested before and after a real rotation. | 151; `lez/results/lc-security/r3-rotations.md` |
 | R.4 | shown | Daemon killed inside a job resumes from chain state, no second Open, in the harness and on a sequencer; the lab restarted. | 79, 99, 104; `lez/lab/README.md` |
 | R.5 | shown | A down source and dropped connections handled; restarted mid-job, the daemon finishes with no second Open, harness and sequencer. | 79, 99, 104 |
-| R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against vectors and Helios, not audited. | 1; `crates/ferrata-spectests/tests/helios_oracle.rs` |
+| R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against the official vectors, Helios (the vectors, 220 recorded updates, 2,000 random mutations of real updates) and Lodestar (the same mutations), 0 disagreements; not audited. | 1, 140, 153; `crates/ferrata-spectests/HELIOS-DIFFERENTIAL.md` |
 | R.7 | in part | Lab instances caught up and ran eight days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
 | R.9 | in part | Two honest daemons and an adversary: refused-step gas 5.7–8.7% of applied, in the in-process chain; not run on a sequencer. | 80; `lez/updater/tests/recorded.rs` |
 | R.10 | in part | Fee share 0.39–0.47 over 58 updates in the in-process chain; the latency effect is derived in a first-draft guide. | 80; `docs/guides/operator-guide.md` §3 |
-| R.11 | not yet | Mechanism read from the LEZ source; several private reads in one block have not been run. | none |
+| R.11 | shown | Four private attestations proven against one snapshot, a finality update applied in between, then settled in one block with nothing re-proven; one account's second transaction on the same snapshot dropped. The block is assembled in process with rc1's block settlement; no sequencer ran it. | 152; `lez/results/lc-security/r11-one-block.md` |
 | R.12 | shown | All seven CI jobs passed on GitHub at `main`; the five latest runs read on 18 November also passed. | GitHub runs 43730879603 and 44172503761; `.github/workflows/ci.yml` |
 
 ### Performance
@@ -129,8 +129,8 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| VS.1 | in part | Fabricated chain refused in the native core; forged signature refused through LEZ; the fabricated chain not sent through the program. | 1; `crates/ferrata-spectests/tests/adversarial.rs`; `lez/results/stage1-refusals.md` |
-| VS.2 | in part | Roots, chain and predicate forgeries refused through the program; committee, participation and finality forgeries only in native tests. | `lez/results/stage4-attest-refusals.md`; `crates/ferrata-spectests/tests/steps.rs` |
+| VS.1 | shown | A self-consistent fabricated chain (a forger's 512-key committee, checkpoint, finality update and a block with real tries), accepted by the forger's own instance, sent through the program to the canonical mainnet instance: refused (40), at its records (213, 110), across instances (211) and by the reference consumer (213, 110); nothing written or credited. | 1, 151; `lez/results/lc-security/vs1-fabricated-chain.md` |
+| VS.2 | shown | All six forgeries refused through the program: a committee never handed off (40, 27, 45, 23), 341 of 512 signers (51; 342 applies), a proof against a non-finalised header (213, 110), tampered roots (25, 110), another chain (140; another instance 211), a predicate the proof does not cover (110, 130, 131). | 151; `lez/results/lc-security/vs2-forgeries.md` |
 | VS.3 | in part | Program deployed immutable through LEZ's loader, image ids reproducible; migration text is a first draft; no replacement attempt tested. | 6, 37, 82, 92; `lez/live/README.md` |
 | VS.4 | in part | Documented in a first-draft `trust.md`; the attestation side's `monitor` is not built. | `docs/trust.md` §2, §6 |
 | VS.5 | in part | Stated in first drafts of the trust document and the operator and consumer guides. | `docs/trust.md`; `docs/guides/operator-guide.md`; `docs/guides/consumer-guide.md` |
