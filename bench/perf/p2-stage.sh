@@ -8,7 +8,8 @@
 #   bash bench/perf/p2-stage.sh STAGE        # from the repository root
 #
 # P2_WITH_PRIVATE=1 also stages the proven update path: prove_private (one private transaction proving a whole
-# finality update, VerifyAll, at a private account: lez/RESULTS.md §3) with its fixture (mainnet-p1899).
+# finality update, VerifyAll, at a private account: lez/RESULTS.md §3) with its fixture (mainnet-p1899), and its
+# --handoff mode's dry run (a committee handoff in one private transaction).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 stage="$(realpath -m "${1:?usage: p2-stage.sh STAGE}")"
@@ -25,6 +26,10 @@ if [ "${P2_WITH_PRIVATE:-0}" = 1 ]; then
   RISC0_DEV_MODE=1 "$stage/bin/prove_private" --allow-dev-mode --tx-out "$stage/private-dry.borsh" \
     > "$stage/private-dry.log" 2>&1 || { tail -20 "$stage/private-dry.log"; exit 1; }
   head -1 "$stage/private-dry.log"
+  # The committee handoff in one private transaction (prove_private --handoff), dry: its cycles and that it settles.
+  RISC0_DEV_MODE=1 "$stage/bin/prove_private" --handoff --allow-dev-mode --tx-out "$stage/private-handoff-dry.borsh" \
+    > "$stage/private-handoff-dry.log" 2>&1 || { tail -20 "$stage/private-handoff-dry.log"; exit 1; }
+  grep -E 'private transition|settled:' "$stage/private-handoff-dry.log"
 fi
 r0vm="$(readlink -f "$(command -v r0vm)")"
 {

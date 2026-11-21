@@ -17,7 +17,7 @@
 //!   RUNS times (default 5); prints one `EXEC` line: user cycles and the median wall time (the
 //!   executor's throughput, for the precompile model of RFP-021 P.8).
 //!
-//! `bench/perf/prove-actions.sh` runs both on the build box and `bench/perf/summarize.py` writes
+//! `bench/perf/prove-actions.sh` runs both on the build box and `bench/perf/summarize_proofs.py` writes
 //! `lez/results/perf-proofs.md`.
 
 use std::{
@@ -130,6 +130,13 @@ fn dump(dir: &Path, with_verify_all: bool) {
             .then(|| format!("consumer: {l}"))
     });
 
+    // Instance succession (lez/results/a1-successors-ws.md): `Succeed` at a parent, which `Spawn`s the successor.
+    let (w, tape) = taped(succession);
+    let pairs = by_report(&w.chain.reports, &tape);
+    keep(&mut rows, "succession", &pairs, |l| {
+        (l == "Succeed").then(|| "instance succession: Succeed (then Spawn at the successor)".to_string())
+    });
+
     if with_verify_all {
         // The whole finality update in one public transaction (VerifyAll), stage1-one-transaction.md.
         let (reports, tape) = taped(scenarios::one_transaction_update);
@@ -177,6 +184,30 @@ fn dump(dir: &Path, with_verify_all: bool) {
         .unwrap();
     }
     println!("{} transitions written to {} (index.tsv)", rows.len(), dir.display());
+}
+
+/// The accepted `Succeed` of `tests/successor.rs`, alone: a parent initialised with Sepolia's schedule before Gloas was
+/// scheduled follows period 1378; then `Succeed` names a successor with the schedule that has Gloas, at the parent's
+/// latest record, and the successor's `Spawn` creates it.
+fn succession() -> scenarios::World {
+    use ferrata_core::fork::{Fork, FAR_FUTURE_EPOCH};
+    use ferrata_lez_wire::{instance_actor, successor_id, Message};
+    use harness::sepolia::{self, FIRST_PERIOD, GLOAS_PERIOD};
+    let mut parent_config = sepolia::sepolia_config(2);
+    parent_config.fork_epochs[Fork::Gloas as usize] = FAR_FUTURE_EPOCH;
+    let mut w = sepolia::sepolia_world(parent_config);
+    let u1378 = sepolia::sepolia_update(FIRST_PERIOD);
+    let run = w.apply(&u1378, &format!("parent: period {FIRST_PERIOD}"));
+    assert!(run.reports.iter().all(TxReport::ok));
+    let checkpoint = w.inst.store(&w.chain).finalized.hash_tree_root();
+    let now = w.inst.config.slot_start_ms(sepolia::sepolia_update(GLOAS_PERIOD).signature_slot) + 12_000;
+    let config = sepolia::sepolia_config(2);
+    let root_id = w.inst.state(&w.chain).unwrap().root_id;
+    let successor = instance_actor(w.inst.program, &successor_id(&root_id, &w.inst.id, &config, &checkpoint));
+    let message = borsh::to_vec(&Message::Succeed { config, checkpoint }).unwrap();
+    let r = w.chain.submit("Succeed", w.inst.actor(), message, vec![w.inst.actor(), successor], vec![], now);
+    assert!(r.ok(), "Succeed: {:?}", r.charge.revert);
+    w
 }
 
 fn field(line: &str, i: usize) -> &str {

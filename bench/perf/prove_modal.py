@@ -9,13 +9,16 @@ the Volume's /bundle/r0vm/r0vm (the one lez/results/perf-p4-laptop.md's proofs u
 
     export MODAL_PROFILE=<workspace>
     modal volume put p4-minimum <stage>/bin /bundle/p2/bin        # and <stage>/dump to /bundle/p2/dump
+    modal volume put p4-minimum <stage>/fixture /bundle/p2/fixture    # --private only (P2_WITH_PRIVATE=1's fixture)
+    modal volume put p4-minimum <r0vm 3.0.5> /bundle/r0vm/r0vm      # once: the CPU r0vm (rzup install r0vm 3.0.5)
     P2_CPU=16 modal run --detach bench/perf/prove_modal.py --tag <tag> --index <stage>/dump/index.tsv [--only 3,25]
     modal volume get p4-minimum /results/p2-<tag> bench/perf/results/
     python3 -I bench/perf/summarize_proofs.py bench/perf/results/p2-<tag> > lez/results/perf-proofs.md
 
 `--private`: instead, the proven update path (prove_private: the whole finality update proven in one private
 transaction, then settled with the receipt verified; staged with P2_WITH_PRIVATE=1), RUNS times in one container
-each: /vol/results/p2-<tag>/private-<i>.log.
+each: /vol/results/p2-<tag>/private-<i>.log; with `--handoff`, the committee handoff in one private transaction
+(prove_private --handoff): private-handoff-<i>.log. P2_BUNDLE (default /bundle/p2) names the stage on the Volume.
 
 Results: /vol/results/p2-<tag>/prove-NNN.log (perf_prove's output, then GNU time's), machine-NNN.json (what the
 container reported), index.tsv and machine.txt (written by the local entrypoint). A transition whose log already
@@ -35,6 +38,7 @@ CPU = float(os.environ.get("P2_CPU", "16"))
 MEM_MIB = int(os.environ.get("P2_MEM_MIB", "32768"))
 CONTAINERS = int(os.environ.get("P2_CONTAINERS", "8"))
 VOLUME = "p4-minimum"
+BUNDLE = "/vol" + os.environ.get("P2_BUNDLE", "/bundle/p2")
 
 app = modal.App("perf-proofs")
 vol = modal.Volume.from_name(VOLUME)
@@ -70,7 +74,7 @@ def prove(n: int, tag: str) -> dict:
     if "\nRESULT\t" in "\n" + _read(log):
         return {"n": n, "skipped": True}
     work = "/root/p2"
-    shutil.copytree("/vol/bundle/p2", work, dirs_exist_ok=True)
+    shutil.copytree(BUNDLE, work, dirs_exist_ok=True)
     r0vm = shutil.copy("/vol/bundle/r0vm/r0vm", f"{work}/bin/r0vm")
     for b in (r0vm, f"{work}/bin/perf_prove"):
         os.chmod(b, 0o755)
@@ -93,37 +97,39 @@ def prove(n: int, tag: str) -> dict:
 
 @app.function(image=image, cpu=(CPU, CPU), memory=(MEM_MIB, MEM_MIB), volumes={"/vol": vol}, timeout=3 * 3600,
               max_containers=CONTAINERS, single_use_containers=True, retries=1)
-def prove_private(i: int, tag: str) -> dict:
+def prove_private(i: int, tag: str, handoff: bool = False) -> dict:
     out = f"/vol/results/p2-{tag}"
     os.makedirs(out, exist_ok=True)
-    log = f"{out}/private-{i}.log"
+    name = f"private-handoff-{i}" if handoff else f"private-{i}"
+    mode = ["--handoff"] if handoff else []
+    log = f"{out}/{name}.log"
     if "SETTLED" in _read(log):
         return {"private": i, "skipped": True}
     work = "/root/p2"
-    shutil.copytree("/vol/bundle/p2", work, dirs_exist_ok=True)
+    shutil.copytree(BUNDLE, work, dirs_exist_ok=True)
     r0vm = shutil.copy("/vol/bundle/r0vm/r0vm", f"{work}/bin/r0vm")
     for b in (r0vm, f"{work}/bin/prove_private"):
         os.chmod(b, 0o755)
     os.makedirs(f"{work}/tmp", exist_ok=True)
     m = _machine()
-    json.dump(m, open(f"{out}/machine-private-{i}.json", "w"), indent=1)
+    json.dump(m, open(f"{out}/machine-{name}.json", "w"), indent=1)
     env = {**os.environ, "RISC0_DEV_MODE": "0", "RISC0_SERVER_PATH": r0vm, "RISC0_INFO": "1", "RUST_LOG": "info",
            "TMPDIR": f"{work}/tmp", "FERRATA_FIXTURE_DIR": f"{work}/fixture"}
     t0 = time.time()
     with open(f"{work}/private.log", "w") as f:
-        rc = subprocess.run(["/usr/bin/time", "-v", f"{work}/bin/prove_private", "--tx-out", f"{work}/private-tx.borsh"],
+        rc = subprocess.run(["/usr/bin/time", "-v", f"{work}/bin/prove_private", *mode, "--tx-out", f"{work}/private-tx.borsh"],
                             stdout=f, stderr=subprocess.STDOUT, env=env, timeout=2 * 3600, cwd=work).returncode
         if rc == 0:
             s_env = {k: v for k, v in env.items() if k not in ("RISC0_INFO", "RUST_LOG")}
             f.write("\n--- settle\n")
             f.flush()
-            src = subprocess.run([f"{work}/bin/prove_private", "--settle", f"{work}/private-tx.borsh"], stdout=f,
+            src = subprocess.run([f"{work}/bin/prove_private", *mode, "--settle", f"{work}/private-tx.borsh"], stdout=f,
                                  stderr=subprocess.STDOUT, env=s_env, timeout=1800, cwd=work).returncode
             f.write(f"\nsettle exit {src}\n")
     wall = time.time() - t0
     shutil.copy(f"{work}/private.log", log)
     if os.path.exists(f"{work}/private-tx.borsh"):
-        shutil.copy(f"{work}/private-tx.borsh", f"{out}/private-{i}-tx.borsh")
+        shutil.copy(f"{work}/private-tx.borsh", f"{out}/{name}-tx.borsh")
     vol.commit()
     return {"private": i, "rc": rc, "wall_s": round(wall, 1), "machine": m}
 
@@ -138,9 +144,9 @@ def write(tag: str, files: dict) -> None:
 
 
 @app.local_entrypoint()
-def main(tag: str, index: str = "", only: str = "", private: int = 0):
+def main(tag: str, index: str = "", only: str = "", private: int = 0, handoff: bool = False):
     if private:
-        for r in prove_private.starmap([(i, tag) for i in range(1, private + 1)], return_exceptions=True):
+        for r in prove_private.starmap([(i, tag, handoff) for i in range(1, private + 1)], return_exceptions=True):
             print(json.dumps(r if isinstance(r, dict) else {"error": repr(r)}), flush=True)
         return
     rows = [l.split("\t") for l in open(index).read().splitlines()]
