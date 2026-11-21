@@ -463,6 +463,16 @@ failures, whose cause row 115 found); the `e2e/seqnet` records of all six runs r
 re-run in this pass; the one-command check (row 90) at a87cebe: 5 of 5 PASS in 36:10, the same counts as at 5a22d93.
 Every figure: [`modules/results/final-verify-2026-11-14/`](../modules/results/final-verify-2026-11-14/README.md).
 
+**Eleventh pass (branch `integration9`, 21 Nov 2026).** The merge of `rfp-lc-security` (rows 151–153), run on the
+build box (Rust 1.93.0, the box's default) at e983b2c1, which adds the review's two test changes, and for the
+Lodestar lockfile at 253f8a3c: the CI workflow's `test` job for the root workspace, 168 passed and 1 ignored (the
+corpus export) in 24 test binaries and 2 doc-test runs, fmt and clippy `-D warnings` clean, the `no_std` RISC-V build
+clean once the box had the target CI installs; `idl` and `links` (59 files, 1,826 links, 0 broken) on the laptop. The
+LEZ harness in dev mode: `security_lc` 5, `security_privacy` 2, `redteam_lc` 11 and `redteam_attest` 11 passed, their
+outputs byte-identical to the committed ones but for the F.8 file's count of differing random bytes; `rustfmt --check`
+of the two new test files clean. Lodestar from the lockfile with `npm ci`: the recorded output but for its time. Not
+re-run: the jobs whose code the merge does not touch (`witness-independence`, `roundtrip`, `vault`, `admin`).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
