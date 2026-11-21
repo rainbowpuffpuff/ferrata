@@ -6,6 +6,9 @@
 # other on one machine.
 #
 #   bash bench/perf/p2-stage.sh STAGE        # from the repository root
+#
+# P2_WITH_PRIVATE=1 also stages the proven update path: prove_private (one private transaction proving a whole
+# finality update, VerifyAll, at a private account: lez/RESULTS.md §3) with its fixture (mainnet-p1899).
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 stage="$(realpath -m "${1:?usage: p2-stage.sh STAGE}")"
@@ -15,6 +18,14 @@ export RISC0_HOME="${RISC0_HOME:-$root/../risc0-home-lez}"
 cargo build -p harness --locked --bin perf_prove > "$stage/build.log" 2>&1 || { tail -30 "$stage/build.log"; exit 1; }
 target/debug/perf_prove --dump "$stage/dump" > "$stage/dump.log" 2>&1 || { tail -30 "$stage/dump.log"; exit 1; }
 strip -o "$stage/bin/perf_prove" target/debug/perf_prove
+if [ "${P2_WITH_PRIVATE:-0}" = 1 ]; then
+  cargo build -p harness --locked --bin prove_private >> "$stage/build.log" 2>&1 || { tail -30 "$stage/build.log"; exit 1; }
+  strip -o "$stage/bin/prove_private" target/debug/prove_private
+  mkdir -p "$stage/fixture" && cp "$root"/crates/ferrata-spectests/fixtures/mainnet-p1899/*.ssz "$stage/fixture/"
+  RISC0_DEV_MODE=1 "$stage/bin/prove_private" --allow-dev-mode --tx-out "$stage/private-dry.borsh" \
+    > "$stage/private-dry.log" 2>&1 || { tail -20 "$stage/private-dry.log"; exit 1; }
+  head -1 "$stage/private-dry.log"
+fi
 r0vm="$(readlink -f "$(command -v r0vm)")"
 {
   echo "date: $(date -u +%FT%TZ)"
@@ -23,6 +34,6 @@ r0vm="$(readlink -f "$(command -v r0vm)")"
   echo "r0vm: $(r0vm --version) $(sha256sum "$r0vm" | cut -c1-64)"
   echo "transitions: $(($(wc -l < "$stage/dump/index.tsv") - 1))"
 } > "$stage/stage.txt"
-( cd "$stage" && find bin dump -type f | sort | xargs sha256sum > SHA256SUMS )
+( cd "$stage" && find bin dump $([ -d fixture ] && echo fixture) -type f | sort | xargs sha256sum > SHA256SUMS )
 cat "$stage/stage.txt"
 du -sh "$stage/bin" "$stage/dump"
