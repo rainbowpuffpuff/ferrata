@@ -22,9 +22,12 @@ the builder copies only `rust-lib/` and a flake sees only tracked files).
 published (no push, no public network). The action itself has not run. Publishing is one owner step,
 prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
 SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
-`trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, and prints the
-create/push/secret/trigger commands it then runs; its offline dry run (local bare repositories, `file://`
-remotes) is recorded in [`dry-run-publish/README.md`](dry-run-publish/README.md).
+`trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the
+remote side read-only, then creates the repositories, pushes them and sets the signing secret, and stops:
+the browser settings (immutable releases, protected tags, 2FA) come next, and the release trigger it
+prints comes last. Its offline dry run (local bare repositories, `file://` remotes) is recorded in
+[`dry-run-publish/README.md`](dry-run-publish/README.md); `modules/scripts/test-release-publish.sh` runs
+every path against a stub `gh`.
 
 ## Dry run: the action's steps, run locally
 

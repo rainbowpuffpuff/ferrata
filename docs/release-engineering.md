@@ -169,12 +169,15 @@ of the CLI refused; the completed lockfiles are committed on this branch. The CL
 ### Publishing: one owner step
 
 The Logos modules have their own publishing path, beside the release above:
-`modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE [--dry-run DIR] [--yes]` puts
+`modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE [--dry-run DIR | --yes]` puts
 everything in place — the catalog's `logos-repo.json` (signer DID, `indexUrl`), the six module
 repositories, the assembled catalog repository — so that publishing them with
-`logos-modules-release-action` is one owner step: create the repositories, set the signing secret,
-push, tag, trigger the workflows. Nothing is published by the script without `--yes`, and its offline
-dry run is recorded in `modules/catalog/dry-run-publish/`. Each lambda-prize release-integrity rule,
+`logos-modules-release-action` is one owner step: with `--yes` it checks the remote side read-only, then
+creates the repositories, pushes and tags them and sets the signing secret, and stops; the browser
+settings (immutable releases, protected tags, 2FA) come next and the release trigger it prints comes
+last. Nothing is published by the script without `--yes`; its offline dry run is recorded in
+`modules/catalog/dry-run-publish/`, and `modules/scripts/test-release-publish.sh` (CI job
+`release-publish`) runs every path against a stub `gh`. Each lambda-prize release-integrity rule,
 mapped to how the catalog meets it: `modules/catalog/RELEASE.md`.
 
 ## 4. Deployment on testnet 0.4: one command

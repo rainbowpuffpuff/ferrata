@@ -16,44 +16,73 @@ modules/scripts/release-publish.sh ORG CATALOG_REPO SIGNING_KEY_FILE --yes
 
 `ORG` is the GitHub organization (say `ferrata-co`), `CATALOG_REPO` the catalog repository (say
 `ferrata-modules`), `SIGNING_KEY_FILE` the Ed25519 private key for module signatures — a JWK,
-`{"crv":"Ed25519","d":<seed>,"kty":"OKP","x":<pubkey>}` (what `lgx keygen` writes), the format
-`logos-modules-release-action`'s inline signing mode reads. Generate it out-of-band and keep it offline:
+`{"crv":"Ed25519","d":<seed>,"kty":"OKP","x":<pubkey>}`, the format `logos-modules-release-action`'s inline
+signing mode reads. Generate it out-of-band and keep it offline, with `lgx keygen` (logos-package's README,
+"Generate a Signing Key"):
 
 ```sh
-openssl genpkey -algorithm ed25519 -out ferrata-release-key.pem
-# convert to the JWK: the PKCS8 file's last 32 bytes are the seed, the pubkey's last 32 bytes are x
+lgx keygen --name ferrata-release        # writes ~/.config/logos/keys/ferrata-release.jwk and prints the DID
 ```
 
-(With `--dry-run DIR` the same command runs end to end offline: local bare repositories under `DIR`,
-`file://` remotes, no network command — the recorded run is [`dry-run-publish/README.md`](dry-run-publish/README.md).)
+or with OpenSSL 1.1.1 or later (not the LibreSSL of macOS before 3.7, which has no Ed25519), whose DER
+encodings end with the 32-byte seed and the 32-byte public key:
+
+```sh
+openssl genpkey -algorithm ed25519 -out ferrata-release.pem
+d=$(openssl pkey -in ferrata-release.pem -outform DER | tail -c 32 | base64 | tr '+/' '-_' | tr -d '=\n')
+x=$(openssl pkey -in ferrata-release.pem -pubout -outform DER | tail -c 32 | base64 | tr '+/' '-_' | tr -d '=\n')
+printf '{"crv":"Ed25519","d":"%s","kty":"OKP","x":"%s"}\n' "$d" "$x" > ferrata-release.jwk
+```
+
+The script needs bash (3.2 or later, so macOS's own will do), git, jq and python3, and `gh` logged in to an
+account that can create repositories in `ORG`. It writes only to a workspace it makes with `mktemp` (under
+`TMPDIR` when that is set) and prints its path. Without `--yes` it prepares everything and prints the plan;
+with `--dry-run DIR` it also pushes everything into local bare repositories under `DIR` (`file://`
+remotes, no network command; the recorded run is [`dry-run-publish/README.md`](dry-run-publish/README.md)).
+[`test-release-publish.sh`](../scripts/test-release-publish.sh) runs every path of it, `--yes` included,
+against a stub `gh` with no network (CI job `release-publish`).
 
 What it does, in order:
 
 1. **Checks its inputs.** The key file must be the JWK the action's signing expects (an Ed25519 OKP with
-   `d` and `x`); the script refuses anything else.
+   `d` and `x`), and `x` must be the public key of `d` (computed by [`jwk_did.py`](../scripts/jwk_did.py),
+   standard-library Python checked against RFC 8032's test vector), or the signer the catalog declares
+   would not be the key that signs; it refuses anything else before doing anything, and no message ever
+   shows `d`.
 2. **Derives the signer's `did:jwk:`** from the public half (`did:jwk:` + base64url of
-   `{"crv":"Ed25519","kty":"OKP","x":…}`, the way `lgx` and Logos's clients construct it) and writes it,
-   with the `indexUrl` formed from `ORG/CATALOG_REPO`, into the `logos-repo.json` it generates for the
-   published catalog (from this directory's copy: identity and description kept, `trustedSigners` and
-   `indexUrl` replaced). The private key is read at run time only and never written under any repository.
+   `{"crv":"Ed25519","kty":"OKP","x":…}`, the way `lgx` constructs it) and writes it, with the `indexUrl`
+   formed from `ORG/CATALOG_REPO`, into the `logos-repo.json` it generates for the published catalog (from
+   this directory's copy: identity and description kept, `trustedSigners` and `indexUrl` replaced). The
+   private key is read at run time only and never written anywhere.
 3. **Exports each module repository** with [`export.sh`](../scripts/export.sh) (the module's directory with
-   its staged crate committed) and **assembles the catalog repository**: the catalog files at its root
-   (`logos-repo.json`, the release workflows), each module a git submodule pointing at
-   `https://github.com/ORG/<module>`. (`ferrata_updater_module`'s export additionally needs lez/methods'
-   risc0-build output, `lez/target` — `cd lez && cargo build --locked -p methods`, `RISC0_HOME` as
-   `lez/RESULTS.md` says; on the machine the publish runs from.)
-4. **Prints the exact `gh` and `git` commands** and, with `--yes`, runs them: create the seven
-   repositories; push each module's `main` and its `v<version>` tag; push the catalog; set the
-   `LOGOS_SIGNING_KEY` Actions secret from the key file (`gh secret set LOGOS_SIGNING_KEY --repo
-   ORG/CATALOG_REPO < KEY`, feeding the `signing_key` the workflows pass in inline mode); trigger
-   `release-all.yml`. The workflows — pinned, signing set up, least-privilege `permissions` per job —
-   do what `logos-modules-release-action` does: build each `.lgx` per variant (`darwin-arm64`,
-   `linux-amd64`, `linux-arm64`, `windows-x86_64`, narrowed to what each flake exposes), merge, `lgx
-   verify`, `lgx sign` with the secret, publish the `<module>-v<version>` release with its sidecar,
-   then rebuild the rolling `index` release clients read. Three settings have no `gh` command this
-   offline setup could verify, so the script prints them for the owner to click instead (§rules 2 and 6
-   below): immutable releases, protected tags, organization 2FA.
-5. Afterwards the owner fills [`releases/RELEASE-INTEGRITY.template.md`](../../releases/RELEASE-INTEGRITY.template.md)
+   its staged crate committed; reproducible: the same source commit gives the same commit SHA, its date
+   being the source commit's) and **assembles the catalog repository**: the catalog files at its root
+   (`logos-repo.json`, the release workflows, a `README.md` with the install instructions of rule 5), each
+   module a git submodule pointing at `https://github.com/ORG/<module>`. (`ferrata_updater_module`'s
+   export additionally needs lez/methods' risc0-build output, `lez/target` — `cd lez && cargo build
+   --locked -p methods`, `RISC0_HOME` as `lez/RESULTS.md` says; on the machine the publish runs from.)
+4. **With `--yes`, checks the remote side before creating anything**, read-only: `gh` is there and logged
+   in, `ORG` is an organization, and no repository of the seven already holds a different `main` or a
+   different version tag. Any failure stops it with nothing created.
+5. **Then creates, pushes and sets the secret**, each step idempotent (a rerun after a failure resumes and
+   moves nothing): create the seven repositories; push each module's `main` and its `v<version>` tag; push
+   the catalog; set the `LOGOS_SIGNING_KEY` Actions secret from the key file on standard input (`gh secret
+   set LOGOS_SIGNING_KEY --repo ORG/CATALOG_REPO < KEY`, the `signing_key` the workflows pass in inline
+   mode).
+6. **Stops, and prints the owner's remaining steps in order.** First the three settings this offline
+   setup has no verified `gh` command for, done in the browser (rules 2 and 6 below): immutable releases on
+   the catalog and module repositories, a ruleset protecting `refs/tags/*`, organization 2FA. Only then
+   the release, which the script prints and does not run:
+   `gh workflow run release-all.yml --repo ORG/CATALOG_REPO`. The workflows — pinned, signing set up,
+   least-privilege `permissions` per job — do what `logos-modules-release-action` does: build each `.lgx`
+   per variant (`darwin-arm64`, `linux-amd64`, `linux-arm64`; at the pinned v1.8 every listed variant
+   gets a build leg, and a leg that fails fails alone: the release then publishes the variants that built
+   as a partial release, its sidecar listing them in `builtVariants` and the rest in `missingVariants`),
+   merge, `lgx verify`, `lgx sign` with the secret, publish the `<module>-v<version>` release with its
+   sidecar, then rebuild the rolling `index` release clients read. `ferrata_updater_module` vendors the
+   linux-x86_64 builds of the circuits and of rapidsnark (`modules/scripts/stage-updater.sh`), so its
+   release is expected to carry `linux-amd64` alone.
+7. Afterwards the owner fills [`releases/RELEASE-INTEGRITY.template.md`](../../releases/RELEASE-INTEGRITY.template.md)
    — every value's producing command is in it — and publishes that manifest with the solution.
 
 ## Each rule of the lambda-prize release-integrity rules, and how this catalog meets it

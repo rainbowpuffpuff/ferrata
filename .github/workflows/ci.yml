@@ -164,6 +164,19 @@ jobs:
       # scripts/ci/check-actions-pinned.py joins this job once the owner has pinned the actions by commit
       # (python3 scripts/ci/pin-actions.py --write, which reads the network; modules/catalog/RELEASE.md).
 
+  # The catalog's one owner step (modules/catalog/RELEASE.md), end to end with no network: a stub gh,
+  # GitHub as local bare repositories, every transport but file:// refused; the refusals before anything is
+  # created, the order of the steps, a rerun, a failure and its resumption, a dry run, no TMPDIR, and
+  # export.sh's reproducible commits (RFP-021 S.9, S.10; RFP-022 U.10, S.3).
+  release-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: The publish step, with a stub gh and no network
+        run: bash modules/scripts/test-release-publish.sh "$RUNNER_TEMP/test-release-publish"
+
   # The IDL of the attestation and bridge programs (idl/README.md): standard-library Python, no
   # toolchain. The vectors it decodes are written by lez/bridge-wire/tests/idl_vectors.rs, which
   # runs with lez/ (by hand) and fails when the wire and the committed vectors part.
