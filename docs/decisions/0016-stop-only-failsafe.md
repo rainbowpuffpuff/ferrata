@@ -32,8 +32,9 @@ first non-revoked sunset checkpoint, never lowered by a later one, and revoking 
 freeze key, so anyone may call `retire()` once a sunset checkpoint has been final for longer than `revokeWindow` —
 since widened to anyone retiring after 30 days without a finalisation (D13, D11).
 
-The limits kept and documented rather than fixed (D8): a tripped stop strands all escrow except owed balances, unless
-a sunset checkpoint was finalised first; the stop wrapper's owner is not moved by a freeze-authority handover, so it
+The limits kept and documented rather than fixed (D8): a tripped stop strands all escrow except owed balances (D8 kept refunds open for a sunset checkpoint finalised
+first; as built under D13, refunds stop with the verifier too, so after a stop nothing but owed balances moves, shown by
+the migration rehearsal's `vault/test/MigrationFailsafe.t.sol`, branch rfp-ci-release); the stop wrapper's owner is not moved by a freeze-authority handover, so it
 is renounced at deployment instead; until the admin replaces it under the timelock, a compromised freeze key can renew
 freezes, revoke honest checkpoints within the window and retire the vault; a payee that can never receive keeps its
 `owed` balance forever; and retired keys stay counted until a finalised checkpoint carries the rotation.
