@@ -8,7 +8,8 @@
 #   vendor/ferrata/                the repository's crates the updater needs, in the repository's own
 #                                  layout, with the workspace manifests they inherit from (the root's,
 #                                  bridge/'s, lez/'s), so every path dependency resolves unchanged:
-#                                  lez/{updater,updater/sequencer,advance,wire,bridge-wire,holdings-wire,harness}
+#                                  lez/{updater,updater/sequencer,advance,wire,bridge-wire,holdings-wire,harness,
+#                                  statements-wire,rebate-wire} (the last two: wire crates the harness depends on)
 #                                  (advance: the update's job planning the updater shares with
 #                                  ferrata_attest_module; updater/sequencer: the backend for a running LEZ
 #                                  sequencer, a library the module links, with the live driver's modules it
@@ -61,7 +62,8 @@ copy() { # SOURCE_DIR (relative to the repository): its Cargo.toml, README.md, b
   for f in README.md build.rs; do if [ -f "$src/$f" ]; then cp "$src/$f" "$dst/"; fi; done
 }
 crates="lez/updater lez/updater/sequencer lez/advance lez/wire lez/bridge-wire lez/holdings-wire lez/harness crates/ferrata-core crates/ferrata-spectests
-        bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core"
+        bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core
+        lez/statements-wire lez/rebate-wire"
 for c in $crates; do copy "$c"; done
 # The live driver's modules the sequencer backend compiles in by path (lez/updater/sequencer/src/lib.rs).
 mkdir -p "$v/ferrata/lez/live/driver/src"
@@ -145,6 +147,18 @@ open(os.path.join(out, "src", "lib.rs"), "w").write("\n".join(lines) + "\n")
 json.dump(ids, open(ids_out, "w"), indent=1, sort_keys=True)
 print("stage-updater.sh: guests " + ", ".join(f"{k} {v[:12]}…" for k, v in sorted(ids.items())))
 PY
+
+# The harness's optional guest crates (its features `statements` and `rebate`, which the module never enables):
+# cargo reads the manifest of every path dependency, so each gets a crate of the same name with nothing in it.
+for g in methods-statements methods-rebate; do
+  mkdir -p "$v/ferrata/lez/$g/src"
+  printf '%s\n' \
+    "# A stand-in for lez/$g in ferrata_updater_module (modules/scripts/stage-updater.sh): an optional" \
+    "# dependency of the harness behind a feature the module never enables; empty, without the build script." \
+    "[package]" "name = \"$g\"" 'version = "0.1.0"' 'edition = "2021"' 'license = "MIT OR Apache-2.0"' 'publish = false' \
+    > "$v/ferrata/lez/$g/Cargo.toml"
+  echo "//! Empty: lez/$g is not built into ferrata_updater_module (modules/scripts/stage-updater.sh)." > "$v/ferrata/lez/$g/src/lib.rs"
+done
 
 # What was staged, for version().
 sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done
