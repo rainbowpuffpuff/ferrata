@@ -23,6 +23,13 @@ have. The published catalog takes all six. Every path of the script, `--yes` inc
 stub `gh` in [`../../scripts/test-release-publish.sh`](../../scripts/test-release-publish.sh), CI job
 `release-publish`.)
 
+**All six, on the build box.** The same dry run with no `MODULES` (all six modules), on the build box where
+lez/methods' guests are built, 21 November 2026: exit 0 in 21 s, seven bare repositories, the updater's export
+staging the linux-x86_64 circuits (`logos-blockchain-circuits-v0.5.7`) and rapidsnark (`v0.0.8`) and the guests,
+`ferrata_lez` among them at `816d1fef…` as in `docs/image-ids.md`. The box's copy of the tree carries no git
+metadata, so its staged records name the source commit `unknown` and its export commits differ from the laptop's
+below; the laptop's run is the record of a source commit.
+
 ## The repositories created (bare, `<scratch>/publish-dry/`, each with `HEAD` on `main`)
 
 | Repository | `main` | Tag `v0.1.0` (annotated) |

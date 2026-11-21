@@ -47,6 +47,7 @@ only now. The same comparison against the scripts as they were before (`git show
 
 - macOS itself: Nix on macOS, the `.lgx` builds (`nix build .#lgx-portable`), Apple's toolchain and
   `lgx verify` there. The first run of `macos.yml` is the owner's push.
-- `fetch-vectors.sh` on the real consensus-spec archive under bsdtar (the synthetic one above has its shape):
-  the build box run is recorded in [`../../../scripts/ci/README.md`](../../../scripts/ci/README.md), "check-portable.py".
+- `fetch-vectors.sh` on the real consensus-spec archives ran on the build box instead, with bsdtar 3.7.2 as
+  `tar` and with GNU tar 1.35: both verified the pinned tree hashes
+  ([`../../../scripts/ci/README.md`](../../../scripts/ci/README.md), "check-portable.py").
 - `ferrata_updater_module`, which `macos.yml` leaves out (linux-x86_64 circuits and rapidsnark).

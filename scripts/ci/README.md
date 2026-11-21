@@ -66,6 +66,9 @@ anything newer than macOS's bash 3.2 (`declare -A`, `mapfile`, `${x,,}`, `|&`...
 before the fixes of 21 November 2026 it reports eleven, the four of the review among them. It does not run
 anything; the scripts themselves were run under a FreeBSD userland with bash 3.2, and their exports compared
 with GNU's, byte for byte: [`modules/results/bsd-userland-2026-11-21/`](../../modules/results/bsd-userland-2026-11-21/README.md).
+`scripts/fetch-vectors.sh` itself ran on the real archives on the build box, 21 November 2026, once with GNU tar
+1.35 and once with bsdtar 3.7.2 (libarchive) as `tar`: exit 0 both times (23 s, 30 s), each ending "vectors
+verified", that is, the extracted trees equal the pinned tree hashes.
 
 ```sh
 python3 -I scripts/ci/check-portable.py
