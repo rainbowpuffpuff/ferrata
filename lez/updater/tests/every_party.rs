@@ -7,7 +7,7 @@
 //! What runs: `ferrata-updater` (the submitter daemon) against LEZ v0.4.0-rc1's state machine in process
 //! (`HarnessLedger`: the attestation program at genesis, LEZ's fee settlement, RISC0_DEV_MODE), fed the mainnet
 //! fixture of 10 November 2026 (`crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10`: the bootstrap of slot
-//! 15,622,144 and the finality update that finalizes slot 15,624,544, execution block 26,384,851), and that block's
+//! 15,622,144 and the finality update attested at slot 15,624,544 that finalizes slot 15,624,480, execution block 26,384,851), and that block's
 //! recorded `eth_getProof` for WETH's storage as the attested fact. The checkpoint scenario also initialises a second
 //! instance from the lab's recorded mainnet checkpoint (`lez/lab/results/record/net/mainnet`).
 //!
@@ -263,7 +263,7 @@ fn provers_none_is_needed_on_the_public_job() {
     let mut l = HarnessLedger::new(std::slice::from_ref(&op));
     let mut u = f.updater("public-job-only", op.clone(), vec![f.honest("node")]);
     settle(&mut u, &mut l, 50);
-    let labels: Vec<&str> = l.log.iter().map(|(_, label, _)| label.as_str()).collect();
+    let labels: Vec<String> = l.log.iter().map(|(_, label, _)| label.clone()).collect();
     assert!(!labels.is_empty());
     for label in &labels {
         assert!(!label.contains("Verify") && !label.contains("Apply"), "a proven-path transaction: {label}");
@@ -361,7 +361,8 @@ fn execution_providers_cannot_forge_a_fact() {
 
     let mut lying_account = f.request(&u.inst);
     let node = lying_account.accounts[0].proof.first_mut().expect("an account proof");
-    node[node.len() / 2] ^= 0x01;
+    let at = node.len() / 2;
+    node[at] ^= 0x01;
     let code2 = evaluate(&rec.instance_id, rec.chain_id, &recorded, &lying_account).expect_err("refuses");
     let out2 = l.submit(&op, &attest_tx(header, &lying_account, f.time()), GAS, MAX_FEE).unwrap();
     assert_eq!(out2.exit_code, Some(u32::from(code2)));
