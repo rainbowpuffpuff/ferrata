@@ -121,14 +121,26 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
     be proven by the buggy guest, so it stays in escrow, stranded as after a stop unless the bug proves narrow
     enough to reopen releases safely - the vault cannot tell, the freeze authority decides. d2 can still be
     refunded: a refund does not run the release guest (the vault checks the leaf's Merkle path to the frozen
-    deposit root itself), and the per-token release freeze stops releases but not refunds, so once the sunset
-    checkpoint is final and its revocation window has passed, holding every registered token's releases frozen in
-    place of the global release freeze refunds d2 to its depositor while no release can pay. Deposits LEZ imported
-    and nobody burned stay claimable on LEZ. What forged releases paid before the freeze is lost, bounded by the
-    release buckets (the caps) and by the release delay of the root they drew on; nothing recovers it (§5).
+    deposit root itself), and the per-token release freeze stops releases but not refunds. So the freeze
+    authority holds every registered token's releases frozen in place of the global release freeze (the per-token
+    freezes set first, then the global one lifted), and d2 is refunded to its depositor once the sunset checkpoint
+    is final and its revocation window has passed, while no release can pay. If the sunset checkpoint was not yet
+    final when the bug was found, it cannot be submitted or finalised while checkpoints stay frozen. The checkpoint
+    guest is sound in this case, so the freeze authority lifts the checkpoint freeze to let the sunset checkpoint
+    through (its wait, the watchers' cancel and its revocation window apply as to any checkpoint, and the per-token
+    release freezes keep every root it accepts from paying), and may freeze checkpoints again once it is final;
+    until then, and until its revocation window has passed, d2 waits. Deposits LEZ imported and nobody burned stay
+    claimable on LEZ. What forged releases paid before the freeze is lost, bounded by the release buckets (each
+    token's and the global one: their capacity plus their refill until the freeze; [README](README.md), "Under a
+    broken verifier") and by the token's escrow, and with the caps UNLIMITED, as the deployment script's testnet
+    defaults leave them, by the escrow alone. The release delay bounds nothing here: a forged release can name any
+    accepted burn root whose delay passed long ago, with a fresh nullifier (the tests' forged release names b1's
+    honest root), unlike a checkpoint-guest bug's forged root (below). Nothing recovers it (§5).
     — `test_guestBug_releaseFreezeHoldsReleasesAndRefundsOnlyWhileRenewed`
     (the freeze holds releases and refunds while renewed; left to lapse, the forged release pays),
-    `test_guestBug_tokenReleaseFreezesKeepReleasesShutWhileD2IsRefunded`.
+    `test_guestBug_tokenReleaseFreezesKeepReleasesShutWhileD2IsRefunded` (the sunset already final),
+    `test_guestBug_releaseGuest_sunsetNotYetFinal_checkpointFreezeLiftedForIt` (the sunset checkpoint let
+    through the lifted checkpoint freeze, then d2 refunded).
   - *in a checkpoint guest* (burn roots, imported leaf counts and the sunset flag all come from it): **checkpoints
     and releases freeze at once** while the finalised checkpoints are checked against the LEZ chain, and
     `revokeFrom` takes back the first wrong one within the revocation window (it revokes every later one too, and

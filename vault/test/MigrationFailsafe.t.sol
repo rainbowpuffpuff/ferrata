@@ -542,6 +542,90 @@ contract MigrationFailsafeTest is VaultTestBase {
         assertEq(eve.balance, 0);
     }
 
+    /// @notice Still a RELEASE-guest bug, found before the sunset checkpoint was final. With checkpoints frozen the
+    ///         sunset checkpoint can be neither submitted nor finalised, so d2 is not refundable. The checkpoint guest
+    ///         is sound in this case, so the freeze authority lifts the checkpoint freeze for it: the sunset
+    ///         checkpoint goes through its wait (in which a watcher could cancel it) and is finalised, checkpoints
+    ///         are frozen again, and once its revocation window has passed d2 is refunded to its depositor. Every
+    ///         registered token's release freeze, set in place of the global one, keeps the forged path and b1 shut
+    ///         throughout, the sunset checkpoint's own root included.
+    function test_guestBug_releaseGuest_sunsetNotYetFinal_checkpointFreezeLiftedForIt() public {
+        _dep(alice, 1, keccak256("d1: imported; burned on LEZ as b1"));
+        uint64 d2 = _dep(bob, 0, keccak256("d2: never imported"));
+        _acceptRoot(ROOT1); // b1's burn root, finalised by an honest checkpoint
+
+        // the bug is announced: releases and checkpoints freeze at once, then deposits, and the vault is retired;
+        // then every registered token's releases are frozen in place of the global release freeze (these first)
+        vm.startPrank(freezer);
+        vault.setReleasesFrozen(true);
+        vault.setCheckpointsFrozen(true);
+        vault.setDepositsFrozen(true);
+        vault.retire();
+        vault.setTokenReleasesFrozen(ETH, true);
+        vault.setTokenReleasesFrozen(address(usdc), true);
+        vault.setTokenReleasesFrozen(address(dai), true);
+        vault.setTokenReleasesFrozen(address(usdt), true);
+        vault.setReleasesFrozen(false);
+        vm.stopPrank();
+
+        FerrataVault.ReleaseRequest memory forged = _request(ETH, 1, eve, ROOT1, keccak256("a forged nullifier"));
+        _proveRelease(_releaseJournal(forged));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(forged, SEAL);
+        FerrataVault.ReleaseRequest memory forgedUsdc =
+            _request(address(usdc), 0, eve, ROOT1, keccak256("a forged nullifier, another token"));
+        _proveRelease(_releaseJournal(forgedUsdc));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(forgedUsdc, SEAL);
+
+        // no sunset checkpoint yet: d2 is not refundable, and the sunset checkpoint cannot be submitted
+        bytes32[32] memory p2 = _path(d2); // built first: the precompile must not take the expectRevert
+        vm.expectRevert(FerrataVault.NotRefundable.selector);
+        vault.refund(d2, bob, ETH, leafData[d2].denomIndex, leafData[d2].commitment, p2);
+        FerrataVault.Checkpoint memory sunset = _nextCheckpoint(vault, ROOT0, 1, true);
+        _proveCheckpoint(_checkpointJournal(sunset));
+        vm.expectRevert(FerrataVault.CheckpointsAreFrozen.selector);
+        vault.submitCandidate(sunset, SEAL);
+
+        // the checkpoint guest is sound: the checkpoint freeze is lifted, the sunset checkpoint submitted, and
+        // finalised after its wait; then checkpoints are frozen again
+        vm.prank(freezer);
+        vault.setCheckpointsFrozen(false);
+        vault.submitCandidate(sunset, SEAL);
+        _finalizeAfterDelta(sunset);
+        assertTrue(vault.sunsetLeafCountSet(), "the sunset checkpoint is final");
+        assertEq(uint256(vault.sunsetLeafCount()), 1);
+        vm.prank(freezer);
+        vault.setCheckpointsFrozen(true);
+
+        // d2 waits for the sunset checkpoint's revocation window, then is refunded to its depositor, whole escrow
+        vm.expectRevert(FerrataVault.RefundNotYetOpen.selector);
+        vault.refund(d2, bob, ETH, leafData[d2].denomIndex, leafData[d2].commitment, p2);
+        vm.warp(vault.sunsetFinalizedAt() + REVOKE_WINDOW + 1);
+        uint256 bobBefore = bob.balance;
+        vault.refund(d2, bob, ETH, leafData[d2].denomIndex, leafData[d2].commitment, p2);
+        assertEq(bob.balance - bobBefore, 0.1 ether + 0.1 ether / 500, "d2 refunded to its depositor, whole escrow");
+        assertTrue(vault.refunded(d2));
+
+        // and throughout no release could pay: not the forged one, not b1, not one on the sunset checkpoint's root
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(forged, SEAL);
+        FerrataVault.ReleaseRequest memory b1 = _request(ETH, 1, alice, ROOT1, keccak256("b1's nullifier"));
+        _proveRelease(_releaseJournal(b1));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(b1, SEAL);
+        FerrataVault.ReleaseRequest memory onSunset = _request(ETH, 0, eve, ROOT0, keccak256("on the sunset's root"));
+        _proveRelease(_releaseJournal(onSunset));
+        vm.prank(relayer);
+        vm.expectRevert(FerrataVault.TokenReleasesAreFrozen.selector);
+        vault.release(onSunset, SEAL);
+        assertEq(eve.balance, 0);
+    }
+
     /// @notice A bug in the CHECKPOINT guest (a checkpoint carrying a burn root nobody burned into would verify,
     ///         and finalises). The freeze authority freezes checkpoints and releases and, within the revocation
     ///         window, revokes the wrong checkpoint and every later one. The forged root then pays nothing; b1's root,
