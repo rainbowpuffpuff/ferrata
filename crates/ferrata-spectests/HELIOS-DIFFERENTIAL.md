@@ -34,6 +34,49 @@ what each implementation does.
 `helios_oracle.rs`'s `where_helios_departs_from_the_specification` pins the same two inputs on fabricated data, with
 the departures Helios 0.9.4 had and 0.12.0 no longer has.
 
+## Seeded random mutations of real updates
+
+`helios_oracle.rs`'s `random_mutations_of_real_updates_agree_with_helios` (added 21 November 2026): 2,000 seeded
+mutations (seed `0x261121f8`, 400 for each) of mainnet periods 1899–1903's five real updates, each submitted to
+ferrata's policy store (what the program runs), its spec store and Helios 0.12.0 as they stand just before that update.
+Each mutation flips one to three distinct bits (never the same bit twice, so no flip cancels another) in one region of
+the update's SSZ encoding, chosen uniformly, at a uniform offset in it. The spec store and Helios must give the same
+verdict and, where both accept, the same finalized and optimistic headers; the policy store may accept only what the
+spec store accepts.
+
+| Region | Mutations | Refused by all three | Accepted by the spec store and Helios (same heads) | Of those, refused by the policy store |
+|---|---:|---:|---:|---:|
+| offset of the attested header | 146 | 146 | 0 | 0 |
+| next committee | 131 | 131 | 0 | 0 |
+| next-committee branch | 148 | 148 | 0 | 0 |
+| offset of the finalized header | 146 | 146 | 0 | 0 |
+| finality branch | 149 | 149 | 0 | 0 |
+| participation bits | 156 | 156 | 0 | 0 |
+| signature | 124 | 124 | 0 | 0 |
+| signature slot | 149 | 136 | 13 | 0 |
+| attested beacon header | 127 | 127 | 0 | 0 |
+| attested execution branch and offset | 158 | 158 | 0 | 0 |
+| attested payload | 138 | 138 | 0 | 0 |
+| finalized beacon header | 131 | 131 | 0 | 0 |
+| finalized execution branch and offset | 154 | 154 | 0 | 0 |
+| finalized payload | 143 | 143 | 0 | 0 |
+| **total** | **2,000** | **1,987** | **13** | **0** |
+
+Disagreements: 0. The 13 accepted mutations all flip bits of the signature slot's two low bytes: the signature does
+not cover the signature slot, and each mutated slot is still after the attested slot and in the same period and fork
+(the test's current slot is the signature slot plus one), so the specification accepts the update, and all three
+stores do, with the same heads. The
+run's output, every accepted mutation listed: [`results/helios-random-mutations-2026-11-21.txt`](results/helios-random-mutations-2026-11-21.txt)
+(build box, 21 November 2026, rustc 1.93.0; `cargo test --locked -p ferrata-spectests --test helios_oracle
+random_mutations -- --nocapture`).
+
+What this differential cannot give: Helios and ferrata-core are two transcriptions of one specification, and a
+mistake both make the same way (or one the specification itself makes) agrees with itself; the mutations are random,
+so a structured input that needs several coordinated changes (a re-signed update, a consistent fabricated branch) is
+reached only by the targeted tests (`adversarial.rs`, `steps.rs`, `where_helios_departs_from_the_specification`) and
+not by this one. A review of the code against the specification by someone who did not write either is what an audit
+adds.
+
 ## Re-run
 
 ```sh
