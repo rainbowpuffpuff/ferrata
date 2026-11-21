@@ -23,6 +23,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 mod advance;
+mod lez;
+pub use lez::{set_lez_core, LezCoreCall};
 pub mod providers;
 mod rpc;
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
@@ -49,7 +51,10 @@ pub fn version() -> String {
             "build_attest_tx",
             "read_attestation",
             "read_instance",
-            "advance"
+            "advance",
+            "lez",
+            "lez_read",
+            "lez_submit"
         ],
     })
     .to_string()
@@ -101,6 +106,22 @@ pub fn read_attestation(request: &str) -> String {
 /// `InstanceState`, Borsh): its id, configuration, activation, store and jobs applied.
 pub fn read_instance(request: &str) -> String {
     reply(instance(request))
+}
+
+/// `lez(request)`: open (or close) the path through Logos Core's own LEZ module, `lez_core` (`lez.rs`).
+pub fn lez(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez(&r)))
+}
+
+/// `lez_read(request)`: an instance, a record or a job read through `lez_core.get_account_public` (`lez.rs`).
+pub fn lez_read(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez_read(&r)))
+}
+
+/// `lez_submit(request)`: the steps of `advance`, or `build_attest_tx`'s transaction, sent through
+/// `lez_core.send_generic_public_transaction`, each waited for with `poll_transaction_status` (`lez.rs`).
+pub fn lez_submit(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez_submit(&r)))
 }
 
 fn reply(result: Result<Value, String>) -> String {
