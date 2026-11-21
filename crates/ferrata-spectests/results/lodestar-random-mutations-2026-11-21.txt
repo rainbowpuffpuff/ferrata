@@ -1,0 +1,48 @@
+Lodestar light client 1.43.0, node v22.11.0; bootstrap: header root equal to the trusted root (validateLightClientBootstrap not exported)
+2005 records: 5 updates as served (each accepted by both, the same heads: yes) and 2000 mutations (seed 0x261121f8, 400 per update), 290.3 s
+40 mutations also run on a store rebuilt from the bootstrap: the same outcome as on the copied store (else listed below)
+region | mutations | refused by all four (ferrata's policy and spec stores, Helios, Lodestar) | accepted by ferrata's spec store and Lodestar (same heads)
+attested beacon header | 127 | 127 | 0
+attested execution branch and offset | 158 | 158 | 0
+attested payload | 138 | 138 | 0
+finality branch | 149 | 149 | 0
+finalized beacon header | 131 | 131 | 0
+finalized execution branch and offset | 154 | 154 | 0
+finalized payload | 143 | 143 | 0
+next committee | 131 | 131 | 0
+next-committee branch | 148 | 148 | 0
+offset of the attested header | 146 | 146 | 0
+offset of the finalized header | 146 | 146 | 0
+participation bits | 156 | 156 | 0
+signature slot | 149 | 136 | 13
+signature | 124 | 124 | 0
+total | 2000 | 1987 | 13
+Lodestar's refusals by message (numbers as N):
+  360 Finalized Header is not valid Light Client Header
+  343 Attested Header is not Valid Light Client Header
+  307 does not decode
+  279 Invalid next sync committee merkle branch
+  243 Invalid finality header merkle branch
+  176 Invalid aggregate signature
+  124 Error deserializing signature: err callDeserialize: N != N
+  85 No SyncCommittee for period N available syncCommittees [N,N] available bestValidUpdates [N]
+  24 No SyncCommittee for period N available syncCommittees [N] available bestValidUpdates []
+  24 No SyncCommittee for period N available syncCommittees [N] available bestValidUpdates [N]
+  14 attested header slot N must be after finalized header slot N
+  8 signature slot N must be after attested header slot N
+mutations accepted by both:
+  update 0 mutation 10 (signature slot): heads the same
+  update 0 mutation 101 (signature slot): heads the same
+  update 0 mutation 119 (signature slot): heads the same
+  update 0 mutation 339 (signature slot): heads the same
+  update 0 mutation 341 (signature slot): heads the same
+  update 1 mutation 35 (signature slot): heads the same
+  update 1 mutation 149 (signature slot): heads the same
+  update 1 mutation 346 (signature slot): heads the same
+  update 2 mutation 178 (signature slot): heads the same
+  update 2 mutation 205 (signature slot): heads the same
+  update 2 mutation 305 (signature slot): heads the same
+  update 3 mutation 211 (signature slot): heads the same
+  update 4 mutation 322 (signature slot): heads the same
+disagreements: 0
+

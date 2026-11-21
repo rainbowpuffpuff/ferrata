@@ -77,6 +77,44 @@ reached only by the targeted tests (`adversarial.rs`, `steps.rs`, `where_helios_
 not by this one. A review of the code against the specification by someone who did not write either is what an audit
 adds.
 
+## A second client: Lodestar
+
+The same 2,000 mutations, and the five updates as served, judged by Lodestar's light client
+(`@lodestar/light-client` 1.43.0, TypeScript, ChainSafe; its `LightclientSpec.onUpdate`, BLS through
+`@chainsafe/blst`): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
+the corpus with ferrata's and Helios's verdicts and ferrata's heads, and [`lodestar/diff.mjs`](lodestar/diff.mjs) runs
+every record through Lodestar against a copy of a store bootstrapped from the same bytes and advanced by the updates
+before it (current slot: the signature slot plus one, as on the Rust side). Lodestar must refuse what ferrata's spec
+store refuses and accept what it accepts, with the same finalized and optimistic headers.
+
+| | Records | Refused by all four (ferrata's policy and spec stores, Helios, Lodestar) | Accepted by ferrata's spec store and Lodestar (same heads) | Disagreements |
+|---|---:|---:|---:|---:|
+| the updates as served | 5 | 0 | 5 | 0 |
+| mutations | 2,000 | 1,987 | 13 | 0 |
+
+The 13 accepted mutations are the same 13 signature-slot mutations the other three accept. Lodestar keeps a store of
+its own design (committees by period, the next one taken from the best valid update when a later period first needs
+it; no relevance assertion), not the specification's; on these inputs it decides as the specification's store does.
+Its refusals, by message: an invalid finalized or attested light-client header (360, 343), bytes that do not decode
+(307), an invalid next-committee or finality branch (279, 243), an invalid aggregate signature (176), a signature
+that does not deserialize (124), no committee for the signature's period (133), slots out of order (14, 8). As a check
+of the store copy, 40 of the mutations were also run on a store rebuilt from the bootstrap: the same outcome each
+time. Output: [`results/lodestar-random-mutations-2026-11-21.txt`](results/lodestar-random-mutations-2026-11-21.txt)
+(build box, 21 November 2026, node 22.11.0; 290 s).
+
+Pins (`lodestar/package.json`): Lodestar 1.43.0 is the last published `@lodestar/light-client`; its own packages are
+pinned to 1.43.0, and the `@chainsafe` SSZ packages to the versions published before it (`ssz` 1.6.0,
+`persistent-merkle-tree` 1.3.0, `as-sha256` 1.2.4: the newer `ssz` refuses a list limit `@lodestar/types` 1.43.0
+declares). `@lodestar/config` 1.43.0 lists `@lodestar/spec-test-util` (a test helper) as a dependency, and every
+`spec-test-util` since 1.39.0 depends on `vitest` through a pnpm `catalog:` specifier npm cannot install, so an empty
+stand-in replaces it (`lodestar/stub-spec-test-util`; nothing imports it at run time).
+
+```sh
+cargo build --locked -p ferrata-spectests --tests
+FERRATA_DIFF_CORPUS=<dir> cargo test --locked -p ferrata-spectests --test helios_oracle export_random -- --ignored
+cd crates/ferrata-spectests/lodestar && npm install && node diff.mjs <dir>     # exits 1 on any disagreement
+```
+
 ## Re-run
 
 ```sh
