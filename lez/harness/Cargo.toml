@@ -49,12 +49,14 @@ methods-bridge-next = { path = "../methods-bridge-next", optional = true }
 methods-program-class = { path = "../methods-program-class", optional = true }
 ferrata-lez-wire-class = { path = "../wire-class", optional = true }
 # The recorded-statement program and its reader (guests/statements, guests/statements-reader; RFP-021 soft
-# requirement 1, tests/statements.rs). Optional, behind the feature `statements`, so that no ordinary build builds them.
+# requirement 1, tests/statements.rs). The guests are optional, behind the feature `statements`, so that no ordinary
+# build builds them; the wire crate is not, so that the exit-code tables name its codes (tests/exit_codes.rs).
 methods-statements = { path = "../methods-statements", optional = true }
-ferrata-lez-statements-wire = { path = "../statements-wire", optional = true }
-# The rebate program (guests/rebate; RFP-021 soft requirement 5, tests/rebate.rs). Optional, behind the feature `rebate`.
+ferrata-lez-statements-wire = { path = "../statements-wire" }
+# The rebate program (guests/rebate; RFP-021 soft requirement 5, tests/rebate.rs). The guest is optional, behind the
+# feature `rebate`; the wire crate is not, for the same reason.
 methods-rebate = { path = "../methods-rebate", optional = true }
-ferrata-lez-rebate-wire = { path = "../rebate-wire", optional = true }
+ferrata-lez-rebate-wire = { path = "../rebate-wire" }
 
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
@@ -76,6 +78,6 @@ bridge-next = ["dep:methods-bridge-next", "ferrata-lez-bridge-wire/config-keyed"
 # The attestation program's second build at `CLASSED` (tests/history_hops.rs, docs/design/attestation.md §5.7).
 program-class = ["dep:methods-program-class", "dep:ferrata-lez-wire-class"]
 # The recorded-statement path (tests/statements.rs, docs/guides/recorded-statements.md).
-statements = ["dep:methods-statements", "dep:ferrata-lez-statements-wire"]
-# The operator rebate (tests/rebate.rs, docs/guides/operator-guide.md).
-rebate = ["dep:methods-rebate", "dep:ferrata-lez-rebate-wire"]
+statements = ["dep:methods-statements"]
+# The operator rebate (tests/rebate.rs, docs/guides/operator-rebate.md).
+rebate = ["dep:methods-rebate"]

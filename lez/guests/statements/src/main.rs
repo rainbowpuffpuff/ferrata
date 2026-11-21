@@ -47,7 +47,7 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
         }
         Some(StatementsState::Recorded(entry)) => match borsh::from_slice(&input.message) {
             Ok(StatementsMessage::Read) => {
-                let reader = input.from.ok_or(code::UNROUTABLE)?;
+                let reader = input.from.ok_or(code::WRONG_SENDER)?;
                 Ok(Response::keep_state().send_sync(reader, &entry))
             }
             Ok(StatementsMessage::Record { .. }) => Err(code::ALREADY_RECORDED),

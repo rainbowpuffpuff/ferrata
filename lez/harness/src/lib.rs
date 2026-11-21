@@ -715,6 +715,8 @@ pub fn grouped(n: u64) -> String {
 /// What a refusal's exit code means.
 pub fn exit_name(code: u32) -> String {
     use ferrata_lez_holdings_wire::code as h;
+    use ferrata_lez_rebate_wire::code as rb;
+    use ferrata_lez_statements_wire::code as st;
     use ferrata_lez_wire::{code as c, consumer::code as k};
     let name = match code as u8 {
         h::BAD_MESSAGE => "holdings: BadMessage",
@@ -758,6 +760,23 @@ pub fn exit_name(code: u32) -> String {
         k::COMMITMENT_MISMATCH => "consumer: CommitmentMismatch",
         k::WRONG_KIND => "consumer: WrongKind",
         80 => "StepError::Witness",
+        st::BAD_MESSAGE => "statements: BadMessage",
+        st::BAD_STATE => "statements: BadState",
+        st::WRONG_RECEIVER => "statements: WrongReceiver",
+        st::WRONG_SENDER => "statements: WrongSender",
+        st::BAD_REPLY => "statements: BadReply",
+        st::ALREADY_RECORDED => "statements: AlreadyRecorded",
+        st::NOT_RECORDED => "statements: NotRecorded",
+        st::WRONG_SOURCE => "statements: WrongSource",
+        st::NO_SUCH_STATEMENT => "statements: NoSuchStatement",
+        st::ALREADY_USED => "statements: AlreadyUsed",
+        rb::BAD_MESSAGE => "rebate: BadMessage",
+        rb::BAD_STATE => "rebate: BadState",
+        rb::WRONG_RECEIVER => "rebate: WrongReceiver",
+        rb::WRONG_SENDER => "rebate: WrongSender",
+        rb::BAD_REPLY => "rebate: BadReply",
+        rb::ALREADY_CONFIGURED => "rebate: AlreadyConfigured",
+        rb::NOT_CONFIGURED => "rebate: NotConfigured",
         81 => "StepError::Phase",
         82 => "StepError::StoreChanged",
         83 => "StepError::AdoptionIncomplete",

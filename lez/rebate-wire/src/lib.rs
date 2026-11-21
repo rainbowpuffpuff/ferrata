@@ -84,16 +84,36 @@ pub enum RebateState {
     },
 }
 
-/// Exit codes, 70-76: apart from the attestation program's (1xx, 200-229), the holdings consumer's, the bridge's and
-/// the recorded-statement programs' (59-69).
+/// The exit codes `ferrata_rebate` owns: 73–79, a block of its own beside the light client's 1–61 and the
+/// recorded-statement programs' 62–72 (`ferrata_lez_wire::CODE_BLOCKS` names them; `harness/tests/exit_codes.rs`
+/// checks that no other program's code is in it). `Land` runs the attestation program's `Finish`, whose refusals
+/// (the core's 1–61 and 100–199, the step API's 80–99, the program's 200–217) end the transaction with their own code.
+pub const CODE_BLOCK: core::ops::RangeInclusive<u8> = 73..=79;
+
+macro_rules! exit_codes {
+    ($($(#[doc = $doc:literal])* $name:ident = $value:literal;)*) => {
+        $($(#[doc = $doc])* pub const $name: u8 = $value;)*
+        /// Every code of this module, with its name.
+        pub const ALL: &[(&str, u8)] = &[$((stringify!($name), $name)),*];
+    };
+}
+
+/// Exit codes of the rebate program.
 pub mod code {
-    pub const BAD_MESSAGE: u8 = 70;
-    pub const BAD_STATE: u8 = 71;
-    pub const WRONG_RECEIVER: u8 = 72;
-    pub const WRONG_SENDER: u8 = 73;
-    pub const BAD_REPLY: u8 = 74;
-    /// `Configure` of a pool that exists.
-    pub const ALREADY_CONFIGURED: u8 = 75;
-    /// `Land` at a pool that does not exist.
-    pub const NOT_CONFIGURED: u8 = 76;
+    exit_codes! {
+        /// The message does not decode.
+        BAD_MESSAGE = 73;
+        /// Stored state that does not decode.
+        BAD_STATE = 74;
+        /// The receiver is not the actor the message is for.
+        WRONG_RECEIVER = 75;
+        /// A reply from an actor other than the one waited for.
+        WRONG_SENDER = 76;
+        /// A reply that does not decode.
+        BAD_REPLY = 77;
+        /// `Configure` of a pool that exists.
+        ALREADY_CONFIGURED = 78;
+        /// `Land` at a pool that does not exist.
+        NOT_CONFIGURED = 79;
+    }
 }

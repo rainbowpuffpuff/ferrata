@@ -252,7 +252,9 @@ fn code_names() -> BTreeMap<u32, (String, String)> {
 
 fn describe(code: u32, names: &BTreeMap<u32, (String, String)>) -> String {
     let owner = match code {
-        1..=79 | 100..=199 => "the core",
+        1..=61 | 100..=199 => "the core",
+        62..=72 => "the recorded-statement programs",
+        73..=79 => "the rebate program",
         80..=99 => "the step API",
         200..=219 => "the attestation program",
         _ => "unassigned",

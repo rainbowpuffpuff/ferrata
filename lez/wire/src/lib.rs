@@ -323,10 +323,10 @@ pub enum CodeOwner {
 
 /// The blocks of refusal codes. The program exits with its own codes and with the core's and the
 /// step API's, so each code must have one owner: the blocks are disjoint, and every code lies in
-/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 230–255 belong to programs of
-/// their own (`ferrata_holdings` 230–239, the bridge 240–255).
+/// a block of its owner (`harness/tests/exit_codes.rs` checks both). 62–79 and 230–255 belong to
+/// programs of their own (statements 62–72, rebate 73–79, holdings 230–239, the bridge 240–255).
 pub const CODE_BLOCKS: [(CodeOwner, core::ops::RangeInclusive<u8>); 5] = [
-    (CodeOwner::Core, 1..=79),        // the light client: 1–61 in use
+    (CodeOwner::Core, 1..=61),        // the light client: 1–61, all in use
     (CodeOwner::StepApi, 80..=99),    // 80–84 in use
     (CodeOwner::Core, 100..=199),     // the execution layer: 100–163 in use
     (CodeOwner::Program, 200..=217),  // 200–217 in use

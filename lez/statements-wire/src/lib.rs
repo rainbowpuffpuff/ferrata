@@ -175,26 +175,44 @@ pub enum ReaderState {
     Used(Used),
 }
 
-/// Exit codes, 59-69: apart from the attestation program's (1xx, 200-229), the holdings consumer's (230-239), the
-/// bridge program's (240-255) and the rebate program's (70-76).
+/// The exit codes `ferrata_statements` and its reader own: 62–72, a block of their own beside the light client's
+/// 1–61 and the rebate program's 73–79 (`ferrata_lez_wire::CODE_BLOCKS` names them; `harness/tests/exit_codes.rs`
+/// checks that no other program's code is in it). A `Record` that the attestation program refuses ends with that
+/// program's own code (100–217).
+pub const CODE_BLOCK: core::ops::RangeInclusive<u8> = 62..=72;
+
+macro_rules! exit_codes {
+    ($($(#[doc = $doc:literal])* $name:ident = $value:literal;)*) => {
+        $($(#[doc = $doc])* pub const $name: u8 = $value;)*
+        /// Every code of this module, with its name.
+        pub const ALL: &[(&str, u8)] = &[$((stringify!($name), $name)),*];
+    };
+}
+
+/// Exit codes of the recorder and the reader.
 pub mod code {
-    pub const BAD_MESSAGE: u8 = 60;
-    pub const BAD_STATE: u8 = 61;
-    pub const WRONG_RECEIVER: u8 = 62;
-    pub const WRONG_SENDER: u8 = 63;
-    pub const BAD_REPLY: u8 = 64;
-    /// `Record` of a statement already recorded.
-    pub const ALREADY_RECORDED: u8 = 65;
-    /// `Read` of a statement not recorded.
-    pub const NOT_RECORDED: u8 = 66;
-    /// The reader: the entry is of another attestation program, instance or chain, or another key.
-    pub const WRONG_SOURCE: u8 = 67;
-    /// The reader: the entry does not hold the statement.
-    pub const NO_SUCH_STATEMENT: u8 = 68;
-    /// The reader: the statement was already used under this tag.
-    pub const ALREADY_USED: u8 = 69;
-    /// No sender to reply to.
-    pub const UNROUTABLE: u8 = 59;
+    exit_codes! {
+        /// The message does not decode.
+        BAD_MESSAGE = 62;
+        /// Stored state that does not decode.
+        BAD_STATE = 63;
+        /// The receiver is not the actor the message is for.
+        WRONG_RECEIVER = 64;
+        /// A reply from an actor other than the one waited for, or a `Read` with no sender to reply to.
+        WRONG_SENDER = 65;
+        /// A reply that does not decode.
+        BAD_REPLY = 66;
+        /// `Record` of a statement already recorded.
+        ALREADY_RECORDED = 67;
+        /// `Read` of a statement not recorded.
+        NOT_RECORDED = 68;
+        /// The reader: the entry is of another attestation program, instance or chain, or another key.
+        WRONG_SOURCE = 69;
+        /// The reader: the entry does not hold the statement.
+        NO_SUCH_STATEMENT = 70;
+        /// The reader: the statement was already used under this configuration.
+        ALREADY_USED = 71;
+    }
 }
 
 /// The reader's acceptance of an entry: the source it trusts, and the statement it wants.
