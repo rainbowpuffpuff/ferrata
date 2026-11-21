@@ -30,7 +30,7 @@ use ferrata_core::{
 use ferrata_lez_wire::{
     attest::{evaluate, AccountQuery, Address, Cmp, Condition, Field, LogQuery, Operand, Relation, Request, Word},
     consumer::{balance_actor, claim_actor, claim_seed, nullifier, ConsumerMessage, ConsumerState},
-    header_actor, job_actor, job_id, Message, ATTESTED_SELECTOR,
+    header_actor, header_seed, job_actor, job_id, Message, ATTESTED_SELECTOR,
 };
 use ferrata_spectests::{
     execkit::relink,
@@ -174,6 +174,24 @@ fn verify_all(w: &mut World, update: &LightClientUpdate, time: u64, label: &str)
         vec![],
         time,
     )
+}
+
+/// `Attest` at `header(id, slot)`, an actor that holds no record, admitted by its PDA evidence so
+/// that the program decides (without the evidence LEZ refuses the transaction before the program
+/// runs, with no code: "Program violated execution rules").
+fn attest_no_record(
+    chain: &mut harness::Chain,
+    label: &str,
+    program: lee::AccountId,
+    instance_id: &Root,
+    slot: u64,
+    request: &Request,
+    time: u64,
+) -> TxReport {
+    let actor = header_actor(program, instance_id, slot);
+    let message = borsh::to_vec(&Message::Attest { request: request.clone() }).unwrap();
+    let evidence = vec![PublicAccountEvidence::Pda { program, seed: header_seed(instance_id, slot) }];
+    chain.submit(label, actor, message, vec![actor], evidence, time)
 }
 
 /// Run `update` through `w` with `World::apply` (program and native store must agree).
@@ -437,10 +455,12 @@ fn not_finalised_cases() -> (Vec<Row>, String) {
     assert!(native.is_ok(), "the proof is valid against the attested header: {native:?}");
     let time = base.time(&u);
     let (program, id) = (base.w.inst.program, base.w.inst.id);
-    let r = attest_root(
+    let r = attest_no_record(
         &mut base.w.chain,
         "Attest at the attested header's slot",
-        header_actor(program, &id, s0 + 96),
+        program,
+        &id,
+        s0 + 96,
         &request,
         time,
     );
@@ -711,10 +731,12 @@ fn vs1_a_fabricated_chain_is_refused_through_the_program() {
     assert!(s.w.inst.record(&s.w.chain, fs).is_none(), "no record of the fabricated header");
     let r = verify_all(&mut s.w, &x, time, "canonical instance: the fabricated update by VerifyAll");
     check(&mut rows, "the same update in one transaction (VerifyAll)", Some(40), Verdict::of(&[r]), "");
-    let r = attest_root(
+    let r = attest_no_record(
         &mut s.w.chain,
         "canonical: Attest at the fabricated slot",
-        header_actor(program, &victim.id, fs),
+        program,
+        &victim.id,
+        fs,
         &request(victim.id),
         time,
     );
@@ -777,7 +799,12 @@ fn vs1_a_fabricated_chain_is_refused_through_the_program() {
             claim,
             borsh::to_vec(&message).unwrap(),
             vec![claim, header, balance],
-            vec![PublicAccountEvidence::Pda { program: consumer_account(), seed: claim_seed(&pool_id, &n) }],
+            [PublicAccountEvidence::Pda { program: consumer_account(), seed: claim_seed(&pool_id, &n) }]
+                .into_iter()
+                .chain(
+                    (slot == fs).then(|| PublicAccountEvidence::Pda { program, seed: header_seed(&victim.id, slot) }),
+                )
+                .collect(),
             time,
         );
         check(
@@ -1241,11 +1268,7 @@ fn r3_records_stay_valid_after_committee_rotations() {
     ] {
         for (slot, record) in &written {
             let (r, kept) = read_record(&mut w, *slot, time, &format!("read the record of slot {slot} {when}"));
-            assert_eq!(
-                kept,
-                Some(borsh::to_vec(record).unwrap()),
-                "slot {slot}: the record read is the record written"
-            );
+            assert_eq!(kept, Some(record.record.clone()), "slot {slot}: the record read is the record written");
             rows.push(row(
                 &format!("the reference consumer reads the record of slot {slot} (period {}) {when}", slot / PERIOD),
                 "applied, the bytes written",
