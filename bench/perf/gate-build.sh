@@ -6,10 +6,10 @@
 #
 #   bash bench/perf/gate-build.sh BUNDLE      # BUNDLE: bundle-crown-live-3.tar.zst (sha256 0013bab1...)
 #
-# Output in $PERF_GATE_TMP (default spike/tmp/rfp-C/gate): bin/crown-driver, bin/ferrata-updater, crown-lez/bundle.tar.zst.
+# Output in $PERF_GATE_TMP (default spike/tmp/perf-gate): bin/crown-driver, bin/ferrata-updater, crown-lez/bundle.tar.zst.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-T="${PERF_GATE_TMP:-$REPO/../tmp/rfp-C/gate}"
+T="${PERF_GATE_TMP:-$REPO/../tmp/perf-gate}"
 bundle="${1:?usage: gate-build.sh BUNDLE}"
 export CARGO_TERM_COLOR=never PATH="$HOME/.cargo/bin:$PATH"
 mkdir -p "$T/bin" "$T/crown-lez/bin" "$T/logs"

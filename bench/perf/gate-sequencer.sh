@@ -16,7 +16,7 @@
 #    programs deployed (crown-driver crown-a); saved. 2. session.sh x with bench/perf/gate-hook.sh while the zone runs.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-T="${PERF_GATE_TMP:-$REPO/../tmp/rfp-C/gate}"
+T="${PERF_GATE_TMP:-$REPO/../tmp/perf-gate}"
 NAME="${1:?usage: gate-sequencer.sh NAME}"
 # The run writes to scratch and its records are copied into the worktree at the end: a synced mrun call during the run
 # would put the worktree's older copies back over files the daemons hold open.

@@ -17,7 +17,7 @@ anvil Version: 1.3.6-v1.3.6
 nproc --all 32
 MemTotal:       67108864 kB
 8a1201af1ea70efeb83dfbac9de68fcfb8a0e2242d5cf3391d5160c2f2af1ef5  <repo>/monitor/target/release/monitor
-98c2801ff04454482a7411b7e47bc7a0f3a37e2545aab93fb51f2c03f8b881e4  <repo>/../tmp/rfp-C/gate/target-lez/release/ferrata-relayer
+98c2801ff04454482a7411b7e47bc7a0f3a37e2545aab93fb51f2c03f8b881e4  <repo>/../tmp/perf-gate/target-lez/release/ferrata-relayer
 ```
 
 Phases: idle-1 start at +0 s; activity start at +600 s; activity end (final state 0x89a39679a46c1f7b…; wanted 0x89a39679a46c1f7b…) at +681 s; idle-2 end at +1281 s.

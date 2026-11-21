@@ -224,7 +224,7 @@
    Compiling alloy-sol-types v1.7.3
    Compiling alloy-signer v1.8.3
    Compiling risc0-circuit-recursion v4.0.4
-warning: lee@0.1.0: Generated module at <repo>/../tmp/rfp-C/gate/target-lez/release/build/lee-51f15a1d524f426a/out/lee/privacy_preserving_circuit/mod.rs
+warning: lee@0.1.0: Generated module at <repo>/../tmp/perf-gate/target-lez/release/build/lee-51f15a1d524f426a/out/lee/privacy_preserving_circuit/mod.rs
    Compiling ark-snark v0.5.1
    Compiling alloy-consensus v1.8.3
    Compiling phf_shared v0.14.0
@@ -273,7 +273,7 @@ warning: function `check_shape` is never used
    Compiling jf-poseidon2 v0.2.0 (https://github.com/EspressoSystems/jellyfish.git?rev=8d80230358e900f8d63765a937f63f4978ca1daa#8d802303)
    Compiling alloy-transport v1.8.3
    Compiling alloy-core v1.7.3
-warning: programs@0.1.0: Generated module at <repo>/../tmp/rfp-C/gate/target-lez/release/build/programs-83a713f6fc81bb13/out/lez/programs/mod.rs
+warning: programs@0.1.0: Generated module at <repo>/../tmp/perf-gate/target-lez/release/build/programs-83a713f6fc81bb13/out/lez/programs/mod.rs
    Compiling logos-blockchain-poseidon2 v0.0.0 (https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6)
    Compiling logos-blockchain-groth16 v0.0.0 (https://github.com/logos-blockchain/logos-blockchain.git?rev=d480efc6bbb48fb493c10fe9afefd84c18a04f02#d480efc6)
 warning: `ferrata-core` (lib) generated 1 warning

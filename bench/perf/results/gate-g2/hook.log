@@ -62,4 +62,4 @@
 [15:40:16] revealed 30/30; newest applied finalized slot 15640192 (want 15640800)
 [15:40:46] revealed 30/30; newest applied finalized slot 15640800 (want 15640800)
 [15:41:22] stopping (done=1)
-[15:41:25] records in <repo>/../tmp/rfp-C/gate/w-g2/out
+[15:41:25] records in <repo>/../tmp/perf-gate/w-g2/out

@@ -1,4 +1,4 @@
-	Command being timed: "<repo>/../tmp/rfp-C/gate/target-lez/release/ferrata-relayer --eth-rpc http://127.0.0.1:18602 --vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 --unlocked 0x90f79bf6eb2c4f870365e785982e1f101e93b906 --state <scratch>/daemons-anvil/run/relayer-state --from-block 3 run --inbox <scratch>/daemons-anvil/run/inbox --poll-secs 12"
+	Command being timed: "<repo>/../tmp/perf-gate/target-lez/release/ferrata-relayer --eth-rpc http://127.0.0.1:18602 --vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 --unlocked 0x90f79bf6eb2c4f870365e785982e1f101e93b906 --state <scratch>/daemons-anvil/run/relayer-state --from-block 3 run --inbox <scratch>/daemons-anvil/run/inbox --poll-secs 12"
 	User time (seconds): 0.33
 	System time (seconds): 0.54
 	Percent of CPU this job got: 0%

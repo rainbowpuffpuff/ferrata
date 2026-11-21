@@ -17,7 +17,7 @@ REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 HERE="$REPO/bench/perf"
 out="$(realpath -m "${1:?usage: daemons-anvil.sh OUT_DIR [IDLE_MIN]}")"; idle_min="${2:-10}"
 export PATH="$HOME/.foundry/bin:$HOME/.cargo/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1 CARGO_TERM_COLOR=never
-T="${PERF_GATE_TMP:-$REPO/../tmp/rfp-C/gate}"
+T="${PERF_GATE_TMP:-$REPO/../tmp/perf-gate}"
 rm -rf "$out"; mkdir -p "$out/run"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$out/log.txt"; }
 say "build: monitor (release), ferrata-relayer (release)"

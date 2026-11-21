@@ -51,4 +51,4 @@
 [16:14:33] revealed 24/24; newest applied finalized slot 15637216 (want 15637792)
 [16:15:03] revealed 24/24; newest applied finalized slot 15637792 (want 15637792)
 [16:15:39] stopping (done=1)
-[16:15:41] records in <repo>/../tmp/rfp-C/gate/w-g3/out
+[16:15:41] records in <repo>/../tmp/perf-gate/w-g3/out
