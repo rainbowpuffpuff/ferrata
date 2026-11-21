@@ -20,6 +20,21 @@ libraries that already exist:
 | Ethereum: keystore files, signing, JSON-RPC, the vault's ABI | `alloy` 1.x |
 | The release guest (execute or prove) | `risc0-zkvm` 3.0.5 client, `r0vm` 3.0.5 over IPC |
 
+## The user's journey, command by command
+
+| The user wants to | Command | Shown by |
+|---|---|---|
+| know its keys and accounts | `ferrata keys` | below |
+| deposit, privately by default | `ferrata deposit --denomination N …` (a dry run until `--send --yes`) | `tests/e2e.rs` (EVIDENCE row 84), which CI runs on every push (the `roundtrip` job) |
+| find its deposits and burns | `ferrata scan`, `ferrata status` | the same |
+| claim, privately, after its delay | `ferrata claim --bridge-program bridge.bin` | the same; on a running LEZ sequencer: [`e2e/runs/seqnet-cli-1/`](../e2e/runs/seqnet-cli-1/SUMMARY.md) (row 102) |
+| go back: burn, then release through any relayer | `ferrata burn --amount A --recipient 0x… …`, `ferrata release --seal … --job-out job.json` | the same |
+| recover everything from the seed alone | `ferrata recover` | the same |
+
+What each step makes public, what the tool prints before it, who handles the user's data and what a relayer learns:
+[`docs/guides/user-guide.md`](../docs/guides/user-guide.md) §9, §10. The operator's side of the same tool
+(`ferrata-relayer`): [`docs/guides/operator-guide.md`](../docs/guides/operator-guide.md) §0, §6.
+
 ## Installation
 
 Linux x86-64. The tool links LEZ's crates by path, like `lez/`, and LEZ's wallet links the PC/SC library
@@ -580,5 +595,6 @@ RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings
   authority has no key, so no frozen state is exercised.
 - **The anonymity-set view** (how many deposits of the denomination a claim hides among) is not shown.
 - **Relayer work, admin functions, Logos module.** The relayer's root imports and checkpoint proofs are
-  `ferrata-relayer`'s; the admin functions and the Logos core module (`ferrata_bridge_module`) are not part
-  of the tool.
+  `ferrata-relayer`'s; the admin functions are the vault's and the admin view's
+  ([`docs/guides/deployer-guide.md`](../docs/guides/deployer-guide.md)); the Logos core module
+  (`ferrata_bridge_module`, the user guide's §13) runs this tool's code (`cli/wallet`) but is not part of the binary.

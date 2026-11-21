@@ -17,6 +17,20 @@ source ([On a running LEZ sequencer](#on-a-running-lez-sequencer-with-live-sepol
 [`results/live-sepolia/`](results/live-sepolia/)). The beacon APIs are only read; nothing is sent to
 Sepolia or any public network.
 
+## The operator's journey
+
+| Step | How | Shown by |
+|---|---|---|
+| Install | `cd lez && cargo build -p ferrata-updater --features harness --locked` (the in-process chain), or `cd lez/updater/sequencer && cargo build --release` (a running sequencer); or the Logos module `ferrata_updater_module` | the builds of the runs below |
+| Configure | one TOML file; [`ferrata-updater.example.toml`](ferrata-updater.example.toml) lists every field with its default (the table below) | `tests/config.rs` parses the shipped files and refuses bad ones |
+| Run | `ferrata-updater --config FILE`; no permission, no registration: any account with LEZ gas advances any instance | [`dev/demo.sh`](dev/demo.sh) at this commit ([`docs/guides/runs/2026-11-21-lez/`](../../docs/guides/runs/2026-11-21-lez/README.md): 29 transactions applied in 45 s); 8 h following Sepolia live on a devnet ([`results/live-sepolia/`](results/live-sepolia/)) |
+| Monitor | `GET /health` (`ok`, `degraded` with reasons, `down` with HTTP 503) and `GET /metrics` (Prometheus): [Health and metrics](#health-and-metrics) | the demo read `/health` (HTTP 200, `ok`) and `/metrics` while it ran |
+| Stop | SIGTERM or SIGINT: the round in hand finishes, exit 0; a restart reads the chain | the demo's exit 0 after SIGTERM; `restart_mid_job_and_mid_period` |
+
+What every other off-chain party can do to an attestation, and why none of them can stop one:
+[`docs/trust.md`](../../docs/trust.md) §2.4, each party walked by `tests/every_party.rs`. The whole operator role
+(cost, cadence, concurrency, a stalled instance): [`docs/guides/operator-guide.md`](../../docs/guides/operator-guide.md) §3.
+
 ## Run
 
 ```sh
