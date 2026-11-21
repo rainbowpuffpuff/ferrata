@@ -180,7 +180,14 @@ Item {
             verify(host.app.releaseDelayOn && el("burn.delay").checked, "the release's random delay on by default");
             host.privateRecipient = host.app.recipient;
             verify(host.privateRecipient.toLowerCase() !== String(host.app.info.user.depositor).toLowerCase(), "a fresh recipient generated");
-            verify(has(el("burn.leaks.summary").text, "Minimal"), el("burn.leaks.summary").text);
+            if (logosEth()) {
+                // On this path the release is sent from the user's own release account, not by a relayer: the panel says
+                // so (a fee-payer correlation), it does not claim a relayer.
+                verify(has(el("burn.leaks.summary").text, "Elevated"), el("burn.leaks.summary").text);
+                verify(has(el("release.submit").text, "release account"), el("release.submit").text);
+            } else {
+                verify(has(el("burn.leaks.summary").text, "Minimal"), el("burn.leaks.summary").text);
+            }
             shot("12-burn-private-defaults");
             click("burn.submit");
             approve("Burn", "13-burn-approval");

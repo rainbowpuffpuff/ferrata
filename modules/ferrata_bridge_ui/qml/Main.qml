@@ -311,6 +311,26 @@ Rectangle {
     Timer { id: jobTimer; interval: jobPollMs; repeat: true; running: jobRunning(); onTriggered: pollJobs() }
     function refreshAdmin(done) { call("admin.status", {}, function (ok, v) { if (ok) { admin = v; registry = v.registry; } if (done) done(ok, v); }); }
     function token() { return registry && registry.tokens && registry.tokens.length ? registry.tokens[0] : null; }
+    // The module's session sends Ethereum through Logos Core's send stack (`wallet eth`): the release goes from the
+    // user's release account (no relayer on this path), the vault's admin runs from this view.
+    function logosEth() { return !!(info && info.eth); }
+    // The vault actions that name a token, and each action's parameters as the module takes them (admin.rs).
+    property var vaultTokenActions: ["register_token", "set_deposits_enabled", "set_token_cap", "set_release_delay", "announce_fees", "apply_fees", "set_token_deposits_frozen", "set_token_releases_frozen"]
+    function vaultTemplate(a) {
+        var cap = { direction: "deposit", capacity: "50000000000000000000", refill_per_second: "1000000000000000" };
+        var t = {
+            register_token: { denominations: ["1000000"], relay_fees: ["1000"], lez_unit: "1", unit_weight: "1", deposit_cap: { capacity: "1000000000000", refill_per_second: "1000" },
+                              release_cap: { capacity: "1000000000000", refill_per_second: "1000" }, release_delay: "120", lez_definition: "0x" + "00".repeat(32), decimals: 6, checkpoint_fees: ["0"] },
+            set_deposits_enabled: { enabled: false }, set_token_cap: cap, set_global_cap: cap, set_release_delay: { delay: "7200" },
+            announce_fees: { mint_fees: ["0"], burn_fees: ["0"], checkpoint_fees: ["0"] }, apply_fees: {}, raise_delta: { delta: "0" },
+            set_token_deposits_frozen: { frozen: true }, set_token_releases_frozen: { frozen: true }, set_deposits_frozen: { frozen: true },
+            set_releases_frozen: { frozen: true }, set_checkpoints_frozen: { frozen: true }, revoke_from: { index: 0 },
+            transfer_admin: { new_admin: "0x" }, accept_admin: {}, propose_roles: { watchers: ["0x", "0x", "0x"], freeze_authority: "0x" }, apply_roles: {}, retire: {}
+        };
+        return t[a] !== undefined ? t[a] : {};
+    }
+    // The module's session (not the devnet backend): LEZ's Freeze needs a time record the module does not send yet.
+    function onModule() { return !!(info && info.backend && String(info.backend).indexOf("ferrata_bridge_module") === 0); }
     function denomAmount(i) { var t = token(); return t && t.denominations[i] ? t.denominations[i].amount : "0"; }
     function denomText(i) { var t = token(); return t && t.denominations[i] ? Fmt.units(t.denominations[i].amount, t.decimals, t.symbol) : "–"; }
     function depositOf(leaf) {
@@ -610,7 +630,7 @@ Rectangle {
                 objectName: "page.redeem"
                 spacing: 8
                 Heading { text: "Burn on LEZ, release on Ethereum" }
-                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, a relayer releases it on Ethereum: the release does not say which burn it pays." }
+                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, " + (logosEth() ? "you release it on Ethereum from your release account (on this path no relayer sends it)" : "a relayer releases it on Ethereum") + ": the release does not say which burn it pays." }
                 Box {
                     Label { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
                     RowLayout {
@@ -645,7 +665,7 @@ Rectangle {
                 }
                 LeakList {
                     objectName: "burn.leaks"; summaryName: "burn.leaks.summary"
-                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: true, delay: releaseDelayOn, delayHours: releaseDelayHours })
+                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: !logosEth(), delay: releaseDelayOn, delayHours: releaseDelayHours })
                 }
                 Label { objectName: "burn.result"; text: burnText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Box {
@@ -671,7 +691,7 @@ Rectangle {
                     }
                     CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }
                     Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
-                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
+                    Button { objectName: "release.submit"; text: logosEth() ? "Release from your release account" : "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
@@ -884,7 +904,7 @@ Rectangle {
                 objectName: "page.privacy"
                 spacing: 8
                 Heading { text: "What is public and what is private" }
-                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." }
+                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
                 RowLayout { StepTable { step: "deposit" } StepTable { step: "claim" } }
                 RowLayout { StepTable { step: "burn" } StepTable { step: "release" } }
                 Item { Layout.fillHeight: true }

@@ -76,12 +76,19 @@ fn configure_eth(params: &Value) -> Result<Value, String> {
     if user != depositor {
         return Err(format!("the user's account {user} is not the session's depositor {depositor}: deposits name their depositor"));
     }
+    // On this path the release is sent from an account of the user's own (no relayer): never the depositor, whose
+    // address would then link the deposit to the release on Ethereum.
+    let release_sender = params["release_sender"].as_str().map(str::to_lowercase)
+        .ok_or("release_sender: the account the release is sent from on this path (another of the user's accounts: not the depositor)")?;
+    if release_sender == user {
+        return Err(format!("release_sender {release_sender} is the depositor: one address would link the deposit and the release on Ethereum"));
+    }
     let cfg = json!({
         "eth": eth,
         "chain_id": chain_id,
         "from_block": params["from_block"].as_u64().unwrap_or(0),
         "user": user,
-        "release_sender": params["release_sender"].as_str().map(str::to_lowercase).unwrap_or_else(|| user.clone()),
+        "release_sender": release_sender,
         "admin": params["admin"],
         "freeze_authority": params["freeze_authority"],
     });
