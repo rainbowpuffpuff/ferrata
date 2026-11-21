@@ -25,8 +25,22 @@ The second.
 No role can move escrow; the walkaway test passes. The cost: after a stop, unreleased burns and unrefunded deposits
 stay in the vault; a wrong checkpoint not revoked within the window halts the vault for good.
 
+Refunds open only when the vault is retired, the sunset checkpoint's revocation window has passed — so a forged sunset
+checkpoint can be revoked before any refund — and no global release freeze stands; the refund boundary is set by the
+first non-revoked sunset checkpoint, never lowered by a later one, and revoking that checkpoint clears it, while
+`revokeFrom` refuses an index that is already revoked (D5). From the v3 vault build: retirement must not depend on the
+freeze key, so anyone may call `retire()` once a sunset checkpoint has been final for longer than `revokeWindow` —
+since widened to anyone retiring after 30 days without a finalisation (D13, D11).
+
+The limits kept and documented rather than fixed (D8): a tripped stop strands all escrow except owed balances, unless
+a sunset checkpoint was finalised first; the stop wrapper's owner is not moved by a freeze-authority handover, so it
+is renounced at deployment instead; until the admin replaces it under the timelock, a compromised freeze key can renew
+freezes, revoke honest checkpoints within the window and retire the vault; a payee that can never receive keeps its
+`owed` balance forever; and retired keys stay counted until a finalised checkpoint carries the rotation.
+
 ## Sources
 
-- docs/design/bridge.md §14–§16
+- docs/design/bridge.md §14–§16, §20
 - docs/trust.md §6
 - vault/README.md, "Verifier and stop"
+- docs/design/spec/bridge-spec-v3-changes.md D5, D8, D11

@@ -24,7 +24,12 @@ The second.
 A wallet restored from the seed finds everything (10 of 10 deposits and burns in the privacy suite); providers see
 whole-list downloads only. The cost: recovery scans every deposit (1.3 s for a million on one laptop thread).
 
+The burn note's `mac` also covers `memo`, so a copied note with another memo cannot mislead a `kView`-only viewer, and
+`kView` discloses the holder's burns and recipients only, never its deposits or claims, so the optional viewing key is
+met outbound only (D12).
+
 ## Sources
 
 - docs/design/bridge.md §4, §5.3, §5.6, §12.1
+- docs/design/spec/bridge-spec-v3-changes.md D12
 - docs/guides/user-guide.md §2, §8

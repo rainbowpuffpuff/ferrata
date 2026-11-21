@@ -24,8 +24,15 @@ The second.
 A burn collected twice is released once; used nullifiers stay used across a revocation. The cost: a release waits at
 least the delay after its checkpoint.
 
+The delay is bounded on both sides, `minReleaseDelay <= delay <= revokeWindow` with the minimum immutable, so a
+checkpoint can be revoked for as long as its releases are delayed (D5); and the window's boundary is one second exact:
+`revokeFrom` runs while `block.timestamp <= finalizedAt + revokeWindow`, refunds and releases whose delay equals
+`revokeWindow` open only after it (D11). The release and claim guests' cycle counts are witness-independent, a CI gate
+of 64 random witnesses against one count, which caught the first release guest leaking the burn index's popcount
+through its cycle count (D12).
+
 ## Sources
 
-- docs/design/spec/bridge-spec-v3-changes.md D13
+- docs/design/spec/bridge-spec-v3-changes.md D5, D11, D12, D13
 - docs/trust.md §3.5
 - bridge/crates/ferrata-bridge-core/src/encoding.rs (`TAG_NF_OUT`)
