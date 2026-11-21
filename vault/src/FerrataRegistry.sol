@@ -581,6 +581,13 @@ library FerrataRegistry {
         return abi.encodePacked(mint, burn, checkpoint);
     }
 
+    /// @notice The listing of `token` at the SHA-256 slot sha256("ferrata/vault/listing/v1" ‖ token) (bridge-wire
+    ///         `listing_slot`): the word 1 while its deposits are disabled (delisted), 0 while enabled. Called by the
+    ///         vault's `setDepositsEnabled` only (delegatecall: it writes the vault's storage).
+    function publishListing(address token, bool enabled) external {
+        _store(sha256(abi.encodePacked("ferrata/vault/listing/v1", token)), enabled ? bytes32(0) : bytes32(uint256(1)));
+    }
+
     function _store(bytes32 slot, bytes32 value) private {
         assembly ("memory-safe") {
             sstore(slot, value)
