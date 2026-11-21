@@ -1,0 +1,60 @@
+[2026-11-21 21:05:59.272] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:01.685] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:02.773] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:04.764] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:05.773] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:07.930] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:08.973] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:11.633] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:12.673] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:14.764] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:15.773] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:22.515] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:23.573] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:25.648] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:26.673] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:43.567] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:44.572] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:46.649] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:47.673] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:50.323] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:51.373] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:53.468] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:54.472] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:56.886] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:06:57.973] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:06:59.972] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:07:00.973] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:07:03.378] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:07:04.473] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:07:06.466] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_be43acc244bb" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-21 21:07:07.472] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-21 21:07:10.122] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.124] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.125] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.127] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.129] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.131] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.132] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.134] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.144] [out] [lez_core] Syncing to block 42. Blocks to sync: 7
+[2026-11-21 21:07:10.150] [out] [lez_core] Synced to block 42 in 5.681679ms
+[2026-11-21 21:07:10.237] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.239] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.240] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.242] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.244] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.246] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.247] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-21 21:07:10.249] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+Shutting down logosctl daemon...
+[2026-11-21 21:07:17.776] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"modules_state"::"module_state_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:17.927] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageStart"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:17.927] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageStop"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:17.927] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadDone"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:17.927] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadProgress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:17.927] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadManifestDone"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:18.028] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"signer_accounts_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:18.028] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"sign_progress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:18.028] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"signer_accounts_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-21 21:07:18.028] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"sign_progress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.

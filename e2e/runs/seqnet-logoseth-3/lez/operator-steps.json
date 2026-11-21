@@ -1,0 +1,36 @@
+{
+  "tipT0": {
+    "hash": "0xf4bbd03b64e3cb2fa4d6f44e3e234a3bdf1b57d9286f01fa84e2ebb56ca06063",
+    "id": 19
+  },
+  "tipT1": {
+    "hash": "0x34989cc0ea89bcbaeaa196438bd1dd10e55cd364a16afe518429e8c2f445ed3b",
+    "id": 28
+  },
+  "blocks": {
+    "from": 20,
+    "to": 28
+  },
+  "configId": "0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c",
+  "vault": "0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516",
+  "steps": [
+    {
+      "step": "bridge Init (pairing: configId in the vault's slot 2)",
+      "status": "applied",
+      "block": "26",
+      "tx_hash": "ffaf0abf1b464ca9df7db7f6893567a165c96d1d53aee52898ac5e5f39902e5f"
+    },
+    {
+      "step": "bridge Register ETH (registry entry, schedules 0 and 1, leaf count)",
+      "status": "applied",
+      "block": "27",
+      "tx_hash": "368bac8eaa9a8b4f1e4c607f6a5c93d2c80ad74494913597821e4d37256897b1"
+    },
+    {
+      "step": "bridge ImportRoot n=1 (stage 1, block 10)",
+      "status": "applied",
+      "block": "28",
+      "tx_hash": "7c77ae5e0f25874575ed4db43f534c9032754d4c23b23f4d438aa89e60bb62e0"
+    }
+  ]
+}
