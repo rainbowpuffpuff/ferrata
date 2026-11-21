@@ -1027,3 +1027,101 @@ fn where_helios_departs_from_the_specification() {
     let (mut ours5, mut theirs5) = chain5.stores();
     assert_eq!(chain5.submit(&mut ours5, &mut theirs5, &signed_by_half, 82), (Ok(()), true), "half signing");
 }
+
+/// Seeded random mutations of every real update of mainnet periods 1899 to 1903, each against the
+/// stores as they stand just before that update: one to three bit flips, each in a region of the
+/// update's SSZ encoding chosen uniformly (the two offsets, the next committee and its branch, the
+/// finality branch, the participation bits, the signature, the signature slot, and each header's
+/// beacon fields, execution branch and payload), at a uniform offset in it. ferrata's spec store
+/// and Helios must give the same verdict; where both accept, the same finalized and optimistic
+/// headers; ferrata's policy store (what the program runs) may accept only what the spec store
+/// accepts. Prints the tally by region.
+#[test]
+fn random_mutations_of_real_updates_agree_with_helios() {
+    use ferrata_spectests::execkit::Rng;
+    const PER_UPDATE: usize = 400;
+    const SEED: u64 = 0x2611_21f8;
+    let trusted = "0x64b56a372f8c4ccc274d9f42c9b4a1d9a18966a20188992bcac15b1c6e7d91ac";
+    let mut pair = Pair::mainnet("mainnet-p1899", trusted);
+    let mut rng = Rng::new(SEED);
+    let electra = Data::Update(LcFork::Electra);
+    // region -> (mutations, all three refuse, spec store and Helios accept, policy refuses what both accept)
+    let mut tally: std::collections::BTreeMap<String, [usize; 4]> = std::collections::BTreeMap::new();
+    let mut disagreements = Vec::new();
+    for i in 0..5 {
+        let original = fixture("mainnet-p1899", &format!("update_{i}.ssz"));
+        let u32_at = |o: usize| u32::from_le_bytes(original[o..o + 4].try_into().unwrap()) as usize;
+        let (att, fin) = (u32_at(0), u32_at(layout::NEXT_BRANCH + 6 * 32));
+        assert_eq!((att, fin > att), (layout::FIXED, true), "update {i}: the offsets");
+        let regions: [(&str, usize, usize); 14] = [
+            ("offset of the attested header", 0, 4),
+            ("next committee", layout::NEXT_COMMITTEE, 513 * 48),
+            ("next-committee branch", layout::NEXT_BRANCH, 6 * 32),
+            ("offset of the finalized header", layout::NEXT_BRANCH + 6 * 32, 4),
+            ("finality branch", layout::FINALITY_BRANCH, 7 * 32),
+            ("participation bits", layout::BITS, 64),
+            ("signature", layout::SIGNATURE, 96),
+            ("signature slot", layout::SIGNATURE_SLOT, 8),
+            ("attested beacon header", att, 112),
+            ("attested execution branch and offset", att + 112, 132),
+            ("attested payload", att + 244, fin - att - 244),
+            ("finalized beacon header", fin, 112),
+            ("finalized execution branch and offset", fin + 112, 132),
+            ("finalized payload", fin + 244, original.len() - fin - 244),
+        ];
+        for m in 0..PER_UPDATE {
+            let (name, start, len) = regions[rng.below(regions.len())];
+            let mut bytes = original.clone();
+            let flips = 1 + rng.below(3);
+            let mut at = Vec::new();
+            for _ in 0..flips {
+                let offset = start + rng.below(len);
+                let bit = rng.below(8);
+                bytes[offset] ^= 1 << bit;
+                at.push((offset, bit));
+            }
+            let mut p = pair.clone();
+            let (policy, spec, helios) = p.submit(&bytes, electra);
+            let t = tally.entry(name.to_string()).or_default();
+            t[0] += 1;
+            if !policy && !spec && !helios {
+                t[1] += 1;
+            }
+            if spec && helios {
+                t[2] += 1;
+                if !policy {
+                    t[3] += 1;
+                }
+                if !p.agree() {
+                    disagreements.push(format!(
+                        "update {i} mutation {m} ({name}, flips {at:?}): both accept, the headers differ"
+                    ));
+                }
+            }
+            if spec != helios {
+                disagreements.push(format!(
+                    "update {i} mutation {m} ({name}, flips {at:?}): spec store {spec}, Helios {helios}"
+                ));
+            }
+            if policy && !spec {
+                disagreements.push(format!("update {i} mutation {m} ({name}, flips {at:?}): the policy store accepts what the spec store refuses"));
+            }
+        }
+        assert_eq!(pair.submit(&original, electra), (true, true, true), "update {i}");
+        assert!(pair.agree());
+    }
+    let mut out = format!(
+        "{} seeded mutations (seed {SEED:#x}, {PER_UPDATE} per update) of mainnet periods 1899-1903's five updates:\n\
+         region | mutations | refused by all three | accepted by spec store and Helios (same heads) | of those, refused by the policy store\n",
+        5 * PER_UPDATE
+    );
+    for (name, t) in &tally {
+        out.push_str(&format!("{name} | {} | {} | {} | {}\n", t[0], t[1], t[2], t[3]));
+    }
+    out.push_str(&format!("disagreements: {}\n", disagreements.len()));
+    for d in &disagreements {
+        out.push_str(&format!("  {d}\n"));
+    }
+    println!("{out}");
+    assert!(disagreements.is_empty(), "{out}");
+}
