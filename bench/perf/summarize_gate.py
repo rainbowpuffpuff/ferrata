@@ -62,6 +62,7 @@ def pct(xs, q):
 
 def summarize(run):
     run = Path(run)
+    key = {"run": run.name}
     names = sorted(p.name[len("state-"):] for p in run.glob("state-*") if p.is_dir())
     J = {n: journal(run / f"state-{n}" / "journal.tsv") for n in names}
     reveals = [l.split("\t") for l in (run / "reveals.tsv").read_text().splitlines()[1:]]
@@ -86,11 +87,13 @@ def summarize(run):
     if honest:
         ae = sum(tot[n]["ae"] for n in honest); be = sum(tot[n]["be"] for n in honest)
         af = sum(tot[n]["af"] for n in honest); bf = sum(tot[n]["bf"] for n in honest)
+        key["r9"] = be / ae if ae else None
         print(f"\n**R.9:** the honest daemons' execution gas on refused steps / on applied steps = {g(be)} / {g(ae)} = "
               f"**{be / ae:.4f}** (fees: {bf / af:.4f}; the gate: at most 0.10)." if ae else "\nno applied step")
         if len(honest) == 2 and af + bf:
             paid = {n: tot[n]["af"] + tot[n]["bf"] for n in honest}
             share = paid[honest[0]] / (paid[honest[0]] + paid[honest[1]])
+            key["share"] = share
             print(f"**R.10:** {honest[0]}'s share of the honest daemons' fees = **{share:.3f}** "
                   f"({honest[1]} {1 - share:.3f}; the gate: 0.35 to 0.65).")
     # Each step applied once.
@@ -102,6 +105,7 @@ def summarize(run):
     twice = {k: v for k, v in applied.items() if len(v) > 1}
     jobs = {k[0] for k in applied}
     print(f"\nJobs with an applied step: {len(jobs)}; steps applied: {len(applied)}; applied more than once: {len(twice)}.")
+    key.update(jobs=len(jobs), twice=len(twice))
 
     # Latency: an entry's appearance to the first applied Finish whose finalized slot reaches it.
     fin = sorted((r["t"], r["slot"], n) for n in names for r in J[n] if r["step"] == "finish" and r["status"] == "applied")
@@ -113,6 +117,7 @@ def summarize(run):
             lat.append(hit[0] - t0)
             who[hit[2]] = who.get(hit[2], 0) + 1
     if lat:
+        key.update(lat_med=statistics.median(lat), lat_p90=pct(lat, 0.9), lat_n=len(lat), who=dict(who))
         print(f"\n**Latency** (a recorded finality update appearing at the beacon API to its job's `Finish` applied in a block "
               f"final on Bedrock), {len(lat)} updates: median **{statistics.median(lat):.0f} s**, p90 {pct(lat, 0.9):.0f} s, "
               f"min {min(lat):.0f} s, max {max(lat):.0f} s; finished by {', '.join(f'{k} {v}' for k, v in sorted(who.items()))}.")
@@ -139,11 +144,24 @@ def summarize(run):
         print(f"| {n} | {wall:.0f} | {cpu:.1f} | {cpu / wall if wall else 0:.4f} | {tm.get('rss_kb', 0) / 1024:.1f} | {med:.1f} | "
               f"{g(breq)} / {g(bbytes)} | {g(rpc.get('up', 0))} / {g(rpc.get('down', 0))} |")
     print()
+    m = re.search(r"GATE_WINDOW=(\d+) GATE_POLL=(\d+) GATE_ADVERSARY=(\d+)", machine)
+    if m:
+        key.update(window=int(m.group(1)), poll=int(m.group(2)), adversary=int(m.group(3)))
+    return key
 
 
 def main():
-    for run in sys.argv[1:]:
-        summarize(run)
+    keys = [summarize(run) for run in sys.argv[1:]]
+    if len(keys) > 1:
+        print("## The runs side by side\n")
+        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | R.9 refused / applied | R.10 honest-1's share |")
+        print("|---|---|---|---:|---:|---|---|---:|---:|")
+        for k in keys:
+            fmt = lambda v, f: (f.format(v) if v is not None else "—")
+            print(f"| {k['run']} | {k.get('window', '?')} of {k.get('poll', '?')} | {'yes' if k.get('adversary') else 'no'} | "
+                  f"{k.get('jobs', 0)} | {k.get('twice', 0)} | {fmt(k.get('lat_med'), '{:.0f}')} / {fmt(k.get('lat_p90'), '{:.0f}')} | "
+                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | {fmt(k.get('r9'), '{:.4f}')} | "
+                  f"{fmt(k.get('share'), '{:.3f}')} |")
 
 
 if __name__ == "__main__":
