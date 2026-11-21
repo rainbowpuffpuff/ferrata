@@ -1,0 +1,13 @@
+$ ferrata attest advance --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 --update $REPO/lez/lab/results/record/net/sepolia/updates/00057.finality.gloas.ssz --finality --committee bootstrap:$REPO/crates/ferrata-spectests/fixtures/sepolia-2026-11-12/bootstrap.ssz --send --yes
+zone http://127.0.0.1:3040: followed to block 24 (final on Bedrock)
+advance: update attested at slot 11563264, signed at slot 11563265, finalizing slot 11563200; the store is at slot 11562112
+advance: useful: job 0xa3df278a985ce3725ef3d61ec605e6f7346506fe9613ed0480b4758dd2f21902, layout Gloas, advanced true, adopted false, rotated false
+advance: dry run of 3 transaction(s) on the zone's state at block 24 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  open                         3435 bytes; would be applied; execution gas 2074542, storage gas 3435, 0 event(s)
+  miller                       399 bytes; would be applied; execution gas 3305374, storage gas 399, 0 event(s)
+  finish                       527 bytes; would be applied; execution gas 3721523, storage gas 527, 1 event(s)
+  the verdict and the zone's execution agree: applied
+  open                         block 26 (13 s): applied; execution gas 2074542, storage gas 3435, 0 event(s); equal to its dry run
+  miller                       block 27 (10 s): applied; execution gas 3305374, storage gas 399, 0 event(s); equal to its dry run
+  finish                       block 28 (12 s): applied; execution gas 3721523, storage gas 527, 1 event(s); equal to its dry run
+advance: the instance's finalized slot is now 11563200 (jobs applied 3)

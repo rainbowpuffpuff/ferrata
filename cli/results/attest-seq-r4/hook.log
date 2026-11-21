@@ -1,0 +1,27 @@
+[16:25:11] zone http://127.0.0.1:3040; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c; session A's Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[16:25:23] sepolia-config: exit 0 (expected 0)
+[16:25:23] sepolia-status: exit 0 (expected 0)
+[16:25:24] sepolia-advance-finality-dry-run: exit 0 (expected 0)
+[16:25:24] sepolia-status-after-dry-run: exit 0 (expected 0)
+[16:26:00] sepolia-advance-finality: exit 0 (expected 0)
+[16:27:00] sepolia-advance-period-1412: exit 0 (expected 0)
+[16:27:08] sepolia-advance-replayed: exit 3 (expected 3)
+[16:27:08] sepolia-status-after: exit 0 (expected 0)
+[16:27:39] mainnet-init: exit 0 (expected 0)
+[16:27:40] mainnet instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+[16:28:10] mainnet-advance-finality: exit 0 (expected 0)
+[16:28:10] mainnet-config: exit 0 (expected 0)
+[16:28:10] mainnet-status: exit 0 (expected 0)
+[16:28:10] attest-storage-dry-run: exit 0 (expected 0)
+[16:28:17] attest-storage: exit 0 (expected 0)
+[16:28:28] attest-storage-predicate-fails: exit 3 (expected 3)
+[16:28:37] attest-storage-ge: exit 0 (expected 0)
+[16:28:47] attest-log-transfer: exit 0 (expected 0)
+[16:28:57] attest-log-wrong-emitter: exit 3 (expected 3)
+[16:29:07] attest-account-codehash: exit 0 (expected 0)
+[16:29:17] attest-log-failed-tx: exit 3 (expected 3)
+[16:29:27] attest-storage-and-log: exit 0 (expected 0)
+[16:29:38] mainnet-advance-replayed: exit 3 (expected 3)
+[16:29:39] attest-monitor (at-the-record): exit 0, divergence confirmed, alerts []
+[16:29:39] attest-monitor (now): exit 20, divergence confirmed, alerts ["ws-half"]
+[16:29:39] hook done: 24 steps
