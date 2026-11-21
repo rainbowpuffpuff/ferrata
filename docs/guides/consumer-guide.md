@@ -434,9 +434,11 @@ Sources: [`attestation.md`](../design/attestation.md) §3.5, §3.6, §4.1, §4.7
 **Why step 3 matters (derived).** The reference consumer's pool includes the instance id, and its
 nullifier is `H(pool id ‖ statement identifier)`; a pool bound to a new instance is a new pool, so
 its nullifiers differ and, without step 3, every old deposit could be claimed once more. The
-bridge's nullifiers do not include the instance (`N = H(s ‖ fid)`, accounts keyed by
-`(evmChainId, vault, N)`), so a new attestation instance under the same bridge program keeps them
-([`docs/design/bridge.md`](../design/bridge.md) §3, §5.3).
+bridge's nullifiers do not include the instance (`N = H(s ‖ fid)`); their accounts are keyed by
+`(evmChainId, vault, N)` on the deployed program and, since milestone B1, by `(configId, evmChainId, vault, N)`.
+`configId` commits to the instance, but a vault pins one `configId`, so a configuration on another instance cannot
+pair with the vault, and its claims mint nothing that vault releases ([`docs/design/bridge.md`](../design/bridge.md)
+§3, §5.3).
 
 ## 10. Bounding what a forged record can cost you (VS.4)
 

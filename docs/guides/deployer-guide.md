@@ -52,16 +52,17 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 | Watchers | up to three hot addresses, each with its own nodes | none | admin's proposal, 14 days later |
 | Fee recipient | the deployer's choice | the deployer | vault immutable |
 | Tokens, denominations, relay and checkpoint fees, `lezUnit`, `unitWeight` | three denominations per token; fees ≤ 1% each | ETH 0.001/0.01/0.1, relay 0.2%, checkpoint 0.1%; test token 100/1,000/10,000, 0.25% and 0.1% | write-once per token |
-| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | UNLIMITED | admin, never below the floor |
+| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | capped by default since milestone B1: per token and day 100 times its largest denomination (10 ETH, 1,000,000 test-token units; `ethDailyCap`, `tokenDailyCap` in the params), globally their sum, an immutable release floor of one largest denomination a day (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_UNCAPPED=1` deploys without caps, as the live runs of November 2026 did | admin, never below the floor |
 | Attestation instance (its root id) | an instance whose checkpoint you verified | the Sepolia period-1378 bootstrap | inside `configId` |
-| Inbound finality depth | Ethereum finality, no extra epochs | — | — (deeper settings: not built) |
+| Inbound finality depth | Ethereum finality, no extra epochs (depth 0) | 0 | the admin's `SetDepth` on LEZ, in beacon slots beyond finality, at most 216,000; it applies to later imports only (since B1) |
 
 Sources: [`bridge.md`](../design/bridge.md) §9, §13; [`vault/README.md`](../../vault/README.md),
 "Deployment (v5)", "Roles", "Sepolia round trip"; [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md).
 
 **Finality depth (R.14, F.12).** Inbound, the default is Ethereum finality with no extra epochs; a
 deeper setting delays honest claimants but not a captured sync committee, whose defence is caps and
-freezes ([`bridge.md`](../design/bridge.md) §5.4). Outbound, the depth is the vault's wait (Δ, plus
+freezes ([`bridge.md`](../design/bridge.md) §5.4). The admin sets it with `SetDepth`; roots already imported stay
+imported, so no valid claim is lost (`lez/harness/tests/bridge_depth.rs`). Outbound, the depth is the vault's wait (Δ, plus
 `(t − 1) × turnSeconds` under (A)) and the per-token release delay; a change applies only to candidates
 submitted, or roots finalised, after it ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints",
 "Releases and pull payments").
@@ -266,6 +267,15 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   carry no time ([EVIDENCE](../EVIDENCE.md) row 28). A freeze therefore holds while the light client stalls.
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   ahead; the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
+- **Inbound depth** (since B1). The admin's `SetDepth` holds every later `ImportRoot` until the configuration's
+  clock has read a record that many beacon slots newer than the import's (242 until then); at most 216,000 slots
+  (`lez/harness/tests/bridge_depth.rs`).
+- **Delisting** (since B1). The admin delists a token on the vault (`setDepositsEnabled(token, false)`): its
+  deposits stop, and the vault writes 1 at `sha256("ferrata/vault/listing/v1" ‖ token)` (0 when relisted). Anyone
+  then attests that slot on LEZ (`AttestListing`), and `token(cid, token)` records the delisting and the record it
+  came from, so LEZ-side clients can show it; an older record never undoes a newer listing. Claims of deposits made
+  before it, burns, transfers and releases are untouched, so users lose nothing and need do nothing; to end a token
+  for good, delist it and let holders burn (`vault/test/Listing.t.sol`, `lez/harness/tests/bridge_delist.rs`).
 
 Measured costs of these steps (in-process harness, this tree's program): `Init` 171,027 execution gas;
 `Register` 331,816 (431,512–455,116 on the vault's real storage); `ImportFees` 269,684; `SetCap` 91,019;
@@ -281,9 +291,12 @@ execution target.
 - **Reciprocal check**: the vault copies `lezConfigId` into slot 2; LEZ `Init` attests it. Every proof
   journal carries the EVM chain id, the vault and `lezConfigId`, so a proof made for one vault is
   worthless for another ([`vault/README.md`](../../vault/README.md), "Sepolia round trip").
-- **One nullifier namespace per vault**: inbound nullifier accounts are keyed by `(evmChainId, vault, N)`
-  across the whole bridge program, so two configurations importing one vault's roots cannot both mint
-  against a deposit ([`bridge.md`](../design/bridge.md) §3).
+- **Nullifiers per configuration** (since B1; the program the live runs of November 2026 deployed keyed them by
+  `(evmChainId, vault, N)` across the whole program): inbound nullifier accounts are `nullifier(configId, evmChainId,
+  vault, N)` and holdings `holder(configId, account)`, so no configuration can spend another's nullifier or fill its
+  holders' accounts. A second configuration of a vault can mint only its own tokens, which no vault releases: a
+  release binds the vault's own `lezConfigId` ([`bridge.md`](../design/bridge.md) §3,
+  `lez/harness/tests/tenant.rs`).
 - Measured refusals: `Init` of another configuration of the same vault (246); a vault-A deposit under a
   vault-B root (249); vault B's proofs for configuration A (110) ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2).
 - **Run once against Sepolia:** `Init` against the vault deployed there, which pins the `configId` of the
@@ -302,8 +315,14 @@ from another tenant's vault ([`bridge.md`](../design/bridge.md) §12.1, §15). A
 configuration by its id. Evidence today: the release test
 `attack_burn_from_another_config_cannot_satisfy_a_release` (native), and two configurations with their
 own vaults side by side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8).
-The malicious-tenant test (milestone B2's gate) is **not built** ([`docs/traceability.md`](../traceability.md),
-row F.16).
+The malicious-tenant test is `lez/harness/tests/tenant.rs`: on the bridge program since B1 a tenant's claims,
+holdings, roles and internal messages reach nothing of another configuration (`lez/results/b1/tenant/`); against
+the program the live runs of November 2026 deployed, its two known issues stand (`lez/results/tenant.md`).
+
+**Identifying and switching.** A vault pins exactly one configuration (`lezConfigId`, slot 2), so a client
+identifies a configuration by its EVM chain id and vault: the `ferrata` tool reads `lezConfigId` from the vault it
+is given (`--chain-id`, `--vault`, with `--bridge-account` for the LEZ program) and acts under that id only; to switch
+configuration, give it another vault ([`cli/README.md`](../../cli/README.md), options).
 
 ## 8. Rehearse the whole round trip
 
@@ -333,6 +352,9 @@ authority, or anyone once no checkpoint has finalised for 30 days, calls `retire
 LEZ never imported become refundable after a final sunset checkpoint and its revocation window. A new
 version is a new configuration, deployed as above, that holders move to by burning and depositing
 again ([`bridge.md`](../design/bridge.md) §16; [`vault/README.md`](../../vault/README.md), "Refunds").
+Rehearsed over both halves (the vault on anvil, the bridge program in the harness, the guests in dev mode):
+`cli/tests/both_halves.rs`, `migration_rehearsal_honours_positions_in_flight`
+([`e2e/both-halves/results/migration.md`](../../e2e/both-halves/results/migration.md)).
 The attestation side's migration (successor and replacement instances) is in
 [`consumer-guide.md`](consumer-guide.md) §9.
 
@@ -346,7 +368,6 @@ The attestation side's migration (successor and replacement instances) is in
   module (rule (B)'s sequencer side; the program is built);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
-- deeper inbound finality settings; the malicious-tenant test;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
 - `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
   mini-app's `SetCap` and `Freeze` on a local devnet, row 62, are built).

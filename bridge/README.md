@@ -68,7 +68,9 @@ Statements:
 * `verify_claim(root, {depositor, token, amount, leafIndex, path, s, kind, dest}, evmChainId, vault) -> N`:
   recompute `C` and the leaf, check the path with **direction bits = leafIndex** to `root`, return
   `N`. `evmChainId` and `vault` enter only `N`: the LEZ program must take them from its configuration.
-  `register_claim` records `(evmChainId, vault, N)` in one write-once namespace.
+  `register_claim` records `(evmChainId, vault, N)` in one write-once namespace (the native model; the LEZ bridge
+  program since milestone B1 keys each nullifier account by its configuration as well, `nullifier(configId, evmChainId,
+  vault, N)`, so a configuration never spends another's).
 * `verify_release(burnRoot, {burnIndex, path, sOut, r}, {evmChainId, vault, configId, token, amount,
   recipient, relayer, relayFee}) -> NOut`: recompute `COut` and the burn leaf, check the path (direction
   bits = burnIndex). The guest commits `release_journal(...)`. Its cycle count does not depend on the

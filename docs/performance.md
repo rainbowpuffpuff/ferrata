@@ -363,9 +363,9 @@ What accumulates, per operation ([`vault/README.md`](../vault/README.md), "Stora
 | Ethereum | refunded leaf | refund | one slot |
 | Ethereum | checkpoint history | finalised checkpoint | a few slots, not per burn |
 | LEZ | `root(cid, n)` | import | 117 B (measured, [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3) |
-| LEZ | `nullifier(chain, vault, N)` | claim | 77 B (estimated from the type: `NullifierState` borsh, 32 + 20 + 8 + 16, plus the enum tag) |
+| LEZ | `nullifier(chain, vault, N)`; `nullifier(cid, chain, vault, N)` since milestone B1 (the state is the same) | claim | 77 B (estimated from the type: `NullifierState` borsh, 32 + 20 + 8 + 16, plus the enum tag) |
 | LEZ | `burn(cid, H(note))` | burn | 185 B (estimated: `BurnRecord`, 32 + a 152-byte note, plus the tag) |
-| LEZ | holder state | holder | grows with the configurations and tokens it holds |
+| LEZ | holder state | holder | grows with the configurations and tokens it holds; since milestone B1 one account per configuration (`holder(cid, account)`), so with that configuration's tokens only |
 
 The estimate method reproduces the measured root state (116 bytes of fields plus the tag = 117).
 **Projection (derived; account overhead not counted):**

@@ -136,8 +136,9 @@ it bounds what one can take before someone freezes, as row 138's invariants meas
   checkpoint, any release, at the earliest second allowed): releases and refunds stayed within the cap bound in every
   window (the fullest 74.00 % of the ETH bucket's bound under rule (A), 90.09 % under rule (B)) and none came before the
   delay; the uncapped USDT lost up to 94.4 % (rule (A)) and 99.4 % (rule (B)) of a run's deposits, and with the
-  deployment script's testnet defaults
-  (caps UNLIMITED) only the clocks and the emergency stop remain.
+  deployment script's testnet defaults of the
+  live runs of November 2026 (caps UNLIMITED; since milestone B1 only with `FERRATA_UNCAPPED=1`, the script's default
+  being capped: `vault/test/DeployDefaults.t.sol`) only the clocks and the emergency stop remain.
 - **Sizing:** a production deployment's caps × (the time to notice and freeze, at least the release delay) is what
   a captured committee can take; set it to what the deployment accepts to lose. The live round trips of rows 41 and 91
   ran with no caps and a 120 s delay (testnet values).

@@ -360,6 +360,9 @@ messages for each code.
 
 - **Frozen** (deposits, releases, mints or burns, globally or per token): your position waits. Every
   freeze lapses after at most 30 days unless renewed; the admin cannot unfreeze.
+- **Delisted** (a token's deposits disabled by the admin on the vault, mirrored on LEZ by `AttestListing`): no new
+  deposit of it; your deposits made before are still claimed, and your holdings still burn, transfer and release
+  ([`lez/harness/tests/bridge_delist.rs`](../../lez/harness/tests/bridge_delist.rs)).
 - **Retired** (`retire()` on the vault, `Sunset` on LEZ): deposits stop forever and root imports stop;
   claims against imported roots, burns and releases continue; unimported deposits become refundable
   after a final sunset checkpoint and its 7-day revocation window. Anyone may retire once no checkpoint
@@ -386,7 +389,8 @@ private claim, `ImportRoot`, registry reads and release proving are **not built*
   `Freeze` (17), `SetCap` (18), `Sunset` (2). Variants 0–3 are decoded by the checkpoint program, so
   their bytes are fixed.
 - **Actors and addresses**: `config(cid)`, `token(cid, token)`, `root(cid, n)`,
-  `nullifier(chain, vault, N)` (no `cid`: one namespace per vault for the whole program), the holder,
+  `nullifier(cid, chain, vault, N)` and the holder `holder(cid, account)` (keyed by the configuration since milestone
+  B1; the program the live runs of November 2026 deployed keys them by the chain, vault and `N`, and by the account),
   `burn(cid, H(note))`; seeds `H("ferrata-lez/v1/bridge/<role>" ‖ …)` ([`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2).
 - **Derivations**: `configId` ([`bridge.md`](../design/bridge.md) §3), `s`, `C`, `fid`, `N` (§5.3), the
   leaf (§5.2), `r_i`, `sOut`, `COut`, `memo`, `mac`, burn leaf (§12.1), `NOut` and the release journal
