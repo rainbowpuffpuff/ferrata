@@ -1,0 +1,36 @@
+{
+  "pass": 9,
+  "fail": 0,
+  "imported": [
+    2,
+    3,
+    4,
+    5
+  ],
+  "proxyActions": [
+    {
+      "action": "forwarded",
+      "n": 46
+    },
+    {
+      "action": "forwarded, answer held 8.0 s",
+      "n": 1
+    },
+    {
+      "action": "forwarded, answer lost",
+      "n": 1
+    },
+    {
+      "action": "outage",
+      "n": 2
+    },
+    {
+      "action": "trapped (not forwarded)",
+      "n": 1
+    },
+    {
+      "action": "trapped request's client gone",
+      "n": 1
+    }
+  ]
+}

@@ -344,7 +344,10 @@ impl Daemon {
         if let Err(e) = self.p.call(tx).await {
             match eth::refusal_of(&e, "eth_call before sending") {
                 Some(r) => bail!(r),
-                None => bail!("the vault would revert: {e}"),
+                None if e.as_error_resp().and_then(|p| p.as_revert_data()).is_some() => {
+                    bail!("the vault would revert: {e}")
+                }
+                None => bail!("the endpoint failed (eth_call before sending): {e}"),
             }
         }
         let (vault, sent) = (self.r.vault, input.clone());
@@ -384,7 +387,7 @@ impl Daemon {
     /// The vault as of the node's head, if the head is at or above the fence; `None` (the round waits) if the node
     /// is behind the relayer's own last transaction.
     async fn pinned_view(&mut self) -> Result<Option<relayer::VaultView>> {
-        let head = self.p.get_block_number().await?;
+        let head = eth::retry_rpc(|| self.p.get_block_number()).await?;
         if head < self.fence.block {
             log(&self.sink, "node-behind", json!({ "head": head, "fence": self.fence.block }));
             return Ok(None);
@@ -402,14 +405,19 @@ impl Daemon {
         if let Err(e) = self.p.call(tx.clone()).block(at).await {
             match eth::refusal_of(&e, "eth_call before sending") {
                 Some(r) => bail!(r),
-                None => bail!("the vault would revert: {e}"),
+                // Revert data the vault's errors do not name: a refusal all the same.
+                None if e.as_error_resp().and_then(|p| p.as_revert_data()).is_some() => {
+                    bail!("the vault would revert: {e}")
+                }
+                // No revert: the endpoint's failure (a rate limit, a 5xx, a node behind), retried.
+                None => bail!("the endpoint failed (eth_call before sending): {e}"),
             }
         }
         let nonce = match Inflight::load(&self.state)? {
             // The same call, lost by the node, sent again: with its nonce, at most one of them can be mined.
             Some(f) if f.key == key => f.nonce,
             Some(f) => bail!("{} is still in flight (nonce {}): nothing else is sent before it resolves", f.key, f.nonce),
-            None => self.p.get_transaction_count(self.r.me).pending().await?.max(self.fence.next_nonce),
+            None => eth::retry_rpc(|| self.p.get_transaction_count(self.r.me).pending()).await?.max(self.fence.next_nonce),
         };
         let mut f = Inflight {
             key: key.to_string(),
@@ -422,6 +430,7 @@ impl Daemon {
             from_block: self.at.unwrap_or(self.fence.block),
         };
         f.save(&self.state)?;
+        let tx = self.with_gas(tx, at).await?;
         let pending = self.p.send_transaction(tx.with_nonce(nonce)).await.map_err(|e| {
             match eth::refusal_of(&e, "eth_sendTransaction") {
                 Some(r) => anyhow!(r),
@@ -434,6 +443,13 @@ impl Daemon {
         self.mined(&rc, nonce)?;
         ensure!(rc.status(), "the transaction {} reverted", rc.transaction_hash);
         Ok(rc)
+    }
+
+    /// `tx` with a gas limit of the node's estimate plus 30 % and 20,000: an estimate is the least that passed at
+    /// the block it was made at, and a transaction mined later must not run out of gas for a few writes.
+    async fn with_gas(&self, tx: TransactionRequest, at: alloy::eips::BlockId) -> Result<TransactionRequest> {
+        let est = self.p.estimate_gas(tx.clone()).block(at).await.map_err(|e| anyhow!("eth_estimateGas: {e}"))?;
+        Ok(tx.with_gas_limit(est.saturating_mul(13) / 10 + 20_000))
     }
 
     /// The receipt of `hash`, polled for `--receipt-timeout` seconds; transport errors meanwhile are waited out.
@@ -455,16 +471,16 @@ impl Daemon {
     async fn find_mined(&self, f: &Inflight) -> Result<Option<TransactionReceipt>> {
         use alloy::consensus::Transaction as _;
         use alloy::network::TransactionResponse as _;
-        let head = self.p.get_block_number().await?;
+        let head = eth::retry_rpc(|| self.p.get_block_number()).await?;
         let start = f.from_block.max(head.saturating_sub(2_000));
         for n in start..=head {
-            let Some(block) = self.p.get_block_by_number(n.into()).full().await? else { continue };
+            let Some(block) = eth::retry_rpc(|| self.p.get_block_by_number(n.into()).full()).await? else { continue };
             for tx in block.transactions.txns() {
                 if tx.from() == self.r.me && tx.nonce() == f.nonce {
                     if tx.to() != Some(self.r.vault) || tx.input() != &f.input {
                         return Ok(None);
                     }
-                    return Ok(self.p.get_transaction_receipt(tx.tx_hash()).await?);
+                    return Ok(eth::retry_rpc(|| self.p.get_transaction_receipt(tx.tx_hash())).await?);
                 }
             }
         }
@@ -539,14 +555,14 @@ impl Daemon {
         let Some(mut f) = Inflight::load(&self.state)? else { return Ok(true) };
         let s = self.sink.clone();
         if let Some(hash) = f.hash {
-            if let Some(rc) = self.p.get_transaction_receipt(hash).await? {
+            if let Some(rc) = eth::retry_rpc(|| self.p.get_transaction_receipt(hash)).await? {
                 self.mined(&rc, f.nonce)?;
                 self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
                 Inflight::clear(&self.state)?;
                 return Ok(true);
             }
         }
-        let latest = self.p.get_transaction_count(self.r.me).latest().await?;
+        let latest = eth::retry_rpc(|| self.p.get_transaction_count(self.r.me).latest()).await?;
         if latest > f.nonce {
             // The nonce is spent and no receipt names the recorded hash (the daemon was killed before it had the
             // hash, or sent the call again): the transaction mined under the nonce, found in the blocks since the
@@ -570,10 +586,10 @@ impl Daemon {
             return Ok(true);
         }
         let known = match f.hash {
-            Some(h) => self.p.get_transaction_by_hash(h).await?.is_some(),
+            Some(h) => eth::retry_rpc(|| self.p.get_transaction_by_hash(h)).await?.is_some(),
             None => false,
         };
-        let pending = self.p.get_transaction_count(self.r.me).pending().await?;
+        let pending = eth::retry_rpc(|| self.p.get_transaction_count(self.r.me).pending()).await?;
         if known || pending > f.nonce {
             log(&s, "inflight-pending", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash, "ageSecs": unix_now().saturating_sub(f.at) }));
             return Ok(false);
@@ -588,6 +604,7 @@ impl Daemon {
             Inflight::clear(&self.state)?;
             return Ok(true);
         }
+        let tx = self.with_gas(tx, alloy::eips::BlockId::latest()).await?;
         let sent = self
             .p
             .send_transaction(tx.with_nonce(f.nonce))
@@ -659,12 +676,14 @@ impl Daemon {
             };
             std::fs::create_dir_all(self.state.join(dir))?;
             std::fs::rename(&file, self.state.join(dir).join(&name))?;
-            if Inflight::load(&self.state)?.is_some_and(|f| f.job.as_deref() == Some(name.as_str())) {
-                Inflight::clear(&self.state)?;
-            }
+            // The line before the record goes: a daemon killed in between books the job again on restart
+            // (`"recovered": true`), so a booked job always has its line.
             match outcome {
                 Ok(fields) => log(&s, "job-done", json!({ "job": name, "result": fields })),
                 Err(e) => log(&s, "job-refused", json!({ "job": name, "reason": format!("{e:#}") })),
+            }
+            if Inflight::load(&self.state)?.is_some_and(|f| f.job.as_deref() == Some(name.as_str())) {
+                Inflight::clear(&self.state)?;
             }
         }
         // 2. Candidates whose wait is over.
@@ -975,52 +994,62 @@ fn sequencer(_cli: &Cli, _rpc: &str) -> Result<Zone> {
 pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Option<String>>) -> Result<()> {
     let url = cli.eth_rpc.clone().ok_or_else(|| anyhow!("--eth-rpc is required"))?;
     let vault = cli.vault.ok_or_else(|| anyhow!("--vault is required"))?;
-    // An endpoint that does not answer at start is waited for, up to --startup-wait seconds (R.06).
-    {
-        let probe = eth::provider(&url)?;
-        let t0 = std::time::Instant::now();
-        let mut delay = 1u64;
-        loop {
-            match probe.get_chain_id().await {
-                Ok(_) => break,
-                Err(e) if t0.elapsed().as_secs() < cli.startup_wait && stop.borrow().is_none() => {
-                    log(&sink, "waiting-for-rpc", json!({ "reason": e.to_string(), "waitedSecs": t0.elapsed().as_secs() }));
-                    tokio::time::sleep(Duration::from_secs(delay)).await;
-                    delay = (delay * 2).min(30);
-                }
-                Err(e) => {
-                    return Err(anyhow!("the Ethereum endpoint did not answer within {} s: {e}", cli.startup_wait))
-                }
-            }
-        }
-    }
     let logos = cli.send_via == "logos";
-    let (p, me) = match (&cli.keystore, &cli.password_file, cli.unlocked) {
+    // The key: no network yet.
+    let (p, me, unlocked) = match (&cli.keystore, &cli.password_file, cli.unlocked) {
         (None, None, None) if logos => {
             let me = cli.from.ok_or_else(|| anyhow!("--send-via logos needs --from (the keystore account)"))?;
-            (eth::provider(&url)?, me)
+            (eth::provider(&url)?, me, false)
         }
         (Some(ks), Some(pw), None) => {
             let signer = eth::keystore_signer(ks, pw)?;
             let me = signer.address();
-            (eth::signing_provider(&url, signer)?, me)
+            (eth::signing_provider(&url, signer)?, me, false)
         }
-        (None, None, Some(me)) => {
-            let p = eth::provider(&url)?;
-            let accounts = p.get_accounts().await.unwrap_or_default();
-            let chain = p.get_chain_id().await?;
-            // anvil answers anvil_nodeInfo; a public node does not, and must never be asked to sign.
-            let anvil = p.raw_request::<_, serde_json::Value>("anvil_nodeInfo".into(), Vec::<u64>::new()).await.is_ok();
-            if !anvil {
-                bail!("--unlocked needs a local anvil (chain {chain}; {} unlocked accounts)", accounts.len());
-            }
-            (p, me)
-        }
+        (None, None, Some(me)) => (eth::provider(&url)?, me, true),
         _ => bail!("give --keystore and --password-file, or --unlocked on a local anvil, or --send-via logos --from"),
     };
     let r = Relayer { vault, me, accept_unpaid: cli.accept_unpaid };
-    let v = r.view(&p).await?;
-    relayer::require_chain(&v, cli.chain_id)?;
+    // The start-up reads, retried while the endpoint fails (it may be down, rate-limited or behind when the daemon
+    // starts: R.06), up to --startup-wait seconds; a wrong chain, a node that is not anvil for --unlocked, or a
+    // vault that is not one stop it at once.
+    let t0 = std::time::Instant::now();
+    let mut delay = 1u64;
+    let (v, rule_b) = loop {
+        let attempt: Result<std::result::Result<(relayer::VaultView, bool), String>> = async {
+            if unlocked {
+                // anvil answers anvil_nodeInfo; a public node does not, and must never be asked to sign.
+                if let Err(e) = p.raw_request::<_, serde_json::Value>("anvil_nodeInfo".into(), Vec::<u64>::new()).await {
+                    if e.as_error_resp().is_some() {
+                        let chain = p.get_chain_id().await?;
+                        return Ok(Err(format!("--unlocked needs a local anvil (chain {chain} answers no anvil_nodeInfo)")));
+                    }
+                    return Err(e.into());
+                }
+            }
+            let v = r.view(&p).await?;
+            if let Err(e) = relayer::require_chain(&v, cli.chain_id) {
+                return Ok(Err(format!("{e:#}")));
+            }
+            let mode = eth::view(&p, vault, IRelayVault::modeCall {}, None).await;
+            match mode {
+                Ok(m) => Ok(Ok((v, m == 1))),
+                Err(e) if format!("{e:#}").contains("revert") => Ok(Err(format!("{vault} is not a FerrataVault: {e:#}"))),
+                Err(e) => Err(e),
+            }
+        }
+        .await;
+        match attempt {
+            Ok(Ok(x)) => break x,
+            Ok(Err(stop_now)) => bail!(stop_now),
+            Err(e) if t0.elapsed().as_secs() < cli.startup_wait && stop.borrow().is_none() => {
+                log(&sink, "waiting-for-rpc", json!({ "reason": format!("{e:#}"), "waitedSecs": t0.elapsed().as_secs() }));
+                tokio::time::sleep(Duration::from_secs(delay)).await;
+                delay = (delay * 2).min(30);
+            }
+            Err(e) => return Err(e.context(format!("the Ethereum endpoint did not answer within {} s", cli.startup_wait))),
+        }
+    };
     let logos = if logos {
         let call = crate::logos_send::installed()
             .ok_or_else(|| anyhow!("--send-via logos needs Logos Core: run the relayer as ferrata_relayer_module"))?;
@@ -1067,7 +1096,6 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
     if cli.import_roots && zone.is_none() {
         bail!("--import-roots needs a zone: --sequencer, or --lez-devnet for the devnet");
     }
-    let p_mode = p.clone();
     let mut d = Daemon {
         p,
         r,
@@ -1078,7 +1106,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         lez_me: cli.lez_account.as_deref().map(h32).transpose()?,
         drop_amount: cli.drop_amount,
         tokens: [Address::ZERO].into_iter().collect(),
-        rule_b: eth::view(&p_mode, vault, IRelayVault::modeCall {}, None).await? == 1,
+        rule_b,
         max_job_age: cli.max_job_age,
         wrap_command: cli.wrap_command.clone(),
         receipt_timeout: cli.receipt_timeout,

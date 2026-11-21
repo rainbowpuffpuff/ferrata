@@ -167,9 +167,16 @@ pub const TEMPORARY: [&str; 11] = [
     "in flight",
 ];
 
-/// Whether a job that failed with `reason` should be retried rather than refused for good.
+/// What makes a failure final for the job: a check of the relayer's or the vault's refusing it (anything else, a
+/// rate limit, a 5xx, a closed connection, a node behind, a body that is not JSON, is the endpoint's and is retried).
+pub const FINAL: [&str; 7] =
+    ["refused", "skipped:", "reverted", "not a relayer job", "not a release journal", "not a receipt", "would revert"];
+
+/// Whether a job that failed with `reason` should be retried rather than refused for good: a temporary vault error
+/// ([`TEMPORARY`]), or any failure that is not a refusal ([`FINAL`]). A job kept by mistake is retried until
+/// `--max-job-age`; a job refused by mistake would be lost, so the endpoint's failures never refuse one (R.06).
 pub fn temporary(reason: &str) -> bool {
-    TEMPORARY.iter().any(|t| reason.contains(t))
+    TEMPORARY.iter().any(|t| reason.contains(t)) || !FINAL.iter().any(|t| reason.contains(t))
 }
 
 /// The relayer's own identity and its terms.
@@ -204,12 +211,11 @@ impl Relayer {
 
     /// The same at block `at` (`None`: latest); the block must exist on the node.
     pub async fn view_at(&self, p: &DynProvider, at: Option<u64>) -> Result<VaultView> {
-        let chain_id = p.get_chain_id().await?;
+        let chain_id = eth::retry_rpc(|| p.get_chain_id()).await?;
         let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, at).await?;
         let final_state = eth::view(p, self.vault, IRelayVault::finalStateCall {}, at).await?;
         let id = at.map_or(BlockId::latest(), BlockId::number);
-        let now = p
-            .get_block(id)
+        let now = eth::retry_rpc(|| p.get_block(id))
             .await?
             .map(|b| b.header.timestamp)
             .ok_or_else(|| anyhow!("the node has no block {at:?} yet (it is behind)"))?;
@@ -310,12 +316,12 @@ impl Relayer {
                 .event_signature(IRelayVault::CandidateSubmitted::SIGNATURE_HASH)
                 .from_block(start)
                 .to_block(end);
-            logs.extend(p.get_logs(&filter).await.with_context(|| format!("eth_getLogs {start}..{end}"))?);
+            logs.extend(eth::retry_rpc(|| p.get_logs(&filter)).await.with_context(|| format!("eth_getLogs {start}..{end}"))?);
             start = end + 1;
         }
         let n_min = eth::view(p, self.vault, IRelayVault::nMinCall {}, at).await?;
         let t_min = eth::view(p, self.vault, IRelayVault::tMinCall {}, at).await?;
-        let chain_id = p.get_chain_id().await?;
+        let chain_id = eth::retry_rpc(|| p.get_chain_id()).await?;
         let cid = eth::view(p, self.vault, IVault::lezConfigIdCall {}, at).await?;
         let mut out = Vec::new();
         let mut seen = BTreeSet::new();
@@ -942,6 +948,14 @@ mod tests {
         assert!(temporary("refused: vault error BurnRootNotAccepted() (eth_call before sending): …"));
         assert!(temporary("refused: vault error ReleaseDelayNotElapsed() …"));
         assert!(temporary("eth_call: error sending request for url (http://…)"));
+        assert!(temporary(
+            "eth_call tokenConfig(address): HTTP error 429 with body: {\"error\": {\"code\": -32005, \"message\": \"Too Many Requests\"}}"
+        ));
+        assert!(temporary("the endpoint failed (eth_call before sending): HTTP error 503 with body: service unavailable"));
+        assert!(temporary("server returned an error response: error code -32000: header not found"));
+        assert!(temporary("0xab… not mined within 180 s: kept in flight, resolved next round"));
+        assert!(!temporary("not a relayer job"));
+        assert!(!temporary("the transaction 0x… reverted"));
         assert!(!temporary("refused: the proof names relayer 0x…; only it can be paid for this release"));
         assert!(!temporary("refused: NOut 0x… is already released"));
         assert!(!temporary("refused: vault error VerificationFailed() …"));

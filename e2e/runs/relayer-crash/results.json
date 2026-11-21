@@ -1,0 +1,243 @@
+{
+  "chainId": 31337,
+  "part1": [
+    {
+      "case": "P",
+      "killedWithPending": "0x7fc571ea35b6bc80b3ea1ad97365f41488fa8cf66af64a49838ac719a4c92619",
+      "nonce": 0,
+      "restartedSawPending": true,
+      "what": "submitCandidate"
+    },
+    {
+      "case": "M",
+      "killedWithPending": "0xa4991690bf9803b7c436efd4ca5ef5c7cbbe8910e06e567ea8bb980a4b268e60",
+      "minedBeforeRestart": true,
+      "nonce": 1,
+      "pendingAfter": 0,
+      "what": "finalizeAttested"
+    },
+    {
+      "case": "D",
+      "killedWithPending": "0xb54034b86303439059555a1ea123ecf2d0e0809dee4b68408dc911f4bb824f19",
+      "nonce": 2,
+      "resentWithSameNonce": "0xb54034b86303439059555a1ea123ecf2d0e0809dee4b68408dc911f4bb824f19",
+      "what": "release (denomination 0)"
+    },
+    {
+      "case": "P",
+      "killedWithPending": "0xcbd97f1768ab49dc14cb0b90776c7ea62c9fb2e1a03c17d216fe8dd8d24ea3bc",
+      "nonce": 3,
+      "restartedSawPending": true,
+      "what": "release (denomination 0)"
+    },
+    {
+      "case": "M",
+      "killedWithPending": "0xc68e0777382266488d0870f628efedcaa934a14cae70d1996b71cd2480582545",
+      "minedBeforeRestart": true,
+      "nonce": 4,
+      "pendingAfter": 1,
+      "what": "release with a checkpoint fee"
+    },
+    {
+      "case": "D",
+      "killedWithPending": "0x3e934e31c426cd2d7de6a7a7a88e9778d7cab8aa83c26977ce20e4b7ab9e55c9",
+      "nonce": 5,
+      "resentWithSameNonce": "0x3e934e31c426cd2d7de6a7a7a88e9778d7cab8aa83c26977ce20e4b7ab9e55c9",
+      "what": "claimOwed"
+    }
+  ],
+  "parts": [
+    {
+      "candidateSubmitted": 1,
+      "checkpointFinalized": 1,
+      "daemonRuns": 12,
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-lost": 3,
+        "inflight-pending": 8,
+        "inflight-resent": 3,
+        "job-done": 4,
+        "start": 12
+      },
+      "jobs": 4,
+      "linesRecovered": 6,
+      "part": "part 1 (kills at each transaction)",
+      "relayerTransactions": 6,
+      "releases": 3,
+      "reverted": 0
+    },
+    {
+      "candidateSubmitted": 1,
+      "checkpointFinalized": 1,
+      "daemonRuns": 18,
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-lost": 3,
+        "inflight-pending": 8,
+        "inflight-resent": 3,
+        "job-done": 24,
+        "start": 18
+      },
+      "jobs": 24,
+      "kills": 5,
+      "linesRecovered": 10,
+      "part": "part 2 (random kills)",
+      "relayerTransactions": 26,
+      "releases": 23,
+      "reverted": 0
+    },
+    {
+      "candidateSubmitted": 1,
+      "checkpointFinalized": 1,
+      "daemonRuns": 19,
+      "endpoint": {
+        "ep": "ep0",
+        "kind": "flaky",
+        "lag": 0,
+        "port": 41796,
+        "rates": {
+          "backwards": 0.079,
+          "notfound": 0.043,
+          "r429": 0.049,
+          "r5xx": 0.026,
+          "timeout": 0.005
+        }
+      },
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-lost": 3,
+        "inflight-pending": 8,
+        "inflight-resent": 3,
+        "job-done": 28,
+        "start": 19
+      },
+      "faultsSeen": {
+        "429": 3,
+        "5xx": 1,
+        "receipt-lag": 4
+      },
+      "jobs": 28,
+      "linesRecovered": 10,
+      "outagesS": [
+        [
+          79,
+          120
+        ],
+        [
+          32,
+          70
+        ]
+      ],
+      "part": "part 3 (flaky endpoint, seed 11)",
+      "relayerTransactions": 30,
+      "releases": 27,
+      "reverted": 0,
+      "secondsToDone": 2
+    },
+    {
+      "candidateSubmitted": 1,
+      "checkpointFinalized": 1,
+      "daemonRuns": 20,
+      "endpoint": {
+        "ep": "ep1",
+        "kind": "sends",
+        "lag": 0,
+        "port": 45750,
+        "rates": {
+          "drop": 0.173,
+          "dup": 0.17,
+          "lost": 0.076,
+          "notfound": 0.093
+        }
+      },
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-lost": 4,
+        "inflight-pending": 8,
+        "inflight-resent": 4,
+        "job-deferred": 3,
+        "job-done": 32,
+        "round-failed": 26,
+        "start": 20
+      },
+      "faultsSeen": {
+        "drop": 1,
+        "dup": 1,
+        "notfound": 2,
+        "outage": 118,
+        "receipt-lag": 4
+      },
+      "jobs": 32,
+      "linesRecovered": 11,
+      "outagesS": [
+        [
+          46,
+          72
+        ],
+        [
+          6,
+          59
+        ]
+      ],
+      "part": "part 3 (sends endpoint, seed 16)",
+      "relayerTransactions": 34,
+      "releases": 31,
+      "reverted": 0,
+      "secondsToDone": 73
+    },
+    {
+      "candidateSubmitted": 1,
+      "checkpointFinalized": 1,
+      "daemonRuns": 21,
+      "endpoint": {
+        "ep": "ep2",
+        "kind": "lagging",
+        "lag": 4,
+        "port": 37394,
+        "rates": {
+          "r429": 0.045
+        }
+      },
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-lost": 5,
+        "inflight-pending": 8,
+        "inflight-resent": 5,
+        "job-deferred": 6,
+        "job-done": 36,
+        "node-behind": 3,
+        "round-failed": 26,
+        "start": 21
+      },
+      "faultsSeen": {
+        "429": 5,
+        "receipt-lag": 29
+      },
+      "jobs": 36,
+      "linesRecovered": 12,
+      "outagesS": [
+        [
+          26,
+          41
+        ]
+      ],
+      "part": "part 3 (lagging endpoint, seed 12)",
+      "relayerTransactions": 38,
+      "releases": 35,
+      "reverted": 0,
+      "secondsToDone": 20
+    }
+  ],
+  "relayer": "0xde28b1210c20cff667ee32899c055b2210fba3ad",
+  "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+}
