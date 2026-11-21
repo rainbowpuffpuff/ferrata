@@ -22,12 +22,19 @@ sent to any public network): each run is `bash bench/perf/gate-sequencer.sh NAME
 `machine.txt`. A new zone gets this tree's attestation and bridge programs (`lez/crown/session.sh a`), then
 `ferrata-updater` daemons (the build of `lez/updater/sequencer`, each with its own payer) follow the lab's recorded
 mainnet chain (`lez/lab/results/record/net/mainnet`), which `bench/perf/beacon_replay.py` reveals on loopback one
-recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. Every daemon
-reads the chain through its follower (`wait_final = true`: blocks final on Bedrock), re-checks the instance right
-before each transaction, and defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers
-(`W` = 1) and polls twice as often. Each daemon runs under GNU time, is sampled every 5 s, and reaches the sequencer
-and its beacon API through its own byte-counting proxy. A transaction is *applied*, *refused* (included, its
-program refused it: charged) or *rejected* (dropped: nothing charged).
+recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The recorded
+updates are about two hours of mainnet apart (median 121.6 min); revealed every 60 or 90 s, the replay runs 80 to 120
+times faster than mainnet and faster than the daemons apply an update, so jobs overlap by construction (each run's
+"Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
+Bedrock); it reads the instance at the start of each round and the job's account just before it sends a step, and
+defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers (`W` = 1) and is configured
+to poll every 2 s against the honest daemons' 4 s. Rounds take longer than the poll (each run's "s per round": a
+round also fetches, checks and sends), so a window of `W` rounds is a nominal `W` × poll seconds. Each daemon runs
+under GNU time and is sampled every 5 s; its sequencer RPC bytes are counted by a proxy in front of it, its beacon
+API bytes by the replay itself (each response's body plus 200 bytes, on the daemon's own port). A transaction is
+*applied*, *refused* (included, its program refused it: charged) or *rejected* (dropped: nothing charged). A job is
+*completed* when its `Finish` is applied; otherwise *abandoned* (another job moved the store first, and the job id
+binds the store): its applied steps are spent gas like a refused step.
 
 """
 
@@ -42,17 +49,7 @@ def main():
             sys.argv = [sys.argv[0]]  # main() prints only the side-by-side table from keys below
     print(out.getvalue())
     if len(keys) > 1:
-        print("## The runs side by side\n")
-        print("| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | execution gas, all daemons, per recorded update revealed | gas multiple over the applied steps | honest refused / applied (A3's gate: at most 0.10) | honest-1's share of the honest fees (A3's gate: 0.35–0.65) |")
-        print("|---|---|---|---:|---:|---|---|---:|---:|---:|---:|")
-        fmt = lambda v, f: f.format(v) if v is not None else "—"
-        for k in keys:
-            print(f"| {k['run']} | {k.get('window', '?')} of {k.get('poll', '?')} | {'yes' if k.get('adversary') else 'no'} | "
-                  f"{k.get('jobs', 0)} | {k.get('twice', 0)} | {fmt(k.get('lat_med'), '{:.0f}')} / {fmt(k.get('lat_p90'), '{:.0f}')} | "
-                  f"{', '.join(f'{a} {b}' for a, b in sorted(k.get('who', {}).items()))} | "
-                  f"{fmt(k['total_gas'] / k['revealed'] if k.get('revealed') else None, '{:,.0f}')} | {fmt(k.get('mult'), '{:.3f}')} | "
-                  f"{fmt(k.get('r9'), '{:.4f}')} | {fmt(k.get('share'), '{:.3f}')} |")
-
+        summarize_gate.side_by_side(keys)
 
 if __name__ == "__main__":
     main()

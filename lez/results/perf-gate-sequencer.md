@@ -6,12 +6,19 @@ sent to any public network): each run is `bash bench/perf/gate-sequencer.sh NAME
 `machine.txt`. A new zone gets this tree's attestation and bridge programs (`lez/crown/session.sh a`), then
 `ferrata-updater` daemons (the build of `lez/updater/sequencer`, each with its own payer) follow the lab's recorded
 mainnet chain (`lez/lab/results/record/net/mainnet`), which `bench/perf/beacon_replay.py` reveals on loopback one
-recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. Every daemon
-reads the chain through its follower (`wait_final = true`: blocks final on Bedrock), re-checks the instance right
-before each transaction, and defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers
-(`W` = 1) and polls twice as often. Each daemon runs under GNU time, is sampled every 5 s, and reaches the sequencer
-and its beacon API through its own byte-counting proxy. A transaction is *applied*, *refused* (included, its
-program refused it: charged) or *rejected* (dropped: nothing charged).
+recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The recorded
+updates are about two hours of mainnet apart (median 121.6 min); revealed every 60 or 90 s, the replay runs 80 to 120
+times faster than mainnet and faster than the daemons apply an update, so jobs overlap by construction (each run's
+"Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
+Bedrock); it reads the instance at the start of each round and the job's account just before it sends a step, and
+defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers (`W` = 1) and is configured
+to poll every 2 s against the honest daemons' 4 s. Rounds take longer than the poll (each run's "s per round": a
+round also fetches, checks and sends), so a window of `W` rounds is a nominal `W` × poll seconds. Each daemon runs
+under GNU time and is sampled every 5 s; its sequencer RPC bytes are counted by a proxy in front of it, its beacon
+API bytes by the replay itself (each response's body plus 200 bytes, on the daemon's own port). A transaction is
+*applied*, *refused* (included, its program refused it: charged) or *rejected* (dropped: nothing charged). A job is
+*completed* when its `Finish` is applied; otherwise *abandoned* (another job moved the store first, and the job id
+binds the store): its applied steps are spent gas like a refused step.
 
 
 ## Run `gate-g2`
@@ -47,15 +54,29 @@ Jobs with an applied step: 31; steps applied: 99; applied more than once: 0.
 | adversary | miller | 81 | 1 | 21,237 | 1 of 1 |
 | honest daemons | finish | 205 | 2 | 12,222 | 2 of 2 |
 
-All daemons together: execution gas on applied steps 304,571,747, on refused steps 28,901,541: the updates cost **1.095** times what one submitter would pay.
+| execution gas of | in completed jobs | in abandoned jobs (their applied steps) | on refused steps | total |
+|---|---:|---:|---:|---:|
+| adversary | 284,206,582 | 0 | 2,207,313 | 286,413,895 |
+| honest-1 | 16,628,504 | 0 | 11,048,055 | 27,676,559 |
+| honest-2 | 3,736,661 | 0 | 15,646,173 | 19,382,834 |
+| all daemons | 304,571,747 | 0 | 28,901,541 | 333,473,288 |
 
-**Latency** (a recorded finality update appearing at the beacon API to its job's `Finish` applied in a block final on Bedrock), 26 updates: median **35 s**, p90 45 s, min 35 s, max 66 s; finished by adversary 24, honest-1 2.
+Jobs: 31 with an applied step, 31 completed, **0 abandoned**.
 
-| daemon | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes down | sequencer RPC: bytes up / down |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| adversary | 1849 | 148.9 | 0.0806 | 57.6 | 36.0 | 650 / 10,273,960 | 2,065,955 / 18,999,116 |
-| honest-1 | 1849 | 151.3 | 0.0818 | 57.4 | 37.5 | 666 / 10,401,271 | 600,786 / 7,409,375 |
-| honest-2 | 1849 | 151.8 | 0.0821 | 57.5 | 38.2 | 604 / 9,036,260 | 571,555 / 7,596,289 |
+All daemons together: the updates cost **1.095** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.095.
+**Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 26,694,228 / 20,365,165 = **1.3108** (A3's ratio above counts refused steps only).
+
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 26 of 26 revealed finality updates covered (26 by their own job, 0 by a later update's): median **35 s**, p90 45 s (nearest rank), min 35 s, max 66 s; finished by adversary 24, honest-1 2.
+
+**Replay rate:** 30 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; this run's median latency (35 s) is shorter than the reveal step.
+
+| daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| adversary | 2 | 367, 5.0 | 1849 | 148.9 | 0.0806 | 57.6 | 36.0 | 604 / 9,036,260 | 2,065,955 / 18,999,116 |
+| honest-1 | 4 | 377, 4.9 | 1849 | 151.3 | 0.0818 | 57.4 | 37.5 | 650 / 10,273,960 | 600,786 / 7,409,375 |
+| honest-2 | 4 | 386, 4.8 | 1849 | 151.8 | 0.0821 | 57.5 | 38.2 | 666 / 10,401,271 | 571,555 / 7,596,289 |
+
+Beacon bytes are the replay's own count (each response's body plus 200 bytes), per port; sequencer RPC bytes are counted by a proxy in front of each daemon.
 
 ## Run `gate-g3`
 
@@ -87,14 +108,27 @@ Jobs with an applied step: 24; steps applied: 60; applied more than once: 0.
 | honest daemons | miller | 81 | 2 | 44,125 | 2 of 2 |
 | honest daemons | init | 203 | 1 | 18,515 | 1 of 1 |
 
-All daemons together: execution gas on applied steps 176,312,948, on refused steps 17,953,325: the updates cost **1.102** times what one submitter would pay.
+| execution gas of | in completed jobs | in abandoned jobs (their applied steps) | on refused steps | total |
+|---|---:|---:|---:|---:|
+| honest-1 | 93,705,798 | 4,337,003 | 11,397,025 | 109,439,826 |
+| honest-2 | 65,207,858 | 13,062,289 | 6,556,300 | 84,826,447 |
+| all daemons | 158,913,656 | 17,399,292 | 17,953,325 | 194,266,273 |
 
-**Latency** (a recorded finality update appearing at the beacon API to its job's `Finish` applied in a block final on Bedrock), 21 updates: median **126 s**, p90 176 s, min 74 s, max 266 s; finished by honest-1 11, honest-2 10.
+Jobs: 24 with an applied step, 16 completed, **8 abandoned** (8 with Open applied).
 
-| daemon | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes down | sequencer RPC: bytes up / down |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| honest-1 | 1517 | 108.9 | 0.0718 | 57.8 | 33.0 | 273 / 4,157,484 | 1,114,409 / 11,175,697 |
-| honest-2 | 1517 | 111.6 | 0.0736 | 57.7 | 33.4 | 353 / 5,738,479 | 957,558 / 9,199,312 |
+All daemons together: the updates cost **1.222** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.102.
+**Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 35,352,617 / 158,913,656 = **0.2225** (A3's ratio above counts refused steps only).
+
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (12 by their own job, 9 by a later update's): median **126 s**, p90 176 s (nearest rank), min 74 s, max 266 s; finished by honest-1 11, honest-2 10.
+
+**Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (126 s), so jobs overlap by construction.
+
+| daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| honest-1 | 4 | 246, 6.2 | 1517 | 108.9 | 0.0718 | 57.8 | 33.0 | 273 / 4,157,484 | 1,114,409 / 11,175,697 |
+| honest-2 | 4 | 259, 5.9 | 1517 | 111.6 | 0.0736 | 57.7 | 33.4 | 353 / 5,738,479 | 957,558 / 9,199,312 |
+
+Beacon bytes are the replay's own count (each response's body plus 200 bytes), per port; sequencer RPC bytes are counted by a proxy in front of each daemon.
 
 ## Run `gate-g4`
 
@@ -129,14 +163,27 @@ Jobs with an applied step: 42; steps applied: 113; applied more than once: 0.
 | honest daemons | init | 203 | 1 | 18,515 | 1 of 1 |
 | honest daemons | finish | 205 | 3 | 18,333 | 3 of 3 |
 
-All daemons together: execution gas on applied steps 334,553,150, on refused steps 49,986,276: the updates cost **1.149** times what one submitter would pay.
+| execution gas of | in completed jobs | in abandoned jobs (their applied steps) | on refused steps | total |
+|---|---:|---:|---:|---:|
+| honest-1 | 117,604,790 | 50,767,959 | 21,036,785 | 189,409,534 |
+| honest-2 | 105,813,993 | 60,366,408 | 28,949,491 | 195,129,892 |
+| all daemons | 223,418,783 | 111,134,367 | 49,986,276 | 384,539,426 |
 
-**Latency** (a recorded finality update appearing at the beacon API to its job's `Finish` applied in a block final on Bedrock), 21 updates: median **105 s**, p90 106 s, min 66 s, max 166 s; finished by honest-1 13, honest-2 8.
+Jobs: 42 with an applied step, 23 completed, **19 abandoned** (18 with Open + Miller applied; 1 with Open + Miller + adopt 1/2 + adopt 2/2 applied).
 
-| daemon | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes down | sequencer RPC: bytes up / down |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| honest-1 | 1545 | 142.0 | 0.0919 | 57.3 | 36.3 | 105 / 1,633,613 | 1,851,095 / 19,575,884 |
-| honest-2 | 1545 | 141.7 | 0.0917 | 57.7 | 36.5 | 103 / 1,658,139 | 1,804,836 / 18,975,024 |
+All daemons together: the updates cost **1.721** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.149.
+**Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 161,120,643 / 223,418,783 = **0.7212** (A3's ratio above counts refused steps only).
+
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (20 by their own job, 1 by a later update's): median **105 s**, p90 106 s (nearest rank), min 66 s, max 166 s; finished by honest-1 13, honest-2 8.
+
+**Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (105 s), so jobs overlap by construction.
+
+| daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| honest-1 | 4 | 88, 17.6 | 1545 | 142.0 | 0.0919 | 57.3 | 36.3 | 105 / 1,633,613 | 1,851,095 / 19,575,884 |
+| honest-2 | 4 | 88, 17.6 | 1545 | 141.7 | 0.0917 | 57.7 | 36.5 | 103 / 1,658,139 | 1,804,836 / 18,975,024 |
+
+Beacon bytes are the replay's own count (each response's body plus 200 bytes), per port; sequencer RPC bytes are counted by a proxy in front of each daemon.
 
 ## Run `gate-g5`
 
@@ -165,21 +212,34 @@ Jobs with an applied step: 11; steps applied: 31; applied more than once: 0.
 |---|---|---:|---:|---:|---:|
 | honest daemons | adopt1 | 205 | 1 | 333,914 | 1 of 1 |
 
-All daemons together: execution gas on applied steps 91,839,981, on refused steps 333,914: the updates cost **1.004** times what one submitter would pay.
+| execution gas of | in completed jobs | in abandoned jobs (their applied steps) | on refused steps | total |
+|---|---:|---:|---:|---:|
+| honest-1 | 53,985,305 | 2,212,943 | 0 | 56,198,248 |
+| honest-2 | 31,262,679 | 4,379,054 | 333,914 | 35,975,647 |
+| all daemons | 85,247,984 | 6,591,997 | 333,914 | 92,173,895 |
 
-**Latency** (a recorded finality update appearing at the beacon API to its job's `Finish` applied in a block final on Bedrock), 17 updates: median **306 s**, p90 576 s, min 166 s, max 666 s; finished by honest-1 13, honest-2 4.
+Jobs: 11 with an applied step, 8 completed, **3 abandoned** (3 with Open applied).
 
-| daemon | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes down | sequencer RPC: bytes up / down |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| honest-1 | 1937 | 83.9 | 0.0433 | 57.8 | 37.3 | 487 / 7,897,879 | 1,023,997 / 10,186,490 |
-| honest-2 | 1937 | 83.4 | 0.0431 | 57.7 | 36.2 | 379 / 6,254,489 | 1,016,689 / 11,146,212 |
+All daemons together: the updates cost **1.081** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.004.
+**Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 6,925,911 / 85,247,984 = **0.0812** (A3's ratio above counts refused steps only).
+
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 17 of 17 revealed finality updates covered (5 by their own job, 12 by a later update's): median **306 s**, p90 576 s (nearest rank), min 166 s, max 666 s; finished by honest-1 13, honest-2 4.
+
+**Replay rate:** 20 recorded updates revealed one every 90 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 81 times faster than mainnet; the reveal step is shorter than this run's median latency (306 s), so jobs overlap by construction.
+
+| daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| honest-1 | 4 | 404, 4.8 | 1937 | 83.9 | 0.0433 | 57.8 | 37.3 | 487 / 7,897,879 | 1,023,997 / 10,186,490 |
+| honest-2 | 4 | 420, 4.6 | 1937 | 83.4 | 0.0431 | 57.7 | 36.2 | 379 / 6,254,489 | 1,016,689 / 11,146,212 |
+
+Beacon bytes are the replay's own count (each response's body plus 200 bytes), per port; sequencer RPC bytes are counted by a proxy in front of each daemon.
 
 
 ## The runs side by side
 
-| run | honest daemons' deferral window (rounds of s) | adversary | jobs | steps applied twice | latency median / p90 (s) | finished by | execution gas, all daemons, per recorded update revealed | gas multiple over the applied steps | honest refused / applied (A3's gate: at most 0.10) | honest-1's share of the honest fees (A3's gate: 0.35–0.65) |
-|---|---|---|---:|---:|---|---|---:|---:|---:|---:|
-| gate-g2 | 8 of 4 | yes | 31 | 0 | 35 / 45 | adversary 24, honest-1 2 | 11,115,776 | 1.095 | 1.3108 | 0.588 |
-| gate-g3 | 8 of 4 | no | 24 | 0 | 126 / 176 | honest-1 11, honest-2 10 | 8,094,428 | 1.102 | 0.1018 | 0.563 |
-| gate-g4 | 1 of 4 | no | 42 | 0 | 105 / 106 | honest-1 13, honest-2 8 | 16,022,476 | 1.149 | 0.1494 | 0.493 |
-| gate-g5 | 30 of 4 | no | 11 | 0 | 306 / 576 | honest-1 13, honest-2 4 | 4,608,695 | 1.004 | 0.0036 | 0.609 |
+| run | honest daemons' deferral window: rounds of a nominal s (measured s per round, all daemons) | adversary | reveal step s | jobs: completed / abandoned | steps applied twice | finality updates covered: own job / a later one | latency median / p90 (s) | execution gas, all daemons, per recorded update revealed | gas multiple: total / completed jobs ((applied + refused) / applied) | honest waste: refused and abandoned / completed | A3's ratio: honest refused / applied (gate at most 0.10) | honest-1's share of the honest fees (gate 0.35–0.65) |
+|---|---|---|---:|---|---:|---|---|---:|---|---:|---:|---:|
+| gate-g2 | 8 of 4 (4.8–5.0) | yes | 60 | 31 / 0 | 0 | 26 / 0 | 35 / 45 | 11,115,776 | **1.095** (1.095) | 1.3108 | 1.3108 | 0.588 |
+| gate-g3 | 8 of 4 (5.9–6.2) | no | 60 | 16 / 8 | 0 | 12 / 9 | 126 / 176 | 8,094,428 | **1.222** (1.102) | 0.2225 | 0.1018 | 0.563 |
+| gate-g4 | 1 of 4 (17.6–17.6) | no | 60 | 23 / 19 | 0 | 20 / 1 | 105 / 106 | 16,022,476 | **1.721** (1.149) | 0.7212 | 0.1494 | 0.493 |
+| gate-g5 | 30 of 4 (4.6–4.8) | no | 90 | 8 / 3 | 0 | 5 / 12 | 306 / 576 | 4,608,695 | **1.081** (1.004) | 0.0812 | 0.0036 | 0.609 |
