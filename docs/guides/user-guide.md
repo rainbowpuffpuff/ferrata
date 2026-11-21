@@ -389,7 +389,7 @@ Every component, with where the data stays: [`docs/trust.md`](../trust.md) §8.1
 | Who submits | When | What it learns beyond what the chain then publishes | How you switch it, per operation |
 |---|---|---|---|
 | a gas-drop relayer | it funds the fee of your first private claim | that a claim spending your `N` under that root will follow, the one-time address it funds, when you asked, your IP address; not which deposit | the receipt you prove names one relayer: name another for the next claim |
-| the relayer your claim names | it is paid the relay fee by your claim | nothing: it is named inside the claim you prove and send | `ferrata claim --relayer`, per claim |
+| the relayer your claim names | it is paid the relay fee by your claim | nothing, as long as you send the claim yourself (the tool does): it is named inside the claim you prove and send; a relayer you asked to submit it would also learn the time and your IP address | `ferrata claim --relayer`, per claim |
 | a release relayer | it sends your release on Ethereum and pays the gas | the job's fields, which are exactly what the release publishes (recipient, token, amount, `NOut`, root, relayer, fee), when you asked, your IP address; not which burn | by default the job names relayer address 0, so you hand it to any relayer and the vault pays whoever sends it; `--relayer` names one; `--self-send` needs none |
 
 Measured, the gas drop's one credit per `N`, refused at another relayer and after the claim (EVIDENCE rows 47, 48,
