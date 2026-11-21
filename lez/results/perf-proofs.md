@@ -95,3 +95,19 @@ through LEZ's state machine with the receipt verified; the update is mainnet's (
 | 35 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | Attest | 100,517 | 100,517 | 262,144 | 1 | 70.4 | 485,266 | 20.8 | 226,261 | 229,419 | 48.0 | 3.47 | 1426 | AMD Zen 3, 16 CPUs |
 | 36 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer (reply) | 31,502 | 31,502 | 131,072 | 1 | 14.9 | 246,048 | 10.0 | 224,064 | 225,025 | 45.7 | 1.44 | 1436 | AMD Zen 3, 16 CPUs |
 | 37 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | consumer Credit | 15,703 | 15,703 | 65,536 | 1 | 7.7 | 221,840 | 10.3 | 223,480 | 223,857 | 46.8 | 1.44 | 1401 | AMD Zen 3, 16 CPUs |
+
+## Added 21 November 2026 (review fixes): the committee handoff on the proven path, and instance succession
+
+Records `bench/perf/results/p2-b/` (stage `bash bench/perf/p2-stage.sh` with `P2_WITH_PRIVATE=1` at `beaf71e9`: its
+`perf_prove --dump` rows 1–37 are byte-identical to `p2-a/index.tsv`; rows 38–39 are new); each proven by r0vm 3.0.5
+with `RISC0_DEV_MODE=0` on a Modal container held to 16 CPUs and 32 GiB (`P2_CPU=16 P2_BUNDLE=/bundle/p2b modal run
+bench/perf/prove_modal.py --tag b ...`).
+
+| what | user cycles proven (segments) | prove s | compress s | composite B | succinct B | peak RSS GiB | host | settled |
+|---|---:|---:|---:|---:|---:|---:|---|---|
+| committee handoff in one private transaction (`prove_private --handoff`: update_1 as served, its 512 keys adopted, no new header) | 15,796,512 (17) | **2,254.2** (`execute_and_prove`) | — | — | receipt **227,347**; transaction 231,568 | 9.20 | AMD Zen 4 (Azure) | receipt verified; 451,895 execution gas (409,764 + a 42,131-cycle public part) and 224,063 storage gas |
+| instance succession: `Succeed` (transition 38) | 45,512 (1) | 14.6 | 6.3 | 247,574 | 224,827 | 1.44 | Intel family 6 model 173 (AWS) | — (public transaction: 70,610 execution gas with `Spawn`, 697 storage gas) |
+| instance succession: `Spawn` at the successor (transition 39) | 25,098 (1) | 14.6 | 9.9 | 246,848 | 224,464 | 1.44 | AMD Zen 3 (Azure) | — |
+
+The handoff used 33,290 CPU-seconds (9.25 CPU-hours; GNU time), 10.0 allocated (16 × the wall time). `Succeed` and
+`Spawn`'s user cycles sum to the transaction's 70,610 execution gas, as in `lez/results/a1-successors-ws.md`.

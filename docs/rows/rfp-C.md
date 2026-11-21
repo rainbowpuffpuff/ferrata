@@ -10,41 +10,46 @@ to the CPUs and memory named (request = limit). Nothing was sent to Sepolia, mai
 
 ## RFP-021
 
-### P.2 — proposed **shown** (was in part)
+### P.2 — proposed **shown** (was in part; the review's H2 fixed by proving both missing actions)
 
 | clause (RFP wording) | shown by |
 |---|---|
 | breakdown by program action: advancing the tracked state | `lez/results/perf-proofs.md` §"Per action": `Init` (bootstrap, adoption in two parts), a committee handoff (`Open`, `Miller`, two adoption parts, `Finish`) and a finality update (`Open`, `Miller`, `Finish`), each transaction with its transitions |
 | … and statement verification by type of statement | the same table: account, absent account, storage slot with a predicate, absent slot, ERC-20 `Transfer` log, a log in a 306-log receipt, a slot through one EIP-2935 hop, four facts and a relation; a public consumer's `CallAttest` (slot, log); the reference consumer's claim |
 | cycle count and gas cost for each | the same rows (execution gas equals the user cycles proven in every row; storage gas beside it) |
-| proof time and proof size for each | 37 transitions proven for real, one 16-CPU, 32-GiB cloud container each: composite proof time and size, compression to succinct, succinct receipt size, peak memory, machine (`perf-proofs.md` §"Per transition"); the proven update path in one private transaction, this tree's program: 9,049,362 user cycles, **1,673.6 s** on 16 CPUs, 9.21 GiB, receipt 227,120 B, settled with the receipt verified at 485,298 + 224,063 gas (`perf-proofs.md` §"The proven update path"); the private attestation, padded: 633.5 s / 1,254.8 s at 16 / 8 CPUs, receipt 239,246 B (`perf-p4-laptop.md`) |
+| proof time and proof size for each | 37 transitions proven for real, one 16-CPU, 32-GiB cloud container each: composite proof time and size, compression to succinct, succinct receipt size, peak memory, machine (`perf-proofs.md` §"Per transition"); the proven update path in one private transaction, this tree's program: 9,049,362 user cycles, **1,673.6 s** on 16 CPUs, 9.21 GiB, receipt 227,120 B, settled with the receipt verified at 485,298 + 224,063 gas (`perf-proofs.md` §"The proven update path"); **the committee handoff on the proven path** in one private transaction (`prove_private --handoff`): 15,796,512 user cycles, **2,254.2 s** on 16 CPUs, 9.20 GiB, receipt 227,347 B, settled with the receipt verified at 451,895 + 224,063 gas; **instance succession**: `Succeed` 45,512 and `Spawn` 25,098 user cycles (the transaction's 70,610 execution gas), 14.6 s each composite, succinct 224,827 / 224,464 B (`perf-proofs.md` §"Added 21 November", records `bench/perf/results/p2-b/`, commits `96747309`, `beaf71e9`); the private attestation, padded: 633.5 s / 1,254.8 s at 16 / 8 CPUs, receipt 239,246 B (`perf-p4-laptop.md`) |
 | extending RFP-020's methodology | each guest execution proven with exactly the input LEZ v0.4.0-rc1 gives it (`trace::TAPE`), composite then succinct, both verified, journal equal to the executor's (`lez/harness/src/bin/perf_prove.rs`) |
 | reproducible from the test suite | `perf_prove --dump` runs the test suite's scenarios (`lez/results/stage1-*.md`, `stage4-attest.md`) and keeps each transition's input; `bash bench/perf/prove-actions.sh OUT` proves them on one machine, `bench/perf/prove_modal.py` in parallel; `python3 -I bench/perf/summarize_proofs.py bench/perf/results/p2-a` writes the table |
 
 Commands: on the build box `bash bench/perf/p2-stage.sh STAGE` (and `P2_WITH_PRIVATE=1`); then `P2_CPU=16 modal run
 bench/perf/prove_modal.py --tag a --index STAGE/dump/index.tsv` and `--private 1`. Records: `bench/perf/results/p2-a/`
 (37 `prove-NNN.log`, `machine-NNN.json`, `private-1.log`, `private-1-tx.borsh`). Commits `e89392a0`, `750a36c5`,
-`b60ff84a`. Caveat: the containers' hosts differ (mostly AMD Zen 3; some Zen 4 and Intel), named per row; a proven
-handoff (one private transaction) was run in dev mode only.
+`b60ff84a`, and for the handoff and succession `bash bench/perf/p2-stage.sh STAGE` (`P2_WITH_PRIVATE=1`), `P2_CPU=16
+P2_BUNDLE=/bundle/p2b modal run bench/perf/prove_modal.py --tag b --private 1 --handoff` and `--index
+STAGE/dump/index.tsv --only 38,39`. Caveat: the containers' hosts differ (mostly AMD Zen 3; some Zen 4 and Intel),
+named per row.
 
 Proposed EVIDENCE row: | new | RFP-021 P.2's proof time and size for every program action and statement type: the 37
 guest executions of the test suite's scenarios, each with the input LEZ v0.4.0-rc1 gives it, proven for real
 (composite, then succinct, both verified, journals equal to the executor's), and the whole finality update proven in
 one private transaction and settled | per action and statement type: execution gas = user cycles proven; e.g. a
-finality update's `Open` / `Miller` / `Finish` 307.9 / 410.1 / 514.0 s composite on 16 CPUs, succinct receipts
+finality update's `Open` / `Miller` / `Finish` 307.9 / 410.1 / 514.0 s composite on 16 CPUs, `Succeed` and `Spawn`
+14.6 s each, succinct receipts
 224,041–228,025 B; a storage-slot statement 81.0 s, 230,663 B; the 306-log receipt's log 277.1 s, 282,105 B; the
-proven update path 9,049,362 user cycles, 1,673.6 s, 9.21 GiB, receipt 227,120 B, 485,298 + 224,063 gas | cloud
+proven update path 9,049,362 user cycles, 1,673.6 s, 9.21 GiB, receipt 227,120 B, 485,298 + 224,063 gas; the proven
+committee handoff 15,796,512 user cycles, 2,254.2 s, 9.20 GiB, receipt 227,347 B, 451,895 + 224,063 gas | cloud
 containers held to 16 CPUs and 32 GiB (Modal), r0vm 3.0.5 | real | `bash bench/perf/prove-actions.sh OUT` (one
 machine) or `bench/perf/prove_modal.py`; `python3 -I bench/perf/summarize_proofs.py bench/perf/results/p2-a` |
 `lez/results/perf-proofs.md` |
 
-### P.3 — proposed **shown** (was in part)
+### P.3 — proposed **shown** (was in part; the review's M3 fixed: the once-per-period cadence restored)
 
 | clause | shown by |
 |---|---|
 | the amortised per-attestation cost of sync-committee tracking | `lez/results/perf-tracking.md`: every transaction the lab sent to its LEZ v0.4.0-rc1 sequencer over 8.06 days (98 sessions): per update (finality 9,225,372 execution gas median, a handoff 16,060,242), per day (127,294,275 as the lab ran), per period, and per attestation at 1 to 10,000 attestations a day |
 | at the recommended operating cadence | the design's cadence (hourly while importing, plus each period's handoff): 235.5M execution gas a day on the public path, *derived* from the measured per-update medians (all 98 measured finality updates within 1.2% of the median, `perf-tracking.md`); the proven path with a real proof of this tree's program: 485,298 + 224,063 gas and 1,673.6 s on 16 CPUs per update (`perf-proofs.md`), 11.6M execution gas and 179 CPU-hours a day for 24 updates (*derived*) |
-| separately from the per-attestation verification cost | the same table's verification columns: each statement's own transaction (93,316 for a `Transfer` log, 166,249 an account, 275,865 a slot, 499,277 a hop), paid by its consumer whatever the number of attestations |
+| … at the once-per-period cadence (no bridge imports) | 16,060,242 execution gas per period, about 14.1M a day, 14.1M / N per attestation (*derived* from the measured handoff median); on the proven path the period's handoff alone, 451,895 execution and 224,063 storage gas, proven for real (P.2) |
+| separately from the per-attestation verification cost | the same table's verification columns: each statement's own transaction (93,316 for a `Transfer` log and 166,249 an account without a predicate, 97,485 / 168,909 with one, 275,865 a slot, 499,277 a hop), paid by its consumer whatever the number of attestations |
 
 Commands: `python3 -I bench/perf/tracking_cost.py lez/lab/results/record` (commit `f6937bb2`, `2c969c7f`); the proven
 path as P.2. Text: `docs/performance.md` RFP-021 §P.3.
@@ -59,13 +64,18 @@ bench/perf/tracking_cost.py lez/lab/results/record` | `lez/results/perf-tracking
 
 ### P.4 — stays **in part**
 
-Measured on this branch: the private attestation of this tree's programs, padded as LEZ's wallet pads it, in cloud
+The owner's step is ready: `bench/perf/p4-laptop-owner.sh` (fixed, `bfd25e52`) was rehearsed end to end as the owner
+would run it, from the staged bundle, in a container held to 8 CPUs and 16 GiB: exit 0, attestation 1,110.8 s, claim
+1,007.5 s, burn 868.1 s, all settled, 50 minutes (`lez/results/perf-p4-laptop.md` §"Rehearsal", records
+`bench/perf/results/p4-owner-rehearsal/`). Measured on this branch: the private attestation of this tree's programs, padded as LEZ's wallet pads it, in cloud
 containers held to a mid-range laptop's shape: **1,254.8 s** (1,250.0 and 1,259.6) at 8 CPUs and 16 GiB, **633.5 s** at
 16 CPUs, r0vm peak 9.19 GiB, receipt 239,246 B, each settled with the receipt verified and refused with one bit flipped
-(`lez/results/perf-p4-laptop.md`, records `bench/perf/results/p4-laptop/`, commit `ef395ac3`). **What is short:** the
-clause "on a mid-range laptop". It needs the owner: an x86-64 Linux laptop with 16 GB or more, on mains power, idle,
-about 45 minutes: `bash bench/perf/p4-laptop-owner.sh STAGE OUT` on the bundle `bench/perf/p4-laptop-build.sh` stages
-(prove_attest, prove_bridge, the fixture, r0vm 3.0.5), then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
+(`lez/results/perf-p4-laptop.md`, records `bench/perf/results/p4-laptop/`, commit `ef395ac3`; the 8-CPU "medians" of
+the claim and the burn are means of one Intel and one AMD run). **What is short:** the clause "on a mid-range laptop".
+It needs the owner: an x86-64 Linux laptop with 16 GB or more and GNU time (`/usr/bin/time`), on mains power, idle,
+about 50 minutes at 8 threads: from the worktree, `bash bench/perf/p4-laptop-owner.sh ../tmp/perf-p4/stage OUT` (the
+bundle, 131 MB: prove_attest, prove_bridge, the fixture, r0vm 3.0.5 and its SHA256SUMS; OUT a new directory outside
+it), then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
 
 Proposed EVIDENCE row: | new | The private attestation, claim and burn of this tree's programs, padded as LEZ's wallet
 pads every private transaction, proven in containers held to a mid-range laptop's shape | attestation 1,254.8 s at 8

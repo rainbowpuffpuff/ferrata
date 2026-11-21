@@ -67,3 +67,20 @@ An x86-64 Linux laptop with 16 GB or more, on mains power, nothing else busy, ab
 3. `python3 -I bench/perf/summarize_p4.py --owner OUT_DIR` prints the rows for the table above.
 
 A Mac follows [`p4-macos`](p4-macos/README.md) (M1 16 GB: 857.4 s padded attestation, EVIDENCE row 88).
+
+## Rehearsal of the owner's step (21 November 2026)
+
+`bench/perf/p4-laptop-owner.sh` (fixed: it no longer stops after the first proof) run exactly as the owner would, from
+the staged bundle (`bench/perf/p4-laptop-build.sh`'s `stage/`: attest-pad, bridge-pad, r0vm/r0vm with its SHA256SUMS),
+by an unprivileged user in a Modal container held to 8 CPUs and 16 GiB (`bench/perf/p4_owner_modal.py`; Intel family 6
+model 173, AWS): `bash bench/perf/p4-laptop-owner.sh STAGE OUT`, then `python3 -I bench/perf/summarize_p4.py --owner
+OUT`. Both exited 0; records `bench/perf/results/p4-owner-rehearsal/` (`owner.log`, `summary.md`, `out/`).
+
+| proof | `execute_and_prove` s | user cycles (segments) | peak GiB: r0vm / machine | receipt B | transaction B | settled |
+|---|---:|---:|---:|---:|---:|---|
+| private attestation | 1,110.8 | 3,336,834 (6) | 9.19 / 9.24 | 239,246 | 255,366 | yes |
+| private claim | 1,007.5 | 3,122,740 (6) | 9.19 / 9.23 | 239,628 | 256,130 | yes |
+| private burn | 868.1 | 2,903,241 (5) | 9.19 / 9.23 | 239,046 | 254,966 | yes |
+
+The whole step took 50 minutes at 8 CPUs (the prover at nice 10). The 8-CPU "medians" of the claim and the burn above
+are the means of one Intel and one AMD run. The owner's real laptop remains to be run.

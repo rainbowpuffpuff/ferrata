@@ -68,14 +68,16 @@ target ([`lez/RESULTS.md`](../lez/RESULTS.md) §5, "What is not built").
 ### P.2 Cost by program action: cycles, gas, proof time, proof size
 
 **Every program action and statement type, proven for real** ([`perf-proofs.md`](../lez/results/perf-proofs.md),
-21 November 2026): the 37 guest executions of the test suite's scenarios (`lez/results/stage1-*.md`,
+21 November 2026; instance succession and the proven path's committee handoff added after review): the 37 guest executions of the test suite's scenarios (`lez/results/stage1-*.md`,
 `stage4-attest.md`), each with the exact input LEZ v0.4.0-rc1 gives it, proven by r0vm 3.0.5 on a cloud container held
 to 16 CPUs and 32 GiB (one container per transition, `bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs
 the same `perf_prove --prove` on one machine): a composite receipt verified against the image id with its journal
 equal to the executor's, then compressed to one succinct receipt and verified again. LEZ v0.4 does not prove public
 transactions (every node re-executes them): these are the proofs a prover of the same execution would make, RFP-020's
 method. Execution gas equals the user cycles proven in every row. Proof times are sums over a transaction's
-transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts):
+transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts; four actions sum transitions
+proven on different hosts, `Init`, `Init` adopt 2/2 and both `Finish` rows, and the slot, absent-slot and four-facts
+statements ran on Zen 4: compression times differ by up to about 40 % between hosts):
 
 | action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -101,6 +103,7 @@ transitions; each transition's machine is in the results file (mostly AMD Zen 3 
 | consumer: a public actor calls Attest: storage slot | 3 | 386,181 | 7,507 | 386,181 | 3 | 136.9 | 42.0 | 1,014,414 | 237,300 + 231,045 + 224,122 | 4.61 |
 | consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
 | consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
+| instance succession: Succeed (then Spawn at the successor) | 2 | 70,610 | 697 | 70,610 | 2 | 29.2 | 16.2 | 494,422 | 224,827 + 224,464 | 1.44 |
 
 **The proven update path** (one private transaction proving a whole finality update, `VerifyAll` at a private
 account's actor, this tree's program `0x816d1fef…`; [`perf-proofs.md`](../lez/results/perf-proofs.md)): the private
@@ -109,7 +112,11 @@ peak **9.21 GiB**, receipt **227,120 B**, transaction 231,114 B; settled through
 verified, charged **485,298** execution gas (the flat 409,764 plus a 75,534-cycle public part) and 224,063 storage
 gas. Earlier images: 3,240.5 s on the laptop CPU (16 threads, shared), 49.5 s on one L4, 895.6 s on a cloud CPU with
 32 prover threads ([`lez/RESULTS.md`](../lez/RESULTS.md) §3, §9). The same update in one public transaction
-(`VerifyAll`) is charged 9,115,325 execution gas and needs no proof.
+(`VerifyAll`) is charged 9,115,325 execution gas and needs no proof. **The proven committee handoff** (`prove_private
+--handoff`: update_1 as served, its 512 keys adopted in the same private call, no new header): 15,796,512 user cycles in
+17 segments, `execute_and_prove` **2,254.2 s** on a 16-CPU container (AMD Zen 4), peak 9.20 GiB, receipt **227,347 B**,
+transaction 231,568 B; settled with the receipt verified, charged **451,895** execution gas (409,764 + a 42,131-cycle
+public part) and 224,063 storage gas.
 
 **The private attestation** (the consumer's read of a record and LEZ's privacy circuit, padded as the wallet pads
 it): 633.5 s at 16 CPUs and 1,254.8 s at 8 (3.34M user cycles, 6 segments), receipt 239,246 B, transaction 255,366 B,
@@ -202,9 +209,10 @@ and **475.2 s** on an M4 (medians of 2), r0vm peak 9.26–9.45 GiB, no swap-out 
 held to a mid-range laptop's shape (8 CPUs of time, 16 GiB hard) and to 16 CPUs: **1,254.8 s** (1,250.0 and 1,259.6 s)
 and **633.5 s**, 3.34M user cycles in 6 segments, r0vm peak **9.19 GiB** (container 9.23 GiB), receipt 239,246 B,
 transaction 255,366 B, each settled with the receipt verified and refused with one bit flipped
-([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), 21 November 2026). **Gaps:** a run on a real mid-range
-laptop (the owner's step: `bench/perf/p4-laptop-owner.sh` on the same staged binaries, about 45 minutes); a chain of
-hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
+([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), 21 November 2026). The owner's step, rehearsed as the owner
+would run it in an 8-CPU, 16-GiB container: 1,110.8 s for the attestation, all three transactions settled, 50 minutes in
+all. **Gaps:** a run on a real mid-range laptop (the owner's step: `bench/perf/p4-laptop-owner.sh` on the staged bundle);
+a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
 
 ### P.5 End-to-end attestation latency
 
@@ -535,9 +543,12 @@ private transaction are LEZ's and not counted.
 ## Gaps, in one list
 
 User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
-measured; the owner's run is `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); a proven committee handoff (dev mode
-only: RFP-021 P.2, P.3); the importer's LEZ-side resources as a daemon (RFP-022 P.6); v5's ERC-20 calls and refunds
-on Sepolia's gas rules (RFP-022 P.3); an import under a mainnet state root (RFP-022 P.2); the source-chain finality of
-LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a devnet). Every one is a milestone
+measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
+`bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
+`monitor` not built (RFP-021 P.6); actions other than five statement types and the update steps at different state
+sizes (RFP-021 P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
+(RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
+devnet). Every one is a milestone
 deliverable ([`attestation.md`](design/attestation.md) §13; [`bridge.md`](design/bridge.md) §18.6;
 [`docs/traceability.md`](traceability.md)).
