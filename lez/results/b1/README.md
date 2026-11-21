@@ -50,7 +50,12 @@ except where B1 changed the behaviour on purpose:
   `config(A)`, where the claim's value is admitted to the global bucket), BR-PRV-01 (a private claim's `Issue` names
   its fee schedule range, `from_leaf` 6 to 8 in this world, which holds the leaf index's value; the client counts the
   range in the claim's anonymity set, `cli/wallet/src/claim.rs`), BR-TEN-01/02 (HARNESS-ERROR: their setup's `Register`
-  of a configuration of vault `0xe5…e5` exits 101 in its `Attest` step, as before; `tenant.rs`'s separation matrix
+  of a configuration of vault `0xe5…e5` fails with exit 101 after 131,032 cycles, a panic, on both programs; `tenant.rs`'s separation matrix
   sends both vectors' messages, another configuration's `SetCap` and `Freeze` naming A, and both are refused, 253).
 - **`tenant/`**: every attack of `lez/results/tenant.md` fails (`r1.txt`, `r1-frontrun.txt`, `r2.txt`), and
   `separation.txt` holds the separation matrix (new).
+- **`privacy/`** (the privacy suite, `scripts/privacy/run.sh`; against `docs/privacy/generated/`): an adversary
+  reading every public byte of 20 users' round trips pairs at chance (5.0 %) in every private game, with candidate sets
+  of 20, as with the deployed program; the informational claim-to-burn game is 5.0 % (4.5 % with the deployed program,
+  where two of its candidate sets had one member); recovery from the seed alone finds 10 of 10 unclaimed deposits and 10
+  of 10 unreleased burns.
