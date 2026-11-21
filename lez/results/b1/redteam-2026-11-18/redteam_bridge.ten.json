@@ -68,7 +68,7 @@
       "id": "BR-TEN-04",
       "kind": "adversarial",
       "observed": {
-        "note": "nullifier(chain, V, N) recorded under configId(B): true [A's Claim of leaf 2]",
+        "note": "nullifier(configId(B), chain, V, N) recorded by B's claim: true [A's Claim of leaf 2]",
         "outcome": "accepted"
       },
       "title": "a deposit already minted by a second configuration of the same vault (R1)",

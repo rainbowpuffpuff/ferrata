@@ -17,10 +17,12 @@ After every step: vault balance == escrowed + owed; zone supply == minted - burn
 
 ## Anonymity sets of the claims (F.8)
 
-The set the client shows for each claim (`ferrata_wallet::claim::anonymity_set`: the deposits of the same token and amount under the root and fee schedule range it names), by denomination over every run.
+For each claim, the set a private claim of its deposit would have at that moment (`ferrata_wallet::claim::anonymity_set`, what `ferrata claim` shows for a private claim: the deposits of the same token and amount under the root and fee schedule range it names, less those a plaintext claim has published), by denomination over every run. Every claim of these runs is plaintext, for which the client shows 1 (it names its deposit), and each leaves every later set: "as run". Beside it, the same claims had every earlier claim been private, the default, which publishes no deposit: "all private". Median: the lower and the upper middle of the sorted sets (the same when the count is odd).
 
-| denomination (ETH) | claims | smallest | median | largest |
-|---:|---:|---:|---:|---:|
-| 0.1 | 33 | 1 | 4 | 10 |
-| 1 | 28 | 1 | 4 | 7 |
-| 10 | 20 | 1 | 3 | 6 |
+| denomination (ETH) | claims | as run: smallest | median | largest | sets of 1 | all private: smallest | median | largest | sets of 1 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 0.1 | 33 | 1 | 2 | 7 | 8 | 1 | 4 | 10 | 2 |
+| 1 | 28 | 1 | 2 | 6 | 10 | 1 | 4 | 7 | 5 |
+| 10 | 20 | 1 | 2 | 5 | 9 | 1 | 3 | 6 | 3 |
+
+Sets of 1 (the claim's amount alone links it): 27 of 81 claims as run, 10 of 81 had every earlier claim been private; the plaintext claims made 57 of the 81 sets smaller.
