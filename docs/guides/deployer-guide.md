@@ -445,7 +445,7 @@ export CROWN_TOKEN_CAP=3000000000 CROWN_GLOBAL_CAP=9000000000
 checkpoint tools) and stands up the deployment; its records go to `e2e/runs/seqnet-NAME/`:
 
 ```sh
-bash e2e/seqnet/run.sh deployer second-deployer-1
+bash e2e/seqnet/run.sh deployer second-deployer-2
 ```
 
 **Step 3. What it does, in §3's order** ([`drive.sh`](../../e2e/seqnet/drive.sh), mode `deployer`, then
