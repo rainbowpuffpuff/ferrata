@@ -11,7 +11,9 @@ Checks:
   2. docs/guides/user-guide.md, between `<!-- ui-privacy:begin -->` and `<!-- ui-privacy:end -->`: what the `ferrata`
      tool prints before each step (cli/src/privacy.rs, the mini-app's privacy.js table), word for word (RFP-022 U.7).
   3. docs/guides/user-guide.md §11 names every code of the bridge program's IDL (idl/ferrata_bridge.idl.json).
-  4. No guide, README or trust document of the documentation set still calls itself a first draft.
+  4. No guide, README or trust document of the documentation set still calls itself a first draft, and neither
+     README.md, docs/README.md nor the attestation design note calls a guide one (they may say so of
+     docs/performance.md, which is still the first draft of 11 November).
 """
 import json
 import re
@@ -24,6 +26,31 @@ FINDINGS = []
 
 def finding(msg):
     FINDINGS.append(msg)
+
+
+# ---- 4. no first drafts left -----------------------------------------------------------------------------------------
+
+# The documentation set (besides docs/guides/*.md): none may call itself a first draft, except to say what it replaces.
+DOCS = ("docs/trust.md", "lez/ATTEST-CLI.md", "cli/README.md", "monitor/README.md", "lez/updater/README.md")
+# Indexes and notes that point at the guides: they may say "first draft" only of the performance document, named.
+POINTERS = ("README.md", "docs/README.md", "docs/design/attestation.md")
+
+
+def first_draft_findings(texts):
+    """`texts`: path (relative to the repository) -> content. One finding per "first draft" left."""
+    out = []
+    for path, raw in texts.items():
+        text = re.sub(r"\s+", " ", raw)
+        for m in re.finditer(r"first draft", text, re.I):
+            before = text[max(0, m.start() - 30) : m.start()]
+            if path in POINTERS:
+                # Of the performance document by name, just before: "(`docs/performance.md` is still the first draft".
+                if "performance.md" in text[max(0, m.start() - 50) : m.start()]:
+                    continue
+            elif re.search(r"(replaces|since|of) the $", before, re.I):
+                continue
+            out.append(f"{path}: still says '...{before}{m.group(0)}'")
+    return out
 
 
 # ---- 1. every error code of the attestation program, with what a client does --------------------------------------
@@ -161,16 +188,10 @@ def main():
             finding(f"user guide §11: bridge code {e['code']} {e['name']} is not named")
 
     # 4. no first drafts left
-    docs = sorted((ROOT / "docs/guides").glob("*.md")) + [
-        ROOT / p for p in ("docs/trust.md", "lez/ATTEST-CLI.md", "cli/README.md", "monitor/README.md",
-                           "lez/updater/README.md")
-    ]
-    for d in docs:
-        text = re.sub(r"\s+", " ", d.read_text())
-        for m in re.finditer(r"first draft", text, re.I):
-            before = text[max(0, m.start() - 30) : m.start()]
-            if not re.search(r"(replaces|since|of) the $", before, re.I):
-                finding(f"{d.relative_to(ROOT)}: still says '...{before}{m.group(0)}'")
+    docs = sorted((ROOT / "docs/guides").glob("*.md")) + [ROOT / p for p in DOCS]
+    texts = {str(d.relative_to(ROOT)): d.read_text() for d in docs + [ROOT / p for p in POINTERS]}
+    for f in first_draft_findings(texts):
+        finding(f)
 
     for f in FINDINGS:
         print("FINDING", f)
