@@ -36,7 +36,9 @@ forged release needs no forged checkpoint, only a burn root a vault already acce
 
 **What stops it.** No key-less control does: the freeze authority has no key holder, the stops have no owner and no
 watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every release
-and refund at once and `setGlobalCap(Deposit, 0, 0)` every deposit; the admin can undo both. Estimated on Sepolia
+on all four, and every refund on the three v5 vaults (the v3 vault's `refund` does not draw on the caps, but it needs a
+retired vault, and only the keyless freeze authority can retire the v3 vault, so it never opens refunds), and
+`setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both. Estimated on Sepolia
 (`eth_estimateGas`, nothing sent, [`estimate-publicnode.tsv`](estimate-publicnode.tsv)): 66,941 and 63,396 gas per v5
 vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at that block's base fee of 16
 wei. Slower: on the v5 vaults the admin can install a freeze authority and a watcher with `proposeRoles`, applied 14
@@ -99,7 +101,7 @@ export ETH_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 export ETH_KEYSTORE=/path/to/deployer-keystore      # cast prompts for its password, or add --password-file FILE
 for V in 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 \
          0x80555Fe53CCcEf46951B23A3c75643a4C9283470 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7; do
-  cast send "$V" "setGlobalCap(uint8,uint256,uint256)" 1 0 0   # no release, no refund
+  cast send "$V" "setGlobalCap(uint8,uint256,uint256)" 1 0 0   # no release (and no refund on the v5 vaults)
   cast send "$V" "setGlobalCap(uint8,uint256,uint256)" 0 0 0   # no deposit
 done
 for V in 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 \
