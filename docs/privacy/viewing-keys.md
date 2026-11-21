@@ -57,19 +57,40 @@ nothing, so disclosing it is safe. Until then an entry carries only the public f
 declared `kind` and `dest`, which the third party can neither check nor act on; the report marks
 them unverified.
 
+## What the document proves, and what it cannot
+
+* **It is a bearer document.** It proves that whoever wrote it knew `kView` and, for each claimed deposit, `s`. It
+  does not prove who wrote it or who presents it: a recipient can pass it on, or present it as its own, and the next
+  reader can tell no difference. A user who needs the disclosure bound to a person binds it outside this mechanism
+  (for example by signing it with the depositor address's key, which is a separate, deliberate act).
+* **Its burns are complete; its deposits are not.** With `kView` the third party scans every burn note itself and finds
+  every burn made under that key, so it can see that none is missing. Deposits it cannot scan for: a deposit is found
+  only from `kAuth`, which the document does not carry, so the user can leave a deposit out and the third party cannot
+  tell. Read the report's deposit list as the user's own selection, never as all of the user's deposits.
+
 ## Effect on others
 
-None from the mechanism. Nothing here touches a guest, a LEZ program, the vault, or any existing
-source file of `ferrata-bridge-core`: disclosure is a file the user chooses to hand over, and no
-protocol component can produce or demand one. A user who discloses nothing changes nothing for
-anyone.
+**No other user's secret is revealed.** The document holds only its author's keys and entries; verifying it reads
+public chain data only; nothing here touches a guest, a LEZ program, the vault, or any existing source file of
+`ferrata-bridge-core`, and no protocol component can produce or demand a disclosure. The tests check that none of the
+other user's deposits, claims or burns appears in the report.
 
-Said plainly anyway: if the third party **publishes** what it learned, that is a real loss for
-others. Each disclosed deposit-to-claim pair is a public link from a vault leaf to a LEZ
-destination and a spent nullifier, and every such link leaves the candidate set that everyone
-else's deposits hide in. Each disclosed burn is a public recognition of one burn note as the
-user's, with its recipient. The mechanism weakens nobody's privacy; a third party that breaks
-confidence weakens everyone's, one published pair at a time.
+**But every disclosed link shrinks everyone else's anonymity set, as the recipient sees it.** The recipient learns
+each disclosed deposit-to-claim pair (and each disclosed burn with its recipient). By elimination, that pair is no
+longer a candidate for anyone else's claim: for another claim of the same token and denomination, the deposits it may
+spend shrink, in the recipient's eyes, from all `n` deposits of that denomination to `n − k` once `k` of them are
+disclosed and matched. In a small pool this is exact: with two deposits and two claims of one denomination, disclosing
+one pair tells the recipient the other user's pair. The same holds for burns: a burn disclosed as the user's, with its
+recipient, leaves the candidates for the other releases of that denomination. The tests do not measure this inference;
+it follows from what the report contains.
+
+If the recipient **publishes** what it learned, the same shrinkage applies against everyone.
+
+So the clause's "without weakening privacy for anyone else" cannot be met absolutely by any disclosure that reveals a
+link, this one included. What this design meets: the disclosure is voluntary, reveals no secret of anyone else's,
+needs no protocol-level capability, and weakens others' privacy only by removing the disclosed links from their
+candidate sets, against the recipient and against whoever the recipient tells. A user deciding to disclose should know
+that it also tells the recipient something about the other users of the same denominations.
 
 ## Running the tests
 
