@@ -256,7 +256,7 @@ and every step of a handoff and of a finality update were charged the same execu
 construction no action reads a variable-length collection (records, roots and nullifiers are addressed by key). In
 operation, the lab's 98 mainnet finality updates over eight days were charged within 1.2% of their median as records
 accumulated ([`perf-tracking.md`](../lez/results/perf-tracking.md)). The node's own work is not charged: serializing
-the state took 0.002 s at 2.8 MB and 0.285 s at 48.1 MB (the breakpoint a node writes, not a transaction's cost).
+the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node writes, not a transaction's cost).
 
 ---
 
