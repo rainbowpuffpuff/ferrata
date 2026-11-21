@@ -1,0 +1,39 @@
+# The attestation side's monitor (RFP-021 S.7, VS.4): watches one attestation instance on LEZ against several
+# beacon providers and raises the stall, weak-subjectivity and divergence alarms. Prototype, unaudited.
+#
+# Its own workspace: it links the attestation program's wire (`lez/wire`, with LEZ's `lee_core`) and the verification
+# core without BLS, and nothing of `monitor/`'s alloy stack. HTTP goes through `curl`, as `ferrata_attest_module`'s
+# `verify_checkpoint` and `ferrata-updater` read beacon nodes.
+[package]
+name = "ferrata-attest-monitor"
+description = "The attestation side's monitor: an instance's finalized header against several beacon providers, the stall and weak-subjectivity alarms, the divergence alarm a consumer wires to its freeze authority"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[lib]
+name = "ferrata_attest_monitor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "attest-monitor"
+path = "src/main.rs"
+
+[dependencies]
+ferrata-lez-wire = { path = "../../lez/wire" }
+ferrata-core = { path = "../../crates/ferrata-core", default-features = false }
+# LEZ v0.4.0-rc1 (commit 1806e87), beside the repository, as lez/wire links it: the sequencer's `getAccount` answer.
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+hex = "0.4"
+anyhow = "1"
+clap = { version = "4.5", features = ["derive"] }
+signal-hook = "0.3"
+
+[patch.crates-io]
+keccak = { git = "https://github.com/logos-blockchain/sponges", rev = "3a56e99771beedf04946eab21a4a62adc2951377" }
