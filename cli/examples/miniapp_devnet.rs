@@ -1290,7 +1290,7 @@ impl Devnet {
         if let Some(nf) = params["nullifier"].as_str() {
             let nf = ferrata_cli::h32(nf)?;
             out["nullifier_state"] =
-                json!(self.state_hex(bw::nullifier_actor(program, 1, &self.vault.into_array(), &nf)));
+                json!(self.state_hex(bw::nullifier_actor(program, &self.cid, 1, &self.vault.into_array(), &nf)));
         }
         Ok(out)
     }

@@ -134,7 +134,7 @@ pub fn build_claim(
     let fee_recipient = AccountId::new(token.controls.fee_recipient);
     let relayer_account = relayer.map(AccountId::new).unwrap_or(fee_recipient);
     let root = root_actor(ctx.program, &ctx.cid, n);
-    let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
+    let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
     let mut mentions = Vec::new();
     let message = if private {
         let root_account = match owned.kind {
@@ -157,13 +157,13 @@ pub fn build_claim(
         seed: token_seed(&ctx.cid, &d.token),
     });
     mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
-    mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
+    mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(&ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier) });
     let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));
-    // Mints land at `holder(account)` PDAs (security review C-1); the mint's seed admits a new one.
+    // Mints land at `holder(cid, account)` PDAs (security review C-1); the mint's seed admits a new one.
     for account in dest.into_iter().chain([fee_recipient, relayer_account]) {
-        let actor = holder_actor(ctx.program, account);
+        let actor = holder_actor(ctx.program, &ctx.cid, account);
         if !mentions.iter().any(|m| m.actor() == actor) {
-            mentions.push(Mention::Pda { actor, seed: holder_seed(account.value()) });
+            mentions.push(Mention::Pda { actor, seed: holder_seed(&ctx.cid, account.value()) });
         }
     }
     let what = format!(

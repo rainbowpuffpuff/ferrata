@@ -230,7 +230,7 @@ pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&st
         let chain_id = s["chain_id"].as_u64().ok_or("chain_id")?;
         let vault: [u8; 20] = fixed(&s["vault"], "vault")?;
         let nf: [u8; 32] = fixed(&json!(nf), "nullifier")?;
-        wanted.push(("nullifier_state", "nullifier(chain, vault, N)".into(), bw::nullifier_actor(program, chain_id, &vault, &nf).account_id));
+        wanted.push(("nullifier_state", "nullifier(cid, chain, vault, N)".into(), bw::nullifier_actor(program, &cid, chain_id, &vault, &nf).account_id));
     }
     for (key, what, account) in wanted {
         if let Some(plain) = inputs[key].as_str().map(str::to_string) {
@@ -243,7 +243,7 @@ pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&st
         for h in holders.iter_mut() {
             let Some(account) = h["account"].as_str() else { continue };
             let id = AccountId::new(fixed::<32>(&json!(account), "public holder")?);
-            let holder = bw::holder_actor(program, id).account_id;
+            let holder = bw::holder_actor(program, &cid, id).account_id;
             let plain = h["state"].as_str().unwrap_or("0x").to_string();
             let (v, e) = reread(&format!("holder({})", &norm(account)[..10]), &hex(holder.value()), &p, &plain);
             h["state"] = json!(v);

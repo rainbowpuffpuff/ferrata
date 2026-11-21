@@ -305,6 +305,9 @@ fn bridge_label(m: &bw::BridgeMessage) -> &'static str {
         Cosigned { .. } => "Cosigned",
         Transfer { .. } => "Transfer",
         Credit { .. } => "Credit",
+        SetDepth { .. } => "SetDepth",
+        AttestListing { .. } => "AttestListing",
+        SetListing { .. } => "SetListing",
     }
 }
 
@@ -324,6 +327,7 @@ fn state_label(s: &bw::BridgeState) -> &'static str {
                 bw::Timed::Apply => "Config.Ready.Time.Apply",
             },
             bw::Pending::Retired { .. } => "Config.Ready.Retired",
+            bw::Pending::Listing { .. } => "Config.Ready.Listing",
         },
         bw::BridgeState::Root(_) => "Root",
         bw::BridgeState::Nullifier(_) => "Nullifier",
@@ -423,6 +427,8 @@ fn roles(proposal: bool) -> bw::Roles {
         }),
         vault_retired: false,
         sunset_approved: proposal,
+        inbound_depth_slots: if proposal { 64 } else { 0 },
+        tip_slot: 11_547_300,
     }
 }
 
@@ -443,6 +449,8 @@ fn token_state(pending: Option<bw::PendingTime>) -> bw::TokenState {
         controls: controls(),
         gate: gate(),
         pending,
+        delisted: false,
+        listing_slot: 11_547_160,
     }
 }
 
@@ -593,6 +601,14 @@ fn bridge_vectors() -> Vec<Vector> {
         },
         Transfer { config_id: r(60), token: a(40), amount: 900_000_000_000_000_000, to: r(74) },
         Credit { config_id: r(60), token: a(40), amount: 900_000_000_000_000_000, to: r(74) },
+        SetDepth { config_id: r(60), slots: 64 },
+        AttestListing {
+            config_id: r(60),
+            token: a(40),
+            record_slot: 11_547_320,
+            proof: bw::VaultProof { account: vec![vec![0xf8, 0x51]], slots: vec![vec![vec![0xe3, 0x01]]] },
+        },
+        SetListing { config_id: r(60), token: a(40), delisted: true, record_slot: 11_547_320 },
     ];
     let mut out: Vec<Vector> = Vec::new();
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
@@ -655,6 +671,7 @@ fn bridge_vectors() -> Vec<Vector> {
             then: bw::Timed::Apply,
         })))),
         bw::BridgeState::Config(ready(Some(bw::Pending::Retired { record_slot: 11_547_310 }))),
+        bw::BridgeState::Config(ready(Some(bw::Pending::Listing { token: a(40), record_slot: 11_547_320 }))),
         bw::BridgeState::Root(root_state()),
         bw::BridgeState::Nullifier(bw::NullifierState {
             config_id: r(60),
@@ -685,6 +702,7 @@ fn bridge_vectors() -> Vec<Vector> {
             record: time_record(true),
             then: bw::Timed::Freeze { mints: false, burns: true, until_ms: 9 },
         }))),
+        bw::BridgeState::Token(bw::TokenState { delisted: true, listing_slot: 11_547_320, ..token_state(None) }),
     ];
     let mut seen = std::collections::BTreeMap::<&str, u32>::new();
     for s in &states {
@@ -830,11 +848,12 @@ fn pda_vectors() {
             "nullifier",
             &program,
             &[
+                ("config_id", "bytes", hex(&cid)),
                 ("evm_chain_id", "u256be", 11_155_111u64.to_string()),
                 ("vault", "bytes", hex(&vault)),
                 ("nullifier", "bytes", hex(&nullifier)),
             ],
-            &bw::nullifier_actor(program, 11_155_111, &vault, &nullifier),
+            &bw::nullifier_actor(program, &cid, 11_155_111, &vault, &nullifier),
         ),
         pda_entry(
             "ferrata_bridge",
@@ -847,8 +866,8 @@ fn pda_vectors() {
             "ferrata_bridge",
             "holder",
             &program,
-            &[("holder", "bytes", hex(holder.value()))],
-            &bw::holder_actor(program, holder),
+            &[("config_id", "bytes", hex(&cid)), ("holder", "bytes", hex(holder.value()))],
+            &bw::holder_actor(program, &cid, holder),
         ),
     ];
     let text = format!(

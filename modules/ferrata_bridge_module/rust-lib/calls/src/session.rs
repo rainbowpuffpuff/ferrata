@@ -387,6 +387,7 @@ impl Chain {
         );
         let rec = crate::recover_of(&req)?;
         let program = self.program()?;
+        let cid = self.cid()?;
         let chain_id = self.s["chain_id"].as_u64().ok_or("chain_id")?;
         let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
         let touched: Vec<String> = inputs["touched_privately"].as_array().into_iter().flatten().filter_map(|v| v.as_str().map(str::to_lowercase)).collect();
@@ -397,7 +398,7 @@ impl Chain {
         let mut deposits = Vec::new();
         for d in rec["deposits"].as_array().into_iter().flatten() {
             let n: Hash = fixed(&d["nullifier"], "nullifier")?;
-            let n_account = hex(bw::nullifier_actor(program, chain_id, &vault, &n).account_id.value()).to_lowercase();
+            let n_account = hex(bw::nullifier_actor(program, &cid, chain_id, &vault, &n).account_id.value()).to_lowercase();
             let leaf = d["leaf_index"].as_u64().unwrap_or(0);
             let state = if claimed.contains(&hex(&n).to_lowercase()) || touched.contains(&n_account) {
                 "claimed"

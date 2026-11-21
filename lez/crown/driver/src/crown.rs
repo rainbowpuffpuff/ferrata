@@ -937,15 +937,15 @@ async fn bridge_state(live: &Live, pda: Pda) -> Result<Option<BridgeState>> {
     Ok(if state.is_empty() { None } else { Some(borsh::from_slice(&state)?) })
 }
 
-async fn holder_state(live: &Live, bridge: AccountId, account: AccountId) -> Result<Option<BridgeState>> {
-    let state = live.actor_state(holder_pda(bridge, account).actor()).await?;
+async fn holder_state(live: &Live, bridge: AccountId, cid: &Root, account: AccountId) -> Result<Option<BridgeState>> {
+    let state = live.actor_state(holder_pda(bridge, cid, account).actor()).await?;
     Ok(if state.is_empty() { None } else { Some(borsh::from_slice(&state)?) })
 }
 
-/// `holder(account)`: the PDA holding `account`'s public wrapped balances (security fix C-1); a claim
-/// mints there, a public burn forwards from there.
-fn holder_pda(bridge: AccountId, account: AccountId) -> Pda {
-    Pda { program: bridge, seed: holder_seed(account.value()) }
+/// `holder(cid, account)`: the PDA holding `account`'s public wrapped balances under `cid` (security fix C-1,
+/// milestone B1); a claim mints there, a public burn forwards from there.
+fn holder_pda(bridge: AccountId, cid: &Root, account: AccountId) -> Pda {
+    Pda { program: bridge, seed: holder_seed(cid, account.value()) }
 }
 
 /// The fee schedule range a wallet names for a claim of `leaf`: the schedule it falls under and
@@ -1146,23 +1146,23 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;
             ensure!(kind == DestKind::Public, "deposit 0 is the public one");
             let range = range_for(live, token_pda, 0).await?;
-            let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
+            let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let dest = AccountId::new(w.dest);
             let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
-            let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, dest)), mention(holder_pda(bridge, fee_recipient()))];
+            let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, dest)), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = send(live, &format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), mentions, &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
             claims.push(json!({ "leaf": 0, "kind": "public", "nullifier": h(&nullifier), "block": o.row.block, "tx": o.row.tx_hash, "dest": h(dest.value()) }));
-            println!("[crown-b] public test account 0's holding: {:?}", holder_state(live, bridge, dest).await?);
+            println!("[crown-b] public test account 0's holding: {:?}", holder_state(live, bridge, &cid, dest).await?);
         } else {
             // The private claim of deposit 1, then the two burns.
             let mut session = PrivateSession::open(live, bridge_bin, &b.private).await?;
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 1)?;
             ensure!(kind == DestKind::Private && w.dest == *session.me.value(), "deposit 1 is the private one, to the wallet's private account");
             let range = range_for(live, token_pda, 1).await?;
-            let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
+            let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
-            let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, fee_recipient()))];
+            let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = session.send(live, "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0", publics, &message, "claim").await?;
             steps.push(row_json(&o));
             if session.fake {
@@ -1178,7 +1178,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
             let mentions = vec![
                 AccountIdentity::Public(holder0).select_program_actor_state(bridge),
-                mention(holder_pda(bridge, holder0)),
+                mention(holder_pda(bridge, &cid, holder0)),
                 mention(token_pda),
                 mention(config_pda),
                 mention(burn_pda),

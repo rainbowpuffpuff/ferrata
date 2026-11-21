@@ -206,7 +206,7 @@ async fn claim_parts(live: &Live, bridge_bin: &GuestBinary, chain: &Chain, ident
     let config_pda = Pda { program: bridge, seed: config_seed(&cid) };
     let token_pda = Pda { program: bridge, seed: token_seed(&cid, &ETH) };
     let root_pda = Pda { program: bridge, seed: root_seed(&cid, LEAF_COUNT) };
-    let n_pda = Pda { program: bridge, seed: nullifier_seed(SEPOLIA_CHAIN_ID, &vault, &nullifier) };
+    let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, SEPOLIA_CHAIN_ID, &vault, &nullifier) };
     let mut roots = Vec::new();
     for n in 1..=LEAF_COUNT {
         match bridge_state(live, Pda { program: bridge, seed: root_seed(&cid, n) }).await? {

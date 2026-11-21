@@ -249,7 +249,7 @@ fn handover(w: &mut World, fa: FreezeAuthority, watchers: Vec<Hash>) -> usize {
 fn claim_actors_of(w: &World, cid: &Hash, n: u64, vault: &[u8; 20], wit: &ClaimWitness, relayer: Option<Hash>) -> Vec<Actor> {
     let n_d = Deposit::of(wit).nullifier(CHAIN_ID, vault);
     let mut actors = vec![root_actor(w.program, cid, n)];
-    let nullifier = nullifier_actor(w.program, CHAIN_ID, vault, &n_d);
+    let nullifier = nullifier_actor(w.program, cid, CHAIN_ID, vault, &n_d);
     actors.extend(w.claim_actors(cid, &wit.token, nullifier, Some(AccountId::new(wit.dest)), relayer));
     actors
 }
@@ -1082,8 +1082,8 @@ fn int() {
         let mut w = base();
         let (cid, va, program, payer) = (w.cid_a, w.vault_a.address, w.program, w.chain.payer);
         let mint = BridgeMessage::Mint { nullifier: [7; 32], config_id: cid, evm_chain_id: CHAIN_ID, vault: va, token: ETH, holder: *payer.value(), amount: D2 };
-        let at = holder_actor(program, payer);
-        let ev = vec![PublicAccountEvidence::Pda { program, seed: holder_seed(payer.value()) }];
+        let at = holder_actor(program, &cid, payer);
+        let ev = vec![PublicAccountEvidence::Pda { program, seed: holder_seed(&cid, payer.value()) }];
         let rep = w.submit("Mint sent to holder(payer) by the payer", at, &mint, vec![at], ev);
         Observed::of_report(&rep, outsider)
     });
@@ -1093,9 +1093,9 @@ fn int() {
         let (cid, va, program, payer) = (w.cid_a, w.vault_a.address, w.program, w.chain.payer);
         let n = w.payer_deposit.nullifier(CHAIN_ID, &va);
         let spend = BridgeMessage::Spend { nullifier: n, config_id: cid, evm_chain_id: CHAIN_ID, vault: va, token: ETH, leaf_count: 8, amount: D2, mint_to: Some(*payer.value()), fees: vec![] };
-        let at = nullifier_actor(program, CHAIN_ID, &va, &n);
-        let ev = vec![PublicAccountEvidence::Pda { program, seed: nullifier_seed(CHAIN_ID, &va, &n) }];
-        let rep = w.submit("Spend sent to nullifier(N) by the payer", at, &spend, vec![at, holder_actor(program, payer)], ev);
+        let at = nullifier_actor(program, &cid, CHAIN_ID, &va, &n);
+        let ev = vec![PublicAccountEvidence::Pda { program, seed: nullifier_seed(&cid, CHAIN_ID, &va, &n) }];
+        let rep = w.submit("Spend sent to nullifier(N) by the payer", at, &spend, vec![at, holder_actor(program, &cid, payer)], ev);
         Observed::of_report(&rep, &format!("{outsider}; nullifier spent after: {}", w.nullifier(&cid, &va, &n).is_some()))
     });
     // BR-INT-03: WriteRoot{root of its choice} at root(A, 9).
@@ -1126,7 +1126,7 @@ fn int() {
         let n = [0x5e; 32];
         let issue = BridgeMessage::Issue { config_id: cid, token: ETH, nullifier: n, amount: D0, range: ScheduleRange { index: 0, from_leaf: 0, until_leaf: 6 }, leaf_count: 8, mint_to: Some(*payer.value()), relayer: None };
         let at = token_actor(program, &cid, &ETH);
-        let actors = vec![at, config_actor(program, &cid), nullifier_actor(program, CHAIN_ID, &va, &n), holder_actor(program, payer), holder_actor(program, fee_recipient())];
+        let actors = vec![at, config_actor(program, &cid), nullifier_actor(program, &cid, CHAIN_ID, &va, &n), holder_actor(program, &cid, payer), holder_actor(program, &cid, fee_recipient())];
         let rep = w.send("Issue sent to token(A, ETH) by the payer", at, &issue, actors);
         Observed::of_report(&rep, outsider)
     });
@@ -1142,8 +1142,8 @@ fn int() {
     r.run("BR-INT-07", || {
         let mut w = base();
         let (cid, program, payer) = (w.cid_a, w.program, w.chain.payer);
-        let at = holder_actor(program, payer);
-        let ev = vec![PublicAccountEvidence::Pda { program, seed: holder_seed(payer.value()) }];
+        let at = holder_actor(program, &cid, payer);
+        let ev = vec![PublicAccountEvidence::Pda { program, seed: holder_seed(&cid, payer.value()) }];
         let credit = BridgeMessage::Credit { config_id: cid, token: ETH, amount: D2, to: *payer.value() };
         let rep = w.submit("Credit sent to holder(payer) by the payer", at, &credit, vec![at], ev);
         Observed::of_report(&rep, outsider)

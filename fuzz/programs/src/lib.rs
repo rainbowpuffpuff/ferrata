@@ -122,7 +122,12 @@ pub fn names(m: &w::BridgeMessage) -> Names {
         | M::ProposeRoles { config_id, .. }
         | M::ApplyRoles { config_id, .. }
         | M::CancelRoles { config_id }
-        | M::Cosigned { config_id, .. } => n.config_id = *config_id,
+        | M::Cosigned { config_id, .. }
+        | M::SetDepth { config_id, .. } => n.config_id = *config_id,
+        M::AttestListing { config_id, token, .. } | M::SetListing { config_id, token, .. } => {
+            n.config_id = *config_id;
+            n.token = *token;
+        }
         M::Transfer { config_id, token, to, .. } | M::Credit { config_id, token, to, .. } => {
             n.config_id = *config_id;
             n.token = *token;
@@ -139,8 +144,8 @@ pub fn actor(mode: u8, n: &Names) -> Actor {
         0 => w::config_actor(p, &n.config_id),
         1 => w::token_actor(p, &n.config_id, &n.token),
         2 => w::root_actor(p, &n.config_id, n.leaf_count),
-        3 => w::nullifier_actor(p, n.evm_chain_id, &n.vault, &n.nullifier),
-        4 => w::holder_actor(p, AccountId::new(n.account)),
+        3 => w::nullifier_actor(p, &n.config_id, n.evm_chain_id, &n.vault, &n.nullifier),
+        4 => w::holder_actor(p, &n.config_id, AccountId::new(n.account)),
         5 => w::burn_actor(p, &n.config_id, &n.note),
         6 => w::own_actor(p, AccountId::new(n.account)),
         _ => Actor::new(AccountId::new(n.account), p),

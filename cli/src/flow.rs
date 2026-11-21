@@ -897,7 +897,7 @@ pub async fn recover<L: Ledger>(
         let (decimals, symbol) = eth::token_meta(&eth.p, *token).await?;
         let t = token.into_array();
         for a in &publics {
-            let state = ledger.actor_state(ferrata_lez_bridge_wire::holder_actor(ctx.program, a.id)).await?;
+            let state = ledger.actor_state(ferrata_lez_bridge_wire::holder_actor(ctx.program, &ctx.cid, a.id)).await?;
             let held = lez::holding_in(&state, ctx, &t);
             if held > 0 {
                 r.holdings.push((DestKind::Public, a.index, *token, held));

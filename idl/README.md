@@ -5,7 +5,7 @@
 | File | What |
 |---|---|
 | [`ferrata_attestation.idl.json`](ferrata_attestation.idl.json) | The attestation program (RFP-021): 13 instructions, 16 types, 3 actor states, 68 exit codes |
-| [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) | The bridge program (RFP-022): 20 instructions, 28 types, the actor state enum, 16 exit codes |
+| [`ferrata_bridge.idl.json`](ferrata_bridge.idl.json) | The bridge program (RFP-022): 31 instructions, 32 types, the actor state enum, 16 exit codes (since B1: config-keyed nullifier and holder accounts, `SetDepth`, `AttestListing`) |
 | [`vectors/`](vectors/) | Borsh vectors written by the Rust wire crates, each with its Rust `Debug` text |
 | [`check.py`](check.py) | The check CI runs: decodes every vector with the IDL alone |
 | [`tools/build_idl.py`](tools/build_idl.py) | How the JSON was written (by hand, in Python); the error lists are read from the Rust sources |

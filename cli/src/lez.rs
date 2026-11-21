@@ -220,10 +220,10 @@ pub async fn history_of<L: Ledger>(ledger: &L, ctx: &Context) -> Result<History>
 }
 
 /// Whether the deposit with nullifier `n` is claimed in `history`: by a plaintext claim, or by a
-/// private one, whose public part names `nullifier(chain, vault, N)`. Matched locally: no per-item query.
+/// private one, whose public part names `nullifier(cid, chain, vault, N)`. Matched locally: no per-item query.
 pub fn is_claimed(ctx: &Context, history: &History, n: &Hash) -> bool {
     history.claimed.contains(n)
-        || history.touched_privately.contains(&nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, n).account_id)
+        || history.touched_privately.contains(&nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, n).account_id)
 }
 
 /// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows).
@@ -267,7 +267,7 @@ pub async fn plan_claim<L: Ledger>(
         _ => bail!(program_refusal(245, format!("checked before sending: root(cid, {n}) is not on the zone"))),
     };
     let token = token_state(ledger, ctx, &owned.deposit.token).await?;
-    let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
+    let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
     let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
     let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
@@ -320,7 +320,7 @@ pub async fn plan_burn<L: Ledger>(
         bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
     }
     let held = match holder {
-        BurnFrom::Public(account) => match read(ledger, holder_actor(ctx.program, account)).await? {
+        BurnFrom::Public(account) => match read(ledger, holder_actor(ctx.program, &ctx.cid, account)).await? {
             Some(BridgeState::Holder(HolderState { holdings, .. })) => {
                 holdings.iter().find(|h| h.config_id == ctx.cid && h.token == token).map_or(0, |h| h.amount)
             }
@@ -338,10 +338,10 @@ pub async fn plan_burn<L: Ledger>(
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
     let note_hash = wire.hash();
     let mut mentions = match holder {
-        // Signed at the holder's own actor, which forwards the note to its `holder(account)`.
+        // Signed at the holder's own actor, which forwards the note to its `holder(cid, account)`.
         BurnFrom::Public(account) => vec![
             Mention::Signer(own_actor(ctx.program, account)),
-            Mention::Pda { actor: holder_actor(ctx.program, account), seed: holder_seed(account.value()) },
+            Mention::Pda { actor: holder_actor(ctx.program, &ctx.cid, account), seed: holder_seed(&ctx.cid, account.value()) },
         ],
         // Proven at the private account's own actor, which debits its private holding and sends the
         // note to the token's account in the clear.

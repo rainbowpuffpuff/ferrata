@@ -417,7 +417,7 @@ B_TYPES = [
     struct("PendingTime", f("record", d("TimeRecord")), f("then", d("Timed"))),
     struct("FreezeAuthority", f("members", vec(ROOT32)), f("threshold", U8), docs="The freeze authority: one account (threshold 1) or an M-of-N multisig of at most 8 distinct members (Cosigned)."),
     struct("RoleProposal", f("freeze_authority", d("FreezeAuthority")), f("watchers", vec(ROOT32)), f("effective_ms", U64), docs="A role change the admin proposed; ApplyRoles once a record 14 days of attested time later is read."),
-    struct("Roles", f("freeze_authority", d("FreezeAuthority")), f("watchers", vec(ROOT32)), f("proposal", opt(d("RoleProposal"))), f("vault_retired", BOOL), f("sunset_approved", BOOL), docs="The live roles in config(cid): the freeze authority, up to three watchers, a pending proposal; vault_retired once AttestRetired read the vault's retired flag; sunset_approved by a multisig's Cosigned Sunset."),
+    struct("Roles", f("freeze_authority", d("FreezeAuthority")), f("watchers", vec(ROOT32)), f("proposal", opt(d("RoleProposal"))), f("vault_retired", BOOL), f("sunset_approved", BOOL), f("inbound_depth_slots", U64), f("tip_slot", U64), docs="The live roles in config(cid): the freeze authority, up to three watchers, a pending proposal; vault_retired once AttestRetired read the vault's retired flag; sunset_approved by a multisig's Cosigned Sunset; inbound_depth_slots, the admin's inbound finality depth beyond Ethereum finality (SetDepth, at most 216,000), measured against tip_slot, the newest record slot the configuration's clock read."),
     enum("CosignedAction", v("Sunset"), v("Freeze", f("token", opt(ADDRESS)), f("mints", BOOL), f("burns", BOOL), f("until_ms", U64), f("record", d("TimeRecord"))), docs="What a multisig freeze authority signs (Cosigned)."),
     struct(
         "Controls",
@@ -516,6 +516,9 @@ B_TYPES = [
         v("Cosigned", f("config_id", ROOT32), f("signers", vec(ROOT32)), f("action", d("CosignedAction"))),
         v("Transfer", f("config_id", ROOT32), f("token", ADDRESS), f("amount", U128), f("to", ROOT32)),
         v("Credit", f("config_id", ROOT32), f("token", ADDRESS), f("amount", U128), f("to", ROOT32)),
+        v("SetDepth", f("config_id", ROOT32), f("slots", U64)),
+        v("AttestListing", f("config_id", ROOT32), f("token", ADDRESS), f("record_slot", U64), f("proof", d("VaultProof"))),
+        v("SetListing", f("config_id", ROOT32), f("token", ADDRESS), f("delisted", BOOL), f("record_slot", U64)),
         docs="Every message the bridge program handles (ferrata_lez_bridge_wire::BridgeMessage).",
     ),
     enum(
@@ -530,6 +533,7 @@ B_TYPES = [
         v("Fees", f("token", ADDRESS), f("index", U64), f("schedule", opt(d("FeeSchedule"))), f("record_slot", U64)),
         tv("Time", d("PendingTime")),
         v("Retired", f("record_slot", U64)),
+        v("Listing", f("token", ADDRESS), f("record_slot", U64)),
         docs="A transaction-internal step: an attestation asked and not yet answered.",
     ),
     struct("PendingImport", f("record_slot", U64), f("root", ROOT32), f("leaf_count", U64)),
@@ -556,6 +560,8 @@ B_TYPES = [
         f("controls", d("Controls")),
         f("gate", d("Gate")),
         f("pending", opt(d("PendingTime"))),
+        f("delisted", BOOL),
+        f("listing_slot", U64),
     ),
     struct("NullifierState", f("config_id", ROOT32), f("token", ADDRESS), f("leaf_count", U64), f("amount", U128)),
     struct("Holding", f("config_id", ROOT32), f("token", ADDRESS), f("amount", U128)),
@@ -582,7 +588,7 @@ B_ACCOUNTS = [
             tv("Holder", d("HolderState")),
             tv("Burn", d("BurnRecord")),
             tv("Token", d("TokenState")),
-            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(chain, vault, N), holder(account), burn(cid, H(note)), token(cid, token).",
+            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, H(note)), token(cid, token).",
         ),
     }
 ]
@@ -595,8 +601,8 @@ def bridge_idl():
     CONFIG = lambda init=False, docs=None: acct("config", pda("config", "config_id"), init=init, docs=docs)
     TOKEN = lambda init=False, docs=None: acct("token_actor", pda("token", "config_id", "token"), init=init, docs=docs)
     ROOTA = lambda init=False, docs=None, writable=True: acct("root", pda("root", "config_id", "leaf_count"), init=init, docs=docs, writable=writable)
-    NULL = lambda: acct("nullifier", pda("nullifier", "evm_chain_id (u256 big-endian)", "vault", "nullifier"), init=True, docs="written once: a second Spend refuses with 250 ALREADY_CLAIMED")
-    HOLDER = lambda docs=None: acct("holder", pda("holder", "holder"), docs=docs)
+    NULL = lambda: acct("nullifier", pda("nullifier", "config_id", "evm_chain_id (u256 big-endian)", "vault", "nullifier"), init=True, docs="written once: a second Spend refuses with 250 ALREADY_CLAIMED")
+    HOLDER = lambda docs=None: acct("holder", pda("holder", "config_id", "holder"), docs=docs)
     BURN = lambda: acct("burn", pda("burn", "config_id", "note_hash"), init=True, docs="burn(cid, H(note)), written once")
     OWN = lambda who: acct("own", None, signer=True, docs=f"{who}'s own account (the program's actor at it); signed")
     ANY = lambda docs: acct("receiver", None, writable=False, docs=docs)
@@ -607,9 +613,9 @@ def bridge_idl():
         a["owner"] = "ferrata_attestation"
         return a
 
-    HOLDERS = lambda: acct("holder", pda("holder", "holder"), docs="holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once")
+    HOLDERS = lambda: acct("holder", pda("holder", "config_id", "holder"), docs="holder(cid, account) of each account credited (the destination, the fee recipient, the relayer), each listed once")
     instructions = [
-        I(0, "burn", [OWN("the holder"), HOLDER("the root instead of the own actor when the denomination is debited from holder(account)"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), CONFIG(docs="Admit: the global burn freeze and bucket"), BURN()], "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."),
+        I(0, "burn", [OWN("the holder"), HOLDER("the root instead of the own actor when the denomination is debited from holder(cid, account)"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), CONFIG(docs="Admit: the global burn freeze and bucket"), BURN()], "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."),
         I(1, "import_root", [CONFIG(), RECORD(), ROOTA(init=True, docs="written once at the attested leaf count")], "Attest the vault's slots 0 and 1 under the record at record_slot and write root(cid, leaf_count). Anyone may call; refused after Sunset."),
         I(2, "sunset", [OWN("the freeze authority"), CONFIG()], "The configuration's one-way Sunset: stops ImportRoot for good."),
         I(3, "echo", [ANY("any actor")], "Rule (A)'s echo nonce: accepted anywhere, changes nothing."),
@@ -618,8 +624,8 @@ def bridge_idl():
         I(6, "claim_privately", [OWN("the claimant (meant to run privately)"), ROOTA(writable=False), TOKEN(), CONFIG(docs="Admit"), NULL(), HOLDERS()], "Read root(cid, n), verify the claim inside this execution, then Issue; a private destination must be this account.", public=False, private_owned=True),
         I(7, "read", [ANY("any actor of this program; replies StateReply")], "Reply with this actor's state."),
         I(8, "write_root", [ROOTA(init=True, docs="from config(cid) only")], "Internal: config(cid) -> root(cid, n), the verified root, written once.", internal=True),
-        I(9, "spend", [NULL()], "Internal: token(cid, token) -> nullifier(chain, vault, N): spend N once; mint to mint_to and each fee to its account.", internal=True),
-        I(10, "mint", [HOLDER("from nullifier(chain, vault, N) only")], "Internal: credit amount of token to holder.", internal=True),
+        I(9, "spend", [NULL()], "Internal: token(cid, token) -> nullifier(cid, chain, vault, N): spend N once; mint to mint_to and each fee to its account.", internal=True),
+        I(10, "mint", [HOLDER("from nullifier(cid, chain, vault, N) only")], "Internal: credit amount of token to holder.", internal=True),
         I(11, "register", [CONFIG(), RECORD(), TOKEN(init=True)], "Attest the vault's registry entry of entry.token, its fee schedules 0 and 1 and its leaf count under one record, and write token(cid, token)."),
         I(12, "import_fees", [CONFIG(), RECORD(), TOKEN()], "Attest the vault's fee schedule index of token (or its absence) and its leaf count, and extend token(cid, token)."),
         I(13, "write_token", [TOKEN(init=True, docs="from config(cid) only")], "Internal: the attested entry, written once.", internal=True),
@@ -635,8 +641,11 @@ def bridge_idl():
         I(23, "cancel_roles", [OWN("the admin"), CONFIG()], "The admin cancels a pending role proposal."),
         I(24, "pause", [OWN("a watcher"), CONFIG(docs="target when token is None"), TOKEN(docs="target when token is Some"), RECORD("the record the 12 h pause runs from")], "A watcher freezes mints and/or burns until 12 h after the record, never shortening a longer freeze."),
         I(25, "cosigned", [OWN("each signer, in order (the call is forwarded along the signers' own actors)"), CONFIG(), TOKEN(docs="target of a token's Freeze")], "A multisig freeze authority's action (Freeze, or approving Sunset), signed by at least its threshold of distinct members in one transaction."),
-        I(26, "transfer", [OWN("the holder"), HOLDER("the holder's holder(account), debited when it is not a private holder"), TOKEN(docs="requires a multiple of the LEZ unit and credits holder(to)"), HOLDER("holder(to), credited")], "Move a balance to another holder; from a private holder the transaction shows only the Transfer to the token from an alias."),
-        I(27, "credit", [HOLDER("holder(to): from token(cid, token) only")], "Internal: token(cid, token) -> holder(to), the transferred amount.", internal=True),
+        I(26, "transfer", [OWN("the holder"), HOLDER("the holder's holder(cid, account), debited when it is not a private holder"), TOKEN(docs="requires a multiple of the LEZ unit and credits holder(cid, to)"), HOLDER("holder(cid, to), credited")], "Move a balance to another holder; from a private holder the transaction shows only the Transfer to the token from an alias."),
+        I(27, "credit", [HOLDER("holder(cid, to): from token(cid, token) only")], "Internal: token(cid, token) -> holder(cid, to), the transferred amount.", internal=True),
+        I(28, "set_depth", [OWN("the admin"), CONFIG()], "The admin sets the inbound finality depth beyond Ethereum finality, in beacon slots (at most 216,000): ImportRoot under a record at slot s waits (242 FROZEN) until the configuration's clock has read a record at s + depth or later. Applies to imports from then on; imported roots stay valid."),
+        I(29, "attest_listing", [CONFIG(), RECORD("the record the vault's listing slot of token (sha256(\"ferrata/vault/listing/v1\" || token): 1 delisted, 0 listed) is proven under"), TOKEN(docs="SetListing")], "Anyone: attest the vault's listing of a token (F.10); token(cid, token) then holds whether deposits of it are delisted. Claims, burns and transfers go on."),
+        I(30, "set_listing", [TOKEN(docs="from config(cid) only")], "Internal: the attested listing, kept only if its record is newer than the token's last.", internal=True),
     ]
     return {
         "version": "0.1.0",
@@ -647,7 +656,7 @@ def bridge_idl():
         "docs": [
             "The bridge program of Ferrata on LEZ v0.4 (RFP-022). Hand-written IDL in SPEL's format (see ferrata_attestation.idl.json for why).",
             "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
-            "PDA seeds: SHA-256(\"ferrata-lez/v1/bridge/\" || tag || parts), u64 parts little-endian, the EVM chain id as a 32-byte big-endian word; the account is AccountId::for_public_pda(program, seed). holder(account) hashes the account's 32 bytes.",
+            "PDA seeds: SHA-256(\"ferrata-lez/v1/bridge/\" || tag || parts), u64 parts little-endian, the EVM chain id as a 32-byte big-endian word; the account is AccountId::for_public_pda(program, seed). holder(cid, account) hashes the configuration id, then the account's 32 bytes; nullifier(cid, chain, vault, N) the configuration id first (milestone B1: every account a configuration writes is keyed by it).",
             "Refusals exit with one byte, 240-255 (below). The attestation program's codes (ferrata_attestation.idl.json) can surface through an attested import.",
         ],
         "instructions": instructions,
