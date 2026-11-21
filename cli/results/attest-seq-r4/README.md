@@ -1,6 +1,6 @@
 # `ferrata attest` on a running LEZ sequencer (run r4, 21 November 2026)
 
-`bash cli/tests/attest-seq.sh r4` on the Modal build box, tree `bdb8f6f` (the commands of `cli/tests/attest-seq-hook.sh`).
+`bash cli/tests/attest-seq.sh r4` on the Modal build box, tree `2523e3ce` (the commands of `cli/tests/attest-seq-hook.sh`).
 A LEZ v0.4.0-rc1 zone we started (crown-live-3's sequencer, Logos Blockchain node and final programs; LEZ's local
 configuration; dev-mode leader proofs), session A (`lez/crown/session.sh a`, `CROWN_CHAIN=sepolia`: the attestation
 program `0x816d1fef…` deployed, the Sepolia instance `0xa5fb2591…` from `sepolia-2026-11-12`), then the zone again with
