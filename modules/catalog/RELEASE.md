@@ -52,9 +52,9 @@ What it does, in order:
 
 1. **Checks its inputs.** The key file must be the JWK the action's signing expects (an Ed25519 OKP with
    `d` and `x`), and `x` must be the public key of `d` (computed by [`jwk_did.py`](../scripts/jwk_did.py),
-   standard-library Python, its own curve arithmetic, checked against RFC 8032's test vectors), or the signer the catalog declares
-   would not be the key that signs; it refuses anything else before doing anything, and no message ever
-   shows `d`.
+   standard-library Python, its own curve arithmetic, checked against RFC 8032's test vectors), or the
+   signer the catalog declares would not be the key that signs; it refuses anything else before doing
+   anything, and no message ever shows `d`.
 2. **Derives the signer's `did:jwk:`** from the public half (`did:jwk:` + base64url of
    `{"crv":"Ed25519","kty":"OKP","x":…}`, the way `lgx` constructs it) and writes it, with the `indexUrl`
    formed from `ORG/CATALOG_REPO`, into the `logos-repo.json` it generates for the published catalog (from

@@ -14,7 +14,7 @@ published data back from the releases (the source of truth), not from this repos
 |---|---|---|
 | Catalog repository | `<ORG>/<CATALOG_REPO>` | from the publish step's arguments |
 | `logos-repo.json` URL (the catalog's identity clients add) | `https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/logos-repo.json` | — |
-| Signer DID (`trustedSigners[0].did`) | `<did:jwk:…>` | `curl -fsSL https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/logos-repo.json \| jq -r '.trustedSigners[0].did'` |
+| Signer DID (`trustedSigners[0].did`) | `<did:jwk:…>` | `curl -fsSL https://raw.githubusercontent.com/<ORG>/<CATALOG_REPO>/refs/heads/main/logos-repo.json \| jq -r '.trustedSigners[0].did'`, or in the clone below: `git show HEAD:logos-repo.json \| jq -r '.trustedSigners[0].did'` |
 | Catalog commit the submodules were pushed from | `<full-sha>` | `git ls-remote https://github.com/<ORG>/<CATALOG_REPO>.git refs/heads/main \| awk '{print $1}'` |
 | The local assembly it matches | the one-step publish assembled it | `modules/scripts/release-publish.sh <ORG> <CATALOG_REPO> <KEY> --dry-run <dir>` at the same source commit (offline): it lists the same module commits; the catalog commit differs, its `.gitmodules` naming `file://` URLs |
 
@@ -35,17 +35,20 @@ The producing commands, per module `<module>-v<version>`:
 gh release download '<module>-v<version>' --repo '<ORG>/<CATALOG_REPO>' --pattern 'sidecar.json' \
   --output - | jq '{rootHash, sha256, builtVariants, missingVariants, signerDid: .signature.did}'
 
-# the source commit SHA the built package came from: the catalog's submodule pointer
-git clone -q --no-checkout https://github.com/<ORG>/<CATALOG_REPO> && cd <CATALOG_REPO>
-git submodule status 'submodules/<module>'            # <sha> submodules/<module> — the pinned commit
+# the commit the built package came from: the catalog's submodule pointer (the gitlink in its tree)
+git clone -q https://github.com/<ORG>/<CATALOG_REPO> && cd <CATALOG_REPO>
+git ls-tree HEAD submodules/<module>            # 160000 commit <sha>  submodules/<module> — the pinned commit
 
 # that commit is what modules/scripts/export.sh wrote from this repository, and export.sh is reproducible
-# (fixed identity, the source commit's date): check out the source commit its STAGED.json records
-# (`commit`, under rust-lib/staged/, attestor/, monitor/ or vendor/), with LEZ v0.4.0-rc1 (1806e87) beside
-# the repository (scripts/fetch-upstream.sh; the updater also needs lez/methods built), and export again:
+# (fixed identity, the source commit's date): read the source commit its STAGED.json records (`commit`;
+# rust-lib/staged/ for attest and bridge, attestor/, monitor/, vendor/ for the relayer and the updater),
+# check it out in a clean clone of this repository, with LEZ v0.4.0-rc1 (1806e87) beside it
+# (scripts/fetch-upstream.sh; the updater also needs lez/methods built), and export again, keeping any
+# SOURCE_DATE_EPOCH or FERRATA_COMMIT of the shell (a Nix shell sets the first) out of it:
+git submodule update --init submodules/<module>
 git -C submodules/<module> show HEAD:rust-lib/<staged|attestor|monitor|vendor>/STAGED.json | jq -r .commit
 git -C <ferrata checkout> checkout <that commit>
-<ferrata checkout>/modules/scripts/export.sh <module> <scratch>/<module>
+env -u SOURCE_DATE_EPOCH -u FERRATA_COMMIT <ferrata checkout>/modules/scripts/export.sh <module> <scratch>/<module>
 git -C <scratch>/<module> rev-parse HEAD        # must equal the submodule pointer above
 
 # the signature: lgx (logos-package, pinned) checks the package's content hashes and its signature and
