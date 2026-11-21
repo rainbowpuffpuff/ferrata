@@ -38,13 +38,13 @@ use std::process::Command;
 
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use attestor_core::{key_set_hash, verify_certificate, Deployment, FinalTip, SignedAttestation, VerifyError};
+use checkpoint_core::bedrock_0_3_5;
 use checkpoint_core::hash::{sha256_parts, threshold};
 use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::lez::{hash_parsed_block, parse_block, NoVisitor};
-use checkpoint_core::bedrock_0_3_5;
 use checkpoint_core::mantle::{
-    inscription_msg_id, tx_hash, ChannelConfigOp, CheckedInscription, ConfigChange, ElidedInscription, OP_CHANNEL_INSCRIBE,
-    OP_TRANSFER,
+    inscription_msg_id, tx_hash, ChannelConfigOp, CheckedInscription, ConfigChange, ElidedInscription,
+    OP_CHANNEL_INSCRIBE, OP_CHANNEL_TRANSFER, OP_CHANNEL_WITHDRAW, OP_TRANSFER,
 };
 use checkpoint_core::rule_b::{run_checkpoint_b, OutcomeB};
 use checkpoint_core::state::Config;
@@ -183,6 +183,24 @@ fn encode_ops(ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
         }
         Ok(b)
     };
+    // `Inputs` = `u8 n ‖ NoteId·n`; `Outputs` = `u8 n ‖ (value u64 ‖ pk)·n`.
+    let inputs = |p: &Value, out: &mut Vec<u8>| -> Result<()> {
+        let inputs = p["inputs"].as_array().context("inputs")?;
+        out.push(u8::try_from(inputs.len())?);
+        for i in inputs {
+            out.extend(fr(i, "note id")?);
+        }
+        Ok(())
+    };
+    let outputs = |p: &Value, out: &mut Vec<u8>| -> Result<()> {
+        let outputs = p["outputs"].as_array().context("outputs")?;
+        out.push(u8::try_from(outputs.len())?);
+        for o in outputs {
+            out.extend(o["value"].as_u64().context("value")?.to_le_bytes());
+            out.extend(fr(&o["pk"], "pk")?);
+        }
+        Ok(())
+    };
     let mut out = vec![u8::try_from(ops.len())?];
     for op in ops {
         let code = u8::try_from(op["opcode"].as_u64().context("opcode")?)?;
@@ -198,19 +216,21 @@ fn encode_ops(ops: &[Value], reverse_fr: bool) -> Result<Vec<u8>> {
                 out.extend(hexa::<32>(&p["signer"], "signer")?);
             }
             OP_TRANSFER => {
-                let inputs = p["inputs"].as_array().context("inputs")?;
-                out.push(u8::try_from(inputs.len())?);
-                for i in inputs {
-                    out.extend(fr(i, "note id")?);
-                }
-                let outputs = p["outputs"].as_array().context("outputs")?;
-                out.push(u8::try_from(outputs.len())?);
-                for o in outputs {
-                    out.extend(o["value"].as_u64().context("value")?.to_le_bytes());
-                    out.extend(fr(&o["pk"], "pk")?);
-                }
+                inputs(p, &mut out)?;
+                outputs(p, &mut out)?;
             }
-            c => bail!("opcode {c:#04x} in an inscription transaction of this channel: not one LEZ sends"),
+            // `ChannelWithdrawOp { channel_id, inputs }` and `ChannelTransferOp { channel_id, inputs,
+            // outputs }`: LEZ's `publish_atomic_withdraw` puts them after a block's inscription.
+            OP_CHANNEL_WITHDRAW => {
+                out.extend(hexa::<32>(&p["channel_id"], "channel_id")?);
+                inputs(p, &mut out)?;
+            }
+            OP_CHANNEL_TRANSFER => {
+                out.extend(hexa::<32>(&p["channel_id"], "channel_id")?);
+                inputs(p, &mut out)?;
+                outputs(p, &mut out)?;
+            }
+            c => bail!("opcode {c:#04x}: not one this attestor encodes (it encodes 0x00, 0x11, 0x13 and 0x14)"),
         }
     }
     Ok(out)
