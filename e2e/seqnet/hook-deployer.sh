@@ -3,8 +3,9 @@
 # zone runs; drive.sh (mode deployer) has deployed the vault on anvil with vault/script/deploy.sh and this deployer's
 # own settings (FERRATA_* variables), made one smoke-test deposit with the `ferrata` tool, and captured the vault.
 #   a. the LEZ configuration: crown-driver crown-b --operator-only over capture-1 (the stand-in committee's finality
-#      update for the deposit's block, Init with this deployer's roles and caps (CROWN_ROLES_LABEL, CROWN_TOKEN_CAP,
-#      CROWN_GLOBAL_CAP), Register ETH from the vault's registry, ImportRoot)
+#      update for the deposit's block, Init with this deployer's roles and caps (CROWN_ADMIN and CROWN_FREEZE_AUTHORITY,
+#      by default the accounts of two fresh random keys drive.sh made, or CROWN_ROLES_LABEL's derived keys;
+#      CROWN_TOKEN_CAP, CROWN_GLOBAL_CAP), Register ETH from the vault's registry, ImportRoot)
 #   b. on the vault, as its admin: register this deployer's own token with its own denominations and fees, set caps,
 #      announce a fee schedule and let it come into force, hand the admin role to this deployer's own address
 #   c. every setting read back from both chains and compared with what was chosen: checks.txt (PASS or FAIL per line)
@@ -26,8 +27,10 @@ send() { local from="$1"; shift; cast send "$VAULT" "$@" --rpc-url "$RPC" --unlo
 
 # ---- a. LEZ: the configuration, with this deployer's roles and caps ----------------------------------------------
 "$BIN/crown-driver" config-id --identity "$SA" --vault "$VAULT" > "$RUN/lez/config.json"
+if [ -n "${CROWN_ADMIN:-}" ]; then roles="the deployer's own accounts (CROWN_ADMIN, CROWN_FREEZE_AUTHORITY)"
+else roles="keys derived from the label '${CROWN_ROLES_LABEL:-crown}': public, for a local zone only"; fi
 say "LEZ configuration: configId $(jq -r .configId "$RUN/lez/config.json"); admin $(jq -r .controls.admin "$RUN/lez/config.json")," \
-  "freeze authority $(jq -r .controls.freezeAuthority "$RUN/lez/config.json") (keys derived from the label '${CROWN_ROLES_LABEL:-crown}')"
+  "freeze authority $(jq -r .controls.freezeAuthority "$RUN/lez/config.json") ($roles)"
 operator_import
 u 06-status-zone "${F[@]}" status || die "status on the zone"
 
@@ -84,21 +87,35 @@ for i in 0 1; do
 done
 check "second token: deposit cap (capacity)" "$CAP2" "$(cast call "$VAULT" 'tokenCap(address,uint8)(uint256,uint256,uint256)' "$TOKEN2" 0 --rpc-url "$RPC" | head -n 1 | awk '{print $1}')"
 check "ETH: release cap (capacity)" 1000000000000000000 "$(cast call "$VAULT" 'tokenCap(address,uint8)(uint256,uint256,uint256)' $ETH 1 --rpc-url "$RPC" | head -n 1 | awk '{print $1}')"
+# fees(token, 1, i) holds schedule 1's values from its announcement on; feeState's `current` says it is in force.
+check "ETH fee schedule in force (feeState.current)" 1 "$(cast call "$VAULT" 'feeState(address)(uint64,uint64)' $ETH --rpc-url "$RPC" | head -n 1 | awk '{print $1}')"
 for i in 0 1 2; do
   f="$(cast call "$VAULT" 'fees(address,uint256,uint8)(uint256,uint256,uint256,uint256)' $ETH 1 $i --rpc-url "$RPC" | awk '{print $1}' | paste -sd' ')"
   m=$((1000000000000 * 10 ** i)); r=$((2000000000000 * 10 ** i))
-  check "ETH fee schedule 1 in force, denomination $i: mint, relay, burn, checkpoint" "$m $r $m $r" "$f"
+  check "ETH fee schedule 1, denomination $i: mint, relay, burn, checkpoint" "$m $r $m $r" "$f"
 done
+# The LEZ controls as config-id computed them: they reach the chain as configId, a hash over them that the vault pins
+# (lezConfigId, read above) and under which the zone accepted Init (below); the global cap is also read from the zone.
 cfg="$RUN/lez/config.json"
-dflt="$(CROWN_ROLES_LABEL=crown CROWN_TOKEN_CAP= CROWN_GLOBAL_CAP= "$BIN/crown-driver" config-id --identity "$SA" --vault "$VAULT")"
-[ "$(jq -r .controls.admin "$cfg")" != "$(echo "$dflt" | jq -r .controls.admin)" ] && check "LEZ admin is this deployer's, not the default crown/admin" yes yes \
-  || check "LEZ admin is this deployer's, not the default crown/admin" yes no
-[ "$(jq -r .controls.freezeAuthority "$cfg")" != "$(echo "$dflt" | jq -r .controls.freezeAuthority)" ] && check "LEZ freeze authority is this deployer's" yes yes \
-  || check "LEZ freeze authority is this deployer's" yes no
+dflt="$(CROWN_ADMIN= CROWN_FREEZE_AUTHORITY= CROWN_ROLES_LABEL=crown CROWN_TOKEN_CAP= CROWN_GLOBAL_CAP= "$BIN/crown-driver" config-id --identity "$SA" --vault "$VAULT")"
+if [ -n "${CROWN_ADMIN:-}" ]; then
+  check "LEZ admin in configId = the deployer's own account" "$CROWN_ADMIN" "$(jq -r .controls.admin "$cfg")"
+  check "LEZ freeze authority in configId = the deployer's own account" "$CROWN_FREEZE_AUTHORITY" "$(jq -r .controls.freezeAuthority "$cfg")"
+else
+  [ "$(jq -r .controls.admin "$cfg")" != "$(echo "$dflt" | jq -r .controls.admin)" ] && check "LEZ admin differs from the default label's" yes yes \
+    || check "LEZ admin differs from the default label's" yes no
+  [ "$(jq -r .controls.freezeAuthority "$cfg")" != "$(echo "$dflt" | jq -r .controls.freezeAuthority)" ] && check "LEZ freeze authority differs from the default label's" yes yes \
+    || check "LEZ freeze authority differs from the default label's" yes no
+fi
 [ "$(jq -r .configId "$cfg")" != "$(echo "$dflt" | jq -r .configId)" ] && check "the roles and caps enter configId (another configId than the default's)" yes yes \
   || check "the roles and caps enter configId (another configId than the default's)" yes no
-check "LEZ token cap (value units)" "${CROWN_TOKEN_CAP:-unlimited}" "$(jq -r .controls.tokenCap.capacity "$cfg")"
-check "LEZ global cap (value units)" "${CROWN_GLOBAL_CAP:-unlimited}" "$(jq -r .controls.globalCap.capacity "$cfg")"
+check "LEZ token cap in configId (value units)" "${CROWN_TOKEN_CAP:-unlimited}" "$(jq -r .controls.tokenCap.capacity "$cfg")"
+check "LEZ global cap in configId (value units)" "${CROWN_GLOBAL_CAP:-unlimited}" "$(jq -r .controls.globalCap.capacity "$cfg")"
+if [ -n "${CROWN_GLOBAL_CAP:-}" ]; then
+  gate="$(grep -m1 '^  gate Gate' "$RUN/user/06-status-zone.txt" || true)"
+  check "LEZ global cap read from the zone (the gate's mint and burn buckets)" "$CROWN_GLOBAL_CAP $CROWN_GLOBAL_CAP" \
+    "$(echo "$gate" | grep -o -E '(mint|burn): Bucket \{ capacity: [0-9]+' | awk '{print $NF}' | paste -sd' ')"
+fi
 grep -q 'configuration ready' "$RUN/user/06-status-zone.txt" && check "LEZ configuration initialised under this configId" yes yes \
   || check "LEZ configuration initialised under this configId" yes no
 records

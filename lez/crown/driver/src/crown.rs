@@ -131,32 +131,90 @@ fn now_ms() -> u64 {
 // ---------------------------------------------------------------------------------------------
 
 /// The roles of the configuration and its caps: no floor, unlimited caps (e2e/crown/README.md
-/// "Identity of the configuration"). The admin and the freeze authority are throwaway accounts of
-/// derived keys (they act by signing, which admits their accounts); the fee recipient only
-/// receives, and a public account must exist to be admitted, so it is the second of the funded
-/// test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
+/// "Identity of the configuration"). The admin and the freeze authority act by signing, which admits their
+/// accounts; the fee recipient only receives, and a public account must exist to be admitted, so it is the second of
+/// the funded test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
 ///
-/// Another deployer's own configuration (docs/guides/deployer-guide.md §11): `CROWN_ROLES_LABEL` names the
-/// derived keys of the admin and the freeze authority (`<label>/admin`, `<label>/freeze-authority`; default
-/// `crown`), and `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets' capacity in value units,
-/// refilled over a day (default unlimited). They enter `controls`, so `salt` and `configId`: every call of one
-/// configuration (`config-id`, then `crown-b`) must see the same values.
-pub fn controls() -> Controls {
+/// The admin and the freeze authority: `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY`, the account ids (`0x` and 64 hex
+/// digits) of accounts whose keys the deployer holds (`new-role-keys` makes two from fresh random keys); without them,
+/// the accounts of the keys derived from `CROWN_ROLES_LABEL` (`<label>/admin`, `<label>/freeze-authority`; default
+/// `crown`, the recorded runs'). A derived key is SHA-256 of a public prefix, the label and a counter
+/// (`keys::derived_key`): anyone who reads the label has it, so a label is for a local zone or a recorded run, never
+/// for a configuration that holds value. `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets'
+/// capacity in value units, refilled over a day (unset or empty: unlimited; anything but a whole number is refused).
+/// They enter `controls`, so `salt` and `configId`: every call of one configuration (`config-id`, then `crown-b`)
+/// must see the same values.
+pub fn try_controls() -> Result<Controls> {
     let unlimited = CapParams { capacity: UNLIMITED, refill_per_second: 0 };
-    let cap = |var: &str| match std::env::var(var).ok().and_then(|v| v.trim().parse::<u128>().ok()) {
-        Some(capacity) => CapParams { capacity, refill_per_second: (capacity / 86_400).max(1) },
-        None => unlimited,
+    let cap = |var: &str| -> Result<CapParams> {
+        match std::env::var(var).ok().map(|v| v.trim().to_string()).filter(|v| !v.is_empty()) {
+            None => Ok(unlimited),
+            Some(v) => {
+                let capacity: u128 = v.parse().map_err(|_| anyhow!("{var}={v:?}: not a whole number of value units"))?;
+                Ok(CapParams { capacity, refill_per_second: (capacity / 86_400).max(1) })
+            }
+        }
+    };
+    let account = |var: &str| -> Result<Option<[u8; 32]>> {
+        let Some(v) = std::env::var(var).ok().filter(|v| !v.trim().is_empty()) else { return Ok(None) };
+        let bytes = hex::decode(v.trim().trim_start_matches("0x")).map_err(|e| anyhow!("{var}={v:?}: {e}"))?;
+        let id: [u8; 32] = bytes.try_into().map_err(|_| anyhow!("{var}={v:?}: an account id is 32 bytes"))?;
+        Ok(Some(id))
     };
     let label = std::env::var("CROWN_ROLES_LABEL").unwrap_or_else(|_| "crown".to_string());
-    let fee_recipient = account_of(&lez_test_payers().expect("LEZ's test keys")[3]);
-    Controls {
-        admin: *account_of(&derived_key(&format!("{label}/admin"))).value(),
-        freeze_authority: *account_of(&derived_key(&format!("{label}/freeze-authority"))).value(),
+    let (admin, freeze_authority) = match (account("CROWN_ADMIN")?, account("CROWN_FREEZE_AUTHORITY")?) {
+        (Some(a), Some(f)) => {
+            ensure!(a != f, "CROWN_ADMIN and CROWN_FREEZE_AUTHORITY must be two accounts");
+            (a, f)
+        }
+        (None, None) => (
+            *account_of(&derived_key(&format!("{label}/admin"))).value(),
+            *account_of(&derived_key(&format!("{label}/freeze-authority"))).value(),
+        ),
+        _ => bail!("set both CROWN_ADMIN and CROWN_FREEZE_AUTHORITY, or neither"),
+    };
+    let fee_recipient = account_of(&lez_test_payers().context("LEZ's test keys")?[3]);
+    Ok(Controls {
+        admin,
+        freeze_authority,
         fee_recipient: *fee_recipient.value(),
         floor: CapParams { capacity: 0, refill_per_second: 0 },
-        token_cap: cap("CROWN_TOKEN_CAP"),
-        global_cap: cap("CROWN_GLOBAL_CAP"),
+        token_cap: cap("CROWN_TOKEN_CAP")?,
+        global_cap: cap("CROWN_GLOBAL_CAP")?,
+    })
+}
+
+/// [`try_controls`], which `main` runs first, so that a wrong setting stops the driver before it does anything.
+pub fn controls() -> Controls {
+    try_controls().unwrap_or_else(|e| panic!("{e:#}"))
+}
+
+/// Two fresh keys from the operating system's randomness, for the configuration's admin and freeze authority:
+/// written to `out` (`lez-admin.key`, `lez-freeze-authority.key`: 32 bytes in hex, mode 600), their accounts returned
+/// as `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY` take them. Nothing derives them: only `out` holds them.
+pub fn new_role_keys(out: &Path) -> Result<Value> {
+    use std::io::Read;
+    fs::create_dir_all(out)?;
+    let mut ids = Vec::new();
+    for name in ["lez-admin", "lez-freeze-authority"] {
+        let key = loop {
+            let mut bytes = [0u8; 32];
+            fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+            if let Ok(key) = lee::PrivateKey::try_new(bytes) {
+                break (key, bytes);
+            }
+        };
+        let path = out.join(format!("{name}.key"));
+        ensure!(!path.exists(), "{} exists: keep it, or move it away first", path.display());
+        fs::write(&path, hex::encode(key.1))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
+        }
+        ids.push(h(account_of(&key.0).value()));
     }
+    Ok(json!({ "admin": ids[0], "freezeAuthority": ids[1], "keys": out.display().to_string() }))
 }
 
 pub fn fee_recipient() -> AccountId {

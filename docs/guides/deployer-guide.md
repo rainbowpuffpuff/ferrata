@@ -12,8 +12,10 @@ relative to the repository root.
 deployment script on local chains and forks of Sepolia (one transaction per run, limits from the node), and by the
 owner on public Sepolia for the live round trips (EVIDENCE rows 41, 91, 142; the sources verified, row 122); the LEZ
 programs through LEZ's own program loader on zones we ran; the one-command deployment of a release, tested on anvil
-(row 53). A **second deployer** followed this guide from a fresh clone and stood up its own configuration, with its
-own roles, fees, token, caps and finality settings, on anvil and a local LEZ zone: §11, recorded.
+(row 53). The walkthrough of §11 was followed from a fresh clone, every input of its step 0 built from source, and
+stood up a configuration of its own, with its own roles, fees, token, caps and finality settings, on anvil and a local
+LEZ zone: recorded there. It was run on our build box, so it shows that the steps work as written, not that a stranger
+found them clear.
 
 **Where each clause is answered (RFP-022 R.14).** Registering tokens: §3 steps 5 and 7, §5 ("Registry bounds"), §11
 step 3, items 3 to 5. Setting fees: §2, §5 ("Fee schedules"), §11 step 3, item 5. Configuring the admin and the freeze
@@ -250,7 +252,13 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
   role's actor. The freeze authority's 14-day handover, an M-of-N freeze authority (`Cosigned`), LEZ-side
   watchers' 12-hour pauses and the keyless `Sunset` are built on LEZ
   ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §14, EVIDENCE row 74); the admin's own handover
-  is not.
+  is not. **Put accounts only you control into `controls`.** `crown-driver` takes them as `CROWN_ADMIN` and
+  `CROWN_FREEZE_AUTHORITY` (account ids), and `crown-driver new-role-keys --out DIR` makes two from fresh random
+  keys, which only `DIR` holds (§11 does this by default). Its other way, `CROWN_ROLES_LABEL`, derives both keys from
+  a label as SHA-256 of a public prefix, the label and a counter ([`keys.rs`](../../lez/live/driver/src/keys.rs)):
+  anyone who reads the label has the keys, and with them `SetCap`, `Freeze` and `Sunset`. Use a label only on a
+  local zone, never for a configuration that holds value ([`lez/testnet04/NOTES.md`](../../lez/testnet04/NOTES.md)
+  says the same of the label keys).
 - **Registry bounds** checked by `Register` before any attestation: 1 to 8 denominations, strictly
   increasing, each an exact multiple of a power-of-ten `lezUnit` (at most `10^decimals`); relay fees at
   most 1% and multiples of `lezUnit`; non-zero `unitWeight`; schedule 0 without protocol fees. Refused
@@ -353,6 +361,12 @@ The attestation side's migration (successor and replacement instances) is in
   not deployed: EVIDENCE row 143);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
+- a tool for the LEZ configuration's role messages: `crown-driver` puts your own accounts into `controls` (§5), but
+  no shipped tool sends the admin's `ProposeRoles` (to hand the freeze authority to an M-of-N set) or a multisig's
+  `Cosigned` (both built and tested in the harness, EVIDENCE row 74);
+- published build outputs: the zone's bundle and the R0BF programs of §11 step 0 are built from source; publishing
+  them (as release assets, with their sha256) would save a deployer that hour of building and is the maintainer's
+  step, not done;
 - deeper inbound finality settings;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
 - `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
@@ -363,25 +377,44 @@ Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md
 
 ## 11. Walkthrough: a second deployer's own configuration, on anvil and a local LEZ zone
 
-This is the guide followed end to end by someone who is not the author: a fresh clone of this repository stands up its
-own, independently configured deployment, choosing its own roles, fees, token, caps and finality depth, and reads
-every one of them back from both chains. Everything runs on one machine: a local anvil chain (chain id 11155111, the
+This is the guide followed end to end from a fresh clone: the clone builds every input from source (step 0), stands
+up its own, independently configured deployment, choosing its own roles, fees, token, caps and finality depth, and
+reads them back from both chains (what is read from where: step 3, item 6). Everything runs on one machine: a local anvil chain (chain id 11155111, the
 light client's configuration being Sepolia's) and a local LEZ v0.4.0-rc1 zone (LEZ's own sequencer and a Logos
 Blockchain node, one validator). One stand-in, named: anvil has no beacon chain, so a committee whose keys the run
 holds finalizes anvil's blocks for LEZ's light client (`CROWN_CHAIN=stand-in`); everything else is the deployment as
 §3 describes it. Nothing is sent to any public network.
 
-**Step 0. The tree and what it builds against.** A clone, with LEZ v0.4.0-rc1 beside it (`../upstream/lez-v0.4.0-rc1`,
-[`quickstart.md`](quickstart.md)) and the zone's inputs where [`e2e/seqnet/run.sh`](../../e2e/seqnet/run.sh) looks for
-them (`../tmp/miniapp-sequencer/inputs/`: the LEZ bundle of the live run, with LEZ's sequencer and node and the final
-programs of [`image-ids.md`](../image-ids.md), and the final checkpoint and release programs); Foundry 1.3.6, Rust,
-`jq`, `curl`, and libpcsclite's development files (`sudo apt-get install libpcsclite-dev` on Debian or Ubuntu,
-`pcsc-lite-devel` on Fedora): LEZ's wallet, which the `ferrata` tool links, builds keycard support. The first
-walkthrough from a fresh clone stopped at that build without them; CI's `roundtrip` job installs them too.
+**Step 0. The tree and what it builds.** A Linux machine with about 16 cores, 64 GB of memory and 60 GB of disk
+(the build box's size; the builds below take about an hour there), Rust ([`rustup`](https://rustup.rs): each
+directory's `rust-toolchain.toml` picks its version), Foundry 1.3.6, `git`, `jq`, `curl`, `zstd`, `python3`,
+`clang`, `cmake`, `protobuf-compiler`, `pkg-config`, `libssl-dev`, and libpcsclite's development files (`sudo apt-get
+install libpcsclite-dev` on Debian or Ubuntu, `pcsc-lite-devel` on Fedora): LEZ's wallet, which the `ferrata` tool
+links, builds keycard support (an earlier walkthrough from a fresh clone stopped there without them). Everything else
+is built from source, beside the clone (`../upstream`, `../risc0-home-lez`, `../tmp`), and nothing is sent to any
+network but the downloads of sources and toolchains:
 
 ```sh
 git clone https://github.com/rainbowpuffpuff/ferrata.git && cd ferrata
+scripts/fetch-upstream.sh                     # LEZ v0.4.0-rc1 and the Logos Blockchain revision it pins, beside the clone
+RISC0_HOME_LEZ=$PWD/../risc0-home-lez scripts/ci/install-risc0.sh    # RISC Zero 3.0.5 and both guest toolchains
+export PATH=$HOME/.risc0/bin:$PATH                                     # r0vm, as rzup installs it
+(cd vault && forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 \
+  risc0/risc0-ethereum@v3.0.0 && FOUNDRY_OFFLINE=false forge build)   # the vault's pinned libraries and solc 0.8.26
+# The final programs, rebuilt and compared with docs/image-ids.md (any path gives the same ids):
+scripts/reproduce-image-ids.sh build --out ../tmp/programs && scripts/reproduce-image-ids.sh compare --out ../tmp/programs
+# LEZ's sequencer and the Logos Blockchain node (into ../tmp/crown/live), then the zone's bundle (lez/crown/build.sh):
+FERRATA_LIVE_JOBS=$(nproc) FERRATA_LIVE_NICE=0 FERRATA_LIVE_TMP=$PWD/../tmp/crown/live bash lez/live/run.sh build-sequencer
+FERRATA_LIVE_JOBS=$(nproc) FERRATA_LIVE_NICE=0 FERRATA_LIVE_TMP=$PWD/../tmp/crown/live bash lez/live/run.sh build-bedrock
+CROWN_PROGRAMS=$PWD/../tmp/programs/programs bash lez/crown/build.sh all
+export SEQNET_BUNDLE=$PWD/../tmp/crown-lez/bundle.tar.zst SEQNET_R0BF=$PWD/../tmp/programs/r0bf
 ```
+
+`compare` must print a match for every program: the zone then runs exactly the programs of
+[`image-ids.md`](../image-ids.md) (`ferrata_lez.bin` `0x816d1fef…`, `ferrata_bridge.bin` `0xccde6171…`, the
+checkpoint and release programs the vault pins). The sequencer and the node need not match anyone's bytes: no image
+id names them. (The recorded runs before 21 November used the live run's bundle instead, which is not published:
+§10.)
 
 **Step 1. Your settings.** The run below used these; choose your own.
 
@@ -393,7 +426,7 @@ git clone https://github.com/rainbowpuffpuff/ferrata.git && cd ferrata
 | Watchers (up to three) | `FERRATA_WATCHERS` | `0x5ec0d000000000000000000000000000000a7001,0x5ec0d000000000000000000000000000000a7002` | admin's proposal, 14 days later |
 | Finality depth outbound: the candidate's wait Δ (rule B), s | `SEQNET_DELTA` (passed to `FERRATA_DELTA`) | 5,400 | `deltaFloor` immutable; `delta` raise-only |
 | Release delay per token, its floor, the revocation window, s | `FERRATA_RELEASE_DELAY`, `FERRATA_MIN_RELEASE_DELAY`, `FERRATA_REVOKE_WINDOW` | 600; 300; 172,800 | immutable floor and window; the admin sets the delay within them |
-| The LEZ configuration's admin and freeze authority | `CROWN_ROLES_LABEL` (the label of their derived keys) | `deployer-two` | inside `configId` |
+| The LEZ configuration's admin and freeze authority | `CROWN_ADMIN`, `CROWN_FREEZE_AUTHORITY` (account ids of keys you hold); unset: two fresh random keys, made by the run and kept in its work directory | unset: fresh random keys (the walkthrough before 21 November used `CROWN_ROLES_LABEL=deployer-two`, keys anyone can derive: §5) | inside `configId` |
 | LEZ mint and burn caps, per token and global, value units a day | `CROWN_TOKEN_CAP`, `CROWN_GLOBAL_CAP` | 3,000,000,000; 9,000,000,000 | inside `configId`; the LEZ admin sets caps above the floor |
 | Inbound finality depth | — | Ethereum finality | not configurable (a deeper setting would not stop a captured committee, §2) |
 
@@ -403,7 +436,9 @@ export FERRATA_FREEZE_AUTHORITY=0x5ec0d000000000000000000000000000000f2001
 export FERRATA_FEE_RECIPIENT=0x5ec0d000000000000000000000000000000fee01
 export FERRATA_WATCHERS=0x5ec0d000000000000000000000000000000a7001,0x5ec0d000000000000000000000000000000a7002
 export SEQNET_DELTA=5400 FERRATA_RELEASE_DELAY=600 FERRATA_MIN_RELEASE_DELAY=300 FERRATA_REVOKE_WINDOW=172800
-export CROWN_ROLES_LABEL=deployer-two CROWN_TOKEN_CAP=3000000000 CROWN_GLOBAL_CAP=9000000000
+export CROWN_TOKEN_CAP=3000000000 CROWN_GLOBAL_CAP=9000000000
+# Your own LEZ admin and freeze authority, if you hold their keys elsewhere (otherwise the run makes two fresh ones):
+# export CROWN_ADMIN=0x<64 hex digits> CROWN_FREEZE_AUTHORITY=0x<64 hex digits>
 ```
 
 **Step 2. Run it.** One command builds the tools from this clone (the vault, `ferrata`, `crown-driver` and the
@@ -419,7 +454,8 @@ bash e2e/seqnet/run.sh deployer second-deployer-1
 1. **LEZ: the programs and an instance.** A new zone; the attestation and bridge programs deployed through LEZ's
    program loader, immutable, checked to be the final images; an attestation instance (`lez/crown/session.sh a`).
 2. **`configId`**, from the zone's identity, the predicted vault address and your LEZ roles and caps
-   (`crown-driver config-id`; the roles are the accounts of `<label>/admin` and `<label>/freeze-authority`).
+   (`crown-driver config-id`; the roles are `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY`, or the accounts of two fresh
+   random keys, `crown-driver new-role-keys`, kept in the run's work directory and never in its records).
 3. **EVM: the vault**, by `vault/script/deploy.sh` (§4) in mode (B), one transaction per run: RISC Zero's Groth16
    verifier, the emergency stop, the library, the vault with your freeze authority, fee recipient, watchers, Δ,
    revocation window and release delays; ETH and the test token registered; the stop's owner renounced; the checks.
@@ -434,15 +470,18 @@ bash e2e/seqnet/run.sh deployer second-deployer-1
    release delay; ETH's deposit and release caps (1 ETH a day) and a global deposit cap; a fee schedule for ETH
    announced (mint and burn fees 0.1%, checkpoint fees 0.2%), seven days of anvil's clock let pass, applied; the admin
    role handed to your address in two steps.
-6. **Everything read back** from both chains (`cast call` on the vault's getters, `ferrata status` on the vault and
-   the zone, `crown-driver config-id` for the LEZ controls) and compared with what you chose: `checks.txt`, one PASS
-   or FAIL per setting; the run fails on any FAIL.
+6. **Everything read back** and compared with what you chose: `checks.txt`, one PASS or FAIL per setting; the run
+   fails on any FAIL. The vault's settings are read from anvil (`cast call` on its getters, `feeState` for the
+   schedule in force). The LEZ controls are compared as `crown-driver config-id` computes them: they reach the zone
+   as `configId`, a hash over them that the vault pins (`lezConfigId`, read from anvil) and under which the zone
+   accepted `Init` (`ferrata status` on the zone); the global cap is also read from the zone itself.
 
 **Step 4. Look at your deployment** with the admin view ([`admin/index.html`](../../admin/index.html), or
 `node admin/dump.mjs http://127.0.0.1:8545 <vault> <deployment block>`) while anvil runs, and `ferrata status`.
 
-**Recorded:** [`runs/2026-11-21-second-deployer/`](runs/2026-11-21-second-deployer/README.md), from a fresh clone of
-this branch on the build box.
+**Recorded:** [`runs/2026-11-21-second-deployer/`](runs/2026-11-21-second-deployer/README.md): fresh clones of this
+branch on the build box; the first with the live run's bundle placed beside the clone and label-derived LEZ roles,
+the second with step 0 as written here and fresh random LEZ roles.
 
 **What this walkthrough does not show:** a public network (Sepolia and LEZ testnet 0.4: the live round trips of
 EVIDENCE rows 41, 91, 142 were the owner's deployments); real proofs (none is needed to stand a deployment up); your

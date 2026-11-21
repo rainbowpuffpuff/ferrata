@@ -20,13 +20,15 @@
 #                         (seqnet-chain) (hook-lezcore.sh)
 #   run.sh deployer NAME  a second deployer's own configuration (docs/guides/deployer-guide.md §11): the vault by
 #                         vault/script/deploy.sh with its FERRATA_* settings and RISC Zero's own Groth16 verifier, the LEZ
-#                         configuration with its roles and caps (CROWN_ROLES_LABEL, CROWN_TOKEN_CAP, CROWN_GLOBAL_CAP),
+#                         configuration with its roles and caps (CROWN_ADMIN and CROWN_FREEZE_AUTHORITY, by default
+#                         two fresh random keys; CROWN_TOKEN_CAP, CROWN_GLOBAL_CAP),
 #                         its token, caps, fee schedule and admin handover, every value read back (hook-deployer.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
 #
-# Inputs (beside the repository, spike/tmp/miniapp-sequencer/inputs/, put on the box with mrun --put): the crown-live-3
+# Inputs (beside the repository, spike/tmp/miniapp-sequencer/inputs/, put on the box with mrun --put; or built from
+# source and named by SEQNET_BUNDLE and SEQNET_R0BF, as docs/guides/deployer-guide.md §11 step 0 does): the crown-live-3
 # LEZ bundle (bundle-crown-live-3.tar.zst, sha256 0013bab1...: sequencer_service, the node, r0vm, the final programs
 # ferrata_lez.bin 0x816d1fef... and ferrata_bridge.bin 0xccde6171...) and the final R0BF programs (r0bf/checkpoint_b.bin
 # 0xf8116722..., r0bf/release.bin 0xb64900bc...), docs/image-ids.md.
@@ -39,6 +41,9 @@ REPO="$(cd "$HERE/../.." && pwd)"
 BESIDE="$(cd "$REPO/.." && pwd)"
 T="${SEQNET_TMP:-$BESIDE/tmp/miniapp-sequencer}"
 IN="$T/inputs"
+# The zone's bundle and the R0BF programs: the live run's (in $IN), or the ones step 0 of the deployer guide's §11
+# builds from source (SEQNET_BUNDLE: lez/crown/build.sh's bundle.tar.zst; SEQNET_R0BF: reproduce-image-ids.sh's r0bf/).
+BUNDLE="${SEQNET_BUNDLE:-$IN/bundle-crown-live-3.tar.zst}"
 TGT="$T/target-lez"                                  # one target directory for cli/ and lez/crown/driver (LEZ's crates)
 mkdir -p "$T/logs"                                   # a fresh clone's first run has none (found by a second deployer)
 export CARGO_TERM_COLOR=never PATH="$HOME/.foundry/bin:$HOME/.cargo/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
@@ -66,9 +71,9 @@ build() {
   mkdir -p "$T/bin"
   cp "$TGT/release/ferrata" "$TGT/release/ferrata-relayer" "$TGT/release/seqnet-fund" "$TGT/release/seqnet-txs" \
      "$TGT/release/crown-driver" "$REPO/checkpoint/target/release/realblocks-crown" "$REPO/bridge/target/release/ferrata-e2e" "$T/bin/"
-  say "the zone's bundle: crown-live-3's, with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
+  say "the zone's bundle: $(basename "$BUNDLE"), with this tree's crown-driver and session.sh (lez/crown/build.sh repack)"
   mkdir -p "$T/crown-lez/bin"; cp "$T/bin/crown-driver" "$T/crown-lez/bin/crown-driver"
-  CROWN_LEZ_TMP="$T/crown-lez" bash "$REPO/lez/crown/build.sh" repack "$IN/bundle-crown-live-3.tar.zst" > "$L/repack.log" 2>&1 \
+  CROWN_LEZ_TMP="$T/crown-lez" bash "$REPO/lez/crown/build.sh" repack "$BUNDLE" > "$L/repack.log" 2>&1 \
     || { tail -n 20 "$L/repack.log"; die "repack"; }
   tail -n 8 "$L/repack.log"
   ( cd "$T/bin" && sha256sum * ) | tee "$T/bin/SHA256SUMS"
