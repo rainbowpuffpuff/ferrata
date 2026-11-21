@@ -96,10 +96,10 @@ pub struct AttestArgs {
     /// The gas limit each transaction declares.
     #[arg(long, default_value_t = 10_000_000)]
     gas_limit: u64,
-    /// Send what the dry run shows (with --yes).
-    #[arg(long)]
+    /// Send what the dry run shows (with --yes); may follow the command.
+    #[arg(long, global = true)]
     send: bool,
-    #[arg(long)]
+    #[arg(long, global = true)]
     yes: bool,
     /// Append the run's record (JSON lines: every dry run and every receipt) to this file.
     #[arg(long)]
