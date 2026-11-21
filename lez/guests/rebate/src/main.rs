@@ -43,19 +43,20 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
     };
     match state {
         None => match borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)? {
-            RebateMessage::Configure { ferrata, instance_id, rebate } => {
-                if input.receiver != pool_actor(program, &ferrata, &instance_id) {
+            RebateMessage::Configure { terms } => {
+                // The address commits to the terms: at `pool(terms)` only `terms` can be written.
+                if input.receiver != pool_actor(program, &terms) {
                     return Err(code::WRONG_RECEIVER);
                 }
-                let pool = Pool { ferrata, instance_id, rebate, paid_slot: 0, paid_count: 0, paid_total: 0 };
+                let pool = Pool { terms, paid_slot: 0, paid_count: 0, paid_total: 0 };
                 Ok(Response::set_state(encode(&RebateState::Configuring(pool)))
-                    .send_sync(instance_actor(ferrata, &instance_id), &Message::Read))
+                    .send_sync(instance_actor(terms.ferrata, &terms.instance_id), &Message::Read))
             }
             RebateMessage::Land { .. } => Err(code::NOT_CONFIGURED),
         },
         // The instance's state when the pool is created: its finalized slot is already paid for.
         Some(RebateState::Configuring(mut pool)) => {
-            if input.from != Some(instance_actor(pool.ferrata, &pool.instance_id)) {
+            if input.from != Some(instance_actor(pool.terms.ferrata, &pool.terms.instance_id)) {
                 return Err(code::WRONG_SENDER);
             }
             pool.paid_slot = finalized_slot(&input.message)?;
@@ -66,8 +67,8 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
             RebateMessage::Land { job_id, payee } => {
                 // In order, each call's subtree completing before the next: the pool's balance, the instance, the
                 // update's last step (a refusal there ends the transaction), the instance after it.
-                let instance = instance_actor(pool.ferrata, &pool.instance_id);
-                let job = job_actor(pool.ferrata, &pool.instance_id, &job_id);
+                let instance = instance_actor(pool.terms.ferrata, &pool.terms.instance_id);
+                let job = job_actor(pool.terms.ferrata, &pool.terms.instance_id, &job_id);
                 let balance = Actor::native_balance(input.receiver.account_id);
                 Ok(Response::set_state(encode(&RebateState::Landing { pool, payee, balance: None, before: None }))
                     .send_sync(balance, &NativeMessage::ReadState)
@@ -78,7 +79,7 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
         },
         Some(RebateState::Landing { mut pool, payee, balance, before }) => {
             let own_balance = Actor::native_balance(input.receiver.account_id);
-            let instance = instance_actor(pool.ferrata, &pool.instance_id);
+            let instance = instance_actor(pool.terms.ferrata, &pool.terms.instance_id);
             if input.from == Some(own_balance) && balance.is_none() {
                 let reply: StateReply = borsh::from_slice(&input.message).map_err(|_| code::BAD_REPLY)?;
                 let held: Balance = decode_balance(&reply.state).map_err(|_| code::BAD_REPLY)?;
@@ -93,15 +94,16 @@ fn handle(input: &ReceiveInput) -> Result<Response, u8> {
                 let landing = RebateState::Landing { pool, payee, balance, before: Some(slot) };
                 return Ok(Response::set_state(encode(&landing)));
             };
-            let amount = pool.rebate.min(balance.unwrap_or(0));
-            if slot <= before || amount == 0 {
-                // Landed, but no advance in this transaction (or nothing to pay): the update stands, nothing is paid.
+            let amount = pool.earned(before, slot, balance.unwrap_or(0));
+            if amount == 0 {
+                // Landed, but no advance in this transaction, an advance short of `min_gap` since the last one paid
+                // for, or nothing to pay: the update stands, nothing is paid.
                 return Ok(Response::set_state(encode(&RebateState::Ready(pool))));
             }
             pool.paid_slot = slot;
-            pool.paid_count += 1;
-            pool.paid_total += amount;
-            let seed = pool_seed(&pool.ferrata, &pool.instance_id);
+            pool.paid_count = pool.paid_count.saturating_add(1);
+            pool.paid_total = pool.paid_total.saturating_add(amount);
+            let seed = pool_seed(&pool.terms);
             let pay = custody_transfer(input.receiver.account_id, seed, payee, amount);
             Ok(Response::set_state(encode(&RebateState::Ready(pool))).send(pay))
         }
