@@ -10,7 +10,7 @@ request reads: the program reads records by key only, so the copies weigh on the
 statements cannot see them; the accounts measured in sections 1 and 4 are written by real transactions. Every
 charge in sections 2 and 3 is asserted equal at every K before it is printed.
 
-Measured 2026-11-21 on the build box (a Modal container: 16 CPUs and 64 GiB at most; its CPU model is not reported inside the sandbox), commit eecd5208 (the binary of that commit; this file's later commits change nothing it measures).
+Measured 2026-11-21 on the build box (a Modal container: 16 CPUs of quota and 64 GiB at most; its CPU model is not reported inside the sandbox), commit 2bebbeea (`perf_state.rs` as of 2c969c7f).
 
 
 ## 1. Attestation program: account sizes
@@ -25,10 +25,10 @@ Measured 2026-11-21 on the build box (a Modal container: 16 CPUs and 64 GiB at m
 
 | records added | serialized state (B) | serialization (s) | account (WETH: code hash): exec gas | stor gas | transitions | storage slot, value >= 1: exec gas | stor gas | transitions | event log (receipt of 7 logs): exec gas | stor gas | transitions | event log (largest receipt): exec gas | stor gas | transitions | one EIP-2935 hop, then a slot: exec gas | stor gas | transitions |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 0 | 2,829,379 | 0.005 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
-| 1,000 | 3,282,379 | 0.008 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
-| 10,000 | 7,359,379 | 0.026 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
-| 100,000 | 48,129,379 | 0.274 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
+| 0 | 2,829,379 | 0.002 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
+| 1,000 | 3,282,379 | 0.003 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
+| 10,000 | 7,359,379 | 0.022 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
+| 100,000 | 48,129,379 | 0.228 | 166,249 | 4,356 | 1 | 275,865 | 7,338 | 1 | 93,316 | 2,519 | 1 | 1,615,769 | 58,708 | 1 | 499,277 | 13,578 | 1 |
 
 Every statement was charged the same execution and storage gas at every K (asserted).
 
@@ -70,6 +70,15 @@ Every statement was charged the same execution and storage gas at every K (asser
 | 100,000 | 48,128,874 | update_1 as finality update Finish (step 3) | 3,725,955 | 527 |
 
 Every step was charged the same execution and storage gas at every K (asserted).
+
+## 4a. Bridge program: root imports and the deposits each covers (RFP-022 P.2)
+
+| import | leaves it covers | newly covered | exec gas | storage gas | exec gas per newly covered deposit |
+|---|---:|---:|---:|---:|---:|
+| ImportRoot A n=5 | 5 | 5 | 230,731 | 1,895 | 46,146 |
+| ImportRoot A n=8 | 8 | 3 | 236,224 | 2,025 | 78,741 |
+| ImportRoot A n=6 (lagging count) | 6 | 0 | 236,224 | 2,025 | — (none new) |
+| ImportRoot B n=8 | 8 | 8 | 236,202 | 1,918 | 29,525 |
 
 ## 4. Bridge program: accounts created by real transactions
 

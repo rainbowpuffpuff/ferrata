@@ -11,7 +11,9 @@ out="$REPO/lez/results/perf-state.md"
 {
   sed -n '2,$p' "$REPO/bench/perf/state-header.md"
   echo
-  echo "Measured $(date -u +%F) on $(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | sed "s/^ //") ($(nproc --all) CPUs visible), commit ${FERRATA_HEAD:-$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)}."
+  model="$(grep -m1 "model name" /proc/cpuinfo | cut -d: -f2 | sed "s/^ //")"
+  [ "$model" = unknown ] && model="the build box (its CPU model is not reported inside the sandbox)"
+  echo "Measured $(date -u +%F) on $model ($(nproc --all) CPUs visible), commit ${FERRATA_HEAD:-$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)}."
   echo
   target/debug/perf_state | sed '1d'
 } > "$out"
