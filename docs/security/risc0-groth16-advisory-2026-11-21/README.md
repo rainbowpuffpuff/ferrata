@@ -67,7 +67,8 @@ calls: the same releases revert `GlobalReleaseCapExceeded`, a deposit `GlobalDep
 other address `NotAdmin`; the four vaults accept both calls. Through the timelock: a new freeze authority freezes
 releases and checkpoints and retires the vault, until the freeze lapses after 30 days unless renewed.
 
-**Status:** the owner's action is pending as of this note; this line changes when the caps read zero on chain.
+**Status, 21 November 2026:** the owner has not sent the cap transactions; the caps are unlimited, as read at block
+12,183,432. This line changes when the caps read zero on chain.
 
 **2. Our proofs as evidence.** Our provers made every seal and receipt in this tree from the recorded inputs, but a
 3.0.x verifier accepting one no longer shows anyone else that its claim is true. EVIDENCE row 149 (our seals accepted
