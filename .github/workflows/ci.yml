@@ -149,6 +149,27 @@ jobs:
         working-directory: vault
         run: forge test --no-match-contract PrivacySuite
 
+  # The Logos Core modules' crates, staged as the module builder sees them, resolve with their committed Cargo.lock
+  # files (scripts/ci/modules-resolve.sh): a manifest change in a crate a module vendors (cli/, lez/wire, ...) that
+  # the module does not follow fails here. ferrata_updater_module is left out (its staging needs lez/'s guests).
+  modules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain; ferrata_relayer_module, as modules/scripts/native.sh)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - name: Every module's staged crate resolves with its committed Cargo.lock
+        run: scripts/ci/modules-resolve.sh
+
   links:
     runs-on: ubuntu-latest
     steps:
