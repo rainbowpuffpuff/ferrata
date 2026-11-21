@@ -21,18 +21,18 @@ on:
         type: boolean
         default: false
 
-# Forked repos default to a read-only GITHUB_TOKEN.
-permissions:
-  contents: write
-
 jobs:
   discover:
     runs-on: ubuntu-latest
+    # Least privilege, on the job: this scan only needs to read the
+    # checked-out .gitmodules.
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.scan.outputs.matrix }}
       count: ${{ steps.scan.outputs.count }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4 — the same pin logos-modules-release-action v1.8 uses
       - id: scan
         shell: bash
         run: |
@@ -56,6 +56,10 @@ jobs:
   release:
     needs: discover
     if: ${{ needs.discover.outputs.count != '0' }}
+    # Least privilege, on the job: contents alone, for the release and its
+    # assets (a fork's GITHUB_TOKEN starts read-only).
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
