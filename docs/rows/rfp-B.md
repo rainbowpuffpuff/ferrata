@@ -14,9 +14,11 @@ box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "mea
 | RFP-021 VS.4 | in part | in part (the monitor gap closed; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence alarm and the consumer's freeze hook built and tested |
 | RFP-021 U.4 | waits on Logos | **shown** (with SPEL's v0.4 pull request; see the caveat) | SPEL PR #301's own generator makes the attestation program's IDL from `lez/wire`: 0 differences from ours; SPEL's decoder reads 905 of 905 recorded messages |
 | RFP-022 U.4 | waits on Logos | in part | The same generator stops at a tuple in `BridgeMessage::Spend`; with our 23-line SPEL patch (drafted, not opened) it makes the bridge's IDL, 0 differences from ours |
+| RFP-021 U.1 | in part | **shown** | `ferrata_attest_module` in a headless Logos Core beside `lez_core` on a LEZ zone we ran: its LEZ reads through `lez_core` byte-equal to the plain path; an update's job and attestations sent through `lez_core`, applied or refused on the zone as the module's dry runs said |
+| RFP-021 F.9 | in part | in part (blocked on Logos for the last clause) | `verify_checkpoint`'s beacon checks through Logos Core's `beacon_api_module`, live in Logos Core (3 of 3 agree); the same check drafted as a method of Logos's `beacon_api_module` (applies, 32 of 32 tests) |
 | RFP-021 U.2 | in part | **shown** | `ferrata attest` (cli/) on a LEZ v0.4.0-rc1 zone we ran: configuration read, updates submitted, attestations of slot, account and log tuples with predicates, dry runs whose codes (0, 130, 124, 23, 52) equal the zone's for every sent transaction (24 of 24 steps) |
 
-(U.1, F.9: below. U.3, F.7: unchanged, below.)
+(U.3, F.7: unchanged, below.)
 
 ## RFP-021 R.7: a stalled instance keeps safety and resumes
 
@@ -156,14 +158,22 @@ changed) is shown as before (rows 18, 69, 70, 91; F.13). What this stream adds t
   pinned: canonical, canonical at its slot, finalized there, genesis and deposit chain id; agreeing hosts counted); it
   applies to `aca138e` and the crate's tests pass with it (32 of 32, three new). With it merged, the API is the Logos
   module's.
-- The live run in a headless Logos Core (`beacon_api_module` built from source with our builder's locks, providers on
-  loopback serving the recorded answers): see U.1 below (same run).
+- **Live in a headless Logos Core** (run r6, [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md)):
+  `beacon_api_module` (aca138e, built from source with builder 5f74cdb's locks) configured with three providers on
+  loopback answering what Lodestar, publicnode and Nimbus answered in the recorded live run of 13 Nov;
+  `ferrata_attest_module.verify_checkpoint` with `providers: {via: beacon_api_module}`: verdict ok, the three agree
+  through `beacon_api_module.raw_get` (slot 11,562,112). With row 117 (the execution check through `eth_rpc_module` and
+  `verified_proxy_module`), every Ethereum read of the check goes through Logos Core's own Ethereum modules.
+- Remains: the API being Logos's own (the drafted change above, to be opened and merged by Logos), and a live run
+  against public providers (the brief of this stream allows recorded data only).
+
+Proposed EVIDENCE row: | new (rfp-B 5) | **The checkpoint check's beacon reads through Logos Core's `beacon_api_module`, and the check drafted as a method of it** (F.9): `ferrata_attest_module.verify_checkpoint` in a headless Logos Core with `beacon_api_module` (aca138e, built from source), its three providers on loopback answering the recorded answers of Lodestar, publicnode and Nimbus: verdict ok, 3 of 3 agree through `raw_get`; replay test against the same record equal to the plain path; `beacon_api_module.verify_checkpoint` drafted for upstream (canonical, canonical at its slot, finalized, genesis and deposit chain id; hosts counted), applies to aca138e, 32 of 32 tests of its crate pass | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh`; `cargo test` (calls crate, 22 of 22); `cargo test --no-default-features` (beacon_api_module with the patch) | Modal build box; recorded provider answers | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md), [`modules/ferrata_attest_module/upstream-drafts/`](../../modules/ferrata_attest_module/upstream-drafts/README.md) |
 
 ## RFP-021 U.1: the attestation functionality in a Logos core module; LEZ through Logos Core's modules
 
-**Proposed: shown if the Logos Core run below passes; in part until then.** The module already produced, verified and
-read (rows 59, 60, 93, 108, 116); its Ethereum reads already went through `eth_rpc_module`. What was missing: its LEZ
-reads and sends through Logos Core's modules. Built in this stream:
+**Proposed: shown.** The module already produced, verified and read configuration (rows 59, 60, 93, 108, 116); its
+Ethereum reads already went through `eth_rpc_module`. What was missing, its LEZ reads and sends through Logos Core's
+modules, is built and was run (run r6 below). Built in this stream:
 
 - `ferrata_attest_module.lez` (opens a LEZ wallet inside Logos Core's `lez_core`), `lez_read` (an instance, a record or a
   job through `lez_core.get_account_public`), `lez_submit` (the steps of `advance`, or `build_attest_tx`'s transaction,
@@ -176,3 +186,22 @@ reads and sends through Logos Core's modules. Built in this stream:
   update planned by the module on that state and its job sent through `lez_core`, a log attested through the module and
   sent through `lez_core`, a refused one the same way, each transaction's verdict read from the zone's receipts
   (`ferrata attest receipt`).
+
+Run r6 ([`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md); `ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh
+bash cli/tests/attest-seq.sh r6`, Modal build box, tree `a333c7e1`), clause by clause ("Build the attestation
+functionality for consumers and operators in a Logos core module ...: producing an attestation, verifying one,
+submitting a consensus-state update, and reading the checkpoint and chain configuration of an instance"):
+
+| Clause | Through Logos Core (run r6) |
+|---|---|
+| producing an attestation | `fetch_log_proof` → `build_attest_tx` → `lez_submit` (`lez_core.send_generic_public_transaction`): a USDC `Transfer` of mainnet block 26,384,851 attested under the zone's record, applied (93,316 execution gas, 1 event) |
+| verifying one | `dry_run_attest` on the record read through `lez_core`: code 0, then 110 for a tampered proof; the zone refused that one with 110 |
+| submitting a consensus-state update | `advance` on the instance state read through `lez_core`, its job (`Open`, `Miller`, `Finish`) sent through `lez_core`: applied; finalized slot 11,567,104 → 11,567,392 |
+| reading the checkpoint and chain configuration | `lez_read` through `lez_core.get_account_public`: the Sepolia instance (585 bytes), the mainnet instance (505) and record (365), each byte-equal to the plain path's; decoded as `read_instance` decodes them (configuration, store, id) |
+
+Limits: one zone we ran; `lez_core` built from its merged v0.4 state with our patch (as merged, a generic send mentions
+no account authorizing: the patch is the bridge stream's, `modules/patches/`); the payer is a public account of a wallet
+holding LEZ's published local test key; the zone's verdicts read from its receipts (`ferrata attest receipt`), since
+`lez_core` reports inclusion, not outcomes.
+
+Proposed EVIDENCE row: | new (rfp-B 6) | **The attestation module's LEZ reads and sends through Logos Core's own `lez_core`** (U.1): `ferrata_attest_module` in a headless Logos Core (`logosctl` 66d098d) beside `lez_core` (cc73ebf, patched) and `beacon_api_module`, on a LEZ v0.4.0-rc1 zone with the final attestation program: three actor states read through `lez_core.get_account_public`, each byte-equal to the plain path's; an update's job (3 transactions) planned by the module on that state and sent through `lez_core.send_generic_public_transaction`, applied (slot 11,567,104 → 11,567,392); a log attested through the module and sent through `lez_core`, applied (93,316 gas); a tampered one refused on the zone with 110, as the module's dry run said | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh` (tree `a333c7e1`); packages from `logos-build.sh` | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md) |
