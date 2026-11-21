@@ -286,7 +286,18 @@ over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDG
 
 ### P.2 Additional LEZ verification and its amortised cost per deposit
 
-The root import is the only additional verification (the claim needs no Ethereum proof of its own):
+The root import is the only additional verification (the claim needs no Ethereum proof of its own). **Its cost does
+not depend on how many deposits it covers**, measured on this tree's bridge program (in-process harness,
+[`perf-state.md`](../lez/results/perf-state.md) §4a, `bash bench/perf/state.sh`):
+
+| import | leaves it covers | newly covered | execution gas | storage gas | execution gas per newly covered deposit |
+|---|---:|---:|---:|---:|---:|
+| vault A, `ImportRoot` n = 5 | 5 | 5 | 230,731 | 1,895 | 46,146 |
+| vault A, n = 8 | 8 | 3 | 236,224 | 2,025 | 78,741 |
+| vault A, n = 6 (a lagging count) | 6 | 0 | 236,224 | 2,025 | — |
+| vault B, n = 8 | 8 | 8 | 236,202 | 1,918 | 29,525 |
+
+The same import in other settings:
 
 | `ImportRoot` | Execution gas | Storage gas | Where |
 |---|---:|---:|---|
@@ -298,12 +309,14 @@ The root import is the only additional verification (the claim needs no Ethereum
 | Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip `crown-live-3`) | 432,182; 432,182 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)) |
 | the same in the first live run (`integration5`'s program, `crown-live-1`) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
-**Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
-import an hour: about 283k per deposit at one deposit an hour, 28.3k at ten, 2.8k at a hundred (from the
-real-storage figure). The import also needs a record, whose tracking cost is RFP-021 P.3's, shared with
-every other consumer. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
-[`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Gap:** an import under a mainnet state
-root (estimated at roughly 275k cycles of attestation plus one slot proof; not measured).
+**Amortised per deposit at the recommended cadence** (*derived* from the measured figures: one import an hour while
+deposits arrive, its cost divided by the deposits of that hour): on Sepolia's real state (432,182, the live round
+trip's import of the v5 vault) **432,182 per deposit at one deposit an hour, 43,218 at ten, 4,322 at a hundred**; on
+the harness's synthetic storage (236,224) 236,224, 23,622 and 2,362. The import also needs a light-client record,
+whose tracking cost is RFP-021 P.3's (127.3M execution gas a day as the lab ran), shared with every other consumer of
+the instance. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
+[`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Gap:** an import under a mainnet state root
+(estimated at roughly 275k cycles of attestation plus one slot proof; not measured).
 
 ### P.3 Ethereum gas: deposit, release, checkpoints
 
