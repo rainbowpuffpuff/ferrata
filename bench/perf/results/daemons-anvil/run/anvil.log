@@ -1,0 +1,3031 @@
+
+
+                             _   _
+                            (_) | |
+      __ _   _ __   __   __  _  | |
+     / _` | | '_ \  \ \ / / | | | |
+    | (_| | | | | |  \ V /  | | | |
+     \__,_| |_| |_|   \_/   |_| |_|
+
+    1.3.6-v1.3.6 (d241588709 2025-09-16T10:47:09.419330223Z)
+    https://github.com/foundry-rs/foundry
+
+Available Accounts
+==================
+
+(0) 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 (10000.000000000000000000 ETH)
+(1) 0x70997970C51812dc3A010C7d01b50e0d17dc79C8 (10000.000000000000000000 ETH)
+(2) 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC (10000.000000000000000000 ETH)
+(3) 0x90F79bf6EB2c4f870365E785982E1f101E93b906 (10000.000000000000000000 ETH)
+(4) 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65 (10000.000000000000000000 ETH)
+(5) 0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc (10000.000000000000000000 ETH)
+(6) 0x976EA74026E726554dB657fA54763abd0C3a0aa9 (10000.000000000000000000 ETH)
+(7) 0x14dC79964da2C08b23698B3D3cc7Ca32193d9955 (10000.000000000000000000 ETH)
+(8) 0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f (10000.000000000000000000 ETH)
+(9) 0xa0Ee7A142d267C1f36714E4a8F75612F20a79720 (10000.000000000000000000 ETH)
+
+Private Keys
+==================
+
+(0) 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+(1) 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+(2) 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
+(3) 0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6
+(4) 0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a
+(5) 0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba
+(6) 0x92db14e403b83dfe3df233f83dfa3a0d7096f21ca9b0d6d6b8d88b2b4ec1564e
+(7) 0x4bbbf85ce3377467afe5d46f804f221813b2bb87f24d81f60f1fcdbf7cbf4356
+(8) 0xdbda1821b80551c9d65939329250298aa3472ba22feea921c0cf5d620ea67b97
+(9) 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
+
+Wallet
+==================
+Mnemonic:          test test test test test test test test test test test junk
+Derivation path:   m/44'/60'/0'/0/
+
+
+Chain ID
+==================
+
+31337
+
+Base Fee
+==================
+
+1000000000
+
+Gas Limit
+==================
+
+30000000
+
+Genesis Timestamp
+==================
+
+1795273752
+
+Genesis Number
+==================
+
+0
+
+Listening on 127.0.0.1:8549
+eth_blockNumber
+eth_accounts
+anvil_setBalance
+anvil_setBalance
+eth_getTransactionCount
+eth_getCode
+eth_blockNumber
+eth_gasPrice
+eth_chainId
+eth_getBlockByNumber
+eth_blockNumber
+eth_gasPrice
+eth_chainId
+eth_getBlockByNumber
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getCode
+eth_getBalance
+eth_getTransactionCount
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_getAccountInfo
+eth_getAccount
+eth_getCode
+eth_chainId
+eth_chainId
+eth_blockNumber
+eth_gasPrice
+eth_chainId
+eth_getBlockByNumber
+eth_chainId
+eth_feeHistory
+eth_feeHistory
+eth_getTransactionCount
+eth_blockNumber
+eth_getBlockByNumber
+eth_sendTransaction
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+
+    Transaction: 0xa37ff4db8145c0b3ba6448f49b30560d098226b9a7014379c77c5c0121acb73a
+    Gas used: 2762591
+
+    Block Number: 1
+    Block Hash: 0x037d6f537469eaed0599cabbfc52dc925a42a5e20c1df4f377ce9135b84173d5
+    Block Time: "Sat, 21 Nov 2026 15:09:24 +0000"
+
+eth_getTransactionReceipt
+eth_getTransactionCount
+eth_sendTransaction
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getBlockByNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+
+    Transaction: 0xbc513f90240b7c6c95e63eebe8fdcf1c5a29b3e355ad4be5fe6fee00aabcfc77
+    Contract created: 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512
+    Gas used: 109899
+
+    Block Number: 2
+    Block Hash: 0x4f615114fbaa0bb35642ef372c3a29c3e68b5e36044088eef8885d017d8c5cf1
+    Block Time: "Sat, 21 Nov 2026 15:09:36 +0000"
+
+eth_blockNumber
+eth_getBlockByNumber
+eth_getTransactionReceipt
+eth_getTransactionCount
+eth_sendTransaction
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+
+    Transaction: 0xd4ffacec552fe3d63f14bd6095793520951f4309dfb19c148f92341d27646293
+    Contract created: 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+    Gas used: 5704661
+
+    Block Number: 3
+    Block Hash: 0x007bd6e2741fd9c8132f9db51ddaf9e5294f89a05ac530f144a3df99ef3a3d34
+    Block Time: "Sat, 21 Nov 2026 15:09:48 +0000"
+
+eth_getTransactionReceipt
+eth_blockNumber
+eth_chainId
+eth_getTransactionCount
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_call
+eth_call
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getBlockByNumber
+eth_getLogs
+eth_accounts
+eth_chainId
+anvil_nodeInfo
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 4
+    Block Hash: 0x6bcb996b9108319f8cff85148063fc1b21751549aa26658f50c05079ca7f962f
+    Block Time: "Sat, 21 Nov 2026 15:10:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 5
+    Block Hash: 0xc2cfe12e8b7060bf0b526338c355892c5062de890eec0b71d41693238ad777a7
+    Block Time: "Sat, 21 Nov 2026 15:10:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 6
+    Block Hash: 0x71b99bfd36c3ded3aa201489e0c7d01115368bebaea8d496e7235bfeba968d92
+    Block Time: "Sat, 21 Nov 2026 15:10:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 7
+    Block Hash: 0xbf7058518abeaa57e354918ba605c83b9f1589f7ecf2853027b3341966e3f159
+    Block Time: "Sat, 21 Nov 2026 15:10:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 8
+    Block Hash: 0x04b7e08cc466b82a9974a547ec0c4a03c616e18a8af0bb6c829f8b75a09c9c94
+    Block Time: "Sat, 21 Nov 2026 15:10:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 9
+    Block Hash: 0x9c24c8641c9af1a17f68e36a02db2b70903e3434b44954d99192502664197ede
+    Block Time: "Sat, 21 Nov 2026 15:11:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 10
+    Block Hash: 0x02545cd09d2c07b3688bb4aaa72a75c7e9c90f8066e6b105ad70fb05252a516a
+    Block Time: "Sat, 21 Nov 2026 15:11:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 11
+    Block Hash: 0x9a3099b620a2e2e70b1ec11ba4bc99683c9f9eb54fb5759390e358df2edc84fb
+    Block Time: "Sat, 21 Nov 2026 15:11:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 12
+    Block Hash: 0x4400d86ef69d9b8d62b3c1edecc841a8fcdd7a6b3eabc2691733ca19104688ed
+    Block Time: "Sat, 21 Nov 2026 15:11:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 13
+    Block Hash: 0x2846b05b784707d36b8b8aad06479fcfb3bbfe06028cdbd0e33638bb21d38008
+    Block Time: "Sat, 21 Nov 2026 15:11:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 14
+    Block Hash: 0x36b7455dd50653b205f8de6dfbaee9618e499214a7619191b936dd70c5deb44a
+    Block Time: "Sat, 21 Nov 2026 15:12:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 15
+    Block Hash: 0x9fd6360e8e7037ce296f81ac07d61ecb4d07d71c7dcf2a06d49af8dbec272a91
+    Block Time: "Sat, 21 Nov 2026 15:12:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 16
+    Block Hash: 0x13f24c28bd5be02d61b380253215d021bf6e91f2a5c2eddfafae9dfffec04a1d
+    Block Time: "Sat, 21 Nov 2026 15:12:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 17
+    Block Hash: 0x567390ac765f8de83c7235fb6d3d2f57fb71ba0a5382f583565536fc5551ce0b
+    Block Time: "Sat, 21 Nov 2026 15:12:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 18
+    Block Hash: 0x4b1d27f7bcafe22e337cfd19b454b9f82f107119a3fb3e4157941b6af01612ce
+    Block Time: "Sat, 21 Nov 2026 15:12:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 19
+    Block Hash: 0x969b944a9839d60e541c0947f55b81e94d5402ddb2c083faace2e238f4dd3f2d
+    Block Time: "Sat, 21 Nov 2026 15:13:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 20
+    Block Hash: 0xb45cfb2feb4189e19f1383cc0d83db42ffe427f704a6176ab0dd18d778716492
+    Block Time: "Sat, 21 Nov 2026 15:13:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 21
+    Block Hash: 0xe47aca2e00e4199ff5fac0b0408d742527b3c105fda927659c09316af088e09d
+    Block Time: "Sat, 21 Nov 2026 15:13:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 22
+    Block Hash: 0x5b1a3d04b57c056a091534b81dad065d0537ae414eab9dbf7453d49cb2838c59
+    Block Time: "Sat, 21 Nov 2026 15:13:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 23
+    Block Hash: 0x4951c53262d4be80bac7ff0b02aa24fa047cec6d49c179968e2ca30df3afecfa
+    Block Time: "Sat, 21 Nov 2026 15:13:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 24
+    Block Hash: 0xfe8a2fe740c0a8887a3cda38d5dfcad4b3d1ce2d4926909ee80550e6d2d20d34
+    Block Time: "Sat, 21 Nov 2026 15:14:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 25
+    Block Hash: 0x8fed211a38813fc102b5c01a78c9ae2848ade35527e62569e1b6ed2ba74183c1
+    Block Time: "Sat, 21 Nov 2026 15:14:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 26
+    Block Hash: 0x39fc1e83fe9f6178dd435b8700208ffb8311fd0fddef2e122474343aa4119b7d
+    Block Time: "Sat, 21 Nov 2026 15:14:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 27
+    Block Hash: 0x3a6ce684693f7dc03d127188922bb5fa8b723e99a5fb2d4493a58bf7382b5963
+    Block Time: "Sat, 21 Nov 2026 15:14:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 28
+    Block Hash: 0x2f9943c144682b8b03539c0618895439c64374b4e4fe8c8bb870d83638e32de3
+    Block Time: "Sat, 21 Nov 2026 15:14:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 29
+    Block Hash: 0x6e43b4228ea0d615f615923e11524ffb39a262079266783e6db02ed13572ea4c
+    Block Time: "Sat, 21 Nov 2026 15:15:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 30
+    Block Hash: 0x6c594980f01224b033138dfdd59416fc37a7436860de354193506f6050040a79
+    Block Time: "Sat, 21 Nov 2026 15:15:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 31
+    Block Hash: 0x8a6052a2fc8fdb22977c2f2e628d04d1276543f3fd27a21db528b2e681e06dd0
+    Block Time: "Sat, 21 Nov 2026 15:15:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 32
+    Block Hash: 0x346b4ebb70a11cb0a13a2a1d4c80e28f5dd8c057e270f1c458824ffcfaa45b49
+    Block Time: "Sat, 21 Nov 2026 15:15:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 33
+    Block Hash: 0xd103a49e374e2b09c0de676f62cc8d8082c097f931126f1028e61e5ebf7b8ce2
+    Block Time: "Sat, 21 Nov 2026 15:15:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 34
+    Block Hash: 0xc1803297dea07db8278105dfc7dc270315a5541d0e65fa3d1a18488844c7bb6a
+    Block Time: "Sat, 21 Nov 2026 15:16:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 35
+    Block Hash: 0x41961cbf013b058c991cf51a2b4be13501e84ef4205e5411c432f4b088c11a96
+    Block Time: "Sat, 21 Nov 2026 15:16:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 36
+    Block Hash: 0x8b00b4ed637c1623b92e3cf401bbb59284a6905d399c2bae2fece6c75e93e450
+    Block Time: "Sat, 21 Nov 2026 15:16:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 37
+    Block Hash: 0xd745e3ab0b3a7ae7fcd90523202932692ac6b6c5bb049911e7c45cffdaf10d03
+    Block Time: "Sat, 21 Nov 2026 15:16:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 38
+    Block Hash: 0xb5b107fa5aa36ecd343a6f4bed52b517e0e74e1007bfa234792e21ff80bab437
+    Block Time: "Sat, 21 Nov 2026 15:16:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 39
+    Block Hash: 0x6563613e1043d53bd707ee1cd9209a893289cd54d3befc3a5500726c52a90ca6
+    Block Time: "Sat, 21 Nov 2026 15:17:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 40
+    Block Hash: 0x1d12c2a2df618c310a28d8b1f11b5479de06f96167f69bce08e49c886a5f48d4
+    Block Time: "Sat, 21 Nov 2026 15:17:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 41
+    Block Hash: 0xd9700f371e12eb348ffc7ea6694db7335ade9af2ec04ef59ebbff553936f3e4d
+    Block Time: "Sat, 21 Nov 2026 15:17:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 42
+    Block Hash: 0x9dd8895cf5d7ca556f7be157e58b1efb4b65cd3142cda82899796193839c9d70
+    Block Time: "Sat, 21 Nov 2026 15:17:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 43
+    Block Hash: 0x6a7feecfcb299e4e19d164b8f98dfdb17e71f969be186c423409dd3a4f623261
+    Block Time: "Sat, 21 Nov 2026 15:17:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 44
+    Block Hash: 0x5b7e22f84a0631042b81875575b5f251d816e4ad8d8ef7ca94842d28542c7590
+    Block Time: "Sat, 21 Nov 2026 15:18:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 45
+    Block Hash: 0x99acbb296ad820ba5b275932515b54ece9839b0c2bfe66a3d77d33b7b973cc80
+    Block Time: "Sat, 21 Nov 2026 15:18:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 46
+    Block Hash: 0x5e13ded869142178069fbfd87e150cdd6172e714e434c0671e08b20d0b0e70d2
+    Block Time: "Sat, 21 Nov 2026 15:18:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 47
+    Block Hash: 0x6a119e8b6db2a0da156af75f67c0882e7b5cbae4cee98d347536b6e383644b32
+    Block Time: "Sat, 21 Nov 2026 15:18:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 48
+    Block Hash: 0x96418d6775a0389ba0f0a975d766481fa0691724c157a220756d0d8ea64a4df2
+    Block Time: "Sat, 21 Nov 2026 15:18:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 49
+    Block Hash: 0xc2ad62580117716366c0f975ffa7b523b84a0f05fab5815449325364c202efd1
+    Block Time: "Sat, 21 Nov 2026 15:19:00 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 50
+    Block Hash: 0x8a6fa53b9573a00e7d3cf1d867bc9f8c298a8986340b3e466083b05e4ba622cb
+    Block Time: "Sat, 21 Nov 2026 15:19:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 51
+    Block Hash: 0xe64b37f541ea305f5b5ec5c6770f031f425c932df45620ea1e0ec1103c32be3c
+    Block Time: "Sat, 21 Nov 2026 15:19:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 52
+    Block Hash: 0x07cc7982d4970a66ffd0b196a8c31b8274e0aea1d15423cb6f4436906b362797
+    Block Time: "Sat, 21 Nov 2026 15:19:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+
+    Block Number: 53
+    Block Hash: 0x3baf50c9f15097c352d3077534b554aac198149e69466f7bddc14c92a216c28e
+    Block Time: "Sat, 21 Nov 2026 15:19:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_chainId
+eth_getTransactionCount
+eth_feeHistory
+eth_estimateGas
+eth_sendTransaction
+eth_blockNumber
+eth_getTransactionReceipt
+eth_getBlockByNumber
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+
+    Transaction: 0x46d1a464a997305b01a5913d58d2e19867642ca8756dcacf70809a087921f8ac
+    Gas used: 141259
+
+    Block Number: 54
+    Block Hash: 0x3ada1f0471bd9d1ed1dbd0ec504baaefb5e31fe1fd5abdea49c07bb0d700520a
+    Block Time: "Sat, 21 Nov 2026 15:20:00 +0000"
+
+eth_getTransactionReceipt
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+
+    Block Number: 55
+    Block Hash: 0x6fb02a6cca048ef97273cef067dcac68e341f76e74c3e615fa7e6dcf440fba9a
+    Block Time: "Sat, 21 Nov 2026 15:20:12 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+
+    Block Number: 56
+    Block Hash: 0x6903716183f4da9592b4e5bc7f7c51c99e43821376885a7612331ad7e24bf5c5
+    Block Time: "Sat, 21 Nov 2026 15:20:24 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+
+    Block Number: 57
+    Block Hash: 0xc82229af47782db82ffe6e880594d4701de9fd7b956272fafdd5fbd1d87e13e0
+    Block Time: "Sat, 21 Nov 2026 15:20:36 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+
+    Block Number: 58
+    Block Hash: 0xac277d2ad579f34a61e86457d47609de276c30103a748a35d854bb7285f1b763
+    Block Time: "Sat, 21 Nov 2026 15:20:48 +0000"
+
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+
+    Block Number: 59
+    Block Hash: 0x5c40ba0497b2c259f91feaf24cb15e11e41b676c87c803c7cbe1bb9a6493397e
+    Block Time: "Sat, 21 Nov 2026 15:21:00 +0000"
+
+eth_chainId
+eth_getTransactionCount
+eth_call
+evm_increaseTime
+evm_mine
+
+    Block Number: 60
+    Block Hash: 0x0b04bfb6d9331d9e4202a6be7dac22ad363b3cad4a1e4e7b191920732f91b046
+    Block Time: "Sat, 21 Nov 2026 16:31:01 +0000"
+
+eth_chainId
+eth_getTransactionCount
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_estimateGas
+eth_feeHistory
+eth_chainId
+eth_getTransactionCount
+eth_sendTransaction
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getBlockByNumber
+eth_getBlockByNumber
+eth_blockNumber
+eth_getTransactionReceipt
+eth_getTransactionReceipt
+eth_blockNumber
+eth_chainId
+eth_getTransactionCount
+eth_call
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_chainId
+eth_blockNumber
+eth_getTransactionCount
+eth_call
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+eth_blockNumber
+eth_getTransactionReceipt
+
+    Transaction: 0x8443d363c7ed9b0e33cca12c86a00f0b608a4e9cd9eae94e40663964ea06511b
+    Gas used: 216155
+
+    Block Number: 61
+    Block Hash: 0x8ddc0964f038c89d157fed1169cb6d841a19227bfd45978e3a346184060591d9
+    Block Time: "Sat, 21 Nov 2026 16:31:12 +0000"
+
+eth_blockNumber
+eth_getBlockByNumber
+eth_getTransactionReceipt
+eth_call
+eth_chainId
+eth_getTransactionCount
+eth_call
+eth_chainId
+eth_getTransactionCount
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 62
+    Block Hash: 0x77421ebe36836e947f522d2c81a1ca99c00377f5839f8b9ea472d547e1f1a166
+    Block Time: "Sat, 21 Nov 2026 16:31:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 63
+    Block Hash: 0xe9e7e13e612bebb12ce1641e43a56fba7b51cf841bbfbf9fd14d00ead78d2c50
+    Block Time: "Sat, 21 Nov 2026 16:31:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 64
+    Block Hash: 0x4a08c390f55220e0f1ed2cf3f3ac17b1592af78f8239e838322b151ebc19d745
+    Block Time: "Sat, 21 Nov 2026 16:31:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 65
+    Block Hash: 0xb352f97f9839155f8a2cc3fd7f806f92282164dc1803b81c93b4aa70995e4237
+    Block Time: "Sat, 21 Nov 2026 16:32:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 66
+    Block Hash: 0x8c43e6136f791785a6b0a72124fe46c75b8739602d953e20a7aebefeb772105c
+    Block Time: "Sat, 21 Nov 2026 16:32:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 67
+    Block Hash: 0xd8516ecfbc9efd54ea49f2416b7e10e4326dab5f13f5779de4db6919293d7f39
+    Block Time: "Sat, 21 Nov 2026 16:32:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 68
+    Block Hash: 0x8b8b6518b537000c2c25b126e7204c757a9337e4d3b1b016802823be3c26a5f3
+    Block Time: "Sat, 21 Nov 2026 16:32:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 69
+    Block Hash: 0x4469d6800a7adf901ccc7834798aa3b50036acb3f636c0f335466247d381af46
+    Block Time: "Sat, 21 Nov 2026 16:32:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 70
+    Block Hash: 0xc0ffa309caac8a2b235b09fd0f0085e98a49150c383e8e2ccc292c87fd2685a9
+    Block Time: "Sat, 21 Nov 2026 16:33:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 71
+    Block Hash: 0xebcc14bf34b3620782f4129274fe2f5ce5c18921603baf185b7cf4af2ec7ebd9
+    Block Time: "Sat, 21 Nov 2026 16:33:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 72
+    Block Hash: 0x689c8d7271cf880d3668d05702d9f6dde15ef0f33a29fe23667630fc35360238
+    Block Time: "Sat, 21 Nov 2026 16:33:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 73
+    Block Hash: 0x4001a843e5cf66bdce54cd3b77acf5b4bc473d48c987ce7d4880f8bb70277283
+    Block Time: "Sat, 21 Nov 2026 16:33:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 74
+    Block Hash: 0xed5b41f89b9ff68f5adf13294d3ce27413fdfdc8e2275661d3285c5963ccc634
+    Block Time: "Sat, 21 Nov 2026 16:33:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 75
+    Block Hash: 0x4123de8b9cfd7f01137530520516c678342dfdbd5a67c7376844bfa2c4b30ac0
+    Block Time: "Sat, 21 Nov 2026 16:34:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 76
+    Block Hash: 0x0aae5dcbdebb129eaedcbf76913faa1146426bdef550024371240dff67fd98ba
+    Block Time: "Sat, 21 Nov 2026 16:34:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 77
+    Block Hash: 0x93cb9b020d2d9e721b517284b13f566119a0c831babaa49423830a83118f56f9
+    Block Time: "Sat, 21 Nov 2026 16:34:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 78
+    Block Hash: 0xa688ae90c5e6b02e529fb5b3b502470073f631389644dd370c6f0054b3acd019
+    Block Time: "Sat, 21 Nov 2026 16:34:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 79
+    Block Hash: 0xc60b2faf98bea787ca9457c2931f3bf7949e02f2e97e1712cbb81d2f20a7e3b4
+    Block Time: "Sat, 21 Nov 2026 16:34:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 80
+    Block Hash: 0xac47d74c08a3f3e73cb4ce90fc522423220ca0e3ad87dc349c2d1475e2d1f102
+    Block Time: "Sat, 21 Nov 2026 16:35:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 81
+    Block Hash: 0x4e2e725178f3f7fb8f4ab942380cf0024116de93523313fe91879457e1978925
+    Block Time: "Sat, 21 Nov 2026 16:35:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 82
+    Block Hash: 0x92c64f101745a02129ccbff3934b972ce014d9becdde80481b9afb7a990c701a
+    Block Time: "Sat, 21 Nov 2026 16:35:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 83
+    Block Hash: 0x2605b26fd4b23acbaeed8cc551802d77504985191c87f3410bccfe37a6e901ee
+    Block Time: "Sat, 21 Nov 2026 16:35:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 84
+    Block Hash: 0x87df1a6f9fc03d239162138056bcf6132830a24aff0fc3abd193ae6b4d768f8f
+    Block Time: "Sat, 21 Nov 2026 16:35:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 85
+    Block Hash: 0x7ad8c6c75785b886f992014345a4a3bf2daf4d1adc2ef6e5dc9387f6f55ca6f5
+    Block Time: "Sat, 21 Nov 2026 16:36:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 86
+    Block Hash: 0xda18224f3cc72427e9cd5a60d5ab4a33a1e920bfd4ea6e71a89b0d374e26df2f
+    Block Time: "Sat, 21 Nov 2026 16:36:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 87
+    Block Hash: 0xadb30ef2b17678d00052070d61425b7821e8822586ebe43f6a7dd1ade3f6f165
+    Block Time: "Sat, 21 Nov 2026 16:36:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 88
+    Block Hash: 0x6affbb76982e9d1bfe3837c89836f6aed2d848dc05d834f076e000a9da15496c
+    Block Time: "Sat, 21 Nov 2026 16:36:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 89
+    Block Hash: 0x9447b781ad6fa5bf5852bfcee7c9c92fdc384a5ca60706ccf1dd7e7ff05057ca
+    Block Time: "Sat, 21 Nov 2026 16:36:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 90
+    Block Hash: 0x0211f24c990189e579b2e7f199e695c904aca73cbf95762fe105f3e1b0abb6be
+    Block Time: "Sat, 21 Nov 2026 16:37:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 91
+    Block Hash: 0x6a3552ce024be36cd3559fd9090479b7eacb10a518df21068b21c472b0f63563
+    Block Time: "Sat, 21 Nov 2026 16:37:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 92
+    Block Hash: 0x5eafa6978059f5b5e35d56b9ae8fe56ac9c489fe4e022e00ccb1cba1865ae17e
+    Block Time: "Sat, 21 Nov 2026 16:37:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 93
+    Block Hash: 0x7ad889fadb9ac248b0b972ad1ff25ab97c6873a45d643dc2bc78b7ee986213e1
+    Block Time: "Sat, 21 Nov 2026 16:37:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 94
+    Block Hash: 0xcbeb268f5294df6d446a07d3734f4b52b4d8485de2ebcafe2e4065fb6a5ce47f
+    Block Time: "Sat, 21 Nov 2026 16:37:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 95
+    Block Hash: 0xc29848a8586764b52b6d27119cb42dc428f3fd3ddbb88a6296dabf469bc898a2
+    Block Time: "Sat, 21 Nov 2026 16:38:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 96
+    Block Hash: 0x135dcbb93b5e87864d2c38154428a17f53a11e6b3084d197cde1280646d33acb
+    Block Time: "Sat, 21 Nov 2026 16:38:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 97
+    Block Hash: 0x61608558d784ae6b0c794477f1c91695a9d626c4724b1acd7db873303285c7c8
+    Block Time: "Sat, 21 Nov 2026 16:38:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 98
+    Block Hash: 0x0b24927def3144adf79cf7a681b80a4d27540d9ba7062c2fc86f92751fe5fa59
+    Block Time: "Sat, 21 Nov 2026 16:38:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 99
+    Block Hash: 0xa65ce846adac4c118ed06021a207d104e10c944313b5f4a7d8271097fe2e3561
+    Block Time: "Sat, 21 Nov 2026 16:38:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 100
+    Block Hash: 0xf569536da5a62e8b40522dfe3755c6bfd3d95396c80717bcc7fbeb1984999d15
+    Block Time: "Sat, 21 Nov 2026 16:39:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 101
+    Block Hash: 0x1266fe7816751a164381668cf2ed8e857dd8e26249e37f67200f91f837f9b1c0
+    Block Time: "Sat, 21 Nov 2026 16:39:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 102
+    Block Hash: 0x96fd89369f12bc5d43f6fd7a1ec963e712289db76670fc25fddb43247478a7c5
+    Block Time: "Sat, 21 Nov 2026 16:39:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 103
+    Block Hash: 0x9a504affb349bde032c801f7b6c938903ae2430d9729c2c934a0b8d55e9419d6
+    Block Time: "Sat, 21 Nov 2026 16:39:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 104
+    Block Hash: 0xd98c9086270ae59cad683c728c341c5ae8e2cff6ba8ba19a80af9c3d06407120
+    Block Time: "Sat, 21 Nov 2026 16:39:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 105
+    Block Hash: 0xcfd420e6e144c98b12288da4fe5ca6130ba1099434352c2e3fad85c13988efa2
+    Block Time: "Sat, 21 Nov 2026 16:40:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 106
+    Block Hash: 0x32c85171ad1e9a050658334f00cacc6c0fc408c3c8455bd986aa1c365048f456
+    Block Time: "Sat, 21 Nov 2026 16:40:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 107
+    Block Hash: 0xd4c7562c353cb5b3c6901e84a6776d13601c8b0e5afe7a10997967b5ad1071d0
+    Block Time: "Sat, 21 Nov 2026 16:40:24 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 108
+    Block Hash: 0x4fa3bb71c056b51775c0f83401307547374ca957ae5eef1a0010a94212d7969d
+    Block Time: "Sat, 21 Nov 2026 16:40:36 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 109
+    Block Hash: 0x3ab783ea8cfac82e5a1063a8a38a230f4ea4c066a36832d348f4cb65840726c8
+    Block Time: "Sat, 21 Nov 2026 16:40:48 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 110
+    Block Hash: 0xb376572efe395327fcb2f0027e99a07fe017010e30e980e6db912cc5f387fdb3
+    Block Time: "Sat, 21 Nov 2026 16:41:00 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_getLogs
+
+    Block Number: 111
+    Block Hash: 0x8dd5f12725e094cd75b7aed7b9e378b0bb4e1004a5eb924d6484cb787eb57d22
+    Block Time: "Sat, 21 Nov 2026 16:41:12 +0000"
+
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_chainId
+eth_call
+eth_call
+eth_getBlockByNumber
+eth_blockNumber
+eth_getLogs
+eth_call
+eth_call
+eth_chainId
+eth_call
+eth_call
+eth_call
+eth_getBlockByNumber

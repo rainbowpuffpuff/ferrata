@@ -1,0 +1,181 @@
+2026-11-21T15:10:41Z [sequencer] http://127.0.0.1:13042: head block 20, following to block 19 (final on Bedrock: true) in 7.2 s; payer 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo balance 19999934335200; records in <scratch>/gate/w-g2/zone/gate/honest-2/state/ledger
+2026-11-21T15:10:41Z [honest-2 mainnet] instance 0x2fb72006428ae094f21dbbc4e15c0e22e02a927f93dcf92b22b63c1f8b6b707f of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff); payer 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo; ledger sequencer
+2026-11-21T15:10:41Z [honest-2] /health and /metrics on http://127.0.0.1:9702
+2026-11-21T15:10:53Z [honest-2 mainnet] round 4: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:02Z [honest-2 mainnet] round 6: the sequencer and the follower disagree on the state of 4VP93BptTdWa1ujcHBiozkMXU1AUnDbTJjDvoZj2J212@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:06Z [honest-2 mainnet] round 7: the sequencer and the follower disagree on the state of 4VP93BptTdWa1ujcHBiozkMXU1AUnDbTJjDvoZj2J212@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:15Z [honest-2 mainnet] round 9: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:24Z [honest-2 mainnet] round 11: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:33Z [honest-2 mainnet] round 13: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:42Z [honest-2 mainnet] round 15: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:46Z [honest-2 mainnet] round 16: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:11:54Z [honest-2 mainnet] round 18: the sequencer and the follower disagree on the state of 2CRkNewfzxD4U5hsSrfQ7yXJ9Wd8sEx7eSVSaXH9jozb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:03Z [honest-2 mainnet] round 20: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:12Z [honest-2 mainnet] round 22: the sequencer and the follower disagree on the state of Fa77jKUctGcohKdLLJNNktmFMDrxFGy6UpZUYf478gm4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:16Z [honest-2 mainnet] round 23: the sequencer and the follower disagree on the state of Fa77jKUctGcohKdLLJNNktmFMDrxFGy6UpZUYf478gm4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:22Z [honest-2 mainnet] round 24: the sequencer and the follower disagree on the state of Fa77jKUctGcohKdLLJNNktmFMDrxFGy6UpZUYf478gm4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:26Z [honest-2 mainnet] round 25: the sequencer and the follower disagree on the state of Fa77jKUctGcohKdLLJNNktmFMDrxFGy6UpZUYf478gm4@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:35Z [honest-2 mainnet] round 27: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:44Z [honest-2 mainnet] round 29: the sequencer and the follower disagree on the state of 3s771tuhTWAdoKqcuUinbmQZXCpmwmpVFiL1ZgH3dKkh@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:12:53Z [honest-2 mainnet] round 31: the sequencer and the follower disagree on the state of 3s771tuhTWAdoKqcuUinbmQZXCpmwmpVFiL1ZgH3dKkh@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:13:02Z [honest-2 mainnet] round 33: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:13:06Z [honest-2 mainnet] round 34: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:13:44Z [honest-2 mainnet] round 43: the sequencer and the follower disagree on the state of 88hen3gpSjQY8fEsm8tMfNx5pRoUujPYdffhbQBpXc7k@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:13:53Z [honest-2 mainnet] round 45: the sequencer and the follower disagree on the state of 88hen3gpSjQY8fEsm8tMfNx5pRoUujPYdffhbQBpXc7k@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:14:02Z [honest-2 mainnet] round 47: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:14:06Z [honest-2 mainnet] round 48: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:14:40Z [honest-2 mainnet] job 0x3e38ab848954ba89: finalized slot 15627616 root 0xe55c5a55edd4ef3fe2e2d5a3d9f13a9f655d6fa5bd30e36bb73f5b17980a820b (attested slot 15627681, signature slot 15627682, 508 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15627616 Open                                  refused   207 (JobExists) gas   2242047 block   44 +  9.4s 2b172c668d6ddccf8ecbf4f71ee8a2a70cfe7070c0a36a16a4b21519ed853109
+2026-11-21T15:14:50Z [honest-2 mainnet] mainnet fin 15627616 Open refused (exit Some(207), gas 2246355, fee 17970840, block 44)
+[updater] mainnet fin 15627616 Miller                                refused   81 (StepError::Phase) gas     21237 block   46 + 14.9s c799931caaa117498e328afc86382f134a916ae45eb95d1d7f26fae5bfd448a1
+2026-11-21T15:15:09Z [honest-2 mainnet] mainnet fin 15627616 Miller refused (exit Some(81), gas 21636, fee 173088, block 46)
+2026-11-21T15:15:13Z [honest-2 mainnet] round 58: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:15:17Z [honest-2 mainnet] round 59: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:15:42Z [honest-2 mainnet] round 65: the sequencer and the follower disagree on the state of 5KMvHvnniKPFikzbAUNV6qizXdVds2FyMw2oeXyRrjR6@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:15:46Z [honest-2 mainnet] round 66: the sequencer and the follower disagree on the state of 5KMvHvnniKPFikzbAUNV6qizXdVds2FyMw2oeXyRrjR6@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:15:52Z [honest-2 mainnet] round 67: the sequencer and the follower disagree on the state of 5KMvHvnniKPFikzbAUNV6qizXdVds2FyMw2oeXyRrjR6@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:15:56Z [honest-2 mainnet] round 68: the sequencer and the follower disagree on the state of 5KMvHvnniKPFikzbAUNV6qizXdVds2FyMw2oeXyRrjR6@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:16:05Z [honest-2 mainnet] round 70: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:16:34Z [honest-2 mainnet] job 0x0b66c30ce61ff812: finalized slot 15628800 root 0xa1404d47180c18d674f7627be29be0e2893a74187e31bfc1ce79470ac9c71a93 (attested slot 15628868, signature slot 15628869, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15628800 Open                                  refused   207 (JobExists) gas   2188514 block   56 + 16.7s dccc77ba93e99e85fe47100f01609d087898f25fd3c60bd42b6f3e1a78b6e4aa
+2026-11-21T15:16:51Z [honest-2 mainnet] mainnet fin 15628800 Open refused (exit Some(207), gas 2192046, fee 17536368, block 56)
+2026-11-21T15:17:03Z [honest-2 mainnet] round 80: the sequencer and the follower disagree on the state of 9MS62jQKNBRP6wugg6MGe6GAQX9yxQKMVDi6rJ8TK5nj@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:12Z [honest-2 mainnet] round 82: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:16Z [honest-2 mainnet] round 83: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:42Z [honest-2 mainnet] round 89: the sequencer and the follower disagree on the state of 3zwYgbmgWCGAtiQJxCtcvSTDC8b28NogMf29uMc7fodm@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:46Z [honest-2 mainnet] round 90: the sequencer and the follower disagree on the state of 3zwYgbmgWCGAtiQJxCtcvSTDC8b28NogMf29uMc7fodm@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:52Z [honest-2 mainnet] round 91: the sequencer and the follower disagree on the state of 3zwYgbmgWCGAtiQJxCtcvSTDC8b28NogMf29uMc7fodm@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:17:56Z [honest-2 mainnet] round 92: the sequencer and the follower disagree on the state of 3zwYgbmgWCGAtiQJxCtcvSTDC8b28NogMf29uMc7fodm@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:02Z [honest-2 mainnet] round 93: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:06Z [honest-2 mainnet] round 94: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:42Z [honest-2 mainnet] round 102: the sequencer and the follower disagree on the state of 7zHddQs3rwKQq91xMf8Yym6966JbxvbpyF27njerUunL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:46Z [honest-2 mainnet] round 103: the sequencer and the follower disagree on the state of 7zHddQs3rwKQq91xMf8Yym6966JbxvbpyF27njerUunL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:52Z [honest-2 mainnet] round 104: the sequencer and the follower disagree on the state of 7zHddQs3rwKQq91xMf8Yym6966JbxvbpyF27njerUunL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:18:56Z [honest-2 mainnet] round 105: the sequencer and the follower disagree on the state of 7zHddQs3rwKQq91xMf8Yym6966JbxvbpyF27njerUunL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:19:02Z [honest-2 mainnet] round 106: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:19:06Z [honest-2 mainnet] round 107: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:19:37Z [honest-2 mainnet] job 0x1e4965c6d38b6041: finalized slot 15630336 root 0x655955cfa7904a0e3fc1aee3f05028314c679e2ad62d1f210061e84c68347cc8 (attested slot 15630400, signature slot 15630401, 510 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15630336 Open                                  refused   207 (JobExists) gas   2204986 block   74 + 13.3s 67066a4d656be430ec5ce6996d29bd444df099eff266a7e451c4555961b39fec
+2026-11-21T15:19:50Z [honest-2 mainnet] mainnet fin 15630336 Open refused (exit Some(207), gas 2208608, fee 17668864, block 74)
+[updater] mainnet fin 15630336 Miller                                refused   81 (StepError::Phase) gas     22888 block   76 + 10.2s e3526fa12c21428e2c04189e7a2ecbb1819d61c6fba5d49c2837c2485440aad6
+2026-11-21T15:20:08Z [honest-2 mainnet] mainnet fin 15630336 Miller refused (exit Some(81), gas 23287, fee 186296, block 76)
+2026-11-21T15:20:12Z [honest-2 mainnet] round 117: the sequencer and the follower disagree on the state of 7GuudfsYoKXYeA6vRMDxBVXB8uWaNbJbhjWV17nTDzjL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:16Z [honest-2 mainnet] round 118: the sequencer and the follower disagree on the state of 7GuudfsYoKXYeA6vRMDxBVXB8uWaNbJbhjWV17nTDzjL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:22Z [honest-2 mainnet] round 119: the sequencer and the follower disagree on the state of 7GuudfsYoKXYeA6vRMDxBVXB8uWaNbJbhjWV17nTDzjL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:26Z [honest-2 mainnet] round 120: the sequencer and the follower disagree on the state of 7GuudfsYoKXYeA6vRMDxBVXB8uWaNbJbhjWV17nTDzjL@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:32Z [honest-2 mainnet] round 121: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:36Z [honest-2 mainnet] round 122: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:42Z [honest-2 mainnet] round 123: the sequencer and the follower disagree on the state of 98R6E1dZyF24XUYpHk22JN58ZazW6nv92XqdPEnFQ43b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:46Z [honest-2 mainnet] round 124: the sequencer and the follower disagree on the state of 98R6E1dZyF24XUYpHk22JN58ZazW6nv92XqdPEnFQ43b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:52Z [honest-2 mainnet] round 125: the sequencer and the follower disagree on the state of 98R6E1dZyF24XUYpHk22JN58ZazW6nv92XqdPEnFQ43b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:20:56Z [honest-2 mainnet] round 126: the sequencer and the follower disagree on the state of 98R6E1dZyF24XUYpHk22JN58ZazW6nv92XqdPEnFQ43b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:21:02Z [honest-2 mainnet] round 127: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:21:06Z [honest-2 mainnet] round 128: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:21:43Z [honest-2 mainnet] round 136: the sequencer and the follower disagree on the state of BBoSs543ecZ7DQGZJtTC7NgQYTvuC9PvzRXb7NV4jeaw@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:21:47Z [honest-2 mainnet] round 137: the sequencer and the follower disagree on the state of BBoSs543ecZ7DQGZJtTC7NgQYTvuC9PvzRXb7NV4jeaw@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:22:02Z [honest-2 mainnet] round 140: the sequencer and the follower disagree on the state of BBoSs543ecZ7DQGZJtTC7NgQYTvuC9PvzRXb7NV4jeaw@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:22:06Z [honest-2 mainnet] round 141: the sequencer and the follower disagree on the state of BBoSs543ecZ7DQGZJtTC7NgQYTvuC9PvzRXb7NV4jeaw@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:22:15Z [honest-2 mainnet] round 143: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:22:44Z [honest-2 mainnet] round 150: the sequencer and the follower disagree on the state of 4Qy5LjGrZVic3xfKfjRdKcsM9BBEQk87EQLYhDdV65oR@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:22:54Z [honest-2 mainnet] round 152: the sequencer and the follower disagree on the state of 4Qy5LjGrZVic3xfKfjRdKcsM9BBEQk87EQLYhDdV65oR@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:02Z [honest-2 mainnet] round 154: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:06Z [honest-2 mainnet] round 155: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:42Z [honest-2 mainnet] round 163: the sequencer and the follower disagree on the state of CPsXhPxwB5jHncTrKnb5zwGAiY8Sa6i4fmjfnYY4vMwu@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:46Z [honest-2 mainnet] round 164: the sequencer and the follower disagree on the state of CPsXhPxwB5jHncTrKnb5zwGAiY8Sa6i4fmjfnYY4vMwu@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:52Z [honest-2 mainnet] round 165: the sequencer and the follower disagree on the state of CPsXhPxwB5jHncTrKnb5zwGAiY8Sa6i4fmjfnYY4vMwu@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:23:56Z [honest-2 mainnet] round 166: the sequencer and the follower disagree on the state of CPsXhPxwB5jHncTrKnb5zwGAiY8Sa6i4fmjfnYY4vMwu@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:02Z [honest-2 mainnet] round 167: the sequencer and the follower disagree on the state of CPsXhPxwB5jHncTrKnb5zwGAiY8Sa6i4fmjfnYY4vMwu@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:06Z [honest-2 mainnet] round 168: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:42Z [honest-2 mainnet] round 176: the sequencer and the follower disagree on the state of DAi42M7VL8AbSwoJoCPQmaqgJtHyTXKTMRsEvP3Yigrd@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:46Z [honest-2 mainnet] round 177: the sequencer and the follower disagree on the state of DAi42M7VL8AbSwoJoCPQmaqgJtHyTXKTMRsEvP3Yigrd@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:52Z [honest-2 mainnet] round 178: the sequencer and the follower disagree on the state of DAi42M7VL8AbSwoJoCPQmaqgJtHyTXKTMRsEvP3Yigrd@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:24:56Z [honest-2 mainnet] round 179: the sequencer and the follower disagree on the state of DAi42M7VL8AbSwoJoCPQmaqgJtHyTXKTMRsEvP3Yigrd@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15632416 Finish                                refused   205 (NoJob) gas      6111 block  106 +  8.0s 00e230ea7b26a15354e2e983cb251b5ce333bf8a857d10844953e5b0b51f8326
+2026-11-21T15:25:09Z [honest-2 mainnet] mainnet fin 15632416 Finish refused (exit Some(205), gas 6638, fee 53104, block 106)
+2026-11-21T15:25:42Z [honest-2 mainnet] round 188: the sequencer and the follower disagree on the state of 4mcUwzGYwST3Vh3qeWKgeuSmJ7AmPgsgd5QzDrL3bkoS@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:25:46Z [honest-2 mainnet] round 189: the sequencer and the follower disagree on the state of 4mcUwzGYwST3Vh3qeWKgeuSmJ7AmPgsgd5QzDrL3bkoS@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:25:52Z [honest-2 mainnet] round 190: the sequencer and the follower disagree on the state of 4mcUwzGYwST3Vh3qeWKgeuSmJ7AmPgsgd5QzDrL3bkoS@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:25:56Z [honest-2 mainnet] round 191: the sequencer and the follower disagree on the state of 4mcUwzGYwST3Vh3qeWKgeuSmJ7AmPgsgd5QzDrL3bkoS@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:26:02Z [honest-2 mainnet] round 192: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:26:06Z [honest-2 mainnet] round 193: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:26:44Z [honest-2 mainnet] round 202: the sequencer and the follower disagree on the state of Fqs1EM5wNqQhPtNrQtzg8DiiGm5YitD6GWKvCJ2psqEF@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:27:03Z [honest-2 mainnet] round 206: the sequencer and the follower disagree on the state of Fqs1EM5wNqQhPtNrQtzg8DiiGm5YitD6GWKvCJ2psqEF@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:27:07Z [honest-2 mainnet] round 207: the sequencer and the follower disagree on the state of Fqs1EM5wNqQhPtNrQtzg8DiiGm5YitD6GWKvCJ2psqEF@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:27:12Z [honest-2 mainnet] round 208: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:27:16Z [honest-2 mainnet] round 209: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:27:38Z [honest-2 mainnet] job 0x2ab81b888acdc0be: finalized slot 15634208 root 0x71515eac280839cbfb2e0daf7ee2c411ccd55a2269a224493f59f727337932d7 (attested slot 15634274, signature slot 15634275, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15634208 Open                                  refused   207 (JobExists) gas   2162127 block  122 + 12.3s a1f351cb2d96b5ac67ef7347185adb4c93faea48b93ff179cedbdc0e50f16875
+2026-11-21T15:27:51Z [honest-2 mainnet] mainnet fin 15634208 Open refused (exit Some(207), gas 2165282, fee 17322256, block 122)
+2026-11-21T15:28:03Z [honest-2 mainnet] round 217: the sequencer and the follower disagree on the state of 8chXJGLakXBCKEApLoDcYxM3UqXf5TJwuvrZdny2kWhe@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:12Z [honest-2 mainnet] round 219: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:16Z [honest-2 mainnet] round 220: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:42Z [honest-2 mainnet] round 226: the sequencer and the follower disagree on the state of HmCtHVbqNtVCFoT1NPWWCCVU5RCHFqUvPPWxF1jG48wN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:46Z [honest-2 mainnet] round 227: the sequencer and the follower disagree on the state of HmCtHVbqNtVCFoT1NPWWCCVU5RCHFqUvPPWxF1jG48wN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:52Z [honest-2 mainnet] round 228: the sequencer and the follower disagree on the state of HmCtHVbqNtVCFoT1NPWWCCVU5RCHFqUvPPWxF1jG48wN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:28:56Z [honest-2 mainnet] round 229: the sequencer and the follower disagree on the state of HmCtHVbqNtVCFoT1NPWWCCVU5RCHFqUvPPWxF1jG48wN@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:03Z [honest-2 mainnet] round 230: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:07Z [honest-2 mainnet] round 231: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:42Z [honest-2 mainnet] round 239: the sequencer and the follower disagree on the state of 9jaeEC1GKzx4XS4MpHpv5jGiKfEMD2yVhdhMBPwZQZvB@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:46Z [honest-2 mainnet] round 240: the sequencer and the follower disagree on the state of 9jaeEC1GKzx4XS4MpHpv5jGiKfEMD2yVhdhMBPwZQZvB@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:52Z [honest-2 mainnet] round 241: the sequencer and the follower disagree on the state of 9jaeEC1GKzx4XS4MpHpv5jGiKfEMD2yVhdhMBPwZQZvB@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:29:56Z [honest-2 mainnet] round 242: the sequencer and the follower disagree on the state of 9jaeEC1GKzx4XS4MpHpv5jGiKfEMD2yVhdhMBPwZQZvB@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:02Z [honest-2 mainnet] round 243: the sequencer and the follower disagree on the state of 9jaeEC1GKzx4XS4MpHpv5jGiKfEMD2yVhdhMBPwZQZvB@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:06Z [honest-2 mainnet] round 244: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:42Z [honest-2 mainnet] round 252: the sequencer and the follower disagree on the state of Aw8Ljpfu6opiM4gxJHxd6Ygi41rtSU7dQXMsmVt8nMRV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:46Z [honest-2 mainnet] round 253: the sequencer and the follower disagree on the state of Aw8Ljpfu6opiM4gxJHxd6Ygi41rtSU7dQXMsmVt8nMRV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:52Z [honest-2 mainnet] round 254: the sequencer and the follower disagree on the state of Aw8Ljpfu6opiM4gxJHxd6Ygi41rtSU7dQXMsmVt8nMRV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:30:56Z [honest-2 mainnet] round 255: the sequencer and the follower disagree on the state of Aw8Ljpfu6opiM4gxJHxd6Ygi41rtSU7dQXMsmVt8nMRV@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:31:05Z [honest-2 mainnet] round 257: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:31:43Z [honest-2 mainnet] round 266: the sequencer and the follower disagree on the state of 7hLucTNVXdLb2HRW2jek2i8eA2Cpr3PDQ3Jt9Ls9nwmZ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:31:52Z [honest-2 mainnet] round 268: the sequencer and the follower disagree on the state of 7hLucTNVXdLb2HRW2jek2i8eA2Cpr3PDQ3Jt9Ls9nwmZ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:31:56Z [honest-2 mainnet] round 269: the sequencer and the follower disagree on the state of 7hLucTNVXdLb2HRW2jek2i8eA2Cpr3PDQ3Jt9Ls9nwmZ@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:32:04Z [honest-2 mainnet] round 271: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:32:43Z [honest-2 mainnet] round 280: the sequencer and the follower disagree on the state of 3MPBzzW7bZ5daSpRbLnyGFD4Wbh7pqfRMhTwfnL3nDP5@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:32:52Z [honest-2 mainnet] round 282: the sequencer and the follower disagree on the state of 3MPBzzW7bZ5daSpRbLnyGFD4Wbh7pqfRMhTwfnL3nDP5@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:32:56Z [honest-2 mainnet] round 283: the sequencer and the follower disagree on the state of 3MPBzzW7bZ5daSpRbLnyGFD4Wbh7pqfRMhTwfnL3nDP5@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:33:02Z [honest-2 mainnet] round 284: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:33:06Z [honest-2 mainnet] round 285: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:33:44Z [honest-2 mainnet] round 294: the sequencer and the follower disagree on the state of DU6HsrkhenNgJ7AgyivQFw6y5jATSZj3UcDD6dKz78ag@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:33:53Z [honest-2 mainnet] round 296: the sequencer and the follower disagree on the state of DU6HsrkhenNgJ7AgyivQFw6y5jATSZj3UcDD6dKz78ag@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:02Z [honest-2 mainnet] round 298: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:06Z [honest-2 mainnet] round 299: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:42Z [honest-2 mainnet] round 307: the sequencer and the follower disagree on the state of 3KLTMpr5EfUuksstUAziNFTbHKq4CB5yrLyuvkqywmWi@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:46Z [honest-2 mainnet] round 308: the sequencer and the follower disagree on the state of 3KLTMpr5EfUuksstUAziNFTbHKq4CB5yrLyuvkqywmWi@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:52Z [honest-2 mainnet] round 309: the sequencer and the follower disagree on the state of 3KLTMpr5EfUuksstUAziNFTbHKq4CB5yrLyuvkqywmWi@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:34:56Z [honest-2 mainnet] round 310: the sequencer and the follower disagree on the state of 3KLTMpr5EfUuksstUAziNFTbHKq4CB5yrLyuvkqywmWi@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:35:05Z [honest-2 mainnet] round 312: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:35:40Z [honest-2 mainnet] job 0x2070711c0792c16f: finalized slot 15638592 root 0x3323d1442d6ecb25b2f46c4894cd179defbe794eccddb33d2b5e579c3e323112 (attested slot 15638676, signature slot 15638677, 509 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15638592 Open                                  refused   207 (JobExists) gas   2232761 block  170 + 10.4s 45124439792c07d25492eafe4eef0d33fde54ac64e7abc788c0afc2e83283ffa
+2026-11-21T15:35:50Z [honest-2 mainnet] mainnet fin 15638592 Open refused (exit Some(207), gas 2236764, fee 17894112, block 170)
+2026-11-21T15:36:02Z [honest-2 mainnet] round 323: the sequencer and the follower disagree on the state of AVcsBaUK614e6GFdtLQFQ7n5Xtw3GNWykvkUgZESr75y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:36:06Z [honest-2 mainnet] round 324: the sequencer and the follower disagree on the state of AVcsBaUK614e6GFdtLQFQ7n5Xtw3GNWykvkUgZESr75y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:36:12Z [honest-2 mainnet] round 325: the sequencer and the follower disagree on the state of AVcsBaUK614e6GFdtLQFQ7n5Xtw3GNWykvkUgZESr75y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:36:16Z [honest-2 mainnet] round 326: the sequencer and the follower disagree on the state of AVcsBaUK614e6GFdtLQFQ7n5Xtw3GNWykvkUgZESr75y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:36:25Z [honest-2 mainnet] round 328: the sequencer and the follower disagree on the state of AVcsBaUK614e6GFdtLQFQ7n5Xtw3GNWykvkUgZESr75y@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+[updater] mainnet fin 15638592 Finish                                applied        gas   3736661 block  175 + 10.9s 83b739d2ff8b2283b31bae81de65eeb474347e5b8cc4e987505e1aeb29fc15dd
+2026-11-21T15:36:40Z [honest-2 mainnet] mainnet fin 15638592 Finish applied (exit None, gas 3737188, fee 29897504, block 175)
+2026-11-21T15:36:49Z [honest-2 mainnet] job 0x2f46b0dcce1ec63c: finalized slot 15639008 root 0x63eb61ed53731bfcb70e737bb39785a082ae3021fc541a2ce4f7a055685d266d (attested slot 15639073, signature slot 15639074, 507 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15639008 Open                                  refused   207 (JobExists) gas   2268511 block  177 + 11.4s 5e1cd8fe190d5aa0aa3801bb9878b3e86a44694cf8a6b3fab5701e2254516fce
+2026-11-21T15:37:00Z [honest-2 mainnet] mainnet fin 15639008 Open refused (exit Some(207), gas 2273195, fee 18185560, block 177)
+2026-11-21T15:37:12Z [honest-2 mainnet] round 334: the sequencer and the follower disagree on the state of GHGrhwpe5MaoncenmoUV6bGkV5bx3PXFGapZVFzW8y2b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:17Z [honest-2 mainnet] round 335: the sequencer and the follower disagree on the state of GHGrhwpe5MaoncenmoUV6bGkV5bx3PXFGapZVFzW8y2b@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:23Z [honest-2 mainnet] round 336: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:27Z [honest-2 mainnet] round 337: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:42Z [honest-2 mainnet] round 340: the sequencer and the follower disagree on the state of 2NyFqTJjAi2xAYU6YKjKcAsUP49SNG8TYoidEfTKWbi1@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:46Z [honest-2 mainnet] round 341: the sequencer and the follower disagree on the state of 2NyFqTJjAi2xAYU6YKjKcAsUP49SNG8TYoidEfTKWbi1@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:52Z [honest-2 mainnet] round 342: the sequencer and the follower disagree on the state of 2NyFqTJjAi2xAYU6YKjKcAsUP49SNG8TYoidEfTKWbi1@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:37:56Z [honest-2 mainnet] round 343: the sequencer and the follower disagree on the state of 2NyFqTJjAi2xAYU6YKjKcAsUP49SNG8TYoidEfTKWbi1@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:02Z [honest-2 mainnet] round 344: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:06Z [honest-2 mainnet] round 345: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:42Z [honest-2 mainnet] round 353: the sequencer and the follower disagree on the state of HkMenAZykC7r4d7xVoqBxPtkSMZNGC8WoBCtnJgBaUfr@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:46Z [honest-2 mainnet] round 354: the sequencer and the follower disagree on the state of HkMenAZykC7r4d7xVoqBxPtkSMZNGC8WoBCtnJgBaUfr@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:52Z [honest-2 mainnet] round 355: the sequencer and the follower disagree on the state of HkMenAZykC7r4d7xVoqBxPtkSMZNGC8WoBCtnJgBaUfr@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:38:56Z [honest-2 mainnet] round 356: the sequencer and the follower disagree on the state of HkMenAZykC7r4d7xVoqBxPtkSMZNGC8WoBCtnJgBaUfr@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:39:05Z [honest-2 mainnet] round 358: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:39:34Z [honest-2 mainnet] job 0xa092ff0a4cc79d4a: finalized slot 15640800 root 0xce81cdc0381f4c4f0c8cb91b34591f60b97efa2de262ac52a2bd8e61f6d3ec78 (attested slot 15640865, signature slot 15640866, 506 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15640800 Open                                  refused   207 (JobExists) gas   2296991 block  194 + 16.7s c4ba2249d4d1447716db00f146fb687a7cb0df9febbb583a8268165999777114
+2026-11-21T15:39:51Z [honest-2 mainnet] mainnet fin 15640800 Open refused (exit Some(207), gas 2302072, fee 18416576, block 194)
+2026-11-21T15:40:04Z [honest-2 mainnet] round 368: the sequencer and the follower disagree on the state of AkMx35TGfFYd5K6G8pASpPBZNURyhH5JppPemGCBZgZb@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:40:13Z [honest-2 mainnet] round 370: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:40:17Z [honest-2 mainnet] round 371: the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX
+2026-11-21T15:41:23Z [honest-2 mainnet] stopped at round 386: {"chain":"mainnet","daemon":"honest-2","finalized_slot":15640800,"last_error":"the sequencer and the follower disagree on the state of BDdM4a7r2dZYGu2j8gN9ibU1SBB6Rm7mb1DijhWsLyXg@A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX","last_plan":"up-to-date","period":1909,"reasons":[],"round":386,"status":"ok"}
