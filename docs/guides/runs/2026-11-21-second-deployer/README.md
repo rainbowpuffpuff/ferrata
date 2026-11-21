@@ -1,14 +1,15 @@
 # A deployment of its own, from a fresh clone: the deployer guide's walkthrough (21 November 2026)
 
 The deployer guide's §11 walkthrough ([`deployer-guide.md`](../../deployer-guide.md#11-walkthrough-a-second-deployers-own-configuration-on-anvil-and-a-local-lez-zone)),
-run twice from a fresh clone of this branch on our build box: its own settings, one command, and the settings read
-back. RFP-022 Reliability #14. Both runs show that the steps work as written; neither was a stranger following them.
+run twice from a fresh clone of this branch on our build box (a machine already set up for building: the deployer
+guide's step 0, *What was tested*): its own settings, one command, and the settings read back. RFP-022 Reliability #14. Both runs show that the steps work as written; neither was a stranger following them.
 
 - **The first run** (below, `second-deployer-1`) had the live run's LEZ bundle and the R0BF programs placed beside the
   clone, files that are not published, and LEZ roles derived from a label anyone can compute.
-- **The second run** ([at the end](#the-second-run-every-input-built-from-source-and-fresh-random-lez-roles),
-  `second-deployer-2`) built every input from source as step 0 now says, with nothing placed beside the clone, and gave
-  the LEZ configuration fresh random roles.
+- **The second run** ([at the end](#the-second-run-every-program-built-in-the-clone-and-fresh-random-lez-roles),
+  `second-deployer-2`) built every input in the clone as step 0 now says (every Ferrata program from source; LEZ's
+  sequencer and the Logos Blockchain node from their pinned sources, whose builds download prebuilt zk-circuit
+  libraries), with nothing placed beside the clone, and gave the LEZ configuration fresh random roles.
 
 ## The first run: where and what
 
@@ -58,23 +59,27 @@ As the guide's §11 says: no public network, no real proofs, the deployer's own 
 the new fee schedule not imported on LEZ, the LEZ admin's `SetCap` and the freeze authority's `Freeze` (those are
 tested in the harness, EVIDENCE row 74).
 
-## The second run: every input built from source, and fresh random LEZ roles
+## The second run: every program built in the clone, and fresh random LEZ roles
 
 After a review found that the first run needed files only the author had, and LEZ roles anyone could derive, step 0
-was rewritten to build every input from source and the walkthrough to make fresh random LEZ roles by default
+was rewritten to build every input in the clone (Ferrata's programs from source; LEZ's sequencer and the Logos
+Blockchain node from their pinned sources, their zk-circuit libraries downloaded prebuilt by their builds) and the
+walkthrough to make fresh random LEZ roles by default
 (commits `7974fd64`, `203db290`). This run executed the guide's §11 as printed: a script took the three `sh` blocks
 from the clone's own guide and ran them in order (step 0 without its `git clone` line, done first from a bundle of the
 branch, which is not pushed); nothing was placed beside the clone ([`second-run/clone.txt`](second-run/clone.txt) lists
 the directory: the clone alone).
 
-- **The clone.** Branch `rfp-docs-final` at `203db290`, 0 files changed, on the build box (Linux x86-64; `nproc` 2,
-  64 GB of memory, libpcsclite 2.0.3 as step 0 names it; Foundry 1.3.6, cargo 1.93.0).
+- **The clone.** Branch `rfp-docs-final` at `203db290`, 0 files changed, on the build box (Linux x86-64, Ubuntu 24.04
+  with the packages of step 0's *What was tested*; `nproc` 2, 64 GB of memory, libpcsclite 2.0.3 as step 0 names it;
+  Foundry 1.3.6, cargo 1.93.0; RISC Zero already in `~/.risc0`, a filled cargo registry).
 - **Step 0**, 21 November 2026, 18:02–19:04 UTC: exit 0 after 3,696 s ([`second-run/step0-trace.txt`](second-run/step0-trace.txt),
   each command with its start time): the upstream sources fetched (17 s), RISC Zero 3.0.5 and both guest toolchains
   installed into a fresh `../risc0-home-lez` (67 s), the vault's libraries and solc (70 s), every guest rebuilt (607 s)
   and compared: **20 of 20 MATCH**, the 14 programs of [`image-ids.md`](../../../image-ids.md) and the six of
   `e2e/crown/README.md`'s table ([`second-run/image-ids-compare.txt`](second-run/image-ids-compare.txt)); LEZ's
-  sequencer built (1,352 s), the Logos Blockchain node LEZ pins built by LEZ's own resolver (1,430 s), the zone's
+  sequencer built (1,352 s), the Logos Blockchain node LEZ pins built by LEZ's own resolver (1,430 s; both builds
+  download prebuilt zk-circuit libraries from logos-blockchain-circuits v0.5.7's release, unverified), the zone's
   bundle packed (153 s). The two R0BF programs it built are byte for byte the ones the first run was given (sha256
   `7b5c3735…`, `7be1349c…`; [`programs.txt`](../../../../e2e/runs/seqnet-second-deployer-2/programs.txt)). Disk after
   step 0: 14 GB beside and in the clone ([`second-run/disk.txt`](second-run/disk.txt)).
