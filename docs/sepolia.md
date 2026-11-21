@@ -5,8 +5,8 @@ links are rewritten for this folder).
 
 **Security note, 21 November 2026.** The four vaults below verify through our own deployment of RISC Zero's Groth16
 verifier 3.0.0 (`0x8f0A…A2A0`), which accepts forged claims (RISC Zero's advisory GHSA-mm6c-35cm-g4x2, 11 November
-2026). RISC Zero's emergency stop does not cover our deployment; the vaults' own stops have no owner, their freeze
-authority no key, and they have no caps. Read at block 12,183,432: a forgery could take 0.001 Sepolia ETH (the v3
+2026). RISC Zero's emergency stop does not cover our deployment; the vaults' own stops have no owner with a key, their
+freeze authority no key, and they have no caps. Read at block 12,183,432: a forgery could take 0.001 Sepolia ETH (the v3
 vault's deposit 0) and nothing from the three v5 vaults, whose escrow is below their smallest denomination;
 deposits stay open until the deployer's admin key sets the caps to zero. The runs below happened and their records
 stand, but a seal's acceptance by these verifiers shows only that it is well-formed: [security note](security/risc0-groth16-advisory-2026-11-21/README.md).

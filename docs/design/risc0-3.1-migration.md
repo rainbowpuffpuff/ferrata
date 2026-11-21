@@ -74,7 +74,8 @@ the 51 lockfiles lock risc0-zkvm 3.0.5; 18 guests in `docs/image-ids.md` plus th
    done twice.
 3. **Phase 1** on one branch from `main`: toolchains, manifests and lockfiles of the Ethereum-side workspaces, rebuilt
    ids recorded (old and new), regenerated fixtures, risc0-ethereum v3.1.0, the vault tests below; a fork rehearsal of
-   the new deployment. The cargo-deny job of review M4 lands with it (it would have failed on 11 November).
+   the new deployment. The cargo-deny job of review M4 lands with it (the crates it refuses were yanked when read on 21 November
+   2026; when they were yanked is not recorded).
 4. **Phase 2** when Logos tags LEZ on 3.1: the LEZ programs and LEZ-linked hosts, real proofs on that tag, the day-one
    kit and the lab rebuilt.
 5. **Live, the owner**: new vaults on Sepolia with the new ids and the D1 wiring, a round trip, `verify-sepolia.py`,
@@ -88,7 +89,7 @@ module SDK and `lez_core` versions the modules link.
 ## 4. Decision D1 for the new vaults: what stops a broken verifier
 
 The four Sepolia vaults verify through their own stop around our own verifier, the stop's owner renounced (D13,
-proposal §B5), and they were deployed with a freeze authority nobody holds and no caps. When the verifier proved
+proposal §B5; on the v3 vault, the keyless `0xC820…`), and they were deployed with a freeze authority nobody holds and no caps. When the verifier proved
 unsound, only the admin's caps could stop them, and only because the testnet floor is zero. Options:
 
 - **(a) Keep our own verifier 3.1.0 behind our own stop, owner renounced.** No third party can halt the vault. A

@@ -3,7 +3,7 @@
 **21 November 2026: superseded as evidence.** RISC Zero's advisories of 11 November 2026
 ([GHSA-g6qg-9j8p-7j87](https://github.com/risc0/risc0/security/advisories/GHSA-g6qg-9j8p-7j87),
 [GHSA-mm6c-35cm-g4x2](https://github.com/risc0/risc0-ethereum/security/advisories/GHSA-mm6c-35cm-g4x2)) show that
-verifier 3.0.0 accepts forged claims. The advisory, as updated on 19 November, says RISC Zero has emergency-stopped
+verifier 3.0.0 accepts forged claims. The advisory (last updated 19 November) says RISC Zero has emergency-stopped
 it on every network; at this run's block its stop was not yet paused, and the run has not been repeated. What the run
 still shows: our seals are well-formed for the 3.0.0 circuits and trusted setup. It does not show that a forged seal
 would be refused ([security note](../../../docs/security/risc0-groth16-advisory-2026-11-21/README.md)).

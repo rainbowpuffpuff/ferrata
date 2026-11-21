@@ -33,16 +33,17 @@ Sepolia block 12,183,432 (18:00:48 UTC), read-only, on two public endpoints with
 
 No vault is frozen or retired; the test tokens' balances are 0. **What is at stake today: 0.001 Sepolia ETH, test
 ether of the deployer's own.** Deposits are open on all four, so whatever anyone deposits from now on is exposed: a
-forged release needs no forged checkpoint, only a burn root a vault already accepted and a fresh nullifier.
+forged release on a v5 vault needs no forged checkpoint, only the burn root it already accepted and a fresh nullifier
+(the v3 vault has accepted none, so there a forged checkpoint comes first).
 
-**What stops it.** No key-less control does: the freeze authority has no key holder, the stops have no owner and no
-watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every release
+**What stops it.** No key-less control does: the freeze authority has no key holder, no stop has an owner with a key, and
+no watcher is set. The deployer key, admin of all four vaults, does: `setGlobalCap(Release, 0, 0)` stops every release
 on all four, and every refund on the three v5 vaults (the v3 vault's `refund` does not draw on the caps, but it needs a
 retired vault, and only the keyless freeze authority can retire the v3 vault, so it never opens refunds), and
 `setGlobalCap(Deposit, 0, 0)` stops every deposit; the admin can undo both. Estimated on Sepolia
 (`eth_estimateGas`, nothing sent, [`estimate-publicnode.tsv`](estimate-publicnode.tsv)): 66,941 and 63,396 gas per v5
-vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at that block's base fee of 16
-wei. Slower: on the v5 vaults the admin can install a freeze authority and a watcher with `proposeRoles`, applied 14
+vault, 59,005 and 58,982 for the v3 vault, 508,998 in all, about 10^-11 Sepolia ETH at the base fee of 16 wei of
+block 12,183,475, where the estimates ran. Slower: on the v5 vaults the admin can install a freeze authority and a watcher with `proposeRoles`, applied 14
 days later (369,833 gas each); the v3 vault has no such path. A stop can also be tripped by anyone holding a receipt
 the verifier accepts for the all-zero claim digest (`estop(receipt)`); whether the forgery reaches that digest is not
 established, and none was built.
@@ -93,7 +94,8 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
    retirement opens (`retireOpensAt`: 11, 12 and 18 December 2026, if no checkpoint is submitted before), or through a
    freeze authority after the timelock. They will not be used again.
 2. Done here on 21 November 2026: this note; the README, EVIDENCE row 149, [docs/sepolia.md](../../sepolia.md),
-   [verify.md](../../guides/verify.md) and the mainnet run's README corrected.
+   [verify.md](../../guides/verify.md), the mainnet run's README, [lez-v0.4-findings.md](../../design/lez-v0.4-findings.md),
+   [SECURITY.md](../../../SECURITY.md) and [e2e/README.md](../../../e2e/README.md) corrected.
 3. The move to risc0 3.1.0 and verifier 3.1.0, with new vaults: [risc0-3.1-migration.md](../../design/risc0-3.1-migration.md).
 4. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
 
@@ -101,10 +103,11 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 # The owner runs this with the deployer key (0x79A9…5C07); nothing here has been sent.
 export ETH_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
 export ETH_KEYSTORE=/path/to/deployer-keystore      # cast prompts for its password, or add --password-file FILE
+# --chain 11155111: with a wrong ETH_RPC_URL the node refuses the transaction rather than running it on another chain
 for V in 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 \
          0x80555Fe53CCcEf46951B23A3c75643a4C9283470 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7; do
-  cast send "$V" "setGlobalCap(uint8,uint256,uint256)" 1 0 0   # no release (and no refund on the v5 vaults)
-  cast send "$V" "setGlobalCap(uint8,uint256,uint256)" 0 0 0   # no deposit
+  cast send --chain 11155111 "$V" "setGlobalCap(uint8,uint256,uint256)" 1 0 0   # no release (and no refund on the v5 vaults)
+  cast send --chain 11155111 "$V" "setGlobalCap(uint8,uint256,uint256)" 0 0 0   # no deposit
 done
 for V in 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54 \
          0x80555Fe53CCcEf46951B23A3c75643a4C9283470 0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7; do
