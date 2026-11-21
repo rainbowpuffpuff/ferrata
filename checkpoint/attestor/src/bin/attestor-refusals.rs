@@ -15,7 +15,7 @@ use attestor_core::{sign_certificate, Deployment, SignedAttestation};
 use checkpoint_core::hash::sha256_parts;
 use checkpoint_core::input::CheckpointInputB;
 use ed25519_dalek::SigningKey;
-use ferrata_attestor::{assemble_unchecked, deployment_of, final_tier, fixture_meta, NodeAnswers};
+use ferrata_attestor::{assemble_unchecked, bedrock_tier, deployment_of, fixture_meta, NodeAnswers};
 
 fn key(label: &str) -> SigningKey {
     SigningKey::from_bytes(&sha256_parts(&[b"ferrata/attestor/devnet-key/", label.as_bytes()]))
@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     let out = Path::new(&out);
     fs::create_dir_all(out)?;
     let d = deployment_of(&CheckpointInputB::decode(&base).map_err(|e| anyhow::anyhow!("{e:?}"))?.config);
-    let tier = final_tier(&NodeAnswers::load(Path::new(&get("answers")?))?, &d.channel_id)?;
+    let tier = bedrock_tier(&NodeAnswers::load(Path::new(&get("answers")?))?, &d.channel_id)?;
     let sign = |att: &SigningKey, channel: &SigningKey, cert_for: &Deployment, msg_for: &Deployment| {
         let cert = sign_certificate(channel, cert_for, &att.verifying_key().to_bytes());
         SignedAttestation::new(att, channel.verifying_key().to_bytes(), cert, msg_for, &tier.key_set_hash, tier.tip)

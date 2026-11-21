@@ -14,8 +14,8 @@ use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::mantle::{opcodes, ElidedInscription};
 use checkpoint_core::rule_b::run_checkpoint_b;
 use ferrata_attestor::{
-    collect, deployment_of, final_inscriptions, final_tier, rekey_base, upgrade_pre_producer_input, Attestor,
-    FinalTier, NodeAnswers,
+    collect, deployment_of, devnet_lez_standin, final_inscriptions, final_tier, rekey_base, upgrade_pre_producer_input,
+    Attestor, FinalTier, NodeAnswers,
 };
 use serde_json::Value;
 use support::*;
@@ -34,8 +34,9 @@ fn attestor(i: u32, d: &Deployment) -> Attestor {
     Attestor { deployment: *d, channel_key: pk(&ch), certificate: sign_certificate(&ch, d, &pk(&att)), att_key: att }
 }
 
+/// The final tier read with a LEZ node that holds every inscribed block final (the honest case).
 fn tier_of(a: &NodeAnswers) -> FinalTier {
-    final_tier(a, &channel()).unwrap()
+    final_tier(a, &mut devnet_lez_standin(a, &channel()).unwrap(), &channel(), None).unwrap()
 }
 
 /// Block 203 on the real 202, inscribed by k1 in a transaction of `ops` (the inscription at `at`).
@@ -91,4 +92,27 @@ fn a_channel_transfer_alone_and_two_withdrawals_are_encoded() {
         let (b203, _, _) = withdrawal_block(&mut a, ops, 0);
         assert_eq!(tier_of(&a).tip.tip_hash, carried_hash(&b203), "{what}");
     }
+}
+
+/// The program frames an inscription at any position of its transaction, and so does the attestor now:
+/// a turn holder that puts its block's inscription second cannot stall the attestors.
+#[test]
+fn an_inscription_that_is_not_the_first_op_is_signed_and_proven() {
+    let mut a = answers_with_keys(&n3_keys());
+    let second = |ins: Op| vec![fee_transfer(6), ins, channel_withdraw(&[[7; 32]])];
+    let (b203, bytes, txj) = withdrawal_block(&mut a, second, 1);
+    let tier = tier_of(&a);
+    assert_eq!((tier.tip.tip_id, tier.tip.tip_hash), (203, carried_hash(&b203)));
+    let base = base_n3();
+    let d = deployment_of(&CheckpointInputB::decode(&base).unwrap().config);
+    let atts = [attestor(1, &d).attest(&tier, None).unwrap(), attestor(2, &d).attest(&tier, None).unwrap()];
+    let mut input = CheckpointInputB::decode(&base).unwrap();
+    input.blocks.push(&b203);
+    input.t_index = 17;
+    let sig: [u8; 64] = ferrata_attestor::hexa(&txj["ops_proofs"][1]["Ed25519Sig"], "sig").unwrap();
+    input.producer = ElidedInscription::split(&bytes, 1, &sig).unwrap();
+    let with_t = input.encode();
+    let outcome =
+        run_checkpoint_b(&CheckpointInputB::decode(&collect(&with_t, &atts).unwrap().input).unwrap()).unwrap();
+    assert_eq!((outcome.journal.tip_id, outcome.attestors), (203, 2));
 }

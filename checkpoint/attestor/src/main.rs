@@ -9,8 +9,12 @@
 //!                                              checkpoint_b input's configuration serves
 //! certify --channel-key KEY --att-pub HEX --deployment DEP --out CERT
 //!                                              the channel key's one certificate of an attestation key
-//! attest  --deployment DEP --cert CERT --att-key KEY (--node URL --save DIR [--slot-from N] | --answers DIR)
-//!         [--state FILE] --out ATT             read the node's final tier, check it, sign it
+//! attest  --deployment DEP --cert CERT --att-key KEY --out ATT
+//!         (--node URL --lez URL --save DIR --state FILE [--slot-from N] | --answers DIR [--lez-answers DIR] [--state FILE])
+//!                                              read the node's final tier, check its tip against the
+//!                                              LEZ node (applied and final there), sign it; the state
+//!                                              records the tip before ATT is written, and the next read
+//!                                              starts at its slot (--slot-from only without a state)
 //! verify  --deployment DEP --att ATT...        check published attestations (both signatures)
 //! collect --base IN --att ATT... --out IN2 --meta JSON --name NAME
 //!                                              t of n valid attestations into the input; the native
@@ -22,7 +26,11 @@
 //!                                              inscription, with T's inscription from the node's answers
 //! retip   --base IN --answers DIR --tip N --out IN2   T moved to block N of the input (its inscription
 //!                                              from the node); the later blocks become the path after T
-//! tier    --answers DIR [--channel HEX]        the node's final tier: tip, key set, blocks per signer
+//! tier    --answers DIR [--channel HEX]        the Bedrock node's view alone (not signable): tip, key
+//!                                              set, blocks per signer
+//! devnet-lez-standin --answers DIR [--channel HEX]
+//!                                              devnet replays of recorded runs without a LEZ node: saves
+//!                                              every inscribed block as the LEZ node's final block
 //! base    --answers DIR --genesis FILE --from A --to T --n-min N --t-min T --out IN
 //!                                              devnet set-up: an input over final blocks A..=T from the
 //!                                              node's answers alone (bridge values are stand-ins)
@@ -42,8 +50,9 @@ use checkpoint_core::input::CheckpointInputB;
 use checkpoint_core::Hash;
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
-    assemble_unchecked, attestation_from_json, attestation_json, collect, deployment_from_json, deployment_json,
-    deployment_of, final_tier, fixture_meta, hex_str, hexa, read_key, Attestor, LastSigned, NodeAnswers,
+    assemble_unchecked, attestation_from_json, attestation_json, bedrock_tier, collect, deployment_from_json,
+    deployment_json, deployment_of, devnet_lez_standin, final_tier, fixture_meta, hex_str, hexa, read_key, read_state,
+    round, save_lez_answers, write_atomic, write_secret, write_state, Attestor, AttestorState, LezSaved, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -54,7 +63,7 @@ impl Args {
         let v: Vec<String> = std::env::args().skip(1).collect();
         let cmd = v.first().context("a command is required (see the module docs)")?.clone();
         let rest = &v[1..];
-        ensure!(rest.len() % 2 == 0, "options come in --key value pairs");
+        ensure!(rest.len().is_multiple_of(2), "options come in --key value pairs");
         let pairs = rest
             .chunks(2)
             .map(|p| Ok((p[0].strip_prefix("--").context("expected --key")?.to_string(), p[1].clone())))
@@ -89,9 +98,7 @@ fn cmd_keygen(a: &Args) -> Result<()> {
             b
         }
     };
-    let out = a.get("out")?;
-    ensure!(!Path::new(out).exists(), "{out} exists: a key is never overwritten");
-    fs::write(out, secret)?;
+    write_secret(Path::new(a.get("out")?), &secret)?;
     println!("{}", hex::encode(SigningKey::from_bytes(&secret).verifying_key().to_bytes()));
     Ok(())
 }
@@ -131,34 +138,42 @@ fn cmd_attest(a: &Args) -> Result<()> {
         certificate: hexa(&cert["certificate"], "cert certificate")?,
         att_key: read_key(Path::new(a.get("att-key")?))?,
     };
-    let answers = match (a.opt("node"), a.opt("answers")) {
+    let out = a.get("out")?;
+    let (tier, att) = match (a.opt("node"), a.opt("answers")) {
         (Some(node), None) => {
+            let state = a.get("state").context("a live attestor keeps a state (--state): what it signed")?;
             let from = a.opt("slot-from").map(str::parse).transpose()?.unwrap_or(0);
-            NodeAnswers::fetch(node, &d.channel_id, from, Path::new(a.get("save")?))?
+            let r = round(&attestor, node, a.get("lez")?, Path::new(a.get("save")?), Path::new(state), from)
+                .map_err(|e| anyhow!("{e}"))?;
+            println!("read the node from slot {}", r.scanned_from);
+            (r.tier, r.attestation)
         }
-        (None, Some(dir)) => NodeAnswers::load(Path::new(dir))?,
-        _ => bail!("exactly one of --node URL or --answers DIR"),
-    };
-    let tier = final_tier(&answers, &d.channel_id)?;
-    let last = match a.opt("state") {
-        Some(p) if Path::new(p).exists() => {
-            let s = read_json(p)?;
-            Some(LastSigned {
-                tip_id: s["tip_id"].as_u64().context("state tip_id")?,
-                tip_hash: hexa(&s["tip_hash"], "state tip_hash")?,
-            })
+        (None, Some(dir)) => {
+            let state = a.opt("state").map(Path::new);
+            let before = match state {
+                Some(p) => read_state(p, &d.channel_id)?,
+                None => None,
+            };
+            let answers = NodeAnswers::load(Path::new(dir))?;
+            let mut lez = LezSaved::new(Path::new(a.opt("lez-answers").unwrap_or(dir)));
+            let tier = final_tier(&answers, &mut lez, &d.channel_id, before.as_ref())?;
+            let att = attestor.attest(&tier, before.as_ref().map(|s| s.last))?;
+            if let Some(p) = state {
+                write_state(p, &d.channel_id, &AttestorState::of(&tier))?;
+            }
+            (tier, att)
         }
-        _ => None,
+        _ => bail!("exactly one of --node URL (with --lez URL, --save DIR, --state FILE) or --answers DIR"),
     };
-    let att = attestor.attest(&tier, last)?;
+    // Published only after the state records it.
     let record = attestation_json(&d, &att, &tier);
-    write_json(a.get("out")?, &record)?;
-    if let Some(p) = a.opt("state") {
-        write_json(p, &json!({"tip_id": att.tip.tip_id, "tip_hash": hex::encode(att.tip.tip_hash)}))?;
+    write_atomic(Path::new(out), (serde_json::to_string_pretty(&record)? + "\n").as_bytes())?;
+    for n in &tier.notes {
+        eprintln!("note: {n}");
     }
     println!(
         "attested: channel key {} | attestation key {} | final tip {} {} (final message {}) | node lib slot {}, \
-         blocks {}..={} checked | key set n = {} hash {}",
+         blocks {}..={} followed, the tip final in the LEZ node | key set n = {} hash {}",
         hex::encode(att.channel_key),
         hex::encode(att.att_key),
         att.tip.tip_id,
@@ -169,6 +184,21 @@ fn cmd_attest(a: &Args) -> Result<()> {
         att.tip.tip_id,
         tier.keys.len(),
         hex::encode(tier.key_set_hash)
+    );
+    Ok(())
+}
+
+fn cmd_lez_standin(a: &Args) -> Result<()> {
+    let dir = Path::new(a.get("answers")?);
+    let channel: Hash = hex_str(a.opt("channel").unwrap_or(DEFAULT_CHANNEL), "channel")?;
+    let answers = NodeAnswers::load(dir)?;
+    let lez = devnet_lez_standin(&answers, &channel)?;
+    save_lez_answers(dir, &lez)?;
+    eprintln!(
+        "devnet stand-in: {} inscribed blocks saved as the LEZ node's final blocks under {}/lez (this assumes every \
+         inscribed block applied: replays of recorded honest runs only)",
+        lez.len(),
+        dir.display()
     );
     Ok(())
 }
@@ -259,7 +289,7 @@ const DEFAULT_CHANNEL: &str = "0101010101010101010101010101010101010101010101010
 fn cmd_tier(a: &Args) -> Result<()> {
     let answers = NodeAnswers::load(Path::new(a.get("answers")?))?;
     let channel: Hash = hex_str(a.opt("channel").unwrap_or(DEFAULT_CHANNEL), "channel")?;
-    let tier = final_tier(&answers, &channel)?;
+    let tier = bedrock_tier(&answers, &channel)?;
     let signers = ferrata_attestor::signers(&answers, &channel)?;
     let mut per: std::collections::BTreeMap<String, Vec<u64>> = std::collections::BTreeMap::new();
     for (id, k) in &signers {
@@ -376,6 +406,7 @@ fn main() -> Result<()> {
         "rotate" => cmd_rotate(&a),
         "tier" => cmd_tier(&a),
         "base" => cmd_base(&a),
+        "devnet-lez-standin" => cmd_lez_standin(&a),
         other => bail!("unknown command {other}"),
     }
 }
