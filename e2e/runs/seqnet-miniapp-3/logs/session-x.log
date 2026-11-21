@@ -4,7 +4,7 @@
 [11:19:42] node slot 0 is unix second 1785493027
 [11:20:19] sequencer start 1: scheduler after 37 s; its blocks fall 2 s after an epoch second
 [11:20:19] sequencer up, head block 19
-[11:20:20] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-miniapp-sequencer/e2e/seqnet/hook-miniapp.sh
+[11:20:20] hook <repo>/e2e/seqnet/hook-miniapp.sh
 [11:38:47] driver exit 0
 [11:39:08] sequencer stopped (exit 0)
 [11:39:16] node stopped (exit 143)

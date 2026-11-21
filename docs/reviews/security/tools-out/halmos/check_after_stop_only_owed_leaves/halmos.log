@@ -1350,19 +1350,19 @@ WARNING  Counterexample (potentially invalid):
     p_token_address_987fe7a_91 = 0xaaaa0008[0m
 Exception ignored in: <function AstRef.__del__ at 0x2ae04be5f9c0>
 Traceback (most recent call last):
-  File "<workspace>/spike/tmp/sectools/tools/venv/lib/python3.12/site-packages/z3/z3.py", line 352, in __del__
+  File "<sectools>/venv/lib/python3.12/site-packages/z3/z3.py", line 352, in __del__
     Z3_dec_ref(self.ctx.ref(), self.as_ast())
                                ^^^^^^^^^^^^^
-  File "<workspace>/spike/tmp/sectools/tools/venv/lib/python3.12/site-packages/z3/z3.py", line 563, in as_ast
+  File "<sectools>/venv/lib/python3.12/site-packages/z3/z3.py", line 563, in as_ast
     return Z3_sort_to_ast(self.ctx_ref(), self.ast)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "<workspace>/spike/tmp/sectools/tools/venv/lib/python3.12/site-packages/z3/z3core.py", line 2824, in Z3_sort_to_ast
+  File "<sectools>/venv/lib/python3.12/site-packages/z3/z3core.py", line 2824, in Z3_sort_to_ast
     r = _elems.f(a0, a1)
         ^^^^^^^^^^^^^^^^
-  File "<workspace>/spike/tmp/sectools/tools/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1826, in on_signal
+  File "<sectools>/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1826, in on_signal
     def on_signal(signum, frame):
 
-  File "<workspace>/spike/tmp/sectools/tools/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1830, in on_signal
+  File "<sectools>/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1830, in on_signal
     sys.exit(exitcode)
 SystemExit: 143
 ERROR    solver_output.error='executor has been shutdown'                       

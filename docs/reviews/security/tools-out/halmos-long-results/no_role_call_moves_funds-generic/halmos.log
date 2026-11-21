@@ -52,11 +52,11 @@ warning: unknown lint id: 'unsafe-typecast'
 Running 1 tests for test/halmos/VaultHalmos.t.sol:VaultHalmos
 Exception ignored in: <function AstRef.__del__ at 0x2b6a2b563240>
 Traceback (most recent call last):
-  File "~/Downloads/software_i_built/logos-rfp/spike/tmp/release-eng/sectools/venv/lib/python3.12/site-packages/z3/z3.py", line 352, in __del__
+  File "<sectools>/venv/lib/python3.12/site-packages/z3/z3.py", line 352, in __del__
     Z3_dec_ref(self.ctx.ref(), self.as_ast())
-  File "~/Downloads/software_i_built/logos-rfp/spike/tmp/release-eng/sectools/venv/lib/python3.12/site-packages/z3/z3core.py", line 1626, in Z3_dec_ref
+  File "<sectools>/venv/lib/python3.12/site-packages/z3/z3core.py", line 1626, in Z3_dec_ref
     _elems.f(a0, a1)
-  File "~/Downloads/software_i_built/logos-rfp/spike/tmp/release-eng/sectools/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1830, in on_signal
+  File "<sectools>/venv/lib/python3.12/site-packages/halmos/__main__.py", line 1830, in on_signal
     sys.exit(exitcode)
 SystemExit: 143
 [PASS] check_no_role_call_moves_funds(uint8) (paths: 24473, time: 4781.55s, bounds: [])

@@ -6,7 +6,7 @@
 [10:15:26] sequencer stopped (exit 0)
 [10:15:29] sequencer start 2: scheduler after 1 s; its blocks fall 1 s after an epoch second
 [10:15:29] sequencer up, head block 19
-[10:15:29] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-lez-core-v04/e2e/seqnet/hook-lezcore.sh
+[10:15:29] hook <repo>/e2e/seqnet/hook-lezcore.sh
 [10:29:04] driver exit 0
 [10:29:19] sequencer stopped (exit 0)
 [10:29:27] node stopped (exit 143)

@@ -26,8 +26,9 @@ ADERYN_VERSION=${ADERYN_VERSION:-0.6.8}
 CARGO_AUDIT_VERSION=${CARGO_AUDIT_VERSION:-0.23.0}
 CARGO_DENY_VERSION=${CARGO_DENY_VERSION:-0.20.2}
 
-# Reports name paths relative to the repository and the home directory as ~, so they carry no machine paths.
-scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
+# Reports name paths relative to the repository, the tools' directory as <sectools> and the home directory as ~,
+# so they carry no machine paths (a traceback names the venv under $TOOLS, wherever SECTOOLS_DIR points).
+scrub() { for f in "$@"; do [ -f "$f" ] && sed -i -e "s|$TOOLS/|<sectools>/|g" -e "s|$ROOT/|./|g" -e "s|$ROOT|.|g" -e "s|$HOME|~|g" "$f"; done; }
 
 pin() { [ -n "$2" ] && printf '%s==%s' "$1" "$2" || printf '%s' "$1"; }
 cpin() { [ -n "$2" ] && printf -- '--version %s' "$2"; }

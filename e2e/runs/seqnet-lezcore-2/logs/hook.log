@@ -16,7 +16,7 @@
 [crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   26 + 10.3s df142cf66b56859cc2f868c4f7b91945c152ff9e4c7e15f0c6ff28a1ca3deaa5
 [crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
 [crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   27 +  9.9s ef15e1d7f4ddf2adf57f282ef0c93269c0c85b6231eb22bba38bca996072761b
-[crown-b] blocks 20..=27 (T1 0x057362a7c4ffa7e066a48bb6e7e523f7f76cf7ee399a200cb432fbcdc652b41b); 0 burn note(s) written to ~/Downloads/software_i_built/logos-rfp/spike/tmp/lez-core-v04-seq/w-lezcore-2/notes.json
+[crown-b] blocks 20..=27 (T1 0x057362a7c4ffa7e066a48bb6e7e523f7f76cf7ee399a200cb432fbcdc652b41b); 0 burn note(s) written to <work>/notes.json
 [10:16:55] wallet registry: {"imported_root":{"block_number":9,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","evm_chain_id":11155111,"leaf_count":1,"record_slot":11542656,"root":"0x8de765294b027c36b584555c3d6c7be0
 [10:16:55] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
 {"step":"faucet public transfer (stand-in for the gas drop)","tx":"bc0d0bab5fa056ed5d65e13b6e4e4b593b1aeaffbbb9af6e8131b5738ff2881b","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
