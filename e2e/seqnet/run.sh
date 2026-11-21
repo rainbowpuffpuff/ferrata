@@ -40,6 +40,7 @@ BESIDE="$(cd "$REPO/.." && pwd)"
 T="${SEQNET_TMP:-$BESIDE/tmp/miniapp-sequencer}"
 IN="$T/inputs"
 TGT="$T/target-lez"                                  # one target directory for cli/ and lez/crown/driver (LEZ's crates)
+mkdir -p "$T/logs"                                   # a fresh clone's first run has none (found by a second deployer)
 export CARGO_TERM_COLOR=never PATH="$HOME/.foundry/bin:$HOME/.cargo/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 say() { echo "[$(date -u +%H:%M:%S)] $*"; }
 die() { say "STOP: $*"; exit 1; }
