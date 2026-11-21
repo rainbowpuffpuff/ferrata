@@ -1,0 +1,26 @@
+********* Start testing of ferrata_miniapp_logos *********
+Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_module wallet session","program":"0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d","proofs":"dev","vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516"}
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: LEZ {"calls":[{"method":"open","ms":111,"reply":"0"},{"method":"get_sequencer_addr","ms":1,"reply":"http://127.0.0.1:3040/"},{"method":"get_current_block_height","ms":10,"reply":"20"},{"method":"list_accounts","ms":1}],"plain_path":"the zone's history and Ethereum: the chain service; a send lez_core refuses goes through the chain service","private_holding":"lez_core.sync_to_block + get_account_private
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: ETH {"configured":{"admin":"0x90F79bf6EB2c4f870365E785982E1f101E93b906","chain_id":11155111,"eth":{"chain_id":11155111,"via":"eth_rpc_module"},"freeze_authority":"0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65","from_block":1,"release_sender":"0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc","user":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"},"reads":{"calls":3,"chain_id":11155111,"routes":["direct","direct","direct"],"via":"eth_rpc_module"},"seen":{"block":9,"chain_id":11155111,"deposits":0},"sends":"tx_sender_module (one approval per send in the Logos signer)"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_01_connect()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_02_registry()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default() qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x214fb9…68a25d in block 10, position #0, sent through Logos Core's tx_sender_module after your approval (request snd_smh_d2984b132fc39a674d8d9e6deaecad971). Public on Ethereum: the depositor address, the token, the denomination and fees, the time, the commitment C. Hidden: the LEZ destination (C commits to it).
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_04_positions_before_import()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: WAITED claim delay 59 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: CLAIM {"tx":"ab66efcf6f3398244d9e97ed704d6dee986e3e4c25097249d068c24c24efed92","block":31,"proof":{"by":"LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven there, verified by the sequencer","mode":"dev","prove_ms":635,"receipt_bytes":16519,"tx_bytes":33055},"variant":"ClaimPrivately"}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults() qml: BURN {"tx":"c423232ed994f96f146ad0bab90349705b87ce0a2c9d518ae454ecd4a3ce6a66","block":32,"proof":{"by":"LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven there, verified by the sequencer","mode":"dev","prove_ms":405,"receipt_bytes":16033,"tx_bytes":32018}}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: WAITED release delay 300 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: RELEASE Released: 0.000997 ETH paid to 0x91579fb80e49de42635ff2675f6da710e6ebd0b2 in block 17 (transaction 0xbffbbb…615421), sent by 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc through Logos Core's tx_sender_module (one approval in the Logos signer).
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07b_vault_admin_through_the_send_stack()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: JOBS ["deposit:settled","claim:settled","burn:settled","release:settled","admin:settled","admin:settled","admin:settled","deposit:failed","admin:settled"]
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: CALLS 49 longest 528 ms
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::cleanupTestCase()
+Totals: 11 passed, 0 failed, 0 skipped, 0 blacklisted, 178814ms
+********* Finished testing of ferrata_miniapp_logos *********
