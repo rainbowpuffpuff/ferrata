@@ -20,8 +20,11 @@ name: _release-module
 # repository's LOGOS_SIGNING_KEY Actions secret (how logos-modules-release-
 # action's README and the base catalog's _release-module.yml inline
 # instructions name it), and logos-repo.json declares the matching public
-# identity under `trustedSigners` so clients verify it (release-publish.sh
-# writes that DID from the key the owner provides).
+# identity under `trustedSigners` (release-publish.sh writes that DID from
+# the key the owner provides). Logos clients do not trust that declaration
+# by itself: a signature counts for a user who adds the DID to the
+# installer's keyring and requires signatures (modules/catalog/RELEASE.md,
+# rules 1 and 5).
 #
 #   external — a signing rig you control (Jenkins, HSM, hardware token)
 #   produces the signed `.lgx`; the key never touches CI. Switch by
@@ -65,16 +68,21 @@ jobs:
       skip_if_published: ${{ !inputs.force_build }}
 
       # ─── Variants (edit here, not in each caller) ───────────────────
-      # All four of the action's variants, macOS (darwin-arm64) beside the
-      # Linux ones. windows-x86_64 is a mingw CROSS build — an ordinary
-      # Linux runner produces the PE — and is opt-in upstream, so the full
-      # list has to be spelled out rather than left to the action's
-      # default. The action narrows this list to the variants each
-      # module's flake actually exposes; a module that does not expose
-      # windows-x86_64 or linux-arm64 simply skips that leg, and one that
-      # fails to build ships the rest as a partial release the sidecar
-      # records in builtVariants / missingVariants.
-      variants: "darwin-arm64,linux-amd64,linux-arm64,windows-x86_64"
+      # The action's own default list at the pinned commit (v1.8), spelled
+      # out: macOS (darwin-arm64) beside the two Linux variants, the
+      # platforms RFP-022 Supportability #2 asks for. The base catalog adds
+      # windows-x86_64 (a mingw CROSS build, opt-in upstream); these modules
+      # have never been built for Windows, so it is left out.
+      # At v1.8 every listed variant gets its own build leg, with no check
+      # of what a module's flake exposes (that narrowing arrives in v1.12,
+      # f31710a): a leg that fails — a system the flake lacks, or a crate
+      # that does not build there — fails alone, and the release job
+      # publishes the variants that built as a partial release, the sidecar
+      # recording builtVariants / missingVariants. ferrata_updater_module
+      # vendors linux-x86_64 builds of the circuits and of rapidsnark
+      # (modules/scripts/stage-updater.sh), so its darwin-arm64 and
+      # linux-arm64 legs are expected to fail.
+      variants: "darwin-arm64,linux-amd64,linux-arm64"
 
       # ─── Runners and Nix cache (set by variables, not edited here) ───
       # Unset, every job runs GitHub-hosted and only reads the Logos cache.
@@ -100,6 +108,7 @@ jobs:
       ATTIC_TOKEN_PUBLIC: ${{ secrets.ATTIC_TOKEN_PUBLIC }}
       # Inline signing reads this (the JWK Ed25519 secret key; the action's
       # step writes it to a 0600 file and runs `lgx sign --key release`).
-      # The owner sets it out-of-band with:
-      #   gh secret set LOGOS_SIGNING_KEY --repo ORG/CATALOG_REPO --body-file KEY.jwk
+      # The owner sets it out-of-band with (the value read from stdin;
+      # modules/scripts/release-publish.sh --yes runs exactly this):
+      #   gh secret set LOGOS_SIGNING_KEY --repo ORG/CATALOG_REPO < KEY.jwk
       signing_key: ${{ secrets.LOGOS_SIGNING_KEY }}
