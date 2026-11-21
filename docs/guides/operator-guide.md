@@ -1,7 +1,7 @@
 # Operating Ferrata: the updater, the importer, the checkpoint prover and relayer, watchers
 
-**Operator guide (RFP-021 U.3, S.5, S.7, R.9, R.10, P.6; RFP-022 U.3, R.6, R.9, R.13, P.6). First
-draft, 11 November 2026.** For anyone who keeps Ferrata live: advancing an attestation instance,
+**Operator guide (RFP-021 U.3, S.5, S.7, R.9, R.10, P.6, VS.5; RFP-022 U.3, R.6, R.9, R.13, P.6). Revised for
+delivery on 21 November 2026, against the tree at this commit; it replaces the first draft of 11 November.** For anyone who keeps Ferrata live: advancing an attestation instance,
 importing the vault's deposit roots, proving and finalising LEZ checkpoints for the vault, relaying
 users' transactions, and watching for wrong candidates. It says what each role needs, what it costs
 (cycles, gas on Foundry's rules and on Sepolia, proof times on CPU and GPU), how concurrent operators
@@ -14,20 +14,39 @@ year. Every role below is permissionless except the watchers', and none can make
 vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
-**Status.** Three daemons are built as prototypes: `monitor` (§7), a standalone program
-([`monitor/`](../../monitor/README.md)) and a Logos module; the relayer, the binary `ferrata-relayer` (§6: rule (B) checkpoints,
-releases, wrapping, fee collection and the gas drop; tested on an anvil fork of Sepolia with real proofs and
-in the LEZ harness); and the **updater**, `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md), §3.6),
-tested against LEZ v0.4.0-rc1's state machine in process on the lab's recorded mainnet and Sepolia data, also as a
-Logos module on that chain. The relayer's root imports (§4, §6.1) and its Logos module (`ferrata_relayer_module`, the
-same daemon code) are built as prototypes, shown on the mini-app's devnet and the Sepolia fork, the module's LEZ side the
-devnet's zone (§6.6); the updater's backend for a
-running sequencer, a binary of its own (`lez/updater/sequencer/`), ran 8 h on a LEZ devnet following Sepolia live
-(`lez/updater/results/live-sepolia/`). All three daemons are designed
-as Logos modules run under `logosctl daemon`, with structured logs, clean shutdown and configurable endpoints and depths
-([`attestation.md`](../design/attestation.md) §8; [`bridge.md`](../design/bridge.md) §1). What runs
-today, and what this guide describes from measurement, is the **lab** (§2), the harness and live
-drivers, the checkpoint prover's host, and the end-to-end scripts.
+**Your role is liveness only (VS.5).** The programs accept an update on its signatures alone and a release on its
+proof alone, whoever sends them; nothing an operator sends can make them accept a false record, a false root or a
+false release, and if an operator stops, anyone else continues. The one exception on the return leg: under rule (A)
+the watchers also hold a safety role outside the rule's conditions ([`docs/trust.md`](../trust.md) §0, §2.4, §4.2).
+
+**Status.** Four daemons are built as prototypes, each as a binary and as a Logos module run under `logosctl
+daemon` with the binary's own code: the **updater** `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md),
+§3.6; `ferrata_updater_module`), the **relayer** `ferrata-relayer` (§4, §6: root imports, rule (B) checkpoints,
+releases, wrapping, fee collection, the gas drop's checks; `ferrata_relayer_module`), the watchers' **`monitor`** (§7,
+[`monitor/`](../../monitor/README.md); `ferrata_monitor_module`) and rule (B)'s **attestor** (§5.4,
+`ferrata_attestor_module`). They log structured lines, stop cleanly on SIGTERM and take their endpoints and depths
+from configuration ([`modules/README.md`](../../modules/README.md)). None has run on a public LEZ network (none
+exists for v0.4); each has run on zones we ran, on anvil and on forks of Sepolia, as §0 lists.
+
+## 0. The operator's journey: install, configure, run, monitor, stop
+
+Each row is a component an operator runs; the last column is the recorded run or test that exercised those very
+commands. Every component builds from this repository with the toolchains of
+[`quickstart.md`](quickstart.md) (LEZ v0.4.0-rc1 beside the repository, `lez/RESULTS.md` §8).
+
+| Component | Install | Configure | Run | Monitor | Stop | Exercised by |
+|---|---|---|---|---|---|---|
+| Updater (RFP-021 U.3) | `cd lez && cargo build -p ferrata-updater --features harness --locked` (the in-process chain), or `cd lez/updater/sequencer && cargo build --release` (a running sequencer); or `ferrata_updater_module` | one TOML file, every field with its default in [`ferrata-updater.example.toml`](../../lez/updater/ferrata-updater.example.toml): beacon sources, the checkpoint, the payer key file, fee limits and budget, the deferral policy (§3.6) | `RISC0_DEV_MODE=1 target/debug/ferrata-updater --config FILE` | `GET /health` (`ok`, `degraded` with reasons, `down` with HTTP 503) and `GET /metrics` (Prometheus) on `daemon.listen` | SIGTERM: the round in hand finishes, exit 0; a restart reads the chain | `lez/updater/dev/demo.sh`, at this commit: [`runs/2026-11-21-lez/`](runs/2026-11-21-lez/README.md); 8 h following Sepolia live on a devnet (`lez/updater/results/live-sepolia/`, EVIDENCE row 99); the module on a crown zone (row 104) |
+| Relayer and root importer (RFP-022 U.3) | `cd cli && cargo build --release --bin ferrata-relayer`, or `ferrata_relayer_module` | options (§6.2): the endpoints, the vault, the keystore and its password file, the state directory, the inbox, `--import-roots` and `--import-every` | `ferrata-relayer … run --inbox DIR` | one JSON line per event on stdout (§6.1); `ferrata-relayer … status` | SIGTERM or SIGINT, after the round in progress | `cli/tests/relayer.sh` on an anvil fork of Sepolia with real proofs (EVIDENCE row 46); `modules/scripts/relayer-e2e.sh`, binary and module (rows 106, 107) |
+| Watcher (`monitor`) | `cd monitor && cargo build --release`, or `ferrata_monitor_module` | options: the RPC, the vault, one `--node` view per own node, the key (`--key-env`, `--key-file` or a keystore, never on the command line), the state file, the alert log and pager command | `monitor run …` ([`monitor/README.md`](../../monitor/README.md), "Running it") | alerts as JSON lines, critical ones to the pager | SIGTERM: a `stopped` alert, the state saved | `monitor/tests/anvil-e2e.sh`, 46 checks (EVIDENCE row 43); `monitor/tests/fork-live-vault.sh` (row 45); the module on its devnet (row 96) |
+| Checkpoint prover | `checkpoint/` (the host) and `gpu-prover/` (a GPU), an x86 machine for the Groth16 wrap | the vault, the LEZ node, the rule | §5.4's sequence; `e2e/sepolia-cloud.sh` runs it end to end | the vault's candidates and checkpoints (the admin view, §10.1) | — | the live round trips (EVIDENCE rows 41, 91); `e2e/runs/crown-rehearsal-*` |
+| Rule (B) attestor | `checkpoint/attestor/`, or `ferrata_attestor_module` beside the sequencer | its certified attestation key; the node it reads | beside each sequencer | its published final-tier messages (the monitor audits them) | — | a real zone of four sequencers (EVIDENCE rows 65, 66); the module beside each sequencer (row 95) |
+
+**Where each clause is answered.** RFP-021 S.5 and U.3 (the operator journey end to end): §0 and §3; S.7 (the
+operator role: cost §3.3, cadence §3.1, starting without permission and what it needs §3.4 and §1, concurrent
+operators §3.4, a stalled instance §3.5, nobody obliged above); R.9 and R.10 (re-check before sending, deferral):
+§3.4; P.6 (resources): §9. RFP-022 U.3 and R.13 (the operator journeys): §0, §4, §6, §7; R.9 (third-party outages):
+§10 and [`docs/trust.md`](../trust.md) §4.3; R.6 (recovery after a connectivity failure): §10.
 
 ## 1. The roles at a glance
 
@@ -404,9 +423,12 @@ a real succinct proof in 14.6 s and 14.9 s, 584,106 bytes as JSON; image id at t
 `0xe10554850874c952eae7a7a939cc832be97bcd9f4426214269360d736ce0d207` (path-dependent; rebuild and record it
 for a deployment).
 
-Not built: the sealed variant (a credit to a private one-time account); the sweep of the credit inside the
-private claim by LEZ's wallet; a run against a live sequencer (the harness does not model LEZ's native
-token program, so its credit is a recorded stand-in).
+The sealed variant, a credit to a fresh one-time private account that the private claim sweeps and pays its fee
+from, ran on LEZ v0.4.0-rc3 with real proofs (M0 check 2, EVIDENCE row 124: a claimant with no native LEZ; the
+relayer's check made offline with `ferrata-gasdrop relay`). Not built: that credit in the daemon itself, whose
+`impl Credit for lez::Sequencer` sends a public transfer no private claim can sweep; a run of the daemon's drop
+against a live sequencer (the harness does not model LEZ's native token program, so its credit there is a recorded
+stand-in).
 
 ### 6.5 Wrapping
 
@@ -518,9 +540,10 @@ outside its conditions, funds can be lost ([`bridge.md`](../design/bridge.md) §
 [`docs/trust.md`](../trust.md)). Not built:
 - a client for the LEZ RPC and the Logos Blockchain node's channel answer;
 - the node-side computation of the checkpoint fields;
-- the Logos module;
 - fee bumping;
 - a run against a public network.
+
+`ferrata_monitor_module` runs the same daemon inside a headless Logos Core (EVIDENCE row 96).
 
 ## 8. Keys
 
@@ -547,7 +570,9 @@ Sources: [`bridge.md`](../design/bridge.md) §8.3, §14; [`vault/README.md`](../
 | Groth16 wrap | x86 | ~7.3 GiB | 195–215 s per checkpoint seal, 78–80 s per release seal (laptop) | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md); [`bridge.md`](../design/bridge.md) §18.2 |
 | The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | 0.08 USD a day at a two-hour cadence | [`lez/lab/README.md`](../../lez/lab/README.md) |
 
-Daemon CPU, memory and bandwidth for the real modules are **not measured** (they do not exist).
+Measured for the watchers' daemon: 34,216 kB resident at its kill, a two-poll run with a full rescan 31,980 kB
+maximum and 1.04 s ([`monitor/README.md`](../../monitor/README.md)). The updater's, the relayer's and the modules'
+CPU, memory and bandwidth over days are **not measured**.
 
 ## 10. Failure modes and recovery
 
@@ -566,6 +591,18 @@ Daemon CPU, memory and bandwidth for the real modules are **not measured** (they
 | A wrong checkpoint not revoked within 7 days | the vault halts for good: no honest checkpoint can follow it | revoke within the window (freeze authority) | [`bridge.md`](../design/bridge.md) §20 |
 | Verifier stop tripped (RISC Zero's proof of unsoundness) | no more releases or refunds | — | [`vault/README.md`](../../vault/README.md), "Verifier and stop" |
 | Ethereum gas mispriced (Glamsterdam state gas) | out-of-gas | take every limit from the node's estimate × 1.25 | [`deployer-guide.md`](deployer-guide.md) §4.1 |
+
+**The bridge's third-party components (RFP-022 R.9).** For each component a third party is expected to run on the
+bridge's side (the updater, the root importer, the relayer inbound and outbound, the wrapper, the checkpoint
+prover, the watchers, the rule (B) attestors, the nodes, the multisigs), what its outage and its malfunction do, the
+mitigation that is built and the test that shows it: [`docs/trust.md`](../trust.md) §4.3. What an operator does when
+its own daemon fails:
+
+| Daemon | After a crash or a restart | After its endpoint fails |
+|---|---|---|
+| Updater | start it again: it keeps no store, reads the instance from the chain and sends the open job's next step, never a second `Open` (EVIDENCE rows 79, 99) | retried with backoff; a source that fails is flagged unavailable and the others are used (`/health` says which) |
+| Relayer | start it again with the same `--state`: done and refused jobs, the gas-drop book (`drops.json`: a drop is recorded before its credit is sent, so no second drop for one `N`) and the root-import period are kept | a job whose failure is temporary stays in the inbox and is retried each round until `--max-job-age` (§6.1) |
+| `monitor` | start it again on the same `--state`: it rescans the vault's events and re-reads every pending candidate before acting; a lost state file costs a rescan from `--start-block`, never a missed cancellation; one process per state file (an OS lock) | `poll-failed` alerts, critical after 5 minutes; a stuck transaction times out and the next poll retries (§7) |
 
 ### 10.1 Reading a deployed vault: the admin view
 
@@ -595,10 +632,9 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The relayer's Logos module (`ferrata-relayer` is a plain binary, §6; the monitor, the rule (B) attestor and the
-updater are built as Logos modules, the updater's with both of its backends, §3.6); the relayer's root
-imports and its run against a live sequencer, the sealed gas drop to a private one-time account and its sweep inside
-the private claim (§6.4); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+The relayer's root imports on a running LEZ sequencer (they ran on the mini-app's devnet, §6.6); the gas drop's
+sealed credit inside the relayer daemon (the sealed credit and its sweep by a private claim ran with LEZ's wallet
+on v0.4.0-rc3, EVIDENCE row 124; the daemon's own credit is a public transfer that no private claim can sweep, §6.4); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
