@@ -46,6 +46,11 @@ to its table in `e2e/crown/README.md`), so records of either that name other ids
 | checkpoint final | after the wait W: `finalState` = the journal's new state, `checkpointCount` ≥ 1, the burn root accepted; before it, PENDING with the time finalization opens | |
 | releases | each release's journal verifies with its seal for the vault's `releaseImageId`; once paid: the nullifier is spent, the `Release` event names the recorded recipient, token, amount and the checkpoint's burn root, and the vault's balance is at most the deposits minus what the releases paid out (a release's fees are credited to `owed` and stay in the vault) and at least `escrowed` + `totalOwed` | |
 
+**21 November 2026.** The seal checks above trust RISC Zero's proof system, and verifier 3.0.0, the one these vaults
+use, accepts forged claims (RISC Zero's advisory GHSA-mm6c-35cm-g4x2, 11 November 2026): a seal that passes them is
+well-formed for the 3.0.0 circuits, and a forged seal would pass them too ([security
+note](../security/risc0-groth16-advisory-2026-11-21/README.md)).
+
 Measured on 11 November 2026 against crown-live-1's records while the run waited W (submit at Sepolia block
 12,111,746; finalization opens 13:27:48Z): **10 passed, 2 pending, 0 failed**, 48 RPC calls to the public endpoint
 (publicnode).

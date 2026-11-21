@@ -3,6 +3,15 @@
 The README's two sections on the Sepolia runs and deployments, moved here unchanged on 16 November 2026 (only the
 links are rewritten for this folder).
 
+**Security note, 21 November 2026.** The four vaults below verify through our own deployment of RISC Zero's Groth16
+verifier 3.0.0 (`0x8f0A…A2A0`), which accepts forged claims (RISC Zero's advisory GHSA-mm6c-35cm-g4x2, 11 November
+2026). RISC Zero's emergency stop does not cover our deployment; the vaults' own stops have no owner with a key, their
+freeze authority no key, and they had no caps. Read at block 12,183,432: a forgery could take 0.001 Sepolia ETH (the v3
+vault's deposit 0) and nothing from the three v5 vaults, whose escrow is below their smallest denomination. Later that
+day the deployer's admin key set every release and deposit cap of the four to zero (the deployer's nonces 49–56, read
+back at block 12,184,587), which closes their releases and deposits and the v5 vaults' refunds. The runs below
+happened and their records stand, but a seal's acceptance by these verifiers shows only that it is well-formed: [security note](security/risc0-groth16-advisory-2026-11-21/README.md).
+
 ## Live on Sepolia, and how to check it yourself
 
 On 12 November 2026 (EVIDENCE rows 91–92) the whole round trip ran on the final programs of
@@ -46,7 +55,9 @@ of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14
 [docs/guides/verify.md](guides/verify.md) says what each check proves and what it still trusts, and how to
 rebuild the programs to their image ids.
 
-**The same seals on Ethereum mainnet, read-only (EVIDENCE row 149).** On Sepolia the vaults check seals with our own
+**The same seals on Ethereum mainnet, read-only (EVIDENCE row 149; superseded as evidence on 21 November 2026:
+verifier 3.0.0 accepts forged claims and RISC Zero has emergency-stopped it, so this shows that our seals are
+well-formed for the 3.0.0 circuits, not that a forged seal would be refused).** On Sepolia the vaults check seals with our own
 deployment of RISC Zero's Groth16 verifier (`0x8f0A…`). On 18 November 2026 the crown-live-3 checkpoint, its two releases
 and every other Groth16 seal the tree records with its journal (66 in all) were also checked against RISC Zero's own
 contracts on Ethereum mainnet, the ones risc0-ethereum v3.0.0's `deployment.toml` names: the router
@@ -68,7 +79,8 @@ checkpoint and two releases through it ([`e2e/runs/crown-live-3/`](../e2e/runs/c
 (transaction `0xee91c261265ac3ada50b525edb35a1faa32bb5bb4ffa2b1d433f5a278d9808a3`, block 12,111,048): the live round
 trip of 11 November 2026 ([`e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md), EVIDENCE row 41). Both have
 testnet parameters (a 1-day revocation window, a 120 s release delay, no caps, no watchers, a freeze authority without
-a key holder). Before them, the v3 vault of the end-to-end fixture was deployed on Sepolia at
+a key holder); with verifier 3.0.0 known to accept forged claims, that leaves the admin key as the only control (the
+security note above). Before them, the v3 vault of the end-to-end fixture was deployed on Sepolia at
 [`0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7`](https://sepolia.etherscan.io/address/0xd0B5fcC0B47D8E6f514f9D246Bb0b416b2048AF7) (created by
 transaction `0x0a5c3a64b6357c76e273f3ecd91ad58078f9c872f3ab90e68dba521de0589f12`, block 12,107,894), with one deposit, deposit 0
 (transaction `0xf3235de7115886851c2a92b6471e1cdce9c8aa9fa3c39558d60cade17a5789a0`, block 12,107,901, 0.001 ETH).

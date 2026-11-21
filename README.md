@@ -47,7 +47,7 @@ Every document, one line each: [docs/README.md](docs/README.md).
 | The light client kept running ([the lab](lez/lab/README.md)) | two instances following Sepolia and mainnet on a LEZ zone, unattended, a session every two hours; the record replays offline, and each session's finalized roots equal a second beacon provider's | a LEZ v0.4.0-rc1 sequencer we run, one validator | [21](docs/EVIDENCE.md) |
 | The light client on the public LEZ testnet | its experimental v0.3.1 port (image `8d3b59ff…`) deployed, `Init` from a Sepolia checkpoint, two finality updates in one transaction each and an attestation of the vault's slots 0 and 1: 11 transactions in blocks 83019-83021; `verify` 29 of 29 and the explorer 11 of 11, the three blocks `Finalized` as the sequencer and the explorer reported them at the re-check (19 November, 11:21 UTC; the Logos Blockchain itself not checked by us) | the public LEZ testnet (LEZ v0.3.1); Sepolia read only | [150](docs/EVIDENCE.md) |
 | The round trip, live on Sepolia | Ethereum to LEZ and back on the final programs, one public and one private crossing each way, through FerrataVault v5; anyone can check it from the committed records | Sepolia; a LEZ devnet we ran | [91, 92](docs/EVIDENCE.md) |
-| Our seals on Ethereum mainnet, read-only | every Groth16 seal the tree records with its journal (66, the live round trip's among them) accepted by RISC Zero's own router and Groth16 verifier 3.0.0 on mainnet by `eth_call`; each seal, image id or journal with one byte changed refused | Ethereum mainnet, read-only, two public endpoints; nothing deployed, nothing sent | [149](docs/EVIDENCE.md) |
+| Our seals on Ethereum mainnet, read-only (18 November; superseded as evidence) | every Groth16 seal the tree records with its journal (66, the live round trip's among them) accepted by RISC Zero's router and Groth16 verifier 3.0.0 on mainnet by `eth_call`; each seal, image id or journal with one byte changed refused. **Not evidence of soundness:** verifier 3.0.0 accepts forged claims and RISC Zero has stopped it ([security note, 21 November](docs/security/risc0-groth16-advisory-2026-11-21/README.md)); the row shows only that our seals are well-formed for the 3.0.0 circuits | Ethereum mainnet, read-only, two public endpoints; nothing deployed, nothing sent | [149](docs/EVIDENCE.md) |
 | The return leg with several sequencers | the bridge program on a zone of four LEZ sequencers with an attestor beside each, its rule (B) checkpoint proven into the vault, and a rotation its committee proposed | a zone we ran; the vault on a local anvil, a stand-in beacon chain | [100, 101](docs/EVIDENCE.md) |
 | The return leg on LEZ v0.4.0-rc3 | the checkpoint guests' second build reads Logos Blockchain 0.3.5-rc.1's fork digest (the deployed ids unchanged); its rule (B) checkpoint over an rc3 zone's real blocks proven for real, wrapped and accepted by the vault, both burns released | rc3's sequencer (one) and node (one validator); CPUs of a Modal box; the vault on a local anvil | [129, 130](docs/EVIDENCE.md) |
 | The round trip on LEZ v0.4.0-rc3, live on Sepolia | Ethereum to LEZ and back with rc3's sequencer and its node 0.3.5-rc.1, the final LEZ programs and a new vault pinning the second build's `checkpoint_b`, real proofs; 13 transactions, verify 14 of 14 (rehearsed on a fork first) | Sepolia; an rc3 zone we ran, one sequencer, one validator | [141, 142](docs/EVIDENCE.md) |
@@ -148,6 +148,13 @@ both private LEZ transactions and the checkpoint proven for real, both releases 
 The runs in full, the four vaults deployed on Sepolia and what each check proves:
 [docs/sepolia.md](docs/sepolia.md) and [docs/guides/verify.md](docs/guides/verify.md).
 
+**Security note, 21 November 2026.** The four Sepolia vaults verify through our own deployment of RISC Zero's Groth16
+verifier 3.0.0, which accepts forged claims (RISC Zero's advisory GHSA-mm6c-35cm-g4x2 of 11 November 2026), with
+no stop anyone can trip today and no freeze key. At Sepolia block 12,183,432 a forgery could take 0.001 Sepolia ETH
+and nothing more. The same day the deployer's admin key closed all four: every release and deposit cap reads zero
+(eight transactions, read back at block 12,184,587). What is affected, what is not, and the plan:
+[docs/security/risc0-groth16-advisory-2026-11-21/](docs/security/risc0-groth16-advisory-2026-11-21/README.md).
+
 ## Components and their status
 
 | Component | What it is | Status | EVIDENCE rows |
@@ -233,7 +240,9 @@ testnet parameters ([docs/sepolia.md](docs/sepolia.md)). On a public LEZ network
 ([row 150](docs/EVIDENCE.md)); none of the proposal's v0.4 programs is: LEZ testnet 0.4 does not exist. The deployment for the day it opens is one command, built and rehearsed on our own LEZ v0.4.0-rc3 zone
 ([lez/testnet04/](lez/testnet04/README.md), [row 148](docs/EVIDENCE.md)). The prototypes exist to measure and to test the design; the audit is planned for the code the
 proposal would deliver. A security review by an agent in a separate context (11 November 2026) is not an audit,
-and Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing are tooling, not an audit. To report a
+and Slither, Aderyn, Halmos, cargo-audit, cargo-deny and fuzzing are tooling, not an audit. Every proof here is made
+with RISC Zero 3.0.5, whose verifiers accept forged claims (RISC Zero's advisories of 11 November 2026); the move to 3.1.0
+is [planned](docs/design/risc0-3.1-migration.md) ([security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md)). To report a
 vulnerability: [SECURITY.md](SECURITY.md).
 
 ## Licence
