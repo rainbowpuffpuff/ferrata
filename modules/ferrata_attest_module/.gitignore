@@ -9,3 +9,4 @@ rust-lib/staged/
 rust-lib/upstream/
 # check.sh output (default OUT_DIR)
 out/
+rust-lib/calls/target/
