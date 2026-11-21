@@ -18,6 +18,10 @@
 #   run.sh lezcore NAME   ferrata_bridge_module in a headless Logos Core beside lez_core: the module's LEZ reads, the
 #                         private holding and the private claim and burn through lez_core, each beside the plain path
 #                         (seqnet-chain) (hook-lezcore.sh)
+#   run.sh deployer NAME  a second deployer's own configuration (docs/guides/deployer-guide.md §11): the vault by
+#                         vault/script/deploy.sh with its FERRATA_* settings and RISC Zero's own Groth16 verifier, the LEZ
+#                         configuration with its roles and caps (CROWN_ROLES_LABEL, CROWN_TOKEN_CAP, CROWN_GLOBAL_CAP),
+#                         its token, caps, fee schedule and admin handover, every value read back (hook-deployer.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
@@ -147,11 +151,11 @@ case "${1:-}" in
   build) build ;;
   build-miniapp) build_miniapp ;;
   build-lezcore) build_lezcore "${2:-all}" ;;
-  cli|miniapp|lezcore|basecamp)
+  cli|miniapp|lezcore|basecamp|deployer)
     NAME="${2:?run.sh $1 NAME}"
     # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
     build > "$T/logs/build-before-$NAME.log" 2>&1 || { tail -n 20 "$T/logs/build-before-$NAME.log"; die "build"; }
-    if [ "$1" != cli ]; then
+    if [ "$1" != cli ] && [ "$1" != deployer ]; then
       ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin seqnet-chain ) >> "$T/logs/build-before-$NAME.log" 2>&1 \
         && cp "$TGT/release/seqnet-chain" "$T/bin/" || die "seqnet-chain build"
     fi

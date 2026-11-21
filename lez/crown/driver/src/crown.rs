@@ -135,16 +135,27 @@ fn now_ms() -> u64 {
 /// derived keys (they act by signing, which admits their accounts); the fee recipient only
 /// receives, and a public account must exist to be admitted, so it is the second of the funded
 /// test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
+///
+/// Another deployer's own configuration (docs/guides/deployer-guide.md §11): `CROWN_ROLES_LABEL` names the
+/// derived keys of the admin and the freeze authority (`<label>/admin`, `<label>/freeze-authority`; default
+/// `crown`), and `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets' capacity in value units,
+/// refilled over a day (default unlimited). They enter `controls`, so `salt` and `configId`: every call of one
+/// configuration (`config-id`, then `crown-b`) must see the same values.
 pub fn controls() -> Controls {
     let unlimited = CapParams { capacity: UNLIMITED, refill_per_second: 0 };
+    let cap = |var: &str| match std::env::var(var).ok().and_then(|v| v.trim().parse::<u128>().ok()) {
+        Some(capacity) => CapParams { capacity, refill_per_second: (capacity / 86_400).max(1) },
+        None => unlimited,
+    };
+    let label = std::env::var("CROWN_ROLES_LABEL").unwrap_or_else(|_| "crown".to_string());
     let fee_recipient = account_of(&lez_test_payers().expect("LEZ's test keys")[3]);
     Controls {
-        admin: *account_of(&derived_key("crown/admin")).value(),
-        freeze_authority: *account_of(&derived_key("crown/freeze-authority")).value(),
+        admin: *account_of(&derived_key(&format!("{label}/admin"))).value(),
+        freeze_authority: *account_of(&derived_key(&format!("{label}/freeze-authority"))).value(),
         fee_recipient: *fee_recipient.value(),
         floor: CapParams { capacity: 0, refill_per_second: 0 },
-        token_cap: unlimited,
-        global_cap: unlimited,
+        token_cap: cap("CROWN_TOKEN_CAP"),
+        global_cap: cap("CROWN_GLOBAL_CAP"),
     }
 }
 
@@ -234,7 +245,17 @@ impl Identity {
     pub fn config_json(&self, vault: [u8; 20]) -> Value {
         let config = self.bridge_config(vault);
         let preimage = self.config_preimage(vault).map(|p| h(&p)).unwrap_or_else(|e| format!("ERROR: {e}"));
-        json!({ "vault": h(&vault), "configId": h(&config.id(self.bridge_header)), "preimage": preimage })
+        let c = controls();
+        let cap = |p: &CapParams| json!({ "capacity": p.capacity.to_string(), "refillPerSecond": p.refill_per_second.to_string() });
+        json!({
+            "vault": h(&vault),
+            "configId": h(&config.id(self.bridge_header)),
+            "preimage": preimage,
+            "controls": {
+                "admin": h(&c.admin), "freezeAuthority": h(&c.freeze_authority), "feeRecipient": h(&c.fee_recipient),
+                "tokenCap": cap(&c.token_cap), "globalCap": cap(&c.global_cap), "floor": cap(&c.floor),
+            },
+        })
     }
 
     pub fn to_json(&self, vault: Option<[u8; 20]>) -> Value {

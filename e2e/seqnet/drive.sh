@@ -60,18 +60,25 @@ anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 --auto-impersonate >
 trap 'kill $ANVIL 2>/dev/null || true' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 1; done
 cast rpc anvil_setBalance $DEPLOYER 0x56bc75e2d63100000 --rpc-url $RPC > /dev/null   # 100 ETH
-MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
-  --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
-[ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
-N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
-VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
+if [ "$MODE" = deployer ]; then
+  # A second deployer's own deployment: DeployVault deploys RISC Zero's Groth16 verifier first (no proof is verified in
+  # this run), then the stop, the library and the vault: the vault is the fourth creation.
+  MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
+  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 3)) | awk '{print $NF}')"
+else
+  MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
+    --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
+  [ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
+  N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
+  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
+fi
 CID="$("$BIN/crown-driver" config-id --identity "$SA" --vault "$VAULT" | jq -r .configId)"
 GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$(jq -r .tip.id "$SA")" --tip-hash "$(jq -r .tip.hash "$SA")" \
   --keys "$(jq -r '.channel.keys | join(",")' "$SA")" --posting-timeframe "$(jq -r .channel.postingTimeframe "$SA")" \
   --config-tip-hash "$(jq -r .channel.configTipHash "$SA")")"
 FROM="$(cast block-number --rpc-url $RPC)"
-jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" '{label: "seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault tests MockRiscZeroVerifier behind the emergency stop",
-  chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: 3600}' > "$RUN/identity.json"
+jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" --arg d "${SEQNET_DELTA:-3600}" '{label: "seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault tests MockRiscZeroVerifier behind the emergency stop",
+  chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: ($d | tonumber)}' > "$RUN/identity.json"
 jq -n --arg c "$CID" --arg g "$GS" --arg a "$CHECKPOINT_A_ID" --arg b "$CHECKPOINT_B_ID" --arg r "$RELEASE_ID" --arg z "$Z" \
   '{_source: "seqnet (the final programs of docs/image-ids.md; a stand-in identity from a real devnet session A)",
     checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 1, tMin: 1,
@@ -101,7 +108,7 @@ EOF
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
 # ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
-if [ "$MODE" = cli ]; then
+if [ "$MODE" = cli ] || [ "$MODE" = deployer ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
@@ -132,7 +139,7 @@ cp "$VOL/session-a/logs/driver.log" "$RUN/lez/crown-a.log" 2>/dev/null || true
 [ -f "$VOL/session-x/export/chain.tsv" ] && cp "$VOL/session-x/export/chain.tsv" "$VOL/session-x/export/programs.tsv" "$RUN/lez/" 2>/dev/null
 
 # ---- 5. Ethereum's transactions ---------------------------------------------------------------------
-python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT,mock verifier=$MOCK" \
+python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT${MOCK:+,mock verifier=$MOCK}${SD_ADMIN:+,new admin=$SD_ADMIN}" \
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \

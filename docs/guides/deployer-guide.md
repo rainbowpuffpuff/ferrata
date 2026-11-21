@@ -1,20 +1,25 @@
 # Deploying Ferrata: the programs on LEZ and the vault on an EVM chain
 
-**Deployer guide (RFP-022 R.14, F.15, F.16, Security #8; RFP-021 VS.3). First draft, 11 November
-2026.** For an entity standing up its own, independently configured deployment: which decisions to
+**Deployer guide (RFP-022 R.14, F.15, F.16, Security #8; RFP-021 VS.3). Revised for delivery on 21 November 2026,
+against the tree at this commit; it replaces the first draft of 11 November.** For an entity standing up its own, independently configured deployment: which decisions to
 take before anything is sent, in which order the pieces are deployed and paired, how gas limits are
 set on a chain with Glamsterdam's state gas, how tokens, fees, the admin and freeze authorities and
 the finality depth are configured, and how to rehearse. Every statement cites its source; paths are
 relative to the repository root.
 
-**Status.** Nothing has been deployed for production. What was run: the vault's deployment script, on
-local forks of Sepolia (one transaction per run, limits from the node); the whole return leg, on forks
-and as a cloud rehearsal; the LEZ programs, through LEZ's own program loader on a local LEZ v0.4.0-rc1
-sequencer. Sent to public Sepolia: the first attempt's first transaction, which ran out of gas (§4); then,
-on 11 November 2026, the second run's deployment of the v3 vault of the end-to-end fixture and its
-deposit 0, and nothing after it ([`e2e/runs/sepolia-live-2/README.md`](../../e2e/runs/sepolia-live-2/README.md);
-the hashes in [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md), "On Sepolia"). The code is not audited
-([`vault/README.md`](../../vault/README.md); [`README.md`](../../README.md), "Not audited").
+**Status.** Nothing has been deployed for production, and the code is not audited
+([`vault/README.md`](../../vault/README.md); [`README.md`](../../README.md), "Not audited"). What was run: the vault's
+deployment script on local chains and forks of Sepolia (one transaction per run, limits from the node), and by the
+owner on public Sepolia for the live round trips (EVIDENCE rows 41, 91, 142; the sources verified, row 122); the LEZ
+programs through LEZ's own program loader on zones we ran; the one-command deployment of a release, tested on anvil
+(row 53). A **second deployer** followed this guide from a fresh clone and stood up its own configuration, with its
+own roles, fees, token, caps and finality settings, on anvil and a local LEZ zone: §11, recorded.
+
+**Where each clause is answered (RFP-022 R.14).** Registering tokens: §3 steps 5 and 7, §5 ("Registry bounds"), §11
+step 3, items 3 to 5. Setting fees: §2, §5 ("Fee schedules"), §11 step 3, item 5. Configuring the admin and the freeze
+authorities: §2, §5 ("Roles"), §11 steps 1 and 3 (items 2, 3, 5). The finality depth: §2 ("Finality depth"), §11
+step 1. An independently configured
+deployment (F.16): §7 and §11. Pairing (F.15): §6. Migration (Security #8): §9.
 
 ## 1. What a deployment consists of
 
@@ -299,11 +304,12 @@ Another entity deploys its own configuration under the same immutable bridge pro
 admin, freeze authority, registry, fees, caps, depths and wrapped tokens. Burn leaves bind the
 configuration and the checkpoint program collects only its own, so a tenant's burns cannot be released
 from another tenant's vault ([`bridge.md`](../design/bridge.md) §12.1, §15). A client selects a
-configuration by its id. Evidence today: the release test
-`attack_burn_from_another_config_cannot_satisfy_a_release` (native), and two configurations with their
-own vaults side by side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8).
-The malicious-tenant test (milestone B2's gate) is **not built** ([`docs/traceability.md`](../traceability.md),
-row F.16).
+configuration by its id. Evidence: the release test
+`attack_burn_from_another_config_cannot_satisfy_a_release` (native); two configurations with their own vaults side by
+side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8); the malicious-tenant test on the
+deployed program, which recorded two known issues (EVIDENCE row 136: a plaintext claim's `s` lets its holder freeze
+that deposit through a second configuration, and a filled public destination), both closed in a second build of the
+program that is not deployed (row 143); and a second deployer's own configuration, §11.
 
 ## 8. Rehearse the whole round trip
 
@@ -342,14 +348,102 @@ The attestation side's migration (successor and replacement instances) is in
   row 91, `crown-live-3`; the first live run, row 41, on `integration5`'s) through FerrataVault v5 with testnet
   parameters and a LEZ devnet we ran; a deployment on LEZ testnet 0.4 (which does not exist);
 - `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through
-  `verified_proxy_module`, its beacon checks read plain HTTP); the `ferrata_attestor`
-  module (rule (B)'s sequencer side; the program is built);
+  `verified_proxy_module`, its beacon checks read plain HTTP);
+- in the deployed bridge program, the nullifier and holder accounts keyed by the configuration (the second build,
+  not deployed: EVIDENCE row 143);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
-- deeper inbound finality settings; the malicious-tenant test;
+- deeper inbound finality settings;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
 - `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
   mini-app's `SetCap` and `Freeze` on a local devnet, row 62, are built).
 
 Sources: [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md)
 §19–§20; [`attestation.md`](../design/attestation.md) §15; [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §4.
+
+## 11. Walkthrough: a second deployer's own configuration, on anvil and a local LEZ zone
+
+This is the guide followed end to end by someone who is not the author: a fresh clone of this repository stands up its
+own, independently configured deployment, choosing its own roles, fees, token, caps and finality depth, and reads
+every one of them back from both chains. Everything runs on one machine: a local anvil chain (chain id 11155111, the
+light client's configuration being Sepolia's) and a local LEZ v0.4.0-rc1 zone (LEZ's own sequencer and a Logos
+Blockchain node, one validator). One stand-in, named: anvil has no beacon chain, so a committee whose keys the run
+holds finalizes anvil's blocks for LEZ's light client (`CROWN_CHAIN=stand-in`); everything else is the deployment as
+§3 describes it. Nothing is sent to any public network.
+
+**Step 0. The tree and what it builds against.** A clone, with LEZ v0.4.0-rc1 beside it (`../upstream/lez-v0.4.0-rc1`,
+[`quickstart.md`](quickstart.md)) and the zone's inputs where [`e2e/seqnet/run.sh`](../../e2e/seqnet/run.sh) looks for
+them (`../tmp/miniapp-sequencer/inputs/`: the LEZ bundle of the live run, with LEZ's sequencer and node and the final
+programs of [`image-ids.md`](../image-ids.md), and the final checkpoint and release programs); Foundry 1.3.6, Rust,
+`jq`, `curl`.
+
+```sh
+git clone https://github.com/rainbowpuffpuff/ferrata.git && cd ferrata
+```
+
+**Step 1. Your settings.** The run below used these; choose your own.
+
+| Setting | Variable | In the recorded run | Fixed in |
+|---|---|---|---|
+| The vault's admin, after the handover | `SD_ADMIN` | `0x5ec0d000000000000000000000000000000ad001` | two-step handover (`transferAdmin`, `acceptAdmin`) |
+| The vault's freeze authority (never the admin) | `FERRATA_FREEZE_AUTHORITY` | `0x5ec0d000000000000000000000000000000f2001` | replaced only by the admin's proposal, 14 days later |
+| Who receives protocol fees | `FERRATA_FEE_RECIPIENT` | `0x5ec0d000000000000000000000000000000fee01` | vault immutable |
+| Watchers (up to three) | `FERRATA_WATCHERS` | `0x5ec0d000000000000000000000000000000a7001,0x5ec0d000000000000000000000000000000a7002` | admin's proposal, 14 days later |
+| Finality depth outbound: the candidate's wait Δ (rule B), s | `SEQNET_DELTA` (passed to `FERRATA_DELTA`) | 5,400 | `deltaFloor` immutable; `delta` raise-only |
+| Release delay per token, its floor, the revocation window, s | `FERRATA_RELEASE_DELAY`, `FERRATA_MIN_RELEASE_DELAY`, `FERRATA_REVOKE_WINDOW` | 600; 300; 172,800 | immutable floor and window; the admin sets the delay within them |
+| The LEZ configuration's admin and freeze authority | `CROWN_ROLES_LABEL` (the label of their derived keys) | `deployer-two` | inside `configId` |
+| LEZ mint and burn caps, per token and global, value units a day | `CROWN_TOKEN_CAP`, `CROWN_GLOBAL_CAP` | 3,000,000,000; 9,000,000,000 | inside `configId`; the LEZ admin sets caps above the floor |
+| Inbound finality depth | — | Ethereum finality | not configurable (a deeper setting would not stop a captured committee, §2) |
+
+```sh
+export SD_ADMIN=0x5ec0d000000000000000000000000000000ad001
+export FERRATA_FREEZE_AUTHORITY=0x5ec0d000000000000000000000000000000f2001
+export FERRATA_FEE_RECIPIENT=0x5ec0d000000000000000000000000000000fee01
+export FERRATA_WATCHERS=0x5ec0d000000000000000000000000000000a7001,0x5ec0d000000000000000000000000000000a7002
+export SEQNET_DELTA=5400 FERRATA_RELEASE_DELAY=600 FERRATA_MIN_RELEASE_DELAY=300 FERRATA_REVOKE_WINDOW=172800
+export CROWN_ROLES_LABEL=deployer-two CROWN_TOKEN_CAP=3000000000 CROWN_GLOBAL_CAP=9000000000
+```
+
+**Step 2. Run it.** One command builds the tools from this clone (the vault, `ferrata`, `crown-driver` and the
+checkpoint tools) and stands up the deployment; its records go to `e2e/runs/seqnet-NAME/`:
+
+```sh
+bash e2e/seqnet/run.sh deployer second-deployer-1
+```
+
+**Step 3. What it does, in §3's order** ([`drive.sh`](../../e2e/seqnet/drive.sh), mode `deployer`, then
+[`hook-deployer.sh`](../../e2e/seqnet/hook-deployer.sh)):
+
+1. **LEZ: the programs and an instance.** A new zone; the attestation and bridge programs deployed through LEZ's
+   program loader, immutable, checked to be the final images; an attestation instance (`lez/crown/session.sh a`).
+2. **`configId`**, from the zone's identity, the predicted vault address and your LEZ roles and caps
+   (`crown-driver config-id`; the roles are the accounts of `<label>/admin` and `<label>/freeze-authority`).
+3. **EVM: the vault**, by `vault/script/deploy.sh` (§4) in mode (B), one transaction per run: RISC Zero's Groth16
+   verifier, the emergency stop, the library, the vault with your freeze authority, fee recipient, watchers, Δ,
+   revocation window and release delays; ETH and the test token registered; the stop's owner renounced; the checks.
+4. **A smoke test and the LEZ configuration**: one deposit with the `ferrata` tool, the vault captured, then on the
+   zone `Init` of your configuration (it attests that the vault's slot 2 holds your `configId`, so it succeeds only
+   if the LEZ roles and caps are the ones the vault pinned), ETH registered from the vault's registry, the deposit's
+   root imported (`crown-driver crown-b --operator-only`). These come before step 5 because the LEZ `Register`
+   attests the vault's fee schedules as they stand at the record; a schedule announced later reaches LEZ through
+   `ImportFees` once it is in force.
+5. **Your token, caps and fees, as the vault's admin**: a token of your own deployed and registered with your
+   denominations (50 and 500, 6 decimals), relay fees (0.5%), checkpoint fees (0.2%), caps (5,000 a day each way) and
+   release delay; ETH's deposit and release caps (1 ETH a day) and a global deposit cap; a fee schedule for ETH
+   announced (mint and burn fees 0.1%, checkpoint fees 0.2%), seven days of anvil's clock let pass, applied; the admin
+   role handed to your address in two steps.
+6. **Everything read back** from both chains (`cast call` on the vault's getters, `ferrata status` on the vault and
+   the zone, `crown-driver config-id` for the LEZ controls) and compared with what you chose: `checks.txt`, one PASS
+   or FAIL per setting; the run fails on any FAIL.
+
+**Step 4. Look at your deployment** with the admin view ([`admin/index.html`](../../admin/index.html), or
+`node admin/dump.mjs http://127.0.0.1:8545 <vault> <deployment block>`) while anvil runs, and `ferrata status`.
+
+**Recorded:** [`runs/2026-11-21-second-deployer/`](runs/2026-11-21-second-deployer/README.md), from a fresh clone of
+this branch on the build box.
+
+**What this walkthrough does not show:** a public network (Sepolia and LEZ testnet 0.4: the live round trips of
+EVIDENCE rows 41, 91, 142 were the owner's deployments); real proofs (none is needed to stand a deployment up); your
+own token registered on the LEZ side (the same `Register` message attests its vault entry as it does ETH's: §3 step 7);
+the LEZ import of the new fee schedule (`ImportFees`, once in force on the record's clock); the LEZ admin's own
+`SetCap` and the freeze authority's `Freeze` (built and tested in the harness, EVIDENCE row 74).
