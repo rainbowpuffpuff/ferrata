@@ -22,7 +22,9 @@ in the same box, 8 of 8.
 
 - submitters: the first operator stopped after `Init`; an account that had never sent anything sent 4 transactions
   and carried the instance to the fixture's finalized slot; the attestation of block 26,384,851 (2 statements)
-  applied. A forged update sent unchecked was refused at `Open` (exit 80, `Witness`); the store did not move.
+  applied. A forged update sent unchecked was refused at `Open` (exit 80, `Witness`); the store did not move. That
+  check was vacuous: the forger's update went out without its signer witness, so the program refused it for that
+  before reading the signature. Fixed and run again below (`every-party-2.log`).
 - provers: 6 transactions, all of the public job (`Init`, two `Adopt`, `Open`, `Miller`, `Finish`), none proven.
 - beacon providers: two liars and a down node beside an honest one, 0 transactions refused; with third parties only,
   the instance held after 3 transactions (the real bootstrap, which the liar must serve), then the consumer's own
@@ -37,10 +39,25 @@ in the same box, 8 of 8.
   state unchanged.
 - `trust.md` §2.4: 7 parties, each walked by its scenario.
 
+**`every_party` again, after review** (`every-party-2.log`; the same box, 21 November 2026, the tree of commit
+`011a4b6e`, `RISC0_HOME` set to the LEZ guest toolchain as `lez/RESULTS.md` §6 says): 8 of 8 passed. What changed:
+
+- submitters: the forger now sends its updates with the signer witness right (built from the store's committee, as
+  an honest submitter builds it; the genuine update with the same witness passes every step natively). One signature
+  byte flipped: refused at `Open` with 41 (`SignatureMalformed`). The committee's genuine signature over a false
+  finalized header (another execution state root, its execution and finality branches recomputed so that both
+  verify): `Open` and `Miller` applied, `Finish` refused with 40 (`SignatureInvalid`, the pairing check). Each code
+  equal to the native steps'; the instance's state byte for byte unchanged; no record of the false header.
+- beacon providers: a lagging node (it serves the checkpoint's bootstrap, not yet the newest finality update) added
+  beside the liars and the down node, in both phases; 0 refused, the instance held with third parties only (3
+  transactions), the consumer's own node carried it.
+- deployer: the codes are now asserted (203, 201), not only printed.
+- `trust.md` §2.4: each scenario named in the table must also be a test of the file (a renamed test fails).
+
 **`replacement`** (`replacement.log`): a statement attested under an instance and under its replacement with the same
 identifier (`7e5f4c87…555d`); each binding refused at the other's record (211); the old record still attests; the
 reference consumer's nullifiers for the same transfer under the old and the new pool differ (`bc8dde6d…`,
 `15cb99ed…`).
 
 Box cost of the session: about 0.08 USD for the first command (611 s, a cold build), 0.00 for the rerun (36 s), by
-`mrun`'s ledger estimate. Paths of the box are written `<repo>`.
+`mrun`'s ledger estimate; the rerun after review about 0.01 USD (20 s, warm). Paths of the box are written `<repo>`.
