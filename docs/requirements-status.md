@@ -25,7 +25,7 @@ Hard requirements:
 | RFP-021 | 25 | 29 | 2 | 3 | **59** |
 | RFP-022 | 27 | 37 | 2 | 2 | **68** |
 
-Soft requirements, counted apart (5 for each RFP): RFP-021 3 shown, 1 in part, 1 not yet; RFP-022 1 shown, 2 in part, 2 not yet (both not offered).
+Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 1 shown, 4 in part.
 
 By section, hard requirements:
 
@@ -140,11 +140,11 @@ By section, hard requirements:
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| Soft.1 | in part | In the bridge's own form only: `ImportRoot` records a root once; no generic recorded-statement account. | 27, 41, 91; `lez/harness/tests/bridge_inbound.rs` |
+| Soft.1 | shown | `ferrata_statements` records the attestation program's own `Attest` reply once at a public account; a reference reader uses one entry once per configuration after the guide's four consumer checks, each tested (an entry recorded for a weaker predicate is never read); two consumers share one entry, one `Use` 74,518 cycles against 432,128 for a direct attestation. Not deployed. | 154; `lez/results/statements.md`; `lez/results/statements-checks.md`; `docs/guides/recorded-statements.md` |
 | Soft.2 | shown | Four facts under one record in one call, 453,182 cycles, through the program. | 71; `lez/results/stage4-attest.md` |
 | Soft.3 | shown | Chains of EIP-2935 hops through the program on real data: up to 32 in one transaction under a Sepolia Gloas record (262,112 blocks back), four on mainnet; refusals with their codes. | 72, 145; `lez/results/history-hops-sepolia.md`; `lez/results/history-hops-mainnet.md` |
 | Soft.4 | shown | Conditions on four facts and a relation between two of them in one request, accepted and refused through the program. | `lez/results/stage4-attest.md`; `lez/results/stage4-attest-refusals.md` |
-| Soft.5 | not yet | A design note only; the protocol fee it would draw on starts at zero. | none |
+| Soft.5 | shown | `ferrata_rebate`: a pool anyone funds, at an address committing to its terms, pays a fixed rebate to whoever lands an advance through `Land`; a direct `Finish` still applies and is paid nothing; one advance pays one rebate, split progress once per gap; on five real mainnet updates. Not deployed; funding it from wrapped fee tokens needs a conversion, not built. | 155; `lez/results/rebate.md`; `lez/results/rebate-terms.md`; `docs/guides/operator-rebate.md` |
 
 ## RFP-022: Privacy-Preserving Wrapped ERC-20 and Ether Bridge
 
@@ -259,8 +259,8 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| Soft.1 | not yet | Not offered: committed amounts would need a new vault. | none |
-| Soft.2 | in part | `kView` discloses a holder's burns, not deposits or claims, in native tests; disclosure to a third party not tested. | `bridge/crates/ferrata-bridge-core/tests/outbound.rs`; `docs/privacy/RESULTS.md` |
+| Soft.1 | in part | Not implemented; the migration path is documented: the deployed vault cannot adopt committed amounts on either leg (three facts of the deployed code, each tested), so the path is a new vault with the old configuration retired, each safety claim citing its test. "Without redeploying the vault" is not met. | 158; `docs/design/committed-amounts.md` |
+| Soft.2 | in part | A disclosure document from the user's own keys (burns by `kView`; deposits, and a deposit's secret once its nullifier is spent) that a third party verifies against public chain data alone, wallet-side, tested; a library with no command, not replayed on recorded chain data; "without weakening privacy for anyone else" cannot be met absolutely by disclosing a link. | 156; `bridge/crates/ferrata-disclose/tests/disclose.rs`; `docs/privacy/viewing-keys.md` |
 | Soft.3 | shown | Per-token release delay tested on a local EVM within its bounds; the tool's early release is refused, then sent. | 85, 102; `vault/test/ReleaseDelay.t.sol` |
 | Soft.4 | in part | By redeployment only: a new proof system means a new vault and migration, which has not been run. | as Sec.8 |
-| Soft.5 | not yet | Not offered: no web depositor for common wallets. | none |
+| Soft.5 | in part | One static page deposits from any injected EIP-1193 wallet, served on 127.0.0.1, its security trade-offs documented; tested in headless Chromium against anvil with a stand-in wallet, not a wallet extension. | 157; `web/depositor/README.md`; `web/depositor/results/anvil-2026-11-21.txt` |

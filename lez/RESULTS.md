@@ -1424,9 +1424,11 @@ always built in release. Cycle counts do not depend on the host build.
 Lint and format this workspace's own crates only. Clippy needs `RISC0_SKIP_BUILD=1`, or its
 wrapper reaches the guest build and compiles the guests with the host toolchain:
 `RISC0_SKIP_BUILD=1 cargo clippy -p ferrata-lez-wire -p harness -p methods --all-targets --locked -- -D warnings`
-(clean). `cargo fmt --all` would also rewrite the path dependencies, LEZ's crates among them; use
-`cargo fmt -p ferrata-lez-wire -p harness -p methods`, and `rustfmt --edition 2021` for the guests
-(clean).
+(clean, also with `--features harness/statements,harness/rebate`; checked on 21 November 2026). `cargo fmt --all`
+would also rewrite the path dependencies, LEZ's crates among them; use
+`cargo fmt -p ferrata-lez-wire -p harness -p methods` (clean but for seven files written before this rule was kept:
+the three `redteam_*.rs` tests, `history_hops.rs`, `history_hops_review.rs`, `residue_handoff.rs` and `src/hops.rs`;
+checked on 21 November 2026), and `rustfmt --edition 2021` for the guests (clean).
 
 ## 9. On a running sequencer (`live/`)
 

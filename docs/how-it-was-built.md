@@ -35,6 +35,9 @@ trailer: 502 name `claude-opus-5-5` and 35 `claude-fable-5-2` (counted with
 `git rev-list --count b4ad05f` and `git log --format=%B b4ad05f | grep '^Assisted-by' | sort | uniq -c`).
 The two commits of 04:37 CET on 11 November are the last without it; every commit since carries one.
 
+Some drafts were written with GLM 5.3 through Claude Code and reviewed by Opus; their commits carry
+`Assisted-by: Claude Code (glm-5.3)`, beside the Opus trailer where Opus finished or rewrote them.
+
 ## Reviews by agents
 
 Agent reviews in a separate context were part of the work; none of them is an audit. No part of this
