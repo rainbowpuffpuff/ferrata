@@ -151,6 +151,14 @@ pub enum AttestCmd {
         #[arg(long = "committee")]
         committees: Vec<String>,
     },
+    /// Write a LEZ wallet (LEZ's own storage, encrypted under the password) holding the payer's key (--key), as Logos
+    /// Core's `lez_core` opens one (`open(config, storage, password, force_rpc)`); no zone is read.
+    Wallet {
+        #[arg(long)]
+        home: PathBuf,
+        #[arg(long)]
+        password_file: PathBuf,
+    },
     /// The zone's receipts of transactions (sent by anyone, for instance through Logos Core's `lez_core`), from the
     /// follower: applied or refused with the program's code, execution and storage gas, events.
     Receipt {
@@ -484,6 +492,29 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
     let program = AccountId::new(root_arg(&a.program)?);
     let run = Run { record: a.record.clone() };
     let rpc = a.lez_rpc.clone().or(sequencer).unwrap_or_else(|| "http://127.0.0.1:3040".to_string());
+    if let AttestCmd::Wallet { home, password_file } = &a.cmd {
+        let p = payer(&a.key)?;
+        let password = std::fs::read_to_string(password_file)?;
+        let password = password.trim_end_matches(['\n', '\r']);
+        std::fs::create_dir_all(home)?;
+        let config = home.join("wallet_config.json");
+        let storage = home.join("storage.json");
+        std::fs::write(
+            &config,
+            format!(
+                "{{\n  \"sequencer\": {{ \"sequencer_addr\": \"{rpc}\" }},\n  \"seq_poll_timeout\": \"1s\",\n  \
+                 \"seq_tx_poll_max_blocks\": 120,\n  \"seq_poll_max_retries\": 2,\n  \"seq_block_poll_max_amount\": 100,\n  \
+                 \"gas_limit\": {}\n}}\n",
+                a.gas_limit
+            ),
+        )?;
+        let (mut w, _mnemonic) = wallet::WalletCore::new_init_storage(config.clone(), storage.clone(), None, password)?;
+        w.storage_mut().key_chain_mut().add_imported_public_account(p.key);
+        w.store_persistent_data()?;
+        println!("wallet {}: config {}, storage {}, public account {} (the payer)", home.display(), config.display(), storage.display(), p.id);
+        run.log(json!({ "what": "wallet", "home": home.display().to_string(), "account": p.id.to_string() }));
+        return Ok(0);
+    }
     let mut z = Zone::open(&rpc, a.wait_final != "no", a.state_dir.clone()).await?;
     let (tip, _) = z.tip();
     println!("zone {rpc}: followed to block {tip}{}", if z.wait_final { " (final on Bedrock)" } else { "" });
@@ -650,6 +681,7 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             }
             Ok(st)
         }
+        AttestCmd::Wallet { .. } => unreachable!("handled before the zone is opened"),
         AttestCmd::Receipt { txs } => {
             let mut status = 0;
             for t in txs {
