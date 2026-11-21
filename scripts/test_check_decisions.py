@@ -165,6 +165,18 @@ D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13
         self.assertTrue(any("RFP-021 Sec.9 is not a row" in f for f in findings({"0001-one-core.md": bad},
                                                                                 readme=INDEX.replace("RFP-021 F.1, S.4", "RFP-021 Sec.9"))))
 
+    def test_an_adr_that_is_not_in_the_log(self):
+        # 0013 named ADR 0029 after 0029 was held back (review of 21 November 2026, M-1).
+        bad = GOOD.replace("the cost is one crate to audit.", "the cost is one crate to audit; ADR 0029 adds the rest, "
+                           "and ADRs 0001 and 0002 the context.")
+        out = findings({"0001-one-core.md": bad}, readme=INDEX + "\nRecords 0027–0031 wait: ADRs 0001–0003.\n")
+        self.assertIn("0001-one-core.md: names ADR 0029, which is not in the log", out)
+        self.assertIn("0001-one-core.md: names ADR 0002, which is not in the log", out)
+        self.assertIn("README: names ADR 0002, which is not in the log", out)
+        self.assertIn("README: names ADR 0003, which is not in the log", out)
+        self.assertFalse(any("ADR 0001," in f for f in out), out)
+        self.assertEqual(findings({"0001-one-core.md": GOOD.replace("the cost is", "ADR 0001: the cost is")}), [])
+
     def test_a_gap_in_the_numbers_and_an_unlisted_record(self):
         out = findings({"0001-one-core.md": GOOD, "0003-other.md": GOOD.replace("ADR 0001", "ADR 0003")})
         self.assertTrue(any("without a gap" in f for f in out), out)

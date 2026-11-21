@@ -20,6 +20,7 @@ decisions are made and current at each milestone delivery". This check fails (ex
   not have, a change Dn the bridge specification does not have, or a branch (a record describes only work in this
   tree);
 * a requirement is not an ID of docs/traceability.md (F.1, Sec.8, Soft.3, ...) under the RFP named before it;
+* a record or the README names an ADR (`ADR 0029`, `ADRs 0003 and 0011`, `ADRs 0027–0031`) that is not in the log;
 * the README's index does not link every record exactly once, or one of its cells (title, date, status,
   requirements) differs from the record's;
 * a change D1, D2, ... of the bridge specification (docs/design/spec/bridge-spec-v3-changes.md) is cited in no
@@ -44,6 +45,7 @@ DATE = re.compile(rf"\b\d{{1,2}}(?:[–-]\d{{1,2}})? (?:{MONTHS}) \d{{4}}\b")
 MARK = re.compile(r"\*(Recorded|Recorded later|Ruled out):\*|\*Reconstructed for contrast\*")
 PATH = re.compile(r"(?<![\w./-])((?:[\w.-]+/)+(?:[\w.-]+)?|[\w.-]+\.(?:md|rs|sol|sh|py|toml|json))(?![\w-])")
 SKIP_PATH = re.compile(r"^(https?:|[\d.]+$|v\d)|\.\.\.")
+ADR_REF = re.compile(r"\bADRs? (\d{4}(?:(?:, | and | or |[–-]| to )\d{4})*)")
 
 
 def plain(text):
@@ -102,6 +104,21 @@ def requirement_findings(where, value, repo):
                 out.append(f"{where}: {rfp} {tok} is not a row of docs/traceability.md")
         else:
             out.append(f"{where}: '{tok}' is not a requirement ID (F.1, Sec.8, Soft.3, ...)")
+    return out
+
+
+def adr_findings(where, text, repo):
+    """Every ADR the text names (one, a list, or a range) is a record of the log."""
+    out = []
+    for m in ADR_REF.finditer(text):
+        nums, seps = re.findall(r"\d{4}", m.group(1)), re.findall(r"\d{4}(, | and | or |[–-]| to )", m.group(1))
+        named = {int(nums[0])}
+        for k, sep in enumerate(seps):
+            a, b = int(nums[k]), int(nums[k + 1])
+            named |= set(range(a, b + 1)) if sep.strip() in ("–", "-", "to") else {b}
+        for n in sorted(named):
+            if not any(r.startswith(f"{n:04d}-") for r in repo.records):
+                out.append(f"{where}: names ADR {n:04d}, which is not in the log")
     return out
 
 
@@ -200,6 +217,7 @@ def check(repo):
         if re.search(r"\bbranch\b", st):
             findings.append(f"{name}: the status cites a branch: a record describes only work in this tree")
         findings += requirement_findings(name, meta.get("Requirements", ""), repo)
+        findings += adr_findings(name, text, repo)
         sec = sections(text)
         for s in SECTIONS:
             if s not in sec:
@@ -243,7 +261,8 @@ def check(repo):
                 findings.append(f"{name}: names {p}, which is not a tracked file")
     if numbers != list(range(1, len(numbers) + 1)):
         findings.append(f"record numbers are not 1..{len(numbers)} without a gap: {numbers}")
-    # The index: every record once, every cell equal to the record's.
+    # The index: every record once, every cell equal to the record's; every ADR it names in the log.
+    findings += adr_findings("README", repo.readme, repo)
     linked = {}
     for line in repo.readme.splitlines():
         m = re.match(r"^\| \[(\d{4})\]\((\d{4}-[a-z0-9-]+\.md)\) \|(.*)\|\s*$", line)

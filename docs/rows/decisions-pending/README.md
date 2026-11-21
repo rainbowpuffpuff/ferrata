@@ -8,7 +8,9 @@ pointed at files this tree does not have and said the opposite of `docs/trust.md
 
 When `rfp-softs` is merged, in the same commit:
 
-1. move the five files back into `docs/decisions/` (their numbers follow 0026);
+1. move the five files back into `docs/decisions/` (their numbers follow 0026), and put back at the end of 0013's
+   rationale the sentence "ADR 0029 (21 November 2026) adds the disclosure of deposits and claims, wallet-side."
+   (taken out because 0029 is not in the log until then);
 2. drop "(branch rfp-softs)" from their statuses and the "branch …, commit …:" prefixes from their sources, citing the
    files instead;
 3. update `docs/trust.md` (the rebate "design only"), `docs/design/attestation.md` §9 (the rebate) and the RFP-021
