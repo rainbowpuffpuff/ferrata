@@ -4,7 +4,10 @@ Branch `risc0-advisory` (from `5cf1e8e7`). This stream owns no requirement row. 
 11 November 2026 (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2) and asks for the changes below to shared files. Already
 on the branch, as the brief asked: README row 50 and two dated sentences, EVIDENCE row 149 and one header sentence
 (commit `43e31d01`); the security note `docs/security/risc0-groth16-advisory-2026-11-21/` and the migration plan
-`docs/design/risc0-3.1-migration.md` (`de60ab91`).
+`docs/design/risc0-3.1-migration.md` (`de60ab91`). After the branch's review, commits `c4f9f99d` to `73691970`
+change, directly, only files no open branch edits (the note and its scripts, the migration plan, this file,
+`docs/sepolia.md`, `e2e/README.md`, `e2e/runs/mainnet-risc0-verify/README.md`); what shared files need is proposed
+below.
 
 ## Requirement rows (proposed)
 
