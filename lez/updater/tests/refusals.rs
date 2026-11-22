@@ -907,10 +907,11 @@ impl Source for Serving {
 /// review-integ9d M1, the bypass of the tie-break: a source serves another real update of the same finalized header
 /// with more signers (Lodestar's, 511, of the probe), re-dated to a later slot, while the other serves Nimbus's (510).
 /// The liar's used to sort first (the most signers before the earliest signature slot), and its window not being open
-/// ended every round in `Waiting`, up to a sync-committee period. Re-dated 600 slots (two hours): refused as signed in
-/// the future, the liar demoted, Nimbus's applied. Re-dated three slots (24 s past the chain's clock, within
-/// `FUTURE_MARGIN_MS`, as a clock skew could make an honest update look): not refused, the liar not demoted, and
-/// Nimbus's, signed earlier, applied first. Neither waits a round.
+/// ended every round in `Waiting`, up to a sync-committee period. Re-dated 600 slots (two hours), or six slots past the
+/// chain's clock (72 s, one slot beyond `FUTURE_MARGIN_MS`): refused as signed in the future, the liar demoted, Nimbus's
+/// applied. Re-dated two slots past the clock (24 s), or five (60 s, the margin itself), as a clock skew could make an
+/// honest update look: not refused, the liar not demoted, and Nimbus's, signed earlier, applied first. None waits a
+/// round.
 #[test]
 fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
     let r = mainnet();
@@ -920,11 +921,19 @@ fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
     assert_eq!(more.finalized_header, fewer.finalized_header, "one finalized header");
     assert_eq!((signers(&more), signers(&fewer)), (511, 510));
     assert!(more.signature_slot < fewer.signature_slot);
-    // The chain's clock one slot after Nimbus's signature slot.
+    // The chain's clock one slot after Nimbus's signature slot; `past(k)`, the slot that starts `k` slots after it.
     let now = r.config.slot_start_ms(fewer.signature_slot) + 12_000;
-    let near = fewer.signature_slot + 3;
-    assert!(r.config.slot_start_ms(near) > now && r.config.slot_start_ms(near) <= now + FUTURE_MARGIN_MS);
-    for (case, to, payer) in [("600 slots", more.signature_slot + 600, key(0x50)), ("three slots", near, key(0x51))] {
+    let past = |k: u64| fewer.signature_slot + 1 + k;
+    assert_eq!(r.config.slot_start_ms(past(0)), now);
+    assert_eq!(r.config.slot_start_ms(past(5)), now + FUTURE_MARGIN_MS, "five slots: the margin itself");
+    // (case, the slot it is re-dated to, whether it is refused as signed in the future, the payer)
+    let cases = [
+        ("600 slots", more.signature_slot + 600, true, key(0x50)),
+        ("two slots past the clock", past(2), false, key(0x51)),
+        ("five slots past the clock (the margin)", past(5), false, key(0x53)),
+        ("six slots past the clock", past(6), true, key(0x54)),
+    ];
+    for (case, to, future, payer) in cases {
         let clock = Clock::new(105);
         let on = Arc::new(AtomicBool::new(false));
         let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
@@ -960,11 +969,11 @@ fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
         assert_eq!(moved, fewer.finalized_header.beacon.slot, "{case}");
         assert_eq!(opens.len(), 1, "{case}: one job");
         assert_eq!(refused(&l, 0), 0, "{case}");
-        if to == near {
-            assert_eq!(liar.refused, 0, "within the margin: not demoted");
-        } else {
-            assert_eq!(liar.refused, 1);
+        if future {
+            assert_eq!(liar.refused, 1, "{case}");
             assert!(why.iter().any(|w| w.contains("liar demoted") && w.contains("signed in the future")), "{why:?}");
+        } else {
+            assert_eq!(liar.refused, 0, "{case}: within the margin, not demoted");
         }
     }
 }

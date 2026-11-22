@@ -33,10 +33,10 @@ MUTANTS = {
     # No refusal of candidates signed in the future, and the key of 0ddb5168 (the most signers before the earliest
     # signature slot).
     "m1": ([(U, *FUTURE), (U, *KEY)], ["--test", "refusals", "a_re_dated"]),
-    # The same, with only the near case of the more-signers test (re-dated within FUTURE_MARGIN_MS).
+    # The same, with only the more-signers cases re-dated within FUTURE_MARGIN_MS (two and five slots past the clock).
     "m1near": ([(U, *FUTURE), (U, *KEY),
-                (T, '[("600 slots", more.signature_slot + 600, key(0x50)), ("three slots", near, key(0x51))]',
-                 '[("three slots", near, key(0x51))]')],
+                (T, "    for (case, to, future, payer) in cases {",
+                 "    for (case, to, future, payer) in cases.into_iter().filter(|c| !c.2) {")],
                ["--test", "refusals", "a_re_dated_update_with_more_signers"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
