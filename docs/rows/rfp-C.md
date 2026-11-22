@@ -202,7 +202,7 @@ measured after a restructure). It could be done with the RISC Zero 3.1.0 rebuild
 which moves the image ids anyway. (2)
 needs no image change: an updater policy that does not open a job on a store another party's open job will change
 (join it or wait). A lower gas limit for `Open` would cap the same-block revert. Against a daemon that never defers,
-the honest daemons' ratio stays high whatever their window while a duplicate costs 2.2M.
+the honest daemons' ratio was 1.31 at window 8 (G2); other windows were not run with the adversary.
 
 Proposed EVIDENCE row: | new | RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer: two honest `ferrata-updater`
 daemons with an adversary (window 8) and alone (windows 1, 8, 30), following recorded mainnet updates replayed 80 to
