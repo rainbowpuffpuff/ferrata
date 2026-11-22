@@ -18,6 +18,8 @@ against the program since B1, and the suites B1 added:
 | `bridge-refusals.md` | `bridge_refusals.rs` | Priv.5 (refused, repeated and capped claims) |
 | `tenant/` | `tenant.rs` | F.16 (the malicious-tenant attacks and the separation matrix) |
 | `redteam-2026-11-18/` | `redteam_bridge.rs` | the blind red team's bridge vectors, re-run |
+| `captured-committee-exposure.md` | `captured_committee_exposure.rs` | RFP-021 VS.4 (a captured committee's take, bounded by the caps and the freeze) |
+| `interrupted-operations-claim.md`, `interrupted-operations-burn.md` | `interrupted_operations.rs` | R.7 (dropped proofs consume nothing) |
 | `privacy/` | `privacy_suite.rs` with `scripts/privacy/run.sh` | the privacy suite (F.2, F.8, Privacy #1–#7) |
 | `bridge-burn.md`, `bridge-controls.md`, `bridge-gloas.md`, `bridge-inbound.md`, `bridge-private-claim.md`, `bridge-roles.md`, `bridge-time.md`, `bridge-transfer-private.md`, `bridge-vault-storage.md` | the suites of the same names | as their records beside this folder |
 
@@ -28,7 +30,8 @@ in a block of its own, RISC Zero dev mode; the build box. Re-run (in `lez/`, wit
 FERRATA_LEZ_RESULTS_DIR="$PWD/results/b1" RISC0_DEV_MODE=1 cargo test -p harness --locked \
   --test tenant --test bridge_depth --test bridge_delist --test bridge_refusals --test bridge_inbound \
   --test bridge_controls --test bridge_burn --test bridge_private --test bridge_roles --test bridge_secfix \
-  --test bridge_time --test bridge_vault_storage --test redteam_bridge
+  --test bridge_time --test bridge_vault_storage --test redteam_bridge \
+  --test captured_committee_exposure --test interrupted_operations
 scripts/privacy/run.sh lez/results/b1/privacy        # from the repository root
 ```
 

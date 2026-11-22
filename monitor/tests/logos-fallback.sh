@@ -17,13 +17,14 @@
 # request takes the module's next number, behind the gap at n.
 #
 # Run from monitor/ (on the build box: mrun -- 'bash tests/logos-fallback.sh'; Foundry's vault/lib installed).
-# Results: results/logos-fallback/ (summary.md, alerts.jsonl, the stand-in's log and history), or $MONITOR_LF_OUT.
+# Results: target/logos-fallback/ (summary.md, alerts.jsonl, the stand-in's log and history), or $MONITOR_LF_OUT; the
+# committed record, results/logos-fallback/ (with its README and before-fix/), is copied from a run by hand.
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")/.." && pwd)"
 repo="$(cd "$here/.." && pwd)"
 vault_dir="$repo/vault"
-out="${MONITOR_LF_OUT:-$here/results/logos-fallback}"
+out="${MONITOR_LF_OUT:-$here/target/logos-fallback}"
 run="$out/run"
 rm -rf "$out"
 mkdir -p "$run"
@@ -157,11 +158,13 @@ check "L4 cancelled through tx_sender_module at nonce $((nonce0 + 3)), mined" \
   '[ "$(submitted_at "$n4")" = 0 ] && [ "$(jq -r .via.path <<< "$a")" = logos ] && [ "$txn" = $((nonce0 + 3)) ]'
 latest=$(cast nonce --rpc-url "$rpc" "$watcher" --block latest)
 pending=$(cast nonce --rpc-url "$rpc" "$watcher" --block pending)
-check "the watcher's account: $((nonce0 + 4)) transactions mined, nothing pending behind a gap (latest $latest, pending $pending)" \
-  '[ "$latest" = $((nonce0 + 4)) ] && [ "$pending" = "$latest" ]'
+# anvil's pending nonce does not count transactions queued behind a gap: ask its pool too (review-integ9d L6).
+queued=$(cast rpc --rpc-url "$rpc" txpool_status | jq -r '.queued' | xargs printf '%d')
+check "the watcher's account: $((nonce0 + 4)) transactions mined, nothing pending or queued behind a gap (latest $latest, pending $pending, queued $queued)" \
+  '[ "$latest" = $((nonce0 + 4)) ] && [ "$pending" = "$latest" ] && [ "$queued" = 0 ]'
 
 # The node view's path in the alerts, without the checkout's location (as anvil-e2e.sh).
-sed -i -e 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' "$alerts"
+sed -i -e 's#"file:[^"]*/monitor/\(results\|target\)/#"file:<checkout>/monitor/\1/#g' "$alerts"
 {
   echo
   echo "| Case | Fault armed | Requests to the module | Request's nonce | The cancel went | Its nonce (mined) | cancel-failed alerts |"

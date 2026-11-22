@@ -600,7 +600,13 @@ impl Sequencer {
 fn write_json_atomic(path: &Path, value: &serde_json::Value) -> Result<()> {
     use std::io::Write as _;
     let tmp = path.with_extension("part");
-    let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    // Owner-only, as LEZ's wallet storage beside it: the record links `N` to the one-time account (review-integ9d L8).
+    let _ = std::fs::remove_file(&tmp);
+    let mut o = std::fs::OpenOptions::new();
+    o.write(true).create_new(true);
+    #[cfg(unix)]
+    std::os::unix::fs::OpenOptionsExt::mode(&mut o, 0o600);
+    let mut f = o.open(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
     f.write_all(&serde_json::to_vec_pretty(value)?)?;
     f.sync_all()?;
     std::fs::rename(&tmp, path)?;

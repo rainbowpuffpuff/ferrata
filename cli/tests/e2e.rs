@@ -358,7 +358,9 @@ async fn lez_freeze(
 }
 
 /// A refusal that names no deposit and no burn: no hash, commitment, nullifier or address (no run of 40 or more
-/// hex digits), no leaf index and no burn counter (U.08's last sentence).
+/// hex digits), no leaf index and no burn counter (U.08's last sentence). Called on the whole error chain, `{e:#}`, as
+/// the binary prints it (`main.rs`). It does not search for the case's own index, `N` or tag by value (review-integ9d
+/// L5: a decimal index or a short prefix would pass it); the recorded messages show none.
 fn names_nothing(text: &str) -> bool {
     let mut run = 0usize;
     for c in text.chars() {
@@ -988,7 +990,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
                 && e.to_string().contains(&format!("mints (claims) {scope} are frozen until Ethereum time"))
                 && e.to_string().contains("the deposit stays claimable")
                 && e.to_string().contains("retry once the freeze ends")
-                && names_nothing(&e.to_string()),
+                && names_nothing(&format!("{e:#}")),
             "the frozen claim's refusal: {e}"
         );
         lez_freeze(&mut zone, &p, &cid, token, true, true).await?;
@@ -1066,7 +1068,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
             e.to_string().contains("exit code 242 FROZEN")
                 && e.to_string().contains(&format!("burns {scope} are frozen until Ethereum time"))
                 && e.to_string().contains("nothing is burned: the holding stays yours")
-                && names_nothing(&e.to_string()),
+                && names_nothing(&format!("{e:#}")),
             "the frozen burn's refusal: {e}"
         );
         lez_freeze(&mut zone, &p, &cid, token, false, true).await?;
@@ -1211,7 +1213,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
             e.to_string().contains(&format!("vault error {want}()"))
                 && e.to_string().contains("checked before sending: frozen until Ethereum time")
                 && e.to_string().contains("the burn stays releasable")
-                && names_nothing(&e.to_string()),
+                && names_nothing(&format!("{e:#}")),
             "the frozen release's refusal: {e}"
         );
         freezer_send(&p, vault, lift).await?;
@@ -1362,7 +1364,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     ensure!(
         e.to_string().contains("exit code 242 FROZEN")
             && e.to_string().contains("the deposit stays claimable")
-            && names_nothing(&e.to_string()),
+            && names_nothing(&format!("{e:#}")),
         "the frozen private claim's refusal: {e}"
     );
     lez_freeze(&mut zone, &p, &cid, None, true, true).await?;

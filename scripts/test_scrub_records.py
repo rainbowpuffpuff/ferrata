@@ -11,18 +11,25 @@
   E  zone-bridge.sh records on a run directory holding this machine's paths where the second review found one
      (net/proxy.log: pubnet.py's traceback) and where forge and the box scripts write them (logs/, logs/deploy/,
      zone/): exit 0 and none left anywhere in the run, read by this test, not by the tool; a path the stage cannot
-     map makes it exit 1.
+     map makes it exit 1;
+  F  what review-integ9d's L10 found let through: a home directory with no slash after it, a symbolic link's target,
+     a tar member's name, link target and owner, and the contents of .xz, .bz2 and .zip files.
 
 Run from anywhere; scratch goes to $TMPDIR (set it to a directory of yours). E writes e2e/runs/scrub-records-test/
 and removes it.
 """
+import bz2
 import gzip
+import io
+import lzma
 import os
 import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "scripts", "scrub_records.py")
@@ -171,9 +178,59 @@ def case_stage():
         shutil.rmtree(run, ignore_errors=True)
 
 
+def case_paths_let_through(tmp):
+    def refused(run, what, needle, env=None):
+        r = tool("--check-only", run, env=env)
+        check(f"F: {what} refuses", r.returncode == 1 and needle in r.stderr, r.stdout + r.stderr)
+    run = os.path.join(tmp, "f-slashless")
+    write(f"{run}/logs/env.log", "HOME=/home/bob\n")
+    refused(run, "a home directory with no slash after it", "logs/env.log:1: a home directory")
+    write(f"{run}/logs/env.log", "a/root/b and ./root-cause: not a home\n")
+    r = tool("--check-only", run)
+    check("F: a path segment named root inside another path does not", r.returncode == 0, r.stdout + r.stderr)
+    run = os.path.join(tmp, "f-link")
+    write(f"{run}/logs/a.log", "clean\n")
+    os.symlink("/home/bob/work/x", f"{run}/logs/latest")
+    refused(run, "a symbolic link whose target is a home directory", "logs/latest (a symbolic link's target): a home directory")
+    for kind in ("name", "link target", "owner"):
+        run = os.path.join(tmp, f"f-tar-{kind.replace(' ', '-')}")
+        buf = io.BytesIO()
+        with tarfile.open(fileobj=buf, mode="w") as t:
+            info = tarfile.TarInfo("node/x.json" if kind != "name" else "home/bob/x.json")
+            if kind == "name":
+                info.name = "/home/bob/x.json"
+            body = b"{}"
+            info.size = len(body)
+            if kind == "owner":
+                info.uname = "somebody-private"
+            if kind == "link target":
+                link = tarfile.TarInfo("node/latest")
+                link.type = tarfile.SYMTYPE
+                link.linkname = "/home/bob/x.json"
+                t.addfile(link)
+            t.addfile(info, io.BytesIO(body))
+        os.makedirs(f"{run}/zone", exist_ok=True)
+        with open(f"{run}/zone/answers.tar", "wb") as f:
+            f.write(buf.getvalue())
+        env = dict(os.environ, FERRATA_SCRUB_DENY="somebody-private") if kind == "owner" else None
+        refused(run, f"a tar member's {kind}", f"its {kind}", env=env)
+    for ext, pack in ((".xz", lzma.compress), (".bz2", bz2.compress)):
+        run = os.path.join(tmp, "f" + ext.replace(".", "-"))
+        os.makedirs(f"{run}/logs", exist_ok=True)
+        with open(f"{run}/logs/seq.log{ext}", "wb") as f:
+            f.write(pack(b"started in /home/bob/run\n"))
+        refused(run, f"a home directory inside a {ext} file", "seq.log:1: a home directory")
+    run = os.path.join(tmp, "f-zip")
+    os.makedirs(f"{run}/logs", exist_ok=True)
+    with zipfile.ZipFile(f"{run}/logs/bundle.zip", "w") as z:
+        z.writestr("inner.log", "cargo at /home/bob/.cargo/bin\n")
+    refused(run, "a home directory inside a .zip file", "bundle.zip!inner.log:1: a home directory")
+
+
 def main():
     with tempfile.TemporaryDirectory(prefix="scrub-records-") as tmp:
         case_helper(tmp)
+        case_paths_let_through(tmp)
     case_stage()
     print(f"{'FAILED' if FAILED else 'passed'}: {len(FAILED)} failed")
     return 1 if FAILED else 0

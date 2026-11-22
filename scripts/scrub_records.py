@@ -9,8 +9,9 @@ Every text file under DIR (any name, any depth: logs/, net/, zone/ ...) has each
   --scratch DIR=TO   DIR/<one directory>/ becomes TO (a scratch directory whose subdirectories are named after
                      whoever made them).
 A file is rewritten only if a rule changed it. Then every file is checked, text or not (an archive, .gz, .zst or
-.tar, by what it holds): none may contain a rule's FROM or DIR, a home directory (/home/<name>/, /Users/<name>/,
-/root/), a scratch or worktree folder of this project's agents (spike/tmp/, ferrata-wt-, .claude/), or, in text, a
+.tar, .xz, .bz2 or .zip, by what it holds, a tar member's name, link target and owner too; a symbolic link by its
+target): none may contain a rule's FROM or DIR, a home directory (/home/<name> or /Users/<name>, with or without a
+slash after it, /root), a scratch or worktree folder of this project's agents (spike/tmp/, ferrata-wt-, .claude/), or, in text, a
 match of the regular expression in FERRATA_SCRUB_DENY if it is set (case-sensitive; names kept outside the
 repository, such as cloud workspace names). Any of them: the file, the line and which pattern are listed (not the
 text), exit 1.
@@ -18,17 +19,21 @@ text), exit 1.
 such as a run's work/).
 """
 import argparse
+import bz2
 import gzip
 import io
+import lzma
 import os
 import re
 import subprocess
 import sys
 import tarfile
 import tempfile
+import zipfile
 
 GENERIC = [  # (what, pattern, text only)
-    ("a home directory", re.compile(rb"/home/[^/\s\"'`]+/|/Users/[^/\s\"'`]+/|/root/"), False),
+    # /home/<name> with or without a slash after it (HOME=/home/<name> is a path too); not inside a longer path segment.
+    ("a home directory", re.compile(rb"(?<![\w.-])(?:/home|/Users)/[^/\s\"'`:;,)]+|(?<![\w.-])/root(?![\w.-])"), False),
     ("an agent folder", re.compile(rb"spike/tmp/|ferrata-wt-|\.claude/"), False),
 ]
 
@@ -93,9 +98,25 @@ def members(name, data):
     elif name.endswith(".zst"):
         out = subprocess.run(["zstd", "-dc"], input=data, capture_output=True, check=True).stdout
         yield from members(name[:-4], out)
+    elif name.endswith(".xz"):
+        yield from members(name[:-3], lzma.decompress(data))
+    elif name.endswith(".bz2"):
+        yield from members(name[:-4], bz2.decompress(data))
+    elif name.endswith(".zip"):
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            for i in z.infolist():
+                yield f"{name}!{i.filename} (its name)", i.filename.encode()
+                if not i.is_dir():
+                    yield from members(f"{name}!{i.filename}", z.read(i))
     elif name.endswith(".tar") or name.endswith(".tgz"):
         with tarfile.open(fileobj=io.BytesIO(data)) as t:
             for m in t.getmembers():
+                # A member's name, link target and owner are written into the archive too.
+                yield f"{name}!{m.name} (its name)", m.name.encode()
+                if m.linkname:
+                    yield f"{name}!{m.name} (its link target)", m.linkname.encode()
+                if m.uname or m.gname:
+                    yield f"{name}!{m.name} (its owner)", f"{m.uname}:{m.gname}".encode()
                 if m.isfile():
                     yield from members(f"{name}!{m.name}", t.extractfile(m).read())
     else:
@@ -116,12 +137,21 @@ def main():
         ap.error(f"{a.dir}: not a directory")
     subs, deny = rules_to_regex(a.rules), deny_patterns(a.rules)
     skip = {os.path.join(root, n.strip("/")) for n in a.skip}
-    files = []
+    files, links = [], []
     for d, dirs, fs in os.walk(root):
         dirs[:] = sorted(x for x in dirs if os.path.join(d, x) not in skip)
-        files += [os.path.join(d, f) for f in sorted(fs)
-                  if os.path.join(d, f) not in skip and not os.path.islink(os.path.join(d, f))]
+        for f in sorted(fs) + [x for x in dirs if os.path.islink(os.path.join(d, x))]:
+            path = os.path.join(d, f)
+            if path in skip:
+                continue
+            (links if os.path.islink(path) else files).append(path)
     rewritten, found = 0, []
+    for path in links:  # never followed nor rewritten: their targets are checked
+        target = os.readlink(path).encode()
+        for label, rx, _text_only in deny:
+            if rx.search(target):
+                found.append(f"{os.path.relpath(path, root)} (a symbolic link's target): {label}")
+                break
     for path in files:
         with open(path, "rb") as f:
             data = f.read()
@@ -144,10 +174,11 @@ def main():
                         line = body.count(b"\n", 0, m.start()) + 1
                         found.append(f"{name}:{line}: {label}")
                         break
-        except (OSError, EOFError, tarfile.TarError, subprocess.CalledProcessError, gzip.BadGzipFile) as e:
+        except (OSError, EOFError, tarfile.TarError, subprocess.CalledProcessError, gzip.BadGzipFile, lzma.LZMAError,
+                zipfile.BadZipFile) as e:
             found.append(f"{rel}: cannot be opened to check ({type(e).__name__})")
     mode = "checked" if a.check_only else f"scrubbed ({rewritten} rewritten)"
-    print(f"scrub_records: {len(files)} files under {os.path.basename(root)} {mode}; "
+    print(f"scrub_records: {len(files) + len(links)} files under {os.path.basename(root)} {mode}; "
           f"{'none names this machine' if not found else str(len(found)) + ' finding(s)'}")
     for line in found:
         print(f"scrub_records: REFUSED {line}", file=sys.stderr)
