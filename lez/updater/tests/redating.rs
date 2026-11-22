@@ -2,10 +2,14 @@
 //! (only its fork version), to steer which update the updater chooses and when it sends it. review-fix-updater3b M1: a
 //! source re-dating an update that adopts the next committee to slots that have started, a new slot each round, and
 //! choosing them with the updater's tag (its name and payer account, both public), had the deferral postpone that
-//! update's `Open` every round, so that no update was sent until the source was removed. Then the variants of
-//! review-fix-updater3 M1 that review-fix-updater3b and review-fix-updater3 measured (the reviewers' attack tests, kept
-//! as regression tests). The in-process chain (LEZ v0.4.0-rc1's state machine and fee settlement, dev mode) with its
-//! block time set (`HarnessLedger::now`), the lab's recorded mainnet data, as `refusals.rs`.
+//! update's `Open` every round, so that no update was sent until the source was removed. review-fix-updater4 M1: the
+//! same source also sending each copy's `Open` (or `Open` and `Miller`) itself, which anyone may, so that the updater's
+//! next step was a later one, still counted by the job; and the strongest attacker known against the fix, cycling
+//! through every kind of step. review-fix-updater4 L2: `finish_own_jobs = false` with honest sources serving their
+//! newest update. Then the variants of review-fix-updater3 M1 that review-fix-updater3b and review-fix-updater3
+//! measured (the reviewers' attack tests, kept as regression tests). The in-process chain (LEZ v0.4.0-rc1's state
+//! machine and fee settlement, dev mode) with its block time set (`HarnessLedger::now`), the lab's recorded mainnet
+//! data, as `refusals.rs`.
 #![cfg(feature = "harness")]
 
 use std::{
@@ -389,6 +393,357 @@ fn started_slots_with_finish_own_jobs_off_an_open_is_sent_once_per_turn() {
     assert!(copies <= after.div_ceil(w), "{copies} Opens in {after} rounds");
     assert!(copies >= 1, "the source's copies are sent");
     assert_eq!(refused(&l, 0), 0);
+}
+
+// ---- review-fix-updater4 M1: the same source opening each copy's job itself (anyone may) ---------------------------
+
+fn id_of(k: &PrivateKey) -> AccountId {
+    AccountId::from(&PublicKey::new_from_private_key(k))
+}
+
+/// The updater's deferral tag as anyone computes it: from its name and its payer's account.
+fn tag_of(label: &str, payer: &PrivateKey) -> [u8; 32] {
+    Sha256::digest(format!("{label}/{:?}", id_of(payer)).as_bytes()).into()
+}
+
+/// A source serving the attacker's current copy (when set) in place of the update with the same attested header (the
+/// record's entry 12, its period-1908 update, which carries the next committee); everything else as recorded.
+struct CopySource {
+    inner: Recorded,
+    config: Config,
+    current: Arc<Mutex<Option<Vec<u8>>>>,
+}
+
+impl CopySource {
+    fn serve(&self, b: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+        let Some(copy) = self.current.lock().unwrap().clone() else { return Ok(b) };
+        let (u, _) = decode_update(&b, &self.config)?;
+        let (c, _) = decode_update(&copy, &self.config)?;
+        Ok(if u.attested_header == c.attested_header { copy } else { b })
+    }
+}
+
+impl Source for CopySource {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        let list = self.inner.updates(start_period, count)?;
+        list.into_iter().map(|b| self.serve(b)).collect()
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        self.inner.finality_update()
+    }
+}
+
+/// A job's steps in order: `Open`, `Miller`, the adoption's two parts (the tests' preset), `Finish`.
+const STEPS: [Step; 5] = [Step::Open, Step::Miller, Step::Adopt(0), Step::Adopt(1), Step::Finish];
+
+/// Of the started, unused slots of entry 12's period (the latest 512 up to the slot holding `ms`), the one whose job
+/// scores highest by `score` (given the job id), the latest on ties: (slot, score).
+fn pick_slot(
+    r: &Rec,
+    store: &CompactStore,
+    base: &[u8],
+    used: &BTreeSet<u64>,
+    ms: u64,
+    score: &dyn Fn(&Root) -> u64,
+) -> (u64, u64) {
+    let (u, _) = decode_update(base, &r.config).unwrap();
+    let layout = layout_for(&r.config, store.fork, &u).expect("a layout");
+    let store_u = store_for_update(store, layout, u.attested_header.beacon.slot, &r.config.spec()).unwrap();
+    let digest = store_u.digest();
+    let inst_id = r.instance().id;
+    let mut c = CompactUpdate::of(&u);
+    let end = (u.signature_slot / 8192 + 1) * 8192 - 1;
+    let mut best: Option<(u64, u64)> = None;
+    for s in (u.signature_slot..=slot_of(&r.config, ms).min(end)).rev().filter(|s| !used.contains(s)).take(512) {
+        c.signature_slot = s;
+        let v = score(&job_id(&inst_id, &digest, &c.digest(layout)));
+        if best.is_none_or(|(_, b)| v > b) {
+            best = Some((s, v));
+        }
+    }
+    best.expect("a started, unused slot")
+}
+
+/// How the attacker serves copies of entry 12 while the store lacks its next committee. It knows the updater's tag, so
+/// the wait the updater draws for each step of each copy's job.
+#[derive(Clone, Copy, Debug)]
+enum Attack {
+    /// A new copy every `every` rounds, the attacker having sent its first `stage` steps itself (1: its `Open`; 2: its
+    /// `Open` and `Miller`), chosen by the updater's wait for the step then due.
+    Copies { stage: usize, every: usize },
+    /// Each kind of step in turn, `Open` to `Finish`: for `defer_window - 1` rounds each (the longest a turn lasts), a
+    /// copy at that step (the steps before it sent by the attacker), chosen by its wait; then a copy not yet opened,
+    /// chosen by the waits of its later steps (the job the updater then carries). The strongest attacker known against
+    /// a turn per kind of step and state.
+    Cycle,
+}
+
+#[derive(Debug, Default)]
+struct OpenedRun {
+    rotated: Option<usize>,
+    adopted: Option<usize>,
+    final_slot: u64,
+    sends_after_rotation: usize,
+    deferrals_after_rotation: usize,
+    copies: usize,
+    attacker_txs: usize,
+    attacker_fee: u128,
+    liar_refused: u64,
+    victim_refused: usize,
+    health: String,
+}
+
+/// The store at entry 9; the sources at entry 13 for `n13` rounds 12 s apart (its finality update rotates the
+/// committees, after which the store lacks the next one), then at entry 20 for `n20`; `defer_window` 8. The liar serves
+/// the attacker's copies of entry 12 (it adopts the next committee and finalizes later than the honest source's entry
+/// 10); the attacker sends steps of them from its own account just before the updater's round.
+fn opened(attack: Attack, payer_byte: u8, n13: usize, n20: usize) -> OpenedRun {
+    let w = 8u64;
+    let r = mainnet();
+    let clock = Clock::new(9);
+    let victim = key(payer_byte);
+    let attacker = key(payer_byte.wrapping_add(0x40));
+    let label = "victim";
+    let tag = tag_of(label, &victim);
+    let current = Arc::new(Mutex::new(None));
+    let mut l = HarnessLedger::new(&[victim.clone(), attacker.clone()]);
+    let liar = CopySource { inner: r.recorded("liar", &clock), config: r.config.clone(), current: current.clone() };
+    let honest = r.honest_1908("honest", &clock);
+    let mut u = r.updater(label, victim.clone(), vec![Box::new(liar), Box::new(honest)], policy(w));
+    assert_eq!(u.payer_id, id_of(&victim), "the tag as the attacker computes it");
+    let src = CopySource { inner: r.recorded("opener", &clock), config: r.config.clone(), current: current.clone() };
+    let att_policy = Policy { finish_own_jobs: false, ..policy(1) };
+    let mut att = r.updater("attacker", attacker.clone(), vec![Box::new(src)], att_policy);
+    settle(&mut u, &mut l, 200);
+    assert_eq!(store(&u, &l).finalized.slot, 15_630_016, "the record's entry 9");
+    let base = r.entries[11].bytes.clone();
+    let period = decode_update(&base, &r.config).unwrap().0.attested_header.beacon.slot / 8192;
+    let n0 = l.log.len();
+    let (mut used, mut on_current, mut lacking) = (BTreeSet::new(), 0usize, 0usize);
+    let mut out = OpenedRun::default();
+    let mut all: Rounds = Vec::new();
+    let mut t = 0u64;
+    for (entry, n) in [(13usize, n13), (20, n20)] {
+        clock.set(entry);
+        t = t.max(r.config.slot_start_ms(r.entry(entry).signature_slot) + 12_000);
+        for _ in 0..n {
+            l.now = Some(t);
+            let s = store(&u, &l);
+            if s.next.is_none() && s.finalized.slot / 8192 == period {
+                // (steps the attacker sends of a new copy, whether a new copy is due, what the copy is chosen by)
+                let turn = (w - 1) as usize;
+                let (stage, new, by): (usize, bool, Vec<Step>) = match attack {
+                    Attack::Copies { stage, every } => {
+                        (stage, current.lock().unwrap().is_none() || on_current >= every, vec![STEPS[stage]])
+                    }
+                    Attack::Cycle if lacking < STEPS.len() * turn => {
+                        let phase = lacking / turn;
+                        (phase, lacking % turn == 0, vec![STEPS[phase]])
+                    }
+                    Attack::Cycle => (0, lacking == STEPS.len() * turn, STEPS[1..].to_vec()),
+                };
+                if new {
+                    let score = |jid: &Root| by.iter().map(|&st| wait(&tag, jid, st, w)).sum::<u64>();
+                    let (slot, _) = pick_slot(&r, &s, &base, &used, t, &score);
+                    used.insert(slot);
+                    *current.lock().unwrap() = Some(redate(base.clone(), &r.config, true, slot).unwrap());
+                    on_current = 0;
+                    out.copies += 1;
+                    for &step in &STEPS[..stage] {
+                        let p = att.tick(&mut l).unwrap();
+                        assert!(matches!(&p, Plan::Send(a) if a.step == step), "the attacker's {step:?}: {p:?}");
+                    }
+                }
+                on_current += 1;
+                lacking += 1;
+            } else {
+                *current.lock().unwrap() = None;
+            }
+            let p = u.tick(&mut l).unwrap();
+            let s = store(&u, &l);
+            all.push((p, s.finalized.slot, s.next.is_some()));
+            t += 12_000;
+        }
+    }
+    out.rotated = at_slot(&all, ROTATED);
+    out.adopted = adopted_at(&all, ROTATED);
+    out.final_slot = all.last().unwrap().1;
+    let after = &all[out.rotated.unwrap_or(all.len())..];
+    out.sends_after_rotation = after.iter().filter(|x| matches!(x.0, Plan::Send(_))).count();
+    out.deferrals_after_rotation = after.iter().filter(|x| matches!(x.0, Plan::Deferred(_))).count();
+    let (victim_id, attacker_id) = (id_of(&victim), id_of(&attacker));
+    for (payer, _, o) in &l.log[n0..] {
+        if *payer == attacker_id {
+            out.attacker_txs += 1;
+            out.attacker_fee += o.fee;
+        } else if *payer == victim_id && !o.applied && !o.rejected {
+            out.victim_refused += 1;
+        }
+    }
+    out.liar_refused = refused_of(&u, "liar");
+    let (status, why) = u.health();
+    out.health = format!("{status} {why:?}");
+    out
+}
+
+/// The longest the next committee can take to be adopted after the rotation, in rounds, at `defer_window` 8 with two
+/// adoption parts: `K = 5` kinds of step, each with one turn per state of at most 7 rounds (`K × 7`), then the job this
+/// updater carries, from its `Open` (1) through its other four steps, each waiting at most 7 rounds and sent in the
+/// next (`4 × 8`).
+const BOUND: usize = 5 * 7 + 1 + 4 * 8;
+
+fn assert_opened_bounded(what: &str, o: &OpenedRun) {
+    println!(
+        "{what}: rotated in round {:?}, the next committee adopted in round {:?}, final slot {}; after the rotation: {} \
+         sends, {} deferrals; copies served {}; the attacker's transactions {} (fee {}); the liar refused {}; the \
+         updater's refused transactions {}; health {}",
+        o.rotated,
+        o.adopted,
+        o.final_slot,
+        o.sends_after_rotation,
+        o.deferrals_after_rotation,
+        o.copies,
+        o.attacker_txs,
+        o.attacker_fee,
+        o.liar_refused,
+        o.victim_refused,
+        o.health
+    );
+    let rotated = o.rotated.expect("rotated by entry 13's finality update");
+    let adopted = o.adopted.expect("the next committee adopted at entry 13");
+    assert!(adopted - rotated <= BOUND, "{what}: rotated in round {rotated}, adopted in round {adopted}");
+    assert_eq!(o.final_slot, ENTRY_20, "{what}: entry 20 applied");
+    assert_eq!(o.liar_refused, 0, "{what}: a started slot is not refused");
+    assert_eq!(o.victim_refused, 0, "{what}");
+}
+
+/// review-fix-updater4 M1, the economical form: the source also sends each copy's `Open` itself, so the updater finds
+/// the job open and its next step is `Miller`; a new copy every 7 rounds (the longest a turn lasts), chosen by the
+/// `Miller` wait. Counted by the job, a new opened copy restarted the count: nothing sent in 115 rounds after the
+/// rotation, for one `Open` per 7 rounds (the review). Now the `Miller` of a job this updater does not carry waits one
+/// turn per state.
+#[test]
+fn opener_a_new_opened_copy_every_turn_does_not_hold_the_instance() {
+    let o = opened(Attack::Copies { stage: 1, every: 7 }, 0xe2, 90, 30);
+    assert_opened_bounded("a new copy every 7 rounds, its Open sent by the source", &o);
+}
+
+/// The same, a new opened copy each round (the review: nothing sent in 107 rounds, 107 `Open`s by the attacker).
+#[test]
+fn opener_a_new_opened_copy_each_round_does_not_hold_the_instance() {
+    let o = opened(Attack::Copies { stage: 1, every: 1 }, 0xe1, 90, 30);
+    assert_opened_bounded("a new copy each round, its Open sent by the source", &o);
+}
+
+/// The source sends each copy's `Open` and `Miller`, a new copy each round chosen by the first `Adopt` part's wait (the
+/// review: nothing sent in 111 rounds, 222 transactions by the attacker).
+#[test]
+fn opener_sending_open_and_miller_does_not_hold_the_instance() {
+    let o = opened(Attack::Copies { stage: 2, every: 1 }, 0xe5, 90, 30);
+    assert_opened_bounded("a new copy each round, its Open and Miller sent by the source", &o);
+}
+
+/// The strongest attacker known against a turn per kind of step and state ([`Attack::Cycle`]): it uses up the turn of
+/// each kind of step in turn, then leaves this updater a job to carry from its `Open`, its later steps chosen to wait
+/// longest. The next committee is adopted within [`BOUND`] rounds of the rotation.
+#[test]
+fn opener_cycling_through_every_kind_of_step_is_bounded() {
+    let o = opened(Attack::Cycle, 0xe7, 90, 30);
+    assert_opened_bounded("each kind of step in turn, then a job to carry", &o);
+}
+
+// ---- review-fix-updater4 L2: finish_own_jobs = false with honest sources serving their newest update --------------
+
+/// A recorded source serving, as its finality update, its newest one re-dated to the slot that held Ethereum's time
+/// `delay_ms` earlier: as a beacon node serves a new finality update each slot (a new job each round).
+struct Newest {
+    inner: Recorded,
+    config: Config,
+    eth: Arc<AtomicU64>,
+    delay_ms: u64,
+}
+
+impl Source for Newest {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        self.inner.updates(start_period, count)
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        let b = self.inner.finality_update()?;
+        let ms = self.eth.load(SeqCst);
+        if ms == 0 {
+            return Ok(b);
+        }
+        let (u, _) = decode_finality_update(&b, &self.config)?;
+        let end = (u.signature_slot / 8192 + 1) * 8192 - 1;
+        let to = slot_of(&self.config, ms.saturating_sub(self.delay_ms)).min(end).max(u.signature_slot);
+        redate(b, &self.config, false, to)
+    }
+}
+
+/// review-fix-updater4 L2: `finish_own_jobs = false`, two honest sources serving their newest finality update each
+/// slot (a new job each round), `defer_window` 8, entries 4 to 7 for 15 rounds each. The updater takes the newest
+/// update each round and leaves the job it opened, so it finishes none; after each `Open` sent on the state, the next
+/// one there waits a whole turn: at most one `Open` per 8 rounds (the review: 21 in 60 rounds at `06ed8bc1`, a fresh
+/// turn after each send ending at the first round whose wait, drawn from that round's job, had run out; 9 with the
+/// turn counted by the job).
+#[test]
+fn newest_only_sources_with_finish_own_jobs_off_open_once_per_turn() {
+    let w = 8u64;
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let eth = Arc::new(AtomicU64::new(0));
+    let payer = key(0xf7);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let src = |name: &str| -> Box<dyn Source> {
+        Box::new(Newest {
+            inner: r.recorded(name, &clock),
+            config: r.config.clone(),
+            eth: eth.clone(),
+            delay_ms: 2_000,
+        })
+    };
+    let pol = Policy { finish_own_jobs: false, ..policy(w) };
+    let mut u = r.updater("newest", payer.clone(), vec![src("a"), src("b")], pol);
+    settle(&mut u, &mut l, 60);
+    let (n0, fin) = (l.log.len(), store(&u, &l).finalized.slot);
+    let mut rounds = 0u64;
+    for e in 4..8 {
+        clock.set(e);
+        let mut t = r.config.slot_start_ms(r.entry(e).signature_slot) + 15_000;
+        for _ in 0..15 {
+            l.now = Some(t);
+            eth.store(t, SeqCst);
+            u.tick(&mut l).unwrap();
+            rounds += 1;
+            t += 12_000;
+        }
+    }
+    let sent = &l.log[n0..];
+    let opens = sent.iter().filter(|(_, label, o)| label.ends_with("Open") && o.applied).count() as u64;
+    let fee: u128 = sent.iter().map(|(_, _, o)| o.fee).sum();
+    let moved = store(&u, &l).finalized.slot;
+    println!(
+        "finish_own_jobs = false, two sources serving their newest finality update each slot, defer_window {w}: {rounds} \
+         rounds, {opens} Opens applied (one per turn: at most {}), finalized slot {fin} -> {moved}, fees {fee}; refused \
+         txs {}",
+        rounds.div_ceil(w),
+        refused(&l, n0)
+    );
+    assert!(opens <= rounds.div_ceil(w), "{opens} Opens in {rounds} rounds");
+    assert!(opens >= 1);
+    assert_eq!(refused(&l, n0), 0);
 }
 
 // ---- review-fix-updater3 M1's variants (review-fix-updater3b, review-fix-updater3): red under m1roll or m1 -------

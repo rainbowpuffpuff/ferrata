@@ -17,11 +17,12 @@ refused, of one finalized header the earliest-signed is taken; m1near also undoe
 its tests; m1 too, so that it restores the old behaviour whole); m1roll, review-fix-updater3 M1 (an update that can be
 sent now ranks first, so one re-dated within the margin every round holds back only itself); m4, review-fix-updater3b
 M1 (an `Open` waits its turn counted by the instance's state, not by its job, so a source serving a new copy each round
-cannot postpone it); m4reset, its companion (after an `Open` is sent on a state, the next one there waits its turn
-again); u2, L-U2 (a round that cannot fetch the committees counts towards `down`); u3, L-U3 (a refusal whose re-reads
-fail is judged once the chain reads again); u5, L-U5 (holds for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an
-IPv6 client counts by its /64); u6, L-U6 (the bound tests fail for a reader that takes an answer whole and then refuses
-it).
+cannot postpone it); m6, review-fix-updater4 M1 (so does a step of a job this updater does not carry, so a source
+opening each copy itself cannot either); m4reset and m7, their companions (after a step is sent on a state, the next of
+its kind there waits a whole turn: m4reset, no new turn; m7, a fresh one, review-fix-updater4 L2); u2, L-U2 (a round
+that cannot fetch the committees counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the
+chain reads again); u5, L-U5 (holds for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by
+its /64); u6, L-U6 (the bound tests fail for a reader that takes an answer whole and then refuses it).
 """
 import os
 import signal
@@ -39,6 +40,8 @@ KEY = ("                std::cmp::Reverse(p.update.signature_slot),\n"
        "                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),\n"
        "                std::cmp::Reverse(p.update.signature_slot),\n")
 # The order's first element, an update that can be sent now, made the same for every candidate.
+# After a step sent on a state: a whole turn for the next of its kind there.
+SENT = ".insert((state_digest(&action.store_seen), action.step), (self.round + 1, Some(whole)));"
 OPEN = ("                now.is_none_or(|t| config.slot_start_ms(p.update.signature_slot) <= t),\n",
         "                now.map(|_| true).unwrap_or(true),\n")
 MUTANTS = {
@@ -53,12 +56,20 @@ MUTANTS = {
     # The order of 81bbea61: an update whose window has not opened can rank first (review-fix-updater3 M1).
     "m1roll": ([(U, *OPEN)], ["--test", "refusals", "within_the_margin_every_round"]),
     # An `Open`'s turn counted by its job, as before review-fix-updater3b M1: a new copy each round is a new job.
-    "m4": ([(U, "            Step::Open => open_turn(state),\n", "            Step::Open => chosen.jid,\n")],
+    "m4": ([(U, "            Step::Open => state_turn(state),\n", "            Step::Open => chosen.jid,\n")],
            ["--test", "redating", "started_slots_an_adopting"]),
-    # No new turn after an `Open` sent on a state.
-    "m4reset": ([(U, "self.first_due.remove(&(state_digest(&action.store_seen), Step::Open));",
-                  "let _ = (state_digest(&action.store_seen), Step::Open);")],
-                ["--test", "redating", "started_slots_with_finish_own_jobs_off"]),
+    # A step of a job this updater does not carry counted by the job, as before review-fix-updater4 M1: a new copy the
+    # source opened itself each round restarts the count.
+    "m6": ([(U, "            _ => state_turn(state),\n", "            _ => chosen.jid,\n")],
+           ["--test", "redating", "opener_"]),
+    # No new turn after a step sent on a state: once the first turn has passed, an `Open` each round.
+    "m4reset": ([(U, SENT, ".retain(|_, _| true);\n"
+                           "                    let _ = (whole, state_digest(&action.store_seen));")],
+                ["--test", "redating", "finish_own_jobs_off"]),
+    # A fresh turn after a step sent on a state, its wait drawn from each round's job, as before review-fix-updater4 L2.
+    "m7": ([(U, SENT, ".remove(&(state_digest(&action.store_seen), action.step));\n"
+                      "                    let _ = whole;")],
+           ["--test", "redating", "newest_only"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),
