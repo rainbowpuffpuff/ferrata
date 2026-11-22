@@ -1,7 +1,7 @@
 # Requirement status, row by row
 
 The status of every row of [traceability.md](traceability.md): 64 rows for RFP-021 and 73 for RFP-022. The
-classification is the project's own, made on 18 November 2026 and updated on 21 November 2026 from the matrix as it stands at this commit, and
+classification is the project's own, made on 18 November 2026 and updated on 22 November 2026 from the matrix as it stands at this commit, and
 it is strict on purpose. A row is **shown** only if every clause of the requirement, as the RFP words it, is
 demonstrated today by a named test or a recorded run on real code: LEZ v0.4 release candidates' own state
 machine (the in-process harness) or one of their sequencers for the LEZ side, a local EVM or Sepolia for the
@@ -23,9 +23,9 @@ Hard requirements:
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
 | RFP-021 | 25 | 29 | 2 | 3 | **59** |
-| RFP-022 | 24 | 40 | 2 | 2 | **68** |
+| RFP-022 | 26 | 38 | 2 | 2 | **68** |
 
-Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 1 shown, 4 in part.
+Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
 By section, hard requirements:
 
@@ -42,7 +42,7 @@ By section, hard requirements:
 | RFP-022 | Reliability | 4 | 10 | 0 | 0 | 14 |
 | RFP-022 | Performance | 2 | 5 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 2 | 1 | 1 | 4 |
-| RFP-022 | Security | 1 | 7 | 1 | 0 | 9 |
+| RFP-022 | Security | 3 | 5 | 1 | 0 | 9 |
 | RFP-022 | Privacy Preservation | 4 | 3 | 0 | 0 | 7 |
 
 ## RFP-021: Trustless Ethereum State Attestation
@@ -114,15 +114,15 @@ By section, hard requirements:
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia eight days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
-| S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition, not a sequencer. | 6, 21, 76, 99; `lez/live/verify-run.sh` |
+| S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition. A CI script builds LEZ's standalone sequencer from source and deploys the programs through its loader (20 transactions applied), in a workflow started by hand; its production and consumption phases stopped on recorded data older than the `Init` validity window. | 6, 21, 76, 99, 164; `lez/live/verify-run.sh`; `e2e/runs/ci-sequencer-attest-2026-11-21/` |
 | S.3 | in part | Consumer guide is a first draft; its worked example is tested in the harness with real handler proofs. | 39; `docs/guides/consumer-guide.md` |
 | S.4 | in part | The pattern's points run in two reference consumers in the harness; the guide's section is a first draft. | 39, 73; `docs/guides/consumer-guide.md` §6 |
 | S.5 | in part | First drafts of the CLI, operator and consumer guides and the updater README. | `lez/ATTEST-CLI.md`; `docs/guides/operator-guide.md`; `lez/updater/README.md` |
 | S.6 | in part | `trust.md` covers the listed points as a first draft. | `docs/trust.md` |
 | S.7 | in part | Refusal costs, cadence and concurrency measured; the operator guide is a first draft; the stall alarm's `monitor` is not built. | 21, 80, 81; `lez/results/stage1-refusals.md`; `docs/guides/operator-guide.md` §3 |
 | S.8 | not yet | No audit; it depends on Logos contracting one. Review, fuzzing and dependency checks are not an audit. | none (tooling: 1, 36, 40) |
-| S.9 | in part | Catalog laid out from the template and installed from 127.0.0.1; not published. | 61, 98 |
-| S.10 | in part | The release action's steps ran locally for linux-amd64; nothing published, the action not run on a release. | 61; `modules/scripts/release-local.sh` |
+| S.9 | in part | Catalog laid out from the template and installed from 127.0.0.1; publishing is one owner command, every path tested against a stub GitHub with no network (83 of 83), its dry run reproducible; not published. | 61, 98, 163; `modules/catalog/RELEASE.md` |
+| S.10 | in part | The release action's steps ran locally for linux-amd64; the catalog's workflows call the action pinned (v1.8); nothing published, the action not run on a release. | 61, 163; `modules/scripts/release-local.sh` |
 | S.11 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the design notes. | `docs/how-it-was-built.md` |
 
 ### Verification Security
@@ -131,7 +131,7 @@ By section, hard requirements:
 |---|---|---|---|
 | VS.1 | shown | A self-consistent fabricated chain (a forger's 512-key committee, checkpoint, finality update and a block with real tries), accepted by the forger's own instance, sent through the program to the canonical mainnet instance: refused (40), at its records (213, 110), across instances (211) and by the reference consumer (213, 110); nothing written or credited. | 1, 151; `lez/results/lc-security/vs1-fabricated-chain.md` |
 | VS.2 | shown | All six forgeries refused through the program: a committee never handed off (40, 27, 45, 23), 341 of 512 signers (51; 342 applies), a proof against a non-finalised header (213, 110), tampered roots (25, 110), another chain (140; another instance 211), a predicate the proof does not cover (110, 130, 131). | 151; `lez/results/lc-security/vs2-forgeries.md` |
-| VS.3 | in part | Program deployed immutable through LEZ's loader, image ids reproducible; migration text is a first draft; no replacement attempt tested. | 6, 37, 82, 92; `lez/live/README.md` |
+| VS.3 | in part | Program deployed immutable through LEZ's loader, image ids reproducible; every replacement attempt through the loader refused and a mutable control swapped (2 of 2); the migration text and the consumer rule are first drafts here (revised on `rfp-docs-final`, not merged). | 6, 37, 82, 92, 160; `lez/live/README.md` |
 | VS.4 | in part | Documented in a first-draft `trust.md`; the attestation side's `monitor` is not built. | `docs/trust.md` §2, §6 |
 | VS.5 | in part | Stated in first drafts of the trust document and the operator and consumer guides. | `docs/trust.md`; `docs/guides/operator-guide.md`; `docs/guides/consumer-guide.md` |
 | VS.6 | shown | Forged signature refused from any sender; three keys applied updates; only spoofed internal messages refused by sender (202). | 80; `lez/results/stage1-refusals.md` |
@@ -187,7 +187,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | U.7 | in part | Tool dry runs and the mini-app say what each step publishes; the user guide is a first draft. | 84; `cli/src/privacy.rs`; `docs/guides/user-guide.md` §10 |
 | U.8 | in part | 21 refusals named without a deposit or burn in the tool; the freeze refusal is exercised in the mini-app only. | 62, 85; `cli/tests/e2e.rs` |
 | U.9 | shown | Tool takes RPC and sequencer by option; the mini-app switches endpoints in the view, bad ones reported; tested. | 62, 85; `cli/README.md` |
-| U.10 | in part | Catalog laid out from the template and installed from 127.0.0.1; not published. | 61, 98, 107 |
+| U.10 | in part | Catalog laid out from the template and installed from 127.0.0.1; publishing is one owner command, every path tested against a stub GitHub (83 of 83); not published. | 61, 98, 107, 163 |
 
 ### Reliability
 
@@ -203,7 +203,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.8 | in part | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. "Mature, audited" is not met by the versions pinned today: risc0-zkvm 3.0.5 is yanked and verifier 3.0.0 accepts forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2); RISC Zero has stopped its own 3.0.0 deployments. Shown again after the move to 3.1: the Ethereum side after phase 1, the LEZ side after phase 2 (a LEZ tag on risc0 3.1, Logos). | 12, 19, 41, 91, 154; `bridge/evm-verify/test/v2/Groth16Verify.t.sol`; `docs/design/risc0-3.1-migration.md` |
 | R.9 | in part | Documented in first drafts of `trust.md` and the operator guide. | `docs/trust.md` §1, §4; `docs/guides/operator-guide.md` §10 |
 | R.10 | in part | CI runs the round trip over the state transition and anvil; sequencer round trips, twice live on Sepolia, are by hand. | 41, 76, 91, 100, 102 |
-| R.11 | in part | Most hard rows name a test or run; S.4 and Sec.1 name none, documentation rows name drafts; not all in CI. | this file |
+| R.11 | in part | Every hard row of both RFPs mapped to a test, record or document, and CI's claims checked in the `links` job; 46 of 68 RFP-022 rows have a test CI runs, 22 do not, so the gate (`--require-ci RFP-022`) exits 1. | 162; `scripts/ci/row-tests.toml`; `scripts/ci/check-row-tests.py` |
 | R.12 | in part | First drafts of the user guide, the consumer guide and the tool's README. | `docs/guides/user-guide.md`; `cli/README.md` |
 | R.13 | in part | First drafts of the tool's README, the operator guide and `monitor`'s README. | `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
 | R.14 | in part | Deployer guide is a first draft; four vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122, 142 |
@@ -225,8 +225,8 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and three round trips against zones we ran (the third with LEZ v0.4.0-rc3's sequencer and node 0.3.5-rc.1). The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 142, 148 |
-| S.2 | in part | User-side proofs built and proven on macOS; the modules and the catalog on Linux x86-64 only. | 88, 59–62, 94–98 |
-| S.3 | in part | The release action's steps ran locally; nothing published, the action not run on a release. | 61 |
+| S.2 | in part | User-side proofs built and proven on macOS; a macOS workflow for the user-side crates and five modules is written and its scripts are portable (the same exports under a FreeBSD userland and bash 3.2), never run on macOS (no push); the modules and the catalog run on Linux x86-64 only. | 88, 59–62, 94–98, 165; `.github/workflows/macos.yml` |
+| S.3 | in part | The release action's steps ran locally; the catalog's workflows call it pinned (v1.8); nothing published, the action not run on a release. | 61, 163 |
 | S.4 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the specification and notes. | `docs/how-it-was-built.md` |
 
 ### Security
@@ -240,8 +240,8 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Sec.5 | shown | Each half freezes by its own authority in tests that run without the other half. | 8, 28, 74; `vault/test/Freeze.t.sol`; `lez/harness/tests/bridge_controls.rs` |
 | Sec.6 | in part | Vault invariants hold over 256 runs × 100 calls; invalid mints and releases refused; no randomised run over both real halves. Under verifier 3.0.0 a release without a valid burn succeeds (154's fork, with the forgery stood in for). | 12, 42, 154; `vault/test/invariant` |
 | Sec.7 | in part | Stated in first drafts of the user guide and `trust.md`. | `docs/guides/user-guide.md`; `docs/trust.md` |
-| Sec.8 | in part | Image ids and verifier are immutables, read back on Sepolia; migration text is a first draft; no migration run. The four Sepolia vaults cannot change their verifier: the move to RISC Zero 3.1 is retirement and new vaults. | 74, 91, 92; `docs/guides/deployer-guide.md` §9; `docs/design/risc0-3.1-migration.md` §3 |
-| Sec.9 | in part | Stop-only failsafe tested, its owner renounced live on Sepolia; why no fund recovery exists is a first-draft document. 21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there, and the owner set them to zero on 21 Nov 2026. | 35, 41, 91, 154; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
+| Sec.8 | shown | Verifier and image ids are immutables, read back on Sepolia; the migration is documented (`vault/MIGRATION.md`: stop, retire, sunset, refunds, releases, the new configuration, users moving) and rehearsed on a local EVM with every in-flight position (8 of 8): an in-flight burn released to its own recipient only, an unimported deposit refunded to its depositor only after the sunset and its revocation window, an imported one not refundable. The four Sepolia vaults cannot change their verifier: the move to RISC Zero 3.1 is retirement and new vaults. | 74, 91, 92, 161; `vault/MIGRATION.md`; `vault/test/Migration.t.sol`; `docs/design/risc0-3.1-migration.md` §3 |
+| Sec.9 | shown | Stop-only failsafe tested, its owner renounced live on Sepolia; no escrow-moving recovery, and per case what happens, documented (`vault/MIGRATION.md` §4–5, `docs/trust.md` §6) and rehearsed (8 of 8): after the stop no role moves escrow, refunds included; after a bug in one of Ferrata's own guests the release and checkpoint freezes hold while renewed and a lapse reopens the forged path, per-token release freezes let unimported deposits be refunded, a revoked forged root pays nothing; the losses before a freeze and their bounds stated. 21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there, and the owner set them to zero on 21 Nov 2026. | 35, 41, 91, 154, 161; `vault/test/MigrationFailsafe.t.sol`; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
 
 ### Privacy Preservation
 
@@ -262,5 +262,5 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Soft.1 | in part | Not implemented; the migration path is documented: the deployed vault cannot adopt committed amounts on either leg (three facts of the deployed code, each tested), so the path is a new vault with the old configuration retired, each safety claim citing its test. "Without redeploying the vault" is not met. | 159; `docs/design/committed-amounts.md` |
 | Soft.2 | in part | A disclosure document from the user's own keys (burns by `kView`; deposits, and a deposit's secret once its nullifier is spent) that a third party verifies against public chain data alone, wallet-side, tested; a library with no command, not replayed on recorded chain data; "without weakening privacy for anyone else" cannot be met absolutely by disclosing a link. | 157; `bridge/crates/ferrata-disclose/tests/disclose.rs`; `docs/privacy/viewing-keys.md` |
 | Soft.3 | shown | Per-token release delay tested on a local EVM within its bounds; the tool's early release is refused, then sent. | 85, 102; `vault/test/ReleaseDelay.t.sol` |
-| Soft.4 | in part | By redeployment only: a new proof system means a new vault and migration, which has not been run. | as Sec.8 |
+| Soft.4 | shown | The vault takes its verifier and image ids as constructor parameters: the same `FerrataVault` deployed with a second proof system runs deposit, checkpoint and release; a v1 vault asks only for its own image id; no function changes a deployed vault's verifier or image ids; adopting a new proof system is redeployment and migration, rehearsed (Sec.8). | 161; `vault/test/Migration.t.sol`; `vault/MIGRATION.md` §3, §7 |
 | Soft.5 | in part | One static page deposits from any injected EIP-1193 wallet, served on 127.0.0.1, its security trade-offs documented; tested in headless Chromium against anvil with a stand-in wallet, not a wallet extension. | 158; `web/depositor/README.md`; `web/depositor/results/anvil-2026-11-21.txt` |

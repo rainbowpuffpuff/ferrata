@@ -1,5 +1,15 @@
 # Stream G: CI, platforms, release and migrations, proposed statuses
 
+**Folded on `integration9`, 22 November 2026,** with the third review's verdicts: RFP-022 Sec.8, Sec.9 and Soft.4
+shown; RFP-021 S.2, S.9, S.10 and VS.3 and RFP-022 R.10, R.11, S.2, U.10 and S.3 in part, their reasons updated, in
+`docs/requirements-status.md` (with the counts), `docs/traceability.md` and README.md; the six proposed rows as
+EVIDENCE rows 160 (VS.3), 161 (the migration rehearsal), 162 (the row map), 163 (the catalog's owner step), 164 (the
+standalone sequencer) and 165 (the portable macOS scripts). `scripts/ci/row-tests.toml` now names stream A's tests
+for the rows it moved to shown (box tests; the counts of rows with a test CI runs are unchanged). Still proposed, for
+when `rfp-docs-final` merges: VS.3 to shown, the map's `branch = "rfp-docs-final"` lines and the two guide checks in
+the `links` job (below), the keyless-retirement wording in the deployer guide §9 and ADR 0016; and the owner's
+steps below.
+
 For the integrator of `docs/requirements-status.md`, `docs/traceability.md` and `docs/EVIDENCE.md`. Branch
 `rfp-ci-release` from `f13faee2`, revised after two independent reviews of 21 November 2026 (the first: two High
 and eight Medium findings; the second: three Medium and nine Low), all addressed below. Nothing was pushed, so no GitHub run exists for anything new here: a clause
