@@ -7,7 +7,9 @@ from the repository's root, with the environment the suite needs (`cd lez`-relat
 RISC0_DEV_MODE=1 and RISC0_HOME as for `cargo test -p ferrata-updater --features harness`). NAME is one of the keys
 below; without arguments the tests that fix's commit added are run. Each mutant undoes one fix in the sources (the API
 kept, so the tests compile), the tests run, and the sources are put back byte for byte, also when the run fails or is
-interrupted. Exit status: cargo's (non-zero expected: the tests fail without the fix).
+stopped by Ctrl-C, SIGTERM or SIGHUP (cargo is killed first; SIGKILL cannot be caught). Exit status: cargo's (non-zero
+expected: the tests fail without the fix); 128 + the signal's number when stopped. `dev/test_mutants.py` checks the
+restoring.
 
 The fixes (22 November 2026): m1 and m1near, review-integ9d M1 / review-integ9c M4 (an update signed in the future is
 refused, of one finalized header the earliest-signed is taken; these two also undo m1roll's fix, which alone would
@@ -18,6 +20,7 @@ for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by
 fail for a reader that takes an answer whole and then refuses it).
 """
 import os
+import signal
 import subprocess
 import sys
 
@@ -80,6 +83,21 @@ def check() -> int:
     return 1 if bad else 0
 
 
+def cargo_test(args: list) -> list:
+    """The command a mutant runs (from `lez/`)."""
+    return ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked", *args, "--", "--nocapture",
+            "--test-threads", "4"]
+
+
+def stopped(signum, _frame):
+    """SIGTERM and SIGHUP end the run as Ctrl-C does: by an exception, so that `finally` puts the sources back (their
+    default action ends the process at once, the sources left mutated: review-fix-updater3). Further signals are
+    ignored from here, so that none stops the restoring half way."""
+    for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, signal.SIG_IGN)
+    raise SystemExit(128 + signum)
+
+
 def main() -> int:
     if sys.argv[1:] == ["--check"]:
         return check()
@@ -89,6 +107,8 @@ def main() -> int:
     edits, default = MUTANTS[sys.argv[1]]
     args = sys.argv[2:] or default
     originals = {}
+    for sig in (signal.SIGTERM, signal.SIGHUP):
+        signal.signal(sig, stopped)
     try:
         for path, old, new in edits:
             p = os.path.join(ROOT, path)
@@ -99,11 +119,16 @@ def main() -> int:
                 return 2
             with open(p, "w", encoding="utf-8") as f:
                 f.write(current.replace(old, new))
-        cmd = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked", *args, "--",
-               "--nocapture", "--test-threads", "4"]
+        cmd = cargo_test(args)
         print(f"mutant {sys.argv[1]}: {' '.join(cmd)}", flush=True)
+        # On an exception (Ctrl-C, or a signal above) `run` kills cargo before it is raised here.
         return subprocess.run(cmd, cwd=os.path.join(ROOT, "lez")).returncode
+    except KeyboardInterrupt:
+        return 128 + signal.SIGINT
     finally:
+        # A second signal must not stop the restoring half way.
+        for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+            signal.signal(sig, signal.SIG_IGN)
         for p, text in originals.items():
             with open(p, "w", encoding="utf-8") as f:
                 f.write(text)
