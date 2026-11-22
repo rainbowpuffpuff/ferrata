@@ -17,6 +17,9 @@ Listens on 127.0.0.1 (the port written to F). Before each request it reads the c
                         then `pass`
   fail METHOD           such a request is answered 503 without being forwarded (the endpoint failing that one call: it
                         never reached the server); then `pass`
+  late METHOD SECS      such a request is answered 503 at once and forwarded SECS seconds later (a path that held it:
+                        the client believes it failed, and the server gets it after the client sent again); the server's
+                        answer to it is logged ("late forward answered"); then `pass`
 
 Each one-shot fault writes a line to C + ".hit" when it fires (the test waits for it). Every request and what was done
 with it goes to L (JSONL: time, method, action). Local only: the upstream must be a loopback address.
@@ -114,6 +117,27 @@ def main():
                 if int(time.time() * 1000) % 3:
                     return self.reply(503, b"service unavailable", "text/plain")
                 return self.close_now()
+            if mode == "late" and method == target:
+                secs = float(ctl[2]) if len(ctl) > 2 else 30.0
+                fired(f"late {method} {secs}")
+                log(method, f"answered 503, forwarded {secs} s later")
+                path = self.path
+
+                def late():
+                    time.sleep(secs)
+                    req = urllib.request.Request(a.upstream + path, data=body, method="POST",
+                                                 headers={"Content-Type": "application/json"})
+                    try:
+                        with urllib.request.urlopen(req, timeout=600) as r:
+                            status, data = r.status, r.read()
+                    except urllib.error.HTTPError as e:
+                        status, data = e.code, e.read()
+                    except Exception as e:  # noqa: BLE001
+                        status, data = None, str(e).encode()
+                    log(method, "late forward answered", status=status, answer=data.decode("utf-8", "replace")[:600])
+
+                threading.Thread(target=late, daemon=True).start()
+                return self.reply(503, b"service unavailable", "text/plain")
             if mode == "fail" and method == target:
                 fired(f"fail {method}")
                 log(method, "failed (503, not forwarded)")

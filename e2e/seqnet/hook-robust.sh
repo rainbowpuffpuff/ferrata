@@ -25,9 +25,10 @@
 #      and does not burn again (the private holding 0.001 less, once)
 #   e. the checkpoint, the release through the relayer, recover and status (as hook-cli.sh)
 #   f. R.06, the gas drop resumed on the running sequencer (the drops daemon reaches the sequencer through a second
-#      holdproxy): the first drop's credit held unsent and the daemon SIGKILLed, its next send failing at the endpoint
-#      (503, not forwarded), then sent again on the same account state and applied once; the second drop's credit
-#      forwarded with its answer held and the daemon SIGKILLed, then booked after the restart from LEZ (its drop
+#      holdproxy): the first drop's credit held unsent and the daemon SIGKILLed; its next send answered 503 by the
+#      endpoint and forwarded to the sequencer 35 s later (`late`), after the daemon sent it a third time on the same
+#      account state: two credits of one drop reach LEZ, and one applies (the second review's M1); the second drop's
+#      credit forwarded with its answer held and the daemon SIGKILLed, then booked after the restart from LEZ (its drop
 #      account's nonce moved) with nothing sent again. Each claim's dry run claims exactly one pending credit.
 #   g. the claim's gas drop asked of another relayer (review M3): a claim first naming a relayer that never answers
 #      (an inbox nobody serves) stops after its wait; the same deposit's claim naming the real relayer reuses the
@@ -192,7 +193,7 @@ if [ "$GAS_DROP" = 1 ]; then
     else
       bad "R.06 gas drop: no unsettled record when the daemon was killed ($rec)"
     fi
-    echo "fail sendTransaction" > "$PR/ctl"   # its next send fails at the endpoint (503; never reaches the sequencer)
+    echo "late sendTransaction 35" > "$PR/ctl"   # its next send: 503 to the daemon, at the sequencer 35 s later
     start_drops
   else
     bad "R.06 gas drop: the relayer's credit never reached its proxy"
@@ -236,9 +237,28 @@ if [ "$GAS_DROP" = 1 ]; then
   fact drop1 "${d1:-null}"; fact drop1Record "${rec1:-null}"
   if [ -n "$d1" ] && [ "$(echo "$d1" | jq -r '.sends')" -ge 2 ] && [ "$(echo "$d1" | jq -r '.resolvedLater')" = true ] \
      && [ "$(hits_of "$PR")" -ge $((hr + 2)) ] && grep -q 'claims: *1 pending credit' "$RUN/user/10-claim.txt"; then
-    ok "R.06 gas drop: after the kill and a failed send (503) the restarted daemon sent the credit again on the same account state and booked it from LEZ: $(echo "$d1" | jq -c '{sends, resolvedLater, tx}'); the claim's dry run claims exactly 1 pending credit"
+    ok "R.06 gas drop: after the kill and a send answered 503 the restarted daemon sent the credit again on the same account state and booked it from LEZ: $(echo "$d1" | jq -c '{sends, resolvedLater, tx}'); the claim's dry run claims exactly 1 pending credit"
   else
     bad "R.06 gas drop: the first drop after the kill: $d1; record $rec1; proxy hits $(hits_of "$PR") (from $hr); $(grep -m1 -o -E 'claims: +[0-9]+ pending credit' "$RUN/user/10-claim.txt")"
+  fi
+  # The credit answered 503 reached the sequencer late: two credits of the first drop at LEZ, one applied (review E2, M1).
+  late=""
+  for _ in $(seq 1 60); do
+    late="$(jq -c 'select(.action == "late forward answered")' "$PR/log.jsonl" 2>/dev/null | head -n 1)"
+    [ -n "$late" ] && break; sleep 1
+  done
+  fact drop1LateCredit "${late:-null}"
+  s1="$(echo "$d1" | jq -r '.sends // 0' 2>/dev/null)"
+  if [ -n "$late" ] && grep -q 'claims: *1 pending credit' "$RUN/user/10-claim.txt"; then
+    if [ "${s1:-0}" -ge 3 ]; then
+      ok "R.06 gas drop (review E2, M1): two credits of the first drop reached the sequencer, built on the same account state: the third send, forwarded, and the second, at the sequencer 35 s after the daemon got its 503 (its answer: $(echo "$late" | jq -r '.answer' | tr '
+' ' ' | cut -c1-200)); the claim's dry run claims exactly 1 pending credit"
+    else
+      ok "R.06 gas drop (review E2, M1): the second send, at the sequencer 35 s after the daemon got its 503, applied before the daemon sent a third (booked from LEZ, $s1 sends; its answer: $(echo "$late" | jq -r '.answer' | tr '
+' ' ' | cut -c1-200)); the claim's dry run claims exactly 1 pending credit"
+    fi
+  else
+    bad "R.06 gas drop (review E2, M1): the late credit: ${late:-no late forward logged}; $(grep -m1 -o -E 'claims: +[0-9]+ pending credit' "$RUN/user/10-claim.txt")"
   fi
   # The second drop: its credit forwarded with the answer held, the daemon killed; restarted 30 s later.
   hr2="$(hits_of "$PR")"; echo "hold sendTransaction 40" > "$PR/ctl"
