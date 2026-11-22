@@ -8,6 +8,10 @@
 #
 # The node's channel holds one key (the lab sequencer's), so the lab's attestor signs (n = 1) and the
 # stand-in sequencers' attestors refuse: their channel keys are not in the live set the node reports.
+#
+# Since the LEZ check (RESULTS.md §10) the attestor also asks a LEZ node (LEZ=<its JSON-RPC>), which must follow the
+# lab channel of that generation; the recorded run (runs/live-node, §6) predates the check and no such LEZ node was
+# saved with the generation, so it cannot be repeated as recorded.
 set -euo pipefail
 bundle="$(realpath "$1")"; gen="$(realpath "$2")"; out="$(realpath -m "$3")"
 bin="$PWD/target/release/ferrata_attestor"; runs="$PWD/attestor/runs/devnet-n3"

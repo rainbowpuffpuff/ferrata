@@ -130,6 +130,11 @@ A copy of the lab's saved generation 3 (`spike/tmp/realblocks/labcopy/gen-3.tar.
 node's one-key set (`keySetHash` `868b734d…8b14`); `verify` accepts it (`live-att-0.json`). Attestor 1 asked
 the same node: refused, its channel key is not in the live set.
 
+This run predates the LEZ check (§10): the attestor then signed the Bedrock node's view alone. `live-node.sh` now
+also needs `LEZ`, a LEZ node that follows the recorded lab channel, and none exists for that lab generation (the
+lab's sequencer state was not saved with it), so the run cannot be repeated as recorded; the LEZ check against
+running LEZ nodes is shown by the zone runs of §10.1 instead.
+
 ## 7. A real zone of four sequencers (`attestor/zone.sh`, `attestor/zone-attest.sh`, `runs/zone/`)
 
 Not a stand-in: upstream's own four-sequencer devnet (`lez/configs/docker-all-in-one/devnet` of LEZ v0.4.0-rc1
