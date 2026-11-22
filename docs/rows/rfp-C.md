@@ -57,10 +57,13 @@ path as P.2. Text: `docs/performance.md` RFP-021 §P.3.
 Proposed EVIDENCE row: | new | RFP-021 P.3: tracking cost measured in eight days of operation on a running LEZ
 sequencer, per update, day and period, and amortised per attestation apart from each attestation's verification; the
 proven path with a real proof | mainnet: 9,225,372 execution gas per finality update (median of 98, all within 1.2%),
-16,060,242 per handoff, 127,294,275 a day as the lab ran; 12,729 per attestation at 10,000 a day; verification
-93,316–499,277 per statement; proven path 485,298 + 224,063 gas and 1,673.6 s on 16 CPUs per update | the lab's LEZ
-v0.4.0-rc1 sequencer (10–18 Nov); a 16-CPU cloud container for the proof | real (the proven path) | `python3 -I
-bench/perf/tracking_cost.py lez/lab/results/record` | `lez/results/perf-tracking.md` |
+16,060,242 per handoff, 127,294,275 a day as the lab ran (12,729 per attestation at 10,000 a day); at the recommended
+cadence 235.5M / N per attestation on the public path (hourly while roots are imported, with each period's handoff)
+and 14.1M / N once per period (derived); verification 93,316–1,619,960 per statement; proven path 485,298 + 224,063
+gas and 1,673.6 s on 16 CPUs per update, 451,895 + 224,063 gas and 2,254.2 s per handoff (12.0M / N a day with the
+handoffs, derived) | the lab's LEZ v0.4.0-rc1 sequencer (10–18 Nov); 16-CPU cloud containers for the proofs | real
+(the proven path) | `python3 -I bench/perf/tracking_cost.py lez/lab/results/record` | `lez/results/perf-tracking.md`,
+`docs/performance.md` RFP-021 §P.3 |
 
 ### P.4 — stays **in part**
 
