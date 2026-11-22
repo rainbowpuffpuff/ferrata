@@ -1,0 +1,15 @@
+pubnet resolve: 0xd0c0a3e4eb8a71ef85af4c1bf682f688a30497032d9b2d582298b1b55de7d3a4: mined in block 11, status 0x1
+[2026-11-22T03:45:40Z] submit: 1 transaction(s) mined, in the manifest: 0xd0c0a3e4eb8a71ef85af4c1bf682f688a30497032d9b2d582298b1b55de7d3a4
+[03:45:40] W warped: 3601 s (anvil evm_increaseTime)
+pubnet resolve: 0x005a3ace0a022397d0bf0972c200c800b473f3fa007687fc575e61c6942d07dc: mined in block 13, status 0x1
+[2026-11-22T03:45:41Z] finalizeAttested: 1 transaction(s) mined, in the manifest: 0x005a3ace0a022397d0bf0972c200c800b473f3fa007687fc575e61c6942d07dc
+[03:45:41] finalState 0xceaced15bc42b935d30224a36a229f7fd4b7e467f213aed1afcaf056013907cc = the journal's new state; burnRootStatus(0x78aae8032592950b0cfa09a7de939391fe7591e58f218e5928f334c814ac7759) = true 1795322742 [1.795e9] 
+[03:45:41] release delay warped: 121 s
+pubnet resolve: 0x2d5597f7e944bbbf655cc9ce357c606b2dcf7099895b9e4b030052fd4eb55cd1: mined in block 15, status 0x1
+[2026-11-22T03:45:43Z] release-0: 1 transaction(s) mined, in the manifest: 0x2d5597f7e944bbbf655cc9ce357c606b2dcf7099895b9e4b030052fd4eb55cd1
+[03:45:43] release 0: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+pubnet resolve: 0x5a17d438125f6054e73bcf35b4539246e0f6f46deea727af5a1d326665bb2c54: mined in block 16, status 0x1
+[2026-11-22T03:45:45Z] release-1: 1 transaction(s) mined, in the manifest: 0x5a17d438125f6054e73bcf35b4539246e0f6f46deea727af5a1d326665bb2c54
+[03:45:45] release 1: recipient 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07 +999000000000000 wei; nullifierUsed true
+[2026-11-22T03:45:46Z] chain 11155111 block 16 (pinned) deployer nonce 14
+[2026-11-22T03:45:46Z] vault 0x169E05aE832232B7B177b717D718bccaC12F65b1: finalState 0xceaced15bc42b935d30224a36a229f7fd4b7e467f213aed1afcaf056013907cc leaves 2 checkpoints 1

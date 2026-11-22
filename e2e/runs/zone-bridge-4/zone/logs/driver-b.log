@@ -1,0 +1,27 @@
+[crown-b] crown STAND-IN: vault 0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c, configId 0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9, instance 0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a
+[crown-b] stage 1 finality update (block 9) Open (step 1)            applied        gas   1995749 block   51 + 16.8s 6e37b98d49f8303f15ad802e711cf21dfcaa55cfe509bf4a80487dc01b3eef55
+[crown-b] stage 1 finality update (block 9) Miller (step 2)          applied        gas   3305374 block   52 +  9.9s c9ed80b89ce40d5c013fde198586e0d214bb8a56473d0779c258e2fea26eb1f0
+[crown-b] stage 1 finality update (block 9) Finish (step 3)          applied        gas   3718957 block   54 + 14.2s 2d12ab5bc2105486598ed213ce070e329073d3765e128847d6997f9a313d5cdb
+[crown-b] bridge Init (pairing: configId in the vault's slot 2)      applied        gas    225204 block   55 +  9.9s 355c57516f8c89a63e0af2fd3585487682c0346edf15b9f219d9cbc234c35a6f
+[crown-b] ETH schedule 0 announced and effective at 1795317727
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    448600 block   56 + 10.2s fbb4350054e24ea1441a7362ae68443a846f035cc094756048c0b13023acbe67
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    305431 block   57 + 10.2s 2daddafee02436fb4dd2eec5779ccef3d2bba1c6f0614653f53cc3f7e4199654
+[crown-b] bridge Claim: deposit 0 (public) under root(cid, 1)        applied        gas    256314 block   58 + 11.2s cf7bb3ce809e6afb95b391eac7b71e9ee6bff2d8067470175654be971744ab06
+[crown-b] public test account 0's holding: Some(Holder(HolderState { holdings: [Holding { config_id: [140, 49, 62, 164, 28, 100, 96, 41, 251, 23, 176, 166, 94, 224, 49, 91, 239, 41, 138, 42, 205, 60, 127, 54, 138, 55, 92, 141, 195, 51, 245, 217], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None }))
+[crown-b] stage 2 finality update (block 10) Open (step 1)           applied        gas   1996227 block   59 +  9.5s 0080e80f2b77cd6661f030045fa806f11b8c6cfcbe425ffbb5a4ae3eac462f10
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block   60 + 11.1s c5c7ff9e512f395f48450221817eb0c304d585edd22e80ac2105ce9f0843e069
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block   61 + 10.1s b4b12efc43f110666b6e27b5f7ee44e51c970aac07ef181487610d2f808685c5
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    315313 block   62 + 10.0s 6fdd1fc5906e6bc909e736df804ea10ab44d37483c463583d1e411d83e6f880a
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    305431 block   63 + 10.0s 3e85e680b35fe70a47252cbef02948482695e2471066405e6682512c92140d80
+[crown-b] private wallet at block 63: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 411.8 s (252267 bytes)
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block  106 + 18.9s 9375882016804a0d64fc2149c0aa546537f0cf94b83b51582dd1dbb602bd4de7
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block  107 + 13.4s 61cd28c804a4988ae4539c43649ead551a053da11b2f3d201ce5e8b76a3394ad
+Syncing to block 107. Blocks to sync: 44
+Synced to block 107 in 20.356939ms
+[crown-b] private test account 0 after the claim (wallet's view at block 107): Some(HolderState { holdings: [Holding { config_id: [140, 49, 62, 164, 28, 100, 96, 41, 251, 23, 176, 166, 94, 224, 49, 91, 239, 41, 138, 42, 205, 60, 127, 54, 138, 55, 92, 141, 195, 51, 245, 217], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 390.4 s (255031 bytes)
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block  148 + 12.9s 26df82f6b00a1c6191cd1fd360428d2be0a0ea2f4ed901e1df1a85bae8a944e1
+[crown-b] blocks 31..=148 (T1 0x9d6712618ccd1d04ecffa549e26ea4d6dc68cf9c7cabf4e38e4d30d187b2f5fd); 2 burn note(s) written to work/burn-notes.json

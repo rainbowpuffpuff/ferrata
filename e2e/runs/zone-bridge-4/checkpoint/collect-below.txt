@@ -1,0 +1,3 @@
+Error: too few attestations: 3 valid, t(n = 5) = 4 needed; dropped []
+3 of 5: refused by the collector: Error: too few attestations: 3 valid, t(n = 5) = 4 needed; dropped []
+zone-30-148-below: refused: InsufficientAttestations { have: 3, need: 4 }

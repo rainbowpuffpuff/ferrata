@@ -1,0 +1,3 @@
+Error: too few attestations: 0 valid, t(n = 1) = 1 needed; dropped []
+0 of 1: refused by the collector: Error: too few attestations: 0 valid, t(n = 1) = 1 needed; dropped []
+zone-24-106-below: refused: Core(InsufficientAttestations { have: 0, need: 1 })

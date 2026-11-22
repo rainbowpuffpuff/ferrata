@@ -1,0 +1,47 @@
+[03:22:01] pubnet proxy on 127.0.0.1:39787: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 0
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 43205)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/local/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/local/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "spike/ferrata-wt-fix-attestor/scripts/pubnet.py", line 1323, in do_POST
+    self.wfile.write(body)
+  File "/usr/local/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+[03:22:10] pubnet proxy on 127.0.0.1:52597: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 8
+[03:22:11] pubnet proxy on 127.0.0.1:56720: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 9
+[03:22:13] pubnet proxy on 127.0.0.1:24974: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 10
+[04:15:21] pubnet proxy on 127.0.0.1:64400: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 10
+[04:15:23] pubnet proxy on 127.0.0.1:22827: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 11
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 60678)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/local/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/local/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "spike/ferrata-wt-fix-attestor/scripts/pubnet.py", line 1323, in do_POST
+    self.wfile.write(body)
+  File "/usr/local/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------
+[04:15:24] pubnet proxy on 127.0.0.1:64242: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 13
+[04:15:25] pubnet proxy on 127.0.0.1:53261: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 15
+[04:15:27] pubnet proxy on 127.0.0.1:26083: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x30aabbf57dcbb3c8e7e32a32726498819edfb682, fence 16

@@ -1,0 +1,1 @@
+{"image_id":"0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf","loadavg_after":"0.00 0.00 0.00 0/0 0","loadavg_before":"0.00 0.00 0.00 0/0 0","p254_seal_bytes":222668,"step":"identity_p254","threads":32,"wall_s":22.737212874}

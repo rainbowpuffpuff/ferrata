@@ -1,0 +1,2 @@
+kept 5 of 5 (n = 5, t = 4)
+zone-30-148-all: accepted: n = 5, t = 4, 5 attestations counted, producer fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096

@@ -1,0 +1,65 @@
+{
+  "chainId": 11155111,
+  "stages": {
+    "deposit-0": [
+      {
+        "hash": "0xd8720cd5f053c9a31d9c6f0757397c7fb3ece01e3da43d5f6017c5e5fcc8a12a",
+        "blockNumber": "0x9",
+        "status": "0x1",
+        "gasUsed": "0x30f7c",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "deposit-1": [
+      {
+        "hash": "0x07af806f19f615b46ed12e33d9c52d994a415e345fad900e57865719365fd765",
+        "blockNumber": "0xa",
+        "status": "0x1",
+        "gasUsed": "0x24f62",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "submit": [
+      {
+        "hash": "0x47313db19bfd111c16ebf858363c3c626169b5b96abd259af171315c6765613b",
+        "blockNumber": "0xb",
+        "status": "0x1",
+        "gasUsed": "0x5ba09",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "finalizeAttested": [
+      {
+        "hash": "0x389ff6f7fefd78c9d56d16afb1dc749aa2f80ccecdff32599d58d00c1fe9db91",
+        "blockNumber": "0xd",
+        "status": "0x1",
+        "gasUsed": "0x35511",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "release-0": [
+      {
+        "hash": "0xa3b2c1aab3f6756b3686bf708aac9cd77a3afa17d7f381b3603af8bb128f6aa2",
+        "blockNumber": "0xf",
+        "status": "0x1",
+        "gasUsed": "0x66b00",
+        "to": null,
+        "contractAddress": null
+      }
+    ],
+    "release-1": [
+      {
+        "hash": "0x31736b0af6024ebcc15297223190fda3867fa8c9f253084ca7441c562c9860e2",
+        "blockNumber": "0x10",
+        "status": "0x1",
+        "gasUsed": "0x583b4",
+        "to": null,
+        "contractAddress": null
+      }
+    ]
+  }
+}

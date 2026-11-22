@@ -323,7 +323,29 @@ branch, [`e2e/runs/zone-bridge-3/`](../../e2e/runs/zone-bridge-3/README.md); §8
 
 The box was preempted during a first attempt, whose zone stage had reached T1 = 111 with all four attestors signing
 it at the first final round; Modal ran the call again in a new container, and the run above is that second one (the
-first left only its live log lines). Not re-run: `ZB_ROTATE=1` (§9, row 101).
+first left only its live log lines).
+
+**The rotation run again** (`ZB_ROTATE=1`, [`e2e/runs/zone-bridge-4/`](../../e2e/runs/zone-bridge-4/README.md), §9's run):
+five keys accredited 20 s after the stake; attestors 0-3 21 rounds each, 21 rising tips (31 … 148), attestor 4 (the
+fifth sequencer's, started after the rotation) 20 rounds (37 … 148), none refused; the final round: all five signed
+T1 = 148 at the first try; input `zone-30-148` (T0 = 30): the rotation as inscribed, blocks 31..=148 (118 blocks, 252
+transactions), n = 5, t = 4; r0vm 4 of 5: 26,952,174 user cycles, 29 segments (5 of 5: 28,633,873; 3 of 5 refused by
+the collector and the guest); CPU proof 1,739.1 s, identity_p254 14.9 s, Groth16 15 s; releases 11.2 s and 11.1 s;
+vault: `submitCandidate` 375,305 gas, `finalizeAttested` 218,385, releases 420,608 and 361,396, each paid
+999,000,000,000,000 wei; `ZoneBridgeRotationLezCheckedTest` 6 of 6; `verify` equal.
+
+**The rc3 return leg again** (review M2's re-run, [`e2e/runs/zone-bridge-rc3-2/`](../../e2e/runs/zone-bridge-rc3-2/README.md),
+[`lez/results/v0.4.0-rc3/return-leg-2/`](../../lez/results/v0.4.0-rc3/return-leg-2/README.md)): rc3's
+`sequencer_service` on a 0.3.5-rc.1 node; the attestor asked the sequencer's own `getBlock` every round: 14 rounds,
+rising tips 27 … 105, none refused, the final round (zone up) signed T1 = 106 (fork digest `c025c6d2…`); input
+`zone-24-106` (T0 = 24): blocks 25..=106 (82 blocks, 179 transactions), all 106 final inscriptions checked by the
+second build, burn root `0x78aae803…` (the first rc3 run's leaves); `checkpoint_b_0_3_5` (rebuilt here, the same id
+`0xafbf4023…`): 18,486,594 user cycles, 20 segments, CPU proof 1,543.9 s, identity_p254 22.7 s, Groth16 16 s; 0 of 1
+refused; the deployed `checkpoint_b` refuses the input (`UnsupportedOpcode { opcode: 37 }`); releases 16.3 s each;
+vault: `submitCandidate` 375,269 gas, `finalizeAttested` 218,373, releases 420,572 and 361,396, each paid
+999,000,000,000,000 wei; on that anvil the seal is refused under the deployed `checkpoint_b`'s id at RISC Zero's
+verifier and a replayed release with `NullifierAlreadyUsed()`; `ZoneBridgeRc3LezCheckedTest` 5 of 5; `verify` equal.
+The six zone-bridge suites together: 30 of 30.
 
 ## What failed on the way
 

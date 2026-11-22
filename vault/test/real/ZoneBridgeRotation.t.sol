@@ -12,7 +12,7 @@ import {FerrataVault} from "../../src/FerrataVault.sol";
 import {ZoneBridgeFixture} from "./ZoneBridge.t.sol";
 
 contract ZoneBridgeRotationTest is ZoneBridgeFixture {
-    function _path() internal pure override returns (string memory) {
+    function _path() internal pure virtual override returns (string memory) {
         return "test/real/fixtures/zone-bridge-rotation.json";
     }
 
@@ -49,5 +49,13 @@ contract ZoneBridgeRotationTest is ZoneBridgeFixture {
         _deploy(FerrataVault.Mode.B, imageId, _state(r), 4, 3);
         vm.expectRevert(FerrataVault.ParentNotFinal.selector);
         vault.submitCandidate(_checkpoint(), seal);
+    }
+}
+
+/// @notice zone-bridge-4: the rotation run again (22 November) with each attestor checking every tip against its own
+/// sequencer's LEZ node and the last round taken while the zone runs (checkpoint/attestor/RESULTS.md §10.1).
+contract ZoneBridgeRotationLezCheckedTest is ZoneBridgeRotationTest {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/zone-bridge-4.json";
     }
 }
