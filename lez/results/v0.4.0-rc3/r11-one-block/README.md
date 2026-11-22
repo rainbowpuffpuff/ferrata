@@ -57,7 +57,8 @@ every block; the storage base fee rose from 8 to 9 for block 48, block 47 being 
   with no conflict; one more would not fit LEZ's block storage cap, not because of anything Ferrata does.
 - **A private transaction computes its resulting state before inclusion:** each transaction was complete (its
   nullifiers, its new commitments, its encrypted notes, the reply it expects from the record) when it was proven,
-  36 to 42 s and six blocks before inclusion (the block timestamps of 41, 40 and 47); the chain moved in between (a private transaction moved the commitment tree; the
+  36 to 42 s before inclusion (proving began after block 40 and ended after block 41; the four are in block 47); the
+  chain moved in between (a private transaction moved the commitment tree; the
   attestation program verified a finality update and wrote a record of another instance), and the four were applied
   as proven, each of their commitments in the tree after. Records are never written again and reads write nothing,
   so the reply each proof predicted is the reply settlement gets.
