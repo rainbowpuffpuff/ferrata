@@ -5,7 +5,7 @@
   "type": "core",
   "interface": "cdylib",
   "category": "bridge",
-  "description": "Ferrata (prototype): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
+  "description": "Ferrata (prototype, unaudited, not for production): the user side of the Ferrata bridge between Ethereum and LEZ: deposit commitments and vault calls, claims, burns, release witnesses and journals, recovery and status, with the bridge core",
   "main": "ferrata_bridge_module_plugin",
   "dependencies": [],
 

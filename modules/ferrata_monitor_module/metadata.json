@@ -5,7 +5,7 @@
   "type": "core",
   "interface": "cdylib",
   "category": "bridge",
-  "description": "Ferrata (prototype): the watchers' monitor as a module: follows a Ferrata vault, checks every candidate checkpoint against its own node views and cancels a wrong one in time, pauses checkpoints, alerts on and revokes a wrong finalised one, audits rule (B)'s published attestations, as a loop under Logos Core or for a given number of polls, and offline verdicts",
+  "description": "Ferrata (prototype, unaudited, not for production): the watchers' monitor as a module: follows a Ferrata vault, checks every candidate checkpoint against its own node views and cancels a wrong one in time, pauses checkpoints, alerts on and revokes a wrong finalised one, audits rule (B)'s published attestations, as a loop under Logos Core or for a given number of polls, and offline verdicts",
   "main": "ferrata_monitor_module_plugin",
   "dependencies": [],
 

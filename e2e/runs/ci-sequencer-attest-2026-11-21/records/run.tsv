@@ -1,0 +1,22 @@
+phase	step	tx_hash	block	position	status	exit	exec_gas	stor_gas	gas_limit	base_fee_exec	base_fee_stor	fee	payer_debit	block_txs	block_exec_gas	block_stor_gas	harness_exec_gas	harness_stor_gas	harness_result	note
+deploy	deploy main: WriteSegment 7 of 7 (4816 bytes)	ffcda7010006ccfc2c5fd91a7f1e8b96aa848f7f43508326eb6ebcae79867262	2	0	applied	-	0	5396	2000000	8	8	43168	-	1	0	5396	-	-	-	-
+deploy	deploy main: WriteSegment 6 of 7 (98304 bytes)	a0cdc47796c8afbc2a0463f783a64c89217396a6d81a3b5be50b583ebe3fb9ce	3	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: WriteSegment 5 of 7 (98304 bytes)	95f6c350ba463132b5be3ea19d2cfdfe34b334232da71b984cf9cfc28169f5e9	4	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: WriteSegment 4 of 7 (98304 bytes)	02f31a307a6f072088a2311929f32efd175ced79709ad3332f6db4f5a58ca92f	5	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: WriteSegment 3 of 7 (98304 bytes)	67ffc82b3fbd4727a2cf25f10c8b1a5441cc64c423741449837492a65508c513	6	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: WriteSegment 2 of 7 (98304 bytes)	928c0ba0a701fbad039407f82bced382e274f65ae9cf44938b60e8eb0bad482b	7	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: WriteSegment 1 of 7 (98304 bytes)	ab2d45f1db16a7db3e6f365833b66464731d60326408766216737a493f1d1ac3	8	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy main: CreateHeader (immutable) at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs	caf475ae79c49ba7fc2d25509fca7c72204905d768a40dc75d46fa917e13fca5	9	0	applied	-	0	608	2000000	8	8	4864	4796000	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4796000
+deploy	deploy twin: WriteSegment 7 of 7 (4816 bytes)	fd716a80f009a6c2b637ba4d9c147ef53867ab2a0627b08fdbf27161b07f01c2	10	0	applied	-	0	5396	2000000	8	8	43168	-	1	0	5396	-	-	-	-
+deploy	deploy twin: WriteSegment 6 of 7 (98304 bytes)	adad317333106f77bc2994be8f402f880f3da12a70e26a23beb8a0dc3955d384	11	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: WriteSegment 5 of 7 (98304 bytes)	a152cd05ec9052d1190824f1a1ba0dc16487df01655121d317e1c00fb5e91c7f	12	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: WriteSegment 4 of 7 (98304 bytes)	f7c0311ca703324eaffb799dd447dec54eec6dbfc2f3171a168044619804294b	13	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: WriteSegment 3 of 7 (98304 bytes)	c26f1ade892ab367d68299f6b508fe17783f244aee07beb033a48ca1459ef400	14	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: WriteSegment 2 of 7 (98304 bytes)	9efc1738395a47ee3325b0aede5856269ca5e4531ecf17140857a9e0002161d7	15	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: WriteSegment 1 of 7 (98304 bytes)	d50aa5b04edd820c574e45e72f10e3fc32f1a4bd3c3024554c23fe10aae205fb	16	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy twin: CreateHeader (immutable) at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57	926b3a1f3710941b61cb287adc3cc78eed50c40eaa43999a67dfb9a60c1f3ff8	17	0	applied	-	0	608	2000000	8	8	4864	4796000	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 4796000
+deploy	deploy scripted: WriteSegment 3 of 3 (39196 bytes)	b748bd4a4bd938adbda65ffa268cc530fdfcc87fc68af56e2ae38598813444f7	18	0	applied	-	0	39776	2000000	8	8	318208	-	1	0	39776	-	-	-	-
+deploy	deploy scripted: WriteSegment 2 of 3 (98304 bytes)	853625c6f2e399b24d06a96c7c1d6e114601a9c06ac58e5db2db297ff963fd76	19	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy scripted: WriteSegment 1 of 3 (98304 bytes)	b3693c9718b3ea29b81ea589a41a2f1af50986c5ed29d175badb45fdadf2a44e	20	0	applied	-	0	98916	2000000	8	8	791328	-	1	0	98916	-	-	-	-
+deploy	deploy scripted: CreateHeader (immutable) at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K	221264aa5a94c18ff5ed021ba1e56502259a0791b9a931c6ba9109037b8768a5	21	0	applied	-	0	608	2000000	8	8	4864	1905728	1	0	608	-	-	-	payer_debit is for the whole deployment; its fees sum to 1905728
+scenarios	twin Init Init	d24975c03dfb60844c97560e3386014b900ffe812914f0aa40decbf846b00195	22	0	reverted	-	4000000	1961	4000000	8	8	32015688	32015688	1	4000000	1961	209212	1888	applied	Execution outside of the validity window

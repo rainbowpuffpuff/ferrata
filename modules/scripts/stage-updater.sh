@@ -42,10 +42,16 @@ repo=$(cd "$here/../.." && pwd)
 spike=$(cd "$repo/.." && pwd)
 lez_up="$spike/upstream/lez-v0.4.0-rc1"
 commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
+# Portable to macOS's userland (no find -printf; sha256sum where it exists, else shasum; bash 3.2). What it stages
+# is not: the circuits' and rapidsnark's prebuilt artifacts below are their linux-x86_64 releases, so the module
+# it stages builds for x86-64 Linux only (.github/workflows/macos.yml leaves it out).
+if command -v sha256sum > /dev/null; then SHA256=(sha256sum); else SHA256=(shasum -a 256); fi
 r="$repo/modules/ferrata_updater_module/rust-lib"
 v="$r/vendor"
 
-methods_rs=${METHODS_RS:-$(find "$repo/lez/target" -path '*/build/methods-*/out/methods.rs' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-)}
+methods_rs=${METHODS_RS:-$(python3 -I -c 'import glob, os, sys
+found = glob.glob(os.path.join(sys.argv[1], "**", "build", "methods-*", "out", "methods.rs"), recursive=True)
+print(max(found, key=os.path.getmtime) if found else "")' "$repo/lez/target")}
 if [ -z "$methods_rs" ] || [ ! -f "$methods_rs" ]; then
   echo "stage-updater.sh: no risc0-build output of lez/methods (build it: cd lez && cargo build --locked -p methods)" >&2
   exit 1
@@ -95,7 +101,7 @@ if [ ! -d "$lbc_cache/$lbc" ]; then
 fi
 mkdir -p "$v/lbc"
 cp -r "$lbc_cache/$lbc" "$v/lbc/"
-lbc_sum=$( (cd "$v/lbc" && find "$lbc" -type f | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+lbc_sum=$( (cd "$v/lbc" && find "$lbc" -type f | LC_ALL=C sort | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
 # rapidsnark's static libraries, which logos-blockchain-circuits-prover links (static-rapidsnark): rust-rapidsnark's
 # build script reads ../RAPIDSNARK_VERSION from its git checkout and downloads them, unless RAPIDSNARK_LIB_DIR names
 # them (rust-lib/.cargo/config.toml); Nix vendors each crate alone, without that file. The version is the one of the
@@ -109,7 +115,7 @@ if [ ! -d "$lbc_cache/$rs" ]; then
 fi
 mkdir -p "$v/rapidsnark"
 cp "$lbc_cache/$rs/lib/"*.a "$v/rapidsnark/"
-rs_sum=$( (cd "$v/rapidsnark" && ls | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+rs_sum=$( (cd "$v/rapidsnark" && ls | LC_ALL=C sort | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
 
 # The LEZ tree.
 tar -C "$spike/upstream" --exclude='lez-v0.4.0-rc1/target' --exclude='lez-v0.4.0-rc1/.git' -cf - lez-v0.4.0-rc1 | tar -C "$v/upstream" -xf -
@@ -164,7 +170,7 @@ done
 # What was staged, for version().
 sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done
                          for f in blocklog follower live manifest plan programs rpcurl; do echo "lez/live/driver/src/$f.rs"; done; } \
-        | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+        | LC_ALL=C sort | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
 lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/lez/updater/Cargo.toml" | head -n 1)
 python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" "$rs" "$rs_sum" <<'PY'

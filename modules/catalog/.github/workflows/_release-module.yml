@@ -1,5 +1,6 @@
 # Ferrata catalog: the base catalog's _release-module.yml (logos-modules-release-base@33fb564),
-# unchanged but for this header. Signing stays off (signing_mode: none) until a key is set up.
+# with signing on (signing_mode: inline) and the release action pinned to a commit. The owner's one
+# step to this publishing is modules/catalog/RELEASE.md (modules/scripts/release-publish.sh).
 name: _release-module
 
 # Local reusable workflow — the single place that owns this catalog's
@@ -13,23 +14,23 @@ name: _release-module
 # the Actions UI. It can only be invoked from a sibling workflow via
 # `uses: ./.github/workflows/_release-module.yml`.
 #
-# ── Signing modes ────────────────────────────────────────────────────
-# This catalog publishes UNSIGNED (`signing_mode: none`) — matching the
-# empty `trustedSigners` in logos-repo.json. Turn on signing when ready:
-#
-#   inline   — `lgx sign` runs in the workflow using a JWK secret.
-#              1. Generate an Ed25519 JWK private key.
-#              2. Add it as the `LOGOS_SIGNING_KEY` Actions secret.
-#              3. Uncomment the `signing_mode: inline` line + the
-#                 `signing_key:` line below; delete `signing_mode: none`.
-#              4. Put the matching public DID in `logos-repo.json`
-#                 under `trustedSigners`.
+# ── Signing ──────────────────────────────────────────────────────────
+# This catalog publishes SIGNED packages (signing_mode: inline): the
+# release job runs `lgx sign` with the JWK Ed25519 secret key held in the
+# repository's LOGOS_SIGNING_KEY Actions secret (how logos-modules-release-
+# action's README and the base catalog's _release-module.yml inline
+# instructions name it), and logos-repo.json declares the matching public
+# identity under `trustedSigners` (release-publish.sh writes that DID from
+# the key the owner provides). Logos clients do not trust that declaration
+# by itself: a signature counts for a user who adds the DID to the
+# installer's keyring and requires signatures (modules/catalog/RELEASE.md,
+# rules 1 and 5).
 #
 #   external — a signing rig you control (Jenkins, HSM, hardware token)
-#              produces the signed `.lgx`; the key never touches CI.
-#              Uncomment the external block; `signing_command` runs with
-#              $LGX_PATH (unsigned input) and must either modify it in
-#              place or write the signed result to $LGX_SIGNED_OUT.
+#   produces the signed `.lgx`; the key never touches CI. Switch by
+#   replacing the `signing_mode` line with `signing_mode: external` and a
+#   `signing_command`, which runs with $LGX_PATH (unsigned input) and must
+#   either modify it in place or write the signed result to $LGX_SIGNED_OUT.
 
 on:
   workflow_call:
@@ -48,14 +49,17 @@ on:
         type: boolean
         default: false
 
-# Forked repos default to a read-only GITHUB_TOKEN; the downstream
-# release job needs to create releases / upload assets.
+# Forked repos default to a read-only GITHUB_TOKEN; the release job the
+# action defines needs contents: write to create releases / upload assets
+# (its setup job is contents: read, and GitHub only lets a called workflow
+# downgrade, so the caller must grant the maximum any of its jobs needs).
+# No other permission is granted.
 permissions:
   contents: write
 
 jobs:
   release:
-    uses: logos-co/logos-modules-release-action/.github/workflows/release.yml@v1
+    uses: logos-co/logos-modules-release-action/.github/workflows/release.yml@bbdc52871dc4305c8007923e1b08738ad2dd6b50 # v1 (= v1.8)
     with:
       module_path: ${{ inputs.module_path }}
 
@@ -64,12 +68,21 @@ jobs:
       skip_if_published: ${{ !inputs.force_build }}
 
       # ─── Variants (edit here, not in each caller) ───────────────────
-      # windows-x86_64 is a mingw CROSS build — an ordinary Linux runner
-      # produces the PE — and is opt-in upstream, so the full list has to
-      # be spelled out rather than left to the action's default. A module
-      # whose flake does not expose `packages.x86_64-windows` fails only
-      # that leg; the other three still publish as a partial release.
-      variants: "darwin-arm64,linux-amd64,linux-arm64,windows-x86_64"
+      # The action's own default list at the pinned commit (v1.8), spelled
+      # out: macOS (darwin-arm64) beside the two Linux variants, the
+      # platforms RFP-022 Supportability #2 asks for. The base catalog adds
+      # windows-x86_64 (a mingw CROSS build, opt-in upstream); these modules
+      # have never been built for Windows, so it is left out.
+      # At v1.8 every listed variant gets its own build leg, with no check
+      # of what a module's flake exposes (that narrowing arrives in v1.12,
+      # f31710a): a leg that fails — a system the flake lacks, or a crate
+      # that does not build there — fails alone, and the release job
+      # publishes the variants that built as a partial release, the sidecar
+      # recording builtVariants / missingVariants. ferrata_updater_module
+      # vendors linux-x86_64 builds of the circuits and of rapidsnark
+      # (modules/scripts/stage-updater.sh), so its darwin-arm64 and
+      # linux-arm64 legs are expected to fail.
+      variants: "darwin-arm64,linux-amd64,linux-arm64"
 
       # ─── Runners and Nix cache (set by variables, not edited here) ───
       # Unset, every job runs GitHub-hosted and only reads the Logos cache.
@@ -81,23 +94,8 @@ jobs:
       cache_environment: ${{ vars.ATTIC_ENDPOINT && 'public-cache' || '' }}
 
       # ─── Signing mode (edit here, not in each caller) ────────────────
-      signing_mode: none
-
-      # Inline signing — uncomment this line (and `signing_key:` at the
-      # bottom), then delete `signing_mode: none` above.
-      #signing_mode: inline
-
-      # External signing (Jenkins / HSM / hardware token). Uncomment and
-      # delete `signing_mode: none`. `signing_command` runs with
-      # $LGX_PATH pointing at the unsigned `.lgx`; it must modify that
-      # file in place or write the signed package to $LGX_SIGNED_OUT.
-      #
-      # signing_mode: external
-      # signing_command: |
-      #   curl -fsSL -X POST --data-binary @"$LGX_PATH" \
-      #        -H "X-Build-Id: ${GITHUB_RUN_ID}" \
-      #        -o "$LGX_SIGNED_OUT" \
-      #        "$JENKINS_SIGNING_URL"
+      # See the header: inline signs with the LOGOS_SIGNING_KEY secret.
+      signing_mode: inline
 
     # Reaches here via `secrets: inherit` from each caller, so the
     # per-module files don't need to know which secret names matter.
@@ -108,6 +106,9 @@ jobs:
       # environment secret whose name its caller passed.
       ATTIC_TOKEN_CI: ${{ secrets.ATTIC_TOKEN_CI }}
       ATTIC_TOKEN_PUBLIC: ${{ secrets.ATTIC_TOKEN_PUBLIC }}
-      # Inline mode reads this; none/external ignore it. Uncomment for
-      # inline mode.
-      #signing_key: ${{ secrets.LOGOS_SIGNING_KEY }}
+      # Inline signing reads this (the JWK Ed25519 secret key; the action's
+      # step writes it to a 0600 file and runs `lgx sign --key release`).
+      # The owner sets it out-of-band with (the value read from stdin;
+      # modules/scripts/release-publish.sh --yes runs exactly this):
+      #   gh secret set LOGOS_SIGNING_KEY --repo ORG/CATALOG_REPO < KEY.jwk
+      signing_key: ${{ secrets.LOGOS_SIGNING_KEY }}

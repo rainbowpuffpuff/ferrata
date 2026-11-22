@@ -1,0 +1,6 @@
+blocks: 1..=22
+transactions: 21 sent; 20 applied, 0 refused with an exit code, 1 reverted otherwise, 0 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 4000000, storage gas 1439177, base fees 43513416
+against the harness tables: 1 transactions have a harness row; execution gas equal in 0, different in 1
+  differs: twin Init Init live 4000000 harness 209212 (Execution outside of the validity window)
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 0 of 22

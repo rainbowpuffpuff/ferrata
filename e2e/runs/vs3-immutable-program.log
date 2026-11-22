@@ -1,0 +1,35 @@
+warning: lee@0.1.0: Generated module at <spike>/ferrata-wt-rfp-g/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <spike>/ferrata-wt-rfp-g/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<spike>/ferrata-wt-rfp-g/lez/methods)
+   Compiling harness v0.1.0 (<spike>/ferrata-wt-rfp-g/lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.58s
+     Running tests/immutable_program.rs (target/debug/deps/immutable_program-f0c2498c85033c2b)
+
+running 2 tests
+
+thread 'main' (1) panicked at /upstream/lez-v0.4.0-rc1/lee/state_machine/core/src/program/mod.rs:740:57:
+message must decode from borsh: Custom { kind: InvalidData, error: "Invalid Option representation: 5. The first byte must be 0 or 1" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'main' (1) panicked at /upstream/lez-v0.4.0-rc1/lee/state_machine/core/src/program/mod.rs:740:57:
+message must decode from borsh: Custom { kind: InvalidData, error: "Invalid Option representation: 5. The first byte must be 0 or 1" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test the_control_a_mutable_deployment_of_the_same_code_can_be_swapped ... ok
+
+thread 'the_verification_logic_of_the_deployment_cannot_be_replaced' (52617) panicked at <spike>/upstream/lez-v0.4.0-rc1/lez/programs/program_loader/core/src/lib.rs:92:13:
+UpdateHeader target is immutable and cannot be updated
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'the_verification_logic_of_the_deployment_cannot_be_replaced' (52617) panicked at <spike>/upstream/lez-v0.4.0-rc1/lez/programs/program_loader/core/src/lib.rs:92:13:
+UpdateHeader target is immutable and cannot be updated
+
+thread 'the_verification_logic_of_the_deployment_cannot_be_replaced' (52617) panicked at <spike>/upstream/lez-v0.4.0-rc1/lez/programs/program_loader/core/src/lib.rs:78:13:
+header target already deployed
+
+thread 'the_verification_logic_of_the_deployment_cannot_be_replaced' (52617) panicked at <spike>/upstream/lez-v0.4.0-rc1/lez/programs/program_loader/core/src/lib.rs:58:13:
+segment target already deployed
+test the_verification_logic_of_the_deployment_cannot_be_replaced ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.50s
+
+exit 0

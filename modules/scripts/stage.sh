@@ -22,6 +22,11 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
+# Portable to macOS (BSD sed, find and xargs; bash 3.2): no sed -i, and sha256sum where it exists, else shasum.
+if command -v sha256sum > /dev/null; then SHA256=(sha256sum); else SHA256=(shasum -a 256); fi
+edit() { # FILE SED-SCRIPT: sed's in-place edit, written the same way for GNU and BSD sed
+  sed -e "$2" "$1" > "$1.stage" && mv "$1.stage" "$1"
+}
 
 # The copy inherits these from the module's rust-lib/Cargo.toml; they must equal its source workspace's.
 fields() { sed -n '/^\[workspace.package\]/,/^\[/p' "$1" | grep -E '^(version|edition|license|rust-version|repository) = '; }
@@ -35,7 +40,7 @@ same_fields() { # MODULE SOURCE_WORKSPACE_TOML
 srcsum() {
   local d
   for d in "$@"; do (cd "$repo/$d" && find Cargo.toml src -type f | LC_ALL=C sort | sed "s#^#$d/#"); done \
-    | (cd "$repo" && xargs sha256sum) | sha256sum | cut -d' ' -f1
+    | (cd "$repo" && xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1
 }
 # copy SOURCE_CRATE DEST_DIR: its Cargo.toml, README.md, build.rs and src/.
 copy() {
@@ -67,9 +72,9 @@ stage_monitor() {
   rm -rf "$r/checkpoint"
   copy monitor "$r/monitor"
   # A member of the module's workspace: without its own `[workspace]` table; its library only.
-  sed -i '/^\[workspace\]$/d' "$r/monitor/Cargo.toml"
+  edit "$r/monitor/Cargo.toml" '/^\[workspace\]$/d'
   rm -f "$r/monitor/src/main.rs"
-  sed -i '/^\[\[bin\]\]$/,/^$/d' "$r/monitor/Cargo.toml"
+  edit "$r/monitor/Cargo.toml" '/^\[\[bin\]\]$/,/^$/d'
   copy checkpoint/crates/attestor-core "$r/checkpoint/crates/attestor-core"
   staged "$r/monitor" "$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/monitor/Cargo.toml" | head -n 1)" \
     "$(srcsum monitor checkpoint/crates/attestor-core)" "monitor (ferrata-monitor) with attestor-core into $m"

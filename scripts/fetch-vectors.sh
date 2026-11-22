@@ -47,8 +47,15 @@ if [ ! -d "${SPEC_DIR}/tests/minimal" ] || [ ! -d "${SPEC_DIR}/tests/general" ];
   base="https://github.com/ethereum/consensus-specs/releases/download/${SPEC}"
   fetch "${base}/minimal.tar.gz" "${MINIMAL_SHA}" "${SPEC_DIR}/minimal.tar.gz"
   fetch "${base}/general.tar.gz" "${GENERAL_SHA}" "${SPEC_DIR}/general.tar.gz"
-  tar -xzf "${SPEC_DIR}/minimal.tar.gz" -C "${SPEC_DIR}" --wildcards \
-    'tests/minimal/*/light_client/sync/*' 'tests/minimal/*/light_client/update_ranking/*'
+  # Only the minimal preset's light-client `sync` and `update_ranking` tests: the names of their files
+  # are listed first and extracted by name, which GNU tar and BSD tar (macOS's) both do the same way (a
+  # pattern would need GNU tar's --wildcards, an option BSD tar refuses). Files only: GNU tar takes a
+  # listed directory for all it holds and then reports its files, listed again, as not found. The tree
+  # hash below checks the result.
+  tar -tzf "${SPEC_DIR}/minimal.tar.gz" \
+    | grep -E '^tests/minimal/[^/]+/light_client/(sync|update_ranking)/.*[^/]$' > "${SPEC_DIR}/minimal.list"
+  tar -xzf "${SPEC_DIR}/minimal.tar.gz" -C "${SPEC_DIR}" -T "${SPEC_DIR}/minimal.list"
+  rm -f "${SPEC_DIR}/minimal.list"
   tar -xzf "${SPEC_DIR}/general.tar.gz" -C "${SPEC_DIR}"
   rm -f "${SPEC_DIR}/minimal.tar.gz" "${SPEC_DIR}/general.tar.gz"
 fi

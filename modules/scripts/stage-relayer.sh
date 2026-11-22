@@ -21,6 +21,8 @@ repo=$(cd "$here/../.." && pwd)
 spike=$(cd "$repo/.." && pwd)
 lez_up="$spike/upstream/lez-v0.4.0-rc1"
 commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
+# Portable to macOS (BSD userland, bash 3.2): sha256sum where it exists, else shasum.
+if command -v sha256sum > /dev/null; then SHA256=(sha256sum); else SHA256=(shasum -a 256); fi
 r="$repo/modules/ferrata_relayer_module/rust-lib"
 v="$r/vendor"
 [ -d "$lez_up/lee" ] || { echo "stage-relayer.sh: $lez_up missing" >&2; exit 1; }
@@ -66,7 +68,7 @@ grep -q '^lez-wallet = ' "$v/ferrata/cli/Cargo.toml" || { echo "stage-relayer.sh
 tar -C "$spike/upstream" --exclude='lez-v0.4.0-rc1/target' --exclude='lez-v0.4.0-rc1/.git' -cf - lez-v0.4.0-rc1 | tar -C "$v/upstream" -xf -
 
 # What was staged, for version().
-sum=$( (cd "$repo" && for c in cli $crates; do find "$c/Cargo.toml" "$c/src" -type f; done | LC_ALL=C sort -u | xargs sha256sum) | sha256sum | cut -d' ' -f1)
+sum=$( (cd "$repo" && for c in cli $crates; do find "$c/Cargo.toml" "$c/src" -type f; done | LC_ALL=C sort -u | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
 lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/cli/Cargo.toml" | head -n 1)
 python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" <<'PY'

@@ -1,0 +1,4 @@
+../tmp/sequencer/run/sequencer_home is set up
+  channel signing public key  d15d201181ca44d738fe39fe28748db03adfb9fbf8df8cba58a89d2efcd0f6ab
+`start` creates the channel if it does not exist yet.
+Creating the channel stakes that key at genesis.

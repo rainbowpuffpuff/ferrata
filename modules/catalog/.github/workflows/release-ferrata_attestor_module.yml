@@ -22,12 +22,13 @@ on:
         type: boolean
         default: false
 
-# Forked repos default to a read-only GITHUB_TOKEN.
-permissions:
-  contents: write
-
 jobs:
   release:
+    # Least privilege, stated on the job (not the workflow): this pipeline
+    # needs contents alone, to create the <module>-v<version> release and
+    # upload its assets (a fork's GITHUB_TOKEN starts read-only).
+    permissions:
+      contents: write
     uses: ./.github/workflows/_release-module.yml
     with:
       module_path: submodules/ferrata_attestor_module

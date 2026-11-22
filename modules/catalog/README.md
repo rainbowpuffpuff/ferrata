@@ -8,9 +8,9 @@ The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own w
 | File | What | From the base |
 |---|---|---|
 | `logos-repo.json` | how clients (`lgpd`, the `package_downloader` module, the package-manager UI) identify the catalog; `indexUrl` names the rolling `index` release | the base's template, filled in |
-| `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml@v1` with the catalog's variants and signing (`signing_mode: none`) | unchanged but for a header |
+| `.github/workflows/_release-module.yml` | calls `logos-co/logos-modules-release-action/.github/workflows/release.yml` pinned to the commit its `v1` tag names (`bbdc528…`, with the variants list and `signing_mode: inline`, the secret the workflows pass named `signing_key` from the repository's `LOGOS_SIGNING_KEY`) | the base's, with signing on, the pin, and a header; least-privilege `permissions:` per job in every file |
 | `.github/workflows/release-<module>.yml` (six: `ferrata_attest_module`, `ferrata_bridge_module`, `ferrata_attestor_module`, `ferrata_monitor_module`, `ferrata_updater_module`, `ferrata_relayer_module`) | one per module: `module_path: submodules/<module>` | the base's `release-module.yml.template`, as `scripts/add-module.sh` writes it |
-| `.github/workflows/release-all.yml` | releases every submodule | unchanged |
+| `.github/workflows/release-all.yml` | releases every submodule | the base's, with least-privilege `permissions:` per job and the checkout pinned to a commit |
 
 In the catalog's own repository these files sit at its root (GitHub runs workflows only from the
 root's `.github/`, so nothing here runs from this repository). Each module is a git submodule under
@@ -19,7 +19,15 @@ writes that repository from this one (the module's directory with its staged cra
 the builder copies only `rust-lib/` and a flake sees only tracked files).
 
 **Not done:** no catalog repository, module repositories, release, tag or index has been created or
-published (no push, no public network). The action itself has not run.
+published (no push, no public network). The action itself has not run. Publishing is one owner step,
+prepared by [`RELEASE.md`](RELEASE.md): `modules/scripts/release-publish.sh ORG CATALOG_REPO
+SIGNING_KEY_FILE --yes` generates the published catalog's `logos-repo.json` (the signer's `did:jwk` under
+`trustedSigners`, the `indexUrl`), exports the module repositories, assembles the catalog, checks the
+remote side read-only, then creates the repositories, pushes them and sets the signing secret, and stops:
+the browser settings (immutable releases, protected tags, 2FA) come next, and the release trigger it
+prints comes last. Its offline dry run (local bare repositories, `file://` remotes) is recorded in
+[`dry-run-publish/README.md`](dry-run-publish/README.md); `modules/scripts/test-release-publish.sh` runs
+every path against a stub `gh`.
 
 ## Dry run: the action's steps, run locally
 
