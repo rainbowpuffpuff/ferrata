@@ -1,35 +1,52 @@
 //! `/health` (JSON) and `/metrics` (Prometheus text) on a plain HTTP listener, from a snapshot the
 //! daemon refreshes after every round.
 //!
-//! Bounded against its clients (any local process, or the network when `daemon.listen` is not on loopback): each
-//! connection is served on a thread of its own, at most [`MAX_CONNECTIONS`] at once (one more is closed at once); a
-//! client has [`DEADLINE`] in all to send its request head, at most [`MAX_HEAD`] bytes (`400` beyond, then the
-//! connection is closed); a write that does not drain within [`DEADLINE`] ends the connection. One idle or slow client
-//! therefore holds one thread for at most [`DEADLINE`] and at most [`MAX_HEAD`] bytes, and never blocks another.
+//! Bounded against its clients (any local process, or the network when `daemon.listen` is not on loopback), and so
+//! that a monitor gets through: each connection is served on a thread of its own. At most [`MAX_CONNECTIONS`] are
+//! served at once with the full [`DEADLINE`] to send their request head, and of those at most [`MAX_PER_CLIENT`] from
+//! one address other than loopback (on loopback every client is this machine, one address: they share the
+//! [`MAX_CONNECTIONS`]). A connection beyond those bounds is still served, on at most [`MAX_QUICK`] more threads, if
+//! its request head arrives within [`QUICK_DEADLINE`], as a monitor's does (its request goes out with the connection);
+//! beyond those it is closed at once. A request head is at most [`MAX_HEAD`] bytes (`400` beyond); a write that does
+//! not drain within [`DEADLINE`] ends the connection. A connection's place is given back before it is closed, so a
+//! client that connects again at once finds it free. Clients that keep connections idle therefore hold at most
+//! [`MAX_CONNECTIONS`] threads for [`DEADLINE`] each, and to keep a prompt request out they must also fill the
+//! [`MAX_QUICK`] places again at least every [`QUICK_DEADLINE`] (review of the fixes, L1: eight clients re-opening
+//! idle connections used to deny `/health` for as long as they kept at it). One other host gets at most
+//! [`MAX_PER_CLIENT`] of the [`MAX_CONNECTIONS`], so it cannot; several hosts, or a process on this machine, can: keep
+//! `listen` on loopback.
 //! A snapshot that no round has refreshed for longer than its limit ([`Snapshot::with_stale_after`]) is served with
 //! `503`: a round that hangs (a settle wait, a source without a time limit) is not reported healthy.
 
 use std::{
+    collections::BTreeMap,
     io::{ErrorKind, Read, Write},
-    net::{Shutdown, TcpListener, TcpStream},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
+    net::{IpAddr, Shutdown, TcpListener, TcpStream},
+    sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
 };
 
 use anyhow::{Context as _, Result};
 
-/// Connections served at once; a connection beyond them is closed without an answer.
+/// Connections served at once with the full [`DEADLINE`].
 pub const MAX_CONNECTIONS: usize = 8;
+/// Of the [`MAX_CONNECTIONS`], at most this many from one address other than loopback.
+pub const MAX_PER_CLIENT: usize = 4;
+/// Connections served at once beyond [`MAX_CONNECTIONS`] (or beyond a client's [`MAX_PER_CLIENT`]), each given
+/// [`QUICK_DEADLINE`] to send its request head; a connection beyond them is closed without an answer.
+pub const MAX_QUICK: usize = 8;
+/// The time a connection beyond the [`MAX_CONNECTIONS`] has to send its request head.
+pub const QUICK_DEADLINE: Duration = Duration::from_millis(250);
 /// The most bytes of a request head (request line, headers, the blank line) read from a client.
 pub const MAX_HEAD: usize = 8 * 1024;
 /// The time a client has to send its request head, and a write has to drain.
 pub const DEADLINE: Duration = Duration::from_secs(2);
 /// The default age after which a snapshot is served with `503`.
 pub const STALE_AFTER: Duration = Duration::from_secs(600);
+/// After a `400`, what is still read (and dropped) before the connection is closed, so that the client receives the
+/// answer rather than a reset: at most this long and this many bytes.
+const DRAIN: (Duration, usize) = (Duration::from_millis(200), 64 * 1024);
 
 struct State {
     metrics: String,
@@ -85,12 +102,75 @@ impl Snapshot {
     }
 }
 
-/// A slot among the [`MAX_CONNECTIONS`]: given back when its connection's thread ends (or never starts).
-struct Slot(Arc<AtomicUsize>);
+/// The connections being served: in the full lane (with the non-loopback addresses among them) and in the quick lane.
+#[derive(Default)]
+struct Lanes {
+    full: usize,
+    clients: BTreeMap<IpAddr, usize>,
+    quick: usize,
+}
 
-impl Drop for Slot {
+/// Where a connection is served.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Lane {
+    /// Among the [`MAX_CONNECTIONS`]; the address if it counts towards [`MAX_PER_CLIENT`] (not loopback).
+    Full(Option<IpAddr>),
+    /// Among the [`MAX_QUICK`].
+    Quick,
+}
+
+impl Lanes {
+    /// The lane for a new connection from `peer`, taken; `None`: no room (close it).
+    fn take(&mut self, peer: Option<IpAddr>) -> Option<Lane> {
+        let client = peer.map(|ip| ip.to_canonical()).filter(|ip| !ip.is_loopback());
+        let mine = client.map_or(0, |ip| self.clients.get(&ip).copied().unwrap_or(0));
+        if self.full < MAX_CONNECTIONS && mine < MAX_PER_CLIENT {
+            self.full += 1;
+            if let Some(ip) = client {
+                *self.clients.entry(ip).or_default() += 1;
+            }
+            return Some(Lane::Full(client));
+        }
+        if self.quick < MAX_QUICK {
+            self.quick += 1;
+            return Some(Lane::Quick);
+        }
+        None
+    }
+
+    fn give_back(&mut self, lane: Lane) {
+        match lane {
+            Lane::Full(client) => {
+                self.full -= 1;
+                if let Some(ip) = client {
+                    if let Some(n) = self.clients.get_mut(&ip) {
+                        *n -= 1;
+                        if *n == 0 {
+                            self.clients.remove(&ip);
+                        }
+                    }
+                }
+            }
+            Lane::Quick => self.quick -= 1,
+        }
+    }
+}
+
+/// A connection's place in its lane: given back when dropped (its thread ends, or never starts).
+struct Place(Arc<Mutex<Lanes>>, Lane);
+
+impl Place {
+    fn deadline(&self) -> Duration {
+        match self.1 {
+            Lane::Full(_) => DEADLINE,
+            Lane::Quick => QUICK_DEADLINE,
+        }
+    }
+}
+
+impl Drop for Place {
     fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::SeqCst);
+        self.0.lock().unwrap_or_else(|p| p.into_inner()).give_back(self.1);
     }
 }
 
@@ -98,22 +178,20 @@ impl Drop for Slot {
 pub fn serve(addr: &str, snapshot: Snapshot) -> Result<std::net::SocketAddr> {
     let listener = TcpListener::bind(addr).with_context(|| format!("listen on {addr}"))?;
     let local = listener.local_addr()?;
-    let active = Arc::new(AtomicUsize::new(0));
+    let lanes = Arc::new(Mutex::new(Lanes::default()));
     thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(stream) = stream else { continue };
-            if active.fetch_add(1, Ordering::SeqCst) >= MAX_CONNECTIONS {
-                active.fetch_sub(1, Ordering::SeqCst);
+            let peer = stream.peer_addr().ok().map(|a| a.ip());
+            let lane = lanes.lock().unwrap_or_else(|p| p.into_inner()).take(peer);
+            let Some(lane) = lane else {
                 let _ = stream.shutdown(Shutdown::Both);
                 continue;
-            }
-            let slot = Slot(active.clone());
+            };
+            let place = Place(lanes.clone(), lane);
             let snapshot = snapshot.clone();
-            // If the thread cannot start, the closure (and the slot in it) is dropped: the slot is given back.
-            let _ = thread::Builder::new().name("ferrata-health".into()).spawn(move || {
-                let _slot = slot;
-                answer(stream, &snapshot);
-            });
+            // If the thread cannot start, the closure (and the place in it) is dropped: the place is given back.
+            let _ = thread::Builder::new().name("ferrata-health".into()).spawn(move || answer(stream, &snapshot, place));
         }
     });
     Ok(local)
@@ -127,31 +205,57 @@ enum Refused {
     Gone,
 }
 
-fn answer(mut stream: TcpStream, snapshot: &Snapshot) {
+fn answer(mut stream: TcpStream, snapshot: &Snapshot, place: Place) {
     let _ = stream.set_write_timeout(Some(DEADLINE));
-    let reply = match read_head(&mut stream, Instant::now()) {
-        Ok(line) => respond(&line, snapshot),
+    match read_head(&mut stream, Instant::now(), place.deadline()) {
+        Ok(line) => {
+            let _ = stream.write_all(respond(&line, snapshot).as_bytes());
+        }
         Err(Refused::TooLong) => {
-            reply("400 Bad Request", "text/plain", &format!("request head longer than {MAX_HEAD} bytes\n"), None)
+            let body = format!("request head longer than {MAX_HEAD} bytes\n");
+            let _ = stream.write_all(reply("400 Bad Request", "text/plain", &body, None).as_bytes());
+            // What the client still sends is read and dropped for a moment: closed with unread input, the connection
+            // would be reset and the client might never see the 400.
+            let _ = stream.shutdown(Shutdown::Write);
+            drain(&mut stream);
         }
-        Err(Refused::Gone) => {
-            let _ = stream.shutdown(Shutdown::Both);
-            return;
-        }
-    };
-    let _ = stream.write_all(reply.as_bytes());
+        Err(Refused::Gone) => {}
+    }
+    // The place is given back before the close: a client that connects again as soon as it sees the close finds it.
+    drop(place);
     let _ = stream.shutdown(Shutdown::Both);
 }
 
+/// Reads and drops what the client sends, for at most [`DRAIN`] (time and bytes) or until it closes.
+fn drain(stream: &mut TcpStream) {
+    let (limit, max) = DRAIN;
+    let start = Instant::now();
+    let mut chunk = [0u8; 4096];
+    let mut read = 0usize;
+    while read < max {
+        let left = limit.saturating_sub(start.elapsed());
+        if left.is_zero() || stream.set_read_timeout(Some(left)).is_err() {
+            return;
+        }
+        match stream.read(&mut chunk) {
+            Ok(0) => return,
+            Ok(n) => read += n,
+            Err(e) if e.kind() == ErrorKind::Interrupted => {}
+            Err(_) => return,
+        }
+    }
+}
+
 /// The request line, read with the rest of the head (up to the blank line), at most [`MAX_HEAD`] bytes in all, within
-/// [`DEADLINE`] of `start`. A client that has sent its request line but not its blank line by then is answered from
-/// the line.
-fn read_head(stream: &mut TcpStream, start: Instant) -> std::result::Result<String, Refused> {
+/// `deadline` of `start` (what has already arrived is always read once, however late the thread starts). A client that
+/// has sent its request line but not its blank line by then is answered from the line.
+fn read_head(stream: &mut TcpStream, start: Instant, deadline: Duration) -> std::result::Result<String, Refused> {
     let mut buf: Vec<u8> = Vec::with_capacity(1024);
     let mut chunk = [0u8; 1024];
     let line = |buf: &[u8]| {
         buf.iter().position(|&b| b == b'\n').map(|end| String::from_utf8_lossy(&buf[..end]).trim_end().to_string())
     };
+    let mut first = true;
     loop {
         if let Some(len) = head_len(&buf) {
             return if len > MAX_HEAD { Err(Refused::TooLong) } else { line(&buf).ok_or(Refused::Gone) };
@@ -159,8 +263,12 @@ fn read_head(stream: &mut TcpStream, start: Instant) -> std::result::Result<Stri
         if buf.len() >= MAX_HEAD {
             return Err(Refused::TooLong);
         }
-        let left = DEADLINE.saturating_sub(start.elapsed());
-        if left.is_zero() || stream.set_read_timeout(Some(left)).is_err() {
+        let left = deadline.saturating_sub(start.elapsed());
+        if left.is_zero() && !first {
+            return line(&buf).ok_or(Refused::Gone);
+        }
+        first = false;
+        if stream.set_read_timeout(Some(left.max(Duration::from_millis(1)))).is_err() {
             return line(&buf).ok_or(Refused::Gone);
         }
         match stream.read(&mut chunk) {
@@ -201,4 +309,44 @@ fn reply(status: &str, kind: &str, body: &str, age: Option<u64>) -> String {
         "HTTP/1.1 {status}\r\nContent-Type: {kind}\r\nContent-Length: {}\r\n{age}Connection: close\r\n\r\n{body}",
         body.len()
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Lane, Lanes, MAX_CONNECTIONS, MAX_PER_CLIENT, MAX_QUICK};
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+    fn ip(last: u8) -> Option<IpAddr> {
+        Some(IpAddr::V4(Ipv4Addr::new(192, 0, 2, last)))
+    }
+
+    /// One host other than loopback gets at most MAX_PER_CLIENT of the full lane, then the quick lane, then nothing;
+    /// another host still finds the rest of the full lane; loopback clients share the full lane; places come back.
+    #[test]
+    fn per_client_and_total_bounds() {
+        let mut l = Lanes::default();
+        let a: Vec<_> = (0..MAX_PER_CLIENT + MAX_QUICK + 1).map(|_| l.take(ip(1))).collect();
+        assert!(a[..MAX_PER_CLIENT].iter().all(|x| matches!(x, Some(Lane::Full(Some(_))))), "{a:?}");
+        assert!(a[MAX_PER_CLIENT..MAX_PER_CLIENT + MAX_QUICK].iter().all(|x| *x == Some(Lane::Quick)), "{a:?}");
+        assert_eq!(a[MAX_PER_CLIENT + MAX_QUICK], None, "one host fills its share and the quick lane, no more");
+        let b: Vec<_> = (0..MAX_CONNECTIONS - MAX_PER_CLIENT).map(|_| l.take(ip(2))).collect();
+        assert!(b.iter().all(|x| matches!(x, Some(Lane::Full(Some(_))))), "another host gets the rest: {b:?}");
+        assert_eq!(l.take(ip(3)), None, "full and quick lanes taken");
+        l.give_back(a[0].unwrap());
+        assert_eq!(l.take(ip(3)), Some(Lane::Full(ip(3))), "a place given back is found");
+        assert_eq!(l.clients.get(&ip(1).unwrap()), Some(&(MAX_PER_CLIENT - 1)));
+
+        let mut l = Lanes::default();
+        let local = Some(IpAddr::V4(Ipv4Addr::LOCALHOST));
+        let mapped = Some(IpAddr::V6(Ipv4Addr::LOCALHOST.to_ipv6_mapped()));
+        let v6 = Some(IpAddr::V6(Ipv6Addr::LOCALHOST));
+        let c: Vec<_> = (0..MAX_CONNECTIONS).map(|i| l.take([local, mapped, v6][i % 3])).collect();
+        assert!(c.iter().all(|x| *x == Some(Lane::Full(None))), "loopback shares the full lane: {c:?}");
+        assert!(l.clients.is_empty());
+        assert_eq!(l.take(local), Some(Lane::Quick));
+        for x in c {
+            l.give_back(x.unwrap());
+        }
+        assert_eq!(l.full, 0);
+    }
 }
