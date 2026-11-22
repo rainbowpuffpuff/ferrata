@@ -233,6 +233,36 @@ of the CLI refused; the completed lockfiles are committed on this branch. The CL
 
 <!-- results: section 3 -->
 
+### Before a release is published (known follow-ups, 22 November 2026)
+
+The release tooling above is not yet ready to publish a release; these are open and recorded here, not fixed:
+
+- **The CLI binary carries the builder's paths.** A release build's `cli/ferrata` holds 666 strings under the
+  builder's home (`~/.cargo/registry/src/…`, `~/.cargo/git/checkouts/…`) and 28 under the directory beside the
+  repository (`…/upstream/…`), so a release made on a machine whose paths name a person would publish them, and the
+  binary depends on the build path. Before any release: pass `--remap-path-prefix` for `$HOME/.cargo`, the directory
+  beside the repository and the repository itself in the CLI step (as `scripts/guest-rustc.py` does for the guests),
+  and have `verify` refuse a binary that still holds the builder's home.
+- **Licence files whose names do not start with the word** are missed by `scripts/crate_notices.py` (yaml-rust2 0.10.4
+  ships `Apache-LICENSE` and `MIT-LICENSE`): an MIT-only crate so named would get the synthesized MIT text with its
+  authors, not its own copyright line. Match the words anywhere in the name, regenerate, and test the case.
+- **The second pass's measurements are not recorded here.** The numbers of [EVIDENCE](EVIDENCE.md) row 201 (638 + 27
+  crates, 235 + 14 seen in the binary, `cargo deny` over 51 workspaces, the offline failures) come from build-box runs
+  whose logs are outside the repository; a dated, measured paragraph for a run at the tip is still to be added above.
+- **The advisories baseline** (`scripts/deny-advisories-baseline.txt`) has no entries for the workspaces of streams
+  merged after it (`lez/guests/statements`, `statements-reader`, `rebate`, `monitor/attest`, the module libraries
+  when staged); their advisories, the same RUSTSEC identifiers the baseline accepts elsewhere, wait for triage. CI's
+  `deps` job reports advisories without failing; licences, bans and sources fail it.
+- **Two decisions are the owner's.** (1) The README's licence sentence: the source is MIT OR Apache-2.0, but a
+  release's `ferrata` binary links native code under the GPL and LGPL version 3 (circom's runtime, GMP, rapidsnark,
+  ffiasm, circomlib), so as a combined work it is conveyed under the GPL version 3. Proposed text: "The source is MIT
+  OR Apache-2.0, at your option, for every directory, the imported ones included. The `ferrata` binary of a release
+  links native code under the GPL and LGPL version 3 (circom's runtime, GMP, rapidsnark, ffiasm, circomlib), so as a
+  combined work it is conveyed under the GPL version 3; every release carries its notices (releases/third-party/, and
+  `THIRD-PARTY-CRATES.md` for the Rust crates in it)." (2) The written source offer in the release's notices commits
+  the project; a complete source asset (the CLI's vendored crates, LEZ, Logos Blockchain, the native sources and the
+  workflows that built them) is recommended before a release is published.
+
 ### Publishing: one owner step
 
 The Logos modules have their own publishing path, beside the release above:
