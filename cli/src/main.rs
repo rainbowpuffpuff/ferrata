@@ -417,9 +417,10 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             let e = eth_side(c).await?;
             let r = if c.sequencer.is_some() || recover {
                 let (mut ledger, ctx) = zone(c, &e, &seed, None, None).await?;
-                flow::recover(&e, &seed, c.gap, Some((&mut ledger, &ctx)), recover, out).await?
+                flow::recover(&e, &seed, c.gap, Some((&mut ledger, &ctx)), recover, c.lez_wallet.as_deref(), out)
+                    .await?
             } else {
-                flow::recover::<Sequencer>(&e, &seed, c.gap, None, false, out).await?
+                flow::recover::<Sequencer>(&e, &seed, c.gap, None, false, None, out).await?
             };
             let result = json!({
                 "deposits": r.deposits,
@@ -540,6 +541,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             let signer = signer_of(c, &send)?;
             let o = flow::ReleaseOpts {
                 burn,
+                journal: c.lez_wallet.clone(),
                 via: if self_send { flow::Via::Myself } else { flow::Via::Relayer(relayer) },
                 seal,
                 job_out,

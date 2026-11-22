@@ -34,8 +34,12 @@ use ferrata_wallet::claim;
 use crate::seed::{Seed, DEFAULT_GAP};
 use crate::{codes::program_refusal, hx, units::u128_to_word};
 
-/// How many unused burn counters end a burn scan.
+/// How many unused burn counters end a burn scan (a counter is used once its tag is on the zone, applied or refused:
+/// `scan::burns_past`).
 pub const BURN_GAP: u64 = 20;
+
+/// The `burn_index` of a note in [`History::refused_burns`]: a refused burn has no burn leaf.
+pub const REFUSED: u64 = u64::MAX;
 
 /// Which configuration of which bridge program, and the vault it pairs with (shared with
 /// `ferrata_bridge_module` through `ferrata-wallet`).
@@ -233,8 +237,8 @@ pub struct History {
     pub imports: Vec<(u64, u64)>,
     /// Published burn notes of this configuration, by burn index (order of application).
     pub burns: Vec<PublishedBurn>,
-    /// Burn notes of this configuration in transactions a block includes though they were refused (their `burn_index`
-    /// is meaningless): nothing was burnt, but each tag is used, its memo public in its block.
+    /// Burn notes of this configuration in transactions a block includes though they were refused (`burn_index`
+    /// [`REFUSED`]): nothing was burnt, but each tag is used, its memo public in its block.
     pub refused_burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
@@ -297,7 +301,7 @@ impl History {
                 Ok(BridgeMessage::Claim { witness, .. }) => self.opened.extend(published_leaf(&witness)),
                 Ok(BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out }) if config_id == ctx.cid => {
                     self.refused_burns.push(PublishedBurn {
-                        burn_index: u64::MAX,
+                        burn_index: REFUSED,
                         note: BurnNote { r, memo, mac, token, amount, c_out },
                     });
                 }
@@ -1343,7 +1347,8 @@ mod tests {
 
         // A plaintext claim refused on chain (a full bucket, a frozen token) stays in its block with its witness: its
         // leaf is opened as well, under any configuration, but it spends no nullifier: the deposit stays claimable.
-        // A refused call of another program, or a refused import or burn, adds nothing.
+        // A refused call of another program, or a refused import, adds nothing (a refused burn's tag is used:
+        // `refused_burns`).
         let other_program = Applied { to: config_actor(AccountId::new([8; 32]), &[1; 32]), ..claim([1; 32], 7, 9) };
         let import = BridgeMessage::ImportRoot {
             config_id: [1; 32],

@@ -79,14 +79,14 @@ impl Reserved {
             && self.recipient == ask.recipient
     }
 
-    fn describe(&self) -> String {
+    pub fn describe(&self) -> String {
         format!(
             "counter {}, {} base units of {} from {} to {}",
             self.i, self.amount, self.token, self.from, self.recipient
         )
     }
 
-    fn state(&self) -> String {
+    pub fn state(&self) -> String {
         match &self.sent {
             Some(h) => format!("sent as {h}"),
             None => "interrupted before it was known to be sent".into(),
@@ -435,7 +435,8 @@ impl Store {
         self.save(&j)
     }
 
-    /// This seed's counters, as the journal holds them (`ferrata scan` shows the open ones).
+    /// This seed's counters, as the journal holds them, read without the lock (the journal is replaced whole): `ferrata
+    /// release` and `ferrata recover` search past them, and `ferrata recover` lists the open ones.
     pub fn counters(&self, key: &str) -> Result<Option<Counters>> {
         Ok(self.load()?.wallets.remove(key))
     }

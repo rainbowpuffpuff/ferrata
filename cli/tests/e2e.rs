@@ -1143,6 +1143,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // first (the root by the wallet's rule, the cost, the exposure), then signed and sent.
     let self_opts = |seal: Option<Bytes>, send: bool| flow::ReleaseOpts {
         burn: Some(0),
+        journal: None,
         via: flow::Via::Myself,
         seal,
         job_out: None,
@@ -1441,6 +1442,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let _ = std::fs::remove_file(&job_path);
     let ropts = |burn: u64, seal: Option<Bytes>, job: Option<PathBuf>| flow::ReleaseOpts {
         burn: Some(burn),
+        journal: None,
         via: flow::Via::Relayer(None),
         seal,
         job_out: job,
@@ -1533,7 +1535,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // for its sync, keeping the states the chain committed.)
     let wiped = Seed::from_phrase(&std::fs::read_to_string(&seed_user)?)?;
     let mut out = flow::Out::new(true);
-    let rec = flow::recover(&eth_side, &wiped, 8, Some((&mut zone, &ctx)), true, &mut out).await?;
+    let rec = flow::recover(&eth_side, &wiped, 8, Some((&mut zone, &ctx)), true, None, &mut out).await?;
     let want: Vec<(DestKind, u32)> = expected_unclaimed
         .iter()
         .map(|(k, a)| (if *k == "private" { DestKind::Private } else { DestKind::Public }, *a))
