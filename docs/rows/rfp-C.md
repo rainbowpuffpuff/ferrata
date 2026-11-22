@@ -114,8 +114,7 @@ send-to-final time); with the run's outages median 19.6, p90 86.7 | the live run
 `docs/design/attestation.md` §8) are not measured; the §8 `monitor` is not built. The three sentences the review found
 unsupported ("hardly depend on the work", "the cost is its poll", "a slower poll divides it") are deleted.
 
-Commands: `GATE_* bash bench/perf/gate-sequencer.sh gN` on the build box after `bash bench/perf/gate-build.sh BUNDLE`;
-`python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 … gate-g5`. Records `bench/perf/results/gate-g*/`
+Commands: on the build box, after `bash bench/perf/gate-build.sh BUNDLE`: `GATE_ENTRIES=30 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=1 bash bench/perf/gate-sequencer.sh g2`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g3`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=1 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g4`, `GATE_ENTRIES=20 GATE_STEP=90 GATE_WINDOW=30 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g5` (each run's `machine.txt`); then `python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 bench/perf/results/gate-g3 bench/perf/results/gate-g4 bench/perf/results/gate-g5`. Records `bench/perf/results/gate-g*/`
 (commits `7e854f33`, `8e0fd144`, `225e3b65`, `e1d7630e`); summarizer fixed in `1b12fbc2` (each daemon's beacon traffic
 read from its own port). EVIDENCE: in the R.9 row below.
 
@@ -211,8 +210,7 @@ they raced; total / completed-job gas 1.095 / 1.721 / 1.222 / 1.081 (G2 adversar
 window 30; refused steps only 1.095 / 1.149 / 1.102 / 1.004); jobs abandoned 0 / 19 / 8 / 3; A3's ratio honest
 refused / applied 1.31 / 0.149 / 0.102 / 0.0036 (gate 0.10); honest-1's fee share 0.588 / 0.493 / 0.563 / 0.609;
 latency median 35 / 105 / 126 / 306 s, p90 45 / 106 / 176 / 576 s; each daemon 0.043–0.092 of a core, 57.3–57.8 MiB
-peak | the build box: LEZ v0.4.0-rc1 sequencer and Logos Blockchain node (LEZ's local configuration) | — | `GATE_* bash
-bench/perf/gate-sequencer.sh gN`; `python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 …` |
+peak | the build box: LEZ v0.4.0-rc1 sequencer and Logos Blockchain node (LEZ's local configuration) | — | On the build box, after `bash bench/perf/gate-build.sh BUNDLE`: `GATE_ENTRIES=30 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=1 bash bench/perf/gate-sequencer.sh g2`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g3`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=1 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g4`, `GATE_ENTRIES=20 GATE_STEP=90 GATE_WINDOW=30 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g5` (each run's `machine.txt`); then `python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 bench/perf/results/gate-g3 bench/perf/results/gate-g4 bench/perf/results/gate-g5` |
 `lez/results/perf-gate-sequencer.md` |
 
 ### R.10 — stays **in part** (the review: in part)
