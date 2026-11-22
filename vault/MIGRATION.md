@@ -155,18 +155,29 @@ All in `test_migration_step6_v2RunsProofSystemBNeitherVaultAcceptsTheOther` and
     recommended setting) the revocation always comes first, and with a shorter one what it paid in between is
     lost, bounded by the caps.
     — `test_guestBug_checkpointGuest_revokeTakesBackTheForgedRootAndB1StillReleases`.
-- **A bug in the proof system itself** (the verifier would accept a forged seal): the emergency stop applies, as
-  [`test/EmergencyStop.t.sol`](test/EmergencyStop.t.sol) shows. It is RISC Zero's unmodified
+- **A bug in the proof system itself** (the verifier would accept a forged seal): the emergency stop applies once
+  someone submits RISC Zero's proof of exploit, as [`test/EmergencyStop.t.sol`](test/EmergencyStop.t.sol) shows. It is RISC Zero's unmodified
   `RiscZeroVerifierEmergencyStop`, its owner renounced at deployment, so the only key that trips it is a *verifying
   receipt for the all-zero claim digest* - RISC Zero's own proof of exploit, producible by anyone only if the
   system really is unsound. It is one-way and has no unpause. After it: no release, no refund, no checkpoint proof
   accepted. The in-flight burns are never released on v1 and the unimported deposits are never refunded - that case
-  is §5.
+  is §5. **Without a proof of exploit the stop does not trip.** RISC Zero's advisory of 11 November 2026
+  (GHSA-mm6c-35cm-g4x2) published none, the forgery it describes makes the verifier accept a chosen claim rather than
+  any seal, and the stops of the four Sepolia vaults did not trip
+  ([security note](../docs/security/risc0-groth16-advisory-2026-11-21/README.md)). Then the answer is decision D1's
+  runbook ([`risc0-3.1-migration.md`](../docs/design/risc0-3.1-migration.md) §4): the freeze authority freezes releases
+  and checkpoints at once and renews the freezes before `maxFreeze` lapses (a lapse reopens the forged path), the admin
+  sets the deposit cap to zero and the release cap to its floor, and the vault is retired and replaced; what forged
+  releases pay before that is bounded by the release buckets and the token's escrow. How the remaining escrow leaves
+  such a vault is open: every exit (a release, or a refund after a sunset checkpoint) rests on a proof the broken
+  verifier would accept forged as well. This case is not rehearsed here.
 
 ## 5. Security #9: why there is no fund-recovery failsafe, and what happens to affected funds
 
-This section is the proof-system case, the one the stop answers; a bug in one of Ferrata's own guests is answered
-by the freezes and `revokeFrom`, and what it does to each in-flight position is in §4.
+This section is the proof-system case once the stop has tripped, which takes RISC Zero's proof of exploit (without
+one, as under the advisory of 11 November 2026, the stop does not trip and the freeze authority and the caps answer:
+§4); a bug in one of Ferrata's own guests is answered by the freezes and `revokeFrom`, and what it does to each
+in-flight position is in §4.
 
 **Why none exists.** There is no escrow-moving recovery path, deliberately. A recovery would need some party to
 choose new verification logic - everyone-getting-their-money-back logic, a new verifier, an override - and any such

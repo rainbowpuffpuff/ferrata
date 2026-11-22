@@ -285,7 +285,10 @@ numbers, rules A and B) and `test/invariant/BrokenVerifierInvariants.t.sol` (eig
 - **Freezes.** No release in a global or per-token release freeze, no refund in a global one.
 - **The emergency stop.** `estop(receipt)` needs a verifying receipt for the all-zero claim digest, and a broken
   verifier accepts a junk one, so **anyone** can then trip the stop; after it no candidate, finalisation, release or
-  refund (what was credited before can still be claimed).
+  refund (what was credited before can still be claimed). This models a verifier that accepts every seal. RISC Zero's
+  advisory of 11 November 2026 (GHSA-mm6c-35cm-g4x2) is narrower: a chosen claim is accepted, and whether a receipt for
+  the all-zero claim digest can be forged is not established; the Sepolia vaults' stops did not trip
+  ([security note](../docs/security/risc0-groth16-advisory-2026-11-21/README.md)).
 - **Refunds.** A forged sunset checkpoint makes leaves at or above its imported count refundable, but only once the
   vault is retired and `revokeWindow` has passed; a refund pays the leaf's depositor (a Merkle path to `depositRoot`,
   which no proof touches) its leaf's escrow, once, and draws on the release buckets. A finalised forged sunset also

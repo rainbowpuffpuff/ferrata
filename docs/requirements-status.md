@@ -23,7 +23,7 @@ Hard requirements:
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
 | RFP-021 | 37 | 18 | 1 | 3 | **59** |
-| RFP-022 | 37 | 28 | 1 | 2 | **68** |
+| RFP-022 | 36 | 29 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -42,7 +42,7 @@ By section, hard requirements:
 | RFP-022 | Reliability | 8 | 6 | 0 | 0 | 14 |
 | RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 3 | 0 | 1 | 4 |
-| RFP-022 | Security | 4 | 4 | 1 | 0 | 9 |
+| RFP-022 | Security | 3 | 5 | 1 | 0 | 9 |
 | RFP-022 | Privacy Preservation | 6 | 1 | 0 | 0 | 7 |
 
 ## RFP-021: Trustless Ethereum State Attestation
@@ -241,7 +241,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Sec.6 | in part | Vault invariants hold over 256 runs × 100 calls; invalid mints and releases refused; no randomised run over both real halves. Under verifier 3.0.0 a release without a valid burn succeeds (154's fork, with the forgery stood in for). | 12, 42, 154; `vault/test/invariant` |
 | Sec.7 | shown | User guide §0 (its §12 states freezes, the revocation window and keyless retirement as the vault enforces them, held to the vault's source); `docs/trust.md` §0, §4.2, with the exceptions stated (the accredited sequencers for the return leg; rule (A)'s watchers outside its conditions); every role's mitigation tested (R.9). | 180; `docs/guides/user-guide.md` §0, §12; `docs/trust.md` §4.2 |
 | Sec.8 | shown | Verifier and image ids are immutables, read back on Sepolia; the migration is documented (`vault/MIGRATION.md`: stop, retire, sunset, refunds, releases, the new configuration, users moving) and rehearsed on a local EVM with every in-flight position (8 of 8): an in-flight burn released to its own recipient only, an unimported deposit refunded to its depositor only after the sunset and its revocation window, an imported one not refundable. The four Sepolia vaults cannot change their verifier: the move to RISC Zero 3.1 is retirement and new vaults. | 74, 91, 92, 161; `vault/MIGRATION.md`; `vault/test/Migration.t.sol`; `docs/design/risc0-3.1-migration.md` §3 |
-| Sec.9 | shown | Stop-only failsafe tested, its owner renounced live on Sepolia; no escrow-moving recovery, and per case what happens, documented (`vault/MIGRATION.md` §4–5, `docs/trust.md` §6) and rehearsed (8 of 8): after the stop no role moves escrow, refunds included; after a bug in one of Ferrata's own guests the release and checkpoint freezes hold while renewed and a lapse reopens the forged path, per-token release freezes let unimported deposits be refunded, a revoked forged root pays nothing; the losses before a freeze and their bounds stated. 21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there, and the owner set them to zero on 21 Nov 2026. | 35, 41, 91, 154, 161; `vault/test/MigrationFailsafe.t.sol`; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
+| Sec.9 | in part | Stop-only failsafe and per-case outcomes documented and rehearsed for a tripped stop and for a bug in Ferrata's own guests (`vault/MIGRATION.md` §4–5, `docs/trust.md` §6; 8 of 8): after the stop no role moves escrow, refunds included; after a guest bug the release and checkpoint freezes hold while renewed and a lapse reopens the forged path, per-token release freezes let unimported deposits be refunded, a revoked forged root pays nothing; the stop's owner renounced live on Sepolia. For a broken verifier with no published proof of exploit (GHSA-mm6c-35cm-g4x2) the stop does not engage: on the live vaults only the admin's caps contained a forgery (set to zero on 21 Nov 2026; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026), and how escrow leaves such a vault is open (`docs/design/risc0-3.1-migration.md` §4). | 35, 41, 91, 154, 161; `vault/test/MigrationFailsafe.t.sol`; `vault/test/EmergencyStop.t.sol`; `vault/MIGRATION.md` §4–5; `docs/trust.md` §5, §6 |
 
 ### Privacy Preservation
 

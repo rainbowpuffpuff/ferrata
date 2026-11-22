@@ -3,9 +3,10 @@
 **Folded on `integration10`, 21 November 2026:** the requirement rows (R.8, Sec.2 and Sec.3 to in part; the reasons of
 Sec.6, Sec.8 and Sec.9 extended) into `docs/requirements-status.md`, with the counts there, in `docs/traceability.md`
 and in README.md; row 154, the EVIDENCE header's list of transactions and the one-line notes on rows 41, 42, 91, 92,
-141 and 142 into `docs/EVIDENCE.md`. Still proposed, to apply once `rfp-bridge-hardening`, `rfp-docs-final` and
-`rfp-ci-release` have merged: the text on the stop (review M1, EVIDENCE row 138's note included), README.md's opening
-and `docs/README.md`'s lines.
+141 and 142 into `docs/EVIDENCE.md`. **Applied on `integration9`, 22 November 2026,** once `rfp-docs-final` and `rfp-ci-release` had
+merged: the text on the stop (review M1, EVIDENCE row 138's note included) in every file it names, with
+`vault/MIGRATION.md` §4–5 made consistent and RFP-022 Sec.9 set to in part; `rfp-bridge-hardening`'s merge keeps it.
+Still proposed, for after `rfp-bridge-hardening` merges: README.md's opening and `docs/README.md`'s lines.
 
 Branch `risc0-advisory` (from `5cf1e8e7`). This stream owns no requirement row. It answers RISC Zero's advisories of
 11 November 2026 (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2) and asks for the changes below to shared files. Already

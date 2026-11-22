@@ -615,6 +615,7 @@ modules under `logosctl daemon` (`ferrata_updater_module`, `ferrata_monitor_modu
 | Silent sequencers | rule (B) needs `t` live keys; rule (A) `t + 1`, so one silent key stalls (A) for `n ≤ 5` | — | [`bridge.md`](../design/bridge.md) §9, §20 |
 | A wrong checkpoint not revoked within the revocation window (`revokeWindow`, 7 days by the design's default) | the vault halts for good: no honest checkpoint can follow it | revoke within the window (freeze authority) | [`bridge.md`](../design/bridge.md) §20 |
 | Verifier stop tripped (RISC Zero's proof of unsoundness) | no more releases or refunds | — | [`vault/README.md`](../../vault/README.md), "Verifier and stop" |
+| A RISC Zero advisory against the pinned verifier with no proof of exploit (as on 11 November 2026) | the stop does not trip; forged checkpoints and releases can be accepted | the freeze authority freezes releases and checkpoints at once; the admin sets the deposit cap to zero and the release cap to its floor (zero only where `releaseCapFloor` is zero, as on the Sepolia testnet vaults); then retire the vault and deploy a new one | [security note](../security/risc0-groth16-advisory-2026-11-21/README.md) |
 | Ethereum gas mispriced (Glamsterdam state gas) | out-of-gas | take every limit from the node's estimate × 1.25 | [`deployer-guide.md`](deployer-guide.md) §4.1 |
 
 **The bridge's third-party components (RFP-022 R.9).** For each component a third party is expected to run on the

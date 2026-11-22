@@ -53,7 +53,7 @@ role outside its conditions (§3).
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
 | Rule (A)'s conditions F1–F4, or else a live, uneclipsed watcher | finality under rule (A) | as above, with fewer than `t` keys or none | the same; outside F1–F4 the watchers are trusted for safety | §3.4 |
-| RISC Zero's proof system (and LEZ's privacy circuit) | that every accepted proof is true | anything a proof gates | the emergency stop, tripped only by RISC Zero's own proof of unsoundness | §5 |
+| RISC Zero's proof system (and LEZ's privacy circuit) | that every accepted proof is true | anything a proof gates | caps and freezes; the emergency stop once a proof of unsoundness for the all-zero claim is published, which did not happen under RISC Zero's advisory of 11 November 2026 (§5) | §5 |
 | Ferrata's own code (core, programs, guests, vault) | everything | depends on the bug | caps, freezes, `revokeFrom`; immutability means no fix in place | §6 |
 | Admin and freeze authority (multisigs) | liveness only: they cannot move escrow or accept anything | denial of service | freezes lapse after `maxFreeze` (immutable: 30 days by default on the vault, a 30-day constant on LEZ); keyless retirement; 14-day public role changes | §4 |
 | Until milestone B1: nobody who knows a public-kind deposit's `s` creates a second configuration of the same vault and chain, and nobody fills a destination's `holder(dest)` | that every public-kind deposit can be claimed under the paired configuration, and that a public destination can receive | that deposit is frozen: the paired configuration's claim is refused (250) and, once it has imported the deposit, the leaf is below the refund boundary, so its escrow stays in the vault; a filled destination can no longer be credited | no theft and no double mint: the second configuration's mints and burns are under its own id, which no vault pays; only the depositor or whoever sees a plaintext claim before inclusion knows `s` (a private claim, the CLI's default path, does not publish it; a private-kind deposit cannot be taken); the fix is planned for B1 ([`lez/results/tenant.md`](../lez/results/tenant.md)) | [`bridge.md`](design/bridge.md) §3 |
@@ -480,7 +480,7 @@ From [`vault/README.md`](../vault/README.md), "Roles"; [`bridge.md`](design/brid
 | **Admin** (multisig) | register a token once; enable or disable deposits per token; set caps above the immutable floor; set release delays within `[minReleaseDelay, revokeWindow]` for later roots; raise Δ; propose watchers and a new freeze authority, applied 14 days later; announce fee schedules (in force 7 days later, ≤ 1% each) | move escrow; change a registered token; lower Δ; cut a cap below the floor; freeze, unfreeze, cancel, revoke, retire; change any immutable (verifier, `mode`, image ids, `lezConfigId`, timers, floors) | no new tokens or caps; everything else keeps working | registry and cap churn within bounds; a public 14-day window before a role change |
 | **Freeze authority** (multisig) | freeze deposits, releases, checkpoints (vault) and mints, burns (LEZ), globally or per token, each for at most `maxFreeze` (on the vault an immutable deployment parameter, 30 days by default, which the constructor does not bound; on LEZ a 30-day constant, of attested Ethereum time, so a LEZ freeze holds while the light client stalls) unless renewed; `cancelCandidate`; `revokeFrom` within the window; `retire()`; LEZ `Sunset` | touch the registry, caps, delays, Δ or escrow; accept anything; undo a stop or a retirement; hand itself over | freezes lapse; anyone retires once 30 days plus one candidate wait pass without checkpoint progress (counted from the end of the last checkpoint freeze, if later); the admin replaces it in 14 days | **denial of service, not theft**: renew freezes, revoke honest checkpoints within the window, retire the vault |
 | **Watchers** (up to three hot keys) | cancel a pending candidate; pause checkpoints for at most 12 h | anything else | — (others watch) | delay finalisation until the admin replaces them |
-| **Emergency stop** (RISC Zero's `RiscZeroVerifierEmergencyStop`) | stop every proof-gated call for good | be tripped by anyone holding a key: its owner is renounced at deployment, so only `estop(receipt)`, RISC Zero's proof of unsoundness, trips it | — | — |
+| **Emergency stop** (RISC Zero's `RiscZeroVerifierEmergencyStop`) | stop every proof-gated call for good | be tripped by anyone holding a key: its owner is renounced at deployment, so only `estop(receipt)`, RISC Zero's proof of unsoundness, trips it (a receipt that verifies for the all-zero claim digest; RISC Zero's advisory of 11 November 2026 came with none, and the stops of the Sepolia vaults did not trip) | — | — |
 | **Anyone** | deposit; submit and finalise checkpoints with proofs; record beacons; release with a proof; refund once allowed; apply a role proposal after 14 days; retire after 30 days without checkpoint progress (no submission or finalisation, counted from the end of the last checkpoint freeze or pause if later, plus one candidate wait), or once a sunset checkpoint can no longer be revoked | — | — | — |
 
 On LEZ the same controls are built ([EVIDENCE](EVIDENCE.md) row 74; harness, dev mode): the freeze
@@ -549,6 +549,11 @@ built, and the test or recorded run that shows the mitigation.
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
   trips, an unsound proof system breaks everything a proof gates; caps and freezes bound it.
+- **21 November 2026: RISC Zero's advisory GHSA-mm6c-35cm-g4x2 is this case, and the stop did not trip.** RISC Zero
+  published no proof of exploit; the forgery makes the verifier accept a chosen claim, not any seal; and whether it
+  reaches the all-zero claim digest that `estop(receipt)` requires is not established. On the four Sepolia vaults only
+  the admin's caps stop it ([security note](security/risc0-groth16-advisory-2026-11-21/README.md)); decision D1 of
+  [risc0-3.1-migration.md](design/risc0-3.1-migration.md) §4 changes this for new vaults.
 - **Image ids are reproducible at any build path** since `integration7` (`scripts/guest-rustc`: source paths
   remapped and cargo's path-dependent `-C metadata` replaced in guest builds): the same commit built at two paths with
   two `$HOME`s gives byte-identical guests and ids, 14 of 14 ([`image-ids.md`](image-ids.md),
@@ -574,13 +579,21 @@ delay; a revoked root pays nothing, and with the release delay equal to the revo
 comes first; freezes hold; and since the broken verifier also accepts a junk proof of exploit, anyone can trip the
 stop, after which nothing proven is accepted. Which depositors' escrow of a token goes is not bounded.
 
+This is the model of a verifier that accepts every seal. RISC Zero's advisory of 11 November 2026 (GHSA-mm6c-35cm-g4x2)
+is narrower: the verifier accepts a chosen claim, no junk proof of exploit is known to verify, and on 21 November 2026
+the stops of the four Sepolia vaults had not tripped. Until a stop trips, the bounds are the ones above but the stop:
+the token's escrow, the clocks, revocation and freezes where a freeze authority holds a key, and the caps. On the
+Sepolia vaults (no freeze-authority key) that left the escrow and the clocks until the admin set every release and
+deposit cap to zero on 21 November 2026, which is what stops a forgery there
+([security note](security/risc0-groth16-advisory-2026-11-21/README.md), [EVIDENCE](EVIDENCE.md) row 154).
+
 | Failure | What happens | Positions lost | Bound |
 |---|---|---|---|
 | Sync committee captured (inbound) | forged records; invented deposits imported and minted | wrapped supply above escrow; the shortfall falls on late redeemers | LEZ mint caps until the freeze authority freezes mints |
 | `t` sequencer keys (outbound) | a forged burn root; releases of tokens never burned | escrow paid out against forged burns | wait + watchers; release delay with `revokeFrom`; release caps |
 | Rule (A) outside F1–F4, watchers down or eclipsed | a released burn later dropped on LEZ (double spend) | as above | the same |
-| Proof system unsound (the verifier accepts any seal) | forged checkpoints and releases, a forged sunset's refunds (to the leaves' depositors) | escrow, token by token, any depositor's | per-token escrow; the wait, cancel and revoke; the release delay; release caps; freezes; the stop, which anyone can then trip with a junk proof of exploit ([`vault/README.md`](../vault/README.md) "Under a broken verifier") |
-| Proof system unsound | anything a proof gates, until the stop trips | after the stop: every unreleased burn and unrefunded deposit stays in the vault | caps and freezes before; the stop after |
+| Proof system unsound (the verifier accepts any seal) | forged checkpoints and releases, a forged sunset's refunds (to the leaves' depositors) | escrow, token by token, any depositor's | per-token escrow; the wait, cancel and revoke; the release delay; release caps; freezes; the stop, which anyone can then trip with a junk proof of exploit (with an accept-all verifier; under GHSA-mm6c-35cm-g4x2 no such proof was known and the stop did not trip) ([`vault/README.md`](../vault/README.md) "Under a broken verifier") |
+| Proof system unsound | anything a proof gates, until the stop trips | after the stop: every unreleased burn and unrefunded deposit stays in the vault | caps and freezes before; the stop after; the stop may never trip (§5) |
 | A bug in Ferrata's guests | depends on the bug | depends | release freeze and `revokeFrom` ([`bridge.md`](design/bridge.md) §14) |
 | A bug in the vault | depends; no upgrade | depends | freezes, retirement; caps |
 | A wrong checkpoint not revoked within 7 days | the vault halts for good | every position not yet released | caps bound what the error itself released |

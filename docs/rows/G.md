@@ -1,7 +1,8 @@
 # Stream G: CI, platforms, release and migrations, proposed statuses
 
-**Folded on `integration9`, 22 November 2026,** with the third review's verdicts: RFP-022 Sec.8, Sec.9 and Soft.4
-shown; RFP-021 S.2, S.9, S.10 and VS.3 and RFP-022 R.11, S.2, U.10 and S.3 in part, their reasons updated (R.10 unchanged), in
+**Folded on `integration9`, 22 November 2026,** with the third review's verdicts: RFP-022 Sec.8 and Soft.4 shown
+(Sec.9 too, set back to in part on 22 November 2026: for a broken verifier with no proof of exploit, as under
+RISC Zero's advisory, the stop does not engage and how escrow leaves such a vault is open); RFP-021 S.2, S.9, S.10 and VS.3 and RFP-022 R.11, S.2, U.10 and S.3 in part, their reasons updated (R.10 unchanged), in
 `docs/requirements-status.md` (with the counts), `docs/traceability.md` and README.md; the six proposed rows as
 EVIDENCE rows 160 (VS.3), 161 (the migration rehearsal), 162 (the row map), 163 (the catalog's owner step), 164 (the
 standalone sequencer) and 165 (the portable macOS scripts). `scripts/ci/row-tests.toml` now names stream A's tests
