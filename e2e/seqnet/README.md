@@ -61,7 +61,8 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
   --gas-drop-inbox` makes a one-time private account, hands the relayer daemon the gas-drop receipt with that account's
   public keys, and pays the claim's fee from the daemon's credit, sealed to that account (`hook-robust.sh`, b); the
   burn's fee still comes from `seqnet-fund` (burns with a drop are not built). The drops daemon reaches the sequencer
-  through a second `e2e/netfault/holdproxy.py`, which makes its credits fail and the daemon die around them (f: R.06);
+  through a second `e2e/netfault/holdproxy.py`, which makes its credits fail or arrive late (a credit answered 503 that
+  reaches the sequencer after the next one) and the daemon die around them (f: R.06);
   a first claim names a relayer that never answers (g); a burn is killed before it reaches the zone (h).
 - **Time**: the claim's and the release's delays are let pass on the devnet's clocks (anvil's blocks and time;
   the view's own clock in the mini-app), never overridden.
