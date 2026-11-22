@@ -66,7 +66,7 @@ Jobs: 31 with an applied step, 31 completed, **0 abandoned**.
 All daemons together: the updates cost **1.095** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.095.
 **Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 26,694,228 / 20,365,165 = **1.3108** (A3's ratio above counts refused steps only).
 
-**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 26 of 26 revealed finality updates covered (26 by their own job, 0 by a later update's): median **35 s**, p90 45 s (nearest rank), min 35 s, max 66 s; finished by adversary 24, honest-1 2.
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 26 of 26 revealed finality updates covered (26 by their own job, 0 by a later update's): median **35 s**, p90 45 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 35 s, max 66 s; finished by adversary 24, honest-1 2.
 
 **Replay rate:** 30 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; this run's median latency (35 s) is shorter than the reveal step.
 
@@ -119,7 +119,7 @@ Jobs: 24 with an applied step, 16 completed, **8 abandoned** (8 with Open applie
 All daemons together: the updates cost **1.222** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.102.
 **Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 35,352,617 / 158,913,656 = **0.2225** (A3's ratio above counts refused steps only).
 
-**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (12 by their own job, 9 by a later update's): median **126 s**, p90 176 s (nearest rank), min 74 s, max 266 s; finished by honest-1 11, honest-2 10.
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (12 by their own job, 9 by a later update's): median **126 s**, p90 176 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 74 s, max 266 s; finished by honest-1 11, honest-2 10.
 
 **Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (126 s), so jobs overlap by construction.
 
@@ -174,7 +174,7 @@ Jobs: 42 with an applied step, 23 completed, **19 abandoned** (18 with Open + Mi
 All daemons together: the updates cost **1.721** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.149.
 **Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 161,120,643 / 223,418,783 = **0.7212** (A3's ratio above counts refused steps only).
 
-**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (20 by their own job, 1 by a later update's): median **105 s**, p90 106 s (nearest rank), min 66 s, max 166 s; finished by honest-1 13, honest-2 8.
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (20 by their own job, 1 by a later update's): median **105 s**, p90 106 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 66 s, max 166 s; finished by honest-1 13, honest-2 8.
 
 **Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (105 s), so jobs overlap by construction.
 
@@ -223,7 +223,7 @@ Jobs: 11 with an applied step, 8 completed, **3 abandoned** (3 with Open applied
 All daemons together: the updates cost **1.081** times the execution gas of the completed jobs (total / completed; one submitter that never raced would pay the completed jobs alone); counting only refused steps as waste, (applied + refused) / applied = 1.004.
 **Honest waste:** the honest daemons' gas on refused steps and abandoned jobs / on completed jobs = 6,925,911 / 85,247,984 = **0.0812** (A3's ratio above counts refused steps only).
 
-**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 17 of 17 revealed finality updates covered (5 by their own job, 12 by a later update's): median **306 s**, p90 576 s (nearest rank), min 166 s, max 666 s; finished by honest-1 13, honest-2 4.
+**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 17 of 17 revealed finality updates covered (5 by their own job, 12 by a later update's): median **306 s**, p90 576 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 166 s, max 666 s; finished by honest-1 13, honest-2 4.
 
 **Replay rate:** 20 recorded updates revealed one every 90 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 81 times faster than mainnet; the reveal step is shorter than this run's median latency (306 s), so jobs overlap by construction.
 

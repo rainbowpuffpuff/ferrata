@@ -56,6 +56,7 @@ def gnu_time(path):
 
 
 def pct(xs, q):
+    """The value at index round(q (n - 1)) of the sorted values (Python's round: halves to even); not the nearest rank."""
     xs = sorted(xs)
     if not xs:
         return float("nan")
@@ -189,7 +190,7 @@ def summarize(run):
         print(f"\n**Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block "
               f"final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), "
               f"{len(lat)} of {key['fin_revealed']} revealed finality updates covered ({own} by their own job, {len(lat) - own} "
-              f"by a later update's): median **{statistics.median(lat):.0f} s**, p90 {pct(lat, 0.9):.0f} s (nearest rank), "
+              f"by a later update's): median **{statistics.median(lat):.0f} s**, p90 {pct(lat, 0.9):.0f} s (the value at index round(0.9 (n − 1)) of the sorted latencies), "
               f"min {min(lat):.0f} s, max {max(lat):.0f} s; finished by {', '.join(f'{k} {v}' for k, v in sorted(who.items()))}.")
 
     # The replay's rate against mainnet's.
