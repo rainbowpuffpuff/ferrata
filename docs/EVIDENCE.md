@@ -551,6 +551,19 @@ clean again once C's one flagged division used `checked_div` (`perf_state`'s out
 C's `StateGrowth.t.sol`), `roundtrip` and `cli/tests/e2e.sh` passed. On the laptop: `links` and its steps (below),
 `idl`.
 
+**Sixteenth pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-docs-final` (stream H, rows 177–182;
+conflicts in `docs/design/attestation.md` §7, `docs/design/bridge.md` §14 and §16, the consumer and operator guides
+and `vault/README.md`, each resolved to H's text with the other streams' facts kept), on the build box: the updater's
+`every_party` (8 of 8) and `replacement` (1 of 1) in dev mode; the harness's `statements` (with its feature) and
+`holdings`, their records byte-identical but for `statements-checks.md`'s relabelled row 14; lez/RESULTS.md §8's
+clippy gate clean, also with the two features, and the updater's clippy clean; the crown driver's tests 8 of 8 (H's
+`new-role-keys` test among them; its clippy and rustfmt, never kept clean, flag only code from 11 November). On the
+laptop: `links` with its new steps (108 files, 2,177 links, 0 broken; `check-guides.py` 0 findings, its tests 17 of
+17; `check-decisions.py` 31 records, 0 findings, its tests 23 of 23; `check-row-tests.py` consistent;
+`test_ci_model.py` 42 passed, its counts 51 of 68 and 28 of 59 those of the map; `ci_model.py --compare-yq` 11
+workflows, 0 differ; `check-portable.py` clean; `test-sequencer-records.sh` 13 passed; `check-unaudited.sh` clean) and
+`idl`. Not rerun here: the deployment from a fresh clone (row 182: 3,696 s and 699 s on the box at `26ad3564`).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
