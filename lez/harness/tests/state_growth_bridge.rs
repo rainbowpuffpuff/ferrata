@@ -4,7 +4,8 @@
 //! claim and `burn(cid, H(note))` per burn, the first measured and the other two estimated from their types. This
 //! test measures all three as the bridge program writes them through LEZ v0.4.0-rc1's state machine (the harness,
 //! dev mode), pins them, and checks the projection's premise: a second claim and a second burn each add an account
-//! of the same size, and an import, a claim or a burn adds nothing to the configuration's or the token's account.
+//! of the same size, and a claim or a burn adds nothing to the configuration's or the token's account (the
+//! baseline is taken after `World::with_roots` has imported the roots, so an import is not measured here).
 
 use ferrata_bridge_core::{
     chain_id_u256,

@@ -4,6 +4,10 @@ on:
   push:
   pull_request:
 
+# No job writes to the repository or calls the API with its token.
+permissions:
+  contents: read
+
 # vault/foundry.toml keeps forge offline, so a build never fetches anything by itself; a fresh runner has no
 # solc 0.8.26 yet, so here forge may fetch that one compiler (the version is pinned in foundry.toml).
 env:
