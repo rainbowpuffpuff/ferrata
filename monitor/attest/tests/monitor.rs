@@ -572,7 +572,7 @@ fn the_daemon_alerts_on_change_recovers_and_stops_on_sigterm() {
     for (i, p) in ps.iter().enumerate() {
         cmd.args(["--provider", &format!("p{i}={}", p.url)]);
     }
-    let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap();
+    let child = Daemon(Some(cmd.stdout(Stdio::piped()).stderr(Stdio::null()).spawn().unwrap()));
     let wait_for = |pred: &dyn Fn(&[Value]) -> bool| {
         for _ in 0..100 {
             let lines: Vec<Value> = std::fs::read_to_string(&log)
@@ -600,11 +600,8 @@ fn the_daemon_alerts_on_change_recovers_and_stops_on_sigterm() {
     let st: Value = serde_json::from_str(&std::fs::read_to_string(&status).unwrap()).unwrap();
     assert_eq!(st["finalized_slot"].as_u64(), Some(s1));
     // SIGTERM: the poll in hand ends, `stopped` is logged, exit 0.
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    let status_code = child.wait().unwrap();
+    let (status_code, out) = child.stop();
     assert!(status_code.success(), "{status_code}");
-    let mut out = String::new();
-    child.stdout.take().unwrap().read_to_string(&mut out).unwrap();
     let summary: Value = serde_json::from_str(out.trim()).unwrap();
     assert!(summary["polls"].as_u64().unwrap() >= 3);
     let lines = wait_for(&|l| has(l, "stopped"));
@@ -637,7 +634,7 @@ fn the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_h
     for (i, p) in ps.iter().enumerate() {
         cmd.args(["--provider", &format!("p{i}={}", p.url)]);
     }
-    let mut child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+    let child = Daemon(Some(cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()));
     let lines = || -> Vec<Value> {
         std::fs::read_to_string(&log).unwrap_or_default().lines().filter_map(|l| serde_json::from_str(l).ok()).collect()
     };
@@ -682,8 +679,7 @@ fn the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_h
     }
     std::fs::copy(&healthy, &current).unwrap();
     let l = wait_for("the divergence recovered", &|l| recovered(l, "instance-diverged"));
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    assert!(child.wait().unwrap().success());
+    assert!(child.stop().0.success());
     println!("outage: {} alerts, instance-diverged emitted {emitted} times (failed tool retried), freeze tool ran once", l.len());
 }
 
@@ -774,7 +770,7 @@ fn b2_daemon_keeps_a_forged_header_raised_once_the_instance_has_moved_ahead_agai
     for (i, p) in ps.iter().enumerate() {
         cmd.args(["--provider", &format!("p{i}={}", p.url)]);
     }
-    let mut child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+    let child = Daemon(Some(cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()));
     std::thread::sleep(Duration::from_millis(3000)); // polls on forged1, ahead of the providers' finality
     std::fs::copy(&f2, &current).unwrap(); // the forger's next update: ahead again
     std::thread::sleep(Duration::from_millis(2000));
@@ -782,8 +778,7 @@ fn b2_daemon_keeps_a_forged_header_raised_once_the_instance_has_moved_ahead_agai
         p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 64)); // forged1's slot now final for them
     }
     std::thread::sleep(Duration::from_millis(4000)); // more polls
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    child.wait().unwrap();
+    child.stop();
     let lines = read_lines(&log);
     let k: Vec<String> = lines.iter().map(|v| v["kind"].as_str().unwrap_or("").to_string()).collect();
     println!("b2 daemon, forger ahead twice: {} alerts {:?}; freeze tool ran: {}", k.len(), k, freeze.exists());
@@ -870,8 +865,35 @@ fn a_header_ahead_of_every_providers_finality_is_critical_after_the_grace() {
     assert_eq!((k.iter().filter(|k| *k == "provider-behind").count(), k.contains(&"instance-unconfirmed".to_string())), (3, true), "{k:?}");
 }
 
+/// A running `attest-monitor watch`, killed and reaped when dropped: a test that fails (a panic unwinds through it)
+/// leaves no daemon behind to write into a later run's scratch files, which have the same names (review B3, L5).
+struct Daemon(Option<std::process::Child>);
+
+impl Daemon {
+    /// SIGTERM, as an operator stops it; its exit status and standard output.
+    fn stop(mut self) -> (std::process::ExitStatus, String) {
+        let mut c = self.0.take().unwrap();
+        Command::new("kill").args(["-TERM", &c.id().to_string()]).status().unwrap();
+        let status = c.wait().unwrap();
+        let mut out = String::new();
+        if let Some(mut s) = c.stdout.take() {
+            s.read_to_string(&mut out).unwrap();
+        }
+        (status, out)
+    }
+}
+
+impl Drop for Daemon {
+    fn drop(&mut self) {
+        if let Some(c) = self.0.as_mut() {
+            let _ = c.kill();
+            let _ = c.wait();
+        }
+    }
+}
+
 /// A daemon wired to the freeze tool: start a `watch` on `current` with `ps`, `extra` arguments, at chain time `now`.
-fn spawn_watch(current: &Path, ps: &[&Server], now: u64, log: &Path, freeze: &Path, extra: &[&str]) -> std::process::Child {
+fn spawn_watch(current: &Path, ps: &[&Server], now: u64, log: &Path, freeze: &Path, extra: &[&str]) -> Daemon {
     let mut cmd = Command::new(bin());
     cmd.arg("watch")
         .args(["--state", &format!("cmd:cat {}", current.display())])
@@ -881,7 +903,7 @@ fn spawn_watch(current: &Path, ps: &[&Server], now: u64, log: &Path, freeze: &Pa
     for (i, p) in ps.iter().enumerate() {
         cmd.args(["--provider", &format!("p{i}={}", p.url)]);
     }
-    cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()
+    Daemon(Some(cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()))
 }
 
 fn wait_for_lines(log: &Path, what: &str, pred: &dyn Fn(&[Value]) -> bool) -> Vec<Value> {
@@ -926,7 +948,7 @@ fn the_daemon_judges_an_earlier_header_again_once_the_providers_finalize_its_slo
     let current = d.join("current.hex");
     std::fs::copy(&f1, &current).unwrap();
     let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
-    let mut child = spawn_watch(&current, &ps, now, &log, &freeze, &["--state-file", &d.join("seen.json").display().to_string()]);
+    let child = spawn_watch(&current, &ps, now, &log, &freeze, &["--state-file", &d.join("seen.json").display().to_string()]);
     wait_for_lines(&log, "the first header unconfirmed", &|l| l.iter().any(|x| x["kind"] == "instance-unconfirmed"));
     std::thread::sleep(Duration::from_millis(1500));
     std::fs::copy(&f2, &current).unwrap();
@@ -949,8 +971,7 @@ fn the_daemon_judges_an_earlier_header_again_once_the_providers_finalize_its_slo
     let l = wait_for_lines(&log, "the second header diverged", &|l| {
         l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot + 32))
     });
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    assert!(child.wait().unwrap().success());
+    assert!(child.stop().0.success());
     assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-diverged"));
     let ran: Vec<u64> = read_lines(&freeze).iter().filter(|x| x["kind"] == "instance-diverged").map(|x| x["slot"].as_u64().unwrap()).collect();
     assert_eq!(ran, vec![slot, slot + 32], "the freeze tool ran once for each forged header");
@@ -971,15 +992,14 @@ fn with_diverge_at_2_an_honest_provider_dropping_out_is_not_a_recovery() {
     let colluder = provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64);
     let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
     let now = secs(&f.stalled["time_ms"]) + 60;
-    let mut child = spawn_watch(&current, &[&honest[0], &honest[1], &colluder], now, &log, &freeze, &["--diverge-at", "2"]);
+    let child = spawn_watch(&current, &[&honest[0], &honest[1], &colluder], now, &log, &freeze, &["--diverge-at", "2"]);
     wait_for_lines(&log, "the divergence", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
     // One honest provider drops out: one disagrees, one agrees (`contested`). Held, not recovered.
     honest[1].set("/eth/v1/beacon/genesis", 503, "{}".into());
     wait_for_lines(&log, "providers-disagree", &|l| l.iter().any(|x| x["kind"] == "providers-disagree"));
     std::thread::sleep(Duration::from_millis(2500));
     let l = read_lines(&log);
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    assert!(child.wait().unwrap().success());
+    assert!(child.stop().0.success());
     assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-diverged"), "{l:?}");
     assert_eq!(l.iter().filter(|x| x["kind"] == "instance-diverged").count(), 1, "held, not emitted again");
     assert_eq!(read_lines(&freeze).len(), 1);
@@ -1010,11 +1030,10 @@ fn a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its
     )
     .unwrap();
     let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
-    let mut child = spawn_watch(&current, &ps.iter().collect::<Vec<_>>(), secs(&f.resumed["time_ms"]), &log, &freeze, &["--state-file", &seen.display().to_string()]);
+    let child = spawn_watch(&current, &ps.iter().collect::<Vec<_>>(), secs(&f.resumed["time_ms"]), &log, &freeze, &["--state-file", &seen.display().to_string()]);
     let l = wait_for_lines(&log, "the old unconfirmed header judged", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
     std::thread::sleep(Duration::from_millis(2500));
-    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
-    assert!(child.wait().unwrap().success());
+    assert!(child.stop().0.success());
     let l: Vec<Value> = read_lines(&log).into_iter().chain(l).collect();
     let diverged: std::collections::BTreeSet<u64> = l.iter().filter(|x| x["kind"] == "instance-diverged").map(|x| x["slot"].as_u64().unwrap()).collect();
     assert_eq!(diverged.into_iter().collect::<Vec<_>>(), vec![s0], "the old confirmed header is not judged again");
