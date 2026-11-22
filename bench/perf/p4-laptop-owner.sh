@@ -12,8 +12,9 @@
 # outside it. Run it on mains power with nothing else busy. The two proving runs keep every hardware thread busy (at
 # nice 10, so the desktop stays usable) and hold about 9.3 GiB each: about 21 minutes for the attestation and 34 for
 # the claim and the burn at 8 threads (measured in a container of that shape), less with 16. x86-64 Linux only (the
-# staged binaries); a Mac runs lez/results/p4-macos's procedure instead. No network, no keys, no sudo; it writes only
-# inside OUT_DIR.
+# staged binaries); a Mac runs lez/results/p4-macos's procedure instead. No network beyond a loopback socket to its
+# own r0vm, no keys, no sudo; it writes only inside OUT_DIR (and sets +x on the staged binaries). It exits 1 if a
+# proof or a settlement fails, 2 if it refuses to start.
 set -euo pipefail
 usage="usage: p4-laptop-owner.sh STAGE_DIR OUT_DIR"
 stage="$(realpath "${1:?$usage}")"
@@ -107,4 +108,10 @@ run attest-pad "$stage/attest-pad/prove_attest" --shape wallet --tx-out tx-attes
 ENVS=("FERRATA_EXPECT_BRIDGE_IMAGE_ID=$(get "$stage/bridge-pad/MANIFEST.json" expected_bridge_image_id)")
 run bridge-pad "$stage/bridge-pad/prove_bridge" --shape wallet --claim-out tx-claim.borsh --burn-out tx-burn.borsh \
   -- tx-claim.borsh tx-burn.borsh
+fail=0
+for job in attest-pad bridge-pad; do
+  grep -q '^exit 0,' "$out/$job/exit.txt" && grep -qx 'settle exit 0' "$out/$job/exit.txt" \
+    || { echo "p4-laptop-owner: $job did not prove and settle: $(tr '\n' ' ' < "$out/$job/exit.txt")" >&2; fail=1; }
+done
 echo "records in $out; next: python3 -I bench/perf/summarize_p4.py --owner $out"
+exit "$fail"
