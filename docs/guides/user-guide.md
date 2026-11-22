@@ -1,7 +1,7 @@
 # Using the Ferrata bridge: deposit, claim, burn, release, recover
 
-**User guide, with the developer integration journey (RFP-022 U.5–U.8, R.12, Privacy #1–#7). First
-draft, 11 November 2026.** For someone moving ETH or a registered ERC-20 from Ethereum to LEZ and
+**User guide, with the developer integration journey (RFP-022 U.5–U.8, R.12, Security #7, Privacy #1–#7). Revised
+for delivery on 21 November 2026, against the tree at this commit; it replaces the first draft of 11 November.** For someone moving ETH or a registered ERC-20 from Ethereum to LEZ and
 back without linking the two sides, and for a developer wiring those flows into a Logos module. It
 says what each step does, what it reveals, what the defaults are, how to recover everything from
 the wallet seed, and what is not built yet. Every statement cites its source file; paths are
@@ -16,6 +16,27 @@ there is no wallet integration yet. The steps below were exercised by tests, har
 section says where. Labels:
 **measured** (a run in the repository, with where it ran), **derived**, **estimated**, **not built**
 ([`docs/design/bridge.md`](../design/bridge.md), opening section).
+
+## 0. What you trust, and where each clause is answered
+
+**The trust model (Security #7).** Nobody holds your funds or your secrets, and nobody's word is taken for a fact.
+Your deposit is claimed on LEZ because the bridge program proves it under a root that the attestation program
+proved from Ethereum's own finality, inside the claim's transaction; your release is paid because the vault verifies
+a zero-knowledge proof of your burn under a checkpoint it accepted. The parties who import roots, prove checkpoints,
+relay, wrap proofs or serve chain data are **liveness only**: if one lies, the programs or the vault refuse what it
+sent; if one stops, anyone else, you included, can do its job; none can redirect your funds, because each proof binds
+your destination, recipient and fees. What you do trust, stated in [`docs/trust.md`](../trust.md) §0 and §1: the
+checkpoint the configuration's attestation instance started from (anyone can compare it with public Ethereum), two
+thirds of each Ethereum sync committee for the way in, fewer than `t` of the zone's accredited sequencer keys for the
+way out (under rule (A) also the watchers, outside its conditions), and the code itself, which is not audited.
+
+| Clause | Where |
+|---|---|
+| RFP-022 U.7: what is public and what is private at each step on both chains | §10, with what the tool and the mini-app print word for word; per field, measured: [`docs/privacy/generated/fields.md`](../privacy/generated/fields.md) |
+| RFP-022 Security #7: the trustless model and the liveness-only roles | above; [`docs/trust.md`](../trust.md) §0, §4.2 |
+| RFP-022 Privacy #4: every component that handles your data | §10.1 |
+| RFP-022 Privacy #6: what a party submitting for you learns, and switching it per operation | §10.2 |
+| RFP-022 R.12: the core module's developer journey for both flows, with recovery | §13 |
 
 ## 1. The round trip at a glance
 
@@ -155,12 +176,13 @@ or an Apple M1 with 16 GB, [`attestation.md`](../design/attestation.md) §13).
 **Fees.** The claim mints your denomination to you and the escrowed fees to the fee recipient and to
 the relayer it names ([`bridge.md`](../design/bridge.md) §5.5, §13). The LEZ transaction fee of a
 privacy-preserving transaction is paid in native LEZ from a private account of the prover, inside the
-proof; nobody else can pay it on v0.4. The **gas drop**, which lets a relayer fund that fee without
-learning which deposit is yours, is built in part: its receipt binding `(N, oneTimeAddress, relayer)` and
-the relayer's one credit per `N` (EVIDENCE rows 47, 48); the sealed credit to a private one-time account
-and its sweep inside the private claim are **not built** (milestone M0 tests them); until it works, a first
-claim needs native LEZ from a faucet or a public purchase, which is a correlation the client must
-state ([`bridge.md`](../design/bridge.md) §6).
+proof; nobody else can pay it on v0.4. The **gas drop** lets a relayer fund that fee without learning which deposit
+is yours: your gas-drop receipt binds `(N, oneTimeAddress, relayer)`, the relayer sends one credit per `N` (EVIDENCE
+rows 47, 48), and on LEZ v0.4.0-rc3 a credit sealed to a fresh one-time private account was swept by the private
+claim that paid its fee from it, by a claimant with no native LEZ at all, with real proofs (M0 check 2, row 124).
+The relayer daemon does not send the sealed credit yet (its own credit is a public transfer no private claim can
+sweep), so with the daemon a first claim still needs native LEZ from elsewhere: a correlation the client states
+([`bridge.md`](../design/bridge.md) §6).
 
 **A refused claim changes nothing** and the deposit stays claimable (R.1): a refusal reverts the whole
 LEZ transaction, and a private claim that fails produces no receipt and no transaction
@@ -206,8 +228,10 @@ cancels it ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints"; [`bri
 §9, §11.6, §13). You do nothing here; the operator guide covers it.
 
 **Release delay.** Once the root holding your burn is final, the token's release delay must pass:
-at least 24 hours outside testnets (0 allowed on testnets), at most the 7-day revocation window. It is
-the window in which an accepted error can still be revoked ([`bridge.md`](../design/bridge.md) §13).
+at least the vault's `minReleaseDelay`, at most its revocation window `revokeWindow` (both immutable
+deployment parameters: 24 hours and 7 days by the design's defaults, 0 and 1 day in the deploy
+script's testnet configuration; read them from the vault you use). It is the window in which an
+accepted error can still be revoked ([`bridge.md`](../design/bridge.md) §13).
 
 **Release.** You (or a relayer) call `release(r, seal)` with the request `{token, denomIndex,
 recipient, relayer, relayFee, burnRoot, nullifier}`. The proof shows, in zero knowledge, that a burn
@@ -239,10 +263,10 @@ burn. **Reverts you may meet:** `BurnRootNotAccepted`, `ReleaseDelayNotElapsed`,
 `TokenReleaseCapExceeded` / `GlobalReleaseCapExceeded`, `InsufficientEscrow`, `VerifierStopped`.
 None consumes your entitlement: the nullifier is marked only by a release that succeeds (R.2).
 
-**Known gap:** the release guest that was proven implements SPEC-v2, whose `NOut` includes the burn
-index; v2 of `NOut` (index-free, so a burn collected again after a revocation cannot be released
-twice) is in `bridge-wire` and the specification, not in the proven release guest
-([`bridge.md`](../design/bridge.md) §19; [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §4).
+**The release nullifier does not depend on the burn's index**: the release guest computes D13's
+`NOut = H("ferrata/nf-out/v2" ‖ sOut)` (`ferrata-bridge-core`, `TAG_NF_OUT`), so a burn that a revoked checkpoint
+collected at one index and the canonical branch at another is released once (since 11 November 2026, security
+review M-3; [`docs/trust.md`](../trust.md) §3.5).
 
 ## 8. Recovery from the seed alone (F.9, R.5)
 
@@ -269,7 +293,10 @@ A wallet restored from the seed, with no local state, finds everything
 the holdings: public ones read from the zone, private ones as the LEZ wallet decrypts them. Its end-to-end test
 recovers 12 deposits (2 claimed, one of them privately), 12 burns (one private; 2 released) and the holdings
 (measured, build box, 12 November 2026; [`cli/README.md`](../../cli/README.md)). In the test the harness stands
-in for the LEZ wallet's sync of its private accounts. The module (`ferrata_bridge_module`) has `recover`, which finds the
+in for the LEZ wallet's sync of its private accounts; on a running LEZ sequencer (a devnet we ran) `recover` found
+the private holding as LEZ's wallet decrypted it after its sync (EVIDENCE row 102), and the privacy suite's wiped
+clients found 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from the seed alone, also on real proofs
+(rows 23, 89). The module (`ferrata_bridge_module`) has `recover`, which finds the
 wallet's deposits and burns among the events it is given (EVIDENCE row 59); reading those events through
 Logos Core's own modules is **not built**; the scan's speed is measured in the bridge core.
 
@@ -325,7 +352,53 @@ From [`bridge.md`](../design/bridge.md) §17, with the measured dumps of
   applied (the mint fee is public and differs between schedules);
 - **network metadata** (your IP to an RPC or sequencer): out of scope, disclosed;
 - **an adversary's own deposits**, which it can subtract from any set;
-- **the fee payer** until the gas drop exists (§5).
+- **the fee payer** of a first private claim, unless a relayer's gas drop funds it (§5).
+
+**What the tool and the mini-app print before each step** (U.7). Before it sends anything, every command's dry run
+prints this table for its step, then what your own choices add ("privacy of these choices", §9); the mini-app shows
+the same table for its four steps (`qml/js/privacy.js`, word for word `cli/src/privacy.rs`'s; the mini-app offers no
+plaintext claim). Generated from `cli/src/privacy.rs` by
+`python3 -I scripts/check-guides.py --write`, which fails when the two part; the tool's end-to-end test checks that
+each dry run prints it (EVIDENCE row 84, `cli/tests/e2e.rs`).
+
+<!-- ui-privacy:begin -->
+| Step, as the tool titles it | Public on Ethereum | Public on LEZ | Kept private |
+|---|---|---|---|
+| Deposit (Ethereum) | your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking) | nothing | the LEZ account that will receive the tokens (C commits to it); which later claim spends it |
+| Claim (LEZ) | nothing | the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one | which deposit is claimed (no leaf index, no depositor); a private destination and its balance |
+| Plaintext claim (LEZ) | nothing | the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance | nothing |
+| Burn (LEZ) | nothing | the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public | the Ethereum recipient (encrypted to you); a private holder and its balance |
+| Release (Ethereum) | the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas) | nothing | which burn is released (no burn index); the LEZ holder |
+<!-- ui-privacy:end -->
+
+### 10.1 Who handles your data (Privacy #4)
+
+Everything that could connect your deposit to your claim, or your burn to your release, comes from your seed: the
+bridge keys, each deposit's secret `s` and destination, each burn's `sOut` and recipient. It stays on your machine,
+in the `ferrata` tool, the mini-app and `ferrata_bridge_module`, and in LEZ's wallet, which proves your private claims
+and burns locally; it is in no transaction you send. The privacy suite searched every public byte of both chains, over
+20 round trips, for 320 such values and found none (EVIDENCE rows 23, 89). The others see only what they need:
+
+| Who | Sees | Never sees |
+|---|---|---|
+| a relayer you hand a job to | what the step publishes anyway, plus when you asked and from which IP address | your seed, `s`, `sOut`, which deposit or burn is yours |
+| a wrapper | your release's journal, which the release publishes | the witness |
+| Ethereum RPC providers and LEZ nodes | which blocks and lists you read, and your IP address (recovery downloads whole lists, never one item) | which items are yours |
+| importers, checkpoint provers, updaters | nothing of yours | — |
+
+Every component, with where the data stays: [`docs/trust.md`](../trust.md) §8.1.
+
+### 10.2 A party that submits for you, and switching it per operation (Privacy #6)
+
+| Who submits | When | What it learns beyond what the chain then publishes | How you switch it, per operation |
+|---|---|---|---|
+| a gas-drop relayer | it funds the fee of your first private claim | that a claim spending your `N` under that root will follow, the one-time address it funds, when you asked, your IP address; not which deposit | the receipt you prove names one relayer: name another for the next claim |
+| the relayer your claim names | it is paid the relay fee by your claim | nothing, as long as you send the claim yourself (the tool does): it is named inside the claim you prove and send; a relayer you asked to submit it would also learn the time and your IP address | `ferrata claim --relayer`, per claim |
+| a release relayer | it sends your release on Ethereum and pays the gas | the job's fields, which are exactly what the release publishes (recipient, token, amount, `NOut`, root, relayer, fee), when you asked, your IP address; not which burn | by default the job names relayer address 0, so you hand it to any relayer and the vault pays whoever sends it; `--relayer` names one; `--self-send` needs none |
+
+Measured, the gas drop's one credit per `N`, refused at another relayer and after the claim (EVIDENCE rows 47, 48,
+124); a release job naming another relayer refused by a relayer's daemon, and releases sent by a relayer and by
+`--self-send` (rows 46, 84, 85). Per party, with what it receives: [`docs/trust.md`](../trust.md) §8.2.
 
 ## 11. Errors (U.8, Privacy #5)
 
@@ -359,25 +432,69 @@ messages for each code.
 [`bridge.md`](../design/bridge.md) §14–§16, §20)
 
 - **Frozen** (deposits, releases, mints or burns, globally or per token): your position waits. Every
-  freeze lapses after at most 30 days unless renewed; the admin cannot unfreeze.
+  freeze lapses unless renewed: on the vault after its `maxFreeze` (an immutable deployment parameter
+  that the vault requires only to be above zero: 30 days by default; read it from the vault you use),
+  on LEZ at most 30 days after the newest attested Ethereum time (a constant of the bridge program).
+  The admin cannot unfreeze.
 - **Retired** (`retire()` on the vault, `Sunset` on LEZ): deposits stop forever and root imports stop;
   claims against imported roots, burns and releases continue; unimported deposits become refundable
-  after a final sunset checkpoint and its 7-day revocation window. Anyone may retire once no checkpoint
-  has been finalised for 30 days.
+  after a final sunset checkpoint and its revocation window (`revokeWindow`, 7 days by the design's
+  default). Anyone may retire once 30 days plus one candidate wait have passed since the last
+  checkpoint progress: the deployment, the last candidate submitted, the last checkpoint finalised or
+  the end of the last checkpoint freeze or watchers' pause, whichever is latest (`retireOpensAt()` on
+  the vault gives the moment; a resubmitted candidate or a new pause starts the count again).
 - **Verifier stopped** (only by RISC Zero's own proof that its proof system is unsound): nothing more
   is released or refunded; owed balances stay claimable with `claimOwed` (vault v5; the sentence of
   [`bridge.md`](../design/bridge.md) §15 that refunds still work after a stop describes an earlier
   prototype: in v5 `refund` requires no verifier stop, [`vault/README.md`](../../vault/README.md), "Refunds").
-- **A wrong checkpoint not revoked within 7 days halts the vault for good.** What bounds your loss is
+- **A wrong checkpoint not revoked within the revocation window (7 days by the design's default)
+  halts the vault for good.** What bounds your loss is
   in [`docs/trust.md`](../trust.md).
 
-## 13. For developers: integrating both flows (R.12)
+## 13. For developers: integrating both flows through the core module (R.12)
 
-The integration surface today is the program messages and the derivations; the Logos module
-(`ferrata_bridge_module`: `deposit`, `claim`, `burn`, `release`, `recover`, `status`) is built and called
-under a headless Logos Core (EVIDENCE row 59); it builds messages without signing or sending them, and its
-private claim, `ImportRoot`, registry reads and release proving are **not built**
-([`bridge.md`](../design/bridge.md) §1; [`modules/README.md`](../../modules/README.md)). Build against these:
+`ferrata_bridge_module` is the bridge's core module: the user's side of both flows, recovery and the registry, as
+eleven methods a Logos ui module or a client calls ([`modules/README.md`](../../modules/README.md),
+"`ferrata_bridge_module`"); the nine of the flows are below, and `wallet` (the LEZ wallet's accounts) and `version`
+are described there. It derives every key from the wallet's seed and never returns `kAuth`, `kView`, `s` or
+`sOut` (a claim message carries `s` as the private execution's input, or in the clear on the plaintext path the user
+chose). It builds what is to be signed and sent; the user's Ethereum wallet signs the vault calls, and LEZ's wallet
+proves and sends the private ones. In a headless Logos Core each method takes one JSON request:
+
+```sh
+logosctl daemon start --detach
+logosctl install ferrata_bridge_module.lgx -y && logosctl module load ferrata_bridge_module
+logosctl call ferrata_bridge_module registry @registry.json     # the token's denominations, fees, the claim's range
+logosctl call ferrata_bridge_module deposit  @deposit.json      # the commitment C and the vault call to sign
+logosctl call ferrata_bridge_module claim    @claim.json        # with LEZ's state: claimable, ClaimPrivately and its accounts
+logosctl call ferrata_bridge_module burn     @burn.json         # the burn note and the Burn message
+logosctl call ferrata_bridge_module release  @release.json      # by the wallet's rule: the newest root past its delay
+logosctl call ferrata_bridge_module prove_release @prove.json   # the release guest: a succinct receipt for a relayer
+logosctl call ferrata_bridge_module recover  @recover.json      # from the seed: your deposits and burns
+logosctl call ferrata_bridge_module status   @status.json       # each one awaiting, claimable or claimed, releasable or released
+logosctl daemon stop
+```
+
+| Flow | Step | Method | It takes | It returns | You then |
+|---|---|---|---|---|---|
+| in | read the token | `registry` | `token_state`, `config_state`, `root_state` as LEZ holds them | the entry (denominations, relay fees, LEZ unit), fee schedules, controls, the range a claim names | pick a denomination |
+| in | deposit | `deposit` | the seed, the chain, the vault, your address and deposit count `j`, the destination's kind and account, the token, the denomination | `C`, the vault call (`to`, function, ABI data, value) | sign and send it on Ethereum (the user's wallet) |
+| in | wait for a root | `import_root` (an operator's; anyone may) | the configuration's state, the record's slot, the vault's `eth_getProof` or an endpoint | `ImportRoot`, checked with both programs' own functions | nothing: daemons import on a fixed cadence (§4) |
+| in | claim | `claim` with LEZ state | the deposit, the vault's leaves, the imported roots, the token's and the nullifier's states, `private` | `claimable` with `N`, the `ClaimPrivately` message and its accounts (or the plaintext `Claim`, by explicit choice), or the refusal | LEZ's wallet proves and sends it privately |
+| out | burn | `burn` | the seed, the configuration, your burn counter, the recipient, the token, the amount | the note, the `Burn` message | send it from your private holding (LEZ's wallet); advance the counter |
+| out | release | `release` by the wallet's rule | the zone's published burns, the vault's accepted roots with their delays, the time | `releasable` with the 352-byte journal against the newest root past its delay, or the refusal | prove it (`prove_release`), hand the job to any relayer |
+| both | recover | `recover`, `status` | the seed, the vault's `Deposit` events, the published burn notes, what LEZ and the vault say is spent | your deposits and burns, each with its state | resume wherever you stopped |
+
+**Run end to end.** The eleven methods natively and inside a headless Logos Core on the mini-app's devnet (a local
+LEZ zone and anvil): `modules/scripts/bridge_e2e.sh`, 24 of 24 checks, also through the daemon, one release proven
+for real through Logos Core (EVIDENCE row 93, `modules/results/complete-2026-11-12/`); the calls equal to the shared
+vectors (row 59); `import_root` reading the vault itself through Logos Core's `eth_rpc_module` (row 109); the user's
+private round trip in the mini-app on its defaults, the view calling this module inside a headless Logos Core on a
+running LEZ sequencer (row 103), with its private claim and burn sent through Logos Core's `lez_core` (rows 113, 114)
+and inside Logos Basecamp with real proofs (rows 125, 126); the `ferrata` tool runs the same code (`cli/wallet`) in its
+end-to-end test, which CI runs on every push (row 84).
+
+**Below the module**, for a client that builds its own transactions:
 
 - **Messages** of the bridge program, one borsh enum in [`lez/bridge-wire/src/lib.rs`](../../lez/bridge-wire/src/lib.rs),
   tabulated in [`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2: `Init` (4), `ImportRoot` (1), `Register` (11),
@@ -410,25 +527,21 @@ private claim, `ImportRoot`, registry reads and release proving are **not built*
 
 ## 14. What is not built
 
-([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md) §1,
-§18.6, §19; [`vault/README.md`](../../vault/README.md), status paragraph)
+([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
+[`docs/not-built.md`](../not-built.md); at this commit)
 
-- a wallet integration; in `ferrata_bridge_module`, the private claim, `ImportRoot`, registry reads and
-  release proving (the module is built: EVIDENCE row 59); the anonymity-set view; the `ferrata` tool's LEZ commands
-  against a live sequencer (its tests use the LEZ harness);
-- the gas drop's sealed credit to a private one-time account and its sweep inside the private claim, and
-  the relayer's root imports (the gas-drop receipt and the relayer daemon `ferrata-relayer`, which also
-  wraps, are built: EVIDENCE rows 46–48);
-- a transfer that credits a private recipient privately (transfers between holders are built: EVIDENCE
-  rows 74, 75); the switch to LEZ's token program;
-- a real proof of a private claim to a public destination, and laptop or GPU proofs of the current program
-  image's private claim and burn (the crown rehearsal, the live round trip and `lez/results/p4-minimum` proved
-  them on cloud CPUs, the latter held to 8 and 16 CPUs with 16 GiB); any user-side proof on a laptop (under macOS they were proven on M1 and M4 Mac minis, CPU only:
-  EVIDENCE row 88);
-- a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on 12 November
-  2026 on the final programs, a private claim of a Sepolia deposit and a private burn included, with LEZ as a devnet we ran (one
-  validator; [`e2e/runs/crown-live-3/`](../../e2e/runs/crown-live-3/README.md)), as on 11 November on the first live
-  run's programs ([`e2e/runs/crown-live-1/`](../../e2e/runs/crown-live-1/README.md)); before them, the v3 vault of the end-to-end fixture
-  got one deposit on Sepolia, claimed by the plaintext path
-  ([`lez/live/inbound/README.md`](../../lez/live/inbound/README.md); [`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §11);
-- LEZ testnet 0.4 itself, which did not exist when this was written.
+- a wallet integration beyond the mini-app; the anonymity-set view (§9);
+- the gas drop inside the relayer daemon: the sealed credit to a one-time private account, swept by the claim that
+  pays its fee from it, ran with LEZ's wallet on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124); the daemon's own
+  credit is a public transfer that no private claim can sweep;
+- the relayer's root imports on a running LEZ sequencer (they ran on the mini-app's devnet: rows 106, 107);
+- a transfer that credits a private recipient privately (transfers between holders are built: rows 74, 75); the
+  switch to LEZ's token program, when one is released;
+- in the deployed bridge program, nullifier and holder accounts keyed by the configuration, which close the two
+  tenant issues of 18 November (row 136): built and tested in a second build, not deployed (row 143);
+- a user-side proof on a laptop: the private claim and burn were proven on cloud CPUs held to 8 and 16 cores and on
+  M1 and M4 Mac minis under macOS (rows 33, 88);
+- Ethereum reads, signatures and sends through Logos Core's own modules in the mini-app's round trip (inside Basecamp
+  its Ethereum side goes through a stand-in service);
+- a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on the final programs,
+  with LEZ as zones we ran (rows 91, 142); LEZ testnet 0.4 did not exist when this was written.

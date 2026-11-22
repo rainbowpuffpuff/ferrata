@@ -1,0 +1,7 @@
+build ferrata-attest exit 0 (384 s)
+holdings test exit 0 (20 s)
+ferrata-attest journey exit 3 (101 s)
+every_party test exit 101 (10 s)
+updater demo exit 0 (54 s)
+every_party test exit 0 (20 s)
+replacement test exit 0 (15 s)

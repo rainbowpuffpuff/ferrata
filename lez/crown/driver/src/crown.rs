@@ -131,21 +131,115 @@ fn now_ms() -> u64 {
 // ---------------------------------------------------------------------------------------------
 
 /// The roles of the configuration and its caps: no floor, unlimited caps (e2e/crown/README.md
-/// "Identity of the configuration"). The admin and the freeze authority are throwaway accounts of
-/// derived keys (they act by signing, which admits their accounts); the fee recipient only
-/// receives, and a public account must exist to be admitted, so it is the second of the funded
-/// test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
-pub fn controls() -> Controls {
+/// "Identity of the configuration"). The admin and the freeze authority act by signing, which admits their
+/// accounts; the fee recipient only receives, and a public account must exist to be admitted, so it is the second of
+/// the funded test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
+///
+/// The admin and the freeze authority: `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY`, the account ids (`0x` and 64 hex
+/// digits) of accounts whose keys the deployer holds (`new-role-keys` makes two from fresh random keys); without them,
+/// the accounts of the keys derived from `CROWN_ROLES_LABEL` (`<label>/admin`, `<label>/freeze-authority`; default
+/// `crown`, the recorded runs'). A derived key is SHA-256 of a public prefix, the label and a counter
+/// (`keys::derived_key`): anyone who reads the label has it, so a label is for a local zone or a recorded run, never
+/// for a configuration that holds value. `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets'
+/// capacity in value units, refilled over a day (unset or empty: unlimited; anything but a whole number is refused).
+/// They enter `controls`, so `salt` and `configId`: every call of one configuration (`config-id`, then `crown-b`)
+/// must see the same values.
+pub fn try_controls() -> Result<Controls> {
     let unlimited = CapParams { capacity: UNLIMITED, refill_per_second: 0 };
-    let fee_recipient = account_of(&lez_test_payers().expect("LEZ's test keys")[3]);
-    Controls {
-        admin: *account_of(&derived_key("crown/admin")).value(),
-        freeze_authority: *account_of(&derived_key("crown/freeze-authority")).value(),
+    let cap = |var: &str| -> Result<CapParams> {
+        match std::env::var(var).ok().map(|v| v.trim().to_string()).filter(|v| !v.is_empty()) {
+            None => Ok(unlimited),
+            Some(v) => {
+                let capacity: u128 = v.parse().map_err(|_| anyhow!("{var}={v:?}: not a whole number of value units"))?;
+                Ok(CapParams { capacity, refill_per_second: (capacity / 86_400).max(1) })
+            }
+        }
+    };
+    let account = |var: &str| -> Result<Option<[u8; 32]>> {
+        let Some(v) = std::env::var(var).ok().filter(|v| !v.trim().is_empty()) else { return Ok(None) };
+        let bytes = hex::decode(v.trim().trim_start_matches("0x")).map_err(|e| anyhow!("{var}={v:?}: {e}"))?;
+        let id: [u8; 32] = bytes.try_into().map_err(|_| anyhow!("{var}={v:?}: an account id is 32 bytes"))?;
+        Ok(Some(id))
+    };
+    let label = std::env::var("CROWN_ROLES_LABEL").unwrap_or_else(|_| "crown".to_string());
+    let (admin, freeze_authority) = match (account("CROWN_ADMIN")?, account("CROWN_FREEZE_AUTHORITY")?) {
+        (Some(a), Some(f)) => {
+            ensure!(a != f, "CROWN_ADMIN and CROWN_FREEZE_AUTHORITY must be two accounts");
+            (a, f)
+        }
+        (None, None) => (
+            *account_of(&derived_key(&format!("{label}/admin"))).value(),
+            *account_of(&derived_key(&format!("{label}/freeze-authority"))).value(),
+        ),
+        _ => bail!("set both CROWN_ADMIN and CROWN_FREEZE_AUTHORITY, or neither"),
+    };
+    let fee_recipient = account_of(&lez_test_payers().context("LEZ's test keys")?[3]);
+    Ok(Controls {
+        admin,
+        freeze_authority,
         fee_recipient: *fee_recipient.value(),
         floor: CapParams { capacity: 0, refill_per_second: 0 },
-        token_cap: unlimited,
-        global_cap: unlimited,
+        token_cap: cap("CROWN_TOKEN_CAP")?,
+        global_cap: cap("CROWN_GLOBAL_CAP")?,
+    })
+}
+
+/// [`try_controls`], which `main` runs first, so that a wrong setting stops the driver before it does anything.
+pub fn controls() -> Controls {
+    try_controls().unwrap_or_else(|e| panic!("{e:#}"))
+}
+
+/// Two fresh keys from the operating system's randomness, for the configuration's admin and freeze authority:
+/// written to `out` (`lez-admin.key`, `lez-freeze-authority.key`: 32 bytes in hex, mode 600), their accounts returned
+/// as `CROWN_ADMIN` and `CROWN_FREEZE_AUTHORITY` take them. Nothing derives them: only `out` holds them.
+///
+/// Neither file may exist yet, not even as a symbolic link, and both are checked before either is written. Each is
+/// created by the same call that opens it, with mode 600 from the start (`O_CREAT | O_EXCL`, never following a link),
+/// so no other local user can read a key between its creation and its first byte. Every directory of `out` that this
+/// call creates gets mode 700 whatever the umask, so no other local user can replace a key in it either; a directory
+/// that exists already keeps its mode.
+pub fn new_role_keys(out: &Path) -> Result<Value> {
+    use std::io::{Read, Write};
+    let mut dir = fs::DirBuilder::new();
+    dir.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        dir.mode(0o700);
     }
+    dir.create(out).with_context(|| format!("{}: not created", out.display()))?;
+    let paths: Vec<PathBuf> =
+        ["lez-admin", "lez-freeze-authority"].iter().map(|name| out.join(format!("{name}.key"))).collect();
+    for path in &paths {
+        ensure!(fs::symlink_metadata(path).is_err(), "{} exists: keep it, or move it away first", path.display());
+    }
+    let mut ids = Vec::new();
+    for path in &paths {
+        let key = loop {
+            let mut bytes = [0u8; 32];
+            fs::File::open("/dev/urandom")?.read_exact(&mut bytes)?;
+            if let Ok(key) = lee::PrivateKey::try_new(bytes) {
+                break (key, bytes);
+            }
+        };
+        let mut open = fs::OpenOptions::new();
+        open.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            open.mode(0o600);
+        }
+        let mut file = open.open(path).with_context(|| format!("{}: not created", path.display()))?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(fs::Permissions::from_mode(0o600))?;
+        }
+        file.write_all(hex::encode(key.1).as_bytes())?;
+        file.sync_all()?;
+        ids.push(h(account_of(&key.0).value()));
+    }
+    Ok(json!({ "admin": ids[0], "freezeAuthority": ids[1], "keys": out.display().to_string() }))
 }
 
 pub fn fee_recipient() -> AccountId {
@@ -234,7 +328,17 @@ impl Identity {
     pub fn config_json(&self, vault: [u8; 20]) -> Value {
         let config = self.bridge_config(vault);
         let preimage = self.config_preimage(vault).map(|p| h(&p)).unwrap_or_else(|e| format!("ERROR: {e}"));
-        json!({ "vault": h(&vault), "configId": h(&config.id(self.bridge_header)), "preimage": preimage })
+        let c = controls();
+        let cap = |p: &CapParams| json!({ "capacity": p.capacity.to_string(), "refillPerSecond": p.refill_per_second.to_string() });
+        json!({
+            "vault": h(&vault),
+            "configId": h(&config.id(self.bridge_header)),
+            "preimage": preimage,
+            "controls": {
+                "admin": h(&c.admin), "freezeAuthority": h(&c.freeze_authority), "feeRecipient": h(&c.fee_recipient),
+                "tokenCap": cap(&c.token_cap), "globalCap": cap(&c.global_cap), "floor": cap(&c.floor),
+            },
+        })
     }
 
     pub fn to_json(&self, vault: Option<[u8; 20]>) -> Value {
@@ -1403,6 +1507,51 @@ mod tests {
         let (end, end_ms) = ws_end(&chain.config, chain.bootstrap.header.beacon.slot).unwrap();
         assert_eq!((end, utc(end_ms).as_str()), (11_401_632, "2026-10-21T03:26:24Z"));
         assert!(end_ms < chain.config.slot_start_ms(11_562_112));
+    }
+
+    /// `new-role-keys`: both key files are created with mode 600 from the start and hold 32 bytes in hex, in a
+    /// directory created with mode 700 (and its parent too, when the call creates it); a second call refuses and
+    /// changes nothing; a dangling symbolic link at the second path is refused before the first key is written, and
+    /// nothing is written through it.
+    #[cfg(unix)]
+    #[test]
+    fn new_role_keys_private_from_creation_and_never_overwritten() {
+        use std::os::unix::fs::{symlink, PermissionsExt};
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join(format!("role-keys-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&root);
+        let mode = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+
+        let k1 = root.join("k1");
+        let out = new_role_keys(&k1).expect("new-role-keys");
+        assert_eq!(mode(&root), 0o700, "{}", root.display());
+        assert_eq!(mode(&k1), 0o700, "{}", k1.display());
+        let (admin, freeze) = (k1.join("lez-admin.key"), k1.join("lez-freeze-authority.key"));
+        for p in [&admin, &freeze] {
+            assert_eq!(mode(p), 0o600, "{}", p.display());
+            let text = fs::read_to_string(p).unwrap();
+            assert_eq!(text.len(), 64);
+            assert!(hex::decode(&text).is_ok());
+        }
+        assert_ne!(out["admin"], out["freezeAuthority"]);
+        assert_ne!(fs::read(&admin).unwrap(), fs::read(&freeze).unwrap());
+
+        let before = (fs::read(&admin).unwrap(), fs::read(&freeze).unwrap());
+        let again = new_role_keys(&k1).unwrap_err().to_string();
+        assert!(again.contains("lez-admin.key exists"), "{again}");
+        assert_eq!((fs::read(&admin).unwrap(), fs::read(&freeze).unwrap()), before);
+
+        let k2 = root.join("k2");
+        fs::create_dir_all(&k2).unwrap();
+        let target = root.join("elsewhere.key");
+        symlink(&target, k2.join("lez-freeze-authority.key")).unwrap();
+        let linked = new_role_keys(&k2).unwrap_err().to_string();
+        assert!(linked.contains("lez-freeze-authority.key exists"), "{linked}");
+        assert!(fs::symlink_metadata(k2.join("lez-admin.key")).is_err(), "the first key was written before the check");
+        assert!(fs::symlink_metadata(&target).is_err(), "a key was written through the link");
+
+        fs::remove_dir_all(&root).unwrap();
     }
 
     /// The stand-in's fixed bootstrap slot (rehearsals) is bounded the same way.

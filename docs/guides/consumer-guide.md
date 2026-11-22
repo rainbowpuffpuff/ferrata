@@ -1,6 +1,7 @@
 # Consuming Ferrata attestations from a LEZ program
 
-**Consumer guide (RFP-021 S.3, S.4; VS.3, VS.5). First draft, 11 November 2026.** For the author of a
+**Consumer guide (RFP-021 S.3, S.4, F.10; VS.3, VS.5; U.5). Revised for delivery on 21 November 2026, against the
+tree at this commit; it replaces the first draft of 11 November.** For the author of a
 LEZ program that must act on a fact about Ethereum: a storage slot, an account, an event log or a
 leaf of an accumulator kept in a contract. It says how to ask for an attestation on the public path
 and on the private path, what a statement identifier is and how to key a nullifier on it, the
@@ -16,6 +17,35 @@ transition functions called in-process with LEZ's fee settlement copied, one tra
 at genesis base fees; private parts in RISC Zero dev mode (executed, not proven) unless a real proof
 is named. The code is a prototype, not audited and not for production ([`README.md`](../../README.md),
 "Not audited").
+
+## 0. The model, the journey, and where each clause is answered
+
+**The model (VS.5).** Your program trusts no relayer, no RPC provider and no operator. It trusts the checkpoint of
+the instance it pins (check it once: §7) and two thirds of each sync committee, and nothing else: the attestation
+program verifies the committee's signatures itself and proves every fact against the record it wrote, inside your
+transaction. Whoever runs the updater, fetches your proofs or submits your transaction only carries data the
+program accepts or refuses; if one of them lies the transaction is refused, if one stops anyone else, you included,
+does the same job. Their role is liveness only, and a test walks each of them
+([`docs/trust.md`](../trust.md) §0, §2.4).
+
+**The developer's journey**, in the order you meet it:
+
+| Step | What you do | Where |
+|---|---|---|
+| 1 | Choose an instance and check its checkpoint against independent providers; pin the program's account, the instance id and the chain id as constants | §2, §7; `verify_checkpoint` and `read_instance` of `ferrata_attest_module` (§13) |
+| 2 | Choose the path: a public call (`Attest`, synchronous) or a private read (`Read`, then `attest::evaluate` in your own proof) | §1, §4 |
+| 3 | Write the request your program builds from its own configuration: accounts, slots, logs, leaves, conditions | §3, §12 steps 1–3 |
+| 4 | Apply the Recommended Consumer Pattern: the nullifier, the chain binding, the codes, no fallback | §6 |
+| 5 | Off chain: find a record, fetch the proofs, dry-run the request with the program's own function, build and send the transaction, read the result | §13 (the module), `lez/ATTEST-CLI.md` (the tool) |
+| 6 | Handle every code the transaction can end with | §8 |
+| 7 | Test against LEZ's state machine with real data, measure, prove | §12 steps 7–9 |
+| 8 | Know when your instance must be replaced, and how you move | §9 |
+
+**Where each clause is answered.** RFP-021 S.3 (the core module's documentation for a consuming program's
+integration journey): this table, §12 (a whole consumer, tested) and §13 (the module, run end to end). S.4 (the
+Recommended Consumer Pattern): §6, each point with the test that shows it in §6.2. F.10 (when an instance must be
+replaced, and what a consumer does to migrate): §9. VS.3 (no `ProgramId` in mutable state, and the same rule for
+consumers): §2 and §9. VS.5: the model above. U.5 (typed errors): §8, every code in §8.4.
 
 ## 1. What the program gives you
 
@@ -310,6 +340,19 @@ vault provides ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "Decisions" item 7
 [`crates/ferrata-spectests/tests/nullifier_illustration.rs`](../../crates/ferrata-spectests/tests/nullifier_illustration.rs)
 illustrates the linkage of an identifier-only nullifier; it runs no `ferrata-core` code.
 
+### 6.2 The RFP's four points, and the test that shows each
+
+Every test named here runs the consumer through LEZ v0.4.0-rc1's own state machine with real Ethereum data
+(`RISC0_DEV_MODE=1 cargo test -p harness --locked --test <file>` in `lez/`; `lez/RESULTS.md` §8 sets up the
+toolchains), except where said.
+
+| Point | What it means in your program | Shown by |
+|---|---|---|
+| 1. A nullifier keyed on the statement identifier | the claim writes an account derived from the identifier (rule 6's form when the fact carries a secret); a second claim finds it and is refused | `attest_public.rs`, `the_reference_consumer_credits_a_transfer_once` (a replay refused, 223); `vault_consumer.rs`, `a_real_deposit_is_claimed_publicly_once` and `a_real_deposit_is_claimed_privately_once` (the vault's real Sepolia deposits: `N = H(s ‖ statement id)` spent once, by either path; EVIDENCE row 73) |
+| 2. The chain binding matches your expectation | the request names your chain id and instance; the reply must carry both; the record's sender is the actor you derived | `holdings.rs`, `holdings_consumer` (a gate for Sepolia against mainnet's records refused, 140); `attest_public.rs`, `refusals_exit_with_their_codes_and_change_nothing` (another chain 140, another instance 211, an attestation-shaped reply from another program 220); `attest_native.rs`, `the_pool_accepts_exactly_its_deposit` (226 to 228); `lez/updater/tests/every_party.rs`, `checkpoint_source_misleads_only_until_checked` (a pinned request refused at another instance's record, 211) |
+| 3. Each typed error code handled | the code is the transaction's outcome; the client maps it to an action (§8.4) and retries only where a retry can succeed | `holdings.rs` (ten typed refusals, each leaving the holding as it was, each equal to the native `attest::evaluate`); `lez/ATTEST-CLI.md`'s journey (the dry run predicts 130 and the send reproduces it; recorded in [`runs/2026-11-21-lez/`](runs/2026-11-21-lez/README.md)) |
+| 4. No attestation, no action; never an unverified fallback | no branch of your program acts without the reply of the record you asked | by construction on LEZ v0.4 (a non-zero exit reverts the whole transaction, §8.1): `refusals_exit_with_their_codes_and_change_nothing` (a refused attestation consumes nothing, and the same claim then succeeds); `attest_private.rs`, `a_private_attestation_that_does_not_verify_cannot_be_proven` (no receipt, so no transaction) |
+
 ## 7. Chain binding (F.5)
 
 - The chain id is in every statement identifier and every instance id
@@ -400,45 +443,170 @@ with corrected input; nothing was consumed.
 | already consumed | consumer 223 `ALREADY_CLAIMED`; bridge 250 `ALREADY_CLAIMED` | the nullifier exists | stop |
 | wrong claimant actor | consumer 229 `NULLIFIER_MISMATCH` | the claim was sent to a claim actor the statement does not name | send it to `claim(pool, N)` |
 
-Full lists with one-line meanings: the doc comments of the files in §8.2. The reference consumer's
+Every code, one by one, is in §8.4. The reference consumer's
 own reply checks (226, 227, 228) cannot be reached through the program, which never produces such
 a reply; [`lez/harness/tests/attest_native.rs`](../../lez/harness/tests/attest_native.rs) runs them on
 attestations built by hand ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5).
+
+### 8.4 Every code of the attestation program, and what the client does
+
+Generated from the program's IDL ([`idl/ferrata_attestation.idl.json`](../../idl/ferrata_attestation.idl.json)) by
+`python3 -I scripts/check-guides.py --write`; the same script, without `--write`, fails when the IDL and this table
+part. "Met by" says who can receive the code: a consumer meets only the codes of an `Attest` (100–163, 200–215); the
+others are refused updates, job steps and deployments. The consumers' own codes (the reference consumer's 220–229,
+`ferrata_holdings`' 230–239, the bridge's 240–255) are in their wire crates (§8.2) and, for the bridge, in its IDL
+and the [user guide](user-guide.md) §11.
+
+<!-- codes:begin -->
+| Code | Name | Meaning (the IDL's) | Met by | The client should |
+|---:|---|---|---|---|
+| 1 | `Malformed` | SSZ input is malformed: wrong length, bad offset, or wrong shape for the fork. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 10 | `CheckpointMismatch` | Bootstrap header root differs from the trusted checkpoint root. | the deployer, at `Init` | use the bootstrap of the checkpoint you checked; the instance is not created |
+| 11 | `BootstrapHeaderInvalid` | Bootstrap header fails `is_valid_light_client_header`. | the deployer, at `Init` | use the bootstrap of the checkpoint you checked; the instance is not created |
+| 12 | `CurrentCommitteeBranchInvalid` | Bootstrap `current_sync_committee` branch does not verify against the state root. | the deployer, at `Init` | use the bootstrap of the checkpoint you checked; the instance is not created |
+| 20 | `ParticipationLow` | Fewer than `MIN_SYNC_COMMITTEE_PARTICIPANTS` signers. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 21 | `AttestedHeaderInvalid` | Attested header fails `is_valid_light_client_header`. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 22 | `SlotOrderInvalid` | Violates `current_slot >= signature_slot > attested_slot >= finalized_slot`. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 23 | `PeriodSkipped` | Signature period is neither the store period nor (with a known next committee) the next. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 24 | `UpdateIrrelevant` | Update neither advances the store nor supplies the missing next committee. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 25 | `FinalizedHeaderInvalid` | Finalized header is invalid, or non-empty when it must be empty. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 26 | `FinalityBranchInvalid` | Finality branch does not verify against the attested state root. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 27 | `NextCommitteeBranchInvalid` | Next-sync-committee branch does not verify against the attested state root. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 28 | `NextCommitteeMismatch` | Next committee contradicts the one the store already holds for that period. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 29 | `NextCommitteeUnexpected` | A non-sync-committee update carries a non-empty next committee. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 40 | `SignatureInvalid` | The aggregate signature does not verify. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 41 | `SignatureMalformed` | The signature is not a valid compressed G2 point in the prime-order subgroup. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 42 | `PubkeyInvalid` | A public key fails `KeyValidate`: not a curve point, the identity, or outside G1. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 43 | `SigningKeyIdentity` | The signing key (aggregate of the signers) is the identity point. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 45 | `CommitteeInvalid` | A committee key fails `KeyValidate`, or the keys do not sum to `aggregate_pubkey`. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 50 | `NotFinalized` | Ferrata policy: only finality updates may advance an instance. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 51 | `BelowSupermajority` | Ferrata policy: participation is below the supermajority (2/3) floor. | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 52 | `NotNewer` | Ferrata policy: the update does not advance the finalized header (duplicate or stale). | an updater (a record exists only once these pass) | nothing: the update is applied already (duplicate or stale) |
+| 53 | `OutsideWeakSubjectivityPeriod` | Ferrata policy: the store's finalized header is older than its weak-subjectivity period at the current slot (`crate::ws`); recover from a new bootstrap. | an updater (a record exists only once these pass) | the instance is past its weak-subjectivity bound: move to a replacement (§9) |
+| 60 | `CommitteeUnknown` | Store invariant: next committee unknown and the update finalizes outside the store period. | an updater (a record exists only once these pass) | send the period update that supplies the next committee first |
+| 61 | `ForkMismatch` | Data of one fork was handed to a store of another (or a downgrade was requested). | an updater (a record exists only once these pass) | refused update: take it from another source (the updater demotes the one that served it) |
+| 80 | `Witness` | The signer witness does not fit the committee: wrong count, encoding, key or branch. | an updater (job step) | send the job's due step with the right witness, or open a new job |
+| 81 | `Phase` | The step does not follow the job's last one (skipped or replayed). | an updater (job step) | another updater moved the job or the store: re-read the job and send its due step |
+| 82 | `StoreChanged` | The job was started on a store with another digest. | an updater (job step) | another updater moved the job or the store: re-read the job and send its due step |
+| 83 | `AdoptionIncomplete` | The update adopts a committee whose adoption is not complete. | an updater (job step) | send the job's due step with the right witness, or open a new job |
+| 84 | `NoAdoption` | The job adopts no committee, or its adoption is already complete. | an updater (job step) | send the job's due step with the right witness, or open a new job |
+| 100 | `RlpNonCanonical` | RLP that is not the canonical encoding: a non-minimal length, a long-form length with a leading zero, a single byte below 0x80 wrapped as a string, or an integer with a leading zero byte. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
+| 101 | `RlpMalformed` | RLP that is truncated or does not have the expected shape: a length past the end of the input or of the enclosing list, bytes after the item, a list where a string belongs (or the reverse), a wrong item count or field size, or an integer too large for its field. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
+| 110 | `ProofNodeMismatch` | Inclusion proof: a node's Keccak-256 differs from the root or from its parent's reference. | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
+| 111 | `ProofIncomplete` | Inclusion proof: the proof ends before the walk reaches a value or the key's absence. | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
+| 112 | `ProofTrailingNodes` | Inclusion proof: elements remain after the walk ended. | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
+| 113 | `ProofNodeInvalid` | Inclusion proof: a node is not a canonical trie node (item count, hex-prefix flag or padding, empty extension path, child reference, empty value, or a node shorter than 32 bytes referenced by hash). | a consumer's client | refetch the proof at the record's block number; another block's proof never verifies |
+| 120 | `HeaderHashMismatch` | keccak256 of an RLP block header differs from the hash it must match. | a consumer's client | send the RLP header of the record's own block (a Gloas record binds the hash only) |
+| 121 | `HeaderUnsupported` | A block header that is not of the Cancun (20 fields), Prague/Osaka (21) or Amsterdam (23) layout. | a consumer's client | none: the block's header layout is not one the program decodes; do not resend |
+| 122 | `ReceiptNotIncluded` | The receipts trie has no receipt at the requested transaction index. | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
+| 123 | `ReceiptUnsupported` | A pre-Byzantium receipt (state root instead of status) or an unknown receipt type. | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
+| 124 | `ReceiptFailed` | The transaction failed (receipt status 0). | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
+| 125 | `LogIndexOutOfRange` | The receipt has no log at the requested position. | a consumer's client | this fact cannot be attested: a missing, failed or pre-Byzantium receipt, or no such log |
+| 130 | `PredicateFailed` | A condition of the statement does not hold. | a consumer | refuse the action (rule 4): the condition does not hold |
+| 131 | `QueryInvalid` | A condition names a field its fact does not have, or the query is empty. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
+| 140 | `ChainMismatch` | The record belongs to another chain than the consumer is configured for. | a consumer | configuration error: the request names another chain or instance; do not retry |
+| 141 | `BindingMismatch` | The finalized header does not carry the execution binding the record constructor reads. | a consumer's client | use a record whose finalized header carries the execution binding |
+| 150 | `HistoryOutOfWindow` | EIP-2935: the older block is not among the 8191 blocks before the record's block. | a consumer's client | hop from a nearer record, or chain hops (§4.4) |
+| 151 | `HistoryHashMismatch` | EIP-2935: the history slot does not hold keccak256 of the supplied header. | a consumer's client | hop from a nearer record, or chain hops (§4.4) |
+| 152 | `HistoryContractMissing` | EIP-2935: no history contract with the specified code in the record's state. | a consumer's client | no EIP-2935 contract in that record's state: no hop from it; use a later record |
+| 160 | `AccumulatorPathInvalid` | Accumulator: the path does not have 32 siblings. | a consumer's client | rebuild the accumulator path against the attested root |
+| 161 | `AccumulatorIndexOutOfRange` | Accumulator: the leaf index is 2^32 or more (it would share a path with its low 32 bits). | a consumer's client | none: no leaf has an index of 2^32 or more; the request is wrong, do not retry |
+| 162 | `AccumulatorLeafEmpty` | Accumulator: the leaf is the empty leaf (32 zero bytes). | a consumer's client | none: the empty leaf is no deposit; there is nothing to attest |
+| 163 | `AccumulatorRootMismatch` | Accumulator: the path does not hash the leaf to the attested root. | a consumer's client | rebuild the accumulator path against the attested root |
+| 200 | `BAD_MESSAGE` | The message does not decode. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
+| 201 | `WRONG_RECEIVER` | The receiver is not the actor the message is for. | any sender | send the message to the actor it is for (derive it: §2) |
+| 202 | `WRONG_SENDER` | An internal message from an actor other than the expected one. | a forged internal message | nothing: only the program's own actors may send it |
+| 203 | `ALREADY_INITIALIZED` | `Init` on an instance that exists. | the deployer | the instance exists: use it, or initialise a new one from another checkpoint |
+| 204 | `NO_INSTANCE` | No instance at the receiver. | any sender | no instance there: check the instance id you derived |
+| 205 | `NO_JOB` | No job at the receiver. | an updater (job step) | the job is finished, or open already: re-read it and send its due step |
+| 206 | `INSTANCE_INACTIVE` | An update for an instance whose initial committee is not adopted yet. | an updater | wait until the initial committee is adopted |
+| 207 | `JOB_EXISTS` | A job that is already open. | an updater (job step) | the job is finished, or open already: re-read it and send its due step |
+| 208 | `RECORD_CONFLICT` | A record that already holds another header. | nobody (a write-once record) | report it: a record never holds two headers |
+| 209 | `BAD_STATE` | Stored state that does not decode. | a consumer's client | send the request to a record `header(id, slot)`, not another actor |
+| 210 | `UNROUTABLE` | A read with no one to reply to. | a consumer's client | a read needs a sender to reply to: send it from your program |
+| 211 | `WRONG_INSTANCE` | A message about another instance than the receiver's: an internal message, or an attestation asked of a record of another instance than the caller is bound to. | a consumer | configuration error: the request names another chain or instance; do not retry |
+| 212 | `BAD_CONFIG` | An unknown store layout in a config. | the deployer | use a store layout the program knows |
+| 213 | `NO_RECORD` | An attestation asked of an actor that holds no record. | a consumer's client | no record there yet: wait for the updater, or use the newest record |
+| 214 | `BAD_QUERY` | An attestation request the program cannot serve: an accumulator leaf whose root is not a storage fact of the same request, or a block header sent for a record that holds the payload's fields and needs none. | a consumer's client | fix the request: it does not decode or asks for something the program cannot serve |
+| 215 | `HEADER_REQUIRED` | An attestation asked, without the block's header, of a record that binds a block hash only (a finalized header in the Gloas layout): `Request::header` must carry the RLP header that hashes to it. | a consumer's client | send the RLP header of the record's own block (a Gloas record binds the hash only) |
+| 216 | `BAD_SUCCESSOR` | A successor whose configuration is not its parent's with another fork schedule: an immutable field changed (the chain, the preset, the genesis, the weak-subjectivity period, the adoption parts), a fork at or before the checkpoint's epoch changed, a store layout other than the parent store's, a schedule that is not in order, or no change at all. | whoever sends `Succeed` | a successor copies the parent's immutable fields and starts from its latest record |
+| 217 | `STALE_CHECKPOINT` | A successor from a checkpoint that is not the parent's latest record. | whoever sends `Succeed` | a successor copies the parent's immutable fields and starts from its latest record |
+<!-- codes:end -->
 
 **Errors must not identify a deposit.** For a privacy-preserving consumer (RFP-022 Privacy #5), a
 private claim that fails produces no transaction at all (§4.2); a public refusal shows only what the
 public request already showed. The bridge's refusals are bare exit codes (240–255), which carry no leaf index
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2–§3).
 
-## 9. Versions, successors and migration (VS.3)
+## 9. Replacement, successors and migration (F.10, VS.3)
 
 The verification logic cannot be swapped: no consensus or inclusion check is reached through a
-program id held in mutable state ([`attestation.md`](../design/attestation.md) §3.3). Change means a
-new deployment that consumers choose to move to.
+program id held in mutable state ([`attestation.md`](../design/attestation.md) §3.3), and no instruction rewrites an
+initialised instance (a second `Init` is refused with 203, whoever sends it). Change means a new instance or a new
+deployment that consumers choose to move to. Records already written stay valid: a statement over a finalized header
+never expires, so what your program accepted under the old instance stands.
+
+### 9.1 When an instance must be replaced
+
+| Condition | How you see it | What you do |
+|---|---|---|
+| Its weak-subjectivity bound has passed: updates further than the bound past the instance's finalized header are refused (about two weeks on mainnet; the bound is fixed per instance by its configuration) | updates fail with 53 `OutsideWeakSubjectivityPeriod`; no record newer than the instance's finalized slot appears (`read_instance` gives it; compare it with the chain's) | move to a **replacement** from a fresh checkpoint: a new instance id, a new trust decision (§9.3) |
+| Ethereum finalized nothing for a whole sync-committee period, or a third of one committee withheld its signatures for one | no update can be applied: the store does not know the next committee | as above |
+| A fork that is not in the schedule fixed at `Init` | updates signed under the new fork are refused | accept a **successor** under the same root id (§9.2) |
+| A new program version (a fix, a feature) | a new image id at a new program account | move to an instance of the new program (§9.3) |
+| The checkpoint you pinned turns out to be wrong | `verify_checkpoint`, or your own comparison, disagrees | stop accepting its statements at once, then §9.3 |
+
+Measured: the bound refuses `Init` and `Open` by the sequencer's clock (`lez/harness/tests/successor.rs`,
+`the_weak_subjectivity_bound_on_init_and_open`; EVIDENCE row 69); in practice the live run `crown-live-2` stopped
+before sending anything because its 38-day-old checkpoint was outside the bound, and the next run initialised a fresh
+instance (EVIDENCE row 91). The attestation side's `monitor`, which would warn at half the bound, is not built.
+
+### 9.2 Successors: a fork after `Init`
+
+Anyone sends `Succeed` at the parent instance; the program checks three invariants (immutable fields copied, the
+checkpoint equal to the parent's latest record, inside the bound; 216, 217 otherwise) and creates the successor under
+the parent's **root id**. A record carries the root id of the instance that wrote it, and a request bound to the root
+id is served as well as one bound to the instance id (`RecordState::root_id`), so a consumer that binds its requests
+to the root id follows successors without a change. Shown: `successor.rs`,
+`a_successor_crosses_a_fork_not_in_the_schedule_fixed_at_init`, on real Sepolia data (EVIDENCE row 70). Our reference
+consumers still bind to an instance id; for them a successor is a move as in §9.3.
+
+### 9.3 Moving to a replacement: the recipe
+
+1. **Choose the replacement and check it**, as you checked the first instance: its checkpoint against independent
+   providers (`verify_checkpoint`, §7), its configuration (`read_instance`). Anyone may initialise an instance from a
+   checkpoint it checked ([`docs/trust.md`](../trust.md) §2.4); you need nobody's permission.
+2. **Close the old path**: stop accepting statements bound to the old instance once the new one is pinned. Entries
+   your program already wrote stay valid.
+3. **Bind to the replacement** in a new immutable configuration (a new gate, pool or deployment holding the new
+   instance id, and for a new program its account), never by updating a stored pointer (VS.3).
+4. **Carry the nullifiers over.** Statement identifiers do not depend on the instance (§5), so the same fact has the
+   same identifier under the replacement. If your nullifier namespace includes the instance, as the reference
+   consumer's pool does (`N = H(pool id ‖ statement identifier)`, the pool naming the instance), the same fact gets a
+   new nullifier under the replacement and could be claimed again: refuse every nullifier the predecessor spent,
+   derived from the statement identifier and the predecessor's pool, which are constants you hold. If your namespace
+   leaves the instance out, as the bridge's does (nullifier accounts keyed by `(evmChainId, vault, N)`, with
+   `N = H(s ‖ fid)`), there is nothing to carry over ([`docs/design/bridge.md`](../design/bridge.md) §3, §5.3).
+5. **Open the replacement.**
+
+Shown by [`lez/updater/tests/replacement.rs`](../../lez/updater/tests/replacement.rs),
+`a_consumer_moves_to_a_replacement_instance`: two instances hold a record of mainnet block 26,384,851; a consumer
+bound to the first re-binds to the second and gets the same statement with the same identifier; each binding is
+refused at the other instance's record (211); the first instance's record still attests; and the reference consumer's
+nullifier for the same transfer differs between the two pools, which is what step 4 handles. In that test the
+replacement is the fixture's checkpoint under another configuration, so that both instances record the one block the
+fixture has proofs for; for a consumer it is what a replacement is, another instance id. Not built: a reference
+consumer that binds to the root id, and tooling that carries a predecessor's nullifiers over.
 
 | Change | What happens | What a consumer does |
 |---|---|---|
 | A fork **in the schedule fixed at `Init`** | the instance crosses it in place; the store upgrades its layout at the fork (measured on Sepolia through Gloas, periods 1378–1409) | nothing; a new `ferrata-core` release is needed if the fork changes containers or header layouts, and consumers that run the core in their own proofs rebuild with it |
-| A fork **scheduled after `Init`** | a successor instance under the same root id: anyone sends `Succeed` at the parent, which checks three invariants (immutable fields copied, checkpoint = the parent's finalized header, inside the bound; 216, 217) and sends `Spawn` (EVIDENCE row 70) | accept the successor under the root id; consumers bound to the root id are not built (the reference consumer and `ferrata_holdings` pin an instance), so today a consumer moves with the successor recipe below |
-| An instance past its weak-subjectivity bound, or stranded by a period without Ethereum finality | replacement from a fresh checkpoint under a **new root id**: a new trust decision | decide to accept it after checking the checkpoint (`verify_checkpoint`, which asks three beacon providers itself: EVIDENCE rows 59, 105); move with the successor recipe below |
-| A new program version (new image) | a new deployment at a new header account | the successor recipe below |
+| A fork **scheduled after `Init`** | a successor under the same root id (§9.2) | nothing if it binds to the root id; otherwise §9.3 |
+| An instance past its bound, or stranded by a period without Ethereum finality | replacement from a fresh checkpoint under a **new root id** | §9.3 |
+| A new program version (new image) | a new deployment at a new program account | §9.3 |
 
-Sources: [`attestation.md`](../design/attestation.md) §3.5, §3.6, §4.1, §4.7, §15;
+Sources: [`attestation.md`](../design/attestation.md) §3.5, §3.6, §4.1, §4.7, §7, §15;
 [`lez/RESULTS.md`](../../lez/RESULTS.md) §6.
-
-**Successor recipe** (design, [`attestation.md`](../design/attestation.md) §7; no consumer has carried it out yet):
-1. freeze the predecessor consumer's claims;
-2. deploy the successor consumer pinned to the new header account or instance;
-3. make the successor refuse every nullifier in the predecessor's set; how it checks that set is not
-   specified beyond this rule;
-4. open the successor.
-
-**Why step 3 matters (derived).** The reference consumer's pool includes the instance id, and its
-nullifier is `H(pool id ‖ statement identifier)`; a pool bound to a new instance is a new pool, so
-its nullifiers differ and, without step 3, every old deposit could be claimed once more. The
-bridge's nullifiers do not include the instance (`N = H(s ‖ fid)`, accounts keyed by
-`(evmChainId, vault, N)`), so a new attestation instance under the same bridge program keeps them
-([`docs/design/bridge.md`](../design/bridge.md) §3, §5.3).
 
 ## 10. Bounding what a forged record can cost you (VS.4)
 
@@ -451,27 +619,21 @@ bridge's numbers are in [`docs/trust.md`](../trust.md).
 
 ## 11. What is not built
 
-From [`attestation.md`](../design/attestation.md) §15 and [`lez/RESULTS.md`](../../lez/RESULTS.md) §5
-("What is not built"):
+From [`attestation.md`](../design/attestation.md) §15, [`lez/RESULTS.md`](../../lez/RESULTS.md) §5 ("What is not
+built") and the README's "Specified but not built" ([`docs/not-built.md`](../not-built.md) in full), at this commit:
 
-- consumers bound to the root id rather than to an instance (the reference consumer, `ferrata_holdings`
-  and the bridge still pin one); migration tooling;
-- a chain of several hops through the program (one hop is attested, also under a Gloas record);
-- joining an open job, clean-up of failed jobs, deployment by `program_loader`; a consumer's own
-  `Attest` on a running sequencer (the attestation program ran on LEZ's own sequencer at an image
-  before `Attest`, [`lez/RESULTS.md`](../../lez/RESULTS.md) §9; the bridge's `Init` and `ImportRoot`,
-  which call `Attest`, ran on the sequencers of crown devnets, on Sepolia's real state in the live runs:
-  [EVIDENCE](../EVIDENCE.md) rows 31, 41, 83, 91);
-- a real proof of a private attestation on a laptop (proven on a cloud GPU, on cloud CPUs held to 8 and
-  16 cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
-- in the Logos module, reads and transactions through Logos Core's own modules (`advance` is built,
-  EVIDENCE row 93); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs
-  through `verified_proxy_module`); a published catalog; the
-  attestation side's `monitor`; the A3 gate's three updaters on a running sequencer (the updater is built as
-  a binary and as a module, each with the in-process chain and a running sequencer as backends, rows 97, 99, 104)
-  ([README](../../README.md#specified-but-not-built), "Specified but not built").
+- consumers bound to the root id rather than to an instance (the reference consumer, `ferrata_holdings` and the
+  bridge pin one), and tooling that carries a predecessor's nullifiers over (§9.3);
+- clean-up of jobs whose final step fails (they stay open; the updater moves on);
+- a real proof of a private attestation on a user's laptop (proven on a cloud GPU, on cloud CPUs held to 8 and 16
+  cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
+- in the Logos modules: LEZ through `lez_core` beyond the bridge module's wallet session, verified Ethereum reads
+  beyond the attestation module's, `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check
+  runs through `verified_proxy_module`), a published catalog; the attestation side's `monitor`; the A3 gate's three
+  updaters on a running sequencer (the updater is built as a binary and as a module, each with the in-process chain
+  and a running sequencer as backends, rows 97, 99, 104).
 
-Built since this guide's first draft, with their evidence: successors, the root id and the
+Built since the first draft of 11 November, with their evidence: successors, the root id and the
 weak-subjectivity bound (EVIDENCE rows 69, 70); rules 5–7, a public and a private claim and the
 native-ETH pool in the reference consumer, on the vault's real deposits (row 73); accumulator leaves
 on the vault's real Sepolia state (row 71) and a hop under a Gloas record (row 72); the private path
@@ -610,3 +772,41 @@ only), no Gloas record in its tests (`header: None`), no accumulator leaves. It 
 in-process harness, not on a live sequencer. It was built and run on v0.4.0-rc1 only:
 `lez/scripts/lez-select.sh` switches its manifests to another tag, but
 `lez/lockfiles/v0.4.0-rc2.patch` does not cover its guest's lockfile. Not audited.
+
+## 13. The client side through the core module, `ferrata_attest_module`
+
+Your program runs on LEZ; its users' clients, and its own operators, need the off-chain half: find a record, fetch
+the proofs, predict the verdict, build the transaction, read the result. `ferrata_attest_module` is that half as a
+Logos core module (eight methods, [`modules/README.md`](../../modules/README.md), "`ferrata_attest_module`"), so a
+Logos ui module or a daemon calls the same code. In a headless Logos Core, each method takes one JSON request:
+
+```sh
+logosctl daemon start --detach
+logosctl install ferrata_attest_module.lgx -y && logosctl module load ferrata_attest_module
+logosctl call ferrata_attest_module read_instance @instance.json      # 1. the instance you pin: config, store, id
+logosctl call ferrata_attest_module verify_checkpoint @checkpoint.json # 1. its checkpoint against several providers
+logosctl call ferrata_attest_module fetch_log_proof @log.json          # 3. the receipt and its proof for one log
+logosctl call ferrata_attest_module dry_run_attest @dry-run.json       # 4. the program's own verdict and codes
+logosctl call ferrata_attest_module build_attest_tx @tx.json           # 5. header(id, slot), the actors, the message
+logosctl call ferrata_attest_module read_attestation @event.json       # 6. the statements from the program's event
+logosctl daemon stop
+```
+
+| Step | Method | What goes in (the request's fields) | What comes out |
+|---|---|---|---|
+| 1. Pin the instance | `read_instance`, `verify_checkpoint` | the instance's state as LEZ holds it at `instance(id)`; the `config`, the `checkpoint` root, the `bootstrap`, the beacon `providers` to ask (at least three must agree) and an `execution` endpoint | the instance id recomputed, its configuration and store; for the checkpoint, each check and each provider's answer |
+| 2. Pick a record | (a read of `header(id, slot)`) | the newest finalized slot from `read_instance`, or the instance's `FRT-FIN1` events | the 333-byte record your request is checked against |
+| 3. Fetch the proofs | `fetch_log_proof` (logs); `eth_getProof` for accounts and slots | `eth`: `{"via": "eth_rpc_module", "chain_id": N}` (Logos Core's own Ethereum module) or `rpc_url`; the block; the log's position | the receipt and its proof, the receipts root checked against the block's |
+| 4. Dry-run | `dry_run_attest` | your `chain_id`, the record (as read, or its fields), and the facts with their proofs | the verdict the program will return: the statements and their identifiers, or the refusal's code, name and meaning (§8.4) |
+| 5. Build the transaction | `build_attest_tx` | the program's account, the instance id, the chain id, the record's slot, the facts | the account `header(id, slot)`, the account list, the `Attest` message (borsh, variant 7) and its digest |
+| 6. Send, then read | your wallet sends; `read_attestation` | the program's `FRT-ATT1` event data, the dry run's identifiers, the instance id you pinned | the statements, and whether they equal the prediction and name your instance |
+
+Run end to end: a log and a storage slot of mainnet block 26,384,851 through these methods, the `Attest` messages
+executed by LEZ v0.4.0-rc1's state machine and the events read back, a tampered proof refused with the predicted 110
+and another instance with 211, the instance read back with its id recomputed (EVIDENCE row 60,
+[`modules/results/check-2026-11-11/e2e-dev.md`](../../modules/results/check-2026-11-11/e2e-dev.md), 36 of 36 checks
+natively and through the daemon); the same with every Ethereum read through Logos Core's `eth_rpc_module` (row 108,
+43 of 43, [`modules/results/logos-core-io-2026-11-13/`](../../modules/results/logos-core-io-2026-11-13/)); and
+`verify_checkpoint` against Sepolia's public providers, replayed in its tests (row 105). The command-line tool
+`ferrata-attest` runs the same journey over the in-process chain ([`lez/ATTEST-CLI.md`](../../lez/ATTEST-CLI.md); a
+run at this commit: [`runs/2026-11-21-lez/`](runs/2026-11-21-lez/README.md)).

@@ -265,7 +265,8 @@ only sets caps, so it cannot unfreeze. `Sunset` is one-way; `ImportRoot` refuses
 (`FROZEN`), everything else goes on. The freeze authority's single key sends it through its own
 actor; otherwise anyone sends it as a top-level call at `config(cid)` once the vault is attested
 retired (`AttestRetired`: slot 37's `retired` byte, set only by the vault's `retire()`, open to anyone
-after D13's 30 days without checkpoint progress) or a multisig authority approved it by `Cosigned`.
+from the vault's `retireOpensAt()`: D13's 30 days without checkpoint progress plus one candidate wait)
+or a multisig authority approved it by `Cosigned`.
 
 **Handover and watchers (D13).** The admin proposes a freeze authority and up to three watchers
 (`ProposeRoles`); the proposal reads a record, is valid only in a block stamped within a day after it

@@ -1,0 +1,9 @@
+{
+  "label": "seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault tests MockRiscZeroVerifier behind the emergency stop",
+  "chainId": 11155111,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0",
+  "genesisState": "0xc66feca4e1a13782a79b3ffa786cd555f012968211d55993e60858fb85c66cd5",
+  "groth16Verifier": "",
+  "delta": 5400
+}

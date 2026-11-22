@@ -36,10 +36,11 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
   the vault and its library (52 rows) and for every guest program's entry points and checks (55 rows); drafted on
   12 November 2026 with an agent review, not yet signed.
 
-## Guides, trust and performance (first drafts, 11 November 2026)
+## Guides, trust and performance
 
-The documents the two RFPs ask for, drafted from the results and design notes above; every statement
-cites the file it rests on, and each says what is not built.
+The documents the two RFPs ask for, written from the results and design notes above and revised for delivery on
+21 November 2026 (`performance.md` is still the first draft of 11 November); every statement cites the file it rests
+on, and each says what is not built.
 
 - [docs/guides/consumer-guide.md](guides/consumer-guide.md): consuming attestations from a LEZ
   program (public call, private read), statement identifiers, the Recommended Consumer Pattern, error

@@ -1,0 +1,17 @@
+[14:42:32] LEZ configuration: configId 0x595a106513addb099b9de1ed7330b663742a10cafc094d84d40572ba17dcd5a0; admin 0xb74cb315a1b1312b3b0f7a6b3c31b5d9bbeffc41ae0d5dc5f5473d02e0e29e80, freeze authority 0x6b541af436bb54510607a7ccfda9cd78b4de986a622a8f06e97b02a30e98667f (keys derived from the label 'deployer-two')
+[14:42:32] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 + 10.0s 07210b3833e3ed0477d30608c671857ff1e99c54b9dc9922cee86c6eefb4e7a8
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   25 +  9.9s 07c1c7f1ffe65cce01d62db16e97fe454e89c40802baff5ac6e6799ae1fb8075
+[crown-b] blocks 20..=25 (T1 0xbb1c34036c95c0221e35c17330e7faefc4d496d9aea04e0d68b754079c5d8957); 0 burn note(s) written to <beside the clone>/tmp/miniapp-sequencer/w-second-deployer-1/notes.json
+[14:43:40] vault: registerToken(address,(uint256[],uint256[],uint256,uint256,(uint256,uint256),(uint256,uint256),uint256,bytes32,uint8,uint256[])) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setTokenCap(address,uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setTokenCap(address,uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: setGlobalCap(uint8,uint256,uint256) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] vault: announceFees(address,uint256[],uint256[],uint256[]) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:40] anvil's clock moved on 604801 s: the fee schedule's seven days (Ethereum time now 1795877021)
+[14:43:41] vault: transferAdmin(address) (from 0x000000000000000000000000000000005E9DE901)
+[14:43:41] vault: acceptAdmin() (from 0x5ec0d000000000000000000000000000000ad001)
+[14:43:43] the zone: 83 transactions in blocks 1..=26
+[14:43:43] checks: 27 passed, 0 failed (checks.txt)
+[14:43:43] hook-deployer: done

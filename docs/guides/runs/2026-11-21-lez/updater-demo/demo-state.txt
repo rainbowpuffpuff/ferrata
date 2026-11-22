@@ -1,0 +1,5 @@
+bootstrap.ssz
+committees
+journal.tsv
+open
+30

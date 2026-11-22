@@ -86,7 +86,9 @@ cd <repo>                                        # a worktree; the inputs beside
 
 The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the
 node, r0vm and the two LEZ programs of [`docs/image-ids.md`](../../docs/image-ids.md)) and the final R0BF
-programs (`r0bf/checkpoint_b.bin`, `r0bf/release.bin`), which `scripts/reproduce-image-ids.sh build` rebuilds.
+programs (`r0bf/checkpoint_b.bin`, `r0bf/release.bin`), which `scripts/reproduce-image-ids.sh build` rebuilds. Neither
+is published: built from source as the [deployer guide](../../docs/guides/deployer-guide.md) §11 step 0 shows, they
+are named by `SEQNET_BUNDLE` (`lez/crown/build.sh`'s `bundle.tar.zst`) and `SEQNET_R0BF` (the `r0bf/` directory).
 
 | File | What |
 |---|---|

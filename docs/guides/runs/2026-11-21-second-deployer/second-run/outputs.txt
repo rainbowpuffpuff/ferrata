@@ -1,0 +1,17 @@
+../tmp/crown-lez:
+bin
+bundle
+bundle.tar.zst
+logs
+
+../tmp/programs/r0bf:
+checkpoint.bin
+checkpoint_b.bin
+ids.jsonl
+release.bin
+segment.bin
+a955d3c5e9a56537ba46e9d1b1b971950bb220ca2e0147fd2f6b413b9354bcb1  ../tmp/crown-lez/bundle.tar.zst
+e9e800e9a8d823587ce4060ce1c0205277d31b02beebd6f9e398beb940b9a3ce  ../tmp/programs/r0bf/checkpoint.bin
+7b5c3735635ff116ea2f2a0a1eae8929dd716ce57a7839368df683b5ad500e3b  ../tmp/programs/r0bf/checkpoint_b.bin
+7be1349cba34b670c0ef63e2093c76885e648d9f9875f5d378ce1706b73f11bf  ../tmp/programs/r0bf/release.bin
+2beb911014fa9b83bb27a61dbb66c396b291fd98df835424c4a45e82624960ed  ../tmp/programs/r0bf/segment.bin

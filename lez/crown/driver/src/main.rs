@@ -17,6 +17,8 @@
 //!             balances before and the negative control, the relayer's sealed credit, the claim that sweeps it
 //!             (lez/live/hooks/gasdrop.sh runs them); `--gasdrop-dir DIR` holds each step's JSON
 //! Without a sequencer:
+//!   new-role-keys  two fresh random keys in `--out DIR` for the configuration's admin and freeze authority; prints
+//!               their accounts (for CROWN_ADMIN and CROWN_FREEZE_AUTHORITY: crown::try_controls)
 //!   config-id   the configuration id for `--vault` from `--identity` (session-a.json)
 //!   check       the chain natively: the fixture's bootstrap and catch-up, then the `--capture`s: the light
 //!               client, the bridge's requests under each record, every deposit's opening (what crown-b will
@@ -271,7 +273,12 @@ async fn export(live: &mut Live, program: &GuestBinary, bridge: &GuestBinary, ch
 }
 
 async fn run(args: Args) -> Result<()> {
+    crown::try_controls()?;
     match args.command.as_str() {
+        "new-role-keys" => {
+            println!("{}", serde_json::to_string_pretty(&crown::new_role_keys(&args.path("out")?)?)?);
+            return Ok(());
+        }
         "config-id" => {
             let identity = crown::Identity::load(&args.path("identity")?)?;
             let vault = crown::address(args.get("vault").ok_or_else(|| anyhow!("--vault is required"))?)?;

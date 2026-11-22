@@ -14,7 +14,7 @@ set -euo pipefail
 REPO="$SEQNET_REPO"; T="$SEQNET_T"; NAME="$SEQNET_NAME"; MODE="$SEQNET_MODE"
 HERE="$REPO/e2e/seqnet"
 RUN="$REPO/e2e/runs/seqnet-$NAME"
-W="$T/w-$NAME"; VOL="$W/vol"; BIN="$T/bin"; R0BF="$T/inputs/r0bf"
+W="$T/w-$NAME"; VOL="$W/vol"; BIN="$T/bin"; R0BF="${SEQNET_R0BF:-$T/inputs/r0bf}"
 PROOFS="${SEQNET_PROOFS:-dev}"
 RPC=http://127.0.0.1:8545
 # The deployer and stand-in prover: an address nobody holds a key for, impersonated by anvil (DeployVault refuses
@@ -32,7 +32,13 @@ ATTEST_ID=0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df
 BRIDGE_ID=0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
 Z=0x0000000000000000000000000000000000000000000000000000000000000000
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
-say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$RUN/run.log"; }
+# This machine's paths, as the records write them (the same rewrite as at the end, for what is printed meanwhile), in
+# both forms: absolute, and under `~/` as LEZ's session logs write them.
+tilde() { case "$1" in "$HOME"/*) echo "~/${1#"$HOME"/}" ;; *) echo "$1" ;; esac; }
+SCRUB=(-e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$(tilde "$W")/#<work>/#g"
+       -e "s#$(tilde "$T")/#<tmp>/#g" -e "s#$(tilde "$REPO")/#<repo>/#g" -e "s#$HOME/#~/#g")
+scrub() { sed "${SCRUB[@]}"; }
+say() { echo "[$(date -u +%H:%M:%S)] $*" | scrub | tee -a "$RUN/run.log"; }
 die() { say "STOP: $*"; exit 1; }
 rm -rf "$W" "$RUN"; mkdir -p "$W" "$VOL/inputs" "$RUN/user" "$RUN/lez" "$RUN/eth" "$RUN/logs"
 say "seqnet $NAME: mode $MODE, private proofs $PROOFS"
@@ -41,7 +47,7 @@ for f in checkpoint_b.bin release.bin; do
   echo "$f sha256 $(sha256sum "$R0BF/$f" | cut -c1-64) r0vm id ${id:-?}" >> "$RUN/programs.txt"
 done
 cp "$T/crown-lez/bundle.tar.zst" "$VOL/bundle.tar.zst"
-echo "bundle (crown-live-3's, this tree's crown-driver and session.sh) sha256 $(sha256sum "$VOL/bundle.tar.zst" | cut -c1-64)" >> "$RUN/programs.txt"
+echo "bundle ($(basename "${SEQNET_BUNDLE:-bundle-crown-live-3.tar.zst}") repacked with this tree's crown-driver and session.sh) sha256 $(sha256sum "$VOL/bundle.tar.zst" | cut -c1-64)" >> "$RUN/programs.txt"
 export CROWN_LEZ_VOL="$VOL" CROWN_LEZ_WORK="$W/zone" CROWN_CHAIN=stand-in
 
 # ---- 1. LEZ session A -------------------------------------------------------------------------------
@@ -60,28 +66,53 @@ anvil --chain-id 11155111 --port 8545 --gas-limit 100000000 --auto-impersonate >
 trap 'kill $ANVIL 2>/dev/null || true' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 1; done
 cast rpc anvil_setBalance $DEPLOYER 0x56bc75e2d63100000 --rpc-url $RPC > /dev/null   # 100 ETH
-MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
-  --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
-[ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
-N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
-VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
+if [ "$MODE" = deployer ]; then
+  # A second deployer's own deployment: DeployVault deploys RISC Zero's Groth16 verifier first (no proof is verified in
+  # this run), then the stop, the library and the vault: the vault is the fourth creation.
+  MOCK=""; N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
+  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 3)) | awk '{print $NF}')"
+else
+  MOCK="$(cd "$REPO/vault" && forge create test/mocks/MockVerifiers.sol:MockRiscZeroVerifier --rpc-url $RPC --unlocked \
+    --from $DEPLOYER --broadcast --json 2>/dev/null | jq -r .deployedTo)"
+  [ -n "$MOCK" ] && [ "$MOCK" != null ] || die "the mock verifier was not deployed"
+  N="$(cast nonce $DEPLOYER --rpc-url $RPC)"
+  VAULT="$(cast compute-address $DEPLOYER --nonce $((N + 2)) | awk '{print $NF}')"
+fi
+if [ "$MODE" = deployer ] && [ -z "${CROWN_ADMIN:-}${CROWN_FREEZE_AUTHORITY:-}${CROWN_ROLES_LABEL:-}" ]; then
+  # The LEZ configuration's admin and freeze authority, unless the deployer names its own accounts (CROWN_ADMIN and
+  # CROWN_FREEZE_AUTHORITY) or a label: two fresh random keys, kept in the work directory, never in the records.
+  ROLES="$("$BIN/crown-driver" new-role-keys --out "$W/lez-role-keys")" || die "new-role-keys"
+  CROWN_ADMIN="$(echo "$ROLES" | jq -r .admin)"; CROWN_FREEZE_AUTHORITY="$(echo "$ROLES" | jq -r .freezeAuthority)"
+  export CROWN_ADMIN CROWN_FREEZE_AUTHORITY
+  say "LEZ admin $CROWN_ADMIN, freeze authority $CROWN_FREEZE_AUTHORITY: fresh random keys in $W/lez-role-keys/"
+fi
 CID="$("$BIN/crown-driver" config-id --identity "$SA" --vault "$VAULT" | jq -r .configId)"
 GS="$(python3 -I "$REPO/e2e/crown/identity.py" genesis-state --tip-id "$(jq -r .tip.id "$SA")" --tip-hash "$(jq -r .tip.hash "$SA")" \
   --keys "$(jq -r '.channel.keys | join(",")' "$SA")" --posting-timeframe "$(jq -r .channel.postingTimeframe "$SA")" \
   --config-tip-hash "$(jq -r .channel.configTipHash "$SA")")"
 FROM="$(cast block-number --rpc-url $RPC)"
-jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" '{label: "seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault tests MockRiscZeroVerifier behind the emergency stop",
-  chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: 3600}' > "$RUN/identity.json"
+if [ "$MODE" = deployer ]; then VERIFIER="RISC Zero's Groth16 verifier, which DeployVault deploys first"
+else VERIFIER="the vault tests' MockRiscZeroVerifier"; fi
+jq -n --arg v "$VAULT" --arg c "$CID" --arg g "$GS" --arg m "$MOCK" --arg d "${SEQNET_DELTA:-3600}" --arg w "$VERIFIER" \
+  '{label: ("seqnet: local anvil (chain id 11155111, the stand-in committee finalizes its blocks), the vault uses " + $w + " behind the emergency stop"),
+  chainId: 11155111, vault: $v, configId: $c, genesisState: $g, groth16Verifier: $m, delta: ($d | tonumber)}' > "$RUN/identity.json"
 jq -n --arg c "$CID" --arg g "$GS" --arg a "$CHECKPOINT_A_ID" --arg b "$CHECKPOINT_B_ID" --arg r "$RELEASE_ID" --arg z "$Z" \
   '{_source: "seqnet (the final programs of docs/image-ids.md; a stand-in identity from a real devnet session A)",
     checkpointImageIdA: $a, checkpointImageIdB: $b, releaseImageId: $r, lezConfigId: $c, genesisState: $g, nMin: 1, tMin: 1,
     postingTimeframe: 0, ethLezDefinition: $z, tokenLezDefinition: $z}' > "$RUN/params.json"
 jq -n --arg v "$VAULT" '{chainId: 11155111, vault: $v, deposits: []}' > "$RUN/crown.json"
-say "vault $VAULT (mock verifier $MOCK), configId $CID, genesisState $GS"
+if [ -n "$MOCK" ]; then say "vault $VAULT (mock verifier $MOCK), configId $CID, genesisState $GS"
+else say "vault $VAULT ($VERIFIER), configId $CID, genesisState $GS"; fi
 SEPOLIA_RPC_URL=$RPC ETH_FROM=$DEPLOYER FERRATA_UNLOCKED=1 FERRATA_NONCE_GAP=0 bash "$REPO/e2e/crown/sepolia.sh" "$RUN" deploy \
   > "$W/deploy.log" 2>&1 || { tail -n 30 "$W/deploy.log"; die "vault deployment"; }
-tail -n 1 "$W/deploy.log" | tee -a "$RUN/run.log"
+tail -n 1 "$W/deploy.log" | scrub | tee -a "$RUN/run.log"
 rm -f "$REPO/vault/deployments/crown-seqnet-$NAME.json"   # the same record is $RUN/deploy.json
+if [ "$MODE" = deployer ]; then
+  # The verifier DeployVault deployed, from its record, into the run's identity.
+  GV="$(jq -r '.groth16Verifier // empty' "$RUN/deploy.json")"; [ -n "$GV" ] || die "deploy.json names no Groth16 verifier"
+  jq --arg g "$GV" '.groth16Verifier = $g' "$RUN/identity.json" > "$W/identity.json" && mv "$W/identity.json" "$RUN/identity.json"
+  say "RISC Zero's Groth16 verifier $GV (DeployVault's first creation)"
+fi
 
 # ---- 3. The user: seed, LEZ wallet password, Ethereum keystore --------------------------------------
 U="$W/user"; mkdir -p "$U"
@@ -101,7 +132,7 @@ EOF
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
 # ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
-if [ "$MODE" = cli ]; then
+if [ "$MODE" = cli ] || [ "$MODE" = deployer ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
@@ -124,7 +155,7 @@ say "LEZ session X: the zone restored and running; hook-$MODE.sh"
 xrc=0
 SEQNET_ENV="$W/env.sh" CROWN_HOOK="$HERE/hook-$MODE.sh" CROWN_SEQUENCER_DEV_MODE=$dev CROWN_DEADLINE_MIN=170 \
   bash "$REPO/lez/crown/session.sh" x > "$W/session-x.log" 2>&1 || xrc=$?
-tail -n 6 "$W/session-x.log" | tee -a "$RUN/run.log"
+tail -n 6 "$W/session-x.log" | scrub | tee -a "$RUN/run.log"
 cp "$VOL/session-x/logs/hook.log" "$RUN/logs/hook.log" 2>/dev/null || true
 cp "$VOL/session-x/logs/session.log" "$RUN/logs/session-x.log" 2>/dev/null || true
 cp "$VOL/session-a/logs/session.log" "$RUN/logs/session-a.log" 2>/dev/null || true
@@ -132,11 +163,15 @@ cp "$VOL/session-a/logs/driver.log" "$RUN/lez/crown-a.log" 2>/dev/null || true
 [ -f "$VOL/session-x/export/chain.tsv" ] && cp "$VOL/session-x/export/chain.tsv" "$VOL/session-x/export/programs.tsv" "$RUN/lez/" 2>/dev/null
 
 # ---- 5. Ethereum's transactions ---------------------------------------------------------------------
-python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT,mock verifier=$MOCK" \
+python3 -I "$HERE/ethtxs.py" --rpc $RPC --vault-out "$REPO/vault/out" --names "deployer=$DEPLOYER,relayer=$RELAYER,user=$DEPOSITOR,vault=$VAULT${MOCK:+,mock verifier=$MOCK}${SD_ADMIN:+,new admin=$SD_ADMIN}" \
   > "$RUN/eth/transactions.tsv" 2> "$W/ethtxs.err" || say "ethtxs.py failed: $(tail -n 3 "$W/ethtxs.err")"
 kill $ANVIL 2>/dev/null || true; trap - EXIT
 find "$RUN" -type f \( -name '*.txt' -o -name '*.log' -o -name '*.json' -o -name '*.tsv' -o -name '*.md' -o -name '*.jsonl' -o -name '*.xml' \) \
-  -exec sed -i -e "s#$W/#<work>/#g" -e "s#$T/#<tmp>/#g" -e "s#$REPO/#<repo>/#g" -e "s#$HOME/#~/#g" {} +
-python3 -I "$HERE/summary.py" "$RUN" | tee -a "$RUN/run.log" || true
+  -exec sed -i "${SCRUB[@]}" {} +
+python3 -I "$HERE/summary.py" "$RUN" | scrub | tee -a "$RUN/run.log" || true
+# The records are to be committed: none may keep a path of this machine.
+if grep -rIl -F -e "$REPO/" -e "$T/" -e "$W/" -e "$HOME/" -e "$(tilde "$REPO")/" -e "$(tilde "$T")/" "$RUN"; then
+  die "the files above keep a path of this machine"
+fi
 [ "$xrc" = 0 ] || die "session X (hook) exit $xrc"
 say "seqnet $NAME: DONE"

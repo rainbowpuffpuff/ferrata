@@ -1,0 +1,29 @@
+warning: lee@0.1.0: Generated module at <repo>/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <repo>/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<repo>/lez/methods)
+   Compiling harness v0.1.0 (<repo>/lez/harness)
+   Compiling ferrata-updater v0.1.0 (<repo>/lez/updater)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.27s
+     Running tests/every_party.rs (target/debug/deps/every_party-31f9c240ab1acaf6)
+
+running 8 tests
+trust.md §2.4: 7 parties, each walked by its scenario
+test trust_md_lists_exactly_the_parties_walked_here ... ok
+forged updates with the signer witness right: a flipped signature byte refused at Open (exit Some(41)); the genuine signature over a false execution state root, every branch recomputed: Open and Miller applied, Finish refused (exit Some(40)); the instance unchanged, no record
+provers: 6 public transactions, none proven: ["mainnet Init", "mainnet init adopt 1/2", "mainnet init adopt 2/2", "mainnet fin 15624480 Open", "mainnet fin 15624480 Miller", "mainnet fin 15624480 Finish"]
+test provers_none_is_needed_on_the_public_job ... ok
+execution providers: a changed storage proof refused with 110, a changed account proof with 110; the honest proof attested (2 statements)
+test execution_providers_cannot_forge_a_fact ... ok
+deployer: Init again refused (exit Some(203)), Init with another chain id refused (exit Some(201)); instance unchanged
+test deployer_holds_nothing_after_deployment ... ok
+submitters: the first operator stopped after Init; a stranger sent 4 transactions; attestation of block 26384851 with 2 statement(s)
+test submitters_any_account_advances_none_is_needed ... ok
+checkpoint source: a false root gave no instance (10 of 10 rounds stuck, 0 sent); another checkpoint's instance refused the pinned consumer's request with 211; the checked instance attested
+test checkpoint_source_misleads_only_until_checked ... ok
+beacon providers: liars, a lagging and a down node beside an honest one: 0 refused; third parties only: held with 3 transactions sent, then the consumer's own node: attestation produced
+test beacon_providers_lie_lag_or_stop ... ok
+sequencers: 6 transactions of the censored submitter left out, the other carried the instance; 6 dropped connections cost 6 retries and no duplicate
+test sequencers_censor_or_stall_the_instance_still_advances ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.49s
+

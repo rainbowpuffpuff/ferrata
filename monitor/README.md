@@ -11,6 +11,10 @@ safely across restarts. The vault side (`watchers`, `cancelCandidate`, `pauseChe
 
 Prototype evidence for a grant proposal. **Not audited. Not for production.**
 
+The operator's journey (install, configure, run, monitor, stop) with the run that exercised each step:
+[`docs/guides/operator-guide.md`](../docs/guides/operator-guide.md) §0; what a watcher's outage or malfunction does
+and what bounds it: [`docs/trust.md`](../docs/trust.md) §4.3.
+
 ## What it decides
 
 For each pending candidate (`CandidateSubmitted`, re-read from `candidates(newState)` at every poll),
