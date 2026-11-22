@@ -1956,8 +1956,8 @@ async fn counters_pairing_and_quiet_dry_runs(
     );
     ensure!(next == c + 2, "the next counter after the refused one and the last burn");
 
-    // M-1: an Ethereum RPC of another chain than the configuration's (a fork reports 31337) is refused before anything
-    // is planned or sent.
+    // M-1: an Ethereum RPC of another chain than the configuration's (a local anvil's 31337; a fork started with another
+    // `--chain-id`) is refused before anything is planned or sent.
     lez::check_pairing(&*zone, ctx).await?;
     let forked = Context { chain_id: 31_337, ..ctx.clone() };
     let e = lez::check_pairing(&*zone, &forked)
@@ -2001,6 +2001,14 @@ async fn counters_pairing_and_quiet_dry_runs(
         };
         let r = flow::claim(eth_side, user, &mut z, ctx, &o, &mut flow::Out::new(false)).await;
         let held = r.as_ref().err().is_some_and(|e| e.to_string().contains("held by your claim delay"));
+        // Not vacuous (review L7): the dry run went as far as the claim's plan (`lez::plan_claim`), which it either
+        // completed or, without --no-delay, followed with the claim delay's hold (whether the delay still holds depends
+        // on the blocks' time).
+        ensure!(
+            r.is_ok() || (held && !no_delay),
+            "the claim's dry run (no_delay {no_delay}) did not reach the plan: {:?}",
+            r.as_ref().err().map(|e| format!("{e:#}"))
+        );
         ensure!(
             !z.reads.borrow().contains(&n_actor),
             "a claim (send {send}, no_delay {no_delay}) read the nullifier account"
