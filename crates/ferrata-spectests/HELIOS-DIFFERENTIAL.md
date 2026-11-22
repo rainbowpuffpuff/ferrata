@@ -90,9 +90,11 @@ not by this one. Its inputs are narrower than "the light client" in five more wa
 - Refusal reasons are not compared, only verdicts and heads.
 
 So could a class of forgery be missed? Yes: every forgery that needs a valid signature over changed signed data, or
-several coordinated changes, is out of reach of random bit flips by construction. What the run shows is narrower: no
-field the signature does not cover, other than the signature slot, changes a verdict, and two independent clients
-decide as ferrata-core does on 2,005 inputs. A review of the code against the specification by someone who did not
+several coordinated changes, is out of reach of random bit flips by construction. What the run shows is narrower: of
+the fields the signature does not cover, only the signature slot let a flip through (the 13 accepted, explained above);
+every flip of every other region, covered by the signature or not (offsets, branches, the next committee, participation
+bits, both headers and payloads, the signature), was refused by all three stores; and two independent clients decide
+as ferrata-core does on 2,005 inputs. A review of the code against the specification by someone who did not
 write either is what an audit adds.
 
 ## A second client: Lodestar
