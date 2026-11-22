@@ -182,7 +182,7 @@ than two honest daemons apply one (median latency 105–306 s): their jobs overl
 | several instances must not multiply the gas spent beyond what contention makes unavoidable | total / completed-job execution gas (abandoned jobs, opened then overtaken, counted with refused steps): **1.095 (G2), 1.222 (G3), 1.721 (G4), 1.081 (G5)**; counting refused steps only, 1.095 / 1.102 / 1.149 / 1.004; jobs completed / abandoned 31 / 0, 16 / 8, 23 / 19, 8 / 3; execution gas per revealed update 11.1M / 8.1M / 16.0M / 4.6M |
 
 **What is short:** A3's gate (the honest daemons' gas on refused steps at most 10% of their gas on applied steps), met
-in the in-process chain (EVIDENCE row 80), is met on the sequencer at window 30 (**0.0036**), not at window 8
+in the in-process chain (EVIDENCE row 80), is met on the sequencer at window 30 (**0.0036**, on 20 updates; A3's gate asks 100), not at window 8
 (**0.102**) or 1 (**0.149**), and not with the adversary (**1.31**). Counting abandoned jobs as waste too, the honest
 daemons' waste is 0.081 (G5), 0.222 (G3), 0.721 (G4), 1.311 (G2). Two causes, measured: (1) a duplicate `Open` costs
 2.13–2.30M execution gas, because the program refuses it only in `job_open`, after the instance's step 1 has run;
