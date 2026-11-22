@@ -147,6 +147,9 @@ pub const DOWN_AFTER_FAILED_ROUNDS: u32 = 5;
 pub const HOLD_ROUNDS: u64 = 4096;
 /// See [`HOLD_ROUNDS`].
 pub const MAX_HELD: usize = 1024;
+/// Refusals after which the chain could not be read ([`After::Unread`]) kept to be judged once it can be read again; the
+/// oldest beyond this is dropped unjudged.
+pub const MAX_UNJUDGED: usize = 64;
 
 /// Why the chain refused a transaction, as its outcome says (LEZ's note, the program's exit code).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -212,7 +215,8 @@ pub enum After {
     /// The chain could not be read after the refusal, `policy.max_attempts` times with the transport backoff between.
     /// On the sequencer backend a read fails while another party's transaction touching the instance is in flight,
     /// which is when a race is lost: held as a cause that may pass is ([`REFUSAL_BACKOFF`] rounds the first time),
-    /// whatever the cause; not a failing send, no strike.
+    /// whatever the cause, and judged at the next round that reads the chain ([`Updater`]'s `judge_unread`): a race
+    /// then, its hold dropped; or a step that stayed due, then a failing send and a strike as [`After::Due`] (9c L-U3).
     Unread,
 }
 
@@ -319,8 +323,10 @@ pub struct Metrics {
     pub refused_codes: BTreeMap<u32, u64>,
     /// Refused transactions by cause ([`Refusal::kind`]) and by what followed ([`After::label`]): `race` (the step was
     /// done or moot afterwards: another party's transaction came first), `due` (it stayed due: held,
-    /// [`Updater::held`]) or `unread` (the chain could not be read after it: held for a while).
+    /// [`Updater::held`]) or `unread` (the chain could not be read after it: held for a while, and judged later).
     pub refusals: BTreeMap<(&'static str, &'static str), u64>,
+    /// The `unread` refusals as judged once the chain could be read again: `race` or `due`.
+    pub unread_judged: BTreeMap<&'static str, u64>,
     pub gas_applied: u64,
     pub gas_refused: u64,
     pub fee_applied: u128,
@@ -426,6 +432,9 @@ pub struct Updater {
     /// Steps refused while they stayed due (or with the chain unreadable after the refusal), by (job, step): not sent
     /// again on the same state, or not yet ([`Held::retry_at`]).
     pub held: BTreeMap<(Root, Step), Held>,
+    /// Refusals after which the chain could not be read ([`After::Unread`]): the action and its cause, judged at the next
+    /// round that reads the chain. At most [`MAX_UNJUDGED`].
+    unjudged: Vec<(Action, Refusal, String)>,
     pub breaker: Breaker,
     /// The instance can no longer advance by the chain's clock: its finalized header (before `Init`: the checkpoint)
     /// is past its weak-subjectivity period, so the program refuses every `Open` (`Init`) from now on. (The finalized
@@ -478,6 +487,7 @@ impl Updater {
             disagreed: BTreeSet::new(),
             served_by: BTreeMap::new(),
             held: BTreeMap::new(),
+            unjudged: Vec::new(),
             breaker: Breaker::default(),
             expired: None,
             sleep: real_sleep,
@@ -912,6 +922,7 @@ impl Updater {
         }
         let round = self.round;
         self.held.retain(|_, h| h.round + HOLD_ROUNDS > round);
+        self.judge_unread(ledger);
         let mut plan = self.plan_inner(ledger);
         if matches!(plan, Ok(Plan::Send(_))) && self.round < self.breaker.paused_until {
             plan = Ok(Plan::Stuck(self.paused()));
@@ -1772,9 +1783,13 @@ impl Updater {
                 }
                 After::Unread => {
                     let held = self.hold(action, cause, &out.note, false);
+                    if self.unjudged.len() >= MAX_UNJUDGED {
+                        self.unjudged.remove(0);
+                    }
+                    self.unjudged.push((action.clone(), cause, reason.clone()));
                     why = format!(
                         ": {reason}; the chain could not be read after it ({} attempts), so whether another party's \
-                         transaction came first is not known: {held}",
+                         transaction came first is not known: {held}, judged once the chain is read again",
                         self.policy.max_attempts
                     );
                 }
@@ -1790,6 +1805,48 @@ impl Updater {
             action.tx.label, out.exit_code, gas, out.fee, out.block
         ));
         self.journal(action, out);
+    }
+
+    /// The refusals after which the chain could not be read ([`After::Unread`]), judged now that it may be read again:
+    /// a step done or moot was a race another party won (its hold is dropped); a step that stayed due counts as any
+    /// refusal of a step that stayed due does: a send that did not land and a strike towards the breaker, its hold for
+    /// good if the cause repeats on the same state (9c L-U3: such a refusal used to be neither, whatever followed). One
+    /// whose chain still cannot be read waits for a later round.
+    fn judge_unread(&mut self, ledger: &dyn Ledger) {
+        for (action, cause, reason) in std::mem::take(&mut self.unjudged) {
+            match self.step_done(ledger, &action) {
+                Err(_) => self.unjudged.push((action, cause, reason)),
+                Ok(true) => {
+                    *self.metrics.unread_judged.entry("race").or_default() += 1;
+                    self.held.remove(&(action.job_id, action.step));
+                    self.log(&format!(
+                        "{} (refused with the chain unreadable after it): read again, the step was done or moot \
+                         (another party's transaction came first); not held",
+                        action.tx.label
+                    ));
+                }
+                Ok(false) => {
+                    *self.metrics.unread_judged.entry("due").or_default() += 1;
+                    self.metrics.failing_sends += 1;
+                    self.metrics.last_failure =
+                        format!("{} refused: {reason}; the chain read again: the step stayed due", action.tx.label);
+                    if let Some(h) = self.held.get_mut(&(action.job_id, action.step)) {
+                        h.due = true;
+                        if cause.repeats() {
+                            h.retry_at = None;
+                        }
+                    }
+                    let mut why = format!(
+                        "{} (refused with the chain unreadable after it: {reason}): read again, the step stayed due",
+                        action.tx.label
+                    );
+                    if let Some(paused) = self.strike(format!("{} {reason}", action.tx.label)) {
+                        why += &format!("; {paused}");
+                    }
+                    self.log(&why);
+                }
+            }
+        }
     }
 
     /// One round: plan, then send what is due, after reading the chain once more: the round read the instance before
@@ -1942,6 +1999,9 @@ impl Updater {
         }
         for ((cause, after), n) in &m.refusals {
             let _ = writeln!(o, "ferrata_updater_refusals_total{{{l},cause=\"{cause}\",after=\"{after}\"}} {n}");
+        }
+        for (judged, n) in &m.unread_judged {
+            let _ = writeln!(o, "ferrata_updater_unread_refusals_judged_total{{{l},as=\"{judged}\"}} {n}");
         }
         let held = self.held.values().filter(|h| self.holding(h)).count();
         let _ = writeln!(o, "ferrata_updater_held_steps{{{l}}} {held}");

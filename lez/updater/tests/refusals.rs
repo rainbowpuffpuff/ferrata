@@ -437,22 +437,35 @@ fn a_step_made_moot_while_planning_is_not_sent() {
 
 /// The in-process chain, refusing without executing it (nothing charged) each of the next `refuse` transactions whose
 /// label ends with `suffix`, with no exit code and a note that names neither the window nor the gas: a refusal of a
-/// cause the updater does not know ([`Refusal::Other`]).
+/// cause the updater does not know ([`Refusal::Other`]). After each refusal the next `unreadable` reads fail.
 struct Flaky {
     inner: HarnessLedger,
     suffix: &'static str,
     refuse: usize,
     refused: usize,
+    unreadable: usize,
+    fail: Cell<usize>,
+}
+
+impl Flaky {
+    fn new(inner: HarnessLedger, suffix: &'static str) -> Self {
+        Self { inner, suffix, refuse: 0, refused: 0, unreadable: 0, fail: Cell::new(0) }
+    }
 }
 
 impl Ledger for Flaky {
     fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
+        if self.fail.get() > 0 {
+            self.fail.set(self.fail.get() - 1);
+            anyhow::bail!("actor state unavailable");
+        }
         self.inner.actor_state(actor)
     }
     fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         if self.refuse > 0 && tx.label.ends_with(self.suffix) {
             self.refuse -= 1;
             self.refused += 1;
+            self.fail.set(self.unreadable);
             return Ok(TxOutcome {
                 note: "Program violated execution rules".into(),
                 gas_exec: 1,
@@ -476,8 +489,7 @@ fn a_refusal_of_unknown_cause_is_sent_again_until_it_lands() {
     let r = mainnet();
     let clock = Clock::new(3);
     let payer = key(0x49);
-    let mut l =
-        Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
+    let mut l = Flaky::new(HarnessLedger::new(std::slice::from_ref(&payer)), "Miller");
     let mut u = r.updater("unknown", payer, vec![r.source("a", &clock)], None);
     settle(&mut u, &mut l, 60);
     let start = store(&u, &l.inner).finalized.slot;
@@ -624,28 +636,95 @@ fn a_failed_read_after_a_lost_race_is_read_again() {
 }
 
 /// The same with the chain unreadable after the refusal for every attempt (`max_attempts` reads fail): whether the
-/// step stayed due is not known, so it is held [`REFUSAL_BACKOFF`] rounds whatever the cause, without a strike or a
-/// failing send (`after="unread"`), and the slower updater goes on once the chain answers.
+/// step stayed due is not known then, so it is held whatever the cause (`after="unread"`), without a strike or a
+/// failing send; the next round reads the chain, finds the other updater's transaction applied, and judges it a race:
+/// the hold dropped, still no strike and no failing send (9c L-U3), and the slower updater goes on.
 #[test]
 fn a_refusal_with_the_chain_unreadable_after_it_is_held_briefly() {
     let attempts = Policy::default().max_attempts as usize;
     let (races, u, lines) = races_with_failing_reads(attempts, (0x4c, 0x4d));
     let (status, why) = u.health();
     println!(
-        "{}\n{races} races, each followed by {attempts} failed reads: refusals {:?}; held {:?}; breaker {:?}; failing \
-         sends {}; health {status} {why:?}",
+        "{}\n{races} races, each followed by {attempts} failed reads: refusals {:?}; judged once read again {:?}; held \
+         {:?}; breaker {:?}; failing sends {}; health {status} {why:?}",
         lines.join("\n"),
         u.metrics.refusals,
+        u.metrics.unread_judged,
         u.held.values().map(|h| (h.step.name(), h.count, h.due, h.retry_at.map(|r| r - h.round))).collect::<Vec<_>>(),
         u.breaker,
         u.metrics.failing_sends
     );
-    assert!(races >= 4, "{races}");
+    assert_eq!(races, 9, "{races}");
     assert_eq!(u.metrics.refusals.get(&("program", "unread")), Some(&(races as u64)));
+    assert_eq!(u.metrics.unread_judged.get("race"), Some(&(races as u64)));
+    assert_eq!(u.metrics.unread_judged.get("due"), None);
     assert_eq!((u.breaker.strikes, u.breaker.trips), (0, 0));
     assert_eq!(u.metrics.failing_sends, 0);
-    assert!(u.held.values().all(|h| !h.due && h.count == 1 && h.retry_at == Some(h.round + REFUSAL_BACKOFF)));
+    assert!(u.held.is_empty(), "a race is not held once judged");
     assert!(!why.iter().any(|w| w.contains("did not land") || w.contains("sending paused")), "{why:?}");
+}
+
+/// 9c L-U3: a `Miller` refused for a cause the updater does not know, three times, the chain unreadable after each
+/// refusal (every one of `max_attempts` reads fails), and no other party. Then it is not known whether a race was lost,
+/// so the step is held; the next round reads the chain, finds the step still due, and counts the refusal as any of a
+/// step that stayed due: a send that did not land (`/health` degraded from that round) and a strike, three of which
+/// pause sending. (It used to be neither, whatever followed: no failing send, no strike, `/health` silent.) The fourth
+/// attempt lands and the instance moves.
+#[test]
+fn a_refusal_with_the_chain_unreadable_after_it_is_judged_once_it_reads() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x4b);
+    let mut l = Flaky::new(HarnessLedger::new(std::slice::from_ref(&payer)), "Miller");
+    l.unreadable = Policy::default().max_attempts as usize;
+    let mut u = r.updater("unjudged", payer, vec![r.source("a", &clock)], None);
+    settle(&mut u, &mut l, 60);
+    let start = store(&u, &l.inner).finalized.slot;
+    clock.set(4);
+    l.refuse = 3;
+    // (round, refusals so far, failing sends, strikes, paused) after each round; the rounds a Miller was sent.
+    let (mut trace, mut millers, mut degraded_at, mut tripped) = (Vec::new(), Vec::new(), Vec::new(), 0);
+    for round in 1..=120u64 {
+        let p = u.tick(&mut l).unwrap();
+        if matches!(&p, Plan::Send(a) if a.step == Step::Miller) {
+            millers.push(round);
+        }
+        let paused = u.metrics.rounds < u.breaker.paused_until;
+        tripped = tripped.max(u.breaker.trips);
+        trace.push((round, l.refused, u.metrics.failing_sends, u.breaker.strikes, paused));
+        if u.health().1.iter().any(|w| w.contains("did not land")) {
+            degraded_at.push(round);
+        }
+        if store(&u, &l.inner).finalized.slot != start && matches!(p, Plan::UpToDate) {
+            break;
+        }
+    }
+    let end = store(&u, &l.inner).finalized.slot;
+    println!(
+        "a Miller refused {} times, the chain unreadable after each: Millers sent in rounds {millers:?}; (round, \
+         refusals, failing sends, strikes, paused) {:?}; `did not land` in rounds {degraded_at:?}; breaker trips {tripped}; \
+         refusals {:?}; judged {:?}; finalized slot {start} -> {end}; health {:?}",
+        l.refused,
+        trace.iter().filter(|t| t.2 > 0 || t.4).collect::<Vec<_>>(),
+        u.metrics.refusals,
+        u.metrics.unread_judged,
+        u.health()
+    );
+    assert_eq!(l.refused, 3);
+    assert_eq!(millers.len(), 4, "three refused, the fourth applied: {millers:?}");
+    assert_eq!(u.metrics.refusals.get(&("other", "unread")), Some(&3));
+    assert_eq!(u.metrics.unread_judged.get("due"), Some(&3));
+    // Each refusal is judged in the round after it: a failing send from then on, until the fourth lands.
+    for (k, &sent) in millers[..3].iter().enumerate() {
+        let after = trace.iter().find(|t| t.0 == sent + 1).expect("a round after the refusal");
+        assert_eq!((after.2, after.3), (k as u32 + 1, k as u32 + 1), "round {}: {after:?}", sent + 1);
+    }
+    assert_eq!(degraded_at.first(), Some(&(millers[0] + 1)), "degraded from the round that judged the first");
+    assert_eq!(tripped, 1, "the third strike paused sending");
+    assert!(end > start, "the instance moved");
+    assert_eq!(u.metrics.failing_sends, 0, "the fourth landed");
+    assert!(u.held.is_empty());
+    assert_eq!(u.health().0, "ok", "{:?}", u.health());
 }
 
 /// `bytes`, a finality update, with its `signature_slot` set to `to`, a later slot of the same sync-committee period.
