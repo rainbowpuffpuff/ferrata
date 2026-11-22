@@ -198,7 +198,8 @@ move the bridge, consumer and holdings guests); the pinned consumers to update a
 `lez/testnet04/day1.sh`, `e2e/seqnet/drive.sh`, `e2e/seqnet/run.sh`, `e2e/crown/cloud/app.py` and
 `lez/harness/tests/residue_handoff.rs`, and existing instances must be re-bootstrapped. A refused duplicate would then
 cost its handler's decoding and the check, of the order of `JobOpen`'s 19,050–26,464 cycles (*estimated*, not
-measured after a restructure). It is planned with the RISC Zero 3.1.0 rebuild, which moves the image ids anyway. (2)
+measured after a restructure). It could be done with the RISC Zero 3.1.0 rebuild that LEZ's `dev` already carries (`lez/testnet04/README.md`),
+which moves the image ids anyway. (2)
 needs no image change: an updater policy that does not open a job on a store another party's open job will change
 (join it or wait). A lower gas limit for `Open` would cap the same-block revert. Against a daemon that never defers,
 the honest daemons' ratio stays high whatever their window while a duplicate costs 2.2M.
