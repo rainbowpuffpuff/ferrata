@@ -100,8 +100,9 @@ tests = [
   { path = "lez/harness/tests/successor.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test successor -- --nocapture" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "modules/scripts/check.sh", kind = "test", ci = "box", run = "modules/scripts/check.sh" },
+  { path = "cli/results/attest-seq-r6/README.md", kind = "record" },
 ]
-note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_checkpoint is a method of ferrata_attest_module (EVIDENCE rows 59, 105)"
+note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_checkpoint is a method of ferrata_attest_module (EVIDENCE rows 59, 105), its beacon checks through beacon_api_module in a headless Logos Core, the check drafted as that module's method, not opened (row 196)"
 
 [[row]]
 id = "RFP-021 F.10"
@@ -173,16 +174,20 @@ tests = [
   { path = "modules/scripts/check.sh", kind = "test", ci = "box", run = "modules/scripts/check.sh" },
   { path = "modules/scripts/e2e.sh", kind = "test", ci = "box", run = "modules/scripts/e2e.sh" },
   { path = "modules/RESULTS.md", kind = "record" },
+  { path = "modules/ferrata_attest_module/scripts/logos-run-hook.sh", kind = "test", ci = "box", run = "ATTEST_SEQ_HOOK=modules/ferrata_attest_module/scripts/logos-run-hook.sh bash cli/tests/attest-seq.sh r6" },
+  { path = "cli/results/attest-seq-r6/README.md", kind = "record" },
 ]
-note = "ferrata_attest_module built, loaded under a headless Logos Core and every call equal to the native one (EVIDENCE rows 59, 60, 93, 108); its LEZ reads and sends and an instance's Init in advance remain outside Logos Core's modules"
+note = "ferrata_attest_module built, loaded under a headless Logos Core and every call equal to the native one (EVIDENCE rows 59, 60, 93, 108); its LEZ reads and sends through lez_core since, with our patch, outcomes read with the CLI's follower (EVIDENCE row 197); an instance's Init in advance remains"
 
 [[row]]
 id = "RFP-021 U.2"
 tests = [
   { path = "lez/harness/src/bin/ferrata-attest.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin ferrata-attest && RISC0_DEV_MODE=1 target/debug/ferrata-attest status --then slot --send ..." },
   { path = "lez/results/attest-cli/README.md", kind = "record" },
+  { path = "cli/tests/attest-seq.sh", kind = "test", ci = "box", run = "bash cli/tests/attest-seq.sh rf1" },
+  { path = "cli/results/attest-seq-rf1/README.md", kind = "record" },
 ]
-note = "advance, config and the attestations of a finalized Sepolia block, every dry run returning the program's code (EVIDENCE row 56); a run against a LEZ sequencer remains"
+note = "advance, config and the attestations of a finalized Sepolia block, every dry run returning the program's code (EVIDENCE row 56); ferrata attest against a running LEZ sequencer, every sent transaction equal to its dry run, 22 of 22 commands (EVIDENCE row 195)"
 
 [[row]]
 id = "RFP-021 U.3"
@@ -199,8 +204,10 @@ tests = [
   { path = "idl/check.py", kind = "test", ci = "idl" },
   { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-bridge-wire --locked --test idl_vectors" },
   { path = "idl/results/spel-check.txt", kind = "record" },
+  { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
+  { path = "idl/generated/spel-v2.txt", kind = "record" },
 ]
-note = "waits on Logos: SPEL's stable release targets LEZ v0.2.4, not v0.4. Shown instead: a hand-written IDL in SPEL's format that decodes every instruction (19 vectors for the attestation program), parsed and decoded by SPEL's own crate; the idl job checks the committed vectors in CI"
+note = "waits on Logos: SPEL's v0.4 line is an open pull request, not a release; its generator makes the attestation program's messages and types, 0 differences (EVIDENCE row 194). Shown instead: a hand-written IDL in SPEL's format that decodes every instruction (19 vectors for the attestation program), parsed and decoded by SPEL's own crate; the idl job checks the committed vectors in CI"
 
 [[row]]
 id = "RFP-021 U.5"
@@ -279,8 +286,10 @@ tests = [
   { path = "crates/ferrata-spectests/tests/mutation_guards.rs", kind = "test", ci = "test" },
   { path = "lez/lab/README.md", kind = "document" },
   { path = "lez/results/stage1-replay.md", kind = "record" },
+  { path = "lez/harness/tests/stall.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test stall -- --nocapture" },
+  { path = "lez/results/r7-stall.md", kind = "record" },
 ]
-note = "the liveness limit on all seven forks (test job); the lab's catch-up session and seven days of scheduled sessions all applied (EVIDENCE row 21); an instance past its bound or without finality for a period is replaced, not resumed (F.10)"
+note = "the liveness limit on all seven forks (test job); the lab's catch-up session and seven days of scheduled sessions all applied (EVIDENCE row 21); a stall of 8.2 days: attestations verify during and after it, the 106 outstanding real updates applied late in order with no repair (EVIDENCE row 192); an instance past its bound or without finality for a period is replaced, not resumed (F.10)"
 
 [[row]]
 id = "RFP-021 R.8"
@@ -485,8 +494,9 @@ tests = [
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "lez/lab/README.md", kind = "document" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
 ]
-note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the guide is a first draft; the attestation side's monitor and its stall alarm are not built"
+note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the stall and weak-subjectivity alarms built and tested (attest-monitor, EVIDENCE row 193); the operator guide does not describe stall detection with it yet"
 
 [[row]]
 id = "RFP-021 S.8"
@@ -559,8 +569,9 @@ note = "the deployed program's header is immutable with its image id: UpdateHead
 id = "RFP-021 VS.4"
 tests = [
   { path = "docs/trust.md", kind = "document" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
 ]
-note = "trust.md 2 (what a captured committee can do) and 6 (failure classes, what bounds the loss), a first draft; the exposure bound a consumer sizes is its caps; the attestation side's monitor that would wire the alarm is not built"
+note = "trust.md 2.2 (what a captured committee can do; the attestation side's monitor, its alarms and what they cannot see) and 6 (failure classes, what bounds the loss); the exposure bound a consumer sizes is its caps; the monitor's critical alarms built and tested on altered states against recorded answers (EVIDENCE row 193), not run against public providers"
 
 [[row]]
 id = "RFP-021 VS.5"
@@ -781,8 +792,10 @@ id = "RFP-022 U.4"
 tests = [
   { path = "idl/check.py", kind = "test", ci = "idl" },
   { path = "lez/bridge-wire/tests/idl_vectors.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-bridge-wire --locked --test idl_vectors" },
+  { path = "idl/spel-v2/run.sh", kind = "test", ci = "box", run = "RECORDED=... bash idl/spel-v2/run.sh" },
+  { path = "idl/generated/spel-v2.txt", kind = "record" },
 ]
-note = "waits on Logos: SPEL does not support LEZ v0.4. Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job checks the committed vectors in CI"
+note = "waits on Logos: SPEL's v0.4 line is an open pull request; with our tuple patch its generator makes the bridge's messages and types, 0 differences (EVIDENCE row 194). Shown instead: the hand-written IDL decodes every instruction, type and variant of the bridge program (37 vectors), parsed and decoded by SPEL's own crate (EVIDENCE row 55); the idl job checks the committed vectors in CI"
 
 [[row]]
 id = "RFP-022 U.5"

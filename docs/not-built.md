@@ -25,7 +25,7 @@ The design notes specify these; there is no code for them here:
   built; the imports and the module ran on the mini-app's devnet, whose zone the module reaches, and on a fork of
   Sepolia, `modules/results/relayer-2026-11-13/`); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
   program and its Logos module are built, `monitor/`, `modules/ferrata_monitor_module`; node views come through
-  an adapter); the attestation side's `monitor` (records against several providers; the weak-subjectivity alarm);
+  an adapter); the attestation side's monitor against public providers (built and tested on recorded answers: `monitor/attest/`);
 - in the Logos modules (`modules/README.md`, "Left out"; [`modules/LOGOS-CORE-MODULES.md`](../modules/LOGOS-CORE-MODULES.md)):
   Ethereum transactions through Logos Core's own modules beyond the two daemons on a devnet (the monitor's and the
   relayer's sends go through `tx_sender_module`, signed by `keystore_module` through `signer_manager_module`, with

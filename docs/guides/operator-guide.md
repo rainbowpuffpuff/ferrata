@@ -192,9 +192,9 @@ two-hour cadence (§2).
 Compare the instance's finalized slot and root with the chain's: the lab's `lab.sh status` puts both
 instances against the chains' clocks, and each session's fetch record holds the root a second provider
 reports for the newest finalized slot, which must equal the instance's `finalized_root`
-([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). In the design the attestation side's `monitor` (not the watchers' `monitor` of §7) compares records with several providers'
-canonical roots and alarms at half the weak-subjectivity bound (**not built**,
-[`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
+([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). The attestation side's monitor (`attest-monitor`, [`monitor/attest/`](../../monitor/attest/README.md); not the watchers'
+`monitor` of §7) compares records with several providers' canonical roots and alarms at half the weak-subjectivity
+bound ([`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
 it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
 
 ### 3.6 Running `ferrata-updater`

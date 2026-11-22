@@ -193,5 +193,5 @@ tests/anvil-e2e.sh` runs the scenarios above with the module in place of the bin
 - The computation of `states` from the node's own blocks (the checkpoint program's state at a tip).
 - Fee bumping of a stuck transaction (today: the receipt timeout and an alert).
 - The attestation side's `monitor` duties (comparing records with several providers; the
-  weak-subjectivity alarm, `docs/design/attestation.md` §3.6).
+  weak-subjectivity alarm, `docs/design/attestation.md` §3.6): another program, [`attest/`](attest/README.md).
 - A run against a public network (the fork reads Sepolia, but the monitor's transactions stay on the fork).

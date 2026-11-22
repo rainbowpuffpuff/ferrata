@@ -439,7 +439,7 @@ with corrected input; nothing was consumed.
 | accumulator leaf | 160–163 | path not 32 siblings, index ≥ 2^32, empty leaf, path does not reach the root | rebuild the path against the attested root |
 | sync-committee signature invalid | 40 `SignatureInvalid`, 41 `SignatureMalformed`, 43 `SigningKeyIdentity`, 20 `ParticipationLow`, 51 `BelowSupermajority` | met by updaters, not consumers: a record exists only after these pass | — |
 | committee handoff not verified | 27, 28, 29, 45 `CommitteeInvalid`, 60 `CommitteeUnknown`; step API 83, 84 | updaters only | — |
-| checkpoint stale or outside the weak-subjectivity period | 10, 11, 12 at `Init`; 53 `OutsideWeakSubjectivityPeriod` for every update once the store is past its period ([`attestation.md`](../design/attestation.md) §4.6; EVIDENCE rows 69, 70) | — | replacement from a fresh checkpoint (§9); the attestation side's `monitor`, which would warn first, is not built |
+| checkpoint stale or outside the weak-subjectivity period | 10, 11, 12 at `Init`; 53 `OutsideWeakSubjectivityPeriod` for every update once the store is past its period ([`attestation.md`](../design/attestation.md) §4.6; EVIDENCE rows 69, 70) | — | replacement from a fresh checkpoint (§9); the attestation side's monitor warns first (`ws-half`, `attest-monitor`) |
 | already consumed | consumer 223 `ALREADY_CLAIMED`; bridge 250 `ALREADY_CLAIMED` | the nullifier exists | stop |
 | wrong claimant actor | consumer 229 `NULLIFIER_MISMATCH` | the claim was sent to a claim actor the statement does not name | send it to `claim(pool, N)` |
 
@@ -559,7 +559,8 @@ never expires, so what your program accepted under the old instance stands.
 Measured: the bound refuses `Init` and `Open` by the sequencer's clock (`lez/harness/tests/successor.rs`,
 `the_weak_subjectivity_bound_on_init_and_open`; EVIDENCE row 69); in practice the live run `crown-live-2` stopped
 before sending anything because its 38-day-old checkpoint was outside the bound, and the next run initialised a fresh
-instance (EVIDENCE row 91). The attestation side's `monitor`, which would warn at half the bound, is not built.
+instance (EVIDENCE row 91). The attestation side's monitor (`attest-monitor`, [`monitor/attest/`](../../monitor/attest/README.md)) warns at half the
+bound (`ws-half`) and past it (`ws-expired`).
 
 ### 9.2 Successors: a fork after `Init`
 
@@ -616,7 +617,7 @@ Sources: [`attestation.md`](../design/attestation.md) §3.5, §3.6, §4.1, §4.7
 A captured sync committee (two thirds of 512 keys) can sign a header that was never on the
 canonical chain, and your consumer would act on facts under it. The design bounds the loss, not the
 attack's cost, because a bribe has no protocol floor: size what your caps let through before a
-freeze to what you can afford to lose, and wire the attestation side's `monitor` alarm (**not built**) to your
+freeze to what you can afford to lose, and wire the attestation side's monitor's critical alarms (`attest-monitor`, [`monitor/attest/`](../../monitor/attest/README.md)) to your
 freeze authority ([`attestation.md`](../design/attestation.md) §11.2–§11.3). The probabilities and the
 bridge's numbers are in [`docs/trust.md`](../trust.md).
 
@@ -630,9 +631,11 @@ built") and the README's "Specified but not built" ([`docs/not-built.md`](../not
 - clean-up of jobs whose final step fails (they stay open; the updater moves on);
 - a real proof of a private attestation on a user's laptop (proven on a cloud GPU, on cloud CPUs held to 8 and 16
   cores, and on M1 and M4 Mac minis under macOS: EVIDENCE rows 32–34, 38, 88);
-- in the Logos modules: LEZ through `lez_core` beyond the bridge module's wallet session, verified Ethereum reads
-  beyond the attestation module's, `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check
-  runs through `verified_proxy_module`), a published catalog; the attestation side's `monitor`; the A3 gate's three
+- in the Logos modules: LEZ through an unpatched `lez_core` (the bridge module's wallet session and, with our patch,
+  the attestation module's reads and sends go through it: EVIDENCE row 197), verified Ethereum reads beyond the
+  attestation module's, `verify_checkpoint` as an API of Logos Core's Ethereum module (its beacon checks run through
+  `beacon_api_module`, its execution check through `verified_proxy_module`; the upstream method is drafted, not
+  opened), a published catalog; the attestation side's monitor against public providers; the A3 gate's three
   updaters on a running sequencer (the updater is built as a binary and as a module, each with the in-process chain
   and a running sequencer as backends, rows 97, 99, 104).
 

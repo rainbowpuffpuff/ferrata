@@ -262,7 +262,7 @@ The gates replayed recorded updates 81 to 122 times faster than the lab recorded
 recorded one about every two hours, its session schedule), about 40–60 times the design's hourly cadence, so their traffic is that of a daemon busier than in operation; per-day figures from them would
 overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. **Not measured:** the
 `ferrata-attest` CLI and the `ferrata_attest_module` (a consumer's off-chain side, [`attestation.md`](design/attestation.md)
-§8); the §8 `monitor` is not built; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, [EVIDENCE](EVIDENCE.md) row 104), is not measured: the binary is.
+§8); the §8 `monitor` (`monitor/attest`, built since) is not measured; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, [EVIDENCE](EVIDENCE.md) row 104), is not measured: the binary is.
 
 ### P.7 State growth
 
@@ -559,7 +559,7 @@ private transaction are LEZ's and not counted.
 User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
 measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
 `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
-`monitor` not built (RFP-021 P.6); actions other than five statement types and the update steps at different state
+`monitor` not measured (RFP-021 P.6); actions other than five statement types and the update steps at different state
 sizes (RFP-021 P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
 resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a

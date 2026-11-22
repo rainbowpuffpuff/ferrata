@@ -49,7 +49,7 @@ role outside its conditions (§3).
 |---|---|---|---|---|
 | The starting checkpoint of an attestation instance | that the instance follows the real Ethereum | a false chain from the start | anyone can compare the checkpoint root with public Ethereum before relying on the instance | §2.1 |
 | The vault's deployment parameters: `genesisState` (the starting key set, turn length and tip), `lezConfigId`, the image ids, `turnSeconds`, `nMin`/`tMin` | that the vault follows the real LEZ channel from the right state with the right programs | a false LEZ history or program accepted from the start | anyone can check them before depositing: the channel's public state, `configId`'s preimage (it binds the vault's address), reproducible builds of the guests; the deployment script checks none of them and accepts `nMin = tMin = 1` (testnets only: it refuses every chain but anvil, Sepolia, Hoodi and Holesky) | §3.2, §4 |
-| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested; the signers lose no stake (none of it is slashable for this) | consumer caps and freezes; the attestation side's `monitor` alarm (not built); an instance freeze on evidence of conflicting finality (experimental, the v0.3.1 port only, not deployed) | §2.2 |
+| Two thirds of each 512-member sync committee | that every recorded header was finalized | forged records: facts about blocks that never existed are attested; the signers lose no stake (none of it is slashable for this) | consumer caps and freezes; the attestation side's monitor's alarms (§2.2); an instance freeze on evidence of conflicting finality (experimental, the v0.3.1 port only, not deployed) | §2.2 |
 | Fewer than `t` of the LEZ channel's accredited keys are an attacker's, in every key set the checkpoint program used | validity of every burn root the vault accepts (both rules) | `t` keys can forge a burn root | the public wait, watchers, the release delay and revocation, release caps | §3.2 |
 | Logos Blockchain: no reorganisation deeper than `k` on the attestors' nodes | finality of accepted burn roots under rule (B) | a released burn is later undone on LEZ | the same | §3.3 |
 | Rule (A)'s conditions F1–F4, or else a live, uneclipsed watcher | finality under rule (A) | as above, with fewer than `t` keys or none | the same; outside F1–F4 the watchers are trusted for safety | §3.4 |
@@ -107,8 +107,9 @@ instance (about two weeks on mainnet) and an update too far past the finalized s
 clock. **Built** ([EVIDENCE](EVIDENCE.md) rows 69, 70): the core implements consensus-specs'
 `compute_weak_subjectivity_period` and `is_within_weak_subjectivity_period` against the store's finalized
 header, a store past its period refuses every update (53) and is recovered only by a new bootstrap, and
-the program applies the bound by the sequencer's clock. The alarm before an instance runs out (the
-attestation side's `monitor`) is not built ([`attestation.md`](design/attestation.md) §3.6, §4.6).
+the program applies the bound by the sequencer's clock. The alarm before an instance runs out is the
+attestation side's monitor's (`attest-monitor`: `ws-half` past half the period, `ws-expired` past it; §2.2,
+[`attestation.md`](design/attestation.md) §3.6, §4.6).
 
 ### 2.2 Two thirds of each sync committee
 
@@ -201,9 +202,23 @@ supply then exceeds escrow by at most what the caps let through ([`bridge.md`](d
 "Supply"). Those caps and freezes run on attested Ethereum time, the execution timestamp of a record,
 and a record moves a clock only in a LEZ block stamped at or after it: a captured committee's
 far-future record refills no bucket and ends no freeze unless a block producer also stamps its block
-that far ahead ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6). The attestation side's `monitor`, which would compare records with several providers' canonical roots
-and feed consumers' freeze authorities, is **not built** (the watchers' `monitor` of the return leg is:
-EVIDENCE rows 43–45) ([`attestation.md`](design/attestation.md) §11.3). A deeper inbound
+that far ahead ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6). The attestation side's monitor (`monitor/attest`,
+`attest-monitor`; [EVIDENCE](EVIDENCE.md) row 193) compares the instance's finalized header with several beacon providers
+and raises two critical alarms that a consumer wires (`--alert-cmd`, level critical) to its freeze authority:
+`instance-diverged` when a provider (by default any one; `--diverge-at N` for N) holds another block at that slot, final
+for it or not yet, or no block at a slot it has finalized, whatever the others say (a provider that agrees with a forged
+header may be colluding with the forger); and `instance-ahead` when the header is younger than the chain's finality
+delay (two epochs), which no honest instance can hold, or when no provider has finalized it or holds it although it is
+older than that delay plus a grace. A consumer runs it with three or more providers of different clients, operated by
+different parties. One dishonest provider can then raise a false alarm, which costs a pause, but cannot hide a forged
+header; only every provider counted together can. A forged header the providers cannot judge yet (ahead of their
+finality, at a slot where they hold no block) is judged again once they finalize its slot: at most three epochs after it
+on a chain that finalizes normally (about 19 minutes on Ethereum; an epoch more if every slot from it to the next epoch
+boundary is empty). What can pass before the freeze is the consumer's caps over that time, plus the poll interval and
+the freeze's own; size the caps to what it can afford to lose. The monitor is a prototype, tested on altered states
+against loopback providers serving recorded answers, not run against public providers or a real captured committee
+(the watchers' `monitor` of the return leg is another program: EVIDENCE rows 43–45; [`attestation.md`](design/attestation.md)
+§11.3). A deeper inbound
 finality setting would not help: it delays honest claimants, not a captured committee
 ([`bridge.md`](design/bridge.md) §5.4).
 
@@ -290,8 +305,8 @@ further test fails if a row is added here without its scenario, or the reverse.
 From [`attestation.md`](design/attestation.md) §11.5. An update is accepted on validity alone, never on
 the submitter's identity (VS.6; §4.5 there). Apart from the checkpoint source, no participant can make
 the program accept a false record (VS.5). The consumer's own client (the wallet, the `ferrata-attest` tool, a
-module) is the user, not a third party; the attestation side's `monitor`, which would compare records with several
-providers and warn before the weak-subjectivity bound, is not built (§10) and is not required for an attestation.
+module) is the user, not a third party; the attestation side's monitor (`attest-monitor`), which compares records with several
+providers and warns before the weak-subjectivity bound, is not required for an attestation (§2.2).
 
 **The updater's sources.** `ferrata-updater` runs the program's own checks on every candidate before it pays for a
 step, demotes a source that serves what the program would refuse, and with `min_agreeing` waits until enough sources
@@ -714,8 +729,8 @@ refunded to ([`privacy/generated/fields.md`](privacy/generated/fields.md)).
 ## 10. Not built, and therefore not yet part of the guarantee
 
 `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`;
-the upstream pull request is not opened); the attestation side's `monitor` (records against
-several providers, the weak-subjectivity alarm); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
+the upstream pull request is not opened); the attestation side's monitor against public providers (built and
+tested on recorded answers: `monitor/attest/`); `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs;
 consumers bound to the root id (the bridge, `ferrata_holdings` and the reference consumer still pin an
 instance); on LEZ, the admin's own handover; the gas drop inside the relayer daemon (the sealed credit and its sweep
 by the claim ran with LEZ's wallet on v0.4.0-rc3, EVIDENCE row 124; the daemon's own credit is a public transfer that

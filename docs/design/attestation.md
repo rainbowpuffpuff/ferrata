@@ -99,7 +99,7 @@ A successor inherits the root id that consumers bind to, so the handoff to it ne
 
 ### 3.6 Replacement
 
-An instance past its weak-subjectivity bound, or stranded by Ethereum non-finality (§4.1), is replaced from a fresh checkpoint under a new root id. That is a new trust decision; the consumer guide will carry the migration recipe. The bound is fixed per instance from the specification's weak-subjectivity computation, about two weeks on mainnet (§4.6, built), and `monitor` alarms at half of it (**not built**, §8). A misconfigured checkpoint is handled the same way, never by mutation (F.13).
+An instance past its weak-subjectivity bound, or stranded by Ethereum non-finality (§4.1), is replaced from a fresh checkpoint under a new root id. That is a new trust decision; the consumer guide will carry the migration recipe. The bound is fixed per instance from the specification's weak-subjectivity computation, about two weeks on mainnet (§4.6, built), and `monitor` alarms at half of it (built as a prototype, `monitor/attest/`, §8). A misconfigured checkpoint is handled the same way, never by mutation (F.13).
 
 ## 4. Advancing an instance
 
@@ -338,7 +338,7 @@ The two U.6 reference consumers (an ERC-20 and a native ETH transfer to a contra
   - the **updater** follows Ethereum, submits updates, defers (§9) and resumes from on-chain state;
   - **`monitor`** compares records with several providers' canonical roots, alarms at half the weak-subjectivity bound (§3.6), and feeds consumers' freeze authorities (§11.3).
 - **Ethereum access**: light-client data through `beacon_api_module.lc_request` (unverified until the program checks it), until the light-client API Logos R&D announced on 6 November exists; execution reads through `eth_rpc_module`, with `verified_proxy_module` in required mode wherever it covers the call. The proxy has no `eth_getProof`, so storage proofs use a second chain configuration with the proxy off, which is safe because every proof is checked against a record.
-- **LEZ access** through `lez_core`, which pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC; tried for the bridge module's wallet session ([EVIDENCE](../EVIDENCE.md) rows 113–115), not yet for this module (if it falls short, call the sequencer directly).
+- **LEZ access** through `lez_core`, which pinned LEZ v0.3.1 until its PRs 72 and 74 (v0.4.0-rc1, `1806e87`) were merged on 13 November, 13:18–13:20 UTC; tried for the bridge module's wallet session ([EVIDENCE](../EVIDENCE.md) rows 113–115) and, with a patch to `lez_core`, for this module's reads and sends (row 197: as merged, `lez_core` cannot send them, and it reports a transaction's inclusion, not its outcome).
 - **IDL**: hand-written and checked in CI by decoding every accepted message from it alone; SPEL's stable release targets LEZ v0.2.4, and generated output replaces the hand-written IDL when SPEL supports v0.4. **Catalog**: the project's own, from `logos-modules-release-base`, released with `logos-modules-release-action` (milestone A4).
 
 ## 9. Liveness and deferral (R.9, R.10, S.7, F.12)
@@ -465,4 +465,4 @@ In the consumers: nothing (rules 5 to 7, the public and private claims and the n
 
 Evidence: real proofs of a private attestation on a user's machine (one was made on a cloud GPU, `lez/RESULTS.md` §5; the consumer's private claims of the vault's real deposits were proven on a cloud CPU, `lez/RESULTS.md` §6; a committee handoff was proven for real in one private transaction, `lez/results/perf-proofs.md` §"Added 21 November 2026"); the `single_merkle_proof` vectors; fuzzing; `cargo-mutants` over the whole core; `just bench` and the P.1–P.9 report, including the amortised tracking cost at the recommended cadence (§10); a deployment on LEZ testnet 0.4, which does not exist yet (until it does, a standalone v0.4 zone with its block log published; the testnet deployment and its 7-day run are due within 4 weeks of its launch).
 
-Off chain (each built as a prototype: EVIDENCE rows 43–45, 55–61, 79–81, 93–110): chain access and sends through Logos Core's own modules (`modules/LOGOS-CORE-MODULES.md`), the A3 gate's three daemons on a sequencer, `monitor`'s node clients and the attestation side's `monitor`, a published catalog, and the documents' final versions.
+Off chain (each built as a prototype: EVIDENCE rows 43–45, 55–61, 79–81, 93–110): chain access and sends through Logos Core's own modules (`modules/LOGOS-CORE-MODULES.md`), the A3 gate's three daemons on a sequencer, `monitor`'s node clients, the attestation side's monitor against public providers (it is built: `monitor/attest/`), and a published catalog.
