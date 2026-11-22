@@ -47,3 +47,13 @@ freshness lines, `security_privacy` with `redteam_lc` 11 and `redteam_attest` 11
 to the committed ones), then `security_privacy` alone for the final F.8 text (29,818 differing bytes that run), all
 passed; `f4-comparisons.md` was byte-identical. R.11 on LEZ v0.4.0-rc3's own sequencer:
 [`../v0.4.0-rc3/r11-one-block/`](../v0.4.0-rc3/r11-one-block/README.md).
+
+Run again on 22 November 2026 (build box), after the review of those changes, with the re-run command above (and
+`RISC0_BUILD_LOCKED=1`): the texts say which synthetic updates run beside the policy store (those sent with
+`World::apply`) and which are sent as the program's own transactions only (the adoption with a replaced key, the
+weak-subjectivity and validity-window cases, the update ten years on, the `VerifyAll` forms); the notes on the
+specification's store say only what the test asserts (it refuses neither case and finalizes neither); F.8's texts tell
+the fresh fields (aliases, notes, recovery bindings, dummy actions) from the account's own nullifier and commitments,
+set by the private state spent and made. `security_lc` 5 of 5 (156.85 s) and `security_privacy` 2 of 2 (12.57 s)
+passed; `vs2-forgeries.md`, `r3-rotations.md`, `f2-finalised-only.md` and `f8-full-diff.md` changed only in those
+texts and in F.8's count of differing bytes (29,792 that run); the other four files were byte-identical.
