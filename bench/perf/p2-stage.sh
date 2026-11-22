@@ -5,7 +5,7 @@
 # with mrun --get and run bench/perf/prove_modal.py. bench/perf/prove-actions.sh is the same proofs one after the
 # other on one machine.
 #
-#   bash bench/perf/p2-stage.sh STAGE        # from the repository root
+#   bash bench/perf/p2-stage.sh STAGE        # from the repository root; STAGE new or empty
 #
 # P2_WITH_PRIVATE=1 also stages the proven update path: prove_private (one private transaction proving a whole
 # finality update, VerifyAll, at a private account: lez/RESULTS.md §3) with its fixture (mainnet-p1899), and its
@@ -13,7 +13,9 @@
 set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 stage="$(realpath -m "${1:?usage: p2-stage.sh STAGE}")"
-rm -rf "$stage"; mkdir -p "$stage/bin"
+# Never delete what the caller names: STAGE must be new or empty (it used to be removed first).
+[ -e "$stage" ] && [ -n "$(ls -A "$stage")" ] && { echo "p2-stage: STAGE must be new or empty: $stage" >&2; exit 1; }
+mkdir -p "$stage/bin"
 cd "$root/lez"
 export RISC0_HOME="${RISC0_HOME:-$root/../risc0-home-lez}"
 cargo build -p harness --locked --bin perf_prove > "$stage/build.log" 2>&1 || { tail -30 "$stage/build.log"; exit 1; }

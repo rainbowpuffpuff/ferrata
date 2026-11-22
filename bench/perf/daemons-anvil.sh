@@ -7,7 +7,7 @@
 # honest node view of that script. Without a LEZ zone (the relayer's LEZ parts, root imports and the burn watch,
 # need one: measured on the zone by bench/perf/gate-sequencer.sh for the updater).
 #
-#   bash bench/perf/daemons-anvil.sh OUT_DIR [IDLE_MIN]
+#   bash bench/perf/daemons-anvil.sh OUT_DIR [IDLE_MIN]     # OUT_DIR new or empty
 #
 # Phases: IDLE_MIN minutes idle (both daemons polling: monitor every 12 s, relayer every 12 s), then activity (an
 # honest candidate the monitor checks and passes; anvil's time moved past the vault's wait; the relayer finalises
@@ -18,7 +18,9 @@ HERE="$REPO/bench/perf"
 out="$(realpath -m "${1:?usage: daemons-anvil.sh OUT_DIR [IDLE_MIN]}")"; idle_min="${2:-10}"
 export PATH="$HOME/.foundry/bin:$HOME/.cargo/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1 CARGO_TERM_COLOR=never
 T="${PERF_GATE_TMP:-$REPO/../tmp/perf-gate}"
-rm -rf "$out"; mkdir -p "$out/run"
+# Never delete what the caller names: OUT must be new or empty (`. 10` would have removed the checkout).
+[ -e "$out" ] && [ -n "$(ls -A "$out")" ] && { echo "daemons-anvil: OUT must be new or empty: $out" >&2; exit 1; }
+mkdir -p "$out/run"
 say() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$out/log.txt"; }
 say "build: monitor (release), ferrata-relayer (release)"
 ( cd "$REPO/monitor" && cargo build --release --locked ) > "$out/run/build-monitor.log" 2>&1 || { tail -20 "$out/run/build-monitor.log"; exit 1; }
