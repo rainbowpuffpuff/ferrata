@@ -8,8 +8,9 @@
 //! The F.8 test is the one `docs/design/attestation.md` §6.5 specifies: two deposits of the same
 //! token and amount, in different blocks, one needing no hop and one needing three, claimed
 //! privately against the same record. Their transactions, events and state diffs must be identical
-//! except for fresh randomness and the nullifier; a private consumer that calls `Attest` instead of
-//! reading must fail the same comparison. The chain is synthetic (`security_common::Synth`, a
+//! except for fresh randomness and the nullifiers (the claim's, and the account's own with its new
+//! commitments, set by the private state spent and made); a private consumer that calls `Attest`
+//! instead of reading must fail the same comparison. The chain is synthetic (`security_common::Synth`, a
 //! mainnet-preset light client whose committees the test holds) because no real chain has two
 //! deposits to accounts whose keys a test holds, one of them three hops back.
 
@@ -243,8 +244,9 @@ impl Claims {
 /// the payer alias's crossing in its boundary; and the claim's nullifier N, in `Spend` and in the
 /// address and PDA seed of `claim(pool, N)` (each transaction's own). Of those, the aliases, notes,
 /// recovery bindings and dummy actions are fresh randomness, and the account's own nullifier and
-/// commitment are determined by the private state it spends and makes (unlinkable to the account,
-/// but the same if the same state is spent twice); `fresh_check` shows which is which. Every other
+/// commitments are determined by the private state it spends and makes (the same if the same state
+/// is spent twice; that they reveal nothing of the account is LEZ's nullifier and commitment scheme,
+/// not shown here); `fresh_check` shows which is which. Every other
 /// field must already be equal. Returns the log of what was aligned, or the first difference no
 /// rule allows, by field. The caller then requires the two messages' encodings to be
 /// byte-identical.
@@ -265,8 +267,9 @@ fn align(
     let publics = a.message.public_context.actors.clone();
     let (ea, eo) = (&a.message.execution, &mut out.message.execution);
     align_boundary("boundary", &ea.boundary, &mut eo.boundary, &publics, claims, &mut log)?;
-    // Private actions: fresh nullifiers, commitments and notes, of equal sizes; the commitment
-    // root they were proven against must be the same.
+    // Private actions: nullifiers, commitments and notes of equal sizes (the account's own nullifier
+    // and commitment set by the state spent and made, the dummies' fresh, every note fresh); the
+    // commitment root they were proven against must be the same.
     if ea.private_actions.len() != eo.private_actions.len() {
         return Err("private actions: another count".into());
     }
@@ -274,7 +277,9 @@ fn align(
         align_action(&format!("private action {i}"), pa, po)?;
     }
     log.push(format!(
-        "{} private actions: nullifier, commitment and encrypted note (fresh; same sizes, same root)",
+        "{} private actions: nullifier, commitment and encrypted note (same sizes, same root): the account's own \
+         (nullifier and commitment set by the private state spent and made, note fresh) and the dummies (nullifier, \
+         commitment and note fresh)",
         ea.private_actions.len()
     ));
     if ea.recovery_bindings.len() != eo.recovery_bindings.len() {
@@ -310,8 +315,8 @@ fn align(
                         &mut log,
                     )?;
                     log.push(
-                        "the fee fallback's private action: nullifier, commitment and encrypted note (fresh; same \
-                         sizes, same root)"
+                        "the fee fallback's private action: the account's own nullifier and commitment (set by the \
+                         private state spent and made) and encrypted note (fresh); same sizes, same root"
                             .to_string(),
                     );
                 }
@@ -459,7 +464,8 @@ fn align_boundary(
 }
 
 /// Align one private action of `d` to `a`'s: the same commitment root, a note of the same size;
-/// the nullifier, commitment and note are fresh.
+/// the note is fresh, the nullifier and commitment fresh for a dummy and set by the state spent and
+/// made for the account's own.
 fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Result<(), String> {
     if pa.root != po.root {
         return Err(format!("{label}: another commitment root"));
@@ -638,17 +644,21 @@ fn f8_two_deposits_full_diff() {
     assert_eq!(ra.proof_bytes, rd.proof_bytes, "the same proof size");
     let (_, log) = align(&ra.tx, &rd.tx, Some(claims)).unwrap_or_else(|e| panic!("the two claims differ: {e}"));
     let differing = bytes_a.iter().zip(&bytes_d).filter(|(x, y)| x != y).count();
-    // What was taken is fresh: X's claim of A proven a second time from the same state.
+    // What was taken is fresh, or the account's own per-state value: X's claim of A proven a second
+    // time from the same state.
     let ra2 = dep.claim(&mut s0.clone(), &dep.x, &dep.a);
     let fresh = fresh_check(&ra.tx, &ra2.tx, &ra.tx.message.public_context.actors)
-        .unwrap_or_else(|e| panic!("a field align takes is not fresh: {e}"));
+        .unwrap_or_else(|e| panic!("a field align takes is neither fresh nor the account's own per-state value: {e}"));
     out.push_str(&format!(
         "## The transactions\n\nBoth are {} bytes (proof field {} bytes). {} of those bytes differ. After taking from A every \
          field that may differ — each with the same encoded size in both — the two messages are byte-identical. The fields \
-         taken:\n\n{}\n\nThose fields carry nothing of the account: X's claim of A proven a second time from the same state \
-         (the same account, the same state, the same claim) gives, against the first:\n\n{}\n\nSo the aliases, notes, \
-         recovery bindings and dummies are fresh randomness, and the account's own nullifier and commitments are \
-         determined by the private state spent and made, never shown twice since a state is spent once.\n\n\
+         taken:\n\n{}\n\nThose fields are fresh randomness or the account's own per-state values (LEZ's nullifier and \
+         commitments, never shown twice): X's claim of A proven a second time from the same state (the same account, the \
+         same state, the same claim) gives, against the first:\n\n{}\n\nSo the aliases, notes, recovery bindings and \
+         dummies are fresh randomness, and the account's own nullifier and commitments are determined by the private \
+         state spent and made: never shown twice, since a state is spent once, but computed from that state, so that \
+         they reveal nothing of the account rests on LEZ's nullifier and commitment scheme, which this check does not \
+         test.\n\n\
          The proof field differs as two proofs of different statements do; its size is the same. Here the proofs are \
          dev-mode fake receipts; a real private transaction carries LEZ's succinct receipt, of fixed seal size whatever the \
          statement (`ProverOpts::succinct()`, rc1 `lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs` \
@@ -761,7 +771,7 @@ fn f8_two_deposits_full_diff() {
     }
     out.push_str(&format!(
         "## The state diffs\n\nEvery public account of the state, before and after each claim (decoded from the state's own encoding):\n\n{rows}\n\
-         Nothing else of the public state changes. The private state gains, for each, its {} private actions' nullifiers and commitments (fresh); the whole state encodes to {} bytes after either claim. The record is read, never written; no account of X, Y, the depositors or the vault exists on LEZ.\n\n",
+         Nothing else of the public state changes. The private state gains, for each, its {} private actions' nullifiers and commitments (the dummies' fresh, the account's own per state); the whole state encodes to {} bytes after either claim. The record is read, never written; no account of X, Y, the depositors or the vault exists on LEZ.\n\n",
         ra.tx.message.execution.private_actions.len(),
         grouped(state_a)
     ));
