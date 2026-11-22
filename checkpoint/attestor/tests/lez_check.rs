@@ -317,6 +317,57 @@ fn base64_matches_rfc4648() {
     }
 }
 
+/// Review L2 (`first-root-unchecked`): on a first read, a well-formed sibling J of 202 on 201, inscribed by a
+/// key in K just before the real 202, sits at the highest id the LEZ node holds final. The root counts as
+/// confirmed, so it must be the block the LEZ node holds byte for byte, never J (a mutant that took the first
+/// candidate at that id signed J, a block no LEZ node holds).
+#[test]
+fn l2_a_first_read_never_roots_at_a_sibling_the_lez_node_does_not_hold() {
+    let mut a = answers_with_keys(&n3_keys());
+    let lab = lab_answers();
+    let (p201, p202) = (payload_of(&lab, 201), payload_of(&lab, 202));
+    let j = derive_block(&p202, 202, &carried_hash(&p201), 3);
+    assert_ne!(carried_hash(&j), carried_hash(&p202));
+    let (jtx, _) = inscription_tx(&key("channel-2"), &j, &msg_of(&lab, 201), 9);
+    let s202 = slot_of(&lab, 202);
+    let at = a.blocks.iter().position(|b| slot(b) >= s202).unwrap();
+    a.blocks.insert(at, node_block("J", s202 - 1, vec![jtx]));
+    for state in [None, Some(signed_200())] {
+        let t = read(&a, &lez_lab(202, FINALIZED), state.as_ref()).unwrap();
+        assert_eq!((t.tip.tip_id, t.tip.tip_hash), (202, carried_hash(&p202)), "state {}", state.is_some());
+        assert_eq!(t.hashes.get(&202), Some(&carried_hash(&p202)));
+    }
+}
+
+/// Review L2 (`signer-not-in-k-ok`): block 203, applied and final in the LEZ node, was inscribed by a key the
+/// channel no longer accredits (channel-9: rotated out). The program refuses such a `T`, so the attestor passes
+/// over it: with a state it signs 202 below it; a first read, whose run starts at 203, refuses until a block
+/// by a key in K is final (a liveness pause, never a signature of 203).
+#[test]
+fn l2_a_tip_inscribed_by_a_key_outside_k_is_passed_over() {
+    let mut a = answers_with_keys(&n3_keys());
+    let lab = lab_answers();
+    let p202 = payload_of(&lab, 202);
+    let b203 = derive_block(&p202, 203, &carried_hash(&p202), 1);
+    let (tx203, _) = inscription_tx(&key("channel-9"), &b203, &msg_of(&lab, 202), 12);
+    let lib = a.lib_slot;
+    a.blocks.push(node_block("203 by channel-9", lib, vec![tx203]));
+    let mut lez = lez_lab(202, FINALIZED);
+    lez.insert(203, Some(with_status(&b203, FINALIZED)));
+    let t = read(&a, &lez, Some(&signed_200())).unwrap();
+    assert_eq!((t.tip.tip_id, t.tip.tip_hash), (202, carried_hash(&p202)));
+    assert!(
+        t.notes.iter().any(|n| n.starts_with("block 203: inscribed by") && n.contains("does not accredit")),
+        "{:?}",
+        t.notes
+    );
+    let e = read(&a, &lez, None).unwrap_err().to_string();
+    assert!(
+        e.contains("refused: no block of the read is final in the LEZ node with an inscription that checks"),
+        "{e}"
+    );
+}
+
 /// Review L5: the LEZ node is ahead of the Bedrock node's LIB (it holds the honest 203..=230 final, whose
 /// inscriptions are not final on Bedrock yet), and a turn holder inscribed 28 junk blocks with those ids, final
 /// on Bedrock. Each reads "final in the LEZ node" by its id and none is held byte for byte: the first read walks
