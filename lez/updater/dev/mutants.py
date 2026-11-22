@@ -14,11 +14,14 @@ restoring.
 
 The fixes (22 November 2026): m1 and m1near, review-integ9d M1 / review-integ9c M4 (an update signed in the future is
 refused, of one finalized header the earliest-signed is taken; m1near also undoes m1roll's fix, which alone would pass
-its tests; m1 too, so that it restores the old behaviour whole); m1roll, review-fix-updater3 M1 (an update that can be sent now ranks first, so one re-dated within
-the margin every round holds back only itself); u2, L-U2 (a round that cannot fetch the committees
-counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the chain reads again); u5, L-U5 (holds
-for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by its /64); u6, L-U6 (the bound tests
-fail for a reader that takes an answer whole and then refuses it).
+its tests; m1 too, so that it restores the old behaviour whole); m1roll, review-fix-updater3 M1 (an update that can be
+sent now ranks first, so one re-dated within the margin every round holds back only itself); m4, review-fix-updater3b
+M1 (an `Open` waits its turn counted by the instance's state, not by its job, so a source serving a new copy each round
+cannot postpone it); m4reset, its companion (after an `Open` is sent on a state, the next one there waits its turn
+again); u2, L-U2 (a round that cannot fetch the committees counts towards `down`); u3, L-U3 (a refusal whose re-reads
+fail is judged once the chain reads again); u5, L-U5 (holds for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an
+IPv6 client counts by its /64); u6, L-U6 (the bound tests fail for a reader that takes an answer whole and then refuses
+it).
 """
 import os
 import signal
@@ -49,6 +52,13 @@ MUTANTS = {
                ["--test", "refusals", "a_re_dated_update_with_more_signers"]),
     # The order of 81bbea61: an update whose window has not opened can rank first (review-fix-updater3 M1).
     "m1roll": ([(U, *OPEN)], ["--test", "refusals", "within_the_margin_every_round"]),
+    # An `Open`'s turn counted by its job, as before review-fix-updater3b M1: a new copy each round is a new job.
+    "m4": ([(U, "            Step::Open => open_turn(state),\n", "            Step::Open => chosen.jid,\n")],
+           ["--test", "redating", "started_slots_an_adopting"]),
+    # No new turn after an `Open` sent on a state.
+    "m4reset": ([(U, "self.first_due.remove(&(state_digest(&action.store_seen), Step::Open));",
+                  "let _ = (state_digest(&action.store_seen), Step::Open);")],
+                ["--test", "redating", "started_slots_with_finish_own_jobs_off"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),

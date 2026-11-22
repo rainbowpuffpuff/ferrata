@@ -94,7 +94,8 @@ impl Default for Fees {
 #[serde(deny_unknown_fields)]
 pub struct Policy {
     /// Rounds over which updaters spread who sends a step: each waits `H(key, job, step) mod
-    /// defer_window` rounds after it first sees the step due (1: never waits).
+    /// defer_window` rounds after it first sees the step due (1: never waits); an `Open`, after it first sees an
+    /// `Open` due on the instance's state, whatever update it is for, and again after each `Open` it sends there.
     pub defer_window: u64,
     /// A source whose newest verified finalized slot is this far behind the best is lagging.
     pub max_lag_slots: u64,
