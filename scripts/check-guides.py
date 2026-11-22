@@ -15,6 +15,13 @@ Checks:
   4. No guide, README or trust document of the documentation set still calls itself a first draft, and neither
      README.md, docs/README.md nor the attestation design note calls a guide one (they may say so of
      docs/performance.md, which is still the first draft of 11 November).
+  5. Keyless retirement as the vault counts it. The vault (vault/src/FerrataVault.sol) still opens `retire()` to
+     anyone at max(keylessFrom, checkpointsFrozenUntil) + delta + _keylessSpan, with KEYLESS_RETIREMENT 30 days
+     and keylessFrom set by the constructor, `submitCandidate` and `_finalize` only; the user, operator and deployer
+     guides each state that rule in full (30 days plus one candidate wait after the deployment, the last candidate
+     submitted, the last checkpoint finalised or the end of the last checkpoint freeze or watchers' pause, whichever
+     is latest); and no guide, trust document, decision record, vault README or LEZ bridge note words it in a way
+     the vault does not count (finalisations only, or "time under a freeze not counting").
 """
 import json
 import re
@@ -51,6 +58,66 @@ def first_draft_findings(texts):
             elif re.search(r"(replaces|since|of) the $", before, re.I):
                 continue
             out.append(f"{path}: still says '...{before}{m.group(0)}'")
+    return out
+
+
+# ---- 5. keyless retirement as the vault counts it --------------------------------------------------------------------
+
+VAULT = "vault/src/FerrataVault.sol"
+# Where the rule is stated (besides docs/guides/*.md and DOCS). docs/design/bridge.md is left out: it keeps D13's
+# decision text beside the rule as built, and describes vault v4, which counted finalisations only.
+RETIREMENT_DOCS = ("vault/README.md", "lez/BRIDGE.md", "lez/BRIDGE-RESULTS.md")
+# The guides that must state the whole rule.
+RULE_GUIDES = ("docs/guides/user-guide.md", "docs/guides/operator-guide.md", "docs/guides/deployer-guide.md")
+FULL_RULE = re.compile(
+    r"30 days plus one candidate wait .{0,40}?last checkpoint progress\W{1,4}the deployment, the last candidate "
+    r"submitted,? (?:or|the last) checkpoint finalised,? or the end of the last checkpoint freeze or watchers' pause, "
+    r"whichever is latest"
+)
+# Wordings the vault does not count: (what the text says, why it is wrong).
+WRONG_RULE = (
+    (r"finali[sz]ed for 30 days(?! \(as built)", "counts finalisations only; a submitted candidate restarts the count"),
+    (r"without a finali[sz]ation", "counts finalisations only; a submitted candidate restarts the count"),
+    (r"30 days without a checkpoint\b", "counts checkpoints only; a submitted candidate restarts the count"),
+    (r"time under a (?:checkpoint )?freeze[^.;]{0,40}?(?:not counting|does not count)",
+     "the end of a freeze or pause restarts the count; the time before it does not count either"),
+    (r"freezes and pauses do\s+not count", "the end of a freeze or pause restarts the count"),
+    (r"freeze time excluded", "the end of a freeze or pause restarts the count"),
+)
+
+
+def vault_rule_findings(src):
+    """What check 5 relies on in the vault's source `src`; one finding per fact that no longer holds."""
+    out = []
+    if not re.search(r"KEYLESS_RETIREMENT\s*=\s*30 days\s*;", src):
+        out.append(f"{VAULT}: KEYLESS_RETIREMENT is no longer 30 days")
+    m = re.search(r"function retireOpensAt\(\)[^{]*\{(.*?)\n    \}", src, re.S)
+    body = re.sub(r"\s+", " ", m.group(1)) if m else ""
+    for stmt in ("uint256 from = keylessFrom;", "if (checkpointsFrozenUntil > from) from = checkpointsFrozenUntil;",
+                 "opensAt = from + delta + _keylessSpan;"):
+        if stmt not in body:
+            out.append(f"{VAULT}: retireOpensAt() no longer has '{stmt}'")
+    setters = []
+    for w in re.finditer(r"\bkeylessFrom\s*=", src):
+        heads = list(re.finditer(r"\bfunction\s+(\w+)|\bconstructor\s*\(", src[: w.start()]))
+        setters.append((heads[-1].group(1) or "constructor") if heads else "?")
+    if sorted(setters) != ["_finalize", "constructor", "submitCandidate"]:
+        out.append(f"{VAULT}: keylessFrom is set in {sorted(setters)}, not the constructor, submitCandidate and _finalize")
+    return out
+
+
+def retirement_findings(texts):
+    """`texts`: path -> content. The three guides state the whole rule; no text words it as the vault does not count."""
+    out = []
+    for path, raw in texts.items():
+        text = re.sub(r"\s+", " ", raw).replace("**", "")
+        if path in RULE_GUIDES and not FULL_RULE.search(text):
+            out.append(f"{path}: keyless retirement is not stated as the vault counts it (30 days plus one candidate "
+                       "wait after the deployment, the last candidate submitted, the last checkpoint finalised or the "
+                       "end of the last checkpoint freeze or watchers' pause, whichever is latest)")
+        for pattern, why in WRONG_RULE:
+            for m in re.finditer(pattern, text, re.I):
+                out.append(f"{path}: '...{text[max(0, m.start() - 40) : m.end()]}': {why}")
     return out
 
 
@@ -234,6 +301,13 @@ def main():
     docs = sorted((ROOT / "docs/guides").glob("*.md")) + [ROOT / p for p in DOCS]
     texts = {str(d.relative_to(ROOT)): d.read_text() for d in docs + [ROOT / p for p in POINTERS]}
     for f in first_draft_findings(texts):
+        finding(f)
+
+    # 5. keyless retirement as the vault counts it
+    for f in vault_rule_findings((ROOT / VAULT).read_text()):
+        finding(f)
+    rule_docs = docs + sorted((ROOT / "docs/decisions").glob("*.md")) + [ROOT / p for p in RETIREMENT_DOCS]
+    for f in retirement_findings({str(d.relative_to(ROOT)): d.read_text() for d in rule_docs}):
         finding(f)
 
     for f in FINDINGS:

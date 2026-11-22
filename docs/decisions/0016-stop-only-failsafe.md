@@ -1,6 +1,6 @@
 # ADR 0016: No escrow-moving failsafe: a stop that only RISC Zero's proof of unsoundness trips, lapsing freezes, keyless retirement and refunds
 
-- **Date:** 10–11 November 2026; corrected 21 November 2026 (after a stop, refunds stop too)
+- **Date:** 10–11 November 2026; corrected 21 November 2026 (after a stop, refunds stop too) and 22 November 2026 (what starts the keyless-retirement count)
 - **Status:** accepted; built
 - **Requirements:** RFP-022 Sec.5, Sec.8, Sec.9
 
@@ -15,8 +15,8 @@ funds; Security #8 forbids changing what the bridge accepts.
 2. A stop-only failsafe: RISC Zero's unmodified emergency stop around the base Groth16 verifier (never the router,
    whose admin can add verifiers), its owner renounced at deployment; freezes that lapse after `maxFreeze` (an
    immutable deployment parameter, 30 days by default on the vault; a 30-day constant on LEZ); anyone retires after
-   30 days without checkpoint progress (plus the candidate's wait; time under a checkpoint freeze does not count);
-   refunds to the depositor named in the leaf.
+   30 days without checkpoint progress (plus the candidate's wait, counted from the last submission, finalisation or
+   end of a checkpoint freeze or watchers' pause); refunds to the depositor named in the leaf.
 
 ## Decision
 
@@ -33,7 +33,7 @@ checkpoint can be revoked before any refund — and no global release freeze sta
 first non-revoked sunset checkpoint, never lowered by a later one, and revoking that checkpoint clears it, while
 `revokeFrom` refuses an index that is already revoked (D5). From the v3 vault build: retirement must not depend on the
 freeze key, so anyone may call `retire()` once a sunset checkpoint has been final for longer than `revokeWindow` —
-since widened to anyone retiring after 30 days without a finalisation (D13, D11).
+since widened to anyone retiring 30 days plus one candidate wait after the last checkpoint progress (D13, D11).
 
 The limits kept and documented rather than fixed (D8): a tripped stop strands all escrow except owed balances. D8 kept
 refunds open for a sunset checkpoint finalised first; D13 replaced that ("After a stop nothing more is released or

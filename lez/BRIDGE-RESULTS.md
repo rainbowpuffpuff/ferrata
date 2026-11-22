@@ -670,9 +670,10 @@ worktree's path (the unchanged program builds to `0d3552601f93…70ed` there; `c
   word FerrataVault v5 packs `freezeAuthority` and `retired` in; slot 35 is `admin`, as the vault's
   own storage export `vault/test/vectors/registry-storage.json` shows) under a record and requires
   byte 11, `retired`, to be 1. The vault sets it only in `retire()`, which anyone may call once D13's
-  30 days without checkpoint progress have passed (`retireOpensAt`), so the vault evaluates the
-  condition on Ethereum's own clock with the freeze time excluded, as designed. Afterwards anyone sends
-  the checkpoint's own 33-byte `Sunset` as a top-level call at `config(cid)`.
+  30 days without checkpoint progress, plus one candidate wait, have passed (`retireOpensAt`), so the
+  vault evaluates the condition on Ethereum's own clock (the end of a checkpoint freeze or pause, if
+  later, starts the count). Afterwards anyone sends the checkpoint's own 33-byte `Sunset` as a
+  top-level call at `config(cid)`.
 - *Handover.* The live roles sit in `config(cid)` (`Roles`), not in `Controls` (which `configId`
   commits to). The admin's `ProposeRoles` (freeze authority and up to three watchers) reads a record
   and is valid only in a block stamped within a day after it; anyone's `ApplyRoles` applies it once a

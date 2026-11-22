@@ -344,8 +344,9 @@ program that is not deployed (row 143); and a second deployer's own configuratio
 
 The vault and the checkpoint program are immutable and parse LEZ v0.4 blocks, so a configuration is
 retired before a LEZ change it cannot follow (including a change of turn or slot length). The freeze
-authority, or anyone once no checkpoint has finalised for 30 days plus one candidate wait (time under a
-checkpoint freeze or a watchers' pause not counting: `retireOpensAt()`), calls `retire()` on the vault
+authority, or anyone 30 days plus one candidate wait after the last checkpoint progress (the deployment, the
+last candidate submitted or checkpoint finalised, or the end of the last checkpoint freeze or watchers' pause,
+whichever is latest: `retireOpensAt()`), calls `retire()` on the vault
 (deposits stop forever) and `Sunset` on LEZ (imports stop). Holders burn and release as usual; deposits
 LEZ never imported become refundable after a final sunset checkpoint and its revocation window. A new
 version is a new configuration, deployed as above, that holders move to by burning and depositing

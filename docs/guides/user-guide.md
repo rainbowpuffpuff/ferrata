@@ -439,9 +439,10 @@ messages for each code.
 - **Retired** (`retire()` on the vault, `Sunset` on LEZ): deposits stop forever and root imports stop;
   claims against imported roots, burns and releases continue; unimported deposits become refundable
   after a final sunset checkpoint and its revocation window (`revokeWindow`, 7 days by the design's
-  default). Anyone may retire once no checkpoint has been finalised for 30 days plus one candidate
-  wait, time under a checkpoint freeze or a watchers' pause not counting (`retireOpensAt()` on the
-  vault).
+  default). Anyone may retire once 30 days plus one candidate wait have passed since the last
+  checkpoint progress: the deployment, the last candidate submitted, the last checkpoint finalised or
+  the end of the last checkpoint freeze or watchers' pause, whichever is latest (`retireOpensAt()` on
+  the vault gives the moment; a resubmitted candidate or a new pause starts the count again).
 - **Verifier stopped** (only by RISC Zero's own proof that its proof system is unsound): nothing more
   is released or refunded; owed balances stay claimable with `claimOwed` (vault v5; the sentence of
   [`bridge.md`](../design/bridge.md) §15 that refunds still work after a stop describes an earlier
