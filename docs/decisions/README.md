@@ -59,3 +59,4 @@ a later record, its text kept. A record describes only work in this tree.
 | [0029](0029-voluntary-disclosure-claimed-only.md) | Voluntary disclosure of deposits and claims: the deposit secret only once its nullifier is spent | 21 November 2026 | accepted; built, not deployed | RFP-022 Soft.2, Priv.4 |
 | [0030](0030-web-depositor-takes-a-ticket.md) | A web depositor that takes a ticket from the user's Logos tool and never sees the seed | 21 November 2026 | accepted; built, not deployed | RFP-022 Soft.5, U.7 |
 | [0031](0031-committed-amounts-path.md) | Committed amounts: a new vault on both legs, the next one built so that a later switch is LEZ-side only | 21 November 2026 | design only | RFP-022 Soft.1, Sec.8 |
+| [0032](0032-burn-tag-used-once.md) | A burn's tag is used once: the burn record keyed on the tag, the wallet's counters journalled | 22 November 2026 | accepted; built, not deployed | RFP-022 R.2, R.4, R.5, R.7 |

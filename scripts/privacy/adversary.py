@@ -386,7 +386,7 @@ CLASSES = [
     (r"^boundary\[\]\.(out|in)\.(from|to)$|^fee\.fallback\.boundary\[\]\.(out|in)\.(from|to)$", FRESH,
      "LEZ: the sender's one-time alias (where it varies)"),
     (r"Burn\.(r|memo|mac|c_out)$", FRESH, "the burn note (tag, encrypted recipient, mac, COut)"),
-    (r"^derived\.burn_record_account$", FRESH, "the burn record account, a PDA of H(note)"),
+    (r"^derived\.burn_record_account$", FRESH, "the burn record account, a PDA of the note's tag r"),
     (r"^witness_set$", FRESH, "the proof (dev mode: a fake receipt) or the submitter's signature"),
     (r"^proof\.seal\.stark$", FRESH,
      "LEZ's receipt: the STARK proper (trace commitments, FRI openings) of a zero-knowledge proof, drawn by the prover"),

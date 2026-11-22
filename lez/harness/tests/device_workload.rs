@@ -108,7 +108,9 @@ const BURN_TRANSITION: (u64, usize, u64) = (25_377, 1, 131_072);
 /// checked against the record's segments again (the asserts below) or the measurements redone.
 const ATTEST_TRANSITIONS_NOW: [u64; 2] = [34_717, 346_763];
 const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_785, 110_944];
-const BURN_TRANSITION_NOW: u64 = 25_773;
+/// 23,610 since ADR 0032 (22 November 2026): the burn record is keyed on the note's tag, so the private transition no
+/// longer hashes the note (25,773 before); still one segment of 131,072 padded cycles, as the record's.
+const BURN_TRANSITION_NOW: u64 = 23_610;
 
 /// Each proof's receipt and transaction sizes as the record states them, `(receipt bytes,
 /// transaction bytes)`: the unpadded first pass (p4-minimum:23-25) and the padded pass (337-339;

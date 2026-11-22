@@ -1,6 +1,6 @@
 # Randomised runs over both real halves (`cli/tests/both_halves.rs`, RFP-022 Sec.6 and F.8)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; checkpoint (rule B) `0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e`; release `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9`. The vault on anvil (chain id 1), the bridge program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier accepts only the journals the guests committed. 321 s in all.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; checkpoint (rule B) `0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e`; release `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9`. The vault on anvil (chain id 1), the bridge program in LEZ v0.4.0-rc1's state machine, the two guests executed in RISC Zero dev mode; the mock verifier accepts only the journals the guests committed. 279 s in all.
 
 After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and supply + unminted deposits + unreleased burns == escrowed.
 

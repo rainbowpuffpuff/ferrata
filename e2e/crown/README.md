@@ -46,8 +46,8 @@ script that re-checks every step from public data and the recorded blocks.
   `crown-live-1` the one of its own table below. Their vaults and LEZ programs are immutable and keep it, and their
   records still check from this tree: `e2e/crown.sh verify RUN` takes the ids from the run's own records, and
   `scripts/verify-sepolia.py` holds each live vault to the programs it was deployed with.
-- **A run started from this tree** runs the bridge program since B1 (`ferrata_bridge_b1`, `0xac1fb59b…442e`, binary
-  sha256 `5f47b065…7fd8`) with this tree's crown-driver, which speaks only B1's accounts (`holder(cid, account)`,
+- **A run started from this tree** runs the bridge program since B1 (`ferrata_bridge_b1`, `0x847a4336…7515` since ADR 0032 of
+  22 November 2026, binary sha256 `537cbe7a…a036`; B1's first build was `0xac1fb59b…442e`) with this tree's crown-driver, which speaks only B1's accounts (`holder(cid, account)`,
   `nullifier(cid, chain, vault, N)`) and, like `vault/script/DeployVault.s.sol`, deploys a capped configuration
   (`FERRATA_UNCAPPED=1` for the unlimited one of the live runs). The input sets `rc1` and `rc3` on the Volume carry
   the earlier bridge program and a crown-driver built before B1, so this tree refuses them before anything runs or is

@@ -793,7 +793,7 @@ fn privacy_suite_lez_half() {
             .collect();
         assert_eq!(collected.len(), 1, "{}: one burn in the clear", r.id);
         let mut r = r;
-        let record = bw::burn_actor(w.program, &cid, &note.hash()).account_id;
+        let record = bw::burn_actor(w.program, &cid, &note.r).account_id;
         r.fields.push(("derived.burn_record_account".into(), record.value().to_vec()));
         assert_eq!(
             (collected[0].r, collected[0].c_out, collected[0].memo, collected[0].mac),

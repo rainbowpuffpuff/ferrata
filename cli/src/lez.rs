@@ -16,7 +16,7 @@ use common::transaction::LeeTransaction;
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{self, DestKind, OwnedDeposit},
-    outbound::{recover_burns, BurnNote, PublishedBurn, ReleaseTarget},
+    outbound::{BurnNote, PublishedBurn, ReleaseTarget},
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
@@ -235,6 +235,9 @@ pub struct History {
     pub imports: Vec<(u64, u64)>,
     /// Published burn notes of this configuration, by burn index (order of application).
     pub burns: Vec<PublishedBurn>,
+    /// Burn notes of this configuration in transactions a block includes though they were refused (their `burn_index`
+    /// is meaningless): nothing was burnt, but each tag is used, its memo public in its block.
+    pub refused_burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
     /// The deposit leaves (`inbound::deposit_leaf`) that plaintext claims have published, under any configuration of
@@ -288,13 +291,28 @@ fn published_leaf(w: &ferrata_lez_bridge_wire::ClaimWitness) -> Option<Hash> {
 impl History {
     /// Adds what refused calls (`Included::refused`) published: a refused plaintext `Claim`, under any configuration
     /// of the program, names its deposit as an applied one does, so its leaf joins `opened`; it spends no nullifier
-    /// (the deposit stays claimable) and nothing else of a refused call counts.
+    /// (the deposit stays claimable). A refused `Burn` of this configuration burnt nothing, but its tag is used (its
+    /// memo is public in the block): it joins `refused_burns`. Nothing else of a refused call counts.
     pub fn note_refused(&mut self, ctx: &Context, refused: &[Applied]) {
         for call in refused.iter().filter(|c| c.to.program_account_id == ctx.program) {
-            if let Ok(BridgeMessage::Claim { witness, .. }) = BridgeMessage::try_from_slice(&call.message) {
-                self.opened.extend(published_leaf(&witness));
+            match BridgeMessage::try_from_slice(&call.message) {
+                Ok(BridgeMessage::Claim { witness, .. }) => self.opened.extend(published_leaf(&witness)),
+                Ok(BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out }) if config_id == ctx.cid => {
+                    self.refused_burns.push(PublishedBurn {
+                        burn_index: u64::MAX,
+                        note: BurnNote { r, memo, mac, token, amount, c_out },
+                    });
+                }
+                _ => {}
             }
         }
+    }
+
+    /// The first burn counter of `keys` after the last one this history shows used, applied or refused, found as a
+    /// recovery from the seed finds it (gap [`BURN_GAP`]).
+    pub fn next_burn_counter(&self, keys: &BridgeKeys, ctx: &Context) -> u64 {
+        let all: Vec<PublishedBurn> = self.burns.iter().chain(&self.refused_burns).copied().collect();
+        ferrata_bridge_core::outbound::view_burns(&keys.view, &ctx.cid, &all, BURN_GAP).1
     }
 }
 
@@ -324,6 +342,44 @@ async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> 
         None => bail!(program_refusal(251, "checked before sending: no token(cid, token) account")),
         Some(other) => bail!("token(cid, token) holds another state: {other:?}"),
     }
+}
+
+/// Review M-1: the configuration `config(cid)` the zone holds is the one the tool reads on Ethereum. A burn binds
+/// `ctx.chain_id` and `ctx.vault` into `COut`, and `ctx.chain_id` is what the Ethereum RPC says (`eth_chainId`): an RPC
+/// that serves another chain (a fork reports its own id, 31337 for anvil's) while returning the real vault's
+/// `lezConfigId` would make a burn that no release can open. Refuses unless `config(cid)` is paired (`Ready`), is the
+/// configuration of this program with this id, and names this chain and this vault.
+pub async fn check_pairing<L: Ledger>(ledger: &L, ctx: &Context) -> Result<()> {
+    let cid = hx(&ctx.cid);
+    let config = match read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(bw::ConfigState::Ready { config, .. })) => config,
+        Some(BridgeState::Config(_)) => bail!("the zone's configuration {cid} is not paired with its vault yet: nothing can be sent under it"),
+        Some(other) => bail!("config(cid) of {cid} holds another state: {other:?}"),
+        None => bail!(
+            "the zone has no configuration {cid} (the vault's lezConfigId) at the bridge program {}: check --bridge-account, --vault and --sequencer",
+            hx(ctx.program.value())
+        ),
+    };
+    ensure!(
+        config.id(ctx.program) == ctx.cid,
+        "config(cid) at {cid} is not the configuration {cid} of the bridge program {}: refusing to go on",
+        hx(ctx.program.value())
+    );
+    ensure!(
+        config.evm_chain_id == ctx.chain_id,
+        "the zone's configuration {cid} pairs with chain {}, but the Ethereum RPC serves chain {}: refusing to go on (a burn \
+         binds the chain into COut, and no release could open it; use an RPC of chain {})",
+        config.evm_chain_id,
+        ctx.chain_id,
+        config.evm_chain_id
+    );
+    ensure!(
+        config.vault == ctx.vault,
+        "the zone's configuration {cid} pairs with the vault {}, not {}: refusing to go on",
+        hx(&config.vault),
+        hx(&ctx.vault)
+    );
+    Ok(())
 }
 
 /// The freezes a mint (`mints`) or a burn of `token` meets, as the bridge program checks them: the token's
@@ -398,8 +454,9 @@ pub struct ClaimPlan {
 }
 
 /// Builds the claim of `owned` from the vault's whole leaf list `leaves`: the newest imported root
-/// that covers the leaf, read with its token's state and the nullifier from the zone, then the shared
-/// builder (`ferrata_wallet::claim`: the path, the range, the program's checks, the accounts).
+/// that covers the leaf, read with its token's state from the zone, whether it is spent from `history` (never a read
+/// of its nullifier's account), then the shared builder (`ferrata_wallet::claim`: the path, the range, the program's
+/// checks, the accounts).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_claim<L: Ledger>(
     ledger: &L,
@@ -420,8 +477,9 @@ pub async fn plan_claim<L: Ledger>(
     if let Some(r) = gate_refusal(ledger, ctx, &token, true).await? {
         bail!(r);
     }
-    let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
-    let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
+    // Spent or not from the downloaded history alone (review M-2): asking the sequencer for `nullifier(cid, chain,
+    // vault, N)` would name this deposit to it before the claim, in a dry run or while the claim delay holds it.
+    let spent = is_claimed(ctx, history, &owned.nullifier);
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
     let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
     Ok(ClaimPlan {
@@ -472,6 +530,13 @@ pub async fn plan_burn<L: Ledger>(
     plan_burn_at(ledger, ctx, keys, holder, token, amount, recipient, history, None).await
 }
 
+/// A burn note's hash, `H(…/note ‖ r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` (the wire's): tells a note from another
+/// note with its tag.
+pub fn note_id(note: &BurnNote) -> Hash {
+    bw::Note { r: note.r, memo: note.memo, mac: note.mac, token: note.token, amount: note.amount, c_out: note.c_out }
+        .hash()
+}
+
 /// The burn with counter `i` of `amount` of `token` to `recipient` as its note was built (deterministic in the
 /// counter), for describing a burn an earlier run sent (R.07); its call names no account and is never sent.
 pub fn described_burn(
@@ -494,8 +559,9 @@ pub fn described_burn(
     BurnPlan { call, note, i }
 }
 
-/// [`plan_burn`] with the burn counter given (`Some(i)`: an interrupted burn's, so that its note and tag are the same
-/// and the bridge program, which refuses a repeated tag, applies at most one of the two) or the next free one.
+/// [`plan_burn`] with the burn counter given (`Some(i)`: the one the burn journal reserved, `crate::burns`) or the
+/// next one this history shows unused ([`History::next_burn_counter`]: blind to burns in flight; the bridge program
+/// refuses a second note with a used tag, ADR 0032).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_burn_at<L: Ledger>(
     ledger: &L,
@@ -528,14 +594,10 @@ pub async fn plan_burn_at<L: Ledger>(
         bail!(r);
     }
     let chain = chain_id_u256(ctx.chain_id);
-    let next_i = match counter {
-        Some(i) => i,
-        None => recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i,
-    };
+    let next_i = counter.unwrap_or_else(|| history.next_burn_counter(keys, ctx));
     let target = ReleaseTarget { chain_id: chain, vault: ctx.vault, recipient };
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
-    let note_hash = wire.hash();
     let mut mentions = match holder {
         // Signed at the holder's own actor, which forwards the note to its `holder(cid, account)`.
         BurnFrom::Public(account) => vec![
@@ -549,7 +611,7 @@ pub async fn plan_burn_at<L: Ledger>(
     mentions.extend([
         Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &token), seed: token_seed(&ctx.cid, &token) },
         Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) },
-        Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note_hash), seed: burn_seed(&ctx.cid, &note_hash) },
+        Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note.r), seed: burn_seed(&ctx.cid, &note.r) },
     ]);
     let call = LezCall {
         what: format!("burn with tag counter {next_i}"),
@@ -696,8 +758,11 @@ impl Ledger for Sequencer {
                                 if reverted { out.refused.push(call) } else { out.applied.push(call) }
                             }
                         }
-                        // A refused private transaction's witness stays in its proof: nothing of it counts.
-                        LeeTransaction::PrivacyPreserving(_) if reverted => {}
+                        // A refused private transaction's witness stays in its proof; what it delivers in the clear (a
+                        // refused private burn's note) is a refused call: nothing was burnt, but its tag is used.
+                        LeeTransaction::PrivacyPreserving(tx) if reverted => {
+                            out.refused.extend(visible_calls(tx, program))
+                        }
                         LeeTransaction::PrivacyPreserving(tx) => {
                             out.touched.extend(tx.message.public_account_ids());
                             out.applied.extend(visible_calls(tx, program));

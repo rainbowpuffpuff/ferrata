@@ -1,7 +1,7 @@
 //! Burns (`lez/BRIDGE.md` §2, D10, D13) and what the checkpoint program collects from them.
 //!
 //! A public holder burns by a top-level call it signs; a private holder burns as the root of its
-//! own private execution (RISC Zero dev mode), whose boundary delivery to `burn(cid, H(note))` is
+//! own private execution (RISC Zero dev mode), whose boundary delivery to `burn(cid, r)` is
 //! public. The notes are made as a wallet makes them, with D12's `mac` (over `memo`) and D13's
 //! `NOut`. Then the transactions are put into one LEZ block and read with the checkpoint program's
 //! own parser and decoder (`checkpoint-core`), to see what it would collect. Writes
@@ -154,7 +154,7 @@ fn burns_and_what_the_checkpoint_collects() {
     let keys = BridgeKeys::from_bridge_seed(&[0x77; 32]);
     let (n1, s_out1) = note(&keys, &cid_a, &vault_a, 0, ETH, DENOMINATIONS[1]);
     let holder = own_actor(program, payer);
-    let record1 = burn_actor(program, &cid_a, &n1.hash());
+    let record1 = burn_actor(program, &cid_a, &n1.r);
     let burn = |w: &mut World, label: &str, at: Actor, cid: Hash, note: &Note, code: Option<u8>| -> TxReport {
         let actors = w.public_burn_actors(at.account_id, &cid, note);
         let r = w.send(label, at, &BridgeMessage::burn(cid, note), actors);
@@ -166,7 +166,7 @@ fn burns_and_what_the_checkpoint_collects() {
     assert_eq!(
         borsh::from_slice::<BridgeState>(&w.chain.actor_state(record1)).unwrap(),
         BridgeState::Burn(BurnRecord { config_id: cid_a, note: n1 }),
-        "the note, written once at burn(cid, H(note))"
+        "the note, written once at burn(cid, r)"
     );
     reports.push(burn(&mut w, "Burn: the same note again", holder, cid_a, &n1, Some(code::ALREADY_WRITTEN)));
     let (odd, _) = note(&keys, &cid_a, &vault_a, 1, ETH, DENOMINATIONS[1] / 2);
@@ -200,10 +200,10 @@ fn burns_and_what_the_checkpoint_collects() {
         &n2,
         Some(code::INSUFFICIENT_BALANCE),
     ));
-    let record2 = burn_actor(program, &cid_a, &n2.hash());
+    let record2 = burn_actor(program, &cid_a, &n2.r);
     // A root call at a PDA that does not exist yet needs admission evidence (LEZ refuses it
     // otherwise, before the program runs).
-    let evidence = vec![PublicAccountEvidence::Pda { program, seed: burn_seed(&cid_a, &n2.hash()) }];
+    let evidence = vec![PublicAccountEvidence::Pda { program, seed: burn_seed(&cid_a, &n2.r) }];
     let r = w.submit(
         "Burn sent to the burn account itself",
         record2,
@@ -265,7 +265,7 @@ fn burns_and_what_the_checkpoint_collects() {
     assert_eq!(executed.exit_code, 0);
     let executed_table = render_executed(&[executed]);
     let holder_p = PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
-    let record_p = burn_actor(program, &cid_a, &np.hash());
+    let record_p = burn_actor(program, &cid_a, &np.r);
     let burn_publics = w.burn_actors(me, &cid_a, &np)[1..].to_vec();
     let private_burn = w
         .chain

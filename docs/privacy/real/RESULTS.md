@@ -3,7 +3,7 @@
 > **Which program.** These records are of the bridge program the deployments of November 2026 run
 > ([`docs/image-ids.md`](../../image-ids.md) `ferrata_bridge`, `0xccde6171…71dd`), and they reproduce from commit
 > `f13faee2`, where the steps under "Reproduce" wrote them in place. Since milestone B1 this tree's bridge program is
-> B1 (`ferrata_bridge_b1`, `0xac1fb59b…442e`): on this tree the same steps expect B1's id and write under
+> B1 (`ferrata_bridge_b1`, `0x847a4336…7515` since ADR 0032; `0xac1fb59b…442e` before): on this tree the same steps expect B1's id and write under
 > `target/privacy/real/b1/` (`FERRATA_PRIVACY_OUT`), never over these files. B1 has had dev-mode passes of this
 > suite, not a real-proof one.
 

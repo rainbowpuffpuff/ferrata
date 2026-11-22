@@ -18,7 +18,7 @@
   },
   "claim, plaintext": {
    "pass": false,
-   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000002acd86ae369f2c94ec3a9806a7d8469e358fee5f10a517a8 / 00070000001a85b914b8314d79068e12073cf5637cd2178a7627e03810)"
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (000700000039015e41407ca96e2441eb35f8b801223bcbf25fb39d7230 / 00070000001033fd3104506274fc30fac4e7631f764636a5cf32ff5255)"
   },
   "burn, private holding": {
    "pass": true,
@@ -119,18 +119,22 @@
    "with_order_state": 0.05000000000000001
   },
   "on LEZ: claim to burn (informational)": {
-   "success": 0.05000000000000001,
+   "success": 0.04500000000000001,
    "chance": 0.05,
    "exactly_identified": 0,
    "candidate_set_sizes": [
     [
+     1,
+     2
+    ],
+    [
      20,
-     20
+     18
     ]
    ],
-   "max_score": 0.0,
-   "without_derived_identifiers": 0.05000000000000001,
-   "with_order_state": 0.05000000000000001
+   "max_score": 2.995732273553991,
+   "without_derived_identifiers": 0.04500000000000001,
+   "with_order_state": 0.04500000000000001
   }
  },
  "order_only": {
@@ -817,7 +821,15 @@
     "B6": null
    },
    {
-    "field": "state: the harness's fee payer (refund_to)",
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
+    "what": "created or changed by this record only",
+    "B6": "N"
+   },
+   {
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -825,7 +837,7 @@
     "B6": null
    },
    {
-    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
+    "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -841,14 +853,6 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -857,12 +861,12 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.nullifier_account`",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": "N"
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
    }
   ],
   "claim, plaintext": [
@@ -1099,6 +1103,14 @@
     "B6": null
    },
    {
+    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
     "field": "state: the account in `derived.nullifier_account`",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
@@ -1115,14 +1127,6 @@
     "B6": null
    },
    {
-    "field": "state: holder(the relayer) (its wrapped balance: relay fees)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
-   },
-   {
     "field": "state: LEZ fee inbox",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -1131,7 +1135,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1139,7 +1143,7 @@
     "B6": null
    },
    {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1161,7 +1165,7 @@
     "bytes": 64,
     "across records": "20 distinct",
     "class": "fresh randomness",
-    "what": "= `derived.burn_record_account`: the burn record account, a PDA of H(note)",
+    "what": "= `derived.burn_record_account`: the burn record account, a PDA of the note's tag r",
     "B6": "the burn note"
    },
    {
@@ -1433,7 +1437,7 @@
     "bytes": 32,
     "across records": "20 distinct",
     "class": "fresh randomness",
-    "what": "the burn record account, a PDA of H(note)",
+    "what": "the burn record account, a PDA of the note's tag r",
     "B6": "the burn note"
    },
    {
@@ -1469,14 +1473,6 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.burn_record_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "fresh randomness",
-    "what": "created or changed by this record only",
-    "B6": "the burn note"
-   },
-   {
     "field": "state: the harness's fee payer (refund_to)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -1493,7 +1489,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1501,7 +1497,15 @@
     "B6": null
    },
    {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: the account in `derived.burn_record_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "fresh randomness",
+    "what": "created or changed by this record only",
+    "B6": "the burn note"
+   },
+   {
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1958,10 +1962,10 @@
      "fake"
     ],
     "prove_s": {
-     "min": 1.053953971,
-     "median": 1.114421543,
-     "max": 1.19195894,
-     "sum": 22.407321972000002,
+     "min": 0.815711405,
+     "median": 0.85364358,
+     "max": 0.874313266,
+     "sum": 17.071003875,
      "n": 20
     },
     "proof_bytes": {
@@ -2053,10 +2057,10 @@
      "fake"
     ],
     "prove_s": {
-     "min": 0.65276855,
-     "median": 0.6826149450000001,
-     "max": 0.725235273,
-     "sum": 13.697297612,
+     "min": 0.523050836,
+     "median": 0.530237006,
+     "max": 0.549997093,
+     "sum": 10.625071581,
      "n": 20
     },
     "proof_bytes": {
@@ -2236,7 +2240,7 @@
       "class": null
      },
      "receipt.calldataGas": {
-      "distinct": 3,
+      "distinct": 2,
       "bytes": [
        32
       ],
@@ -2438,16 +2442,16 @@
   },
   "burn, private holding": {
    "receipt.gas_exec": [
-    516059
+    511731
    ],
    "receipt.cycles": [
-    106295
+    101967
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    5920976
+    5886352
    ]
   },
   "claim, plaintext": {

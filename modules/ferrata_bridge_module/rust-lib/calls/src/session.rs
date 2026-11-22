@@ -720,10 +720,9 @@ impl Chain {
             json!({ "account": hex(account.value()), "program": hex(of.value()), "kind": "pda", "seed": hex(seed) })
         };
         let me = bw::own_actor(program, holder);
-        let note_hash = note.hash();
         let (t, ts) = (bw::token_actor(program, &cid, &[0u8; 20]), bw::token_seed(&cid, &[0u8; 20]));
         let (c, cs) = (bw::config_actor(program, &cid), bw::config_seed(&cid));
-        let (u, us) = (bw::burn_actor(program, &cid, &note_hash), bw::burn_seed(&cid, &note_hash));
+        let (u, us) = (bw::burn_actor(program, &cid, &note.r), bw::burn_seed(&cid, &note.r));
         let accounts = json!([
             { "account": hex(me.account_id.value()), "program": hex(me.program_account_id.value()), "kind": "private_self" },
             pda(&t.account_id, &t.program_account_id, ts.as_bytes()),

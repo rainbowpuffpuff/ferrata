@@ -78,7 +78,9 @@ Statements:
 * `recover(kAuth, …, deposits, g, dest_of)`: per deposit, one HMAC and up to `2g` SHA-256 (g seed-derived
   account indices × both kinds). `recover_burns(keys, configId, …, notes, gap)`: regenerate `r_i`,
   keep notes whose MAC verifies, decrypt the memo, authenticate it against `COut`. `view_burns(kView, …)`
-  does the first half with the view key alone. `register_burn_tag` refuses a repeated `r`.
+  does the first half with the view key alone. The core keeps no state: a repeated `r` (one `sOut`, one `NOut`) is
+  refused by the LEZ bridge program, which records a burn at `burn(cid, r)` (ADR 0032;
+  `lez/harness/tests/bridge_burn_tag.rs`).
 
 ## Reproduce
 

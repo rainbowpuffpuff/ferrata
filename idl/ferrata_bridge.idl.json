@@ -133,12 +133,12 @@
               },
               {
                 "kind": "arg",
-                "path": "note_hash"
+                "path": "r"
               }
             ]
           },
           "docs": [
-            "burn(cid, H(note)), written once"
+            "burn(cid, r), written once per tag: a second note with a used tag refuses with 244 ALREADY_WRITTEN"
           ]
         }
       ],
@@ -212,7 +212,7 @@
         "private_owned": false
       },
       "docs": [
-        "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."
+        "Debit one denomination and record the note once at burn(cid, r), once per tag; a top-level call or the root of a private execution."
       ]
     },
     {
@@ -3396,7 +3396,7 @@
           }
         ],
         "docs": [
-          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, H(note)), token(cid, token)."
+          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token)."
         ]
       }
     }
@@ -5725,7 +5725,7 @@
     {
       "code": 244,
       "name": "ALREADY_WRITTEN",
-      "msg": "A write-once account already written: the configuration, a root at the same leaf count, a token's entry, a burn note, the sunset."
+      "msg": "A write-once account already written: the configuration, a root at the same leaf count, a token's entry, a burn tag (the same note again, or another note with its tag), the sunset."
     },
     {
       "code": 245,

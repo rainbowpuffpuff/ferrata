@@ -37,7 +37,7 @@ Negative tests for specific attacks (each a named test):
 | a burn of another configuration | `attack_burn_from_another_config_cannot_satisfy_a_release` | `RootMismatch` (verifies only for its own `configId`) |
 | wrong token or amount | `attack_wrong_token_or_amount_fails` | `RootMismatch` |
 | copied note on another token/amount | `attack_copied_note_with_other_token_or_amount_fails_the_mac` | MAC fails (also for another `COut` and another view key); the scan ignores it |
-| repeated `r` | `attack_repeated_burn_tag_is_refused_by_the_registry` | `RepeatedTag` for a reused `i` and for a copied `r` |
+| repeated `r` | `a_reused_counter_shares_the_release_nullifier` | two notes with one counter share `sOut` and `NOut`, so a tag must be used once; the LEZ bridge program refuses a second note with a used tag (`lez/harness/tests/bridge_burn_tag.rs`, ADR 0032). Until 22 November 2026 this row named a test of `register_burn_tag`, a helper the program never called (review H-1): removed |
 | private kind opened as public | `attack_private_kind_commitment_cannot_be_opened_as_public` | `RootMismatch` both ways |
 
 Vectors: `python3 -I scripts/check_vectors_v2.py vectors` → `v2 vectors OK: 529 values recomputed

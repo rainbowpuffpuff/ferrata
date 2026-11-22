@@ -1,6 +1,7 @@
 {
   "counts": {
-    "PASS": 12
+    "MISMATCH": 1,
+    "PASS": 11
   },
   "dev_mode": "1",
   "lez": "v0.4.0-rc1",
@@ -88,11 +89,13 @@
       "id": "BR-BRN-05",
       "kind": "control",
       "observed": {
-        "note": "X's burn first: applied true exit None [H burns its note]",
-        "outcome": "accepted"
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": "X's burn first: applied true exit None; H's holding after: 100000000000000000 (ADR 0032: one note per tag) [H burns its note]",
+        "outcome": "refused"
       },
       "title": "a copied tag cannot make the owner's burn revert",
-      "verdict": "PASS"
+      "verdict": "MISMATCH"
     },
     {
       "area": "bridge",

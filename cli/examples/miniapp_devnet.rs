@@ -968,7 +968,7 @@ impl Devnet {
         let publics = vec![
             token_actor(program, &self.cid, &ETH_TOKEN),
             config_actor(program, &self.cid),
-            burn_actor(program, &self.cid, &wire.hash()),
+            burn_actor(program, &self.cid, &wire.r),
         ];
         let mut holder = slot.holder.clone();
         holder.debit(&self.cid, &ETH_TOKEN, amount).context("the holding is smaller than the burn")?;

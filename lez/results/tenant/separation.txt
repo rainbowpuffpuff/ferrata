@@ -1,7 +1,7 @@
-# Separation of configurations (LEZ v0.4.0-rc1 state machine, bridge program ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e)
+# Separation of configurations (LEZ v0.4.0-rc1 state machine, bridge program 847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515)
 
-configId(A) d25e5f070e01458580d7c14bd5b382c5d2df185f60e9b7f86f6576e29871463b (vault A's own; roles: the world's admin and freeze authority)
-configId(T) 305591dc5c09ff31fed096130cd9f5a19e5642804adcef93984eab8411bea884 (vault A, an instance its creator controls; roles: accounts of seeds 0x41 and 0x42)
+configId(A) 2a7b0831b75aa6f65daff347a0f2dd0f1ae2fa7932c9ae7924c25860b36c473e (vault A's own; roles: the world's admin and freeze authority)
+configId(T) 708055b3fbe39dfa5a2985157f0d7cd11206e4a6b55de9688fd848d1f42c6531 (vault A, an instance its creator controls; roles: accounts of seeds 0x41 and 0x42)
 
 ## T's roles
 

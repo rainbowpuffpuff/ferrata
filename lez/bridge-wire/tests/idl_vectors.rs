@@ -859,7 +859,7 @@ fn pda_vectors() {
             "ferrata_bridge",
             "burn",
             &program,
-            &[("config_id", "bytes", hex(&cid)), ("note_hash", "bytes", hex(&note))],
+            &[("config_id", "bytes", hex(&cid)), ("r", "bytes", hex(&note))],
             &bw::burn_actor(program, &cid, &note),
         ),
         pda_entry(

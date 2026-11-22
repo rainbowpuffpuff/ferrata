@@ -923,8 +923,8 @@ fn brn() {
         observe(&w, &rep, "holder(H) holds 0.2 ETH under A", |w| {
             let mut f = Vec::new();
             want(&mut f, "holding -d0", w.balance(role_account(H), &cid), D0);
-            let rec = w.chain.actor_state(burn_actor(program, &cid, &note.hash())).to_vec();
-            want(&mut f, "burn(A, H(note))", borsh::from_slice::<BridgeState>(&rec).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid, note })));
+            let rec = w.chain.actor_state(burn_actor(program, &cid, &note.r)).to_vec();
+            want(&mut f, "burn(A, r)", borsh::from_slice::<BridgeState>(&rec).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid, note })));
             f
         })
     });
@@ -956,6 +956,10 @@ fn brn() {
         Observed::of_report(&rep, &format!("holding after: {left} (d0 = {D0})"))
     });
     // BR-BRN-05: H and X hold d0; X burns a note with H's r (another memo and mac) first; then H's burn.
+    // The vector rests on D13's "copying a pending burn's tag cannot make it revert". ADR 0032 (the reviews of
+    // 22 November 2026, H-1) withdraws it: `burn(cid, r)` is written once per tag, so that two notes with one tag
+    // can never both be applied (they would share one release nullifier); X's copy, applied first, makes H's burn
+    // revert (244) and H's holding stays whole. Recorded as observed (a MISMATCH against the blind vector).
     r.run("BR-BRN-05", || {
         let mut w = holds(D0);
         let cid = w.cid_a;
@@ -964,7 +968,15 @@ fn brn() {
         let note_x = Note { memo: [0x99; 20], mac: [0x98; 16], ..note_h };
         let first = burn_at(&mut w, "X burns a note with H's r first", X, X, cid, &note_x);
         let rep = burn_at(&mut w, "H burns its note", H, H, cid, &note_h);
-        Observed::of_report(&rep, &format!("X's burn first: applied {} exit {:?}", first.ok(), first.exit_code))
+        Observed::of_report(
+            &rep,
+            &format!(
+                "X's burn first: applied {} exit {:?}; H's holding after: {} (ADR 0032: one note per tag)",
+                first.ok(),
+                first.exit_code,
+                w.balance(role_account(H), &cid)
+            ),
+        )
     });
     // BR-BRN-06: holder(P's account) holds d0, P (LEZ's `scripted` program, at its PDA) calls the bridge's
     // Burn at its own bridge actor from its handler.
@@ -1651,11 +1663,11 @@ fn ten() {
         if !matches!(obs, Observed::Accepted { .. }) {
             return obs;
         }
-        let (ra, rb) = (burn_actor(program, &cid_a, &note.hash()), burn_actor(program, &cid_b, &note.hash()));
+        let (ra, rb) = (burn_actor(program, &cid_a, &note.r), burn_actor(program, &cid_b, &note.r));
         let mut f = Vec::new();
         want(&mut f, "two accounts", ra.account_id != rb.account_id, true);
-        want(&mut f, "burn(A, H(note))", borsh::from_slice::<BridgeState>(&w.chain.actor_state(ra)).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid_a, note })));
-        want(&mut f, "burn(B, H(note))", borsh::from_slice::<BridgeState>(&w.chain.actor_state(rb)).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid_b, note })));
+        want(&mut f, "burn(A, r)", borsh::from_slice::<BridgeState>(&w.chain.actor_state(ra)).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid_a, note })));
+        want(&mut f, "burn(B, r)", borsh::from_slice::<BridgeState>(&w.chain.actor_state(rb)).ok(), Some(BridgeState::Burn(BurnRecord { config_id: cid_b, note })));
         if f.is_empty() { obs } else { Observed::EffectMismatch { note: f.join("; ") } }
     });
     // BR-TEN-04: B-BR plus the rogue configuration B of vault A, which claimed A's leaf 2 with its s; A's claim.

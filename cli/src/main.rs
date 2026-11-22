@@ -507,7 +507,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 recipient,
                 send,
                 yes,
-                pending: c.lez_wallet.as_ref().map(|w| w.join("ferrata-pending-burn.json")),
+                journal: c.lez_wallet.clone(),
             };
             let r = flow::burn(&e, &seed, &mut ledger, &ctx, &o, out).await?;
             let result = json!({

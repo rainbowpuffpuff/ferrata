@@ -1,4 +1,4 @@
-# R2: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, bridge program ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e)
+# R2: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, bridge program 847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515)
 
 Execution gas limit of a transaction: 10000000. The k holdings of other configurations are placed as the program leaves them: each at its own holder(cid, dest), one account per configuration (state bytes: the k accounts' states in all); A's claim and A's owner's burn touch holder(A, ·) only.
 
@@ -15,16 +15,16 @@ Execution gas limit of a transaction: 10000000. The k holdings of other configur
 
 | k | state bytes (k accounts) | outcome | gas_exec charged | fee_base | cycles at holder(A, owner) |
 |---:|---:|---|---:|---:|---:|
-| 0 | 0 | applied | 165329 | 1329344 | 30431 |
-| 6110 | 452140 | applied | 165329 | 1329344 | 30431 |
-| 12098 | 895252 | applied | 165329 | 1329344 | 30431 |
+| 0 | 0 | applied | 156678 | 1260136 | 28270 |
+| 6110 | 452140 | applied | 156678 | 1260136 | 28270 |
+| 12098 | 895252 | applied | 156678 | 1260136 | 28270 |
 
 Every claim and every burn above: the same gas, fee and cycles as with k = 0.
 
 ## holder(A, dest) takes credits under A only
 
-configId(A) d25e5f070e01458580d7c14bd5b382c5d2df185f60e9b7f86f6576e29871463b
-configId(B) aabe5ca5334d39859f1694fca4190732535df3ce198970bc7c1f97b23579bea6
+configId(A) 2a7b0831b75aa6f65daff347a0f2dd0f1ae2fa7932c9ae7924c25860b36c473e
+configId(B) d3f3e0295cf7e71d12bf9967b50169c82cbd5b132e770e65485937f0ab526b67
 
 | delivered (the program's executor, no state machine) | exit code |
 |---|---:|

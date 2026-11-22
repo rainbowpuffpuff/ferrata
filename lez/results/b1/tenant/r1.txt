@@ -1,7 +1,7 @@
-# R1: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, bridge program ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e)
+# R1: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, bridge program 847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515)
 
-configId(A) d25e5f070e01458580d7c14bd5b382c5d2df185f60e9b7f86f6576e29871463b
-configId(B) aabe5ca5334d39859f1694fca4190732535df3ce198970bc7c1f97b23579bea6 (A's fields, instance bebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebe)
+configId(A) 2a7b0831b75aa6f65daff347a0f2dd0f1ae2fa7932c9ae7924c25860b36c473e
+configId(B) d3f3e0295cf7e71d12bf9967b50169c82cbd5b132e770e65485937f0ab526b67 (A's fields, instance bebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebebe)
 
 | transaction | outcome | gas_exec | gas_stor | fee_base |
 |---|---|---:|---:|---:|
@@ -18,18 +18,18 @@ configId(B) aabe5ca5334d39859f1694fca4190732535df3ce198970bc7c1f97b23579bea6 (A'
 | A: the same claim again | refused, exit 250 (ALREADY_CLAIMED) | 216477 | 2053 | 1748240 |
 | A: Claim of A's other deposit (leaf 6, 10 ETH) | applied | 295638 | 2053 | 2381528 |
 | B: Claim of the invented deposit (leaf 8, 1 ETH to the payer) | applied | 266149 | 2053 | 2145616 |
-| B: Burn of the invented 1 ETH by the payer | applied | 161159 | 839 | 1295984 |
+| B: Burn of the invented 1 ETH by the payer | applied | 152508 | 839 | 1226776 |
 | B: Claim of A's private-kind deposit (leaf 5), s guessed | refused, exit 249 (CLAIM_INVALID) | 94862 | 2053 | 775320 |
 | B: the same as a public-kind deposit to the attacker, s guessed | refused, exit 249 (CLAIM_INVALID) | 94862 | 2053 | 775320 |
 | B: plaintext Claim of leaf 5 with its real s | refused, exit 252 (WRONG_DESTINATION) | 98488 | 2053 | 804328 |
 | B: ClaimPrivately of leaf 5 with its real s, run as the attacker's own account | refused, exit 252 (WRONG_DESTINATION) | 157476 | 2229 | 1277640 |
 
 A's claim after B's: applied, gas_exec 265694, fee_base 2141976; the same claim again: exit Some(250), gas_exec 216477
-holder(A, dest of leaf 2): [Holding { config_id: [210, 94, 95, 7, 14, 1, 69, 133, 128, 215, 193, 75, 213, 179, 130, 197, 210, 223, 24, 95, 96, 233, 183, 248, 111, 101, 118, 226, 152, 113, 70, 59], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000000 }]
-holder(B, dest of leaf 2): [Holding { config_id: [170, 190, 92, 165, 51, 77, 57, 133, 159, 22, 148, 252, 164, 25, 7, 50, 83, 93, 243, 206, 25, 137, 112, 188, 124, 31, 151, 178, 53, 121, 190, 166], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000000 }]
-nullifier(A, chain, vault, N of leaf 2): Some(NullifierState { config_id: [210, 94, 95, 7, 14, 1, 69, 133, 128, 215, 193, 75, 213, 179, 130, 197, 210, 223, 24, 95, 96, 233, 183, 248, 111, 101, 118, 226, 152, 113, 70, 59], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], leaf_count: 8, amount: 1000000000000000000 })
-nullifier(B, chain, vault, N of leaf 2): Some(NullifierState { config_id: [170, 190, 92, 165, 51, 77, 57, 133, 159, 22, 148, 252, 164, 25, 7, 50, 83, 93, 243, 206, 25, 137, 112, 188, 124, 31, 151, 178, 53, 121, 190, 166], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], leaf_count: 9, amount: 1000000000000000000 })
-burn(configId(B), H(note)): written; burn(configId(A), H(note)): empty
+holder(A, dest of leaf 2): [Holding { config_id: [42, 123, 8, 49, 183, 90, 166, 246, 93, 175, 243, 71, 160, 242, 221, 15, 26, 226, 250, 121, 50, 201, 174, 121, 36, 194, 88, 96, 179, 108, 71, 62], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000000 }]
+holder(B, dest of leaf 2): [Holding { config_id: [211, 243, 224, 41, 92, 247, 231, 29, 18, 191, 153, 103, 181, 1, 105, 200, 44, 189, 91, 19, 46, 119, 14, 101, 72, 89, 55, 240, 171, 82, 107, 103], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000000 }]
+nullifier(A, chain, vault, N of leaf 2): Some(NullifierState { config_id: [42, 123, 8, 49, 183, 90, 166, 246, 93, 175, 243, 71, 160, 242, 221, 15, 26, 226, 250, 121, 50, 201, 174, 121, 36, 194, 88, 96, 179, 108, 71, 62], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], leaf_count: 8, amount: 1000000000000000000 })
+nullifier(B, chain, vault, N of leaf 2): Some(NullifierState { config_id: [211, 243, 224, 41, 92, 247, 231, 29, 18, 191, 153, 103, 181, 1, 105, 200, 44, 189, 91, 19, 46, 119, 14, 101, 72, 89, 55, 240, 171, 82, 107, 103], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], leaf_count: 9, amount: 1000000000000000000 })
+burn(configId(B), r): written; burn(configId(A), r): empty
 nullifier of the private-kind deposit (leaf 5): unspent under A and under B
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
@@ -47,7 +47,7 @@ nullifier of the private-kind deposit (leaf 5): unspent under A and under B
 | 11 | A: the same claim again | bridge Claim 107,796 → bridge Issue 52,567 → bridge Admit 35,962 → bridge Spend 20,152 | 216,477 | 4% | 2,053 | 1,748,240 | refused: exit 250 (ALREADY_CLAIMED) |
 | 12 | A: Claim of A's other deposit (leaf 6, 10 ETH) | bridge Claim 107,796 → bridge Issue 52,816 → bridge Admit 35,962 → bridge Spend 38,287 → bridge Mint 18,800 → bridge Mint 18,800 → bridge Mint 23,177 | 295,638 | 6% | 2,053 | 2,381,528 | applied |
 | 13 | B: Claim of the invented deposit (leaf 8, 1 ETH to the payer) | bridge Claim 107,796 → bridge Issue 48,645 → bridge Admit 35,962 → bridge Spend 31,769 → bridge Mint 18,800 → bridge Mint 23,177 | 266,149 | 5% | 2,053 | 2,145,616 | applied |
-| 14 | B: Burn of the invented 1 ETH by the payer | bridge Burn 24,855 → bridge Burn 30,009 → bridge Burn 48,670 → bridge Admit 35,963 → bridge Burn 21,662 | 161,159 | 3% | 839 | 1,295,984 | applied |
+| 14 | B: Burn of the invented 1 ETH by the payer | bridge Burn 22,693 → bridge Burn 27,848 → bridge Burn 46,506 → bridge Admit 35,963 → bridge Burn 19,498 | 152,508 | 3% | 839 | 1,226,776 | applied |
 | 15 | B: Claim of A's private-kind deposit (leaf 5), s guessed | bridge Claim 94,862 | 94,862 | 2% | 2,053 | 775,320 | refused: exit 249 (CLAIM_INVALID) |
 | 16 | B: the same as a public-kind deposit to the attacker, s guessed | bridge Claim 94,862 | 94,862 | 2% | 2,053 | 775,320 | refused: exit 249 (CLAIM_INVALID) |
 | 17 | B: plaintext Claim of leaf 5 with its real s | bridge Claim 98,488 | 98,488 | 2% | 2,053 | 804,328 | refused: exit 252 (WRONG_DESTINATION) |

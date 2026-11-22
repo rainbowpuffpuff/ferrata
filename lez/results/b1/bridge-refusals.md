@@ -1,6 +1,6 @@
 # Refused, repeated and capped claims (`harness/tests/bridge_refusals.rs`, RFP-022 Priv.5)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`.
 
 ## The private claim (the default)
 

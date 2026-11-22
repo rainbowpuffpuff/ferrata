@@ -208,9 +208,13 @@ memo = recipient XOR HMAC(kView, "ferrata/memo/v1" ‖ r)[0..20]
 mac  = HMAC(kView, "ferrata/burn-mac/v2" ‖ r ‖ memo ‖ token ‖ amount ‖ COut)[0..16]
 ```
 
-`COut` hides and binds your Ethereum recipient. The note is recorded once, keyed on its whole hash, so
-a copy cannot block it. The wallet advances `i` on every published burn, even a reverted one, so a tag
-never repeats.
+`COut` hides and binds your Ethereum recipient. The note is recorded once per tag, at `burn(cid, r)`: a
+second note with your tag is refused, so two notes with one tag (one `sOut`, one release nullifier) are
+never both applied (ADR 0032; the reviews of 22 November 2026). The wallet advances `i` on every published
+burn, even a reverted one, so a tag never repeats, and the `ferrata` tool reserves the counter in a journal
+beside LEZ's wallet before it proves the burn, so two burns in flight, or a burn after an interrupted one,
+never share a counter. Whoever sees your burn before it is applied (on LEZ v0.4, the sequencer) can make
+it revert by burning a denomination of its own under your tag; you lose nothing and burn again.
 
 **Public:** token, denomination, time, the note; for a private holding the holder appears as an alias.
 **Hidden:** you and your recipient. **Measured** (in-process harness, the deployed program): a private burn
@@ -513,7 +517,7 @@ end-to-end test, which CI runs on every push (row 84).
 - **Actors and addresses**: `config(cid)`, `token(cid, token)`, `root(cid, n)`,
   `nullifier(cid, chain, vault, N)` and the holder `holder(cid, account)` (keyed by the configuration since milestone
   B1; the program the live runs of November 2026 deployed keys them by the chain, vault and `N`, and by the account),
-  `burn(cid, H(note))`; seeds `H("ferrata-lez/v1/bridge/<role>" ‖ …)` ([`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2).
+  `burn(cid, r)`; seeds `H("ferrata-lez/v1/bridge/<role>" ‖ …)` ([`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2).
 - **Derivations**: `configId` ([`bridge.md`](../design/bridge.md) §3), `s`, `C`, `fid`, `N` (§5.3), the
   leaf (§5.2), `r_i`, `sOut`, `COut`, `memo`, `mac`, burn leaf (§12.1), `NOut` and the release journal
   (§12.2). Implementations: `ferrata-bridge-core` (SPEC-v2 encodings) and `bridge-wire` (`nf_out_v2`).
@@ -531,7 +535,8 @@ end-to-end test, which CI runs on every push (row 84).
   the return leg on Ethereum with real proofs ([`e2e/README.md`](../../e2e/README.md)).
 - **Rules for a client**: prove at submission time against the newest root; check caps and freezes
   before proving (a retry after a cap rejection dates the first attempt); advance the burn counter on
-  every published burn; keep the blocks a candidate was proven over if you are also a prover
+  every published burn, and reserve it before proving, never giving one counter to two burns (the program
+  refuses a second note with a used tag: ADR 0032); keep the blocks a candidate was proven over if you are also a prover
   ([`bridge.md`](../design/bridge.md) §18.7, last paragraph).
 
 ## 14. What is not built

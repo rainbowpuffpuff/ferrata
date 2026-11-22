@@ -21,8 +21,9 @@
 #      recorded reused (no second job), the deposit claimed once (the second deposit, with its own drop, after it)
 #   d. R.07, a burn killed after its sending: `ferrata burn --amount 0.001` (of the 0.002 the two claims minted) with
 #      holdproxy holding its sendTransaction's answer (the burn reaches the sequencer, the tool never learns it); the
-#      tool SIGKILLed; the burn applied; the same command again: the tool finds the burn its record names on the zone
-#      and does not burn again (the private holding 0.001 less, once)
+#      tool SIGKILLed; the burn applied; the same command again: the tool finds the burn its journal names on the zone
+#      (`<LEZ wallet>/ferrata-burns.json`, cli/src/burns.rs) and does not burn again (the private holding 0.001 less,
+#      once); the journal's entry resolved
 #   e. the checkpoint, the release through the relayer, recover and status (as hook-cli.sh)
 #   f. R.06, the gas drop resumed on the running sequencer (the drops daemon reaches the sequencer through a second
 #      holdproxy): the first drop's credit held unsent and the daemon SIGKILLed; its next send answered 503 by the
@@ -33,8 +34,12 @@
 #   g. the claim's gas drop asked of another relayer (review M3): a claim first naming a relayer that never answers
 #      (an inbox nobody serves) stops after its wait; the same deposit's claim naming the real relayer reuses the
 #      one-time account and hands that relayer a receipt of its own
-#   h. R.07, a burn killed with its send trapped (it never reached the zone), then a burn with other parameters (another
-#      recipient): it takes the interrupted burn's counter (at most one of the two can be applied), applied once
+#   h. R.07, a burn whose send is answered 503 and forwarded to the sequencer 90 s later (`late`: the tool never learns
+#      it was sent), then a burn with other parameters (another recipient): it takes a fresh counter, never the
+#      interrupted burn's (the final review's H1 of 22 November 2026: until 22 November 2026 it took the interrupted burn's counter, and the
+#      bridge program applied two notes with one tag, one of them never releasable), and is applied; the late
+#      transaction, built on the private account's state the second burn spent, is refused; the interrupted burn's
+#      counter stays reserved in the journal
 # SEQNET_GAS_DROP=0: the claims' fees from the stand-in (seqnet-fund) instead of the relayer's drops (b, f, g skipped).
 # The daemons' standard output (their JSON lines, and LEZ's wallet's plain sync lines) goes to the work directory; the
 # records keep the JSON lines only.
@@ -321,8 +326,8 @@ say "R.07: the burn, its sendTransaction's answer held by the proxy"
 BP=$!
 if wait_hit "$h"; then
   sleep 2; kill -9 "$BP" 2>/dev/null; wait "$BP" 2>/dev/null
-  pending_rec="$(cat "$U/lez-wallet/ferrata-pending-burn.json" 2>/dev/null | jq -c '{i, amount, at}')"
-  ok "R.07 burn: the tool SIGKILLed with its burn at the sequencer and the answer held; its record: $pending_rec"
+  pending_rec="$(jq -c '[.wallets[].open[] | {i, amount, at, sent}]' "$U/lez-wallet/ferrata-burns.json" 2>/dev/null)"
+  ok "R.07 burn: the tool SIGKILLed with its burn at the sequencer and the answer held; its journal: $pending_rec"
   fact pendingBurn "${pending_rec:-null}"
 else
   kill -9 "$BP" 2>/dev/null; bad "R.07 burn: the burn's send never reached the proxy"
@@ -335,7 +340,8 @@ echo pass > "$PX/ctl"
 u 13-burn "${PROVE[@]}" "${F[@]}" burn --amount 0.001 --recipient "$FRESH" --bridge-program "$BRIDGE_BIN" --send --yes || die "the burn again"
 sleep 40
 nb2="$(zone_txs)"
-if grep -q "not burning again" "$RUN/user/13-burn.txt" && [ "$nb2" = "$nb1" ] && [ ! -e "$U/lez-wallet/ferrata-pending-burn.json" ]; then
+open_d="$(jq '[.wallets[].open[]] | length' "$U/lez-wallet/ferrata-burns.json" 2>/dev/null)"
+if grep -q "not burning again" "$RUN/user/13-burn.txt" && [ "$nb2" = "$nb1" ] && [ "$open_d" = 0 ]; then
   ok "R.07 burn: the same command again found that burn on the zone and burnt nothing more ($(grep -m1 'earlier run' "$RUN/user/13-burn.txt" | cut -c1-160)); the zone still $nb2 private transactions"
 else
   bad "R.07 burn: the command again: $(grep -E 'earlier run|sent:' "$RUN/user/13-burn.txt" | head -n 2 | tr '\n' ' '); the zone $nb1 -> $nb2"
@@ -354,35 +360,32 @@ u 18-status "${F[@]}" status || die "status"
 paid="$(cast balance "$FRESH" --rpc-url "$RPC")"
 [ "$paid" != 0 ] && ok "the release through the relayer paid $paid wei to the fresh address" || bad "nothing released to the fresh address"
 
-# ---- h. R.07: a burn killed before it reached the zone, then a burn with other parameters (review L5) -----------------
+# ---- h. R.07: a burn sent late, then a burn with other parameters (review L5; the final review's H1) ------------------
 fund_private   # the burn's LEZ fee (the stand-in)
 FRESH2="$(cast wallet new --json | jq -r '.[0].address')"
-nb3="$(zone_txs)"; h="$(hits)"; echo "trap sendTransaction" > "$PX/ctl"
-say "R.07: a burn of the last 0.001, its sendTransaction trapped by the proxy (never forwarded)"
-( "${PROVE[@]}" "${FP[@]}" burn --amount 0.001 --recipient "$FRESH" --bridge-program "$BRIDGE_BIN" --send --yes \
-    > "$RUN/user/19-burn-trapped.txt" 2>&1 ) &
-BP=$!
-trapped_rec=""
-if wait_hit "$h"; then
-  sleep 1; kill -9 "$BP" 2>/dev/null; wait "$BP" 2>/dev/null
-  trapped_rec="$(jq -c '{i, amount, recipient}' "$U/lez-wallet/ferrata-pending-burn.json" 2>/dev/null)"
-  fact trappedBurn "${trapped_rec:-null}"
-  ok "R.07 burn: a burn SIGKILLed with its send trapped (it never left the proxy); its record: $trapped_rec"
-else
-  kill -9 "$BP" 2>/dev/null; bad "R.07 burn: the trapped burn's send never reached the proxy"
-fi
-echo pass > "$PX/ctl"
-sleep 40
+nb3="$(zone_txs)"; h="$(hits)"; echo "late sendTransaction 90" > "$PX/ctl"
+say "R.07: a burn of the last 0.001, its sendTransaction answered 503 and forwarded to the sequencer 90 s later"
+u 19-burn-late "${PROVE[@]}" "${FP[@]}" burn --amount 0.001 --recipient "$FRESH" --bridge-program "$BRIDGE_BIN" --send --yes \
+  && bad "R.07 burn: the tool did not see the 503"
+trapped_rec="$(jq -c '[.wallets[].open[] | select(.sent == null) | {i, amount, recipient}] | .[0]' "$U/lez-wallet/ferrata-burns.json" 2>/dev/null)"
+fact trappedBurn "${trapped_rec:-null}"
+ti="$(echo "$trapped_rec" | jq -r '.i // empty')"
+[ -n "$ti" ] && ok "R.07 burn: the tool saw 503 for a burn whose transaction the proxy holds; its counter $ti stays reserved: $trapped_rec" \
+  || bad "R.07 burn: no reserved counter for the burn answered 503"
 nb4="$(zone_txs)"
 u 20-burn-other "${PROVE[@]}" "${F[@]}" burn --amount 0.001 --recipient "$FRESH2" --bridge-program "$BRIDGE_BIN" --send --yes || die "the burn with other parameters"
 wait_tx "$RUN/user/20-burn-other.txt"
 nb5="$(zone_txs)"
-ti="$(echo "$trapped_rec" | jq -r '.i // empty')"
-if [ "$nb4" = "$nb3" ] && [ "$nb5" = $((nb3 + 1)) ] && [ -n "$ti" ] && grep -q "did not reach the zone: this burn takes its counter" "$RUN/user/20-burn-other.txt" \
-   && grep -q "burn counter $ti\$" "$RUN/user/20-burn-other.txt" && [ ! -e "$U/lez-wallet/ferrata-pending-burn.json" ]; then
-  ok "R.07 burn: nothing reached the zone ($nb3 -> $nb4 private transactions); the burn with another recipient took the interrupted burn's counter $ti and was applied once ($nb4 -> $nb5); the record cleared"
+for _ in $(seq 1 30); do jq -e 'select(.action == "late forward answered")' "$PX/log.jsonl" > /dev/null 2>&1 && break; sleep 5; done
+lateans="$(jq -c 'select(.action == "late forward answered")' "$PX/log.jsonl" 2>/dev/null | tail -n 1 | cut -c1-200)"
+sleep 20
+nb6="$(zone_txs)"
+oi="$(grep -o -E 'burn counter [0-9]+$' "$RUN/user/20-burn-other.txt" | tail -n 1 | grep -o -E '[0-9]+$')"
+if [ -n "$ti" ] && [ -n "$oi" ] && [ "$oi" != "$ti" ] && [ "$nb4" = "$nb3" ] && [ "$nb5" = $((nb3 + 1)) ] && [ "$nb6" = "$nb5" ] && [ -n "$lateans" ] \
+   && grep -q "interrupted before it was known to be sent" "$RUN/user/20-burn-other.txt"; then
+  ok "R.07 burn: the burn with another recipient took counter $oi, not the interrupted burn's $ti, and was applied once ($nb4 -> $nb5); the late transaction reached the sequencer ($lateans) and was refused ($nb5 -> $nb6)"
 else
-  bad "R.07 burn: the zone $nb3 -> $nb4 -> $nb5; counter '$ti'; $(grep -E 'earlier run|burn counter' "$RUN/user/20-burn-other.txt" | head -n 2 | tr '\n' ' ' | cut -c1-300)"
+  bad "R.07 burn: the zone $nb3 -> $nb4 -> $nb5 -> $nb6; counters interrupted '$ti', other '$oi'; late: '${lateans:-none}'; $(grep -E 'earlier|burn counter' "$RUN/user/20-burn-other.txt" | head -n 3 | tr '\n' ' ' | cut -c1-300)"
 fi
 u 21-recover "${F[@]}" recover || die "recover"
 records

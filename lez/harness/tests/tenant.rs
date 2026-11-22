@@ -387,12 +387,12 @@ fn r1_the_paired_configuration_claims_after_a_rogue_one() {
     let actors = w.public_burn_actors(payer, &cid_b, &note);
     let burn = w.send("B: Burn of the invented 1 ETH by the payer", own, &BridgeMessage::burn(cid_b, &note), actors);
     step(&mut log, burn, None);
-    let record = w.chain.actor_state(burn_actor(program, &cid_b, &note.hash()));
+    let record = w.chain.actor_state(burn_actor(program, &cid_b, &note.r));
     assert_eq!(
         borsh::from_slice::<BridgeState>(&record).unwrap(),
         BridgeState::Burn(BurnRecord { config_id: cid_b, note })
     );
-    assert!(w.chain.actor_state(burn_actor(program, &cid_a, &note.hash())).is_empty(), "nothing under configId(A)");
+    assert!(w.chain.actor_state(burn_actor(program, &cid_a, &note.r)).is_empty(), "nothing under configId(A)");
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "A's holding untouched");
     assert_eq!(w.balance(payer, &cid_b), 0, "B's 1 ETH burnt");
 
@@ -436,7 +436,7 @@ fn r1_the_paired_configuration_claims_after_a_rogue_one() {
         "\nA's claim after B's: applied, gas_exec {}, fee_base {}; the same claim again: exit {:?}, gas_exec {}\n\
          holder(A, dest of leaf 2): {:?}\nholder(B, dest of leaf 2): {:?}\n\
          nullifier(A, chain, vault, N of leaf 2): {:?}\nnullifier(B, chain, vault, N of leaf 2): {:?}\n\
-         burn(configId(B), H(note)): written; burn(configId(A), H(note)): empty\n\
+         burn(configId(B), r): written; burn(configId(A), r): empty\n\
          nullifier of the private-kind deposit (leaf 5): unspent under A and under B\n\n{}",
         paired.charge.gas_exec,
         paired.charge.fee_base,

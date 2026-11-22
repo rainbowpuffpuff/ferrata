@@ -2,7 +2,8 @@
 
 > **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
 > program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below,
-> recorded there as `ferrata_bridge_b1` (`0xac1fb59b…442e`). The first table's `ferrata_bridge` row stays the program the
+> recorded there as `ferrata_bridge_b1` (`0x847a4336…7515` since 22 November 2026, ADR 0032: a burn's tag used once;
+> B1's first build was `0xac1fb59b…442e`). The first table's `ferrata_bridge` row stays the program the
 > live runs of November 2026 deployed (`crown-live-3`, `crown-live-4`, the LEZ sequencers we ran), which those
 > deployments keep; its source is at commit `f13faee2`, which rebuilds it. The tools resolve the two by name:
 > `scripts/verify-sepolia.py` holds the live vaults to `ferrata_bridge` and a run of B1's program to `ferrata_bridge_b1`;
@@ -79,9 +80,20 @@ Modal build box from this tree (`cd lez && cargo test -p harness --no-run --lock
 through `scripts/guest-rustc`, in a target directory that did not exist before), where the attestation program of the
 first table rebuilt to its recorded id `0x816d1fef…03df`; `r0vm --elf ferrata_bridge.bin --id` gives the same id.
 
+**Rebuilt on 22 November 2026 ([ADR 0032](decisions/0032-burn-tag-used-once.md)): a burn's tag is used once.** The burn
+record is `burn(cid, r)` instead of `burn(cid, H(note))`, so a second note with a used tag is refused (the reviews of
+that day: two notes with one tag were both applied and shared one release nullifier). That moves the id below from
+B1's first build, `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e` (binary sha256
+`5f47b065…7fd8`, 607,608 bytes, user ELF `e240c82e…d6ee`), which no deployment pins either. Built on the Modal build box
+by `scripts/reproduce-image-ids.sh build` after `cargo clean -p methods` in `lez/` (one build output, no stale one),
+then `compare`: the 13 other guests of the first table and the crown run's other five programs equal their recorded ids
+(the bridge core lost `register_burn_tag`, a helper no guest calls: `release`, `claim` and `gasdrop` unchanged); `r0vm`
+gives the same id. It ships with the RISC Zero 3.1 rebuild (phase 2,
+[`design/risc0-3.1-migration.md`](design/risc0-3.1-migration.md)), whose LEZ guests all move again.
+
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
 |---|---|---|---:|---|
-| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge_b1` | `0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e` | `5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8` | 607,608 | `e240c82e5c4c39e2b5dcb00ea98f09baabf5b387051523f76650b503a8b5d6ee` |
+| bridge program since B1 (`lez/guests/bridge`): `ferrata_bridge_b1` | `0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515` | `537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036` | 607,448 | `6cbe0aa504ddec7d05189165a5bb6873896e99cc35f6677d91fb35220edbde9f` |
 
 ## The attestation program with statement classes; not deployed
 

@@ -11,7 +11,7 @@
 //! | `nullifier(cid, chain, vault, N)` | PDA `H(…/nullifier ‖ cid ‖ chain ‖ vault ‖ N)` | [`NullifierState`]: `N` spent under `cid`, written once |
 //! | `holder(cid, account)` | PDA `H(…/holder ‖ cid ‖ account)` | [`HolderState`]: an account's public wrapped balances under `cid` (the M0 fallback: no v0.4 token program); written only by `Mint`, `Credit` and the account's own `Burn` and `Transfer` |
 //! | the account's own actor | the account itself | [`HolderState`] of its own private claims (in a private account, its private state); the entry point of its burns and of its role messages; runs only for its owner |
-//! | `burn(cid, H(note))` | PDA `H(…/burn ‖ cid ‖ H(note))` | [`BurnRecord`]: a burn note, written once |
+//! | `burn(cid, r)` | PDA `H(…/burn ‖ cid ‖ r)` | [`BurnRecord`]: the burn note with tag `r`, written once: a second note with a used tag is refused |
 //!
 //! `cid` is SPEC-v2 §1's `configId`. Every account a configuration writes is keyed by its `cid`, so one
 //! configuration has no access to another's accounts (RFP-022 F.16, milestone B1; `docs/design/bridge.md` §3,
@@ -795,8 +795,11 @@ pub fn nullifier_seed(config_id: &Root, evm_chain_id: u64, vault: &Address, null
     PdaSeed::new(tagged_hash(b"nullifier", &[config_id, &chain_id_u256(evm_chain_id), vault, nullifier]))
 }
 
-pub fn burn_seed(config_id: &Root, note_hash: &Root) -> PdaSeed {
-    PdaSeed::new(tagged_hash(b"burn", &[config_id, note_hash]))
+/// `burn(cid, r)`'s seed: keyed by the note's tag `r`, so a tag is recorded once and a second note with a used tag is
+/// refused (security reviews of 22 November 2026, H-1 and H1: keyed on the whole note before, two notes with one tag
+/// were both applied and shared one release nullifier).
+pub fn burn_seed(config_id: &Root, r: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"burn", &[config_id, r]))
 }
 
 /// `holder(cid, account)`'s seed: keyed by the configuration too (module docs, R2).
@@ -831,8 +834,9 @@ pub fn nullifier_actor(
     pda(program, &nullifier_seed(config_id, evm_chain_id, vault, nullifier))
 }
 
-pub fn burn_actor(program: AccountId, config_id: &Root, note_hash: &Root) -> Actor {
-    pda(program, &burn_seed(config_id, note_hash))
+/// `burn(cid, r)`: the burn note with tag `r`, written once ([`burn_seed`]).
+pub fn burn_actor(program: AccountId, config_id: &Root, r: &Root) -> Actor {
+    pda(program, &burn_seed(config_id, r))
 }
 
 /// `holder(cid, account)`: the PDA holding `account`'s public wrapped balances under configuration `cid`. Its seed
@@ -867,8 +871,8 @@ pub struct Note {
 }
 
 impl Note {
-    /// `H(…/note ‖ r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)`: the burn account is keyed on the
-    /// whole note (D13), so copying a pending burn's tag alone cannot make it revert.
+    /// `H(…/note ‖ r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)`. D13 keyed the burn account on it; since the reviews of
+    /// 22 November 2026 (H-1) the account is keyed on `r` alone ([`burn_seed`]).
     pub fn hash(&self) -> Root {
         tagged_hash(b"note", &[&self.r, &self.memo, &self.mac, &self.token, &self.amount, &self.c_out])
     }
@@ -950,7 +954,8 @@ pub enum BridgeMessage {
     /// Variant 0. At the holder's own actor, as a top-level call or the root of a private
     /// execution: debit one denomination (from its own state, or else from `holder(cid, account)`, to
     /// which it forwards the note) and send the note to `token(cid, token)`, which admits it (the
-    /// denomination, the burn freezes and caps) and records it once at `burn(cid, H(note))`.
+    /// denomination, the burn freezes and caps) and records it once at `burn(cid, r)`: a second note with a used tag
+    /// is refused.
     Burn { config_id: Root, r: Root, memo: Address, mac: [u8; 16], token: Address, amount: Word, c_out: Root },
     /// Variant 1. At `config(cid)`: attest the vault's slots 0 and 1 under the record at
     /// `record_slot` and write `root(cid, leaf_count)` if they hold `root` and `leaf_count`.
@@ -1332,7 +1337,7 @@ pub struct PendingClaim {
     pub relayer: Option<Root>,
 }
 
-/// `burn(cid, H(note))`.
+/// `burn(cid, r)`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct BurnRecord {
     pub config_id: Root,
@@ -1648,7 +1653,8 @@ pub mod code {
         /// reply to, or a receiver that is not the actor the message names.
         WRONG_SENDER = 243;
         /// A write-once account already written: the configuration, a root at the same leaf
-        /// count, a token's entry, a burn note, the sunset.
+        /// count, a token's entry, a burn tag (the same note again, or another note with its tag),
+        /// the sunset.
         ALREADY_WRITTEN = 244;
         /// No configuration (an import before `Init`), or no imported root (a claim), or no
         /// role proposal to apply or cancel.

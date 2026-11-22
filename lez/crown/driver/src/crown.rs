@@ -106,8 +106,9 @@ fn h(bytes: &[u8]) -> String {
 /// the live runs of November 2026 (`ferrata_bridge`, `0xccde6171…`) has neither: with it session B's claims would be
 /// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
 /// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
-/// milestone B1"); the live runs' program needs the driver of `f13faee2`.
-pub const BRIDGE_IMAGE_ID: &str = "ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e";
+/// milestone B1"); the live runs' program needs the driver of `f13faee2`. Since 22 November 2026 (ADR 0032: a burn's
+/// tag is used once, `burn(cid, r)`) the program of this tree is `0x847a4336…`; B1's first build was `0xac1fb59b…`.
+pub const BRIDGE_IMAGE_ID: &str = "847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515";
 
 /// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
 pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
@@ -1323,7 +1324,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // Burn public: one denomination of public test account 0, note 0.
             let amount = ETH_DENOMINATIONS[0];
             let (note, s_out) = burn_note(&cid, &vault, 0, &b.recipient, amount);
-            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
+            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let mentions = vec![
                 AccountIdentity::Public(holder0).select_program_actor_state(bridge),
                 mention(holder_pda(bridge, &cid, holder0)),
@@ -1339,7 +1340,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // Burn private: one denomination of private test account 0, note 1.
             session.refresh(live, bridge).await?;
             let (note, s_out) = burn_note(&cid, &vault, 1, &b.recipient, amount);
-            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
+            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let publics = vec![mention(token_pda), mention(config_pda), mention(burn_pda)];
             let o = session.send(live, "bridge Burn (private): 0.001 ETH of private test account 0, note 1", publics, &BridgeMessage::burn(cid, &note), "burn").await?;
             steps.push(row_json(&o));

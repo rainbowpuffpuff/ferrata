@@ -175,7 +175,7 @@ fn main() {
     let keys = BridgeKeys::from_bridge_seed(&[0x77; 32]);
     let note = wallet_note(&keys, &cid, &vault, 5, ETH, DENOMINATIONS[1]);
     let burn_message = BridgeMessage::burn(cid, &note);
-    let record = burn_actor(program, &cid, &note.hash());
+    let record = burn_actor(program, &cid, &note.r);
     let holder = PrivateAccount { keys: private_keys(seed), account: claimed.clone() };
     let burn = match &settle_from {
         Some((_, path)) => settle(&mut w, path, "private burn"),

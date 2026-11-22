@@ -1,6 +1,6 @@
 # The inbound finality depth (`harness/tests/bridge_depth.rs`, RFP-022 F.12)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; LEZ v0.4.0-rc1's state machine, every transaction settled in a block of its own (RISC Zero dev mode). Depth 0 (the default) is Ethereum finality; the admin's depth is in beacon slots beyond it, measured against the newest record the configuration's clock read.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; LEZ v0.4.0-rc1's state machine, every transaction settled in a block of its own (RISC Zero dev mode). Depth 0 (the default) is Ethereum finality; the admin's depth is in beacon slots beyond it, measured against the newest record the configuration's clock read.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|

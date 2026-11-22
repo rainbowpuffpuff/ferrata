@@ -1084,7 +1084,7 @@ impl World {
             holder,
             token_actor(self.program, cid, &note.token),
             config_actor(self.program, cid),
-            bw::burn_actor(self.program, cid, &note.hash()),
+            bw::burn_actor(self.program, cid, &note.r),
         ]
     }
 

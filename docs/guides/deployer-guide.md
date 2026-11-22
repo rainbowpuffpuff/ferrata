@@ -472,7 +472,7 @@ export SEQNET_BUNDLE=$PWD/../tmp/crown-lez/bundle.tar.zst SEQNET_R0BF=$PWD/../tm
 
 `compare` must print a match for every program: the zone then runs exactly the programs of
 [`image-ids.md`](../image-ids.md) (`ferrata_lez.bin` `0x816d1fef…`; `ferrata_bridge.bin` since milestone B1 is
-`ferrata_bridge_b1`, `0xac1fb59b…`; the checkpoint and release programs the vault pins). The recorded runs, at
+`ferrata_bridge_b1`, `0x847a4336…` since ADR 0032, `0xac1fb59b…` before; the checkpoint and release programs the vault pins). The recorded runs, at
 `6a191ce0` and `26ad3564`, predate B1 and ran the deployed `0xccde6171…`. The sequencer and the node need not match anyone's bytes: no image
 id names them. (The recorded runs before 21 November used the live run's bundle instead, which is not published:
 §10.)
