@@ -480,8 +480,8 @@ pub struct DropRecord {
     /// (the second spends a nullifier the first spent). `None`: a book written before the journal.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from_nonce: Option<String>,
-    /// Applied on LEZ, or given up (the deposit claimed without it, or past `--max-job-age` with nothing applied):
-    /// nothing more is sent for this `N`. Books written before the journal hold settled drops only.
+    /// Applied on LEZ, or given up (the deposit claimed without it, `--drop-max-sends` credits sent, or past
+    /// `--max-job-age`, with nothing applied): nothing more is sent for this `N`. Books written before the journal hold settled drops only.
     #[serde(default = "settled_by_default")]
     pub settled: bool,
     /// Credits sent for this `N` (the first, and each one sent again after `--drop-wait`).
@@ -976,7 +976,8 @@ fn give_up_drop(n: &Hash, mut r: DropRecord, why: String, book: &mut DropBook, b
 ///
 /// Not told apart: a credit of a drop given up that a sequencer still holds and applies after the give-up moves the
 /// drop account as the next drop's own credit would (which LEZ then refuses: the same state), so that next drop is
-/// booked applied. A give-up waits `--drop-wait` after the last send for that reason (past `--max-job-age`, not).
+/// booked applied, its `N` settled: its claimant gets nothing more from this relayer and must name another or pay its
+/// fee itself. A give-up waits `--drop-wait` after the last send for that reason (past `--max-job-age`, not).
 ///
 /// Errors are refusals (final for the job) or the zone's failures (the job is retried; nothing is lost: the record
 /// stays and the next step resolves it).

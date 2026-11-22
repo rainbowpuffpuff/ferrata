@@ -347,7 +347,14 @@ journaled in `drops.json` before its credit is sent (the drop account's private 
 or was interrupted is sent again by the daemon itself after `--drop-wait`, built only on that recorded state, so LEZ
 applies at most one credit per `N`. **Never edit or remove an unsettled entry of `drops.json` by hand**: a credit may
 still be on its way, and a drop recorded again can pay twice. The drop account (`--drop-from-private`) must spend for
-drops only (the journal reads its nonce): fund it, never send from it.
+drops only (the journal reads its nonce): fund it, never send from it. One case the journal cannot tell apart: a credit
+of a drop already given up (the deposit claimed without it, or `--drop-max-sends` credits sent) that a sequencer still
+holds and applies later moves the drop account as the next drop's own credit would, so that next drop is booked applied
+while its own credit is refused (the same state); its `N` then counts as served, and that claimant gets nothing more
+from this relayer: the claim must name another relayer or pay its fee itself (`ferrata claim --no-gas-drop`). A give-up
+waits `--drop-wait` after the last send to make this unlikely (not one forced by `--max-job-age`). The cost is bounded:
+one drop of the relayer's money on a one-time account that may no longer need it, and one claimant without this
+relayer's drop; no user's funds.
 
 ### 6.2 Starting a relayer
 

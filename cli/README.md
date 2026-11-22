@@ -343,7 +343,9 @@ it opens at) unless `--no-delay`.
   sealed to that account (`--gas-drop-wait`, 600 s), and sends the claim with the account as fee payer after LEZ's
   wallet's dry run (which shows the credit it claims). Killed after handing the job over, or out of time waiting, the
   same command reuses the account (and the credit, once there) and asks nothing new of that relayer, which resumes its
-  own drop. Naming another relayer instead (`--relayer`, `--gas-drop-inbox`), the same command reuses the one-time
+  own drop. In one rare case the relayer has booked the drop as paid while its credit was refused (operator guide
+  §6.1: an earlier drop's credit, applied late, taken for this one); waiting or asking it again then does not help:
+  name another relayer, or pay from your own account (`--no-gas-drop`). Naming another relayer instead (`--relayer`, `--gas-drop-inbox`), the same command reuses the one-time
   account and hands that relayer a receipt of its own (a receipt names one relayer); the record keeps one job per
   relayer asked, and the output names the ones asked before. The dry run's `fee payer:` line says which way the fee
   is paid and what that leaks; `--no-gas-drop` pays from the proving account. The relayer side is `ferrata-relayer`'s
