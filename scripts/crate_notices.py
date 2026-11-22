@@ -71,7 +71,7 @@ STD_LICENCES = {"addr2line": "Apache-2.0 OR MIT", "adler2": "0BSD OR MIT OR Apac
                 "getopts": "MIT OR Apache-2.0", "gimli": "MIT OR Apache-2.0", "hashbrown": "MIT OR Apache-2.0",
                 "libc": "MIT OR Apache-2.0", "memchr": "Unlicense OR MIT", "miniz_oxide": "MIT OR Zlib OR Apache-2.0",
                 "object": "Apache-2.0 OR MIT", "rustc_demangle": "MIT/Apache-2.0",
-                "rustc_literal_escaper": "MIT OR Apache-2.0"}
+                "rustc_literal_escaper": "Apache-2.0 OR MIT"}
 
 
 class Bad(Exception):
