@@ -185,10 +185,13 @@ measured handoff median).
 proof of **1,673.6 s on 16 CPUs** (7.4 CPU-hours allocated, 16 × the wall time; 6.76 CPU-hours used, GNU time) or
 49.5 s on one L4 (earlier image). For the design's 24 hourly updates a day that is 11.6M execution and 5.4M storage gas
 a day, and 179 allocated CPU-hours or 20 L4-minutes of proving (*derived* from the measured update); each period's
-handoff adds one more private transaction, charged 451,895 execution and 224,063 storage gas (P.2: proven for real in
-one private transaction). At the once-per-period cadence the proven path costs that handoff alone: 451,895 execution
-gas per period. Per attestation, at N attestations a day: 235.5M / N execution gas on the public path at the design's
-cadence (14.1M / N once per period), or 11.6M / N plus 179 / N allocated CPU-hours of proving on the proven path.
+handoff adds one more private transaction, charged 451,895 execution and 224,063 storage gas after a proof of 2,254.2 s
+on 16 CPUs (P.2: proven for real in one private transaction), 0.879 a day: with it, 12.0M execution and 5.6M storage
+gas and 187 allocated CPU-hours a day (24 × 485,298 + 0.879 × 451,895; *derived*). At the once-per-period cadence the
+proven path costs that handoff alone: 451,895 execution gas per period. Per attestation, at N attestations a day:
+235.5M / N execution gas on the public path at the design's cadence (14.1M / N once per period), or 12.0M / N plus
+187 / N allocated CPU-hours of proving on the proven path, each period's handoff included (11.6M / N and 179 / N for
+the 24 hourly updates alone).
 
 ### P.4 User proving (RFP-021)
 
