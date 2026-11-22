@@ -209,7 +209,7 @@ demotion) and, per instance, its preset, checkpoint and beacon sources. Per roun
 from the chain, checks every candidate from every source with the program's own steps natively before
 paying for anything (a source serving what the program would refuse, or an update signed more than 60 s past the
 chain's clock, is demoted; one far behind is flagged lagging; one silent is flagged unavailable), and sends the next
-step of the best candidate's job (of updates of one finalized header, the earliest-signed). It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
+step of the best candidate's job (an update whose window has not opened by the chain's clock ranks after every one that can be sent; of updates of one finalized header, the earliest-signed). It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
 (HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
