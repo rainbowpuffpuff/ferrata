@@ -808,6 +808,24 @@ impl Chain {
 }
 
 
+/// A deposit asked for while an earlier deposit of this session was broadcast and reported not yet mined (its job ended
+/// `unconfirmed`) is refused as long as that transaction has no receipt: it may still be mined, and then both would land.
+/// `again: true` (the view's "Deposit again anyway", offered on this refusal) sends it all the same, for an earlier
+/// deposit the person knows will not be mined (dropped from the mempool).
+fn refuse_while_unmined(v: &mut crate::evm::Vault, params: &Value) -> Result<(), String> {
+    if params["again"] == true {
+        return Ok(());
+    }
+    for h in crate::jobs::unconfirmed_hashes("deposit") {
+        if v.rpc.call("eth_getTransactionReceipt", json!([h]))?.is_null() {
+            return Err(format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet; it may still be. \
+                                Wait for it (refresh your positions), or deposit again anyway (again: true): if the earlier one is mined \
+                                after all, both deposits land"));
+        }
+    }
+    Ok(())
+}
+
 /// The session's Ethereum side through Logos Core's own modules (`eth`): reads through `eth_rpc_module`, sends through
 /// `tx_sender_module`. Each send waits for one approval in the Logos signer, so it runs as a job the view polls.
 impl Chain {
@@ -845,10 +863,10 @@ impl Chain {
     /// Sends `calls` from `from` through `tx_sender_module` (gas limits with the margin, send.rs), waits for the
     /// person's approval and the broadcast (the job's phases), and reads every call's receipt back through
     /// `eth_rpc_module`; `reverted` says which call reverted, if one did.
-    fn send_logos(&self, e: &Value, v: &mut crate::evm::Vault, from: &str, calls: &[crate::send::Call], purpose: &str)
-        -> Result<crate::send::Sent, String> {
+    fn send_logos(&self, e: &Value, v: &mut crate::evm::Vault, from: &str, calls: &[crate::send::Call], purpose: &str,
+                  receipt_wait: Duration) -> Result<crate::send::Sent, String> {
         let chain_id = e["chain_id"].as_u64().ok_or("chain_id")?;
-        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), crate::send::RECEIPT_WAIT, json!({}))
+        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), receipt_wait, json!({}))
     }
 
     /// The deposit through Logos Core's send stack: the module's commitment and vault call, the price and the
@@ -863,16 +881,7 @@ impl Chain {
             return Err(format!("account /{a} is outside the recovery window ({gap}): a wallet would not find it"));
         }
         let mut v = self.vault(&e)?;
-        // A deposit broadcast earlier and reported not yet mined (job `unconfirmed`) may still be mined: no second one
-        // is asked for while it is unmined, unless the person says so (`again`).
-        if params["again"] != true {
-            for h in crate::jobs::unconfirmed_hashes("deposit") {
-                if v.rpc.call("eth_getTransactionReceipt", json!([h]))?.is_null() {
-                    return Err(format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet; it may still be. \
-                                        Wait for it (refresh the positions), or deposit again on purpose (again: true)"));
-                }
-            }
-        }
+        refuse_while_unmined(&mut v, params)?;
         let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
         let j = v.deposit_count(&depositor)?;
         let price = v.price(&[0u8; 20], d as u8)?;
@@ -891,8 +900,10 @@ impl Chain {
         crate::user::preflight(&mut v, &depositor, &to, &data, &total)?;
         let calls = [crate::send::Call::new(to, total.clone(), data, format!("Ferrata deposit: {} wei into the vault", total))];
         let user = e["user"].as_str().ok_or("user")?.to_string();
+        // `receipt_timeout_s`: how long the person's view waits for the receipt (the module's own 600 s by default).
         let sent = self.send_logos(&e, &mut v, &user, &calls,
-            &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"))?;
+            &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"),
+            crate::send::receipt_wait(params))?;
         if let Some(why) = sent.unconfirmed_text("this deposit") {
             // Broadcast, not yet mined: the job ends `unconfirmed` (jobs.rs), never "not deposited"; the module refuses
             // another deposit while this one is unmined (above).
@@ -976,7 +987,7 @@ impl Chain {
         crate::user::preflight(&mut v, &fixed(&json!(sender), "release_sender")?, &vault, &data, "0")?;
         let calls = [crate::send::Call::new(vault, "0", data, "Ferrata release to the burn's recipient")];
         let sent = self.send_logos(&e, &mut v, &sender, &calls,
-            "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)")?;
+            "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)", crate::send::RECEIPT_WAIT)?;
         if let Some(why) = sent.unconfirmed_text("this release") {
             return Ok(json!({ "settled": false, "pending": true, "what": why, "tx_hash": sent.last_hash(), "recipient": hex(&recipient),
                               "send": sent.record, "eth": v.report() }));
@@ -1344,5 +1355,26 @@ mod tests {
         go.send(()).unwrap();
         assert_eq!(wait_done(id)["state"], "settled");
         assert!(call("scan", json!({}))["error"].as_str().unwrap().contains("no wallet session"));
+    }
+
+    /// The session refuses a second deposit while its earlier one was broadcast and is still unmined (the job ended
+    /// `unconfirmed`, no receipt yet), unless the person says `again`; once the earlier one is mined there is nothing to
+    /// wait for (review L-C: this refusal had no test, and the view could not override it).
+    #[test]
+    fn a_second_deposit_waits_while_the_first_is_unmined_unless_the_person_says_again() {
+        let _g = serial();
+        crate::send::fake::install();
+        let h = format!("0x{}", "cd".repeat(32));
+        let reply = json!({ "settled": false, "pending": true, "tx_hash": h, "what": "broadcast, not yet mined: transaction ..." });
+        let r = crate::jobs::start("deposit", &json!({}), move |_| Ok(reply)).unwrap();
+        assert_eq!(wait_done(r["job"]["id"].as_u64().unwrap())["state"], "unconfirmed");
+        let mut v = crate::evm::Vault::new(&json!({ "via": "eth_rpc_module", "chain_id": 11155111 }), [2; 20], 0).unwrap();
+        *crate::send::fake::MINED.lock().unwrap() = false;
+        let e = refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).unwrap_err();
+        assert!(e.starts_with(&format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet")), "{e}");
+        assert!(e.contains("deposit again anyway (again: true)") && e.contains("both deposits land"), "{e}");
+        refuse_while_unmined(&mut v, &json!({ "denomination": 0, "again": true })).expect("the person's own decision: sent anyway");
+        *crate::send::fake::MINED.lock().unwrap() = true;
+        refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).expect("mined since: nothing to wait for");
     }
 }

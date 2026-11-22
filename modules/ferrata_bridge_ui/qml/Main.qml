@@ -87,6 +87,11 @@ Rectangle {
     property bool relayerOn: true
     property var heldUntil: ({})
     property string depositText: ""
+    // The module refused a deposit while the person's earlier one is broadcast and not mined yet: the view offers to send
+    // it anyway ("Deposit again anyway": again: true), for a deposit the person knows will not be mined.
+    property bool depositAgainOffered: false
+    // How long the module waits for a deposit's receipt (s); 0: the module's own wait (600 s). A test shortens it.
+    property int receiptWaitS: 0
 
     property int claimLeaf: -1
     property string claimMode: "private"
@@ -574,7 +579,14 @@ Rectangle {
                         objectName: "deposit.review"
                         text: "Review deposit"
                         enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
-                        onClicked: reviewDeposit()
+                        onClicked: reviewDeposit(false)
+                    }
+                    Button {
+                        objectName: "deposit.again"
+                        visible: depositAgainOffered
+                        text: "Deposit again anyway"
+                        enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
+                        onClicked: reviewDeposit(true)
                     }
                     Label { visible: connectedAccount === ""; text: "Connect the wallet first."; color: "#8a6d00" }
                 }
@@ -1031,16 +1043,28 @@ Rectangle {
     }
     onRegistryChanged: if (registry && priceText === "") refreshPrice()
 
-    function reviewDeposit() {
+    // again: the person sends a deposit although the module refused it while their earlier one is not mined yet.
+    function reviewDeposit(again) {
         call("price", { denomination: denomIndex }, function (ok, p) {
             if (!ok) return;
+            var effects = ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"];
+            if (again) effects = ["A NEW deposit, although your earlier one is not mined yet: if the earlier one is mined after all, both land (two deposits)"].concat(effects);
             propose({
-                title: "Deposit to the Ferrata vault",
+                title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault",
                 rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info.user.depositor + " (Ethereum)"], ["Asset", "ETH"], ["Amount", Fmt.eth(p.denomination) + " + fees = " + Fmt.eth(p.total)], ["Destination", "the Ferrata vault " + info.vault + " on chain " + info.chain_id], ["Then on LEZ", destKind + " account /" + destAccount + ", hidden inside C"]],
-                effects: ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"]
+                effects: effects
             }, function () {
-                ethStep("deposit", "deposit", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok2, v, job) {
-                    if (!ok2) { depositText = notDone("Not deposited", v, job); return; }
+                var params = { denomination: denomIndex, kind: destKind, account: destAccount };
+                if (again) params.again = true;
+                if (receiptWaitS > 0) params.receipt_timeout_s = receiptWaitS;
+                depositAgainOffered = false;
+                ethStep("deposit", "deposit", params, function (ok2, v, job) {
+                    if (!ok2) {
+                        depositText = notDone("Not deposited", v, job);
+                        // Refused because the earlier deposit is unmined (nothing was asked or signed): offer it anyway.
+                        depositAgainOffered = !(job && job.state === "unconfirmed") && String(v).indexOf("refused: your earlier deposit") >= 0;
+                        return;
+                    }
                     var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
                     if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
                     heldUntil = h;
