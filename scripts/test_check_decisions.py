@@ -86,7 +86,7 @@ class Records(unittest.TestCase):
             self.assertTrue(any(what in f for f in out), (what, out))
 
     def test_the_reviews_probe_record(self):
-        # The record the review of 21 November 2026 wrote to show that the first version of the check passed anything.
+        # A record an internal review wrote to show that the first version of the check passed anything.
         probe = """# ADR 0001: Probe
 
 - **Date:** someday
@@ -166,7 +166,7 @@ D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13
                                                                                 readme=INDEX.replace("RFP-021 F.1, S.4", "RFP-021 Sec.9"))))
 
     def test_an_adr_that_is_not_in_the_log(self):
-        # 0013 named ADR 0029 after 0029 was held back (review of 21 November 2026, M-1).
+        # 0013 named ADR 0029 after 0029 was held back (found by an internal review).
         bad = GOOD.replace("the cost is one crate to audit.", "the cost is one crate to audit; ADR 0029 adds the rest, "
                            "and ADRs 0001 and 0002 the context.")
         out = findings({"0001-one-core.md": bad}, readme=INDEX + "\nRecords 0027–0031 wait: ADRs 0001–0003.\n")
@@ -184,8 +184,8 @@ D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13
 
 
 class Strictness(unittest.TestCase):
-    """The review of 21 November 2026 (L-1) mutated one record thirteen ways; nine passed the check then. Each of the
-    eight that a check can catch (a false statement in the record's own words cannot be) fails now."""
+    """An internal review mutated one record thirteen ways; nine passed the check then. Each of the eight that a check
+    can catch (a false statement in the record's own words cannot be) fails now."""
 
     def flags(self, bad, what, files=None):
         out = findings({"0001-one-core.md": bad}, files=files)

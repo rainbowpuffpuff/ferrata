@@ -18,8 +18,8 @@ the log is checked against the design notes and brought up to date in the same t
 **Options.** The chosen option is the last; the decision it records is in the record's sources. Every other option
 says where the repository records it (*Recorded:*), or which RFP clause rules it out (*Ruled out:*), or that it is
 *reconstructed for contrast*: stated to make the choice clear, not recorded as an option when the decision was
-taken. The review of 21 November 2026 found options and statements that no source supported; they were corrected
-the same day, and each correction is in the record's history.
+taken. An internal review on 21 November 2026 found options and statements that no source supported; they were
+corrected the same day, and each correction is in the record's history.
 
 **Statuses.** *accepted*, then what of it is built, deployed or run, in the record's own words (for example
 *accepted; built*: decided and in the code, with evidence in [`EVIDENCE.md`](../EVIDENCE.md); *not deployed*: built

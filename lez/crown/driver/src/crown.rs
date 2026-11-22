@@ -1500,7 +1500,7 @@ mod tests {
         assert!(end_ms < chain.config.slot_start_ms(11_562_112));
     }
 
-    /// `new-role-keys` (review of 21 November 2026, L-4): both key files are created with mode 600 from the start
+    /// `new-role-keys`: both key files are created with mode 600 from the start
     /// and hold 32 bytes in hex; a second call refuses and changes nothing; a dangling symbolic link at the second
     /// path is refused before the first key is written, and nothing is written through it.
     #[cfg(unix)]

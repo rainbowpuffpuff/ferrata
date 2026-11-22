@@ -25,7 +25,7 @@ class FirstDrafts(unittest.TestCase):
         self.assertEqual(cg.first_draft_findings({"docs/guides/user-guide.md": text}), [])
 
     def test_the_readme_calling_the_guides_first_drafts(self):
-        # The line the review found (README.md:193 before the fix), and the docs index's heading.
+        # README.md:193 before the fix, and the docs index's heading.
         old = "The guides are first drafts of 11 November 2026; every statement cites the file it rests on."
         self.assertEqual(len(cg.first_draft_findings({"README.md": old})), 1)
         heading = "## Guides, trust and performance (first drafts, 11 November 2026)"
@@ -76,7 +76,7 @@ class MiniAppTable(unittest.TestCase):
 
 class KeylessRetirement(unittest.TestCase):
     ROOT = os.path.dirname(HERE)
-    # The sentences the third review found (H3-M1), as they stood at cc6b0fa3.
+    # The sentences as they stood at cc6b0fa3, before the fix of 22 November 2026.
     OLD_USER = ("default). Anyone may retire once no checkpoint has been finalised for 30 days plus one candidate\n"
                 "  wait, time under a checkpoint freeze or a watchers' pause not counting (`retireOpensAt()` on the\n"
                 "  vault).")
