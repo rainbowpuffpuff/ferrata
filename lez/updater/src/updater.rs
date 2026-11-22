@@ -1603,11 +1603,13 @@ impl Updater {
         self.journal(action, out);
     }
 
-    /// One round: plan, then send what is due.
+    /// One round: plan, then send what is due, after reading the chain once more: the round read the instance before
+    /// it asked its sources, and another party may have sent the step, or moved the store, since (nothing is sent
+    /// then; `_steps_done_by_others_total`).
     pub fn tick(&mut self, ledger: &mut dyn Ledger) -> Result<Plan> {
         let plan = self.plan(ledger)?;
         if let Plan::Send(action) = &plan {
-            self.submit(ledger, action, false)?;
+            self.submit(ledger, action, true)?;
         }
         Ok(plan)
     }

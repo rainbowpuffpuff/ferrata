@@ -7,18 +7,22 @@
 //! with its block time set (`HarnessLedger::now`), the lab's recorded mainnet data.
 #![cfg(feature = "harness")]
 
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
 
 use ferrata_core::{types::LightClientBootstrap, witness::CompactStore, Root};
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
     chain::{preset, root},
     config::{Fees, Policy},
-    ledger::HarnessLedger,
+    ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{Instance, Plan, Refusal, Step, Updater, BREAKER_AFTER, BREAKER_MAX_PAUSE, WINDOW_MARGIN_MS},
 };
-use lee::PrivateKey;
+use lee::{Actor, PrivateKey};
 
 fn key(b: u8) -> PrivateKey {
     PrivateKey::try_new([b; 32]).unwrap()
@@ -315,4 +319,99 @@ fn a_refusal_that_lost_a_race_is_not_held() {
     assert_eq!(u2.breaker.strikes, 0);
     assert_eq!(u2.metrics.refusals.get(&("program", "race")), Some(&1));
     assert_eq!(send(&mut u2, &l).step, Step::Miller);
+}
+
+/// A chain shared by two updaters, so that a source of one can let the other's transactions land while it plans.
+#[derive(Clone)]
+struct Shared(Arc<Mutex<HarnessLedger>>);
+
+impl Ledger for Shared {
+    fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
+        self.0.lock().unwrap().actor_state(actor)
+    }
+    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
+        self.0.lock().unwrap().submit(payer, tx, gas_limit, max_fee)
+    }
+    fn now_ms(&self) -> Option<u64> {
+        self.0.lock().unwrap().now_ms()
+    }
+}
+
+/// A source that, the first time it is asked for the finality update, lets another updater apply that update's whole
+/// job on the shared chain (a faster party), then answers.
+struct Overtaken {
+    inner: Box<dyn Source>,
+    other: Option<(Updater, Shared)>,
+}
+
+impl Source for Overtaken {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        self.inner.updates(start_period, count)
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        if let Some((mut other, mut chain)) = self.other.take() {
+            for _ in 0..20 {
+                if matches!(other.tick(&mut chain)?, Plan::UpToDate) {
+                    break;
+                }
+            }
+        }
+        self.inner.finality_update()
+    }
+}
+
+/// UP-L5 (RFP-021 R.9, the submitter re-checks before sending): while this updater asks its sources, another applies
+/// the same update; the `Open` planned against the store read before is not sent, because the round reads the chain
+/// again just before sending; nothing is charged. Sent anyway, the chain refuses it.
+#[test]
+fn a_step_made_moot_while_planning_is_not_sent() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let (slow, fast) = (key(0x47), key(0x48));
+    let chain = Shared(Arc::new(Mutex::new(HarnessLedger::new(&[slow.clone(), fast.clone()]))));
+    let mut other = r.updater("fast", fast, vec![r.source("b", &clock)], None);
+    let mut c = chain.clone();
+    for _ in 0..60 {
+        if matches!(other.tick(&mut c).unwrap(), Plan::UpToDate) {
+            break;
+        }
+    }
+    clock.set(4);
+    let source = Overtaken { inner: r.source("a", &clock), other: Some((other, chain.clone())) };
+    let mut u = r.updater("slow", slow.clone(), vec![Box::new(source)], None);
+    let (n0, before) = {
+        let l = chain.0.lock().unwrap();
+        (l.log.len(), l.balance(&slow))
+    };
+    let plan = u.tick(&mut c).unwrap();
+    let (others, mine, after) = {
+        let l = chain.0.lock().unwrap();
+        let mine = l.log[n0..].iter().filter(|(p, ..)| *p == u.payer_id).count();
+        (l.log.len() - n0 - mine, mine, l.balance(&slow))
+    };
+    println!(
+        "while this updater planned, the other sent {others}; this one planned {}, sent {mine}, charged {}; steps done by \
+         others {}",
+        match &plan {
+            Plan::Send(a) => a.tx.label.clone(),
+            p => format!("{p:?}"),
+        },
+        before - after,
+        u.metrics.skipped_done
+    );
+    let Plan::Send(a) = &plan else { panic!("{plan:?}") };
+    assert_eq!(a.step, Step::Open);
+    assert!(others >= 3, "the other updater's job landed meanwhile");
+    assert_eq!(mine, 0, "nothing sent");
+    assert_eq!(after, before, "nothing charged");
+    assert_eq!(u.metrics.skipped_done, 1);
+    let out = u.submit(&mut c, a, false).unwrap().unwrap();
+    println!("sent anyway: applied {} exit {:?} fee {}", out.applied, out.exit_code, out.fee);
+    assert!(!out.applied);
 }
