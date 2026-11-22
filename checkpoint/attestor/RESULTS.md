@@ -271,8 +271,59 @@ narrowed. All on the build box (`mrun`), measured:
 | `devnet.sh`, `zone-attest.sh` re-run (outputs in scratch; recorded runs have no LEZ answers, stood in) | both exit 0 with their refusals; the zone's four attestations sign the same bytes as `runs/zone/att-*.json` (the 264-byte `encoded` field, equal), while the files differ in their `node` facts: `first_block` 30 and `blocks_checked` 1 (a first read starts at the LEZ node's highest final block; the records, of 11 November, read 2 and 29) and `fork_digest` (null, a field the records predate); the 3-of-4 input is identical to the proven `rbz-zone-n4-t3.input`. (An earlier text said the attestations were byte-identical: only `encoded` was compared.) `runs/zone/` keeps the 11 November records; `zone-attest.sh` now writes a replay's records to a directory of its own |
 | `ferrata_attestor_module` calls (`the_zone_replayed_gives_the_proven_input`, in a scratch workspace laid out like the module) | 2 passed; without LEZ answers the module's `attest` refuses |
 
-Not re-run: `zone.sh`, `zone-bridge.sh`, `live-node.sh` (live nodes; `live-node.sh` now needs a LEZ node), the
-module's `attestor-e2e.sh` and `attestor-zone-live.sh` (they must now pass a LEZ node or a stand-in: open).
+Not re-run at this point: `zone.sh`, `zone-bridge.sh`, `live-node.sh` (live nodes; `live-node.sh` now needs a LEZ
+node), the module's `attestor-e2e.sh` and `attestor-zone-live.sh` (they must now pass a LEZ node or a stand-in). §10.1
+re-ran `zone-bridge.sh` and `attestor-e2e.sh` after the next review.
+
+### 10.1 The branch's own review (22 November): the scripts around the attestor, two untested guards, the Lows
+
+The review of this branch found the attestor's safety logic sound and its tests checking what they claim, and
+four Medium findings outside that logic: two scripts that run the attestor beside live sequencers (`zone-bridge.sh`
+asked stopped LEZ nodes for its final round; `lez/live/hooks/return-leg.sh` passed no LEZ node), the module's e2e
+scripts (not moved to the new interface: 9 of 23 checks passed), and the "byte-identical" claim above (corrected
+there). Its Lows: two guards no test covered, #1053 missing from the README, a first read that 16 junk ids could
+stop, a fixed temporary file, the module's one-shot `attest` classifying a silent LEZ node as a refusal and working
+without a state file, and undocumented operator steps. All on the build box (`mrun`), measured:
+
+| Finding | What changed | Shown by |
+|---|---|---|
+| L2: two guards no test covered | tests: a first read never roots at a sibling its LEZ node does not hold; a tip by a key outside `K` is passed over (a first read whose run starts there refuses) | `lez_check.rs` `l2_a_first_read_never_roots_at_a_sibling_the_lez_node_does_not_hold`, `l2_a_tip_inscribed_by_a_key_outside_k_is_passed_over`; the review's surviving mutants now fail 2 and 1 tests |
+| L5: 16 junk ids could stop a first read | the first read walks down every inscribed id (each asked once) | `l5_junk_ids_above_the_chain_never_stop_a_first_read` (28 junk ids, the LEZ node ahead of the LIB) |
+| L6: `write_atomic` used `<path>.tmp` with `File::create` | a temporary file of its own (process, time, counter), opened `create_new` | `files.rs` `l6_write_atomic_never_writes_through_a_planted_link`, `l6_two_writers_never_share_a_temporary_file` |
+| L3: keygen's mode and refusal untested; L7's order shown only in part | tests through the CLI | `files.rs` `l3_keygen_writes_an_owner_only_key_and_never_overwrites`, `l7_the_state_holds_the_tip_before_the_attestation_is_written` |
+| L4: the module's `attest` | a silent LEZ node is an `error`; `node` requires `state_file` (`is_node_fault`, shared with `round`) | calls crate `a_live_attest_keeps_a_state_and_a_silent_lez_node_is_an_error` (3 of 3) |
+| L1, L7, L8 | README: #1053 and the LIB filter; "Operating it" (the attestor's own LEZ node; a node that lost the signed tip stops it until the operator acts; a lost state file loses the guard; `getBlock` marked for removal upstream); §6: `live-node.sh`'s run cannot be repeated as recorded | |
+| M3: the module's e2e scripts | `recorded_node.py` stands the zone's inscribed blocks in as a LEZ node (`getBlock` over HTTP, or saved for `lez_dir`); `attestor-e2e.sh`, `daemon_requests.py`, `attestor-zone-live.sh` (the last signatures before the sequencers stop: `zone.sh`'s `ZONE_BEFORE_STOP`), `modules/README.md` | `attestor-e2e.sh` natively: **24 of 24** (one check added: another history at the signed height); `daemon_requests.py`'s 12 attestor requests: every expectation met ([`modules/RESULTS.md`](../../modules/RESULTS.md)) |
+| M4: "byte-identical" | the text above; `zone-attest.sh` writes a replay's records to a directory of its own | replay into scratch: `encoded` equal x4, `node` differs as stated, the 3-of-4 input identical |
+| M1, M2: the scripts beside live sequencers | the attestors' last round while the zone is up (each asks its own sequencer's LEZ node), every attestor on one tip at or above T1; the loops end after the round in hand; the node's answers read separately (a round now reads only from its signed tip's slot); `return-leg.sh` passes `--lez "$ZONE_RPC"` | the re-runs below |
+
+`cargo test -p ferrata-attestor --locked`: **31 passed** (`attestor.rs` 12, `files.rs` 4, `io.rs` 2, `lez_check.rs` 10,
+`withdrawals.rs` 3); `cargo clippy --all-targets -- -D warnings` clean; rustfmt clean. Mutants, one guard removed at
+a time (the review's 14, `first-root-unchecked` following the new walk, and two that undo L5 and L6), each on a copy:
+**16 of 16 fail at least one test**: `bytes-unchecked` 5, `end-unconfirmed` 4, `fork-status-only` 3, `fork-unchecked`
+3, `lib-filter-off` 3, `first-root-unchecked` 2, `status-ignored` 2, `write-atomic-fixed-tmp` 2, and 1 each for
+`end-status-only`, `first-root-cap16`, `guard-partial`, `lez-checked-off`, `lower-ok`, `signer-not-in-k-ok`,
+`tripwire-off`, `tripwire-status-off`.
+
+**The bridge program on a zone of four, with LEZ-checked attestors** (review M1's re-run: `zone-bridge.sh` at this
+branch, [`e2e/runs/zone-bridge-3/`](../../e2e/runs/zone-bridge-3/README.md); §8's run again, everything else as there):
+
+| Step | Result |
+|---|---|
+| The attestors | four, each beside its sequencer and asking that sequencer's LEZ node (`getBlock` on its JSON-RPC) every round: 13 rounds each (12 while the zone ran, one final), **13 rising tips signed (30, 35, 41, … 88, 93, 96), none refused**, the four on the same tip at every round; the first real LEZ nodes the check met: each signed tip was served `Finalized` and byte for byte as inscribed |
+| The final round | taken while the sequencers ran, side by side: all four signed **T1 = 96** at the first try (heights 96/96/96/96); each final read started at the tip signed before (93: blocks 93..=96 checked); `verify` 4 of 4; then the sequencers stopped, the LIB passed the channel's tip, and the node's answers were read from the first slot the attestors read to the LIB |
+| Sessions | A: T0 = 29; B: `Init` (block 35), `Register` ETH (36), `ImportRoot` n=1 (37), `Claim` (38), `ImportFees` (42), `ImportRoot` n=2 (43), `ClaimPrivately` (proven by LEZ's wallet in 241.1 s; block 67), `Burn` public (68), `Burn` private (282.4 s; block 96) |
+| Input `zone-29-96` (`realblocks-crown --att`, attestor 3 left out) | blocks 30..=96 (67 blocks, 149 transactions, 592,292 bytes), n = 4, t = 3, 2 burns (burn root `0x64742ec9…`, the leaves §8's), imported leaf count 2; journal sha256 `e73ee6bb…`; parent state `0xb271bd0d…`, new state `0xe8330733…` |
+| r0vm | 3 of 4: **22,251,410** user cycles, 24 segments; 4 of 4: 23,940,403, 26 segments; 2 of 4: refused by the collector and by the guest (`InsufficientAttestations { have: 2, need: 3 }`) |
+| Proof | the box's CPU (32 threads, beside other builds): **1,426.4 s**, receipt 224,314 B, journal = native; identity_p254 16.3 s; Groth16 16 s (seal 260 B) |
+| Releases | 77,736 cycles each, 11.1 s and 11.2 s; Groth16 12 s and 17 s |
+| Vault (the run's anvil) | `submitCandidate` 375,305 gas; W warped; `finalizeAttested` 218,385; `finalState` = the journal's new state; burn root accepted; releases 420,596 and 361,372 gas, each paid 999,000,000,000,000 wei |
+| `vault/test/real/ZoneBridge.t.sol` | `ZoneBridgeLezCheckedTest` (fixture `zone-bridge-3.json`) **4 of 4**; `ZoneBridgeTest` (zone-bridge-1's) still 4 of 4 |
+| `zone-bridge.sh verify` | input, journal and burns re-derived from the recorded answers and attestations: equal; the receipts verify |
+
+The box was preempted during a first attempt, whose zone stage had reached T1 = 111 with all four attestors signing
+it at the first final round; Modal ran the call again in a new container, and the run above is that second one (the
+first left only its live log lines). Not re-run: `ZB_ROTATE=1` (§9, row 101).
 
 ## What failed on the way
 
@@ -292,6 +343,11 @@ module's `attestor-e2e.sh` and `attestor-zone-live.sh` (they must now pass a LEZ
   `/cryptarchia/info`, where the node nests it (`cryptarchia_info.lib_slot`), and saved no window; the answers are
   the ones attestor 0 fetched and checked in its final round (`zone-bridge.sh answers`), which the stage now packs
   itself.
+- §10.1: the first start of `zone-bridge-3` lost its local `mrun` client at ten minutes (a tool's default limit for a
+  background command); the box kept running it until its container was recycled, and nothing came back (records made
+  on the box return only through the client). The second start ran with its client kept for two hours; its container
+  was preempted at about 02:02 UTC with the zone stage done (T1 = 111) and Modal ran the whole call again in a new
+  container: the records are that run's. Box-made records are now fetched with `--no-sync --get` before any synced call.
 - §9: the first start of the rotation run never reached the box (the laptop's Modal client timed out, "Deadline
   exceeded", and the box's container was recycled); the second start ran it.
 
