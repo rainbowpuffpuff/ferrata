@@ -848,7 +848,7 @@ impl Chain {
     fn send_logos(&self, e: &Value, v: &mut crate::evm::Vault, from: &str, calls: &[crate::send::Call], purpose: &str)
         -> Result<crate::send::Sent, String> {
         let chain_id = e["chain_id"].as_u64().ok_or("chain_id")?;
-        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), json!({}))
+        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), crate::send::RECEIPT_WAIT, json!({}))
     }
 
     /// The deposit through Logos Core's send stack: the module's commitment and vault call, the price and the
@@ -863,6 +863,16 @@ impl Chain {
             return Err(format!("account /{a} is outside the recovery window ({gap}): a wallet would not find it"));
         }
         let mut v = self.vault(&e)?;
+        // A deposit broadcast earlier and reported not yet mined (job `unconfirmed`) may still be mined: no second one
+        // is asked for while it is unmined, unless the person says so (`again`).
+        if params["again"] != true {
+            for h in crate::jobs::unconfirmed_hashes("deposit") {
+                if v.rpc.call("eth_getTransactionReceipt", json!([h]))?.is_null() {
+                    return Err(format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet; it may still be. \
+                                        Wait for it (refresh the positions), or deposit again on purpose (again: true)"));
+                }
+            }
+        }
         let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
         let j = v.deposit_count(&depositor)?;
         let price = v.price(&[0u8; 20], d as u8)?;
@@ -883,6 +893,11 @@ impl Chain {
         let user = e["user"].as_str().ok_or("user")?.to_string();
         let sent = self.send_logos(&e, &mut v, &user, &calls,
             &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"))?;
+        if let Some(why) = sent.unconfirmed_text("this deposit") {
+            // Broadcast, not yet mined: the job ends `unconfirmed` (jobs.rs), never "not deposited"; the module refuses
+            // another deposit while this one is unmined (above).
+            return Ok(json!({ "settled": false, "pending": true, "what": why, "tx_hash": sent.last_hash(), "send": sent.record, "eth": v.report() }));
+        }
         if let Some(why) = &sent.reverted {
             return Ok(json!({ "settled": false, "what": format!("{why}; nothing was deposited"), "tx_hash": sent.last_hash(),
                               "send": sent.record, "eth": v.report() }));
@@ -962,6 +977,10 @@ impl Chain {
         let calls = [crate::send::Call::new(vault, "0", data, "Ferrata release to the burn's recipient")];
         let sent = self.send_logos(&e, &mut v, &sender, &calls,
             "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)")?;
+        if let Some(why) = sent.unconfirmed_text("this release") {
+            return Ok(json!({ "settled": false, "pending": true, "what": why, "tx_hash": sent.last_hash(), "recipient": hex(&recipient),
+                              "send": sent.record, "eth": v.report() }));
+        }
         if let Some(why) = &sent.reverted {
             return Ok(json!({ "settled": false, "what": format!("{why}; nothing was released"), "tx_hash": sent.last_hash(),
                               "recipient": hex(&recipient), "paid_wei": "0", "send": sent.record, "eth": v.report() }));

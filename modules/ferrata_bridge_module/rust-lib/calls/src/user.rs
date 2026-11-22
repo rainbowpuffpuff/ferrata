@@ -40,7 +40,7 @@ pub(crate) fn preflight(v: &mut Vault, from: &Address, to: &Address, data: &[u8]
 fn send_bundle(v: &mut Vault, sender: &Value, from: &Address, calls: &[Call], purpose: &str) -> Result<send::Sent, String> {
     let chain_id = sender["chain_id"].as_u64().ok_or("send.chain_id: the chain tx_sender_module sends on")?;
     let timeout = Duration::from_secs(sender["timeout_s"].as_u64().unwrap_or(900));
-    send::through_stack(v, chain_id, &hex(from), calls, purpose, sender["wait"] != false, timeout, json!({}))
+    send::through_stack(v, chain_id, &hex(from), calls, purpose, sender["wait"] != false, timeout, send::receipt_wait(sender), json!({}))
 }
 
 /// An ERC-20 deposit's checks before the person is asked (its `deposit` cannot be run with `eth_call` before the
@@ -109,6 +109,17 @@ pub(crate) fn deposit_and_send(req: &Value) -> Result<Value, String> {
     let s = send_bundle(&mut v, sender, &from, &calls, &purpose)?;
     let mut out = made;
     out["price"] = price;
+    if let Some(why) = s.unconfirmed_text("this deposit") {
+        // Broadcast and not yet mined: not a failure (it may still be mined), and said so.
+        out["verdict"] = json!("unconfirmed");
+        out["settled"] = json!(false);
+        out["pending"] = json!(true);
+        out["what"] = json!(why);
+        out["tx_hash"] = s.last_hash();
+        out["send"] = s.record;
+        out["eth"] = v.report();
+        return Ok(out);
+    }
     let Some(receipt) = s.last().cloned() else {
         out["verdict"] = json!("awaiting_approval");
         out["send"] = s.record;
@@ -181,6 +192,15 @@ pub(crate) fn release_and_send(req: &Value, r: &Value) -> Result<Value, String> 
     c.gas_limit = send::given_limit(sender)?;
     let s = send_bundle(&mut v, sender, &from, &[c], "Ferrata Bridge release: the vault pays a burn's recipient")?;
     let mut out = r.clone();
+    if let Some(why) = s.unconfirmed_text("this release") {
+        out["verdict"] = json!("unconfirmed");
+        out["settled"] = json!(false);
+        out["pending"] = json!(true);
+        out["what"] = json!(why);
+        out["tx_hash"] = s.last_hash();
+        out["send"] = s.record;
+        return Ok(out);
+    }
     let Some(receipt) = s.last().cloned() else {
         out["verdict"] = json!("awaiting_approval");
         out["send"] = s.record;

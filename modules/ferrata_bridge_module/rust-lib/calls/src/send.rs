@@ -230,9 +230,12 @@ pub(crate) fn cancel(request_id: &str) -> Result<Value, String> {
     module_call("cancel_send", json!([request_id]))
 }
 
-/// The hashes of a final `send_status` that broadcast, in the order of the calls; the refusal otherwise.
+/// The hashes of a final `send_status` that broadcast, in the order of the calls; the refusal otherwise. `stuck` (a
+/// broadcast whose node has not answered for 180 s: tx_sender_module cannot say it is not on chain) counts as
+/// broadcast: its calls' receipts are awaited and, unseen, reported as not yet mined, never as failed. A `failed` send
+/// names every call that had already left (an ERC-20 `approve` broadcast before a failed `deposit` leaves an allowance).
 pub(crate) fn broadcast_hashes(s: &Value) -> Result<Vec<String>, String> {
-    if s["ok"] == true && s["status"] == "broadcast" {
+    if s["ok"] == true && (s["status"] == "broadcast" || s["status"] == "stuck") {
         let mut hashes: Vec<String> = s["hashes"].as_array().into_iter().flatten().filter_map(|h| h.as_str().map(str::to_string)).collect();
         if hashes.is_empty() {
             if let Some(h) = s["hash"].as_str() {
@@ -248,8 +251,31 @@ pub(crate) fn broadcast_hashes(s: &Value) -> Result<Vec<String>, String> {
     Err(match state {
         "rejected" => "rejected: the person declined the approval in the Logos signer; nothing was signed or sent".to_string(),
         "cancelled" => "cancelled: the send was withdrawn before it was signed".to_string(),
-        other => format!("{other}: {}", why(s)),
+        other => format!("{other}: {}{}", why(s), left_calls(s)),
     })
+}
+
+/// The calls of a send that had already left (`legs[].left`, with their hashes), as a clause for an error: what a
+/// person must check before sending again.
+fn left_calls(s: &Value) -> String {
+    let legs = s["legs"].as_array().cloned().unwrap_or_default();
+    let left: Vec<String> = legs
+        .iter()
+        .enumerate()
+        .filter(|(_, l)| l["left"] == true)
+        .map(|(i, l)| format!("call {} of {} ({}), transaction {}", i + 1, legs.len(), l["label"].as_str().unwrap_or("?"), l["hash"].as_str().unwrap_or("?")))
+        .collect();
+    if left.is_empty() {
+        String::new()
+    } else {
+        format!("; already broadcast before it failed: {} (check it before sending again)", left.join("; "))
+    }
+}
+
+/// How long a request waits for its calls' receipts once they are broadcast (`send.receipt_timeout_s`, seconds), or
+/// [`RECEIPT_WAIT`].
+pub(crate) fn receipt_wait(sender: &Value) -> Duration {
+    sender["receipt_timeout_s"].as_u64().map_or(RECEIPT_WAIT, Duration::from_secs)
 }
 
 /// The gas limit a request gives for its vault call (`send.gas_limit`: a number or a decimal string), if any. Used
@@ -273,6 +299,9 @@ pub(crate) struct Sent {
     pub receipts: Vec<Value>,
     /// The first call whose receipt has status 0, as one sentence.
     pub reverted: Option<String>,
+    /// The calls broadcast whose receipt was not seen within the wait (from the first such call on): they may still be
+    /// mined. Reported as broadcast and not yet mined, never as failed: a person told "not deposited" deposits again.
+    pub unconfirmed: Vec<String>,
 }
 
 impl Sent {
@@ -285,16 +314,55 @@ impl Sent {
     pub(crate) fn last_hash(&self) -> Value {
         self.record["hashes"].as_array().and_then(|h| h.last()).cloned().unwrap_or(Value::Null)
     }
+
+    /// "Broadcast, not yet mined" as one sentence, when a call's receipt was not seen: what the person must not do.
+    pub(crate) fn unconfirmed_text(&self, what: &str) -> Option<String> {
+        let first = self.unconfirmed.first()?;
+        Some(format!(
+            "broadcast, not yet mined: transaction {first}{} was sent after your approval and no receipt was seen within {} s. \
+             Do not send {what} again: it may still be mined. Check that transaction (or refresh) before acting again",
+            if self.unconfirmed.len() > 1 { format!(" (and {} more)", self.unconfirmed.len() - 1) } else { String::new() },
+            self.record["receipt_wait_s"].as_u64().unwrap_or(0)))
+    }
+}
+
+/// How long a broadcast call's receipt is awaited before the send is reported as broadcast and not yet mined.
+pub(crate) const RECEIPT_WAIT: Duration = Duration::from_secs(600);
+
+/// Every broadcast call's receipt through `v`'s Ethereum path, read until each is seen or `wait` passes. A read that
+/// fails is read again (a node that does not answer for a moment is no failure of the send). (the receipts seen, in
+/// the calls' order; the hashes from the first unseen call on; the last read error).
+fn receipts(v: &mut crate::evm::Vault, hashes: &[String], wait: Duration) -> (Vec<Value>, Vec<String>, Option<String>) {
+    let t0 = Instant::now();
+    let (mut seen, mut last_error) = (Vec::new(), None);
+    for (i, h) in hashes.iter().enumerate() {
+        loop {
+            match v.rpc.call("eth_getTransactionReceipt", json!([h])) {
+                Ok(r) if !r.is_null() => {
+                    seen.push(r);
+                    break;
+                }
+                Ok(_) => {}
+                Err(e) => last_error = Some(e),
+            }
+            if t0.elapsed() >= wait {
+                return (seen, hashes[i..].to_vec(), last_error);
+            }
+            std::thread::sleep(POLL.min(wait));
+        }
+    }
+    (seen, Vec::new(), last_error)
 }
 
 /// One send through Logos Core's send stack: `calls` from `from` on `chain_id`, each with its gas limit
 /// ([`with_limits`]); the person's approval in the Logos signer (the job's `awaiting_approval` phase, with `detail`'s
 /// fields added); then, when `wait_for_it`, the broadcast and EVERY call's receipt read back through `v`'s Ethereum
 /// path. A receipt with status 0 is not a success: `reverted` names the call, its block and the gas it used of its
-/// limit. `wait_for_it` false answers at the approval request (`record.state` `awaiting_approval`).
+/// limit. A receipt not seen within `receipt_wait` is not a failure either: `unconfirmed` holds the calls broadcast and
+/// not yet mined. `wait_for_it` false answers at the approval request (`record.state` `awaiting_approval`).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str, calls: &[Call], purpose: &str,
-                            wait_for_it: bool, timeout: Duration, detail: Value) -> Result<Sent, String> {
+                            wait_for_it: bool, timeout: Duration, receipt_wait: Duration, detail: Value) -> Result<Sent, String> {
     let req = request(chain_id, from, calls, purpose);
     let asked = send(&req, Duration::from_secs(60))?;
     let id = asked["requestId"].as_str().unwrap_or_default().to_string();
@@ -307,7 +375,7 @@ pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str
                              "calls": asked["request"]["calls"], "gas": asked["gas"] });
     if !wait_for_it {
         record["state"] = json!("awaiting_approval");
-        return Ok(Sent { record, receipts: Vec::new(), reverted: None });
+        return Ok(Sent { record, receipts: Vec::new(), reverted: None, unconfirmed: Vec::new() });
     }
     let mut statuses = Vec::new();
     let st = wait(&id, timeout, |s| statuses.push(s["status"].clone()))?;
@@ -316,9 +384,10 @@ pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str
     let hashes = broadcast_hashes(&st)?;
     crate::jobs::phase("sent", json!({ "tx_hash": hashes[hashes.len() - 1], "by": "tx_sender_module (keystore_module signed after the approval; broadcast through eth_rpc_module)" }));
     record["hashes"] = json!(hashes);
+    record["receipt_wait_s"] = json!(receipt_wait.as_secs());
+    let (seen, unconfirmed, read_error) = receipts(v, &hashes, receipt_wait);
     let (mut receipts, mut summary, mut reverted) = (Vec::new(), Vec::new(), None);
-    for (i, h) in hashes.iter().enumerate() {
-        let r = v.receipt(h, 120)?;
+    for (i, (h, r)) in hashes.iter().zip(seen).enumerate() {
         let ok = r["status"].as_str() == Some("0x1");
         let (used, block, limit) = (quantity(&r["gasUsed"]), quantity(&r["blockNumber"]), asked["gas"][i]["limit"].as_u64());
         summary.push(json!({ "hash": h, "status": if ok { "success" } else { "reverted" }, "block": block, "gas_used": used, "gas_limit": limit }));
@@ -330,11 +399,17 @@ pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str
         }
         receipts.push(r);
     }
+    for h in &unconfirmed {
+        summary.push(json!({ "hash": h, "status": "not yet mined", "last_read_error": read_error }));
+    }
     record["receipts"] = json!(summary);
     if let Some(r) = &reverted {
         record["reverted"] = json!(r);
     }
-    Ok(Sent { record, receipts, reverted })
+    if !unconfirmed.is_empty() {
+        record["unconfirmed"] = json!(unconfirmed);
+    }
+    Ok(Sent { record, receipts, reverted, unconfirmed })
 }
 
 /// Installs a stand-in of `tx_sender_module` for the tests: `prepare` estimates every limitless call at [`ESTIMATE`],
@@ -350,6 +425,10 @@ pub(crate) mod fake {
     pub(crate) static ESTIMATE: Mutex<u64> = Mutex::new(48_564);
     pub(crate) static STATUS: Mutex<&'static str> = Mutex::new("0x1");
     pub(crate) static CANCELLED: Mutex<Vec<String>> = Mutex::new(Vec::new());
+    /// Whether the stand-in node has mined the transactions (`false`: every receipt read answers null).
+    pub(crate) static MINED: Mutex<bool> = Mutex::new(true);
+    /// How many receipt reads fail before the node answers again.
+    pub(crate) static FAILING_READS: Mutex<u32> = Mutex::new(0);
 
     fn call(module: &str, method: &str, args: &Value, _t: u64) -> Result<String, String> {
         assert_eq!(module, TX_SENDER);
@@ -375,7 +454,15 @@ pub(crate) mod fake {
                     .map(|k| format!("0x{:064x}", 0xabc0 + k))
                     .collect();
                 let fin = verdict != "awaitingApproval";
-                Ok(json!({ "ok": true, "requestId": args[0], "status": verdict, "final": fin, "hashes": if verdict == "broadcast" { json!(hashes) } else { json!([]) } }).to_string())
+                let broadcast = matches!(verdict, "broadcast" | "stuck");
+                // `failed` after the first call left (an ERC-20 approve broadcast, the deposit's broadcast failed).
+                let legs: Vec<Value> = hashes.iter().enumerate().map(|(k, h)| {
+                    let left = broadcast || (verdict == "failed" && k == 0);
+                    if left { json!({ "label": format!("call {k}"), "left": true, "hash": h }) } else { json!({ "label": format!("call {k}"), "left": false }) }
+                }).collect();
+                Ok(json!({ "ok": true, "requestId": args[0], "status": verdict, "final": fin, "legs": legs,
+                           "reason": if verdict == "failed" { json!("the node refused the second transaction") } else { Value::Null },
+                           "hashes": if broadcast { json!(hashes) } else { json!([]) } }).to_string())
             }
             "cancel_send" => {
                 CANCELLED.lock().unwrap().push(args[0].as_str().unwrap_or("").to_string());
@@ -388,8 +475,18 @@ pub(crate) mod fake {
     fn eth(_chain: i64, method: &str, params: &str, _t: u64) -> Result<String, String> {
         let p: Value = serde_json::from_str(params).unwrap();
         match method {
-            "eth_getTransactionReceipt" => Ok(json!({ "ok": true, "route": "direct", "result": {
-                "transactionHash": p[0], "status": *STATUS.lock().unwrap(), "blockNumber": "0x8", "gasUsed": "0xbc91", "logs": [] } }).to_string()),
+            "eth_getTransactionReceipt" => {
+                let mut failing = FAILING_READS.lock().unwrap();
+                if *failing > 0 {
+                    *failing -= 1;
+                    return Ok(json!({ "ok": false, "code": "unreachable", "error": "the node did not answer" }).to_string());
+                }
+                if !*MINED.lock().unwrap() {
+                    return Ok(json!({ "ok": true, "route": "direct", "result": null }).to_string());
+                }
+                Ok(json!({ "ok": true, "route": "direct", "result": {
+                    "transactionHash": p[0], "status": *STATUS.lock().unwrap(), "blockNumber": "0x8", "gasUsed": "0xbc91", "logs": [] } }).to_string())
+            }
             other => Ok(json!({ "ok": false, "code": "test", "error": format!("unexpected {other}") }).to_string()),
         }
     }
@@ -456,7 +553,7 @@ mod tests {
         *fake::STATUS.lock().unwrap() = "0x1";
         let mut v = vault();
         let s = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "Ferrata deposit", true,
-                              Duration::from_secs(1), json!({})).unwrap();
+                              Duration::from_secs(1), Duration::from_secs(1), json!({})).unwrap();
         assert_eq!(s.receipts.len(), 2);
         assert!(s.reverted.is_none());
         assert_eq!(s.record["receipts"][1]["status"], "success");
@@ -464,7 +561,7 @@ mod tests {
         // A forced revert (status 0, e.g. a too-low limit): reported, naming the call, the block, the gas.
         *fake::STATUS.lock().unwrap() = "0x0";
         let s = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "Ferrata deposit", true,
-                              Duration::from_secs(1), json!({})).unwrap();
+                              Duration::from_secs(1), Duration::from_secs(1), json!({})).unwrap();
         let why = s.reverted.clone().unwrap();
         assert!(why.starts_with("reverted: call 1 of 2 (approve)"), "{why}");
         assert!(why.contains("block 8") && why.contains("using 48273 gas"), "{why}");
@@ -472,10 +569,55 @@ mod tests {
         *fake::STATUS.lock().unwrap() = "0x1";
         // Refused at the approver: nothing broadcast, said so.
         *fake::VERDICT.lock().unwrap() = "rejected";
-        let e = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "x", true, Duration::from_secs(1), json!({}))
+        let e = through_stack(&mut v, 11155111, "0x0000000000000000000000000000000000000003", &calls(), "x", true, Duration::from_secs(1),
+                              Duration::from_secs(1), json!({}))
             .err().unwrap();
         assert!(e.starts_with("rejected"), "{e}");
         *fake::VERDICT.lock().unwrap() = "broadcast";
+    }
+
+    /// A receipt not seen in time is not a failure (review: "not deposited" invited a second deposit): the send is
+    /// reported broadcast and not yet mined, naming the transaction; a read that fails is read again; a `stuck` send
+    /// counts as broadcast; a `failed` one names the calls that had already left.
+    #[test]
+    fn a_receipt_not_seen_in_time_is_broadcast_not_yet_mined_never_failed() {
+        let _g = serial();
+        fake::install();
+        *fake::VERDICT.lock().unwrap() = "broadcast";
+        *fake::STATUS.lock().unwrap() = "0x1";
+        let from = "0x0000000000000000000000000000000000000003";
+        let mut v = vault();
+        *fake::MINED.lock().unwrap() = false;
+        let s = through_stack(&mut v, 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_millis(30), json!({}))
+            .expect("not an error");
+        assert!(s.reverted.is_none() && s.receipts.is_empty());
+        assert_eq!(s.unconfirmed.len(), 2);
+        let why = s.unconfirmed_text("this deposit").unwrap();
+        assert!(why.starts_with(&format!("broadcast, not yet mined: transaction {}", s.unconfirmed[0])), "{why}");
+        assert!(why.contains("Do not send this deposit again"), "{why}");
+        assert_eq!(s.record["receipts"][1]["status"], "not yet mined");
+        *fake::MINED.lock().unwrap() = true;
+        // Two failed reads, then the node answers: read again, not aborted.
+        *fake::FAILING_READS.lock().unwrap() = 2;
+        let s = through_stack(&mut v, 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_secs(5), json!({})).unwrap();
+        assert_eq!((s.receipts.len(), s.unconfirmed.len()), (2, 0));
+        assert!(s.unconfirmed_text("x").is_none());
+        // `stuck`: the node did not answer the broadcast; its receipts are read like a broadcast's.
+        *fake::VERDICT.lock().unwrap() = "stuck";
+        *fake::MINED.lock().unwrap() = false;
+        let s = through_stack(&mut v, 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_millis(30), json!({})).unwrap();
+        assert_eq!(s.unconfirmed.len(), 2);
+        assert_eq!(s.record["final"], "stuck");
+        *fake::MINED.lock().unwrap() = true;
+        // `failed` after the approve left: the error names it.
+        *fake::VERDICT.lock().unwrap() = "failed";
+        let e = through_stack(&mut v, 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_secs(1), json!({}))
+            .err().unwrap();
+        assert!(e.starts_with("failed: the node refused the second transaction"), "{e}");
+        assert!(e.contains("already broadcast before it failed: call 1 of 2 (call 0), transaction 0x"), "{e}");
+        *fake::VERDICT.lock().unwrap() = "broadcast";
+        assert_eq!(receipt_wait(&json!({ "receipt_timeout_s": 12 })), Duration::from_secs(12));
+        assert_eq!(receipt_wait(&json!({})), RECEIPT_WAIT);
     }
 
     #[test]

@@ -373,9 +373,13 @@ pub(crate) fn vault_admin(v: &mut Vault, action: &str, p: &Value, sender: &Value
     c.gas_limit = send::given_limit(sender)?;
     let wait_for_it = sender["wait"] != false;
     let s = send::through_stack(v, chain_id, &hex(&from), &[c], &format!("Ferrata bridge admin ({}): {what}", role.name()),
-                                wait_for_it, timeout(sender), json!({ "role": role.name() }))?;
+                                wait_for_it, timeout(sender), send::receipt_wait(sender), json!({ "role": role.name() }))?;
     if !wait_for_it {
         return Ok(json!({ "verdict": "awaiting_approval", "call": call, "send": s.record, "approve_in": send::APPROVE_IN }));
+    }
+    if let Some(why) = s.unconfirmed_text("this admin call") {
+        return Ok(json!({ "verdict": "unconfirmed", "settled": false, "pending": true, "what": why, "error": why, "call": call,
+                          "tx_hash": s.last_hash(), "send": s.record, "eth": v.report() }));
     }
     let receipt = s.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
     let (ok, block, _) = evm::receipt_summary(&receipt, &v.vault)?;
