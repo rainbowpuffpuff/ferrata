@@ -221,6 +221,9 @@ Rectangle {
         if (!j || !j.phases) return "";
         var last = j.phases[j.phases.length - 1];
         if (last.state !== "awaiting_approval") return "";
+        // A LEZ role message: held by the role's wallet until a person approves exactly it there.
+        if (last.detail.approval_id)
+            return "Approve this LEZ " + (last.detail.message || "role message") + " at the role's wallet: " + last.detail.what + " (approval " + last.detail.approval_id + ", message " + Fmt.short(last.detail.message_sha256) + "). Nothing is signed until you approve.";
         var h = last.detail.handle;
         if (inLogos && typeof logos.request === "function" && !raisedHandles[h]) {
             var r = {}; for (var k in raisedHandles) r[k] = raisedHandles[k]; r[h] = true; raisedHandles = r;

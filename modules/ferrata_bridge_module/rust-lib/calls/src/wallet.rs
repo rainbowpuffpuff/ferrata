@@ -383,14 +383,14 @@ fn node_list(v: &Value, what: &str) -> Result<Vec<Vec<u8>>, String> {
         .collect()
 }
 
-fn config_of(req: &Value) -> Result<(BridgeConfig, &'static str), String> {
+fn config_of(req: &Value) -> Result<(BridgeConfig, &'static str, Option<bool>), String> {
     match state(&req["config_state"], "config_state")? {
         Some(BridgeState::Config(c)) => {
-            let phase = match &c {
-                ConfigState::Pairing { .. } => "pairing",
-                ConfigState::Ready { .. } => "ready",
+            let (phase, sunset) = match &c {
+                ConfigState::Pairing { .. } => ("pairing", None),
+                ConfigState::Ready { sunset, .. } => ("ready", Some(*sunset)),
             };
-            Ok((c.config().clone(), phase))
+            Ok((c.config().clone(), phase, sunset))
         }
         _ => Err("config_state: the request needs config(cid)'s state (a bridge configuration)".into()),
     }
@@ -412,7 +412,7 @@ fn root_state_json(r: &RootState) -> Value {
 pub(crate) fn import_root_of(req: &Value) -> Result<Value, String> {
     let program = account(&req["program"], "program")?;
     let cid: Hash = fixed(&req["config_id"], "config_id")?;
-    let (config, _) = config_of(req)?;
+    let (config, _, _) = config_of(req)?;
     let record_slot = uint(&req["record_slot"], "record_slot")?;
     // The vault's `eth_getProof` of slots 0 (the root) and 1 (the leaf count): given in the request
     // (`get_proof`), or read by the module at `block` from the vault the configuration names, through
@@ -587,9 +587,11 @@ pub(crate) fn registry_of(req: &Value) -> Result<Value, String> {
     }
     if !req["config_state"].is_null() {
         any = true;
-        let (c, phase) = config_of(req)?;
+        let (c, phase, sunset) = config_of(req)?;
         let mut v = json!({
             "phase": phase,
+            // The one-way retirement (`Sunset`): no mint after it.
+            "sunset": sunset,
             "bedrock_genesis_id": hex(&c.bedrock_genesis_id),
             "channel_id": hex(&c.channel_id),
             "bridge_image_id": hex(&c.bridge_image_id),

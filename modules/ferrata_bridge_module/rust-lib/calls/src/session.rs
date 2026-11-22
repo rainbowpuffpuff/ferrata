@@ -189,7 +189,7 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         }
         "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
         m if m.starts_with("admin.") => Err(format!(
-            "{m}: not on this path. The module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds and sends the LEZ SetCap (admin.set_cap, admin.lez). A LEZ Freeze, Pause or Tick it builds (the module's `admin` lez_freeze with params.record) but does not send yet: their time record in the Gloas layout needs the execution block's RLP header, which the module does not fetch"
+            "{m}: not on this path. The module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds the LEZ role messages (admin.set_cap, admin.lez: SetCap, Freeze, Pause, Tick, Sunset), each sent only after a person approves it at the role's wallet. A LEZ Freeze, Pause or Tick needs a time record whose Gloas layout carries the execution block's RLP header, which the module does not fetch"
         )),
         "relay" | "checkpoint" | "advance_time" => {
             Err(format!("{method} is a devnet stand-in: on a sequencer the relayer and the checkpoint prover do it, and time passes"))
@@ -1071,6 +1071,12 @@ impl Chain {
     /// signer is the configuration's role holder read from config(cid)'s state, or `params.signer` (an account id, or
     /// `"user"`: the wallet's first public account). A signer that does not hold the role is refused here before
     /// anything is sent, unless `params.unchecked` asks to send it anyway (to show the program's own refusal).
+    ///
+    /// No role message is sent without a person's approval: the module hands a role message only to a signer with an
+    /// approval step (the chain service's `module.role_gate`: the stand-in for the role's own wallet holds it until a
+    /// person approves exactly that message with the role password), and waits for that decision (the job's
+    /// `awaiting_approval` phase); unapproved after [`ROLE_WAIT`] it is withdrawn. A `Sunset` (irreversible) is no
+    /// exception.
     fn admin_lez(&self, method: &str, params: &Value) -> Result<Value, String> {
         let (action, p) = if method == "admin.set_cap" {
             ("lez_set_cap".to_string(), json!({ "token": ETH, "mints": params["mints"].as_bool().unwrap_or(true),
@@ -1101,13 +1107,23 @@ impl Chain {
         if built["signer_holds_role"] == false && params["unchecked"] != true {
             return Err(format!("refused before sending: {signer} is not the configuration's {} ({})", built["role"], built["role_holder"]));
         }
-        let what = format!("{} (admin view)", built["what"].as_str().unwrap_or("LEZ admin"));
+        let what = format!("{} (admin view){}", built["what"].as_str().unwrap_or("LEZ admin"),
+                           if action == "lez_sunset" { ": ends this configuration for good (irreversible)" } else { "" });
+        if built["role"] != "anyone" {
+            // Only to a signer that asks a person first.
+            role_gate_ok(self.post("module.role_gate", json!({})))?;
+        }
         // The role's account holds no LEZ: the wallet's public account /0 pays the fee and co-signs (outside the
         // message's accounts), a stand-in for the role's own funded wallet.
         let payer = self.account("public", 0)?;
-        crate::jobs::phase("sent", json!({ "by": "the chain service's LEZ wallet", "signer": signer, "payer": payer }));
-        let sent = self.post("module.submit", json!({ "message": built["message"], "accounts": built["accounts"],
-                                                       "root_index": built["root_index"], "what": what, "payer": payer }))?;
+        let mut sent = self.post("module.submit", json!({ "message": built["message"], "accounts": built["accounts"],
+                                                           "root_index": built["root_index"], "what": what, "payer": payer }))?;
+        let mut approval = Value::Null;
+        if sent["pending_approval"] == true {
+            approval = sent.clone();
+            sent = self.wait_role(&sent)?;
+        }
+        crate::jobs::phase("sent", json!({ "tx_hash": sent["tx_hash"], "block": sent["block"], "by": "the chain service's LEZ wallet", "signer": signer, "payer": payer }));
         let settled = sent["settled"] == true;
         let mut out = built;
         out["settled"] = json!(settled);
@@ -1115,6 +1131,11 @@ impl Chain {
         out["block"] = sent["block"].clone();
         out["sent"] = sent;
         out["signed_by"] = json!("the chain service's LEZ wallet (seqnet-chain, LEZ's wallet library), holding the role's key in this run: the stand-in for the role's own LEZ wallet or multisig");
+        out["approved"] = if approval.is_null() {
+            json!("not held: not signed by a role key the wallet holds (the user's own account)")
+        } else {
+            json!({ "approval_id": approval["approval_id"], "message_sha256": approval["message_sha256"], "by": "a person, at the role wallet's approval step (the role password)" })
+        };
         out["fee_paid_by"] = json!(payer);
         if settled {
             if action == "lez_set_cap" {
@@ -1125,6 +1146,53 @@ impl Chain {
                                         out["tx_hash"].as_str().unwrap_or("?"), out["block"], out["role"], out["role_holder"]));
         }
         Ok(out)
+    }
+}
+
+/// Whether the chain service's signer asks a person before it signs a LEZ role message (`module.role_gate`): the module
+/// hands it no role message otherwise.
+fn role_gate_ok(gate: Result<Value, String>) -> Result<(), String> {
+    match gate {
+        Ok(g) if g["approval"] == "password" => Ok(()),
+        Ok(g) => Err(format!("refused before sending: the chain service would sign LEZ role messages without a person's approval ({g})")),
+        Err(e) => Err(format!("refused before sending: the chain service has no approval step for LEZ role messages ({e})")),
+    }
+}
+
+/// How long a LEZ role message waits for the person's approval at the role wallet before it is withdrawn.
+const ROLE_WAIT: Duration = Duration::from_secs(900);
+
+impl Chain {
+    /// Waits for the person's decision on a role message the chain service holds (`held`: its `pending_approval` reply):
+    /// the job is `awaiting_approval` meanwhile. The send's reply once approved and sent; the refusal otherwise; at
+    /// [`ROLE_WAIT`] the request is withdrawn (`module.cancel_role`) so that it cannot still be approved untracked.
+    fn wait_role(&self, held: &Value) -> Result<Value, String> {
+        let id = held["approval_id"].as_str().ok_or("the chain service held the message without an approval_id")?.to_string();
+        crate::jobs::phase("awaiting_approval", json!({
+            "approval_id": id, "what": held["what"], "message": held["message"], "signer": held["signer"],
+            "message_sha256": held["message_sha256"],
+            "approve_in": "the role's LEZ wallet (here its stand-in, seqnet-chain: module.approve_role with the role password; headless e2e/seqnet/ops.sh approve-lez)",
+        }));
+        let t0 = Instant::now();
+        loop {
+            let st = self.post("module.role_status", json!({ "approval_id": id }))?;
+            match st["state"].as_str().unwrap_or("") {
+                "awaiting_approval" | "approved" => {}
+                "sent" => return Ok(st["result"].clone()),
+                "rejected" => return Err(format!("rejected at the role wallet ({id}): the person declined; nothing was signed or sent")),
+                "cancelled" => return Err(format!("withdrawn ({id}): nothing was signed or sent")),
+                "expired" => return Err(format!("not approved in time at the role wallet ({id}): nothing was signed or sent")),
+                other => return Err(format!("the role wallet answered {other} for {id}: {}", st["error"].as_str().unwrap_or("no reason given"))),
+            }
+            if t0.elapsed() > ROLE_WAIT {
+                let w = self.post("module.cancel_role", json!({ "approval_id": id }));
+                return Err(format!("not approved within {} s at the role wallet ({id}); {}", ROLE_WAIT.as_secs(), match w {
+                    Ok(_) => "withdrawn: nothing will be signed for it".to_string(),
+                    Err(e) => format!("withdrawing it failed ({e}): it may still be approved there"),
+                }));
+            }
+            std::thread::sleep(Duration::from_secs(1));
+        }
     }
 }
 
@@ -1179,6 +1247,66 @@ mod tests {
 
     fn call(method: &str, params: Value) -> Value {
         serde_json::from_str(&wallet(&json!({ "method": method, "params": params }).to_string())).expect("the reply is JSON")
+    }
+
+    /// A stand-in chain service: answers each request with the next of `replies` (`{"ok": true, "result"}`), and
+    /// records the methods asked.
+    fn fake_chain(replies: Vec<Value>) -> (String, std::sync::Arc<Mutex<Vec<String>>>) {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", l.local_addr().unwrap());
+        let seen = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+        std::thread::spawn(move || {
+            let mut replies = replies.into_iter();
+            for stream in l.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let mut buf = Vec::new();
+                let mut chunk = [0u8; 4096];
+                let body = loop {
+                    let n = stream.read(&mut chunk).unwrap_or(0);
+                    buf.extend_from_slice(&chunk[..n]);
+                    if let Some(end) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let head = String::from_utf8_lossy(&buf[..end]).to_lowercase();
+                        let len = head.lines().find_map(|l| l.strip_prefix("content-length:")).and_then(|v| v.trim().parse::<usize>().ok()).unwrap_or(0);
+                        if buf.len() >= end + 4 + len {
+                            break buf[end + 4..end + 4 + len].to_vec();
+                        }
+                    }
+                    if n == 0 {
+                        break Vec::new();
+                    }
+                };
+                let req: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                log.lock().unwrap().push(req["method"].as_str().unwrap_or("").to_string());
+                let Some(reply) = replies.next() else { break };
+                let text = json!({ "ok": true, "result": reply }).to_string();
+                let _ = write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
+            }
+        });
+        (url, seen)
+    }
+
+    /// No LEZ role message leaves without a person's approval: the module hands one only to a signer that asks first
+    /// (`module.role_gate`), waits for the decision, and reports a rejection as nothing sent.
+    #[test]
+    fn a_lez_role_message_is_sent_only_after_a_persons_approval() {
+        assert!(role_gate_ok(Ok(json!({ "approval": "password" }))).is_ok());
+        assert!(role_gate_ok(Ok(json!({ "approval": "none" }))).unwrap_err().starts_with("refused before sending"));
+        assert!(role_gate_ok(Err("unknown method module.role_gate".into())).unwrap_err().contains("no approval step"));
+        let held = json!({ "pending_approval": true, "approval_id": "lra_1", "what": "Sunset (admin view): ends this configuration for good (irreversible)",
+                           "message": "Sunset", "message_sha256": "0xab" });
+        let (url, seen) = fake_chain(vec![
+            json!({ "state": "awaiting_approval" }),
+            json!({ "state": "sent", "result": { "settled": true, "tx_hash": "0x01", "block": 7 } }),
+        ]);
+        let sent = Chain { url, s: Value::Null }.wait_role(&held).unwrap();
+        assert_eq!(sent["block"], 7);
+        assert_eq!(*seen.lock().unwrap(), vec!["module.role_status", "module.role_status"]);
+        let (url, _) = fake_chain(vec![json!({ "state": "rejected" })]);
+        let e = Chain { url, s: Value::Null }.wait_role(&held).unwrap_err();
+        assert!(e.starts_with("rejected at the role wallet (lra_1): the person declined; nothing was signed or sent"), "{e}");
+        let (url, _) = fake_chain(vec![json!({ "state": "expired" })]);
+        assert!(Chain { url, s: Value::Null }.wait_role(&held).unwrap_err().contains("not approved in time"));
     }
 
     #[test]

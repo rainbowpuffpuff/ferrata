@@ -27,14 +27,17 @@ STACK="$T/logoseth/stack"; LEZ_PATCHED="$T/logos/lgx-lez_core-patched"
 
 # 1. The chain service: LEZ's history and the release's stand-in prover (the module reads and sends Ethereum itself);
 #    its LEZ wallet also holds the configuration's role keys (the crown's derived throwaway keys), the stand-in for the
-#    roles' own LEZ wallets: it signs and sends the LEZ admin messages the module builds (module.submit).
+#    roles' own LEZ wallets: a LEZ admin message the module builds (module.submit) is HELD there until a person approves
+#    exactly that message with the role password (module.approve_role; the test plays the person: ops.sh approve-lez).
+#    The module never has the password.
 mkdir -p "$W/relayer-inbox"
+RK="$W/lez-role"; mkdir -p "$RK"; chmod 700 "$RK"; ( umask 077; printf '%s' "seqnet LEZ role wallet (local)" > "$RK/password" )
 "${PROVE[@]}" "$BIN/seqnet-chain" --listen "127.0.0.1:$CHAIN_PORT" --eth-rpc "$RPC" --chain-id 11155111 --vault "$VAULT" --from-block "$FROM" \
   --keystore "$KEYSTORE" --password-file "$U/eth.pass" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" \
   --lez-password-file "$U/lez.pass" --bridge-account "$BRIDGE" --bridge-program "$BRIDGE_BIN" --relayer-bin "$BIN/ferrata-relayer" \
   --relayer "$RELAYER" --relayer-state "$W/relayer" --relayer-inbox "$W/relayer-inbox" --mock "$MOCK" --prover "$DEPLOYER" \
   --release-image-id "$RELEASE_ID" --log "$M/chain-calls.jsonl" --proofs "$PROOFS" \
-  --lez-role-key crown/admin --lez-role-key crown/freeze-authority > "$W/seqnet-chain.log" 2>&1 &
+  --lez-role-key crown/admin --lez-role-key crown/freeze-authority --lez-role-password-file "$RK/password" > "$W/seqnet-chain.log" 2>&1 &
 CHAIN_PID=$!
 for _ in $(seq 120); do curl -fsS -m 2 -d '{"method":"module.info","params":{"lez_only":true}}' "http://127.0.0.1:$CHAIN_PORT/" > /dev/null 2>&1 && break; sleep 1; done
 kill -0 $CHAIN_PID 2>/dev/null || { tail -n 20 "$W/seqnet-chain.log"; die "seqnet-chain did not start"; }
@@ -102,7 +105,7 @@ t0=$(date +%s)
     TMPDIR="$LT" LOGOS_TMPDIR_SHORT="$LT" LOGOS_PASSWORD_FILE="$K/password" SEQNET_TMP="$W" SEQNET_CALL_LOG="$M/calls.jsonl" \
     SEQNET_OPS="bash $REPO/e2e/seqnet/ops.sh" SEQNET_OPS_LOG="$M/ops.jsonl" SEQNET_CHAIN_URL="http://127.0.0.1:$CHAIN_PORT/" \
     SEQNET_SHOTS="$M/screenshots" SEQNET_ETH=logos SEQNET_FROM_BLOCK="$FROM" SEQNET_ADMIN="$ADMIN" SEQNET_FREEZE_AUTHORITY="$FREEZER" \
-    SEQNET_RELEASE_SENDER="$RELEASE_SENDER" SEQNET_LEZ_PARAMS="$LEZ_PARAMS" \
+    SEQNET_RELEASE_SENDER="$RELEASE_SENDER" SEQNET_LEZ_PARAMS="$LEZ_PARAMS" SEQNET_LEZ_ROLE_PASSWORD_FILE="$RK/password" \
     "$RUNNER" -input tst_miniapp_logos.qml -o "$M/qmltest.txt,txt" -o "$M/qmltest.xml,xunitxml" -maxwarnings 0 ) \
   > "$W/qmltest.log" 2>&1
 qrc=$?

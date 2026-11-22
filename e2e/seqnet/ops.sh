@@ -17,6 +17,9 @@
 #                              (its status and prompt), and approves it with the account's password file (or rejects it).
 #                              A request the approver's screen dropped is looked up by handle (`list`, then
 #                              tx_sender_module's live sends) and shown again (`show`), and that recovery is recorded
+#   ops.sh approve-lez NAME [reject]   (logoseth mode) the person at the LEZ role's wallet (its stand-in, seqnet-chain):
+#                              waits for the role message the module asked for (module.role_pending), records it, and
+#                              approves exactly that message (its SHA-256) with the role password, or rejects it
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
@@ -68,6 +71,27 @@ case "${1:-}" in
     if [ "$decision" = reject ]; then lctl call evm_signer_cli reject "str:$h" --json < /dev/null > "$A/$name.decision.json" 2>&1
     else lctl call evm_signer_cli approve "str:$h" "str:$b" "@$LOGOS_PASSWORD_FILE" --json < /dev/null > "$A/$name.decision.json" 2>&1; fi
     say "approver: $decision $name (handle $h, requested by $(jq -r '.rendered.requester // "tx_sender_module (shown by handle)"' <<< "$st"))"
+    ;;
+  approve-lez)
+    shift; name="${1:?approve-lez NAME}"; decision="${2:-approve}"
+    A="$RUN/approver"; mkdir -p "$A"
+    chain() { curl -fsS -m 600 --data-binary @- "$SEQNET_CHAIN_URL" <<< "$1"; }   # the body on stdin: no password in argv
+    p=""
+    for _ in $(seq 240); do
+      pend=$(chain '{"method":"module.role_pending","params":{}}'); p=$(jq -c '.result.pending | last // empty' <<< "$pend" 2>/dev/null)
+      [ -n "$p" ] && break; sleep 0.5
+    done
+    [ -n "$p" ] || die "approve-lez $name: no role message is held at the role wallet"
+    echo "$p" > "$A/lez-$name.held.json"
+    id=$(jq -r .approval_id <<< "$p"); sha=$(jq -r .message_sha256 <<< "$p")
+    if [ "$decision" = reject ]; then
+      chain "$(jq -c -n --arg id "$id" '{method: "module.reject_role", params: {approval_id: $id}}')" > "$A/lez-$name.decision.json"
+    else
+      chain "$(jq -c -n --arg id "$id" --arg sha "$sha" --rawfile pw "$SEQNET_LEZ_ROLE_PASSWORD_FILE" \
+        '{method: "module.approve_role", params: {approval_id: $id, message_sha256: $sha, password: $pw}}')" > "$A/lez-$name.decision.json"
+    fi
+    jq -e '.ok == true' "$A/lez-$name.decision.json" > /dev/null || die "approve-lez $name: $(head -c 400 "$A/lez-$name.decision.json")"
+    say "role wallet: $decision $name ($id: $(jq -r .what <<< "$p"); message $(jq -r .message <<< "$p"), sha256 ${sha:0:18}...)"
     ;;
   *) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

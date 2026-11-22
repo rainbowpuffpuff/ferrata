@@ -80,6 +80,14 @@ Item {
             if (shotName) shot(shotName);
             ops("approve " + name);
         }
+        // The person at the LEZ role's wallet (its stand-in, seqnet-chain): the module's role message is held there until
+        // the person approves exactly it with the role password (ops.sh approve-lez), or rejects it.
+        function signerLez(name, shotName, decision) {
+            tryVerify(function () { return has(host.app.approvalText, "at the role's wallet"); }, 120000, "the LEZ message waits for the role's wallet: " + host.app.approvalText + " " + host.app.lastError);
+            verify(has(el("header.job").text, "Approve this LEZ"), el("header.job").text);
+            if (shotName) shot(shotName);
+            ops("approve-lez " + name + (decision ? " " + decision : ""));
+        }
         // The user waits: the view's clock moves on to just past `until` (ms).
         function waitUntil(until) { var ms = Math.max(0, until - host.app.now()) + 1000; host.app.clockOffset += ms; return ms; }
 
@@ -314,7 +322,10 @@ Item {
             el("admin.cap.capacity").text = "12000000000";
             click("admin.setcap");
             approve("SetCap", "26-admin-lez-setcap-approval");
+            // Not sent on the request: held at the role's wallet until the person approves exactly this message.
+            signerLez("setcap", "26b-admin-lez-setcap-awaits-the-role-wallet");
             tryVerify(function () { return host.app.ethJob && host.app.jobOver(host.app.ethJob); }, 300000, "the LEZ SetCap's job ended: " + host.app.lastError);
+            verify(host.app.ethJob.result && host.app.ethJob.result.approved && host.app.ethJob.result.approved.approval_id, "approved at the role's wallet: " + JSON.stringify(host.app.ethJob.result ? host.app.ethJob.result.approved : null));
             verify(has(host.app.adminText, "LEZ cap set"), "accepted by the bridge program: " + host.app.adminText + " " + host.app.lastError);
             console.log("LEZ SETCAP " + host.app.adminText);
             tab("registry");
@@ -337,6 +348,20 @@ Item {
             verify(r2.ok, "started: " + r2.error);
             tryVerify(function () { var j = wallet("job", { id: r2.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 60000, "the checked SetCap's job ended");
             verify(has(wallet("job", { id: r2.result.job.id }).result.error, "refused before sending"), "the module's own role check");
+            // A Sunset (irreversible) is held at the role's wallet like every role message: the person rejects it there;
+            // nothing is signed or sent, and the configuration is not sunset.
+            var sr = wallet("admin.lez", { action: "lez_sunset", params: {} });
+            verify(sr.ok, "started: " + sr.error);
+            tryVerify(function () { var j = wallet("job", { id: sr.result.job.id }); return j.ok && (j.result.state === "awaiting_approval" || host.app.jobOver(j.result)); }, 60000, "the Sunset waits at the role's wallet");
+            compare(wallet("job", { id: sr.result.job.id }).result.state, "awaiting_approval", "held, not sent: " + JSON.stringify(wallet("job", { id: sr.result.job.id }).result.error));
+            ops("approve-lez sunset reject");
+            tryVerify(function () { var j = wallet("job", { id: sr.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 60000, "the rejected Sunset's job ended");
+            var sj = wallet("job", { id: sr.result.job.id }).result;
+            compare(sj.state, "failed", "not sent");
+            verify(has(sj.error, "rejected at the role wallet") && has(sj.error, "nothing was signed or sent"), sj.error);
+            var st = wallet("admin.status", {});
+            verify(st.ok && st.result.lez && st.result.lez.config && st.result.lez.config.sunset === false, "the configuration is not sunset: " + JSON.stringify(st.ok ? st.result.lez.config : st.error).substring(0, 400));
+            console.log("LEZ SUNSET REJECTED " + sj.error);
             // The vault: every setting from the panel.
             tab("admin");
             click("admin.refresh");

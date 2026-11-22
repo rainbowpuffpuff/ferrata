@@ -29,7 +29,7 @@ use std::{
     net::{TcpListener, TcpStream},
     path::PathBuf,
     process::Command,
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use alloy::{
@@ -110,9 +110,162 @@ struct Args {
     proofs: String,
     /// A LEZ role's key, by its label in the run's key derivation (`lez/live/driver/src/keys.rs`, the crown's
     /// `crown/admin` and `crown/freeze-authority`), imported into the LEZ wallet so that the module's LEZ admin messages
-    /// can be signed and sent in the run (`module.submit`). Repeatable. A stand-in for the role's own wallet.
+    /// can be signed and sent in the run. Repeatable. A stand-in for the role's own wallet: a message one of these keys
+    /// must sign is held until a person approves it (`module.approve_role` with the password of
+    /// `--lez-role-password-file`), never signed on the request alone.
     #[arg(long = "lez-role-key")]
     lez_role_keys: Vec<String>,
+    /// The password a person gives to approve a held role message (required with `--lez-role-key`).
+    #[arg(long = "lez-role-password-file")]
+    lez_role_password_file: Option<PathBuf>,
+}
+
+/// How long a held role message waits for the person before it expires (nothing signed).
+const HOLD_FOR: Duration = Duration::from_secs(900);
+
+/// The approval step in front of the role keys this wallet holds (the stand-in for each role's own LEZ wallet): a
+/// message one of them must sign (`module.submit` whose `signer` account is a role key's) is HELD, not signed, until a
+/// person approves exactly that message with the role password (`module.approve_role {approval_id, message_sha256,
+/// password}`), as Logos's signer asks a person before `keystore_module` signs on Ethereum. A request may be rejected
+/// (`module.reject_role`) or withdrawn by its requester (`module.cancel_role`); one left unanswered expires. Nothing
+/// else signs with a role key. Messages signed by the user's own accounts (claims, burns) are not held.
+struct RoleGate {
+    accounts: Vec<[u8; 32]>,
+    password_sha256: Option<[u8; 32]>,
+    held: Vec<Held>,
+    next: u64,
+    hold_for: Duration,
+}
+
+struct Held {
+    id: String,
+    params: Value,
+    what: String,
+    message: String,
+    signer: String,
+    message_sha256: String,
+    at: Instant,
+    state: &'static str,
+    result: Option<Value>,
+    error: Option<String>,
+}
+
+/// A password as typed into a file: without one trailing newline.
+fn password_line(text: &str) -> &str {
+    text.strip_suffix("\r\n").or_else(|| text.strip_suffix('\n')).unwrap_or(text)
+}
+
+impl RoleGate {
+    fn new(accounts: Vec<[u8; 32]>, password: Option<&str>) -> Self {
+        RoleGate { accounts, password_sha256: password.map(|p| sha256(password_line(p).as_bytes())), held: Vec::new(), next: 0, hold_for: HOLD_FOR }
+    }
+
+    /// The `signer` account of a `module.submit` request that is one of the role keys', if any.
+    fn role_signer(&self, params: &Value) -> Option<String> {
+        params["accounts"].as_array()?.iter().filter(|a| a["kind"] == "signer").find_map(|a| {
+            let id = h32(a["account"].as_str()?).ok()?;
+            self.accounts.contains(&id).then(|| hx(&id))
+        })
+    }
+
+    fn expire(&mut self) {
+        let hold_for = self.hold_for;
+        for h in &mut self.held {
+            if h.state == "awaiting_approval" && h.at.elapsed() >= hold_for {
+                h.state = "expired";
+            }
+        }
+        // Keep the last 64 answered requests for `module.role_status`.
+        while self.held.len() > 64 {
+            match self.held.iter().position(|h| h.state != "awaiting_approval") {
+                Some(i) => {
+                    self.held.remove(i);
+                }
+                None => break,
+            }
+        }
+    }
+
+    /// Holds `params` (signed by `signer`, a role key) for the person: nothing is signed.
+    fn hold(&mut self, params: &Value, signer: String, message: &BridgeMessage, bytes: &[u8]) -> Value {
+        self.expire();
+        self.next += 1;
+        let id = format!("lra_{}", self.next);
+        let name = format!("{message:?}").split(['(', ' ', '{']).next().unwrap_or("?").to_string();
+        let what = params["what"].as_str().unwrap_or("a LEZ role message").to_string();
+        let message_sha256 = hx(&sha256(bytes));
+        self.held.push(Held { id: id.clone(), params: params.clone(), what: what.clone(), message: name.clone(), signer: signer.clone(),
+                              message_sha256: message_sha256.clone(), at: Instant::now(), state: "awaiting_approval", result: None, error: None });
+        json!({
+            "pending_approval": true, "approval_id": id, "what": what, "message": name, "signer": signer,
+            "message_sha256": message_sha256, "expires_in_s": self.hold_for.as_secs(),
+            "approve_with": "module.approve_role {approval_id, message_sha256, password}: the person, with the role password (e2e/seqnet/ops.sh approve-lez)",
+        })
+    }
+
+    fn find(&mut self, id: &str) -> Result<&mut Held> {
+        self.expire();
+        self.held.iter_mut().find(|h| h.id == id).ok_or_else(|| anyhow!("no held role message {id}"))
+    }
+
+    fn summary(h: &Held) -> Value {
+        json!({ "approval_id": h.id, "state": h.state, "what": h.what, "message": h.message, "signer": h.signer,
+                "message_sha256": h.message_sha256, "age_s": h.at.elapsed().as_secs(), "result": h.result, "error": h.error })
+    }
+
+    fn pending(&mut self) -> Value {
+        self.expire();
+        json!({ "pending": self.held.iter().filter(|h| h.state == "awaiting_approval").map(Self::summary).collect::<Vec<_>>() })
+    }
+
+    fn status(&mut self, params: &Value) -> Result<Value> {
+        let id = params["approval_id"].as_str().context("approval_id")?;
+        Ok(Self::summary(self.find(id)?))
+    }
+
+    /// The person approves exactly the held message (its SHA-256) with the role password: the request to send.
+    fn approve(&mut self, params: &Value) -> Result<(String, Value)> {
+        let id = params["approval_id"].as_str().context("approval_id")?.to_string();
+        let want = self.password_sha256.context("no role password configured: nothing can be approved")?;
+        let given = sha256(password_line(params["password"].as_str().unwrap_or("")).as_bytes());
+        let h = self.find(&id)?;
+        ensure!(h.state == "awaiting_approval", "{id} is {}, not awaiting approval", h.state);
+        ensure!(params["message_sha256"].as_str().map(str::to_lowercase) == Some(h.message_sha256.clone()),
+                "message_sha256 is not the held message's ({}): approve exactly what was shown", h.message_sha256);
+        ensure!(given == want, "wrong password for the role key: not approved");
+        h.state = "approved";
+        Ok((id, h.params.clone()))
+    }
+
+    fn finish(&mut self, id: &str, outcome: &Result<Value>) {
+        if let Ok(h) = self.find(id) {
+            match outcome {
+                Ok(v) => {
+                    h.state = "sent";
+                    h.result = Some(v.clone());
+                }
+                Err(e) => {
+                    h.state = "failed";
+                    h.error = Some(format!("{e:#}"));
+                }
+            }
+        }
+    }
+
+    /// `reject` (the person) or `cancel` (the requester withdraws): nothing is signed.
+    fn decline(&mut self, params: &Value, state: &'static str) -> Result<Value> {
+        let id = params["approval_id"].as_str().context("approval_id")?;
+        let h = self.find(id)?;
+        ensure!(h.state == "awaiting_approval", "{id} is {}, not awaiting approval", h.state);
+        h.state = state;
+        Ok(Self::summary(h))
+    }
+
+    fn describe(&self) -> Value {
+        json!({ "approval": if self.password_sha256.is_some() { "password" } else { "none" },
+                "role_accounts": self.accounts.iter().map(|a| hx(a)).collect::<Vec<_>>(), "hold_for_s": self.hold_for.as_secs(),
+                "rule": "a message a role key must sign is held until a person approves it with the role password; nothing else signs with a role key" })
+    }
 }
 
 /// The run's throwaway key of `label`: SHA-256 of `ferrata-live/v1/key/`, the label and a counter (the first that is
@@ -141,6 +294,7 @@ struct Chain {
     ctx: Context,
     seed: Seed,
     user: Address,
+    gate: RoleGate,
 }
 
 /// How LEZ's wallet proves in this process: `dev` (RISC0_DEV_MODE set: a fake receipt) or `real`.
@@ -194,6 +348,17 @@ impl Chain {
             "module.inputs" => self.inputs(params).await,
             "module.private" => self.private(params).await,
             "module.submit" => self.submit(params).await,
+            "module.role_gate" => Ok(self.gate.describe()),
+            "module.role_pending" => Ok(self.gate.pending()),
+            "module.role_status" => self.gate.status(params),
+            "module.approve_role" => {
+                let (id, held) = self.gate.approve(params)?;
+                let outcome = self.submit_now(&held).await;
+                self.gate.finish(&id, &outcome);
+                outcome
+            }
+            "module.reject_role" => self.gate.decline(params, "rejected"),
+            "module.cancel_role" => self.gate.decline(params, "cancelled"),
             "module.tx" => self.tx(params).await,
             "module.vault_roots" => self.vault_roots(params).await,
             "module.vault_release" => self.vault_release(params).await,
@@ -472,6 +637,17 @@ impl Chain {
     /// a private account of the wallet, a private transaction executed and proven by LEZ's wallet; then
     /// waits for the block that applies it.
     async fn submit(&mut self, params: &Value) -> Result<Value> {
+        if let Some(signer) = self.gate.role_signer(params) {
+            // A role key must sign it: held for the person's approval (RoleGate), nothing signed now.
+            let bytes = hex_bytes(&params["message"], "message")?;
+            let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
+            return Ok(self.gate.hold(params, signer, &message, &bytes));
+        }
+        self.submit_now(params).await
+    }
+
+    /// Signs and sends a module message (after the gate, for a role key's).
+    async fn submit_now(&mut self, params: &Value) -> Result<Value> {
         let bytes = hex_bytes(&params["message"], "message")?;
         let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
         let accounts = params["accounts"].as_array().context("accounts")?;
@@ -720,18 +896,27 @@ fn main() -> Result<()> {
         let eth = flow::Eth { p, vault: a.vault, chain_id, from_block: a.from_block, chunk: 10_000 };
         let seed = Seed::from_file(&a.seed)?;
         let mut wallet = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
+        let password = match &a.lez_role_password_file {
+            Some(f) => Some(std::fs::read_to_string(f).with_context(|| format!("--lez-role-password-file {}", f.display()))?),
+            None => None,
+        };
+        ensure!(a.lez_role_keys.is_empty() || password.is_some(),
+                "--lez-role-key needs --lez-role-password-file: a role's message is signed only after a person approves it with that password");
+        let mut role_accounts = Vec::new();
         for label in &a.lez_role_keys {
             let key = derived_key(label);
             let account = AccountId::from(&lee::PublicKey::new_from_private_key(&key));
+            role_accounts.push(*account.value());
             wallet.storage_mut().key_chain_mut().add_imported_public_account(key);
-            eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account})");
+            eprintln!("seqnet-chain: the LEZ wallet holds the role key {label} (account {account}); its messages wait for approval");
         }
+        let gate = RoleGate::new(role_accounts, password.as_deref());
         let program = AccountId::new(h32(&a.bridge_account)?);
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
         let ctx = Context { program, cid: cid.0, chain_id, vault: eth.vault.into_array() };
         let seq = Sequencer { wallet, payer: None, bridge_program: Some(a.bridge_program.clone()), synced: false };
         let user = eth::keystore_signer(&a.keystore, &a.password_file)?.address();
-        anyhow::Ok(Chain { a, eth, seq, ctx, seed, user })
+        anyhow::Ok(Chain { a, eth, seq, ctx, seed, user, gate })
     })?;
     let listener = TcpListener::bind(&chain.a.listen)?;
     println!(
@@ -769,4 +954,61 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn req(signer: &[u8; 32]) -> (Value, Vec<u8>) {
+        let message = BridgeMessage::Sunset { config_id: [7; 32] };
+        let bytes = borsh::to_vec(&message).unwrap();
+        (json!({ "message": hx(&bytes), "what": "Sunset (admin view)", "root_index": 0,
+                 "accounts": [{ "kind": "signer", "account": hx(signer), "program": hx(&[2; 32]) },
+                              { "kind": "public", "account": hx(&[3; 32]), "program": hx(&[2; 32]) }] }), bytes)
+    }
+
+    /// No role message is signed on the request alone: it is held until the person approves exactly it with the role
+    /// password; a wrong password or another message is refused; it can be rejected, withdrawn, or expire.
+    #[test]
+    fn a_role_message_waits_for_the_persons_approval() {
+        let role = [9u8; 32];
+        let mut g = RoleGate::new(vec![role], Some("ferrata devnet only\n"));
+        let (p, bytes) = req(&role);
+        assert_eq!(g.role_signer(&p), Some(hx(&role)));
+        assert_eq!(g.role_signer(&req(&[1; 32]).0), None, "the user's own account is not held");
+        let m = BridgeMessage::try_from_slice(&bytes).unwrap();
+        let held = g.hold(&p, hx(&role), &m, &bytes);
+        assert_eq!(held["pending_approval"], true);
+        assert_eq!(held["message"], "Sunset");
+        let id = held["approval_id"].as_str().unwrap().to_string();
+        let sha = held["message_sha256"].as_str().unwrap().to_string();
+        assert_eq!(g.pending()["pending"][0]["approval_id"], json!(id));
+        let e = g.approve(&json!({ "approval_id": id, "message_sha256": sha, "password": "guess" })).unwrap_err();
+        assert!(e.to_string().contains("wrong password"), "{e}");
+        let e = g.approve(&json!({ "approval_id": id, "message_sha256": hx(&[0; 32]), "password": "ferrata devnet only" })).unwrap_err();
+        assert!(e.to_string().contains("not the held message"), "{e}");
+        assert_eq!(g.status(&json!({ "approval_id": id })).unwrap()["state"], "awaiting_approval");
+        let (got, params) = g.approve(&json!({ "approval_id": id, "message_sha256": sha, "password": "ferrata devnet only" })).unwrap();
+        assert_eq!((got.as_str(), &params), (id.as_str(), &p));
+        assert!(g.approve(&json!({ "approval_id": id, "message_sha256": sha, "password": "ferrata devnet only" })).is_err(), "approved once");
+        g.finish(&id, &Ok(json!({ "settled": true, "block": 5 })));
+        assert_eq!(g.status(&json!({ "approval_id": id })).unwrap()["state"], "sent");
+        // Rejected by the person, withdrawn by the requester: never approvable afterwards.
+        let r = g.hold(&p, hx(&role), &m, &bytes)["approval_id"].as_str().unwrap().to_string();
+        assert_eq!(g.decline(&json!({ "approval_id": r }), "rejected").unwrap()["state"], "rejected");
+        assert!(g.approve(&json!({ "approval_id": r, "message_sha256": sha, "password": "ferrata devnet only" })).is_err());
+        let c = g.hold(&p, hx(&role), &m, &bytes)["approval_id"].as_str().unwrap().to_string();
+        assert_eq!(g.decline(&json!({ "approval_id": c }), "cancelled").unwrap()["state"], "cancelled");
+        // Unanswered: expires.
+        g.hold_for = Duration::ZERO;
+        let x = g.hold(&p, hx(&role), &m, &bytes)["approval_id"].as_str().unwrap().to_string();
+        assert_eq!(g.status(&json!({ "approval_id": x })).unwrap()["state"], "expired");
+        assert!(g.pending()["pending"].as_array().unwrap().is_empty());
+        // Without a password nothing can be approved.
+        let mut none = RoleGate::new(vec![role], None);
+        let id = none.hold(&p, hx(&role), &m, &bytes)["approval_id"].as_str().unwrap().to_string();
+        assert!(none.approve(&json!({ "approval_id": id, "message_sha256": sha, "password": "" })).is_err());
+        assert_eq!(password_line("a\r\n"), "a");
+    }
 }
