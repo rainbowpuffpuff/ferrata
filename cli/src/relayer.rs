@@ -1097,7 +1097,7 @@ pub async fn drop_step<C: Credit>(
             })
         }
         // A credit of this drop sent before (built on the same state) was applied while this one was being built:
-        // nothing was sent now (review E2, M1).
+        // nothing was sent now (the second review's M1).
         Ok(Built::Moved(_)) if before.1 > 0 => {
             (r.tx, r.sends, r.settled) = (before.0, before.1, true);
             book.record(&j.nullifier, r.clone());
@@ -1647,7 +1647,8 @@ mod tests {
     }
 
     /// A zone in which a credit sent before lands at the start of the next `credit_on`, while its sync runs: the
-    /// block that comes between the step's own check of the drop account and the credit's build (review E2, M1).
+    /// block that comes between the step's own check of the drop account and the credit's build (the second
+    /// review's M1).
     #[derive(Default)]
     struct RacyZone {
         z: DropZone,
@@ -1785,7 +1786,7 @@ mod tests {
         assert_eq!(zone.applied, vec![j.one_time_address, j2.one_time_address], "one credit per N");
     }
 
-    /// The second review's race (review E2, M1; its model test, turned into the regression): the first credit lands
+    /// The second review's race (its model test, turned into the regression): the first credit lands
     /// while the credit sent again syncs, after the step's own check found the drop account unmoved. Before the fix
     /// the second credit was built on the state the first had made, and both applied.
     #[tokio::test]
@@ -1866,8 +1867,8 @@ mod tests {
         assert!(again.unwrap_err().to_string().contains("already had its drop"));
     }
 
-    /// review E2, L4: a drop whose credit keeps failing is given up `--drop-wait` after its last allowed send, and the
-    /// next drop goes.
+    /// The second review's L4: a drop whose credit keeps failing is given up `--drop-wait` after its last allowed
+    /// send, and the next drop goes.
     #[tokio::test]
     async fn a_drop_failing_every_send_is_given_up_after_its_last_send_and_the_next_drop_goes() {
         let (k1, j1) = one_time(24);
@@ -1932,7 +1933,7 @@ mod tests {
         assert!(old.drops["0xaa"].settled && old.in_flight().is_none());
     }
 
-    /// review E2, L6: a viewing key in hex that is not a key is the job's fault: refused, not retried.
+    /// The second review's L6: a viewing key in hex that is not a key is the job's fault: refused, not retried.
     #[tokio::test]
     async fn a_viewing_key_that_does_not_decode_is_refused() {
         let (mut keys, j) = one_time(28);

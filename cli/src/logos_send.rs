@@ -538,8 +538,8 @@ mod tests {
         assert!(matches!(o, Outcome::Unknown { forgotten: false, nonce: Some(44), .. }), "{o:?}");
     }
 
-    /// review E2, M2: tx_sender_module restarted (its sends are in memory) answers a final refusal for a request it
-    /// no longer holds: unknown, never "not sent". A withdrawal it does not confirm is unknown too.
+    /// The second review's M2: tx_sender_module restarted (its sends are in memory) answers a final refusal for a
+    /// request it no longer holds: unknown, never "not sent". A withdrawal it does not confirm is unknown too.
     #[test]
     fn a_request_the_module_no_longer_holds_or_did_not_withdraw_is_unknown() {
         let _g = SERIAL.lock().unwrap();
@@ -590,7 +590,7 @@ mod tests {
                 { "requestId": "r6", "chainId": 31337, "from": from, "status": "awaitingApproval", "purpose": "Ferrata monitor: other" },
                 { "requestId": "r7", "chainId": 31337, "from": from, "status": "awaitingApproval", "purpose": format!("{} (ferrata_monitor_module)", p(&mine)) },
                 { "requestId": "r8", "chainId": 1, "from": from, "status": "awaitingApproval", "purpose": p(&mine) },
-                // Another call of the same label (review E2, L7): not taken for this one.
+                // Another call of the same label (the second review's L7): not taken for this one.
                 { "requestId": "r9", "chainId": 31337, "from": from, "status": "awaitingApproval", "purpose": p(&other) },
             ] })),
             ("send_status", json!({ "ok": true, "status": "broadcast", "final": true, "hashes": [H], "hash": H })),

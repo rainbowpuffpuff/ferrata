@@ -837,7 +837,7 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     s5["requestsMade"] = json!(made);
     results["parts"].as_array_mut().expect("array").push(s5);
 
-    // ---- part 6: what tx_sender_module cannot account for (review E2, M2) ------------------------------------------------
+    // ---- part 6: what tx_sender_module cannot account for (the second review's M2) ---------------------------
     let history = dir.join("txsender6.history.jsonl").to_string_lossy().into_owned();
     let with_history = ["--history".to_string(), history];
     let requests = |ts: &Helper| ts.log_count(|v| v["method"] == "send" && v["requestId"].is_string());

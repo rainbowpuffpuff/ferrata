@@ -673,8 +673,8 @@ impl Daemon {
         let s = self.sink.clone();
         // Through tx_sender_module without a hash yet: its request (by the recorded id, or the one it holds open for this
         // very call) driven to its end; it broadcasts only when polled, so an open request is never made twice. What the
-        // module cannot account for (review E2, M2: a request it no longer holds after a restart, `stuck`, a leg failed
-        // after it began to leave) is not "nothing sent": it is settled on the chain below, at the request's nonce.
+        // module cannot account for (the second review's M2: a request it no longer holds after a restart, `stuck`, a
+        // leg failed after it began to leave) is not "nothing sent": it is settled on the chain below, at its nonce.
         let logos = f.via.as_deref() == Some(VIA_LOGOS);
         if let (true, None, Some(route)) = (logos, f.hash, self.logos.clone()) {
             use crate::logos_send::Outcome;
