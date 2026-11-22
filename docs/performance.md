@@ -77,7 +77,8 @@ transactions (every node re-executes them): these are the proofs a prover of the
 method. Execution gas equals the user cycles proven in every row. Proof times are sums over a transaction's
 transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts; four actions sum transitions
 proven on different hosts, `Init`, `Init` adopt 2/2 and both `Finish` rows, and the slot, absent-slot and four-facts
-statements ran on Zen 4: compression times differ by up to about 40 % between hosts):
+statements ran on Zen 4, and the succession row's two transitions on two hosts, `Succeed` (38) on Intel and `Spawn`
+(39) on AMD Zen 3: compression times differ by up to about 40 % between hosts):
 
 | action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
