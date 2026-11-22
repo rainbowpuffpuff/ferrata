@@ -143,16 +143,16 @@ accelerated Keccak in the program ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5,
 
 | Transaction | Execution gas | Of the 5M target | Storage gas (tx bytes) |
 |---|---:|---:|---:|
-| `Attest` as the transaction's root: an account | 167,882 | 3% | 4,424 |
-| a storage slot, with a condition | 274,842 | 5% | 7,338 |
-| an ERC-20 `Transfer` log (receipt of 7 logs) | 96,584 | 2% | 2,623 |
-| the same, receipt of 306 logs | 1,618,872 | 32% | 58,812 |
-| one history hop (16 blocks back), then a slot | 498,204 | 10% | 13,578 |
-| four facts in one call, with a relation | 453,182 | 9% | 12,309 |
-| a consumer actor calls `Attest` for a storage slot and keeps the reply | 384,776 | 8% | 7,507 |
-| the same for a log | 163,704 | 3% | 2,792 |
-| the reference consumer's claim of a `Transfer` (four handlers) | 183,538 | 4% | 2,768 |
-| the same claim again, refused by the nullifier (223) | 14,835 | 0% | 2,768 |
+| `Attest` as the transaction's root: an account | 168,909 | 3% | 4,424 |
+| a storage slot, with a condition | 275,865 | 6% | 7,338 |
+| an ERC-20 `Transfer` log (receipt of 7 logs) | 97,485 | 2% | 2,623 |
+| the same, receipt of 306 logs | 1,619,960 | 32% | 58,812 |
+| one history hop (16 blocks back), then a slot | 499,277 | 10% | 13,578 |
+| four facts in one call, with a relation | 454,255 | 9% | 12,309 |
+| a consumer actor calls `Attest` for a storage slot and keeps the reply | 386,181 | 8% | 7,507 |
+| the same for a log | 164,872 | 3% | 2,792 |
+| the reference consumer's claim of a `Transfer` (four handlers) | 185,389 | 4% | 2,768 |
+| the same claim again, refused by the nullifier (223) | 14,936 | 0% | 2,768 |
 
 Without the accelerated Keccak the same attestations cost 0.34M to 2.1M cycles, and 8.2M for the
 306-log receipt ([`attestation.md`](../design/attestation.md) §13, P.1). Sent as a transaction's

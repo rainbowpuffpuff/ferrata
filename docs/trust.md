@@ -701,7 +701,7 @@ secret `s` and the opening of its commitment `C` (`s`, the destination's kind, t
 `sOut` and recipient, and the burn counter. **On the default, private path, none of them leaves the user's machine, and
 none is in any submitted transaction** (a plaintext claim, which the user must choose explicitly, publishes its whole
 witness: the leaf index, the depositor, `j`, `s` and the destination): the privacy suite searched every public byte of both chains over 20 round trips for 320 such values
-and found none, in dev mode and on real proofs of the final programs (EVIDENCE rows 23, 89;
+and found none, in dev mode on this tree's programs and on real proofs of the deployed ones (the bridge program `0xccde6171…`, before milestone B1; EVIDENCE rows 23, 89;
 [`privacy/RESULTS.md`](privacy/RESULTS.md); every public field, step by step:
 [`privacy/generated/fields.md`](privacy/generated/fields.md)).
 
