@@ -1,0 +1,23 @@
+# idl/spel-v2/run.sh: SPEL PR #301 (c90ca0b, LEZ v0.4.0-rc3) on Ferrata 18fc505c
+# recorded messages: idl-recorded.json (26054381 bytes)
+## 1. SPEL as PR #301 has it
+ferrata_attestation: generate_idl(lez/wire, message Message, states ["InstanceState", "RecordState", "JobState", "Attestation"])
+  generated: IDL version "2", 15 messages, 18 types
+  wrote idl/generated/ferrata_attestation.idl-v2.json
+  against the hand-written IDL: 33 messages and types compared, 0 difference(s)
+    first: Message::Init#1 -> {"Init":{"bootstrap":"010203","checkpoint":"d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6e7e8e9eaebecedeeeff0f1","config":{"adoption_parts":2,"chain_id":"11155111"
+    committed vectors: SPEL v2 decoded 21 of 21 exactly; mutants refused
+    first: lab/block 10/tx 0: Adopt -> {"Adopt":{"keys":["17825edba8410e8bcb85c5943628c02ea95ee7595f559c030b94395c0d1d0d84c38eca199fce9c1992e572b5029b124c093959975a377209f9626aa3192643cb6a69284dc7e85
+    recorded messages: SPEL v2 decoded 905 of 905 exactly; mutants refused
+ferrata_bridge: generate_idl(lez/bridge-wire, message BridgeMessage, states ["BridgeState"])
+  expected: ferrata_bridge: generate_idl (state BridgeState) failed: cannot describe `(Root , u128)` (in `BridgeMessage::Spend`): only paths and arrays are supported
+SPEL v2 check: passed
+## 2. SPEL with patches/spel-c90ca0b-idl-gen-tuples.patch
+ferrata_bridge: generate_idl(lez/bridge-wire, message BridgeMessage, states ["BridgeState"])
+  generated: IDL version "2", 28 messages, 32 types
+  wrote idl/generated/ferrata_bridge.idl-v2.json
+  against the hand-written IDL: 60 messages and types compared, 0 difference(s)
+    first: BridgeMessage::Burn#1 -> {"Burn":{"amount":"c0c1c2c3c4c5c6c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedf","c_out":"c7c8c9cacbcccdcecfd0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5e6",
+    committed vectors: SPEL v2 decoded 50 of 50 exactly; mutants refused
+SPEL v2 check: passed
+spel-v2 run: done

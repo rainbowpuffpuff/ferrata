@@ -152,12 +152,70 @@ code, cycles, execution and storage gas, base fee, size and events. The IDL alon
 The wire carries one receipt proof per log, so attesting a whole receipt repeats its proof: the
 39-log receipt is 345,894 bytes and 9,968,157 cycles, just under v0.4's 10M execution gas cap.
 
+## On a running sequencer: `ferrata attest`
+
+The same commands against a running LEZ v0.4 sequencer are in the `ferrata` tool (`cli/`, source
+[`../cli/src/attest.rs`](../cli/src/attest.rs)): `ferrata attest SUBCOMMAND`, built with `cargo build --release` in
+`cli/` (LEZ v0.4.0-rc1's wallet library and node-side crates, as the tool's other sequencer commands).
+
+```sh
+F="ferrata attest --lez-rpc http://127.0.0.1:3040 --program 0x<program account> --key payer.key --state-dir follower/ --record run.jsonl"
+$F config  --instance 0x<id> [--checkpoint 0x<root>]          # the instance's configuration; its id derived again
+$F status  --instance 0x<id>                                  # store, finalized slot and root, newest record
+$F init    --preset mainnet|sepolia --bootstrap bootstrap.ssz --checkpoint 0x<root> [--layout electra|gloas] [--parts 2] [--send --yes]
+$F advance --instance 0x<id> --update update.ssz [--finality] --committee bootstrap:FILE|update:FILE ... [--send --yes]
+$F attest  --instance 0x<id> --record-slot S --eth URL --block N \
+           [--storage ADDRESS:SLOT[:eq|ne|ge|gt|le|lt:VALUE]] [--account ADDRESS[:codehash]] [--log TX:LOG[:emitter=ADDRESS]] \
+           [--header-rlp FILE] [--send --yes]
+```
+
+- **Reads** come from the zone: the tool follows the sequencer's blocks with LEZ's own block application
+  (`lez/live/driver/src/follower.rs`, included), only those final on Bedrock unless `--wait-final no`, and compares each
+  actor state it reads with the sequencer's `getAccount`: a difference is noted on standard error (the sequencer's head
+  can be ahead of the last final block) and the followed state is used. `--state-dir` keeps the followed state between
+  runs.
+- **Every command that sends is a dry run** unless `--send --yes` (which may follow the command). The dry run gives the
+  verdict of the program's own function natively (`attest::evaluate`; for an update `ferrata_advance::evaluate` and the
+  program's step code; for an instance `steps::initialize`), with the program's code and its name from the IDL, and the
+  zone's execution: the exact signed transaction settled by LEZ's `settle_transaction` on a scratch copy of the
+  followed state (exit code, execution and storage gas, events). The tool checks the two agree.
+- **`--send --yes`** sends the same signed bytes, waits for the block that includes each to be final on Bedrock, and
+  compares the zone's receipt (the follower's: the sequencer's RPC reports no outcome) with the dry run: exit code,
+  execution gas, storage gas, number of events (the receipt carries no event data).
+- Proofs come from an Ethereum JSON-RPC endpoint (`--eth`: `eth_getProof`, `eth_getBlockReceipts`); the program checks
+  them against the record, so the endpoint is not trusted.
+- Exit status: 0 applied (or would be); 3 refused, as the dry run said; 1 the dry run and the zone disagree, or the
+  verdict and the dry run; 2 a usage error.
+
+Run on a zone we started (`cli/tests/attest-seq.sh`: crown session A, then the commands in `cli/tests/attest-seq-hook.sh`):
+see [Results on a sequencer](#results-on-a-sequencer).
+
+## Results on a sequencer
+
+Run r4 of `cli/tests/attest-seq.sh` (Modal build box, 21 November 2026; record and table:
+[`../cli/results/attest-seq-r4/`](../cli/results/attest-seq-r4/README.md)): on a LEZ v0.4.0-rc1 zone we started, with the
+final attestation program, 24 commands, each with the exit status expected; **every sent transaction equal to its dry run**
+(exit code, execution gas, storage gas, events), read from the zone's final blocks:
+
+- `config` of the zone's Sepolia instance (its id derived again: equal); `status` before and after.
+- `advance` with real Sepolia updates of 12 November (the lab's record): a finality update (3 transactions) and the
+  period-1412 update (5, adopting a committee); finalized slot 11,562,112 → 11,567,104. A dry run alone changed nothing.
+- `init` of a mainnet instance from the attestation fixture's bootstrap (3 transactions), `advance` with its finality
+  update (the record of block 26,384,851), `config` (id equal).
+- `attest`, the proofs fetched over JSON-RPC (recorded mainnet responses): WETH's balance slot with `eq` (applied,
+  275,925 gas), with a wrong value (130 `PredicateFailed`), with `ge` (applied); a USDC `Transfer` log with its emitter
+  (applied, 94,795), with another emitter (130); WETH's code hash (applied, 166,249); a failed transaction's log (124
+  `ReceiptFailed`); a slot and a log in one request (applied, 349,917).
+- Refusals of updates: an update of an earlier period (23 `PeriodSkipped`) and a replayed one (52 `NotNewer`), each the
+  program's step 1 natively, the dry run and the zone alike.
+
 ## Not done
 
-- Live endpoints in this tool: it reads recorded responses. Fetching `eth_getProof`, receipts and light-client data
-  from an endpoint is `ferrata_attest_module`'s (`fetch_log_proof`, also through Logos Core's `eth_rpc_module`:
-  EVIDENCE rows 60, 108; the [consumer guide](../docs/guides/consumer-guide.md) §13), and following a live chain on a
-  running sequencer is the updater's (EVIDENCE row 99).
+- Live endpoints in the in-process tool: `ferrata-attest` reads recorded responses; `ferrata attest` (above) is the
+  sequencer and live-endpoint tool. Fetching `eth_getProof`, receipts and light-client data from an endpoint is also
+  `ferrata_attest_module`'s (`fetch_log_proof`, also through Logos Core's `eth_rpc_module`: EVIDENCE rows 60, 108; the
+  [consumer guide](../docs/guides/consumer-guide.md) §13), and following a live chain on a running sequencer is the
+  updater's (EVIDENCE row 99).
 - The private placement (`VerifyAll`, the proven path) has no command; `advance` sends the public job.
 - Accumulator leaves and EIP-2935 hops are in the request format (and in the IDL) but have no
   command.

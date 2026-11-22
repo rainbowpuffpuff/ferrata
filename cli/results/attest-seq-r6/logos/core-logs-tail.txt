@@ -1,0 +1,51 @@
+==> $SPIKE/tmp/attest-seq/work-r6/hook/core/logs/daemon.log <==
+[2026-11-21 17:46:52.288] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-21 17:46:52.304] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-21 17:46:52.339] [out] [capability_module] [2026-11-21 17:46:52.338] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-21 17:46:52.342] [info] [logos] Module loaded: capability_module
+[2026-11-21 17:46:52.375] [info] [logos] Module loaded: modules_state
+[2026-11-21 17:46:52.422] [info] [logos] Module loaded: package_manager
+[2026-11-21 17:46:52.427] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-21 17:46:52.477] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-21 17:46:52.477] [info] [logos] Module loaded: storage_module
+[2026-11-21 17:46:52.514] [info] [logos] Module loaded: package_downloader
+Logosctl daemon started (pid 47485, instance 5f8d7bb9f4f4)
+Daemon state: $SPIKE/tmp/attest-seq/work-r6/hook/core/daemon/state.json
+Local client config: $SPIKE/tmp/attest-seq/work-r6/hook/core/client/config.yaml
+[2026-11-21 17:46:52.526] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:46:52.530] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:46:57.500] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/lgx-lez_core-patched/logos-lez_core-module-lib.lgx
+[2026-11-21 17:46:59.798] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx
+[2026-11-21 17:47:00.387] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx
+[2026-11-21 17:47:00.609] [info] [logos] Module loaded: lez_core
+[2026-11-21 17:47:00.703] [info] [logos] Module loaded: beacon_api_module
+[2026-11-21 17:47:00.791] [info] [logos] Module loaded: ferrata_attest_module
+[2026-11-21 17:47:01.165] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:47:52.169] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Shutting down logosctl daemon...
+
+==> $SPIKE/tmp/attest-seq/work-r6/hook/core/logs/daemon_20261121_174652.log <==
+[2026-11-21 17:46:52.288] [info] Inter-module access enforcement is OFF (no access policy set): any loaded module may call any other
+[2026-11-21 17:46:52.304] [info] [logos] Granting host services to 'capability_module': token_registry,token_delivery
+[2026-11-21 17:46:52.339] [out] [capability_module] [2026-11-21 17:46:52.338] [info] Granting host services to capability_module: ["token_registry","token_delivery"]
+[2026-11-21 17:46:52.342] [info] [logos] Module loaded: capability_module
+[2026-11-21 17:46:52.375] [info] [logos] Module loaded: modules_state
+[2026-11-21 17:46:52.422] [info] [logos] Module loaded: package_manager
+[2026-11-21 17:46:52.427] [info] [logos] Pushed module snapshot to modules_state
+[2026-11-21 17:46:52.477] [info] [logos] [storage_module] StorageModuleImpl: Initializing...
+[2026-11-21 17:46:52.477] [info] [logos] Module loaded: storage_module
+[2026-11-21 17:46:52.514] [info] [logos] Module loaded: package_downloader
+Logosctl daemon started (pid 47485, instance 5f8d7bb9f4f4)
+Daemon state: $SPIKE/tmp/attest-seq/work-r6/hook/core/daemon/state.json
+Local client config: $SPIKE/tmp/attest-seq/work-r6/hook/core/client/config.yaml
+[2026-11-21 17:46:52.526] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:46:52.530] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:46:57.500] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/lgx-lez_core-patched/logos-lez_core-module-lib.lgx
+[2026-11-21 17:46:59.798] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/lgx-beacon_api_module/logos-beacon_api_module-module-lib.lgx
+[2026-11-21 17:47:00.387] [warning] [logos] [package_manager] Warning: Package is unsigned: $REPO/../tmp/rfp-b/logos-build/check/lgx-ferrata_attest_module/logos-ferrata_attest_module-module-lib.lgx
+[2026-11-21 17:47:00.609] [info] [logos] Module loaded: lez_core
+[2026-11-21 17:47:00.703] [info] [logos] Module loaded: beacon_api_module
+[2026-11-21 17:47:00.791] [info] [logos] Module loaded: ferrata_attest_module
+[2026-11-21 17:47:01.165] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+[2026-11-21 17:47:52.169] [warning] [logos] [capability_module] Warning: QObject::connect: No such signal ::eventResponse(QString,QVariantList)
+Shutting down logosctl daemon...

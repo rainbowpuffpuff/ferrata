@@ -45,6 +45,13 @@ pub trait FerrataAttestModule: Send + 'static {
     /// (`Open`, `Miller`, `Adopt`, `Finish`) with their accounts. JSON in and out (modules/README.md).
     fn advance(&mut self, request: String) -> String;
 
+    /// Open (or close) the path through Logos Core's own LEZ module, `lez_core`: a LEZ wallet opened inside it.
+    fn lez(&mut self, request: String) -> String;
+    /// An instance, a record or a job of the attestation program read through `lez_core.get_account_public`.
+    fn lez_read(&mut self, request: String) -> String;
+    /// Transactions (the steps of `advance`, or `build_attest_tx`'s) sent through `lez_core.send_generic_public_transaction`.
+    fn lez_submit(&mut self, request: String) -> String;
+
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -66,6 +73,36 @@ fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms:
             std::time::Duration::from_millis(timeout_ms.max(1)),
         )
         .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
+/// Logos Core's own LEZ module, `lez_core`, called by name through the SDK as `eth_rpc_module` above: (method, the
+/// arguments as a JSON array, a timeout) -> the method's reply as text. Not declared a dependency, for the same reason;
+/// the calls crate uses it for `lez`, `lez_read` and `lez_submit` (calls/src/lez.rs).
+fn lez_core_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, String> {
+    let args: serde_json::Value = serde_json::from_str(args).map_err(|e| format!("lez_core.{method}: arguments: {e}"))?;
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("lez_core")
+        .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("lez_core.{method} did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
+/// Logos Core's `beacon_api_module` (logos-evm-beacon-api-module), called by name: `verify_checkpoint`'s beacon checks
+/// when the request says `"providers": {"via": "beacon_api_module", "chain_id": N}` (`list_providers`, then each
+/// provider pinned through `raw_get`). Not declared a dependency, for the same reason as above.
+fn beacon_api_module_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, String> {
+    let args: serde_json::Value = serde_json::from_str(args).map_err(|e| format!("beacon_api_module.{method}: arguments: {e}"))?;
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("beacon_api_module")
+        .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("beacon_api_module.{method} did not answer: {e:?}"))?;
     Ok(match v {
         serde_json::Value::String(s) => s,
         other => other.to_string(),
@@ -114,10 +151,24 @@ impl FerrataAttestModule for FerrataAttest {
     fn advance(&mut self, request: String) -> String {
         guarded("advance", || ferrata_attest_calls::advance(&request))
     }
+
+    fn lez(&mut self, request: String) -> String {
+        guarded("lez", || ferrata_attest_calls::lez(&request))
+    }
+
+    fn lez_read(&mut self, request: String) -> String {
+        guarded("lez_read", || ferrata_attest_calls::lez_read(&request))
+    }
+
+    fn lez_submit(&mut self, request: String) -> String {
+        guarded("lez_submit", || ferrata_attest_calls::lez_submit(&request))
+    }
 }
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
     ferrata_attest_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
+    ferrata_attest_calls::set_lez_core(lez_core_call);
+    ferrata_attest_calls::set_beacon_api_module(beacon_api_module_call);
     install::<FerrataAttest>();
 }

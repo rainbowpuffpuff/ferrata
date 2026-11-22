@@ -1,0 +1,2 @@
+zone http://127.0.0.1:3040: followed to block 53 (final on Bedrock)
+receipt 0b11edc505701debd0dbff85e7d5c09c2aa25257c1435bcc109e9a420a498501: block 54: applied; execution gas 93316, storage gas 2519, 1 event(s)

@@ -228,6 +228,11 @@ enum Command {
         #[command(flatten)]
         send: Send,
     },
+    /// The attestation side against a running LEZ sequencer: an instance's configuration and state, `init`,
+    /// `advance` (a consensus-state update), `attest` (a storage slot, an account or a log under a record), each a dry
+    /// run with the program's codes unless --send --yes (`src/attest.rs`, `lez/ATTEST-CLI.md`).
+    #[cfg(feature = "lez-wallet")]
+    Attest(ferrata_cli::attest::AttestArgs),
     /// The vault's registry, fees, caps and freezes, and the zone's configuration and newest root.
     Status {
         /// Tokens to show (repeatable; default ETH).
@@ -337,6 +342,11 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
     use serde_json::json;
     let c = &cli.common;
     let result = match cli.command {
+        #[cfg(feature = "lez-wallet")]
+        Command::Attest(a) => {
+            let code = ferrata_cli::attest::run(a, c.sequencer.clone(), c.chain_id).await?;
+            std::process::exit(code);
+        }
         Command::Keys { accounts, show_secrets } => {
             let seed = seed_of(c)?;
             out.line("LEZ public accounts (wallet key tree, /a):");

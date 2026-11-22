@@ -1,0 +1,7 @@
+$ ferrata attest config --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --checkpoint 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433
+zone http://127.0.0.1:3040: followed to block 41 (final on Bedrock)
+instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd (root id 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd, parent 0x0000000000000000000000000000000000000000000000000000000000000000)
+  chain id 1, committee 512, 32 slots/epoch, 256 epochs/period, 12 s/slot, genesis time 1606824023, genesis_validators_root 0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95
+  fork epochs [0, 74240, 144896, 194048, 269568, 364032, 411392, 18446744073709551615, 18446744073709551615]; layout at Init 3; adoption parts 2; weak-subjectivity period 3532 epochs
+  active true, jobs applied 2
+  id derived again from the configuration and checkpoint 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433: 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd (equal)

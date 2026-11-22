@@ -1,0 +1,25 @@
+step	exit	expected	code	result
+sepolia-config	0	0	-	as expected
+sepolia-status	0	0	-	as expected
+sepolia-advance-finality-dry-run	0	0	-	as expected
+sepolia-status-after-dry-run	0	0	-	as expected
+sepolia-advance-finality	0	0	-	as expected
+sepolia-advance-period-1412	0	0	-	as expected
+sepolia-advance-replayed	3	3:23	23	as expected
+sepolia-status-after	0	0	-	as expected
+mainnet-init	0	0	-	as expected
+mainnet-advance-finality	0	0	-	as expected
+mainnet-config	0	0	-	as expected
+mainnet-status	0	0	-	as expected
+attest-storage-dry-run	0	0	-	as expected
+attest-storage	0	0	-	as expected
+attest-storage-predicate-fails	3	3:130	130	as expected
+attest-storage-ge	0	0	-	as expected
+attest-log-transfer	0	0	-	as expected
+attest-log-wrong-emitter	3	3:130	130	as expected
+attest-account-codehash	0	0	-	as expected
+attest-log-failed-tx	3	3:124	124	as expected
+attest-storage-and-log	0	0	-	as expected
+mainnet-advance-replayed	3	3:52	52	as expected
+monitor-at-the-record	0	-	-	a read, no expectation
+monitor-now	20	-	-	a read, no expectation

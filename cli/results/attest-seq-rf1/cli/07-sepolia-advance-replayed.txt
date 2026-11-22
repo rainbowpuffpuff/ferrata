@@ -1,0 +1,9 @@
+$ ferrata attest advance --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 --update $REPO/lez/lab/results/record/net/sepolia/updates/00057.finality.gloas.ssz --finality --committee bootstrap:$REPO/crates/ferrata-spectests/fixtures/sepolia-2026-11-12/bootstrap.ssz --send --yes
+zone http://127.0.0.1:3040: followed to block 33 (final on Bedrock)
+advance: update attested at slot 11563264, signed at slot 11563265, finalizing slot 11563200; the store is at slot 11567104
+advance: the program's checks, natively: no change: it would not move the store (duplicate, stale or of an earlier period)
+advance: the program's step 1, natively: refused with 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.)
+advance: dry run of 1 transaction(s) on the zone's state at block 33 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  Open                         3435 bytes; would be refused with 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.); execution gas 75458, storage gas 3435, 0 event(s)
+  the verdict and the zone's execution agree: 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.)
+  Open                         block 34 (10 s): refused with 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.); execution gas 75458, storage gas 3435, 0 event(s); equal to its dry run

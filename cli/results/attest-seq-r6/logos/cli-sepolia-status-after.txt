@@ -1,0 +1,3 @@
+zone http://127.0.0.1:3040: followed to block 53 (final on Bedrock)
+instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5: store layout Gloas, finalized slot 11567392 (period 1412), root 0x6de4eab8db8ef9b2450684fb314c7a7faad600374ebed0101cbfbd2823958148, next committee known, jobs applied 5
+  newest record header(0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5, 11567392): chain id 11155111, execution BlockHash([54, 205, 53, 182, 165, 108, 81, 103, 47, 56, 28, 127, 17, 57, 252, 106, 145, 232, 134, 150, 88, 231, 42, 57, 210, 53, 85, 165, 72, 72, 74, 14])

@@ -1,0 +1,125 @@
+[21:33:53] attest-seq rf1
+[21:33:53] build: crown-driver (build logs in the work directory)
+[21:33:55] build: ferrata (cli, --features seqnet)
+[21:33:56] build: attest-monitor
+[21:33:59] build: the zone's bundle (crown-live-3's, this tree's crown-driver and session.sh)
+[21:34:02] LEZ session A: a new zone, the final programs, the Sepolia instance from sepolia-2026-11-12
+[21:38:18] session A: attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df), Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[21:38:18] session X: ferrata attest against the zone's sequencer
+[21:39:01] zone http://127.0.0.1:3040; attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c; session A's Sepolia instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[21:39:12] sepolia-config: exit 0 (expected 0): as expected
+      chain id 11155111, committee 512, 32 slots/epoch, 256 epochs/period, 12 s/slot, genesis time 1655733600, genesis_validators_root 0xd8ea171f3c94aea21ebc42a1ed61052acf3f9209c00e4efbaaddac09ed9b8078
+      fork epochs [0, 50, 100, 56832, 132608, 222464, 272640, 353024, 18446744073709551615]; layout at Init 4; adoption parts 2; weak-subjectivity period 3532 epochs
+      active true, jobs applied 2
+      id derived again from the configuration and checkpoint 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c: 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5 (equal)
+[21:39:12] sepolia-status: exit 0 (expected 0): as expected
+    $ ferrata attest status --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+    zone http://127.0.0.1:3040: followed to block 24 (final on Bedrock)
+    instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5: store layout Gloas, finalized slot 11562112 (period 1411), root 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c, next committee known, jobs applied 2
+      newest record header(0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5, 11562112): chain id 11155111, execution BlockHash([206, 170, 161, 186, 0, 208, 93, 46, 63, 114, 82, 185, 209, 189, 216, 77, 230, 215, 108, 177, 76, 31, 52, 87, 33, 111, 136, 89, 104, 59, 8, 199])
+[21:39:13] sepolia-advance-finality-dry-run: exit 0 (expected 0): as expected
+      open                         3435 bytes; would be applied; execution gas 2074542, storage gas 3435, 0 event(s)
+      miller                       399 bytes; would be applied; execution gas 3305374, storage gas 399, 0 event(s)
+      finish                       527 bytes; would be applied; execution gas 3721523, storage gas 527, 1 event(s)
+      the verdict and the zone's execution agree: applied
+[21:39:13] sepolia-status-after-dry-run: exit 0 (expected 0): as expected
+    $ ferrata attest status --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+    zone http://127.0.0.1:3040: followed to block 24 (final on Bedrock)
+    instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5: store layout Gloas, finalized slot 11562112 (period 1411), root 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c, next committee known, jobs applied 2
+      newest record header(0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5, 11562112): chain id 11155111, execution BlockHash([206, 170, 161, 186, 0, 208, 93, 46, 63, 114, 82, 185, 209, 189, 216, 77, 230, 215, 108, 177, 76, 31, 52, 87, 33, 111, 136, 89, 104, 59, 8, 199])
+[21:39:47] sepolia-advance-finality: exit 0 (expected 0): as expected
+      open                         block 26 (12 s): applied; execution gas 2074542, storage gas 3435, 0 event(s); equal to its dry run
+      miller                       block 27 (10 s): applied; execution gas 3305374, storage gas 399, 0 event(s); equal to its dry run
+      finish                       block 28 (11 s): applied; execution gas 3721523, storage gas 527, 1 event(s); equal to its dry run
+    advance: the instance's finalized slot is now 11563200 (jobs applied 3)
+[21:40:37] sepolia-advance-period-1412: exit 0 (expected 0): as expected
+      adopt0                       block 31 (10 s): applied; execution gas 3408111, storage gas 24980, 0 event(s); equal to its dry run
+      adopt1                       block 32 (10 s): applied; execution gas 3415303, storage gas 24980, 0 event(s); equal to its dry run
+      finish                       block 33 (11 s): applied; execution gas 3731558, storage gas 527, 1 event(s); equal to its dry run
+    advance: the instance's finalized slot is now 11567104 (jobs applied 4)
+[21:40:47] sepolia-advance-replayed: exit 3, refused with 23 (expected 3:23): as expected
+    advance: dry run of 1 transaction(s) on the zone's state at block 33 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Open                         3435 bytes; would be refused with 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.); execution gas 75458, storage gas 3435, 0 event(s)
+      the verdict and the zone's execution agree: 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.)
+      Open                         block 34 (10 s): refused with 23 PeriodSkipped (Signature period is neither the store period nor (with a known next committee) the next.); execution gas 75458, storage gas 3435, 0 event(s); equal to its dry run
+[21:40:47] sepolia-status-after: exit 0 (expected 0): as expected
+    $ ferrata attest status --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+    zone http://127.0.0.1:3040: followed to block 34 (final on Bedrock)
+    instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5: store layout Gloas, finalized slot 11567104 (period 1412), root 0xf665af3947a89ec955df954ae605120921d6fa49fdf6b9aedcd4b9564d11a945, next committee known, jobs applied 4
+      newest record header(0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5, 11567104): chain id 11155111, execution BlockHash([210, 138, 230, 97, 115, 61, 61, 126, 99, 25, 10, 192, 190, 51, 225, 253, 101, 20, 57, 43, 38, 108, 245, 253, 75, 131, 149, 126, 167, 26, 184, 108])
+[21:41:17] mainnet-init: exit 0 (expected 0): as expected
+      the verdict and the zone's execution agree: applied
+      Init                         block 35 (7 s): applied; execution gas 210357, storage gas 1895, 0 event(s); equal to its dry run
+      Adopt 1/2                    block 36 (11 s): applied; execution gas 3399141, storage gas 24980, 0 event(s); equal to its dry run
+      Adopt 2/2                    block 37 (10 s): applied; execution gas 3485575, storage gas 25108, 1 event(s); equal to its dry run
+[21:41:17] mainnet instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+[21:41:48] mainnet-advance-finality: exit 0 (expected 0): as expected
+      open                         block 38 (9 s): applied; execution gas 2330188, storage gas 5452, 0 event(s); equal to its dry run
+      miller                       block 39 (10 s): applied; execution gas 3308048, storage gas 399, 0 event(s); equal to its dry run
+      finish                       block 40 (11 s): applied; execution gas 3723960, storage gas 527, 1 event(s); equal to its dry run
+    advance: the instance's finalized slot is now 15624480 (jobs applied 2)
+[21:41:48] mainnet-config: exit 0 (expected 0): as expected
+      chain id 1, committee 512, 32 slots/epoch, 256 epochs/period, 12 s/slot, genesis time 1606824023, genesis_validators_root 0x4b363db94e286120d76eb905340fdd4e54bfe9f06bf33ff6cf5ad27f511bfe95
+      fork epochs [0, 74240, 144896, 194048, 269568, 364032, 411392, 18446744073709551615, 18446744073709551615]; layout at Init 3; adoption parts 2; weak-subjectivity period 3532 epochs
+      active true, jobs applied 2
+      id derived again from the configuration and checkpoint 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433: 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd (equal)
+[21:41:48] mainnet-status: exit 0 (expected 0): as expected
+    $ ferrata attest status --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
+    zone http://127.0.0.1:3040: followed to block 40 (final on Bedrock)
+    instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd: store layout Electra, finalized slot 15624480 (period 1907), root 0x46d069655d60786d109a3abec9a63e4db77560b9ca7e588c82f13ef988a4f40f, next committee unknown, jobs applied 2
+      newest record header(0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd, 15624480): chain id 1, execution Payload { block_number: 26384851, block_hash: [62, 2, 229, 186, 168, 27, 241, 96, 75, 100, 71, 233, 202, 1, 74, 28, 168, 94, 60, 119, 133, 202, 107, 154, 84, 48, 182, 201, 60, 186, 123, 206], parent_hash: [153, 142, 147, 211, 21, 134, 234, 66, 100, 208, 116, 233, 141, 129, 91, 110, 5, 41, 141, 189, 130, 248, 113, 122, 136, 132, 117, 80, 77, 217, 31, 33], state_root: [33, 151, 25, 204, 132, 132, 233, 174, 215, 70, 249, 43, 16, 196, 126, 72, 244, 33, 63, 187, 15, 48, 116, 175, 236, 217, 187, 2, 13, 180, 36, 126], receipts_root: [159, 122, 174, 79, 111, 147, 126, 165, 81, 164, 202, 17, 195, 30, 113, 190, 106, 48, 157, 26, 236, 203, 220, 164, 157, 253, 62, 255, 125, 67, 121, 226], timestamp: 1794317783 }
+[21:41:48] attest-storage-dry-run: exit 0 (expected 0): as expected
+      statement id 0xabc1114e5c089b52e94b0980941b17a7d081c2444f5341b3823fdc4d3a1dfa53
+    attest: dry run of 1 transaction(s) on the zone's state at block 40 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       7338 bytes; would be applied; execution gas 275925, storage gas 7338, 1 event(s)
+      the verdict and the zone's execution agree: applied
+[21:41:57] attest-storage: exit 0 (expected 0): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 40 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       7338 bytes; would be applied; execution gas 275925, storage gas 7338, 1 event(s)
+      the verdict and the zone's execution agree: applied
+      Attest                       block 41 (8 s): applied; execution gas 275925, storage gas 7338, 1 event(s); equal to its dry run
+[21:42:07] attest-storage-predicate-fails: exit 3, refused with 130 (expected 3:130): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 41 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       7338 bytes; would be refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 253805, storage gas 7338, 0 event(s)
+      the verdict and the zone's execution agree: 130 PredicateFailed (A condition of the statement does not hold.)
+      Attest                       block 42 (10 s): refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 253805, storage gas 7338, 0 event(s); equal to its dry run
+[21:42:17] attest-storage-ge: exit 0 (expected 0): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 42 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       7338 bytes; would be applied; execution gas 275865, storage gas 7338, 1 event(s)
+      the verdict and the zone's execution agree: applied
+      Attest                       block 43 (10 s): applied; execution gas 275865, storage gas 7338, 1 event(s); equal to its dry run
+[21:42:27] attest-log-transfer: exit 0 (expected 0): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 43 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       2553 bytes; would be applied; execution gas 94795, storage gas 2553, 1 event(s)
+      the verdict and the zone's execution agree: applied
+      Attest                       block 44 (10 s): applied; execution gas 94795, storage gas 2553, 1 event(s); equal to its dry run
+[21:42:37] attest-log-wrong-emitter: exit 3, refused with 130 (expected 3:130): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 44 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       2553 bytes; would be refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 85064, storage gas 2553, 0 event(s)
+      the verdict and the zone's execution agree: 130 PredicateFailed (A condition of the statement does not hold.)
+      Attest                       block 45 (10 s): refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 85064, storage gas 2553, 0 event(s); equal to its dry run
+[21:42:47] attest-account-codehash: exit 0 (expected 0): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 45 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       4356 bytes; would be applied; execution gas 166249, storage gas 4356, 1 event(s)
+      the verdict and the zone's execution agree: applied
+      Attest                       block 46 (10 s): applied; execution gas 166249, storage gas 4356, 1 event(s); equal to its dry run
+[21:42:57] attest-log-failed-tx: exit 3, refused with 124 (expected 3:124): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 46 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       1612 bytes; would be refused with 124 ReceiptFailed (The transaction failed (receipt status 0).); execution gas 55530, storage gas 1612, 0 event(s)
+      the verdict and the zone's execution agree: 124 ReceiptFailed (The transaction failed (receipt status 0).)
+      Attest                       block 47 (10 s): refused with 124 ReceiptFailed (The transaction failed (receipt status 0).); execution gas 55530, storage gas 1612, 0 event(s); equal to its dry run
+[21:43:07] attest-storage-and-log: exit 0 (expected 0): as expected
+    attest: dry run of 1 transaction(s) on the zone's state at block 47 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Attest                       9431 bytes; would be applied; execution gas 349917, storage gas 9431, 1 event(s)
+      the verdict and the zone's execution agree: applied
+      Attest                       block 48 (10 s): applied; execution gas 349917, storage gas 9431, 1 event(s); equal to its dry run
+[21:43:17] mainnet-advance-replayed: exit 3, refused with 52 (expected 3:52): as expected
+    advance: dry run of 1 transaction(s) on the zone's state at block 48 (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+      Open                         5452 bytes; would be refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).); execution gas 229560, storage gas 5452, 0 event(s)
+      the verdict and the zone's execution agree: 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).)
+      Open                         block 49 (10 s): refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).); execution gas 229560, storage gas 5452, 0 event(s); equal to its dry run
+[21:43:18] attest-monitor (at-the-record): exit 0, divergence confirmed, alerts []
+[21:43:18] attest-monitor (now): exit 20, divergence confirmed, alerts ["ws-half"]
+[21:43:18] hook done: 22 of 22 commands as expected (exit status and the zone's refusal code); 2 monitor reads
+[21:39:01] hook $REPO/cli/tests/attest-seq-hook.sh
+[21:43:45] done: 70 records in attest.jsonl

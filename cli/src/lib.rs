@@ -16,6 +16,8 @@
 
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "lez-wallet")]
+pub mod attest;
 pub mod codes;
 pub mod eth;
 #[cfg(feature = "lez-wallet")]

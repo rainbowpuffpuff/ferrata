@@ -23,6 +23,8 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
 mod advance;
+mod lez;
+pub use lez::{set_lez_core, LezCoreCall};
 pub mod providers;
 mod rpc;
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
@@ -49,8 +51,12 @@ pub fn version() -> String {
             "build_attest_tx",
             "read_attestation",
             "read_instance",
-            "advance"
+            "advance",
+            "lez",
+            "lez_read",
+            "lez_submit"
         ],
+        "logos_core_modules_called": ["eth_rpc_module (raw_rpc)", "beacon_api_module (list_providers, raw_get)", "lez_core"],
     })
     .to_string()
 }
@@ -101,6 +107,22 @@ pub fn read_attestation(request: &str) -> String {
 /// `InstanceState`, Borsh): its id, configuration, activation, store and jobs applied.
 pub fn read_instance(request: &str) -> String {
     reply(instance(request))
+}
+
+/// `lez(request)`: open (or close) the path through Logos Core's own LEZ module, `lez_core` (`lez.rs`).
+pub fn lez(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez(&r)))
+}
+
+/// `lez_read(request)`: an instance, a record or a job read through `lez_core.get_account_public` (`lez.rs`).
+pub fn lez_read(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez_read(&r)))
+}
+
+/// `lez_submit(request)`: the steps of `advance`, or `build_attest_tx`'s transaction, sent through
+/// `lez_core.send_generic_public_transaction`, each waited for with `poll_transaction_status` (`lez.rs`).
+pub fn lez_submit(request: &str) -> String {
+    reply(serde_json::from_str::<Value>(request).map_err(|e| format!("request: {e}")).and_then(|r| lez::lez_submit(&r)))
 }
 
 fn reply(result: Result<Value, String>) -> String {
@@ -559,6 +581,43 @@ fn checkpoint(request: &str, http: Option<&mut dyn providers::Http>) -> Result<V
             let (name, url) = endpoint(p, &format!("providers[{i}]"))?;
             provider_results.push(providers::beacon(http, &name, &url, &expected));
         }
+    } else if req["providers"]["via"].as_str() == Some("beacon_api_module") {
+        // Through Logos Core's `beacon_api_module`: its providers for the chain (`list_providers`), or the ones `ids`
+        // names, each asked pinned; a provider is counted by its endpoint's host, and one whose GETs another provider
+        // answered is not counted.
+        let p = &req["providers"];
+        let chain_id = p["chain_id"].as_i64().ok_or("providers.chain_id: the chain beacon_api_module serves")?;
+        let ms = timeout.saturating_mul(1000);
+        let listed = beacon_api_call("list_providers", json!([chain_id]), ms)?;
+        let all: Vec<(String, String)> = listed["providers"]
+            .as_array()
+            .ok_or_else(|| format!("beacon_api_module.list_providers: {listed}"))?
+            .iter()
+            .filter(|x| x["enabled"] != false)
+            .filter_map(|x| Some((x["id"].as_str()?.to_owned(), x["endpoint"].as_str()?.to_owned())))
+            .collect();
+        let ids: Vec<String> = match p["ids"].as_array() {
+            Some(a) => a.iter().filter_map(|x| x.as_str().map(str::to_owned)).collect(),
+            None => all.iter().map(|(i, _)| i.clone()).collect(),
+        };
+        for id in ids {
+            let endpoint = all
+                .iter()
+                .find(|(i, _)| *i == id)
+                .map(|(_, e)| e.clone())
+                .ok_or_else(|| format!("providers.ids: {id} is not an enabled provider of beacon_api_module's chain {chain_id}"))?;
+            let base = format!("beacon_api_module:{id}");
+            let mut h = BeaconApiModuleHttp { chain_id, provider: id.clone(), base: base.clone(), timeout_ms: ms, answered: vec![] };
+            let mut v = providers::beacon(&mut h, &id, &base, &expected);
+            v["via"] = json!("beacon_api_module.raw_get");
+            v["endpoint"] = json!(endpoint);
+            v["host"] = json!(providers::host_of(&endpoint));
+            if h.answered.iter().any(|a| *a != id) {
+                v["verdict"] = json!("unavailable");
+                v["unavailable"] = json!(["another provider answered for it"]);
+            }
+            provider_results.push(v);
+        }
     }
     let min_providers = if req["min_providers"].is_null() {
         if provider_results.is_empty() { 0 } else { 3 }
@@ -659,6 +718,59 @@ impl providers::Http for EthRpcModuleHttp {
             Err(e) => json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }),
         };
         Ok((200, answer.to_string()))
+    }
+}
+
+/// How the module crate reaches Logos Core's `beacon_api_module` (logos-evm-beacon-api-module): (method, the arguments
+/// as a JSON array, a timeout in milliseconds) -> the method's reply as text.
+pub type BeaconApiModuleCall = fn(&str, &str, u64) -> Result<String, String>;
+
+static BEACON_API_MODULE: std::sync::OnceLock<BeaconApiModuleCall> = std::sync::OnceLock::new();
+
+/// Installed once by the module crate (inside Logos Core).
+pub fn set_beacon_api_module(f: BeaconApiModuleCall) {
+    let _ = BEACON_API_MODULE.set(f);
+}
+
+fn beacon_api_call(method: &str, args: Value, timeout_ms: u64) -> Result<Value, String> {
+    let f = BEACON_API_MODULE.get().ok_or("beacon_api_module is reachable only inside Logos Core (the module crate installs the call)")?;
+    let text = f(method, &args.to_string(), timeout_ms)?;
+    serde_json::from_str(&text).map_err(|e| format!("beacon_api_module.{method}: not JSON ({e}): {text}"))
+}
+
+/// One beacon provider of Logos Core's `beacon_api_module`, pinned (the module does not fail over for a pinned
+/// provider): each GET of `verify_checkpoint`'s beacon checks goes to `raw_get(chain_id, path, provider)` and comes back
+/// as that provider's answer. `answered` keeps which provider the module says answered each GET.
+struct BeaconApiModuleHttp {
+    chain_id: i64,
+    provider: String,
+    base: String,
+    timeout_ms: u64,
+    answered: Vec<String>,
+}
+
+impl providers::Http for BeaconApiModuleHttp {
+    fn get(&mut self, url: &str) -> providers::Reply {
+        let path = url.strip_prefix(&self.base).ok_or_else(|| format!("{url}: not a path of {}", self.base))?;
+        let v = beacon_api_call("raw_get", json!([self.chain_id, path, self.provider]), self.timeout_ms)?;
+        if v["ok"] == true {
+            self.answered.push(v["provider"].as_str().unwrap_or_default().to_owned());
+            let body = match &v["result"] {
+                Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            Ok((200, body))
+        } else {
+            let e = v["error"].as_str().map(str::to_owned).unwrap_or_else(|| v.to_string());
+            if e.contains("404") {
+                Ok((404, "{}".to_owned()))
+            } else {
+                Err(format!("beacon_api_module.raw_get: {e}"))
+            }
+        }
+    }
+    fn post(&mut self, url: &str, _body: &str) -> providers::Reply {
+        Err(format!("{url}: beacon_api_module serves GETs only"))
     }
 }
 
@@ -1185,6 +1297,59 @@ mod tests {
         // A checkpointz server serves the chain's genesis and spec, not the headers API: not counted.
         assert_eq!(provider(&v, "checkpointz-ethpandaops")["verdict"], "unavailable");
         assert_eq!(v["execution"]["verdict"], "agrees", "{:#}", v["execution"]);
+    }
+
+    /// Logos Core's `beacon_api_module` as a test double: its three providers for Sepolia, each `raw_get` answered
+    /// from the live run's record of that provider (what the module would fetch from it).
+    fn recorded_beacon_api_module(method: &str, args: &str, _t: u64) -> Result<String, String> {
+        let a: Value = serde_json::from_str(args).unwrap();
+        let bases = [("lodestar", LODESTAR), ("publicnode", PUBLICNODE), ("nimbus", NIMBUS)];
+        match method {
+            "list_providers" => Ok(json!({ "ok": true, "chainId": a[0],
+                "providers": bases.iter().map(|(i, e)| json!({ "id": i, "endpoint": e, "enabled": true })).collect::<Vec<_>>() })
+            .to_string()),
+            "raw_get" => {
+                let (path, id) = (a[1].as_str().unwrap(), a[2].as_str().unwrap());
+                let base = bases.iter().find(|(i, _)| *i == id).ok_or("unknown provider")?.1;
+                let log: Vec<Value> = serde_json::from_str(SEPOLIA_RECORD).unwrap();
+                let url = format!("{base}{path}");
+                Ok(match log.iter().find(|e| e["method"] == "GET" && e["url"] == url) {
+                    Some(e) if e["status"] == 200 => json!({ "ok": true, "provider": id,
+                        "result": serde_json::from_str::<Value>(e["response"].as_str().unwrap()).unwrap() }),
+                    Some(e) => json!({ "ok": false, "error": format!("{id}: HTTP {}", e["status"]) }),
+                    None => json!({ "ok": false, "error": format!("not recorded: {url}") }),
+                }
+                .to_string())
+            }
+            other => Err(format!("{other}: not in the double")),
+        }
+    }
+
+    #[test]
+    fn the_beacon_checks_through_beacon_api_module_give_the_plain_paths_verdicts() {
+        set_beacon_api_module(recorded_beacon_api_module);
+        let mut req = sepolia_request();
+        req["providers"] = json!({ "via": "beacon_api_module", "chain_id": 11_155_111 });
+        let v = check(&req, &mut replay());
+        assert_eq!(v["verdict"], "ok", "{v:#}");
+        assert_eq!(v["providers_agreeing"], 3);
+        let plain = check(&sepolia_request(), &mut replay());
+        for p in ["lodestar", "publicnode", "nimbus"] {
+            assert_eq!(provider(&v, p)["verdict"], "agrees", "{p}: {:#}", provider(&v, p));
+            assert_eq!(provider(&v, p)["via"], "beacon_api_module.raw_get");
+            for k in ["slot", "verdict", "finalized_slot"] {
+                assert_eq!(provider(&v, p)[k], provider(&plain, p)[k], "{p}: {k}");
+            }
+        }
+        // Pinned to two of them: two agree, three are needed.
+        req["providers"]["ids"] = json!(["lodestar", "nimbus"]);
+        let v = check(&req, &mut replay());
+        assert_eq!(v["providers_agreeing"], 2);
+        assert!(v["failed"].as_array().unwrap().contains(&json!("providers")));
+        // A provider beacon_api_module does not have is a request error.
+        req["providers"]["ids"] = json!(["lodestar", "nope"]);
+        let v = check(&req, &mut replay());
+        assert_eq!(v["verdict"], "invalid_request", "{v:#}");
     }
 
     #[test]
