@@ -399,8 +399,8 @@ fn attest_reads(
     }
 }
 
-/// `attest(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, answers_dir [+ lez_dir] |
-/// node + lez + save_dir + state_file [+ slot_from], channel?, state_file?, out?}`: read the node's final tier,
+/// `attest(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, answers_dir [+ lez_dir]
+/// [+ state_file] | node + lez + save_dir + state_file [+ slot_from], channel?, out?}`: read the node's final tier,
 /// check its tip against the LEZ node, sign it (the CLI's `attest`). With `state_file`, the read starts at the
 /// signed tip, refuses a tip that does not descend from it, and records the new one before `out` is written.
 /// Against live nodes (`node`) a state file is required, as the CLI requires `--state` with `--node`: an
