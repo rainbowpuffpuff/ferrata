@@ -13,7 +13,7 @@ This document maps every numbered requirement of Logos RFP-021 (Trustless Ethere
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 38 | 17 | 1 | 3 | **59** |
+| RFP-021 | 39 | 16 | 1 | 3 | **59** |
 | RFP-022 | 41 | 24 | 1 | 2 | **68** |
 
 "Shown" means every clause is demonstrated today by a named test or a recorded run on real code (LEZ v0.4 release candidates' own state machine or a sequencer we ran, a local EVM or Sepolia); "waits on Logos" means the requirement names LEZ testnet 0.4 or another upstream component that is not released. The soft requirements, counted apart: RFP-021 5 shown; RFP-022 2 shown, 3 in part.
