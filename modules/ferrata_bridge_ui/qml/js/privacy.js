@@ -30,6 +30,20 @@ var STEPS = {
     }
 };
 
+// A step's table for the path the view is on. `ownRelease`: the release is sent from the user's own release account
+// (the module's path through Logos Core's send stack), not by a relayer: that account, not a relayer, is public.
+function step(name, ownRelease) {
+    var s = STEPS[name];
+    if (name !== "release" || !ownRelease) return s;
+    return {
+        title: s.title,
+        publicEth: ["the recipient address", "the token and amount", "NOut (fresh randomness)", "the burn root used", "the time",
+                    "the account that sent it: on this path your own release account (it pays the gas; your releases from it are linked to each other, not to your depositor address)"],
+        publicLez: s.publicLez,
+        hidden: s.hidden
+    };
+}
+
 // level: 0 fine, 1 a correlation the user accepts, 2 a direct link.
 function leaks(c) {
     var out = [];

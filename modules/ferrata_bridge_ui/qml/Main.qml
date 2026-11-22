@@ -415,9 +415,12 @@ Rectangle {
     }
     component StepTable: Box {
         property string step: "deposit"
-        readonly property var s: Privacy.STEPS[step]
+        // The release sent from the user's own release account (the module's path), not by a relayer.
+        property bool ownRelease: false
+        property string tableName: ""
+        readonly property var s: Privacy.step(step, ownRelease)
         Label { text: "What is public and what is private: " + s.title; font.bold: true }
-        Label { visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
+        Label { objectName: tableName ? tableName + ".publicEth" : ""; visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
         Label { visible: s.publicLez.length > 0; text: "Public on LEZ: " + s.publicLez.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
         Label { text: "Private: " + s.hidden.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#1b6b3a" }
     }
@@ -709,7 +712,7 @@ Rectangle {
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
                     StepTable { step: "burn" }
-                    StepTable { step: "release" }
+                    StepTable { step: "release"; ownRelease: logosEth(); tableName: "redeem.steps.release" }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -974,7 +977,7 @@ Rectangle {
                 Heading { text: "What is public and what is private" }
                 Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
                 RowLayout { StepTable { step: "deposit" } StepTable { step: "claim" } }
-                RowLayout { StepTable { step: "burn" } StepTable { step: "release" } }
+                RowLayout { StepTable { step: "burn" } StepTable { step: "release"; ownRelease: logosEth(); tableName: "privacy.steps.release" } }
                 Item { Layout.fillHeight: true }
             }
 
