@@ -114,7 +114,8 @@ two-hour cadence (§2).
 - **What another operator's activity does to you.** A job's id is the hash of the instance, its starting
   store and the update, so a job can finish only on the store it began on. A duplicate first step is
   refused once the job is stored, but only after step 1 has run: **2.2M** cycles of gas wasted. `Open` of
-  an already applied update is refused at 207,687; `Finish` after the job applied at 5,731
+  an already applied update is refused at 207,687; `Finish` after the job applied at 5,731 (6,111 on
+  the sequencer, 9 of 9, [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md))
   ([`attestation.md`](../design/attestation.md) §4.4, codes as renumbered: 207 `JOB_EXISTS`, 52
   `NotNewer`, 205 `NO_JOB`).
 - **Deferral.** Each daemon waits a random share of a window `W`, re-checks the chain, then sends. The
@@ -562,13 +563,16 @@ Sources: [`bridge.md`](../design/bridge.md) §8.3, §14; [`vault/README.md`](../
 
 | Component | CPU | Memory | Time | Source |
 |---|---|---|---|---|
-| Updater, public path | light (fetch, encode, send) | — | one session of the lab: 123–133 s for 6–11 transactions | [`lez/lab/README.md`](../../lez/lab/README.md) |
-| Updater, proven path | 9.0M-cycle proof | 9.18 GiB peak (laptop CPU) | 54 min laptop CPU; 49.5 s one L4 | [`attestation.md`](../design/attestation.md) §4.2; [`lez/RESULTS.md`](../../lez/RESULTS.md) §9 |
+| Updater daemon (`ferrata-updater`, sequencer backend), public path, gates G2–G5 on a LEZ v0.4.0-rc1 zone | 0.043–0.092 of one core per daemon | 57.3–57.8 MiB peak, 33–38 MiB median resident | beacon API 10.3–10.4 MB per honest daemon (G2); sequencer RPC 0.57–2.07 MB up, 7.4–19.6 MB down per daemon; updates replayed 81 to 122 times faster than the lab recorded them, so no per-day figure | [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md); [`performance.md`](../performance.md) P.6 |
+| Updater, proven path (one private transaction per update, this tree's program) | 16 CPUs for 1,673.6 s per update (9,049,362 user cycles) | 9.21 GiB peak | 49.5 s on one L4, 54 min on a laptop CPU (both the earlier image) | [`perf-proofs.md`](../../lez/results/perf-proofs.md); [`lez/RESULTS.md`](../../lez/RESULTS.md) §9 |
 | Checkpoint prover | GPU advised | ~10.9 GiB GPU, ≤ 1.08 GiB host | 24.1 s per idle hour, 219.3 s per busy hour on one L4 | [`gpu-prover/RESULTS.md`](../../gpu-prover/RESULTS.md) |
 | Groth16 wrap | x86 | ~7.3 GiB | 195–215 s per checkpoint seal, 78–80 s per release seal (laptop) | [`checkpoint/RESULTS.md`](../../checkpoint/RESULTS.md); [`bridge.md`](../design/bridge.md) §18.2 |
-| The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | 0.08 USD a day at a two-hour cadence | [`lez/lab/README.md`](../../lez/lab/README.md) |
+| The whole lab zone (sequencer, node, driver) | 2 physical cores requested | state 20–31 MB compressed per generation, growing with write-ahead logs | a session 83–142 s over 85 sessions; 0.08 USD a day at a two-hour cadence | [`lez/lab/README.md`](../../lez/lab/README.md) |
 
-Daemon CPU, memory and bandwidth for the real modules are **not measured** (they do not exist).
+Measured as binaries: the updater (above), and the bridge's `monitor` and relayer
+([`perf-daemons.md`](../../lez/results/perf-daemons.md)). **Not measured:** the daemons as Logos modules under
+`logosctl daemon` (`ferrata_updater_module`, `ferrata_monitor_module`, `ferrata_relayer_module`), and the
+`ferrata-attest` CLI and its module ([`performance.md`](../performance.md) P.6).
 
 ## 10. Failure modes and recovery
 
