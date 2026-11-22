@@ -287,6 +287,65 @@ class CheckBuild(Base):
         self.assertEqual(r.returncode, 1)
         self.assertIn("no build-script-executed messages", r.stderr)
 
+    def release_check(self, msgs, *extra):
+        """check-build as scripts/release.sh build runs it: --binary, --copy-binary, --out-json (review-fix-supply M-2)."""
+        p = os.path.join(self.t, "messages.jsonl")
+        with open(p, "w") as f:
+            for m in msgs:
+                f.write(json.dumps(m) + "\n")
+        self.copy, self.rec = os.path.join(self.t, "copied-ferrata"), os.path.join(self.t, "check-build.json")
+        for x in (self.copy, self.rec):
+            if os.path.exists(x):
+                os.unlink(x)
+        return self.run_fn("check-build", p, "--target-dir", self.target, "--binary", "ferrata", "--copy-binary",
+                           self.copy, "--out-json", self.rec, *extra)
+
+    def binary(self, where=None):
+        exe = where or os.path.join(self.target, "release", "ferrata")
+        os.makedirs(os.path.dirname(exe), exist_ok=True)
+        with open(exe, "wb") as f:
+            f.write(b"\x7fELF the checked binary")
+        return [{"reason": "compiler-artifact", "package_id": "path+file:///w/cli#ferrata-cli@0.1.0",
+                 "target": {"kind": ["bin"], "name": "ferrata"}, "executable": exe},
+                {"reason": "build-finished", "success": True}]
+
+    def test_release_record_and_copy(self):
+        r = self.release_check(self.good() + self.binary())
+        self.assertEqual(r.returncode, 0, r.stderr)
+        with open(self.rec) as f:
+            rec = json.load(f)
+        with open(self.copy, "rb") as f:
+            self.assertEqual(rec["binary"]["sha256"], hashlib.sha256(f.read()).hexdigest())
+        self.assertEqual(rec["result"], "pass")
+        self.assertEqual([a["sha256"] for a in rec["archives"]], [a["sha256"] for a in self.pins["archives"]])
+        # No machine paths (the record goes into the release); the test's pins have file:// URLs, the real ones GitHub's.
+        self.assertNotIn(self.t, json.dumps({**rec, "archives": [{**a, "url": ""} for a in rec["archives"]]}))
+        out = self.run_fn("record", "--check-build", self.rec)
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertEqual(out.stdout.split(), " ".join(fn.record_lines(self.pins["archives"])).split())
+        self.assertNotEqual(self.run_fn("record").returncode, 0)          # never the pins alone
+
+    def test_release_check_refuses_a_failed_or_foreign_build(self):
+        m = self.good() + self.binary()
+        r = self.release_check(m[:-1] + [{"reason": "build-finished", "success": False}])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("did not report a successful build", r.stderr)
+        self.assertFalse(os.path.exists(self.rec) or os.path.exists(self.copy))
+        r = self.release_check(self.good() + [{"reason": "build-finished", "success": True}])
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("name no executable 'ferrata'", r.stderr)
+        r = self.release_check(self.good() + self.binary(os.path.join(self.t, "elsewhere", "release", "ferrata")))
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("outside the target directory", r.stderr)
+
+    def test_unpacked_file_changed_during_the_build(self):
+        lib = os.path.join(self.rs, "libgmp.a")
+        with open(lib, "ab") as f:
+            f.write(b"changed after the fetch")
+        r = self.release_check(self.good() + self.binary())
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("after the build:", r.stderr)
+
 
 class Names(unittest.TestCase):
     def test_package_name(self):

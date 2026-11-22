@@ -92,7 +92,7 @@
   }
  ],
  "compiled_from_crate_sources": {
-  "_doc": "The packages whose build scripts compile C or C++ from their own crate sources (checked by Cargo.lock) and link it statically, per build (check-build --record): a package added here is native code someone has looked at. Measured from the release CLI build of 22 November 2026 (fix-supply box run 4); the licences as each crate declares them (review-fix-supply L-3).",
+  "_doc": "The packages whose build scripts compile C or C++ from their own crate sources (checked by Cargo.lock) and link it statically, per build (check-build --record): a package added here is native code someone has looked at; scripts/crate_notices.py gives every licence file of these packages and the SPDX identifiers and copyright lines of their sources. Measured from the release CLI build of 22 November 2026 (fix-supply box run 4); the licences as each crate declares them (review-fix-supply L-3).",
   "cli": {
    "aws-lc-sys": "AWS-LC (aws_lc_0_47_0_crypto), through rustls; declared ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0) (its OpenSSL-derived files carry Apache-2.0 headers)",
    "librocksdb-sys": "RocksDB and Snappy (rocksdb), the node's storage; declared MIT/Apache-2.0/BSD-3-Clause; compiled by the build, not linked into ferrata (0 RocksDB symbols: review-fix-supply box B)",

@@ -6,13 +6,20 @@ otherwise download with no checksum.
     python3 -I scripts/fetch_native.py fetch   [--dir DIR] [--refetch]   download (if absent), check, unpack (if absent)
     python3 -I scripts/fetch_native.py env     [--dir DIR] [--refetch]   the same, then `export VAR=...` lines for eval:
                                                                           RAPIDSNARK_LIB_DIR and LBC_ROOT_DIR
-    python3 -I scripts/fetch_native.py record  [--dir DIR]               lines for a release's toolchains.txt
+    python3 -I scripts/fetch_native.py record  --check-build FILE        the native lines of a release's toolchains.txt,
+                                                                          from what check-build verified (not the pins)
     python3 -I scripts/fetch_native.py check-build MESSAGES.jsonl [--dir DIR] [--target-dir T] [--record cli]
+                                       [--binary NAME [--copy-binary DEST] [--out-json FILE]]
                                                                           after `cargo build --message-format=json`: fail
                                                                           if a build script linked native code from
                                                                           anywhere but the checked archives or the build,
-                                                                          or (--record) a package not recorded compiles
-                                                                          and links native code of its own
+                                                                          (--record) a package not recorded compiles and
+                                                                          links native code of its own, or an archive's
+                                                                          unpacked files changed during the build; with
+                                                                          --binary, also unless cargo reported success and
+                                                                          built that executable inside the target dir:
+                                                                          then copy it to DEST and write the record
+                                                                          (FILE: result, the copy's sha256, the archives)
     python3 -I scripts/fetch_native.py sources --out DIR                 the pinned source tarballs (GMP) for the
                                                                           release's source offer, checked
 
@@ -21,6 +28,13 @@ files against their pinned sha256s; a cached archive that differs is an error (i
 replaced: --refetch deletes it and downloads again). Unpacking refuses absolute paths, `..` and links. DIR defaults to
 $FERRATA_NATIVE_DIR, else ~/.cache/ferrata/native. --pins FILE (default scripts/native-deps.json) is for tests.
 Standard library only.
+
+What check-build cannot see (review-fix-supply L-12): it reads the `cargo:rustc-link-search` and `cargo:rustc-link-lib`
+lines of build scripts. A library a build script links from a system directory (/usr/lib, /usr/local/lib, ...) passes,
+as does a new dynamic library from there; `cargo:rustc-link-arg` (which can name any file) and a linker that the
+environment configures are not read; the ratchet (--record) counts packages that link static libraries only. None of
+the locked graph's build scripts uses rustc-link-arg (review-fix-supply box E), and the release binary's dynamic
+libraries are listed by `readelf -d` (docs/release-engineering.md).
 """
 import argparse
 import hashlib
@@ -227,12 +241,13 @@ def within(path, roots):
     return any(p == r or p.startswith(r + os.sep) for r in roots)
 
 
-def check_build(messages, d, pins, target_dir, record=None):
+def check_build(messages, d, pins, target_dir, record=None, binary=None, info=None):
     """Problems found (empty: the build linked native code only from the checked archives and from its own output).
     record: a key of the pins' compiled_from_crate_sources (the packages whose build scripts compile and link static
     libraries from their own sources in that build): any other package doing so, or a recorded one no longer doing
-    so, is a problem."""
-    scripts = {}
+    so, is a problem. binary: the name of a bin target the build must have produced, inside target_dir, with cargo
+    reporting success. info (a dict) receives the executable's path and the packages compiling native code."""
+    scripts, exe, finished = {}, None, None
     with open(messages, encoding="utf-8", errors="replace") as f:
         for line in f:
             line = line.strip()
@@ -244,6 +259,12 @@ def check_build(messages, d, pins, target_dir, record=None):
                 continue
             if j.get("reason") == "build-script-executed":
                 scripts.setdefault(package_name(j.get("package_id", "")), []).append(j)
+            elif j.get("reason") == "compiler-artifact" and binary:
+                t = j.get("target") or {}
+                if "bin" in (t.get("kind") or []) and t.get("name") == binary:
+                    exe = j.get("executable")
+            elif j.get("reason") == "build-finished":
+                finished = j.get("success")
     problems = []
     if not scripts:
         return ["no build-script-executed messages: build with --message-format=json and pass that output"]
@@ -298,11 +319,46 @@ def check_build(messages, d, pins, target_dir, record=None):
         for pkg in sorted(set(recorded) - compiling):
             problems.append(f"{pkg}: listed in compiled_from_crate_sources[{record!r}] but links no static library in "
                             "this build (update the record)")
+    # The files the linker read must still be the pinned ones after the build.
+    for a in pins["archives"]:
+        try:
+            check_unpacked(unpacked_path(d, a), a)
+        except Bad as e:
+            problems.append(f"after the build: {e}")
+    if binary:
+        if finished is not True:
+            problems.append("cargo did not report a successful build (no build-finished message with success)")
+        if not exe:
+            problems.append(f"the build's messages name no executable {binary!r}")
+        elif not os.path.isfile(exe):
+            problems.append(f"{binary}: {exe} does not exist")
+        elif target and not within(exe, [target]):
+            problems.append(f"{binary}: built at {exe}, outside the target directory {target} (CARGO_TARGET_DIR?)")
+    if info is not None:
+        info.update(executable=exe, compiling=sorted(compiling), finished=finished)
     return problems
 
 
-def record_lines(pins):
-    return [f"native_{a['name']} {a['version']} sha256 {a['sha256']} {a['url']}" for a in pins["archives"]]
+def record_lines(archives):
+    """toolchains.txt's native lines for these archives (check-build's record, or pins in tests)."""
+    return [f"native_{a['name']} {a['version']} sha256 {a['sha256']} {a['url']}" for a in archives]
+
+
+def build_record(pins, info, line, record, binary=None, copy=None):
+    """The check-build record of a passed build; with binary, the executable is copied to copy (if given) and the
+    copy's size and sha256 recorded. No machine paths: the record goes into the release."""
+    rec = {"result": "pass", "line": line, "record": record, "compiled_from_crate_sources": info.get("compiling", []),
+           "archives": [{"name": a["name"], "version": a["version"], "sha256": a["sha256"], "url": a["url"],
+                         "linked_by": a["build_packages"], "files_checked_after_build": len(a["files"])}
+                        for a in pins["archives"]]}
+    if binary:
+        dest = info["executable"]
+        if copy:
+            shutil.copyfile(dest, copy)
+            os.chmod(copy, 0o755)
+            dest = copy
+        rec["binary"] = {"name": binary, "bytes": os.path.getsize(dest), "sha256": sha256_file(dest)}
+    return rec
 
 
 def fetch_sources(out, pins, log=print):
@@ -327,6 +383,10 @@ def main():
     ap.add_argument("--refetch", action="store_true")
     ap.add_argument("--target-dir", default="")
     ap.add_argument("--record", default=None, help="check-build: the compiled_from_crate_sources entry of this build")
+    ap.add_argument("--binary", default="", help="check-build: the bin target the build must have produced")
+    ap.add_argument("--copy-binary", default="", help="check-build --binary: copy the checked executable here")
+    ap.add_argument("--out-json", default="", help="check-build: write the record of a passed build here")
+    ap.add_argument("--check-build", default="", help="record: check-build's record (--out-json)")
     ap.add_argument("--out", default="")
     a = ap.parse_args()
     pins = load_pins(a.pins)
@@ -339,17 +399,37 @@ def main():
             roots = fetch_all(d, pins, a.refetch, log=err)
             print("\n".join(env_lines(d, pins, roots)))
         elif a.cmd == "record":
-            print("\n".join(record_lines(pins)))
+            if not a.check_build:
+                raise Bad("record: --check-build FILE (check-build --out-json) is required: the native lines say what "
+                          "the build linked, as check-build verified it")
+            with open(a.check_build, encoding="utf-8") as f:
+                rec = json.load(f)
+            want = [(x["name"], x["version"], x["sha256"]) for x in pins["archives"]]
+            if rec.get("result") != "pass" or [(x["name"], x["version"], x["sha256"]) for x in rec["archives"]] != want:
+                raise Bad(f"record: {a.check_build} is not a passed check-build of the pinned archives")
+            print("\n".join(record_lines(rec["archives"])))
         elif a.cmd == "check-build":
             if not a.messages:
                 raise Bad("check-build: MESSAGES.jsonl (cargo build --message-format=json output) is required")
-            problems = check_build(a.messages, d, pins, a.target_dir, a.record)
+            if a.copy_binary and not a.binary:
+                raise Bad("check-build: --copy-binary needs --binary")
+            info = {}
+            problems = check_build(a.messages, d, pins, a.target_dir, a.record, a.binary or None, info)
             for p in problems:
                 err(f"check-build: {p}")
             if problems:
                 return 1
-            print(f"check-build: every build script linked native code only from its own build output, the system "
-                  f"library directories, or the checked archives ({', '.join(x['name'] for x in pins['archives'])})")
+            line = (f"check-build: every build script linked native code only from its own build output, the system "
+                    f"library directories, or the checked archives ({', '.join(x['name'] for x in pins['archives'])})")
+            print(line)
+            if a.out_json:
+                rec = build_record(pins, info, line, a.record, a.binary or None, a.copy_binary or None)
+                with open(a.out_json, "w", encoding="utf-8") as f:
+                    json.dump(rec, f, indent=1)
+                    f.write("\n")
+                if a.binary:
+                    print(f"check-build: {a.binary}: {rec['binary']['bytes']} bytes, sha256 {rec['binary']['sha256']}"
+                          + (f", copied to {a.copy_binary}" if a.copy_binary else ""))
         elif a.cmd == "sources":
             if not a.out:
                 raise Bad("sources: --out DIR is required")
