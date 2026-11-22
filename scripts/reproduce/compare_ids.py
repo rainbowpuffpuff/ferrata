@@ -3,6 +3,7 @@
 
     python3 -I scripts/reproduce/compare_ids.py --out DIR [--readme e2e/crown/README.md] [--table docs/image-ids.md]
                                                 [--vault ADDR] [--rpc URL]
+    python3 -I scripts/reproduce/compare_ids.py --out DIR --guests NAME[,NAME...] [--table docs/image-ids.md]
 
 The crown run's six programs are compared with e2e/crown/README.md's table (and, with --vault, a crown vault's
 immutables); every guest of DIR/ids.tsv with docs/image-ids.md. DIR is the output of `scripts/reproduce-image-ids.sh build` (ids.txt: the LEZ programs' ids from r0vm; r0bf/ids.jsonl:
@@ -14,6 +15,10 @@ unknown mode) counts as a difference, and so does an immutable that differs (che
 checkpoint in mode A, checkpoint_b in mode B; releaseImageId is release's). A row of DIR/ids.tsv counts only if
 r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table (the guests
 `scripts/reproduce-image-ids.sh build` builds) must be in DIR/ids.tsv.
+
+--guests (a job that builds some guests, such as CI's; review-fix-supply L-8): only the named guests are compared,
+each of which must be in DIR/ids.tsv (scripts/reproduce/guest_ids.py, with r0vm on PATH) with r0vm's "= id" and the id
+docs/image-ids.md gives; the crown run's table, DIR/ids.txt, DIR/r0bf/ and the other guests are not read.
 """
 import argparse
 import importlib.util
@@ -46,6 +51,32 @@ def read_vault(rpc, vault: str):
     return {key: ck[0], "release": rl[0]}, {key, "release"}, mode
 
 
+def guests_only(out, table, names) -> int:
+    """--guests: the named guests of OUT/ids.tsv against docs/image-ids.md, nothing else."""
+    tsv = os.path.join(out, "ids.tsv")
+    if not os.path.isfile(tsv) or not os.path.isfile(table):
+        print(f"DIFFER guests not compared: {tsv if not os.path.isfile(tsv) else table} missing")
+        return 1
+    with open(table, encoding="utf-8") as f:
+        doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", f.read()))
+    with open(tsv, encoding="utf-8") as f:
+        rows = {r[1]: r for r in ([*l.rstrip("\n").split("\t"), *[""] * 7][:7] for l in list(f)[1:]) if len(r) > 1}
+    bad = 0
+    for n in names:
+        r = rows.get(n)
+        if r is None:
+            bad += 1
+            print(f"MISSING {n:<32} not in {tsv}")
+            continue
+        ok = doc.get(n) == r[2] and r[6] == "= id"
+        bad += not ok
+        r0 = "" if r[6] == "= id" else f"  r0vm {r[6] or '?'} (must be '= id')"
+        print(f"{'MATCH' if ok else 'DIFFER':<7}{n:<32} rebuilt {r[2]}  docs/image-ids.md "
+              f"{'= rebuilt' if doc.get(n) == r[2] else doc.get(n)}{r0}")
+    print(f"{len(names) - bad} of {len(names)} named guests equal docs/image-ids.md")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -53,7 +84,15 @@ def main() -> int:
     ap.add_argument("--table", default=os.path.join(HERE, "..", "..", "docs", "image-ids.md"))
     ap.add_argument("--vault", default="")
     ap.add_argument("--rpc", default=os.environ.get("SEPOLIA_RPC_URL") or vs.DEFAULT_RPC)
+    ap.add_argument("--guests", default="", help="compare only these guests (comma-separated) of DIR/ids.tsv")
     a = ap.parse_args()
+    if a.guests:
+        if a.vault:
+            ap.error("--guests compares guests with docs/image-ids.md only; --vault needs the full comparison")
+        names = [n for n in a.guests.split(",") if n]
+        if not names:
+            ap.error("--guests: no guest named")
+        return guests_only(a.out, a.table, names)
     rebuilt, sha = {}, {}
     with open(os.path.join(a.out, "ids.txt"), encoding="utf-8") as f:
         for line in f:

@@ -11,6 +11,7 @@ import http.server
 import importlib.util
 import json
 import os
+import shutil
 import socket
 import stat
 import subprocess
@@ -181,6 +182,33 @@ class Compare(Fixture):
         r = self.compare()
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("guests not compared", r.stdout)
+
+
+class GuestsOnly(Fixture):
+    """--guests (CI jobs that build some guests): no crown table or ids.txt needed, only the named guests compared."""
+
+    def setUp(self):
+        super().setUp()
+        os.unlink(os.path.join(self.d, "out", "ids.txt"))              # a CI job builds no LEZ programs
+        shutil.rmtree(os.path.join(self.d, "out", "r0bf"))
+
+    def test_named_guests_equal(self):
+        self.tsv([("guest_a", "= id")])
+        r = self.compare("--guests", "guest_a")
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("1 of 1 named guests equal docs/image-ids.md", r.stdout)
+
+    def test_named_guest_missing_or_unconfirmed(self):
+        self.tsv([("guest_a", "?")])
+        r = self.compare("--guests", "guest_a,guest_b")
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertRegex(r.stdout, r"DIFFER guest_a .*r0vm \?")
+        self.assertIn("MISSING guest_b", r.stdout)
+
+    def test_no_vault_with_guests(self):
+        self.tsv([("guest_a", "= id")])
+        r = self.compare("--guests", "guest_a", "--vault", "0x" + "11" * 20)
+        self.assertEqual(r.returncode, 2)
 
 
 class StubRpc(http.server.BaseHTTPRequestHandler):
