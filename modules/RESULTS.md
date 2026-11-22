@@ -1,12 +1,32 @@
 # Logos modules: results
 
-Runs, newest first: Ferrata's Ethereum transactions through Logos Core's send stack (14 November), the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Runs, newest first: the attestor module after the LEZ check (22 November), Ferrata's Ethereum transactions through Logos Core's send stack (14 November), the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
 Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The attestor module after the LEZ check, 22 November 2026 (branch `fix-attestor`)
+
+The attestor now signs only a tip its own LEZ node holds final (`checkpoint/attestor/RESULTS.md` §10): `attest`
+takes `lez` (with `node`, and then requires `state_file`) or `lez_dir` (with `answers_dir`), `start` takes `lez`,
+and a LEZ node that does not answer is an `error`. The zone of four saved no LEZ node's answers, so
+`recorded_node.py` stands its inscribed blocks in as the LEZ node's final blocks (served over JSON-RPC `getBlock`
+on the node's port, or saved for `lez_dir` with `--save-lez`; replays of recorded honest runs only). On the build
+box, natively (the calls crate's `call` example in a scratch workspace laid out like the module; measured):
+
+| What | Result |
+|---|---|
+| `attestor-e2e.sh` (24 checks: one added, a signed block 30 of another history refused) | **24 of 24**: each attestation's signed bytes (`encoded`) = the run's `att-<i>.json`, now after a first read that starts at the LEZ node's highest final block (`first_block` 30, `blocks_checked` 1); 3 of 4 = the proven input byte for byte; the refusals: a signed tip 31 its LEZ node does not hold, another block 30, a certificate of another key, another vault (both for the certificate, the read succeeding); the loop: 3 rounds, signed 30 once, unchanged twice, 3 `getBlock` requests |
+| `daemon_requests.py`'s attestor requests (12) | every expectation met (`attest` with `lez_dir` signs tip 30 with the run's signed bytes; the certificate refusal now after a read that succeeds) |
+| The calls crate's tests | 3 of 3 (one added: without `state_file` a live `attest` is `invalid_request`, a silent LEZ node an `error`) |
+
+Not re-run: through the dev and the portable Logos Core (it needs the module's packages built with this code),
+and `attestor-zone-live.sh` (updated: each loop gets its sequencer's LEZ node, and the last signatures are taken
+before the sequencers stop, `zone.sh`'s new `ZONE_BEFORE_STOP` hook, with the one-shot `attest` until all four sign
+one tip; the base input ends at that tip).
 
 ## Ferrata's Ethereum transactions through Logos Core's send stack, 14 November 2026
 

@@ -3,14 +3,18 @@
 # (checkpoint/attestor/runs/zone: the node's saved answers of a real LEZ v0.4.0-rc1 zone, the devnet's
 # channel keys): what attestor/zone-attest.sh does with the binary, through the module.
 #
-#   tier, base           the node's final tier (tip 30, four keys) and the base input over its final blocks
+#   tier, base           the Bedrock node's final tier (tip 30, four keys) and the base input over its final blocks
 #   keygen, certify,     each sequencer's attestor: its key, its channel key's certificate, its signature of
-#   attest               the final tip after checking the whole tier (every value equal to the run's records)
+#   attest               the final tip, checked against a LEZ node (the zone saved none: its inscribed blocks
+#                        stand in as the LEZ node's final blocks, recorded_node.py --save-lez); a first read
+#                        starts at the LEZ node's highest final block (30); the signed bytes equal the run's
 #   verify, collect      the four verify; 3 of 4 collected = the input the checkpoint program proved
 #                        (byte for byte); 4 of 4 = that run's journal; 2 of 4 refused; the refusal input
-#   refusals             a tip below what it signed, a certificate of another key, another deployment
+#   refusals             a signed tip its LEZ node does not hold, another history at the signed height, a
+#                        certificate of another key, another deployment
 #   start/status/stop    the attestor's loop in the module, against a node served from the same answers
-#                        over HTTP (recorded_node.py): it reads the node each round, signs once, publishes
+#                        over HTTP, with the LEZ stand-in's getBlock on the same port (recorded_node.py): it
+#                        reads the node and asks its LEZ node each round, signs once, publishes
 #
 #   modules/scripts/attestor-e2e.sh OUT_DIR                  the methods called natively (call example)
 #   CALL=logosctl LOGOSCTL=BIN SESSION=DIR modules/scripts/attestor-e2e.sh OUT_DIR
@@ -56,6 +60,9 @@ call() {
 }
 req() { cat > "$out/req/$1.json"; }
 rep() { cat "$out/rep/$1.json"; }
+# The zone saved no LEZ node's answers: its inscribed blocks (all applied there) stand in as the LEZ node's final blocks.
+lez="$work/lez-standin"
+python3 -I "$here/recorded_node.py" --save-lez "$Z/answers" "$lez" > "$out/lez-standin.log"
 check() { # NAME CONDITION
   if eval "$2"; then echo "- PASS $1" >> "$summary"; else echo "- FAIL $1" >> "$summary"; fails=$((fails + 1)); fi
 }
@@ -88,11 +95,11 @@ for i in 0 1 2 3; do
   check "certify $i: the channel key's certificate = the run's cert-$i.json" \
     'same "{channel_key, attestation_key, certificate, certificate_message}" "$work/cert-$i.json" "{channel_key, attestation_key, certificate, certificate_message}" "$Z/cert-$i.json"'
   jq -n --argjson d "$dep" --arg c "$work/cert-$i.json" --arg k "$work/attestation-$i.key" --arg a "$Z/answers" \
-    --arg s "$work/state-$i.json" --arg o "$work/att-$i.json" \
-    '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, state_file: $s, out: $o}' | req "attest-$i"
+    --arg s "$work/state-$i.json" --arg o "$work/att-$i.json" --arg l "$lez" \
+    '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, lez_dir: $l, state_file: $s, out: $o}' | req "attest-$i"
   call attest "attest-$i"
-  check "attest $i: tip 30 signed after checking blocks 2..=30; the attestation = the run's att-$i.json" \
-    '[ "$(jq -c "[.verdict, .tip_id, .blocks_checked]" "$out/rep/attest-$i.json")" = "[\"attested\",30,29]" ] && same .encoded "$work/att-$i.json" .encoded "$Z/att-$i.json"'
+  check "attest $i: tip 30 signed, the LEZ node's highest final block (a first read starts there); the signed attestation = the run's att-$i.json (encoded)" \
+    '[ "$(jq -c "[.verdict, .tip_id, .first_block, .blocks_checked]" "$out/rep/attest-$i.json")" = "[\"attested\",30,30,1]" ] && same .encoded "$work/att-$i.json" .encoded "$Z/att-$i.json"'
 done
 
 # 4. Anyone verifies them.
@@ -124,23 +131,30 @@ check "assemble 2 of 4: the program's own rule refuses it (InsufficientAttestati
 # 6. What the attestor refuses to sign.
 echo '{"tip_id": 31, "tip_hash": "0000000000000000000000000000000000000000000000000000000000000000"}' > "$work/state-ahead.json"
 jq -n --argjson d "$dep" --arg c "$work/cert-0.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" --arg s "$work/state-ahead.json" \
-  '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, state_file: $s}' | req refuse-behind
+  --arg l "$lez" '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, lez_dir: $l, state_file: $s}' | req refuse-behind
 call attest refuse-behind
-check "refused: a final tip (30) below the tip it signed (31): it never signs two histories" \
-  '[ "$(jq -r .verdict "$out/rep/refuse-behind.json")" = refused ] && jq -r .error "$out/rep/refuse-behind.json" | grep -q "below the tip 31"'
-jq -n --argjson d "$dep" --arg c "$work/cert-1.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" \
-  '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a}' | req refuse-cert
+check "refused: it signed tip 31 and its LEZ node holds no block 31 (the node's final tip, 30, is below it): it never signs a lower tip" \
+  '[ "$(jq -r .verdict "$out/rep/refuse-behind.json")" = refused ] && jq -r .error "$out/rep/refuse-behind.json" | grep -q "holds no block 31, which this attestor signed"'
+jq -n --arg h "$(printf '%064d' 0)" '{tip_id: 30, tip_hash: $h}' > "$work/state-other.json"
+jq -n --argjson d "$dep" --arg c "$work/cert-0.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" --arg s "$work/state-other.json" \
+  --arg l "$lez" '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, lez_dir: $l, state_file: $s}' | req refuse-other
+call attest refuse-other
+check "refused: it signed another block 30 than the one its LEZ node holds final: it never signs two histories" \
+  '[ "$(jq -r .verdict "$out/rep/refuse-other.json")" = refused ] && jq -r .error "$out/rep/refuse-other.json" | grep -q "another history"'
+jq -n --argjson d "$dep" --arg c "$work/cert-1.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" --arg l "$lez" \
+  '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, lez_dir: $l}' | req refuse-cert
 call attest refuse-cert
 check "refused: a certificate of another attestation key" \
   '[ "$(jq -r .verdict "$out/rep/refuse-cert.json")" = refused ] && jq -r .error "$out/rep/refuse-cert.json" | grep -q "does not certify"'
 other=$(jq -c '.vault = "0x00000000000000000000000000000000000000aa"' <<< "$dep")
-jq -n --argjson d "$other" --arg c "$work/cert-0.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" \
-  '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a}' | req refuse-deployment
+jq -n --argjson d "$other" --arg c "$work/cert-0.json" --arg k "$work/attestation-0.key" --arg a "$Z/answers" --arg l "$lez" \
+  '{deployment: $d, cert_file: $c, att_key_file: $k, answers_dir: $a, lez_dir: $l}' | req refuse-deployment
 call attest refuse-deployment
 check "refused: the same certificate for another vault (a certificate binds chain, vault, configuration and channel)" \
-  '[ "$(jq -r .verdict "$out/rep/refuse-deployment.json")" = refused ]'
+  '[ "$(jq -r .verdict "$out/rep/refuse-deployment.json")" = refused ] && jq -r .error "$out/rep/refuse-deployment.json" | grep -q "does not certify"'
 
-# 7. The attestor's loop in the module, reading a node over HTTP (the zone node's answers, served).
+# 7. The attestor's loop in the module, reading a node over HTTP (the zone node's answers, served) and asking a LEZ
+#    node's getBlock on the same port (the stand-in).
 python3 -I "$here/recorded_node.py" "$Z/answers" "$PORT" "$out/node.log" &
 node_pid=$!
 trap 'kill $node_pid 2>/dev/null || true' EXIT
@@ -149,7 +163,7 @@ for _ in $(seq 1 100); do (echo > "/dev/tcp/127.0.0.1/$PORT") 2>/dev/null && bre
 from=$(jq -s '[.[][] | .header.slot] | min' "$Z"/answers/blocks/*.json)
 jq -n --argjson d "$dep" --arg c "$work/cert-0.json" --arg k "$work/attestation-0.key" --arg n "http://127.0.0.1:$PORT" \
   --arg w "$work/loop" --arg p "$work/published" --arg s "$work/loop-state.json" --argjson f "$from" \
-  '{deployment: $d, cert_file: $c, att_key_file: $k, node: $n, work_dir: $w, publish_dir: $p, state_file: $s,
+  '{deployment: $d, cert_file: $c, att_key_file: $k, node: $n, lez: $n, work_dir: $w, publish_dir: $p, state_file: $s,
     slot_from: $f, poll_ms: 500, max_rounds: 3}' | req start
 call start start
 if [ "$CALL" = logosctl ]; then
@@ -167,8 +181,8 @@ check "loop: 3 rounds against the node over HTTP: signed tip 30 once, then found
   '[ "$(jq -c "[.rounds, .attested, .unchanged, .refused, .errors, .last_attestation.tip_id]" "$out/rep/loop.json")" = "[3,1,2,0,0,30]" ]'
 check "loop: its published attestation = the one-shot attest's (att-30.json, latest.json)" \
   'same .encoded "$work/published/att-30.json" .encoded "$work/att-0.json" && same .encoded "$work/published/latest.json" .encoded "$work/att-0.json"'
-check "loop: it read the node each round (info, channel, blocks)" \
-  '[ "$(grep -c "^/cryptarchia/info " "$out/node.log")" -ge 3 ] && [ "$(grep -c "^/channel/" "$out/node.log")" -ge 3 ] && grep -q "^/cryptarchia/blocks?slot_from=" "$out/node.log"'
+check "loop: it read the node each round (info, channel, blocks) and asked its LEZ node (getBlock)" \
+  '[ "$(grep -c "^/cryptarchia/info " "$out/node.log")" -ge 3 ] && [ "$(grep -c "^/channel/" "$out/node.log")" -ge 3 ] && grep -q "^/cryptarchia/blocks?slot_from=" "$out/node.log" && [ "$(grep -c "^POST getBlock " "$out/node.log")" -ge 3 ]'
 kill $node_pid 2>/dev/null || true
 trap - EXIT
 
