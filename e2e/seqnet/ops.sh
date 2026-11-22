@@ -14,7 +14,9 @@
 #                              and every applied transaction (block, hash, kind, reverted, the bridge's visible calls)
 #   ops.sh approve NAME [reject]   (logoseth mode) the person at Logos's headless approver, evm_signer_cli: waits for the
 #                              request tx_sender_module raised for the module's send, records what the approver shows
-#                              (its status and prompt), and approves it with the account's password file (or rejects it)
+#                              (its status and prompt), and approves it with the account's password file (or rejects it).
+#                              A request the approver's screen dropped is looked up by handle (`list`, then
+#                              tx_sender_module's live sends) and shown again (`show`), and that recovery is recorded
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
@@ -39,17 +41,33 @@ case "${1:-}" in
     A="$RUN/approver"; mkdir -p "$A"
     lctl() { TMPDIR="$LOGOS_TMPDIR_SHORT" "$LOGOSCTL" --config-dir "$LOGOS_SESSION" "$@"; }
     unwrap() { jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else (.result // .) end' 2>/dev/null; }
-    h=""
-    for _ in $(seq 240); do
+    h=""; b=""
+    for i in $(seq 240); do
       st=$(lctl call evm_signer_cli status --json < /dev/null 2>&1 | unwrap); h=$(jq -r '.rendered.handle // empty' <<< "$st" 2>/dev/null)
-      [ -n "$h" ] && break; sleep 0.5
+      [ -n "$h" ] && break
+      # Nothing on screen after 5 s: the request is looked up as a person would (the manager's queue, then the
+      # sender's live sends) and shown by handle (evm_signer_cli show). Recorded: a dropped request is not hidden.
+      if [ $(( i % 10 )) = 0 ]; then
+        q=$(lctl call evm_signer_cli list --json < /dev/null 2>&1 | unwrap)
+        live=$(lctl call tx_sender_module live_sends --json < /dev/null 2>&1 | unwrap)
+        want=$(jq -r '[.pending[]? | select(.requester == "tx_sender_module") | .handle] | first // empty' <<< "$q" 2>/dev/null)
+        [ -n "$want" ] || want=$(jq -r '[.sends[]? | select(.status == "awaitingApproval") | .handle] | last // empty' <<< "$live" 2>/dev/null)
+        if [ -n "$want" ]; then
+          sh=$(lctl call evm_signer_cli show "str:$want" --json < /dev/null 2>&1 | unwrap)
+          jq -c -n --arg name "$name" --argjson poll "$i" --arg handle "$want" --argjson status "${st:-null}" --argjson list "${q:-null}" \
+            --argjson live "${live:-null}" --argjson show "${sh:-null}" '{name: $name, poll: $poll, handle: $handle, status: $status, list: $list, live_sends: $live, show: $show}' \
+            >> "$A/recoveries.jsonl" 2>/dev/null || echo "{\"name\":\"$name\",\"poll\":$i,\"handle\":\"$want\"}" >> "$A/recoveries.jsonl"
+          if [ "$(jq -r '.ok // false' <<< "$sh" 2>/dev/null)" = true ]; then h="$want"; b=$(jq -r '.bundle_id' <<< "$sh"); break; fi
+        fi
+      fi
+      sleep 0.5
     done
     echo "$st" > "$A/$name.status.json"
     [ -n "$h" ] || die "approve $name: no request reached evm_signer_cli"
-    b=$(jq -r '.rendered.bundle_id' <<< "$st")
+    [ -n "$b" ] || b=$(jq -r '.rendered.bundle_id' <<< "$st")
     if [ "$decision" = reject ]; then lctl call evm_signer_cli reject "str:$h" --json < /dev/null > "$A/$name.decision.json" 2>&1
     else lctl call evm_signer_cli approve "str:$h" "str:$b" "@$LOGOS_PASSWORD_FILE" --json < /dev/null > "$A/$name.decision.json" 2>&1; fi
-    say "approver: $decision $name (handle $h, requested by $(jq -r .rendered.requester <<< "$st"))"
+    say "approver: $decision $name (handle $h, requested by $(jq -r '.rendered.requester // "tx_sender_module (shown by handle)"' <<< "$st"))"
     ;;
   *) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

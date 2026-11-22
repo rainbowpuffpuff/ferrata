@@ -109,14 +109,32 @@ run() {
 
   local E="{\"via\":\"eth_rpc_module\",\"chain_id\":$CHAIN}"
   # approve_next NAME DECISION PASSWORD_FILE: wait for the approver's rendered request, record it, approve or reject.
+  # Nothing on screen after 5 s: the request is looked up as a person would (the manager's queue as `evm_signer_cli
+  # list` reads it, then tx_sender_module's live sends) and shown by handle (`evm_signer_cli show`); every such
+  # recovery is recorded in recoveries.jsonl with what each side said (a review's run lost one approval this way:
+  # prompted at 22:51:24, then gone from the approver's queue while tx_sender_module still awaited it).
   approve_next() {
-    local name="$1" decision="$2" st h b
-    for _ in $(seq 240); do
-      st=$(j evm_signer_cli status); h=$(jq -r '.rendered.handle // empty' <<< "$st"); [ -n "$h" ] && break; sleep 0.5
+    local name="$1" decision="$2" st h b="" q live want sh i
+    for i in $(seq 240); do
+      st=$(j evm_signer_cli status); h=$(jq -r '.rendered.handle // empty' <<< "$st"); [ -n "$h" ] && break
+      if [ $(( i % 10 )) = 0 ]; then
+        q=$(j evm_signer_cli list); live=$(j tx_sender_module live_sends)
+        want=$(jq -r '[.pending[]? | select(.requester == "tx_sender_module") | .handle] | first // empty' <<< "$q" 2>/dev/null)
+        [ -n "$want" ] || want=$(jq -r '[.sends[]? | select(.status == "awaitingApproval") | .handle] | last // empty' <<< "$live" 2>/dev/null)
+        if [ -n "$want" ]; then
+          sh=$(j evm_signer_cli show "str:$want")
+          jq -c -n --arg name "$name" --argjson poll "$i" --arg handle "$want" --argjson status "${st:-null}" --argjson list "${q:-null}" \
+            --argjson live "${live:-null}" --argjson show "$(jq -c 'del(.text, .render_lines, .claim_lines, .interpretation_lines)' <<< "${sh:-null}" 2>/dev/null || echo null)" \
+            '{name: $name, poll: $poll, handle: $handle, status: $status, list: $list, live_sends: $live, show: $show}' >> "$R/recoveries.jsonl" 2>/dev/null \
+            || echo "{\"name\":\"$name\",\"poll\":$i,\"handle\":\"$want\"}" >> "$R/recoveries.jsonl"
+          if [ "$(jq -r '.ok // false' <<< "$sh" 2>/dev/null)" = true ]; then h="$want"; b=$(jq -r '.bundle_id' <<< "$sh"); break; fi
+        fi
+      fi
+      sleep 0.5
     done
     echo "$st" > "$R/approver-$name.json"
     [ -n "$h" ] || { echo "no request reached the approver ($name)"; return 1; }
-    b=$(jq -r '.rendered.bundle_id' <<< "$st")
+    [ -n "$b" ] || b=$(jq -r '.rendered.bundle_id' <<< "$st")
     if [ "$decision" = approve ]; then j evm_signer_cli approve "str:$h" "str:$b" "@$3" > "$R/approve-$name.json"
     else j evm_signer_cli reject "str:$h" > "$R/approve-$name.json"; fi
   }
@@ -243,6 +261,8 @@ run() {
   kill $watch_pid 2>/dev/null
   ctl daemon stop > /dev/null 2>&1; kill $anvil_pid 2>/dev/null
   echo "checks: $pass passed, $fail failed" | tee "$OUT/summary.txt"
+  # Requests the approver's screen dropped and the test showed again by handle (approve_next): reported, not a check.
+  echo "approver recoveries: $(cat "$R/recoveries.jsonl" 2>/dev/null | wc -l)" | tee -a "$OUT/summary.txt"
   [ "$fail" -eq 0 ]
 }
 
