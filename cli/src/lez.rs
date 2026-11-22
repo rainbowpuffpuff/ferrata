@@ -824,7 +824,8 @@ impl Ledger for Sequencer {
         while credit.is_none() {
             ensure!(
                 std::time::Instant::now() < deadline,
-                "no credit to the one-time account {one_time} after {} s: the relayer has not sent it (its log says why; it sends one drop per N, and a receipt for this N bound to another account is refused). Run the claim again to wait more, or name another relayer (--relayer, --gas-drop-inbox): it gets a receipt of its own for the same one-time account",
+                "no credit to the one-time account {} after {} s: the relayer has not sent it (its log says why; it sends one drop per N, and a receipt for this N bound to another account is refused). Run the claim again to wait more, or name another relayer (--relayer, --gas-drop-inbox): it gets a receipt of its own for the same one-time account",
+                hx(one_time.value()),
                 ask.wait_secs
             );
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;

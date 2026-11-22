@@ -1,0 +1,11 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d recover
+
+vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516: 2 deposits at block 610, root 0xb288b96d9e0aa7c68bd9afe95177888f027c56db2b0f467834d5e7e190f3d684 (equal to depositRoot: checked)
+deposits of this seed: 2
+  leaf      0  j    0  0.001 ETH (1000000000000000 base units, 18 decimals)  to private /0  N 0xcd6efdc213344cb4  unclaimed, claimable under root(2)
+  leaf      1  j    1  0.001 ETH (1000000000000000 base units, 18 decimals)  to private /0  N 0x5b6d7098ea0f5ce1  unclaimed, claimable under root(2) from block 1210 (your delay)
+burns of this seed: 0 (next burn counter 0)
+Latest block is 38
+Syncing to block 38. Blocks to sync: 4
+Synced to block 38 in 3.556589ms
+recovered: 2 unclaimed deposits, 0 unreleased burns, 0 holdings

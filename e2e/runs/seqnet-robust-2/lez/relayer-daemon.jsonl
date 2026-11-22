@@ -1,0 +1,5 @@
+{"chainId":11155111,"configId":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","event":"start","finalState":"0xc180539f4ed8178cef74d217d964112cbb766e2897143ac74c925a61a167c27e","gasDrops":true,"importEvery":0,"importRoots":true,"relayer":"0x70997970c51812dc3a010c7d01b50e0d17dc79c8","sendVia":"plain","t":1795307783,"vault":"0x67ac447386f2ea14ef2fbf55ef33ce1d8f386516","zone":"sequencer"}
+{"accounts":3,"applied":false,"block":10,"blockHash":"0xaf9b34e5c792c9db52f7c903bd7d7777785cbd9b92690c2dffd624420cba7555","event":"root-import-unconfirmed","leafCount":2,"previous":0,"recordSlot":11542656,"root":"0xb288b96d9e0aa7c68bd9afe95177888f027c56db2b0f467834d5e7e190f3d684","t":1795307783,"tx":"7962b57fc0b6efa3c44bd36d60f721bfdf2644ce164f673a333fe0ad29adf125","vaultCount":2}
+{"ageSecs":5,"event":"root-import-pending","leafCount":2,"t":1795307788,"tx":"7962b57fc0b6efa3c44bd36d60f721bfdf2644ce164f673a333fe0ad29adf125"}
+{"applied":true,"event":"root-imported","leafCount":2,"recovered":true,"t":1795307794,"tx":"7962b57fc0b6efa3c44bd36d60f721bfdf2644ce164f673a333fe0ad29adf125"}
+{"event":"stop","reason":"SIGTERM","rounds":3,"t":1795307798}

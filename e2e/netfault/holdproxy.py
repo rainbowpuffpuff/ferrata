@@ -15,6 +15,8 @@ Listens on 127.0.0.1 (the port written to F). Before each request it reads the c
   trap METHOD           such a request is not forwarded: the connection is held open until the client goes away (the
                         test kills the client: it had built and proven what it was about to send, which never left);
                         then `pass`
+  fail METHOD           such a request is answered 503 without being forwarded (the endpoint failing that one call: it
+                        never reached the server); then `pass`
 
 Each one-shot fault writes a line to C + ".hit" when it fires (the test waits for it). Every request and what was done
 with it goes to L (JSONL: time, method, action). Local only: the upstream must be a loopback address.
@@ -112,6 +114,10 @@ def main():
                 if int(time.time() * 1000) % 3:
                     return self.reply(503, b"service unavailable", "text/plain")
                 return self.close_now()
+            if mode == "fail" and method == target:
+                fired(f"fail {method}")
+                log(method, "failed (503, not forwarded)")
+                return self.reply(503, b"service unavailable", "text/plain")
             if mode in ("hold", "lose", "trap") and method == target:
                 if mode == "trap":
                     fired(f"trap {method}")
