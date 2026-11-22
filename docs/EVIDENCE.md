@@ -640,6 +640,16 @@ workspaces, 48 passed, 0 failed, 8 skipped, the root, `cli` and `lez` among thos
 tooling's tests (18) and `scripts/test_image_ids.py` (6) on the merged `compare_ids.py`, and piece 7's clean rebuild
 compared again: 18 of 18 guests, 0 of the first table's 14 missing. On the laptop: `links` and its steps, `idl`.
 
+**Twenty-second pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-relayer-robustness` (stream E, rows
+202–206), from a copy of its history rewritten to drop a workspace name from two commit messages and from one phrase of
+its rows file, the commit ids its records cite remapped (six conflicts, every stream's facts kept), at the fold's commit
+`7eec728c`, on the build box: the round trip and `cli/tests/e2e.sh` (`roundtrip`; the tool's test, every freeze
+among it, 1 passed in 32.30 s); `cargo +1.98.1 check --locked --no-default-features --lib` in `cli/`
+(`modules-resolve`); the stream's own suites: the `cli` library, 34 passed; `seqnet-chain`'s tests, 2; `cargo check
+--all-targets --features seqnet`; `cli/tests/relayer-crash.sh`, 1 passed in 126.68 s; the `monitor` library, 8 passed,
+clippy `-D warnings` clean, `tests/logos-fallback.sh` 8 passed, 0 failed; crown-driver checked. On the laptop: `links`
+and its steps; `e2e/seqnet/test-late-credit.sh`, 0 unexpected.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
