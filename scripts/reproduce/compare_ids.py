@@ -17,8 +17,11 @@ beside it; that one rebuilds from f13faee2, the tree before B1, where this scrip
 Fails closed: with --vault, a vault that cannot be read (an RPC error, no endpoint answering, empty return data, an
 unknown mode) counts as a difference, and so does an immutable that differs (checkpointImageId is the rule's program:
 checkpoint in mode A, checkpoint_b in mode B; releaseImageId is release's). A row of DIR/ids.tsv counts only if
-r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table (the guests
-`scripts/reproduce-image-ids.sh build` builds) must be in DIR/ids.tsv.
+r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table must be in
+DIR/ids.tsv. A row with an all-zero id (a methods.rs written with RISC0_SKIP_BUILD=1, which builds nothing) is reported
+NOT BUILT, not as a differing id, and counts as a failure; a guest of a later table that DIR/ids.tsv lacks is named
+NOT BUILT with its section, and does not (review 9b N5: a fresh `build` compared 14 of the 18 and named none of the
+others; `build` now builds them all).
 
 --guests (a job that builds some guests, such as CI's; review-fix-supply L-8): only the named guests are compared,
 each of which must be in DIR/ids.tsv (scripts/reproduce/guest_ids.py, with r0vm on PATH) with r0vm's "= id" and the id
@@ -170,9 +173,15 @@ def main() -> int:
         first = re.split(r"\n## ", text, maxsplit=1)[0]
         expected = [n for n, _ in re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", first)]
         rows = [l.rstrip("\n").split("\t") for l in open(tsv, encoding="utf-8")][1:]
-        same = 0
+        same, unbuilt = 0, 0
         for r in rows:
             r += [""] * (7 - len(r))
+            if not r[2].removeprefix("0x").strip("0"):
+                unbuilt += 1
+                bad += 1
+                print(f"NOT BUILT {r[1]:<30} an all-zero id: its methods.rs was written with RISC0_SKIP_BUILD=1, which "
+                      "builds nothing; build it without that variable")
+                continue
             name = TREE_ENTRY.get(r[1], r[1])  # since B1 the bridge guest is compared with its own entry
             name = name if name in doc else r[1]
             ok = doc.get(name) == r[2] and r[6] == "= id"
@@ -181,13 +190,23 @@ def main() -> int:
             r0 = "" if r[6] == "= id" else f"  r0vm {r[6] or '?'} (must be '= id')"
             print(f"{'MATCH' if ok else 'DIFFER':<7}{r[1]:<32} rebuilt {r[2]}  docs/image-ids.md "
                   + (f"`{name}` " if name != r[1] else "") + f"{'= rebuilt' if doc.get(name) == r[2] else doc.get(name)}{r0}")
-        built = {r[1] for r in rows}
+        built = {r[1] for r in rows if r[2].removeprefix("0x").strip("0")}
         for n in expected:
             if n not in built:
                 bad += 1
                 print(f"MISSING {n:<32} in docs/image-ids.md's first table, not in {tsv}")
+        # The later tables' guests (other builds of this tree) that this rebuild does not hold, named with their section.
+        aliases = set(TREE_ENTRY.values())
+        section = ""
+        for line in text.splitlines():
+            if line.startswith("## "):
+                section = line[3:].strip()
+            for n in re.findall(r"`([a-z0-9_]+)` \| `0x[0-9a-f]{64}`", line):
+                if section and n not in built and n not in aliases:
+                    print(f"NOT BUILT {n:<30} not in {tsv} (docs/image-ids.md, \"{section}\"); not compared")
         print(f"{same} of {len(rows)} guests equal docs/image-ids.md; "
-              f"{sum(n not in built for n in expected)} of its first table's {len(expected)} missing")
+              f"{sum(n not in built for n in expected)} of its first table's {len(expected)} missing"
+              + (f"; {unbuilt} not built (an all-zero id)" if unbuilt else ""))
     return 1 if bad else 0
 
 

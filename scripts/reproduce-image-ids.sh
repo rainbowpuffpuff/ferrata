@@ -3,8 +3,9 @@
 # e2e/crown/README.md's table) and, if a vault is named, the vault's immutables (read over public JSON-RPC).
 #
 #   scripts/reproduce-image-ids.sh build   --out DIR
-#       builds the guests where the tree is (any directory, any $HOME), writes DIR/ids.tsv (all 14 guests),
-#       DIR/ids.txt (the two LEZ programs), DIR/r0bf/ids.jsonl (the four R0BF programs of the vault side) and DIR/logs/.
+#       builds the guests where the tree is (any directory, any $HOME), writes DIR/ids.tsv (every guest of
+#       docs/image-ids.md: the 14 of its first table and the 6 of its later sections), DIR/ids.txt (the two LEZ programs),
+#       DIR/r0bf/ids.jsonl (the four R0BF programs of the vault side) and DIR/logs/.
 #   scripts/reproduce-image-ids.sh compare --out DIR [--vault ADDR] [--rpc URL]
 #       one line per program: rebuilt id, the recorded id, the vault's immutable if --vault is given; exit 1 on a mismatch.
 #   scripts/reproduce-image-ids.sh docker  [--out DIR] [--vault ADDR] [--rpc URL]
@@ -56,9 +57,13 @@ case "$mode" in
     log "source $SRC ($(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo 'not a git tree')); HOME $HOME; nproc $(nproc)"
     log "toolchains: $(cargo --version), $(r0vm --version 2>&1 | head -1), lez rust $(ls "$R0LEZ/toolchains" 2>/dev/null | tr '\n' ' ')"
     j="${CARGO_BUILD_JOBS:-8}"
-    ( cd "$SRC/lez" && RISC0_HOME="$R0LEZ" CARGO_BUILD_JOBS=$j cargo build -p methods --locked ) > "$OUT/logs/lez-methods.log" 2>&1 & a=$!
-    ( cd "$SRC/checkpoint" && env -u RISC0_HOME CARGO_BUILD_JOBS=$j cargo build --release -p methods --locked ) \
-      > "$OUT/logs/checkpoint-methods.log" 2>&1 & b=$!
+    # The first table's guests (`methods`), and those of docs/image-ids.md's later sections, each built by a methods
+    # crate of its own (the class build, the recorded statements and their reader, the rebate; the checkpoint guests
+    # for Logos Blockchain 0.3.5-rc.1), so that `compare` holds every recorded guest to its id (review 9b N5).
+    ( cd "$SRC/lez" && RISC0_HOME="$R0LEZ" CARGO_BUILD_JOBS=$j cargo build -p methods -p methods-program-class \
+        -p methods-statements -p methods-rebate --locked ) > "$OUT/logs/lez-methods.log" 2>&1 & a=$!
+    ( cd "$SRC/checkpoint" && env -u RISC0_HOME CARGO_BUILD_JOBS=$j cargo build --release -p methods -p methods-0-3-5 \
+        --locked ) > "$OUT/logs/checkpoint-methods.log" 2>&1 & b=$!
     ( cd "$SRC/bridge" && env -u RISC0_HOME CARGO_BUILD_JOBS=$j cargo build --release -p methods --locked \
         && env -u RISC0_HOME cargo build --release -p ferrata-e2e --locked ) > "$OUT/logs/bridge-methods.log" 2>&1 & c=$!
     fail=0

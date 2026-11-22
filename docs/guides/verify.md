@@ -95,9 +95,11 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
   home where `build` looks for it (without `RISC0_HOME_LEZ` the script installs it in `~/risc0-home-lez`, CI's place,
   and `build` then stops at "missing …/risc0-home-lez").
   [`scripts/reproduce/Dockerfile`](../../scripts/reproduce/Dockerfile) installs exactly these.
-- `build`: the three `methods` builds in place (`lez`: `cargo build -p methods --locked` with the LEZ RISC Zero home;
-  `checkpoint`, `bridge`: `cargo build --release -p methods --locked`), with `RUSTC_WRAPPER` set to the wrapper (an
-  inherited one, such as sccache, would bring the paths back); `out/ids.tsv` lists all 14 guests (risc0-build's id,
+- `build`: the `methods` builds in place (`lez`: `cargo build -p methods -p methods-program-class -p methods-statements
+  -p methods-rebate --locked` with the LEZ RISC Zero home; `checkpoint`: `cargo build --release -p methods -p
+  methods-0-3-5 --locked`; `bridge`: `cargo build --release -p methods --locked`), with `RUSTC_WRAPPER` set to the
+  wrapper (an inherited one, such as sccache, would bring the paths back); `out/ids.tsv` lists every guest of
+  [`docs/image-ids.md`](../image-ids.md), the 14 of its first table and the 6 of its later sections (risc0-build's id,
   the R0BF binary's sha256 and size, the user ELF's sha256, `r0vm --id` as a cross-check); the crown run's six are
   also copied out, the LEZ programs' ids printed with `r0vm --id` and the other four turned into R0BF programs with
   `ferrata-e2e program-binary` (the v1compat kernel, as risc0-build 3.0.5 does).
@@ -106,7 +108,9 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
   immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs. It
   fails closed: a vault that cannot be read (an RPC error, no endpoint answering, no contract at the address), an id
   that `r0vm` did not compute from the binary, two stale build outputs that disagree, or a guest of the first table
-  missing from the rebuild counts as a difference
+  missing from the rebuild counts as a difference; an all-zero id (a `methods.rs` that a lint with `RISC0_SKIP_BUILD=1`
+  wrote, which builds nothing) is reported `NOT BUILT`, not as a differing id, and a guest of a later section missing
+  from the rebuild is named `NOT BUILT` with its section
   ([`test_image_id_tools.py`](../../scripts/reproduce/test_image_id_tools.py)).
   Two v5 vaults are live on Sepolia. crown-live-3's, `0x04eE…e44c`, holds the final programs: `--vault` on it gives 6
   of 6 (below). crown-live-1's, `0xfE3199fa…9E54`, ran programs built before the wrapper (below): `--vault` on it

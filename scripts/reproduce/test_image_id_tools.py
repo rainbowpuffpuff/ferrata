@@ -1,8 +1,9 @@
 """Tests of the image-id tooling's fail-closed checks: `python3 -I scripts/reproduce/test_image_id_tools.py`.
 
 guest_ids.py: two methods.rs for one guest that disagree are a conflict (exit 1, the guest left out), not the first
-one sorted; the r0vm column. compare_ids.py: a row counts only with "= id" in the r0vm column; every guest of
-docs/image-ids.md's first table must be rebuilt; with --vault, a vault that cannot be read (RPC error, no endpoint,
+one sorted; the r0vm column; an all-zero id (RISC0_SKIP_BUILD=1) is not a build. compare_ids.py: a row counts only
+with "= id" in the r0vm column; an all-zero id is reported NOT BUILT; every guest of docs/image-ids.md's first table
+must be rebuilt, and the later tables' guests not rebuilt are named; with --vault, a vault that cannot be read (RPC error, no endpoint,
 empty answer, unknown mode) or an immutable that differs is a difference, never "6 of 6". The vault is a JSON-RPC stub
 on 127.0.0.1. Standard library only; files go to a temporary directory (TMPDIR).
 """
@@ -103,6 +104,20 @@ class GuestIds(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual((rows[0][1], rows[0][2], rows[0][6]), ("release", ID["release"], "= id"))
 
+    def test_an_all_zero_id_is_not_built(self):
+        # Review 9b N5: a lint with RISC0_SKIP_BUILD=1 writes methods.rs with an all-zero id beside the binary of an
+        # earlier build. Alone it is no build (NOT BUILT, no row); beside a real build it is ignored (no conflict).
+        b = self.binary("release", b"release binary")
+        self.methods("bridge", "0000aaaa", "RELEASE", "0x" + "00" * 32, b, time.time())
+        r, rows = self.guest_ids(self.fake_r0vm(ID["release"]))
+        self.assertEqual(rows, [])
+        self.assertIn("NOT BUILT bridge release", r.stderr)
+        self.methods("bridge", "ffffbbbb", "RELEASE", ID["release"], b, time.time() - 60)
+        r, rows = self.guest_ids(self.fake_r0vm(ID["release"]))
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual([(x[1], x[2]) for x in rows], [("release", ID["release"])])
+        self.assertNotIn("CONFLICT", r.stderr)
+
     def test_r0vm_column(self):
         b = self.binary("release", b"release binary")
         self.methods("bridge", "0000aaaa", "RELEASE", ID["release"], b, time.time())
@@ -177,6 +192,30 @@ class Compare(Fixture):
         self.assertEqual(r.returncode, 1, r.stdout)
         self.assertIn("MISSING guest_b", r.stdout)
         self.assertNotIn("MISSING extra_c", r.stdout)   # the later tables are other builds
+
+    def test_an_all_zero_row_is_not_built(self):
+        self.tsv([("guest_a", "= id"), ("guest_b", "= id")])
+        tsv = os.path.join(self.d, "out", "ids.tsv")
+        text = open(tsv).read().replace(ID["guest_b"], "0x" + "00" * 32)
+        with open(tsv, "w") as f:
+            f.write(text)
+        r = self.compare()
+        self.assertEqual(r.returncode, 1, r.stdout)
+        self.assertIn("NOT BUILT guest_b", r.stdout)
+        self.assertNotIn("DIFFER guest_b", r.stdout)
+        self.assertIn("MISSING guest_b", r.stdout)   # a first-table guest not built is missing
+        self.assertIn("1 not built (an all-zero id)", r.stdout)
+
+    def test_later_tables_named_when_not_rebuilt(self):
+        self.tsv([("guest_a", "= id"), ("guest_b", "= id")])
+        r = self.compare()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertRegex(r.stdout, r'NOT BUILT extra_c +not in .*"A second build, not built by `build`"')
+        self.tsv([("guest_a", "= id"), ("guest_b", "= id"), ("extra_c", "= id")])
+        r = self.compare()
+        self.assertEqual(r.returncode, 0, r.stdout)
+        self.assertNotIn("NOT BUILT", r.stdout)
+        self.assertIn("3 of 3 guests equal", r.stdout)
 
     def test_no_ids_tsv(self):
         r = self.compare()
