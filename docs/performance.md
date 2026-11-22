@@ -262,7 +262,7 @@ The gates replayed recorded updates 81 to 122 times faster than the lab recorded
 recorded one about every two hours, its session schedule), about 40–60 times the design's hourly cadence, so their traffic is that of a daemon busier than in operation; per-day figures from them would
 overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. **Not measured:** the
 `ferrata-attest` CLI and the `ferrata_attest_module` (a consumer's off-chain side, [`attestation.md`](design/attestation.md)
-§8); the §8 `monitor` is not built.
+§8); the §8 `monitor` is not built; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, [EVIDENCE](EVIDENCE.md) row 104), is not measured: the binary is.
 
 ### P.7 State growth
 
@@ -509,7 +509,7 @@ Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVaul
 candidate checked and finalised, ten idle minutes). **Gaps:** the importer's LEZ-side work (the relayer's root imports,
 a prototype, EVIDENCE row 106) was not measured as a daemon (the relayer ran with `importRoots: false`); one import
 transaction is P.2's. `ferrata_attestor` (rule (B): an attestor beside every sequencer) was not measured. `monitor`'s
-LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured.
+LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured. `monitor` and the relayer as Logos modules under `logosctl daemon` (`ferrata_monitor_module`, `ferrata_relayer_module`) are not measured: the binaries are.
 
 ### P.7 State growth at 1M and 10M operations
 

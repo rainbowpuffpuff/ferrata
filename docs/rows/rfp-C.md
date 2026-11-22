@@ -111,7 +111,7 @@ send-to-final time); with the run's outages median 19.6, p90 86.7 | the live run
 | CPU, RAM, time of every off-chain component the design requires | the updater daemon on a running LEZ v0.4.0-rc1 sequencer, gates G2–G5 (`lez/results/perf-gate-sequencer.md`): **0.043–0.092 of one core** per daemon, peak RSS **57.3–57.8 MiB**; G2's honest daemons 650 and 666 beacon requests, 10.3 and 10.4 MB; sequencer RPC 0.57–2.07 MB up and 7.4–19.6 MB down per daemon (more for the daemons that did the work); updates replayed 81 to 122 times faster than the lab recorded them (about 40–60 times the design's hourly cadence), so no per-day figure is given; the proven path's prover: 1,673.6 s on 16 CPUs, 9.21 GiB per update (P.2); the lab's zone (`lez/lab/README.md`) |
 
 **What is short:** the `ferrata-attest` CLI and the `ferrata_attest_module` (the consumer's off-chain side,
-`docs/design/attestation.md` §8) are not measured; the §8 `monitor` is not built. The three sentences the review found
+`docs/design/attestation.md` §8) are not measured; the §8 `monitor` is not built; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, EVIDENCE row 104), is not measured: the binary is. The three sentences the review found
 unsupported ("hardly depend on the work", "the cost is its poll", "a slower poll divides it") are deleted.
 
 Commands: on the build box, after `bash bench/perf/gate-build.sh BUNDLE`: `GATE_ENTRIES=30 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=1 bash bench/perf/gate-sequencer.sh g2`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=8 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g3`, `GATE_ENTRIES=24 GATE_STEP=60 GATE_WINDOW=1 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g4`, `GATE_ENTRIES=20 GATE_STEP=90 GATE_WINDOW=30 GATE_POLL=4 GATE_ADVERSARY=0 bash bench/perf/gate-sequencer.sh g5` (each run's `machine.txt`); then `python3 -I bench/perf/gate_report.py bench/perf/results/gate-g2 bench/perf/results/gate-g3 bench/perf/results/gate-g4 bench/perf/results/gate-g5`. Records `bench/perf/results/gate-g*/`
@@ -281,7 +281,7 @@ up / 254 KB down; the relayer 0.87 CPU-seconds, peak 20.3 MiB, 408 KB / 976 KB; 
 imports need (RFP-021 P.6); the provers (existing). **Short:** the importer's LEZ-side work (the relayer's root
 imports, a prototype) was not measured as a daemon (the relayer ran with `importRoots: false`); `ferrata_attestor`
 (rule (B): an attestor beside every sequencer) was not measured; `monitor`'s LEZ view came from a file
-(`--node file:`), so its traffic to a LEZ node is not measured. `bench/perf/results/daemons-anvil/anvil.log` prints
+(`--node file:`), so its traffic to a LEZ node is not measured; `monitor` and the relayer as Logos modules under `logosctl daemon` (`ferrata_monitor_module`, `ferrata_relayer_module`) are not measured: the binaries are. `bench/perf/results/daemons-anvil/anvil.log` prints
 anvil's built-in test mnemonic and keys (public, the same in every anvil).
 
 Proposed EVIDENCE row: | new | RFP-022 P.6: the Ethereum-side daemons' CPU, memory and bandwidth | `monitor` 0.53
