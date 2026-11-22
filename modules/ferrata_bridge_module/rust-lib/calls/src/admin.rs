@@ -573,4 +573,43 @@ mod tests {
         assert_eq!(out["accounts"][0]["kind"], "pda");
         assert_eq!(out["accounts"][0]["account"], json!(hex(bw::config_actor(program, &[0x33; 32]).account_id.value())));
     }
+
+    /// A watcher's Pause (with its record) and the freeze authority's Sunset (no token, no record: it ends the
+    /// configuration for good) are built at the role's own actor too.
+    #[test]
+    fn pause_and_sunset_are_rooted_at_the_roles_own_actor() {
+        let program = AccountId::new([0x22; 32]);
+        let base = json!({
+            "program": format!("0x{}", "22".repeat(32)), "config_id": format!("0x{}", "33".repeat(32)),
+            "signer": format!("0x{}", "44".repeat(32)),
+            "attestation": format!("0x{}", "55".repeat(32)), "instance_id": format!("0x{}", "66".repeat(32)),
+        });
+        let mut pause = base.clone();
+        pause["action"] = json!("lez_pause");
+        pause["params"] = json!({ "token": format!("0x{}", "00".repeat(20)), "mints": true, "burns": true, "record": { "record_slot": 11 } });
+        let out = admin_of(&pause).unwrap();
+        assert_eq!(out["role"], "watcher");
+        let acc = out["accounts"].as_array().unwrap();
+        assert_eq!(acc.len(), 4, "own actor, config(cid), token(cid, ETH), the record");
+        assert_eq!((acc[0]["kind"].as_str(), acc[0]["account"].as_str()), (Some("signer"), Some(format!("0x{}", "44".repeat(32)).as_str())));
+        assert_eq!(acc[1]["account"], json!(hex(bw::config_actor(program, &[0x33; 32]).account_id.value())));
+        assert_eq!(acc[2]["account"], json!(hex(bw::token_actor(program, &[0x33; 32], &[0u8; 20]).account_id.value())));
+        assert_eq!(acc[3]["account"], json!(hex(ferrata_lez_wire::header_actor(AccountId::new([0x55; 32]), &[0x66; 32], 11).account_id.value())));
+        let m: BridgeMessage = borsh::from_slice(&unhex(out["message"].as_str().unwrap()).unwrap()).unwrap();
+        assert!(matches!(m, BridgeMessage::Pause { token: Some(_), mints: true, burns: true, record: TimeRecord { record_slot: 11, .. }, .. }));
+        let mut sunset = base.clone();
+        sunset["action"] = json!("lez_sunset");
+        sunset["params"] = json!({});
+        let out = admin_of(&sunset).unwrap();
+        assert_eq!(out["role"], "freeze_authority");
+        let acc = out["accounts"].as_array().unwrap();
+        assert_eq!(acc.len(), 2, "own actor and config(cid): no token, no record");
+        assert_eq!(acc[0]["kind"], "signer");
+        assert_eq!(acc[1]["account"], json!(hex(bw::config_actor(program, &[0x33; 32]).account_id.value())));
+        let m: BridgeMessage = borsh::from_slice(&unhex(out["message"].as_str().unwrap()).unwrap()).unwrap();
+        assert_eq!(m, BridgeMessage::Sunset { config_id: [0x33; 32] });
+        let mut unsigned = sunset.clone();
+        unsigned["signer"] = Value::Null;
+        assert!(admin_of(&unsigned).unwrap_err().starts_with("signer:"), "never built without the role's account");
+    }
 }
