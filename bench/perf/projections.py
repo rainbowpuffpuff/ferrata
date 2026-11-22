@@ -64,6 +64,14 @@ def main():
     ]
     for name, n, basis in rows:
         print(f"| {name} | {n:,.0f} | {mb(n * per_rec)} | {mb(5 * n * per_rec)} | {basis} |")
+    # Jobs that never finish: abandoned jobs come on top of the completed ones, at most one per extra racing operator
+    # per update (each operator opens at most one job per update).
+    job_b = num(re.search(r"^\| job\(id, job_id\)[^|]*\| \d+ \| \d+ \| (\d+) \|", state, re.M).group(1))
+    design = rows[1][1]
+    print(f"\nA job that never finishes leaves its account ({job_b:,.0f} B; clean-up is not built). With k operators racing "
+          f"at the design's cadence, at most one abandoned job per extra operator per update ({design:,.0f} a year): "
+          f"(k − 1) × {mb(design * job_b)} a year and (k − 1) × {mb(5 * design * job_b)} in five years; none with one "
+          f"operator.")
 
     # Bridge program.
     nul = re.search(r"^\| ([\d,]+) \| ([\d,]+) \| ([\d.]+) \| ([\d,]+) \| ([\d.]+) \|", state.split("nullifier copies")[1], re.M)

@@ -281,10 +281,11 @@ bench/perf/state.sh`), whose borsh serialization is what a LEZ node stores (its 
 | every finalized epoch, as the live Sepolia daemon ran | 82,181 | 37.23 MB | 186.14 MB |
 
 **Jobs that never finish** leave their `job` account (1,110 B each; clean-up is not built): the lab, one operator,
-left 0 of 248 jobs; the gates, two or three daemons racing on updates replayed about 100 times faster than mainnet, left
-8, 19 and 3 (G3, G4, G5; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)). Bound at the design's
-cadence (about 9,087 jobs a year): at most 9,087 × 1,110 B = 10.1 MB a year if every job were abandoned (*derived*),
-none with one operator. The reference consumer's per-claim accounts are the consumer's state, not the module's
+left 0 of 248 jobs; the gates, two daemons racing on updates replayed 81 to 122 times faster than the lab recorded
+them, left 8, 19 and 3 beside 16, 23 and 8 completed (G3, G4, G5; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)).
+Abandoned jobs come on top of the completed ones: with k operators racing at the design's cadence (9,087 updates a
+year), at most (k − 1) × 10.09 MB a year and (k − 1) × 50.43 MB in five years (one abandoned job per extra operator
+per update; *derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); none with one operator. The reference consumer's per-claim accounts are the consumer's state, not the module's
 (`lez/guests/consumer`).
 
 LEZ v0.4 charges storage gas on a transaction's bytes, not on the state it leaves, so the growth costs nothing in fees:

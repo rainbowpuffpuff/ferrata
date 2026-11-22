@@ -17,6 +17,8 @@ A record is **453 B** in the serialized state (its 32-byte key and its `Account`
 | the design's: one an hour while roots are imported, plus each period's | 9,087 | 4.12 MB | 20.58 MB | 8,766 hourly updates and 321 period updates a year |
 | every finalized epoch (6.4 min), as the live Sepolia daemon ran | 82,181 | 37.23 MB | 186.14 MB | an update per epoch |
 
+A job that never finishes leaves its account (1,110 B; clean-up is not built). With k operators racing at the design's cadence, at most one abandoned job per extra operator per update (9,087 a year): (k − 1) × 10.09 MB a year and (k − 1) × 50.43 MB in five years; none with one operator.
+
 ## RFP-022 P.7: bridge state at 1M and 10M operations
 
 Measured per record: a nullifier 165 B, a burn record 273 B (LEZ's serialized state, key included); Ethereum: a release creates 1 vault slot (25 for 25), a new depositor's first deposit 1 (28 for 25 new depositors: one each and 3 as the deposit tree's frontier took new levels; the frontier is 32 slots at most, ever), a repeat deposit none (1 for 25: a frontier level).
