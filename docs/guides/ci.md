@@ -36,10 +36,11 @@ no proof is made, and dev mode is refused.
 Added on 22 November 2026 (branch `rfp-ci-coverage`): before, the LEZ suites, the watchers' rehearsal and the
 privacy suite ran on the build box only, and RFP-022 R.11's check (`scripts/ci/check-row-tests.py --require-ci`)
 counted their rows as box-only. Measured on the build box with 4 threads (`taskset -c 0-3`, the hosted runner's
-vCPUs), cold, by the jobs' own commands: `lez-harness` built in 622 s and ran the harness's tests in 1,620 s and the
-updater's in 1,025 s (target directory 3.6 GB; the tests added since and the privacy suite add a few minutes);
-`monitor` 69 s for its tests and 131 s for the rehearsal. The hosted runner is slower than the box's cores: expect
-a first `lez-harness` run of one to two hours, inside its 240-minute limit. Its target directory is not cached
+vCPUs), by the jobs' own commands: `lez-harness` built cold in 622 s (target directory 3.6 GB), and its script at
+the branch's tip ran the harness's tests in 2,074 s, the updater's in 1,136 s and the privacy suite with its gate
+in 106 s (3,362 s after a warm build; every test binary passed, the gate 33 of 33); `monitor` 69 s for its tests
+and 131 s for the rehearsal. The hosted runner is slower than the box's cores: an estimate for a first
+`lez-harness` run is 1.5 to 2.5 hours, inside its 240-minute limit. Its target directory is not cached
 (the round trip's caches already use most of GitHub's 10 GB); the toolchains, the upstream sources and the
 vault's libraries share the round trip's cache entries.
 
