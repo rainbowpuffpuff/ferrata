@@ -1,0 +1,2 @@
+Daemon started (pid 40125)
+Logs: <out>/session/logs/daemon.log

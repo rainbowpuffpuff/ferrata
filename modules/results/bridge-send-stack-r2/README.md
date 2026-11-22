@@ -1,5 +1,10 @@
 # ferrata_bridge_module through Logos Core's send stack, after the review's fixes (21 Nov 2026)
 
+**Superseded (22 Nov 2026) by `../bridge-send-stack-r3/`.** The second review reran this script three times at
+`4b087335`: 49 of 49 twice, and once 43 of 49: one approval was lost in the upstream approver (prompted, then gone from
+`evm_signer_cli`'s queue while `tx_sender_module` still awaited it; the module withdrew it after 600 s), so "49/49 three
+times" is not a stable result. r3 records five runs in a row and the script's recovery of a dropped request.
+
 Supersedes `../bridge-send-stack-2026-11-21/` (its 37/37 did not reproduce: an approved `setTokenCap` reverted for want
 of gas and the module reported reverts as done). Code: branch `rfp-logos-core-eth` at `787b5448`..`3ace689f` (H1 send
 path, M1, registry), module `.lgx` sha256 `6b638097…` (`logos-core/lgx-sha256.txt`; the seven send-stack `.lgx` are

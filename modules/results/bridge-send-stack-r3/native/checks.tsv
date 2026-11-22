@@ -1,0 +1,27 @@
+PASS	status: admin	0x70997970c51812dc3a010c7d01b50e0d17dc79c8	0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	status: freeze authority	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc
+PASS	status: ETH denominations	100000000000000000,1000000000000000000,10000000000000000000	100000000000000000,1000000000000000000,10000000000000000000
+PASS	status: ETH relay fee 0	100000000000000	100000000000000
+PASS	status: test token not registered	false	false
+PASS	status: reads through http	http	http
+PASS	register_token: built and checked from the admin	built 0x70997970c51812dc3a010c7d01b50e0d17dc79c8	built 0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	register_token: the vault holds it	true	true
+PASS	register_token: denominations read back	1000000,10000000	1000000,10000000
+PASS	register_token: deposit cap read back	1000000000000	1000000000000
+PASS	register_token again: the vault's error named	TokenAlreadyRegistered	TokenAlreadyRegistered
+PASS	set_token_cap from the user: refused before sending	yes	yes
+PASS	set_token_cap: cast reads the new capacity	2000000000000	2000000000000
+PASS	freeze: built and checked from the freeze authority	built	built
+PASS	freeze: the module reads the vault's until	1797898797	1797898797
+PASS	freeze: it froze (until later than the latest block's time)	yes	yes
+PASS	unfreeze: lifted	0	0
+PASS	price: denomination + fees	100000000000000000	100000000000000000
+PASS	deposit list: two deposits, checked against depositRoot	2	2
+PASS	deposit list: the root is the vault's	0xa48bad4f524386540d8dee6b88ac54dff96de4e529fe057113394a49d85cfc8d	0xa48bad4f524386540d8dee6b88ac54dff96de4e529fe057113394a49d85cfc8d
+PASS	deposit list: leaf 0 is the user's ETH	0 0x90f79bf6eb2c4f870365e785982e1f101e93b906 100000000000000000 0xc1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1	0 0x90f79bf6eb2c4f870365e785982e1f101e93b906 100000000000000000 0xc1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1
+PASS	deposit list: leaf 1 the test token's	1 0x59f2f1fcfe2474fd5f0b9ba1e73ca90b143eb8d0 1000000 0xc2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2	1 0x59f2f1fcfe2474fd5f0b9ba1e73ca90b143eb8d0 1000000 0xc2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2
+PASS	deposit count of the user	2	2
+PASS	read roots: answered (nothing yet)	0	0
+PASS	read released: answered (nothing yet)	0	0
+PASS	read refunded: answered (nothing yet)	0	0
+PASS	LEZ SetCap built (variant 18) at the admin's own actor (the signer), then config(cid)	built 0x12 signer 0x4444444444444444444444444444444444444444444444444444444444444444 public	built 0x12 signer 0x4444444444444444444444444444444444444444444444444444444444444444 public

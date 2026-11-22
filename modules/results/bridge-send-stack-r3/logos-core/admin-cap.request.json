@@ -1,0 +1,1 @@
+{"action":"set_token_cap","vault":"0x712516e61c8b383df4a63cfe83d7701bce54b03e","eth":{"via":"eth_rpc_module","chain_id":11155111},"params":{"token":"0x59f2f1fcfe2474fd5f0b9ba1e73ca90b143eb8d0","direction":"deposit","capacity":"2000000000000","refill_per_second":"5000"},"send":{"via":"tx_sender_module","from":"0x70997970c51812dc3a010c7d01b50e0d17dc79c8","chain_id":11155111}}
