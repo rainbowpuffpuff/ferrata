@@ -19,7 +19,7 @@
 #                            (c) start the updater daemon (lez/updater, the public job path) following Sepolia,
 #                            detached, with its own key; (d) one attestation of the live Sepolia vault 0x04eE…e44c's
 #                            slots 0 and 1 under the instance's newest record; (e) with FERRATA_DAY1_BRIDGE=1, the
-#                            bridge program (image 0xac1fb59b…, B1) and the owner-side Sepolia step for its vault, prepared
+#                            bridge program (image 0x847a4336…, B1 since ADR 0032) and the owner-side Sepolia step for its vault, prepared
 #                            (not sent). Every transaction is signed once and kept beside the keys
 #                            (KEYS/tx/<stage>/NN.tx); after a restart the same bytes are sent again, never a new
 #                            transaction that could apply beside them. The deployments are guarded by the chain too
@@ -54,8 +54,8 @@ VAULT="0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c"      # FerrataVault v5 on Sep
 VAULT_SLOTS="0,1"                                       # depositRoot, nextLeafIndex
 PROGRAM_SHA256="ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9"   # docs/image-ids.md
 PROGRAM_IMAGE="816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df"
-BRIDGE_SHA256="5f47b065eefe2cdd0a27fa4a2b8ad42583a0fe867904368f9aa30851722d7fd8"   # since B1: docs/image-ids.md ferrata_bridge_b1
-BRIDGE_IMAGE="ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e"
+BRIDGE_SHA256="537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036"   # docs/image-ids.md ferrata_bridge_b1 (since ADR 0032, 22 Nov 2026)
+BRIDGE_IMAGE="847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515"
 FETCH_PY="$REPO/lez-v03/scripts/fetch.py"               # public beacon and execution APIs, generic User-Agent
 TOOL_DIR="${FERRATA_DAY1_BIN:-$BESIDE/tmp/testnet04/bin}"
 PROGRAMS="${FERRATA_DAY1_PROGRAMS:-$BESIDE/tmp/testnet04/final}"

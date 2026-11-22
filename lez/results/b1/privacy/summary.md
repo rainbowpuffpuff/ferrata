@@ -1,6 +1,6 @@
 # Privacy suite: generated results
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0x55e4cb9e5ed2c7318534af1352804a605651cf23f8723ff25abe03e338666292`; 20 users per direction; proofs: **dev** (LEZ's privacy-preserving circuit `8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257`). Written by `scripts/privacy/adversary.py`.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; vault `0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0` on chain 1; configuration `0xc1120119d1de64d0f47ec468471657ad1fbc454ac7f1d9b24fb19b63b7f49f9b`; 20 users per direction; proofs: **dev** (LEZ's privacy-preserving circuit `8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257`). Written by `scripts/privacy/adversary.py`.
 
 ## The differential gate
 
@@ -10,7 +10,7 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | deposit (B: public destinations) | 100-100 | yes |
 | claim, private (default) | 8,937-8,937 | yes |
 | claim, naive nullifier N = fid | 8,937-8,937 | yes |
-| claim, plaintext | 2,053-2,053 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (00070000002acd86ae369f2c94ec3a9806a7d8469e358fee5f10a517a8 / 00070000001a85b914b8314d79068e12073cf5637cd2178a7627e03810) |
+| claim, plaintext | 2,053-2,053 | NO: lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 5 of 1837/1837 after the cut (000700000039015e41407ca96e2441eb35f8b801223bcbf25fb39d7230 / 00070000001033fd3104506274fc30fac4e7631f764636a5cf32ff5255) |
 | burn, private holding | 7,857-7,857 | yes |
 | release, NOut of the release statement | 324-324 | yes |
 | release, naive NOut = burnId | 324-324 | yes |
@@ -27,7 +27,7 @@ Chance is 1/20 = 5.0%. Success = mean over the right-hand records of 1/|best can
 | outbound, private (default) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
 | outbound, naive NOut = burnId | 100.0% | 20 of 20 | 1: 20 | 5.0% | 100.0% | 5.0% |
 | round trip: deposit to release (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
-| on LEZ: claim to burn (informational) | 5.0% | 0 of 20 | 20: 20 | 5.0% | 5.0% | 5.0% |
+| on LEZ: claim to burn (informational) | 4.5% | 0 of 20 | 1: 2, 20: 18 | 4.5% | 4.5% | 5.0% |
 
 ## Recovery from the seed alone (after 10 claims and 10 releases)
 
@@ -47,7 +47,7 @@ Private actions proven against the newest commitment-set root: 80 of 80.
 - LEZ burns: only the first differs: yes
 - Ethereum releases: only the first differs, by 25,000 (the relayer's account created): yes
 - LEZ, claim, private (default): gas_exec 552979, 557356; cycles 143215, 147592; gas_stor 224063; fee_base 6216336, 6251352
-- LEZ, burn, private holding: gas_exec 516059; cycles 106295; gas_stor 224063; fee_base 5920976
+- LEZ, burn, private holding: gas_exec 511731; cycles 101967; gas_stor 224063; fee_base 5886352
 - LEZ, claim, plaintext: gas_exec 261772, 266149; cycles 261772, 266149; gas_stor 2053; fee_base 2110600, 2145616
 
 ## Proofs
@@ -56,8 +56,8 @@ What the collectors recorded about each proof (not public: proving time, the che
 
 | step | receipt kind | proof bytes | transaction bytes | seal words | proving time, s (min / median / max; sum) | journal = the message's frame | claim = ok(circuit, journal) | seal outputs = claim digest |
 |---|---|---|---|---|---|---|---|---|
-| claim, private (default) | fake | 4,525 | 8,937 | - | 1.1 / 1.1 / 1.2; 22 | 20 of 20 | 20 of 20 | - |
-| burn, private holding | fake | 3,985 | 7,857 | - | 0.7 / 0.7 / 0.7; 14 | 20 of 20 | 20 of 20 | - |
+| claim, private (default) | fake | 4,525 | 8,937 | - | 0.8 / 0.9 / 0.9; 17 | 20 of 20 | 20 of 20 | - |
+| burn, private holding | fake | 3,985 | 7,857 | - | 0.5 / 0.5 / 0.5; 11 | 20 of 20 | 20 of 20 | - |
 | release, NOut of the release statement | - | - | - | - | - | - | - | - |
 | release, naive NOut = burnId | - | - | - | - | - | - | - | - |
 
@@ -80,6 +80,6 @@ The three check columns are computed by this script from the public bytes alone 
 | release, naive NOut = burnId | `calldata.seal.length` | 32 | 1 of 20 | constant |
 | release, naive NOut = burnId | `calldata.seal.offset` | 32 | 1 of 20 | constant |
 | release, naive NOut = burnId | `calldata.seal[0]` | 32 | 1 of 20 | constant |
-| release, naive NOut = burnId | `receipt.calldataGas` | 32 | 3 of 20 | a function of public data |
+| release, naive NOut = burnId | `receipt.calldataGas` | 32 | 2 of 20 | a function of public data |
 
 

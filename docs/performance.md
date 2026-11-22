@@ -350,8 +350,8 @@ the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node w
 ### P.1 Claim and mint in one LEZ public transaction
 
 **Met.** In-process harness, the bridge program the live runs deployed (image `ccde6171…`, the same built at any path
-from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `ac1fb59b…`, its records in
-`lez/results/b1/`, execution gas within −5,272 and +4,718 of these), synthetic vault storage (tables
+from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `847a4336…` (ADR 0032; B1's first build `ac1fb59b…` was within −5,272 and +4,718),
+its records in `lez/results/b1/`, execution gas within −9,799 and +4,718 of these, the burns now hashing no note), synthetic vault storage (tables
 `lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |

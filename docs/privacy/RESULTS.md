@@ -71,6 +71,14 @@ found, recovery is complete and these tables are reproduced. Every verdict is th
 now splits the witness set (signatures, proof length and kind, the receipt's claim) and names the calldata's gas,
 and a claim's execution gas steps by 4,377 per position (4,335 at `ccde6171…`, 4,720 before).
 
+**Regenerated again on 22 November 2026 (ADR 0032).** The bridge program was rebuilt so that a burn's tag is used once
+(`burn(cid, r)`; image `847a4336…7515`), which moves the configuration id (it commits to the image id) and with it every
+value derived from it, and `fields.md` names the burn record account a PDA of the note's tag `r` (a PDA of `H(note)`
+before). `generated/` (and `lez/results/b1/privacy/`) is that run (the Modal build box, dev mode); the gate's 29
+substantive checks passed on it unchanged (the adversary at chance on both legs, 0 hidden values found, recovery 10 of 10
+each way) before the tables were committed. The private burn's execution gas is 511,731 (516,059 before; 101,967
+cycles), the note no longer hashed.
+
 ## Results in brief
 
 | check | default private path | linkable variants |

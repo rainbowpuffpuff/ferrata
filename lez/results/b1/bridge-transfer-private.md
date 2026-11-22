@@ -1,6 +1,6 @@
 # A private holder's Transfer (`harness/tests/bridge_roles.rs`, dev mode)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`. The holder of the private claim of A's leaf 5 (1 ETH) moves 0.1 ETH to a public holder's `holder(account)`; settled through LEZ's private settlement (dev-mode receipt): 7696 transaction bytes, execution gas 463793, storage gas 224063.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`. The holder of the private claim of A's leaf 5 (1 ETH) moves 0.1 ETH to a public holder's `holder(account)`; settled through LEZ's private settlement (dev-mode receipt): 7696 transaction bytes, execution gas 463793, storage gas 224063.
 
 ## The private transition
 
@@ -12,7 +12,7 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 
 | to | from | message |
 |---|---|---:|
-| 7a4de108c30c0540f693a18a6dc2fcfb587f7319fe561e66d624dc37ff9c72d8 | alias cd0ea9aa | 101 bytes |
+| 79a80cf5b6b3a8f43c11807d19edd9f1b788f28d65fff580302ff926e5d631e4 | alias cd0ea9aa | 101 bytes |
 | 7224eab6e02f8b37d841b163beb8b01470a42e73875ecccfcd72182be1b13b5c | alias cd0ea9aa | 17 bytes |
 
 The private account's id does not occur in the transaction's bytes; its remaining 0.9 ETH is found only in its new commitment.

@@ -1,6 +1,6 @@
 # Registry, fees, caps, freezes and Sunset (`harness/tests/bridge_controls.rs`)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
@@ -50,11 +50,11 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | 44 | Claim B's 1,000 T2 (1 ETH of value units) under the same global cap | bridge Claim 107,796 → bridge Issue 46,853 → bridge Admit 35,961 → bridge Spend 25,003 → bridge Mint 18,800 | 234,413 | 5% | 2,053 | 1,891,728 | applied |
 | 45 | SetCap (admin): global mints of B back to 200 ETH | bridge SetCap 13,540 → bridge SetCap 33,208 | 46,748 | 1% | 705 | 379,624 | applied |
 | 46 | SetCap (admin): ETH (A) burns 1 ETH, 0.01 ETH/s | bridge SetCap 16,353 → bridge SetCap 32,954 → bridge SetCap 42,963 | 92,270 | 2% | 789 | 744,472 | applied |
-| 47 | Burn 1 ETH (A) | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,417 → bridge Admit 35,962 → bridge Burn 21,662 | 165,327 | 3% | 839 | 1,329,328 | applied |
-| 48 | Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 33,322 | 88,608 | 2% | 839 | 715,576 | refused: exit 255 (CAPPED) |
-| 49 | Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 33,322 | 88,608 | 2% | 839 | 715,576 | refused: exit 255 (CAPPED) |
+| 47 | Burn 1 ETH (A) | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,253 → bridge Admit 35,962 → bridge Burn 19,498 | 156,676 | 3% | 839 | 1,260,120 | applied |
+| 48 | Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 31,161 | 82,124 | 2% | 839 | 663,704 | refused: exit 255 (CAPPED) |
+| 49 | Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 31,161 | 82,124 | 2% | 839 | 663,704 | refused: exit 255 (CAPPED) |
 | 50 | Tick ETH (A): the record 100 s later | bridge Tick 42,487 → Read 12,268 → bridge (reply) 40,964 | 95,719 | 2% | 525 | 769,952 | applied |
-| 51 | Burn 1 ETH (A) after the Tick | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,833 → bridge Admit 35,963 → bridge Burn 21,662 | 165,744 | 3% | 839 | 1,332,664 | applied |
+| 51 | Burn 1 ETH (A) after the Tick | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,669 → bridge Admit 35,963 → bridge Burn 19,498 | 157,093 | 3% | 839 | 1,263,456 | applied |
 | 52 | Tick ETH (A): a record 100 s later again | bridge Tick 42,487 → Read 12,268 → bridge (reply) 40,964 | 95,719 | 2% | 525 | 769,952 | applied |
 | 53 | SetCap (admin): ETH (A) burns back to 100 ETH (refilled to 1 ETH first) | bridge SetCap 16,353 → bridge SetCap 32,954 → bridge SetCap 42,990 | 92,297 | 2% | 789 | 744,688 | applied |
 | 54 | Freeze (freeze authority): ETH (B) mints for one hour | bridge Freeze 16,258 → bridge Freeze 32,858 → bridge Freeze 42,226 → Read 12,268 → bridge (reply) 36,773 | 140,383 | 3% | 839 | 1,129,776 | applied |
@@ -66,13 +66,13 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | 60 | Freeze (freeze authority): all mints of B for 30 days | bridge Freeze 13,320 → bridge Freeze 37,143 → Read 12,268 → bridge (reply) 34,413 | 97,144 | 2% | 755 | 783,192 | applied |
 | 61 | Claim B's 1 ETH under the global mint freeze | bridge Claim 107,796 → bridge Issue 49,060 → bridge Admit 28,708 | 185,564 | 4% | 2,053 | 1,500,936 | refused: exit 242 (FROZEN) |
 | 62 | Freeze (freeze authority): ETH (A) burns for one hour | bridge Freeze 16,258 → bridge Freeze 32,858 → bridge Freeze 45,961 → Read 12,268 → bridge (reply) 40,930 | 148,275 | 3% | 839 | 1,192,912 | applied |
-| 63 | Burn 1 ETH (A) while its burns are frozen | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 33,293 | 88,579 | 2% | 839 | 715,344 | refused: exit 242 (FROZEN) |
+| 63 | Burn 1 ETH (A) while its burns are frozen | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 31,132 | 82,095 | 2% | 839 | 663,472 | refused: exit 242 (FROZEN) |
 | 64 | Freeze (freeze authority): unfreeze ETH (A) burns | bridge Freeze 16,258 → bridge Freeze 32,858 → bridge Freeze 45,961 → Read 12,268 → bridge (reply) 40,917 | 148,262 | 3% | 839 | 1,192,808 | applied |
 | 65 | Freeze (freeze authority): all burns of A for one hour | bridge Freeze 13,320 → bridge Freeze 37,143 → Read 12,268 → bridge (reply) 34,413 | 97,144 | 2% | 755 | 783,192 | applied |
-| 66 | Burn 1 ETH (A) under the global burn freeze | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,417 → bridge Admit 28,710 | 136,413 | 3% | 839 | 1,098,016 | refused: exit 242 (FROZEN) |
-| 67 | Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,417 → bridge Admit 28,710 | 136,413 | 3% | 839 | 1,098,016 | refused: exit 242 (FROZEN) |
+| 66 | Burn 1 ETH (A) under the global burn freeze | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,253 → bridge Admit 28,710 | 129,926 | 3% | 839 | 1,046,120 | refused: exit 242 (FROZEN) |
+| 67 | Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,253 → bridge Admit 28,710 | 129,926 | 3% | 839 | 1,046,120 | refused: exit 242 (FROZEN) |
 | 68 | Tick A: the record an hour later | bridge Tick 34,956 → Read 12,268 → bridge (reply) 34,214 | 81,438 | 2% | 505 | 655,544 | applied |
-| 69 | Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,417 → bridge Admit 36,257 → bridge Burn 21,662 | 165,622 | 3% | 839 | 1,331,688 | applied |
+| 69 | Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,253 → bridge Admit 36,257 → bridge Burn 19,498 | 156,971 | 3% | 839 | 1,262,480 | applied |
 | 70 | Sunset B by a signer with no role | bridge Sunset 12,677 → bridge Sunset 25,058 | 37,735 | 1% | 671 | 307,248 | refused: exit 253 (NOT_AUTHORIZED) |
 | 71 | Sunset B by the admin | bridge Sunset 12,677 → bridge Sunset 25,279 | 37,956 | 1% | 671 | 309,016 | refused: exit 253 (NOT_AUTHORIZED) |
 | 72 | Sunset sent to config(B) itself | bridge Sunset 23,045 | 23,045 | 0% | 431 | 187,808 | refused: exit 253 (NOT_AUTHORIZED) |
@@ -81,7 +81,7 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | 75 | ImportRoot B after Sunset | bridge ImportRoot 28,566 | 28,566 | 1% | 1,918 | 243,872 | refused: exit 242 (FROZEN) |
 | 76 | Tick B: the record 30 days later | bridge Tick 34,956 → Read 12,268 → bridge (reply) 34,215 | 81,439 | 2% | 505 | 655,552 | applied |
 | 77 | Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue | bridge Claim 107,796 → bridge Issue 49,060 → bridge Admit 36,256 → bridge Spend 31,769 → bridge Mint 23,698 → bridge Mint 18,800 | 267,379 | 5% | 2,053 | 2,155,456 | applied |
-| 78 | Burn 1 ETH (B) after Sunset: burns continue | bridge Burn 24,855 → bridge Burn 31,753 → bridge Burn 49,085 → bridge Admit 35,962 → bridge Burn 21,662 | 163,317 | 3% | 839 | 1,313,248 | applied |
+| 78 | Burn 1 ETH (B) after Sunset: burns continue | bridge Burn 22,693 → bridge Burn 29,599 → bridge Burn 46,921 → bridge Admit 35,962 → bridge Burn 19,498 | 154,673 | 3% | 839 | 1,244,096 | applied |
 
 ## Handler executions
 
@@ -222,25 +222,25 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | SetCap (admin): ETH (A) burns 1 ETH, 0.01 ETH/s | bridge SetCap | 16,353 | 1 | 161 | 87 | 0 | 341 | – | 0 |
 | SetCap (admin): ETH (A) burns 1 ETH, 0.01 ETH/s | bridge SetCap | 32,954 | 1 | 805 | 87 | 580 | 985 | – | 0 |
 | SetCap (admin): ETH (A) burns 1 ETH, 0.01 ETH/s | bridge SetCap | 42,963 | 1 | 1,265 | 87 | 1,040 | 2,330 | 1,040 | 0 |
-| Burn 1 ETH (A) | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) | bridge Burn | 52,417 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn 1 ETH (A) | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) | bridge Burn | 50,253 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn 1 ETH (A) | bridge Admit | 35,962 | 1 | 788 | 70 | 580 | 1,393 | 580 | 0 |
-| Burn 1 ETH (A) | bridge Burn | 21,662 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
-| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 33,322 | 1 | 1,363 | 185 | 1,040 | 0 | – | 255 |
-| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 33,322 | 1 | 1,363 | 185 | 1,040 | 0 | – | 255 |
+| Burn 1 ETH (A) | bridge Burn | 19,498 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) again: the burn bucket is empty | bridge Burn | 31,161 | 1 | 1,363 | 185 | 1,040 | 0 | – | 255 |
+| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) once a record 100 s later exists, no Tick: the token's clock has not read it | bridge Burn | 31,161 | 1 | 1,363 | 185 | 1,040 | 0 | – | 255 |
 | Tick ETH (A): the record 100 s later | bridge Tick | 42,487 | 1 | 1,177 | 63 | 1,040 | 2,325 | 1,050 | 0 |
 | Tick ETH (A): the record 100 s later | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
 | Tick ETH (A): the record 100 s later | bridge (reply) | 40,964 | 1 | 1,557 | 369 | 1,050 | 2,630 | 1,040 | 0 |
-| Burn 1 ETH (A) after the Tick | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) after the Tick | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) after the Tick | bridge Burn | 52,833 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn 1 ETH (A) after the Tick | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) after the Tick | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) after the Tick | bridge Burn | 50,669 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn 1 ETH (A) after the Tick | bridge Admit | 35,963 | 1 | 788 | 70 | 580 | 1,393 | 580 | 0 |
-| Burn 1 ETH (A) after the Tick | bridge Burn | 21,662 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn 1 ETH (A) after the Tick | bridge Burn | 19,498 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
 | Tick ETH (A): a record 100 s later again | bridge Tick | 42,487 | 1 | 1,177 | 63 | 1,040 | 2,325 | 1,050 | 0 |
 | Tick ETH (A): a record 100 s later again | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
 | Tick ETH (A): a record 100 s later again | bridge (reply) | 40,964 | 1 | 1,557 | 369 | 1,050 | 2,630 | 1,040 | 0 |
@@ -283,9 +283,9 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | Freeze (freeze authority): ETH (A) burns for one hour | bridge Freeze | 45,961 | 1 | 1,251 | 73 | 1,040 | 2,409 | 1,060 | 0 |
 | Freeze (freeze authority): ETH (A) burns for one hour | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
 | Freeze (freeze authority): ETH (A) burns for one hour | bridge (reply) | 40,930 | 1 | 1,567 | 369 | 1,060 | 2,640 | 1,040 | 0 |
-| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 33,293 | 1 | 1,363 | 185 | 1,040 | 0 | – | 242 |
+| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) while its burns are frozen | bridge Burn | 31,132 | 1 | 1,363 | 185 | 1,040 | 0 | – | 242 |
 | Freeze (freeze authority): unfreeze ETH (A) burns | bridge Freeze | 16,258 | 1 | 147 | 73 | 0 | 313 | – | 0 |
 | Freeze (freeze authority): unfreeze ETH (A) burns | bridge Freeze | 32,858 | 1 | 791 | 73 | 580 | 957 | – | 0 |
 | Freeze (freeze authority): unfreeze ETH (A) burns | bridge Freeze | 45,961 | 1 | 1,251 | 73 | 1,040 | 2,409 | 1,060 | 0 |
@@ -295,22 +295,22 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | Freeze (freeze authority): all burns of A for one hour | bridge Freeze | 37,143 | 1 | 771 | 53 | 580 | 1,470 | 601 | 0 |
 | Freeze (freeze authority): all burns of A for one hour | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
 | Freeze (freeze authority): all burns of A for one hour | bridge (reply) | 34,413 | 1 | 1,108 | 369 | 601 | 1,721 | 580 | 0 |
-| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 52,417 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) under the global burn freeze | bridge Burn | 50,253 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn 1 ETH (A) under the global burn freeze | bridge Admit | 28,710 | 1 | 788 | 70 | 580 | 0 | – | 242 |
-| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 52,417 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Burn | 50,253 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn 1 ETH (A) once a record an hour later exists, no Tick: still frozen by the attested clock | bridge Admit | 28,710 | 1 | 788 | 70 | 580 | 0 | – | 242 |
 | Tick A: the record an hour later | bridge Tick | 34,956 | 1 | 697 | 43 | 580 | 1,386 | 591 | 0 |
 | Tick A: the record an hour later | Read | 12,268 | 1 | 504 | 1 | 365 | 966 | – | 0 |
 | Tick A: the record an hour later | bridge (reply) | 34,214 | 1 | 1,098 | 369 | 591 | 1,711 | 580 | 0 |
-| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 52,417 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 50,253 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Admit | 36,257 | 1 | 788 | 70 | 580 | 1,393 | 580 | 0 |
-| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 21,662 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn 1 ETH (A) after the Tick: the freeze has lapsed | bridge Burn | 19,498 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
 | Sunset B by a signer with no role | bridge Sunset | 12,677 | 1 | 107 | 33 | 0 | 233 | – | 0 |
 | Sunset B by a signer with no role | bridge Sunset | 25,058 | 1 | 751 | 33 | 580 | 0 | – | 253 |
 | Sunset B by the admin | bridge Sunset | 12,677 | 1 | 107 | 33 | 0 | 233 | – | 0 |
@@ -330,11 +330,11 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue | bridge Spend | 31,769 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
 | Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue | bridge Mint | 23,698 | 1 | 373 | 161 | 74 | 540 | 142 | 0 |
 | Claim B's 1 ETH after Sunset, the global freeze lapsed: claims continue | bridge Mint | 18,800 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
-| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 31,753 | 1 | 465 | 185 | 142 | 821 | 74 | 0 |
-| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 49,085 | 1 | 1,175 | 185 | 852 | 2,483 | 852 | 0 |
+| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 29,599 | 1 | 465 | 185 | 142 | 821 | 74 | 0 |
+| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 46,921 | 1 | 1,175 | 185 | 852 | 2,483 | 852 | 0 |
 | Burn 1 ETH (B) after Sunset: burns continue | bridge Admit | 35,962 | 1 | 788 | 70 | 580 | 1,393 | 580 | 0 |
-| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 21,662 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn 1 ETH (B) after Sunset: burns continue | bridge Burn | 19,498 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
 
 ## What the checkpoint program collects of the Sunset (`checkpoint-core`'s `parse_block` and `BridgeMessage::decode`)
 

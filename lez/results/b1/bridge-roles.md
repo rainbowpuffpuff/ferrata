@@ -1,6 +1,6 @@
 # Transfers, the handover, the multisig, watchers and the keyless Sunset (`harness/tests/bridge_roles.rs`)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; every transaction settled by LEZ's own functions in a block of its own.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; every transaction settled by LEZ's own functions in a block of its own.
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|

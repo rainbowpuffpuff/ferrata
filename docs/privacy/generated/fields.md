@@ -78,12 +78,12 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | N |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## claim, plaintext
 
@@ -118,19 +118,19 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `commitment_root.before` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | constant | constant | LEZ: the commitment-set root (state the proof read) | - |
 | `state: holder(a public destination) (plaintext universe)` | 0 | one per record (20 distinct) | UNCLASSIFIED | created or changed by this record only | - |
+| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: the account in `derived.nullifier_account`` | 0 | one per record (20 distinct) | nullifier | created or changed by this record only | - |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: holder(the relayer) (its wrapped balance: relay fees)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## burn, private holding
 
 | field | bytes | across records | class | what | §B6 |
 |---|---:|---|---|---|---|
 | `public_context.actors[] (members in every record)` | 64 | constant (3) | constant | the declared public accounts every record shares (root, token, configuration, fee recipient, relayer, fee inbox; per step) | - |
-| `public_context.actors[] (other members)` | 64 | 20 distinct | fresh randomness | = `derived.burn_record_account`: the burn record account, a PDA of H(note) | the burn note |
+| `public_context.actors[] (other members)` | 64 | 20 distinct | fresh randomness | = `derived.burn_record_account`: the burn record account, a PDA of the note's tag r | the burn note |
 | `boundary[].out.from` | 32 | 20 distinct | fresh randomness | LEZ: the sender's one-time alias (where it varies) | a one-time fee alias with a fixed reserve |
 | `boundary[].out.to (members in every record)` | 32 | constant (2) | constant | a public end of a boundary message (where constant: the root, the token's account, the fee inbox) | - |
 | `boundary[].out.message.Burn.config_id` | 32 | constant | constant | configId (the bridge program, vault, chain) | the bridge program |
@@ -164,16 +164,16 @@ Every field the collectors can name, across the 20 records of each step: constan
 | `receipt.cycles` | 8 | constant | constant | LEZ execution gas: follows the position (the shared state the public part updates) | - |
 | `receipt.gas_stor` | 8 | constant | constant |  | - |
 | `receipt.fee_base` | 16 | constant | constant | LEZ: the base fee at the block's opening (moves with the chain's history) | - |
-| `derived.burn_record_account` | 32 | 20 distinct | fresh randomness | the burn record account, a PDA of H(note) | the burn note |
+| `derived.burn_record_account` | 32 | 20 distinct | fresh randomness | the burn record account, a PDA of the note's tag r | the burn note |
 | `block.id` | 8 | 20 distinct | time / order | time | time |
 | `block.timestamp` | 8 | 20 distinct | time / order | time | time |
 | `commitment_root.before` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
 | `commitment_root.after` | 32 | 20 distinct | time / order | LEZ: the commitment-set root (state the proof read) | - |
-| `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
 | `state: the harness's fee payer (refund_to)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: LEZ fee inbox` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
-| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 | `state: config(cid) (global gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
+| `state: the account in `derived.burn_record_account`` | 0 | one per record (20 distinct) | fresh randomness | created or changed by this record only | the burn note |
+| `state: token(cid, ETH) (token gate, time)` | 0 | changed in every record, contents vary | time / order | cumulative state (order) | - |
 
 ## release, NOut of the release statement
 

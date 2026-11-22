@@ -1,6 +1,6 @@
 # The private claim (`harness/tests/bridge_private.rs`), RISC Zero dev mode
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`. `ClaimPrivately` at the destination's own private account, for vault A's leaf 5 (1 ETH, private kind) under `root(A, 8)`.
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`. `ClaimPrivately` at the destination's own private account, for vault A's leaf 5 (1 ETH, private kind) under `root(A, 8)`.
 
 ## The private transitions in the executor
 
@@ -17,20 +17,20 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 
 ## Public outputs (`harness::private::describe_public_outputs`)
 
-public_context.actors (7): program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@osYrsUo8QN1mNUJHbL9TkB26YbVGheNGEegABCfnuYm, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@92yzR3FrUPeUDfhLxizeEtPn77xfENUprzC3bNFwF3nf, program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@9ERciNAHuBzBQRuisyKDmFzrQmgWrLN2wqQgtUtCMZZh, program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@9RKw6XnUNbWfRUjZBptmX4VNJF6bxmWq63KETNbgi94p, program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@F2hMdbvDB9FxMp4Em4rDNpCDuXZAeYTEAqfaqr3AJQgE, program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@HbKmisviedf1TRFezDYpe7aBCa7HnoMWjP2DoExo163z
+public_context.actors (7): program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@4hcbdKTLVkjQC65xk1jsbYpsJi54SQNnbdFe7QHgkYZH, program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@8YgRwRSxzHmp49ERn9k7QL5fMcyxPjVvxhQW6v4L4GCt, native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq, program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@8wdYCbxdyRS839XqSMrdWejhraaYnprnZtNQk8A9HBxK, program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@9BtxTqTvsMiZujzEE8EDGCx4CrLYRhkKd5DHQhA3TS5h, program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@CN16gipBGVMwVSHMWgkA3fKkRNyPufEnt2CVsFGNjD9b, program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EJpBrSH6m7sj2sawoSvZTQhqDbSZGNSPr7JHeN3rDweV
 public_context.authorized_accounts: {}
 execution.public_root: None
 execution.boundary (8 steps):
-  - PrivateToPublic from program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@9RKw6XnUNbWfRUjZBptmX4VNJF6bxmWq63KETNbgi94p: 1 bytes (1 bytes)
-  - PublicToPrivate from program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@9RKw6XnUNbWfRUjZBptmX4VNJF6bxmWq63KETNbgi94p to program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL: StateReply { state: 117 bytes } (121 bytes)
-  - PrivateToPublic from program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to program CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb@9ERciNAHuBzBQRuisyKDmFzrQmgWrLN2wqQgtUtCMZZh: 167 bytes (167 bytes)
+  - PrivateToPublic from program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EJpBrSH6m7sj2sawoSvZTQhqDbSZGNSPr7JHeN3rDweV: 1 bytes (1 bytes)
+  - PublicToPrivate from program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EJpBrSH6m7sj2sawoSvZTQhqDbSZGNSPr7JHeN3rDweV to program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL: StateReply { state: 117 bytes } (121 bytes)
+  - PrivateToPublic from program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to program 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY@9BtxTqTvsMiZujzEE8EDGCx4CrLYRhkKd5DHQhA3TS5h: 167 bytes (167 bytes)
   - EndPublicSubtree
   - EndPrivateSubtree
   - EndPublicSubtree
   - PrivateToPublic from native@EoTYfFi4rVfLkTBefMr8sB6GcyhRTZv682hg9J1S1QsL to native@8ga8NDaWPPnpAo2sWwj4Cjrhcb8hvNa7nrxJaAZh6jwq: Some(Credit(100000000)) (17 bytes)
   - EndPublicSubtree
 execution.program_image_claims (1):
-  - Disclosed { program: CauAk3AVmT8eZHArQBcQnYmkTGPJ2QtXdBJkzBoTcQmb, image_id: ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e }
+  - Disclosed { program: 9v8wrRk8Hw2eEd3wQXBWrLbuLH2hRALd7f5bsn7wrcvY, image_id: 847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515 }
 execution.private_actions (1): each a nullifier, a commitment-tree root, a new commitment and an encrypted note (1343 bytes)
 execution.async_messages: 0
 execution.recovery_bindings: 0

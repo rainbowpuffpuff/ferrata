@@ -1,6 +1,6 @@
 # Delisting on LEZ (`harness/tests/bridge_delist.rs`, RFP-022 F.10)
 
-Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`; LEZ v0.4.0-rc1's state machine, every transaction settled in a block of its own (RISC Zero dev mode). The vault's listing slot of ETH is placed in synthetic blocks of vault A's storage, as `FerrataVault.setDepositsEnabled` writes it (`vault/test/Admin.t.sol`).
+Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`; LEZ v0.4.0-rc1's state machine, every transaction settled in a block of its own (RISC Zero dev mode). The vault's listing slot of ETH is placed in synthetic blocks of vault A's storage, as `FerrataVault.setDepositsEnabled` writes it (`vault/test/Admin.t.sol`).
 
 | # | transaction | handlers run (cycles each) | execution gas | of 5M target | storage gas (tx bytes) | base fee | result |
 |---|---|---|---:|---:|---:|---:|---|
@@ -14,7 +14,7 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | 8 | AttestListing ETH under block 101 (older, slot unwritten) | bridge AttestListing 47,542 → Attest 83,130 → bridge (reply) 50,704 → bridge SetListing 28,464 | 209,840 | 4% | 1,613 | 1,691,624 | refused: exit 247 (IMPORT_MISMATCH) |
 | 9 | AttestListing ETH under the same record again | bridge AttestListing 46,567 → Attest 85,880 → bridge (reply) 50,702 → bridge SetListing 28,463 | 211,612 | 4% | 1,523 | 1,705,080 | refused: exit 247 (IMPORT_MISMATCH) |
 | 10 | Claim of leaf 2 (1 ETH), after the delisting | bridge Claim 107,796 → bridge Issue 52,566 → bridge Admit 35,962 → bridge Spend 31,769 → bridge Mint 18,800 → bridge Mint 23,177 | 270,070 | 5% | 2,053 | 2,176,984 | applied |
-| 11 | Burn of 1 ETH by the payer, after the delisting | bridge Burn 24,855 → bridge Burn 30,431 → bridge Burn 52,417 → bridge Admit 35,963 → bridge Burn 21,662 | 165,328 | 3% | 839 | 1,329,336 | applied |
+| 11 | Burn of 1 ETH by the payer, after the delisting | bridge Burn 22,693 → bridge Burn 28,270 → bridge Burn 50,253 → bridge Admit 35,963 → bridge Burn 19,498 | 156,677 | 3% | 839 | 1,260,128 | applied |
 | 12 | Transfer of 1 ETH from the payer, after the delisting | bridge Transfer 17,778 → bridge Transfer 23,563 → bridge Transfer 37,060 → bridge Credit 21,476 | 99,877 | 2% | 691 | 804,544 | applied |
 | 13 | AttestListing ETH: the slot holds 2 | bridge AttestListing 46,567 → Attest 85,880 → bridge (reply) 37,063 | 169,510 | 3% | 1,523 | 1,368,264 | refused: exit 247 (IMPORT_MISMATCH) |
 | 14 | AttestListing ETH: relisted (the slot holds 0) | bridge AttestListing 45,068 → Attest 78,910 → bridge (reply) 50,704 → bridge SetListing 40,383 | 215,065 | 4% | 1,452 | 1,732,136 | applied |
@@ -68,11 +68,11 @@ Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd52294
 | Claim of leaf 2 (1 ETH), after the delisting | bridge Spend | 31,769 | 1 | 360 | 222 | 0 | 992 | 77 | 0 |
 | Claim of leaf 2 (1 ETH), after the delisting | bridge Mint | 18,800 | 1 | 299 | 161 | 0 | 398 | 74 | 0 |
 | Claim of leaf 2 (1 ETH), after the delisting | bridge Mint | 23,177 | 1 | 373 | 161 | 74 | 472 | 74 | 0 |
-| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 24,855 | 1 | 259 | 185 | 0 | 569 | – | 0 |
-| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 30,431 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
-| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 52,417 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
+| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 22,693 | 1 | 259 | 185 | 0 | 569 | – | 0 |
+| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 28,270 | 1 | 397 | 185 | 74 | 753 | 74 | 0 |
+| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 50,253 | 1 | 1,363 | 185 | 1,040 | 2,859 | 1,040 | 0 |
 | Burn of 1 ETH by the payer, after the delisting | bridge Admit | 35,963 | 1 | 788 | 70 | 580 | 1,393 | 580 | 0 |
-| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 21,662 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
+| Burn of 1 ETH by the payer, after the delisting | bridge Burn | 19,498 | 1 | 323 | 185 | 0 | 533 | 185 | 0 |
 | Transfer of 1 ETH from the payer, after the delisting | bridge Transfer | 17,778 | 1 | 175 | 101 | 0 | 401 | – | 0 |
 | Transfer of 1 ETH from the payer, after the delisting | bridge Transfer | 23,563 | 1 | 313 | 101 | 74 | 585 | 74 | 0 |
 | Transfer of 1 ETH from the payer, after the delisting | bridge Transfer | 37,060 | 1 | 1,279 | 101 | 1,040 | 1,505 | – | 0 |
