@@ -144,15 +144,20 @@ fn apply_at(w: &mut World, update: &LightClientUpdate, label: &str, time_ms: u64
             let keys = uncompressed_keys(&update.next_sync_committee).unwrap();
             let chunk = keys.len() / parts as usize;
             for p in 0..parts {
-                reports.push(w.chain.submit(
-                    &format!("{label} adopt {}/{parts}", p + 1),
-                    job,
-                    borsh::to_vec(&Message::Adopt { part: p, keys: keys[p as usize * chunk..(p as usize + 1) * chunk].to_vec() })
+                reports.push(
+                    w.chain.submit(
+                        &format!("{label} adopt {}/{parts}", p + 1),
+                        job,
+                        borsh::to_vec(&Message::Adopt {
+                            part: p,
+                            keys: keys[p as usize * chunk..(p as usize + 1) * chunk].to_vec(),
+                        })
                         .unwrap(),
-                    vec![job],
-                    vec![],
-                    time_ms,
-                ));
+                        vec![job],
+                        vec![],
+                        time_ms,
+                    ),
+                );
             }
         }
         let mut actors = vec![job, instance];
@@ -195,7 +200,11 @@ fn apply_at(w: &mut World, update: &LightClientUpdate, label: &str, time_ms: u64
 fn requests(s: &Stage5) -> Vec<(&'static str, Request)> {
     let usdc = s.fx.storage_proof();
     let storage = Request {
-        accounts: vec![account_query(&usdc, vec![], vec![(s.fx.slot, vec![condition(Field::Value, Cmp::Eq, s.fx.value)])])],
+        accounts: vec![account_query(
+            &usdc,
+            vec![],
+            vec![(s.fx.slot, vec![condition(Field::Value, Cmp::Eq, s.fx.value)])],
+        )],
         ..s.request()
     };
     let t = s.fx.transfer.clone();
@@ -205,24 +214,42 @@ fn requests(s: &Stage5) -> Vec<(&'static str, Request)> {
             log_index: t.log_index,
             proof: s.fx.receipt_proof(t.tx_index),
             // The reference consumer's acceptance rule: emitted by the token, a `Transfer`, to the recipient.
-            conditions: Pool { ferrata: s.w.inst.program, instance_id: s.w.inst.id, chain_id: s.w.inst.config.chain_id, token: t.token, recipient: t.to }
-                .conditions(),
+            conditions: Pool {
+                ferrata: s.w.inst.program,
+                instance_id: s.w.inst.id,
+                chain_id: s.w.inst.config.chain_id,
+                token: t.token,
+                recipient: t.to,
+            }
+            .conditions(),
         }],
         ..s.request()
     };
     let multicall = s.fx.same_address_proof();
     let account = Request {
-        accounts: vec![account_query(&multicall, vec![condition(Field::CodeHash, Cmp::Eq, multicall.code_hash)], vec![])],
+        accounts: vec![account_query(
+            &multicall,
+            vec![condition(Field::CodeHash, Cmp::Eq, multicall.code_hash)],
+            vec![],
+        )],
         ..s.request()
     };
-    vec![("storage slot (USDC totalSupply_ = value)", storage), ("log (ERC-20 Transfer)", log), ("account (Multicall3)", account)]
+    vec![
+        ("storage slot (USDC totalSupply_ = value)", storage),
+        ("log (ERC-20 Transfer)", log),
+        ("account (Multicall3)", account),
+    ]
 }
 
 fn attest_all(s: &mut Stage5, phase: &str, slot: u64, reqs: &[(&str, Request)]) -> Vec<Attestation> {
     reqs.iter()
         .map(|(label, r)| {
             let (report, a) = s.accept(&format!("{phase}: {label}"), slot, r);
-            println!("{phase}: {label}: applied, {} execution gas, {} statement(s)", report.charge.gas_exec, a.statements.len());
+            println!(
+                "{phase}: {label}: applied, {} execution gas, {} statement(s)",
+                report.charge.gas_exec,
+                a.statements.len()
+            );
             a
         })
         .collect()
@@ -334,12 +361,19 @@ fn a_stalled_instance_keeps_attesting_and_resumes_without_repair() {
             let v: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
             let canonical = harness::root(v["data"]["root"].as_str().unwrap().trim_start_matches("0x"));
             let header = rec.header().unwrap();
-            assert_eq!(header.beacon.hash_tree_root(), canonical, "record at slot {slot} is Sepolia's canonical header");
+            assert_eq!(
+                header.beacon.hash_tree_root(),
+                canonical,
+                "record at slot {slot} is Sepolia's canonical header"
+            );
             checked += 1;
         }
     }
     println!("records written on the resume compared with a second provider's canonical roots: {checked}");
-    assert!(checked >= 2, "at least two records written on the resume equal a second provider's canonical roots ({checked})");
+    assert!(
+        checked >= 2,
+        "at least two records written on the resume equal a second provider's canonical roots ({checked})"
+    );
 
     // 5. After the resume (eight rotations later), the old record R still attests, unchanged (R.3).
     s.time = t_resume + 12_000;

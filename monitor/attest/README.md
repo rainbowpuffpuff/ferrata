@@ -84,7 +84,7 @@ limit that stays: every provider counted colludes with the forger.
 
 ## Tested
 
-`cargo test --locked` (`tests/monitor.rs`): 19 tests, all pass (Modal build box, 22 November 2026). They run the binary
+`cargo test --locked` (`tests/monitor.rs`): 28 tests, all pass, and 4 unit tests (Modal build box, 22 November 2026). They run the binary
 against providers on loopback that serve what Sepolia's public providers served (publicnode's header at slot
 11,549,664 from the attestation fixture, Lodestar's genesis from `verify_checkpoint`'s recorded run, publicnode's root at
 11,608,192 from the lab's session of 18 November), on the instance states the R.7 test wrote with LEZ's state machine
