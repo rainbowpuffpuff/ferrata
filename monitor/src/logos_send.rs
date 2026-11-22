@@ -80,8 +80,11 @@ pub enum Outcome {
     /// It may have left, and `tx_sender_module` gives no hash: `stuck` (a broadcast whose RPC did not answer), a leg
     /// that began to leave and failed, a request still moving past the approval timeout or whose withdrawal was not
     /// confirmed, `send_status` not answering, or (`forgotten`) a request the module no longer holds (restarted: its
-    /// sends are in memory). Never sent a second time on that word: the chain decides, at the leg's `nonce` when the
-    /// module said it (and, for a forgotten request, the module's durable history: [`Route::history_row`]).
+    /// sends are in memory). The relayer never sends it a second time on that word: the chain decides, at the leg's
+    /// `nonce` when the module said it (and, for a forgotten request, the module's durable history:
+    /// [`Route::history_row`]). The monitor, holding its watcher key, sends it the plain way at its node's next nonce
+    /// (`monitor/src/chain.rs`: a duplicate of its calls reverts or moves a pause's end; a number the module burnt
+    /// without broadcasting is filled).
     Unknown { reason: String, forgotten: bool, nonce: Option<u64> },
 }
 
@@ -93,7 +96,8 @@ pub struct Route {
     pub from: Address,
     /// Who asks, in the purpose line the signer shows ("Ferrata monitor: cancelCandidate, call 0x…").
     pub purpose: &'static str,
-    /// The daemon holds its own key too: what `tx_sender_module` did not broadcast goes the plain way.
+    /// The daemon holds its own key too: what `tx_sender_module` did not broadcast goes the plain way (for the
+    /// monitor, also what the module cannot account for, [`Outcome::Unknown`]).
     pub fallback: bool,
     /// How long a request may wait for its approval before it is withdrawn (`cancel_send`).
     pub approval_timeout: Duration,
@@ -419,16 +423,21 @@ pub fn custody(call: ModuleCall, req: &CustodyRequest) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
+    use std::sync::{Mutex, MutexGuard, PoisonError};
 
     // One fake Logos Core per test binary run: the calls it saw and the replies it gives, by method.
     static SEEN: Mutex<Vec<(String, String, Value)>> = Mutex::new(Vec::new());
     static SCRIPT: Mutex<Vec<(&'static str, String)>> = Mutex::new(Vec::new());
     static SERIAL: Mutex<()> = Mutex::new(());
 
+    // A failed test does not poison the mutexes for the others.
+    fn lock<T>(m: &Mutex<T>) -> MutexGuard<'_, T> {
+        m.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
     fn fake(module: &str, method: &str, args: &Value, _t: Duration) -> Result<String, String> {
-        SEEN.lock().unwrap().push((module.into(), method.into(), args.clone()));
-        let mut s = SCRIPT.lock().unwrap();
+        lock(&SEEN).push((module.into(), method.into(), args.clone()));
+        let mut s = lock(&SCRIPT);
         match s.iter().position(|(m, _)| *m == method) {
             Some(i) => Ok(s.remove(i).1),
             None => Err(format!("no reply scripted for {method}")),
@@ -447,15 +456,15 @@ mod tests {
     }
 
     fn script(replies: &[(&'static str, Value)]) {
-        SEEN.lock().unwrap().clear();
-        *SCRIPT.lock().unwrap() = replies.iter().map(|(m, v)| (*m, v.to_string())).collect();
+        lock(&SEEN).clear();
+        *lock(&SCRIPT) = replies.iter().map(|(m, v)| (*m, v.to_string())).collect();
     }
 
     const H: &str = "0x1111111111111111111111111111111111111111111111111111111111111111";
 
     #[test]
     fn a_broadcast_send_answers_its_hash_and_the_request_carries_the_calldata() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[
             ("send", json!({ "ok": true, "pending": true, "requestId": "r1", "handle": "h1" })),
             ("send_status", json!({ "ok": true, "status": "awaitingApproval", "final": false, "hashes": [] })),
@@ -471,7 +480,7 @@ mod tests {
             }
             o => panic!("{o:?}"),
         }
-        let seen = SEEN.lock().unwrap();
+        let seen = lock(&SEEN);
         assert_eq!(seen[0].0, TX_SENDER);
         let req: Value = serde_json::from_str(seen[0].2[0].as_str().unwrap()).unwrap();
         assert_eq!(req["calls"][0]["data"], "0xabcd");
@@ -488,7 +497,7 @@ mod tests {
 
     #[test]
     fn a_refused_or_unapproved_send_is_not_sent_and_an_unapproved_one_is_withdrawn() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[("send", json!({ "ok": false, "code": "locked", "error": "the account's wallet is locked" }))]);
         let to = Address::ZERO;
         assert!(matches!(route().send(to, &Bytes::new(), "x"), Outcome::NotSent(w) if w.contains("locked")));
@@ -501,12 +510,12 @@ mod tests {
             Outcome::NotSent(w) => assert!(w.contains("not approved"), "{w}"),
             o => panic!("{o:?}"),
         }
-        assert!(SEEN.lock().unwrap().iter().any(|(_, m, a)| m == "cancel_send" && *a == json!(["r2"])));
+        assert!(lock(&SEEN).iter().any(|(_, m, a)| m == "cancel_send" && *a == json!(["r2"])));
     }
 
     #[test]
     fn a_send_refused_while_the_history_opens_is_asked_again() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[
             ("send", json!({ "ok": false, "code": "unavailable", "error": "This account's history isn't open yet" })),
             ("send", json!({ "ok": true, "requestId": "r5" })),
@@ -517,7 +526,7 @@ mod tests {
 
     #[test]
     fn a_stuck_send_is_never_reported_as_not_sent() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[
             ("send", json!({ "ok": true, "requestId": "r3" })),
             ("send_status", json!({ "ok": true, "status": "stuck", "final": true, "hashes": [] })),
@@ -542,7 +551,7 @@ mod tests {
     /// request it no longer holds: unknown, never "not sent". A withdrawal it does not confirm is unknown too.
     #[test]
     fn a_request_the_module_no_longer_holds_or_did_not_withdraw_is_unknown() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[(
             "send_status",
             json!({ "ok": false, "error": "no send with id 'snd_7'", "final": true }),
@@ -560,7 +569,7 @@ mod tests {
 
     #[test]
     fn the_history_row_of_a_request_gives_its_nonce_and_hash_and_no_row_means_never_broadcast() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         script(&[
             ("history", json!({ "ok": true, "transactions": [
                 { "requestId": "snd_1", "leg": 0, "nonce": 40, "hash": H, "status": "confirmed" },
@@ -574,13 +583,13 @@ mod tests {
         assert_eq!(route().history_row("snd_9"), Ok(None));
         assert!(route().history_row("snd_2").unwrap_err().contains("unavailable"));
         assert_eq!(route().history_row("snd_2"), Ok(Some((41, None))), "an intent row whose broadcast never answered");
-        let seen = SEEN.lock().unwrap();
+        let seen = lock(&SEEN);
         assert_eq!(seen[0].2, json!(["0x70997970C51812dc3A010C7d01b50e0d17dc79C8", 31337]));
     }
 
     #[test]
     fn a_request_left_open_is_found_and_driven_to_its_end() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         let from = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
         let (mine, other): (Bytes, Bytes) = (vec![1, 2].into(), vec![3, 4].into());
         let p = |input: &Bytes| format!("Ferrata monitor: cancelCandidate, call {}", call_tag(input));
@@ -598,12 +607,12 @@ mod tests {
         let id = route().open(Address::ZERO, &mine, "cancelCandidate", None).unwrap();
         assert_eq!(route().live("cancelCandidate", &mine).unwrap(), vec![id.clone()]);
         assert!(matches!(route().drive(&id, Instant::now()), Outcome::Broadcast { request_id, .. } if request_id == "r7"));
-        assert_eq!(SEEN.lock().unwrap().iter().filter(|(_, m, _)| m == "send").count(), 1, "one request, driven");
+        assert_eq!(lock(&SEEN).iter().filter(|(_, m, _)| m == "send").count(), 1, "one request, driven");
     }
 
     #[test]
     fn custody_imports_waits_for_the_manager_and_unlocks_for_tx_sender_without_confirmation() {
-        let _g = SERIAL.lock().unwrap();
+        let _g = lock(&SERIAL);
         let dir = std::env::temp_dir().join(format!("ferrata-logos-send-custody-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let (k, p) = (dir.join("k"), dir.join("p"));
@@ -632,7 +641,7 @@ mod tests {
         std::fs::remove_dir_all(&dir).ok();
         assert_eq!(r["verdict"], "ok", "{r}");
         assert_eq!(r["address"], a);
-        let seen = SEEN.lock().unwrap();
+        let seen = lock(&SEEN);
         assert_eq!(seen[0].2[0], "59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
         let unlock = seen.iter().find(|(_, m, _)| m == "unlock").unwrap();
         let unlock: Value = serde_json::from_str(unlock.2[0].as_str().unwrap()).unwrap();

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """txsender_stub: a stand-in for Logos Core's `tx_sender_module` over one local anvil, so that the relayer daemon's
-`--send-via logos` route can be killed and restarted as a process (cli/tests/relayer_crash.rs part 5; RFP-022 R.06).
+`--send-via logos` route can be killed and restarted as a process (cli/tests/relayer_crash.rs part 5; RFP-022 R.06),
+and the monitor's fallback run against what the module cannot account for (monitor/tests/logos-fallback.sh).
 Tests only: the real route runs inside ferrata_relayer_module with Logos Core's own modules
 (modules/scripts/relayer-module.sh; modules/results/send-stack-2026-11-14/).
 
@@ -35,6 +36,10 @@ before each call (one line; `pass` or missing: none):
                            hash: as a broadcast whose RPC never answered): {ok, status: "stuck", final: true, hashes: [],
                            legs: [{nonce, left: true}]}
   stuck-unsent send_status the same, the call never sent
+  fail send_status         `send_status` writes the row, and the broadcast answers an error, nothing sent: as the module
+                           when its node refuses or cannot be reached (glue.rs `advance_send`: the leg had begun to
+                           leave, the row is left `unknown`, the number stays burnt and is never handed out again) ->
+                           {ok, status: "failed", final: true, hashes: [], legs: [{nonce, left: true}], reason}
 Each fault that fires appends a line to C + ".hit"; every call goes to L (JSONL). The upstream must be a loopback
 address.
 """
@@ -115,7 +120,8 @@ def main():
         return v["result"]
 
     def status_reply(rid, r):
-        leg = {"to": r["to"], "nonce": r["nonce"], "label": r["label"], "left": r["status"] in ("broadcast", "stuck")}
+        leg = {"to": r["to"], "nonce": r["nonce"], "label": r["label"],
+               "left": r["status"] in ("broadcast", "stuck") or r.get("left", False)}
         if r["status"] == "stuck":
             return {"ok": True, "requestId": rid, "status": "stuck", "final": True, "hashes": [], "legs": [leg],
                     "reason": "the broadcast has not answered"}
@@ -155,13 +161,19 @@ def main():
                              "status": "awaitingApproval", "hash": None}
         return rid, {"ok": True, "pending": True, "requestId": rid, "handle": f"h-{rid}"}
 
-    def broadcast(rid, stuck=None):
+    def broadcast(rid, stuck=None, fail=False):
         with LOCK:
             r = requests.get(rid)
             if r is None:
                 return {"ok": False, "error": f"no send with id '{rid}'", "final": True}
             if r["status"] == "awaitingApproval":
                 write_row(rid, r, None, "intent")  # written ahead: a row means it may have left
+                if fail:
+                    # The module's `leave_unknown`, then `Failed`: no hash, the leg left, its nonce spent.
+                    r["status"], r["left"] = "failed", True
+                    r["reason"] = "the node refused the transaction (the stand-in's fault: nothing was sent)"
+                    write_row(rid, r, None, "unknown")
+                    return status_reply(rid, r)
                 tx = {"from": r["from"], "to": r["to"], "data": r["data"], "nonce": hex(r["nonce"])}
                 try:
                     if stuck != "unsent":
@@ -234,7 +246,9 @@ def main():
                 if fault in ("stuck", "stuck-unsent"):
                     stuck = "unsent" if fault == "stuck-unsent" else "sent"
                     fired(f"{fault} send_status ({rid})")
-                v = broadcast(rid, stuck)
+                if fault == "fail":
+                    fired(f"fail send_status ({rid})")
+                v = broadcast(rid, stuck, fault == "fail")
                 if fault == "hold":
                     secs = float(ctl[2]) if len(ctl) > 2 else 20.0
                     fired(f"hold send_status {secs} ({rid})")

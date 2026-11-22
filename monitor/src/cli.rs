@@ -86,7 +86,8 @@ pub struct RunArgs {
     /// Where the monitor's transactions go: `plain` (signed here with the watcher key, sent over --rpc; the
     /// default) or `logos` (Logos Core's `tx_sender_module`, signed by `keystore_module` through
     /// `signer_manager_module`; only when the monitor runs as `ferrata_monitor_module`). With `logos` and a watcher
-    /// key too, a transaction `tx_sender_module` did not broadcast goes the plain way (the fallback).
+    /// key too, a transaction `tx_sender_module` did not broadcast, or cannot account for (stuck, failed after it
+    /// began to leave, a request it no longer holds), goes the plain way at the node's next nonce (the fallback).
     #[arg(long, default_value = "plain", value_parser = ["plain", "logos"])]
     pub send_via: String,
     /// With --send-via logos: the keystore account that sends (the watcher's address; the watcher key's address
