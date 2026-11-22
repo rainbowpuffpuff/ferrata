@@ -947,7 +947,12 @@ fn main() -> Result<()> {
             Err(e) => json!({"ok": false, "error": format!("{e:#}")}),
         };
         let ms = t0.elapsed().as_millis() as u64;
-        let _ = writeln!(log, "{}", json!({"method": method, "params": req["params"], "reply": reply, "ms": ms}));
+        // A person's role password (module.approve_role) is never written to the log.
+        let mut logged = req["params"].clone();
+        if logged.get("password").is_some() {
+            logged["password"] = json!("<redacted>");
+        }
+        let _ = writeln!(log, "{}", json!({"method": method, "params": logged, "reply": reply, "ms": ms}));
         respond(&mut stream, &reply.to_string());
         if method == "module.stop" {
             break;
