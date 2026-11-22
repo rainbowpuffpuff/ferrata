@@ -2,7 +2,7 @@
 
 **Run:** `cd cli && bash tests/relayer-crash.sh` (the test `relayer_killed_and_cut_off_does_each_job_once` of
 [`cli/tests/relayer_crash.rs`](../../../cli/tests/relayer_crash.rs)), on a Modal build box (CPU), 22 November 2026
-04:39–04:42 UTC, the sources of commit `c8cbaa6c` (branch `rfp-relayer-robustness`; the run's files are that commit's,
+04:39–04:42 UTC, the sources of commit `8153e31b` (branch `rfp-relayer-robustness`; the run's files are that commit's,
 byte for byte: part 6b now also requires the "no row" line, no `inflight-lost`/`inflight-resent` and no pinned request,
 and 6d counts its pins from its own start, the third review's L-5). **Result:** `test result: ok. 1 passed` in
 136.90 s; [`results.json`](results.json) is the test's own summary: 48 relayer transactions, 0 reverted, 45 releases,
