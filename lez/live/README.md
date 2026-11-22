@@ -126,6 +126,11 @@ the state the transaction ran against. It applies a block only when the sequence
 | `results/verify-run.log` | the output of `verify-run.sh` with the guest binaries, run once after the run on the same machine (paths shortened) |
 | `observations/` | runs that are not the record: what the three programs logged when the head was rewound, and the runs made to find out why |
 
+Every text file the run writes into the record passes through `scrub.sh`, so no path of the machine and no name of a
+folder it used is written: the run's scratch becomes `<scratch>`, the repository `<repo>`, LEZ's tree `<lez>`, the
+guest toolchain `<risc0-home>`, any other folder beside the repository `<beside>` (`<tmp>` in its `tmp/`) and the home
+folder `~`. Records written before 22 November 2026 give paths relative to the folder beside the repository (`../`).
+
 `blocks.borsh` holds no program bytecode because the guest binaries embed the absolute paths
 of the machine that built them (`../RESULTS.md` §3). Putting the chunks back from the binaries
 reproduces the blocks byte for byte, which the block hashes prove.
