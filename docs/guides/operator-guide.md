@@ -207,18 +207,19 @@ key file, the fee limits (`gas_limit` per step, default 4,800,000; `max_fee_per_
 it stops sending), the policy (deferral window, lag threshold, how many sources must agree, backoff,
 demotion) and, per instance, its preset, checkpoint and beacon sources. Per round it reads the instance
 from the chain, checks every candidate from every source with the program's own steps natively before
-paying for anything (a source serving what the program would refuse is demoted; one far behind is
-flagged lagging; one silent is flagged unavailable), and sends the next step of the best candidate's
-job. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
+paying for anything (a source serving what the program would refuse, or an update signed more than 60 s past the
+chain's clock, is demoted; one far behind is flagged lagging; one silent is flagged unavailable), and sends the next
+step of the best candidate's job (of updates of one finalized header, the earliest-signed). It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
-(HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change; and a round that stops before it reads the sources' head, as when the committees cannot be fetched, stays `degraded`: not counted toward `down`), that is no light-client source answering, five sends in a row that do not land, five
-rounds in a row that end in an error, the instance past its weak-subjectivity period, no progress for
+(HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
+rounds in a row that end in an error (a round that cannot fetch the committees the store summarises is one), the instance past its weak-subjectivity period, no progress for
 `2 × (6 × defer_window + 10)` rounds while the sources are ahead, or the budget reached; and when no round has
 refreshed it for ten polls, at least 600 s). A step the chain refuses is not resent every round: it is held, for good when the program
-refuses it or it runs out of gas, otherwise for 4 to 64 rounds and then sent again, and three refusals in a row of
-steps that stayed due pause sending for 8 to 512 rounds; `/health` and the metrics (`_held_steps`, `_sending_paused`,
-`_refusals_total`) show both. The listener serves eight connections at once (four per host other than loopback) and
+refuses it or it runs out of gas (kept in the state directory, across restarts, until the instance moves), otherwise for
+4 to 64 rounds and then sent again, and three refusals in a row of steps that stayed due pause sending for 8 to 512
+rounds (a refusal after which the chain could not be read counts once the next round reads the step still due); `/health` and the metrics (`_held_steps`, `_sending_paused`,
+`_refusals_total`) show both. The listener serves eight connections at once (four per host other than loopback: an IPv4 address, or an IPv6 /64) and
 eight more quick ones; keep `daemon.listen` on loopback; `/metrics` counts transactions by step and result, gas and fees applied and refused,
 retries, deferrals, steps done by others, and per source requests, errors, refusals, lag and
 availability. Tested in dev mode (RISC0_DEV_MODE, the in-process chain, recorded data): catch-up to the
