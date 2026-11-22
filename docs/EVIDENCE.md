@@ -687,6 +687,15 @@ module builder stages it: the calls crate 3 of 3, none skipped, `attestor-e2e.sh
 three LEZ-checked zone-bridge suites, 15 passed. On the laptop: `links` and its steps; `scripts/test_scrub_records.py`,
 0 failed.
 
+**Twenty-sixth pass (branch `integration9`, 22 Nov 2026).** The fixes of the batch reviews of pieces 5-8 and 9-12,
+at `afcb3716`, on the build box: the updater's new test red without the tie-break (30 rounds, 30 waiting, nothing
+applied) and green with it (applied in 4 rounds, none waiting); the whole updater suite with `harness`, all passed, the
+A3 gate's file unchanged; the updater's clippy `-D warnings` with and without `harness` (guests skipped, as its gate
+does); attest-monitor's tests, 28 and 4, and clippy `-D warnings` over all targets; the bridge module's native tests,
+40 of 40; `cli/tests/attest-seq.sh` as written, B1's bridge program built by `lez/crown/build.sh`: 22 of 22 commands
+as expected, its 70 records equal to rf1's with the block numbers masked; `bench/perf/gate-build.sh` with crown-live-3's
+bundle as written: the bundle repacked, crown-driver and ferrata-updater built. On the laptop: `links` and its steps.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
