@@ -173,7 +173,7 @@ tests = [
   { path = "modules/scripts/e2e.sh", kind = "test", ci = "box", run = "modules/scripts/e2e.sh" },
   { path = "modules/RESULTS.md", kind = "record" },
 ]
-note = "ferrata_attest_module built, loaded under a headless Logos Core and every call equal to the native one (EVIDENCE rows 59, 60, 93, 108); its LEZ reads and sends and an instance's Init in advance remain outside Logos Core's modules"
+note = "ferrata_attest_module built, loaded under a headless Logos Core and every call equal to the native one (EVIDENCE rows 59, 60, 93, 108); its LEZ reads and sends and an instance's Init in advance remain outside Logos Core's modules. No CI test yet: the module's check (modules/scripts/check.sh) needs Nix and a headless Logos Core built from logos-co's flakes; a Linux job like macos.yml's modules job could run it for ferrata_attest_module, not attempted in this round"
 
 [[row]]
 id = "RFP-021 U.2"
@@ -370,7 +370,7 @@ tests = [
   { path = "e2e/runs/crown-live-1/README.md", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
-note = "measured parts: each update transaction final on Bedrock 6.9-16.4 s after sending, Lodestar's data lagging a period boundary by about 13 minutes (row 99); a deposit's block to its capture for LEZ 19.7 and 19.1 min, then 14.7 and 25.2 min (rows 41, 91); Ethereum's finality wait itself an estimate"
+note = "measured parts: each update transaction final on Bedrock 6.9-16.4 s after sending, Lodestar's data lagging a period boundary by about 13 minutes (row 99); a deposit's block to its capture for LEZ 19.7 and 19.1 min, then 14.7 and 25.2 min (rows 41, 91); Ethereum's finality wait itself an estimate. No CI test: the latency is of live networks (Ethereum's finality wait, a beacon node serving the update, a sequencer including the transaction); CI has no live chain, and nothing here sends to Sepolia or a public LEZ network"
 
 [[row]]
 id = "RFP-021 P.6"
@@ -378,7 +378,7 @@ tests = [
   { path = "lez/harness/src/bin/prove_private.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin prove_private && RISC0_DEV_MODE=0 target/debug/prove_private" },
   { path = "lez/lab/README.md", kind = "document" },
 ]
-note = "the proven-path prover measured (54 min, 9.18 GiB peak on a laptop CPU; 887.3 s on the build box's 32 threads, EVIDENCE row 123); the lab's zone a scheduled session in 83-142 s; the updater daemon's CPU, memory and bandwidth: none yet"
+note = "the proven-path prover measured (54 min, 9.18 GiB peak on a laptop CPU; 887.3 s on the build box's 32 threads, EVIDENCE row 123); the lab's zone a scheduled session in 83-142 s; the updater daemon's CPU, memory and bandwidth: none yet. No CI test: the documented resources are those of real proving on stated hardware (the proven path 54 min, 9.18 GiB on a laptop CPU) and of daemons on a stated machine; CI runs dev mode on GitHub's hosted runner, which is neither, and the updater daemon's CPU, memory and bandwidth are not measured anywhere yet"
 
 [[row]]
 id = "RFP-021 P.7"
@@ -415,7 +415,7 @@ tests = [
   { path = "lez/lab/README.md", kind = "document" },
   { path = "lez/testnet04/day1.sh", kind = "test", ci = "box", run = "FERRATA_TESTNET_SEND=yes lez/testnet04/day1.sh go URL" },
 ]
-note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recorded rc1 sequencer run re-checked by verify-run.sh, the lab's seven days following Sepolia and mainnet (EVIDENCE row 21), sessions on rc2 and rc3 (rows 22, 112, 123) and the day-one deployment rehearsed on our own rc3 zone (row 148)"
+note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the recorded rc1 sequencer run re-checked by verify-run.sh, the lab's seven days following Sepolia and mainnet (EVIDENCE row 21), sessions on rc2 and rc3 (rows 22, 112, 123) and the day-one deployment rehearsed on our own rc3 zone (row 148). No CI test: it needs LEZ testnet 0.4, which is not released, and sending to public networks"
 
 [[row]]
 id = "RFP-021 S.2"
@@ -466,7 +466,7 @@ tests = [
   { path = "lez/harness/src/bin/ferrata-attest.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin ferrata-attest && RISC0_DEV_MODE=1 target/debug/ferrata-attest status --then slot --send ..." },
   { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
 ]
-note = "the four documents are first drafts here: lez/ATTEST-CLI.md, docs/guides/operator-guide.md, docs/guides/consumer-guide.md, lez/updater/README.md; the journeys they describe are exercised by the CLI (row 56) and the updater demo (row 81); final with check-guides.py on the branch"
+note = "the four documents are first drafts here: lez/ATTEST-CLI.md, docs/guides/operator-guide.md, docs/guides/consumer-guide.md, lez/updater/README.md; the journeys they describe are exercised by the CLI (row 56) and the updater demo (row 81); final with check-guides.py on the branch. No CI test in this tree: the documents are first drafts here; on branch rfp-docs-final scripts/check-guides.py (links job) keeps the final guides in step with the code (entry below)"
 
 [[row]]
 id = "RFP-021 S.5"
@@ -481,7 +481,7 @@ tests = [
   { path = "docs/trust.md", kind = "document" },
   { path = "modules/results/verify-checkpoint-2026-11-13/README.md", kind = "record" },
 ]
-note = "trust.md covers the listed points (the parties, capture by stake and bribery, checkpoint verification, failure classes); the checkpoint a verifier confirms independently is exercised by verify_checkpoint's provider checks (EVIDENCE row 105); first draft here, final with check-guides.py on the branch"
+note = "trust.md covers the listed points (the parties, capture by stake and bribery, checkpoint verification, failure classes); the checkpoint a verifier confirms independently is exercised by verify_checkpoint's provider checks (EVIDENCE row 105); first draft here, final with check-guides.py on the branch. No CI test in this tree: a document; on branch rfp-docs-final scripts/check-guides.py (links job) checks the final trust document (entry below)"
 
 [[row]]
 id = "RFP-021 S.6"
@@ -497,7 +497,7 @@ tests = [
   { path = "lez/lab/README.md", kind = "document" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
 ]
-note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the guide is a first draft; the attestation side's monitor and its stall alarm are not built"
+note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the guide is a first draft; the attestation side's monitor and its stall alarm are not built. No CI test: a document (the operator guide); what it describes is tested in CI elsewhere: permissionless submission (F.11), concurrent operators and deferral (R.9, R.10: lez/updater/tests/recorded.rs's gate); the attestation side's stall alarm is not built"
 
 [[row]]
 id = "RFP-021 S.8"
@@ -579,7 +579,7 @@ id = "RFP-021 VS.5"
 tests = [
   { path = "docs/trust.md", kind = "document" },
 ]
-note = "the trustless model and the liveness-only role of every off-chain party stated in trust.md 1, the operator guide and the consumer guide, first drafts; final with check-guides.py on branch rfp-docs-final (next entry)"
+note = "the trustless model and the liveness-only role of every off-chain party stated in trust.md 1, the operator guide and the consumer guide, first drafts; final with check-guides.py on branch rfp-docs-final (next entry). No CI test in this tree: documents; on branch rfp-docs-final scripts/check-guides.py (links job) checks the final ones (entry below)"
 
 [[row]]
 id = "RFP-021 VS.5"
@@ -981,7 +981,7 @@ tests = [
   { path = "scripts/test-deploy-local.sh", kind = "test", ci = "box", run = "scripts/test-deploy-local.sh RELEASE_DIR WORK_DIR" },
   { path = "docs/guides/deployer-guide.md", kind = "document" },
 ]
-note = "the deployer guide (registering tokens, fees, admin and freeze authorities, the finality depth) is a first draft here; scripts/deploy-testnet.sh deploys from a verified release and was tested on anvil (EVIDENCE row 53) and four vaults were deployed on Sepolia by its script (rows 26, 41, 91); no second deployer has followed it in this tree"
+note = "the deployer guide (registering tokens, fees, admin and freeze authorities, the finality depth) is a first draft here; scripts/deploy-testnet.sh deploys from a verified release and was tested on anvil (EVIDENCE row 53) and four vaults were deployed on Sepolia by its script (rows 26, 41, 91); no second deployer has followed it in this tree. No CI test: the deployer journey is a second deployer following the guide from a fresh clone (branch rfp-docs-final: e2e/seqnet/run.sh deployer, a LEZ zone built from source and the vault on anvil, 702 s on the build box after the build); scripts/test-deploy-local.sh needs a built release directory; neither is wired into CI"
 
 [[row]]
 id = "RFP-022 R.14"
@@ -1037,7 +1037,7 @@ tests = [
   { path = "e2e/runs/crown-live-1/README.md", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
-note = "the outbound estimate (about 3 h under rule (B)) and the simulator's tip-to-finalisation medians (table (k)); measured live with testnet parameters (W = 1 h, release delay 120 s): a deposit's block to capture 19.7 and 19.1 min, then 14.7 and 25.2 min; both burns to the first release 64.7 and 66.1 min; production figures not measured"
+note = "the outbound estimate (about 3 h under rule (B)) and the simulator's tip-to-finalisation medians (table (k)); measured live with testnet parameters (W = 1 h, release delay 120 s): a deposit's block to capture 19.7 and 19.1 min, then 14.7 and 25.2 min; both burns to the first release 64.7 and 66.1 min; production figures not measured. No CI test: the latency is of live networks (Ethereum's finality wait, a beacon node serving the update, a sequencer including the transaction); CI has no live chain, and nothing here sends to Sepolia or a public LEZ network"
 
 [[row]]
 id = "RFP-022 P.6"
@@ -1045,7 +1045,7 @@ tests = [
   { path = "checkpoint/results/bench.log", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
-note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.62 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); the daemons' CPU and bandwidth and the relayer's memory: none yet"
+note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.62 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); the daemons' CPU and bandwidth and the relayer's memory: none yet. No CI test: the documented resources are of provers on stated hardware (real proofs, CPU and GPU); the daemons' CPU and bandwidth and the relayer's memory are not measured; the monitor's CI rehearsal prints its resident memory and a rescan's time on GitHub's runner (monitor/tests/anvil-e2e.sh), not a documented figure"
 
 [[row]]
 id = "RFP-022 P.7"
@@ -1062,7 +1062,7 @@ tests = [
   { path = "lez/results/v0.4.0-rc3/README.md", kind = "record" },
   { path = "lez/testnet04/day1.sh", kind = "test", ci = "box", run = "FERRATA_TESTNET_SEND=yes lez/testnet04/day1.sh go URL" },
 ]
-note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the whole round trip live on Sepolia twice (EVIDENCE rows 41, 91) and the final programs' private claim, burn and gas drop proven for real and applied by rc3's sequencer (rows 123, 124); the bridge program's day-one deployment (lez/testnet04/, stage (e), row 148) is built and rehearsed, the vault's Sepolia step prepared, not sent"
+note = "waits on Logos: LEZ testnet 0.4 does not exist. Shown instead: the whole round trip live on Sepolia twice (EVIDENCE rows 41, 91) and the final programs' private claim, burn and gas drop proven for real and applied by rc3's sequencer (rows 123, 124); the bridge program's day-one deployment (lez/testnet04/, stage (e), row 148) is built and rehearsed, the vault's Sepolia step prepared, not sent. No CI test: it needs LEZ testnet 0.4, which is not released, and sending to Sepolia"
 
 [[row]]
 id = "RFP-022 S.2"
@@ -1149,7 +1149,7 @@ id = "RFP-022 Sec.7"
 tests = [
   { path = "docs/trust.md", kind = "document" },
 ]
-note = "under rule (B) the off-chain roles are liveness-only and the user documentation says so, with the exceptions stated (the accredited sequencers for the return leg, the watchers under rule (A) outside its conditions); first drafts here, final with check-guides.py on branch rfp-docs-final (next entry)"
+note = "under rule (B) the off-chain roles are liveness-only and the user documentation says so, with the exceptions stated (the accredited sequencers for the return leg, the watchers under rule (A) outside its conditions); first drafts here, final with check-guides.py on branch rfp-docs-final (next entry). No CI test in this tree: documents; on branch rfp-docs-final scripts/check-guides.py (links job) checks the final ones (entry below)"
 
 [[row]]
 id = "RFP-022 Sec.7"
