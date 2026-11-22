@@ -44,8 +44,8 @@ YAML they are written in (standard library; `python3 -I scripts/ci/ci_model.py -
 `yq` on all eleven workflows of the repository and the catalog: the same triggers, jobs, steps, commands,
 directories and environments, 11 of 11 on 21 November 2026), the trace of the commands a job runs, and the
 cargo and forge selection rules. It reads statically. A command under a step's or job's `if:` (unless always
-true) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, or whose failure `|| X` masks
-counts for nothing; tracing stops at a top-level `exit` and at `[ A = B ] && exit` when A and B resolve (a
+true) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, whose failure `|| X` masks,
+piped without pipefail, or not last in a text without `set -e` counts for nothing; tracing stops at a top-level `exit` and at `[ A = B ] && exit` when A and B resolve (a
 script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` runs no test; `-- --skip P`
 leaves out a file any of whose tests P could skip; a test that asserts an environment variable's value needs
 the command to set it. Other conditions are read as if they held, and a directory it cannot resolve makes the

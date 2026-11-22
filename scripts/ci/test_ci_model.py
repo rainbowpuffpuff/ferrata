@@ -243,6 +243,19 @@ check("cargo: a file whose every test is #[ignore]d is not run",
       not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
 check("cargo: ... unless the harness is given --ignored",
       ci_model.cargo_runs(C(LEZ_CMD + ["--", "--ignored"], "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
+check("guard: `cargo test ... | tee log` in a default-shell step (bash -e, no pipefail) counts for nothing",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"), PUBLIC))
+check("guard: ... with `shell: bash` (pipefail) it counts",
+      job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash",
+                               "run": "RISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"}]), PUBLIC))
+check("guard: ... and with `set -o pipefail` first",
+      job_runs(lez_text("set -o pipefail\nRISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"), PUBLIC))
+check("guard: a custom shell without -e: a test that is not the last command counts for nothing",
+      not job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash {0}",
+                                   "run": "RISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
+check("guard: ... and counts once the text sets -e",
+      job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash {0}",
+                               "run": "set -e\nRISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
 LH = jobs["lez-harness"]
 last = LH.steps[-1] if LH.steps else {}
 check("jobs: lez-harness's last step runs scripts/ci/lez-harness.sh with no argument, unconditionally",

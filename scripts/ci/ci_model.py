@@ -11,8 +11,10 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
 - `trace`: the commands a job runs, from its `run:` steps and, recursively, the shell scripts they call
   (`bash X.sh`, `./X.sh`, `source X`), each with the directory it runs in and the variables set before it.
   A static reading. Commands under a step's or job's `if:` (unless always true) or `continue-on-error`, run
-  in an `if`/`while`/`until` condition or in the background, or whose failure a `|| X` masks (X not failing),
-  are traced with a `guard` and count for nothing; tracing stops at an `exit` at the top level of a script or
+  in an `if`/`while`/`until` condition or in the background, whose failure a `|| X` masks (X not failing),
+  piped without pipefail, or not last in a text without errexit (GitHub's default step shell is `bash -e`,
+  `shell: bash` adds pipefail; a script has what its `set` lines give it), are traced with a `guard` and count
+  for nothing; tracing stops at an `exit` at the top level of a script or
   step, and at `[ A = B ] && exit` when A and B resolve (a script's arguments are $1, $2 ...). Any other
   condition is read as if it held (an over-approximation); a directory that cannot be resolved makes the
   commands after it count nowhere; a test that skips itself or fails without an environment variable is seen
@@ -672,8 +674,13 @@ def trace(job: Job, tracked: set | None = None):
         cwd = os.path.normpath(cwd)
         env = {**base_env, **{k: str(v) for k, v in (step.get("env") or {}).items()}}
         env.setdefault("GITHUB_WORKSPACE", str(ROOT))
+        # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
+        # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
+        shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
+        errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
+        pipefail = shell == "bash" or "pipefail" in shell
         _run_text(str(step["run"]), cwd, env, f"{job.workflow.name} job {job.name} step {number}", out, tracked, 0,
-                  guard=step_guard(job, step))
+                  guard=step_guard(job, step), errexit=errexit, pipefail=pipefail)
     return out
 
 
@@ -712,12 +719,14 @@ def _test_value(words, vars_):
     return None
 
 
-def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=None, args=None):
+def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=None, args=None, errexit=False,
+              pipefail=False):
     """Trace one step's `run:` text or one script. Commands after an `exit` at the top level of the text (not
     inside a block, a function or a subshell) are not run; neither are those after `[ A = B ] && exit` when A
     and B resolve (with the script's arguments as $1, $2 ...) and are equal. A command followed by `|| X`, where
     X does not fail, has its failure masked, as has the &&-chain before it; so has a command run with `&`; a
-    command in an `if`/`while`/`until` condition does not fail the text by failing."""
+    command in an `if`/`while`/`until` condition does not fail the text by failing. Without `set -e` (errexit) only
+    the text's last command can fail it; without pipefail, a command piped into another cannot."""
     vars_ = dict(vars_)
     if script is not None:
         vars_["0"] = str(ROOT / script)
@@ -730,6 +739,7 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
     stack = []
     block = 0  # if/while/until/for/select/case/{ } nesting
     commands = _split_commands(_tokens(text))
+    last_index = max((k for k, (w, _d, _o) in enumerate(commands) if not w[0].startswith("__")), default=-1)
     chain = []  # the commands of the current && chain (masked together by a later `|| true`)
     prev_op = None
     last_test = None  # (value, ...) of a `[ ... ]` just before `&&`
@@ -789,6 +799,18 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
                     name, value = w.split("=", 1)
                     vars_[name] = _unquote(value, vars_)
             continue
+        if words[0] == "set":
+            for k, w in enumerate(words[1:], start=1):
+                if re.fullmatch(r"[-+][A-Za-z]+", w):
+                    on = w.startswith("-")
+                    if "e" in w[1:]:
+                        errexit = on
+                    if "o" in w[1:] and k + 1 < len(words) and words[k + 1] in ("pipefail", "errexit"):
+                        if words[k + 1] == "pipefail":
+                            pipefail = on
+                        else:
+                            errexit = on
+            continue
         # exit: unconditional at the top level, or after a test that resolves to true
         if words[0] == "exit" and depth == 0 and block == 0:
             if after not in ("&&", "||"):
@@ -826,6 +848,10 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
             why = "it is a condition (if/while/until): its failure does not fail the script"
         if why is None and op == "&":
             why = "it runs in the background (&): its exit status is not waited for"
+        if why is None and op == "|" and not pipefail:
+            why = "it is piped into another command without pipefail: its failure is lost"
+        if why is None and not errexit and not all(commands[k][2] in ("&&", "||", "|") for k in range(index, last_index)):
+            why = "the text runs without set -e and this is not its last command: a failure here does not fail it"
         cmd = Cmd(argv, cwd, cmd_env, origin, why)
         out.append(cmd)
         chain.append(cmd)
