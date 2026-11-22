@@ -284,11 +284,9 @@ impl Route {
             .get("transactions")
             .and_then(Value::as_array)
             .ok_or_else(|| format!("{TX_SENDER}.history answered no transactions: {v}"))?;
-        let row = rows
-            .iter()
-            .filter(|r| r.get("requestId").and_then(Value::as_str) == Some(id))
-            .filter(|r| r.get("leg").and_then(Value::as_u64).unwrap_or(0) == 0)
-            .last();
+        let row = rows.iter().rev().find(|r| {
+            r.get("requestId").and_then(Value::as_str) == Some(id) && r.get("leg").and_then(Value::as_u64).unwrap_or(0) == 0
+        });
         let Some(r) = row else { return Ok(None) };
         let nonce = r
             .get("nonce")

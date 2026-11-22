@@ -143,17 +143,16 @@ async fn main() -> Result<()> {
     let send_ms = t0.elapsed().as_millis() as u64;
     // The transfer's own LEZ fee is paid inside its proof, from the private account's new balance: it holds the
     // amount less that fee once applied.
-    let mut seen = 0u128;
     let t1 = std::time::Instant::now();
-    loop {
+    let seen = loop {
         user.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the user's wallet: {e}"))?;
-        seen = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
+        let seen = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
         if seen > private_before {
-            break;
+            break seen;
         }
         ensure!(t1.elapsed().as_secs() < 300, "the private transfer: private /0 still holds {seen} after 300 s");
         tokio::time::sleep(Duration::from_secs(3)).await;
-    }
+    };
     user.store_persistent_data()?;
     println!(
         "{}",

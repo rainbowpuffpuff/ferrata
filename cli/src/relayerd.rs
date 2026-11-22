@@ -870,7 +870,7 @@ impl Daemon {
         }
         let Some(v) = self.pinned_view().await? else { return Ok(()) };
         // 0. Root imports, once per period: before the inbox, whose gas drops check the imported roots.
-        let period = if self.import_every == 0 { None } else { Some(v.now / self.import_every) };
+        let period = v.now.checked_div(self.import_every);
         if self.import_roots && (period.is_none() || period != self.import_done) {
             match self.import_root().await {
                 Ok(true) => {

@@ -514,7 +514,7 @@ impl Chain {
         let receipt = self.eth.p.send_transaction(tx).await?.get_receipt().await?;
         ensure!(receipt.status(), "the stand-in prover's accept reverted");
         std::fs::create_dir_all(&self.a.relayer_inbox)?;
-        let job = self.a.relayer_inbox.join(format!("release-{}.json", hx(&sha256(&journal))[2..18].to_string()));
+        let job = self.a.relayer_inbox.join(format!("release-{}.json", &hx(&sha256(&journal))[2..18]));
         std::fs::write(&job, json!({ "kind": "release", "journal": hx(&journal), "seal": "0x5ea15ea1" }).to_string())?;
         let before = self.eth.p.get_balance(recipient).await?;
         let out = Command::new(&self.a.relayer_bin)

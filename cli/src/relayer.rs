@@ -46,7 +46,7 @@ use crate::hx;
 
 sol! {
     /// The vault's checkpoint side, as the relayer calls it (vault/src/FerrataVault.sol).
-    #[allow(missing_docs)]
+    #[allow(missing_docs, clippy::too_many_arguments)]
     interface IRelayVault {
         #[derive(Debug, PartialEq, Eq)]
         struct Checkpoint {
@@ -1188,9 +1188,12 @@ fn nodes(v: &serde_json::Value) -> Result<Vec<Vec<u8>>> {
         .collect()
 }
 
+/// A storage proof's nodes and the slot's value.
+pub type SlotProof = (Vec<Vec<u8>>, Hash);
+
 /// The vault's account proof and the proofs of its slots 0 (the deposit root) and 1 (the leaf count)
 /// from an `eth_getProof` answer, with the two values.
-pub fn import_proofs(answer: &serde_json::Value) -> Result<(Vec<Vec<u8>>, (Vec<Vec<u8>>, Hash), (Vec<Vec<u8>>, Hash))> {
+pub fn import_proofs(answer: &serde_json::Value) -> Result<(Vec<Vec<u8>>, SlotProof, SlotProof)> {
     let account = nodes(&answer["accountProof"])?;
     Ok((account, proof_entry(answer, 0)?, proof_entry(answer, 1)?))
 }

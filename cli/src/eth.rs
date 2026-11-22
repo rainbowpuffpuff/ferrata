@@ -21,7 +21,7 @@ use crate::codes::{vault_refusal, Refusal};
 
 sol! {
     /// The parts of FerrataVault (vault/src/FerrataVault.sol) the tool calls.
-    #[allow(missing_docs)]
+    #[allow(missing_docs, clippy::too_many_arguments)]
     interface IVault {
         #[derive(Debug, PartialEq, Eq)]
         struct ReleaseRequest {

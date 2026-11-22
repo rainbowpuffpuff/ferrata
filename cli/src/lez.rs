@@ -753,7 +753,7 @@ impl Ledger for Sequencer {
         let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
         // The one-time account: the one recorded for this N by an earlier run, or a new child of private
         // account /0 (LEZ's key tree; nothing on the zone links it to the wallet's other accounts).
-        let recorded = book.get(&key).and_then(|v| v["oneTime"].as_str()).map(|h| crate::h32(h)).transpose()?;
+        let recorded = book.get(&key).and_then(|v| v["oneTime"].as_str()).map(crate::h32).transpose()?;
         let (one_time, resumed) = match recorded {
             Some(id) => (AccountId::new(id), true),
             None => {
@@ -984,7 +984,9 @@ impl Ledger for DevnetZone {
     }
 }
 
-/// The zone a relayer reaches: a sequencer through LEZ's wallet, or the mini-app devnet's zone.
+/// The zone a relayer reaches: a sequencer through LEZ's wallet, or the mini-app devnet's zone. One per daemon: the
+/// variants' sizes do not matter.
+#[allow(clippy::large_enum_variant)]
 pub enum Zone {
     #[cfg(feature = "lez-wallet")]
     Sequencer(Sequencer),

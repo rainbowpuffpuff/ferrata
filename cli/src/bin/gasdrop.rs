@@ -117,7 +117,7 @@ fn journal_json(j: &GasDropJournal) -> Value {
 
 fn prove(elf: &Path, input: &Path, out: &Path, want: Option<&str>) -> Result<Value> {
     ensure!(
-        std::env::var_os("RISC0_DEV_MODE").map_or(true, |v| v.is_empty() || v == "0"),
+        std::env::var_os("RISC0_DEV_MODE").is_none_or(|v| v.is_empty() || v == "0"),
         "RISC0_DEV_MODE is set: this step makes a real receipt only"
     );
     let elf = std::fs::read(elf).with_context(|| format!("reading {}", elf.display()))?;
