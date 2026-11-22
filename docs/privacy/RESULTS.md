@@ -63,7 +63,7 @@ lengthened ...) misses planted leaks the real one finds. The hidden-column searc
 **Regenerated for CI (branch `rfp-ci-coverage`, 22 November 2026).** [`generated/`](generated/) is now the run of
 `scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ccde6171…71dd`, the deployed one
 of [`../image-ids.md`](../image-ids.md); the tables before were image `cf41b7e5…5390`'s); a second run gave the same
-files byte for byte, proving times and image ids aside. CI's `lez-harness` job now runs the suite and
+files byte for byte, the dev-mode proving times aside. CI's `lez-harness` job now runs the suite and
 [`scripts/privacy/check-results.py`](../../scripts/privacy/check-results.py), which fails unless the gate passes on
 every private default, the controls are linkable, the adversary is at chance on both legs, nothing hidden is
 found, recovery is complete and these tables are reproduced. Every verdict is the earlier run's; the collector

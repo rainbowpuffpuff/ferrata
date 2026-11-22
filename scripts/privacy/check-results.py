@@ -29,10 +29,10 @@ What is checked, and the requirement each check answers (RFP-022, "Privacy Prese
 5. The four generated files equal the committed ones byte for byte, so the published tables —
    including `fields.md`, what each third party sees (Privacy #6: "Where a third party submits on
    the user's behalf, document precisely what that party learns") — are what the code produces.
-   Normalised on both sides, and only these: the bridge program's and the privacy circuit's image
-   ids (the ELF holds its build paths, so the id moves with the worktree: docs/privacy/RESULTS.md
-   records `23cc5025…`, `b5d177bb…`, `5943b750…`, `d0c11833…`, `cf41b7e5…` for the same guests) and
-   the proving time (a wall-clock time; written only by the real-proof pipeline). Nothing else.
+   Normalised on both sides, and only this: the proving time, a wall-clock time the collectors
+   record in every run, dev mode included (`prove_s` in results.json, the "min / median / max; sum"
+   cell of summary.md's proofs table). The image ids are compared as they are: the guests build
+   independent of the path (docs/image-ids.md), so another id is another program, and fails.
 
 After `scripts/privacy/run.sh [OUT_DIR]` (its OUT_DIR defaults to docs/privacy/generated), run:
 
@@ -76,8 +76,8 @@ PRIVATE_GAMES = ("inbound, private (default)", "outbound, private (default)")
 HIDDEN_STEPS = ("deposit hides the LEZ destination", "claim hides which deposit and a private destination",
                 "burn hides the holder and the recipient", "release hides which burn")
 
-# The only environment-dependent values adversary.py writes, normalised in check 5 (see the
-# docstring): the two image ids, and the proving times (real-proof pipeline only).
+# The only environment-dependent value adversary.py writes, normalised in check 5 (see the
+# docstring): the proving times, wall-clock, in every run.
 IMAGE_PATTERNS = (re.compile(r"program image `([0-9a-f]{64})`"), re.compile(r"circuit `([0-9a-f]{64})`"))
 PROVE_TIME_JSON = re.compile(r'"prove_s": \{[^{}]*\}')  # spread() of the collectors' proving times
 PROVE_TIME_MD = re.compile(r"[0-9]+\.[0-9] / [0-9]+\.[0-9] / [0-9]+\.[0-9]; [0-9]+")  # summary.md's cell
@@ -260,23 +260,7 @@ def recovery_checks(res, n):
     return out
 
 
-def side_image_ids(files, res_side):
-    """The image ids this side's own files carry (they are this build's, so they differ per path)."""
-    ids = []
-    text = (files.get("summary.md") or b"").decode("utf-8", "replace")
-    for pat in IMAGE_PATTERNS:
-        m = pat.search(text)
-        if m:
-            ids.append(m.group(1))
-    cid = dig(res_side, "proofs", "circuit_image_id")
-    if isinstance(cid, str) and re.fullmatch(r"[0-9a-f]{64}", cid):
-        ids.append(cid)
-    return ids
-
-
-def normalise(text, ids):
-    for i in ids:
-        text = text.replace(i, "<image id: moves with the ELF's build path>")
+def normalise(text):
     text = PROVE_TIME_JSON.sub('"prove_s": "<proving time>"', text)
     text = PROVE_TIME_MD.sub("<proving time>", text)
     return text
@@ -284,7 +268,6 @@ def normalise(text, ids):
 
 def file_checks(out_files, committed_files, res, res_committed, committed_dir):
     out = []
-    ids_a, ids_b = side_image_ids(out_files, res), side_image_ids(committed_files, res_committed)
     for name in FILES:
         a, b = out_files.get(name), committed_files.get(name)
         where = "OUT_DIR" if a is None else str(committed_dir)
@@ -293,10 +276,10 @@ def file_checks(out_files, committed_files, res, res_committed, committed_dir):
                         "published tables, fields.md's third-party view included, are what the code produces)",
                         False, f"missing in {where}"))
             continue
-        na = normalise(a.decode("utf-8", "replace"), ids_a)
-        nb = normalise(b.decode("utf-8", "replace"), ids_b)
+        na = normalise(a.decode("utf-8", "replace"))
+        nb = normalise(b.decode("utf-8", "replace"))
         if na == nb:
-            ok, detail = True, "identical (the two image ids and the proving time normalised; nothing else)"
+            ok, detail = True, "identical (the proving times normalised; nothing else)"
         else:
             la, lb = na.split("\n"), nb.split("\n")
             i = next((k for k in range(min(len(la), len(lb))) if la[k] != lb[k]), min(len(la), len(lb)))
@@ -416,10 +399,14 @@ def self_test():
          lambda f: f.__setitem__("summary.md", f["summary.md"] + b"\n")),
         ("results.json differs by a byte that keeps the same data", "5 published: results.json", None,
          lambda f: f.__setitem__("results.json", f["results.json"].replace(b'"gate": {', b'"gate":  {', 1))),
-        # What the normalisation is for: another build path's image id is not a privacy failure.
-        ("summary.md carries another build's bridge image id (the ELF holds its build path)", None, None,
+        # Another bridge program: its image id is compared as it is (the guests build independent of the path).
+        ("summary.md names another bridge program image", "5 published: summary.md", None,
          lambda f: f.__setitem__("summary.md", f["summary.md"].replace(
              IMAGE_PATTERNS[0].search(f["summary.md"].decode()).group(1).encode(), b"0" * 64))),
+        # What the normalisation is for: the proving time is wall-clock, recorded in every run.
+        ("summary.md's proving times differ (wall clock)", None, None,
+         lambda f: f.__setitem__("summary.md", PROVE_TIME_MD.sub(
+             "9.9 / 9.9 / 9.9; 99", f["summary.md"].decode(), count=1).encode())),
     ]
     refused = accepted = problems = 0
     for label, expect, mutate, files_mutate in cases:
@@ -440,7 +427,7 @@ def self_test():
                 print(f"NOT accepted  {label}: refused by {failures}")
                 problems += 1
             else:
-                print(f"accepted      {label} (the image id is normalised, as designed)")
+                print(f"accepted      {label} (the proving time is normalised, as designed)")
                 accepted += 1
         elif any(expect in f for f in failures):
             print(f"refused       {label} (by: {'; '.join(short(f, 80) for f in failures)})")
