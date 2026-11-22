@@ -246,7 +246,8 @@ operator updating once an hour adds up to 60 minutes to it (*derived*); deferral
 window: on a sequencer two daemons applied an update in 105 s (median; p90 106 s) without deferral, 126 s (p90 176 s)
 with a window of 8 rounds (nominally 32 s; rounds took 5.9–6.2 s) and 306 s (p90 576 s) with 30 rounds (nominally
 120 s; 4.6–4.8 s each), while the execution gas spent per revealed update fell from 16.0M to 8.1M and 4.6M, abandoned
-jobs and refused steps included ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); updates replayed
+jobs and refused steps included (G5 revealed every 90 s, not 60, and 12 of its 17 updates were covered by a later
+update's job: much of the fall is updates skipped, not the window alone; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); updates replayed
 81 to 122 times faster than the lab recorded them, about 40–60 times the design's hourly cadence, so jobs overlapped).
 
 ### P.6 Off-chain compute
