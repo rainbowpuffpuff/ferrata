@@ -15,6 +15,8 @@ STORED_TX="${FERRATA_STORED_TX:-$REPO/lez/results/stage2-private-tx.borsh}"
 # The harness tables (stage1-*.md) each transaction is compared with: those of the deployed image
 # (the default holds the image the harness builds now).
 HARNESS_RESULTS="${FERRATA_LIVE_HARNESS_RESULTS:-$REPO/lez/results}"
+# scrub: no path of this machine and no name of the folders the run used in the records (scrub.sh).
+. "$LIVE_DIR/scrub.sh"
 
 stop_all() {
   [ -f "$PIDS" ] || return 0
@@ -287,8 +289,8 @@ while :; do
 done
 # What the sequencer process was started with, as the kernel reports it.
 {
-  echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | sed "s#$BESIDE/#../#g")"
-  echo "RISC0_* variables in the sequencer's environment: $(tr '\0' '\n' < /proc/$SEQ_PID/environ | grep '^RISC0_' | tr '\n' ' ' | sed "s#$BESIDE/#../#g")"
+  echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | scrub)"
+  echo "RISC0_* variables in the sequencer's environment: $(tr '\0' '\n' < /proc/$SEQ_PID/environ | grep '^RISC0_' | tr '\n' ' ' | scrub)"
   if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then
     echo "(RISC0_DEV_MODE=1, FERRATA_LIVE_SEQUENCER_DEV_MODE: receipts of privacy-preserving transactions are NOT verified; fake receipts are taken)"
   else
@@ -381,9 +383,15 @@ stop_all
 trap - EXIT
 FINISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-scrub() { sed -e "s#$BESIDE/#../#g" -e "s#$HOME/#~/#g"; }   # no paths of this machine in the records
 mkdir -p "$OUT/config" "$OUT/logs" "$OUT/private"
-if [ -d "$DRIVER_OUT" ]; then cp "$DRIVER_OUT"/* "$OUT/"; fi
+if [ -d "$DRIVER_OUT" ]; then   # the driver's records: text through scrub, borsh and other binary files as they are
+  for f in "$DRIVER_OUT"/*; do
+    case "$f" in
+      *.borsh) cp "$f" "$OUT/" ;;
+      *) if grep -Iq . "$f"; then scrub < "$f" > "$OUT/${f##*/}"; else cp "$f" "$OUT/"; fi ;;
+    esac
+  done
+fi
 cp "$RUN_DIR/config/sequencer_config.diff" "$RUN_DIR/config/sequencer-process.txt" "$OUT/config/"
 scrub < "$RUN_DIR/sequencer_home/sequencer_config.json" > "$OUT/config/sequencer_config.json"
 [ -f "$RUN_DIR/config/bedrock-node-config.diff" ] && cp "$RUN_DIR/config/bedrock-node-config.diff" "$OUT/config/"
@@ -456,7 +464,7 @@ fi
   echo "- ports: sequencer RPC 127.0.0.1:$RPC_PORT, metrics 127.0.0.1:${FERRATA_LIVE_METRICS_PORT:-9000}, Bedrock API 127.0.0.1:$BEDROCK_PORT"
   echo "- last block: ${head_block:-?}; blocks the sequencer published to Bedrock: $(grep -c 'Published block' "$LOG/sequencer.log" || true); its last channel update: $(grep 'Channel update' "$LOG/sequencer.log" | tail -1 | sed 's/^.*Channel update: //')"
   if [ -n "$bedrock_end" ]; then echo "- Bedrock node at the end (cryptarchia/info): $bedrock_end"; fi
-} > "$OUT/environment.md"
+} | scrub > "$OUT/environment.md"
 cat "$OUT/environment.md"
 echo "== records in ${OUT#$REPO/}"
 exit "$status"

@@ -8,7 +8,7 @@ payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
 payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
 payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
 payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
-harness tables: 55 rows from ../ferrata-wt-fix-a2-rc3/lez/results/v0.4.0-rc3
+harness tables: 55 rows from <copy>/lez/results/v0.4.0-rc3
 Transaction hash is bf8bc0928a89af68764142b7b20f9a324311b6d5be32743c7f3db478315484d2
 Transaction is included in block 2
 Transaction hash is 6ad340f42f28f8067ed020430a4aa5d2b03d53f8fdddc0c585e805b732414d9e
@@ -169,4 +169,4 @@ transactions: 48 sent; 47 applied, 0 refused with an exit code, 0 reverted other
 charged in all: execution gas 39811221, storage gas 4010970, base fees 350577528
 against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
 base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 0 of 51
-records written to ../tmp/fix-a2/live/run/export
+records written to <scratch>/run/export

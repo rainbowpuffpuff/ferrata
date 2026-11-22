@@ -105,4 +105,4 @@ LEZ_TAG=v0.4.0-rc3 FERRATA_VERIFY_DEV_MODE=1 lez/live/verify-run.sh --dir lez/re
 | `chain.tsv`, `blocks.borsh`, `segments.tsv` | every block as the sequencer served it (program bytecode elided, its chunks listed) |
 | `private/block/` | the transactions the client held, as proven: `reader-0..3.borsh`, `control-0.borsh`, `control-1.borsh`; `funding.borsh` is the last funding transaction as the wallet built it (all four are in `blocks.borsh`) |
 | `programs.tsv`, `instances.tsv` | the deployments, and instance S as the chain holds it at the end |
-| `config/`, `logs/`, `environment.md`, `summary.txt` | the sequencer's configuration and environment, the sequencer's and the driver's logs |
+| `config/`, `logs/`, `environment.md`, `summary.txt` | the sequencer's configuration and environment, the sequencer's and the driver's logs. The box's folder names in them were replaced after the run by `<scratch>` and `<copy>`, as in the command above (8 places in `config/sequencer-process.txt`, `config/sequencer_config.json` and the three logs; nothing else changed, and the replay reads none of them); `lez/live/scrub.sh` now writes such placeholders itself |

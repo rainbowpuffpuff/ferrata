@@ -1,5 +1,5 @@
 {
-  "home": "../tmp/fix-a2/live/run/sequencer_home",
+  "home": "<scratch>/run/sequencer_home",
   "max_num_tx_in_block": 20,
   "mempool_max_size": 1000,
   "block_create_timeout": "6s",
