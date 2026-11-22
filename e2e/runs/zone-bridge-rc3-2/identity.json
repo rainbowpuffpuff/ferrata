@@ -1,0 +1,10 @@
+{
+  "label": "STAND-IN Ethereum side: a local anvil (no fork, Sepolia chain id because crown-driver pins it), W and the release delay warped; the zone (LEZ v0.4.0-rc3, Logos Blockchain 0.3.5-rc.1), its programs and proofs are real",
+  "chainId": 11155111,
+  "vault": "0x169E05aE832232B7B177b717D718bccaC12F65b1",
+  "configId": "0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458",
+  "genesisState": "0xcc26a3cb03e26cd66deced13171d508febb30e941c68af0fd1defbcd26cb2588",
+  "delta": 3600,
+  "deployer": "0x0c8b321A2B8b06cA79459585B13Ea6a33635d0A8",
+  "forkDigest": "c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac"
+}

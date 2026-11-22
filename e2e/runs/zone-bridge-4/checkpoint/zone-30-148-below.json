@@ -1,0 +1,53 @@
+{
+  "attestations": [
+    {
+      "attestation_key": "1b0444c2ff4f686785b564ab0213679159b105338f4be8c347a29ac8e64f2f2a",
+      "channel_key": "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+      "tip_id": 148
+    },
+    {
+      "attestation_key": "2df5a7374c43641121aadcabee56a9f4da420639484defe3464ef4c3feb99404",
+      "channel_key": "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3",
+      "tip_id": 148
+    },
+    {
+      "attestation_key": "7de0dec20c12ae859f62ae91c4e2c5834fcb4c37c3a36425ad955e897d1d3b6b",
+      "channel_key": "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+      "tip_id": 148
+    }
+  ],
+  "block_bytes": 635994,
+  "blocks": 118,
+  "blocks_to_t": 118,
+  "config_tip_hash": "e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c",
+  "deployment": {
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "evm_chain_id": "0000000000000000000000000000000000000000000000000000000000aa36a7",
+    "lez_config_id": "8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9",
+    "vault": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c"
+  },
+  "description": "an input the program must refuse",
+  "expect_refusal": "InsufficientAttestations { have: 3, need: 4 }",
+  "input_bytes": 639582,
+  "keys": [
+    "fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096",
+    "6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac",
+    "90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729",
+    "99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"
+  ],
+  "kind": "checkpoint-b",
+  "n": 4,
+  "n_min": 4,
+  "name": "zone-30-148-below",
+  "native": "refused: InsufficientAttestations { have: 3, need: 4 }",
+  "parent_state": "f0e1c07dba2301ff22f1527b0d6fd6c391015009c16571fb9e393621f36dbbc0",
+  "parent_tip_hash": "4746f9e13e806d632f4d744ac3f97383b82cead94c95274cf8c388f127745d4b",
+  "parent_tip_id": 30,
+  "posting_timeframe": 60,
+  "segments": 0,
+  "t": 3,
+  "t_min": 3,
+  "tip": 148,
+  "tip_hash": "9d6712618ccd1d04ecffa549e26ea4d6dc68cf9c7cabf4e38e4d30d187b2f5fd",
+  "transactions": 252
+}

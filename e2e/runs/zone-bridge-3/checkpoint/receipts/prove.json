@@ -1,0 +1,22 @@
+{
+  "image_id": "0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e",
+  "input_sha256": "254c012fbd0e92325aea632b45fb75224f82b361dddbac1835c5f104b116b97d",
+  "journal_equals_native": true,
+  "loadavg_after": "0.00 0.00 0.00 0/0 0",
+  "loadavg_before": "0.00 0.00 0.00 0/0 0",
+  "paging_cycles": 1708933,
+  "program_sha256": "7b5c3735635ff116ea2f2a0a1eae8929dd716ce57a7839368df683b5ad500e3b",
+  "prover": "r0vm, CPU",
+  "rayon_num_threads": null,
+  "receipt_bytes": 224314,
+  "receipt_kind": "succinct",
+  "receipt_sha256": "8a7acf785a00f1ba1d022c4f5036f19c0c80791f66442fbda5b0cdcd303fe329",
+  "reserved_cycles": 681193,
+  "risc0_zkvm": "3.0.5",
+  "segments": 24,
+  "threads": 32,
+  "total_cycles": 24641536,
+  "user_cycles": 22251410,
+  "verifies": true,
+  "wall_s": 1426.371419991
+}

@@ -1,0 +1,110 @@
+{
+  "blocks": {
+    "from": 31,
+    "to": 148
+  },
+  "chain": "stand-in",
+  "claims": [
+    {
+      "block": "58",
+      "dest": "0x54d662b664519cb8aef608ae84a63e041cc16019e4a07c34828311996f0c817a",
+      "kind": "public",
+      "leaf": 0,
+      "nullifier": "0xece67bfe55887d55054498e24d5b611808181953a37f16592dbcd7229fefa875",
+      "tx": "cf7bb3ce809e6afb95b391eac7b71e9ee6bff2d8067470175654be971744ab06"
+    },
+    {
+      "block": "106",
+      "kind": "private",
+      "leaf": 1,
+      "nullifier": "0xe0edb8785aa96f473d8bff3eca869087f902a189ebf081b66193c85a10dd2d4c",
+      "tx": "9375882016804a0d64fc2149c0aa546537f0cf94b83b51582dd1dbb602bd4de7"
+    }
+  ],
+  "configId": "0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9",
+  "instance": "0xabd362ebd8091508211f8c37dfd4c8e77d7ee313248579c5399aecf726b13c4a",
+  "label": "STAND-IN rehearsal (beacon committee held by the driver; not Sepolia)",
+  "steps": [
+    {
+      "block": "55",
+      "execGas": "225204",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Init (pairing: configId in the vault's slot 2)",
+      "tx": "355c57516f8c89a63e0af2fd3585487682c0346edf15b9f219d9cbc234c35a6f"
+    },
+    {
+      "block": "56",
+      "execGas": "448600",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Register ETH (registry entry, schedules 0 and 1, leaf count)",
+      "tx": "fbb4350054e24ea1441a7362ae68443a846f035cc094756048c0b13023acbe67"
+    },
+    {
+      "block": "57",
+      "execGas": "305431",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportRoot n=1 (stage 1, block 9)",
+      "tx": "2daddafee02436fb4dd2eec5779ccef3d2bba1c6f0614653f53cc3f7e4199654"
+    },
+    {
+      "block": "58",
+      "execGas": "256314",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Claim: deposit 0 (public) under root(cid, 1)",
+      "tx": "cf7bb3ce809e6afb95b391eac7b71e9ee6bff2d8067470175654be971744ab06"
+    },
+    {
+      "block": "62",
+      "execGas": "315313",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportFees: ETH schedule 1 absent at n=2",
+      "tx": "6fdd1fc5906e6bc909e736df804ea10ab44d37483c463583d1e411d83e6f880a"
+    },
+    {
+      "block": "63",
+      "execGas": "305431",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ImportRoot n=2 (stage 2, block 10)",
+      "tx": "3e85e680b35fe70a47252cbef02948482695e2471066405e6682512c92140d80"
+    },
+    {
+      "block": "106",
+      "execGas": "553328",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)",
+      "tx": "9375882016804a0d64fc2149c0aa546537f0cf94b83b51582dd1dbb602bd4de7"
+    },
+    {
+      "block": "107",
+      "execGas": "160297",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Burn (public): 0.001 ETH of public test account 0, note 0",
+      "tx": "61cd28c804a4988ae4539c43649ead551a053da11b2f3d201ce5e8b76a3394ad"
+    },
+    {
+      "block": "148",
+      "execGas": "515555",
+      "exit": "",
+      "status": "applied",
+      "step": "bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)",
+      "tx": "26df82f6b00a1c6191cd1fd360428d2be0a0ea2f4ed901e1df1a85bae8a944e1"
+    }
+  ],
+  "tipT0": {
+    "hash": "0x4746f9e13e806d632f4d744ac3f97383b82cead94c95274cf8c388f127745d4b",
+    "id": 30
+  },
+  "tipT1": {
+    "hash": "0x9d6712618ccd1d04ecffa549e26ea4d6dc68cf9c7cabf4e38e4d30d187b2f5fd",
+    "id": 148
+  },
+  "vault": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c"
+}

@@ -1,0 +1,13 @@
+{
+  "_source": "rc3-return (lez/live/hooks/return-leg.sh): one LEZ v0.4.0-rc3 sequencer on a Logos Blockchain 0.3.5-rc.1 node; the checkpoint guests of guests-0-3-5",
+  "checkpointImageIdA": "0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f",
+  "checkpointImageIdB": "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf",
+  "releaseImageId": "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9",
+  "lezConfigId": "0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458",
+  "genesisState": "0xcc26a3cb03e26cd66deced13171d508febb30e941c68af0fd1defbcd26cb2588",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

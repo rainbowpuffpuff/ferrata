@@ -168,3 +168,20 @@ contract ZoneBridgeTest is ZoneBridgeFixture {
         return 3;
     }
 }
+
+/// @notice zone-bridge-3: zone-bridge-1's run again (22 November) with each attestor checking every tip against its own
+/// sequencer's LEZ node and its last round taken while the zone runs (checkpoint/attestor/RESULTS.md §10.1); the four
+/// sequencers' keys throughout; three of the four attestations (n = 4, t = 3).
+contract ZoneBridgeLezCheckedTest is ZoneBridgeFixture {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/zone-bridge-3.json";
+    }
+
+    function _n() internal pure override returns (uint32) {
+        return 4;
+    }
+
+    function _t() internal pure override returns (uint32) {
+        return 3;
+    }
+}

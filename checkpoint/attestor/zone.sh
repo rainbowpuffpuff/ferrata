@@ -17,10 +17,11 @@
 # upstream/lez-v0.4.0-rc1; rc3's is the same), ZONE_BEDROCK the directory of the node's node-config.yaml and
 # deployment-settings.yaml (default the tree's bedrock/; `bundle`: the bundle's lez-config/, as crown-rc3's bundle has).
 #
-# ZONE_DURING is run (bash -c) once the sequencers are started, ZONE_AFTER once the answers are saved and
-# while the node still runs; both with ZONE_API (the node's HTTP API), ZONE_CHANNEL and ZONE_OUT (<out dir>)
-# in their environment, their output in <out dir>/during.log and after.log. ZONE_AFTER's exit status is
-# the script's.
+# ZONE_DURING is run (bash -c) once the sequencers are started, ZONE_BEFORE_STOP when the <seconds> are over
+# and the sequencers still run (sequencer i's LEZ node answers on 127.0.0.1:1930i: an attestor's last round
+# needs it), ZONE_AFTER once the sequencers have stopped and the answers are saved, while the node still runs;
+# all with ZONE_API (the node's HTTP API), ZONE_CHANNEL and ZONE_OUT (<out dir>) in their environment, their
+# output in <out dir>/during.log, before-stop.log and after.log. ZONE_AFTER's exit status is the script's.
 set -euo pipefail
 bundle="$(realpath "$1")"; out="$(realpath -m "$2")"; secs="${3:-300}"
 lez="$(realpath "${ZONE_LEZ:-../../upstream/lez-v0.4.0-rc1}")"; dev="$lez/lez/configs/docker-all-in-one/devnet"
@@ -92,6 +93,10 @@ while [ "$(date +%s)" -lt "$end" ]; do
   log "channel keys/tip_sequencer/tip_slot: $keys | heights: $(rpc 0 getLastBlockId)/$(rpc 1 getLastBlockId)/$(rpc 2 getLastBlockId)/$(rpc 3 getLastBlockId) | alive $alive | lib $(curl -fsS -m 3 "$api/cryptarchia/info" | sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p')"
   sleep 20
 done
+if [ -n "${ZONE_BEFORE_STOP:-}" ]; then
+  ZONE_API="$api" ZONE_CHANNEL="$CHANNEL" ZONE_OUT="$out" bash -c "$ZONE_BEFORE_STOP" > "$out/before-stop.log" 2>&1 \
+    || log "ZONE_BEFORE_STOP exited $?"
+fi
 stop_seqs
 log "sequencers stopped; waiting for the LIB to pass the channel's tip"
 tip_slot=$(curl -fsS -m 5 "$api/channel/$CHANNEL" | sed -n 's/.*"tip_slot":\([0-9]*\).*/\1/p')

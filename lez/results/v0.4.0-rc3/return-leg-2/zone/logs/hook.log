@@ -1,0 +1,31 @@
+[return-leg 02:54:59] the zone: LEZ RPC http://127.0.0.1:3040, Bedrock http://127.0.0.1:18080; image ids: checkpoint_0_3_5 0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f, checkpoint_b_0_3_5 0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf, release 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9
+[return-leg 02:54:59] node: fork digest c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (GET /chain/fork), channel 0101010101010101010101010101010101010101010101010101010101010101
+[return-leg 02:54:59] the channel: {"keys":1,"configuration_threshold":1,"posting_timeframe":0,"tip_slot":2455768}; the attestor reads node blocks from slot 2455168
+[return-leg 02:58:56] session A: T0 = 24 0x87dde07e5c52984931c4477e3c94d6b7417a76de1c5791d2c1d1d625533f090e; bedrockGenesisId = the fork digest; key set n = 1, posting timeframe 0
+[return-leg 02:58:57] anvil (local, chain id 11155111, no fork): deployer 0x0c8b321A2B8b06cA79459585B13Ea6a33635d0A8 (impersonated) nonce 0; vault 0x169E05aE832232B7B177b717D718bccaC12F65b1; configId 0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458; genesisState 0xcc26a3cb03e26cd66deced13171d508febb30e941c68af0fd1defbcd26cb2588
+[return-leg 02:59:05] deposit 0 sent; capture-1: capture of block 9 0xbca7091f09090b6141b4d0943374ec7b903cbb3248f2d497da0cf4f2e7248e6e (state root patched: False): 1 deposit(s), 6 slot(s)
+[return-leg 02:59:06] deposit 1 sent; capture-2: capture of block 10 0x964855c83865c2c3d25ee682bef60dc3c8163c67d7ff4a24050fe385299be44e (state root patched: False): 2 deposit(s), 6 slot(s)
+[return-leg 02:59:27] crown-driver check: [check] stage 2: configId 0xfe93d41d0cd70a947f7dea6d435254755867276db8c1327e858f9bb6fc774458 in slot 2; pairing, import and register requests accepted natively
+certified e512f089f43e736db73fde2a951e48ab23b2f7ddc391561ffa7f02fd39854b9c by channel key 34788733be3960eec38b965cfc008d9f5885481219ff206114db2a7352cae964
+[return-leg 02:59:27] attestor started (key from the OS's randomness, not recorded; certified by the sequencer's channel key; a round every 60 s)
+[return-leg 02:59:27] crown-b: real private proofs, RAYON_NUM_THREADS=32
+[crown-b] stage 2 finality update (block 10) Miller (step 2)         applied        gas   3305374 block   46 + 15.7s 20582d2db3619c13a9e17b26f1eb3b4c9784f0078af8a32c2cc0e32f9773eed8
+[crown-b] stage 2 finality update (block 10) Finish (step 3)         applied        gas   3718957 block   48 + 24.0s 5c0f2c45de4c1f118c9773b3e49e02ec8f4c38b1d742e8eaa936688e3d17992e
+[crown-b] bridge ImportFees: ETH schedule 1 absent at n=2            applied        gas    321523 block   50 + 19.7s bd3eec925555819ab6c6bc23556c0fbf15e481d48f25fe4c3d3785718c290625
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] bridge ImportRoot n=2 (stage 2, block 10)                  applied        gas    319468 block   52 + 19.6s 3ffad50de8b64038bb3d33e875d6e450e5a9de82ebdcd559aeab8bca0cd25a62
+[crown-b] private wallet at block 53: account 44KVvzvh2ephQU9aR5snboGUXKgS1FnPYh1W4KZKwmhm
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof): executed, proven and sent in 215.5 s (252267 bytes)
+[crown-b] bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof) applied        gas    553328 block   76 + 24.5s 4d05cceb842f699a6d984f349c075052221dd1842393b5dd18e0eaeb0c6bc4e3
+[crown-b] bridge Burn (public): 0.001 ETH of public test account 0, note 0 applied        gas    160297 block   78 + 19.6s 4d4799a9cdc6ae2940d3c6d7ea009bc0ab78b648fddee14faf6ff4a9248687b0
+Syncing to block 78. Blocks to sync: 25
+Synced to block 78 in 18.374011ms
+[crown-b] private test account 0 after the claim (wallet's view at block 78): Some(HolderState { holdings: [Holding { config_id: [254, 147, 212, 29, 12, 215, 10, 148, 127, 125, 234, 109, 67, 82, 84, 117, 88, 103, 39, 109, 184, 193, 50, 126, 133, 143, 155, 182, 252, 119, 68, 88], token: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], amount: 1000000000000000 }], pending: None })
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof): executed, proven and sent in 259.9 s (255031 bytes)
+[crown-b] bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof) applied        gas    515555 block  106 + 19.8s 7d989e31dd21d0b5c02f67ec1fc215d230473b6edf42b340c126b8d70f041151
+[crown-b] blocks 25..=106 (T1 0x19a1a23980358549811514f07ddb007ea817be5643de321b8d1cae8f2b8a40f3); 2 burn note(s) written to work/hook/burn-notes.json
+[return-leg 03:12:36] session B: T1 = 106; steps [["bridge Init (pairing: configId in the vault's slot 2)","applied","36"],["bridge Register ETH (registry entry, schedules 0 and 1, leaf count)","applied","38"],["bridge ImportRoot n=1 (stage 1, block 9)","applied","40"],["bridge Claim: deposit 0 (public) under root(cid, 1)","applied","42"],["bridge ImportFees: ETH schedule 1 absent at n=2","applied","50"],["bridge ImportRoot n=2 (stage 2, block 10)","applied","52"],["bridge ClaimPrivately: deposit 1 at LEZ's private test account 0 (real proof)","applied","76"],["bridge Burn (public): 0.001 ETH of public test account 0, note 0","applied","78"],["bridge Burn (private): 0.001 ETH of private test account 0, note 1 (real proof)","applied","106"]
+attested: channel key 34788733be3960eec38b965cfc008d9f5885481219ff206114db2a7352cae964 | attestation key e512f089f43e736db73fde2a951e48ab23b2f7ddc391561ffa7f02fd39854b9c | final tip 106 19a1a23980358549811514f07ddb007ea817be5643de321b8d1cae8f2b8a40f3 (final message fbe18d5cca524edfd1dfa64a76c6744d9893220c0c2cbba117ebeda49a48fad9) | node lib slot 2456029, blocks 105..=106 followed, the tip final in the LEZ node | key set n = 1 hash b532401481010d796d5d40035ce8d78e265552bdcdb02ad6d84830af0484488d
+work/att-0/final.json: verifies (channel key 34788733be3960eec38b965cfc008d9f5885481219ff206114db2a7352cae964, tip 106)
+[return-leg 03:12:37] node answers (read after the attestor's final round): slots from 2455168 to the LIB 2456029, 2 windows, 4003212 bytes
+[return-leg 03:12:38] hook done: T0 24, T1 106, attested tip 106

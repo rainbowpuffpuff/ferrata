@@ -4,10 +4,13 @@
 # the lab bundle's binaries, no Docker), and four headless Logos Cores, one per sequencer, each with
 # ferrata_attestor_module installed and loaded, its own attestation key (OS randomness) certified once by
 # that sequencer's channel key. While the zone runs, each module's loop (`start`) reads the node over HTTP
-# every POLL seconds, checks the final tier and signs its tip as it advances (never a lower tip or another
-# hash at a height it signed). Once the sequencers have stopped and the node's LIB has passed the
-# channel's tip, each signs the final tip; they are stopped, and the module's collector takes 3 of 4
-# (one sequencer's attestation left out), 4 of 4, and refuses 2 of 4.
+# every POLL seconds, checks the final tier against its own sequencer's LEZ node (`lez`, the sequencer's
+# JSON-RPC on 127.0.0.1:1930i: it signs only a tip that node holds final) and signs its tip as it advances
+# (never a lower tip or another hash at a height it signed). When the run's seconds are over, while the
+# sequencers still run (a stopped LEZ node answers nothing), the loops are stopped and each module's one-shot
+# `attest` (node + lez + its loop's state file) runs, again until all four sign one tip T; then the sequencers
+# stop, and over the node's saved answers the module's collector takes 3 of 4 (one sequencer's attestation left
+# out), 4 of 4, and refuses 2 of 4, the base input ending at T.
 #
 #   LOGOSCTL=BIN LGX=PACKAGE modules/scripts/attestor-zone-live.sh BUNDLE OUT_DIR [SECONDS] [POLL]
 #
@@ -31,7 +34,7 @@ if [ $(( ${#LOGOS_TMPDIR} + 45 )) -gt 107 ]; then
 fi
 mkdir -p "$LOGOS_TMPDIR"
 export TMPDIR="$LOGOS_TMPDIR"
-case "${1:-}" in during | after) phase=$1; shift ;; esac
+case "${1:-}" in during | before-stop | after) phase=$1; shift ;; esac
 
 ctl() { local i=$1; shift; "$LOGOSCTL" --config-dir "$W/core-$i" "$@"; }
 # callm I METHOD NAME: request $W/req/NAME.json (none if absent), reply $W/rep/NAME.json, through core I
@@ -44,18 +47,49 @@ callm() {
 }
 req() { cat > "$W/req/$1.json"; }
 
+lez_of() { echo "http://127.0.0.1:$((19300 + $1))"; }   # sequencer i's JSON-RPC (zone.sh's --rpc-listen-address)
+
 if [ "$phase" = during ]; then
   W=${LIVE_WORK:?}
   slot=$(curl -fsS -m 5 "$ZONE_API/cryptarchia/info" | jq .cryptarchia_info.slot)
   from=$(( slot > 120 ? slot - 120 : 0 ))
   echo "$from" > "$W/slot_from"
   for i in 0 1 2 3; do
+    # The loop starts once its sequencer's LEZ node answers (the others wait for the channel before they serve).
+    for _ in $(seq 1 120); do
+      curl -fsS -m 3 -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"getLastBlockId","params":[]}' \
+        "$(lez_of "$i")" > /dev/null 2>&1 && break
+      sleep 2
+    done
     jq -n --arg d "$Z/deployment.json" --arg c "$W/cert-$i.json" --arg k "$W/attestation-$i.key" --arg n "$ZONE_API" \
-      --arg w "$W/loop-$i" --arg p "$W/published-$i" --arg s "$W/state-$i.json" --argjson f "$from" --argjson poll "${LIVE_POLL:-15}" \
-      '{deployment_file: $d, cert_file: $c, att_key_file: $k, node: $n, work_dir: $w, publish_dir: $p, state_file: $s,
+      --arg l "$(lez_of "$i")" --arg w "$W/loop-$i" --arg p "$W/published-$i" --arg s "$W/state-$i.json" --argjson f "$from" \
+      --argjson poll "${LIVE_POLL:-15}" \
+      '{deployment_file: $d, cert_file: $c, att_key_file: $k, node: $n, lez: $l, work_dir: $w, publish_dir: $p, state_file: $s,
         slot_from: $f, poll_secs: $poll}' | req "start-$i"
     callm "$i" start "start-$i"
     echo "attestor $i: $(jq -c '{verdict, error}' "$W/rep/start-$i.json")"
+  done
+  exit 0
+fi
+
+if [ "$phase" = before-stop ]; then
+  # The sequencers still run. The loops end after the round in hand; then each module's one-shot attest (the
+  # loop's state file, its sequencer's LEZ node) runs, the four in turn, again until all four sign one tip.
+  W=${LIVE_WORK:?}
+  for i in 0 1 2 3; do callm "$i" stop "stop-$i"; done
+  for try in $(seq 1 40); do
+    for i in 0 1 2 3; do
+      rm -rf "$W/final-$i" "$W/final-$i.json"
+      jq -n --arg d "$Z/deployment.json" --arg c "$W/cert-$i.json" --arg k "$W/attestation-$i.key" --arg n "$ZONE_API" \
+        --arg l "$(lez_of "$i")" --arg v "$W/final-$i" --arg s "$W/state-$i.json" --arg o "$W/final-$i.json" \
+        '{deployment_file: $d, cert_file: $c, att_key_file: $k, node: $n, lez: $l, save_dir: $v, state_file: $s, out: $o}' \
+        | req "final-$i"
+      callm "$i" attest "final-$i"
+    done
+    tips=$(for i in 0 1 2 3; do jq -r 'if .verdict == "attested" then "\(.tip_id) \(.tip_hash)" else "none" end' "$W/rep/final-$i.json"; done | sort -u)
+    echo "final round $try: $(echo "$tips" | awk '{print $1}' | tr '\n' ' ')"
+    if [ "$(echo "$tips" | wc -l)" = 1 ] && [ "${tips%% *}" != none ]; then echo "${tips%% *}" > "$W/final_tip"; break; fi
+    sleep 5
   done
   exit 0
 fi
@@ -64,23 +98,14 @@ if [ "$phase" = after ]; then
   W=${LIVE_WORK:?}
   jq -n --arg a "$ZONE_OUT/answers" '{answers_dir: $a}' | req tier
   callm 0 tier tier
-  tip=$(jq -r .tip_id "$W/rep/tier.json")
-  echo "final tip $tip (the node's saved answers)"
-  # Each attestor's next round signs the final tip; wait for the four (a few rounds at most).
-  for _ in $(seq 1 120); do
-    done_n=0
-    for i in 0 1 2 3; do
-      callm "$i" status "status-$i"
-      [ "$(jq -r '.last_attestation.tip_id // -1' "$W/rep/status-$i.json")" = "$tip" ] && done_n=$((done_n + 1))
-    done
-    [ "$done_n" = 4 ] && break
-    sleep 2
-  done
-  for i in 0 1 2 3; do callm "$i" stop "stop-$i"; done
+  tip=$(cat "$W/final_tip" 2>/dev/null || echo none)
+  echo "the attestors' common final tip $tip; the node's final tier after the sequencers stopped: $(jq -r .tip_id "$W/rep/tier.json")"
+  # The base: the final blocks after the first inscribed one, to T = the tip the four signed.
   jq -n --arg a "$ZONE_OUT/answers" --arg g "$ZONE_OUT/deployment-settings.yaml" --arg o "$W/base.input" \
-    '{answers_dir: $a, genesis_file: $g, n_min: 4, t_min: 3, out: $o}' | req base
+    --argjson f "$(( $(jq -r .first_block "$W/rep/tier.json") + 1 ))" --argjson t "${tip/none/0}" \
+    '{answers_dir: $a, genesis_file: $g, n_min: 4, t_min: 3, from: $f, to: $t, out: $o}' | req base
   callm 0 base base
-  jq -n --arg d "$Z/deployment.json" --arg w "$W" '{deployment_file: $d, att_files: [range(4) | "\($w)/published-\(.)/latest.json"]}' | req verify
+  jq -n --arg d "$Z/deployment.json" --arg w "$W" '{deployment_file: $d, att_files: [range(4) | "\($w)/final-\(.).json"]}' | req verify
   callm 0 verify verify
   # 3 of 4: the attestation of the sequencer that inscribed the fewest blocks is left out.
   out_i=$(python3 -I - "$W/rep/tier.json" "$W" <<'PY'
@@ -93,11 +118,11 @@ PY
 )
   echo "$out_i" > "$W/left_out"
   jq -n --arg b "$W/base.input" --arg w "$W" --argjson x "$out_i" \
-    '{base_file: $b, att_files: [range(4) | select(. != $x) | "\($w)/published-\(.)/latest.json"], name: "live-zone-n4-t3", out: "\($w)/live-zone-n4-t3.input"}' | req collect-3
+    '{base_file: $b, att_files: [range(4) | select(. != $x) | "\($w)/final-\(.).json"], name: "live-zone-n4-t3", out: "\($w)/live-zone-n4-t3.input"}' | req collect-3
   callm 0 collect collect-3
-  jq -n --arg b "$W/base.input" --arg w "$W" '{base_file: $b, att_files: [range(4) | "\($w)/published-\(.)/latest.json"], name: "live-zone-n4-all"}' | req collect-4
+  jq -n --arg b "$W/base.input" --arg w "$W" '{base_file: $b, att_files: [range(4) | "\($w)/final-\(.).json"], name: "live-zone-n4-all"}' | req collect-4
   callm 0 collect collect-4
-  jq -n --arg b "$W/base.input" --arg w "$W" '{base_file: $b, att_files: ["\($w)/published-0/latest.json", "\($w)/published-1/latest.json"]}' | req collect-2
+  jq -n --arg b "$W/base.input" --arg w "$W" '{base_file: $b, att_files: ["\($w)/final-0.json", "\($w)/final-1.json"]}' | req collect-2
   callm 0 collect collect-2
   exit 0
 fi
@@ -133,8 +158,8 @@ done
 
 t0=$(date +%s)
 rc=0
-(cd "$repo/checkpoint" && ZONE_DURING="$here/attestor-zone-live.sh during" ZONE_AFTER="$here/attestor-zone-live.sh after" \
-  bash attestor/zone.sh "$bundle" "$out/zone" "$secs") > "$out/zone.out" 2>&1 || rc=$?
+(cd "$repo/checkpoint" && ZONE_DURING="$here/attestor-zone-live.sh during" ZONE_BEFORE_STOP="$here/attestor-zone-live.sh before-stop" \
+  ZONE_AFTER="$here/attestor-zone-live.sh after" bash attestor/zone.sh "$bundle" "$out/zone" "$secs") > "$out/zone.out" 2>&1 || rc=$?
 seconds=$(( $(date +%s) - t0 ))
 
 {
@@ -143,20 +168,20 @@ seconds=$(( $(date +%s) - t0 ))
   echo "$("$LOGOSCTL" --version 2>&1 | head -n 1); $secs s of sequencing, polls every $LIVE_POLL s; zone.sh and the hooks took $seconds s (exit $rc)."
   echo
 } > "$summary"
-tip=$(jq -r .tip_id "$W/rep/tier.json" 2>/dev/null || echo none)
+tip=$(cat "$W/final_tip" 2>/dev/null || echo none)
 check "the zone ran and its genesis is the one runs/zone's deployment was made for (deployment-settings sha256)" \
   '[ "$rc" = 0 ] && [ "$(cat "$out/zone/deployment-settings.sha256")" = "$(cat "$Z/deployment-settings.sha256")" ]'
 check "four Logos Cores loaded the module; each attestation key certified by its sequencer's channel key" \
   '[ "$(for i in 0 1 2 3; do jq -r .verdict "$W/rep/certify-$i.json"; done | sort -u)" = certified ]'
-check "the four loops started against the node's HTTP API" \
+check "the four loops started against the node's HTTP API and their sequencers' LEZ nodes" \
   '[ "$(for i in 0 1 2 3; do jq -r .verdict "$W/rep/start-$i.json"; done | sort -u)" = started ]'
-check "the node's final tier: tip $tip, four keys, every sequencer inscribed" \
+check "the node's final tier: four keys, every sequencer inscribed (its tip after the sequencers stopped: $(jq -r .tip_id "$W/rep/tier.json" 2>/dev/null))" \
   '[ "$(jq -c "[(.keys | length), (.blocks_per_signer | length)]" "$W/rep/tier.json")" = "[4,4]" ]'
 for i in 0 1 2 3; do
   s="$W/rep/stop-$i.json"
   tips=$(ls "$W/published-$i" | sed -n 's/^att-\([0-9]*\)\.json$/\1/p' | sort -n | tr '\n' ' ')
-  check "attestor $i: $(jq -r .rounds "$s") rounds while the zone ran; signed $(jq -r .attested "$s") rising tips ($tips), the last the final tip $tip; refused $(jq -r .refused "$s") rounds (no final block yet), errors $(jq -r .errors "$s")" \
-    '[ "$(jq -r .last_attestation.tip_id "$s")" = "$tip" ] && [ "$(jq -r .attested "$s")" -ge 2 ] && [ "$(jq -r .errors "$s")" = 0 ] && [ "$(jq -r .running "$s")" = false ]'
+  check "attestor $i: $(jq -r .rounds "$s") rounds while the zone ran; signed $(jq -r .attested "$s") rising tips ($tips); refused $(jq -r .refused "$s") rounds (no final block yet), errors $(jq -r .errors "$s"); then its one-shot attest signed the common tip $tip" \
+    '[ "$(jq -r .attested "$s")" -ge 2 ] && [ "$(jq -r .errors "$s")" = 0 ] && [ "$(jq -r .running "$s")" = false ] && [ "$(jq -r "[.verdict, .tip_id] | @tsv" "$W/rep/final-$i.json")" = "$(printf "attested\t%s" "$tip")" ]'
 done
 check "the base over the zone's final blocks has the deployment the attestors certified" \
   '[ "$(jq -S -c .deployment "$W/rep/base.json")" = "$(jq -S -c . "$Z/deployment.json")" ]'

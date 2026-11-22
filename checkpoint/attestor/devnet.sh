@@ -43,6 +43,8 @@ c["accredited_keys"] = keys
 c["configuration_threshold"] = 2
 json.dump(c, open(path, "w"))
 EOF
+# The lab's LEZ node is not recorded; its sequencer served every block Finalized (measured): stood in.
+$bin devnet-lez-standin --answers "$work/answers-n3"
 
 echo "== 3. each sequencer's channel key certifies its attestor's key, once"
 a1=$($bin keygen --seed-label attestation-1 --out "$work/attestation-1.key")
@@ -72,7 +74,7 @@ $bin attest --deployment "$out/deployment.json" --cert "$out/cert-1.json" --att-
   --answers "$work/answers-n3" --state "$work/state-1.json" --out "$work/att-1-again.json"
 echo "-- the lab node's own answer (n = 1): attestor 1's channel key is not in that set, it refuses"
 if $bin attest --deployment "$out/deployment.json" --cert "$out/cert-1.json" --att-key "$work/attestation-1.key" \
-    --answers "$answers" --out "$work/att-1-n1.json" 2> "$work/refusal.txt"; then
+    --answers "$answers" --lez-answers "$work/answers-n3" --out "$work/att-1-n1.json" 2> "$work/refusal.txt"; then
   echo "UNEXPECTED: signed"; exit 1
 else
   tail -n 1 "$work/refusal.txt"

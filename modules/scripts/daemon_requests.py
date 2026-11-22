@@ -7,7 +7,9 @@ through Logos Core and compares the replies (summary.py).
 
 Appends to OUT_DIR/calls.json and OUT_DIR/expect.json (requests.py and bridge_requests.py write them
 first). The attestor's requests are the zone run's (checkpoint/attestor/runs/zone: the node's saved
-answers, the certificates, the attestations, the collected input the checkpoint program proved); the
+answers, the certificates, the attestations, the collected input the checkpoint program proved; the zone
+saved no LEZ node's answers, so its inscribed blocks stand in as the LEZ node's final blocks, written by
+recorded_node.py --save-lez); the
 monitor's are offline verdicts on a small node view and the lab record's node view; the updater's are
 its configuration files. The daemons' own loops (start, status, stop) are exercised by attestor-e2e.sh,
 updater-e2e.sh and monitor/tests/anvil-e2e.sh, not here.
@@ -16,6 +18,7 @@ updater-e2e.sh and monitor/tests/anvil-e2e.sh, not here.
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -40,12 +43,16 @@ def main():
     # ---- ferrata_attestor_module ----------------------------------------------------------------
     A = "ferrata_attestor_module"
     att = [json.loads((ZONE / f"att-{i}.json").read_text()) for i in range(4)]
-    cert0 = json.loads((ZONE / "cert-0.json").read_text())
+    cert0, cert1 = (json.loads((ZONE / f"cert-{i}.json").read_text()) for i in (0, 1))
     tier = json.loads((ZONE / "tier.json").read_text())
     proven = hashlib.sha256((ZONE / "rbz-zone-n4-t3.input").read_bytes()).hexdigest()
     # The zone attestor 0's key, from its public devnet label (attestor/zone-attest.sh's keygen).
     key0 = out / "zone-attestation-0.key"
     key0.write_bytes(hashlib.sha256(b"ferrata/attestor/devnet-key/zone-attestation-0").digest())
+    # The LEZ node the attestor checks its tip against: the zone's inscribed blocks, stood in as final.
+    lez_dir = out / "zone-lez-standin"
+    subprocess.run([sys.executable, "-I", str(pathlib.Path(__file__).resolve().parent / "recorded_node.py"), "--save-lez",
+                    str(ZONE / "answers"), str(lez_dir)], check=True, stdout=subprocess.DEVNULL)
     add(A, "attestor_version", "version", None, {"module": A})
     add(A, "attestor_tier", "tier", {"answers_dir": str(ZONE / "answers")},
         {"verdict": "ok", "tip_id": tier["tip_id"], "tip_hash": tier["tip_hash"], "blocks_checked": tier["blocks_checked"]})
@@ -57,7 +64,7 @@ def main():
         "att_pub": cert0["attestation_key"], "deployment_file": str(ZONE / "deployment.json")},
         {"verdict": "certified", "cert.certificate": cert0["certificate"]})
     add(A, "attestor_attest", "attest", {"deployment_file": str(ZONE / "deployment.json"), "cert_file": str(ZONE / "cert-0.json"),
-        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers")},
+        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers"), "lez_dir": str(lez_dir)},
         {"verdict": "attested", "tip_id": 30, "attestation.encoded": att[0]["encoded"]})
     add(A, "attestor_verify", "verify", {"deployment_file": str(ZONE / "deployment.json"),
         "att_files": [str(ZONE / f"att-{i}.json") for i in range(4)]}, {"verdict": "verified", "refused": 0})
@@ -70,8 +77,12 @@ def main():
     add(A, "attestor_assemble_2", "assemble", {"base_file": str(ZONE / "rbz-zone-n4-t3.input"),
         "att_files": [str(ZONE / f"att-{i}.json") for i in range(2)], "name": "two-of-four", "expect": "InsufficientAttestations"},
         {"verdict": "assembled", "native": "refused: InsufficientAttestations { have: 2, need: 3 }"})
+    # The read checks (LEZ answers given), so what refuses is the certificate (cert-1 certifies another key), and the
+    # reply's error must say so word for word: a read that refused would pass on the verdict alone.
     add(A, "attestor_refuse_cert", "attest", {"deployment_file": str(ZONE / "deployment.json"), "cert_file": str(ZONE / "cert-1.json"),
-        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers")}, {"verdict": "refused"})
+        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers"), "lez_dir": str(lez_dir)},
+        {"verdict": "refused", "error": f"refused: the certificate does not certify attestation key {cert0['attestation_key']} "
+                                        f"by channel key {cert1['channel_key']} for this deployment"})
     add(A, "attestor_invalid", "collect", {"att_files": []}, {"verdict": "invalid_request"})
 
     # ---- ferrata_monitor_module -----------------------------------------------------------------

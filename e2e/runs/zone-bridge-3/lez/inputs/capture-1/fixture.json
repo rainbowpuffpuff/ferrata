@@ -1,0 +1,48 @@
+{
+  "network": "local anvil, no fork, chain id 11155111 (STAND-IN: not finalized by any beacon chain)",
+  "block": 9,
+  "block_hash": "0x7f888e8c7db0a995299e183175c7d39ad4dc9b9415edb4a9d1c3b93b0cdd1bcf",
+  "anvil_block_hash": "0x7f888e8c7db0a995299e183175c7d39ad4dc9b9415edb4a9d1c3b93b0cdd1bcf",
+  "state_root_patched": false,
+  "timestamp": 1795313669,
+  "state_root": "0x002dcb16a4f8c9c00fd3fd7a68f12125978a83e150191fbae5ab47fa0a02c5bf",
+  "storage": [
+    {
+      "address": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+      "slots": [
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "value": "0xde15c63de718927940bc01821d9a14db742b799338e3d09a254cf88131a19c2d"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000001",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000001"
+        },
+        {
+          "slot": "0x0000000000000000000000000000000000000000000000000000000000000002",
+          "value": "0x8c313ea41c646029fb17b0a65ee0315bef298a2acd3c7f368a375c8dc333f5d9"
+        },
+        {
+          "slot": "0x2f7d2fc425649f0a2184f57eb1355c97d45240e80cf9b2fa1972b849a0d0433c",
+          "value": "0x898160360b5b4aab318e281b88c160e31bf1f284aba2a0c877c3033809b2ce30"
+        },
+        {
+          "slot": "0x9aa0b42bfab58f5661a89501a520051162e6336036c5c42663bd4f8f1ac012ce",
+          "value": "0x37c13e6fcdfa12cd739c696ea4cb1be0f6e94f34145860eaa52bc542b45867c8"
+        },
+        {
+          "slot": "0x07dbb398239016a117a7e00064fdec5830d1a809cdc146e8228b3d0ed733d432",
+          "value": "0x0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
+    }
+  ],
+  "deposits": {
+    "vault": "0xe9bd0e958697fe8aa6633dfed2b8d0234f69d04c",
+    "from_block": 0,
+    "event": "Deposit(address,uint64,uint64,address,uint256,bytes32)",
+    "topic": "0x83d2d1c34c8825843c9af84bec80378e997084e8c1d6d5a3c2a6e758fe05538e",
+    "count": 1
+  },
+  "updates": []
+}

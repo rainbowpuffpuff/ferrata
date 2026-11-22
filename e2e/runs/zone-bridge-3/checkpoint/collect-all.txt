@@ -1,0 +1,2 @@
+kept 4 of 4 (n = 4, t = 3)
+zone-29-96-all: accepted: n = 4, t = 3, 4 attestations counted, producer 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3

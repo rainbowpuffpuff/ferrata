@@ -11,8 +11,8 @@ pragma solidity ^0.8.26;
 // Zero's real Groth16 verifier behind its emergency stop, at the address and chain id the journal names. The fixture:
 // ZB_FIXTURE=zone-bridge-rc3 checkpoint/attestor/zone-bridge.sh fixture.
 
-import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
 import {console2} from "forge-std/Test.sol";
+import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
@@ -25,7 +25,7 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
     bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
     bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
 
-    function _path() internal pure override returns (string memory) {
+    function _path() internal pure virtual override returns (string memory) {
         return "test/real/fixtures/zone-bridge-rc3.json";
     }
 
@@ -162,5 +162,14 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         vm.warp(block.timestamp + WAIT);
         vault.finalizeAttested(c);
         console2.log("rc3 return leg, 2 burns: finalizeAttested", vm.lastCallGas().gasTotalUsed);
+    }
+}
+
+/// @notice zone-bridge-rc3-2: the rc3 return leg again (22 November) with the attestor checking every tip against the
+/// sequencer's own LEZ node and its last round taken while the zone runs (checkpoint/attestor/RESULTS.md §10.1;
+/// records in e2e/runs/zone-bridge-rc3-2/, lez/results/v0.4.0-rc3/return-leg-2/).
+contract ZoneBridgeRc3LezCheckedTest is ZoneBridgeRc3Test {
+    function _path() internal pure override returns (string memory) {
+        return "test/real/fixtures/zone-bridge-rc3-2.json";
     }
 }

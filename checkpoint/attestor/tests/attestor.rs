@@ -5,6 +5,11 @@
 //! The lab runs one sequencer (n = 1). For t of n with t > 1 the tests re-key the parent state to a
 //! stand-in set K = {the lab's key (producer of T), k1, k2} with nMin = 3, tMin = 2, and give the
 //! node's channel answer the same three keys.
+//!
+//! The attestor signs only what its LEZ node holds final. The lab's LEZ node is not recorded; its
+//! sequencer served all of its blocks `Finalized` (measured, `docs/design/lez-v0.4-findings.md` §3), so
+//! these tests stand it in with every inscribed block served as final ([`honest_lez`]). The tests of what
+//! the LEZ node decides are in `lez_check.rs`.
 use std::fs;
 use std::path::PathBuf;
 
@@ -15,9 +20,9 @@ use checkpoint_core::rule_b::run_checkpoint_b;
 use checkpoint_core::{Error, Hash};
 use ed25519_dalek::SigningKey;
 use ferrata_attestor::{
-    assemble_unchecked, channel_config_tx, collect, deployment_of, final_inscriptions, final_tier, hexa, rekey_base,
-    rekey_base_with_timeframe, retip, rotate_base, upgrade_pre_producer_input, Attestor, Dropped, FinalTier,
-    LastSigned, NodeAnswers,
+    assemble_unchecked, bedrock_tier, channel_config_tx, collect, deployment_of, devnet_lez_standin,
+    final_inscriptions, final_tier, hexa, rekey_base, rekey_base_with_timeframe, retip, rotate_base,
+    upgrade_pre_producer_input, Attestor, AttestorState, Dropped, FinalTier, LastSigned, NodeAnswers,
 };
 use serde_json::{json, Value};
 
@@ -46,6 +51,22 @@ fn lab_answers() -> NodeAnswers {
     NodeAnswers::load(&dir().join("vectors/lab-node")).unwrap()
 }
 
+/// The lab's LEZ node, stood in: every block inscribed on the channel, served as final.
+fn honest_lez() -> std::collections::BTreeMap<u64, Option<Vec<u8>>> {
+    devnet_lez_standin(&lab_answers(), &h(CHANNEL)).unwrap()
+}
+
+/// The final tier read with the honest LEZ node, from `state` (or a first read).
+fn read(answers: &NodeAnswers, state: Option<&AttestorState>) -> FinalTier {
+    final_tier(answers, &mut honest_lez(), &h(CHANNEL), state).unwrap()
+}
+
+/// A first-version state naming block `id` of the lab chain (the run is then followed from it).
+fn state_at(id: u64) -> AttestorState {
+    let hash = bedrock_tier(&lab_answers(), &h(CHANNEL)).unwrap().hashes[&id];
+    AttestorState { last: LastSigned { tip_id: id, tip_hash: hash }, record: None }
+}
+
 /// The real span with T's inscription as the node holds it (the recorded input predates the field).
 fn real_input() -> Vec<u8> {
     let old = fs::read(dir().join("../realblocks/out/real-lab-186-202.input")).unwrap();
@@ -68,7 +89,7 @@ fn tier_n3() -> FinalTier {
     let mut answers = lab_answers();
     answers.channel["accredited_keys"] =
         json!([LAB_KEY, hex::encode(pk(&key("channel-1"))), hex::encode(pk(&key("channel-2")))]);
-    final_tier(&answers, &h("0101010101010101010101010101010101010101010101010101010101010101")).unwrap()
+    read(&answers, None)
 }
 
 fn attestor(i: u32, d: &Deployment) -> Attestor {
@@ -119,15 +140,26 @@ fn run(bytes: &[u8]) -> Result<checkpoint_core::rule_b::OutcomeB, Error> {
 #[test]
 fn reads_the_lab_nodes_final_tier() {
     let channel = h("0101010101010101010101010101010101010101010101010101010101010101");
-    let tier = final_tier(&lab_answers(), &channel).unwrap();
+    // A first read starts at the highest block the LEZ node holds final.
+    let tier = read(&lab_answers(), None);
+    assert!(tier.lez_checked);
     assert_eq!(tier.keys, vec![h(LAB_KEY)]);
     assert_eq!(tier.tip.tip_id, 202);
     assert_eq!(tier.tip.tip_hash, h(TIP_HASH));
     assert_eq!(tier.tip.final_msg_id, h(TIP_MSG));
     assert_eq!(tier.tip_signer, h(LAB_KEY));
-    assert_eq!(tier.first_block, 186);
-    assert_eq!(tier.hashes.len(), 17);
     assert_eq!(tier.lib_slot, 8_856_126);
+    assert_eq!((tier.first_block, tier.hashes.len()), (202, 1));
+    // From a state at 186, the run 186..=202 is followed.
+    let from186 = read(&lab_answers(), Some(&state_at(186)));
+    assert_eq!((from186.first_block, from186.hashes.len(), from186.tip.tip_id), (186, 17, 202));
+    assert_eq!(from186.tip.final_msg_id, h(TIP_MSG));
+    assert!(from186.notes.is_empty(), "{:?}", from186.notes);
+    // The Bedrock node's view alone gives the same run and tip, but is not signable.
+    let bedrock = bedrock_tier(&lab_answers(), &channel).unwrap();
+    assert_eq!((bedrock.first_block, bedrock.hashes.len(), bedrock.tip), (186, 17, tier.tip));
+    assert_eq!(bedrock.hashes, from186.hashes);
+    assert!(!bedrock.lez_checked);
     // The channel's own tip message is T's inscription: the node's final tier ends at T.
     assert_eq!(lab_answers().channel["tip_message"].as_str(), Some(TIP_MSG));
 }
@@ -136,8 +168,11 @@ fn reads_the_lab_nodes_final_tier() {
 fn a_tip_beyond_the_nodes_lib_is_not_final() {
     let mut answers = lab_answers();
     answers.lib_slot = 8_856_116; // one slot below T's node block
-    let tier = final_tier(&answers, &h("0101010101010101010101010101010101010101010101010101010101010101")).unwrap();
+    let tier = read(&answers, None);
     assert_eq!(tier.tip.tip_id, 201);
+    // The exact limit: T's node block at lib_slot is final.
+    answers.lib_slot = 8_856_117;
+    assert_eq!(read(&answers, None).tip.tip_id, 202);
 }
 
 #[test]
@@ -265,8 +300,7 @@ fn refused_a_repeated_key_and_a_signature_over_another_key_set() {
     let c = collect(&base, &[a1, a1]);
     assert!(c.is_err());
     // Attestor 2 signs the one-key set its node would have shown before the stand-in.
-    let lab_tier =
-        final_tier(&lab_answers(), &h("0101010101010101010101010101010101010101010101010101010101010101")).unwrap();
+    let lab_tier = read(&lab_answers(), None);
     let a2 = attestor(2, &d);
     let stale =
         SignedAttestation::new(&a2.att_key, a2.channel_key, a2.certificate, &d, &lab_tier.key_set_hash, lab_tier.tip);
@@ -276,7 +310,10 @@ fn refused_a_repeated_key_and_a_signature_over_another_key_set() {
 #[test]
 fn the_attestor_never_signs_two_histories() {
     let d = deployment(&base_n3());
-    let tier = tier_n3();
+    let mut answers = lab_answers();
+    answers.channel["accredited_keys"] =
+        json!([LAB_KEY, hex::encode(pk(&key("channel-1"))), hex::encode(pk(&key("channel-2")))]);
+    let tier = read(&answers, Some(&state_at(186)));
     let a1 = attestor(1, &d);
     a1.attest(&tier, Some(LastSigned { tip_id: 202, tip_hash: h(TIP_HASH) })).unwrap();
     a1.attest(&tier, Some(LastSigned { tip_id: 190, tip_hash: tier.hashes[&190] })).unwrap();
@@ -286,6 +323,13 @@ fn the_attestor_never_signs_two_histories() {
     assert!(e.contains("this attestor signed"), "{e}");
     let e = a1.attest(&tier, Some(LastSigned { tip_id: 203, tip_hash: other })).unwrap_err().to_string();
     assert!(e.contains("below the tip"), "{e}");
+    // A signed tip below the run read (review M7's case): the tier does not show that it descends from it.
+    let e =
+        a1.attest(&tier, Some(LastSigned { tip_id: tier.first_block - 1, tip_hash: other })).unwrap_err().to_string();
+    assert!(e.contains("does not hold block 185"), "{e}");
+    // A Bedrock-only view is never signed.
+    let bedrock = bedrock_tier(&answers, &h(CHANNEL)).unwrap();
+    assert!(a1.attest(&bedrock, None).unwrap_err().to_string().contains("not checked against a LEZ node"));
 }
 
 #[test]
@@ -342,10 +386,10 @@ fn attestations_of_a_descendant_of_t_count_and_an_attestor_behind_t_is_refused()
     let c = collect(&base200, &[a0, a1]).unwrap();
     let outcome = run(&c.input).unwrap();
     assert_eq!((outcome.journal.tip_id, outcome.path_after_tip, outcome.attestors), (200, 2, 2));
-    assert_eq!(outcome.journal.tip_hash, tier.hashes[&200]);
+    assert_eq!(outcome.journal.tip_hash, state_at(200).last.tip_hash);
     // An attestor whose node had finalised only up to 201 cannot support T = 202.
     answers.lib_slot = 8_856_116;
-    let behind = final_tier(&answers, &h(CHANNEL)).unwrap();
+    let behind = read(&answers, None);
     assert_eq!(behind.tip.tip_id, 201);
     let a2_behind = attestor(2, &d).attest(&behind, None).unwrap();
     assert_eq!(
@@ -372,7 +416,7 @@ fn a_rotation_by_two_of_three_and_attestations_under_the_new_set() {
         let mut answers = lab_answers();
         answers.channel["accredited_keys"] = json!(keys.iter().map(hex::encode).collect::<Vec<_>>());
         answers.channel["posting_timeframe"] = json!(P);
-        final_tier(&answers, &h(CHANNEL)).unwrap()
+        read(&answers, None)
     };
     let tier = tier_with(&new);
     let a0 = lab_attestor(&d).attest(&tier, None).unwrap();

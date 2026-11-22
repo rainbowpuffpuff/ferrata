@@ -13,7 +13,9 @@
 #     checkpoint_0_3_5 (A), checkpoint_b_0_3_5 (B), release; nMin 1, tMin 1 (one sequencer); deposits j0 (public) and
 #     j1 (private) and their captures;
 #   - one ferrata_attestor beside the sequencer (its key certified by the sequencer's channel key for this deployment),
-#     attesting the node's final tier every RL_ROUND_S s while crown-b runs, then once the final tier reaches T1;
+#     attesting the node's final tier every RL_ROUND_S s while crown-b runs, then once the final tier reaches T1; it
+#     signs a tip only when the sequencer's own LEZ node (ZONE_RPC, its getBlock) holds it final, and the zone is up
+#     for its last round; the node's answers the checkpoint is built from are read separately, from FROM to the LIB;
 #   - crown-b (pairing, registration, imports, Claim, ClaimPrivately, a public and a private Burn, the private ones
 #     proven for real by LEZ's wallet);
 #   - records in RL_RUN (a run directory under the worktree's e2e/runs/) in zone-bridge.sh's layout, so that its
@@ -42,7 +44,7 @@ Z=0x0000000000000000000000000000000000000000000000000000000000000000
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 say() { echo "[return-leg $(date -u +%H:%M:%S)] $*" | tee -a "$RUN/logs/zone-bridge.log"; }
 die() { say "STOP: $*"; exit 1; }
-scrub() { sed -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g"; }
+scrub() { sed -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$WT/##g" -e "s#$BESIDE/tmp/[^/][^/]*/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g"; }
 id_of() { jq -r --arg p "$1.bin" 'select(.program == $p or (.program | endswith("/" + $p))) | .image_id' "$RL_PROGRAMS/ids.jsonl"; }
 [ -e "$RUN/identity.json" ] && { echo "$RUN holds a run already"; exit 2; }
 rm -rf "$W"; mkdir -p "$H" "$A/rounds" "$RUN/logs" "$RUN/zone/attestor-0" "$RUN/lez/session-a" "$RUN/lez/session-b" "$RUN/lez/inputs"
@@ -137,13 +139,14 @@ cp "$W/deployment.json" "$RUN/zone/deployment.json"
 "$ATT" certify --channel-key "$KEYFILE" --att-pub "$(cat "$A/pub.txt")" --deployment "$W/deployment.json" --out "$A/cert.json" \
   | tee -a "$RUN/logs/zone-bridge.log"
 cp "$A/cert.json" "$RUN/zone/attestor-0/cert.json"
-attest_round() { # out: one attestation of the node's final tier (fresh answers each round)
+attest_round() { # out: one attestation of the node's final tier (fresh answers each round), checked against the LEZ node
   rm -rf "$A/answers"; mkdir -p "$A/answers"
   "$ATT" attest --deployment "$W/deployment.json" --cert "$A/cert.json" --att-key "$A/key" --node "$ZONE_BEDROCK" \
-    --save "$A/answers" --slot-from "$FROM" --state "$A/state.json" --out "$1" >> "$A/attest.log" 2>&1
+    --lez "$ZONE_RPC" --save "$A/answers" --slot-from "$FROM" --state "$A/state.json" --out "$1" >> "$A/attest.log" 2>&1
 }
-( n=0; last=""
-  while :; do
+( n=0; last=""; stop=""
+  trap 'stop=1' TERM   # SIGTERM ends the loop after the round in hand
+  while [ -z "$stop" ]; do
     n=$((n + 1))
     if attest_round "$A/round.json"; then
       tip="$(jq -r .tip_id "$A/round.json")"
@@ -152,7 +155,8 @@ attest_round() { # out: one attestation of the node's final tier (fresh answers 
     else
       echo -e "$(date -u +%FT%TZ)\t$n\trefused\t-\t$(tail -n 1 "$A/attest.log" | tr '\t' ' ' | cut -c1-200)" >> "$A/rounds.tsv"
     fi
-    sleep "$ROUND_S"
+    [ -n "$stop" ] && break
+    sleep "$ROUND_S" & wait $! || true
   done ) > "$W/attest-loop.log" 2>&1 &
 LOOP=$!
 trap 'kill $LOOP 2>/dev/null || true' EXIT
@@ -171,8 +175,8 @@ cp "$H/session-b.json" "$H/burn-notes.json" "$RUN/lez/session-b/"
 T1="$(jq -r .tipT1.id "$H/session-b.json")"
 say "session B: T1 = $T1; steps $(jq -c '[.steps[] | [.step, .status, .block]]' "$H/session-b.json" | cut -c1-700)"
 
-# ---- the final tier reaches T1: the attestor's final round ---------------------------------------------------------
-kill $LOOP 2>/dev/null || true; trap - EXIT
+# ---- the final tier reaches T1: the attestor's final round (the zone still up: its LEZ node must answer) ------------
+kill -TERM $LOOP 2>/dev/null || true; wait $LOOP 2>/dev/null || true; trap - EXIT
 ok=""
 for _ in $(seq 1 40); do
   if attest_round "$A/final.json" && [ "$(jq -r .tip_id "$A/final.json")" -ge "$T1" ]; then ok=1; break; fi
@@ -186,16 +190,28 @@ scrub < "$A/attest.log" | tail -n 400 > "$RUN/zone/attestor-0/attest.log"
 ls "$A/rounds" > "$RUN/zone/attestor-0/tips-signed.txt"
 [ "$(jq -r .node.fork_digest "$A/final.json")" = "$DIGEST" ] || die "the final tier's fork digest is not /chain/fork's"
 
-# ---- the node's answers (the checkpoint's input is built from these alone) ------------------------------------------
-rm -rf "$W/node"; cp -r "$A/answers" "$W/node"; echo "$FROM" > "$W/slot-from.txt"
+# ---- the node's answers (the checkpoint's input is built from these alone): from FROM to the LIB, read after the final
+#      round (a round reads the node only from the slot of the tip the attestor signed last)
+rm -rf "$W/node"; mkdir -p "$W/node/blocks"; echo "$FROM" > "$W/slot-from.txt"
+curl -fsS -m 10 -o "$W/node/info.json" "$ZONE_BEDROCK/cryptarchia/info" || die "GET /cryptarchia/info"
+curl -fsS -m 10 -o "$W/node/channel.json" "$ZONE_BEDROCK/channel/$CHANNEL" || die "GET /channel"
+LIBS="$(jq -r '.cryptarchia_info.lib_slot // .lib_slot' "$W/node/info.json")"; [[ "$LIBS" =~ ^[0-9]+$ ]] || die "no lib_slot"
+s0="$FROM"
+while [ "$s0" -le "$LIBS" ]; do
+  s1=$(( s0 + 499 )); [ "$s1" -gt "$LIBS" ] && s1="$LIBS"
+  curl -fsS -m 60 -o "$W/node/blocks/$s0-$s1.json" "$ZONE_BEDROCK/cryptarchia/blocks?slot_from=$s0&slot_to=$s1" || die "GET blocks $s0..=$s1"
+  s0=$(( s1 + 1 ))
+done
 tar -C "$W" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -cf - node | zstd -q -T0 -19 -o "$RUN/zone/node-answers.tar.zst" -f
 cp "$W/node/channel.json" "$RUN/zone/channel-end.json"; cp "$W/node/info.json" "$RUN/zone/info-end.json"
-say "node answers (the attestor's final round): slots from $FROM to the LIB $(jq -r '.cryptarchia_info.lib_slot // .lib_slot' "$W/node/info.json"), $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes"
+say "node answers (read after the attestor's final round): slots from $FROM to the LIB $(jq -r '.cryptarchia_info.lib_slot // .lib_slot' "$W/node/info.json"), $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes"
 [ -d "$H/export" ] && tar -C "$H" -cf - export | zstd -q -T0 -19 -o "$RUN/lez/session-b/driver-export.tar.zst" -f
 for f in crown-a.log crown-b.log check.log export.log capture-1.log capture-2.log eth-deploy.log eth-deposit-0.log eth-deposit-1.log eth-status.log anvil.log; do
   [ -f "$H/$f" ] && scrub < "$H/$f" > "$RUN/logs/$f"
 done
 for f in "$H"/driver/out/crown-private-*-tx.borsh; do [ -f "$f" ] && cp "$f" "$RUN/lez/session-b/"; done
 cp "$H/driver/manifest.tsv" "$RUN/lez/manifest.tsv" 2>/dev/null || true
-find "$RUN/logs" -type f -name '*.log' -exec sed -i -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g" {} +
+# every file of the run (net/proxy.log too: review M1 of the second review) scrubbed by scrub's rules, then checked
+python3 -I "$WT/scripts/scrub_records.py" --skip work "$RUN" --map "$W/=work/" --map "$ZB_TMP/=tmp/" --map "$WT/=" \
+  --scratch "$BESIDE/tmp=tmp/" --map "$BESIDE/=spike/" --map "$HOME/=~/" || die "the records name this machine or an agent's folder (above)"
 say "hook done: T0 $T0, T1 $T1, attested tip $(jq -r .tip_id "$A/final.json")"
