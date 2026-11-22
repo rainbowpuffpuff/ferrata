@@ -40,7 +40,8 @@ in the same box, 8 of 8.
 - `trust.md` §2.4: 7 parties, each walked by its scenario.
 
 **`every_party` again, after review** (`every-party-2.log`; the same box, 21 November 2026, the tree of commit
-`b8b0f256`, `RISC0_HOME` set to the LEZ guest toolchain as `lez/RESULTS.md` §6 says): 8 of 8 passed. What changed:
+`b8b0f256`, `011a4b6e` before the branch's messages-only rewrite, as the message of the commit that added this record
+says; `RISC0_HOME` set to the LEZ guest toolchain as `lez/RESULTS.md` §6 says): 8 of 8 passed. What changed:
 
 - submitters: the forger now sends its updates with the signer witness right (built from the store's committee, as
   an honest submitter builds it; the genuine update with the same witness passes every step natively). One signature
