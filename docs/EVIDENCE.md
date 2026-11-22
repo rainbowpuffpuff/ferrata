@@ -679,6 +679,16 @@ scratch directory and compared with the committed ones: `security_lc` 5 passed, 
 11, `redteam_attest` 11; 29 records byte-identical, `f8-full-diff.md` differing only in its count of random bytes
 (29,806 against 29,792 committed); rustfmt clean on the changed test files. On the laptop: `links` and its steps.
 
+**Twenty-fifth pass (branch `integration9`, 22 Nov 2026).** The merge of `fix-attestor` (rows 63, 95, 100, 101, 129,
+130, 218; two conflicts, both sides kept), at its fold's commit `2cb1d8c5`, on the build box: `cargo test -p
+ferrata-attestor --locked` and `cargo +1.88 test -p ferrata-attestor`, 33 passed each; clippy `-D warnings` and rustfmt
+clean; the replays with their outputs in scratch, as the attestor's README gives them: `zone-attest.sh` (the four
+attestations' 264 signed bytes equal to `runs/zone/att-*.json`, 3 of 4 collected, 2 of 4 refused) and `devnet.sh`
+over the lab node's answers (its refusals as recorded); no tracked file changed; the module natively, laid out as the
+module builder stages it: the calls crate 3 of 3, none skipped, `attestor-e2e.sh` 24 of 24; `forge test` of the
+three LEZ-checked zone-bridge suites, 15 passed. On the laptop: `links` and its steps; `scripts/test_scrub_records.py`,
+0 failed.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
