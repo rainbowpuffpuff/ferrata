@@ -347,11 +347,13 @@ pub struct Updater {
     pub metrics: Metrics,
     round: u64,
     first_due: BTreeMap<(Root, Step), u64>,
-    /// Updates of jobs this updater opened, by job id: (period update, the bytes a source served). Until the job is
-    /// finished or moot (`policy.finish_own_jobs`).
+    /// Updates of jobs this updater sent a step for (its own `Open`, or a later step of a job another party opened),
+    /// by job id: (period update, the bytes a source served). Until the job is finished or moot
+    /// (`policy.finish_own_jobs`): a job is never left after this updater has paid for a step of it.
     carried: BTreeMap<Root, (bool, Vec<u8>)>,
-    /// The Open this round chose, kept once it is applied.
-    opening: Option<(Root, bool, Vec<u8>)>,
+    /// The job of the step this round chose and its update, kept once the step lands (or another party's step of the
+    /// same job came first).
+    sending: Option<(Root, bool, Vec<u8>)>,
     /// (headers source, slot) -> the root it confirmed canonical there (a finalized block stays canonical).
     confirmed: BTreeMap<(usize, u64), Root>,
     /// Per source, the client family it reported this round (`policy.min_distinct_clients`; `None`: none).
@@ -407,7 +409,7 @@ impl Updater {
             round: 0,
             first_due: BTreeMap::new(),
             carried: BTreeMap::new(),
-            opening: None,
+            sending: None,
             confirmed: BTreeMap::new(),
             clients: Vec::new(),
             disagreed: BTreeSet::new(),
@@ -483,6 +485,9 @@ impl Updater {
     }
 
     fn carry(&mut self, jid: Root, period_update: bool, raw: Vec<u8>) {
+        if self.carried.contains_key(&jid) {
+            return;
+        }
         if let Some(dir) = self.dir() {
             let mut b = vec![u8::from(period_update)];
             b.extend_from_slice(&raw);
@@ -1160,9 +1165,7 @@ impl Updater {
             return Ok(Plan::Deferred(step));
         }
         let tx = self.job_tx(&chosen, step)?;
-        if step == Step::Open {
-            self.opening = Some((chosen.jid, served.0, served.1));
-        }
+        self.sending = Some((chosen.jid, served.0, served.1));
         Ok(Plan::Send(Action {
             step,
             job_id: chosen.jid,
@@ -1541,17 +1544,20 @@ impl Updater {
         *self.metrics.tx.entry((action.step.name(), result)).or_default() += 1;
         let gas = out.gas_exec + out.gas_stor;
         let mut why = String::new();
+        // Keep the job of a step that landed, or that another party's transaction for the same job overtook (the job
+        // goes on): it comes first until it is finished or moot (`policy.finish_own_jobs`).
+        let job_goes_on = out.applied || (!out.rejected && !stayed_due);
+        if self.policy.finish_own_jobs && job_goes_on && action.step != Step::Finish {
+            if let Some((jid, period_update, raw)) = self.sending.take().filter(|o| o.0 == action.job_id) {
+                self.carry(jid, period_update, raw);
+            }
+        }
         if out.applied {
             self.held.remove(&(action.job_id, action.step));
             self.breaker = Breaker::default();
             self.metrics.failing_sends = 0;
             self.metrics.last_applied_round = self.round;
             self.metrics.last_applied_utc = crate::utc_now();
-            if action.step == Step::Open && self.policy.finish_own_jobs {
-                if let Some((jid, period_update, raw)) = self.opening.take().filter(|o| o.0 == action.job_id) {
-                    self.carry(jid, period_update, raw);
-                }
-            }
             if action.step == Step::Finish {
                 self.drop_carried(&action.job_id);
             }
@@ -1685,6 +1691,11 @@ impl Updater {
     /// `Adopt` parts, `Finish`) each waiting its full deferral, and ten more.
     pub fn stall_rounds(&self) -> u64 {
         self.policy.defer_window.saturating_mul(6).saturating_add(10)
+    }
+
+    /// How many jobs it keeps to finish (`policy.finish_own_jobs`).
+    pub fn carried_jobs(&self) -> usize {
+        self.carried.len()
     }
 
     /// The metrics in Prometheus' text format.
