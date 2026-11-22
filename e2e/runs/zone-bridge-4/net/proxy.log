@@ -12,7 +12,7 @@ Traceback (most recent call last):
     self.handle_one_request()
   File "/usr/local/lib/python3.12/http/server.py", line 424, in handle_one_request
     method()
-  File "spike/ferrata-wt-fix-attestor/scripts/pubnet.py", line 1323, in do_POST
+  File "scripts/pubnet.py", line 1323, in do_POST
     self.wfile.write(body)
   File "/usr/local/lib/python3.12/socketserver.py", line 840, in write
     self._sock.sendall(b)
@@ -36,7 +36,7 @@ Traceback (most recent call last):
     self.handle_one_request()
   File "/usr/local/lib/python3.12/http/server.py", line 424, in handle_one_request
     method()
-  File "spike/ferrata-wt-fix-attestor/scripts/pubnet.py", line 1323, in do_POST
+  File "scripts/pubnet.py", line 1323, in do_POST
     self.wfile.write(body)
   File "/usr/local/lib/python3.12/socketserver.py", line 840, in write
     self._sock.sendall(b)

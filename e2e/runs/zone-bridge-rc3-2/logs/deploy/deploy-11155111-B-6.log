@@ -14,7 +14,7 @@ SKIPPING ON CHAIN SIMULATION.
 
 ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
 
-Transactions saved to: spike/ferrata-wt-fix-attestor/vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
+Transactions saved to: vault/broadcast/DeployVault.s.sol/11155111/run-latest.json
 
-Sensitive values saved to: spike/ferrata-wt-fix-attestor/vault/cache/DeployVault.s.sol/11155111/run-latest.json
+Sensitive values saved to: vault/cache/DeployVault.s.sol/11155111/run-latest.json
 

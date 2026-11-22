@@ -19,7 +19,7 @@ payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
 payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
 payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
 payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
-harness tables: 55 rows from spike/tmp/fix-attestor-2/rc3/tree/lez/results/v0.4.0-rc3
+harness tables: 55 rows from tmp/rc3/tree/lez/results/v0.4.0-rc3
 == phase hook (02:54:59)
 [return-leg 02:54:59] the zone: LEZ RPC http://127.0.0.1:3040, Bedrock http://127.0.0.1:18080; image ids: checkpoint_0_3_5 0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f, checkpoint_b_0_3_5 0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf, release 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9
 [return-leg 02:54:59] node: fork digest c025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac (GET /chain/fork), channel 0101010101010101010101010101010101010101010101010101010101010101
@@ -58,7 +58,7 @@ transactions: 0 sent; 0 applied, 0 refused with an exit code, 0 reverted otherwi
 charged in all: execution gas 0, storage gas 0, base fees 0
 against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
 base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 109 of 109
-records written to spike/tmp/fix-attestor-2/rc3/live/run/export
+records written to tmp/rc3/live/run/export
 # The run's environment
 
 - started 2026-11-22T02:54:24Z, finished 2026-11-22T03:13:06Z (UTC); exit status of the phases: 0
@@ -80,4 +80,4 @@ records written to spike/tmp/fix-attestor-2/rc3/live/run/export
 - ports: sequencer RPC 127.0.0.1:3040, metrics 127.0.0.1:9000, Bedrock API 127.0.0.1:18080
 - last block: 110; blocks the sequencer published to Bedrock: 110; its last channel update: adopted none, finalized 109..=109 (1), head Some(110)
 - Bedrock node at the end (cryptarchia/info): {"cryptarchia_info":{"lib":"934863444939831c63a8305beccfcb4b50a4ab84812233262f2c4b1ff6a5ddf7","lib_slot":2456036,"tip":"86bf2734704255bd5716f969c4014f2c93b226bf34a4f8d44057621569a05ec8","slot":2456039,"height":275,"state":"Online"},"phase":"Following"}
-== records in spike/ferrata-wt-fix-attestor/lez/results/v0.4.0-rc3/return-leg-2/zone
+== records in lez/results/v0.4.0-rc3/return-leg-2/zone

@@ -8,7 +8,7 @@ SKIPPING ON CHAIN SIMULATION.
 
 ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
 
-Transactions saved to: spike/ferrata-wt-fix-attestor/vault/broadcast/Crown.s.sol/11155111/submit-latest.json
+Transactions saved to: vault/broadcast/Crown.s.sol/11155111/submit-latest.json
 
-Sensitive values saved to: spike/ferrata-wt-fix-attestor/vault/cache/Crown.s.sol/11155111/submit-latest.json
+Sensitive values saved to: vault/cache/Crown.s.sol/11155111/submit-latest.json
 
