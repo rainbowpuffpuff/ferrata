@@ -6,15 +6,18 @@ run that shows each clause, and an EVIDENCE row text. Nothing here edits `docs/E
 box (`spike/modal-build/mrun`, profile of this stream) on 21 November 2026; "measured" unless marked. An independent
 review of the branch (21 November) reran every cited test and run on a fresh box and reproduced them; its findings are
 fixed on the branch after `d2d937a1` (the monitor's divergence rule, the relayer module's build, the U.4 statuses,
-wording), and the rows below say what changed.
+wording), and the rows below say what changed. A second review (22 November) reproduced those fixes and found one
+regression, a forged header kept ahead of every provider's finality raising no critical alarm (VS.4 below), and seven
+smaller points; they are fixed after `c51f7849` (the monitor's rule, CI, wording), measured on the Modal build box
+on 22 November.
 
 ## Summary
 
 | Row | Was | Proposed | Why, in one line |
 |---|---|---|---|
 | RFP-021 R.7 | in part | **shown** | `lez/harness/tests/stall.rs`: attestations verify during an 8.2-day stall and after it; the 106 outstanding real Sepolia updates (8 handoffs) applied in order by a late submitter, no repair, no gap |
-| RFP-021 S.7 | in part | in part (the monitor gap closed; only the first-draft guide remains) | `monitor/attest`: the stall and half-weak-subjectivity alarms built and tested on the R.7 states |
-| RFP-021 VS.4 | in part | in part (the monitor gap closed; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence alarm and the consumer's freeze hook built and tested, including one provider colluding with the forger (the alarm stays critical, the freeze hook runs) |
+| RFP-021 S.7 | in part | in part (the stall monitor built and tested; only the first-draft guide remains) | `monitor/attest`: the stall and half-weak-subjectivity alarms built and tested on the R.7 states |
+| RFP-021 VS.4 | in part | in part (the monitor's alarms built and tested with their rule stated; only the first-draft `trust.md` remains) | `monitor/attest`: the divergence and ahead-of-finality alarms and the consumer's freeze hook, tested on forged headers: one provider colluding with the forger, a header kept ahead of every provider's finality, one younger than finality allows, one the providers can judge only later (the daemon judges it then, whether or not the instance has moved on) |
 | RFP-021 U.4 | waits on Logos | **waits on Logos** (shown instead: SPEL's v0.4 generator, at its open pull request, on our programs) | SPEL's LEZ v0.4 line is an open pull request (#301), not a release: the table files that under "waits on Logos". Shown instead: its own generator makes the attestation program's messages and types from `lez/wire`, 0 differences from ours; its decoder reads 905 of 905 recorded messages |
 | RFP-022 U.4 | waits on Logos | **waits on Logos** (shown instead: the same generator with our tuple patch) | The same open pull request, which stops at a tuple in `BridgeMessage::Spend`; with our 23-line SPEL patch (drafted, not opened) it makes the bridge's messages and types, 0 differences from ours |
 | RFP-021 U.1 | in part | **shown** (two conditions stated) | `ferrata_attest_module` in a headless Logos Core beside `lez_core` on a LEZ zone we ran: its LEZ reads through `lez_core` byte-equal to the plain path; an update's job and attestations sent through `lez_core`, applied or refused on the zone as the module's dry runs said. Conditions: `lez_core` runs with our patch (as merged it cannot send these transactions), and a sent transaction's outcome is not observable through Logos Core (`lez_core` reports inclusion; the run read verdicts with the CLI's follower) |
@@ -51,21 +54,92 @@ Proposed EVIDENCE row: | new (rfp-B 1) | **A stalled instance keeps attesting an
 first draft (rfp-H's). What this stream adds:
 
 - `attest-monitor` ([`monitor/attest/`](../../monitor/attest/README.md)): `instance-stalled` (the instance's finalized header behind the providers' median finalized header by more than `--stall-after`), `ws-half` (past half its weak-subjectivity period by the chain's clock), `ws-expired` (must be replaced), with alerts to a log, a command and standard error, a daemon with a status file and a clean stop.
-- Tested on real data (`monitor/attest/tests/monitor.rs`, 12 of 12 pass after the review's fixes; 8 of 8 before): the R.7 test's stalled instance at the resume's time gives lag 702,336 s, `instance-stalled` and `ws-half` (half at slot 11,606,192: the real 8.2-day stall crossed it); the resumed instance gives no alarm and its root equals publicnode's recorded `0x23362d57…5466`; the daemon raises each alarm once, clears both with `recovered` when the instance resumes, stops on SIGTERM.
+- Tested on real data (`monitor/attest/tests/monitor.rs`, 18 of 18 pass after the second review's fixes; 12 of 12 after the first; 8 of 8 before): the R.7 test's stalled instance at the resume's time gives lag 702,336 s, `instance-stalled` and `ws-half` (half at slot 11,606,192: the real 8.2-day stall crossed it); the resumed instance gives no alarm and its root equals publicnode's recorded `0x23362d57…5466`; the daemon raises each alarm once, clears both with `recovered` when the instance resumes, stops on SIGTERM.
 - Proposed text for the operator guide §3.5 (for rfp-H): "Run `attest-monitor watch --state lez:<sequencer> --program <program> --instance <id> --provider … --provider … --provider …` (three or more beacon providers of different clients). It warns `instance-stalled` when the instance's finalized header lags the providers' finalized header (their median: with three or more providers no single one can raise or hide it) by more than `--stall-after` (default 15,300 s, two missed two-hour sessions plus finality), and raises `ws-half` (critical) when the header is older than half its weak-subjectivity period: submit the outstanding updates then; anyone may, and the instance resumes with no repair (R.7). Past the period it raises `ws-expired`: the instance must be replaced (§ on replacement). Nobody is obliged to run an updater or this monitor."
 
-Proposed EVIDENCE row: | new (rfp-B 2) | **The attestation side's `monitor`: stall, weak-subjectivity and divergence alarms** (S.7, VS.4): `attest-monitor` reads an instance (a LEZ sequencer's `getAccount`, or a file or command) and several beacon providers; on the R.7 test's real Sepolia instance states and providers serving Sepolia's recorded answers: healthy (3 agree), the real 8.2-day stall (`instance-stalled`, lag 702,336 s; `ws-half`), past the period (`ws-expired`), a forged finalized header (`instance-diverged`, the consumer's freeze hook run once with the instance id), the forged header with one provider colluding (still critical, the hook runs, the colluder named), the stated rule with `--diverge-at`, providers behind the instance's slot, unreachable or on another chain not counted, the daemon's alerts on change, an outage held (no false `recovered`), a failed freeze hook retried at the next poll, SIGTERM | `monitor/attest/tests/monitor.rs`: 12 of 12 pass | Modal build box | [`monitor/attest/README.md`](../../monitor/attest/README.md) |
+Proposed EVIDENCE row: | new (rfp-B 2) | **The attestation side's `monitor`: stall, weak-subjectivity, divergence and ahead-of-finality alarms** (S.7, VS.4): `attest-monitor` reads an instance (a LEZ sequencer's `getAccount`, or a file or command) and several beacon providers; on the R.7 test's real Sepolia instance states and providers serving Sepolia's recorded answers: healthy (3 agree), the real 8.2-day stall (`instance-stalled`, lag 702,336 s; `ws-half`), past the period (`ws-expired`), a forged finalized header (`instance-diverged`, the consumer's freeze hook run once with the instance id), the forged header with one provider colluding (still critical, the hook runs, the colluder named), the stated rule with `--diverge-at`; a forged header kept ahead of every provider's finality (critical: the providers' other block at its slot counts before it is final for them, and `instance-ahead`), one younger than two epochs (critical whatever the providers say, every provider colluding included), one ahead of providers holding no block there (critical past the finality delay and a 60 s grace), one only judgeable later (the daemon judges it once the providers finalize its slot, after the instance has moved on; the hook runs for each forged header); a provider behind the instance's slot with no block there, unreachable or on another chain not counted; the daemon's alerts on change, an outage held (no false `recovered`, `contested` included), a failed freeze hook retried at the next poll, SIGTERM | `monitor/attest/tests/monitor.rs`: 18 of 18 pass | Modal build box | [`monitor/attest/README.md`](../../monitor/attest/README.md) |
 
 ## RFP-021 VS.4: committee-compromise failure modes and what a consumer can do
 
-**Proposed: in part; the monitor gap is closed.** The documentation (`docs/trust.md` §2, §6) is a first draft (rfp-H's).
-What this stream adds: the alarm the documentation tells consumers to wire to their freeze authority exists and is tested.
+**Proposed: in part.** What remains is the documentation (`docs/trust.md` §2, §6, a first draft, rfp-H's). The
+monitor's part is built and tested with its rule stated exactly, including the case the second review found open (a
+forged header kept ahead of every provider's finality): the alarms the documentation tells consumers to wire to their
+freeze authority exist, and what they cannot see is said.
 
-- `instance-diverged` (critical) when at least `--diverge-at` providers (default 1: any provider) report another root, or no block, at the instance's finalized slot, a slot they have finalized, whatever the others report: what a captured committee's forged handoff or finality leaves. A provider that reports the instance's root does not cancel it (it may collude with the forger; the alert names it under `agreeing`). The rule, with `n` providers answering: `f` lying providers raise it when `f` ≥ `--diverge-at`; `f` providers colluding with a forged instance hide it only when `f` > `n` − `--diverge-at` (by default, only when every provider that answers colludes). By default one provider can raise it (a false freeze costs a pause); with `--diverge-at 2` and three or more providers one provider can neither raise nor hide it.
-- Tests: `a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_hook` (the header altered as a captured committee would leave it; the alert names all three providers and the instance; the consumer's freeze tool ran exactly once); `one_colluding_provider_cannot_hide_a_divergence_from_the_freeze_hook` (two honest providers and one reporting the forged root, the freeze tool wired at level critical as the README says: exit 20, the tool ran once, the colluder named; two colluding of three: still critical; only colluding providers answering: confirmed, the stated limit); `the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2`; `a_provider_behind_the_instance_is_not_counted` (providers that have not finalized the slot raise no false divergence); `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook`.
-- Before the review's fix (`ac5a78d5`), one colluding provider turned the critical alarm into a warning, so a freeze tool wired at level critical did not run; the earlier text here and in the monitor's README claimed it could not be hidden.
-- Proposed text for `trust.md` §2.2 (for rfp-H): "The attestation side's monitor (`monitor/attest`, `attest-monitor`) compares the instance's finalized header with several beacon providers' canonical roots and raises `instance-diverged` (critical) when any of them (by default; `--diverge-at N` for N) has another block at that slot, whatever the others say: a provider that agrees with a forged header may be colluding with the forger. A consumer runs it with three or more providers of different clients, operated by different parties, and wires `--alert-cmd` at level critical to its freeze authority; one dishonest provider can then raise a false alarm, which costs a pause, but cannot hide a real one, which only every provider together can. What can pass before the freeze is the consumer's caps over the time the alarm and the freeze take; size the caps to what it can afford to lose."
-- Limits: the divergence is shown on an altered state against loopback providers serving recorded answers, not a real captured committee; the monitor has not run against public providers; a provider past the slot that no longer serves it (pruned history) counts as disagreeing.
+The rule ([`monitor/attest/README.md`](../../monitor/attest/README.md), "The rule"), on the instance's finalized header
+at slot `S` with root `R`, `D` the chain's finality delay (two epochs, 768 s on Ethereum) and `G` the `--ahead-grace`
+(default 60 s):
+
+1. `instance-ahead` (critical, `too-new`) when the header is younger than `D` by the chain's clock. Casper FFG
+   finalizes a checkpoint two epochs after it at the earliest, so an honest light client's finalized header is always
+   at least that old; no provider can hide this alarm.
+2. `instance-diverged` (critical) when at least `--diverge-at` providers (default 1) are counted against the header: a
+   provider that has finalized `S` counts with another root there or no block; one that has not finalized `S` counts
+   only with another canonical block there. One behind `S` with no block there (it may not have seen the slot: the
+   first review's L5) or with `R` there is not counted either way. An agreeing provider never cancels a disagreeing
+   one (it may collude with the forger); the alert names it under `agreeing`.
+3. `instance-ahead` (critical, `ahead-of-providers`) when providers answer, none has finalized `S` or holds `R` there,
+   and the header is older than `D + G`: the instance is not on their chain, or every provider lags (a false alarm
+   costs a pause). One provider behind among others that have finalized `S` never raises it.
+
+With `n` providers counted, `f` lying providers raise a false `instance-diverged` when `f` ≥ `--diverge-at`; `f`
+providers colluding with a forged instance hide it only when fewer than `--diverge-at` honest providers are counted,
+`f` > `n` − `--diverge-at` (by default, only when every provider counted colludes). What one `check` cannot see: a
+forged header no honest provider can be counted against yet (each behind `S` with no block there, or down), older than
+`D`, and within the grace or vouched for by a colluding provider. `watch` judges every header on record again until it
+settles, whether or not the instance has moved on; on a chain that finalizes normally honest providers finalize any
+slot at most three epochs after it (19.2 min on Ethereum; an epoch more when every slot from `S` to the next epoch
+boundary is empty), so such a header raises `instance-diverged` at the latest at the first poll after that. A header
+found diverged, or too new, stays raised when the instance moves on or providers drop out; one diverged, or ahead of
+every provider, clears only when a later poll confirms that header (not on `contested`, the second review's N7). The
+limit that stays: every provider counted colludes with the forger.
+
+- Tests (`monitor/attest/tests/monitor.rs`, 18 of 18 pass, Modal build box, 22 Nov 2026):
+  `a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_hook` (the header altered as a captured
+  committee would leave it; the alert names all three providers and the instance; the consumer's freeze tool ran
+  exactly once); `one_colluding_provider_cannot_hide_a_divergence_from_the_freeze_hook` (two honest providers and one
+  reporting the forged root, the freeze tool wired at level critical as the README says: exit 20, the tool ran once,
+  the colluder named; two colluding of three: still critical; only colluding providers answering: confirmed, the stated
+  limit); `the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2`;
+  `b2_forged_instance_ahead_of_every_providers_finality_raises_a_critical_alert` and
+  `b2_daemon_keeps_a_forged_header_raised_once_the_instance_has_moved_ahead_again` (the second review's two tests,
+  kept with their setups and inverted: the forged header 64 and 1 slots ahead of three honest providers' finality:
+  exit 20, `instance-diverged` and `instance-ahead`, the freeze tool ran; in `watch`, the forger moving ahead again: the
+  first forged header stays raised, the second, 60 s old, `instance-ahead` `too-new`);
+  `a_header_younger_than_the_finality_delay_is_critical_whatever_the_providers_say` (768 s old: healthy; 756 s:
+  critical; a forged header 360 s old with every provider colluding: `confirmed`, and critical all the same);
+  `a_header_ahead_of_every_providers_finality_is_critical_after_the_grace` (providers with no block at the slot:
+  critical at 829 s, warnings at 828 s, critical at 769 s with `--ahead-grace 0`; providers behind but holding the
+  instance's block: warnings only); `the_daemon_judges_an_earlier_header_again_once_the_providers_finalize_its_slot`
+  (a forged header vouched for by a colluder, the honest providers behind it with no block there: one `check` warns,
+  the stated limit; `watch` raises it once they finalize its slot, after the instance has moved on, and then the next
+  forged header; the freeze tool ran once for each); `with_diverge_at_2_an_honest_provider_dropping_out_is_not_a_recovery`;
+  `a_provider_behind_the_instance_is_not_counted` (the first review's L5: a provider behind the slot with no block there
+  raises no false divergence; unchanged, passing); `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook`.
+- Before the second review's fix (`883ec012`), a forged header kept ahead of every provider's finality raised no
+  critical alarm, and the text here called the monitor gap closed: the first review's L5 fix (`50e709d9`) had stopped
+  counting any provider behind the instance's slot, and the daemon never judged an earlier header again. The second
+  review measured it with the two tests now kept inverted. Before the first review's fix (`ac5a78d5`), one colluding
+  provider turned the critical alarm into a warning.
+- Proposed text for `trust.md` §2.2 (for rfp-H): "The attestation side's monitor (`monitor/attest`, `attest-monitor`)
+  compares the instance's finalized header with several beacon providers and raises two critical alarms that a
+  consumer wires (`--alert-cmd`, level critical) to its freeze authority: `instance-diverged` when a provider (by
+  default any one; `--diverge-at N` for N) holds another block at that slot, final for it or not yet, or no block at a
+  slot it has finalized, whatever the others say (a provider that agrees with a forged header may be colluding with the
+  forger); and `instance-ahead` when the header is younger than the chain's finality delay (two epochs), which no honest
+  instance can hold, or when no provider has finalized it or holds it although it is older than that delay plus a
+  grace. A consumer runs it with three or more providers of different clients, operated by different parties. One
+  dishonest provider can then raise a false alarm, which costs a pause, but cannot hide a forged header; only every
+  provider counted together can. A forged header the providers cannot judge yet (ahead of their finality, at a slot
+  where they hold no block) is judged again once they finalize its slot: at most three epochs after it on a chain that
+  finalizes normally (about 19 minutes on Ethereum; an epoch more if every slot from it to the next epoch boundary is
+  empty). What can pass before the freeze is the consumer's caps over that time, plus the poll interval and the
+  freeze's own; size the caps to what it can afford to lose."
+- Limits: the alarms are shown on altered states against loopback providers serving recorded answers, not a real
+  captured committee; the monitor has not run against public providers; a provider past the slot that no longer serves
+  it (pruned history) counts as disagreeing; the `too-new` rule takes the monitor's clock to be within a slot of the
+  chain's (an honest header is at least two epochs and a slot old when its update is signed, so a clock more than 12 s
+  slow raises a false `instance-ahead`).
 
 ## RFP-021 U.4 and RFP-022 U.4: an IDL through the SPEL framework
 
@@ -227,6 +301,11 @@ inclusion only, so the run read every verdict with the CLI's follower (`ferrata 
 learns an `Attest`'s result only from the dry run beforehand. Limits: one zone we ran; the payer is a public account of
 a wallet holding LEZ's published local test key. The packages' hashes in the run's record are what ran: rebuilt from
 scratch by the review, the module package was bit-identical, while `lez_core`'s and `beacon_api_module`'s were not
-(their builds are not bit-reproducible across boxes).
+(their builds are not bit-reproducible across boxes). The branch's module is no longer the package r6 ran (tree
+`002ebb96`): `f2b2700f` (the first review's L11 and L12) changed its `lez` method so that any answer of `lez_core`'s
+`open` other than `0` is an error, and moved a doc comment. Only that error path changed: r6's `open` answered `0`
+(`open_reply` in [`cli/results/attest-seq-r6/logos/calls.jsonl`](../../cli/results/attest-seq-r6/logos/calls.jsonl),
+line 1), so r6's path is the same at the tip; the calls crate's test covers the new path (`open` answering 99: an
+error, `lez_submit` refused; 22 of 22 pass). The tip's package has not been run in Logos Core.
 
 Proposed EVIDENCE row: | new (rfp-B 6) | **The attestation module's LEZ reads and sends through Logos Core's own `lez_core`** (U.1): `ferrata_attest_module` in a headless Logos Core (`logosctl` 66d098d) beside `lez_core` (cc73ebf, patched) and `beacon_api_module`, on a LEZ v0.4.0-rc1 zone with the final attestation program: three actor states read through `lez_core.get_account_public`, each byte-equal to the plain path's; an update's job (3 transactions) planned by the module on that state and sent through `lez_core.send_generic_public_transaction`, applied (slot 11,567,104 → 11,567,392); a log attested through the module and sent through `lez_core`, applied (93,316 gas); a tampered one refused on the zone with 110, as the module's dry run said | run r6 of `cli/tests/attest-seq.sh` with `logos-run-hook.sh` (tree `002ebb96`); packages from `logos-build.sh` | Modal build box; a zone we started; recorded Ethereum data | [`cli/results/attest-seq-r6/`](../../cli/results/attest-seq-r6/README.md) |
