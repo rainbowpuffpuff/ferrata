@@ -29,6 +29,8 @@
 #   fixture   vault/test/real/fixtures/${ZB_FIXTURE:-zone-bridge}.json for ZoneBridge.t.sol (the journal, the seals, the
 #             run's values, the rotated key set)
 #   verify    the input and journal re-derived from the recorded node answers and attestations; every receipt verified
+#   records   only what every stage but build and verify ends with: the run's files scrubbed of this machine's paths
+#             and checked (scripts/scrub_records.py); a file that still names a home directory or an agent's folder fails
 #
 # STAND-INs (every record says so): the beacon chain on LEZ (a committee the driver holds finalizes the anvil's
 # blocks), the Ethereum side (a local anvil with Sepolia's chain id, which crown-driver pins), the vault's W and
@@ -67,7 +69,9 @@ CHAIN_ID=11155111                                                       # crown-
 export FOUNDRY_DISABLE_NIGHTLY_WARNING=1 PATH="$HOME/.foundry/bin:$PATH"
 log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$RUN/logs/zone-bridge.log"; }
 die() { log "STOP: $*"; exit 1; }
-scrub() { sed -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g"; }
+# The records name no path of this machine and no agent's folder: the worktree's paths become relative to it, a
+# scratch directory's become tmp/ (the same rules as records_final, which every stage ends with)
+scrub() { sed -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$REPO/##g" -e "s#$SPIKE/tmp/[^/][^/]*/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g"; }
 id_of() { local v; v="$(jq -r --arg p "$1.bin" 'select(.program == $p or (.program | endswith("/" + $p))) | .image_id' "$PROGRAMS/ids.jsonl")"; [ -n "$v" ] || { echo "no $1 in $PROGRAMS/ids.jsonl" >&2; exit 1; }; echo "$v"; }
 hexfile() { tr -d ' \n' < "$1" | sed 's/^0x//'; }
 mkdir -p "$RUN/logs"
@@ -471,11 +475,14 @@ stage_zone() {
   cp "$W/phases.txt" "$RUN/zone/phases.txt"
   cp "$W/driver/manifest.tsv" "$RUN/lez/manifest.tsv" 2>/dev/null || true
   rm -f "$REPO/vault/deployments/crown-$NAME.json"   # DeployVault's record, kept as $RUN/deploy.json
-  log "zone stage done"; scrub_logs
+  log "zone stage done"
 }
 
-scrub_logs() { # forge's and the stages' logs under $RUN/logs name this machine's paths
-  find "$RUN/logs" -type f -name '*.log' -exec sed -i -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g" {} +
+records_final() { # every file of the run (logs/, net/ where the proxy logs, zone/ ...; not the ignored work/), after
+  # every stage, failed or not: scrub's rules applied, then refused (exit 1) if any file still names a home directory,
+  # this machine's spike/ or an agent's folder (scripts/scrub_records.py; review M1: net/proxy.log was not scrubbed)
+  python3 -I "$REPO/scripts/scrub_records.py" --skip work "$RUN" --map "$W/=work/" --map "$T/=tmp/" --map "$REPO/=" \
+    --scratch "$SPIKE/tmp=tmp/" --map "$SPIKE/=spike/" --map "$HOME/=~/"
 }
 
 pack_answers() { # $W/node (save_answers) -> $RUN/zone/node-answers.tar.zst (as node/: info.json, channel.json, blocks/)
@@ -620,7 +627,6 @@ stage_vault() {
   jq -n --arg f "$final" --arg root "$root" --argjson paid "$paid" --arg bal "$(cast balance "$VAULT" --rpc-url "$R")" \
     '{finalState: $f, burnRoot: $root, burnRootAccepted: true, releases: $paid, vaultBalanceWeiAfter: $bal}' > "$RUN/vault-checks.json"
   "$S" "$RUN" status | tee -a "$RUN/logs/zone-bridge.log"
-  scrub_logs
 }
 
 # ---- fixture: what vault/test/real/ZoneBridge.t.sol reads ---------------------------------------------------------
@@ -665,16 +671,29 @@ stage_verify() {
   [ "$(jq -r .candidate.seal "$RUN/crown.json")" = "0x$(hexfile "$C/receipts/seal.hex")" ] && echo "crown.json: the candidate's seal = the verified receipt's"
 }
 
+# A stage runs in a subshell, so that its EXIT traps (zone_cleanup writes zone/logs/) have run before its records
+# are scrubbed and checked; build and verify write no record and check none (their re-checks over the runs recorded
+# before this check, zone-bridge-1, -2 and -rc3, whose forge logs name the worktree's folder, are unchanged)
+set +e
+( set -e
+  case "$STAGE" in
+    build) stage_build ;;
+    zone) stage_zone ;;
+    answers) pack_answers ;;
+    input) stage_input ;;
+    prove) stage_prove ;;
+    releases) stage_releases ;;
+    groth16) stage_groth16 "$@" ;;
+    vault) stage_vault ;;
+    fixture) stage_fixture ;;
+    verify) stage_verify ;;
+    records) ;;
+    *) sed -n '2,33p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  esac )
+rc=$?
+set -e
 case "$STAGE" in
-  build) stage_build ;;
-  zone) stage_zone ;;
-  answers) pack_answers ;;
-  input) stage_input ;;
-  prove) stage_prove ;;
-  releases) stage_releases ;;
-  groth16) stage_groth16 "$@" ;;
-  vault) stage_vault ;;
-  fixture) stage_fixture ;;
-  verify) stage_verify ;;
-  *) sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  zone|answers|input|prove|releases|groth16|vault|fixture|records)
+    records_final || { log "STOP: the records name this machine or an agent's folder (listed above)"; [ "$rc" -ne 0 ] || rc=1; } ;;
 esac
+exit "$rc"

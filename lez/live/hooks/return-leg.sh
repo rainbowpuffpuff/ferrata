@@ -44,7 +44,7 @@ Z=0x0000000000000000000000000000000000000000000000000000000000000000
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 say() { echo "[return-leg $(date -u +%H:%M:%S)] $*" | tee -a "$RUN/logs/zone-bridge.log"; }
 die() { say "STOP: $*"; exit 1; }
-scrub() { sed -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g"; }
+scrub() { sed -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$WT/##g" -e "s#$BESIDE/tmp/[^/][^/]*/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g"; }
 id_of() { jq -r --arg p "$1.bin" 'select(.program == $p or (.program | endswith("/" + $p))) | .image_id' "$RL_PROGRAMS/ids.jsonl"; }
 [ -e "$RUN/identity.json" ] && { echo "$RUN holds a run already"; exit 2; }
 rm -rf "$W"; mkdir -p "$H" "$A/rounds" "$RUN/logs" "$RUN/zone/attestor-0" "$RUN/lez/session-a" "$RUN/lez/session-b" "$RUN/lez/inputs"
@@ -211,5 +211,7 @@ for f in crown-a.log crown-b.log check.log export.log capture-1.log capture-2.lo
 done
 for f in "$H"/driver/out/crown-private-*-tx.borsh; do [ -f "$f" ] && cp "$f" "$RUN/lez/session-b/"; done
 cp "$H/driver/manifest.tsv" "$RUN/lez/manifest.tsv" 2>/dev/null || true
-find "$RUN/logs" -type f -name '*.log' -exec sed -i -e "s#$W/#work/#g" -e "s#$ZB_TMP/#tmp/#g" -e "s#$BESIDE/#spike/#g" -e "s#$HOME/#~/#g" {} +
+# every file of the run (net/proxy.log too: review M1 of the second review) scrubbed by scrub's rules, then checked
+python3 -I "$WT/scripts/scrub_records.py" --skip work "$RUN" --map "$W/=work/" --map "$ZB_TMP/=tmp/" --map "$WT/=" \
+  --scratch "$BESIDE/tmp=tmp/" --map "$BESIDE/=spike/" --map "$HOME/=~/" || die "the records name this machine or an agent's folder (above)"
 say "hook done: T0 $T0, T1 $T1, attested tip $(jq -r .tip_id "$A/final.json")"

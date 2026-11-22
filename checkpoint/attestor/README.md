@@ -78,6 +78,9 @@ bash attestor/zone-attest.sh attestor/runs/zone "$TMPDIR/zone"   # its four atte
                                                            # outputs to the second directory, records untouched)
 # from the worktree root: the bridge program on the zone, its checkpoint into the vault (stages in the header)
 bash checkpoint/attestor/zone-bridge.sh zone e2e/runs/zone-bridge-1
+python3 -I scripts/test_scrub_records.py   # what every zone-bridge.sh stage but build and verify ends with (and
+                                           # return-leg.sh): the run's files scrubbed of this machine's paths, the
+                                           # stage refused if one is left (scripts/scrub_records.py); scratch in $TMPDIR
 ```
 
 `vectors/lab-node/` holds the lab node's answers trimmed to the node blocks that carry LEZ blocks 186..=202.
