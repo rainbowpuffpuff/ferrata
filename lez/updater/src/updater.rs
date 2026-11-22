@@ -143,7 +143,11 @@ pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
 /// `down`; one is enough for `degraded`. A chain that answers neither reads nor sends fails every round before anything
 /// is sent, so it never counts as a failing send.
 pub const DOWN_AFTER_FAILED_ROUNDS: u32 = 5;
-/// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
+/// A hold that ends ([`Held::retry_at`]) is forgotten this many rounds after its last refusal. A hold for good is kept
+/// while the instance holds the state its step was refused on (a job commits to its starting store, so the step is moot
+/// once the instance moves), across restarts: `state_dir/<chain>/held.tsv` (9c L-U5: it used to be forgotten after
+/// 4,096 rounds, about 13.7 h at 12 s rounds, and at every restart, and the step was refused and charged again). At
+/// most [`MAX_HELD`] holds are kept.
 pub const HOLD_ROUNDS: u64 = 4096;
 /// See [`HOLD_ROUNDS`].
 pub const MAX_HELD: usize = 1024;
@@ -250,6 +254,61 @@ pub struct Held {
     pub retry_at: Option<u64>,
     /// `fees.gas_limit` at its last refusal ([`Refusal::Gas`]: the hold ends when the limit is raised).
     pub gas_limit: u64,
+    /// The instance's state the step was refused on ([`state_digest`]): the hold is forgotten once it changes.
+    pub state: Root,
+}
+
+/// The SHA-256 of the instance's state as a round saw it ([`Action::store_seen`]: whether it is active, and its store;
+/// none before `Init`).
+pub fn state_digest(seen: &Option<(bool, Vec<u8>)>) -> Root {
+    let mut h = Sha256::new();
+    match seen {
+        None => h.update([0u8]),
+        Some((active, store)) => {
+            h.update([1u8, u8::from(*active)]);
+            h.update(store);
+        }
+    }
+    h.finalize().into()
+}
+
+fn step_of_byte(b: u8) -> Step {
+    match b {
+        0 => Step::Init,
+        1 => Step::Open,
+        2 => Step::Miller,
+        255 => Step::Finish,
+        p => Step::Adopt(p - 3),
+    }
+}
+
+/// A line of `held.tsv` ([`Updater`]'s `held_text`): a hold for good, as of round 0 of this run.
+fn parse_held(line: &str) -> Option<((Root, Step), Held)> {
+    let f: Vec<&str> = line.splitn(9, '\t').collect();
+    if f.len() != 9 {
+        return None;
+    }
+    let jid = crate::chain::root(f[0]).ok()?;
+    let step = step_of_byte(f[1].parse().ok()?);
+    let cause = match f[3] {
+        "window" => Refusal::Window,
+        "gas" => Refusal::Gas,
+        "other" => Refusal::Other,
+        c => Refusal::Program(c.strip_prefix("program:")?.parse().ok()?),
+    };
+    let held = Held {
+        step,
+        finalized_slot: f[2].parse().ok()?,
+        cause,
+        note: clip(f[8]),
+        count: f[4].parse().ok()?,
+        due: f[5] == "1",
+        round: 0,
+        retry_at: None,
+        gas_limit: f[6].parse().ok()?,
+        state: crate::chain::root(f[7]).ok()?,
+    };
+    Some(((jid, step), held))
 }
 
 /// Refusals in a row of steps that stayed due, and the pause they set ([`BREAKER_AFTER`]).
@@ -432,6 +491,8 @@ pub struct Updater {
     /// Steps refused while they stayed due (or with the chain unreadable after the refusal), by (job, step): not sent
     /// again on the same state, or not yet ([`Held::retry_at`]).
     pub held: BTreeMap<(Root, Step), Held>,
+    /// What `held.tsv` holds (the holds for good as last written), so it is written only when they change.
+    held_saved: String,
     /// Refusals after which the chain could not be read ([`After::Unread`]): the action and its cause, judged at the next
     /// round that reads the chain. At most [`MAX_UNJUDGED`].
     unjudged: Vec<(Action, Refusal, String)>,
@@ -487,6 +548,7 @@ impl Updater {
             disagreed: BTreeSet::new(),
             served_by: BTreeMap::new(),
             held: BTreeMap::new(),
+            held_saved: String::new(),
             unjudged: Vec::new(),
             breaker: Breaker::default(),
             expired: None,
@@ -543,7 +605,51 @@ impl Updater {
                 }
             }
         }
+        if let Ok(text) = fs::read_to_string(dir.join("held.tsv")) {
+            self.held.extend(text.lines().filter_map(parse_held).take(MAX_HELD));
+            self.held_saved = self.held_text();
+        }
         Ok(())
+    }
+
+    /// The holds for good, a line each (tab-separated: job, step, finalized slot, cause, refusals, due, gas limit, the
+    /// instance's state, the chain's note), as `held.tsv` keeps them.
+    fn held_text(&self) -> String {
+        let mut o = String::new();
+        for ((jid, step), h) in self.held.iter().filter(|(_, h)| h.retry_at.is_none()) {
+            let cause = match h.cause {
+                Refusal::Program(code) => format!("program:{code}"),
+                c => c.kind().to_string(),
+            };
+            let _ = writeln!(
+                o,
+                "{}\t{}\t{}\t{cause}\t{}\t{}\t{}\t{}\t{}",
+                hex::encode(jid),
+                step.byte(),
+                h.finalized_slot,
+                h.count,
+                u8::from(h.due),
+                h.gas_limit,
+                hex::encode(h.state),
+                h.note
+            );
+        }
+        o
+    }
+
+    /// Write `state_dir/<chain>/held.tsv` if the holds for good changed (9c L-U5).
+    fn save_held(&mut self) {
+        let text = self.held_text();
+        if text == self.held_saved {
+            return;
+        }
+        if let Some(dir) = self.dir() {
+            if let Err(e) = fs::write(dir.join("held.tsv"), &text) {
+                self.log(&format!("held.tsv: {e}"));
+                return;
+            }
+        }
+        self.held_saved = text;
     }
 
     fn keep_committee(&mut self, c: &SyncCommittee) -> Result<()> {
@@ -921,9 +1027,10 @@ impl Updater {
             self.first_due.retain(|_, r| *r >= horizon);
         }
         let round = self.round;
-        self.held.retain(|_, h| h.round + HOLD_ROUNDS > round);
+        self.held.retain(|_, h| h.retry_at.is_none() || h.round + HOLD_ROUNDS > round);
         self.judge_unread(ledger);
         let mut plan = self.plan_inner(ledger);
+        self.save_held();
         if matches!(plan, Ok(Plan::Send(_))) && self.round < self.breaker.paused_until {
             plan = Ok(Plan::Stuck(self.paused()));
         }
@@ -949,6 +1056,9 @@ impl Updater {
         let spec = config.spec();
         let fork = config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
         let state = self.inst.state(ledger)?;
+        // A step held on another state of the instance is moot (a job commits to the store it starts from): forgotten.
+        let seen = state_digest(&state.as_ref().map(|s| (s.active, s.store.clone())));
+        self.held.retain(|_, h| h.state == seen);
         let Some(state) = state.filter(|s| s.active) else {
             // Not initialized, or its committee not adopted yet.
             if let Err(e) = self.ensure_bootstrap() {
@@ -1365,7 +1475,7 @@ impl Updater {
     /// Hold `(job, step)` after a refusal: `due`, the chain read after it showed the step still due ([`After::Due`]);
     /// otherwise it could not be read ([`After::Unread`]: held for a while whatever the cause). What follows, described.
     fn hold(&mut self, action: &Action, cause: Refusal, note: &str, due: bool) -> String {
-        let (round, gas_limit) = (self.round, self.fees.gas_limit);
+        let (round, gas_limit, state) = (self.round, self.fees.gas_limit, state_digest(&action.store_seen));
         let h = self.held.entry((action.job_id, action.step)).or_insert_with(|| Held {
             step: action.step,
             finalized_slot: action.finalized_slot,
@@ -1376,6 +1486,7 @@ impl Updater {
             round,
             retry_at: None,
             gas_limit,
+            state,
         });
         h.count = h.count.saturating_add(1);
         h.cause = cause;
@@ -1383,6 +1494,7 @@ impl Updater {
         h.due = due;
         h.round = round;
         h.gas_limit = gas_limit;
+        h.state = state;
         // A cause that repeats on the same state, seen to leave the step due: for good. Any other: a hold that doubles
         // up to MAX_REFUSAL_BACKOFF rounds, then the step is sent again (review of the fixes, L3: it used to stop
         // after three).
@@ -1805,6 +1917,7 @@ impl Updater {
             action.tx.label, out.exit_code, gas, out.fee, out.block
         ));
         self.journal(action, out);
+        self.save_held();
     }
 
     /// The refusals after which the chain could not be read ([`After::Unread`]), judged now that it may be read again:

@@ -29,7 +29,7 @@ use ferrata_updater::{
     ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{
-        Instance, Plan, Refusal, Step, Updater, BREAKER_AFTER, BREAKER_MAX_PAUSE, FUTURE_MARGIN_MS,
+        Instance, Plan, Refusal, Step, Updater, BREAKER_AFTER, BREAKER_MAX_PAUSE, FUTURE_MARGIN_MS, HOLD_ROUNDS,
         MAX_REFUSAL_BACKOFF, REFUSAL_BACKOFF, WINDOW_MARGIN_MS,
     },
 };
@@ -967,4 +967,47 @@ fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
             assert!(why.iter().any(|w| w.contains("liar demoted") && w.contains("signed in the future")), "{why:?}");
         }
     }
+}
+
+/// 9c L-U5: a hold for good (the initialization's `Adopt` refused out of gas) outlives `HOLD_ROUNDS` rounds and a restart
+/// (`state_dir/<chain>/held.tsv`): one refusal in `HOLD_ROUNDS` + 10 rounds and ten more after a restart (it used to be
+/// forgotten after 4,096 rounds, about 13.7 h at 12 s rounds, and at every restart, and the step refused and charged
+/// again). Raising the gas limit releases it; once the step lands the file is empty.
+#[test]
+fn a_hold_for_good_outlives_its_rounds_and_a_restart() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x52);
+    let dir = scratch("held");
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let mut u = r.updater("held", payer.clone(), vec![r.source("a", &clock)], Some(dir.clone()));
+    u.fees.gas_limit = 1_000_000;
+    let total = HOLD_ROUNDS + 10;
+    for _ in 0..total {
+        u.tick(&mut l).unwrap();
+    }
+    let file = dir.join("mainnet/held.tsv");
+    let kept = fs::read_to_string(&file).unwrap();
+    println!("{total} rounds: {} refused; held.tsv: {kept:?}", refused(&l, 0));
+    assert_eq!(refused(&l, 0), 1, "one refusal in {total} rounds");
+    assert_eq!(kept.lines().count(), 1);
+    assert!(kept.contains("\tgas\t"), "{kept}");
+    drop(u);
+
+    let mut again = r.updater("held", payer.clone(), vec![r.source("a", &clock)], Some(dir.clone()));
+    again.fees.gas_limit = 1_000_000;
+    for _ in 0..10 {
+        again.tick(&mut l).unwrap();
+    }
+    let (status, why) = again.health();
+    println!("restarted, ten rounds: {} refused; held {}; health {status} {why:?}", refused(&l, 0), again.held.len());
+    assert_eq!(refused(&l, 0), 1, "not sent again after the restart");
+    assert_eq!(again.held.len(), 1);
+    assert!(why.iter().any(|w| w.contains("out of gas") && w.contains("raise it")), "{why:?}");
+
+    again.fees.gas_limit = Fees::default().gas_limit;
+    settle(&mut again, &mut l, 60);
+    assert!(again.held.is_empty());
+    assert_eq!(fs::read_to_string(&file).unwrap(), "", "released and applied: nothing kept");
+    assert_eq!(refused(&l, 0), 1);
 }
