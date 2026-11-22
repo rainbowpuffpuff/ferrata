@@ -12,7 +12,9 @@
 //!   unminted deposits plus the unreleased burns is the vault's escrow**, so the supply never exceeds the vault's
 //!   holdings. For each claim, the anonymity set a private claim of its deposit would have at that moment (the client's
 //!   `anonymity_set`) is recorded per denomination, twice: as run (every claim of these runs is plaintext and publishes
-//!   its deposit, which leaves every later set) and as if every earlier claim had been private (nothing published).
+//!   its deposit, which leaves every later set, refused by the bucket or not) and as if every earlier claim had been
+//!   private (nothing published). With `FERRATA_BOTH_HALVES_MINT_CAP_ETH` the admin first tightens ETH's mint bucket,
+//!   so that claims are refused (255) and claimed later.
 //! * `migration_rehearsal_honours_positions_in_flight` (Sec.8, R.4, Sec.9): an old vault and configuration with
 //!   deposits imported or not, claimed or not, and burns before and after the retirement; the freeze authority retires
 //!   the old vault; the zone attests it and runs the keyless `Sunset`; one sunset checkpoint; every burn released, every
@@ -30,7 +32,7 @@
 //! Runs only with `FERRATA_E2E=1` and the built tools in `FERRATA_CI_ZONE`, `FERRATA_CI_CHECKPOINT_B_ELF` and
 //! `FERRATA_CI_RELEASE_ELF` (`e2e/both-halves/run.sh` builds and sets them). Writes `e2e/both-halves/results/`.
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     fmt::Write as _,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
@@ -63,7 +65,9 @@ use ferrata_cli::{
     scan::{self, DepositState},
     seed::Seed,
 };
-use ferrata_lez_bridge_wire::{config_actor, fee_slot, registry_slot, BridgeConfig, BridgeMessage, FeeSchedule};
+use ferrata_lez_bridge_wire::{
+    config_actor, fee_slot, registry_slot, token_actor, BridgeConfig, BridgeMessage, CapParams, FeeSchedule,
+};
 use harness::{bridge as hb, TxReport};
 use lee::{AccountId, PrivateKey, PublicAccountEvidence};
 use lee_core::account::Actor;
@@ -123,21 +127,28 @@ const DENOMS: [u128; 3] = [100_000_000_000_000_000, 1_000_000_000_000_000_000, 1
 struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
+    refused: Vec<Applied>,
     keys: HashMap<AccountId, PrivateKey>,
     txs: Vec<Vec<u8>>,
 }
 
 impl HarnessLedger {
+    /// Keeps the last settled transaction: its root call, applied or refused (LEZ keeps a refused transaction in its
+    /// block, message and all: a refused plaintext claim publishes its witness), and the bytes of an applied one.
     fn record(&mut self, report: &TxReport) {
-        if !report.ok() {
-            return;
-        }
-        self.txs.push(self.world.chain.last_tx.clone());
         let tx =
             common::transaction::LeeTransaction::try_from_slice(&self.world.chain.last_tx).expect("a LEZ transaction");
         if let common::transaction::LeeTransaction::Public(tx) = tx {
             let root = &tx.message.execution.root;
-            self.applied.push(Applied { to: root.to, message: root.message.clone() });
+            let call = Applied { to: root.to, message: root.message.clone() };
+            if !report.ok() {
+                self.refused.push(call);
+                return;
+            }
+            self.applied.push(call);
+        }
+        if report.ok() {
+            self.txs.push(self.world.chain.last_tx.clone());
         }
     }
 
@@ -184,6 +195,11 @@ impl HarnessLedger {
 impl Ledger for HarnessLedger {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
         Ok(self.applied.iter().filter(|a| a.to.program_account_id == program).cloned().collect())
+    }
+
+    async fn included(&self, program: AccountId) -> Result<lez::Included> {
+        let refused = self.refused.iter().filter(|a| a.to.program_account_id == program).cloned().collect();
+        Ok(lez::Included { applied: self.applied(program).await?, refused, ..Default::default() })
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
@@ -563,7 +579,7 @@ async fn rows(
     user: &Seed,
 ) -> Result<(eth::DepositList, Vec<Hash>, Vec<scan::DepositRow>)> {
     let list = eth::deposit_list(p, side.vault, 0, 10_000).await?;
-    let history = lez::history(&side.ctx, &zone.applied(side.ctx.program).await?);
+    let history = lez::history_of(zone, &side.ctx).await?;
     let refunded = eth::refunded_leaves(p, side.vault, 0, 10_000).await?;
     let rows = scan::deposits(user, &side.ctx, &list, 8, &history, &refunded)?;
     let leaves = list
@@ -583,7 +599,8 @@ fn refusal_code(e: &anyhow::Error) -> Option<u32> {
 /// with 249, and after it the same claim again, refused (250, or 255 when the token's bucket is spent first: the
 /// program admits the value before it reaches the nullifier). Returns the anonymity set a private claim of the deposit
 /// would have at that moment, or `None` when the mint bucket refused it (255): the deposit stays claimable and a later
-/// step claims it (R.4: a cap only delays). The plaintext claim itself shows the client's 1: it names its deposit.
+/// step claims it (R.4: a cap only delays), but the refused claim stays in its block and has published the deposit
+/// (F.8). The plaintext claim itself shows the client's 1: it names its deposit.
 async fn claim(
     p: &DynProvider,
     zone: &mut HarnessLedger,
@@ -596,15 +613,30 @@ async fn claim(
     let (list, leaves, rows) = rows(p, zone, side, user).await?;
     let row = rows.iter().find(|r| r.owned.deposit.leaf_index == leaf).context("the user's deposit")?;
     ensure!(matches!(row.state, DepositState::Claimable { .. }), "leaf {leaf} is claimable: {:?}", row.state);
-    let history = lez::history(&side.ctx, &zone.applied(side.ctx.program).await?);
+    let history = lez::history_of(&*zone, &side.ctx).await?;
     let plan = lez::plan_claim(&*zone, &side.ctx, &leaves, &row.owned, &history, false, None, None).await?;
     let BridgeMessage::Claim { range, .. } = &plan.call.message else { bail!("a plaintext claim") };
     let d = &row.owned.deposit;
     // F.8: the deposits of the same token and amount under the root and range the claim names, less those that earlier
-    // plaintext claims published (`History.opened`, which must hold exactly the claims applied so far); beside it, the
-    // set had every earlier claim been private (nothing published).
-    ensure!(history.opened.len() as u64 == log.claims, "the client's history: one published leaf per plaintext claim");
-    let set = ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, range);
+    // plaintext claims published, applied or refused on chain (`History.opened` from the zone's blocks: its leaves among
+    // the vault's deposits must be exactly those this test sent a plaintext claim of). A deposit whose own earlier claim
+    // was refused is published already: the client shows 1 (`flow::claim`). Beside it, the set had every earlier claim
+    // been private (nothing published, refused or not).
+    let opened: BTreeSet<u64> = list
+        .deposits
+        .iter()
+        .zip(&leaves)
+        .filter(|(_, l)| history.opened.contains(*l))
+        .map(|(d, _)| d.leaf_index)
+        .collect();
+    let published = log.published.get(&side.vault).cloned().unwrap_or_default();
+    ensure!(opened == published, "the client's history opens {opened:?}; plaintext claims sent: {published:?}");
+    let set = if published.contains(&leaf) {
+        log.reclaimed += 1;
+        1
+    } else {
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, range)
+    };
     let set_private =
         ferrata_wallet::claim::anonymity_set(&list.deposits, &HashSet::new(), &d.token, &d.amount, plan.leaf_count, range);
     ensure!(1 <= set && set <= set_private, "the deposit's own set: {set}, {set_private}");
@@ -617,6 +649,7 @@ async fn claim(
         ensure!(r.exit_code == Some(249), "a claim with a tampered witness: {:?}", r.exit_code);
         log.forged += 1;
     }
+    log.published.entry(side.vault).or_default().insert(leaf); // applied or refused, its witness is in a block now
     if let Err(e) = zone.submit(&plan.call).await {
         ensure!(refusal_code(&e) == Some(255), "the claim of leaf {leaf}: {e}");
         log.capped += 1;
@@ -836,6 +869,10 @@ struct Log {
     releases: u64,
     forged: u64,
     capped: u64,
+    /// Claims of a deposit whose earlier plaintext claim the bucket refused (its set as run is 1).
+    reclaimed: u64,
+    /// Per vault, the leaves the test sent a plaintext claim of (applied or refused: each is in a block).
+    published: BTreeMap<Address, BTreeSet<u64>>,
     /// Per denomination, each claim's set as run and had every earlier claim been private.
     sets: BTreeMap<u128, Vec<usize>>,
     sets_private: BTreeMap<u128, Vec<usize>>,
@@ -867,7 +904,13 @@ fn guard() -> Result<bool> {
 
 fn new_zone(user: &Seed) -> Result<HarnessLedger> {
     let mut zone =
-        HarnessLedger { world: hb::World::new(), applied: Vec::new(), keys: HashMap::new(), txs: Vec::new() };
+        HarnessLedger {
+            world: hb::World::new(),
+            applied: Vec::new(),
+            refused: Vec::new(),
+            keys: HashMap::new(),
+            txs: Vec::new(),
+        };
     for a in user.public_accounts(8)? {
         zone.keys.insert(a.id, a.key.clone());
     }
@@ -891,6 +934,11 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
         .map(|s| s.trim().parse().expect("a seed"))
         .collect();
     let steps: u64 = std::env::var("FERRATA_BOTH_HALVES_STEPS").ok().and_then(|s| s.parse().ok()).unwrap_or(40);
+    // FERRATA_BOTH_HALVES_MINT_CAP_ETH: after pairing, the admin sets ETH's mint bucket to that many ETH (`SetCap`,
+    // refilled at the harness's rate, 0.01 ETH per second of attested time), so that claims meet a spent bucket (255):
+    // each refused plaintext claim publishes its deposit all the same (F.8) and the deposit is claimed later (R.4).
+    let mint_cap: Option<u128> =
+        std::env::var("FERRATA_BOTH_HALVES_MINT_CAP_ETH").ok().map(|v| v.parse().expect("whole ETH"));
     let user = Seed::from_phrase(USER)?;
     let mut report = String::new();
     let mut all_sets: BTreeMap<u128, Vec<usize>> = BTreeMap::new();
@@ -905,6 +953,14 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
         let mut zone = new_zone(&user)?;
         let mut clock = Clock(9_200_000);
         let mut side = deploy(&p, &mut zone, &mut clock, &rpc, &dir, "A", ANVIL0, images, false).await?;
+        if let Some(cap) = mint_cap {
+            let cid = side.ctx.cid;
+            let cap = CapParams { capacity: cap * 1_000_000_000, refill_per_second: hb::TOKEN_CAP.refill_per_second };
+            let message = BridgeMessage::SetCap { config_id: cid, token: Some([0; 20]), mints: true, cap };
+            let token = token_actor(side.ctx.program, &cid, &[0; 20]);
+            let r = zone.world.role("A: SetCap ETH mints", hb::ADMIN_SEED, &message, token);
+            zone.keep(r, "SetCap")?;
+        }
         let mut rng = Rng(0x9e37_79b9_7f4a_7c15 ^ seed);
         let mut log = Log::default();
         let mut root: Option<(B256, u64)> = None;
@@ -972,12 +1028,13 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
         invariants(&p, &zone, &mut side, &user).await?;
         let _ = writeln!(
             report,
-            "| {seed} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} | {} |",
+            "| {seed} | {} | {} | {} | {} | {} ({}) | {} | {} | {} | {} | {} | {} |",
             log.steps,
             log.deposits,
             log.imports,
             log.claims,
             log.capped,
+            log.reclaimed,
             log.burns,
             log.releases,
             log.forged,
@@ -1005,21 +1062,30 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          accepts only the journals the guests committed. {} s in all.\n\n\
          After every step: vault balance == escrowed + owed; zone supply == minted - burnt; supply <= escrowed; and \
          supply + unminted deposits + unreleased burns == escrowed.\n\n\
-         | seed | steps | deposits | imports | claims | claims capped (claimed later) | burns | releases | forgeries refused | \
+         {cap_note}| seed | steps | deposits | imports | claims | claims capped (of them claimed later) | burns | releases | forgeries refused | \
          unminted at the end | unreleased at the end | invariant checks |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n{report}\n\
          ## Anonymity sets of the claims (F.8)\n\nFor each claim, the set a private claim of its deposit would have at \
          that moment (`ferrata_wallet::claim::anonymity_set`, what `ferrata claim` shows for a private claim: the \
          deposits of the same token and amount under the root and fee schedule range it names, less those a plaintext \
-         claim has published), by denomination over every run. Every claim of these runs is plaintext, for which the \
-         client shows 1 (it names its deposit), and each leaves every later set: \"as run\". Beside it, the same \
-         claims had every earlier claim been private, the default, which publishes no deposit: \"all private\". \
+         claim has published, applied or refused on chain: a refused transaction stays in its block, witness and all), \
+         by denomination over every run. Every claim of these runs is plaintext, for which the client shows 1 (it names \
+         its deposit), and each leaves every later set, as does a claim the bucket refused, whose deposit's own later \
+         claim shows 1: \"as run\". Beside it, the same claims had every earlier claim been private, the default, \
+         which publishes no deposit, refused or not: \"all private\". \
          Median: the lower and the upper middle of the sorted sets (the same when the count is odd).\n\n\
          | denomination (ETH) | claims | as run: smallest | median | largest | sets of 1 | all private: smallest | \
          median | largest | sets of 1 |\n|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n",
         harness::image_id_hex(hb::BRIDGE_ID),
         images.0,
         images.1,
-        t0.elapsed().as_secs()
+        t0.elapsed().as_secs(),
+        cap_note = match mint_cap {
+            Some(cap) => format!(
+                "ETH's mint bucket set to {cap} ETH after pairing (`SetCap` by the admin; refilled at 0.01 ETH per second \
+                 of attested time), so that claims meet a spent bucket.\n\n"
+            ),
+            None => String::new(),
+        }
     );
     // Smallest, median (lower and upper middle), largest and how many are 1, of one list of sets.
     let stats = |v: &mut Vec<usize>| -> String {
@@ -1050,7 +1116,11 @@ async fn randomised_runs_keep_supply_within_holdings() -> Result<()> {
          {claims} had every earlier claim been private; the plaintext claims made {shrink} of the {claims} sets smaller."
     );
     println!("{out}");
-    std::fs::write(results_dir().join("randomised.md"), out)?;
+    let name = match mint_cap {
+        Some(cap) => format!("randomised-cap-{cap}eth.md"),
+        None => "randomised.md".into(),
+    };
+    std::fs::write(results_dir().join(name), out)?;
     Ok(())
 }
 
@@ -1417,7 +1487,7 @@ async fn fee_schedules_over_both_halves() -> Result<()> {
     let mut pre_sets: BTreeMap<u64, usize> = BTreeMap::new();
     {
         let (list, leaves_now, rows_now) = rows(&p, &zone, &a, &user).await?;
-        let history = lez::history(&a.ctx, &zone.applied(a.ctx.program).await?);
+        let history = lez::history_of(&zone, &a.ctx).await?;
         ensure!(history.opened.is_empty(), "no claim yet");
         for leaf in &leaves {
             let row = rows_now.iter().find(|r| r.owned.deposit.leaf_index == *leaf).context("the user's deposit")?;

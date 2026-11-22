@@ -337,7 +337,9 @@ it opens at) unless `--no-delay`.
 - **Anonymity set** (RFP-022 F.8): the `anonymity` line counts the deposits a private claim cannot be told apart from
   on chain: those of the same token and amount, under the root it reads and within the fee schedule range it names,
   less those a plaintext claim has already published (its witness names the leaf and `s`, under any configuration of
-  the program: an observer sees which deposit it spent) (`ferrata_wallet::claim::anonymity_set`); a fee change starts
+  the program, and a claim refused on chain publishes it too: LEZ keeps a refused transaction in its block; an observer
+  sees which deposit it spent) (`ferrata_wallet::claim::anonymity_set`). When your own deposit is one of those (say a
+  plaintext claim of it met a full bucket), the line says 1: its nullifier follows from the published witness. A fee change starts
   a new range. When the deposit is the only one there, the line says that its amount alone links the claim to it
   (above: the test's only deposit of 1 ETH). A plaintext claim names its deposit, so its set is 1, and it takes its
   deposit out of every later claim's set: `e2e/both-halves/results/randomised.md` measures both ways.

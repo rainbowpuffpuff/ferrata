@@ -103,16 +103,30 @@ pub struct Applied {
     pub message: Vec<u8>,
 }
 
+/// What a zone's blocks hold for `program`, read in one pass ([`Ledger::included`]).
+#[derive(Clone, Debug, Default)]
+pub struct Included {
+    /// [`Ledger::applied`].
+    pub applied: Vec<Applied>,
+    /// The public calls whose root is an actor of `program` in transactions a block includes though they were refused:
+    /// LEZ keeps a refused (charged) transaction in its block, its message in the clear, and lists its position in the
+    /// block's `reverted` (`lez-v03-return/STAGE2.md`, "block body"). A refused plaintext `Claim` has published its
+    /// witness all the same (RFP-022 F.8).
+    pub refused: Vec<Applied>,
+    /// The public accounts named by applied privacy-preserving transactions (a private claim names its nullifier
+    /// account there).
+    pub touched: HashSet<AccountId>,
+}
+
 /// What a zone serves the tool: applied calls, actor states, submission.
 #[allow(async_fn_in_trait)]
 pub trait Ledger {
     /// Every applied (not reverted) public call whose root is an actor of `program`, in chain order.
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>>;
-    /// `applied`, and the public accounts named by applied privacy-preserving transactions (a
-    /// private claim names its nullifier account there), read in the same pass where the ledger can.
-    /// None by default.
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
-        Ok((self.applied(program).await?, HashSet::new()))
+    /// `applied`, the refused public calls to `program` its blocks include, and the public accounts named by applied
+    /// privacy-preserving transactions, read in the same pass where the ledger can. Only `applied` by default.
+    async fn included(&self, program: AccountId) -> Result<Included> {
+        Ok(Included { applied: self.applied(program).await?, ..Included::default() })
     }
     /// The bridge state of `actor` (empty if none).
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>>;
@@ -177,8 +191,9 @@ pub struct History {
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
     /// The deposit leaves (`inbound::deposit_leaf`) that plaintext claims have published, under any configuration of
-    /// the program (a witness names its leaf index and `s`): they leave every private claim's anonymity set (F.8,
-    /// `ferrata_wallet::claim::anonymity_set`). Another vault's leaves match none of this vault's deposits.
+    /// the program, applied or refused (a witness names its leaf index and `s`, and a refused transaction stays in its
+    /// block): they leave every private claim's anonymity set (F.8, `ferrata_wallet::claim::anonymity_set`). Another
+    /// vault's leaves match none of this vault's deposits.
     pub opened: HashSet<Hash>,
     /// Public accounts named by applied privacy-preserving transactions: the nullifier accounts of
     /// private claims among them.
@@ -201,9 +216,7 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
                 h.burns.push(PublishedBurn { burn_index, note: BurnNote { r, memo, mac, token, amount, c_out } });
             }
             BridgeMessage::Claim { config_id, witness: w, .. } => {
-                let Some(kind) = DestKind::from_byte(w.kind) else { continue };
-                let c = inbound::commitment(&w.s, kind, &w.dest);
-                let leaf = inbound::deposit_leaf(w.leaf_index, &w.depositor, &w.token, &w.amount, &c);
+                let Some(leaf) = published_leaf(&w) else { continue };
                 h.opened.insert(leaf);
                 if config_id == ctx.cid {
                     let fid = inbound::deposit_id(&chain, &ctx.vault, w.leaf_index, &leaf);
@@ -218,11 +231,33 @@ pub fn history(ctx: &Context, applied: &[Applied]) -> History {
     h
 }
 
-/// The history of `ctx`'s configuration, private claims included, from one pass over the zone.
+/// The deposit leaf a plaintext claim's witness names (`None` for a destination kind no deposit has).
+fn published_leaf(w: &ferrata_lez_bridge_wire::ClaimWitness) -> Option<Hash> {
+    let kind = DestKind::from_byte(w.kind)?;
+    let c = inbound::commitment(&w.s, kind, &w.dest);
+    Some(inbound::deposit_leaf(w.leaf_index, &w.depositor, &w.token, &w.amount, &c))
+}
+
+impl History {
+    /// Adds what refused calls (`Included::refused`) published: a refused plaintext `Claim`, under any configuration
+    /// of the program, names its deposit as an applied one does, so its leaf joins `opened`; it spends no nullifier
+    /// (the deposit stays claimable) and nothing else of a refused call counts.
+    pub fn note_refused(&mut self, ctx: &Context, refused: &[Applied]) {
+        for call in refused.iter().filter(|c| c.to.program_account_id == ctx.program) {
+            if let Ok(BridgeMessage::Claim { witness, .. }) = BridgeMessage::try_from_slice(&call.message) {
+                self.opened.extend(published_leaf(&witness));
+            }
+        }
+    }
+}
+
+/// The history of `ctx`'s configuration, private claims and refused plaintext claims included, from one pass over the
+/// zone.
 pub async fn history_of<L: Ledger>(ledger: &L, ctx: &Context) -> Result<History> {
-    let (applied, touched) = ledger.applied_with_private(ctx.program).await?;
-    let mut h = history(ctx, &applied);
-    h.touched_privately = touched;
+    let included = ledger.included(ctx.program).await?;
+    let mut h = history(ctx, &included.applied);
+    h.note_refused(ctx, &included.refused);
+    h.touched_privately = included.touched;
     Ok(h)
 }
 
@@ -443,14 +478,13 @@ fn mention(m: &Mention) -> AccountMention {
 #[cfg(feature = "lez-wallet")]
 impl Ledger for Sequencer {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
-        Ok(self.applied_with_private(program).await?.0)
+        Ok(self.included(program).await?.applied)
     }
 
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+    async fn included(&self, program: AccountId) -> Result<Included> {
         let client = self.wallet.client();
-        let mut touched = HashSet::new();
+        let mut out = Included::default();
         let last = client.get_last_block_id().await.map_err(|e| anyhow!("get_last_block_id: {e}"))?;
-        let mut out = Vec::new();
         let mut start = 1;
         while start <= last {
             let end = (start + 99).min(last);
@@ -458,26 +492,27 @@ impl Ledger for Sequencer {
                 client.get_block_range(start, end).await.map_err(|e| anyhow!("get_block_range {start}..{end}: {e}"))?;
             for block in blocks {
                 for (i, tx) in block.body.transactions.iter().enumerate() {
-                    if block.body.reverted.contains(&(i as u64)) {
-                        continue;
-                    }
+                    let reverted = block.body.reverted.contains(&(i as u64));
                     match tx {
                         LeeTransaction::Public(tx) => {
                             let root = &tx.message.execution.root;
                             if root.to.program_account_id == program {
-                                out.push(Applied { to: root.to, message: root.message.clone() });
+                                let call = Applied { to: root.to, message: root.message.clone() };
+                                if reverted { out.refused.push(call) } else { out.applied.push(call) }
                             }
                         }
+                        // A refused private transaction's witness stays in its proof: nothing of it counts.
+                        LeeTransaction::PrivacyPreserving(_) if reverted => {}
                         LeeTransaction::PrivacyPreserving(tx) => {
-                            touched.extend(tx.message.public_account_ids());
-                            out.extend(visible_calls(tx, program));
+                            out.touched.extend(tx.message.public_account_ids());
+                            out.applied.extend(visible_calls(tx, program));
                         }
                     }
                 }
             }
             start = end + 1;
         }
-        Ok((out, touched))
+        Ok(out)
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
@@ -592,22 +627,30 @@ fn devnet_account(v: &serde_json::Value, what: &str) -> Result<AccountId> {
 
 impl Ledger for DevnetZone {
     async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
-        Ok(self.applied_with_private(program).await?.0)
+        Ok(self.included(program).await?.applied)
     }
 
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+    async fn included(&self, program: AccountId) -> Result<Included> {
         let r = self.call("zone.applied", serde_json::json!({ "program": hx(program.value()) })).await?;
-        let mut out = Vec::new();
-        for a in r["applied"].as_array().ok_or_else(|| anyhow!("zone.applied: no list"))? {
-            let to = Actor::new(devnet_account(&a["account"], "account")?, devnet_account(&a["program"], "program")?);
-            let message = hex::decode(a["message"].as_str().unwrap_or_default().trim_start_matches("0x"))?;
-            out.push(Applied { to, message });
+        let calls = |list: &serde_json::Value| -> Result<Vec<Applied>> {
+            let mut out = Vec::new();
+            for a in list.as_array().into_iter().flatten() {
+                let to =
+                    Actor::new(devnet_account(&a["account"], "account")?, devnet_account(&a["program"], "program")?);
+                let message = hex::decode(a["message"].as_str().unwrap_or_default().trim_start_matches("0x"))?;
+                out.push(Applied { to, message });
+            }
+            Ok(out)
+        };
+        if !r["applied"].is_array() {
+            bail!("zone.applied: no list");
         }
         let mut touched = HashSet::new();
         for t in r["touched"].as_array().ok_or_else(|| anyhow!("zone.applied: no touched list"))? {
             touched.insert(devnet_account(t, "touched")?);
         }
-        Ok((out, touched))
+        // `refused`: a devnet older than the list sends none.
+        Ok(Included { applied: calls(&r["applied"])?, refused: calls(&r["refused"])?, touched })
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
@@ -684,11 +727,11 @@ impl Ledger for Zone {
         }
     }
 
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
+    async fn included(&self, program: AccountId) -> Result<Included> {
         match self {
             #[cfg(feature = "lez-wallet")]
-            Zone::Sequencer(s) => s.applied_with_private(program).await,
-            Zone::Devnet(d) => d.applied_with_private(program).await,
+            Zone::Sequencer(s) => s.included(program).await,
+            Zone::Devnet(d) => d.included(program).await,
         }
     }
 
@@ -894,5 +937,82 @@ mod tests {
         let h = history(&ctx, &[claim([1; 32], 3, 5), claim([2; 32], 4, 6)]);
         assert_eq!(h.opened, HashSet::from([leaf(3, 5), leaf(4, 6)]));
         assert_eq!(h.claimed.len(), 1, "only this configuration's claim spends a nullifier here");
+
+        // A plaintext claim refused on chain (a full bucket, a frozen token) stays in its block with its witness: its
+        // leaf is opened as well, under any configuration, but it spends no nullifier: the deposit stays claimable.
+        // A refused call of another program, or a refused import or burn, adds nothing.
+        let other_program = Applied { to: config_actor(AccountId::new([8; 32]), &[1; 32]), ..claim([1; 32], 7, 9) };
+        let import = BridgeMessage::ImportRoot {
+            config_id: [1; 32],
+            record_slot: 4,
+            root: [3; 32],
+            leaf_count: 12,
+            proof: Default::default(),
+        };
+        let refused_import = Applied { to: config_actor(program, &[1; 32]), message: borsh::to_vec(&import).unwrap() };
+        let mut refused = h.clone();
+        refused.note_refused(&ctx, &[claim([1; 32], 5, 7), claim([2; 32], 6, 8), other_program, refused_import]);
+        assert_eq!(refused.opened, HashSet::from([leaf(3, 5), leaf(4, 6), leaf(5, 7), leaf(6, 8)]));
+        assert_eq!(refused.claimed, h.claimed, "a refused claim spends no nullifier");
+        assert_eq!(refused.roots, h.roots, "a refused import imports nothing");
+    }
+
+    /// `history_of` reads a ledger's refused calls: the leaf of a refused plaintext claim leaves the anonymity set of
+    /// every other deposit's private claim, and the owner of that deposit sees it opened (`flow::claim`'s line of 1).
+    #[tokio::test]
+    async fn history_of_counts_refused_plaintext_claims() {
+        struct Blocks(Included);
+        impl Ledger for Blocks {
+            async fn applied(&self, _: AccountId) -> Result<Vec<Applied>> {
+                Ok(self.0.applied.clone())
+            }
+            async fn included(&self, _: AccountId) -> Result<Included> {
+                Ok(self.0.clone())
+            }
+            async fn actor_state(&self, _: Actor) -> Result<Vec<u8>> {
+                Ok(Vec::new())
+            }
+            async fn submit(&mut self, _: &LezCall) -> Result<String> {
+                unreachable!()
+            }
+        }
+        let program = AccountId::new([7; 32]);
+        let ctx = Context { program, cid: [1; 32], chain_id: 11_155_111, vault: [0xaa; 20] };
+        let deposits: Vec<ferrata_bridge_core::inbound::VaultDeposit> = (0..4)
+            .map(|i| {
+                let s = [i as u8 + 1; 32];
+                ferrata_bridge_core::inbound::VaultDeposit {
+                    depositor: [0xd1; 20],
+                    j: i,
+                    leaf_index: i,
+                    token: [0; 20],
+                    amount: [2; 32],
+                    commitment: inbound::commitment(&s, DestKind::Public, &[9; 32]),
+                }
+            })
+            .collect();
+        let witness = |i: u64| ClaimWitness {
+            depositor: [0xd1; 20],
+            token: [0; 20],
+            amount: [2; 32],
+            leaf_index: i,
+            path: vec![[0; 32]; 32],
+            s: [i as u8 + 1; 32],
+            kind: DestKind::Public as u8,
+            dest: [9; 32],
+        };
+        let range = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
+        let refused_claim = BridgeMessage::Claim { config_id: [1; 32], leaf_count: 4, witness: witness(2), range, relayer: None };
+        let ledger = Blocks(Included {
+            refused: vec![Applied { to: config_actor(program, &[1; 32]), message: borsh::to_vec(&refused_claim).unwrap() }],
+            ..Included::default()
+        });
+        let h = history_of(&ledger, &ctx).await.unwrap();
+        let set = |h: &History| ferrata_wallet::claim::anonymity_set(&deposits, &h.opened, &[0; 20], &[2; 32], 4, &range);
+        assert_eq!(set(&history(&ctx, &[])), 4, "nothing published: every deposit of the amount");
+        assert_eq!(set(&h), 3, "the refused claim published leaf 2: it leaves the set");
+        let d = &deposits[2];
+        assert!(h.opened.contains(&inbound::deposit_leaf(2, &d.depositor, &d.token, &d.amount, &d.commitment)));
+        assert!(h.claimed.is_empty(), "and leaf 2 is still claimable");
     }
 }

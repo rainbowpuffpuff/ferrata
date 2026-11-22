@@ -96,6 +96,7 @@ const ETH_1: u128 = 1_000_000_000_000_000_000;
 struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
+    refused: Vec<Applied>,
     keys: HashMap<AccountId, PrivateKey>,
     /// The wallet's private accounts: their secret keys (ask, d, z) and their state as LEZ's wallet
     /// holds it after decrypting it from the zone (stand-in: the harness keeps the state the chain
@@ -110,16 +111,16 @@ fn test_keys(s: &PrivateSecrets) -> TestPrivateKeys {
 }
 
 impl HarnessLedger {
-    /// Keeps the last settled transaction's root call if it applied.
+    /// Keeps the last settled transaction's root call, applied or refused.
     fn record(&mut self, report: &TxReport) {
-        if !report.ok() {
-            return;
-        }
         let tx =
             common::transaction::LeeTransaction::try_from_slice(&self.world.chain.last_tx).expect("a LEZ transaction");
         if let common::transaction::LeeTransaction::Public(tx) = tx {
             let root = &tx.message.execution.root;
-            self.applied.push(Applied { to: root.to, message: root.message.clone() });
+            let call = Applied { to: root.to, message: root.message.clone() };
+            // LEZ keeps a refused transaction in its block, message and all (a refused plaintext claim publishes its
+            // witness): as `Sequencer::included` reads it.
+            if report.ok() { self.applied.push(call) } else { self.refused.push(call) }
         }
     }
 
@@ -241,8 +242,9 @@ impl Ledger for HarnessLedger {
         Ok(self.applied.iter().filter(|a| a.to.program_account_id == program).cloned().collect())
     }
 
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
-        Ok((self.applied(program).await?, self.touched.clone()))
+    async fn included(&self, program: AccountId) -> Result<lez::Included> {
+        let refused = self.refused.iter().filter(|a| a.to.program_account_id == program).cloned().collect();
+        Ok(lez::Included { applied: self.applied(program).await?, refused, touched: self.touched.clone() })
     }
 
     async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
@@ -441,6 +443,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let mut zone = HarnessLedger {
         world: hb::World::new(),
         applied: Vec::new(),
+        refused: Vec::new(),
         keys: HashMap::new(),
         private: HashMap::new(),
         touched: HashSet::new(),

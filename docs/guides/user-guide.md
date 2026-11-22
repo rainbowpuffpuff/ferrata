@@ -296,7 +296,8 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 
 The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
 1): the deposits of that token and denomination under the root it reads and within the fee schedule range it names,
-less those already claimed in plaintext, which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
+less those a plaintext claim has published, applied or refused on chain (a refused transaction stays in its block,
+witness and all), which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
 measured over both halves, with plaintext and with private claims:
 [`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.
 This tree's tools speak the bridge program since milestone B1 only; the deployments of November 2026 run the earlier
