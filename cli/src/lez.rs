@@ -7,9 +7,7 @@ use std::collections::HashSet;
 #[cfg(feature = "lez-wallet")]
 use std::path::{Path, PathBuf};
 
-#[cfg(feature = "lez-wallet")]
-use anyhow::ensure;
-use anyhow::{anyhow, bail, Context as _, Result};
+use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use borsh::BorshDeserialize as _;
 #[cfg(feature = "lez-wallet")]
 use common::transaction::LeeTransaction;
