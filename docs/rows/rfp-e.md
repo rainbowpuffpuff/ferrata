@@ -1,26 +1,28 @@
 # Stream rfp-E: relayer, monitor and client robustness (RFP-022)
 
 Proposals for the integrator; this stream does not edit `requirements-status.md`, `traceability.md`, `EVIDENCE.md`
-or the README's status lines. Branch `rfp-relayer-robustness`, from `f13faee2`; commits in the last section.
+or the README's status lines. Branch `rfp-relayer-robustness`, from `f13faee2`; commits in the last section. Revised
+after the first review (`review-rfp-E`): U.3 and R.6 are proposed **in part** with their exact remainders; R.6's
+relayer gaps the review found (the gas drop not resumed, the `--send-via logos` route without a journal, the record's
+narrow windows never hit, faults claimed that did not fire) are built, tested and recorded.
 
-Where everything ran: a Modal build box (CPU), 21 November 2026 (two agents of this stream; the second added U.3's
-and R.7's run, U.5's code and run, and F.7's stall analysis). Ethereum: local anvil only (nothing sent to Sepolia
-or mainnet, no public endpoint read). LEZ: the v0.4.0-rc1 in-process harness, the mini-app's devnet (the harness
-behind HTTP), LEZ v0.4.0-rc1's own sequencer and node (e2e/seqnet), and LEZ v0.4.0-rc3's own sequencer and node
-0.3.5-rc.1 (upstream's four-sequencer devnet). None of R.06, R.07, U.03, U.08 is about proving: dev-mode receipts and
-mock or accept-all verifiers are used there and named. No program, guest or image id changed; no deployment is
+Where everything ran: a Modal build box (CPU), 21 and 22 November 2026. Ethereum: local anvil only (nothing sent to
+Sepolia or mainnet, no public endpoint read). LEZ: the v0.4.0-rc1 in-process harness, the mini-app's devnet (the
+harness behind HTTP), LEZ v0.4.0-rc1's own sequencer and node (e2e/seqnet), and LEZ v0.4.0-rc3's own sequencer and
+node 0.3.5-rc.1 (upstream's four-sequencer devnet). None of R.06, R.07, U.03, U.08 is about proving: dev-mode receipts
+and mock or accept-all verifiers are used there and named. No program, guest or image id changed; no deployment is
 affected.
 
 ## Summary
 
-| Row | Today | Proposed | Shown by |
-|---|---|---|---|
-| U.8 | in part | **shown** | `cli/tests/e2e.rs`, run recorded in `e2e/runs/cli-freezes/` |
-| R.6 | in part | **shown** | `cli/tests/relayer_crash.rs` (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), with row 43's monitor restarts |
-| U.3 | in part | **shown** (the remainder the status names), see the caveat below | `e2e/runs/seqnet-robust-1/` (14/14), with rows 43–48, 96, 106–107, 120 |
-| R.7 | in part | **shown** | `e2e/runs/seqnet-robust-1/` (claim killed before sending, burn killed after it, a gas drop across a kill), with row 126 |
-| U.5 | in part | in part, gap narrowed | the gas drop is now inside the relayer daemon and the tool (`e2e/runs/seqnet-robust-1/`); the mini-app's claim, burns and real proofs of this path remain |
-| F.7 | in part | in part (narrower gap) | rc3 runs a four-key zone (`zone-rc3-four-keys`); its end-of-run stall traced (`STALL.md`); the bridge and a t-of-n checkpoint over an rc3 multi-key zone are not run |
+| Row | Today | Proposed | Shown by | Remaining |
+|---|---|---|---|---|
+| U.8 | in part | **shown** | `cli/tests/e2e.rs`, `e2e/runs/cli-freezes/` | — |
+| R.6 | in part | **in part** (the relayer shown on both chains) | `cli/tests/relayer_crash.rs` parts 1–5 (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), `relayer::tests` and `e2e/runs/seqnet-robust-2/` (gas drops), row 43 (monitor kills) | `monitor` under an RPC failure (only kills are tested), the checkpoint prover and the attestors under RPC failure; the relayer's root import under a fault on a real sequencer (its faults ran against the devnet stand-in) |
+| U.3 | in part | **in part** (narrower) | rows 43–48, 96, 106–107, 120; `e2e/runs/seqnet-robust-1/` and `-2/` (the daemon's root import on a running sequencer, by the standalone binary) | `ferrata_relayer_module` with a LEZ sequencer path; chain access through the LEZ and Ethereum Logos modules; `monitor`'s LEZ and Logos Blockchain RPC clients; the operator guide past its first draft |
+| R.7 | in part | **shown** | `e2e/runs/seqnet-robust-1/` and `-2/` (claim killed before sending, burn killed after it, burn killed before it reached the zone then made with other parameters, gas drops across kills), with row 126 | — |
+| U.5 | in part | in part, gap narrowed | the gas drop in the relayer daemon and the tool, journaled (`e2e/runs/seqnet-robust-2/`) | the mini-app's claim, burns with a drop, real proofs of this path, a network handover of the job to a third-party relayer |
+| F.7 | in part | in part (narrower gap) | rc3 four-key zone (`zone-rc3-four-keys`), its stall traced (`STALL.md`) | the bridge, a t-of-n checkpoint and releases over an rc3 multi-key zone |
 
 ## U.8: actionable errors, including program or per-token frozen — proposed **shown**
 
@@ -40,7 +42,8 @@ What was missing: the freeze refusal was exercised in the mini-app only. Now, in
 | the other listed failures | unchanged, EVIDENCE row 85 (21 refusals, same test file) | as before |
 
 Run: `cd cli && bash tests/e2e.sh`, commit `dfd4e2e4`: `test result: ok. 1 passed` in 34.47 s; again at `c7f1b352`
-after the R.07 changes: 1 passed in 36.78 s. Record: `e2e/runs/cli-freezes/` (README with every refusal verbatim,
+after the R.07 changes: 1 passed in 36.78 s; again at `d8ddc000` after the review fixes (the claim's gas-drop record per
+relayer): 1 passed in 30.20 s. Record: `e2e/runs/cli-freezes/` (README with every refusal verbatim,
 `test.log`).
 
 Proposed EVIDENCE row: "The `ferrata` tool under every freeze (RFP-022 U.08): the vault's deposit and release freezes
@@ -51,131 +54,148 @@ claim ×2, burn ×2, release ×2, private claim ×1), all passing `names_nothing
 box; anvil (chain id 1), LEZ v0.4.0-rc1 harness | none (dev mode; mock verifier) | `cd cli && bash tests/e2e.sh` |
 `e2e/runs/cli-freezes/`".
 
-## R.6: temporary RPC or connectivity failure on either chain, recoverable, no work duplicated — proposed **shown**
+## R.6: temporary RPC or connectivity failure on either chain, recoverable, no work duplicated — proposed **in part**
 
 RFP: "Temporary RPC or connectivity failure on either chain leaves any off-chain component in a recoverable state,
 able to resume without duplicating work already done."
 
-What was missing: "A relayer killed in the middle of a checkpoint or a release, and an RPC failure under it: none yet."
+**The relayer (all its work, both chains): shown.**
 
-| Clause | Test | Result |
+| Clause, for the relayer | Test | Result |
 |---|---|---|
-| the relayer killed mid-transaction, exactly-once effects | `cli/tests/relayer_crash.rs` part 1 (anvil automine off; SIGKILL with the transaction pending, then restarted with it pending (P), mined before the restart (M), dropped from the pool (D)): submitCandidate P, finalizeAttested M, release D, release P, release with checkpoint fee M, claimOwed D | 6 transactions for 6 effects, none reverted; 1 `CandidateSubmitted`, 1 `CheckpointFinalized`, one `Release` per nullifier, 1 `OwedClaimed`; P: `inflight-pending` and nothing sent until mined; D: the same call sent again with the same nonce |
-| killed at any point | part 2: 20 releases queued, SIGKILL 0–40 ms after each start line until all booked | 26 transactions for 26 effects (cumulative), none reverted, every job once |
-| Ethereum RPC failure | part 3: `e2e/netfault/faultnet.py` flaky (429, 5xx, late answers, head backwards), sends (dropped, duplicated, answer lost), lagging (4 blocks behind), with outages of every endpoint | all jobs done (2 s, 73 s, 20 s); 38 transactions for 38 effects, none reverted; faults seen recorded per part |
-| LEZ connectivity failure | `e2e/netfault/relayer-lez.sh` (`e2e/netfault/holdproxy.py` in front of the devnet's zone): outage; ImportRoot applied but its answer lost; SIGKILL with the answer held; SIGKILL with the import held unsent | 9 of 9: each leaf count imported once; booked from the record (`recovered`), nothing sent again; the unsent one planned again after `--import-wait` and imported once |
-| the monitor (the other long-running component) | EVIDENCE row 43 (S5, S6: SIGKILLed mid-window, restarted from its state file or with it lost, exactly one cancellation), unchanged | as before |
+| killed mid-transaction, Ethereum, exactly-once effects | `cli/tests/relayer_crash.rs` part 1 (automine off; SIGKILL with the transaction pending, then restarted with it pending (P), mined before the restart (M), dropped from the pool (D)): submitCandidate P, finalizeAttested M, release D, release P, release with checkpoint fee M, claimOwed D | 6 transactions for 6 effects, none reverted; P: `inflight-pending`, nothing sent until mined; D: the same call sent again with the same nonce |
+| killed at random | part 2: 20 releases, SIGKILL 0–40 ms after each start until all booked | 26 transactions for 26 effects (cumulative), every job once (2 kills sufficed in the recorded run: where they land is chance, hence part 4) |
+| the record's two narrow windows, deterministically | part 4 (`e2e/netfault/holdproxy.py` in front of the anvil): the send's answer lost; the send forwarded, its answer held, the daemon SIGKILLed; the daemon SIGKILLed with its record written and nothing sent | each fault fired (3 of 3); the first two found under their nonce with no hash known (`inflight-found`, the in-flight block scan of `01b57e13` exercised); the third `inflight-lost`, sent again with the recorded nonce; 41 transactions for 41 effects |
+| Ethereum endpoints failing | part 3: `e2e/netfault/faultnet.py` flaky, sends and lagging endpoints, with outages | all jobs done (2 s, 73 s, 20 s); 38 transactions for 38 effects; **the faults that fired** (results.json `faultsSeen`): flaky 3 × 429, 1 × 5xx, 4 receipts behind; sends 1 dropped, 1 duplicated, 2 not found, 4 receipts behind, 118 answers refused in outages; lagging 4 × 429, 29 receipts behind, 3 rounds `node-behind`. Late answers and a head going backwards were drawn but did not fire; a lost send answer is part 4's |
+| the `--send-via logos` route (Logos Core's `tx_sender_module`) killed | part 5 (`cli/examples/relayer_logos_stub.rs` with `e2e/netfault/txsender_stub.py`, a stand-in for `tx_sender_module`; no key in the daemon): SIGKILL after the request was made with nothing broadcast; before the request's id reached the daemon; after the broadcast, before its hash reached it | each restart found its request (by id; or among `live_sends`) and drove it to its end: 3 requests for 3 jobs, each booked once; 44 transactions for 44 effects, none reverted |
+| LEZ connectivity failure, root imports | `e2e/netfault/relayer-lez.sh` (holdproxy in front of the devnet's zone): outage; ImportRoot applied but its answer lost; SIGKILL with the answer held; SIGKILL with the import held unsent | 9 of 9: each leaf count imported once; booked from the record, nothing sent again; the unsent one planned again after `--import-wait` and imported once |
+| LEZ failure and kills, gas drops (the relayer's LEZ credits) | `relayer::tests` (5 tests: a model zone in which two credits built on one account state apply once) and `e2e/runs/seqnet-robust-2/` on LEZ v0.4.0-rc1's running sequencer (holdproxy in front of it for the drops daemon): the drops daemon behind a second holdproxy; its first credit trapped unsent and the daemon SIGKILLed, then a 503 on its next send; its second credit forwarded with the answer held and the daemon SIGKILLed | 21 of 21 checks. Drop 1: the credit held unsent by the proxy and the daemon SIGKILLed (its record: sent once, not settled), its next send failing with a 503, then sent again on the same account state: 3 sends, applied once, booked from LEZ (`resolvedLater`). Drop 2: forwarded with its answer held and the daemon SIGKILLed; restarted 30 s later, booked from the drop account's nonce with nothing sent again (1 send). Each claim's dry run claims exactly 1 pending credit of 50,000,000 (no second credit); 0 jobs refused; the unit tests: 5 of 5 |
 
-Runs: `cd cli && bash tests/relayer-crash.sh` at `01b57e13` (sources as committed): `test result: ok. 1 passed` in
-117.85 s (`e2e/runs/relayer-crash/results.json`); `bash e2e/netfault/relayer-lez.sh OUT` at `01b57e13`: 9 passed, 0
-failed (`e2e/runs/relayer-lez/`).
+Runs: `cd cli && bash tests/relayer-crash.sh` at `516e397a`: `test result: ok. 1 passed` in 121.75 s
+(`e2e/runs/relayer-crash/results.json`, README); `cd cli && cargo test --lib` at `516e397a`: 24 passed;
+`bash e2e/netfault/relayer-lez.sh OUT`: 9 passed, 0 failed at `01b57e13` (recorded) and again at this branch's tip on 22 November (with the restarted daemon's `--import-wait` in case D widened from 3 s to 10 s: in a first rerun the restart's first round came after 3 s had passed and found the record already expired, which the check counted as a failure; a test timing, not the daemon); `bash e2e/seqnet/run.sh robust robust-2`: 21 passed, 0 failed (box 852 s; the run 00:31–00:42 UTC, 22 November 2026), the sources of `d8ddc000`.
 
-What the daemon does now (all in `cli/src/relayerd.rs`, `relayer.rs`, `eth.rs`): one transaction in flight,
-journaled before it is sent (`<state>/inflight.json`) and resolved first in every round (mined: booked, pending:
-waited for, lost: the same call with the same nonce); reads pinned at or above the relayer's own last mined block
-(`<state>/fence.json`); one daemon per state directory; the start-up waits for the endpoint; root imports kept in
-flight until applied; endpoint failures never refuse a job; gas with headroom; a wrapped seal reused after a restart.
-Bugs the tests found and the fixes are in commit `01b57e13`.
+What the daemon does now (`cli/src/relayerd.rs`, `relayer.rs`, `logos_send.rs`): one Ethereum transaction in flight,
+journaled before it is sent (`<state>/inflight.json`) and resolved first in every round (mined: booked; pending:
+waited for; lost: the same call with the same nonce); through `tx_sender_module` the same, with the request's id
+recorded as soon as `send` answers and a killed daemon's open request driven to its end rather than made again; reads
+pinned at or above the relayer's own last mined block (`<state>/fence.json`); one daemon per state directory; root
+imports kept in flight until applied; **gas drops journaled** (`<state>/drops.json`: the drop account's private nonce
+recorded before the credit, one drop at a time, the job kept until LEZ shows the nonce moved, a credit not applied
+within `--drop-wait` sent again on the same account state, so LEZ applies at most one); endpoint failures never refuse
+a job; malformed jobs are refused, not retried; gas with headroom; a wrapped seal reused after a restart.
 
-Not covered, stated: the `--send-via logos` path (Logos Core's `tx_sender_module` keeps its own requests); the gas
-drop stays at most once (recorded before its credit); a node that lies is not a temporary failure (the crown's
-two-endpoint agreement covers it, `e2e/NETWORK.md`).
+**Not shown, hence in part:** `monitor` under an RPC outage (row 43 shows it killed mid-window and restarted, with
+and without its state file; no fault injected under it); the checkpoint prover (`e2e/crown` stage 7, a separate
+process) and the attestors (`ferrata_attestor`) under RPC failure: no test; the relayer's root import under a fault on
+a real sequencer (its four LEZ faults ran against the devnet's synchronous stand-in; robust-1 and -2 import cleanly on
+the sequencer). A node that lies is not a temporary failure (the crown's two-endpoint agreement, `e2e/NETWORK.md`).
 
-Proposed EVIDENCE row: "`ferrata-relayer` killed at each of its transactions, killed at random, and run behind failing
-endpoints (RFP-022 R.06): a journal of the one transaction in flight (resolved first in every round: mined, pending,
-or lost and sent again with the same nonce), reads fenced at the relayer's own last block, one daemon per state |
-part 1: 6 kills (P, M, D) at submitCandidate, finalizeAttested, releases, claimOwed; part 2: 20 releases under kills
-0–40 ms after start; part 3: faultnet flaky/sends/lagging with outages: 38 relayer transactions for 38 effects, 0
-reverted, one Release per nullifier, every job booked once; the LEZ side: outage, lost answer, kill while held, kill
-while unsent: each root imported once (9/9) | Modal build box; anvil (31337), FerrataVault v5 mode (B), accept-all
-verifier; the devnet's zone (LEZ v0.4.0-rc1 harness) | none needed (not about proving) | `cd cli && bash
-tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT` | `e2e/runs/relayer-crash/`, `e2e/runs/relayer-lez/`".
+Proposed EVIDENCE row: "`ferrata-relayer` killed at each of its transactions, at random, in the record's narrow
+windows, through Logos Core's send route, and behind failing endpoints on both chains (RFP-022 R.06): one Ethereum
+transaction in flight, journaled (mined, pending, or lost and sent again with the same nonce), a killed daemon's
+`tx_sender_module` request driven to its end, reads fenced at the relayer's own last block; root imports and gas drops
+journaled on LEZ | parts 1–5: 44 relayer transactions for 44 effects, 0 reverted, one Release per nullifier, every job
+booked once; the lost answer, the held answer with a kill, and the kill before the send each made to happen and
+resolved (`inflight-found` ×2, `inflight-lost`); the logos route killed in its three windows: 3 requests for 3 jobs;
+faultnet's faults that fired as recorded; the LEZ side: each root imported once (9/9, devnet stand-in); gas drops on LEZ v0.4.0-rc1's running sequencer: a credit trapped unsent with a kill, then a 503, sent again on the same account state and applied once (3 sends); a credit forwarded with its answer held and a kill, booked from LEZ after the restart with nothing sent again; each claim claims exactly one credit (robust-2, 21 of 21) |
+Modal build box; anvil (31337), FerrataVault v5 mode (B), accept-all verifier; the devnet's zone (LEZ v0.4.0-rc1
+harness); LEZ v0.4.0-rc1's sequencer and node (gas drops) | none needed (not about proving); a stand-in for
+tx_sender_module in part 5 | `cd cli && bash tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT`; `bash
+e2e/seqnet/run.sh robust NAME` | `e2e/runs/relayer-crash/`, `e2e/runs/relayer-lez/`, `e2e/runs/seqnet-robust-2/`".
 
-## U.3 and R.7: the seqnet robust run — proposed **shown** (U.3 with one caveat)
+## U.3: long-running components as Logos module plus headless daemon, documented — proposed **in part** (narrower)
 
-**Run:** `e2e/runs/seqnet-robust-1/` (`robust.md`: 14 passed, 0 failed; `robust.json`; `run.log`; `user/`: every
-command the user ran and what it printed), commit `2c418019`, a Modal build box, 21 November 2026
-21:18–21:27 UTC: `cd cli && cargo test --tests --no-run && cargo test --lib relayer::tests && env -u RISC0_DEV_MODE
-cargo test --test gasdrop` (RISC0_HOME as in `lez/RESULTS.md`), then `bash e2e/seqnet/run.sh robust robust-1`
-(alone on the box: the script first checks that ports 18080, 3040 and 8545 are free). LEZ v0.4.0-rc1's own sequencer
-and node (one validator, dev-mode leader proofs), dev-mode private proofs, a local anvil with the vault tests' mock
-verifier: what the row needs here is the daemons' and the tool's behaviour, not proofs.
+RFP: "Any long-running off-chain component the design requires must be provided as a Logos module accompanied by a
+Logos Core headless CLI/daemon, runnable standalone, using LEZ module and Ethereum module for the respective chains
+access, configurable finality depth, structured logging, and a clean shutdown path. Document the operator journey
+end-to-end: install, configure, run, monitor."
 
-Getting there found and fixed two defects (both in `2c418019`/`d674560b`, failed records kept beside the stream's
-scratch, not committed):
+**New:** the relayer daemon's root import on a running LEZ sequencer (the remainder the status named):
+`e2e/runs/seqnet-robust-1/` (and again in `-2/`): crown-b `--operator-only yes --import-roots no` (no ImportRoot), then
+`ferrata-relayer --sequencer --import-roots` (its own LEZ wallet; a Gloas record: the block's header rebuilt from
+`eth_getBlockByHash`, keccak-checked) imported root(cid, 2) on the running sequencer, applied two rounds after it was
+sent; SIGTERM gave its `stop` line; nothing left in flight. With rows 43–48, 96, 106–107 and 120.
 
-1. **The relayer could not import under a Gloas record** (the stand-in light client's records, and Sepolia's since its
-   Gloas fork, bind the execution block's hash only): the daemon waited for ever ("this relayer does not fetch the
-   block's header yet"). Now it rebuilds the block's header from `eth_getBlockByHash`, checks its keccak against the
-   record, and sends it in front of the account proof, as the programs read it (`d674560b`; unit test
-   `relayer::tests::header_rlp_rebuilds_the_block_hash` on a mainnet block of 9 Nov 2026: its hash, a missing field
-   refused, a changed field changing the hash).
-2. **A second private claim from a new process was refused by the sequencer** ("Nullifier already seen", the
-   sequencer's log): the tool did not sync LEZ's wallet before a private send, so it spent private account `/0`'s state
-   from before the first claim. `Sequencer::submit` now syncs before every private transaction (`2c418019`).
+**Still missing (exact):**
+1. `ferrata_relayer_module` links `cli/` without `lez-wallet` (`modules/ferrata_relayer_module/rust-lib/calls/Cargo.toml`;
+   `--sequencer` is refused there, `cli/src/relayerd.rs`, `fn sequencer` without the feature): the module reaches LEZ
+   only through the devnet's stand-in. The root import on a sequencer is shown for the standalone binary only. The way
+   exists (`ferrata_updater_module` links LEZ's node-side crates, staging the circuits and rapidsnark libraries:
+   `modules/scripts/stage-updater.sh`, row 104); not done for the relayer module.
+2. Chain access through Logos Core's LEZ and Ethereum modules: the relayer's Ethereum transactions go through
+   `tx_sender_module` (row 120, anvil; now journaled, R.6), its Ethereum reads through plain JSON-RPC, its LEZ access
+   through LEZ's wallet library (or the devnet stand-in), not `lez_core`, which serves no zone history for a sequencer
+   it does not run (`docs/not-built.md`).
+3. `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (traceability's U.3 remainder): not built.
+4. The operator journey: `docs/guides/operator-guide.md` is a first draft (its header).
 
-**U.3, "Logos module plus headless daemon … using LEZ module and Ethereum module … clean shutdown"; the status's
-remainder "the relayer's root imports on a running sequencer":** crown-b `--operator-only yes --import-roots no` (the
-finality update, Init, Register; no ImportRoot), then `ferrata-relayer --sequencer --import-roots` (its own LEZ
-wallet; its public account and private account `/0` funded by `seqnet-fund`) imported root(cid, 2) on the running
-sequencer (tx `660dd6bd…`, applied, two rounds after it was sent); SIGTERM gave its `stop` line; nothing left in
-flight. The gas-drop daemon (below) is the same binary, stopped the same way. With rows 43–48, 96, 106–107 and 120 this
-covers the remainder the status names. **Caveat for the integrator:** `docs/traceability.md`'s U.3 row also lists
-`monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs as remaining (README, "Specified but not built"); this
-stream did not build it. If that is part of U.3's clause, U.3 stays **in part** with that item alone.
+## R.7: an interrupted user-side operation does not consume, corrupt, or expose the entitlement — proposed **shown**
 
-**R.7, "an interrupted user-side operation does not consume, corrupt, or expose the user's entitlement":**
+**Runs:** `e2e/runs/seqnet-robust-1/` (14 of 14, commit `2c418019`, 21 November 2026) and `e2e/runs/seqnet-robust-2/`
+(21 of 21, commit `d8ddc000`, 22 November 2026), `bash e2e/seqnet/run.sh robust NAME` on a Modal build box:
+LEZ v0.4.0-rc1's own sequencer and node (one validator, dev-mode leader proofs), dev-mode private proofs, a local anvil
+with the vault tests' mock verifier (what the row needs is the tool's and the daemons' behaviour, not proofs).
 
-- *A claim killed between its proof and its sending:* `ferrata claim --send --yes` with its sequencer endpoint behind
-  `e2e/netfault/holdproxy.py`, which traps the claim's `sendTransaction` (built and proven by LEZ's wallet, never
-  forwarded); SIGKILL. The zone held 2 private transactions before and after (the count taken at the trap, after the
-  claim's gas drop had landed); `ferrata recover` from the seed still finds the deposit claimable; the same command
-  again claims it once, and the second deposit after it (recover: 2 claimed). Nothing left the machine but the gas-drop
-  job (a receipt and a one-time account's public keys).
-- *A burn killed after its sending:* `ferrata burn` with the proxy holding its `sendTransaction`'s answer (the burn
-  reached the sequencer, the tool never learned it); SIGKILL; the burn was applied once (6 → 7 private transactions);
-  the same command again found that burn on the zone through the tool's interrupted-burn record
-  (`<LEZ wallet home>/ferrata-pending-burn.json`: counter 0) and burnt nothing more (still 7); the release of that burn
-  through the relayer paid 997000000000000 wei to the fresh address.
-- *A gas drop across a kill:* the killed claim had made its one-time account and handed the relayer its job; the claim
-  again reused that account and the credit already pending to it, and asked nothing new of the relayer ("no new job";
-  the daemon sent exactly 2 drops for 2 deposits, 0 refused).
+- *A claim killed between its proof and its sending* (both runs): `ferrata claim --send --yes` with its sequencer
+  endpoint behind `e2e/netfault/holdproxy.py`, which traps the claim's `sendTransaction`; SIGKILL. The zone's private
+  transactions unchanged; `ferrata recover` from the seed still finds the deposit claimable; the same command again
+  claims it once (recover: 2 claimed), reusing the one-time account and its credit (no second job).
+- *A burn killed after its sending* (both runs): the proxy holds the burn's answer; SIGKILL; the burn applied once; the
+  same command again finds it on the zone through the tool's interrupted-burn record and burns nothing more; its release
+  through the relayer pays the fresh address.
+- *A burn killed before it reached the zone, then made with other parameters* (robust-2, review L5): the burn's
+  `sendTransaction` trapped unforwarded; SIGKILL; the zone unchanged; the burn asked again with **another recipient**
+  takes the interrupted burn's counter (so at most one of the two can ever be applied) and is applied once; the record
+  cleared. (robust-2: the zone 8 → 8 private transactions after the kill, 8 → 9 after the burn with another recipient; counter 1 taken; the record cleared)
+- *A gas drop across kills* (both runs): the killed claim's one-time account and pending credit reused; robust-2 also
+  kills the relayer's drops daemon twice around its credits (R.6 above): each claim's dry run claims exactly one pending
+  credit.
 
-With row 126 (a view closed during a proof, in Basecamp) this covers the row.
+With row 126 (a view closed during a proof, in Basecamp) this covers the row. The interrupted-burn record is the
+`ferrata` tool's (`<LEZ wallet home>/ferrata-pending-burn.json`); the mini-app's burn keeps none (its view closed during
+a proof is row 126's case).
 
-**Proposed EVIDENCE row:** "The relayer daemon's root import, its gas drops and interrupted user commands on LEZ
-v0.4.0-rc1's running sequencer: crown-b without ImportRoot, then `ferrata-relayer --sequencer --import-roots` imports
-root(cid, 2) (Gloas record: the header rebuilt and checked); the daemon's two gas drops, each a native credit sealed to
-the claim's one-time private account, and both claims paying their LEZ fee from it (LEZ's wallet's dry run: 1 pending
-credit of 50,000,000 claimed to the one-time payer; fee at head 6,188,624 and 6,223,304); a claim killed after its
-proof with its send trapped (nothing reached the zone; resumed: claimed once, the same one-time account, no second
-drop); a burn killed after its send (applied once; the same command again burns nothing); release through the relayer.
-14 of 14 checks | Modal build box (CPU), 21 Nov 2026; LEZ v0.4.0-rc1 sequencer and node, one validator, dev-mode leader
-proofs | dev-mode private proofs; the vault's verifier a mock; local anvil; the beacon chain a stand-in committee |
-`bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/seqnet/hook-robust.sh`, commit `2c418019`"
+**Proposed EVIDENCE row:** "Interrupted user commands on LEZ v0.4.0-rc1's running sequencer, the `ferrata` tool (RFP-022
+R.07): a claim killed after its proof with its send trapped (nothing reached the zone; still claimable; then claimed
+once); a burn killed after its send (applied once; the same command burns nothing more); a burn killed before it
+reached the zone, then asked with another recipient (it takes the interrupted burn's counter: at most one of the two can
+be applied; applied once); gas drops across kills of the claim and of the relayer's daemon (each claim claims exactly
+one credit) | robust-1 14 of 14; robust-2 21 of 21 | Modal build box (CPU); LEZ v0.4.0-rc1 sequencer and node,
+one validator, dev-mode leader proofs | dev-mode private proofs; mock verifier; local anvil; a stand-in beacon committee
+| `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`,
+`e2e/seqnet/hook-robust.sh`"
 
 ## U.5: the fee-payer mitigation in the relayer daemon and the tool — stays **in part**, gap narrowed
 
-**New (commit `2c418019`, run above):** the relayer daemon's gas drop is the sealed credit of row 124, not a public
-transfer: a `gas-drop` job carries the receipt and the one-time account's public keys (`oneTimeNpk`, `oneTimeVpk`), which
-must derive the receipt's one-time address (`KeysMismatch`, checked before the drop is recorded:
-`cli/tests/gasdrop.rs`, 1 passed on a real receipt); the credit goes from the relayer's private account
-(`--drop-from-private`, default `/0`) sealed to that account (`seal_destination` with `PrivateForeign`, left pending).
-`ferrata claim` with `--gas-drop-inbox` (the relayer's inbox; `FERRATA_GAS_DROP_INBOX`) and `--relayer` pays a private
-claim's fee from that drop by default: a new child of private account `/0` as the one-time account, recorded per `N`
-beside LEZ's wallet before the job is handed over (`ferrata-gas-drops.json`), the receipt proven over the claim's
-witness, the job written to the inbox, the credit awaited, the claim sent with the one-time account as fee payer after
-LEZ's wallet's dry run (it claims the credit). The dry run names the fee payer and what it leaks; `--no-gas-drop` pays
-from the proving account. In the run: 2 drops, both sealed, both claims sweeping them (credit 50,000,000; fee at head
-6,188,624 / 6,223,304; reserve 10,056,514 / 10,112,869; the credit pending 3 s and 9 s after the tool began asking; dev-mode receipts, proven in 0.0 s); the
-gas-drop guest built on the box has `docs/image-ids.md`'s id `0x89580416…`.
+**New (commits `2c418019`, `8d329dcb`, `b289dcb4`; runs robust-1 and robust-2):** the relayer daemon's gas drop is the
+sealed credit of row 124, not a public transfer: a `gas-drop` job carries the receipt and the one-time account's
+public keys, which must derive the receipt's one-time address (`KeysMismatch`, checked before anything is recorded:
+`cli/tests/gasdrop.rs`); the credit goes from the relayer's private account (`--drop-from-private`, default `/0`)
+sealed to that account, left pending; the drop is journaled (R.6). `ferrata claim` with `--gas-drop-inbox` (the
+relayer's inbox; `FERRATA_GAS_DROP_INBOX`) and `--relayer` pays a private claim's fee from that drop by default: a new
+child of private account `/0` as the one-time account, recorded per `N` beside LEZ's wallet with one job per relayer
+asked (`ferrata-gas-drops.json`), the receipt proven over the claim's witness, the job written to the inbox, the credit
+awaited, the claim sent with the one-time account as fee payer after LEZ's wallet's dry run (it claims the credit).
+Another relayer gets a receipt of its own for the same one-time account (robust-2: a claim first naming a relayer that
+never answers, then the real one). The dry run names the fee payer and what it leaks; `--no-gas-drop` pays from the
+proving account. Runs: robust-1, 2 drops (credit 50,000,000; fee at head 6,188,624 / 6,223,304); robust-2 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own.
 
-**Still missing for shown:** (1) the mini-app: `ferrata_bridge_module`'s claim does not ask for a drop (its runs use the
-stand-in, rows 102, 103, 125, 126); (2) burns: the burn's fee still comes from `seqnet-fund` (burns with a drop are
-not built; the design says burns use the same drop); (3) "by default" holds once a relayer's inbox is configured
-(`FERRATA_GAS_DROP_INBOX`); a tool with no relayer configured pays from the proving account, as the dry run says;
-(4) this path ran with dev-mode proofs on rc1 (row 124 proved the same sealed credit and sweep for real on rc3, by
+**Still missing for shown:** (1) the mini-app: `ferrata_bridge_module`'s claim does not ask for a drop (its runs use
+the stand-in, rows 102, 103, 125, 126); (2) burns: the burn's fee still comes from `seqnet-fund` (burns with a drop are
+not built; the design says burns use the same drop); (3) the job's handover is a directory shared by the user and the
+relayer (`--gas-drop-inbox DIR`): there is no network handover to a third-party relayer; (4) "by default" holds once a
+relayer's inbox is configured; a tool with no relayer configured pays from the proving account, as the dry run says;
+(5) this path ran with dev-mode proofs on rc1 (row 124 proved the same sealed credit and sweep for real on rc3, by
 crown-driver, not by the daemon).
+
+**Proposed EVIDENCE row:** "The gas drop in the relayer daemon and the `ferrata` tool (RFP-022 U.05, the fee payer): a
+private claim's LEZ fee paid by a one-time private account from the relayer daemon's credit sealed to it (the receipt
+and the account's public keys handed to the relayer's inbox; the drop journaled on the relayer's side; another relayer
+asked with a receipt of its own for the same account) | robust-1: 2 drops sealed, both claims' dry runs claim the credit
+(1 pending credit of 50,000,000 each; fee at head 6,188,624 and 6,223,304); robust-2: 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own | Modal build box;
+LEZ v0.4.0-rc1 sequencer and node | dev-mode receipts and private proofs (row 124: real proofs on rc3, by crown-driver)
+| `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`"
 
 ## F.7: release on native verification of a valid burn, validity with more than one sequencer key — stays **in part**, gap narrowed
 
@@ -209,18 +229,44 @@ t of the zone's n sequencer keys either way (`docs/trust.md` §3.2), as the matr
 agent of this stream (budget): the plan is in the stream's report; a run of it must expect the stall above (end the
 checkpoint's window before a stall, or wait out the posting timeout, or give each sequencer its own funding key).
 
+**Proposed EVIDENCE row:** "A zone of four LEZ v0.4.0-rc3 sequencers on Logos Blockchain 0.3.5-rc.1 (RFP-022 F.07,
+validity with more than one sequencer key): upstream's four-sequencer devnet run without Docker, four keys accredited
+(threshold 3, posting timeframe 60 slots), the turn rotating, every key inscribing; its end-of-run stall traced from the
+logs and the pinned node code | 93 inscriptions in the node's final blocks, 24/23/23/23; the stall: two block-94
+inscriptions across a turn boundary, both removed by the node, the next key's lineage built on its unmined one; the
+removing check unknown (TRACE only) | Modal build box, 1,080 s, one validator, dev-mode leader proofs | no bridge, no
+checkpoint or release on this zone | `ZONE_BEDROCK=bundle bash checkpoint/attestor/zone.sh <crown-rc3 bundle> OUT
+1080` | `e2e/runs/zone-rc3-four-keys/` (README, STALL.md)"
+
+## Main statements this branch makes stale (for the integrator)
+
+- `README.md:211` ("Specified but not built", daemons: "the relayer's root imports on a running LEZ sequencer"): now
+  run by the standalone `ferrata-relayer` (robust-1, -2); remaining there: the same through `ferrata_relayer_module`,
+  and `monitor`'s LEZ and Logos Blockchain clients.
+- `README.md:220` ("a zone of several sequencers on [Logos Blockchain 0.3.5-rc.1]"): now run (rc3 four-key zone,
+  F.7 above); remaining: the bridge and a t-of-n checkpoint on it.
+- `README.md:225` ("the gas drop's sealed credit in the relayer daemon"): now built and run (U.5 above).
+- `docs/traceability.md` U.5 ("The sealed credit is not yet in the relayer daemon"), R.6 (RFP-022: "A relayer killed in
+  the middle of a checkpoint or a release, and an RPC failure under it: none yet"), U.3 ("Remains: the relayer's root
+  imports on a running LEZ sequencer"): as above.
+
 ## Commits
 
-`dfd4e2e4` U.08 freezes in the tool, the relayer's in-flight journal, fence and lock; `389dfc6e` U.08 run recorded;
-`01b57e13` R.06 tests and records, the fixes the tests found; `c7f1b352` the seqnet robust mode, the interrupted-burn
-record, crown-b `--import-roots no`, `seqnet-fund --public-only`; `fe05ed9a` the rc3 four-key zone, zone.sh's
-overrides, this file's draft; `efcfc2c8` the first hand-back. Second agent: `d674560b` the relayer's root import under
-a Gloas record; `9c21e580`, `29863cb6` the rc3 stall traced; `2c418019` U.05 (the gas drop in the daemon and the tool)
-and the wallet sync before private sends; `2ce94555` the robust run recorded (14/14), seqnet README, drive.sh's scrub
-of `~/` paths; and this file's update after it.
+First agent: `dfd4e2e4` U.08 freezes in the tool, the relayer's in-flight journal, fence and lock; `389dfc6e` U.08 run
+recorded; `01b57e13` R.06 tests and records, the fixes the tests found; `c7f1b352` the seqnet robust mode, the
+interrupted-burn record, crown-b `--import-roots no`, `seqnet-fund --public-only`; `fe05ed9a` the rc3 four-key zone,
+zone.sh's overrides; `efcfc2c8` the first hand-back. Second agent: `d674560b` the root import under a Gloas record;
+`9c21e580`, `29863cb6`, `14af8de1` the rc3 stall traced; `2c418019` U.05 in the daemon and the tool, the wallet sync
+before private sends; `2ce94555` robust-1 recorded; `e2b1b564`, `c457099d` rows file and cli README.
+After the first review (`rfp-E-fix`): `e57f23b8` M1, L1, L2 (no workspace name or agent path; the driver's comment;
+the rc3 bundle's provenance); `8d329dcb` gas drops journaled and resumed (H2), malformed jobs refused (L3), a
+finalised candidate booked from its event (L4), gas drops refused under dev mode unless asked for on a local devnet
+(L10); `b289dcb4` the claim's record per relayer (M3); `516e397a` the logos route journaled (H2), crash test parts 4
+(M2) and 5, the test's scratch in `target/` (L8); `d8ddc000` robust-2 recorded (with the hook, holdproxy's `fail` mode, robust-1's drops log filtered: L12) and the crash record; then the relayer-lez case-D wait and this file.
 
 Files of other streams changed, minimal and default-preserving: `lez/crown/driver/src/{main,crown}.rs`
-(`--import-roots no`), `checkpoint/attestor/zone.sh` (`ZONE_LEZ`, `ZONE_BEDROCK`), `e2e/seqnet/{run,drive}.sh` (the
-`robust` mode; `run.sh build` now also builds the gas-drop guest; `drive.sh` also scrubs `~/` paths),
-`e2e/seqnet/README.md` (the robust mode's gas drop). `cli/src/{lez,flow,main}.rs` (the tool's claim) are this
-stream's `cli/` bridge commands.
+(`--import-roots no`; a comment, L1), `checkpoint/attestor/zone.sh` (`ZONE_LEZ`, `ZONE_BEDROCK`), `e2e/seqnet/{run,drive}.sh`
+(the `robust` mode; `run.sh build` also builds the gas-drop guest; `drive.sh` also scrubs `~/` paths),
+`e2e/seqnet/README.md` (the robust mode), `monitor/src/logos_send.rs` (kept identical to `cli/src/logos_send.rs`: `send`
+split into `open` and `drive`, plus `live`; the monitor's behaviour unchanged, its `logos_send` tests 6 passed).
+`cli/src/{lez,flow,main}.rs` (the tool's claim) are this stream's `cli/` bridge commands.

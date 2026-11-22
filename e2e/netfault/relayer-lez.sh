@@ -12,7 +12,7 @@
 #   C  killed while the answer is held: the import reaches the zone, the daemon is SIGKILLed before the answer
 #      comes; restarted, it books the import from its record, sends nothing
 #   D  killed while the import is trapped (never sent): the daemon is SIGKILLed with its ImportRoot held unsent;
-#      restarted (--import-wait 3), it waits out its record, then plans and sends the import once
+#      restarted (--import-wait 10), it waits out its record, then plans and sends the import once
 #
 #   e2e/netfault/relayer-lez.sh OUT_DIR
 #
@@ -144,7 +144,7 @@ start d1
 if wait_hit "$h"; then sleep 1; kill -9 "$daemon"; wait "$daemon" 2>/dev/null; daemon=""; ok "D: SIGKILLed with its ImportRoot built and held unsent"; else bad "D: the import never reached the proxy"; fi
 sleep 1
 check "D: nothing reached the zone ($(imported d1a))" bash -c "[ '$(imported d1b)' = '[2,3,4]' ] && [ $(applied d1c) = $nd ]"
-start d2 --import-wait 3
+start d2 --import-wait 10   # long enough that its first round still sees the record pending
 for _ in $(seq 1 60); do [ "$(nev d2 root-imported)" -ge 1 ] && break; sleep 0.5; done
 sleep 2; kill -TERM "$daemon"; wait "$daemon" 2>/dev/null; daemon=""
 check "D: restarted: its record waited out ($(nev d2 root-import-pending) pending, $(nev d2 root-import-expired) expired), then n = 5 imported once ($(ev d2 root-imported | jq -c '.[0] | {leafCount, applied, recovered}'))" \
