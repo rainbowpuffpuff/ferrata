@@ -49,7 +49,7 @@ impl Clock {
     }
 
     pub fn now(&self) -> u64 {
-        self.start_s + self.started.elapsed().as_secs()
+        self.start_s.saturating_add(self.started.elapsed().as_secs())
     }
 }
 
@@ -314,8 +314,9 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
         if w.max_polls.is_some_and(|m| summary.polls >= m) || stop.load(Ordering::SeqCst) {
             break;
         }
-        let until = Instant::now() + Duration::from_secs(w.interval_s);
-        while Instant::now() < until && !stop.load(Ordering::SeqCst) {
+        // An --interval too large for the clock waits for the stop flag (review B3 L7).
+        let until = Instant::now().checked_add(Duration::from_secs(w.interval_s));
+        while until.map_or(true, |u| Instant::now() < u) && !stop.load(Ordering::SeqCst) {
             std::thread::sleep(Duration::from_millis(100));
         }
         if stop.load(Ordering::SeqCst) {

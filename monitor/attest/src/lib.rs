@@ -389,7 +389,7 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
     // finalized header younger than the finality delay. Or ahead of every provider that answers, past the grace.
     let ahead = if age_s < delay_s {
         Some(Ahead::TooNew)
-    } else if j.answering > 0 && j.behind == j.answering && j.holding == 0 && age_s > delay_s + p.ahead_grace_s {
+    } else if j.answering > 0 && j.behind == j.answering && j.holding == 0 && age_s > delay_s.saturating_add(p.ahead_grace_s) {
         Some(Ahead::AheadOfProviders)
     } else {
         None

@@ -1042,3 +1042,55 @@ fn a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its
     assert_eq!((st[(s0 - 32).to_string()]["divergence"].as_str(), st[(s0 - 32).to_string()].get("settled")), (Some("confirmed"), None));
     assert_eq!((st[s1.to_string()]["divergence"].as_str(), st[s1.to_string()]["settled"].as_bool()), (Some("confirmed"), Some(true)));
 }
+
+/// Review B3 L7: an operator who means "never" by a huge value gets it, not an overflow. `--ahead-grace` at u64::MAX
+/// never raises rule 3 (before: a panic in a debug build; in a release build, which wraps, rule 3 at 768 s);
+/// `--interval` at u64::MAX polls once and waits for SIGTERM (before: a panic after the first poll); `--now` at
+/// u64::MAX keeps polling, its clock saturated (before: a panic at the second poll).
+#[test]
+fn huge_operator_values_do_not_overflow() {
+    let f = fx();
+    let d = scratch("overflow");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let t = slot_time(&s, slot);
+    let max = u64::MAX.to_string();
+    // The forged header ahead of three providers with no block at its slot: rule 3 past 828 s by default.
+    let fstate = write_state(&d, "f.hex", &forged(&s));
+    let behind: Vec<Server> = (0..3).map(|_| provider(&g, slot, None, slot - 32)).collect();
+    for at in [t + 829, t + 100_000] {
+        let mut a = args(&fstate, &behind.iter().collect::<Vec<_>>(), at);
+        a.extend(["--ahead-grace".into(), max.clone()]);
+        let o = check(&a);
+        assert_eq!((o.code, o.report["ahead"].clone()), (10, Value::Null), "{}", o.report);
+    }
+    let state = write_state(&d, "s.hex", &s);
+    let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot + 64)).collect();
+    let hs = honest.iter().collect::<Vec<_>>();
+    let (log, status) = (d.join("alerts.jsonl"), d.join("status.json"));
+    let mut cmd = Command::new(bin());
+    cmd.arg("watch").args(args(&state, &hs, t + 900));
+    cmd.args(["--interval", &max, "--alert-log", &log.display().to_string(), "--status-file", &status.display().to_string()]);
+    let daemon = Daemon(Some(cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()));
+    for _ in 0..150 {
+        if status.exists() {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    assert!(status.exists(), "the first poll");
+    std::thread::sleep(Duration::from_millis(1500));
+    let (st, _) = daemon.stop();
+    assert!(st.success(), "{st}");
+    assert!(read_lines(&log).iter().any(|x| x["kind"] == "stopped"));
+    let st = Command::new(bin())
+        .arg("watch")
+        .args(args(&state, &hs, u64::MAX))
+        .args(["--interval", "1", "--max-polls", "3"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .unwrap();
+    assert!(st.success(), "{st}");
+}
