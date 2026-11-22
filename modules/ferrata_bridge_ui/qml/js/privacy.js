@@ -38,7 +38,7 @@ function step(name, ownRelease) {
     return {
         title: s.title,
         publicEth: ["the recipient address", "the token and amount", "NOut (fresh randomness)", "the burn root used", "the time",
-                    "the account that sent it: on this path your own release account (it pays the gas; your releases from it are linked to each other, not to your depositor address)"],
+                    "the account that sent it: on this path your own release account (it pays the gas; your releases from it are linked to each other, but not to your depositor address unless you fund it from there, or from an account linked to it)"],
         publicLez: s.publicLez,
         hidden: s.hidden
     };
@@ -80,7 +80,8 @@ function burnLeaks(c) {
     else
         out.push({ level: 2, text: "Burn from a public account: the holder, its balance and the burn are public on LEZ." });
     if (c.freshRecipient)
-        out.push({ level: 0, text: "Fresh recipient address: nothing on Ethereum ties the release to your depositor address." });
+        out.push({ level: 0, text: "Fresh recipient address: nothing on Ethereum ties the release to your depositor address" +
+                                   (c.relayer ? "." : ", as long as the account that sends it is not funded from your depositor address (or an account linked to it).") });
     else
         out.push({ level: 1, text: "The recipient is an address you used before: the release is linked to it." });
     if (c.relayer)

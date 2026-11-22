@@ -196,6 +196,8 @@ Item {
                 // The release's step table names that account, not a relayer.
                 var rt = el("redeem.steps.release.publicEth").text;
                 verify(has(rt, "your own release account") && !has(rt, "relayer"), rt);
+                // Unlinked from the depositor only if that account is not funded from it (review L-D).
+                verify(has(rt, "not to your depositor address unless you fund it from there"), rt);
             } else {
                 verify(has(el("burn.leaks.summary").text, "Minimal"), el("burn.leaks.summary").text);
             }
