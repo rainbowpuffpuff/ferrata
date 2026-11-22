@@ -54,13 +54,13 @@ To paste into `docs/EVIDENCE.md`'s table (same columns; links written for that f
 | Finding | Status | Commit(s) | Test or run |
 |---|---|---|---|
 | M1 release CLI unlocked, native downloads unchecked | fixed | `e709601f`, `a9a17562` | `scripts/test_fetch_native.py` (19); `scripts/test_release_scripts.py` (corrupted cache stops `release.sh build`); box run 4 |
-| M2 LGPL/GPL native code without notices; cargo-deny blind to it | fixed (owner to approve the written offer before publishing a release) | `bbd49dd9` (deny.toml), `a9a17562` | `scripts/test_release_manifest.py` (9); box run 3 (`cargo deny list`); box run 4 |
+| M2 LGPL/GPL native code without notices; cargo-deny blind to it | fixed (owner to approve the written offer before publishing a release) | `bbd49dd9` (deny.toml), `a9a17562`, `5b2d7615` (check-build `--record`) | `scripts/test_release_manifest.py` (9); box run 3 (`cargo deny list`); box run 4 |
 | M4 deny.toml fails on the guest workspaces; no script over every workspace | fixed (CI job: integrator) | `bbd49dd9` | box runs 2–4 |
 | L1 stale `methods.rs`, r0vm column ignored | fixed | `50f8572f` | `scripts/reproduce/test_image_id_tools.py` |
 | L2 `compare --vault` passes on an unreadable vault | fixed | `50f8572f` | same (JSON-RPC stub) |
 | L3 provenance written without being measured | fixed | `a9a17562`, `68298533` | `scripts/test_release_scripts.py`, `scripts/test_release_manifest.py` |
 | L4 false MSRV | fixed (1.85, measured) | `e4271790` | box runs 2–3 |
-| L6 weak pins | fixed: Logos Blockchain full SHA, vault libraries by tree hash; the CI cache key is the integrator's | `8816471b`, `39fedec6` | `scripts/test_vault_libs.py`; three local installs agree |
+| L6 weak pins | fixed: Logos Blockchain full SHA, vault libraries by tree hash; the CI cache key is the integrator's | `8816471b`, `39fedec6`, `098ddb08` | `scripts/test_vault_libs.py`; four separate installs give the pinned hashes (three local, one on the box) |
 | L9 stale docs | in part (`gpu-prover/README.md`); `docs/guides/ci.md` and `docs/image-ids.md` belong to other streams | `24aacc6f` | — |
 | L11 gpu-prover not buildable in the tree | fixed | `bbd49dd9` | box run 3 (`cargo metadata` exit 0) |
 | L12 justfile arguments unquoted | fixed | `68298533` | box run 4 (`just m0 'x \|\| echo INJECTED'`) |
