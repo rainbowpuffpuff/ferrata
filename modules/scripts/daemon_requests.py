@@ -43,7 +43,7 @@ def main():
     # ---- ferrata_attestor_module ----------------------------------------------------------------
     A = "ferrata_attestor_module"
     att = [json.loads((ZONE / f"att-{i}.json").read_text()) for i in range(4)]
-    cert0 = json.loads((ZONE / "cert-0.json").read_text())
+    cert0, cert1 = (json.loads((ZONE / f"cert-{i}.json").read_text()) for i in (0, 1))
     tier = json.loads((ZONE / "tier.json").read_text())
     proven = hashlib.sha256((ZONE / "rbz-zone-n4-t3.input").read_bytes()).hexdigest()
     # The zone attestor 0's key, from its public devnet label (attestor/zone-attest.sh's keygen).
@@ -77,9 +77,12 @@ def main():
     add(A, "attestor_assemble_2", "assemble", {"base_file": str(ZONE / "rbz-zone-n4-t3.input"),
         "att_files": [str(ZONE / f"att-{i}.json") for i in range(2)], "name": "two-of-four", "expect": "InsufficientAttestations"},
         {"verdict": "assembled", "native": "refused: InsufficientAttestations { have: 2, need: 3 }"})
-    # The read checks (LEZ answers given), so what refuses is the certificate (cert-1 certifies another key).
+    # The read checks (LEZ answers given), so what refuses is the certificate (cert-1 certifies another key), and the
+    # reply's error must say so word for word: a read that refused would pass on the verdict alone.
     add(A, "attestor_refuse_cert", "attest", {"deployment_file": str(ZONE / "deployment.json"), "cert_file": str(ZONE / "cert-1.json"),
-        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers"), "lez_dir": str(lez_dir)}, {"verdict": "refused"})
+        "att_key_file": str(key0), "answers_dir": str(ZONE / "answers"), "lez_dir": str(lez_dir)},
+        {"verdict": "refused", "error": f"refused: the certificate does not certify attestation key {cert0['attestation_key']} "
+                                        f"by channel key {cert1['channel_key']} for this deployment"})
     add(A, "attestor_invalid", "collect", {"att_files": []}, {"verdict": "invalid_request"})
 
     # ---- ferrata_monitor_module -----------------------------------------------------------------
