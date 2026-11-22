@@ -139,8 +139,9 @@ pub const LEAVE_JOB_AFTER: u32 = 3;
 /// every retry) after which `/health` says `down`; one is enough for `degraded`.
 pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
 /// Rounds in a row that failed (the round ended in an error: a read of the chain failed, every transport retry
-/// failed, the budget is reached) after which `/health` says `down`; one is enough for `degraded`. A chain that answers
-/// neither reads nor sends fails every round before anything is sent, so it never counts as a failing send.
+/// failed, the budget is reached, the committees the store summarises could not be fetched) after which `/health` says
+/// `down`; one is enough for `degraded`. A chain that answers neither reads nor sends fails every round before anything
+/// is sent, so it never counts as a failing send.
 pub const DOWN_AFTER_FAILED_ROUNDS: u32 = 5;
 /// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
 pub const HOLD_ROUNDS: u64 = 4096;
@@ -1019,9 +1020,10 @@ impl Updater {
         }
         self.metrics.finalized_slot = store.finalized.slot;
         self.metrics.period = spec.period_at_slot(store.finalized.slot);
-        if let Err(e) = self.ensure_committees(&store) {
-            return Ok(Plan::Stuck(format!("{e:#}")));
-        }
+        // Without the committees the store summarises no update can be judged or sent: the round ends in an error, so
+        // that rounds in a row of it count towards `down` (DOWN_AFTER_FAILED_ROUNDS) as an unreadable chain's do (9c
+        // L-U2: it used to end `Stuck`, before the sources' head was read, and `/health` stayed `degraded` for good).
+        self.ensure_committees(&store)?;
         if self.policy.finish_own_jobs {
             if let Some(plan) = self.continue_carried(ledger, &store, &state)? {
                 return Ok(plan);
