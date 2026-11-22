@@ -15,7 +15,8 @@ takes `lez` (with `node`, and then requires `state_file`) or `lez_dir` (with `an
 and a LEZ node that does not answer is an `error`. The zone of four saved no LEZ node's answers, so
 `recorded_node.py` stands its inscribed blocks in as the LEZ node's final blocks (served over JSON-RPC `getBlock`
 on the node's port, or saved for `lez_dir` with `--save-lez`; replays of recorded honest runs only). On the build
-box, natively (the calls crate's `call` example in a scratch workspace laid out like the module; measured):
+box, natively (the calls crate's `call` example in a scratch workspace laid out like the module; measured; the
+summary: [`results/fix-attestor-2026-11-22/attestor-e2e-native/summary.md`](results/fix-attestor-2026-11-22/attestor-e2e-native/summary.md)):
 
 | What | Result |
 |---|---|
