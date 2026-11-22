@@ -118,6 +118,9 @@ pub const BREAKER_MAX_PAUSE: u64 = 512;
 pub const REFUSAL_BACKOFF: u64 = 4;
 /// See [`REFUSAL_BACKOFF`].
 pub const MAX_REFUSALS: u32 = 3;
+/// Sends in a row that did not land (rejected, refused while their step stayed due, or failed at transport after
+/// every retry) after which `/health` says `down`; one is enough for `degraded`.
+pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
 /// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
 pub const HOLD_ROUNDS: u64 = 4096;
 /// See [`HOLD_ROUNDS`].
@@ -280,6 +283,19 @@ pub struct Metrics {
     pub period: u64,
     pub last_plan: String,
     pub last_error: String,
+    /// Sends since this updater's last applied transaction that did not land: rejected, refused while the step stayed
+    /// due, or failed at transport after every retry (a refusal that lost a race to another party is none of these).
+    pub failing_sends: u32,
+    /// The last of them, described.
+    pub last_failure: String,
+    /// This updater's last applied transaction: its round and time (UTC).
+    pub last_applied_round: u64,
+    pub last_applied_utc: String,
+    /// The furthest finalized slot the sources serve in an update the program would not refuse (verified, or signed by
+    /// a committee the store does not hold yet), as of the last round that asked them.
+    pub sources_head: u64,
+    /// The round in which the instance's finalized slot last moved (or the instance was first seen active; 0: not yet).
+    pub progress_round: u64,
     /// `policy.min_distinct_clients`: this round waits for clients, and the furthest update the sources serve that the
     /// program would not refuse finalizes this many slots past the instance (`None`: not waiting for clients). Beyond
     /// `max_lag_slots`, `/health` says so.
@@ -559,7 +575,9 @@ impl Updater {
             }
             self.stats(i).requests += 1;
             let checkpoint = self.inst.checkpoint;
-            match self.sources[i].bootstrap(&checkpoint) {
+            let answer = self.sources[i].bootstrap(&checkpoint);
+            self.stats(i).available = answer.is_ok();
+            match answer {
                 Ok(bytes) => match LightClientBootstrap::decode(&bytes, fork, n) {
                     Ok(b) if self.bootstrap_verifies(&b) => {
                         if let Some(dir) = self.dir() {
@@ -892,6 +910,9 @@ impl Updater {
         };
 
         let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
+        if self.metrics.progress_round == 0 || store.finalized.slot != self.metrics.finalized_slot {
+            self.metrics.progress_round = self.round;
+        }
         self.metrics.finalized_slot = store.finalized.slot;
         self.metrics.period = spec.period_at_slot(store.finalized.slot);
         if let Err(e) = self.ensure_committees(&store) {
@@ -959,6 +980,7 @@ impl Updater {
                 }
             }
         }
+        self.metrics.sources_head = seen_head;
         // Lag: a source whose newest verified finalized slot is far behind the best.
         let best =
             useful.iter().map(|(_, p, ..)| p.update.finalized_header.beacon.slot).max().unwrap_or(store.finalized.slot);
@@ -1463,6 +1485,9 @@ impl Updater {
                     self.metrics.last_error = format!("{e:#}");
                     attempt += 1;
                     if attempt >= self.policy.max_attempts {
+                        self.metrics.failing_sends += 1;
+                        self.metrics.last_failure =
+                            format!("{}: transport: gave up after {attempt} attempts: {e:#}", action.tx.label);
                         bail!("{}: gave up after {attempt} attempts: {e:#}", action.tx.label);
                     }
                     self.metrics.retries += 1;
@@ -1519,6 +1544,9 @@ impl Updater {
         if out.applied {
             self.held.remove(&(action.job_id, action.step));
             self.breaker = Breaker::default();
+            self.metrics.failing_sends = 0;
+            self.metrics.last_applied_round = self.round;
+            self.metrics.last_applied_utc = crate::utc_now();
             if action.step == Step::Open && self.policy.finish_own_jobs {
                 if let Some((jid, period_update, raw)) = self.opening.take().filter(|o| o.0 == action.job_id) {
                     self.carry(jid, period_update, raw);
@@ -1536,6 +1564,8 @@ impl Updater {
             }
         } else if out.rejected {
             why = format!(": {}", clip(&out.note));
+            self.metrics.failing_sends += 1;
+            self.metrics.last_failure = format!("{} rejected{why}", action.tx.label);
         } else {
             self.metrics.gas_refused += gas;
             self.metrics.fee_refused += out.fee;
@@ -1546,6 +1576,8 @@ impl Updater {
             *self.metrics.refusals.entry((cause.kind(), if stayed_due { "due" } else { "race" })).or_default() += 1;
             let reason = format!("{}: {}", cause.describe(), clip(&out.note));
             if stayed_due {
+                self.metrics.failing_sends += 1;
+                self.metrics.last_failure = format!("{} refused: {reason}", action.tx.label);
                 let held = self.hold(action, cause, &out.note);
                 let what = format!("{} {reason}", action.tx.label);
                 why = format!(": {reason}; the step stayed due: {held}");
@@ -1576,11 +1608,21 @@ impl Updater {
 
     // ---- health and metrics -----------------------------------------------------------------
 
-    /// `ok`, `degraded` (a source lies, lags or fails; the budget is reached; the last round
-    /// failed) or `down` (no usable source).
+    /// `ok`, `degraded` or `down`, and why. Degraded: a source lies, lags, fails or disagrees; a transaction it sent
+    /// did not land (rejected, refused while its step stayed due, failed at transport); the last round was stuck or
+    /// failed; sending is paused; the instance has not moved for `6 × defer_window + 10` rounds while the sources
+    /// serve updates more than `max_lag_slots` past it. Down: no light-client source usable and answering,
+    /// [`DOWN_AFTER_FAILED_SENDS`] sends in a row that did not land, or the budget reached: this updater moves
+    /// nothing.
     pub fn health(&self) -> (&'static str, Vec<String>) {
         let mut why = Vec::new();
-        let usable = (0..self.sources.len()).filter(|&i| self.usable(i)).count();
+        // Light-client sources not demoted that answered when last asked (or were not asked yet).
+        let answering = (0..self.sources.len())
+            .filter(|&i| self.sources[i].light_client() && self.usable(i))
+            .filter(|&i| {
+                self.metrics.sources.get(self.sources[i].name()).is_none_or(|s| s.available || s.requests == 0)
+            })
+            .count();
         for (name, s) in &self.metrics.sources {
             if s.demoted_until > self.round {
                 why.push(format!("source {name} demoted (served what the program refuses)"));
@@ -1601,8 +1643,27 @@ impl Updater {
                 self.policy.min_distinct_clients
             ));
         }
-        if self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget) {
+        let budget_reached = self.metrics.spent() + u128::from(self.fees.max_fee_per_tx) > u128::from(self.fees.budget);
+        if budget_reached {
             why.push("budget reached".into());
+        }
+        if answering == 0 {
+            why.push("no light-client source answers".into());
+        }
+        if self.metrics.failing_sends > 0 {
+            why.push(format!(
+                "the last {} transaction(s) sent did not land; the last: {}",
+                self.metrics.failing_sends, self.metrics.last_failure
+            ));
+        }
+        let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
+        let still = self.round.saturating_sub(self.metrics.progress_round);
+        if self.metrics.progress_round > 0 && behind > self.policy.max_lag_slots && still >= self.stall_rounds() {
+            why.push(format!(
+                "no progress: the instance's finalized slot {} has not moved for {still} rounds while the sources serve \
+                 updates {behind} slots past it",
+                self.metrics.finalized_slot
+            ));
         }
         if self.metrics.last_plan.starts_with("stuck") || self.metrics.last_plan.starts_with("error") {
             why.push(self.metrics.last_plan.clone());
@@ -1610,7 +1671,7 @@ impl Updater {
         if self.round < self.breaker.paused_until && !self.metrics.last_plan.starts_with("stuck: sending paused") {
             why.push(self.paused());
         }
-        let status = if usable == 0 {
+        let status = if answering == 0 || budget_reached || self.metrics.failing_sends >= DOWN_AFTER_FAILED_SENDS {
             "down"
         } else if why.is_empty() {
             "ok"
@@ -1618,6 +1679,12 @@ impl Updater {
             "degraded"
         };
         (status, why)
+    }
+
+    /// Rounds without progress after which `/health` says so: room for every step of a job (`Open`, `Miller`, two
+    /// `Adopt` parts, `Finish`) each waiting its full deferral, and ten more.
+    pub fn stall_rounds(&self) -> u64 {
+        self.policy.defer_window.saturating_mul(6).saturating_add(10)
     }
 
     /// The metrics in Prometheus' text format.
@@ -1654,6 +1721,9 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_steps_done_by_others_total{{{l}}} {}", m.skipped_done);
         let _ = writeln!(o, "ferrata_updater_jobs_finished_total{{{l}}} {}", m.jobs_finished);
         let _ = writeln!(o, "ferrata_updater_finalized_slot{{{l}}} {}", m.finalized_slot);
+        let _ = writeln!(o, "ferrata_updater_sources_head_slot{{{l}}} {}", m.sources_head);
+        let _ = writeln!(o, "ferrata_updater_failing_sends{{{l}}} {}", m.failing_sends);
+        let _ = writeln!(o, "ferrata_updater_rounds_without_progress{{{l}}} {}", self.rounds_without_progress());
         let _ = writeln!(o, "ferrata_updater_period{{{l}}} {}", m.period);
         if self.policy.min_distinct_clients >= 2 {
             let _ = writeln!(o, "ferrata_updater_client_wait_slots{{{l}}} {}", m.client_wait.unwrap_or(0));
@@ -1691,6 +1761,15 @@ impl Updater {
         o
     }
 
+    /// Rounds since the instance's finalized slot last moved (0 before it is active).
+    pub fn rounds_without_progress(&self) -> u64 {
+        if self.metrics.progress_round == 0 {
+            0
+        } else {
+            self.round.saturating_sub(self.metrics.progress_round)
+        }
+    }
+
     pub fn health_json(&self) -> serde_json::Value {
         let (status, why) = self.health();
         let mut v = serde_json::json!({
@@ -1710,6 +1789,12 @@ impl Updater {
                 .filter_map(|((jid, step), _)| self.held_back(jid, *step))
                 .collect::<Vec<_>>(),
             "paused_until_round": self.breaker.paused_until,
+            "failing_sends": self.metrics.failing_sends,
+            "last_failure": self.metrics.last_failure,
+            "last_applied_utc": self.metrics.last_applied_utc,
+            "sources_head_slot": self.metrics.sources_head,
+            "rounds_without_progress": self.rounds_without_progress(),
+            "updated_utc": crate::utc_now(),
         });
         if self.policy.min_distinct_clients >= 2 {
             // What each source reported at /eth/v1/node/version.
