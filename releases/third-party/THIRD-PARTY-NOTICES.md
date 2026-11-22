@@ -30,15 +30,17 @@ the build if a build script linked native code from anywhere else. `MANIFEST.jso
 
 ### `rapidsnark-linux-x86_64-pic-v0.0.8.zip`, sha256 `59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831`
 
-Built by Logos: logos-blockchain-rust-rapidsnark `e91187f8ccb5bbfc7bb00dac88169112428da78f`,
-`.github/workflows/build-pic-archives.yml` (GMP configured `--enable-static --disable-shared --with-pic`; rapidsnark
-with its `ffiasm` and `json` submodules, CMake with `-DUSE_ASM=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON`). Linked by the
-crate `rust-rapidsnark` (feature `static-rapidsnark`, enabled by `logos-blockchain-circuits-prover` and `-verifier`).
+Built by Logos on 7 June 2026: logos-blockchain-rust-rapidsnark `8f51c339fd4d4a3e30c361a20cc118ce20f9f39f` (the tag
+`rapidsnark-pic-v0.0.8`), `.github/workflows/build-pic-archives.yml` at that commit (GMP 6.3.0 configured
+`--enable-static --disable-shared --with-pic`; rapidsnark v0.0.8 with its `ffiasm` and `json` submodules, CMake with
+`-DUSE_ASM=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_OPENMP=OFF -DUSE_LOGGER=ON`, targets `rapidsnarkStatic fr fq`).
+Linked by the crate `rust-rapidsnark` (logos-blockchain-rust-rapidsnark `e91187f8`, five commits later; feature
+`static-rapidsnark`, enabled by `logos-blockchain-circuits-prover` and `-verifier`).
 
 | Component | Version | Licence | In the archive | Source |
 |---|---|---|---|---|
 | rapidsnark | v0.0.8 (iden3/rapidsnark 2921b0eb33369f4d329a6902e97959246b802e6c) | `LGPL-3.0-only` | `lib/librapidsnark.a` | https://github.com/iden3/rapidsnark/tree/v0.0.8 |
-| ffiasm field arithmetic (Fr, Fq) | iden3/ffiasm aa90166dc4c5a075b835a398e15cc1e06ac90e95 (rapidsnark v0.0.8's submodule) | `LGPL-3.0-only` | `lib/libfr.a`, `lib/libfq.a` | https://github.com/iden3/ffiasm/tree/aa90166dc4c5a075b835a398e15cc1e06ac90e95 |
+| ffiasm field arithmetic (Fr, Fq) | iden3/ffiasm aa90166dc4c5a075b835a398e15cc1e06ac90e95 (rapidsnark v0.0.8's submodule) | `LGPL-3.0-only` | `lib/libfr.a`, `lib/libfq.a`; `lib/librapidsnark.a` (`misc`, `naf`, `splitparstr`, `alt_bn128`) | https://github.com/iden3/ffiasm/tree/aa90166dc4c5a075b835a398e15cc1e06ac90e95 |
 | JSON for Modern C++ (nlohmann/json) | 350ff4f7ced7c4117eae2fb93df02823c8021fcb (rapidsnark v0.0.8's submodule; header-only) | `MIT` | `lib/librapidsnark.a` | https://github.com/nlohmann/json/tree/350ff4f7ced7c4117eae2fb93df02823c8021fcb |
 | GNU MP (GMP) | 6.3.0 | `LGPL-3.0-or-later OR GPL-2.0-or-later` | `lib/libgmp.a` | `gmp-6.3.0.tar.xz` (below) |
 
@@ -46,15 +48,18 @@ crate `rust-rapidsnark` (feature `static-rapidsnark`, enabled by `logos-blockcha
 
 Built by Logos: logos-blockchain-circuits v0.5.7 (`ebf7ddf5b5b625ef4ea7c803171c670beebd05ef`),
 `.github/workflows/ci.yml` (circom 2.2.2 C++ witness generators; GMP 6.2.1 through its rapidsnark submodule's
-`build_gmp.sh`). Linked by the crates `logos-blockchain-circuits-pol-sys`, `-poc-sys`, `-poq-sys` and
-`-signature-sys` (through `logos-blockchain-circuits-build`, feature `prebuilt`); each also embeds its circuit's
-proving key, verification key and `witness_generator.dat` in the binary.
+`build_gmp.sh`; nlohmann/json from the runner's package, `nlohmann-json3-dev` of Ubuntu 22.04: the job runs on
+`ubuntu-22.04`, and each library has the header's `/usr/include/nlohmann/json.hpp` path in it). Linked by the crates
+`logos-blockchain-circuits-pol-sys`, `-poc-sys`, `-poq-sys` and `-signature-sys` (through
+`logos-blockchain-circuits-build`, feature `prebuilt`); each also embeds its circuit's proving key, verification key
+and `witness_generator.dat` in the binary.
 
 | Component | Version | Licence | In the archive | Source |
 |---|---|---|---|---|
 | Logos Blockchain circuits (witness generators pol, poc, poq, signature; their proving and verification keys) | v0.5.7 (ebf7ddf5b5b625ef4ea7c803171c670beebd05ef) | `MIT OR Apache-2.0` | `{pol,poc,poq,signature}/lib*.a` and the key files | https://github.com/logos-blockchain/logos-blockchain-circuits/tree/v0.5.7 |
 | circom C++ runtime (calcwit, circom.hpp, fr), compiled into each witness generator by circom | circom 2.2.2 | `GPL-3.0-only` | `{pol,poc,poq,signature}/lib*.a` | https://github.com/iden3/circom/tree/v2.2.2/code_producers/src/c_elements |
 | circomlib templates (bitify, comparators), compiled into the witness generators | iden3/circomlib 35e54ea21da3e8762557234298dbb553c175ea8d (the circuits' submodule) | `LGPL-3.0-only` | `{pol,poc,poq,signature}/lib*.a` | https://github.com/iden3/circomlib/tree/35e54ea21da3e8762557234298dbb553c175ea8d |
+| JSON for Modern C++ (nlohmann/json), compiled into each witness generator (circom's main.cpp) | 3.10.5 (Ubuntu 22.04's `nlohmann-json3-dev` 3.10.5-2; header-only) | `MIT` | `{pol,poc,poq,signature}/lib*.a` | https://github.com/nlohmann/json/tree/v3.10.5 |
 | GNU MP (GMP) | 6.2.1 | `LGPL-3.0-or-later OR GPL-2.0-or-later` | `lib/libgmp.a` | `gmp-6.2.1.tar.xz` (below) |
 
 ## Copyright notices and licence texts
@@ -64,7 +69,8 @@ proving key, verification key and `witness_generator.dat` in the binary.
 | GNU MP (GMP) | Copyright Free Software Foundation, Inc. The GNU MP Library is free software; you can redistribute it and/or modify it under the terms of either the GNU Lesser General Public License as published by the Free Software Foundation, version 3 or later, or the GNU General Public License as published by the Free Software Foundation, version 2 or later. | `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt`, `licenses/GPL-2.0.txt` (as shipped in gmp-6.3.0.tar.xz) |
 | rapidsnark, ffiasm, circomlib | Part of the iden3 project, copyright 0KIMS association, published under the GNU LGPL version 3 (their `COPYING` / `LICENSE` files). | `licenses/LGPL-3.0.txt`, `licenses/GPL-3.0.txt` (the LGPL version 3 adds to the GPL version 3) |
 | circom C++ runtime | Part of the iden3 project (circom), copyright 0KIMS association, published under the GNU GPL version 3 (`COPYING`). | `licenses/GPL-3.0.txt` |
-| JSON for Modern C++ | Copyright (c) 2013-2020 Niels Lohmann | `licenses/MIT-nlohmann-json.txt` |
+| JSON for Modern C++, in rapidsnark (`350ff4f7`) | Copyright (c) 2013-2020 Niels Lohmann | `licenses/MIT-nlohmann-json.txt` |
+| JSON for Modern C++ 3.10.5, in the circuits | Copyright (c) 2013-2022 Niels Lohmann | `licenses/MIT-nlohmann-json-3.10.5.txt` |
 | Logos Blockchain circuits | Copyright © 2025-2026 Logos | `licenses/MIT-logos-blockchain-circuits.txt` (MIT, chosen of MIT OR Apache-2.0) |
 
 ## Changing and relinking the LGPL libraries (LGPL version 3, section 4)

@@ -23,7 +23,7 @@
    "build_packages": ["rust-rapidsnark"],
    "static_libs": ["rapidsnark", "fr", "fq", "gmp"],
    "used_by": "rust-rapidsnark (logos-blockchain-rust-rapidsnark e91187f8, crates/build.rs), linked statically: logos-blockchain-circuits-prover and -verifier (logos-blockchain d480efc6) enable its static-rapidsnark feature",
-   "built_by": "logos-blockchain-rust-rapidsnark e91187f8ccb5bbfc7bb00dac88169112428da78f, .github/workflows/build-pic-archives.yml (GMP 6.3.0 configured --enable-static --disable-shared --with-pic; rapidsnark v0.0.8 with its ffiasm and json submodules, cmake -DUSE_ASM=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON)",
+   "built_by": "logos-blockchain-rust-rapidsnark 8f51c339fd4d4a3e30c361a20cc118ce20f9f39f (the tag rapidsnark-pic-v0.0.8; its release assets were made on 7 June 2026), .github/workflows/build-pic-archives.yml at that commit (GMP 6.3.0 configured --enable-static --disable-shared --with-pic; rapidsnark v0.0.8 with its ffiasm and json submodules, cmake -DUSE_ASM=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DUSE_OPENMP=OFF -DUSE_LOGGER=ON, make rapidsnarkStatic fr fq); e91187f8, the crate's commit, is five commits later",
    "files": {
     "rapidsnark-linux-x86_64-pic-v0.0.8/lib/librapidsnark.a": "d4133227f845ff5bfa3672eb5b9c018a6a086bfa164b176bdaf76949c7d1f423",
     "rapidsnark-linux-x86_64-pic-v0.0.8/lib/libfr.a": "40f809394904682cb5517845cd3c2f936a5eb4609712534b573f552f2811fb82",
@@ -34,7 +34,7 @@
     {"name": "rapidsnark", "version": "v0.0.8 (iden3/rapidsnark 2921b0eb33369f4d329a6902e97959246b802e6c)", "licence": "LGPL-3.0-only",
      "in": "lib/librapidsnark.a", "source": "https://github.com/iden3/rapidsnark/tree/v0.0.8", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
     {"name": "ffiasm field arithmetic (Fr, Fq)", "version": "iden3/ffiasm aa90166dc4c5a075b835a398e15cc1e06ac90e95 (rapidsnark v0.0.8's submodule)", "licence": "LGPL-3.0-only",
-     "in": "lib/libfr.a, lib/libfq.a", "source": "https://github.com/iden3/ffiasm/tree/aa90166dc4c5a075b835a398e15cc1e06ac90e95", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
+     "in": "lib/libfr.a, lib/libfq.a; and lib/librapidsnark.a (misc, naf, splitparstr, alt_bn128)", "source": "https://github.com/iden3/ffiasm/tree/aa90166dc4c5a075b835a398e15cc1e06ac90e95", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
     {"name": "JSON for Modern C++ (nlohmann/json)", "version": "350ff4f7ced7c4117eae2fb93df02823c8021fcb (rapidsnark v0.0.8's submodule; header-only)", "licence": "MIT",
      "in": "lib/librapidsnark.a", "source": "https://github.com/nlohmann/json/tree/350ff4f7ced7c4117eae2fb93df02823c8021fcb",
      "notice": "Copyright (c) 2013-2020 Niels Lohmann", "texts": ["MIT-nlohmann-json.txt"]},
@@ -83,18 +83,21 @@
      "in": "{pol,poc,poq,signature}/lib*.a", "source": "https://github.com/iden3/circom/tree/v2.2.2/code_producers/src/c_elements", "texts": ["GPL-3.0.txt"]},
     {"name": "circomlib templates (bitify, comparators), compiled into the witness generators", "version": "iden3/circomlib 35e54ea21da3e8762557234298dbb553c175ea8d (the circuits' submodule)", "licence": "LGPL-3.0-only",
      "in": "{pol,poc,poq,signature}/lib*.a", "source": "https://github.com/iden3/circomlib/tree/35e54ea21da3e8762557234298dbb553c175ea8d", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
+    {"name": "JSON for Modern C++ (nlohmann/json), compiled into each witness generator (circom's main.cpp)", "version": "3.10.5 (Ubuntu 22.04's nlohmann-json3-dev 3.10.5-2, the package the circuits' Linux build installs; header-only)", "licence": "MIT",
+     "in": "{pol,poc,poq,signature}/lib*.a", "source": "https://github.com/nlohmann/json/tree/v3.10.5",
+     "notice": "Copyright (c) 2013-2022 Niels Lohmann", "texts": ["MIT-nlohmann-json-3.10.5.txt"]},
     {"name": "GNU MP (GMP)", "version": "6.2.1", "licence": "LGPL-3.0-or-later OR GPL-2.0-or-later",
      "in": "lib/libgmp.a", "source": "gmp-6.2.1", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt", "GPL-2.0.txt"]}
    ]
   }
  ],
  "compiled_from_crate_sources": {
-  "_doc": "The packages whose build scripts compile C or C++ from their own crate sources (checked by Cargo.lock) and link it statically, per build (check-build --record): a package added here is native code someone has looked at. Measured from the release CLI build of 22 November 2026 (fix-supply box run 4).",
+  "_doc": "The packages whose build scripts compile C or C++ from their own crate sources (checked by Cargo.lock) and link it statically, per build (check-build --record): a package added here is native code someone has looked at. Measured from the release CLI build of 22 November 2026 (fix-supply box run 4); the licences as each crate declares them (review-fix-supply L-3).",
   "cli": {
-   "aws-lc-sys": "AWS-LC (aws_lc_0_47_0_crypto); ISC AND (Apache-2.0 OR ISC) AND OpenSSL, through rustls",
-   "librocksdb-sys": "RocksDB (rocksdb); Apache-2.0 AND BSD-3-Clause, the node's storage",
-   "nvtx": "NVIDIA Tools Extension shim (nvtx), through RISC Zero",
-   "ring": "ring's C and assembly (ring_core_0_17_14_, ring_core_0_17_14__test)"
+   "aws-lc-sys": "AWS-LC (aws_lc_0_47_0_crypto), through rustls; declared ISC AND (Apache-2.0 OR ISC) AND Apache-2.0 AND MIT AND BSD-3-Clause AND (Apache-2.0 OR ISC OR MIT) AND (Apache-2.0 OR ISC OR MIT-0) (its OpenSSL-derived files carry Apache-2.0 headers)",
+   "librocksdb-sys": "RocksDB and Snappy (rocksdb), the node's storage; declared MIT/Apache-2.0/BSD-3-Clause; compiled by the build, not linked into ferrata (0 RocksDB symbols: review-fix-supply box B)",
+   "nvtx": "the crate's export.c with NVIDIA's NVTX v3 headers (nvtx; Apache-2.0 WITH LLVM-exception, Copyright NVIDIA Corporation), through RISC Zero; declared MIT OR Apache-2.0",
+   "ring": "ring's C and assembly (ring_core_0_17_14_, ring_core_0_17_14__test); declared Apache-2.0 AND ISC"
   }
  },
  "sources": [

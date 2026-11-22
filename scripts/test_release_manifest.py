@@ -106,7 +106,7 @@ class Release(unittest.TestCase):
         self.assertIn("2 native archives covered by THIRD-PARTY-NOTICES.md", r.stdout)
         c = self.check()
         self.assertEqual(c.returncode, 0, c.stdout)
-        self.assertIn("covers the 2 native archives and their 8 components", c.stdout)
+        self.assertIn("covers the 2 native archives and their 9 components", c.stdout)
         m = json.loads(rd(os.path.join(self.d, "MANIFEST.json")))
         self.assertEqual([a["sha256"] for a in m["native"]], [a["sha256"] for a in PINS["archives"]])
         self.assertEqual(m["third_party"]["sources"]["sha256"], sha(rd(self.tar, "rb")))
