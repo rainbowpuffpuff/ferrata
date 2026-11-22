@@ -1,6 +1,6 @@
 # Stream rfp-C: measurements for the performance and cost rows (proposals for the integrator)
 
-Branch `rfp-measure` (from `f13faee2`). Every figure comes from a command run on this branch, on 21 November 2026;
+Branch `rfp-measure` (from `f13faee2`). Every figure comes from a command run on this branch, on 21 November 2026 (the second review's fixes on 22 November);
 *derived* marks a figure computed from measured inputs. Where the build box ran a command, its copy of the tree holds
 no `.git`; the commit is the branch's at that time. The integrator applies the statuses and EVIDENCE texts; this
 stream edited neither `docs/EVIDENCE.md` nor `docs/requirements-status.md` nor `docs/traceability.md`.
@@ -10,7 +10,15 @@ to the CPUs and memory named (request = limit). Nothing was sent to Sepolia, mai
 
 ## RFP-021
 
-### P.2 — proposed **shown** (was in part; the review's H2 fixed by proving both missing actions)
+### P.2 — proposed **in part** until the second review's M-a is cleared, then **shown** (the first review's H2 fixed by proving both missing actions)
+
+**What is short (review C2 M-a):** the accumulator-leaf statement type (`Fact::AccumulatorLeaf`) has no proof of this
+tree's program; its only real proof is of the 11 November image `8fe18f74…` (`lez/results/prove-vault.log`: 391,291
+user cycles, 67.2 s, succinct receipt 240,913 B). The public `VerifyAll`, `ApplyVerified` (public part, cycles only)
+and `Read` are not proven either. To clear it: add the vault request (slots 0 and 1 and one deposit leaf,
+`vault::synthetic_attestations()`) to `perf_prove --dump` and prove it on one 16-CPU container, or reword the
+headline to every action that advances the tracked state and every statement type but the accumulator leaf. The
+EVIDENCE row below is for P.2 shown.
 
 | clause (RFP wording) | shown by |
 |---|---|
@@ -42,7 +50,7 @@ containers held to 16 CPUs and 32 GiB (Modal), r0vm 3.0.5 | real | `bash bench/p
 machine) or `bench/perf/prove_modal.py`; `python3 -I bench/perf/summarize_proofs.py bench/perf/results/p2-a` |
 `lez/results/perf-proofs.md` |
 
-### P.3 — proposed **shown** (was in part; the review's M3 fixed: the once-per-period cadence restored)
+### P.3 — proposed **shown** (the second review agrees; its L10–L12 fixed: the predicates named, the period's handoff counted on the proven path, the EVIDENCE row at the recommended cadence)
 
 | clause | shown by |
 |---|---|
@@ -87,7 +95,7 @@ CPUs (2 runs) and 633.5 s at 16; claim 1,093.0 / 639.2 s; burn 932.8 / 534.5 s; 
 CPUs and 16 GiB hard (gVisor; mostly AMD Zen 3) | real | `lez/results/p4-minimum/minimum.py` jobs `attest-pad`,
 `bridge-pad`; `python3 -I bench/perf/summarize_p4.py bench/perf/results/p4-laptop` | `lez/results/perf-p4-laptop.md` |
 
-### P.5 — proposed **shown** (was in part; the review agrees)
+### P.5 — proposed **shown** (both reviews agree; L29's caveat on the deferral's gas added)
 
 | clause | shown by |
 |---|---|
@@ -118,7 +126,7 @@ Commands: on the build box, after `bash bench/perf/gate-build.sh BUNDLE`: `GATE_
 (commits `7e854f33`, `8e0fd144`, `225e3b65`, `e1d7630e`); summarizer fixed in `1b12fbc2` (each daemon's beacon traffic
 read from its own port). EVIDENCE: in the R.9 row below.
 
-### P.7 — proposed **shown** (was in part; the review's M7 fixed)
+### P.7 — proposed **shown** (the second review's L1 and L2 fixed: abandoned jobs bounded per extra racing operator, (k − 1) × 10.09 MB a year and (k − 1) × 50.43 MB in five years, derived)
 
 | clause | shown by |
 |---|---|
@@ -136,7 +144,7 @@ at every size | record 453 B, instance 593 B, job 1,110 B; nullifier 165 B, burn
 storage gas at 0, 1,000, 10,000 and 100,000 records (asserted) | the build box, in-process harness (LEZ's state
 machine) | — | `bash bench/perf/state.sh` | `lez/results/perf-state.md`, `lez/results/perf-projections.md` |
 
-### P.8 — proposed **shown** (was in part; the review agrees; its L12 wording fixed)
+### P.8 — proposed **shown** (both reviews agree)
 
 | clause | shown by |
 |---|---|
@@ -230,7 +238,7 @@ as R.9.
 
 ## RFP-022
 
-### P.2 — proposed **shown** (was in part; the review's M2 fixed)
+### P.2 — proposed **shown** (the second review agrees; its L3 fixed: the period's handoffs counted)
 
 | clause | shown by |
 |---|---|
@@ -254,7 +262,7 @@ The private claim and burn of this tree's bridge program, padded, at a laptop's 
 (`lez/results/perf-p4-laptop.md`). Short: the real laptop (the owner's step, as RFP-021 P.4). EVIDENCE: RFP-021 P.4's
 row above.
 
-### P.5 — proposed **shown** (was in part; the review's M8 fixed)
+### P.5 — proposed **shown** (the second review agrees; its L4 fixed: the claim hold counted from the deposit's block)
 
 | clause | shown by |
 |---|---|
@@ -290,7 +298,7 @@ CPU-s in 1,284 s (0.0004 of a core), 14.0 MiB peak, 86,265 / 254,218 B; relayer 
 bench/perf/daemons-anvil.sh OUT 10`; `python3 -I bench/perf/summarize_daemons.py bench/perf/results/daemons-anvil` |
 `lez/results/perf-daemons.md` |
 
-### P.7 — proposed **shown** (was in part; the review's L14 fixed)
+### P.7 — proposed **shown** (the second review agrees; its L5 fixed: the first claim's 486 B is three new holders; 162–324 B per claim)
 
 | clause | shown by |
 |---|---|
