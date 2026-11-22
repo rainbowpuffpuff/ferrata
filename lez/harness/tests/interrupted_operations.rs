@@ -18,11 +18,11 @@
 //!   nothing: an old proof cannot double-spend or corrupt.
 //! * *Burn proven, then dropped*: the private holding is unchanged and no burn record exists;
 //!   burning again later (the same counter, the same note, since nothing was published) is
-//!   accepted once, the note written once at `burn(cid, H(note))`; a third attempt of the same
+//!   accepted once, the note written once at `burn(cid, r)`; a third attempt of the same
 //!   note is refused; the dropped proof, sent late, is refused and changes nothing.
 //! * *A burn sent, its client killed before it wrote the note down locally*: a fresh client from
 //!   the seed alone finds the burn note on chain — in the zone's blocks, as the checkpoint
-//!   program reads them, and at `burn(cid, H(note))` — and computes everything a release needs
+//!   program reads them, and at `burn(cid, r)` — and computes everything a release needs
 //!   (the burn counter, the recipient, `sOut`, the burn leaf at its collected index, `NOut`; the
 //!   bridge core's `outbound::recover_burns`). The entitlement is intact.
 //!
@@ -448,7 +448,7 @@ fn a_burn_interrupted_and_a_burn_whose_note_was_never_recorded() {
     let keys = BridgeKeys::from_bridge_seed(&BURNER_BRIDGE_SEED);
     let (note, s_out) = wallet_note(&keys, &cid, &va, 0, ETH, DENOMINATIONS[1]);
     let message = BridgeMessage::burn(cid, &note);
-    let record = burn_actor(program, &cid, &note.hash());
+    let record = burn_actor(program, &cid, &note.r);
 
     // --- Stage 1: the wallet proves the burn and is killed ----------------------------------
     // The executor's own view of the burn (the proof's content: the debit, the delivery), then
@@ -490,7 +490,7 @@ fn a_burn_interrupted_and_a_burn_whose_note_was_never_recorded() {
     assert_eq!(
         borsh::from_slice::<BridgeState>(&w.chain.actor_state(record)).unwrap(),
         BridgeState::Burn(BurnRecord { config_id: cid, note }),
-        "accepted once: the note, written once at burn(cid, H(note))"
+        "accepted once: the note, written once at burn(cid, r)"
     );
     let emptied = HolderState::default();
     let burned = private_post_state(&w.chain, &private_keys(seed), &claimed, RESERVE, &emptied)
@@ -573,7 +573,7 @@ fn a_burn_interrupted_and_a_burn_whose_note_was_never_recorded() {
     assert_eq!(
         borsh::from_slice::<BridgeState>(&w.chain.actor_state(record)).unwrap(),
         BridgeState::Burn(BurnRecord { config_id: cid, note }),
-        "and `burn(cid, H(note))` holds the same note, the on-chain record of it"
+        "and `burn(cid, r)` holds the same note, the on-chain record of it"
     );
     // The recovery itself (RFP-022 Reliability #5's, the burn half): `kView` verifies the MAC and
     // decrypts the recipient, `kAuth` re-derives `sOut`, and `COut` authenticates the recipient.
@@ -607,15 +607,15 @@ fn a_burn_interrupted_and_a_burn_whose_note_was_never_recorded() {
 
     let table = "| stage | interrupted at | outcome |\n|---|---|---|\n".to_string()
         + "| burn proven, dropped | between the proof and the sending | the holding unchanged (the committed account \
-           still the claimed one), no `burn(cid, H(note))` record: nothing consumed, nothing exposed |\n"
-        + "| client restarts, burns again | — | accepted once: the note written once at `burn(cid, H(note))`, the \
+           still the claimed one), no `burn(cid, r)` record: nothing consumed, nothing exposed |\n"
+        + "| client restarts, burns again | — | accepted once: the note written once at `burn(cid, r)`, the \
            holding gone exactly once |\n"
         + "| the note a third time | — | refused before the zone is touched: the private debit fails, the public \
            `holder(account)` refuses 254 (INSUFFICIENT_BALANCE) |\n"
         + "| the dropped proof, sent late | after the retry landed | refused at LEZ's commitment/nullifier \
            re-use check before anything runs; the zone exactly as after the accepted burn |\n"
         + "| burn sent, note never recorded | between the sending and the wallet's own record | a fresh client \
-           from the seed alone finds the note in the zone's blocks and at `burn(cid, H(note))`, and recovers the \
+           from the seed alone finds the note in the zone's blocks and at `burn(cid, r)`, and recovers the \
            counter (0), the recipient, `sOut`, the burn leaf and `NOut` (bridge core `outbound::recover_burns`): \
            everything a release needs except the burn root and path, which a published checkpoint gives; the \
            entitlement is intact |\n";

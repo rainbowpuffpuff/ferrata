@@ -27,7 +27,7 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | claim, private | B1, B6 | `ClaimPrivately` at the destination's own private account: reads `root(cid, n)`, verifies inside its own execution, sends only `Issue` (the fee schedule's range, not the leaf index) |
 | nullifier | §1, B1 | write-once `nullifier(cid, chain, vault, N)` since milestone B1, one namespace per configuration (the program the live runs of November 2026 deployed: `nullifier(chain, vault, N)`, one for the whole program) |
 | wrapped balances | (M0 fallback, §3 below) | public: `holder(cid, account)` (since B1; `holder(account)` before), a PDA of the program whose seed names the configuration and the account; private: the claimant's own private state; per configuration and token |
-| burn | §5.1, D13 outbound, D10 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's own actor, top-level or private root only, which debits its own state or forwards to `holder(cid, account)`; admitted by `token(cid, token)`; a write-once `burn(cid, H(note))` |
+| burn | §5.1, D13 outbound, D10, ADR 0032 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's own actor, top-level or private root only, which debits its own state or forwards to `holder(cid, account)`; admitted by `token(cid, token)`; a write-once `burn(cid, r)`, one note per tag |
 
 Left out: the gas drop (B2), a transfer that credits a private recipient privately, the admin's own
 handover (the admin is fixed per configuration), off-chain software (importer, wallet, prover daemons)
@@ -62,7 +62,7 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 | `nullifier(cid, chain, vault, N)` | PDA `nullifier ‖ cid ‖ chain:u256 ‖ vault ‖ N` (since B1; without `cid` before) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
 | `holder(cid, account)` | PDA `holder ‖ cid ‖ account` (since B1; `holder ‖ account` before, one list for every configuration) | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances, of `cid`'s tokens only | `Mint` from `nullifier(cid, …)` (naming `account`); `Credit` from `token(cid, token)`; `Burn` and `Transfer` forwarded by the account's own actor |
 | the account's own actor | the account itself, program `B` | `Holder` of its own private claims (a private account's private state; a public account has one only if it ran its own `ClaimPrivately` publicly) | its own `ClaimPrivately`; its `Burn`; role messages (forwarded, nothing stored) |
-| `burn(cid, H(note))` | PDA `burn ‖ cid ‖ H(r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` | `Burn { cid, note }` | `Burn` from `token(cid, token)` only |
+| `burn(cid, r)` | PDA `burn ‖ cid ‖ r` (the note's tag; until 22 November 2026 `H(r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)`, ADR 0032) | `Burn { cid, note }` | `Burn` from `token(cid, token)` only; once per tag |
 
 `cid` is SPEC-v2 §1's `configId`, computed on chain with the bridge core
 (`config_id_preimage`), with `bridgeHeader` taken from the program's own account. The token actor
@@ -76,7 +76,7 @@ bytes on chain.
 
 | # | message | to | from | does |
 |---|---|---|---|---|
-| 0 | `Burn { cid, r, memo, mac, token, amount, COut }` | the holder's own actor; then (if its own state lacks the amount) `holder(cid, account)`; then `token(cid, token)`; then `burn(cid, H(note))` | top-level (public) or the private root; then `B` | debits one denomination of an authorised holder; the token admits it (denomination, burn freezes and buckets, `Admit`); the note is recorded once |
+| 0 | `Burn { cid, r, memo, mac, token, amount, COut }` | the holder's own actor; then (if its own state lacks the amount) `holder(cid, account)`; then `token(cid, token)`; then `burn(cid, r)` | top-level (public) or the private root; then `B` | debits one denomination of an authorised holder; the token admits it (denomination, burn freezes and buckets, `Admit`); the note is recorded once |
 | 1 | `ImportRoot { cid, record_slot, root, leaf_count, proof }` | `config(cid)` | anyone, top-level or private root only (D10) | `Attest` (vault account, slots 0 and 1) at `header(instance, record_slot)`; on the reply, `WriteRoot`. Refused after `Sunset` |
 | 2 | `Sunset { cid }` | the freeze authority's own actor, then `config(cid)`; or `config(cid)` itself | top-level, signed by a single-key authority; or anyone, once `AttestRetired` or a multisig's approval opened it | one-way: no `ImportRoot` after it |
 | 3 | `Echo { nonce }` | any | anyone | no-op (rule (A)'s echo nonce) |
@@ -144,7 +144,7 @@ boundary after `Sunset`, below a root that claims were made against (security re
 holder's `Burn` is forwarded by its own actor to `holder(cid, account)` as a nested call; the root call
 is the one the checkpoint collects, and the forward is accepted only from that own actor.
 The note itself is admitted by `token(cid, token)` from an actor of `B` only and recorded by
-`burn(cid, H(note))` from that token actor only; in the private case the delivery to the token
+`burn(cid, r)` from that token actor only, once per tag (a second note with a used tag is refused, 244); in the private case the delivery to the token
 actor is the boundary message the checkpoint reads. The bridge never records a burn in private
 state. `Sunset` follows the same rule: the freeze authority's own actor forwards it only from a
 top-level call (or private root), so the checkpoint sees every `Sunset` that executes.

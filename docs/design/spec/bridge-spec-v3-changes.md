@@ -264,6 +264,7 @@ finalisation paths and an immutable `mode` chosen at deployment.
   collected again at another index after a revocation cannot be released twice.
 - The write-once burn account is keyed on the hash of the whole note
   `(r, memo, mac, token, amount, COut)`, so copying a pending burn's tag cannot make it revert.
+  *Amended by D14.*
 - Release uses the newest root whose release delay has passed.
 
 **Fees.** A deposit escrows the denomination plus the registered mint and relay fees; the
@@ -272,3 +273,14 @@ A burn of one denomination releases it less the registered burn, relay and check
 the checkpoint fee goes to whoever finalised the root used. LEZ balances stay whole
 denominations. Default cap per token and day: the smaller of 10% of escrow and a
 deployer-set ceiling.
+
+## D14. Changes of 22 November 2026 (the security reviews H-1 and H1; ADR 0032)
+
+**Outbound.**
+- The write-once burn account is keyed on the tag: `burn(cid, r)`. A second note with a used tag is refused
+  (`ALREADY_WRITTEN`) and its whole transaction reverts. Under D13's keying, two notes with one tag (a wallet that
+  reused its counter) were both applied and shared one `sOut`, hence one `NOut`: one of the two could never be
+  released. The cost: whoever sees a pending burn before it is applied can make it revert by burning a denomination of
+  its own under the same tag first (the owner loses nothing and burns again with its next counter).
+- A wallet reserves its counter before it proves a burn and never gives one counter to two burns; the same burn sent
+  again (the same note) is the only reuse, and the program applies at most one of the two.

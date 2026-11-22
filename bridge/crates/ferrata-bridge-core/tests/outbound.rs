@@ -1,17 +1,15 @@
-//! Burn -> release (SPEC-v2 §5): the release statement and its journal, burn notes and their MAC, the
-//! burn-tag registry, and burn recovery. Tests named `attack_*` are negative tests for specific
+//! Burn -> release (SPEC-v2 §5): the release statement and its journal, burn notes and their MAC, why a
+//! tag must be used once, and burn recovery. Tests named `attack_*` are negative tests for specific
 //! attacks.
 
 mod common;
-
-use std::collections::HashSet;
 
 use common::{addr, chain, h, keys, release_case};
 use ferrata_bridge_core::encoding::{u256_from_u128, ReleaseJournal};
 use ferrata_bridge_core::outbound::{
     burn_commitment, burn_id, burn_leaf, burn_mac, burn_nullifier, burn_secret, burn_tag, memo_pad, recover_burns,
-    register_burn_tag, release_journal, verify_release, view_burns, xor_memo, BurnNote, PublishedBurn, ReleasePublic,
-    ReleaseTarget, ReleaseWitness, RepeatedTag,
+    release_journal, verify_release, view_burns, xor_memo, BurnNote, PublishedBurn, ReleasePublic, ReleaseTarget,
+    ReleaseWitness,
 };
 use ferrata_bridge_core::tree::{Tree, MAX_LEAVES};
 use ferrata_bridge_core::{derive_keys, BridgeKey, BridgeKeys, Hash, VerifyError};
@@ -234,22 +232,25 @@ proptest! {
     }
 }
 
-/// The bridge program refuses a repeated `r`, with this helper.
+/// Two notes made with one counter share the tag, `sOut` and `NOut` (D13: `NOut` is a function of `sOut`, and `sOut`
+/// of the tag), whatever their recipient, token or amount: the vault could release only one of them. So a tag must be
+/// used once. The core does not enforce it (it has no state); the bridge program does, by recording a burn at
+/// `burn(cid, r)` and refusing a second note with a used tag (`lez/harness/tests/bridge_burn_tag.rs`, ADR 0032), and
+/// the `ferrata` tool never reuses a counter (`cli/src/burns.rs`). This replaces a test of a helper the program never
+/// called (`register_burn_tag`, removed; the reviews of 22 November 2026, H-1).
 #[test]
-fn attack_repeated_burn_tag_is_refused_by_the_registry() {
+fn a_reused_counter_shares_the_release_nullifier() {
     let k = keys("seed");
-    let target = ReleaseTarget { chain_id: chain(1), vault: addr("vault"), recipient: addr("recipient") };
     let config = h("config");
-    let first = BurnNote::create(&k, &config, 0, &target, addr("USDC"), u256_from_u128(100));
-    let reused_i = BurnNote::create(&k, &config, 0, &target, addr("DAI"), u256_from_u128(100));
-    let next = BurnNote::create(&k, &config, 1, &target, addr("USDC"), u256_from_u128(100));
-    let mut copied = next;
-    copied.token = addr("rare token");
-    let mut tags: HashSet<Hash> = HashSet::new();
-    assert_eq!(register_burn_tag(&mut tags, &first), Ok(()));
-    assert_eq!(register_burn_tag(&mut tags, &reused_i), Err(RepeatedTag)); // a wallet reusing i
-    assert_eq!(register_burn_tag(&mut tags, &next), Ok(()));
-    assert_eq!(register_burn_tag(&mut tags, &copied), Err(RepeatedTag)); // a copier reusing r
+    let to = |r: &str| ReleaseTarget { chain_id: chain(1), vault: addr("vault"), recipient: addr(r) };
+    let first = BurnNote::create(&k, &config, 0, &to("recipient 1"), addr("USDC"), u256_from_u128(100));
+    let reused = BurnNote::create(&k, &config, 0, &to("recipient 2"), addr("DAI"), u256_from_u128(7));
+    let next = BurnNote::create(&k, &config, 1, &to("recipient 1"), addr("USDC"), u256_from_u128(100));
+    assert_eq!(first.r, reused.r, "one counter, one tag");
+    assert_ne!(first, reused, "two notes");
+    let nout = |n: &BurnNote| burn_nullifier(&burn_secret(&k.auth, &config, &n.r));
+    assert_eq!(nout(&first), nout(&reused), "one tag, one NOut: the vault would release only one of the two");
+    assert_ne!(nout(&first), nout(&next), "the next counter: another tag, another NOut");
 }
 
 #[test]

@@ -1,7 +1,7 @@
 //! RFP-022 Performance #7: "Document the growth rate and on-chain storage cost of all bridge state that
 //! accumulates with usage, projected at 1M and 10M operations." `docs/performance.md` (RFP-022 §P.7) projects
 //! LEZ's growth from three per-operation accounts: `root(cid, n)` per import, `nullifier(chain, vault, N)` per
-//! claim and `burn(cid, H(note))` per burn, the first measured and the other two estimated from their types. This
+//! claim and `burn(cid, r)` per burn, the first measured and the other two estimated from their types. This
 //! test measures all three as the bridge program writes them through LEZ v0.4.0-rc1's state machine (the harness,
 //! dev mode), pins them, and checks the projection's premise: a second claim and a second burn each add an account
 //! of the same size, and a claim or a burn adds nothing to the configuration's or the token's account (the
@@ -70,7 +70,7 @@ fn each_import_claim_and_burn_adds_one_account_of_a_fixed_size() {
         let actors = w.public_burn_actors(payer, &cid, &note);
         let r = w.send(&format!("Burn {i}: 1 ETH by the payer"), holder, &BridgeMessage::burn(cid, &note), actors);
         assert!(r.ok(), "burn {i}: {:?} (exit {:?})", r.charge.revert, r.exit_code);
-        burns.push(size(&w, burn_actor(program, &cid, &note.hash())));
+        burns.push(size(&w, burn_actor(program, &cid, &note.r)));
     }
     assert_eq!((size(&w, config), size(&w, token)), (config0, token0), "burns grow neither config nor token");
 
@@ -78,7 +78,7 @@ fn each_import_claim_and_burn_adds_one_account_of_a_fixed_size() {
     println!("|---|---|---:|---:|");
     println!("| root(cid, n) | import | {root} | {DOC_ROOT} (measured) |");
     println!("| nullifier(chain, vault, N) | claim | {} | {DOC_NULLIFIER} (estimated) |", nullifiers[0]);
-    println!("| burn(cid, H(note)) | burn | {} | {DOC_BURN} (estimated) |", burns[0]);
+    println!("| burn(cid, r) | burn | {} | {DOC_BURN} (estimated) |", burns[0]);
     assert_eq!(nullifiers[0], nullifiers[1], "every claim's nullifier account has one size");
     assert_eq!(burns[0], burns[1], "every burn record has one size");
     assert_eq!(nullifiers[0], DOC_NULLIFIER, "a nullifier account: {} bytes", nullifiers[0]);

@@ -535,7 +535,6 @@ pub async fn plan_burn_at<L: Ledger>(
     let target = ReleaseTarget { chain_id: chain, vault: ctx.vault, recipient };
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
-    let note_hash = wire.hash();
     let mut mentions = match holder {
         // Signed at the holder's own actor, which forwards the note to its `holder(cid, account)`.
         BurnFrom::Public(account) => vec![
@@ -549,7 +548,7 @@ pub async fn plan_burn_at<L: Ledger>(
     mentions.extend([
         Mention::Pda { actor: token_actor(ctx.program, &ctx.cid, &token), seed: token_seed(&ctx.cid, &token) },
         Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) },
-        Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note_hash), seed: burn_seed(&ctx.cid, &note_hash) },
+        Mention::Pda { actor: burn_actor(ctx.program, &ctx.cid, &note.r), seed: burn_seed(&ctx.cid, &note.r) },
     ]);
     let call = LezCall {
         what: format!("burn with tag counter {next_i}"),

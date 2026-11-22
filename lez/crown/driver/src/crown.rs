@@ -1323,7 +1323,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // Burn public: one denomination of public test account 0, note 0.
             let amount = ETH_DENOMINATIONS[0];
             let (note, s_out) = burn_note(&cid, &vault, 0, &b.recipient, amount);
-            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
+            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let mentions = vec![
                 AccountIdentity::Public(holder0).select_program_actor_state(bridge),
                 mention(holder_pda(bridge, &cid, holder0)),
@@ -1339,7 +1339,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             // Burn private: one denomination of private test account 0, note 1.
             session.refresh(live, bridge).await?;
             let (note, s_out) = burn_note(&cid, &vault, 1, &b.recipient, amount);
-            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
+            let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.r) };
             let publics = vec![mention(token_pda), mention(config_pda), mention(burn_pda)];
             let o = session.send(live, "bridge Burn (private): 0.001 ETH of private test account 0, note 1", publics, &BridgeMessage::burn(cid, &note), "burn").await?;
             steps.push(row_json(&o));

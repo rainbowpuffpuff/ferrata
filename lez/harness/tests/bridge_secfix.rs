@@ -287,14 +287,14 @@ fn c1_e_a_claim_cannot_block_a_burn() {
         amount: word_of_u128(DENOMINATIONS[0]),
         c_out: [0x4b; 32],
     };
-    let target = burn_actor(program, &honest.cid, &note.hash());
+    let target = burn_actor(program, &honest.cid, &note.r);
     let r = attack_claim(
         &mut w,
         "attacker's claim: relayer = the pending burn's record",
         &att,
         0,
         Some(*target.account_id.value()),
-        &[burn_seed(&honest.cid, &note.hash())],
+        &[burn_seed(&honest.cid, &note.r)],
     );
     expect(&r, None);
     assert!(is_empty(&w, target), "the claim wrote nothing at the burn record");

@@ -588,7 +588,7 @@ B_ACCOUNTS = [
             tv("Holder", d("HolderState")),
             tv("Burn", d("BurnRecord")),
             tv("Token", d("TokenState")),
-            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, H(note)), token(cid, token).",
+            docs="The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, r), token(cid, token).",
         ),
     }
 ]
@@ -603,7 +603,7 @@ def bridge_idl():
     ROOTA = lambda init=False, docs=None, writable=True: acct("root", pda("root", "config_id", "leaf_count"), init=init, docs=docs, writable=writable)
     NULL = lambda: acct("nullifier", pda("nullifier", "config_id", "evm_chain_id (u256 big-endian)", "vault", "nullifier"), init=True, docs="written once: a second Spend refuses with 250 ALREADY_CLAIMED")
     HOLDER = lambda docs=None: acct("holder", pda("holder", "config_id", "holder"), docs=docs)
-    BURN = lambda: acct("burn", pda("burn", "config_id", "note_hash"), init=True, docs="burn(cid, H(note)), written once")
+    BURN = lambda: acct("burn", pda("burn", "config_id", "r"), init=True, docs="burn(cid, r), written once per tag: a second note with a used tag refuses with 244 ALREADY_WRITTEN")
     OWN = lambda who: acct("own", None, signer=True, docs=f"{who}'s own account (the program's actor at it); signed")
     ANY = lambda docs: acct("receiver", None, writable=False, docs=docs)
 
@@ -615,7 +615,7 @@ def bridge_idl():
 
     HOLDERS = lambda: acct("holder", pda("holder", "config_id", "holder"), docs="holder(cid, account) of each account credited (the destination, the fee recipient, the relayer), each listed once")
     instructions = [
-        I(0, "burn", [OWN("the holder"), HOLDER("the root instead of the own actor when the denomination is debited from holder(cid, account)"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), CONFIG(docs="Admit: the global burn freeze and bucket"), BURN()], "Debit one denomination and record the note once at burn(cid, H(note)); a top-level call or the root of a private execution."),
+        I(0, "burn", [OWN("the holder"), HOLDER("the root instead of the own actor when the denomination is debited from holder(cid, account)"), TOKEN(docs="admits the note: denomination, burn freezes and caps"), CONFIG(docs="Admit: the global burn freeze and bucket"), BURN()], "Debit one denomination and record the note once at burn(cid, r), once per tag; a top-level call or the root of a private execution."),
         I(1, "import_root", [CONFIG(), RECORD(), ROOTA(init=True, docs="written once at the attested leaf count")], "Attest the vault's slots 0 and 1 under the record at record_slot and write root(cid, leaf_count). Anyone may call; refused after Sunset."),
         I(2, "sunset", [OWN("the freeze authority"), CONFIG()], "The configuration's one-way Sunset: stops ImportRoot for good."),
         I(3, "echo", [ANY("any actor")], "Rule (A)'s echo nonce: accepted anywhere, changes nothing."),

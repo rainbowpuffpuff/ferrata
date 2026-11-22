@@ -285,7 +285,7 @@ fn bridge_state() {
         let label = format!("public burn {} of 1 ETH by the payer", i + 1);
         let r = w.send(&label, holder, &BridgeMessage::burn(cid_a, &n1), actors);
         assert!(r.ok(), "{label}: {:?}", r.charge.revert);
-        let bid = burn_actor(program, &cid_a, &n1.hash()).account_id;
+        let bid = burn_actor(program, &cid_a, &n1.r).account_id;
         let now = state_bytes(&w.chain.state).0;
         println!(
             "| {label} | burn record | {} | {} | {} | {} |",
@@ -308,7 +308,7 @@ fn bridge_state() {
     let nullifier = account(&w.chain.state, nullifiers[0]);
     let burn = {
         let n1 = note(&keys, &cid_a, &vault_a, 0, ETH, DENOMINATIONS[1]);
-        account(&w.chain.state, burn_actor(program, &cid_a, &n1.hash()).account_id)
+        account(&w.chain.state, burn_actor(program, &cid_a, &n1.r).account_id)
     };
     let base = state_bytes(&w.chain.state).0;
     let (mut sn, mut sb) = (w.chain.state.clone(), w.chain.state.clone());

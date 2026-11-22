@@ -30,7 +30,9 @@
 //! * **Burn.** `Burn` at the holder's own actor, as a top-level call or a private root only, debits
 //!   one denomination (its own state first, else its `holder(cid, account)`, to which it forwards the
 //!   note) and sends the note to `token(cid, token)`, which applies the burn freezes and buckets
-//!   and records the note once at `burn(cid, H(note))`.
+//!   and records the note at `burn(cid, r)`: once per tag, so a second note with a used tag is refused
+//!   and the whole transaction reverts (the reviews of 22 November 2026, H-1: keyed on the whole note,
+//!   two notes with one tag were both applied and shared one release nullifier).
 //! * **Roles.** `Sunset`, `Freeze`, `SetCap` and `SetDepth` are top-level calls at the role's own
 //!   actor, which forwards them to `config(cid)` or `token(cid, token)`; those accept them only from
 //!   the configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`, `SetDepth`).
@@ -748,7 +750,7 @@ fn spend(
 
 /// `Burn` at a holder's own actor (debit its own state, or forward to its `holder(cid, account)`), at
 /// `holder(cid, account)` from that own actor (debit), at `token(cid, token)` (admit, then record), or
-/// at `burn(cid, H(note))` (record once). A debit sends the note to the token.
+/// at `burn(cid, r)` (record once per tag). A debit sends the note to the token.
 fn burn(
     input: &ReceiveInput,
     program: AccountId,
@@ -756,8 +758,7 @@ fn burn(
     config_id: Root,
     note: Note,
 ) -> Result<Response, Refusal> {
-    let note_hash = note.hash();
-    let record = burn_actor(program, &config_id, &note_hash);
+    let record = burn_actor(program, &config_id, &note.r);
     let token = token_actor(program, &config_id, &note.token);
     if input.receiver == record {
         if input.from != Some(token) {
@@ -782,7 +783,7 @@ fn burn(
         state.gate.admit(false, value)?;
         let admit = BridgeMessage::Admit { config_id, token: note.token, mints: false, value };
         let publish = SyncMessage::new(record, &BridgeMessage::burn(config_id, &note))
-            .with_pda_seeds([burn_seed(&config_id, &note_hash)]);
+            .with_pda_seeds([burn_seed(&config_id, &note.r)]);
         return Ok(set(BridgeState::Token(state)).send_sync(config_actor(program, &config_id), &admit).send(publish));
     }
     let holder = |state: Option<BridgeState>| match state {

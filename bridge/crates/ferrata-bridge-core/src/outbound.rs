@@ -15,7 +15,7 @@ use crate::encoding::{
     burn_secret_message, burn_tag_message, memo_pad_message, Mac, ReleaseJournal, RELEASE_JOURNAL_LEN,
 };
 use crate::tree::{verify_path, MerklePath};
-use crate::{sha256, Address, BridgeKey, BridgeKeys, Hash, VerifyError, WriteOnceSet, U256};
+use crate::{sha256, Address, BridgeKey, BridgeKeys, Hash, VerifyError, U256};
 
 /// Burn tag `r_i = HMAC(kView, "ferrata/burn-tag/v1" ‖ configId ‖ i)`. The wallet advances `i`
 /// whenever a burn is published, even if it reverts.
@@ -126,20 +126,6 @@ impl BurnNote {
     pub fn mac_verifies(&self, view: &BridgeKey) -> bool {
         let want = burn_mac(view, &self.r, &self.memo, &self.token, &self.amount, &self.c_out);
         want.iter().zip(self.mac.iter()).fold(0u8, |acc, (a, b)| acc | (a ^ b)) == 0
-    }
-}
-
-/// A burn note whose tag was already used.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct RepeatedTag;
-
-/// What the LEZ bridge program does with every burn (§5.1): record `r` in its write-once tag set,
-/// refusing a repeated `r` (no copied tags, no pad reuse on chain).
-pub fn register_burn_tag(tags: &mut impl WriteOnceSet<Hash>, note: &BurnNote) -> Result<(), RepeatedTag> {
-    if tags.insert_new(note.r) {
-        Ok(())
-    } else {
-        Err(RepeatedTag)
     }
 }
 
