@@ -352,7 +352,7 @@ fn headers_answers_count_canonical_blocks_and_client_names_are_the_providers_tex
 
 /// When the configured sources cannot meet the policy (here both report one client), the updater waits for ever after
 /// `Init`; `/health` says so (degraded) once the furthest verified update is more than `max_lag_slots` past the
-/// instance.
+/// instance, and `down` once the instance has not moved for `Updater::stall_down_rounds` rounds.
 #[test]
 fn waiting_for_clients_is_reported_in_health() {
     let r = rec("mainnet");
@@ -365,24 +365,37 @@ fn waiting_for_clients_is_reported_in_health() {
     ];
     let mut u = r.updater("c4", payer, sources, diverse(2, ClientMatch::Bytes));
     let mut waiting = 0;
+    let mut seen = Vec::new();
     for _ in 0..60 {
         if let Plan::Waiting(_) = u.tick(&mut l).unwrap() {
             waiting += 1;
         }
+        seen.push(u.health());
     }
+    let waits = |why: &[String]| why.iter().any(|w| w.starts_with("waiting for clients"));
+    let first = seen.iter().position(|(_, why)| waits(why)).expect("waiting for clients is reported");
+    let first_down = seen.iter().position(|(s, _)| *s == "down");
     let (status, why) = u.health();
     println!(
-        "C4: {waiting} of 60 rounds waiting, applied {}, store finalized {} (record's end {}); health {status} {why:?}; \
-         health_json status {}, last_plan {}",
+        "C4: {waiting} of 60 rounds waiting, applied {}, store finalized {} (record's end {}); first reported in round \
+         {} ({:?}), down from round {:?}; health {status} {why:?}; health_json status {}, last_plan {}",
         applied(&u, &l),
         store(&u, &l).finalized.slot,
         r.last_finalized(),
+        first + 1,
+        seen[first].0,
+        first_down.map(|i| i + 1),
         u.health_json()["status"],
         u.health_json()["last_plan"]
     );
     assert!(waiting >= 55);
-    assert_eq!(status, "degraded", "{why:?}");
-    assert!(why.iter().any(|w| w.starts_with("waiting for clients")), "{why:?}");
-    assert_eq!(u.health_json()["status"], "degraded");
+    assert_eq!(seen[first].0, "degraded", "{:?}", seen[first].1);
+    // Waiting round after round moves nothing: `down` once the instance has not moved for twice the stall alarm's
+    // rounds (the review of the fixes, M1).
+    assert!(first_down.is_some_and(|d| d > first), "{first_down:?}");
+    assert_eq!(status, "down", "{why:?}");
+    assert!(waits(&why), "{why:?}");
+    assert!(why.iter().any(|w| w.starts_with("no progress")), "{why:?}");
+    assert_eq!(u.health_json()["status"], "down");
     assert!(u.render_metrics().contains("ferrata_updater_client_wait_slots{daemon=\"c4\",chain=\"mainnet\"}"));
 }

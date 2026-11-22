@@ -98,7 +98,8 @@ fn refused(l: &HarnessLedger, from: usize) -> usize {
 
 /// P1. The chain's clock at the last time `Init` is still sent (its window, [`WINDOW_MARGIN_MS`] before the end of the
 /// checkpoint's weak-subjectivity period, is open): sent and applied. At the margin and past the end: nothing is sent
-/// in five rounds, nothing charged, `/health` degraded naming why (the review: five `Init`s refused, 38,415,184 each).
+/// in five rounds, nothing charged, `/health` `down` naming why (the review: five `Init`s refused, 38,415,184 each;
+/// the review of the fixes, M1: degraded, HTTP 200, although nothing can be sent until a person acts).
 #[test]
 fn init_is_not_sent_outside_its_window() {
     let r = mainnet();
@@ -128,15 +129,16 @@ fn init_is_not_sent_outside_its_window() {
             assert!(l.log.is_empty(), "nothing sent");
             assert_eq!(l.balance(&payer), before, "nothing charged");
             assert!(plans.iter().all(|p| matches!(p, Plan::Stuck(w) if w.contains("weak-subjectivity"))));
-            assert_eq!(status, "degraded");
-            assert!(why.iter().any(|w| w.contains("Init not sent")), "{why:?}");
+            assert_eq!(status, "down");
+            assert!(why.iter().any(|w| w.contains("Init not sent") && w.contains("newer checkpoint")), "{why:?}");
         }
     }
 }
 
 /// P2. An instance whose finalized header leaves its weak-subjectivity period by the chain's clock: no `Open` is sent
-/// at the margin or past the end (the review: five refused, 38,428,328 each, `/health` ok); at the nearest admitted
-/// time it is sent and the instance advances.
+/// at the margin or past the end, and `/health` says `down` (the review: five refused, 38,428,328 each, `/health` ok;
+/// the review of the fixes, M1: degraded, HTTP 200); at the nearest admitted time it is sent, the instance advances
+/// and `/health` is `ok` again.
 #[test]
 fn open_is_not_sent_outside_its_window() {
     let r = mainnet();
@@ -162,20 +164,23 @@ fn open_is_not_sent_outside_its_window() {
         assert_eq!(l.log.len(), n0, "nothing sent");
         assert_eq!(l.balance(&payer), before, "nothing charged");
         assert!(plans.iter().all(|p| matches!(p, Plan::Stuck(w) if w.starts_with("Open not sent"))));
-        assert_eq!(status, "degraded");
-        assert!(why.iter().any(|w| w.contains("weak-subjectivity")), "{why:?}");
+        assert_eq!(status, "down");
+        assert!(why.iter().any(|w| w.contains("weak-subjectivity") && w.contains("initialise a new instance")), "{why:?}");
     }
     l.now = Some(ws_end - WINDOW_MARGIN_MS - 1);
     let n0 = l.log.len();
     settle(&mut u, &mut l, 30);
     let moved = store(&u, &l).finalized.slot;
     println!(
-        "at {} ms from the end: {} sent, finalized slot {fin} -> {moved}",
+        "at {} ms from the end: {} sent, finalized slot {fin} -> {moved}; health {:?}",
         -(WINDOW_MARGIN_MS as i64) - 1,
-        l.log.len() - n0
+        l.log.len() - n0,
+        u.health()
     );
     assert!(moved > fin);
     assert_eq!(refused(&l, 0), 0);
+    assert!(u.expired.is_none());
+    assert_eq!(u.health().0, "ok");
 }
 
 /// P9. A gas limit below what `Adopt` needs: the step is refused (charged) once, then held: in ten rounds one

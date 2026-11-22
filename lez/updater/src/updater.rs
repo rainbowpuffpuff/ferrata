@@ -121,6 +121,10 @@ pub const MAX_REFUSALS: u32 = 3;
 /// Sends in a row that did not land (rejected, refused while their step stayed due, or failed at transport after
 /// every retry) after which `/health` says `down`; one is enough for `degraded`.
 pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
+/// Rounds in a row that failed (the round ended in an error: a read of the chain failed, every transport retry
+/// failed, the budget is reached) after which `/health` says `down`; one is enough for `degraded`. A chain that answers
+/// neither reads nor sends fails every round before anything is sent, so it never counts as a failing send.
+pub const DOWN_AFTER_FAILED_ROUNDS: u32 = 5;
 /// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
 pub const HOLD_ROUNDS: u64 = 4096;
 /// See [`HOLD_ROUNDS`].
@@ -288,6 +292,9 @@ pub struct Metrics {
     pub failing_sends: u32,
     /// The last of them, described.
     pub last_failure: String,
+    /// Rounds in a row that ended in an error ([`Updater::tick`] returned one: a read of the chain failed, every
+    /// transport retry failed, the budget is reached); a round without an error resets it.
+    pub failed_rounds: u32,
     /// This updater's last applied transaction: its round and time (UTC).
     pub last_applied_round: u64,
     pub last_applied_utc: String,
@@ -369,6 +376,11 @@ pub struct Updater {
     /// Steps refused while they stayed due, by (job, step): not sent again on the same state (or not yet).
     pub held: BTreeMap<(Root, Step), Held>,
     pub breaker: Breaker,
+    /// The instance can no longer advance by the chain's clock: its finalized header (before `Init`: the checkpoint)
+    /// is past its weak-subjectivity period, so the program refuses every `Open` (`Init`) from now on. (The finalized
+    /// slot it was found at, 0 before `Init`; why, with what to do.) Cleared when a step's window admits it again (a
+    /// clock put right) or the instance moves (a job already open finished). `/health` says `down` while it is set.
+    pub expired: Option<(u64, String)>,
     /// How a backoff waits (milliseconds); tests pass one that does not sleep.
     pub sleep: fn(u64),
     /// Log lines to stderr.
@@ -416,6 +428,7 @@ impl Updater {
             served_by: BTreeMap::new(),
             held: BTreeMap::new(),
             breaker: Breaker::default(),
+            expired: None,
             sleep: real_sleep,
             verbose: false,
         };
@@ -874,14 +887,17 @@ impl Updater {
             };
             if let Some((late, why)) = self.outside(ledger, &window, time_ms) {
                 return Ok(if late {
-                    Plan::Stuck(format!(
+                    let why = format!(
                         "Init not sent: {why}: the checkpoint's weak-subjectivity period ends there, and no instance can \
                          be created from it after that: initialise from a newer checkpoint"
-                    ))
+                    );
+                    self.expired = Some((0, why.clone()));
+                    Plan::Stuck(why)
                 } else {
                     Plan::Waiting(format!("Init not sent: {why}"))
                 });
             }
+            self.expired = None;
             if let Some(why) = self.held_back(&jid, step) {
                 return Ok(Plan::Stuck(why));
             }
@@ -917,6 +933,9 @@ impl Updater {
         let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
         if self.metrics.progress_round == 0 || store.finalized.slot != self.metrics.finalized_slot {
             self.metrics.progress_round = self.round;
+        }
+        if self.expired.as_ref().is_some_and(|(slot, _)| *slot != store.finalized.slot) {
+            self.expired = None;
         }
         self.metrics.finalized_slot = store.finalized.slot;
         self.metrics.period = spec.period_at_slot(store.finalized.slot);
@@ -1139,25 +1158,30 @@ impl Updater {
             Step::Open => match ferrata_advance::open_window(&self.inst.config, fin, signature_slot) {
                 Some(w) => w,
                 None => {
-                    return Ok(Plan::Stuck(format!(
+                    let why = format!(
                         "Open not sent: the update is signed at slot {signature_slot}, at or after the end of the \
                          weak-subjectivity period of the instance's finalized header (slot {fin}), which the program \
                          refuses: the instance can no longer advance; initialise a new one"
-                    )))
+                    );
+                    self.expired = Some((fin, why.clone()));
+                    return Ok(Plan::Stuck(why));
                 }
             },
             _ => Window::ANY,
         };
         if let Some((late, why)) = self.outside(ledger, &window, self.inst.time_ms(signature_slot)) {
             return Ok(if late {
-                Plan::Stuck(format!(
+                let why = format!(
                     "Open not sent: {why}: the weak-subjectivity period of the instance's finalized header (slot {fin}) \
                      ends there, and no update can be applied to it after that: initialise a new instance"
-                ))
+                );
+                self.expired = Some((fin, why.clone()));
+                Plan::Stuck(why)
             } else {
                 Plan::Waiting(format!("Open not sent: {why}"))
             });
         }
+        self.expired = None;
         if let Some(why) = self.held_back(&chosen.jid, step) {
             return Ok(Plan::Stuck(why));
         }
@@ -1605,23 +1629,35 @@ impl Updater {
 
     /// One round: plan, then send what is due, after reading the chain once more: the round read the instance before
     /// it asked its sources, and another party may have sent the step, or moved the store, since (nothing is sent
-    /// then; `_steps_done_by_others_total`).
+    /// then; `_steps_done_by_others_total`). A round that ends in an error counts towards
+    /// [`DOWN_AFTER_FAILED_ROUNDS`]; one that does not resets the count.
     pub fn tick(&mut self, ledger: &mut dyn Ledger) -> Result<Plan> {
-        let plan = self.plan(ledger)?;
-        if let Plan::Send(action) = &plan {
-            self.submit(ledger, action, true)?;
+        let result = match self.plan(ledger) {
+            Ok(Plan::Send(action)) => self.submit(ledger, &action, true).map(|_| Plan::Send(action)),
+            other => other,
+        };
+        match &result {
+            Ok(_) => self.metrics.failed_rounds = 0,
+            Err(e) => {
+                self.metrics.failed_rounds = self.metrics.failed_rounds.saturating_add(1);
+                self.metrics.last_error = format!("{e:#}");
+            }
         }
-        Ok(plan)
+        result
     }
 
     // ---- health and metrics -----------------------------------------------------------------
 
     /// `ok`, `degraded` or `down`, and why. Degraded: a source lies, lags, fails or disagrees; a transaction it sent
-    /// did not land (rejected, refused while its step stayed due, failed at transport); the last round was stuck or
-    /// failed; sending is paused; the instance has not moved for `6 × defer_window + 10` rounds while the sources
-    /// serve updates more than `max_lag_slots` past it. Down: no light-client source usable and answering,
-    /// [`DOWN_AFTER_FAILED_SENDS`] sends in a row that did not land, or the budget reached: this updater moves
-    /// nothing.
+    /// did not land (rejected, refused while its step stayed due, failed at transport); a round ended in an error; the
+    /// last round was stuck; sending is paused; the instance has not moved for [`Updater::stall_rounds`] rounds while
+    /// the sources serve updates more than `max_lag_slots` past it. Down: this updater moves nothing: no light-client
+    /// source usable and answering; [`DOWN_AFTER_FAILED_SENDS`] sends in a row that did not land;
+    /// [`DOWN_AFTER_FAILED_ROUNDS`] rounds in a row that ended in an error (a chain that answers neither reads nor
+    /// sends); the instance (or, before `Init`, its checkpoint) past its weak-subjectivity period by the chain's clock
+    /// ([`Updater::expired`]: a person must initialise a new one); no progress for [`Updater::stall_down_rounds`]
+    /// rounds while the sources serve updates more than `max_lag_slots` past it (a step held, sending paused, too few
+    /// sources or clients agreeing, round after round); or the budget reached.
     pub fn health(&self) -> (&'static str, Vec<String>) {
         let mut why = Vec::new();
         // Light-client sources not demoted that answered when last asked (or were not asked yet).
@@ -1664,22 +1700,40 @@ impl Updater {
                 self.metrics.failing_sends, self.metrics.last_failure
             ));
         }
-        let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
-        let still = self.round.saturating_sub(self.metrics.progress_round);
-        if self.metrics.progress_round > 0 && behind > self.policy.max_lag_slots && still >= self.stall_rounds() {
+        if self.metrics.failed_rounds > 0 {
             why.push(format!(
-                "no progress: the instance's finalized slot {} has not moved for {still} rounds while the sources serve \
-                 updates {behind} slots past it",
-                self.metrics.finalized_slot
+                "the last {} round(s) ended in an error; the last: {}",
+                self.metrics.failed_rounds, self.metrics.last_error
             ));
         }
-        if self.metrics.last_plan.starts_with("stuck") || self.metrics.last_plan.starts_with("error") {
-            why.push(self.metrics.last_plan.clone());
+        let behind = self.metrics.sources_head.saturating_sub(self.metrics.finalized_slot);
+        let still = self.round.saturating_sub(self.metrics.progress_round);
+        let left_behind = self.metrics.progress_round > 0 && behind > self.policy.max_lag_slots;
+        if left_behind && still >= self.stall_rounds() {
+            why.push(format!(
+                "no progress: the instance's finalized slot {} has not moved for {still} rounds while the sources serve \
+                 updates {behind} slots past it{}",
+                self.metrics.finalized_slot,
+                if still >= self.stall_down_rounds() { "" } else { " (down after twice as many)" }
+            ));
         }
-        if self.round < self.breaker.paused_until && !self.metrics.last_plan.starts_with("stuck: sending paused") {
+        let plan = &self.metrics.last_plan;
+        if plan.starts_with("stuck") || (plan.starts_with("error") && self.metrics.failed_rounds == 0) {
+            why.push(plan.clone());
+        }
+        if let Some((_, w)) = self.expired.as_ref().filter(|(_, w)| !plan.ends_with(w.as_str())) {
+            why.push(w.clone());
+        }
+        if self.round < self.breaker.paused_until && !plan.starts_with("stuck: sending paused") {
             why.push(self.paused());
         }
-        let status = if answering == 0 || budget_reached || self.metrics.failing_sends >= DOWN_AFTER_FAILED_SENDS {
+        let down = answering == 0
+            || budget_reached
+            || self.metrics.failing_sends >= DOWN_AFTER_FAILED_SENDS
+            || self.metrics.failed_rounds >= DOWN_AFTER_FAILED_ROUNDS
+            || self.expired.is_some()
+            || (left_behind && still >= self.stall_down_rounds());
+        let status = if down {
             "down"
         } else if why.is_empty() {
             "ok"
@@ -1693,6 +1747,12 @@ impl Updater {
     /// `Adopt` parts, `Finish`) each waiting its full deferral, and ten more.
     pub fn stall_rounds(&self) -> u64 {
         self.policy.defer_window.saturating_mul(6).saturating_add(10)
+    }
+
+    /// Rounds without progress (while the sources serve updates past the instance) after which `/health` says `down`:
+    /// twice [`Updater::stall_rounds`].
+    pub fn stall_down_rounds(&self) -> u64 {
+        self.stall_rounds().saturating_mul(2)
     }
 
     /// How many jobs it keeps to finish (`policy.finish_own_jobs`).
@@ -1736,6 +1796,8 @@ impl Updater {
         let _ = writeln!(o, "ferrata_updater_finalized_slot{{{l}}} {}", m.finalized_slot);
         let _ = writeln!(o, "ferrata_updater_sources_head_slot{{{l}}} {}", m.sources_head);
         let _ = writeln!(o, "ferrata_updater_failing_sends{{{l}}} {}", m.failing_sends);
+        let _ = writeln!(o, "ferrata_updater_failed_rounds{{{l}}} {}", m.failed_rounds);
+        let _ = writeln!(o, "ferrata_updater_past_weak_subjectivity{{{l}}} {}", u8::from(self.expired.is_some()));
         let _ = writeln!(o, "ferrata_updater_rounds_without_progress{{{l}}} {}", self.rounds_without_progress());
         let _ = writeln!(o, "ferrata_updater_period{{{l}}} {}", m.period);
         if self.policy.min_distinct_clients >= 2 {
@@ -1804,6 +1866,7 @@ impl Updater {
             "paused_until_round": self.breaker.paused_until,
             "failing_sends": self.metrics.failing_sends,
             "last_failure": self.metrics.last_failure,
+            "failed_rounds": self.metrics.failed_rounds,
             "last_applied_utc": self.metrics.last_applied_utc,
             "sources_head_slot": self.metrics.sources_head,
             "rounds_without_progress": self.rounds_without_progress(),
