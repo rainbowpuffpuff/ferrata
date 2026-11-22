@@ -108,8 +108,11 @@ pub const WINDOW_MARGIN_MS: u64 = 60_000;
 /// period, whose window has not opened (review-integ9c M4, review-integ9d M1): such a candidate is refused and its
 /// source demoted (`policy.demote_rounds`), and nothing else that source served in the round is used. The margin is the
 /// skew between the chain's clock and Ethereum's that the updater tolerates, as for its windows ([`WINDOW_MARGIN_MS`]).
-/// One re-dated within it is not refused, and is chosen only when no source serves its finalized header signed earlier
-/// (updates of one finalized header are taken earliest-signed first): it can delay an update by at most this margin.
+/// One re-dated within it is not refused (a few seconds of clock skew make an honest update look the same), but an
+/// update whose `Open` window has not opened by the chain's clock never outranks one that can be sent now (the order in
+/// `plan`): a source that re-dates so, even again every round, holds back only an update no other source serves, for as
+/// long as it alone serves it (review-fix-updater3 M1: it used to hold every update back until the period ended when
+/// the re-dated update adopted the next committee).
 pub const FUTURE_MARGIN_MS: u64 = WINDOW_MARGIN_MS;
 /// Refusals in a row, each of a step that stayed due after it (not a race another party won), after which this
 /// updater sends nothing for [`BREAKER_PAUSE`] rounds. Each time it opens again before one of this updater's
@@ -1236,17 +1239,24 @@ impl Updater {
         if useful.is_empty() {
             return Ok(Plan::UpToDate);
         }
-        // Adopting the next committee comes first when the store lacks it; then the furthest finalized header; then the
-        // earliest signature slot; then the most signers. The signature does not cover `signature_slot` (only its fork
-        // version), so a source can serve a real update, or another real update of the same finalized header with
-        // more signers, re-dated to a later slot of the same period, whose `Open` window has not opened yet
-        // (review-integ9c M4, review-integ9d M1). One signed in the future by more than FUTURE_MARGIN_MS was refused
-        // above; among updates of one finalized header the earliest-signed is taken, so a re-dated one never holds back
-        // one that another source serves signed earlier. The signer count does not change the store an update leaves
-        // (every update applied has two thirds of the committee); it only breaks the remaining ties.
+        // An update that can be sent now comes first: its `Open` window is open by the chain's clock (its signature slot
+        // has started; without a clock each transaction carries its own time, so every update can). Then adopting the
+        // next committee when the store lacks it; then the furthest finalized header; then the earliest signature slot;
+        // then the most signers. The signature does not cover `signature_slot` (only its fork version), so a source can
+        // serve a real update, or another real update of the same finalized header with more signers, re-dated to a
+        // later slot of the same period, whose `Open` window has not opened yet (review-integ9c M4, review-integ9d M1).
+        // One signed in the future by more than FUTURE_MARGIN_MS was refused above. One re-dated within it, again every
+        // round, used to rank first when it adopted the next committee, and every round waited for its window until the
+        // period ended (review-fix-updater3 M1); now it ranks after every update that can be sent, so it holds back only
+        // itself, while no other source serves its finalized header. The comparison is the program's own (`Open`'s
+        // window starts at the signature slot's start), exact: a tolerance would let a source re-date to a slot about to
+        // start. The signer count does not change the store an update leaves (every update applied has two thirds of the
+        // committee); it only breaks the remaining ties.
         let needs_next = store.next.is_none();
+        let now = ledger.now_ms();
         let key = |p: &Planned| {
             (
+                now.is_none_or(|t| config.slot_start_ms(p.update.signature_slot) <= t),
                 needs_next && p.outcome.adopted,
                 p.update.finalized_header.beacon.slot,
                 std::cmp::Reverse(p.update.signature_slot),

@@ -12,7 +12,7 @@ use std::{
     fs,
     path::PathBuf,
     sync::{
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
         Arc, Mutex,
     },
 };
@@ -24,7 +24,7 @@ use ferrata_core::{
 };
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
-    chain::{decode_finality_update, preset, root},
+    chain::{decode_finality_update, decode_update, preset, root},
     config::{Fees, Policy},
     ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
@@ -727,18 +727,28 @@ fn a_refusal_with_the_chain_unreadable_after_it_is_judged_once_it_reads() {
     assert_eq!(u.health().0, "ok", "{:?}", u.health());
 }
 
-/// `bytes`, a finality update, with its `signature_slot` set to `to`, a later slot of the same sync-committee period.
-/// The signature does not cover that field (only its fork version), so the copy verifies; its `Open` window opens at
-/// the later slot.
-fn redate(mut b: Vec<u8>, config: &Config, to: u64) -> anyhow::Result<Vec<u8>> {
-    let (u, _) = decode_finality_update(&b, config)?;
+/// `bytes`, a finality update (a period update if `period`), with its `signature_slot` set to `to`, the same or a later
+/// slot of the same sync-committee period. The signature does not cover that field (only its fork version), so the copy
+/// verifies; its `Open` window opens at the later slot.
+fn redate(mut b: Vec<u8>, config: &Config, period: bool, to: u64) -> anyhow::Result<Vec<u8>> {
+    let decode = |b: &[u8]| if period { decode_update(b, config) } else { decode_finality_update(b, config) };
+    let (u, _) = decode(&b)?;
+    if to == u.signature_slot {
+        return Ok(b);
+    }
     anyhow::ensure!(to > u.signature_slot && to / 8192 == u.signature_slot / 8192, "{to}: not later in the period");
     let from = u.signature_slot.to_le_bytes();
     let at: Vec<usize> = b.windows(8).enumerate().filter(|(_, w)| *w == from).map(|(i, _)| i).collect();
     anyhow::ensure!(at.len() == 1, "signature_slot found {} times in the served bytes", at.len());
     b[at[0]..at[0] + 8].copy_from_slice(&to.to_le_bytes());
-    let (re, _) = decode_finality_update(&b, config)?;
-    anyhow::ensure!(re.signature_slot == to && re.finalized_header == u.finalized_header, "re-dating failed");
+    let (re, _) = decode(&b)?;
+    anyhow::ensure!(
+        re.signature_slot == to
+            && re.finalized_header == u.finalized_header
+            && re.attested_header == u.attested_header
+            && re.next_sync_committee.is_empty() == u.next_sync_committee.is_empty(),
+        "re-dating failed"
+    );
     Ok(b)
 }
 
@@ -764,7 +774,7 @@ impl Source for Redated {
         let b = self.inner.finality_update()?;
         let (u, _) = decode_finality_update(&b, &self.config)?;
         let period_end = (u.signature_slot / 8192 + 1) * 8192 - 1;
-        redate(b, &self.config, (u.signature_slot + self.bump).min(period_end))
+        redate(b, &self.config, false, (u.signature_slot + self.bump).min(period_end))
     }
 }
 
@@ -898,7 +908,7 @@ impl Source for Serving {
             return self.inner.finality_update();
         }
         match self.to {
-            Some(to) => redate(self.finality.clone(), &self.config, to),
+            Some(to) => redate(self.finality.clone(), &self.config, false, to),
             None => Ok(self.finality.clone()),
         }
     }
@@ -976,6 +986,197 @@ fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
             assert_eq!(liar.refused, 0, "{case}: within the margin, not demoted");
         }
     }
+}
+
+/// A recorded source that re-dates what it serves each time it is asked: to `ahead` slots past the slot that holds the
+/// chain's clock `now` (the test moves both together; at most the period's last slot, never before the real signature
+/// slot, so before the clock is set it serves the real one). Its period updates if `period`, else its finality update.
+/// `ahead = 4`: 48 s past the clock, inside `FUTURE_MARGIN_MS`, so it is not refused, and asked again every round its
+/// `Open` window never opens (review-fix-updater3 M1).
+struct Rolling {
+    inner: Recorded,
+    config: Config,
+    now: Arc<AtomicU64>,
+    ahead: u64,
+    period: bool,
+}
+
+impl Rolling {
+    fn to(&self, real: u64) -> u64 {
+        let secs = self.now.load(Ordering::SeqCst) / 1000;
+        let slot = secs.saturating_sub(self.config.genesis_time) / self.config.seconds_per_slot;
+        let period_end = (real / 8192 + 1) * 8192 - 1;
+        (slot + self.ahead).min(period_end).max(real)
+    }
+}
+
+impl Source for Rolling {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        let list = self.inner.updates(start_period, count)?;
+        if !self.period {
+            return Ok(list);
+        }
+        list.into_iter()
+            .map(|b| {
+                let (u, _) = decode_update(&b, &self.config)?;
+                redate(b, &self.config, true, self.to(u.signature_slot))
+            })
+            .collect()
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        let b = self.inner.finality_update()?;
+        if self.period {
+            return Ok(b);
+        }
+        let (u, _) = decode_finality_update(&b, &self.config)?;
+        redate(b, &self.config, false, self.to(u.signature_slot))
+    }
+}
+
+/// `n` rounds 12 s apart from the chain's clock `t` (moved on past them), the liar's clock `now` following it: each
+/// round's plan, and the instance's finalized slot after it.
+fn rounds_from(u: &mut Updater, l: &mut HarnessLedger, now: &AtomicU64, t: &mut u64, n: usize) -> Vec<(Plan, u64)> {
+    let mut out = Vec::new();
+    for _ in 0..n {
+        l.now = Some(*t);
+        now.store(*t, Ordering::SeqCst);
+        let p = u.tick(l).unwrap();
+        out.push((p, store(u, l).finalized.slot));
+        *t += 12_000;
+    }
+    out
+}
+
+fn waiting(plans: &[(Plan, u64)]) -> usize {
+    plans.iter().filter(|(p, _)| matches!(p, Plan::Waiting(_))).count()
+}
+
+/// review-fix-updater3 M1: one source re-dates a real update that adopts the next committee, each time it is asked, to
+/// four slots (48 s) past the chain's clock: inside `FUTURE_MARGIN_MS`, so it is not refused, and its `Open` window
+/// never opens. The store at the record's entry 9 (period 1907, its next committee known); then the sources at entry
+/// 13: both serve its finality update (finalizing 15,631,200, which rotates the committees, after which the store lacks
+/// the next one). As its period-1908 update the honest source serves entry 10 (finalizing 15,630,336: a beacon node
+/// serves the period's best update, not its newest), the liar entry 12 (finalizing 15,630,720), re-dated so; both are
+/// real and adopt the next committee. The liar's used to rank first (adopting, then the furthest finalized header) and
+/// every round waited for its window, until the period ended (about 24 h of chain time), newer finality updates unsent
+/// and the liar never demoted. Now an update that can be sent outranks it: the honest one adopts the committee at once,
+/// entry 20's finality update is applied once served, and no round waits. Within the margin the liar is not demoted.
+#[test]
+fn an_adopting_update_re_dated_within_the_margin_every_round_does_not_hold_the_instance() {
+    let r = mainnet();
+    assert!(r.entries[9].period_update && r.entries[11].period_update);
+    assert_eq!((r.entries[9].attested_period, r.entries[11].attested_period), (1908, 1908));
+    let clock = Clock::new(9);
+    let now = Arc::new(AtomicU64::new(0));
+    let payer = key(0x55);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Rolling {
+        inner: Recorded::open("liar", &r.dir, &r.config, clock.clone()).unwrap(),
+        config: r.config.clone(),
+        now: now.clone(),
+        ahead: 4,
+        period: true,
+    };
+    let mut honest = Recorded::open("honest", &r.dir, &r.config, clock.clone()).unwrap();
+    honest.entries[11].bytes = honest.entries[9].bytes.clone();
+    let mut u = r.updater("adopt-rolled", payer.clone(), vec![Box::new(liar), Box::new(honest)], None);
+    settle(&mut u, &mut l, 80);
+    let s0 = store(&u, &l);
+    assert_eq!(s0.finalized.slot, 15_630_016, "the record's entry 9");
+    assert!(s0.next.is_some(), "the next committee known");
+    clock.set(13);
+    let (f13, _) = decode_finality_update(&r.entries[12].bytes, &r.config).unwrap();
+    let mut t = r.config.slot_start_ms(f13.signature_slot) + 12_000;
+    let p13 = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let s13 = store(&u, &l);
+    clock.set(20);
+    let (f20, _) = decode_finality_update(&r.entries[19].bytes, &r.config).unwrap();
+    t = t.max(r.config.slot_start_ms(f20.signature_slot) + 12_000);
+    let p20 = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let s20 = store(&u, &l);
+    let (status, why) = u.health();
+    println!(
+        "an adopting update re-dated 4 slots (48 s, the margin {} s) past the chain's clock every round: at entry 13, 30 \
+         rounds, {} waiting, finalized slot {} -> {} (next committee known: {}); at entry 20, 30 rounds, {} waiting, \
+         finalized slot {} (entry 20's {}); the liar refused {} time(s); health {status} {why:?}",
+        FUTURE_MARGIN_MS / 1000,
+        waiting(&p13),
+        s0.finalized.slot,
+        s13.finalized.slot,
+        s13.next.is_some(),
+        waiting(&p20),
+        s20.finalized.slot,
+        f20.finalized_header.beacon.slot,
+        u.metrics.sources["liar"].refused
+    );
+    assert_eq!(waiting(&p13), 0, "{p13:?}");
+    assert_eq!(s13.finalized.slot, f13.finalized_header.beacon.slot, "rotated by entry 13");
+    assert_eq!(s13.finalized.slot, 15_631_200);
+    assert!(s13.next.is_some(), "the honest period update adopted the next committee");
+    assert_eq!(waiting(&p20), 0, "{p20:?}");
+    assert_eq!(s20.finalized.slot, f20.finalized_header.beacon.slot, "entry 20 applied");
+    assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 0, "within the margin: not demoted");
+    assert_eq!(status, "ok", "{why:?}");
+}
+
+/// review-fix-updater3 M1, the update only the liar serves: re-dated four slots past the chain's clock each time it is
+/// asked, the other source one update behind. It used to be chosen (the furthest finalized header) and to wait for its
+/// window every round, while the other source's update was never sent (30 of 30 rounds waiting, the store unmoved).
+/// Now the other source's update, which can be sent, is applied first, in the first rounds; then only the liar's
+/// waits, for as long as it alone serves it, and `/health` names the instance not moving.
+#[test]
+fn an_update_only_one_source_serves_re_dated_within_the_margin_every_round_holds_back_only_itself() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let now = Arc::new(AtomicU64::new(0));
+    let payer = key(0x56);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Rolling {
+        inner: Recorded::open("liar", &r.dir, &r.config, clock.clone()).unwrap(),
+        config: r.config.clone(),
+        now: now.clone(),
+        ahead: 4,
+        period: false,
+    };
+    let mut behind = Recorded::open("behind", &r.dir, &r.config, clock.clone()).unwrap();
+    behind.lag = 1;
+    let mut u = r.updater("only-rolled", payer.clone(), vec![Box::new(liar), Box::new(behind)], None);
+    settle(&mut u, &mut l, 60);
+    let fin = store(&u, &l).finalized.slot;
+    clock.set(5);
+    let (newest, _) = decode_finality_update(&r.entries[4].bytes, &r.config).unwrap();
+    let (older, _) = decode_finality_update(&r.entries[3].bytes, &r.config).unwrap();
+    let mut t = r.config.slot_start_ms(newest.signature_slot) + 12_000;
+    let plans = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let moved = store(&u, &l).finalized.slot;
+    let applied_at = plans.iter().position(|(_, f)| *f != fin);
+    let (status, why) = u.health();
+    println!(
+        "an update only the liar serves (finalizing {}), re-dated 4 slots past the chain's clock every round, the other \
+         source one behind (finalizing {}): 30 rounds, {} waiting, finalized slot {fin} -> {moved} in round {:?}; the \
+         liar refused {} time(s); last plan {:?}; health {status} {why:?}",
+        newest.finalized_header.beacon.slot,
+        older.finalized_header.beacon.slot,
+        waiting(&plans),
+        applied_at.map(|i| i + 1),
+        u.metrics.sources["liar"].refused,
+        plans.last().map(|p| &p.0)
+    );
+    assert_eq!(moved, older.finalized_header.beacon.slot, "the other source's update applied");
+    let applied_at = applied_at.expect("moved");
+    assert_eq!(waiting(&plans[..=applied_at]), 0, "nothing waits before it: {plans:?}");
+    // Afterwards only the liar's update is useful, and it waits for its window, which it keeps moving.
+    assert!(plans[applied_at + 1..].iter().all(|(p, _)| matches!(p, Plan::Waiting(w) if w.contains("window opens"))));
+    assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 0, "within the margin: not demoted");
+    assert!(why.iter().any(|w| w.contains("no progress")), "{why:?}");
 }
 
 /// 9c L-U5: a hold for good (the initialization's `Adopt` refused out of gas) outlives `HOLD_ROUNDS` rounds and a restart

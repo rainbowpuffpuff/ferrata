@@ -10,7 +10,9 @@ kept, so the tests compile), the tests run, and the sources are put back byte fo
 interrupted. Exit status: cargo's (non-zero expected: the tests fail without the fix).
 
 The fixes (22 November 2026): m1 and m1near, review-integ9d M1 / review-integ9c M4 (an update signed in the future is
-refused, of one finalized header the earliest-signed is taken); u2, L-U2 (a round that cannot fetch the committees
+refused, of one finalized header the earliest-signed is taken; these two also undo m1roll's fix, which alone would
+pass their tests); m1roll, review-fix-updater3 M1 (an update that can be sent now ranks first, so one re-dated within
+the margin every round holds back only itself); u2, L-U2 (a round that cannot fetch the committees
 counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the chain reads again); u5, L-U5 (holds
 for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by its /64); u6, L-U6 (the bound tests
 fail for a reader that takes an answer whole and then refuses it).
@@ -29,15 +31,20 @@ KEY = ("                std::cmp::Reverse(p.update.signature_slot),\n"
        "                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),\n",
        "                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),\n"
        "                std::cmp::Reverse(p.update.signature_slot),\n")
+# The order's first element, an update that can be sent now, made the same for every candidate.
+OPEN = ("                now.is_none_or(|t| config.slot_start_ms(p.update.signature_slot) <= t),\n",
+        "                now.map(|_| true).unwrap_or(true),\n")
 MUTANTS = {
     # No refusal of candidates signed in the future, and the key of 0ddb5168 (the most signers before the earliest
     # signature slot).
-    "m1": ([(U, *FUTURE), (U, *KEY)], ["--test", "refusals", "a_re_dated"]),
+    "m1": ([(U, *FUTURE), (U, *KEY), (U, *OPEN)], ["--test", "refusals", "a_re_dated"]),
     # The same, with only the more-signers cases re-dated within FUTURE_MARGIN_MS (two and five slots past the clock).
-    "m1near": ([(U, *FUTURE), (U, *KEY),
+    "m1near": ([(U, *FUTURE), (U, *KEY), (U, *OPEN),
                 (T, "    for (case, to, future, payer) in cases {",
                  "    for (case, to, future, payer) in cases.into_iter().filter(|c| !c.2) {")],
                ["--test", "refusals", "a_re_dated_update_with_more_signers"]),
+    # The order of 81bbea61: an update whose window has not opened can rank first (review-fix-updater3 M1).
+    "m1roll": ([(U, *OPEN)], ["--test", "refusals", "within_the_margin_every_round"]),
     "u2": ([(U, "self.ensure_committees(&store)?;",
              "if let Err(e) = self.ensure_committees(&store) {\n            return Ok(Plan::Stuck(format!(\"{e:#}\")));\n        }")],
            ["--test", "health", "committees_no_source_serves"]),
