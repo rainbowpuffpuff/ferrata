@@ -98,7 +98,8 @@ pub struct Policy {
     pub max_lag_slots: u64,
     /// How many sources must serve the chosen update's finalized header before it is sent.
     pub min_agreeing: usize,
-    /// Backoff after a transport failure: `retry_base_ms * 2^attempt`, at most `retry_max_ms`.
+    /// Backoff after a transport failure (and a failed read of the chain): `retry_base_ms * 2^(attempt-1)` after
+    /// attempt 1, 2, ..., at most `retry_max_ms`; `max_attempts` attempts in all.
     pub retry_base_ms: u64,
     pub retry_max_ms: u64,
     pub max_attempts: u32,

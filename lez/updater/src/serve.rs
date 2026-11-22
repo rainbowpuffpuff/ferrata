@@ -44,6 +44,13 @@ pub const MAX_HEAD: usize = 8 * 1024;
 pub const DEADLINE: Duration = Duration::from_secs(2);
 /// The default age after which a snapshot is served with `503`.
 pub const STALE_AFTER: Duration = Duration::from_secs(600);
+
+/// The age after which a daemon polling every `poll_secs` serves its snapshot with `503`: ten polls, and at least
+/// [`STALE_AFTER`] (the binary's; a host of the daemon, such as the Logos module, sets the same with
+/// [`Snapshot::with_stale_after`]).
+pub fn stale_after(poll_secs: u64) -> Duration {
+    STALE_AFTER.max(Duration::from_secs(poll_secs.saturating_mul(10)))
+}
 /// After a `400`, what is still read (and dropped) before the connection is closed, so that the client receives the
 /// answer rather than a reset: at most this long and this many bytes.
 const DRAIN: (Duration, usize) = (Duration::from_millis(200), 64 * 1024);

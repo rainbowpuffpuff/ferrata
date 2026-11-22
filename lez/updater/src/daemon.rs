@@ -21,7 +21,7 @@ use crate::{
     chain::{instance_config, root},
     config::{File, SourceKind},
     ledger::{machine_now_ms, Ledger, Tx, TxOutcome},
-    serve::{serve, Snapshot, STALE_AFTER},
+    serve::{serve, stale_after, Snapshot},
     source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
     utc_now,
@@ -55,8 +55,11 @@ pub fn open_ledger(file: &File, _base: &Path, payer: &PrivateKey) -> Result<(Box
 
 /// A chain backend whose blocks carry the time they are made, read from this machine's clock unless the backend
 /// knows better: what the updater checks the program's validity windows against (`Ledger::now_ms`). The daemon puts
-/// every backend but the harness (whose blocks take each transaction's own time) behind it; the sequencer backend's
-/// sequencer is on this machine (loopback only), so it stamps its blocks with the same clock.
+/// every backend but the harness (whose blocks take each transaction's own time) behind it. A sequencer on this
+/// machine stamps its blocks with the same clock; the one remote sequencer the owner may name for the day-one
+/// deployment (`FERRATA_SEQUENCER_REMOTE`, sending only with `FERRATA_TESTNET_SEND=yes`: `chain::check_loopback`, the
+/// live driver's `check_send`) stamps them with its own, so `updater::WINDOW_MARGIN_MS` covers a small skew and a
+/// refusal by a larger one is held like any window refusal (4, 8, ... rounds), within the breaker's bound.
 pub struct MachineClock(pub Box<dyn Ledger>);
 
 impl Ledger for MachineClock {
@@ -282,8 +285,7 @@ pub fn run(open: OpenLedger) -> Result<()> {
     }
     // `/health` answers 503 once no round has refreshed it for ten polls' worth of time, and at least STALE_AFTER (a
     // round hung in a settle wait or on a source is not reported healthy).
-    let snapshot = Snapshot::default()
-        .with_stale_after(STALE_AFTER.max(Duration::from_secs(d.file.daemon.poll_secs.saturating_mul(10))));
+    let snapshot = Snapshot::default().with_stale_after(stale_after(d.file.daemon.poll_secs));
     if let Some(addr) = &d.file.daemon.listen {
         let bound = serve(addr, snapshot.clone())?;
         eprintln!("{} [{}] /health and /metrics on http://{bound}", utc_now(), d.file.daemon.name);

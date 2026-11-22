@@ -64,7 +64,8 @@ pub struct Fetched {
 /// HTTP and HTTPS (`--proto =http,https`), follows no redirect, gives up after `timeout_secs` (at least 1), refuses an
 /// answer that announces more than `max` bytes (`--max-filesize`, exit 63) and is stopped as soon as it has written
 /// more than `max` bytes (an answer that announces no length): the answer never takes more than `max` bytes of memory
-/// here. `args` go before the URL (`--fail`, `-w ...`); the User-Agent is generic, nothing identifies the caller.
+/// here. `args` go before the URL (`--fail`, `-w ...`), which is passed with `--url` (a value that starts with `-` is
+/// not read as an option); the User-Agent is generic, nothing identifies the caller.
 pub fn fetch(url: &str, accept: &str, args: &[&str], timeout_secs: u64, max: usize) -> Result<Fetched> {
     let mut child = Command::new("curl")
         .arg("-q")
@@ -72,6 +73,7 @@ pub fn fetch(url: &str, accept: &str, args: &[&str], timeout_secs: u64, max: usi
         .args(["--max-time", &timeout_secs.max(1).to_string(), "--max-filesize", &max.to_string()])
         .args(["-H", &format!("Accept: {accept}"), "-A", "ferrata-updater"])
         .args(args)
+        .arg("--url")
         .arg(url)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
