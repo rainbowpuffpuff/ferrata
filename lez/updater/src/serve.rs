@@ -4,8 +4,8 @@
 //! Bounded against its clients (any local process, or the network when `daemon.listen` is not on loopback), and so
 //! that a monitor gets through: each connection is served on a thread of its own. At most [`MAX_CONNECTIONS`] are
 //! served at once with the full [`DEADLINE`] to send their request head, and of those at most [`MAX_PER_CLIENT`] from
-//! one address other than loopback (on loopback every client is this machine, one address: they share the
-//! [`MAX_CONNECTIONS`]). A connection beyond those bounds is still served, on at most [`MAX_QUICK`] more threads, if
+//! one host other than loopback (an IPv4 address, or an IPv6 /64 network; on loopback every client is this machine, one
+//! address: they share the [`MAX_CONNECTIONS`]). A connection beyond those bounds is still served, on at most [`MAX_QUICK`] more threads, if
 //! its request head arrives within [`QUICK_DEADLINE`], as a monitor's does (its request goes out with the connection);
 //! beyond those it is closed at once. A request head is at most [`MAX_HEAD`] bytes (`400` beyond); a write that does
 //! not drain within [`DEADLINE`] ends the connection. A connection's place is given back before it is closed, so a
@@ -21,7 +21,7 @@
 use std::{
     collections::BTreeMap,
     io::{ErrorKind, Read, Write},
-    net::{IpAddr, Shutdown, TcpListener, TcpStream},
+    net::{IpAddr, Ipv6Addr, Shutdown, TcpListener, TcpStream},
     sync::{Arc, Mutex},
     thread,
     time::{Duration, Instant},
@@ -31,7 +31,8 @@ use anyhow::{Context as _, Result};
 
 /// Connections served at once with the full [`DEADLINE`].
 pub const MAX_CONNECTIONS: usize = 8;
-/// Of the [`MAX_CONNECTIONS`], at most this many from one address other than loopback.
+/// Of the [`MAX_CONNECTIONS`], at most this many from one host other than loopback (an IPv4 address, or an
+/// IPv6 address's /64 network).
 pub const MAX_PER_CLIENT: usize = 4;
 /// Connections served at once beyond [`MAX_CONNECTIONS`] (or beyond a client's [`MAX_PER_CLIENT`]), each given
 /// [`QUICK_DEADLINE`] to send its request head; a connection beyond them is closed without an answer.
@@ -109,7 +110,7 @@ impl Snapshot {
     }
 }
 
-/// The connections being served: in the full lane (with the non-loopback addresses among them) and in the quick lane.
+/// The connections being served: in the full lane (with the hosts other than loopback among them) and in the quick lane.
 #[derive(Default)]
 struct Lanes {
     full: usize,
@@ -120,16 +121,27 @@ struct Lanes {
 /// Where a connection is served.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Lane {
-    /// Among the [`MAX_CONNECTIONS`]; the address if it counts towards [`MAX_PER_CLIENT`] (not loopback).
+    /// Among the [`MAX_CONNECTIONS`]; the host ([`host`]) if it counts towards [`MAX_PER_CLIENT`] (not loopback).
     Full(Option<IpAddr>),
     /// Among the [`MAX_QUICK`].
     Quick,
 }
 
+/// What a client other than loopback is counted as for [`MAX_PER_CLIENT`]: its IPv4 address (an IPv4-mapped IPv6 address
+/// as that IPv4 address), or its IPv6 address's /64 network. A host is usually given a whole /64 and can answer from any
+/// address in it (temporary addresses), so counting each IPv6 address apart would give one host as many shares as it
+/// has addresses (9c L-U4f).
+fn host(ip: IpAddr) -> IpAddr {
+    match ip.to_canonical() {
+        IpAddr::V6(v6) => IpAddr::V6(Ipv6Addr::from(u128::from(v6) & !(u128::from(u64::MAX)))),
+        v4 => v4,
+    }
+}
+
 impl Lanes {
     /// The lane for a new connection from `peer`, taken; `None`: no room (close it).
     fn take(&mut self, peer: Option<IpAddr>) -> Option<Lane> {
-        let client = peer.map(|ip| ip.to_canonical()).filter(|ip| !ip.is_loopback());
+        let client = peer.map(|ip| ip.to_canonical()).filter(|ip| !ip.is_loopback()).map(host);
         let mine = client.map_or(0, |ip| self.clients.get(&ip).copied().unwrap_or(0));
         if self.full < MAX_CONNECTIONS && mine < MAX_PER_CLIENT {
             self.full += 1;
@@ -321,7 +333,7 @@ fn reply(status: &str, kind: &str, body: &str, age: Option<u64>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{Lane, Lanes, MAX_CONNECTIONS, MAX_PER_CLIENT, MAX_QUICK};
+    use super::{host, Lane, Lanes, MAX_CONNECTIONS, MAX_PER_CLIENT, MAX_QUICK};
     use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 
     fn ip(last: u8) -> Option<IpAddr> {
@@ -356,5 +368,27 @@ mod tests {
             l.give_back(x.unwrap());
         }
         assert_eq!(l.full, 0);
+    }
+    /// 9c L-U4f: an IPv6 client is counted by its /64 network, so one host answering from many addresses of its /64
+    /// gets one share of the full lane; another /64 is another host; an IPv4-mapped address counts as its IPv4 address;
+    /// loopback (`::1`) still shares the full lane uncounted.
+    #[test]
+    fn ipv6_clients_count_by_their_64_network() {
+        let v6 =
+            |net: u16, last: u16| Some(IpAddr::V6(Ipv6Addr::new(0x2001, 0xdb8, 0, net, 0x1111, 0x2222, 0x3333, last)));
+        let mut l = Lanes::default();
+        let a: Vec<_> = (1..=MAX_PER_CLIENT as u16 + 1).map(|i| l.take(v6(1, i))).collect();
+        assert!(a[..MAX_PER_CLIENT].iter().all(|x| matches!(x, Some(Lane::Full(Some(_))))), "{a:?}");
+        assert_eq!(a[MAX_PER_CLIENT], Some(Lane::Quick), "a fifth address of the same /64: {a:?}");
+        assert_eq!(l.clients.len(), 1, "one host: {:?}", l.clients);
+        assert!(matches!(l.take(v6(2, 1)), Some(Lane::Full(Some(_)))), "another /64 is another host");
+        assert_eq!(l.clients.len(), 2);
+        let v4 = Ipv4Addr::new(192, 0, 2, 7);
+        assert_eq!(host(IpAddr::V6(v4.to_ipv6_mapped())), IpAddr::V4(v4));
+        assert_eq!(l.take(Some(IpAddr::V6(Ipv6Addr::LOCALHOST))), Some(Lane::Full(None)));
+        for x in a {
+            l.give_back(x.unwrap());
+        }
+        assert_eq!(l.clients.len(), 1, "places given back: only the other /64 left");
     }
 }

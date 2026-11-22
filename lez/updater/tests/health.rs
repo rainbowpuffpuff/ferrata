@@ -355,3 +355,41 @@ fn a_daemon_cut_off_from_its_chain_answers_503() {
     assert!(seen[..rounds - 1].iter().all(|s| s == "HTTP/1.1 200 OK"), "{seen:?}");
     assert!(seen[rounds - 1..].iter().all(|s| s == "HTTP/1.1 503 Service Unavailable"), "{seen:?}");
 }
+
+/// 9c L-U2: an updater restarted without its committee cache, whose only source does not serve the store's period's
+/// update (here one that serves the checkpoint's bootstrap and nothing else), can judge no update: each round ends in
+/// an error, so `/health` is degraded in rounds 1-4 and `down` from round 5, naming why (it used to end `stuck`, before
+/// the sources' head was read, and stay degraded for good). Given a source that serves the period's update, its next
+/// round ends without an error.
+#[test]
+fn committees_no_source_serves_take_it_down() {
+    let r = mainnet();
+    let clock = Clock::new(12);
+    let payer = key(0x58);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let mut u = r.updater("cached", payer, vec![Box::new(r.source("a", &clock))], policy());
+    settle(&mut u, &mut l);
+    let period = u.metrics.period;
+    let mut blind = r.source("bootstrap-only", &clock);
+    blind.lag = 12;
+    let mut fresh = r.updater("no-cache", key(0x59), vec![Box::new(blind)], policy());
+    let mut seen = Vec::new();
+    for _ in 0..10 {
+        assert!(fresh.tick(&mut l).is_err());
+        seen.push(fresh.health().0);
+    }
+    let (status, why) = fresh.health();
+    println!(
+        "the store in period {period}, no source serving its committees: health by round {seen:?}; {status} {why:?}"
+    );
+    let rounds = DOWN_AFTER_FAILED_ROUNDS as usize;
+    assert!(seen[..rounds - 1].iter().all(|s| *s == "degraded"), "{seen:?}");
+    assert!(seen[rounds - 1..].iter().all(|s| *s == "down"), "{seen:?}");
+    assert!(why.iter().any(|w| w.contains("committees are not served by any source")), "{why:?}");
+    fresh.sources.push(Box::new(r.source("a", &clock)));
+    let p = fresh.tick(&mut l).unwrap();
+    println!("a source serving the period's update added: {p:?}; {:?}", fresh.health());
+    assert!(matches!(p, Plan::UpToDate), "{p:?}");
+    assert_eq!(fresh.metrics.failed_rounds, 0);
+    assert_ne!(fresh.health().0, "down");
+}

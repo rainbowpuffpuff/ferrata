@@ -11,19 +11,26 @@ use std::{
     cell::Cell,
     fs,
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc, Mutex,
+    },
 };
 
-use ferrata_core::{types::LightClientBootstrap, witness::CompactStore, Root};
+use ferrata_core::{
+    types::{LightClientBootstrap, LightClientUpdate},
+    witness::CompactStore,
+    Root,
+};
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
-    chain::{decode_finality_update, preset, root},
+    chain::{decode_finality_update, decode_update, preset, root},
     config::{Fees, Policy},
     ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
     updater::{
-        Instance, Plan, Refusal, Step, Updater, BREAKER_AFTER, BREAKER_MAX_PAUSE, MAX_REFUSAL_BACKOFF, REFUSAL_BACKOFF,
-        WINDOW_MARGIN_MS,
+        Instance, Plan, Refusal, Step, Updater, BREAKER_AFTER, BREAKER_MAX_PAUSE, FUTURE_MARGIN_MS, HOLD_ROUNDS,
+        MAX_REFUSAL_BACKOFF, REFUSAL_BACKOFF, WINDOW_MARGIN_MS,
     },
 };
 use lee::{Actor, PrivateKey};
@@ -277,7 +284,7 @@ fn the_breaker_bounds_refusals_when_every_round_brings_a_new_job() {
     );
     // Three in a row, a pause of 8 rounds, one tried, a pause of 16, one tried, a pause of 32: five in 40 rounds.
     assert_eq!(sent, n, "nothing applied: every Open needs more gas");
-    assert!(n >= BREAKER_AFTER as usize && n <= BREAKER_AFTER as usize + 2, "{n} refusals");
+    assert_eq!(n, BREAKER_AFTER as usize + 2, "{n} refusals");
     assert!(paused >= 10, "{paused}");
     assert_ne!(status, "ok");
     assert!(why.iter().any(|w| w.contains("sending paused")), "{why:?}");
@@ -430,22 +437,35 @@ fn a_step_made_moot_while_planning_is_not_sent() {
 
 /// The in-process chain, refusing without executing it (nothing charged) each of the next `refuse` transactions whose
 /// label ends with `suffix`, with no exit code and a note that names neither the window nor the gas: a refusal of a
-/// cause the updater does not know ([`Refusal::Other`]).
+/// cause the updater does not know ([`Refusal::Other`]). After each refusal the next `unreadable` reads fail.
 struct Flaky {
     inner: HarnessLedger,
     suffix: &'static str,
     refuse: usize,
     refused: usize,
+    unreadable: usize,
+    fail: Cell<usize>,
+}
+
+impl Flaky {
+    fn new(inner: HarnessLedger, suffix: &'static str) -> Self {
+        Self { inner, suffix, refuse: 0, refused: 0, unreadable: 0, fail: Cell::new(0) }
+    }
 }
 
 impl Ledger for Flaky {
     fn actor_state(&self, actor: Actor) -> anyhow::Result<Vec<u8>> {
+        if self.fail.get() > 0 {
+            self.fail.set(self.fail.get() - 1);
+            anyhow::bail!("actor state unavailable");
+        }
         self.inner.actor_state(actor)
     }
     fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> anyhow::Result<TxOutcome> {
         if self.refuse > 0 && tx.label.ends_with(self.suffix) {
             self.refuse -= 1;
             self.refused += 1;
+            self.fail.set(self.unreadable);
             return Ok(TxOutcome {
                 note: "Program violated execution rules".into(),
                 gas_exec: 1,
@@ -469,8 +489,7 @@ fn a_refusal_of_unknown_cause_is_sent_again_until_it_lands() {
     let r = mainnet();
     let clock = Clock::new(3);
     let payer = key(0x49);
-    let mut l =
-        Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
+    let mut l = Flaky::new(HarnessLedger::new(std::slice::from_ref(&payer)), "Miller");
     let mut u = r.updater("unknown", payer, vec![r.source("a", &clock)], None);
     settle(&mut u, &mut l, 60);
     let start = store(&u, &l.inner).finalized.slot;
@@ -607,7 +626,7 @@ fn a_failed_read_after_a_lost_race_is_read_again() {
         u.breaker,
         u.metrics.failing_sends
     );
-    assert!(races >= 4, "{races}");
+    assert_eq!(races, 9, "{races}");
     assert_eq!(u.metrics.refusals.get(&("program", "race")), Some(&(races as u64)));
     assert_eq!(u.metrics.refusals.len(), 1, "{:?}", u.metrics.refusals);
     assert_eq!((u.breaker.strikes, u.breaker.trips, u.breaker.paused_until), (0, 0, 0));
@@ -617,33 +636,124 @@ fn a_failed_read_after_a_lost_race_is_read_again() {
 }
 
 /// The same with the chain unreadable after the refusal for every attempt (`max_attempts` reads fail): whether the
-/// step stayed due is not known, so it is held [`REFUSAL_BACKOFF`] rounds whatever the cause, without a strike or a
-/// failing send (`after="unread"`), and the slower updater goes on once the chain answers.
+/// step stayed due is not known then, so it is held whatever the cause (`after="unread"`), without a strike or a
+/// failing send; the next round reads the chain, finds the other updater's transaction applied, and judges it a race:
+/// the hold dropped, still no strike and no failing send (9c L-U3), and the slower updater goes on.
 #[test]
-fn a_refusal_with_the_chain_unreadable_after_it_is_held_briefly() {
+fn a_refusal_with_the_chain_unreadable_after_it_is_judged_a_race() {
     let attempts = Policy::default().max_attempts as usize;
     let (races, u, lines) = races_with_failing_reads(attempts, (0x4c, 0x4d));
     let (status, why) = u.health();
     println!(
-        "{}\n{races} races, each followed by {attempts} failed reads: refusals {:?}; held {:?}; breaker {:?}; failing \
-         sends {}; health {status} {why:?}",
+        "{}\n{races} races, each followed by {attempts} failed reads: refusals {:?}; judged once read again {:?}; held \
+         {:?}; breaker {:?}; failing sends {}; health {status} {why:?}",
         lines.join("\n"),
         u.metrics.refusals,
+        u.metrics.unread_judged,
         u.held.values().map(|h| (h.step.name(), h.count, h.due, h.retry_at.map(|r| r - h.round))).collect::<Vec<_>>(),
         u.breaker,
         u.metrics.failing_sends
     );
-    assert!(races >= 4, "{races}");
+    assert_eq!(races, 9, "{races}");
     assert_eq!(u.metrics.refusals.get(&("program", "unread")), Some(&(races as u64)));
+    assert_eq!(u.metrics.unread_judged.get("race"), Some(&(races as u64)));
+    assert_eq!(u.metrics.unread_judged.get("due"), None);
     assert_eq!((u.breaker.strikes, u.breaker.trips), (0, 0));
     assert_eq!(u.metrics.failing_sends, 0);
-    assert!(u.held.values().all(|h| !h.due && h.count == 1 && h.retry_at == Some(h.round + REFUSAL_BACKOFF)));
+    assert!(u.held.is_empty(), "a race is not held once judged");
     assert!(!why.iter().any(|w| w.contains("did not land") || w.contains("sending paused")), "{why:?}");
 }
 
-/// A source that serves every finality update re-dated: its `signature_slot` moved later inside the same
-/// sync-committee period. The signature does not cover that field (only its fork version), so the copy verifies, but
-/// its `Open` window opens at the later slot (review-integ9c M4).
+/// 9c L-U3: a `Miller` refused for a cause the updater does not know, three times, the chain unreadable after each
+/// refusal (every one of `max_attempts` reads fails), and no other party. Then it is not known whether a race was lost,
+/// so the step is held; the next round reads the chain, finds the step still due, and counts the refusal as any of a
+/// step that stayed due: a send that did not land (`/health` degraded from that round) and a strike, three of which
+/// pause sending. (It used to be neither, whatever followed: no failing send, no strike, `/health` silent.) The fourth
+/// attempt lands and the instance moves.
+#[test]
+fn a_refusal_with_the_chain_unreadable_after_it_is_judged_once_it_reads() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x4b);
+    let mut l = Flaky::new(HarnessLedger::new(std::slice::from_ref(&payer)), "Miller");
+    l.unreadable = Policy::default().max_attempts as usize;
+    let mut u = r.updater("unjudged", payer, vec![r.source("a", &clock)], None);
+    settle(&mut u, &mut l, 60);
+    let start = store(&u, &l.inner).finalized.slot;
+    clock.set(4);
+    l.refuse = 3;
+    // (round, refusals so far, failing sends, strikes, paused) after each round; the rounds a Miller was sent.
+    let (mut trace, mut millers, mut degraded_at, mut tripped) = (Vec::new(), Vec::new(), Vec::new(), 0);
+    for round in 1..=120u64 {
+        let p = u.tick(&mut l).unwrap();
+        if matches!(&p, Plan::Send(a) if a.step == Step::Miller) {
+            millers.push(round);
+        }
+        let paused = u.metrics.rounds < u.breaker.paused_until;
+        tripped = tripped.max(u.breaker.trips);
+        trace.push((round, l.refused, u.metrics.failing_sends, u.breaker.strikes, paused));
+        if u.health().1.iter().any(|w| w.contains("did not land")) {
+            degraded_at.push(round);
+        }
+        if store(&u, &l.inner).finalized.slot != start && matches!(p, Plan::UpToDate) {
+            break;
+        }
+    }
+    let end = store(&u, &l.inner).finalized.slot;
+    println!(
+        "a Miller refused {} times, the chain unreadable after each: Millers sent in rounds {millers:?}; (round, \
+         refusals, failing sends, strikes, paused) {:?}; `did not land` in rounds {degraded_at:?}; breaker trips {tripped}; \
+         refusals {:?}; judged {:?}; finalized slot {start} -> {end}; health {:?}",
+        l.refused,
+        trace.iter().filter(|t| t.2 > 0 || t.4).collect::<Vec<_>>(),
+        u.metrics.refusals,
+        u.metrics.unread_judged,
+        u.health()
+    );
+    assert_eq!(l.refused, 3);
+    assert_eq!(millers.len(), 4, "three refused, the fourth applied: {millers:?}");
+    assert_eq!(u.metrics.refusals.get(&("other", "unread")), Some(&3));
+    assert_eq!(u.metrics.unread_judged.get("due"), Some(&3));
+    // Each refusal is judged in the round after it: a failing send from then on, until the fourth lands.
+    for (k, &sent) in millers[..3].iter().enumerate() {
+        let after = trace.iter().find(|t| t.0 == sent + 1).expect("a round after the refusal");
+        assert_eq!((after.2, after.3), (k as u32 + 1, k as u32 + 1), "round {}: {after:?}", sent + 1);
+    }
+    assert_eq!(degraded_at.first(), Some(&(millers[0] + 1)), "degraded from the round that judged the first");
+    assert_eq!(tripped, 1, "the third strike paused sending");
+    assert!(end > start, "the instance moved");
+    assert_eq!(u.metrics.failing_sends, 0, "the fourth landed");
+    assert!(u.held.is_empty());
+    assert_eq!(u.health().0, "ok", "{:?}", u.health());
+}
+
+/// `bytes`, a finality update (a period update if `period`), with its `signature_slot` set to `to`, the same or a later
+/// slot of the same sync-committee period. The signature does not cover that field (only its fork version), so the copy
+/// verifies; its `Open` window opens at the later slot.
+fn redate(mut b: Vec<u8>, config: &Config, period: bool, to: u64) -> anyhow::Result<Vec<u8>> {
+    let decode = |b: &[u8]| if period { decode_update(b, config) } else { decode_finality_update(b, config) };
+    let (u, _) = decode(&b)?;
+    if to == u.signature_slot {
+        return Ok(b);
+    }
+    anyhow::ensure!(to > u.signature_slot && to / 8192 == u.signature_slot / 8192, "{to}: not later in the period");
+    let from = u.signature_slot.to_le_bytes();
+    let at: Vec<usize> = b.windows(8).enumerate().filter(|(_, w)| *w == from).map(|(i, _)| i).collect();
+    anyhow::ensure!(at.len() == 1, "signature_slot found {} times in the served bytes", at.len());
+    b[at[0]..at[0] + 8].copy_from_slice(&to.to_le_bytes());
+    let (re, _) = decode(&b)?;
+    anyhow::ensure!(
+        re.signature_slot == to
+            && re.finalized_header == u.finalized_header
+            && re.attested_header == u.attested_header
+            && re.next_sync_committee.is_empty() == u.next_sync_committee.is_empty(),
+        "re-dating failed"
+    );
+    Ok(b)
+}
+
+/// A source that serves every finality update re-dated `bump` slots later (at most to the period's last slot)
+/// (review-integ9c M4).
 struct Redated {
     inner: Box<dyn Source>,
     config: Config,
@@ -661,26 +771,38 @@ impl Source for Redated {
         self.inner.updates(start_period, count)
     }
     fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
-        let mut b = self.inner.finality_update()?;
+        let b = self.inner.finality_update()?;
         let (u, _) = decode_finality_update(&b, &self.config)?;
         let period_end = (u.signature_slot / 8192 + 1) * 8192 - 1;
-        let to = (u.signature_slot + self.bump).min(period_end);
-        anyhow::ensure!(to > u.signature_slot + 1, "no later slot left in the period of {}", u.signature_slot);
-        let from = u.signature_slot.to_le_bytes();
-        let at: Vec<usize> = b.windows(8).enumerate().filter(|(_, w)| *w == from).map(|(i, _)| i).collect();
-        anyhow::ensure!(at.len() == 1, "signature_slot found {} times in the served bytes", at.len());
-        b[at[0]..at[0] + 8].copy_from_slice(&to.to_le_bytes());
-        let (re, _) = decode_finality_update(&b, &self.config)?;
-        anyhow::ensure!(re.signature_slot == to && re.finalized_header == u.finalized_header, "re-dating failed");
-        Ok(b)
+        redate(b, &self.config, false, (u.signature_slot + self.bump).min(period_end))
     }
 }
 
-/// review-integ9c M4: one source re-dates every finality update it serves (a later `signature_slot` of the same
+/// Signers of an update's sync aggregate.
+fn signers(u: &LightClientUpdate) -> usize {
+    u.sync_aggregate.bits.iter().filter(|b| **b).count()
+}
+
+/// Rounds until the instance is up to date (at most `max`): the plans, and how many waited.
+fn rounds(u: &mut Updater, l: &mut dyn Ledger, max: usize) -> (Vec<Plan>, usize) {
+    let mut plans = Vec::new();
+    for _ in 0..max {
+        let p = u.tick(l).unwrap();
+        let done = matches!(p, Plan::UpToDate);
+        plans.push(p);
+        if done {
+            break;
+        }
+    }
+    let waits = plans.iter().filter(|p| matches!(p, Plan::Waiting(_))).count();
+    (plans, waits)
+}
+
+/// review-integ9c M4: one source re-dates every finality update it serves (600 slots later, two hours, in the same
 /// period); another serves them as they are. Listed first, the liar's copy used to win the tie (a stable sort over a
 /// key without `signature_slot`), and its window not being open ended every round in `Waiting`, for up to a
-/// sync-committee period. Now the earliest copy is taken: the update is sent and applied in the first rounds, no
-/// round waits.
+/// sync-committee period. Now a copy signed in the future by the chain's clock is refused and its source demoted
+/// (`FUTURE_MARGIN_MS`): the update is sent and applied in the first rounds, no round waits, nothing is refused.
 #[test]
 fn a_re_dated_copy_of_an_update_does_not_hold_it_back() {
     let r = mainnet();
@@ -694,25 +816,408 @@ fn a_re_dated_copy_of_an_update_does_not_hold_it_back() {
     clock.set(4);
     let (real, _) = decode_finality_update(&r.entries[3].bytes, &r.config).unwrap();
     // The chain's clock one slot after the real signature slot: the honest copy's window is open, the re-dated
-    // copy's (at least two slots later) is not.
+    // copy's (600 slots later) is not.
     l.now = Some(r.config.slot_start_ms(real.signature_slot) + 12_000);
-    let mut plans = Vec::new();
-    for _ in 0..30 {
-        let p = u.tick(&mut l).unwrap();
-        let done = matches!(p, Plan::UpToDate);
-        plans.push(p);
-        if done {
-            break;
-        }
-    }
+    let (plans, waits) = rounds(&mut u, &mut l, 30);
     let moved = store(&u, &l).finalized.slot;
-    let waits = plans.iter().filter(|p| matches!(p, Plan::Waiting(_))).count();
+    let (status, why) = u.health();
     println!(
-        "a re-dated copy listed first: {} rounds, {waits} waiting, finalized slot {fin} -> {moved} (the update's {})",
+        "a re-dated copy listed first: {} rounds, {waits} waiting, finalized slot {fin} -> {moved} (the update's {}); \
+         the liar refused {} time(s); health {status} {why:?}",
         plans.len(),
-        real.finalized_header.beacon.slot
+        real.finalized_header.beacon.slot,
+        u.metrics.sources["liar"].refused
     );
     assert_eq!(waits, 0, "{plans:?}");
-    assert!(moved > fin, "the honest copy was applied");
+    assert_eq!(moved, real.finalized_header.beacon.slot, "the honest copy was applied");
     assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 1, "demoted once (not asked again while demoted)");
+    assert_eq!(u.metrics.sources["honest"].refused, 0);
+    assert!(why.iter().any(|w| w.contains("liar demoted") && w.contains("signed in the future")), "{why:?}");
+}
+
+/// review-integ9c M4, the copy only the liar serves: the other source is one update behind, so the re-dated update
+/// (the furthest finalized header) has no earlier copy to take instead. It used to be chosen and to wait for its
+/// window, up to a sync-committee period, while the other source's update was never sent and the liar never demoted.
+/// Now it is refused as signed in the future, the liar demoted, and the other source's update applied.
+#[test]
+fn a_re_dated_update_only_one_source_serves_is_refused() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x4e);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Redated { inner: r.source("liar", &clock), config: r.config.clone(), bump: 600 };
+    let mut behind = Recorded::open("behind", &r.dir, &r.config, clock.clone()).unwrap();
+    behind.lag = 1;
+    let mut u = r.updater("only-the-liar", payer.clone(), vec![Box::new(liar), Box::new(behind)], None);
+    settle(&mut u, &mut l, 60);
+    let fin = store(&u, &l).finalized.slot;
+    clock.set(5);
+    let (newest, _) = decode_finality_update(&r.entries[4].bytes, &r.config).unwrap();
+    let (older, _) = decode_finality_update(&r.entries[3].bytes, &r.config).unwrap();
+    l.now = Some(r.config.slot_start_ms(newest.signature_slot) + 12_000);
+    let (plans, waits) = rounds(&mut u, &mut l, 30);
+    let moved = store(&u, &l).finalized.slot;
+    let (status, why) = u.health();
+    println!(
+        "a re-dated update only the liar serves (finalizing {}), the other source one behind (finalizing {}): {} rounds, \
+         {waits} waiting, finalized slot {fin} -> {moved}; the liar refused {} time(s); health {status} {why:?}",
+        newest.finalized_header.beacon.slot,
+        older.finalized_header.beacon.slot,
+        plans.len(),
+        u.metrics.sources["liar"].refused
+    );
+    assert_eq!(waits, 0, "{plans:?}");
+    assert_eq!(moved, older.finalized_header.beacon.slot, "the other source's update was applied");
+    assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 1);
+    assert!(why.iter().any(|w| w.contains("liar demoted") && w.contains("signed in the future")), "{why:?}");
+}
+
+/// The client-diversity probe's mainnet answers of 18 November 2026 (`lez/updater/results/client-diversity-2026-11-18/`,
+/// read from public beacon APIs): two real finality updates of one finalized header (slot 15,682,752), Lodestar's
+/// (signed at 15,682,818, 511 signers) and Nimbus's (signed at 15,682,828, 510 signers). The lab's record reaches that
+/// period: its entry 105 finalizes 15,682,208.
+fn probe(node: &str) -> Vec<u8> {
+    let dir =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("results/client-diversity-2026-11-18/probe/mainnet/answers");
+    fs::read(dir.join(format!("mainnet-{node}-finality-round0.ssz"))).unwrap()
+}
+
+/// A recorded source that, once `on` is set, serves `finality` as its finality update, re-dated to slot `to` if given.
+struct Serving {
+    inner: Box<dyn Source>,
+    config: Config,
+    finality: Vec<u8>,
+    to: Option<u64>,
+    on: Arc<AtomicBool>,
+}
+
+impl Source for Serving {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        self.inner.updates(start_period, count)
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        if !self.on.load(Ordering::SeqCst) {
+            return self.inner.finality_update();
+        }
+        match self.to {
+            Some(to) => redate(self.finality.clone(), &self.config, false, to),
+            None => Ok(self.finality.clone()),
+        }
+    }
+}
+
+/// review-integ9d M1, the bypass of the tie-break: a source serves another real update of the same finalized header
+/// with more signers (Lodestar's, 511, of the probe), re-dated to a later slot, while the other serves Nimbus's (510).
+/// The liar's used to sort first (the most signers before the earliest signature slot), and its window not being open
+/// ended every round in `Waiting`, up to a sync-committee period. Re-dated 600 slots (two hours), or six slots past the
+/// chain's clock (72 s, one slot beyond `FUTURE_MARGIN_MS`): refused as signed in the future, the liar demoted, Nimbus's
+/// applied. Re-dated two slots past the clock (24 s), or five (60 s, the margin itself), as a clock skew could make an
+/// honest update look: not refused, the liar not demoted, and Nimbus's, signed earlier, applied first. None waits a
+/// round.
+#[test]
+fn a_re_dated_update_with_more_signers_does_not_hold_back_another() {
+    let r = mainnet();
+    let (lodestar, nimbus) = (probe("lodestar-mainnet.chainsafe.io"), probe("testing.mainnet.beacon-api.nimbus.team"));
+    let (more, _) = decode_finality_update(&lodestar, &r.config).unwrap();
+    let (fewer, _) = decode_finality_update(&nimbus, &r.config).unwrap();
+    assert_eq!(more.finalized_header, fewer.finalized_header, "one finalized header");
+    assert_eq!((signers(&more), signers(&fewer)), (511, 510));
+    assert!(more.signature_slot < fewer.signature_slot);
+    // The chain's clock one slot after Nimbus's signature slot; `past(k)`, the slot that starts `k` slots after it.
+    let now = r.config.slot_start_ms(fewer.signature_slot) + 12_000;
+    let past = |k: u64| fewer.signature_slot + 1 + k;
+    assert_eq!(r.config.slot_start_ms(past(0)), now);
+    assert_eq!(r.config.slot_start_ms(past(5)), now + FUTURE_MARGIN_MS, "five slots: the margin itself");
+    // (case, the slot it is re-dated to, whether it is refused as signed in the future, the payer)
+    let cases = [
+        ("600 slots", more.signature_slot + 600, true, key(0x50)),
+        ("two slots past the clock", past(2), false, key(0x51)),
+        ("five slots past the clock (the margin)", past(5), false, key(0x53)),
+        ("six slots past the clock", past(6), true, key(0x54)),
+    ];
+    for (case, to, future, payer) in cases {
+        let clock = Clock::new(105);
+        let on = Arc::new(AtomicBool::new(false));
+        let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+        let serving = |name: &str, finality: &[u8], to: Option<u64>| -> Box<dyn Source> {
+            let inner = r.source(name, &clock);
+            Box::new(Serving { inner, config: r.config.clone(), finality: finality.to_vec(), to, on: on.clone() })
+        };
+        let sources = vec![serving("liar", &lodestar, Some(to)), serving("honest", &nimbus, None)];
+        let mut u = r.updater("more-signers", payer.clone(), sources, None);
+        settle(&mut u, &mut l, 80);
+        let fin = store(&u, &l).finalized.slot;
+        assert_eq!(fin, 15_682_208, "the record's entry 105");
+        on.store(true, Ordering::SeqCst);
+        l.now = Some(now);
+        let n0 = l.log.len();
+        let (plans, waits) = rounds(&mut u, &mut l, 30);
+        let moved = store(&u, &l).finalized.slot;
+        let opens: Vec<&String> = l.log[n0..]
+            .iter()
+            .filter(|(_, label, o)| label.ends_with("Open") && o.applied)
+            .map(|(_, label, _)| label)
+            .collect();
+        let liar = u.metrics.sources["liar"].clone();
+        let (status, why) = u.health();
+        println!(
+            "Lodestar's update (511 signers) re-dated {case} (to slot {to}) by the source listed first, Nimbus's (510) \
+             by the other: {} rounds, {waits} waiting, finalized slot {fin} -> {moved}, Opens applied {opens:?}; the \
+             liar refused {} time(s); health {status} {why:?}",
+            plans.len(),
+            liar.refused
+        );
+        assert_eq!(waits, 0, "{case}: {plans:?}");
+        assert_eq!(moved, fewer.finalized_header.beacon.slot, "{case}");
+        assert_eq!(opens.len(), 1, "{case}: one job");
+        assert_eq!(refused(&l, 0), 0, "{case}");
+        if future {
+            assert_eq!(liar.refused, 1, "{case}");
+            assert!(why.iter().any(|w| w.contains("liar demoted") && w.contains("signed in the future")), "{why:?}");
+        } else {
+            assert_eq!(liar.refused, 0, "{case}: within the margin, not demoted");
+        }
+    }
+}
+
+/// A recorded source that re-dates what it serves each time it is asked: to `ahead` slots past the slot that holds the
+/// chain's clock `now` (the test moves both together; at most the period's last slot, never before the real signature
+/// slot, so before the clock is set it serves the real one). Its period updates if `period`, else its finality update.
+/// `ahead = 4`: 48 s past the clock, inside `FUTURE_MARGIN_MS`, so it is not refused, and asked again every round its
+/// `Open` window never opens (review-fix-updater3 M1).
+struct Rolling {
+    inner: Recorded,
+    config: Config,
+    now: Arc<AtomicU64>,
+    ahead: u64,
+    period: bool,
+}
+
+impl Rolling {
+    fn to(&self, real: u64) -> u64 {
+        let secs = self.now.load(Ordering::SeqCst) / 1000;
+        let slot = secs.saturating_sub(self.config.genesis_time) / self.config.seconds_per_slot;
+        let period_end = (real / 8192 + 1) * 8192 - 1;
+        (slot + self.ahead).min(period_end).max(real)
+    }
+}
+
+impl Source for Rolling {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        let list = self.inner.updates(start_period, count)?;
+        if !self.period {
+            return Ok(list);
+        }
+        list.into_iter()
+            .map(|b| {
+                let (u, _) = decode_update(&b, &self.config)?;
+                redate(b, &self.config, true, self.to(u.signature_slot))
+            })
+            .collect()
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        let b = self.inner.finality_update()?;
+        if self.period {
+            return Ok(b);
+        }
+        let (u, _) = decode_finality_update(&b, &self.config)?;
+        redate(b, &self.config, false, self.to(u.signature_slot))
+    }
+}
+
+/// `n` rounds 12 s apart from the chain's clock `t` (moved on past them), the liar's clock `now` following it: each
+/// round's plan, and the instance's finalized slot after it.
+fn rounds_from(u: &mut Updater, l: &mut HarnessLedger, now: &AtomicU64, t: &mut u64, n: usize) -> Vec<(Plan, u64)> {
+    let mut out = Vec::new();
+    for _ in 0..n {
+        l.now = Some(*t);
+        now.store(*t, Ordering::SeqCst);
+        let p = u.tick(l).unwrap();
+        out.push((p, store(u, l).finalized.slot));
+        *t += 12_000;
+    }
+    out
+}
+
+fn waiting(plans: &[(Plan, u64)]) -> usize {
+    plans.iter().filter(|(p, _)| matches!(p, Plan::Waiting(_))).count()
+}
+
+/// review-fix-updater3 M1: one source re-dates a real update that adopts the next committee, each time it is asked, to
+/// four slots (48 s) past the chain's clock: inside `FUTURE_MARGIN_MS`, so it is not refused, and its `Open` window
+/// never opens. The store at the record's entry 9 (period 1907, its next committee known); then the sources at entry
+/// 13: both serve its finality update (finalizing 15,631,200, which rotates the committees, after which the store lacks
+/// the next one). As its period-1908 update the honest source serves entry 10 (finalizing 15,630,336: a beacon node
+/// serves the period's best update, not its newest), the liar entry 12 (finalizing 15,630,720), re-dated so; both are
+/// real and adopt the next committee. The liar's used to rank first (adopting, then the furthest finalized header) and
+/// every round waited for its window, until the period ended (about 24 h of chain time), newer finality updates unsent
+/// and the liar never demoted. Now an update that can be sent outranks it: the honest one adopts the committee at once,
+/// entry 20's finality update is applied once served, and no round waits. Within the margin the liar is not demoted.
+#[test]
+fn an_adopting_update_re_dated_within_the_margin_every_round_does_not_hold_the_instance() {
+    let r = mainnet();
+    assert!(r.entries[9].period_update && r.entries[11].period_update);
+    assert_eq!((r.entries[9].attested_period, r.entries[11].attested_period), (1908, 1908));
+    let clock = Clock::new(9);
+    let now = Arc::new(AtomicU64::new(0));
+    let payer = key(0x55);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Rolling {
+        inner: Recorded::open("liar", &r.dir, &r.config, clock.clone()).unwrap(),
+        config: r.config.clone(),
+        now: now.clone(),
+        ahead: 4,
+        period: true,
+    };
+    let mut honest = Recorded::open("honest", &r.dir, &r.config, clock.clone()).unwrap();
+    honest.entries[11].bytes = honest.entries[9].bytes.clone();
+    let mut u = r.updater("adopt-rolled", payer.clone(), vec![Box::new(liar), Box::new(honest)], None);
+    settle(&mut u, &mut l, 80);
+    let s0 = store(&u, &l);
+    assert_eq!(s0.finalized.slot, 15_630_016, "the record's entry 9");
+    assert!(s0.next.is_some(), "the next committee known");
+    clock.set(13);
+    let (f13, _) = decode_finality_update(&r.entries[12].bytes, &r.config).unwrap();
+    let mut t = r.config.slot_start_ms(f13.signature_slot) + 12_000;
+    let p13 = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let s13 = store(&u, &l);
+    clock.set(20);
+    let (f20, _) = decode_finality_update(&r.entries[19].bytes, &r.config).unwrap();
+    t = t.max(r.config.slot_start_ms(f20.signature_slot) + 12_000);
+    let p20 = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let s20 = store(&u, &l);
+    let (status, why) = u.health();
+    println!(
+        "an adopting update re-dated 4 slots (48 s, the margin {} s) past the chain's clock every round: at entry 13, 30 \
+         rounds, {} waiting, finalized slot {} -> {} (next committee known: {}); at entry 20, 30 rounds, {} waiting, \
+         finalized slot {} (entry 20's {}); the liar refused {} time(s); health {status} {why:?}",
+        FUTURE_MARGIN_MS / 1000,
+        waiting(&p13),
+        s0.finalized.slot,
+        s13.finalized.slot,
+        s13.next.is_some(),
+        waiting(&p20),
+        s20.finalized.slot,
+        f20.finalized_header.beacon.slot,
+        u.metrics.sources["liar"].refused
+    );
+    assert_eq!(waiting(&p13), 0, "{p13:?}");
+    assert_eq!(s13.finalized.slot, f13.finalized_header.beacon.slot, "rotated by entry 13");
+    assert_eq!(s13.finalized.slot, 15_631_200);
+    assert!(s13.next.is_some(), "the honest period update adopted the next committee");
+    assert_eq!(waiting(&p20), 0, "{p20:?}");
+    assert_eq!(s20.finalized.slot, f20.finalized_header.beacon.slot, "entry 20 applied");
+    assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 0, "within the margin: not demoted");
+    assert_eq!(status, "ok", "{why:?}");
+}
+
+/// review-fix-updater3 M1, the update only the liar serves: re-dated four slots past the chain's clock each time it is
+/// asked, the other source one update behind. It used to be chosen (the furthest finalized header) and to wait for its
+/// window every round, while the other source's update was never sent (30 of 30 rounds waiting, the store unmoved).
+/// Now the other source's update, which can be sent, is applied first, in the first rounds; then only the liar's
+/// waits, for as long as it alone serves it, and `/health` names the instance not moving.
+#[test]
+fn an_update_only_one_source_serves_re_dated_within_the_margin_every_round_holds_back_only_itself() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let now = Arc::new(AtomicU64::new(0));
+    let payer = key(0x56);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Rolling {
+        inner: Recorded::open("liar", &r.dir, &r.config, clock.clone()).unwrap(),
+        config: r.config.clone(),
+        now: now.clone(),
+        ahead: 4,
+        period: false,
+    };
+    let mut behind = Recorded::open("behind", &r.dir, &r.config, clock.clone()).unwrap();
+    behind.lag = 1;
+    let mut u = r.updater("only-rolled", payer.clone(), vec![Box::new(liar), Box::new(behind)], None);
+    settle(&mut u, &mut l, 60);
+    let fin = store(&u, &l).finalized.slot;
+    clock.set(5);
+    let (newest, _) = decode_finality_update(&r.entries[4].bytes, &r.config).unwrap();
+    let (older, _) = decode_finality_update(&r.entries[3].bytes, &r.config).unwrap();
+    let mut t = r.config.slot_start_ms(newest.signature_slot) + 12_000;
+    let plans = rounds_from(&mut u, &mut l, &now, &mut t, 30);
+    let moved = store(&u, &l).finalized.slot;
+    let applied_at = plans.iter().position(|(_, f)| *f != fin);
+    let (status, why) = u.health();
+    println!(
+        "an update only the liar serves (finalizing {}), re-dated 4 slots past the chain's clock every round, the other \
+         source one behind (finalizing {}): 30 rounds, {} waiting, finalized slot {fin} -> {moved} in round {:?}; the \
+         liar refused {} time(s); last plan {:?}; health {status} {why:?}",
+        newest.finalized_header.beacon.slot,
+        older.finalized_header.beacon.slot,
+        waiting(&plans),
+        applied_at.map(|i| i + 1),
+        u.metrics.sources["liar"].refused,
+        plans.last().map(|p| &p.0)
+    );
+    assert_eq!(moved, older.finalized_header.beacon.slot, "the other source's update applied");
+    let applied_at = applied_at.expect("moved");
+    assert_eq!(waiting(&plans[..=applied_at]), 0, "nothing waits before it: {plans:?}");
+    // Afterwards only the liar's update is useful, and it waits for its window, which it keeps moving.
+    assert!(plans[applied_at + 1..].iter().all(|(p, _)| matches!(p, Plan::Waiting(w) if w.contains("window opens"))));
+    assert_eq!(refused(&l, 0), 0);
+    assert_eq!(u.metrics.sources["liar"].refused, 0, "within the margin: not demoted");
+    assert!(why.iter().any(|w| w.contains("no progress")), "{why:?}");
+}
+
+/// 9c L-U5: a hold for good (the initialization's `Adopt` refused out of gas) outlives `HOLD_ROUNDS` rounds and a restart
+/// (`state_dir/<chain>/held.tsv`): one refusal in `HOLD_ROUNDS` + 10 rounds and ten more after a restart (it used to be
+/// forgotten after 4,096 rounds, about 13.7 h at 12 s rounds, and at every restart, and the step refused and charged
+/// again). Raising the gas limit releases it; once the step lands the file is empty.
+#[test]
+fn a_hold_for_good_outlives_its_rounds_and_a_restart() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x52);
+    let dir = scratch("held");
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let mut u = r.updater("held", payer.clone(), vec![r.source("a", &clock)], Some(dir.clone()));
+    u.fees.gas_limit = 1_000_000;
+    let total = HOLD_ROUNDS + 10;
+    for _ in 0..total {
+        u.tick(&mut l).unwrap();
+    }
+    let file = dir.join("mainnet/held.tsv");
+    let kept = fs::read_to_string(&file).unwrap();
+    println!("{total} rounds: {} refused; held.tsv: {kept:?}", refused(&l, 0));
+    assert_eq!(refused(&l, 0), 1, "one refusal in {total} rounds");
+    assert_eq!(kept.lines().count(), 1);
+    assert!(kept.contains("\tgas\t"), "{kept}");
+    drop(u);
+
+    let mut again = r.updater("held", payer.clone(), vec![r.source("a", &clock)], Some(dir.clone()));
+    again.fees.gas_limit = 1_000_000;
+    for _ in 0..10 {
+        again.tick(&mut l).unwrap();
+    }
+    let (status, why) = again.health();
+    println!("restarted, ten rounds: {} refused; held {}; health {status} {why:?}", refused(&l, 0), again.held.len());
+    assert_eq!(refused(&l, 0), 1, "not sent again after the restart");
+    assert_eq!(again.held.len(), 1);
+    assert!(why.iter().any(|w| w.contains("out of gas") && w.contains("raise it")), "{why:?}");
+
+    again.fees.gas_limit = Fees::default().gas_limit;
+    settle(&mut again, &mut l, 60);
+    assert!(again.held.is_empty());
+    assert_eq!(fs::read_to_string(&file).unwrap(), "", "released and applied: nothing kept");
+    assert_eq!(refused(&l, 0), 1);
 }

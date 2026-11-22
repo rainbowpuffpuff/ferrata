@@ -8,7 +8,9 @@ binary as a cross-check. Used by scripts/reproduce-image-ids.sh build.
 A target directory can hold more than one methods.rs for a guest (a toolchain or lockfile change leaves the old
 `methods-<hash>` directory behind). All of them are read: when they give the same id the newest is used; when they
 disagree the guest is reported as a conflict, left out of OUT.tsv, and the exit status is 1 (rebuild in a fresh
-target directory). The r0vm column is "= id" when r0vm computes risc0-build's id from the binary, r0vm's own id when
+target directory). A methods.rs with an all-zero id was written by a build with RISC0_SKIP_BUILD=1 (a lint), which
+builds no guest: it is not read, and a guest that has only such ones is reported NOT BUILT on stderr and left out
+(review 9b N5: it used to be compared as a differing id). The r0vm column is "= id" when r0vm computes risc0-build's id from the binary, r0vm's own id when
 it differs, and "?" when r0vm is not installed or fails; scripts/reproduce/compare_ids.py counts anything but "= id"
 as a difference.
 """
@@ -37,6 +39,11 @@ def candidates(root: Path) -> dict:
     return out
 
 
+def built(cands: list) -> list:
+    """The candidates a guest build wrote: not an all-zero id (RISC0_SKIP_BUILD=1), and a binary that exists."""
+    return [c for c in cands if c[1].strip("0") and c[2].is_file()]
+
+
 def r0vm_id(binary: Path) -> str:
     try:
         r = subprocess.run(["r0vm", "--elf", str(binary), "--id"], capture_output=True, text=True)
@@ -49,9 +56,12 @@ def r0vm_id(binary: Path) -> str:
 def main() -> int:
     root, out = Path(sys.argv[1]), Path(sys.argv[2])
     rows, conflicts = [], []
+    not_built = []
     for (ws, name), cands in sorted(candidates(root).items()):
-        present = [c for c in cands if c[2].exists()]
+        present = built(cands)
         if not present:
+            if any(not c[1].strip("0") for c in cands):
+                not_built.append((ws, name))
             continue
         ids = sorted({c[1] for c in present})
         if len(ids) > 1:
@@ -68,6 +78,9 @@ def main() -> int:
     out.write_text("workspace\tname\timage_id\tsha256_bin\tbytes_bin\tsha256_user_elf\tr0vm_id\n"
                    + "".join("\t".join(r) + "\n" for r in rows))
     print(out.read_text(), end="")
+    for ws, name in not_built:
+        print(f"NOT BUILT {ws} {name.lower()}: only a methods.rs with an all-zero id (written with RISC0_SKIP_BUILD=1); "
+              "build it without that variable", file=sys.stderr)
     for ws, name, present in conflicts:
         print(f"CONFLICT {ws} {name.lower()}: {len(present)} methods.rs give different image ids (stale build output; "
               "rebuild in a fresh target directory):", file=sys.stderr)

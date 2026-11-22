@@ -81,6 +81,11 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    candidate's layout. *Useful* (it advances, rotates or adopts), *no change* (older than the
    store), *unverifiable* (signed by a committee the store does not hold yet), or *invalid*: the
    program would refuse it, so the source is demoted for `demote_rounds` and nothing is sent.
+   Before the verdicts, a candidate signed in the future is refused: its signature slot starts more than 60 s after
+   the chain's clock (`Ledger::now_ms`; `FUTURE_MARGIN_MS`, the skew the updater tolerates, as for its windows). No
+   honest node serves one (a sync aggregate exists only once its slot's block does) and the program refuses its
+   `Open` until then; its source is demoted and nothing else it served in the round is used (review-integ9c M4,
+   review-integ9d M1). The in-process chain without a clock (`HarnessLedger::now` unset) checks nothing here.
 5. **Cross-check.** A source whose newest verified finalized slot is more than `max_lag_slots`
    behind the best is flagged lagging (the best source's update is used: fallback is per round). A
    source that does not answer is flagged unavailable. With `min_agreeing = k`, the updater sends
@@ -93,8 +98,23 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    `/health`, and nothing is sent until enough sources agree.
    With `min_distinct_clients = k` the update must also come from `k` different consensus clients
    ([below](#client-diversity-policymin_distinct_clients)); otherwise the updater waits.
-6. **Choice.** Adopting the next committee first when the store lacks it; then the furthest
-   finalized header; then the most signers.
+6. **Choice.** An update that can be sent now first: its `Open` window is open by the chain's clock (its signature
+   slot has started); then adopting the next committee when the store lacks it; then the furthest finalized header;
+   then the earliest signature slot; then the most signers. The signature does not cover `signature_slot` (only its
+   fork version), so a source can serve a real update, or another real update of the same finalized header with more
+   signers, re-dated to a later slot of its period, whose `Open` window has not opened. Re-dated more than 60 s past
+   the chain's clock it was refused in item 4. Within that margin it is not refused (a few seconds of clock skew make
+   an honest update look the same), but it ranks after every update that can be sent: a source re-dating so, even
+   again every round, holds back only an update no other source serves, until another source serves it or a later
+   one, and meanwhile the instance advances to the furthest update the other sources serve. (Before
+   review-fix-updater3 M1 such an update ranked first when it adopted the next committee, and every round waited for
+   its window, so that nothing was sent until the period ended: 24.2 h of chain time in the review's run, a period
+   being about 27 h.) The comparison is the program's own start check, exact: a tolerance would let a source re-date
+   to a slot about to start. The signer count does not change the store an
+   update leaves (every update the program applies has two thirds of the committee) and breaks the remaining ties
+   (`tests/refusals.rs`: copies of one update, an update only the liar serves, two real updates of one finalized
+   header from the client-diversity probe, Lodestar's with 511 signers re-dated against Nimbus's with 510, and an
+   update adopting the next committee, or one only the liar serves, re-dated 48 s past the clock every round).
 7. **The job's next step, from the chain.** A job's id hashes the instance, its starting store and
    the update, so every updater computes the same id for the same update. No job yet: `Open`. A job
    in `Miller`: `Miller`. Adoption pending: the next `Adopt` part. Otherwise `Finish`. The updater
@@ -118,7 +138,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    exponential backoff (`retry_base_ms * 2^(attempt-1)` after attempt 1, 2, ..., at most
    `retry_max_ms`, `max_attempts` attempts), and just before sending and before every retry the
    chain is read again: a step another party sent, or a store that moved, since the round read the
-   instance is not sent (UP-L5). A read that fails is tried again at a later round; after a refusal, a step whose chain cannot be read again is held briefly, neither a strike nor a failing send (`tests/refusals.rs`).
+   instance is not sent (UP-L5). A read that fails is tried again at a later round; after a refusal, a step whose chain cannot be read again is held, and judged at the next round that reads the chain: a race (the hold dropped, nothing counted) or a step that stayed due (a failing send and a strike, as any; `tests/refusals.rs`).
    Every sent transaction is a line of `state_dir/<chain>/journal.tsv` (round, step, job, finalized
    slot, result, exit code, execution and storage gas, fee, block, the time it settled, its label, the
    chain's note: a refusal's reason).
@@ -139,9 +159,14 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    it or it ran out of gas (out of gas: until `fees.gas_limit` is raised), and for a window or an
    unknown reason 4 rounds, then 8, 16, 32, then every 64 rounds, sent again after each hold, never
    given up (review of the fixes, L3); if the chain cannot be read after the refusal, the step is held
-   4 rounds (doubling if that happens again to the same step) whatever the cause, without counting against the breaker or as a send that did not land (on
-   the sequencer backend a read fails while another party's transaction touching the instance is in
-   flight, which is when a race is lost; L4). Three refusals in a row of steps that stayed due pause
+   4 rounds (doubling if that happens again to the same step) whatever the cause, and judged at the next round that
+   can read the chain: done or moot, a race (the hold dropped, no strike, not a failing send: on the sequencer backend a
+   read fails while another party's transaction touching the instance is in flight, which is when a race is lost; L4);
+   still due, a send that did not land and a strike, as any refusal of a step that stayed due (9c L-U3: it used to be
+   neither, whatever followed). A hold for good is kept while the instance holds the state its step was refused on
+   (a job commits to the store it starts from), across restarts: `state_dir/<chain>/held.tsv` (9c L-U5: it used to
+   end after 4,096 rounds, about 13.7 h at 12 s rounds, and at every restart, and the step was refused and charged
+   again); a hold that ends is forgotten 4,096 rounds after its last refusal. Three refusals in a row of steps that stayed due pause
    sending for 8 rounds, then 16, ... up to 512, with one step tried after each pause: this bounds what
    a refusal nothing here foresees can cost, also when every round brings a new job. The reason is in
    the log line, the journal, `/health` and the metrics.
@@ -231,12 +256,14 @@ round hung on a settle wait or a source). It reflects what lands on the chain (r
 `degraded`: a source demoted, lagging or unavailable, a `headers` source holding another block at a
 finalized header's slot, two sources serving other bytes for one update or waiting for clients beyond `max_lag_slots`
 (`min_distinct_clients`), a transaction it sent that did not land (rejected, refused while its step
-stayed due, failed at transport after every retry), a round that ended in an error, the last round
+stayed due, failed at transport after every retry; refused with the chain unreadable after it: from the round that
+reads the step still due), a round that ended in an error, the last round
 stuck, sending paused, or no progress: the instance's finalized slot unmoved for
 `6 × defer_window + 10` rounds while the sources serve updates more than `max_lag_slots` past it.
-`down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change; and a round that stops before it reads the sources' head, as when the committees cannot be fetched, stays `degraded`: not counted toward `down`): no light-client source usable and answering;
+`down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change): no light-client source usable and answering;
 five sends in a row that did not land; five rounds in a row that ended in an error (a chain that
-answers neither reads nor sends fails each round before anything is sent); the instance, or before
+answers neither reads nor sends fails each round before anything is sent; so does a round that cannot fetch the
+committees the store summarises, 9c L-U2: it used to stay `degraded`); the instance, or before
 `Init` its checkpoint, past its weak-subjectivity period by the chain's clock (a person must
 initialise a new instance, or start from a newer checkpoint); no progress for twice the rounds above,
 `2 × (6 × defer_window + 10)` (a step held, sending paused, too few sources or clients agreeing, round
@@ -245,8 +272,9 @@ instance past its period stayed `degraded`, HTTP 200, in 200 rounds of 200). Aft
 than that, `/health` stays `down` until the instance moves again (measured: three rounds, one job).
 
 The listener serves each connection on a thread of its own: at most eight at once with two seconds
-to send the request head, of those at most four from one address other than loopback (on loopback
-every client is this machine, one address: they share the eight); a connection beyond those is still
+to send the request head, of those at most four from one host other than loopback (an IPv4 address, or an IPv6
+address's /64 network, from any address of which one host may answer; 9c L-U4f: each IPv6 address used to count as a
+host; on loopback every client is this machine, one address: they share the eight); a connection beyond those is still
 served, on at most eight more threads, if its request head arrives within 250 ms, as a monitor's does
 (the request goes out with the connection); beyond those it is closed at once. A head is at most 8 KiB
 (`400` beyond, and the client receives it: what it still sends is read for a moment before the close).
@@ -321,14 +349,24 @@ these fixes): **64 tests pass** (10 in the library, 8 in `config.rs`, 4 in `dive
 `recorded.rs`, and the files below), clippy `-D warnings` clean with and without `harness`; the A3 gate's default run
 on the grown record (246 updates, 1,101 rounds) passes: honest refused / applied gas 0.0752, shares 0.4841 / 0.5159.
 
+**Liveness fixes** (22 November 2026: review-integ9d M1 and review-integ9c M4, one lying source holding every update
+back; the Lows L-U2, L-U3, L-U4f, L-U5, L-U6 and L-U7 of review-integ9c; then review-fix-updater3 M1, a source
+re-dating within the margin every round, and its Lows and nits): **82 tests pass** (11 in the library, 3 `bounds`, 8
+`config`, 1 `daemon_clock`, 4 `diversity_limits`, 8 `every_party`, 8 `health`, 2 `jobs`, 13 `recorded`, 16 `refusals`,
+1 `replacement`, 7 `serve`), clippy `-D warnings` clean with and without `harness`, fmt clean; the A3 gate's default run
+writes `results/gate.txt` byte for byte as before. Each new test fails with its fix undone:
+`python3 -I lez/updater/dev/mutants.py NAME` (from the root) undoes one fix in the sources, runs the tests it added and
+puts the sources back, also when stopped by Ctrl-C, SIGTERM or SIGHUP (`--check`: every mutant still applies;
+`dev/test_mutants.py` checks the restoring). The table gives the files as they stand.
+
 | test | what it shows | result |
 |---|---|---|
-| `refusals.rs` (9) | `Init` and `Open` with the chain's clock (`HarnessLedger::now`) at and past the window's end; out of gas; a new refused job every round; a race; a store moved while planning; a refusal of unknown cause three times; races each followed by failed reads | at the end minus 60 s or past it nothing is sent, 0 charged, `/health` `down` naming the action; 1 ms inside, sent and applied, `ok`. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds, nothing charged after, released when the limit is raised. 5 refusals in 40 rounds where each round brings a new job (the breaker). A refusal lost to another updater (exit 207) not held. A step made moot while planning is not sent (sent anyway: refused, fee 1,706,408). A `Miller` refused three times for an unknown cause: sent again after 4, 8 and 16 rounds, lands, the instance moves. 9 races each followed by one failed read: all races, no strike; with every read failing: held 4 rounds each, no strike, no failing send |
-| `health.rs` (7) | every send rejected (no funds), failing at transport, the only source down, the instance not moving, the chain unreachable for 200 rounds, the instance past its weak-subjectivity period for 200 rounds, a daemon cut off from its chain | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress, `down` after 32 (`defer_window` 1); unreachable: degraded in rounds 1-4, `down` in 5-200, `ok` once it answers and the instance moves; past its period: `down` in 200 of 200, nothing sent; the daemon's `/health`: 200 in rounds 1-4, 503 from round 5 |
-| `jobs.rs` (2) | ten rounds, a new finality update each, another party opening its job first and leaving it; a kept job whose `Miller` is refused once while the sources move on | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s for 5 applied updates, nothing refused; the kept job kept through its 3 held rounds and finished: 2 `Open`s for 2 applied updates |
-| `bounds.rs` (3) | answers at and one byte past their bound, with and without a length; 256 MiB; module replies; provider messages | exact bound read, one more refused; 256 MiB cut after 1 MiB, RSS +0.9 MiB; `file://` refused; messages kept to 200 printable characters |
+| `refusals.rs` (16) | `Init` and `Open` with the chain's clock (`HarnessLedger::now`) at and past the window's end; out of gas; a new refused job every round; a race; a store moved while planning; a refusal of unknown cause three times; races each followed by failed reads; a refusal of unknown cause three times with every read after it failing; a source re-dating updates: a copy, an update only it serves, another real update of one finalized header with more signers (600 slots, or 24, 60 or 72 s past the chain's clock), and, again every round 48 s past the clock, an update adopting the next committee or one only it serves; a hold for good across 4,106 rounds and a restart | at the end minus 60 s or past it nothing is sent, 0 charged, `/health` `down` naming the action; 1 ms inside, sent and applied, `ok`. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds, nothing charged after, released when the limit is raised. 5 refusals in 40 rounds where each round brings a new job (the breaker). A refusal lost to another updater (exit 207) not held. A step made moot while planning is not sent (sent anyway: refused, fee 1,706,408). A `Miller` refused three times for an unknown cause: sent again after 4, 8 and 16 rounds, lands, the instance moves. 9 races each followed by one failed read: all races, no strike; with every read failing: held, judged a race the next round (the hold dropped), no strike, no failing send. The same `Miller` refusals with every read after each failing and no other party: each judged due the round after (failing sends 1, 2, 3; strikes 1, 2, 3; `/health` "did not land" from round 3), the third strike pauses sending (rounds 15-23), the fourth lands in round 30, `ok`. A source re-dating every finality update 600 slots, listed first: 4 rounds, 0 waiting, the update applied, the liar demoted (`/health` names the 7,188 s); a re-dated update only the liar serves, the other source one update behind: 4 rounds, 0 waiting, the other's update applied (15,626,400 → 15,627,008); Lodestar's real update of the probe (511 signers) re-dated against Nimbus's of the same finalized header (510): Nimbus's applied in 4 rounds whether the re-dated slot starts 24 s or 60 s (the margin itself) past the chain's clock, the liar not demoted, or 72 s or two hours past it, the liar demoted; with the fix undone, 30 of 30 rounds waiting and the store unmoved. A real update adopting the next committee (the record's entry 12) re-dated 48 s past the chain's clock every time it is asked, the store without its next committee after a rotation: 0 of 60 rounds waiting, the honest period update (entry 10) adopted at once, entry 20 applied (15,635,392) once served, the liar not demoted, `ok` (with the order of `81bbea61`: 27 of 30 rounds waiting, the committee not adopted, then 30 of 30 with entry 20 unsent, `down`); an update only the liar serves, re-dated so: the other source's applied in round 3, then 27 rounds waiting for the liar's window alone, `/health` `degraded` naming no progress (with that order: 30 of 30 waiting, the store unmoved). The initialization's `Adopt` out of gas held for good: 1 refusal in 4,106 rounds, `held.tsv` one line; restarted on the same directory: still 1 refusal ten rounds later; raised: applied, `held.tsv` empty (undone: 2 refusals in 4,106 rounds) |
+| `health.rs` (8) | every send rejected (no funds), failing at transport, the only source down, the instance not moving, the chain unreachable for 200 rounds, the instance past its weak-subjectivity period for 200 rounds, a daemon cut off from its chain, a restart without the committee cache whose source serves only the bootstrap | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress, `down` after 32 (`defer_window` 1); unreachable: degraded in rounds 1-4, `down` in 5-200, `ok` once it answers and the instance moves; past its period: `down` in 200 of 200, nothing sent; the daemon's `/health`: 200 in rounds 1-4, 503 from round 5; the committees not served (store in period 1908): degraded in rounds 1-4, `down` from round 5, naming them (undone: the round ends `stuck`), the next round without an error once a source serves them |
+| `jobs.rs` (2) | ten rounds, a new finality update each, another party opening its job first and leaving it; a kept job whose `Miller` is refused once while the sources move on | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s and 5 `Finish`es (asserted exactly), nothing refused; the kept job kept through its 3 held rounds and finished: 2 `Open`s for 2 applied updates |
+| `bounds.rs` (3) | answers at and one byte past their bound, with and without a length; 256 MiB; module replies; provider messages | exact bound read, one more refused; 256 MiB cut after 1 MiB: the test server pushed a few MiB of it before curl was stopped (4,194,304, 6,291,456 and 6,291,456 bytes in three runs: socket buffering decides; asserted under 64 MiB: a reader that took the answer whole would have taken all 256 MiB; with curl's limit and the reader's bound both removed, the test fails), and where the kernel reports `VmHWM` the peak RSS is checked too (the box's gVisor does not); `file://` refused; messages kept to 200 printable characters |
 | `daemon_clock.rs` (1) | the clock the windows are checked against | a `sequencer` backend gets this machine's clock; the harness, and a wrapper of it that says nothing, each transaction's own time |
-| `serve.rs` (7) | an idle connection, a request with no end, a trickling client, 24 connections, eight clients re-opening idle connections for 8 s, 400 connections at once, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 answered `400`; 16 MiB without a newline cut, RSS within 4 MiB; 24 connections: `/health` at once (0.6 ms); the eight clients: 80 of 80 tries answered; 400 at once: 8 kept open; `503` when stale |
+| `serve.rs` (7) | an idle connection, a request with no end, a trickling client, 24 connections, eight clients re-opening idle connections for 8 s, 400 connections at once, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 answered `400`; 64 MiB offered without a newline: about 1.5 to 1.7 MiB got through before the server ended the connection (1,769,472, 1,572,864 and 1,572,864 bytes in three runs; asserted under 32 MiB; the peak RSS checked where `VmHWM` is reported); 24 connections: `/health` at once (0.6 ms); the eight clients: 80 of 80 tries answered; 400 at once: 8 kept open; `503` when stale |
 | `diversity_limits.rs` (4) | as above, and waiting for clients | degraded from the first round waiting, `down` once the instance has not moved for 32 rounds |
 
 **The A3 gate** (the runs below are of 12 November 2026, over the 58 updates recorded then; `results/gate.txt`
@@ -399,6 +437,17 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   with LEZ's node-side crates and their prebuilt circuit and rapidsnark libraries). It ran inside a headless Logos
   Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
+- A chain clock (`Ledger::now_ms`) more than 60 s behind Ethereum's: honest sources' newest updates look signed in the
+  future, are refused and their sources demoted (`/health` names the gap in seconds); before this, such a clock already
+  kept a source serving the newest update each slot waiting for its window. A clock behind by less, but by more than
+  the second or so between a slot's start and its update being served, ranks the newest honest update after an older
+  one that can be sent (item 6): the older may be applied first (one more job and its fees) where the updater used to
+  wait for the newest. A source re-dating within the 60 s, alone in serving the newest finalized header, holds
+  it back until another source serves it or a later one, and is not demoted (`/health` names the instance not moving
+  once that lasts the stall alarm's rounds). Tested on the in-process chain with its clock set
+  (`HarnessLedger::now`), not on a sequencer.
+- The bound tests' peak-RSS checks need `VmHWM` in `/proc/self/status` (and `/proc/self/clear_refs` to reset it); the
+  build box's gVisor reports neither, so there the byte counts are the check.
 - The review fixes on a sequencer: every measurement of them ran in the in-process chain. A sequencer's real
   refusals (the note the backend passes on when a receipt has no exit code), a clock that differs from the
   sequencer's near a window's end, `/health` under a real settle wait, and reads that fail while another daemon's

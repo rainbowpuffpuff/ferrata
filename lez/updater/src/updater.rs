@@ -101,6 +101,19 @@ pub struct Action {
 /// A step is sent only if its validity window ([`Window`]) stays open this long past the chain's clock: the time a
 /// transaction may take to reach a block (a sequencer's block interval, a retry).
 pub const WINDOW_MARGIN_MS: u64 = 60_000;
+/// A candidate update whose signature slot starts more than this after the chain's clock (`Ledger::now_ms`, the clock
+/// the program checks `Open`'s window against) is signed in the future: no honest node serves one (a sync aggregate
+/// exists only once its slot's block does), and the program refuses its `Open` until then. The signature does not cover
+/// `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of the same
+/// period, whose window has not opened (review-integ9c M4, review-integ9d M1): such a candidate is refused and its
+/// source demoted (`policy.demote_rounds`), and nothing else that source served in the round is used. The margin is the
+/// skew between the chain's clock and Ethereum's that the updater tolerates, as for its windows ([`WINDOW_MARGIN_MS`]).
+/// One re-dated within it is not refused (a few seconds of clock skew make an honest update look the same), but an
+/// update whose `Open` window has not opened by the chain's clock never outranks one that can be sent now (the order in
+/// `plan`): a source that re-dates so, even again every round, holds back only an update no other source serves, for as
+/// long as it alone serves it (review-fix-updater3 M1: it used to hold every update back until the period ended when
+/// the re-dated update adopted the next committee).
+pub const FUTURE_MARGIN_MS: u64 = WINDOW_MARGIN_MS;
 /// Refusals in a row, each of a step that stayed due after it (not a race another party won), after which this
 /// updater sends nothing for [`BREAKER_PAUSE`] rounds. Each time it opens again before one of this updater's
 /// transactions is applied, the pause doubles, up to [`BREAKER_MAX_PAUSE`] rounds; after a pause one step is tried.
@@ -129,13 +142,21 @@ pub const LEAVE_JOB_AFTER: u32 = 3;
 /// every retry) after which `/health` says `down`; one is enough for `degraded`.
 pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
 /// Rounds in a row that failed (the round ended in an error: a read of the chain failed, every transport retry
-/// failed, the budget is reached) after which `/health` says `down`; one is enough for `degraded`. A chain that answers
-/// neither reads nor sends fails every round before anything is sent, so it never counts as a failing send.
+/// failed, the budget is reached, the committees the store summarises could not be fetched) after which `/health` says
+/// `down`; one is enough for `degraded`. A chain that answers neither reads nor sends fails every round before anything
+/// is sent, so it never counts as a failing send.
 pub const DOWN_AFTER_FAILED_ROUNDS: u32 = 5;
-/// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
+/// A hold that ends ([`Held::retry_at`]) is forgotten this many rounds after its last refusal. A hold for good is kept
+/// while the instance holds the state its step was refused on (a job commits to its starting store, so the step is moot
+/// once the instance moves), across restarts: `state_dir/<chain>/held.tsv` (9c L-U5: it used to be forgotten after
+/// 4,096 rounds, about 13.7 h at 12 s rounds, and at every restart, and the step was refused and charged again). At
+/// most [`MAX_HELD`] holds are kept.
 pub const HOLD_ROUNDS: u64 = 4096;
 /// See [`HOLD_ROUNDS`].
 pub const MAX_HELD: usize = 1024;
+/// Refusals after which the chain could not be read ([`After::Unread`]) kept to be judged once it can be read again; the
+/// oldest beyond this is dropped unjudged.
+pub const MAX_UNJUDGED: usize = 64;
 
 /// Why the chain refused a transaction, as its outcome says (LEZ's note, the program's exit code).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -201,7 +222,8 @@ pub enum After {
     /// The chain could not be read after the refusal, `policy.max_attempts` times with the transport backoff between.
     /// On the sequencer backend a read fails while another party's transaction touching the instance is in flight,
     /// which is when a race is lost: held as a cause that may pass is ([`REFUSAL_BACKOFF`] rounds the first time),
-    /// whatever the cause; not a failing send, no strike.
+    /// whatever the cause, and judged at the next round that reads the chain ([`Updater`]'s `judge_unread`): a race
+    /// then, its hold dropped; or a step that stayed due, then a failing send and a strike as [`After::Due`] (9c L-U3).
     Unread,
 }
 
@@ -235,6 +257,61 @@ pub struct Held {
     pub retry_at: Option<u64>,
     /// `fees.gas_limit` at its last refusal ([`Refusal::Gas`]: the hold ends when the limit is raised).
     pub gas_limit: u64,
+    /// The instance's state the step was refused on ([`state_digest`]): the hold is forgotten once it changes.
+    pub state: Root,
+}
+
+/// The SHA-256 of the instance's state as a round saw it ([`Action::store_seen`]: whether it is active, and its store;
+/// none before `Init`).
+pub fn state_digest(seen: &Option<(bool, Vec<u8>)>) -> Root {
+    let mut h = Sha256::new();
+    match seen {
+        None => h.update([0u8]),
+        Some((active, store)) => {
+            h.update([1u8, u8::from(*active)]);
+            h.update(store);
+        }
+    }
+    h.finalize().into()
+}
+
+fn step_of_byte(b: u8) -> Step {
+    match b {
+        0 => Step::Init,
+        1 => Step::Open,
+        2 => Step::Miller,
+        255 => Step::Finish,
+        p => Step::Adopt(p - 3),
+    }
+}
+
+/// A line of `held.tsv` ([`Updater`]'s `held_text`): a hold for good, as of round 0 of this run.
+fn parse_held(line: &str) -> Option<((Root, Step), Held)> {
+    let f: Vec<&str> = line.splitn(9, '\t').collect();
+    if f.len() != 9 {
+        return None;
+    }
+    let jid = crate::chain::root(f[0]).ok()?;
+    let step = step_of_byte(f[1].parse().ok()?);
+    let cause = match f[3] {
+        "window" => Refusal::Window,
+        "gas" => Refusal::Gas,
+        "other" => Refusal::Other,
+        c => Refusal::Program(c.strip_prefix("program:")?.parse().ok()?),
+    };
+    let held = Held {
+        step,
+        finalized_slot: f[2].parse().ok()?,
+        cause,
+        note: clip(f[8]),
+        count: f[4].parse().ok()?,
+        due: f[5] == "1",
+        round: 0,
+        retry_at: None,
+        gas_limit: f[6].parse().ok()?,
+        state: crate::chain::root(f[7]).ok()?,
+    };
+    Some(((jid, step), held))
 }
 
 /// Refusals in a row of steps that stayed due, and the pause they set ([`BREAKER_AFTER`]).
@@ -272,6 +349,8 @@ pub struct SourceStats {
     /// Candidates it served that the program would refuse (a forged signature, a wrong
     /// bootstrap, a broken branch).
     pub refused: u64,
+    /// The last thing it served that the program would refuse (or signed in the future), described.
+    pub last_refused: String,
     /// Rounds it was found lagging.
     pub lagging_rounds: u64,
     pub lagging: bool,
@@ -306,8 +385,10 @@ pub struct Metrics {
     pub refused_codes: BTreeMap<u32, u64>,
     /// Refused transactions by cause ([`Refusal::kind`]) and by what followed ([`After::label`]): `race` (the step was
     /// done or moot afterwards: another party's transaction came first), `due` (it stayed due: held,
-    /// [`Updater::held`]) or `unread` (the chain could not be read after it: held for a while).
+    /// [`Updater::held`]) or `unread` (the chain could not be read after it: held for a while, and judged later).
     pub refusals: BTreeMap<(&'static str, &'static str), u64>,
+    /// The `unread` refusals as judged once the chain could be read again: `race` or `due`.
+    pub unread_judged: BTreeMap<&'static str, u64>,
     pub gas_applied: u64,
     pub gas_refused: u64,
     pub fee_applied: u128,
@@ -413,6 +494,11 @@ pub struct Updater {
     /// Steps refused while they stayed due (or with the chain unreadable after the refusal), by (job, step): not sent
     /// again on the same state, or not yet ([`Held::retry_at`]).
     pub held: BTreeMap<(Root, Step), Held>,
+    /// What `held.tsv` holds (the holds for good as last written), so it is written only when they change.
+    held_saved: String,
+    /// Refusals after which the chain could not be read ([`After::Unread`]): the action and its cause, judged at the next
+    /// round that reads the chain. At most [`MAX_UNJUDGED`].
+    unjudged: Vec<(Action, Refusal, String)>,
     pub breaker: Breaker,
     /// The instance can no longer advance by the chain's clock: its finalized header (before `Init`: the checkpoint)
     /// is past its weak-subjectivity period, so the program refuses every `Open` (`Init`) from now on. (The finalized
@@ -465,6 +551,8 @@ impl Updater {
             disagreed: BTreeSet::new(),
             served_by: BTreeMap::new(),
             held: BTreeMap::new(),
+            held_saved: String::new(),
+            unjudged: Vec::new(),
             breaker: Breaker::default(),
             expired: None,
             sleep: real_sleep,
@@ -520,7 +608,51 @@ impl Updater {
                 }
             }
         }
+        if let Ok(text) = fs::read_to_string(dir.join("held.tsv")) {
+            self.held.extend(text.lines().filter_map(parse_held).take(MAX_HELD));
+            self.held_saved = self.held_text();
+        }
         Ok(())
+    }
+
+    /// The holds for good, a line each (tab-separated: job, step, finalized slot, cause, refusals, due, gas limit, the
+    /// instance's state, the chain's note), as `held.tsv` keeps them.
+    fn held_text(&self) -> String {
+        let mut o = String::new();
+        for ((jid, step), h) in self.held.iter().filter(|(_, h)| h.retry_at.is_none()) {
+            let cause = match h.cause {
+                Refusal::Program(code) => format!("program:{code}"),
+                c => c.kind().to_string(),
+            };
+            let _ = writeln!(
+                o,
+                "{}\t{}\t{}\t{cause}\t{}\t{}\t{}\t{}\t{}",
+                hex::encode(jid),
+                step.byte(),
+                h.finalized_slot,
+                h.count,
+                u8::from(h.due),
+                h.gas_limit,
+                hex::encode(h.state),
+                h.note
+            );
+        }
+        o
+    }
+
+    /// Write `state_dir/<chain>/held.tsv` if the holds for good changed (9c L-U5).
+    fn save_held(&mut self) {
+        let text = self.held_text();
+        if text == self.held_saved {
+            return;
+        }
+        if let Some(dir) = self.dir() {
+            if let Err(e) = fs::write(dir.join("held.tsv"), &text) {
+                self.log(&format!("held.tsv: {e}"));
+                return;
+            }
+        }
+        self.held_saved = text;
     }
 
     fn keep_committee(&mut self, c: &SyncCommittee) -> Result<()> {
@@ -604,6 +736,7 @@ impl Updater {
         let s = self.stats(i);
         s.refused += 1;
         s.demoted_until = until;
+        s.last_refused = clip(why);
         self.log(&format!(
             "source {name} served what the program would refuse ({why}); not asked for {} rounds",
             self.policy.demote_rounds
@@ -836,6 +969,35 @@ impl Updater {
         }
     }
 
+    /// [`FUTURE_MARGIN_MS`]: the candidates of the sources that served none signed in the future by the chain's clock
+    /// (`now_ms`; `None`: each transaction carries its own time, so nothing is in the future), and the first refusal
+    /// described (empty: none). A source that served one is demoted, and none of its candidates is kept this round.
+    fn refuse_future(&mut self, candidates: Vec<Candidate>, now_ms: Option<u64>) -> (Vec<Candidate>, String) {
+        let Some(now) = now_ms else { return (candidates, String::new()) };
+        let mut liars: BTreeMap<usize, String> = BTreeMap::new();
+        for c in &candidates {
+            let start = self.inst.config.slot_start_ms(c.update.signature_slot);
+            if start <= now.saturating_add(FUTURE_MARGIN_MS) || liars.contains_key(&c.source) {
+                continue;
+            }
+            let kind = if c.period_update { "period update" } else { "finality update" };
+            let why = format!(
+                "a {kind} finalizing slot {} signed at slot {}, which starts {} s after the chain's clock ({}): signed in \
+                 the future",
+                c.update.finalized_header.beacon.slot,
+                c.update.signature_slot,
+                (start - now) / 1000,
+                crate::utc(now / 1000)
+            );
+            liars.insert(c.source, why);
+        }
+        let first = liars.values().next().cloned().unwrap_or_default();
+        for (&i, why) in &liars {
+            self.demote(i, why);
+        }
+        (candidates.into_iter().filter(|c| !liars.contains_key(&c.source)).collect(), first)
+    }
+
     fn evaluate(&self, store: &CompactStore, update: &LightClientUpdate) -> Verdict {
         let current = self.committees.get(&store.current.pubkeys_root);
         let next = store.next.as_ref().and_then(|n| self.committees.get(&n.pubkeys_root));
@@ -868,8 +1030,10 @@ impl Updater {
             self.first_due.retain(|_, r| *r >= horizon);
         }
         let round = self.round;
-        self.held.retain(|_, h| h.round + HOLD_ROUNDS > round);
+        self.held.retain(|_, h| h.retry_at.is_none() || h.round + HOLD_ROUNDS > round);
+        self.judge_unread(ledger);
         let mut plan = self.plan_inner(ledger);
+        self.save_held();
         if matches!(plan, Ok(Plan::Send(_))) && self.round < self.breaker.paused_until {
             plan = Ok(Plan::Stuck(self.paused()));
         }
@@ -895,6 +1059,9 @@ impl Updater {
         let spec = config.spec();
         let fork = config.fork().ok_or_else(|| anyhow!("config: no layout"))?;
         let state = self.inst.state(ledger)?;
+        // A step held on another state of the instance is moot (a job commits to the store it starts from): forgotten.
+        let seen = state_digest(&state.as_ref().map(|s| (s.active, s.store.clone())));
+        self.held.retain(|_, h| h.state == seen);
         let Some(state) = state.filter(|s| s.active) else {
             // Not initialized, or its committee not adopted yet.
             if let Err(e) = self.ensure_bootstrap() {
@@ -977,9 +1144,10 @@ impl Updater {
         }
         self.metrics.finalized_slot = store.finalized.slot;
         self.metrics.period = spec.period_at_slot(store.finalized.slot);
-        if let Err(e) = self.ensure_committees(&store) {
-            return Ok(Plan::Stuck(format!("{e:#}")));
-        }
+        // Without the committees the store summarises no update can be judged or sent: the round ends in an error, so
+        // that rounds in a row of it count towards `down` (DOWN_AFTER_FAILED_ROUNDS) as an unreadable chain's do (9c
+        // L-U2: it used to end `Stuck`, before the sources' head was read, and `/health` stayed `degraded` for good).
+        self.ensure_committees(&store)?;
         if self.policy.finish_own_jobs {
             if let Some(plan) = self.continue_carried(ledger, &store, &state)? {
                 return Ok(plan);
@@ -992,6 +1160,13 @@ impl Updater {
         let candidates = self.candidates(&store);
         if candidates.is_empty() {
             return Ok(Plan::Stuck("no source answered".into()));
+        }
+        let (candidates, future) = self.refuse_future(candidates, ledger.now_ms());
+        if candidates.is_empty() {
+            return Ok(Plan::Stuck(format!(
+                "every source that answered served an update signed in the future ({future}) and is demoted; when every \
+                 source is demoted so, the chain's clock may be behind Ethereum's"
+            )));
         }
         if k >= 2 {
             self.note_disagreements(&candidates);
@@ -1064,18 +1239,28 @@ impl Updater {
         if useful.is_empty() {
             return Ok(Plan::UpToDate);
         }
-        // Adopting the next committee comes first when the store lacks it; then the furthest
-        // finalized header; then the most signers; then the earliest signature slot. The signature does not cover
-        // `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of
-        // the same period, whose `Open` window has not opened yet: among copies of one update the earliest is taken,
-        // so such a copy cannot hold back the copy other sources serve (review-integ9c M4).
+        // An update that can be sent now comes first: its `Open` window is open by the chain's clock (its signature slot
+        // has started; without a clock each transaction carries its own time, so every update can). Then adopting the
+        // next committee when the store lacks it; then the furthest finalized header; then the earliest signature slot;
+        // then the most signers. The signature does not cover `signature_slot` (only its fork version), so a source can
+        // serve a real update, or another real update of the same finalized header with more signers, re-dated to a
+        // later slot of the same period, whose `Open` window has not opened yet (review-integ9c M4, review-integ9d M1).
+        // One signed in the future by more than FUTURE_MARGIN_MS was refused above. One re-dated within it, again every
+        // round, used to rank first when it adopted the next committee, and every round waited for its window until the
+        // period ended (review-fix-updater3 M1); now it ranks after every update that can be sent, so it holds back only
+        // itself, while no other source serves its finalized header. The comparison is the program's own (`Open`'s
+        // window starts at the signature slot's start), exact: a tolerance would let a source re-date to a slot about to
+        // start. The signer count does not change the store an update leaves (every update applied has two thirds of the
+        // committee); it only breaks the remaining ties.
         let needs_next = store.next.is_none();
+        let now = ledger.now_ms();
         let key = |p: &Planned| {
             (
+                now.is_none_or(|t| config.slot_start_ms(p.update.signature_slot) <= t),
                 needs_next && p.outcome.adopted,
                 p.update.finalized_header.beacon.slot,
-                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
                 std::cmp::Reverse(p.update.signature_slot),
+                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
             )
         };
         // The best candidate that enough sources serve: light-client sources serving an update with its finalized
@@ -1300,7 +1485,7 @@ impl Updater {
     /// Hold `(job, step)` after a refusal: `due`, the chain read after it showed the step still due ([`After::Due`]);
     /// otherwise it could not be read ([`After::Unread`]: held for a while whatever the cause). What follows, described.
     fn hold(&mut self, action: &Action, cause: Refusal, note: &str, due: bool) -> String {
-        let (round, gas_limit) = (self.round, self.fees.gas_limit);
+        let (round, gas_limit, state) = (self.round, self.fees.gas_limit, state_digest(&action.store_seen));
         let h = self.held.entry((action.job_id, action.step)).or_insert_with(|| Held {
             step: action.step,
             finalized_slot: action.finalized_slot,
@@ -1311,6 +1496,7 @@ impl Updater {
             round,
             retry_at: None,
             gas_limit,
+            state,
         });
         h.count = h.count.saturating_add(1);
         h.cause = cause;
@@ -1318,6 +1504,7 @@ impl Updater {
         h.due = due;
         h.round = round;
         h.gas_limit = gas_limit;
+        h.state = state;
         // A cause that repeats on the same state, seen to leave the step due: for good. Any other: a hold that doubles
         // up to MAX_REFUSAL_BACKOFF rounds, then the step is sent again (review of the fixes, L3: it used to stop
         // after three).
@@ -1718,9 +1905,13 @@ impl Updater {
                 }
                 After::Unread => {
                     let held = self.hold(action, cause, &out.note, false);
+                    if self.unjudged.len() >= MAX_UNJUDGED {
+                        self.unjudged.remove(0);
+                    }
+                    self.unjudged.push((action.clone(), cause, reason.clone()));
                     why = format!(
                         ": {reason}; the chain could not be read after it ({} attempts), so whether another party's \
-                         transaction came first is not known: {held}",
+                         transaction came first is not known: {held}, judged once the chain is read again",
                         self.policy.max_attempts
                     );
                 }
@@ -1736,6 +1927,49 @@ impl Updater {
             action.tx.label, out.exit_code, gas, out.fee, out.block
         ));
         self.journal(action, out);
+        self.save_held();
+    }
+
+    /// The refusals after which the chain could not be read ([`After::Unread`]), judged now that it may be read again:
+    /// a step done or moot was a race another party won (its hold is dropped); a step that stayed due counts as any
+    /// refusal of a step that stayed due does: a send that did not land and a strike towards the breaker, its hold for
+    /// good if the cause repeats on the same state (9c L-U3: such a refusal used to be neither, whatever followed). One
+    /// whose chain still cannot be read waits for a later round.
+    fn judge_unread(&mut self, ledger: &dyn Ledger) {
+        for (action, cause, reason) in std::mem::take(&mut self.unjudged) {
+            match self.step_done(ledger, &action) {
+                Err(_) => self.unjudged.push((action, cause, reason)),
+                Ok(true) => {
+                    *self.metrics.unread_judged.entry("race").or_default() += 1;
+                    self.held.remove(&(action.job_id, action.step));
+                    self.log(&format!(
+                        "{} (refused with the chain unreadable after it): read again, the step was done or moot \
+                         (another party's transaction came first); not held",
+                        action.tx.label
+                    ));
+                }
+                Ok(false) => {
+                    *self.metrics.unread_judged.entry("due").or_default() += 1;
+                    self.metrics.failing_sends += 1;
+                    self.metrics.last_failure =
+                        format!("{} refused: {reason}; the chain read again: the step stayed due", action.tx.label);
+                    if let Some(h) = self.held.get_mut(&(action.job_id, action.step)) {
+                        h.due = true;
+                        if cause.repeats() {
+                            h.retry_at = None;
+                        }
+                    }
+                    let mut why = format!(
+                        "{} (refused with the chain unreadable after it: {reason}): read again, the step stayed due",
+                        action.tx.label
+                    );
+                    if let Some(paused) = self.strike(format!("{} {reason}", action.tx.label)) {
+                        why += &format!("; {paused}");
+                    }
+                    self.log(&why);
+                }
+            }
+        }
     }
 
     /// One round: plan, then send what is due, after reading the chain once more: the round read the instance before
@@ -1780,7 +2014,10 @@ impl Updater {
             .count();
         for (name, s) in &self.metrics.sources {
             if s.demoted_until > self.round {
-                why.push(format!("source {name} demoted (served what the program refuses)"));
+                why.push(format!(
+                    "source {name} demoted until round {} (served what the program refuses: {})",
+                    s.demoted_until, s.last_refused
+                ));
             } else if s.lagging {
                 why.push(format!("source {name} lagging (finalized slot {})", s.finalized_slot));
             } else if s.mismatch {
@@ -1885,6 +2122,9 @@ impl Updater {
         }
         for ((cause, after), n) in &m.refusals {
             let _ = writeln!(o, "ferrata_updater_refusals_total{{{l},cause=\"{cause}\",after=\"{after}\"}} {n}");
+        }
+        for (judged, n) in &m.unread_judged {
+            let _ = writeln!(o, "ferrata_updater_unread_refusals_judged_total{{{l},as=\"{judged}\"}} {n}");
         }
         let held = self.held.values().filter(|h| self.holding(h)).count();
         let _ = writeln!(o, "ferrata_updater_held_steps{{{l}}} {held}");
