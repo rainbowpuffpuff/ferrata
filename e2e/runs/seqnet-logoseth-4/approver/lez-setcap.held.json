@@ -1,0 +1,1 @@
+{"age_s":3,"approval_id":"lra_1","error":null,"message":"SetCap","message_sha256":"0x0157e91250e97ed1c0a01ad098f9ede465204d2d1c3a9fad6b08136b7e144e20","result":null,"signer":"0x10debe6ffb247286bd4c509e61204d54f926d169fb474b2490f30b001dbbd68f","state":"awaiting_approval","what":"SetCap: mint cap 12000000000 LEZ units, refill 10000000/s (admin view)"}

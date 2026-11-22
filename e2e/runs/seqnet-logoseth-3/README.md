@@ -1,5 +1,8 @@
 # seqnet logoseth-3: the mini-app's round trip and admin, Ethereum through Logos Core's own modules (21 Nov 2026)
 
+**Superseded (22 Nov 2026) by `../seqnet-logoseth-4/`** (the second review's fixes: the registry's LEZ side read again
+through `lez_core`, every LEZ role message held for a person's approval at the role's wallet).
+
 As `../seqnet-logoseth-1/` (a LEZ v0.4.0-rc1 zone we ran, anvil with chain id 11155111, the mock verifier, dev-mode
 private proofs), with the review's fixes: branch `rfp-logos-core-eth` at `3ace689f` plus the test inputs of `25eae689`'s
 tree. On the Modal build box, from the worktree's root, as run: `export SEQNET_TMP=<scratch>/seqnet

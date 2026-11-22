@@ -1,0 +1,9 @@
+ea73799a0c2c2f9c14559c00dd1b9ba83bde20a5a62428b09f1792d45988c59d  <tmp>/logoseth/stack/lgx-eth_rpc_module//logos-eth_rpc_module-module-lib.lgx
+c832f409190c1a572bd0b3401c4637ad4838037f34fd0ed8431f9e1403a524ba  <tmp>/logoseth/stack/lgx-evm_keystore_cli//logos-evm_keystore_cli-module-lib.lgx
+3c7579b8021d9f7452fa197f2f636ab0085752d77462f714ccdaf30bbdba04c3  <tmp>/logoseth/stack/lgx-evm_signer_cli//logos-evm_signer_cli-module-lib.lgx
+80ed87e6a561ec93eba57ba4033d5f6d5069117f85638f7a32d06178b220308d  <tmp>/logoseth/stack/lgx-fee_module//logos-fee_module-module-lib.lgx
+7ffb69823c9f03ed41a19df99b8f83cbdf461806d1e77cb9a5eda58b72839f26  <tmp>/logoseth/stack/lgx-keystore_module//logos-keystore_module-module-lib.lgx
+42e10ba75807bfdcbac3deabe7b6c61f47d1daa579f6a10f36855866f3dc5503  <tmp>/logoseth/stack/lgx-signer_manager_module//logos-signer_manager_module-module-lib.lgx
+09babe0886a467efb48bf3c420308bc47211765602aacd4b4ab0479d73bc134f  <tmp>/logoseth/stack/lgx-tx_sender_module//logos-tx_sender_module-module-lib.lgx
+be17842b3d7a5e45f0273e69dcb9a3cc55f08ac7db91272e8f56e72c448d1cfc  <tmp>/logos/lgx-ferrata_bridge_module//logos-ferrata_bridge_module-module-lib.lgx
+480b74833f64d9c9247cb9193df10d67c49b738533426552a9271583300f9fdb  <tmp>/logos/lgx-lez_core-patched//logos-lez_core-module-lib.lgx
