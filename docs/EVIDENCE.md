@@ -573,6 +573,21 @@ laptop: `links` with its new steps (108 files, 2,177 links, 0 broken; `check-gui
 workflows, 0 differ; `check-portable.py` clean; `test-sequencer-records.sh` 13 passed; `check-unaudited.sh` clean) and
 `idl`. Not rerun here: the deployment from a fresh clone (row 182: 3,696 s and 699 s on the box at `26ad3564`).
 
+**Seventeenth pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-bridge-hardening` (stream D, rows
+183–191; conflicts in the deployer, user and consumer guides, `docs/performance.md`, `lez/Cargo.toml` and the crown
+driver's `crown.rs`, each resolved with both sides' facts kept), on the build box: the LEZ harness in dev mode with the
+features `statements` and `rebate`, every test: 116 passed in 53 test runs, 74 of its 75 records byte-identical to
+`lez/results/b1/` (the bridge program since B1) or `lez/results/` (the rest), the 75th the F.8 file's random count; the
+bridge-wire crate's tests; lez/RESULTS.md §8's clippy gate clean, also with the two features, and its rustfmt rule
+listing exactly its seven files; CI's `vault` (613 passed in 61 suites, the invariants among them), `roundtrip` and
+`cli/tests/e2e.sh` passed; the both-halves tests 3 of 3 at their defaults (`migration.md` and `fees.md` as committed
+but for the run's wall time and anvil's timestamps); the crown driver's tests 10 of 10 (D's capped default and H's role
+keys among them); `scripts/reproduce-image-ids.sh build` then `compare`: 18 of 18 guests equal `docs/image-ids.md`, 5
+of the crown run's 6 programs equal its records and the bridge equal to B1's own entry (after removing build outputs a
+`RISC0_SKIP_BUILD` lint run had left on the box, which read as zero ids). On the laptop: `links` and its steps, `idl`,
+`scripts/test_image_ids.py` (6 of 6) and `scripts/verify-sepolia.py` with its RPC stubbed out on crown-live-3 and -4
+(the four checks that need no chain pass, the image ids among them; the nine others need a Sepolia RPC).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
