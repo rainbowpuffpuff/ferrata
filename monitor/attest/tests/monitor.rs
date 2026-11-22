@@ -683,3 +683,301 @@ fn the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_h
     assert!(child.wait().unwrap().success());
     println!("outage: {} alerts, instance-diverged emitted {emitted} times (failed tool retried), freeze tool ran once", l.len());
 }
+
+/// The time (UNIX seconds) at which `slot` starts on the instance's chain.
+fn slot_time(s: &InstanceState, slot: u64) -> u64 {
+    s.config.genesis_time + slot * s.config.seconds_per_slot
+}
+
+fn read_lines(path: &Path) -> Vec<Value> {
+    std::fs::read_to_string(path).unwrap_or_default().lines().filter_map(|l| serde_json::from_str(l).ok()).collect()
+}
+
+// ---- the second review's two tests (its finding N1), which measured the hole, kept with their
+// setups and inverted: they now expect the critical alarm. A captured committee's forged finalized header at a slot the
+// honest providers have not finalized yet (a forged finality update is accepted with any finalized slot up to LEZ's
+// clock, so the forger can keep the instance ahead of honest finality, about two epochs behind the head). The same forged
+// state as `a_forged_finalized_header_is_called_diverged_and_runs_the_consumers_freeze_hook`; only the providers'
+// finalized slot differs.
+
+/// Was `b2_forged_instance_ahead_of_every_providers_finality_raises_no_critical_alert` (it asserted exit 10).
+#[test]
+fn b2_forged_instance_ahead_of_every_providers_finality_raises_a_critical_alert() {
+    let f = fx();
+    let d = scratch("b2-ahead");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let now = secs(&f.stalled["time_ms"]) + 60;
+    let fstate = write_state(&d, "f.hex", &forged(&state_of(&f.stalled)));
+    for behind in [64u64, 1] {
+        // Three honest providers: their canonical block at `slot` is the real one (served if asked), finalized up to
+        // `behind` slots before the forged header.
+        let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot - behind)).collect();
+        let freeze = d.join(format!("freeze-{behind}.jsonl"));
+        let mut a = args(&fstate, &honest.iter().collect::<Vec<_>>(), now);
+        a.extend(["--alert-cmd".into(), format!("cat >> {}", freeze.display()), "--alert-cmd-level".into(), "critical".into()]);
+        let o = check(&a);
+        println!(
+            "b2 forged header {behind} slot(s) ahead of 3 honest providers' finality: exit {}, divergence {}, ahead {}, alerts {:?}, freeze tool ran: {}",
+            o.code,
+            o.report["divergence"],
+            o.report["ahead"],
+            kinds(&o.report),
+            freeze.exists()
+        );
+        // They already hold another block at the slot: counted as disagreeing although not final for them; and no
+        // provider has finalized or holds the instance's header there, 852 s after its slot (past two epochs and the grace).
+        assert_eq!(o.code, 20, "{}", o.report);
+        assert_eq!(o.report["divergence"], "diverged");
+        assert_eq!(o.report["ahead"], "ahead-of-providers");
+        let k = kinds(&o.report);
+        assert!(k.contains(&"instance-diverged".to_string()) && k.contains(&"instance-ahead".to_string()), "{k:?}");
+        assert_eq!(k.iter().filter(|k| *k == "provider-behind").count(), 3, "{k:?}");
+        let lines = read_lines(&freeze);
+        assert_eq!(lines.iter().map(|l| l["kind"].as_str().unwrap()).collect::<Vec<_>>(), vec!["instance-diverged", "instance-ahead"], "the freeze tool ran");
+        assert_eq!(names(&lines[0], "providers"), vec!["p0", "p1", "p2"]);
+    }
+}
+
+/// The daemon: the forger's next finality update moves the instance ahead again before the providers finalize the
+/// first forged slot; once they have finalized it (their root there is the real one), the first forged header is still
+/// raised. Was `b2_daemon_never_rechecks_a_forged_header_once_the_instance_has_moved_ahead_again` (it asserted that no
+/// `instance-diverged` was raised and the freeze tool never ran).
+#[test]
+fn b2_daemon_keeps_a_forged_header_raised_once_the_instance_has_moved_ahead_again() {
+    let f = fx();
+    let d = scratch("b2-daemon-ahead");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let ps: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot - 64)).collect();
+    let s = state_of(&f.stalled);
+    let forged1 = forged(&s);
+    let forged2 = {
+        let mut store = CompactStore::decode(&s.store).unwrap();
+        store.finalized.slot += 128;
+        store.finalized.state_root[0] ^= 2;
+        InstanceState { store: store.encode(), ..s.clone() }
+    };
+    let (f1, f2) = (write_state(&d, "forged1.hex", &forged1), write_state(&d, "forged2.hex", &forged2));
+    let current = d.join("current.hex");
+    std::fs::copy(&f1, &current).unwrap();
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze-requests.jsonl"));
+    let now = s.config.genesis_time + (slot + 128) * s.config.seconds_per_slot + 60;
+    let mut cmd = Command::new(bin());
+    cmd.arg("watch")
+        .args(["--state", &format!("cmd:cat {}", current.display())])
+        .args(["--now", &now.to_string(), "--interval", "1", "--repeat", "3600", "--timeout", "3"])
+        .args(["--alert-log", &log.display().to_string(), "--alert-cmd", &format!("cat >> {}", freeze.display()), "--alert-cmd-level", "critical"]);
+    for (i, p) in ps.iter().enumerate() {
+        cmd.args(["--provider", &format!("p{i}={}", p.url)]);
+    }
+    let mut child = cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap();
+    std::thread::sleep(Duration::from_millis(3000)); // polls on forged1, ahead of the providers' finality
+    std::fs::copy(&f2, &current).unwrap(); // the forger's next update: ahead again
+    std::thread::sleep(Duration::from_millis(2000));
+    for p in &ps {
+        p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 64)); // forged1's slot now final for them
+    }
+    std::thread::sleep(Duration::from_millis(4000)); // more polls
+    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
+    child.wait().unwrap();
+    let lines = read_lines(&log);
+    let k: Vec<String> = lines.iter().map(|v| v["kind"].as_str().unwrap_or("").to_string()).collect();
+    println!("b2 daemon, forger ahead twice: {} alerts {:?}; freeze tool ran: {}", k.len(), k, freeze.exists());
+    assert!(k.iter().filter(|x| *x == "provider-behind").count() >= 3, "{k:?}");
+    let at = |kind: &str, s: u64| lines.iter().any(|l| l["kind"] == kind && l["slot"].as_u64() == Some(s));
+    assert!(at("instance-diverged", slot), "forged1 raised: {k:?}");
+    assert!(at("instance-ahead", slot + 128), "forged2 is 60 s old: too new for any honest instance: {k:?}");
+    assert!(!lines.iter().any(|l| l["kind"] == "recovered" && l["cleared"] == "instance-diverged"), "moving on is not a recovery: {k:?}");
+    let ran = read_lines(&freeze);
+    assert!(ran.iter().any(|l| l["kind"] == "instance-diverged" && l["slot"].as_u64() == Some(slot)), "the freeze tool ran for forged1");
+    assert!(ran.iter().any(|l| l["kind"] == "instance-ahead" && l["slot"].as_u64() == Some(slot + 128) && l["why"] == "too-new"));
+}
+
+// ---- the rule that closes N1, each part on its own.
+
+#[test]
+fn a_header_younger_than_the_finality_delay_is_critical_whatever_the_providers_say() {
+    let f = fx();
+    let d = scratch("too-new");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let t = slot_time(&s, slot);
+    let state = write_state(&d, "s.hex", &s);
+    let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot + 64)).collect();
+    // A checkpoint is finalized two epochs (64 slots, 768 s) after it at the earliest, so an honest instance holds a
+    // finalized header that old at the least: at 64 slots, healthy; at 63, no honest instance can hold it.
+    let o = check(&args(&state, &honest.iter().collect::<Vec<_>>(), t + 768));
+    assert_eq!((o.code, o.report["ahead"].clone()), (0, Value::Null), "{}", o.report);
+    assert_eq!(o.report["finality_delay_s"].as_u64(), Some(768));
+    let o = check(&args(&state, &honest.iter().collect::<Vec<_>>(), t + 756));
+    assert_eq!(o.code, 20, "{}", o.report);
+    assert_eq!((o.report["ahead"].as_str(), kinds(&o.report)), (Some("too-new"), vec!["instance-ahead".to_string()]));
+    // A forged header 30 slots old, every provider colluding (finalized past it, the forged root there): the divergence
+    // is `confirmed`, and the alarm is critical all the same; the freeze tool runs.
+    let forged_state = forged(&s);
+    let fstate = write_state(&d, "f.hex", &forged_state);
+    let colluders: Vec<Server> =
+        (0..3).map(|_| provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64)).collect();
+    let freeze = d.join("freeze.jsonl");
+    let mut a = args(&fstate, &colluders.iter().collect::<Vec<_>>(), t + 360);
+    a.extend(["--alert-cmd".into(), format!("cat >> {}", freeze.display()), "--alert-cmd-level".into(), "critical".into()]);
+    let o = check(&a);
+    assert_eq!((o.code, o.report["divergence"].as_str(), o.report["ahead"].as_str()), (20, Some("confirmed"), Some("too-new")), "{}", o.report);
+    let ran = read_lines(&freeze);
+    assert_eq!(ran.len(), 1);
+    assert_eq!((ran[0]["kind"].as_str(), ran[0]["why"].as_str(), ran[0]["age_s"].as_u64()), (Some("instance-ahead"), Some("too-new"), Some(360)));
+}
+
+#[test]
+fn a_header_ahead_of_every_providers_finality_is_critical_after_the_grace() {
+    let f = fx();
+    let d = scratch("ahead");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let t = slot_time(&s, slot);
+    // A forged header at a slot where the honest providers have no block (an empty slot of their chain, or one they have
+    // not seen) and that none of them has finalized: none disagrees yet.
+    let fstate = write_state(&d, "f.hex", &forged(&s));
+    let behind: Vec<Server> = (0..3).map(|_| provider(&g, slot, None, slot - 32)).collect();
+    let ps = behind.iter().collect::<Vec<_>>();
+    // Past the finality delay (768 s) and the grace (60 s by default): critical.
+    let o = check(&args(&fstate, &ps, t + 829));
+    assert_eq!((o.code, o.report["divergence"].as_str(), o.report["ahead"].as_str()), (20, Some("unconfirmed"), Some("ahead-of-providers")), "{}", o.report);
+    let alert = o.report["alerts"].as_array().unwrap().iter().find(|a| a["kind"] == "instance-ahead").unwrap().clone();
+    assert_eq!((alert["highest_provider_finalized_slot"].as_u64(), alert["ahead_grace_s"].as_u64()), (Some(slot - 32), Some(60)));
+    assert_eq!(names(&alert, "providers"), vec!["p0", "p1", "p2"]);
+    // Within the grace: warnings only (each provider behind; unconfirmed).
+    let o = check(&args(&fstate, &ps, t + 828));
+    assert_eq!((o.code, o.report["ahead"].clone()), (10, Value::Null), "{}", o.report);
+    // --ahead-grace 0: critical as soon as the finality delay has passed.
+    let mut a = args(&fstate, &ps, t + 769);
+    a.extend(["--ahead-grace".into(), "0".into()]);
+    let o = check(&a);
+    assert_eq!((o.code, o.report["ahead"].as_str()), (20, Some("ahead-of-providers")), "{}", o.report);
+    // An honest instance and every provider lagging in finality, but each already holding the instance's block at the
+    // slot: not ahead of them, and their agreement is not final: warnings only.
+    let state = write_state(&d, "s.hex", &s);
+    let holding: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot - 32)).collect();
+    let o = check(&args(&state, &holding.iter().collect::<Vec<_>>(), t + 852));
+    assert_eq!((o.code, o.report["divergence"].as_str(), o.report["ahead"].clone()), (10, Some("unconfirmed"), Value::Null), "{}", o.report);
+    let k = kinds(&o.report);
+    assert_eq!((k.iter().filter(|k| *k == "provider-behind").count(), k.contains(&"instance-unconfirmed".to_string())), (3, true), "{k:?}");
+}
+
+/// A daemon wired to the freeze tool: start a `watch` on `current` with `ps`, `extra` arguments, at chain time `now`.
+fn spawn_watch(current: &Path, ps: &[&Server], now: u64, log: &Path, freeze: &Path, extra: &[&str]) -> std::process::Child {
+    let mut cmd = Command::new(bin());
+    cmd.arg("watch")
+        .args(["--state", &format!("cmd:cat {}", current.display())])
+        .args(["--now", &now.to_string(), "--interval", "1", "--repeat", "3600", "--timeout", "3"])
+        .args(["--alert-log", &log.display().to_string(), "--alert-cmd", &format!("cat >> {}", freeze.display()), "--alert-cmd-level", "critical"])
+        .args(extra);
+    for (i, p) in ps.iter().enumerate() {
+        cmd.args(["--provider", &format!("p{i}={}", p.url)]);
+    }
+    cmd.stdout(Stdio::null()).stderr(Stdio::null()).spawn().unwrap()
+}
+
+fn wait_for_lines(log: &Path, what: &str, pred: &dyn Fn(&[Value]) -> bool) -> Vec<Value> {
+    for _ in 0..150 {
+        let l = read_lines(log);
+        if pred(&l) {
+            return l;
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+    panic!("timed out waiting for {what}: {}", std::fs::read_to_string(log).unwrap_or_default());
+}
+
+#[test]
+fn the_daemon_judges_an_earlier_header_again_once_the_providers_finalize_its_slot() {
+    let f = fx();
+    let d = scratch("recheck");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let s1 = forged(&s);
+    let s2 = {
+        let mut store = CompactStore::decode(&s.store).unwrap();
+        store.finalized.slot += 32;
+        store.finalized.state_root[0] ^= 2;
+        InstanceState { store: store.encode(), ..s.clone() }
+    };
+    let (f1, f2) = (write_state(&d, "s1.hex", &s1), write_state(&d, "s2.hex", &s2));
+    // The second forged header 70 slots old, the first 102: neither too new.
+    let now = slot_time(&s, slot + 32 + 70);
+    // Two honest providers, finalized before both headers and with no block at either slot (empty in their chain); one
+    // colluder claiming a finality past both, with the forged roots there.
+    let honest = [provider(&g, slot, None, slot - 64), provider(&g, slot, None, slot - 64)];
+    let colluder = provider(&g, slot, Some(header_json(&forged_root(&s1), slot)), slot + 32 + 64);
+    colluder.set(&format!("/eth/v1/beacon/headers/{}", slot + 32), 200, header_json(&forged_root(&s2), slot + 32));
+    let ps = [&honest[0], &honest[1], &colluder];
+    // One check cannot judge it (the stated limit): a colluder claims the slot final, the honest ones hold nothing
+    // there yet; a warning.
+    let o = check(&args(&f1, &ps, now));
+    assert_eq!((o.code, o.report["divergence"].as_str(), o.report["ahead"].clone()), (10, Some("unconfirmed"), Value::Null), "{}", o.report);
+    // The daemon: the first header, then the second; then the honest providers finalize the first's slot.
+    let current = d.join("current.hex");
+    std::fs::copy(&f1, &current).unwrap();
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let mut child = spawn_watch(&current, &ps, now, &log, &freeze, &["--state-file", &d.join("seen.json").display().to_string()]);
+    wait_for_lines(&log, "the first header unconfirmed", &|l| l.iter().any(|x| x["kind"] == "instance-unconfirmed"));
+    std::thread::sleep(Duration::from_millis(1500));
+    std::fs::copy(&f2, &current).unwrap();
+    std::thread::sleep(Duration::from_millis(2500));
+    assert!(!read_lines(&log).iter().any(|x| x["kind"] == "instance-diverged"), "nothing to judge yet");
+    for p in &honest {
+        p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 1));
+    }
+    // The first header is judged again although the instance has moved on: no block at a slot they have finalized.
+    let l = wait_for_lines(&log, "the first header diverged", &|l| {
+        l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot))
+    });
+    let first = l.iter().find(|x| x["kind"] == "instance-diverged").unwrap();
+    assert_eq!((first["current"].as_bool(), first["instance_root"].as_str()), (Some(false), Some(forged_root(&s1).as_str())));
+    assert!(!l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot + 32)), "the second's slot is not final for them yet");
+    // Then they finalize the second's slot: raised too, and the first still raised.
+    for p in &honest {
+        p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 33));
+    }
+    let l = wait_for_lines(&log, "the second header diverged", &|l| {
+        l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot + 32))
+    });
+    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-diverged"));
+    let ran: Vec<u64> = read_lines(&freeze).iter().filter(|x| x["kind"] == "instance-diverged").map(|x| x["slot"].as_u64().unwrap()).collect();
+    assert_eq!(ran, vec![slot, slot + 32], "the freeze tool ran once for each forged header");
+    let seen: Value = serde_json::from_str(&std::fs::read_to_string(d.join("seen.json")).unwrap()).unwrap();
+    assert_eq!((seen[slot.to_string()]["divergence"].as_str(), seen[(slot + 32).to_string()]["divergence"].as_str()), (Some("diverged"), Some("diverged")));
+    println!("recheck: freeze tool ran for slots {ran:?}; seen {seen}");
+}
+
+#[test]
+fn with_diverge_at_2_an_honest_provider_dropping_out_is_not_a_recovery() {
+    let f = fx();
+    let d = scratch("diverge-at-2-outage");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let forged_state = forged(&state_of(&f.stalled));
+    let current = write_state(&d, "f.hex", &forged_state);
+    let honest = [provider(&g, slot, Some(header_11549664()), slot + 64), provider(&g, slot, Some(header_11549664()), slot + 64)];
+    let colluder = provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64);
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let now = secs(&f.stalled["time_ms"]) + 60;
+    let mut child = spawn_watch(&current, &[&honest[0], &honest[1], &colluder], now, &log, &freeze, &["--diverge-at", "2"]);
+    wait_for_lines(&log, "the divergence", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
+    // One honest provider drops out: one disagrees, one agrees (`contested`). Held, not recovered.
+    honest[1].set("/eth/v1/beacon/genesis", 503, "{}".into());
+    wait_for_lines(&log, "providers-disagree", &|l| l.iter().any(|x| x["kind"] == "providers-disagree"));
+    std::thread::sleep(Duration::from_millis(2500));
+    let l = read_lines(&log);
+    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
+    assert!(child.wait().unwrap().success());
+    assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-diverged"), "{l:?}");
+    assert_eq!(l.iter().filter(|x| x["kind"] == "instance-diverged").count(), 1, "held, not emitted again");
+    assert_eq!(read_lines(&freeze).len(), 1);
+}

@@ -160,8 +160,8 @@ pub fn query_provider(p: &Provider, slot: u64, timeout_s: u64) -> ProviderView {
             return v;
         }
     }
-    // Its finalized slot first: an answer at the instance's slot counts only once the provider has finalized that slot
-    // (before, a 404 there may be a block it has not seen yet, and a root may still be reorganised away).
+    // Its finalized slot first: an answer at the instance's slot is final only once the provider has finalized that slot
+    // (before, a 404 there may be a block it has not seen yet, and an agreeing root is not final).
     match get_json(&format!("{}/eth/v1/beacon/headers/finalized", p.url), timeout_s) {
         Ok(Some(j)) => match j["data"]["header"]["message"]["slot"].as_str().and_then(|s| s.parse::<u64>().ok()) {
             Some(f) => v.finalized_slot = Some(f),
@@ -179,26 +179,40 @@ pub fn query_provider(p: &Provider, slot: u64, timeout_s: u64) -> ProviderView {
             return v;
         }
     }
-    if v.finalized_slot.is_some_and(|f| f < slot) {
-        return v; // behind the instance: not counted (assess)
+    // Asked even when the provider has not finalized the slot: another canonical block already there counts (`judge`).
+    match query_root(p, slot, timeout_s) {
+        Ok(r) => v.root_at_slot = Some(r),
+        Err(e) => v.error = Some(e),
     }
+    v
+}
+
+/// The provider's canonical block root at `slot` (`/eth/v1/beacon/headers/{slot}`): `None` when it has no canonical
+/// block there (HTTP 404, a header it marks `canonical: false`, or one at another slot).
+pub fn query_root(p: &Provider, slot: u64, timeout_s: u64) -> Result<Option<Root>, String> {
     match get_json(&format!("{}/eth/v1/beacon/headers/{slot}", p.url), timeout_s) {
         Ok(Some(j)) => {
             let d = &j["data"];
             let at = d["header"]["message"]["slot"].as_str().and_then(|s| s.parse::<u64>().ok());
             let canonical = d["canonical"].as_bool().unwrap_or(true);
             match d["root"].as_str().map(parse_root) {
-                Some(Ok(r)) => v.root_at_slot = Some((canonical && at == Some(slot)).then_some(r)),
-                _ => {
-                    v.error = Some(format!("headers/{slot}: no root in the answer"));
-                    return v;
-                }
+                Some(Ok(r)) => Ok((canonical && at == Some(slot)).then_some(r)),
+                _ => Err(format!("headers/{slot}: no root in the answer")),
             }
         }
-        Ok(None) => v.root_at_slot = Some(None),
-        Err(e) => {
-            v.error = Some(format!("headers/{slot}: {e}"));
-            return v;
+        Ok(None) => Ok(None),
+        Err(e) => Err(format!("headers/{slot}: {e}")),
+    }
+}
+
+/// `current` (this poll's view of the provider for the instance's current header) for an earlier `slot`: the same
+/// genesis and finalized slot, and its root at `slot`, asked again. A provider without a usable view is not asked.
+pub fn view_at(p: &Provider, current: &ProviderView, slot: u64, timeout_s: u64) -> ProviderView {
+    let mut v = ProviderView { root_at_slot: None, ..current.clone() };
+    if v.error.is_none() && v.finalized_slot.is_some() {
+        match query_root(p, slot, timeout_s) {
+            Ok(r) => v.root_at_slot = Some(r),
+            Err(e) => v.error = Some(e),
         }
     }
     v

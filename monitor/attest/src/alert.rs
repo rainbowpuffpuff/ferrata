@@ -1,6 +1,6 @@
 //! Alerts, with the same contract as the watchers' `monitor` (`monitor/src/alert.rs`): one JSON line per event to
 //! standard error, to an append-only log file, and to an operator's command (a pager, a webhook, or the consumer's
-//! freeze tool, run with `sh -c`, the JSON on its standard input) at or above a level. Nothing else is sent anywhere.
+//! freeze tool, run with `sh -c`, the JSON line on its standard input) at or above a level. Nothing else is sent anywhere.
 
 use std::fs::OpenOptions;
 use std::io::Write as _;
@@ -86,9 +86,10 @@ impl Sink {
             if alert.level >= self.cmd_level.unwrap_or(Level::Warn) {
                 let sent = Command::new("sh").arg("-c").arg(cmd).stdin(Stdio::piped()).spawn().and_then(|mut child| {
                     if let Some(mut stdin) = child.stdin.take() {
-                        // A command that exits without reading its input closes the pipe: its exit status decides,
-                        // and the child is always waited for.
-                        let _ = stdin.write_all(text.as_bytes());
+                        // One line, newline-terminated: a tool that appends its input to a journal keeps one alert per
+                        // line. A command that exits without reading its input closes the pipe: its exit status
+                        // decides, and the child is always waited for.
+                        let _ = stdin.write_all(text.as_bytes()).and_then(|()| stdin.write_all(b"\n"));
                     }
                     child.wait()
                 });

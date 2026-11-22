@@ -6,15 +6,23 @@
 //!
 //! * **divergence** (`instance-diverged`, critical): the instance's finalized header is not the canonical block at
 //!   its slot by the account of at least `diverge_at` providers (default 1: any one of them), whatever the others
-//!   report: they have another root there, or no block. This is what a captured or colluding sync committee leaves
-//!   behind: a forged handoff or finality the program could not tell apart (`docs/trust.md` §2). The program cannot
-//!   see it; a consumer wires this alarm to its freeze authority (the alert command) and sizes its caps to what may
-//!   pass before the freeze. A provider that reports the instance's root does not suppress the alarm: it may be
-//!   colluding with the forger. The exact rule, with `n` providers answering: `f` lying providers raise the alarm on a
-//!   healthy instance when `f >= diverge_at`; `f` providers colluding with a forged instance hide it only when the
-//!   honest ones that answer are fewer than `diverge_at`, that is `f > n - diverge_at` (by default, only when every
-//!   provider that answers colludes). With `diverge_at` 2 and three or more providers, one provider can neither
-//!   raise nor hide it;
+//!   report: they have another canonical block there (final for them or not yet), or no block at a slot they have
+//!   finalized. This is what a captured or colluding sync committee leaves behind: a forged handoff or finality the
+//!   program could not tell apart (`docs/trust.md` §2). The program cannot see it; a consumer wires this alarm to its
+//!   freeze authority (the alert command) and sizes its caps to what may pass before the freeze. A provider that
+//!   reports the instance's root does not suppress the alarm: it may be colluding with the forger. With `n` providers
+//!   counted (they have finalized the slot, or already hold another block there): `f` lying providers raise the alarm
+//!   on a healthy instance when `f >= diverge_at`; `f` providers colluding with a forged instance hide it only when
+//!   the honest ones counted are fewer than `diverge_at`, that is `f > n - diverge_at`. With `diverge_at` 2 and three
+//!   or more providers, one provider can neither raise nor hide it;
+//! * **ahead** (`instance-ahead`, critical): the instance claims a finality the chain cannot have, or that no
+//!   provider has. `too-new`: the finalized header is younger, by the chain's clock, than the chain's finality delay
+//!   (two epochs: Casper FFG finalizes a checkpoint two epochs after it at the earliest, so no honest instance can hold
+//!   such a header), whatever the providers say. `ahead-of-providers`: no provider that answers has finalized the
+//!   header's slot or holds the header there, although the header is older than the finality delay plus
+//!   `ahead_grace_s`: either the instance is not on the providers' chain, or every provider lags by more than the
+//!   grace. A forged header kept ahead of the providers' finality is caught by one of these or by the divergence
+//!   alarm (`README.md`, "The rule");
 //! * **stall** (`instance-stalled`, warning): the instance's finalized header lags the providers' finalized header
 //!   by more than `stall_after_s`. Nobody is obliged to advance an instance (S.7): the alarm tells whoever cares that
 //!   updates are outstanding. Anyone can submit them, and the instance resumes (R.7);
@@ -23,8 +31,9 @@
 //!   (§3.6); `ws-expired` (critical): past the period the program refuses every update and the instance must be
 //!   replaced by a fresh one (F.10);
 //! * the providers themselves: one that cannot be reached, answers for another chain (its genesis is not the
-//!   instance's), or has not finalized the instance's slot (behind or syncing: its answer there is not final, and an
-//!   HTTP 404 may be a block it has not seen) is reported, and is never counted towards a verdict.
+//!   instance's), or has not finalized the instance's slot (behind or syncing) is reported. One behind the slot is
+//!   counted only when it already holds another canonical block there (a disagreement); its 404 there may be a block
+//!   it has not seen, and its agreement is not final, so neither counts.
 //!
 //! [`assess`] is the whole decision, a pure function of the instance's state, the providers' answers and the clock;
 //! [`source`] reads the instance (a LEZ sequencer's `getAccount`, a file or a command) and the providers (beacon API,
@@ -32,7 +41,7 @@
 
 use anyhow::{anyhow, Result};
 use ferrata_core::{witness::CompactStore, Root};
-use ferrata_lez_wire::InstanceState;
+use ferrata_lez_wire::{Config, InstanceState};
 use serde::{Deserialize, Serialize};
 
 pub mod alert;
@@ -53,8 +62,8 @@ pub struct ProviderView {
     /// The canonical block root at the instance's finalized slot (`/eth/v1/beacon/headers/{slot}`): `Some(None)` when
     /// the provider has no canonical block at that slot (HTTP 404, or a header it marks `canonical: false`).
     pub root_at_slot: Option<Option<Root>>,
-    /// The provider's finalized slot (`/eth/v1/beacon/headers/finalized`). A provider counts only when it is at or past
-    /// the instance's finalized slot.
+    /// The provider's finalized slot (`/eth/v1/beacon/headers/finalized`). A provider behind the instance's finalized
+    /// slot counts only when it already holds another canonical block there ([`judge`]).
     pub finalized_slot: Option<u64>,
 }
 
@@ -70,12 +79,15 @@ pub struct Policy {
     pub diverge_at: usize,
     /// The lag of the instance's finalized header behind the providers' finalized header that raises the stall alarm.
     pub stall_after_s: u64,
+    /// How long, past the chain's finality delay, the instance's finalized header may be ahead of every provider (none
+    /// has finalized its slot or holds it there) before `instance-ahead` is raised: the lag allowed to the providers.
+    pub ahead_grace_s: u64,
 }
 
 impl Default for Policy {
     fn default() -> Self {
         // Two missed sessions of the lab's two-hour cadence (operator guide §3), plus finality.
-        Self { min_agreeing: 2, diverge_at: 1, stall_after_s: 4 * 3600 + 15 * 60 }
+        Self { min_agreeing: 2, diverge_at: 1, stall_after_s: 4 * 3600 + 15 * 60, ahead_grace_s: 60 }
     }
 }
 
@@ -85,8 +97,10 @@ impl Default for Policy {
 pub enum Standing {
     /// Its canonical root at the slot is the instance's finalized root.
     Agrees,
-    /// It reports another root, or no canonical block, at the slot.
+    /// It reports another canonical root at the slot (final for it or not yet), or no block at a slot it has finalized.
     Disagrees,
+    /// It has not finalized the slot and holds no other canonical block there: not counted.
+    Behind,
     /// No usable answer.
     Unavailable,
     /// Its genesis is not the instance's: another chain; not counted.
@@ -116,6 +130,16 @@ pub enum Divergence {
     Unconfirmed,
 }
 
+/// Why the instance's finalized header is ahead of the chain's finality (`instance-ahead`).
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum Ahead {
+    /// Younger, by the chain's clock, than the chain's finality delay: no honest instance can hold it.
+    TooNew,
+    /// No provider that answers has finalized its slot or holds it there, past the finality delay and the grace.
+    AheadOfProviders,
+}
+
 /// One poll's assessment of the instance.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Assessment {
@@ -140,6 +164,13 @@ pub struct Assessment {
     pub ws_end_slot: Option<u64>,
     pub ws_half_slot: Option<u64>,
     pub divergence: Divergence,
+    /// The chain's finality delay (two epochs), and whether the header is ahead of the chain's finality.
+    pub finality_delay_s: u64,
+    pub ahead: Option<Ahead>,
+    /// Providers that answered for the slot on the instance's chain (a finalized slot and an answer there), and how
+    /// many of them have not finalized it.
+    pub providers_answering: usize,
+    pub providers_behind: usize,
     pub providers: Vec<ProviderVerdict>,
     pub alerts: Vec<Alert>,
 }
@@ -166,30 +197,32 @@ pub fn decode_state(bytes: &[u8]) -> Result<InstanceState> {
     borsh::from_slice(bytes).map_err(|e| anyhow!("the instance state does not decode: {e}"))
 }
 
-/// The whole decision: the instance's `state`, the providers' `views`, the chain's clock `now_s` (UNIX seconds).
-pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Policy) -> Result<Assessment> {
-    let c = &state.config;
-    let spec = c.spec();
-    let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("the instance's store does not decode: {e:?}"))?;
-    let slot = store.finalized.slot;
-    let root = store.finalized.hash_tree_root();
-    let sps = c.seconds_per_slot.max(1);
-    let now_slot = now_s.saturating_sub(c.genesis_time) / sps;
-    let header_time = c.genesis_time + slot * sps;
-    let age_s = now_s.saturating_sub(header_time);
-    let ws_end_slot = c.ws_end_slot(slot);
-    let ws_half_slot = ws_end_slot.map(|end| slot + (end - slot) / 2);
+/// The providers' verdict on one finalized header: the instance's current one, or one it showed earlier.
+#[derive(Clone, Debug)]
+pub struct Judgement {
+    pub divergence: Divergence,
+    pub verdicts: Vec<ProviderVerdict>,
+    /// Providers that answered for the slot on the instance's chain: a finalized slot and an answer at the slot.
+    pub answering: usize,
+    /// Of those, the ones that have not finalized the slot.
+    pub behind: usize,
+    /// Of those behind, the ones whose canonical block at the slot is the header (not final for them yet).
+    pub holding: usize,
+    /// The finalized slots of the providers that have finalized the slot (for the stall), and the highest finalized
+    /// slot any provider on the instance's chain reported.
+    pub finalized: Vec<u64>,
+    pub highest_finalized: Option<u64>,
+    /// What the providers themselves raised (unavailable, another chain, behind).
+    pub provider_alerts: Vec<Alert>,
+}
 
+/// The providers' `views` of the header `root` at `slot` of an instance of chain `c`.
+pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Policy) -> Judgement {
     let mut alerts = Vec::new();
-    let id = hex0x(&state.id);
-    if !state.active {
-        alerts.push(Alert::new(Level::Warn, "instance-inactive", "the instance's initial committee is not adopted yet")
-            .with("instance", &id));
-    }
-
-    // The providers, each on its own.
     let mut verdicts = Vec::new();
     let mut finalized = Vec::new();
+    let (mut answering, mut behind, mut holding) = (0, 0, 0);
+    let mut highest_finalized: Option<u64> = None;
     for v in views {
         let mut verdict =
             ProviderVerdict { name: v.name.clone(), standing: Standing::Unavailable, root_at_slot: None, finalized_slot: v.finalized_slot, note: None };
@@ -217,50 +250,67 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
             verdicts.push(verdict);
             continue;
         }
-        // A provider counts once it has finalized the instance's slot: before that, its answer there is not final, and
-        // an HTTP 404 may be a block it has not seen yet (a provider that is behind, or still syncing).
-        match v.finalized_slot {
-            Some(f) if f >= slot => finalized.push(f),
-            Some(f) => {
-                verdict.note = Some(format!("behind: finalized slot {f}, before the instance's {slot}"));
-                alerts.push(
-                    Alert::new(Level::Warn, "provider-behind", "a beacon provider has not finalized the instance's slot; not counted")
-                        .with("provider", &v.name)
-                        .with("finalized_slot", f)
-                        .with("slot", slot),
-                );
-                verdicts.push(verdict);
-                continue;
-            }
-            None => {
-                verdict.note = Some("no finalized slot".into());
-                alerts.push(Alert::new(Level::Warn, "provider-unavailable", "a beacon provider gave no usable answer")
-                    .with("provider", &v.name)
-                    .with("error", "no finalized slot"));
-                verdicts.push(verdict);
-                continue;
-            }
+        let Some(f) = v.finalized_slot else {
+            verdict.note = Some("no finalized slot".into());
+            alerts.push(Alert::new(Level::Warn, "provider-unavailable", "a beacon provider gave no usable answer")
+                .with("provider", &v.name)
+                .with("error", "no finalized slot"));
+            verdicts.push(verdict);
+            continue;
+        };
+        highest_finalized = Some(highest_finalized.map_or(f, |h| h.max(f)));
+        if v.root_at_slot.is_some() {
+            answering += 1;
         }
+        if f >= slot {
+            finalized.push(f);
+            match &v.root_at_slot {
+                None => verdict.note = Some("no answer for the instance's slot".into()),
+                Some(Some(r)) => {
+                    verdict.root_at_slot = Some(hex0x(r));
+                    verdict.standing = if r == root { Standing::Agrees } else { Standing::Disagrees };
+                }
+                Some(None) => {
+                    verdict.standing = Standing::Disagrees;
+                    verdict.note = Some("no canonical block at the instance's slot".into());
+                }
+            }
+            verdicts.push(verdict);
+            continue;
+        }
+        // Behind the slot. Its 404 there may be a block it has not seen yet, and its agreement is not final: neither
+        // counts. Another canonical block already there does: an honest instance's finalized header is final on the
+        // chain, so a provider whose chain holds another block at the slot is on another fork, or the instance is.
+        if v.root_at_slot.is_some() {
+            behind += 1;
+        }
+        alerts.push(
+            Alert::new(Level::Warn, "provider-behind", "a beacon provider has not finalized the instance's slot; counted only if it holds another block there")
+                .with("provider", &v.name)
+                .with("finalized_slot", f)
+                .with("slot", slot),
+        );
+        verdict.standing = Standing::Behind;
         match &v.root_at_slot {
-            None => {
-                verdict.note = Some("no answer for the instance's slot".into());
+            Some(Some(r)) if r != root => {
+                verdict.root_at_slot = Some(hex0x(r));
+                verdict.standing = Standing::Disagrees;
+                verdict.note = Some(format!("finalized slot {f}, before the instance's {slot}; its canonical block at the slot is another"));
             }
             Some(Some(r)) => {
                 verdict.root_at_slot = Some(hex0x(r));
-                verdict.standing = if *r == root { Standing::Agrees } else { Standing::Disagrees };
+                holding += 1;
+                verdict.note = Some(format!("finalized slot {f}, before the instance's {slot}; holds the instance's block there, not final for it yet"));
             }
-            Some(None) => {
-                verdict.standing = Standing::Disagrees;
-                verdict.note = Some("no canonical block at the instance's slot".into());
-            }
+            Some(None) => verdict.note = Some(format!("finalized slot {f}, before the instance's {slot}; no canonical block there (yet)")),
+            None => verdict.note = Some(format!("finalized slot {f}, before the instance's {slot}")),
         }
         verdicts.push(verdict);
     }
     let agree = verdicts.iter().filter(|v| v.standing == Standing::Agrees).count();
     let disagree = verdicts.iter().filter(|v| v.standing == Standing::Disagrees).count();
     // Disagreement decides: an agreeing provider never cancels a disagreeing one (it may collude with a forger).
-    let diverge_at = p.diverge_at.max(1);
-    let divergence = if disagree >= diverge_at {
+    let divergence = if disagree >= p.diverge_at.max(1) {
         Divergence::Diverged
     } else if disagree > 0 && agree > 0 {
         Divergence::Contested
@@ -269,7 +319,41 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
     } else {
         Divergence::Unconfirmed
     };
-    let names = |s: Standing| -> Vec<String> { verdicts.iter().filter(|v| v.standing == s).map(|v| v.name.clone()).collect() };
+    Judgement { divergence, verdicts, answering, behind, holding, finalized, highest_finalized, provider_alerts: alerts }
+}
+
+/// The chain's finality delay in seconds: two epochs (a checkpoint is finalized two epochs after it at the earliest).
+pub fn finality_delay_s(c: &Config) -> u64 {
+    2 * c.slots_per_epoch.max(1) * c.seconds_per_slot.max(1)
+}
+
+/// The whole decision: the instance's `state`, the providers' `views`, the chain's clock `now_s` (UNIX seconds).
+pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Policy) -> Result<Assessment> {
+    let c = &state.config;
+    let spec = c.spec();
+    let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("the instance's store does not decode: {e:?}"))?;
+    let slot = store.finalized.slot;
+    let root = store.finalized.hash_tree_root();
+    let sps = c.seconds_per_slot.max(1);
+    let now_slot = now_s.saturating_sub(c.genesis_time) / sps;
+    let header_time = c.genesis_time + slot * sps;
+    let age_s = now_s.saturating_sub(header_time);
+    let ws_end_slot = c.ws_end_slot(slot);
+    let ws_half_slot = ws_end_slot.map(|end| slot + (end - slot) / 2);
+    let delay_s = finality_delay_s(c);
+
+    let mut alerts = Vec::new();
+    let id = hex0x(&state.id);
+    if !state.active {
+        alerts.push(Alert::new(Level::Warn, "instance-inactive", "the instance's initial committee is not adopted yet")
+            .with("instance", &id));
+    }
+
+    let j = judge(c, slot, &root, views, p);
+    alerts.extend(j.provider_alerts.iter().cloned());
+    let divergence = j.divergence;
+    let diverge_at = p.diverge_at.max(1);
+    let names = |s: Standing| -> Vec<String> { j.verdicts.iter().filter(|v| v.standing == s).map(|v| v.name.clone()).collect() };
     let (dissent, assent) = (names(Standing::Disagrees), names(Standing::Agrees));
     match divergence {
         Divergence::Confirmed => {}
@@ -289,20 +373,64 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
         Divergence::Contested => alerts.push(
             Alert::new(Level::Warn, "providers-disagree", "providers disagree about the instance's finalized header, fewer than --diverge-at against it")
                 .with("slot", slot)
-                .with("agree", agree)
+                .with("agree", assent.len())
                 .with("disagree", serde_json::json!(dissent))
                 .with("diverge_at", diverge_at),
         ),
         Divergence::Unconfirmed => alerts.push(
             Alert::new(Level::Warn, "instance-unconfirmed", "too few providers answered to confirm the instance's finalized header")
                 .with("slot", slot)
-                .with("agree", agree)
+                .with("agree", assent.len())
                 .with("needed", p.min_agreeing),
         ),
     }
 
-    // The stall: against the providers' finalized slot, the median (the lower of two): with three or more providers,
-    // one provider can neither raise nor hide it; with two, either can hide it.
+    // Ahead of the chain's finality. By the clock alone, whatever any provider says: no honest instance holds a
+    // finalized header younger than the finality delay. Or ahead of every provider that answers, past the grace.
+    let ahead = if age_s < delay_s {
+        Some(Ahead::TooNew)
+    } else if j.answering > 0 && j.behind == j.answering && j.holding == 0 && age_s > delay_s + p.ahead_grace_s {
+        Some(Ahead::AheadOfProviders)
+    } else {
+        None
+    };
+    match ahead {
+        Some(Ahead::TooNew) => alerts.push(
+            Alert::new(
+                Level::Critical,
+                "instance-ahead",
+                "the instance's finalized header is younger than the chain's finality delay: no honest instance can hold it; freeze what consumes this instance",
+            )
+            .with("instance", &id)
+            .with("why", Ahead::TooNew)
+            .with("slot", slot)
+            .with("instance_root", hex0x(&root))
+            .with("age_s", age_s)
+            .with("finality_delay_s", delay_s)
+            .with("now_slot", now_slot),
+        ),
+        Some(Ahead::AheadOfProviders) => alerts.push(
+            Alert::new(
+                Level::Critical,
+                "instance-ahead",
+                "no provider has finalized or holds the instance's finalized header, past the finality delay and the grace: the instance is not on their chain, or every provider lags; freeze what consumes this instance",
+            )
+            .with("instance", &id)
+            .with("why", Ahead::AheadOfProviders)
+            .with("slot", slot)
+            .with("instance_root", hex0x(&root))
+            .with("highest_provider_finalized_slot", j.highest_finalized)
+            .with("age_s", age_s)
+            .with("finality_delay_s", delay_s)
+            .with("ahead_grace_s", p.ahead_grace_s)
+            .with("providers", serde_json::json!(names(Standing::Behind).into_iter().chain(dissent.iter().cloned()).collect::<Vec<_>>())),
+        ),
+        None => {}
+    }
+
+    // The stall: against the finalized slot of the providers that have finalized the instance's, the median (the lower
+    // of two): with three or more providers, one provider can neither raise nor hide it; with two, either can hide it.
+    let mut finalized = j.finalized.clone();
     finalized.sort_unstable();
     let chain_finalized_slot = (!finalized.is_empty()).then(|| finalized[(finalized.len() - 1) / 2]);
     let lag_s = chain_finalized_slot.map(|f| f.saturating_sub(slot) * sps);
@@ -359,7 +487,11 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
         ws_end_slot,
         ws_half_slot,
         divergence,
-        providers: verdicts,
+        finality_delay_s: delay_s,
+        ahead,
+        providers_answering: j.answering,
+        providers_behind: j.behind,
+        providers: j.verdicts,
         alerts,
     })
 }

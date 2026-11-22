@@ -4,9 +4,16 @@
 //! the alert command fails to take it, and a `recovered` alert (info) when a poll that can judge it no longer raises
 //! it. An outage is not a recovery: a poll that cannot read the instance judges nothing, one with too few providers
 //! for a verdict judges no divergence, and one without any provider's finalized slot judges no stall, so what was
-//! raised is held through it. Each finalized header the instance shows is remembered with the verdict the providers
-//! gave it (`state_file`), so a header seen once and replaced later still has its verdict on record. The loop ends
-//! after `max_polls`, or on the stop flag (SIGTERM or SIGINT in the binary) after the poll in hand.
+//! raised is held through it.
+//!
+//! Every finalized header the instance shows is remembered with the providers' verdict (`state_file`), and judged
+//! again, whether or not the instance has moved on, until the verdict is settled: confirmed or contested with no
+//! provider behind its slot. So a forged header the providers could not judge when the instance showed it (ahead of
+//! their finality) is judged once they have finalized its slot. A header found diverged, or too new when shown (no
+//! honest instance can hold it), stays raised (`instance-diverged`, `instance-ahead`, one alert per header) whether
+//! the instance moves on or the providers drop out; a diverged one, or one ahead of every provider, clears only when a
+//! later poll confirms that header (`--min-agreeing` agree, none disagrees). The loop ends after `max_polls`, or on
+//! the stop flag (SIGTERM or SIGINT in the binary) after the poll in hand.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -18,8 +25,12 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 use crate::alert::{Alert, Level, Sink};
-use crate::source::{query_provider, read_state, Provider, StateSource, Target};
-use crate::{assess, Assessment, Divergence, Policy};
+use crate::source::{query_provider, read_state, view_at, Provider, StateSource, Target};
+use crate::{assess, judge, parse_root, Ahead, Assessment, Divergence, Policy, ProviderView};
+use ferrata_lez_wire::InstanceState;
+
+/// Earlier headers judged again per poll, at most: never-decided ones first, then the oldest.
+pub const RECHECK_PER_POLL: usize = 8;
 
 /// The chain's clock: `start_s` at the start, then the wall clock's progress (UNIX seconds).
 #[derive(Clone, Copy, Debug)]
@@ -62,7 +73,42 @@ pub struct Watch {
 pub struct Seen {
     pub root: String,
     pub first_seen_s: u64,
+    /// The latest verdict: `unconfirmed` never replaces one, and `diverged` is replaced only by `confirmed`.
     pub divergence: Divergence,
+    /// Confirmed or contested with no provider behind the slot: not judged again.
+    #[serde(default)]
+    pub settled: bool,
+    /// `too-new` when the instance showed it (it stays raised), or ahead of every provider (until confirmed).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ahead: Option<Ahead>,
+}
+
+impl Seen {
+    fn new(root: String, now: u64) -> Self {
+        Self { root, first_seen_s: now, divergence: Divergence::Unconfirmed, settled: false, ahead: None }
+    }
+
+    /// Records a verdict reached with `behind` providers that had not finalized the slot.
+    fn record(&mut self, d: Divergence, behind: usize) {
+        if d == Divergence::Unconfirmed {
+            return;
+        }
+        if !(self.divergence == Divergence::Diverged && d == Divergence::Contested) {
+            self.divergence = d;
+        }
+        self.settled = matches!(self.divergence, Divergence::Confirmed | Divergence::Contested) && behind == 0;
+        if self.divergence == Divergence::Confirmed && self.ahead == Some(Ahead::AheadOfProviders) {
+            self.ahead = None;
+        }
+    }
+
+    fn note_ahead(&mut self, a: Option<Ahead>) {
+        match a {
+            Some(Ahead::TooNew) => self.ahead = Some(Ahead::TooNew),
+            Some(Ahead::AheadOfProviders) if self.ahead.is_none() && self.divergence != Divergence::Confirmed => self.ahead = a,
+            _ => {}
+        }
+    }
 }
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -75,13 +121,73 @@ pub struct Summary {
 
 /// One poll: the instance's state, then each provider at its finalized slot, then the decision at `now_s`.
 pub fn poll(state: &StateSource, target: Option<&Target>, providers: &[Provider], policy: &Policy, now_s: u64, timeout_s: u64) -> Result<Assessment> {
+    poll_views(state, target, providers, policy, now_s, timeout_s).map(|(_, _, a)| a)
+}
+
+fn poll_views(
+    state: &StateSource,
+    target: Option<&Target>,
+    providers: &[Provider],
+    policy: &Policy,
+    now_s: u64,
+    timeout_s: u64,
+) -> Result<(InstanceState, Vec<ProviderView>, Assessment)> {
     let s = read_state(state, target, timeout_s)?;
     let slot = ferrata_core::witness::CompactStore::decode(&s.store)
         .map_err(|e| anyhow::anyhow!("the instance's store does not decode: {e:?}"))?
         .finalized
         .slot;
     let views: Vec<_> = providers.iter().map(|p| query_provider(p, slot, timeout_s)).collect();
-    assess(&s, &views, now_s, policy)
+    let a = assess(&s, &views, now_s, policy)?;
+    Ok((s, views, a))
+}
+
+/// Judges again the earlier headers in `seen` that some provider can judge now (its finalized slot at or past theirs).
+fn recheck(seen: &mut BTreeMap<u64, Seen>, current: u64, s: &InstanceState, providers: &[Provider], views: &[ProviderView], w: &Watch) {
+    let Some(highest) = views.iter().filter(|v| v.error.is_none()).filter_map(|v| v.finalized_slot).max() else { return };
+    let mut due: Vec<(bool, u64)> = seen
+        .iter()
+        .filter(|(slot, e)| **slot != current && **slot <= highest && !e.settled)
+        .map(|(slot, e)| (e.divergence != Divergence::Unconfirmed, *slot))
+        .collect();
+    due.sort_unstable();
+    for (_, slot) in due.into_iter().take(RECHECK_PER_POLL) {
+        let Ok(root) = parse_root(&seen[&slot].root) else { continue };
+        let at: Vec<ProviderView> = providers.iter().zip(views).map(|(p, v)| view_at(p, v, slot, w.timeout_s)).collect();
+        let j = judge(&s.config, slot, &root, &at, &w.policy);
+        if let Some(e) = seen.get_mut(&slot) {
+            e.record(j.divergence, j.behind);
+        }
+    }
+}
+
+/// The alerts every header on record keeps raised: diverged (until confirmed), too new, ahead of every provider.
+fn on_record(seen: &BTreeMap<u64, Seen>, instance: &str, current: u64) -> Vec<Alert> {
+    let mut out = Vec::new();
+    for (slot, e) in seen {
+        if e.divergence == Divergence::Diverged {
+            out.push(
+                Alert::new(Level::Critical, "instance-diverged", "a finalized header the instance showed is not the canonical block at its slot: freeze what consumes this instance")
+                    .with("instance", instance)
+                    .with("slot", *slot)
+                    .with("instance_root", &e.root)
+                    .with("current", *slot == current)
+                    .with("first_seen_s", e.first_seen_s),
+            );
+        }
+        if let Some(why) = e.ahead {
+            out.push(
+                Alert::new(Level::Critical, "instance-ahead", "a finalized header the instance showed is ahead of the chain's finality: freeze what consumes this instance")
+                    .with("instance", instance)
+                    .with("why", why)
+                    .with("slot", *slot)
+                    .with("instance_root", &e.root)
+                    .with("current", *slot == current)
+                    .with("first_seen_s", e.first_seen_s),
+            );
+        }
+    }
+    out
 }
 
 /// An alert raised and not cleared: the latest of it, when it was last emitted, and whether the alert command took it.
@@ -106,9 +212,12 @@ impl Unjudged {
     }
 }
 
+/// An alert's identity: its kind and provider; a header's alarms, its kind and slot (one alert per header).
 fn key(a: &Alert) -> String {
-    let who = a.fields.get("provider").and_then(|v| v.as_str()).unwrap_or("");
-    format!("{}:{who}", a.kind)
+    match a.kind.as_str() {
+        "instance-diverged" | "instance-ahead" => format!("{}@{}", a.kind, a.fields.get("slot").and_then(|v| v.as_u64()).unwrap_or_default()),
+        _ => format!("{}:{}", a.kind, a.fields.get("provider").and_then(|v| v.as_str()).unwrap_or("")),
+    }
 }
 
 fn write_atomic(path: &PathBuf, text: &str) {
@@ -133,25 +242,27 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
     summary.emitted.push(start);
     loop {
         let now = w.clock.now();
-        let (alerts, unjudged) = match poll(&w.state, w.target.as_ref(), &w.providers, &w.policy, now, w.timeout_s) {
-            Ok(a) => {
-                let entry = summary.seen.entry(a.finalized_slot).or_insert(Seen {
-                    root: a.finalized_root.clone(),
-                    first_seen_s: now,
-                    divergence: a.divergence,
-                });
-                // A verdict reached later (providers that answer again) replaces an open one.
-                if entry.divergence != a.divergence && a.divergence != Divergence::Unconfirmed {
-                    entry.divergence = a.divergence;
+        let (alerts, unjudged) = match poll_views(&w.state, w.target.as_ref(), &w.providers, &w.policy, now, w.timeout_s) {
+            Ok((s, views, a)) => {
+                let entry = summary.seen.entry(a.finalized_slot).or_insert_with(|| Seen::new(a.finalized_root.clone(), now));
+                if entry.root != a.finalized_root {
+                    // Another header at a slot on record (the program never replaces a finalized header at its slot: the
+                    // source now shows another instance state): a new entry.
+                    *entry = Seen::new(a.finalized_root.clone(), now);
                 }
+                entry.record(a.divergence, a.providers_behind);
+                entry.note_ahead(a.ahead);
+                recheck(&mut summary.seen, a.finalized_slot, &s, &w.providers, &views, w);
+                let mut alerts = a.alerts.clone();
+                let raised: Vec<String> = alerts.iter().map(key).collect();
+                alerts.extend(on_record(&summary.seen, &a.instance_id, a.finalized_slot).into_iter().filter(|r| !raised.contains(&key(r))));
                 let mut unjudged = Vec::new();
                 if a.divergence == Divergence::Unconfirmed {
-                    unjudged.extend(["instance-diverged", "providers-disagree"]);
+                    unjudged.push("providers-disagree");
                 }
                 if a.lag_s.is_none() {
                     unjudged.push("instance-stalled");
                 }
-                let alerts = a.alerts.clone();
                 if let Some(p) = &w.status_file {
                     write_atomic(p, &serde_json::to_string_pretty(&a).unwrap_or_default());
                 }

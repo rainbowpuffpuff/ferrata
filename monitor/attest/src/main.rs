@@ -17,7 +17,7 @@ use ferrata_attest_monitor::{assess, hex0x, parse_root, Policy, ProviderView};
 use lee_core::account::AccountId;
 
 #[derive(Parser)]
-#[command(name = "attest-monitor", version, about = "Watches a Ferrata attestation instance against several beacon providers: stall, weak-subjectivity and divergence alarms")]
+#[command(name = "attest-monitor", version, about = "Watches a Ferrata attestation instance against several beacon providers: stall, weak-subjectivity, divergence and ahead-of-finality alarms")]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -50,6 +50,10 @@ struct Common {
     /// Lag behind the providers' finalized header that raises `instance-stalled`.
     #[arg(long, default_value_t = Policy::default().stall_after_s)]
     stall_after: u64,
+    /// Seconds past the chain's finality delay (two epochs) that the instance's finalized header may be ahead of every
+    /// provider (none has finalized its slot or holds it there) before `instance-ahead` (critical).
+    #[arg(long, default_value_t = Policy::default().ahead_grace_s)]
+    ahead_grace: u64,
     /// The chain's clock at the start, UNIX seconds (default: the system clock).
     #[arg(long)]
     now: Option<u64>,
@@ -74,7 +78,12 @@ impl Common {
         })
     }
     fn policy(&self) -> Policy {
-        Policy { min_agreeing: self.min_agreeing, diverge_at: self.diverge_at as usize, stall_after_s: self.stall_after }
+        Policy {
+            min_agreeing: self.min_agreeing,
+            diverge_at: self.diverge_at as usize,
+            stall_after_s: self.stall_after,
+            ahead_grace_s: self.ahead_grace,
+        }
     }
     fn sink(&self) -> Sink {
         Sink { log: self.alert_log.clone(), cmd: self.alert_cmd.clone(), cmd_level: Some(self.alert_cmd_level) }
