@@ -1,7 +1,7 @@
 # Stream fix-a2: proposed changes for the integrator
 
 Branch `fix-a2` (from `462d0cd1`). It answers the second critical review of stream A (light-client security),
-`review-rfp-A2`: M1, M2, L1–L7 and N1, and then the review of this branch, `review-fix-a2`: M1–M3, L1–L6, N1 and N2
+`review-rfp-A2`: M1, M2, L1–L7 and N1, and then the review of this branch: M1–M3, L1–L6, N1 and N2
 (last section). No program, guest or image id changed. This stream owns no new requirement row;
 it proposes new wording for five RFP-021 rows, one new EVIDENCE row and edits to two EVIDENCE rows and three
 traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; RFP-021 hard stays 25 shown, 29 in part,
@@ -77,7 +77,7 @@ traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; R
 | L6: the differential's limits | `HELIOS-DIFFERENTIAL.md` ("What this differential cannot give") | `f729a9e4` |
 | N1: proof size in dev mode | `f8-full-diff.md`'s text | `4e3410bb`, `2a9a4fae` |
 
-## Findings of the review of this branch (`review-fix-a2`), fixed on the branch
+## Findings of the review of this branch, fixed on the branch
 
 Reruns on the build box, 22 November 2026: `security_lc` 5 of 5 and `security_privacy` 2 of 2 (results regenerated;
 only the texts below and F.8's count of differing bytes changed); the R.11 session again on LEZ v0.4.0-rc3's own
