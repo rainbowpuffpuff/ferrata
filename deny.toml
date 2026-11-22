@@ -34,8 +34,6 @@ allow = [
     "Unicode-DFS-2016",
     "CDLA-Permissive-2.0",
     "OpenSSL",
-    # University of Illinois/NCSA (BSD-like): libfuzzer-sys, in the fuzz workspaces only.
-    "NCSA",
 ]
 
 # MPL-2.0 is file-level copyleft: using these crates unmodified as dependencies keeps the workspace's licence
@@ -43,6 +41,8 @@ allow = [
 exceptions = [
     { allow = ["MPL-2.0"], crate = "attohttpc" },
     { allow = ["MPL-2.0"], crate = "option-ext" },
+    # University of Illinois/NCSA (BSD-like): libfuzzer-sys, in the fuzz workspaces only.
+    { allow = ["NCSA"], crate = "libfuzzer-sys" },
     # The native code these crates link statically (the clarifications below): the CLI, LEZ's wallet and sequencer
     # carry it; every release ships its notices, licence texts and source offer (releases/third-party/).
     { allow = ["LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "rust-rapidsnark" },
@@ -50,15 +50,7 @@ exceptions = [
     { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-poc-sys" },
     { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-poq-sys" },
     { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-signature-sys" },
-    # RISC Zero's prover (risc0-zkvm with `prove`): malachite through risc0-circuit-rv32im, downloader as a build
-    # dependency of risc0-circuit-recursion. Only gpu-prover/prover enables it, and its binary runs on the project's
-    # own Modal workspace; nothing that links them is distributed.
-    { allow = ["LGPL-3.0-only"], crate = "malachite" },
-    { allow = ["LGPL-3.0-only"], crate = "malachite-base" },
-    { allow = ["LGPL-3.0-only"], crate = "malachite-float" },
-    { allow = ["LGPL-3.0-only"], crate = "malachite-nz" },
-    { allow = ["LGPL-3.0-only"], crate = "malachite-q" },
-    { allow = ["LGPL-3.0-or-later"], crate = "downloader" },
+    # RISC Zero's prover (malachite, downloader: LGPL-3.0) is allowed in gpu-prover/ only, by gpu-prover/deny.toml.
 ]
 
 # Native code that the crates' declared licences (MIT OR Apache-2.0) do not cover (review-code-ops M2), so that
@@ -66,25 +58,26 @@ exceptions = [
 # above the licence check rejects them). rust-rapidsnark links the prebuilt rapidsnark and ffiasm (LGPL-3.0) and GMP
 # 6.3.0; the circuits' sys crates link circom-generated witness generators with circom's C++ runtime (GPL-3.0), circomlib
 # templates (LGPL-3.0) and GMP 6.2.1. The archives and their components: scripts/native-deps.json. license-files is
-# required and left empty: the expressions describe the native archives, not files of the crates.
+# required and left empty: the expressions describe the native archives, not files of the crates. Each is scoped to the
+# version every lockfile holds (scripts/test_deny_all.py checks it), so a new version is looked at before it is clarified.
 [[licenses.clarify]]
-crate = "rust-rapidsnark"
+crate = "rust-rapidsnark@0.1.3"
 expression = "(MIT OR Apache-2.0) AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
 license-files = []
 [[licenses.clarify]]
-crate = "logos-blockchain-circuits-pol-sys"
+crate = "logos-blockchain-circuits-pol-sys@0.5.7"
 expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
 license-files = []
 [[licenses.clarify]]
-crate = "logos-blockchain-circuits-poc-sys"
+crate = "logos-blockchain-circuits-poc-sys@0.5.7"
 expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
 license-files = []
 [[licenses.clarify]]
-crate = "logos-blockchain-circuits-poq-sys"
+crate = "logos-blockchain-circuits-poq-sys@0.5.7"
 expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
 license-files = []
 [[licenses.clarify]]
-crate = "logos-blockchain-circuits-signature-sys"
+crate = "logos-blockchain-circuits-signature-sys@0.5.7"
 expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
 license-files = []
 

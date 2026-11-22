@@ -1,52 +1,54 @@
-# Advisories and yanked crates that scripts/deny_all.py --advisories baseline accepts; any other one
-# fails the run. Written by `scripts/deny_all.py --write-baseline` on 2026-11-22.
+# Advisories and yanked crates that scripts/deny_all.py --advisories baseline accepts, each only in the
+# workspaces its line names; any other one, or one of these in another workspace, fails the run.
+# Rewritten per workspace on 2026-11-22 from the run of review-fix-supply's box C (the same 49 entries as before;
+# review-fix-supply L-5); `scripts/deny_all.py --write-baseline FILE` writes this format.
 # A listing here is not a triage: see docs/reviews/security/ for which ones are reachable.
-RUSTSEC-2023-0071                        # 12 workspace(s): bench, bench/exec, bridge, checkpoint, cli, fuzz/programs, gpu-prover/prover, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2023-0089                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2024-0388                        # 36 workspace(s): bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-pla
-RUSTSEC-2024-0436                        # 39 workspace(s): ., bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-
-RUSTSEC-2024-0449                        # 12 workspace(s): ., bench, bench/exec, checkpoint, cli, fuzz, fuzz/programs, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2025-0055                        # 36 workspace(s): bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-pla
-RUSTSEC-2025-0119                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2025-0141                        # 12 workspace(s): bench, bench/exec, bridge, checkpoint, cli, fuzz/programs, gpu-prover/prover, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0118                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0119                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0173                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0220                        # 15 workspace(s): bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-plain, bridge/guests, 
-RUSTSEC-2026-0344                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0367                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0368                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0369                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0385                        # 8 workspace(s): checkpoint, cli, fuzz/programs, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0387                        # 10 workspace(s): ., checkpoint, cli, fuzz/programs, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer, monitor
-RUSTSEC-2026-0391                        # 1 workspace(s): checkpoint
-RUSTSEC-2026-0398                        # 1 workspace(s): checkpoint
-RUSTSEC-2026-0403                        # 1 workspace(s): checkpoint
-RUSTSEC-2026-0410                        # 1 workspace(s): checkpoint
-RUSTSEC-2026-0429                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0487                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0489                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0490                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0491                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0504                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0505                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0511                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0512                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0514                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0530                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0531                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0532                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0534                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0538                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0542                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0545                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0548                        # 1 workspace(s): gpu-prover/prover
-RUSTSEC-2026-0549                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0550                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-RUSTSEC-2026-0551                        # 7 workspace(s): checkpoint, cli, fuzz/programs, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-yanked crypto-bigint@0.7.5               # 5 workspace(s): cli, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-yanked risc0-circuit-recursion@4.0.4     # 9 workspace(s): checkpoint, cli, fuzz/programs, gpu-prover/prover, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-yanked risc0-circuit-recursion@4.0.5     # 27 workspace(s): bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-pla
-yanked risc0-groth16@3.0.4               # 9 workspace(s): checkpoint, cli, fuzz/programs, gpu-prover/prover, lez, lez/crown/driver, lez/lab/driver, lez/live/driver, lez/updater/sequencer
-yanked risc0-groth16@3.0.5               # 27 workspace(s): bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-pla
-yanked risc0-zkvm@3.0.5                  # 36 workspace(s): bench, bench/exec, bench/exec/guests/keccak-accel, bench/exec/guests/keccak-plain, bench/guests/blst-accel, bench/guests/blst-accel-v0314, bench/guests/blst-plain, bench/guests/nopatch, bench/guests/residue-accel, bench/guests/residue-agg-accel, bench/guests/zkcrypto-accel, bench/guests/zkcrypto-pla
+RUSTSEC-2023-0071 bench bench/exec bridge checkpoint cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2023-0089 gpu-prover/prover
+RUSTSEC-2024-0388 bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2024-0436 . bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain cli fuzz fuzz/programs gpu-prover/prover lez lez/crown/driver lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted lez/lab/driver lez/live/driver lez/updater/sequencer monitor
+RUSTSEC-2024-0449 . bench bench/exec checkpoint cli fuzz fuzz/programs lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2025-0055 bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2025-0119 gpu-prover/prover
+RUSTSEC-2025-0141 bench bench/exec bridge checkpoint cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0118 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0119 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0173 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0220 bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge/guests checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain gpu-prover/prover
+RUSTSEC-2026-0344 gpu-prover/prover
+RUSTSEC-2026-0367 gpu-prover/prover
+RUSTSEC-2026-0368 gpu-prover/prover
+RUSTSEC-2026-0369 gpu-prover/prover
+RUSTSEC-2026-0385 checkpoint cli fuzz/programs lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0387 . checkpoint cli fuzz/programs lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer monitor
+RUSTSEC-2026-0391 checkpoint
+RUSTSEC-2026-0398 checkpoint
+RUSTSEC-2026-0403 checkpoint
+RUSTSEC-2026-0410 checkpoint
+RUSTSEC-2026-0429 gpu-prover/prover
+RUSTSEC-2026-0487 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0489 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0490 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0491 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0504 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0505 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0511 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0512 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0514 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0530 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0531 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0532 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0534 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0538 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0542 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0545 gpu-prover/prover
+RUSTSEC-2026-0548 gpu-prover/prover
+RUSTSEC-2026-0549 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0550 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+RUSTSEC-2026-0551 checkpoint cli fuzz/programs lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+yanked:crypto-bigint@0.7.5 cli lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+yanked:risc0-circuit-recursion@4.0.4 checkpoint cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+yanked:risc0-circuit-recursion@4.0.5 bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted
+yanked:risc0-groth16@3.0.4 checkpoint cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/lab/driver lez/live/driver lez/updater/sequencer
+yanked:risc0-groth16@3.0.5 bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted
+yanked:risc0-zkvm@3.0.5 bench bench/exec bench/exec/guests/keccak-accel bench/exec/guests/keccak-plain bench/guests/blst-accel bench/guests/blst-accel-v0314 bench/guests/blst-plain bench/guests/nopatch bench/guests/residue-accel bench/guests/residue-agg-accel bench/guests/zkcrypto-accel bench/guests/zkcrypto-plain bridge bridge/guests checkpoint checkpoint/guests checkpoint/guests-0-3-5 checkpoint/guests-plain cli fuzz/programs gpu-prover/prover lez lez/crown/driver lez/guests/bridge lez/guests/bridge-next lez/guests/consumer lez/guests/consumer-keccak-accel lez/guests/holdings lez/guests/program lez/guests/program-class lez/guests/program-keccak-soft lez/guests/program-residue-experimental lez/guests/scripted lez/lab/driver lez/live/driver lez/updater/sequencer
