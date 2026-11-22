@@ -7,7 +7,9 @@
 //! `keystore_module`/`tx_sender_module` on Ethereum, `lez_core` on LEZ), which are not available here:
 //!
 //! - Ethereum: the vault's public reads (the `ferrata` tool's `eth.rs`), the user's deposit signed with its
-//!   keystore, and a release handed to the relayer (`ferrata-relayer`, one round) after the stand-in prover
+//!   keystore (only when started with `--keystore`; with `--user ADDR` it holds no Ethereum key and refuses to
+//!   sign, as on the `logoseth` path, where the module sends through Logos Core's own send stack), and a release
+//!   handed to the relayer (`ferrata-relayer`, one round) after the stand-in prover
 //!   (the vault tests' mock verifier accepts the exact journal: the Groth16 wrap is not run here);
 //! - LEZ: LEZ's wallet library through the tool's own ledger (`ferrata_cli::lez::Sequencer`): actor states,
 //!   the zone's applied bridge calls and the calls private transactions make in the clear (`lez::history_of`,
@@ -20,7 +22,7 @@
 //! appended to `--log` (one JSON line: method, params, reply, milliseconds).
 //!
 //!   seqnet-chain --listen 127.0.0.1:18700 --eth-rpc URL --chain-id N --vault ADDR --from-block N
-//!     --keystore FILE --password-file FILE --sequencer URL --seed FILE --lez-wallet DIR --lez-password-file FILE
+//!     (--keystore FILE --password-file FILE | --user ADDR) --sequencer URL --seed FILE --lez-wallet DIR --lez-password-file FILE
 //!     --bridge-account HEX --bridge-program FILE --relayer-bin FILE --relayer ADDR --relayer-state DIR
 //!     --relayer-inbox DIR --mock ADDR --prover ADDR --release-image-id HEX --log FILE [--proofs dev|real]
 
@@ -74,10 +76,16 @@ struct Args {
     vault: Address,
     #[arg(long, default_value_t = 0)]
     from_block: u64,
-    #[arg(long)]
-    keystore: PathBuf,
-    #[arg(long)]
-    password_file: PathBuf,
+    /// The user's Ethereum keystore, for the deposit this service signs on the plain path (`module.send_deposit`).
+    /// Leave it out (give `--user`) where the module sends through Logos Core's send stack: then no Ethereum key is
+    /// held here.
+    #[arg(long, requires = "password_file", conflicts_with = "user")]
+    keystore: Option<PathBuf>,
+    #[arg(long, requires = "keystore")]
+    password_file: Option<PathBuf>,
+    /// The user's Ethereum address (the depositor) when no keystore is given.
+    #[arg(long, required_unless_present = "keystore")]
+    user: Option<Address>,
     #[arg(long)]
     sequencer: String,
     #[arg(long)]
@@ -128,7 +136,9 @@ const HOLD_FOR: Duration = Duration::from_secs(900);
 /// person approves exactly that message with the role password (`module.approve_role {approval_id, message_sha256,
 /// password}`), as Logos's signer asks a person before `keystore_module` signs on Ethereum. A request may be rejected
 /// (`module.reject_role`) or withdrawn by its requester (`module.cancel_role`); one left unanswered expires. Nothing
-/// else signs with a role key. Messages signed by the user's own accounts (claims, burns) are not held.
+/// else signs with a role key: a request that names a role account as its fee `payer` (LEZ's wallet would make that
+/// key co-sign, outside the message's accounts) is refused, never held or signed. Messages signed by the user's own
+/// accounts (claims, burns) are not held.
 struct RoleGate {
     accounts: Vec<[u8; 32]>,
     password_sha256: Option<[u8; 32]>,
@@ -142,6 +152,9 @@ struct Held {
     params: Value,
     what: String,
     message: String,
+    /// The message as the program will read it (decoded from the bytes the person approves, not the requester's
+    /// words).
+    decoded: String,
     signer: String,
     message_sha256: String,
     at: Instant,
@@ -158,6 +171,20 @@ fn password_line(text: &str) -> &str {
 impl RoleGate {
     fn new(accounts: Vec<[u8; 32]>, password: Option<&str>) -> Self {
         RoleGate { accounts, password_sha256: password.map(|p| sha256(password_line(p).as_bytes())), held: Vec::new(), next: 0, hold_for: HOLD_FOR }
+    }
+
+    /// What to do with a `module.submit` request: refuse it when its fee `payer` is a role account (LEZ's wallet would
+    /// have that key co-sign without the person's approval); hold it when a role key must sign it; otherwise send it.
+    fn screen(&self, params: &Value) -> Result<Screen> {
+        if let Some(p) = params["payer"].as_str() {
+            let id = h32(p).context("payer")?;
+            ensure!(!self.accounts.contains(&id),
+                    "refused: the fee payer {} is a role account: its key would co-sign without a person's approval (a role key signs only a held message, as its signer, after approve_role); nothing was signed", hx(&id));
+        }
+        Ok(match self.role_signer(params) {
+            Some(signer) => Screen::Hold(signer),
+            None => Screen::Now,
+        })
     }
 
     /// The `signer` account of a `module.submit` request that is one of the role keys', if any.
@@ -191,13 +218,15 @@ impl RoleGate {
         self.expire();
         self.next += 1;
         let id = format!("lra_{}", self.next);
-        let name = format!("{message:?}").split(['(', ' ', '{']).next().unwrap_or("?").to_string();
+        let decoded = format!("{message:?}");
+        let name = decoded.split(['(', ' ', '{']).next().unwrap_or("?").to_string();
         let what = params["what"].as_str().unwrap_or("a LEZ role message").to_string();
         let message_sha256 = hx(&sha256(bytes));
-        self.held.push(Held { id: id.clone(), params: params.clone(), what: what.clone(), message: name.clone(), signer: signer.clone(),
-                              message_sha256: message_sha256.clone(), at: Instant::now(), state: "awaiting_approval", result: None, error: None });
+        self.held.push(Held { id: id.clone(), params: params.clone(), what: what.clone(), message: name.clone(), decoded: decoded.clone(),
+                              signer: signer.clone(), message_sha256: message_sha256.clone(), at: Instant::now(), state: "awaiting_approval",
+                              result: None, error: None });
         json!({
-            "pending_approval": true, "approval_id": id, "what": what, "message": name, "signer": signer,
+            "pending_approval": true, "approval_id": id, "what": what, "message": name, "decoded": decoded, "signer": signer,
             "message_sha256": message_sha256, "expires_in_s": self.hold_for.as_secs(),
             "approve_with": "module.approve_role {approval_id, message_sha256, password}: the person, with the role password (e2e/seqnet/ops.sh approve-lez)",
         })
@@ -209,7 +238,7 @@ impl RoleGate {
     }
 
     fn summary(h: &Held) -> Value {
-        json!({ "approval_id": h.id, "state": h.state, "what": h.what, "message": h.message, "signer": h.signer,
+        json!({ "approval_id": h.id, "state": h.state, "what": h.what, "message": h.message, "decoded": h.decoded, "signer": h.signer,
                 "message_sha256": h.message_sha256, "age_s": h.at.elapsed().as_secs(), "result": h.result, "error": h.error })
     }
 
@@ -264,8 +293,17 @@ impl RoleGate {
     fn describe(&self) -> Value {
         json!({ "approval": if self.password_sha256.is_some() { "password" } else { "none" },
                 "role_accounts": self.accounts.iter().map(|a| hx(a)).collect::<Vec<_>>(), "hold_for_s": self.hold_for.as_secs(),
-                "rule": "a message a role key must sign is held until a person approves it with the role password; nothing else signs with a role key" })
+                "rule": "a message a role key must sign is held until a person approves it with the role password; nothing else signs with a role key (a role account named as the fee payer is refused)" })
     }
+}
+
+/// [`RoleGate::screen`]'s answer for a `module.submit` request.
+#[derive(Debug, PartialEq)]
+enum Screen {
+    /// A role key must sign it: held for the person (the role account).
+    Hold(String),
+    /// Signed and sent now (no role key signs it).
+    Now,
 }
 
 /// The run's throwaway key of `label`: SHA-256 of `ferrata-live/v1/key/`, the label and a counter (the first that is
@@ -384,6 +422,9 @@ impl Chain {
             "proofs": proof_mode(),
             "eth_rpc": self.a.eth_rpc,
             "sequencer": self.a.sequencer,
+            // Whether this service holds the user's Ethereum key (`--keystore`); without it, it signs nothing on
+            // Ethereum for the user (the module sends through Logos Core's send stack).
+            "holds_eth_key": self.a.keystore.is_some(),
         }))
     }
 
@@ -467,7 +508,10 @@ impl Chain {
         ensure!(to == self.eth.vault, "the deposit's call goes to the vault {}, not {to}", self.eth.vault);
         let data = Bytes::from(hex_bytes(&params["data"], "data")?);
         let value: U256 = params["value"].as_str().context("value")?.parse().context("value: a decimal amount")?;
-        let signer = eth::keystore_signer(&self.a.keystore, &self.a.password_file)?;
+        let (Some(keystore), Some(password_file)) = (&self.a.keystore, &self.a.password_file) else {
+            bail!("refused: this chain service holds no Ethereum key (started with --user): the deposit is sent through Logos Core's send stack, not here");
+        };
+        let signer = eth::keystore_signer(keystore, password_file)?;
         let sp = eth::signing_provider(&self.a.eth_rpc, signer)?;
         let receipt = eth::send(&sp, self.user, to, data, value, 1).await?;
         let event = eth::deposit_of_receipt(&receipt).context("the receipt has no Deposit event")?;
@@ -637,13 +681,15 @@ impl Chain {
     /// a private account of the wallet, a private transaction executed and proven by LEZ's wallet; then
     /// waits for the block that applies it.
     async fn submit(&mut self, params: &Value) -> Result<Value> {
-        if let Some(signer) = self.gate.role_signer(params) {
-            // A role key must sign it: held for the person's approval (RoleGate), nothing signed now.
-            let bytes = hex_bytes(&params["message"], "message")?;
-            let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
-            return Ok(self.gate.hold(params, signer, &message, &bytes));
+        match self.gate.screen(params)? {
+            Screen::Hold(signer) => {
+                // A role key must sign it: held for the person's approval (RoleGate), nothing signed now.
+                let bytes = hex_bytes(&params["message"], "message")?;
+                let message = BridgeMessage::try_from_slice(&bytes).context("message: not a BridgeMessage")?;
+                Ok(self.gate.hold(params, signer, &message, &bytes))
+            }
+            Screen::Now => self.submit_now(params).await,
         }
-        self.submit_now(params).await
     }
 
     /// Signs and sends a module message (after the gate, for a role key's).
@@ -915,7 +961,14 @@ fn main() -> Result<()> {
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
         let ctx = Context { program, cid: cid.0, chain_id, vault: eth.vault.into_array() };
         let seq = Sequencer { wallet, payer: None, bridge_program: Some(a.bridge_program.clone()), synced: false };
-        let user = eth::keystore_signer(&a.keystore, &a.password_file)?.address();
+        let user = match (&a.keystore, &a.password_file, a.user) {
+            (Some(k), Some(p), _) => eth::keystore_signer(k, p)?.address(),
+            (None, _, Some(u)) => {
+                eprintln!("seqnet-chain: no Ethereum key held (--user {u}): the user's Ethereum sends go through Logos Core's send stack");
+                u
+            }
+            _ => bail!("give --keystore and --password-file, or --user"),
+        };
         anyhow::Ok(Chain { a, eth, seq, ctx, seed, user, gate })
     })?;
     let listener = TcpListener::bind(&chain.a.listen)?;
@@ -1015,5 +1068,40 @@ mod tests {
         let id = none.hold(&p, hx(&role), &m, &bytes)["approval_id"].as_str().unwrap().to_string();
         assert!(none.approve(&json!({ "approval_id": id, "message_sha256": sha, "password": "" })).is_err());
         assert_eq!(password_line("a\r\n"), "a");
+    }
+
+    /// A role key never signs as a request's fee payer (LEZ's wallet makes an explicit payer whose key it holds
+    /// co-sign, outside the message's accounts): such a request is refused, not held and not sent, whoever signs the
+    /// message; the user's own payer is fine. The person sees the message decoded from its bytes.
+    #[test]
+    fn a_role_account_as_the_fee_payer_is_refused_and_the_held_message_is_decoded() {
+        let role = [9u8; 32];
+        let user = [1u8; 32];
+        let g = RoleGate::new(vec![role], Some("ferrata devnet only"));
+        // The user's own message, the role account as its payer: refused (before: signed at once, the role key co-signing).
+        let (mut p, _) = req(&user);
+        p["payer"] = json!(hx(&role));
+        let e = g.screen(&p).unwrap_err();
+        assert!(e.to_string().contains("is a role account") && e.to_string().contains("nothing was signed"), "{e}");
+        // A role message with the role account as its payer too: refused, not held.
+        let (mut p, _) = req(&role);
+        p["payer"] = json!(hx(&role));
+        assert!(g.screen(&p).is_err());
+        // The user's account pays: a role message is held, the user's own is sent.
+        let (mut p, bytes) = req(&role);
+        p["payer"] = json!(hx(&user));
+        assert_eq!(g.screen(&p).unwrap(), Screen::Hold(hx(&role)));
+        let (mut q, _) = req(&user);
+        q["payer"] = json!(hx(&user));
+        assert_eq!(g.screen(&q).unwrap(), Screen::Now);
+        assert_eq!(g.screen(&req(&user).0).unwrap(), Screen::Now, "no payer named: the wallet picks the message's own signer");
+        assert!(g.screen(&json!({ "payer": "0x12" })).is_err(), "a payer that is not an account id");
+        // The held message as the program reads it, not only the requester's words.
+        let mut g = g;
+        let m = BridgeMessage::try_from_slice(&bytes).unwrap();
+        let held = g.hold(&p, hx(&role), &m, &bytes);
+        assert!(held["decoded"].as_str().unwrap().starts_with("Sunset { config_id: [7, 7"), "{}", held["decoded"]);
+        assert_eq!(g.pending()["pending"][0]["decoded"], held["decoded"]);
+        assert!(g.describe()["rule"].as_str().unwrap().contains("fee payer is refused"));
     }
 }
