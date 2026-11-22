@@ -26,10 +26,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::alert::{Alert, Level, Sink};
 use crate::source::{query_provider, read_state, view_at, Provider, StateSource, Target};
-use crate::{assess, judge, parse_root, Ahead, Assessment, Divergence, Policy, ProviderView};
+use crate::{assess, finalizers, judge, parse_root, Ahead, Assessment, Divergence, Policy, ProviderView};
 use ferrata_lez_wire::InstanceState;
 
-/// Earlier headers judged again per poll, at most: never-decided ones first, then the oldest.
+/// Earlier headers judged again per poll, at most: the newly judgeable first, then the least recently judged
+/// (`due_order`). More due raise `recheck-backlog` (warning).
 pub const RECHECK_PER_POLL: usize = 8;
 
 /// The chain's clock: `start_s` at the start, then the wall clock's progress (UNIX seconds).
@@ -85,11 +86,26 @@ pub struct Seen {
     /// `too-new` (seen younger than the finality delay) or ahead of every provider: raised until a settled confirmation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ahead: Option<Ahead>,
+    /// The chain's clock at its latest judgement (the order of re-judgement: the least recently judged first).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub last_judged_s: Option<u64>,
+    /// The providers on the instance's chain that had finalized its slot at its latest judgement (`finalizers`): one
+    /// that has since makes the header newly judgeable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub finalized_by: Option<Vec<String>>,
 }
 
 impl Seen {
     fn new(root: String, now: u64) -> Self {
-        Self { root, first_seen_s: now, divergence: Divergence::Unconfirmed, settled: Some(false), ahead: None }
+        Self {
+            root,
+            first_seen_s: now,
+            divergence: Divergence::Unconfirmed,
+            settled: Some(false),
+            ahead: None,
+            last_judged_s: None,
+            finalized_by: None,
+        }
     }
 
     pub fn is_settled(&self) -> bool {
@@ -116,6 +132,12 @@ impl Seen {
         if settled_confirmation {
             self.ahead = None;
         }
+    }
+
+    /// Stamps a judgement at `now` with the providers that had finalized the slot.
+    fn judged(&mut self, now: u64, finalized_by: Vec<String>) {
+        self.last_judged_s = Some(now);
+        self.finalized_by = Some(finalized_by);
     }
 
     fn note_ahead(&mut self, a: Option<Ahead>) {
@@ -158,23 +180,60 @@ fn poll_views(
     Ok((s, views, a))
 }
 
-/// Judges again the earlier headers in `seen` that some provider can judge now (its finalized slot at or past theirs).
-fn recheck(seen: &mut BTreeMap<u64, Seen>, current: u64, s: &InstanceState, providers: &[Provider], views: &[ProviderView], w: &Watch) {
-    let Some(highest) = views.iter().filter(|v| v.error.is_none()).filter_map(|v| v.finalized_slot).max() else { return };
-    let mut due: Vec<(bool, u64)> = seen
+/// The earlier headers to judge again this poll, at most `per_poll`: the due ones (not settled, not `current`, at a
+/// slot some provider has finalized: `highest`), first the newly judgeable (a provider on the instance's chain has
+/// finalized the slot since the header was last judged, so it may count now: `final_now(slot)` against the header's
+/// `finalized_by`), then the least recently judged, then the oldest. So a header that becomes judgeable is judged at the
+/// next poll unless more than `per_poll` do at once, and every due header within ⌈due / per_poll⌉ polls: undecidable
+/// headers cannot hold the budget (review B3, L2). Returns them, the number due and the number newly judgeable.
+fn due_order(
+    seen: &BTreeMap<u64, Seen>,
+    current: u64,
+    highest: u64,
+    final_now: &dyn Fn(u64) -> Vec<String>,
+    per_poll: usize,
+) -> (Vec<u64>, usize, usize) {
+    let mut due: Vec<(bool, u64, u64)> = seen
         .iter()
         .filter(|(slot, e)| **slot != current && **slot <= highest && !e.is_settled())
-        .map(|(slot, e)| (e.divergence != Divergence::Unconfirmed, *slot))
+        .map(|(slot, e)| {
+            let then = e.finalized_by.as_deref().unwrap_or(&[]);
+            let newly = final_now(*slot).iter().any(|n| !then.contains(n));
+            (!newly, e.last_judged_s.unwrap_or(0), *slot)
+        })
         .collect();
+    let (n, newly) = (due.len(), due.iter().filter(|d| !d.0).count());
     due.sort_unstable();
-    for (_, slot) in due.into_iter().take(RECHECK_PER_POLL) {
-        let Ok(root) = parse_root(&seen[&slot].root) else { continue };
-        let at: Vec<ProviderView> = providers.iter().zip(views).map(|(p, v)| view_at(p, v, slot, w.timeout_s)).collect();
-        let j = judge(&s.config, slot, &root, &at, &w.policy);
+    (due.into_iter().take(per_poll).map(|d| d.2).collect(), n, newly)
+}
+
+/// Judges again the earlier headers `due_order` picks. Returns the number due and newly judgeable, or `None` when no
+/// provider gave a finalized slot (nothing can be judged).
+fn recheck(
+    seen: &mut BTreeMap<u64, Seen>,
+    current: u64,
+    s: &InstanceState,
+    providers: &[Provider],
+    views: &[ProviderView],
+    w: &Watch,
+    now: u64,
+) -> Option<(usize, usize)> {
+    let highest = views.iter().filter(|v| v.error.is_none()).filter_map(|v| v.finalized_slot).max()?;
+    let final_now = |slot: u64| finalizers(&s.config, slot, views);
+    let (slots, due, newly) = due_order(seen, current, highest, &final_now, RECHECK_PER_POLL);
+    for slot in slots {
+        let j = parse_root(&seen[&slot].root).ok().map(|root| {
+            let at: Vec<ProviderView> = providers.iter().zip(views).map(|(p, v)| view_at(p, v, slot, w.timeout_s)).collect();
+            judge(&s.config, slot, &root, &at, &w.policy)
+        });
         if let Some(e) = seen.get_mut(&slot) {
-            e.record(j.divergence, j.uncounted);
+            if let Some(j) = j {
+                e.record(j.divergence, j.uncounted);
+            }
+            e.judged(now, final_now(slot));
         }
     }
+    Some((due, newly))
 }
 
 /// The alerts every header on record keeps raised: diverged (until confirmed), too new, ahead of every provider.
@@ -268,8 +327,18 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
                 }
                 entry.record(a.divergence, crate::uncounted(&a.providers));
                 entry.note_ahead(a.ahead);
-                recheck(&mut summary.seen, a.finalized_slot, &s, &w.providers, &views, w);
+                entry.judged(now, finalizers(&s.config, a.finalized_slot, &views));
+                let backlog = recheck(&mut summary.seen, a.finalized_slot, &s, &w.providers, &views, w, now);
                 let mut alerts = a.alerts.clone();
+                if let Some((due, newly)) = backlog.filter(|(due, _)| *due > RECHECK_PER_POLL) {
+                    alerts.push(
+                        Alert::new(Level::Warn, "recheck-backlog", "more earlier headers are due for judgement than one poll judges: the newly judgeable go first, then the least recently judged")
+                            .with("due", due)
+                            .with("newly_judgeable", newly)
+                            .with("per_poll", RECHECK_PER_POLL)
+                            .with("polls", due.div_ceil(RECHECK_PER_POLL)),
+                    );
+                }
                 let raised: Vec<String> = alerts.iter().map(key).collect();
                 alerts.extend(on_record(&summary.seen, &a.instance_id, a.finalized_slot).into_iter().filter(|r| !raised.contains(&key(r))));
                 let mut unjudged = Vec::new();
@@ -278,6 +347,9 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
                 }
                 if a.lag_s.is_none() {
                     unjudged.push("instance-stalled");
+                }
+                if backlog.is_none() {
+                    unjudged.push("recheck-backlog");
                 }
                 if let Some(p) = &w.status_file {
                     write_atomic(p, &serde_json::to_string_pretty(&a).unwrap_or_default());
@@ -337,4 +409,69 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
     w.sink.emit(&end);
     summary.emitted.push(end);
     summary
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn names(n: &[&str]) -> Vec<String> {
+        n.iter().map(|s| s.to_string()).collect()
+    }
+
+    fn entry(last: Option<u64>, by: Option<&[&str]>) -> Seen {
+        Seen { last_judged_s: last, finalized_by: by.map(names), ..Seen::new(format!("0x{}", "cd".repeat(32)), 1) }
+    }
+
+    /// Review B3's R5 at the level of the order: twenty older undecidable headers, judged at the last poll with every
+    /// provider final at their slots (they error there), and the forged S1, judged while no provider had finalized it.
+    /// The providers now have: S1 goes first (before: the oldest undecided first, so eight of them held the budget).
+    #[test]
+    fn a_newly_judgeable_header_goes_before_older_undecidable_ones() {
+        let mut seen = BTreeMap::new();
+        for k in 1..=20 {
+            seen.insert(1000 - k, entry(Some(50), Some(&["a", "b", "c"])));
+        }
+        seen.insert(1000, entry(Some(40), Some(&[])));
+        let all = |_: u64| names(&["a", "b", "c"]);
+        let (slots, due, newly) = due_order(&seen, 1001, 1000, &all, RECHECK_PER_POLL);
+        assert_eq!((slots[0], slots.len(), due, newly), (1000, 8, 21, 1));
+    }
+
+    /// A provider back from an outage (absent from `finalized_by` when the header was judged) makes the header newly
+    /// judgeable (L1's case); the current header, a settled one and one past every provider's finality are not due.
+    #[test]
+    fn a_provider_back_makes_its_headers_newly_judgeable_and_settled_ones_are_not_due() {
+        let mut seen = BTreeMap::new();
+        seen.insert(10, entry(Some(5), Some(&["c1", "c2"])));
+        seen.insert(11, entry(Some(1), Some(&["c1", "c2", "h"])));
+        let mut settled = entry(Some(0), Some(&[]));
+        (settled.divergence, settled.settled) = (Divergence::Confirmed, Some(true));
+        seen.insert(12, settled);
+        seen.insert(13, entry(Some(0), None));
+        seen.insert(20, entry(Some(0), None));
+        let back = |_: u64| names(&["c1", "c2", "h"]);
+        assert_eq!(due_order(&seen, 13, 15, &back, RECHECK_PER_POLL), (vec![10, 11], 2, 1));
+    }
+
+    /// More due than a poll judges, none newly judgeable: each is judged within ⌈due / 8⌉ polls (before: the same
+    /// eight, the oldest undecided, at every poll).
+    #[test]
+    fn every_due_header_is_judged_within_due_over_per_poll_polls() {
+        let mut seen = BTreeMap::new();
+        for slot in 0..21u64 {
+            seen.insert(slot, entry(Some(100 - slot), Some(&["a"])));
+        }
+        let a = |_: u64| names(&["a"]);
+        let mut judged = std::collections::BTreeSet::new();
+        for poll in 0..21u64.div_ceil(RECHECK_PER_POLL as u64) {
+            let (slots, due, newly) = due_order(&seen, 99, 50, &a, RECHECK_PER_POLL);
+            assert_eq!((due, newly), (21, 0));
+            for s in slots {
+                judged.insert(s);
+                seen.get_mut(&s).unwrap().judged(1000 + poll, names(&["a"]));
+            }
+        }
+        assert_eq!(judged.len(), 21);
+    }
 }

@@ -237,9 +237,7 @@ pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Pol
             verdicts.push(verdict);
             continue;
         }
-        let wrong_genesis = v.genesis_validators_root.is_some_and(|g| g != c.genesis_validators_root)
-            || v.genesis_time.is_some_and(|t| t != c.genesis_time);
-        if wrong_genesis {
+        if !on_chain(c, v) {
             verdict.standing = Standing::WrongChain;
             verdict.note = Some(format!(
                 "genesis {} at {} is not the instance's {} at {}",
@@ -324,6 +322,21 @@ pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Pol
         Divergence::Unconfirmed
     };
     Judgement { divergence, verdicts, answering, behind, holding, uncounted, finalized, highest_finalized, provider_alerts: alerts }
+}
+
+/// Whether a provider's genesis, as far as it gave one, is the instance's chain's.
+fn on_chain(c: &Config, v: &ProviderView) -> bool {
+    !(v.genesis_validators_root.is_some_and(|g| g != c.genesis_validators_root) || v.genesis_time.is_some_and(|t| t != c.genesis_time))
+}
+
+/// The providers in `views` that a judgement of a header at `slot` counts by what they have finalized: a usable answer,
+/// the instance's chain, a finalized slot at or past `slot`.
+pub fn finalizers(c: &Config, slot: u64, views: &[ProviderView]) -> Vec<String> {
+    views
+        .iter()
+        .filter(|v| v.error.is_none() && on_chain(c, v) && v.finalized_slot.is_some_and(|f| f >= slot))
+        .map(|v| v.name.clone())
+        .collect()
 }
 
 /// The providers in `verdicts` that are not counted: neither agreeing nor disagreeing.

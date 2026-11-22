@@ -1202,3 +1202,52 @@ fn an_honest_providers_outage_while_colluders_confirm_is_not_a_recovery() {
     assert_eq!(l.iter().filter(|x| x["kind"] == "instance-diverged").count(), 1, "held, not emitted again");
     assert_eq!(read_lines(&freeze).len(), 1);
 }
+
+/// R5 (review B3, L2), inverted. Was `b3_r5_undecidable_older_headers_pin_the_recheck`: eight older headers on record
+/// that never decide (every provider answers HTTP 500 there) took the eight re-judgements of every poll, and the forged
+/// S1 behind them was never judged again after the providers finalized it (with seven it was). Now S1 is raised with
+/// 7, 8 and 20 of them; with more due than the eight a poll judges, `recheck-backlog` (warning) says so.
+#[test]
+fn b3_r5_undecidable_older_headers_do_not_hold_the_recheck() {
+    let f = fx();
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let (s1, s2) = (forged(&s), forged_at(&s, 1, 2));
+    for pinned in [7u64, 8, 20] {
+        let d = scratch(&format!("b3-r5-{pinned}"));
+        let (f1, f2) = (write_state(&d, "s1.hex", &s1), write_state(&d, "s2.hex", &s2));
+        let now = slot_time(&s, slot) + 815;
+        let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, None, slot - 32)).collect();
+        let mut seen = serde_json::Map::new();
+        for k in 1..=pinned {
+            for p in &honest {
+                p.set(&format!("/eth/v1/beacon/headers/{}", slot - k), 500, "{}".into());
+            }
+            seen.insert((slot - k).to_string(), json!({"root": format!("0x{}", "cd".repeat(32)), "first_seen_s": 1, "divergence": "unconfirmed", "settled": false}));
+        }
+        let sf = d.join("seen.json");
+        std::fs::write(&sf, Value::Object(seen).to_string()).unwrap();
+        let ps: Vec<&Server> = honest.iter().collect();
+        let current = d.join("current.hex");
+        std::fs::copy(&f1, &current).unwrap();
+        let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+        let daemon = spawn_watch(&current, &ps, now, &log, &freeze, &["--state-file", &sf.display().to_string()]);
+        wait_for_lines(&log, "S1 unconfirmed", &|l| l.iter().any(|x| x["kind"] == "instance-unconfirmed"));
+        std::thread::sleep(Duration::from_millis(1500));
+        std::fs::copy(&f2, &current).unwrap();
+        std::thread::sleep(Duration::from_millis(2000));
+        for p in &honest {
+            p.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot));
+        }
+        let l = wait_for_lines(&log, "S1 raised", &|l| l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)));
+        assert!(daemon.stop().0.success());
+        let backlog = l.iter().find(|x| x["kind"] == "recheck-backlog");
+        println!("b3-r5: {pinned} undecidable older headers on record: S1 raised after the providers finalized it; recheck-backlog: {backlog:?}");
+        assert_eq!(backlog.is_some(), pinned + 1 > 8, "{l:?}");
+        if let Some(b) = backlog {
+            assert_eq!((b["due"].as_u64(), b["per_poll"].as_u64(), b["polls"].as_u64()), (Some(pinned + 1), Some(8), Some((pinned + 1).div_ceil(8))));
+        }
+        assert!(read_lines(&freeze).iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)));
+    }
+}
