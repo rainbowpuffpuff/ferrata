@@ -170,8 +170,8 @@ path; fees in LEZ's native unit at the chain's base fee of 8. Steady state (the 
 **Per attestation** (mainnet, as the lab ran): an instance's tracking divided by the attestations that use its records,
 127,294,275 / N execution gas a day: 12.7M at 10 attestations a day, 1.27M at 100, 127,294 at 1,000, 12,729 at 10,000;
 **apart from each attestation's own verification**, which its consumer pays whatever N is: 93,316 execution gas for a
-`Transfer` log and 166,249 for an account (the variants without a predicate; with them 97,485 and 168,909, P.2), 275,865
-for a storage slot, 499,277 for a slot through one EIP-2935 hop ([`perf-state.md`](../lez/results/perf-state.md) §2,
+`Transfer` log without a predicate (97,485 with the reference consumer's conditions, P.2) and 166,249 for an account
+with one condition, its code hash (168,909 with P.2's three), 275,865 for a storage slot, 499,277 for a slot through one EIP-2935 hop ([`perf-state.md`](../lez/results/perf-state.md) §2,
 this tree's program). At the design's cadence (one update an
 hour while roots are imported, plus each period's) the measured per-update figures give 24 × 9,225,372 + 0.88 handoffs
 × 16,060,242 ≈ 235.5M execution gas a day (*derived* from the measured medians; every one of the 98 measured finality
