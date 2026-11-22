@@ -660,6 +660,17 @@ among it, 1 passed in 32.30 s); `cargo +1.98.1 check --locked --no-default-featu
 clippy `-D warnings` clean, `tests/logos-fallback.sh` 8 passed, 0 failed; crown-driver checked. On the laptop: `links`
 and its steps; `e2e/seqnet/test-late-credit.sh`, 0 unexpected.
 
+**Twenty-third pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-ci-coverage` (rows 207–216; four
+conflicts, both sides' entries and facts kept), at its fold's commit `7602bc53`, on the build box: CI's new
+`lez-harness` job script once, pinned to 4 CPUs at 4 threads, 3,453 s (build 51 s, warm; harness 2,196 s; updater
+1,113 s; privacy suite and gate 93 s), 77 test binaries ok, the gate 33 of 33 on the privacy tables regenerated at
+bridge image `ac1fb59b…442e`; before it, every harness and updater test with `--no-fail-fast`, all passed, once
+`device_workload.rs`'s three bridge pins had moved to the B1 build's cycles (the first run stopped there); EVIDENCE
+row 23's command as written, 33 of 33; `check-results.py --self-test`, 27 altered cases refused and 1 accepted; the 15
+generated stage tables regenerated (program `816d1fef…`); the updater's gate over 246 updates (`gate.txt`: 0.0752,
+0.4841 / 0.5159, 1,101 rounds). On the laptop: `links` and its steps (`check-row-tests.py` consistent;
+`test_ci_model.py` 88 passed: RFP-021 54 of 59 and RFP-022 64 of 68 hard rows with a test CI runs).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
