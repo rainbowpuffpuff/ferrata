@@ -291,6 +291,12 @@ impl std::fmt::Display for NodeFault {
 
 impl std::error::Error for NodeFault {}
 
+/// Whether `e` failed on a node that did not answer (a [`NodeFault`] in its chain): an error to retry, not a
+/// refusal.
+pub fn is_node_fault(e: &anyhow::Error) -> bool {
+    e.chain().any(|c| c.is::<NodeFault>())
+}
+
 /// The attestor's own LEZ node, asked block by block.
 pub trait LezNode {
     /// The node's block `id` as it serves it (`borsh(Block)`, the bedrock status as its last byte), or
@@ -1357,7 +1363,7 @@ pub fn round(
     let mut lez = LezRpc::new(lez_url, save).map_err(RoundError::Node)?;
     let tier = final_tier(&answers, &mut lez, &channel, before.as_ref()).map_err(|e| {
         // A LEZ node that does not answer is a node error; everything else is a refusal.
-        if e.chain().any(|c| c.is::<NodeFault>()) {
+        if is_node_fault(&e) {
             RoundError::Node(e)
         } else {
             RoundError::Refused(e)

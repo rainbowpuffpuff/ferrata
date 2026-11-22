@@ -33,8 +33,8 @@ use checkpoint_core::Hash;
 use ferrata_attestor::{
     assemble_unchecked, attestation_from_json, attestation_json, base_from_answers, bedrock_tier,
     collect as collect_atts, deployment_from_json, deployment_json, deployment_of, final_tier, fixture_meta, hex_str,
-    hexa, read_key, read_state, round, scan_from, signers, write_atomic, write_state, Attestor, AttestorState, LezNode,
-    LezRpc, LezSaved, NodeAnswers, RoundError,
+    hexa, is_node_fault, read_key, read_state, round, scan_from, signers, write_atomic, write_state, Attestor,
+    AttestorState, LezNode, LezRpc, LezSaved, NodeAnswers, RoundError,
 };
 use serde_json::{json, Value};
 
@@ -400,9 +400,11 @@ fn attest_reads(
 }
 
 /// `attest(request)`: `{deployment | deployment_file, cert | cert_file, att_key_file, answers_dir [+ lez_dir] |
-/// node + lez + save_dir [+ slot_from], channel?, state_file?, out?}`: read the node's final tier, check
-/// its tip against the LEZ node, sign it (the CLI's `attest`). With `state_file`, the read starts at the
+/// node + lez + save_dir + state_file [+ slot_from], channel?, state_file?, out?}`: read the node's final tier,
+/// check its tip against the LEZ node, sign it (the CLI's `attest`). With `state_file`, the read starts at the
 /// signed tip, refuses a tip that does not descend from it, and records the new one before `out` is written.
+/// Against live nodes (`node`) a state file is required, as the CLI requires `--state` with `--node`: an
+/// attestor that signs live keeps what it signed. A LEZ node that does not answer is an `error`, not a refusal.
 pub fn attest(request: &str) -> String {
     reply((|| {
         let r = parse(request)?;
@@ -410,12 +412,18 @@ pub fn attest(request: &str) -> String {
         let cert = cert_req(&r).bad()?;
         let attestor = attestor_from(d, &cert, Path::new(text(&r, "att_key_file").bad()?)).bad()?;
         let state = opt_text(&r, "state_file").map(PathBuf::from);
+        if opt_text(&r, "node").is_some() && state.is_none() {
+            return Err(Fail::Invalid(anyhow!(
+                "state_file is required with node: a live attestor keeps a state (what it signed)"
+            )));
+        }
         let before = match &state {
             Some(p) => read_state(p, &d.channel_id).bad()?,
             None => None,
         };
         let (answers, mut lez, source) = attest_reads(&r, &d.channel_id, before.as_ref())?;
-        let tier = final_tier(&answers, lez.as_mut(), &d.channel_id, before.as_ref()).no()?;
+        let tier = final_tier(&answers, lez.as_mut(), &d.channel_id, before.as_ref())
+            .map_err(|e| if is_node_fault(&e) { Fail::Error(e) } else { Fail::Refused(e) })?;
         let att = attestor.attest(&tier, before.as_ref().map(|s| s.last)).no()?;
         let record = attestation_json(&d, &att, &tier);
         if let Some(p) = &state {
@@ -889,6 +897,98 @@ mod tests {
             "answers_dir": answers}),
         );
         assert_eq!(no_lez["verdict"], "refused", "{no_lez}");
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    /// A Logos Blockchain node over HTTP serving saved answers (`GET` only: what `NodeAnswers::fetch` asks).
+    fn serve_node(answers: &Path) -> String {
+        use std::io::{BufRead as _, BufReader, Write as _};
+        let info = fs::read(answers.join("info.json")).unwrap();
+        let channel = fs::read(answers.join("channel.json")).unwrap();
+        let blocks = NodeAnswers::load(answers).unwrap().blocks;
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut s) = stream else { continue };
+                let mut r = BufReader::new(s.try_clone().unwrap());
+                let mut line = String::new();
+                if r.read_line(&mut line).is_err() {
+                    continue;
+                }
+                loop {
+                    let mut h = String::new();
+                    if r.read_line(&mut h).is_err() || h == "\r\n" || h.is_empty() {
+                        break;
+                    }
+                }
+                let target = line.split_whitespace().nth(1).unwrap_or("").to_string();
+                let body = if target == "/cryptarchia/info" {
+                    info.clone()
+                } else if target.starts_with("/channel/") {
+                    channel.clone()
+                } else if let Some(q) = target.strip_prefix("/cryptarchia/blocks?") {
+                    let get = |k: &str| -> u64 {
+                        q.split('&').find_map(|kv| kv.strip_prefix(&format!("{k}="))).and_then(|v| v.parse().ok()).unwrap_or(0)
+                    };
+                    let (from, to) = (get("slot_from"), get("slot_to"));
+                    let sel: Vec<&Value> =
+                        blocks.iter().filter(|b| (from..=to).contains(&b["header"]["slot"].as_u64().unwrap_or(0))).collect();
+                    serde_json::to_vec(&sel).unwrap()
+                } else {
+                    b"null".to_vec()
+                };
+                let head = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = s.write_all(head.as_bytes()).and_then(|()| s.write_all(&body));
+            }
+        });
+        url
+    }
+
+    /// Review L4: against live nodes, `attest` requires a state file (the CLI requires `--state` with `--node`),
+    /// and a LEZ node that does not answer is an `error` (the daemon's and the CLI's classification), not a refusal.
+    #[test]
+    fn a_live_attest_keeps_a_state_and_a_silent_lez_node_is_an_error() {
+        let zone = repo().join("checkpoint/attestor/runs/zone");
+        let dev = repo().join("../upstream/lez-v0.4.0-rc1/lez/configs/docker-all-in-one/devnet");
+        if !dev.exists() || !zone.exists() {
+            eprintln!("skipped: {} or {} missing", dev.display(), zone.display());
+            return;
+        }
+        let tmp = std::env::temp_dir().join(format!("ferrata-attestor-calls-l4-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&tmp);
+        fs::create_dir_all(&tmp).unwrap();
+        let answers = zone.join("answers");
+        let key = tmp.join("attestation-0.key");
+        let k = call(keygen, json!({"out": key, "seed_label": "zone-attestation-0"}));
+        let c = call(
+            certify,
+            json!({"channel_key_file": dev.join("seq-0/channel_signing_key"), "att_pub": k["public_key"],
+            "deployment_file": zone.join("deployment.json")}),
+        );
+        assert_eq!(c["verdict"], "certified", "{c}");
+        let from = NodeAnswers::load(&answers).unwrap().blocks.iter().filter_map(|b| b["header"]["slot"].as_u64()).min().unwrap();
+        let node = serve_node(&answers);
+        // Port 1 on loopback: nothing listens, curl's connection is refused.
+        let live = |save: &str, state: Option<&Path>| {
+            let mut r = json!({"deployment_file": zone.join("deployment.json"), "cert": c["cert"], "att_key_file": key,
+                "node": node, "lez": "http://127.0.0.1:1", "save_dir": tmp.join(save), "slot_from": from});
+            if let Some(s) = state {
+                r["state_file"] = json!(s);
+            }
+            call(attest, r)
+        };
+        let no_state = live("save-1", None);
+        assert_eq!(no_state["verdict"], "invalid_request", "{no_state}");
+        assert!(no_state["error"].as_str().unwrap().contains("state_file is required with node"), "{no_state}");
+        let state = tmp.join("state.json");
+        let silent = live("save-2", Some(&state));
+        assert_eq!(silent["verdict"], "error", "{silent}");
+        assert!(silent["error"].as_str().unwrap().contains("LEZ node http://127.0.0.1:1"), "{silent}");
+        assert!(!state.exists(), "nothing signed, nothing recorded");
         let _ = fs::remove_dir_all(&tmp);
     }
 }
