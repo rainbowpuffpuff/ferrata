@@ -21,7 +21,7 @@ use crate::{
     chain::{instance_config, root},
     config::{File, SourceKind},
     ledger::Ledger,
-    serve::{serve, Snapshot},
+    serve::{serve, Snapshot, STALE_AFTER},
     source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
     utc_now,
@@ -257,7 +257,10 @@ pub fn run(open: OpenLedger) -> Result<()> {
         libc::signal(libc::SIGTERM, on_signal as extern "C" fn(libc::c_int) as libc::sighandler_t);
         libc::signal(libc::SIGINT, on_signal as extern "C" fn(libc::c_int) as libc::sighandler_t);
     }
-    let snapshot = Snapshot::default();
+    // `/health` answers 503 once no round has refreshed it for ten polls' worth of time, and at least STALE_AFTER (a
+    // round hung in a settle wait or on a source is not reported healthy).
+    let snapshot = Snapshot::default()
+        .with_stale_after(STALE_AFTER.max(Duration::from_secs(d.file.daemon.poll_secs.saturating_mul(10))));
     if let Some(addr) = &d.file.daemon.listen {
         let bound = serve(addr, snapshot.clone())?;
         eprintln!("{} [{}] /health and /metrics on http://{bound}", utc_now(), d.file.daemon.name);
