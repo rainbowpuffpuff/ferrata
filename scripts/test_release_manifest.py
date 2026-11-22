@@ -397,6 +397,20 @@ class CrateNotices(unittest.TestCase):
     def tearDown(self):
         self.tmp.cleanup()
 
+    def test_path_sources_name_no_checkout(self):
+        # The same commit in a checkout of any name records the same crates.tsv: Ferrata's own crates as
+        # path:ferrata/..., never the checkout's directory name (review of the second pass, L-3).
+        root = os.path.realpath(cn.ROOT)
+        self.assertEqual(cn.source_of({"source": None, "manifest_path": os.path.join(root, "cli", "Cargo.toml")}),
+                         "path:ferrata/cli")
+        self.assertEqual(cn.source_of({"source": None, "manifest_path": os.path.join(root, "Cargo.toml")}),
+                         "path:ferrata")
+        self.assertNotIn(os.path.basename(root) + "/",
+                         cn.source_of({"source": None, "manifest_path": os.path.join(root, "lez", "wire", "Cargo.toml")}))
+        beside = os.path.join(os.path.dirname(root), "upstream", "lez", "Cargo.toml")
+        self.assertEqual(cn.source_of({"source": None, "manifest_path": beside}), "path:upstream/lez")
+        self.assertEqual(cn.source_of({"source": "registry+x", "manifest_path": beside}), "registry+x")
+
     def test_used_under(self):
         self.assertEqual(cn.used_under("MIT OR Apache-2.0"), "Apache-2.0")
         self.assertEqual(cn.used_under("MIT/Apache-2.0"), "Apache-2.0")

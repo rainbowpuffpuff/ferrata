@@ -33,7 +33,6 @@ allow = [
     "Unicode-3.0",
     "Unicode-DFS-2016",
     "CDLA-Permissive-2.0",
-    "OpenSSL",
 ]
 
 # MPL-2.0 is file-level copyleft: using these crates unmodified as dependencies keeps the workspace's licence

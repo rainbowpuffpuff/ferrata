@@ -249,12 +249,18 @@ def is_own(pkg):
 
 
 def source_of(pkg):
-    """crates.tsv's source: the lockfile's `source` for registry and git packages, `path:DIR` (relative to the
-    directory holding the repository) for path packages."""
+    """crates.tsv's source: the lockfile's `source` for registry and git packages, `path:DIR` for path packages: a
+    package of this repository as `path:ferrata/DIR` (DIR relative to its root), whatever the checkout's directory is
+    called, so the same commit gives the same crates.tsv and no checkout's name reaches a published file; one beside
+    the repository (LEZ's sources under `upstream/`) relative to the directory holding it."""
     if pkg.get("source"):
         return pkg["source"]
-    d = os.path.dirname(pkg["manifest_path"])
-    rel = os.path.relpath(d, os.path.dirname(ROOT))
+    d = os.path.realpath(os.path.dirname(pkg["manifest_path"]))
+    root = os.path.realpath(ROOT)
+    if d == root or d.startswith(root + os.sep):
+        rel = os.path.relpath(d, root)
+        return "path:ferrata" + ("" if rel == "." else "/" + rel.replace(os.sep, "/"))
+    rel = os.path.relpath(d, os.path.dirname(root))
     if rel.startswith(".."):
         rel = "/".join(d.split(os.sep)[-4:])
     return "path:" + rel.replace(os.sep, "/")
