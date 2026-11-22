@@ -120,6 +120,11 @@ pub const BREAKER_MAX_PAUSE: u64 = 512;
 pub const REFUSAL_BACKOFF: u64 = 4;
 /// See [`REFUSAL_BACKOFF`].
 pub const MAX_REFUSAL_BACKOFF: u64 = 64;
+/// A job this updater carries (`policy.finish_own_jobs`) is kept through a hold of its next step that will end, until
+/// that step has been refused this many times; then this updater leaves it (another party may finish it, and the step
+/// is still sent again if its update is chosen again), so that a refusal no check here explains does not pin the
+/// updater to one job.
+pub const LEAVE_JOB_AFTER: u32 = 3;
 /// Sends in a row that did not land (rejected, refused while their step stayed due, or failed at transport after
 /// every retry) after which `/health` says `down`; one is enough for `degraded`.
 pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
@@ -1350,8 +1355,11 @@ impl Updater {
         )
     }
 
-    /// The next step of a job this updater opened whose update still moves the store (`policy.finish_own_jobs`); a
-    /// kept job that is finished, gone or moot is forgotten.
+    /// The next step of a job this updater sent a step for whose update still moves the store
+    /// (`policy.finish_own_jobs`); a kept job that is finished, gone or moot is forgotten. A job whose next step is held
+    /// is kept while the hold will end and the step has been refused fewer than [`LEAVE_JOB_AFTER`] times (review of
+    /// the fixes, L2: it used to be left at the first hold, and the steps paid for it were lost once the sources moved
+    /// on); otherwise this updater leaves it to another party.
     fn continue_carried(
         &mut self,
         ledger: &dyn Ledger,
@@ -1370,10 +1378,20 @@ impl Updater {
                 continue;
             };
             match self.evaluate(store, &update) {
-                Verdict::Useful(p) if p.jid == jid && self.job_on_chain(ledger, &jid)?.is_some() => {
+                Verdict::Useful(p) if p.jid == jid => {
+                    let Some(job) = self.job_on_chain(ledger, &jid)? else {
+                        self.drop_carried(&jid);
+                        continue;
+                    };
+                    let step = ferrata_advance::next_step(Some(&job));
                     let plan = self.next_step(ledger, *p, (period_update, raw), state, store)?;
                     if let Plan::Stuck(why) = &plan {
-                        // A held step: this updater does not finish the job; another party may.
+                        // A held step. Kept through a hold that will end; left after LEAVE_JOB_AFTER refusals, or a
+                        // hold for good (another party may finish it).
+                        let passes = |h: &Held| h.retry_at.is_some() && h.count < LEAVE_JOB_AFTER;
+                        if self.held.get(&(jid, step)).is_some_and(passes) {
+                            return Ok(Some(plan));
+                        }
                         self.log(&format!("kept job 0x{} left: {why}", &hex::encode(jid)[..16]));
                         self.drop_carried(&jid);
                         continue;
