@@ -1,5 +1,9 @@
 # seqnet logoseth-4: the mini-app's round trip and admin, Ethereum through Logos Core's own modules (22 Nov 2026)
 
+> Superseded by [`../seqnet-logoseth-5/`](../seqnet-logoseth-5/README.md) (the third review's fixes). Its "293 bridge states,
+> all equal" counted 123 reads that `lez_core` answered nothing for (an absent account, or a failed read) as equal; logoseth-5
+> counts them apart.
+
 As `../seqnet-logoseth-3/` (a LEZ v0.4.0-rc1 zone we ran, anvil with chain id 11155111, the mock verifier, dev-mode
 private proofs), with the second review's fixes: branch `rfp-logos-core-eth` at `bcfd983a`, the module's `.lgx` of
 `modules/results/bridge-send-stack-r3/` (sha256 `be17842b…`, `miniapp/lgx-sha256.txt`). On the Modal build box, from the

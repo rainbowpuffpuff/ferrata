@@ -1,0 +1,6 @@
+run 1	 55 PASS 	approver recoveries: 0
+run 2	 55 PASS 	approver recoveries: 0
+run 3	 55 PASS 	approver recoveries: 0
+run 1	set_token_cap	estimate 51089	limit 83861	used 0xc653
+run 2	set_token_cap	estimate 48564	limit 80705	used 0xc653
+run 3	set_token_cap	estimate 51089	limit 83861	used 0xc653

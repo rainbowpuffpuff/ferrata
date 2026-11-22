@@ -1,0 +1,31 @@
+No files changed, compilation skipped
+Script ran successfully.
+
+== Logs ==
+  vault 0x712516e61C8B383dF4A63CFe83d7701Bce54B03e
+  mock 0x71C95911E9a5D330f4D621842EC243EE1343292e
+  token 0x59F2f1fCfE2474fD5F0b9BA1E73ca90b143Eb8d0
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 11155111
+
+Estimated gas price: 2.000000001 gwei
+
+Estimated total gas used for script: 13681862
+
+Estimated amount required: 0.027363724013681862 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: <worktree>/vault/broadcast/LogosSendStack.s.sol/11155111/run-latest.json
+
+Sensitive values saved to: <worktree>/vault/cache/LogosSendStack.s.sol/11155111/run-latest.json
+

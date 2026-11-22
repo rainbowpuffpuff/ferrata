@@ -1,5 +1,8 @@
 # ferrata_bridge_module through Logos Core's send stack, after the second review's fixes (22 Nov 2026)
 
+> Superseded by [`../bridge-send-stack-r4/`](../bridge-send-stack-r4/README.md) (the third review's fixes: the deployment pin,
+> 55 checks); kept as recorded.
+
 Supersedes `../bridge-send-stack-r2/`. Code: branch `rfp-logos-core-eth` at `bcfd983a` (the module as of `fc422f09`).
 Module `.lgx` sha256 `be17842b…`, built with `LOGOS_TMPDIR=/var/tmp/bss` (`logos-core/lgx-sha256.txt`: the module's
 `.so` embeds Nix's build directory, so another directory gives another hash for the same source); the seven send-stack
