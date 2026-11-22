@@ -23,6 +23,11 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
   test file or script. A Rust test compiled out by a feature the command leaves off does not count
   (`feature_gates`: a file-level `#![cfg(feature = "X")]`, `#[cfg(feature = "X")]` on the test or on the
   `mod` block holding it; other `cfg` forms are not read).
+
+Not caught (scripts/ci/README.md, "What it does not catch"): a job that `needs:` a skipped job; `on:` filters that
+match nothing; `--ignored` or `--list` on the test binary; `exec` before the test; an `exit` inside a function, a
+compound command or an and-list; `trap 'exit 0' EXIT` or `ERR`; a subshell or brace group masked by `|| true`;
+`cfg` forms other than a bare feature gate.
 """
 
 from __future__ import annotations

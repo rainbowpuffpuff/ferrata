@@ -49,7 +49,25 @@ piped without pipefail, or not last in a text without `set -e` counts for nothin
 script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` runs no test; `-- --skip P`
 leaves out a file any of whose tests P could skip; a test that asserts an environment variable's value needs
 the command to set it. Other conditions are read as if they held, and a directory it cannot resolve makes the
-commands after it count nowhere. A Rust test
+commands after it count nowhere.
+
+**What it does not catch.** The model reads statically and covers the forms above, not every way of not running a
+test. An independent review's mutants (22 November 2026) found these that still count as CI running a test; none is
+in today's workflows, so the counts stand:
+- in a workflow: a job that `needs:` a job that is skipped (it is skipped too); `on:` triggers whose `paths:` or
+  `branches:` filters match nothing pushed (the workflow never runs);
+- in a command or script: `--ignored` or `--list` given to the test binary (only ignored tests run, or none, listed);
+  `exec` of another command before the test; an `exit` inside a shell function, a compound command
+  (`if true; then exit 0; fi`) or an and-list (`true && exit 0`) before the test; `trap 'exit 0' EXIT` or
+  `trap 'exit 0' ERR`, which turn a failure into success; the test in a subshell or a brace group whose failure
+  `|| true` masks (`( cargo test ) || true`, `{ cargo test; } || true`);
+- in Rust: `cfg` forms other than a bare `feature = "X"` on the file, the test or its `mod` block, such as
+  `cfg(all(feature = "X", test))`, `cfg(any(feature = "X", feature = "Y"))` with both off, a file-level
+  `#![cfg(all(feature = "X"))]`, `cfg_attr(not(feature = "X"), ignore)`, or another attribute between a `mod`
+  block and its gate.
+
+It errs the other way on two forms that do run the test: a step under `if: always()` and one with
+`continue-on-error: false` are counted for nothing. A Rust test
 compiled out by a feature the command leaves off (`#![cfg(feature = "X")]` on the file, `#[cfg(feature = "X")]`
 on the test or its `mod` block) does not count, and a cargo name filter is matched against a test's whole path
 (the module path of a file under `src/`, its inner modules, the function), as cargo matches it.

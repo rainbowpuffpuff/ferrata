@@ -119,7 +119,7 @@ PDAs of the program (`wire/src/lib.rs`):
 |---|---|---|---|
 | `instance(id)` | `H(…/instance ‖ id)` | the config, an active flag and the compact store: fork, finalized beacon header, current and next committee as *summaries* (key root + aggregate key, 80 bytes each); 433 bytes, 513 with a next committee | `Init`; `Apply` / `ApplyVerified` |
 | `job(id, job_id)` | `H(…/job ‖ id ‖ job_id)` | one job: store and update digests, the signature check's phase (H(m), −key, signature: 480 bytes; then the 576-byte Miller product), the adoption's progress, what to apply; 1,281–1,441 bytes for an update that adopts a committee, 1,022–1,118 for a finality update | `JobOpen`; `Miller`, `Adopt`; cleared by `Finish` |
-| `header(id, slot)` | `H(…/header ‖ id ‖ slot)` | the record of a finalized header (the instance's chain id; the beacon header, execution root, block number, block hash, parent hash, state and receipts roots, timestamp), written once; 333 bytes | `Record` |
+| `header(id, slot)` | `H(…/header ‖ id ‖ slot)` | the record of a finalized header (the instance's chain id and root id; the beacon header, execution root, block number, block hash, parent hash, state and receipts roots, timestamp), written once; 365 bytes | `Record` |
 
 `id = H(config ‖ checkpoint)`; `job_id = H(id ‖ store digest ‖ update digest)`.
 

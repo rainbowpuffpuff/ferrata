@@ -98,7 +98,7 @@ unchanged) after each review; the commit ids here are the current ones.
 ## For the integrator
 
 - Done when `rfp-docs-final` merged: its map lines, the two checks in the `links` job, `test_ci_model.py`'s counts
-  (now RFP-022 51 of 68, RFP-021 28 of 59; a merge that gives a row a test CI runs updates them in the same change),
+  (now RFP-022 64 of 68, RFP-021 54 of 59, after the coverage stream's merge; a merge that gives a row a test CI runs updates them in the same change),
   and the keyless-retirement wording in the deployer guide §9 and ADR 0016.
 - Pre-existing, outside this branch: deposits are accepted after the verifier stop (`_checkDeposit`; documented in
   `vault/README.md`); a later vault should refuse them. The runbook retires a stopped vault at once.

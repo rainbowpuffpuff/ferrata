@@ -310,12 +310,11 @@ serves the same bytes (`an_update_one_client_serves_is_held_back`); a forged-sig
 sends nothing, is demoted, and both sides' disagreements (7 each) are logged and named in `/health`
 (`a_lying_client_is_logged_and_does_not_count`); the recorded `/eth/v1/node/version` answers of Nimbus, Lodestar and
 Lighthouse over HTTP, in both match modes (`clients_reported_over_http`); the configuration's checks. The lab's record
-has grown since 13 November (mainnet 95, Sepolia 125 updates): `restart_mid_job_and_mid_period` now picks its stop
-point from the data (it had assumed the third entry from the end was a finality update), and the A3 gate's default
-run replays all **220** updates, each applied once, refused gas / applied 0.0603, honest-1's share 0.5027, 1,020
-rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table below keeps the 58-update runs). Running
-the suite rewrites the tracked `results/gate.txt` with the grown record's figures; `git checkout` it afterwards to keep
-the 58-update file the README and EVIDENCE row 80 cite.
+has grown since 13 November (mainnet 108, Sepolia 138 updates): `restart_mid_job_and_mid_period` now picks its stop
+point from the data (it had assumed the third entry from the end was a finality update), and the A3 gate's default run
+replays all **246** updates, each applied once, refused gas / applied 0.0752, honest-1's share 0.4841, 1,101 rounds
+(`results/gate.txt`, which CI's `lez/updater/tests/recorded.rs` writes; the table below keeps the 58-update runs).
+Running the suite rewrites the tracked `results/gate.txt` with the record's figures.
 
 **Review fixes** (22 November 2026: the findings of the code reviews of 21 November, then those of the review of
 these fixes): **64 tests pass** (10 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in
@@ -332,8 +331,9 @@ on the grown record (246 updates, 1,101 rounds) passes: honest refused / applied
 | `serve.rs` (7) | an idle connection, a request with no end, a trickling client, 24 connections, eight clients re-opening idle connections for 8 s, 400 connections at once, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 answered `400`; 16 MiB without a newline cut, RSS within 4 MiB; 24 connections: `/health` at once (0.6 ms); the eight clients: 80 of 80 tries answered; 400 at once: 8 kept open; `503` when stale |
 | `diversity_limits.rs` (4) | as above, and waiting for clients | degraded from the first round waiting, `down` once the instance has not moved for 32 rounds |
 
-**The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
-lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
+**The A3 gate** (the runs below are of 12 November 2026, over the 58 updates recorded then; `results/gate.txt`
+holds the default run over the grown record's 246 updates, as the paragraph above gives it). Two honest updaters (one
+with a lying source, one with a lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
 replays one update at a time; each round is a block whose transactions settle in a shuffled order;
 the adversary races due steps a third of the time without waiting and, at each new update, opens a
 job for a forged update and replays an applied one.

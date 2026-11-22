@@ -22,8 +22,8 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 40 | 15 | 1 | 3 | **59** |
-| RFP-022 | 45 | 20 | 1 | 2 | **68** |
+| RFP-021 | 39 | 16 | 1 | 3 | **59** |
+| RFP-022 | 44 | 21 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -33,13 +33,13 @@ By section, hard requirements:
 |---|---|---:|---:|---:|---:|---:|
 | RFP-021 | Functionality | 13 | 1 | 0 | 1 | 15 |
 | RFP-021 | Usability | 4 | 1 | 0 | 1 | 6 |
-| RFP-021 | Reliability | 9 | 3 | 0 | 0 | 12 |
-| RFP-021 | Performance | 5 | 4 | 0 | 0 | 9 |
+| RFP-021 | Reliability | 7 | 5 | 0 | 0 | 12 |
+| RFP-021 | Performance | 6 | 3 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 4 | 5 | 1 | 1 | 11 |
 | RFP-021 | Verification Security | 5 | 1 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 15 | 2 | 0 | 0 | 17 |
 | RFP-022 | Usability | 4 | 5 | 0 | 1 | 10 |
-| RFP-022 | Reliability | 9 | 5 | 0 | 0 | 14 |
+| RFP-022 | Reliability | 8 | 6 | 0 | 0 | 14 |
 | RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 3 | 0 | 1 | 4 |
 | RFP-022 | Security | 5 | 3 | 1 | 0 | 9 |
@@ -84,7 +84,7 @@ By section, hard requirements:
 |---|---|---|---|
 | R.1 | shown | Step API equals `process_update` on 52 sync cases and the mainnet replay; vectors identical under two BLS libraries. | 1; `crates/ferrata-spectests/tests/steps.rs` |
 | R.2 | shown | Each refusal leaves state unchanged; a refused attestation reverts the consumer's transaction and the same claim then succeeds. | `lez/results/stage1-refusals.md`; `lez/results/stage4-attest-refusals.md` |
-| R.3 | shown | Two records attested after each of four committee rotations and ten years later, statements byte-identical and records unchanged (synthetic chain); five real mainnet records read after four real rotations and ten years later; a real Sepolia record attested before and after a real rotation. | 151; `lez/results/lc-security/r3-rotations.md` |
+| R.3 | shown | Two records attested after each of four committee rotations and ten years later, statements byte-identical and records unchanged (synthetic chain); five real mainnet records read after four real rotations and ten years later; a real Sepolia record attested before and after a real rotation; in CI, a record and its attestations unchanged after three rotations through the program. | 151, 208; `lez/results/lc-security/r3-rotations.md` |
 | R.4 | shown | Daemon killed inside a job resumes from chain state, no second Open, in the harness and on a sequencer; the lab restarted. | 79, 99, 104; `lez/lab/README.md` |
 | R.5 | shown | A down source and dropped connections handled; restarted mid-job, the daemon finishes with no second Open, harness and sequencer. | 79, 99, 104 |
 | R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against the official vectors, Helios (the vectors, 220 recorded updates, 2,000 random mutations of real updates) and Lodestar (the same mutations), 0 disagreements; not audited. | 1, 140, 153; `crates/ferrata-spectests/HELIOS-DIFFERENTIAL.md` |
@@ -92,8 +92,8 @@ By section, hard requirements:
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
 | R.9 | in part | On a running sequencer, two honest daemons alone at windows 1, 8 and 30 and with an adversary: A3's waste ratio 0.0036 at window 30 (on 20 updates; the gate asks 100), above the gate at windows 1 and 8 and with the adversary; in process, each daemon reads the chain again just before it sends, a refused step that stays due is held, not resent every round, and a job another party opens and leaves is finished, not paid for again. Several daemons on a sequencer at 100 updates not run. | 80, 172, 200; `lez/results/perf-gate-sequencer.md` |
 | R.10 | in part | On a running sequencer, honest-1's fee share 0.493–0.609 and latency medians 105–306 s across windows, 8–23 completed jobs per run against A3's 100 updates, the window comparison confounded by one run's reveal step; the deferral strategy and its measured effect in the operator guide §3.4. | 80, 172; `docs/guides/operator-guide.md` §3.4 |
-| R.11 | shown | Four private attestations proven against one snapshot, a finality update applied in between, then settled in one block with nothing re-proven; one account's second transaction on the same snapshot dropped. The block is assembled in process with rc1's block settlement; no sequencer ran it. | 152; `lez/results/lc-security/r11-one-block.md` |
-| R.12 | shown | All seven CI jobs passed on GitHub at `main`; the five latest runs read on 18 November also passed. | GitHub runs 43730879603 and 44172503761; `.github/workflows/ci.yml` |
+| R.11 | in part | Four private statements proven against one pre-state and settled in one block in either order, each result as computed before inclusion (in CI), and four private attestations with an update applied between them, nothing re-proven; the block is assembled in process from LEZ's settlement, no sequencer ran it. | 152, 209; `lez/results/lc-security/r11-one-block.md` |
+| R.12 | in part | Seven CI jobs passed on GitHub at `main` (15 and 18 November); the six jobs added since (`lez-harness`, `monitor`, `deps`, `modules-resolve`, `release-publish`, `image-ids`) have not run on GitHub: a green run of every job is still needed. | GitHub runs 43730879603 and 44172503761; `.github/workflows/ci.yml` |
 
 ### Performance
 
@@ -107,7 +107,7 @@ By section, hard requirements:
 | P.6 | in part | The updater daemons on a running sequencer: 0.043–0.092 of a core and 57.3–57.8 MiB each; the update's proofs measured; the attestation CLI and module, the §8 `monitor` and the daemons as Logos modules not measured; the updater bounds what it reads and serves. | 21, 123, 172, 200; `docs/performance.md` RFP-021 §P.6 |
 | P.7 | shown | Account sizes in LEZ's serialized state with growth measured to 100,000 records (record 453 B, instance 593 B, job 1,110 B); one- and five-year growth derived at the design's cadence (4.12 MB and 20.58 MB); unfinished jobs at most (k − 1) × 10.09 MB a year with k racing operators, none with one (derived). | 170; `lez/results/perf-state.md`; `docs/performance.md` RFP-021 §P.7 |
 | P.8 | shown | The BLS precompile delta modelled at time parity from measured native and in-program costs: 8,344,139 cycles of BLS per finality update in the program, 17,841 as a precompile; the update about 902,607 cycles instead of 9,228,905. | 127, 171; `docs/performance.md` RFP-021 §P.8 |
-| P.9 | in part | Five statement types and every update step charged the same at every size to 100,000 records; the lab's 98 finality jobs flat; other statement types not measured against accumulated state. | 170; `lez/results/perf-state.md`; `lez/lab/README.md` |
+| P.9 | shown | Every update step charged the same over five updates as records grow and one attestation 275,865 cycles with 2 and with 1,002 record accounts, pinned in CI; five statement types and every update step the same to 100,000 records; `Init`, `Succeed`/`Spawn` and the proven path read fixed-size accounts only. | 170, 211; `lez/results/perf-state.md`; `lez/lab/README.md` |
 
 ### Supportability
 
@@ -199,11 +199,11 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.4 | in part | Every later act only delays, over both halves: caps, freezes, a depth change, delisting, a fee change, a retirement and `Sunset` (an imported deposit claimed after `Sunset`, a burn released under the sunset checkpoint). Two disclosed exceptions: after RISC Zero's emergency stop nothing more is released or refunded, and tokens not burned before a LEZ change the immutable checkpoint program cannot follow lose their backing. | 8, 28, 191; `vault/test/Freeze.t.sol`; `vault/test/EmergencyStop.t.sol`; `e2e/both-halves/results/migration.md` |
 | R.5 | shown | A wiped client finds 10 of 10 unclaimed deposits and unreleased burns from the seed, also with real proofs. | 23, 84, 89, 102 |
 | R.6 | in part | The relayer daemon recovers from kills and endpoint faults on both chains without duplicating work; `monitor` restarted cancels once; its own endpoint failing, the prover and the attestors not shown. | 43, 46, 47, 96, 203 |
-| R.7 | shown | A claim killed after its proof, burns killed after and before sending, gas drops across kills: nothing lost or spent twice on a running sequencer; a Basecamp view closed mid-proof resumed once. | 126, 204 |
+| R.7 | in part | A claim killed after its proof, burns killed after and before sending, gas drops across kills: nothing lost or spent twice on a running sequencer; dropped proofs consume nothing (in CI); a Basecamp view closed mid-proof resumed once; the deposit and release legs not interrupted. | 126, 204, 216 |
 | R.8 | in part | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. "Mature, audited" is not met by the versions pinned today: risc0-zkvm 3.0.5 is yanked and verifier 3.0.0 accepts forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2); RISC Zero has stopped its own 3.0.0 deployments. Shown again after the move to 3.1: the Ethereum side after phase 1, the LEZ side after phase 2 (a LEZ tag on risc0 3.1, Logos). | 12, 19, 41, 91, 154; `bridge/evm-verify/test/v2/Groth16Verify.t.sol`; `docs/design/risc0-3.1-migration.md` |
 | R.9 | shown | `docs/trust.md` §4.3: every third-party component (the updater, the root importer, the relayer both ways, the wrapper, the checkpoint prover, the watchers, the rule (B) attestors, RPC and LEZ nodes, the multisigs) with the effect of its outage and of its malfunction and the mitigation, each mitigation with the test or run that shows it; the operator guide §10. | 12, 43–48, 66, 68, 84, 85, 106, 124; `docs/trust.md` §4.3; `docs/guides/operator-guide.md` §10 |
 | R.10 | in part | CI runs the round trip over the state transition and anvil; sequencer round trips, twice live on Sepolia, are by hand. | 41, 76, 91, 100, 102 |
-| R.11 | in part | Every hard row of both RFPs mapped to a test, record or document, and CI's claims checked in the `links` job; 51 of 68 RFP-022 rows have a test CI runs, 17 do not, so the gate (`--require-ci RFP-022`) exits 1. | 162; `scripts/ci/row-tests.toml`; `scripts/ci/check-row-tests.py` |
+| R.11 | in part | Every hard row of both RFPs mapped to a test, record or document, and CI's claims checked in the `links` job; 64 of 68 RFP-022 rows (54 of 59 RFP-021) have a test CI runs, 4 do not, so the gate (`--require-ci RFP-022`) exits 1. | 162, 207; `scripts/ci/row-tests.toml`; `scripts/ci/check-row-tests.py` |
 | R.12 | shown | User guide §13: `ferrata_bridge_module`'s methods in journey order for both flows, recovery and status, with `logosctl` commands, then the messages and derivations below it; the flows run through the module natively and in a headless Logos Core (24 of 24, one release proven for real), and the mini-app's round trip through it on a running sequencer and inside Basecamp. | 84, 93, 103, 113, 114, 125, 126; `docs/guides/user-guide.md` §13 |
 | R.13 | shown | `cli/README.md` (the user's journey command by command, every option and refusal; its end-to-end test in CI's round trip); the operator journey in the operator guide §0, §4, §6, §7, `monitor/README.md` and the updater README, each component run. | 43–46, 84, 85, 96, 102, 106, 107; `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
 | R.14 | shown | Deployer guide §2–§7 and §11: registering tokens, fees, the admin and freeze authorities and the finality depth, each read back by the walkthrough, run from a fresh clone with nothing beside it: every program rebuilt from source equal to `image-ids.md` (20 of 20), 29 of 29 settings PASS. Run by the team on its build box; the proposal's outside-deployer gate (B4) is still open, which the RFP clause does not ask for. | 26, 41, 53, 91, 122, 142, 182; `docs/guides/deployer-guide.md`; `docs/guides/runs/2026-11-21-second-deployer/` |

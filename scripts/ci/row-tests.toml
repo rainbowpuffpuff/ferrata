@@ -333,7 +333,7 @@ tests = [
   { path = ".github/workflows/ci.yml", kind = "test", ci = "test" },
   { path = "docs/guides/ci.md", kind = "document" },
 ]
-note = "the requirement is CI itself: ci.yml (on every push and pull request) with all its jobs; the workflow defines the seven jobs (test, witness-independence, roundtrip, vault, links, idl, admin); green on main is read from GitHub's runs (43730879603, 44172503761, all five most recent passed on 18 November 2026)"
+note = "the requirement is CI itself: ci.yml (on every push and pull request) with all its jobs; the workflow defines thirteen jobs (test, witness-independence, roundtrip, lez-harness, monitor, vault, deps, modules-resolve, links, release-publish, image-ids, idl, admin); green on main was read from GitHub's runs of the seven it had then (43730879603, 44172503761, all five most recent passed on 18 November 2026); the six added since have not run on GitHub"
 
 [[row]]
 id = "RFP-021 P.1"
@@ -374,7 +374,7 @@ tests = [
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
 ]
-note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -734 to +576 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
+note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -652 to +625 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
 
 [[row]]
 id = "RFP-021 P.5"
@@ -398,9 +398,10 @@ id = "RFP-021 P.7"
 tests = [
   { path = "lez/harness/tests/costs_attestation.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-replay.md", kind = "record" },
+  { path = "lez/results/perf-state.md", kind = "record" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "the accumulating accounts as this tree writes them, pinned by costs_attestation.rs (CI, lez-harness): the header record 365 B for every finalized header, the job account 1,281-1,441 B during an update and cleared after it, the instance 505 B at Init and 585 B after; the one- and five-year projections in performance.md (about 3.0 MB a year, 15.1 MB over five years) were derived from an earlier image's sizes (333 B, 1,249-1,409 B, 425-505 B, as lez/results/stage1-replay.md still gives them): at 365 B the same derivation gives about 3.3 MB a year and 16.6 MB over five years (docs/rows/coverage.md, corrected text)"
+note = "the accumulating accounts as this tree writes them, pinned by costs_attestation.rs (CI, lez-harness): the header record 365 B for every finalized header, the job account 1,281-1,441 B during an update and cleared after it, the instance 505 B at Init and 585 B after (as lez/results/stage1-replay.md gives them since its regeneration); performance.md's P.7 measures the accounts in LEZ's serialized state, the key included, with growth to 100,000 records (record 453 B, instance 593 B, job 1,110 B; EVIDENCE row 170, lez/results/perf-state.md) and derives the one- and five-year growth from those (4.12 MB and 20.58 MB at the design's cadence)"
 
 [[row]]
 id = "RFP-021 P.8"

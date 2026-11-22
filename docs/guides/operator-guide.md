@@ -111,7 +111,8 @@ the bridge ([`attestation.md`](../design/attestation.md) §10).
 | Proven handoff with no new header (dev mode) | 1 | 448,530 | 224,063 | — |
 
 Measured in the in-process harness on mainnet periods 1899–1903 ([`attestation.md`](../design/attestation.md)
-§4.2). The largest step is 75% of LEZ's 5M base-fee target; at most four proven (private) transactions
+§4.2, the figures of image `e7cec90e…`; the current programs charge 9,228,905, 16,092,355, 485,298 and 451,895, which
+CI pins: `lez/harness/tests/costs_attestation.rs`). The largest step is 75% of LEZ's 5M base-fee target; at most four proven (private) transactions
 fit in a block. **Proof of an update** (9.0M user cycles): 3,240.5 s on a 16-thread laptop CPU, peak
 9.18 GiB; 895.6 s on a cloud container's CPU with 32 prover threads, verified and applied by a live
 sequencer; 49.5 s on one NVIDIA L4 ([`attestation.md`](../design/attestation.md) §4.2;
@@ -120,10 +121,9 @@ about 54 of every 60 minutes (derived).
 
 ### 3.3 Daily and yearly cost (derived)
 
-From [`attestation.md`](../design/attestation.md) §10: once per period on the public path, 16,076,120
-execution gas per period, about 5.16 billion a year; once per hour while roots are imported, 221,186,904
-execution and 106,824 storage gas per day on the public path, or 11,516,496 and 5,377,512 on the proven
-path. LEZ gas has no market price yet (no public v0.4 network), so these are not converted to money. The
+From [`attestation.md`](../design/attestation.md) §10: once per period on the public path, 16,092,355 execution gas per
+period, about 5.17 billion a year; once per hour while roots are imported, 221,493,720 execution and 106,824 storage gas
+per day on the public path, or 11,647,152 and 5,377,512 on the proven path. LEZ gas has no market price yet (no public v0.4 network), so these are not converted to money. The
 lab's whole zone, sequencer and node included, ran on a cloud container for about 0.08 USD a day at its
 two-hour cadence (§2).
 
@@ -175,14 +175,13 @@ two-hour cadence (§2).
   50.0M refused) is abandoned jobs, at window 8 (G3) about half (17.4M against 18.0M): a daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
   not opening a job on a store another party's open job will change (join or wait) would remove it; it is not built.
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
-  updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: that is all
-  the recorded data), each round a block settled in a shuffled order, `W` = 8 rounds: every update
+  updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: all that was recorded then), each round a block settled in a shuffled order, `W` = 8 rounds: every update
   applied once; the honest updaters' gas on refused steps was **0.057–0.087** of their gas on applied
   steps (gate ≤ 0.10) and their shares of the honest fees **0.39–0.47** and **0.53–0.61** (gate
   0.35–0.65 each), in seven runs (four orders of the blocks' transactions, three other draws of the
   deferral waits); the adversary raced a third of the due steps and sent 110 junk `Open`s at its own
   cost; without it, 0.0284 and 0.48 / 0.52 (12 November, and the same on the merged tree of 13 November)
-  ([`lez/updater/README.md`](../../lez/updater/README.md), `lez/updater/results/gate.txt`).
+  ([`lez/updater/README.md`](../../lez/updater/README.md)). On the grown record, 246 updates (108 mainnet, 138 Sepolia), the default run applies each once, refused gas 0.0752 of applied, shares 0.4841 / 0.5159, 1,101 rounds (`lez/updater/results/gate.txt`, written by CI's `lez/updater/tests/recorded.rs`).
 - **Joining another party's open job** is built in `ferrata-updater` (it reads the job's phase on
   chain and sends its next step). **Not built**: clean-up of jobs whose final step fails (they stay,
   unapplied) ([`attestation.md`](../design/attestation.md) §4.5).

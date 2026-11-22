@@ -54,6 +54,8 @@ In LEZ v0.4 a handler sees only its own actor's state and communicates by messag
 
 `id = H(config ‖ checkpoint)`; `job_id = H(id ‖ store digest ‖ update digest)`.
 
+The current programs write larger accounts, which CI pins (`lez/harness/tests/costs_attestation.rs`): `instance(id)` 505–585 bytes, `job(id, job_id)` 1,281–1,441 bytes for a job that adopts a committee and 1,022–1,118 for a finality job, and `header(id, slot)` 365 bytes, the record having gained the root id (`lez/RESULTS.md`'s opening note: '365 bytes of state, not 333').
+
 There is no committee actor. An earlier version of the design kept both committees' compressed keys (49 KB) in one. On v0.4 a handler pays for every byte it loads (§4.3), so committees are kept as summaries and keys arrive as witnesses.
 
 ### 3.2 Messages and authentication
@@ -127,6 +129,8 @@ Measured on mainnet periods 1899–1903 (Fulu, 512-member committees), in the in
 | Finality update in one public transaction (`VerifyAll`) | 1 | 9,115,325 | 9,115,325 | 4,089 |
 | Finality update, proven path | 1 | 479,854 | 479,854 | 224,063 |
 | Handoff with no new header, proven path (dev mode) | 1 | 448,530 | 448,530 | 224,063 |
+
+The current programs charge a little more for the same updates, which CI pins (`lez/harness/tests/costs_attestation.rs`): a finality update 9,228,905 execution gas (4,451 storage gas), update_1's rotation and adoption 16,092,355 (54,491), update_0's committee-only job 15,997,954 (53,675), the proven path 485,298 with a 75,534-cycle public part, and a proven handoff 451,895 with a 42,131-cycle public part.
 
 Execution gas is the user cycles LEZ metered, storage gas the transaction's serialized size. After every job the instance's store equals the native `FinalizedStore`'s, every finalized root equals the canonical root a second provider reports, and the record equals the native finalized header's.
 
@@ -285,7 +289,7 @@ A public consumer sends `Attest{query}` synchronously to `header(id, slot)` and 
 
 ### 6.2 Private consumers read (F.8)
 
-Every message from a private execution to a public actor is published in plaintext (findings note §6). A private consumer therefore sends one fixed-size `Read` to a write-once record, receives it in a `StateReply` (333 bytes of state; 293 before the record carried the chain id and the parent hash), and runs `ferrata-core` inside its own proof. At settlement LEZ re-runs the public handler and refuses the transaction if the reply differs from the prover's prediction. A record written once keeps the prediction valid; `instance(id)`, which every update changes, would not.
+Every message from a private execution to a public actor is published in plaintext (findings note §6). A private consumer therefore sends one fixed-size `Read` to a write-once record, receives it in a `StateReply` (333 bytes of state; 293 before the record carried the chain id and the parent hash; the current programs' record also carries the root id and is 365 bytes, `lez/harness/tests/costs_attestation.rs`), and runs `ferrata-core` inside its own proof. At settlement LEZ re-runs the public handler and refuses the transaction if the reply differs from the prover's prediction. A record written once keeps the prediction valid; `instance(id)`, which every update changes, would not.
 
 What a read exposes (measured in the in-process harness, dev mode; every byte of the transaction searched): which record was read, the record, the consumer's program (even with an undisclosed image claim), and an alias of its account. Absent: the query, the account the consumer acts for, and its keys. The consumer therefore reads the newest record, which many consumers read, and reaches older blocks by hops inside its proof; the read then shows only that some transaction of that program acted after that record. LEZ charged the read 421,641 execution gas and 224,063 storage gas. A consumer that verifies an ERC-20 `Transfer` of a real mainnet block this way takes 380,577 user cycles for its two transitions, with no byte of the query, the proof or the result in the transaction (measured, in-process harness and executor, dev mode; `lez/RESULTS.md` §5). That transaction, which contains such a read, was proven on one NVIDIA L4 (16.1 s, a 227,170-byte receipt) and settled with the receipt verified; it has not been proven on a CPU.
 
@@ -359,21 +363,21 @@ Tracking cost is what keeping an instance current costs, shared by every consume
 
 | Update | Path | Execution gas | Storage gas | Where |
 |---|---|---:|---:|---|
-| Finality update | public job, 3 transactions | 9,216,121 | 4,451 | in-process harness |
-| Handoff that rotates and adopts a committee | public job, 5 transactions | 16,076,120 | 54,491 | in-process harness |
-| Finality update | proven, 1 transaction | 479,854 | 224,063 | in-process harness; the proof made on the laptop CPU in 3,240.5 s |
-| Handoff with no new header | proven, 1 transaction | 448,530 | 224,063 | in-process harness, dev mode (no real proof) |
+| Finality update | public job, 3 transactions | 9,228,905 | 4,451 | in-process harness |
+| Handoff that rotates and adopts a committee | public job, 5 transactions | 16,092,355 | 54,491 | in-process harness |
+| Finality update | proven, 1 transaction | 485,298 | 224,063 | in-process harness; the real proof, of an earlier image's update (479,854), made on the laptop CPU in 3,240.5 s |
+| Handoff with no new header | proven, 1 transaction | 451,895 | 224,063 | in-process harness, dev mode (no real proof) |
 
-A proven finality update costs 0.70M gas with execution and storage gas added together. A proven handoff that also finalizes a new header was not measured.
+A proven finality update costs 0.71M gas with execution and storage gas added together. A proven handoff that also finalizes a new header was not measured.
 
 **Amortised** (derived from the table above):
 
 | Cadence | Path | Execution gas | Storage gas |
 |---|---|---:|---:|
-| Once per period (one handoff) | public | 16,076,120 per period; about 5.16 billion per year | 54,491 per period |
-| Once per period (one handoff, no new header) | proven | 448,530 per period | 224,063 per period |
-| Once per hour while roots are imported | public | 221,186,904 per day of importing | 106,824 per day of importing |
-| Once per hour while roots are imported | proven | 11,516,496 per day of importing | 5,377,512 per day of importing |
+| Once per period (one handoff) | public | 16,092,355 per period; about 5.17 billion per year | 54,491 per period |
+| Once per period (one handoff, no new header) | proven | 451,895 per period | 224,063 per period |
+| Once per hour while roots are imported | public | 221,493,720 per day of importing | 106,824 per day of importing |
+| Once per hour while roots are imported | proven | 11,647,152 per day of importing | 5,377,512 per day of importing |
 
 The amortised tracking cost per attestation is the cost over an interval divided by the attestations served from that interval's records. Proving one update per hour on the laptop CPU would take about 54 of every 60 minutes (derived from the one real proof, 3,240.5 s; one run on a shared machine). The figure at the recommended cadence, with real proving and recorded hardware, is a deliverable of the A4 performance report.
 
@@ -439,7 +443,7 @@ The Helios departures, none produced by a genuine chain with an honest committee
 | P.3 tracking cost, apart from attestation cost | per-update costs in the in-process harness; amortised figures derived from them (§10) | the A4 report at the recommended cadence, with real proving |
 | P.4 user proving | declared minimum for user-side proving: 16 GB of memory and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB. A private attestation of a log proven on cloud CPUs held to 8 CPUs and 16 GiB in 904.3 s, at 16 CPUs in 497.3 s, 9.25 GiB peak (medians of 3), and padded under macOS in 857.4 s on an M1 Mac mini with 16 GB ([`p4-macos`](../../lez/results/p4-macos/README.md)): 2,355,666 user cycles, the consumer's two transitions 380,577 (software Keccak) and LEZ's privacy circuit 1,975,089 ([`p4-minimum`](../../lez/results/p4-minimum/README.md)); the update proof is an updater's, not a user's (9.18 GiB peak) | private read, attestation and claim proofs (time, memory); a 320-hop claim is estimated at about 58M accelerated user cycles |
 | P.5 latency; P.6 off-chain resources | — | finality wait (about 13–19 minutes), update availability, the job's blocks, deferral; daemon CPU, memory, bandwidth |
-| P.7 state growth | record 333 bytes (293 before the chain id and parent hash), job 1,249–1,409, instance 425–505 (in-process harness); committee storage constant | projections over one and five years |
+| P.7 state growth | record 365 bytes (333 before the root id), job 1,281–1,441, instance 505–585 (in-process harness; pinned by `lez/harness/tests/costs_attestation.rs` in CI); committee storage constant | projections over one and five years |
 | P.8 BLS against a precompile | the two pairing steps (`Miller` 3.31M, `Finish` 3.65M) are 7.0M of an update's 9.2M (in-process harness); in the bare guest, Miller loops 40%, final exponentiation 35%, hash to G2 11% of 10.21M | the precompile delta; a precompile is reachable only from public transactions |
 | P.9 no scan | by construction (§5.6) | — |
 

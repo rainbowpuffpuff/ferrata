@@ -294,7 +294,7 @@ rc, out = run_checker(real.replace('kind = "document"', 'kind = "doc"', 1))
 check("checker: an unknown kind is refused", rc == 1 and "is none of test, record, document" in out)
 
 # ── R.11's numbers and gate: what counts as a test CI runs ──────────────────────────────────────────
-# The real map's counts, as docs/rows/coverage.md states them: update these lines with the map (a row that gains a
+# The real map's counts, as docs/EVIDENCE.md row 162 states them: update these lines with the map (a row that gains a
 # test CI runs moves both numbers).
 rc, out = run_checker(real, "--list")
 check("checker: the real map, RFP-022: 64 of 68 hard rows with a test CI runs",

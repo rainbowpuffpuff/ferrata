@@ -60,15 +60,16 @@ lengthened ...) misses planted leaks the real one finds. The hidden-column searc
 `kAuth`, `kView`, `sOut`, `NOut` before the release, the memo pad and the holder added) in four encodings and every
 16-byte window; on this commit's run it finds 0 of 680. The tables below are the earlier runs' (320 values, verbatim).
 
-**Regenerated for CI (branch `rfp-ci-coverage`, 22 November 2026).** [`generated/`](generated/) is now the run of
-`scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ccde6171…71dd`, the deployed one
-of [`../image-ids.md`](../image-ids.md); the tables before were image `cf41b7e5…5390`'s); a second run gave the same
-files byte for byte, the dev-mode proving times aside. CI's `lez-harness` job now runs the suite and
+**Regenerated for CI (branch `rfp-ci-coverage`, 22 November 2026; again at its integration).** [`generated/`](generated/)
+is now the run of `scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ac1fb59b…442e`,
+the build since milestone B1, `ferrata_bridge_b1` in [`../image-ids.md`](../image-ids.md); the coverage stream ran it
+at the deployed `ccde6171…71dd`, with the same verdicts; the tables before were image `cf41b7e5…5390`'s); a second run
+gave the same files byte for byte, the dev-mode proving times aside. CI's `lez-harness` job now runs the suite and
 [`scripts/privacy/check-results.py`](../../scripts/privacy/check-results.py), which fails unless the gate passes on
 every private default, the controls are linkable, the adversary is at chance on both legs, nothing hidden is
 found, recovery is complete and these tables are reproduced. Every verdict is the earlier run's; the collector
 now splits the witness set (signatures, proof length and kind, the receipt's claim) and names the calldata's gas,
-and a claim's execution gas steps by 4,335 per position (4,720 before).
+and a claim's execution gas steps by 4,377 per position (4,335 at `ccde6171…`, 4,720 before).
 
 ## Results in brief
 

@@ -27,7 +27,8 @@
 //!   padding (p4-minimum:349-351). The segment count and the segment sizes — the work a prover
 //!   does, what sets its time and memory — are asserted equal to the record's. The user cycles are
 //!   asserted exactly against this tree's pins: the programs changed after the record's runs, by
-//!   -734 to +576 cycles per transition (build box, 22 November 2026), inside the same segments.
+//!   -652 to +625 cycles per transition (build box, 22 November 2026, the bridge program since
+//!   milestone B1), inside the same segments.
 //! * **The transaction the device proves, at its recorded size.** LEZ's circuit publishes the
 //!   transaction's public part; the record's "transaction (B)" column is the borsh
 //!   `LeeTransaction` with the real receipt inside. Only the receipt is receipt-dependent (and a
@@ -106,8 +107,8 @@ const BURN_TRANSITION: (u64, usize, u64) = (25_377, 1, 131_072);
 /// the same segments and padded sizes; these exact pins catch the next change, which must then be
 /// checked against the record's segments again (the asserts below) or the measurements redone.
 const ATTEST_TRANSITIONS_NOW: [u64; 2] = [34_717, 346_763];
-const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_736, 110_862];
-const BURN_TRANSITION_NOW: u64 = 25_679;
+const CLAIM_TRANSITIONS_NOW: [u64; 2] = [41_785, 110_944];
+const BURN_TRANSITION_NOW: u64 = 25_773;
 
 /// Each proof's receipt and transaction sizes as the record states them, `(receipt bytes,
 /// transaction bytes)`: the unpadded first pass (p4-minimum:23-25) and the padded pass (337-339;
