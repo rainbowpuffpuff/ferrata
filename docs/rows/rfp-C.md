@@ -29,8 +29,8 @@ P2_BUNDLE=/bundle/p2b modal run bench/perf/prove_modal.py --tag b --private 1 --
 STAGE/dump/index.tsv --only 38,39`. Caveat: the containers' hosts differ (mostly AMD Zen 3; some Zen 4 and Intel),
 named per row.
 
-Proposed EVIDENCE row: | new | RFP-021 P.2's proof time and size for every program action and statement type: the 37
-guest executions of the test suite's scenarios, each with the input LEZ v0.4.0-rc1 gives it, proven for real
+Proposed EVIDENCE row: | new | RFP-021 P.2's proof time and size for every program action and statement type: the 39
+guest executions (37, and `Succeed`/`Spawn` added) of the test suite's scenarios, each with the input LEZ v0.4.0-rc1 gives it, proven for real
 (composite, then succinct, both verified, journals equal to the executor's), and the whole finality update proven in
 one private transaction and settled | per action and statement type: execution gas = user cycles proven; e.g. a
 finality update's `Open` / `Miller` / `Finish` 307.9 / 410.1 / 514.0 s composite on 16 CPUs, `Succeed` and `Spawn`

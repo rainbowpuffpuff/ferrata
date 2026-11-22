@@ -68,7 +68,7 @@ target ([`lez/RESULTS.md`](../lez/RESULTS.md) §5, "What is not built").
 ### P.2 Cost by program action: cycles, gas, proof time, proof size
 
 **Every program action and statement type, proven for real** ([`perf-proofs.md`](../lez/results/perf-proofs.md),
-21 November 2026; instance succession and the proven path's committee handoff added after review): the 37 guest executions of the test suite's scenarios (`lez/results/stage1-*.md`,
+21 November 2026; instance succession and the proven path's committee handoff added after review): the 39 guest executions (37, and `Succeed`/`Spawn` added) of the test suite's scenarios (`lez/results/stage1-*.md`,
 `stage4-attest.md`), each with the exact input LEZ v0.4.0-rc1 gives it, proven by r0vm 3.0.5 on a cloud container held
 to 16 CPUs and 32 GiB (one container per transition, `bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs
 the same `perf_prove --prove` on one machine): a composite receipt verified against the image id with its journal
