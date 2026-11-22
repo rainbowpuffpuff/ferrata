@@ -20,7 +20,7 @@
 id = "RFP-021 F.1"
 tests = [
   { path = "crates/ferrata-spectests/tests/steps.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test public_path -- --nocapture" },
+  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/v0.4.0-rc3/real-proofs/README.md", kind = "record" },
 ]
 note = "the 52 official sync cases run in the test job; Init and five mainnet updates settle through LEZ's state machine in the harness; the final program's private update was proven for real and applied by rc3's sequencer; the live round trip initialises from a fresh Sepolia checkpoint"
@@ -30,7 +30,7 @@ id = "RFP-021 F.2"
 tests = [
   { path = "crates/ferrata-spectests/tests/mutation_guards.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/steps.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture" },
+  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "a tampered and a removed finality branch are refused natively; a non-finality update never reaches the program; Attest at a never-finalised slot is refused (213) through LEZ"
 
@@ -40,7 +40,7 @@ tests = [
   { path = "crates/ferrata-spectests/tests/mainnet_e2e.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/mpt_proofs.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/exec_adversarial.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "account, storage and log proofs against roots from the write-once record only; 32 refusals of Attest recorded through LEZ (lez/results/stage4-attest-refusals.md)"
 
@@ -48,7 +48,7 @@ note = "account, storage and log proofs against roots from the write-once record
 id = "RFP-021 F.4"
 tests = [
   { path = "scripts/mutants.py", kind = "test", ci = "box", run = "python3 scripts/mutants.py" },
-  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "predicates and relations are among the 107 mutants (docs/mutants-run.log), all killed; =, >, >=, < and a relation run through the program from the consumer's request; != and <= are in the wire and the core, not in a request run through the program"
 
@@ -56,7 +56,7 @@ note = "predicates and relations are among the 107 mutants (docs/mutants-run.log
 id = "RFP-021 F.5"
 tests = [
   { path = "crates/ferrata-spectests/tests/exec_adversarial.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/sepolia.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test sepolia -- --nocapture" },
+  { path = "lez/harness/tests/sepolia.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage5-attest-refusals.md", kind = "record" },
 ]
 note = "one address (Multicall3) attested under mainnet's and Sepolia's records, each statement refused for the other chain (140); the chain id is in every identifier and instance id"
@@ -66,7 +66,7 @@ id = "RFP-021 F.6"
 tests = [
   { path = "crates/ferrata-spectests/tests/mainnet_e2e.rs", kind = "test", ci = "test" },
   { path = "vectors/acc-leaf.json", kind = "record" },
-  { path = "lez/harness/tests/attest_native.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_native -- --nocapture" },
+  { path = "lez/harness/tests/attest_native.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/wire-class/src/lib.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-lez-wire-class --locked" },
 ]
 note = "identifiers equal an independent derivation; the nullifier-safety classes come from a second build of the program (lez/wire-class), not the deployed one"
@@ -74,8 +74,8 @@ note = "identifiers equal an independent derivation; the nullifier-safety classe
 [[row]]
 id = "RFP-021 F.7"
 tests = [
-  { path = "lez/harness/tests/private_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test private_consumer -- --nocapture" },
-  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
+  { path = "lez/harness/tests/private_consumer.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage4-attest-consumer.md", kind = "record" },
 ]
 note = "waits on Logos: the requirement names LEZ testnet 0.4, which does not exist (requirements-status.md). Shown instead: synchronous consumption in the harness and on sequencer zones we ran, and rc3's sequencer applying the reference consumer's private attestation"
@@ -83,9 +83,9 @@ note = "waits on Logos: the requirement names LEZ testnet 0.4, which does not ex
 [[row]]
 id = "RFP-021 F.8"
 tests = [
-  { path = "lez/harness/tests/attest_private.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_private -- --nocapture" },
-  { path = "lez/harness/tests/private_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test private_consumer -- --nocapture" },
-  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault_consumer -- --nocapture" },
+  { path = "lez/harness/tests/attest_private.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/private_consumer.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/v0.4.0-rc3/real-proofs/README.md", kind = "record" },
 ]
 note = "the read and the private attestation publish none of the query, keys or account; the F.8 two-deposit full-diff test is not built"
@@ -94,7 +94,7 @@ note = "the read and the private attestation publish none of the query, keys or 
 id = "RFP-021 F.9"
 tests = [
   { path = "crates/ferrata-spectests/tests/weak_subjectivity.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test successor -- --nocapture" },
+  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "modules/scripts/check.sh", kind = "test", ci = "box", run = "modules/scripts/check.sh" },
 ]
@@ -104,7 +104,7 @@ note = "parameters fixed at Init (refusals 18/203, 53 past the bound); verify_ch
 id = "RFP-021 F.10"
 tests = [
   { path = "crates/ferrata-spectests/tests/mutation_guards.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test successor -- --nocapture" },
+  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "stops_safely_after_a_period_without_finality (the liveness limit) runs in the test job; a fresh instance was started live after the bound refused a 38-day-old checkpoint (EVIDENCE row 91); on branch rfp-docs-final a consumer moves to a replacement instance (replacement.rs, next entry)"
 
@@ -112,22 +112,22 @@ note = "stops_safely_after_a_period_without_finality (the liveness limit) runs i
 id = "RFP-021 F.10"
 branch = "rfp-docs-final"
 tests = [
-  { path = "lez/updater/tests/replacement.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test replacement" },
+  { path = "lez/updater/tests/replacement.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "the consumer's migration (docs/guides/consumer-guide.md 9.3) exercised end to end: same statement identifier under the replacement instance, each binding refused at the other's record (211)"
 
 [[row]]
 id = "RFP-021 F.11"
 tests = [
-  { path = "lez/harness/tests/private_placement.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test private_placement -- --nocapture" },
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/harness/tests/private_placement.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "no update step checks its sender; two honest updaters and an adversarial one each applied updates on the same instances (EVIDENCE row 80)"
 
 [[row]]
 id = "RFP-021 F.12"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "the participant table is docs/trust.md 1 and 7 here: a lying, a lagging and a down beacon source did not stop the updater (row 79), an adversarial updater did not stop two honest ones (row 80); the test that walks every listed party is on branch rfp-docs-final (next entry)"
 
@@ -135,14 +135,14 @@ note = "the participant table is docs/trust.md 1 and 7 here: a lying, a lagging 
 id = "RFP-021 F.12"
 branch = "rfp-docs-final"
 tests = [
-  { path = "lez/updater/tests/every_party.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test every_party -- --nocapture" },
+  { path = "lez/updater/tests/every_party.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "every party of trust.md 2.4 made to lie, lag, stop or censor in turn, 8 of 8, and a test that fails if the table and the tests part"
 
 [[row]]
 id = "RFP-021 F.13"
 tests = [
-  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test public_path -- --nocapture" },
+  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/live/README.md", kind = "document" },
   { path = "scripts/test-deploy-local.sh", kind = "test", ci = "box", run = "scripts/test-deploy-local.sh RELEASE_DIR WORK_DIR" },
 ]
@@ -152,7 +152,7 @@ note = "re-Init refused (203) and the program placed immutable at genesis in the
 id = "RFP-021 F.14"
 tests = [
   { path = "crates/ferrata-spectests/tests/vectors.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/sepolia.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test sepolia -- --nocapture" },
+  { path = "lez/harness/tests/sepolia.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage5-sepolia-replay.md", kind = "record" },
 ]
 note = "one program serves mainnet and Sepolia (through the Gloas fork, 166 public transactions) and one image served both side by side on the lab's zone (EVIDENCE row 21); Hoodi and a minimal-preset devnet not run"
@@ -160,7 +160,7 @@ note = "one program serves mainnet and Sepolia (through the Gloas fork, 166 publ
 [[row]]
 id = "RFP-021 F.15"
 tests = [
-  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test successor -- --nocapture" },
+  { path = "lez/harness/tests/successor.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
   { path = "lez/lab/README.md", kind = "document" },
 ]
@@ -186,7 +186,7 @@ note = "advance, config and the attestations of a finalized Sepolia block, every
 [[row]]
 id = "RFP-021 U.3"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/dev/demo.sh", kind = "test", ci = "box", run = "lez/updater/dev/demo.sh" },
   { path = "lez/updater/README.md", kind = "document" },
 ]
@@ -205,7 +205,7 @@ note = "waits on Logos: SPEL's stable release targets LEZ v0.2.4, not v0.4. Show
 id = "RFP-021 U.5"
 tests = [
   { path = "crates/ferrata-spectests/tests/exec_adversarial.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/exit_codes.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test exit_codes -- --nocapture" },
+  { path = "lez/harness/tests/exit_codes.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage4-attest-refusals.md", kind = "record" },
 ]
 note = "stable numeric codes with one owner each, checked for their exact value on every refusal; ferrata-attest prints each code's name and meaning from the IDL (row 56)"
@@ -213,9 +213,9 @@ note = "stable numeric codes with one owner each, checked for their exact value 
 [[row]]
 id = "RFP-021 U.6"
 tests = [
-  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
-  { path = "lez/harness/tests/attest_native.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_native -- --nocapture" },
-  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault_consumer -- --nocapture" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/attest_native.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "the ERC-20 Transfer consumer credits once (public and private claim) and the native-ETH pool credits the vault's real Sepolia deposits under the Recommended Consumer Pattern (EVIDENCE row 73); the consumers are lez/guests/consumer"
 
@@ -231,7 +231,7 @@ note = "the step API equals process_update on the 52 sync cases and the mainnet 
 id = "RFP-021 R.2"
 tests = [
   { path = "crates/ferrata-spectests/tests/adversarial.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
 ]
 note = "every refused update leaves the store unchanged; a refused attestation reverts the consumer's transaction, its nullifier stays unspent, and the same claim then succeeds"
@@ -248,7 +248,7 @@ note = "status not yet: no test reads an old record after later committee rotati
 id = "RFP-021 R.4"
 tests = [
   { path = "crates/ferrata-spectests/tests/steps.rs", kind = "test", ci = "test" },
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/lab/README.md", kind = "document" },
 ]
 note = "the program restores its compact store from its own state without re-checking (test job); the daemon killed inside a job resumes from the chain's state with no second Open, in the harness and on a sequencer (rows 79, 99, 104); the lab's zone restarted after 54 minutes stopped"
@@ -256,7 +256,7 @@ note = "the program restores its compact store from its own state without re-che
 [[row]]
 id = "RFP-021 R.5"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/README.md", kind = "document" },
 ]
 note = "a source that is down counted and the others used; 2 dropped connections retried; restarted mid-job, the daemon finishes the job from the chain's state without duplicated work (rows 79, 99, 104)"
@@ -282,7 +282,7 @@ note = "the liveness limit on all seven forks (test job); the lab's catch-up ses
 [[row]]
 id = "RFP-021 R.8"
 tests = [
-  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test public_path -- --nocapture" },
+  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
 ]
 note = "duplicate Open (207 JobExists), replayed Finish (205 NoJob) and an applied update again (52 NotNewer), with the same outcomes on the rc1, rc2 and rc3 sequencers (rows 6, 22, 112) and the same refusal predicted by the CLI's dry run (row 56)"
@@ -290,7 +290,7 @@ note = "duplicate Open (207 JobExists), replayed Finish (205 NoJob) and an appli
 [[row]]
 id = "RFP-021 R.9"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test recorded gate -- --nocapture" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/results/gate.txt", kind = "record" },
 ]
 note = "A3's gate: two honest daemons and one adversary over 58 recorded updates; honest gas on refused steps 5.7-8.7% of applied (gate <= 10%), each update applied once (EVIDENCE row 80); the seven runs are lez/updater/results/gate*.txt"
@@ -298,7 +298,7 @@ note = "A3's gate: two honest daemons and one adversary over 58 recorded updates
 [[row]]
 id = "RFP-021 R.10"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test recorded gate -- --nocapture" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/updater/results/gate.txt", kind = "record" },
   { path = "docs/guides/operator-guide.md", kind = "document" },
 ]
@@ -322,20 +322,23 @@ note = "the requirement is CI itself: ci.yml (on every push and pull request) wi
 [[row]]
 id = "RFP-021 P.1"
 tests = [
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage4-attest.md", kind = "record" },
   { path = "bench/RESULTS.md", kind = "record" },
 ]
-note = "each attestation type settles in one transaction through the program: account 167,882, storage slot 274,842, log 96,584 (1,618,872 for a 306-log receipt, 8.2M without the Keccak accelerator); executor counts in bench/RESULTS.md"
+note = "each attestation type settles in one transaction through the program: account 167,882, storage slot 274,842, log 96,584 (1,618,872 for a 306-log receipt, 8.2M without the Keccak accelerator); executor counts in bench/RESULTS.md. In CI (lez-harness): attest_public.rs asserts that every kind (account, slot, absent slot, absent account, two logs, a hop, a batch) is one handler execution in one transaction under TARGET_GAS_EXEC (5,000,000) and prints the per-type gas"
 
 [[row]]
 id = "RFP-021 P.2"
 tests = [
+  { path = "lez/harness/tests/public_path.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-finality.md", kind = "record" },
   { path = "lez/harness/src/bin/prove_private.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin prove_private && RISC0_DEV_MODE=0 target/debug/prove_private" },
   { path = "lez/results/prove-attest.log", kind = "record" },
   { path = "gpu-prover/RESULTS.md", kind = "record" },
 ]
-note = "cycles and gas per action and statement type; proof time and size for the finality update (3,240.5 s, 227,080-byte receipt, laptop CPU) and one log attestation; per-type proof time otherwise only estimated"
+note = "cycles and gas per action and statement type, reproduced by CI (lez-harness: public_path.rs prints every update step's handlers, cycles and gas, attest_public.rs every statement type's); proof time and size for the finality update (3,240.5 s, 227,080-byte receipt, laptop CPU) and one log attestation need real proving (prove_private on the box); per-type proof time otherwise only estimated"
 
 [[row]]
 id = "RFP-021 P.3"
@@ -351,7 +354,7 @@ tests = [
   { path = "lez/results/stage4-attest-private.md", kind = "record" },
   { path = "lez/results/p4-minimum/README.md", kind = "record" },
   { path = "lez/results/p4-macos/README.md", kind = "record" },
-  { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test wallet_padding -- --nocapture" },
+  { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop"
 
@@ -420,7 +423,7 @@ note = "CI runs the round trip over LEZ's state transition and anvil (job roundt
 [[row]]
 id = "RFP-021 S.3"
 tests = [
-  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture" },
+  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/src/bin/prove_holdings.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin prove_holdings && RISC0_DEV_MODE=0 target/debug/prove_holdings" },
 ]
 note = "the consumer guide's worked example: ferrata_holdings, written against the public interface only, its test (two acceptances, ten typed refusals) and real proofs of its three handler executions (EVIDENCE row 39); the final guide is on branch rfp-docs-final, kept in step by check-guides.py (next entry)"
@@ -437,8 +440,8 @@ note = "the guides final for delivery and kept in step with the code (docs/rows/
 id = "RFP-021 S.4"
 tests = [
   { path = "crates/ferrata-spectests/tests/nullifier_illustration.rs", kind = "test", ci = "test" },
-  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault_consumer -- --nocapture" },
-  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture" },
+  { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "the pattern's points in the reference consumers: a nullifier keyed on the statement identifier (replay refused, 223), the chain and instance binding, typed refusals, no path without an attestation (rows 39, 73); the guide's section is a first draft here, final with check-guides.py on the branch"
 
@@ -546,7 +549,7 @@ note = "all six forgeries refused: substituted key or aggregate and conflicting 
 [[row]]
 id = "RFP-021 VS.3"
 tests = [
-  { path = "lez/harness/tests/immutable_program.rs", kind = "test", ci = "box", run = "cd lez && RISC0_HOME=$(cd ../.. && pwd)/risc0-home-lez RISC0_DEV_MODE=1 cargo test -p harness --locked --test immutable_program -- --nocapture --test-threads 4" },
+  { path = "lez/harness/tests/immutable_program.rs", kind = "test", ci = "lez-harness" },
   { path = "e2e/runs/vs3-immutable-program.log", kind = "record" },
   { path = "scripts/reproduce-image-ids.sh", kind = "test", ci = "local", run = "scripts/reproduce-image-ids.sh build" },
   { path = "lez/live/README.md", kind = "document" },
@@ -578,7 +581,7 @@ tests = [
 [[row]]
 id = "RFP-021 VS.6"
 tests = [
-  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked" },
+  { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
 ]
 note = "a forged signature refused (exit 40) on the path any sender uses; refusals 10-14 refuse only spoofed internal messages (202 WrongSender); three updaters with their own keys, one adversarial, applied updates on the same instances (row 80)"
@@ -606,8 +609,8 @@ note = "LEZ-side data never appears in calldata, events or storage writes (vault
 [[row]]
 id = "RFP-022 F.3"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "witness-independence" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
 ]
 note = "the program mints only on a claim proven against a root imported through RFP-021's attestation; the same claim again and the same deposit under a second root refused (250 ALREADY_CLAIMED), in the harness, in CI's round trip and live on Sepolia"
@@ -615,8 +618,8 @@ note = "the program mints only on a claim proven against a root imported through
 [[row]]
 id = "RFP-022 F.4"
 tests = [
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
-  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_private -- --nocapture" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/src/bin/prove_bridge.rs", kind = "test", ci = "box", run = "cd lez && cargo build -p harness --locked --bin prove_bridge && RISC0_DEV_MODE=0 target/debug/prove_bridge" },
 ]
 note = "mints to a public account (plaintext and private claims) and to a private one through LEZ's own circuit; the private claim to a private account proven for real (EVIDENCE rows 89, 91, 123); a flipped bit in its receipt refused"
@@ -624,8 +627,8 @@ note = "mints to a public account (plaintext and private claims) and to a privat
 [[row]]
 id = "RFP-022 F.5"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
-  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_burn" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "witness-independence" },
+  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "lez-harness" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
 note = "the burn note (r, memo, mac, token, amount, C_out) written once with no Ethereum address in it (memo is the recipient under a one-time pad); burns entitling releases live on Sepolia with their seals verified on chain (row 91)"
@@ -634,7 +637,7 @@ note = "the burn note (r, memo, mac, token, amount, C_out) written once with no 
 id = "RFP-022 F.6"
 tests = [
   { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
-  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_burn" },
+  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "burns from a public holding (a signed top-level call) and from a private one (its delivery to the token's account public), destroying one denomination through synchronous messages only; the parser collects both (fixtures cp-burns10-360, cp-privburns10-360) and the private burn was proven for real (rows 91, 100, 123)"
 
@@ -652,8 +655,8 @@ note = "a burn root accepted only through the checkpoint proof, every LEZ block 
 id = "RFP-022 F.8"
 tests = [
   { path = "vault/test/Deposit.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
 ]
 note = "claims and burns accept only a registered denomination (251) and a registry entry with nine, or one not a multiple of the LEZ unit, is refused (240); the adversary pairs deposits with claims at chance (5.0%); the client's anonymity-set view is not built"
@@ -661,10 +664,10 @@ note = "claims and burns accept only a registered denomination (251) and a regis
 [[row]]
 id = "RFP-022 F.9"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
-  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "witness-independence" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "witness-independence" },
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
-  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "from the seed alone: exactly the 7 own deposits among 100,000 natively; 10 of 10 unclaimed deposits and 10 of 10 unreleased burns from each of 20 wiped clients, also with real proofs (rows 23, 84, 89, 102); the scan checked against depositCount"
 
@@ -673,8 +676,8 @@ id = "RFP-022 F.10"
 tests = [
   { path = "vault/test/Admin.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Release.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_vault_storage" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
+  { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "write-once registry on both sides; the LEZ entry written by attesting the hash the vault holds (for five tokens the hash v5 itself wrote, BRIDGE-RESULTS 8a); a second registration (244) and an entry the vault does not hold (247) refused; delisting stops deposits and leaves claims and releases working; the guides do not cover delisting yet"
 
@@ -682,8 +685,8 @@ note = "write-once registry on both sides; the LEZ entry written by attesting th
 id = "RFP-022 F.11"
 tests = [
   { path = "vault/test/Caps.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
-  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_time -- --nocapture" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "mint and burn token buckets per token and global, an immutable floor (240 below), admin only (253); their clock is attested Ethereum time (EVIDENCE row 28): a block stamped a year ahead refills nothing, a capped claim (255) stays claimable"
 
@@ -700,8 +703,8 @@ id = "RFP-022 F.13"
 tests = [
   { path = "vault/test/Fees.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
-  { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_vault_storage" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "fixed fees per token and denomination, in the wrapped token only, at most 1% (fuzzed), in force seven days after announcement, a deposit keeping its leaf index's schedule; invariants balance = escrow + owed + donations and LEZ supply = escrow - unminted - unreleased; live on Sepolia (rows 41, 91)"
 
@@ -710,8 +713,8 @@ id = "RFP-022 F.14"
 tests = [
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
-  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_roles" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "all 32 combinations of the vault's five freezes, lapse after maxFreeze, renewal, the checkpoint freeze and cancelCandidate; on LEZ freezes per token or globally (242), at most 30 days, the keyless Sunset, watchers' 12 h pauses (EVIDENCE row 74); no v0.4 freeze library exists, so per-token freezing is bridge code"
 
@@ -719,7 +722,7 @@ note = "all 32 combinations of the vault's five freezes, lapse after maxFreeze, 
 id = "RFP-022 F.15"
 tests = [
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },
 ]
 note = "the configuration id hashes the Logos genesis, channel, bridge header and image, EVM chain id, vault and root id; Init matches it against the vault's attested slot 2 (another configuration refused 246, foreign proofs 110); the live vault's immutables read back on Sepolia (rows 91, 92); verify-sepolia.py reads Sepolia's public RPC"
@@ -727,9 +730,9 @@ note = "the configuration id hashes the Logos genesis, channel, bridge header an
 [[row]]
 id = "RFP-022 F.16"
 tests = [
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
-  { path = "lez/harness/tests/tenant.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test tenant" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/tenant.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "a vault-A deposit claimed under configuration B's root refused (249) and two configurations run side by side; the tenant test is the honest record of the limit: a second configuration of the same vault can spend a public-kind deposit's nullifier and fill a shared holder account (EVIDENCE row 136), the fix changes the image id"
 
@@ -762,8 +765,8 @@ note = "every mini-app screen driven headless against a local devnet (deposit, c
 id = "RFP-022 U.3"
 tests = [
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
-  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "box", run = "monitor/tests/anvil-e2e.sh" },
-  { path = "monitor/tests/check.rs", kind = "test", ci = "box", run = "cd monitor && cargo test" },
+  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "monitor" },
+  { path = "monitor/tests/check.rs", kind = "test", ci = "monitor" },
   { path = "monitor/tests/fork-live-vault.sh", kind = "test", ci = "box", run = "monitor/tests/fork-live-vault.sh" },
 ]
 note = "the relayer and monitor as binaries and Logos modules (rows 43-48, 96, 106, 107, 120); on a devnet with a running sequencer the relayer sent the round trip's checkpoint and release (row 102); the relayer's root imports on a running sequencer remain"
@@ -837,16 +840,16 @@ note = "as RFP-021 S.9: the catalog laid out from the base and the modules insta
 [[row]]
 id = "RFP-022 R.1"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
-  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
-  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_private -- --nocapture" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "witness-independence" },
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "refused claims end with their own exit codes and spend nothing; a private claim the program refuses (252) cannot be proven, so nothing is spent; every single-field change of a claim fails natively; a copied C gets its own leaf and nullifier"
 
 [[row]]
 id = "RFP-022 R.2"
 tests = [
-  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_burn" },
+  { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "lez-harness" },
   { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
   { path = "vault/test/PullPayment.t.sol", kind = "test", ci = "vault" },
 ]
@@ -855,7 +858,7 @@ note = "a burn debits through synchronous messages only, so a non-reverted burn 
 [[row]]
 id = "RFP-022 R.3"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "witness-independence" },
   { path = "vault/test/Revocation.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
@@ -868,15 +871,15 @@ tests = [
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/EmergencyStop.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_time -- --nocapture" },
+  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "freezes, caps and delisting only delay on both sides; a capped claim (255) or freeze (242) stays claimable and succeeds after the refill or once the freeze ends; the disclosed exceptions are the sunset, the emergency stop and a retirement (Refund.t.sol, EmergencyStop.t.sol, Sunset)"
 
 [[row]]
 id = "RFP-022 R.5"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
-  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/inbound.rs", kind = "test", ci = "witness-independence" },
+  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
 ]
 note = "each of 20 wiped clients, from its seed and whole lists only, finds 10 of 10 unclaimed deposits and 10 of 10 unreleased burns after 10 claims and 10 releases, no other user's item taken, also on real proofs (rows 23, 84, 89); on a running sequencer the tool's recover found its positions from the seed (row 102)"
@@ -884,9 +887,10 @@ note = "each of 20 wiped clients, from its seed and whole lists only, finds 10 o
 [[row]]
 id = "RFP-022 R.6"
 tests = [
-  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "box", run = "monitor/tests/anvil-e2e.sh" },
+  { path = "cli/src/relayer.rs", kind = "test", ci = "roundtrip" },
+  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "monitor" },
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
-  { path = "cli/tests/gasdrop.rs", kind = "test", ci = "box", run = "cd cli && cargo test --test gasdrop" },
+  { path = "cli/tests/gasdrop.rs", kind = "test", ci = "roundtrip" },
 ]
 note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47)"
 
@@ -909,7 +913,7 @@ note = "RISC Zero zkVM 3.0.5 receipts, the unmodified base Groth16 verifier behi
 [[row]]
 id = "RFP-022 R.9"
 tests = [
-  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "box", run = "monitor/tests/anvil-e2e.sh" },
+  { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "monitor" },
   { path = "docs/trust.md", kind = "document" },
 ]
 note = "the participant table (each role, what it can do if it lies or stops, who takes over) in trust.md 1 and 4, first drafts; the mitigations are exercised: monitor kill and restart, the relayer's refusals (row 46), the gas drop (rows 47, 48, 124), a silent sequencer (row 66)"
@@ -980,19 +984,21 @@ note = "the second deployer's own configuration from a fresh clone, on anvil and
 [[row]]
 id = "RFP-022 P.1"
 tests = [
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/bridge-inbound.md", kind = "record" },
   { path = "lez/results/bridge-private-claim.md", kind = "record" },
 ]
-note = "a plaintext claim in one public transaction on this tree's program: 261,671 execution gas with fees, caps, freezes, roles and attested time, broken down by handler, 2,053 storage gas; a private claim to a private account 553,641 execution and 224,063 storage gas (dev mode)"
+note = "a plaintext claim in one public transaction on this tree's program: 261,671 execution gas with fees, caps, freezes, roles and attested time, broken down by handler, 2,053 storage gas; a private claim to a private account 553,641 execution and 224,063 storage gas (dev mode). In CI (lez-harness): bridge_inbound.rs settles the configuration, the root imports and the plaintext claims each in one public transaction under TARGET_GAS_EXEC (5,000,000), prints the per-handler breakdown and rewrites lez/results/bridge-inbound.md (unchanged by the box run of 22 November)"
 
 [[row]]
 id = "RFP-022 P.2"
 tests = [
+  { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/bridge-inbound.md", kind = "record" },
   { path = "lez/live/inbound/README.md", kind = "document" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "one ImportRoot (two slots under one record) 236,224 execution gas on this tree's program, 432,182 in the live run on Sepolia's real state, 431,512-455,116 to register a token; one import serves every deposit under its root; the per-deposit figures derived in performance.md"
+note = "one ImportRoot (two slots under one record) 236,224 execution gas on this tree's program, 432,182 in the live run on Sepolia's real state, 431,512-455,116 to register a token; one import serves every deposit under its root; the per-deposit figures derived in performance.md. In CI (lez-harness): bridge_inbound.rs measures each ImportRoot (and its refusals) under TARGET_GAS_EXEC"
 
 [[row]]
 id = "RFP-022 P.3"
@@ -1008,7 +1014,7 @@ id = "RFP-022 P.4"
 tests = [
   { path = "lez/results/p4-minimum/README.md", kind = "record" },
   { path = "lez/results/p4-macos/README.md", kind = "record" },
-  { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test wallet_padding -- --nocapture" },
+  { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
   { path = "bridge/artifacts/logs/20261110T065453Z-prove-claim-claim.log", kind = "record" },
 ]
 note = "the full private claim and burn proven at cloud containers held to the declared minimum (905.4 s / 756.3 s at 8 CPUs) and on the Mac minis (818.7 s / 716.5 s on an M1, 453.5 s / 396.1 s on an M4, EVIDENCE row 88); the release's succinct proof 46.0 s at 8 CPUs, 31.7 s on the M1; padded shape in wallet_padding.rs; the full claim and burn on a laptop: none yet"
@@ -1093,7 +1099,7 @@ note = "every flipped proof word, journal word, selector and image id refused by
 [[row]]
 id = "RFP-022 Sec.3"
 tests = [
-  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "box", run = "cd bridge && scripts/check.sh" },
+  { path = "bridge/crates/ferrata-bridge-core/tests/outbound.rs", kind = "test", ci = "witness-independence" },
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
 ]
@@ -1103,7 +1109,7 @@ note = "C and C_out bind the destination under a seed-derived secret, the releas
 id = "RFP-022 Sec.4"
 tests = [
   { path = "vault/test/Caps.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
+  { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/guides/deployer-guide.md", kind = "document" },
 ]
 note = "token buckets per token and globally on both sides with the immutable floor; the recommended default (the smaller of 10% of escrow and a deployer-set ceiling) stated in the deployer guide, a first draft, and the design note; the live Sepolia vaults ran without caps (testnet parameters)"
@@ -1112,8 +1118,8 @@ note = "token buckets per token and globally on both sides with the immutable fl
 id = "RFP-022 Sec.5"
 tests = [
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_roles" },
-  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_time -- --nocapture" },
+  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "each half freezes by its own authority and its tests run without the other half: the vault's five freezes by its freeze authority, the LEZ half per token or globally (242) on a record its light client already wrote, no call to Ethereum (EVIDENCE rows 8, 28, 74)"
 
@@ -1147,7 +1153,7 @@ tests = [
   { path = "vault/MIGRATION.md", kind = "document" },
   { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
   { path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_roles" },
+  { path = "lez/harness/tests/bridge_roles.rs", kind = "test", ci = "lez-harness" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },
 ]
 note = "the migration rehearsal (Migration.t.sol, 8 tests, CI's vault job): v1 frozen and retired, every in-flight position honoured (an imported and an unimported deposit, a finalised unreleased burn, a released one), v2 the same vault code under another proof system, the holder moving to v2; vault/MIGRATION.md documents the mechanism and each position. The vault half only: the LEZ half (Sunset, the successor's Init and pairing) is bridge_roles.rs and EVIDENCE rows 37, 82, 91, 92; the vault and both programs are immutable, their image ids read back on Sepolia equal to image-ids.md"
@@ -1166,8 +1172,8 @@ note = "stop-only, no fund recovery (MIGRATION.md sections 4 and 5, trust.md sec
 [[row]]
 id = "RFP-022 Priv.1"
 tests = [
-  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_private -- --nocapture" },
-  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
 ]
 note = "a private claim publishes only N, the denomination, the root read and the fee alias's fixed reserve; an adversary using every public byte pairs 20 deposits with their claims at chance (5.0%), in dev mode and on real proofs of the final programs (rows 23, 89); the plaintext path links and the client says so"
@@ -1185,7 +1191,7 @@ note = "the release guest's cycle count is witness-independent (the check that f
 id = "RFP-022 Priv.3"
 tests = [
   { path = "vault/test/Privacy.t.sol", kind = "test", ci = "vault" },
-  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/generated/b6.md", kind = "document" },
 ]
 note = "the B2 gate over transaction bytes, block bodies, events and state diffs of 20 pairs each way: destination, s, C, leaf, depositor, holder, recipient and the burn's values found 0 of 320 times; the deliberately linkable plaintext control fails the gate; the public fields are tabled in b6.md"
@@ -1193,7 +1199,7 @@ note = "the B2 gate over transaction bytes, block bodies, events and state diffs
 [[row]]
 id = "RFP-022 Priv.4"
 tests = [
-  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
   { path = "docs/trust.md", kind = "document" },
 ]

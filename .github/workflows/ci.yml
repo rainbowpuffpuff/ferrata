@@ -64,6 +64,11 @@ jobs:
           shared-key: witness
       - name: Cycle counts independent of the witness (release and claim guests)
         run: scripts/ci/witness-independence.sh 64
+      # The bridge core's own tests (bridge/scripts/check.sh's "core tests"): deposits, claims, burns and releases
+      # natively, every single-field change of a claim or a burn refused (RFP-022 F.5, R.1).
+      - name: The bridge core's tests
+        working-directory: bridge
+        run: cargo test -p ferrata-bridge-core --locked
 
   # One round trip, every step asserted (e2e/ci/README.md): the v5 vault under rule (B) on anvil with
   # the vault tests' mock verifier; LEZ v0.4.0-rc1's state transition in the harness (dev mode);
@@ -125,6 +130,16 @@ jobs:
         run: e2e/ci/run.sh
       - name: The ferrata tool's own end-to-end test (cli/tests/e2e.sh)
         run: RISC0_HOME="$HOME/risc0-home-lez" cli/tests/e2e.sh
+      # cli/tests/relayer.sh's offline part: the relayer library's tests (journals, the burn watch, temporary
+      # failures, imported roots) and the gas drop's checks on a real receipt, no dev mode (RFP-022 R.6, U.3). Its
+      # third test, tests/relayer_fork.rs, reads public Sepolia state for its fork and runs on the build box.
+      - name: The relayer's tests (library, gas drop)
+        working-directory: cli
+        run: |
+          export RISC0_HOME="$HOME/risc0-home-lez"
+          cargo test --locked --lib relayer
+          cargo test --locked --test gasdrop -- --nocapture
+
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every test file of lez/harness/tests/ (red-team suites included), and
   # the update-submitting daemon on its recorded data (lez/updater/tests/), the guests in RISC Zero dev mode. The
@@ -164,6 +179,37 @@ jobs:
         run: scripts/ci/lez-harness.sh build
       - name: The harness and updater suites, dev mode
         run: scripts/ci/lez-harness.sh
+
+  # The watchers (monitor/README.md): the monitor's own tests, then its rehearsal on a local anvil chain
+  # (monitor/tests/anvil-e2e.sh: rule (B) and rule (A) FerrataVault v5 deployments with the monitor's key as watcher;
+  # wrong candidates cancelled in time, a SIGKILL and restart, a lost state file rescanned, a watcher without gas,
+  # a clean shutdown). RFP-022 U.3, R.6, R.9. Nothing sent to any public network.
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.93.0
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.3.6
+      - name: Cache the vault's libraries
+        uses: actions/cache@v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+      - name: Libraries
+        working-directory: vault
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: monitor -> target
+      - name: The monitor's tests
+        working-directory: monitor
+        run: cargo test --locked
+      - name: The watchers' rehearsal on anvil (monitor/tests/anvil-e2e.sh)
+        working-directory: monitor
+        run: MONITOR_E2E_OUT="$RUNNER_TEMP/monitor-e2e" bash tests/anvil-e2e.sh
 
   # The vault's Foundry suites (vault/README.md): unit, fuzz and invariant tests with the mock verifier, and
   # test/real/ with RISC Zero's real Groth16 verifier and committed real proofs. PrivacySuite is left out: it replays

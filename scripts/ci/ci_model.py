@@ -1017,10 +1017,25 @@ def cargo_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
         if not a.startswith("-"):
             hpos.append(a)
     filters += hpos
+    # A name filter matches a test's full path: for a file under src/, the module path the file gives (src/relayer.rs:
+    # `relayer::...`), then the file's inner modules, then the function; for an integration test file, the inner
+    # modules and the function.
     fns = re.findall(r"\bfn\s+([A-Za-z0-9_]+)", text)
+    mods = re.findall(r"\bmod\s+([A-Za-z0-9_]+)\s*\{", text)
+    module = ""
+    if target[0] in ("lib", "bin"):
+        parts = pathlib.PurePosixPath(rel_in_pkg).with_suffix("").parts[1:]  # without src/
+        parts = [q for q in parts if q != "mod"]
+        if parts and parts[0] == "bin":
+            parts = parts[2:]  # src/bin/NAME.rs is the root of its own crate
+        if parts in (["lib"], ["main"]):
+            parts = []
+        module = "::".join(parts)
+    paths = [f"{module}::{fn}" if module else fn for fn in fns]
+    paths += [f"{module}::{m}::{fn}" if module else f"{m}::{fn}" for m in mods for fn in fns]
     for f in filters:
-        if not any(f in fn for fn in fns):
-            return False, f"the name filter {f!r} matches none of its functions"
+        if not any(f in path for path in paths):
+            return False, f"the name filter {f!r} matches none of its tests' paths"
     n_tests = len(re.findall(r"#\[(?:[a-z_]+::)?test\b", text))
     if n_tests and n_tests <= text.count("#[ignore") and not ({"--ignored", "--include-ignored"} & harness_flags):
         return False, "every test in it is #[ignore]d"

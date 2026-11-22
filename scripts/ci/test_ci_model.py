@@ -108,6 +108,12 @@ check("trace: lez-harness runs lez/updater/tests/recorded.rs (cargo test -p ferr
       runs("lez-harness", "lez/updater/tests/recorded.rs"))
 check("trace: lez-harness does not run lez/harness/tests/residue_experimental.rs (feature residue-experimental)",
       not runs("lez-harness", "lez/harness/tests/residue_experimental.rs"))
+check("trace: monitor runs monitor/tests/check.rs and monitor/tests/anvil-e2e.sh",
+      runs("monitor", "monitor/tests/check.rs") and runs("monitor", "monitor/tests/anvil-e2e.sh"))
+check("trace: roundtrip runs cli/tests/gasdrop.rs but not cli/tests/relayer_fork.rs (it reads Sepolia)",
+      runs("roundtrip", "cli/tests/gasdrop.rs") and not runs("roundtrip", "cli/tests/relayer_fork.rs"))
+check("trace: witness-independence runs the bridge core's tests (tests/inbound.rs)",
+      runs("witness-independence", "bridge/crates/ferrata-bridge-core/tests/inbound.rs"))
 check("trace: links runs scripts/ci/check-unaudited.sh", runs("links", "scripts/ci/check-unaudited.sh"))
 check("trace: links does not run scripts/ci/sequencer-attest.sh", not runs("links", "scripts/ci/sequencer-attest.sh"))
 
@@ -135,6 +141,15 @@ check("forge: --match-path keeps its own",
 check("forge: --match-test matching no function of the file",
       not ci_model.forge_runs(C(["forge", "test", "--match-test", "zz_no_such_test"], "vault", {}, "t"), "vault/test/Refund.t.sol")[0])
 
+check("cargo: a name filter matching the module path of a file under src/ (cargo test --lib relayer)",
+      ci_model.cargo_runs(C(["cargo", "test", "--lib", "relayer"], "cli", {}, "t"), "cli/src/relayer.rs")[0])
+check("cargo: a filter naming the module path, an inner module and a function",
+      ci_model.cargo_runs(C(["cargo", "test", "--lib", "relayer::tests::temporary_failures"], "cli", {}, "t"),
+                          "cli/src/relayer.rs")[0])
+check("cargo: a filter matching another module's path does not select this file",
+      not ci_model.cargo_runs(C(["cargo", "test", "--lib", "privacy"], "cli", {}, "t"), "cli/src/relayer.rs")[0])
+check("trace: roundtrip runs cli/src/relayer.rs's tests (cargo test --lib relayer in cli/)",
+      runs("roundtrip", "cli/src/relayer.rs"))
 check("cargo: a file compiled only with a feature the command leaves off (lez/updater/tests/recorded.rs)",
       not ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater"], "lez", {}, "t"),
                               "lez/updater/tests/recorded.rs")[0])
@@ -183,19 +198,19 @@ rc, out = run_checker(real.replace('kind = "document"', 'kind = "doc"', 1))
 check("checker: an unknown kind is refused", rc == 1 and "is none of test, record, document" in out)
 
 # ── R.11's numbers and gate: what counts as a test CI runs ──────────────────────────────────────────
-# The real map's counts, as docs/rows/G.md states them: update these lines with the map (a row that gains a
+# The real map's counts, as docs/rows/coverage.md states them: update these lines with the map (a row that gains a
 # test CI runs moves both numbers).
 rc, out = run_checker(real, "--list")
-check("checker: the real map, RFP-022: 46 of 68 hard rows with a test CI runs",
-      "RFP-022: 68 hard rows; 46 with a test CI runs; 22 without one" in out)
-check("checker: the real map, RFP-021: 23 of 59 hard rows with a test CI runs",
-      "RFP-021: 59 hard rows; 23 with a test CI runs; 36 without one" in out)
+check("checker: the real map, RFP-022: 59 of 68 hard rows with a test CI runs",
+      "RFP-022: 68 hard rows; 59 with a test CI runs; 9 without one" in out)
+check("checker: the real map, RFP-021: 42 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 42 with a test CI runs; 17 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
 rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
 rc, out = run_checker(real, "--require-ci", "RFP-022")
 check("checker: --require-ci RFP-022 exits 1 on the real map and counts the rows without a test CI runs",
-      rc == 1 and "--require-ci RFP-022: 22 hard row(s) without a test CI runs" in out)
+      rc == 1 and "--require-ci RFP-022: 9 hard row(s) without a test CI runs" in out)
 
 # Synthetic maps: the real one with a test the vault job runs added to some RFP-022 rows (a row may have
 # several [[row]] blocks; the checker joins them).
@@ -211,17 +226,17 @@ rc, out = run_checker(with_tests(real, rows022), "--require-ci", "RFP-022")
 check("checker: --require-ci RFP-022 exits 0 once every RFP-022 row has a test CI runs",
       rc == 0 and "RFP-022: 68 hard rows; 68 with a test CI runs; 0 without one" in out
       and "--require-ci RFP-022: every hard row has a test CI runs" in out)
-# F.4 has tests on the build box only in the real map
-others = [rid for rid in rows022 if rid != "RFP-022 F.4"]
+# S.1 has a test on the build box only in the real map (lez/testnet04/day1.sh sends to a public LEZ testnet)
+others = [rid for rid in rows022 if rid != "RFP-022 S.1"]
 rc, out = run_checker(with_tests(real, others), "--require-ci", "RFP-022")
 check("checker: a row whose tests run on the box only is not counted as CI, and the gate names it",
       rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
-      and "tests run on the build box or by hand only (1): F.4" in out
+      and "tests run on the build box or by hand only (1): S.1" in out
       and "--require-ci RFP-022: 1 hard row(s) without a test CI runs" in out)
-rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 F.4"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
+rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 S.1"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
 check("checker: a test in a job started by hand only is counted as manual, not as CI",
       rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
-      and "a test in a workflow started by hand only (1): F.4" in out)
+      and "a test in a workflow started by hand only (1): S.1" in out)
 # The matrices must hold 59 and 68 hard rows: one RFP-022 row taken out of a copy of traceability.md.
 lines, rfp, dropped = [], None, False
 for line in (ROOT / "docs" / "traceability.md").read_text(encoding="utf-8").splitlines(keepends=True):
