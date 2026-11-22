@@ -56,7 +56,12 @@ fn by_report<'a>(reports: &'a [TxReport], tape: &'a [Taped]) -> Vec<(&'a TxRepor
         let n = r.transitions.len();
         let mine = &tape[at..at + n];
         for (t, k) in r.transitions.iter().zip(mine) {
-            assert_eq!((t.handler.as_str(), t.cycles), (k.handler.as_str(), k.cycles), "{}: tape and trace agree", r.label);
+            assert_eq!(
+                (t.handler.as_str(), t.cycles),
+                (k.handler.as_str(), k.cycles),
+                "{}: tape and trace agree",
+                r.label
+            );
         }
         out.push((r, mine));
         at += n;
@@ -75,7 +80,12 @@ struct Row {
     taped: Taped,
 }
 
-fn keep(rows: &mut Vec<Row>, scenario: &'static str, pairs: &[(&TxReport, &[Taped])], pick: impl Fn(&str) -> Option<String>) {
+fn keep(
+    rows: &mut Vec<Row>,
+    scenario: &'static str,
+    pairs: &[(&TxReport, &[Taped])],
+    pick: impl Fn(&str) -> Option<String>,
+) {
     for (r, taped) in pairs {
         let Some(action) = pick(&r.label) else { continue };
         assert!(r.ok(), "{}: the measured action is applied", r.label);
@@ -283,11 +293,7 @@ fn exec(dir: &Path, n: usize, runs: usize) {
     }
     times.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let median = times[times.len() / 2];
-    println!(
-        "EXEC\t{n}\t{}\t{exec_cycles}\t{median:.4}\t{:.2}",
-        field(&line, 5),
-        exec_cycles as f64 / median / 1e6
-    );
+    println!("EXEC\t{n}\t{}\t{exec_cycles}\t{median:.4}\t{:.2}", field(&line, 5), exec_cycles as f64 / median / 1e6);
 }
 
 fn main() {

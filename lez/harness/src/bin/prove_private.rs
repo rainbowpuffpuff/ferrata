@@ -37,7 +37,9 @@ use lee_core::{program::ReceiveInput, ProgramImageClaim};
 use risc0_zkvm::{default_executor, ExecutorEnv};
 
 fn usage() -> ! {
-    eprintln!("usage: prove_private [--handoff] [--tx-out FILE] [--allow-dev-mode] | prove_private [--handoff] --settle FILE");
+    eprintln!(
+        "usage: prove_private [--handoff] [--tx-out FILE] [--allow-dev-mode] | prove_private [--handoff] --settle FILE"
+    );
     std::process::exit(2)
 }
 
@@ -92,7 +94,11 @@ fn main() {
         store: store.encode(),
         update: CompactUpdate::of(&update).encode(LcFork::Electra),
         signers: witness.encode(),
-        adoption: if handoff { ferrata_core::witness::uncompressed_keys(&update.next_sync_committee).unwrap() } else { vec![] },
+        adoption: if handoff {
+            ferrata_core::witness::uncompressed_keys(&update.next_sync_committee).unwrap()
+        } else {
+            vec![]
+        },
     })
     .unwrap();
     let root = Actor::new(sender.id(), ferrata_account());
@@ -127,15 +133,7 @@ fn main() {
             let started = Instant::now();
             let run = w
                 .chain
-                .prove_and_settle_private(
-                    &sender,
-                    root,
-                    message,
-                    actors,
-                    &catalog(),
-                    100_000_000,
-                    time,
-                )
+                .prove_and_settle_private(&sender, root, message, actors, &catalog(), 100_000_000, time)
                 .expect("proves and settles");
             let total = started.elapsed();
             let (what, receipt) = if dev_mode {

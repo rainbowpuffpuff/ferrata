@@ -130,12 +130,7 @@ fn sizes_and_statements() {
     }
     // The job: its actor state is the Open step's post-state (the job is cleared at Finish).
     let open = s.w.chain.reports.iter().find(|r| r.label.starts_with("finality update Open")).expect("the Open step");
-    let job_state = open
-        .transitions
-        .iter()
-        .filter_map(|t| t.post_state_bytes)
-        .max()
-        .expect("Open writes the job");
+    let job_state = open.transitions.iter().filter_map(|t| t.post_state_bytes).max().expect("Open writes the job");
     let job = Account::default().with_actor_state(program, vec![0; job_state].into());
     let job_b = borsh::to_vec(&job).unwrap().len();
     println!("| job(id, job_id), while open (built from Open's post-state) | {job_state} | {job_b} | {} |", job_b + 32);
@@ -175,7 +170,9 @@ fn sizes_and_statements() {
 }
 
 fn updates_against_records() {
-    println!("\n## 3. Updates against records held (mainnet update_0, a handoff; then update_1 as a finality update)\n");
+    println!(
+        "\n## 3. Updates against records held (mainnet update_0, a handoff; then update_1 as a finality update)\n"
+    );
     println!("| records added | serialized state before (B) | step | exec gas | stor gas |\n|---:|---:|---|---:|---:|");
     let mut base: Vec<(String, u64, u64)> = Vec::new();
     for k in KS {
@@ -235,13 +232,19 @@ fn bridge_state() {
     let mut covered = std::collections::BTreeMap::<[u8; 32], u64>::new();
     for r in w.chain.reports.iter().filter(|r| r.label.starts_with("ImportRoot")) {
         assert!(r.ok(), "{}: applied", r.label);
-        let n: u64 = r.label.split("n=").nth(1).and_then(|s| s.split_whitespace().next()).and_then(|s| s.parse().ok()).unwrap();
+        let n: u64 =
+            r.label.split("n=").nth(1).and_then(|s| s.split_whitespace().next()).and_then(|s| s.parse().ok()).unwrap();
         let cid = if r.label.contains(" A ") { w.cid_a } else { w.cid_b };
         let before = covered.get(&cid).copied().unwrap_or(0);
         let new = n.saturating_sub(before);
         covered.insert(cid, before.max(n));
-        let per = if new > 0 { grouped(r.charge.gas_exec / new) } else { "— (none new)".into() };
-        println!("| {} | {n} | {new} | {} | {} | {per} |", r.label, grouped(r.charge.gas_exec), grouped(r.charge.gas_stor));
+        let per = r.charge.gas_exec.checked_div(new).map_or_else(|| "— (none new)".to_string(), grouped);
+        println!(
+            "| {} | {n} | {new} | {} | {} | {per} |",
+            r.label,
+            grouped(r.charge.gas_exec),
+            grouped(r.charge.gas_stor)
+        );
     }
     println!("\n## 4. Bridge program: accounts created by real transactions\n");
     let program = w.program;
