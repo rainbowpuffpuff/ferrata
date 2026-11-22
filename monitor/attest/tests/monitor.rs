@@ -984,3 +984,42 @@ fn with_diverge_at_2_an_honest_provider_dropping_out_is_not_a_recovery() {
     assert_eq!(l.iter().filter(|x| x["kind"] == "instance-diverged").count(), 1, "held, not emitted again");
     assert_eq!(read_lines(&freeze).len(), 1);
 }
+
+#[test]
+fn a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its_confirmed_ones() {
+    let f = fx();
+    let d = scratch("old-state-file");
+    let (s0, s1) = (f.stalled["finalized_slot"].as_u64().unwrap(), f.resumed["finalized_slot"].as_u64().unwrap());
+    let g = sepolia_genesis();
+    // The instance shows its resumed header, confirmed by three providers finalized at it; they serve the real header at
+    // s0, and nothing at s0 - 32.
+    let ps: Vec<Server> = (0..3).map(|_| provider(&g, s0, Some(header_11549664()), s1)).collect();
+    for p in &ps {
+        p.set(&format!("/eth/v1/beacon/headers/{s1}"), 200, header_json(&root_11608192(), s1));
+    }
+    let current = write_state(&d, "resumed.hex", &state_of(&f.resumed));
+    // A state file as the daemon wrote it before `settled`: a forged header at s0 left unconfirmed (the hole of the
+    // second review), and a header at s0 - 32 confirmed long ago (no provider has a block there now).
+    let forged_root0 = forged_root(&forged(&state_of(&f.stalled)));
+    let seen = d.join("seen.json");
+    std::fs::write(
+        &seen,
+        json!({ s0.to_string(): {"root": forged_root0, "first_seen_s": 1, "divergence": "unconfirmed"},
+                (s0 - 32).to_string(): {"root": format!("0x{}", "ab".repeat(32)), "first_seen_s": 1, "divergence": "confirmed"} })
+        .to_string(),
+    )
+    .unwrap();
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let mut child = spawn_watch(&current, &ps.iter().collect::<Vec<_>>(), secs(&f.resumed["time_ms"]), &log, &freeze, &["--state-file", &seen.display().to_string()]);
+    let l = wait_for_lines(&log, "the old unconfirmed header judged", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
+    std::thread::sleep(Duration::from_millis(2500));
+    Command::new("kill").args(["-TERM", &child.id().to_string()]).status().unwrap();
+    assert!(child.wait().unwrap().success());
+    let l: Vec<Value> = read_lines(&log).into_iter().chain(l).collect();
+    let diverged: std::collections::BTreeSet<u64> = l.iter().filter(|x| x["kind"] == "instance-diverged").map(|x| x["slot"].as_u64().unwrap()).collect();
+    assert_eq!(diverged.into_iter().collect::<Vec<_>>(), vec![s0], "the old confirmed header is not judged again");
+    let st: Value = serde_json::from_str(&std::fs::read_to_string(&seen).unwrap()).unwrap();
+    assert_eq!(st[s0.to_string()]["divergence"], "diverged");
+    assert_eq!((st[(s0 - 32).to_string()]["divergence"].as_str(), st[(s0 - 32).to_string()].get("settled")), (Some("confirmed"), None));
+    assert_eq!((st[s1.to_string()]["divergence"].as_str(), st[s1.to_string()]["settled"].as_bool()), (Some("confirmed"), Some(true)));
+}

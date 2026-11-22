@@ -75,9 +75,11 @@ pub struct Seen {
     pub first_seen_s: u64,
     /// The latest verdict: `unconfirmed` never replaces one, and `diverged` is replaced only by `confirmed`.
     pub divergence: Divergence,
-    /// Confirmed or contested with no provider behind the slot: not judged again.
-    #[serde(default)]
-    pub settled: bool,
+    /// Confirmed or contested with no provider behind the slot: not judged again. Absent from a state file written
+    /// before this field: read as settled when its verdict is confirmed or contested (an unconfirmed or diverged header
+    /// is judged again; a confirmed one, which an older provider may no longer serve, is not).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub settled: Option<bool>,
     /// `too-new` when the instance showed it (it stays raised), or ahead of every provider (until confirmed).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ahead: Option<Ahead>,
@@ -85,7 +87,11 @@ pub struct Seen {
 
 impl Seen {
     fn new(root: String, now: u64) -> Self {
-        Self { root, first_seen_s: now, divergence: Divergence::Unconfirmed, settled: false, ahead: None }
+        Self { root, first_seen_s: now, divergence: Divergence::Unconfirmed, settled: Some(false), ahead: None }
+    }
+
+    pub fn is_settled(&self) -> bool {
+        self.settled.unwrap_or(matches!(self.divergence, Divergence::Confirmed | Divergence::Contested))
     }
 
     /// Records a verdict reached with `behind` providers that had not finalized the slot.
@@ -96,7 +102,7 @@ impl Seen {
         if !(self.divergence == Divergence::Diverged && d == Divergence::Contested) {
             self.divergence = d;
         }
-        self.settled = matches!(self.divergence, Divergence::Confirmed | Divergence::Contested) && behind == 0;
+        self.settled = Some(matches!(self.divergence, Divergence::Confirmed | Divergence::Contested) && behind == 0);
         if self.divergence == Divergence::Confirmed && self.ahead == Some(Ahead::AheadOfProviders) {
             self.ahead = None;
         }
@@ -147,7 +153,7 @@ fn recheck(seen: &mut BTreeMap<u64, Seen>, current: u64, s: &InstanceState, prov
     let Some(highest) = views.iter().filter(|v| v.error.is_none()).filter_map(|v| v.finalized_slot).max() else { return };
     let mut due: Vec<(bool, u64)> = seen
         .iter()
-        .filter(|(slot, e)| **slot != current && **slot <= highest && !e.settled)
+        .filter(|(slot, e)| **slot != current && **slot <= highest && !e.is_settled())
         .map(|(slot, e)| (e.divergence != Divergence::Unconfirmed, *slot))
         .collect();
     due.sort_unstable();

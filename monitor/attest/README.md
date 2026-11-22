@@ -48,7 +48,9 @@ attest-monitor watch --state lez:http://127.0.0.1:3040 --program 0x... --instanc
   stays raised (repeated every `--repeat`) when the instance moves on or providers drop out; one diverged, or ahead of
   every provider, clears (`recovered`) only when a later poll confirms that header (`--min-agreeing` agree, none
   disagrees), not when the verdict becomes `contested` or `unconfirmed`. An operator who finds such an alarm false (a
-  lying provider) removes the provider and, for a header the instance has left, its entry in the state file.
+  lying provider) removes the provider and, for a header the instance has left, its entry in the state file. A state
+  file written before this version has no `settled`: its confirmed and contested headers count as settled, its
+  unconfirmed and diverged ones are judged again.
 - The alert command gets one JSON line per alert, newline-terminated.
 
 ## The rule
@@ -82,7 +84,7 @@ limit that stays: every provider counted colludes with the forger.
 
 ## Tested
 
-`cargo test --locked` (`tests/monitor.rs`): 18 tests, all pass (Modal build box, 22 November 2026). They run the binary
+`cargo test --locked` (`tests/monitor.rs`): 19 tests, all pass (Modal build box, 22 November 2026). They run the binary
 against providers on loopback that serve what Sepolia's public providers served (publicnode's header at slot
 11,549,664 from the attestation fixture, Lodestar's genesis from `verify_checkpoint`'s recorded run, publicnode's root at
 11,608,192 from the lab's session of 18 November), on the instance states the R.7 test wrote with LEZ's state machine
@@ -103,6 +105,7 @@ stalled state's time plus 60 s) the header at 11,549,664 is 852 s old.
 | `a_header_younger_than_the_finality_delay_is_critical_whatever_the_providers_say` | the real header, 3 providers confirming: at 768 s old no alert (exit 0), at 756 s `instance-ahead` (`too-new`, exit 20); a forged header 360 s old with every provider colluding: `confirmed`, and `instance-ahead` all the same, the freeze tool ran |
 | `a_header_ahead_of_every_providers_finality_is_critical_after_the_grace` | a forged header at a slot where 3 honest providers, finalized 32 slots before it, have no block: at 829 s `instance-ahead` (`ahead-of-providers`, exit 20); at 828 s (within the grace) warnings only (exit 10); `--ahead-grace 0` at 769 s: critical; the real header with all 3 behind but holding it there: warnings only, no `instance-ahead` |
 | `the_daemon_judges_an_earlier_header_again_once_the_providers_finalize_its_slot` | a forged header vouched for by one colluder (finality claimed, forged root), 2 honest providers behind it with no block there: one `check` gives a warning (exit 10, the stated limit); `watch`: the forger moves on to a second forged header; the honest providers finalize the first slot: `instance-diverged` for the first (`current: false`), then for the second when they finalize its slot; the freeze tool ran once for each; both `diverged` in the state file |
+| `a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its_confirmed_ones` | a state file written before this version: its unconfirmed (forged) header is judged again and raised; its header confirmed long ago, where the providers now have no block, is not judged again |
 | `with_diverge_at_2_an_honest_provider_dropping_out_is_not_a_recovery` | `--diverge-at 2`, the forged header, 2 honest + 1 colluder: `instance-diverged`; one honest provider down (`contested`, `providers-disagree`): held, no `recovered`, not emitted again |
 | `the_stall_resists_one_lying_provider_with_three_providers_not_with_two` | the R.7 stall with 2 honest providers + 1 claiming the instance's own slot as finalized: `instance-stalled`; with 1 honest + that one: no stall (the lower of two counts), the stated limit |
 | `unreachable_and_wrong_chain_providers_are_not_counted` | a closed port and an HTTP 503: `provider-unavailable` ×2; mainnet's genesis: `provider-wrong-chain`; one honest left: `instance-unconfirmed` |
