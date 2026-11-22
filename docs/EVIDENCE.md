@@ -711,6 +711,17 @@ advisory step no longer reports RUSTSEC-2026-0592; the B1 runs of `captured_comm
 `interrupted_operations` (2 passed) into `lez/results/b1/`. On the laptop: `links` and its steps;
 `check-actions-pinned.py`: `ci.yml` pinned throughout; `scripts/test_scrub_records.py`, 0 failed.
 
+**Twenty-eighth pass (branch `integration9`, 22 Nov 2026).** The merges of `fix-updater-3` (no conflict) and
+`fix-bridge-cli` (one, `lez/results/b1/README.md`'s re-run command) and their folds (rows 219-223), on the build box:
+CI's `lez-harness` job script at 8 test threads, 3,979 s, 78 test binaries ok, 0 failed (the harness with
+`bridge_burn_tag`, the updater's 82 tests among them), the privacy gate 33 of 33 on the tables regenerated at bridge
+image `847a4336…7515`; `roundtrip` as merged (the build, the round trip, `cli/tests/e2e.sh` 1 passed with the burn
+journal's scenarios, the relayer's library 17, `gasdrop` 1, the journal's 7); `scripts/reproduce-image-ids.sh build`
+then `compare`: 20 of 20 guests equal `docs/image-ids.md`, the bridge `0x847a4336…` = `ferrata_bridge_b1` (the
+stale guest outputs of earlier builds removed from the box's target directories first); the coverage stream's two
+suites into `lez/results/b1/` on the rebuilt program. On the laptop: `links` and its steps, `idl/check.py`,
+`node admin/dump.mjs --selftest` (232), `check-decisions.py` (32 records, ADR 0032 among them).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
