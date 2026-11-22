@@ -34,7 +34,7 @@ use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use borsh::BorshDeserialize as _;
 use ferrata_bridge_core::{inbound::DestKind, outbound::burn_leaf, sha256, tree::Tree, Hash};
 use ferrata_cli::{
-    codes, eth,
+    burns, codes, eth,
     eth::IVault,
     flow, hx,
     lez::{self, Applied, BurnFrom, Context, Ledger, LezCall, Mention},
@@ -1779,6 +1779,8 @@ async fn tags(zone: &HarnessLedger, ctx: &Context) -> Result<(Vec<Hash>, Vec<Has
 ///   again while unseen takes its counter again (the same note: one of the two is applied, the other refused, one
 ///   denomination burnt); a dry run reserves nothing; a burn refused on the zone uses its counter;
 /// - a recovery from the seed alone, with no journal, finds every burn, each with its own `NOut`;
+/// - `ferrata recover` with a burn journal lists only the burns reserved there that the zone does not show (review
+///   N1), and a damaged journal makes `recover` and `release` fail at once with an error naming it (review L-C);
 /// - a burn under an Ethereum RPC of another chain than the configuration's is refused before anything is planned
 ///   (M-1);
 /// - a claim's dry run, and a claim held by its delay, never ask the zone for the deposit's nullifier account (M-2).
@@ -1957,6 +1959,90 @@ async fn counters_pairing_and_quiet_dry_runs(
         "one NOut per burn, no tag shared"
     );
     ensure!(next == c + 2, "the next counter after the refused one and the last burn");
+
+    // Review N1: `ferrata recover` with the burn journal lists only the burns reserved there that the zone does not
+    // show. An entry stays open until the next burn resolves it, so the journal still holds the last burn's counter
+    // (c + 1), which the zone shows applied: no "burn journal:" line.
+    let key = burns::key(&ferrata_bridge_core::outbound::burn_tag(&keys.view, &ctx.cid, 0));
+    let open = burns::Store::new(&journal).counters(&key)?.context("this seed's counters in the journal")?.open;
+    ensure!(open.iter().map(|e| e.i).collect::<Vec<_>>() == vec![c + 1], "the last burn's counter is open: {open:?}");
+    let journal_lines = |out: &flow::Out| -> Vec<String> {
+        out.lines.iter().filter(|l| l.starts_with("burn journal:")).cloned().collect()
+    };
+    let mut out = flow::Out::new(false);
+    let rec = flow::recover(eth_side, user, 8, Some((&mut *zone, ctx)), true, Some(journal.as_path()), &mut out).await?;
+    let listed = journal_lines(&out);
+    ensure!(listed.is_empty(), "a burn the zone shows, listed as not on the zone: {listed:?}");
+    ensure!(rec.burns == burn_rows.len() && rec.next_burn_counter == c + 2, "the same burns as from the seed alone");
+    // A journal of this seed made with the tool's own store (another device's, say) holding counters c, c + 1 and c + 2
+    // open: refused on the zone, applied, and not on the zone. Only c + 2 is listed.
+    let other_home = dir.join("burn-journal-other");
+    let _ = std::fs::remove_dir_all(&other_home);
+    std::fs::create_dir_all(&other_home)?;
+    let store = burns::Store::new(&other_home);
+    let tag_of = |i: u64| ferrata_bridge_core::outbound::burn_tag(&keys.view, &ctx.cid, i);
+    // The store's note hash (no zone note has it): only the tags are compared here.
+    let note_of = |i: u64| sha256(&i.to_be_bytes());
+    for i in [c, c + 1, c + 2] {
+        let seen = burns::Seen { next: i, ..burns::Seen::default() };
+        let ask = burns::Ask { from: "public /0".into(), token: eth::ETH, amount: i.into(), recipient: r4 };
+        let plan = store.peek(&key, &ctx.cid, &seen, &ask, 0, None, &tag_of, &note_of)?;
+        ensure!(plan.counter == burns::Counter::Fresh(i), "counter {i} reserved: {:?}", plan.counter);
+        store.reserve(&key, &ctx.cid, &seen, &ask, 0, None, &tag_of, &note_of, &plan.counter)?;
+    }
+    let mut out = flow::Out::new(false);
+    flow::recover(eth_side, user, 8, Some((&mut *zone, ctx)), true, Some(other_home.as_path()), &mut out).await?;
+    let listed = journal_lines(&out);
+    ensure!(
+        listed.len() == 1 && listed[0].starts_with(&format!("burn journal: counter {}, ", c + 2)),
+        "only the counter the zone does not show (c + 2 = {}): {listed:?}",
+        c + 2
+    );
+    println!(
+        "RECOVER (N1): the tool's journal (counter {} open, applied): no line; a journal with {c} refused, {} \
+         applied, {} not on the zone: {listed:?}",
+        c + 1,
+        c + 1,
+        c + 2
+    );
+
+    // Review L-C: that journal damaged (its next counter u64::MAX): `ferrata recover` and `ferrata release` fail at
+    // once with an error naming it, where they searched 2^64 counters.
+    let mut j: burns::Journal = serde_json::from_slice(&std::fs::read(store.path())?)?;
+    j.wallets.get_mut(&key).context("this seed's counters in the other journal")?.next = u64::MAX;
+    std::fs::write(store.path(), serde_json::to_vec(&j)?)?;
+    let started = std::time::Instant::now();
+    let rec = flow::recover(eth_side, user, 8, Some((&mut *zone, ctx)), true, Some(other_home.as_path()), &mut out)
+        .await
+        .err()
+        .context("recover with a damaged journal")?;
+    let ropts = flow::ReleaseOpts {
+        burn: None,
+        journal: Some(other_home.clone()),
+        via: flow::Via::Relayer(None),
+        seal: None,
+        job_out: None,
+        input_out: None,
+        program: None,
+        prove: false,
+        send: false,
+        yes: false,
+        confirmations: 1,
+    };
+    let rel = flow::release_burn(eth_side, user, &mut *zone, ctx, None, &ropts, &mut flow::Out::new(false))
+        .await
+        .err()
+        .context("release with a damaged journal")?;
+    let took = started.elapsed();
+    for e in [&rec, &rel] {
+        let e = format!("{e:#}");
+        ensure!(
+            e.contains(&format!("the burn journal {} is damaged", store.path().display()))
+                && e.contains(&format!("names {} as this seed's next burn counter", u64::MAX)),
+            "{e}"
+        );
+    }
+    println!("JOURNAL (L-C): a damaged journal: recover and release refused in {} ms: {rec:#}", took.as_millis());
 
     // M-1: an Ethereum RPC of another chain than the configuration's (a local anvil's 31337; a fork started with another
     // `--chain-id`) is refused before anything is planned or sent.

@@ -51,6 +51,11 @@ const LEGACY_FROM: &str = "(recorded by an earlier version of the tool)";
 /// The most counters the tool reserves past the zone's next one while none of them is on the zone (half the recovery
 /// scan's gap, `lez::BURN_GAP`).
 pub const MAX_AHEAD: u64 = crate::lez::BURN_GAP / 2;
+/// The most counters past the zone's next one that `ferrata release` and `ferrata recover` search for this journal's
+/// reservations (review L-C of 22 November 2026: a damaged `next` near `u64::MAX` had them compute tags for ever). The
+/// tool reserves at most [`MAX_AHEAD`] past the zone's next counter as it reads the zone when it reserves; the rest is
+/// room for counters a later history read no longer shows. A journal naming more is damaged or not this tool's.
+pub const MAX_SEARCH_AHEAD: u64 = 1 << 20;
 
 /// A reserved counter and the burn it was reserved for.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

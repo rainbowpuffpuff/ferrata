@@ -443,7 +443,8 @@ November 2026, H1 and H-1):
 The journal is not needed to recover anything the zone shows: `ferrata recover` finds every burn from the seed
 and the zone, a refused burn's tag counting as used. `ferrata release` and `ferrata recover` also read the
 journal, when there is one, to search 20 counters past the last one it reserved, and `ferrata recover` lists the
-burns reserved there that the zone does not show.
+burns reserved there that the zone does not show. A journal whose next counter lies more than 2^20 past the
+zone's is refused as damaged, at once: move it aside (nothing the zone shows needs it).
 Another client of the same seed (a second device, the Logos module) does not see it; the bridge program
 refuses a second note with a used tag (ADR 0032), so such a clash costs a refused transaction's fee, not a
 denomination. The interrupted-burn record of the tool before 22 November 2026, `ferrata-pending-burn.json`,

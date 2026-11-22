@@ -624,20 +624,45 @@ struct Reservation {
     choice: burns::Choice,
 }
 
-/// This seed's counters under `ctx` in the burn journal in `dir`, for a search of its burns ([`scan::burns_past`]). A
-/// journal that cannot be read is a note: the burns are then found from the zone alone (a recovery from the seed).
-fn journal_counters(dir: Option<&Path>, seed: &Seed, ctx: &Context, out: &mut Out) -> Option<burns::Counters> {
-    let dir = dir?;
-    let tag0 = ferrata_bridge_core::outbound::burn_tag(&seed.bridge_keys().view, &ctx.cid, 0);
-    match burns::Store::new(dir).counters(&burns::key(&tag0)) {
+/// This seed's counters under `ctx` in the burn journal in `dir` (the LEZ wallet's home), for a search of its burns
+/// ([`scan::burns_past`]) by `ferrata release` and `ferrata recover`. A journal that cannot be read is a note: the
+/// burns are then found from the zone alone (a recovery from the seed). A journal whose next counter lies more than
+/// [`burns::MAX_SEARCH_AHEAD`] past the zone's next one (`history`) is an error naming the file, not a search that far
+/// (review L-C of 22 November 2026: a damaged `next` near `u64::MAX` made both commands run for ever).
+fn journal_counters(
+    dir: Option<&Path>,
+    seed: &Seed,
+    ctx: &Context,
+    history: &lez::History,
+    out: &mut Out,
+) -> Result<Option<burns::Counters>> {
+    let Some(dir) = dir else { return Ok(None) };
+    let keys = seed.bridge_keys();
+    let store = burns::Store::new(dir);
+    let c = match store.counters(&burns::key(&ferrata_bridge_core::outbound::burn_tag(&keys.view, &ctx.cid, 0))) {
         Ok(c) => c,
         Err(e) => {
             out.line(format!(
                 "the burn journal could not be read ({e:#}): this seed's burns are found from the zone alone"
             ));
-            None
+            return Ok(None);
         }
+    };
+    if let Some(c) = &c {
+        let zone_next = history.next_burn_counter(&keys, ctx);
+        ensure!(
+            c.next <= zone_next.saturating_add(burns::MAX_SEARCH_AHEAD),
+            "the burn journal {} is damaged or not this tool's: it names {} as this seed's next burn counter, {} past \
+             the zone's next one ({zone_next}), and the tool reserves at most {} past the zone's next counter. Nothing \
+             was searched or sent. Move the file aside: `ferrata recover` and `ferrata release` find every burn the \
+             zone shows without it",
+            store.path().display(),
+            c.next,
+            c.next - zone_next,
+            burns::MAX_AHEAD
+        );
     }
+    Ok(c)
 }
 
 /// The holding of private account `id` under `ctx`, as the wallet sees it.
@@ -895,7 +920,7 @@ pub async fn release_burn<L: Ledger>(
 ) -> Result<Released> {
     let history = lez::history_of(ledger, ctx).await?;
     let released = eth::released_nullifiers(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
-    let reserved = journal_counters(o.journal.as_deref(), seed, ctx, out).map_or(0, |c| c.next);
+    let reserved = journal_counters(o.journal.as_deref(), seed, ctx, &history, out)?.map_or(0, |c| c.next);
     let (rows, _) = scan::burns_past(seed, ctx, &history, &released, reserved);
     let row = match o.burn {
         Some(i) => rows
@@ -1064,7 +1089,8 @@ pub struct Recovered {
 /// `ferrata scan` (`zone: None`: Ethereum only) and `ferrata recover` (`burns`: also the burns,
 /// whether released, and the holdings): everything from the seed and the endpoints. The burn journal in `journal` (the
 /// LEZ wallet's home), if there is one, is read only to search past the counters it reserved ([`scan::burns_past`]) and
-/// to list the burns reserved there that the zone does not show; without it nothing is missed that the zone shows.
+/// to list the burns reserved there that the zone does not show; without it nothing is missed that the zone shows. A
+/// journal naming a counter far past any the tool reserves is an error ([`journal_counters`]).
 pub async fn recover<L: Ledger>(
     eth: &Eth,
     seed: &Seed,
@@ -1146,9 +1172,13 @@ pub async fn recover<L: Ledger>(
         bail!("recover needs the zone too (--sequencer, --lez-wallet, --lez-password-file, --bridge-account)");
     };
     let released = eth::released_nullifiers(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
-    let reserved = journal_counters(journal, seed, ctx, out);
+    let reserved = journal_counters(journal, seed, ctx, &history, out)?;
     let (burn_rows, next_i) = scan::burns_past(seed, ctx, &history, &released, reserved.as_ref().map_or(0, |c| c.next));
-    for e in reserved.iter().flat_map(|c| &c.open) {
+    // Review N1: an entry stays open until the next burn resolves it, so the last burn's is open even once the zone
+    // shows it. Listed: the entries whose tag the zone does not show (applied, refused, or taken by another note).
+    let shown: std::collections::HashSet<Hash> =
+        history.burns.iter().chain(&history.refused_burns).map(|b| b.note.r).collect();
+    for e in reserved.iter().flat_map(|c| &c.open).filter(|e| !crate::h32(&e.r).is_ok_and(|r| shown.contains(&r))) {
         out.line(format!("burn journal: {} is reserved and not on the zone ({})", e.describe(), e.state()));
     }
     r.burns = burn_rows.len();
@@ -1243,8 +1273,9 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         let mut out = Out::new(false);
-        assert!(journal_counters(Some(&dir), &user, &ctx, &mut out).is_none(), "no journal yet");
-        assert!(journal_counters(None, &user, &ctx, &mut out).is_none());
+        let empty = lez::History::default();
+        assert!(journal_counters(Some(&dir), &user, &ctx, &empty, &mut out).unwrap().is_none(), "no journal yet");
+        assert!(journal_counters(None, &user, &ctx, &empty, &mut out).unwrap().is_none());
         // Counters 0..=30 reserved here for 31 burns, the zone's next counter moving on with them (each was on the zone
         // before the next was reserved), and none of 1..=29 is in the history read now (refused where the read does not
         // show refused transactions, or never sent); counter 30's burn is applied after counter 0's.
@@ -1266,7 +1297,7 @@ mod tests {
         let mut h = lez::History::default();
         h.burns.push(PublishedBurn { burn_index: 0, note: note(0) });
         h.burns.push(PublishedBurn { burn_index: 1, note: note(30) });
-        let c = journal_counters(Some(&dir), &user, &ctx, &mut out).expect("this seed's counters");
+        let c = journal_counters(Some(&dir), &user, &ctx, &h, &mut out).unwrap().expect("this seed's counters");
         assert_eq!(c.next, 31, "this seed's, not the other seed's 91");
         let found = |reserved: u64| {
             scan::burns_past(&user, &ctx, &h, &HashSet::new(), reserved).0.iter().map(|r| r.owned.i).collect::<Vec<_>>()
@@ -1275,8 +1306,67 @@ mod tests {
         assert_eq!(found(0), vec![0], "from the seed alone, past 29 counters the zone does not show: not found");
         // A journal that cannot be read: a note, and the seed-alone search.
         std::fs::write(store.path(), b"not json").unwrap();
-        assert!(journal_counters(Some(&dir), &user, &ctx, &mut out).is_none());
+        assert!(journal_counters(Some(&dir), &user, &ctx, &h, &mut out).unwrap().is_none());
         assert!(out.text().contains("the burn journal could not be read"), "{}", out.text());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Review L-C (22 November 2026): a journal whose next counter lies more than `burns::MAX_SEARCH_AHEAD` past the
+    /// zone's next one (a damaged file: `u64::MAX`) is an error naming the file, returned at once, where `ferrata
+    /// release` and `ferrata recover` searched that many counters; up to the bound it is read and searched as before.
+    #[test]
+    fn burns_search_refuses_a_damaged_journal_at_once() {
+        let user = Seed::from_phrase(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )
+        .unwrap();
+        let keys = user.bridge_keys();
+        let ctx = Context { program: lee::AccountId::new([7; 32]), cid: [9; 32], chain_id: 1, vault: [0x55; 20] };
+        let to = Address::repeat_byte(0xe1);
+        let target = ReleaseTarget {
+            chain_id: ferrata_bridge_core::chain_id_u256(1),
+            vault: ctx.vault,
+            recipient: to.into_array(),
+        };
+        let note = |i: u64| BurnNote::create(&keys, &ctx.cid, i, &target, [0; 20], u256_from_u128(1));
+        let tag = |i: u64| burn_tag(&keys.view, &ctx.cid, i);
+        let note_of = |i: u64| lez::note_id(&note(i));
+        let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join(format!("burns-damaged-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let store = burns::Store::new(&dir);
+        let key = burns::key(&tag(0));
+        let ask = burns::Ask { from: "private /0".into(), token: Address::ZERO, amount: 1, recipient: to };
+        let zone = burns::Seen::default();
+        let plan = store.peek(&key, &ctx.cid, &zone, &ask, 0, None, &tag, &note_of).unwrap();
+        store.reserve(&key, &ctx.cid, &zone, &ask, 0, None, &tag, &note_of, &plan.counter).unwrap();
+        // The zone shows counter 0's burn: its next counter is 1.
+        let mut h = lez::History::default();
+        h.burns.push(PublishedBurn { burn_index: 0, note: note(0) });
+        let set_next = |next: u64| {
+            let mut j: burns::Journal = serde_json::from_slice(&std::fs::read(store.path()).unwrap()).unwrap();
+            j.wallets.get_mut(&key).unwrap().next = next;
+            std::fs::write(store.path(), serde_json::to_vec(&j).unwrap()).unwrap();
+        };
+        let mut out = Out::new(false);
+        set_next(1 + burns::MAX_SEARCH_AHEAD);
+        let c = journal_counters(Some(&dir), &user, &ctx, &h, &mut out).unwrap().expect("this seed's counters");
+        assert_eq!(c.next, 1 + burns::MAX_SEARCH_AHEAD, "at the bound: read as before");
+        for next in [2 + burns::MAX_SEARCH_AHEAD, u64::MAX] {
+            set_next(next);
+            let started = std::time::Instant::now();
+            let e = format!("{:#}", journal_counters(Some(&dir), &user, &ctx, &h, &mut out).unwrap_err());
+            assert!(started.elapsed() < std::time::Duration::from_secs(5), "at once");
+            assert!(
+                e.contains(&format!("the burn journal {} is damaged or not this tool's", store.path().display()))
+                    && e.contains(&format!("names {next} as this seed's next burn counter"))
+                    && e.contains("the zone's next one (1)")
+                    && e.contains("Move the file aside"),
+                "{e}"
+            );
+        }
         let _ = std::fs::remove_dir_all(&dir);
     }
 
