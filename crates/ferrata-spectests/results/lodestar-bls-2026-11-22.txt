@@ -1,0 +1,24 @@
+# Lodestar's BLS library as `npm ci` installs it from crates/ferrata-spectests/lodestar/package-lock.json
+# Build box, 22 November 2026, node v22.11.0, in a copy of crates/ferrata-spectests/lodestar/ (node_modules removed):
+#   npm ci
+#   for each package below: its package.json's version if installed, else "absent"
+#   grep -rhoE "from ['\"]@chainsafe/blst?[^'\"]*['\"]|require\(['\"]@chainsafe/blst?[^'\"]*['\"]\)" node_modules/@lodestar/light-client/lib | sort | uniq -c
+#   grep -rlE "['\"]@chainsafe/blst['\"/]" node_modules/@lodestar/light-client/lib
+#   node --input-type=module -e "import bls from '@chainsafe/bls'; console.log('implementation', bls.implementation);"
+lockfile unchanged by npm ci
+node v22.11.0
+installed: node_modules/@chainsafe/bls 8.2.0
+absent: node_modules/@chainsafe/blst
+installed: node_modules/bls-eth-wasm 1.7.0
+installed: node_modules/@lodestar/light-client/node_modules/@chainsafe/blst 2.2.0
+installed: node_modules/@chainsafe/blst-linux-x64-gnu 2.2.0
+absent: node_modules/node-gyp
+absent: node_modules/tar
+absent: node_modules/glob
+== imports of @chainsafe/blst and @chainsafe/bls in @lodestar/light-client's lib:
+      3 from "@chainsafe/bls"
+      2 from "@chainsafe/bls/types"
+== files importing @chainsafe/blst (not bls):
+== @chainsafe/bls at run time:
+implementation herumi
+exports default

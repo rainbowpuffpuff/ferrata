@@ -104,7 +104,8 @@ The same 2,000 mutations, and the five updates as served, judged by Lodestar's l
 `@chainsafe/blst` 2.2.0 the light client lists as a dependency is installed but imported by none of its files; so no
 code of `blst`, ferrata-core's BLS library, takes part. Measured on the build box, 22 November 2026, after `npm ci` from
 the committed lockfile: `@chainsafe/bls` reports its implementation as `herumi`, `node_modules/@chainsafe/blst` is
-absent, and the light client's `lib` imports `@chainsafe/bls` and `@chainsafe/bls/types` only): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
+absent, and the light client's `lib` imports `@chainsafe/bls` and `@chainsafe/bls/types` only;
+[`results/lodestar-bls-2026-11-22.txt`](results/lodestar-bls-2026-11-22.txt)): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
 the corpus with ferrata's and Helios's verdicts and ferrata's heads, and [`lodestar/diff.mjs`](lodestar/diff.mjs) runs
 every record through Lodestar against a copy of a store bootstrapped from the same bytes and advanced by the updates
 before it (current slot: the signature slot plus one, as on the Rust side). Lodestar must refuse what ferrata's spec
