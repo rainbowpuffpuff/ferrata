@@ -150,8 +150,8 @@ two-hour cadence (§2).
   covers them). Caveats: the replay reveals updates 81 to 122 times faster than the lab recorded them (one about every
   two hours, its session schedule), about 40–60 times the design's hourly cadence, so jobs overlap more than in
   operation; G5's 90-s reveal step against 60 s confounds its comparison with G3 and G4;
-  the runs hold 11 to 42 jobs, under A3's planned 100 updates. Most of the waste at short windows is abandoned jobs: a
-  daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
+  the runs hold 11 to 42 jobs, under A3's planned 100 updates. Most of the waste at window 1 (G4: 111.1M abandoned against
+  50.0M refused) is abandoned jobs, at window 8 (G3) about half (17.4M against 18.0M): a daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
   not opening a job on a store another party's open job will change (join or wait) would remove it; it is not built.
 - **The acceptance run (measured, dev mode).** Two honest `ferrata-updater`s and one adversarial
   updater, on the lab's 58 recorded updates (14 mainnet, 44 Sepolia; not the 100 planned: that is all
