@@ -3,6 +3,7 @@
 
     python3 -I scripts/reproduce/compare_ids.py --out DIR [--readme e2e/crown/README.md] [--table docs/image-ids.md]
                                                 [--vault ADDR] [--rpc URL]
+    python3 -I scripts/reproduce/compare_ids.py --out DIR --guests NAME[,NAME...] [--table docs/image-ids.md]
 
 The crown run's six programs are compared with e2e/crown/README.md's table (and, with --vault, a crown vault's
 immutables); every guest of DIR/ids.tsv with docs/image-ids.md. DIR is the output of `scripts/reproduce-image-ids.sh build` (ids.txt: the LEZ programs' ids from r0vm; r0bf/ids.jsonl:
@@ -12,6 +13,16 @@ library only; the vault is read with eth_call over public JSON-RPC (read-only). 
 Since milestone B1 this tree's bridge program is not the crown run's: it is compared with docs/image-ids.md's
 `ferrata_bridge_b1` (TREE_ENTRY), and the crown run's bridge (`ferrata_bridge`, e2e/crown/README.md's table) is printed
 beside it; that one rebuilds from f13faee2, the tree before B1, where this script gives 6 of 6.
+
+Fails closed: with --vault, a vault that cannot be read (an RPC error, no endpoint answering, empty return data, an
+unknown mode) counts as a difference, and so does an immutable that differs (checkpointImageId is the rule's program:
+checkpoint in mode A, checkpoint_b in mode B; releaseImageId is release's). A row of DIR/ids.tsv counts only if
+r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table (the guests
+`scripts/reproduce-image-ids.sh build` builds) must be in DIR/ids.tsv.
+
+--guests (a job that builds some guests, such as CI's; review-fix-supply L-8): only the named guests are compared,
+each of which must be in DIR/ids.tsv (scripts/reproduce/guest_ids.py, with r0vm on PATH) with r0vm's "= id" and the id
+docs/image-ids.md gives; the crown run's table, DIR/ids.txt, DIR/r0bf/ and the other guests are not read.
 """
 import argparse
 import importlib.util
@@ -36,6 +47,46 @@ TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_b1"}
 GUEST_OF = {"attestation": "ferrata_lez", "bridge": "ferrata_bridge"}  # the crown run's roles that are LEZ guests
 
 
+def read_vault(rpc, vault: str):
+    """The vault's immutables: ({key: id}, the keys the vault pins, mode). ValueError when the answer is not a vault's."""
+    ck, rl, md = (vs.words(rpc.call(vault, sig)) for sig in ("checkpointImageId()", "releaseImageId()", "mode()"))
+    if not (ck and rl and md):
+        raise ValueError("empty return data (no contract at this address, or not a FerrataVault)")
+    mode = int(md[0], 16)
+    if mode not in (0, 1):
+        raise ValueError(f"mode() is {mode}, neither A (0) nor B (1)")
+    key = "checkpoint" if mode == 0 else "checkpoint_b"
+    return {key: ck[0], "release": rl[0]}, {key, "release"}, mode
+
+
+def guests_only(out, table, names) -> int:
+    """--guests: the named guests of OUT/ids.tsv against docs/image-ids.md, nothing else."""
+    tsv = os.path.join(out, "ids.tsv")
+    if not os.path.isfile(tsv) or not os.path.isfile(table):
+        print(f"DIFFER guests not compared: {tsv if not os.path.isfile(tsv) else table} missing")
+        return 1
+    with open(table, encoding="utf-8") as f:
+        doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", f.read()))
+    with open(tsv, encoding="utf-8") as f:
+        rows = {r[1]: r for r in ([*l.rstrip("\n").split("\t"), *[""] * 7][:7] for l in list(f)[1:]) if len(r) > 1}
+    bad = 0
+    for n in names:
+        r = rows.get(n)
+        if r is None:
+            bad += 1
+            print(f"MISSING {n:<32} not in {tsv}")
+            continue
+        e = TREE_ENTRY.get(n, n)  # since B1 the bridge guest is compared with its own entry
+        e = e if e in doc else n
+        ok = doc.get(e) == r[2] and r[6] == "= id"
+        bad += not ok
+        r0 = "" if r[6] == "= id" else f"  r0vm {r[6] or '?'} (must be '= id')"
+        print(f"{'MATCH' if ok else 'DIFFER':<7}{n:<32} rebuilt {r[2]}  docs/image-ids.md "
+              + (f"`{e}` " if e != n else "") + f"{'= rebuilt' if doc.get(e) == r[2] else doc.get(e)}{r0}")
+    print(f"{len(names) - bad} of {len(names)} named guests equal docs/image-ids.md")
+    return 1 if bad else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -43,7 +94,15 @@ def main() -> int:
     ap.add_argument("--table", default=os.path.join(HERE, "..", "..", "docs", "image-ids.md"))
     ap.add_argument("--vault", default="")
     ap.add_argument("--rpc", default=os.environ.get("SEPOLIA_RPC_URL") or vs.DEFAULT_RPC)
+    ap.add_argument("--guests", default="", help="compare only these guests (comma-separated) of DIR/ids.tsv")
     a = ap.parse_args()
+    if a.guests:
+        if a.vault:
+            ap.error("--guests compares guests with docs/image-ids.md only; --vault needs the full comparison")
+        names = [n for n in a.guests.split(",") if n]
+        if not names:
+            ap.error("--guests: no guest named")
+        return guests_only(a.out, a.table, names)
     rebuilt, sha = {}, {}
     with open(os.path.join(a.out, "ids.txt"), encoding="utf-8") as f:
         for line in f:
@@ -66,51 +125,69 @@ def main() -> int:
                 words = [int(x.strip()) for x in m.group(2).split(",") if x.strip()]
                 methods[METHODS[m.group(1)]] = "0x" + b"".join(w.to_bytes(4, "little") for w in words).hex()
     table = vs.readme_ids(a.readme) if os.path.isfile(a.readme) else vs.image_ids_md(a.table)
-    onchain, mode = {}, None
+    onchain, pinned, bad, crown_same = {}, set(), 0, 0
     if not a.vault:
         print("vault: not checked (no --vault given)")
     else:
         try:
-            rpc = vs.Rpc(a.rpc)
-            onchain["checkpoint_b"] = vs.words(rpc.call(a.vault, "checkpointImageId()"))[0]
-            onchain["release"] = vs.words(rpc.call(a.vault, "releaseImageId()"))[0]
-            mode = int(vs.words(rpc.call(a.vault, "mode()"))[0], 16)
-        except vs.RpcError as e:
-            print(f"vault not readable over {a.rpc}: {e}")
-            mode = None
-        print(f"vault {a.vault} (mode {'B' if mode == 1 else mode}): checkpointImageId is checkpoint_b's id, releaseImageId release's")
-    doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", open(a.table, encoding="utf-8").read())) \
+            onchain, pinned, mode = read_vault(vs.Rpc(a.rpc), a.vault)
+            print(f"vault {a.vault} (mode {'AB'[mode]}): checkpointImageId is {'checkpoint' if mode == 0 else 'checkpoint_b'}'s id, "
+                  "releaseImageId release's")
+        except (vs.RpcError, vs.RpcUnavailable, ValueError) as e:
+            # The vault was asked for and not read: that is a failed comparison, never a pass.
+            print(f"DIFFER vault {a.vault} not read over {a.rpc}: {e}")
+            pinned, bad = {"checkpoint", "checkpoint_b", "release"}, 1
+    doc_all = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", open(a.table, encoding="utf-8").read())) \
         if os.path.isfile(a.table) else {}
-    bad = crown = 0
     changed = []
     for k in ORDER:
         r, t, v, mth = rebuilt.get(k), table.get(k), onchain.get(k), methods.get(k)
         entry = TREE_ENTRY.get(GUEST_OF.get(k, ""))
-        want = doc.get(entry) if entry else t  # what this tree must rebuild: the crown run's id, or its own entry's
-        ok = r is not None and r == want and (v is None or v == r) and (mth is None or mth == r)
+        if entry not in doc_all:  # a table without the entry (a tree before B1): the crown run's id is this tree's
+            entry = None
+        want = doc_all[entry] if entry else t  # what this tree must rebuild: the crown run's id, or its own entry's
+        vault_ok = k not in pinned or (v is not None and v == r)
+        ok = r is not None and r == want and vault_ok and (mth is None or mth == r)
         bad += not ok
-        crown += r is not None and r == t
+        crown_same += r is not None and r == t and vault_ok and (mth is None or mth == r)
         print(f"{'MATCH' if ok else 'DIFFER':<7}{k:<13} rebuilt {r}  README {'= rebuilt' if t == r else t}  "
-              f"vault {'-' if v is None else ('= rebuilt' if v == r else v)}"
+              f"vault {('NOT READ' if k in pinned else '-') if v is None else ('= rebuilt' if v == r else v)}"
               + (f"  risc0-build {'= rebuilt' if mth == r else mth}" if mth else "") + f"  (sha256 {(sha.get(k) or '?')[:16]}…)")
         if entry:
             changed.append((k, ok))
             print(f"       {k}: this tree builds docs/image-ids.md's `{entry}` ({'= rebuilt' if want == r else want}); "
                   f"the crown run's ({t}) rebuilds from f13faee2, the tree before B1")
-    print(f"{crown} of {len(ORDER)} ids of the crown run's programs equal the recorded ones"
-          + "".join(f"; {k}: this tree's own (docs/image-ids.md), {'equal' if ok else 'DIFFERS'}" for k, ok in changed))
+    print(f"{crown_same} of {len(ORDER)} ids of the crown run's programs equal the recorded ones"
+          + "".join(f"; {k}: this tree's own (docs/image-ids.md), {'equal' if ok else 'DIFFERS'}" for k, ok in changed)
+          + ("" if not a.vault else " and the vault's immutables" if onchain else "; the vault was NOT read"))
     tsv = os.path.join(a.out, "ids.tsv")
-    if os.path.isfile(tsv) and doc:
+    if not (os.path.isfile(tsv) and os.path.isfile(a.table)):
+        bad += 1
+        print(f"DIFFER guests not compared: {tsv if not os.path.isfile(tsv) else a.table} missing")
+    else:
+        text = open(a.table, encoding="utf-8").read()
+        doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", text))
+        first = re.split(r"\n## ", text, maxsplit=1)[0]
+        expected = [n for n, _ in re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", first)]
         rows = [l.rstrip("\n").split("\t") for l in open(tsv, encoding="utf-8")][1:]
         same = 0
         for r in rows:
-            name = TREE_ENTRY.get(r[1], r[1])
-            ok = doc.get(name) == r[2]
+            r += [""] * (7 - len(r))
+            name = TREE_ENTRY.get(r[1], r[1])  # since B1 the bridge guest is compared with its own entry
+            name = name if name in doc else r[1]
+            ok = doc.get(name) == r[2] and r[6] == "= id"
             same += ok
             bad += not ok
+            r0 = "" if r[6] == "= id" else f"  r0vm {r[6] or '?'} (must be '= id')"
             print(f"{'MATCH' if ok else 'DIFFER':<7}{r[1]:<32} rebuilt {r[2]}  docs/image-ids.md "
-                  + (f"`{name}` " if name != r[1] else "") + f"{'= rebuilt' if ok else doc.get(name)}")
-        print(f"{same} of {len(rows)} guests equal docs/image-ids.md")
+                  + (f"`{name}` " if name != r[1] else "") + f"{'= rebuilt' if doc.get(name) == r[2] else doc.get(name)}{r0}")
+        built = {r[1] for r in rows}
+        for n in expected:
+            if n not in built:
+                bad += 1
+                print(f"MISSING {n:<32} in docs/image-ids.md's first table, not in {tsv}")
+        print(f"{same} of {len(rows)} guests equal docs/image-ids.md; "
+              f"{sum(n not in built for n in expected)} of its first table's {len(expected)} missing")
     return 1 if bad else 0
 
 

@@ -5,7 +5,7 @@
 #   upstream/lez-v0.4.0-rc2               logos-execution-zone at tag v0.4.0-rc2 (commit e3edf47;
 #                                         lez/scripts/lez-select.sh points lez/ at it)
 #   upstream/lez-v0.4.0-rc3               logos-execution-zone at tag v0.4.0-rc3 (commit bafd07b; the same)
-#   upstream/logos-blockchain-d480efc6    logos-blockchain at d480efc6, the revision LEZ pins
+#   upstream/logos-blockchain-d480efc6    logos-blockchain at d480efc6bbb48fb493c10fe9afefd84c18a04f02, the revision LEZ pins
 # Read-only clones; nothing is sent anywhere.
 set -euo pipefail
 here="$(cd "$(dirname "$0")/.." && pwd)"
@@ -22,13 +22,15 @@ for spec in v0.4.0-rc1:1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21 v0.4.0-rc2:e3edf
   test "$(git -C "$lez" rev-parse HEAD)" = "$commit" || { echo "unexpected LEZ commit for $tag" >&2; exit 1; }
 done
 
+# The full commit LEZ pins (scripts/reproduce/Dockerfile uses the same): an 8-hex prefix is not a pin.
+lb_commit=d480efc6bbb48fb493c10fe9afefd84c18a04f02
 lb="$up/logos-blockchain-d480efc6"
 if [ ! -d "$lb/.git" ]; then
   git init -q "$lb"
   git -C "$lb" remote add origin https://github.com/logos-blockchain/logos-blockchain.git
-  git -C "$lb" fetch -q --depth 1 origin d480efc6 2>/dev/null \
-    || git -C "$lb" fetch -q origin   # servers that refuse a short id: fetch all, then check out
-  git -C "$lb" checkout -q d480efc6 2>/dev/null || git -C "$lb" checkout -q FETCH_HEAD
+  git -C "$lb" fetch -q --depth 1 origin "$lb_commit" 2>/dev/null \
+    || git -C "$lb" fetch -q origin   # servers that refuse a commit id: fetch all, then check out
+  git -C "$lb" checkout -q "$lb_commit"
 fi
-case "$(git -C "$lb" rev-parse HEAD)" in d480efc6*) ;; *) echo "unexpected Logos Blockchain commit" >&2; exit 1;; esac
+test "$(git -C "$lb" rev-parse HEAD)" = "$lb_commit" || { echo "unexpected Logos Blockchain commit (want $lb_commit)" >&2; exit 1; }
 echo "upstream sources ready in $up"

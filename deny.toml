@@ -1,5 +1,6 @@
-# cargo-deny policy for Ferrata's Rust workspaces (scripts/security-tools.sh deny; triage in
-# docs/reviews/security/tools-2026-11-11.md). Checks: advisories, licenses, sources.
+# cargo-deny policy for every Rust workspace of Ferrata: `python3 -I scripts/deny_all.py` runs it over all of them
+# (bans, licenses and sources must pass; advisories reported, or checked against scripts/deny-advisories-baseline.txt);
+# scripts/security-tools.sh deny runs it on the host workspaces. Triage: docs/reviews/security/tools-2026-11-11.md.
 
 [graph]
 all-features = true
@@ -7,8 +8,9 @@ all-features = true
 [advisories]
 version = 2
 # Every RustSec advisory (vulnerability, unmaintained, unsound, notice) is reported; nothing is ignored
-# here: the triage note lists each one and why it is or is not reachable.
-yanked = "warn"
+# here: the triage note lists each one and why it is or is not reachable. A yanked version is an error too (RISC Zero
+# yanked every risc0-zkvm 3.0.x on 11 November 2026 for GHSA-g6qg-9j8p-7j87; docs/design/risc0-3.1-migration.md).
+yanked = "deny"
 ignore = []
 
 [licenses]
@@ -39,7 +41,45 @@ allow = [
 exceptions = [
     { allow = ["MPL-2.0"], crate = "attohttpc" },
     { allow = ["MPL-2.0"], crate = "option-ext" },
+    # University of Illinois/NCSA (BSD-like): libfuzzer-sys, in the fuzz workspaces only.
+    { allow = ["NCSA"], crate = "libfuzzer-sys" },
+    # The native code these crates link statically (the clarifications below): the CLI, LEZ's wallet and sequencer
+    # carry it; every release ships its notices, licence texts and source offer (releases/third-party/).
+    { allow = ["LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "rust-rapidsnark" },
+    { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-pol-sys" },
+    { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-poc-sys" },
+    { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-poq-sys" },
+    { allow = ["GPL-3.0-only", "LGPL-3.0-only", "LGPL-3.0-or-later"], crate = "logos-blockchain-circuits-signature-sys" },
+    # RISC Zero's prover (malachite, downloader: LGPL-3.0) is allowed in gpu-prover/ only, by gpu-prover/deny.toml.
 ]
+
+# Native code that the crates' declared licences (MIT OR Apache-2.0) do not cover (review-code-ops M2), so that
+# cargo-deny sees it (`cargo deny list` in cli/ shows these licences against these five crates; without the exceptions
+# above the licence check rejects them). rust-rapidsnark links the prebuilt rapidsnark and ffiasm (LGPL-3.0) and GMP
+# 6.3.0; the circuits' sys crates link circom-generated witness generators with circom's C++ runtime (GPL-3.0), circomlib
+# templates (LGPL-3.0) and GMP 6.2.1. The archives and their components: scripts/native-deps.json. license-files is
+# required and left empty: the expressions describe the native archives, not files of the crates. Each is scoped to the
+# version every lockfile holds (scripts/test_deny_all.py checks it), so a new version is looked at before it is clarified.
+[[licenses.clarify]]
+crate = "rust-rapidsnark@0.1.3"
+expression = "(MIT OR Apache-2.0) AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
+license-files = []
+[[licenses.clarify]]
+crate = "logos-blockchain-circuits-pol-sys@0.5.7"
+expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
+license-files = []
+[[licenses.clarify]]
+crate = "logos-blockchain-circuits-poc-sys@0.5.7"
+expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
+license-files = []
+[[licenses.clarify]]
+crate = "logos-blockchain-circuits-poq-sys@0.5.7"
+expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
+license-files = []
+[[licenses.clarify]]
+crate = "logos-blockchain-circuits-signature-sys@0.5.7"
+expression = "(MIT OR Apache-2.0) AND GPL-3.0-only AND LGPL-3.0-only AND (LGPL-3.0-or-later OR GPL-2.0-or-later)"
+license-files = []
 
 [licenses.private]
 ignore = true
@@ -51,6 +91,8 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 # Git dependencies, each pinned to a commit in the lockfiles: Logos (the platform Ferrata targets: LEZ, the
 # Logos Blockchain node, its circuits, Overwatch, sponges, rapidsnark), what they pull in (jellyfish,
 # spongefish, keycard-rs), and Helios (the root workspace's differential test oracle, a dev-dependency).
+# The lockfiles pin the crates' sources only: the prebuilt archives two of those crates' build scripts download
+# (rapidsnark, the circuits) are pinned by sha256 in scripts/native-deps.json and fetched by scripts/fetch_native.py.
 allow-git = [
     "https://github.com/EspressoSystems/jellyfish",
     "https://github.com/EspressoSystems/jellyfish.git",
@@ -60,4 +102,6 @@ allow-git = [
 ]
 
 [sources.allow-org]
-github = ["logos-blockchain", "logos-co"]
+# risc0: RISC Zero's forks that the guests patch in for the zkVM's accelerated circuits (RustCrypto hashes and
+# crypto-bigint, blst, tiny-keccak, curve25519-dalek), each pinned to a commit in the guest workspaces' lockfiles.
+github = ["logos-blockchain", "logos-co", "risc0"]

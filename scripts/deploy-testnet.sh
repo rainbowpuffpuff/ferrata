@@ -117,6 +117,11 @@ if [ "$SKIP_EVM" = 0 ]; then
   base=${PARAMS:-$REL/vault/script/params/sepolia.json}
   python3 -I "$ROOT/scripts/release_manifest.py" params "$REL" "$base" > "$OUTD/params.json"
   say "  parameters: $OUTD/params.json (image ids from the release, the rest from $base)"
+  # The verifier and the emergency stop come from vault/lib, not from the release: its libraries must be the pinned
+  # trees (vault/lib.lock), not whatever their tags point at today.
+  if ! python3 -I "$ROOT/scripts/vault_libs.py" check 2>&1 | tee -a "$LOG"; then
+    die "vault/lib is not the pinned libraries (vault/lib.lock; scripts/vault_libs.py install)"
+  fi
   # The vault deployed must be the release's: forge's build of this tree, byte for byte.
   ( cd "$ROOT/vault" && forge build > "$OUTD/forge-build.log" 2>&1 ) || die "forge build failed ($OUTD/forge-build.log)"
   if ! python3 -I - "$REL" "$ROOT/vault/out" <<'PY' | tee -a "$LOG"; then die "this tree's vault is not the release's: check out the release's commit"; fi

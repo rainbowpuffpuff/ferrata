@@ -6,6 +6,8 @@
 # Each recipe is a thin wrapper of a script under scripts/, which can also be run without `just`.
 
 set shell := ["bash", "-euo", "pipefail", "-c"]
+# Recipe arguments reach the scripts as positional parameters ("$@"), each one word, never re-split or run by the shell.
+set positional-arguments
 
 box := env_var_or_default("FERRATA_BOX", "")
 # With a remote box: a command prefix that copies a path from the box to the same path here, followed by `-- true`
@@ -13,9 +15,9 @@ box := env_var_or_default("FERRATA_BOX", "")
 fetch := env_var_or_default("FERRATA_BOX_FETCH", "")
 stamp := `date -u +%Y%m%dT%H%MZ`
 commit := `git rev-parse --short=12 HEAD 2>/dev/null || echo unknown`
-# The full commit, passed to a build machine whose copy of the tree has no .git (FERRATA_COMMIT); "+dirty" when
-# tracked files differ from it.
-commit_full := `if [ -n "${FERRATA_COMMIT:-}" ]; then echo "$FERRATA_COMMIT"; elif c=$(git rev-parse --verify -q HEAD); then git diff --quiet HEAD -- . && echo $c || echo $c+dirty; else echo unknown; fi`
+# The full commit, passed to a build machine whose copy of the tree has no .git (FERRATA_COMMIT); "+dirty" when a
+# tracked file differs from it or an untracked file exists (scripts/release.sh commit).
+commit_full := `scripts/release.sh commit`
 
 # List the recipes.
 default:
@@ -36,23 +38,24 @@ bench-user out=("bench/report/" + stamp + "-" + commit) stage=(justfile_director
 
 # Every M0 check of the proposal with its measured value and GO / NO-GO (--online re-reads upstream tags).
 m0 *args:
-    python3 -I scripts/m0.py {{args}}
+    python3 -I scripts/m0.py "$@"
 
 # A versioned release (programs and image ids, vault bytecode, CLI, MANIFEST.json, SHA256SUMS), recorded in releases/.
 release version out=(justfile_directory() + "/../tmp/releases"):
     {{box}} env FERRATA_COMMIT={{commit_full}} scripts/release.sh build {{out}}
     {{box}} env FERRATA_COMMIT={{commit_full}} scripts/release.sh package {{out}} {{version}}
-    {{box}} scripts/release.sh verify {{out}}/ferrata-{{version}}
+    {{box}} scripts/release.sh verify {{out}}/ferrata-{{version}} --strict
     {{box}} scripts/release.sh record {{out}}/ferrata-{{version}}
     if [ -n "{{fetch}}" ]; then {{fetch}} {{out}}/ferrata-{{version}}-x86_64-linux.tar.gz -- true; fi
+    if [ -n "{{fetch}}" ]; then {{fetch}} {{out}}/ferrata-{{version}}-third-party-sources.tar -- true; fi
 
 # Check a release directory (checksums, manifest, image ids where r0vm is installed).
 release-verify dir:
-    scripts/release.sh verify {{dir}}
+    scripts/release.sh verify "$1"
 
 # Deploy a release on a LEZ testnet and an EVM chain; plan only unless --send (scripts/deploy-testnet.sh --help).
 deploy-testnet *args:
-    scripts/deploy-testnet.sh {{args}}
+    scripts/deploy-testnet.sh "$@"
 
 # The four Halmos properties that did not finish in 900 s, with a longer budget (HALMOS_LONG_TIMEOUT, default 4800 s).
 halmos-long:

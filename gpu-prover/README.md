@@ -19,8 +19,10 @@ No personal data is in any of them.
 The guests are **not rebuilt** on Modal. The ELFs of the local build embed absolute build paths
 (`<home>/.cargo/registry/src/…`, `<home>/.cargo/git/checkouts/…`,
 `<project>/…`; `strings` finds 16 in `checkpoint.bin` and 12 in
-`segment.bin`). risc0-build 3.0.5 built them without Docker, so a rebuild anywhere else produces
-different bytes and different image ids (ferrata-checkpoint README, UNVERIFIED 7). Instead,
+`segment.bin`). risc0-build 3.0.5 built them without Docker, so a rebuild anywhere else produced
+different bytes and different image ids (ferrata-checkpoint README, UNVERIFIED 7). (That was true of the binaries
+staged here, built before 12 November 2026: since then guest builds go through `scripts/guest-rustc`, and their ids
+no longer depend on the build path, [docs/image-ids.md](../docs/image-ids.md).) Instead,
 `scripts/stage-inputs.sh` copies the program binaries the local host embeds
 (`target/riscv-guest/…/checkpoint.bin`, `segment.bin`) and the fixtures into `inputs/`. It records
 their sha256 and the image ids the local host reports (`host ids`) in `inputs/MANIFEST.json`. Every
