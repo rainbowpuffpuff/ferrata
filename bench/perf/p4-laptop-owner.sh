@@ -8,11 +8,12 @@
 #   bash bench/perf/p4-laptop-owner.sh STAGE_DIR OUT_DIR
 #   python3 -I bench/perf/summarize_p4.py --owner OUT_DIR     # its rows for lez/results/perf-p4-laptop.md
 #
-# STAGE_DIR holds attest-pad/, bridge-pad/ and r0vm/r0vm as staged; OUT_DIR is a new directory outside it. Run it on
-# mains power with nothing else busy. The two proving runs keep every hardware thread busy (at nice 10, so the desktop
-# stays usable) and hold about 9.3 GiB each: about 21 minutes for the attestation and 34 for the claim and the burn
-# at 8 threads (measured in a container of that shape), less with 16. x86-64 Linux only (the staged binaries); a Mac
-# runs lez/results/p4-macos's procedure instead. No network, no keys, no sudo; it writes only inside OUT_DIR.
+# STAGE_DIR holds attest-pad/, bridge-pad/ and r0vm/ (r0vm and its SHA256SUMS) as staged; OUT_DIR is a new directory
+# outside it. Run it on mains power with nothing else busy. The two proving runs keep every hardware thread busy (at
+# nice 10, so the desktop stays usable) and hold about 9.3 GiB each: about 21 minutes for the attestation and 34 for
+# the claim and the burn at 8 threads (measured in a container of that shape), less with 16. x86-64 Linux only (the
+# staged binaries); a Mac runs lez/results/p4-macos's procedure instead. No network, no keys, no sudo; it writes only
+# inside OUT_DIR.
 set -euo pipefail
 usage="usage: p4-laptop-owner.sh STAGE_DIR OUT_DIR"
 stage="$(realpath "${1:?$usage}")"
@@ -26,9 +27,9 @@ for c in python3 awk ps lscpu free sha256sum nice; do command -v "$c" > /dev/nul
 case "$out/" in "$stage/"*) die "OUT_DIR must lie outside STAGE_DIR";; esac
 case "$stage/" in "$out/attest-pad/"*|"$out/bridge-pad/"*) die "OUT_DIR would hold STAGE_DIR";; esac
 r0vm="$stage/r0vm/r0vm"
-for f in "$r0vm" "$stage/attest-pad/prove_attest" "$stage/attest-pad/MANIFEST.json" \
+for f in "$r0vm" "$stage/r0vm/SHA256SUMS" "$stage/attest-pad/prove_attest" "$stage/attest-pad/MANIFEST.json" \
          "$stage/bridge-pad/prove_bridge" "$stage/bridge-pad/MANIFEST.json"; do
-  [ -f "$f" ] || die "missing $f (the bundle holds attest-pad/, bridge-pad/ and r0vm/r0vm)"
+  [ -f "$f" ] || die "missing $f (the bundle holds attest-pad/, bridge-pad/ and r0vm/ with r0vm and SHA256SUMS)"
 done
 # Every staged file against the sha256 its manifest recorded (the bundle as the build box staged it).
 python3 -I - "$stage" <<'EOF' || die "the bundle does not match its manifests"
@@ -40,12 +41,10 @@ for job in ("attest-pad", "bridge-pad"):
         got = hashlib.sha256((stage / job / name).read_bytes()).hexdigest()
         if got != want["sha256"]:
             print(f"{job}/{name}: sha256 {got}, manifest {want['sha256']}", file=sys.stderr); bad += 1
-sums = stage / "r0vm" / "SHA256SUMS"
-if sums.exists():
-    want = sums.read_text().split()[0]
-    got = hashlib.sha256((stage / "r0vm" / "r0vm").read_bytes()).hexdigest()
-    if got != want:
-        print(f"r0vm/r0vm: sha256 {got}, SHA256SUMS {want}", file=sys.stderr); bad += 1
+want = (stage / "r0vm" / "SHA256SUMS").read_text().split()[0]
+got = hashlib.sha256((stage / "r0vm" / "r0vm").read_bytes()).hexdigest()
+if got != want:
+    print(f"r0vm/r0vm: sha256 {got}, SHA256SUMS {want}", file=sys.stderr); bad += 1
 sys.exit(1 if bad else 0)
 EOF
 mkdir -p "$out"
