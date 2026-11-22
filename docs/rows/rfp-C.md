@@ -73,8 +73,8 @@ containers held to a mid-range laptop's shape: **1,254.8 s** (1,250.0 and 1,259.
 (`lez/results/perf-p4-laptop.md`, records `bench/perf/results/p4-laptop/`, commit `ef395ac3`; the 8-CPU "medians" of
 the claim and the burn are means of one Intel and one AMD run). **What is short:** the clause "on a mid-range laptop".
 It needs the owner: an x86-64 Linux laptop with 16 GB or more and GNU time (`/usr/bin/time`), on mains power, idle,
-about 50 minutes at 8 threads: from the worktree, `bash bench/perf/p4-laptop-owner.sh ../tmp/perf-p4/stage OUT` (the
-bundle, 131 MB: prove_attest, prove_bridge, the fixture, r0vm 3.0.5 and its SHA256SUMS; OUT a new directory outside
+about 50–55 minutes at 8 threads (rehearsal 50 min): from the worktree, `bash bench/perf/p4-laptop-owner.sh ../tmp/perf-p4/stage OUT` (the
+bundle, 136 MB: prove_attest, prove_bridge, the fixture, r0vm 3.0.5 and its SHA256SUMS; OUT a new directory outside
 it), then `python3 -I bench/perf/summarize_p4.py --owner OUT`.
 
 Proposed EVIDENCE row: | new | The private attestation, claim and burn of this tree's programs, padded as LEZ's wallet

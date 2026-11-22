@@ -10,11 +10,12 @@
 #
 # STAGE_DIR holds attest-pad/, bridge-pad/ and r0vm/ (r0vm and its SHA256SUMS) as staged; OUT_DIR is a new directory
 # outside it. Run it on mains power with nothing else busy. The two proving runs keep every hardware thread busy (at
-# nice 10, so the desktop stays usable) and hold about 9.3 GiB each: about 21 minutes for the attestation and 34 for
-# the claim and the burn at 8 threads (measured in a container of that shape), less with 16. x86-64 Linux only (the
-# staged binaries); a Mac runs lez/results/p4-macos's procedure instead. No network beyond a loopback socket to its
-# own r0vm, no keys, no sudo; it writes only inside OUT_DIR (and sets +x on the staged binaries). It exits 1 if a
-# proof or a settlement fails, 2 if it refuses to start.
+# nice 10, so the desktop stays usable) and hold about 9.3 GiB each: about 50-55 minutes in all at 8 threads (the
+# attestation 19-21 minutes of proving, the claim and the burn 31-34; measured in containers of that shape, the
+# rehearsal 50 minutes in all), less with 16. x86-64 Linux only (the staged binaries); a Mac runs
+# lez/results/p4-macos's procedure instead. No network beyond a loopback socket to its own r0vm, no keys, no sudo; it
+# writes only inside OUT_DIR (and sets +x on the staged binaries). It exits 1 if a proof or a settlement fails, 2 if
+# it refuses to start.
 set -euo pipefail
 usage="usage: p4-laptop-owner.sh STAGE_DIR OUT_DIR"
 stage="$(realpath "${1:?$usage}")"

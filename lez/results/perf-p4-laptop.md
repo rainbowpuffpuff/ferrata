@@ -58,10 +58,11 @@ Read with the tables:
 
 ## What a laptop run needs from the owner
 
-An x86-64 Linux laptop with 16 GB or more, on mains power, nothing else busy, about 45 minutes:
+An x86-64 Linux laptop with 16 GB or more, on mains power, nothing else busy, about 50–55 minutes at 8 threads
+(the rehearsal below: 50 minutes):
 
 1. The staged folder that `bench/perf/p4-laptop-build.sh` writes on the build box (`attest-pad/`, `bridge-pad/`,
-   `r0vm/r0vm`; 131 MB), brought to the laptop with `mrun --get`.
+   `r0vm/r0vm` and its `SHA256SUMS`; 136 MB, 136,438,291 B), brought to the laptop with `mrun --get`.
 2. `bash bench/perf/p4-laptop-owner.sh STAGE_DIR OUT_DIR`: the same three proofs and settlements, GNU time's peak
    and the machine's used memory every second, `lscpu` and the power state in `OUT_DIR/machine.txt`.
 3. `python3 -I bench/perf/summarize_p4.py --owner OUT_DIR` prints the rows for the table above.
