@@ -1,7 +1,9 @@
 """Tests of scripts/vault_libs.py (review-code-ops L6): `python3 -I scripts/test_vault_libs.py`.
 
 A library tree as pinned passes; one changed byte, an added file or a missing library fails; .git is left out of the
-hash; the repository's vault/lib.lock parses. Standard library only; files go to a temporary directory (TMPDIR).
+hash; a linked directory is part of the hash (its target changed: fails) and a link leading outside the library is
+refused (review-fix-supply L-6); the repository's vault/lib.lock parses. Standard library only; files go to a
+temporary directory (TMPDIR).
 """
 
 import importlib.util
@@ -52,6 +54,27 @@ class VaultLibs(unittest.TestCase):
         r = self.check()
         self.assertEqual(r.returncode, 1)
         self.assertIn("risc0-ethereum (risc0/risc0-ethereum@v3): tree hash", r.stdout)
+
+    def test_linked_directory(self):
+        top = os.path.join(self.lib, "forge-std")
+        os.makedirs(os.path.join(top, "alt-a"))
+        os.makedirs(os.path.join(top, "alt-b"))
+        os.symlink("alt-a", os.path.join(top, "lib-link"))
+        h1 = vl.tree_hash(top)[0]
+        os.unlink(os.path.join(top, "lib-link"))
+        os.symlink("alt-b", os.path.join(top, "lib-link"))           # the link's target changed, no file did
+        self.assertNotEqual(vl.tree_hash(top)[0], h1)
+
+    def test_link_leaving_the_library(self):
+        outside = os.path.join(self.tmp.name, "outside")
+        os.makedirs(outside)
+        os.symlink(outside, os.path.join(self.lib, "forge-std", "src", "escape"))
+        r = self.check()
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("escape -> " + outside + " leads outside the library", r.stdout)
+        os.unlink(os.path.join(self.lib, "forge-std", "src", "escape"))
+        os.symlink("../../../outside/x.sol", os.path.join(self.lib, "forge-std", "src", "Up.sol"))
+        self.assertIn("leads outside the library", self.check().stdout)
 
     def test_added_file(self):
         with open(os.path.join(self.lib, "forge-std/src/Extra.sol"), "w") as f:

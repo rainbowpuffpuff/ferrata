@@ -7,8 +7,9 @@
 
 `forge install --no-git` takes a tag and keeps no commit, and the release's vault bytecode, the Groth16 verifier and
 the emergency stop that scripts/deploy-testnet.sh deploys are compiled from these trees: a moved tag would change them
-silently. A library's tree hash is the sha256 of its files' sorted `sha256  path` lines (links as `link path -> target`;
-.git entries left out). DIR defaults to vault/lib. Standard library only (install needs forge).
+silently. A library's tree hash is the sha256 of its files' sorted `sha256  path` lines (links, to files or to
+directories, as `link path -> target`; .git entries left out); a link whose target lies outside the library is refused
+(review-fix-supply L-6). DIR defaults to vault/lib. Standard library only (install needs forge).
 """
 import argparse
 import hashlib
@@ -32,18 +33,34 @@ def read_lock(path=LOCK):
     return out
 
 
+class Escape(ValueError):
+    pass
+
+
 def tree_hash(top):
-    lines = []
+    """(tree hash, number of entries); Escape when a link leads outside the library."""
+    lines, real_top = [], os.path.realpath(top)
+
+    def link(p):
+        rel = os.path.relpath(p, top).replace(os.sep, "/")
+        target = os.readlink(p)
+        real = os.path.realpath(p)
+        if not (real == real_top or real.startswith(real_top + os.sep)):
+            raise Escape(f"{rel} -> {target} leads outside the library")
+        lines.append(f"link {rel} -> {target}")
+
     for dp, dns, fns in os.walk(top):
-        dns[:] = sorted(d for d in dns if d != ".git")
+        for d in [d for d in dns if os.path.islink(os.path.join(dp, d))]:
+            link(os.path.join(dp, d))                    # a linked directory: recorded, not walked
+        dns[:] = sorted(d for d in dns if d != ".git" and not os.path.islink(os.path.join(dp, d)))
         for n in sorted(fns):
             if n == ".git":
                 continue
             p = os.path.join(dp, n)
-            rel = os.path.relpath(p, top).replace(os.sep, "/")
             if os.path.islink(p):
-                lines.append(f"link {rel} -> {os.readlink(p)}")
+                link(p)
             else:
+                rel = os.path.relpath(p, top).replace(os.sep, "/")
                 h = hashlib.sha256()
                 with open(p, "rb") as f:
                     for chunk in iter(lambda: f.read(1 << 20), b""):
@@ -61,7 +78,12 @@ def check(lib, lock):
             print(f"vault_libs: {d} missing ({spec}): python3 -I scripts/vault_libs.py install")
             bad += 1
             continue
-        got, n = tree_hash(p)
+        try:
+            got, n = tree_hash(p)
+        except Escape as e:
+            print(f"vault_libs: {d} ({spec}): {e}")
+            bad += 1
+            continue
         if got != want:
             print(f"vault_libs: {d} ({spec}): tree hash {got} over {n} files, vault/lib.lock says {want}")
             bad += 1
@@ -79,7 +101,11 @@ def main():
     lock = read_lock(a.lock)
     if a.cmd == "hash":
         for d, spec, _ in lock:
-            h, n = tree_hash(os.path.join(a.lib, d))
+            try:
+                h, n = tree_hash(os.path.join(a.lib, d))
+            except Escape as e:
+                print(f"vault_libs: {d} ({spec}): {e}")
+                return 1
             print(f"{d:<24} {spec:<44} {h}  # {n} files")
         return 0
     if a.cmd == "install":
