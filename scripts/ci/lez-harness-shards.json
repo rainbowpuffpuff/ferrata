@@ -1,0 +1,115 @@
+{
+  "harness_feature_gated": {
+    "rebate": "rebate",
+    "residue_experimental": "residue-experimental",
+    "residue_handoff": "residue-experimental",
+    "residue_placements": "residue-experimental",
+    "statements": "statements"
+  },
+  "shards": {
+    "harness-1": {
+      "harness_lib": true,
+      "harness_tests": [
+        "attest_native",
+        "bridge_burn",
+        "bridge_delist",
+        "bridge_refusals",
+        "costs_attestation",
+        "exit_codes",
+        "private_consumer",
+        "redteam_bridge",
+        "redteam_lc",
+        "state_growth_bridge",
+        "tenant"
+      ]
+    },
+    "harness-2": {
+      "harness_tests": [
+        "attest_cli",
+        "attest_public",
+        "bridge_inbound",
+        "bridge_private",
+        "captured_committee_exposure",
+        "device_workload",
+        "holdings",
+        "immutable_program",
+        "stall",
+        "vault"
+      ]
+    },
+    "harness-3": {
+      "harness_tests": [
+        "attest_private",
+        "bridge_burn_tag",
+        "bridge_depth",
+        "bridge_roles",
+        "bridge_time",
+        "history_hops_review",
+        "interrupted_operations",
+        "redteam_attest",
+        "sepolia",
+        "statements_same_block",
+        "successor"
+      ]
+    },
+    "harness-4": {
+      "harness_tests": [
+        "bridge_controls",
+        "bridge_secfix",
+        "bridge_vault_storage",
+        "history_hops",
+        "private_placement",
+        "public_path",
+        "security_lc",
+        "security_privacy",
+        "validity_after_rotations",
+        "vault_consumer",
+        "wallet_padding"
+      ]
+    },
+    "updater-gate": {
+      "updater_splits": [
+        {
+          "test": "recorded",
+          "mode": "exact",
+          "names": [
+            "an_update_one_client_serves_is_held_back",
+            "catches_up_mainnet_and_sepolia_from_recorded_data",
+            "gate_two_honest_one_adversary",
+            "restart_mid_job_and_mid_period",
+            "stale_and_down_sources_fall_back"
+          ]
+        }
+      ]
+    },
+    "updater-privacy": {
+      "updater_lib": true,
+      "updater_tests": [
+        "bounds",
+        "config",
+        "daemon_clock",
+        "diversity_limits",
+        "every_party",
+        "health",
+        "jobs",
+        "refusals",
+        "replacement",
+        "serve"
+      ],
+      "updater_splits": [
+        {
+          "test": "recorded",
+          "mode": "skip",
+          "names": [
+            "an_update_one_client_serves_is_held_back",
+            "catches_up_mainnet_and_sepolia_from_recorded_data",
+            "gate_two_honest_one_adversary",
+            "restart_mid_job_and_mid_period",
+            "stale_and_down_sources_fall_back"
+          ]
+        }
+      ],
+      "privacy": true
+    }
+  }
+}
