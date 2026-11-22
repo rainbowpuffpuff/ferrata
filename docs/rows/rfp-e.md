@@ -28,7 +28,7 @@ affected. The second and third reviews' fixes change off-chain code only (`cli/`
 | Row | Today | Proposed | Shown by | Remaining |
 |---|---|---|---|---|
 | U.8 | in part | **shown** | `cli/tests/e2e.rs`, `e2e/runs/cli-freezes/` | — |
-| R.6 | in part | **in part** (the relayer daemon shown on both chains, with the limits below) | `cli/tests/relayer_crash.rs` parts 1–6 (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), `relayer::tests` and `e2e/runs/seqnet-robust-2/`, `-3/`, `-4/` (gas drops), row 43 (monitor kills), `monitor/tests/logos-fallback.sh` (`monitor/results/logos-fallback/`: the monitor's `--send-via logos` route when the module's broadcast fails or sticks) | `monitor` under an RPC failure of its own endpoint (kills, and the module's failures against a stand-in, are tested), the checkpoint prover and the attestors under RPC failure; the relayer's root import under a fault on a real sequencer (its faults ran against the devnet stand-in); the `--send-via logos` route with the real `tx_sender_module` or Logos Core restarted, and `ferrata_relayer_module` itself killed (a stand-in of the module was restarted) |
+| R.6 | in part | **in part** (the relayer daemon shown on both chains, with the limits below) | `cli/tests/relayer_crash.rs` parts 1–6 (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), `relayer::tests` and `e2e/runs/seqnet-robust-2/`, `-3/`, `-4/` (gas drops), row 43 (monitor kills), `monitor/tests/logos-fallback.sh` (`monitor/results/logos-fallback/`: the monitor's `--send-via logos` route when the module's broadcast fails or sticks) | `monitor` under an RPC failure of its own endpoint (kills, and the module's failures against a stand-in, are tested), and its fallback's own send failing right after the module burnt a nonce (not recovered: the fourth review's L-1), the checkpoint prover and the attestors under RPC failure; the relayer's root import under a fault on a real sequencer (its faults ran against the devnet stand-in); the `--send-via logos` route with the real `tx_sender_module` or Logos Core restarted, and `ferrata_relayer_module` itself killed (a stand-in of the module was restarted) |
 | U.3 | in part | **in part** (narrower) | rows 43–48, 96, 106–107, 120; `e2e/runs/seqnet-robust-1/` and `-2/` (the daemon's root import on a running sequencer, by the standalone binary) | `ferrata_relayer_module` with a LEZ sequencer path; chain access through the LEZ and Ethereum Logos modules; `monitor`'s LEZ and Logos Blockchain RPC clients; the operator guide past its first draft |
 | R.7 | in part | **shown** | `e2e/runs/seqnet-robust-1/`, `-2/`, `-3/` and `-4/` (claim killed before sending, burn killed after it, burn killed before it reached the zone then made with other parameters, gas drops across kills), with row 126 | — |
 | U.5 | in part | in part, gap narrowed | the gas drop in the relayer daemon and the tool, journaled (`e2e/runs/seqnet-robust-2/`, `-3/`) | the mini-app's claim, burns with a drop, real proofs of this path, a network handover of the job to a third-party relayer |
@@ -137,8 +137,11 @@ state before the next drop) is not built.
 
 **Not shown, hence in part:** `monitor` under an outage of its own endpoint (row 43 shows it killed mid-window and
 restarted, with and without its state file; `monitor/tests/logos-fallback.sh` shows its sends through
-`tx_sender_module` failing or sticking, against a stand-in, and every cancel still mined; no fault injected on its
-own RPC); the checkpoint prover (`e2e/crown` stage 7, a separate
+`tx_sender_module` failing or sticking, against a stand-in, and every cancel still mined in that test, where each
+plain send went through; no fault injected on its own RPC); the monitor's fallback when its own plain send also fails
+right after the module burnt a nonce: it does not recover (the module's later sends come back broadcast, so the
+fallback does not run again, and they wait behind that number: no cancel mined; shown by the fourth review on the box,
+not handled); the checkpoint prover (`e2e/crown` stage 7, a separate
 process) and the attestors (`ferrata_attestor`) under RPC failure: no test; the relayer's root import under a fault on
 a real sequencer (its four LEZ faults ran against the devnet's synchronous stand-in; robust-1, -2 and -3 import cleanly
 on the sequencer). A node that lies is not a temporary failure (the crown's two-endpoint agreement, `e2e/NETWORK.md`).
@@ -231,7 +234,7 @@ R.07): a claim killed after its proof with its send trapped (nothing reached the
 once); a burn killed after its send (applied once; the same command burns nothing more); a burn killed before it
 reached the zone, then asked with another recipient (it takes the interrupted burn's counter: at most one of the two can
 be applied; applied once); gas drops across kills of the claim and of the relayer's daemon (each claim claims exactly
-one credit) | robust-1 14 of 14; robust-2 21 of 21; robust-3 22 of 22 | Modal build box (CPU); LEZ v0.4.0-rc1 sequencer and node,
+one credit) | robust-1 14 of 14; robust-2 21 of 21; robust-3 22 of 22; robust-4 22 of 22 | Modal build box (CPU); LEZ v0.4.0-rc1 sequencer and node,
 one validator, dev-mode leader proofs | dev-mode private proofs; mock verifier; local anvil; a stand-in beacon committee
 | `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`,
 `e2e/runs/seqnet-robust-3/`, `e2e/runs/seqnet-robust-4/`, `e2e/seqnet/hook-robust.sh`"

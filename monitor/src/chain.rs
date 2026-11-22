@@ -314,11 +314,13 @@ impl Chain {
     /// logos` the transaction goes through `tx_sender_module`; one it did not broadcast, and one it cannot account for
     /// ([`Outcome::Unknown`]: `stuck`, failed after its leg began to leave, not withdrawn, a request it no longer
     /// holds), goes the plain way when the monitor holds the watcher key too (the fallback), and is an error
-    /// otherwise (retried at the next poll). The plain send takes the node's next nonce: that fills a number the
-    /// module burnt without broadcasting (its ledger never hands it out again, so its own later sends would wait
-    /// behind the gap), and against a transaction of the module's that did leave, at most one extra call: a second
-    /// `cancelCandidate` or `revokeFrom` reverts (usually already at the gas estimate, so nothing is sent), and a
-    /// second `pauseCheckpoints` moves the pause's end by the seconds between the two blocks.
+    /// otherwise (retried at the next poll). The plain send takes the node's next nonce: when it goes through, that
+    /// fills a number the module burnt without broadcasting (its ledger never hands it out again, so its own later
+    /// sends would wait behind the gap); if it fails too, that is not handled: the module's later sends come back as
+    /// [`Outcome::Broadcast`], so this fallback does not run again, and they wait behind the number. Against a
+    /// transaction of the module's that did leave, at most one extra call: a second `cancelCandidate` or
+    /// `revokeFrom` reverts (usually already at the gas estimate, so nothing is sent), and a second
+    /// `pauseCheckpoints` moves the pause's end by the seconds between the two blocks.
     async fn send(&self, input: Bytes, label: &'static str) -> Result<Sent> {
         let from = self.me.context("the monitor holds no key")?;
         let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input.clone());

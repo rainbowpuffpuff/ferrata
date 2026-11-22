@@ -183,12 +183,16 @@ tests/anvil-e2e.sh` runs the scenarios above with the module in place of the bin
 With `--send-via logos` its transactions go through Logos Core's `tx_sender_module`. When the monitor holds the
 watcher key too, a transaction the module did not broadcast, or cannot account for (stuck, failed after its leg began
 to leave, a withdrawal not confirmed, a request it no longer holds), goes the plain way at the node's next nonce:
-that fills a number the module burnt without broadcasting, which its own later sends would otherwise wait behind, and
-against a transaction of the module's that did leave it costs at most one extra call (a second `cancelCandidate` or
-`revokeFrom` reverts; a second `pauseCheckpoints` moves the pause's end by the seconds between the two). Without the
-key it is an error, retried at the next poll. `bash tests/logos-fallback.sh` runs this against a stand-in for
+when that send goes through, it fills a number the module burnt without broadcasting, which its own later sends would
+otherwise wait behind; against a transaction of the module's that did leave it costs at most one extra call (a second
+`cancelCandidate` or `revokeFrom` reverts; a second `pauseCheckpoints` moves the pause's end by the seconds between
+the two). If the plain send fails once right after the module burnt a nonce (an error from the monitor's own endpoint,
+or a watcher account out of gas money at that moment), the monitor does not recover: the module's later sends come
+back broadcast, so the fallback does not run again, and they wait behind that number; no cancel is mined. Not handled
+(the monitor would have to keep the burnt nonce in its state and send the plain way until the account's nonce is past
+it). Without the key it is an error, retried at the next poll. `bash tests/logos-fallback.sh` runs this against a stand-in for
 `tx_sender_module` on anvil ([`results/logos-fallback/`](results/logos-fallback/README.md): every cancel mined, at the
-burnt number when the module failed; with the previous code none was).
+burnt number when the module failed and the plain send went through; with the previous code none was).
 
 ## Not built
 
