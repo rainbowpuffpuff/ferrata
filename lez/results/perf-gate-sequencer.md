@@ -18,8 +18,9 @@ round also fetches, checks and sends), so a window of `W` rounds is a nominal `W
 under GNU time and is sampled every 5 s; its sequencer RPC bytes are counted by a proxy in front of it, its beacon
 API bytes by the replay itself (each response's body plus 200 bytes, on the daemon's own port). A transaction is
 *applied*, *refused* (included, its program refused it: charged) or *rejected* (dropped: nothing charged). A job is
-*completed* when its `Finish` is applied; otherwise *abandoned* (another job moved the store first, and the job id
-binds the store): its applied steps are spent gas like a refused step.
+*completed* when its `Finish` is applied; *abandoned* when another job completed at or after its first applied step
+(it moved the store first, and the job id binds the store); *unfinished* otherwise (none in these runs). The applied
+steps of both are spent gas like a refused step.
 
 
 ## Run `gate-g2`

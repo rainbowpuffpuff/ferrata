@@ -131,23 +131,33 @@ def summarize(run):
     key["revealed"] = len(reveals)
     key.update(jobs=len(jobs), twice=len(twice))
 
-    # Job fates. A job is completed when its last step is applied (`Finish`; for `Init`, adoption part 2/2). Otherwise
-    # it is abandoned: another job moved the instance's store first, and the job id binds the store, so its remaining
-    # steps can no longer apply. Its applied steps are spent gas as much as a refused step is.
+    # Job fates. A job is completed when its last step is applied (`Finish`; for `Init`, adoption part 2/2). A job that
+    # never completed is abandoned when another job completed at or after its first applied step (it overtook it:
+    # another job moved the instance's store first, and the job id binds the store, so its remaining steps can no longer
+    # apply); any other is unfinished (in flight at the run's end, or a step failed without another job overtaking it).
+    # The applied steps of both are spent gas as much as a refused step is.
     def last_step(r):
         return r["step"] == "finish" or r["label"].endswith("init adopt 2/2")
     done_jobs = {r["job"] for n in names for r in J[n] if r["status"] == "applied" and last_step(r)}
+    done_blocks = [int(r["block"]) for n in names for r in J[n] if r["status"] == "applied" and last_step(r)]
+    first_block = {}
+    for n in names:
+        for r in J[n]:
+            if r["status"] == "applied" and r["job"] not in done_jobs:
+                first_block[r["job"]] = min(first_block.get(r["job"], int(r["block"])), int(r["block"]))
+    unfinished = {j for j, b in first_block.items() if not any(d >= b for d in done_blocks)}
     gas = {n: dict(done=0, aband=0, ref=0) for n in names}
     aband = {}
     for n in names:
         for r in J[n]:
             if r["status"] == "applied":
                 gas[n]["done" if r["job"] in done_jobs else "aband"] += r["gas_exec"]
-                if r["job"] not in done_jobs:
+                if r["job"] not in done_jobs and r["job"] not in unfinished:
                     aband.setdefault(r["job"], []).append(STEP.get(r["step"], r["step"]))
             elif r["status"] == "refused":
                 gas[n]["ref"] += r["gas_exec"]
-    print("\n| execution gas of | in completed jobs | in abandoned jobs (their applied steps) | on refused steps | total |")
+    in_aband = "in abandoned or unfinished jobs" if unfinished else "in abandoned jobs"
+    print(f"\n| execution gas of | in completed jobs | {in_aband} (their applied steps) | on refused steps | total |")
     print("|---|---:|---:|---:|---:|")
     for n in names:
         x = gas[n]
@@ -158,9 +168,12 @@ def summarize(run):
     for steps in aband.values():
         k = " + ".join(steps)
         kinds[k] = kinds.get(k, 0) + 1
-    print(f"\nJobs: {len(jobs)} with an applied step, {len(jobs) - len(aband)} completed, **{len(aband)} abandoned**"
-          + (f" ({'; '.join(f'{c} with {k} applied' for k, c in sorted(kinds.items(), key=lambda kv: -kv[1]))})." if aband else "."))
-    key.update(completed=len(jobs) - len(aband), abandoned=len(aband), gas_done=D, gas_aband=A, gas_ref=R)
+    print(f"\nJobs: {len(jobs)} with an applied step, {len(jobs) - len(aband) - len(unfinished)} completed, **{len(aband)} abandoned**"
+          + (f" ({'; '.join(f'{c} with {k} applied' for k, c in sorted(kinds.items(), key=lambda kv: -kv[1]))})" if aband else "")
+          + (f", **{len(unfinished)} unfinished** (no job completed at or after their first applied step)" if unfinished else "")
+          + ".")
+    key.update(completed=len(jobs) - len(aband) - len(unfinished), abandoned=len(aband), unfinished=len(unfinished),
+               gas_done=D, gas_aband=A, gas_ref=R)
     if D:
         key["mult"] = (D + A + R) / D
         key["mult_applied"] = (tot_a + tot_r) / tot_a
