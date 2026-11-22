@@ -6,9 +6,10 @@ sent to any public network): each run is `bash bench/perf/gate-sequencer.sh NAME
 `machine.txt`. A new zone gets this tree's attestation and bridge programs (`lez/crown/session.sh a`), then
 `ferrata-updater` daemons (the build of `lez/updater/sequencer`, each with its own payer) follow the lab's recorded
 mainnet chain (`lez/lab/results/record/net/mainnet`), which `bench/perf/beacon_replay.py` reveals on loopback one
-recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The recorded
-updates are about two hours of mainnet apart (median 121.6 min); revealed every 60 or 90 s, the replay runs 80 to 120
-times faster than mainnet and faster than two honest daemons apply one (G3–G5; in G2 the adversary applied each in
+recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The lab
+recorded an update about every two hours (its session schedule, not mainnet's update rate; median 121.6 min apart);
+revealed every 60 or 90 s, the replay runs 81 to 122 times faster than the lab recorded them, about 40–60 times the
+design's hourly cadence, and faster than two honest daemons apply one (G3–G5; in G2 the adversary applied each in
 35 s median), so their jobs overlap (each run's "Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
 Bedrock); it reads the instance at the start of each round and the job's account just before it sends a step, and
 defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers (`W` = 1) and is configured
@@ -68,7 +69,7 @@ All daemons together: the updates cost **1.095** times the execution gas of the 
 
 **Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 26 of 26 revealed finality updates covered (26 by their own job, 0 by a later update's): median **35 s**, p90 45 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 35 s, max 66 s; finished by adversary 24, honest-1 2.
 
-**Replay rate:** 30 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; this run's median latency (35 s) is shorter than the reveal step.
+**Replay rate:** 30 recorded updates revealed one every 60 s (median); the lab recorded them 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min; its session schedule, not mainnet's update rate), so the replay runs about 122 times faster than the lab recorded them and 60 times the design's hourly cadence; this run's median latency (35 s) is shorter than the reveal step.
 
 | daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -121,7 +122,7 @@ All daemons together: the updates cost **1.222** times the execution gas of the 
 
 **Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (12 by their own job, 9 by a later update's): median **126 s**, p90 176 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 74 s, max 266 s; finished by honest-1 11, honest-2 10.
 
-**Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (126 s), so jobs overlap by construction.
+**Replay rate:** 24 recorded updates revealed one every 60 s (median); the lab recorded them 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min; its session schedule, not mainnet's update rate), so the replay runs about 122 times faster than the lab recorded them and 60 times the design's hourly cadence; the reveal step is shorter than this run's median latency (126 s), so jobs overlap by construction.
 
 | daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -176,7 +177,7 @@ All daemons together: the updates cost **1.721** times the execution gas of the 
 
 **Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 21 of 21 revealed finality updates covered (20 by their own job, 1 by a later update's): median **105 s**, p90 106 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 66 s, max 166 s; finished by honest-1 13, honest-2 8.
 
-**Replay rate:** 24 recorded updates revealed one every 60 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 122 times faster than mainnet; the reveal step is shorter than this run's median latency (105 s), so jobs overlap by construction.
+**Replay rate:** 24 recorded updates revealed one every 60 s (median); the lab recorded them 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min; its session schedule, not mainnet's update rate), so the replay runs about 122 times faster than the lab recorded them and 60 times the design's hourly cadence; the reveal step is shorter than this run's median latency (105 s), so jobs overlap by construction.
 
 | daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -225,7 +226,7 @@ All daemons together: the updates cost **1.081** times the execution gas of the 
 
 **Latency** (a recorded finality update appearing at the beacon API to the first `Finish`, applied in a block final on Bedrock, that leaves the instance at least as fresh: the update's own job or a later update's), 17 of 17 revealed finality updates covered (5 by their own job, 12 by a later update's): median **306 s**, p90 576 s (the value at index round(0.9 (n − 1)) of the sorted latencies), min 166 s, max 666 s; finished by honest-1 13, honest-2 4.
 
-**Replay rate:** 20 recorded updates revealed one every 90 s (median); on mainnet they are 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min), so the replay runs about 81 times faster than mainnet; the reveal step is shorter than this run's median latency (306 s), so jobs overlap by construction.
+**Replay rate:** 20 recorded updates revealed one every 90 s (median); the lab recorded them 121.6 min apart (median of the finalized headers' spacing; 25.6 to 768.0 min; its session schedule, not mainnet's update rate), so the replay runs about 81 times faster than the lab recorded them and 40 times the design's hourly cadence; the reveal step is shorter than this run's median latency (306 s), so jobs overlap by construction.
 
 | daemon | poll s (configured) | rounds run, s per round | wall s | CPU s (user + sys) | CPU share of one core | peak RSS MiB | median RSS MiB | beacon API: requests / bytes served | sequencer RPC: bytes up / down |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|

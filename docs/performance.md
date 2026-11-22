@@ -247,7 +247,7 @@ window: on a sequencer two daemons applied an update in 105 s (median; p90 106 s
 with a window of 8 rounds (nominally 32 s; rounds took 5.9–6.2 s) and 306 s (p90 576 s) with 30 rounds (nominally
 120 s; 4.6–4.8 s each), while the execution gas spent per revealed update fell from 16.0M to 8.1M and 4.6M, abandoned
 jobs and refused steps included ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); updates replayed
-80 to 120 times faster than mainnet, so jobs overlapped).
+81 to 122 times faster than the lab recorded them, about 40–60 times the design's hourly cadence, so jobs overlapped).
 
 ### P.6 Off-chain compute
 
@@ -257,8 +257,8 @@ jobs and refused steps included ([`perf-gate-sequencer.md`](../lez/results/perf-
 | the proven path's prover (one private transaction per update) | 16 CPUs for 1,673.6 s (7.4 CPU-hours allocated; 6.76 used) per update | 9.21 GiB peak | 49.5 s on one L4 (earlier image) | measured (P.2, [`perf-proofs.md`](../lez/results/perf-proofs.md)) |
 | the lab zone (sequencer, Bedrock node, driver) | two physical cores requested | — | a session 83–142 s over 85 sessions; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 
-The gates replayed recorded updates 80 to 120 times faster than mainnet (one every 60 or 90 s; they are about two hours
-apart on mainnet), so their traffic is that of a daemon busier than in operation; per-day figures from them would
+The gates replayed recorded updates 81 to 122 times faster than the lab recorded them (one every 60 or 90 s; the lab
+recorded one about every two hours, its session schedule), about 40–60 times the design's hourly cadence, so their traffic is that of a daemon busier than in operation; per-day figures from them would
 overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. **Not measured:** the
 `ferrata-attest` CLI and the `ferrata_attest_module` (a consumer's off-chain side, [`attestation.md`](design/attestation.md)
 §8); the §8 `monitor` is not built.
@@ -502,7 +502,7 @@ min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
 | `monitor` (the watchers' daemon), idle and while it checks a candidate, polling every 12 s | 0.53 CPU-seconds in 1,284 s (0.0004 of a core) | **14.0 MiB peak** | JSON-RPC 86 KB up, 254 KB down (about 23 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
 | `ferrata-relayer run` (releases and finalisations), idle and while it finalises a checkpoint | 0.87 CPU-seconds in 1,284 s (0.0007 of a core) | **20.3 MiB peak** | JSON-RPC 408 KB up, 976 KB down (about 93 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
-| the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | 10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 120 times faster than mainnet) | RFP-021 P.6 |
+| the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | 10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 122 times faster than the lab recorded them, 60 times the design's hourly cadence) | RFP-021 P.6 |
 
 Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVault v5 (12-s blocks; ten idle minutes, a
 candidate checked and finalised, ten idle minutes). **Gaps:** the importer's LEZ-side work (the relayer's root imports,

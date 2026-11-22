@@ -108,7 +108,7 @@ send-to-final time); with the run's outages median 19.6, p90 86.7 | the live run
 
 | clause | shown by |
 |---|---|
-| CPU, RAM, time of every off-chain component the design requires | the updater daemon on a running LEZ v0.4.0-rc1 sequencer, gates G2–G5 (`lez/results/perf-gate-sequencer.md`): **0.043–0.092 of one core** per daemon, peak RSS **57.3–57.8 MiB**; G2's honest daemons 650 and 666 beacon requests, 10.3 and 10.4 MB; sequencer RPC 0.57–2.07 MB up and 7.4–19.6 MB down per daemon (more for the daemons that did the work); updates replayed 80 to 120 times faster than mainnet, so no per-day figure is given; the proven path's prover: 1,673.6 s on 16 CPUs, 9.21 GiB per update (P.2); the lab's zone (`lez/lab/README.md`) |
+| CPU, RAM, time of every off-chain component the design requires | the updater daemon on a running LEZ v0.4.0-rc1 sequencer, gates G2–G5 (`lez/results/perf-gate-sequencer.md`): **0.043–0.092 of one core** per daemon, peak RSS **57.3–57.8 MiB**; G2's honest daemons 650 and 666 beacon requests, 10.3 and 10.4 MB; sequencer RPC 0.57–2.07 MB up and 7.4–19.6 MB down per daemon (more for the daemons that did the work); updates replayed 81 to 122 times faster than the lab recorded them (about 40–60 times the design's hourly cadence), so no per-day figure is given; the proven path's prover: 1,673.6 s on 16 CPUs, 9.21 GiB per update (P.2); the lab's zone (`lez/lab/README.md`) |
 
 **What is short:** the `ferrata-attest` CLI and the `ferrata_attest_module` (the consumer's off-chain side,
 `docs/design/attestation.md` §8) are not measured; the §8 `monitor` is not built. The three sentences the review found
@@ -172,9 +172,9 @@ the public `VerifyAll`, the private update path, the absent-account, absent-slot
 Gates on a running LEZ v0.4.0-rc1 sequencer (`lez/results/perf-gate-sequencer.md`, `bash bench/perf/gate-sequencer.sh`,
 records `bench/perf/results/gate-g*/`): G2 two honest daemons (window 8 rounds) and an adversary that never defers,
 30 recorded mainnet updates; G3 the two honest daemons alone, window 8; G4 window 1 (no deferral); G5 window 30, 20
-updates revealed every 90 s. The replay reveals updates recorded about two hours apart every 60 or 90 s, 80 to 120
-times faster than mainnet and faster than two daemons apply one (median latency 105–306 s): jobs overlap by
-construction. Rounds took 4.6–6.2 s (G4 17.6 s) against a configured 4-s poll.
+updates revealed every 90 s. The replay reveals updates the lab recorded about two hours apart (its session schedule) every 60 or 90 s, 81 to
+122 times faster than the lab recorded them (about 40–60 times the design's hourly cadence) and, in G3–G5, faster
+than two honest daemons apply one (median latency 105–306 s): their jobs overlap. Rounds took 4.6–6.2 s (G4 17.6 s) against a configured 4-s poll.
 
 | clause | shown by |
 |---|---|
@@ -205,8 +205,8 @@ needs no image change: an updater policy that does not open a job on a store ano
 the honest daemons' ratio was 1.31 at window 8 (G2); other windows were not run with the adversary.
 
 Proposed EVIDENCE row: | new | RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer: two honest `ferrata-updater`
-daemons with an adversary (window 8) and alone (windows 1, 8, 30), following recorded mainnet updates replayed 80 to
-120 times faster than mainnet | every step applied once in every run; refused steps all in the same block as the step
+daemons with an adversary (window 8) and alone (windows 1, 8, 30), following recorded mainnet updates replayed 81 to
+122 times faster than the lab recorded them | every step applied once in every run; refused steps all in the same block as the step
 they raced; total / completed-job gas 1.095 / 1.721 / 1.222 / 1.081 (G2 adversary / G4 window 1 / G3 window 8 / G5
 window 30; refused steps only 1.095 / 1.149 / 1.102 / 1.004); jobs abandoned 0 / 19 / 8 / 3; A3's ratio honest
 refused / applied 1.31 / 0.149 / 0.102 / 0.0036 (gate 0.10); honest-1's fee share 0.588 / 0.493 / 0.563 / 0.609;

@@ -147,8 +147,9 @@ two-hour cadence (§2).
   | G2: G3 with a daemon that never defers | 8 (4.8–5.0 s) | 60 s | 35 / 45 s | 26 / 0 | 11.1M | 1.095 | 1.311 | 1.311 | 0.588 |
 
   A longer window costs latency and saves gas: fewer races, and intermediate updates skipped (a later update's job
-  covers them). Caveats: the replay reveals updates 80 to 120 times faster than mainnet (about two hours apart there),
-  so jobs overlap more than in operation; G5's 90-s reveal step against 60 s confounds its comparison with G3 and G4;
+  covers them). Caveats: the replay reveals updates 81 to 122 times faster than the lab recorded them (one about every
+  two hours, its session schedule), about 40–60 times the design's hourly cadence, so jobs overlap more than in
+  operation; G5's 90-s reveal step against 60 s confounds its comparison with G3 and G4;
   the runs hold 11 to 42 jobs, under A3's planned 100 updates. Most of the waste at short windows is abandoned jobs: a
   daemon that lost a race opens a job for the next update on the store the winner is about to change. A policy of
   not opening a job on a store another party's open job will change (join or wait) would remove it; it is not built.

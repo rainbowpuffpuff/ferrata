@@ -200,10 +200,11 @@ def summarize(run):
         step = statistics.median(b - a for a, b in zip(tr, tr[1:]))
         rec = [(b - a) * 12 / 60 for a, b in zip(fs, fs[1:])]
         key.update(reveal_step=step, recorded_min=statistics.median(rec))
-        print(f"\n**Replay rate:** {len(reveals)} recorded updates revealed one every {step:.0f} s (median); on mainnet they "
-              f"are {statistics.median(rec):.1f} min apart (median of the finalized headers' spacing; {min(rec):.1f} to "
-              f"{max(rec):.1f} min), so the replay runs about {statistics.median(rec) * 60 / step:.0f} times faster than "
-              f"mainnet" + (f"; the reveal step is shorter than this run's median latency ({key['lat_med']:.0f} s), so jobs overlap by construction." if key.get("lat_med", 0) > step else f"; this run's median latency ({key.get('lat_med', float('nan')):.0f} s) is shorter than the reveal step."))
+        print(f"\n**Replay rate:** {len(reveals)} recorded updates revealed one every {step:.0f} s (median); the lab recorded "
+              f"them {statistics.median(rec):.1f} min apart (median of the finalized headers' spacing; {min(rec):.1f} to "
+              f"{max(rec):.1f} min; its session schedule, not mainnet's update rate), so the replay runs about "
+              f"{statistics.median(rec) * 60 / step:.0f} times faster than the lab recorded them and {3600 / step:.0f} times "
+              f"the design's hourly cadence" + (f"; the reveal step is shorter than this run's median latency ({key['lat_med']:.0f} s), so jobs overlap by construction." if key.get("lat_med", 0) > step else f"; this run's median latency ({key.get('lat_med', float('nan')):.0f} s) is shorter than the reveal step."))
 
     # P.6: resources.
     stats = json.loads((run / "beacon-stats.json").read_text()) if (run / "beacon-stats.json").exists() else {"per_port": {}}

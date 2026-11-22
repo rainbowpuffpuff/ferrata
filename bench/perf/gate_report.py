@@ -22,9 +22,10 @@ sent to any public network): each run is `bash bench/perf/gate-sequencer.sh NAME
 `machine.txt`. A new zone gets this tree's attestation and bridge programs (`lez/crown/session.sh a`), then
 `ferrata-updater` daemons (the build of `lez/updater/sequencer`, each with its own payer) follow the lab's recorded
 mainnet chain (`lez/lab/results/record/net/mainnet`), which `bench/perf/beacon_replay.py` reveals on loopback one
-recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The recorded
-updates are about two hours of mainnet apart (median 121.6 min); revealed every 60 or 90 s, the replay runs 80 to 120
-times faster than mainnet and faster than two honest daemons apply one (G3–G5; in G2 the adversary applied each in
+recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The lab
+recorded an update about every two hours (its session schedule, not mainnet's update rate; median 121.6 min apart);
+revealed every 60 or 90 s, the replay runs 81 to 122 times faster than the lab recorded them, about 40–60 times the
+design's hourly cadence, and faster than two honest daemons apply one (G3–G5; in G2 the adversary applied each in
 35 s median), so their jobs overlap (each run's "Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
 Bedrock); it reads the instance at the start of each round and the job's account just before it sends a step, and
 defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers (`W` = 1) and is configured
