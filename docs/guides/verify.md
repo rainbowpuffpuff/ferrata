@@ -103,7 +103,11 @@ scripts/reproduce-image-ids.sh docker            # the same inside scripts/repro
   `ferrata-e2e program-binary` (the v1compat kernel, as risc0-build 3.0.5 does).
 - `compare` ([`scripts/reproduce/compare_ids.py`](../../scripts/reproduce/compare_ids.py)): the crown run's six
   programs beside [`e2e/crown/README.md`](../../e2e/crown/README.md)'s table and, with `--vault`, a crown vault's
-  immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs.
+  immutables read over RPC; every guest beside [`docs/image-ids.md`](../image-ids.md); exit 1 if one differs. It
+  fails closed: a vault that cannot be read (an RPC error, no endpoint answering, no contract at the address), an id
+  that `r0vm` did not compute from the binary, two stale build outputs that disagree, or a guest of the first table
+  missing from the rebuild counts as a difference
+  ([`test_image_id_tools.py`](../../scripts/reproduce/test_image_id_tools.py)).
   Two v5 vaults are live on Sepolia. crown-live-3's, `0x04eE…e44c`, holds the final programs: `--vault` on it gives 6
   of 6 (below). crown-live-1's, `0xfE3199fa…9E54`, ran programs built before the wrapper (below): `--vault` on it
   prints DIFFER for `checkpoint_b` and `release` and exits 1, as expected.
