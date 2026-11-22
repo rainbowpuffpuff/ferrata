@@ -76,3 +76,23 @@ traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; R
 | L5: F.8's alignment | `align_boundary` takes inherited authorizations only where none names a public account; `fresh_check` (the same claim twice from one state) | `4e3410bb`, `2a9a4fae` |
 | L6: the differential's limits | `HELIOS-DIFFERENTIAL.md` ("What this differential cannot give") | `f729a9e4` |
 | N1: proof size in dev mode | `f8-full-diff.md`'s text | `4e3410bb`, `2a9a4fae` |
+
+## Findings of the review of this branch (`review-fix-a2`), fixed on the branch
+
+Reruns on the build box, 22 November 2026: `security_lc` 5 of 5 and `security_privacy` 2 of 2 (results regenerated;
+only the texts below and F.8's count of differing bytes changed); the R.11 session again on LEZ v0.4.0-rc3's own
+sequencer (block 47, positions 0–3; replay green), whose new record names no folder.
+
+| Finding | Fixed in | Commits |
+|---|---|---|
+| M1: every synthetic update said to run beside the policy store | `security_lc.rs` (module doc, `vs2-forgeries.md` and `r3-rotations.md` texts), `security_common/mod.rs`: updates sent with `World::apply` run beside `FinalizedStore`; the refusals it does not model (45, 53, LEZ's validity window, ten years on) and the `VerifyAll` forms are sent as the program's own transactions only | `a84c03db`, `dae3993b` |
+| M2: the account's own nullifier and commitments called fresh | `security_privacy.rs` texts and docs, `f8-full-diff.md`, the R.11 record's README pointer; the F.8 row and row 152 texts above | `a3a4f589`, `1e07625b`, `8165f733` |
+| M3: agent folders in the rc3 record | the 8 names in 5 files → `<scratch>`, `<copy>` (README says so); `lez/live/scrub.sh` (scratch, repository, LEZ's tree, toolchain, other folders beside the repository, home → placeholders) used by `run-live.sh` for every text record and by `hooks/crown.sh`, `hooks/gasdrop.sh`; `lez/live/README.md`; the rerun's record names none | `cf5a3db8`, `50028a49`, `54dca63a`, `88ba54b8` |
+| L1: "36 to 42 s" | 30 to 42 s, from the blocks' timestamps | `5e8c9be5` |
+| L2: HELIOS-DIFFERENTIAL's inverted sentence | only the signature slot let a flip through; every other region refused by all three | `9ec47955` |
+| L3: rows-file slips | recovery binding (1); "sent within 2 ms" | `077868be` |
+| L4: the re-check command on a fresh checkout | `scripts/fetch-upstream.sh` and `lez/scripts/lez-select.sh v0.4.0-rc3` first (record README, this file) | `be5db26b`, `9823af95` |
+| L5: the specification's store notes | "does not refuse it and does not finalize it", what the test asserts | `47910adc`, `a6564553` |
+| L6: U.5's generic stale-checkpoint text | stated in the U.5 row as still open (not changed: mapping that revert to code 53's message in `ferrata-attest`, with a test, would settle it) | `1c779eac` |
+| N1: rustfmt | `security_privacy.rs`, `block.rs` (line breaks and trailing commas only) | `6c2af7a1` |
+| N2: row 155's number | renumbering note above | `e725f8b3` |
