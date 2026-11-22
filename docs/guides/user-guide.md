@@ -214,7 +214,8 @@ never both applied (ADR 0032; the reviews of 22 November 2026). The wallet advan
 burn, even a reverted one, so a tag never repeats, and the `ferrata` tool reserves the counter in a journal
 beside LEZ's wallet before it proves the burn, so two burns in flight, or a burn after an interrupted one,
 never share a counter. Whoever sees your burn before it is applied (on LEZ v0.4, the sequencer) can make
-it revert by burning a denomination of its own under your tag; you lose nothing and burn again.
+it revert by burning a denomination of its own under your tag; you lose that transaction's fee, your
+denomination whole, and burn again.
 
 **Public:** token, denomination, time, the note; for a private holding the holder appears as an alias.
 **Hidden:** you and your recipient. **Measured** (in-process harness, the deployed program): a private burn

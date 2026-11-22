@@ -273,7 +273,10 @@ fn a_burn_tag_is_used_once() {
     expect(&rep, Some(code::ALREADY_WRITTEN));
     reports.push(rep);
     assert_eq!(w.balance(payer, &cid), before_a, "A keeps its denomination");
-    assert_eq!(w.balance(copier, &cid), 0, "the copier's denomination is gone for good (it cannot open the tag)");
+    // The copier's LEZ holding is burnt, but not lost: its copy carries a COut of its own secret, and it can release the
+    // copy on Ethereum (ADR 0032; `bridge/crates/ferrata-bridge-core/tests/outbound.rs`,
+    // `a_tag_copier_can_release_its_own_copy`): the copy costs it fees only, and A a refused transaction's fee.
+    assert_eq!(w.balance(copier, &cid), 0, "the copier's holding is burnt (its copy is a burn of its own)");
     let (n4a, _) = note_to(&keys, &cid, &vault, 4, d1, [0xe4; 20]);
     let rep = burn_public(&mut w, "A burns again with its next counter (4)", payer, None, &n4a);
     expect(&rep, None);

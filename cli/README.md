@@ -422,8 +422,9 @@ private burn is proven by LEZ's wallet at the private account, which debits its 
 the note to the token's account in the clear. Before sending, the tool checks the denomination and the
 holding (the wallet's view of a private account). It also tells whether the recipient is fresh (not a
 depositor of this vault), and first that the zone's configuration pairs with the chain the Ethereum RPC
-serves and with the vault (a burn binds both into `COut`: under an RPC of another chain, a fork's 31337 say,
-no release could open it; review M-1 of 22 November 2026).
+serves and with the vault (a burn binds both into `COut`: under an RPC of another chain, a local anvil's
+31337 or a fork started with another `--chain-id` say, no release could open it; review M-1 of 22 November
+2026; an anvil fork reports the forked chain's id unless told otherwise).
 
 The burn counter is reserved in a journal beside LEZ's wallet, `<--lez-wallet>/ferrata-burns.json` (mode
 0600; `ferrata-burns.lock` beside it serialises the tool's processes), before the burn is proven and sent,
@@ -435,9 +436,14 @@ November 2026, H1 and H-1):
   if the first is already applied, burns nothing (`not burning again`); any other burn takes a fresh counter;
 - a burn refused on the zone uses its counter (its memo is public in its block);
 - the tool reserves at most 10 counters past the zone's while none of them is on the zone, so a recovery from
-  the seed alone (which looks 20 counters past the last burn it finds) misses none.
+  the seed alone, which looks 20 counters past the last one it finds used, applied or refused, misses none
+  (before the review M1 of 22 November 2026 it counted applied burns only, and 20 refused burns hid the next
+  applied one).
 
-The journal is not needed to recover anything: `ferrata recover` finds every burn from the seed and the zone.
+The journal is not needed to recover anything the zone shows: `ferrata recover` finds every burn from the seed
+and the zone, a refused burn's tag counting as used. `ferrata release` and `ferrata recover` also read the
+journal, when there is one, to search 20 counters past the last one it reserved, and `ferrata recover` lists the
+burns reserved there that the zone does not show.
 Another client of the same seed (a second device, the Logos module) does not see it; the bridge program
 refuses a second note with a used tag (ADR 0032), so such a clash costs a refused transaction's fee, not a
 denomination. The interrupted-burn record of the tool before 22 November 2026, `ferrata-pending-burn.json`,

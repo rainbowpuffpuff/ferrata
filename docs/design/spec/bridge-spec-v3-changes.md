@@ -281,6 +281,8 @@ deployer-set ceiling.
   (`ALREADY_WRITTEN`) and its whole transaction reverts. Under D13's keying, two notes with one tag (a wallet that
   reused its counter) were both applied and shared one `sOut`, hence one `NOut`: one of the two could never be
   released. The cost: whoever sees a pending burn before it is applied can make it revert by burning a denomination of
-  its own under the same tag first (the owner loses nothing and burns again with its next counter).
+  its own under the same tag first (the owner loses the refused transaction's fee, its denomination whole, and burns
+  again with its next counter; the copier can release its copy, whose `COut` is of its own secret, so the attack costs
+  it fees only: ADR 0032).
 - A wallet reserves its counter before it proves a burn and never gives one counter to two burns; the same burn sent
   again (the same note) is the only reuse, and the program applies at most one of the two.
