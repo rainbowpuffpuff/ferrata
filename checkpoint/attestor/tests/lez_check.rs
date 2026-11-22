@@ -317,6 +317,35 @@ fn base64_matches_rfc4648() {
     }
 }
 
+/// Review L5: the LEZ node is ahead of the Bedrock node's LIB (it holds the honest 203..=230 final, whose
+/// inscriptions are not final on Bedrock yet), and a turn holder inscribed 28 junk blocks with those ids, final
+/// on Bedrock. Each reads "final in the LEZ node" by its id and none is held byte for byte: the first read walks
+/// down every one of them to 202 (a cap of 16 ids made it refuse).
+#[test]
+fn l5_junk_ids_above_the_chain_never_stop_a_first_read() {
+    let mut a = answers_with_keys(&n3_keys());
+    let lab = lab_answers();
+    let p202 = payload_of(&lab, 202);
+    let mut lez = lez_lab(202, FINALIZED);
+    let mut prev = carried_hash(&p202);
+    for id in 203..=230u64 {
+        let honest = derive_block(&p202, id, &prev, id);
+        prev = carried_hash(&honest);
+        lez.insert(id, Some(with_status(&honest, FINALIZED)));
+    }
+    let k2 = key("channel-2");
+    let junk: Vec<Value> = (203..=230u64)
+        .map(|id| inscription_tx(&k2, &derive_block(&p202, id, &[0x77; 32], 7), &msg_of(&lab, 202), id as u8).0)
+        .collect();
+    assert!(junk.len() > 16);
+    let lib = a.lib_slot;
+    a.blocks.push(node_block("junk ids", lib, junk));
+    let t = read(&a, &lez, None).unwrap();
+    assert_eq!((t.tip.tip_id, t.tip.tip_hash, t.first_block), (202, carried_hash(&p202), 202));
+    // With a state the run starts at the signed tip and the junk is passed over as before.
+    assert_eq!(read(&a, &lez, Some(&signed_200())).unwrap().tip.tip_id, 202);
+}
+
 // ---- random sequences of rounds ---------------------------------------------------------------------
 
 struct Rng(u64);

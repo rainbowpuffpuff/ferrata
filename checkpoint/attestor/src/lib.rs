@@ -856,14 +856,15 @@ pub fn bedrock_tier(answers: &NodeAnswers, channel_id: &Hash) -> Result<FinalTie
     })
 }
 
-/// How many ids below the LEZ node's highest final block a first read looks for one it was offered.
-const FIRST_ROOT_STEPS: usize = 16;
-
 /// The first read's starting block (no state): the highest block that the LEZ node holds final and the
-/// Bedrock node's final tier holds. A LEZ node marks `Finalized` exactly the ids up to its final tip, so
-/// over the inscribed ids (sorted) "final in the LEZ node" holds up to some id and not above it: probing
-/// down from the highest id in doubling steps finds a final one, and bisection the highest. Blocks
-/// inscribed with made-up ids, above or below the chain, cost a few questions and never stop the read.
+/// Bedrock node's final tier holds. A LEZ node marks `Finalized` the ids up to its final tip, so over the
+/// inscribed ids (sorted) "final in the LEZ node" holds up to some id and not above it: probing down from the
+/// highest id in doubling steps finds a final one, and bisection the highest. (A block a LEZ node adopted from
+/// another sequencer keeps the status inscribed with it, LEZ #1053; a status out of order only moves where the
+/// walk below starts, and the candidates are inscriptions at or below the Bedrock node's LIB.) From there the
+/// walk goes down the inscribed ids, every one, to the first whose inscribed block the LEZ node holds byte for
+/// byte: blocks inscribed with made-up ids, above or below the chain, cost one question each (bounded by the
+/// candidates of the read) and never stop the read (review L5: a cap of 16 ids let 16 junk ids stop it).
 fn first_root(cands: &[Candidate], entries: &[Entry<'_>], lez: &mut LezAsked<'_>) -> Result<usize> {
     let mut ids: Vec<u64> = cands.iter().map(|c| c.id).collect();
     ids.sort_unstable();
@@ -900,9 +901,13 @@ fn first_root(cands: &[Candidate], entries: &[Entry<'_>], lez: &mut LezAsked<'_>
             bad = mid;
         }
     }
-    for &id in ids[..=good].iter().rev().take(FIRST_ROOT_STEPS) {
-        for (i, c) in cands.iter().enumerate().filter(|(_, c)| c.id == id) {
-            if lez.holds(id, &entries[c.entry].payload)? {
+    let mut by_id: BTreeMap<u64, Vec<usize>> = BTreeMap::new();
+    for (i, c) in cands.iter().enumerate() {
+        by_id.entry(c.id).or_default().push(i);
+    }
+    for (&id, at) in by_id.range(..=ids[good]).rev() {
+        for &i in at {
+            if lez.holds(id, &entries[cands[i].entry].payload)? {
                 return Ok(i);
             }
         }
