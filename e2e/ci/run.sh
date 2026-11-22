@@ -30,6 +30,7 @@ stamp() { echo "[$(( $(date +%s) - t0 )) s] $*"; }
 stamp "vault: libraries and build"
 cd "$repo/vault"
 [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
+python3 -I "$repo/scripts/vault_libs.py" check
 forge build --quiet
 
 stamp "bridge: the release guest (risc0-build, guest Rust 1.88.0)"
@@ -45,12 +46,18 @@ cargo build --release --locked -p methods
 cp_elf="$(find target/riscv-guest -path '*riscv32im-risc0-zkvm-elf/release/*' -name 'checkpoint_b.bin' | head -1)"
 [ -n "$cp_elf" ] || { echo "no checkpoint_b.bin under checkpoint/target/riscv-guest" >&2; exit 1; }
 export FERRATA_CI_CHECKPOINT_B_ELF="$repo/checkpoint/$cp_elf"
-cargo +1.98.1 build --release --locked -p fidelity --bin ci_zone
+stamp "native archives (rapidsnark, the Logos Blockchain circuits): fetched once, checked against scripts/native-deps.json"
+vars=$(python3 -I "$repo/scripts/fetch_native.py" env) && eval "$vars"
+cargo +1.98.1 build --release --locked -p fidelity --bin ci_zone --message-format=json-render-diagnostics \
+  > "$FERRATA_E2E_DIR/ci_zone-build.json"
+python3 -I "$repo/scripts/fetch_native.py" check-build "$FERRATA_E2E_DIR/ci_zone-build.json" --target-dir "$repo/checkpoint/target"
 export FERRATA_CI_ZONE="$repo/checkpoint/target/release/ci_zone"
 
 stamp "cli: the round-trip test (LEZ's guests: guest Rust 1.91.1 in $lez_home)"
 cd "$repo/cli"
-RISC0_HOME="$lez_home" cargo test --locked --test roundtrip_b --no-run
+RISC0_HOME="$lez_home" cargo test --locked --test roundtrip_b --no-run --message-format=json-render-diagnostics \
+  > "$FERRATA_E2E_DIR/cli-build.json"
+python3 -I "$repo/scripts/fetch_native.py" check-build "$FERRATA_E2E_DIR/cli-build.json" --target-dir "$repo/cli/target"
 stamp "built"
 [ "${1:-}" = build ] && exit 0
 for f in "$FERRATA_CI_RELEASE_ELF" "$FERRATA_CI_CHECKPOINT_B_ELF"; do echo "guest $(basename "$f") sha256 $(sha256sum "$f" | cut -c1-64)"; done

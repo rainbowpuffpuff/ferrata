@@ -37,8 +37,15 @@ jobs:
         run: cargo test --workspace --locked -- --nocapture
       - name: Format
         run: cargo fmt --all -- --check
+      # unnecessary_map_or is allowed: with rust-version 1.85 clippy proposes is_none_or for ferrata-core's
+      # Job::is_verified, code the deployed attestation program is built from (a change would move its image id).
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings -A clippy::unnecessary_map_or
+      # The root workspace's rust-version (1.85, measured) stays true.
+      - name: Rust 1.85.0 (the root workspace's rust-version)
+        run: rustup toolchain install 1.85.0 --profile minimal
+      - name: The root workspace builds with its declared minimum Rust
+        run: cargo +1.85.0 check --workspace --locked
       - name: no_std build for the RISC Zero guest ISA
         run: cargo build -p ferrata-core --no-default-features --features zkcrypto --target riscv32im-unknown-none-elf --release --locked
 
@@ -124,6 +131,11 @@ jobs:
             cli -> target
           shared-key: roundtrip
           cache-on-failure: true
+      - name: Cache the checked native archives (scripts/native-deps.json)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ferrata/native
+          key: native-${{ hashFiles('scripts/native-deps.json') }}
       - name: Build (vault, release and rule (B) guests, ci_zone, the test)
         run: e2e/ci/run.sh build
       - name: Round trip
@@ -150,9 +162,43 @@ jobs:
       - name: Libraries
         working-directory: vault
         run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+      - name: The libraries are the trees vault/lib.lock pins (scripts/vault_libs.py)
+        run: python3 -I scripts/vault_libs.py check
       - name: forge test
         working-directory: vault
         run: forge test --no-match-contract PrivacySuite
+
+  # The dependency policy (deny.toml) over every Rust workspace (scripts/deny_all.py): licences, bans and sources block,
+  # and the workspaces that need the upstream sources (the root, cli, lez) must have passed, not been skipped (the trees
+  # CI does not fetch, LEZ v0.3.1, spel and the unstaged module libraries, are skipped); advisories against
+  # scripts/deny-advisories-baseline.txt are reported without blocking, so a new RustSec advisory does not turn main
+  # red with no code change. cargo-deny from its release asset, checked by sha256.
+  deps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (cargo metadata of LEZ's workspaces)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: cargo-deny 0.20.2, its release asset checked
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/cargo-deny.tgz" https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz
+          echo "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  $RUNNER_TEMP/cargo-deny.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/cargo-deny.tgz" -C "$RUNNER_TEMP"
+          install -m 755 "$RUNNER_TEMP/cargo-deny-0.20.2-x86_64-unknown-linux-musl/cargo-deny" "$HOME/.cargo/bin/cargo-deny"
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - name: Licences, bans and sources over every workspace; the root, cli and lez checked, not skipped
+        run: python3 -I scripts/deny_all.py --advisories off | tee "$RUNNER_TEMP/deny.txt" && grep -q ' 0 failed, ' "$RUNNER_TEMP/deny.txt" && grep -q -E '^PASS +\. ' "$RUNNER_TEMP/deny.txt" && grep -q -E '^PASS +cli ' "$RUNNER_TEMP/deny.txt" && grep -q -E '^PASS +lez ' "$RUNNER_TEMP/deny.txt"
+      - name: Advisories against the per-workspace baseline (reported, not blocking)
+        continue-on-error: true
+        run: python3 -I scripts/deny_all.py --advisories baseline
 
   # The Logos Core modules' crates, staged as the module builder sees them, resolve with their committed Cargo.lock
   # files (scripts/ci/modules-resolve.sh): a manifest change in a crate a module vendors (cli/, lez/wire, ...) that
@@ -199,6 +245,19 @@ jobs:
         run: python3 -I scripts/check-decisions.py
       - name: The decision checker's own tests (scripts/test_check_decisions.py)
         run: python3 -I scripts/test_check_decisions.py
+      # The release's supply chain and the image-id tooling (standard library; bash, git, tar, gzip).
+      - name: The image-id tooling's tests (scripts/reproduce/test_image_id_tools.py)
+        run: python3 -I scripts/reproduce/test_image_id_tools.py
+      - name: The native archives' fetch and build check (scripts/test_fetch_native.py)
+        run: python3 -I scripts/test_fetch_native.py
+      - name: The release manifest and crate notices (scripts/test_release_manifest.py)
+        run: python3 -I scripts/test_release_manifest.py
+      - name: The release scripts end to end, with stubs (scripts/test_release_scripts.py)
+        run: python3 -I scripts/test_release_scripts.py
+      - name: The vault's pinned libraries (scripts/test_vault_libs.py)
+        run: python3 -I scripts/test_vault_libs.py
+      - name: The cargo-deny runner (scripts/test_deny_all.py)
+        run: python3 -I scripts/test_deny_all.py
       # RFP-022 Reliability #11: every hard row of both RFPs mapped to its tests, records and documents
       # (scripts/ci/row-tests.toml), and every test said to run in a CI job really run by that job's
       # commands (scripts/ci/ci_model.py reads the workflows and the scripts they call). The checker's own

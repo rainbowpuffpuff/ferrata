@@ -445,7 +445,7 @@ fn ssz_decoding_is_strict() {
     let encode = |extra: usize| {
         let mut b = vec![0u8; 584];
         b[436..440].copy_from_slice(&584u32.to_le_bytes());
-        b.extend(std::iter::repeat(7u8).take(extra));
+        b.extend(std::iter::repeat_n(7u8, extra));
         b
     };
     assert!(ExecutionPayloadHeader::decode(&encode(32), true).is_ok());
