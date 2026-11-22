@@ -8,8 +8,8 @@ sent to any public network): each run is `bash bench/perf/gate-sequencer.sh NAME
 mainnet chain (`lez/lab/results/record/net/mainnet`), which `bench/perf/beacon_replay.py` reveals on loopback one
 recorded update every `GATE_STEP` seconds, as a beacon node's light-client API would have served it. The recorded
 updates are about two hours of mainnet apart (median 121.6 min); revealed every 60 or 90 s, the replay runs 80 to 120
-times faster than mainnet and faster than the daemons apply an update, so jobs overlap by construction (each run's
-"Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
+times faster than mainnet and faster than two honest daemons apply one (G3–G5; in G2 the adversary applied each in
+35 s median), so their jobs overlap (each run's "Replay rate" below). Every daemon reads the chain through its follower (`wait_final = true`: blocks final on
 Bedrock); it reads the instance at the start of each round and the job's account just before it sends a step, and
 defers each (job, step) by `H(key, job, step) mod W` rounds; the adversary never defers (`W` = 1) and is configured
 to poll every 2 s against the honest daemons' 4 s. Rounds take longer than the poll (each run's "s per round": a
