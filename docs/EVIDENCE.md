@@ -672,6 +672,12 @@ generated stage tables regenerated (program `816d1fef…`); the updater's gate o
 0.4841 / 0.5159, 1,101 rounds). On the laptop: `links` and its steps (`check-row-tests.py` consistent;
 `test_ci_model.py` 88 passed: RFP-021 54 of 59 and RFP-022 64 of 68 hard rows with a test CI runs).
 
+**Twenty-fourth pass (branch `integration9`, 22 Nov 2026).** The merge of `fix-a2` (row 217; no conflict), at its
+fold's commit `f7813b37`, on the build box: the four LEZ harness suites it touches, dev mode, records written to a
+scratch directory and compared with the committed ones: `security_lc` 5 passed, `security_privacy` 2, `redteam_lc`
+11, `redteam_attest` 11; 29 records byte-identical, `f8-full-diff.md` differing only in its count of random bytes
+(29,806 against 29,792 committed); rustfmt clean on the changed test files. On the laptop: `links` and its steps.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
