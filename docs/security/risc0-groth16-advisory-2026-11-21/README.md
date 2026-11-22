@@ -1,5 +1,9 @@
 # Security note, 21 November 2026: RISC Zero's Groth16 advisory and Ferrata
 
+> **Corrected 23 November 2026**: the light client's public path is not independent of LEZ's check of
+> privacy-preserving transactions, as "Not affected" below said; see [the correction](#correction-23-november-2026).
+> The rest of the note stands as written on 21 November 2026.
+
 RISC Zero published two critical advisories on 11 November 2026:
 [GHSA-g6qg-9j8p-7j87](https://github.com/risc0/risc0/security/advisories/GHSA-g6qg-9j8p-7j87) (risc0-zkvm) and
 [GHSA-mm6c-35cm-g4x2](https://github.com/risc0/risc0-ethereum/security/advisories/GHSA-mm6c-35cm-g4x2) (the Ethereum
@@ -104,6 +108,43 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 - Ethereum mainnet: nothing of ours is deployed there. No one's funds: the vaults hold the deployer's Sepolia ether.
 - LEZ public transactions, which the sequencer executes rather than verifies by proof (the light client's updates and
   records on its public path, the public LEZ testnet instance of EVIDENCE row 150), and the native light-client core.
+  **Qualified 23 November 2026** ([correction](#correction-23-november-2026)): the public transactions are not checked
+  by proof, but on LEZ v0.4 the instance's store they read can also be written by a privacy-preserving transaction
+  (the proven update path), so the light client's records rest on LEZ's receipt check as well.
+
+## Correction, 23 November 2026
+
+**What the note said.** Under "Not affected" (above, as written on 21 November 2026): "LEZ public transactions, which
+the sequencer executes rather than verifies by proof (the light client's updates and records on its public path, …)".
+
+**What holds.** A public transaction is executed by the sequencer, not checked by proof, so the public path's own steps
+(the job's `Open`, `Miller` and `Finish`, and `Attest`) do not depend on RISC Zero. The state they read does: on LEZ v0.4 an instance's
+store, from which every record and attestation follows, can also be written by a privacy-preserving transaction, through
+the attestation program's proven path. A private run of the program sends `ApplyVerified` to the instance, which
+accepts it on the sender's program alone (`lez/guests/program/src/main.rs:288-305`; LEZ's
+`ReceiveInput::from_own_program`, `lee/state_machine/core/src/program/mod.rs:390-393` at v0.4.0-rc1 and rc3) and
+applies the job it carries after checking only its phase, its adoption and its starting store
+(`crates/ferrata-core/src/steps.rs:605-623`). LEZ v0.4.0-rc1 and rc3 accept that transaction when its proof, decoded as
+any `InnerReceipt`, passes `Receipt::verify` for the privacy circuit
+(`lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs:51-65`, the same in both). With the versions both
+lock (risc0-zkvm 3.0.5, risc0-groth16 3.0.4, risc0-circuit-recursion 4.0.4), that accepts a Groth16 receipt as well as a
+succinct one (risc0-zkvm 3.0.5 `src/receipt.rs:344-354`): the receipt kind GHSA-g6qg-9j8p-7j87 is about, in its
+affected versions. So if LEZ accepts a forged receipt, which §3 above leaves to Logos to confirm and which we have not
+tested (we built no forgery), it can write any instance's store, and the records that public consumers read follow
+from it. GHSA-mm6c-35cm-g4x2 (the Solidity verifiers) does not reach LEZ. The bridge program's and the reference
+consumer's public state rest on the same check (each accepts some messages from its own private runs:
+`lez/guests/bridge/src/main.rs:639`, `:775`, `:852`; `lez/guests/consumer/src/main.rs:185`), as RFP-022's rows Sec.2
+and Sec.3 already say. The experimental v0.3.1 port (row 150) has no proven update path; whether a forged
+privacy-preserving transaction on v0.3.1 could write its state was not examined.
+
+**Why it was missed.** The note judged the public path by the transactions it sends, not by everything that can
+write the state it reads. The audit of `main` at `8c38d723` (22 November 2026) found the `ApplyVerified` path.
+
+**What changes.** `docs/trust.md` states it: a fourth assumption in §0, the provers' row of §2.4, §2.5 and §5. The
+RFP-021 rows of `docs/requirements-status.md` that rest on an instance's store (F.1, F.2, F.12, S.6, VS.1, VS.2, VS.5,
+VS.6) give it as a condition. Nothing deployed changes. The fix is LEZ's (a LEZ on risc0 3.1.0). An option for after
+the award: an instance configured at `Init` to refuse `ApplyVerified`, which takes its public path out of this
+dependence at the price of the proven path; it moves the attestation program's image id.
 
 ## Plan
 
