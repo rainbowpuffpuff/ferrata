@@ -60,14 +60,13 @@ fn closed_within(c: &mut TcpStream, limit: Duration) -> Option<Duration> {
     }
 }
 
-#[cfg(target_os = "linux")]
-fn rss_kib() -> u64 {
+/// A line of `/proc/self/status`, in KiB (`VmRSS`, `VmHWM`; `None` where the kernel does not report it).
+fn status_kib(field: &str) -> Option<u64> {
     std::fs::read_to_string("/proc/self/status")
-        .unwrap()
+        .ok()?
         .lines()
-        .find_map(|l| l.strip_prefix("VmRSS:"))
+        .find_map(|l| l.strip_prefix(field)?.strip_prefix(':'))
         .and_then(|v| v.split_whitespace().next()?.parse().ok())
-        .unwrap()
 }
 
 /// The review's reproduction: one client that connects and sends nothing (and one that sends `GET ` and stops) no
@@ -94,8 +93,11 @@ fn health_answers_beside_an_idle_connection() {
 }
 
 /// A request head of exactly [`MAX_HEAD`] bytes is answered; one byte more is refused with `400` (and the client
-/// receives it: the server reads what is still coming before it closes); 16 MiB with no newline are refused without
-/// the process growing (the review measured +257 MiB for 256 MiB; an unbounded server would grow by the 16 MiB).
+/// receives it: the server reads what is still coming before it closes); a client offering 64 MiB with no newline is
+/// cut off after a few MiB (what the sockets hold) and the process's peak resident set does not grow by them (the
+/// review measured +257 MiB for 256 MiB). 9c L-U6: the test read `VmRSS` after the connection, which a server that
+/// read everything and then refused would also have passed; now the peak (`VmHWM`, reset first where the kernel
+/// allows) and the bytes the client got through.
 #[test]
 fn request_heads_are_bounded() {
     let addr = listener(healthy());
@@ -116,25 +118,26 @@ fn request_heads_are_bounded() {
     assert_eq!(status(&over), "HTTP/1.1 400 Bad Request", "{over}");
 
     let chunk = vec![b'a'; 64 * 1024];
-    #[cfg(target_os = "linux")]
-    let before = rss_kib();
+    let reset = std::fs::write("/proc/self/clear_refs", "5").is_ok();
+    let before = status_kib("VmHWM");
     let mut c = TcpStream::connect(addr).unwrap();
     c.set_write_timeout(Some(Duration::from_secs(3))).unwrap();
     let mut sent = 0usize;
-    while sent < (16 << 20) {
+    while sent < (64 << 20) {
         match c.write(&chunk) {
             Ok(n) => sent += n,
             Err(_) => break,
         }
     }
     let ended = closed_within(&mut c, Duration::from_secs(3));
-    println!("16 MiB without a newline: {sent} bytes written before the server ended it (after {ended:?} more)");
+    let peak = status_kib("VmHWM");
+    println!(
+        "64 MiB offered without a newline: {sent} bytes written before the server ended it (after {ended:?} more); peak          RSS {before:?} KiB -> {peak:?} KiB (reset first: {reset})"
+    );
     assert!(ended.is_some(), "the server ends the connection");
-    #[cfg(target_os = "linux")]
-    {
-        let after = rss_kib();
-        println!("RSS {before} KiB -> {after} KiB");
-        assert!(after < before + 4 * 1024, "RSS grew by {} KiB", after.saturating_sub(before));
+    assert!(sent < 32 << 20, "{sent} bytes got through: the server read on");
+    if let (Some(before), Some(peak)) = (before, peak) {
+        assert!(peak < before + 4 * 1024, "the peak RSS grew by {} KiB", peak.saturating_sub(before));
     }
     assert_eq!(status(&get(addr, "/health").unwrap()), "HTTP/1.1 200 OK");
 }

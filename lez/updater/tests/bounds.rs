@@ -5,10 +5,11 @@
 //! test's allocations.
 
 use std::{
+    collections::BTreeMap,
     io::{BufRead, BufReader, Write},
     net::TcpListener,
     sync::{Mutex, OnceLock},
-    time::Instant,
+    time::{Duration, Instant},
 };
 
 use ferrata_updater::source::{
@@ -17,6 +18,23 @@ use ferrata_updater::source::{
 };
 
 static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
+
+/// Per request path, the bytes the test server pushed before the answer ended or the client went away.
+static PUSHED: Mutex<BTreeMap<String, usize>> = Mutex::new(BTreeMap::new());
+
+/// The bytes the server pushed for the request whose path starts with `prefix`, once its connection has ended (at most
+/// 30 s).
+fn pushed(prefix: &str) -> Option<usize> {
+    let t = Instant::now();
+    while t.elapsed() < Duration::from_secs(30) {
+        let found = PUSHED.lock().unwrap().iter().find(|(p, _)| p.starts_with(prefix)).map(|(_, n)| *n);
+        if found.is_some() {
+            return found;
+        }
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    None
+}
 
 fn lock() -> std::sync::MutexGuard<'static, ()> {
     ONE_AT_A_TIME.lock().unwrap_or_else(|p| p.into_inner())
@@ -58,10 +76,11 @@ fn server() -> &'static str {
                     while left > 0 {
                         let k = left.min(chunk.len());
                         if s.write_all(&chunk[..k]).is_err() {
-                            return;
+                            break;
                         }
                         left -= k;
                     }
+                    PUSHED.lock().unwrap().insert(path, n - left);
                 });
             }
         });
@@ -69,14 +88,21 @@ fn server() -> &'static str {
     })
 }
 
-#[cfg(target_os = "linux")]
-fn rss_kib() -> u64 {
+/// A line of `/proc/self/status`, in KiB (`VmRSS`, `VmHWM`; `None` where the kernel does not report it).
+fn status_kib(field: &str) -> Option<u64> {
     std::fs::read_to_string("/proc/self/status")
-        .unwrap()
+        .ok()?
         .lines()
-        .find_map(|l| l.strip_prefix("VmRSS:"))
+        .find_map(|l| l.strip_prefix(field)?.strip_prefix(':'))
         .and_then(|v| v.split_whitespace().next()?.parse().ok())
-        .unwrap()
+}
+
+/// The process's peak resident set so far (`VmHWM`), after resetting it to the current one where the kernel allows
+/// (`/proc/self/clear_refs`, "5"): what an answer read whole would raise, even if freed before the test looks (9c L-U6:
+/// the test read `VmRSS` after the call, which a read-everything-then-refuse implementation would also have passed).
+fn peak_reset() -> (Option<u64>, bool) {
+    let reset = std::fs::write("/proc/self/clear_refs", "5").is_ok();
+    (status_kib("VmHWM"), reset)
 }
 
 /// The exact bound is read whole; one byte more is refused, whether the answer announces its length (curl refuses it
@@ -119,21 +145,24 @@ fn huge_answers_are_refused_without_growing_the_process() {
             assert_eq!(got.is_ok(), ok);
         }
     }
-    #[cfg(target_os = "linux")]
-    let before = rss_kib();
+    let (before, reset) = peak_reset();
+    let rss = status_kib("VmRSS");
     let t = Instant::now();
-    let huge = src(&format!("/close/{}", 256usize << 20)).finality_update();
+    let huge = src(&format!("/close/{}/huge", 256usize << 20)).finality_update();
     let took = t.elapsed();
+    let peak = status_kib("VmHWM");
+    let sent = pushed(&format!("/close/{}/huge", 256usize << 20)).expect("the server's count");
     println!(
-        "256 MiB finality update without a length: {:?} in {took:?}",
-        huge.as_ref().map(Vec::len).map_err(|e| format!("{e:#}"))
+        "256 MiB finality update without a length: {:?} in {took:?}; the server pushed {sent} bytes before curl was          stopped; peak RSS {before:?} KiB -> {peak:?} KiB (reset to the current {rss:?} KiB: {reset}; bound {} KiB)",
+        huge.as_ref().map(Vec::len).map_err(|e| format!("{e:#}")),
+        MAX_OBJECT_BYTES / 1024
     );
     assert!(huge.is_err());
-    #[cfg(target_os = "linux")]
-    {
-        let after = rss_kib();
-        println!("RSS {before} KiB -> {after} KiB (bound {} KiB)", MAX_OBJECT_BYTES / 1024);
-        assert!(after < before + 8 * 1024, "RSS grew by {} KiB", after.saturating_sub(before));
+    // Read whole, all 256 MiB would have left the server; a bounded reader stops curl past 1 MiB, and what the
+    // sockets and the pipe hold between them is a few MiB.
+    assert!(sent < 64 << 20, "the server pushed {sent} bytes");
+    if let (Some(before), Some(peak)) = (before, peak) {
+        assert!(peak < before + 8 * 1024, "the peak RSS grew by {} KiB", peak.saturating_sub(before));
     }
     let announced = src(&format!("/len/{}", 256usize << 20)).finality_update();
     println!(
