@@ -34,7 +34,9 @@
 //! drop is journaled in `<state>/drops.json` ([`relayer::drop_step`]): recorded with the private nonce of the account
 //! the credits come from before its credit is sent, one drop at a time; its job stays in the inbox until LEZ shows
 //! that nonce moved (the credit applied); a credit not applied within `--drop-wait` (its send failed, a kill left it
-//! unsent, LEZ dropped it) is sent again on the same state of that account, so LEZ applies at most one of the two.
+//! unsent, LEZ dropped it) is sent again, built only on the recorded state of that account (a credit that lands while
+//! the next is built is found, and nothing is sent), so LEZ applies at most one of them; after `--drop-max-sends`
+//! credits, or once the deposit is claimed without it, the drop is given up (`gas-drop-given-up`).
 //!
 //! Keys: an Ethereum keystore file (`--keystore`, `--password-file`), or, on a local anvil only,
 //! `--unlocked` (the node signs). The LEZ side: a sequencer through LEZ's wallet with the relayer's own
@@ -125,11 +127,15 @@ pub struct Cli {
     /// Native LEZ sent per gas drop.
     #[arg(long, default_value_t = 0, global = true)]
     pub drop_amount: u128,
-    /// Seconds a gas drop's credit sent to LEZ may stay unapplied before it is sent again. It is sent again on the same
-    /// state of the drop account (the relayer's book records that account's nonce before the first send), so LEZ
-    /// applies at most one of the two.
+    /// Seconds a gas drop's credit sent to LEZ may stay unapplied before it is sent again. It is sent again only on the
+    /// state of the drop account the relayer's book recorded before the first send (a credit that lands meanwhile is
+    /// found after the sync, and nothing is sent), so LEZ applies at most one of the credits of a drop.
     #[arg(long, default_value_t = 120, global = true)]
     pub drop_wait: u64,
+    /// Credits sent for one gas drop at most: still not applied `--drop-wait` after the last of them, the drop is given
+    /// up (`gas-drop-given-up`) and the next drops go (one drop at a time).
+    #[arg(long, default_value_t = 5, global = true)]
+    pub drop_max_sends: u32,
     /// Accept RISC Zero dev-mode (fake) gas-drop receipts: a local devnet whose proofs are fake too. Without it, a
     /// daemon started with RISC0_DEV_MODE set refuses to run gas drops (a fake receipt would be paid a real drop).
     #[arg(long, global = true)]
@@ -331,8 +337,9 @@ struct Daemon {
     gasdrop_image_id: Option<[u8; 32]>,
     lez_me: Option<[u8; 32]>,
     drop_amount: u128,
-    /// `--drop-wait`.
+    /// `--drop-wait`, `--drop-max-sends`.
     drop_wait: u64,
+    drop_max_sends: u32,
     /// Tokens whose credited fees the relayer collects (ETH, and every token of a release it sent).
     tokens: std::collections::BTreeSet<Address>,
     /// The vault runs rule (B) (`mode() == 1`): candidates are finalised with `finalizeAttested`.
@@ -1098,6 +1105,7 @@ impl Daemon {
                     amount: self.drop_amount,
                     now: unix_now(),
                     drop_wait: self.drop_wait,
+                    max_sends: self.drop_max_sends,
                     job_age: file_age(file),
                     max_job_age: self.max_job_age,
                 };
@@ -1119,6 +1127,14 @@ impl Daemon {
                         "applied": true, "resolvedLater": resolved,
                     })),
                     DropStep::InFlight { reason } => bail!("in flight: {reason}"),
+                    DropStep::GivenUp { why, sends } => {
+                        log(
+                            &self.sink,
+                            "gas-drop-given-up",
+                            json!({ "job": name, "nullifier": hx(&j.nullifier), "sends": sends, "why": why }),
+                        );
+                        bail!("refused: the gas drop for this N was given up with nothing applied: {why}")
+                    }
                 }
             }
         }
@@ -1284,6 +1300,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         lez_me: cli.lez_account.as_deref().map(h32).transpose()?,
         drop_amount: cli.drop_amount,
         drop_wait: cli.drop_wait,
+        drop_max_sends: cli.drop_max_sends,
         tokens: [Address::ZERO].into_iter().collect(),
         rule_b,
         max_job_age: cli.max_job_age,
