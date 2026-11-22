@@ -24,7 +24,7 @@ One session on 22 November 2026, 04:10–04:15 UTC, on a Modal build box (a CPU 
 - **Client:** the live driver's phase `attest-block` ([`lez/live/driver/src/block.rs`](../../../live/driver/src/block.rs)),
   every transaction built by LEZ v0.4.0-rc3's wallet library and sent over the sequencer's RPC. The command as it ran,
   in a copy of the tree with rc3 selected (`lez/scripts/lez-select.sh v0.4.0-rc3`), after `lez/live/run.sh
-  build-standalone` and `lez/live/run.sh build-driver` with the same first five variables; only the box's paths are
+  build-standalone` and `lez/live/run.sh build-driver` with the same first four variables; only the box's paths are
   replaced by `<...>`:
 
   ```sh
