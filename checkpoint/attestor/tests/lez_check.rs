@@ -368,6 +368,24 @@ fn l2_a_tip_inscribed_by_a_key_outside_k_is_passed_over() {
     );
 }
 
+/// The second review's N5 (`recorded-tip-signer-unchecked`): the lab key, which inscribed 186..=202, has left K
+/// (the channel now accredits channel-1, -2 and -9), so every block of the read is passed over and nothing above
+/// the signed tip 200 checks. The attestor does not fall back to signing 200 again as recorded: its signer is
+/// outside K, and the program refuses such a `T` (a liveness pause, as L2's first read).
+#[test]
+fn n5_the_signed_tip_is_not_signed_again_once_its_signer_left_k() {
+    let st200 = signed_200();
+    let rotated = [pk(&key("channel-1")), pk(&key("channel-2")), pk(&key("channel-9"))];
+    let e = read(&answers_with_keys(&rotated), &lez_lab(202, FINALIZED), Some(&st200)).unwrap_err().to_string();
+    assert!(
+        e.starts_with("refused: the signed tip 200 was inscribed by") && e.contains("no block above it checks"),
+        "{e}"
+    );
+    // The same read with the lab key still in K signs 202.
+    let t = read(&answers_with_keys(&n3_keys()), &lez_lab(202, FINALIZED), Some(&st200)).unwrap();
+    assert_eq!(t.tip.tip_id, 202);
+}
+
 /// Review L5: the LEZ node is ahead of the Bedrock node's LIB (it holds the honest 203..=230 final, whose
 /// inscriptions are not final on Bedrock yet), and a turn holder inscribed 28 junk blocks with those ids, final
 /// on Bedrock. Each reads "final in the LEZ node" by its id and none is held byte for byte: the first read walks
