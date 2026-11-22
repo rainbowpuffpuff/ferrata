@@ -352,6 +352,10 @@ fn timeout(send: &Value) -> Duration {
 /// One Ethereum admin action: built, role and `eth_call` checked from `from`, then (with `send`) through Logos Core's
 /// send stack.
 pub(crate) fn vault_admin(v: &mut Vault, action: &str, p: &Value, sender: &Value, chain_id: u64) -> Result<Value, String> {
+    if sender["via"].as_str() == Some(send::TX_SENDER) {
+        // Only a deployment the person named (send.rs `pinned`), before the vault's roles are read.
+        send::pinned(chain_id, &v.vault)?;
+    }
     let (signature, args, role, what) = vault_action(action, p)?;
     let data = calldata(signature, &args);
     let call = json!({ "to": hex(&v.vault), "function": signature, "data": hex(&data), "value": "0", "role": role.name(), "what": what });

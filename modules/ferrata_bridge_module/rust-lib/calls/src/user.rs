@@ -76,6 +76,8 @@ fn erc20_preflight(v: &mut Vault, from: &Address, token: &Address, total: &str) 
 pub(crate) fn deposit_and_send(req: &Value) -> Result<Value, String> {
     let sender = &req["send"];
     let vault: Address = fixed(&req["vault"], "vault")?;
+    // Only a deployment the person named (send.rs `pinned`): refused before the vault is even read.
+    send::pinned(sender["chain_id"].as_u64().ok_or("send.chain_id: the chain tx_sender_module sends on")?, &vault)?;
     let mut v = Vault::new(&req["eth"], vault, req["from_block"].as_u64().unwrap_or(0))?;
     let from: Address = fixed(&sender["from"], "send.from: the depositor's account (held by keystore_module)")?;
     let depositor: Address = fixed(&req["depositor"], "depositor")?;
@@ -182,6 +184,7 @@ pub(crate) fn release_call(v: &mut Vault, r: &Value, seal: &[u8]) -> Result<(Vec
 pub(crate) fn release_and_send(req: &Value, r: &Value) -> Result<Value, String> {
     let sender = &req["send"];
     let vault: Address = fixed(&req["vault"], "vault")?;
+    send::pinned(sender["chain_id"].as_u64().ok_or("send.chain_id: the chain tx_sender_module sends on")?, &vault)?;
     let mut v = Vault::new(&req["eth"], vault, req["from_block"].as_u64().unwrap_or(0))?;
     let from: Address = fixed(&sender["from"], "send.from: the sender's account (held by keystore_module)")?;
     let seal = unhex(req["seal"].as_str().ok_or("seal: the release proof's seal (hex)")?)?;

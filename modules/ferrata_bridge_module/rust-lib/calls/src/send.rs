@@ -15,6 +15,10 @@
 //!
 //! Inside Logos Core the module crate installs the call by name ([`set_module_call`]); natively nothing is, and every
 //! send here is refused (the tests install a stand-in of the contract above).
+//!
+//! Every send goes to a deployment the person running Logos Core named ([`pinned`], `FERRATA_DEPLOYMENTS`): a caller of
+//! the module cannot have it raise a signing request for another vault or chain, and the purpose the approver shows
+//! names the vault and the chain.
 
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};
@@ -78,6 +82,56 @@ pub(crate) const TX_GAS_CAP: u64 = 1 << 24;
 /// the fee ceiling the account must hold.
 pub(crate) fn margin(estimate: u64) -> u64 {
     estimate.saturating_add(estimate / 4).saturating_add(20_000).min(TX_GAS_CAP).max(estimate)
+}
+
+/// The environment variable naming the deployments this module may send to:
+/// `FERRATA_DEPLOYMENTS="<chain id>:<vault address>[,<chain id>:<vault address>...]"`, set by the person who runs Logos
+/// Core (its modules start with its environment). No caller of the module can change it (review L1: any module or
+/// client that can call ferrata_bridge_module could otherwise have it raise signing requests to a vault it names).
+pub(crate) const DEPLOYMENTS_ENV: &str = "FERRATA_DEPLOYMENTS";
+
+fn deployments_text() -> Option<String> {
+    if cfg!(test) {
+        return test_deployments();
+    }
+    std::env::var(DEPLOYMENTS_ENV).ok().filter(|t| !t.trim().is_empty())
+}
+
+#[cfg(test)]
+fn test_deployments() -> Option<String> {
+    fake::DEPLOYMENTS.lock().unwrap().clone()
+}
+
+#[cfg(not(test))]
+fn test_deployments() -> Option<String> {
+    None
+}
+
+/// The entries of `FERRATA_DEPLOYMENTS`: (chain id, vault).
+pub(crate) fn parse_deployments(text: &str) -> Result<Vec<(u64, [u8; 20])>, String> {
+    text.split(',')
+        .map(str::trim)
+        .filter(|e| !e.is_empty())
+        .map(|e| {
+            let (c, v) = e.split_once(':').ok_or_else(|| format!("{DEPLOYMENTS_ENV}: {e} is not <chain id>:<vault address>"))?;
+            let chain: u64 = c.trim().parse().map_err(|_| format!("{DEPLOYMENTS_ENV}: the chain id {c} is not a number"))?;
+            Ok((chain, crate::fixed::<20>(&json!(v.trim()), "a FERRATA_DEPLOYMENTS vault")?))
+        })
+        .collect()
+}
+
+/// Whether the module may send to `vault` on `chain_id`: only to a deployment the person named in
+/// [`DEPLOYMENTS_ENV`]; none named, it sends nowhere. Checked before anything is asked or signed.
+pub(crate) fn pinned(chain_id: u64, vault: &[u8; 20]) -> Result<(), String> {
+    let text = deployments_text().ok_or_else(|| format!(
+        "refused before anything was asked: no deployment is pinned. The module sends only to the deployments the person \
+         running Logos Core names in {DEPLOYMENTS_ENV}=\"<chain id>:<vault>\" (asked: vault {} on chain {chain_id})", hex(vault)))?;
+    if parse_deployments(&text)?.iter().any(|(c, v)| *c == chain_id && v == vault) {
+        Ok(())
+    } else {
+        Err(format!("refused before anything was asked: vault {} on chain {chain_id} is not a deployment this module may send to \
+                     ({DEPLOYMENTS_ENV}: {})", hex(vault), text.trim()))
+    }
 }
 
 /// The request `tx_sender_module.send` takes: the chain, the account, the calls in order, the purpose (one line).
@@ -363,7 +417,10 @@ fn receipts(v: &mut crate::evm::Vault, hashes: &[String], wait: Duration) -> (Ve
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn through_stack(v: &mut crate::evm::Vault, chain_id: u64, from: &str, calls: &[Call], purpose: &str,
                             wait_for_it: bool, timeout: Duration, receipt_wait: Duration, detail: Value) -> Result<Sent, String> {
-    let req = request(chain_id, from, calls, purpose);
+    // Only to a deployment the person named; the approver's purpose line names it.
+    pinned(chain_id, &v.vault)?;
+    let purpose = format!("{purpose} (vault {} on chain {chain_id})", hex(&v.vault));
+    let req = request(chain_id, from, calls, &purpose);
     let asked = send(&req, Duration::from_secs(60))?;
     let id = asked["requestId"].as_str().unwrap_or_default().to_string();
     let mut phase = json!({ "requestId": id, "handle": asked["handle"], "from": from, "gas": asked["gas"], "approve_in": APPROVE_IN });
@@ -429,6 +486,8 @@ pub(crate) mod fake {
     pub(crate) static MINED: Mutex<bool> = Mutex::new(true);
     /// How many receipt reads fail before the node answers again.
     pub(crate) static FAILING_READS: Mutex<u32> = Mutex::new(0);
+    /// `FERRATA_DEPLOYMENTS` for the tests: the test vault `0x0202…` on Sepolia's chain id and on chain 1.
+    pub(crate) static DEPLOYMENTS: Mutex<Option<String>> = Mutex::new(None);
 
     fn call(module: &str, method: &str, args: &Value, _t: u64) -> Result<String, String> {
         assert_eq!(module, TX_SENDER);
@@ -494,6 +553,7 @@ pub(crate) mod fake {
     pub(crate) fn install() {
         set_module_call(call);
         crate::rpc::set_eth_rpc_module(eth);
+        *DEPLOYMENTS.lock().unwrap() = Some(format!("11155111:0x{v},1:0x{v}", v = "02".repeat(20)));
     }
 }
 
@@ -618,6 +678,47 @@ mod tests {
         *fake::VERDICT.lock().unwrap() = "broadcast";
         assert_eq!(receipt_wait(&json!({ "receipt_timeout_s": 12 })), Duration::from_secs(12));
         assert_eq!(receipt_wait(&json!({})), RECEIPT_WAIT);
+    }
+
+    /// Review L1 (the caller chose the vault): the module sends only to a deployment the person named
+    /// (`FERRATA_DEPLOYMENTS`); another vault, another chain, or none named is refused before anything reaches
+    /// tx_sender_module; the purpose the approver shows names the vault and the chain.
+    #[test]
+    fn only_a_pinned_deployment_is_sent_to_and_the_purpose_names_it() {
+        let _g = serial();
+        fake::install();
+        *fake::VERDICT.lock().unwrap() = "broadcast";
+        *fake::STATUS.lock().unwrap() = "0x1";
+        let from = "0x0000000000000000000000000000000000000003";
+        let n0 = fake::SENT.lock().unwrap().len();
+        let mut other = crate::evm::Vault::new(&json!({ "via": "eth_rpc_module", "chain_id": 11155111 }), [7; 20], 0).unwrap();
+        let e = through_stack(&mut other, 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_secs(1), json!({}))
+            .err().unwrap();
+        assert!(e.starts_with(&format!("refused before anything was asked: vault 0x{} on chain 11155111 is not a deployment", "07".repeat(20))), "{e}");
+        let e = through_stack(&mut vault(), 5, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_secs(1), json!({}))
+            .err().unwrap();
+        assert!(e.contains("on chain 5 is not a deployment this module may send to (FERRATA_DEPLOYMENTS: 11155111:0x0202"), "{e}");
+        // The module-level deposit naming another vault: refused first, before any read of that address.
+        let req = json!({ "vault": format!("0x{}", "07".repeat(20)), "eth": { "via": "eth_rpc_module", "chain_id": 11155111 },
+                          "depositor": from, "token": format!("0x{}", "00".repeat(20)), "denom_index": 0,
+                          "send": { "via": TX_SENDER, "from": from, "chain_id": 11155111 } });
+        let e = crate::user::deposit_and_send(&req).unwrap_err();
+        assert!(e.starts_with("refused before anything was asked: vault 0x0707"), "{e}");
+        assert_eq!(fake::SENT.lock().unwrap().len(), n0, "nothing reached tx_sender_module");
+        // The pinned deployment: sent; the purpose line names it.
+        through_stack(&mut vault(), 11155111, from, &calls(), "Ferrata deposit", true, Duration::from_secs(1), Duration::from_secs(1), json!({})).unwrap();
+        let last = fake::SENT.lock().unwrap().last().cloned().unwrap();
+        assert_eq!(last["purpose"], json!(format!("Ferrata deposit (vault 0x{} on chain 11155111)", "02".repeat(20))));
+        // None named: nothing is sent anywhere.
+        *fake::DEPLOYMENTS.lock().unwrap() = None;
+        let e = through_stack(&mut vault(), 11155111, from, &calls(), "x", true, Duration::from_secs(1), Duration::from_secs(1), json!({})).err().unwrap();
+        assert!(e.contains("no deployment is pinned") && e.contains("FERRATA_DEPLOYMENTS=\"<chain id>:<vault>\""), "{e}");
+        // The list's form.
+        assert_eq!(parse_deployments(&format!(" 1:0x{}, 11155111:0x{} ,", "02".repeat(20), "07".repeat(20))).unwrap(), vec![(1, [2; 20]), (11155111, [7; 20])]);
+        assert!(parse_deployments("11155111").is_err());
+        assert!(parse_deployments(&format!("sepolia:0x{}", "02".repeat(20))).is_err());
+        assert!(parse_deployments("1:0x1234").is_err());
+        fake::install();
     }
 
     #[test]
