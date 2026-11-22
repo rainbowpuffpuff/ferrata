@@ -288,7 +288,9 @@ fn m7_the_read_starts_at_the_signed_tip_and_the_state_round_trips() {
     let p = dir.join("state.json");
     write_state(&p, &channel(), &st200).unwrap();
     assert_eq!(read_state(&p, &channel()).unwrap(), Some(st200.clone()));
-    assert!(!dir.join("state.json.tmp").exists());
+    let left: Vec<String> =
+        fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+    assert_eq!(left, ["state.json"], "no temporary file is left beside the state");
     assert!(format!("{:#}", read_state(&p, &[7; 32]).unwrap_err()).contains("of channel"));
     assert!(state_from_json(&[7; 32], &state_json(&channel(), &st200)).unwrap_err().to_string().contains("of channel"));
     assert_eq!(read_state(&dir.join("absent.json"), &channel()).unwrap(), None);
