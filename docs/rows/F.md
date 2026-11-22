@@ -36,7 +36,8 @@ Commands (Modal build box, from the worktree's root; Nix, Foundry 1.3.6):
     bash modules/scripts/bridge-send-stack.sh run <out>             # 53 of 53; run five times in a row
     export SEQNET_TMP=<scratch>/seqnet SEQNET_SHORT=/var/tmp/rfx    # the crown-live-3 inputs in $SEQNET_TMP/inputs (run.sh's header)
     bash e2e/seqnet/run.sh build-logoseth                           # the zone's tools, logosctl, the send stack, lez_core patched, the runner
-    cp -r <out>/check/lgx-ferrata_bridge_module "$SEQNET_TMP/logos/"   # the same module .lgx as the send stack's run
+    D="$SEQNET_TMP/logos/lgx-ferrata_bridge_module"; chmod -R u+w "$D"; rm -rf "$D"   # build-logoseth's own .lgx out (run.sh does the same)
+    cp -rL <out>/check/lgx-ferrata_bridge_module "$D"              # the same module .lgx as the send stack's run (a /nix/store symlink: -L)
     bash e2e/seqnet/run.sh logoseth logoseth-4                      # 12 of 12
 
 ## RFP-021

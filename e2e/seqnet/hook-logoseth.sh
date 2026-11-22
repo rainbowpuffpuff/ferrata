@@ -25,7 +25,8 @@ STACK="$T/logoseth/stack"; LEZ_PATCHED="$T/logos/lgx-lez_core-patched"
 [ -x "$LOGOSCTL" ] && [ -d "$LGX_DIR" ] && [ -x "$RUNNER" ] && [ -d "$STACK/lgx-tx_sender_module" ] \
   || die "run.sh build-logoseth first (logosctl, the module's .lgx, the send stack's, the qmltest runner)"
 
-# 1. The chain service: LEZ's history and the release's stand-in prover (the module reads and sends Ethereum itself);
+# 1. The chain service: LEZ's history and the release's stand-in prover (the module reads and sends Ethereum itself, so
+#    the service is started with the user's address alone, --user: it holds no Ethereum key of the user's);
 #    its LEZ wallet also holds the configuration's role keys (the crown's derived throwaway keys), the stand-in for the
 #    roles' own LEZ wallets: a LEZ admin message the module builds (module.submit) is HELD there until a person approves
 #    exactly that message with the role password (module.approve_role; the test plays the person: ops.sh approve-lez).
@@ -33,7 +34,7 @@ STACK="$T/logoseth/stack"; LEZ_PATCHED="$T/logos/lgx-lez_core-patched"
 mkdir -p "$W/relayer-inbox"
 RK="$W/lez-role"; mkdir -p "$RK"; chmod 700 "$RK"; ( umask 077; printf '%s' "seqnet LEZ role wallet (local)" > "$RK/password" )
 "${PROVE[@]}" "$BIN/seqnet-chain" --listen "127.0.0.1:$CHAIN_PORT" --eth-rpc "$RPC" --chain-id 11155111 --vault "$VAULT" --from-block "$FROM" \
-  --keystore "$KEYSTORE" --password-file "$U/eth.pass" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" \
+  --user "$DEPOSITOR" --sequencer "$SEQ" --seed "$U/seed.txt" --lez-wallet "$U/lez-wallet" \
   --lez-password-file "$U/lez.pass" --bridge-account "$BRIDGE" --bridge-program "$BRIDGE_BIN" --relayer-bin "$BIN/ferrata-relayer" \
   --relayer "$RELAYER" --relayer-state "$W/relayer" --relayer-inbox "$W/relayer-inbox" --mock "$MOCK" --prover "$DEPLOYER" \
   --release-image-id "$RELEASE_ID" --log "$M/chain-calls.jsonl" --proofs "$PROOFS" \
@@ -41,6 +42,12 @@ RK="$W/lez-role"; mkdir -p "$RK"; chmod 700 "$RK"; ( umask 077; printf '%s' "seq
 CHAIN_PID=$!
 for _ in $(seq 120); do curl -fsS -m 2 -d '{"method":"module.info","params":{"lez_only":true}}' "http://127.0.0.1:$CHAIN_PORT/" > /dev/null 2>&1 && break; sleep 1; done
 kill -0 $CHAIN_PID 2>/dev/null || { tail -n 20 "$W/seqnet-chain.log"; die "seqnet-chain did not start"; }
+# What the chain service holds, as it says itself: no Ethereum key; the LEZ role keys behind its approval step.
+curl -fsS -m 10 -d '{"method":"module.session","params":{}}' "http://127.0.0.1:$CHAIN_PORT/" \
+  | jq -c '{holds_eth_key: .result.holds_eth_key, depositor: .result.depositor}' > "$M/chain-keys.json"
+curl -fsS -m 10 -d '{"method":"module.role_gate","params":{}}' "http://127.0.0.1:$CHAIN_PORT/" | jq -c .result >> "$M/chain-keys.json"
+[ "$(head -n 1 "$M/chain-keys.json" | jq -r .holds_eth_key)" = false ] || die "seqnet-chain holds an Ethereum key on the logoseth path"
+say "seqnet-chain: no Ethereum key held ($(head -n 1 "$M/chain-keys.json")); LEZ role keys behind the approval step"
 
 # 2. One Logos Core (sockets in a short TMPDIR: a Unix socket path holds 107 bytes).
 LT="$BESIDE_SHORT"; mkdir -p "$LT"
@@ -50,8 +57,10 @@ unwrap() { jq -c 'if (.result | type) == "string" then (.result | fromjson? // .
 j() { ctl --timeout 600000 call "$@" --json < /dev/null 2>&1 | unwrap; }
 dmode=(env RISC0_DEV_MODE=1); [ "$PROOFS" = real ] && dmode=(env -u RISC0_DEV_MODE)
 # lez_core proves private transactions inside its module process: the zone's r0vm on its PATH and as RISC0_SERVER_PATH.
+# FERRATA_DEPLOYMENTS: the one deployment ferrata_bridge_module may send to (this run's vault), set by the person who
+# runs Logos Core; the module refuses any other.
 "${dmode[@]}" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-}" PATH="${ZONE_BIN:-/nonexistent}:$PATH" TMPDIR="$LT" HOME="$W/logos-home" \
-  "$LOGOSCTL" --config-dir "$S" daemon start --detach > "$M/logos-daemon.txt" 2>&1 || { cat "$M/logos-daemon.txt"; die "logosctl daemon start"; }
+  FERRATA_DEPLOYMENTS="11155111:$VAULT" "$LOGOSCTL" --config-dir "$S" daemon start --detach > "$M/logos-daemon.txt" 2>&1 || { cat "$M/logos-daemon.txt"; die "logosctl daemon start"; }
 WATCH_PID=""
 finish() {
   [ -n "$WATCH_PID" ] && kill "$WATCH_PID" 2>/dev/null

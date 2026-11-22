@@ -332,7 +332,8 @@ Item {
             tryVerify(function () { return host.app.ethJob && host.app.jobOver(host.app.ethJob); }, 300000, "the LEZ SetCap's job ended: " + host.app.lastError);
             verify(host.app.ethJob.result && host.app.ethJob.result.approved && host.app.ethJob.result.approved.approval_id, "approved at the role's wallet: " + JSON.stringify(host.app.ethJob.result ? host.app.ethJob.result.approved : null));
             verify(has(host.app.adminText, "LEZ cap set"), "accepted by the bridge program: " + host.app.adminText + " " + host.app.lastError);
-            console.log("LEZ SETCAP " + host.app.adminText);
+            var adminSetCap = host.app.ethJob.result;
+            console.log("LEZ SETCAP " + host.app.adminText + " signer " + adminSetCap.signer + " fee paid by " + adminSetCap.fee_paid_by);
             tab("registry");
             click("registry.refresh");
             idle();
@@ -352,14 +353,27 @@ Item {
                 }
                 console.log("REGISTRY LEZ READS " + JSON.stringify(host.app.registry.tokens.map(function (t) { return t.lez_read_via; })));
             }
-            // The same SetCap signed by the wallet's own public account (not the admin), sent anyway: refused on LEZ.
-            var r = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: "user", unchecked: true });
+            // The same SetCap from an account that is not the admin, sent anyway: refused on LEZ. It is signed by the user's
+            // public account /1 (the run funds only public /0 and private /0: seqnet-fund), not the fee payer: the fee is
+            // paid by public /0 exactly as for the admin's accepted SetCap above, so the two sends differ in the signer
+            // alone (review R2-L5). LEZ v0.4.0-rc1's sequencer keeps only "reverted" for a block's transaction, not the
+            // program's code; the code for this case, NOT_AUTHORIZED, is the harness's (bridge_controls.rs "SetCap by a
+            // signer with no role").
+            var other = host.app.info.user.public_accounts[1];
+            verify(other && other !== adminSetCap.fee_paid_by && other !== adminSetCap.signer, "a third account: " + other);
+            var r = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: other, unchecked: true });
             verify(r.ok, "started: " + r.error);
             tryVerify(function () { var j = wallet("job", { id: r.result.job.id }); return j.ok && host.app.jobOver(j.result); }, 300000, "the refused SetCap's job ended");
             var jr = wallet("job", { id: r.result.job.id }).result;
             compare(jr.state, "failed", "a SetCap from a non-admin account is not applied");
             verify(has(jr.error, "refused by the bridge program") && jr.result && jr.result.sent && jr.result.sent.reverted === true, "reverted in a block: " + JSON.stringify(jr).substring(0, 600));
-            console.log("LEZ SETCAP REFUSED " + jr.error);
+            compare(jr.result.signer, other, "signed by public /1");
+            compare(jr.result.fee_paid_by, adminSetCap.fee_paid_by, "the fee paid as for the admin's SetCap");
+            verify(jr.result.signer_holds_role === false, "the module's own reading: not the admin");
+            // Nothing changed: the mint cap is still the admin's.
+            var st0 = wallet("admin.status", {});
+            verify(st0.ok && st0.result.registry.tokens[0].lez.mint_cap.capacity === "12000000000", "the cap unchanged: " + JSON.stringify(st0.ok ? st0.result.registry.tokens[0].lez : st0.error).substring(0, 300));
+            console.log("LEZ SETCAP REFUSED " + jr.error + " signer " + jr.result.signer + " fee paid by " + jr.result.fee_paid_by);
             // Unchecked off: the module refuses it before anything is sent.
             var r2 = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: "user" });
             verify(r2.ok, "started: " + r2.error);
@@ -468,6 +482,67 @@ Item {
             var longest = 0;
             for (var i = 0; i < host.app.callLog.length; i++) longest = Math.max(longest, host.app.callLog[i].ms);
             console.log("CALLS " + host.app.callLog.length + " longest " + longest + " ms");
+        }
+
+        // A deposit broadcast and not mined in time, in the view (review L-C; U.2's "not confirmed yet" text): anvil stops
+        // mining (ops.sh automine off), the deposit is approved at the Logos signer and broadcast, and the module stops
+        // waiting for its receipt after the view's 8 s: "Sent, not confirmed yet", never "Not deposited". A second deposit
+        // is refused by the module before anything is asked while the first is unmined, and the view offers "Deposit again
+        // anyway". One block later (ops.sh mine) the first deposit is in the vault's list; the control then sends a
+        // deposit with again: true, approved like any other.
+        function test_09_unmined_deposit_refused_then_again() {
+            if (!logosEth()) skip("the unmined send through the send stack runs with SEQNET_ETH=logos");
+            tab("positions");
+            click("positions.recover");
+            idle();
+            var before = host.app.positions.deposits.length;
+            tab("deposit");
+            host.app.receiptWaitS = 8;
+            ops("automine off");
+            click("deposit.review");
+            approve("Deposit", "");
+            signer("deposit-unmined", "");
+            tryVerify(function () { return host.app.ethJob && host.app.ethJob.kind === "deposit" && host.app.jobOver(host.app.ethJob); }, 120000, "the unmined deposit's job ended: " + host.app.lastError);
+            compare(host.app.ethJob.state, "unconfirmed", "broadcast, not yet mined: " + JSON.stringify(host.app.ethJob.error));
+            var uh = String(host.app.ethJob.tx_hash);
+            verify(uh.length === 66, "its transaction: " + uh);
+            verify(has(host.app.depositText, "Sent, not confirmed yet (not a failure)") && !has(host.app.depositText, "Not deposited"), host.app.depositText);
+            verify(has(host.app.depositText, uh) && has(host.app.depositText, "Do not send this deposit again"), host.app.depositText);
+            verify(!el("deposit.again").visible, "nothing to send again yet");
+            shot("30-deposit-sent-not-confirmed-yet");
+            console.log("UNMINED " + host.app.depositText);
+            // A second deposit while the first is unmined: refused before anything is asked (no request at the signer).
+            var firstJob = host.app.ethJob.id;
+            click("deposit.review");
+            approve("Deposit", "");
+            tryVerify(function () { return host.app.ethJob && host.app.ethJob.id !== firstJob && host.app.jobOver(host.app.ethJob); }, 60000, "the second deposit's job ended");
+            compare(host.app.ethJob.state, "failed", "refused");
+            verify(has(host.app.depositText, "Not deposited: refused: your earlier deposit, transaction " + uh), host.app.depositText);
+            verify(el("deposit.again").visible, "the view offers to deposit again anyway");
+            shot("31-deposit-refused-while-unmined-again-offered");
+            console.log("REFUSED WHILE UNMINED " + host.app.depositText);
+            // One block: the first deposit is mined and in the vault's deposit list.
+            ops("mine");
+            tab("positions");
+            click("positions.recover");
+            idle();
+            tryVerify(function () { return host.app.positions.deposits.length === before + 1; }, 60000, "the unmined deposit landed: " + host.app.positions.deposits.length + " (was " + before + ")");
+            // The control: a deposit sent anyway (again: true), approved at the signer like any other.
+            tab("deposit");
+            click("deposit.again");
+            approve("Deposit again anyway", "32-deposit-again-anyway-approval");
+            signer("deposit-again", "");
+            tryVerify(function () { return host.app.ethJob && host.app.ethJob.kind === "deposit" && host.app.jobOver(host.app.ethJob) && host.app.ethJob.state === "settled"; }, 120000, "deposited again: " + host.app.lastError);
+            verify(host.app.ethJob.params.again === true, "sent with again: true: " + JSON.stringify(host.app.ethJob.params));
+            tryVerify(function () { return has(host.app.depositText, "Deposited"); }, 30000, host.app.depositText);
+            verify(!el("deposit.again").visible, "the offer is gone once a deposit is sent");
+            host.app.receiptWaitS = 0;
+            tab("positions");
+            click("positions.recover");
+            idle();
+            tryVerify(function () { return host.app.positions.deposits.length === before + 2; }, 60000, "both deposits in the vault's list: " + host.app.positions.deposits.length);
+            shot("33-deposited-again-both-in-the-list");
+            console.log("DEPOSITED AGAIN " + host.app.depositText);
         }
     }
 }

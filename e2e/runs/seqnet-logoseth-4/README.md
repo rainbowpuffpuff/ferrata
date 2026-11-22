@@ -7,8 +7,14 @@ worktree's root, as run (the crown-live-3 inputs in `$SEQNET_TMP/inputs`, as `ru
 
     export SEQNET_TMP=<scratch>/seqnet SEQNET_SHORT=/var/tmp/rfx
     bash e2e/seqnet/run.sh build-logoseth                                  # once: the tools, logosctl, the send stack, lez_core (patched), the runner
-    cp -r <out>/check/lgx-ferrata_bridge_module "$SEQNET_TMP/logos/"       # the r3 build's module .lgx (build-logoseth's own differs: its build directory)
+    D="$SEQNET_TMP/logos/lgx-ferrata_bridge_module"                        # build-logoseth's own module .lgx (it differs: its build directory),
+    chmod -R u+w "$D"; rm -rf "$D"                                         # replaced as run.sh does: the source is a /nix/store symlink, so
+    cp -rL <out>/check/lgx-ferrata_bridge_module "$D"                      # cp -rL; the r3 build's module .lgx
     bash e2e/seqnet/run.sh logoseth logoseth-4                             # rebuilds seqnet-chain first
+
+(The copy step was written `cp -r <out>/check/... "$SEQNET_TMP/logos/"` until the third review found that it fails, "cannot
+overwrite directory with non-directory", and would leave build-logoseth's own `.lgx` in place; the run itself copied it
+as above (`rm -rf`, then `cp -rL`), and `miniapp/lgx-sha256.txt` shows the r3 hash.)
 
 Run 529 s; Qt Quick Test 12 passed of 12 (10 test functions plus `initTestCase`/`cleanupTestCase`; `miniapp/qmltest.txt`,
 238.5 s).

@@ -20,6 +20,8 @@
 #   ops.sh approve-lez NAME [reject]   (logoseth mode) the person at the LEZ role's wallet (its stand-in, seqnet-chain):
 #                              waits for the role message the module asked for (module.role_pending), records it, and
 #                              approves exactly that message (its SHA-256) with the role password, or rejects it
+#   ops.sh automine on|off     anvil's automine (off: a send is broadcast and stays unmined until `mine`)
+#   ops.sh mine                one block mined on anvil, then automine on again
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
@@ -93,5 +95,15 @@ case "${1:-}" in
     jq -e '.ok == true' "$A/lez-$name.decision.json" > /dev/null || die "approve-lez $name: $(head -c 400 "$A/lez-$name.decision.json")"
     say "role wallet: $decision $name ($id: $(jq -r .what <<< "$p"); message $(jq -r .message <<< "$p"), sha256 ${sha:0:18}...)"
     ;;
-  *) sed -n '2,14p' "${BASH_SOURCE[0]}"; exit 2 ;;
+  automine)
+    shift; case "${1:-}" in on) v=true ;; off) v=false ;; *) die "automine on|off" ;; esac
+    cast rpc evm_setAutomine "$v" --rpc-url "$RPC" > /dev/null || die "evm_setAutomine $v"
+    say "anvil: automine $1 (block $(cast block-number --rpc-url "$RPC"))"
+    ;;
+  mine)
+    cast rpc evm_mine --rpc-url "$RPC" > /dev/null || die "evm_mine"
+    cast rpc evm_setAutomine true --rpc-url "$RPC" > /dev/null || die "evm_setAutomine true"
+    say "anvil: one block mined (block $(cast block-number --rpc-url "$RPC")), automine on"
+    ;;
+  *) sed -n '2,30p' "${BASH_SOURCE[0]}"; exit 2 ;;
 esac

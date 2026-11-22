@@ -89,7 +89,9 @@ run() {
   cast send $T 'mint(address,uint256)' $A3 100000000 --from $A3 --unlocked --rpc-url $RPC > /dev/null 2>&1
 
   # ---- one Logos Core: Logos's send stack and its headless approver and custodian, and ferrata_bridge_module ----
-  ctl daemon start --detach > "$R/daemon.txt" 2>&1; sleep 3
+  # FERRATA_DEPLOYMENTS: the one deployment ferrata_bridge_module may send to (this vault on this chain), set by the
+  # person who starts Logos Core; the module refuses any other (calls/src/send.rs `pinned`).
+  FERRATA_DEPLOYMENTS="$CHAIN:$V" HOME="$OUT/home" TMPDIR="$LT" "$LOGOSCTL" --config-dir "$S" daemon start --detach > "$R/daemon.txt" 2>&1; sleep 3
   local d m
   for d in "$OUT"/stack/lgx-*/ "$OUT/check/lgx-ferrata_bridge_module/"; do ctl install "$d"/*.lgx -y 2>&1 | tail -n 1; done > "$R/install.log"
   # The providers first, then the approver (it must be up before the first send: an unclaimed request is swept after
@@ -171,6 +173,14 @@ run() {
   check "status: the freeze authority" "$A2" "$(jq -r .roles.freeze_authority <<< "$S1")"
   check "status: answered by eth_rpc_module" "eth_rpc_module" "$(jq -r .eth.via <<< "$S1")"
   check "status: the test token not registered yet" "false" "$(jq -r '.registry[1].token.registered' <<< "$S1")"
+
+  # 1b. Only the deployment the person named (FERRATA_DEPLOYMENTS at the daemon's start): a deposit naming another
+  # vault (here the test token's address) is refused before anything is read from it or asked of the signer.
+  local OV; OV=$(j ferrata_bridge_module deposit "{\"bridge_seed\":\"0x$(printf '5e%.0s' $(seq 32))\",\"chain_id\":$CHAIN,\"vault\":\"$T\",\"depositor\":\"$A3\",\"kind\":\"private\",\"dest\":\"0x$(printf 'de%.0s' $(seq 32))\",\"eth\":$E,\"token\":\"$ETH\",\"denom_index\":0,\"send\":{\"via\":\"tx_sender_module\",\"from\":\"$A3\",\"chain_id\":$CHAIN}}")
+  echo "$OV" > "$R/deposit-other-vault.json"
+  check "pinned deployment: a deposit naming another vault is refused before anything is asked" "yes" \
+    "$(jq -r '.error // ""' <<< "$OV" | grep -q "^refused before anything was asked: vault $T on chain $CHAIN is not a deployment this module may send to" && echo yes)"
+  check "pinned deployment: no send reached tx_sender_module" "0" "$(j tx_sender_module live_sends | jq -r '.sends | length' 2>/dev/null)"
 
   # 2. the admin registers the test token through the send stack (one approval at evm_signer_cli).
   local REG="{\"token\":\"$T\",\"denominations\":[\"1000000\",\"10000000\"],\"relay_fees\":[\"1000\",\"10000\"],\"lez_unit\":\"1\",\"unit_weight\":\"1\",\
