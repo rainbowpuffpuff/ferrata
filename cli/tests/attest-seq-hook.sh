@@ -103,7 +103,11 @@ EOF
 python3 -I "$W/providers.py" "$M/beacon_header_15624480_second.json" 8701 & P1=$!
 python3 -I "$W/providers.py" "$M/beacon_header_15624480_second.json" 8702 & P2=$!
 sleep 1
-REC_TIME=$(( 1606824023 + 15624480 * 12 + 600 ))
+# The record's time: its finality update's signature slot (15,624,545, the earliest the record can exist, 65 slots
+# after its finalized header 15,624,480; mainnet-attest-2026-11-10/fixture.json) plus 600 s. (Runs r4, r6 and rf1 used
+# the header's own time plus 600 s, a clock at which no honest instance holds that header: the monitor now calls that
+# `instance-ahead`, too new.)
+REC_TIME=$(( 1606824023 + 15624545 * 12 + 600 ))
 for mode in at-the-record now; do
   f="$RUN/cli/monitor-$mode.json"
   args=(check --state "lez:$LEZ" --program "$ATTEST" --instance "$MID" --provider p1=http://127.0.0.1:8701 --provider p2=http://127.0.0.1:8702)

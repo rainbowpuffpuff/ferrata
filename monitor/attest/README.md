@@ -55,7 +55,8 @@ attest-monitor watch --state lez:http://127.0.0.1:3040 --program 0x... --instanc
 
 On the instance's finalized header at slot `S` with root `R`, `D` the chain's finality delay (two epochs: 768 s on
 Ethereum; Casper FFG finalizes a checkpoint two epochs after it at the earliest, so an honest light client's finalized
-header is always at least that old) and `G` the `--ahead-grace` (60 s):
+header is always at least that old: the mainnet finality update of the attestation fixtures finalizes slot 15,624,480
+with signature slot 15,624,545, 65 slots later) and `G` the `--ahead-grace` (60 s):
 
 1. `instance-ahead` (`too-new`) when the header is younger than `D` by the chain's clock. No provider can hide it.
 2. `instance-diverged` when at least `--diverge-at` providers are counted against it: a provider that has finalized `S`
