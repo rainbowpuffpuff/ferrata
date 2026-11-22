@@ -514,6 +514,17 @@ the module built with Nix on the laptop and loaded in a headless Logos Core, its
 ([`modules/RESULTS.md`](../modules/RESULTS.md), 22 November). `links` (66 files, 1,930 links, 0 broken) and `idl` on
 the laptop; the other jobs' inputs are unchanged since the twelfth pass.
 
+**Fourteenth pass (branch `integration9`, 22 Nov 2026).** Public main at `462d0cd1` (the hygiene cleanup) merged, then
+`rfp-ci-release` (stream G, rows 160–165; one conflict, the updater module's staging script, both sides kept). CI's
+jobs on what the merges touched, on the laptop: `links` with its new steps (67 files, 1,961 links, 0 broken;
+`check-row-tests.py` consistent; `test_ci_model.py` 42 passed, its counts 46 of 68 and 23 of 59 those of the merged map;
+`ci_model.py --compare-yq` 11 workflows, 0 differ; `check-portable.py` clean; `test-sequencer-records.sh` 9 passed;
+`check-unaudited.sh` clean), `release-publish` (`test-release-publish.sh` 83 passed) and `idl`; on the build box:
+`vault` 596 passed in 57 suites, `scripts/fetch-vectors.sh` from empty vector directories ("vectors verified") and the
+root workspace's tests (168 passed, 1 ignored). The LEZ harness's `immutable_program` 2 passed on the merged harness;
+lez/RESULTS.md §8's clippy gate still clean with it (also with the two features). The updater module's staging,
+rewritten portably by the stream, stages the same sources as the build of 22 November (`modules/RESULTS.md`).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
