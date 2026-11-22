@@ -907,10 +907,11 @@ note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; w
 [[row]]
 id = "RFP-022 R.7"
 tests = [
+  { path = "lez/harness/tests/interrupted_operations.rs", kind = "test", ci = "lez-harness" },
   { path = "e2e/runs/seqnet-basecamp-final-real/SUMMARY.md", kind = "record" },
   { path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/README.md", kind = "record" },
 ]
-note = "in Basecamp the view was closed 6 s into the burn's proof and opened again: it found the running job, a second start answered it, the burn completed once and was released (EVIDENCE row 126, real proofs); a client killed between a proof and its sending has no named test (a refused claim or burn consumes nothing: R.1, R.2)"
+note = "in Basecamp the view was closed 6 s into the burn's proof and opened again: it found the running job, a second start answered it, the burn completed once and was released (EVIDENCE row 126, real proofs); interrupted_operations.rs (CI, lez-harness, protocol level): a private claim proven and dropped consumes nothing (N unspent, every state byte-identical, the client's account as before), a fresh client from the seed alone finds the deposit and claims once (a second claim refused, 250), the dropped transaction sent late is refused by LEZ's commitment and nullifier checks and changes nothing; a private burn proven and dropped leaves the holding, burning again is accepted once and the old proof refused late; a burn sent but never recorded by the client is found again by a fresh client from the burner seed by scanning the zone's blocks, with everything the release needs (lez/results/interrupted-operations-*.md). The Basecamp module's job manager is not this test's subject"
 
 [[row]]
 id = "RFP-022 R.8"
