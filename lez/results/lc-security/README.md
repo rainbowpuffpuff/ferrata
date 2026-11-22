@@ -18,7 +18,7 @@ real elsewhere, EVIDENCE rows 5, 73 and 123).
 | [`f8-full-diff.md`](f8-full-diff.md) | F.8, the full-diff test (two deposits, no hop and three hops) | `security_privacy::f8_two_deposits_full_diff` |
 | [`r11-one-block.md`](r11-one-block.md) | R.11, several private statements in one block | `security_privacy::r11_several_private_reads_in_one_block` |
 
-Re-run (from `lez/`, with `RISC0_HOME` set as `lez/RESULTS.md` §6 says):
+Re-run (from `lez/`, with `RISC0_HOME` set as `lez/RESULTS.md` §8 says):
 
 ```sh
 RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc --test security_privacy -- --test-threads 4
