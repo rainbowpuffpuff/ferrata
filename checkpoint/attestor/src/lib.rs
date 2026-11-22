@@ -8,10 +8,13 @@
 //! applied, not parked. Bedrock admits any payload from the key whose turn it is (it checks only the
 //! inscription's parent and signer); LEZ re-executes every finalized inscription and parks a block that
 //! does not apply, keeping its final tip (`lez/chain_state/src/chain.rs`, `apply_final_block`). A LEZ
-//! node stores only blocks that applied, and marks `Finalized` exactly the ids up to its final tip
-//! (the sequencer's storage actor, `stage_new_blocks`). The attestor asks its LEZ node `getBlock(id)` and
-//! takes a block as final in LEZ only when the node serves it with status `Finalized` and byte for byte
-//! the block that was inscribed (all but the status byte, which lies outside the hash).
+//! node stores only blocks that applied, and marks `Finalized` the ids up to its final tip (the sequencer's
+//! storage actor, `stage_new_blocks`), except that a block it adopted from another sequencer keeps the status
+//! that was inscribed with it (LEZ #1053), so a head block can read `Finalized` early. The attestor asks its LEZ
+//! node `getBlock(id)` and takes a block as final in LEZ only when the node serves it with status `Finalized`
+//! and byte for byte the block that was inscribed (all but the status byte, which lies outside the hash), and
+//! only among inscriptions at or below its Bedrock node's last irreversible block, so a status shown early is
+//! never signed before the block's inscription is final on Bedrock.
 //!
 //! **Reading.** The attestor asks its own Logos Blockchain node, by its HTTP API (or from saved answers of
 //! the same endpoints, laid out as `realblocks/extract.sh` writes them): `/cryptarchia/info` (the last

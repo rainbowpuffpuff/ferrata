@@ -25,7 +25,10 @@ Not audited. A prototype: a command-line program, and the same library as a Logo
    Bedrock admits any payload from the key whose turn it is; LEZ re-executes every finalized inscription and
    parks a block that does not apply. So the attestor asks its LEZ node `getBlock(id)` and signs a tip only
    when that node serves it with status `Finalized` and byte for byte the inscribed block (a LEZ node stores
-   only blocks that applied, and marks `Finalized` exactly the ids up to its final tip). Where two
+   only blocks that applied, and marks `Finalized` the ids up to its final tip, except that a block adopted
+   from another sequencer keeps the status inscribed with it, LEZ #1053, so a head block can read `Finalized`
+   early; the attestor therefore also requires the block's inscription to be at or below its Bedrock node's
+   LIB, and never signs above it). Where two
    inscriptions offer the next block (a parked one and its honest replacement), the LEZ node decides. The
    tip's inscription is checked as the program checks `T`'s: the transaction's canonical encoding reproduces
    the node's hash (inscriptions, transfers, channel transfers and channel withdrawals: review M-3), the
@@ -65,7 +68,7 @@ of recorded runs that saved no LEZ answers (it assumes what the attestor checks;
 From `checkpoint/`, on the build box (`spike/modal-build/mrun`):
 
 ```sh
-cargo +1.88 test -p ferrata-attestor                      # 24 tests (the lab node's real answers, a node stub)
+cargo +1.88 test -p ferrata-attestor                      # 31 tests (the lab node's real answers, a node stub)
 cargo +1.93.0 build --release -p host -p ferrata-attestor  # host builds the guests
 bash attestor/devnet.sh <lab node answers> attestor/runs/devnet-n3   # three attestors, t of n, refusals
 bash attestor/prove.sh                                     # executor, succinct proof, identity_p254
@@ -77,6 +80,26 @@ bash checkpoint/attestor/zone-bridge.sh zone e2e/runs/zone-bridge-1
 ```
 
 `vectors/lab-node/` holds the lab node's answers trimmed to the node blocks that carry LEZ blocks 186..=202.
+
+## Operating it
+
+- **Its own LEZ node.** `--lez` (the module's `lez`) must be a LEZ node the attestor's operator runs (the
+  sequencer's own RPC, or a follower of the zone it trusts as itself), not a shared public RPC: the LEZ node
+  decides which inscribed block is final in LEZ, so a lying node can get any Bedrock-final block that links to
+  the signed tip signed, and attestors sharing one node share its lies. A node that lags only lowers the tip or
+  makes the round refuse.
+- **The state file is the guard.** It holds the tip signed last; each round first asks the LEZ node whether it
+  still holds that tip final. A LEZ node that lost it (wiped, re-synced on another history, or not synced yet)
+  makes every round refuse ("another history", "holds no block"): the attestor stops signing until its operator
+  has checked the LEZ node (it must hold the signed tip again, or the zone really forked) and, only then,
+  removes the state file. A deleted or lost state file loses the guard: the next round is a first read, which
+  signs whatever its LEZ node holds final now.
+- **An upstream interface at risk.** The attestor asks the sequencer's JSON-RPC `getBlock`, which LEZ marks for
+  removal ("TODO: These functions should be removed after wallet starts using indexer", above it in
+  `lez/sequencer/service/rpc/src/lib.rs`, v0.4.0-rc3 line 59). When it goes, the attestor must ask the
+  indexer's `getBlockById`, which serves the block as JSON fields (`indexer_service_protocol::Block`: header,
+  body, status), not as base64 `borsh(Block)`: the attestor would encode it back to borsh before comparing it
+  with the inscribed bytes (not built here).
 
 ## Several sequencers
 
