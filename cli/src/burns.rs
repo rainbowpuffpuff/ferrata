@@ -17,10 +17,13 @@
 //! - Any other burn takes the next counter after every reserved one and every one the zone shows used (a refused
 //!   burn's tag too: its memo is public in its block).
 //! - At most [`MAX_AHEAD`] counters are reserved past the zone's next one while none of them is on the zone: a
-//!   recovery from the seed alone stops after `lez::BURN_GAP` unused counters, and must find every burn.
+//!   recovery from the seed alone stops after `lez::BURN_GAP` unused counters (a refused burn's tag counts as used),
+//!   and must find every burn.
 //!
-//! Nothing here is needed to recover anything: a client restored from the seed alone finds every burn on the zone
-//! (`outbound::recover_burns`). The file is beside LEZ's wallet (`<LEZ wallet home>/ferrata-burns.json`, mode 0600),
+//! Nothing here is needed to recover anything the zone shows: a client restored from the seed alone finds every burn
+//! on the zone (`scan::burns`: applied and refused tags count as used, review M1 of 22 November 2026). `ferrata
+//! release` and `ferrata recover` read the journal when there is one, to search past the counters it reserved
+//! (`scan::burns_past`). The file is beside LEZ's wallet (`<LEZ wallet home>/ferrata-burns.json`, mode 0600),
 //! which holds the user's keys already; `ferrata-burns.lock` beside it serialises the tool's processes on one wallet.
 
 use std::{

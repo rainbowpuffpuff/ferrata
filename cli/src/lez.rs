@@ -110,10 +110,11 @@ pub struct Applied {
 pub struct Included {
     /// [`Ledger::applied`].
     pub applied: Vec<Applied>,
-    /// The public calls whose root is an actor of `program` in transactions a block includes though they were refused:
-    /// LEZ keeps a refused (charged) transaction in its block, its message in the clear, and lists its position in the
-    /// block's `reverted` (`lez-v03-return/STAGE2.md`, "block body"). A refused plaintext `Claim` has published its
-    /// witness all the same (RFP-022 F.8).
+    /// The calls whose root is an actor of `program` in transactions a block includes though they were refused: LEZ
+    /// keeps a refused (charged) transaction in its block, and lists its position in the block's `reverted`
+    /// (`lez-v03-return/STAGE2.md`, "block body"). A refused public call's message is in the clear; a refused private
+    /// transaction gives what it delivers in the clear (a private burn's note). A refused plaintext `Claim` has
+    /// published its witness all the same (RFP-022 F.8).
     pub refused: Vec<Applied>,
     /// The public accounts named by applied privacy-preserving transactions (a private claim names its nullifier
     /// account there).
@@ -348,8 +349,9 @@ async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> 
 
 /// Review M-1: the configuration `config(cid)` the zone holds is the one the tool reads on Ethereum. A burn binds
 /// `ctx.chain_id` and `ctx.vault` into `COut`, and `ctx.chain_id` is what the Ethereum RPC says (`eth_chainId`): an RPC
-/// that serves another chain (a fork reports its own id, 31337 for anvil's) while returning the real vault's
-/// `lezConfigId` would make a burn that no release can open. Refuses unless `config(cid)` is paired (`Ready`), is the
+/// of another chain (a local anvil's 31337; a fork started with another `--chain-id`: an anvil fork reports the forked
+/// chain's id unless told otherwise) that returns the real vault's `lezConfigId` would make a burn that no release can
+/// open. Refuses unless `config(cid)` is paired (`Ready`), is the
 /// configuration of this program with this id, and names this chain and this vault.
 pub async fn check_pairing<L: Ledger>(ledger: &L, ctx: &Context) -> Result<()> {
     let cid = hx(&ctx.cid);

@@ -61,7 +61,7 @@ lengthened ...) misses planted leaks the real one finds. The hidden-column searc
 16-byte window; on this commit's run it finds 0 of 680. The tables below are the earlier runs' (320 values, verbatim).
 
 **Regenerated for CI (branch `rfp-ci-coverage`, 22 November 2026; again at its integration).** [`generated/`](generated/)
-is now the run of `scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ac1fb59b…442e`,
+was then the run (regenerated again below, at `847a4336…7515`) of `scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ac1fb59b…442e`,
 the build since milestone B1, `ferrata_bridge_b1` in [`../image-ids.md`](../image-ids.md); the coverage stream ran it
 at the deployed `ccde6171…71dd`, with the same verdicts; the tables before were image `cf41b7e5…5390`'s); a second run
 gave the same files byte for byte, the dev-mode proving times aside. CI's `lez-harness` job now runs the suite and
