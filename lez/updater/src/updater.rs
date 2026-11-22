@@ -111,13 +111,15 @@ pub const BREAKER_AFTER: u32 = 3;
 pub const BREAKER_PAUSE: u64 = 8;
 /// See [`BREAKER_AFTER`].
 pub const BREAKER_MAX_PAUSE: u64 = 512;
-/// A step refused for a reason that may pass (its window, by a clock that differs from the chain's; an unknown one) is
-/// held [`REFUSAL_BACKOFF`] rounds, then twice that, at most [`MAX_REFUSALS`] refusals in all. One that the program
-/// refuses, or that ran out of gas, is held for good (out of gas: until `fees.gas_limit` is raised): LEZ executes the
-/// same transaction on the same state the same way.
+/// A step refused for a reason that may pass (its window, by a clock that differs from the chain's; an unknown one; a
+/// refusal after which the chain could not be read, [`After::Unread`]) is held [`REFUSAL_BACKOFF`] rounds, then twice
+/// as long after each further refusal, up to [`MAX_REFUSAL_BACKOFF`] rounds, and sent again after every hold: it is
+/// never given up silently (the breaker, [`BREAKER_AFTER`], bounds what the refusals cost). One that the program
+/// refuses, or that ran out of gas, while it stayed due is held for good (out of gas: until `fees.gas_limit` is
+/// raised): LEZ executes the same transaction on the same state the same way.
 pub const REFUSAL_BACKOFF: u64 = 4;
 /// See [`REFUSAL_BACKOFF`].
-pub const MAX_REFUSALS: u32 = 3;
+pub const MAX_REFUSAL_BACKOFF: u64 = 64;
 /// Sends in a row that did not land (rejected, refused while their step stayed due, or failed at transport after
 /// every retry) after which `/health` says `down`; one is enough for `degraded`.
 pub const DOWN_AFTER_FAILED_SENDS: u32 = 5;
@@ -183,8 +185,33 @@ impl Refusal {
     }
 }
 
-/// A step the chain refused while it stayed due after it (no other party sent it, the store did not move): sent again,
-/// it would meet the same state.
+/// What a refused transaction left, read from the chain after it ([`Updater::submit`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum After {
+    /// The step was done or moot afterwards: another party's transaction came first. Nothing is held.
+    Race,
+    /// The step stayed due (no other party sent it, the store did not move): sent again, it would meet the same state.
+    /// Held ([`REFUSAL_BACKOFF`]), a failing send, a strike towards the breaker.
+    Due,
+    /// The chain could not be read after the refusal, `policy.max_attempts` times with the transport backoff between.
+    /// On the sequencer backend a read fails while another party's transaction touching the instance is in flight,
+    /// which is when a race is lost: held [`REFUSAL_BACKOFF`] rounds whatever the cause, not a failing send, no strike.
+    Unread,
+}
+
+impl After {
+    /// The metric label: `race`, `due` or `unread`.
+    pub fn label(&self) -> &'static str {
+        match self {
+            After::Race => "race",
+            After::Due => "due",
+            After::Unread => "unread",
+        }
+    }
+}
+
+/// A step the chain refused that is not sent again for now: it stayed due after the refusal (no other party sent it,
+/// the store did not move), so sent again it would meet the same state; or the chain could not be read after it.
 #[derive(Clone, Debug)]
 pub struct Held {
     pub step: Step,
@@ -193,6 +220,9 @@ pub struct Held {
     /// The chain's note, clipped.
     pub note: String,
     pub count: u32,
+    /// Whether the chain, read after the last refusal, showed the step still due ([`After::Due`]; otherwise
+    /// [`After::Unread`]).
+    pub due: bool,
     /// The round of its last refusal.
     pub round: u64,
     /// The first round it may be sent again (`None`: not on this state).
@@ -268,8 +298,9 @@ pub struct Metrics {
     /// (step, result) -> transactions: result `applied`, `refused`, `rejected`.
     pub tx: BTreeMap<(String, &'static str), u64>,
     pub refused_codes: BTreeMap<u32, u64>,
-    /// Refused transactions by cause ([`Refusal::kind`]) and by what followed: `race` (the step was done or moot
-    /// afterwards: another party's transaction came first) or `due` (it stayed due: held, [`Updater::held`]).
+    /// Refused transactions by cause ([`Refusal::kind`]) and by what followed ([`After::label`]): `race` (the step was
+    /// done or moot afterwards: another party's transaction came first), `due` (it stayed due: held,
+    /// [`Updater::held`]) or `unread` (the chain could not be read after it: held for a while).
     pub refusals: BTreeMap<(&'static str, &'static str), u64>,
     pub gas_applied: u64,
     pub gas_refused: u64,
@@ -373,7 +404,8 @@ pub struct Updater {
     /// the whole epoch, Nimbus the newest, so the two serve the same bytes during one slot), so the match need not
     /// fall in one round. At most 4096 updates are kept.
     served_by: BTreeMap<Root, BTreeSet<(String, usize)>>,
-    /// Steps refused while they stayed due, by (job, step): not sent again on the same state (or not yet).
+    /// Steps refused while they stayed due (or with the chain unreadable after the refusal), by (job, step): not sent
+    /// again on the same state, or not yet ([`Held::retry_at`]).
     pub held: BTreeMap<(Root, Step), Held>,
     pub breaker: Breaker,
     /// The instance can no longer advance by the chain's clock: its finalized header (before `Init`: the checkpoint)
@@ -1232,17 +1264,18 @@ impl Updater {
             return None;
         }
         let hint = match (h.cause, h.retry_at) {
-            (Refusal::Gas, _) => format!("fees.gas_limit {} is below what it needs: raise it", h.gas_limit),
-            (Refusal::Program(_), _) => "the program refuses it on this state".to_string(),
             (_, Some(r)) => format!("tried again at round {r}"),
-            (_, None) => format!("not sent again after {} refusals", h.count),
+            (Refusal::Gas, None) => format!("fees.gas_limit {} is below what it needs: raise it", h.gas_limit),
+            (Refusal::Program(_), None) => "the program refuses it on this state".to_string(),
+            (_, None) => "not sent again on this state".to_string(),
         };
         Some(format!(
-            "{} of job 0x{} (finalized slot {}) refused {} time(s) while it stayed due ({}: {}): {hint}",
+            "{} of job 0x{} (finalized slot {}) refused {} time(s), the last {} ({}: {}): {hint}",
             step.name(),
             &hex::encode(jid)[..16],
             h.finalized_slot,
             h.count,
+            if h.due { "while it stayed due" } else { "with the chain unreadable after it" },
             h.cause.describe(),
             h.note
         ))
@@ -1254,8 +1287,9 @@ impl Updater {
         !gas_raised && h.retry_at.is_none_or(|r| self.round < r)
     }
 
-    /// Hold `(job, step)` after a refusal that left it due; what follows, described.
-    fn hold(&mut self, action: &Action, cause: Refusal, note: &str) -> String {
+    /// Hold `(job, step)` after a refusal: `due`, the chain read after it showed the step still due ([`After::Due`]);
+    /// otherwise it could not be read ([`After::Unread`]: held for a while whatever the cause). What follows, described.
+    fn hold(&mut self, action: &Action, cause: Refusal, note: &str, due: bool) -> String {
         let (round, gas_limit) = (self.round, self.fees.gas_limit);
         let h = self.held.entry((action.job_id, action.step)).or_insert_with(|| Held {
             step: action.step,
@@ -1263,19 +1297,24 @@ impl Updater {
             cause,
             note: String::new(),
             count: 0,
+            due,
             round,
             retry_at: None,
             gas_limit,
         });
-        h.count += 1;
+        h.count = h.count.saturating_add(1);
         h.cause = cause;
         h.note = clip(note);
+        h.due = due;
         h.round = round;
         h.gas_limit = gas_limit;
-        h.retry_at = if cause.repeats() || h.count >= MAX_REFUSALS {
+        // A cause that repeats on the same state, seen to leave the step due: for good. Any other: a hold that doubles
+        // up to MAX_REFUSAL_BACKOFF rounds, then the step is sent again (review of the fixes, L3: it used to stop
+        // after three).
+        h.retry_at = if due && cause.repeats() {
             None
         } else {
-            Some(round + (REFUSAL_BACKOFF << (h.count - 1).min(16)))
+            Some(round + (REFUSAL_BACKOFF << (h.count - 1).min(16)).min(MAX_REFUSAL_BACKOFF))
         };
         let what = match h.retry_at {
             Some(r) => format!("held until round {r}"),
@@ -1486,7 +1525,7 @@ impl Updater {
     /// chain settled it. Before sending, the step is checked against the chain again: if another
     /// updater sent it meanwhile, nothing is sent.
     pub fn submit(&mut self, ledger: &mut dyn Ledger, action: &Action, recheck: bool) -> Result<Option<TxOutcome>> {
-        if recheck && self.step_done(ledger, action)? {
+        if recheck && self.read_step_done(ledger, action)? {
             self.metrics.skipped_done += 1;
             return Ok(None);
         }
@@ -1501,10 +1540,20 @@ impl Updater {
             }
             match ledger.submit(&self.payer, &action.tx, self.fees.gas_limit, u128::from(self.fees.max_fee_per_tx)) {
                 Ok(out) => {
-                    // A refused step that is still due afterwards (no other party's transaction came first, the store
-                    // did not move) would meet the same state if sent again. A failed read counts as still due.
-                    let stayed_due = !out.applied && !out.rejected && !self.step_done(ledger, action).unwrap_or(false);
-                    self.record(action, &out, stayed_due);
+                    // A refused step: the chain is read again. Done or moot: a race. Still due (no other party's
+                    // transaction came first, the store did not move): sent again it would meet the same state.
+                    // Unreadable after every attempt: unknown, held for a while (review of the fixes, L4: a failed read
+                    // used to count as still due, so lost races tripped the breaker).
+                    let after = if out.applied || out.rejected {
+                        None
+                    } else {
+                        Some(match self.read_step_done(ledger, action) {
+                            Ok(true) => After::Race,
+                            Ok(false) => After::Due,
+                            Err(_) => After::Unread,
+                        })
+                    };
+                    self.record(action, &out, after);
                     return Ok(Some(out));
                 }
                 Err(e) => {
@@ -1518,17 +1567,39 @@ impl Updater {
                         bail!("{}: gave up after {attempt} attempts: {e:#}", action.tx.label);
                     }
                     self.metrics.retries += 1;
-                    let wait = self
-                        .policy
-                        .retry_base_ms
-                        .saturating_mul(1 << (attempt - 1).min(20))
-                        .min(self.policy.retry_max_ms);
+                    let wait = self.backoff_ms(attempt);
                     self.log(&format!("{}: {e:#}; retry {attempt} in {wait} ms", action.tx.label));
                     (self.sleep)(wait);
                     if self.step_done(ledger, action)? {
                         self.metrics.skipped_done += 1;
                         return Ok(None);
                     }
+                }
+            }
+        }
+    }
+
+    /// The transport backoff before attempt `attempt + 1` (`attempt` from 1): `retry_base_ms * 2^(attempt-1)`, at most
+    /// `retry_max_ms`.
+    fn backoff_ms(&self, attempt: u32) -> u64 {
+        self.policy.retry_base_ms.saturating_mul(1 << attempt.saturating_sub(1).min(20)).min(self.policy.retry_max_ms)
+    }
+
+    /// [`Updater::step_done`], read up to `policy.max_attempts` times with the transport backoff between: on the
+    /// sequencer backend a read fails while another party's transaction touching the instance is in flight.
+    fn read_step_done(&mut self, ledger: &dyn Ledger, action: &Action) -> Result<bool> {
+        let mut attempt = 0u32;
+        loop {
+            match self.step_done(ledger, action) {
+                Ok(done) => return Ok(done),
+                Err(e) => {
+                    attempt += 1;
+                    if attempt >= self.policy.max_attempts {
+                        return Err(e.context(format!("{}: the chain could not be read ({attempt} attempts)", action.tx.label)));
+                    }
+                    let wait = self.backoff_ms(attempt);
+                    self.log(&format!("{}: reading the chain: {e:#}; again in {wait} ms", action.tx.label));
+                    (self.sleep)(wait);
                 }
             }
         }
@@ -1557,7 +1628,8 @@ impl Updater {
         })
     }
 
-    fn record(&mut self, action: &Action, out: &TxOutcome, stayed_due: bool) {
+    /// `after`: for a refusal, what the chain showed after it (`None` for an applied or rejected transaction).
+    fn record(&mut self, action: &Action, out: &TxOutcome, after: Option<After>) {
         let result = if out.applied {
             "applied"
         } else if out.rejected {
@@ -1568,9 +1640,10 @@ impl Updater {
         *self.metrics.tx.entry((action.step.name(), result)).or_default() += 1;
         let gas = out.gas_exec + out.gas_stor;
         let mut why = String::new();
-        // Keep the job of a step that landed, or that another party's transaction for the same job overtook (the job
-        // goes on): it comes first until it is finished or moot (`policy.finish_own_jobs`).
-        let job_goes_on = out.applied || (!out.rejected && !stayed_due);
+        // Keep the job of a step that landed, or that another party's transaction for the same job may have overtaken
+        // (the job goes on): it comes first until it is finished or moot (`policy.finish_own_jobs`). A kept job that
+        // is not on chain is forgotten the next round.
+        let job_goes_on = out.applied || (!out.rejected && after != Some(After::Due));
         if self.policy.finish_own_jobs && job_goes_on && action.step != Step::Finish {
             if let Some((jid, period_update, raw)) = self.sending.take().filter(|o| o.0 == action.job_id) {
                 self.carry(jid, period_update, raw);
@@ -1603,21 +1676,33 @@ impl Updater {
                 *self.metrics.refused_codes.entry(c).or_default() += 1;
             }
             let cause = Refusal::of(out);
-            *self.metrics.refusals.entry((cause.kind(), if stayed_due { "due" } else { "race" })).or_default() += 1;
+            let after = after.unwrap_or(After::Due);
+            *self.metrics.refusals.entry((cause.kind(), after.label())).or_default() += 1;
             let reason = format!("{}: {}", cause.describe(), clip(&out.note));
-            if stayed_due {
-                self.metrics.failing_sends += 1;
-                self.metrics.last_failure = format!("{} refused: {reason}", action.tx.label);
-                let held = self.hold(action, cause, &out.note);
-                let what = format!("{} {reason}", action.tx.label);
-                why = format!(": {reason}; the step stayed due: {held}");
-                if let Some(paused) = self.strike(what) {
-                    why += &format!("; {paused}");
+            match after {
+                After::Due => {
+                    self.metrics.failing_sends += 1;
+                    self.metrics.last_failure = format!("{} refused: {reason}", action.tx.label);
+                    let held = self.hold(action, cause, &out.note, true);
+                    let what = format!("{} {reason}", action.tx.label);
+                    why = format!(": {reason}; the step stayed due: {held}");
+                    if let Some(paused) = self.strike(what) {
+                        why += &format!("; {paused}");
+                    }
                 }
-            } else {
-                why = format!(
-                    ": {reason}; the step was done or moot afterwards (another party's transaction came first)"
-                );
+                After::Unread => {
+                    let held = self.hold(action, cause, &out.note, false);
+                    why = format!(
+                        ": {reason}; the chain could not be read after it ({} attempts), so whether another party's \
+                         transaction came first is not known: {held}",
+                        self.policy.max_attempts
+                    );
+                }
+                After::Race => {
+                    why = format!(
+                        ": {reason}; the step was done or moot afterwards (another party's transaction came first)"
+                    );
+                }
             }
         }
         self.log(&format!(
