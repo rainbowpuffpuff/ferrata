@@ -1,6 +1,6 @@
 # A claim interrupted between its proof and its sending (`harness/tests/interrupted_operations.rs`), RISC Zero dev mode
 
-RFP-022 Reliability #7. Bridge program image `ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e`. Vault A's leaf 5 (1 ETH, private kind), claimed as the private account it names.
+RFP-022 Reliability #7. Bridge program image `847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515`. Vault A's leaf 5 (1 ETH, private kind), claimed as the private account it names.
 
 | stage | interrupted at | outcome |
 |---|---|---|
