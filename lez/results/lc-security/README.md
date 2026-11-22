@@ -42,7 +42,8 @@ the program (Ferrata's policy store, `FinalizedStore`; the specification's store
 cases where they part, 50 and 51, and refuses neither while finalizing neither); U.5's last column is the message a
 client shows (LEZ's own text where LEZ refuses); F.8 also proves X's claim a second time from the same state and checks
 that every field its alignment takes is fresh, or the account's own per-state value; R.11 names the test's own block
-loop. `security_lc` 5 of 5 (121 s) and `security_privacy` 2 of 2 passed, then `security_privacy` again (the final F.8
-text, 29,818 differing bytes that run) with `redteam_lc` 11 and `redteam_attest` 11, whose 22 output files were
-byte-identical to the committed ones; `f4-comparisons.md` was byte-identical. R.11 on LEZ v0.4.0-rc3's own sequencer:
+loop. `security_lc` 5 of 5 (121 s) and `security_privacy` 2 of 2 passed; after two wording changes to F.8's
+freshness lines, `security_privacy` with `redteam_lc` 11 and `redteam_attest` 11 (their 22 output files byte-identical
+to the committed ones), then `security_privacy` alone for the final F.8 text (29,818 differing bytes that run), all
+passed; `f4-comparisons.md` was byte-identical. R.11 on LEZ v0.4.0-rc3's own sequencer:
 [`../v0.4.0-rc3/r11-one-block/`](../v0.4.0-rc3/r11-one-block/README.md).
