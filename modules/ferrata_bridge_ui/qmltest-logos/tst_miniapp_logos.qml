@@ -338,6 +338,14 @@ Item {
                       60000, "the mint cap read back from token(cid, ETH): " + JSON.stringify(host.app.registry ? host.app.registry.tokens[0].lez : null));
             shot("27-registry-lez-cap-and-every-token");
             verify(host.app.registry.tokens.length >= 2, "the registry lists every token the vault registered: " + host.app.registry.tokens.length);
+            // Each token's LEZ side read again through lez_core on that path (not the chain service's word alone).
+            if (seqnet.env("SEQNET_LEZ_PARAMS") !== "") {
+                for (var k = 0; k < host.app.registry.tokens.length; k++) {
+                    var via = host.app.registry.tokens[k].lez_read_via;
+                    verify(via && via.via === "lez_core" && via.reads >= 2 && via.equal === via.reads, "token " + k + ": " + JSON.stringify(via));
+                }
+                console.log("REGISTRY LEZ READS " + JSON.stringify(host.app.registry.tokens.map(function (t) { return t.lez_read_via; })));
+            }
             // The same SetCap signed by the wallet's own public account (not the admin), sent anyway: refused on LEZ.
             var r = wallet("admin.set_cap", { mints: true, capacity: "13000000000", refill_per_second: "10000000", signer: "user", unchecked: true });
             verify(r.ok, "started: " + r.error);
