@@ -1,7 +1,7 @@
 # ADR 0029: Voluntary disclosure of deposits and claims: the deposit secret only once its nullifier is spent
 
 - **Date:** 21 November 2026
-- **Status:** accepted; built (branch rfp-softs), not deployed
+- **Status:** accepted; built, not deployed
 - **Requirements:** RFP-022 Soft.2, Priv.4
 
 ## Context
@@ -32,6 +32,6 @@ deposit-to-claim pair, that pair leaves everyone else's candidate set.
 
 ## Sources
 
-- branch rfp-softs, commit b5c54fda: bridge/crates/ferrata-disclose, docs/privacy/viewing-keys.md
+- bridge/crates/ferrata-disclose, docs/privacy/viewing-keys.md
 - bridge/RESULTS.md ("SPEC-v2: what I believe is wrong, unsafe or underspecified", point 4)
 - docs/design/bridge.md §4

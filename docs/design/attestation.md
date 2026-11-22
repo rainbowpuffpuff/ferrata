@@ -347,7 +347,7 @@ Anyone running the daemon sends updates: protocols whose users need fresh record
 
 Each daemon waits a random share of a window `W`, re-checks the chain, then sends. With block interval Δ and n daemons, duplicates occur with probability `1 − (1 − Δ/W)^n`; the operator guide tabulates duplicate rate against added latency (derived from this formula, not measured). A concurrent operator's duplicate costs what §4.4 lists. The acceptance run (milestone A3 gate): two honest daemons and one adversarial daemon run 100 updates; every update is applied once, the honest daemons' gas on refused steps is at most 10% of their gas on applied steps, and each honest daemon pays 35–65% of the honest total. Run on the 58 recorded updates (all the recorded data, not 100) in seven runs with the adversary: each update applied once, refused / applied gas 0.057–0.087, the first honest daemon's share 0.39–0.47 ([EVIDENCE](../EVIDENCE.md) row 80; in-process harness, dev mode).
 
-Incentives (soft #5) are design only: the bridge can pay a fixed rebate out of its protocol fee to whoever lands an update.
+Incentives (soft #5): the design note proposed that the bridge pay a fixed rebate from its protocol fee to whoever lands an update; built instead, `ferrata_rebate`, a pool anyone funds, pays whoever lands an advance through it (built and tested in the harness, not deployed: [operator-rebate guide](../guides/operator-rebate.md), [EVIDENCE](../EVIDENCE.md) row 156, ADR 0028); funding it from the bridge's fees needs a conversion that is not built.
 
 ## 10. Tracking cost and update cadence (P.3, S.7)
 

@@ -602,7 +602,7 @@ Nothing runs itself; every state change is a transaction someone pays for
 
 | Transition | Who | Why they would | Built |
 |---|---|---|---|
-| light-client update | anyone running the updater | they need fresh records (consumers, the bridge's importers); the bridge can pay a fixed rebate from its protocol fee (soft #5) | updates yes; the rebate is design only |
+| light-client update | anyone running the updater | they need fresh records (consumers, the bridge's importers); a rebate pool anyone funds pays whoever lands an advance through it (soft #5, `ferrata_rebate`) | updates yes; the rebate pool built and tested in the harness, not deployed; funding it from the bridge's fees needs a conversion that is not built |
 | `ImportRoot` | anyone, as a top-level call or private root (the bridge refuses a nested or asynchronous import, which the checkpoint could not count; security review H-1) | depositors want to claim; relayers earn relay fees on claims | yes |
 | `submitCandidate`, `finalize` / `finalizeAttested` | anyone with a prover | the **checkpoint fee** of every release against that root goes to the candidate's prover, the sender of `submitCandidate` (not of the finalisation, which under rule (B) needs no proof) | yes (vault v5; prover since the security fixes of 11 November) |
 | `recordBeacon` (rule (A)) | anyone, typically the finaliser | needed for its finalisation | yes |

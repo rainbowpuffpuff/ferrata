@@ -1,7 +1,7 @@
 # ADR 0030: A web depositor that takes a ticket from the user's Logos tool and never sees the seed
 
 - **Date:** 21 November 2026
-- **Status:** accepted; built (branch rfp-softs), not deployed
+- **Status:** accepted; built, not deployed
 - **Requirements:** RFP-022 Soft.5, U.7
 
 ## Context
@@ -12,14 +12,14 @@ phishing copies.
 
 ## Options considered
 
-1. A web page that holds the bridge seed (or derives keys in the browser) and computes the commitment itself.
-2. A static page that takes a ticket (`C`, `j`, vault, token, denomination) from a dry run of the user's own Logos
+1. A web page that holds the bridge seed (or derives keys in the browser) and computes the commitment itself. *Reconstructed for contrast* (not recorded as an option at the time).
+2. No web approach: users move funds to the Logos Ethereum module first. *Reconstructed for contrast* (not recorded as an option at the time).
+3. A static page that takes a ticket (`C`, `j`, vault, token, denomination) from a dry run of the user's own Logos
    tool and only relays the deposit through the injected wallet.
-3. No web approach: users move funds to the Logos Ethereum module first.
 
 ## Decision
 
-The second.
+The third.
 
 ## Rationale and trade-offs
 
@@ -30,4 +30,4 @@ signs, so the user's comparison of both in the wallet's confirmation is the last
 
 ## Sources
 
-- branch rfp-softs, commit 57ba5a7e: web/depositor/index.html, web/depositor/README.md
+- web/depositor/index.html, web/depositor/README.md
