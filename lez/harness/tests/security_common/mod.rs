@@ -276,9 +276,11 @@ pub fn plain_receipt(i: u64) -> Vec<u8> {
 
 /// An instance of the program (the mainnet configuration unless given) initialised from a
 /// fabricated checkpoint at `slot0`, whose committee for each period from `slot0`'s on the test
-/// holds (`committees[k]` is period `p0 + k`'s). Every update goes through LEZ's settlement next
-/// to Ferrata's policy store (`World::apply`: `FinalizedStore`, the native store whose rules the
-/// program runs), which must give the same verdict. That is not the specification's store
+/// holds (`committees[k]` is period `p0 + k`'s). An update sent with `World::apply` goes through
+/// LEZ's settlement and through Ferrata's policy store (`FinalizedStore`, the native store whose
+/// rules the program runs), which must give the same verdict; an update a test sends as the
+/// program's own transactions only (a forged adoption, a time the native store has no clock for,
+/// `VerifyAll`) has no native verdict beside it. The policy store is not the specification's store
 /// (`LightClientStore`), which also accepts updates without finality or below two thirds.
 pub struct Synth {
     pub w: World,
