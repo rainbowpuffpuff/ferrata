@@ -153,7 +153,7 @@ two-hour cadence (§2).
   Derived by arithmetic from that formula. A duplicate costs the 2.2M step above.
   `ferrata-updater` defers per step rather than per update: each (job, step) waits
   `H(key, job, step) mod W` rounds, `key` the daemon's own (so the wait differs per daemon and per step), reads the
-  job's account just before sending, and any updater continues any open job.
+  job's account just before sending, and an updater continues the open job of the update it chose.
 - **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 November 2026;
   [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md), `bash bench/perf/gate-sequencer.sh`): two honest
   daemons following recorded mainnet updates, configured to poll every 4 s, the window `W` in rounds. Latency: a
@@ -212,10 +212,10 @@ flagged lagging; one silent is flagged unavailable), and sends the next step of 
 job. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
-(HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
+(HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change; and a round that stops before it reads the sources' head, as when the committees cannot be fetched, stays `degraded`: not counted toward `down`), that is no light-client source answering, five sends in a row that do not land, five
 rounds in a row that end in an error, the instance past its weak-subjectivity period, no progress for
 `2 × (6 × defer_window + 10)` rounds while the sources are ahead, or the budget reached; and when no round has
-refreshed it for ten polls). A step the chain refuses is not resent every round: it is held, for good when the program
+refreshed it for ten polls, at least 600 s). A step the chain refuses is not resent every round: it is held, for good when the program
 refuses it or it runs out of gas, otherwise for 4 to 64 rounds and then sent again, and three refusals in a row of
 steps that stayed due pause sending for 8 to 512 rounds; `/health` and the metrics (`_held_steps`, `_sending_paused`,
 `_refusals_total`) show both. The listener serves eight connections at once (four per host other than loopback) and

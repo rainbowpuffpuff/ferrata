@@ -14,7 +14,7 @@ Checks:
   3. docs/guides/user-guide.md §11 names every code of the bridge program's IDL (idl/ferrata_bridge.idl.json).
   4. No guide, README or trust document of the documentation set still calls itself a first draft, and neither
      README.md, docs/README.md nor the attestation design note calls a guide one (they may say so of
-     docs/performance.md, which is still the first draft of 11 November).
+     docs/performance.md, of its drafts before its revision for delivery on 22 November).
   5. Keyless retirement as the vault counts it. The vault (vault/src/FerrataVault.sol) still opens `retire()` to
      anyone at max(keylessFrom, checkpointsFrozenUntil) + delta + _keylessSpan, with KEYLESS_RETIREMENT 30 days
      and keylessFrom set by the constructor, `submitCandidate` and `_finalize` only; the user, operator and deployer

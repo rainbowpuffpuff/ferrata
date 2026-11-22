@@ -10,8 +10,8 @@ exclude = ["bench", "lez", "bridge", "checkpoint", "gpu-prover"]
 version = "0.0.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-# Measured on 22 November 2026: `cargo +1.85.0 check --workspace --locked` passes (1.85: zeroize_derive's edition
-# 2024); the tests' dev-dependencies need 1.91 (alloy 2.1 through the Helios oracle:
+# Measured on 22 November 2026: `cargo +1.85.0 check --workspace --locked` passes (1.85: the edition 2024 of
+# zeroize_derive and indexmap 2.14.2); the tests' dev-dependencies need 1.91 (alloy 2.1 through the Helios oracle:
 # `cargo +1.91.0 check --workspace --all-targets --locked` passes, 1.88 does not).
 rust-version = "1.85"
 repository = "https://github.com/rainbowpuffpuff/ferrata"

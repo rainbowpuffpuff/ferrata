@@ -1,6 +1,6 @@
 # Ferrata: performance report (RFP-021 P.1–P.9, RFP-022 P.1–P.7)
 
-**Second draft, 21 November 2026** (the first: 11 November). Each requirement with the measured figures, where and how they were
+**Revised for delivery, 22 November 2026** (the second draft: 21 November; the first: 11 November). Each requirement with the measured figures, where and how they were
 measured, and the gaps. Paths are relative to the repository root. `just bench` regenerates the vault's gas, the light
 client's cycles and a real release proof from a fresh checkout and records the hardware ([EVIDENCE](EVIDENCE.md)
 row 49; `just bench-user`, the user-side proofs at the declared minimum, row 50); every other number comes

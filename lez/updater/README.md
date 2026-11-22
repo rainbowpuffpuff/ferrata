@@ -98,7 +98,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
 7. **The job's next step, from the chain.** A job's id hashes the instance, its starting store and
    the update, so every updater computes the same id for the same update. No job yet: `Open`. A job
    in `Miller`: `Miller`. Adoption pending: the next `Adopt` part. Otherwise `Finish`. The updater
-   continues any open job, its own or another's, and after a restart its own. A job it sent a step
+   continues the open job of the update it chose, its own or another's, and after a restart its own. A job it sent a step
    for (its own `Open`, or a later step of a job another party opened) comes first, before any other
    update is chosen (`finish_own_jobs`, default): a beacon node serves only its newest finality
    update, so the update a job was opened for can be gone from every source before the job's last
@@ -118,7 +118,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    exponential backoff (`retry_base_ms * 2^(attempt-1)` after attempt 1, 2, ..., at most
    `retry_max_ms`, `max_attempts` attempts), and just before sending and before every retry the
    chain is read again: a step another party sent, or a store that moved, since the round read the
-   instance is not sent (UP-L5). A read that fails is tried again the same way.
+   instance is not sent (UP-L5). A read that fails is tried again at a later round; after a refusal, a step whose chain cannot be read again is held briefly, neither a strike nor a failing send (`tests/refusals.rs`).
    Every sent transaction is a line of `state_dir/<chain>/journal.tsv` (round, step, job, finalized
    slot, result, exit code, execution and storage gas, fee, block, the time it settled, its label, the
    chain's note: a refusal's reason).
@@ -234,7 +234,7 @@ finalized header's slot, two sources serving other bytes for one update or waiti
 stayed due, failed at transport after every retry), a round that ended in an error, the last round
 stuck, sending paused, or no progress: the instance's finalized slot unmoved for
 `6 × defer_window + 10` rounds while the sources serve updates more than `max_lag_slots` past it.
-`down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change): no light-client source usable and answering;
+`down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change; and a round that stops before it reads the sources' head, as when the committees cannot be fetched, stays `degraded`: not counted toward `down`): no light-client source usable and answering;
 five sends in a row that did not land; five rounds in a row that ended in an error (a chain that
 answers neither reads nor sends fails each round before anything is sent); the instance, or before
 `Init` its checkpoint, past its weak-subjectivity period by the chain's clock (a person must

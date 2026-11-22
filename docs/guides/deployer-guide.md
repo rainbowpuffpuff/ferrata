@@ -489,7 +489,7 @@ id names them. (The recorded runs before 21 November used the live run's bundle 
 | Release delay per token, its floor, the revocation window, s | `FERRATA_RELEASE_DELAY`, `FERRATA_MIN_RELEASE_DELAY`, `FERRATA_REVOKE_WINDOW` | 600; 300; 172,800 | immutable floor and window; the admin sets the delay within them |
 | The LEZ configuration's admin and freeze authority | `CROWN_ADMIN`, `CROWN_FREEZE_AUTHORITY` (account ids of keys you hold); unset: two fresh random keys, made by the run and kept in its work directory (a rerun under the same name deletes that directory and makes new ones: copy the keys out first) | unset: fresh random keys (the walkthrough before 21 November used `CROWN_ROLES_LABEL=deployer-two`, keys anyone can derive: §5) | inside `configId` |
 | LEZ mint and burn caps, per token and global, value units a day | `CROWN_TOKEN_CAP`, `CROWN_GLOBAL_CAP` | 3,000,000,000; 9,000,000,000 | inside `configId`; the LEZ admin sets caps above the floor |
-| Inbound finality depth | — | Ethereum finality | not configurable (a deeper setting would not stop a captured committee, §2) |
+| Inbound finality depth | — (the walkthrough keeps the default) | 0: Ethereum finality | the admin's `SetDepth` on LEZ, for later imports only (§2; since B1) |
 
 ```sh
 export SD_ADMIN=0x5ec0d000000000000000000000000000000ad001

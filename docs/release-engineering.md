@@ -200,7 +200,7 @@ installed, recomputes the six programs' image ids (`r0vm --elf F --id`); without
 recomputed, and `--strict` (what `just release` uses) fails, as it does without `nm` or the sources asset. A build's
 commit is `+dirty` when a tracked file differs or an untracked one exists (`scripts/release.sh commit`; cargo and the
 build box use untracked files too). Tests: [`scripts/test_fetch_native.py`](../scripts/test_fetch_native.py) (22),
-[`scripts/test_release_manifest.py`](../scripts/test_release_manifest.py) (24),
+[`scripts/test_release_manifest.py`](../scripts/test_release_manifest.py) (25),
 [`scripts/test_release_scripts.py`](../scripts/test_release_scripts.py) (13: the release path end to end with stub
 cargo, forge, rustc, r0vm and nm, including review-fix-supply's failed-build case),
 [`scripts/test_deny_all.py`](../scripts/test_deny_all.py) (13).

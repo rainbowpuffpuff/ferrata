@@ -1,6 +1,6 @@
 # seqnet logoseth-1: the mini-app's round trip with its Ethereum side through Logos Core's own modules (21 Nov 2026)
 
-`e2e/seqnet/run.sh logoseth logoseth-1` on the Modal build box (from the worktree's root through `spike/modal-build/mrun`, as run: `export SEQNET_TMP=<scratch>/seqnet SEQNET_SHORT=/var/tmp/rfpf; bash e2e/seqnet/run.sh build; bash e2e/seqnet/run.sh build-logoseth; bash e2e/seqnet/run.sh logoseth logoseth-1`, the crown-live-3 inputs put in `$SEQNET_TMP/inputs` with `mrun --put`; branch `rfp-logos-core-eth`
+`e2e/seqnet/run.sh logoseth logoseth-1` on the Modal build box (from the worktree's root through `spike/modal-build/mrun`, as run: `export SEQNET_TMP=<scratch>/seqnet SEQNET_SHORT=<short>; bash e2e/seqnet/run.sh build; bash e2e/seqnet/run.sh build-logoseth; bash e2e/seqnet/run.sh logoseth logoseth-1`, the crown-live-3 inputs put in `$SEQNET_TMP/inputs` with `mrun --put`; branch `rfp-logos-core-eth`
 at `6a3ee5f9` + the SEQNET_SHORT fix), after `run.sh build` and `run.sh build-logoseth`. Local only: a LEZ v0.4.0-rc1 zone
 we ran (the crown-live-3 bundle: one sequencer, one Logos Blockchain node, dev-mode leader proofs), anvil with chain id
 11155111, the vault tests' mock verifier; private proofs in RISC Zero dev mode (`SEQNET_PROOFS=dev`).

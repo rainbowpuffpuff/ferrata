@@ -17,6 +17,7 @@ beacon providers report. The program cannot see any of this; the monitor is how 
 | `ws-half` | critical | By the chain's clock, the finalized header is past half its weak-subjectivity period (`Config::ws_end_slot`): submit the outstanding updates now. |
 | `ws-expired` | critical | Past the period: the program refuses every update; the instance must be replaced by a fresh one (F.10) and consumers must migrate. |
 | `provider-unavailable`, `provider-wrong-chain`, `provider-behind` | warn | A provider gave no usable answer (its finalized slot included), answers for another chain (its genesis is not the instance's), or has not finalized the instance's slot (behind or syncing). The first two are never counted. One behind the slot is counted only when it already holds another canonical block there (a disagreement): its 404 there may be a block it has not seen, and its agreement is not final, so neither counts. A provider past the slot that no longer serves it (pruned history, or a node checkpoint-synced after the slot that has not backfilled) answers 404 like an empty slot and counts as disagreeing; the alert names it. |
+| `recheck-backlog` | warn | More earlier headers are due to be judged again than the 8 a poll judges (`due`, `newly_judgeable`, `per_poll`, `polls`): every one is judged within ⌈due / 8⌉ polls, the newly judgeable first. |
 | `instance-inactive`, `instance-unreadable` | warn | The instance's committee is not adopted yet; its state could not be read. |
 | `recovered`, `started`, `stopped` | info | An alert cleared; the daemon's start and clean stop. |
 
@@ -42,15 +43,18 @@ attest-monitor watch --state lez:http://127.0.0.1:3040 --program 0x... --instanc
   and an outage is not a recovery: a poll that cannot read the instance, has too few providers for a verdict, or has
   no provider's finalized slot holds what was raised (no `recovered`) until a poll can judge it.
 - `--state-file` keeps every finalized header the instance has shown with the providers' verdict, across restarts;
-  `--status-file` is the latest assessment. `watch` judges each header on record again (up to 8 a poll) until its
-  verdict settles (confirmed, or contested, with no provider behind its slot), whether or not the instance has moved
-  on. `instance-diverged` and `instance-ahead` are one alert per header (its slot): one found diverged, or too new,
-  stays raised (repeated every `--repeat`) when the instance moves on or providers drop out; one diverged, or ahead of
-  every provider, clears (`recovered`) only when a later poll confirms that header (`--min-agreeing` agree, none
-  disagrees), not when the verdict becomes `contested` or `unconfirmed`. An operator who finds such an alarm false (a
-  lying provider) removes the provider and, for a header the instance has left, its entry in the state file. A state
-  file written before this version has no `settled`: its confirmed and contested headers count as settled, its
-  unconfirmed and diverged ones are judged again.
+  `--status-file` is the latest assessment. `watch` judges each header on record again, whether or not the instance
+  has moved on, until its verdict settles, and it settles only when every configured provider was counted (agreeing
+  or disagreeing): one behind the slot, down or on another chain leaves it unsettled. At most 8 earlier headers are
+  judged a poll, the newly judgeable first, then the least recently judged, so every due header is judged within
+  ⌈due / 8⌉ polls (`recheck-backlog` says when more are due); the state file keeps, per header, `last_judged_s` and
+  `finalized_by`. `instance-diverged` and `instance-ahead` are one alert per header (its slot), raised for either why,
+  and stay raised (repeated every `--repeat`) when the instance moves on or providers drop out, until a settled
+  confirmation of that header: every configured provider has finalized its slot and holds the header there. A
+  contested or unconfirmed verdict, or a confirmation without every provider, does not clear them. A false alarm from a
+  lying provider clears by itself once the operator removes that provider (the header is still judged); no edit of the
+  state file is needed. A state file written before this version has no `settled`: its confirmed and contested headers
+  count as settled, its unconfirmed and diverged ones are judged again.
 - The alert command gets one JSON line per alert, newline-terminated.
 
 ## The rule
@@ -60,7 +64,10 @@ Ethereum; Casper FFG finalizes a checkpoint two epochs after it at the earliest,
 header is always at least that old: the mainnet finality update of the attestation fixtures finalizes slot 15,624,480
 with signature slot 15,624,545, 65 slots later) and `G` the `--ahead-grace` (60 s):
 
-1. `instance-ahead` (`too-new`) when the header is younger than `D` by the chain's clock. No provider can hide it.
+1. `instance-ahead` (`too-new`) when the header is younger than `D` by the chain's clock. No provider can hide it. The
+   clock is read once the instance's state is in (`watch`: after the state's read; `check`: after its reads), and the
+   12 s margin covers only the monitor clock's error: a too-new raised by a slow clock clears once the header is no
+   longer too new and every configured provider confirms it; a forged too-new header stays raised.
 2. `instance-diverged` when at least `--diverge-at` providers are counted against it: a provider that has finalized `S`
    counts with another root there or no block; one that has not finalized `S` counts only with another canonical block
    there. A provider behind `S` with no block there (it may not have seen the slot) or with `R` there is not counted
@@ -79,8 +86,11 @@ and either within the grace or vouched for by a colluding provider (claiming `S`
 it again once the honest providers finalize `S`; on a chain that finalizes normally they finalize any slot within
 three epochs of it (19.2 min on Ethereum; one epoch more when every slot from `S` to the next epoch boundary is empty),
 so the forged header raises `instance-diverged` at the latest at the first poll after that, whether or not the
-instance has moved on: that time, plus a poll interval and the freeze's own, is what a consumer's caps must cover. The
-limit that stays: every provider counted colludes with the forger.
+instance has moved on, unless more than 8 headers become judgeable at once (then within ⌈n / 8⌉ polls, with
+`recheck-backlog`): that time, plus a poll interval and the freeze's own, is what a consumer's caps must cover. A header
+that colluding providers confirm while the honest one is down or behind is not settled: it is judged when the honest
+provider returns. The limit that stays: every provider counted colludes with the forger (and, for an alarm to clear,
+every configured provider confirms).
 
 ## Tested
 
@@ -111,6 +121,15 @@ stalled state's time plus 60 s) the header at 11,549,664 is 852 s old.
 | `unreachable_and_wrong_chain_providers_are_not_counted` | a closed port and an HTTP 503: `provider-unavailable` ×2; mainnet's genesis: `provider-wrong-chain`; one honest left: `instance-unconfirmed` |
 | `reads_the_instance_from_a_lez_sequencers_get_account` | `lez:`: one `getAccount`, the account built with LEZ's own types as the sequencer serves it; an instance the account does not hold: exit 1 |
 | `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook` | `watch` on the forged header with a freeze tool that fails until it is "up": `instance-diverged` emitted again at each poll while the tool fails, taken once the tool is up; then the instance unreadable (`instance-unreadable`) and every provider down (`provider-unavailable` ×3): the divergence held, no `recovered`, not emitted again; providers back and the honest header: `recovered` |
+| `b3_r2_colluders_confirming_while_the_honest_provider_is_behind_do_not_settle_the_header` | colluders confirm a forged header while the honest provider has not reached its slot: the header stays unsettled and is judged again |
+| `b3_r3_colluders_confirming_while_the_honest_provider_is_down_do_not_settle_the_header` | the same with the honest provider down: unsettled, judged when it returns |
+| `an_honest_providers_outage_while_colluders_confirm_is_not_a_recovery` | a raised divergence, then the honest provider down while the colluders confirm: no `recovered` |
+| `b3_r4_a_slow_state_read_does_not_make_an_honest_header_too_new` | the clock read after the state's read: a slow read does not raise `too-new` for an honest header |
+| `b3_r5_undecidable_older_headers_do_not_hold_the_recheck` | headers that cannot be decided yet do not keep newer judgeable ones from being judged (the order above) |
+| `a_false_too_new_from_a_slow_clock_clears_once_every_provider_confirms_the_header` | a too-new raised by a slow clock clears once the header is old enough and every configured provider confirms it |
+| `a_too_new_header_stays_raised_after_the_instance_moves_on` | a too-new header stays raised when the instance moves on |
+| `an_ahead_of_providers_header_stays_raised_when_it_turns_contested_or_diverged` | an ahead-of-providers header stays raised when its verdict turns contested or diverged |
+| `huge_operator_values_do_not_overflow` | intervals, graces and repeats at their largest values: no overflow, the daemon still stops |
 | `the_daemon_alerts_on_change_recovers_and_stops_on_sigterm` | `watch`: `instance-stalled` and `ws-half` once each (not repeated within `--repeat`), `recovered` for both when the instance resumes, the status and state files, SIGTERM: `stopped`, exit 0 |
 
 Not done: a run against a running LEZ sequencer and public beacon providers (the `lez:` reader is tested against

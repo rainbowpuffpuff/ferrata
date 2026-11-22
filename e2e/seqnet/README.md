@@ -99,15 +99,14 @@ cd <repo>                                        # a worktree; the inputs beside
 ../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh logoseth logoseth-N'
 ```
 
-The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the
-node, r0vm and the two LEZ programs of [`docs/image-ids.md`](../../docs/image-ids.md)) and the final R0BF
+The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the node, r0vm and the live runs' two LEZ programs: the attestation program of [`docs/image-ids.md`](../../docs/image-ids.md) and the bridge program from before milestone B1, which `lez/crown/build.sh`'s repack replaces with B1's, built from this tree or named by `CROWN_BRIDGE_BIN`) and the final R0BF
 programs (`r0bf/checkpoint_b.bin`, `r0bf/release.bin`), which `scripts/reproduce-image-ids.sh build` rebuilds. Neither
 is published: built from source as the [deployer guide](../../docs/guides/deployer-guide.md) §11 step 0 shows, they
 are named by `SEQNET_BUNDLE` (`lez/crown/build.sh`'s `bundle.tar.zst`) and `SEQNET_R0BF` (the `r0bf/` directory).
 
 | File | What |
 |---|---|
-| `run.sh` | `build`, `build-miniapp`, `cli NAME`, `miniapp NAME`, `build-lezcore [core\|rest]`, `lezcore NAME` |
+| `run.sh` | `build`, `build-miniapp`, `cli NAME`, `miniapp NAME`, `build-lezcore [core\|rest]`, `lezcore NAME`, `basecamp NAME`, `deployer NAME`, `build-logoseth`, `logoseth NAME`, `robust NAME` |
 | `drive.sh` | one run: session A, anvil and the vault, the user's keys, the deposit and capture (cli), the zone with the hook, Ethereum's transactions |
 | `hook-cli.sh`, `hook-miniapp.sh`, `hook-lezcore.sh` | what runs while the zone runs (`lez/crown/session.sh x`) |
 | `common.sh` | the steps the hooks share: the operator's import, the gas drop's stand-in, the checkpoint, the relayer, the records |
