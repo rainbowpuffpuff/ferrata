@@ -65,9 +65,10 @@ crates="lez/updater lez/updater/sequencer lez/advance lez/wire lez/bridge-wire l
         bridge/crates/ferrata-bridge-core checkpoint/crates/checkpoint-core checkpoint/crates/attestor-core
         lez/statements-wire lez/rebate-wire"
 for c in $crates; do copy "$c"; done
-# The live driver's modules the sequencer backend compiles in by path (lez/updater/sequencer/src/lib.rs).
+# The live driver's modules the sequencer backend compiles in by path (lez/updater/sequencer/src/lib.rs), and the
+# URL guards' parser the updater compiles in by path (lez/updater/src/chain.rs: rpcurl.rs, since 18 November 2026).
 mkdir -p "$v/ferrata/lez/live/driver/src"
-for f in blocklog follower live manifest plan programs; do cp "$repo/lez/live/driver/src/$f.rs" "$v/ferrata/lez/live/driver/src/"; done
+for f in blocklog follower live manifest plan programs rpcurl; do cp "$repo/lez/live/driver/src/$f.rs" "$v/ferrata/lez/live/driver/src/"; done
 # The workspace manifests the copies inherit from.
 cp "$repo/Cargo.toml" "$v/ferrata/Cargo.toml"
 cp "$repo/lez/Cargo.toml" "$v/ferrata/lez/Cargo.toml"
@@ -162,7 +163,7 @@ done
 
 # What was staged, for version().
 sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done
-                         for f in blocklog follower live manifest plan programs; do echo "lez/live/driver/src/$f.rs"; done; } \
+                         for f in blocklog follower live manifest plan programs rpcurl; do echo "lez/live/driver/src/$f.rs"; done; } \
         | LC_ALL=C sort | xargs sha256sum) | sha256sum | cut -d' ' -f1)
 lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/lez/updater/Cargo.toml" | head -n 1)
