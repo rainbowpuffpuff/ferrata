@@ -536,6 +536,15 @@ root workspace's tests (168 passed, 1 ignored). The LEZ harness's `immutable_pro
 lez/RESULTS.md §8's clippy gate still clean with it (also with the two features). The updater module's staging,
 rewritten portably by the stream, stages the same sources as the build of 22 November (`modules/RESULTS.md`).
 
+**Fifteenth pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-measure` (stream C, rows 166–176; one
+conflict, `docs/design/attestation.md` §15, both sides kept), on the build box: the LEZ harness in dev mode with the
+features `statements` and `rebate`, every test: 112 passed in 50 test runs, 70 of its 71 records byte-identical (the
+71st the F.8 file's random count); its binaries build (C's `perf_prove`, `perf_state`); lez/RESULTS.md §8's clippy gate
+clean again once C's one flagged division used `checked_div` (`perf_state`'s output then equal to the committed
+`perf-state.md` but for its wall-clock serialization column) and C's three binaries were formatted; CI's `vault` (with
+C's `StateGrowth.t.sol`), `roundtrip` and `cli/tests/e2e.sh` passed. On the laptop: `links` and its steps (below),
+`idl`.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
