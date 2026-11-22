@@ -200,7 +200,8 @@ pub enum After {
     Due,
     /// The chain could not be read after the refusal, `policy.max_attempts` times with the transport backoff between.
     /// On the sequencer backend a read fails while another party's transaction touching the instance is in flight,
-    /// which is when a race is lost: held [`REFUSAL_BACKOFF`] rounds whatever the cause, not a failing send, no strike.
+    /// which is when a race is lost: held as a cause that may pass is ([`REFUSAL_BACKOFF`] rounds the first time),
+    /// whatever the cause; not a failing send, no strike.
     Unread,
 }
 

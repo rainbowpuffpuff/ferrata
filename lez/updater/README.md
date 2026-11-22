@@ -125,7 +125,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    it or it ran out of gas (out of gas: until `fees.gas_limit` is raised), and for a window or an
    unknown reason 4 rounds, then 8, 16, 32, then every 64 rounds, sent again after each hold, never
    given up (review of the fixes, L3); if the chain cannot be read after the refusal, the step is held
-   4 rounds whatever the cause, without counting against the breaker or as a send that did not land (on
+   4 rounds (doubling if that happens again to the same step) whatever the cause, without counting against the breaker or as a send that did not land (on
    the sequencer backend a read fails while another party's transaction touching the instance is in
    flight, which is when a race is lost; L4). Three refusals in a row of steps that stayed due pause
    sending for 8 rounds, then 16, ... up to 512, with one step tried after each pause: this bounds what
