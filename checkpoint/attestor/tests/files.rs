@@ -3,7 +3,9 @@
 //! - L3: `keygen` writes a key readable by its owner only (mode 0600) and never overwrites a file, nor writes
 //!   through a link planted at its path (one `create_new` open).
 //! - L6: `write_atomic` (the state file, the published attestation) writes a temporary file of its own beside
-//!   the target, never one a link planted beside it points to, and two writers never share one.
+//!   the target, never one a link planted beside it points to, and two writers never share one. The unique name
+//!   is shown by the first two L6 tests; `create_new` by the third (the second review's L3), which plants a link
+//!   or a file at exactly the temporary name `write_atomic_via` is given.
 //! - L7: the CLI records the signed tip in its state before it writes the attestation: when the attestation
 //!   cannot be written, the state already holds the tip, and the next round signs the same tip again.
 mod support;
@@ -16,7 +18,7 @@ use std::process::Command;
 
 use attestor_core::{sign_certificate, Deployment};
 use checkpoint_core::hash::sha256_parts;
-use ferrata_attestor::{deployment_json, read_state, save_lez_answers, write_atomic, write_secret};
+use ferrata_attestor::{deployment_json, read_state, save_lez_answers, write_atomic, write_atomic_via, write_secret};
 use serde_json::{json, Value};
 use support::*;
 
@@ -111,6 +113,40 @@ fn l6_two_writers_never_share_a_temporary_file() {
     let last = fs::read(&p).unwrap();
     assert!(contents.contains(&last), "the file holds one writer's bytes whole");
     assert!(temporaries(&d).is_empty(), "{:?}", temporaries(&d));
+    let _ = fs::remove_dir_all(&d);
+}
+
+#[test]
+fn l6_create_new_never_opens_what_is_at_the_temporary_name() {
+    let d = scratch("atomic-create-new");
+    let (state, tmp) = (d.join("state.json"), d.join(".state.json.planted.tmp"));
+    fs::write(&state, b"old").unwrap();
+    // A link to an existing file at exactly the temporary name: not written through, not removed.
+    let victim = d.join("victim");
+    fs::write(&victim, b"victim").unwrap();
+    symlink(&victim, &tmp).unwrap();
+    assert!(write_atomic_via(&state, &tmp, b"new").is_err());
+    assert_eq!(fs::read(&victim).unwrap(), b"victim");
+    assert_eq!(fs::read(&state).unwrap(), b"old");
+    assert!(fs::symlink_metadata(&tmp).unwrap().file_type().is_symlink(), "the planted link is left as it was");
+    // A dangling link: following it would create what it points to.
+    fs::remove_file(&tmp).unwrap();
+    let absent = d.join("created-through-the-link");
+    symlink(&absent, &tmp).unwrap();
+    assert!(write_atomic_via(&state, &tmp, b"new").is_err());
+    assert!(fs::symlink_metadata(&absent).is_err(), "nothing created through the link");
+    assert_eq!(fs::read(&state).unwrap(), b"old");
+    // Another writer's file: never truncated, never removed.
+    fs::remove_file(&tmp).unwrap();
+    fs::write(&tmp, b"another writer's").unwrap();
+    assert!(write_atomic_via(&state, &tmp, b"new").is_err());
+    assert_eq!(fs::read(&tmp).unwrap(), b"another writer's");
+    assert_eq!(fs::read(&state).unwrap(), b"old");
+    // Nothing there: the same call writes, and the temporary name is gone.
+    fs::remove_file(&tmp).unwrap();
+    write_atomic_via(&state, &tmp, b"new").unwrap();
+    assert_eq!(fs::read(&state).unwrap(), b"new");
+    assert!(fs::symlink_metadata(&tmp).is_err());
     let _ = fs::remove_dir_all(&d);
 }
 

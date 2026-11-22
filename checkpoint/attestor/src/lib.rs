@@ -126,39 +126,52 @@ pub fn write_secret(path: &Path, secret: &[u8; 32]) -> Result<()> {
 
 /// Writes `bytes` to `path` atomically: a new temporary file beside it, synced, renamed over it, the
 /// directory synced. A reader sees the old content or the new, never a part. The temporary file has a name of
-/// its own (process, time, a counter) and is created with `create_new`, which never follows a symlink and never
-/// opens a file that exists: two writers never share one, and a link planted beside `path` is not written through.
+/// its own (process, time, a counter) and is created with `create_new` ([`write_atomic_via`]), which never
+/// follows a symlink and never opens a file that exists: two writers never share one, and a link planted beside
+/// `path` is not written through.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
-    let dir = match path.parent() {
-        Some(p) if !p.as_os_str().is_empty() => p,
-        _ => Path::new("."),
-    };
     let name = path.file_name().with_context(|| format!("{}: not a file path", path.display()))?;
     let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_nanos());
-    let tmp = dir.join(format!(
+    let tmp = parent_dir(path).join(format!(
         ".{}.{}.{nanos}.{}.tmp",
         name.to_string_lossy(),
         std::process::id(),
         SEQ.fetch_add(1, Ordering::Relaxed)
     ));
+    write_atomic_via(path, &tmp, bytes)
+}
+
+/// [`write_atomic`] with the temporary file's name given (the seam its tests plant a link at). `tmp` is opened
+/// with `create_new`: if anything is there, a file or a link (dangling or not), the write fails, nothing is
+/// written through it, nothing it points to is created, and it is left as it was (it is not this call's to
+/// remove). A temporary file this call created is removed if the write fails before the rename.
+#[doc(hidden)]
+pub fn write_atomic_via(path: &Path, tmp: &Path, bytes: &[u8]) -> Result<()> {
+    let mut f = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(tmp)
+        .with_context(|| format!("{}: a temporary file that exists is never opened", tmp.display()))?;
     let written = (|| -> Result<()> {
-        let mut f = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&tmp)
-            .with_context(|| tmp.display().to_string())?;
         f.write_all(bytes)?;
         f.sync_all()?;
-        fs::rename(&tmp, path).with_context(|| path.display().to_string())
+        fs::rename(tmp, path).with_context(|| path.display().to_string())
     })();
     if written.is_err() {
-        let _ = fs::remove_file(&tmp);
+        let _ = fs::remove_file(tmp);
     }
     written?;
-    fs::File::open(dir)?.sync_all()?;
+    fs::File::open(parent_dir(path))?.sync_all()?;
     Ok(())
+}
+
+fn parent_dir(path: &Path) -> &Path {
+    match path.parent() {
+        Some(p) if !p.as_os_str().is_empty() => p,
+        _ => Path::new("."),
+    }
 }
 
 // ---- the deployment --------------------------------------------------------------------------------
