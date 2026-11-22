@@ -19,6 +19,12 @@
 //!   attest-private  the reference consumer (--consumer-bin, deployed as consumer) attests privately, with a
 //!                   real proof, a Transfer log of the mainnet block of --attest-fixture (default the harness's
 //!                   Stage 4 fixture) on a new instance of the main deployment; --private-account N (default 1)
+//!   attest-block    (LEZ v0.4.0-rc3) several private reads in one block, RFP-021 R.11: four new private accounts
+//!                   each prove the consumer's AttestPrivately of another Transfer log of --attest-fixture's block
+//!                   against one snapshot, held; the chain moves (a private transaction of the control, a finality
+//!                   update of an instance from --other-fixture, default the mainnet end-to-end fixture); then the
+//!                   four are sent back to back and must apply in one block; the control's second transaction from
+//!                   the same snapshot must be refused (src/block.rs; --consumer-bin)
 //!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
 //!   export          write the records into --out
 //! Without a sequencer:
@@ -34,11 +40,13 @@
 //! --program-bin FILE, --scripted-bin FILE, --fixtures DIR, --harness-results DIR,
 //! --sequencer-log FILE, --gas-limit N (default 4000000), --stored-tx FILE, --dir DIR,
 //! --binary FILE (repeatable), --transcript FILE, --tx-out FILE, --tx FILE, --consumer-bin FILE,
-//! --attest-fixture DIR, --private-account N,
+//! --attest-fixture DIR, --other-fixture DIR, --private-account N,
 //! --wait-final yes|no (default yes: a transaction is settled once its block is final on Bedrock;
 //! no for LEZ's mock Bedrock, where no block becomes final).
 
 mod attest;
+#[cfg(feature = "lez-rc3")]
+mod block;
 mod blocklog;
 mod follower;
 mod inbound;
@@ -475,6 +483,19 @@ async fn run(args: Args) -> Result<()> {
             let dir = attest_fixture_dir(args.get("attest-fixture"));
             attest::attest_private(&mut run.live, &program, &consumer, &dir, payer, index).await?;
         }
+        #[cfg(feature = "lez-rc3")]
+        "attest-block" => {
+            let consumer = run.consumer.clone().ok_or_else(|| anyhow!("--consumer-bin is required"))?;
+            let (program, payer) = (run.program.clone(), run.payers[1]);
+            let funder_key = lez_test_payers()?[0].clone();
+            let dir = attest_fixture_dir(args.get("attest-fixture"));
+            let other = args.get("other-fixture").map(PathBuf::from).unwrap_or_else(|| {
+                repository_root().join("crates/ferrata-spectests/fixtures/mainnet-e2e-2026-11-09")
+            });
+            block::attest_block(&mut run.live, &program, &consumer, &dir, &other, payer, &funder_key).await?;
+        }
+        #[cfg(not(feature = "lez-rc3"))]
+        "attest-block" => bail!("attest-block needs LEZ v0.4.0-rc3 (lez/scripts/lez-select.sh v0.4.0-rc3)"),
         "inbound-deploy" => {
             let bridge = run.bridge.clone().ok_or_else(|| anyhow!("--bridge-bin is required"))?;
             let (program, payer) = (run.program.clone(), run.payers[1]);

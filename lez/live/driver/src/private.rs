@@ -124,6 +124,9 @@ struct Tape {
     recorded: Vec<Entry>,
     /// Where `sendTransaction` writes the transaction (borsh `LeeTransaction`).
     tx_out: PathBuf,
+    /// Recording, but `sendTransaction` only writes the transaction and returns its hash: the
+    /// wallet builds and proves it, and the caller sends it later (`TapClient::hold`).
+    hold: bool,
 }
 
 /// LEZ's wallet talks to the sequencer through this: every call goes to the sequencer and is
@@ -143,7 +146,12 @@ impl TapClient {
         fs::write(transcript, b"")?;
         Ok(Self {
             inner: Some(inner),
-            tape: Arc::new(Mutex::new(Tape { path: transcript.to_path_buf(), recorded: Vec::new(), tx_out: tx_out.to_path_buf() })),
+            tape: Arc::new(Mutex::new(Tape {
+                path: transcript.to_path_buf(),
+                recorded: Vec::new(),
+                tx_out: tx_out.to_path_buf(),
+                hold: false,
+            })),
         })
     }
 
@@ -156,8 +164,22 @@ impl TapClient {
             .collect::<Result<Vec<_>>>()?;
         Ok(Self {
             inner: None,
-            tape: Arc::new(Mutex::new(Tape { path: transcript.to_path_buf(), recorded, tx_out: tx_out.to_path_buf() })),
+            tape: Arc::new(Mutex::new(Tape { path: transcript.to_path_buf(), recorded, tx_out: tx_out.to_path_buf(), hold: false })),
         })
+    }
+
+    /// While `on`, a recording client does not send: `sendTransaction` writes the transaction to
+    /// the current output file and returns its hash, so that a transaction can be built and proven
+    /// against the chain as it is now and sent later (`attest-block`). Every clone shares this.
+    #[allow(dead_code)] // used by the attest-block phase (LEZ v0.4.0-rc3); crown-driver includes this file too
+    pub fn hold(&self, on: bool) {
+        self.tape.lock().expect("tape").hold = on;
+    }
+
+    /// Where the next `sendTransaction` writes its transaction. Every clone shares this.
+    #[allow(dead_code)]
+    pub fn set_tx_out(&self, tx_out: &Path) {
+        self.tape.lock().expect("tape").tx_out = tx_out.to_path_buf();
     }
 
     fn append(&self, entry: &Entry) {
@@ -225,13 +247,22 @@ impl WalletSequencerClient for TapClient {
     async fn send_transaction(&self, tx: LeeTransaction) -> Result<HashType, Self::Error> {
         let hash = tx.hash();
         let bytes = borsh::to_vec(&tx).expect("a transaction serializes");
-        let (tx_out, file) = {
+        let (tx_out, file, hold) = {
             let tape = self.tape.lock().expect("tape");
-            (tape.tx_out.clone(), tape.tx_out.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string())
+            (tape.tx_out.clone(), tape.tx_out.file_name().and_then(|n| n.to_str()).unwrap_or("").to_string(), tape.hold)
         };
         fs::write(&tx_out, &bytes).map_err(|e| ClientError::Custom(format!("writing {}: {e}", tx_out.display())))?;
         let params = SentTransaction { hash: hash.to_string(), bytes: bytes.len(), file };
         match &self.inner {
+            Some(_) if hold => {
+                self.append(&Entry {
+                    method: "sendTransaction (held: written, not sent)".into(),
+                    params: raw(&params),
+                    ok: Some(raw(&hash)),
+                    err: None,
+                });
+                Ok(hash)
+            }
             Some(inner) => {
                 let result = <SequencerClient as WalletSequencerClient>::send_transaction(inner, tx).await;
                 let entry = match &result {
@@ -397,6 +428,21 @@ pub(crate) fn private_wallet(home: &Path, rpc: &str, client: TapClient) -> Resul
 
 /// As `private_wallet`, with LEZ's test private account `index` (0 or 1 on LEZ's local network).
 pub(crate) fn private_wallet_at(home: &Path, rpc: &str, client: TapClient, index: usize) -> Result<(WalletCore<TapClient>, AccountId)> {
+    let mut wallet = empty_wallet(home, rpc, client)?;
+    // LEZ's test private account `index` (the first by default): the genesis of its local
+    // network credits it, and its keys are in LEZ's source (`testnet_initial_state`).
+    let account = testnet_initial_state::initial_priv_accounts_private_keys()
+        .into_iter()
+        .nth(index)
+        .ok_or_else(|| anyhow!("LEZ's initial state has no private account {index}"))?;
+    let id = account.account_id();
+    wallet.storage_mut().key_chain_mut().add_imported_private_account(account.key_chain, account.chain_index, account.account);
+    Ok((wallet, id))
+}
+
+/// A new wallet at `home` (its storage made anew, a fresh seed) talking to the sequencer at `rpc`
+/// through `client`, holding no account yet.
+pub(crate) fn empty_wallet(home: &Path, rpc: &str, client: TapClient) -> Result<WalletCore<TapClient>> {
     check_loopback(rpc)?;
     fs::create_dir_all(home)?;
     let config_path = home.join("wallet_config.json");
@@ -409,16 +455,8 @@ pub(crate) fn private_wallet_at(home: &Path, rpc: &str, client: TapClient, index
              \"seq_tx_poll_max_blocks\": 120,\n  \"seq_poll_max_retries\": 2,\n  \"seq_block_poll_max_amount\": 100\n}}\n"
         ),
     )?;
-    let (mut wallet, _mnemonic) = WalletCore::new_init_storage_with_client(config_path, storage_path, None, "", client)?;
-    // LEZ's test private account `index` (the first by default): the genesis of its local
-    // network credits it, and its keys are in LEZ's source (`testnet_initial_state`).
-    let account = testnet_initial_state::initial_priv_accounts_private_keys()
-        .into_iter()
-        .nth(index)
-        .ok_or_else(|| anyhow!("LEZ's initial state has no private account {index}"))?;
-    let id = account.account_id();
-    wallet.storage_mut().key_chain_mut().add_imported_private_account(account.key_chain, account.chain_index, account.account);
-    Ok((wallet, id))
+    let (wallet, _mnemonic) = WalletCore::new_init_storage_with_client(config_path, storage_path, None, "", client)?;
+    Ok(wallet)
 }
 
 pub(crate) fn describe_private(tx_out: &Path) -> Result<String> {

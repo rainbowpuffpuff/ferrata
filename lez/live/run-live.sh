@@ -231,7 +231,10 @@ else
 fi
 
 launched="$(date +%s)"
-env -u RISC0_DEV_MODE RUST_LOG="${FERRATA_LIVE_RUST_LOG:-info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn}" \
+# FERRATA_LIVE_SEQUENCER_DEV_MODE=1: the sequencer runs with RISC0_DEV_MODE=1, as LEZ's Justfile documents for
+# development ("to disable proof verification"), so that it takes the fake receipts of a driver in dev mode.
+if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then seq_env="RISC0_DEV_MODE=1"; else seq_env="-u RISC0_DEV_MODE"; fi
+env $seq_env RUST_LOG="${FERRATA_LIVE_RUST_LOG:-info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn}" \
   "$SEQUENCER" start "$RUN_DIR/sequencer_home" --rpc-listen-address "127.0.0.1:$RPC_PORT" > "$LOG/sequencer.log" 2>&1 &
 SEQ_PID=$!
 echo "$SEQ_PID" >> "$PIDS"
@@ -286,7 +289,11 @@ done
 {
   echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | sed "s#$BESIDE/#../#g")"
   echo "RISC0_* variables in the sequencer's environment: $(tr '\0' '\n' < /proc/$SEQ_PID/environ | grep '^RISC0_' | tr '\n' ' ' | sed "s#$BESIDE/#../#g")"
-  echo "(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)"
+  if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then
+    echo "(RISC0_DEV_MODE=1, FERRATA_LIVE_SEQUENCER_DEV_MODE: receipts of privacy-preserving transactions are NOT verified; fake receipts are taken)"
+  else
+    echo "(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)"
+  fi
 } > "$RUN_DIR/config/sequencer-process.txt"
 cat "$RUN_DIR/config/sequencer-process.txt"
 
@@ -335,6 +342,13 @@ for phase in $PHASES; do
       # priority as private-real's (FERRATA_LIVE_PROOF_THREADS, FERRATA_LIVE_PROOF_NICE); --consumer-bin through
       # FERRATA_LIVE_DRIVER_EXTRA
       ( unset RISC0_DEV_MODE
+        if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
+        renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
+        driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
+    attest-block)   # driver/src/block.rs (LEZ v0.4.0-rc3): several private reads in one block; fake receipts when the
+      # sequencer runs in dev mode (FERRATA_LIVE_SEQUENCER_DEV_MODE=1), real ones otherwise (threads and priority as
+      # private-real's); --consumer-bin through FERRATA_LIVE_DRIVER_EXTRA
+      ( if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then export RISC0_DEV_MODE=1; else unset RISC0_DEV_MODE; fi
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
@@ -405,6 +419,10 @@ for kind in fake real attest; do   # private-attest: phase attest-private
   [ -f "$d/rpc-transcript.jsonl" ] && cp "$d/rpc-transcript.jsonl" "$OUT/private/$kind/"
   [ -f "$d/transaction.borsh" ] && cp "$d/transaction.borsh" "$OUT/private/$kind/"
 done
+if [ -d "$RUN_DIR/driver/private-block" ]; then   # phase attest-block: every transaction it held, as proven
+  mkdir -p "$OUT/private/block"
+  cp "$RUN_DIR/driver/private-block/"*.borsh "$OUT/private/block/" 2>/dev/null || true
+fi
 {
   echo "# The run's environment"
   echo

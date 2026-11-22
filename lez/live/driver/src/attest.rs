@@ -58,12 +58,12 @@ pub struct AttestFixture {
     pub proof: Vec<Vec<u8>>,
 }
 
-fn read(dir: &Path, name: &str) -> Result<Vec<u8>> {
+pub(crate) fn read(dir: &Path, name: &str) -> Result<Vec<u8>> {
     fs::read(dir.join(name)).with_context(|| format!("reading {}", dir.join(name).display()))
 }
 
 /// Every file `SHA256SUMS` names holds its sum.
-fn check_sums(dir: &Path) -> Result<()> {
+pub(crate) fn check_sums(dir: &Path) -> Result<()> {
     let sums = String::from_utf8(read(dir, "SHA256SUMS")?)?;
     let mut n = 0;
     for line in sums.lines().filter(|l| !l.trim().is_empty()) {
@@ -83,7 +83,7 @@ fn bytes_of<const N: usize>(v: &Value) -> Result<[u8; N]> {
 
 /// `LightClientFinalityUpdate` (Electra layout) as the `LightClientUpdate` it stands for (as the
 /// harness's `attest::finality_update`).
-fn finality_update(b: &[u8]) -> Result<LightClientUpdate> {
+pub(crate) fn finality_update(b: &[u8]) -> Result<LightClientUpdate> {
     ensure!(b.len() > 400, "LightClientFinalityUpdate too short");
     let u32_at = |o: usize| u32::from_le_bytes(b[o..o + 4].try_into().unwrap()) as usize;
     let (att, fin) = (u32_at(0), u32_at(4));

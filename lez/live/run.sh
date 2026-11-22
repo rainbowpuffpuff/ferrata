@@ -19,6 +19,8 @@
 #                          FERRATA_LIVE_ALIGN=0 starts the zone once, whatever the phase
 #   FERRATA_PROGRAM_BIN, FERRATA_SCRIPTED_BIN   the guest binaries to deploy (see README.md)
 #   FERRATA_LIVE_PHASES    space-separated phases of the driver (default: all)
+#   FERRATA_LIVE_SEQUENCER_DEV_MODE=1  the sequencer runs with RISC0_DEV_MODE=1, LEZ's Justfile's development mode
+#                          (it takes fake receipts); phase attest-block then proves with fake receipts too
 #   FERRATA_LIVE_PROOF_SECONDS  cap on the real proof of the private update (default 3600; 0 skips it)
 #   FERRATA_LIVE_PROOF_THREADS  the prover's thread count (RAYON_NUM_THREADS), for a machine that
 #                          reports fewer CPUs than it may use; FERRATA_LIVE_PROOF_NICE its niceness
