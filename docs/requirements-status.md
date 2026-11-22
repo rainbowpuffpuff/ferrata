@@ -23,7 +23,7 @@ Hard requirements:
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
 | RFP-021 | 40 | 15 | 1 | 3 | **59** |
-| RFP-022 | 43 | 22 | 1 | 2 | **68** |
+| RFP-022 | 45 | 20 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -38,8 +38,8 @@ By section, hard requirements:
 | RFP-021 | Supportability | 4 | 5 | 1 | 1 | 11 |
 | RFP-021 | Verification Security | 5 | 1 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 15 | 2 | 0 | 0 | 17 |
-| RFP-022 | Usability | 3 | 6 | 0 | 1 | 10 |
-| RFP-022 | Reliability | 8 | 6 | 0 | 0 | 14 |
+| RFP-022 | Usability | 4 | 5 | 0 | 1 | 10 |
+| RFP-022 | Reliability | 9 | 5 | 0 | 0 | 14 |
 | RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 3 | 0 | 1 | 4 |
 | RFP-022 | Security | 5 | 3 | 1 | 0 | 9 |
@@ -162,7 +162,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | F.4 | shown | Mints to public and private accounts; the private claim proven for real and applied by sequencers we ran. | 8, 89, 91, 123; `lez/harness/tests/bridge_private.rs` |
 | F.5 | shown | Burns write the note once with no Ethereum address; both live burns released on Sepolia. | 8, 91; `lez/harness/tests/bridge_burn.rs` |
 | F.6 | shown | Burns from public and private holdings in the harness and on sequencers we ran; the private burn proven for real. | 8, 91, 100, 123; `lez/harness/tests/bridge_burn.rs` |
-| F.7 | in part | Released on Sepolia against real proofs for a one-key devnet; 3 of 4 keys on anvil; validity rests on sequencer keys. | 24, 41, 65, 91, 100, 101 |
+| F.7 | in part | Released on Sepolia against real proofs for a one-key devnet; 3 of 4 keys on anvil; an rc3 four-key zone ran, no bridge on it; validity rests on sequencer keys. | 24, 41, 65, 91, 100, 101, 206 |
 | F.8 | shown | Fixed denominations on both sides; pairing at chance among 20 users, on the program since B1 too (0.05; the naive variants 1.0); the client prints each claim's anonymity set (the same token and amount under its root and fee range, less the deposits a plaintext claim has published, applied or refused) and warns at 1; measured per denomination over both halves: with every claim plaintext, as the runs made them, medians 2, 2, 2 and 27 sets of 1 among 81; had every earlier claim been private, medians 4, 4, 3 and 10 sets of 1. | 23, 89, 186; `cli/README.md`; `e2e/both-halves/results/randomised.md` |
 | F.9 | shown | From the seed alone, 10 of 10 unclaimed deposits and unreleased burns found in the harness, also on real proofs. | 23, 84, 89, 102; `cli/tests/e2e.rs` |
 | F.10 | shown | Write-once registry on both sides, registered live; deregistering: the vault's `setDepositsEnabled(token, false)` stops deposits and publishes the listing slot, mirrored on LEZ by `AttestListing` (never undone by an older record); claims of earlier deposits, burns, transfers and releases still apply; documented in the deployer guide §5 and the user guide §12. No program path or client reads the LEZ flag yet (the tool reads the vault's `depositsEnabled`). | 9, 41, 91, 189; `vault/test/Listing.t.sol`; `lez/harness/tests/bridge_delist.rs` |
@@ -180,12 +180,12 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 |---|---|---|---|
 | U.1 | in part | User functions in `ferrata_bridge_module` through Logos Core's own modules: deposits (ETH, an ERC-20 with one approval), the session's release, recovery and the registry read through `eth_rpc_module` and Logos's send stack (each send approved at the signer, only to the deployment the person running Logos Core names), claims and redemption through a patched `lez_core`; vault admin through the module for registering, caps, listing, fees, the release delay, the token-deposit freeze and accepting the admin role; LEZ `SetCap` held for a person's approval at the role's wallet, then accepted. Not run: the module-level release with send, seven other vault admin actions, LEZ `Freeze`, `Pause`, `Tick`; a non-ETH token's LEZ state not compared; the LEZ role wallet and the session's seed come from a stand-in service, not a module. | 59, 93, 109, 113, 114, 125, 198, 199; `modules/results/bridge-send-stack-r4/`; `e2e/runs/seqnet-logoseth-5/` |
 | U.2 | in part | The mini-app's round trip clicked through Basecamp on a sequencer we ran with real proofs (its Ethereum side a stand-in service there); with its Ethereum side through Logos Core's own modules (reads through `eth_rpc_module`, deposit, release and vault admin through `tx_sender_module`, each approved at `evm_signer_cli`) it ran headless on a sequencer we ran: deposit, claim, burn, release, recovery, the registry view, the vault admin panel and LEZ `SetCap` held for the role's approval. No run has both, inside Basecamp with Logos's approval app (`evm_signer_ui`); LEZ `Freeze` is not on this path; the release does not go through `ferrata_relayer_module`. | 57, 62, 86, 103, 125, 126, 199; `e2e/runs/seqnet-logoseth-5/` |
-| U.3 | in part | Relayer and `monitor` run as daemons and modules on anvil and devnets; the relayer's root imports on a running sequencer remain. | 43, 46, 96, 106, 107, 120 |
+| U.3 | in part | Relayer and `monitor` run as daemons and modules; the standalone relayer imported roots on a running sequencer; its module's LEZ side and `monitor`'s node clients remain. | 43, 46, 96, 106, 107, 120; `e2e/runs/seqnet-robust-1/` |
 | U.4 | waits on Logos | SPEL's LEZ v0.4 line is an open pull request (#301), not a release. Shown instead: a hand-written IDL decodes the bridge program's 37 vectors and SPEL's crate parses it; SPEL's v0.4 generator with our 23-line tuple patch (drafted, not opened) makes the bridge's messages and types (0 differences in 60), 50 of 50 vectors decoded. | 55, 194; `idl/check.py`; `idl/generated/spel-v2.txt` |
-| U.5 | in part | Defaults and exposure indicator tested in tool and mini-app; the gas drop ran on rc3, not yet in the relayer daemon. | 62, 84, 86, 124 |
+| U.5 | in part | Defaults and exposure indicator tested in tool and mini-app; the gas drop in the relayer daemon and the tool on a running sequencer (dev-mode proofs), not in the mini-app or for burns. | 62, 84, 86, 124, 205 |
 | U.6 | shown | Tool and mini-app preselect the private path; each public choice needs its own acknowledgement; tested. | 62, 84, 85, 86 |
 | U.7 | shown | User guide §10 says what is public and what is private at each step on both chains, with the residual correlations and, per field, what was measured; the tool and the mini-app print the same table before each step, and the guide carries it word for word (generated from `cli/src/privacy.rs`, checked). | 62, 84, 86, 180; `cli/src/privacy.rs`; `docs/guides/user-guide.md` §10 |
-| U.8 | in part | 21 refusals named without a deposit or burn in the tool; the freeze refusal is exercised in the mini-app only. | 62, 85; `cli/tests/e2e.rs` |
+| U.8 | shown | Every listed failure refused before signing with source, code and what to do, the freezes included in the tool and the mini-app, none naming a deposit or burn. | 62, 85, 202; `cli/tests/e2e.rs` |
 | U.9 | shown | Tool takes RPC and sequencer by option; the mini-app switches endpoints in the view, bad ones reported; tested. | 62, 85; `cli/README.md` |
 | U.10 | in part | Catalog laid out from the template and installed from 127.0.0.1; publishing is one owner command, every path tested against a stub GitHub (83 of 83); not published. | 61, 98, 107, 163 |
 
@@ -198,8 +198,8 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.3 | shown | Second claim (250), repeated burn note (244) and replayed release refused, also against RISC Zero's real verifier and in CI. | 8, 46, 76; `vault/test/invariant` |
 | R.4 | in part | Every later act only delays, over both halves: caps, freezes, a depth change, delisting, a fee change, a retirement and `Sunset` (an imported deposit claimed after `Sunset`, a burn released under the sunset checkpoint). Two disclosed exceptions: after RISC Zero's emergency stop nothing more is released or refunded, and tokens not burned before a LEZ change the immutable checkpoint program cannot follow lose their backing. | 8, 28, 191; `vault/test/Freeze.t.sol`; `vault/test/EmergencyStop.t.sol`; `e2e/both-halves/results/migration.md` |
 | R.5 | shown | A wiped client finds 10 of 10 unclaimed deposits and unreleased burns from the seed, also with real proofs. | 23, 84, 89, 102 |
-| R.6 | in part | `monitor` killed and restarted makes exactly one cancellation; the relayer keeps its gas-drop record; no relayer kill mid-checkpoint. | 43, 46, 47, 96 |
-| R.7 | in part | A view closed during a proof resumed its job once, in Basecamp; no test of a client killed between proof and sending. | 126; `e2e/runs/seqnet-basecamp-final-real/SUMMARY.md` |
+| R.6 | in part | The relayer daemon recovers from kills and endpoint faults on both chains without duplicating work; `monitor` restarted cancels once; its own endpoint failing, the prover and the attestors not shown. | 43, 46, 47, 96, 203 |
+| R.7 | shown | A claim killed after its proof, burns killed after and before sending, gas drops across kills: nothing lost or spent twice on a running sequencer; a Basecamp view closed mid-proof resumed once. | 126, 204 |
 | R.8 | in part | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. "Mature, audited" is not met by the versions pinned today: risc0-zkvm 3.0.5 is yanked and verifier 3.0.0 accepts forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2); RISC Zero has stopped its own 3.0.0 deployments. Shown again after the move to 3.1: the Ethereum side after phase 1, the LEZ side after phase 2 (a LEZ tag on risc0 3.1, Logos). | 12, 19, 41, 91, 154; `bridge/evm-verify/test/v2/Groth16Verify.t.sol`; `docs/design/risc0-3.1-migration.md` |
 | R.9 | shown | `docs/trust.md` §4.3: every third-party component (the updater, the root importer, the relayer both ways, the wrapper, the checkpoint prover, the watchers, the rule (B) attestors, RPC and LEZ nodes, the multisigs) with the effect of its outage and of its malfunction and the mitigation, each mitigation with the test or run that shows it; the operator guide §10. | 12, 43–48, 66, 68, 84, 85, 106, 124; `docs/trust.md` §4.3; `docs/guides/operator-guide.md` §10 |
 | R.10 | in part | CI runs the round trip over the state transition and anvil; sequencer round trips, twice live on Sepolia, are by hand. | 41, 76, 91, 100, 102 |

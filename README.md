@@ -30,7 +30,7 @@ What is here are prototypes and their measurements. **Not audited. Not for produ
 | see every result, with the command that re-checks it | [docs/EVIDENCE.md](docs/EVIDENCE.md) |
 | check the live Sepolia round trip yourself | [docs/guides/verify.md](docs/guides/verify.md) |
 | find where each RFP requirement is met | [docs/traceability.md](docs/traceability.md) |
-| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 40 and 43 shown, 15 and 22 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 22 November 2026) |
+| see the status of each requirement | [docs/requirements-status.md](docs/requirements-status.md): of the 59 and 68 hard requirements of RFP-021 and RFP-022, 40 and 45 shown, 15 and 20 in part, 1 and 1 not yet, 3 and 2 waiting on Logos (our own strict count, 22 November 2026) |
 | see the light client on the public LEZ testnet's version (v0.3.1) | [lez-v03/](lez-v03/README.md): an experimental, unaudited port; a finality update in one transaction (6,647,546 gas, 66.5% of the cap), run on a v0.3.1 sequencer we started with the image `8d3b59ff…` ([EVIDENCE](docs/EVIDENCE.md) row 131), the reviewed image deployed on the public testnet on 19 November (`Init`, two finality updates, an attestation of the vault; [EVIDENCE](docs/EVIDENCE.md) row 150). This branch's image `bac768a8…` adds a committee handoff in one transaction, sound only under the light client's honest-supermajority assumption (the next committee adopted by its summary; at most 6,737,794 gas on the mainnet replay and 6,682,541 on Sepolia's 32, in v0.3.1's block application in our harness, [EVIDENCE](docs/EVIDENCE.md) row 137); that image has not run on a sequencer. Its image `155b7317…` also freezes an instance on evidence that a sync committee it holds signed finality contradicting its records (one transaction, 6,656,148 gas at 510 of 512 signers; never produced by an honest network for an instance started from a finalized checkpoint, the assumption of [trust.md](docs/trust.md) §2.1; it must land while the instance is in the signing committee's period; experimental, unaudited, deployed nowhere, [`bench/MISBEHAVIOUR.md`](bench/MISBEHAVIOUR.md), [EVIDENCE](docs/EVIDENCE.md) row 144) |
 | see the bridge's inbound leg and burns on LEZ v0.3.1 | [lez-v03-bridge/](lez-v03-bridge/README.md): an experimental, unaudited port; on a v0.3.1 sequencer we started, a private claim and a private burn proven for real; it already carries the fix of the two v0.4 known issues of [row 136](docs/EVIDENCE.md); reviewed twice ([EVIDENCE](docs/EVIDENCE.md) rows 132, 133) |
 | see the leg back from the public LEZ testnet (a testnet stand-in) | [lez-v03-return/](lez-v03-return/README.md): **a stand-in, not the design**: the unchanged vault and real release proofs, the burn root attested by keys we hold (no checkpoint proof can exist for a v0.3.1 zone today); the attestor signs only after it has compared the burns with the bridge's state on the LEZ node at a Finalized block; rehearsed on a fork of Sepolia ([run](e2e/runs/testnet-return-fork-2/README.md)), not sent; and how far a real checkpoint gets on that network's own data ([EVIDENCE](docs/EVIDENCE.md) rows 134, 135) |
@@ -218,7 +218,8 @@ The design notes specify these; there is no code for them here. In short (in ful
   EIP-2935 hops are built: up to 32 in one transaction on real data, [row 145](docs/EVIDENCE.md); so is the F.8
   full-diff test, [row 152](docs/EVIDENCE.md).)
 - **Rule (B):** the watchers' `monitor` reading attestations.
-- **Daemons:** the relayer's root imports on a running LEZ sequencer, `monitor`'s client of the LEZ and Logos
+- **Daemons:** the relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them:
+  `e2e/runs/seqnet-robust-1/`), `monitor`'s client of the LEZ and Logos
   Blockchain nodes' RPCs, the attestation side's monitor against public providers (built on recorded answers:
   `monitor/attest/`), the A3 gate's three daemons on a running sequencer.
 - **Logos modules:** Ethereum transactions through Logos Core's own modules beyond anvil and inside Basecamp (on anvil
@@ -230,13 +231,15 @@ The design notes specify these; there is no code for them here. In short (in ful
   mini-app's round trip ran with LEZ through `lez_core`, its private claim and burn proven for real there (jobs the
   view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side read, signed and sent through a
   stand-in service there; through Logos Core's own modules it ran headless ([EVIDENCE](docs/EVIDENCE.md) row 199).
-- **Logos Blockchain 0.3.5-rc.1:** a zone of several sequencers on it, Logos's devnet itself, and a Bedrock era change;
+- **Logos Blockchain 0.3.5-rc.1:** the bridge and a t-of-n checkpoint over a zone of several sequencers on it (four
+  rc3 sequencers ran a zone on it, [row 206](docs/EVIDENCE.md)), Logos's devnet itself, and a Bedrock era change;
   the fork digest's reading is built as a second build of the checkpoint guests and paid out on a local anvil, over a
   zone of one sequencer and one local validator ([rows 129, 130](docs/EVIDENCE.md)), and live on Sepolia through a vault
   pinning that build, with a zone of one sequencer and one validator we ran ([rows 141, 142](docs/EVIDENCE.md),
   [e2e/crown/README.md](e2e/crown/README.md)).
-- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop's sealed credit in the relayer daemon
-  (it ran through `ferrata-gasdrop` and crown-driver on LEZ v0.4.0-rc3, [row 124](docs/EVIDENCE.md)) and for burns.
+- **From the v3 specification:** rule (A)'s Δ_g of 3 h when participation is partial, the gas drop for burns and in the mini-app's claim
+  (the relayer daemon's sealed credit and the tool's claim ran on LEZ v0.4.0-rc1's sequencer, [row 205](docs/EVIDENCE.md);
+  with real proofs through `ferrata-gasdrop` and crown-driver on rc3, [row 124](docs/EVIDENCE.md)).
 
 ## Not audited. Not for production.
 

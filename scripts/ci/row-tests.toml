@@ -655,9 +655,10 @@ tests = [
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBReal.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
+  { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
   { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
 ]
-note = "a burn root accepted only through the checkpoint proof, every LEZ block re-hashed, the release checked by the pinned base verifier: rule (B) over real LEZ blocks through RISC Zero's real verifier (lab zone, EVIDENCE row 24; t = 3 of four sequencers, row 65; live on Sepolia, rows 41, 91; the four-sequencer zone with the bridge program, rows 100-101)"
+note = "a burn root accepted only through the checkpoint proof, every LEZ block re-hashed, the release checked by the pinned base verifier: rule (B) over real LEZ blocks through RISC Zero's real verifier (lab zone, EVIDENCE row 24; t = 3 of four sequencers, row 65; live on Sepolia, rows 41, 91; the four-sequencer zone with the bridge program, rows 100-101); an rc3 zone of four sequencers ran, its stall traced, no bridge on it (row 206)"
 
 [[row]]
 id = "RFP-022 F.8"
@@ -786,8 +787,9 @@ tests = [
   { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "box", run = "monitor/tests/anvil-e2e.sh" },
   { path = "monitor/tests/check.rs", kind = "test", ci = "box", run = "cd monitor && cargo test" },
   { path = "monitor/tests/fork-live-vault.sh", kind = "test", ci = "box", run = "monitor/tests/fork-live-vault.sh" },
+  { path = "e2e/runs/seqnet-robust-1/robust.md", kind = "record" },
 ]
-note = "the relayer and monitor as binaries and Logos modules (rows 43-48, 96, 106, 107, 120); on a devnet with a running sequencer the relayer sent the round trip's checkpoint and release (row 102); the relayer's root imports on a running sequencer remain"
+note = "the relayer and monitor as binaries and Logos modules (rows 43-48, 96, 106, 107, 120); on a devnet with a running sequencer the relayer sent the round trip's checkpoint and release (row 102); the standalone relayer imported a root on LEZ v0.4.0-rc1's running sequencer (seqnet-robust-1); its Logos module's LEZ side and monitor's node clients remain"
 
 [[row]]
 id = "RFP-022 U.4"
@@ -804,8 +806,10 @@ id = "RFP-022 U.5"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
   { path = "lez/results/v0.4.0-rc3/gas-drop/README.md", kind = "record" },
+  { path = "cli/tests/gasdrop.rs", kind = "test", ci = "box", run = "cd cli && cargo test --test gasdrop" },
+  { path = "e2e/runs/seqnet-robust-2/robust.md", kind = "record" },
 ]
-note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO), not yet in the relayer daemon"
+note = "fixed denominations, the claim delay and the relayer release preselected; each dry run prints the exposure of the choices; the fee-payer gas drop ran on rc3 with real proofs (EVIDENCE row 124, M0 check 2 GO) and in the relayer daemon and the tool on rc1's sequencer with dev-mode proofs (row 205); not in the mini-app's claim or for burns"
 
 [[row]]
 id = "RFP-022 U.6"
@@ -834,9 +838,10 @@ note = "the user guide's copy of what the tool prints is generated from cli/src/
 id = "RFP-022 U.8"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/runs/cli-freezes/README.md", kind = "record" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
 ]
-note = "21 refusals (and 2 claim-delay holds) named with source, code and meaning before signing, none naming a deposit or burn (EVIDENCE row 85); the mini-app exercises the freeze refusal (FROZEN 242, lifted then accepted; row 62)"
+note = "21 refusals (and 2 claim-delay holds) named with source, code and meaning before signing, none naming a deposit or burn (EVIDENCE row 85); every freeze refused in the tool, 9 of 9 naming nothing, then lifted (row 202); the mini-app exercises the freeze refusal (FROZEN 242, lifted then accepted; row 62)"
 
 [[row]]
 id = "RFP-022 U.9"
@@ -911,16 +916,22 @@ tests = [
   { path = "monitor/tests/anvil-e2e.sh", kind = "test", ci = "box", run = "monitor/tests/anvil-e2e.sh" },
   { path = "cli/tests/relayer.sh", kind = "test", ci = "box", run = "cd cli && bash tests/relayer.sh" },
   { path = "cli/tests/gasdrop.rs", kind = "test", ci = "box", run = "cd cli && cargo test --test gasdrop" },
+  { path = "cli/tests/relayer_crash.rs", kind = "test", ci = "box", run = "cd cli && bash tests/relayer-crash.sh" },
+  { path = "e2e/netfault/relayer-lez.sh", kind = "test", ci = "box", run = "bash e2e/netfault/relayer-lez.sh OUT" },
+  { path = "monitor/tests/logos-fallback.sh", kind = "test", ci = "box", run = "cd monitor && bash tests/logos-fallback.sh" },
+  { path = "e2e/runs/relayer-crash/README.md", kind = "record" },
 ]
-note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47)"
+note = "monitor SIGKILLed mid-window and restarted still cancels exactly once; with its state file lost it rescans and makes exactly one cancellation; a watcher without gas cancels once funded (rows 43, 96); the relayer records a gas drop before sending and refuses a second after a restart (row 47); the relayer daemon killed at each of its transactions, at random and in the record's narrow windows, behind failing endpoints, through a stand-in of tx_sender_module, and on LEZ (root imports on the devnet's zone, gas drops on rc1's sequencer): every job once (row 203); monitor's sends the module fails go the plain way (8 of 8); monitor's own endpoint failing, its fallback's own send failing after a burnt nonce, the prover and the attestors are not shown"
 
 [[row]]
 id = "RFP-022 R.7"
 tests = [
+  { path = "e2e/seqnet/hook-robust.sh", kind = "test", ci = "box", run = "bash e2e/seqnet/run.sh robust NAME" },
+  { path = "e2e/runs/seqnet-robust-4/robust.md", kind = "record" },
   { path = "e2e/runs/seqnet-basecamp-final-real/SUMMARY.md", kind = "record" },
   { path = "modules/ferrata_bridge_ui/results-basecamp-roundtrip/real-proofs-jobs/README.md", kind = "record" },
 ]
-note = "in Basecamp the view was closed 6 s into the burn's proof and opened again: it found the running job, a second start answered it, the burn completed once and was released (EVIDENCE row 126, real proofs); a client killed between a proof and its sending has no named test (a refused claim or burn consumes nothing: R.1, R.2)"
+note = "in Basecamp the view was closed 6 s into the burn's proof and opened again: it found the running job, a second start answered it, the burn completed once and was released (EVIDENCE row 126, real proofs); the ferrata tool interrupted on LEZ v0.4.0-rc1's running sequencer: a claim killed after its proof, burns killed after and before sending, gas drops across kills, nothing lost or spent twice (robust-1 to -4, row 204); a refused claim or burn consumes nothing (R.1, R.2)"
 
 [[row]]
 id = "RFP-022 R.8"

@@ -20,7 +20,8 @@ The design notes specify these; there is no code for them here:
   burns, their releases through a vault on a local anvil and a rotation its committee proposed,
   `checkpoint/attestor/RESULTS.md` §8, §9; `ferrata_attestor` is built as a program and as a Logos module, which ran
   beside each sequencer of a second run of that zone, `modules/RESULTS.md`);
-- of the relayer, its root imports on a running LEZ sequencer, and its Logos module's LEZ side through Logos Core's
+- of the relayer, its Logos module's root imports on a running LEZ sequencer (the standalone daemon's ran on LEZ
+  v0.4.0-rc1's sequencer, `e2e/runs/seqnet-robust-1/`), and its Logos module's LEZ side through Logos Core's
   own modules (the daemon `ferrata-relayer`, its wrapping, the gas drop, its root imports and its Logos module are
   built; the imports and the module ran on the mini-app's devnet, whose zone the module reaches, and on a fork of
   Sepolia, `modules/results/relayer-2026-11-13/`); the watchers' `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (the
@@ -87,8 +88,8 @@ The design notes specify these; there is no code for them here:
 Changes in [the v3 specification](design/spec/bridge-spec-v3-changes.md) that the prototypes do not
 implement yet:
 - rule (A) (D13): Δ_g of 3 h when participation is partial (a deployment parameter);
-- inbound (D13): the gas drop's sealed credit in the relayer daemon (`ferrata-relayer` sends a public transfer, which
-  no private claim can sweep) and for burns; the sealed credit to a private one-time account and its sweep inside
+- inbound (D13): the gas drop for burns (the relayer daemon's sealed credit and its sweep inside the `ferrata` tool's
+  private claim ran on LEZ v0.4.0-rc1's sequencer with dev-mode proofs, EVIDENCE row 205); the sealed credit to a private one-time account and its sweep inside
   the private claim ran on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124: `ferrata-gasdrop`, crown-driver; the
   gas-drop receipt binding `(N, oneTimeAddress, relayer)` is built and the relayer checks it; refunds drawing on the release cap are in the vault; `ImportRoot` attesting slots 0 and 1, and claims refusing
   `leafIndex >= count`, are in the bridge program).

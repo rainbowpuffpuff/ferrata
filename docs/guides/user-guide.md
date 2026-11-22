@@ -180,8 +180,9 @@ proof; nobody else can pay it on v0.4. The **gas drop** lets a relayer fund that
 is yours: your gas-drop receipt binds `(N, oneTimeAddress, relayer)`, the relayer sends one credit per `N` (EVIDENCE
 rows 47, 48), and on LEZ v0.4.0-rc3 a credit sealed to a fresh one-time private account was swept by the private
 claim that paid its fee from it, by a claimant with no native LEZ at all, with real proofs (M0 check 2, row 124).
-The relayer daemon does not send the sealed credit yet (its own credit is a public transfer no private claim can
-sweep), so with the daemon a first claim still needs native LEZ from elsewhere: a correlation the client states
+The relayer daemon sends that sealed credit, and the `ferrata` tool's claim asks for it by default once a relayer's
+inbox is configured (`--gas-drop-inbox`; run on LEZ v0.4.0-rc1's sequencer with dev-mode proofs, row 205); with no
+relayer configured, or in the mini-app, a first claim still needs native LEZ from elsewhere: a correlation the client states
 ([`bridge.md`](../design/bridge.md) §6).
 
 **A refused claim changes nothing** and the deposit stays claimable (R.1): a refusal reverts the whole
@@ -540,10 +541,11 @@ end-to-end test, which CI runs on every push (row 84).
 [`docs/not-built.md`](../not-built.md); at this commit)
 
 - a wallet integration beyond the mini-app; the anonymity-set view in a wallet (the `ferrata` tool shows it, §9);
-- the gas drop inside the relayer daemon: the sealed credit to a one-time private account, swept by the claim that
-  pays its fee from it, ran with LEZ's wallet on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124); the daemon's own
-  credit is a public transfer that no private claim can sweep;
-- the relayer's root imports on a running LEZ sequencer (they ran on the mini-app's devnet: rows 106, 107);
+- the gas drop for burns and in the mini-app's claim: the relayer daemon's credit sealed to a one-time private
+  account, swept by the `ferrata` tool's claim that pays its fee from it, ran on LEZ v0.4.0-rc1's sequencer with
+  dev-mode proofs (EVIDENCE row 205), and with LEZ's wallet on v0.4.0-rc3 with real proofs (row 124);
+- the relayer's root imports on a running LEZ sequencer through its Logos module (the standalone daemon ran them:
+  `e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet: rows 106, 107);
 - a transfer that credits a private recipient privately (transfers between holders are built: rows 74, 75); the
   switch to LEZ's token program, when one is released;
 - a deployment of the bridge program since milestone B1, whose nullifier and holder accounts keyed by the

@@ -690,9 +690,9 @@ checkpoints after a sunset until holders have released ([`bridge.md`](../design/
 
 ## 12. What is not built
 
-The relayer's root imports on a running LEZ sequencer (they ran on the mini-app's devnet, §6.6); the gas drop's
-sealed credit inside the relayer daemon (the sealed credit and its sweep by a private claim ran with LEZ's wallet
-on v0.4.0-rc3, EVIDENCE row 124; the daemon's own credit is a public transfer that no private claim can sweep, §6.4); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
+The relayer module's root imports on a running LEZ sequencer (the standalone daemon ran them on rc1's sequencer,
+`e2e/runs/seqnet-robust-1/`; the module's ran on the mini-app's devnet, §6.6); the gas drop for burns and in the
+mini-app's claim (the daemon's sealed credit ran on rc1's sequencer, §6.4, EVIDENCE row 205); `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through `verified_proxy_module`); the attestation side's `monitor`; job clean-up; the acceptance run at 100 updates and on a sequencer (it ran on 58 recorded updates in process, §3.4);
 daemon resource measurements; the amortised costs at the recommended
 cadence with real proving (milestones A4, B4); a deployment on a public LEZ network. Sources:
 [`attestation.md`](../design/attestation.md) §15; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;

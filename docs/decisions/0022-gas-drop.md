@@ -1,7 +1,7 @@
 # ADR 0022: A gas drop funds a first private claim's fee without linking it
 
 - **Date:** 10 November 2026 (D13); run on LEZ v0.4.0-rc3 on 16 November 2026
-- **Status:** accepted; built and run with LEZ's wallet; not yet in the relayer daemon
+- **Status:** accepted; built and run with LEZ's wallet; in the relayer daemon and the `ferrata` tool (LEZ v0.4.0-rc1's sequencer, dev-mode proofs); not for burns
 - **Requirements:** RFP-022 U.5, Priv.6
 
 ## Context
