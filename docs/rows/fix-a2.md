@@ -14,7 +14,7 @@ traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; R
 | VS.1 | shown | shown (L3) | … by the reference consumer (213, 110); the instance's store unchanged, no record at the fabricated slot, nothing credited (the refused job's `Open` and `Miller` leave its job account). | unchanged |
 | R.6 | in part | in part (L6, L1) | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against the official vectors, Helios (the vectors, 220 recorded updates, 2,000 random mutations of real updates) and Lodestar (the same mutations; its BLS is herumi's WebAssembly, not `blst`), 0 disagreements; the mutations judge the native stores, not the program's step path, and only update bytes; not audited. | unchanged |
 | U.5 | shown | shown (L4) | … each code's name and message from the IDL the CLI prints. A checkpoint stale by the sequencer's clock is refused by LEZ with its own text ("Execution outside of the validity window", which the CLI prints as it is) before the program runs, on the window the program declares; the 53 message applies when the update is signed after the end. | unchanged |
-| F.8 | shown | shown (L5) | The full-diff test: two private claims (…), byte-identical once only fresh randomness and the claim's nullifier are taken from one, and the same claim proven twice from one state shows every field taken to be fresh or the account's own per-state value; events, … (rest unchanged). | unchanged |
+| F.8 | shown | shown (L5; branch review M2) | The full-diff test: two private claims (…), byte-identical once only fresh randomness, the account's own nullifier and two commitments (set by the private state spent and made) and the claim's nullifier are taken from one; the same claim proven twice from one state shows which is which; events, … (rest unchanged). | unchanged |
 
 ### R.11, clause by clause
 
@@ -46,9 +46,12 @@ traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; R
 
 - **Row 152, M2:** replace "the block is assembled by the test with rc1's block settlement, not by a sequencer" with
   "the block is the test's own loop around the harness's copy of rc1's per-transaction settlement (rc1's block function
-  and the sequencer's admission screen are not run); the same on rc3's own sequencer: row 155". **L5:** after "(12
-  groups, each of equal size in both)" add "; X's claim proven twice from one state differs in every alias (5), note
-  (8), recovery binding and dummy action (6), the account's own nullifier and two commitments being the same in both".
+  and the sequencer's admission screen are not run); the same on rc3's own sequencer: row 155". **Branch review M2:**
+  replace "byte-identical once fresh randomness and the claim's nullifier are taken from one" with "byte-identical once
+  only fresh randomness, the account's own nullifier and two commitments (set by the private state spent and made) and
+  the claim's nullifier are taken from one". **L5:** after "(12 groups, each of equal size in both)" add "; X's claim
+  proven twice from one state differs in every alias (5), note (8), recovery binding and dummy action (6), and
+  carries the account's own nullifier and two commitments unchanged".
 - **Row 151, L3:** "the instance's store unchanged and nothing credited" already says it right; no change.
 - **Header, "Words used for where it ran":** add "**standalone rc3 sequencer** (LEZ's v0.4.0-rc3 sequencer with its
   mock Bedrock, no Logos Blockchain node)".
