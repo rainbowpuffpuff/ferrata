@@ -347,10 +347,14 @@ it opens at) unless `--no-delay`.
   account and hands that relayer a receipt of its own (a receipt names one relayer); the record keeps one job per
   relayer asked, and the output names the ones asked before. The dry run's `fee payer:` line says which way the fee
   is paid and what that leaks; `--no-gas-drop` pays from the proving account. The relayer side is `ferrata-relayer`'s
-  `gas-drop` job (`--gasdrop-image-id`, `--drop-amount`, `--drop-from-private`, `--drop-wait`): journaled in its
-  `drops.json` (the drop account's private nonce recorded before the credit; the job kept until LEZ shows the credit
-  applied; a credit not applied within `--drop-wait` sent again on the same account state, so at most one applies).
-  Run end to end in [`e2e/runs/seqnet-robust-1/`](../e2e/runs/seqnet-robust-1/robust.md). Burns do not use a drop yet.
+  `gas-drop` job (`--gasdrop-image-id`, `--drop-amount`, `--drop-from-private`, `--drop-wait`, `--drop-max-sends`):
+  journaled in its `drops.json` (the drop account's private nonce recorded before the credit; the job kept until LEZ
+  shows the credit applied; a credit not applied within `--drop-wait` sent again, built only on that recorded state:
+  the credit's own sync finds a credit that landed meanwhile and sends nothing, so LEZ applies at most one; given up,
+  `gas-drop-given-up`, after `--drop-max-sends` credits or once the deposit is claimed without it). The drop itself is
+  run end to end in [`e2e/runs/seqnet-robust-1/`](../e2e/runs/seqnet-robust-1/robust.md); the journal, with the
+  daemon killed inside a credit's send and a send failing, in
+  [`e2e/runs/seqnet-robust-2/`](../e2e/runs/seqnet-robust-2/robust.md). Burns do not use a drop yet.
 
 ```text
 claim on LEZ (configuration 0xa9d67b71ac74fe9bad38696f91d539f82bc21b953b96dee046f02242d718a8c3):
