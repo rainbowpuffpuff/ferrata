@@ -1,8 +1,16 @@
 name: ci
 
+# Runs on every push and pull request with `lez-harness` split across a 6-shard matrix, and daily (04:17 UTC) or on
+# manual dispatch with `lez-harness-full` running the unsharded script once as a backstop. On `schedule` and
+# `workflow_dispatch`, the sharded `lez-harness` matrix is skipped so the LEZ suites do not run twice; the other jobs
+# still run (zero added wall time beside `lez-harness-full`, refreshes caches before GitHub's 7-day eviction, catches
+# Rust `stable` and RustSec drift daily, and gives `workflow_dispatch` a full verdict).
 on:
   push:
   pull_request:
+  schedule:
+    - cron: '17 4 * * *'
+  workflow_dispatch:
 
 # A read-only token: no job writes to the repository or calls GitHub's API. Third-party actions are pinned by commit
 # (the tag or branch they had on 22 November 2026 in the comment).
@@ -161,10 +169,69 @@ jobs:
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every test file of lez/harness/tests/ (red-team suites included), and
   # the update-submitting daemon on its recorded data (lez/updater/tests/), the privacy suite end to end with its gate
-  # (scripts/privacy/run.sh, scripts/privacy/check-results.py), the guests in RISC Zero dev mode. The
+  # (scripts/privacy/run.sh, scripts/privacy/check-results.py), the guests in RISC Zero dev mode. Split across a
+  # 6-shard matrix on pushes and pull requests (scripts/ci/lez-harness-shards.json; checked by
+  # scripts/ci/check-lez-shards.py here and in `links`) so each shard builds and runs only its own binaries; on
+  # `schedule` and `workflow_dispatch`, `lez-harness-full` below runs the unsharded script once as a backstop. The
   # target directory is not cached: GitHub keeps 10 GB of caches per repository and the round trip's fill them; the
   # toolchains and the upstream sources share the round trip's cache entries. No secret, nothing sent to any network.
   lez-harness:
+    name: lez-harness (${{ matrix.shard }})
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [harness-1, harness-2, harness-3, harness-4, updater-gate, updater-privacy]
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check the LEZ shard map (scripts/ci/check-lez-shards.py)
+        run: python3 -I scripts/ci/check-lez-shards.py
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain, lez/rust-toolchain.toml)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
+        with:
+          version: v1.3.6
+      - name: Cache the vault's libraries
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+      - name: Libraries (the privacy suite's Ethereum half)
+        working-directory: vault
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+      - name: Build (shard ${{ matrix.shard }} and the guests)
+        run: scripts/ci/lez-harness.sh --shard "${{ matrix.shard }}" build
+      - name: The LEZ suites, dev mode (shard ${{ matrix.shard }})
+        run: scripts/ci/lez-harness.sh --shard "${{ matrix.shard }}"
+
+  # Daily / manual backstop: runs scripts/ci/lez-harness.sh unsharded once, covering every suite in one job.
+  lez-harness-full:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 240
     env:
@@ -367,6 +434,10 @@ jobs:
         run: python3 -I scripts/ci/check-row-tests.py
       - name: The checks' own tests (scripts/ci/test_ci_model.py)
         run: python3 -I scripts/ci/test_ci_model.py
+      - name: Every LEZ harness and updater test binary is covered by exactly one shard (scripts/ci/check-lez-shards.py)
+        run: python3 -I scripts/ci/check-lez-shards.py
+      - name: The LEZ shard guard's own tests (scripts/ci/test_lez_shards.py)
+        run: python3 -I scripts/ci/test_lez_shards.py
       - name: The workflows read as yq reads them
         run: if command -v yq > /dev/null; then python3 -I scripts/ci/ci_model.py --compare-yq; else echo "yq not on this runner; skipped"; fi
       - name: The shell that runs on macOS is portable (scripts/ci/check-portable.py)

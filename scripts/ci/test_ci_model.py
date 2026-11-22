@@ -102,12 +102,18 @@ privacy_suite = [p for p in tracked if p.startswith("vault/test/") and p.endswit
                  and "contract PrivacySuite" in (ROOT / p).read_text(encoding="utf-8")]
 check("trace: vault leaves PrivacySuite out (--no-match-contract)",
       bool(privacy_suite) and not runs("vault", privacy_suite[0]))
-check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh, in lez/)",
+check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh --shard, in lez/)",
       runs("lez-harness", "lez/harness/tests/public_path.rs"))
-check("trace: lez-harness runs lez/updater/tests/recorded.rs (cargo test -p ferrata-updater --features harness)",
+check("trace: lez-harness runs lez/updater/tests/recorded.rs (updater-gate shard)",
       runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness runs lez/updater/tests/refusals.rs (updater-privacy shard)",
+      runs("lez-harness", "lez/updater/tests/refusals.rs"))
+check("trace: lez-harness runs vault/test/PrivacySuite.t.sol (updater-privacy shard via scripts/privacy/run.sh)",
+      runs("lez-harness", "vault/test/PrivacySuite.t.sol"))
 check("trace: lez-harness does not run lez/harness/tests/residue_experimental.rs (feature residue-experimental)",
       not runs("lez-harness", "lez/harness/tests/residue_experimental.rs"))
+check("trace: lez-harness-full is guarded to schedule/workflow_dispatch and does not count as on-change CI",
+      not runs("lez-harness-full", "lez/harness/tests/public_path.rs"))
 check("trace: monitor runs monitor/tests/check.rs and monitor/tests/anvil-e2e.sh",
       runs("monitor", "monitor/tests/check.rs") and runs("monitor", "monitor/tests/anvil-e2e.sh"))
 check("trace: roundtrip runs cli/tests/gasdrop.rs but not cli/tests/relayer_fork.rs (it reads Sepolia)",
@@ -200,6 +206,28 @@ check("guard: a job with `continue-on-error: true` counts for nothing",
       not job_runs(synthetic_job([SCRIPT_STEP], **{"continue-on-error": True}), PUBLIC))
 check("guard: a job under an `if:` counts for nothing",
       not job_runs(synthetic_job([SCRIPT_STEP], **{"if": "github.ref == 'refs/heads/main'"}), PUBLIC))
+check("guard: a job with `if: github.event_name == 'push'` alone counts for nothing (skips PRs)",
+      not job_runs(ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "s",
+                                {"runs-on": "ubuntu-latest", "steps": [SCRIPT_STEP], "if": "github.event_name == 'push'"},
+                                {"on": {"push": None, "pull_request": None, "schedule": None}}), PUBLIC))
+check("guard: a job with `if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'` counts for nothing",
+      not job_runs(ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "s",
+                                {"runs-on": "ubuntu-latest", "steps": [SCRIPT_STEP],
+                                 "if": "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'"},
+                                {"on": {"push": None, "pull_request": None, "schedule": None, "workflow_dispatch": None}}), PUBLIC))
+check("guard: a job with `if: github.event_name == 'push' || github.event_name == 'pull_request'` counts on a push+PR workflow",
+      job_runs(ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "s",
+                            {"runs-on": "ubuntu-latest", "steps": [SCRIPT_STEP],
+                             "if": "github.event_name == 'push' || github.event_name == 'pull_request'"},
+                            {"on": {"push": None, "pull_request": None, "schedule": None}}), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 runs public_path; --shard harness-1 does not",
+      job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4"}]), PUBLIC)
+      and not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-1"}]), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 build / --dry-run runs no test",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 build"}]), PUBLIC)
+      and not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 --dry-run"}]), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 && echo ok || true masks failure",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 && echo ok || true"}]), PUBLIC))
 
 
 def lez_text(text):
@@ -258,9 +286,19 @@ check("guard: ... and counts once the text sets -e",
                                "run": "set -e\nRISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
 LH = jobs["lez-harness"]
 last = LH.steps[-1] if LH.steps else {}
-check("jobs: lez-harness's last step runs scripts/ci/lez-harness.sh with no argument, unconditionally",
-      last.get("run") == "scripts/ci/lez-harness.sh" and "if" not in last and "continue-on-error" not in last
-      and "if" not in LH.spec and "continue-on-error" not in LH.spec and LH.on_change)
+check("jobs: lez-harness is a matrix job running scripts/ci/lez-harness.sh --shard unconditionally on push/PR",
+      last.get("run") == 'scripts/ci/lez-harness.sh --shard "${{ matrix.shard }}"'
+      and "if" not in last and "continue-on-error" not in last
+      and "continue-on-error" not in LH.spec and LH.on_change
+      and ci_model.step_guard(LH, last) is None
+      and bool(((LH.spec.get("strategy") or {}).get("matrix") or {}).get("shard")))
+LHF = jobs["lez-harness-full"]
+lhf_last = LHF.steps[-1] if LHF.steps else {}
+check("jobs: lez-harness-full runs scripts/ci/lez-harness.sh unsharded on schedule and workflow_dispatch",
+      lhf_last.get("run") == "scripts/ci/lez-harness.sh"
+      and "if" not in lhf_last and "continue-on-error" not in lhf_last
+      and "schedule" in LHF.triggers and "workflow_dispatch" in LHF.triggers
+      and ci_model.step_guard(LHF, lhf_last) is not None)
 
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"

@@ -652,40 +652,86 @@ def _resolve(cwd, path: str):
 
 # A step or job condition that always lets it run.
 _ALWAYS = re.compile(r"^\s*(?:\$\{\{\s*)?(?:true|always\(\)|success\(\)|!\s*cancelled\(\))(?:\s*\}\})?\s*$")
+# A job-level condition that runs on every push and pull request (excluding only schedule / manual dispatch).
+_EVERY_CHANGE = re.compile(
+    r"^\s*(?:\$\{\{\s*)?(?:"
+    r"github\.event_name\s*==\s*['\"]push['\"]\s*\|\|\s*github\.event_name\s*==\s*['\"]pull_request['\"]|"
+    r"github\.event_name\s*==\s*['\"]pull_request['\"]\s*\|\|\s*github\.event_name\s*==\s*['\"]push['\"]|"
+    r"github\.event_name\s*!=\s*['\"]schedule['\"]\s*&&\s*github\.event_name\s*!=\s*['\"]workflow_dispatch['\"]|"
+    r"github\.event_name\s*!=\s*['\"]workflow_dispatch['\"]\s*&&\s*github\.event_name\s*!=\s*['\"]schedule['\"]"
+    r")(?:\s*\}\})?\s*$"
+)
 
 
 def step_guard(job: Job, step: dict) -> str | None:
     """Why a step's commands cannot count as CI running a test: its job or the step runs only under an `if:` that
-    is not always true, or has `continue-on-error` (a failure there does not fail the run). None if neither."""
+    is not always true (or, on a job, not true on every push and pull request), or has `continue-on-error` (a
+    failure there does not fail the run). None if neither."""
     for where, spec in (("job", job.spec), ("step", step)):
         cond = spec.get("if")
         if cond is not None and cond is not True and not _ALWAYS.match(str(cond)):
-            return f"the {where} runs only if {cond}"
+            if where == "job" and "push" in job.triggers and "pull_request" in job.triggers and _EVERY_CHANGE.match(str(cond)):
+                pass
+            else:
+                return f"the {where} runs only if {cond}"
         coe = spec.get("continue-on-error")
         if coe is not None and coe is not False and str(coe).strip().lower() not in ("false", "${{ false }}"):
             return f"the {where} has continue-on-error: {coe} (a failure there does not fail the run)"
     return None
 
 
+def _matrix_combos(job: Job) -> list[dict]:
+    """The matrix combinations of a job's `strategy.matrix`, or `[{}]` if it is not a matrix job."""
+    matrix = (job.spec.get("strategy") or {}).get("matrix")
+    if not isinstance(matrix, dict):
+        return [{}]
+    axes = [(k, v) for k, v in matrix.items() if k not in ("include", "exclude") and isinstance(v, list)]
+    combos = [{}]
+    for k, vals in axes:
+        combos = [{**c, k: v} for c in combos for v in vals]
+    for ex in matrix.get("exclude") or []:
+        if isinstance(ex, dict):
+            combos = [c for c in combos if not all(c.get(k) == v for k, v in ex.items())]
+    for inc in matrix.get("include") or []:
+        if isinstance(inc, dict):
+            combos.append(dict(inc))
+    return combos
+
+
+def _subst_matrix(text: str, combo: dict) -> str:
+    if not combo or "${{" not in text:
+        return text
+    def repl(m):
+        key = m.group(1)
+        return str(combo[key]) if key in combo else m.group(0)
+    return re.sub(r"\$\{\{\s*matrix\.([A-Za-z0-9_-]+)\s*\}\}", repl, text)
+
+
 def trace(job: Job, tracked: set | None = None):
     """Every command the job runs: its steps' `run:` text and, recursively, the scripts they call."""
     tracked = tracked if tracked is not None else tracked_paths()
     out = []
-    base_env = {k: str(v) for k, v in job.env.items()}
-    for number, step in enumerate(job.steps, start=1):
-        if not isinstance(step, dict) or "run" not in step:
-            continue
-        cwd = step.get("working-directory") or job.default_dir or "."
-        cwd = os.path.normpath(cwd)
-        env = {**base_env, **{k: str(v) for k, v in (step.get("env") or {}).items()}}
-        env.setdefault("GITHUB_WORKSPACE", str(ROOT))
-        # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
-        # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
-        shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
-        errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
-        pipefail = shell == "bash" or "pipefail" in shell
-        _run_text(str(step["run"]), cwd, env, f"{job.workflow.name} job {job.name} step {number}", out, tracked, 0,
-                  guard=step_guard(job, step), errexit=errexit, pipefail=pipefail)
+    for combo in _matrix_combos(job):
+        base_env = {k: _subst_matrix(str(v), combo) for k, v in job.env.items()}
+        for number, step in enumerate(job.steps, start=1):
+            if not isinstance(step, dict) or "run" not in step:
+                continue
+            step_eval = dict(step)
+            if "if" in step_eval and isinstance(step_eval["if"], str):
+                step_eval["if"] = _subst_matrix(step_eval["if"], combo)
+            cwd = _subst_matrix(str(step.get("working-directory") or job.default_dir or "."), combo)
+            cwd = os.path.normpath(cwd)
+            env = {**base_env, **{k: _subst_matrix(str(v), combo) for k, v in (step.get("env") or {}).items()}}
+            env.setdefault("GITHUB_WORKSPACE", str(ROOT))
+            # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
+            # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
+            shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
+            errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
+            pipefail = shell == "bash" or "pipefail" in shell
+            run_src = _subst_matrix(str(step["run"]), combo)
+            tag = f"{job.workflow.name} job {job.name}" + (f" [{combo}]" if combo else "") + f" step {number}"
+            _run_text(run_src, cwd, env, tag, out, tracked, 0,
+                      guard=step_guard(job, step_eval), errexit=errexit, pipefail=pipefail)
     return out
 
 
@@ -869,10 +915,102 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
         # scripts this command runs: recurse into shell scripts
         if level < 6:
             target = script_invoked(cmd, tracked)
+            before = len(out)
+            if target == "scripts/ci/lez-harness.sh":
+                sargs = _script_args(cmd, target)
+                if _trace_lez_shard(sargs, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, cmd.guard):
+                    chain.extend(out[before:])
+                    continue
             if target and (target.endswith(".sh") or _is_shell_script(target)) and target != script:
                 text = (ROOT / target).read_text(encoding="utf-8", errors="replace")
                 _run_text(text, cwd, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, script=target,
                           guard=cmd.guard, args=_script_args(cmd, target))
+                chain.extend(out[before:])
+
+
+def _trace_lez_shard(sargs: list[str], cmd_env: dict, origin: str, out: list, tracked: set, level: int, guard) -> bool:
+    """Static trace of `scripts/ci/lez-harness.sh` when invoked with `--shard NAME` or `--dry-run`.
+    Returns True if handled (so the generic unsharded script trace is skipped), False for unsharded calls."""
+    shard = None
+    dry_run = False
+    build_only = False
+    i = 0
+    while i < len(sargs):
+        a = sargs[i]
+        if a == "--shard" and i + 1 < len(sargs):
+            shard = sargs[i + 1]
+            i += 2
+        elif a.startswith("--shard="):
+            shard = a.split("=", 1)[1]
+            i += 1
+        elif a == "--dry-run":
+            dry_run = True
+            i += 1
+        elif a == "build":
+            build_only = True
+            i += 1
+        else:
+            i += 1
+    if dry_run:
+        return True
+    if shard is None:
+        return False
+    map_path = ROOT / "scripts" / "ci" / "lez-harness-shards.json"
+    if not map_path.is_file():
+        return True
+    data = json.loads(map_path.read_text(encoding="utf-8"))
+    spec = (data.get("shards") or {}).get(shard)
+    if not isinstance(spec, dict):
+        return True
+    if build_only:
+        return True
+
+    dev_env = {**cmd_env, "RISC0_DEV_MODE": "1"}
+    threads = str(cmd_env.get("FERRATA_TEST_THREADS") or "4")
+    if spec.get("harness_lib") or spec.get("harness_tests"):
+        argv = ["cargo", "test", "-p", "harness", "--locked"]
+        if spec.get("harness_lib"):
+            argv.append("--lib")
+        for t in spec.get("harness_tests") or []:
+            argv += ["--test", t]
+        argv += ["--", "--test-threads", threads]
+        out.append(Cmd(argv, "lez", dev_env, origin, guard))
+    for split in spec.get("harness_splits") or []:
+        argv = ["cargo", "test", "-p", "harness", "--locked", "--test", split["test"], "--", "--test-threads", threads, "--exact"]
+        if split.get("mode") == "exact":
+            argv += list(split.get("names") or [])
+        else:
+            for name in split.get("names") or []:
+                argv += ["--skip", name]
+        out.append(Cmd(argv, "lez", dev_env, origin, guard))
+    if spec.get("updater_lib") or spec.get("updater_tests"):
+        argv = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked"]
+        if spec.get("updater_lib"):
+            argv.append("--lib")
+        for t in spec.get("updater_tests") or []:
+            argv += ["--test", t]
+        argv += ["--", "--test-threads", threads]
+        out.append(Cmd(argv, "lez", dev_env, origin, guard))
+    for split in spec.get("updater_splits") or []:
+        argv = [
+            "cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked",
+            "--test", split["test"], "--", "--test-threads", threads, "--exact",
+        ]
+        if split.get("mode") == "exact":
+            argv += list(split.get("names") or [])
+        else:
+            for name in split.get("names") or []:
+                argv += ["--skip", name]
+        out.append(Cmd(argv, "lez", dev_env, origin, guard))
+    if spec.get("privacy"):
+        run_cmd = Cmd(["bash", "scripts/privacy/run.sh", "target/ci-privacy"], ".", cmd_env, origin, guard)
+        out.append(run_cmd)
+        if "scripts/privacy/run.sh" in tracked and level < 6:
+            text = (ROOT / "scripts/privacy/run.sh").read_text(encoding="utf-8", errors="replace")
+            _run_text(text, ".", cmd_env, f"scripts/privacy/run.sh (from {origin})", out, tracked, level + 1,
+                      script="scripts/privacy/run.sh", guard=guard, args=["target/ci-privacy"])
+        out.append(Cmd(["python3", "-I", "scripts/privacy/check-results.py", "target/ci-privacy"], ".", cmd_env, origin, guard))
+    return True
 
 
 def _script_args(cmd: Cmd, target: str):

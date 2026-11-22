@@ -204,6 +204,22 @@ with tempfile.TemporaryDirectory() as empty_home:
           p_b.returncode == 0 and "--no-run" in p_b.stdout and "privacy_suite" in p_b.stdout,
           p_b.stdout + p_b.stderr)
 
+# 14. Workflow matrix mismatch in ci.yml -> fails
+real_ci = mod.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
+with tempfile.TemporaryDirectory() as d:
+    wf = pathlib.Path(d) / "ci.yml"
+    wf.write_text(real_ci.replace(", updater-privacy]", "]"), encoding="utf-8")
+    probs, _ = run_check(REAL_MAP, workflow=wf)
+    check("ci.yml matrix missing a shard fails guard",
+          any("differ from shard map" in p for p in probs),
+          "; ".join(probs))
+
+    wf.write_text(real_ci.replace("shard: [harness-1", "shard: [harness-1, harness-1"), encoding="utf-8")
+    probs, _ = run_check(REAL_MAP, workflow=wf)
+    check("ci.yml matrix duplicate shard fails guard",
+          any("duplicate shard" in p for p in probs),
+          "; ".join(probs))
+
 print()
 print(f"test_lez_shards.py: {npass} passed, {nfail} failed")
 sys.exit(1 if nfail else 0)

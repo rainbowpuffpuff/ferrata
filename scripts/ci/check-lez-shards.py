@@ -437,7 +437,7 @@ def check_shards(
     harness_dir: pathlib.Path = DEFAULT_HARNESS_DIR,
     updater_dir: pathlib.Path = DEFAULT_UPDATER_DIR,
     workflow_path: pathlib.Path | None = DEFAULT_WORKFLOW,
-    require_workflow_matrix: bool = False,
+    require_workflow_matrix: bool = True,
 ) -> tuple[list[str], dict]:
     problems: list[str] = []
     data = json.loads(map_path.read_text(encoding="utf-8"))
