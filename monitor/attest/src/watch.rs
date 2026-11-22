@@ -457,6 +457,31 @@ mod tests {
         assert_eq!(due_order(&seen, 13, 15, &back, RECHECK_PER_POLL), (vec![10, 11], 2, 1));
     }
 
+    /// The record's rules (`Seen::record`): `unconfirmed` never replaces a verdict; a verdict reached with a provider
+    /// uncounted is not settled; `diverged` is replaced only by a settled confirmation, which alone clears `ahead`.
+    #[test]
+    fn only_a_settled_confirmation_replaces_diverged_or_clears_ahead() {
+        let mut e = entry(None, None);
+        e.record(Divergence::Confirmed, 0);
+        assert_eq!((e.divergence, e.settled), (Divergence::Confirmed, Some(true)));
+        e.record(Divergence::Unconfirmed, 3);
+        assert_eq!((e.divergence, e.settled), (Divergence::Confirmed, Some(true)), "an outage changes nothing");
+        e.record(Divergence::Confirmed, 1);
+        assert_eq!(e.settled, Some(false), "a provider uncounted");
+        e.record(Divergence::Diverged, 0);
+        for (d, uncounted) in [(Divergence::Contested, 0), (Divergence::Confirmed, 1), (Divergence::Unconfirmed, 0)] {
+            e.record(d, uncounted);
+            assert_eq!((e.divergence, e.settled), (Divergence::Diverged, Some(false)), "{d:?} with {uncounted} uncounted");
+        }
+        for why in [Ahead::TooNew, Ahead::AheadOfProviders] {
+            e.ahead = Some(why);
+            e.record(Divergence::Confirmed, 1);
+            assert_eq!((e.divergence, e.ahead), (Divergence::Diverged, Some(why)), "a confirmation with a provider uncounted");
+        }
+        e.record(Divergence::Confirmed, 0);
+        assert_eq!((e.divergence, e.settled, e.ahead), (Divergence::Confirmed, Some(true), None));
+    }
+
     /// More due than a poll judges, none newly judgeable: each is judged within ⌈due / 8⌉ polls (before: the same
     /// eight, the oldest undecided, at every poll).
     #[test]

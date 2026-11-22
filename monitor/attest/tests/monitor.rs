@@ -1041,6 +1041,10 @@ fn a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its
     assert_eq!(st[s0.to_string()]["divergence"], "diverged");
     assert_eq!((st[(s0 - 32).to_string()]["divergence"].as_str(), st[(s0 - 32).to_string()].get("settled")), (Some("confirmed"), None));
     assert_eq!((st[s1.to_string()]["divergence"].as_str(), st[s1.to_string()]["settled"].as_bool()), (Some("confirmed"), Some(true)));
+    // Each judgement is stamped (the order of re-judgement): when, and the providers that had finalized the slot.
+    let all = json!(["p0", "p1", "p2"]);
+    assert_eq!((&st[s1.to_string()]["finalized_by"], &st[s0.to_string()]["finalized_by"]), (&all, &all));
+    assert!(st[s1.to_string()]["last_judged_s"].is_u64() && st[s0.to_string()]["last_judged_s"].is_u64(), "{st}");
 }
 
 /// Review B3 L7: an operator who means "never" by a huge value gets it, not an overflow. `--ahead-grace` at u64::MAX
