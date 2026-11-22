@@ -1308,3 +1308,75 @@ fn a_false_too_new_from_a_slow_clock_clears_once_every_provider_confirms_the_hea
     assert_eq!((raised["why"].as_str(), raised["age_s"].as_u64()), (Some("too-new"), Some(766)));
     assert!(read_lines(&freeze).iter().any(|x| x["kind"] == "instance-ahead"), "the freeze tool ran");
 }
+
+/// L4 (review B3; its mutant M16, "too-new not kept on record", survived every test: none moved the instance off a
+/// too-new header). The forger's header 60 s old (too new for any honest instance), the providers behind it with no
+/// block there; the forger moves on to the next slot: the first header stays raised (no `recovered` for it), the
+/// second is raised too, and the state file keeps the first as too new.
+#[test]
+fn a_too_new_header_stays_raised_after_the_instance_moves_on() {
+    let f = fx();
+    let d = scratch("too-new-held");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let (a, b) = (forged_at(&s, 128, 2), forged_at(&s, 129, 4));
+    let (fa, fb) = (write_state(&d, "a.hex", &a), write_state(&d, "b.hex", &b));
+    let now = slot_time(&s, slot + 128) + 60;
+    let ps: Vec<Server> = (0..3).map(|_| provider(&g, slot, None, slot - 64)).collect();
+    let current = d.join("current.hex");
+    std::fs::copy(&fa, &current).unwrap();
+    let (log, freeze, seen) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"), d.join("seen.json"));
+    let daemon = spawn_watch(&current, &ps.iter().collect::<Vec<_>>(), now, &log, &freeze, &["--state-file", &seen.display().to_string()]);
+    let ahead_at = |l: &[Value], at: u64| l.iter().any(|x| x["kind"] == "instance-ahead" && x["slot"].as_u64() == Some(at));
+    wait_for_lines(&log, "the first header too new", &|l| ahead_at(l, slot + 128));
+    std::fs::copy(&fb, &current).unwrap();
+    wait_for_lines(&log, "the second header too new", &|l| ahead_at(l, slot + 129));
+    std::thread::sleep(Duration::from_millis(2500));
+    let l = read_lines(&log);
+    assert!(daemon.stop().0.success());
+    let recovered: Vec<&Value> = l.iter().filter(|x| x["kind"] == "recovered" && x["cleared"] == "instance-ahead").collect();
+    assert!(recovered.is_empty(), "moving on is not a recovery: {recovered:?}");
+    let st: Value = serde_json::from_str(&std::fs::read_to_string(&seen).unwrap()).unwrap();
+    assert_eq!((st[(slot + 128).to_string()]["ahead"].as_str(), st[(slot + 129).to_string()]["ahead"].as_str()), (Some("too-new"), Some("too-new")));
+    let ran: Vec<u64> = read_lines(&freeze).iter().filter(|x| x["kind"] == "instance-ahead").map(|x| x["slot"].as_u64().unwrap()).collect();
+    assert_eq!(ran, vec![slot + 128, slot + 129], "the freeze tool ran once for each");
+}
+
+/// L4 (review B3; its mutant M21, "ahead-of-providers cleared by any verdict", survived every test, against the
+/// README: it clears only when a later poll confirms that header). The forged header at a slot where the two honest
+/// providers have no block and which they have not finalized, the colluder down: `instance-ahead`
+/// (`ahead-of-providers`) past the grace. Then, with `--diverge-at 2`, the colluder comes up vouching for it and one
+/// honest provider finalizes the slot: `contested`; then the other: `diverged`. `instance-ahead` stays raised throughout.
+#[test]
+fn an_ahead_of_providers_header_stays_raised_when_it_turns_contested_or_diverged() {
+    let f = fx();
+    let d = scratch("ahead-held");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let fs = forged(&s);
+    let current = write_state(&d, "f.hex", &fs);
+    let honest = [provider(&g, slot, None, slot - 32), provider(&g, slot, None, slot - 32)];
+    let colluder = provider(&g, slot, Some(header_json(&forged_root(&fs), slot)), slot + 64);
+    colluder.set("/eth/v1/beacon/genesis", 503, "{}".into());
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let ps = [&honest[0], &honest[1], &colluder];
+    let daemon = spawn_watch(&current, &ps, slot_time(&s, slot) + 829, &log, &freeze, &["--diverge-at", "2"]);
+    wait_for_lines(&log, "ahead-of-providers", &|l| l.iter().any(|x| x["kind"] == "instance-ahead" && x["why"] == "ahead-of-providers"));
+    colluder.set("/eth/v1/beacon/genesis", 200, g.clone());
+    honest[0].set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 64));
+    wait_for_lines(&log, "contested", &|l| l.iter().any(|x| x["kind"] == "providers-disagree"));
+    std::thread::sleep(Duration::from_millis(2500));
+    honest[1].set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot + 64));
+    wait_for_lines(&log, "diverged", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
+    std::thread::sleep(Duration::from_millis(1500));
+    let l = read_lines(&log);
+    assert!(daemon.stop().0.success());
+    let k: Vec<&str> = l.iter().map(|x| x["kind"].as_str().unwrap_or("")).collect();
+    println!("ahead-of-providers, then contested, then diverged: {k:?}");
+    assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-ahead"), "{k:?}");
+    assert_eq!(l.iter().filter(|x| x["kind"] == "instance-ahead").count(), 1, "held, not emitted again");
+    let ran: Vec<String> = read_lines(&freeze).iter().map(|x| x["kind"].as_str().unwrap_or("").to_string()).collect();
+    assert_eq!(ran, vec!["instance-ahead", "instance-diverged"], "the freeze tool ran for each");
+}
