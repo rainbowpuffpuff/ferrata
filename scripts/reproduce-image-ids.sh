@@ -24,6 +24,7 @@ SRC="$(cd "$HERE/.." && pwd)"
 BESIDE="$(cd "$SRC/.." && pwd)"
 VAULT=""
 RPC="https://ethereum-sepolia-rpc.publicnode.com"
+LEZ_COMMIT=1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21   # LEZ v0.4.0-rc1 (scripts/fetch-upstream.sh)
 OUT=""
 mode="${1:-}"; shift || true
 while [ $# -gt 0 ]; do
@@ -44,9 +45,14 @@ case "$mode" in
     for d in "$BESIDE/upstream/lez-v0.4.0-rc1" "$R0LEZ"; do
       [ -d "$d" ] || { log "missing $d (scripts/fetch-upstream.sh; RISC0_HOME_LEZ=$BESIDE/risc0-home-lez scripts/ci/install-risc0.sh; or set RISC0_HOME_LEZ)"; exit 1; }
     done
-    # The wrapper is what makes the ids path-independent: never let an inherited one (sccache, ...) replace it.
+    # The LEZ guests compile LEZ's sources: the tree beside must be the commit the recorded ids were built from.
+    lez_head="$(git -C "$BESIDE/upstream/lez-v0.4.0-rc1" rev-parse --verify -q HEAD 2>/dev/null)" \
+      || { log "cannot read the commit of $BESIDE/upstream/lez-v0.4.0-rc1 (a clone made by scripts/fetch-upstream.sh is needed)"; exit 1; }
+    [ "$lez_head" = "$LEZ_COMMIT" ] || { log "$BESIDE/upstream/lez-v0.4.0-rc1 is at $lez_head, not $LEZ_COMMIT"; exit 1; }
+    # The wrapper is what makes the ids path-independent: never let an inherited one (sccache, ...) replace it, nor an
+    # inherited FERRATA_GUEST_REMAP_EXTRA add remaps of its own (scripts/guest-rustc.py applies it to every guest).
     export RUSTC_WRAPPER="$SRC/scripts/guest-rustc" CARGO_TERM_COLOR=never RISC0_BUILD_LOCKED=1
-    unset CARGO_TARGET_DIR RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
+    unset CARGO_TARGET_DIR RUSTFLAGS CARGO_ENCODED_RUSTFLAGS FERRATA_GUEST_REMAP_EXTRA
     log "source $SRC ($(git -C "$SRC" rev-parse HEAD 2>/dev/null || echo 'not a git tree')); HOME $HOME; nproc $(nproc)"
     log "toolchains: $(cargo --version), $(r0vm --version 2>&1 | head -1), lez rust $(ls "$R0LEZ/toolchains" 2>/dev/null | tr '\n' ' ')"
     j="${CARGO_BUILD_JOBS:-8}"
