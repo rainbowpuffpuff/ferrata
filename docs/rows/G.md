@@ -44,7 +44,7 @@ unchanged) after each review; the commit ids here are the current ones.
    control, a mutable copy of the same ELF, is swapped. 2 of 2. Box, 21 Nov 2026, dev mode.
    `e2e/runs/vs3-immutable-program.log`.
 2. **A migration rehearsal with a proof-system change, and both Security #9 branches (RFP-022 Sec.8, Sec.9, Soft.4).**
-   `vault/test/Migration.t.sol` (8) and `MigrationFailsafe.t.sol` (7): in-flight deposits and burns of a retired vault
+   `vault/test/Migration.t.sol` (8) and `MigrationFailsafe.t.sol` (8): in-flight deposits and burns of a retired vault
    honoured; the same vault code under proof system B; v1 asks only for its own image id; no verifier or image-id
    setter; after a stop no role moves escrow, refunds included; after a guest bug the freezes hold while renewed and a
    lapse reopens the forged path, per-token release freezes let unimported deposits be refunded (a sunset checkpoint

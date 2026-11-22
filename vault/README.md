@@ -381,7 +381,7 @@ Both journals are `abi.encode` of static values, one 32-byte word each, and the 
 | **admin** | Register a token once: denominations, relay fees (≤ 1% each), `lezUnit` and `unitWeight` are then fixed. Enable or disable deposits per token. Set caps, a release bucket never below the immutable floor. Set release delays, for roots finalised later, always with `minReleaseDelay ≤ delay ≤ revokeWindow` (and ≤ 30 days). Raise Δ (never below `deltaFloor`, at most 30 days). Propose a watcher set and a new freeze authority, applied 14 days later (`proposeRoles`). Hand its own role on in two steps. | Freeze or unfreeze, cancel, pause, revoke, retire, stop the verifier. Change a registered token's denominations, fees, `lezUnit` or weight. Lower Δ. Set a release bucket below the floor. Change the roles faster than 14 days. Touch escrow. Change the verifier, `mode`, image ids, `lezConfigId`, `genesisState`, `nMin`, `tMin`, `deltaFloor`, `revokeWindow`, `maxFreeze`, `turnSeconds`, `minReleaseDelay` or the floor (all immutable). |
 | **watchers** (up to three, D13) | `cancelCandidate` a pending candidate. `pauseCheckpoints()` until 12 h from now. | Anything else: lift a pause, shorten a freeze, freeze anything else, revoke, retire. |
 | **freeze authority** (a multisig) | Freeze and unfreeze deposits, releases and checkpoints (each freeze lapses after `maxFreeze` unless renewed). `cancelCandidate`. `revokeFrom` within the window. `retire()` at any time. | Touch the registry, caps, delays, Δ or escrow. Accept anything. Cancel a finalised checkpoint (only revoke it, within the window). Undo a stop or a retirement. Hand itself over: only the admin's proposal changes it. |
-| **anyone** | Deposit. `recordBeacon` (rule (A)). Submit and finalise checkpoints (`finalize` with a proof under (A), `finalizeAttested` after the wait under (B)), and submit a cancelled state again. Release with a proof (as relayer). Refund once the rules above allow it. `applyRoles` once a proposal is 14 days old. `retire()` from `retireOpensAt()` on: 30 days without a checkpoint submitted or finalised (freezes and pauses not counted), or once a sunset checkpoint can no longer be revoked. Stop the verifier with a proof of exploit. | |
+| **anyone** | Deposit. `recordBeacon` (rule (A)). Submit and finalise checkpoints (`finalize` with a proof under (A), `finalizeAttested` after the wait under (B)), and submit a cancelled state again. Release with a proof (as relayer). Refund once the rules above allow it. `applyRoles` once a proposal is 14 days old. `retire()` from `retireOpensAt()` on: 30 days without a checkpoint submitted or finalised (the clock restarting at the end of every checkpoint freeze or watcher pause), or once a sunset checkpoint can no longer be revoked. Stop the verifier with a proof of exploit. | |
 | **payee** | `claimOwed` what it is owed, to itself. | |
 
 The admin hands its role on in two steps. The freeze authority and the watchers change only through the admin's
@@ -544,9 +544,9 @@ New in v4:
   authority and remove the watchers; the public proposal is the warning.
 - **A watcher can delay checkpoints** by cancelling every candidate and renewing 12-hour pauses, until the admin
   replaces it 14 days after proposing to. Under rule (A) the watchers are also trusted for safety outside F1–F4.
-- **Keyless retirement follows 30 days without checkpoint progress** (after one shortest wait; freezes and pauses do
-  not count). A quiet month with no prover, from deployment on, lets anyone retire the vault, which stops deposits
-  for good: operators must submit or finalise a checkpoint at least every 30 days. A watcher cannot cause it, but a
+- **Keyless retirement follows 30 days without checkpoint progress** (after one shortest wait; the clock restarts
+  at the end of every freeze or pause). A quiet month with no prover, from deployment on, lets anyone retire the
+  vault, which stops deposits for good: operators must submit or finalise a checkpoint at least every 30 days. A watcher cannot cause it, but a
   rogue watcher can delay it (renewing pauses, or submitting and cancelling candidates) until the admin replaces it;
   it can already stop checkpoints, and with them refunds, for as long. Anyone with a valid proof can delay it too,
   by submitting a heartbeat candidate (as a finalisation always could).
