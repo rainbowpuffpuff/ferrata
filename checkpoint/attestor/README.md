@@ -74,7 +74,8 @@ bash attestor/devnet.sh <lab node answers> attestor/runs/devnet-n3   # three att
 bash attestor/prove.sh                                     # executor, succinct proof, identity_p254
 LEZ=<lez rpc> bash attestor/live-node.sh <bundle> <gen> attestor/runs/live-node   # a running copy of the lab node
 bash attestor/zone.sh <bundle> attestor/runs/zone 300      # a real four-sequencer LEZ zone (no Docker)
-bash attestor/zone-attest.sh attestor/runs/zone            # its four attestors, 3 of 4 collected
+bash attestor/zone-attest.sh attestor/runs/zone "$TMPDIR/zone"   # its four attestors, 3 of 4 collected (a replay:
+                                                           # outputs to the second directory, records untouched)
 # from the worktree root: the bridge program on the zone, its checkpoint into the vault (stages in the header)
 bash checkpoint/attestor/zone-bridge.sh zone e2e/runs/zone-bridge-1
 ```
