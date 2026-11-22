@@ -1,5 +1,9 @@
 # seqnet run `seqnet-robust-1`
 
+> Note added after the run (commit `d8ddc000`, 22 November 2026): `lez/relayer-drops.jsonl` was filtered to its JSON
+> lines; the six lines removed were LEZ's wallet's plain sync lines (`Latest block is 27`, `Syncing to block 27. Blocks to
+> sync: 1`, `Synced to block 27 in …`, and the same three for block 33). Nothing else in this folder changed.
+
 [21:18:24] seqnet robust-1: mode robust, private proofs dev
 
 ## LEZ transactions (the zone's every applied transaction, `seqnet-txs`)
