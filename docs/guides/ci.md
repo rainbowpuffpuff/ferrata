@@ -1,8 +1,10 @@
 # How CI works
 
-Three workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push and pull request, on
+Three workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push and pull request (with
+`lez-harness` split across a 6-shard matrix), and daily at 04:17 UTC (`schedule`) or when started by hand
+(`workflow_dispatch`, where `lez-harness-full` runs the unsharded script once in place of the sharded matrix), on
 GitHub's `ubuntu-latest` runners: the jobs below. [`macos.yml`](../../.github/workflows/macos.yml), on pushes to `main` and by hand, runs the light crates
-a user's machine runs and builds five of the six modules' `.lgx` for macOS (arm64) on `macos-14` (RFP-022 S.2; the
+a user's machine runs and builds five of the six modules' `.lgx` for macOS (arm64) on `macos-15` (RFP-022 S.2; the
 updater's module builds for x86-64 Linux only). [`sequencer.yml`](../../.github/workflows/sequencer.yml) runs the
 attestation CLI against a sequencer (`scripts/ci/sequencer-attest.sh`), started by hand only (`workflow_dispatch`):
 the row checker counts it as manual, not as CI. No job needs a secret, and no job sends anything to a public network: the
@@ -17,7 +19,7 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 |---|---|---|---|
 | `test` | `cargo test --workspace --locked` at the repository root (vectors, Helios oracle, adversarial suites, mainnet and Sepolia replays, nullifier demo), `cargo fmt --check`, `cargo clippy -D warnings -A clippy::unnecessary_map_or`, `cargo +1.85.0 check --workspace` (the MSRV), the `no_std` build of `ferrata-core` for `riscv32im-unknown-none-elf` | Rust stable and 1.85.0, the pinned spec vectors (`scripts/fetch-vectors.sh`, cached) | a test, a format or lint finding, or the guest-ISA build fails |
 | `vault` | `forge test --no-match-contract PrivacySuite` in `vault/`: the vault's unit, fuzz and invariant suites with the mock verifier, and `test/real/` with RISC Zero's real Groth16 verifier and committed proofs | Foundry 1.3.6, the vault's libraries (cached) | a vault test fails. `PrivacySuite` is left out: it reads the file the LEZ half of the privacy suite writes (`lez/harness/tests/privacy_suite.rs`), and skips without it (it failed instead until 12 November: forge refused the read while `target/privacy/` did not exist) |
-| `links` | `scripts/check-links.py` over `README.md`, `docs/` and the READMEs the job names; the guide and decision checkers and their tests; the image-id, native-archive, release, vault-library and dependency-policy tools' tests; the row-to-test map's checker and its model's tests (`scripts/ci/`); the portable-shell and unaudited-label checks | Python, `yq` if present | a relative link does not resolve to a tracked file (the recorded tool reports in `docs/reviews/security/tools-out/` are left out), or any of those checks or tests fails |
+| `links` | `scripts/check-links.py` over `README.md`, `docs/` and the READMEs the job names; the guide and decision checkers and their tests; the image-id, native-archive, release, vault-library and dependency-policy tools' tests; the row-to-test map's checker and its model's tests (`scripts/ci/`); the LEZ shard coverage guard (`scripts/ci/check-lez-shards.py`) and its tests (`scripts/ci/test_lez_shards.py`); the portable-shell and unaudited-label checks | Python, `yq` if present | a relative link does not resolve to a tracked file (the recorded tool reports in `docs/reviews/security/tools-out/` are left out), or any of those checks or tests fails |
 | `deps` | `scripts/deny_all.py --advisories off` over every tracked Cargo workspace with cargo-deny 0.20.2 (its release asset checked by sha256): licences, bans, sources; then `--advisories baseline`, not blocking | Rust 1.93.0 and 1.98.1, the upstream sources | a workspace fails a policy, or the root, `cli` or `lez` is not among those passed |
 | `release-publish` | `modules/scripts/test-release-publish.sh`: the owner's publish step with a stub `gh` and no network | bash | the publish step's checks fail |
 | `image-ids` | `scripts/test_image_ids.py`: `docs/image-ids.md` names each program once, and `verify-sepolia.py` and `compare_ids.py` resolve the right row | Python | a program is named twice, or a tool resolves the wrong row |
@@ -26,7 +28,8 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 | `modules-resolve` | [`scripts/ci/modules-resolve.sh`](../../scripts/ci/modules-resolve.sh): five Logos Core modules' crates (`ferrata_{attest,bridge,attestor,monitor,relayer}_module`) staged as the module builder sees them, with the logos-rust-sdk revision their `flake.lock` pins, then `cargo metadata --locked` in each; then `cli/`'s library compiled as `ferrata_relayer_module` uses it, without `lez-wallet` (`cargo +1.98.1 check --locked --no-default-features --lib`) | Rust 1.93 and 1.98.1, the upstream sources (`scripts/fetch-upstream.sh`), Python, `libpcsclite-dev` and `protoc` | a module's staged crate does not resolve with its committed `Cargo.lock` (for instance a crate it vendors gained a dependency its staging does not copy, as `ferrata-cli` did on 21 November 2026), or `cli/` uses a `lez-wallet`-only crate outside `#[cfg(feature = "lez-wallet")]` (the default-feature builds would not see it); `ferrata_updater_module` is left out (its staging needs `lez/`'s guests) |
 | `witness-independence` | [`scripts/ci/witness-independence.sh`](../../scripts/ci/witness-independence.sh): the bridge's `host invariance 64`; then `cargo test -p ferrata-bridge-core` in `bridge/` | Rust 1.93, RISC Zero's toolchains ([`scripts/ci/install-risc0.sh`](../../scripts/ci/install-risc0.sh)) | the release or claim guest's cycle count (user cycles and segment sizes) differs between any two of 64 random valid witnesses (SPEC-v2 §5.2), or a bridge core test fails |
 | `roundtrip` | [`e2e/ci/run.sh`](../../e2e/ci/run.sh): one deposit there and back, every step asserted ([`e2e/ci/README.md`](../../e2e/ci/README.md)); then the `ferrata` tool's own end-to-end test, [`cli/tests/e2e.sh`](../../cli/tests/e2e.sh) (deposits through the binary, scan, claim, eleven burns, a release, recovery from the seed phrase; its checkpoint is a journal the test builds); then the relayer's library tests and `cli/tests/gasdrop.rs` (a real gas-drop receipt, no dev mode) | Rust 1.93 and 1.98.1, RISC Zero's toolchains, Foundry 1.3.6, the upstream sources (`scripts/fetch-upstream.sh`), `libpcsclite-dev` | any step of the round trip, or the build |
-| `lez-harness` | [`scripts/ci/lez-harness.sh`](../../scripts/ci/lez-harness.sh): every test file of `lez/harness/tests/` and `lez/updater/tests/` (the attestation and bridge programs through LEZ v0.4.0-rc1's state machine, the update-submitting daemon on recorded data), RISC Zero dev mode; then the privacy suite end to end ([`scripts/privacy/run.sh`](../../scripts/privacy/run.sh)) and its gate ([`scripts/privacy/check-results.py`](../../scripts/privacy/check-results.py)) | Rust 1.98.1, RISC Zero's toolchains, the upstream sources, Foundry 1.3.6 and the vault's libraries | a harness or updater test fails; the privacy gate fails or the published tables in `docs/privacy/generated/` are not what the code produces |
+| `lez-harness` | [`scripts/ci/lez-harness.sh`](../../scripts/ci/lez-harness.sh) `--shard "${{ matrix.shard }}"` across a 6-shard matrix on push and pull request (`harness-1`–`harness-4`, `updater-gate`, `updater-privacy`; [`scripts/ci/lez-harness-shards.json`](../../scripts/ci/lez-harness-shards.json)), guarded by [`scripts/ci/check-lez-shards.py`](../../scripts/ci/check-lez-shards.py) at the start of each shard: every test file of `lez/harness/tests/` and `lez/updater/tests/` that builds without an optional feature (plus `ferrata-updater`'s `--lib` tests and `harness --lib`), RISC Zero dev mode, and the privacy suite end to end ([`scripts/privacy/run.sh`](../../scripts/privacy/run.sh)) with its gate ([`scripts/privacy/check-results.py`](../../scripts/privacy/check-results.py)) | Rust 1.98.1, RISC Zero's toolchains, the upstream sources, Foundry 1.3.6 and the vault's libraries | the shard map disagrees with `lez/harness` / `lez/updater` / `ci.yml`, a harness or updater test fails, or the privacy gate fails or the published tables in `docs/privacy/generated/` are not what the code produces |
+| `lez-harness-full` | Daily (`schedule`, 04:17 UTC) and manual (`workflow_dispatch`) backstop: [`scripts/ci/lez-harness.sh`](../../scripts/ci/lez-harness.sh) with no arguments (unsharded) once; the sharded `lez-harness` matrix is skipped on those triggers so the LEZ suites run once, while the other 12 jobs still run to refresh shared caches and catch daily toolchain or advisory drift | same as `lez-harness` | any suite or privacy check fails in the unsharded run |
 | `monitor` | `cargo test` in `monitor/`, then [`monitor/tests/anvil-e2e.sh`](../../monitor/tests/anvil-e2e.sh): the watchers' rehearsal on a local anvil chain (wrong candidates cancelled in time, a SIGKILL and restart, a lost state file, a watcher without gas, a clean shutdown) | Rust 1.93, Foundry 1.3.6, the vault's libraries | a monitor test or a rehearsal scenario fails |
 
 `witness-independence`, `roundtrip` and `vault` were added on 11 November 2026: the witness-independence check was
@@ -41,7 +44,7 @@ siblings, secrets and public fields. A guest whose cycle count depends on its wi
 size and time; a first version of the release guest leaked the popcount of the leaf index this way. Executor only:
 no proof is made, and dev mode is refused.
 
-### `lez-harness` and `monitor`
+### `lez-harness`, `lez-harness-full` and `monitor`
 
 Added on 22 November 2026 (branch `rfp-ci-coverage`): before, the LEZ suites, the watchers' rehearsal and the
 privacy suite ran on the build box only, and RFP-022 R.11's check (`scripts/ci/check-row-tests.py --require-ci`)
@@ -49,10 +52,26 @@ counted their rows as box-only. Measured on the build box with 4 threads (`tasks
 vCPUs), by the jobs' own commands: `lez-harness` built cold in 622 s (target directory 3.6 GB), and its script at
 the branch's tip ran the harness's tests in 2,074 s, the updater's in 1,136 s and the privacy suite with its gate
 in 106 s (3,362 s after a warm build; every test binary passed, the gate 33 of 33); `monitor` 69 s for its tests
-and 131 s for the rehearsal. The hosted runner is slower than the box's cores: an estimate for a first
-`lez-harness` run is 1.5 to 2.5 hours, inside its 240-minute limit. Its target directory is not cached
-(the round trip's caches already use most of GitHub's 10 GB); the toolchains, the upstream sources and the
-vault's libraries share the round trip's cache entries.
+and 131 s for the rehearsal.
+
+On GitHub Actions (measured in run `45072883393`, job `137363580490`), the unsharded `lez-harness` job passed in
+4,474 s (74.6 min): setup 137 s, cold build 809 s (13.5 min; 512 s / 8.5 min on run `45075900693`'s runner), warm
+re-check 59 s, harness 2,158 s (36.0 min), updater 1,217 s (20.3 min, of which `tests/recorded.rs` alone took
+806.59 s) and privacy suite + gate 88 s (1.5 min). Every other job finished within 16.4 min (`roundtrip`, 985 s).
+
+To bring push and pull-request CI down without testing less (branch `ci-shards`), `lez-harness` runs as a 6-shard
+matrix balanced on run `45072883393`'s measured durations (`scripts/ci/lez-harness-shards.json`, `fail-fast: false`):
+four harness shards (`harness-1`–`harness-4`, 511.9–516.7 s / 8.5–8.6 min of tests each), `updater-gate` (splitting
+`lez/updater/tests/recorded.rs` with `--exact` so `gate_two_honest_one_adversary`, derived at 724.8 s / 12.1 min as a
+single test, starts at `t = 0` alongside four other heavy `recorded` tests on the remaining 3 cores), and
+`updater-privacy` (the remaining updater tests, `--lib`, `recorded` with `--exact --skip` for those five names, and
+the privacy suite with its gate, derived at ~554 s / 9.2 min plus ~15 s warm relink, running `privacy_suite` once
+instead of twice). Each shard builds only the binaries it runs; expected workflow wall time on pushes and pull
+requests is derived at ~27 min on run `45072883393`'s runner speed (~22 min on run `45075900693`'s). On daily
+`schedule` (04:17 UTC) and `workflow_dispatch`, `lez-harness-full` runs the unsharded script once as a backstop
+(240-minute limit) while the sharded matrix is skipped. Target directories are not cached (the round trip's caches
+already use most of GitHub's 10 GB); the toolchains, the upstream sources and the vault's libraries share the round
+trip's cache entries.
 
 ### `roundtrip`
 

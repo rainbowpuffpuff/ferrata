@@ -42,11 +42,12 @@ reported as pending until that branch merges; their `ci = "links"` entries need 
 [`ci_model.py`](ci_model.py) is what the two checks above and below read the workflows with: a parser for the
 YAML they are written in (standard library; `python3 -I scripts/ci/ci_model.py --compare-yq` compares it with
 `yq` on all eleven workflows of the repository and the catalog: the same triggers, jobs, steps, commands,
-directories and environments, 11 of 11 on 21 November 2026), the trace of the commands a job runs, and the
+directories and environments, 11 of 11), the trace of the commands a job runs (expanding `strategy.matrix`
+combinations and tracing `scripts/ci/lez-harness.sh --shard NAME` from [`lez-harness-shards.json`](lez-harness-shards.json)), and the
 cargo and forge selection rules. It reads statically. A command under a step's or job's `if:` (unless always
-true) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, whose failure `|| X` masks,
+true, or a job-level `push || pull_request` event guard on a workflow triggered on both) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, whose failure `|| X` masks,
 piped without pipefail, or not last in a text without `set -e` counts for nothing; tracing stops at a top-level `exit` and at `[ A = B ] && exit` when A and B resolve (a
-script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` runs no test; `-- --skip P`
+script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` or `lez-harness.sh --shard NAME build` runs no test; `-- --skip P`
 leaves out a file any of whose tests P could skip; a test that asserts an environment variable's value needs
 the command to set it. Other conditions are read as if they held, and a directory it cannot resolve makes the
 commands after it count nowhere.
@@ -60,7 +61,9 @@ in today's workflows, so the counts stand:
   `exec` of another command before the test; an `exit` inside a shell function, a compound command
   (`if true; then exit 0; fi`) or an and-list (`true && exit 0`) before the test; `trap 'exit 0' EXIT` or
   `trap 'exit 0' ERR`, which turn a failure into success; the test in a subshell or a brace group whose failure
-  `|| true` masks (`( cargo test ) || true`, `{ cargo test; } || true`);
+  `|| true` masks (`( cargo test ) || true`, `{ cargo test; } || true`); a bug inside `lez-harness.sh`'s own
+  `--shard` dispatch loop (`ci_model.py` reads `lez-harness-shards.json` statically for `--shard` calls, so the loop
+  itself is tested by `test_lez_shards.py`, `--dry-run`, and the daily unsharded `lez-harness-full` backstop);
 - in Rust: `cfg` forms other than a bare `feature = "X"` on the file, the test or its `mod` block, such as
   `cfg(all(feature = "X", test))`, `cfg(any(feature = "X", feature = "Y"))` with both off, a file-level
   `#![cfg(all(feature = "X"))]`, `cfg_attr(not(feature = "X"), ignore)`, or another attribute between a `mod`
@@ -170,16 +173,37 @@ scripts/ci/witness-independence.sh 64
 
 Run by CI's `witness-independence` job, which passes the witness count.
 
+## check-lez-shards.py, test_lez_shards.py and lez-harness-shards.json
+
+Guard and shard map for the 6-shard `lez-harness` matrix in [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml).
+[`check-lez-shards.py`](check-lez-shards.py) derives integration-test binaries from `lez/harness/Cargo.toml` and
+`lez/updater/Cargo.toml` (`[[test]]` entries and `package.autotests`) and their `tests/` trees (`tests/*.rs` and
+`tests/*/main.rs`; helper directories without `main.rs` such as `redteam_common/` and `security_common/` are modules,
+not binaries). It fails when any binary is run by no shard, run by more than one shard (including `privacy_suite`
+alongside `privacy: true`), named in [`lez-harness-shards.json`](lez-harness-shards.json) without existing, listed as
+feature-gated without a matching `required-features` / `#![cfg(feature = ...)]` gate, when a split binary's `--exact`
+and `--skip` test-name lists disagree or name a nonexistent test, when `updater_lib` is missing while `src/` holds
+unit tests, or when `ci.yml`'s `lez-harness` matrix disagrees with the shard map. Standard library only.
+
+```sh
+python3 -I scripts/ci/check-lez-shards.py    # validate shard map (links job and start of each shard)
+python3 -I scripts/ci/test_lez_shards.py     # unit tests on scratch copies (links job)
+```
+
 ## lez-harness.sh
 
-CI's LEZ suites, run by the `lez-harness` job: every test file of `lez/harness/tests/` and `lez/updater/tests/`
-that builds without an optional feature (the attestation and bridge programs through LEZ v0.4.0-rc1's state
-machine and fee settlement, the red-team suites, the update-submitting daemon on recorded data), in RISC Zero dev
-mode, then the privacy suite end to end (`scripts/privacy/run.sh`) and its gate (`scripts/privacy/check-results.py`).
+CI's LEZ suites, run sharded by `lez-harness` (6-shard matrix on push and pull request) and unsharded by
+`lez-harness-full` (daily `schedule` at 04:17 UTC and `workflow_dispatch`): every test file of `lez/harness/tests/`
+and `lez/updater/tests/` that builds without an optional feature (plus `--lib` unit tests), in RISC Zero dev mode,
+and the privacy suite end to end (`scripts/privacy/run.sh`) with its gate (`scripts/privacy/check-results.py`).
 Needs Rust 1.98.1, RISC Zero's toolchains with guest Rust 1.91.1 (`install-risc0.sh`), the upstream sources
 (`scripts/fetch-upstream.sh`) and Foundry with `vault/lib`.
 
 ```sh
-scripts/ci/lez-harness.sh build    # build only
-scripts/ci/lez-harness.sh          # build what is missing, then run everything
+scripts/ci/lez-harness.sh                         # build what is missing, then run everything (unsharded)
+scripts/ci/lez-harness.sh build                   # build everything only
+scripts/ci/lez-harness.sh --shard NAME build      # check shard map, build shard NAME only
+scripts/ci/lez-harness.sh --shard NAME            # check shard map, run shard NAME
+scripts/ci/lez-harness.sh --dry-run               # print exact commands for every shard (no RISC0_HOME needed)
+scripts/ci/lez-harness.sh --dry-run --shard NAME  # print exact commands for shard NAME (add `build` for build commands)
 ```

@@ -334,7 +334,7 @@ tests = [
   { path = ".github/workflows/ci.yml", kind = "test", ci = "test" },
   { path = "docs/guides/ci.md", kind = "document" },
 ]
-note = "the requirement is CI itself: ci.yml (on every push and pull request) with all its jobs; the workflow defines thirteen jobs (test, witness-independence, roundtrip, lez-harness, monitor, vault, deps, modules-resolve, links, release-publish, image-ids, idl, admin); green on main was read from GitHub's runs of the seven it had then (43730879603, 44172503761, all five most recent passed on 18 November 2026); the six added since have not run on GitHub"
+note = "the requirement is CI itself: ci.yml (on every push and pull request, plus daily schedule and workflow_dispatch) with all its jobs; the workflow defines fourteen jobs (thirteen on push and pull request — test, witness-independence, roundtrip, lez-harness as a 6-shard matrix, monitor, vault, deps, modules-resolve, links, release-publish, image-ids, idl, admin — plus lez-harness-full on schedule and workflow_dispatch); green on main was read from GitHub's runs of the seven it had then (43730879603, 44172503761, all five most recent passed on 18 November 2026); the six added since have not yet completed a single all-green run on GitHub (in run 45072883393 at ff0cb39a, 12 of 13 passed including lez-harness in 74.6 min while links failed on test_release_manifest, fixed in 8c38d723)"
 
 [[row]]
 id = "RFP-021 P.1"
