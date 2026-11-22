@@ -94,9 +94,9 @@ tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT` | `e2e/runs/rela
 ## U.3 and R.7: the seqnet robust run — proposed **shown** (U.3 with one caveat)
 
 **Run:** `e2e/runs/seqnet-robust-1/` (`robust.md`: 14 passed, 0 failed; `robust.json`; `run.log`; `user/`: every
-command the user ran and what it printed), commit `2c418019`, Modal build box, 21 November 2026
-21:18–21:27 UTC, `../tmp/rfp-E/box-u5.sh robust-1` = `cd cli && cargo test --tests --no-run && cargo test --lib
-relayer::tests && env -u RISC0_DEV_MODE cargo test --test gasdrop`, then `bash e2e/seqnet/run.sh robust robust-1`
+command the user ran and what it printed), commit `2c418019`, a Modal build box, 21 November 2026
+21:18–21:27 UTC: `cd cli && cargo test --tests --no-run && cargo test --lib relayer::tests && env -u RISC0_DEV_MODE
+cargo test --test gasdrop` (RISC0_HOME as in `lez/RESULTS.md`), then `bash e2e/seqnet/run.sh robust robust-1`
 (alone on the box: the script first checks that ports 18080, 3040 and 8545 are free). LEZ v0.4.0-rc1's own sequencer
 and node (one validator, dev-mode leader proofs), dev-mode private proofs, a local anvil with the vault tests' mock
 verifier: what the row needs here is the daemons' and the tool's behaviour, not proofs.

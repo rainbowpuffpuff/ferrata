@@ -1,8 +1,8 @@
 # A zone of four LEZ v0.4.0-rc3 sequencers (RFP-022 F.7: validity with more than one sequencer key)
 
 **Run:** from `checkpoint/`, `ZONE_BEDROCK=bundle bash attestor/zone.sh <crown-rc3 bundle> OUT 1080` on a Modal build
-box, 21 November 2026, 17:49–18:07 UTC (`zone.log`). The bundle is crown-rc3's (`spike/tmp/crown-rc3/lez/bundle.tar.zst`
-beside the repository: LEZ v0.4.0-rc3's `sequencer_service`, its Logos Blockchain node 0.3.5-rc.1, r0vm, and its
+box, 21 November 2026, 17:49–18:07 UTC (`zone.log`). The bundle is crown-rc3's (not in the repository: `lez/crown/build.sh rebase FROM` over
+LEZ v0.4.0-rc3's own build, as that script's header says: LEZ v0.4.0-rc3's `sequencer_service`, its Logos Blockchain node 0.3.5-rc.1, r0vm, and its
 `lez-config/` with rc3's `deployment-settings.yaml` and `node-config.yaml`); the zone is upstream's own four-sequencer
 devnet (`lez/configs/docker-all-in-one/devnet`: one configuration whose genesis stakes four channel signing keys, and
 the four keys; byte-identical in rc1 and rc3), run without Docker, one validator with dev-mode leader proofs as LEZ's

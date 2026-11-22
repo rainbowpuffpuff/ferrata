@@ -36,7 +36,7 @@
 //! [--recipient ADDR], [--private real|fake], [--claim-time-offset-s S (default -30)], --session-out FILE,
 //! --notes-out FILE, [--operator-only yes] (the updates, Init, Register, ImportFees and ImportRoot only: the
 //! claims and burns are a user's wallet's, e2e/seqnet), [--import-roots no] (no ImportRoot either: the relayer
-//! daemon imports the roots, e2e/seqnet with SEQNET_RELAYER_IMPORTS=1).
+//! daemon imports the roots: e2e/seqnet's robust mode, `e2e/seqnet/hook-robust.sh`).
 
 #![allow(dead_code)]
 
