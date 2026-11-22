@@ -7,10 +7,12 @@ otherwise download with no checksum.
     python3 -I scripts/fetch_native.py env     [--dir DIR] [--refetch]   the same, then `export VAR=...` lines for eval:
                                                                           RAPIDSNARK_LIB_DIR and LBC_ROOT_DIR
     python3 -I scripts/fetch_native.py record  [--dir DIR]               lines for a release's toolchains.txt
-    python3 -I scripts/fetch_native.py check-build MESSAGES.jsonl [--dir DIR] [--target-dir T]
+    python3 -I scripts/fetch_native.py check-build MESSAGES.jsonl [--dir DIR] [--target-dir T] [--record cli]
                                                                           after `cargo build --message-format=json`: fail
                                                                           if a build script linked native code from
-                                                                          anywhere but the checked archives or the build
+                                                                          anywhere but the checked archives or the build,
+                                                                          or (--record) a package not recorded compiles
+                                                                          and links native code of its own
     python3 -I scripts/fetch_native.py sources --out DIR                 the pinned source tarballs (GMP) for the
                                                                           release's source offer, checked
 
@@ -225,8 +227,11 @@ def within(path, roots):
     return any(p == r or p.startswith(r + os.sep) for r in roots)
 
 
-def check_build(messages, d, pins, target_dir):
-    """Problems found (empty: the build linked native code only from the checked archives and from its own output)."""
+def check_build(messages, d, pins, target_dir, record=None):
+    """Problems found (empty: the build linked native code only from the checked archives and from its own output).
+    record: a key of the pins' compiled_from_crate_sources (the packages whose build scripts compile and link static
+    libraries from their own sources in that build): any other package doing so, or a recorded one no longer doing
+    so, is a problem."""
     scripts = {}
     with open(messages, encoding="utf-8", errors="replace") as f:
         for line in f:
@@ -265,7 +270,10 @@ def check_build(messages, d, pins, target_dir):
                         problems.append(f"{pkg}: links static {name}, not one of {a['name']}'s {a['static_libs']}")
     owned = {pkg for a in pins["archives"] for pkg in a["build_packages"]}
     target = os.path.realpath(target_dir) if target_dir else None
-    allowed_compiled = pins.get("compiled_static_libs", {})
+    if record is not None and record not in pins.get("compiled_from_crate_sources", {}):
+        return [f"no record {record!r} in compiled_from_crate_sources"]
+    recorded = pins["compiled_from_crate_sources"][record] if record is not None else None
+    compiling = set()
     for pkg, msgs in sorted(scripts.items()):
         if pkg in owned:
             continue
@@ -280,14 +288,16 @@ def check_build(messages, d, pins, target_dir):
                     problems.append(f"{pkg}: links from {p}, outside the build, the checked archives and the system "
                                     "library directories")
             statics = sorted(lib_name(s)[1] for s in j.get("linked_libs", []) if lib_name(s)[0] == "static")
-            if statics and sorted(allowed_compiled.get(pkg, [])) != statics and "compiled_static_libs" in pins:
-                problems.append(f"{pkg}: links static {statics}; scripts/native-deps.json's compiled_static_libs says "
-                                f"{sorted(allowed_compiled.get(pkg, []))} (a new native library: check where it comes "
-                                "from and its licence, then record it)")
-    if "compiled_static_libs" in pins:
-        for pkg in sorted(set(allowed_compiled) - set(scripts)):
-            problems.append(f"{pkg}: recorded in compiled_static_libs but its build script is not in this build "
-                            "(update the record)")
+            if statics:
+                compiling.add(pkg)
+                if recorded is not None and pkg not in recorded:
+                    problems.append(f"{pkg}: links static {statics}, and compiled_from_crate_sources[{record!r}] does "
+                                    "not list it (new native code in the build: check where it comes from and its "
+                                    "licence, then record it)")
+    if recorded is not None:
+        for pkg in sorted(set(recorded) - compiling):
+            problems.append(f"{pkg}: listed in compiled_from_crate_sources[{record!r}] but links no static library in "
+                            "this build (update the record)")
     return problems
 
 
@@ -316,6 +326,7 @@ def main():
     ap.add_argument("--pins", default=PINS)
     ap.add_argument("--refetch", action="store_true")
     ap.add_argument("--target-dir", default="")
+    ap.add_argument("--record", default=None, help="check-build: the compiled_from_crate_sources entry of this build")
     ap.add_argument("--out", default="")
     a = ap.parse_args()
     pins = load_pins(a.pins)
@@ -332,7 +343,7 @@ def main():
         elif a.cmd == "check-build":
             if not a.messages:
                 raise Bad("check-build: MESSAGES.jsonl (cargo build --message-format=json output) is required")
-            problems = check_build(a.messages, d, pins, a.target_dir)
+            problems = check_build(a.messages, d, pins, a.target_dir, a.record)
             for p in problems:
                 err(f"check-build: {p}")
             if problems:

@@ -88,6 +88,15 @@
    ]
   }
  ],
+ "compiled_from_crate_sources": {
+  "_doc": "The packages whose build scripts compile C or C++ from their own crate sources (checked by Cargo.lock) and link it statically, per build (check-build --record): a package added here is native code someone has looked at. Measured from the release CLI build of 22 November 2026 (fix-supply box run 4).",
+  "cli": {
+   "aws-lc-sys": "AWS-LC (aws_lc_0_47_0_crypto); ISC AND (Apache-2.0 OR ISC) AND OpenSSL, through rustls",
+   "librocksdb-sys": "RocksDB (rocksdb); Apache-2.0 AND BSD-3-Clause, the node's storage",
+   "nvtx": "NVIDIA Tools Extension shim (nvtx), through RISC Zero",
+   "ring": "ring's C and assembly (ring_core_0_17_14_, ring_core_0_17_14__test)"
+  }
+ },
  "sources": [
   {"name": "gmp-6.3.0", "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz", "bytes": 2094196,
    "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",

@@ -81,7 +81,7 @@ build_() {
       && CARGO_BUILD_JOBS=8 cargo build --release --locked --message-format=json-render-diagnostics \
            > "$out/build/logs/cli-messages.jsonl" 2> "$out/build/logs/cli.log" \
       && python3 -I "$ROOT/scripts/fetch_native.py" check-build "$out/build/logs/cli-messages.jsonl" --dir "$NATIVE_DIR" \
-           --target-dir "$ROOT/cli/target" >> "$out/build/logs/cli.log" 2>&1 ) & local c=$!
+           --target-dir "$ROOT/cli/target" --record cli >> "$out/build/logs/cli.log" 2>&1 ) & local c=$!
   local fail=0
   if wait $g; then echo "$(date -u +%T) guests ok" >> "$log"; else echo "$(date -u +%T) guests FAILED" >> "$log"; fail=1; fi
   if wait $v; then echo "$(date -u +%T) vault ok" >> "$log"; else echo "$(date -u +%T) vault FAILED" >> "$log"; fail=1; fi

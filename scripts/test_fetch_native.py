@@ -219,7 +219,7 @@ class CheckBuild(Base):
                 self.msg("blst", [self.out_blst], ["static=blst"], self.out_blst),
                 self.msg("pcsc-sys", ["/usr/lib/x86_64-linux-gnu"], ["pcsclite"])]
 
-    def check(self, msgs, pins=None):
+    def check(self, msgs, pins=None, record=None):
         p = os.path.join(self.t, "messages.jsonl")
         with open(p, "w") as f:
             f.write("not json: a compiler line\n")
@@ -229,7 +229,7 @@ class CheckBuild(Base):
         if pins is not None:
             with open(self.pins_path, "w") as f:
                 json.dump(pins, f)
-        return self.run_fn("check-build", p, "--target-dir", self.target)
+        return self.run_fn("check-build", p, "--target-dir", self.target, *(["--record", record] if record else []))
 
     def test_good_build(self):
         r = self.check(self.good())
@@ -269,14 +269,18 @@ class CheckBuild(Base):
         self.assertEqual(r.returncode, 1)
         self.assertIn("some-sys: links from /opt/vendor/lib", r.stderr)
 
-    def test_new_compiled_static_lib_against_the_record(self):
-        pins = dict(self.pins, compiled_static_libs={"blst": ["blst"]})
-        self.assertEqual(self.check(self.good(), pins).returncode, 0)
-        m = self.good() + [self.msg("zstd-sys", [self.out_blst.replace("blst", "zstd")], ["static=zstd"],
-                                    self.out_blst.replace("blst", "zstd"))]
-        r = self.check(m, pins)
+    def test_new_compiled_native_package_against_the_record(self):
+        pins = dict(self.pins, compiled_from_crate_sources={"cli": {"blst": "blst's C"}})
+        self.assertEqual(self.check(self.good(), pins, record="cli").returncode, 0)
+        zstd = self.out_blst.replace("blst", "zstd")
+        os.makedirs(zstd)
+        r = self.check(self.good() + [self.msg("zstd-sys", [zstd], ["static=zstd"], zstd)], pins, record="cli")
         self.assertEqual(r.returncode, 1)
-        self.assertIn("zstd-sys: links static ['zstd']", r.stderr)
+        self.assertIn("zstd-sys: links static ['zstd'], and compiled_from_crate_sources['cli'] does not list it", r.stderr)
+        r = self.check(self.good()[:2], pins, record="cli")       # blst no longer linked: the record is stale
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("blst: listed in compiled_from_crate_sources['cli'] but links no static library", r.stderr)
+        self.assertEqual(self.check(self.good(), pins).returncode, 0)   # no --record: no ratchet
 
     def test_no_messages(self):
         r = self.check([])
