@@ -43,8 +43,13 @@ reported as pending until that branch merges; their `ci = "links"` entries need 
 YAML they are written in (standard library; `python3 -I scripts/ci/ci_model.py --compare-yq` compares it with
 `yq` on all eleven workflows of the repository and the catalog: the same triggers, jobs, steps, commands,
 directories and environments, 11 of 11 on 21 November 2026), the trace of the commands a job runs, and the
-cargo and forge selection rules. It reads statically: every command of a script counts as run whatever
-condition guards it, and a directory it cannot resolve makes the commands after it count nowhere. A Rust test
+cargo and forge selection rules. It reads statically. A command under a step's or job's `if:` (unless always
+true) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, or whose failure `|| X` masks
+counts for nothing; tracing stops at a top-level `exit` and at `[ A = B ] && exit` when A and B resolve (a
+script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` runs no test; `-- --skip P`
+leaves out a file any of whose tests P could skip; a test that asserts an environment variable's value needs
+the command to set it. Other conditions are read as if they held, and a directory it cannot resolve makes the
+commands after it count nowhere. A Rust test
 compiled out by a feature the command leaves off (`#![cfg(feature = "X")]` on the file, `#[cfg(feature = "X")]`
 on the test or its `mod` block) does not count, and a cargo name filter is matched against a test's whole path
 (the module path of a file under `src/`, its inner modules, the function), as cargo matches it.

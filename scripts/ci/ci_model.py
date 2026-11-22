@@ -10,9 +10,13 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
 - `jobs`: every job of .github/workflows/*.yml with its workflow's triggers, defaults, environment and steps.
 - `trace`: the commands a job runs, from its `run:` steps and, recursively, the shell scripts they call
   (`bash X.sh`, `./X.sh`, `source X`), each with the directory it runs in and the variables set before it.
-  A static reading: every command of a script counts as run whatever condition guards it (an over-
-  approximation), a directory that cannot be resolved makes the commands after it count nowhere, and a
-  test that skips itself at run time is seen only through the environment gates `rust_env_gates` finds.
+  A static reading. Commands under a step's or job's `if:` (unless always true) or `continue-on-error`, run
+  in an `if`/`while`/`until` condition or in the background, or whose failure a `|| X` masks (X not failing),
+  are traced with a `guard` and count for nothing; tracing stops at an `exit` at the top level of a script or
+  step, and at `[ A = B ] && exit` when A and B resolve (a script's arguments are $1, $2 ...). Any other
+  condition is read as if it held (an over-approximation); a directory that cannot be resolved makes the
+  commands after it count nowhere; a test that skips itself or fails without an environment variable is seen
+  through the gates `rust_env_gates` finds.
 - `cargo_runs`, `forge_runs`, `invokes`: whether one traced command runs a given Rust test file, Foundry
   test file or script. A Rust test compiled out by a feature the command leaves off does not count
   (`feature_gates`: a file-level `#![cfg(feature = "X")]`, `#[cfg(feature = "X")]` on the test or on the
