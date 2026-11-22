@@ -2,13 +2,13 @@
 
 **Run:** `cd cli && bash tests/relayer-crash.sh` (the test `relayer_killed_and_cut_off_does_each_job_once` of
 [`cli/tests/relayer_crash.rs`](../../../cli/tests/relayer_crash.rs)), on a Modal build box (CPU), 22 November 2026
-04:39–04:42 UTC, the sources of commit `8153e31b` (branch `rfp-relayer-robustness`; the run's files are that commit's,
+04:39–04:42 UTC, the sources of commit `cb9d31ad` (branch `rfp-relayer-robustness`; the run's files are that commit's,
 byte for byte: part 6b now also requires the "no row" line, no `inflight-lost`/`inflight-resent` and no pinned request,
 and 6d counts its pins from its own start, the third review's L-5). **Result:** `test result: ok. 1 passed` in
 136.90 s; [`results.json`](results.json) is the test's own summary: 48 relayer transactions, 0 reverted, 45 releases,
 part 6's requests 0, 1 (0 pinned), 1, 2 (1 pinned). Part 2's random kills differ between runs (34 daemon runs here, 36
-in the record at `3f3804f9`, which this file's history keeps with the earlier ones: `41c0d843`, 126.04 s;
-`516e397a`, parts 1–5). With the module's history not asked for a forgotten request (the third review's mutant M2C,
+in the record at `fc7007ff`, which this file's history keeps with the earlier ones: `17dd9d5b`, 126.04 s;
+`93dfc00d`, parts 1–5). With the module's history not asked for a forgotten request (the third review's mutant M2C,
 applied on the box only, then restored), the same test fails at part 6b: `no inflight-request-forgotten line with 'no
 row: never broadcast'`. The root imports' counterpart, the LEZ
 side failing under the relayer, is [`../relayer-lez/`](../relayer-lez/README.md); the gas drop's, on a running LEZ
@@ -28,7 +28,7 @@ its own; each run's JSON lines were kept by the test.
 | Part | What was done to the daemon | Result |
 |---|---|---|
 | 1, a kill at each kind of transaction | anvil's automine off: SIGKILL while its transaction waited in the pool, then **P** restarted with it still pending (mined after), **M** mined then restarted, **D** dropped from the pool then restarted: submitCandidate (P), finalizeAttested (M), a release (D), a release (P), a release with a checkpoint fee (M), the claimOwed after it (D) | 12 daemon runs; 6 transactions of the relayer for 6 effects, none reverted; 1 `CandidateSubmitted`, 1 `CheckpointFinalized`, one `Release` per nullifier, 1 `OwedClaimed`, owed 0 after; P: the restarted daemon logged `inflight-pending` and sent nothing until the block was mined; D: `inflight-lost`, then the same call sent again **with the same nonce**; every booking after a restart marked `"recovered": true` |
-| 2, random kills | automine on, 20 releases in the inbox, SIGKILL 0 to 40 ms after each start-up line, started again until every job was booked | 1 kill was enough this time (a job takes milliseconds; 3 in the record at `3f3804f9`); 26 transactions for 26 effects (cumulative), none reverted; one `Release` per nullifier; every job in `done/` once, none refused. Where random kills land is chance: the two narrow windows are made to happen in part 4 |
+| 2, random kills | automine on, 20 releases in the inbox, SIGKILL 0 to 40 ms after each start-up line, started again until every job was booked | 1 kill was enough this time (a job takes milliseconds; 3 in the record at `fc7007ff`); 26 transactions for 26 effects (cumulative), none reverted; one `Release` per nullifier; every job in `done/` once, none refused. Where random kills land is chance: the two narrow windows are made to happen in part 4 |
 | 3, flaky endpoint | `e2e/netfault/faultnet.py` seed 11, the daemon on its `flaky` endpoint, 4 releases | done in 2 s; **faults that fired:** 3 × 429, 1 × 5xx, 4 receipts behind (drawn with a rate but not fired in this run: "not found" answers, timeouts and a head going backwards; `results.json` has the rates and `faultsSeen`); 30 transactions for 30 effects, none reverted |
 | 3, sends endpoint | seed 16, the `sends` endpoint and its outages, 4 releases | done in 83 s; **fired:** 2 raw transactions dropped with their hash answered, 1 duplicated, 6 "not found", 4 receipts behind, 119 answers refused during outages (a send forwarded with its answer lost did not fire here: part 4 makes it happen); 34 transactions for 34 effects, none reverted |
 | 3, lagging endpoint | seed 12, the `lagging` endpoint (4 blocks behind), a block mined every second, 4 releases | done in 20 s; **fired:** 29 receipts behind, 4 × 429; 3 rounds waited as `node-behind` (the node below the relayer's own last transaction); 38 transactions for 38 effects, none reverted |

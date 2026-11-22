@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The robust hook's late-credit check (late-credit.sh) against a recorded run: PASS on the record, FAIL on each variant
 # that does not show two credits of one drop accepted at the sequencer with one applied (the third review's L-4). The
-# check as it was at 83cf4eb0 (`old_check`) is printed beside it.
+# check as it was at bff8b821 (`old_check`) is printed beside it.
 #   bash e2e/seqnet/test-late-credit.sh [RUN_DIR]   (default e2e/runs/seqnet-robust-3; jq and grep only, no network)
 set -uo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -11,7 +11,7 @@ d1=$(jq -c '.drop1' "$R/robust.json")
 late=$(jq -c '.drop1LateCredit // empty' "$R/robust.json")
 claim=$(cat "$R/user/10-claim.txt")
 lh=$(jq -r '.answer | fromjson | .result' <<< "$late")
-# hook-robust.sh at 83cf4eb0: a late forward logged and one pending credit was a PASS, in both of its branches.
+# hook-robust.sh at bff8b821: a late forward logged and one pending credit was a PASS, in both of its branches.
 old_check() { [ -n "$2" ] && grep -q 'claims: *1 pending credit' <<< "$3"; }
 fails=0
 expect() { # NAME WANT(pass|fail) DROP LATE CLAIM
