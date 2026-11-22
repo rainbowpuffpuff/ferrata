@@ -230,9 +230,13 @@ impl World {
     }
 
     fn last_run_has(&self, event: &str) -> bool {
+        self.last_run_any(|v| v["event"] == event)
+    }
+
+    fn last_run_any(&self, f: impl Fn(&Value) -> bool) -> bool {
         let text =
             std::fs::read_to_string(self.dir.join("logs").join(format!("{:03}.jsonl", self.runs))).unwrap_or_default();
-        text.lines().filter_map(|l| serde_json::from_str::<Value>(l).ok()).any(|v| v["event"] == event)
+        text.lines().filter_map(|l| serde_json::from_str::<Value>(l).ok()).any(|v| f(&v))
     }
 
     async fn wait_last_run(&self, what: &str, f: impl Fn(&Value) -> bool, secs: u64) -> Result<()> {
@@ -841,6 +845,7 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     let history = dir.join("txsender6.history.jsonl").to_string_lossy().into_owned();
     let with_history = ["--history".to_string(), history];
     let requests = |ts: &Helper| ts.log_count(|v| v["method"] == "send" && v["requestId"].is_string());
+    let pins = |ts: &Helper| ts.log_count(|v| v["method"] == "send" && v["pinned"] == true);
     let mut part6 = Vec::new();
     let mut ts = Helper::start_with(&dir, "txsender6a", "e2e/netfault/txsender_stub.py", &url, &with_history)?;
     w.logos_stub = Some(ts.addr().await?);
@@ -884,12 +889,22 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     w.logos_stub = Some(ts.addr().await?);
     let d = w.start(None)?;
     w.wait_done(&r, 120).await?;
-    ensure!(w.last_run_has("inflight-request-forgotten"), "part 6b: no inflight-request-forgotten line");
+    // Planned again because the module's history has no row of the request (never broadcast), not resent as lost with
+    // its nonce pinned: both make one request (the third review's L-5), so the line and the pins tell them apart.
+    let no_row = |v: &Value| v["event"] == "inflight-request-forgotten" && v["history"] == "no row: never broadcast";
+    ensure!(w.last_run_any(no_row), "part 6b: no inflight-request-forgotten line with 'no row: never broadcast'");
+    ensure!(
+        !w.last_run_has("inflight-lost") && !w.last_run_has("inflight-resent"),
+        "part 6b: sent again as lost, not planned again"
+    );
     w.kill(d)?;
-    let made_b = requests(&ts);
-    ensure!(made_b == 1, "part 6b: {made_b} requests at the restarted module (the call planned again once)");
+    let (made_b, pinned_b) = (requests(&ts), pins(&ts));
+    ensure!(
+        made_b == 1 && pinned_b == 0,
+        "part 6b: {made_b} requests, {pinned_b} pinned at the restarted module (expected the call planned again once, unpinned)"
+    );
     part6.push(json!({ "case": "module restarted after the request, before any broadcast", "requestsAfterRestart": made_b,
-                       "booked": "inflight-request-forgotten (no row), planned again" }));
+                       "pinned": pinned_b, "booked": "inflight-request-forgotten (no row), planned again" }));
     // (c) stuck, the transaction out (mined): found under the request's nonce; no second request.
     let (h, m0) = (ts.hits(), requests(&ts));
     ts.arm("stuck send_status")?;
@@ -904,7 +919,7 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     ensure!(made_c == 1, "part 6c: {made_c} requests for one stuck call");
     part6.push(json!({ "case": "stuck, the transaction out", "requests": made_c, "booked": "inflight-request-unknown, inflight-found" }));
     // (d) stuck, nothing sent: lost, sent again through the module with the nonce pinned.
-    let (h, m0) = (ts.hits(), requests(&ts));
+    let (h, m0, p0) = (ts.hits(), requests(&ts), pins(&ts));
     ts.arm("stuck-unsent send_status")?;
     let r = w.release_job(0)?;
     w.effects += 1;
@@ -914,7 +929,7 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     ensure!(w.last_run_has("inflight-lost") && w.last_run_has("inflight-resent"), "part 6d: not sent again as lost");
     w.kill(d)?;
     let made_d = requests(&ts) - m0;
-    let pinned = ts.log_count(|v| v["method"] == "send" && v["pinned"] == true);
+    let pinned = pins(&ts) - p0;
     ensure!(made_d == 2 && pinned == 1, "part 6d: {made_d} requests, {pinned} pinned (expected 2, 1)");
     part6.push(json!({ "case": "stuck, nothing sent", "requests": made_d, "pinned": pinned,
                        "booked": "inflight-request-unknown, inflight-lost, inflight-resent (pinned nonce)" }));
