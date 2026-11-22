@@ -7,13 +7,14 @@ from the repository's root, with the environment the suite needs (`cd lez`-relat
 RISC0_DEV_MODE=1 and RISC0_HOME as for `cargo test -p ferrata-updater --features harness`). NAME is one of the keys
 below; without arguments the tests that fix's commit added are run. Each mutant undoes one fix in the sources (the API
 kept, so the tests compile), the tests run, and the sources are put back byte for byte, also when the run fails or is
-stopped by Ctrl-C, SIGTERM or SIGHUP (cargo is killed first; SIGKILL cannot be caught). Exit status: cargo's (non-zero
+stopped by Ctrl-C, SIGTERM or SIGHUP (cargo and the test processes it started are killed first: cargo runs in a session
+of its own; SIGKILL cannot be caught). Exit status: cargo's (non-zero
 expected: the tests fail without the fix); 128 + the signal's number when stopped. `dev/test_mutants.py` checks the
 restoring.
 
 The fixes (22 November 2026): m1 and m1near, review-integ9d M1 / review-integ9c M4 (an update signed in the future is
-refused, of one finalized header the earliest-signed is taken; these two also undo m1roll's fix, which alone would
-pass their tests); m1roll, review-fix-updater3 M1 (an update that can be sent now ranks first, so one re-dated within
+refused, of one finalized header the earliest-signed is taken; m1near also undoes m1roll's fix, which alone would pass
+its tests; m1 too, so that it restores the old behaviour whole); m1roll, review-fix-updater3 M1 (an update that can be sent now ranks first, so one re-dated within
 the margin every round holds back only itself); u2, L-U2 (a round that cannot fetch the committees
 counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the chain reads again); u5, L-U5 (holds
 for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by its /64); u6, L-U6 (the bound tests
@@ -121,8 +122,19 @@ def main() -> int:
                 f.write(current.replace(old, new))
         cmd = cargo_test(args)
         print(f"mutant {sys.argv[1]}: {' '.join(cmd)}", flush=True)
-        # On an exception (Ctrl-C, or a signal above) `run` kills cargo before it is raised here.
-        return subprocess.run(cmd, cwd=os.path.join(ROOT, "lez")).returncode
+        # cargo in a session (and process group) of its own: on an exception (Ctrl-C, or a signal above) the group is
+        # killed, the test processes cargo started with it, before the sources are put back (killing cargo alone left
+        # a test binary running on with the mutated build: review-fix-updater3b).
+        proc = subprocess.Popen(cmd, cwd=os.path.join(ROOT, "lez"), start_new_session=True)
+        try:
+            return proc.wait()
+        except BaseException:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait()
+            raise
     except KeyboardInterrupt:
         return 128 + signal.SIGINT
     finally:
