@@ -227,7 +227,7 @@ step 4 - strands on v1.
 cd vault
 nice -n 19 forge build
 nice -n 19 forge test --match-path 'test/Migration*.t.sol' -vv
-# 15 passed: 8 in test/Migration.t.sol, 7 in test/MigrationFailsafe.t.sol (3 of them the guest-bug branch)
+# 16 passed: 8 in test/Migration.t.sol, 8 in test/MigrationFailsafe.t.sol (4 of them the guest-bug branch)
 
 # the whole suite, to show nothing else broke:
 nice -n 19 forge test --no-match-contract PrivacySuite
@@ -236,8 +236,8 @@ nice -n 19 forge test --no-match-contract PrivacySuite
 The `-vv` run of `test_migration_step6_noFunctionChangesVerifierOrImageIds` also prints the vault's external
 function list with each function's state mutability (the ABI check of §3).
 
-Measured on the build box, 21 November 2026: 15 passed, 0 failed; the whole suite (CI's `vault` job) 57 suites,
-595 passed, 0 failed.
+Measured on the build box, 21 November 2026: 16 passed, 0 failed; the whole suite (CI's `vault` job) 57 suites,
+596 passed, 0 failed.
 
 ## 7. What is not rehearsed here
 

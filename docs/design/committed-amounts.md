@@ -109,8 +109,9 @@ fails or yields another nullifier) and the nullifier is a function of the deposi
 
 ## The run that shows the tests cited here pass
 
-Measured on the Modal build box, 21 November 2026, branch `rfp-softs` at `8b0a967e` with this note's text only
-changed; nothing was sent to any network:
+Measured on the Modal build box, 21 November 2026, at the change that is `8b0a967e` here, before the branch was
+rebased onto stream A, with this note's text only changed; rerun at `0ba4faf8` on 22 November 2026 with the same
+results; nothing was sent to any network:
 
 | Command (from the directory named) | Result |
 |---|---|
