@@ -1196,11 +1196,12 @@ impl Chain {
     }
 }
 
-/// Where a reply's LEZ states came from: `lez_core` (read again and compared: how many reads, how many equal) or the
-/// chain service alone.
+/// Where a reply's LEZ states came from: `lez_core` (read again and compared: how many reads, how many equal, how many
+/// it answered nothing for: an account the zone does not have, which is not counted as equal) or the chain service
+/// alone.
 fn lez_read_via(inputs: &Value) -> Value {
     match inputs["lez"]["via"].as_str() {
-        Some(via) => json!({ "via": via, "reads": inputs["lez"]["reads"], "equal": inputs["lez"]["equal"] }),
+        Some(via) => json!({ "via": via, "reads": inputs["lez"]["reads"], "equal": inputs["lez"]["equal"], "unanswered": inputs["lez"]["unanswered"] }),
         None => json!({ "via": "the chain service (seqnet-chain)" }),
     }
 }

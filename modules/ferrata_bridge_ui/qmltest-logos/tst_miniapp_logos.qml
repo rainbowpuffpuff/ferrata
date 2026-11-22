@@ -338,11 +338,15 @@ Item {
                       60000, "the mint cap read back from token(cid, ETH): " + JSON.stringify(host.app.registry ? host.app.registry.tokens[0].lez : null));
             shot("27-registry-lez-cap-and-every-token");
             verify(host.app.registry.tokens.length >= 2, "the registry lists every token the vault registered: " + host.app.registry.tokens.length);
-            // Each token's LEZ side read again through lez_core on that path (not the chain service's word alone).
+            // Each token's LEZ side read again through lez_core on that path (not the chain service's word alone). ETH's
+            // states all answered and equal; a token LEZ has no state for (the second: not registered on LEZ in this run)
+            // gets no answer from lez_core for its token(cid, ·), which is not counted as equal: config(cid) and the root
+            // are compared, its gate is not.
             if (seqnet.env("SEQNET_LEZ_PARAMS") !== "") {
                 for (var k = 0; k < host.app.registry.tokens.length; k++) {
                     var via = host.app.registry.tokens[k].lez_read_via;
-                    verify(via && via.via === "lez_core" && via.reads >= 2 && via.equal === via.reads, "token " + k + ": " + JSON.stringify(via));
+                    verify(via && via.via === "lez_core" && via.reads >= 2 && via.equal >= 2 && via.equal + via.unanswered === via.reads, "token " + k + ": " + JSON.stringify(via));
+                    if (k === 0) verify(via.equal === via.reads && via.unanswered === 0, "ETH: every state answered and equal: " + JSON.stringify(via));
                 }
                 console.log("REGISTRY LEZ READS " + JSON.stringify(host.app.registry.tokens.map(function (t) { return t.lez_read_via; })));
             }

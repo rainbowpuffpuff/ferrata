@@ -178,34 +178,51 @@ pub(crate) fn configure(params: &Value, private0: Option<String>) -> Result<Valu
     Ok(summary)
 }
 
-/// The bridge program's actor state of `account` as `lez_core.get_account_public` answers it, the raw reply
-/// beside it.
-fn actor_state(account: &str, program: &str) -> Result<(String, u64, usize), String> {
+/// The bridge program's actor state of `account` as `lez_core.get_account_public` answers it (`None`: no answer), the
+/// milliseconds and how many actor states the account holds.
+fn actor_state(account: &str, program: &str) -> Result<(Option<String>, u64, usize), String> {
     let (reply, ms) = call("get_account_public", &json!([norm(account)]), READ_MS)?;
+    let (state, states) = parse_actor_state(&reply, program)?;
+    Ok((state, ms, states))
+}
+
+/// `get_account_public`'s reply read for the bridge program's state: `None` when `lez_core` answered nothing. It
+/// answers "" whenever its wallet FFI reports an error (lez_core_module.cpp `get_account_public`): for an account the
+/// zone does not have (`AccountNotFound`) and for a read that failed alike, so an empty reply is no value at all, and
+/// never counts as agreeing with the chain service's "absent".
+fn parse_actor_state(reply: &str, program: &str) -> Result<(Option<String>, usize), String> {
     if reply.trim().is_empty() {
-        // lez_core answers "" when the wallet FFI reports an error (the account read failed or is absent).
-        return Ok(("0x".into(), ms, 0));
+        return Ok((None, 0));
     }
-    let v: Value = serde_json::from_str(&reply).map_err(|e| format!("get_account_public: not JSON ({e}): {reply}"))?;
+    let v: Value = serde_json::from_str(reply).map_err(|e| format!("get_account_public: not JSON ({e}): {reply}"))?;
     let states = v["actor_states"].as_array().ok_or_else(|| format!("get_account_public: no actor_states: {reply}"))?;
     let p = norm(program);
     let data = states.iter().find(|s| s["program"].as_str().map(norm) == Some(p.clone())).and_then(|s| s["data"].as_str()).map(norm);
-    Ok((data.unwrap_or_else(|| "0x".into()), ms, states.len()))
+    Ok((Some(data.unwrap_or_else(|| "0x".into())), states.len()))
 }
 
-/// One bridge state read again through `lez_core`, compared with the chain service's: `lez_core`'s value, or
-/// the chain service's when `lez_core` could not answer.
-fn reread(what: &str, account: &str, program: &str, plain: &str) -> (String, Value) {
+/// One read's log entry and the value the module goes on with: `lez_core`'s when it answered (compared with the chain
+/// service's), the chain service's otherwise. An unanswered read (`answered: false`) and a failed call (`error`) are
+/// neither equal nor different: they are not counted as agreeing.
+fn read_entry(what: &str, account: &str, answer: Result<(Option<String>, u64, usize), String>, plain: &str) -> (String, Value) {
     let plain = norm(plain);
-    let (entry, value) = match actor_state(account, program) {
-        Ok((lez, ms, states)) => {
+    let bytes = |h: &str| (h.len() - 2) / 2;
+    match answer {
+        Ok((Some(lez), ms, states)) => {
             let equal = lez == plain;
-            (json!({ "kind": "read", "what": what, "account": norm(account), "via": "lez_core.get_account_public",
-                     "equal": equal, "bytes": (lez.len() - 2) / 2, "plain_bytes": (plain.len() - 2) / 2, "actor_states": states, "ms": ms }),
-             lez)
+            (lez.clone(), json!({ "kind": "read", "what": what, "account": norm(account), "via": "lez_core.get_account_public", "answered": true,
+                                  "equal": equal, "bytes": bytes(&lez), "plain_bytes": bytes(&plain), "actor_states": states, "ms": ms }))
         }
-        Err(e) => (json!({ "kind": "read", "what": what, "account": norm(account), "error": e, "fallback": "the chain service's value" }), plain),
-    };
+        Ok((None, ms, _)) => (plain.clone(), json!({ "kind": "read", "what": what, "account": norm(account), "via": "lez_core.get_account_public",
+            "answered": false, "equal": Value::Null, "plain_bytes": bytes(&plain), "ms": ms,
+            "note": "lez_core answered nothing (its wallet reports an absent account and a failed read alike): not compared; the chain service's value kept" })),
+        Err(e) => (plain, json!({ "kind": "read", "what": what, "account": norm(account), "error": e, "fallback": "the chain service's value" })),
+    }
+}
+
+/// One bridge state read again through `lez_core`, compared with the chain service's ([`read_entry`]).
+fn reread(what: &str, account: &str, program: &str, plain: &str) -> (String, Value) {
+    let (value, entry) = read_entry(what, account, actor_state(account, program), plain);
     log(entry.clone());
     (value, entry)
 }
@@ -258,10 +275,12 @@ pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&st
         }
     }
     let equal = reads.iter().filter(|r| r["equal"] == true).count();
+    let unanswered = reads.iter().filter(|r| r["answered"] == false).count();
     inputs["lez"] = json!({
         "via": "lez_core",
         "reads": reads.len(),
         "equal": equal,
+        "unanswered": unanswered,
         "detail": reads,
         "history": "the chain service's (lez_core's block queries answer only for a sequencer it runs itself)",
     });
@@ -411,6 +430,7 @@ pub(crate) fn report() -> Value {
             "program_bin_sha256": l.elf_sha256,
             "reads": reads.len(),
             "reads_equal": reads.iter().filter(|e| e["equal"] == true).count(),
+            "reads_unanswered": reads.iter().filter(|e| e["answered"] == false).count(),
             "reads_failed": reads.iter().filter(|e| !e["error"].is_null()).count(),
             "private_reads": privates.len(),
             "private_reads_equal": privates.iter().filter(|e| e["equal"] == true).count(),
@@ -484,6 +504,36 @@ mod tests {
         assert_eq!(i["lez"]["reads"], 3);
         assert_eq!(i["token_state"], "0x02");
         assert!(i["lez"]["detail"][1]["error"].as_str().unwrap().contains("lez_core"));
+    }
+
+    /// An empty `lez_core` reply (its wallet's error: an absent account or a failed read) is no answer: it is not
+    /// counted as agreeing with the chain service's "absent" (review: the second token's 17 empty reads were "equal").
+    #[test]
+    fn an_empty_lez_core_reply_is_no_answer_never_equal() {
+        let program = format!("0x{}", "22".repeat(32));
+        assert_eq!(parse_actor_state("", &program).unwrap(), (None, 0));
+        assert_eq!(parse_actor_state("  \n", &program).unwrap(), (None, 0));
+        let held = json!({ "actor_states": [{ "program": program.to_uppercase().replace("0X", "0x"), "data": "0xABCD" }] }).to_string();
+        assert_eq!(parse_actor_state(&held, &program).unwrap(), (Some("0xabcd".to_string()), 1));
+        let other = json!({ "actor_states": [{ "program": format!("0x{}", "99".repeat(32)), "data": "0x01" }] }).to_string();
+        assert_eq!(parse_actor_state(&other, &program).unwrap(), (Some("0x".to_string()), 1), "an account without the program's state");
+        assert!(parse_actor_state("not json", &program).is_err());
+        // Absent at the chain service, no answer from lez_core: not equal, not counted; the chain service's value kept.
+        let (v, e) = read_entry("token(cid, 0x59..)", "0xaa", Ok((None, 4, 0)), "0x");
+        assert_eq!((v.as_str(), &e["answered"], &e["equal"]), ("0x", &json!(false), &Value::Null));
+        // Both answered: compared.
+        let (v, e) = read_entry("config(cid)", "0xaa", Ok((Some("0xabcd".into()), 4, 1)), "0xABCD");
+        assert_eq!((v.as_str(), &e["equal"], &e["bytes"]), ("0xabcd", &json!(true), &json!(2)));
+        let (_, e) = read_entry("config(cid)", "0xaa", Ok((Some("0x".into()), 4, 1)), "0xabcd");
+        assert_eq!(e["equal"], false);
+        // A failed call: the chain service's value, the error said.
+        let (v, e) = read_entry("root(cid, 1)", "0xaa", Err("lez_core.get_account_public: timed out".into()), "0x01");
+        assert_eq!(v, "0x01");
+        assert!(e["equal"].is_null() && e["error"].as_str().unwrap().contains("timed out"));
+        // The totals a reply carries count the unanswered read apart.
+        let reads = [read_entry("a", "0x1", Ok((None, 1, 0)), "0x").1, read_entry("b", "0x2", Ok((Some("0x01".into()), 1, 1)), "0x01").1];
+        assert_eq!(reads.iter().filter(|r| r["equal"] == true).count(), 1);
+        assert_eq!(reads.iter().filter(|r| r["answered"] == false).count(), 1);
     }
 
     #[test]
