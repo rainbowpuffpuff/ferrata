@@ -21,7 +21,7 @@ summary: [`results/fix-attestor-2026-11-22/attestor-e2e-native/summary.md`](resu
 | What | Result |
 |---|---|
 | `attestor-e2e.sh` (24 checks: one added, a signed block 30 of another history refused) | **24 of 24**: each attestation's signed bytes (`encoded`) = the run's `att-<i>.json`, now after a first read that starts at the LEZ node's highest final block (`first_block` 30, `blocks_checked` 1); 3 of 4 = the proven input byte for byte; the refusals: a signed tip 31 its LEZ node does not hold, another block 30, a certificate of another key, another vault (both for the certificate, the read succeeding); the loop: 3 rounds, signed 30 once, unchanged twice, 3 `getBlock` requests |
-| `daemon_requests.py`'s attestor requests (12) | every expectation met (`attest` with `lez_dir` signs tip 30 with the run's signed bytes; the certificate refusal now after a read that succeeds) |
+| `daemon_requests.py`'s attestor requests (12) | every expectation met (`attest` with `lez_dir` signs tip 30 with the run's signed bytes; the certificate refusal now after a read that succeeds, and, since the second review's L4, expected with its `error` word for word: the same request with a read that refuses meets the verdict alone, not the expectation) |
 | The calls crate's tests | 3 of 3 (one added: without `state_file` a live `attest` is `invalid_request`, a silent LEZ node an `error`) |
 
 Not re-run: through the dev and the portable Logos Core (it needs the module's packages built with this code),

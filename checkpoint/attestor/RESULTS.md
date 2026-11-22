@@ -273,7 +273,8 @@ narrowed. All on the build box (`mrun`), measured:
 
 Not re-run at this point: `zone.sh`, `zone-bridge.sh`, `live-node.sh` (live nodes; `live-node.sh` now needs a LEZ
 node), the module's `attestor-e2e.sh` and `attestor-zone-live.sh` (they must now pass a LEZ node or a stand-in). §10.1
-re-ran `zone-bridge.sh` and `attestor-e2e.sh` after the next review.
+re-ran `zone-bridge.sh`, `return-leg.sh` and `attestor-e2e.sh` after the next review; §10.2 re-ran `devnet.sh` as the
+README now says.
 
 ### 10.1 The branch's own review (22 November): the scripts around the attestor, two untested guards, the Lows
 
@@ -289,7 +290,7 @@ without a state file, and undocumented operator steps. All on the build box (`mr
 |---|---|---|
 | L2: two guards no test covered | tests: a first read never roots at a sibling its LEZ node does not hold; a tip by a key outside `K` is passed over (a first read whose run starts there refuses) | `lez_check.rs` `l2_a_first_read_never_roots_at_a_sibling_the_lez_node_does_not_hold`, `l2_a_tip_inscribed_by_a_key_outside_k_is_passed_over`; the review's surviving mutants now fail 2 and 1 tests |
 | L5: 16 junk ids could stop a first read | the first read walks down every inscribed id (each asked once) | `l5_junk_ids_above_the_chain_never_stop_a_first_read` (28 junk ids, the LEZ node ahead of the LIB) |
-| L6: `write_atomic` used `<path>.tmp` with `File::create` | a temporary file of its own (process, time, counter), opened `create_new` | `files.rs` `l6_write_atomic_never_writes_through_a_planted_link`, `l6_two_writers_never_share_a_temporary_file` |
+| L6: `write_atomic` used `<path>.tmp` with `File::create` | a temporary file of its own (process, time, counter), opened `create_new` | the unique name: `files.rs` `l6_write_atomic_never_writes_through_a_planted_link`, `l6_two_writers_never_share_a_temporary_file`; `create_new` only since §10.2 (`l6_create_new_never_opens_what_is_at_the_temporary_name`) |
 | L3: keygen's mode and refusal untested; L7's order shown only in part | tests through the CLI | `files.rs` `l3_keygen_writes_an_owner_only_key_and_never_overwrites`, `l7_the_state_holds_the_tip_before_the_attestation_is_written` |
 | L4: the module's `attest` | a silent LEZ node is an `error`; `node` requires `state_file` (`is_node_fault`, shared with `round`) | calls crate `a_live_attest_keeps_a_state_and_a_silent_lez_node_is_an_error` (3 of 3) |
 | L1, L7, L8 | README: #1053 and the LIB filter; "Operating it" (the attestor's own LEZ node; a node that lost the signed tip stops it until the operator acts; a lost state file loses the guard; `getBlock` marked for removal upstream); §6: `live-node.sh`'s run cannot be repeated as recorded | |
@@ -347,6 +348,33 @@ vault: `submitCandidate` 375,269 gas, `finalizeAttested` 218,373, releases 420,5
 verifier and a replayed release with `NullifierAlreadyUsed()`; `ZoneBridgeRc3LezCheckedTest` 5 of 5; `verify` equal.
 The six zone-bridge suites together: 30 of 30.
 
+### 10.2 The second review (22 November): a machine path in a record, the Lows
+
+The second review found the fixes and re-runs of §10.1 as stated, and one Medium: a record of `zone-bridge-4`
+named this machine's absolute path (pubnet.py's traceback in `net/proxy.log`; `zone-bridge.sh` scrubbed only
+`logs/`). Its Lows: the README's `devnet.sh` command rewrote tracked records; L6's `create_new` was code, not a test;
+a refusal expectation of `daemon_requests.py` that a refusal of the read also met; text for the integrator
+(`docs/rows/fix-attestor.md`). On the build box (`mrun`) unless said, measured:
+
+| Finding | What changed | Shown by |
+|---|---|---|
+| M1: an absolute path in `e2e/runs/zone-bridge-4/net/proxy.log` | the line scrubbed in the commit that added the record; `scripts/scrub_records.py`: every file of a run scrubbed (text, at any depth) and checked (binary files and what archives hold, too), refused if a home directory, this machine's `spike/` or an agent's folder is left; `zone-bridge.sh` ends every stage but `build` and `verify` with it (a `records` stage does only that), `return-leg.sh` its hook; the worktree's paths become repository-relative, a scratch directory's `tmp/`; the three runs of §10.1 rewritten so (path prefixes only) | `scripts/test_scrub_records.py` (laptop): 28 checks, among them `zone-bridge.sh records` on a planted run holding the review's `net/proxy.log` line; 15 mutants of the helper and the stage, all killed, the review's cause (`logs/` only) among them; `zone-bridge.sh records` over `zone-bridge-3`, `-4`, `-rc3-2`: nothing left, nothing rewritten |
+| L1: the README's `devnet.sh` command rewrote `runs/devnet-n3` | it writes to `$TMPDIR/devnet-n3` (a replay; `runs/devnet-n3/` keeps its records) | in a copy: rc 0, no file outside `target/` and `fixtures/` changed; the six attestations sign the same bytes as `runs/devnet-n3`'s (`encoded` equal), and their `node` facts read `first_block` 202 (201 for `att-2-behind`) and `blocks_checked` 1, where the records read 1 and 202 (201), and `fork_digest` null (a field the records predate) |
+| L3: `create_new` untested | `write_atomic_via(path, tmp, bytes)`, the half of `write_atomic` that opens the temporary file; a failed open no longer removes what is at the name (not this call's file) | `files.rs` `l6_create_new_never_opens_what_is_at_the_temporary_name` (a link to a file, a dangling link and another writer's file at the exact name); the review's `write-atomic-no-create-new` fails 1 test, `cleanup-removes-foreign` 1 |
+| L4: `attestor_refuse_cert` met by a refusal of the read | the expectation includes the reply's `error`, word for word | natively: the 12 attestor requests met; the same request with an empty LEZ node, or without `lez_dir`: `refused`, the old expectation met, the new one missed |
+| N5: the recorded tip's signer guard untested (liveness only) | test | `lez_check.rs` `n5_the_signed_tip_is_not_signed_again_once_its_signer_left_k`; `recorded-tip-signer-unchecked` fails 1 test |
+| N1-N4 | the calls crate's `attest` doc (`state_file` once); the README's indexer `Block` fields (`bedrock_status`); what §10.1 re-ran; `zone-bridge.sh answers` (its header, and "What failed on the way") | |
+
+`cargo test -p ferrata-attestor --locked`: **33 passed** (`attestor.rs` 12, `files.rs` 5, `io.rs` 2, `lez_check.rs` 11,
+`withdrawals.rs` 3), and 33 with `cargo +1.88`; clippy `-D warnings` and rustfmt clean. Mutants, each on a copy:
+**25 of 25 fail at least one test**: the branch's 16 with the counts of §10.1, except `write-atomic-fixed-tmp` 3 and
+`signer-not-in-k-ok` 2 (a new test fails too); the second review's 8: `state-after-publish`, `lez-fault-refused`,
+`keygen-mode-0644`, `write-atomic-no-create-new`, `recorded-tip-signer-unchecked`, `state-channel-unchecked` 1 each,
+`cert-unchecked` and `own-key-not-in-k-ok` 2 each; and `cleanup-removes-foreign` 1. The module natively: the calls
+crate 3 of 3 (none skipped), `attestor-e2e.sh` 24 of 24. Not re-run: the live stages (`zone-bridge.sh zone`,
+`return-leg.sh`, `attestor-zone-live.sh`) and the module through Logos Core; their record check is the helper's,
+shown by its test.
+
 ## What failed on the way
 
 - The recorded `realblocks/out/real-lab-186-202.input` no longer decodes (`BadLength { what: "suffix" }`): it
@@ -364,7 +392,9 @@ The six zone-bridge suites together: 30 of 30.
   `libpcsclite1` but not its headers). The zone stage's own dump of the node's answers read `lib_slot` at the top of
   `/cryptarchia/info`, where the node nests it (`cryptarchia_info.lib_slot`), and saved no window; the answers are
   the ones attestor 0 fetched and checked in its final round (`zone-bridge.sh answers`), which the stage now packs
-  itself.
+  itself. (Since §10.1 a round reads only from its signed tip's slot, so an attestor's answers no longer span the
+  run: `zone-bridge.sh answers` now only re-packs what the zone stage saved and recovers nothing after a failed zone
+  stage.)
 - §10.1: the first start of `zone-bridge-3` lost its local `mrun` client at ten minutes (a tool's default limit for a
   background command); the box kept running it until its container was recycled, and nothing came back (records made
   on the box return only through the client). The second start ran with its client kept for two hours; its container

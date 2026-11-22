@@ -18,6 +18,8 @@
 #             while the sequencers still run (each attestor asks its own sequencer's LEZ node, which must be up), all
 #             on one tip at or above T1; the sequencers stopped; the node's answers saved from the first slot read to
 #             its LIB
+#   answers   re-packs the answers the zone stage saved (work/node) into zone/node-answers.tar.zst; it recovers
+#             nothing after a failed zone stage (an attestor's round reads only from its signed tip's slot)
 #   input     realblocks-crown over the node's final blocks T0+1..=T (and the rotation, if any) with all attestations
 #             but one (3 of 4, n = 4, t = 3; after a rotation 4 of 5, t = 4); all n accepted, t - 1 refused (natively
 #             and in r0vm); r0vm executor run
@@ -688,7 +690,7 @@ set +e
     fixture) stage_fixture ;;
     verify) stage_verify ;;
     records) ;;
-    *) sed -n '2,33p' "${BASH_SOURCE[0]}"; exit 2 ;;
+    *) sed -n '2,35p' "${BASH_SOURCE[0]}"; exit 2 ;;
   esac )
 rc=$?
 set -e

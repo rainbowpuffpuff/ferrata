@@ -68,9 +68,10 @@ of recorded runs that saved no LEZ answers (it assumes what the attestor checks;
 From `checkpoint/`, on the build box (`spike/modal-build/mrun`):
 
 ```sh
-cargo +1.88 test -p ferrata-attestor                      # 31 tests (the lab node's real answers, a node stub)
+cargo +1.88 test -p ferrata-attestor                      # 33 tests (the lab node's real answers, a node stub)
 cargo +1.93.0 build --release -p host -p ferrata-attestor  # host builds the guests
-bash attestor/devnet.sh <lab node answers> attestor/runs/devnet-n3   # three attestors, t of n, refusals
+bash attestor/devnet.sh <lab node answers> "$TMPDIR/devnet-n3"   # three attestors, t of n, refusals (a replay:
+                                                           # outputs to the second directory, records untouched)
 bash attestor/prove.sh                                     # executor, succinct proof, identity_p254
 LEZ=<lez rpc> bash attestor/live-node.sh <bundle> <gen> attestor/runs/live-node   # a running copy of the lab node
 bash attestor/zone.sh <bundle> attestor/runs/zone 300      # a real four-sequencer LEZ zone (no Docker)
@@ -101,8 +102,8 @@ python3 -I scripts/test_scrub_records.py   # what every zone-bridge.sh stage but
 - **An upstream interface at risk.** The attestor asks the sequencer's JSON-RPC `getBlock`, which LEZ marks for
   removal ("TODO: These functions should be removed after wallet starts using indexer", above it in
   `lez/sequencer/service/rpc/src/lib.rs`, v0.4.0-rc3 line 59). When it goes, the attestor must ask the
-  indexer's `getBlockById`, which serves the block as JSON fields (`indexer_service_protocol::Block`: header,
-  body, status), not as base64 `borsh(Block)`: the attestor would encode it back to borsh before comparing it
+  indexer's `getBlockById`, which serves the block as JSON fields (`indexer_service_protocol::Block`: `header`,
+  `body`, `bedrock_status`), not as base64 `borsh(Block)`: the attestor would encode it back to borsh before comparing it
   with the inscribed bytes (not built here).
 
 ## Several sequencers
