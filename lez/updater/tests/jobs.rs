@@ -82,9 +82,11 @@ fn jobs_another_party_opens_and_leaves_are_finished_not_paid_for_again() {
         lines.join("\n"),
         u.carried_jobs()
     );
+    // The figures EVIDENCE row 200 gives (9c L-U7: they were printed, and only weaker bounds asserted).
     assert!(end > start, "the instance advances");
-    assert!(updates >= 2, "{updates}");
-    assert!(millers <= updates as usize + 1, "a Miller paid for a job left behind: {millers} for {updates} updates");
+    assert_eq!(updates, 5, "{updates}");
+    assert_eq!(millers, updates as usize, "a Miller paid for a job left behind: {millers} for {updates} updates");
+    assert_eq!(finishes, updates as usize);
     assert_eq!(
         mine.iter().filter(|(_, _, o)| !o.applied && !o.rejected).count(),
         0,

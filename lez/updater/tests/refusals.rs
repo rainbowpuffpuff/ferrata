@@ -284,7 +284,7 @@ fn the_breaker_bounds_refusals_when_every_round_brings_a_new_job() {
     );
     // Three in a row, a pause of 8 rounds, one tried, a pause of 16, one tried, a pause of 32: five in 40 rounds.
     assert_eq!(sent, n, "nothing applied: every Open needs more gas");
-    assert!(n >= BREAKER_AFTER as usize && n <= BREAKER_AFTER as usize + 2, "{n} refusals");
+    assert_eq!(n, BREAKER_AFTER as usize + 2, "{n} refusals");
     assert!(paused >= 10, "{paused}");
     assert_ne!(status, "ok");
     assert!(why.iter().any(|w| w.contains("sending paused")), "{why:?}");
@@ -626,7 +626,7 @@ fn a_failed_read_after_a_lost_race_is_read_again() {
         u.breaker,
         u.metrics.failing_sends
     );
-    assert!(races >= 4, "{races}");
+    assert_eq!(races, 9, "{races}");
     assert_eq!(u.metrics.refusals.get(&("program", "race")), Some(&(races as u64)));
     assert_eq!(u.metrics.refusals.len(), 1, "{:?}", u.metrics.refusals);
     assert_eq!((u.breaker.strikes, u.breaker.trips, u.breaker.paused_until), (0, 0, 0));
