@@ -14,8 +14,10 @@
 #             registration, imports, Claim, ClaimPrivately and both burns, private ones proven by LEZ's wallet);
 #             (with ZB_ROTATE=1, before session B, a rotation by the zone's committee: a fifth sequencer's key staked
 #             on LEZ with `sequencer_service stake`, the committee's ChannelConfigOp applied by Bedrock, the fifth
-#             sequencer and its attestor started, ZB_ROTATE_RUN_S (120) s); the sequencers stopped, the final tier
-#             attested by every attestor; the node's answers saved
+#             sequencer and its attestor started, ZB_ROTATE_RUN_S (120) s); the final tier attested by every attestor
+#             while the sequencers still run (each attestor asks its own sequencer's LEZ node, which must be up), all
+#             on one tip at or above T1; the sequencers stopped; the node's answers saved from the first slot read to
+#             its LIB
 #   input     realblocks-crown over the node's final blocks T0+1..=T (and the rotation, if any) with all attestations
 #             but one (3 of 4, n = 4, t = 3; after a rotation 4 of 5, t = 4); all n accepted, t - 1 refused (natively
 #             and in r0vm); r0vm executor run
@@ -225,9 +227,10 @@ attest_round() { # i out: one attestation of the node's final tier by attestor i
   return "$rc"
 }
 
-attest_loop() { # i: a round every ROUND_S s while the zone runs; each new tip kept
-  local i="$1" A="$W/att-$i" n=0 tip last=""
-  while :; do
+attest_loop() { # i: a round every ROUND_S s while the zone runs; each new tip kept; SIGTERM ends it after the round in hand
+  local i="$1" A="$W/att-$i" n=0 tip last="" stop=""
+  trap 'stop=1' TERM
+  while [ -z "$stop" ]; do
     n=$((n + 1))
     if attest_round "$i" "$A/round.json"; then
       tip="$(jq -r .tip_id "$A/round.json")"
@@ -236,7 +239,48 @@ attest_loop() { # i: a round every ROUND_S s while the zone runs; each new tip k
     else
       echo -e "$(date -u +%FT%TZ)\t$n\trefused\t-\t$(tail -n 1 "$A/attest.log" | tr '\t' ' ' | cut -c1-200)" >> "$A/rounds.tsv"
     fi
-    sleep "$ROUND_S"
+    [ -n "$stop" ] && break
+    sleep "$ROUND_S" & wait $! || true
+  done
+}
+
+final_rounds() { # n t1: every attestor's round side by side (each against its own sequencer's LEZ node, the zone up),
+                 # again until all n sign one tip at or above t1: realblocks-crown takes attestations of one T
+  local n="$1" t1="$2" try i rc tips pids=()
+  for try in $(seq 1 60); do
+    for i in $(seq 0 $(( n - 1 ))); do
+      rm -f "$W/att-$i/final.json"; attest_round "$i" "$W/att-$i/final.json" & pids[$i]=$!
+    done
+    rc=0; for i in $(seq 0 $(( n - 1 ))); do wait "${pids[$i]}" || rc=1; done
+    for i in $(seq 0 $(( n - 1 ))); do
+      if [ -s "$W/att-$i/final.json" ]; then
+        echo -e "$(date -u +%FT%TZ)\tfinal-$try\tsigned\t$(jq -r .tip_id "$W/att-$i/final.json")\t$(jq -r .tip_hash "$W/att-$i/final.json")\t$(jq -r .node.lib_slot "$W/att-$i/final.json")" >> "$W/att-$i/rounds.tsv"
+      else
+        echo -e "$(date -u +%FT%TZ)\tfinal-$try\trefused\t-\t$(tail -n 1 "$W/att-$i/attest.log" | tr '\t' ' ' | cut -c1-200)" >> "$W/att-$i/rounds.tsv"
+      fi
+    done
+    tips="$(for i in $(seq 0 $(( n - 1 ))); do jq -r '"\(.tip_id) \(.tip_hash)"' "$W/att-$i/final.json" 2>/dev/null || echo none; done | sort -u)"
+    log "final round $try: tips signed $(echo "$tips" | awk '{print $1}' | tr '\n' ' ')(T1 = $t1, heights $(heights), lib $(lib_slot))"
+    if [ "$rc" = 0 ] && [ "$(echo "$tips" | wc -l)" = 1 ] && [ "${tips%% *}" != none ] && [ "${tips%% *}" -ge "$t1" ]; then return 0; fi
+    sleep 10
+  done
+  for i in $(seq 0 $(( n - 1 ))); do tail -n 2 "$W/att-$i/attest.log" | scrub; done
+  die "the attestors did not sign one tip at or above T1 = $t1 in 60 rounds"
+}
+
+save_answers() { # the node's answers from FROM to its LIB, as zone.sh reads them, into $W/node: the checkpoint's input is
+                 # built from these alone (an attestor's round reads the node only from the slot of the tip it signed last)
+  local d="$W/node" lib from to
+  rm -rf "$d"; mkdir -p "$d/blocks"
+  curl -fsS -m 10 -o "$d/info.json" "$API/cryptarchia/info" || die "GET /cryptarchia/info"
+  curl -fsS -m 10 -o "$d/channel.json" "$API/channel/$CHANNEL" || die "GET /channel"
+  lib="$(jq -r '.cryptarchia_info.lib_slot // .lib_slot' "$d/info.json")"
+  [[ "$lib" =~ ^[0-9]+$ ]] || die "no lib_slot in the node's /cryptarchia/info"
+  from="$FROM"
+  while [ "$from" -le "$lib" ]; do
+    to=$(( from + 499 )); [ "$to" -gt "$lib" ] && to="$lib"
+    curl -fsS -m 60 -o "$d/blocks/$from-$to.json" "$API/cryptarchia/blocks?slot_from=$from&slot_to=$to" || die "GET blocks $from..=$to"
+    from=$(( to + 1 ))
   done
 }
 
@@ -393,22 +437,25 @@ stage_zone() {
   "$DRV" export "${D[@]}" --out "$W/export" > "$W/logs/export.log" 2>&1 || log "export failed ($?)"
   local NS; NS="$(cat "$W/nseq")"
 
-  # -- the sequencers stop; the node's final tier settles; every attestor signs it
-  sleep 30
-  for p in "${LOOP_PID[@]}"; do kill "$p" 2>/dev/null || true; done; LOOP_PID=()
+  # -- the final tier, signed while the sequencers still run: each attestor asks its own sequencer's LEZ node, and a
+  #    stopped node answers nothing (nor finalizes more blocks). The loops end after the round in hand; then every
+  #    attestor's round runs side by side, again until all sign one tip at or above T1; then the sequencers stop.
+  local T1; T1="$(jq -r .tipT1.id "$W/session-b.json")"
+  for p in "${LOOP_PID[@]}"; do kill -TERM "$p" 2>/dev/null || true; done
+  for p in "${LOOP_PID[@]}"; do wait "$p" 2>/dev/null || true; done; LOOP_PID=()
+  final_rounds "$NS" "$T1"
+  local vargs=()
+  for i in $(seq 0 $(( NS - 1 ))); do
+    tail -n 1 "$W/att-$i/attest.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
+    vargs+=(--att "$W/att-$i/final.json")
+  done
+  "$ATT" verify --deployment "$W/deployment.json" "${vargs[@]}" | scrub | tee -a "$RUN/logs/zone-bridge.log"
   for i in $(seq 0 $(( NS - 1 ))); do stop_pid "${SEQ_PID[$i]}" "seq-$i"; done; SEQ_PID=()
   log "sequencers stopped; waiting for the node's LIB to pass the channel's tip"
   local tip_slot lib=""
   tip_slot="$(curl -fsS -m 5 "$API/channel/$CHANNEL" | jq -r .tip_slot)"
   for i in $(seq 1 120); do lib="$(lib_slot)"; [ -n "$lib" ] && [ "$lib" -ge "$tip_slot" ] && break; sleep 2; done
   log "channel tip slot $tip_slot, lib $lib"
-  local vargs=()
-  for i in $(seq 0 $(( NS - 1 ))); do
-    attest_round "$i" "$W/att-$i/final.json" || { tail -n 5 "$W/att-$i/attest.log" | scrub; die "attestor $i: final round"; }
-    tail -n 1 "$W/att-$i/attest.log" | scrub | tee -a "$RUN/logs/zone-bridge.log"
-    vargs+=(--att "$W/att-$i/final.json")
-  done
-  "$ATT" verify --deployment "$W/deployment.json" "${vargs[@]}" | scrub | tee -a "$RUN/logs/zone-bridge.log"
   for i in $(seq 0 $(( NS - 1 ))); do
     cp "$W/att-$i/final.json" "$RUN/zone/attestor-$i/final.json"; cp "$W/att-$i/rounds.tsv" "$RUN/zone/attestor-$i/rounds.tsv"
     jq '{tip_id, tip_hash, key_set_hash, node}' "$W/att-$i/final.json" > /dev/null
@@ -416,8 +463,9 @@ stage_zone() {
     ls "$W/att-$i/rounds" > "$RUN/zone/attestor-$i/tips-signed.txt"
   done
 
-  # -- the node's answers (the checkpoint's input is built from these alone): those attestor 0 fetched and checked in
-  #    its final round (attest --save), after the sequencers stopped and the LIB passed the channel's tip
+  # -- the node's answers (the checkpoint's input is built from these alone): read from the first slot the attestors
+  #    read to the node's LIB, after the sequencers stopped and the LIB passed the channel's tip
+  save_answers
   pack_answers
   [ -d "$W/export" ] && tar -C "$W" -cf - export | zstd -q -T0 -19 -o "$RUN/lez/session-b/driver-export.tar.zst" -f
   cp "$W/phases.txt" "$RUN/zone/phases.txt"
@@ -430,13 +478,12 @@ scrub_logs() { # forge's and the stages' logs under $RUN/logs name this machine'
   find "$RUN/logs" -type f -name '*.log' -exec sed -i -e "s#$W/#work/#g" -e "s#$T/#tmp/#g" -e "s#$SPIKE/#spike/#g" -e "s#$HOME/#~/#g" {} +
 }
 
-pack_answers() { # $W/att-0/answers -> $RUN/zone/node-answers.tar.zst (as node/: info.json, channel.json, blocks/)
-  local A="$W/att-0/answers" lib
-  [ -s "$A/info.json" ] && [ -s "$A/channel.json" ] && ls "$A"/blocks/*.json > /dev/null 2>&1 || die "no saved answers in $A"
-  rm -rf "$W/node"; cp -r "$A" "$W/node"
+pack_answers() { # $W/node (save_answers) -> $RUN/zone/node-answers.tar.zst (as node/: info.json, channel.json, blocks/)
+  local lib
+  [ -s "$W/node/info.json" ] && [ -s "$W/node/channel.json" ] && ls "$W"/node/blocks/*.json > /dev/null 2>&1 || die "no saved answers in $W/node"
   tar -C "$W" --sort=name --owner=0 --group=0 --numeric-owner --mtime=@0 -cf - node | zstd -q -T0 -19 -o "$RUN/zone/node-answers.tar.zst" -f
   lib="$(sed -n 's/.*"lib_slot":\([0-9]*\).*/\1/p' "$W/node/info.json")"
-  log "node answers (attestor 0's final round): slots from $(cat "$W/slot-from.txt") to the LIB $lib, $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes ($(stat -c %s "$RUN/zone/node-answers.tar.zst") compressed)"
+  log "node answers (read after the sequencers stopped): slots from $(cat "$W/slot-from.txt") to the LIB $lib, $(ls "$W/node/blocks" | wc -l) windows, $(cat "$W"/node/blocks/*.json | wc -c) bytes ($(stat -c %s "$RUN/zone/node-answers.tar.zst") compressed)"
   cp "$W/node/channel.json" "$RUN/zone/channel-end.json"; cp "$W/node/info.json" "$RUN/zone/info-end.json"
 }
 

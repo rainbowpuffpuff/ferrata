@@ -116,7 +116,9 @@ the run: the chain waits out its turn and goes on, and the other three attestors
 on a local anvil over the zone's four keys (nMin 4, tMin 3) taking two deposits, crown-driver's session B on the
 zone (pairing, registration, imports, a public and a private claim, a public and a private burn; the private ones
 proven by LEZ's wallet; the transactions sent to one sequencer and included by whichever held the turn), an
-attestor beside each sequencer signing the rising final tip while the zone ran and the last one after it stopped;
+attestor beside each sequencer signing the rising final tip while the zone ran and the last one after it stopped (since
+the LEZ check, §10, each attestor asks its own sequencer's LEZ node, so the script takes the last round while the
+sequencers still run, every attestor on one tip at or above session B's T1, and reads the node's answers itself);
 `realblocks-crown --att` puts three of the four attestations into the checkpoint over the zone's blocks 35..=116,
 `checkpoint_b` proves it on the CPU, and the vault accepts it, its burn root and both burns' releases. With
 `ZB_ROTATE=1` ([`e2e/runs/zone-bridge-2/`](../../e2e/runs/zone-bridge-2/), [RESULTS.md](RESULTS.md) §9) a fifth key is
