@@ -594,6 +594,17 @@ of the crown run's 6 programs equal its records and the bridge equal to B1's own
 `scripts/test_image_ids.py` (6 of 6) and `scripts/verify-sepolia.py` with its RPC stubbed out on crown-live-3 and -4
 (the four checks that need no chain pass, the image ids among them; the nine others need a Sepolia RPC).
 
+**Eighteenth pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-attest-integration` (stream B, rows
+192–197; merged as a copy whose fifteen newest commits were rewritten in one file only, a test comment; conflicts in
+`.github/workflows/ci.yml` and `lez/ATTEST-CLI.md`; B's CI job renamed `modules-resolve`, `macos.yml` having a job
+`modules`), on the build box: the monitor's tests (`monitor/attest`, 28 of 28 and 4 unit tests); the harness's
+`stall` test, 1 of 1, its output every line of `lez/results/r7-stall.txt` but the fixture's path and the run's time,
+the fixture it writes byte-identical; lez/RESULTS.md §8's clippy gate clean, its rustfmt rule after `stall.rs` was
+formatted; CI's new `modules-resolve` job's commands (`scripts/ci/modules-resolve.sh`: 5 of 5 modules resolve with
+their locks; `cli`'s library checked without `lez-wallet` on Rust 1.98.1); `ferrata_attest_module`'s calls crate 22 of
+22. On the laptop: `links` and its steps, `idl`, `scripts/test_image_ids.py`. Not rerun here: the sequencer runs of
+`cli/tests/attest-seq.sh` (r4, rf1, r6) and SPEL's generator, which B's third review reran.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
