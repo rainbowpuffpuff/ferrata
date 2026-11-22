@@ -104,9 +104,7 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    fork version), so a source can serve a real update, or another real update of the same finalized header with more
    signers, re-dated to a later slot of its period, whose `Open` window has not opened. Re-dated more than 60 s past
    the chain's clock it was refused in item 4. Within that margin it is not refused (a few seconds of clock skew make
-   an honest update look the same), but it ranks after every update that can be sent: a source re-dating so, even
-   again every round, holds back only an update no other source serves, until another source serves it or a later
-   one, and meanwhile the instance advances to the furthest update the other sources serve. (Before
+   an honest update look the same), but it ranks after every update that can be sent: a source re-dating so, even again every round, holds back only an update no other source serves, and meanwhile the instance advances to the furthest update the other sources serve, but for one case not handled (below, "Not built, not tested"). (Before
    review-fix-updater3 M1 such an update ranked first when it adopted the next committee, and every round waited for
    its window, so that nothing was sent until the period ended: 24.2 h of chain time in the review's run, a period
    being about 27 h.) The comparison is the program's own start check, exact: a tolerance would let a source re-date
@@ -442,9 +440,8 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   kept a source serving the newest update each slot waiting for its window. A clock behind by less, but by more than
   the second or so between a slot's start and its update being served, ranks the newest honest update after an older
   one that can be sent (item 6): the older may be applied first (one more job and its fees) where the updater used to
-  wait for the newest. A source re-dating within the 60 s, alone in serving the newest finalized header, holds
-  it back until another source serves it or a later one, and is not demoted (`/health` names the instance not moving
-  once that lasts the stall alarm's rounds). Tested on the in-process chain with its clock set
+  wait for the newest. A source re-dating within the 60 s, alone in serving the newest finalized header, holds it back until another source serves it or a later one, and is not demoted (`/health` names the instance not moving once that lasts the stall alarm's rounds).
+- One lying light-client source can stall this updater for good: a source that re-dates a real update adopting the next committee to slots that have started (its `Open` window open, so it ranks first), a new slot each round, chosen with the updater's deferral tag (computed from the updater's name and payer account, both public) so that the updater defers that update's `Open` every round, holds every update back while the store lacks its next committee, without end and without demotion, until the operator removes or replaces that source; `/health` raises the stall alarm (`degraded`, then `down`). Measured: the next committee never adopted in 113 rounds after the rotation, past the period's end (review-fix-updater3b M1); `min_agreeing = 2` with a `headers` source does not stop it (the copy's finalized header is canonical; derived, not tested). A fix is in progress. The operator's remedy: when `/health` reports no progress while the sources serve updates past the instance, remove or replace the source (the journal and the per-source metrics show which one served the update that was deferred every round); another updater whose sources exclude it is not held. Tested on the in-process chain with its clock set
   (`HarnessLedger::now`), not on a sequencer.
 - The bound tests' peak-RSS checks need `VmHWM` in `/proc/self/status` (and `/proc/self/clear_refs` to reset it); the
   build box's gVisor reports neither, so there the byte counts are the check.
