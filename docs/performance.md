@@ -374,7 +374,7 @@ over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDG
 ### P.2 Additional LEZ verification and its amortised cost per deposit
 
 The root import is the only additional verification (the claim needs no Ethereum proof of its own). **Its cost does
-not depend on how many deposits it covers**, measured on this tree's bridge program (in-process harness,
+not depend on how many deposits it covers**, measured on the deployed bridge program (`0xccde6171…`, before milestone B1; in-process harness,
 [`perf-state.md`](../lez/results/perf-state.md) §4a, `bash bench/perf/state.sh`):
 
 | import | leaves it covers | newly covered | execution gas | storage gas | execution gas per newly covered deposit |
@@ -393,7 +393,7 @@ The same import in other settings:
 | under a Gloas record, with the header | 266,879 | 2,612 | in-process harness |
 | live sequencer, stand-in beacon chain | 232,278 | 2,460 | live sequencer |
 | Sepolia's real state: the live vault, one leaf, capture 1 (the frozen program) | 426,479 | 6,646 | live sequencer ([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)) |
-| Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip `crown-live-3`) | 432,182; 432,182 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)) |
+| Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (the deployed program, the live round trip `crown-live-3`) | 432,182; 432,182 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)) |
 | the same in the first live run (`integration5`'s program, `crown-live-1`) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
 **Amortised per deposit at the recommended cadence** (*derived* from the measured figures: one import an hour while
@@ -461,7 +461,7 @@ verifier.
 
 Declared minimum: 16 GB and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB. The release's succinct proof needs the holder's burn
 secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
-([`bridge.md`](design/bridge.md) §12.2, §12.3). **This tree's bridge program** (image `0xccde6171…`), padded, at a
+([`bridge.md`](design/bridge.md) §12.2, §12.3). **The deployed bridge program** (image `0xccde6171…`, before milestone B1), padded, at a
 mid-range laptop's shape (8 CPUs, 16 GiB hard) and at 16 CPUs: private claim **1,093.0 s** (941.1 and 1,245.0 s) and
 **639.2 s**, private burn **932.8 s** (820.9 and 1,044.7 s) and **534.5 s**, r0vm peak **9.19 GiB**, each transaction
 settled with its receipt verified ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)). **Gaps:** a run on a real

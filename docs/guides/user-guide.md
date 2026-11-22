@@ -213,7 +213,7 @@ a copy cannot block it. The wallet advances `i` on every published burn, even a 
 never repeats.
 
 **Public:** token, denomination, time, the note; for a private holding the holder appears as an alias.
-**Hidden:** you and your recipient. **Measured** (in-process harness, this tree's program): a private burn
+**Hidden:** you and your recipient. **Measured** (in-process harness, the deployed program): a private burn
 519,678 execution gas and 224,063 storage gas, 25,679 user cycles to prove; a public burn 166,477; the private
 burn of the earlier image proven on one L4 in 12.4 s ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md)
 §1, §7), the merged program's on a cloud CPU in 336.0 s with sending, in the crown rehearsal.

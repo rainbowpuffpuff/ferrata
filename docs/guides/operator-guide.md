@@ -238,7 +238,7 @@ response to a particular deposit ([`bridge.md`](../design/bridge.md) §5.4).
 
 | Measured | Execution gas | Storage gas |
 |---|---:|---:|
-| `ImportRoot`, 8 leaves, synthetic vault storage (in-process harness, this tree's program) | 236,224 | 2,025 |
+| `ImportRoot`, 8 leaves, synthetic vault storage (in-process harness, the deployed program) | 236,224 | 2,025 |
 | on the v5 vault's own storage, 3 and 6 leaves | 282,103; 282,881 | — |
 | under a Gloas record, with the block's RLP header (2 leaves) | 266,879 | 2,612 |
 | on a live LEZ sequencer, stand-in beacon chain | 232,278 | 2,460 |

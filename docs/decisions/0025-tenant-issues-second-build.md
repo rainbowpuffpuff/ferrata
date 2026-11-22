@@ -1,7 +1,7 @@
 # ADR 0025: The two tenant issues of 18 November are fixed in a second build of the bridge program, not by redeploying now
 
 - **Date:** 18 November 2026
-- **Status:** accepted; the fix built and tested, not deployed
+- **Status:** accepted; the fix built and tested, the bridge program itself since milestone B1, not deployed
 - **Requirements:** RFP-022 F.16, Sec.3
 
 ## Context
@@ -15,8 +15,8 @@ No theft and no double mint.
 
 1. Redeploy the program at once (every configuration and the live runs would move). *Reconstructed for contrast* (not
    recorded as an option at the time).
-2. Key nullifier and holder accounts by the configuration in a second build (`lez/guests/bridge-next`), tested,
-   deployed with milestone B1; document the issue in the trust document meanwhile.
+2. Key nullifier and holder accounts by the configuration in a second build (`lez/guests/bridge-next`, until milestone
+   B1 made it the program), tested, deployed with milestone B1; document the issue in the trust document meanwhile.
 
 ## Decision
 

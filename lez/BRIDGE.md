@@ -340,7 +340,7 @@ authority can still freeze in it; newer records refill exactly and end freezes; 
 nothing; a record an hour ahead of the block is refused by LEZ unless the block is stamped that far
 ahead too; with no newer record a year of LEZ blocks changes nothing; Gloas records with and without
 the right header; a slot without a record. A `Tick` costs 80,628 execution gas at a configuration
-and 95,555 at a token, a `Freeze` 95,928 to 148,861 (this tree's program, `results/bridge-time.md` and
+and 95,555 at a token, a `Freeze` 95,928 to 148,861 (the deployed program, `results/bridge-time.md` and
 `results/bridge-controls.md`; the time-fix branch alone measured 76,899, 94,979 and 93,524 to 104,274); a `Tick` refused for a record ahead of its block
 is charged LEZ's whole gas limit, as any uncoded failure is. The real crossing on Sepolia and every run recorded
 before this change used the earlier program (its caller time); `BRIDGE-RESULTS.md` §12 has the image
