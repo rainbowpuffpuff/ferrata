@@ -607,6 +607,15 @@ their locks; `cli`'s library checked without `lez-wallet` on Rust 1.98.1); `ferr
 22. On the laptop: `links` and its steps, `idl`, `scripts/test_image_ids.py`. Not rerun here: the sequencer runs of
 `cli/tests/attest-seq.sh` (r4, rf1, r6) and SPEL's generator, which B's third review reran.
 
+**Nineteenth pass (branch `integration9`, 22 Nov 2026).** The merge of `rfp-logos-core-eth` (stream F, rows 198–199;
+conflicts in `e2e/seqnet/drive.sh` and `run.sh`, both streams' modes kept), then F's code against milestone B1 (two
+read sites given the configuration id), on the build box: CI's `vault` (613 passed in 61 suites, F's
+`LogosSendStack.s.sol` among the scripts), `roundtrip` and `cli/tests/e2e.sh` passed; `cli`'s library 17 of 17 and,
+without default features, 19 of 19; the wallet 4 of 4; `seqnet-chain`'s tests 2 of 2; the bridge module's native tests
+40 of 40; CI's `modules-resolve` commands (5 of 5 modules; `cli` without `lez-wallet`). On the laptop: `links` and its
+steps, `idl`, `scripts/test_image_ids.py`. Not rerun here: the send-stack runs and the seqnet `logoseth` run (Nix and a
+zone; F's third review reran both) and the mini-app's Qt test (no Qt on the box).
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
