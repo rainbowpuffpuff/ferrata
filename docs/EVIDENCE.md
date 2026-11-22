@@ -499,6 +499,15 @@ bridge workspace 64 passed (`ferrata-disclose` 5), its clippy `-D warnings` (`RI
 `bridge/scripts/check.sh` runs it) and fmt clean; the web depositor 16 groups, 97 checks. Not re-run: `test` (the
 root workspace, untouched by the merge) and `admin`.
 
+**Thirteenth pass (branch `integration9`, 22 Nov 2026).** Public main at `42b14ca4` (the RISC Zero advisory, row 154)
+merged into `integration9` without a textual conflict; stream I's rows renumbered 155–159; the counts recomputed from
+the rows (hard: RFP-021 25, 29, 2, 3; RFP-022 24, 40, 2, 2; soft: RFP-021 5 shown, RFP-022 1 shown and 4 in part).
+No crate's code changed since the twelfth pass but `ferrata_updater_module`'s staging and lockfile, which had stopped
+its build (the harness's two new wire crates; `rpcurl.rs`, which the updater compiles in by path since 18 November):
+the module built with Nix on the laptop and loaded in a headless Logos Core, its four calls meeting their expectations
+([`modules/RESULTS.md`](../modules/RESULTS.md), 22 November). `links` (66 files, 1,930 links, 0 broken) and `idl` on
+the laptop; the other jobs' inputs are unchanged since the twelfth pass.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |

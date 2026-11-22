@@ -1,12 +1,40 @@
 # Logos modules: results
 
-Runs, newest first: Ferrata's Ethereum transactions through Logos Core's send stack (14 November), the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
+Runs, newest first: the updater module rebuilt and loaded after its staging was brought up to date (22 November), Ferrata's Ethereum transactions through Logos Core's send stack (14 November), the six modules on the final tree (13 November, after the last merge), Ethereum reads through Logos Core's own `eth_rpc_module` (13 November), the updater module with its sequencer backend, on a running LEZ sequencer inside a headless
 Logos Core (13 November), the relayer as the sixth module (13 November: root imports in `ferrata-relayer` and
 `ferrata_relayer_module`), the five modules after the merge of `updater-live` (13 November: the updater's
 sequencer backend, `headers` sources and `finish_own_jobs` on the daemon the updater module drives), the
 five modules after the merge of the two branches of 12 November (12–13 November, at the merged commit), the three daemons as modules and completing the attestation and bridge
 modules (those two branches, each run on its own), the attestation and bridge modules (11 November), the
 attestation module's prototype (10 November).
+
+## The updater module rebuilt and loaded, 22 November 2026
+
+**`ferrata_updater_module` had stopped building, for two reasons, both in its staging (`scripts/stage-updater.sh`) and
+its lockfile, not in its code.** Since 18 November (`9f881884`) `lez/updater/src/chain.rs` compiles in
+`lez/live/driver/src/rpcurl.rs` by path, which the staging did not copy (the build stopped: "couldn't read
+`vendor/ferrata/lez/live/driver/src/rpcurl.rs`"); and since the soft requirements' merge the `lez/` harness depends on
+two more wire crates (`lez/statements-wire`, `lez/rebate-wire`) and names two optional guest crates
+(`methods-statements`, `methods-rebate`), which the staging did not copy and `rust-lib/Cargo.lock` did not hold
+(`cargo metadata --locked` refused it). Fixed on `integration9`: the staging copies `rpcurl.rs` and the two wire
+crates and writes empty stand-ins for the two optional crates (behind features the module never enables); the lockfile
+gains the two wire crates (`cargo update -w`, 23 lines; `--locked` then resolves).
+
+**Built and loaded on the laptop** (Linux x86-64, Nix 2.34.6, `nice -n 19`, `nix build --max-jobs 1 --cores 4`), at
+commit `115f87f4`, the guests of `lez/methods` built on the Modal build box and staged with `METHODS_RS` (their ids
+as in [`docs/image-ids.md`](../docs/image-ids.md)): `check.sh`'s preparation and `nix build .#lgx` with the builder
+pinned at `5f74cdb`: the dev package `logos-ferrata_updater_module-module-lib.lgx` (variant `linux-amd64-dev`,
+58,541,980 bytes; 544 s, of which its cargo build 8 min 27 s, the sources and toolchains fetched by a first attempt
+that stopped on `rpcurl.rs`, 1,392 s); `logosctl` from `logos-logoscore-cli` `66d098d` (`#ctl`, 1,364 s). In a headless Logos Core
+(a fresh session, `RISC0_DEV_MODE=1`): daemon started, the package installed, the module loaded and shown, the four
+one-shot calls of `daemon_requests.py` each meeting its expectations (`version`; `check_config` of
+`dev/recorded.toml`: `ok`, ledger `harness`, chains `mainnet` and `sepolia`; of the updater's example configuration:
+`ok`; of a configuration with an unknown field: `invalid_request`), `module ls`, daemon stopped. `version()` names
+commit `115f87f4`, the attestation program `ferrata_lez` with the same declared and computed id
+(`0x816d1fef…03df`) and the seven staged guests, each id as in `docs/image-ids.md`.
+
+Not run this time: `check.sh`'s native steps (the calls crate's tests and native replies), the portable package and
+logosctl, `updater-e2e.sh` (the updater's job through Logos Core) and the other five modules.
 
 ## Ferrata's Ethereum transactions through Logos Core's send stack, 14 November 2026
 
