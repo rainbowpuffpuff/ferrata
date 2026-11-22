@@ -74,8 +74,26 @@ What this differential cannot give: Helios and ferrata-core are two transcriptio
 mistake both make the same way (or one the specification itself makes) agrees with itself; the mutations are random,
 so a structured input that needs several coordinated changes (a re-signed update, a consistent fabricated branch) is
 reached only by the targeted tests (`adversarial.rs`, `steps.rs`, `where_helios_departs_from_the_specification`) and
-not by this one. A review of the code against the specification by someone who did not write either is what an audit
-adds.
+not by this one. Its inputs are narrower than "the light client" in five more ways:
+
+- It judges ferrata-core's native stores (the policy store and the spec store), not the program's step path: `Open`,
+  `Miller`, the adoption parts and `Finish`, the signer witness and the compact encodings the program reads are not
+  run on these inputs (the LEZ harness's tests and red-team suites run them, on other inputs).
+- All five originals are period updates of one stretch of mainnet in the Electra layout: no Gloas update, no fork
+  upgrade of the store, no `LightClientFinalityUpdate` form.
+- Only the update's bytes are mutated; the bootstrap and the store before each update never are.
+- The current slot is the *mutated* update's signature slot plus one (`helios_oracle.rs` `Pair::submit`, `diff.mjs`
+  `judge`), so the check that refuses a signature slot in the future is never reached, and the 13 accepted mutations
+  follow from that choice: each of them raises the signature slot (by 7 to 5,120 slots; derived from the fixtures'
+  bytes and the listed flips), so with the original signature slot plus one as the current slot all 13 would be
+  refused.
+- Refusal reasons are not compared, only verdicts and heads.
+
+So could a class of forgery be missed? Yes: every forgery that needs a valid signature over changed signed data, or
+several coordinated changes, is out of reach of random bit flips by construction. What the run shows is narrower: no
+field the signature does not cover, other than the signature slot, changes a verdict, and two independent clients
+decide as ferrata-core does on 2,005 inputs. A review of the code against the specification by someone who did not
+write either is what an audit adds.
 
 ## A second client: Lodestar
 
