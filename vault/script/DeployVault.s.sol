@@ -48,7 +48,7 @@ import {TestToken} from "./TestToken.sol";
 ///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
 ///         §13): `deltaFloor` = `initialDelta` = the design's default for the rule, 3 h 01 min under rule (A), 1 h under
 ///         rule (B), unless FERRATA_DELTA names another (seconds; the testnet runs of November 2026 used 600 s, the crown
-///         runs 3,600 s). The admin raises it later (`setDelta`, never below the floor); the record gives `delta` and the
+///         runs 3,600 s). The admin raises it later (`raiseDelta`, never below the floor); the record gives `delta` and the
 ///         rule's `designDelta`. The other timers stay testnet values unless set: revocation window 1 day, release delay
 ///         120 s, minimum release delay 0 (the design's: 7 days, a delay between the minimum and the window, 24 h).
 ///

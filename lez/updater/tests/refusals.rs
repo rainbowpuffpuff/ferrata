@@ -17,7 +17,7 @@ use std::{
 use ferrata_core::{types::LightClientBootstrap, witness::CompactStore, Root};
 use ferrata_lez_wire::Config;
 use ferrata_updater::{
-    chain::{preset, root},
+    chain::{decode_finality_update, preset, root},
     config::{Fees, Policy},
     ledger::{HarnessLedger, Ledger, Tx, TxOutcome},
     source::{lab_record, load_entries, Clock, Entry, Recorded, Source},
@@ -639,4 +639,80 @@ fn a_refusal_with_the_chain_unreadable_after_it_is_held_briefly() {
     assert_eq!(u.metrics.failing_sends, 0);
     assert!(u.held.values().all(|h| !h.due && h.count == 1 && h.retry_at == Some(h.round + REFUSAL_BACKOFF)));
     assert!(!why.iter().any(|w| w.contains("did not land") || w.contains("sending paused")), "{why:?}");
+}
+
+/// A source that serves every finality update re-dated: its `signature_slot` moved later inside the same
+/// sync-committee period. The signature does not cover that field (only its fork version), so the copy verifies, but
+/// its `Open` window opens at the later slot (review-integ9c M4).
+struct Redated {
+    inner: Box<dyn Source>,
+    config: Config,
+    bump: u64,
+}
+
+impl Source for Redated {
+    fn name(&self) -> &str {
+        self.inner.name()
+    }
+    fn bootstrap(&mut self, block_root: &Root) -> anyhow::Result<Vec<u8>> {
+        self.inner.bootstrap(block_root)
+    }
+    fn updates(&mut self, start_period: u64, count: u64) -> anyhow::Result<Vec<Vec<u8>>> {
+        self.inner.updates(start_period, count)
+    }
+    fn finality_update(&mut self) -> anyhow::Result<Vec<u8>> {
+        let mut b = self.inner.finality_update()?;
+        let (u, _) = decode_finality_update(&b, &self.config)?;
+        let period_end = (u.signature_slot / 8192 + 1) * 8192 - 1;
+        let to = (u.signature_slot + self.bump).min(period_end);
+        anyhow::ensure!(to > u.signature_slot + 1, "no later slot left in the period of {}", u.signature_slot);
+        let from = u.signature_slot.to_le_bytes();
+        let at: Vec<usize> = b.windows(8).enumerate().filter(|(_, w)| *w == from).map(|(i, _)| i).collect();
+        anyhow::ensure!(at.len() == 1, "signature_slot found {} times in the served bytes", at.len());
+        b[at[0]..at[0] + 8].copy_from_slice(&to.to_le_bytes());
+        let (re, _) = decode_finality_update(&b, &self.config)?;
+        anyhow::ensure!(re.signature_slot == to && re.finalized_header == u.finalized_header, "re-dating failed");
+        Ok(b)
+    }
+}
+
+/// review-integ9c M4: one source re-dates every finality update it serves (a later `signature_slot` of the same
+/// period); another serves them as they are. Listed first, the liar's copy used to win the tie (a stable sort over a
+/// key without `signature_slot`), and its window not being open ended every round in `Waiting`, for up to a
+/// sync-committee period. Now the earliest copy is taken: the update is sent and applied in the first rounds, no
+/// round waits.
+#[test]
+fn a_re_dated_copy_of_an_update_does_not_hold_it_back() {
+    let r = mainnet();
+    let clock = Clock::new(3);
+    let payer = key(0x4a);
+    let mut l = HarnessLedger::new(std::slice::from_ref(&payer));
+    let liar = Redated { inner: r.source("liar", &clock), config: r.config.clone(), bump: 600 };
+    let mut u = r.updater("redated", payer.clone(), vec![Box::new(liar), r.source("honest", &clock)], None);
+    settle(&mut u, &mut l, 60);
+    let fin = store(&u, &l).finalized.slot;
+    clock.set(4);
+    let (real, _) = decode_finality_update(&r.entries[3].bytes, &r.config).unwrap();
+    // The chain's clock one slot after the real signature slot: the honest copy's window is open, the re-dated
+    // copy's (at least two slots later) is not.
+    l.now = Some(r.config.slot_start_ms(real.signature_slot) + 12_000);
+    let mut plans = Vec::new();
+    for _ in 0..30 {
+        let p = u.tick(&mut l).unwrap();
+        let done = matches!(p, Plan::UpToDate);
+        plans.push(p);
+        if done {
+            break;
+        }
+    }
+    let moved = store(&u, &l).finalized.slot;
+    let waits = plans.iter().filter(|p| matches!(p, Plan::Waiting(_))).count();
+    println!(
+        "a re-dated copy listed first: {} rounds, {waits} waiting, finalized slot {fin} -> {moved} (the update's {})",
+        plans.len(),
+        real.finalized_header.beacon.slot
+    );
+    assert_eq!(waits, 0, "{plans:?}");
+    assert!(moved > fin, "the honest copy was applied");
+    assert_eq!(refused(&l, 0), 0);
 }

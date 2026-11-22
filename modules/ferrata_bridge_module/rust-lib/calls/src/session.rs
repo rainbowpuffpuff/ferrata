@@ -810,7 +810,8 @@ impl Chain {
 
 
 /// A deposit asked for while an earlier deposit of this session was broadcast and reported not yet mined (its job ended
-/// `unconfirmed`) is refused as long as that transaction has no receipt: it may still be mined, and then both would land.
+/// `unconfirmed`) is refused as long as that transaction has no receipt: it may still be mined, and then only one of the two lands: the vault refuses the other (it carries the same deposit
+/// index, `WrongDepositIndex`) after it has cost its gas.
 /// `again: true` (the view's "Deposit again anyway", offered on this refusal) sends it all the same, for an earlier
 /// deposit the person knows will not be mined (dropped from the mempool).
 fn refuse_while_unmined(v: &mut crate::evm::Vault, params: &Value) -> Result<(), String> {
@@ -821,7 +822,7 @@ fn refuse_while_unmined(v: &mut crate::evm::Vault, params: &Value) -> Result<(),
         if v.rpc.call("eth_getTransactionReceipt", json!([h]))?.is_null() {
             return Err(format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet; it may still be. \
                                 Wait for it (refresh your positions), or deposit again anyway (again: true): if the earlier one is mined \
-                                after all, both deposits land"));
+                                after all, only one of the two lands: the vault refuses the other (the same deposit index) after it costs its gas"));
         }
     }
     Ok(())
@@ -1373,7 +1374,7 @@ mod tests {
         *crate::send::fake::MINED.lock().unwrap() = false;
         let e = refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).unwrap_err();
         assert!(e.starts_with(&format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet")), "{e}");
-        assert!(e.contains("deposit again anyway (again: true)") && e.contains("both deposits land"), "{e}");
+        assert!(e.contains("deposit again anyway (again: true)") && e.contains("only one of the two lands"), "{e}");
         refuse_while_unmined(&mut v, &json!({ "denomination": 0, "again": true })).expect("the person's own decision: sent anyway");
         *crate::send::fake::MINED.lock().unwrap() = true;
         refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).expect("mined since: nothing to wait for");

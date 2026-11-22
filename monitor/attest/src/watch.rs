@@ -7,12 +7,13 @@
 //! raised is held through it.
 //!
 //! Every finalized header the instance shows is remembered with the providers' verdict (`state_file`), and judged
-//! again, whether or not the instance has moved on, until the verdict is settled: confirmed or contested with no
-//! provider behind its slot. So a forged header the providers could not judge when the instance showed it (ahead of
-//! their finality) is judged once they have finalized its slot. A header found diverged, or too new when shown (no
-//! honest instance can hold it), stays raised (`instance-diverged`, `instance-ahead`, one alert per header) whether
-//! the instance moves on or the providers drop out; a diverged one, or one ahead of every provider, clears only when a
-//! later poll confirms that header (`--min-agreeing` agree, none disagrees). The loop ends after `max_polls`, or on
+//! again, whether or not the instance has moved on, until the verdict is settled, which needs every configured
+//! provider counted (one behind its slot, down or on another chain leaves it unsettled); at most [`RECHECK_PER_POLL`]
+//! a poll, the newly judgeable first, then the least recently judged (more due raise `recheck-backlog`). So a forged
+//! header the providers could not judge when the instance showed it (ahead of their finality) is judged once they have
+//! finalized its slot. A header found diverged, or ahead (too new, or ahead of every provider), stays raised
+//! (`instance-diverged`, `instance-ahead`, one alert per header) whether the instance moves on or the providers drop
+//! out, until a settled confirmation: every configured provider has finalized its slot and holds the header. The loop ends after `max_polls`, or on
 //! the stop flag (SIGTERM or SIGINT in the binary) after the poll in hand.
 
 use std::collections::BTreeMap;
@@ -401,7 +402,7 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
         }
         // An --interval too large for the clock waits for the stop flag (review B3 L7).
         let until = Instant::now().checked_add(Duration::from_secs(w.interval_s));
-        while until.map_or(true, |u| Instant::now() < u) && !stop.load(Ordering::SeqCst) {
+        while until.is_none_or(|u| Instant::now() < u) && !stop.load(Ordering::SeqCst) {
             std::thread::sleep(Duration::from_millis(100));
         }
         if stop.load(Ordering::SeqCst) {

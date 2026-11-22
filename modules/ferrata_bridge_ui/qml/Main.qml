@@ -1048,7 +1048,7 @@ Rectangle {
         call("price", { denomination: denomIndex }, function (ok, p) {
             if (!ok) return;
             var effects = ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"];
-            if (again) effects = ["A NEW deposit, although your earlier one is not mined yet: if the earlier one is mined after all, both land (two deposits)"].concat(effects);
+            if (again) effects = ["A NEW deposit, although your earlier one is not mined yet: if the earlier one is mined after all, only one of the two lands: the vault refuses the other, which costs its gas"].concat(effects);
             propose({
                 title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault",
                 rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info.user.depositor + " (Ethereum)"], ["Asset", "ETH"], ["Amount", Fmt.eth(p.denomination) + " + fees = " + Fmt.eth(p.total)], ["Destination", "the Ferrata vault " + info.vault + " on chain " + info.chain_id], ["Then on LEZ", destKind + " account /" + destAccount + ", hidden inside C"]],

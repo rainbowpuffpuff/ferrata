@@ -17,10 +17,11 @@
 #                     and session.sh; lez-config/lez-tag.txt names the tag; -> $CROWN_LEZ_TMP/bundle.tar.zst
 #
 # Since milestone B1 this tree's crown-driver speaks only the bridge program of docs/image-ids.md's `ferrata_bridge_b1`
-# (accounts keyed by the configuration): pack, repack and rebase refuse a bundle whose program/ferrata_bridge.bin is
-# another (the bundles of November 2026 carry the live runs' program). CROWN_BRIDGE_BIN puts that file in place of the
-# bundle's (FROM's or $CROWN_PROGRAMS'): B1's ferrata_bridge.bin, which scripts/reproduce-image-ids.sh build --out DIR
-# writes to DIR/programs/ (e2e/crown/README.md, "Since milestone B1").
+# (accounts keyed by the configuration): pack, repack and rebase put it in place of a bundle's other program/
+# ferrata_bridge.bin (the bundles of November 2026 carry the live runs' program): CROWN_BRIDGE_BIN if set (B1's
+# ferrata_bridge.bin, which scripts/reproduce-image-ids.sh build --out DIR writes to DIR/programs/), otherwise B1's built
+# from this tree as that script builds it (LEZ's methods, RISC0_HOME_LEZ); they stop if neither is possible
+# (e2e/crown/README.md, "Since milestone B1").
 # $CROWN_LIVE (default tmp/crown/live beside the repository) holds the sequencer, the node and the target directory;
 # $CROWN_PROGRAMS (default tmp/crown/build/programs) the guests built at the crown path (their image ids are the run's).
 # The fixture: the Sepolia checkpoint the instance starts from ($CROWN_FIXTURE, default the 12 Nov 2026 one; the
@@ -43,13 +44,38 @@ fixture() {
   cp "$FIXTURE/bootstrap.ssz" "$FIXTURE"/update_*.ssz "$FIXTURE"/beacon_header_*_second.json "$FIXTURE/SOURCE.md" "$1/fixture/"
 }
 sums() { ( cd "$1" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS ); }
+# B1's bridge program built from this tree as scripts/reproduce-image-ids.sh builds the LEZ guests (path-independent,
+# so the same bytes anywhere): LEZ's methods with LEZ's RISC Zero home (RISC0_HOME_LEZ, default beside the repository).
+bridge_b1_build() {
+  local r0="${RISC0_HOME_LEZ:-$REPO/../risc0-home-lez}" bin
+  [ -d "$r0" ] || {
+    echo "the bundle's bridge program is not B1's and CROWN_BRIDGE_BIN is not set; building B1's needs LEZ's RISC Zero" \
+      "home ($r0 is missing: set RISC0_HOME_LEZ), or set CROWN_BRIDGE_BIN to B1's ferrata_bridge.bin" \
+      "(scripts/reproduce-image-ids.sh build --out DIR writes DIR/programs/ferrata_bridge.bin)" >&2
+    exit 1
+  }
+  echo "the bundle's bridge program is not B1's: building B1's from this tree (LEZ's methods; CROWN_BRIDGE_BIN names" \
+    "another)" >&2
+  ( cd "$REPO/lez" && env -u CARGO_TARGET_DIR -u RUSTFLAGS -u CARGO_ENCODED_RUSTFLAGS -u FERRATA_GUEST_REMAP_EXTRA \
+      RUSTC_WRAPPER="$REPO/scripts/guest-rustc" RISC0_BUILD_LOCKED=1 RISC0_HOME="$r0" cargo build -p methods --locked ) >&2 \
+    || { echo "building LEZ's methods failed: set CROWN_BRIDGE_BIN to B1's ferrata_bridge.bin" >&2; exit 1; }
+  bin="$(find "$REPO/lez/target/riscv-guest" -path '*release*' -name ferrata_bridge.bin | head -n 1)"
+  [ -n "$bin" ] || { echo "no ferrata_bridge.bin under lez/target/riscv-guest after the build" >&2; exit 1; }
+  echo "$bin"
+}
+
 # The bundle's bridge program: CROWN_BRIDGE_BIN if given (repack, rebase), and in any case the one this tree's
-# crown-driver speaks (the sha256 docs/image-ids.md records for `ferrata_bridge_b1`).
+# crown-driver speaks (the sha256 docs/image-ids.md records for `ferrata_bridge_b1`). A bundle that carries another
+# (crown-live-3's, the live runs' program) gets B1's built from this tree when CROWN_BRIDGE_BIN is not set.
 bridge_b1() {
   if [ -n "${CROWN_BRIDGE_BIN:-}" ]; then cp "$CROWN_BRIDGE_BIN" "$1/program/ferrata_bridge.bin"; fi
   local want got
   want="$( { grep -F '`ferrata_bridge_b1` |' "$REPO/docs/image-ids.md" || true; } | awk -F'|' '{gsub(/[` ]/, "", $4); print $4}')"
   got="$( { sha256sum "$1/program/ferrata_bridge.bin" 2> /dev/null || true; } | cut -c1-64)"
+  if [ -z "${CROWN_BRIDGE_BIN:-}" ] && [ -n "$want" ] && [ "$got" != "$want" ] && [ -d "$1/program" ]; then
+    cp "$(bridge_b1_build)" "$1/program/ferrata_bridge.bin"
+    got="$(sha256sum "$1/program/ferrata_bridge.bin" | cut -c1-64)"
+  fi
   [ -n "$want" ] && [ "$got" = "$want" ] || {
     echo "program/ferrata_bridge.bin has sha256 $got, not the bridge program this tree's crown-driver speaks ($want," \
       "docs/image-ids.md \`ferrata_bridge_b1\`): set CROWN_BRIDGE_BIN to B1's ferrata_bridge.bin" >&2

@@ -18,7 +18,8 @@
 //!
 //! Every send goes to a deployment the person running Logos Core named ([`pinned`], `FERRATA_DEPLOYMENTS`): a caller of
 //! the module cannot have it raise a signing request for another vault or chain, and the purpose the approver shows
-//! names the vault and the chain.
+//! names the vault and the chain. Not pinned: an ERC-20 deposit's `approve` goes to the caller's token (its spender is
+//! the pinned vault), and the reads come through the caller's Ethereum connection, not checked against the pinned chain.
 
 use std::sync::OnceLock;
 use std::time::{Duration, Instant};

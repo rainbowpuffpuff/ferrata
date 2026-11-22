@@ -1065,13 +1065,17 @@ impl Updater {
             return Ok(Plan::UpToDate);
         }
         // Adopting the next committee comes first when the store lacks it; then the furthest
-        // finalized header; then the most signers.
+        // finalized header; then the most signers; then the earliest signature slot. The signature does not cover
+        // `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of
+        // the same period, whose `Open` window has not opened yet: among copies of one update the earliest is taken,
+        // so such a copy cannot hold back the copy other sources serve (review-integ9c M4).
         let needs_next = store.next.is_none();
         let key = |p: &Planned| {
             (
                 needs_next && p.outcome.adopted,
                 p.update.finalized_header.beacon.slot,
                 p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
+                std::cmp::Reverse(p.update.signature_slot),
             )
         };
         // The best candidate that enough sources serve: light-client sources serving an update with its finalized

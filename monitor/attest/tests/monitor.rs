@@ -119,6 +119,7 @@ fn other_root(answer: &str) -> String {
 }
 
 type Routes = Arc<Mutex<HashMap<String, (u16, String)>>>;
+type Post = Arc<dyn Fn(&str) -> String + Send + Sync>;
 
 /// A loopback HTTP server answering GETs from `routes` (404 otherwise) and POSTs with `post` (the request body in,
 /// the answer out).
@@ -128,7 +129,7 @@ struct Server {
 }
 
 impl Server {
-    fn start(routes: Vec<(String, u16, String)>, post: Option<Arc<dyn Fn(&str) -> String + Send + Sync>>) -> Self {
+    fn start(routes: Vec<(String, u16, String)>, post: Option<Post>) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let url = format!("http://{}", listener.local_addr().unwrap());
         let routes: Routes = Arc::new(Mutex::new(routes.into_iter().map(|(p, c, b)| (p, (c, b))).collect()));

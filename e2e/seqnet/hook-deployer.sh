@@ -109,8 +109,9 @@ else
 fi
 [ "$(jq -r .configId "$cfg")" != "$(echo "$dflt" | jq -r .configId)" ] && check "the roles and caps enter configId (another configId than the default's)" yes yes \
   || check "the roles and caps enter configId (another configId than the default's)" yes no
-check "LEZ token cap in configId (value units)" "${CROWN_TOKEN_CAP:-unlimited}" "$(jq -r .controls.tokenCap.capacity "$cfg")"
-check "LEZ global cap in configId (value units)" "${CROWN_GLOBAL_CAP:-unlimited}" "$(jq -r .controls.globalCap.capacity "$cfg")"
+# Unset, the caps are crown-driver's capped default (100 times ETH's largest denomination a day): the default configId's.
+check "LEZ token cap in configId (value units)" "${CROWN_TOKEN_CAP:-$(echo "$dflt" | jq -r .controls.tokenCap.capacity)}" "$(jq -r .controls.tokenCap.capacity "$cfg")"
+check "LEZ global cap in configId (value units)" "${CROWN_GLOBAL_CAP:-$(echo "$dflt" | jq -r .controls.globalCap.capacity)}" "$(jq -r .controls.globalCap.capacity "$cfg")"
 if [ -n "${CROWN_GLOBAL_CAP:-}" ]; then
   gate="$(grep -m1 '^  gate Gate' "$RUN/user/06-status-zone.txt" || true)"
   check "LEZ global cap read from the zone (the gate's mint and burn buckets)" "$CROWN_GLOBAL_CAP $CROWN_GLOBAL_CAP" \
