@@ -6,7 +6,8 @@ after the first review: U.3 and R.6 are proposed **in part** with their exact re
 review found (the gas drop not resumed, the `--send-via logos` route without a journal, the record's narrow windows
 never hit, faults claimed that did not fire) are built, tested and recorded. Revised again after the second review:
 its two defects in that new code are fixed and tested (M1: a gas drop sent again is built only on its recorded state,
-so a credit that lands meanwhile no longer lets a second one apply; M2: a request `tx_sender_module` can no longer
+so a credit that lands meanwhile no longer lets a second one apply; tested for `drop_step`'s handling, while the
+sequencer zone's own check after its sync is exercised by no test; M2: a request `tx_sender_module` can no longer
 account for is settled on the chain, never read as "nothing sent"), and two credits of one drop are shown reaching a
 running sequencer with one applied. Revised after the third review: its blocker, a regression in the **monitor** (the
 M2 change made it bail where it had fallen back, so one broadcast failing inside `tx_sender_module` left every later
@@ -91,7 +92,14 @@ result: ok. 1 passed` in 136.57 s, parts 1–6 (`e2e/runs/relayer-crash/results.
 logos_send`: 8 passed; `bash e2e/netfault/relayer-lez.sh OUT`: 9 passed, 0 failed at `01b57e13` (recorded), again at
 `8f99ec7f` and `41c0d843` after the second review's fixes (9 passed, 0 failed, each); `bash e2e/seqnet/run.sh robust robust-2`: 21 passed, 0 failed (box 852 s, 22 November
 2026), the sources of `d8ddc000`; `bash e2e/seqnet/run.sh robust robust-3`: 22 passed, 0 failed (box 845 s, the run
-02:49–03:01 UTC, 22 November 2026), the sources of `f42663ce`.
+02:49–03:01 UTC, 22 November 2026), the sources of `f42663ce`. After the third review: `cd cli && bash
+tests/relayer-crash.sh` at `c8cbaa6c`: 1 passed in 136.90 s, 48 for 48, part 6's requests 0, 1 (0 pinned), 1, 2 (1
+pinned), now the record; the same with the review's mutant M2C (the module's history not asked, applied on the box
+and restored): fails at part 6b; `cd monitor && bash tests/logos-fallback.sh` (`b1069ddf` and the script's helper fix
+of `4d3e8d64`): 8 passed, 0 failed (recorded in `monitor/results/logos-fallback/`), and with `monitor/src/chain.rs` as at
+`83cf4eb0`: 1 passed, 7 failed (`before-fix/`); `cd monitor && cargo test --lib`: 8 passed; `cargo clippy --all-targets
+-- -D warnings` (monitor): clean; `cd cli && cargo test --lib logos_send`: 8 passed; `bash e2e/seqnet/test-late-credit.sh`
+(laptop, jq and grep): 0 unexpected.
 
 What the daemon does now (`cli/src/relayerd.rs`, `relayer.rs`, `logos_send.rs`): one Ethereum transaction in flight,
 journaled before it is sent (`<state>/inflight.json`) and resolved first in every round (mined: booked; pending:
@@ -115,12 +123,20 @@ itself killed, the statuses the stand-in never gives (`broadcasting`, `blocked`,
 `signer_manager_module` and the module's broadcast to a node other than the daemon's are not run. One gas-drop case is
 not told apart: a credit of a drop given up (claimed without it, or past `--drop-max-sends`) that a sequencer still
 holds and applies after the give-up moves the drop account as the next drop's own credit would; that next drop is then
-booked applied while its own credit is refused (same state), and its claimant's tool waits out `--gas-drop-wait` and can
-ask again or pay from its own account. A give-up waits `--drop-wait` after the last send for that reason; nothing of a
-user's is at risk (the drops are the relayer's money).
+booked applied while its own credit is refused (same state). Its claimant's claim stops after `--gas-drop-wait`, and
+asking this relayer again does not help (that `N` counts as served: "this N already had its drop"; the tool, run again,
+resumes its job with the same relayer): it must name another relayer or pay the fee from its own account
+(`--no-gas-drop`: the fee payer is then its own account, and the dry run's `fee payer:` line says what that reveals). A
+give-up waits `--drop-wait` after the last send to make this unlikely, but not one forced by `--max-job-age`. No user's
+funds move; the cost is one drop of the relayer's money on a one-time account that may no longer need it, and one
+claimant without this relayer's drop. The operator guide (§6.1), `cli/README.md` and the claim's waiting error say so
+(the third review's L-1). The cure (attributing an applied credit by its transaction, or a self-credit on the given-up
+state before the next drop) is not built.
 
-**Not shown, hence in part:** `monitor` under an RPC outage (row 43 shows it killed mid-window and restarted, with
-and without its state file; no fault injected under it); the checkpoint prover (`e2e/crown` stage 7, a separate
+**Not shown, hence in part:** `monitor` under an outage of its own endpoint (row 43 shows it killed mid-window and
+restarted, with and without its state file; `monitor/tests/logos-fallback.sh` shows its sends through
+`tx_sender_module` failing or sticking, against a stand-in, and every cancel still mined; no fault injected on its
+own RPC); the checkpoint prover (`e2e/crown` stage 7, a separate
 process) and the attestors (`ferrata_attestor`) under RPC failure: no test; the relayer's root import under a fault on
 a real sequencer (its four LEZ faults ran against the devnet's synchronous stand-in; robust-1, -2 and -3 import cleanly
 on the sequencer). A node that lies is not a temporary failure (the crown's two-endpoint agreement, `e2e/NETWORK.md`).
@@ -134,17 +150,22 @@ drops journaled on LEZ (a credit sent again built only on its recorded state) | 
 48 effects, 0 reverted, one Release per nullifier, every job booked once; the lost answer, the held answer with a kill,
 and the kill before the send each made to happen and resolved (`inflight-found` ×2, `inflight-lost`); the logos route
 killed in its three windows: 3 requests for 3 jobs; the module restarted after a broadcast: no request after the
-restart, booked from its history row and receipt; restarted before one: planned again once; `stuck` with the
+restart, booked from its history row and receipt; restarted before one: planned again once, unpinned; `stuck` with the
 transaction out: found under its nonce; `stuck` with nothing sent: sent again with the nonce pinned, one transaction;
 faultnet's faults that fired as recorded; the LEZ side: each root imported once (9/9, devnet stand-in); gas drops on
 LEZ v0.4.0-rc1's running sequencer: a credit trapped unsent with a kill, then a send answered 503 and forwarded 35 s
 later, a third sent on the same account state: two credits of one drop reached the sequencer, the third applied, the
 late one accepted and never applied; a credit forwarded with its answer held and a kill, booked from LEZ after the
-restart with nothing sent again; each claim claims exactly one credit (robust-2 21/21, robust-3 22/22) | Modal build
+restart with nothing sent again; each claim claims exactly one credit (robust-2 21/21, robust-3 22/22); and `monitor`'s
+sends through the same stand-in: a broadcast failed after its leg left, and one stuck with nothing sent, each cancel
+then sent the plain way at the nonce the module burnt and mined, the next ones through the module, nothing pending
+(8/8; with the code before the fix no cancel was mined, 1/8) | Modal build
 box; anvil (31337), FerrataVault v5 mode (B), accept-all verifier; the devnet's zone (LEZ v0.4.0-rc1 harness); LEZ
 v0.4.0-rc1's sequencer and node (gas drops) | none needed (not about proving); a stand-in for tx_sender_module in parts
-5–6 | `cd cli && bash tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT`; `bash e2e/seqnet/run.sh robust
-NAME` | `e2e/runs/relayer-crash/`, `e2e/runs/relayer-lez/`, `e2e/runs/seqnet-robust-2/`, `e2e/runs/seqnet-robust-3/`".
+5–6 and the monitor's test | `cd cli && bash tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT`; `bash
+e2e/seqnet/run.sh robust NAME` (its late-credit check: `bash e2e/seqnet/test-late-credit.sh`); `cd monitor && bash
+tests/logos-fallback.sh` | `e2e/runs/relayer-crash/`, `e2e/runs/relayer-lez/`, `e2e/runs/seqnet-robust-2/`,
+`e2e/runs/seqnet-robust-3/`, `monitor/results/logos-fallback/`".
 
 ## U.3: long-running components as Logos module plus headless daemon, documented — proposed **in part** (narrower)
 
@@ -172,7 +193,8 @@ sent; SIGTERM gave its `stop` line; nothing left in flight. With rows 43–48, 9
 3. `monitor`'s client of the LEZ and Logos Blockchain nodes' RPCs (traceability's U.3 remainder): not built.
 4. The operator journey: `docs/guides/operator-guide.md` is a first draft (its header). Its gas-drop text (§6.1,
    §6.2, §6.4) now matches the daemon on this branch (the second review's L1: it had told operators to remove a failed
-   drop's entry by hand, which with the journal can pay twice).
+   drop's entry by hand, which with the journal can pay twice; the third review's L-3: §6.2 said the public account
+   pays the drops, which come from the private account; and §6.1 now names the residual case and its cost, L-1).
 
 ## R.7: an interrupted user-side operation does not consume, corrupt, or expose the entitlement — proposed **shown**
 
@@ -300,7 +322,8 @@ numbers move on `main`):
   the middle of a checkpoint or a release, and an RPC failure under it: none yet"), U.3 ("Remains: the relayer's root
   imports on a running LEZ sequencer"): as above.
 - `docs/guides/operator-guide.md` §6.1, §6.2, §6.4 (the gas drop): updated on this branch (a docs file, changed for
-  the second review's L1); its "First draft" header stays.
+  the second review's L1 and the third's L-1 and L-3; §6.4's "Not built" listed the sealed credit, its sweep in the
+  private claim and a run on a live sequencer, all three run since); its "First draft" header stays.
 
 ## Commits
 
@@ -327,12 +350,29 @@ call's tag in the purpose line); `89f7c413` the crash record at `3f3804f9` (L10)
 `12b775c9` clippy (L11: clean but for one line of `cli/examples/miniapp_devnet.rs`, not this branch's file); then this
 file (L3, L8).
 
+After the third review: `b1069ddf` M-1 (the monitor's fallback for what `tx_sender_module` cannot account for, one
+match arm; its docs; the stand-in's `fail send_status`; `monitor/examples/monitor_logos_stub.rs`;
+`monitor/tests/logos-fallback.sh`; the `logos_send` tests no longer poison their mutexes on a failure, a nit);
+`4d3e8d64` its record (8/8; before the fix 1/8); `ad71bee8` monitor README; `c8cbaa6c` L-5 (crash part 6b, 6d's pins);
+`7a42dcf0` the crash record at `c8cbaa6c`; `b5d0c279` L-4 (`late-credit.sh`, `test-late-credit.sh`); `737220ab` L-1 (the
+residual's wording: §6.1, cli README, the claim's waiting error, `drop_step`'s and `DropRecord::settled`'s docs, a nit);
+`bd446a41` L-3 (§6.2) and §6.4's stale "Not built"; then this file (L-2's wording included).
+
 Files of other streams changed, minimal and default-preserving: `lez/crown/driver/src/{main,crown}.rs`
 (`--import-roots no`; a comment), `checkpoint/attestor/zone.sh` (`ZONE_LEZ`, `ZONE_BEDROCK`), `e2e/seqnet/{run,drive}.sh`
 (the `robust` mode; `run.sh build` also builds the gas-drop guest; `drive.sh` also scrubs `~/` paths),
 `e2e/seqnet/README.md` (the robust mode), `monitor/src/logos_send.rs` (kept identical to `cli/src/logos_send.rs`: `send`
 split into `open` and `drive`, plus `live` and `history_row`; `Outcome::Unknown` carries whether the module forgot the
 request and the leg's nonce; a request the module no longer holds is `Unknown`, no longer `NotSent`; the request's
-purpose line carries the call's tag; its `logos_send` tests 8 passed), `monitor/src/chain.rs` (one match arm, for
-`Outcome::Unknown`'s fields; the monitor's behaviour otherwise unchanged), `docs/guides/operator-guide.md` (§6.1,
+purpose line carries the call's tag; its `logos_send` tests 8 passed; after the third review, doc comments and the
+tests' lock helper), `monitor/src/chain.rs` (one match arm: with `--send-via logos` and the watcher key held, an
+`Outcome::Unknown` takes the plain fallback as `NotSent` does. At `f13faee2` a failed request (also one whose leg had
+begun to leave), a withdrawal whatever the cancel said and a request the module no longer held were `NotSent` and fell
+back, while `stuck`, a broadcast without a hash and a request still moving at the timeout were errors; at `83cf4eb0`
+the first three were errors too (a request failed before its leg left and a confirmed withdrawal stayed `NotSent`), so
+one broadcast failing inside the module left every later cancel behind its burnt nonce, the third review's M-1; now
+all of them fall back, at the node's next nonce. Without the key: an error, retried at the next poll, as before. Documented in
+`chain.rs`, `cli.rs` (`--send-via`), `monitor/README.md`; tested by `monitor/tests/logos-fallback.sh`, new with
+`monitor/examples/monitor_logos_stub.rs`, `monitor/results/logos-fallback/` and one line of `monitor/.gitignore`),
+`e2e/netfault/txsender_stub.py` (this stream's; the `fail send_status` fault), `docs/guides/operator-guide.md` (§6.1,
 §6.2, §6.4). `cli/src/{lez,flow,main}.rs` (the tool's claim) are this stream's `cli/` bridge commands.
