@@ -101,7 +101,9 @@ through LEZ's state machine with the receipt verified; the update is mainnet's (
 Records `bench/perf/results/p2-b/` (stage `bash bench/perf/p2-stage.sh` with `P2_WITH_PRIVATE=1` at `beaf71e9`: its
 `perf_prove --dump` rows 1–37 are byte-identical to `p2-a/index.tsv`; rows 38–39 are new); each proven by r0vm 3.0.5
 with `RISC0_DEV_MODE=0` on a Modal container held to 16 CPUs and 32 GiB (`P2_CPU=16 P2_BUNDLE=/bundle/p2b modal run
-bench/perf/prove_modal.py --tag b ...`).
+bench/perf/prove_modal.py --tag b ...`). This section is written by hand from those records;
+`python3 -I bench/perf/summarize_proofs.py bench/perf/results/p2-b` prints the same figures from them (everything
+above it is that command's output for `p2-a`).
 
 | what | user cycles proven (segments) | prove s | compress s | composite B | succinct B | peak RSS GiB | host | settled |
 |---|---:|---:|---:|---:|---:|---:|---|---|

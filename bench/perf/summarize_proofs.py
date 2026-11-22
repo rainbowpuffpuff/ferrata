@@ -94,24 +94,40 @@ def main():
             f"{sum(x['succ_s'] for x in res):.1f} | {g(sum(x['comp_b'] for x in res))} | "
             f"{' + '.join(g(x['succ_inner_b']) for x in res)} | {rss:.2f} |"
         )
-    private = sorted(out.glob("private-*.log"))
-    if private:
-        print("\n## The proven update path: a whole finality update in one private transaction\n")
-        print("`prove_private` (`lez/harness/src/bin/prove_private.rs`, `lez/RESULTS.md` §3): the program's `VerifyAll`")
-        print("transition (step 1, Miller loops, final exponentiation, `ApplyVerified`) at a private account's actor, the fee")
-        print("transfer, and LEZ's privacy-preserving circuit over both, proven for real (`execute_and_prove`), then settled")
-        print("through LEZ's state machine with the receipt verified; the update is mainnet's (period 1899 fixture).\n")
+    # The proven path's private transactions, one section per kind (prove_private's "private transition (VerifyAll,
+    # <kind>)" line): a finality update (p2-a) or a committee handoff (p2-b, `--handoff`).
+    about = {
+        "finality update": ("a whole finality update in one private transaction",
+                            "`prove_private` (`lez/harness/src/bin/prove_private.rs`, `lez/RESULTS.md` §3): the program's `VerifyAll`\n"
+                            "transition (step 1, Miller loops, final exponentiation, `ApplyVerified`) at a private account's actor, the fee\n"
+                            "transfer, and LEZ's privacy-preserving circuit over both, proven for real (`execute_and_prove`), then settled\n"
+                            "through LEZ's state machine with the receipt verified; the update is mainnet's (period 1899 fixture).\n"),
+        "committee handoff, 512 keys adopted": ("a committee handoff in one private transaction",
+                            "`prove_private --handoff` (`lez/harness/src/bin/prove_private.rs`): the program's `VerifyAll` transition over a\n"
+                            "committee handoff (mainnet's update_1 as served, its 512 keys adopted, no new header) at a private account's\n"
+                            "actor, the fee transfer, and LEZ's privacy-preserving circuit over both, proven for real (`execute_and_prove`),\n"
+                            "then settled through LEZ's state machine with the receipt verified.\n"),
+    }
+    by_kind = OrderedDict()
+    for log in sorted(out.glob("private-*.log")):
+        k = re.search(r"private transition \(VerifyAll, ([^)]*)\):", log.read_text(errors="replace"))
+        by_kind.setdefault(k.group(1) if k else "?", []).append(log)
+    for kind, logs in by_kind.items():
+        title, text_about = about.get(kind, (f"one private transaction ({kind})", ""))
+        print(f"\n## The proven update path: {title}\n" if kind == "finality update" else f"\n## The proven path: {title}\n")
+        if text_about:
+            print(text_about)
         print("| run | private transition: user cycles (segments) | `execute_and_prove` s | peak RSS GiB | receipt B | transaction B | settled: execution gas / storage gas | settle exit | machine |")
         print("|---|---:|---:|---:|---:|---:|---|---:|---|")
-        for log in private:
+        for log in logs:
             text = log.read_text(errors="replace")
-            i = log.stem.split("-")[1]
-            cyc = re.search(r"private transition \(VerifyAll, finality update\): ([\d,]+) user cycles, (\d+) segments", text)
+            i = log.stem.removeprefix("private-")
+            cyc = re.search(r"private transition \(VerifyAll, [^)]*\): ([\d,]+) user cycles, (\d+) segments", text)
             proof = re.search(r"REAL PROOF: execute_and_prove ([\d.]+) s.*?receipt \(.*?\) (\d+) bytes; transaction (\d+) bytes", text)
             settled = re.findall(r"settled: execution gas ([\d,]*\d) .*?storage gas ([\d,]*\d)", text)
             sx = re.search(r"settle exit (\d+)", text)
             rss, _, _ = gnu_time(text)
-            mp = out / f"machine-private-{i}.json"
+            mp = out / f"machine-{log.stem}.json"
             mach = ""
             if mp.exists():
                 m = json.loads(mp.read_text())
