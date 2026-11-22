@@ -1,6 +1,6 @@
 # Fee schedules over both real halves (`cli/tests/both_halves.rs`, RFP-022 F.13, F.8)
 
-Schedule 1 announced at 1795296934, in force at 1795901735 (seven days and 1 s later), from leaf 3: mint [500000000000000, 5000000000000000, 50000000000000000], burn [200000000000000, 2000000000000000, 20000000000000000], checkpoint [100000000000000, 1000000000000000, 10000000000000000] wei for the denominations 0.1, 1 and 10 ETH.
+Schedule 1 announced at 1795308209, in force at 1795913010 (seven days and 1 s later), from leaf 3: mint [500000000000000, 5000000000000000, 50000000000000000], burn [200000000000000, 2000000000000000, 20000000000000000], checkpoint [100000000000000, 1000000000000000, 10000000000000000] wei for the denominations 0.1, 1 and 10 ETH.
 
 ## Claims (plaintext, 1 ETH each)
 
@@ -19,4 +19,4 @@ Within a schedule every claim of 1 ETH mints the same fees, and before any claim
 
 Each recipient received 997000000000000000 wei: 1 ETH less the burn fee 2000000000000000 and the checkpoint fee 1000000000000000, credited on the vault to the fee recipient and to the checkpoint's prover (the vault's `totalOwed` rose by 9000000000000000 wei over 3 releases).
 
-Invariant checks: 12 (vault balance == escrowed + owed; supply == minted - burnt; supply + unminted + unreleased == escrowed). Forgeries refused: 7. 20 s in all.
+Invariant checks: 12 (vault balance == escrowed + owed; supply == minted - burnt; supply + unminted + unreleased == escrowed). Forgeries refused: 7. 21 s in all.
