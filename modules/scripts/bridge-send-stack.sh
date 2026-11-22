@@ -271,7 +271,8 @@ run() {
   check "not mined in time: reported broadcast and not yet mined, not failed" "unconfirmed true false" "$(jq -r '"\(.verdict) \(.pending) \(.settled)"' "$R/deposit-unmined.json")"
   check "not mined in time: the text names the transaction and says not to send it again" "yes" \
     "$(jq -r '.what // ""' "$R/deposit-unmined.json" | grep -F "$UH" | grep -q "Do not send this deposit again" && [ -n "$UH" ] && echo yes)"
-  check "not mined in time: no receipt yet (cast)" "none" "$(cast receipt "$UH" status --rpc-url $RPC > /dev/null 2>&1 && echo mined || echo none)"
+  # eth_getTransactionReceipt answers null at once for a pending transaction (`cast receipt` would wait for it).
+  check "not mined in time: no receipt yet (eth_getTransactionReceipt null)" "null" "$(cast rpc eth_getTransactionReceipt "$UH" --rpc-url $RPC 2>&1 | head -c 40)"
   cast rpc evm_mine --rpc-url $RPC > /dev/null; cast rpc evm_setAutomine true --rpc-url $RPC > /dev/null
   check "not mined in time: mined with the next block (cast receipt status 1)" "1" "$(cast receipt "$UH" status --rpc-url $RPC 2>/dev/null | awk '{print $1}')"
 
