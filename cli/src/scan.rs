@@ -75,13 +75,24 @@ pub struct BurnRow {
     pub owned: OwnedBurn,
     /// Its `NOut` is used on the vault.
     pub released: bool,
+    /// The burn index of another burn of this seed with the same tag: one `NOut` for both, so at most one of the two is
+    /// ever released. Only a program that applied two notes with one tag shows it (the program before 22 November
+    /// 2026, with a tool that reused a counter: review H-1; ADR 0032).
+    pub twin: Option<u64>,
 }
 
-/// This seed's burns among the zone's published notes, with their state; and the next burn counter.
+/// This seed's burns among the zone's published notes, with their state; and the next burn counter (after every tag
+/// the zone shows used, a refused burn's too).
 pub fn burns(seed: &Seed, ctx: &Context, history: &History, released: &HashSet<Hash>) -> (Vec<BurnRow>, u64) {
     let keys = seed.bridge_keys();
     let scan = recover_burns(&keys, &ctx.cid, &chain_id_u256(ctx.chain_id), &ctx.vault, &history.burns, BURN_GAP);
-    let rows =
-        scan.owned.into_iter().map(|owned| BurnRow { released: released.contains(&owned.nullifier), owned }).collect();
-    (rows, scan.next_i)
+    let twin = |o: &OwnedBurn| {
+        scan.owned.iter().find(|x| x.i == o.i && x.burn.burn_index != o.burn.burn_index).map(|x| x.burn.burn_index)
+    };
+    let rows = scan
+        .owned
+        .iter()
+        .map(|owned| BurnRow { released: released.contains(&owned.nullifier), twin: twin(owned), owned: owned.clone() })
+        .collect();
+    (rows, scan.next_i.max(history.next_burn_counter(&keys, ctx)))
 }

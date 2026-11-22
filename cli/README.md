@@ -421,6 +421,24 @@ the note to the token's account in the clear. Before sending, the tool checks th
 holding (the wallet's view of a private account). It also tells whether the recipient is fresh (not a
 depositor of this vault).
 
+The burn counter is reserved in a journal beside LEZ's wallet, `<--lez-wallet>/ferrata-burns.json` (mode
+0600; `ferrata-burns.lock` beside it serialises the tool's processes), before the burn is proven and sent,
+and is never given to another burn ([`src/burns.rs`](src/burns.rs); RFP-022 R.7, the reviews of 22
+November 2026, H1 and H-1):
+- a second burn while the first is in flight (from another account of the seed) takes the next counter;
+- a burn interrupted before the tool learnt it was sent keeps its counter; the same command again (the same
+  account, amount and recipient) sends the same note, of which the bridge program applies at most one, and
+  if the first is already applied, burns nothing (`not burning again`); any other burn takes a fresh counter;
+- a burn refused on the zone uses its counter (its memo is public in its block);
+- the tool reserves at most 10 counters past the zone's while none of them is on the zone, so a recovery from
+  the seed alone (which looks 20 counters past the last burn it finds) misses none.
+
+The journal is not needed to recover anything: `ferrata recover` finds every burn from the seed and the zone.
+Another client of the same seed (a second device, the Logos module) does not see it; the bridge program
+refuses a second note with a used tag (ADR 0032), so such a clash costs a refused transaction's fee, not a
+denomination. The interrupted-burn record of the tool before 22 November 2026, `ferrata-pending-burn.json`,
+is imported once and removed.
+
 ```text
 burn on LEZ (configuration 0xa9d6…a8c3):
   amount       1 ETH (…) from your private account /0

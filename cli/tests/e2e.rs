@@ -1036,7 +1036,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         recipient,
         send: true,
         yes: true,
-        pending: None,
+        journal: None,
     };
     let mut out = flow::Out::new(true);
     let unacked = flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out)
@@ -1399,7 +1399,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         recipient: fresh,
         send: false,
         yes: false,
-        pending: None,
+        journal: None,
     };
     let mut out = flow::Out::new(true);
     flow::burn(&eth_side, &user, &mut zone, &ctx, &bopts, &mut out).await?;

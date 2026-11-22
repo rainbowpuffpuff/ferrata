@@ -16,7 +16,7 @@ use common::transaction::LeeTransaction;
 use ferrata_bridge_core::{
     chain_id_u256,
     inbound::{self, DestKind, OwnedDeposit},
-    outbound::{recover_burns, BurnNote, PublishedBurn, ReleaseTarget},
+    outbound::{BurnNote, PublishedBurn, ReleaseTarget},
     BridgeKeys, Hash,
 };
 use ferrata_lez_bridge_wire::{
@@ -235,6 +235,9 @@ pub struct History {
     pub imports: Vec<(u64, u64)>,
     /// Published burn notes of this configuration, by burn index (order of application).
     pub burns: Vec<PublishedBurn>,
+    /// Burn notes of this configuration in transactions a block includes though they were refused (their `burn_index`
+    /// is meaningless): nothing was burnt, but each tag is used, its memo public in its block.
+    pub refused_burns: Vec<PublishedBurn>,
     /// Nullifiers of plaintext claims against this vault.
     pub claimed: HashSet<Hash>,
     /// The deposit leaves (`inbound::deposit_leaf`) that plaintext claims have published, under any configuration of
@@ -288,13 +291,28 @@ fn published_leaf(w: &ferrata_lez_bridge_wire::ClaimWitness) -> Option<Hash> {
 impl History {
     /// Adds what refused calls (`Included::refused`) published: a refused plaintext `Claim`, under any configuration
     /// of the program, names its deposit as an applied one does, so its leaf joins `opened`; it spends no nullifier
-    /// (the deposit stays claimable) and nothing else of a refused call counts.
+    /// (the deposit stays claimable). A refused `Burn` of this configuration burnt nothing, but its tag is used (its
+    /// memo is public in the block): it joins `refused_burns`. Nothing else of a refused call counts.
     pub fn note_refused(&mut self, ctx: &Context, refused: &[Applied]) {
         for call in refused.iter().filter(|c| c.to.program_account_id == ctx.program) {
-            if let Ok(BridgeMessage::Claim { witness, .. }) = BridgeMessage::try_from_slice(&call.message) {
-                self.opened.extend(published_leaf(&witness));
+            match BridgeMessage::try_from_slice(&call.message) {
+                Ok(BridgeMessage::Claim { witness, .. }) => self.opened.extend(published_leaf(&witness)),
+                Ok(BridgeMessage::Burn { config_id, r, memo, mac, token, amount, c_out }) if config_id == ctx.cid => {
+                    self.refused_burns.push(PublishedBurn {
+                        burn_index: u64::MAX,
+                        note: BurnNote { r, memo, mac, token, amount, c_out },
+                    });
+                }
+                _ => {}
             }
         }
+    }
+
+    /// The first burn counter of `keys` after the last one this history shows used, applied or refused, found as a
+    /// recovery from the seed finds it (gap [`BURN_GAP`]).
+    pub fn next_burn_counter(&self, keys: &BridgeKeys, ctx: &Context) -> u64 {
+        let all: Vec<PublishedBurn> = self.burns.iter().chain(&self.refused_burns).copied().collect();
+        ferrata_bridge_core::outbound::view_burns(&keys.view, &ctx.cid, &all, BURN_GAP).1
     }
 }
 
@@ -472,6 +490,13 @@ pub async fn plan_burn<L: Ledger>(
     plan_burn_at(ledger, ctx, keys, holder, token, amount, recipient, history, None).await
 }
 
+/// A burn note's hash, `H(…/note ‖ r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` (the wire's): tells a note from another
+/// note with its tag.
+pub fn note_id(note: &BurnNote) -> Hash {
+    bw::Note { r: note.r, memo: note.memo, mac: note.mac, token: note.token, amount: note.amount, c_out: note.c_out }
+        .hash()
+}
+
 /// The burn with counter `i` of `amount` of `token` to `recipient` as its note was built (deterministic in the
 /// counter), for describing a burn an earlier run sent (R.07); its call names no account and is never sent.
 pub fn described_burn(
@@ -494,8 +519,9 @@ pub fn described_burn(
     BurnPlan { call, note, i }
 }
 
-/// [`plan_burn`] with the burn counter given (`Some(i)`: an interrupted burn's, so that its note and tag are the same
-/// and the bridge program, which refuses a repeated tag, applies at most one of the two) or the next free one.
+/// [`plan_burn`] with the burn counter given (`Some(i)`: the one the burn journal reserved, `crate::burns`) or the
+/// next one this history shows unused ([`History::next_burn_counter`]: blind to burns in flight; the bridge program
+/// refuses a second note with a used tag, ADR 0032).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_burn_at<L: Ledger>(
     ledger: &L,
@@ -528,10 +554,7 @@ pub async fn plan_burn_at<L: Ledger>(
         bail!(r);
     }
     let chain = chain_id_u256(ctx.chain_id);
-    let next_i = match counter {
-        Some(i) => i,
-        None => recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i,
-    };
+    let next_i = counter.unwrap_or_else(|| history.next_burn_counter(keys, ctx));
     let target = ReleaseTarget { chain_id: chain, vault: ctx.vault, recipient };
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
@@ -689,8 +712,11 @@ impl Ledger for Sequencer {
                                 if reverted { out.refused.push(call) } else { out.applied.push(call) }
                             }
                         }
-                        // A refused private transaction's witness stays in its proof: nothing of it counts.
-                        LeeTransaction::PrivacyPreserving(_) if reverted => {}
+                        // A refused private transaction's witness stays in its proof; what it delivers in the clear (a
+                        // refused private burn's note) is a refused call: nothing was burnt, but its tag is used.
+                        LeeTransaction::PrivacyPreserving(tx) if reverted => {
+                            out.refused.extend(visible_calls(tx, program))
+                        }
                         LeeTransaction::PrivacyPreserving(tx) => {
                             out.touched.extend(tx.message.public_account_ids());
                             out.applied.extend(visible_calls(tx, program));
