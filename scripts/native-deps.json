@@ -1,0 +1,99 @@
+{
+ "_doc": [
+  "Native code that the release CLI links (and that LEZ's wallet and sequencer link) which cargo does not build from",
+  "crate sources: prebuilt archives that the upstream build scripts would download with no checksum (review-code-ops M1).",
+  "scripts/fetch_native.py downloads each archive once, checks its size and sha256 before unpacking (and again on every",
+  "later use), checks the files listed below, and points the build scripts at the result (RAPIDSNARK_LIB_DIR,",
+  "LBC_ROOT_DIR); `fetch_native.py check-build` then fails the build if a build script linked anything else.",
+  "Each archive's components and licences are what releases/third-party/THIRD-PARTY-NOTICES.md must cover",
+  "(scripts/release_manifest.py check). To move a pin: change url, bytes, sha256 and files together, and say in",
+  "`confirmed` where the new hash was checked."
+ ],
+ "archives": [
+  {
+   "name": "rapidsnark",
+   "version": "0.0.8",
+   "target": "x86_64-unknown-linux-gnu",
+   "url": "https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark/releases/download/rapidsnark-pic-v0.0.8/rapidsnark-linux-x86_64-pic-v0.0.8.zip",
+   "bytes": 585355,
+   "sha256": "59bdd709eed96235de061f352893f4650c923b54b591052118593012bb1cd831",
+   "confirmed": "GitHub's digest of the release asset; downloaded on 21 November 2026 (review-code-ops box run 2) and on 22 November 2026 (fix-supply box run 1), the same bytes",
+   "format": "zip",
+   "env": {"RAPIDSNARK_LIB_DIR": "rapidsnark-linux-x86_64-pic-v0.0.8/lib"},
+   "build_packages": ["rust-rapidsnark"],
+   "static_libs": ["rapidsnark", "fr", "fq", "gmp"],
+   "used_by": "rust-rapidsnark (logos-blockchain-rust-rapidsnark e91187f8, crates/build.rs), linked statically: logos-blockchain-circuits-prover and -verifier (logos-blockchain d480efc6) enable its static-rapidsnark feature",
+   "built_by": "logos-blockchain-rust-rapidsnark e91187f8ccb5bbfc7bb00dac88169112428da78f, .github/workflows/build-pic-archives.yml (GMP 6.3.0 configured --enable-static --disable-shared --with-pic; rapidsnark v0.0.8 with its ffiasm and json submodules, cmake -DUSE_ASM=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON)",
+   "files": {
+    "rapidsnark-linux-x86_64-pic-v0.0.8/lib/librapidsnark.a": "d4133227f845ff5bfa3672eb5b9c018a6a086bfa164b176bdaf76949c7d1f423",
+    "rapidsnark-linux-x86_64-pic-v0.0.8/lib/libfr.a": "40f809394904682cb5517845cd3c2f936a5eb4609712534b573f552f2811fb82",
+    "rapidsnark-linux-x86_64-pic-v0.0.8/lib/libfq.a": "797b5d24bb8e8b088f811bddfff35f33973af9c797fb3812489cd42ba6a957d0",
+    "rapidsnark-linux-x86_64-pic-v0.0.8/lib/libgmp.a": "0a910b420c3ad603c83c9dc2818c7ae05394c231ca23135c7b873e8e680ea41b"
+   },
+   "components": [
+    {"name": "rapidsnark", "version": "v0.0.8 (iden3/rapidsnark 2921b0eb33369f4d329a6902e97959246b802e6c)", "licence": "LGPL-3.0-only",
+     "in": "lib/librapidsnark.a", "source": "https://github.com/iden3/rapidsnark/tree/v0.0.8", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
+    {"name": "ffiasm field arithmetic (Fr, Fq)", "version": "iden3/ffiasm aa90166dc4c5a075b835a398e15cc1e06ac90e95 (rapidsnark v0.0.8's submodule)", "licence": "LGPL-3.0-only",
+     "in": "lib/libfr.a, lib/libfq.a", "source": "https://github.com/iden3/ffiasm/tree/aa90166dc4c5a075b835a398e15cc1e06ac90e95", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
+    {"name": "JSON for Modern C++ (nlohmann/json)", "version": "350ff4f7ced7c4117eae2fb93df02823c8021fcb (rapidsnark v0.0.8's submodule; header-only)", "licence": "MIT",
+     "in": "lib/librapidsnark.a", "source": "https://github.com/nlohmann/json/tree/350ff4f7ced7c4117eae2fb93df02823c8021fcb",
+     "notice": "Copyright (c) 2013-2020 Niels Lohmann", "texts": ["MIT-nlohmann-json.txt"]},
+    {"name": "GNU MP (GMP)", "version": "6.3.0", "licence": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+     "in": "lib/libgmp.a", "source": "gmp-6.3.0", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt", "GPL-2.0.txt"]}
+   ]
+  },
+  {
+   "name": "logos-blockchain-circuits",
+   "version": "0.5.7",
+   "target": "x86_64-unknown-linux-gnu",
+   "url": "https://github.com/logos-blockchain/logos-blockchain-circuits/releases/download/v0.5.7/logos-blockchain-circuits-v0.5.7-linux-x86_64.tar.gz",
+   "bytes": 30023192,
+   "sha256": "92a0c6ad810d486631518b7b9b247a2b66f66af6f8f8ddce381acbbdfedc0f7f",
+   "confirmed": "GitHub's digest of the release asset and the circuits repository's own Nix pin (circuits-nix-hashes.json at v0.5.7, x86_64-linux, sha256-kqDGrYENSGYxUYt7myR6K2b2avb4+N3OOBrLvf7cD38=); downloaded on 22 November 2026 (fix-supply box run 1)",
+   "format": "tar.gz",
+   "env": {"LBC_ROOT_DIR": "logos-blockchain-circuits-v0.5.7-linux-x86_64"},
+   "build_packages": ["logos-blockchain-circuits-pol-sys", "logos-blockchain-circuits-poc-sys", "logos-blockchain-circuits-poq-sys", "logos-blockchain-circuits-signature-sys"],
+   "static_libs": ["pol", "poc", "poq", "signature", "gmp"],
+   "used_by": "logos-blockchain-circuits-build v0.5.7 (ebf7ddf5, feature prebuilt) for the four sys crates: each links its witness generator and GMP statically and embeds the circuit's proving key, verification key and witness_generator.dat (include_bytes!)",
+   "built_by": "logos-blockchain-circuits v0.5.7 (ebf7ddf5b5b625ef4ea7c803171c670beebd05ef), .github/workflows/ci.yml: circom 2.2.2 C++ witness generators; GMP 6.2.1 from its rapidsnark submodule's build_gmp.sh",
+   "files": {
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/VERSION": "804764353829da1e01e07eee47a895b39ef86e370a6a2cead4db2b4ac278702b",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/lib/libgmp.a": "3d18d7801b8d7148b7e3ef0ba5ad3e617babb5587ee5e91337d401d392d0cf28",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/pol/libpol.a": "99f2f2f5567be21a5441adbfcc4841b5114fd5adfe124ad3f769cd77d8edd250",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/pol/proving_key.zkey": "8df72881a425e0575fe5d8518ec9fa4430d473c165c42611418172b38d773141",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/pol/verification_key.json": "973513d9a15e0641fa8d153ef678713f5f3dbb9883cae2320832d469b01d44a5",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/pol/witness_generator.dat": "0058bcb6e2d4f16e8e94fa1273259e8a929b66b3c13081e80bbe820002930953",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poc/libpoc.a": "4a70422c1fbbeb7d58ebb9de2d59f37655b3fe9a9986dc0830c6c21b944b82b6",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poc/proving_key.zkey": "5b34ff0ad8a8285fe32835bde22b262f2d59ca9b707ed8a08a70e8fd159e6b9a",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poc/verification_key.json": "94457cb5317dba09f96df09e69aa0be19a38c07d69a17cec8b0be6549606dae3",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poc/witness_generator.dat": "24c151c3f20b161bdd9891846839e8fd5e653f92a49510b9a3ac9e4279ded929",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poq/libpoq.a": "66d59515699eb87caf6b674082c1d0ccb5e9a15d07e1b45369182f43dc5434bc",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poq/proving_key.zkey": "640315cc3ea5c4b3366c640ad6866afd5b43e19ad50b24dc1d788d354509321a",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poq/verification_key.json": "a6898d3eb5353d1333c04f51c365edb669ab1f18c68bd9d9109fc7187bebe10f",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/poq/witness_generator.dat": "4b3a19486f5e8a4f5f7d1b199385812c8e970240f9d222c6a38d3f4dfe46bd4b",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/signature/libsignature.a": "d704b02c9e048b0104d70eb3c5c4d95e4a26329525ca432cf5d8a85788ca1841",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/signature/proving_key.zkey": "b87ac09c136022f614c2300c7aa740ae28d1a39a11e3a2e218cb3414da882ec4",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/signature/verification_key.json": "b6f8a7861308f0df1a7ead87f4d8158f59104738bb24a24b18904f0bbbbe0df9",
+    "logos-blockchain-circuits-v0.5.7-linux-x86_64/signature/witness_generator.dat": "b6b93ab0c2f14247005d5fbb8f6e9edaf8d55de237d460a5e28eb75ecf3060f1"
+   },
+   "components": [
+    {"name": "Logos Blockchain circuits (witness generators pol, poc, poq, signature; their proving and verification keys)", "version": "v0.5.7 (ebf7ddf5b5b625ef4ea7c803171c670beebd05ef)", "licence": "MIT OR Apache-2.0",
+     "in": "{pol,poc,poq,signature}/lib*.a and the key files", "source": "https://github.com/logos-blockchain/logos-blockchain-circuits/tree/v0.5.7", "texts": ["MIT-logos-blockchain-circuits.txt"]},
+    {"name": "circom C++ runtime (calcwit, circom.hpp, fr), compiled into each witness generator by circom", "version": "circom 2.2.2", "licence": "GPL-3.0-only",
+     "in": "{pol,poc,poq,signature}/lib*.a", "source": "https://github.com/iden3/circom/tree/v2.2.2/code_producers/src/c_elements", "texts": ["GPL-3.0.txt"]},
+    {"name": "circomlib templates (bitify, comparators), compiled into the witness generators", "version": "iden3/circomlib 35e54ea21da3e8762557234298dbb553c175ea8d (the circuits' submodule)", "licence": "LGPL-3.0-only",
+     "in": "{pol,poc,poq,signature}/lib*.a", "source": "https://github.com/iden3/circomlib/tree/35e54ea21da3e8762557234298dbb553c175ea8d", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt"]},
+    {"name": "GNU MP (GMP)", "version": "6.2.1", "licence": "LGPL-3.0-or-later OR GPL-2.0-or-later",
+     "in": "lib/libgmp.a", "source": "gmp-6.2.1", "texts": ["LGPL-3.0.txt", "GPL-3.0.txt", "GPL-2.0.txt"]}
+   ]
+  }
+ ],
+ "sources": [
+  {"name": "gmp-6.3.0", "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.3.0.tar.xz", "bytes": 2094196,
+   "sha256": "a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898",
+   "confirmed": "GNU's signature (gmp-6.3.0.tar.xz.sig, RSA key 343C2FF0FBEE5EC2EDBEF399F3599FF828C67298, Niels Moller), checked 22 November 2026 (fix-supply box run 1)"},
+  {"name": "gmp-6.2.1", "url": "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz", "bytes": 2027316,
+   "sha256": "fd4829912cddd12f84181c3451cc752be224643e87fac497b69edddadc49b4f2",
+   "confirmed": "GNU's signature (gmp-6.2.1.tar.xz.sig, the same key), checked 22 November 2026 (fix-supply box run 1)"}
+ ]
+}
