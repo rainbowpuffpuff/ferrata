@@ -101,6 +101,12 @@ LEZ_TAG=v0.4.0-rc3 FERRATA_VERIFY_DEV_MODE=1 lez/live/verify-run.sh --dir lez/re
   <ferrata_lez.bin> <scripted.bin> <ferrata_consumer.bin>
 ```
 
+The session was run again on the build box on 22 November 2026, 05:44–05:49 UTC, with the command of "What ran" at
+commit `50028a49` (`lez/live/scrub.sh` in place) and the same two folder names this record first held: four reader
+transactions in block 47, positions 0–3 (sent within 3 ms; proving, 7.2 s, began after block 40 and ended after block 41), the control's
+second dropped on the same commitment, 51 blocks, its replay as above green. That record (not committed) names no
+folder: `<scratch>`, `<repo>` and `<risc0-home>` stand where the folders were.
+
 ## Files
 
 | File | What |
