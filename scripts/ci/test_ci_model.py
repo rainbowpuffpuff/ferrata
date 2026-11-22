@@ -166,6 +166,89 @@ check("features: a gated module's tests, braces counted",
 check("features: a test after a gated module is not gated",
       FG('#[cfg(feature = "c")]\nmod t {\n    #[test]\n    fn x() {}\n}\n#[test]\nfn y() {}\n', set()) == (None, {"c"}, 1))
 
+# ── Silent non-runs and masked failures: what the static model must not count ────────────────────────
+# Each check below fails under one of the checker mutants a review found surviving (feature-file-only,
+# no-ignore-check, sh-skip-filter, sh-or-true, sh-no-devmode, sh-exit-early, yml-build-only, yml-step-if-false,
+# yml-continue-on-error): synthetic jobs and texts, the real lez-harness script where a job calls it.
+PUBLIC = "lez/harness/tests/public_path.rs"
+LEZ_CMD = ["cargo", "test", "-p", "harness", "--locked"]
+
+
+def synthetic_job(steps, **keys):
+    return ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "synthetic",
+                        {"runs-on": "ubuntu-latest", "steps": steps, **keys}, {"on": {"push": None}})
+
+
+def job_runs(job, path):
+    for cmd in ci_model.trace(job, tracked):
+        if (ci_model.cargo_runs(cmd, path)[0] if path.endswith(".rs") else ci_model.invokes(cmd, path, tracked)):
+            return True
+    return False
+
+
+SCRIPT_STEP = {"name": "suites", "run": "scripts/ci/lez-harness.sh"}
+check("guard: lez-harness.sh with no argument runs the harness's tests (the baseline of the checks below)",
+      job_runs(synthetic_job([SCRIPT_STEP]), PUBLIC))
+check("guard: a job whose only step is `lez-harness.sh build` runs no test (the script exits after its build)",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh build"}]), PUBLIC))
+check("guard: a step with `if: ${{ false }}` counts for nothing",
+      not job_runs(synthetic_job([{**SCRIPT_STEP, "if": "${{ false }}"}]), PUBLIC))
+check("guard: a step with `if: always()` still counts", job_runs(synthetic_job([{**SCRIPT_STEP, "if": "always()"}]), PUBLIC))
+check("guard: a step with `continue-on-error: true` counts for nothing",
+      not job_runs(synthetic_job([{**SCRIPT_STEP, "continue-on-error": True}]), PUBLIC))
+check("guard: a job with `continue-on-error: true` counts for nothing",
+      not job_runs(synthetic_job([SCRIPT_STEP], **{"continue-on-error": True}), PUBLIC))
+check("guard: a job under an `if:` counts for nothing",
+      not job_runs(synthetic_job([SCRIPT_STEP], **{"if": "github.ref == 'refs/heads/main'"}), PUBLIC))
+
+
+def lez_text(text):
+    return synthetic_job([{"working-directory": "lez", "run": text}])
+
+
+check("guard: `cargo test ... || true` masks the test's failure",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked || true"), PUBLIC))
+check("guard: `cargo test ... && echo ok || true` masks it too (the chain before `||`)",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked && echo ok || true"), PUBLIC))
+check("guard: `cargo test ... || exit 1` keeps the failure",
+      job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked || exit 1"), PUBLIC))
+check("guard: a cargo test run as an `if` condition counts for nothing",
+      not job_runs(lez_text("if RISC0_DEV_MODE=1 cargo test -p harness --locked; then echo ok; fi"), PUBLIC))
+check("guard: a cargo test run in the background (&) counts for nothing",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked &\nwait"), PUBLIC))
+check("guard: an unconditional `exit 0` before the test",
+      not job_runs(lez_text("exit 0\nRISC0_DEV_MODE=1 cargo test -p harness --locked"), PUBLIC))
+check("guard: an `exit` inside an `if` block does not stop the trace",
+      job_runs(lez_text('if [ -n "$NO_SUCH_VARIABLE" ]; then exit 0; fi\nRISC0_DEV_MODE=1 cargo test -p harness --locked'),
+               PUBLIC))
+check("guard: an `exit` inside a function body does not stop the trace",
+      job_runs(lez_text("die() {\n  exit 1\n}\nRISC0_DEV_MODE=1 cargo test -p harness --locked"), PUBLIC))
+check("cargo: `-- --skip P` where P is in a test's path leaves the file out",
+      not ci_model.cargo_runs(C(LEZ_CMD + ["--", "--skip", "a"], "lez", {}, "t"), PUBLIC)[0])
+check("cargo: `-- --skip P` matching none of the file's tests keeps it",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--", "--skip", "zz_no_such_test"], "lez", {}, "t"), PUBLIC)[0])
+check("cargo: a file that asserts RISC0_DEV_MODE (attest_private.rs) needs the command to set it",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), "lez/harness/tests/attest_private.rs")[0]
+      and ci_model.cargo_runs(C(LEZ_CMD, "lez", {"RISC0_DEV_MODE": "1"}, "t"), "lez/harness/tests/attest_private.rs")[0])
+MODULE_GATED = '#[cfg(feature = "x")]\nmod t {\n    #[test]\n    fn a() {}\n}\n'
+TEST_GATED = '#[cfg(feature = "x")]\n#[test]\nfn a() {}\n'
+check("features: cargo_runs refuses a file whose every test is in a gated module",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=MODULE_GATED)[0])
+check("features: cargo_runs refuses a file whose every test is gated",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=TEST_GATED)[0])
+check("features: ... and accepts it once the command enables the feature",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--features", "x"], "lez", {}, "t"), PUBLIC, text=TEST_GATED)[0])
+IGNORED = "#[test]\n#[ignore]\nfn a() {}\n"
+check("cargo: a file whose every test is #[ignore]d is not run",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
+check("cargo: ... unless the harness is given --ignored",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--", "--ignored"], "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
+LH = jobs["lez-harness"]
+last = LH.steps[-1] if LH.steps else {}
+check("jobs: lez-harness's last step runs scripts/ci/lez-harness.sh with no argument, unconditionally",
+      last.get("run") == "scripts/ci/lez-harness.sh" and "if" not in last and "continue-on-error" not in last
+      and "if" not in LH.spec and "continue-on-error" not in LH.spec and LH.on_change)
+
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
 real = (HERE / "row-tests.toml").read_text(encoding="utf-8")
