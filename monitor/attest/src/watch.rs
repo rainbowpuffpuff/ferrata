@@ -157,27 +157,30 @@ pub struct Summary {
     pub last: Option<Assessment>,
 }
 
-/// One poll: the instance's state, then each provider at its finalized slot, then the decision at `now_s`.
-pub fn poll(state: &StateSource, target: Option<&Target>, providers: &[Provider], policy: &Policy, now_s: u64, timeout_s: u64) -> Result<Assessment> {
-    poll_views(state, target, providers, policy, now_s, timeout_s).map(|(_, _, a)| a)
+/// One poll: the instance's state, the chain's clock read once the state is in (a slow read must not make the header
+/// look younger than it is: review B3, L3), then each provider at the instance's finalized slot, then the decision.
+pub fn poll(state: &StateSource, target: Option<&Target>, providers: &[Provider], policy: &Policy, clock: &Clock, timeout_s: u64) -> Result<Assessment> {
+    poll_views(state, target, providers, policy, clock, timeout_s).map(|(_, _, _, a)| a)
 }
 
+/// `poll`, with the clock's reading, the state and the providers' views.
 fn poll_views(
     state: &StateSource,
     target: Option<&Target>,
     providers: &[Provider],
     policy: &Policy,
-    now_s: u64,
+    clock: &Clock,
     timeout_s: u64,
-) -> Result<(InstanceState, Vec<ProviderView>, Assessment)> {
+) -> Result<(u64, InstanceState, Vec<ProviderView>, Assessment)> {
     let s = read_state(state, target, timeout_s)?;
+    let now_s = clock.now();
     let slot = ferrata_core::witness::CompactStore::decode(&s.store)
         .map_err(|e| anyhow::anyhow!("the instance's store does not decode: {e:?}"))?
         .finalized
         .slot;
     let views: Vec<_> = providers.iter().map(|p| query_provider(p, slot, timeout_s)).collect();
     let a = assess(&s, &views, now_s, policy)?;
-    Ok((s, views, a))
+    Ok((now_s, s, views, a))
 }
 
 /// The earlier headers to judge again this poll, at most `per_poll`: the due ones (not settled, not `current`, at a
@@ -316,9 +319,8 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
     w.sink.emit(&start);
     summary.emitted.push(start);
     loop {
-        let now = w.clock.now();
-        let (alerts, unjudged) = match poll_views(&w.state, w.target.as_ref(), &w.providers, &w.policy, now, w.timeout_s) {
-            Ok((s, views, a)) => {
+        let (now, alerts, unjudged) = match poll_views(&w.state, w.target.as_ref(), &w.providers, &w.policy, &w.clock, w.timeout_s) {
+            Ok((now, s, views, a)) => {
                 let entry = summary.seen.entry(a.finalized_slot).or_insert_with(|| Seen::new(a.finalized_root.clone(), now));
                 if entry.root != a.finalized_root {
                     // Another header at a slot on record (the program never replaces a finalized header at its slot: the
@@ -355,9 +357,10 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
                     write_atomic(p, &serde_json::to_string_pretty(&a).unwrap_or_default());
                 }
                 summary.last = Some(a);
-                (alerts, Unjudged::Kinds(unjudged))
+                (now, alerts, Unjudged::Kinds(unjudged))
             }
             Err(e) => (
+                w.clock.now(),
                 vec![Alert::new(Level::Warn, "instance-unreadable", "the instance's state could not be read").with("error", format!("{e:#}"))],
                 Unjudged::All,
             ),

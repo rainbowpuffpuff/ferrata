@@ -1251,3 +1251,60 @@ fn b3_r5_undecidable_older_headers_do_not_hold_the_recheck() {
         assert!(read_lines(&freeze).iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)));
     }
 }
+
+/// R4 (review B3, L3), inverted. Was `b3_r4_watch_raises_a_false_too_new_when_its_state_read_takes_longer_than_a_slot`:
+/// `watch` took the poll's clock before reading the instance, so a state read of 15 s started when the honest header was
+/// 766 s old (781 s once read, a legitimate age: an honest instance holds it from 780 s) raised `instance-ahead`
+/// `too-new`, ran the freeze tool and held it. Now the clock is read once the state is in: no alarm, as `check` at 781 s.
+#[test]
+fn b3_r4_a_slow_state_read_does_not_make_an_honest_header_too_new() {
+    let f = fx();
+    let d = scratch("b3-r4");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let state = write_state(&d, "s.hex", &s);
+    let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot + 64)).collect();
+    let ps: Vec<&Server> = honest.iter().collect();
+    let o = check(&args(&state, &ps, slot_time(&s, slot) + 781));
+    assert_eq!(o.code, 0, "{}", o.report);
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let mut cmd = Command::new(bin());
+    cmd.arg("watch")
+        .args(["--state", &format!("cmd:sleep 15; cat {}", state.display())])
+        .args(["--now", &(slot_time(&s, slot) + 766).to_string(), "--interval", "1", "--repeat", "3600", "--timeout", "3", "--max-polls", "2"])
+        .args(["--alert-log", &log.display().to_string(), "--alert-cmd", &format!("cat >> {}", freeze.display()), "--alert-cmd-level", "critical"]);
+    for (i, p) in ps.iter().enumerate() {
+        cmd.args(["--provider", &format!("p{i}={}", p.url)]);
+    }
+    let st = cmd.stdout(Stdio::null()).stderr(Stdio::null()).status().unwrap();
+    let l = read_lines(&log);
+    let k: Vec<String> = l.iter().map(|v| v["kind"].as_str().unwrap_or("").to_string()).collect();
+    println!("b3-r4: check at 781 s: exit {}; watch (read 15 s, started at 766 s): exit {:?}, alerts {:?}", o.code, st.code(), k);
+    assert!(st.success(), "{st}");
+    assert_eq!(k, vec!["started", "stopped"], "no alarm");
+    assert!(read_lines(&freeze).is_empty(), "the freeze tool did not run");
+}
+
+/// L3's other half: a `too-new` raised on an honest header (here the monitor's clock is slow: the header looks 766 s
+/// old while every provider has already finalized it, so the freeze tool runs, the cost of a slow clock) clears once the
+/// header is no longer too new by that clock and every configured provider confirms it. Before, it was kept on record
+/// and raised for good.
+#[test]
+fn a_false_too_new_from_a_slow_clock_clears_once_every_provider_confirms_the_header() {
+    let f = fx();
+    let d = scratch("too-new-clears");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let state = write_state(&d, "s.hex", &s);
+    let honest: Vec<Server> = (0..3).map(|_| provider(&g, slot, Some(header_11549664()), slot + 64)).collect();
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let daemon = spawn_watch(&state, &honest.iter().collect::<Vec<_>>(), slot_time(&s, slot) + 766, &log, &freeze, &[]);
+    let l = wait_for_lines(&log, "too-new cleared", &|l| l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-ahead"));
+    assert!(daemon.stop().0.success());
+    let raised = l.iter().find(|x| x["kind"] == "instance-ahead").unwrap();
+    println!("too-new on an honest header (slow clock): raised at age {} s, then recovered", raised["age_s"]);
+    assert_eq!((raised["why"].as_str(), raised["age_s"].as_u64()), (Some("too-new"), Some(766)));
+    assert!(read_lines(&freeze).iter().any(|x| x["kind"] == "instance-ahead"), "the freeze tool ran");
+}
