@@ -41,7 +41,7 @@ default. In short:
 | section | fields |
 |---|---|
 | `[daemon]` | `name`, `state_dir` (committee cache, journal, the jobs it opened), `poll_secs`, `listen` (`/health`, `/metrics`), `ledger` (`harness`: the build of this crate with `--features harness`; `sequencer`: the build of `sequencer/`) |
-| `[sequencer]` | `rpc` (the sequencer's JSON-RPC; loopback only), `program` (the attestation program's account, base58 or 0x-hex), `wait_final` (default `true`: read the chain and settle transactions only in blocks final on Bedrock), `run_dir` (the backend's follower and manifest; default `state_dir/ledger`), `log` (the sequencer's log, for the reason of a dropped transaction) |
+| `[sequencer]` | `rpc` (the sequencer's JSON-RPC; loopback only, or the one remote sequencer `FERRATA_SEQUENCER_REMOTE` names, sent to only with `FERRATA_TESTNET_SEND=yes`), `program` (the attestation program's account, base58 or 0x-hex), `wait_final` (default `true`: read the chain and settle transactions only in blocks final on Bedrock), `run_dir` (the backend's follower and manifest; default `state_dir/ledger`), `log` (the sequencer's log, for the reason of a dropped transaction) |
 | `[keys]` | `payer_key_file`: a 32-byte secret key in hex. It signs and pays every transaction and needs no other role: no step of the program checks a sender |
 | `[fees]` | `gas_limit` declared by every step (default 4,800,000; the largest step measured is 3,731,712), `max_fee_per_tx`, `budget` (the daemon stops sending at it and says so in `/health`) |
 | `[policy]` | `defer_window`, `max_lag_slots`, `min_agreeing`, `retry_base_ms`, `retry_max_ms`, `max_attempts`, `demote_rounds`, `max_periods_per_request`, `finish_own_jobs` (default `true`), `min_distinct_clients` (default 0, off) and `client_match` (`bytes` or `finalized-header`): [client diversity](#client-diversity-policymin_distinct_clients) |
@@ -92,15 +92,19 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    and leaves it would otherwise have the updater pay a `Miller` each round for a job it then left
    (review-code-lc UP-M3, `tests/jobs.rs`). The update is kept in `state_dir/<chain>/open/` until
    the job is finished or moot (the store moved past it), so a restarted updater finishes it too.
+   A kept job whose next step is held after a refusal (item 10) stays kept while the hold will end,
+   until that step has been refused three times; then the updater leaves it to another party (a
+   refusal for good, by the program or out of gas, leaves it at once).
    With `finish_own_jobs = false` each round takes the best update, and a job left behind keeps the
    steps already paid for it.
 8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod
    defer_window` rounds after it first saw the step due, runs out first; the others find the step
    done and skip it. Two honest updaters collide only when their waits are equal.
 9. **Send.** Within `max_fee_per_tx` and `budget`; a transport failure is retried with
-   exponential backoff (`retry_base_ms * 2^attempt`, at most `retry_max_ms`, `max_attempts`), and
-   just before sending and before every retry the chain is read again: a step another party sent, or
-   a store that moved, since the round read the instance is not sent (UP-L5).
+   exponential backoff (`retry_base_ms * 2^(attempt-1)` after attempt 1, 2, ..., at most
+   `retry_max_ms`, `max_attempts` attempts), and just before sending and before every retry the
+   chain is read again: a step another party sent, or a store that moved, since the round read the
+   instance is not sent (UP-L5). A read that fails is tried again the same way.
    Every sent transaction is a line of `state_dir/<chain>/journal.tsv` (round, step, job, finalized
    slot, result, exit code, execution and storage gas, fee, block, the time it settled, its label, the
    chain's note: a refusal's reason).
@@ -109,16 +113,24 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    update's signature slot to the end of the store's period (`ferrata-advance`'s `init_window`,
    `open_window`), and LEZ charges a transaction executed outside its window the whole gas limit. So
    neither is sent unless its window stays open 60 s past the chain's clock (`Ledger::now_ms`: for the
-   sequencer backend this machine's clock, which the loopback sequencer stamps its blocks with; the
-   in-process harness takes each transaction's own time, `HarnessLedger::now` sets it); outside it the plan is
-   stuck with what to do ("initialise from a newer checkpoint", "initialise a new instance"), and
-   `/health` says so. After a refusal the chain is read again: a step another party's transaction
-   made done or moot was a race and nothing is held; a step still due would meet the same state, so
-   it is held: for good if the program refused it or it ran out of gas (out of gas: until
-   `fees.gas_limit` is raised), 4 then 8 rounds for a window or an unknown reason, three refusals at
-   most. Three such refusals in a row pause sending for 8 rounds, then 16, ... up to 512, with one
-   step tried after each pause: this bounds what a refusal nothing here foresees can cost when every
-   round brings a new job. The reason is in the log line, the journal, `/health` and the metrics.
+   sequencer backend this machine's clock: a sequencer on this machine stamps its blocks with the same
+   clock; the one remote sequencer the owner may name for the day-one deployment
+   (`FERRATA_SEQUENCER_REMOTE`, sending only with `FERRATA_TESTNET_SEND=yes`) stamps them with its own,
+   so the 60 s margin covers a small skew and a refusal by a larger one is held like any window
+   refusal below; the in-process harness takes each transaction's own time, `HarnessLedger::now` sets it);
+   outside it the plan is stuck with what to do ("initialise from a newer checkpoint", "initialise a
+   new instance"), and `/health` says `down`. After a refusal the chain is read again (up to
+   `max_attempts` times): a step another party's transaction made done or moot was a race and nothing
+   is held; a step still due would meet the same state, so it is held: for good if the program refused
+   it or it ran out of gas (out of gas: until `fees.gas_limit` is raised), and for a window or an
+   unknown reason 4 rounds, then 8, 16, 32, then every 64 rounds, sent again after each hold, never
+   given up (review of the fixes, L3); if the chain cannot be read after the refusal, the step is held
+   4 rounds whatever the cause, without counting against the breaker or as a send that did not land (on
+   the sequencer backend a read fails while another party's transaction touching the instance is in
+   flight, which is when a race is lost; L4). Three refusals in a row of steps that stayed due pause
+   sending for 8 rounds, then 16, ... up to 512, with one step tried after each pause: this bounds what
+   a refusal nothing here foresees can cost, also when every round brings a new job. The reason is in
+   the log line, the journal, `/health` and the metrics.
 
 ## Client diversity (`policy.min_distinct_clients`)
 
@@ -197,30 +209,51 @@ daemon is the same (`src/daemon.rs`, which the Logos module drives too). It reus
 
 `GET /health`: JSON per instance (`status` `ok`, `degraded` or `down`, the reasons, the finalized
 slot and period, the last plan and error, the steps held after a refusal, the pause, the sends that
-did not land, the last applied transaction's time, how far the sources are past the instance, the
-rounds without progress, and the time it was written); HTTP 503 when an instance is `down` or when
-no round has refreshed the answer for ten polls (at least 600 s: a round hung on a settle wait or a
-source). It reflects what lands on the chain (review-code-lc UP-M1, `tests/health.rs`):
+did not land, the rounds that ended in an error, the last applied transaction's time, how far the
+sources are past the instance, the rounds without progress, and the time it was written); HTTP 503
+when an instance is `down` or when no round has refreshed the answer for ten polls (at least 600 s: a
+round hung on a settle wait or a source). It reflects what lands on the chain (review-code-lc UP-M1,
+`tests/health.rs`):
 `degraded`: a source demoted, lagging or unavailable, a `headers` source holding another block at a
 finalized header's slot, two sources serving other bytes for one update or waiting for clients beyond `max_lag_slots`
 (`min_distinct_clients`), a transaction it sent that did not land (rejected, refused while its step
-stayed due, failed at transport after every retry), the last round stuck or failed, sending paused,
-or no progress: the instance's finalized slot unmoved for `6 × defer_window + 10` rounds while the
-sources serve updates more than `max_lag_slots` past it. `down`: no light-client source usable and
-answering, five sends in a row that did not land, or the budget reached.
+stayed due, failed at transport after every retry), a round that ended in an error, the last round
+stuck, sending paused, or no progress: the instance's finalized slot unmoved for
+`6 × defer_window + 10` rounds while the sources serve updates more than `max_lag_slots` past it.
+`down` (HTTP 503), whenever this updater moves nothing: no light-client source usable and answering;
+five sends in a row that did not land; five rounds in a row that ended in an error (a chain that
+answers neither reads nor sends fails each round before anything is sent); the instance, or before
+`Init` its checkpoint, past its weak-subjectivity period by the chain's clock (a person must
+initialise a new instance, or start from a newer checkpoint); no progress for twice the rounds above,
+`2 × (6 × defer_window + 10)` (a step held, sending paused, too few sources or clients agreeing, round
+after round); or the budget reached (the review of the fixes, M1: an unreachable chain and an
+instance past its period stayed `degraded`, HTTP 200, in 200 rounds of 200). After an outage longer
+than that, `/health` stays `down` until the instance moves again (measured: three rounds, one job).
 
-The listener serves each connection on a thread of its own, at most eight at once; a client has two
-seconds to send its request head, at most 8 KiB (`400` beyond), so one idle or slow client neither
-blocks another nor grows the daemon (review-code-ops M3, `tests/serve.rs`). Every answer a source
-gives is read to a bound (an `updates` answer 8 MiB, a bootstrap or finality update 1 MiB, a JSON
-answer 64 KiB, `beacon_api_module`'s reply 16 MiB), with `curl -q`, HTTP(S) only and no redirect; a
-provider's message reaches the log and `/health` as at most 200 printable characters (UP-M2,
-`tests/bounds.rs`).
+The listener serves each connection on a thread of its own: at most eight at once with two seconds
+to send the request head, of those at most four from one address other than loopback (on loopback
+every client is this machine, one address: they share the eight); a connection beyond those is still
+served, on at most eight more threads, if its request head arrives within 250 ms, as a monitor's does
+(the request goes out with the connection); beyond those it is closed at once. A head is at most 8 KiB
+(`400` beyond, and the client receives it: what it still sends is read for a moment before the close).
+A connection's place is given back before it is closed, so a client that connects again at once
+finds it. So one idle or slow client neither blocks another nor grows the daemon (review-code-ops M3),
+and clients that keep re-opening idle connections no longer keep a monitor out (the review of the
+fixes, L1: eight such clients used to deny `/health` while they kept at it). To keep a prompt request
+out, clients must hold the eight places and fill the eight quick ones again at least every 250 ms; one
+other host gets at most four of the eight, so it cannot; several hosts, or a process on this machine,
+could: keep `listen` on loopback (`tests/serve.rs`). Every answer
+a source gives through `curl` is read to a bound (an `updates` answer 8 MiB, a bootstrap or finality
+update 1 MiB, a JSON answer 64 KiB), with `curl -q`, HTTP(S) only, no redirect, the URL passed with
+`--url`; a `beacon_api_module` reply is refused past 16 MiB once received (the module hands its reply
+over whole: that bound limits parsing, not memory); a provider's message reaches the log and
+`/health` as at most 200 printable characters (UP-M2, `tests/bounds.rs`).
 
 `GET /metrics` (Prometheus text, labels `daemon`, `chain`, `source`): `ferrata_updater_rounds_total`,
 `_tx_total{step,result=applied|refused|rejected}`, `_refused_by_code_total{code}`,
-`_refusals_total{cause=window|gas|program|other,after=race|due}`, `_held_steps`, `_sending_paused`,
-`_failing_sends`, `_sources_head_slot`, `_rounds_without_progress`,
+`_refusals_total{cause=window|gas|program|other,after=race|due|unread}`, `_held_steps`, `_sending_paused`,
+`_failing_sends`, `_failed_rounds`, `_past_weak_subjectivity` (1: the instance or its checkpoint is
+past its weak-subjectivity period), `_sources_head_slot`, `_rounds_without_progress`,
 `_gas_total{result}`, `_fee_total{result}`, `_budget_remaining`, `_transport_errors_total`,
 `_retries_total`, `_deferrals_total`, `_steps_done_by_others_total`, `_jobs_finished_total`,
 `_finalized_slot`, `_period`, `_health` (0 ok, 1 degraded, 2 down), and per source
@@ -270,19 +303,20 @@ rounds (`results/client-diversity-2026-11-18/suite/gate-default.txt`; the table 
 the suite rewrites the tracked `results/gate.txt` with the grown record's figures; `git checkout` it afterwards to keep
 the 58-update file the README and EVIDENCE row 80 cite.
 
-**Review fixes** (22 November 2026, branch `fix-updater`; the findings of the code reviews of 21 November): on that
-tree **54 tests pass** (9 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in `recorded.rs`, and the
-new files below), clippy `-D warnings` clean with and without `harness`; the A3 gate's default run on the grown record
-(246 updates, 1,101 rounds) passes: honest refused / applied gas 0.0752, shares 0.4841 / 0.5159.
+**Review fixes** (22 November 2026: the findings of the code reviews of 21 November, then those of the review of
+these fixes): **64 tests pass** (10 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in
+`recorded.rs`, and the files below), clippy `-D warnings` clean with and without `harness`; the A3 gate's default run
+on the grown record (246 updates, 1,101 rounds) passes: honest refused / applied gas 0.0752, shares 0.4841 / 0.5159.
 
 | test | what it shows | result |
 |---|---|---|
-| `refusals.rs` (6) | `Init` and `Open` with the chain's clock (`HarnessLedger::now`) at and past the window's end; out of gas; a new refused job every round; a race; a store moved while planning | at the end minus 60 s or past it nothing is sent, 0 charged, `/health` degraded naming the action; 1 ms inside, sent and applied. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds, nothing charged after, released when the limit is raised. 5 refusals in 40 rounds where each round brings a new job (the breaker). A refusal lost to another updater (exit 207) not held. A step made moot while planning is not sent (sent anyway: refused, fee 1,706,408) |
-| `health.rs` (4) | every send rejected (no funds), failing at transport, the only source down, the instance not moving | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress (`defer_window` 1) |
-| `jobs.rs` (1) | ten rounds, a new finality update each, another party opening its job first and leaving it | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s for 5 applied updates, nothing refused |
+| `refusals.rs` (9) | `Init` and `Open` with the chain's clock (`HarnessLedger::now`) at and past the window's end; out of gas; a new refused job every round; a race; a store moved while planning; a refusal of unknown cause three times; races each followed by failed reads | at the end minus 60 s or past it nothing is sent, 0 charged, `/health` `down` naming the action; 1 ms inside, sent and applied, `ok`. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds, nothing charged after, released when the limit is raised. 5 refusals in 40 rounds where each round brings a new job (the breaker). A refusal lost to another updater (exit 207) not held. A step made moot while planning is not sent (sent anyway: refused, fee 1,706,408). A `Miller` refused three times for an unknown cause: sent again after 4, 8 and 16 rounds, lands, the instance moves. 9 races each followed by one failed read: all races, no strike; with every read failing: held 4 rounds each, no strike, no failing send |
+| `health.rs` (7) | every send rejected (no funds), failing at transport, the only source down, the instance not moving, the chain unreachable for 200 rounds, the instance past its weak-subjectivity period for 200 rounds, a daemon cut off from its chain | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress, `down` after 32 (`defer_window` 1); unreachable: degraded in rounds 1-4, `down` in 5-200, `ok` once it answers and the instance moves; past its period: `down` in 200 of 200, nothing sent; the daemon's `/health`: 200 in rounds 1-4, 503 from round 5 |
+| `jobs.rs` (2) | ten rounds, a new finality update each, another party opening its job first and leaving it; a kept job whose `Miller` is refused once while the sources move on | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s for 5 applied updates, nothing refused; the kept job kept through its 3 held rounds and finished: 2 `Open`s for 2 applied updates |
 | `bounds.rs` (3) | answers at and one byte past their bound, with and without a length; 256 MiB; module replies; provider messages | exact bound read, one more refused; 256 MiB cut after 1 MiB, RSS +0.9 MiB; `file://` refused; messages kept to 200 printable characters |
 | `daemon_clock.rs` (1) | the clock the windows are checked against | a `sequencer` backend gets this machine's clock; the harness, and a wrapper of it that says nothing, each transaction's own time |
-| `serve.rs` (5) | an idle connection, a request with no end, a trickling client, 24 connections, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 refused; RSS unchanged by 1 MiB without a newline; recovered after 1.7 s; `503` when stale |
+| `serve.rs` (7) | an idle connection, a request with no end, a trickling client, 24 connections, eight clients re-opening idle connections for 8 s, 400 connections at once, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 answered `400`; 16 MiB without a newline cut, RSS within 4 MiB; 24 connections: `/health` at once (0.6 ms); the eight clients: 80 of 80 tries answered; 400 at once: 8 kept open; `503` when stale |
+| `diversity_limits.rs` (4) | as above, and waiting for clients | degraded from the first round waiting, `down` once the instance has not moved for 32 rounds |
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a
 lagging one) and an adversarial updater follow mainnet and Sepolia on one chain while the record
@@ -351,6 +385,10 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   with LEZ's node-side crates and their prebuilt circuit and rapidsnark libraries). It ran inside a headless Logos
   Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
+- The review fixes on a sequencer: every measurement of them ran in the in-process chain. A sequencer's real
+  refusals (the note the backend passes on when a receipt has no exit code), a clock that differs from the
+  sequencer's near a window's end, `/health` under a real settle wait, and reads that fail while another daemon's
+  transaction touching the instance is in flight (R.9 with several daemons) are untested there.
 - Client diversity ran ten minutes live on mainnet, on the in-process chain (two daemons; Sepolia's run did not start:
   Lodestar's API answered HTTP 500 for the bootstraps the run script asked both clients for), not on a sequencer and
   not for days. A provider's reported client is not authenticated. Lighthouse's public node serves light-client data

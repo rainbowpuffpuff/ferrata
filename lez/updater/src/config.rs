@@ -46,7 +46,9 @@ pub struct Daemon {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SequencerCfg {
-    /// The sequencer's JSON-RPC address (`sequencer_service start --rpc-listen-address`); loopback only.
+    /// The sequencer's JSON-RPC address (`sequencer_service start --rpc-listen-address`); loopback only, or the one
+    /// remote sequencer `FERRATA_SEQUENCER_REMOTE` names exactly (`chain::check_loopback`), which the backend sends to
+    /// only with `FERRATA_TESTNET_SEND=yes`.
     pub rpc: String,
     /// The attestation program's account on that chain (base58), as its deployment computed it.
     pub program: String,
