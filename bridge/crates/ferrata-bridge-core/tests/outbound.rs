@@ -253,6 +253,43 @@ fn a_reused_counter_shares_the_release_nullifier() {
     assert_ne!(nout(&first), nout(&next), "the next counter: another tag, another NOut");
 }
 
+/// ADR 0032's cost, as it is (review M4 of 22 November 2026): whoever copies a pending burn's tag `r` into a burn of its
+/// own, with a `COut` of its own secret and recipient, can release that copy. The release statement ties `sOut` to the
+/// leaf's `COut` and to `NOut`, and `r` only to the leaf: nothing checks `sOut = HMAC(kAuth, cid ‖ r)`. So a copy
+/// applied first (the program then refuses the owner's burn with the used tag, `lez/harness/tests/bridge_burn_tag.rs`)
+/// costs the copier fees only, not its denomination; its `NOut` is its own, not the owner's.
+#[test]
+fn a_tag_copier_can_release_its_own_copy() {
+    let owner = keys("owner");
+    let config = h("config");
+    let (chain_id, vault) = (chain(1), addr("vault"));
+    let (token, amount) = ([0u8; 20], u256_from_u128(1_000_000_000_000_000_000));
+    // The owner's pending burn: tag r_7, public in its note while it is pending.
+    let r = burn_tag(&owner.view, &config, 7);
+    // The copier: a secret and a recipient of its own; the note it burns first carries the owner's r.
+    let s_copy = h("the copier's own secret");
+    let recipient = addr("the copier's recipient");
+    let c_copy = burn_commitment(&s_copy, &chain_id, &vault, &recipient);
+    // The burn tree as the checkpoint collects it: three other burns, then the copy (the owner's burn refused).
+    let mut leaves: Vec<Hash> = (0..3).map(|k| h(&format!("burn {k}"))).collect();
+    leaves.push(burn_leaf(&config, 3, &token, &amount, &c_copy, &r));
+    let tree = Tree::from_leaves(leaves).unwrap();
+    let w = ReleaseWitness { burn_index: 3, path: tree.path(3).unwrap(), s_out: s_copy, r };
+    let p = ReleasePublic {
+        chain_id,
+        vault,
+        config_id: config,
+        token,
+        amount,
+        recipient,
+        relayer: [0; 20],
+        relay_fee: u256_from_u128(0),
+    };
+    let n = verify_release(&tree.root(), &w, &p).expect("the copier's release verifies");
+    assert_eq!(n, burn_nullifier(&s_copy));
+    assert_ne!(n, burn_nullifier(&burn_secret(&owner.auth, &config, &r)), "its own NOut, not the owner's");
+}
+
 #[test]
 fn recover_burns_follows_the_gap_limit_and_ignores_notes_it_did_not_author() {
     let k = keys("our seed");
