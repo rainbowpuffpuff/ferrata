@@ -26,6 +26,13 @@ local anvil, four ways:
    (`modules/ferrata_bridge_ui/basecamp/roundtrip.mjs`), the chains are read directly after each step (`ops.sh
    chain`) and Basecamp's window is grabbed at each state: `run.sh basecamp NAME` (`hook-basecamp.sh`, after
    `modules/ferrata_bridge_ui/scripts/basecamp-build.sh OUT ...` and with `BASECAMP_BUILD=OUT`).
+5. through the mini-app's view driving `ferrata_bridge_module` with its **Ethereum side through Logos Core's own send
+   stack** (`eth_rpc_module`, `fee_module`, `keystore_module`, `signer_manager_module`, `tx_sender_module`, the headless
+   approver `evm_signer_cli` and custodian `evm_keystore_cli`) and LEZ through `lez_core` (patched): `run.sh logoseth
+   NAME` (`hook-logoseth.sh`, after `run.sh build-logoseth`). `seqnet-chain` stays for LEZ's history and the release's
+   stand-in prover; there it holds no Ethereum key (`--user`) and the run's two LEZ role keys only behind an approval
+   step (a role message is held until a person approves exactly it: `ops.sh approve-lez`); Logos Core starts with
+   `FERRATA_DEPLOYMENTS` naming the run's vault, the one deployment the module may send to.
 
 Results: [`RESULTS.md`](RESULTS.md); each run's records in `e2e/runs/seqnet-NAME/`.
 
@@ -82,6 +89,8 @@ cd spike/ferrata-wt-<name>                       # a worktree; the inputs beside
 ../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh lezcore lezcore-N'
 ../modal-build/mrun --profile <yours> --timeout 3600 -- 'bash modules/ferrata_bridge_ui/scripts/basecamp-build.sh OUT <module .lgx dir> <lez_core .lgx dir>'
 ../modal-build/mrun --profile <yours> --timeout 10800 -- 'BASECAMP_BUILD=OUT bash e2e/seqnet/run.sh basecamp basecamp-N'
+../modal-build/mrun --profile <yours> --timeout 7200 -- 'bash e2e/seqnet/run.sh build-logoseth'                 # the send stack, logosctl, lez_core, the runner
+../modal-build/mrun --profile <yours> --timeout 10800 -- 'bash e2e/seqnet/run.sh logoseth logoseth-N'
 ```
 
 The inputs: the crown-live-3 LEZ bundle (`bundle-crown-live-3.tar.zst`, sha256 `0013bab1…`: the sequencer, the
