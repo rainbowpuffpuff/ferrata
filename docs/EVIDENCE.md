@@ -723,6 +723,13 @@ stale guest outputs of earlier builds removed from the box's target directories 
 suites into `lez/results/b1/` on the rebuilt program. On the laptop: `links` and its steps, `idl/check.py`,
 `node admin/dump.mjs --selftest` (232), `check-decisions.py` (32 records, ADR 0032 among them).
 
+**Twenty-ninth pass (branch `integration9`, 22 Nov 2026).** The second round of `fix-bridge-cli` merged (its review's
+M1-M4 and Lows; conflicts in `docs/privacy/RESULTS.md` and the rows file, which stays folded) and folded (row 224,
+R.5), on the build box: CI's `modules-resolve` (5 of 5 modules resolve; the `cli` library checked without `lez-wallet`
+on Rust 1.98.1); `roundtrip` as merged (the build, the round trip, `cli/tests/e2e.sh` 1 passed, the relayer's library
+17, `gasdrop` 1, the burn journal's and the scan's `--lib burns` 11); the bridge core's outbound tests, 11; and
+`bridge_burn_tag` 1 passed, its record reproduced byte for byte. On the laptop: `links` and its steps.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
