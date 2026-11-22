@@ -474,7 +474,7 @@ e2e/runs/crown-live-3`, from the run's own records):
 | source-chain finality wait | 18.6 min (Ethereum: the deposit to its checkpoint's finalization, *derived* two epochs after the checkpoint's slot) | 7.0 s (LEZ: the burn sent to final on Bedrock; a one-validator devnet) |
 | update availability and capture | 6.6 min (the covering finality update served and read, the vault's slots proven) | — |
 | proof generation | 231.9 s (the private claim, LEZ's wallet on the crown runner's cloud CPU, 16–32 CPUs; 1,093 s at a laptop's shape, P.4) | 282.8 s (the private burn, the same) + 167 s (checkpoint on one L40S and the Groth16 wrap) |
-| privacy-motivated delay | 0 in this run; the client's default holds a claim 1–12 h after its deposit ([user guide](guides/user-guide.md), "Choice" table): inbound about 1.5–12.5 h (*derived*) | 0 in this run; the client's default waits for the vault's release delay (below) |
+| privacy-motivated delay | 0 in this run; the client's default holds a claim 1–12 h after its deposit ([user guide](guides/user-guide.md), "Choice" table): counted from the deposit's block, so Ethereum's finality and the capture (25.2 min) elapse inside it and what followed the capture (7.7 min) comes after it: inbound about 1.1–12.1 h (*derived*) | 0 in this run; the client's default waits for the vault's release delay (below) |
 | LEZ steps before the claim | 39.6 s (the light-client update, three transactions; the root import) | — |
 | the vault's wait W, release delay | — | 3,607 s (W = 1 h of block time); 156 s (120 s delay and the release) |
 | on-chain verification | 8.3 s (the claim, send to final) | 37 s (`submitCandidate`, `finalizeAttested`) |

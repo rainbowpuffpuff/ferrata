@@ -258,7 +258,7 @@ row above.
 |---|---|
 | deposit latency (deposit to LEZ mint) | `lez/results/perf-latency-bridge.md` (`python3 -I bench/perf/latency_bridge.py e2e/runs/crown-live-3`): the live round trip on Sepolia with testnet parameters (EVIDENCE row 91), from the run's own records: deposit 1 to its private claim applied **32.9 min** as it ran (29.8 min without the runner's other work) |
 | redemption latency (burn to Ethereum release) | the same run: the private burn's proof started to the release in a Sepolia block **71.0 min** (66.3 from its sending, 66.2 from it final on LEZ; W = 1 h, release delay 120 s) |
-| each broken down by source-chain finality wait, proof generation, any privacy-motivated delay, and on-chain verification | inbound: Ethereum finality 18.6 min (*derived*: two epochs after the checkpoint's slot), the update served and the capture 6.6 min, LEZ steps 39.6 s, the claim's proof 231.9 s (the crown runner's CPU; 1,093 s at a laptop's shape), verification 8.3 s; outbound: the burn's proof 282.8 s, the source chain's finality (the burn sent to final on LEZ, a one-validator devnet) 7.0 s, the checkpoint and wrap 167 s, verification 37 s, W 3,607 s, release delay and transaction 156 s; privacy-motivated delay: none in this run, the client's default holds a claim 1–12 h after its deposit (inbound about 1.5–12.5 h, *derived*) and a release waits for the vault's release delay |
+| each broken down by source-chain finality wait, proof generation, any privacy-motivated delay, and on-chain verification | inbound: Ethereum finality 18.6 min (*derived*: two epochs after the checkpoint's slot), the update served and the capture 6.6 min, LEZ steps 39.6 s, the claim's proof 231.9 s (the crown runner's CPU; 1,093 s at a laptop's shape), verification 8.3 s; outbound: the burn's proof 282.8 s, the source chain's finality (the burn sent to final on LEZ, a one-validator devnet) 7.0 s, the checkpoint and wrap 167 s, verification 37 s, W 3,607 s, release delay and transaction 156 s; privacy-motivated delay: none in this run, the client's default holds a claim 1–12 h from its deposit's block, inside which Ethereum's finality and the capture (25.2 min) elapse (inbound about 1.1–12.1 h, *derived*) and a release waits for the vault's release delay |
 
 Commits `aa2204ca`, `175dda9f`. Caveat: LEZ ran on a devnet (one validator; testnet 0.4 is not released); production
 parameters (W, the 24-h release delay) are stated, not run.
@@ -267,7 +267,7 @@ Proposed EVIDENCE row: | new | RFP-022 P.5: deposit to mint and burn to release 
 from the live round trip's records | inbound 32.9 min (finality 18.6, availability and capture 6.6, LEZ steps 0.7,
 proof 3.9, verification 0.1, the runner's other work 3.0); outbound 71.0 min from the burn's proving (burn proof 4.7,
 LEZ finality 0.1, checkpoint and wrap 2.8, W 60.1, release 2.6, verification 0.6); the client's default claim hold of
-1–12 h would make the inbound about 1.5–12.5 h (derived) | the live round trip of row 91 | real (its proofs) |
+1–12 h, counted from the deposit's block, would make the inbound about 1.1–12.1 h (derived) | the live round trip of row 91 | real (its proofs) |
 `python3 -I bench/perf/latency_bridge.py e2e/runs/crown-live-3` | `lez/results/perf-latency-bridge.md` |
 
 ### P.6 — proposed **in part** (narrower gap than before)

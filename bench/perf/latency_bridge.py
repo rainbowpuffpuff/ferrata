@@ -30,6 +30,10 @@ def mins(s):
     return f"{s / 60:.1f} min"
 
 
+def hours(s):
+    return f"{s / 3600:.1f} h"
+
+
 def main():
     run = Path(sys.argv[1])
     stages = {}
@@ -110,19 +114,25 @@ def main():
         ("LEZ: the light-client update (3 transactions)", lez_upd, "measured, each send to final on Bedrock"),
         ("LEZ: the root import", imp2["final_s"], "measured"),
         ("proof generation: the private claim", claim1["proof_s"], "measured, LEZ's wallet on the crown runner's CPU (a cloud container of 16 to 32 CPUs, not a laptop: at a laptop's shape the claim takes 1,093 s, lez/results/perf-p4-laptop.md)"),
-        ("privacy-motivated delay", 0.0, "none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h after its deposit (docs/guides/user-guide.md, \"Choice\" table), which would add that much"),
+        ("privacy-motivated delay", 0.0, "none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h from its deposit's block (docs/guides/user-guide.md, \"Choice\" table; cli/src/flow.rs `claimable_from`), and Ethereum's finality and the capture elapse inside the hold"),
         ("on-chain verification: the claim, send to final", claim1["final_s"], "measured; the claim is verified inside it (P.1)"),
         ("the runner's other work in session B", other_b, "zone start and wallet sync, deposit 0's update, import and claim, done first"),
     ]
     for name, s, basis in parts:
         print(f"| {name} | {s:.1f} | {s / total_in:.0%} | {basis} |")
+    # The hold counts from the deposit's block (cli/src/flow.rs `claimable_from`): finality and the capture elapse
+    # inside it, what followed the capture comes after it.
+    after_capture = total_in - (c2_end - d1_end)
+    assert 3600 >= c2_end - d1_end, "the shortest hold (1 h) outlasts finality and the capture"
     steady = (fin_t - d1_end) + (c2_end - fin_t) + lez_upd + imp2["final_s"] + claim1["proof_s"] + claim1["final_s"]
     print(f"\nWithout the runner's other work (an operator already following the chain, the deposit's root imported at once):"
           f" **{mins(steady)}**, of which Ethereum's finality and the update's availability {mins(c2_end - d1_end)}. "
           f"Deposit 0 (public kind) as it ran: included {iso(stages['deposit0'][0])}, minted {iso(claim0['at'])}, "
           f"{mins(claim0['at'] - stages['deposit0'][0])} (it waited for deposit 1's capture, which the runner did first). "
-          f"With the client's default hold of 1 to 12 h after the deposit, the inbound is about {mins(total_in + 3600)} to "
-          f"{mins(total_in + 12 * 3600)} (*derived*).\n")
+          f"With the client's default hold of 1 to 12 h, counted from the deposit's block, Ethereum's finality and the "
+          f"capture ({mins(c2_end - d1_end)}) elapse inside the hold and what followed the capture in this run "
+          f"({mins(after_capture)}) comes after it: the inbound is about {hours(3600 + after_capture)} to "
+          f"{hours(12 * 3600 + after_capture)} (*derived*).\n")
 
     print("## Outbound: the private burn to its release on Ethereum\n")
     order = ["checkpoint-input", "checkpoint-exec", "checkpoint-prove", "checkpoint-wrap", "submit", "wait", "finalize", "release0"]

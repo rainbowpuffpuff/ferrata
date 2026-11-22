@@ -29,11 +29,11 @@ As it ran: **32.9 min** from the deposit to the mint. Broken down as RFP-022 P.5
 | LEZ: the light-client update (3 transactions) | 29.6 | 2% | measured, each send to final on Bedrock |
 | LEZ: the root import | 10.0 | 1% | measured |
 | proof generation: the private claim | 231.9 | 12% | measured, LEZ's wallet on the crown runner's CPU (a cloud container of 16 to 32 CPUs, not a laptop: at a laptop's shape the claim takes 1,093 s, lez/results/perf-p4-laptop.md) |
-| privacy-motivated delay | 0.0 | 0% | none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h after its deposit (docs/guides/user-guide.md, "Choice" table), which would add that much |
+| privacy-motivated delay | 0.0 | 0% | none in this run (the runner claimed at once); the client's default holds a claim 1 to 12 h from its deposit's block (docs/guides/user-guide.md, "Choice" table; cli/src/flow.rs `claimable_from`), and Ethereum's finality and the capture elapse inside the hold |
 | on-chain verification: the claim, send to final | 8.3 | 0% | measured; the claim is verified inside it (P.1) |
 | the runner's other work in session B | 180.7 | 9% | zone start and wallet sync, deposit 0's update, import and claim, done first |
 
-Without the runner's other work (an operator already following the chain, the deposit's root imported at once): **29.8 min**, of which Ethereum's finality and the update's availability 25.2 min. Deposit 0 (public kind) as it ran: included 14:24:02Z, minted 15:07:02Z, 43.0 min (it waited for deposit 1's capture, which the runner did first). With the client's default hold of 1 to 12 h after the deposit, the inbound is about 92.9 min to 752.9 min (*derived*).
+Without the runner's other work (an operator already following the chain, the deposit's root imported at once): **29.8 min**, of which Ethereum's finality and the update's availability 25.2 min. Deposit 0 (public kind) as it ran: included 14:24:02Z, minted 15:07:02Z, 43.0 min (it waited for deposit 1's capture, which the runner did first). With the client's default hold of 1 to 12 h, counted from the deposit's block, Ethereum's finality and the capture (25.2 min) elapse inside the hold and what followed the capture in this run (7.7 min) comes after it: the inbound is about 1.1 h to 12.1 h (*derived*).
 
 ## Outbound: the private burn to its release on Ethereum
 
