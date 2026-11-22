@@ -18,6 +18,10 @@
 # manifest's transactions at the manifest's blocks).
 #
 # Builds the driver first if it is not built (run.sh build-driver: it links LEZ's crates).
+#
+# A session recorded with fake receipts (run.sh's FERRATA_LIVE_SEQUENCER_DEV_MODE=1) replays only with
+# FERRATA_VERIFY_DEV_MODE=1, which keeps RISC0_DEV_MODE=1 for the replay: a fake receipt then passes, as it did in
+# the sequencer; the replay says so. Otherwise RISC0_DEV_MODE is removed and every receipt is verified.
 set -euo pipefail
 . "$(dirname "${BASH_SOURCE[0]}")/env.sh"
 
@@ -42,7 +46,13 @@ fi
 
 args=(verify --dir "$DIR")
 for f in "${BINARIES[@]}"; do args+=(--binary "$f"); done
-env -u RISC0_DEV_MODE "$BIN/live-driver" "${args[@]}"
+if [ "${FERRATA_VERIFY_DEV_MODE:-0}" = 1 ]; then
+  echo "replay with RISC0_DEV_MODE=1 (FERRATA_VERIFY_DEV_MODE): fake receipts pass, as in a sequencer in dev mode"
+  replay_env="RISC0_DEV_MODE=1"
+else
+  replay_env="-u RISC0_DEV_MODE"
+fi
+env $replay_env "$BIN/live-driver" "${args[@]}"
 
 if [ -n "$RPC" ]; then
   [ ${#BINARIES[@]} -ge 2 ] || die "--rpc needs the two guest binaries (the driver derives the accounts of the run from them)"
