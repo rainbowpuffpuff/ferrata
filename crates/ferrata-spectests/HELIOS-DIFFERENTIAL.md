@@ -98,8 +98,13 @@ write either is what an audit adds.
 ## A second client: Lodestar
 
 The same 2,000 mutations, and the five updates as served, judged by Lodestar's light client
-(`@lodestar/light-client` 1.43.0, TypeScript, ChainSafe; its `LightclientSpec.onUpdate`, BLS through
-`@chainsafe/blst`): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
+(`@lodestar/light-client` 1.43.0, TypeScript, ChainSafe; its `LightclientSpec.onUpdate`; BLS through
+`@chainsafe/bls` 8.2.0, which with this lockfile runs herumi's `bls-eth-wasm` 1.7.0, in WebAssembly: its optional peer
+`@chainsafe/blst` 1.x, through which it would run blst natively, is one `npm ci` does not install, and the
+`@chainsafe/blst` 2.2.0 the light client lists as a dependency is installed but imported by none of its files; so no
+code of `blst`, ferrata-core's BLS library, takes part. Measured on the build box, 22 November 2026, after `npm ci` from
+the committed lockfile: `@chainsafe/bls` reports its implementation as `herumi`, `node_modules/@chainsafe/blst` is
+absent, and the light client's `lib` imports `@chainsafe/bls` and `@chainsafe/bls/types` only): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
 the corpus with ferrata's and Helios's verdicts and ferrata's heads, and [`lodestar/diff.mjs`](lodestar/diff.mjs) runs
 every record through Lodestar against a copy of a store bootstrapped from the same bytes and advanced by the updates
 before it (current slot: the signature slot plus one, as on the Rust side). Lodestar must refuse what ferrata's spec
@@ -128,8 +133,8 @@ declares). `@lodestar/config` 1.43.0 lists `@lodestar/spec-test-util` (a test he
 stand-in replaces it: `lodestar/stub-spec-test-util`, a dependency of the manifest itself, which the override
 (`$@lodestar/spec-test-util`) gives `@lodestar/config` too; `npm ci` links `node_modules/@lodestar/spec-test-util` to
 it, and nothing imports it at run time. The lockfile also holds `tar` 6.2.1 and `glob` 10.5.0, which npm marks
-deprecated: they reach the tree only through `node-gyp`, which `@chainsafe/blst` uses at install time, and no step of
-the differential runs them. Run again from this lockfile (build box, 21 November 2026, `npm ci`): the same output but
+deprecated: they belong to `node-gyp`, a dependency of `@chainsafe/blst` 1.x, the optional peer `npm ci` does not
+install, so all three stay in the lockfile only (absent from `node_modules` after `npm ci`, measured the same day). Run again from this lockfile (build box, 21 November 2026, `npm ci`): the same output but
 for the elapsed time (326.2 s).
 
 ```sh
