@@ -640,7 +640,7 @@ fn a_failed_read_after_a_lost_race_is_read_again() {
 /// failing send; the next round reads the chain, finds the other updater's transaction applied, and judges it a race:
 /// the hold dropped, still no strike and no failing send (9c L-U3), and the slower updater goes on.
 #[test]
-fn a_refusal_with_the_chain_unreadable_after_it_is_held_briefly() {
+fn a_refusal_with_the_chain_unreadable_after_it_is_judged_a_race() {
     let attempts = Policy::default().max_attempts as usize;
     let (races, u, lines) = races_with_failing_reads(attempts, (0x4c, 0x4d));
     let (status, why) = u.health();
