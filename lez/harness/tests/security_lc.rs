@@ -351,8 +351,7 @@ fn light_client_cases() -> Vec<(&'static str, Row)> {
         assert!(spec.is_ok(), "{n} of 512: the specification's store refuses it: {spec:?}");
         assert_eq!(spec_finalized, expected.is_none(), "{n} of 512: the specification finalizes at two thirds only");
         let note = if expected.is_some() {
-            "one signer below two thirds of 512; the specification's store does not refuse it, but does not finalize it \
-             (it keeps it as its best valid update)"
+            "one signer below two thirds of 512; the specification's store does not refuse it and does not finalize it"
         } else {
             "control: two thirds of 512 (rounded up)"
         };
@@ -370,8 +369,8 @@ fn light_client_cases() -> Vec<(&'static str, Row)> {
             "an update without finality (optimistic)",
             Some(50),
             apply(&mut w, &u, "optimistic update"),
-            "no header enters without a finality branch; the specification's store does not refuse it, but only moves \
-             its optimistic header",
+            "no header enters without a finality branch; the specification's store does not refuse it and does not \
+             finalize it",
         );
         assert!(w.inst.record(&w.chain, s0 + 96).is_none());
     }
