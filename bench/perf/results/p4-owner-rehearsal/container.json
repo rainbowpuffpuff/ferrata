@@ -1,0 +1,20 @@
+{
+  "before": {
+    "nproc": "8",
+    "cpu_model_name": "unknown",
+    "cpu_family": "6",
+    "cpu_model": "173",
+    "cfs_quota_us": "800000",
+    "cfs_period_us": "100000",
+    "cpu_max": null,
+    "memory_limit_bytes": "17179869184",
+    "meminfo_total": "MemTotal:       16777216 kB",
+    "modal_region": "ap-northeast",
+    "modal_cloud_provider": "CLOUD_PROVIDER_AWS",
+    "requested": {
+      "cpu": 8.0,
+      "memory_mib": 16384
+    }
+  },
+  "uid_of_run": "owner (unprivileged)"
+}

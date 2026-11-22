@@ -1,0 +1,8 @@
+20:39:12 attest-pad: proving (no output until it ends; log /home/owner/out/attest-pad/prove.log)
+20:57:48 attest-pad: exit 0, wall 1113.6 s settle exit 0 
+REAL PROOF: execute_and_prove 1110.8 s (prove + settle 1110.9 s); receipt (succinct InnerReceipt, borsh) 239246 bytes; transaction 255366 bytes
+20:57:48 bridge-pad: proving (no output until it ends; log /home/owner/out/bridge-pad/prove.log)
+21:29:17 bridge-pad: exit 0, wall 1882.3 s settle exit 0 
+private claim: REAL PROOF: execute_and_prove 1007.5 s (prove + settle 1007.9 s); receipt (succinct InnerReceipt, borsh) 239628 bytes; transaction 256130 bytes
+private burn: REAL PROOF: execute_and_prove 868.1 s (prove + settle 868.4 s); receipt (succinct InnerReceipt, borsh) 239046 bytes; transaction 254966 bytes
+records in /home/owner/out; next: python3 -I bench/perf/summarize_p4.py --owner /home/owner/out

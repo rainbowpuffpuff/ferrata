@@ -13,6 +13,10 @@
 //!   program image, and LEZ's settlement verifies its receipt (a fake one only passes in dev mode).
 //! * `--allow-dev-mode`: let the proving step run in RISC Zero dev mode, which makes a fake
 //!   receipt in seconds, to try the commands; the output then says it is not a proof.
+//! * `--handoff` (with either form): the private transaction is a committee handoff instead: update_1
+//!   as served, which hands over the next committee, its 512 keys adopted in the same call, after
+//!   update_1's finality update went through the public job (no new header: the handoff of
+//!   `tests/private_placement.rs`, there in dev mode).
 //!
 //! `FERRATA_EXPECT_IMAGE_ID=<hex>` stops it before any work unless the program image compiled into
 //! this binary is that one. `FERRATA_FIXTURE_DIR` overrides where the mainnet fixtures are read.
@@ -33,19 +37,20 @@ use lee_core::{program::ReceiveInput, ProgramImageClaim};
 use risc0_zkvm::{default_executor, ExecutorEnv};
 
 fn usage() -> ! {
-    eprintln!("usage: prove_private [--tx-out FILE] [--allow-dev-mode] | prove_private --settle FILE");
+    eprintln!("usage: prove_private [--handoff] [--tx-out FILE] [--allow-dev-mode] | prove_private [--handoff] --settle FILE");
     std::process::exit(2)
 }
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let (mut tx_out, mut settle_from, mut allow_dev_mode) = (None, None, false);
+    let (mut tx_out, mut settle_from, mut allow_dev_mode, mut handoff) = (None, None, false, false);
     let mut it = args.iter();
     while let Some(arg) = it.next() {
         match arg.as_str() {
             "--tx-out" => tx_out = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--settle" => settle_from = Some(it.next().unwrap_or_else(|| usage()).clone()),
             "--allow-dev-mode" => allow_dev_mode = true,
+            "--handoff" => handoff = true,
             _ => usage(),
         }
     }
@@ -73,8 +78,12 @@ fn main() {
     let mut w = World::new(2);
     let u0 = w.updates[0].clone();
     w.apply(&u0, "update_0");
+    if handoff {
+        let finality = as_finality_update(&w.updates[1]);
+        w.apply(&finality, "update_1 as finality update");
+    }
     let sender = w.chain.add_private_account(0x31, 1_000_000_000_000);
-    let update = as_finality_update(&w.updates[1]);
+    let update = if handoff { w.updates[1].clone() } else { as_finality_update(&w.updates[1]) };
     let store = w.inst.store(&w.chain);
     let witness = Instance::signer_witness(w.native.core(), &update, &w.spec);
     let message = borsh::to_vec(&Message::VerifyAll {
@@ -83,11 +92,14 @@ fn main() {
         store: store.encode(),
         update: CompactUpdate::of(&update).encode(LcFork::Electra),
         signers: witness.encode(),
-        adoption: vec![],
+        adoption: if handoff { ferrata_core::witness::uncompressed_keys(&update.next_sync_committee).unwrap() } else { vec![] },
     })
     .unwrap();
     let root = Actor::new(sender.id(), ferrata_account());
     let header = header_actor(w.inst.program, &w.inst.id, update.finalized_header.beacon.slot);
+    // A handoff without a new header writes no record: the instance alone.
+    let actors = if handoff { vec![w.inst.actor()] } else { vec![w.inst.actor(), header] };
+    let what = if handoff { "committee handoff, 512 keys adopted" } else { "finality update" };
     let time = w.inst.config.slot_start_ms(w.updates[2].signature_slot) + 12_000;
 
     let run = match &settle_from {
@@ -106,7 +118,7 @@ fn main() {
             let info = default_executor().execute(builder.build().unwrap(), ferrata_program().elf()).unwrap();
             let padded: u64 = info.segments.iter().map(|s| 1u64 << s.po2).sum();
             println!(
-                "private transition (VerifyAll, finality update): {} user cycles, {} segments, {} cycles padded (sum of 2^po2), exit {:?}",
+                "private transition (VerifyAll, {what}): {} user cycles, {} segments, {} cycles padded (sum of 2^po2), exit {:?}",
                 grouped(info.cycles()),
                 info.segments.len(),
                 grouped(padded),
@@ -119,7 +131,7 @@ fn main() {
                     &sender,
                     root,
                     message,
-                    vec![w.inst.actor(), header],
+                    actors,
                     &catalog(),
                     100_000_000,
                     time,
@@ -153,7 +165,9 @@ fn main() {
     let ctx = Context { spec: &spec, genesis_validators_root: root_hex(), bls: &harness::scenarios::BLS };
     w.native.process_update(&update, update.signature_slot + 1, &ctx).unwrap();
     w.check_store();
-    w.check_record(update.finalized_header.beacon.slot);
+    if !handoff {
+        w.check_record(update.finalized_header.beacon.slot);
+    }
     println!("{}", describe_public_outputs(&run.tx));
     println!(
         "settled: execution gas {} (PRIVATE_VERIFY_GAS {} + public part {} cycles), storage gas {}, base fee {}",

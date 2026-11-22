@@ -1,0 +1,48 @@
+{
+ "revealed": 30,
+ "last": 30,
+ "per_port": {
+  "9601": {
+   "bootstrap": {
+    "requests": 1,
+    "bytes": 25875
+   },
+   "finality_update": {
+    "requests": 323,
+    "bytes": 735957
+   },
+   "updates": {
+    "requests": 326,
+    "bytes": 9512128
+   }
+  },
+  "9602": {
+   "bootstrap": {
+    "requests": 1,
+    "bytes": 25875
+   },
+   "finality_update": {
+    "requests": 331,
+    "bytes": 754408
+   },
+   "updates": {
+    "requests": 334,
+    "bytes": 9620988
+   }
+  },
+  "9603": {
+   "bootstrap": {
+    "requests": 1,
+    "bytes": 25875
+   },
+   "finality_update": {
+    "requests": 300,
+    "bytes": 687471
+   },
+   "updates": {
+    "requests": 303,
+    "bytes": 8322914
+   }
+  }
+ }
+}

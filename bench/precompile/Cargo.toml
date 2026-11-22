@@ -1,0 +1,18 @@
+# RFP-021 P.8: native BLS12-381 timings for the precompile model (docs/performance.md, RFP-021 P.8).
+# blst 0.3.16 natively: the library the attestation program's guest links in RISC Zero's
+# accelerated build (v0.3.16-risczero.0, lez/guests/program/Cargo.toml). Its own workspace.
+[package]
+name = "ferrata-precompile-model"
+description = "Native BLS12-381 operation timings (blst) for the hypothetical-precompile model of RFP-021 P.8"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+blst = "=0.3.16"
+
+[profile.release]
+opt-level = 3
+
+[workspace]

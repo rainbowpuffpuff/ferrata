@@ -1,0 +1,31 @@
+Compiling 30 files with Solc 0.8.26
+Solc 0.8.26 finished in 1.89s
+Compiler run successful!
+Script ran successfully.
+
+== Return ==
+vault: contract FerrataVault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 31337
+
+Estimated gas price: 2.000000001 gwei
+
+Estimated total gas used for script: 11374754
+
+Estimated amount required: 0.022749508011374754 ETH
+
+==========================
+
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+
+Transactions saved to: <repo>/vault/broadcast/MonitorFixture.s.sol/31337/run-latest.json
+
+Sensitive values saved to: <repo>/vault/cache/MonitorFixture.s.sol/31337/run-latest.json
+

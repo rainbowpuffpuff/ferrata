@@ -43,6 +43,22 @@ pub struct TransitionTrace {
     pub post_state_bytes: Option<usize>,
 }
 
+/// One traced transition kept for a measurement (`src/bin/perf_prove.rs`): the guest and the exact
+/// input `lee`'s public backend gives it, so that the same execution can be proven later.
+#[derive(Clone, Debug)]
+pub struct Taped {
+    pub handler: String,
+    pub elf: Vec<u8>,
+    pub input: ReceiveInput,
+    pub session_limit: u64,
+    pub cycles: u64,
+    pub journal: Vec<u8>,
+}
+
+/// While this holds a vector, every transition `trace_public` executes is also appended to it
+/// (off by default; only the measurement binaries switch it on).
+pub static TAPE: std::sync::Mutex<Option<Vec<Taped>>> = std::sync::Mutex::new(None);
+
 #[derive(Debug)]
 pub struct TraceError(pub String);
 
@@ -83,8 +99,19 @@ impl ExecutionEnvironment for Tracer<'_> {
         builder.session_limit(Some(self.budget.saturating_sub(self.used)));
         lee::program::Program::write_receive_input(input, &mut builder).map_err(|e| TraceError(e.to_string()))?;
         let env = builder.build().map_err(|e| TraceError(e.to_string()))?;
+        let session_limit = self.budget.saturating_sub(self.used);
         let info = default_executor().execute(env, program.elf()).map_err(|e| TraceError(e.to_string()))?;
         let cycles = info.cycles();
+        if let Some(tape) = TAPE.lock().expect("tape").as_mut() {
+            tape.push(Taped {
+                handler: handler_name(input),
+                elf: program.elf().to_vec(),
+                input: input.clone(),
+                session_limit,
+                cycles,
+                journal: info.journal.bytes.clone(),
+            });
+        }
         self.used += cycles;
         let exit_code = match info.exit_code {
             ExitCode::Halted(code) => code,

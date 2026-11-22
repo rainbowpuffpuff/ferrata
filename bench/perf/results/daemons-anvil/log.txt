@@ -1,0 +1,7 @@
+[15:06:13] build: monitor (release), ferrata-relayer (release)
+[15:09:49] vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 at block 3
+[15:09:55] idle-1 start
+[15:19:55] activity start
+[15:21:16] activity end (final state 0x89a39679a46c1f7b…; wanted 0x89a39679a46c1f7b…)
+[15:31:16] idle-2 end
+[15:31:18] records in <scratch>/daemons-anvil

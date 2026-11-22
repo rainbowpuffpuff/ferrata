@@ -1,0 +1,296 @@
+2026-11-21T15:10:41Z [sequencer] http://127.0.0.1:13043: head block 20, following to block 19 (final on Bedrock: true) in 7.2 s; payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r balance 10000000000000; records in <scratch>/gate/w-g2/zone/gate/adversary/state/ledger
+2026-11-21T15:10:41Z [adversary mainnet] instance 0x2fb72006428ae094f21dbbc4e15c0e22e02a927f93dcf92b22b63c1f8b6b707f of program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX (checkpoint 0x4baa732e5dbdbe97932abcf62c7caccc1cba8e9c14118d153aea629e25a4abff); payer CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r; ledger sequencer
+2026-11-21T15:10:41Z [adversary] /health and /metrics on http://127.0.0.1:9703
+[updater] mainnet Init                                               applied        gas    210457 block   21 + 16.3s 2bae69669ad4a55fc6a60200e1f10cd6f4e8ac047dcd3882d8ba848ac5f38f39
+2026-11-21T15:10:58Z [adversary mainnet] mainnet Init applied (exit None, gas 212355, fee 1698840, block 21)
+[updater] mainnet init adopt 1/2                                     applied        gas   3399141 block   22 +  7.8s 993c185cfac60dcff2e7eabb2077f1c31b90e45359d3e9950202af18af64f045
+2026-11-21T15:11:07Z [adversary mainnet] mainnet init adopt 1/2 applied (exit None, gas 3424121, fee 27392968, block 22)
+[updater] mainnet init adopt 2/2                                     applied        gas   3485575 block   23 +  8.3s 719374e3d0a5b4829cadf8c4c5859d14470eb76bf13bdfbb16867f79bd807fb1
+2026-11-21T15:11:18Z [adversary mainnet] mainnet init adopt 2/2 applied (exit None, gas 3510683, fee 28085464, block 23)
+2026-11-21T15:11:20Z [adversary mainnet] job 0x996406f8ba2da632: finalized slot 15622144 root 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433 (attested slot 15622208, signature slot 15622209, 511 of 512 signers; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15622144 Open                                  applied        gas   2184856 block   24 +  7.9s a3c614ecd5b945c60437b3053748b2277b472c88ed7d6cd56e24d74dfc2886cd
+2026-11-21T15:11:28Z [adversary mainnet] mainnet fin 15622144 Open applied (exit None, gas 2188091, fee 17504728, block 24)
+2026-11-21T15:11:30Z [adversary mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its miller first
+[updater] mainnet fin 15622144 Miller                                applied        gas   3313372 block   25 +  7.9s b052e9af7ce266bf25d83117ec8b61af574b262ca85eaed6e1b53016d2ac81d4
+2026-11-21T15:11:38Z [adversary mainnet] mainnet fin 15622144 Miller applied (exit None, gas 3313771, fee 26510168, block 25)
+2026-11-21T15:11:40Z [adversary mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its adopt0 first
+[updater] mainnet fin 15622144 adopt 1/2                             applied        gas   3410995 block   26 +  7.8s 5885c74429fba7735dda187b811f34243589a2dd5937182edee1ad88884c7e46
+2026-11-21T15:11:47Z [adversary mainnet] mainnet fin 15622144 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 26)
+2026-11-21T15:11:49Z [adversary mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its adopt1 first
+[updater] mainnet fin 15622144 adopt 2/2                             applied        gas   3418189 block   27 +  8.0s 3d3b873dc21fc7448dd5473fb0e442fc589c5d6904b7ca2fa831b6de7b0de0cc
+2026-11-21T15:11:57Z [adversary mainnet] mainnet fin 15622144 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 27)
+2026-11-21T15:11:59Z [adversary mainnet] job 0x996406f8ba2da632 (finalized slot 15622144) is open: its finish first
+[updater] mainnet fin 15622144 Finish                                refused   205 (NoJob) gas      6111 block   28 +  8.7s a761069612ccef0817ae2d85e077fb5fde88e33a675462cc42650254753b91b5
+2026-11-21T15:12:08Z [adversary mainnet] mainnet fin 15622144 Finish refused (exit Some(205), gas 6574, fee 52592, block 28)
+2026-11-21T15:12:10Z [adversary mainnet] job 0x3315c89f0d227b0b: finalized slot 15625984 root 0x2090d125994fbc246962dac0a2657730a2aaba5ce2abec399c71e16e2f039f3d (attested slot 15626048, signature slot 15626049, 507 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15625984 Open                                  applied        gas   2277092 block   29 +  7.5s c01ba8c249c63daeda44ea8af471ab09d7c151d5d862892f500407d3d074c982
+2026-11-21T15:12:18Z [adversary mainnet] mainnet fin 15625984 Open applied (exit None, gas 2281783, fee 18254264, block 29)
+2026-11-21T15:12:20Z [adversary mainnet] job 0x3315c89f0d227b0b (finalized slot 15625984) is open: its miller first
+[updater] mainnet fin 15625984 Miller                                applied        gas   3308048 block   30 +  8.0s 9d80e0219e975a026ba35f8b35c8021ca772b9f66c77fe3ff31cb039219eb455
+2026-11-21T15:12:28Z [adversary mainnet] mainnet fin 15625984 Miller applied (exit None, gas 3308447, fee 26467576, block 30)
+2026-11-21T15:12:30Z [adversary mainnet] job 0x3315c89f0d227b0b (finalized slot 15625984) is open: its finish first
+[updater] mainnet fin 15625984 Finish                                applied        gas   3726482 block   31 +  8.2s da4b11c73150cbd96213137ec5451f7951347387196695769090e101ef38c447
+2026-11-21T15:12:38Z [adversary mainnet] mainnet fin 15625984 Finish applied (exit None, gas 3727009, fee 29816072, block 31)
+2026-11-21T15:12:40Z [adversary mainnet] job 0x1e9262f8f8e72a55: finalized slot 15626400 root 0x5a754269113b7b97abef726e7f82096f8598fb157127e70347ebb64021f3d661 (attested slot 15626473, signature slot 15626474, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15626400 Open                                  refused   207 (JobExists) gas   2161632 block   32 +  8.5s de4cb94fb507e2d45c82126ddfac51c9cf3670afad200783c0980754b61968d1
+2026-11-21T15:12:48Z [adversary mainnet] mainnet fin 15626400 Open refused (exit Some(207), gas 2164784, fee 17318272, block 32)
+[updater] mainnet fin 15626400 Miller                                applied        gas   3308048 block   33 +  7.1s d71eeb325e47b6ebf296a6263f618a89523085d812daf24b7445dbacd8e43a7c
+2026-11-21T15:12:57Z [adversary mainnet] mainnet fin 15626400 Miller applied (exit None, gas 3308447, fee 26467576, block 33)
+[updater] mainnet fin 15626400 Finish                                applied        gas   3726482 block   34 +  8.3s 8795d8e3d79017a6a37bdb7a3ca74a94aa4dc57705238d027e8f7019061f2db1
+2026-11-21T15:13:08Z [adversary mainnet] mainnet fin 15626400 Finish applied (exit None, gas 3727009, fee 29816072, block 34)
+2026-11-21T15:13:33Z [adversary mainnet] job 0x52a8457c7198445d: finalized slot 15627008 root 0x4b909f85e73d4ef983e497eca8d34980b2616fb3014cc94fedf4c66529357bdb (attested slot 15627074, signature slot 15627075, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15627008 Open                                  applied        gas   2195609 block   38 + 15.1s 6c7bf51c73dc390b3b6f3f57e705947e5351356802777bac86d22a5505c8f549
+2026-11-21T15:13:48Z [adversary mainnet] mainnet fin 15627008 Open applied (exit None, gas 2199150, fee 17593200, block 38)
+2026-11-21T15:13:50Z [adversary mainnet] job 0x52a8457c7198445d (finalized slot 15627008) is open: its miller first
+[updater] mainnet fin 15627008 Miller                                applied        gas   3308048 block   39 +  7.8s 7e4eec64ad6eb2228793395fa36a8c2e87e4114ffe43556876f0a3694b3b8c63
+2026-11-21T15:13:58Z [adversary mainnet] mainnet fin 15627008 Miller applied (exit None, gas 3308447, fee 26467576, block 39)
+2026-11-21T15:14:00Z [adversary mainnet] job 0x52a8457c7198445d (finalized slot 15627008) is open: its finish first
+[updater] mainnet fin 15627008 Finish                                applied        gas   3726482 block   40 +  8.4s 793987f9d095f7bbaeae513b369c9c99a3535ec50d09b6c84ea0be515068b473
+2026-11-21T15:14:08Z [adversary mainnet] mainnet fin 15627008 Finish applied (exit None, gas 3727009, fee 29816072, block 40)
+2026-11-21T15:14:33Z [adversary mainnet] job 0x3e38ab848954ba89: finalized slot 15627616 root 0xe55c5a55edd4ef3fe2e2d5a3d9f13a9f655d6fa5bd30e36bb73f5b17980a820b (attested slot 15627681, signature slot 15627682, 508 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15627616 Open                                  applied        gas   2248809 block   44 + 16.5s 252934e37b8bb73478e57a1c4836249a3ed666b3d46a8510bff3b4700760c1c2
+2026-11-21T15:14:50Z [adversary mainnet] mainnet fin 15627616 Open applied (exit None, gas 2253117, fee 18024936, block 44)
+2026-11-21T15:14:52Z [adversary mainnet] job 0x3e38ab848954ba89 (finalized slot 15627616) is open: its miller first
+[updater] mainnet fin 15627616 Miller                                applied        gas   3308048 block   46 + 16.8s 2ce51cc25a1a010c134d9c95987dc08cdae363c2a57b4517e550642d997b2396
+2026-11-21T15:15:09Z [adversary mainnet] mainnet fin 15627616 Miller applied (exit None, gas 3308447, fee 26467576, block 46)
+2026-11-21T15:15:11Z [adversary mainnet] job 0x3e38ab848954ba89 (finalized slot 15627616) is open: its finish first
+[updater] mainnet fin 15627616 Finish                                applied        gas   3726482 block   47 +  7.5s c92f9a9dc49f01a8a125a6949980599a443e76dd7d981464ddbd91fb39532332
+2026-11-21T15:15:18Z [adversary mainnet] mainnet fin 15627616 Finish applied (exit None, gas 3727009, fee 29816072, block 47)
+2026-11-21T15:15:33Z [adversary mainnet] job 0x6b765a612e46716b: finalized slot 15628192 root 0xc68e661314646fd28692ab0dfd7cf886fce91981727bed385116c34dacf5cb18 (attested slot 15628258, signature slot 15628259, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15628192 Open                                  applied        gas   2195949 block   50 + 15.3s 37513e33192cdf21d1c180e7d89463cb4311c64ae5eb495d114d8a98ef9251f6
+2026-11-21T15:15:48Z [adversary mainnet] mainnet fin 15628192 Open applied (exit None, gas 2199488, fee 17595904, block 50)
+2026-11-21T15:15:50Z [adversary mainnet] job 0x6b765a612e46716b (finalized slot 15628192) is open: its miller first
+[updater] mainnet fin 15628192 Miller                                applied        gas   3308048 block   51 +  7.9s 311d0e787aaf708ed2b4b2838af62317a143d86263112d722fb2db25ef3c94f6
+2026-11-21T15:15:58Z [adversary mainnet] mainnet fin 15628192 Miller applied (exit None, gas 3308447, fee 26467576, block 51)
+2026-11-21T15:16:00Z [adversary mainnet] job 0x6b765a612e46716b (finalized slot 15628192) is open: its finish first
+[updater] mainnet fin 15628192 Finish                                applied        gas   3726482 block   52 +  8.2s a098a88c2019ec8cd3c4a1e55f45c2e8573b0bad96bd9cab54b2583f6dabb823
+2026-11-21T15:16:08Z [adversary mainnet] mainnet fin 15628192 Finish applied (exit None, gas 3727009, fee 29816072, block 52)
+2026-11-21T15:16:33Z [adversary mainnet] job 0x0b66c30ce61ff812: finalized slot 15628800 root 0xa1404d47180c18d674f7627be29be0e2893a74187e31bfc1ce79470ac9c71a93 (attested slot 15628868, signature slot 15628869, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15628800 Open                                  applied        gas   2195276 block   56 + 17.9s cdfe5ae9d73e9b3aeec1b50940e1fc22bed570fa5f5bf0c9632b655d14e2446b
+2026-11-21T15:16:51Z [adversary mainnet] mainnet fin 15628800 Open applied (exit None, gas 2198808, fee 17590464, block 56)
+2026-11-21T15:16:53Z [adversary mainnet] job 0x0b66c30ce61ff812 (finalized slot 15628800) is open: its miller first
+[updater] mainnet fin 15628800 Miller                                applied        gas   3308048 block   58 + 14.3s 5ff2d29ceb80aadacda14268c5291eeeaf5d0223f578fc7d3c1d593eeb8d2ace
+2026-11-21T15:17:07Z [adversary mainnet] mainnet fin 15628800 Miller applied (exit None, gas 3308447, fee 26467576, block 58)
+2026-11-21T15:17:09Z [adversary mainnet] job 0x0b66c30ce61ff812 (finalized slot 15628800) is open: its finish first
+[updater] mainnet fin 15628800 Finish                                applied        gas   3726482 block   59 +  8.4s c71523f9b0bbcd6a7c4e6ed4d9374907c7ccdf7d9a59f250f1c69106ced6145f
+2026-11-21T15:17:18Z [adversary mainnet] mainnet fin 15628800 Finish applied (exit None, gas 3727009, fee 29816072, block 59)
+2026-11-21T15:17:32Z [adversary mainnet] job 0x8e4dd58b4cc4b6c8: finalized slot 15629408 root 0x314184af7e07c0571afe85da966ae39fc81ef893416547e29a48cddd8415fce7 (attested slot 15629473, signature slot 15629474, 508 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15629408 Open                                  applied        gas   2247654 block   62 + 15.5s a3551a76330734fc73ce94e2315200fe8a778580f7628be94d7ff12b3ecc544e
+2026-11-21T15:17:48Z [adversary mainnet] mainnet fin 15629408 Open applied (exit None, gas 2251947, fee 18015576, block 62)
+2026-11-21T15:17:50Z [adversary mainnet] job 0x8e4dd58b4cc4b6c8 (finalized slot 15629408) is open: its miller first
+[updater] mainnet fin 15629408 Miller                                applied        gas   3308048 block   63 +  7.5s b080362351d0cde32f2ad9e3bb7b9827065c2c85711b02ae421c2bfcf99e57c7
+2026-11-21T15:17:58Z [adversary mainnet] mainnet fin 15629408 Miller applied (exit None, gas 3308447, fee 26467576, block 63)
+2026-11-21T15:18:00Z [adversary mainnet] job 0x8e4dd58b4cc4b6c8 (finalized slot 15629408) is open: its finish first
+[updater] mainnet fin 15629408 Finish                                applied        gas   3726482 block   64 +  8.5s f3e3a5a67491be4fe59f814213c022b48a32d04c140940ffa815c0ba31d3e900
+2026-11-21T15:18:08Z [adversary mainnet] mainnet fin 15629408 Finish applied (exit None, gas 3727009, fee 29816072, block 64)
+2026-11-21T15:18:33Z [adversary mainnet] job 0x5a0db61008f0e291: finalized slot 15630016 root 0xa579bb84e40ddd7e5f1a48d5103c16cde56c9058f8da2a596000581c620ca952 (attested slot 15630081, signature slot 15630082, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15630016 Open                                  applied        gas   2193827 block   68 + 14.5s bd69c4335438b9d42964ac73ce0c22fa4d62e9ba1abcb7984df5c435a08d9972
+2026-11-21T15:18:48Z [adversary mainnet] mainnet fin 15630016 Open applied (exit None, gas 2197352, fee 17578816, block 68)
+2026-11-21T15:18:50Z [adversary mainnet] job 0x5a0db61008f0e291 (finalized slot 15630016) is open: its miller first
+[updater] mainnet fin 15630016 Miller                                applied        gas   3308048 block   69 +  7.6s d0443ebb6a2e03bb2043d8579cc9eca12df595e535bcbe104d9bc4b697671331
+2026-11-21T15:18:57Z [adversary mainnet] mainnet fin 15630016 Miller applied (exit None, gas 3308447, fee 26467576, block 69)
+2026-11-21T15:18:59Z [adversary mainnet] job 0x5a0db61008f0e291 (finalized slot 15630016) is open: its finish first
+[updater] mainnet fin 15630016 Finish                                applied        gas   3726482 block   70 +  8.6s 570d46945f22ab78e131192dca1abf61c1ac0f03589ca80331a153e49d85e601
+2026-11-21T15:19:08Z [adversary mainnet] mainnet fin 15630016 Finish applied (exit None, gas 3727009, fee 29816072, block 70)
+2026-11-21T15:19:33Z [adversary mainnet] job 0x1e4965c6d38b6041: finalized slot 15630336 root 0x655955cfa7904a0e3fc1aee3f05028314c679e2ad62d1f210061e84c68347cc8 (attested slot 15630400, signature slot 15630401, 510 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15630336 Open                                  applied        gas   2212943 block   74 + 16.6s 6f28f95ac274c507611664dee23bf0803ab6a00b040ccfa60a338fdbf397e768
+2026-11-21T15:19:50Z [adversary mainnet] mainnet fin 15630336 Open applied (exit None, gas 2216565, fee 17732520, block 74)
+2026-11-21T15:19:52Z [adversary mainnet] job 0x1e4965c6d38b6041 (finalized slot 15630336) is open: its miller first
+[updater] mainnet fin 15630336 Miller                                applied        gas   3313372 block   76 + 16.2s 572c74181966701140050175c815bb3cb89ba68965b3a3c31c90a42840c520d8
+2026-11-21T15:20:08Z [adversary mainnet] mainnet fin 15630336 Miller applied (exit None, gas 3313771, fee 26510168, block 76)
+2026-11-21T15:20:10Z [adversary mainnet] job 0x1e4965c6d38b6041 (finalized slot 15630336) is open: its adopt0 first
+[updater] mainnet fin 15630336 adopt 1/2                             applied        gas   3410995 block   77 +  7.6s 5f832fac55e35a67e2485434d910ec9bab019f2e9e5ec0e7a7fb00c7e608e87a
+2026-11-21T15:20:18Z [adversary mainnet] mainnet fin 15630336 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 77)
+2026-11-21T15:20:20Z [adversary mainnet] job 0x1e4965c6d38b6041 (finalized slot 15630336) is open: its adopt1 first
+[updater] mainnet fin 15630336 adopt 2/2                             applied        gas   3418189 block   78 +  7.8s 382550ef3c397a12b5efb3b7c6670128d3dee93f60d1e66026a56eb3df5de171
+2026-11-21T15:20:28Z [adversary mainnet] mainnet fin 15630336 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 78)
+2026-11-21T15:20:30Z [adversary mainnet] job 0x1e4965c6d38b6041 (finalized slot 15630336) is open: its finish first
+[updater] mainnet fin 15630336 Finish                                applied        gas   3736661 block   79 +  8.3s ae805d6eec881d405999b5579af52c30bf977efe730dd0453098527dc6902da9
+2026-11-21T15:20:38Z [adversary mainnet] mainnet fin 15630336 Finish applied (exit None, gas 3737188, fee 29897504, block 79)
+2026-11-21T15:20:40Z [adversary mainnet] job 0x2ffa83f9e8b77beb: finalized slot 15630592 root 0x244fde890de748653a21a8ddb596b744f87fa1a8fe9a00447f1b6c3cca9b4927 (attested slot 15630656, signature slot 15630658, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15630592 Open                                  applied        gas   2195655 block   80 +  7.8s 3964e0e18b0a4feefbdd63bfbb456a8a0249d8145c78ce8554bacc4c6fcefbee
+2026-11-21T15:20:48Z [adversary mainnet] mainnet fin 15630592 Open applied (exit None, gas 2199197, fee 17593576, block 80)
+2026-11-21T15:20:50Z [adversary mainnet] job 0x2ffa83f9e8b77beb (finalized slot 15630592) is open: its miller first
+[updater] mainnet fin 15630592 Miller                                applied        gas   3308048 block   81 +  8.0s 1533a41e4497d8535a635bd036e3a6b71a78f5ee26959d571b8342a41e3dd75a
+2026-11-21T15:20:58Z [adversary mainnet] mainnet fin 15630592 Miller applied (exit None, gas 3308447, fee 26467576, block 81)
+2026-11-21T15:21:00Z [adversary mainnet] job 0x2ffa83f9e8b77beb (finalized slot 15630592) is open: its finish first
+[updater] mainnet fin 15630592 Finish                                applied        gas   3726482 block   82 +  8.1s 5003dff83ae234eff5aef6f7ef729ae08c26b2b53b5996aa21f0a03cccc4615e
+2026-11-21T15:21:08Z [adversary mainnet] mainnet fin 15630592 Finish applied (exit None, gas 3727009, fee 29816072, block 82)
+2026-11-21T15:21:33Z [adversary mainnet] job 0x62d5ea5ef1ff3982: finalized slot 15630720 root 0x6668f903ff936abe7be11a6cac2421d0e74a374849f6de5a76029c6661411895 (attested slot 15630809, signature slot 15630810, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15630720 Open                                  applied        gas   2182125 block   86 + 16.3s ddf210f1526017436cfe44fc63523b10d3beb9629e9746380c82514f6aabc569
+2026-11-21T15:21:50Z [adversary mainnet] mainnet fin 15630720 Open applied (exit None, gas 2185322, fee 17482576, block 86)
+2026-11-21T15:21:52Z [adversary mainnet] job 0x62d5ea5ef1ff3982 (finalized slot 15630720) is open: its miller first
+[updater] mainnet fin 15630720 Miller                                applied        gas   3309621 block   88 + 15.7s 839182a1f8030ba88c94d45820a211705dad58d252db270d1f9d7e90af1f4ec1
+2026-11-21T15:22:07Z [adversary mainnet] mainnet fin 15630720 Miller applied (exit None, gas 3310020, fee 26480160, block 88)
+2026-11-21T15:22:09Z [adversary mainnet] job 0x62d5ea5ef1ff3982 (finalized slot 15630720) is open: its finish first
+[updater] mainnet fin 15630720 Finish                                applied        gas   3729346 block   89 +  8.6s c73ec24c577c6d0c52830ac49a74c3970f65f7eeee79beec49534c0e8b00061c
+2026-11-21T15:22:18Z [adversary mainnet] mainnet fin 15630720 Finish applied (exit None, gas 3729873, fee 29838984, block 89)
+2026-11-21T15:22:33Z [adversary mainnet] job 0xc4f6b89d1a1fce47: finalized slot 15631200 root 0x9f201cc26a39bf439335373ca8c63c49886db8b3f7a33d05235fe7a261dd31ba (attested slot 15631266, signature slot 15631267, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15631200 Open                                  applied        gas   2166286 block   92 + 15.1s 48553ddc9fcf4a6ca80157dde4e9d921c57c58eb08df3eb6c04f946cf54a3ecb
+2026-11-21T15:22:48Z [adversary mainnet] mainnet fin 15631200 Open applied (exit None, gas 2169427, fee 17355416, block 92)
+2026-11-21T15:22:50Z [adversary mainnet] job 0xc4f6b89d1a1fce47 (finalized slot 15631200) is open: its miller first
+[updater] mainnet fin 15631200 Miller                                applied        gas   3308048 block   93 +  7.8s ce235c8a70e7b33d764cac5287ab42fb03c28016c4c0cd16e538c580bca7bf96
+2026-11-21T15:22:58Z [adversary mainnet] mainnet fin 15631200 Miller applied (exit None, gas 3308447, fee 26467576, block 93)
+2026-11-21T15:23:00Z [adversary mainnet] job 0xc4f6b89d1a1fce47 (finalized slot 15631200) is open: its finish first
+[updater] mainnet fin 15631200 Finish                                applied        gas   3726482 block   94 +  8.5s 0377cf452615610236bbd2e1e457a6a9fcee312d1dcf59b4b0dde3dfde6ae300
+2026-11-21T15:23:08Z [adversary mainnet] mainnet fin 15631200 Finish applied (exit None, gas 3727009, fee 29816072, block 94)
+2026-11-21T15:23:33Z [adversary mainnet] job 0x7e90434f302bb5a9: finalized slot 15631808 root 0x530599ec91a6ce70948d70d1066bb35a2a0cb999ad8e2cb6229452dcb7102328 (attested slot 15631878, signature slot 15631879, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15631808 Open                                  applied        gas   2169012 block   98 + 14.7s fae12045fbaad1bf0a59b26fd86bc73c49f62850e19bd5799d7808872cec2be2
+2026-11-21T15:23:48Z [adversary mainnet] mainnet fin 15631808 Open applied (exit None, gas 2172167, fee 17377336, block 98)
+2026-11-21T15:23:50Z [adversary mainnet] job 0x7e90434f302bb5a9 (finalized slot 15631808) is open: its miller first
+[updater] mainnet fin 15631808 Miller                                applied        gas   3308048 block   99 +  7.8s 00572767e358d563564431bd6f2431bbf3f6a5b0df89d1128d9b50140db07487
+2026-11-21T15:23:58Z [adversary mainnet] mainnet fin 15631808 Miller applied (exit None, gas 3308447, fee 26467576, block 99)
+2026-11-21T15:24:00Z [adversary mainnet] job 0x7e90434f302bb5a9 (finalized slot 15631808) is open: its finish first
+[updater] mainnet fin 15631808 Finish                                applied        gas   3726482 block  100 +  8.3s d4959cff458e17b87caa524ef0390c570990723b4218d3a390df2d44800976b2
+2026-11-21T15:24:08Z [adversary mainnet] mainnet fin 15631808 Finish applied (exit None, gas 3727009, fee 29816072, block 100)
+2026-11-21T15:24:33Z [adversary mainnet] job 0x5d2e2efd20898c1c: finalized slot 15632416 root 0x93e7c0ee64dbc4e3279f3dcd634bf427076cc2015e0a7b84c95dee92acbd1122 (attested slot 15632480, signature slot 15632481, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15632416 Open                                  applied        gas   2167144 block  104 + 14.5s 1e3478123272de9a2d82d02ae297fb758845be3d2a475127edb64e7c1b47ffab
+2026-11-21T15:24:48Z [adversary mainnet] mainnet fin 15632416 Open applied (exit None, gas 2170279, fee 17362232, block 104)
+2026-11-21T15:24:50Z [adversary mainnet] job 0x5d2e2efd20898c1c (finalized slot 15632416) is open: its miller first
+[updater] mainnet fin 15632416 Miller                                applied        gas   3308048 block  105 +  8.0s 9296cac016e298c2345b7512ad23d55c2d6730a84a8bc729d9758ba19f9d5f22
+2026-11-21T15:24:58Z [adversary mainnet] mainnet fin 15632416 Miller applied (exit None, gas 3308447, fee 26467576, block 105)
+2026-11-21T15:25:00Z [adversary mainnet] job 0x5d2e2efd20898c1c (finalized slot 15632416) is open: its finish first
+[updater] mainnet fin 15632416 Finish                                applied        gas   3726482 block  106 +  8.9s b8c4f1ac365c7378ab4c5aa64fe464fdf50a5ef041c75a5fb68b1575c49309fc
+2026-11-21T15:25:09Z [adversary mainnet] mainnet fin 15632416 Finish applied (exit None, gas 3727009, fee 29816072, block 106)
+2026-11-21T15:25:34Z [adversary mainnet] job 0xe406359631802a9c: finalized slot 15632992 root 0xba917339c351210213ff3ed0a010bd1173cedc09a91ff64285852dfd8d188925 (attested slot 15633059, signature slot 15633060, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15632992 Open                                  applied        gas   2140211 block  110 + 14.4s a1d7d766f68af98116ac9c6bb8e12728077a260c4e11c415765ff9256eead92e
+2026-11-21T15:25:48Z [adversary mainnet] mainnet fin 15632992 Open applied (exit None, gas 2142985, fee 17143880, block 110)
+2026-11-21T15:25:50Z [adversary mainnet] job 0xe406359631802a9c (finalized slot 15632992) is open: its miller first
+[updater] mainnet fin 15632992 Miller                                applied        gas   3308048 block  111 +  7.3s a9900355a829de2323ce659e2445617b94095762085a76a99c740861087c19d5
+2026-11-21T15:25:57Z [adversary mainnet] mainnet fin 15632992 Miller applied (exit None, gas 3308447, fee 26467576, block 111)
+2026-11-21T15:25:59Z [adversary mainnet] job 0xe406359631802a9c (finalized slot 15632992) is open: its finish first
+[updater] mainnet fin 15632992 Finish                                applied        gas   3726482 block  112 +  8.8s 2d31baa3461888d2b4e8b670d8530f62b4c3201da92e6ca54e5d04370447ce9a
+2026-11-21T15:26:08Z [adversary mainnet] mainnet fin 15632992 Finish applied (exit None, gas 3727009, fee 29816072, block 112)
+2026-11-21T15:26:33Z [adversary mainnet] job 0x2ba9711655f93710: finalized slot 15633600 root 0x290ad3ca53f6deee93baad716a2255faec8d8aa4048b5d61ab5ed6b880f9a48d (attested slot 15633664, signature slot 15633665, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15633600 Open                                  applied        gas   2140431 block  116 + 16.4s 23b6bcabb9262c5954ff704a74352cf0f88e28036f9c23f79e40bed8ce1b9598
+2026-11-21T15:26:50Z [adversary mainnet] mainnet fin 15633600 Open applied (exit None, gas 2143202, fee 17145616, block 116)
+2026-11-21T15:26:52Z [adversary mainnet] job 0x2ba9711655f93710 (finalized slot 15633600) is open: its miller first
+[updater] mainnet fin 15633600 Miller                                applied        gas   3308048 block  118 + 16.4s 3f6f54e9c8e8af39754a615a95d42be5cb309e84676f8385012b8c4f3b30d77b
+2026-11-21T15:27:08Z [adversary mainnet] mainnet fin 15633600 Miller applied (exit None, gas 3308447, fee 26467576, block 118)
+2026-11-21T15:27:10Z [adversary mainnet] job 0x2ba9711655f93710 (finalized slot 15633600) is open: its finish first
+[updater] mainnet fin 15633600 Finish                                applied        gas   3726482 block  119 +  8.0s c6ab7a18ba2338de3f2b2eb2a89a2d4d7a32c54db1615a1d5a8c55e326171574
+2026-11-21T15:27:18Z [adversary mainnet] mainnet fin 15633600 Finish applied (exit None, gas 3727009, fee 29816072, block 119)
+2026-11-21T15:27:33Z [adversary mainnet] job 0x2ab81b888acdc0be: finalized slot 15634208 root 0x71515eac280839cbfb2e0daf7ee2c411ccd55a2269a224493f59f727337932d7 (attested slot 15634274, signature slot 15634275, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15634208 Open                                  applied        gas   2168889 block  122 + 17.9s 4a050b9e64587fd7b87c774c3de74f6f5f40f1fb0b29c32848f960d3ba809e16
+2026-11-21T15:27:51Z [adversary mainnet] mainnet fin 15634208 Open applied (exit None, gas 2172044, fee 17376352, block 122)
+2026-11-21T15:27:53Z [adversary mainnet] job 0x2ab81b888acdc0be (finalized slot 15634208) is open: its miller first
+[updater] mainnet fin 15634208 Miller                                applied        gas   3308048 block  124 + 15.1s 6cf6cf5bdbce2a260854a25beaef930584638a55a84fa1111cd794dac8d850c8
+2026-11-21T15:28:08Z [adversary mainnet] mainnet fin 15634208 Miller applied (exit None, gas 3308447, fee 26467576, block 124)
+2026-11-21T15:28:10Z [adversary mainnet] job 0x2ab81b888acdc0be (finalized slot 15634208) is open: its finish first
+[updater] mainnet fin 15634208 Finish                                applied        gas   3726482 block  125 +  7.9s 7454d5176863cafcce7885bb740663c25335ea3fb353b9e8181836c5eea0b507
+2026-11-21T15:28:18Z [adversary mainnet] mainnet fin 15634208 Finish applied (exit None, gas 3727009, fee 29816072, block 125)
+2026-11-21T15:28:33Z [adversary mainnet] job 0x94bab6e726533a67: finalized slot 15634816 root 0x5d9c52b8da2904e86da1461afeab23979c4c61da306435993f50567c8ab7a256 (attested slot 15634881, signature slot 15634882, 510 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15634816 Open                                  applied        gas   2195947 block  128 + 15.1s 00f3b1de0048d2ea8b1821cb2dd6decd34ade1f74ee153ba6c7027300442ba74
+2026-11-21T15:28:48Z [adversary mainnet] mainnet fin 15634816 Open applied (exit None, gas 2199486, fee 17595888, block 128)
+2026-11-21T15:28:50Z [adversary mainnet] job 0x94bab6e726533a67 (finalized slot 15634816) is open: its miller first
+[updater] mainnet fin 15634816 Miller                                applied        gas   3308048 block  129 +  7.7s 11393b4a70945310541500f21fdc7b384191fe06473cb0d664c687966f9fecad
+2026-11-21T15:28:58Z [adversary mainnet] mainnet fin 15634816 Miller applied (exit None, gas 3308447, fee 26467576, block 129)
+2026-11-21T15:29:00Z [adversary mainnet] job 0x94bab6e726533a67 (finalized slot 15634816) is open: its finish first
+[updater] mainnet fin 15634816 Finish                                applied        gas   3726482 block  130 +  9.5s 3baad5f079eba74cca9a5352e8f2a3e450edb7e7ad3ec503b8f8820f9bdb4da6
+2026-11-21T15:29:09Z [adversary mainnet] mainnet fin 15634816 Finish applied (exit None, gas 3727009, fee 29816072, block 130)
+2026-11-21T15:29:32Z [adversary mainnet] job 0x43787ccfb3f085a1: finalized slot 15635392 root 0x2f4a706ce473352cdae36c2489d51b73fb486e2572ebd11de363a9d0f5c6d822 (attested slot 15635465, signature slot 15635466, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15635392 Open                                  applied        gas   2139576 block  134 + 15.7s 4444897586af48e2a3fe3771beedf7ef6ba0656d9445a3e5157c90aed789db38
+2026-11-21T15:29:48Z [adversary mainnet] mainnet fin 15635392 Open applied (exit None, gas 2142333, fee 17138664, block 134)
+2026-11-21T15:29:50Z [adversary mainnet] job 0x43787ccfb3f085a1 (finalized slot 15635392) is open: its miller first
+[updater] mainnet fin 15635392 Miller                                applied        gas   3308048 block  135 +  8.0s ecf619acc153c4b6bfc72f539845db313ffd28bf7afe21737f9d874dbc8af6c3
+2026-11-21T15:29:58Z [adversary mainnet] mainnet fin 15635392 Miller applied (exit None, gas 3308447, fee 26467576, block 135)
+2026-11-21T15:30:00Z [adversary mainnet] job 0x43787ccfb3f085a1 (finalized slot 15635392) is open: its finish first
+[updater] mainnet fin 15635392 Finish                                applied        gas   3726482 block  136 +  8.2s 5a98fbeac4ce31408de47adaf33e483a36eb3f3d50557e22dd85579ff335f0c3
+2026-11-21T15:30:08Z [adversary mainnet] mainnet fin 15635392 Finish applied (exit None, gas 3727009, fee 29816072, block 136)
+2026-11-21T15:30:33Z [adversary mainnet] job 0x04ae51a0a164171f: finalized slot 15636000 root 0xbca5f260fa7bcbda1b6f4a09f9acbe9d0bf93181928bae82813cb9ba5bb883b8 (attested slot 15636068, signature slot 15636069, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15636000 Open                                  applied        gas   2140642 block  140 + 14.6s 20a5f19ac8d133a30004660aa048ffb7a8337657f548ccd4046628b149e10de3
+2026-11-21T15:30:48Z [adversary mainnet] mainnet fin 15636000 Open applied (exit None, gas 2143414, fee 17147312, block 140)
+2026-11-21T15:30:50Z [adversary mainnet] job 0x04ae51a0a164171f (finalized slot 15636000) is open: its miller first
+[updater] mainnet fin 15636000 Miller                                applied        gas   3308048 block  141 +  7.8s dc85f9f499e0428d8ba3468a139f9134221118e274f5274e68644bc75e6a9933
+2026-11-21T15:30:58Z [adversary mainnet] mainnet fin 15636000 Miller applied (exit None, gas 3308447, fee 26467576, block 141)
+2026-11-21T15:31:00Z [adversary mainnet] job 0x04ae51a0a164171f (finalized slot 15636000) is open: its finish first
+[updater] mainnet fin 15636000 Finish                                applied        gas   3726482 block  142 +  8.3s 055a59e4b9d25e2714c3904d26718f9c836669ef3db56e8348e7bc2ee1a223c0
+2026-11-21T15:31:08Z [adversary mainnet] mainnet fin 15636000 Finish applied (exit None, gas 3727009, fee 29816072, block 142)
+2026-11-21T15:31:33Z [adversary mainnet] job 0x7c06864b9b79874c: finalized slot 15636608 root 0x276e98c284bf8da042458c722a12a693450e0173ddfeb5b02592802ead0051d2 (attested slot 15636674, signature slot 15636675, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15636608 Open                                  applied        gas   2167991 block  146 + 14.4s 245db9704d62ae87137969f735f8d54ceed6d6f98b379a62b063cd4dab582d3f
+2026-11-21T15:31:48Z [adversary mainnet] mainnet fin 15636608 Open applied (exit None, gas 2171132, fee 17369056, block 146)
+2026-11-21T15:31:50Z [adversary mainnet] job 0x7c06864b9b79874c (finalized slot 15636608) is open: its miller first
+[updater] mainnet fin 15636608 Miller                                applied        gas   3308048 block  147 +  8.0s 916c1772a9876666e349c20262ca37e4281babcfba25df5d4e5e273eb8a0cfbc
+2026-11-21T15:31:58Z [adversary mainnet] mainnet fin 15636608 Miller applied (exit None, gas 3308447, fee 26467576, block 147)
+2026-11-21T15:32:00Z [adversary mainnet] job 0x7c06864b9b79874c (finalized slot 15636608) is open: its finish first
+[updater] mainnet fin 15636608 Finish                                applied        gas   3726482 block  148 +  8.3s 5e7a848d12fb7e019deb92cecb16c1ffb1d23bd9a03df50daa56cd6c36327ad4
+2026-11-21T15:32:08Z [adversary mainnet] mainnet fin 15636608 Finish applied (exit None, gas 3727009, fee 29816072, block 148)
+2026-11-21T15:32:33Z [adversary mainnet] job 0x559319131f2fba5d: finalized slot 15637216 root 0x18d6ccd4ef147bdb278fe08408c9d3020778ff1b88610767e7ca39a28ad45173 (attested slot 15637281, signature slot 15637282, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15637216 Open                                  applied        gas   2168163 block  152 + 14.4s 07849eac857463316a200c9b2ce91d7e9400e5b81efb62b50b786cdf4c368562
+2026-11-21T15:32:48Z [adversary mainnet] mainnet fin 15637216 Open applied (exit None, gas 2171295, fee 17370360, block 152)
+2026-11-21T15:32:50Z [adversary mainnet] job 0x559319131f2fba5d (finalized slot 15637216) is open: its miller first
+[updater] mainnet fin 15637216 Miller                                refused   81 (StepError::Phase) gas     21237 block  153 +  8.5s 06abf8ef69442e240b44863377fb66cd3174968c7654761d430f8a6720f12bfa
+2026-11-21T15:32:58Z [adversary mainnet] mainnet fin 15637216 Miller refused (exit Some(81), gas 21636, fee 173088, block 153)
+2026-11-21T15:33:00Z [adversary mainnet] job 0x559319131f2fba5d (finalized slot 15637216) is open: its finish first
+[updater] mainnet fin 15637216 Finish                                applied        gas   3726482 block  154 +  8.0s f682ade3c47b6e2dfa920de77dbac5657c4e7ee4b6d94dafcd928d10355a17b1
+2026-11-21T15:33:08Z [adversary mainnet] mainnet fin 15637216 Finish applied (exit None, gas 3727009, fee 29816072, block 154)
+2026-11-21T15:33:33Z [adversary mainnet] job 0x0b3cbbfb9f3a0964: finalized slot 15637792 root 0x65e11343796519f098ca5d4ad0eeb82a93b9fa6d15d15a89399a6193b90b7937 (attested slot 15637856, signature slot 15637857, 512 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15637792 Open                                  applied        gas   2140607 block  158 + 14.3s 9e847b06bfb98fb2449e9268daa575fca6f9c9b6a7253faeaf5c182efe3c8147
+2026-11-21T15:33:48Z [adversary mainnet] mainnet fin 15637792 Open applied (exit None, gas 2143378, fee 17147024, block 158)
+2026-11-21T15:33:50Z [adversary mainnet] job 0x0b3cbbfb9f3a0964 (finalized slot 15637792) is open: its miller first
+[updater] mainnet fin 15637792 Miller                                applied        gas   3308048 block  159 +  8.1s 8d8e6ce5762c27ae98d768b6e9f76df4922593ec01e7f12e4cd9ad7bf5582311
+2026-11-21T15:33:58Z [adversary mainnet] mainnet fin 15637792 Miller applied (exit None, gas 3308447, fee 26467576, block 159)
+2026-11-21T15:34:00Z [adversary mainnet] job 0x0b3cbbfb9f3a0964 (finalized slot 15637792) is open: its finish first
+[updater] mainnet fin 15637792 Finish                                refused   205 (NoJob) gas      6111 block  160 +  8.8s 19f4cab05f66bd25c6be185340de1a72b6e4299b99470d2f6dbe8999ad59a5e4
+2026-11-21T15:34:08Z [adversary mainnet] mainnet fin 15637792 Finish refused (exit Some(205), gas 6638, fee 53104, block 160)
+2026-11-21T15:34:34Z [adversary mainnet] job 0x8e0754ad11579324: finalized slot 15638400 root 0x7772c484f01081086282f5d9633d5f82fcd2ad03832d63166d0e30f7b10fe599 (attested slot 15638471, signature slot 15638472, 511 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15638400 Open                                  applied        gas   2166589 block  164 + 13.9s a3aa31a37ec5fcd120f8dacac6a47d641adeaef7fd187c97457ce1f309f6509f
+2026-11-21T15:34:48Z [adversary mainnet] mainnet fin 15638400 Open applied (exit None, gas 2169725, fee 17357800, block 164)
+2026-11-21T15:34:50Z [adversary mainnet] job 0x8e0754ad11579324 (finalized slot 15638400) is open: its miller first
+[updater] mainnet fin 15638400 Miller                                applied        gas   3308048 block  165 +  8.2s b365acf2de53e6f4a754925fb26ae3f95ded7e2627751e30685726917da7fcd8
+2026-11-21T15:34:58Z [adversary mainnet] mainnet fin 15638400 Miller applied (exit None, gas 3308447, fee 26467576, block 165)
+2026-11-21T15:35:00Z [adversary mainnet] job 0x8e0754ad11579324 (finalized slot 15638400) is open: its finish first
+[updater] mainnet fin 15638400 Finish                                applied        gas   3726482 block  166 +  8.4s 69bf8563fca4d041ffe69d84bc90a7ac28b9da18cf910de9dab7f54643af8399
+2026-11-21T15:35:08Z [adversary mainnet] mainnet fin 15638400 Finish applied (exit None, gas 3727009, fee 29816072, block 166)
+2026-11-21T15:35:34Z [adversary mainnet] job 0x2070711c0792c16f: finalized slot 15638592 root 0x3323d1442d6ecb25b2f46c4894cd179defbe794eccddb33d2b5e579c3e323112 (attested slot 15638676, signature slot 15638677, 509 of 512 signers; advances; rotates the committees; adopts the next committee), served or confirmed by replay
+[updater] mainnet fin 15638592 Open                                  applied        gas   2240718 block  170 + 16.0s ef4038595950a672b870bad88b2d26973aa56c2cc3c434da47801c0d2d1f7509
+2026-11-21T15:35:50Z [adversary mainnet] mainnet fin 15638592 Open applied (exit None, gas 2244721, fee 17957768, block 170)
+2026-11-21T15:35:52Z [adversary mainnet] job 0x2070711c0792c16f (finalized slot 15638592) is open: its miller first
+[updater] mainnet fin 15638592 Miller                                applied        gas   3313372 block  172 + 16.1s bff0dfe4da3d1f536882753b8348b9db1d9a29dd1abf5af32d6a98f9411495fc
+2026-11-21T15:36:08Z [adversary mainnet] mainnet fin 15638592 Miller applied (exit None, gas 3313771, fee 26510168, block 172)
+2026-11-21T15:36:10Z [adversary mainnet] job 0x2070711c0792c16f (finalized slot 15638592) is open: its adopt0 first
+[updater] mainnet fin 15638592 adopt 1/2                             applied        gas   3410995 block  173 +  7.7s 8835f2cadeb2fd4458b5d1a29b509af4cd8b20ea432d6d0c83a82c2629fe322f
+2026-11-21T15:36:18Z [adversary mainnet] mainnet fin 15638592 adopt 1/2 applied (exit None, gas 3435975, fee 27487800, block 173)
+2026-11-21T15:36:20Z [adversary mainnet] job 0x2070711c0792c16f (finalized slot 15638592) is open: its adopt1 first
+[updater] mainnet fin 15638592 adopt 2/2                             applied        gas   3418189 block  174 +  7.9s 11a87abe18ba921e8df16ef4f3d9b306e9343e38e4959c3fb6a8eca8867628fe
+2026-11-21T15:36:28Z [adversary mainnet] mainnet fin 15638592 adopt 2/2 applied (exit None, gas 3443169, fee 27545352, block 174)
+2026-11-21T15:36:30Z [adversary mainnet] job 0x2070711c0792c16f (finalized slot 15638592) is open: its finish first
+[updater] mainnet fin 15638592 Finish                                refused   205 (NoJob) gas      6111 block  175 + 10.7s 0ea55b175816488c7bffd5126712ec73a95ca08a1530502b8bafd9f088416b36
+2026-11-21T15:36:40Z [adversary mainnet] mainnet fin 15638592 Finish refused (exit Some(205), gas 6638, fee 53104, block 175)
+2026-11-21T15:36:42Z [adversary mainnet] job 0x2f46b0dcce1ec63c: finalized slot 15639008 root 0x63eb61ed53731bfcb70e737bb39785a082ae3021fc541a2ce4f7a055685d266d (attested slot 15639073, signature slot 15639074, 507 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15639008 Open                                  applied        gas   2275273 block  177 + 17.5s 35e81e8fb9bbe93c9ff4a63864a5aa09851e02735fed6f206a3d623a44923c85
+2026-11-21T15:37:00Z [adversary mainnet] mainnet fin 15639008 Open applied (exit None, gas 2279957, fee 18239656, block 177)
+2026-11-21T15:37:02Z [adversary mainnet] job 0x2f46b0dcce1ec63c (finalized slot 15639008) is open: its miller first
+[updater] mainnet fin 15639008 Miller                                applied        gas   3308048 block  179 + 15.8s 6c93bb48f2415391d0cf3ecd175006166274cb89a50009df402cc20aaace0114
+2026-11-21T15:37:18Z [adversary mainnet] mainnet fin 15639008 Miller applied (exit None, gas 3308447, fee 26467576, block 179)
+2026-11-21T15:37:20Z [adversary mainnet] job 0x2f46b0dcce1ec63c (finalized slot 15639008) is open: its finish first
+[updater] mainnet fin 15639008 Finish                                applied        gas   3726482 block  180 +  9.6s a842bc2b850f66dd956d76307f0ecebba7b5f09559bb0221b501ad906e712c34
+2026-11-21T15:37:29Z [adversary mainnet] mainnet fin 15639008 Finish applied (exit None, gas 3727009, fee 29816072, block 180)
+2026-11-21T15:37:33Z [adversary mainnet] job 0xd0b6ba36560a723e: finalized slot 15639616 root 0xdbdb20a9134bbe89d74edb7e27935488e64b79333da62d8df9363c2df991a2db (attested slot 15639681, signature slot 15639682, 508 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15639616 Open                                  applied        gas   2247493 block  182 + 14.5s ebe735476ed2e83ed484fc88668294611beb2736a7e3ec66dc814bc7ffdcc25c
+2026-11-21T15:37:48Z [adversary mainnet] mainnet fin 15639616 Open applied (exit None, gas 2251774, fee 18014192, block 182)
+2026-11-21T15:37:50Z [adversary mainnet] job 0xd0b6ba36560a723e (finalized slot 15639616) is open: its miller first
+[updater] mainnet fin 15639616 Miller                                applied        gas   3308048 block  183 +  7.5s 45b6691acb695f9b29f8ee2425e4b06d92cea5eba49d18ca7dd31ee26787110c
+2026-11-21T15:37:57Z [adversary mainnet] mainnet fin 15639616 Miller applied (exit None, gas 3308447, fee 26467576, block 183)
+2026-11-21T15:37:59Z [adversary mainnet] job 0xd0b6ba36560a723e (finalized slot 15639616) is open: its finish first
+[updater] mainnet fin 15639616 Finish                                applied        gas   3726482 block  184 +  8.6s c66cd858c2c8a13642fc54d78c2ced47f308b6626703f03e02b47bb5b95f60a0
+2026-11-21T15:38:08Z [adversary mainnet] mainnet fin 15639616 Finish applied (exit None, gas 3727009, fee 29816072, block 184)
+2026-11-21T15:38:33Z [adversary mainnet] job 0x0d47d44a6a94a8da: finalized slot 15640192 root 0xab03dfe7d00225755031be0fb0fee440c28923a52ecacbdf503e6312d12b3303 (attested slot 15640258, signature slot 15640259, 506 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15640192 Open                                  applied        gas   2302825 block  188 + 14.6s 65f8e7c127b3585caac2cbb9740db7bf2e693ff00e31bc2ffa6349e9885339e7
+2026-11-21T15:38:48Z [adversary mainnet] mainnet fin 15640192 Open applied (exit None, gas 2307905, fee 18463240, block 188)
+2026-11-21T15:38:50Z [adversary mainnet] job 0x0d47d44a6a94a8da (finalized slot 15640192) is open: its miller first
+[updater] mainnet fin 15640192 Miller                                applied        gas   3308048 block  189 +  7.8s 914f51a71ce70eac845c0e259771645114c4a58bbb65422257cf98e2b9efb6d3
+2026-11-21T15:38:58Z [adversary mainnet] mainnet fin 15640192 Miller applied (exit None, gas 3308447, fee 26467576, block 189)
+2026-11-21T15:39:00Z [adversary mainnet] job 0x0d47d44a6a94a8da (finalized slot 15640192) is open: its finish first
+[updater] mainnet fin 15640192 Finish                                applied        gas   3726482 block  190 +  8.6s dffa69edaee40a4de020c3c78fd056c310580c7830c5ea80b14753cef03c03d5
+2026-11-21T15:39:08Z [adversary mainnet] mainnet fin 15640192 Finish applied (exit None, gas 3727009, fee 29816072, block 190)
+2026-11-21T15:39:33Z [adversary mainnet] job 0xa092ff0a4cc79d4a: finalized slot 15640800 root 0xce81cdc0381f4c4f0c8cb91b34591f60b97efa2de262ac52a2bd8e61f6d3ec78 (attested slot 15640865, signature slot 15640866, 506 of 512 signers; advances), served or confirmed by replay
+[updater] mainnet fin 15640800 Open                                  applied        gas   2303753 block  194 + 17.9s 125ea2868fd6c55de8769726cfdb3508b947328e4f8c629c277fb646494ff16b
+2026-11-21T15:39:51Z [adversary mainnet] mainnet fin 15640800 Open applied (exit None, gas 2308834, fee 18470672, block 194)
+2026-11-21T15:39:53Z [adversary mainnet] job 0xa092ff0a4cc79d4a (finalized slot 15640800) is open: its miller first
+[updater] mainnet fin 15640800 Miller                                applied        gas   3308048 block  196 + 14.4s 4141ca9121008d912ffd4eaff1a34e77216ade0feda0ff128ebde9aa07d07091
+2026-11-21T15:40:08Z [adversary mainnet] mainnet fin 15640800 Miller applied (exit None, gas 3308447, fee 26467576, block 196)
+2026-11-21T15:40:10Z [adversary mainnet] job 0xa092ff0a4cc79d4a (finalized slot 15640800) is open: its finish first
+[updater] mainnet fin 15640800 Finish                                refused   205 (NoJob) gas      6111 block  197 +  9.8s 277b9539d8ae8f17f119a61cee0f6f70f3f745b3662ed46c737736f404aaf8a7
+2026-11-21T15:40:19Z [adversary mainnet] mainnet fin 15640800 Finish refused (exit Some(205), gas 6638, fee 53104, block 197)
+2026-11-21T15:41:23Z [adversary mainnet] stopped at round 367: {"chain":"mainnet","daemon":"adversary","finalized_slot":15640800,"last_error":"","last_plan":"up-to-date","period":1909,"reasons":[],"round":367,"status":"ok"}

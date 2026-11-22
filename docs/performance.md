@@ -1,6 +1,6 @@
 # Ferrata: performance report (RFP-021 P.1–P.9, RFP-022 P.1–P.7)
 
-**First draft, 11 November 2026.** Each requirement with the measured figures, where and how they were
+**Second draft, 21 November 2026** (the first: 11 November). Each requirement with the measured figures, where and how they were
 measured, and the gaps. Paths are relative to the repository root. `just bench` regenerates the vault's gas, the light
 client's cycles and a real release proof from a fresh checkout and records the hardware ([EVIDENCE](EVIDENCE.md)
 row 49; `just bench-user`, the user-side proofs at the declared minimum, row 50); every other number comes
@@ -20,6 +20,8 @@ evidence with its commands.
 | **laptop CPU** | AMD Ryzen 9 7940HS, 8 cores, 16 threads, no GPU; shared with other jobs, so wall times state the load | [`docs/design/bridge.md`](design/bridge.md) §18 |
 | **cloud GPU** | one NVIDIA L4 (24 GB) on Modal, 4 CPU cores, 32 GiB; r0vm 3.0.5 built with CUDA | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
 | **simulation** | the Python model of the v0.4 sequencer and Logos Blockchain code | `docs/design/finality-rule/RESULTS.md` |
+| **cloud CPU container** | a Modal container held to the CPUs and memory named (request = limit; gVisor; mostly AMD Zen 3 servers, the host named per run), r0vm 3.0.5 on CPU; "8 CPUs, 16 GiB" is the mid-range laptop's shape | [`lez/results/perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md); [`lez/results/perf-proofs.md`](../lez/results/perf-proofs.md) |
+| **build box, zone** | the Modal build box (16 CPUs of quota, 64 GiB) running a LEZ v0.4.0-rc1 zone we started (sequencer and Logos Blockchain node, LEZ's local configuration) or a local anvil | [`lez/results/perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); [`lez/results/perf-daemons.md`](../lez/results/perf-daemons.md) |
 
 LEZ's limits on v0.4: a block, and so a transaction, may use 10M execution cycles (`MAX_GAS_EXEC`); the
 base fee stops rising at 5M (`TARGET_GAS_EXEC`); a private transaction costs a flat 409,764 execution
@@ -65,22 +67,67 @@ target ([`lez/RESULTS.md`](../lez/RESULTS.md) §5, "What is not built").
 
 ### P.2 Cost by program action: cycles, gas, proof time, proof size
 
-**Advancing the tracked state** (in-process harness, mainnet periods 1899–1903;
-[`attestation.md`](design/attestation.md) §4.2–§4.3):
+**Every program action and statement type, proven for real** ([`perf-proofs.md`](../lez/results/perf-proofs.md),
+21 November 2026; instance succession and the proven path's committee handoff added after review): the 39 guest executions (37, and `Succeed`/`Spawn` added) of the test suite's scenarios (`lez/results/stage1-*.md`,
+`stage4-attest.md`), each with the exact input LEZ v0.4.0-rc1 gives it, proven by r0vm 3.0.5 on a cloud container held
+to 16 CPUs and 32 GiB (one container per transition, `bench/perf/prove_modal.py`; `bench/perf/prove-actions.sh` runs
+the same `perf_prove --prove` on one machine): a composite receipt verified against the image id with its journal
+equal to the executor's, then compressed to one succinct receipt and verified again. LEZ v0.4 does not prove public
+transactions (every node re-executes them): these are the proofs a prover of the same execution would make, RFP-020's
+method. Execution gas equals the user cycles proven in every row. Proof times are sums over a transaction's
+transitions; each transition's machine is in the results file (mostly AMD Zen 3 hosts; four actions sum transitions
+proven on different hosts, `Init`, `Init` adopt 2/2 and both `Finish` rows, and the slot, absent-slot and four-facts
+statements ran on Zen 4, and the succession row's two transitions on two hosts, `Succeed` (38) on Intel and `Spawn`
+(39) on AMD Zen 3: compression times differ by up to about 40 % between hosts):
 
-| Action | Transactions | Cycles per step | Execution gas (total) | Storage gas | Proof |
-|---|---:|---|---:|---:|---|
-| `Init` (bootstrap, adoption in two parts) | 3 | largest 3,479,974 | 7,085,450 | 51,968 | none (public execution) |
-| finality update, public job | 3 | `Open` 2.13–2.18M, `Miller` 3.31M, `Finish` 3.65M | 9,216,121 | 4,451 | none |
-| update that rotates and adopts a committee | 5 | adoption 3.40–3.42M per 256 keys | 16,076,120 | 54,491 | none |
-| finality update, one public transaction (`VerifyAll`) | 1 | 9,115,325 | 9,115,325 | 4,089 | none |
-| finality update, proven path | 1 | public part 70,090 | 479,854 | 224,063 | 9,045,235 user cycles: **3,240.5 s** laptop CPU, peak 9.18 GiB, receipt **227,080 B** |
+| action | transitions | exec gas | stor gas | user cycles proven | segments | prove (composite) s | compress to succinct s | composite B | succinct B (one per transition) | peak RSS GiB |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| Init (bootstrap): Init | 2 | 210,666 | 1,896 | 210,666 | 2 | 66.5 | 19.2 | 497,440 | 225,833 + 224,519 | 4.60 |
+| Init (bootstrap): adopt 1/2 | 1 | 3,399,141 | 24,980 | 3,399,141 | 4 | 469.2 | 71.0 | 1,177,113 | 249,068 | 9.19 |
+| Init (bootstrap): adopt 2/2 | 3 | 3,485,575 | 25,108 | 3,485,575 | 6 | 488.1 | 86.6 | 1,649,283 | 249,201 + 225,511 + 224,041 | 9.19 |
+| committee handoff (update_0): Open (step 1) | 2 | 2,156,300 | 2,853 | 2,156,300 | 4 | 290.6 | 57.9 | 1,089,152 | 227,532 + 225,865 | 9.19 |
+| committee handoff (update_0): Miller (step 2) | 1 | 3,313,372 | 399 | 3,313,372 | 4 | 415.5 | 69.3 | 1,117,523 | 225,897 | 9.19 |
+| committee handoff (update_0): adopt 1/2 | 1 | 3,410,995 | 24,980 | 3,410,995 | 4 | 464.6 | 70.3 | 1,180,189 | 250,606 | 9.19 |
+| committee handoff (update_0): adopt 2/2 | 1 | 3,418,189 | 24,980 | 3,418,189 | 4 | 467.8 | 73.4 | 1,180,317 | 250,670 | 9.19 |
+| committee handoff (update_0): Finish (step 3) | 2 | 3,699,098 | 463 | 3,699,098 | 5 | 471.8 | 55.5 | 1,378,633 | 225,614 + 225,254 | 9.19 |
+| finality update: Open (step 1) | 2 | 2,194,902 | 3,525 | 2,194,902 | 4 | 307.9 | 60.3 | 1,089,102 | 228,025 + 225,347 | 9.19 |
+| finality update: Miller (step 2) | 1 | 3,308,048 | 399 | 3,308,048 | 4 | 410.1 | 70.5 | 1,116,487 | 225,379 | 9.19 |
+| finality update: Finish (step 3) | 3 | 3,725,955 | 527 | 3,725,955 | 6 | 514.0 | 89.3 | 1,600,717 | 224,968 + 225,461 + 224,041 | 9.19 |
+| statement: account: the WETH contract (nonce, balance, storage root, code hash) | 1 | 168,909 | 4,424 | 168,909 | 1 | 67.2 | 19.6 | 488,178 | 227,717 | 3.47 |
+| statement: storage slot: a WETH balance, value >= 1 | 1 | 275,865 | 7,338 | 275,865 | 1 | 81.0 | 16.0 | 506,294 | 230,663 | 4.60 |
+| statement: storage slot: an absent slot is zero | 1 | 270,580 | 7,291 | 270,580 | 1 | 87.7 | 17.5 | 506,200 | 230,616 | 4.60 |
+| statement: account: an address without an account | 1 | 151,829 | 4,150 | 151,829 | 1 | 68.2 | 19.8 | 487,630 | 227,443 | 3.47 |
+| statement: event log: an ERC-20 Transfer (receipt with 7 logs) | 1 | 97,485 | 2,623 | 97,485 | 1 | 71.0 | 20.7 | 484,576 | 225,916 | 3.47 |
+| statement: event log: a Transfer in the block's largest receipt (306 logs) | 1 | 1,619,960 | 58,812 | 1,619,960 | 2 | 277.1 | 40.7 | 903,717 | 282,105 | 9.18 |
+| statement: storage slot 16 blocks back: one EIP-2935 hop, then the slot | 1 | 499,277 | 13,578 | 499,277 | 1 | 162.4 | 21.1 | 532,022 | 236,903 | 9.15 |
+| statement: four facts in one call (account, two slots, a log) and a relation | 1 | 454,255 | 12,309 | 454,255 | 1 | 134.7 | 16.5 | 529,612 | 235,698 | 9.15 |
+| consumer: a public actor calls Attest: storage slot | 3 | 386,181 | 7,507 | 386,181 | 3 | 136.9 | 42.0 | 1,014,414 | 237,300 + 231,045 + 224,122 | 4.61 |
+| consumer: a public actor calls Attest: event log | 3 | 164,872 | 2,792 | 164,872 | 3 | 102.9 | 40.7 | 987,070 | 228,624 + 226,261 + 224,358 | 3.47 |
+| consumer: reference consumer: claim an ERC-20 Transfer (credits its sender once) | 4 | 185,389 | 2,768 | 185,389 | 4 | 108.6 | 51.8 | 1,206,854 | 227,890 + 226,261 + 224,064 + 223,480 | 3.47 |
+| instance succession: Succeed (then Spawn at the successor) | 2 | 70,610 | 697 | 70,610 | 2 | 29.2 | 16.2 | 494,422 | 224,827 + 224,464 | 1.44 |
 
-The same proven update (a later image) took **49.5 s** on one L4, and **895.6 s** on a cloud
-container's CPU with 32 prover threads, where a live sequencer verified and applied it (receipt 237,412 B)
-([`lez/RESULTS.md`](../lez/RESULTS.md) §9). Public transactions need no proof on v0.4: every node
-re-executes them ([`bridge.md`](design/bridge.md) §7). A handler pays 5.7 cycles per byte it receives and
-about 3.4 per byte it sends on ([`attestation.md`](design/attestation.md) §4.3).
+**The proven update path** (one private transaction proving a whole finality update, `VerifyAll` at a private
+account's actor, this tree's program `0x816d1fef…`; [`perf-proofs.md`](../lez/results/perf-proofs.md)): the private
+transition 9,049,362 user cycles in 10 segments, `execute_and_prove` **1,673.6 s** on a 16-CPU container (AMD Zen 3),
+peak **9.21 GiB**, receipt **227,120 B**, transaction 231,114 B; settled through LEZ's state machine with the receipt
+verified, charged **485,298** execution gas (the flat 409,764 plus a 75,534-cycle public part) and 224,063 storage
+gas. Earlier images: 3,240.5 s on the laptop CPU (16 threads, shared), 49.5 s on one L4, 895.6 s on a cloud CPU with
+32 prover threads ([`lez/RESULTS.md`](../lez/RESULTS.md) §3, §9). The same update in one public transaction
+(`VerifyAll`) is charged 9,115,325 execution gas and needs no proof. **The proven committee handoff** (`prove_private
+--handoff`: update_1 as served, its 512 keys adopted in the same private call, no new header): 15,796,512 user cycles in
+17 segments, `execute_and_prove` **2,254.2 s** on a 16-CPU container (AMD Zen 4), peak 9.20 GiB, receipt **227,347 B**,
+transaction 231,568 B; settled with the receipt verified, charged **451,895** execution gas (409,764 + a 42,131-cycle
+public part) and 224,063 storage gas.
+
+**The private attestation** (the consumer's read of a record and LEZ's privacy circuit, padded as the wallet pads
+it): 633.5 s at 16 CPUs and 1,254.8 s at 8 (3.34M user cycles, 6 segments), receipt 239,246 B, transaction 255,366 B,
+peak 9.19 GiB (P.4, [`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)); unpadded, of an earlier image, 16.1 s on
+one L4 (receipt 227,170 B; [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), run `gpu-l4-attest-2`). A handler
+pays 5.7 cycles per byte it receives and about 3.4 per byte it sends ([`attestation.md`](design/attestation.md) §4.3).
+
+**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`, `attest_private.rs` and
+`sepolia.rs` write the cycle and gas tables (`lez/RESULTS.md` §8); `perf_prove --dump` captures the same scenarios'
+guest inputs and `bench/perf/prove-actions.sh` (or `prove_modal.py`) proves each one.
 
 **One public transaction with a residue witness (experimental, not deployed).** An unaudited copy of
 the program whose `VerifyAll` checks a residue witness (Novakovic and Eagen; `c ≠ 0`, `w ∈ Fp6`,
@@ -106,38 +153,46 @@ handoff and **8,431,403** (84.3%) for a 342-signer handoff at the costliest plac
 takes every handoff of the mainnet replay and of Sepolia's 32 periods in one transaction, at most 6,737,794
 (EVIDENCE row 137). The deployed programs are unchanged.
 
-**Statement verification by type**: P.1's table. **Proof time and size of an attestation**: the private
-attestation of a `Transfer`, 380,577 user cycles for the consumer's two transitions plus LEZ's privacy
-circuit, proven on one L4 in **16.1 s**, receipt **227,170 B**, transaction 231,214 B, peak host memory
-0.76 GiB ([`lez/RESULTS.md`](../lez/RESULTS.md) §5; [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md),
-run `gpu-l4-attest-2`). **Bare guest** (executor): storage 210,502, a log 42,445–432,102, a hop 182,627, an
-identifier 1,629 user cycles ([`attestation.md`](design/attestation.md) §5.1).
-
-**Reproducible from the test suite**: `lez/harness/tests/public_path.rs`, `attest_public.rs`,
-`attest_private.rs`, `sepolia.rs` and the commands of [`lez/RESULTS.md`](../lez/RESULTS.md) §8 write the
-`results/*.md` tables.
-
-**Gaps:** proof time and size per public attestation are not applicable (no proof); a private
-attestation was not proven on a CPU; a proven handoff was not proven for real (dev mode only).
-
 ### P.3 Tracking cost, apart from attestation cost
 
-Tracking (shared by every consumer of an instance) and attestation (per fact) are reported apart. Per
-update: public 9.2M execution gas (16.1M at a handoff), proven 0.70M with execution and storage gas added
-([`attestation.md`](design/attestation.md) §10). **Amortised** at the recommended cadence (one update per
-sync-committee period, plus one per hour while roots are imported; derived):
+**Measured over eight days of operation** ([`lez/results/perf-tracking.md`](../lez/results/perf-tracking.md), written by
+`python3 -I bench/perf/tracking_cost.py lez/lab/results/record`): every transaction the lab sent to its LEZ v0.4.0-rc1
+sequencer while it followed mainnet and Sepolia, one session every two hours from 10 to 18 November 2026, with the gas
+and the fee that sequencer charged (read back from the chain, [`lez/lab/README.md`](../lez/lab/README.md)). Public job
+path; fees in LEZ's native unit at the chain's base fee of 8. Steady state (the 97 sessions after the first, 8.06 days):
 
-| Cadence | Path | Execution gas | Storage gas |
-|---|---|---:|---:|
-| once per period (a handoff) | public | 16,076,120 per period, about 5.16 billion a year | 54,491 per period |
-| once per period (handoff, no new header) | proven | 448,530 per period | 224,063 per period |
-| once per hour while importing | public | 221,186,904 per day | 106,824 per day |
-| once per hour while importing | proven | 11,516,496 per day | 5,377,512 per day |
+| | mainnet | Sepolia |
+|---|---:|---:|
+| a finality update (3 transactions): execution gas, median of 98 (range) | 9,225,372 (9,169,394–9,333,584) | 9,097,182 |
+| a handoff (5 transactions): execution gas, median | 16,060,242 | 15,903,846 |
+| per day, as the lab ran: execution gas; fees | **127,294,275; 1,019,185,463** | 126,556,100; 1,013,454,096 |
+| per sync-committee period (27.3 h): execution gas; fees | 144,832,597; 1,159,606,572 | 143,992,718; 1,153,085,549 |
 
-Per attestation: the interval's cost divided by the attestations its records serve. **Measured in
-operation:** the lab followed Sepolia and mainnet on a live sequencer every two hours; its program
-transactions used 208,951 to 3,733,713 execution gas ([`lez/lab/README.md`](../lez/lab/README.md)). **Gap:** the figure at the
-recommended cadence with real proving and recorded hardware (milestone A4).
+**Per attestation** (mainnet, as the lab ran): an instance's tracking divided by the attestations that use its records,
+127,294,275 / N execution gas a day: 12.7M at 10 attestations a day, 1.27M at 100, 127,294 at 1,000, 12,729 at 10,000;
+**apart from each attestation's own verification**, which its consumer pays whatever N is: 93,316 execution gas for a
+`Transfer` log without a predicate (97,485 with the reference consumer's conditions, P.2) and 166,249 for an account
+with one condition, its code hash (168,909 with P.2's three), 275,865 for a storage slot, 499,277 for a slot through one EIP-2935 hop ([`perf-state.md`](../lez/results/perf-state.md) §2,
+this tree's program). At the design's cadence (one update an
+hour while roots are imported, plus each period's) the measured per-update figures give 24 × 9,225,372 + 0.88 handoffs
+× 16,060,242 ≈ 235.5M execution gas a day (*derived* from the measured medians; every one of the 98 measured finality
+updates was within +1.17 / −0.61 % of the median). **At the once-per-period cadence** (an instance without bridge
+imports, [`attestation.md`](design/attestation.md) §10: one handoff per sync-committee period of 27.3 h): 16,060,242
+execution gas per period, about 14.1M a day, **14.1M / N per attestation** at N attestations a day (*derived* from the
+measured handoff median).
+
+**The proven path, with real proving** (this tree's program, P.2): an update is one private transaction, charged
+485,298 execution gas and 224,063 storage gas (709,361 gas; fee 5,674,888 at the base fee its settlement saw), after a
+proof of **1,673.6 s on 16 CPUs** (7.4 CPU-hours allocated, 16 × the wall time; 6.76 CPU-hours used, GNU time) or
+49.5 s on one L4 (earlier image). For the design's 24 hourly updates a day that is 11.6M execution and 5.4M storage gas
+a day, and 179 allocated CPU-hours or 20 L4-minutes of proving (*derived* from the measured update); each period's
+handoff adds one more private transaction, charged 451,895 execution and 224,063 storage gas after a proof of 2,254.2 s
+on 16 CPUs (P.2: proven for real in one private transaction), 0.879 a day: with it, 12.0M execution and 5.6M storage
+gas and 187 allocated CPU-hours a day (24 × 485,298 + 0.879 × 451,895; *derived*). At the once-per-period cadence the
+proven path costs that handoff alone: 451,895 execution gas per period. Per attestation, at N attestations a day:
+235.5M / N execution gas on the public path at the design's cadence (14.1M / N once per period), or 12.0M / N plus
+187 / N allocated CPU-hours of proving on the proven path, each period's handoff included (11.6M / N and 179 / N for
+the 24 hourly updates alone).
 
 ### P.4 User proving (RFP-021)
 
@@ -154,59 +209,139 @@ circuit 979,362–980,875 user cycles more (4 segments, was 3), the same 9.25 Gi
 Apple Silicon (Mac minis, CPU only: r0vm 3.0.5 has no Metal prover), padded: **857.4 s** on an M1 with 16 GB
 and **475.2 s** on an M4 (medians of 2), r0vm peak 9.26–9.45 GiB, no swap-out on the M1
 ([`p4-macos`](../lez/results/p4-macos/README.md), row 88). The update proof is an updater's, not a user's
-(9.18 GiB peak). **Gaps:** a mid-range laptop; a chain of hops (a 320-hop
-claim is estimated at about 58M accelerated user cycles).
+(9.18 GiB peak). **This tree's final programs** (image `0x816d1fef…`, consumer `0x8464603b…`), padded, in containers
+held to a mid-range laptop's shape (8 CPUs of time, 16 GiB hard) and to 16 CPUs: **1,254.8 s** (1,250.0 and 1,259.6 s)
+and **633.5 s**, 3.34M user cycles in 6 segments, r0vm peak **9.19 GiB** (container 9.23 GiB), receipt 239,246 B,
+transaction 255,366 B, each settled with the receipt verified and refused with one bit flipped
+([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md), 21 November 2026). The owner's step, rehearsed as the owner
+would run it in an 8-CPU, 16-GiB container: 1,110.8 s for the attestation, all three transactions settled, 50 minutes in
+all. **Gaps:** a run on a real mid-range laptop (the owner's step: `bench/perf/p4-laptop-owner.sh` on the staged bundle);
+a chain of hops (a 320-hop claim is estimated at about 58M accelerated user cycles).
 
 ### P.5 End-to-end attestation latency
 
-| Component | Figure | Basis |
-|---|---|---|
-| Ethereum finality wait | about 13–19 minutes | design ([`attestation.md`](design/attestation.md) §13) |
-| update availability | the operator's cadence: hourly in the design while importing; every two hours in the lab | design; [`lez/lab/README.md`](../lez/lab/README.md) |
-| the job on LEZ | 3 transactions (5 at a handoff); one block each at the target; 10-s blocks | [`attestation.md`](design/attestation.md) §4.2; lab |
-| on-chain verification | one transaction, same block as the action (P.1) | measured |
+**Measured end to end** on the live run of 12–13 November 2026 (EVIDENCE row 99): `ferrata-updater` following Sepolia
+through Lodestar's public light-client API on a running LEZ v0.4.0-rc1 sequencer and Logos Blockchain node, every
+transaction read back final on Bedrock ([`lez/results/perf-latency-e2e.md`](../lez/results/perf-latency-e2e.md),
+`python3 -I bench/perf/latency_e2e.py lez/updater/results/live-sepolia`). An event in the block at slot *e* becomes a
+statement usable on LEZ when the first applied update whose finalized header is at or after *e* has its `Finish` final,
+plus the consuming transaction (verification, P.1). Every slot of the run's 5.4 hours of continuous operation (1,632
+Sepolia slots, 51 updates; the daemon applied every finalized epoch) is taken as an event's block:
 
-**Gap:** not measured end to end; deferral adds a random share of the chosen window (operator guide §3.4).
+| | median | p10 | p90 | max |
+|---|---:|---:|---:|---:|
+| **Ethereum event to statement usable on LEZ** | **18.1 min** | 15.6 min | 20.7 min | 22.1 min |
+| event to the next finalized header's slot | 3.1 min | 0.6 min | 5.6 min | 6.4 min |
+| finality wait: that header to the signature slot of the update proving it | 13.0 min | 13.0 min | 13.0 min | 13.2 min |
+| update availability: the beacon node serving it, the daemon's poll | 0.2 min | 0.1 min | 0.4 min | 1.0 min |
+| the update applied on LEZ (Open, Miller, Finish, each final on Bedrock) | 1.5 min | 1.5 min | 1.6 min | 1.6 min |
+| on-chain verification: the consuming transaction, send to final | 0.3 min | | | |
+
+The verification row is a proxy: no consuming transaction was sent in that run, so the row is the run's own median
+send-to-final time of a transaction (15.7 s over its 159 update transactions; P.1: the statement is verified inside
+the consuming transaction). An event in a block between two records' headers needs one EIP-2935 hop (about 223k
+execution gas more, P.1); LEZ ran a one-validator devnet with 10-s blocks. With the run's two outages included (the zone stopped when its
+Bedrock funds ran out) the median is 19.6 min and the p90 86.7 min. At a slower cadence the header wait grows: an
+operator updating once an hour adds up to 60 minutes to it (*derived*); deferral (R.10) adds a random share of the
+window: on a sequencer two daemons applied an update in 105 s (median; p90 106 s) without deferral, 126 s (p90 176 s)
+with a window of 8 rounds (nominally 32 s; rounds took 5.9–6.2 s) and 306 s (p90 576 s) with 30 rounds (nominally
+120 s; 4.6–4.8 s each), while the execution gas spent per revealed update fell from 16.0M to 8.1M and 4.6M, abandoned
+jobs and refused steps included (G5 revealed every 90 s, not 60, and 12 of its 17 updates were covered by a later
+update's job: much of the fall is updates skipped, not the window alone; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md); updates replayed
+81 to 122 times faster than the lab recorded them, about 40–60 times the design's hourly cadence, so jobs overlapped).
 
 ### P.6 Off-chain compute
 
-| Component | Resources measured | Source |
-|---|---|---|
-| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested; a session of 6–11 transactions 123–133 s; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
-| proven updater | 9.18 GiB, 54 min laptop CPU; 49.5 s one L4 | P.2 |
+| Component | CPU | Memory | Time, bandwidth | Source |
+|---|---|---|---|---|
+| **the updater daemon** (`ferrata-updater`, sequencer backend), two or three instances following 20–30 recorded mainnet updates on a LEZ v0.4.0-rc1 zone, configured to poll every 4 s (the adversary 2 s; rounds took 4.6–17.6 s), gates G2–G5 | **0.043–0.092 of one core** per daemon (G2: 151 CPU-seconds in 1,849 s, 0.08) | **57.3–57.8 MiB peak**, 33–38 MiB median resident | beacon API: G2's honest daemons 650 and 666 requests, **10.3 and 10.4 MB** (the adversary 604, 9.0 MB); sequencer RPC **0.57–2.07 MB up, 7.4–19.6 MB down** per daemon (the least for G2's honest daemons, which applied 5 and 1 steps; the most for daemons that did the work: G4 about 1.8 MB up and 19.0–19.6 MB down each in 1,545 s, G2's adversary 2.07 / 19.0 MB) | measured, gates G2–G5 ([`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)) |
+| the proven path's prover (one private transaction per update) | 16 CPUs for 1,673.6 s (7.4 CPU-hours allocated; 6.76 used) per update | 9.21 GiB peak | 49.5 s on one L4 (earlier image) | measured (P.2, [`perf-proofs.md`](../lez/results/perf-proofs.md)) |
+| the lab zone (sequencer, Bedrock node, driver) | two physical cores requested | — | a session 83–142 s over 85 sessions; state 20–31 MB compressed per generation; 0.0064 USD per scheduled session, about 0.08 USD a day (derived) | [`lez/lab/README.md`](../lez/lab/README.md) |
 
-**Gap:** the CPU, memory and bandwidth of the updater daemon, and the CPU and bandwidth of `monitor` (both built,
-[EVIDENCE](EVIDENCE.md) rows 43–45, 79–81; of `monitor` only memory is measured: 34,216 kB resident, row 43).
+The gates replayed recorded updates 81 to 122 times faster than the lab recorded them (one every 60 or 90 s; the lab
+recorded one about every two hours, its session schedule), about 40–60 times the design's hourly cadence, so their traffic is that of a daemon busier than in operation; per-day figures from them would
+overstate a real day, and none is given. The live Sepolia daemon polled every 24 s. **Not measured:** the
+`ferrata-attest` CLI and the `ferrata_attest_module` (a consumer's off-chain side, [`attestation.md`](design/attestation.md)
+§8); the §8 `monitor` is not built; the updater as the design runs it, a Logos module under `logosctl daemon` (`ferrata_updater_module`; it ran inside a headless Logos Core, [EVIDENCE](EVIDENCE.md) row 104), is not measured: the binary is.
 
 ### P.7 State growth
 
-| State | Size | Grows with | Source |
-|---|---:|---|---|
-| `header(id, slot)` record | 333 B of actor state (293 before the chain id and parent hash) | one per update that finalizes a new header | [`lez/RESULTS.md`](../lez/RESULTS.md) §5, "Decisions" 2 |
-| `instance(id)` | 425–505 B | constant (committees as 80-byte summaries) | [`attestation.md`](design/attestation.md) §3.1 |
-| `job(id, job_id)` | 1,249–1,409 B | cleared by `Finish`; a failed job stays (clean-up not built) | [`attestation.md`](design/attestation.md) §3.1, §4.5 |
+**Measured** in LEZ v0.4.0-rc1's own state ([`lez/results/perf-state.md`](../lez/results/perf-state.md), `bash
+bench/perf/state.sh`), whose borsh serialization is what a LEZ node stores (its state breakpoints), each account its
+32-byte key and its `Account`:
 
-**Projection (derived)** at the recommended cadence, one record per hour while importing (8,760 a year)
-plus one per period (321): about 9,081 records, **3.0 MB a year, 15.1 MB over five years** of record
-state. LEZ v0.4 charges storage gas on transaction bytes, not on state written, so growth costs nothing
-per byte in fees; account overhead per record is not counted. **Gap:** a measured projection (milestone A4).
+| account | actor state | `Account` | in the serialized state | grows with |
+|---|---:|---:|---:|---|
+| `header(id, slot)` record | 365 B | 421 B | **453 B** (measured: +453.0 B per record from 0 to 100,000 records) | one per applied update that finalizes a new header |
+| `instance(id)` | 505 B | 561 B | 593 B | constant (committees as summaries) |
+| `job(id, job_id)` | 1,022 B | 1,078 B | 1,110 B while open | cleared by `Finish` |
+
+**Projections** ([`perf-projections.md`](../lez/results/perf-projections.md), `python3 -I bench/perf/projections.py`;
+*derived*: the measured size times a count):
+
+| cadence | records a year | one year | five years |
+|---|---:|---:|---:|
+| as the lab ran (measured: 106 jobs in 8.06 days on mainnet, 9 of them period updates) | 4,804 | 2.18 MB | 10.88 MB |
+| the design's: one update an hour while roots are imported, plus each period's | 9,087 | 4.12 MB | 20.58 MB |
+| every finalized epoch, as the live Sepolia daemon ran | 82,181 | 37.23 MB | 186.14 MB |
+
+**Jobs that never finish** leave their `job` account (1,110 B each; clean-up is not built): the lab, one operator,
+left 0 of 248 jobs; the gates, two daemons racing on updates replayed 81 to 122 times faster than the lab recorded
+them, left 8, 19 and 3 beside 16, 23 and 8 completed (G3, G4, G5; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)).
+Abandoned jobs come on top of the completed ones: with k operators racing at the design's cadence (9,087 updates a
+year), at most (k − 1) × 10.09 MB a year and (k − 1) × 50.43 MB in five years (one abandoned job per extra operator
+per update; *derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); none with one operator. The reference consumer's per-claim accounts are the consumer's state, not the module's
+(`lez/guests/consumer`).
+
+LEZ v0.4 charges storage gas on a transaction's bytes, not on the state it leaves, so the growth costs nothing in fees:
+it is disk on every node.
 
 ### P.8 BLS: in-program against a hypothetical precompile
 
-The two pairing steps (`Miller` 3.31M, `Finish` 3.65M) are 7.0M of an update's 9.2M public-path cycles
-(in-process harness); in the bare guest, Miller loops 40%, final exponentiation 35% and hash to G2 11% of
-10.21M ([`attestation.md`](design/attestation.md) §13). So a precompile that made pairing free would save
-at most about 7.0M of 9.2M per update (derived upper bound). **A precompile is reachable only from public
-transactions**: the proven path, which runs in a private actor, would not benefit, and it already costs
-0.48M execution gas. **Gap:** the delta against a modelled precompile cost.
+**Modelled from measured inputs** ([`lez/results/perf-precompile.md`](../lez/results/perf-precompile.md), `python3 -I
+bench/perf/precompile_model.py bench/perf/results`). The program's BLS work for a finality update (mainnet update_1,
+510 of 512 signers): hash-to-G2 1,169,105 and the subtractive key aggregation 285,875 cycles inside `Open`, and the
+final exponentiation and check 3,581,111 (the bare guest's phases with the same accelerated blst, bench/RESULTS.md), the
+two Miller loops 3,308,048 (this tree's `Miller` step, counted whole): **8,344,139 of the update's 9,228,905 cycles**. The model prices a native precompile at time parity: the
+operation's native time (blst 0.3.16 on the build box's CPU, one thread, median of 300: hash-to-G2 228 µs, the two
+Miller loops 651 µs, the final exponentiation 425 µs; the adoption of 256 keys 269 µs, a median of 50) times the
+executor's own throughput on the same box (11.3–14.5 Mcycles/s on these steps, 15.4 on the adoption), so that a node
+spends the same time per unit of gas inside and outside the zkVM.
+
+| step | in-program cycles (BLS) | precompile, modelled | delta |
+|---|---:|---:|---:|
+| `Open`: hash-to-G2, key aggregation | 1,454,980 | 2,652 | 1,452,328 |
+| `Miller`: two Miller loops | 3,308,048 | 9,003 | 3,299,045 |
+| `Finish`: final exponentiation, check | 3,581,111 | 6,187 | 3,574,924 |
+| **finality update** | **8,344,139** | **17,841** | **8,326,298** |
+
+With the precompile a finality update would meter about 902,607 cycles instead of 9,228,905 (10.2 times less, and one
+transaction instead of three); a handoff about 845,451 instead of 15,997,954. Both are lower bounds: `Miller` and the
+adoption parts are counted whole as BLS work, though each also reads and writes the job, so a precompile would leave
+somewhat more.
+At ten times the native cost the conclusions stand. **A precompile is reachable only from public transactions**: a
+private transaction's program runs inside the zkVM proof, where only RISC Zero's accelerators exist (the program already
+uses RISC Zero's accelerated blst), so the proven path and every private consumer would not change. Reference point:
+Ethereum's EIP-2537 charges 102,900 gas for the pairing check that costs this program 6.9M cycles.
 
 ### P.9 No action scales with accumulated state
 
-By construction: no action reads a variable-length collection; records, roots and nullifiers are addressed
-by key; committees are fixed-size summaries ([`attestation.md`](design/attestation.md) §5.6). The lab's
-program transactions used 208,951 to 3,733,713 execution gas over its first 258 blocks
-([`lez/lab/README.md`](../lez/lab/README.md)), not analysed against state size. **Gap:** no measurement of cost against state
-size.
+**Measured** ([`lez/results/perf-state.md`](../lez/results/perf-state.md) §2, §3): with 0, 1,000, 10,000 and 100,000
+records held by the instance (the serialized state growing from 2.8 MB to 48.1 MB), five statement types (an account, a
+storage slot with a predicate, a `Transfer` log, a log in the block's largest receipt, a slot through one EIP-2935 hop)
+and every step of a handoff and of a finality update were charged the same execution and storage gas at every size
+(`perf_state` asserts it): for example 275,865 for the storage slot and 3,308,048 for `Miller` each time. What this
+shows is limited: the copies sit at keys no measured action reads, and a LEZ transaction sees only the accounts it
+names, so the test shows that LEZ's metering does not depend on unrelated state; it cannot catch an account an action
+reads growing with use. That is excluded by construction instead: each action reads the instance (593 B, constant:
+committees as summaries), its job (1,110 B), one record (453 B), or for the bridge one root (205 B) and one nullifier
+or burn record (165 / 273 B), each fixed in size and addressed by key; no action reads a collection. In operation the
+lab's `Miller` (3,307,963) and `Finish` (3,723,564) were charged identically in all 98 mainnet finality jobs while 106
+records accumulated ([`perf-tracking.md`](../lez/results/perf-tracking.md); `lez/lab/results/record/run.tsv`).
+**Not measured at different state sizes:** `Init`, the public `VerifyAll` and the private update path; the
+absent-account, absent-slot and four-facts statements; `CallAttest` and the reference consumer's claim; `Succeed` and
+`Spawn`; the bridge's actions. The node's own work is not charged: serializing
+the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node writes, not a transaction's cost).
 
 ---
 
@@ -236,7 +371,18 @@ over 64 witnesses ([`bridge.md`](design/bridge.md) §18.3). Sources: [`lez/BRIDG
 
 ### P.2 Additional LEZ verification and its amortised cost per deposit
 
-The root import is the only additional verification (the claim needs no Ethereum proof of its own):
+The root import is the only additional verification (the claim needs no Ethereum proof of its own). **Its cost does
+not depend on how many deposits it covers**, measured on this tree's bridge program (in-process harness,
+[`perf-state.md`](../lez/results/perf-state.md) §4a, `bash bench/perf/state.sh`):
+
+| import | leaves it covers | newly covered | execution gas | storage gas | execution gas per newly covered deposit |
+|---|---:|---:|---:|---:|---:|
+| vault A, `ImportRoot` n = 5 | 5 | 5 | 230,731 | 1,895 | 46,146 |
+| vault A, n = 8 | 8 | 3 | 236,224 | 2,025 | 78,741 |
+| vault A, n = 6 (a lagging count) | 6 | 0 | 236,224 | 2,025 | — |
+| vault B, n = 8 | 8 | 8 | 236,202 | 1,918 | 29,525 |
+
+The same import in other settings:
 
 | `ImportRoot` | Execution gas | Storage gas | Where |
 |---|---:|---:|---|
@@ -248,12 +394,22 @@ The root import is the only additional verification (the claim needs no Ethereum
 | Sepolia's real state: the v5 vault, one leaf then two, captures 1 and 2 (this tree's program, the live round trip `crown-live-3`) | 432,182; 432,182 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)) |
 | the same in the first live run (`integration5`'s program, `crown-live-1`) | 433,528; 429,805 | — | crown devnet, LEZ v0.4.0-rc1 ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)) |
 
-**Amortised per deposit (derived)**: an import's cost divided by the deposits it newly covers, so with one
-import an hour: about 283k per deposit at one deposit an hour, 28.3k at ten, 2.8k at a hundred (from the
-real-storage figure). The import also needs a record, whose tracking cost is RFP-021 P.3's, shared with
-every other consumer. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
-[`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Gap:** an import under a mainnet state
-root (estimated at roughly 275k cycles of attestation plus one slot proof; not measured).
+**Amortised per deposit at the recommended cadence** (*derived* from the measured figures: one import an hour while
+deposits arrive, its cost divided by the deposits of that hour): on Sepolia's real state (432,182, the live round
+trip's import of the v5 vault) **432,182 per deposit at one deposit an hour, 43,218 at ten, 4,322 at a hundred**; on
+the harness's synthetic storage (236,224) 236,224, 23,622 and 2,362. **With the hourly light-client update** the
+recommended cadence runs for the bridge ([`attestation.md`](design/attestation.md) §10: one update an hour while roots
+are imported): when the bridge is the instance's only consumer, each hour costs the instance's tracking, the hourly
+update and its share of the period's handoffs (235.5M execution gas a day on the public path, RFP-021 P.3: 9.81M an
+hour, of which the handoffs 0.59M), plus the import (432,182): **10.25M per deposit at one deposit an hour, 1.02M at
+ten, 102k at a hundred** (*derived*); on the proven path (485,298 for the update, 0.879 × 451,895 / 24 = 16,549 for the
+handoffs and 432,182 execution gas an hour, plus about 232,268 storage gas: 224,063 per update and the handoffs' 8,205)
+934,029, 93,403 and 9,340 (*derived*). Shared with other consumers of the instance, the update's share
+falls accordingly. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
+[`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Under a mainnet state root** the import proves the
+same account and two slots through mainnet's deeper state trie: P.1's account statement costs 167,882 under the
+mainnet record against 148,948 under Sepolia's (169,611 with its 20,663-cycle header), so an import there is
+*estimated* at about 450k; the per-deposit figures move by that difference.
 
 ### P.3 Ethereum gas: deposit, release, checkpoints
 
@@ -303,38 +459,37 @@ verifier.
 
 Declared minimum: 16 GB and 8 cores with 16 threads, x86-64, or an Apple M1 with 16 GB. The release's succinct proof needs the holder's burn
 secret `sOut`, so it is the user's; the wrap takes only the succinct receipt, so any relayer can make it
-([`bridge.md`](design/bridge.md) §12.2, §12.3). **Gaps:** a mid-range laptop; the current program image on a GPU; the
-wrap on Apple Silicon (not supported today).
+([`bridge.md`](design/bridge.md) §12.2, §12.3). **This tree's bridge program** (image `0xccde6171…`), padded, at a
+mid-range laptop's shape (8 CPUs, 16 GiB hard) and at 16 CPUs: private claim **1,093.0 s** (941.1 and 1,245.0 s) and
+**639.2 s**, private burn **932.8 s** (820.9 and 1,044.7 s) and **534.5 s**, r0vm peak **9.19 GiB**, each transaction
+settled with its receipt verified ([`perf-p4-laptop.md`](../lez/results/perf-p4-laptop.md)). **Gaps:** a run on a real
+mid-range laptop (the owner's step, `bench/perf/p4-laptop-owner.sh`); the current program image on a GPU; the wrap on
+Apple Silicon (not supported today).
 
 ### P.5 Latency: deposit to mint, burn to release
 
-**Inbound** (deposit to mint): Ethereum finality (about 13–19 min) + the next light-client update and root
-import (the operators' cadence; hourly in the design) + the privacy delay the client proposes + one claim
-transaction. Not measured end to end: in the live round trips a deposit's block to its capture took 19.7 and 19.1
-min (`crown-live-1`) and 14.7 and 25.2 min (`crown-live-3`; the second waited for one more light-client update), and
-both claims then ran in one later LEZ session. On the live sequencer the stand-in crossing ran `Init`, two imports
-and both claims; its duration is not a latency figure (stand-in beacon chain)
-([`lez/live/inbound/README.md`](../lez/live/inbound/README.md)).
+**Measured end to end on Sepolia with testnet parameters** (the live round trip `crown-live-3` on the final programs:
+FerrataVault v5 in mode (B), W = 1 h, release delay 120 s; LEZ v0.4.0-rc1 on a devnet we ran, n = t = 1;
+[`perf-latency-bridge.md`](../lez/results/perf-latency-bridge.md), `python3 -I bench/perf/latency_bridge.py
+e2e/runs/crown-live-3`, from the run's own records):
 
-**Outbound** (burn to release):
+| | inbound: deposit 1 to its private claim applied | outbound: the private burn to its release |
+|---|---:|---:|
+| **as it ran** | **32.9 min** | **71.0 min** from the burn's proving (66.3 from its sending, 66.2 from it final on LEZ) |
+| source-chain finality wait | 18.6 min (Ethereum: the deposit to its checkpoint's finalization, *derived* two epochs after the checkpoint's slot) | 7.0 s (LEZ: the burn sent to final on Bedrock; a one-validator devnet) |
+| update availability and capture | 6.6 min (the covering finality update served and read, the vault's slots proven) | — |
+| proof generation | 231.9 s (the private claim, LEZ's wallet on the crown runner's cloud CPU, 16–32 CPUs; 1,093 s at a laptop's shape, P.4) | 282.8 s (the private burn, the same) + 167 s (checkpoint on one L40S and the Groth16 wrap) |
+| privacy-motivated delay | 0 in this run; the client's default holds a claim 1–12 h after its deposit ([user guide](guides/user-guide.md), "Choice" table): counted from the deposit's block, so Ethereum's finality and the capture (25.2 min) elapse inside it and what followed the capture (7.7 min) comes after it: inbound about 1.1–12.1 h (*derived*) | 0 in this run; the client's default waits for the vault's release delay (below) |
+| LEZ steps before the claim | 39.6 s (the light-client update, three transactions; the root import) | — |
+| the vault's wait W, release delay | — | 3,607 s (W = 1 h of block time); 156 s (120 s delay and the release) |
+| on-chain verification | 8.3 s (the claim, send to final) | 37 s (`submitCandidate`, `finalizeAttested`) |
 
-| Component | Rule (B) | Rule (A) | Basis |
-|---|---|---|---|
-| LEZ finality and proving | proof of the blocks: 24.1 s per idle hour, 219.3 s per busy hour on one L4; wrap about 3.5 min | the same, twice | measured ([`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md); [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md)) |
-| the vault's wait | 1 h | `W` = 3 h 16 min (`n` = 3) to 4 h 31 min (`n` = 10) at the default floor | design ([`bridge.md`](design/bridge.md) §11.6) |
-| tip to finalisation | about 3 h | 7–22 h; **4.00–7.68 h median** in simulation (`n` = 3 to 10) | estimated; simulated ([`bridge.md`](design/bridge.md) §9, §11.7) |
-| release delay | ≥ 24 h outside testnets (0 allowed on testnets) | the same | design ([`bridge.md`](design/bridge.md) §13) |
-| the user's release proof and a relayer's wrap | 46.0 s at 8 CPUs, 26.7 s at 16, plus 55–93 s of wrap (about 40 s + 80 s on a laptop, earlier image) | the same | measured (P.4) |
-| privacy delay | the client's choice | the same | design |
-
-The rehearsed testnet round trip (wait 40 min, release delay 120 s) runs in about 55 minutes plus the queue
-for a GPU (`e2e/sepolia-live.sh`, [`vault/README.md`](../vault/README.md)); the cloud run, with the
-deposits' finality waits, in about an hour and three quarters ([`e2e/README.md`](../e2e/README.md)). Measured live
-on Sepolia (`crown-live-1`; W = 1 h, release delay 120 s, a devnet with n = t = 1): from the end of the LEZ session
-with both burns to the first release's block, 64.7 min (checkpoint input, proof on an L40S and wrap 1.5 min, then
-`submitCandidate`, W, `finalizeAttested`, the delay) ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md));
-on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoint input, proof on an L40S and wrap
-2.8 min) ([`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md)).
+Inbound without the runner's other work in its LEZ session (deposit 0's steps, done first): **29.8 min**. With
+production parameters the outbound is dominated by W (1 h in rule (B); 3 h 16 min to 4 h 31 min in rule (A) at the
+default floor; tip to finalisation 4.00–7.68 h median in simulation, [`bridge.md`](design/bridge.md) §9, §11.7) and
+the release delay (at least 24 h outside testnets, §13); the inbound by Ethereum's finality and the operators' import
+cadence (hourly in the design: up to 60 min more). The first live run (`crown-live-1`, the same parameters) took 64.7
+min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../e2e/runs/crown-live-1/README.md)).
 
 ### P.6 Off-chain compute (RFP-022)
 
@@ -346,49 +501,65 @@ on the final programs (`crown-live-3`, the same parameters), 66.1 min (checkpoin
 | rule (B) checkpoint of the live run on the final programs (`crown-live-3`: LEZ blocks 25..=90, 2 burns, 18,499,940 user cycles, 20 segments) | one L40S | — | 31.9 s prover wall (119 s with the queue and transfers) | [`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md) |
 | Groth16 wrap of a checkpoint | x86 | 7.3 GiB | 195.1–215.2 s (laptop); recursion 18.7 s on 16 cores + 14 s Groth16 (end-to-end run) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`bridge.md`](design/bridge.md) §18.7 |
 | cloud cost of the GPU proofs | — | — | 385 L4-seconds billed for four checkpoint proofs and an update: about 0.09 USD of GPU | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md), "Cost" |
+| `monitor` (the watchers' daemon), idle and while it checks a candidate, polling every 12 s | 0.53 CPU-seconds in 1,284 s (0.0004 of a core) | **14.0 MiB peak** | JSON-RPC 86 KB up, 254 KB down (about 23 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
+| `ferrata-relayer run` (releases and finalisations), idle and while it finalises a checkpoint | 0.87 CPU-seconds in 1,284 s (0.0007 of a core) | **20.3 MiB peak** | JSON-RPC 408 KB up, 976 KB down (about 93 MB a day, *derived*) | measured ([`perf-daemons.md`](../lez/results/perf-daemons.md)) |
+| the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | 10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 122 times faster than the lab recorded them, 60 times the design's hourly cadence) | RFP-021 P.6 |
 
-**Gap:** the resources of the relayer and `monitor` daemons (built, [EVIDENCE](EVIDENCE.md) rows 43–46; not
-measured, except `monitor`'s memory, 34,216 kB resident, row 43) and of the importer (the relayer's root imports: a prototype, row 106; not measured).
+Both Ethereum-side daemons ran against a local anvil with a rule (B) FerrataVault v5 (12-s blocks; ten idle minutes, a
+candidate checked and finalised, ten idle minutes). **Gaps:** the importer's LEZ-side work (the relayer's root imports,
+a prototype, EVIDENCE row 106) was not measured as a daemon (the relayer ran with `importRoots: false`); one import
+transaction is P.2's. `ferrata_attestor` (rule (B): an attestor beside every sequencer) was not measured. `monitor`'s
+LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not measured. `monitor` and the relayer as Logos modules under `logosctl daemon` (`ferrata_monitor_module`, `ferrata_relayer_module`) are not measured: the binaries are.
 
 ### P.7 State growth at 1M and 10M operations
 
-What accumulates, per operation ([`vault/README.md`](../vault/README.md), "Storage-slot contract";
-[`lez/BRIDGE.md`](../lez/BRIDGE.md) §2; type definitions in [`lez/bridge-wire/src/lib.rs`](../lez/bridge-wire/src/lib.rs)):
+**Measured per operation**, on both chains. LEZ ([`lez/results/perf-state.md`](../lez/results/perf-state.md) §4, §5;
+real claims and burns of this tree's bridge program, then copies to 100,000 records):
 
-| Chain | State | Per | Size |
-|---|---|---|---|
-| Ethereum | the deposit tree | deposit | none: the incremental frontier is 32 fixed slots |
-| Ethereum | deposit counter | new depositor address | one slot |
-| Ethereum | used nullifier `NOut` | release | one slot |
-| Ethereum | refunded leaf | refund | one slot |
-| Ethereum | checkpoint history | finalised checkpoint | a few slots, not per burn |
-| LEZ | `root(cid, n)` | import | 117 B (measured, [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §3) |
-| LEZ | `nullifier(chain, vault, N)` | claim | 77 B (estimated from the type: `NullifierState` borsh, 32 + 20 + 8 + 16, plus the enum tag) |
-| LEZ | `burn(cid, H(note))` | burn | 185 B (estimated: `BurnRecord`, 32 + a 152-byte note, plus the tag) |
-| LEZ | holder state | holder | grows with the configurations and tokens it holds |
+| LEZ account | per | actor state | `Account` | in the serialized state, measured |
+|---|---|---:|---:|---:|
+| `nullifier(…, N)` | claim | 77 B | 133 B | **165 B** (+165.00 B per record from 1,000 to 100,000) |
+| `burn(cid, H(note))` | burn | 185 B | 241 B | **273 B** (+273.00 B per record) |
+| `root(cid, n)` | import | 117 B | 173 B | 205 B (account and key) |
+| holder | new holder (a claim's destination or its relayer; the fee recipient's once) | | | **162 B** (the second claim: its destination's); the first claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
 
-The estimate method reproduces the measured root state (116 bytes of fields plus the tag = 117).
-**Projection (derived; account overhead not counted):**
+Ethereum ([`lez/results/perf-state-ethereum.txt`](../lez/results/perf-state-ethereum.txt), `vault/test/StateGrowth.t.sol`:
+Foundry's state-diff recording, each slot's value before and after the operation): a release creates **one** vault slot
+(25 releases: 25 slots; the first release 3, two of them once), a deposit **one** for a depositor's first deposit and
+none for a later one (25 new depositors: 28 slots, the deposit tree's frontier taking a new level as the tree grows; 25
+repeat deposits: 1), a finalised checkpoint about **10** (15 for the first), whatever the number of burns it carries.
 
-| Operations | Ethereum, new slots | LEZ nullifier accounts | LEZ burn accounts |
-|---|---|---:|---:|
-| 1M claims and 1M releases | 1M `NOut` slots (32 MB of values), plus one per new depositor | 77 MB | — |
-| 1M burns | — | — | 185 MB |
-| 10M of each | 10M slots (320 MB of values) | 770 MB | 1.85 GB |
+**Projections** from these measured sizes ([`perf-projections.md`](../lez/results/perf-projections.md), `python3 -I
+bench/perf/projections.py`; *derived*):
 
-Roots grow with the import cadence, not with deposits: 8,760 a year at one an hour, about 1.0 MB a year.
-On Sepolia's Glamsterdam rules each new Ethereum slot costs 97,920 state gas, already inside the release
-and deposit figures of P.3. LEZ's own private-state commitments and nullifiers for each private
-transaction are LEZ's and not counted. **Gaps:** measured LEZ account sizes and overhead; the projections
-over one and five years with real traffic (milestone B4).
+| operations | LEZ nullifier records (claims) | LEZ burn records (burns) | Ethereum, vault slots for releases | Ethereum, vault slots for deposits |
+|---|---:|---:|---:|---|
+| 1M of each | 165 MB | 273 MB | 1,000,000 (64 MB of keys and values) | one per new depositor (at most 1,000,000), plus at most 32 for the frontier |
+| 10M of each | 1.65 GB | 2.73 GB | 10,000,000 (640 MB) | one per new depositor (at most 10,000,000), plus at most 32 |
+
+LEZ holder accounts grow with new holders, not operations: a claim creates at most two that are not one-time (a new
+destination's and a new relayer's, 162 B each; the fee recipient's is created once), so at most 162 MB at 1M claims and
+1.62 GB at 10M when claims name relayers already paid, and 324 MB / 3.24 GB if every claim named a new destination and
+a new relayer (*derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); a holder that takes another
+token grows by a 68-B holding (from the account layout).
+
+Roots grow with the import cadence, not with deposits: 8,760 a year at one an hour, 1.8 MB a year; checkpoints with
+theirs (one an hour: 87,600 vault slots a year). LEZ v0.4 charges storage gas on transaction bytes, not on state, so
+LEZ's growth is disk on every node; on Ethereum each new slot is paid inside the release and deposit gas of P.3
+(97,920 state gas on Sepolia's Glamsterdam rules; 22,100 gas on mainnet's, 20,000 and the cold access). LEZ's own commitments and nullifiers for each
+private transaction are LEZ's and not counted.
 
 ---
 
 ## Gaps, in one list
 
-user-side proofs on a laptop (cloud CPUs held to 8 and 16 CPUs, and Mac minis under macOS, padded as LEZ's wallet
-pads: P.4); latency measured end to end on the inbound leg (the outbound once, on testnet parameters: P.5); the
-recommended-cadence tracking cost with real proving; daemon resources; the BLS precompile delta; cost
-against state size; v5's ERC-20 calls and refunds on Sepolia's gas rules; an import under a mainnet state root; LEZ account
-overhead. Every one is a milestone deliverable ([`attestation.md`](design/attestation.md) §13;
-[`bridge.md`](design/bridge.md) §18.6; [`docs/traceability.md`](traceability.md)).
+User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
+measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
+`bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
+`monitor` not built (RFP-021 P.6); actions other than five statement types and the update steps at different state
+sizes (RFP-021 P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
+(RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
+devnet). Every one is a milestone
+deliverable ([`attestation.md`](design/attestation.md) §13; [`bridge.md`](design/bridge.md) §18.6;
+[`docs/traceability.md`](traceability.md)).

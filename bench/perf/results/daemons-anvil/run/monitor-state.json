@@ -1,0 +1,42 @@
+{
+  "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+  "nextBlock": 111,
+  "candidates": {
+    "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c": {
+      "candidate": {
+        "newState": "0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x64cc8934ddf6b7a59d5bfa84fc1cfeab8697199183d3faff879f3954657106eb",
+        "burnCount": 10,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 10,
+        "tipHash": "0x9ba1286a334daaf7261a2a745b963c5cc514a24077cc2e1ac5b953003cc53ffa",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 1795274400
+      },
+      "status": "gone",
+      "verdict": {
+        "verdict": "pass"
+      },
+      "firstSeenAt": 1795274400,
+      "cancelTx": null,
+      "cancelledAt": null
+    }
+  },
+  "cancelEvents": {},
+  "finalized": {
+    "0": "ok"
+  },
+  "toAudit": {},
+  "alerted": [
+    "attestation:lez-honest:{\"finding\":\"conflictingTip\",\"channelKey\":\"0xafd6dd1c7cebc5fffd6b133c4d7125fdb07f3b8ff9e21dccfa7c076d0d7dcb24\",\"attKey\":\"0x8ae92695f404d5ff11a95e339d638d6ba68cc001a160a3f907dfeb23f7faf456\",\"tipId\":12,\"signedHash\":\"0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293\",\"finalHash\":\"0xaed56b0c928d218dbb33e648e235c287daf2d0d43db00891ed017aa0ae8e6c15\"}",
+    "pass:0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c:1795274400"
+  ],
+  "finalHeight": 20,
+  "finalHeightSince": 1795273788,
+  "pausedAt": null,
+  "polls": 107
+}

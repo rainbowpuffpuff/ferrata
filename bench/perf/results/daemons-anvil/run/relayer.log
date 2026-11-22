@@ -1,0 +1,8 @@
+{"chainId":31337,"configId":"0x331ec674ae0475000b555f176739a21b7ce456c9b990d0045da542143011e251","event":"start","finalState":"0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca","gasDrops":false,"importEvery":3600,"importRoots":false,"relayer":"0x90f79bf6eb2c4f870365e785982e1f101e93b906","sendVia":"plain","t":1795273792,"vault":"0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0","zone":null}
+{"event":"candidate-waiting","newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","now":1795274400,"readyAt":1795278000,"t":1795274405}
+{"event":"candidate-waiting","newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","now":1795274412,"readyAt":1795278000,"t":1795274417}
+{"event":"candidate-waiting","newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","now":1795274424,"readyAt":1795278000,"t":1795274429}
+{"event":"candidate-waiting","newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","now":1795274436,"readyAt":1795278000,"t":1795274441}
+{"event":"candidate-waiting","newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","now":1795274448,"readyAt":1795278000,"t":1795274453}
+{"burnCount":10,"burnRoot":"0x64cc8934ddf6b7a59d5bfa84fc1cfeab8697199183d3faff879f3954657106eb","event":"finalized","gasUsed":216155,"newState":"0x89a39679a46c1f7b5e2072e1d51441f7e7428e87f07b8377af0ea4654a427b3c","t":1795274473,"tx":"0x8443d363c7ed9b0e33cca12c86a00f0b608a4e9cd9eae94e40663964ea06511b","via":{"path":"plain"}}
+{"event":"stop","reason":"SIGTERM","rounds":107,"t":1795275076}

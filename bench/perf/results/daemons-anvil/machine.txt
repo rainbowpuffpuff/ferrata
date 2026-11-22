@@ -1,0 +1,5 @@
+anvil Version: 1.3.6-v1.3.6
+nproc --all 32
+MemTotal:       67108864 kB
+8a1201af1ea70efeb83dfbac9de68fcfb8a0e2242d5cf3391d5160c2f2af1ef5  <repo>/monitor/target/release/monitor
+98c2801ff04454482a7411b7e47bc7a0f3a37e2545aab93fb51f2c03f8b881e4  <repo>/../tmp/perf-gate/target-lez/release/ferrata-relayer
