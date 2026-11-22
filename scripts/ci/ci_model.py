@@ -10,11 +10,19 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
 - `jobs`: every job of .github/workflows/*.yml with its workflow's triggers, defaults, environment and steps.
 - `trace`: the commands a job runs, from its `run:` steps and, recursively, the shell scripts they call
   (`bash X.sh`, `./X.sh`, `source X`), each with the directory it runs in and the variables set before it.
-  A static reading: every command of a script counts as run whatever condition guards it (an over-
-  approximation), a directory that cannot be resolved makes the commands after it count nowhere, and a
-  test that skips itself at run time is seen only through the environment gates `rust_env_gates` finds.
+  A static reading. Commands under a step's or job's `if:` (unless always true) or `continue-on-error`, run
+  in an `if`/`while`/`until` condition or in the background, whose failure a `|| X` masks (X not failing),
+  piped without pipefail, or not last in a text without errexit (GitHub's default step shell is `bash -e`,
+  `shell: bash` adds pipefail; a script has what its `set` lines give it), are traced with a `guard` and count
+  for nothing; tracing stops at an `exit` at the top level of a script or
+  step, and at `[ A = B ] && exit` when A and B resolve (a script's arguments are $1, $2 ...). Any other
+  condition is read as if it held (an over-approximation); a directory that cannot be resolved makes the
+  commands after it count nowhere; a test that skips itself or fails without an environment variable is seen
+  through the gates `rust_env_gates` finds.
 - `cargo_runs`, `forge_runs`, `invokes`: whether one traced command runs a given Rust test file, Foundry
-  test file or script.
+  test file or script. A Rust test compiled out by a feature the command leaves off does not count
+  (`feature_gates`: a file-level `#![cfg(feature = "X")]`, `#[cfg(feature = "X")]` on the test or on the
+  `mod` block holding it; other `cfg` forms are not read).
 """
 
 from __future__ import annotations
@@ -366,10 +374,12 @@ def jobs(root: pathlib.Path = ROOT) -> dict:
 
 class Cmd:
     """One simple command: its words, the directory it runs in (repository-relative, None when unknown),
-    the variables set for it (exported or not), and where it comes from."""
+    the variables set for it (exported or not), and where it comes from. `guard` says why the command cannot
+    count as CI running a test even though it is in the trace: its step or job runs only under an `if:` or has
+    `continue-on-error`, its failure is masked (`|| true`, run in the background), or it is a condition."""
 
-    def __init__(self, argv, cwd, env, origin):
-        self.argv, self.cwd, self.env, self.origin = argv, cwd, env, origin
+    def __init__(self, argv, cwd, env, origin, guard=None):
+        self.argv, self.cwd, self.env, self.origin, self.guard = argv, cwd, env, origin, guard
 
     def __repr__(self):
         return f"[{self.cwd}] {' '.join(self.argv)}  ({self.origin})"
@@ -559,13 +569,14 @@ def _command_substitution(inner: str, vars_: dict) -> str | None:
 
 
 def _split_commands(toks):
-    """Simple commands, each with the subshell depth it runs at; `case` patterns and function headers dropped."""
+    """Simple commands, each with the subshell depth it runs at and the operator that ends it (`&&`, `||`, `|`,
+    `&`, `;`, a newline, or None); `case` patterns and function headers dropped, a `case` block marked."""
     cmds, cur, depth, in_case, after_case_in = [], [], 0, 0, False
 
-    def end():
+    def end(op=None):
         nonlocal cur
         if cur:
-            cmds.append((cur, depth))
+            cmds.append((cur, depth, op))
         cur = []
 
     i = 0
@@ -584,9 +595,9 @@ def _split_commands(toks):
                 continue
             after_case_in = False
         if t in ("\n", ";", "&&", "||", "|", "&"):
-            end()
+            end(t)
         elif t == ";;":
-            end()
+            end(t)
             after_case_in = True
         elif t == "(":
             if cur and i + 1 < len(toks) and toks[i + 1] == ")":
@@ -595,13 +606,14 @@ def _split_commands(toks):
                 continue
             end()
             depth += 1
-            cmds.append((["__SUBSHELL_OPEN__"], depth))
+            cmds.append((["__SUBSHELL_OPEN__"], depth, None))
         elif t == ")":
-            end()
-            cmds.append((["__SUBSHELL_CLOSE__"], depth))
+            end(")")
+            cmds.append((["__SUBSHELL_CLOSE__"], depth, None))
             depth = max(0, depth - 1)
         elif not cur and t == "case":
             in_case += 1
+            cmds.append((["__CASE_OPEN__"], depth, None))
             while i < len(toks) and toks[i] not in ("in", "\n"):
                 i += 1
             after_case_in = True
@@ -609,6 +621,7 @@ def _split_commands(toks):
             continue
         elif not cur and t == "esac":
             end()
+            cmds.append((["__CASE_CLOSE__"], depth, None))
             in_case = max(0, in_case - 1)
             after_case_in = False
         else:
@@ -632,6 +645,23 @@ def _resolve(cwd, path: str):
     return None if rel.startswith("..") else rel
 
 
+# A step or job condition that always lets it run.
+_ALWAYS = re.compile(r"^\s*(?:\$\{\{\s*)?(?:true|always\(\)|success\(\)|!\s*cancelled\(\))(?:\s*\}\})?\s*$")
+
+
+def step_guard(job: Job, step: dict) -> str | None:
+    """Why a step's commands cannot count as CI running a test: its job or the step runs only under an `if:` that
+    is not always true, or has `continue-on-error` (a failure there does not fail the run). None if neither."""
+    for where, spec in (("job", job.spec), ("step", step)):
+        cond = spec.get("if")
+        if cond is not None and cond is not True and not _ALWAYS.match(str(cond)):
+            return f"the {where} runs only if {cond}"
+        coe = spec.get("continue-on-error")
+        if coe is not None and coe is not False and str(coe).strip().lower() not in ("false", "${{ false }}"):
+            return f"the {where} has continue-on-error: {coe} (a failure there does not fail the run)"
+    return None
+
+
 def trace(job: Job, tracked: set | None = None):
     """Every command the job runs: its steps' `run:` text and, recursively, the scripts they call."""
     tracked = tracked if tracked is not None else tracked_paths()
@@ -644,22 +674,94 @@ def trace(job: Job, tracked: set | None = None):
         cwd = os.path.normpath(cwd)
         env = {**base_env, **{k: str(v) for k, v in (step.get("env") or {}).items()}}
         env.setdefault("GITHUB_WORKSPACE", str(ROOT))
-        _run_text(str(step["run"]), cwd, env, f"{job.workflow.name} job {job.name} step {number}", out, tracked, 0)
+        # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
+        # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
+        shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
+        errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
+        pipefail = shell == "bash" or "pipefail" in shell
+        _run_text(str(step["run"]), cwd, env, f"{job.workflow.name} job {job.name} step {number}", out, tracked, 0,
+                  guard=step_guard(job, step), errexit=errexit, pipefail=pipefail)
     return out
 
 
-def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None):
+# Commands after which a `||` keeps the failure: the fallback itself fails.
+def _fails(words) -> bool:
+    words = [w for w in words if not w.startswith("REDIR:")]
+    while words and words[0] in ("{", "("):
+        words = words[1:]
+    if not words:
+        return False
+    if words[0] == "false":
+        return True
+    if words[0] in ("exit", "return"):
+        return len(words) > 1 and words[1] not in ("0", '"0"', "'0'")
+    return False
+
+
+def _test_value(words, vars_):
+    """The value of a `[ ... ]` / `test ...` / `[[ ... ]]` command whose operands resolve, else None."""
+    if not words or words[0] not in ("[", "test", "[["):
+        return None
+    body = words[1:]
+    if words[0] in ("[", "[[") and body and body[-1] in ("]", "]]"):
+        body = body[:-1]
+    vals = [_unquote(w, vars_) for w in body]
+    if any(v is None for v in vals):
+        return None
+    if len(vals) == 3 and vals[1] in ("=", "=="):
+        return vals[0] == vals[2]
+    if len(vals) == 3 and vals[1] == "!=":
+        return vals[0] != vals[2]
+    if len(vals) == 2 and vals[0] == "-z":
+        return vals[1] == ""
+    if len(vals) == 2 and vals[0] == "-n":
+        return vals[1] != ""
+    return None
+
+
+def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=None, args=None, errexit=False,
+              pipefail=False):
+    """Trace one step's `run:` text or one script. Commands after an `exit` at the top level of the text (not
+    inside a block, a function or a subshell) are not run; neither are those after `[ A = B ] && exit` when A
+    and B resolve (with the script's arguments as $1, $2 ...) and are equal. A command followed by `|| X`, where
+    X does not fail, has its failure masked, as has the &&-chain before it; so has a command run with `&`; a
+    command in an `if`/`while`/`until` condition does not fail the text by failing. Without `set -e` (errexit) only
+    the text's last command can fail it; without pipefail, a command piped into another cannot."""
     vars_ = dict(vars_)
     if script is not None:
         vars_["0"] = str(ROOT / script)
+        for k in range(1, 10):
+            vars_[str(k)] = ""
+        for k, a in enumerate(args or [], start=1):
+            if k < 10:
+                vars_[str(k)] = a
+        vars_["#"] = str(len(args or []))
     stack = []
-    for words, _depth in _split_commands(_tokens(text)):
+    block = 0  # if/while/until/for/select/case/{ } nesting
+    commands = _split_commands(_tokens(text))
+    last_index = max((k for k, (w, _d, _o) in enumerate(commands) if not w[0].startswith("__")), default=-1)
+    chain = []  # the commands of the current && chain (masked together by a later `|| true`)
+    prev_op = None
+    last_test = None  # (value, ...) of a `[ ... ]` just before `&&`
+    for index, (words, depth, op) in enumerate(commands):
         if words == ["__SUBSHELL_OPEN__"]:
             stack.append(cwd)
+            prev_op = None
             continue
         if words == ["__SUBSHELL_CLOSE__"]:
             cwd = stack.pop() if stack else cwd
+            prev_op = None
             continue
+        if words == ["__CASE_OPEN__"]:
+            block += 1
+            continue
+        if words == ["__CASE_CLOSE__"]:
+            block = max(0, block - 1)
+            continue
+        after = prev_op
+        prev_op = op
+        if after not in ("&&", "||"):
+            chain = []
         # redirections and their targets out
         clean, skip = [], False
         for w in words:
@@ -671,6 +773,11 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None):
                 continue
             clean.append(w)
         words = clean
+        if words and words[0] in ("if", "while", "until", "for", "select", "{"):
+            block += 1
+        condition = bool(words) and words[0] in ("if", "elif", "while", "until", "!")
+        if words and words[0] in ("fi", "done", "}"):
+            block = max(0, block - 1)
         while words and words[0] in _KEYWORDS_LEAD:
             words = words[1:]
         if not words or words[0] in _KEYWORDS_ALONE:
@@ -692,6 +799,25 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None):
                     name, value = w.split("=", 1)
                     vars_[name] = _unquote(value, vars_)
             continue
+        if words[0] == "set":
+            for k, w in enumerate(words[1:], start=1):
+                if re.fullmatch(r"[-+][A-Za-z]+", w):
+                    on = w.startswith("-")
+                    if "e" in w[1:]:
+                        errexit = on
+                    if "o" in w[1:] and k + 1 < len(words) and words[k + 1] in ("pipefail", "errexit"):
+                        if words[k + 1] == "pipefail":
+                            pipefail = on
+                        else:
+                            errexit = on
+            continue
+        # exit: unconditional at the top level, or after a test that resolves to true
+        if words[0] == "exit" and depth == 0 and block == 0:
+            if after not in ("&&", "||"):
+                return
+            if after == "&&" and last_test is True:
+                return
+        last_test = _test_value(words, {**vars_, **env}) if op == "&&" else None
         argv = [_unquote(w, {**vars_, **env}) for w in words]
         argv = [a if a is not None else "\0?" for a in argv]
         # wrappers: nice -n 19 X, env A=B X, timeout 60 X, sudo X
@@ -717,17 +843,40 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None):
             cwd = _resolve(cwd, target) if target and "\0?" not in target else None
             continue
         cmd_env = {**vars_, **env}
-        cmd = Cmd(argv, cwd, cmd_env, origin)
+        why = guard
+        if why is None and condition:
+            why = "it is a condition (if/while/until): its failure does not fail the script"
+        if why is None and op == "&":
+            why = "it runs in the background (&): its exit status is not waited for"
+        if why is None and op == "|" and not pipefail:
+            why = "it is piped into another command without pipefail: its failure is lost"
+        if why is None and not errexit and not all(commands[k][2] in ("&&", "||", "|") for k in range(index, last_index)):
+            why = "the text runs without set -e and this is not its last command: a failure here does not fail it"
+        cmd = Cmd(argv, cwd, cmd_env, origin, why)
         out.append(cmd)
+        chain.append(cmd)
+        if op == "||":
+            fallback = commands[index + 1][0] if index + 1 < len(commands) else []
+            if not _fails(fallback):
+                for c in chain:
+                    if c.guard is None:
+                        c.guard = f"its failure is masked (`|| {' '.join(fallback) or '...'}`)"
         # scripts this command runs: recurse into shell scripts
         if level < 6:
             target = script_invoked(cmd, tracked)
             if target and (target.endswith(".sh") or _is_shell_script(target)) and target != script:
                 text = (ROOT / target).read_text(encoding="utf-8", errors="replace")
-                same_scope = argv[0] in ("source", ".")
-                _run_text(text, cwd, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, script=target)
-                if same_scope:
-                    pass
+                _run_text(text, cwd, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, script=target,
+                          guard=cmd.guard, args=_script_args(cmd, target))
+
+
+def _script_args(cmd: Cmd, target: str):
+    """The arguments a command passes to the script it runs (after the script's own path)."""
+    argv = cmd.argv
+    for k, a in enumerate(argv):
+        if _resolve(cmd.cwd, a) == target:
+            return argv[k + 1:]
+    return []
 
 
 def _is_shell_script(path: str) -> bool:
@@ -771,7 +920,7 @@ def tracked_paths() -> set:
 
 
 def invokes(cmd: Cmd, path: str, tracked: set) -> bool:
-    return script_invoked(cmd, tracked) == path
+    return cmd.guard is None and script_invoked(cmd, tracked) == path
 
 
 def _toml(path: pathlib.Path) -> dict:
@@ -821,12 +970,58 @@ def _workspace_of(start: pathlib.Path):
 
 
 def rust_env_gates(text: str) -> set:
-    """Environment variables a test file must find set, or it skips itself (`env::var("X").is_err()` and the like)."""
-    return set(re.findall(r'env::var(?:_os)?\(\s*"([A-Z0-9_]+)"\s*\)\s*\.\s*(?:is_err|is_none)\(\)', text))
+    """Environment variables a test file must find set: it skips itself without them (`env::var("X").is_err()` and
+    the like), or asserts their value (`assert_eq!(std::env::var("X").as_deref(), Ok("1"), ...)`) and fails."""
+    gates = set(re.findall(r'env::var(?:_os)?\(\s*"([A-Z0-9_]+)"\s*\)\s*\.\s*(?:is_err|is_none)\(\)', text))
+    gates |= set(re.findall(r'assert(?:_eq|_ne)?!\(\s*(?:std::)?env::var(?:_os)?\(\s*"([A-Z0-9_]+)"', text))
+    return gates
 
 
-def cargo_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
-    """Whether `cargo test` as traced runs the tests of a Rust file; (False, why) otherwise."""
+def feature_gates(text: str, enabled: set) -> tuple:
+    """What features gate a Rust test file's tests off when only `enabled` are on: (the feature of a file-level
+    `#![cfg(feature = "X")]` if X is off, else None; the off features that gate some test; the number of tests no
+    off feature gates). A test is gated by `#[cfg(feature = "X")]` among its attributes or by an enclosing
+    `#[cfg(feature = "X")] mod m { ... }` (the block found by counting braces). Other cfg forms are not read."""
+    gate = re.search(r'^\s*#!\[cfg\(feature\s*=\s*"([^"]+)"\)\]', text, re.M)
+    if gate and gate.group(1) not in enabled:
+        return gate.group(1), set(), 0
+    lines = text.splitlines()
+    module_gate = {}
+    for m in re.finditer(r'^\s*#\[cfg\(feature\s*=\s*"([^"]+)"\)\]\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{', text, re.M):
+        depth, k = 0, m.end() - 1
+        while k < len(text):
+            depth += {"{": 1, "}": -1}.get(text[k], 0)
+            if depth == 0:
+                break
+            k += 1
+        for n in range(text.count("\n", 0, m.start()), text.count("\n", 0, k) + 1):
+            module_gate.setdefault(n, set()).add(m.group(1))
+    gated, ungated = set(), 0
+    for i, line in enumerate(lines):
+        if not re.match(r"\s*#\[(?:[a-z_]+::)?test\b", line):
+            continue
+        off = module_gate.get(i, set()) - enabled
+        attrs, j = [], i - 1
+        while j >= 0 and re.match(r"\s*(#\[|///|//)", lines[j]):
+            attrs.append(lines[j])
+            j -= 1
+        j = i + 1
+        while j < len(lines) and re.match(r"\s*(#\[|///|//)", lines[j]):
+            attrs.append(lines[j])
+            j += 1
+        off |= {f for a in attrs for f in re.findall(r'^\s*#\[cfg\(feature\s*=\s*"([^"]+)"\)\]', a)} - enabled
+        if off:
+            gated |= off
+        else:
+            ungated += 1
+    return None, gated, ungated
+
+
+def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]:
+    """Whether `cargo test` as traced runs the tests of a Rust file; (False, why) otherwise. `text`, if given, is
+    read in place of the file's contents (the tests of this module use it)."""
+    if cmd.guard:
+        return False, cmd.guard
     argv = cmd.argv
     if os.path.basename(argv[0]) != "cargo":
         return False, "not cargo"
@@ -949,33 +1144,67 @@ def cargo_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
         enabled = set(opts["features"]) | defaults
         if "--all-features" not in flags and not set(required) <= enabled:
             return False, f"needs features {required}"
-    text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
+    if text is None:
+        text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
     if not re.search(r"#\[(?:[a-z_]+::)?test\b", text) and "proptest!" not in text:
         return False, "the file has no #[test]"
+    # Tests compiled out by a feature the command does not enable (feature_gates).
+    if "--all-features" not in flags:
+        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                           if "--no-default-features" not in flags else set())
+        file_gate, gated, ungated = feature_gates(text, enabled)
+        if file_gate:
+            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        if gated and not ungated and "proptest!" not in text:
+            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
     # filters
     filters = [p for p in positional]
     harness_flags = set(a for a in harness if a.startswith("-"))
-    hpos, skip_next = [], False
+    hpos, skips, skip_next = [], [], None
     for a in harness:
         if skip_next:
-            skip_next = False
+            if skip_next == "--skip":
+                skips.append(a)
+            skip_next = None
+            continue
+        if a.startswith("--skip="):
+            skips.append(a.split("=", 1)[1])
             continue
         if a in ("--test-threads", "--skip", "--format", "--logfile", "--color", "-Z"):
-            skip_next = True
+            skip_next = a
             continue
         if not a.startswith("-"):
             hpos.append(a)
     filters += hpos
+    # A name filter matches a test's full path: for a file under src/, the module path the file gives (src/relayer.rs:
+    # `relayer::...`), then the file's inner modules, then the function; for an integration test file, the inner
+    # modules and the function.
     fns = re.findall(r"\bfn\s+([A-Za-z0-9_]+)", text)
+    mods = re.findall(r"\bmod\s+([A-Za-z0-9_]+)\s*\{", text)
+    module = ""
+    if target[0] in ("lib", "bin"):
+        parts = pathlib.PurePosixPath(rel_in_pkg).with_suffix("").parts[1:]  # without src/
+        parts = [q for q in parts if q != "mod"]
+        if parts and parts[0] == "bin":
+            parts = parts[2:]  # src/bin/NAME.rs is the root of its own crate
+        if parts in (["lib"], ["main"]):
+            parts = []
+        module = "::".join(parts)
+    paths = [f"{module}::{fn}" if module else fn for fn in fns]
+    paths += [f"{module}::{m}::{fn}" if module else f"{m}::{fn}" for m in mods for fn in fns]
     for f in filters:
-        if not any(f in fn for fn in fns):
-            return False, f"the name filter {f!r} matches none of its functions"
+        if not any(f in path for path in paths):
+            return False, f"the name filter {f!r} matches none of its tests' paths"
+    # `--skip P` leaves out every test whose path holds P: a file any of whose tests it could skip does not count.
+    for k in skips:
+        if any(k in path for path in paths):
+            return False, f"--skip {k!r} skips tests of this file"
     n_tests = len(re.findall(r"#\[(?:[a-z_]+::)?test\b", text))
     if n_tests and n_tests <= text.count("#[ignore") and not ({"--ignored", "--include-ignored"} & harness_flags):
         return False, "every test in it is #[ignore]d"
     missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
     if missing:
-        return False, f"it skips itself unless {', '.join(missing)} is set, and the command does not set it"
+        return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
     return True, ""
 
 
@@ -1035,6 +1264,8 @@ def _test_functions(index: dict, name: str, seen: set) -> list:
 
 def forge_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
     """Whether `forge test` as traced runs the tests of a Solidity test file; (False, why) otherwise."""
+    if cmd.guard:
+        return False, cmd.guard
     argv = cmd.argv
     if os.path.basename(argv[0]) != "forge" or argv[1:2] != ["test"]:
         return False, "not forge test"

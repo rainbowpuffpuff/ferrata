@@ -43,8 +43,16 @@ reported as pending until that branch merges; their `ci = "links"` entries need 
 YAML they are written in (standard library; `python3 -I scripts/ci/ci_model.py --compare-yq` compares it with
 `yq` on all eleven workflows of the repository and the catalog: the same triggers, jobs, steps, commands,
 directories and environments, 11 of 11 on 21 November 2026), the trace of the commands a job runs, and the
-cargo and forge selection rules. It reads statically: every command of a script counts as run whatever
-condition guards it, and a directory it cannot resolve makes the commands after it count nowhere.
+cargo and forge selection rules. It reads statically. A command under a step's or job's `if:` (unless always
+true) or `continue-on-error`, in an `if`/`while`/`until` condition, run with `&`, whose failure `|| X` masks,
+piped without pipefail, or not last in a text without `set -e` counts for nothing; tracing stops at a top-level `exit` and at `[ A = B ] && exit` when A and B resolve (a
+script's arguments are `$1`, `$2` ...), so a step that runs `lez-harness.sh build` runs no test; `-- --skip P`
+leaves out a file any of whose tests P could skip; a test that asserts an environment variable's value needs
+the command to set it. Other conditions are read as if they held, and a directory it cannot resolve makes the
+commands after it count nowhere. A Rust test
+compiled out by a feature the command leaves off (`#![cfg(feature = "X")]` on the file, `#[cfg(feature = "X")]`
+on the test or its `mod` block) does not count, and a cargo name filter is matched against a test's whole path
+(the module path of a file under `src/`, its inner modules, the function), as cargo matches it.
 [`test_ci_model.py`](test_ci_model.py) tests both (YAML forms; what the real jobs run and do not run; made-up
 `cargo test` and `forge test` commands; and the checker refusing a test claimed for a job that does not run
 it, a test file listed as a record, an unknown kind). `python3 -I scripts/ci/ci_model.py --trace [JOB...]`
@@ -143,3 +151,17 @@ scripts/ci/witness-independence.sh 64
 ```
 
 Run by CI's `witness-independence` job, which passes the witness count.
+
+## lez-harness.sh
+
+CI's LEZ suites, run by the `lez-harness` job: every test file of `lez/harness/tests/` and `lez/updater/tests/`
+that builds without an optional feature (the attestation and bridge programs through LEZ v0.4.0-rc1's state
+machine and fee settlement, the red-team suites, the update-submitting daemon on recorded data), in RISC Zero dev
+mode, then the privacy suite end to end (`scripts/privacy/run.sh`) and its gate (`scripts/privacy/check-results.py`).
+Needs Rust 1.98.1, RISC Zero's toolchains with guest Rust 1.91.1 (`install-risc0.sh`), the upstream sources
+(`scripts/fetch-upstream.sh`) and Foundry with `vault/lib`.
+
+```sh
+scripts/ci/lez-harness.sh build    # build only
+scripts/ci/lez-harness.sh          # build what is missing, then run everything
+```

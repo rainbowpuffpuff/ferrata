@@ -17,10 +17,12 @@ kind is one of the three, every test path is something that can run, every box o
 command; and, for every test whose `ci` names a job, that the job really runs it: the job's `run:` steps
 and the shell scripts they call are read (scripts/ci/ci_model.py), and the file must be selected by one of
 the commands - a `cargo test` whose directory, packages, targets, features, name filters and environment
-select it (a test file that skips itself unless an environment variable is set needs the command to set
-it), a `forge test` whose project and filters select it, an invocation of the script itself, or, for a
-workflow file, the job being defined in it. A job that runs only when started by hand counts as manual,
-not as CI.
+select it (a test file that skips itself or fails unless an environment variable is set needs the command
+to set it), a `forge test` whose project and filters select it, an invocation of the script itself, or, for
+a workflow file, the job being defined in it. A command that cannot fail the job does not count: its step
+or job under an `if:` that is not always true or with `continue-on-error`, its failure masked by `|| X`,
+run with `&` or as a condition, or after the script has exited (ci_model.py). A job that runs only when
+started by hand counts as manual, not as CI.
 
 The summary gives, per RFP, the rows with a test CI runs, and the others by what they have instead (a test
 in a manual workflow; tests on the box or by hand; records and documents only); `--list` prints every

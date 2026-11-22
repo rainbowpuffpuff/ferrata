@@ -18,7 +18,7 @@
   },
   "claim, plaintext": {
    "pass": false,
-   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 133 of 1837/1837 after the cut (604a6caf8e675390505dac63c2398893a28af818fa03ceff121a6a8e1635d324 / 604a6caf8e6753907828282b5c8a554cd898798f67a1f779fe87c3cb85c5c28d)"
+   "detail": "lez:claim:plaintext:01 vs lez:claim:plaintext:00: part tx differs at byte 133 of 1837/1837 after the cut (7016e2d96d3871dd5c86b72abfeb818a3a4ddd66058618765aec41e9800d244f / 7016e2d96d3871dd62495c0f2d72f12bde3d73adebb70bfd89de1f2ceab6af60)"
   },
   "burn, private holding": {
    "pass": true,
@@ -328,6 +328,14 @@
     "across records": "constant",
     "class": "constant",
     "what": "j = depositCount[depositor] (0 for a fresh depositor)",
+    "B6": null
+   },
+   {
+    "field": "receipt.calldataGas",
+    "bytes": 32,
+    "across records": "2 distinct",
+    "class": "a function of public data",
+    "what": "the calldata's gas (EIP-2028), a function of the calldata",
     "B6": null
    },
    {
@@ -709,11 +717,35 @@
     "B6": "time"
    },
    {
-    "field": "witness_set",
-    "bytes": 4533,
+    "field": "witness_set.signatures",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the witness set's signatures: none (the sender is an alias)",
+    "B6": null
+   },
+   {
+    "field": "proof.length",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the proof's length: the receipt's size in bytes",
+    "B6": null
+   },
+   {
+    "field": "proof.kind",
+    "bytes": 1,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the receipt's kind (borsh tag of InnerReceipt: 1 succinct, 3 fake)",
+    "B6": null
+   },
+   {
+    "field": "proof.claim",
+    "bytes": 4524,
     "across records": "20 distinct",
-    "class": "fresh randomness",
-    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "class": "a function of public data",
+    "what": "the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal the frame of the transaction's message (checked from the public bytes)",
     "B6": null
    },
    {
@@ -789,20 +821,20 @@
     "B6": null
    },
    {
+    "field": "state: token(cid, ETH) (token gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
     "field": "state: the account in `derived.nullifier_account`",
     "bytes": 0,
     "across records": "one per record (20 distinct)",
     "class": "nullifier",
     "what": "created or changed by this record only",
     "B6": "N"
-   },
-   {
-    "field": "state: config(cid) (global gate, time)",
-    "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
    },
    {
     "field": "state: the harness's fee payer (refund_to)",
@@ -813,7 +845,7 @@
     "B6": null
    },
    {
-    "field": "state: LEZ fee inbox",
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -829,7 +861,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: LEZ fee inbox",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1063,15 +1095,7 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.nullifier_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "nullifier",
-    "what": "created or changed by this record only",
-    "B6": null
-   },
-   {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1087,7 +1111,7 @@
     "B6": null
    },
    {
-    "field": "state: LEZ fee inbox",
+    "field": "state: config(cid) (global gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1103,7 +1127,7 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: LEZ fee inbox",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1115,6 +1139,14 @@
     "bytes": 0,
     "across records": "one per record (20 distinct)",
     "class": "UNCLASSIFIED",
+    "what": "created or changed by this record only",
+    "B6": null
+   },
+   {
+    "field": "state: the account in `derived.nullifier_account`",
+    "bytes": 0,
+    "across records": "one per record (20 distinct)",
+    "class": "nullifier",
     "what": "created or changed by this record only",
     "B6": null
    }
@@ -1337,11 +1369,35 @@
     "B6": "time"
    },
    {
-    "field": "witness_set",
-    "bytes": 3993,
+    "field": "witness_set.signatures",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the witness set's signatures: none (the sender is an alias)",
+    "B6": null
+   },
+   {
+    "field": "proof.length",
+    "bytes": 4,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the proof's length: the receipt's size in bytes",
+    "B6": null
+   },
+   {
+    "field": "proof.kind",
+    "bytes": 1,
+    "across records": "constant",
+    "class": "constant",
+    "what": "the receipt's kind (borsh tag of InnerReceipt: 1 succinct, 3 fake)",
+    "B6": null
+   },
+   {
+    "field": "proof.claim",
+    "bytes": 3984,
     "across records": "20 distinct",
-    "class": "fresh randomness",
-    "what": "the proof (dev mode: a fake receipt) or the submitter's signature",
+    "class": "a function of public data",
+    "what": "the receipt's claim: ReceiptClaim::ok(circuit id, journal), the journal the frame of the transaction's message (checked from the public bytes)",
     "B6": null
    },
    {
@@ -1417,15 +1473,7 @@
     "B6": null
    },
    {
-    "field": "state: the account in `derived.burn_record_account`",
-    "bytes": 0,
-    "across records": "one per record (20 distinct)",
-    "class": "fresh randomness",
-    "what": "created or changed by this record only",
-    "B6": "the burn note"
-   },
-   {
-    "field": "state: config(cid) (global gate, time)",
+    "field": "state: token(cid, ETH) (token gate, time)",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
     "class": "time / order",
@@ -1441,6 +1489,14 @@
     "B6": null
    },
    {
+    "field": "state: config(cid) (global gate, time)",
+    "bytes": 0,
+    "across records": "changed in every record, contents vary",
+    "class": "time / order",
+    "what": "cumulative state (order)",
+    "B6": null
+   },
+   {
     "field": "state: LEZ fee inbox",
     "bytes": 0,
     "across records": "changed in every record, contents vary",
@@ -1449,12 +1505,12 @@
     "B6": null
    },
    {
-    "field": "state: token(cid, ETH) (token gate, time)",
+    "field": "state: the account in `derived.burn_record_account`",
     "bytes": 0,
-    "across records": "changed in every record, contents vary",
-    "class": "time / order",
-    "what": "cumulative state (order)",
-    "B6": null
+    "across records": "one per record (20 distinct)",
+    "class": "fresh randomness",
+    "what": "created or changed by this record only",
+    "B6": "the burn note"
    }
   ],
   "release, NOut of the release statement": [
@@ -1543,7 +1599,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
+    "what": "the seal's ABI offset and length",
     "B6": null
    },
    {
@@ -1551,7 +1607,7 @@
     "bytes": 32,
     "across records": "constant",
     "class": "constant",
-    "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
+    "what": "the seal's ABI offset and length",
     "B6": null
    },
    {
@@ -1560,6 +1616,14 @@
     "across records": "constant",
     "class": "constant",
     "what": "the proof (mock verifier here: a constant; Groth16 on a real deployment)",
+    "B6": null
+   },
+   {
+    "field": "receipt.calldataGas",
+    "bytes": 32,
+    "across records": "2 distinct",
+    "class": "a function of public data",
+    "what": "the calldata's gas (EIP-2028), a function of the calldata",
     "B6": null
    },
    {
@@ -1888,50 +1952,348 @@
    324
   ]
  },
+ "proofs": {
+  "mode": "dev",
+  "circuit_image_id": "8fc948d117c11d55f2036748013b3dc599d6995545f0b020d090f544081cf257",
+  "steps": {
+   "claim, private (default)": {
+    "records": 20,
+    "kinds": [
+     "fake"
+    ],
+    "prove_s": {
+     "min": 0.957914777,
+     "median": 0.9825103150000001,
+     "max": 1.127462391,
+     "sum": 19.926192203,
+     "n": 20
+    },
+    "proof_bytes": {
+     "min": 4525,
+     "median": 4525.0,
+     "max": 4525,
+     "sum": 90500,
+     "n": 20
+    },
+    "tx_bytes": {
+     "min": 8937,
+     "median": 8937.0,
+     "max": 8937,
+     "sum": 178740,
+     "n": 20
+    },
+    "seal_words": null,
+    "journal_bytes": {
+     "min": 4399,
+     "median": 4399.0,
+     "max": 4399,
+     "sum": 87980,
+     "n": 20
+    },
+    "claim_is_ok_of_journal": [
+     20,
+     20
+    ],
+    "seal_outputs_carry_claim_digest": [
+     0,
+     0
+    ],
+    "claim_is_pruned": [
+     0,
+     0
+    ],
+    "fields": {
+     "proof.claim": {
+      "distinct": 20,
+      "bytes": [
+       4524
+      ],
+      "class": "a function of public data"
+     },
+     "proof.kind": {
+      "distinct": 1,
+      "bytes": [
+       1
+      ],
+      "class": null
+     },
+     "proof.length": {
+      "distinct": 1,
+      "bytes": [
+       4
+      ],
+      "class": null
+     },
+     "witness_set.signatures": {
+      "distinct": 1,
+      "bytes": [
+       4
+      ],
+      "class": null
+     }
+    },
+    "public_checks": {
+     "claim_parsed": [
+      20,
+      20
+     ],
+     "journal_is_message_prefix": [
+      20,
+      20
+     ],
+     "claim_is_ok_of_journal": [
+      20,
+      20
+     ],
+     "seal_outputs_carry_claim_digest": [
+      0,
+      0
+     ]
+    }
+   },
+   "burn, private holding": {
+    "records": 20,
+    "kinds": [
+     "fake"
+    ],
+    "prove_s": {
+     "min": 0.597915937,
+     "median": 0.616651192,
+     "max": 0.698637658,
+     "sum": 12.704426808,
+     "n": 20
+    },
+    "proof_bytes": {
+     "min": 3985,
+     "median": 3985.0,
+     "max": 3985,
+     "sum": 79700,
+     "n": 20
+    },
+    "tx_bytes": {
+     "min": 7857,
+     "median": 7857.0,
+     "max": 7857,
+     "sum": 157140,
+     "n": 20
+    },
+    "seal_words": null,
+    "journal_bytes": {
+     "min": 3859,
+     "median": 3859.0,
+     "max": 3859,
+     "sum": 77180,
+     "n": 20
+    },
+    "claim_is_ok_of_journal": [
+     20,
+     20
+    ],
+    "seal_outputs_carry_claim_digest": [
+     0,
+     0
+    ],
+    "claim_is_pruned": [
+     0,
+     0
+    ],
+    "fields": {
+     "proof.claim": {
+      "distinct": 20,
+      "bytes": [
+       3984
+      ],
+      "class": "a function of public data"
+     },
+     "proof.kind": {
+      "distinct": 1,
+      "bytes": [
+       1
+      ],
+      "class": null
+     },
+     "proof.length": {
+      "distinct": 1,
+      "bytes": [
+       4
+      ],
+      "class": null
+     },
+     "witness_set.signatures": {
+      "distinct": 1,
+      "bytes": [
+       4
+      ],
+      "class": null
+     }
+    },
+    "public_checks": {
+     "claim_parsed": [
+      20,
+      20
+     ],
+     "journal_is_message_prefix": [
+      20,
+      20
+     ],
+     "claim_is_ok_of_journal": [
+      20,
+      20
+     ],
+     "seal_outputs_carry_claim_digest": [
+      0,
+      0
+     ]
+    }
+   },
+   "release, NOut of the release statement": {
+    "records": 20,
+    "kinds": [],
+    "prove_s": null,
+    "proof_bytes": null,
+    "tx_bytes": null,
+    "seal_words": null,
+    "journal_bytes": null,
+    "claim_is_ok_of_journal": [
+     0,
+     0
+    ],
+    "seal_outputs_carry_claim_digest": [
+     0,
+     0
+    ],
+    "claim_is_pruned": [
+     0,
+     0
+    ],
+    "fields": {
+     "calldata.seal.length": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "calldata.seal.offset": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "calldata.seal[0]": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "receipt.calldataGas": {
+      "distinct": 2,
+      "bytes": [
+       32
+      ],
+      "class": "a function of public data"
+     }
+    }
+   },
+   "release, naive NOut = burnId": {
+    "records": 20,
+    "kinds": [],
+    "prove_s": null,
+    "proof_bytes": null,
+    "tx_bytes": null,
+    "seal_words": null,
+    "journal_bytes": null,
+    "claim_is_ok_of_journal": [
+     0,
+     0
+    ],
+    "seal_outputs_carry_claim_digest": [
+     0,
+     0
+    ],
+    "claim_is_pruned": [
+     0,
+     0
+    ],
+    "fields": {
+     "calldata.seal.length": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "calldata.seal.offset": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "calldata.seal[0]": {
+      "distinct": 1,
+      "bytes": [
+       32
+      ],
+      "class": null
+     },
+     "receipt.calldataGas": {
+      "distinct": 2,
+      "bytes": [
+       32
+      ],
+      "class": "a function of public data"
+     }
+    }
+   }
+  }
+ },
  "receipts_by_position": {
   "claims private": [
    0,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335
   ],
   "claims plaintext": [
    0,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720,
-   4720
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335,
+   4335
   ],
   "burns": [
    0,
@@ -1985,19 +2347,19 @@
  },
  "hidden": {
   "deposit hides the LEZ destination": {
-   "values searched": 40,
+   "values searched": 100,
    "found": 0
   },
   "claim hides which deposit and a private destination": {
-   "values searched": 120,
+   "values searched": 180,
    "found": 0
   },
   "burn hides the holder and the recipient": {
-   "values searched": 40,
+   "values searched": 160,
    "found": 0
   },
   "release hides which burn": {
-   "values searched": 120,
+   "values searched": 240,
    "found": 0
   }
  },
@@ -2063,50 +2425,50 @@
  "lez_receipts": {
   "claim, private (default)": {
    "receipt.gas_exec": [
-    547629,
-    552349
+    549768,
+    554103
    ],
    "receipt.cycles": [
-    137865,
-    142585
+    140004,
+    144339
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    6173536,
-    6211296
+    6190648,
+    6225328
    ]
   },
   "burn, private holding": {
    "receipt.gas_exec": [
-    514490
+    515810
    ],
    "receipt.cycles": [
-    104726
+    106046
    ],
    "receipt.gas_stor": [
     224063
    ],
    "receipt.fee_base": [
-    5908424
+    5918984
    ]
   },
   "claim, plaintext": {
    "receipt.gas_exec": [
-    255012,
-    259732
+    257798,
+    262133
    ],
    "receipt.cycles": [
-    255012,
-    259732
+    257798,
+    262133
    ],
    "receipt.gas_stor": [
     2053
    ],
    "receipt.fee_base": [
-    2056520,
-    2094280
+    2078808,
+    2113488
    ]
   }
  }

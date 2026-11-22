@@ -102,6 +102,18 @@ privacy_suite = [p for p in tracked if p.startswith("vault/test/") and p.endswit
                  and "contract PrivacySuite" in (ROOT / p).read_text(encoding="utf-8")]
 check("trace: vault leaves PrivacySuite out (--no-match-contract)",
       bool(privacy_suite) and not runs("vault", privacy_suite[0]))
+check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh, in lez/)",
+      runs("lez-harness", "lez/harness/tests/public_path.rs"))
+check("trace: lez-harness runs lez/updater/tests/recorded.rs (cargo test -p ferrata-updater --features harness)",
+      runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness does not run lez/harness/tests/residue_experimental.rs (feature residue-experimental)",
+      not runs("lez-harness", "lez/harness/tests/residue_experimental.rs"))
+check("trace: monitor runs monitor/tests/check.rs and monitor/tests/anvil-e2e.sh",
+      runs("monitor", "monitor/tests/check.rs") and runs("monitor", "monitor/tests/anvil-e2e.sh"))
+check("trace: roundtrip runs cli/tests/gasdrop.rs but not cli/tests/relayer_fork.rs (it reads Sepolia)",
+      runs("roundtrip", "cli/tests/gasdrop.rs") and not runs("roundtrip", "cli/tests/relayer_fork.rs"))
+check("trace: witness-independence runs the bridge core's tests (tests/inbound.rs)",
+      runs("witness-independence", "bridge/crates/ferrata-bridge-core/tests/inbound.rs"))
 check("trace: links runs scripts/ci/check-unaudited.sh", runs("links", "scripts/ci/check-unaudited.sh"))
 check("trace: links does not run scripts/ci/sequencer-attest.sh", not runs("links", "scripts/ci/sequencer-attest.sh"))
 
@@ -128,6 +140,127 @@ check("forge: --match-path keeps its own",
       ci_model.forge_runs(C(["forge", "test", "--match-path", "test/Migration*.t.sol"], "vault", {}, "t"), "vault/test/MigrationFailsafe.t.sol")[0])
 check("forge: --match-test matching no function of the file",
       not ci_model.forge_runs(C(["forge", "test", "--match-test", "zz_no_such_test"], "vault", {}, "t"), "vault/test/Refund.t.sol")[0])
+
+check("cargo: a name filter matching the module path of a file under src/ (cargo test --lib relayer)",
+      ci_model.cargo_runs(C(["cargo", "test", "--lib", "relayer"], "cli", {}, "t"), "cli/src/relayer.rs")[0])
+check("cargo: a filter naming the module path, an inner module and a function",
+      ci_model.cargo_runs(C(["cargo", "test", "--lib", "relayer::tests::temporary_failures"], "cli", {}, "t"),
+                          "cli/src/relayer.rs")[0])
+check("cargo: a filter matching another module's path does not select this file",
+      not ci_model.cargo_runs(C(["cargo", "test", "--lib", "privacy"], "cli", {}, "t"), "cli/src/relayer.rs")[0])
+check("trace: roundtrip runs cli/src/relayer.rs's tests (cargo test --lib relayer in cli/)",
+      runs("roundtrip", "cli/src/relayer.rs"))
+check("cargo: a file compiled only with a feature the command leaves off (lez/updater/tests/recorded.rs)",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater"], "lez", {}, "t"),
+                              "lez/updater/tests/recorded.rs")[0])
+check("cargo: the same file with the feature on",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness"], "lez", {}, "t"),
+                          "lez/updater/tests/recorded.rs")[0])
+FG = ci_model.feature_gates
+check("features: #![cfg(feature)] gates the whole file", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', set()) == ("a", set(), 0))
+check("features: ... unless the feature is on", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', {"a"}) == (None, set(), 1))
+check("features: #[cfg(feature)] on one test of two",
+      FG('#[cfg(feature = "b")]\n#[test]\nfn x() {}\n#[test]\nfn y() {}\n', set()) == (None, {"b"}, 1))
+check("features: a gated module's tests, braces counted",
+      FG('#[cfg(feature = "c")]\nmod t {\n    #[test]\n    fn x() { if true {} }\n}\n', set()) == (None, {"c"}, 0))
+check("features: a test after a gated module is not gated",
+      FG('#[cfg(feature = "c")]\nmod t {\n    #[test]\n    fn x() {}\n}\n#[test]\nfn y() {}\n', set()) == (None, {"c"}, 1))
+
+# ── Silent non-runs and masked failures: what the static model must not count ────────────────────────
+# Each check below fails under one of the checker mutants a review found surviving (feature-file-only,
+# no-ignore-check, sh-skip-filter, sh-or-true, sh-no-devmode, sh-exit-early, yml-build-only, yml-step-if-false,
+# yml-continue-on-error): synthetic jobs and texts, the real lez-harness script where a job calls it.
+PUBLIC = "lez/harness/tests/public_path.rs"
+LEZ_CMD = ["cargo", "test", "-p", "harness", "--locked"]
+
+
+def synthetic_job(steps, **keys):
+    return ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "synthetic",
+                        {"runs-on": "ubuntu-latest", "steps": steps, **keys}, {"on": {"push": None}})
+
+
+def job_runs(job, path):
+    for cmd in ci_model.trace(job, tracked):
+        if (ci_model.cargo_runs(cmd, path)[0] if path.endswith(".rs") else ci_model.invokes(cmd, path, tracked)):
+            return True
+    return False
+
+
+SCRIPT_STEP = {"name": "suites", "run": "scripts/ci/lez-harness.sh"}
+check("guard: lez-harness.sh with no argument runs the harness's tests (the baseline of the checks below)",
+      job_runs(synthetic_job([SCRIPT_STEP]), PUBLIC))
+check("guard: a job whose only step is `lez-harness.sh build` runs no test (the script exits after its build)",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh build"}]), PUBLIC))
+check("guard: a step with `if: ${{ false }}` counts for nothing",
+      not job_runs(synthetic_job([{**SCRIPT_STEP, "if": "${{ false }}"}]), PUBLIC))
+check("guard: a step with `if: always()` still counts", job_runs(synthetic_job([{**SCRIPT_STEP, "if": "always()"}]), PUBLIC))
+check("guard: a step with `continue-on-error: true` counts for nothing",
+      not job_runs(synthetic_job([{**SCRIPT_STEP, "continue-on-error": True}]), PUBLIC))
+check("guard: a job with `continue-on-error: true` counts for nothing",
+      not job_runs(synthetic_job([SCRIPT_STEP], **{"continue-on-error": True}), PUBLIC))
+check("guard: a job under an `if:` counts for nothing",
+      not job_runs(synthetic_job([SCRIPT_STEP], **{"if": "github.ref == 'refs/heads/main'"}), PUBLIC))
+
+
+def lez_text(text):
+    return synthetic_job([{"working-directory": "lez", "run": text}])
+
+
+check("guard: `cargo test ... || true` masks the test's failure",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked || true"), PUBLIC))
+check("guard: `cargo test ... && echo ok || true` masks it too (the chain before `||`)",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked && echo ok || true"), PUBLIC))
+check("guard: `cargo test ... || exit 1` keeps the failure",
+      job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked || exit 1"), PUBLIC))
+check("guard: a cargo test run as an `if` condition counts for nothing",
+      not job_runs(lez_text("if RISC0_DEV_MODE=1 cargo test -p harness --locked; then echo ok; fi"), PUBLIC))
+check("guard: a cargo test run in the background (&) counts for nothing",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked &\nwait"), PUBLIC))
+check("guard: an unconditional `exit 0` before the test",
+      not job_runs(lez_text("exit 0\nRISC0_DEV_MODE=1 cargo test -p harness --locked"), PUBLIC))
+check("guard: an `exit` inside an `if` block does not stop the trace",
+      job_runs(lez_text('if [ -n "$NO_SUCH_VARIABLE" ]; then exit 0; fi\nRISC0_DEV_MODE=1 cargo test -p harness --locked'),
+               PUBLIC))
+check("guard: an `exit` inside a function body does not stop the trace",
+      job_runs(lez_text("die() {\n  exit 1\n}\nRISC0_DEV_MODE=1 cargo test -p harness --locked"), PUBLIC))
+check("cargo: `-- --skip P` where P is in a test's path leaves the file out",
+      not ci_model.cargo_runs(C(LEZ_CMD + ["--", "--skip", "a"], "lez", {}, "t"), PUBLIC)[0])
+check("cargo: `-- --skip P` matching none of the file's tests keeps it",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--", "--skip", "zz_no_such_test"], "lez", {}, "t"), PUBLIC)[0])
+check("cargo: a file that asserts RISC0_DEV_MODE (attest_private.rs) needs the command to set it",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), "lez/harness/tests/attest_private.rs")[0]
+      and ci_model.cargo_runs(C(LEZ_CMD, "lez", {"RISC0_DEV_MODE": "1"}, "t"), "lez/harness/tests/attest_private.rs")[0])
+MODULE_GATED = '#[cfg(feature = "x")]\nmod t {\n    #[test]\n    fn a() {}\n}\n'
+TEST_GATED = '#[cfg(feature = "x")]\n#[test]\nfn a() {}\n'
+check("features: cargo_runs refuses a file whose every test is in a gated module",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=MODULE_GATED)[0])
+check("features: cargo_runs refuses a file whose every test is gated",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=TEST_GATED)[0])
+check("features: ... and accepts it once the command enables the feature",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--features", "x"], "lez", {}, "t"), PUBLIC, text=TEST_GATED)[0])
+IGNORED = "#[test]\n#[ignore]\nfn a() {}\n"
+check("cargo: a file whose every test is #[ignore]d is not run",
+      not ci_model.cargo_runs(C(LEZ_CMD, "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
+check("cargo: ... unless the harness is given --ignored",
+      ci_model.cargo_runs(C(LEZ_CMD + ["--", "--ignored"], "lez", {}, "t"), PUBLIC, text=IGNORED)[0])
+check("guard: `cargo test ... | tee log` in a default-shell step (bash -e, no pipefail) counts for nothing",
+      not job_runs(lez_text("RISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"), PUBLIC))
+check("guard: ... with `shell: bash` (pipefail) it counts",
+      job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash",
+                               "run": "RISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"}]), PUBLIC))
+check("guard: ... and with `set -o pipefail` first",
+      job_runs(lez_text("set -o pipefail\nRISC0_DEV_MODE=1 cargo test -p harness --locked | tee log"), PUBLIC))
+check("guard: a custom shell without -e: a test that is not the last command counts for nothing",
+      not job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash {0}",
+                                   "run": "RISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
+check("guard: ... and counts once the text sets -e",
+      job_runs(synthetic_job([{"working-directory": "lez", "shell": "bash {0}",
+                               "run": "set -e\nRISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
+LH = jobs["lez-harness"]
+last = LH.steps[-1] if LH.steps else {}
+check("jobs: lez-harness's last step runs scripts/ci/lez-harness.sh with no argument, unconditionally",
+      last.get("run") == "scripts/ci/lez-harness.sh" and "if" not in last and "continue-on-error" not in last
+      and "if" not in LH.spec and "continue-on-error" not in LH.spec and LH.on_change)
 
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
@@ -161,19 +294,19 @@ rc, out = run_checker(real.replace('kind = "document"', 'kind = "doc"', 1))
 check("checker: an unknown kind is refused", rc == 1 and "is none of test, record, document" in out)
 
 # ── R.11's numbers and gate: what counts as a test CI runs ──────────────────────────────────────────
-# The real map's counts, as docs/rows/G.md states them: update these lines with the map (a row that gains a
+# The real map's counts, as docs/rows/coverage.md states them: update these lines with the map (a row that gains a
 # test CI runs moves both numbers).
 rc, out = run_checker(real, "--list")
-check("checker: the real map, RFP-022: 51 of 68 hard rows with a test CI runs",
-      "RFP-022: 68 hard rows; 51 with a test CI runs; 17 without one" in out)
-check("checker: the real map, RFP-021: 28 of 59 hard rows with a test CI runs",
-      "RFP-021: 59 hard rows; 28 with a test CI runs; 31 without one" in out)
+check("checker: the real map, RFP-022: 64 of 68 hard rows with a test CI runs",
+      "RFP-022: 68 hard rows; 64 with a test CI runs; 4 without one" in out)
+check("checker: the real map, RFP-021: 54 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 54 with a test CI runs; 5 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
 rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
 rc, out = run_checker(real, "--require-ci", "RFP-022")
 check("checker: --require-ci RFP-022 exits 1 on the real map and counts the rows without a test CI runs",
-      rc == 1 and "--require-ci RFP-022: 17 hard row(s) without a test CI runs" in out)
+      rc == 1 and "--require-ci RFP-022: 4 hard row(s) without a test CI runs" in out)
 
 # Synthetic maps: the real one with a test the vault job runs added to some RFP-022 rows (a row may have
 # several [[row]] blocks; the checker joins them).
@@ -189,17 +322,17 @@ rc, out = run_checker(with_tests(real, rows022), "--require-ci", "RFP-022")
 check("checker: --require-ci RFP-022 exits 0 once every RFP-022 row has a test CI runs",
       rc == 0 and "RFP-022: 68 hard rows; 68 with a test CI runs; 0 without one" in out
       and "--require-ci RFP-022: every hard row has a test CI runs" in out)
-# F.4 has tests on the build box only in the real map
-others = [rid for rid in rows022 if rid != "RFP-022 F.4"]
+# S.1 has a test on the build box only in the real map (lez/testnet04/day1.sh sends to a public LEZ testnet)
+others = [rid for rid in rows022 if rid != "RFP-022 S.1"]
 rc, out = run_checker(with_tests(real, others), "--require-ci", "RFP-022")
 check("checker: a row whose tests run on the box only is not counted as CI, and the gate names it",
       rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
-      and "tests run on the build box or by hand only (1): F.4" in out
+      and "tests run on the build box or by hand only (1): S.1" in out
       and "--require-ci RFP-022: 1 hard row(s) without a test CI runs" in out)
-rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 F.4"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
+rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 S.1"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
 check("checker: a test in a job started by hand only is counted as manual, not as CI",
       rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
-      and "a test in a workflow started by hand only (1): F.4" in out)
+      and "a test in a workflow started by hand only (1): S.1" in out)
 # The matrices must hold 59 and 68 hard rows: one RFP-022 row taken out of a copy of traceability.md.
 lines, rfp, dropped = [], None, False
 for line in (ROOT / "docs" / "traceability.md").read_text(encoding="utf-8").splitlines(keepends=True):
