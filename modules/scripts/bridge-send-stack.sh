@@ -248,6 +248,19 @@ run() {
   check "deposit list through eth_rpc_module: 2 deposits, root = depositRoot" "2 $(cast call $V 'depositRoot()(bytes32)' --rpc-url $RPC)" "$(jq -r '"\(.value.deposits | length) \(.value.root)"' <<< "$L")"
   check "the reads' route: eth_rpc_module, direct" "eth_rpc_module direct" "$(jq -r '"\(.eth.via) \(.eth.routes[0])"' <<< "$L")"
 
+  # 9. A deposit broadcast and not mined in time (anvil's automine off; the request's own receipt wait, 8 s): the module
+  # reports it broadcast and not yet mined, naming the transaction and asking not to send it again, never as failed;
+  # once a block is mined it is there.
+  cast rpc evm_setAutomine false --rpc-url $RPC > /dev/null
+  send_through deposit-unmined deposit "{$DEP,\"token\":\"$ETH\",\"denom_index\":0,\"send\":{\"via\":\"tx_sender_module\",\"from\":\"$A3\",\"chain_id\":$CHAIN,\"receipt_timeout_s\":8}}" approve "$PW"
+  local UH; UH=$(jq -r '.tx_hash // ""' "$R/deposit-unmined.json")
+  check "not mined in time: reported broadcast and not yet mined, not failed" "unconfirmed true false" "$(jq -r '"\(.verdict) \(.pending) \(.settled)"' "$R/deposit-unmined.json")"
+  check "not mined in time: the text names the transaction and says not to send it again" "yes" \
+    "$(jq -r '.what // ""' "$R/deposit-unmined.json" | grep -F "$UH" | grep -q "Do not send this deposit again" && [ -n "$UH" ] && echo yes)"
+  check "not mined in time: no receipt yet (cast)" "none" "$(cast receipt "$UH" status --rpc-url $RPC > /dev/null 2>&1 && echo mined || echo none)"
+  cast rpc evm_mine --rpc-url $RPC > /dev/null; cast rpc evm_setAutomine true --rpc-url $RPC > /dev/null
+  check "not mined in time: mined with the next block (cast receipt status 1)" "1" "$(cast receipt "$UH" status --rpc-url $RPC 2>/dev/null | awk '{print $1}')"
+
   # Every broadcast send's receipts read back by the module: all successful but the forced revert; and every call carried
   # a limit above its own estimate (or the caller's own).
   local bad=""
