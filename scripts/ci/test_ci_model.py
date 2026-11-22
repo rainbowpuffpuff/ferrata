@@ -203,8 +203,8 @@ check("checker: an unknown kind is refused", rc == 1 and "is none of test, recor
 rc, out = run_checker(real, "--list")
 check("checker: the real map, RFP-022: 59 of 68 hard rows with a test CI runs",
       "RFP-022: 68 hard rows; 59 with a test CI runs; 9 without one" in out)
-check("checker: the real map, RFP-021: 42 of 59 hard rows with a test CI runs",
-      "RFP-021: 59 hard rows; 42 with a test CI runs; 17 without one" in out)
+check("checker: the real map, RFP-021: 45 of 59 hard rows with a test CI runs",
+      "RFP-021: 59 hard rows; 45 with a test CI runs; 14 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
 rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
