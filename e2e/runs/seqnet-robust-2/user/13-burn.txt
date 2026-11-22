@@ -1,0 +1,7 @@
+$ env RISC0_DEV_MODE=1 ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d burn --amount 0.001 --recipient 0x0f68ac1761DcEb07Ef1D4C3b08aE1c9A3d32Cc51 --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin --send --yes
+
+Latest block is 45
+Syncing to block 45. Blocks to sync: 1
+Synced to block 45 in 2.43976ms
+an earlier run's burn (counter 0, 0.001 ETH to 0x0f68ac1761DcEb07Ef1D4C3b08aE1c9A3d32Cc51) was sent and is on the zone
+not burning again: that burn is the one asked for (`ferrata release` releases it)

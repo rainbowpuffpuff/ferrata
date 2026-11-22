@@ -1,0 +1,20 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d claim --bridge-program <work>/zone/bundle/program/ferrata_bridge.bin --relayer 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 --gas-drop-inbox <work>/relayer-inbox-drops --gas-drop-elf gasdrop.bin
+
+claim on LEZ (configuration 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c):
+  deposit      0.001 ETH (1000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 2)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d
+  nullifier N  0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.000002 ETH (2000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by a one-time private account the relayer's gas drop funds
+  delay        2 h after the deposit: from Ethereum block 609 (now 10), not reached
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+error: held by your claim delay: this deposit can be claimed from Ethereum block 609, about 119 min from now (a claim right after its deposit narrows which deposit it could be); wait, or add --no-delay to claim now, less privately

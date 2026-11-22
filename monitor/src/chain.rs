@@ -311,8 +311,14 @@ impl Chain {
     }
 
     /// Simulates, then sends and waits for one confirmation. A revert in simulation is an error. With `--send-via
-    /// logos` the transaction goes through `tx_sender_module`; one it did not broadcast goes the plain way when the
-    /// monitor holds the watcher key too (the fallback), and is an error otherwise.
+    /// logos` the transaction goes through `tx_sender_module`; one it did not broadcast, and one it cannot account for
+    /// ([`Outcome::Unknown`]: `stuck`, failed after its leg began to leave, not withdrawn, a request it no longer
+    /// holds), goes the plain way when the monitor holds the watcher key too (the fallback), and is an error
+    /// otherwise (retried at the next poll). The plain send takes the node's next nonce: that fills a number the
+    /// module burnt without broadcasting (its ledger never hands it out again, so its own later sends would wait
+    /// behind the gap), and against a transaction of the module's that did leave, at most one extra call: a second
+    /// `cancelCandidate` or `revokeFrom` reverts (usually already at the gas estimate, so nothing is sent), and a
+    /// second `pauseCheckpoints` moves the pause's end by the seconds between the two blocks.
     async fn send(&self, input: Bytes, label: &'static str) -> Result<Sent> {
         let from = self.me.context("the monitor holds no key")?;
         let tx = TransactionRequest::default().with_from(from).with_to(self.vault).with_input(input.clone());
@@ -328,10 +334,12 @@ impl Chain {
                     let receipt = self.receipt(hash).await?;
                     return self.mined(receipt, Via::Logos { request_id, polls, millis }).await;
                 }
-                Outcome::Unknown(why) => bail!("{why}"),
-                Outcome::NotSent(why) if self.logos.as_ref().is_some_and(|r| r.fallback) => {
+                Outcome::NotSent(why) | Outcome::Unknown { reason: why, .. }
+                    if self.logos.as_ref().is_some_and(|r| r.fallback) =>
+                {
                     via = Via::Fallback { reason: why }
                 }
+                Outcome::Unknown { reason: why, .. } => bail!("{why}"),
                 Outcome::NotSent(why) => bail!("not sent: {why}"),
             }
         }

@@ -1,0 +1,82 @@
+claim on LEZ (configuration 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c):
+  deposit      0.001 ETH (1000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 2)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d
+  nullifier N  0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.000002 ETH (2000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by a one-time private account the relayer's gas drop funds
+  delay        2 h after the deposit: from Ethereum block 609 (now 610), passed
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+Latest block is 29
+Latest block is 29
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+Latest block is 29
+Latest block is 29
+Latest block is 29
+Latest block is 29
+Latest block is 30
+Syncing to block 30. Blocks to sync: 1
+Synced to block 30 in 2.51437ms
+Latest block is 30
+Latest block is 30
+Latest block is 30
+Latest block is 30
+Latest block is 30
+Latest block is 31
+Syncing to block 31. Blocks to sync: 1
+Synced to block 31 in 2.943199ms
+Latest block is 31
+Latest block is 31
+Latest block is 31
+Latest block is 31
+Latest block is 31
+Latest block is 31
+Latest block is 31
+Latest block is 32
+Syncing to block 32. Blocks to sync: 1
+Synced to block 32 in 2.14316ms
+Latest block is 32
+Latest block is 32
+Latest block is 32
+Latest block is 32
+Latest block is 32
+Latest block is 33
+Syncing to block 33. Blocks to sync: 1
+Synced to block 33 in 2.727939ms
+Latest block is 33
+Latest block is 33
+Latest block is 33
+Latest block is 33
+Latest block is 33
+Latest block is 34
+Syncing to block 34. Blocks to sync: 1
+Synced to block 34 in 2.50661ms
+Latest block is 34
+gas drop: one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (recorded for this deposit by an earlier run); the relayer's credit of 50000000 native LEZ, sealed, pending to it after 48 s (receipt proven in 0.0 s)
+  the job (receipt and the account's public keys) went to <work>/relayer-inbox-drops/gas-drop-cd6efdc213344cb4-be4749d8.json
+  asked before for this deposit, no credit from: 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb (this relayer has a receipt of its own, for the same one-time account)
+Latest block is 34
+Dry run: nothing proven or sent
+  public cycles:  139751
+  base fees:      exec 8 / stor 8 (height 34)
+  fee at head:    6188624
+  headroom:       5 blocks, up to exec 13 / stor 13 (10056514)
+  reserve:        10056514 (surplus refunded)
+  fee payer:      CPsE9Pay8EuV8B62WKwxnmukFtEELvMuTqaMogR9VPQ6
+  claims:         1 pending credit(s), 50000000 to the payer
+  refund to:      the payer's alias
+(the dry run above: the LEZ fee paid by the one-time account CPsE9Pay8EuV8B62WKwxnmukFtEELvMuTqaMogR9VPQ6, from the credit it claims)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.

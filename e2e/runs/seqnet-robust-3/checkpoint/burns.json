@@ -1,0 +1,30 @@
+{
+  "burn_count": 1,
+  "burn_root": "0xb1d8528a3c85da9563959d165ee6e0b025e383620060e749473099a5f9eb25fc",
+  "burns": [
+    {
+      "amount": "0x00000000000000000000000000000000000000000000000000038d7ea4c68000",
+      "block": 46,
+      "burn_index": 0,
+      "c_out": "0xcd121f2029e5c8d6f8555a8fe707cc100c7a49e65b485d037861a7c1763e1fae",
+      "leaf": "0xb91138e69f2b1eeca50d67aa7ec07d034fc9a7d493c6741a000d034d1c9a219a",
+      "mac": "0x830edae6bced147844184eb2c6310b16",
+      "memo": "0x3ea6d9b48708ed2a89885ea0cadcefbb0fa6ae8c",
+      "origin": "PrivateToPublic",
+      "r": "0x396078f936626cea091ce987d4adc00accf89065523dace0bcf9007b80189bd0",
+      "token": "0x0000000000000000000000000000000000000000",
+      "tx": 0
+    }
+  ],
+  "config_id": "0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c",
+  "imports": [
+    {
+      "block": 27,
+      "leaf_count": 2,
+      "tx": 0
+    }
+  ],
+  "parent_tip": 19,
+  "sunset": false,
+  "tip": 50
+}

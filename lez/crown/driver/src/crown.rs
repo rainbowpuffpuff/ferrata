@@ -1185,6 +1185,9 @@ pub struct SessionB {
     /// Only the operator's and the relayer's steps (the finality updates, `Init`, `Register`, `ImportFees`,
     /// `ImportRoot`): no claim and no burn, which a user's own wallet sends (e2e/seqnet: the `ferrata` tool).
     pub operator_only: bool,
+    /// `ImportRoot` sent by this session (default); `false` (`--import-roots no`, with `--operator-only yes`): left
+    /// to the relayer daemon (`ferrata-relayer --import-roots`, e2e/seqnet).
+    pub import_roots: bool,
 }
 
 /// Session B: the captures, the bridge's pairing, registration and imports, the claims and the
@@ -1275,6 +1278,11 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             leaf_count: n,
             proof: ImportProof { account: account.clone(), root_slot: root_proof, count_slot: count_proof },
         };
+        if !b.import_roots {
+            ensure!(b.operator_only, "--import-roots no needs --operator-only yes (the session's own claims read the root)");
+            println!("[crown-b] ImportRoot n={n} left to the relayer daemon (--import-roots no)");
+            continue;
+        }
         let o = send(live, &format!("bridge ImportRoot n={n} ({}, block {})", stage.label, stage.block), vec![mention(config_pda), mention(header_pda), mention(root_pda)], &import, payer).await?.expect_applied()?;
         steps.push(row_json(&o));
 

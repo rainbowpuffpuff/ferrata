@@ -1,0 +1,490 @@
+     Running tests/e2e.rs (target/debug/deps/e2e-7ebd2a71695bbcba)
+
+running 1 test
+anvil: vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, configId 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608
+public deposit without acknowledgement: ferrata --seed <repo>/cli/../../tmp/cli/e2e/seed-user.txt --eth-rpc http://127.0.0.1:18545 --vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 deposit --denomination 2 --kind public --keystore <repo>/cli/../../tmp/cli/e2e/keystore-user.json --password-file <repo>/cli/../../tmp/cli/e2e/password.txt --send --yes: warning: the seed file <repo>/cli/../../tmp/cli/e2e/seed-user.txt is readable by other users (chmod 600 it)
+error: refusing a public destination without --i-accept-public-account: the account and its balance become public on LEZ when the deposit is claimed; deposit to a private account (the default) instead
+
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  10 ETH (10000000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.01 ETH (10000000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         10.01 ETH (10010000000000000000 base units, 18 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 0
+  destination   your public LEZ account /0 (hidden: C commits to it)
+  commitment C  0xc92f9011369aa3bbbc797352cfae4c66c0ecf9de82915a2e10715095c3e24a2b
+  claim delay   12 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 10010000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000002c92f9011369aa3bbbc797352cfae4c66c0ecf9de82915a2e10715095c3e24a2b0000000000000000000000000000000000000000000000000000000000000000
+cost: 10.01 ETH (10010000000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.000329378001331976 ETH (329378001331976 base units, 18 decimals) (200584 gas at 1642095089 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: High: a direct link is public
+  ok Fixed denomination: your deposit looks like every other deposit of 10 ETH (10000000000000000000 base units, 18 decimals).
+  !! Public destination: the account and its balance become public on LEZ when claimed; anyone can see it received 10 ETH (10000000000000000000 base units, 18 decimals) at that time.
+  ok Delayed claim: held for 12 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  10 ETH (10000000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.01 ETH (10000000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         10.01 ETH (10010000000000000000 base units, 18 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 0
+  destination   your public LEZ account /0 (hidden: C commits to it)
+  commitment C  0xc92f9011369aa3bbbc797352cfae4c66c0ecf9de82915a2e10715095c3e24a2b
+  claim delay   12 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 10010000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000002c92f9011369aa3bbbc797352cfae4c66c0ecf9de82915a2e10715095c3e24a2b0000000000000000000000000000000000000000000000000000000000000000
+cost: 10.01 ETH (10010000000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.000329378001331976 ETH (329378001331976 base units, 18 decimals) (200584 gas at 1642095089 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: High: a direct link is public
+  ok Fixed denomination: your deposit looks like every other deposit of 10 ETH (10000000000000000000 base units, 18 decimals).
+  !! Public destination: the account and its balance become public on LEZ when claimed; anyone can see it received 10 ETH (10000000000000000000 base units, 18 decimals) at that time.
+  ok Delayed claim: held for 12 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+sent: 0xe3f9bd4509ba405060576f277fa1a97b98f7997407289855d9c8d41f94951681 in block 5
+stale j: refused: vault error WrongDepositIndex() (eth_call before sending): the index j is not depositCount[sender]: another deposit from this address came first
+FREEZE (vault, deposit): error: refused: vault error DepositsAreFrozen() (checked before sending: frozen until Ethereum time 1797871892 (2026-12-21 16:51:32 UTC), unless the freeze authority lifts it sooner): deposits are frozen for the whole vault; nothing is sent: retry once the freeze ends (`ferrata status` shows it)
+FREEZE (vault, deposit): error: refused: vault error TokenDepositsAreFrozen() (checked before sending: frozen until Ethereum time 1797871892 (2026-12-21 16:51:32 UTC), unless the freeze authority lifts it sooner): deposits of this token are frozen; nothing is sent: retry once the freeze ends (`ferrata status` shows it)
+refused (TokenNotRegistered): error: refused: vault error TokenNotRegistered() (checked before sending): the token is not registered
+refused (InvalidDenominationIndex): error: refused: vault error InvalidDenominationIndex() (checked before sending): no denomination has this index
+refused (does not answer): error: the Ethereum RPC http://127.0.0.1:9 does not answer: error sending request for url (http://127.0.0.1:9/): error sending request for url (http://127.0.0.1:9/): client error (Connect): tcp connect error: Connection refused (os error 111)
+refused (serves chain 1, not 11155111): error: the Ethereum RPC http://127.0.0.1:18545 serves chain 1, not 11155111 (--chain-id): refusing to go on
+refused (no contract at): error: no contract at 0x000000000000000000000000000000000000dEaD on chain 1: check --vault and --eth-rpc
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits at block 26, root 0xb2b2bcfa6be472455de1b1a55ca71195f95071c6264e65ce9bba2b30a1f9d8ad (equal to depositRoot: checked)
+deposits of this seed: 11
+  leaf      0  j    0  10 ETH (10000000000000000000 base units, 18 decimals)  to public /0  N 0x4b1e50c88f91c336  claim state unknown (no --sequencer)
+  leaf      2  j    1  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0xcc0445567da28920  claim state unknown (no --sequencer)
+  leaf      3  j    2  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x466558cdf351dfc0  claim state unknown (no --sequencer)
+  leaf      5  j    3  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /2  N 0x118e19e09636b98d  claim state unknown (no --sequencer)
+  leaf      6  j    4  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /3  N 0x4b85d4ee5873a36e  claim state unknown (no --sequencer)
+  leaf      8  j    5  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /4  N 0x91b5eff4d60b9cd1  claim state unknown (no --sequencer)
+  leaf      9  j    6  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /5  N 0x59d94970122b7e3e  claim state unknown (no --sequencer)
+  leaf     11  j    7  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /6  N 0xf4b55088c4df012b  claim state unknown (no --sequencer)
+  leaf     12  j    8  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /7  N 0x1f936e3089caf57b  claim state unknown (no --sequencer)
+  leaf     14  j    9  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x4bc338c76057a1db  claim state unknown (no --sequencer)
+  leaf     15  j   10  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x51a189f6c85669b4  claim state unknown (no --sequencer)
+--json: scan 11 deposits; deposit dry run C "0xfb7d59be9608130326183d178396f0aeb300d848e933eaa00bc9fb0e4c28c7d5"; error "no contract at 0x000000000000000000000000000000000000dEaD on chain 1: check --vault and --eth-rpc"
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 16 deposits, root 0xb2b2bcfa6be472455de1b1a55ca71195f95071c6264e65ce9bba2b30a1f9d8ad, configId 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608
+  retired false; deposits frozen until 0; releases frozen until 0
+  checkpoints 0; final imported leaf count 0
+  global deposit cap: capacity unlimited, refill 0 value units/s, available unlimited
+  global release cap: capacity unlimited, refill 0 value units/s, available unlimited
+token 0x0000000000000000000000000000000000000000 (ETH): registered true, deposits enabled true, lezUnit 1000000000
+  [0] 0.1 ETH (100000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.0001 ETH (100000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  [1] 1 ETH (1000000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.001 ETH (1000000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  [2] 10 ETH (10000000000000000000 base units, 18 decimals)  mint fee 0 ETH (0 base units, 18 decimals)  relay fee 0.01 ETH (10000000000000000 base units, 18 decimals)  burn fee 0 ETH (0 base units, 18 decimals)  checkpoint fee 0 ETH (0 base units, 18 decimals)
+  deposits frozen until 0; releases frozen until 0; release delay 120 s after a checkpoint
+  deposit cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
+  release cap: capacity unlimited, refill 0 ETH (0 base units, 18 decimals)/s, available unlimited
+zone: root(16) imported; ETH fees known to leaf 16
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      10 ETH (10000000000000000000 base units, 18 decimals) to your public account /0, under root(cid, 16)
+  would send   Claim in a public transaction (the witness in the clear) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0x4b1e50c88f91c3367a80e00c52d8686bc7593542513ba8c0b2fa261935f4d245
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.01 ETH (10000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid by the payer account, in public
+  delay        12 h after the deposit: from Ethereum block 3605 (now 26), not reached
+what becomes public (Plaintext claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance
+  stays private:      nothing
+privacy of these choices: High: a direct link is public
+  !! Plaintext claim: names on LEZ which deposit paid which account.
+  !! Public destination: the account and its new balance are public.
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+  !  Self-submitted: the account paying the LEZ fee is linked to the claim.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+claim within the delay: held by your claim delay: this deposit can be claimed from Ethereum block 3605, about 715 min from now (a claim right after its deposit narrows which deposit it could be); wait, or add --no-delay to claim now, less privately
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      10 ETH (10000000000000000000 base units, 18 decimals) to your public account /0, under root(cid, 16)
+  would send   Claim in a public transaction (the witness in the clear) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0x4b1e50c88f91c3367a80e00c52d8686bc7593542513ba8c0b2fa261935f4d245
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.01 ETH (10000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid by the payer account, in public
+  delay        12 h after the deposit: from Ethereum block 3605 (now 26), not reached
+what becomes public (Plaintext claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance
+  stays private:      nothing
+privacy of these choices: High: a direct link is public
+  !! Plaintext claim: names on LEZ which deposit paid which account.
+  !! Public destination: the account and its new balance are public.
+  !  Claiming before your random delay ends: the claim's time narrows which deposits it could be.
+  !  Self-submitted: the account paying the LEZ fee is linked to the claim.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+plaintext claim without acknowledgement: refusing the plaintext path without --i-accept-plaintext-links-deposit: it links this mint to its deposit for everyone; claim privately (the default) instead
+FREEZE (LEZ, claim, mints of this token): refused: LEZ bridge program exit code 242 FROZEN (checked before sending: mints (claims) of this token are frozen until Ethereum time 1808000769 (2027-04-17 22:26:09 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and nothing is consumed: the deposit stays claimable): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset; nothing is consumed: retry once the freeze ends (`ferrata status` shows the freezes)
+FREEZE (LEZ, claim, mints of the whole configuration): refused: LEZ bridge program exit code 242 FROZEN (checked before sending: mints (claims) of the whole configuration are frozen until Ethereum time 1808000771 (2027-04-17 22:26:11 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and nothing is consumed: the deposit stays claimable): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset; nothing is consumed: retry once the freeze ends (`ferrata status` shows the freezes)
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      10 ETH (10000000000000000000 base units, 18 decimals) to your public account /0, under root(cid, 16)
+  would send   Claim in a public transaction (the witness in the clear) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0x4b1e50c88f91c3367a80e00c52d8686bc7593542513ba8c0b2fa261935f4d245
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.01 ETH (10000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid by the payer account, in public
+  delay        12 h after the deposit: from Ethereum block 3605 (now 26), not reached
+what becomes public (Plaintext claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the whole witness: the leaf index, the depositor, j, the secret s and the destination; the nullifier N; the denomination; which imported root was read; the destination and its balance
+  stays private:      nothing
+privacy of these choices: High: a direct link is public
+  !! Plaintext claim: names on LEZ which deposit paid which account.
+  !! Public destination: the account and its new balance are public.
+  !  Claiming before your random delay ends: the claim's time narrows which deposits it could be.
+  !  Self-submitted: the account paying the LEZ fee is linked to the claim.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: PLAINTEXT CLAIM: the whole witness is public — which deposit (leaf, depositor, j), the secret s, the destination; anyone can link this mint to the Ethereum deposit
+sent: plaintext claim of leaf 0 under root(cid, 16) (harness, block 10)
+claim: Some("plaintext claim of leaf 0 under root(cid, 16) (harness, block 10)"); N 0x4b1e50c88f91c3367a80e00c52d8686bc7593542513ba8c0b2fa261935f4d245
+second claim: refused: LEZ bridge program exit code 250 ALREADY_CLAIMED (checked before sending: the nullifier is spent): the deposit's nullifier is spent: it was claimed already
+burn on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  amount       0.1 ETH (100000000000000000 base units, 18 decimals) from your public account /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0)
+  recipient    0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd, signed by the holder; note r 0xbfff9aef28a788fc5fe0041064c1480b39ac36b1e36a155d5c6f1c9a03c876ca  COut 0x80124e21d061f4116f3dcb0b663e4d0ca2dc45df22192bf7a291f7e4a39c1a7d  burn counter 0
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) in force now are deducted: the recipient receives 0.0999 ETH (99900000000000000 base units, 18 decimals) through a relayer (relay fee 0.0001 ETH (100000000000000 base units, 18 decimals)), 0.1 ETH (100000000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid by the holder, in public
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: High: a direct link is public
+  !! Burn from a public account: the holder, its balance and the burn are public on LEZ.
+  !  The recipient is an address you used before: the release is linked to it.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+FREEZE (LEZ, burn, burns of this token): refused: LEZ bridge program exit code 242 FROZEN (checked before sending: burns of this token are frozen until Ethereum time 1808000773 (2027-04-17 22:26:13 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and nothing is burned: the holding stays yours): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset; nothing is consumed: retry once the freeze ends (`ferrata status` shows the freezes)
+FREEZE (LEZ, burn, burns of the whole configuration): refused: LEZ bridge program exit code 242 FROZEN (checked before sending: burns of the whole configuration are frozen until Ethereum time 1808000775 (2027-04-17 22:26:15 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and nothing is burned: the holding stays yours): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset; nothing is consumed: retry once the freeze ends (`ferrata status` shows the freezes)
+burn on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  amount       0.1 ETH (100000000000000000 base units, 18 decimals) from your public account /0 (0x8a7162a5acc0f2c0beab5a9d07dfab129e7dc9b18cd9c14b3090fe2cc40154b0)
+  recipient    0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd, signed by the holder; note r 0xbfff9aef28a788fc5fe0041064c1480b39ac36b1e36a155d5c6f1c9a03c876ca  COut 0x80124e21d061f4116f3dcb0b663e4d0ca2dc45df22192bf7a291f7e4a39c1a7d  burn counter 0
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) in force now are deducted: the recipient receives 0.0999 ETH (99900000000000000 base units, 18 decimals) through a relayer (relay fee 0.0001 ETH (100000000000000 base units, 18 decimals)), 0.1 ETH (100000000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid by the holder, in public
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: High: a direct link is public
+  !! Burn from a public account: the holder, its balance and the burn are public on LEZ.
+  !  The recipient is an address you used before: the release is linked to it.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+WARNING: these choices make a direct link public on a chain, for everyone and for good. The private path is the default; drop the option that chose this path to use it.
+public: burn: the holder's account (a public holding), the token, the denomination, the time and the note (r, memo, mac, COut); not the Ethereum recipient (encrypted in the memo)
+sent: burn with tag counter 0 (harness, block 16)
+release on Ethereum (vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, chain 1):
+  burn         0.1 ETH (100000000000000000 base units, 18 decimals) to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe (your burn counter 0)
+  burn root    0xa3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae of checkpoint 0 (11 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e
+  journal      sha256 0x162c104fe8172ffa7fc669f8e6597b850deda9d428cb07c30f26b2feea87a616
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) are deducted: the recipient receives 0.1 ETH (100000000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 from your keystore's address
+  network fee  paid by the sender (estimated once --seal and --keystore are given)
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  data 0x772e8c8f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa1f6d47020a9ab6687afd2a8d074f351e4904fe00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Elevated: a timing or fee-payer correlation
+  !  The recipient is an address you used before: the release is linked to it.
+  !  You send the release yourself: your gas payer is linked to the recipient.
+not sent: a dry run (add --send --yes to sign and send)
+FREEZE (vault, release): refused: vault error ReleasesAreFrozen() (checked before sending: frozen until Ethereum time 1797872813 (2026-12-21 17:06:53 UTC), unless the freeze authority lifts it sooner): releases are frozen for the whole vault; the burn stays releasable: retry once the freeze ends (`ferrata status` shows it)
+FREEZE (vault, release): refused: vault error TokenReleasesAreFrozen() (checked before sending: frozen until Ethereum time 1797872813 (2026-12-21 17:06:53 UTC), unless the freeze authority lifts it sooner): releases of this token are frozen; the burn stays releasable: retry once the freeze ends (`ferrata status` shows it)
+release on Ethereum (vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, chain 1):
+  burn         0.1 ETH (100000000000000000 base units, 18 decimals) to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe (your burn counter 0)
+  burn root    0xa3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae of checkpoint 0 (11 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e
+  journal      sha256 0x162c104fe8172ffa7fc669f8e6597b850deda9d428cb07c30f26b2feea87a616
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) are deducted: the recipient receives 0.1 ETH (100000000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 from 0x421ebF62600513Ae936C08563e955b70e79E5Ab6
+  network fee  about 0.000125807422734789 ETH (125807422734789 base units, 18 decimals) (124923 gas at 1007079743 wei, eth_estimateGas)
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  data 0x772e8c8f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa1f6d47020a9ab6687afd2a8d074f351e4904fe00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae610a8d719c82a6731dcdc3e6a4eacfdd7c29f726300ad24b90db6cb1268ff87e000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000045ea15ea100000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Elevated: a timing or fee-payer correlation
+  !  The recipient is an address you used before: the release is linked to it.
+  !  You send the release yourself: your gas payer is linked to the recipient.
+sent: 0x5c7b85445a1c6c1cf385c24354b1e9d19d55ca7997c1a0e1f36bd312e3ac0355 in block 39
+release: Some(0x5c7b85445a1c6c1cf385c24354b1e9d19d55ca7997c1a0e1f36bd312e3ac0355)
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  1 ETH (1000000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.001 ETH (1000000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         1.001 ETH (1001000000000000000 base units, 18 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 11
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xfb7d59be9608130326183d178396f0aeb300d848e933eaa00bc9fb0e4c28c7d5
+  claim delay   5 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 1001000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000001fb7d59be9608130326183d178396f0aeb300d848e933eaa00bc9fb0e4c28c7d5000000000000000000000000000000000000000000000000000000000000000b
+cost: 1.001 ETH (1001000000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.000135138969438262 ETH (135138969438262 base units, 18 decimals) (134306 gas at 1006202027 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 1 ETH (1000000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 5 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+not sent: a dry run (add --send --yes to sign and send)
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  1 ETH (1000000000000000000 base units, 18 decimals)
+  mint fee      0 ETH (0 base units, 18 decimals)  (schedule 0)
+  relay fee     0.001 ETH (1000000000000000 base units, 18 decimals)  (paid to the relayer that submits your claim)
+  total         1.001 ETH (1001000000000000000 base units, 18 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 11
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xfb7d59be9608130326183d178396f0aeb300d848e933eaa00bc9fb0e4c28c7d5
+  claim delay   5 h after the deposit (from your seed; `ferrata claim` waits for it)
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 1001000000000000000  data 0xf7edb8570000000000000000000000000000000000000000000000000000000000000001fb7d59be9608130326183d178396f0aeb300d848e933eaa00bc9fb0e4c28c7d5000000000000000000000000000000000000000000000000000000000000000b
+cost: 1.001 ETH (1001000000000000000 base units, 18 decimals) to the vault, and a network fee of about 0.000135138969438262 ETH (135138969438262 base units, 18 decimals) (134306 gas at 1006202027 wei, eth_estimateGas)
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 1 ETH (1000000000000000000 base units, 18 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 5 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+sent: 0x025de0704ccca59ca4f1c6b53313f3dd65de9be9c102c62300158777559dd512 in block 40
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      1 ETH (1000000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 17)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0xd7367f6452d0ba5827795011eebb419dce3bd0770d9ca3e581ceced49b7d090d
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.001 ETH (1000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by the private account that proves
+  delay        5 h after the deposit: from Ethereum block 1540 (now 40), not reached
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok Held by your random delay: the claim will not follow the deposit closely in time.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+claim delay: 5 h = 1500 blocks mined
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      1 ETH (1000000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 17)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0xd7367f6452d0ba5827795011eebb419dce3bd0770d9ca3e581ceced49b7d090d
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.001 ETH (1000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by the private account that proves
+  delay        5 h after the deposit: from Ethereum block 1540 (now 1540), passed
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+not sent: a dry run (add --send --yes to sign and send)
+FREEZE (LEZ, private claim): refused: LEZ bridge program exit code 242 FROZEN (checked before sending: mints (claims) of the whole configuration are frozen until Ethereum time 1808001537 (2027-04-17 22:38:57 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and nothing is consumed: the deposit stays claimable): mints or burns are frozen (of the token or of the whole configuration), or an import after Sunset; nothing is consumed: retry once the freeze ends (`ferrata status` shows the freezes)
+claim on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  deposit      1 ETH (1000000000000000000 base units, 18 decimals) to your private account /0, under root(cid, 17)
+  would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd
+  nullifier N  0xd7367f6452d0ba5827795011eebb419dce3bd0770d9ca3e581ceced49b7d090d
+  cost         nothing more in ETH: the mint fee 0 ETH (0 base units, 18 decimals) and the relay fee 0.001 ETH (1000000000000000 base units, 18 decimals) were paid with the deposit; the LEZ fee is paid inside the proof, by the private account that proves
+  delay        5 h after the deposit: from Ethereum block 1540 (now 1540), passed
+what becomes public (Claim (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the nullifier N (fresh randomness); the denomination; which imported root was read; a public destination and its balance, if you chose one
+  stays private:      which deposit is claimed (no leaf index, no depositor); a private destination and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Private claim: proven without saying which deposit it spends (no leaf index, no depositor).
+  ok Private destination: the account and its balance stay private.
+  ok The LEZ fee is paid inside the proof (or by a relayer): no public fee payment ties the claim to you.
+public: private claim: N, the token, the denomination, the fee schedule's range, the root read, the relayer, when (its block); not the deposit, the path, s or the private destination
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: private claim of leaf 16 under root(cid, 17) (harness, private, block 31)
+private claim: Some("private claim of leaf 16 under root(cid, 17) (harness, private, block 31)")
+burn on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  amount       1 ETH (1000000000000000000 base units, 18 decimals) from your private account /0
+  recipient    0x8B1d201a9357a4E294965c3a71587c967CB6f1E2 on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd, proven locally by LEZ's wallet; note r 0xce880f77aa3c5fb4b1146e31d8be6c352648f1aa484584034fa9794784a5d5be  COut 0x2cea8c0264adf62f1520a67e72b35460345e0c28b74f23a4e0e120bbd1600773  burn counter 11
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) in force now are deducted: the recipient receives 0.999 ETH (999000000000000000 base units, 18 decimals) through a relayer (relay fee 0.001 ETH (1000000000000000 base units, 18 decimals)), 1 ETH (1000000000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid inside the proof
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+not sent: a dry run (add --send --yes to sign and send)
+burn on LEZ (configuration 0x4b87fc2d51de184bb82f98a16e8cb06b328f39c7b1c084d8e633bddf167a9608):
+  amount       1 ETH (1000000000000000000 base units, 18 decimals) from your private account /0
+  recipient    0x8B1d201a9357a4E294965c3a71587c967CB6f1E2 on Ethereum (bound into COut, encrypted in the memo)
+  would send   Burn to the bridge program 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd, proven locally by LEZ's wallet; note r 0xce880f77aa3c5fb4b1146e31d8be6c352648f1aa484584034fa9794784a5d5be  COut 0x2cea8c0264adf62f1520a67e72b35460345e0c28b74f23a4e0e120bbd1600773  burn counter 11
+  cost         at release, the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) in force now are deducted: the recipient receives 0.999 ETH (999000000000000000 base units, 18 decimals) through a relayer (relay fee 0.001 ETH (1000000000000000 base units, 18 decimals)), 1 ETH (1000000000000000000 base units, 18 decimals) if you send the release yourself; the LEZ fee is paid inside the proof
+what becomes public (Burn (LEZ)):
+  public on Ethereum: nothing
+  public on LEZ:      the burn note: token, denomination, r, the recipient encrypted (c_out); the holder account, if it is public
+  stays private:      the Ethereum recipient (encrypted to you); a private holder and its balance
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Burn from a private account: the holder stays private.
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+public: private burn: the note (r, memo, mac, COut), the token, the denomination and the time; not the holder (a private account, shown as an alias) or the Ethereum recipient (encrypted in the memo)
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+sent: burn with tag counter 11 (harness, private, block 32)
+burn 1: refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: the holding is 0 base units): the holding is smaller than the denomination burned
+burn 0.5: refused: LEZ bridge program exit code 251 NOT_REGISTERED (checked before sending: the amount is not one of the token's denominations): the token has no registry entry in this configuration, or the amount is not one of its denominations
+burn 0.1000000000000000001: --amount 0.1000000000000000001: 0.1000000000000000001 has more than 18 decimals
+release in the delay: refused: vault error ReleaseDelayNotElapsed() (checked before sending: the roots that cover this burn are in their release delay; the first opens at Ethereum time 1795281641, in 121 s): the release delay after the checkpoint has not passed
+release on Ethereum (vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, chain 1):
+  burn         0.1 ETH (100000000000000000 base units, 18 decimals) to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe (your burn counter 1)
+  burn root    0xa3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae of checkpoint 0 (11 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x86858e8b25eb6731bdce92219db24ef0d37ddea273be697c58396f89d77e475e
+  journal      sha256 0xe4746ed73bd7492167814021a1a8c9308c974783bffbb99ed94f33362c132929
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) are deducted, the relay fee 0.0001 ETH (100000000000000 base units, 18 decimals) goes to the relayer: the recipient receives 0.0999 ETH (99900000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, submitted by any relayer (it pays the gas and is paid the relay fee); nothing is sent from your accounts
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  data 0x772e8c8f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000fa1f6d47020a9ab6687afd2a8d074f351e4904fe000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005af3107a4000a3d83956e253ff5db065a2d9c5e91afa06a56c85e8e1d94a9ef367defbc368ae86858e8b25eb6731bdce92219db24ef0d37ddea273be697c58396f89d77e475e00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Elevated: a timing or fee-payer correlation
+  !  The recipient is an address you used before: the release is linked to it.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+not sent: hand it to a relayer with --job-out FILE (or send it yourself with --self-send)
+release on Ethereum (vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, chain 1):
+  burn         1 ETH (1000000000000000000 base units, 18 decimals) to 0x8B1d201a9357a4E294965c3a71587c967CB6f1E2 (your burn counter 11)
+  burn root    0x7c9c23d5d95bcd243e1c2bdf2003955364046721114442e0d270143a7bc09c0b of checkpoint 1 (12 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x33df37c594f767b83e78de29e5e23be9155f767b4e8a4d12ffcccaf5dd3f9dfc
+  journal      sha256 0x50a4e870052695bd2d93648d225746745fc91d03fe6a39d46e4fbd4c79a9d2c6
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) are deducted, the relay fee 0.001 ETH (1000000000000000 base units, 18 decimals) goes to the relayer: the recipient receives 0.999 ETH (999000000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, submitted by any relayer (it pays the gas and is paid the relay fee); nothing is sent from your accounts
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  data 0x772e8c8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000008b1d201a9357a4e294965c3a71587c967cb6f1e2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038d7ea4c680007c9c23d5d95bcd243e1c2bdf2003955364046721114442e0d270143a7bc09c0b33df37c594f767b83e78de29e5e23be9155f767b4e8a4d12ffcccaf5dd3f9dfc00000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+not sent: hand it to a relayer with --job-out FILE (or send it yourself with --self-send)
+release on Ethereum (vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, chain 1):
+  burn         1 ETH (1000000000000000000 base units, 18 decimals) to 0x8B1d201a9357a4E294965c3a71587c967CB6f1E2 (your burn counter 11)
+  burn root    0x7c9c23d5d95bcd243e1c2bdf2003955364046721114442e0d270143a7bc09c0b of checkpoint 1 (12 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x33df37c594f767b83e78de29e5e23be9155f767b4e8a4d12ffcccaf5dd3f9dfc
+  journal      sha256 0x50a4e870052695bd2d93648d225746745fc91d03fe6a39d46e4fbd4c79a9d2c6
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0 ETH (0 base units, 18 decimals) are deducted, the relay fee 0.001 ETH (1000000000000000 base units, 18 decimals) goes to the relayer: the recipient receives 0.999 ETH (999000000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, submitted by any relayer (it pays the gas and is paid the relay fee); nothing is sent from your accounts
+call: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  data 0x772e8c8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000008b1d201a9357a4e294965c3a71587c967cb6f1e2000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038d7ea4c680007c9c23d5d95bcd243e1c2bdf2003955364046721114442e0d270143a7bc09c0b33df37c594f767b83e78de29e5e23be9155f767b4e8a4d12ffcccaf5dd3f9dfc000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000045ea15ea100000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+relayer job written to <repo>/cli/../../tmp/cli/e2e/release-job.json: the journal and the proof, nothing secret (hand it to a relayer's inbox)
+PRIVATE ROUND TRIP: 1 ETH deposited to private /0, claimed privately after its delay, burned from private /0, released by a relayer to a fresh address (999000000000000000 wei; relay fee 1000000000000000)
+vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9: 17 deposits at block 1549, root 0xc95da009c54cf1a631a247477d6c6f44cbbc562c13a0800012e581890f3a4234 (equal to depositRoot: checked)
+deposits of this seed: 12
+  leaf      0  j    0  10 ETH (10000000000000000000 base units, 18 decimals)  to public /0  N 0x4b1e50c88f91c336  claimed
+  leaf      2  j    1  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0xcc0445567da28920  unclaimed, claimable under root(17) from block 2407 (your delay)
+  leaf      3  j    2  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x466558cdf351dfc0  unclaimed, claimable under root(17)
+  leaf      5  j    3  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /2  N 0x118e19e09636b98d  unclaimed, claimable under root(17)
+  leaf      6  j    4  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /3  N 0x4b85d4ee5873a36e  unclaimed, claimable under root(17) from block 3011 (your delay)
+  leaf      8  j    5  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /4  N 0x91b5eff4d60b9cd1  unclaimed, claimable under root(17) from block 3613 (your delay)
+  leaf      9  j    6  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /5  N 0x59d94970122b7e3e  unclaimed, claimable under root(17) from block 1814 (your delay)
+  leaf     11  j    7  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /6  N 0xf4b55088c4df012b  unclaimed, claimable under root(17)
+  leaf     12  j    8  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /7  N 0x1f936e3089caf57b  unclaimed, claimable under root(17) from block 1817 (your delay)
+  leaf     14  j    9  0.1 ETH (100000000000000000 base units, 18 decimals)  to private /0  N 0x4bc338c76057a1db  unclaimed, claimable under root(17)
+  leaf     15  j   10  0.1 ETH (100000000000000000 base units, 18 decimals)  to public /1  N 0x51a189f6c85669b4  unclaimed, claimable under root(17)
+  leaf     16  j   11  1 ETH (1000000000000000000 base units, 18 decimals)  to private /0  N 0xd7367f6452d0ba58  claimed
+burns of this seed: 12 (next burn counter 12)
+  i    0  burn      0  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  released
+  i    1  burn      1  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    2  burn      2  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    3  burn      3  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    4  burn      4  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    5  burn      5  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    6  burn      6  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    7  burn      7  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    8  burn      8  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i    9  burn      9  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i   10  burn     10  0.1 ETH (100000000000000000 base units, 18 decimals)  to 0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe  not released
+  i   11  burn     11  1 ETH (1000000000000000000 base units, 18 decimals)  to 0x8B1d201a9357a4E294965c3a71587c967CB6f1E2  released
+  holding  public /0  8.9 ETH (8900000000000000000 base units, 18 decimals)
+recovered: 10 unclaimed deposits, 10 unreleased burns, 1 holdings
+RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings [(Public, 0, 0x0000000000000000000000000000000000000000, 8900000000000000000)]; 17 deposits in the vault
+zone: configuration ready, sunset false; attestation program 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, instance 0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d
+  freezes of the whole configuration: mints not frozen; burns not frozen; clock 1807997938 (2027-04-17 21:38:58 UTC)
+  freezes of ETH: mints not frozen; burns not frozen; clock 1807997174 (2027-04-17 21:26:14 UTC)
+  gate Gate { now_ms: 1807997938000, mints_until: 0, burns_until: 0, mint: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 196649000000, last_ms: 1807997938000 }, burn: Bucket { capacity: 200000000000, refill_per_second: 10000000, level: 199000000000, last_ms: 1807997938000 } }
+  instance(id) is not on this zone (its records are read where written)
+  newest imported root: root(cid, 17) (2 imports), from header(id, 9000128): execution block 9000128 0x9f2dbc763ed939300d0cfb752f46d251052f2792b6a2eac17c338ead7ea286a2 (time 1807997936)
+  burns published: 12
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  1 USDT (1000000 base units, 6 decimals)
+  mint fee      0 USDT (0 base units, 6 decimals)  (schedule 0)
+  relay fee     0.01 USDT (10000 base units, 6 decimals)  (paid to the relayer that submits your claim)
+  total         1.01 USDT (1010000 base units, 6 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 12
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xdc455512ad757dc12e0cdf215109bf89007bd5c95e5213ee23a47319f0235978
+  claim delay   2 h after the deposit (from your seed; `ferrata claim` waits for it)
+  allowance     0 USDT (0 base units, 6 decimals) of 1.01 USDT (1010000 base units, 6 decimals) needed for the vault
+  the deposit needs that allowance first: add --approve to send the approve before it
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 0  data 0x7fde195200000000000000000000000059b670e9fa9d0a427751af201d676719a970857b0000000000000000000000000000000000000000000000000000000000000000dc455512ad757dc12e0cdf215109bf89007bd5c95e5213ee23a47319f0235978000000000000000000000000000000000000000000000000000000000000000c
+cost: 1.01 USDT (1010000 base units, 6 decimals) to the vault; the call does not pass eth_call now: the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x13be252b, data: "0x13be252b"
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 1 USDT (1000000 base units, 6 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 2 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+not sent: a dry run (add --send --yes to sign and send)
+deposit to the vault 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9 on chain 1
+  denomination  1 USDT (1000000 base units, 6 decimals)
+  mint fee      0 USDT (0 base units, 6 decimals)  (schedule 0)
+  relay fee     0.01 USDT (10000 base units, 6 decimals)  (paid to the relayer that submits your claim)
+  total         1.01 USDT (1010000 base units, 6 decimals)
+  depositor     0xFa1F6D47020a9AB6687AFD2A8d074f351E4904Fe   j = 12
+  destination   your private LEZ account /0 (hidden: C commits to it)
+  commitment C  0xdc455512ad757dc12e0cdf215109bf89007bd5c95e5213ee23a47319f0235978
+  claim delay   2 h after the deposit (from your seed; `ferrata claim` waits for it)
+  allowance     0 USDT (0 base units, 6 decimals) of 1.01 USDT (1010000 base units, 6 decimals) needed for the vault
+would send first: approve(0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9, 1010000) to the token 0x59b670e9fA9D0A427751Af201D676719a970857b  data 0x095ea7b3000000000000000000000000cf7ed3acca5a467e9e704c703e8d87f634fb0fc900000000000000000000000000000000000000000000000000000000000f6950
+would send: to 0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9  value 0  data 0x7fde195200000000000000000000000059b670e9fa9d0a427751af201d676719a970857b0000000000000000000000000000000000000000000000000000000000000000dc455512ad757dc12e0cdf215109bf89007bd5c95e5213ee23a47319f0235978000000000000000000000000000000000000000000000000000000000000000c
+cost: 1.01 USDT (1010000 base units, 6 decimals) to the vault; the approve's network fee about 0.000046116000322812 ETH (46116000322812 base units, 18 decimals) (46116 gas, eth_estimateGas); the deposit's is estimated once the allowance is in place
+what becomes public (Deposit (Ethereum)):
+  public on Ethereum: your depositor address; the token; the denomination and its fees; the time; the commitment C (random-looking)
+  public on LEZ:      nothing
+  stays private:      the LEZ account that will receive the tokens (C commits to it); which later claim spends it
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fixed denomination: your deposit looks like every other deposit of 1 USDT (1000000 base units, 6 decimals).
+  ok Private destination: the receiving account and its balance stay private on LEZ.
+  ok Delayed claim: held for 2 h, so the claim's time does not point at your deposit.
+  ok Private fee path: the claim's LEZ fee is paid inside its proof (or by a relayer); no fee payment ties the claim to you.
+  the approve is public too: your address, the token, the vault and the amount, which the deposit shows anyway
+approved: 0xdd47e72aaffedbcfc92359c83daac3d98620fbd0a4c505320e9425d20a2ab70a in block 1553
+sent: 0x68f2a990f58d4f5dadfc95ee245b2b272f70addb24f46b97d15cc9fabdd4a20b in block 1554
+ERC-20: a USDT-shaped token approved and deposited through the binary; the vault holds 1010000 base units
+test deposit_scan_claim_burn_release_and_recovery ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 34.47s
+

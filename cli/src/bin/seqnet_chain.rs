@@ -847,7 +847,7 @@ impl Chain {
         let receipt = self.eth.p.send_transaction(tx).await?.get_receipt().await?;
         ensure!(receipt.status(), "the stand-in prover's accept reverted");
         std::fs::create_dir_all(&self.a.relayer_inbox)?;
-        let job = self.a.relayer_inbox.join(format!("release-{}.json", hx(&sha256(&journal))[2..18].to_string()));
+        let job = self.a.relayer_inbox.join(format!("release-{}.json", &hx(&sha256(&journal))[2..18]));
         std::fs::write(&job, json!({ "kind": "release", "journal": hx(&journal), "seal": "0x5ea15ea1" }).to_string())?;
         let before = self.eth.p.get_balance(recipient).await?;
         let out = Command::new(&self.a.relayer_bin)
@@ -964,7 +964,14 @@ fn main() -> Result<()> {
         let program = AccountId::new(h32(&a.bridge_account)?);
         let cid = eth::view(&eth.p, eth.vault, IVault::lezConfigIdCall {}, None).await?;
         let ctx = Context { program, cid: cid.0, chain_id, vault: eth.vault.into_array() };
-        let seq = Sequencer { wallet, payer: None, bridge_program: Some(a.bridge_program.clone()), synced: false };
+        let seq = Sequencer {
+            wallet,
+            payer: None,
+            bridge_program: Some(a.bridge_program.clone()),
+            synced: false,
+            private_fee_payer: None,
+            drop_from: None,
+        };
         let user = match (&a.keystore, &a.password_file, a.user) {
             (Some(k), Some(p), _) => eth::keystore_signer(k, p)?.address(),
             (None, _, Some(u)) => {

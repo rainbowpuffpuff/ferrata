@@ -48,6 +48,10 @@ struct Args {
     public_amount: u128,
     #[arg(long, default_value_t = 2_000_000_000_000)]
     private_amount: u128,
+    /// Only step 1: native LEZ to the seed's public account /0 (a relayer's own account, which pays the fees of
+    /// its public calls; e2e/seqnet's relayer root imports).
+    #[arg(long)]
+    public_only: bool,
 }
 
 fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_service_rpc::SequencerClient>, AccountId)> {
@@ -114,9 +118,13 @@ async fn main() -> Result<()> {
     println!(
         "{}",
         json!({"step": "faucet public transfer (stand-in for the gas drop)", "tx": hash.to_string(),
-               "from": faucet_id.to_string(), "to_public_0": public0.to_string(), "amount": a.public_amount.to_string(),
+               "from": faucet_id.to_string(), "to_public_0": public0.to_string(),
+               "to_public_0_hex": format!("0x{}", hex::encode(public0.value())), "amount": a.public_amount.to_string(),
                "balance_before": before.to_string(), "balance_after": after.to_string(), "send_ms": send_ms, "seen_ms": wait_ms})
     );
+    if a.public_only {
+        return Ok(());
+    }
 
     // 2. The user's own wallet moves part of it to its private account /0, proven by LEZ's wallet.
     let mut user = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
@@ -135,17 +143,16 @@ async fn main() -> Result<()> {
     let send_ms = t0.elapsed().as_millis() as u64;
     // The transfer's own LEZ fee is paid inside its proof, from the private account's new balance: it holds the
     // amount less that fee once applied.
-    let mut seen = 0u128;
     let t1 = std::time::Instant::now();
-    loop {
+    let seen = loop {
         user.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the user's wallet: {e}"))?;
-        seen = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
+        let seen = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
         if seen > private_before {
-            break;
+            break seen;
         }
         ensure!(t1.elapsed().as_secs() < 300, "the private transfer: private /0 still holds {seen} after 300 s");
         tokio::time::sleep(Duration::from_secs(3)).await;
-    }
+    };
     user.store_persistent_data()?;
     println!(
         "{}",

@@ -1,0 +1,119 @@
+{
+  "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+  "nextBlock": 12,
+  "candidates": {
+    "0x7e10a84840b70e2707673cf06b73ce4392ed0b7a34117c55ce995ef5b1358e69": {
+      "candidate": {
+        "newState": "0x7e10a84840b70e2707673cf06b73ce4392ed0b7a34117c55ce995ef5b1358e69",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x5061dd07f6e0fecba68757f822db3470bfaa5420bfae287021f30f8c2672e970",
+        "burnCount": 12,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795321815,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x88ef004ff035db663e09b684c3bbe014777cf0b76c05040bfe237b4685fc1151": {
+      "candidate": {
+        "newState": "0x88ef004ff035db663e09b684c3bbe014777cf0b76c05040bfe237b4685fc1151",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x5061dd07f6e0fecba68757f822db3470bfaa5420bfae287021f30f8c2672e970",
+        "burnCount": 12,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795321815,
+      "cancelTx": null,
+      "cancelledAt": null
+    },
+    "0x9d58d0a04a3ef415bd598329895b713f1210ae91f2149b70b63298baf88da51f": {
+      "candidate": {
+        "newState": "0x9d58d0a04a3ef415bd598329895b713f1210ae91f2149b70b63298baf88da51f",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x5061dd07f6e0fecba68757f822db3470bfaa5420bfae287021f30f8c2672e970",
+        "burnCount": 12,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 1795321815
+      },
+      "status": "cancelledByUs",
+      "verdict": {
+        "verdict": "cancel",
+        "reason": {
+          "kind": "tipConflict",
+          "node": "lez-honest",
+          "tipId": 12,
+          "finalHash": "0xaed56b0c928d218dbb33e648e235c287daf2d0d43db00891ed017aa0ae8e6c15"
+        }
+      },
+      "firstSeenAt": 1795321815,
+      "cancelTx": "0x041f1616015d4cb13da4bb59876017627c22ed5eabb3709fcdb6e3a40b6f15d7",
+      "cancelledAt": 1795321815
+    },
+    "0xc8dbf144d826cfb073e4793da074fcd227ba2e3f9ea9ffc4a762cd42e5fe710f": {
+      "candidate": {
+        "newState": "0xc8dbf144d826cfb073e4793da074fcd227ba2e3f9ea9ffc4a762cd42e5fe710f",
+        "parentState": "0xa3cb64db34811f09d03bb54954e8ca49df16905edb0573bb011dd10fb6e336ca",
+        "burnRoot": "0x5061dd07f6e0fecba68757f822db3470bfaa5420bfae287021f30f8c2672e970",
+        "burnCount": 12,
+        "importedLeafCount": 0,
+        "sunset": false,
+        "deltaAtSubmit": 3600,
+        "tipId": 12,
+        "tipHash": "0x97cc83aa3e837a692bebba0578aaf7becee800c9d7df4b4adaa6d2dbaa18a293",
+        "n": 4,
+        "t": 3,
+        "submittedAt": 0
+      },
+      "status": "gone",
+      "verdict": null,
+      "firstSeenAt": 1795321815,
+      "cancelTx": null,
+      "cancelledAt": null
+    }
+  },
+  "cancelEvents": {
+    "0x7e10a84840b70e2707673cf06b73ce4392ed0b7a34117c55ce995ef5b1358e69": {
+      "0xd5edcb0811ed1c48abeac43c68cf4fd0b9c7a6ec32485ac7c5374f3e1bf37cc4": 9
+    },
+    "0x88ef004ff035db663e09b684c3bbe014777cf0b76c05040bfe237b4685fc1151": {
+      "0xe6d8b0cfefb631048bb267fd93968b8ee3de11d57b14561d6ac255691fb049b3": 7
+    },
+    "0x9d58d0a04a3ef415bd598329895b713f1210ae91f2149b70b63298baf88da51f": {
+      "0x041f1616015d4cb13da4bb59876017627c22ed5eabb3709fcdb6e3a40b6f15d7": 11
+    },
+    "0xc8dbf144d826cfb073e4793da074fcd227ba2e3f9ea9ffc4a762cd42e5fe710f": {
+      "0x4b21dbb7b9b71f6920f966136778bec8d1a585b2d5d0c8a16bd91c8274cb1441": 5
+    }
+  },
+  "finalized": {},
+  "toAudit": {},
+  "alerted": [],
+  "finalHeight": 20,
+  "finalHeightSince": 1795321809,
+  "pausedAt": null,
+  "polls": 12
+}

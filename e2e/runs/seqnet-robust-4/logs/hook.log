@@ -1,0 +1,83 @@
+[04:58:20] operator: crown-driver crown-b --operator-only yes --import-roots no over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 + 10.3s 4856ae9de79ce7beebedbe09949ca8af4dd4cc4ff39ed83ecbe910e4aa88c196
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 2
+[crown-b] ImportRoot n=2 left to the relayer daemon (--import-roots no)
+[crown-b] blocks 20..=24 (T1 0x0e28e146a8a2511f5d83ba4f30dfb1026699e4c9619d04139e8f6ee497c86cfb); 0 burn note(s) written to <work>/notes.json
+[04:59:29] the relayer's LEZ public account 0xbe4749d897560029caac6c340ab2d38409dc10755067b1fb97cdcf513840b551 and its private account /0 (its gas drops' source) funded (seqnet-fund)
+- PASS U.03: ferrata-relayer imported root(cid, 2) on the running sequencer (tx 013c8aa31ba9978a3e0a92e43e2b897c846a9e392eafe1a78040ff5504e452fe, recovered true); 2 rounds before it was applied
+[04:59:44] PASS U.03: ferrata-relayer imported root(cid, 2) on the running sequencer (tx 013c8aa31ba9978a3e0a92e43e2b897c846a9e392eafe1a78040ff5504e452fe, recovered true); 2 rounds before it was applied
+- PASS U.03: SIGTERM: a clean stop line ({"event":"stop","reason":"SIGTERM","rounds":3,"t":1795323584})
+[04:59:44] PASS U.03: SIGTERM: a clean stop line ({"event":"stop","reason":"SIGTERM","rounds":3,"t":1795323584})
+- PASS U.03: nothing left in flight in the relayer's state
+[04:59:44] PASS U.03: nothing left in flight in the relayer's state
+[04:59:44] the relayer daemon for gas drops: guest 895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4, 50000000 native LEZ per drop, --drop-wait 20, inbox <work>/relayer-inbox-drops, through http://127.0.0.1:26030
+- PASS U.05: the claim's dry run preselects the gas drop: fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relaye
+[04:59:45] PASS U.05: the claim's dry run preselects the gas drop: fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relaye
+[04:59:45] the claim's delay let pass on anvil's clock: 600 blocks mined (block 10 -> 610; the tool counts 12 s per block)
+- PASS M3: a claim naming a relayer that never answers handed it a job (gas-drop-cd6efdc213344cb4-bbbbbbbb.json) and stopped after its 15 s wait, nothing sent (one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3)
+[05:00:00] PASS M3: a claim naming a relayer that never answers handed it a job (gas-drop-cd6efdc213344cb4-bbbbbbbb.json) and stopped after its 15 s wait, nothing sent (one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3)
+[05:00:00] R.07: the claim (its gas drop first), its sendTransaction trapped by the proxy; R.06: the relayer's credit trapped too
+<repo>/e2e/seqnet/hook-robust.sh: line 191: 62270 Killed                  "${PROVE[@]}" "$BIN/ferrata-relayer" --eth-rpc "$RPC" --vault "$VAULT" --chain-id 11155111 --unlocked "$RELAYER" --from-block "$FROM" --state "$W/relayer" --sequencer "$SEQ_RELAYER" --seed "$RL/seed.txt" --lez-wallet "$RL/wallet" --lez-password-file "$RL/lez.pass" --lez-account "$RELAYER_LEZ" --bridge-account "$BRIDGE" --gasdrop-image-id "$GASDROP_ID" --drop-amount "$DROP_AMOUNT" --drop-wait 20 "${DEVR[@]}" run --inbox "$DI" --poll-secs 2 >> "$DD_LOG" 2>> "$W/relayer-drops.err"
+- PASS R.06 gas drop: the drops daemon SIGKILLed inside its first credit's send (held unsent by the proxy); its record: {"sends":1,"settled":false,"tx":"pending"}
+[05:00:02] PASS R.06 gas drop: the drops daemon SIGKILLed inside its first credit's send (held unsent by the proxy); its record: {"sends":1,"settled":false,"tx":"pending"}
+- PASS R.07 claim: the tool SIGKILLed after its proof, with the claim's sendTransaction held unsent ({"t": 1795323651.5468624, "fired": "trap sendTransaction"})
+[05:00:52] PASS R.07 claim: the tool SIGKILLed after its proof, with the claim's sendTransaction held unsent ({"t": 1795323651.5468624, "fired": "trap sendTransaction"})
+- PASS R.07 claim: nothing reached the zone (2 private transactions before and after) and recovery from the seed still finds the deposit claimable
+[05:01:32] PASS R.07 claim: nothing reached the zone (2 private transactions before and after) and recovery from the seed still finds the deposit claimable
+[05:01:43] applied: block 39, private transaction 3a0d6820a7ead0b52ca7aff40a32ebee2268605bb1c54bafc11955c5ec395118, reverted false, program (private root), visible bridge calls Read,Issue
+- PASS R.07 claim + U.05: the claim again reused the one-time account and the credit the killed run had (no second job): gas drop: one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (recorded for this deposit by an earlier run); the relay
+[05:01:43] PASS R.07 claim + U.05: the claim again reused the one-time account and the credit the killed run had (no second job): gas drop: one-time account 0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3 (recorded for this deposit by an earlier run); the relay
+- PASS M3: the same deposit's claim naming the real relayer reused the one-time account (0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3) and handed that relayer a receipt of its own; the output names the silent one
+[05:01:43] PASS M3: the same deposit's claim naming the real relayer reused the one-time account (0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3) and handed that relayer a receipt of its own; the output names the silent one
+- PASS R.06 gas drop: after the kill and a send answered 503 the restarted daemon sent the credit again on the same account state and booked it from LEZ: {"sends":3,"resolvedLater":true,"tx":"d0cce718509b604de1ba8986d5d413e3f6fe3c2015403404f86d93f8267be304"}; the claim's dry run claims exactly 1 pending credit
+[05:01:43] PASS R.06 gas drop: after the kill and a send answered 503 the restarted daemon sent the credit again on the same account state and booked it from LEZ: {"sends":3,"resolvedLater":true,"tx":"d0cce718509b604de1ba8986d5d413e3f6fe3c2015403404f86d93f8267be304"}; the claim's dry run claims exactly 1 pending credit
+- PASS R.06 gas drop (the second review's M1): two credits of the first drop reached the sequencer and were accepted: a later send (3 sends; the drop booked with d0cce718509b604de1ba8986d5d413e3f6fe3c2015403404f86d93f8267be304) and the send answered 503 to the daemon, forwarded late (2a5d9970ec3d36184527338dd4e957852cf36884023d3c4940686697316aea4f); the claim's dry run claims exactly 1 pending credit (a credit sent again is built only on the drop's recorded state: of the two, one applied)
+[05:01:43] PASS R.06 gas drop (the second review's M1): two credits of the first drop reached the sequencer and were accepted: a later send (3 sends; the drop booked with d0cce718509b604de1ba8986d5d413e3f6fe3c2015403404f86d93f8267be304) and the send answered 503 to the daemon, forwarded late (2a5d9970ec3d36184527338dd4e957852cf36884023d3c4940686697316aea4f); the claim's dry run claims exactly 1 pending credit (a credit sent again is built only on the drop's recorded state: of the two, one applied)
+[05:01:43] the claim's delay let pass on anvil's clock: 601 blocks mined (block 610 -> 1211; the tool counts 12 s per block)
+[05:02:00] applied: block 41, private transaction 42f0fc107f10a1fd061a7615271508b7f693fd1d2d776260ea2c1ed73771defe, reverted false, program (private root), visible bridge calls Read,Issue
+- PASS R.06 gas drop: the second credit forwarded with its answer held and the daemon SIGKILLed (05:01:47); restarted, it booked the drop from LEZ (its drop account's nonce moved), nothing sent again: {"sends":1,"resolvedLater":true,"tx":"pending"}; the claim's dry run claims exactly 1 pending credit
+[05:02:20] PASS R.06 gas drop: the second credit forwarded with its answer held and the daemon SIGKILLed (05:01:47); restarted, it booked the drop from LEZ (its drop account's nonce moved), nothing sent again: {"sends":1,"resolvedLater":true,"tx":"pending"}; the claim's dry run claims exactly 1 pending credit
+- PASS U.05: the relayer daemon sent 2 gas drops, one per deposit, each sealed to the claim's one-time account (0 jobs refused); both claims' dry runs claim that credit to their one-time fee payer, and both applied: gas drop: one-time account 0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213 (new); the relayer's credit of 50000000 native LEZ, seal
+[05:02:20] PASS U.05: the relayer daemon sent 2 gas drops, one per deposit, each sealed to the claim's one-time account (0 jobs refused); both claims' dry runs claim that credit to their one-time fee payer, and both applied: gas drop: one-time account 0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213 (new); the relayer's credit of 50000000 native LEZ, seal
+- PASS U.05: the gas-drop daemon stopped cleanly on SIGTERM ({"event":"stop","reason":"SIGTERM","rounds":1,"t":1795323739})
+[05:02:20] PASS U.05: the gas-drop daemon stopped cleanly on SIGTERM ({"event":"stop","reason":"SIGTERM","rounds":1,"t":1795323739})
+[05:02:20] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"1073445006876effe451a8ee40cd671bf68f25bacacaea3a38c52ad2dc271932","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":10010}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"2fdc4a340def2ef92d2ef427f52c89dd11c9437072f22f91cb91d0848aba4f4c","amount":"2000000000000","fee_paid_in_the_proof":"0","send_ms":168,"seen_ms":9109}
+- PASS R.07 claim: after the interrupted claim, both deposits claimed once each (recover: 2 claimed)
+[05:02:39] PASS R.07 claim: after the interrupted claim, both deposits claimed once each (recover: 2 claimed)
+[05:02:40] the user's fresh Ethereum address for the release: 0x7b1bDf63516be912eE92393D3fA2e736Dd58Bc47 (cast wallet new; its key is not kept)
+[05:02:40] R.07: the burn, its sendTransaction's answer held by the proxy
+- PASS R.07 burn: the tool SIGKILLed with its burn at the sequencer and the answer held; its record: {"i":0,"amount":"0.001","at":1795323760}
+[05:02:43] PASS R.07 burn: the tool SIGKILLed with its burn at the sequencer and the answer held; its record: {"i":0,"amount":"0.001","at":1795323760}
+- PASS R.07 burn: the burn the killed tool sent was applied (the zone: 6 -> 7 private transactions)
+[05:02:54] PASS R.07 burn: the burn the killed tool sent was applied (the zone: 6 -> 7 private transactions)
+- PASS R.07 burn: the same command again found that burn on the zone and burnt nothing more (an earlier run's burn (counter 0, 0.001 ETH to 0x7b1bDf63516be912eE92393D3fA2e736Dd58Bc47) was sent and is on the zone); the zone still 7 private transactions
+[05:03:34] PASS R.07 burn: the same command again found that burn on the zone and burnt nothing more (an earlier run's burn (counter 0, 0.001 ETH to 0x7b1bDf63516be912eE92393D3fA2e736Dd58Bc47) was sent and is on the zone); the zone still 7 private transactions
+[05:03:34] checkpoint: blocks 20..=50, once block 50 is final on Bedrock
+[05:03:55] realblocks-crown: node: 605 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=51: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (ad88e7e9… 51): all 51 accepted; channel tip message = block 51's: false seqnet-19-50: 31 blocks, 77 transactions, 261249
+[05:03:55] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.13187748,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":263311,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":4194304,"po2":[20,20,20,20],"segments":4,"user_cycles":3454445}
+[05:03:55] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0xb1fbebe4ef8f46cfdcc5341dbf7484dff537e779d6f1085b5c6604f523e809b2)
+[05:03:55] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[05:03:55] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1795327436)
+[05:03:55] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0xc38b45d0efe90a7998a7e1a94194f93ec3ee3fa7138033734ac6dc3a888a8f9e"} {"event":"stop","tx":null} 
+[05:03:55] vault: finalState 0x474b9104d4b23169bb7adf0add4f9ba951437bd5fb2ed183a5cd84cf4d077ab0, checkpoints 1
+[05:03:55] anvil's clock moved on 121 s: the release delay (120 s after finalizeAttested) (Ethereum time now 1795327557)
+[05:03:56] stand-in prover: the mock verifier accepts the release journal (sha256 0x2008b276ba8162bc50ac924b481bc0bfcb7896cd4399ea1cf6498d941e92c47b)
+[05:03:56] relayer: {"event":"job-done","tx":null,"why":null} {"event":"fees-collected","tx":"0x3791eba6c4ad17a52ee20afef94232cff83b1e72e4c7315a89ceb444511409db","why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[05:03:56] the fresh address 0x7b1bDf63516be912eE92393D3fA2e736Dd58Bc47 holds 997000000000000 wei
+- PASS the release through the relayer paid 997000000000000 wei to the fresh address
+[05:03:56] PASS the release through the relayer paid 997000000000000 wei to the fresh address
+[05:03:56] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"50c8adc533ae607864714fbc185e9431ee5a258bd34853c269aa437b06b2f175","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"5a6f5624cd3c50b8eef03266d14fb69f4f3ba09148e8cd16da76d5f20f01d610","amount":"2000000000000","fee_paid_in_the_proof":"4541661","send_ms":153,"seen_ms":9010}
+[05:04:09] R.07: a burn of the last 0.001, its sendTransaction trapped by the proxy (never forwarded)
+- PASS R.07 burn: a burn SIGKILLed with its send trapped (it never left the proxy); its record: {"i":1,"amount":"0.001","recipient":"0x7b1bdf63516be912ee92393d3fa2e736dd58bc47"}
+[05:04:12] PASS R.07 burn: a burn SIGKILLed with its send trapped (it never left the proxy); its record: {"i":1,"amount":"0.001","recipient":"0x7b1bdf63516be912ee92393d3fa2e736dd58bc47"}
+[05:05:01] applied: block 59, private transaction adae834bddb05cdbf902fbbbf4fe68646fd61c9c7f3131aabef5ed165ebb1a85, reverted false, program (private root), visible bridge calls Burn
+- PASS R.07 burn: nothing reached the zone (8 -> 8 private transactions); the burn with another recipient took the interrupted burn's counter 1 and was applied once (8 -> 9); the record cleared
+[05:05:01] PASS R.07 burn: nothing reached the zone (8 -> 8 private transactions); the burn with another recipient took the interrupted burn's counter 1 and was applied once (8 -> 9); the record cleared
+[05:05:01] the zone: 161 transactions in blocks 1..=59
+
+22 passed, 0 failed
+[05:05:01] hook-robust: done (22 passed, 0 failed)

@@ -21,7 +21,7 @@ use crate::codes::{vault_refusal, Refusal};
 
 sol! {
     /// The parts of FerrataVault (vault/src/FerrataVault.sol) the tool calls.
-    #[allow(missing_docs)]
+    #[allow(missing_docs, clippy::too_many_arguments)]
     interface IVault {
         #[derive(Debug, PartialEq, Eq)]
         struct ReleaseRequest {
@@ -99,6 +99,50 @@ pub fn signing_provider(url: &str, signer: PrivateKeySigner) -> Result<DynProvid
     Ok(ProviderBuilder::new().wallet(EthereumWallet::from(signer)).connect_http(url).erased())
 }
 
+/// Whether an RPC failure is the endpoint's and may pass on a retry: a transport failure (a closed connection, a
+/// timeout, an HTTP 429 or 5xx), a body that is not the JSON-RPC answer, a rate limit (-32005), or a node that lacks
+/// the block or state asked for (a load balancer's backend behind: "header not found", "block not found", "missing
+/// trie node"; -32001). A revert, or any other error the node answers, is not.
+pub fn transient(e: &RpcError<TransportErrorKind>) -> bool {
+    match e {
+        RpcError::Transport(_) | RpcError::DeserError { .. } | RpcError::NullResp => true,
+        RpcError::ErrorResp(payload) => {
+            if payload.as_revert_data().is_some() {
+                return false;
+            }
+            let m = payload.message.to_lowercase();
+            payload.code == -32005
+                || payload.code == -32001
+                || ["header not found", "block not found", "missing trie node", "too many requests", "unknown block"]
+                    .iter()
+                    .any(|t| m.contains(t))
+        }
+        _ => false,
+    }
+}
+
+/// `f` until it succeeds or fails for good: up to four attempts, 0.1 s, 0.3 s and 0.9 s apart, while the failure is
+/// [`transient`]. One read the endpoint drops does not fail the whole round it is part of (R.06).
+pub async fn retry_rpc<T, F, Fut>(mut f: F) -> std::result::Result<T, RpcError<TransportErrorKind>>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::IntoFuture<Output = std::result::Result<T, RpcError<TransportErrorKind>>>,
+{
+    let mut delay = 100u64;
+    let mut attempt = 0;
+    loop {
+        match f().await {
+            Ok(v) => return Ok(v),
+            Err(e) if attempt < 3 && transient(&e) => {
+                attempt += 1;
+                tokio::time::sleep(std::time::Duration::from_millis(delay)).await;
+                delay *= 3;
+            }
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 /// The vault error behind an RPC error, if the node returned revert data.
 pub fn refusal_of(error: &RpcError<TransportErrorKind>, how: &str) -> Option<Refusal> {
     let data = error.as_error_resp().and_then(|payload| payload.as_revert_data())?;
@@ -108,11 +152,16 @@ pub fn refusal_of(error: &RpcError<TransportErrorKind>, how: &str) -> Option<Ref
 /// `eth_call` of `call` at `to`, at block `at` (latest if `None`).
 pub async fn view<C: SolCall>(p: &DynProvider, to: Address, call: C, at: Option<u64>) -> Result<C::Return> {
     let tx = TransactionRequest::default().with_to(to).with_input(call.abi_encode());
-    let request = p.call(tx);
-    let out = match at {
-        Some(n) => request.block(BlockId::number(n)).await,
-        None => request.await,
-    };
+    let out = retry_rpc(|| {
+        let request = p.call(tx.clone());
+        async move {
+            match at {
+                Some(n) => request.block(BlockId::number(n)).await,
+                None => request.await,
+            }
+        }
+    })
+    .await;
     let out = out.map_err(|e| match refusal_of(&e, "eth_call") {
         Some(r) => anyhow!(r),
         None => anyhow!("eth_call {}: {e}", C::SIGNATURE),

@@ -159,6 +159,19 @@ enum Command {
         /// The bridge program's binary (a private claim proves its execution locally).
         #[arg(long, env = "FERRATA_BRIDGE_PROGRAM")]
         bridge_program: Option<PathBuf>,
+        /// The relayer's inbox (a directory): a private claim's LEZ fee is then paid from that relayer's gas
+        /// drop, a credit sealed to a fresh one-time private account (on by default whenever it is set).
+        #[arg(long, env = "FERRATA_GAS_DROP_INBOX")]
+        gas_drop_inbox: Option<PathBuf>,
+        /// The gas-drop guest (ELF) the receipt is proven with.
+        #[arg(long, env = "FERRATA_GASDROP_ELF")]
+        gas_drop_elf: Option<PathBuf>,
+        /// Seconds to wait for the relayer's credit.
+        #[arg(long, default_value_t = 600)]
+        gas_drop_wait: u64,
+        /// Pay a private claim's LEZ fee from your own private account even when a relayer's inbox is set.
+        #[arg(long)]
+        no_gas_drop: bool,
         /// Sign and submit to the sequencer (without it the command is a dry run).
         #[arg(long)]
         send: bool,
@@ -287,7 +300,7 @@ async fn zone(
     let cid = eth::view(&e.p, e.vault, IVault::lezConfigIdCall {}, None).await?;
     let payer = payer.map(account).transpose()?;
     let ctx = Context { program, cid: cid.0, chain_id: e.chain_id, vault: e.vault.into_array() };
-    let seq = Sequencer { wallet, payer, bridge_program, synced: false };
+    let seq = Sequencer { wallet, payer, bridge_program, synced: false, private_fee_payer: None, drop_from: None };
     // Reach the sequencer once, so that a wrong endpoint fails here with its address.
     seq.actor_state(lee_core::account::Actor::new(program, program))
         .await
@@ -429,11 +442,24 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
             relayer,
             payer,
             bridge_program,
+            gas_drop_inbox,
+            gas_drop_elf,
+            gas_drop_wait,
+            no_gas_drop,
             send,
             yes,
         } => {
             let seed = seed_of(c)?;
             let e = eth_side(c).await?;
+            let gas_drop = match gas_drop_inbox {
+                Some(inbox) if !no_gas_drop && !plaintext => Some(flow::GasDropOpts {
+                    inbox,
+                    elf: need(&gas_drop_elf, "--gas-drop-elf (or FERRATA_GASDROP_ELF: the gas-drop guest)")?,
+                    record: need(&c.lez_wallet, "--lez-wallet")?.join("ferrata-gas-drops.json"),
+                    wait_secs: gas_drop_wait,
+                }),
+                _ => None,
+            };
             let (mut ledger, ctx) = zone(c, &e, &seed, payer.as_deref(), bridge_program).await?;
             let o = flow::ClaimOpts {
                 leaf,
@@ -444,12 +470,14 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 gap: c.gap,
                 send,
                 yes,
+                gas_drop,
             };
             let r = flow::claim(&e, &seed, &mut ledger, &ctx, &o, out).await?;
             let result = json!({
                 "nullifier": hx(&r.plan.nullifier),
                 "root_leaf_count": r.plan.leaf_count,
                 "private": !o.plaintext,
+                "gasDrop": o.gas_drop.is_some(),
                 "sent": r.sent,
             });
             ("claim", result)
@@ -479,6 +507,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 recipient,
                 send,
                 yes,
+                pending: c.lez_wallet.as_ref().map(|w| w.join("ferrata-pending-burn.json")),
             };
             let r = flow::burn(&e, &seed, &mut ledger, &ctx, &o, out).await?;
             let result = json!({
@@ -486,6 +515,7 @@ async fn run(cli: Cli, out: &mut flow::Out) -> Result<(&'static str, serde_json:
                 "r": hx(&r.plan.note.r),
                 "c_out": hx(&r.plan.note.c_out),
                 "sent": r.sent,
+                "already_sent": r.already,
             });
             ("burn", result)
         }

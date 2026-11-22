@@ -107,6 +107,25 @@ fn vault_refusal(name: &str, how: &str) -> anyhow::Error {
     anyhow!(codes::vault_refusal(&codes::selector(name), how).expect("a known vault error"))
 }
 
+/// The vault's freezes of `pairs` (a `*FrozenUntil` value and its error), checked before sending against the
+/// latest block's time: the first one in force, as the vault's own error, with the time it ends (U.08).
+async fn vault_freeze(eth: &Eth, pairs: [(U256, &str); 2]) -> Result<()> {
+    let now = eth::now(&eth.p).await?;
+    for (until, name) in pairs {
+        if until > U256::from(now) {
+            let at = u64::try_from(until).unwrap_or(u64::MAX);
+            return Err(vault_refusal(
+                name,
+                &format!(
+                    "checked before sending: frozen until Ethereum time {at} ({}), unless the freeze authority lifts it sooner",
+                    units::utc(at)
+                ),
+            ));
+        }
+    }
+    Ok(())
+}
+
 /// The fees a release of `amount` of `token` pays now: (denomination index, burn fee, checkpoint
 /// fee, relay fee) of the fee schedule in force.
 pub async fn release_fees(eth: &Eth, token: Address, amount: u128) -> Result<(u8, u128, u128, u128)> {
@@ -171,6 +190,17 @@ pub async fn deposit(
         o.gap
     );
     let price = eth::deposit_price(&eth.p, eth.vault, o.token, o.denomination).await?;
+    vault_freeze(
+        eth,
+        [
+            (eth::view(&eth.p, eth.vault, IVault::depositsFrozenUntilCall {}, None).await?, "DepositsAreFrozen"),
+            (
+                eth::view(&eth.p, eth.vault, IVault::tokenDepositsFrozenUntilCall { token: o.token }, None).await?,
+                "TokenDepositsAreFrozen",
+            ),
+        ],
+    )
+    .await?;
     let (decimals, symbol) = eth::token_meta(&eth.p, o.token).await?;
     let j = eth::view(&eth.p, eth.vault, IVault::depositCountCall { depositor }, None).await?;
     let keys = seed.bridge_keys();
@@ -308,6 +338,49 @@ pub struct ClaimOpts {
     pub gap: u32,
     pub send: bool,
     pub yes: bool,
+    /// A private claim's LEZ fee paid from that relayer's gas drop (bridge.md §6): on whenever the relayer's
+    /// inbox is known; `None`: paid by the private account that proves.
+    pub gas_drop: Option<GasDropOpts>,
+}
+
+/// Where a claim's gas drop is asked for ([`lez::GasDropAsk`]).
+#[derive(Clone, Debug)]
+pub struct GasDropOpts {
+    /// The relayer's inbox (a directory).
+    pub inbox: PathBuf,
+    /// The gas-drop guest (ELF).
+    pub elf: PathBuf,
+    /// The record of this wallet's drops, beside LEZ's wallet.
+    pub record: PathBuf,
+    /// How long to wait for the relayer's credit.
+    pub wait_secs: u64,
+}
+
+/// The gas-drop receipt's claim part: the private claim's witness under its root, with the configuration's
+/// chain and vault (the claim proves the same statement).
+fn claim_input(ctx: &Context, plan: &lez::ClaimPlan) -> Result<ferrata_bridge_core::encoding::ClaimInput> {
+    use ferrata_bridge_core::{encoding::ClaimInput, inbound::ClaimWitness, tree::MerklePath};
+    let ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { witness: w, .. } = &plan.call.message else {
+        bail!("a gas drop pays a private claim's fee: this claim is not private");
+    };
+    let siblings: [Hash; 32] =
+        w.path.clone().try_into().map_err(|_| anyhow!("the claim's path is not 32 siblings"))?;
+    let kind = DestKind::from_byte(w.kind).ok_or_else(|| anyhow!("the claim's destination kind {}", w.kind))?;
+    Ok(ClaimInput {
+        root: plan.root,
+        chain_id: chain_id_u256(ctx.chain_id),
+        vault: ctx.vault,
+        witness: ClaimWitness {
+            depositor: w.depositor,
+            token: w.token,
+            amount: w.amount,
+            leaf_index: w.leaf_index,
+            path: MerklePath { directions: w.leaf_index as u32, siblings },
+            s: w.s,
+            kind,
+            dest: w.dest,
+        },
+    })
 }
 
 pub struct Claimed {
@@ -368,6 +441,10 @@ pub async fn claim<L: Ledger>(
         .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
         .collect();
     let plan = lez::plan_claim(ledger, ctx, &leaves, &row.owned, &history, private, o.relayer, prover).await?;
+    let drop = if private { o.gas_drop.as_ref() } else { None };
+    if drop.is_some() && o.relayer.is_none() {
+        bail!("a gas drop is asked of the relayer the claim names: add --relayer (its LEZ account), or --no-gas-drop to pay the LEZ fee from your own private account");
+    }
     let (decimals, symbol) = eth::token_meta(&eth.p, Address::from(d.token)).await?;
     let show = |x: u128| units::show(x, decimals, &symbol);
     let amount = units::word_to_u128(&d.amount)?;
@@ -412,7 +489,11 @@ pub async fn claim<L: Ledger>(
         "  cost         nothing more in {symbol}: the mint fee {} and the relay fee {} were paid with the deposit; the LEZ fee is paid {}",
         show(plan.mint_fee),
         show(plan.relay_fee),
-        if private { "inside the proof, by the private account that proves" } else { "by the payer account, in public" }
+        match (private, drop) {
+            (true, Some(_)) => "inside the proof, by a one-time private account the relayer's gas drop funds",
+            (true, None) => "inside the proof, by the private account that proves",
+            (false, _) => "by the payer account, in public",
+        }
     ));
     out.line(format!(
         "  delay        {hours} h after the deposit: from Ethereum block {from_block} (now {}){}",
@@ -427,6 +508,12 @@ pub async fn claim<L: Ledger>(
         fee_hidden: private,
     });
     out.extend(privacy::render(if private { &privacy::CLAIM } else { &privacy::CLAIM_PLAINTEXT }, &leaks));
+    if private {
+        out.line(match drop {
+            Some(_) => "fee payer: a fresh one-time private account, credited by the relayer (sealed) and swept in the claim's proof; the relayer learns a time and that account, never which deposit",
+            None => "fee payer: your private account that proves; its native LEZ came from somewhere (a faucet or a purchase can link it to you); a relayer's gas drop avoids that (--gas-drop-inbox)",
+        });
+    }
     out.line(format!("public: {}", lez::reveals(&plan.call)));
     if held && !o.no_delay {
         bail!(
@@ -438,6 +525,37 @@ pub async fn claim<L: Ledger>(
         bail!("refusing the plaintext path without --i-accept-plaintext-links-deposit: it links this mint to its deposit for everyone; claim privately (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if let Some(g) = drop {
+            let ask = lez::GasDropAsk {
+                claim: claim_input(ctx, &plan)?,
+                nullifier: plan.nullifier,
+                relayer: o.relayer.expect("checked above"),
+                inbox: g.inbox.clone(),
+                elf: g.elf.clone(),
+                record: g.record.clone(),
+                wait_secs: g.wait_secs,
+            };
+            let done = ledger.gas_drop_fee_payer(&ask).await?;
+            out.line(format!(
+                "gas drop: one-time account {} ({}); the relayer's credit of {} native LEZ{} pending to it after {:.0} s{}",
+                hx(done.one_time.value()),
+                if done.resumed { "recorded for this deposit by an earlier run" } else { "new" },
+                done.credit,
+                if done.sealed { ", sealed," } else { "" },
+                done.secs,
+                done.prove_secs.map(|p| format!(" (receipt proven in {p:.1} s)")).unwrap_or_default()
+            ));
+            match &done.job {
+                Some(j) => out.line(format!("  the job (receipt and the account's public keys) went to {}", j.display())),
+                None => out.line("  no new job: an earlier run had handed this deposit's job to the relayer"),
+            }
+            if !done.asked_before.is_empty() {
+                out.line(format!(
+                    "  asked before for this deposit, no credit from: {} (this relayer has a receipt of its own, for the same one-time account)",
+                    done.asked_before.join(", ")
+                ));
+            }
+        }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));
         Some(h)
@@ -479,11 +597,56 @@ pub struct BurnOpts {
     pub recipient: Address,
     pub send: bool,
     pub yes: bool,
+    /// The interrupted-burn record (R.07), `<LEZ wallet home>/ferrata-pending-burn.json` on the sequencer path:
+    /// written before a burn is proven and sent, removed once it is sent.
+    pub pending: Option<PathBuf>,
+}
+
+/// A burn started and not known to have been sent (the tool killed while it proved or sent it): its counter, so a
+/// second run uses the same one (the same tag: the program applies at most one of the two) or, finding that burn on
+/// the zone, does not burn again. Kept beside LEZ's wallet, which holds the user's keys already.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct PendingBurn {
+    pub i: u64,
+    pub token: Address,
+    pub amount: String,
+    pub recipient: Address,
+    pub r: String,
+    pub at: u64,
+}
+
+impl PendingBurn {
+    pub fn load(path: &std::path::Path) -> Result<Option<Self>> {
+        match std::fs::read(path) {
+            Ok(b) => Ok(Some(serde_json::from_slice(&b).with_context(|| format!("reading {}", path.display()))?)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    fn save(&self, path: &std::path::Path) -> Result<()> {
+        use std::io::Write as _;
+        let tmp = path.with_extension("tmp");
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(&serde_json::to_vec_pretty(self)?)?;
+        f.sync_all()?;
+        std::fs::rename(&tmp, path)?;
+        Ok(())
+    }
+
+    fn clear(path: &std::path::Path) -> Result<()> {
+        match std::fs::remove_file(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => Err(e.into()),
+            _ => Ok(()),
+        }
+    }
 }
 
 pub struct Burned {
     pub plan: lez::BurnPlan,
     pub sent: Option<String>,
+    /// An earlier run had sent this burn (R.07): nothing was sent now.
+    pub already: bool,
 }
 
 /// The holding of private account `id` under `ctx`, as the wallet sees it.
@@ -527,9 +690,47 @@ pub async fn burn<L: Ledger>(
         (BurnFrom::Private { account: id, held }, format!("private account /{}", o.account))
     };
     let history = lez::history_of(ledger, ctx).await?;
-    let plan =
-        lez::plan_burn(ledger, ctx, &seed.bridge_keys(), from, token, amount, o.recipient.into_array(), &history)
-            .await?;
+    // An interrupted burn (R.07): found on the zone, it was sent and applied, and the same burn is not made again;
+    // not found, this burn takes its counter, so the two cannot both be applied.
+    let mut counter = None;
+    if let Some(path) = &o.pending {
+        if let Some(rec) = PendingBurn::load(path)? {
+            let keys = seed.bridge_keys();
+            let tag = ferrata_bridge_core::outbound::burn_tag(&keys.view, &ctx.cid, rec.i);
+            let applied = history.burns.iter().any(|b| b.note.r == tag);
+            let same = rec.token == o.token && rec.amount == o.amount && rec.recipient == o.recipient;
+            if applied {
+                out.line(format!(
+                    "an earlier run's burn (counter {}, {} {} to {}) was sent and is on the zone",
+                    rec.i, rec.amount, symbol, rec.recipient
+                ));
+                PendingBurn::clear(path)?;
+                if same {
+                    out.line("not burning again: that burn is the one asked for (`ferrata release` releases it)");
+                    let plan = lez::described_burn(ctx, &keys, rec.i, token, amount, o.recipient.into_array());
+                    return Ok(Burned { plan, sent: None, already: true });
+                }
+            } else {
+                out.line(format!(
+                    "an earlier run's burn (counter {}) did not reach the zone: this burn takes its counter, so at most one of the two can be applied",
+                    rec.i
+                ));
+                counter = Some(rec.i);
+            }
+        }
+    }
+    let plan = lez::plan_burn_at(
+        ledger,
+        ctx,
+        &seed.bridge_keys(),
+        from,
+        token,
+        amount,
+        o.recipient.into_array(),
+        &history,
+        counter,
+    )
+    .await?;
     let (_, burn_fee, checkpoint_fee, relay_fee) = release_fees(eth, o.token, amount).await?;
     let list = eth::deposit_list(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
     let fresh = !list.deposits.iter().any(|d| d.depositor == o.recipient.into_array());
@@ -560,13 +761,28 @@ pub async fn burn<L: Ledger>(
         bail!("refusing to burn from a public account without --i-accept-public-account: the holder, its balance and the burn are public on LEZ; burn from a private account (the default) instead");
     }
     let sent = if confirm(out, o.send, o.yes)? {
+        if let Some(path) = &o.pending {
+            let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+            let rec = PendingBurn {
+                i: plan.i,
+                token: o.token,
+                amount: o.amount.clone(),
+                recipient: o.recipient,
+                r: hx(&plan.note.r),
+                at: now,
+            };
+            rec.save(path)?;
+        }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));
+        if let Some(path) = &o.pending {
+            PendingBurn::clear(path)?;
+        }
         Some(h)
     } else {
         None
     };
-    Ok(Burned { plan, sent })
+    Ok(Burned { plan, sent, already: false })
 }
 
 // ---- release -------------------------------------------------------------------------------------
@@ -681,18 +897,17 @@ pub async fn release_burn<L: Ledger>(
     }
     let token = Address::from(row.owned.burn.note.token);
     let amount = units::word_to_u128(&row.owned.burn.note.amount)?;
-    let now = eth::now(&eth.p).await?;
-    for (until, name) in [
-        (eth::view(&eth.p, eth.vault, IVault::releasesFrozenUntilCall {}, None).await?, "ReleasesAreFrozen"),
-        (
-            eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?,
-            "TokenReleasesAreFrozen",
-        ),
-    ] {
-        if until > U256::from(now) {
-            return Err(vault_refusal(name, &format!("checked before sending: frozen until Ethereum time {until}")));
-        }
-    }
+    vault_freeze(
+        eth,
+        [
+            (eth::view(&eth.p, eth.vault, IVault::releasesFrozenUntilCall {}, None).await?, "ReleasesAreFrozen"),
+            (
+                eth::view(&eth.p, eth.vault, IVault::tokenReleasesFrozenUntilCall { token }, None).await?,
+                "TokenReleasesAreFrozen",
+            ),
+        ],
+    )
+    .await?;
     let (root, delay) = pick_root(eth, token, row.owned.burn.burn_index).await?;
     let (k, burn_fee, checkpoint_fee, registered_relay_fee) = release_fees(eth, token, amount).await?;
     let (relayer, fee) = match &o.via {

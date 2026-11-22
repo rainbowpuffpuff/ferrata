@@ -47,7 +47,7 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
 | vault | anvil (chain id 11155111, the stand-in light client's configuration being Sepolia's), the vault tests' `MockRiscZeroVerifier`, FerrataVault v5 in mode (B) with session A's `configId` and `genesisState` (`e2e/crown/sepolia.sh deploy`) | the deployer (an address no one holds a key for, impersonated by anvil) |
 | deposit | `ferrata deposit` (cli) or the view's Deposit screen (miniapp) on the defaults: one denomination to private account `/0` | the user |
 | import | capture of the vault after the deposit; the zone restarted (`session.sh x`, the hook below runs while it runs); `crown-driver crown-b --operator-only`: the stand-in committee's finality update for the deposit's block, bridge `Init`, `Register` ETH, `ImportRoot` | the operator and the relayer |
-| fees | `seqnet-fund`: native LEZ to the user's private account `/0` for its fees | **stand-in** for the gas drop |
+| fees | `seqnet-fund`: native LEZ to the user's private account `/0` for its fees (robust mode: for the burn only; each claim's fee comes from the relayer daemon's gas drop, below) | **stand-in** for the gas drop |
 | claim | the claim held by its delay, the delay let pass (cli: anvil's blocks; miniapp: the view's clock), the private claim on the defaults, executed and proven by LEZ's wallet, verified and applied by the sequencer | the user |
 | burn | a private burn of that holding to a fresh address, proven by LEZ's wallet | the user |
 | checkpoint | the node's final blocks, `realblocks-crown` (the attestor's signature and the `checkpoint_b` input over the zone's blocks), `checkpoint_b` executed (`ferrata-e2e exec`: its journal equals the native one), the mock verifier told to accept that journal, the relayer's `submitCandidate`, Δ let pass on anvil's clock, the relayer's `finalizeAttested` | the checkpoint prover and the relayer (**stand-in**: the mock verifier instead of a Groth16 proof) |
@@ -64,7 +64,13 @@ Everything runs in one command on the Modal build box (`spike/modal-build/mrun`)
   the zone's blocks, and the release's, computed by the wallet's rule). No Groth16 proof is made.
 - **The gas drop**: `seqnet-fund` sends native LEZ from a funded genesis account of LEZ's local network to the
   user's public account `/0`, which the user's wallet moves to private account `/0` (this links the two
-  accounts for that amount; the gas drop's sealed credit to a one-time account is not built in LEZ's wallet).
+  accounts for that amount). Robust mode (`run.sh robust`) runs the gas drop itself for the claims: `ferrata claim
+  --gas-drop-inbox` makes a one-time private account, hands the relayer daemon the gas-drop receipt with that account's
+  public keys, and pays the claim's fee from the daemon's credit, sealed to that account (`hook-robust.sh`, b); the
+  burn's fee still comes from `seqnet-fund` (burns with a drop are not built). The drops daemon reaches the sequencer
+  through a second `e2e/netfault/holdproxy.py`, which makes its credits fail or arrive late (a credit answered 503 that
+  reaches the sequencer after the next one) and the daemon die around them (f: R.06);
+  a first claim names a relayer that never answers (g); a burn is killed before it reaches the zone (h).
 - **Time**: the claim's and the release's delays are let pass on the devnet's clocks (anvil's blocks and time;
   the view's own clock in the mini-app), never overridden.
 - **Logos Core's own modules** (miniapp): `ferrata_bridge_module` runs inside Logos Core and decides everything

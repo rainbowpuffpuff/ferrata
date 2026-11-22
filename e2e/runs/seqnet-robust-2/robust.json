@@ -1,0 +1,102 @@
+{
+  "rootImport": {
+    "applied": true,
+    "event": "root-imported",
+    "leafCount": 2,
+    "recovered": true,
+    "t": 1795307794,
+    "tx": "7962b57fc0b6efa3c44bd36d60f721bfdf2644ce164f673a333fe0ad29adf125"
+  },
+  "drop1AtKill": {
+    "sends": 1,
+    "settled": false,
+    "tx": "pending"
+  },
+  "drop1": {
+    "amount": "50000000",
+    "applied": true,
+    "kind": "gas-drop",
+    "nullifier": "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad",
+    "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+    "resolvedLater": true,
+    "sealed": true,
+    "sends": 3,
+    "tx": "2b827bc6a6a315fd6dfb57edb60728e8d863985bb2cb2cfbc2774d44e354d1ef"
+  },
+  "drop1Record": {
+    "sends": 3,
+    "settled": true,
+    "tx": "2b827bc6a6a315fd6dfb57edb60728e8d863985bb2cb2cfbc2774d44e354d1ef"
+  },
+  "drop2": {
+    "amount": "50000000",
+    "applied": true,
+    "kind": "gas-drop",
+    "nullifier": "0x5b6d7098ea0f5ce1cc42c4004dfd2f6f9bf31b22cf674ac90205ef9946e3cd19",
+    "oneTimeAddress": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+    "resolvedLater": true,
+    "sealed": true,
+    "sends": 1,
+    "tx": "pending"
+  },
+  "dropBook": {
+    "0x5b6d7098ea0f5ce1cc42c4004dfd2f6f9bf31b22cf674ac90205ef9946e3cd19": {
+      "one_time_address": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+      "amount": 50000000,
+      "at": 1795307916,
+      "tx": "pending",
+      "from_nonce": "289042100386010598279060112202463155180",
+      "settled": true,
+      "sends": 1,
+      "sent_at": 1795307916
+    },
+    "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad": {
+      "one_time_address": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "amount": 50000000,
+      "at": 1795307817,
+      "tx": "2b827bc6a6a315fd6dfb57edb60728e8d863985bb2cb2cfbc2774d44e354d1ef",
+      "from_nonce": "11446187111063247654693622002334494559",
+      "settled": true,
+      "sends": 3,
+      "sent_at": 1795307858
+    }
+  },
+  "gasDrops": [
+    {
+      "amount": "50000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0xcd6efdc213344cb4703558dba09755f76699b31837e3c6f271bad16311b1adad",
+      "oneTimeAddress": "0xa94c201bbb95f7e5770bf20cc4d09b48620066c5d32a6780d1d6b2564afc06f3",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 3,
+      "tx": "2b827bc6a6a315fd6dfb57edb60728e8d863985bb2cb2cfbc2774d44e354d1ef"
+    },
+    {
+      "amount": "50000000",
+      "applied": true,
+      "kind": "gas-drop",
+      "nullifier": "0x5b6d7098ea0f5ce1cc42c4004dfd2f6f9bf31b22cf674ac90205ef9946e3cd19",
+      "oneTimeAddress": "0xc814a73facbb8f0e94fb439c2cad785f1792e95a8a86860e5eae78dc8c2f3213",
+      "resolvedLater": true,
+      "sealed": true,
+      "sends": 1,
+      "tx": "pending"
+    }
+  ],
+  "claimSweeps": 2,
+  "pendingBurn": {
+    "i": 0,
+    "amount": "0.001",
+    "at": 1795307966
+  },
+  "recoverBurnsLines": 1,
+  "trappedBurn": {
+    "i": 1,
+    "amount": "0.001",
+    "recipient": "0x0f68ac1761dceb07ef1d4c3b08ae1c9a3d32cc51"
+  },
+  "pass": 21,
+  "fail": 0
+}

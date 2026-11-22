@@ -10,6 +10,7 @@
 #      stand-in, the user's private claim and private burn, the checkpoint, the release, the records.
 #   5. Ethereum's transactions listed (ethtxs.py); anvil stopped.
 # Records: e2e/runs/seqnet-NAME/ (committed); work: spike/tmp/miniapp-sequencer/w-NAME/ (not committed).
+# MODE robust (hook-robust.sh): the cli mode's deposit twice; the relayer's root import and interrupted user commands.
 set -euo pipefail
 REPO="$SEQNET_REPO"; T="$SEQNET_T"; NAME="$SEQNET_NAME"; MODE="$SEQNET_MODE"
 HERE="$REPO/e2e/seqnet"; BESIDE="$(cd "$REPO/.." && pwd)"
@@ -146,11 +147,15 @@ EOF
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc $RPC --chain-id 11155111 --vault "$VAULT" --from-block "$FROM")
 
 # ---- 3b. cli: the private deposit with the tool, then capture-1 (miniapp: both in the hook, through the view) ------
-if [ "$MODE" = cli ] || [ "$MODE" = deployer ]; then
+if [ "$MODE" = cli ] || [ "$MODE" = deployer ] || [ "$MODE" = robust ]; then
   u 01-keys "${F[@]}" keys --accounts 2 || die "keys"
   u 02-status "${F[@]}" status || die "status"
   u 03-deposit-dry-run "${F[@]}" deposit --denomination 0 --from "$DEPOSITOR" || die "deposit dry run"
   u 04-deposit "${F[@]}" deposit --denomination 0 --keystore "$KEYSTORE" --password-file "$U/eth.pass" --send --yes || die "deposit"
+  # robust (hook-robust.sh): a second deposit, so that the burn killed after its sending leaves a holding to burn again.
+  if [ "$MODE" = robust ]; then
+    u 04b-deposit "${F[@]}" deposit --denomination 0 --keystore "$KEYSTORE" --password-file "$U/eth.pass" --send --yes || die "deposit 2"
+  fi
   u 05-scan "${F[@]}" scan || die "scan"
   slots="$("$BIN/crown-driver" capture-slots | jq -r '.slots[].slot')"
   sargs=(); for s in $slots; do sargs+=(--slot "$s"); done

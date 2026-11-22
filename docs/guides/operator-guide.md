@@ -391,10 +391,22 @@ the cloud").
 
 Logs are one JSON object per line (`start`, `root-imported`, `root-import-waiting`, `root-import-refused`,
 `root-import-failed`, `root-import-closed`, `job-done`, `job-refused`, `candidate-waiting`, `finalized`,
-`fees-collected`, `checkpoint-needed`, `job-deferred`, `round-failed`, `stop`). The state directory is all
-it keeps between rounds: the drop book (`drops.json`), the done and refused jobs. SIGTERM or SIGINT stops it
-after the round in progress (a `stop` line names the signal), so a service manager can restart it at will; a gas drop is recorded before its credit is sent, so a crash cannot cause a second drop for
-the same `N` (a failed credit stays recorded as failed: remove the entry only knowing it was not sent).
+`fees-collected`, `checkpoint-needed`, `job-deferred`, `gas-drop-given-up`, `round-failed`, `stop`, and the
+`inflight-*` lines of a transaction resolved after a restart). The state directory is all it keeps between rounds:
+the drop book (`drops.json`), the in-flight records, the done and refused jobs. SIGTERM or SIGINT stops it after the
+round in progress (a `stop` line names the signal), so a service manager can restart it at will. A gas drop is
+journaled in `drops.json` before its credit is sent (the drop account's private nonce with it): a credit that failed
+or was interrupted is sent again by the daemon itself after `--drop-wait`, built only on that recorded state, so LEZ
+applies at most one credit per `N`. **Never edit or remove an unsettled entry of `drops.json` by hand**: a credit may
+still be on its way, and a drop recorded again can pay twice. The drop account (`--drop-from-private`) must spend for
+drops only (the journal reads its nonce): fund it, never send from it. One case the journal cannot tell apart: a credit
+of a drop already given up (the deposit claimed without it, or `--drop-max-sends` credits sent) that a sequencer still
+holds and applies later moves the drop account as the next drop's own credit would, so that next drop is booked applied
+while its own credit is refused (the same state); its `N` then counts as served, and that claimant gets nothing more
+from this relayer: the claim must name another relayer or pay its fee itself (`ferrata claim --no-gas-drop`). A give-up
+waits `--drop-wait` after the last send to make this unlikely (not one forced by `--max-job-age`). The cost is bounded:
+one drop of the relayer's money on a one-time account that may no longer need it, and one claimant without this
+relayer's drop; no user's funds.
 
 ### 6.2 Starting a relayer
 
@@ -410,7 +422,11 @@ target/release/ferrata-relayer --eth-rpc … --vault 0x… --keystore … --pass
 
 For gas drops and the burn watch add the LEZ side: `--sequencer <url> --seed <the relayer's own seed file>
 --lez-wallet <dir> --lez-password-file <file> --bridge-account <program id> --lez-account <its public
-account, which pays the drops> --gasdrop-image-id 0x… --drop-amount <native LEZ per drop>`. The Ethereum
+account: pays its root imports' fees, is named in gas-drop receipts and paid the claims' relay fee> --gasdrop-image-id
+0x… --drop-amount <native LEZ per drop>` (and, as needed, `--drop-from-private <n>` for the private account the drops'
+credits come from, `/0` by default, `--drop-wait <s>` before a credit not applied
+is sent again, 120 s, and `--drop-max-sends <n>` before a drop is given up, 5; under RISC Zero's dev mode gas drops run
+only with `--accept-dev-mode-receipts` and a sequencer at a loopback address, a local devnet). The Ethereum
 account needs gas money only; it is paid relay fees by the releases that name it and checkpoint fees through
 `owed`. `--accept-unpaid` also submits releases that pay no relay fee (off by default). `--wrap-command
 <prover>` makes it wrap succinct receipts (§6.5); jobs must be written atomically (write `x.json.tmp`, then
@@ -447,7 +463,10 @@ to another address. The relayer verifies it against the gas-drop image id (fake 
 RISC Zero's dev mode), checks that the receipt names it and its configuration, that the root is one LEZ
 imported (recomputed from the vault's verified deposit list at each imported leaf count), that `N` is not
 claimed on LEZ and has not had a drop from it (`drops.json`, kept across restarts), then sends one native
-credit to the one-time address (LEZ wallet's native transfer, `CreditDelivery::Automatic`). The claim names
+credit sealed to the one-time private account (the claimant hands over that account's public keys with the receipt;
+the claim sweeps the credit into its fee payer in the same proof), journaled as §6.1 says: resent after `--drop-wait`
+on the same recorded state if it does not apply, given up after `--drop-max-sends` credits or once the deposit is
+claimed without it. The claim names
 the relayer and mints it the token's relay fee. It learns a time, the one-time address and `N` (the claim
 publishes `N`), never which deposit, its depositor or amount.
 
@@ -458,10 +477,11 @@ for a deployment).
 
 The sealed variant, a credit to a fresh one-time private account that the private claim sweeps and pays its fee
 from, ran on LEZ v0.4.0-rc3 with real proofs (M0 check 2, EVIDENCE row 124: a claimant with no native LEZ; the
-relayer's check made offline with `ferrata-gasdrop relay`). Not built: that credit in the daemon itself, whose
-`impl Credit for lez::Sequencer` sends a public transfer no private claim can sweep; a run of the daemon's drop
-against a live sequencer (the harness does not model LEZ's native token program, so its credit there is a recorded
-stand-in).
+relayer's check made offline with `ferrata-gasdrop relay`). The daemon's own drop, the sealed credit and its sweep
+inside the private claim included, ran on LEZ v0.4.0-rc1's own sequencer (`e2e/runs/seqnet-robust-1/` to `-4/`,
+dev-mode proofs; the in-process harness does not model LEZ's native token program, so its tests' credit is a
+stand-in). Not built: the gas drop for burns and in the mini-app's claim (`ferrata_bridge_module`), and a handover of
+the job to a relayer other than through a shared inbox directory.
 
 ### 6.5 Wrapping
 

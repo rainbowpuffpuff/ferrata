@@ -117,7 +117,7 @@ fn journal_json(j: &GasDropJournal) -> Value {
 
 fn prove(elf: &Path, input: &Path, out: &Path, want: Option<&str>) -> Result<Value> {
     ensure!(
-        std::env::var_os("RISC0_DEV_MODE").map_or(true, |v| v.is_empty() || v == "0"),
+        std::env::var_os("RISC0_DEV_MODE").is_none_or(|v| v.is_empty() || v == "0"),
         "RISC0_DEV_MODE is set: this step makes a real receipt only"
     );
     let elf = std::fs::read(elf).with_context(|| format!("reading {}", elf.display()))?;
@@ -154,7 +154,7 @@ struct CommandCredit {
 }
 
 impl relayer::Credit for CommandCredit {
-    async fn credit(&mut self, to: Hash, amount: u128) -> Result<String> {
+    async fn credit(&mut self, to: Hash, _keys: Option<&relayer::OneTimeKeys>, amount: u128) -> Result<String> {
         let command = self.template.replace("{to}", &hex::encode(to)).replace("{amount}", &amount.to_string());
         let out = std::process::Command::new("bash")
             .arg("-c")
@@ -204,12 +204,13 @@ async fn relay(
             DropRefusal::RootNotImported => "RootNotImported",
             DropRefusal::AlreadyClaimed => "AlreadyClaimed",
             DropRefusal::AlreadyDropped => "AlreadyDropped",
+            DropRefusal::KeysMismatch => "KeysMismatch",
         };
         return Ok((json!({ "step": "relay", "decision": "refused", "refusal": code, "reason": refusal.to_string(), "at": now }), false));
     }
     let mut credit = CommandCredit { template: credit_command.to_string() };
     let started = Instant::now();
-    let (j, tx) = relayer::gas_drop(&receipt_json, &ctx, |n| claimed.contains(n), &mut book, book_path, &mut credit, amount, now).await?;
+    let (j, tx) = relayer::gas_drop(&receipt_json, None, &ctx, |n| claimed.contains(n), &mut book, book_path, &mut credit, amount, now).await?;
     Ok((
         json!({
             "step": "relay", "decision": "sent", "at": now, "amount": amount.to_string(), "tx": tx,

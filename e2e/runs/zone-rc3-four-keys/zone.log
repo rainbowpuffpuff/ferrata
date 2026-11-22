@@ -1,0 +1,62 @@
+[17:48:58] node up: {"cryptarchia_info":{"lib":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","lib_slot":0,"tip":"99e4fdba361357efe9db02962ac49157c7aebfc1d73fbbf403ca70cf381d0f5b","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[17:48:58] seq-0 set up: fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096
+[17:48:58] seq-1 set up: 99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3
+[17:48:58] seq-2 set up: 6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac
+[17:48:58] seq-3 set up: 90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729
+[17:49:14] channel keys/tip_sequencer/tip_slot: 4 0 2447579 | heights: 2/// | alive 4 | lib 2447578
+[17:49:34] channel keys/tip_sequencer/tip_slot: 4 0 2447585 | heights: 4/3/3/3 | alive 4 | lib 2447583
+[17:49:54] channel keys/tip_sequencer/tip_slot: 4 0 2447590 | heights: 6/5/5/5 | alive 4 | lib 2447588
+[17:50:14] channel keys/tip_sequencer/tip_slot: 4 0 2447595 | heights: 8/7/7/7 | alive 4 | lib 2447593
+[17:50:34] channel keys/tip_sequencer/tip_slot: 4 0 2447600 | heights: 10/9/9/9 | alive 4 | lib 2447598
+[17:50:54] channel keys/tip_sequencer/tip_slot: 4 0 2447605 | heights: 12/11/11/11 | alive 4 | lib 2447603
+[17:51:14] channel keys/tip_sequencer/tip_slot: 4 0 2447610 | heights: 14/13/13/13 | alive 4 | lib 2447608
+[17:51:35] channel keys/tip_sequencer/tip_slot: 4 0 2447615 | heights: 16/15/15/15 | alive 4 | lib 2447613
+[17:51:55] channel keys/tip_sequencer/tip_slot: 4 0 2447620 | heights: 18/18/18/18 | alive 4 | lib 2447619
+[17:52:15] channel keys/tip_sequencer/tip_slot: 4 0 2447627 | heights: 20/20/20/20 | alive 4 | lib 2447624
+[17:52:35] channel keys/tip_sequencer/tip_slot: 4 0 2447632 | heights: 22/22/22/22 | alive 4 | lib 2447629
+[17:52:55] channel keys/tip_sequencer/tip_slot: 4 0 2447637 | heights: 24/24/24/24 | alive 4 | lib 2447634
+[17:53:15] channel keys/tip_sequencer/tip_slot: 4 1 2447642 | heights: 25/25/25/25 | alive 4 | lib 2447639
+[17:53:36] channel keys/tip_sequencer/tip_slot: 4 1 2447647 | heights: 27/27/27/27 | alive 4 | lib 2447644
+[17:53:56] channel keys/tip_sequencer/tip_slot: 4 1 2447652 | heights: 29/29/29/29 | alive 4 | lib 2447649
+[17:54:16] channel keys/tip_sequencer/tip_slot: 4 1 2447657 | heights: 31/31/31/31 | alive 4 | lib 2447654
+[17:54:36] channel keys/tip_sequencer/tip_slot: 4 1 2447662 | heights: 33/33/33/33 | alive 4 | lib 2447659
+[17:54:56] channel keys/tip_sequencer/tip_slot: 4 1 2447667 | heights: 35/35/35/35 | alive 4 | lib 2447664
+[17:55:16] channel keys/tip_sequencer/tip_slot: 4 1 2447672 | heights: 37/37/37/37 | alive 4 | lib 2447669
+[17:55:37] channel keys/tip_sequencer/tip_slot: 4 1 2447677 | heights: 39/39/39/39 | alive 4 | lib 2447674
+[17:55:57] channel keys/tip_sequencer/tip_slot: 4 1 2447682 | heights: 41/41/41/41 | alive 4 | lib 2447679
+[17:56:17] channel keys/tip_sequencer/tip_slot: 4 1 2447687 | heights: 43/43/43/43 | alive 4 | lib 2447684
+[17:56:37] channel keys/tip_sequencer/tip_slot: 4 1 2447692 | heights: 45/45/45/45 | alive 4 | lib 2447689
+[17:56:57] channel keys/tip_sequencer/tip_slot: 4 1 2447697 | heights: 47/47/47/47 | alive 4 | lib 2447694
+[17:57:17] channel keys/tip_sequencer/tip_slot: 4 2 2447702 | heights: 48/48/48/48 | alive 4 | lib 2447699
+[17:57:38] channel keys/tip_sequencer/tip_slot: 4 2 2447707 | heights: 50/50/50/50 | alive 4 | lib 2447704
+[17:57:58] channel keys/tip_sequencer/tip_slot: 4 2 2447712 | heights: 52/52/52/52 | alive 4 | lib 2447709
+[17:58:18] channel keys/tip_sequencer/tip_slot: 4 2 2447717 | heights: 54/54/54/54 | alive 4 | lib 2447714
+[17:58:38] channel keys/tip_sequencer/tip_slot: 4 2 2447722 | heights: 56/56/56/56 | alive 4 | lib 2447719
+[17:58:58] channel keys/tip_sequencer/tip_slot: 4 2 2447727 | heights: 58/58/58/58 | alive 4 | lib 2447724
+[17:59:18] channel keys/tip_sequencer/tip_slot: 4 2 2447732 | heights: 60/60/60/60 | alive 4 | lib 2447729
+[17:59:38] channel keys/tip_sequencer/tip_slot: 4 2 2447737 | heights: 62/62/62/62 | alive 4 | lib 2447734
+[17:59:59] channel keys/tip_sequencer/tip_slot: 4 2 2447742 | heights: 64/64/64/64 | alive 4 | lib 2447740
+[18:00:19] channel keys/tip_sequencer/tip_slot: 4 2 2447747 | heights: 66/66/66/66 | alive 4 | lib 2447744
+[18:00:39] channel keys/tip_sequencer/tip_slot: 4 2 2447752 | heights: 68/68/68/68 | alive 4 | lib 2447750
+[18:00:59] channel keys/tip_sequencer/tip_slot: 4 2 2447757 | heights: 70/70/70/70 | alive 4 | lib 2447755
+[18:01:19] channel keys/tip_sequencer/tip_slot: 4 3 2447762 | heights: 71/71/71/71 | alive 4 | lib 2447760
+[18:01:39] channel keys/tip_sequencer/tip_slot: 4 3 2447767 | heights: 73/73/73/73 | alive 4 | lib 2447765
+[18:02:00] channel keys/tip_sequencer/tip_slot: 4 3 2447772 | heights: 75/75/75/75 | alive 4 | lib 2447770
+[18:02:20] channel keys/tip_sequencer/tip_slot: 4 3 2447777 | heights: 77/77/77/77 | alive 4 | lib 2447775
+[18:02:40] channel keys/tip_sequencer/tip_slot: 4 3 2447782 | heights: 79/79/79/79 | alive 4 | lib 2447780
+[18:03:00] channel keys/tip_sequencer/tip_slot: 4 3 2447787 | heights: 81/81/81/81 | alive 4 | lib 2447785
+[18:03:20] channel keys/tip_sequencer/tip_slot: 4 3 2447792 | heights: 83/83/83/83 | alive 4 | lib 2447790
+[18:03:40] channel keys/tip_sequencer/tip_slot: 4 3 2447797 | heights: 85/85/85/85 | alive 4 | lib 2447795
+[18:04:01] channel keys/tip_sequencer/tip_slot: 4 3 2447802 | heights: 87/87/87/87 | alive 4 | lib 2447800
+[18:04:21] channel keys/tip_sequencer/tip_slot: 4 3 2447807 | heights: 89/89/89/89 | alive 4 | lib 2447805
+[18:04:41] channel keys/tip_sequencer/tip_slot: 4 3 2447812 | heights: 91/91/91/91 | alive 4 | lib 2447810
+[18:05:01] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 93/93/93/93 | alive 4 | lib 2447815
+[18:05:21] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 95/94/93/93 | alive 4 | lib 2447820
+[18:05:41] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 97/94/93/93 | alive 4 | lib 2447825
+[18:06:01] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 99/94/93/93 | alive 4 | lib 2447830
+[18:06:22] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 101/94/93/93 | alive 4 | lib 2447835
+[18:06:42] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 103/94/93/93 | alive 4 | lib 2447840
+[18:07:02] channel keys/tip_sequencer/tip_slot: 4 3 2447817 | heights: 105/94/93/93 | alive 4 | lib 2447845
+[18:07:27] sequencers stopped; waiting for the LIB to pass the channel's tip
+[18:07:27] channel tip slot 2447817, lib 2447852
+[18:07:27] answers saved: 1 windows, 479854 bytes; channel: {"accredited_keys":["fce0d0fadf637a62981f6c8772a235d0e4533fcd572dc6ad9aa6a6bad9cc8096","6462ecf103d4074bbdbed04e115233548af773d62506b30ef25a2501af597fac","90a548e0db5eaf858e31e437bdf3c6d960627e80ed5e1d9d49c5a07fb74f0729","99273f3e47ddce773ac19173cde1fa5b11588e3b285228f0da3d33abb68166e3"],"configuration_threshold":3,"tip_message":"385ff440eaba445cb4d805237b05cc96a0c984e5ca60c9f5d369285b483b5fcb","config_tip_hash":"e502602b81aa7b2ae5bca4f003303c26d00848b3d1339b56bc05fa5be654224c","tip_slot":2447817,"tip_sequencer":3,"tip_sequencer_starting_slot":2447759,"posting_timeframe":60,"posting_timeout":25,"transfer_threshold":3}

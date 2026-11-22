@@ -137,6 +137,53 @@ pub trait Ledger {
     async fn private_account(&mut self, _id: AccountId) -> Result<Option<lee::Account>> {
         Ok(None)
     }
+    /// Makes a gas drop's one-time account the fee payer of the next private transaction (bridge.md §6):
+    /// the one-time private account for `ask.nullifier` (made now, or the one an earlier run recorded),
+    /// the gas-drop receipt proven and handed to the relayer's inbox with that account's public keys, and
+    /// the relayer's credit, sealed to it, awaited. A sequencer's wallet only.
+    async fn gas_drop_fee_payer(&mut self, ask: &GasDropAsk) -> Result<GasDropDone> {
+        let _ = ask;
+        bail!("a gas drop needs a LEZ sequencer and its wallet (--sequencer)")
+    }
+}
+
+/// What a claim asks of a relayer's gas drop ([`Ledger::gas_drop_fee_payer`]).
+#[derive(Clone, Debug)]
+pub struct GasDropAsk {
+    /// The claim's witness under its imported root, with the configuration's chain and vault.
+    pub claim: ferrata_bridge_core::encoding::ClaimInput,
+    /// The claim's nullifier `N` (the relayer sends one credit per `N`).
+    pub nullifier: Hash,
+    /// The relayer's LEZ account: named in the receipt and in the claim, which pays it the relay fee.
+    pub relayer: Hash,
+    /// The relayer's inbox (a directory): the job is written there.
+    pub inbox: std::path::PathBuf,
+    /// The gas-drop guest (ELF), proven over the receipt's input.
+    pub elf: std::path::PathBuf,
+    /// The record of this wallet's drops (`N` -> its one-time account and the job handed to each relayer asked),
+    /// beside LEZ's wallet: a run killed after handing the job over asks nothing new of that relayer when it runs
+    /// again; a run naming another relayer reuses the one-time account and hands that relayer a receipt of its own.
+    pub record: std::path::PathBuf,
+    /// How long to wait for the relayer's credit.
+    pub wait_secs: u64,
+}
+
+/// A gas drop ready to pay a claim's fee.
+#[derive(Clone, Debug)]
+pub struct GasDropDone {
+    pub one_time: AccountId,
+    /// The credit pending to the one-time account (native LEZ).
+    pub credit: u128,
+    /// Whether that credit is sealed (its amount and recipient encrypted on the zone).
+    pub sealed: bool,
+    /// The job handed to the relayer (`None`: an earlier run had handed it over).
+    pub job: Option<std::path::PathBuf>,
+    /// Other relayers an earlier run asked for this `N` (their LEZ accounts, hex), whose credit had not come.
+    pub asked_before: Vec<String>,
+    /// The one-time account was made by an earlier run, recorded for this `N`.
+    pub resumed: bool,
+    pub prove_secs: Option<f64>,
+    pub secs: f64,
 }
 
 /// The bridge program's calls a privacy-preserving transaction makes in the clear: its public root,
@@ -279,10 +326,71 @@ async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> 
     }
 }
 
+/// The freezes a mint (`mints`) or a burn of `token` meets, as the bridge program checks them: the token's
+/// gate, then the configuration's (`Gate::admit` at `token(cid, token)` and at `config(cid)`), each frozen while
+/// its attested clock is before the freeze's end. `None` when neither is frozen. The refusal says until when
+/// and what to do, and names no deposit and no burn (U.08).
+pub async fn gate_refusal<L: Ledger>(
+    ledger: &L,
+    ctx: &Context,
+    token: &TokenState,
+    mints: bool,
+) -> Result<Option<crate::codes::Refusal>> {
+    let what = if mints { "mints (claims)" } else { "burns" };
+    let consumed = if mints {
+        "nothing is sent and nothing is consumed: the deposit stays claimable"
+    } else {
+        "nothing is sent and nothing is burned: the holding stays yours"
+    };
+    let frozen = |g: &bw::Gate| {
+        let until = if mints { g.mints_until } else { g.burns_until };
+        (g.now_ms < until).then_some(until)
+    };
+    let mut scopes = vec![("of this token", frozen(&token.gate))];
+    if let Some(BridgeState::Config(bw::ConfigState::Ready { gate, .. })) =
+        read(ledger, config_actor(ctx.program, &ctx.cid)).await?
+    {
+        scopes.push(("of the whole configuration", frozen(&gate)));
+    }
+    Ok(scopes.into_iter().find_map(|(scope, until)| {
+        until.map(|until| {
+            program_refusal(
+                bw::code::FROZEN as u32,
+                format!(
+                    "checked before sending: {what} {scope} are frozen until Ethereum time {} ({} as the bridge's \
+                     attested clock counts it; a freeze authority may lift it sooner); {consumed}",
+                    until / 1000,
+                    crate::units::utc(until / 1000)
+                ),
+            )
+        })
+    }))
+}
+
+/// One gate's freezes in words, for `status`.
+pub fn gate_line(scope: &str, g: &bw::Gate) -> String {
+    let one = |until: u64| {
+        if g.now_ms < until {
+            format!("frozen until {} ({})", until / 1000, crate::units::utc(until / 1000))
+        } else {
+            "not frozen".to_string()
+        }
+    };
+    format!(
+        "  {scope}: mints {}; burns {}; clock {} ({})",
+        one(g.mints_until),
+        one(g.burns_until),
+        g.now_ms / 1000,
+        crate::units::utc(g.now_ms / 1000)
+    )
+}
+
 /// A claim, built and checked.
 #[derive(Clone, Debug)]
 pub struct ClaimPlan {
     pub call: LezCall,
+    /// The imported root the claim is proven under (`root(cid, leaf_count)`).
+    pub root: Hash,
     pub leaf_count: u64,
     pub nullifier: Hash,
     pub mint_fee: u128,
@@ -309,6 +417,9 @@ pub async fn plan_claim<L: Ledger>(
         _ => bail!(program_refusal(245, format!("checked before sending: root(cid, {n}) is not on the zone"))),
     };
     let token = token_state(ledger, ctx, &owned.deposit.token).await?;
+    if let Some(r) = gate_refusal(ledger, ctx, &token, true).await? {
+        bail!(r);
+    }
     let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
     let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
@@ -320,6 +431,7 @@ pub async fn plan_claim<L: Ledger>(
             root_index: plan.root_index,
             message: plan.message,
         },
+        root: root_state.root,
         leaf_count: plan.leaf_count,
         nullifier: plan.nullifier,
         mint_fee: plan.mint_fee,
@@ -357,6 +469,45 @@ pub async fn plan_burn<L: Ledger>(
     recipient: [u8; 20],
     history: &History,
 ) -> Result<BurnPlan> {
+    plan_burn_at(ledger, ctx, keys, holder, token, amount, recipient, history, None).await
+}
+
+/// The burn with counter `i` of `amount` of `token` to `recipient` as its note was built (deterministic in the
+/// counter), for describing a burn an earlier run sent (R.07); its call names no account and is never sent.
+pub fn described_burn(
+    ctx: &Context,
+    keys: &BridgeKeys,
+    i: u64,
+    token: [u8; 20],
+    amount: u128,
+    recipient: [u8; 20],
+) -> BurnPlan {
+    let target = ReleaseTarget { chain_id: chain_id_u256(ctx.chain_id), vault: ctx.vault, recipient };
+    let note = BurnNote::create(keys, &ctx.cid, i, &target, token, u128_to_word(amount));
+    let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
+    let call = LezCall {
+        what: format!("burn with tag counter {i} (sent by an earlier run)"),
+        mentions: Vec::new(),
+        root_index: 0,
+        message: BridgeMessage::burn(ctx.cid, &wire),
+    };
+    BurnPlan { call, note, i }
+}
+
+/// [`plan_burn`] with the burn counter given (`Some(i)`: an interrupted burn's, so that its note and tag are the same
+/// and the bridge program, which refuses a repeated tag, applies at most one of the two) or the next free one.
+#[allow(clippy::too_many_arguments)]
+pub async fn plan_burn_at<L: Ledger>(
+    ledger: &L,
+    ctx: &Context,
+    keys: &BridgeKeys,
+    holder: BurnFrom,
+    token: [u8; 20],
+    amount: u128,
+    recipient: [u8; 20],
+    history: &History,
+    counter: Option<u64>,
+) -> Result<BurnPlan> {
     let t = token_state(ledger, ctx, &token).await?;
     if t.entry.index_of(amount).is_none() {
         bail!(program_refusal(251, "checked before sending: the amount is not one of the token's denominations"));
@@ -373,8 +524,14 @@ pub async fn plan_burn<L: Ledger>(
     if held < amount {
         bail!(program_refusal(254, format!("checked before sending: the holding is {held} base units")));
     }
+    if let Some(r) = gate_refusal(ledger, ctx, &t, false).await? {
+        bail!(r);
+    }
     let chain = chain_id_u256(ctx.chain_id);
-    let next_i = recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i;
+    let next_i = match counter {
+        Some(i) => i,
+        None => recover_burns(keys, &ctx.cid, &chain, &ctx.vault, &history.burns, BURN_GAP).next_i,
+    };
     let target = ReleaseTarget { chain_id: chain, vault: ctx.vault, recipient };
     let note = BurnNote::create(keys, &ctx.cid, next_i, &target, token, u128_to_word(amount));
     let wire = bw::Note { r: note.r, memo: note.memo, mac: note.mac, token, amount: note.amount, c_out: note.c_out };
@@ -416,6 +573,38 @@ pub struct Sequencer {
     pub bridge_program: Option<PathBuf>,
     /// Whether the wallet has synced its private accounts with the zone since it last sent.
     pub synced: bool,
+    /// The private account that pays a private transaction's fee: a gas drop's one-time account, whose
+    /// sealed credit the transaction sweeps ([`Ledger::gas_drop_fee_payer`]); `None`: the account that proves.
+    pub private_fee_payer: Option<AccountId>,
+    /// A relayer's private account its gas drops are sent from (`relayer::Credit`).
+    pub drop_from: Option<AccountId>,
+}
+
+#[cfg(feature = "lez-wallet")]
+impl Sequencer {
+    /// The largest native credit pending to `id` in this wallet, and whether it is sealed, after a sync.
+    async fn pending_credit(&mut self, id: AccountId) -> Result<Option<(u128, bool)>> {
+        self.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the LEZ wallet with the zone: {e}"))?;
+        self.synced = true;
+        let pending =
+            self.wallet.owned_pending_messages().await.map_err(|e| anyhow!("the wallet's pending messages: {e}"))?;
+        Ok(pending
+            .iter()
+            .filter(|p| p.recipient.account_id() == id)
+            .filter_map(|p| p.native_credit().map(|c| (c, matches!(p.publication, lee::Publication::Sealed(_)))))
+            .max_by_key(|(c, _)| *c))
+    }
+}
+
+#[cfg(feature = "lez-wallet")]
+fn write_json_atomic(path: &Path, value: &serde_json::Value) -> Result<()> {
+    use std::io::Write as _;
+    let tmp = path.with_extension("part");
+    let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    f.write_all(&serde_json::to_vec_pretty(value)?)?;
+    f.sync_all()?;
+    std::fs::rename(&tmp, path)?;
+    Ok(())
 }
 
 #[cfg(feature = "lez-wallet")]
@@ -526,6 +715,13 @@ impl Ledger for Sequencer {
         let mentions: Vec<AccountMention> = call.mentions.iter().map(mention).collect();
         let message = borsh::to_vec(&call.message)?;
         if matches!(call.mentions.first(), Some(Mention::PrivateSelf(_))) {
+            // The private accounts' newest states, as the zone holds them: a private transaction spends them, and
+            // the sequencer refuses one built on a state an earlier transaction spent ("Nullifier already seen";
+            // seqnet robust-1: the second claim of a new process, built on its stored pre-first-claim state).
+            self.wallet
+                .sync_to_latest_block()
+                .await
+                .map_err(|e| anyhow!("syncing the LEZ wallet with the zone before a private transaction: {e}"))?;
             let path = self.bridge_program.as_ref().ok_or_else(|| {
                 anyhow!("a private claim or burn needs --bridge-program (the bridge program's binary) to prove its execution")
             })?;
@@ -536,11 +732,44 @@ impl Ledger for Sequencer {
                 lee::program::Program::new(std::borrow::Cow::Owned(bytes))
                     .map_err(|e| anyhow!("the bridge program does not load: {e}"))?,
             )]);
+            if let Some(payer) = self.private_fee_payer {
+                // A dry run first: the transaction claims the gas drop's credit into the one-time account and
+                // pays its fee from it.
+                self.wallet.set_dry_run(true);
+                let dry = self
+                    .wallet
+                    .send_privacy_preserving_tx_with_pre_check(
+                        call.mentions.iter().map(mention).collect(),
+                        call.root_index,
+                        message.clone(),
+                        &catalog,
+                        Some(payer),
+                        |_| Ok(()),
+                    )
+                    .await;
+                self.wallet.set_dry_run(false);
+                // LEZ v0.4.0-rc1's wallet prints its dry run (the fee payer, the pending credits it claims and
+                // what they sweep to the payer) and ends it with `DryRun`.
+                match dry {
+                    Err(wallet::ExecutionFailureKind::DryRun) => eprintln!(
+                        "(the dry run above: the LEZ fee paid by the one-time account {payer}, from the credit it claims)"
+                    ),
+                    Err(e) => bail!(
+                        "the dry run of the private transaction with the one-time account {payer} as fee payer failed: {e}: {e:?}"
+                    ),
+                    Ok(_) => bail!("a dry run sent a transaction"),
+                }
+            }
             let (hash, _) = self
                 .wallet
-                .send_privacy_preserving_tx_with_pre_check(mentions, call.root_index, message, &catalog, None, |_| {
-                    Ok(())
-                })
+                .send_privacy_preserving_tx_with_pre_check(
+                    mentions,
+                    call.root_index,
+                    message,
+                    &catalog,
+                    self.private_fee_payer,
+                    |_| Ok(()),
+                )
                 .await
                 .map_err(|e| anyhow!("the wallet did not send the private transaction: {e}: {e:?}"))?;
             return Ok(hash.to_string());
@@ -551,6 +780,111 @@ impl Ledger for Sequencer {
             .await
             .map_err(|e| anyhow!("the wallet did not send it: {e}: {e:?}"))?;
         Ok(hash.to_string())
+    }
+
+    async fn gas_drop_fee_payer(&mut self, ask: &GasDropAsk) -> Result<GasDropDone> {
+        use ferrata_bridge_core::gasdrop::{verify_gas_drop, GasDropInput};
+        use key_protocol::key_management::key_tree::chain_index::ChainIndex;
+        let started = std::time::Instant::now();
+        let key = hx(&ask.nullifier);
+        let mut book: serde_json::Map<String, serde_json::Value> = match std::fs::read(&ask.record) {
+            Ok(b) => serde_json::from_slice(&b).with_context(|| format!("reading {}", ask.record.display()))?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => serde_json::Map::new(),
+            Err(e) => return Err(e.into()),
+        };
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs());
+        // The one-time account: the one recorded for this N by an earlier run, or a new child of private
+        // account /0 (LEZ's key tree; nothing on the zone links it to the wallet's other accounts).
+        let recorded = book.get(&key).and_then(|v| v["oneTime"].as_str()).map(crate::h32).transpose()?;
+        let (one_time, resumed) = match recorded {
+            Some(id) => (AccountId::new(id), true),
+            None => {
+                let (id, _) = self.wallet.create_new_account_private(Some(ChainIndex::root().nth_child(0)));
+                self.wallet.store_persistent_data()?;
+                book.insert(key.clone(), serde_json::json!({ "oneTime": hx(id.value()), "at": now }));
+                write_json_atomic(&ask.record, &serde_json::Value::Object(book.clone()))?;
+                (id, false)
+            }
+        };
+        let found = self.wallet.storage().key_chain().private_account(one_time).ok_or_else(|| {
+            anyhow!("LEZ's wallet does not hold the one-time account {one_time} that {} names", ask.record.display())
+        })?;
+        let keys = crate::relayer::OneTimeKeys {
+            npk: found.key_chain.nullifier_public_key.0,
+            vpk: found.key_chain.viewing_public_key.to_bytes().to_vec(),
+        };
+        ensure!(keys.account_id()? == *one_time.value(), "the one-time account's keys do not derive its id");
+        let mut credit = self.pending_credit(one_time).await?;
+        // The relayers asked for this N, each with its own receipt (the receipt names the relayer). A job handed to
+        // this relayer is not handed to it again (a relayer sends one drop per N and resumes its own); another
+        // relayer is asked with a receipt of its own, for the same one-time account. A record from before the
+        // per-relayer jobs names one job: it counts for the relayer whose inbox holds it.
+        let relayer_key = hx(&ask.relayer);
+        let entry = book.get(&key).cloned().unwrap_or_default();
+        let jobs = entry.get("jobs").and_then(|j| j.as_object()).cloned().unwrap_or_default();
+        let legacy_here =
+            entry.get("job").and_then(|j| j.as_str()).is_some_and(|j| Path::new(j).starts_with(&ask.inbox));
+        let handed_over = jobs.contains_key(&relayer_key) || legacy_here;
+        let asked_before: Vec<String> = jobs.keys().filter(|r| **r != relayer_key).cloned().collect();
+        let mut job = None;
+        let mut prove_secs = None;
+        if credit.is_none() && !handed_over {
+            let input = GasDropInput { claim: ask.claim.clone(), one_time_address: *one_time.value(), relayer: ask.relayer };
+            let journal =
+                verify_gas_drop(&input).map_err(|e| anyhow!("the gas-drop statement does not hold natively: {e:?}"))?;
+            ensure!(journal.nullifier == ask.nullifier, "the gas-drop receipt's N is not the claim's");
+            let elf = std::fs::read(&ask.elf)
+                .with_context(|| format!("reading the gas-drop guest {} (--gas-drop-elf)", ask.elf.display()))?;
+            let env = risc0_zkvm::ExecutorEnv::builder().write_slice(&input.encode()).build().map_err(|e| anyhow!("{e}"))?;
+            let t = std::time::Instant::now();
+            let info = tokio::task::block_in_place(|| {
+                risc0_zkvm::default_prover().prove_with_opts(env, &elf, &risc0_zkvm::ProverOpts::succinct())
+            })
+            .map_err(|e| anyhow!("proving the gas-drop receipt: {e}"))?;
+            prove_secs = Some(t.elapsed().as_secs_f64());
+            let value = serde_json::json!({
+                "kind": "gas-drop",
+                "receipt": serde_json::to_value(&info.receipt)?,
+                "oneTimeNpk": hx(&keys.npk),
+                "oneTimeVpk": hx(&keys.vpk),
+            });
+            std::fs::create_dir_all(&ask.inbox)
+                .with_context(|| format!("the relayer's inbox {}", ask.inbox.display()))?;
+            let path = ask.inbox.join(format!("gas-drop-{}-{}.json", &key[2..18], &relayer_key[2..10]));
+            write_json_atomic(&path, &value)?;
+            if let Some(entry) = book.get_mut(&key).and_then(|v| v.as_object_mut()) {
+                let jobs = entry.entry("jobs").or_insert_with(|| serde_json::json!({}));
+                if let Some(jobs) = jobs.as_object_mut() {
+                    jobs.insert(relayer_key.clone(), serde_json::json!(path.display().to_string()));
+                }
+            }
+            write_json_atomic(&ask.record, &serde_json::Value::Object(book.clone()))?;
+            job = Some(path);
+        }
+        // The relayer's credit, sealed to the one-time account and pending until the claim sweeps it.
+        let deadline = started + std::time::Duration::from_secs(ask.wait_secs);
+        while credit.is_none() {
+            ensure!(
+                std::time::Instant::now() < deadline,
+                "no credit to the one-time account {} after {} s: the relayer has not sent it (its log says why; it sends one drop per N, and a receipt for this N bound to another account is refused). Run the claim again to wait more, or name another relayer (--relayer, --gas-drop-inbox): it gets a receipt of its own for the same one-time account; or pay the LEZ fee from your own private account (--no-gas-drop: the dry run's fee payer line says what that reveals)",
+                hx(one_time.value()),
+                ask.wait_secs
+            );
+            tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+            credit = self.pending_credit(one_time).await?;
+        }
+        let (credit, sealed) = credit.expect("checked above");
+        self.private_fee_payer = Some(one_time);
+        Ok(GasDropDone {
+            one_time,
+            credit,
+            sealed,
+            job,
+            asked_before,
+            resumed,
+            prove_secs,
+            secs: started.elapsed().as_secs_f64(),
+        })
     }
 
     async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
@@ -700,7 +1034,9 @@ impl Ledger for DevnetZone {
     }
 }
 
-/// The zone a relayer reaches: a sequencer through LEZ's wallet, or the mini-app devnet's zone.
+/// The zone a relayer reaches: a sequencer through LEZ's wallet, or the mini-app devnet's zone. One per daemon: the
+/// variants' sizes do not matter.
+#[allow(clippy::large_enum_variant)]
 pub enum Zone {
     #[cfg(feature = "lez-wallet")]
     Sequencer(Sequencer),
@@ -843,6 +1179,10 @@ pub async fn zone_status<L: Ledger>(ledger: &L, ctx: &Context, history: &History
                 hx(config.attestation.value()),
                 hx(&config.instance_id)
             ));
+            out.push(gate_line("freezes of the whole configuration", &gate));
+            if let Some(BridgeState::Token(t)) = read(ledger, token_actor(ctx.program, &ctx.cid, &[0; 20])).await? {
+                out.push(gate_line("freezes of ETH", &t.gate));
+            }
             out.push(format!("  gate {gate:?}"));
             config
         }
