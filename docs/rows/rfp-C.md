@@ -128,8 +128,8 @@ read from its own port). EVIDENCE: in the R.9 row below.
 Commits `2993debd`, `d14ad6c9`, `af7a0923`.
 
 Proposed EVIDENCE row: | new | RFP-021 P.7 and P.9 and RFP-022 P.7's LEZ side: account sizes in LEZ v0.4.0-rc1's
-serialized state, growth per record to 100,000 records, every statement and update step charged the same at every
-size | record 453 B, instance 593 B, job 1,110 B; nullifier 165 B, burn record 273 B, root 205 B; growth exactly
+serialized state, growth per record to 100,000 records, five statement types and every update step charged the same
+at every size | record 453 B, instance 593 B, job 1,110 B; nullifier 165 B, burn record 273 B, root 205 B; growth exactly
 453.0 / 165.00 / 273.00 B per record; five statement types and every update step charged identical execution and
 storage gas at 0, 1,000, 10,000 and 100,000 records (asserted) | the build box, in-process harness (LEZ's state
 machine) | — | `bash bench/perf/state.sh` | `lez/results/perf-state.md`, `lez/results/perf-projections.md` |
@@ -162,8 +162,7 @@ records accumulated (`lez/lab/results/record/run.tsv`). **What is short:** not m
 the public `VerifyAll`, the private update path, the absent-account, absent-slot and four-facts statements,
 `CallAttest`, the reference consumer's claim, `Succeed` and `Spawn`, and the bridge's actions. Next piece: extend
 `perf_state`'s K loop to every action and print each action's read set. Command `bash bench/perf/state.sh`; commits
-`2993debd`, `d14ad6c9`; wording `9d6c58ef`. EVIDENCE: the P.7 row above (its "every statement and update step"
-reads "five statement types and every update step").
+`2993debd`, `d14ad6c9`; wording `9d6c58ef`. EVIDENCE: the P.7 row above.
 
 ### R.9 — stays **in part** (the review agrees; figures corrected)
 
