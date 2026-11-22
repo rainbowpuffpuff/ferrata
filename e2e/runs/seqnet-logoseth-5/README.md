@@ -42,7 +42,7 @@ New in this run:
   190 answered, all equal to the chain service's (69 `config(cid)`, 52 `token(cid, ETH)`, 69 `root(cid, n)`), and 156
   got no answer, because `lez_core` answers nothing for an account the zone does not have (and for a failed read, which
   it cannot tell apart): 128 public holders, 18 `token(cid, <the second token>)`, 5 `config(cid)` and 4
-  `token(cid, ETH)` before the operator's first import, 1 nullifier before the claim. None failed; none differed
+  `token(cid, ETH)` before the operator's first import, 1 nullifier before the claim; the chain service reported every one of them absent. None failed; none differed
   (`miniapp/lez-report.json`). The registry's `REGISTRY LEZ READS`: ETH 3 of 3 equal; the second token 2 equal
   (`config(cid)`, the root) and its `token(cid, ·)` unanswered: it has no LEZ state, because it is not registered on LEZ
   in this run (`Register` needs the relayer's attested registry entry, which the run's operator makes for ETH only), so
