@@ -118,7 +118,7 @@ limit that stays: every provider counted colludes with the forger.
   raises no false divergence; unchanged, passing); `the_daemon_holds_a_divergence_through_an_outage_and_retries_a_failed_freeze_hook`;
   `a_state_file_from_before_settled_judges_its_unconfirmed_headers_again_not_its_confirmed_ones` (a daemon upgraded
   over an older state file judges again the headers the old version left unconfirmed).
-- Before the second review's fix (`883ec012`), a forged header kept ahead of every provider's finality raised no
+- Before the second review's fix (`c6253a1a`), a forged header kept ahead of every provider's finality raised no
   critical alarm, and the text here called the monitor gap closed: the first review's L5 fix (`50e709d9`) had stopped
   counting any provider behind the instance's slot, and the daemon never judged an earlier header again. The second
   review measured it with the two tests now kept inverted. Before the first review's fix (`ac5a78d5`), one colluding
