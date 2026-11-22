@@ -35,7 +35,7 @@ use crate::{
     },
     config::{ClientMatch, Fees, Policy},
     ledger::{Ledger, Tx, TxOutcome},
-    source::{client_family, Source},
+    source::{client_family, clip, Source},
 };
 
 /// One instance of the program.
@@ -93,6 +93,117 @@ pub struct Action {
     pub finalized_slot: u64,
     /// The instance as the round saw it (active, store bytes): a step is moot once it changes.
     pub store_seen: Option<(bool, Vec<u8>)>,
+    /// The timestamp validity window the program gives the transaction (`Init`, `Open`; the others: none), checked
+    /// against the chain's clock before every attempt.
+    pub window: Window,
+}
+
+/// A step is sent only if its validity window ([`Window`]) stays open this long past the chain's clock: the time a
+/// transaction may take to reach a block (a sequencer's block interval, a retry).
+pub const WINDOW_MARGIN_MS: u64 = 60_000;
+/// Refusals in a row, each of a step that stayed due after it (not a race another party won), after which this
+/// updater sends nothing for [`BREAKER_PAUSE`] rounds. Each time it opens again before one of this updater's
+/// transactions is applied, the pause doubles, up to [`BREAKER_MAX_PAUSE`] rounds; after a pause one step is tried.
+/// It bounds the fees a refusal no check here foresees can burn when every round brings a new job (a source serving a
+/// new finality update each slot).
+pub const BREAKER_AFTER: u32 = 3;
+/// See [`BREAKER_AFTER`].
+pub const BREAKER_PAUSE: u64 = 8;
+/// See [`BREAKER_AFTER`].
+pub const BREAKER_MAX_PAUSE: u64 = 512;
+/// A step refused for a reason that may pass (its window, by a clock that differs from the chain's; an unknown one) is
+/// held [`REFUSAL_BACKOFF`] rounds, then twice that, at most [`MAX_REFUSALS`] refusals in all. One that the program
+/// refuses, or that ran out of gas, is held for good (out of gas: until `fees.gas_limit` is raised): LEZ executes the
+/// same transaction on the same state the same way.
+pub const REFUSAL_BACKOFF: u64 = 4;
+/// See [`REFUSAL_BACKOFF`].
+pub const MAX_REFUSALS: u32 = 3;
+/// A hold is forgotten this many rounds after its last refusal; at most [`MAX_HELD`] are kept.
+pub const HOLD_ROUNDS: u64 = 4096;
+/// See [`HOLD_ROUNDS`].
+pub const MAX_HELD: usize = 1024;
+
+/// Why the chain refused a transaction, as its outcome says (LEZ's note, the program's exit code).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Refusal {
+    /// Executed outside the timestamp window the program gave it ("Execution outside of the validity window"): LEZ
+    /// charges the whole gas limit.
+    Window,
+    /// It used up the declared gas limit ("Execution exceeded its cycle budget").
+    Gas,
+    /// The program refused it with this exit code.
+    Program(u32),
+    /// Anything else.
+    Other,
+}
+
+impl Refusal {
+    pub fn of(out: &TxOutcome) -> Self {
+        if out.note.contains("validity window") {
+            Refusal::Window
+        } else if out.note.contains("cycle budget") {
+            Refusal::Gas
+        } else if let Some(code) = out.exit_code {
+            Refusal::Program(code)
+        } else {
+            Refusal::Other
+        }
+    }
+
+    /// The metric label: `window`, `gas`, `program` or `other`.
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Refusal::Window => "window",
+            Refusal::Gas => "gas",
+            Refusal::Program(_) => "program",
+            Refusal::Other => "other",
+        }
+    }
+
+    pub fn describe(&self) -> String {
+        match self {
+            Refusal::Window => "outside its validity window".into(),
+            Refusal::Gas => "out of gas".into(),
+            Refusal::Program(code) => format!("the program's exit {code}"),
+            Refusal::Other => "refused".into(),
+        }
+    }
+
+    /// LEZ executes the same transaction on the same state the same way: a program's refusal and an exhausted gas
+    /// limit repeat; a window depends on the clock.
+    fn repeats(&self) -> bool {
+        matches!(self, Refusal::Gas | Refusal::Program(_))
+    }
+}
+
+/// A step the chain refused while it stayed due after it (no other party sent it, the store did not move): sent again,
+/// it would meet the same state.
+#[derive(Clone, Debug)]
+pub struct Held {
+    pub step: Step,
+    pub finalized_slot: u64,
+    pub cause: Refusal,
+    /// The chain's note, clipped.
+    pub note: String,
+    pub count: u32,
+    /// The round of its last refusal.
+    pub round: u64,
+    /// The first round it may be sent again (`None`: not on this state).
+    pub retry_at: Option<u64>,
+    /// `fees.gas_limit` at its last refusal ([`Refusal::Gas`]: the hold ends when the limit is raised).
+    pub gas_limit: u64,
+}
+
+/// Refusals in a row of steps that stayed due, and the pause they set ([`BREAKER_AFTER`]).
+#[derive(Clone, Debug, Default)]
+pub struct Breaker {
+    pub strikes: u32,
+    /// Times it opened since this updater's last applied transaction.
+    pub trips: u32,
+    /// Nothing is sent before this round.
+    pub paused_until: u64,
+    /// The last such refusal, described.
+    pub last: String,
 }
 
 /// What a round decided.
@@ -150,6 +261,9 @@ pub struct Metrics {
     /// (step, result) -> transactions: result `applied`, `refused`, `rejected`.
     pub tx: BTreeMap<(String, &'static str), u64>,
     pub refused_codes: BTreeMap<u32, u64>,
+    /// Refused transactions by cause ([`Refusal::kind`]) and by what followed: `race` (the step was done or moot
+    /// afterwards: another party's transaction came first) or `due` (it stayed due: held, [`Updater::held`]).
+    pub refusals: BTreeMap<(&'static str, &'static str), u64>,
     pub gas_applied: u64,
     pub gas_refused: u64,
     pub fee_applied: u128,
@@ -191,8 +305,9 @@ struct Candidate {
     raw: Vec<u8>,
 }
 
-// What the program would do with a candidate, and the job of an accepted one: ferrata-advance's.
-use ferrata_advance::{Planned, Verdict};
+// What the program would do with a candidate, and the job of an accepted one; a step's validity window:
+// ferrata-advance's.
+use ferrata_advance::{Planned, Verdict, Window};
 
 /// What two sources must serve byte for byte when both serve it (`policy.min_distinct_clients`): a finality update,
 /// by its attested header's root and its signature slot (one block's sync aggregate over its parent: honest nodes
@@ -233,6 +348,9 @@ pub struct Updater {
     /// the whole epoch, Nimbus the newest, so the two serve the same bytes during one slot), so the match need not
     /// fall in one round. At most 4096 updates are kept.
     served_by: BTreeMap<Root, BTreeSet<(String, usize)>>,
+    /// Steps refused while they stayed due, by (job, step): not sent again on the same state (or not yet).
+    pub held: BTreeMap<(Root, Step), Held>,
+    pub breaker: Breaker,
     /// How a backoff waits (milliseconds); tests pass one that does not sleep.
     pub sleep: fn(u64),
     /// Log lines to stderr.
@@ -278,6 +396,8 @@ impl Updater {
             clients: Vec::new(),
             disagreed: BTreeSet::new(),
             served_by: BTreeMap::new(),
+            held: BTreeMap::new(),
+            breaker: Breaker::default(),
             sleep: real_sleep,
             verbose: false,
         };
@@ -364,11 +484,11 @@ impl Updater {
     }
 
     /// One line per transaction: round, step, job, finalized slot, result, exit code, execution and storage gas,
-    /// fee, block, the time it was settled (UTC), its label.
+    /// fee, block, the time it was settled (UTC), its label, the chain's note (a refusal's reason; clipped).
     fn journal(&self, action: &Action, out: &TxOutcome) {
         let Some(dir) = self.dir() else { return };
         let line = format!(
-            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
+            "{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\n",
             self.round,
             action.step.name(),
             hex::encode(action.job_id),
@@ -386,7 +506,8 @@ impl Updater {
             out.fee,
             out.block,
             crate::utc_now(),
-            action.tx.label
+            action.tx.label,
+            clip(&out.note)
         );
         if let Ok(mut f) = fs::OpenOptions::new().create(true).append(true).open(dir.join("journal.tsv")) {
             let _ = f.write_all(line.as_bytes());
@@ -672,7 +793,12 @@ impl Updater {
             let horizon = self.round.saturating_sub(1024);
             self.first_due.retain(|_, r| *r >= horizon);
         }
-        let plan = self.plan_inner(ledger);
+        let round = self.round;
+        self.held.retain(|_, h| h.round + HOLD_ROUNDS > round);
+        let mut plan = self.plan_inner(ledger);
+        if matches!(plan, Ok(Plan::Send(_))) && self.round < self.breaker.paused_until {
+            plan = Ok(Plan::Stuck(self.paused()));
+        }
         if !matches!(plan, Ok(Plan::Waiting(_))) {
             self.metrics.client_wait = None;
         }
@@ -719,6 +845,23 @@ impl Updater {
                     None => return Ok(Plan::Stuck("an inactive instance without its job".into())),
                 }
             };
+            let window = match step {
+                Step::Init => ferrata_advance::init_window(&config, bootstrap.header.beacon.slot),
+                _ => Window::ANY,
+            };
+            if let Some((late, why)) = self.outside(ledger, &window, time_ms) {
+                return Ok(if late {
+                    Plan::Stuck(format!(
+                        "Init not sent: {why}: the checkpoint's weak-subjectivity period ends there, and no instance can \
+                         be created from it after that: initialise from a newer checkpoint"
+                    ))
+                } else {
+                    Plan::Waiting(format!("Init not sent: {why}"))
+                });
+            }
+            if let Some(why) = self.held_back(&jid, step) {
+                return Ok(Plan::Stuck(why));
+            }
             if self.defer(&jid, step) {
                 return Ok(Plan::Deferred(step));
             }
@@ -745,7 +888,7 @@ impl Updater {
                 _ => unreachable!(),
             };
             let store_seen = self.inst.state(ledger)?.map(|s| (s.active, s.store));
-            return Ok(Plan::Send(Action { step, job_id: jid, tx, finalized_slot, store_seen }));
+            return Ok(Plan::Send(Action { step, job_id: jid, tx, finalized_slot, store_seen, window }));
         };
 
         let store = CompactStore::decode(&state.store).map_err(|e| anyhow!("store: {e:?}"))?;
@@ -941,7 +1084,7 @@ impl Updater {
         } else {
             String::new()
         };
-        let plan = self.next_step(ledger, chosen, (period_update, raw), &state)?;
+        let plan = self.next_step(ledger, chosen, (period_update, raw), &state, &store)?;
         if let Plan::Send(a) = &plan {
             if a.step == Step::Open {
                 self.log(&format!("job 0x{}: {what}", &hex::encode(a.job_id)[..16]));
@@ -953,14 +1096,44 @@ impl Updater {
     /// The job's next step, as the chain holds it (another updater, or this one before a restart, may have begun it).
     /// `served`: whether its update came from the `updates` endpoint, and its bytes as the source served them (kept
     /// once its `Open` is applied: `policy.finish_own_jobs`).
+    /// `Open` is sent only inside its validity window, by the chain's clock; a step held after a refusal is not sent.
     fn next_step(
         &mut self,
         ledger: &dyn Ledger,
         chosen: Planned,
         served: (bool, Vec<u8>),
         state: &InstanceState,
+        store: &CompactStore,
     ) -> Result<Plan> {
         let step = ferrata_advance::next_step(self.job_on_chain(ledger, &chosen.jid)?.as_ref());
+        let fin = store.finalized.slot;
+        let signature_slot = chosen.update.signature_slot;
+        let window = match step {
+            Step::Open => match ferrata_advance::open_window(&self.inst.config, fin, signature_slot) {
+                Some(w) => w,
+                None => {
+                    return Ok(Plan::Stuck(format!(
+                        "Open not sent: the update is signed at slot {signature_slot}, at or after the end of the \
+                         weak-subjectivity period of the instance's finalized header (slot {fin}), which the program \
+                         refuses: the instance can no longer advance; initialise a new one"
+                    )))
+                }
+            },
+            _ => Window::ANY,
+        };
+        if let Some((late, why)) = self.outside(ledger, &window, self.inst.time_ms(signature_slot)) {
+            return Ok(if late {
+                Plan::Stuck(format!(
+                    "Open not sent: {why}: the weak-subjectivity period of the instance's finalized header (slot {fin}) \
+                     ends there, and no update can be applied to it after that: initialise a new instance"
+                ))
+            } else {
+                Plan::Waiting(format!("Open not sent: {why}"))
+            });
+        }
+        if let Some(why) = self.held_back(&chosen.jid, step) {
+            return Ok(Plan::Stuck(why));
+        }
         if self.defer(&chosen.jid, step) {
             return Ok(Plan::Deferred(step));
         }
@@ -974,7 +1147,119 @@ impl Updater {
             tx,
             finalized_slot: chosen.update.finalized_header.beacon.slot,
             store_seen: Some((state.active, state.store.clone())),
+            window,
         }))
+    }
+
+    /// Whether `window` refuses a transaction settled now ([`WINDOW_MARGIN_MS`] before its end), by the chain's clock
+    /// (where the chain takes each transaction's own time, `tx_time_ms`): (past its end, why).
+    fn outside(&self, ledger: &dyn Ledger, window: &Window, tx_time_ms: u64) -> Option<(bool, String)> {
+        let now = ledger.now_ms().unwrap_or(tx_time_ms);
+        if window.admits(now, WINDOW_MARGIN_MS) {
+            return None;
+        }
+        let t = |ms: u64| crate::utc(ms / 1000);
+        Some(match (window.start_ms, window.end_ms) {
+            (Some(start), _) if now < start => {
+                (false, format!("its validity window opens at {} (the chain's clock: {})", t(start), t(now)))
+            }
+            (_, end) => (
+                true,
+                format!(
+                    "its validity window ends at {} (the chain's clock: {}; a transaction is sent at least {} s before \
+                     the end)",
+                    end.map_or("?".into(), t),
+                    t(now),
+                    WINDOW_MARGIN_MS / 1000
+                ),
+            ),
+        })
+    }
+
+    /// Why `(jid, step)` is not sent this round, if it is held after a refusal.
+    fn held_back(&self, jid: &Root, step: Step) -> Option<String> {
+        let h = self.held.get(&(*jid, step))?;
+        if !self.holding(h) {
+            return None;
+        }
+        let hint = match (h.cause, h.retry_at) {
+            (Refusal::Gas, _) => format!("fees.gas_limit {} is below what it needs: raise it", h.gas_limit),
+            (Refusal::Program(_), _) => "the program refuses it on this state".to_string(),
+            (_, Some(r)) => format!("tried again at round {r}"),
+            (_, None) => format!("not sent again after {} refusals", h.count),
+        };
+        Some(format!(
+            "{} of job 0x{} (finalized slot {}) refused {} time(s) while it stayed due ({}: {}): {hint}",
+            step.name(),
+            &hex::encode(jid)[..16],
+            h.finalized_slot,
+            h.count,
+            h.cause.describe(),
+            h.note
+        ))
+    }
+
+    /// Whether a hold still holds this round.
+    fn holding(&self, h: &Held) -> bool {
+        let gas_raised = h.cause == Refusal::Gas && self.fees.gas_limit > h.gas_limit;
+        !gas_raised && h.retry_at.is_none_or(|r| self.round < r)
+    }
+
+    /// Hold `(job, step)` after a refusal that left it due; what follows, described.
+    fn hold(&mut self, action: &Action, cause: Refusal, note: &str) -> String {
+        let (round, gas_limit) = (self.round, self.fees.gas_limit);
+        let h = self.held.entry((action.job_id, action.step)).or_insert_with(|| Held {
+            step: action.step,
+            finalized_slot: action.finalized_slot,
+            cause,
+            note: String::new(),
+            count: 0,
+            round,
+            retry_at: None,
+            gas_limit,
+        });
+        h.count += 1;
+        h.cause = cause;
+        h.note = clip(note);
+        h.round = round;
+        h.gas_limit = gas_limit;
+        h.retry_at = if cause.repeats() || h.count >= MAX_REFUSALS {
+            None
+        } else {
+            Some(round + (REFUSAL_BACKOFF << (h.count - 1).min(16)))
+        };
+        let what = match h.retry_at {
+            Some(r) => format!("held until round {r}"),
+            None if cause == Refusal::Gas => format!("held until fees.gas_limit is raised above {gas_limit}"),
+            None => "not sent again on this state".to_string(),
+        };
+        if self.held.len() > MAX_HELD {
+            if let Some(oldest) = self.held.iter().min_by_key(|(_, h)| h.round).map(|(k, _)| *k) {
+                self.held.remove(&oldest);
+            }
+        }
+        what
+    }
+
+    /// Count a refusal of a step that stayed due; the breaker opens at [`BREAKER_AFTER`] in a row.
+    fn strike(&mut self, what: String) -> Option<String> {
+        let b = &mut self.breaker;
+        b.strikes += 1;
+        b.last = what;
+        if b.strikes < BREAKER_AFTER {
+            return None;
+        }
+        b.trips += 1;
+        let pause = BREAKER_PAUSE.saturating_mul(1 << (b.trips - 1).min(16)).min(BREAKER_MAX_PAUSE);
+        b.paused_until = self.round + 1 + pause;
+        Some(format!("{} refusals in a row: nothing sent before round {}", b.strikes, b.paused_until))
+    }
+
+    fn paused(&self) -> String {
+        format!(
+            "sending paused until round {}: {} refusals in a row of steps that stayed due, the last: {}",
+            self.breaker.paused_until, self.breaker.strikes, self.breaker.last
+        )
     }
 
     /// The next step of a job this updater opened whose update still moves the store (`policy.finish_own_jobs`); a
@@ -998,7 +1283,13 @@ impl Updater {
             };
             match self.evaluate(store, &update) {
                 Verdict::Useful(p) if p.jid == jid && self.job_on_chain(ledger, &jid)?.is_some() => {
-                    let plan = self.next_step(ledger, *p, (period_update, raw), state)?;
+                    let plan = self.next_step(ledger, *p, (period_update, raw), state, store)?;
+                    if let Plan::Stuck(why) = &plan {
+                        // A held step: this updater does not finish the job; another party may.
+                        self.log(&format!("kept job 0x{} left: {why}", &hex::encode(jid)[..16]));
+                        self.drop_carried(&jid);
+                        continue;
+                    }
                     if let Plan::Send(a) = &plan {
                         self.log(&format!(
                             "job 0x{} (finalized slot {}) is open: its {} first",
@@ -1156,9 +1447,15 @@ impl Updater {
         }
         let mut attempt = 0u32;
         loop {
+            if let Some((_, why)) = self.outside(ledger, &action.window, action.tx.time_ms) {
+                bail!("{}: not sent: {why}", action.tx.label);
+            }
             match ledger.submit(&self.payer, &action.tx, self.fees.gas_limit, u128::from(self.fees.max_fee_per_tx)) {
                 Ok(out) => {
-                    self.record(action, &out);
+                    // A refused step that is still due afterwards (no other party's transaction came first, the store
+                    // did not move) would meet the same state if sent again. A failed read counts as still due.
+                    let stayed_due = !out.applied && !out.rejected && !self.step_done(ledger, action).unwrap_or(false);
+                    self.record(action, &out, stayed_due);
                     return Ok(Some(out));
                 }
                 Err(e) => {
@@ -1208,7 +1505,7 @@ impl Updater {
         })
     }
 
-    fn record(&mut self, action: &Action, out: &TxOutcome) {
+    fn record(&mut self, action: &Action, out: &TxOutcome, stayed_due: bool) {
         let result = if out.applied {
             "applied"
         } else if out.rejected {
@@ -1218,7 +1515,10 @@ impl Updater {
         };
         *self.metrics.tx.entry((action.step.name(), result)).or_default() += 1;
         let gas = out.gas_exec + out.gas_stor;
+        let mut why = String::new();
         if out.applied {
+            self.held.remove(&(action.job_id, action.step));
+            self.breaker = Breaker::default();
             if action.step == Step::Open && self.policy.finish_own_jobs {
                 if let Some((jid, period_update, raw)) = self.opening.take().filter(|o| o.0 == action.job_id) {
                     self.carry(jid, period_update, raw);
@@ -1234,15 +1534,32 @@ impl Updater {
             if action.step == Step::Finish || last_adopt {
                 self.metrics.jobs_finished += 1;
             }
-        } else if !out.rejected {
+        } else if out.rejected {
+            why = format!(": {}", clip(&out.note));
+        } else {
             self.metrics.gas_refused += gas;
             self.metrics.fee_refused += out.fee;
             if let Some(c) = out.exit_code {
                 *self.metrics.refused_codes.entry(c).or_default() += 1;
             }
+            let cause = Refusal::of(out);
+            *self.metrics.refusals.entry((cause.kind(), if stayed_due { "due" } else { "race" })).or_default() += 1;
+            let reason = format!("{}: {}", cause.describe(), clip(&out.note));
+            if stayed_due {
+                let held = self.hold(action, cause, &out.note);
+                let what = format!("{} {reason}", action.tx.label);
+                why = format!(": {reason}; the step stayed due: {held}");
+                if let Some(paused) = self.strike(what) {
+                    why += &format!("; {paused}");
+                }
+            } else {
+                why = format!(
+                    ": {reason}; the step was done or moot afterwards (another party's transaction came first)"
+                );
+            }
         }
         self.log(&format!(
-            "{} {result} (exit {:?}, gas {}, fee {}, block {})",
+            "{} {result} (exit {:?}, gas {}, fee {}, block {}){why}",
             action.tx.label, out.exit_code, gas, out.fee, out.block
         ));
         self.journal(action, out);
@@ -1290,6 +1607,9 @@ impl Updater {
         if self.metrics.last_plan.starts_with("stuck") || self.metrics.last_plan.starts_with("error") {
             why.push(self.metrics.last_plan.clone());
         }
+        if self.round < self.breaker.paused_until && !self.metrics.last_plan.starts_with("stuck: sending paused") {
+            why.push(self.paused());
+        }
         let status = if usable == 0 {
             "down"
         } else if why.is_empty() {
@@ -1312,6 +1632,13 @@ impl Updater {
         for (code, n) in &m.refused_codes {
             let _ = writeln!(o, "ferrata_updater_refused_by_code_total{{{l},code=\"{code}\"}} {n}");
         }
+        for ((cause, after), n) in &m.refusals {
+            let _ = writeln!(o, "ferrata_updater_refusals_total{{{l},cause=\"{cause}\",after=\"{after}\"}} {n}");
+        }
+        let held = self.held.values().filter(|h| self.holding(h)).count();
+        let _ = writeln!(o, "ferrata_updater_held_steps{{{l}}} {held}");
+        let _ =
+            writeln!(o, "ferrata_updater_sending_paused{{{l}}} {}", u8::from(self.round < self.breaker.paused_until));
         let _ = writeln!(o, "ferrata_updater_gas_total{{{l},result=\"applied\"}} {}", m.gas_applied);
         let _ = writeln!(o, "ferrata_updater_gas_total{{{l},result=\"refused\"}} {}", m.gas_refused);
         let _ = writeln!(o, "ferrata_updater_fee_total{{{l},result=\"applied\"}} {}", m.fee_applied);
@@ -1376,6 +1703,13 @@ impl Updater {
             "period": self.metrics.period,
             "last_plan": self.metrics.last_plan,
             "last_error": self.metrics.last_error,
+            "held": self
+                .held
+                .iter()
+                .filter(|(_, h)| self.holding(h))
+                .filter_map(|((jid, step), _)| self.held_back(jid, *step))
+                .collect::<Vec<_>>(),
+            "paused_until_round": self.breaker.paused_until,
         });
         if self.policy.min_distinct_clients >= 2 {
             // What each source reported at /eth/v1/node/version.
