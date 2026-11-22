@@ -262,7 +262,16 @@ pub struct Inflight {
     /// The node's head when it was written: the transaction is in a later block.
     #[serde(default)]
     pub from_block: u64,
+    /// `logos`: sent through `tx_sender_module` (`--send-via logos`); absent: the plain path.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub via: Option<String>,
+    /// `tx_sender_module`'s request id, once its `send` answered.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub request: Option<String>,
 }
+
+/// [`Inflight::via`] for the route through `tx_sender_module`.
+const VIA_LOGOS: &str = "logos";
 
 impl Inflight {
     pub fn path(state: &Path) -> PathBuf {
@@ -375,31 +384,86 @@ impl Daemon {
                 None => bail!("the endpoint failed (eth_call before sending): {e}"),
             }
         }
-        let (vault, sent) = (self.r.vault, input.clone());
-        let outcome = tokio::task::spawn_blocking(move || route.send(vault, &sent, label))
+        // Journaled as on the plain path (R.06): the record before the request, with the nonce the account takes next;
+        // the request's id as soon as `send` answers it; the hash once `send_status` broadcast it. A daemon killed in
+        // between finds its request again and drives it to its end (`tx_sender_module` broadcasts only when polled):
+        // never a second request while the first is open ([`Daemon::resolve_inflight`]).
+        let nonce = match Inflight::load(&self.state)? {
+            Some(f) if f.key == key => f.nonce,
+            Some(f) => bail!("{} is still in flight (nonce {}): nothing else is sent before it resolves", f.key, f.nonce),
+            None => eth::retry_rpc(|| self.p.get_transaction_count(self.r.me).pending()).await?.max(self.fence.next_nonce),
+        };
+        let mut f = Inflight {
+            key: key.to_string(),
+            label: label.to_string(),
+            job: job.map(str::to_string),
+            input: input.clone(),
+            nonce,
+            hash: None,
+            at: unix_now(),
+            from_block: self.at.unwrap_or(self.fence.block),
+            via: Some(VIA_LOGOS.into()),
+            request: None,
+        };
+        f.save(&self.state)?;
+        let t0 = std::time::Instant::now();
+        let (r2, vault, sent) = (route.clone(), self.r.vault, input.clone());
+        let opened = tokio::task::spawn_blocking(move || r2.open(vault, &sent, label))
             .await
-            .map_err(|e| anyhow!("the send through Logos Core did not finish: {e}"))?;
+            .map_err(|e| anyhow!("the request to Logos Core did not finish (kept in flight): {e}"))?;
+        let id = match opened {
+            Ok(id) => id,
+            // No answer: a request may exist; the next round looks for it (`live_sends`).
+            Err(Outcome::NotSent(reason)) if reason.contains("did not answer") => {
+                bail!("{reason} (kept in flight: the next round looks for the request)")
+            }
+            Err(Outcome::NotSent(reason)) => return self.logos_not_sent(reason, fallback, input, label, key, job).await,
+            Err(o) => bail!("{o:?} (kept in flight, resolved next round)"),
+        };
+        f.request = Some(id.clone());
+        f.save(&self.state)?;
+        let outcome = tokio::task::spawn_blocking(move || route.drive(&id, t0))
+            .await
+            .map_err(|e| anyhow!("the send through Logos Core did not finish (kept in flight): {e}"))?;
         match outcome {
             Outcome::Broadcast { hash, request_id, polls, millis } => {
-                let t0 = std::time::Instant::now();
-                let receipt = loop {
-                    if let Some(r) = self.p.get_transaction_receipt(hash).await? {
-                        break r;
-                    }
-                    if t0.elapsed() > Duration::from_secs(600) {
-                        bail!("{hash:#x} (sent by tx_sender_module, request {request_id}) not mined within 600 s");
-                    }
-                    tokio::time::sleep(Duration::from_millis(250)).await;
-                };
-                anyhow::ensure!(receipt.status(), "the transaction {} reverted", receipt.transaction_hash);
-                Ok((receipt, Via::Logos { request_id, polls, millis }))
+                f.hash = Some(hash);
+                f.save(&self.state)?;
+                let rc = self.wait_receipt(hash).await?;
+                let nonce = self.nonce_of(hash).await.unwrap_or(f.nonce);
+                self.mined(&rc, nonce)?;
+                ensure!(rc.status(), "the transaction {} reverted", rc.transaction_hash);
+                Ok((rc, Via::Logos { request_id, polls, millis }))
             }
-            Outcome::NotSent(reason) if fallback => {
-                Ok((self.r.submit(&self.p, input).await?, Via::Fallback { reason }))
-            }
-            Outcome::NotSent(reason) => bail!("not sent: {reason}"),
-            Outcome::Unknown(reason) => bail!("{reason}"),
+            Outcome::NotSent(reason) => self.logos_not_sent(reason, fallback, input, label, key, job).await,
+            Outcome::Unknown(reason) => bail!("{reason} (kept in flight, resolved next round)"),
         }
+    }
+
+    /// Nothing was signed or broadcast for the call `key` through `tx_sender_module`: the plain path when this
+    /// relayer holds a key too (the fallback: the same record and nonce, rewritten for the plain path), otherwise the
+    /// record goes and the job is planned again in a later round.
+    async fn logos_not_sent(
+        &mut self,
+        reason: String,
+        fallback: bool,
+        input: Bytes,
+        label: &str,
+        key: &str,
+        job: Option<&str>,
+    ) -> Result<(TransactionReceipt, crate::logos_send::Via)> {
+        if fallback {
+            let rc = self.send_plain(input, label, key, job).await?;
+            return Ok((rc, crate::logos_send::Via::Fallback { reason }));
+        }
+        Inflight::clear(&self.state)?;
+        bail!("not sent: {reason}")
+    }
+
+    /// The nonce of the relayer's transaction `hash`, as the node has it.
+    async fn nonce_of(&self, hash: B256) -> Option<u64> {
+        use alloy::consensus::Transaction as _;
+        self.p.get_transaction_by_hash(hash).await.ok().flatten().map(|tx| tx.nonce())
     }
 
     /// A mined transaction of the relayer's moves the fence (and keeps it on disk).
@@ -453,6 +517,8 @@ impl Daemon {
             hash: None,
             at: unix_now(),
             from_block: self.at.unwrap_or(self.fence.block),
+            via: None,
+            request: None,
         };
         f.save(&self.state)?;
         let tx = self.with_gas(tx, at).await?;
@@ -585,6 +651,47 @@ impl Daemon {
     async fn resolve_inflight(&mut self, inbox: &Path) -> Result<bool> {
         let Some(mut f) = Inflight::load(&self.state)? else { return Ok(true) };
         let s = self.sink.clone();
+        // Through tx_sender_module without a hash yet: its request (by the recorded id, or the one it holds open for
+        // this call's label) driven to its end; it broadcasts only when polled, so an open request is never made twice.
+        let logos = f.via.as_deref() == Some(VIA_LOGOS);
+        if let (true, None, Some(route)) = (logos, f.hash, self.logos.clone()) {
+            use crate::logos_send::Outcome;
+            if f.request.is_none() {
+                let (r2, label) = (route.clone(), f.label.clone());
+                let open = tokio::task::spawn_blocking(move || r2.live(&label))
+                    .await
+                    .map_err(|e| anyhow!("live_sends did not finish: {e}"))?
+                    .map_err(|e| anyhow!("{e} (in flight: {} kept)", f.key))?;
+                if let Some(id) = open.last() {
+                    f.request = Some(id.clone());
+                    f.save(&self.state)?;
+                    log(&s, "inflight-request-found", json!({ "key": f.key, "requestId": id, "open": open.len() }));
+                }
+            }
+            if let Some(id) = f.request.clone() {
+                let r3 = route.clone();
+                let outcome = tokio::task::spawn_blocking(move || r3.drive(&id, std::time::Instant::now()))
+                    .await
+                    .map_err(|e| anyhow!("send_status did not finish: {e}"))?;
+                match outcome {
+                    Outcome::Broadcast { hash, request_id, polls, .. } => {
+                        f.hash = Some(hash);
+                        f.save(&self.state)?;
+                        log(&s, "inflight-request-driven", json!({ "key": f.key, "requestId": request_id, "hash": hash, "statusPolls": polls }));
+                    }
+                    Outcome::NotSent(reason) => {
+                        // Rejected, cancelled, failed with nothing sent, or withdrawn unapproved: nothing left.
+                        log(&s, "inflight-request-ended", json!({ "key": f.key, "requestId": f.request, "reason": reason }));
+                        Inflight::clear(&self.state)?;
+                        return Ok(true);
+                    }
+                    Outcome::Unknown(reason) => {
+                        log(&s, "inflight-pending", json!({ "key": f.key, "requestId": f.request, "reason": reason }));
+                        return Ok(false);
+                    }
+                }
+            }
+        }
         if let Some(hash) = f.hash {
             if let Some(rc) = eth::retry_rpc(|| self.p.get_transaction_receipt(hash)).await? {
                 self.mined(&rc, f.nonce)?;
@@ -627,6 +734,12 @@ impl Daemon {
         }
         // Lost: neither mined nor known to the node, its nonce unspent. The same call again, with the same nonce.
         log(&s, "inflight-lost", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash }));
+        if logos && !self.logos.as_ref().is_some_and(|r| r.fallback) {
+            // No key here to send it with that nonce, and no request open for it (above): planned again, through
+            // tx_sender_module, which takes the same next nonce.
+            Inflight::clear(&self.state)?;
+            return Ok(true);
+        }
         let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(f.input.clone());
         if let Err(e) = self.p.call(tx.clone()).await {
             // The call no longer passes (another relayer did it, a freeze, ...): dropped; its job is planned again.

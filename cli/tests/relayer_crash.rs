@@ -17,13 +17,20 @@
 //! submitCandidate (P), finalizeAttested (M), a release (D), a release (P), a release with a checkpoint fee
 //! (M) and the claimOwed after it (D).
 //! Part 2, random kills: automine on, twenty releases in the inbox, the daemon SIGKILLed 0 to 40 ms after its
-//! start-up line (a job takes a few tens of milliseconds there, so the kills land anywhere in a job: before the
-//! record, between the record and the send, between the send and its hash, between the receipt and the booking)
-//! and started again until every job is booked.
-//! Part 3, failing endpoints: `e2e/netfault/faultnet.py` in front of the anvil (seeded: 429s, 5xx, answers
-//! later than the client waits, a head that goes backwards; sends dropped, duplicated, or forwarded with the
-//! answer lost; a node 2 to 6 blocks behind; and outages of every endpoint), the daemon on one of its endpoints
-//! at a time (flaky, sends, lagging), four releases each, a block mined every second.
+//! start-up line and started again until every job is booked. Where the kills land is chance: the recorded runs
+//! show which windows they hit (`inflight-*` lines); the two windows chance rarely hits are part 4's.
+//! Part 3, failing endpoints: `e2e/netfault/faultnet.py` in front of the anvil, the daemon on one of its endpoints
+//! at a time (flaky, sends, lagging), four releases each, a block mined every second. Each endpoint's faults are drawn
+//! from its seed (rates, not guarantees): the faults that actually fired are counted per part (`faultsSeen`).
+//! Part 4, the record's two narrow windows, made to happen (`e2e/netfault/holdproxy.py` in front of the anvil, automine
+//! on): a send whose answer is lost (the transaction mined, its hash never known: found under its nonce,
+//! `inflight-found`); a send forwarded with its answer held and the daemon killed (the same, after a restart); the daemon
+//! killed with its record written and nothing sent (restarted: `inflight-lost`, the same call with the same nonce).
+//! Part 5, the `--send-via logos` route killed in each of its windows (`cli/examples/relayer_logos_stub.rs`, the daemon
+//! with Logos Core's call replaced by a client of `e2e/netfault/txsender_stub.py`, a stand-in for `tx_sender_module`;
+//! no key in the daemon): after its request was made and before any broadcast; after the request was made, before its
+//! id was known; after the broadcast, before its hash was known. Restarted, the daemon finds its request and drives it
+//! to its end: one request per job, never a second one.
 //!
 //! Checked after each part: one `CandidateSubmitted` and one `CheckpointFinalized`, one `Release` per
 //! nullifier, every job in `done/` (none refused) with at least one `job-done` line, all naming one
@@ -110,6 +117,8 @@ struct World {
     runs: usize,
     /// Every job handed over: file name -> (key of its effect, nullifier for a release).
     jobs: BTreeMap<String, Option<B256>>,
+    /// Part 5: the stand-in for tx_sender_module (`HOST:PORT`); the daemon is then the example with --send-via logos.
+    logos_stub: Option<String>,
     /// The relayer's effects the vault must show: transactions it must have mined.
     effects: u64,
     /// The checkpoint's new state.
@@ -133,10 +142,17 @@ fn relayer_bin() -> PathBuf {
     exe.parent().and_then(Path::parent).expect("target/<profile>").join("ferrata-relayer")
 }
 
+/// The example `relayer_logos_stub` (part 5), built beside the binaries (`cargo build --example relayer_logos_stub`).
+fn relayer_logos_stub_bin() -> PathBuf {
+    let exe = std::env::current_exe().expect("the test binary's path");
+    exe.parent().and_then(Path::parent).expect("target/<profile>").join("examples").join("relayer_logos_stub")
+}
+
+/// The test's scratch directory: `FERRATA_CRASH_DIR`, or cargo's directory for integration tests (inside `target/`).
 fn scratch() -> PathBuf {
     let dir = std::env::var("FERRATA_CRASH_DIR")
         .map(PathBuf::from)
-        .unwrap_or_else(|_| Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tmp/cli/relayer-crash"));
+        .unwrap_or_else(|_| PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relayer-crash"));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("logs")).unwrap();
     dir
@@ -159,12 +175,25 @@ impl World {
         self.runs += 1;
         let log = std::fs::File::create(self.dir.join("logs").join(format!("{:03}.jsonl", self.runs)))?;
         let err = std::fs::File::create(self.dir.join("logs").join(format!("{:03}.err", self.runs)))?;
-        let child = Command::new(relayer_bin())
-            .args(["--eth-rpc", rpc.unwrap_or(&self.rpc), "--vault", &self.vault.to_string()])
-            .arg("--keystore")
-            .arg(&self.keystore)
-            .arg("--password-file")
-            .arg(&self.password)
+        let mut cmd = match &self.logos_stub {
+            None => {
+                let mut c = Command::new(relayer_bin());
+                c.args(["--eth-rpc", rpc.unwrap_or(&self.rpc), "--vault", &self.vault.to_string()])
+                    .arg("--keystore")
+                    .arg(&self.keystore)
+                    .arg("--password-file")
+                    .arg(&self.password);
+                c
+            }
+            Some(stub) => {
+                let mut c = Command::new(relayer_logos_stub_bin());
+                c.env("FERRATA_LOGOS_STUB", stub)
+                    .args(["--eth-rpc", rpc.unwrap_or(&self.rpc), "--vault", &self.vault.to_string()])
+                    .args(["--send-via", "logos", "--from", &self.relayer.to_string(), "--approval-timeout", "20"]);
+                c
+            }
+        };
+        let child = cmd
             .arg("--state")
             .arg(&self.state)
             .args(["--receipt-timeout", "8", "--startup-wait", "300", "run", "--poll-secs", "1", "--inbox"])
@@ -502,10 +531,10 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     };
     from_anvil(&p, ANVIL[0], vault, IAdmin::registerTokenCall { token: Address::ZERO, p: params }.abi_encode(), U256::ZERO)
         .await?;
-    // Deposits from anvil's account 3: 16 of 0.1 ETH and 3 of 1 ETH (more than every release pays out).
+    // Deposits from anvil's account 3: 24 of 0.1 ETH and 3 of 1 ETH (more than every release pays out: 4.8 ETH).
     let depositor = ANVIL[3];
     let mut j = 0u64;
-    for (d, count) in [(0u8, 16), (1u8, 3)] {
+    for (d, count) in [(0u8, 24), (1u8, 3)] {
         for _ in 0..count {
             let price = eth::deposit_price(&p, vault, eth::ETH, d).await?;
             let c = B256::from(sha256(format!("relayer crash test: deposit {j}").as_bytes()));
@@ -539,6 +568,7 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
         inbox: dir.join("inbox"),
         runs: 0,
         jobs: BTreeMap::new(),
+        logos_stub: None,
         effects: 0,
         new_state: B256::from(sha256(b"relayer crash test: state 1")),
         burn_root: B256::from(sha256(b"relayer crash test: burns")),
@@ -710,11 +740,182 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
         results["parts"].as_array_mut().expect("array").push(s3);
     }
     ticker.abort();
+    w.automine(true).await?;
+
+    // ---- part 4: the record's narrow windows, made to happen ---------------------------------------------------------
+    let hp = Helper::start(&dir, "holdproxy", "e2e/netfault/holdproxy.py", &url)?;
+    let proxy = hp.url().await?;
+    let mut part4 = Vec::new();
+    // E1: the send's answer lost (mined: automine); no kill: the next round finds it under its nonce.
+    hp.arm("lose eth_sendRawTransaction")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(Some(&proxy))?;
+    w.wait_done(&r, 120).await?;
+    ensure!(w.last_run_has("inflight-found"), "part 4 E1: no inflight-found line");
+    w.kill(d)?;
+    part4.push(json!({ "case": "answer lost", "fired": hp.hits(), "booked": "inflight-found" }));
+    // E2: the send forwarded, its answer held, the daemon killed; restarted on the anvil: found under its nonce.
+    let h = hp.hits();
+    hp.arm("hold eth_sendRawTransaction 30")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(Some(&proxy))?;
+    hp.wait_hit(h, 120).await?;
+    w.kill(d)?;
+    let d = w.start(None)?;
+    w.wait_done(&r, 120).await?;
+    ensure!(w.last_run_has("inflight-found"), "part 4 E2: no inflight-found line after the restart");
+    w.kill(d)?;
+    part4.push(json!({ "case": "answer held, killed", "fired": hp.hits(), "booked": "inflight-found" }));
+    // E3: the daemon killed with its record written and nothing sent; restarted: the same call, the same nonce.
+    let h = hp.hits();
+    hp.arm("trap eth_sendRawTransaction")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(Some(&proxy))?;
+    hp.wait_hit(h, 120).await?;
+    let (latest, pending) = w.nonces().await?;
+    ensure!(latest == pending && latest == w.effects - 1, "part 4 E3: something was sent ({latest}, {pending})");
+    let recorded = ferrata_cli::relayerd::Inflight::load(&w.state)?.context("part 4 E3: no record")?;
+    ensure!(recorded.hash.is_none(), "part 4 E3: the record has a hash");
+    w.kill(d)?;
+    let d = w.start(None)?;
+    w.wait_done(&r, 120).await?;
+    ensure!(
+        w.last_run_has("inflight-lost") && w.last_run_has("inflight-resent"),
+        "part 4 E3: not resent as lost after the restart"
+    );
+    w.kill(d)?;
+    part4.push(json!({ "case": "killed with the record written, nothing sent", "fired": hp.hits(), "nonce": recorded.nonce,
+                       "booked": "inflight-lost, inflight-resent (same nonce)" }));
+    drop(hp);
+    let mut s4 = w.check("part 4 (lost answer, held answer and kill, kill before the send)").await?;
+    s4["cases"] = json!(part4);
+    results["parts"].as_array_mut().expect("array").push(s4);
+
+    // ---- part 5: the --send-via logos route killed in each of its windows ----------------------------------------------
+    rpc(&p, "anvil_impersonateAccount", json!([relayer])).await?; // the stand-in has anvil sign for it (local only)
+    let ts = Helper::start(&dir, "txsender", "e2e/netfault/txsender_stub.py", &url)?;
+    w.logos_stub = Some(ts.addr().await?);
+    let mut part5 = Vec::new();
+    for (fault, what, line) in [
+        ("stall send_status", "request made, nothing broadcast", "inflight-request-driven"),
+        ("hold send 30", "request made, its id unknown", "inflight-request-found"),
+        ("hold send_status 30", "broadcast, its hash unknown", "inflight-request-driven"),
+    ] {
+        let h = ts.hits();
+        ts.arm(fault)?;
+        let r = w.release_job(0)?;
+        w.effects += 1;
+        let d = w.start(None)?;
+        ts.wait_hit(h, 120).await?;
+        let (latest, _) = w.nonces().await?;
+        w.kill(d)?;
+        let d = w.start(None)?;
+        w.wait_done(&r, 120).await?;
+        ensure!(w.last_run_has(line), "part 5 ({fault}): no {line} line after the restart");
+        ensure!(w.last_run_has("inflight-request-driven"), "part 5 ({fault}): the request was not driven to its end");
+        w.kill(d)?;
+        part5.push(json!({ "fault": fault, "window": what, "minedBeforeRestart": latest == w.effects, "booked": line }));
+    }
+    let made = ts.log_count(|v| v["method"] == "send" && v["requestId"].is_string() && !v["action"].as_str().unwrap_or("").contains("not delivered"));
+    let jobs5 = part5.len();
+    ensure!(made == jobs5, "part 5: {made} requests made at tx_sender_module's stand-in for {jobs5} jobs");
+    drop(ts);
+    w.logos_stub = None;
+    let mut s5 = w.check("part 5 (the logos route killed in each window)").await?;
+    s5["cases"] = json!(part5);
+    s5["requestsMade"] = json!(made);
+    results["parts"].as_array_mut().expect("array").push(s5);
+
     if let Ok(path) = std::env::var("FERRATA_CRASH_RESULTS") {
         std::fs::write(&path, serde_json::to_vec_pretty(&results)?)?;
     }
     println!("RESULTS {}", serde_json::to_string(&results)?);
     Ok(())
+}
+
+/// A Python helper of e2e/netfault (holdproxy.py, txsender_stub.py) in front of the anvil, its one-shot faults armed
+/// through its control file; stopped when dropped.
+struct Helper {
+    proc: Proc,
+    ctl: PathBuf,
+    port: PathBuf,
+    log: PathBuf,
+}
+
+impl Helper {
+    fn start(dir: &Path, name: &str, script: &str, upstream: &str) -> Result<Self> {
+        let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(script);
+        let (ctl, port, log) =
+            (dir.join(format!("{name}.ctl")), dir.join(format!("{name}.port")), dir.join(format!("{name}.jsonl")));
+        std::fs::write(&ctl, "pass\n")?;
+        let child = Command::new("python3")
+            .arg("-I")
+            .arg(&script)
+            .args(["--upstream", upstream])
+            .arg("--port-file")
+            .arg(&port)
+            .arg("--ctl")
+            .arg(&ctl)
+            .arg("--log")
+            .arg(&log)
+            .stdout(Stdio::null())
+            .stderr(Stdio::from(std::fs::File::create(dir.join(format!("{name}.err")))?))
+            .spawn()
+            .with_context(|| format!("starting {}", script.display()))?;
+        Ok(Self { proc: Proc(child), ctl, port, log })
+    }
+
+    async fn addr(&self) -> Result<String> {
+        let t0 = Instant::now();
+        loop {
+            if let Some(p) = std::fs::read_to_string(&self.port).ok().map(|t| t.trim().to_string()).filter(|t| !t.is_empty()) {
+                return Ok(format!("127.0.0.1:{p}"));
+            }
+            ensure!(t0.elapsed() < Duration::from_secs(20), "{} did not start", self.port.display());
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    }
+
+    async fn url(&self) -> Result<String> {
+        Ok(format!("http://{}", self.addr().await?))
+    }
+
+    fn arm(&self, fault: &str) -> Result<()> {
+        std::fs::write(&self.ctl, format!("{fault}\n")).map_err(Into::into)
+    }
+
+    fn hits(&self) -> usize {
+        std::fs::read_to_string(self.ctl.with_extension("ctl.hit")).map_or(0, |t| t.lines().count())
+    }
+
+    async fn wait_hit(&self, before: usize, secs: u64) -> Result<()> {
+        let t0 = Instant::now();
+        while self.hits() <= before {
+            ensure!(t0.elapsed() < Duration::from_secs(secs), "{}: the fault did not fire within {secs} s", self.ctl.display());
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        // The fault fired; the call it caught is held now.
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        Ok(())
+    }
+
+    fn log_count(&self, f: impl Fn(&Value) -> bool) -> usize {
+        std::fs::read_to_string(&self.log)
+            .unwrap_or_default()
+            .lines()
+            .filter_map(|l| serde_json::from_str::<Value>(l).ok())
+            .filter(|v| f(v))
+            .count()
+    }
+}
+
+impl Drop for Helper {
+    fn drop(&mut self) {
+        let _ = self.proc.0.kill();
+    }
 }
 
 fn relayerd_inflight(state: &Path) -> PathBuf {

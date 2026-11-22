@@ -120,11 +120,21 @@ impl Route {
     /// `send`, then `send_status` until it is final. Blocking: run it off the async runtime.
     pub fn send(&self, to: Address, input: &Bytes, label: &str) -> Outcome {
         let t0 = Instant::now();
+        match self.open(to, input, label) {
+            Ok(id) => self.drive(&id, t0),
+            Err(o) => o,
+        }
+    }
+
+    /// `send` alone: the request made (its nonce reserved) and its id; nothing is signed or broadcast before
+    /// [`Route::drive`]. `Err`: nothing was reserved ([`Outcome::NotSent`]). Blocking.
+    pub fn open(&self, to: Address, input: &Bytes, label: &str) -> Result<String, Outcome> {
+        let t0 = Instant::now();
         let request = self.request(to, input, label).to_string();
         let v = loop {
             let v = match (self.call)(TX_SENDER, "send", &json!([request]), CALL_TIMEOUT) {
                 Ok(r) => parse(&r),
-                Err(e) => return Outcome::NotSent(format!("{TX_SENDER}.send did not answer: {e}")),
+                Err(e) => return Err(Outcome::NotSent(format!("{TX_SENDER}.send did not answer: {e}"))),
             };
             // `unavailable`: the account's history is still opening (its key being asked of the signer manager);
             // nothing was reserved or signed, so it is asked again until the approval timeout.
@@ -135,11 +145,19 @@ impl Route {
             std::thread::sleep(POLL);
         };
         if v.get("ok") != Some(&Value::Bool(true)) {
-            return Outcome::NotSent(format!("{TX_SENDER}.send refused: {}", why(&v)));
+            return Err(Outcome::NotSent(format!("{TX_SENDER}.send refused: {}", why(&v))));
         }
-        let Some(id) = v.get("requestId").and_then(Value::as_str).map(str::to_string) else {
-            return Outcome::NotSent(format!("{TX_SENDER}.send answered no requestId: {v}"));
-        };
+        v.get("requestId")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| Outcome::NotSent(format!("{TX_SENDER}.send answered no requestId: {v}")))
+    }
+
+    /// `send_status` until it is final, for a request [`Route::open`] made, here or before a restart: `send_status` is
+    /// what broadcasts (`tx_sender_module` has no background advancer), so a request left open is driven to its end
+    /// rather than made again. The approval timeout runs from `t0`. Blocking.
+    pub fn drive(&self, id: &str, t0: Instant) -> Outcome {
+        let id = id.to_string();
         let mut polls = 0u32;
         loop {
             polls += 1;
@@ -189,6 +207,28 @@ impl Route {
             }
             std::thread::sleep(POLL);
         }
+    }
+}
+
+impl Route {
+    /// The requests `tx_sender_module` still holds open (`live_sends`) for this route's chain and account whose
+    /// purpose is this route's for `label`: what a daemon killed before it learnt a request's id finds again.
+    /// Blocking.
+    pub fn live(&self, label: &str) -> Result<Vec<String>, String> {
+        let v = parse(&(self.call)(TX_SENDER, "live_sends", &json!([]), CALL_TIMEOUT)?);
+        if v.get("ok") != Some(&Value::Bool(true)) {
+            return Err(format!("{TX_SENDER}.live_sends refused: {}", why(&v)));
+        }
+        let purpose = format!("{}: {label}", self.purpose);
+        Ok(v.get("sends")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter(|s| s.get("chainId").and_then(Value::as_u64) == Some(self.chain_id))
+            .filter(|s| s.get("from").and_then(Value::as_str).and_then(|f| f.parse::<Address>().ok()) == Some(self.from))
+            .filter(|s| s.get("purpose").and_then(Value::as_str).is_some_and(|p| p.starts_with(&purpose)))
+            .filter_map(|s| s.get("requestId").and_then(Value::as_str).map(str::to_string))
+            .collect())
     }
 }
 
@@ -419,6 +459,25 @@ mod tests {
             ("send_status", json!({ "ok": true, "status": "failed", "final": true, "hashes": [H] })),
         ]);
         assert!(matches!(route().send(Address::ZERO, &Bytes::new(), "x"), Outcome::Broadcast { .. }));
+    }
+
+    #[test]
+    fn a_request_left_open_is_found_and_driven_to_its_end() {
+        let _g = SERIAL.lock().unwrap();
+        let from = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8";
+        script(&[
+            ("send", json!({ "ok": true, "pending": true, "requestId": "r7" })),
+            ("live_sends", json!({ "ok": true, "sends": [
+                { "requestId": "r6", "chainId": 31337, "from": from, "status": "awaitingApproval", "purpose": "Ferrata monitor: other" },
+                { "requestId": "r7", "chainId": 31337, "from": from, "status": "awaitingApproval", "purpose": "Ferrata monitor: cancelCandidate (ferrata_monitor_module)" },
+                { "requestId": "r8", "chainId": 1, "from": from, "status": "awaitingApproval", "purpose": "Ferrata monitor: cancelCandidate" },
+            ] })),
+            ("send_status", json!({ "ok": true, "status": "broadcast", "final": true, "hashes": [H], "hash": H })),
+        ]);
+        let id = route().open(Address::ZERO, &Bytes::new(), "cancelCandidate").unwrap();
+        assert_eq!(route().live("cancelCandidate").unwrap(), vec![id.clone()]);
+        assert!(matches!(route().drive(&id, Instant::now()), Outcome::Broadcast { request_id, .. } if request_id == "r7"));
+        assert_eq!(SEEN.lock().unwrap().iter().filter(|(_, m, _)| m == "send").count(), 1, "one request, driven");
     }
 
     #[test]
