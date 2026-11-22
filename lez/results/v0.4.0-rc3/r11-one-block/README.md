@@ -89,9 +89,14 @@ needs fresher fixtures.
 `verify-run.sh` replays the record ([`verify-run.log`](verify-run.log)): 51 blocks, the chain links hold, every block
 hash holds once the 22 elided program chunks are put back, the 51 blocks applied by rc3's `chain_state` from the
 pre-genesis state, the 47 included rows equal what LEZ's settlement charges, the four program images as recorded. The
-receipts are fake, so the replay runs in dev mode as the sequencer did:
+receipts are fake, so the replay runs in dev mode as the sequencer did. From a fresh checkout, which selects LEZ
+v0.4.0-rc1: fetch LEZ beside the repository, select rc3 (it rewrites the LEZ manifests and lockfiles in place;
+`lez/scripts/lez-select.sh v0.4.0-rc1` undoes it), then replay; without the selection, `verify-run.sh` stops at once
+("the driver's manifests point at LEZ v0.4.0-rc1, not v0.4.0-rc3"):
 
 ```sh
+scripts/fetch-upstream.sh
+lez/scripts/lez-select.sh v0.4.0-rc3
 LEZ_TAG=v0.4.0-rc3 FERRATA_VERIFY_DEV_MODE=1 lez/live/verify-run.sh --dir lez/results/v0.4.0-rc3/r11-one-block \
   <ferrata_lez.bin> <scripted.bin> <ferrata_consumer.bin>
 ```
