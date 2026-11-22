@@ -1,6 +1,6 @@
 # ferrata_bridge_module's Ethereum side through Logos Core's own modules, 21 November 2026
 
-**Superseded (22 Nov 2026).** This 37/37 did not reproduce at `d12dd396`: the review's four reruns gave 35/37 each, an
+**Superseded (21 Nov 2026).** This 37/37 did not reproduce at `d12dd396`: the review's four reruns gave 35/37 each, an
 approved `setTokenCap` reverting for want of gas (sent with the bare estimate, no margin), and the module reported
 reverts as done. Fixed in `787b5448`; the record of the fixed module is `../bridge-send-stack-r2/`.
 

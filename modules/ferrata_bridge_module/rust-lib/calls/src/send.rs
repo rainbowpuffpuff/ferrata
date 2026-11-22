@@ -515,7 +515,7 @@ mod tests {
 
     #[test]
     fn the_margin_covers_the_gap_that_reverted_an_approved_cap() {
-        // Measured (review-rfp-F): setTokenCap estimated 48,564, needed 48,273 + 2,525 when mined a second later.
+        // Measured (the first review's run): setTokenCap estimated 48,564, needed 48,273 + 2,525 when mined a second later.
         assert_eq!(margin(48_564), 48_564 + 12_141 + 20_000);
         assert!(margin(48_564) > 48_273 + 2_525);
         // The ETH deposit (estimate = used = 200,572): a second-later branch write (~17k) still fits.
