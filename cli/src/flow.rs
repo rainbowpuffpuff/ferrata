@@ -530,6 +530,12 @@ pub async fn claim<L: Ledger>(
                 Some(j) => out.line(format!("  the job (receipt and the account's public keys) went to {}", j.display())),
                 None => out.line("  no new job: an earlier run had handed this deposit's job to the relayer"),
             }
+            if !done.asked_before.is_empty() {
+                out.line(format!(
+                    "  asked before for this deposit, no credit from: {} (this relayer has a receipt of its own, for the same one-time account)",
+                    done.asked_before.join(", ")
+                ));
+            }
         }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));

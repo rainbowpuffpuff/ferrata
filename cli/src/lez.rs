@@ -146,8 +146,9 @@ pub struct GasDropAsk {
     pub inbox: std::path::PathBuf,
     /// The gas-drop guest (ELF), proven over the receipt's input.
     pub elf: std::path::PathBuf,
-    /// The record of this wallet's drops (`N` -> one-time account, job), beside LEZ's wallet: a run killed
-    /// after handing the job over asks nothing new of the relayer when it runs again.
+    /// The record of this wallet's drops (`N` -> its one-time account and the job handed to each relayer asked),
+    /// beside LEZ's wallet: a run killed after handing the job over asks nothing new of that relayer when it runs
+    /// again; a run naming another relayer reuses the one-time account and hands that relayer a receipt of its own.
     pub record: std::path::PathBuf,
     /// How long to wait for the relayer's credit.
     pub wait_secs: u64,
@@ -163,6 +164,8 @@ pub struct GasDropDone {
     pub sealed: bool,
     /// The job handed to the relayer (`None`: an earlier run had handed it over).
     pub job: Option<std::path::PathBuf>,
+    /// Other relayers an earlier run asked for this `N` (their LEZ accounts, hex), whose credit had not come.
+    pub asked_before: Vec<String>,
     /// The one-time account was made by an earlier run, recorded for this `N`.
     pub resumed: bool,
     pub prove_secs: Option<f64>,
@@ -770,8 +773,17 @@ impl Ledger for Sequencer {
         };
         ensure!(keys.account_id()? == *one_time.value(), "the one-time account's keys do not derive its id");
         let mut credit = self.pending_credit(one_time).await?;
-        // A job an earlier run handed over is not handed over again (the relayer sends one drop per N).
-        let handed_over = book.get(&key).and_then(|v| v["job"].as_str()).is_some();
+        // The relayers asked for this N, each with its own receipt (the receipt names the relayer). A job handed to
+        // this relayer is not handed to it again (a relayer sends one drop per N and resumes its own); another
+        // relayer is asked with a receipt of its own, for the same one-time account. A record from before the
+        // per-relayer jobs names one job: it counts for the relayer whose inbox holds it.
+        let relayer_key = hx(&ask.relayer);
+        let entry = book.get(&key).cloned().unwrap_or_default();
+        let jobs = entry.get("jobs").and_then(|j| j.as_object()).cloned().unwrap_or_default();
+        let legacy_here =
+            entry.get("job").and_then(|j| j.as_str()).is_some_and(|j| Path::new(j).starts_with(&ask.inbox));
+        let handed_over = jobs.contains_key(&relayer_key) || legacy_here;
+        let asked_before: Vec<String> = jobs.keys().filter(|r| **r != relayer_key).cloned().collect();
         let mut job = None;
         let mut prove_secs = None;
         if credit.is_none() && !handed_over {
@@ -796,10 +808,13 @@ impl Ledger for Sequencer {
             });
             std::fs::create_dir_all(&ask.inbox)
                 .with_context(|| format!("the relayer's inbox {}", ask.inbox.display()))?;
-            let path = ask.inbox.join(format!("gas-drop-{}.json", &key[2..18]));
+            let path = ask.inbox.join(format!("gas-drop-{}-{}.json", &key[2..18], &relayer_key[2..10]));
             write_json_atomic(&path, &value)?;
             if let Some(entry) = book.get_mut(&key).and_then(|v| v.as_object_mut()) {
-                entry.insert("job".into(), serde_json::json!(path.display().to_string()));
+                let jobs = entry.entry("jobs").or_insert_with(|| serde_json::json!({}));
+                if let Some(jobs) = jobs.as_object_mut() {
+                    jobs.insert(relayer_key.clone(), serde_json::json!(path.display().to_string()));
+                }
             }
             write_json_atomic(&ask.record, &serde_json::Value::Object(book.clone()))?;
             job = Some(path);
@@ -809,7 +824,7 @@ impl Ledger for Sequencer {
         while credit.is_none() {
             ensure!(
                 std::time::Instant::now() < deadline,
-                "no credit to the one-time account {one_time} after {} s: the relayer has not sent it (its log says why; it sends one drop per N, and a receipt for this N bound to another account is refused)",
+                "no credit to the one-time account {one_time} after {} s: the relayer has not sent it (its log says why; it sends one drop per N, and a receipt for this N bound to another account is refused). Run the claim again to wait more, or name another relayer (--relayer, --gas-drop-inbox): it gets a receipt of its own for the same one-time account",
                 ask.wait_secs
             );
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
@@ -817,7 +832,16 @@ impl Ledger for Sequencer {
         }
         let (credit, sealed) = credit.expect("checked above");
         self.private_fee_payer = Some(one_time);
-        Ok(GasDropDone { one_time, credit, sealed, job, resumed, prove_secs, secs: started.elapsed().as_secs_f64() })
+        Ok(GasDropDone {
+            one_time,
+            credit,
+            sealed,
+            job,
+            asked_before,
+            resumed,
+            prove_secs,
+            secs: started.elapsed().as_secs_f64(),
+        })
     }
 
     async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {

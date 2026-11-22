@@ -341,11 +341,16 @@ it opens at) unless `--no-delay`.
   deposit's `N` beside the wallet (`ferrata-gas-drops.json`), proves the gas-drop receipt over the claim's witness,
   writes the relayer's job (the receipt and the account's public keys) to its inbox, waits for the relayer's credit
   sealed to that account (`--gas-drop-wait`, 600 s), and sends the claim with the account as fee payer after LEZ's
-  wallet's dry run (which shows the credit it claims). Killed after handing the job over, the same command reuses the
-  account and the credit and asks nothing new of the relayer. The dry run's `fee payer:` line says which way the fee
+  wallet's dry run (which shows the credit it claims). Killed after handing the job over, or out of time waiting, the
+  same command reuses the account (and the credit, once there) and asks nothing new of that relayer, which resumes its
+  own drop. Naming another relayer instead (`--relayer`, `--gas-drop-inbox`), the same command reuses the one-time
+  account and hands that relayer a receipt of its own (a receipt names one relayer); the record keeps one job per
+  relayer asked, and the output names the ones asked before. The dry run's `fee payer:` line says which way the fee
   is paid and what that leaks; `--no-gas-drop` pays from the proving account. The relayer side is `ferrata-relayer`'s
-  `gas-drop` job (`--gasdrop-image-id`, `--drop-amount`, `--drop-from-private`); run end to end in
-  [`e2e/runs/seqnet-robust-1/`](../e2e/runs/seqnet-robust-1/robust.md). Burns do not use a drop yet.
+  `gas-drop` job (`--gasdrop-image-id`, `--drop-amount`, `--drop-from-private`, `--drop-wait`): journaled in its
+  `drops.json` (the drop account's private nonce recorded before the credit; the job kept until LEZ shows the credit
+  applied; a credit not applied within `--drop-wait` sent again on the same account state, so at most one applies).
+  Run end to end in [`e2e/runs/seqnet-robust-1/`](../e2e/runs/seqnet-robust-1/robust.md). Burns do not use a drop yet.
 
 ```text
 claim on LEZ (configuration 0xa9d67b71ac74fe9bad38696f91d539f82bc21b953b96dee046f02242d718a8c3):
