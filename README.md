@@ -21,6 +21,8 @@ for LEZ) that also covers RFP-021 (trustless Ethereum state attestation for LEZ)
 
 What is here are prototypes and their measurements. **Not audited. Not for production.**
 
+**21 November 2026:** every proof here is made with RISC Zero 3.0.5, whose Groth16 verifier accepts forged claims (RISC Zero's advisories of 11 November 2026), and the owner closed the Sepolia vaults the same day (every release and deposit cap zero): [security note](docs/security/risc0-groth16-advisory-2026-11-21/README.md).
+
 ## Start here
 
 | To | Read |

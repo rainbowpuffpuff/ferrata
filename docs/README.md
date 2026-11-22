@@ -28,6 +28,7 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
 - [docs/design/spec/](design/spec/): the bridge specification,
   [v2](design/spec/bridge-spec-v2.md) and [the v3 changes](design/spec/bridge-spec-v3-changes.md),
   which the prototypes cite as SPEC-v2 and SPEC-v3.
+- [docs/design/risc0-3.1-migration.md](design/risc0-3.1-migration.md): moving to RISC Zero 3.1 after the Groth16 advisories: what moves, in what order, what waits on Logos, the tests.
 - [docs/traceability.md](traceability.md): every requirement of RFP-021 and RFP-022 with its design,
   the evidence that exists today and the milestone that would deliver it.
 - [docs/REVIEW-core.md](REVIEW-core.md): each function of the core against its specification
@@ -73,5 +74,6 @@ on, and each says what is not built.
   `just deploy-testnet`).
 - [reviews/](reviews/): the agents' reviews of the core, the vault and the guests, and the security review of
   11 November 2026 with its tool outputs. None is an audit.
+- [security/](security/): dated security notes; 21 November 2026: RISC Zero's Groth16 advisories and the Sepolia vaults.
 - [history-rewrite.md](history-rewrite.md): why commit ids changed on 15 November 2026, with the table from old to
   new.
