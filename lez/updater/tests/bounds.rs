@@ -153,7 +153,8 @@ fn huge_answers_are_refused_without_growing_the_process() {
     let peak = status_kib("VmHWM");
     let sent = pushed(&format!("/close/{}/huge", 256usize << 20)).expect("the server's count");
     println!(
-        "256 MiB finality update without a length: {:?} in {took:?}; the server pushed {sent} bytes before curl was          stopped; peak RSS {before:?} KiB -> {peak:?} KiB (reset to the current {rss:?} KiB: {reset}; bound {} KiB)",
+        "256 MiB finality update without a length: {:?} in {took:?}; the server pushed {sent} bytes before curl was \
+         stopped; peak RSS {before:?} KiB -> {peak:?} KiB (reset to the current {rss:?} KiB: {reset}; bound {} KiB)",
         huge.as_ref().map(Vec::len).map_err(|e| format!("{e:#}")),
         MAX_OBJECT_BYTES / 1024
     );

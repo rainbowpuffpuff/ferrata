@@ -132,7 +132,8 @@ fn request_heads_are_bounded() {
     let ended = closed_within(&mut c, Duration::from_secs(3));
     let peak = status_kib("VmHWM");
     println!(
-        "64 MiB offered without a newline: {sent} bytes written before the server ended it (after {ended:?} more); peak          RSS {before:?} KiB -> {peak:?} KiB (reset first: {reset})"
+        "64 MiB offered without a newline: {sent} bytes written before the server ended it (after {ended:?} more); peak \
+         RSS {before:?} KiB -> {peak:?} KiB (reset first: {reset})"
     );
     assert!(ended.is_some(), "the server ends the connection");
     assert!(sent < 32 << 20, "{sent} bytes got through: the server read on");
