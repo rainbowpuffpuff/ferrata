@@ -626,7 +626,8 @@ FERRATA_MODE=A FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL=<Sepolia RPC> script/dep
 script/fork-rehearsal.sh [<log directory>]
 ```
 
-Testnet defaults: `FERRATA_DELTA` 600 s, `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
+Testnet defaults: `FERRATA_DELTA` the design's wait for the rule, 3 h 01 min (A) or 1 h (B), unless set (the script
+warns below it), `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
 `FERRATA_MIN_RELEASE_DELAY` 0, `FERRATA_RELEASE_DELAY` 120 s, a freeze authority nobody holds a key for
 (`FERRATA_FREEZE_AUTHORITY`), the deployer as admin and fee recipient (`FERRATA_FEE_RECIPIENT`), no watchers
 (`FERRATA_WATCHERS`). Caps since milestone B1 (RFP-022 Sec.4): per token and day, deposits and releases each at most

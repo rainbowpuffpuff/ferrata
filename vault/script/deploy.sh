@@ -23,7 +23,8 @@
 #   FERRATA_GROTH16_VERIFIER  an existing Groth16 verifier to put behind the stop instead of deploying one
 #   FERRATA_FREEZE_AUTHORITY, FERRATA_FEE_RECIPIENT, FERRATA_WATCHERS (comma-separated, at most 3), FERRATA_DELTA,
 #   FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE, FERRATA_MIN_RELEASE_DELAY, FERRATA_RELEASE_DELAY: the testnet
-#     configuration (defaults: an address nobody holds a key for, the deployer, none, 600 s, 1 day, 30 days, 0, 120 s)
+#     configuration (defaults: an address nobody holds a key for, the deployer, none, the design's wait for the rule
+#     (3 h 01 min under A, 1 h under B; DeployVault.s.sol warns below it), 1 day, 30 days, 0, 120 s)
 #   FERRATA_LOG_DIR     one log per run, and the network journal in net/ (default broadcast/deploy-logs/<record
 #                       name>: one journal per deployment record, so per chain and mode by default)
 #
