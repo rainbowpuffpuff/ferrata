@@ -113,7 +113,6 @@ note = "stops_safely_after_a_period_without_finality (the liveness limit) runs i
 
 [[row]]
 id = "RFP-021 F.10"
-branch = "rfp-docs-final"
 tests = [
   { path = "lez/updater/tests/replacement.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test replacement" },
 ]
@@ -136,7 +135,6 @@ note = "the participant table is docs/trust.md 1 and 7 here: a lying, a lagging 
 
 [[row]]
 id = "RFP-021 F.12"
-branch = "rfp-docs-final"
 tests = [
   { path = "lez/updater/tests/every_party.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test every_party -- --nocapture" },
 ]
@@ -433,7 +431,6 @@ note = "the consumer guide's worked example: ferrata_holdings, written against t
 
 [[row]]
 id = "RFP-021 S.3"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -450,7 +447,6 @@ note = "the pattern's points in the reference consumers: a nullifier keyed on th
 
 [[row]]
 id = "RFP-021 S.4"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -465,7 +461,6 @@ note = "the four documents are first drafts here: lez/ATTEST-CLI.md, docs/guides
 
 [[row]]
 id = "RFP-021 S.5"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -480,7 +475,6 @@ note = "trust.md covers the listed points (the parties, capture by stake and bri
 
 [[row]]
 id = "RFP-021 S.6"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -524,7 +518,6 @@ note = "logos-modules-release-action's steps run locally for linux-amd64: export
 
 [[row]]
 id = "RFP-021 S.11"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-decisions.py", kind = "test", ci = "links", run = "python3 -I scripts/check-decisions.py" },
 ]
@@ -578,7 +571,6 @@ note = "the trustless model and the liveness-only role of every off-chain party 
 
 [[row]]
 id = "RFP-021 VS.5"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -810,7 +802,6 @@ note = "every dry run prints what the step makes public on each chain and what s
 
 [[row]]
 id = "RFP-022 U.7"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -949,7 +940,6 @@ note = "the user guide (both flows, recovery from the seed in 8), the consumer g
 
 [[row]]
 id = "RFP-022 R.12"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -964,7 +954,6 @@ note = "cli/README.md (the user's journey command by command), the operator guid
 
 [[row]]
 id = "RFP-022 R.13"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -979,7 +968,6 @@ note = "the deployer guide (registering tokens, fees, admin and freeze authoriti
 
 [[row]]
 id = "RFP-022 R.14"
-branch = "rfp-docs-final"
 tests = [
   { path = "docs/guides/runs/2026-11-21-second-deployer/README.md", kind = "record", run = "e2e/seqnet/run.sh deployer NAME" },
 ]
@@ -1041,9 +1029,11 @@ note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transact
 [[row]]
 id = "RFP-022 P.7"
 tests = [
+  { path = "vault/test/StateGrowth.t.sol", kind = "test", ci = "vault" },
+  { path = "lez/results/perf-projections.md", kind = "record" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "the projections at 1M and 10M operations derived in performance.md from measured and type-estimated account sizes (LEZ nullifier accounts 77 MB / 770 MB, burn accounts 185 MB / 1.85 GB, Ethereum 1M / 10M NOut slots); measured sizes and real-traffic projections remain"
+note = "growth of all bridge state measured: on Ethereum one slot per release and per new depositor (the vault job's StateGrowth.t.sol), on LEZ a nullifier 165 B, a burn record 273 B, a root 205 B, 162 B per new holder (perf-projections.md, measured on the box); the projections at 1M and 10M operations derived in performance.md"
 
 [[row]]
 id = "RFP-022 S.1"
@@ -1075,7 +1065,6 @@ note = "as RFP-021 S.10: the action's steps run locally (EVIDENCE row 61), the c
 
 [[row]]
 id = "RFP-022 S.4"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-decisions.py", kind = "test", ci = "links", run = "python3 -I scripts/check-decisions.py" },
 ]
@@ -1143,7 +1132,6 @@ note = "under rule (B) the off-chain roles are liveness-only and the user docume
 
 [[row]]
 id = "RFP-022 Sec.7"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -1209,7 +1197,6 @@ note = "secrets derive from the wallet seed and stay in the wallet; no linking v
 
 [[row]]
 id = "RFP-022 Priv.4"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]
@@ -1232,7 +1219,6 @@ note = "what each third party receives measured (docs/privacy/generated/fields.m
 
 [[row]]
 id = "RFP-022 Priv.6"
-branch = "rfp-docs-final"
 tests = [
   { path = "scripts/check-guides.py", kind = "test", ci = "links", run = "python3 -I scripts/check-guides.py" },
 ]

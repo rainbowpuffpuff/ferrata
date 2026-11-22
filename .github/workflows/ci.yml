@@ -153,8 +153,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Every relative link in README.md and docs/ resolves to a tracked file
-        run: python3 -I scripts/check-links.py
+      - name: Every relative link in README.md, docs/ and the READMEs elsewhere resolves to a tracked file
+        run: python3 -I scripts/check-links.py README.md docs cli/README.md monitor/README.md lez/ATTEST-CLI.md lez/updater/README.md e2e/seqnet/README.md
+      # RFP-021 S.3-S.6, VS.5; RFP-022 U.7, R.12-R.14, Sec.7: the guides kept in step with the code (every
+      # attestation code with its client action, the tool's privacy table word for word, every bridge code
+      # named, no guide called a first draft, keyless retirement as FerrataVault.sol counts it).
+      - name: The guides agree with the code (scripts/check-guides.py)
+        run: python3 -I scripts/check-guides.py
+      - name: The guide checker's own tests (scripts/test_check_guides.py)
+        run: python3 -I scripts/test_check_guides.py
+      # RFP-021 S.11 / RFP-022 S.4: every decision record's form, and every path, quote and name it cites.
+      - name: The decision log's form and references (scripts/check-decisions.py)
+        run: python3 -I scripts/check-decisions.py
+      - name: The decision checker's own tests (scripts/test_check_decisions.py)
+        run: python3 -I scripts/test_check_decisions.py
       # RFP-022 Reliability #11: every hard row of both RFPs mapped to its tests, records and documents
       # (scripts/ci/row-tests.toml), and every test said to run in a CI job really run by that job's
       # commands (scripts/ci/ci_model.py reads the workflows and the scripts they call). The checker's own
