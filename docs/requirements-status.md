@@ -22,8 +22,8 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 29 | 25 | 2 | 3 | **59** |
-| RFP-022 | 29 | 35 | 2 | 2 | **68** |
+| RFP-021 | 37 | 18 | 1 | 3 | **59** |
+| RFP-022 | 37 | 28 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -31,19 +31,19 @@ By section, hard requirements:
 
 | RFP | Section | shown | in part | not yet | waits on Logos | total |
 |---|---|---:|---:|---:|---:|---:|
-| RFP-021 | Functionality | 11 | 3 | 0 | 1 | 15 |
+| RFP-021 | Functionality | 13 | 1 | 0 | 1 | 15 |
 | RFP-021 | Usability | 2 | 3 | 0 | 1 | 6 |
 | RFP-021 | Reliability | 8 | 4 | 0 | 0 | 12 |
 | RFP-021 | Performance | 5 | 4 | 0 | 0 | 9 |
-| RFP-021 | Supportability | 0 | 8 | 2 | 1 | 11 |
-| RFP-021 | Verification Security | 3 | 3 | 0 | 0 | 6 |
+| RFP-021 | Supportability | 4 | 5 | 1 | 1 | 11 |
+| RFP-021 | Verification Security | 5 | 1 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 11 | 6 | 0 | 0 | 17 |
-| RFP-022 | Usability | 2 | 7 | 0 | 1 | 10 |
-| RFP-022 | Reliability | 4 | 10 | 0 | 0 | 14 |
+| RFP-022 | Usability | 3 | 6 | 0 | 1 | 10 |
+| RFP-022 | Reliability | 8 | 6 | 0 | 0 | 14 |
 | RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
-| RFP-022 | Supportability | 0 | 2 | 1 | 1 | 4 |
-| RFP-022 | Security | 3 | 5 | 1 | 0 | 9 |
-| RFP-022 | Privacy Preservation | 4 | 3 | 0 | 0 | 7 |
+| RFP-022 | Supportability | 0 | 3 | 0 | 1 | 4 |
+| RFP-022 | Security | 4 | 4 | 1 | 0 | 9 |
+| RFP-022 | Privacy Preservation | 6 | 1 | 0 | 0 | 7 |
 
 ## RFP-021: Trustless Ethereum State Attestation
 
@@ -60,9 +60,9 @@ By section, hard requirements:
 | F.7 | waits on Logos | Names a testnet. Shown instead: same-transaction consumption in the harness and on rc1 and rc3 sequencers we ran. | 3, 27, 91, 123; `lez/results/stage4-attest-consumer.md` |
 | F.8 | shown | The full-diff test: two private claims (a deposit in the recorded block, one three hops back), byte-identical once only fresh randomness and the claim's nullifier are taken from one; events, charges and every public account's change identical; no secret, statement id, account, vault address, receipt proof's last node or hop header in either; the calling variant fails the same test. Private attestation proven for real and applied on rc3. | 5, 73, 123, 152; `lez/results/lc-security/f8-full-diff.md` |
 | F.9 | in part | Parameters fixed at Init; `verify_checkpoint` ran against Sepolia providers from Ferrata's module, not as an API of the Logos Ethereum module. | 69, 70, 105, 117 |
-| F.10 | in part | Bound and successors run in the harness; a stale checkpoint was refused live; the migration text is a first draft. | 69, 70, 91; `docs/guides/consumer-guide.md` §9 |
+| F.10 | shown | Replacement is a fresh instance: re-`Init` refused (203), an `Init` with another chain id refused (201), the instance unchanged; past the weak-subjectivity bound updates are refused, and a stale checkpoint was refused live. When to replace and how a consumer migrates: consumer guide §9.1, §9.3; the recipe's re-binding run (the same statement identifier under the replacement, 211 both ways, the old record still attests), its step 4 shown to be needed (the two pools' nullifiers differ) and not tooled. | 69, 70, 91, 105, 177, 178; `lez/updater/tests/replacement.rs`; `docs/guides/consumer-guide.md` §9 |
 | F.11 | shown | No step checks its sender; three updaters with their own keys advanced the same instances in the harness. | 80; `lez/harness/tests/private_placement.rs`; `lez/updater/tests/recorded.rs` |
-| F.12 | in part | Parties listed in a first-draft trust document; lying sources and an adversarial updater did not block; no test over every party. | 79, 80; `docs/trust.md` §1, §7 |
+| F.12 | shown | `docs/trust.md` §2.4 lists the seven off-chain parties, what each can affect and why none, alone or as a class, can block; a test per party in which it lies, lags, stops or censors and an attestation is still produced (8 of 8; the table and the tests checked against each other); forged updates refused by the signature check (41, 40); the LEZ nodes clients read from argued, not tested. | 79, 80, 177; `lez/updater/tests/every_party.rs`; `docs/trust.md` §2.4 |
 | F.13 | shown | Re-Init refused (203) in the harness and on sequencers; program deployed immutable through LEZ's loader; recovery by a fresh instance. | 6, 21, 91, 112; `lez/results/stage1-refusals.md` |
 | F.14 | shown | One program followed mainnet and Sepolia through the Gloas fork, in the harness and side by side on the lab's zone. | 4, 21; `lez/results/stage5-sepolia-replay.md` |
 | F.15 | shown | Two instances side by side on the lab's zone; another instance's job id and request are refused (205, 211). | 21, 70; `lez/results/stage1-refusals.md`; `lez/results/stage4-attest-refusals.md` |
@@ -73,7 +73,7 @@ By section, hard requirements:
 |---|---|---|---|
 | U.1 | in part | Module loaded in a headless Logos Core, Ethereum reads through `eth_rpc_module`; LEZ reads and sends not through Logos Core's modules. | 59, 60, 93, 108, 116 |
 | U.2 | in part | CLI attests, dry-runs with the program's codes, advances and reads configuration against the in-process chain only, not a sequencer. | 56; `lez/ATTEST-CLI.md` |
-| U.3 | in part | Daemon and module followed Sepolia on sequencers we ran; operator journey is a first draft; Ethereum data partly outside Logos Core. | 79, 81, 97, 99, 104, 118 |
+| U.3 | in part | Daemon and module followed Sepolia on sequencers we ran; the operator journey documented and recorded (operator guide §0, §3; `/health` ok, SIGTERM exit 0); Ethereum data partly outside Logos Core. | 79, 81, 97, 99, 104, 118, 179 |
 | U.4 | waits on Logos | SPEL's release targets LEZ v0.2.4. Shown instead: a hand-written IDL in SPEL's format that SPEL's crate parses and decodes. | 55, 58; `idl/check.py` |
 | U.5 | shown | Every listed failure mode refused through the program with its code (22 cases, a committee handoff refused with 27, 45 and 23 among them), each code's name and message from the IDL the CLI prints. A checkpoint stale by the sequencer's clock is refused by LEZ with its own text before the program runs, on the window the program declares; the 53 message applies when the update is signed after the end. | 39, 56, 69, 70, 151; `lez/results/lc-security/u5-failure-modes.md` |
 | U.6 | shown | ERC-20 `Transfer` and native-ETH deposit consumers credit once in the harness, public and private claims, on real mainnet and Sepolia data. | 3, 73; `lez/harness/tests/attest_public.rs`; `lez/harness/tests/vault_consumer.rs` |
@@ -91,7 +91,7 @@ By section, hard requirements:
 | R.7 | in part | Lab instances caught up and ran eight days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
 | R.9 | in part | On a running sequencer, two honest daemons alone at windows 1, 8 and 30 and with an adversary: A3's waste ratio 0.0036 at window 30 (on 20 updates; the gate asks 100), above the gate at windows 1 and 8 and with the adversary; the abandoned-job policy is not built. | 80, 172; `lez/results/perf-gate-sequencer.md` |
-| R.10 | in part | On a running sequencer, honest-1's fee share 0.493–0.609 and latency medians 105–306 s across windows, 8–23 completed jobs per run against A3's 100 updates, the window comparison confounded by one run's reveal step; the guide's §3.4 sits in a first-draft guide. | 80, 172; `docs/guides/operator-guide.md` §3.4 |
+| R.10 | in part | On a running sequencer, honest-1's fee share 0.493–0.609 and latency medians 105–306 s across windows, 8–23 completed jobs per run against A3's 100 updates, the window comparison confounded by one run's reveal step; the deferral strategy and its measured effect in the operator guide §3.4. | 80, 172; `docs/guides/operator-guide.md` §3.4 |
 | R.11 | shown | Four private attestations proven against one snapshot, a finality update applied in between, then settled in one block with nothing re-proven; one account's second transaction on the same snapshot dropped. The block is assembled in process with rc1's block settlement; no sequencer ran it. | 152; `lez/results/lc-security/r11-one-block.md` |
 | R.12 | shown | All seven CI jobs passed on GitHub at `main`; the five latest runs read on 18 November also passed. | GitHub runs 43730879603 and 44172503761; `.github/workflows/ci.yml` |
 
@@ -115,15 +115,15 @@ By section, hard requirements:
 |---|---|---|---|
 | S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: rc1, rc2 and rc3 sequencers we ran; the lab followed Sepolia eight days. The day-one deployment is built and rehearsed: one command deploys the attestation program, starts a Sepolia instance and its updater and attests the live vault, run on our own rc3 zone as if it were the public network. | 6, 21, 22, 99, 112, 123, 148 |
 | S.2 | in part | Sequencer runs by hand and scheduled, against live Sepolia data; CI runs the state transition. A CI script builds LEZ's standalone sequencer from source and deploys the programs through its loader (20 transactions applied), in a workflow started by hand; its production and consumption phases stopped on recorded data older than the `Init` validity window. | 6, 21, 76, 99, 164; `lez/live/verify-run.sh`; `e2e/runs/ci-sequencer-attest-2026-11-21/` |
-| S.3 | in part | Consumer guide is a first draft; its worked example is tested in the harness with real handler proofs. | 39; `docs/guides/consumer-guide.md` |
-| S.4 | in part | The pattern's points run in two reference consumers in the harness; the guide's section is a first draft. | 39, 73; `docs/guides/consumer-guide.md` §6 |
-| S.5 | in part | First drafts of the CLI, operator and consumer guides and the updater README. | `lez/ATTEST-CLI.md`; `docs/guides/operator-guide.md`; `lez/updater/README.md` |
-| S.6 | in part | `trust.md` covers the listed points as a first draft. | `docs/trust.md` |
-| S.7 | in part | Refusal costs, cadence and concurrency measured; the operator guide is a first draft; the stall alarm's `monitor` is not built. | 21, 80, 81; `lez/results/stage1-refusals.md`; `docs/guides/operator-guide.md` §3 |
+| S.3 | shown | Consumer guide: the developer journey in eight steps with a clause map (§0), the interface, pattern, codes and migration (§1–§11), a whole consumer step by step (§12, re-run, its table byte for byte the committed record) and the core module method by method with `logosctl` commands (§13), each run end to end. | 39, 60, 105, 108, 179; `docs/guides/consumer-guide.md` |
+| S.4 | shown | Consumer guide §6: the nullifier keyed on the statement identifier, the chain binding, every code of the IDL (71) with who meets it and what the client does (generated, checked), refusing when no attestation can be produced; §6.2 names the test for each point, run in two reference consumers. | 39, 73, 177, 180; `docs/guides/consumer-guide.md` §6 |
+| S.5 | shown | CLI guide (`lez/ATTEST-CLI.md`, the core user journey with commands as run, recorded: the one refusal predicted and reproduced, every sent transaction equal to its dry run); the operator journey in the operator guide §0, §3 and the updater README (recorded: `/health` ok, SIGTERM exit 0). | 99, 104, 179; `lez/ATTEST-CLI.md`; `docs/guides/operator-guide.md`; `lez/updater/README.md` |
+| S.6 | shown | `docs/trust.md` §0 maps each listed point: the honest supermajority and the cost of the attack it admits (§2.2), the checkpoint and how a verifier confirms it (§2.1), what an attestation proves and does not (§2.3), what each participant observes and can affect (§2.4, §4.2), when the guarantees degrade or fail (§2.5, §6). | 105, 177; `docs/trust.md`; `docs/forgery-cost/` |
+| S.7 | in part | Refusal costs, cadence and concurrency measured and in the operator guide §3; the stall alarm's `monitor` is not built. | 21, 80, 81; `lez/results/stage1-refusals.md`; `docs/guides/operator-guide.md` §3 |
 | S.8 | not yet | No audit; it depends on Logos contracting one. Review, fuzzing and dependency checks are not an audit. | none (tooling: 1, 36, 40) |
 | S.9 | in part | Catalog laid out from the template and installed from 127.0.0.1; publishing is one owner command, every path tested against a stub GitHub with no network (83 of 83), its dry run reproducible; not published. | 61, 98, 163; `modules/catalog/RELEASE.md` |
 | S.10 | in part | The release action's steps ran locally for linux-amd64; the catalog's workflows call the action pinned (v1.8); nothing published, the action not run on a release. | 61, 163; `modules/scripts/release-local.sh` |
-| S.11 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the design notes. | `docs/how-it-was-built.md` |
+| S.11 | in part | `docs/decisions/`: 31 dated records (context, options, decision, rationale and trade-offs, sources), their form and references checked (0 findings); 26 reconstructed on one day from the design notes, 0027–0031 written on the day of their decisions; in 0009, 0014, 0021, 0022, 0025, 0027 and 0030 the only alternatives are reconstructed for contrast. That the log is kept current at each milestone can be shown only over the coming milestones. | 181; `docs/decisions/README.md`; `scripts/check-decisions.py` |
 
 ### Verification Security
 
@@ -131,9 +131,9 @@ By section, hard requirements:
 |---|---|---|---|
 | VS.1 | shown | A self-consistent fabricated chain (a forger's 512-key committee, checkpoint, finality update and a block with real tries), accepted by the forger's own instance, sent through the program to the canonical mainnet instance: refused (40), at its records (213, 110), across instances (211) and by the reference consumer (213, 110); nothing written or credited. | 1, 151; `lez/results/lc-security/vs1-fabricated-chain.md` |
 | VS.2 | shown | All six forgeries refused through the program: a committee never handed off (40, 27, 45, 23), 341 of 512 signers (51; 342 applies), a proof against a non-finalised header (213, 110), tampered roots (25, 110), another chain (140; another instance 211), a predicate the proof does not cover (110, 130, 131). | 151; `lez/results/lc-security/vs2-forgeries.md` |
-| VS.3 | in part | Program deployed immutable through LEZ's loader, image ids reproducible; every replacement attempt through the loader refused and a mutable control swapped (2 of 2); the migration text and the consumer rule are first drafts here (revised on `rfp-docs-final`, not merged). | 6, 37, 82, 92, 160; `lez/live/README.md` |
-| VS.4 | in part | Documented in a first-draft `trust.md`; the attestation side's `monitor` is not built. | `docs/trust.md` §2, §6 |
-| VS.5 | in part | Stated in first drafts of the trust document and the operator and consumer guides. | `docs/trust.md`; `docs/guides/operator-guide.md`; `docs/guides/consumer-guide.md` |
+| VS.3 | shown | Program deployed immutable through LEZ's loader, image ids reproducible; every replacement attempt through the loader refused and a mutable control swapped (2 of 2); the migration documented with what consumers must do (consumer guide §9: when to replace, the recipe, its re-binding run) and the rule stated for consumers (§2, "Pin the program, never a pointer"). The run moves a consumer to a replacement instance of the same program; a move to a new program version is the guide's text. | 6, 37, 82, 92, 160, 178; `lez/live/README.md`; `docs/guides/consumer-guide.md` §2, §9 |
+| VS.4 | in part | Documented in `trust.md` §2.2 (what a captured committee can do) and §6 (failure classes, what bounds the loss); the attestation side's `monitor` is not built. | `docs/trust.md` §2, §6 |
+| VS.5 | shown | The trustless model and the liveness-only role of every off-chain participant stated in `docs/trust.md` §0, the consumer guide §0, the CLI guide ("What you trust when you use it"), the operator guide ("Your role is liveness only") and the user guide §0; each participant's role exercised party by party (8 of 8). | 177; `docs/trust.md` §0; `docs/guides/consumer-guide.md` §0; `docs/guides/operator-guide.md` |
 | VS.6 | shown | Forged signature refused from any sender; three keys applied updates; only spoofed internal messages refused by sender (202). | 80; `lez/results/stage1-refusals.md` |
 
 ### Soft requirements
@@ -171,7 +171,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | F.13 | in part | Mint fee paid on LEZ, burn fee taken at release on the vault; rates capped at 1%; claims show their schedule's range. | 8, 9, 41, 91; `vault/test/Fees.t.sol` |
 | F.14 | shown | All 32 freeze combinations on the vault; LEZ freezes per token or globally (242) in the harness; both in Ferrata's own code. | 8, 43, 74; `vault/test/Freeze.t.sol` |
 | F.15 | shown | `Init` refuses another configuration (246) and foreign proofs (110); vault journals bind every field; the live vault holds the devnet's `configId`. | 8, 91, 92; `vault/test/JournalBinding.t.sol` |
-| F.16 | in part | A vault-A deposit under configuration B's root is refused (249), but the configurations are not strictly separated: the malicious-tenant test shows that a second configuration of the same vault can freeze a public-kind deposit whose `s` it knows (the paired one's claim refused, 250) and fill a destination's shared holder account; the fix changes the image id (B1); the switching text is a first draft. | 8, 136; `lez/harness/tests/tenant.rs`; `docs/guides/deployer-guide.md` §7 |
+| F.16 | in part | A vault-A deposit under configuration B's root is refused (249), but the configurations are not strictly separated: the malicious-tenant test shows that a second configuration of the same vault can freeze a public-kind deposit whose `s` it knows (the paired one's claim refused, 250) and fill a destination's shared holder account; the fix changes the image id (B1); switching documented in the deployer guide §7. | 8, 136; `lez/harness/tests/tenant.rs`; `docs/guides/deployer-guide.md` §7 |
 | F.17 | shown | USDT-style deposits and releases pass on a local EVM and through the tool; fee-on-transfer and false-returning tokens rejected. | 12, 85; `vault/test/Deposit.t.sol`; `vault/test/Release.t.sol` |
 
 ### Usability
@@ -184,7 +184,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | U.4 | waits on Logos | SPEL does not support LEZ v0.4. Shown instead: a hand-written IDL decodes the bridge program's 37 vectors; SPEL's crate parses it. | 55; `idl/check.py` |
 | U.5 | in part | Defaults and exposure indicator tested in tool and mini-app; the gas drop ran on rc3, not yet in the relayer daemon. | 62, 84, 86, 124 |
 | U.6 | shown | Tool and mini-app preselect the private path; each public choice needs its own acknowledgement; tested. | 62, 84, 85, 86 |
-| U.7 | in part | Tool dry runs and the mini-app say what each step publishes; the user guide is a first draft. | 84; `cli/src/privacy.rs`; `docs/guides/user-guide.md` §10 |
+| U.7 | shown | User guide §10 says what is public and what is private at each step on both chains, with the residual correlations and, per field, what was measured; the tool and the mini-app print the same table before each step, and the guide carries it word for word (generated from `cli/src/privacy.rs`, checked). | 62, 84, 86, 180; `cli/src/privacy.rs`; `docs/guides/user-guide.md` §10 |
 | U.8 | in part | 21 refusals named without a deposit or burn in the tool; the freeze refusal is exercised in the mini-app only. | 62, 85; `cli/tests/e2e.rs` |
 | U.9 | shown | Tool takes RPC and sequencer by option; the mini-app switches endpoints in the view, bad ones reported; tested. | 62, 85; `cli/README.md` |
 | U.10 | in part | Catalog laid out from the template and installed from 127.0.0.1; publishing is one owner command, every path tested against a stub GitHub (83 of 83); not published. | 61, 98, 107, 163 |
@@ -201,12 +201,12 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | R.6 | in part | `monitor` killed and restarted makes exactly one cancellation; the relayer keeps its gas-drop record; no relayer kill mid-checkpoint. | 43, 46, 47, 96 |
 | R.7 | in part | A view closed during a proof resumed its job once, in Basecamp; no test of a client killed between proof and sending. | 126; `e2e/runs/seqnet-basecamp-final-real/SUMMARY.md` |
 | R.8 | in part | RISC Zero's unmodified Groth16 verifier accepts the receipts, on a local EVM and on Sepolia; no new ZK primitive. "Mature, audited" is not met by the versions pinned today: risc0-zkvm 3.0.5 is yanked and verifier 3.0.0 accepts forged claims (GHSA-g6qg-9j8p-7j87, GHSA-mm6c-35cm-g4x2); RISC Zero has stopped its own 3.0.0 deployments. Shown again after the move to 3.1: the Ethereum side after phase 1, the LEZ side after phase 2 (a LEZ tag on risc0 3.1, Logos). | 12, 19, 41, 91, 154; `bridge/evm-verify/test/v2/Groth16Verify.t.sol`; `docs/design/risc0-3.1-migration.md` |
-| R.9 | in part | Documented in first drafts of `trust.md` and the operator guide. | `docs/trust.md` §1, §4; `docs/guides/operator-guide.md` §10 |
+| R.9 | shown | `docs/trust.md` §4.3: every third-party component (the updater, the root importer, the relayer both ways, the wrapper, the checkpoint prover, the watchers, the rule (B) attestors, RPC and LEZ nodes, the multisigs) with the effect of its outage and of its malfunction and the mitigation, each mitigation with the test or run that shows it; the operator guide §10. | 12, 43–48, 66, 68, 84, 85, 106, 124; `docs/trust.md` §4.3; `docs/guides/operator-guide.md` §10 |
 | R.10 | in part | CI runs the round trip over the state transition and anvil; sequencer round trips, twice live on Sepolia, are by hand. | 41, 76, 91, 100, 102 |
 | R.11 | in part | Every hard row of both RFPs mapped to a test, record or document, and CI's claims checked in the `links` job; 51 of 68 RFP-022 rows have a test CI runs, 17 do not, so the gate (`--require-ci RFP-022`) exits 1. | 162; `scripts/ci/row-tests.toml`; `scripts/ci/check-row-tests.py` |
-| R.12 | in part | First drafts of the user guide, the consumer guide and the tool's README. | `docs/guides/user-guide.md`; `cli/README.md` |
-| R.13 | in part | First drafts of the tool's README, the operator guide and `monitor`'s README. | `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
-| R.14 | in part | Deployer guide is a first draft; four vaults deployed on Sepolia by the script; no second deployer has followed it. | 26, 41, 53, 91, 122, 142 |
+| R.12 | shown | User guide §13: `ferrata_bridge_module`'s methods in journey order for both flows, recovery and status, with `logosctl` commands, then the messages and derivations below it; the flows run through the module natively and in a headless Logos Core (24 of 24, one release proven for real), and the mini-app's round trip through it on a running sequencer and inside Basecamp. | 84, 93, 103, 113, 114, 125, 126; `docs/guides/user-guide.md` §13 |
+| R.13 | shown | `cli/README.md` (the user's journey command by command, every option and refusal; its end-to-end test in CI's round trip); the operator journey in the operator guide §0, §4, §6, §7, `monitor/README.md` and the updater README, each component run. | 43–46, 84, 85, 96, 102, 106, 107; `cli/README.md`; `docs/guides/operator-guide.md`; `monitor/README.md` |
+| R.14 | shown | Deployer guide §2–§7 and §11: registering tokens, fees, the admin and freeze authorities and the finality depth, each read back by the walkthrough, run from a fresh clone with nothing beside it: every program rebuilt from source equal to `image-ids.md` (20 of 20), 29 of 29 settings PASS. Run by the team on its build box; the proposal's outside-deployer gate (B4) is still open, which the RFP clause does not ask for. | 26, 41, 53, 91, 122, 142, 182; `docs/guides/deployer-guide.md`; `docs/guides/runs/2026-11-21-second-deployer/` |
 
 ### Performance
 
@@ -227,7 +227,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | S.1 | waits on Logos | LEZ testnet 0.4 does not exist. Shown instead: the vault on Sepolia and three round trips against zones we ran (the third with LEZ v0.4.0-rc3's sequencer and node 0.3.5-rc.1). The bridge program's day-one deployment is built and rehearsed with the attestation program's; the vault's Sepolia step for it is prepared, not sent. | 41, 91, 92, 122, 123, 142, 148 |
 | S.2 | in part | User-side proofs built and proven on macOS; a macOS workflow for the user-side crates and five modules is written and its scripts are portable (the same exports under a FreeBSD userland and bash 3.2), never run on macOS (no push); the modules and the catalog run on Linux x86-64 only. | 88, 59–62, 94–98, 165; `.github/workflows/macos.yml` |
 | S.3 | in part | The release action's steps ran locally; the catalog's workflows call it pinned (v1.8); nothing published, the action not run on a release. | 61, 163 |
-| S.4 | not yet | No decision log in the repository; the author's log is private, decisions are spread over the specification and notes. | `docs/how-it-was-built.md` |
+| S.4 | in part | As RFP-021 S.11: `docs/decisions/` (0013–0026 the bridge's, 0019 and 0024 shared, 0029–0031 of 21 November), form and references checked; that the log is kept current at each milestone can be shown only over the coming milestones. | 181; `docs/decisions/README.md`; `scripts/check-decisions.py` |
 
 ### Security
 
@@ -236,10 +236,10 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Sec.1 | not yet | No audit; it depends on Logos contracting one. Static analysis, symbolic checks and an internal review are not an audit. | none (tooling: 30, 35, 54) |
 | Sec.2 | in part | Flipped proof and journal words, wrong inputs and replays refused by the real verifier; altered claims and receipts refused on LEZ. But verifier 3.0.0 accepts a forged claim (GHSA-mm6c-35cm-g4x2): on a fork, with the forgery stood in for, releases without a valid burn are paid (154); LEZ rc1 and rc3 verify private transactions with risc0 3.0.5 (Logos to confirm). The Ethereum side shown again after phase 1 of the move to 3.1, the LEZ side after phase 2. | 12, 42, 46, 75, 154; `lez/BRIDGE-RESULTS.md` §2 |
 | Sec.3 | in part | The release journal binds recipient, relayer and fee: redirected, fee-raised and replayed releases refused by the real verifier; a redirected claim refused on LEZ (249, 252). But under verifier 3.0.0 a forged release journal can name any recipient and fee (on a fork, a stranger takes two deposits: 154), and the refusal on LEZ rests on LEZ's risc0 3.0.5. The Ethereum side shown again after phase 1 of the move to 3.1, the LEZ side after phase 2 (waits on Logos). | 46, 47, 76, 154; `lez/harness/tests/bridge_inbound.rs` |
-| Sec.4 | in part | Buckets tested on both sides; the recommended default is in a first-draft guide; live vaults ran without caps. | 8, 28; `vault/test/Caps.t.sol`; `docs/guides/deployer-guide.md` §2 |
+| Sec.4 | in part | Buckets tested on both sides; the recommended default in the deployer guide §2; live vaults ran without caps. | 8, 28; `vault/test/Caps.t.sol`; `docs/guides/deployer-guide.md` §2 |
 | Sec.5 | shown | Each half freezes by its own authority in tests that run without the other half. | 8, 28, 74; `vault/test/Freeze.t.sol`; `lez/harness/tests/bridge_controls.rs` |
 | Sec.6 | in part | Vault invariants hold over 256 runs × 100 calls; invalid mints and releases refused; no randomised run over both real halves. Under verifier 3.0.0 a release without a valid burn succeeds (154's fork, with the forgery stood in for). | 12, 42, 154; `vault/test/invariant` |
-| Sec.7 | in part | Stated in first drafts of the user guide and `trust.md`. | `docs/guides/user-guide.md`; `docs/trust.md` |
+| Sec.7 | shown | User guide §0 (its §12 states freezes, the revocation window and keyless retirement as the vault enforces them, held to the vault's source); `docs/trust.md` §0, §4.2, with the exceptions stated (the accredited sequencers for the return leg; rule (A)'s watchers outside its conditions); every role's mitigation tested (R.9). | 180; `docs/guides/user-guide.md` §0, §12; `docs/trust.md` §4.2 |
 | Sec.8 | shown | Verifier and image ids are immutables, read back on Sepolia; the migration is documented (`vault/MIGRATION.md`: stop, retire, sunset, refunds, releases, the new configuration, users moving) and rehearsed on a local EVM with every in-flight position (8 of 8): an in-flight burn released to its own recipient only, an unimported deposit refunded to its depositor only after the sunset and its revocation window, an imported one not refundable. The four Sepolia vaults cannot change their verifier: the move to RISC Zero 3.1 is retirement and new vaults. | 74, 91, 92, 161; `vault/MIGRATION.md`; `vault/test/Migration.t.sol`; `docs/design/risc0-3.1-migration.md` §3 |
 | Sec.9 | shown | Stop-only failsafe tested, its owner renounced live on Sepolia; no escrow-moving recovery, and per case what happens, documented (`vault/MIGRATION.md` §4–5, `docs/trust.md` §6) and rehearsed (8 of 8): after the stop no role moves escrow, refunds included; after a bug in one of Ferrata's own guests the release and checkpoint freezes hold while renewed and a lapse reopens the forged path, per-token release freezes let unimported deposits be refunded, a revoked forged root pays nothing; the losses before a freeze and their bounds stated. 21 Nov 2026: the stop-only failsafe did not engage on the live vaults under GHSA-mm6c-35cm-g4x2 (no proof of exploit published; RISC Zero paused its own 3.0.0 stops with the owner's `estop()` on 19 Nov 2026; stop owners renounced or keyless); only the admin's caps contain a forgery there, and the owner set them to zero on 21 Nov 2026. | 35, 41, 91, 154, 161; `vault/test/MigrationFailsafe.t.sol`; `vault/test/EmergencyStop.t.sol`; `docs/trust.md` §6 |
 
@@ -250,9 +250,9 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Priv.1 | shown | An adversary pairs 20 deposits with their claims at chance (5.0%), in dev mode and on real proofs of the final programs. | 23, 89; `docs/privacy/RESULTS.md` |
 | Priv.2 | shown | An adversary pairs 20 burns with their releases at chance (5.0%), also on real proofs; the burn root's checkpoint mocked. | 23, 89; `docs/privacy/real/RESULTS.md` |
 | Priv.3 | shown | Destinations and linked values searched in every public byte of 20 pairs each way: 0 of 320; plaintext control fails. | 23, 89; `vault/test/PrivacySuite.t.sol` |
-| Priv.4 | in part | No linking value in submitted bytes (measured); the document of who handles what is a first draft. | 23; `docs/trust.md` §8; `docs/guides/user-guide.md` §10 |
+| Priv.4 | shown | Every component that handles user data documented (`docs/trust.md` §8.1, user guide §10.1); no linking value in any submitted byte of either chain (0 of 320 hidden values over 20 round trips, dev mode and real proofs). | 23, 89; `docs/trust.md` §8.1; `docs/privacy/RESULTS.md` |
 | Priv.5 | in part | Client-side refusals name no deposit or burn; on-chain indistinguishability of rejected, repeated and capped claims not measured. | 62, 85 |
-| Priv.6 | in part | A relayer chosen per claim and per release, tested; what it learns is measured but documented in first drafts. | 84, 85, 124; `docs/privacy/generated/fields.md` |
+| Priv.6 | shown | What each third party submitting for the user learns documented (`docs/trust.md` §8.2, user guide §10.2: the gas-drop relayer, the claim's relayer, the release relayer, the wrapper); the user switches per claim (`--relayer`) and per release (relayer address 0 for any, `--relayer`, `--self-send`), tested. | 46, 47, 48, 84, 85, 124; `docs/trust.md` §8.2 |
 | Priv.7 | shown | Tool and mini-app default to private; a public destination, plaintext claim or public burn is refused without its own acknowledgement. | 62, 84, 85, 86 |
 
 ### Soft requirements

@@ -39,7 +39,7 @@ Every document in this folder, one line each. Start with [EVIDENCE.md](EVIDENCE.
 ## Guides, trust and performance
 
 The documents the two RFPs ask for, written from the results and design notes above and revised for delivery on
-21 November 2026 (`performance.md` is still the first draft of 11 November); every statement cites the file it rests
+21 November 2026 (`performance.md`: its second draft, the same day); every statement cites the file it rests
 on, and each says what is not built.
 
 - [docs/guides/consumer-guide.md](guides/consumer-guide.md): consuming attestations from a LEZ

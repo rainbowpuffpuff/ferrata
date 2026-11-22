@@ -1,13 +1,14 @@
 # Stream G: CI, platforms, release and migrations, proposed statuses
 
 **Folded on `integration9`, 22 November 2026,** with the third review's verdicts: RFP-022 Sec.8, Sec.9 and Soft.4
-shown; RFP-021 S.2, S.9, S.10 and VS.3 and RFP-022 R.10, R.11, S.2, U.10 and S.3 in part, their reasons updated, in
+shown; RFP-021 S.2, S.9, S.10 and VS.3 and RFP-022 R.11, S.2, U.10 and S.3 in part, their reasons updated (R.10 unchanged), in
 `docs/requirements-status.md` (with the counts), `docs/traceability.md` and README.md; the six proposed rows as
 EVIDENCE rows 160 (VS.3), 161 (the migration rehearsal), 162 (the row map), 163 (the catalog's owner step), 164 (the
 standalone sequencer) and 165 (the portable macOS scripts). `scripts/ci/row-tests.toml` now names stream A's tests
-for the rows it moved to shown (box tests; the counts of rows with a test CI runs are unchanged). Still proposed, for
-when `rfp-docs-final` merges: VS.3 to shown, the map's `branch = "rfp-docs-final"` lines and the two guide checks in
-the `links` job (below), the keyless-retirement wording in the deployer guide §9 and ADR 0016; and the owner's
+for the rows it moved to shown (box tests; the counts of rows with a test CI runs are unchanged). Done when
+`rfp-docs-final` merged (22 November 2026): VS.3 shown, the map's `branch = "rfp-docs-final"` lines dropped and the
+guide and decision checks in the `links` job (51 of 68 RFP-022 and 28 of 59 RFP-021 rows now with a test CI runs),
+the keyless-retirement wording in the deployer guide §9 and ADR 0016 (stream H's `a2473461`). Still open: the owner's
 steps below.
 
 For the integrator of `docs/requirements-status.md`, `docs/traceability.md` and `docs/EVIDENCE.md`. Branch
@@ -95,15 +96,9 @@ unchanged) after each review; the commit ids here are the current ones.
 
 ## For the integrator
 
-- When `rfp-docs-final` merges: drop the `branch = "rfp-docs-final"` lines of `scripts/ci/row-tests.toml` and add
-  `python3 -I scripts/check-guides.py` and `python3 -I scripts/check-decisions.py` to the `links` job in the same
-  change: the checker then verifies the `ci = "links"` claims of those entries and fails if the job does not run them.
-- `scripts/ci/test_ci_model.py` asserts the map's counts (RFP-022 46 of 68, RFP-021 23 of 59 hard rows with a test CI
-  runs; review N-L2): a merge that gives a row a test CI runs (the one above among them) updates those two lines in
-  the same change, or the `links` job fails.
-- The same keyless-retirement wording fixed here in `docs/design/bridge.md` (anyone may retire "once no checkpoint has
-  finalised for 30 days"; the clock also restarts at a submission) remains in the deployer guide §9 and ADR 0016 on
-  `rfp-docs-final`.
+- Done when `rfp-docs-final` merged: its map lines, the two checks in the `links` job, `test_ci_model.py`'s counts
+  (now RFP-022 51 of 68, RFP-021 28 of 59; a merge that gives a row a test CI runs updates them in the same change),
+  and the keyless-retirement wording in the deployer guide §9 and ADR 0016.
 - Pre-existing, outside this branch: deposits are accepted after the verifier stop (`_checkDeposit`; documented in
   `vault/README.md`); a later vault should refuse them. The runbook retires a stopped vault at once.
 - Pre-existing, outside this branch: `checkpoint/scripts/check-attestor-vectors.py` ("RFC 8032 section 6 reference
