@@ -61,6 +61,9 @@ build_() {
     || { echo "build: cannot read the commit of $lez (scripts/fetch-upstream.sh)" | tee -a "$log" >&2; return 1; }
   [ "$lez_commit" = "$LEZ_COMMIT" ] \
     || { echo "build: $lez is at $lez_commit, not $LEZ_COMMIT" | tee -a "$log" >&2; return 1; }
+  # The vault's Solidity libraries must be the pinned trees (vault/lib.lock): the release's bytecode is built from them.
+  python3 -I "$ROOT/scripts/vault_libs.py" check > "$out/build/logs/vault-libs.log" 2>&1 \
+    || { cat "$out/build/logs/vault-libs.log" >&2; echo "$(date -u +%T) vault libraries FAILED" >> "$log"; return 1; }
   # An inherited remap would change the guests' paths and so their image ids (scripts/guest-rustc.py).
   unset FERRATA_GUEST_REMAP_EXTRA
   # 1. The guests (writes out/build/guests/{programs,r0bf,ids.txt}).
