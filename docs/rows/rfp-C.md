@@ -233,14 +233,15 @@ as R.9.
 | clause | shown by |
 |---|---|
 | the compute-unit cost of any additional LEZ-side verification beyond the per-claim path | the root import: `lez/results/perf-state.md` §4a (this tree's bridge program, in-process harness): 230,731 execution gas covering 5 leaves, 236,224 covering 8, 236,202 for another vault's 8: flat in the deposits covered; on Sepolia's real state in the live round trip 432,182 (`e2e/runs/crown-live-3`); under a mainnet state root *estimated* at about 450k (P.1's account statement: 167,882 under the mainnet record, 148,948 under Sepolia's without its header) |
-| its amortised per-deposit cost at the recommended operating cadence | `docs/performance.md` RFP-022 §P.2 (*derived* from the measured figures): import only, 432,182 / N per deposit at N deposits an hour (432,182, 43,218, 4,322 at 1, 10, 100); with the hourly light-client update the cadence runs for the bridge, when the bridge is the instance's only consumer, (9,225,372 + 432,182) / N: **9.66M, 0.97M, 96.6k**; on the proven path (485,298 + 432,182) / N: 917,480, 91,748, 9,175, plus 224,063 storage gas an hour. Per newly covered deposit in the harness (*derived*, a division): 46,146 (5), 78,741 (3), 29,525 (8) |
+| its amortised per-deposit cost at the recommended operating cadence | `docs/performance.md` RFP-022 §P.2 (*derived* from the measured figures): import only, 432,182 / N per deposit at N deposits an hour (432,182, 43,218, 4,322 at 1, 10, 100); with the instance's tracking the cadence runs for the bridge (the hourly light-client update and each period's handoff), when the bridge is the instance's only consumer, (235.5M / 24 + 432,182) / N: **10.25M, 1.02M, 102k** (the handoffs 0.59M of each hour's 9.81M); on the proven path (485,298 + 0.879 × 451,895 / 24 + 432,182) / N: 934,029, 93,403, 9,340, plus about 232,268 storage gas an hour (224,063 per update, the handoffs' share 8,205). Per newly covered deposit in the harness (*derived*, a division): 46,146 (5), 78,741 (3), 29,525 (8) |
 
 Command `bash bench/perf/state.sh`; commits `d14ad6c9`, `9d6c58ef` (text).
 
 Proposed EVIDENCE row: | new | RFP-022 P.2: a root import's cost against the deposits it covers, and per deposit at
 the hourly cadence | 230,731 / 236,224 / 236,202 execution gas for imports newly covering 5 / 3 / 8 deposits; 432,182
-on Sepolia's real state; per deposit at the hourly cadence with the hourly update (bridge as the only consumer)
-9.66M / 0.97M / 96.6k at 1 / 10 / 100 deposits an hour, import only 432,182 / 43,218 / 4,322 (derived) | the build box,
+on Sepolia's real state; per deposit at the hourly cadence with the instance's tracking (the hourly update and the period's
+handoffs; bridge as the only consumer) 10.25M / 1.02M / 102k at 1 / 10 / 100 deposits an hour, on the proven path
+934,029 / 93,403 / 9,340, import only 432,182 / 43,218 / 4,322 (derived) | the build box,
 in-process harness; the live round trip of row 91 | — | `bash bench/perf/state.sh` | `lez/results/perf-state.md` §4a,
 `docs/performance.md` RFP-022 §P.2 |
 

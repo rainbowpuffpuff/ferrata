@@ -394,10 +394,12 @@ deposits arrive, its cost divided by the deposits of that hour): on Sepolia's re
 trip's import of the v5 vault) **432,182 per deposit at one deposit an hour, 43,218 at ten, 4,322 at a hundred**; on
 the harness's synthetic storage (236,224) 236,224, 23,622 and 2,362. **With the hourly light-client update** the
 recommended cadence runs for the bridge ([`attestation.md`](design/attestation.md) §10: one update an hour while roots
-are imported): when the bridge is the instance's only consumer, each hour costs the update (9,225,372 execution gas on
-the public path, RFP-021 P.3) plus the import (432,182): **9.66M per deposit at one deposit an hour, 0.97M at ten,
-96.6k at a hundred** (*derived*); on the proven path (485,298 + 432,182 execution gas an hour, plus 224,063 storage gas
-for the update) 917,480, 91,748 and 9,175 (*derived*). Shared with other consumers of the instance, the update's share
+are imported): when the bridge is the instance's only consumer, each hour costs the instance's tracking, the hourly
+update and its share of the period's handoffs (235.5M execution gas a day on the public path, RFP-021 P.3: 9.81M an
+hour, of which the handoffs 0.59M), plus the import (432,182): **10.25M per deposit at one deposit an hour, 1.02M at
+ten, 102k at a hundred** (*derived*); on the proven path (485,298 for the update, 0.879 × 451,895 / 24 = 16,549 for the
+handoffs and 432,182 execution gas an hour, plus about 232,268 storage gas: 224,063 per update and the handoffs' 8,205)
+934,029, 93,403 and 9,340 (*derived*). Shared with other consumers of the instance, the update's share
 falls accordingly. Sources: [`lez/BRIDGE-RESULTS.md`](../lez/BRIDGE-RESULTS.md) §1, §2a, §8a;
 [`lez/live/inbound/README.md`](../lez/live/inbound/README.md). **Under a mainnet state root** the import proves the
 same account and two slots through mainnet's deeper state trie: P.1's account statement costs 167,882 under the
