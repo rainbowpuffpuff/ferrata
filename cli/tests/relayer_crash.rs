@@ -538,7 +538,8 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     };
     from_anvil(&p, ANVIL[0], vault, IAdmin::registerTokenCall { token: Address::ZERO, p: params }.abi_encode(), U256::ZERO)
         .await?;
-    // Deposits from anvil's account 3: 24 of 0.1 ETH and 3 of 1 ETH (more than every release pays out: 4.8 ETH).
+    // Deposits from anvil's account 3: 24 of 0.1 ETH and 3 of 1 ETH, 5.4 ETH: what the 45 releases of parts 1-6 pay out
+    // (44 of 0.1 ETH, 1 of 1 ETH); a part with more releases needs more deposits.
     let depositor = ANVIL[3];
     let mut j = 0u64;
     for (d, count) in [(0u8, 24), (1u8, 3)] {

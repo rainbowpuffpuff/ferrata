@@ -3,14 +3,14 @@
   "part1": [
     {
       "case": "P",
-      "killedWithPending": "0x5f1a8e0731dd091c54d7bf55756924cfd3af9ae170268f5c4e4dbc195e7b0235",
+      "killedWithPending": "0x071cdb26bcf1cbfc9c682b6073df83fd0b28048f1d0cc48c2e2003f6e4b39773",
       "nonce": 0,
       "restartedSawPending": true,
       "what": "submitCandidate"
     },
     {
       "case": "M",
-      "killedWithPending": "0x3a54d7fca8d1cb0e7e65dea659030a37346454ce98df70bc0fe42b418fe75368",
+      "killedWithPending": "0x2bd8829fbe9450c8dd68f17f8d0e94a4855575097c7fedafb9cb19d697619054",
       "minedBeforeRestart": true,
       "nonce": 1,
       "pendingAfter": 0,
@@ -18,21 +18,21 @@
     },
     {
       "case": "D",
-      "killedWithPending": "0x9cb39eebd43295823e5914b3c3c350f6c5c319c41c8c5091b4ace181a0721ca4",
+      "killedWithPending": "0x18c9f8e89f072bc149e71f4a48b97af0a08162e94b80143e0aa8082ac6067dca",
       "nonce": 2,
-      "resentWithSameNonce": "0x9cb39eebd43295823e5914b3c3c350f6c5c319c41c8c5091b4ace181a0721ca4",
+      "resentWithSameNonce": "0x18c9f8e89f072bc149e71f4a48b97af0a08162e94b80143e0aa8082ac6067dca",
       "what": "release (denomination 0)"
     },
     {
       "case": "P",
-      "killedWithPending": "0xaf02c8d0e9acea03d6d82dba06bf88650d28740afaf9cfa354350199e7d1bf80",
+      "killedWithPending": "0x4d1586fb222e4ba2981bfb761e3a2b953ad9fb8583942683726dd5a47baa56be",
       "nonce": 3,
       "restartedSawPending": true,
       "what": "release (denomination 0)"
     },
     {
       "case": "M",
-      "killedWithPending": "0x95c558f01992ba702f72100b01adddf26210826651a8669895c9d476d1eeb12d",
+      "killedWithPending": "0xabfca105302fb1e4ea9c00b435b7e7042e520685e85467217ece511e0ff47af3",
       "minedBeforeRestart": true,
       "nonce": 4,
       "pendingAfter": 1,
@@ -40,9 +40,9 @@
     },
     {
       "case": "D",
-      "killedWithPending": "0x62ce813ac2e3abc70e865f35865c73ca0d55f3a19e81f36ea4f8ec2647628dd2",
+      "killedWithPending": "0x4d7af4a6100024650e0fa11353bca083a2d6f7157f69078fa4ba4531c196ac87",
       "nonce": 5,
-      "resentWithSameNonce": "0x62ce813ac2e3abc70e865f35865c73ca0d55f3a19e81f36ea4f8ec2647628dd2",
+      "resentWithSameNonce": "0x4d7af4a6100024650e0fa11353bca083a2d6f7157f69078fa4ba4531c196ac87",
       "what": "claimOwed"
     }
   ],
@@ -71,7 +71,7 @@
     {
       "candidateSubmitted": 1,
       "checkpointFinalized": 1,
-      "daemonRuns": 15,
+      "daemonRuns": 16,
       "events": {
         "candidate-waiting": 1,
         "fees-collected": 1,
@@ -80,11 +80,11 @@
         "inflight-pending": 8,
         "inflight-resent": 3,
         "job-done": 24,
-        "start": 15
+        "start": 16
       },
       "jobs": 24,
-      "kills": 2,
-      "linesRecovered": 7,
+      "kills": 3,
+      "linesRecovered": 8,
       "part": "part 2 (random kills)",
       "relayerTransactions": 26,
       "releases": 23,
@@ -93,12 +93,12 @@
     {
       "candidateSubmitted": 1,
       "checkpointFinalized": 1,
-      "daemonRuns": 16,
+      "daemonRuns": 17,
       "endpoint": {
         "ep": "ep0",
         "kind": "flaky",
         "lag": 0,
-        "port": 32366,
+        "port": 32379,
         "rates": {
           "backwards": 0.079,
           "notfound": 0.043,
@@ -115,7 +115,7 @@
         "inflight-pending": 8,
         "inflight-resent": 3,
         "job-done": 28,
-        "start": 16
+        "start": 17
       },
       "faultsSeen": {
         "429": 3,
@@ -123,7 +123,7 @@
         "receipt-lag": 4
       },
       "jobs": 28,
-      "linesRecovered": 7,
+      "linesRecovered": 8,
       "outagesS": [
         [
           79,
@@ -143,12 +143,12 @@
     {
       "candidateSubmitted": 1,
       "checkpointFinalized": 1,
-      "daemonRuns": 17,
+      "daemonRuns": 18,
       "endpoint": {
         "ep": "ep1",
         "kind": "sends",
         "lag": 0,
-        "port": 59042,
+        "port": 62082,
         "rates": {
           "drop": 0.173,
           "dup": 0.17,
@@ -160,23 +160,23 @@
         "candidate-waiting": 1,
         "fees-collected": 1,
         "finalized": 1,
-        "inflight-lost": 4,
+        "inflight-lost": 5,
         "inflight-pending": 8,
-        "inflight-resent": 4,
-        "job-deferred": 3,
+        "inflight-resent": 5,
+        "job-deferred": 6,
         "job-done": 32,
         "round-failed": 26,
-        "start": 17
+        "start": 18
       },
       "faultsSeen": {
-        "drop": 1,
+        "drop": 2,
         "dup": 1,
-        "notfound": 2,
-        "outage": 118,
+        "notfound": 6,
+        "outage": 119,
         "receipt-lag": 4
       },
       "jobs": 32,
-      "linesRecovered": 8,
+      "linesRecovered": 10,
       "outagesS": [
         [
           46,
@@ -191,17 +191,17 @@
       "relayerTransactions": 34,
       "releases": 31,
       "reverted": 0,
-      "secondsToDone": 73
+      "secondsToDone": 83
     },
     {
       "candidateSubmitted": 1,
       "checkpointFinalized": 1,
-      "daemonRuns": 18,
+      "daemonRuns": 19,
       "endpoint": {
         "ep": "ep2",
         "kind": "lagging",
         "lag": 4,
-        "port": 51410,
+        "port": 21230,
         "rates": {
           "r429": 0.045
         }
@@ -210,21 +210,21 @@
         "candidate-waiting": 1,
         "fees-collected": 1,
         "finalized": 1,
-        "inflight-lost": 5,
+        "inflight-lost": 6,
         "inflight-pending": 8,
-        "inflight-resent": 5,
-        "job-deferred": 6,
+        "inflight-resent": 6,
+        "job-deferred": 9,
         "job-done": 36,
         "node-behind": 3,
         "round-failed": 26,
-        "start": 18
+        "start": 19
       },
       "faultsSeen": {
-        "429": 4,
-        "receipt-lag": 29
+        "429": 5,
+        "receipt-lag": 28
       },
       "jobs": 36,
-      "linesRecovered": 9,
+      "linesRecovered": 11,
       "outagesS": [
         [
           26,
@@ -235,7 +235,7 @@
       "relayerTransactions": 38,
       "releases": 35,
       "reverted": 0,
-      "secondsToDone": 20
+      "secondsToDone": 19
     },
     {
       "candidateSubmitted": 1,
@@ -258,23 +258,23 @@
         }
       ],
       "checkpointFinalized": 1,
-      "daemonRuns": 23,
+      "daemonRuns": 24,
       "events": {
         "candidate-waiting": 1,
         "fees-collected": 1,
         "finalized": 1,
         "inflight-found": 2,
-        "inflight-lost": 6,
+        "inflight-lost": 7,
         "inflight-pending": 8,
-        "inflight-resent": 6,
-        "job-deferred": 7,
+        "inflight-resent": 7,
+        "job-deferred": 10,
         "job-done": 39,
         "node-behind": 3,
         "round-failed": 26,
-        "start": 23
+        "start": 24
       },
       "jobs": 39,
-      "linesRecovered": 12,
+      "linesRecovered": 14,
       "part": "part 4 (lost answer, held answer and kill, kill before the send)",
       "relayerTransactions": 41,
       "releases": 38,
@@ -303,32 +303,84 @@
         }
       ],
       "checkpointFinalized": 1,
-      "daemonRuns": 29,
+      "daemonRuns": 30,
       "events": {
         "candidate-waiting": 1,
         "fees-collected": 1,
         "finalized": 1,
         "inflight-found": 2,
-        "inflight-lost": 6,
+        "inflight-lost": 7,
         "inflight-pending": 8,
         "inflight-request-driven": 3,
         "inflight-request-found": 1,
-        "inflight-resent": 6,
-        "job-deferred": 7,
+        "inflight-resent": 7,
+        "job-deferred": 10,
         "job-done": 42,
         "node-behind": 3,
         "round-failed": 26,
-        "start": 29
+        "start": 30
       },
       "jobs": 42,
-      "linesRecovered": 15,
+      "linesRecovered": 17,
       "part": "part 5 (the logos route killed in each window)",
       "relayerTransactions": 44,
       "releases": 41,
       "requestsMade": 3,
       "reverted": 0
+    },
+    {
+      "candidateSubmitted": 1,
+      "cases": [
+        {
+          "booked": "inflight-request-forgotten (history row), inflight-pending, then the receipt",
+          "case": "module restarted after the broadcast, transaction pending",
+          "requestsAfterRestart": 0
+        },
+        {
+          "booked": "inflight-request-forgotten (no row), planned again",
+          "case": "module restarted after the request, before any broadcast",
+          "requestsAfterRestart": 1
+        },
+        {
+          "booked": "inflight-request-unknown, inflight-found",
+          "case": "stuck, the transaction out",
+          "requests": 1
+        },
+        {
+          "booked": "inflight-request-unknown, inflight-lost, inflight-resent (pinned nonce)",
+          "case": "stuck, nothing sent",
+          "pinned": 1,
+          "requests": 2
+        }
+      ],
+      "checkpointFinalized": 1,
+      "daemonRuns": 36,
+      "events": {
+        "candidate-waiting": 1,
+        "fees-collected": 1,
+        "finalized": 1,
+        "inflight-found": 3,
+        "inflight-lost": 8,
+        "inflight-pending": 9,
+        "inflight-request-driven": 3,
+        "inflight-request-forgotten": 2,
+        "inflight-request-found": 1,
+        "inflight-request-unknown": 2,
+        "inflight-resent": 8,
+        "job-deferred": 12,
+        "job-done": 46,
+        "node-behind": 3,
+        "round-failed": 26,
+        "start": 36
+      },
+      "jobs": 46,
+      "linesRecovered": 20,
+      "part": "part 6 (what tx_sender_module cannot account for)",
+      "relayerTransactions": 48,
+      "releases": 45,
+      "reverted": 0
     }
   ],
-  "relayer": "0x726a31afac96ad323d51c1017a04f68dd5f69c85",
+  "relayer": "0x643d6f3d338278380b8b725638c47a7061d39dca",
   "vault": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
 }
