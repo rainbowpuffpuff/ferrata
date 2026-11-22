@@ -254,6 +254,7 @@ pub(crate) fn wanted_reads(inputs: &Value, s: &Value, nullifier: Option<&str>, t
 /// gains `lez`: what was read, and whether the two paths agreed.
 pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&str>, token: &[u8; 20]) -> Result<(), String> {
     let program = AccountId::new(fixed::<32>(&s["program"], "program")?);
+    let cid = fixed::<32>(&s["config_id"], "config_id")?;
     let p = hex(program.value());
     let mut reads = Vec::new();
     for (key, what, account) in wanted_reads(inputs, s, nullifier, token)? {
