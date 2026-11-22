@@ -11,12 +11,18 @@
 #   modules/scripts/bridge-send-stack.sh build OUT   the send stack and the two CLIs (send-stack.sh build, builder
 #                                                    5f74cdb grafted), ferrata_bridge_module's dev .lgx and logosctl
 #                                                    (check.sh); then /nix saved to $NIX_SAVE when it is set
+#   modules/scripts/bridge-send-stack.sh build-module OUT   only the module's .lgx and logosctl (check.sh), the send
+#                                                    stack's .lgx already in OUT/stack (built by `build`, or linked)
 #   modules/scripts/bridge-send-stack.sh run OUT     the run: OUT/run/ (calls.jsonl, prompts, receipts), OUT/checks.tsv
+# The module's .lgx hash is reproducible only with the same build directory: Nix builds it unsandboxed under
+# $LOGOS_TMPDIR/nix-build-..., and that path ends up in the .so (panic locations, crate-metadata symbol hashes). Both
+# build modes use LOGOS_TMPDIR=/var/tmp/bss (MODULE_TMPDIR overrides it); another directory gives another hash for the
+# same source.
 # Box only (spike/modal-build/mrun: Nix, a 1 GiB stack, Foundry 1.3.6).
 set -uo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
-MODE=${1:?build|run}; OUT=$(mkdir -p "${2:?OUT}" && cd "$2" && pwd)
+MODE=${1:?build|build-module|run}; OUT=$(mkdir -p "${2:?OUT}" && cd "$2" && pwd)
 export PATH="$HOME/.foundry/bin:$PATH" FOUNDRY_DISABLE_NIGHTLY_WARNING=1
 if [ "$(ulimit -s)" = unlimited ]; then ulimit -s 1048576; fi
 STACK="eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module evm_signer_cli evm_keystore_cli"
@@ -24,15 +30,23 @@ STACK="eth_rpc_module fee_module keystore_module signer_manager_module tx_sender
 build() {
   local t0=$(date +%s)
   ONLY="$STACK" bash "$here/send-stack.sh" build "$OUT/stack" 2>&1 | tail -n 40
-  echo "send stack: $(( $(date +%s) - t0 )) s"; t0=$(date +%s)
-  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR=/var/tmp/bss RISC0_DEV_MODE=1 bash "$here/check.sh" "$OUT/check" > "$OUT/check.log" 2>&1
-  echo "check.sh rc=$? ($(( $(date +%s) - t0 )) s)"; tail -n 12 "$OUT/check/report/summary.md" 2>/dev/null
-  ls -d "$OUT"/stack/lgx-* "$OUT"/check/lgx-ferrata_bridge_module "$OUT"/check/logos/bin/logosctl 2>&1
+  echo "send stack: $(( $(date +%s) - t0 )) s"
+  build_module
   if [ -n "${NIX_SAVE:-}" ]; then
     t0=$(date +%s)
     tar -C / -cf - nix | zstd -q -T0 -3 -o "$NIX_SAVE.part" -f && mv "$NIX_SAVE.part" "$NIX_SAVE"
     echo "nix saved: $(du -h "$NIX_SAVE" | cut -f1) in $(( $(date +%s) - t0 )) s"
   fi
+}
+
+# The module's dev .lgx and logosctl (check.sh), in the fixed build directory (see the header), and their hashes.
+build_module() {
+  local t0=$(date +%s)
+  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="${MODULE_TMPDIR:-/var/tmp/bss}" RISC0_DEV_MODE=1 bash "$here/check.sh" "$OUT/check" > "$OUT/check.log" 2>&1
+  echo "check.sh rc=$? ($(( $(date +%s) - t0 )) s, LOGOS_TMPDIR=${MODULE_TMPDIR:-/var/tmp/bss})"; tail -n 12 "$OUT/check/report/summary.md" 2>/dev/null
+  ( cd "$OUT" && sha256sum stack/lgx-*/*.lgx check/lgx-ferrata_bridge_module/*.lgx 2>/dev/null ) | sed "s#  .*/#  #" > "$OUT/lgx-sha256.txt"
+  echo "LOGOS_TMPDIR=${MODULE_TMPDIR:-/var/tmp/bss}" >> "$OUT/lgx-sha256.txt"
+  ls -d "$OUT"/stack/lgx-* "$OUT"/check/lgx-ferrata_bridge_module "$OUT"/check/logos/bin/logosctl 2>&1
 }
 
 run() {
@@ -281,6 +295,7 @@ run() {
 
 case "$MODE" in
   build) build ;;
+  build-module) build_module ;;
   run) run ;;
-  *) sed -n '2,15p' "$0"; exit 2 ;;
+  *) sed -n '2,20p' "$0"; exit 2 ;;
 esac
