@@ -346,10 +346,11 @@ note = "cycles and gas per action and statement type, reproduced by CI (lez-harn
 [[row]]
 id = "RFP-021 P.3"
 tests = [
+  { path = "lez/harness/tests/costs_attestation.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-replay.md", kind = "record" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "per-update costs measured (9.2M public or 0.71M proven); the amortised tables per period and per day in performance.md are derived, without real proving; a figure per attestation at a stated number of attestations: none yet"
+note = "per-update costs measured (9.2M public or 0.71M proven); the amortised tables per period and per day in performance.md are derived, without real proving; a figure per attestation at a stated number of attestations: none yet; costs_attestation.rs (CI, lez-harness) pins the per-period input (each adopting update's execution gas, 15,997,954 to 16,092,929 over five updates), the per-hour input (a finality update, 9,228,905), the proven path's (a finality update 485,298 execution gas, a handoff 451,895) and the per-attestation verification cost (a WETH slot, 275,865), so the derived tables fail CI when an input moves"
 
 [[row]]
 id = "RFP-021 P.4"
@@ -381,27 +382,30 @@ note = "the proven-path prover measured (54 min, 9.18 GiB peak on a laptop CPU; 
 [[row]]
 id = "RFP-021 P.7"
 tests = [
+  { path = "lez/harness/tests/costs_attestation.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-replay.md", kind = "record" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "measured sizes: instance 425-505 B, job 1,249-1,409 B, header record 333 B; the one- and five-year projections (about 3.0 MB a year, 15.1 MB over five years) derived in performance.md"
+note = "measured sizes: instance 425-505 B, job 1,249-1,409 B, header record 333 B; the one- and five-year projections (about 3.0 MB a year, 15.1 MB over five years) derived in performance.md; costs_attestation.rs (CI, lez-harness) pins the accumulating accounts as this tree writes them: the header record 365 B for every finalized header, the job account 1,281-1,441 B (cleared after each update), the instance 505 B at Init and 585 B after; the 333 B, 1,249-1,409 B and 425-505 B in performance.md and lez/results/stage1-replay.md are an earlier image's (before the successors merge), so the projections must be redone from these"
 
 [[row]]
 id = "RFP-021 P.8"
 tests = [
+  { path = "lez/harness/tests/costs_attestation.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-finality.md", kind = "record" },
   { path = "bench/RESIDUE.md", kind = "document" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "the two pairing steps are 7.0M of an update's 9.2M (measured); the precompile delta a derived upper bound in performance.md; the residue-witness bench measurement (a finality update in one transaction, experimental, unaudited) is bench/RESIDUE.md (EVIDENCE row 127)"
+note = "the two pairing steps are 7.0M of an update's 9.2M (measured); the precompile delta a derived upper bound in performance.md; the residue-witness bench measurement (a finality update in one transaction, experimental, unaudited) is bench/RESIDUE.md (EVIDENCE row 127); costs_attestation.rs (CI, lez-harness) pins the pairing steps: Miller 3,308,048 and Finish 3,647,652 cycles, 6,955,700 of a finality update's 9,228,905 execution gas (75.4%, what a native precompile could remove at most), and in an adopting update 6,967,210"
 
 [[row]]
 id = "RFP-021 P.9"
 tests = [
+  { path = "lez/harness/tests/costs_attestation.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage1-replay.md", kind = "record" },
   { path = "lez/lab/README.md", kind = "document" },
 ]
-note = "step costs flat across five mainnet updates as records accumulate (Miller 3,313,287 each time); the lab's first 257 transactions none over the 5M target; an attestation's cost against accumulated records not measured"
+note = "step costs flat across five mainnet updates as records accumulate (Miller 3,313,287 each time); the lab's first 257 transactions none over the 5M target; an attestation's cost against accumulated records not measured; costs_attestation.rs (CI, lez-harness): every update step costs the same or less from one update to the next while the chain's records grow from one to five (JobOpen, Miller, both Adopts and Finish identical in all five), and one attestation (a WETH balance slot) costs 275,865 cycles both before and after a thousand more records are placed on the chain"
 
 [[row]]
 id = "RFP-021 S.1"
