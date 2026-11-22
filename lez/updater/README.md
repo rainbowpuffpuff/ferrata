@@ -108,8 +108,9 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    timestamp window ending with its checkpoint's weak-subjectivity period and `Open` one from its
    update's signature slot to the end of the store's period (`ferrata-advance`'s `init_window`,
    `open_window`), and LEZ charges a transaction executed outside its window the whole gas limit. So
-   neither is sent unless its window stays open 60 s past the chain's clock (`Ledger::now_ms`: this
-   machine's clock, which the loopback sequencer stamps its blocks with); outside it the plan is
+   neither is sent unless its window stays open 60 s past the chain's clock (`Ledger::now_ms`: for the
+   sequencer backend this machine's clock, which the loopback sequencer stamps its blocks with; the
+   in-process harness takes each transaction's own time, `HarnessLedger::now` sets it); outside it the plan is
    stuck with what to do ("initialise from a newer checkpoint", "initialise a new instance"), and
    `/health` says so. After a refusal the chain is read again: a step another party's transaction
    made done or moot was a race and nothing is held; a step still due would meet the same state, so
@@ -270,7 +271,7 @@ the suite rewrites the tracked `results/gate.txt` with the grown record's figure
 the 58-update file the README and EVIDENCE row 80 cite.
 
 **Review fixes** (22 November 2026, branch `fix-updater`; the findings of the code reviews of 21 November): on that
-tree **53 tests pass** (9 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in `recorded.rs`, and the
+tree **54 tests pass** (9 in the library, 8 in `config.rs`, 4 in `diversity_limits.rs`, 13 in `recorded.rs`, and the
 new files below), clippy `-D warnings` clean with and without `harness`; the A3 gate's default run on the grown record
 (246 updates, 1,101 rounds) passes: honest refused / applied gas 0.0752, shares 0.4841 / 0.5159.
 
@@ -280,6 +281,7 @@ new files below), clippy `-D warnings` clean with and without `harness`; the A3 
 | `health.rs` (4) | every send rejected (no funds), failing at transport, the only source down, the instance not moving | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress (`defer_window` 1) |
 | `jobs.rs` (1) | ten rounds, a new finality update each, another party opening its job first and leaving it | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s for 5 applied updates, nothing refused |
 | `bounds.rs` (3) | answers at and one byte past their bound, with and without a length; 256 MiB; module replies; provider messages | exact bound read, one more refused; 256 MiB cut after 1 MiB, RSS +0.9 MiB; `file://` refused; messages kept to 200 printable characters |
+| `daemon_clock.rs` (1) | the clock the windows are checked against | a `sequencer` backend gets this machine's clock; the harness, and a wrapper of it that says nothing, each transaction's own time |
 | `serve.rs` (5) | an idle connection, a request with no end, a trickling client, 24 connections, a stale snapshot | `/health` in 0.8 ms beside idle connections; 8,192-byte head answered, 8,193 refused; RSS unchanged by 1 MiB without a newline; recovered after 1.7 s; `503` when stale |
 
 **The A3 gate** (`results/gate.txt`). Two honest updaters (one with a lying source, one with a

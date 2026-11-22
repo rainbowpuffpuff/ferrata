@@ -49,12 +49,18 @@ pub trait Ledger {
     }
     /// The time (Unix milliseconds) the chain's next block will carry, as near as the backend knows: the program's
     /// timestamp validity windows (`ferrata_advance::Window`) are checked against it before a step is sent, since LEZ
-    /// charges a transaction executed outside its window the whole gas limit. Default: this machine's clock (the
-    /// sequencer backend talks to a sequencer on this machine, which stamps its blocks with the same clock). `None`:
-    /// every transaction carries its own block time (`Tx::time_ms`: the in-process harness).
+    /// charges a transaction executed outside its window the whole gas limit. `None` (the default): every transaction
+    /// carries its own block time (`Tx::time_ms`: the in-process harness, and a wrapper of it that does not say
+    /// otherwise). The daemon gives every other backend [`machine_now_ms`] (`daemon::Daemon::open_with`): the sequencer
+    /// backend talks to a sequencer on this machine, which stamps its blocks with the same clock.
     fn now_ms(&self) -> Option<u64> {
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_millis() as u64)
+        None
     }
+}
+
+/// This machine's clock, in Unix milliseconds.
+pub fn machine_now_ms() -> Option<u64> {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_millis() as u64)
 }
 
 #[cfg(feature = "harness")]

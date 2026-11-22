@@ -15,12 +15,12 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context as _, Result};
-use lee::{AccountId, PrivateKey, PublicKey};
+use lee::{AccountId, Actor, PrivateKey, PublicKey};
 
 use crate::{
     chain::{instance_config, root},
     config::{File, SourceKind},
-    ledger::Ledger,
+    ledger::{machine_now_ms, Ledger, Tx, TxOutcome},
     serve::{serve, Snapshot, STALE_AFTER},
     source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
@@ -50,6 +50,27 @@ pub fn open_ledger(file: &File, _base: &Path, payer: &PrivateKey) -> Result<(Box
              lez/updater/sequencer, which links LEZ's node-side crates)"
         ),
         other => bail!("daemon.ledger = {other:?}: harness or sequencer"),
+    }
+}
+
+/// A chain backend whose blocks carry the time they are made, read from this machine's clock unless the backend
+/// knows better: what the updater checks the program's validity windows against (`Ledger::now_ms`). The daemon puts
+/// every backend but the harness (whose blocks take each transaction's own time) behind it; the sequencer backend's
+/// sequencer is on this machine (loopback only), so it stamps its blocks with the same clock.
+pub struct MachineClock(pub Box<dyn Ledger>);
+
+impl Ledger for MachineClock {
+    fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+        self.0.actor_state(actor)
+    }
+    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+        self.0.submit(payer, tx, gas_limit, max_fee)
+    }
+    fn flush(&mut self) -> Result<()> {
+        self.0.flush()
+    }
+    fn now_ms(&self) -> Option<u64> {
+        self.0.now_ms().or_else(machine_now_ms)
     }
 }
 
@@ -95,6 +116,8 @@ impl Daemon {
         let state_dir = at(&base, &file.daemon.state_dir);
         fs::create_dir_all(&state_dir)?;
         let (ledger, program) = open(&file, &base, &payer)?;
+        let ledger: Box<dyn Ledger> =
+            if file.daemon.ledger == "harness" { ledger } else { Box::new(MachineClock(ledger)) };
 
         let mut updaters = Vec::new();
         for c in &file.chains {
