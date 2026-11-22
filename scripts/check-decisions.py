@@ -17,7 +17,7 @@ decisions are made and current at each milestone delivery". This check fails (ex
   a ruled-out one an RFP requirement that exists; "records no alternative" is not an option;
 * a source, or a path anywhere in a record, names a file the repository does not track (a path with a slash under
   any top-level directory, or under an unknown one when it ends in a file extension; in the text, a bare file name
-  such as `FerrataVault.sol` that no tracked file has), a line (`path:N`, `path:N-M`) past the end of its file, a
+  such as `FerrataVault.sol` that no tracked file has; a full stop after a path is not part of it), a line (`path:N`, `path:N-M`) past the end of its file, a
   section (§n) its Markdown file has no heading for or a § of a file that is not Markdown, a quoted phrase its file
   does not contain (a quote with "…", or quotes joined by one, must have its parts in order, each within 300
   characters of the one before), a
@@ -147,10 +147,13 @@ def path_ok(p, repo):
 
 def paths_in(text, repo):
     """The repository paths a text names, with the lines it gives after a colon (or None): tokens with a slash under a
-    top-level directory, or under any directory when they end in a file extension, and file names."""
+    top-level directory, or under any directory when they end in a file extension, and file names. A full stop after a
+    path ends the sentence; it is not part of the path."""
     out, flat = [], text.replace("`", " ")
     for m in PATH.finditer(flat):
         p = m.group(1)
+        if p.endswith(".") and not p.endswith(".."):
+            p = p[:-1]
         if SKIP_PATH.search(p) or ("/" in p and p.split("/")[0] not in repo.tops and not FILE_EXT.search(p)):
             continue
         lm = LINES.match(flat, m.end(1))

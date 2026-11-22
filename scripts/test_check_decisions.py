@@ -191,6 +191,12 @@ class Strictness(unittest.TestCase):
         out = findings({"0001-one-core.md": bad}, files=files)
         self.assertTrue(any(what in f for f in out), (what, out))
 
+    def test_a_path_at_the_end_of_a_sentence(self):
+        # The full stop is not part of the path: a tracked file passes, a missing one under an unknown directory fails.
+        end = "the cost is one crate to audit."
+        self.assertEqual(findings({"0001-one-core.md": GOOD.replace(end, end[:-1] + ", in src/core.rs.")}), [])
+        self.flags(GOOD.replace(end, end[:-1] + ", in zzz/missing.md."), "names zzz/missing.md, which is not a tracked")
+
     def test_a_path_under_a_directory_the_repository_lacks(self):
         self.flags(GOOD.replace("- src/core.rs (`evaluate`)", "- src/core.rs (`evaluate`), `lib/Nope.sol`"),
                    "lib/Nope.sol is not a tracked file")
