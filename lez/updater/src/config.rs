@@ -106,10 +106,12 @@ pub struct Policy {
     pub demote_rounds: u64,
     /// Periods asked of the `updates` endpoint at once.
     pub max_periods_per_request: u64,
-    /// Finish a job this updater opened before choosing another update (default): a beacon node serves only its
-    /// newest finality update, so the update a job was opened for can be gone from every source before the job's
-    /// last step, and the steps already paid would be lost. The update is kept in `state_dir/<chain>/open/` until the
-    /// job is finished or moot, so a restarted updater finishes it too.
+    /// Finish a job this updater sent a step for (its own `Open`, or a later step of a job another party opened)
+    /// before choosing another update (default): a beacon node serves only its newest finality update, so the update
+    /// a job was opened for can be gone from every source before the job's last step, and the steps already paid would
+    /// be lost (and a party that opens every new update's job and leaves it would have the updater pay a step of each).
+    /// The update is kept in `state_dir/<chain>/open/` until the job is finished or moot, so a restarted updater
+    /// finishes it too.
     #[serde(default = "default_true")]
     pub finish_own_jobs: bool,
     /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at
