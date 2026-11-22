@@ -568,9 +568,11 @@ note = "the deployed program's header is immutable with its image id: UpdateHead
 [[row]]
 id = "RFP-021 VS.4"
 tests = [
+  { path = "lez/harness/tests/captured_committee_exposure.rs", kind = "test", ci = "lez-harness" },
+  { path = "lez/results/captured-committee-exposure.md", kind = "record" },
   { path = "docs/trust.md", kind = "document" },
 ]
-note = "trust.md 2 (what a captured committee can do) and 6 (failure classes, what bounds the loss), a first draft; the exposure bound a consumer sizes is its caps; the attestation side's monitor that would wire the alarm is not built"
+note = "trust.md 2 (what a captured committee can do) and 6 (failure classes, what bounds the loss), a first draft; the exposure bound a consumer sizes is its caps; the attestation side's monitor that would wire the alarm is not built; captured_committee_exposure.rs (CI, lez-harness) plays the consumer side of trust.md 2.2 and 6 through the bridge program: a record of a block Ethereum never finalized holds ten invented deposits; their claims mint until the per-token cap (3 claims a window) and the global cap (4, below the two tokens' 6) refuse them with 255 CAPPED, one more window's worth after the window rolls on attested time, nothing while the freeze authority's freeze holds (242 FROZEN, also under a second fabricated record and a far-future one), and the minted total stays within cap per window until the freeze (lez/results/captured-committee-exposure.md)"
 
 [[row]]
 id = "RFP-021 VS.5"
