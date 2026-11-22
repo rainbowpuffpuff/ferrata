@@ -234,7 +234,7 @@ finalized header's slot, two sources serving other bytes for one update or waiti
 stayed due, failed at transport after every retry), a round that ended in an error, the last round
 stuck, sending paused, or no progress: the instance's finalized slot unmoved for
 `6 × defer_window + 10` rounds while the sources serve updates more than `max_lag_slots` past it.
-`down` (HTTP 503), whenever this updater moves nothing: no light-client source usable and answering;
+`down` (HTTP 503), whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change): no light-client source usable and answering;
 five sends in a row that did not land; five rounds in a row that ended in an error (a chain that
 answers neither reads nor sends fails each round before anything is sent); the instance, or before
 `Init` its checkpoint, past its weak-subjectivity period by the chain's clock (a person must

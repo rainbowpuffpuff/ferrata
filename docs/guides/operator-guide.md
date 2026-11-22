@@ -194,7 +194,10 @@ instances against the chains' clocks, and each session's fetch record holds the 
 reports for the newest finalized slot, which must equal the instance's `finalized_root`
 ([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). The attestation side's monitor (`attest-monitor`, [`monitor/attest/`](../../monitor/attest/README.md); not the watchers'
 `monitor` of §7) compares records with several providers' canonical roots and alarms at half the weak-subjectivity
-bound ([`attestation.md`](../design/attestation.md) §3.6, §8). An instance lags by the cadence plus finality;
+bound ([`attestation.md`](../design/attestation.md) §3.6, §8). The updater raises its own alarm: its `/health` is
+`degraded` when the instance has not moved for `6 × defer_window + 10` rounds while its sources serve updates more
+than `max_lag_slots` past it, and `down` (HTTP 503) after twice as many, or at once when the instance is past its
+weak-subjectivity period (then initialise a new instance). An instance lags by the cadence plus finality;
 it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
 
 ### 3.6 Running `ferrata-updater`
@@ -210,7 +213,14 @@ flagged lagging; one silent is flagged unavailable), and sends the next step of 
 job. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
-(HTTP 503); `/metrics` counts transactions by step and result, gas and fees applied and refused,
+(HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
+rounds in a row that end in an error, the instance past its weak-subjectivity period, no progress for
+`2 × (6 × defer_window + 10)` rounds while the sources are ahead, or the budget reached; and when no round has
+refreshed it for ten polls). A step the chain refuses is not resent every round: it is held, for good when the program
+refuses it or it runs out of gas, otherwise for 4 to 64 rounds and then sent again, and three refusals in a row of
+steps that stayed due pause sending for 8 to 512 rounds; `/health` and the metrics (`_held_steps`, `_sending_paused`,
+`_refusals_total`) show both. The listener serves eight connections at once (four per host other than loopback) and
+eight more quick ones; keep `daemon.listen` on loopback; `/metrics` counts transactions by step and result, gas and fees applied and refused,
 retries, deferrals, steps done by others, and per source requests, errors, refusals, lag and
 availability. Tested in dev mode (RISC0_DEV_MODE, the in-process chain, recorded data): catch-up to the
 lab's final roots on both chains, a lying source, a stale and a down source, `min_agreeing = 2`, a
