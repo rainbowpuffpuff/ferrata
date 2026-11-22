@@ -142,7 +142,8 @@ jobs:
 
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every test file of lez/harness/tests/ (red-team suites included), and
-  # the update-submitting daemon on its recorded data (lez/updater/tests/), the guests in RISC Zero dev mode. The
+  # the update-submitting daemon on its recorded data (lez/updater/tests/), the privacy suite end to end with its gate
+  # (scripts/privacy/run.sh, scripts/privacy/check-results.py), the guests in RISC Zero dev mode. The
   # target directory is not cached: GitHub keeps 10 GB of caches per repository and the round trip's fill them; the
   # toolchains and the upstream sources share the round trip's cache entries. No secret, nothing sent to any network.
   lez-harness:
@@ -175,6 +176,17 @@ jobs:
           key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
       - name: Fetch the upstream sources
         run: scripts/fetch-upstream.sh
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.3.6
+      - name: Cache the vault's libraries
+        uses: actions/cache@v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+      - name: Libraries (the privacy suite's Ethereum half)
+        working-directory: vault
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
       - name: Build (the harness's and the updater's tests, the guests)
         run: scripts/ci/lez-harness.sh build
       - name: The harness and updater suites, dev mode

@@ -355,12 +355,13 @@ note = "per-update costs measured (9.2M public or 0.71M proven); the amortised t
 [[row]]
 id = "RFP-021 P.4"
 tests = [
+  { path = "lez/harness/tests/device_workload.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage4-attest-private.md", kind = "record" },
   { path = "lez/results/p4-minimum/README.md", kind = "record" },
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
 ]
-note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop"
+note = "the private attestation proven at cloud containers held to the declared minimum (904.3 s at 8 CPUs), on an M1 Mac mini (857.4 s padded, EVIDENCE row 88) and on one L4; padded as the wallet pads them (wallet_padding.rs, row 38); not on a laptop; device_workload.rs (CI, lez-harness) holds the work those proofs measured: the programs' private transitions in the record's segments and padded sizes (user cycles pinned at this tree's values, -734 to +576 from the record's), the claim's and burn's transactions at the recorded sizes to the byte, the wallet's padded shape; the attestation's transaction is 32 bytes larger than recorded (231,246 and 255,334 against 231,214 and 255,302), and LEZ's circuit's session cannot be measured in dev mode, so the recorded times stand for a transaction 32 bytes smaller"
 
 [[row]]
 id = "RFP-021 P.5"
@@ -1019,12 +1020,13 @@ note = "deposit, candidate, finalisation and release gas measured with the real 
 [[row]]
 id = "RFP-022 P.4"
 tests = [
+  { path = "lez/harness/tests/device_workload.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/p4-minimum/README.md", kind = "record" },
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "lez/harness/tests/wallet_padding.rs", kind = "test", ci = "lez-harness" },
   { path = "bridge/artifacts/logs/20261110T065453Z-prove-claim-claim.log", kind = "record" },
 ]
-note = "the full private claim and burn proven at cloud containers held to the declared minimum (905.4 s / 756.3 s at 8 CPUs) and on the Mac minis (818.7 s / 716.5 s on an M1, 453.5 s / 396.1 s on an M4, EVIDENCE row 88); the release's succinct proof 46.0 s at 8 CPUs, 31.7 s on the M1; padded shape in wallet_padding.rs; the full claim and burn on a laptop: none yet"
+note = "the full private claim and burn proven at cloud containers held to the declared minimum (905.4 s / 756.3 s at 8 CPUs) and on the Mac minis (818.7 s / 716.5 s on an M1, 453.5 s / 396.1 s on an M4, EVIDENCE row 88); the release's succinct proof 46.0 s at 8 CPUs, 31.7 s on the M1; padded shape in wallet_padding.rs; the full claim and burn on a laptop: none yet; device_workload.rs (CI, lez-harness): the private claim and burn the device proves are the recorded transactions to the byte (bare and padded), their programs' transitions in the recorded segments and padded sizes"
 
 [[row]]
 id = "RFP-022 P.5"
@@ -1179,17 +1181,20 @@ note = "stop-only, no fund recovery (MIGRATION.md sections 4 and 5, trust.md sec
 [[row]]
 id = "RFP-022 Priv.1"
 tests = [
+  { path = "scripts/privacy/check-results.py", kind = "test", ci = "lez-harness" },
+  { path = "scripts/privacy/run.sh", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/bridge_private.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
 ]
-note = "a private claim publishes only N, the denomination, the root read and the fee alias's fixed reserve; an adversary using every public byte pairs 20 deposits with their claims at chance (5.0%), in dev mode and on real proofs of the final programs (rows 23, 89); the plaintext path links and the client says so"
+note = "a private claim publishes only N, the denomination, the root read and the fee alias's fixed reserve; an adversary using every public byte pairs 20 deposits with their claims at chance (5.0%), in dev mode and on real proofs of the final programs (rows 23, 89); the plaintext path links and the client says so; in CI (lez-harness): scripts/privacy/run.sh runs both halves and the adversary, and scripts/privacy/check-results.py fails unless the gate passes on every private default, the controls are linkable, the adversary does no better than chance on both legs, every hidden value is found 0 times, recovery from the seed is complete and the published tables (docs/privacy/generated) are reproduced byte for byte"
 
 [[row]]
 id = "RFP-022 Priv.2"
 tests = [
+  { path = "scripts/privacy/check-results.py", kind = "test", ci = "lez-harness" },
   { path = "scripts/ci/witness-independence.sh", kind = "test", ci = "witness-independence", run = "scripts/ci/witness-independence.sh 64" },
-  { path = "vault/test/PrivacySuite.t.sol", kind = "test", ci = "box", run = "scripts/privacy/run.sh" },
+  { path = "vault/test/PrivacySuite.t.sol", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
 ]
 note = "the release guest's cycle count is witness-independent (the check that found the popcount leak; CI's witness-independence job and bridge/artifacts/logs/invariance-v2.log); 20 burn/release pairs: the adversary at chance (5.0%), also on real proofs (row 89, the burn root's checkpoint a mock there)"
@@ -1197,6 +1202,7 @@ note = "the release guest's cycle count is witness-independent (the check that f
 [[row]]
 id = "RFP-022 Priv.3"
 tests = [
+  { path = "scripts/privacy/check-results.py", kind = "test", ci = "lez-harness" },
   { path = "vault/test/Privacy.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/generated/b6.md", kind = "document" },
@@ -1206,11 +1212,13 @@ note = "the B2 gate over transaction bytes, block bodies, events and state diffs
 [[row]]
 id = "RFP-022 Priv.4"
 tests = [
+  { path = "scripts/privacy/check-results.py", kind = "test", ci = "lez-harness" },
+  { path = "scripts/privacy/run.sh", kind = "test", ci = "lez-harness" },
   { path = "lez/harness/tests/privacy_suite.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
   { path = "docs/trust.md", kind = "document" },
 ]
-note = "secrets derive from the wallet seed and stay in the wallet; no linking value in any submitted byte (measured over every public byte of both chains); who handles what documented in trust.md 8 and the user guide, first drafts here, final with check-guides.py on branch rfp-docs-final (next entry)"
+note = "secrets derive from the wallet seed and stay in the wallet; no linking value in any submitted byte (measured over every public byte of both chains); who handles what documented in trust.md 8 and the user guide, first drafts here, final with check-guides.py on branch rfp-docs-final (next entry); in CI (lez-harness): scripts/privacy/run.sh runs both halves and the adversary, and scripts/privacy/check-results.py fails unless the gate passes on every private default, the controls are linkable, the adversary does no better than chance on both legs, every hidden value is found 0 times, recovery from the seed is complete and the published tables (docs/privacy/generated) are reproduced byte for byte"
 
 [[row]]
 id = "RFP-022 Priv.4"
@@ -1230,10 +1238,11 @@ note = "23 refusals and holds named before anything is signed, none naming a dep
 [[row]]
 id = "RFP-022 Priv.6"
 tests = [
+  { path = "scripts/privacy/check-results.py", kind = "test", ci = "lez-harness" },
   { path = "docs/privacy/generated/fields.md", kind = "document" },
   { path = "lez/results/v0.4.0-rc3/gas-drop/README.md", kind = "record" },
 ]
-note = "what each third party receives measured (docs/privacy/generated/fields.md) and what the gas-drop relayer learns from the run (EVIDENCE row 124); the user switches per operation: a claim's relayer per claim, any relayer per release (rows 84, 85); the documents are first drafts here, final with check-guides.py on branch rfp-docs-final (next entry)"
+note = "what each third party receives measured (docs/privacy/generated/fields.md) and what the gas-drop relayer learns from the run (EVIDENCE row 124); the user switches per operation: a claim's relayer per claim, any relayer per release (rows 84, 85); the documents are first drafts here, final with check-guides.py on branch rfp-docs-final (next entry); check-results.py (CI, lez-harness) fails unless docs/privacy/generated/fields.md, what each third party receives, is what the code produces today (regenerated on 22 November: the earlier tables were of bridge image cf41b7e5, the current program is ccde6171)"
 
 [[row]]
 id = "RFP-022 Priv.6"

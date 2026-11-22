@@ -60,6 +60,16 @@ lengthened ...) misses planted leaks the real one finds. The hidden-column searc
 `kAuth`, `kView`, `sOut`, `NOut` before the release, the memo pad and the holder added) in four encodings and every
 16-byte window; on this commit's run it finds 0 of 680. The tables below are the earlier runs' (320 values, verbatim).
 
+**Regenerated for CI (branch `rfp-ci-coverage`, 22 November 2026).** [`generated/`](generated/) is now the run of
+`scripts/privacy/run.sh` on the build box at this tree's programs (bridge image `ccde6171…71dd`, the deployed one
+of [`../image-ids.md`](../image-ids.md); the tables before were image `cf41b7e5…5390`'s); a second run gave the same
+files byte for byte, proving times and image ids aside. CI's `lez-harness` job now runs the suite and
+[`scripts/privacy/check-results.py`](../../scripts/privacy/check-results.py), which fails unless the gate passes on
+every private default, the controls are linkable, the adversary is at chance on both legs, nothing hidden is
+found, recovery is complete and these tables are reproduced. Every verdict is the earlier run's; the collector
+now splits the witness set (signatures, proof length and kind, the receipt's claim) and names the calldata's gas,
+and a claim's execution gas steps by 4,335 per position (4,720 before).
+
 ## Results in brief
 
 | check | default private path | linkable variants |
@@ -175,7 +185,8 @@ adversary computes them.
 ### Receipts
 
 Gas is public, and it varies; every variation follows the operation's position, not its user:
-- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4720, 4720, …]` by position, the same
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4335, 4335, …]` by position (`4720` on image
+  `cf41b7e5`), the same
   sequence in the private and the plaintext universe, whose users stand in different orders, so it is the
   shared public part (Issue, Admit, Spend, the mints) that varies, with the state the claims before it left.
   Storage gas is constant (224,063 private, 2,053 plaintext).
