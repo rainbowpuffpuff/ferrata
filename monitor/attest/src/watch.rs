@@ -73,14 +73,16 @@ pub struct Watch {
 pub struct Seen {
     pub root: String,
     pub first_seen_s: u64,
-    /// The latest verdict: `unconfirmed` never replaces one, and `diverged` is replaced only by `confirmed`.
+    /// The latest verdict: `unconfirmed` never replaces one, and `diverged` is replaced only by a settled confirmation.
     pub divergence: Divergence,
-    /// Confirmed or contested with no provider behind the slot: not judged again. Absent from a state file written
-    /// before this field: read as settled when its verdict is confirmed or contested (an unconfirmed or diverged header
-    /// is judged again; a confirmed one, which an older provider may no longer serve, is not).
+    /// Confirmed or contested with every configured provider counted (each has finalized the slot, or holds another
+    /// block there): not judged again. A verdict reached while a provider was behind, down or on another chain is not
+    /// settled: that provider may count against the header once it can (review B3, L1). Absent from a state file
+    /// written before this field: read as settled when its verdict is confirmed or contested (an unconfirmed or
+    /// diverged header is judged again; a confirmed one, which an older provider may no longer serve, is not).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub settled: Option<bool>,
-    /// `too-new` when the instance showed it (it stays raised), or ahead of every provider (until confirmed).
+    /// `too-new` (seen younger than the finality delay) or ahead of every provider: raised until a settled confirmation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ahead: Option<Ahead>,
 }
@@ -94,16 +96,24 @@ impl Seen {
         self.settled.unwrap_or(matches!(self.divergence, Divergence::Confirmed | Divergence::Contested))
     }
 
-    /// Records a verdict reached with `behind` providers that had not finalized the slot.
-    fn record(&mut self, d: Divergence, behind: usize) {
+    /// Confirmed with every configured provider counted: each has finalized the slot and holds the header.
+    fn settled_confirmed(&self) -> bool {
+        self.divergence == Divergence::Confirmed && self.is_settled()
+    }
+
+    /// Records a verdict reached with `uncounted` configured providers not counted. Only a settled confirmation
+    /// replaces `diverged` and clears `ahead`: a confirmation by the providers that answered while others could not
+    /// count (an outage of the honest ones, say) clears nothing.
+    fn record(&mut self, d: Divergence, uncounted: usize) {
         if d == Divergence::Unconfirmed {
             return;
         }
-        if !(self.divergence == Divergence::Diverged && d == Divergence::Contested) {
+        let settled_confirmation = d == Divergence::Confirmed && uncounted == 0;
+        if self.divergence != Divergence::Diverged || settled_confirmation {
             self.divergence = d;
         }
-        self.settled = Some(matches!(self.divergence, Divergence::Confirmed | Divergence::Contested) && behind == 0);
-        if self.divergence == Divergence::Confirmed && self.ahead == Some(Ahead::AheadOfProviders) {
+        self.settled = Some(matches!(self.divergence, Divergence::Confirmed | Divergence::Contested) && uncounted == 0);
+        if settled_confirmation {
             self.ahead = None;
         }
     }
@@ -111,7 +121,7 @@ impl Seen {
     fn note_ahead(&mut self, a: Option<Ahead>) {
         match a {
             Some(Ahead::TooNew) => self.ahead = Some(Ahead::TooNew),
-            Some(Ahead::AheadOfProviders) if self.ahead.is_none() && self.divergence != Divergence::Confirmed => self.ahead = a,
+            Some(Ahead::AheadOfProviders) if self.ahead.is_none() && !self.settled_confirmed() => self.ahead = a,
             _ => {}
         }
     }
@@ -162,7 +172,7 @@ fn recheck(seen: &mut BTreeMap<u64, Seen>, current: u64, s: &InstanceState, prov
         let at: Vec<ProviderView> = providers.iter().zip(views).map(|(p, v)| view_at(p, v, slot, w.timeout_s)).collect();
         let j = judge(&s.config, slot, &root, &at, &w.policy);
         if let Some(e) = seen.get_mut(&slot) {
-            e.record(j.divergence, j.behind);
+            e.record(j.divergence, j.uncounted);
         }
     }
 }
@@ -256,7 +266,7 @@ pub fn run(w: &Watch, stop: Arc<AtomicBool>) -> Summary {
                     // source now shows another instance state): a new entry.
                     *entry = Seen::new(a.finalized_root.clone(), now);
                 }
-                entry.record(a.divergence, a.providers_behind);
+                entry.record(a.divergence, crate::uncounted(&a.providers));
                 entry.note_ahead(a.ahead);
                 recheck(&mut summary.seen, a.finalized_slot, &s, &w.providers, &views, w);
                 let mut alerts = a.alerts.clone();

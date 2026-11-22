@@ -208,6 +208,9 @@ pub struct Judgement {
     pub behind: usize,
     /// Of those behind, the ones whose canonical block at the slot is the header (not final for them yet).
     pub holding: usize,
+    /// Configured providers not counted (neither agreeing nor disagreeing: behind with nothing else at the slot,
+    /// unavailable, on another chain). A verdict reached with one of them may change once it counts.
+    pub uncounted: usize,
     /// The finalized slots of the providers that have finalized the slot (for the stall), and the highest finalized
     /// slot any provider on the instance's chain reported.
     pub finalized: Vec<u64>,
@@ -309,6 +312,7 @@ pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Pol
     }
     let agree = verdicts.iter().filter(|v| v.standing == Standing::Agrees).count();
     let disagree = verdicts.iter().filter(|v| v.standing == Standing::Disagrees).count();
+    let uncounted = uncounted(&verdicts);
     // Disagreement decides: an agreeing provider never cancels a disagreeing one (it may collude with a forger).
     let divergence = if disagree >= p.diverge_at.max(1) {
         Divergence::Diverged
@@ -319,7 +323,12 @@ pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Pol
     } else {
         Divergence::Unconfirmed
     };
-    Judgement { divergence, verdicts, answering, behind, holding, finalized, highest_finalized, provider_alerts: alerts }
+    Judgement { divergence, verdicts, answering, behind, holding, uncounted, finalized, highest_finalized, provider_alerts: alerts }
+}
+
+/// The providers in `verdicts` that are not counted: neither agreeing nor disagreeing.
+pub fn uncounted(verdicts: &[ProviderVerdict]) -> usize {
+    verdicts.iter().filter(|v| !matches!(v.standing, Standing::Agrees | Standing::Disagrees)).count()
 }
 
 /// The chain's finality delay in seconds: two epochs (a checkpoint is finalized two epochs after it at the earliest).

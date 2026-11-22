@@ -1094,3 +1094,111 @@ fn huge_operator_values_do_not_overflow() {
         .unwrap();
     assert!(st.success(), "{st}");
 }
+
+// ---- the third review's tests R2 to R5, kept as regression tests (inverted where they measured a gap), and the tests
+// of the behaviours it found untested.
+
+/// A forged header `plus` slots after `s`'s, with another state root (`flip`).
+fn forged_at(s: &InstanceState, plus: u64, flip: u8) -> InstanceState {
+    let mut store = CompactStore::decode(&s.store).unwrap();
+    store.finalized.slot += plus;
+    store.finalized.state_root[0] ^= flip;
+    InstanceState { store: store.encode(), ..s.clone() }
+}
+
+/// Two colluders vouch for the forged header S1 (finality claimed past it, the forged root there) while the honest
+/// provider cannot count: behind S1 with no block there (`honest_down` false), or down, HTTP 503 (true). The forger
+/// moves on to S2; the honest provider is then up, finalizes S1 and has no block there. Returns the alert log once S1
+/// is raised, S1's entry in the state file before the honest provider finalized it, and a `check` of S1 then.
+fn colluders_confirm_while_the_honest_provider_cannot_count(tag: &str, honest_down: bool) -> (Vec<Value>, Value, Value) {
+    let f = fx();
+    let d = scratch(tag);
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let s = state_of(&f.stalled);
+    let (s1, s2) = (forged(&s), forged_at(&s, 1, 2));
+    let (f1, f2) = (write_state(&d, "s1.hex", &s1), write_state(&d, "s2.hex", &s2));
+    let now = slot_time(&s, slot) + 815;
+    let honest = provider(&g, slot, None, slot - 32);
+    if honest_down {
+        honest.set("/eth/v1/beacon/genesis", 503, "{}".into());
+    }
+    let colluders: Vec<Server> = (0..2)
+        .map(|_| {
+            let c = provider(&g, slot, Some(header_json(&forged_root(&s1), slot)), slot + 64);
+            c.set(&format!("/eth/v1/beacon/headers/{}", slot + 1), 200, header_json(&forged_root(&s2), slot + 1));
+            c
+        })
+        .collect();
+    let ps = vec![&honest, &colluders[0], &colluders[1]];
+    let current = d.join("current.hex");
+    std::fs::copy(&f1, &current).unwrap();
+    let (log, freeze, seen) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"), d.join("seen.json"));
+    let daemon = spawn_watch(&current, &ps, now, &log, &freeze, &["--state-file", &seen.display().to_string()]);
+    wait_for_lines(&log, "S1 polled", &|l| l.iter().any(|x| x["kind"] == "provider-behind" || x["kind"] == "provider-unavailable"));
+    std::thread::sleep(Duration::from_millis(1500));
+    std::fs::copy(&f2, &current).unwrap();
+    std::thread::sleep(Duration::from_millis(2000));
+    let before: Value = serde_json::from_str(&std::fs::read_to_string(&seen).unwrap()).unwrap();
+    honest.set("/eth/v1/beacon/genesis", 200, g.clone());
+    honest.set("/eth/v1/beacon/headers/finalized", 200, header_json("0x00", slot));
+    let l = wait_for_lines(&log, "S1 raised", &|l| l.iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)));
+    assert!(daemon.stop().0.success());
+    let ctl = check(&args(&f1, &ps, now + 10));
+    let raised = l.iter().find(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)).unwrap();
+    println!(
+        "{tag}: S1 in the state file before the honest provider finalized it: {}; then instance-diverged@S1 current {}; a check of S1 then: exit {} divergence {}",
+        before[slot.to_string()], raised["current"], ctl.code, ctl.report["divergence"]
+    );
+    assert_eq!(raised["current"].as_bool(), Some(false), "the instance had moved on");
+    assert!(read_lines(&freeze).iter().any(|x| x["kind"] == "instance-diverged" && x["slot"].as_u64() == Some(slot)), "the freeze tool ran for S1");
+    (l, before[slot.to_string()].clone(), ctl.report)
+}
+
+/// R2 (review B3; kills the mutant that settles a header with a provider behind its slot): `confirmed` by the two
+/// colluders while the honest provider is behind S1, not settled; raised once the honest provider finalizes S1.
+#[test]
+fn b3_r2_colluders_confirming_while_the_honest_provider_is_behind_do_not_settle_the_header() {
+    let (_, s1, ctl) = colluders_confirm_while_the_honest_provider_cannot_count("b3-r2", false);
+    assert_eq!((s1["divergence"].as_str(), s1["settled"].as_bool()), (Some("confirmed"), Some(false)));
+    assert_eq!(ctl["divergence"].as_str(), Some("diverged"));
+}
+
+/// R3 (review B3, L1), inverted. Was `b3_r3_two_colluders_confirming_while_the_honest_provider_is_down_settle_it_for_good`:
+/// it measured S1 `confirmed` and settled while the honest provider was down, and never judged again although the
+/// honest provider, back, counted against it. Now the honest provider's outage leaves S1 unsettled, and it is raised.
+#[test]
+fn b3_r3_colluders_confirming_while_the_honest_provider_is_down_do_not_settle_the_header() {
+    let (_, s1, ctl) = colluders_confirm_while_the_honest_provider_cannot_count("b3-r3", true);
+    assert_eq!((s1["divergence"].as_str(), s1["settled"].as_bool()), (Some("confirmed"), Some(false)));
+    assert_eq!(ctl["divergence"].as_str(), Some("diverged"));
+}
+
+/// Of L1's kind, found while fixing it: the default `--diverge-at 1`, the forged header, one honest provider and two
+/// colluders: `instance-diverged`. The honest provider goes down and the colluders alone confirm the header. A
+/// confirmation without every configured provider is no recovery: the alarm is held (before: `recovered`, and raised
+/// again only when the honest provider came back).
+#[test]
+fn an_honest_providers_outage_while_colluders_confirm_is_not_a_recovery() {
+    let f = fx();
+    let d = scratch("honest-outage-colluders");
+    let slot = f.stalled["finalized_slot"].as_u64().unwrap();
+    let g = sepolia_genesis();
+    let forged_state = forged(&state_of(&f.stalled));
+    let current = write_state(&d, "f.hex", &forged_state);
+    let honest = provider(&g, slot, Some(header_11549664()), slot + 64);
+    let colluders: Vec<Server> =
+        (0..2).map(|_| provider(&g, slot, Some(header_json(&forged_root(&forged_state), slot)), slot + 64)).collect();
+    let (log, freeze) = (d.join("alerts.jsonl"), d.join("freeze.jsonl"));
+    let now = secs(&f.stalled["time_ms"]) + 60;
+    let daemon = spawn_watch(&current, &[&honest, &colluders[0], &colluders[1]], now, &log, &freeze, &[]);
+    wait_for_lines(&log, "the divergence", &|l| l.iter().any(|x| x["kind"] == "instance-diverged"));
+    honest.set("/eth/v1/beacon/genesis", 503, "{}".into());
+    wait_for_lines(&log, "the honest provider down", &|l| l.iter().any(|x| x["kind"] == "provider-unavailable"));
+    std::thread::sleep(Duration::from_millis(2500));
+    let l = read_lines(&log);
+    assert!(daemon.stop().0.success());
+    assert!(!l.iter().any(|x| x["kind"] == "recovered" && x["cleared"] == "instance-diverged"), "{l:?}");
+    assert_eq!(l.iter().filter(|x| x["kind"] == "instance-diverged").count(), 1, "held, not emitted again");
+    assert_eq!(read_lines(&freeze).len(), 1);
+}
