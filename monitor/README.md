@@ -176,6 +176,16 @@ instead of on signals, since the process's signals are the host's); `check` and 
 tests/anvil-e2e.sh` runs the scenarios above with the module in place of the binary
 ([`modules/RESULTS.md`](../modules/RESULTS.md)).
 
+With `--send-via logos` its transactions go through Logos Core's `tx_sender_module`. When the monitor holds the
+watcher key too, a transaction the module did not broadcast, or cannot account for (stuck, failed after its leg began
+to leave, a withdrawal not confirmed, a request it no longer holds), goes the plain way at the node's next nonce:
+that fills a number the module burnt without broadcasting, which its own later sends would otherwise wait behind, and
+against a transaction of the module's that did leave it costs at most one extra call (a second `cancelCandidate` or
+`revokeFrom` reverts; a second `pauseCheckpoints` moves the pause's end by the seconds between the two). Without the
+key it is an error, retried at the next poll. `bash tests/logos-fallback.sh` runs this against a stand-in for
+`tx_sender_module` on anvil ([`results/logos-fallback/`](results/logos-fallback/README.md): every cancel mined, at the
+burnt number when the module failed; with the previous code none was).
+
 ## Not built
 
 - A client for the LEZ sequencer's RPC and the Logos Blockchain node's channel answer, to read the
