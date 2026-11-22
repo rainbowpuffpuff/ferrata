@@ -94,7 +94,13 @@ fn request(fx: &Fixture, instance_id: Root) -> Request {
     }
 }
 
-fn attest(l: &mut HarnessLedger, payer: &PrivateKey, header: Actor, req: &Request, time_ms: u64) -> (bool, Option<u32>) {
+fn attest(
+    l: &mut HarnessLedger,
+    payer: &PrivateKey,
+    header: Actor,
+    req: &Request,
+    time_ms: u64,
+) -> (bool, Option<u32>) {
     let tx = Tx {
         label: "Attest".into(),
         root: header,

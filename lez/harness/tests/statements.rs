@@ -517,7 +517,7 @@ fn the_reader_makes_the_four_consumer_checks() {
     let evidence =
         vec![PublicAccountEvidence::Pda { program: reader(), seed: use_seed(&waiting_config.config(), &storage_id) }];
     let r = h2.s.w.chain.submit(
-        "check 2: a forged entry sent to a waiting reader by another actor (the wait placed)",
+        "check 2: a forged entry sent to a waiting reader with no sender, as a transaction's root (the wait placed)",
         waiting_at,
         borsh::to_vec(&reply).unwrap(),
         vec![waiting_at],

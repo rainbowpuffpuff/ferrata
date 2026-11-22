@@ -226,7 +226,13 @@ fn sent_by(l: &HarnessLedger, k: &PrivateKey) -> usize {
 /// The job an adversary opens for `update` on `inst`, built as an honest submitter builds it: the layout, the
 /// compact update, the signer witness from the full committee that signs it (`committee`, which must be the one the
 /// store summarises) and the job id over the store the job starts from. Only the update is the adversary's.
-fn job_for(f: &Fx, inst: &Instance, store: &CompactStore, committee: &SyncCommittee, update: &LightClientUpdate) -> Planned {
+fn job_for(
+    f: &Fx,
+    inst: &Instance,
+    store: &CompactStore,
+    committee: &SyncCommittee,
+    update: &LightClientUpdate,
+) -> Planned {
     let spec = f.config.spec();
     let layout = layout_for(&f.config, store.fork, update).expect("a layout at the update's slot");
     let store_u = steps::store_for_update(store, layout, update.attested_header.beacon.slot, &spec).unwrap();
@@ -715,18 +721,13 @@ fn trust_md_lists_exactly_the_parties_walked_here() {
     let start = doc.find("### 2.4").expect("trust.md §2.4");
     let rest = &doc[start..];
     let end = rest[4..].find("\n### ").map_or(rest.len(), |e| e + 4);
-    let table: Vec<&str> = rest[..end]
-        .lines()
-        .skip_while(|l| !l.starts_with('|'))
-        .take_while(|l| l.starts_with('|'))
-        .skip(2)
-        .collect();
+    let table: Vec<&str> =
+        rest[..end].lines().skip_while(|l| !l.starts_with('|')).take_while(|l| l.starts_with('|')).skip(2).collect();
     assert!(table.len() >= WALKED.len(), "the participant table");
     let mut named = BTreeSet::new();
     for row in &table {
         let last = row.trim_end_matches('|').rsplit('|').next().unwrap();
-        let fns: Vec<&str> =
-            last.split('`').skip(1).step_by(2).filter(|n| WALKED.contains(n)).collect();
+        let fns: Vec<&str> = last.split('`').skip(1).step_by(2).filter(|n| WALKED.contains(n)).collect();
         assert_eq!(fns.len(), 1, "row without exactly one scenario of every_party.rs: {row}");
         assert!(named.insert(fns[0]), "scenario named twice: {}", fns[0]);
     }
