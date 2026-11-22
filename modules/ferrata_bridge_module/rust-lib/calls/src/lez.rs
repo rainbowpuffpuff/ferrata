@@ -210,18 +210,15 @@ fn reread(what: &str, account: &str, program: &str, plain: &str) -> (String, Val
     (value, entry)
 }
 
-/// The chain service's `module.inputs` with every bridge actor state in it read again through `lez_core`
-/// (`config_state`, `token_state`, `root_state`, `nullifier_state`, `public_holder_states`). The reply gains
-/// `lez`: what was read, and whether the two paths agreed.
-pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&str>) -> Result<(), String> {
+/// The bridge actor states of a `module.inputs` reply that `lez_core` reads again: (the key in the chain service's
+/// reply, what it is, the account that holds it). `token(cid, token)` for the token the inputs were asked for.
+pub(crate) fn wanted_reads(inputs: &Value, s: &Value, nullifier: Option<&str>, token: &[u8; 20]) -> Result<Vec<(&'static str, String, AccountId)>, String> {
     let program = AccountId::new(fixed::<32>(&s["program"], "program")?);
-    let p = hex(program.value());
     let cid = fixed::<32>(&s["config_id"], "config_id")?;
-    let mut reads = Vec::new();
-    // (the key in the chain service's reply, what it is, the account that holds it)
+    let name = if *token == [0u8; 20] { "ETH".to_string() } else { hex(token) };
     let mut wanted = vec![
         ("config_state", "config(cid)".to_string(), bw::config_actor(program, &cid).account_id),
-        ("token_state", "token(cid, ETH)".to_string(), bw::token_actor(program, &cid, &[0u8; 20]).account_id),
+        ("token_state", format!("token(cid, {name})"), bw::token_actor(program, &cid, token).account_id),
     ];
     if let Some(n) = inputs["leaf_count"].as_u64() {
         wanted.push(("root_state", format!("root(cid, {n})"), bw::root_actor(program, &cid, n).account_id));
@@ -232,7 +229,17 @@ pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&st
         let nf: [u8; 32] = fixed(&json!(nf), "nullifier")?;
         wanted.push(("nullifier_state", "nullifier(chain, vault, N)".into(), bw::nullifier_actor(program, chain_id, &vault, &nf).account_id));
     }
-    for (key, what, account) in wanted {
+    Ok(wanted)
+}
+
+/// The chain service's `module.inputs` with every bridge actor state in it read again through `lez_core`
+/// (`config_state`, `token_state` of `token`, `root_state`, `nullifier_state`, `public_holder_states`). The reply
+/// gains `lez`: what was read, and whether the two paths agreed.
+pub(crate) fn verify_inputs(inputs: &mut Value, s: &Value, nullifier: Option<&str>, token: &[u8; 20]) -> Result<(), String> {
+    let program = AccountId::new(fixed::<32>(&s["program"], "program")?);
+    let p = hex(program.value());
+    let mut reads = Vec::new();
+    for (key, what, account) in wanted_reads(inputs, s, nullifier, token)? {
         if let Some(plain) = inputs[key].as_str().map(str::to_string) {
             let (v, e) = reread(&what, &hex(account.value()), &p, &plain);
             inputs[key] = json!(v);
@@ -448,6 +455,35 @@ mod tests {
         assert_eq!(v[1]["authorizes"], false);
         assert!(v[2]["authorizes"].is_null());
         assert!(accounts_json(&json!([{ "account": "0x01", "program": "0x02", "kind": "nope" }]), None).is_err());
+    }
+
+    /// The registry and the admin tab read each token's LEZ side again through lez_core: config(cid), the asked
+    /// token's own token(cid, token) (not ETH's), the newest imported root.
+    #[test]
+    fn every_tokens_lez_states_are_read_again_through_lez_core() {
+        let program = AccountId::new([0x22; 32]);
+        let cid = [0x33u8; 32];
+        let s = json!({ "program": format!("0x{}", "22".repeat(32)), "config_id": format!("0x{}", "33".repeat(32)),
+                        "chain_id": 11155111, "vault": format!("0x{}", "44".repeat(20)) });
+        let tusd = [0x59u8; 20];
+        let inputs = json!({ "config_state": "0x01", "token_state": "0x02", "leaf_count": 3, "root_state": "0x03" });
+        let w = wanted_reads(&inputs, &s, None, &tusd).unwrap();
+        let keys: Vec<&str> = w.iter().map(|(k, _, _)| *k).collect();
+        assert_eq!(keys, vec!["config_state", "token_state", "root_state"]);
+        assert_eq!(w[0].2, bw::config_actor(program, &cid).account_id);
+        assert_eq!(w[1].2, bw::token_actor(program, &cid, &tusd).account_id, "the asked token's gate");
+        assert_ne!(w[1].2, bw::token_actor(program, &cid, &[0u8; 20]).account_id);
+        assert_eq!(w[1].1, format!("token(cid, 0x{})", "59".repeat(20)));
+        assert_eq!(w[2].2, bw::root_actor(program, &cid, 3).account_id);
+        let eth = wanted_reads(&json!({}), &s, None, &[0u8; 20]).unwrap();
+        assert_eq!(eth.len(), 2);
+        assert_eq!(eth[1].1, "token(cid, ETH)");
+        // Natively lez_core is not reachable: every read keeps the chain service's value and says why.
+        let mut i = inputs.clone();
+        verify_inputs(&mut i, &s, None, &tusd).unwrap();
+        assert_eq!(i["lez"]["reads"], 3);
+        assert_eq!(i["token_state"], "0x02");
+        assert!(i["lez"]["detail"][1]["error"].as_str().unwrap().contains("lez_core"));
     }
 
     #[test]

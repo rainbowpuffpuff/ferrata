@@ -274,7 +274,19 @@ impl Chain {
             None => self.post("module.inputs", params.clone())?,
         };
         if crate::lez::active() {
-            crate::lez::verify_inputs(&mut inputs, &self.s, params["nullifier"].as_str())?;
+            let token: [u8; 20] = if params["token"].is_null() { [0u8; 20] } else { fixed(&params["token"], "token")? };
+            crate::lez::verify_inputs(&mut inputs, &self.s, params["nullifier"].as_str(), &token)?;
+        }
+        Ok(inputs)
+    }
+
+    /// The chain service's LEZ states of `token` (`module.inputs` for LEZ alone: config(cid), token(cid, token), the
+    /// newest imported root), each read again through Logos Core's `lez_core` and compared on the `lez_core` path
+    /// (`lez` in the reply): what the registry view and the admin tab show on the `eth` path.
+    fn lez_inputs(&self, token: &[u8; 20]) -> Result<Value, String> {
+        let mut inputs = self.post("module.inputs", json!({ "token": hex(token), "lez_only": true }))?;
+        if crate::lez::active() {
+            crate::lez::verify_inputs(&mut inputs, &self.s, None, token)?;
         }
         Ok(inputs)
     }
@@ -436,7 +448,8 @@ impl Chain {
             let (symbol, decimals) = if t == [0u8; 20] { ("ETH".to_string(), 18) } else { v.erc20_meta(&t) };
             token["symbol"] = json!(symbol);
             token["decimals"] = json!(decimals);
-            let inputs = self.post("module.inputs", json!({ "token": hex(&t), "lez_only": true }))?;
+            // Read again through lez_core on that path (review: the registry's LEZ side came from the chain service alone).
+            let inputs = self.lez_inputs(&t)?;
             let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
             let mut req = json!({ "bridge_header": self.s["program"] });
             for k in ["token_state", "config_state", "root_state"] {
@@ -450,6 +463,7 @@ impl Chain {
                 imported_root = lez["root"].clone();
             }
             token["lez"] = lez_token(&lez["token"]);
+            token["lez_read_via"] = lez_read_via(&inputs);
             tokens.push(token);
         }
         Ok(json!({ "tokens": tokens, "vault": vault_side, "lez_config": lez_config, "imported_root": imported_root, "eth": v.report() }))
@@ -982,7 +996,7 @@ impl Chain {
         let roles = v.roles()?;
         let vault_registry = v.registry(&[0u8; 20])?;
         let registry = self.registry()?;
-        let inputs = self.post("module.inputs", json!({ "token": ETH, "lez_only": true }))?;
+        let inputs = self.lez_inputs(&[0u8; 20])?;
         let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
         let mut req = json!({ "bridge_header": self.s["program"] });
         for k in ["token_state", "config_state"] {
@@ -1000,6 +1014,7 @@ impl Chain {
             "lez": lez,
             "registry": registry,
             "senders": { "admin": e["admin"], "freeze_authority": e["freeze_authority"] },
+            "lez_read_via": lez_read_via(&inputs),
             // The view's LEZ section (the bridge program's roles); the vault's are `vault_roles`.
             "admin": controls["admin"], "freeze_authority": controls["freeze_authority"], "fee_recipient": controls["fee_recipient"],
             "eth": v.report(),
@@ -1044,11 +1059,10 @@ impl Chain {
         } else {
             (params["action"].as_str().ok_or("admin.lez needs an action (lez_*)")?.to_string(), params["params"].clone())
         };
-        let mut inputs = self.post("module.inputs", json!({ "token": ETH, "lez_only": true }))?;
-        if crate::lez::active() {
-            // The program's states read again through lez_core (Logos Core's LEZ wallet), compared with the service's.
-            crate::lez::verify_inputs(&mut inputs, &self.s, None)?;
-        }
+        // The program's states read again through lez_core (Logos Core's LEZ wallet) on that path, compared with the
+        // service's.
+        let token: [u8; 20] = if p["token"].is_null() { [0u8; 20] } else { fixed(&p["token"], "params.token")? };
+        let inputs = self.lez_inputs(&token)?;
         let config_state = inputs["config_state"].as_str().filter(|h| h.len() > 2).ok_or("the bridge has no configuration on LEZ yet")?.to_string();
         let mut req = json!({ "action": action, "program": self.s["program"], "config_id": self.s["config_id"], "params": p,
                               "config_state": config_state });
@@ -1092,6 +1106,15 @@ impl Chain {
                                         out["tx_hash"].as_str().unwrap_or("?"), out["block"], out["role"], out["role_holder"]));
         }
         Ok(out)
+    }
+}
+
+/// Where a reply's LEZ states came from: `lez_core` (read again and compared: how many reads, how many equal) or the
+/// chain service alone.
+fn lez_read_via(inputs: &Value) -> Value {
+    match inputs["lez"]["via"].as_str() {
+        Some(via) => json!({ "via": via, "reads": inputs["lez"]["reads"], "equal": inputs["lez"]["equal"] }),
+        None => json!({ "via": "the chain service (seqnet-chain)" }),
     }
 }
 
