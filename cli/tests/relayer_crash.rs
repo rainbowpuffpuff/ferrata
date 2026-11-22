@@ -30,7 +30,14 @@
 //! with Logos Core's call replaced by a client of `e2e/netfault/txsender_stub.py`, a stand-in for `tx_sender_module`;
 //! no key in the daemon): after its request was made and before any broadcast; after the request was made, before its
 //! id was known; after the broadcast, before its hash was known. Restarted, the daemon finds its request and drives it
-//! to its end: one request per job, never a second one.
+//! to its end: one request per job, never a second one. The stand-in survives each of these kills.
+//! Part 6, what `tx_sender_module` cannot account for (the second review's M2; the stand-in with a durable history, as
+//! the module's): (a) the module restarted after it broadcast, the answer never delivered, the transaction pending
+//! (automine off): the restarted daemon reads the request's row in the module's history and waits for the transaction,
+//! no request made; (b) the module restarted after the request was made, before any broadcast: no row, so nothing left,
+//! and the call is planned again (one request); (c) `stuck` (a broadcast whose answer never came) with the transaction
+//! out: found mined under the request's nonce; (d) `stuck` with nothing sent: lost, sent again through the module with
+//! the nonce pinned (one transaction for two requests).
 //!
 //! Checked after each part: one `CandidateSubmitted` and one `CheckpointFinalized`, one `Release` per
 //! nullifier, every job in `done/` (none refused) with at least one `job-done` line, all naming one
@@ -829,6 +836,93 @@ async fn relayer_killed_and_cut_off_does_each_job_once() -> Result<()> {
     s5["requestsMade"] = json!(made);
     results["parts"].as_array_mut().expect("array").push(s5);
 
+    // ---- part 6: what tx_sender_module cannot account for (review E2, M2) ------------------------------------------------
+    let history = dir.join("txsender6.history.jsonl").to_string_lossy().into_owned();
+    let with_history = ["--history".to_string(), history];
+    let requests = |ts: &Helper| ts.log_count(|v| v["method"] == "send" && v["requestId"].is_string());
+    let mut part6 = Vec::new();
+    let mut ts = Helper::start_with(&dir, "txsender6a", "e2e/netfault/txsender_stub.py", &url, &with_history)?;
+    w.logos_stub = Some(ts.addr().await?);
+    // (a) broadcast, its answer held, the daemon killed; the module restarted; the transaction still pending.
+    w.automine(false).await?;
+    let h = ts.hits();
+    ts.arm("hold send_status 30")?;
+    let (l0, _) = w.nonces().await?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(None)?;
+    ts.wait_hit(h, 120).await?;
+    let (_, pending_at_kill) = w.nonces().await?;
+    ensure!(pending_at_kill == l0 + 1, "part 6a: the transaction is not pending at the kill ({l0}, {pending_at_kill})");
+    w.kill(d)?;
+    drop(ts);
+    ts = Helper::start_with(&dir, "txsender6b", "e2e/netfault/txsender_stub.py", &url, &with_history)?;
+    w.logos_stub = Some(ts.addr().await?);
+    let d = w.start(None)?;
+    w.wait_last_run("the transaction waited for", |v| v["event"] == "inflight-pending", 60).await?;
+    ensure!(w.last_run_has("inflight-request-forgotten"), "part 6a: no inflight-request-forgotten line");
+    ensure!(!w.state.join("refused").join(&r).exists(), "part 6a: {r} refused while its transaction is pending");
+    w.mine().await?;
+    w.wait_done(&r, 60).await?;
+    w.kill(d)?;
+    w.automine(true).await?;
+    let made_a = requests(&ts);
+    ensure!(made_a == 0, "part 6a: {made_a} requests made at the restarted module");
+    part6.push(json!({ "case": "module restarted after the broadcast, transaction pending", "requestsAfterRestart": made_a,
+                       "booked": "inflight-request-forgotten (history row), inflight-pending, then the receipt" }));
+    // (b) the request made, nothing broadcast, the daemon killed; the module restarted: no row, nothing left.
+    let h = ts.hits();
+    ts.arm("stall send_status")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(None)?;
+    ts.wait_hit(h, 120).await?;
+    w.kill(d)?;
+    drop(ts);
+    ts = Helper::start_with(&dir, "txsender6c", "e2e/netfault/txsender_stub.py", &url, &with_history)?;
+    w.logos_stub = Some(ts.addr().await?);
+    let d = w.start(None)?;
+    w.wait_done(&r, 120).await?;
+    ensure!(w.last_run_has("inflight-request-forgotten"), "part 6b: no inflight-request-forgotten line");
+    w.kill(d)?;
+    let made_b = requests(&ts);
+    ensure!(made_b == 1, "part 6b: {made_b} requests at the restarted module (the call planned again once)");
+    part6.push(json!({ "case": "module restarted after the request, before any broadcast", "requestsAfterRestart": made_b,
+                       "booked": "inflight-request-forgotten (no row), planned again" }));
+    // (c) stuck, the transaction out (mined): found under the request's nonce; no second request.
+    let (h, m0) = (ts.hits(), requests(&ts));
+    ts.arm("stuck send_status")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(None)?;
+    w.wait_done(&r, 120).await?;
+    ensure!(ts.hits() > h, "part 6c: the fault did not fire");
+    ensure!(w.last_run_has("inflight-request-unknown") && w.last_run_has("inflight-found"), "part 6c: not found under its nonce");
+    w.kill(d)?;
+    let made_c = requests(&ts) - m0;
+    ensure!(made_c == 1, "part 6c: {made_c} requests for one stuck call");
+    part6.push(json!({ "case": "stuck, the transaction out", "requests": made_c, "booked": "inflight-request-unknown, inflight-found" }));
+    // (d) stuck, nothing sent: lost, sent again through the module with the nonce pinned.
+    let (h, m0) = (ts.hits(), requests(&ts));
+    ts.arm("stuck-unsent send_status")?;
+    let r = w.release_job(0)?;
+    w.effects += 1;
+    let d = w.start(None)?;
+    w.wait_done(&r, 120).await?;
+    ensure!(ts.hits() > h, "part 6d: the fault did not fire");
+    ensure!(w.last_run_has("inflight-lost") && w.last_run_has("inflight-resent"), "part 6d: not sent again as lost");
+    w.kill(d)?;
+    let made_d = requests(&ts) - m0;
+    let pinned = ts.log_count(|v| v["method"] == "send" && v["pinned"] == true);
+    ensure!(made_d == 2 && pinned == 1, "part 6d: {made_d} requests, {pinned} pinned (expected 2, 1)");
+    part6.push(json!({ "case": "stuck, nothing sent", "requests": made_d, "pinned": pinned,
+                       "booked": "inflight-request-unknown, inflight-lost, inflight-resent (pinned nonce)" }));
+    drop(ts);
+    w.logos_stub = None;
+    let mut s6 = w.check("part 6 (what tx_sender_module cannot account for)").await?;
+    s6["cases"] = json!(part6);
+    results["parts"].as_array_mut().expect("array").push(s6);
+
     if let Ok(path) = std::env::var("FERRATA_CRASH_RESULTS") {
         std::fs::write(&path, serde_json::to_vec_pretty(&results)?)?;
     }
@@ -847,6 +941,10 @@ struct Helper {
 
 impl Helper {
     fn start(dir: &Path, name: &str, script: &str, upstream: &str) -> Result<Self> {
+        Self::start_with(dir, name, script, upstream, &[])
+    }
+
+    fn start_with(dir: &Path, name: &str, script: &str, upstream: &str, extra: &[String]) -> Result<Self> {
         let script = Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(script);
         let (ctl, port, log) =
             (dir.join(format!("{name}.ctl")), dir.join(format!("{name}.port")), dir.join(format!("{name}.jsonl")));
@@ -861,6 +959,7 @@ impl Helper {
             .arg(&ctl)
             .arg("--log")
             .arg(&log)
+            .args(extra)
             .stdout(Stdio::null())
             .stderr(Stdio::from(std::fs::File::create(dir.join(format!("{name}.err")))?))
             .spawn()

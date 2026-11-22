@@ -4,26 +4,37 @@
 Tests only: the real route runs inside ferrata_relayer_module with Logos Core's own modules
 (modules/scripts/relayer-module.sh; modules/results/send-stack-2026-11-14/).
 
-  txsender_stub.py --upstream http://127.0.0.1:<anvil> --port-file F --ctl C --log L
+  txsender_stub.py --upstream http://127.0.0.1:<anvil> --port-file F --ctl C --log L [--history H]
 
 One HTTP endpoint on 127.0.0.1 (its port written to F): POST {"module": "tx_sender_module", "method": M, "args": [...]}
 answers what the module's method M answers (logos-evm-tx-sender-module f1754c3, rust-lib/src/glue.rs; the subset the
 daemon calls):
-  send(request_json)       reserves the account's next nonce (one ledger, as the module's) and answers
+  send(request_json)       reserves the account's next nonce (one ledger, as the module's), or the request's pinned
+                           `nonce` (refused while a request not broadcast yet holds it), and answers
                            {ok, pending: true, requestId}; nothing is signed or broadcast
-  send_status(requestId)   the broadcast (the module has no background advancer: this call IS the broadcast): the call
-                           sent with its reserved nonce from the request's account (anvil signs: the test impersonates
-                           it) -> {ok, status: "broadcast", final: true, hashes: [h], hash: h, legs}; asked again for a
-                           request already broadcast, the same answer
+  send_status(requestId)   the broadcast (the module has no background advancer: this call IS the broadcast): the
+                           history row written first (as the module's "write ahead"), then the call sent with its
+                           reserved nonce from the request's account (anvil signs: the test impersonates it) ->
+                           {ok, status: "broadcast", final: true, hashes: [h], hash: h, legs}; asked again for a request
+                           already broadcast, the same answer; for a request it does not hold (made before a restart):
+                           {ok: false, final: true}, as the module
   cancel_send(requestId)   withdraws a request not broadcast yet
   live_sends()             the requests not broadcast yet: {ok, sends: [{requestId, chainId, from, status, purpose}]}
-Approval is immediate (as under a custodian's unlock without confirmation). Faults, one-shot, read from C before each
-call (one line; `pass` or missing: none):
+  history(address, chain)  the durable rows (H, JSONL, read back at start; the newest row per request):
+                           {ok, transactions: [{requestId, leg, nonce, hash, status, chainId, from, txInput, purpose}]}
+A restarted stand-in with the same H is the module restarted: its requests are gone (in memory), its history and the
+nonces it holds (burnt: every row's) are not. Request ids carry the process's own tag, so a restarted stand-in never
+reuses one. Approval is immediate (as under a custodian's unlock without confirmation). Faults, one-shot, read from C
+before each call (one line; `pass` or missing: none):
   hold send SECS           `send` reserves the request, then holds its answer SECS (the test kills the daemon meanwhile:
                            it never learns the request's id)
   stall send_status        `send_status` holds the connection, broadcasting nothing, until the client goes away (the
                            daemon killed after its request was made, before any broadcast)
   hold send_status SECS    `send_status` broadcasts, then holds its answer SECS (killed: it never learns the hash)
+  stuck send_status        `send_status` writes the row and broadcasts, and the request is `stuck` from then on (no
+                           hash: as a broadcast whose RPC never answered): {ok, status: "stuck", final: true, hashes: [],
+                           legs: [{nonce, left: true}]}
+  stuck-unsent send_status the same, the call never sent
 Each fault that fires appends a line to C + ".hit"; every call goes to L (JSONL). The upstream must be a loopback
 address.
 """
@@ -45,6 +56,7 @@ def main():
     ap.add_argument("--port-file", required=True)
     ap.add_argument("--ctl", required=True)
     ap.add_argument("--log", required=True)
+    ap.add_argument("--history")
     a = ap.parse_args()
     host = urllib.parse.urlparse(a.upstream).hostname
     if host not in ("127.0.0.1", "localhost", "::1"):
@@ -52,6 +64,29 @@ def main():
     requests = {}  # id -> {from, chainId, to, data, label, purpose, nonce, status, hash}
     ledger = {}  # (chainId, from) -> next nonce reserved
     counter = [0]
+    tag = os.urandom(3).hex()
+    rows = {}  # requestId -> its newest history row
+    if a.history and os.path.exists(a.history):
+        with open(a.history) as f:
+            for line in f:
+                if line.strip():
+                    r = json.loads(line)
+                    rows[r["requestId"]] = r
+        # As the module's restart: the numbers its history holds are burnt (never taken again by an unpinned send).
+        for r in rows.values():
+            key = (r["chainId"], r["from"].lower())
+            ledger[key] = max(ledger.get(key, 0), r["nonce"] + 1)
+
+    def write_row(rid, r, hash_, status):
+        row = {"requestId": rid, "leg": 0, "nonce": r["nonce"], "hash": hash_ or "", "status": status,
+               "chainId": r["chainId"], "from": r["from"], "to": r["to"], "txInput": r["data"],
+               "purpose": r["purpose"]}
+        rows[rid] = row
+        if a.history:
+            with open(a.history, "a") as f:
+                f.write(json.dumps(row) + "\n")
+                f.flush()
+                os.fsync(f.fileno())
 
     def log(method, action, **kw):
         with LOCK, open(a.log, "a") as f:
@@ -80,7 +115,10 @@ def main():
         return v["result"]
 
     def status_reply(rid, r):
-        leg = {"to": r["to"], "nonce": r["nonce"], "label": r["label"]}
+        leg = {"to": r["to"], "nonce": r["nonce"], "label": r["label"], "left": r["status"] in ("broadcast", "stuck")}
+        if r["status"] == "stuck":
+            return {"ok": True, "requestId": rid, "status": "stuck", "final": True, "hashes": [], "legs": [leg],
+                    "reason": "the broadcast has not answered"}
         if r["status"] == "broadcast":
             leg["hash"] = r["hash"]
             return {"ok": True, "requestId": rid, "status": "broadcast", "final": True, "hashes": [r["hash"]],
@@ -96,26 +134,42 @@ def main():
         call = req["calls"][0]
         key = (req["chainId"], req["from"].lower())
         with LOCK:
-            chain_next = int(rpc("eth_getTransactionCount", [req["from"], "pending"]), 16)
-            nonce = max(ledger.get(key, 0), chain_next)
-            ledger[key] = nonce + 1
+            pinned = req.get("nonce")
+            if pinned is not None:
+                held = [rid for rid, r in requests.items() if (r["chainId"], r["from"].lower()) == key
+                        and r["nonce"] == pinned and r["status"] == "awaitingApproval"]
+                if held:
+                    return None, {"ok": False, "error": f"nonce {pinned} is already held by a send that has not been "
+                                                        "broadcast; a nonce may only be pinned to replace a "
+                                                        "transaction that has already left"}
+                nonce = int(pinned)
+                ledger[key] = max(ledger.get(key, 0), nonce + 1)
+            else:
+                chain_next = int(rpc("eth_getTransactionCount", [req["from"], "pending"]), 16)
+                nonce = max(ledger.get(key, 0), chain_next)
+                ledger[key] = nonce + 1
             counter[0] += 1
-            rid = f"r{counter[0]}"
+            rid = f"r{counter[0]}-{tag}"
             requests[rid] = {"from": req["from"], "chainId": req["chainId"], "to": call["to"], "data": call["data"],
                              "label": call.get("label", ""), "purpose": req.get("purpose", ""), "nonce": nonce,
                              "status": "awaitingApproval", "hash": None}
         return rid, {"ok": True, "pending": True, "requestId": rid, "handle": f"h-{rid}"}
 
-    def broadcast(rid):
+    def broadcast(rid, stuck=None):
         with LOCK:
             r = requests.get(rid)
             if r is None:
-                return {"ok": False, "error": f"no request {rid}", "final": True}
+                return {"ok": False, "error": f"no send with id '{rid}'", "final": True}
             if r["status"] == "awaitingApproval":
+                write_row(rid, r, None, "intent")  # written ahead: a row means it may have left
                 tx = {"from": r["from"], "to": r["to"], "data": r["data"], "nonce": hex(r["nonce"])}
                 try:
-                    r["hash"] = rpc("eth_sendTransaction", [tx])
-                    r["status"] = "broadcast"
+                    if stuck != "unsent":
+                        h = rpc("eth_sendTransaction", [tx])
+                        if stuck is None:
+                            r["hash"] = h
+                            write_row(rid, r, h, "pending")
+                    r["status"] = "stuck" if stuck else "broadcast"
                 except Exception as e:  # noqa: BLE001
                     r["status"], r["reason"] = "failed", str(e)
             return status_reply(rid, r)
@@ -155,6 +209,9 @@ def main():
                 return self.reply({"ok": False, "error": f"no module {body.get('module')} here"})
             if method == "send":
                 rid, v = send(args)
+                if rid is None:
+                    log(method, "refused", reason=v.get("error"))
+                    return self.reply(v)
                 if fault == "hold":
                     secs = float(ctl[2]) if len(ctl) > 2 else 20.0
                     fired(f"hold send {secs} ({rid})")
@@ -162,7 +219,8 @@ def main():
                     if self.until_client_gone(secs):
                         log(method, f"held answer for {rid} not delivered (client gone)", requestId=rid)
                         return None
-                log(method, "request made", requestId=rid, nonce=requests[rid]["nonce"], label=requests[rid]["label"])
+                log(method, "request made", requestId=rid, nonce=requests[rid]["nonce"], label=requests[rid]["label"],
+                    pinned=json.loads(args[0]).get("nonce") is not None)
                 return self.reply(v)
             if method == "send_status":
                 rid = args[0] if args else ""
@@ -172,7 +230,11 @@ def main():
                     self.until_client_gone(600)
                     log(method, f"stalled call's client gone; {rid} still open", requestId=rid)
                     return None
-                v = broadcast(rid)
+                stuck = None
+                if fault in ("stuck", "stuck-unsent"):
+                    stuck = "unsent" if fault == "stuck-unsent" else "sent"
+                    fired(f"{fault} send_status ({rid})")
+                v = broadcast(rid, stuck)
                 if fault == "hold":
                     secs = float(ctl[2]) if len(ctl) > 2 else 20.0
                     fired(f"hold send_status {secs} ({rid})")
@@ -194,6 +256,15 @@ def main():
                             ledger[key] = r["nonce"]
                 log(method, "cancelled" if ok else "not cancellable", requestId=rid)
                 return self.reply({"ok": ok} if ok else {"ok": False, "error": f"{rid} is not awaiting approval"})
+            if method == "history":
+                address = (args[0] if args else "").lower()
+                chain = int(args[1]) if len(args) > 1 else 0
+                with LOCK:
+                    txs = [r for r in rows.values() if r["from"].lower() == address
+                           and (chain == 0 or r["chainId"] == chain)]
+                log(method, f"{len(txs)} rows")
+                return self.reply({"ok": True, "chainId": chain, "address": args[0] if args else "",
+                                   "transactions": txs})
             if method == "live_sends":
                 with LOCK:
                     sends = [{"requestId": rid, "handle": f"h-{rid}", "chainId": r["chainId"], "from": r["from"],

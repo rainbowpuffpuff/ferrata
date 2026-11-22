@@ -29,7 +29,11 @@
 //! booked (the job moved to `done/`, the line written). Every round first resolves a record left by a killed or
 //! cut-off daemon: mined, it books what the transaction did (`"recovered": true`); still pending, the round waits;
 //! lost (not mined and unknown to the node, its nonce unspent), the same call is sent again **with the same
-//! nonce**, so at most one of the two can ever be mined. One daemon per state directory (`<state>/lock`). A root
+//! nonce**, so at most one of the two can ever be mined. Through `tx_sender_module` (`--send-via logos`) the record
+//! carries the request's id; a killed daemon drives its open request to its end, and what the module cannot account
+//! for (a request it no longer holds after a restart, `stuck`, a leg that failed after it began to leave) is settled
+//! on the chain the same way, at the request's nonce (the module's own, from `send_status` or its durable history);
+//! lost, it is sent again through the module with that nonce pinned. One daemon per state directory (`<state>/lock`). A root
 //! import sent to LEZ is kept the same way (`<state>/root-import-inflight.json`) until `root(cid, n)` holds it. A gas
 //! drop is journaled in `<state>/drops.json` ([`relayer::drop_step`]): recorded with the private nonce of the account
 //! the credits come from before its credit is sent, one drop at a time; its job stays in the inbox until LEZ shows
@@ -259,7 +263,8 @@ pub struct Inflight {
     pub job: Option<String>,
     /// Its calldata to the vault.
     pub input: Bytes,
-    /// The nonce it takes; a lost transaction is sent again with it.
+    /// The nonce it takes; a lost transaction is sent again with it. Through `tx_sender_module`: the number its request
+    /// took, once the module said it (`send_status`'s leg, or its history row); before that, the account's next.
     pub nonce: u64,
     /// Its hash, once the node has answered the send.
     pub hash: Option<B256>,
@@ -394,7 +399,8 @@ impl Daemon {
         // Journaled as on the plain path (R.06): the record before the request, with the nonce the account takes next;
         // the request's id as soon as `send` answers it; the hash once `send_status` broadcast it. A daemon killed in
         // between finds its request again and drives it to its end (`tx_sender_module` broadcasts only when polled):
-        // never a second request while the first is open ([`Daemon::resolve_inflight`]).
+        // never a second request while the first is open; one the module cannot account for is settled on the chain at
+        // its nonce, and sent again only with that nonce pinned ([`Daemon::resolve_inflight`]).
         let nonce = match Inflight::load(&self.state)? {
             Some(f) if f.key == key => f.nonce,
             Some(f) => bail!("{} is still in flight (nonce {}): nothing else is sent before it resolves", f.key, f.nonce),
@@ -415,7 +421,7 @@ impl Daemon {
         f.save(&self.state)?;
         let t0 = std::time::Instant::now();
         let (r2, vault, sent) = (route.clone(), self.r.vault, input.clone());
-        let opened = tokio::task::spawn_blocking(move || r2.open(vault, &sent, label))
+        let opened = tokio::task::spawn_blocking(move || r2.open(vault, &sent, label, None))
             .await
             .map_err(|e| anyhow!("the request to Logos Core did not finish (kept in flight): {e}"))?;
         let id = match opened {
@@ -443,7 +449,14 @@ impl Daemon {
                 Ok((rc, Via::Logos { request_id, polls, millis }))
             }
             Outcome::NotSent(reason) => self.logos_not_sent(reason, fallback, input, label, key, job).await,
-            Outcome::Unknown(reason) => bail!("{reason} (kept in flight, resolved next round)"),
+            Outcome::Unknown { reason, nonce, .. } => {
+                if let Some(n) = nonce.filter(|n| *n != f.nonce) {
+                    // The module's own number for the request: the one the chain is checked at.
+                    f.nonce = n;
+                    f.save(&self.state)?;
+                }
+                bail!("{reason} (kept in flight, resolved next round)")
+            }
         }
     }
 
@@ -658,14 +671,16 @@ impl Daemon {
     async fn resolve_inflight(&mut self, inbox: &Path) -> Result<bool> {
         let Some(mut f) = Inflight::load(&self.state)? else { return Ok(true) };
         let s = self.sink.clone();
-        // Through tx_sender_module without a hash yet: its request (by the recorded id, or the one it holds open for
-        // this call's label) driven to its end; it broadcasts only when polled, so an open request is never made twice.
+        // Through tx_sender_module without a hash yet: its request (by the recorded id, or the one it holds open for this
+        // very call) driven to its end; it broadcasts only when polled, so an open request is never made twice. What the
+        // module cannot account for (review E2, M2: a request it no longer holds after a restart, `stuck`, a leg failed
+        // after it began to leave) is not "nothing sent": it is settled on the chain below, at the request's nonce.
         let logos = f.via.as_deref() == Some(VIA_LOGOS);
         if let (true, None, Some(route)) = (logos, f.hash, self.logos.clone()) {
             use crate::logos_send::Outcome;
             if f.request.is_none() {
-                let (r2, label) = (route.clone(), f.label.clone());
-                let open = tokio::task::spawn_blocking(move || r2.live(&label))
+                let (r2, label, input) = (route.clone(), f.label.clone(), f.input.clone());
+                let open = tokio::task::spawn_blocking(move || r2.live(&label, &input))
                     .await
                     .map_err(|e| anyhow!("live_sends did not finish: {e}"))?
                     .map_err(|e| anyhow!("{e} (in flight: {} kept)", f.key))?;
@@ -687,14 +702,38 @@ impl Daemon {
                         log(&s, "inflight-request-driven", json!({ "key": f.key, "requestId": request_id, "hash": hash, "statusPolls": polls }));
                     }
                     Outcome::NotSent(reason) => {
-                        // Rejected, cancelled, failed with nothing sent, or withdrawn unapproved: nothing left.
+                        // Rejected, cancelled, failed before it left, or withdrawn unapproved, on the module's word for
+                        // a request it holds: nothing left.
                         log(&s, "inflight-request-ended", json!({ "key": f.key, "requestId": f.request, "reason": reason }));
                         Inflight::clear(&self.state)?;
                         return Ok(true);
                     }
-                    Outcome::Unknown(reason) => {
-                        log(&s, "inflight-pending", json!({ "key": f.key, "requestId": f.request, "reason": reason }));
-                        return Ok(false);
+                    Outcome::Unknown { reason, forgotten: false, nonce } => {
+                        f.nonce = nonce.unwrap_or(f.nonce);
+                        f.save(&self.state)?;
+                        log(&s, "inflight-request-unknown", json!({ "key": f.key, "requestId": f.request, "nonce": f.nonce, "reason": reason }));
+                    }
+                    Outcome::Unknown { reason, forgotten: true, .. } => {
+                        // The module's durable history: its row for the request is written before the call leaves.
+                        let (r4, id) = (route.clone(), f.request.clone().unwrap_or_default());
+                        let row = tokio::task::spawn_blocking(move || r4.history_row(&id))
+                            .await
+                            .map_err(|e| anyhow!("history did not finish: {e}"))?;
+                        match row {
+                            Ok(None) => {
+                                log(&s, "inflight-request-forgotten", json!({ "key": f.key, "requestId": f.request, "reason": reason, "history": "no row: never broadcast" }));
+                                Inflight::clear(&self.state)?;
+                                return Ok(true);
+                            }
+                            Ok(Some((n, hash))) => {
+                                (f.nonce, f.hash) = (n, hash);
+                                f.save(&self.state)?;
+                                log(&s, "inflight-request-forgotten", json!({ "key": f.key, "requestId": f.request, "reason": reason, "history": { "nonce": n, "hash": hash } }));
+                            }
+                            Err(e) => {
+                                log(&s, "inflight-request-forgotten", json!({ "key": f.key, "requestId": f.request, "nonce": f.nonce, "reason": reason, "history": format!("not read: {e}") }));
+                            }
+                        }
                     }
                 }
             }
@@ -741,19 +780,20 @@ impl Daemon {
         }
         // Lost: neither mined nor known to the node, its nonce unspent. The same call again, with the same nonce.
         log(&s, "inflight-lost", json!({ "key": f.key, "nonce": f.nonce, "hash": f.hash }));
-        if logos && !self.logos.as_ref().is_some_and(|r| r.fallback) {
-            // No key here to send it with that nonce, and no request open for it (above): planned again, through
-            // tx_sender_module, which takes the same next nonce.
-            Inflight::clear(&self.state)?;
-            return Ok(true);
-        }
         let tx = TransactionRequest::default().with_from(self.r.me).with_to(self.r.vault).with_input(f.input.clone());
         if let Err(e) = self.p.call(tx.clone()).await {
+            // Spent meanwhile (the call refused because it is done)? The next round books it at its nonce.
+            if eth::retry_rpc(|| self.p.get_transaction_count(self.r.me).latest()).await? > f.nonce {
+                return Ok(false);
+            }
             // The call no longer passes (another relayer did it, a freeze, ...): dropped; its job is planned again.
             let reason = eth::refusal_of(&e, "eth_call before sending again").map_or_else(|| e.to_string(), |r| r.to_string());
             log(&s, "inflight-dropped", json!({ "key": f.key, "reason": reason }));
             Inflight::clear(&self.state)?;
             return Ok(true);
+        }
+        if let Some(route) = self.logos.clone().filter(|r| logos && !r.fallback) {
+            return self.resend_pinned(inbox, f, route).await;
         }
         let tx = self.with_gas(tx, alloy::eips::BlockId::latest()).await?;
         let sent = self
@@ -770,6 +810,56 @@ impl Daemon {
         self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
         Inflight::clear(&self.state)?;
         Ok(true)
+    }
+
+    /// A lost call of the route through `tx_sender_module`, with no key here: the same call again through the module,
+    /// its nonce pinned to the record's, so that at most one of the two can ever be mined (the module takes a number
+    /// nothing holds, or one whose transaction began to leave; it refuses one an unbroadcast request holds, and the
+    /// record then waits). `Ok(false)`: not settled this round.
+    async fn resend_pinned(&mut self, inbox: &Path, mut f: Inflight, route: crate::logos_send::Route) -> Result<bool> {
+        use crate::logos_send::Outcome;
+        let s = self.sink.clone();
+        let (r2, vault, input, label, nonce) = (route.clone(), self.r.vault, f.input.clone(), f.label.clone(), f.nonce);
+        let opened = tokio::task::spawn_blocking(move || r2.open(vault, &input, &label, Some(nonce)))
+            .await
+            .map_err(|e| anyhow!("the request to Logos Core did not finish (kept in flight): {e}"))?;
+        let id = match opened {
+            Ok(id) => id,
+            Err(o) => {
+                log(&s, "inflight-resend-refused", json!({ "key": f.key, "nonce": f.nonce, "reason": format!("{o:?}") }));
+                return Ok(false);
+            }
+        };
+        let earlier = f.request.replace(id.clone());
+        f.at = unix_now();
+        f.save(&self.state)?;
+        log(&s, "inflight-resent", json!({ "key": f.key, "nonce": f.nonce, "requestId": id, "pinned": true, "earlierRequest": earlier }));
+        let r3 = route.clone();
+        let outcome = tokio::task::spawn_blocking(move || r3.drive(&id, std::time::Instant::now()))
+            .await
+            .map_err(|e| anyhow!("send_status did not finish: {e}"))?;
+        match outcome {
+            Outcome::Broadcast { hash, .. } => {
+                f.hash = Some(hash);
+                f.save(&self.state)?;
+                let rc = self.wait_receipt(hash).await?;
+                self.mined(&rc, f.nonce)?;
+                self.book_recovered(inbox, &f, Some(&rc), rc.status())?;
+                Inflight::clear(&self.state)?;
+                Ok(true)
+            }
+            Outcome::NotSent(reason) => {
+                // This request ended with nothing sent; the earlier one stays what the record follows.
+                f.request = earlier;
+                f.save(&self.state)?;
+                log(&s, "inflight-pending", json!({ "key": f.key, "nonce": f.nonce, "requestId": f.request, "reason": reason }));
+                Ok(false)
+            }
+            Outcome::Unknown { reason, .. } => {
+                log(&s, "inflight-pending", json!({ "key": f.key, "nonce": f.nonce, "requestId": f.request, "reason": reason }));
+                Ok(false)
+            }
+        }
     }
 
     async fn round(&mut self, inbox: &Path) -> Result<()> {

@@ -328,7 +328,7 @@ impl Chain {
                     let receipt = self.receipt(hash).await?;
                     return self.mined(receipt, Via::Logos { request_id, polls, millis }).await;
                 }
-                Outcome::Unknown(why) => bail!("{why}"),
+                Outcome::Unknown { reason: why, .. } => bail!("{why}"),
                 Outcome::NotSent(why) if self.logos.as_ref().is_some_and(|r| r.fallback) => {
                     via = Via::Fallback { reason: why }
                 }
