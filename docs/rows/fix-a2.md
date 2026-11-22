@@ -1,7 +1,8 @@
 # Stream fix-a2: proposed changes for the integrator
 
 Branch `fix-a2` (from `462d0cd1`). It answers the second critical review of stream A (light-client security),
-`review-rfp-A2`: M1, M2, L1–L7 and N1. No program, guest or image id changed. This stream owns no new requirement row;
+`review-rfp-A2`: M1, M2, L1–L7 and N1, and then the review of this branch, `review-fix-a2`: M1–M3, L1–L6, N1 and N2
+(last section). No program, guest or image id changed. This stream owns no new requirement row;
 it proposes new wording for five RFP-021 rows, one new EVIDENCE row and edits to two EVIDENCE rows and three
 traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; RFP-021 hard stays 25 shown, 29 in part,
 2 not yet, 3 waits on Logos.
@@ -55,7 +56,9 @@ traceability rows. **No count changes:** R.11 stays shown, now on a sequencer; R
 - **Row 151, L3:** "the instance's store unchanged and nothing credited" already says it right; no change.
 - **Header, "Words used for where it ran":** add "**standalone rc3 sequencer** (LEZ's v0.4.0-rc3 sequencer with its
   mock Bedrock, no Logos Blockchain node)".
-- **New row** (number: the next free one, 155 at `462d0cd1`), to paste as is (the link is written for `docs/EVIDENCE.md`):
+- **New row** (number: the next free one, 155 at `462d0cd1`; streams run in parallel, so if 155 is taken by then,
+  give it the next free number and change "155" in the R.11 row's evidence above, in the row 152 text and in the
+  traceability text to match), to paste as is (the link is written for `docs/EVIDENCE.md`):
 
 ```markdown
 | 155 | **Several private reads in one block of LEZ v0.4.0-rc3's own sequencer (RFP-021 R.11)**: the reference consumer's private attestation by four accounts, proven against one snapshot, applied together in one block after the chain moved (tests and records only; no program, guest or image id changed) | four new private accounts (funded by native transfers, blocks 37–40) each prove `AttestPrivately` of another `Transfer` of mainnet block 26,384,851 (instance S's record) against commitment root `ba64320a…` in 5.6 s with two transactions of a control, all held; the control's first applied (block 42, the root moves) and instance E verifies a finality update (blocks 43–45); the four, sent within 2 ms after block 46, applied in **block 47** (positions 0–3, each 422,032 execution gas, 224,063 storage gas, base fee 5,168,760; the block 896,252 of LEZ's 1,000,000 storage gas), the record's account unchanged, the 28 commitments computed before inclusion all in the tree; the control's second (same account, same snapshot) dropped, "Commitment … already seen"; 48 transactions, 47 applied, 51 blocks 6.0 s apart; `verify-run.sh` replays the 51 blocks through rc3's `chain_state`, 47 rows equal LEZ's settlement | standalone rc3 sequencer (its mock Bedrock), sequencer and wallet with `RISC0_DEV_MODE=1`, on the build box (22 Nov 2026) | none (dev mode: fake receipts, not verified by the sequencer; the same transaction kind proven for real on rc3: row 123) | from a fresh checkout: `scripts/fetch-upstream.sh && lez/scripts/lez-select.sh v0.4.0-rc3 && LEZ_TAG=v0.4.0-rc3 FERRATA_VERIFY_DEV_MODE=1 lez/live/verify-run.sh --dir lez/results/v0.4.0-rc3/r11-one-block <the three binaries>` | [`lez/results/v0.4.0-rc3/r11-one-block/`](../lez/results/v0.4.0-rc3/r11-one-block/README.md) |
