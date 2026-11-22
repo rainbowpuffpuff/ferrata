@@ -63,8 +63,9 @@ box; anvil (chain id 1), LEZ v0.4.0-rc1 harness | none (dev mode; mock verifier)
 RFP: "Temporary RPC or connectivity failure on either chain leaves any off-chain component in a recoverable state,
 able to resume without duplicating work already done."
 
-**The relayer daemon: every clause shown, on both chains**, with the limits named under the table (the `--send-via
-logos` route ran against a stand-in of `tx_sender_module`; the root import's faults against the devnet's zone).
+**The relayer daemon: shown on both chains for the faults below**, within the limits named under the table (the
+`--send-via logos` route ran against a stand-in of `tx_sender_module`; the root import's faults against the devnet's
+zone, its gas drops' on a running sequencer).
 
 | Clause, for the relayer | Test | Result |
 |---|---|---|
