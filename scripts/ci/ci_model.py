@@ -14,7 +14,9 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
   approximation), a directory that cannot be resolved makes the commands after it count nowhere, and a
   test that skips itself at run time is seen only through the environment gates `rust_env_gates` finds.
 - `cargo_runs`, `forge_runs`, `invokes`: whether one traced command runs a given Rust test file, Foundry
-  test file or script.
+  test file or script. A Rust test compiled out by a feature the command leaves off does not count
+  (`feature_gates`: a file-level `#![cfg(feature = "X")]`, `#[cfg(feature = "X")]` on the test or on the
+  `mod` block holding it; other `cfg` forms are not read).
 """
 
 from __future__ import annotations
@@ -825,6 +827,46 @@ def rust_env_gates(text: str) -> set:
     return set(re.findall(r'env::var(?:_os)?\(\s*"([A-Z0-9_]+)"\s*\)\s*\.\s*(?:is_err|is_none)\(\)', text))
 
 
+def feature_gates(text: str, enabled: set) -> tuple:
+    """What features gate a Rust test file's tests off when only `enabled` are on: (the feature of a file-level
+    `#![cfg(feature = "X")]` if X is off, else None; the off features that gate some test; the number of tests no
+    off feature gates). A test is gated by `#[cfg(feature = "X")]` among its attributes or by an enclosing
+    `#[cfg(feature = "X")] mod m { ... }` (the block found by counting braces). Other cfg forms are not read."""
+    gate = re.search(r'^\s*#!\[cfg\(feature\s*=\s*"([^"]+)"\)\]', text, re.M)
+    if gate and gate.group(1) not in enabled:
+        return gate.group(1), set(), 0
+    lines = text.splitlines()
+    module_gate = {}
+    for m in re.finditer(r'^\s*#\[cfg\(feature\s*=\s*"([^"]+)"\)\]\s*(?:pub(?:\([^)]*\))?\s+)?mod\s+\w+\s*\{', text, re.M):
+        depth, k = 0, m.end() - 1
+        while k < len(text):
+            depth += {"{": 1, "}": -1}.get(text[k], 0)
+            if depth == 0:
+                break
+            k += 1
+        for n in range(text.count("\n", 0, m.start()), text.count("\n", 0, k) + 1):
+            module_gate.setdefault(n, set()).add(m.group(1))
+    gated, ungated = set(), 0
+    for i, line in enumerate(lines):
+        if not re.match(r"\s*#\[(?:[a-z_]+::)?test\b", line):
+            continue
+        off = module_gate.get(i, set()) - enabled
+        attrs, j = [], i - 1
+        while j >= 0 and re.match(r"\s*(#\[|///|//)", lines[j]):
+            attrs.append(lines[j])
+            j -= 1
+        j = i + 1
+        while j < len(lines) and re.match(r"\s*(#\[|///|//)", lines[j]):
+            attrs.append(lines[j])
+            j += 1
+        off |= {f for a in attrs for f in re.findall(r'^\s*#\[cfg\(feature\s*=\s*"([^"]+)"\)\]', a)} - enabled
+        if off:
+            gated |= off
+        else:
+            ungated += 1
+    return None, gated, ungated
+
+
 def cargo_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
     """Whether `cargo test` as traced runs the tests of a Rust file; (False, why) otherwise."""
     argv = cmd.argv
@@ -952,6 +994,15 @@ def cargo_runs(cmd: Cmd, path: str) -> tuple[bool, str]:
     text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
     if not re.search(r"#\[(?:[a-z_]+::)?test\b", text) and "proptest!" not in text:
         return False, "the file has no #[test]"
+    # Tests compiled out by a feature the command does not enable (feature_gates).
+    if "--all-features" not in flags:
+        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                           if "--no-default-features" not in flags else set())
+        file_gate, gated, ungated = feature_gates(text, enabled)
+        if file_gate:
+            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        if gated and not ungated and "proptest!" not in text:
+            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
     # filters
     filters = [p for p in positional]
     harness_flags = set(a for a in harness if a.startswith("-"))

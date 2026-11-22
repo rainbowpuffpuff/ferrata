@@ -102,6 +102,12 @@ privacy_suite = [p for p in tracked if p.startswith("vault/test/") and p.endswit
                  and "contract PrivacySuite" in (ROOT / p).read_text(encoding="utf-8")]
 check("trace: vault leaves PrivacySuite out (--no-match-contract)",
       bool(privacy_suite) and not runs("vault", privacy_suite[0]))
+check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh, in lez/)",
+      runs("lez-harness", "lez/harness/tests/public_path.rs"))
+check("trace: lez-harness runs lez/updater/tests/recorded.rs (cargo test -p ferrata-updater --features harness)",
+      runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness does not run lez/harness/tests/residue_experimental.rs (feature residue-experimental)",
+      not runs("lez-harness", "lez/harness/tests/residue_experimental.rs"))
 check("trace: links runs scripts/ci/check-unaudited.sh", runs("links", "scripts/ci/check-unaudited.sh"))
 check("trace: links does not run scripts/ci/sequencer-attest.sh", not runs("links", "scripts/ci/sequencer-attest.sh"))
 
@@ -128,6 +134,22 @@ check("forge: --match-path keeps its own",
       ci_model.forge_runs(C(["forge", "test", "--match-path", "test/Migration*.t.sol"], "vault", {}, "t"), "vault/test/MigrationFailsafe.t.sol")[0])
 check("forge: --match-test matching no function of the file",
       not ci_model.forge_runs(C(["forge", "test", "--match-test", "zz_no_such_test"], "vault", {}, "t"), "vault/test/Refund.t.sol")[0])
+
+check("cargo: a file compiled only with a feature the command leaves off (lez/updater/tests/recorded.rs)",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater"], "lez", {}, "t"),
+                              "lez/updater/tests/recorded.rs")[0])
+check("cargo: the same file with the feature on",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness"], "lez", {}, "t"),
+                          "lez/updater/tests/recorded.rs")[0])
+FG = ci_model.feature_gates
+check("features: #![cfg(feature)] gates the whole file", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', set()) == ("a", set(), 0))
+check("features: ... unless the feature is on", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', {"a"}) == (None, set(), 1))
+check("features: #[cfg(feature)] on one test of two",
+      FG('#[cfg(feature = "b")]\n#[test]\nfn x() {}\n#[test]\nfn y() {}\n', set()) == (None, {"b"}, 1))
+check("features: a gated module's tests, braces counted",
+      FG('#[cfg(feature = "c")]\nmod t {\n    #[test]\n    fn x() { if true {} }\n}\n', set()) == (None, {"c"}, 0))
+check("features: a test after a gated module is not gated",
+      FG('#[cfg(feature = "c")]\nmod t {\n    #[test]\n    fn x() {}\n}\n#[test]\nfn y() {}\n', set()) == (None, {"c"}, 1))
 
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
