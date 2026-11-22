@@ -59,6 +59,11 @@ pub trait FerrataBridgeModule: Send + 'static {
     /// proven for minutes, and a host may end the call sooner), `job` answers a job's state and, once done, its
     /// reply, `jobs` lists them (calls/src/jobs.rs); `{"ok", ...}`.
     fn wallet(&mut self, request: String) -> String;
+    /// The admin's and the freeze authority's functions: `status` (the vault's roles, registry, caps and freezes read
+    /// through Logos Core's `eth_rpc_module`; LEZ's from the bridge program's states), a vault action built, checked
+    /// with `eth_call` from the role's account and, with `send`, handed to Logos Core's `tx_sender_module` (one
+    /// approval in the Logos signer), or a LEZ action's message for the role's LEZ wallet. JSON in and out.
+    fn admin(&mut self, request: String) -> String;
     /// Called once the module is wired to the host.
     fn on_context_ready(&mut self, _ctx: &RustModuleContext) {}
 }
@@ -98,6 +103,20 @@ fn lez_core_call(method: &str, args: &str, timeout_ms: u64) -> Result<String, St
         .plugin("lez_core")
         .call_json_with_timeout(method, &args, std::time::Duration::from_millis(timeout_ms.max(1)))
         .map_err(|e| format!("lez_core.{method} did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
+/// A method of another Logos module, called by name through the SDK as `eth_rpc_module` above: here Logos Core's send
+/// stack, `tx_sender_module` (`send`, `send_status`, `cancel_send`), which holds no dependency of ours either. The
+/// calls crate sends the user's deposit and release and the admin's vault calls through it (calls/src/send.rs).
+fn module_call(module: &str, method: &str, args: &serde_json::Value, timeout_ms: u64) -> Result<String, String> {
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin(module)
+        .call_json_with_timeout(method, args, std::time::Duration::from_millis(timeout_ms.max(1)))
+        .map_err(|e| format!("{module}.{method} did not answer: {e:?}"))?;
     Ok(match v {
         serde_json::Value::String(s) => s,
         other => other.to_string(),
@@ -157,11 +176,15 @@ impl FerrataBridgeModule for FerrataBridge {
     fn registry(&mut self, request: String) -> String {
         guarded("registry", || ferrata_bridge_calls::registry(&request))
     }
+    fn admin(&mut self, request: String) -> String {
+        guarded("admin", || ferrata_bridge_calls::admin(&request))
+    }
 }
 
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
     ferrata_bridge_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     ferrata_bridge_calls::set_lez_core(lez_core_call);
+    ferrata_bridge_calls::set_module_call(module_call);
     install::<FerrataBridge>();
 }

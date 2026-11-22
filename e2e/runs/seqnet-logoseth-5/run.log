@@ -1,0 +1,90 @@
+[02:56:38] seqnet logoseth-5: mode logoseth, private proofs dev
+[02:56:38] LEZ session A: a new zone, the programs, the stand-in instance
+[03:01:21] session A: tip {"hash":"0xaf413e05092b41ba908e01325382404998077882f7f983a1f5422b5ded8e8c55","id":19}; bridge program 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d (image 0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd), attestation program 0x86ce4d7f54bd68b4c7356398cfda192f791c83f6fa3c3102a18ac20fefdfa04c (image 0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df)
+[03:01:22] vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 (mock verifier 0x25Fa4286d401bdc4AC7657bc7a1ebdE1B737F4b1), configId 0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c, genesisState 0xd5fc2c38115da42b5bfc0ca0662062b54c7c2e278c679a4c5ceb3311ae70bf69
+[03:01:33] logoseth: the vault's freeze authority 0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65, pending admin 0x90F79bf6EB2c4f870365E785982E1f101E93b906
+[2026-11-22T03:01:32Z] deploy complete: vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, configId and genesisState as the run's identity
+[03:01:33] LEZ session X: the zone restored and running; hook-logoseth.sh
+[03:02:20] seqnet-chain: no Ethereum key held ({"holds_eth_key":false,"depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"}); LEZ role keys behind the approval step
+[03:02:33] Logos Core: lez_core, tx_sender_module, capability_module, modules_state, evm_signer_cli, package_downloader, storage_module, package_manager, eth_rpc_module, evm_keystore_cli, keystore_module, signer_manager_module, fee_module, ferrata_bridge_module
+[03:02:38] keystore_module holds: ["0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65","0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC","0x90F79bf6EB2c4f870365E785982E1f101E93b906","0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"]
+[03:02:38] the mini-app: Qt Quick Test (offscreen), Ethereum through Logos Core's modules, LEZ through lez_core
+[03:02:47] approver: approve deposit (handle smh_dca2314c59d4658b056b4627d0ff7eaf1, requested by tx_sender_module)
+[03:02:49] capture-1: capture of block 10 0x8d6bd6cda557cb8469e2756ff0c1e34fbfe1da546f8cdf606a295ec43a5831f9 (state root patched: False): 1 deposit(s), 6 slot(s)
+[03:02:50] operator: crown-driver crown-b --operator-only over capture-1
+[crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   27 + 10.0s 9da1f0edcf11cd93daf975dc5d37c988f6bf46ee3581dc5685414be80b45cc3f
+[crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
+[crown-b] bridge ImportRoot n=1 (stage 1, block 10)                  applied        gas    301949 block   28 + 10.1s 835852006f5e895a5d6995530cd3ea5f3526a367e441720a9780b5ecfea7e6b4
+[crown-b] blocks 20..=28 (T1 0xb4cd9893b0ef3ebaee1964bd3464a4f4965369fbe5c37a5b975fe64943ba5c98); 0 burn note(s) written to <work>/notes.json
+[03:03:56] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
+{"step":"faucet public transfer (stand-in for the gas drop)","tx":"0d1b8382e9372d2bdab6f015bfe72b62a00029d2d35f105b8b4de51cfbdc0f36","amount":"3000000000000","fee_paid_in_the_proof":null,"send_ms":2,"seen_ms":4005}
+{"step":"the user's private transfer public /0 -> private /0 (proven by LEZ's wallet)","tx":"4cf2e1199dfce876a0363699a01b398c3b1244fa3646bc36705793e5dc2906e4","amount":"2000000000000","fee_paid_in_the_proof":"5070616","send_ms":165,"seen_ms":9012}
+[03:04:32] checkpoint: blocks 20..=32, once block 32 is final on Bedrock
+[03:04:53] realblocks-crown: node: 467 immutable blocks (0 other transactions), final inscriptions of LEZ blocks 1..=33: parse + re-hash + link + framing + BLAKE2b + verify_strict by the channel's 1 key(s) (3cbc3fab… 33): all 33 accepted; channel tip message = block 33's: false seqnet-19-32: 13 blocks, 36 transactions, 119756
+[03:04:53] checkpoint_b executed (final program 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e): {"executor_wall_s":0.236374686,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":121746,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":5505024,"po2":[20,20,20,20,20,18],"segments":6,"user_cycles":4857319}
+[03:04:53] stand-in prover: the mock verifier accepts checkpoint_b's journal (sha256 0x69a9590765334d8ea54a706dcd23ff6f3506410638a82a1a901d26e4a71d4c5d)
+[03:04:53] relayer: {"event":"job-done","tx":null,"why":null} {"event":"candidate-waiting","tx":null,"why":null} {"event":"stop","tx":null,"why":"rounds"} 
+[03:04:54] anvil's clock moved on 3601 s: the candidate's wait (Delta 3600 s) (Ethereum time now 1795320294)
+[03:04:54] relayer: {"event":"start","tx":null} {"event":"finalized","tx":"0xebd84f085ab7ae8f033ea67db8ac6a46d5c89305367ac3029474d39ad577311d"} {"event":"stop","tx":null} 
+[03:04:54] vault: finalState 0x5bbbf8cec0040297ba5000bf5bd10a9e243f96a92090255e81dc666127883f3c, checkpoints 1
+[03:04:55] anvil's clock moved on 121 s: the vault release delay after finalizeAttested (Ethereum time now 1795320416)
+[03:05:00] approver: approve release (handle smh_ab839d9e1c9c7a57d427339bfb5db0ea2, requested by tx_sender_module)
+[03:05:05] approver: approve accept-admin (handle smh_30f7b39cfcb4bbd74cd128a51404ed8f3, requested by tx_sender_module)
+[03:05:11] approver: approve admin-setcap (handle smh_cd0c977c4ff39beff9aa48aaee1a4c384, requested by tx_sender_module)
+[03:05:17] approver: approve admin-setcap-reverts (handle smh_96e143185cb68006ce2f9a9a29f9e6d35, requested by tx_sender_module)
+[03:05:24] approver: approve admin-freeze (handle smh_d915ea941c576b0656ba35d77e3d47086, requested by tx_sender_module)
+[03:05:35] approver: approve admin-unfreeze (handle smh_729372290bb92123d59cc8993820b4327, requested by tx_sender_module)
+[03:05:50] role wallet: approve setcap (lra_1: SetCap: mint cap 12000000000 LEZ units, refill 10000000/s (admin view); message SetCap, sha256 0x0157e91250e97ed1...)
+[03:06:00] role wallet: reject sunset (lra_2: Sunset (admin view): ends this configuration for good (irreversible); message Sunset, sha256 0x668d9a8bb02e557f...)
+[03:06:07] approver: approve admin-set-deposits-enabled-1 (handle smh_b44958c62fdfb832f904d0e6e94e61918, requested by tx_sender_module)
+[03:06:14] approver: approve admin-set-deposits-enabled-1 (handle smh_fc7174ee6ed7de83b14b4958041526b19, requested by tx_sender_module)
+[03:06:20] approver: approve admin-announce-fees-0 (handle smh_7c4677de2279d264125e2fb4813ce947a, requested by tx_sender_module)
+[03:06:27] approver: approve admin-set-release-delay-0 (handle smh_5275aff71a56c434fed477e9b9602542b, requested by tx_sender_module)
+[03:06:38] anvil: automine off (block 26)
+[03:06:43] approver: approve deposit-unmined (handle smh_d901ba404a412ab4b712b4d00654f5f1c, requested by tx_sender_module)
+[03:06:57] anvil: one block mined (block 27), automine on
+[03:07:03] approver: approve deposit-again (handle smh_a5177c69314b7f69ce21106be7ddee89d, requested by tx_sender_module)
+[03:07:06] qmltest: exit 0 in 268 s: Totals: 13 passed, 0 failed, 0 skipped, 0 blacklisted, 267175ms
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: SESSION {"chain":"http://127.0.0.1:18700/","chain_id":11155111,"config_id":"0xa58dcdacfa0b09c1582dab98c61e5c2cfcaeec663f5990c1fb506ce9042e382c","depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc","module":"ferrata_bridge_m
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: LEZ {"calls":[{"method":"open","ms":109,"reply":"0"},{"method":"get_sequencer_addr","ms":1,"reply":"http://127.0.0.1:3040/"},{"method":"get_current_block_height","ms":39,"reply":"21"},{"method":"list_accounts","ms":2}],"plain_p
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase() qml: ETH {"configured":{"admin":"0x90F79bf6EB2c4f870365E785982E1f101E93b906","chain_id":11155111,"eth":{"chain_id":11155111,"via":"eth_rpc_module"},"freeze_authority":"0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65","from_block":1,"rele
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::initTestCase()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_01_connect()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_02_registry()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default() qml: DEPOSIT Deposited 0.001 ETH to a private account (/0): transaction 0x109892…9fefd9 in block 10, position #0, sent through Logos Core's tx_sender_module after your approval (request snd_smh_dca2314c59d465
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_03_deposit_private_by_default()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_04_positions_before_import()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: WAITED claim delay 599 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim() qml: CLAIM {"tx":"c595000ccd155b038536ca4c62bfbc3267d9975873db79490721cee12268c6d2","block":31,"proof":{"by":"LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and proven the
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_05_private_claim()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults() qml: BURN {"tx":"53d9a00b958a65d1267e75d0a8a1a1f6b65781a1299c9e337cee3330ce46a312","block":32,"proof":{"by":"LEZ's wallet inside Logos Core (lez_core.send_generic_private_transaction_with_accounts): executed and 
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_06_private_burn_on_defaults()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: WAITED release delay 120 min (the view's clock)
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release() qml: RELEASE Released: 0.000997 ETH paid to 0x55061ea46b04d280f5cd5360fc6b8e786d5c006b in block 17 (transaction 0x2c86e4…f6a12a), sent by 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc through Logos Core's tx
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07_checkpoint_and_private_release()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07b_vault_admin_through_the_send_stack() qml: REVERTED Not done: not settled: reverted: call 1 of 1 (Ferrata vault: set the deposit cap of 0x0000000000000000000000000000000000000000), transaction 0x6f44115d48be014e64cfca71f7b00913d572b49e6f79
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07b_vault_admin_through_the_send_stack()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting() qml: LEZ SETCAP LEZ cap set: SetCap: mint cap 12000000000 LEZ units, refill 10000000/s (transaction e24ede6c…0eb7a3 in block 40, built by ferrata_bridge_module at the admin's own actor, signed by the 
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting() qml: REGISTRY LEZ READS [{"equal":3,"reads":3,"unanswered":0,"via":"lez_core"},{"equal":2,"reads":3,"unanswered":1,"via":"lez_core"}]
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting() qml: LEZ SETCAP REFUSED not settled: refused by the bridge program: the transaction 5ca6393263a7fdaeeca4104c41a6924a9ee56f80e137253f6429cda442b5b272 was included in block 41 and reverted (signer 0xc0fe2
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting() qml: LEZ SUNSET REJECTED rejected at the role wallet (lra_2): the person declined; nothing was signed or sent
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting() qml: VAULT SETTINGS {"token1":"0x7aa40900a493bcb2140f441ed52b94b26e5e0688","delisted_and_listed":true,"fee_pending_at":1795925303,"release_delay_next":7200}
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_07c_admin_lez_and_every_vault_setting()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: JOBS ["deposit:settled","claim:settled","burn:settled","release:settled","admin:settled","admin:settled","admin:failed","admin:settled","deposit:failed","admin:settled","admin_lez:settled","admin_lez:failed","admin_lez:failed",
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs() qml: CALLS 77 longest 765 ms
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_08_jobs()
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_09_unmined_deposit_refused_then_again() qml: UNMINED Sent, not confirmed yet (not a failure): broadcast, not yet mined: transaction 0x355fbedd3c2db59bad2cb16524f2de088b9a2a42fa6c1a99961f44981f7fba86 was sent after your approval and no receipt
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_09_unmined_deposit_refused_then_again() qml: REFUSED WHILE UNMINED Not deposited: refused: your earlier deposit, transaction 0x355fbedd3c2db59bad2cb16524f2de088b9a2a42fa6c1a99961f44981f7fba86, was broadcast and is not mined yet; it may still 
+QDEBUG : ferrata_miniapp_logos::FerrataMiniAppLogos::test_09_unmined_deposit_refused_then_again() qml: DEPOSITED AGAIN Deposited 0.001 ETH to a private account (/0): transaction 0x36bfd6…827c75 in block 28, position #2, sent through Logos Core's tx_sender_module after your approval (request snd_sm
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::test_09_unmined_deposit_refused_then_again()
+PASS   : ferrata_miniapp_logos::FerrataMiniAppLogos::cleanupTestCase()
+[03:07:06] the zone: 131 transactions in blocks 1..=47
+[03:07:06] hook-logoseth: done
+[03:07:08] driver exit 0
+[03:07:09] export failed (1)
+[03:07:09] sequencer stopped (exit 0)
+[03:07:18] node stopped (exit 143)
+[03:07:18] saved generation 2 (79224090 bytes; head block 48)
+[03:07:18] session x: ok
+seqnet-logoseth-5: 131 LEZ and 26 Ethereum transactions, 0 user commands, 208 view calls
+[03:07:19] seqnet logoseth-5: DONE

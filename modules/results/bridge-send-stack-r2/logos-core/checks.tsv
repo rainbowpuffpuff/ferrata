@@ -1,0 +1,49 @@
+PASS	loaded: keystore_module	loaded	loaded
+PASS	loaded: signer_manager_module	loaded	loaded
+PASS	loaded: eth_rpc_module	loaded	loaded
+PASS	loaded: fee_module	loaded	loaded
+PASS	loaded: tx_sender_module	loaded	loaded
+PASS	loaded: evm_signer_cli	loaded	loaded
+PASS	loaded: evm_keystore_cli	loaded	loaded
+PASS	loaded: ferrata_bridge_module	loaded	loaded
+PASS	eth_rpc_module: anvil's chain id	true	true
+PASS	keystore_module holds 0x70997970c51812dc3a010c7d01b50e0d17dc79c8 (via evm_keystore_cli)	yes	yes
+PASS	keystore_module holds 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc (via evm_keystore_cli)	yes	yes
+PASS	keystore_module holds 0x90f79bf6eb2c4f870365e785982e1f101e93b906 (via evm_keystore_cli)	yes	yes
+PASS	status through eth_rpc_module: the admin	0x70997970c51812dc3a010c7d01b50e0d17dc79c8	0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	status: the freeze authority	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc	0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc
+PASS	status: answered by eth_rpc_module	eth_rpc_module	eth_rpc_module
+PASS	status: the test token not registered yet	false	false
+PASS	admin register_token: settled through tx_sender_module	settled	settled
+PASS	admin register_token: the vault holds the token (cast)	true	true
+PASS	admin register_token: sent by the admin (cast)	0x70997970c51812dc3a010c7d01b50e0d17dc79c8	0x70997970c51812dc3a010c7d01b50e0d17dc79c8
+PASS	admin register_token: the approver saw tx_sender_module's request	tx_sender_module	tx_sender_module
+PASS	admin set_token_cap: settled	settled	settled
+PASS	admin set_token_cap: cast reads it	2000000000000	2000000000000
+PASS	admin set_token_cap: sent with the estimate + 25% + 20000	yes	yes
+PASS	admin set_token_cap: the receipt's gas used below its limit (cast)	yes	yes
+PASS	forced revert: the module reports it reverted	reverted false	reverted false
+PASS	forced revert: the error names the call and its limit	yes	yes
+PASS	forced revert: the receipt's status is 0 (cast)	0	0
+PASS	forced revert: the cap is unchanged (cast)	2000000000000	2000000000000
+PASS	admin set_deposits_enabled(false): settled, deposits disabled (cast)	settled false	settled false
+PASS	delisted: the module refuses the ERC-20 deposit before signing	DepositsDisabled	DepositsDisabled
+PASS	admin set_deposits_enabled(true): settled, deposits enabled (cast)	settled true	settled true
+PASS	admin announce_fees: settled, a schedule pending (cast feeState: pending time > 0)	settled yes	settled yes
+PASS	admin set_release_delay(600): settled, the next checkpoints' delay (cast)	settled 600	settled 600
+PASS	deposit ETH: settled through tx_sender_module	settled	settled
+PASS	deposit ETH: leaf 0	0	0
+PASS	deposit ETH: the vault's Deposit commitment is the module's	0xb05689e5086dd4e18376ee2ae34f9b2a35e9fdadae9af79f89de7ab6a7b9de0f	0xb05689e5086dd4e18376ee2ae34f9b2a35e9fdadae9af79f89de7ab6a7b9de0f
+PASS	deposit ETH: the vault received the price	100100000000000000	100100000000000000
+PASS	deposit ETH: sent by the user	0x90f79bf6eb2c4f870365e785982e1f101e93b906	0x90f79bf6eb2c4f870365e785982e1f101e93b906
+PASS	deposit ERC-20: settled (approve + deposit, one approval)	settled 2	settled 2
+PASS	deposit ERC-20: the vault holds the price	1001000	1001000
+PASS	deposit ERC-20: leaf 1	1	1
+PASS	refused at the approver: the module reports it	rejected	rejected
+PASS	refused at the approver: no deposit	2	2
+PASS	freeze ETH deposits: settled, sent by the freeze authority	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc	settled 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc
+PASS	frozen: the module refuses before anything is signed (the vault's error named)	TokenDepositsAreFrozen	TokenDepositsAreFrozen
+PASS	unfreeze: lifted (cast)	0	0
+PASS	deposit list through eth_rpc_module: 2 deposits, root = depositRoot	2 0x38b70901cec17e265554a76697091f4344a443b685ef75c52714771ade3e89e1	2 0x38b70901cec17e265554a76697091f4344a443b685ef75c52714771ade3e89e1
+PASS	the reads' route: eth_rpc_module, direct	eth_rpc_module direct	eth_rpc_module direct
+PASS	every other send: every receipt successful, gas used below its limit		

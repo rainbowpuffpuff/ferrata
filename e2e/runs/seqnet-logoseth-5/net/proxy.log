@@ -1,0 +1,20 @@
+[03:01:23] pubnet proxy on 127.0.0.1:18591: 1 endpoint(s) ['http://127.0.0.1:8545'], lag 0, sender 0x000000000000000000000000000000005e9de901, fence 0
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 23319)
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.12/socketserver.py", line 692, in process_request_thread
+    self.finish_request(request, client_address)
+  File "/usr/local/lib/python3.12/socketserver.py", line 362, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "/usr/local/lib/python3.12/socketserver.py", line 761, in __init__
+    self.handle()
+  File "/usr/local/lib/python3.12/http/server.py", line 436, in handle
+    self.handle_one_request()
+  File "/usr/local/lib/python3.12/http/server.py", line 424, in handle_one_request
+    method()
+  File "<repo>/scripts/pubnet.py", line 1323, in do_POST
+    self.wfile.write(body)
+  File "/usr/local/lib/python3.12/socketserver.py", line 840, in write
+    self._sock.sendall(b)
+BrokenPipeError: [Errno 32] Broken pipe
+----------------------------------------

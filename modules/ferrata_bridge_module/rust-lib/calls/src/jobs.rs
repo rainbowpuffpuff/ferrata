@@ -4,7 +4,8 @@
 //! view's call to a core module after 20 s whatever the view asks (`modules/ferrata_bridge_ui/
 //! results-basecamp-roundtrip/README.md`, "L4"), and a private claim or burn proven on a CPU takes about four
 //! minutes. So the view's `claim` and `burn` start a job here and are answered at once with the job's record;
-//! `job {"id"}` answers its state (`queued`, `proving`, `sent`, `settled` or `failed`), the time it has taken and,
+//! `job {"id"}` answers its state (`queued`, `proving`, `sent`, `settled`, `unconfirmed` or `failed`), the time it has
+//! taken and,
 //! once it is done, exactly the reply the call used to carry (`result`) or its error; `jobs` lists every job the
 //! module has run since it started, so that a view opened again, or one that missed a reply, finds them. The jobs
 //! live in the module's memory (the module keeps no state on disk) for as long as the module runs.
@@ -68,7 +69,7 @@ fn lock() -> MutexGuard<'static, Jobs> {
 }
 
 fn running(state: &str) -> bool {
-    !matches!(state, "settled" | "failed")
+    !matches!(state, "settled" | "failed" | "unconfirmed")
 }
 
 impl Job {
@@ -220,8 +221,9 @@ where
     Ok(json!({ "job": record, "started": true }))
 }
 
-/// The step's outcome: `settled` when it settled, `failed` with its error otherwise (a reply that did not settle is
-/// kept as the result, and the job is `failed`).
+/// The step's outcome: `settled` when it settled; `unconfirmed` when its transaction was broadcast and not yet seen
+/// mined (`pending: true`: it may still be mined, so it is not a failure, and the reply says not to send it again);
+/// `failed` with its error otherwise (a reply that did not settle is kept as the result, and the job is `failed`).
 fn finish(id: u64, outcome: Result<Value, String>) {
     let mut g = lock();
     if let Some(j) = g.list.iter_mut().find(|j| j.id == id) {
@@ -234,6 +236,8 @@ fn finish(id: u64, outcome: Result<Value, String>) {
                 }
                 if v["settled"] == true {
                     j.state = "settled";
+                } else if v["pending"] == true {
+                    j.state = "unconfirmed";
                 } else {
                     j.state = "failed";
                     j.error = Some(format!("not settled: {}", v["what"].as_str().unwrap_or("the transaction was not applied")));
@@ -248,6 +252,17 @@ fn finish(id: u64, outcome: Result<Value, String>) {
         let state = j.state;
         j.phases.push(json!({ "state": state, "at_ms": now }));
     }
+}
+
+/// The transactions of the `kind` jobs that ended `unconfirmed` (broadcast, not yet seen mined), newest first.
+pub(crate) fn unconfirmed_hashes(kind: &str) -> Vec<String> {
+    let g = lock();
+    g.list
+        .iter()
+        .rev()
+        .filter(|j| j.kind == kind && j.state == "unconfirmed")
+        .filter_map(|j| j.tx_hash.clone())
+        .collect()
 }
 
 /// `job {"id"}`: the job's record.
@@ -382,6 +397,24 @@ pub(crate) mod tests {
         assert_eq!(done["state"], "failed");
         assert_eq!(done["result"]["what"], "reverted in block 9");
         assert!(done["error"].as_str().unwrap().contains("reverted in block 9"));
+    }
+
+    /// A transaction broadcast and not yet seen mined is not a failure: the job ends `unconfirmed` (no "not deposited"
+    /// for the view to show), its hash is kept, and the session refuses another deposit while it is unmined.
+    #[test]
+    fn a_send_not_yet_mined_ends_unconfirmed_not_failed() {
+        let _s = serial();
+        let h = format!("0x{}", "ab".repeat(32));
+        let reply = json!({ "settled": false, "pending": true, "tx_hash": h, "what": "broadcast, not yet mined: transaction ..." });
+        let r = start("deposit", &json!({}), move |_| Ok(reply)).unwrap();
+        let done = wait_done(r["job"]["id"].as_u64().unwrap());
+        assert_eq!(done["state"], "unconfirmed");
+        assert_eq!(done["running"], false, "over: another step may start");
+        assert!(done["error"].is_null(), "not a failure: {done}");
+        assert_eq!(done["tx_hash"], json!(h));
+        assert_eq!(unconfirmed_hashes("deposit").first(), Some(&h));
+        assert!(unconfirmed_hashes("release").iter().all(|x| x != &h));
+        assert!(active().is_none());
     }
 
     #[test]

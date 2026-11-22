@@ -13,6 +13,12 @@
 //! that is `e2e/seqnet`'s `seqnet-chain` (LEZ's wallet library and the `ferrata` tool's Ethereum reads);
 //! its methods are the mini-app devnet's `module.*` ones. Plain `http://` only, as the module's other reads.
 //!
+//! `eth` routes the session's Ethereum side through Logos Core's own modules instead of the chain service: every vault
+//! read through `eth_rpc_module` (`evm.rs`), and the user's deposit and release and the admin's vault calls through
+//! the send stack (`tx_sender_module` -> one approval in the Logos signer -> `keystore_module` signs; `send.rs`), each
+//! a job the view polls while the person approves. The chain service then answers for LEZ alone (`lez_only`) and
+//! stands in for the release's prover only (the vault's verifier is the tests' mock: no Groth16 wrap here).
+//!
 //! Every reply is `{"ok": true, "result"}` or `{"ok": false, "error"}`, the envelope the view reads.
 
 use std::io::{Read, Write};
@@ -37,6 +43,65 @@ struct Session {
 }
 
 static SESSION: Mutex<Option<Session>> = Mutex::new(None);
+
+/// The session's Ethereum path when it goes through Logos Core's modules (`wallet {"method": "eth"}`): `eth` (the
+/// `Rpc` path: `{"via": "eth_rpc_module", "chain_id"}`, or `{"via": "http", "rpc_url"}` natively), `chain_id`,
+/// `from_block`, and the accounts the send stack sends from: `user` (the depositor), `release_sender`, `admin`,
+/// `freeze_authority` (each held by `keystore_module`; the module holds no key).
+static ETH_PATH: Mutex<Option<Value>> = Mutex::new(None);
+
+fn eth_path() -> Option<Value> {
+    ETH_PATH.lock().ok().and_then(|g| g.clone())
+}
+
+/// `wallet {"method": "eth", "params": {...}}`: the Ethereum path (`{"via": "plain"}`: back to the chain service).
+fn configure_eth(params: &Value) -> Result<Value, String> {
+    let via = params["via"].as_str().unwrap_or("");
+    if via == "plain" {
+        *ETH_PATH.lock().map_err(|_| "poisoned")? = None;
+        return Ok(json!({ "via": "the chain service (seqnet-chain)" }));
+    }
+    let s = SESSION.lock().ok().and_then(|g| g.as_ref().map(|s| s.s.clone())).ok_or("open the session first")?;
+    let eth = match via {
+        "eth_rpc_module" => json!({ "via": "eth_rpc_module", "chain_id": params["chain_id"].as_u64().ok_or("chain_id")? }),
+        "http" => json!({ "via": "http", "rpc_url": params["rpc_url"].as_str().ok_or("rpc_url")? }),
+        other => return Err(format!("eth.via {other:?}: eth_rpc_module (Logos Core), http (native) or plain")),
+    };
+    let chain_id = params["chain_id"].as_u64().or_else(|| s["chain_id"].as_u64()).ok_or("chain_id")?;
+    if Some(chain_id) != s["chain_id"].as_u64() {
+        return Err(format!("chain {chain_id} is not the session's ({})", s["chain_id"]));
+    }
+    let depositor = s["depositor"].as_str().ok_or("the session has no depositor")?.to_lowercase();
+    let user = params["user"].as_str().map(str::to_lowercase).unwrap_or_else(|| depositor.clone());
+    if user != depositor {
+        return Err(format!("the user's account {user} is not the session's depositor {depositor}: deposits name their depositor"));
+    }
+    // On this path the release is sent from an account of the user's own (no relayer): never the depositor, whose
+    // address would then link the deposit to the release on Ethereum.
+    let release_sender = params["release_sender"].as_str().map(str::to_lowercase)
+        .ok_or("release_sender: the account the release is sent from on this path (another of the user's accounts: not the depositor)")?;
+    if release_sender == user {
+        return Err(format!("release_sender {release_sender} is the depositor: one address would link the deposit and the release on Ethereum"));
+    }
+    let cfg = json!({
+        "eth": eth,
+        "chain_id": chain_id,
+        "from_block": params["from_block"].as_u64().unwrap_or(0),
+        "user": user,
+        "release_sender": release_sender,
+        "admin": params["admin"],
+        "freeze_authority": params["freeze_authority"],
+    });
+    // One read through the path, to answer with what it sees (the chain id and the vault's deposits).
+    let vault: [u8; 20] = fixed(&s["vault"], "vault")?;
+    let mut v = crate::evm::Vault::new(&cfg["eth"], vault, 0)?;
+    let seen = json!({ "chain_id": v.chain_id()?, "deposits": v.next_leaf_index(None)?, "block": v.block_number()? });
+    if seen["chain_id"].as_u64() != Some(chain_id) {
+        return Err(format!("the Ethereum path answers chain {}, not {chain_id}", seen["chain_id"]));
+    }
+    *ETH_PATH.lock().map_err(|_| "poisoned")? = Some(cfg.clone());
+    Ok(json!({ "configured": cfg, "seen": seen, "reads": v.report(), "sends": "tx_sender_module (one approval per send in the Logos signer)" }))
+}
 
 /// `wallet(request)`: one call of the view.
 pub fn wallet(request: &str) -> String {
@@ -65,7 +130,9 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     // once (jobs.rs: it would wait there for lez_core, busy proving). `info`, `price` and `deposit` read and send
     // through the chain service only; `claim` and `burn` answer the running job, or are refused.
     if let Some(job) = crate::jobs::active() {
-        if !matches!(method, "info" | "price" | "deposit" | "claim" | "burn") {
+        // A deposit or a vault admin call through the send stack is itself a job: started again it answers that job,
+        // and jobs.rs refuses it while another job runs.
+        if !matches!(method, "info" | "price" | "deposit" | "claim" | "burn" | "admin.vault" | "admin.set_cap" | "admin.lez" | "eth_report") {
             return Err(crate::jobs::busy(method, &job));
         }
     }
@@ -76,6 +143,12 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
         // The session's LEZ path: Logos Core's lez_core (reads, the private holding, private sends) or plain.
         let private0 = SESSION.lock().ok().and_then(|g| g.as_ref().and_then(|s| s.s["private_accounts"][0].as_str().map(str::to_string)));
         return crate::lez::configure(params, private0);
+    }
+    if method == "eth" {
+        return configure_eth(params);
+    }
+    if method == "eth_report" {
+        return Ok(json!({ "path": eth_path(), "via": if eth_path().is_some() { "Logos Core: eth_rpc_module (reads), tx_sender_module (sends)" } else { "the chain service" } }));
     }
     if method == "lez_report" {
         return Ok(crate::lez::report());
@@ -94,15 +167,30 @@ fn dispatch(method: &str, params: &Value) -> Result<Value, String> {
     match method {
         "info" => c.info(),
         "registry" => c.registry(),
-        "price" => c.post("module.price", json!({ "denomination": params["denomination"], "token": ETH })),
+        "price" => match eth_path() {
+            Some(e) => c.vault(&e)?.price(&[0u8; 20], params["denomination"].as_u64().unwrap_or(0) as u8),
+            None => c.post("module.price", json!({ "denomination": params["denomination"], "token": ETH })),
+        },
+        // Through the send stack the deposit waits for the person's approval in the Logos signer: a job, polled.
+        "deposit" if eth_path().is_some() => crate::jobs::start("deposit", params, move |p| c.deposit_logos(p)),
         "deposit" => c.deposit(params),
         "scan" => c.scan(),
         // A private claim or burn proven on a CPU takes minutes: a job (jobs.rs), answered at once, polled with `job`.
         "claim" => crate::jobs::start("claim", params, move |p| c.claim(p)),
         "burn" => crate::jobs::start("burn", params, move |p| c.burn(p)),
+        "release" if eth_path().is_some() => crate::jobs::start("release", params, move |p| c.release_logos(p)),
         "release" => c.release(params),
+        "admin.status" if eth_path().is_some() => c.admin_status(),
+        "admin.vault" if eth_path().is_some() => crate::jobs::start("admin", params, move |p| c.admin_vault(p)),
+        // A LEZ admin message built by the module and sent as a public transaction (one block): a job.
+        "admin.set_cap" | "admin.lez" => {
+            let m = method.to_string();
+            crate::jobs::start("admin_lez", params, move |p| c.admin_lez(&m, p))
+        }
         "set_endpoints" => Err("the endpoints are the chain service's (seqnet-chain): set them where it starts".into()),
-        m if m.starts_with("admin.") => Err("the admin functions are the devnet backend's: not run through the module".into()),
+        m if m.starts_with("admin.") => Err(format!(
+            "{m}: not on this path. The module answers admin.status and admin.vault once the session's Ethereum path goes through Logos Core (`eth`), and builds the LEZ role messages (admin.set_cap, admin.lez: SetCap, Freeze, Pause, Tick, Sunset), each sent only after a person approves it at the role's wallet. A LEZ Freeze, Pause or Tick needs a time record whose Gloas layout carries the execution block's RLP header, which the module does not fetch"
+        )),
         "relay" | "checkpoint" | "advance_time" => {
             Err(format!("{method} is a devnet stand-in: on a sequencer the relayer and the checkpoint prover do it, and time passes"))
         }
@@ -181,9 +269,24 @@ impl Chain {
     /// The chain service's `module.inputs`; on the `lez_core` path every bridge actor state in it read again
     /// through Logos Core's `lez_core` and compared (`lez` in the reply, `lez.rs`).
     fn inputs(&self, params: Value) -> Result<Value, String> {
-        let mut inputs = self.post("module.inputs", params.clone())?;
+        let mut inputs = match eth_path() {
+            Some(e) => self.inputs_logos(&e, params.clone())?,
+            None => self.post("module.inputs", params.clone())?,
+        };
         if crate::lez::active() {
-            crate::lez::verify_inputs(&mut inputs, &self.s, params["nullifier"].as_str())?;
+            let token: [u8; 20] = if params["token"].is_null() { [0u8; 20] } else { fixed(&params["token"], "token")? };
+            crate::lez::verify_inputs(&mut inputs, &self.s, params["nullifier"].as_str(), &token)?;
+        }
+        Ok(inputs)
+    }
+
+    /// The chain service's LEZ states of `token` (`module.inputs` for LEZ alone: config(cid), token(cid, token), the
+    /// newest imported root), each read again through Logos Core's `lez_core` and compared on the `lez_core` path
+    /// (`lez` in the reply): what the registry view and the admin tab show on the `eth` path.
+    fn lez_inputs(&self, token: &[u8; 20]) -> Result<Value, String> {
+        let mut inputs = self.post("module.inputs", json!({ "token": hex(token), "lez_only": true }))?;
+        if crate::lez::active() {
+            crate::lez::verify_inputs(&mut inputs, &self.s, None, token)?;
         }
         Ok(inputs)
     }
@@ -261,7 +364,19 @@ impl Chain {
     }
 
     fn info(&self) -> Result<Value, String> {
-        let i = self.post("module.info", json!({}))?;
+        let i = match eth_path() {
+            Some(e) => {
+                let mut i = self.post("module.info", json!({ "lez_only": true }))?;
+                let mut v = self.vault(&e)?;
+                let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
+                i["eth_block"] = json!(v.block_number()?);
+                i["eth_time"] = json!(v.now()?);
+                i["eth_balance_wei"] = json!(crate::evm::dec(&v.balance(&depositor)?));
+                i["eth"] = v.report();
+                i
+            }
+            None => self.post("module.info", json!({}))?,
+        };
         Ok(json!({
             "network": format!("a running LEZ devnet (sequencer {} and a Logos Blockchain node) and a local anvil ({})",
                                self.s["sequencer"].as_str().unwrap_or("?"), self.s["eth_rpc"].as_str().unwrap_or("?")),
@@ -285,12 +400,20 @@ impl Chain {
                 "private_accounts": self.s["private_accounts"],
             },
             "relayer": i["relayer"],
-            "backend": "ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)",
+            "backend": if eth_path().is_some() {
+                "ferrata_bridge_module in Logos Core; Ethereum through Logos Core's eth_rpc_module (reads) and tx_sender_module (sends, approved in the Logos signer); LEZ through the chain service or lez_core"
+            } else {
+                "ferrata_bridge_module in Logos Core; the chains through seqnet-chain (the stand-in for Logos Core's own modules)"
+            },
+            "eth": i["eth"],
             "stand_in": "the vault's verifier is the vault tests' mock (no Groth16 wrap); Ethereum is a local anvil whose blocks a stand-in committee finalizes for LEZ",
         }))
     }
 
     fn registry(&self) -> Result<Value, String> {
+        if let Some(e) = eth_path() {
+            return self.registry_logos(&e);
+        }
         let r = self.post("module.registry", json!({ "token": ETH }))?;
         let inputs = self.inputs(json!({ "token": ETH }))?;
         let mut token = r["token"].clone();
@@ -306,22 +429,44 @@ impl Chain {
             }
         }
         let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
-        let t = &lez["token"];
-        token["lez"] = if t.is_null() {
-            Value::Null
-        } else {
-            json!({
-                "now_ms": t["gate"]["now_ms"],
-                "mints_frozen_until_ms": t["gate"]["mints_until"],
-                "burns_frozen_until_ms": t["gate"]["burns_until"],
-                "mint_cap": t["gate"]["mint"],
-                "burn_cap": t["gate"]["burn"],
-                "known_until_leaf": t["known_until"],
-                "fee_schedules": t["schedules"].as_array().map(|a| a.len()),
-                "decoded_by": "ferrata_bridge_module registry (token(cid, ETH) with the bridge program's types)",
-            })
-        };
+        token["lez"] = lez_token(&lez["token"]);
         Ok(json!({ "tokens": [token], "vault": r["vault"], "lez_config": lez["config"], "imported_root": lez["root"] }))
+    }
+
+    /// The registry through Logos Core's eth_rpc_module: EVERY token the vault registered (its `TokenRegistered` logs),
+    /// each with its denominations (the permitted amounts), fees, caps and their use and freezes, its symbol and
+    /// decimals read from the token, and its LEZ side (token(cid, token)'s gate) when the bridge program has one.
+    fn registry_logos(&self, e: &Value) -> Result<Value, String> {
+        let mut v = self.vault(e)?;
+        let mut tokens = Vec::new();
+        let mut vault_side = Value::Null;
+        let (mut lez_config, mut imported_root) = (Value::Null, Value::Null);
+        for t in v.registered_tokens()? {
+            let r = v.registry(&t)?;
+            vault_side = r["vault"].clone();
+            let mut token = r["token"].clone();
+            let (symbol, decimals) = if t == [0u8; 20] { ("ETH".to_string(), 18) } else { v.erc20_meta(&t) };
+            token["symbol"] = json!(symbol);
+            token["decimals"] = json!(decimals);
+            // Read again through lez_core on that path (review: the registry's LEZ side came from the chain service alone).
+            let inputs = self.lez_inputs(&t)?;
+            let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
+            let mut req = json!({ "bridge_header": self.s["program"] });
+            for k in ["token_state", "config_state", "root_state"] {
+                if present(k) {
+                    req[k] = inputs[k].clone();
+                }
+            }
+            let lez = if present("token_state") || present("config_state") { w::registry_of(&req)? } else { json!({}) };
+            if lez_config.is_null() {
+                lez_config = lez["config"].clone();
+                imported_root = lez["root"].clone();
+            }
+            token["lez"] = lez_token(&lez["token"]);
+            token["lez_read_via"] = lez_read_via(&inputs);
+            tokens.push(token);
+        }
+        Ok(json!({ "tokens": tokens, "vault": vault_side, "lez_config": lez_config, "imported_root": imported_root, "eth": v.report() }))
     }
 
     fn deposit(&self, params: &Value) -> Result<Value, String> {
@@ -663,6 +808,433 @@ impl Chain {
     }
 }
 
+
+/// A deposit asked for while an earlier deposit of this session was broadcast and reported not yet mined (its job ended
+/// `unconfirmed`) is refused as long as that transaction has no receipt: it may still be mined, and then both would land.
+/// `again: true` (the view's "Deposit again anyway", offered on this refusal) sends it all the same, for an earlier
+/// deposit the person knows will not be mined (dropped from the mempool).
+fn refuse_while_unmined(v: &mut crate::evm::Vault, params: &Value) -> Result<(), String> {
+    if params["again"] == true {
+        return Ok(());
+    }
+    for h in crate::jobs::unconfirmed_hashes("deposit") {
+        if v.rpc.call("eth_getTransactionReceipt", json!([h]))?.is_null() {
+            return Err(format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet; it may still be. \
+                                Wait for it (refresh your positions), or deposit again anyway (again: true): if the earlier one is mined \
+                                after all, both deposits land"));
+        }
+    }
+    Ok(())
+}
+
+/// The session's Ethereum side through Logos Core's own modules (`eth`): reads through `eth_rpc_module`, sends through
+/// `tx_sender_module`. Each send waits for one approval in the Logos signer, so it runs as a job the view polls.
+impl Chain {
+    fn vault(&self, e: &Value) -> Result<crate::evm::Vault, String> {
+        let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
+        crate::evm::Vault::new(&e["eth"], vault, e["from_block"].as_u64().unwrap_or(0))
+    }
+
+    /// `module.inputs` for LEZ alone (`lez_only`), with Ethereum's part read here: the deposit list (checked against
+    /// `depositRoot`), its leaves, the released nullifiers, the refunded leaves and Ethereum's time.
+    fn inputs_logos(&self, e: &Value, params: Value) -> Result<Value, String> {
+        let mut p = params;
+        p["lez_only"] = json!(true);
+        let mut inputs = self.post("module.inputs", p)?;
+        let mut v = self.vault(e)?;
+        let (block, deposits, root) = v.deposit_list()?;
+        inputs["leaves"] = json!(deposits
+            .iter()
+            .map(|d| hex(&ferrata_bridge_core::inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)))
+            .collect::<Vec<_>>());
+        inputs["deposits"] = json!(deposits
+            .iter()
+            .map(|d| json!({ "leaf_index": d.leaf_index, "depositor": hex(&d.depositor), "j": d.j, "token": hex(&d.token),
+                             "amount": hex(&d.amount), "commitment": hex(&d.commitment), "block": d.block }))
+            .collect::<Vec<_>>());
+        inputs["deposit_root"] = json!(hex(&root));
+        inputs["eth_block"] = json!(block);
+        inputs["eth_time"] = json!(v.now()?);
+        inputs["released_nullifiers"] = json!(v.released_nullifiers()?.iter().map(|n| hex(n)).collect::<Vec<_>>());
+        inputs["refunded_leaves"] = json!(v.refunded_leaves()?);
+        inputs["eth"] = v.report();
+        Ok(inputs)
+    }
+
+    /// Sends `calls` from `from` through `tx_sender_module` (gas limits with the margin, send.rs), waits for the
+    /// person's approval and the broadcast (the job's phases), and reads every call's receipt back through
+    /// `eth_rpc_module`; `reverted` says which call reverted, if one did.
+    fn send_logos(&self, e: &Value, v: &mut crate::evm::Vault, from: &str, calls: &[crate::send::Call], purpose: &str,
+                  receipt_wait: Duration) -> Result<crate::send::Sent, String> {
+        let chain_id = e["chain_id"].as_u64().ok_or("chain_id")?;
+        crate::send::through_stack(v, chain_id, from, calls, purpose, true, Duration::from_secs(900), receipt_wait, json!({}))
+    }
+
+    /// The deposit through Logos Core's send stack: the module's commitment and vault call, the price and the
+    /// depositor's count read through `eth_rpc_module`, one approval, the `Deposit` event read back.
+    fn deposit_logos(&self, params: &Value) -> Result<Value, String> {
+        let e = eth_path().ok_or("the Ethereum path is no longer Logos Core's")?;
+        let d = params["denomination"].as_u64().unwrap_or(0);
+        let kind = params["kind"].as_str().unwrap_or("private");
+        let a = params["account"].as_u64().unwrap_or(0);
+        let gap = self.s["gap"].as_u64().unwrap_or(8);
+        if a >= gap {
+            return Err(format!("account /{a} is outside the recovery window ({gap}): a wallet would not find it"));
+        }
+        let mut v = self.vault(&e)?;
+        refuse_while_unmined(&mut v, params)?;
+        let depositor: [u8; 20] = fixed(&self.s["depositor"], "depositor")?;
+        let j = v.deposit_count(&depositor)?;
+        let price = v.price(&[0u8; 20], d as u8)?;
+        let mut req = self.seed_fields();
+        req["j"] = json!(j);
+        req["kind"] = json!(kind);
+        req["dest"] = json!(self.account(kind, a)?);
+        req["token"] = json!(ETH);
+        req["denom_index"] = json!(d);
+        let made = crate::deposit_of(&req)?;
+        let call = &made["vault_call"];
+        let data = unhex(call["data"].as_str().ok_or("vault_call.data")?)?;
+        let total = price["total"].as_str().ok_or("price.total")?.to_string();
+        let to: [u8; 20] = fixed(&call["to"], "vault_call.to")?;
+        // The vault's refusal (a frozen token, a disabled deposit, a cap) is named before anything is asked or signed.
+        crate::user::preflight(&mut v, &depositor, &to, &data, &total)?;
+        let calls = [crate::send::Call::new(to, total.clone(), data, format!("Ferrata deposit: {} wei into the vault", total))];
+        let user = e["user"].as_str().ok_or("user")?.to_string();
+        // `receipt_timeout_s`: how long the person's view waits for the receipt (the module's own 600 s by default).
+        let sent = self.send_logos(&e, &mut v, &user, &calls,
+            &format!("Ferrata Bridge deposit: denomination {d} of ETH to a {kind} LEZ account (hidden in the commitment)"),
+            crate::send::receipt_wait(params))?;
+        if let Some(why) = sent.unconfirmed_text("this deposit") {
+            // Broadcast, not yet mined: the job ends `unconfirmed` (jobs.rs), never "not deposited"; the module refuses
+            // another deposit while this one is unmined (above).
+            return Ok(json!({ "settled": false, "pending": true, "what": why, "tx_hash": sent.last_hash(), "send": sent.record, "eth": v.report() }));
+        }
+        if let Some(why) = &sent.reverted {
+            return Ok(json!({ "settled": false, "what": format!("{why}; nothing was deposited"), "tx_hash": sent.last_hash(),
+                              "send": sent.record, "eth": v.report() }));
+        }
+        let receipt = sent.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
+        let (ok, block, event) = crate::evm::receipt_summary(&receipt, &to)?;
+        let event = event.ok_or("the receipt has no Deposit event of the vault")?;
+        if event.commitment != fixed::<32>(&made["commitment"], "commitment")? {
+            return Err("the Deposit event's commitment is not the module's".into());
+        }
+        Ok(json!({
+            "settled": ok,
+            "tx_hash": sent.last_hash(),
+            "block": block,
+            "gas_used": receipt["gasUsed"],
+            "leaf_index": event.leaf_index,
+            "j": event.j,
+            "amount": price["denomination"],
+            "total_paid": total,
+            "commitment": made["commitment"],
+            "kind": kind,
+            "account": a,
+            "made_by": "ferrata_bridge_module deposit (the commitment and the vault call), sent through Logos Core's tx_sender_module after one approval in the Logos signer; keystore_module signed",
+            "send": sent.record,
+            "eth": v.report(),
+            "public_on_ethereum": ["the depositor address", "the token", "the denomination and fees", "the time", "the commitment C"],
+            "hidden": ["the LEZ destination (C commits to it)"],
+        }))
+    }
+
+    /// The release through Logos Core's send stack, sent by the session's `release_sender` (anyone may send a release;
+    /// the relay fee goes to the sender): the wallet's rule over the accepted roots read through `eth_rpc_module`, the
+    /// stand-in prover's seal (the vault's verifier is the tests' mock), then `release(r, seal)` after one approval.
+    fn release_logos(&self, params: &Value) -> Result<Value, String> {
+        let e = eth_path().ok_or("the Ethereum path is no longer Logos Core's")?;
+        let burn_index = params["burn_index"].as_u64().ok_or("release needs burn_index")?;
+        let inputs = self.inputs(json!({ "token": ETH }))?;
+        let (_, _, burns) = self.positions(&inputs)?;
+        let b = burns.iter().find(|b| b["burn_index"].as_u64() == Some(burn_index)).ok_or("not a burn of this wallet")?;
+        if b["released"] == true {
+            return Err("already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)".into());
+        }
+        let mut v = self.vault(&e)?;
+        let roots = v.roots_for_release(&[0u8; 20])?;
+        let reg = v.registry(&[0u8; 20])?;
+        let denominations = reg["token"]["denominations"].as_array().cloned().unwrap_or_default();
+        // The position's amount is decimal already (positions: word_dec).
+        let amount = b["amount"].as_str().ok_or("the burn's amount")?.to_string();
+        let relay_fee = denominations
+            .iter()
+            .find(|d| d["amount"].as_str() == Some(amount.as_str()))
+            .map(|d| d["relay_fee"].clone())
+            .ok_or("the burn's amount is not one of the vault's denominations")?;
+        let mut req = self.seed_fields();
+        req["relay_fee"] = relay_fee;
+        req["i"] = b["i"].clone();
+        req["burns"] = inputs["burns"].clone();
+        req["roots"] = roots["roots"].clone();
+        req["now"] = roots["now"].clone();
+        let r = match w::release_by_rule(&req)? {
+            Ok((v, _)) => v,
+            Err(refusal) => {
+                return Err(match refusal["first_open"].as_u64() {
+                    Some(t) => format!("refused: vault error ReleaseDelayNotElapsed() (checked before sending: the roots that cover this burn open at Ethereum time {t})"),
+                    None => format!("refused (checked before sending): {}", refusal["error"].as_str().unwrap_or("no accepted burn root covers this burn yet: wait for the next checkpoint")),
+                });
+            }
+        };
+        crate::jobs::phase("proving", json!({ "by": "the stand-in prover (seqnet-chain): the vault tests' mock verifier is told to accept the exact journal; no Groth16 wrap here" }));
+        let proof = self.post("module.prove_release", json!({ "release": r }))?;
+        let seal = unhex(proof["seal"].as_str().ok_or("the prover's seal")?)?;
+        let (data, recipient) = crate::user::release_call(&mut v, &r, &seal)?;
+        let sender = e["release_sender"].as_str().ok_or("release_sender")?.to_string();
+        let before = v.balance(&recipient)?;
+        let vault: [u8; 20] = fixed(&self.s["vault"], "vault")?;
+        crate::user::preflight(&mut v, &fixed(&json!(sender), "release_sender")?, &vault, &data, "0")?;
+        let calls = [crate::send::Call::new(vault, "0", data, "Ferrata release to the burn's recipient")];
+        let sent = self.send_logos(&e, &mut v, &sender, &calls,
+            "Ferrata Bridge release: the vault pays a burn's recipient (the relay fee to the sender)", crate::send::RECEIPT_WAIT)?;
+        if let Some(why) = sent.unconfirmed_text("this release") {
+            return Ok(json!({ "settled": false, "pending": true, "what": why, "tx_hash": sent.last_hash(), "recipient": hex(&recipient),
+                              "send": sent.record, "eth": v.report() }));
+        }
+        if let Some(why) = &sent.reverted {
+            return Ok(json!({ "settled": false, "what": format!("{why}; nothing was released"), "tx_hash": sent.last_hash(),
+                              "recipient": hex(&recipient), "paid_wei": "0", "send": sent.record, "eth": v.report() }));
+        }
+        let receipt = sent.last().cloned().ok_or("tx_sender_module broadcast no transaction")?;
+        let (ok, block, _) = crate::evm::receipt_summary(&receipt, &vault)?;
+        let after = v.balance(&recipient)?;
+        let paid = crate::evm::as_u128(&after)?.saturating_sub(crate::evm::as_u128(&before)?);
+        Ok(json!({
+            "settled": ok && paid > 0,
+            "what": if ok && paid > 0 { Value::Null } else { json!(format!("the release in block {block} paid the recipient nothing")) },
+            "tx_hash": sent.last_hash(),
+            "block": block,
+            "gas_used": receipt["gasUsed"],
+            "recipient": hex(&recipient),
+            "paid_wei": paid.to_string(),
+            "sent_by": format!("{sender} through Logos Core's tx_sender_module (one approval in the Logos signer)"),
+            "picked": r["picked"],
+            "journal_sha256": r["journal_sha256"],
+            "send": sent.record,
+            "eth": v.report(),
+            "made_by": "ferrata_bridge_module release (the wallet's rule over the accepted roots read through eth_rpc_module; the journal; the vault call), sent through tx_sender_module",
+            "public_on_ethereum": ["the recipient", "the token and amount", "NOut (the release nullifier)", "the burn root used", "the time", "the sender"],
+            "stand_in": proof["stand_in_prover"],
+        }))
+    }
+
+    /// Both sides' roles and controls: the vault's through `eth_rpc_module`, LEZ's from the bridge program's states.
+    fn admin_status(&self) -> Result<Value, String> {
+        let e = eth_path().ok_or("admin.status reads the vault through the Ethereum path")?;
+        let mut v = self.vault(&e)?;
+        let roles = v.roles()?;
+        let vault_registry = v.registry(&[0u8; 20])?;
+        let registry = self.registry()?;
+        let inputs = self.lez_inputs(&[0u8; 20])?;
+        let present = |k: &str| inputs[k].as_str().is_some_and(|h| h.len() > 2);
+        let mut req = json!({ "bridge_header": self.s["program"] });
+        for k in ["token_state", "config_state"] {
+            if present(k) {
+                req[k] = inputs[k].clone();
+            }
+        }
+        let lez = if present("config_state") { w::registry_of(&req)? } else { Value::Null };
+        let controls = &lez["config"]["controls"];
+        Ok(json!({
+            // The LEZ configuration's roles and floor, as the view's LEZ section shows them (the devnet backend's shape).
+            "floor": if controls["floor"].is_null() { json!({ "capacity": "?" }) } else { controls["floor"].clone() },
+            "vault_roles": roles,
+            "vault": vault_registry,
+            "lez": lez,
+            "registry": registry,
+            "senders": { "admin": e["admin"], "freeze_authority": e["freeze_authority"] },
+            "lez_read_via": lez_read_via(&inputs),
+            // The view's LEZ section (the bridge program's roles); the vault's are `vault_roles`.
+            "admin": controls["admin"], "freeze_authority": controls["freeze_authority"], "fee_recipient": controls["fee_recipient"],
+            "eth": v.report(),
+        }))
+    }
+
+    /// A vault admin or freeze-authority call (`admin.rs`), sent from the role's account through the send stack.
+    fn admin_vault(&self, params: &Value) -> Result<Value, String> {
+        let e = eth_path().ok_or("the Ethereum path is no longer Logos Core's")?;
+        let action = params["action"].as_str().ok_or("admin.vault needs an action")?;
+        let role = crate::admin::role_of(action, &params["params"])?;
+        let from = match role {
+            "admin" | "pending_admin" => e["admin"].clone(),
+            "freeze_authority" => e["freeze_authority"].clone(),
+            _ => e["user"].clone(),
+        };
+        if from.is_null() {
+            return Err(format!("no account for the vault's {role} in the session's Ethereum path"));
+        }
+        let mut v = self.vault(&e)?;
+        // `gas_limit`: the admin's own limit for the call (the view's field); absent, the stack's estimate + the margin.
+        let sender = json!({ "via": crate::send::TX_SENDER, "from": from, "wait": true, "timeout_s": 900, "gas_limit": params["gas_limit"] });
+        let mut out = crate::admin::vault_admin(&mut v, action, &params["params"], &sender, e["chain_id"].as_u64().unwrap_or(0))?;
+        out["settled"] = json!(out["verdict"] == "settled");
+        if out["settled"] != true {
+            // jobs.rs fails the job with this sentence: the view shows it where the admin acted.
+            out["what"] = out["error"].clone();
+        }
+        Ok(out)
+    }
+
+    /// A LEZ admin message built by the module (`admin.rs`: at the role's own actor, with config(cid), the token and,
+    /// for a freeze, the record) and sent as a public transaction through the chain service, as the session's other
+    /// public calls are (`submit`: lez_core's public send has no account kind for the bridge program's PDAs). The
+    /// signer is the configuration's role holder read from config(cid)'s state, or `params.signer` (an account id, or
+    /// `"user"`: the wallet's first public account). A signer that does not hold the role is refused here before
+    /// anything is sent, unless `params.unchecked` asks to send it anyway (to show the program's own refusal).
+    ///
+    /// No role message is sent without a person's approval: the module hands a role message only to a signer with an
+    /// approval step (the chain service's `module.role_gate`: the stand-in for the role's own wallet holds it until a
+    /// person approves exactly that message with the role password), and waits for that decision (the job's
+    /// `awaiting_approval` phase); unapproved after [`ROLE_WAIT`] it is withdrawn. A `Sunset` (irreversible) is no
+    /// exception.
+    fn admin_lez(&self, method: &str, params: &Value) -> Result<Value, String> {
+        let (action, p) = if method == "admin.set_cap" {
+            ("lez_set_cap".to_string(), json!({ "token": ETH, "mints": params["mints"].as_bool().unwrap_or(true),
+                                                "capacity": params["capacity"], "refill_per_second": params["refill_per_second"] }))
+        } else {
+            (params["action"].as_str().ok_or("admin.lez needs an action (lez_*)")?.to_string(), params["params"].clone())
+        };
+        // The program's states read again through lez_core (Logos Core's LEZ wallet) on that path, compared with the
+        // service's.
+        let token: [u8; 20] = if p["token"].is_null() { [0u8; 20] } else { fixed(&p["token"], "params.token")? };
+        let inputs = self.lez_inputs(&token)?;
+        let config_state = inputs["config_state"].as_str().filter(|h| h.len() > 2).ok_or("the bridge has no configuration on LEZ yet")?.to_string();
+        let mut req = json!({ "action": action, "program": self.s["program"], "config_id": self.s["config_id"], "params": p,
+                              "config_state": config_state });
+        // Who signs: first the role holder the configuration names (the module's own reading of its state).
+        let probe = { let mut r = req.clone(); r["signer"] = json!(format!("0x{}", "00".repeat(32))); crate::admin::admin_of(&r)? };
+        let signer = match params["signer"].as_str() {
+            Some("user") => self.account("public", 0)?,
+            Some(a) => a.to_string(),
+            None => match &probe["role_holder"] {
+                Value::String(h) => h.clone(),
+                Value::Array(m) if m.len() == 1 => m[0].as_str().unwrap_or_default().to_string(),
+                other => return Err(format!("the configuration's {} is not one key ({other}): sign it with the role's own wallet", probe["role"])),
+            },
+        };
+        req["signer"] = json!(signer);
+        let built = crate::admin::admin_of(&req)?;
+        if built["signer_holds_role"] == false && params["unchecked"] != true {
+            return Err(format!("refused before sending: {signer} is not the configuration's {} ({})", built["role"], built["role_holder"]));
+        }
+        let what = format!("{} (admin view){}", built["what"].as_str().unwrap_or("LEZ admin"),
+                           if action == "lez_sunset" { ": ends this configuration for good (irreversible)" } else { "" });
+        if built["role"] != "anyone" {
+            // Only to a signer that asks a person first.
+            role_gate_ok(self.post("module.role_gate", json!({})))?;
+        }
+        // The role's account holds no LEZ: the wallet's public account /0 pays the fee and co-signs (outside the
+        // message's accounts), a stand-in for the role's own funded wallet.
+        let payer = self.account("public", 0)?;
+        let mut sent = self.post("module.submit", json!({ "message": built["message"], "accounts": built["accounts"],
+                                                           "root_index": built["root_index"], "what": what, "payer": payer }))?;
+        let mut approval = Value::Null;
+        if sent["pending_approval"] == true {
+            approval = sent.clone();
+            sent = self.wait_role(&sent)?;
+        }
+        crate::jobs::phase("sent", json!({ "tx_hash": sent["tx_hash"], "block": sent["block"], "by": "the chain service's LEZ wallet", "signer": signer, "payer": payer }));
+        let settled = sent["settled"] == true;
+        let mut out = built;
+        out["settled"] = json!(settled);
+        out["tx_hash"] = sent["tx_hash"].clone();
+        out["block"] = sent["block"].clone();
+        out["sent"] = sent;
+        out["signed_by"] = json!("the chain service's LEZ wallet (seqnet-chain, LEZ's wallet library), holding the role's key in this run: the stand-in for the role's own LEZ wallet or multisig");
+        out["approved"] = if approval.is_null() {
+            json!("not held: not signed by a role key the wallet holds (the user's own account)")
+        } else {
+            json!({ "approval_id": approval["approval_id"], "message_sha256": approval["message_sha256"], "by": "a person, at the role wallet's approval step (the role password)" })
+        };
+        out["fee_paid_by"] = json!(payer);
+        if settled {
+            if action == "lez_set_cap" {
+                out["after"] = self.registry()?["tokens"][0]["lez"].clone();
+            }
+        } else {
+            out["what"] = json!(format!("refused by the bridge program: the transaction {} was included in block {} and reverted (signer {signer}, the configuration's {}: {})",
+                                        out["tx_hash"].as_str().unwrap_or("?"), out["block"], out["role"], out["role_holder"]));
+        }
+        Ok(out)
+    }
+}
+
+/// Whether the chain service's signer asks a person before it signs a LEZ role message (`module.role_gate`): the module
+/// hands it no role message otherwise.
+fn role_gate_ok(gate: Result<Value, String>) -> Result<(), String> {
+    match gate {
+        Ok(g) if g["approval"] == "password" => Ok(()),
+        Ok(g) => Err(format!("refused before sending: the chain service would sign LEZ role messages without a person's approval ({g})")),
+        Err(e) => Err(format!("refused before sending: the chain service has no approval step for LEZ role messages ({e})")),
+    }
+}
+
+/// How long a LEZ role message waits for the person's approval at the role wallet before it is withdrawn.
+const ROLE_WAIT: Duration = Duration::from_secs(900);
+
+impl Chain {
+    /// Waits for the person's decision on a role message the chain service holds (`held`: its `pending_approval` reply):
+    /// the job is `awaiting_approval` meanwhile. The send's reply once approved and sent; the refusal otherwise; at
+    /// [`ROLE_WAIT`] the request is withdrawn (`module.cancel_role`) so that it cannot still be approved untracked.
+    fn wait_role(&self, held: &Value) -> Result<Value, String> {
+        let id = held["approval_id"].as_str().ok_or("the chain service held the message without an approval_id")?.to_string();
+        crate::jobs::phase("awaiting_approval", json!({
+            "approval_id": id, "what": held["what"], "message": held["message"], "signer": held["signer"],
+            "message_sha256": held["message_sha256"],
+            "approve_in": "the role's LEZ wallet (here its stand-in, seqnet-chain: module.approve_role with the role password; headless e2e/seqnet/ops.sh approve-lez)",
+        }));
+        let t0 = Instant::now();
+        loop {
+            let st = self.post("module.role_status", json!({ "approval_id": id }))?;
+            match st["state"].as_str().unwrap_or("") {
+                "awaiting_approval" | "approved" => {}
+                "sent" => return Ok(st["result"].clone()),
+                "rejected" => return Err(format!("rejected at the role wallet ({id}): the person declined; nothing was signed or sent")),
+                "cancelled" => return Err(format!("withdrawn ({id}): nothing was signed or sent")),
+                "expired" => return Err(format!("not approved in time at the role wallet ({id}): nothing was signed or sent")),
+                other => return Err(format!("the role wallet answered {other} for {id}: {}", st["error"].as_str().unwrap_or("no reason given"))),
+            }
+            if t0.elapsed() > ROLE_WAIT {
+                let w = self.post("module.cancel_role", json!({ "approval_id": id }));
+                return Err(format!("not approved within {} s at the role wallet ({id}); {}", ROLE_WAIT.as_secs(), match w {
+                    Ok(_) => "withdrawn: nothing will be signed for it".to_string(),
+                    Err(e) => format!("withdrawing it failed ({e}): it may still be approved there"),
+                }));
+            }
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    }
+}
+
+/// Where a reply's LEZ states came from: `lez_core` (read again and compared: how many reads, how many equal, how many
+/// it answered nothing for: an account the zone does not have, which is not counted as equal) or the chain service
+/// alone.
+fn lez_read_via(inputs: &Value) -> Value {
+    match inputs["lez"]["via"].as_str() {
+        Some(via) => json!({ "via": via, "reads": inputs["lez"]["reads"], "equal": inputs["lez"]["equal"], "unanswered": inputs["lez"]["unanswered"] }),
+        None => json!({ "via": "the chain service (seqnet-chain)" }),
+    }
+}
+
+/// A token's LEZ side as the registry view shows it (token(cid, token)'s gate), or null when it has none.
+fn lez_token(t: &Value) -> Value {
+    if t.is_null() {
+        return Value::Null;
+    }
+    json!({
+        "now_ms": t["gate"]["now_ms"],
+        "mints_frozen_until_ms": t["gate"]["mints_until"],
+        "burns_frozen_until_ms": t["gate"]["burns_until"],
+        "mint_cap": t["gate"]["mint"],
+        "burn_cap": t["gate"]["burn"],
+        "known_until_leaf": t["known_until"],
+        "fee_schedules": t["schedules"].as_array().map(|a| a.len()),
+        "decoded_by": "ferrata_bridge_module registry (token(cid, token) with the bridge program's types)",
+    })
+}
+
 /// Who made a send: the module, and who executed, proved and sent it.
 fn sent_by(sent: &Value, made: &str) -> String {
     match sent["lez"]["via"].as_str() {
@@ -688,6 +1260,66 @@ mod tests {
 
     fn call(method: &str, params: Value) -> Value {
         serde_json::from_str(&wallet(&json!({ "method": method, "params": params }).to_string())).expect("the reply is JSON")
+    }
+
+    /// A stand-in chain service: answers each request with the next of `replies` (`{"ok": true, "result"}`), and
+    /// records the methods asked.
+    fn fake_chain(replies: Vec<Value>) -> (String, std::sync::Arc<Mutex<Vec<String>>>) {
+        let l = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/", l.local_addr().unwrap());
+        let seen = std::sync::Arc::new(Mutex::new(Vec::new()));
+        let log = seen.clone();
+        std::thread::spawn(move || {
+            let mut replies = replies.into_iter();
+            for stream in l.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let mut buf = Vec::new();
+                let mut chunk = [0u8; 4096];
+                let body = loop {
+                    let n = stream.read(&mut chunk).unwrap_or(0);
+                    buf.extend_from_slice(&chunk[..n]);
+                    if let Some(end) = buf.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let head = String::from_utf8_lossy(&buf[..end]).to_lowercase();
+                        let len = head.lines().find_map(|l| l.strip_prefix("content-length:")).and_then(|v| v.trim().parse::<usize>().ok()).unwrap_or(0);
+                        if buf.len() >= end + 4 + len {
+                            break buf[end + 4..end + 4 + len].to_vec();
+                        }
+                    }
+                    if n == 0 {
+                        break Vec::new();
+                    }
+                };
+                let req: Value = serde_json::from_slice(&body).unwrap_or(Value::Null);
+                log.lock().unwrap().push(req["method"].as_str().unwrap_or("").to_string());
+                let Some(reply) = replies.next() else { break };
+                let text = json!({ "ok": true, "result": reply }).to_string();
+                let _ = write!(stream, "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", text.len(), text);
+            }
+        });
+        (url, seen)
+    }
+
+    /// No LEZ role message leaves without a person's approval: the module hands one only to a signer that asks first
+    /// (`module.role_gate`), waits for the decision, and reports a rejection as nothing sent.
+    #[test]
+    fn a_lez_role_message_is_sent_only_after_a_persons_approval() {
+        assert!(role_gate_ok(Ok(json!({ "approval": "password" }))).is_ok());
+        assert!(role_gate_ok(Ok(json!({ "approval": "none" }))).unwrap_err().starts_with("refused before sending"));
+        assert!(role_gate_ok(Err("unknown method module.role_gate".into())).unwrap_err().contains("no approval step"));
+        let held = json!({ "pending_approval": true, "approval_id": "lra_1", "what": "Sunset (admin view): ends this configuration for good (irreversible)",
+                           "message": "Sunset", "message_sha256": "0xab" });
+        let (url, seen) = fake_chain(vec![
+            json!({ "state": "awaiting_approval" }),
+            json!({ "state": "sent", "result": { "settled": true, "tx_hash": "0x01", "block": 7 } }),
+        ]);
+        let sent = Chain { url, s: Value::Null }.wait_role(&held).unwrap();
+        assert_eq!(sent["block"], 7);
+        assert_eq!(*seen.lock().unwrap(), vec!["module.role_status", "module.role_status"]);
+        let (url, _) = fake_chain(vec![json!({ "state": "rejected" })]);
+        let e = Chain { url, s: Value::Null }.wait_role(&held).unwrap_err();
+        assert!(e.starts_with("rejected at the role wallet (lra_1): the person declined; nothing was signed or sent"), "{e}");
+        let (url, _) = fake_chain(vec![json!({ "state": "expired" })]);
+        assert!(Chain { url, s: Value::Null }.wait_role(&held).unwrap_err().contains("not approved in time"));
     }
 
     #[test]
@@ -724,5 +1356,26 @@ mod tests {
         go.send(()).unwrap();
         assert_eq!(wait_done(id)["state"], "settled");
         assert!(call("scan", json!({}))["error"].as_str().unwrap().contains("no wallet session"));
+    }
+
+    /// The session refuses a second deposit while its earlier one was broadcast and is still unmined (the job ended
+    /// `unconfirmed`, no receipt yet), unless the person says `again`; once the earlier one is mined there is nothing to
+    /// wait for (review L-C: this refusal had no test, and the view could not override it).
+    #[test]
+    fn a_second_deposit_waits_while_the_first_is_unmined_unless_the_person_says_again() {
+        let _g = serial();
+        crate::send::fake::install();
+        let h = format!("0x{}", "cd".repeat(32));
+        let reply = json!({ "settled": false, "pending": true, "tx_hash": h, "what": "broadcast, not yet mined: transaction ..." });
+        let r = crate::jobs::start("deposit", &json!({}), move |_| Ok(reply)).unwrap();
+        assert_eq!(wait_done(r["job"]["id"].as_u64().unwrap())["state"], "unconfirmed");
+        let mut v = crate::evm::Vault::new(&json!({ "via": "eth_rpc_module", "chain_id": 11155111 }), [2; 20], 0).unwrap();
+        *crate::send::fake::MINED.lock().unwrap() = false;
+        let e = refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).unwrap_err();
+        assert!(e.starts_with(&format!("refused: your earlier deposit, transaction {h}, was broadcast and is not mined yet")), "{e}");
+        assert!(e.contains("deposit again anyway (again: true)") && e.contains("both deposits land"), "{e}");
+        refuse_while_unmined(&mut v, &json!({ "denomination": 0, "again": true })).expect("the person's own decision: sent anyway");
+        *crate::send::fake::MINED.lock().unwrap() = true;
+        refuse_while_unmined(&mut v, &json!({ "denomination": 0 })).expect("mined since: nothing to wait for");
     }
 }

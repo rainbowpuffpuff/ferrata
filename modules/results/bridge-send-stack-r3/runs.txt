@@ -1,0 +1,10 @@
+run 1	53 PASS	approver recoveries: 0
+run 2	53 PASS	approver recoveries: 0
+run 3	53 PASS	approver recoveries: 0
+run 4	53 PASS	approver recoveries: 0
+run 5	53 PASS	approver recoveries: 0
+run 1	set_token_cap	estimate 48564	limit 80705	used 50771
+run 2	set_token_cap	estimate 51089	limit 83861	used 50771
+run 3	set_token_cap	estimate 48564	limit 80705	used 50771
+run 4	set_token_cap	estimate 48564	limit 80705	used 50771
+run 5	set_token_cap	estimate 48564	limit 80705	used 50771

@@ -1,0 +1,2 @@
+{"holds_eth_key":false,"depositor":"0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc"}
+{"approval":"password","hold_for_s":900,"role_accounts":["0x10debe6ffb247286bd4c509e61204d54f926d169fb474b2490f30b001dbbd68f","0x1223c5f1b21f554d1bd16d6a0aec44560337c5f18ae5fe2c7fe3693f0aaf5dad"],"rule":"a message a role key must sign is held until a person approves it with the role password; nothing else signs with a role key (a role account named as the fee payer is refused)"}

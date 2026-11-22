@@ -1,0 +1,6 @@
+[01:01:27] Logos Core: lez_core, tx_sender_module, capability_module, modules_state, evm_signer_cli, package_downloader, storage_module, package_manager, eth_rpc_module, evm_keystore_cli, keystore_module, signer_manager_module, fee_module, ferrata_bridge_module
+[01:01:32] keystore_module holds: ["0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65","0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC","0x90F79bf6EB2c4f870365E785982E1f101E93b906","0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc"]
+[01:01:32] the mini-app: Qt Quick Test (offscreen), Ethereum through Logos Core's modules, LEZ through lez_core
+[01:05:31] qmltest: exit 0 in 239 s: Totals: 12 passed, 0 failed, 0 skipped, 0 blacklisted, 238500ms
+[01:05:31] the zone: 125 transactions in blocks 1..=44
+[01:05:31] hook-logoseth: done

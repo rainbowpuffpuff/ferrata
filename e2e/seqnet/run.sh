@@ -23,6 +23,12 @@
 #                         configuration with its roles and caps (CROWN_ADMIN and CROWN_FREEZE_AUTHORITY, by default
 #                         two fresh random keys; CROWN_TOKEN_CAP, CROWN_GLOBAL_CAP),
 #                         its token, caps, fee schedule and admin handover, every value read back (hook-deployer.sh)
+#   run.sh build-logoseth also: Logos's Ethereum send stack and its headless approver and custodian (send-stack.sh: eth_rpc,
+#                         fee, keystore, signer manager, tx_sender, evm_signer_cli, evm_keystore_cli) into $T/logoseth/stack,
+#                         and what build-miniapp and build-lezcore build (the runner, seqnet-chain, lez_core, the module)
+#   run.sh logoseth NAME  the mini-app's round trip with its Ethereum side through Logos Core's own modules (reads through
+#                         eth_rpc_module; the deposit, the release and the vault's admin calls through tx_sender_module, each
+#                         approved at evm_signer_cli) and LEZ through lez_core (hook-logoseth.sh)
 #   run.sh basecamp NAME  the round trip in the mini-app inside Logos Basecamp, ferrata_bridge_module and lez_core
 #                         loaded in the same Basecamp (hook-basecamp.sh; first modules/ferrata_bridge_ui/scripts/
 #                         basecamp-build.sh, BASECAMP_BUILD=its OUT)
@@ -94,7 +100,7 @@ build_miniapp() {
   cp "$T/qmltest-build/ferrata_miniapp_logos" "$T/bin/"
   say "ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh"
   local O="$T/modcheck"
-  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+  MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="${SEQNET_SHORT:-$(dirname "$T")/mseq}" RISC0_DEV_MODE=1 \
     bash "$REPO/modules/scripts/check.sh" "$O" > "$L/check.log" 2>&1 || { tail -n 40 "$L/check.log"; die "check.sh"; }
   tail -n 12 "$O/report/summary.md" 2>/dev/null
   mkdir -p "$T/logos"; rm -rf "$T/logos/lgx-ferrata_bridge_module"
@@ -142,7 +148,7 @@ build_lezcore() {
     [ -e "$T/logos/lez_core-tests-upstream" ] || try lez_core-tests-upstream "${NB[@]}" "github:$LEZ_CORE_REPO/$LEZ_CORE_REV#unit-tests" -o "$T/logos/lez_core-tests-upstream"
     [ -e "$T/logos/lez_core-tests-patched" ] || try lez_core-tests-patched "${NB[@]}" "path:$P#unit-tests" -o "$T/logos/lez_core-tests-patched"
     # ferrata_bridge_module (native tests and calls, then the dev .lgx) and logosctl, through modules/scripts/check.sh.
-    try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="$(dirname "$T")/mseq" RISC0_DEV_MODE=1 \
+    try check env MODULES=ferrata_bridge_module PORTABLE=0 E2E=0 LOGOS_TMPDIR="${SEQNET_SHORT:-$(dirname "$T")/mseq}" RISC0_DEV_MODE=1 \
       bash "$REPO/modules/scripts/check.sh" "$O"
     tail -n 12 "$O/report/summary.md" 2>/dev/null
     if [ -d "$O/lgx-ferrata_bridge_module" ]; then
@@ -155,11 +161,36 @@ build_lezcore() {
   [ -z "$failed" ] || die "build-lezcore: failed:$failed (logs in $L)"
 }
 
+# build-logoseth: the send stack and the two CLIs (Nix, send-stack.sh), the qmltest runner and seqnet-chain, lez_core and
+# the module (build_lezcore). Qt 6's development packages are installed first when missing (the box's setup script).
+build_logoseth() {
+  local L="$T/logs/build"; mkdir -p "$L" "$T/bin"
+  if ! dpkg -s qt6-declarative-dev > /dev/null 2>&1; then
+    apt-get update -q > /dev/null 2>&1
+    for p in qt6-qpa-plugins qml-qt6 qt6-declarative-dev-tools qml6-module-qtquick qml6-module-qtquick-controls qml6-module-qtquick-layouts \
+             qml6-module-qtquick-templates qml6-module-qtquick-window qml6-module-qtqml-workerscript qml6-module-qttest qml6-module-qtqml \
+             qml6-module-qtqml-models fonts-dejavu-core qt6-base-dev qt6-declarative-dev qt6-base-dev-tools; do
+      apt-get install -y -q --no-install-recommends "$p" > /dev/null 2>&1 || say "MISSING $p"
+    done
+  fi
+  say "the qmltest runner (Qt 6)"
+  ( cmake -S "$REPO/modules/ferrata_bridge_ui/qmltest-logos" -B "$T/qmltest-build" -DCMAKE_BUILD_TYPE=Release \
+      && cmake --build "$T/qmltest-build" -j 8 ) > "$L/runner.log" 2>&1 || { tail -n 30 "$L/runner.log"; die "the qmltest runner"; }
+  cp "$T/qmltest-build/ferrata_miniapp_logos" "$T/bin/"
+  say "the send stack and its two CLIs (Nix)"
+  ONLY="eth_rpc_module fee_module keystore_module signer_manager_module tx_sender_module evm_signer_cli evm_keystore_cli" \
+    bash "$REPO/modules/scripts/send-stack.sh" build "$T/logoseth/stack" > "$L/send-stack.log" 2>&1
+  grep -E "ok \(|FAILED" "$L/send-stack.log" | tail -n 8
+  [ -d "$T/logoseth/stack/lgx-tx_sender_module" ] && [ -d "$T/logoseth/stack/lgx-evm_signer_cli" ] || die "the send stack did not build"
+  build_lezcore all
+}
+
 case "${1:-}" in
   build) build ;;
   build-miniapp) build_miniapp ;;
+  build-logoseth) build_logoseth ;;
   build-lezcore) build_lezcore "${2:-all}" ;;
-  cli|miniapp|lezcore|basecamp|deployer)
+  cli|miniapp|lezcore|basecamp|deployer|logoseth)
     NAME="${2:?run.sh $1 NAME}"
     # The tools are rebuilt first (incremental), so that a run uses this tree's (a restored box may hold older ones).
     build > "$T/logs/build-before-$NAME.log" 2>&1 || { tail -n 20 "$T/logs/build-before-$NAME.log"; die "build"; }

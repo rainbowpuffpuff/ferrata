@@ -18,14 +18,19 @@
 
 use std::fmt::Write as _;
 
+mod admin;
+mod evm;
 mod jobs;
 mod lez;
 mod rpc;
+mod send;
 mod session;
+mod user;
 mod wallet;
 
 pub use lez::{set_lez_core, LezCoreCall};
 pub use rpc::{set_eth_rpc_module, EthRpcModuleCall};
+pub use send::{set_module_call, ModuleCall};
 
 use ferrata_bridge_core::{
     chain_id_u256,
@@ -56,14 +61,16 @@ pub fn version() -> String {
         "staged": serde_json::from_str::<Value>(STAGED).unwrap_or(Value::Null),
         "spec": "v2",
         "tool_code": "ferrata-wallet (claim with LEZ state, release rule, release guest run, root import)",
-        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry", "wallet"],
+        "methods": ["version", "deposit", "claim", "burn", "release", "recover", "status", "prove_release", "import_root", "registry", "wallet", "admin"],
+        "ethereum": "reads through Logos Core's eth_rpc_module (or a plain http:// endpoint); sends through Logos Core's tx_sender_module (one approval in the Logos signer per send); the module holds no Ethereum key",
     })
     .to_string()
 }
 
 /// `deposit(request)`: the commitment and the vault call of a deposit.
+/// With `send`, the deposit is sent through Logos Core's send stack from the depositor's account (`user.rs`).
 pub fn deposit(request: &str) -> String {
-    reply(parse(request).and_then(|r| deposit_of(&r)))
+    reply(parse(request).and_then(|r| if r["send"].is_null() { deposit_of(&r) } else { user::deposit_and_send(&r) }))
 }
 
 /// `claim(request)`: the claim of one deposit against a deposit root.
@@ -83,12 +90,18 @@ pub fn burn(request: &str) -> String {
 }
 
 /// `release(request)`: the release of one burn against a checkpointed burn root.
+/// With `send` (and the proof's `seal`), a releasable one is sent through Logos Core's send stack (`user.rs`).
 pub fn release(request: &str) -> String {
     reply(parse(request).and_then(|r| {
-        if r["roots"].is_null() {
-            release_explicit(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _, _)| v))
+        let made = if r["roots"].is_null() {
+            release_explicit(&r).map(|x| x.map(|(v, _, _)| v))
         } else {
-            wallet::release_by_rule(&r).map(|x| x.map_or_else(|refusal| refusal, |(v, _)| v))
+            wallet::release_by_rule(&r).map(|x| x.map(|(v, _)| v))
+        }?;
+        match made {
+            Ok(v) if !r["send"].is_null() => user::release_and_send(&r, &v),
+            Ok(v) => Ok(v),
+            Err(refusal) => Ok(refusal),
         }
     }))
 }
@@ -118,6 +131,13 @@ pub fn recover(request: &str) -> String {
 /// `status(request)`: where each deposit and burn stands.
 pub fn status(request: &str) -> String {
     reply(parse(request).and_then(|r| status_of(&r)))
+}
+
+/// `admin(request)`: the bridge's admin and freeze-authority functions (`admin.rs`): `status` (both sides' roles,
+/// registry and controls), a vault action built, checked and (with `send`) sent through Logos Core's send stack, or a
+/// LEZ action's message (`lez_*`).
+pub fn admin(request: &str) -> String {
+    reply(parse(request).and_then(|r| admin::admin_of(&r)))
 }
 
 /// `wallet(request)`: one call of the mini-app's view (`{"method", "params"}`), run with this module's

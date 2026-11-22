@@ -35,6 +35,13 @@ Rectangle {
     // is done. A view opened again picks the jobs up (resumeJobs).
     property var claimJob: null
     property var burnJob: null
+    // A send through Logos Core's send stack (the module's `eth` path: a deposit, a release, a vault admin call) is a job
+    // too: tx_sender_module asks the signer manager for one approval, which the person gives in the Logos signer
+    // (evm_signer_ui in Basecamp, raised with the intent evm.signing.approve; evm_signer_cli headless). The view keeps
+    // it in ethJob, polls it like the others and hands its reply to ethFinished once it is done.
+    property var ethJob: null
+    property var ethFinished: null
+    property string approvalText: ""
     property int jobPollMs: 3000
     property var appliedJobs: ({})
     property bool jobPolling: false
@@ -80,6 +87,11 @@ Rectangle {
     property bool relayerOn: true
     property var heldUntil: ({})
     property string depositText: ""
+    // The module refused a deposit while the person's earlier one is broadcast and not mined yet: the view offers to send
+    // it anyway ("Deposit again anyway": again: true), for a deposit the person knows will not be mined.
+    property bool depositAgainOffered: false
+    // How long the module waits for a deposit's receipt (s); 0: the module's own wait (600 s). A test shortens it.
+    property int receiptWaitS: 0
 
     property int claimLeaf: -1
     property string claimMode: "private"
@@ -190,8 +202,61 @@ Rectangle {
     }
 
     // ---- jobs (the module's claim and burn) ----
-    function jobOver(j) { return !!j && (j.state === "settled" || j.state === "failed"); }
-    function jobRunning() { return (!!claimJob && !jobOver(claimJob)) || (!!burnJob && !jobOver(burnJob)); }
+    // `unconfirmed`: a send broadcast and not yet seen mined (the module stopped waiting for its receipt). Over, but not a
+    // failure: it may still be mined, so the view never says "not deposited" for it (notDone).
+    function jobOver(j) { return !!j && (j.state === "settled" || j.state === "failed" || j.state === "unconfirmed"); }
+    // What the view says for a send that is not done: an unconfirmed one names its transaction and asks the person not to
+    // send it again (the module refuses another deposit while it is unmined); a failure says it failed.
+    function notDone(prefix, v, job) {
+        if (job && job.state === "unconfirmed") return "Sent, not confirmed yet (not a failure): " + v;
+        return prefix + ": " + v;
+    }
+    function jobRunning() { return (!!claimJob && !jobOver(claimJob)) || (!!burnJob && !jobOver(burnJob)) || (!!ethJob && !jobOver(ethJob)); }
+    // ethStep(kind, method, params, finished): a deposit, release or vault admin call; through the send stack the module
+    // answers with a job that waits for the person's approval in the Logos signer; the plain path answers the reply.
+    function ethStep(kind, method, params, finished) {
+        call(method, params, function (ok, v) {
+            if (ok && v && v.job) { ethFinished = finished; ethJob = v.job; approvalText = approvalOf(v.job); ethApplyIfOver(); }
+            else finished(ok, v, null);
+        });
+    }
+    // The approval the job waits for: its request in tx_sender_module and the signer manager's handle. In Basecamp the
+    // Signer app is raised with the intent evm.signing.approve, when the host offers intents.
+    function approvalOf(j) {
+        if (!j || !j.phases) return "";
+        var last = j.phases[j.phases.length - 1];
+        if (last.state !== "awaiting_approval") return "";
+        // A LEZ role message: held by the role's wallet until a person approves exactly it there.
+        if (last.detail.approval_id)
+            return "Approve this LEZ " + (last.detail.message || "role message") + " at the role's wallet: " + last.detail.what + " (approval " + last.detail.approval_id + ", message " + Fmt.short(last.detail.message_sha256) + "). Nothing is signed until you approve.";
+        var h = last.detail.handle;
+        if (inLogos && typeof logos.request === "function" && !raisedHandles[h]) {
+            var r = {}; for (var k in raisedHandles) r[k] = raisedHandles[k]; r[h] = true; raisedHandles = r;
+            try { logos.request("evm.signing.approve", { handle: h }, function () {}); } catch (e) {}
+        }
+        return "Approve this " + j.kind + " in the Logos signer: tx_sender_module request " + last.detail.requestId + ", handle " + h + ", from " + Fmt.short(last.detail.from) + ". Nothing is signed until you approve.";
+    }
+    property var raisedHandles: ({})
+    function ethApplyIfOver() {
+        if (!ethJob || !jobOver(ethJob) || appliedJobs[ethJob.id]) return;
+        var a = {}; for (var k in appliedJobs) a[k] = appliedJobs[k]; a[ethJob.id] = true; appliedJobs = a;
+        approvalText = "";
+        // Done means settled: a failed job (refused, or a send that was approved, mined and REVERTED, whose reply
+        // jobs.rs keeps beside the error) is a failure, said where the person acted (the finished callbacks).
+        var settled = ethJob.state === "settled" && ethJob.result !== null && ethJob.result !== undefined;
+        var unconfirmed = ethJob.state === "unconfirmed";
+        var why = unconfirmed ? String(ethJob.result && ethJob.result.what ? ethJob.result.what : "broadcast, not yet mined") : String(ethJob.error);
+        if (!settled && !unconfirmed) { lastError = why; lastOk = false; }
+        if (ethFinished) ethFinished(settled, settled ? ethJob.result : why, ethJob);
+        if (positionsDeferred && !jobRunning()) { positionsDeferred = false; refreshPositions(); }
+    }
+    function pollEthJob() {
+        if (!ethJob || jobOver(ethJob)) return;
+        call("job", { id: ethJob.id }, function (ok, v) {
+            if (ok) { ethJob = v; approvalText = approvalOf(v); ethApplyIfOver(); }
+        }, true);
+    }
+    Timer { id: ethJobTimer; interval: jobPollMs; repeat: true; running: !!ethJob && !jobOver(ethJob); onTriggered: pollEthJob() }
     // A claim or burn: the module answers with a job, polled until it is done; the devnet backend answers with the
     // step's reply itself. Either way stepDone runs once with the reply.
     function step(kind, params) {
@@ -243,6 +308,10 @@ Rectangle {
                 if (newest.claim && (!claimJob || claimJob.id <= newest.claim.id)) { claimJob = newest.claim; picked.push(newest.claim); }
                 if (newest.burn && (!burnJob || burnJob.id <= newest.burn.id)) { burnJob = newest.burn; picked.push(newest.burn); }
                 for (var k = 0; k < picked.length; k++) if (jobOver(picked[k])) applyJob(picked[k], true);
+                // A send through Logos Core's send stack still waiting for its approval (or broadcast): polled again;
+                // its reply refreshes the positions once it is done.
+                var e = newest.deposit || newest.release || newest.admin;
+                if (e && !jobOver(e) && !ethJob) { ethFinished = function () { refreshPositions(); }; ethJob = e; approvalText = approvalOf(e); }
             }
             if (done) done(ok, v);
         }, true);
@@ -260,6 +329,26 @@ Rectangle {
     Timer { id: jobTimer; interval: jobPollMs; repeat: true; running: jobRunning(); onTriggered: pollJobs() }
     function refreshAdmin(done) { call("admin.status", {}, function (ok, v) { if (ok) { admin = v; registry = v.registry; } if (done) done(ok, v); }); }
     function token() { return registry && registry.tokens && registry.tokens.length ? registry.tokens[0] : null; }
+    // The module's session sends Ethereum through Logos Core's send stack (`wallet eth`): the release goes from the
+    // user's release account (no relayer on this path), the vault's admin runs from this view.
+    function logosEth() { return !!(info && info.eth); }
+    // The vault actions that name a token, and each action's parameters as the module takes them (admin.rs).
+    property var vaultTokenActions: ["register_token", "set_deposits_enabled", "set_token_cap", "set_release_delay", "announce_fees", "apply_fees", "set_token_deposits_frozen", "set_token_releases_frozen"]
+    function vaultTemplate(a) {
+        var cap = { direction: "deposit", capacity: "50000000000000000000", refill_per_second: "1000000000000000" };
+        var t = {
+            register_token: { denominations: ["1000000"], relay_fees: ["1000"], lez_unit: "1", unit_weight: "1", deposit_cap: { capacity: "1000000000000", refill_per_second: "1000" },
+                              release_cap: { capacity: "1000000000000", refill_per_second: "1000" }, release_delay: "120", lez_definition: "0x" + "00".repeat(32), decimals: 6, checkpoint_fees: ["0"] },
+            set_deposits_enabled: { enabled: false }, set_token_cap: cap, set_global_cap: cap, set_release_delay: { delay: "7200" },
+            announce_fees: { mint_fees: ["0"], burn_fees: ["0"], checkpoint_fees: ["0"] }, apply_fees: {}, raise_delta: { delta: "0" },
+            set_token_deposits_frozen: { frozen: true }, set_token_releases_frozen: { frozen: true }, set_deposits_frozen: { frozen: true },
+            set_releases_frozen: { frozen: true }, set_checkpoints_frozen: { frozen: true }, revoke_from: { index: 0 },
+            transfer_admin: { new_admin: "0x" }, accept_admin: {}, propose_roles: { watchers: ["0x", "0x", "0x"], freeze_authority: "0x" }, apply_roles: {}, retire: {}
+        };
+        return t[a] !== undefined ? t[a] : {};
+    }
+    // The module's session (not the devnet backend): LEZ's Freeze needs a time record the module does not send yet.
+    function onModule() { return !!(info && info.backend && String(info.backend).indexOf("ferrata_bridge_module") === 0); }
     function denomAmount(i) { var t = token(); return t && t.denominations[i] ? t.denominations[i].amount : "0"; }
     function denomText(i) { var t = token(); return t && t.denominations[i] ? Fmt.units(t.denominations[i].amount, t.decimals, t.symbol) : "–"; }
     function depositOf(leaf) {
@@ -331,9 +420,12 @@ Rectangle {
     }
     component StepTable: Box {
         property string step: "deposit"
-        readonly property var s: Privacy.STEPS[step]
+        // The release sent from the user's own release account (the module's path), not by a relayer.
+        property bool ownRelease: false
+        property string tableName: ""
+        readonly property var s: Privacy.step(step, ownRelease)
         Label { text: "What is public and what is private: " + s.title; font.bold: true }
-        Label { visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
+        Label { objectName: tableName ? tableName + ".publicEth" : ""; visible: s.publicEth.length > 0; text: "Public on Ethereum: " + s.publicEth.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
         Label { visible: s.publicLez.length > 0; text: "Public on LEZ: " + s.publicLez.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#8a4b00" }
         Label { text: "Private: " + s.hidden.join("; "); wrapMode: Text.WordWrap; Layout.fillWidth: true; color: "#1b6b3a" }
     }
@@ -386,7 +478,7 @@ Rectangle {
                 Label {
                     objectName: "header.job"
                     visible: jobRunning()
-                    text: jobRunning() ? jobText(claimJob && !jobOver(claimJob) ? claimJob : burnJob) : ""
+                    text: jobRunning() ? (ethJob && !jobOver(ethJob) ? (approvalText !== "" ? approvalText : "Job " + ethJob.id + ": the " + ethJob.kind + " is " + ethJob.state + ".") : jobText(claimJob && !jobOver(claimJob) ? claimJob : burnJob)) : ""
                     color: "#8a6d00"; font.pixelSize: 12; wrapMode: Text.WordWrap; Layout.maximumWidth: 560
                 }
                 // Both sides of the connected account, as the backend last read them: the Ethereum balance and block
@@ -487,7 +579,14 @@ Rectangle {
                         objectName: "deposit.review"
                         text: "Review deposit"
                         enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
-                        onClicked: reviewDeposit()
+                        onClicked: reviewDeposit(false)
+                    }
+                    Button {
+                        objectName: "deposit.again"
+                        visible: depositAgainOffered
+                        text: "Deposit again anyway"
+                        enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
+                        onClicked: reviewDeposit(true)
                     }
                     Label { visible: connectedAccount === ""; text: "Connect the wallet first."; color: "#8a6d00" }
                 }
@@ -559,7 +658,7 @@ Rectangle {
                 objectName: "page.redeem"
                 spacing: 8
                 Heading { text: "Burn on LEZ, release on Ethereum" }
-                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, a relayer releases it on Ethereum: the release does not say which burn it pays." }
+                Note { text: "A burn publishes a note whose recipient is encrypted to you. After a checkpoint covers it, " + (logosEth() ? "you release it on Ethereum from your release account (on this path no relayer sends it)" : "a relayer releases it on Ethereum") + ": the release does not say which burn it pays." }
                 Box {
                     Label { objectName: "burn.holding"; text: "Private holding /0: " + Fmt.eth(holding("private")) + "  ·  public holding /0: " + Fmt.eth(holding("public")); font.bold: true }
                     RowLayout {
@@ -594,7 +693,7 @@ Rectangle {
                 }
                 LeakList {
                     objectName: "burn.leaks"; summaryName: "burn.leaks.summary"
-                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: true, delay: releaseDelayOn, delayHours: releaseDelayHours })
+                    items: Privacy.burnLeaks({ kind: burnKind, freshRecipient: !info || recipient.toLowerCase() !== String(info.user.depositor).toLowerCase(), relayer: !logosEth(), delay: releaseDelayOn, delayHours: releaseDelayHours })
                 }
                 Label { objectName: "burn.result"; text: burnText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Box {
@@ -620,12 +719,12 @@ Rectangle {
                     }
                     CheckBox { objectName: "release.skipDelay"; visible: releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Release now anyway (less private)"; checked: false; onClicked: releaseSkipDelay = checked }
                     Button { objectName: "release.wait"; visible: transport === "devnet" && releaseBurn >= 0 && releaseHeld(releaseBurn); text: "Devnet: let the delay pass (moves the devnet clock " + hoursLeft(releaseHeldUntil[releaseBurn]) + " h on)"; onClicked: letTimePass(releaseHeldUntil[releaseBurn]) }
-                    Button { objectName: "release.submit"; text: "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
+                    Button { objectName: "release.submit"; text: logosEth() ? "Release from your release account" : "Release through a relayer"; enabled: busy === 0 && !jobRunning() && releaseBurn >= 0 && connectedAccount !== "" && (!releaseHeld(releaseBurn) || releaseSkipDelay); onClicked: reviewRelease() }
                 }
                 Label { objectName: "release.result"; text: releaseText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 RowLayout {
                     StepTable { step: "burn" }
-                    StepTable { step: "release" }
+                    StepTable { step: "release"; ownRelease: logosEth(); tableName: "redeem.steps.release" }
                 }
                 Item { Layout.fillHeight: true }
             }
@@ -671,17 +770,20 @@ Rectangle {
                 Repeater {
                     model: registry ? registry.tokens : []
                     Box {
+                        id: tokBox
+                        property int tokDecimals: modelData.decimals !== undefined ? modelData.decimals : 18
+                        property string tokSymbol: modelData.symbol ? modelData.symbol : "ETH"
                         Label { objectName: "registry.token." + index; text: modelData.symbol + "  " + (modelData.registered ? "registered" : "not registered") + " · deposits " + (modelData.deposits_enabled ? "open" : "closed") + " · escrowed " + Fmt.units(modelData.escrowed, modelData.decimals, modelData.symbol); font.bold: true }
                         Repeater {
                             model: modelData.denominations
-                            Label { text: "Denomination " + Fmt.eth(modelData.amount) + ": mint fee " + Fmt.eth(modelData.mint_fee) + ", relay fee " + Fmt.eth(modelData.relay_fee) + ", burn fee " + Fmt.eth(modelData.burn_fee) + ", checkpoint fee " + Fmt.eth(modelData.checkpoint_fee) }
+                            Label { text: "Denomination " + Fmt.units(modelData.amount, tokBox.tokDecimals, tokBox.tokSymbol) + ": mint fee " + Fmt.units(modelData.mint_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", relay fee " + Fmt.units(modelData.relay_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", burn fee " + Fmt.units(modelData.burn_fee, tokBox.tokDecimals, tokBox.tokSymbol) + ", checkpoint fee " + Fmt.units(modelData.checkpoint_fee, tokBox.tokDecimals, tokBox.tokSymbol) }
                         }
                         Label {
-                            text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, 18, "ETH") + "/s"
+                            text: "Ethereum, deposit cap: " + Fmt.cap(modelData.vault_deposit_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_deposit_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_deposit_cap.capacity) - Number(modelData.vault_deposit_cap.available), modelData.vault_deposit_cap.capacity) + "), refill " + Fmt.cap(modelData.vault_deposit_cap.refill_per_second, tokBox.tokDecimals, tokBox.tokSymbol) + "/s" + (modelData.release_delay_next !== undefined && modelData.release_delay_next !== null ? "; release delay " + modelData.release_delay_next + " s" : "")
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
                         Label {
-                            text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, 18, "ETH") + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, 18, "ETH") + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
+                            text: "Ethereum, release cap: " + Fmt.cap(modelData.vault_release_cap.available, tokBox.tokDecimals, tokBox.tokSymbol) + " available of " + Fmt.cap(modelData.vault_release_cap.capacity, tokBox.tokDecimals, tokBox.tokSymbol) + " (used " + Fmt.pct(Number(modelData.vault_release_cap.capacity) - Number(modelData.vault_release_cap.available), modelData.vault_release_cap.capacity) + ")"
                             wrapMode: Text.WordWrap; Layout.fillWidth: true; Layout.maximumWidth: 1120
                         }
                         Label {
@@ -705,7 +807,7 @@ Rectangle {
                 objectName: "page.admin"
                 spacing: 8
                 Heading { text: "Admin" }
-                Note { text: "The admin sets caps, never below the immutable floor, and cannot freeze; the freeze authority freezes mints and burns for at most 30 days at a time and runs Sunset. Neither can move escrow or raise a fee past the ceiling. On the devnet the harness holds both roles' keys; a deployment uses its multisig." }
+                Note { text: "The admin sets caps, never below the immutable floor, and cannot freeze; the freeze authority freezes mints and burns for at most 30 days at a time and runs Sunset. Neither can move escrow or raise a fee past the ceiling. " + (onModule() ? "Here the module builds each LEZ message at the role's own actor and the role's LEZ wallet signs it only once a person approves exactly that message there (in this run a stand-in wallet holds the role keys and asks for the role password); each vault call is approved in the Logos signer by the role's Ethereum account." : "On the devnet the harness holds both roles' keys; a deployment uses its multisig.") }
                 Button { objectName: "admin.refresh"; text: "Load roles and controls"; onClicked: refreshAdmin() }
                 Box {
                     Label { objectName: "admin.roles"; text: admin ? "Admin " + Fmt.short(admin.admin) + " · freeze authority " + Fmt.short(admin.freeze_authority) + " · fee recipient " + Fmt.short(admin.fee_recipient) + " · cap floor " + admin.floor.capacity + " LEZ units" : "Not loaded."; wrapMode: Text.WordWrap; Layout.fillWidth: true }
@@ -728,11 +830,18 @@ Rectangle {
                             rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the configuration's admin"], ["Asset", "ETH"], ["Cap", capCapacity.text + " LEZ units, refill " + capRefill.text + "/s on " + (capMints.checked ? "mints" : "burns")], ["Program", "the bridge program, configuration " + Fmt.short(info ? info.config_id : "")]],
                             effects: ["Changes the token's rate limit; refused below the floor", "Moves no funds"]
                         }, function () {
-                            call("admin.set_cap", { mints: capMints.checked, capacity: capCapacity.text, refill_per_second: capRefill.text }, function (ok, v) { adminText = ok ? "Cap set: " + v.capacity + " LEZ units on " + (v.mints ? "mints" : "burns") + "." : ""; if (ok) refreshRegistry(); });
+                            ethStep("admin_lez", "admin.set_cap", { mints: capMints.checked, capacity: capCapacity.text, refill_per_second: capRefill.text }, function (ok, v, job) {
+                                adminText = !ok ? notDone("Not done", v, job)
+                                    : (v.tx_hash ? "LEZ cap set: " + v.what + " (transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", built by ferrata_bridge_module at the admin's own actor, signed by the admin's LEZ key)."
+                                                 : "Cap set: " + v.capacity + " LEZ units on " + (v.mints ? "mints" : "burns") + ".");
+                                refreshRegistry();
+                            });
                         })
                     }
                 }
+                Note { visible: onModule(); text: "LEZ Freeze and its lifting: ferrata_bridge_module builds them (admin lez_freeze) but does not send them on this path yet: their attested time record needs the execution block's header, which the module does not fetch." }
                 Box {
+                    visible: !onModule()
                     Label { text: "Freeze (freeze authority)"; font.bold: true }
                     RowLayout {
                         CheckBox { id: frMints; objectName: "admin.freeze.mints"; text: "mints"; checked: true }
@@ -752,6 +861,7 @@ Rectangle {
                     }
                 }
                 Box {
+                    visible: !onModule()
                     Label { text: "Lift a freeze (freeze authority)"; font.bold: true }
                     Button {
                         objectName: "admin.unfreeze"; text: "Lift the freeze"; enabled: busy === 0
@@ -764,7 +874,110 @@ Rectangle {
                         })
                     }
                 }
-                Note { text: "On Ethereum the vault's own controls (fee changes announced seven days ahead, watchers, the 14-day role change, retirement) are listed in the registry and run from the operator's tools; this view sends the bridge program's." }
+                Note { visible: !logosEth(); text: "On Ethereum the vault's own controls (fee changes announced seven days ahead, watchers, the 14-day role change, retirement) are listed in the registry and run from the operator's tools; this view sends the bridge program's." }
+                // The vault's side (Ethereum): the module builds the call, checks the role and the call from the role's
+                // account, and sends it through Logos Core's send stack; the admin or the freeze authority approves it
+                // in the Logos signer. Shown when the module's session reads and sends Ethereum through Logos Core.
+                ColumnLayout {
+                    visible: !!(admin && admin.vault_roles)
+                    Label { text: "The vault on Ethereum (through Logos Core's send stack)"; font.bold: true }
+                    Label { objectName: "admin.vault.roles"; text: admin && admin.vault_roles ? "Vault admin " + Fmt.short(admin.vault_roles.admin) + " · freeze authority " + Fmt.short(admin.vault_roles.freeze_authority) + " · ETH deposit cap " + (admin.vault ? admin.vault.token.vault_deposit_cap.capacity : "?") + " wei · ETH deposits frozen until " + (admin.vault ? admin.vault.token.deposits_frozen_until : "?") : ""; wrapMode: Text.WordWrap; Layout.fillWidth: true }
+                    RowLayout {
+                        Label { text: "ETH deposit cap (wei)" }
+                        TextField { id: vaultCap; objectName: "admin.vault.cap"; text: "50000000000000000000"; Layout.preferredWidth: 220 }
+                        Label { text: "refill/s" }
+                        TextField { id: vaultRefill; objectName: "admin.vault.refill"; text: "1000000000000000"; Layout.preferredWidth: 160 }
+                        Label { text: "gas limit" }
+                        TextField { id: vaultGas; objectName: "admin.vault.gas"; text: ""; placeholderText: "estimated + 25% + 20000"; Layout.preferredWidth: 170 }
+                        Button {
+                            objectName: "admin.vault.setcap"; text: "Set the vault's cap (admin)"; enabled: busy === 0 && !jobRunning()
+                            onClicked: propose({
+                                title: "setTokenCap on the Ferrata vault (admin)",
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the vault's admin " + (admin ? Fmt.short(admin.vault_roles.admin) : "")], ["Asset", "ETH"], ["Cap", vaultCap.text + " wei, refill " + vaultRefill.text + " wei/s on deposits"], ["Gas limit", vaultGas.text !== "" ? vaultGas.text + " (yours)" : "the send stack's estimate + 25% + 20000"], ["Sent by", "Logos Core's tx_sender_module, after the admin's approval in the Logos signer"]],
+                                effects: ["Changes how much ETH the vault accepts per refill period", "Moves no funds"]
+                            }, function () {
+                                var q = { action: "set_token_cap", params: { token: "0x0000000000000000000000000000000000000000", direction: "deposit", capacity: vaultCap.text, refill_per_second: vaultRefill.text } };
+                                if (vaultGas.text !== "") q.gas_limit = vaultGas.text;
+                                ethStep("admin", "admin.vault", q, function (ok, v, job) {
+                                    adminText = ok ? "Vault cap set: " + v.call.what + " (transaction " + Fmt.short(v.tx_hash) + ", request " + v.send.requestId + ")." : notDone("Not done", v, job);
+                                    refreshAdmin();
+                                });
+                            })
+                        }
+                    }
+                    RowLayout {
+                        Button {
+                            objectName: "admin.vault.freeze"; text: "Freeze ETH deposits on the vault (freeze authority)"; enabled: busy === 0 && !jobRunning()
+                            onClicked: propose({
+                                title: "setTokenDepositsFrozen on the Ferrata vault (freeze authority)",
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the vault's freeze authority " + (admin ? Fmt.short(admin.vault_roles.freeze_authority) : "")], ["Asset", "ETH"], ["Freeze", "ETH deposits, until lifted or the vault's maximum freeze"], ["Sent by", "Logos Core's tx_sender_module, after the freeze authority's approval in the Logos signer"]],
+                                effects: ["Stops new ETH deposits; releases and claims continue", "Moves no funds"]
+                            }, function () {
+                                ethStep("admin", "admin.vault", { action: "set_token_deposits_frozen", params: { token: "0x0000000000000000000000000000000000000000", frozen: true } }, function (ok, v, job) {
+                                    adminText = ok ? "Vault: ETH deposits frozen (transaction " + Fmt.short(v.tx_hash) + ")." : notDone("Not done", v, job);
+                                    refreshAdmin();
+                                });
+                            })
+                        }
+                        Button {
+                            objectName: "admin.vault.unfreeze"; text: "Lift it"; enabled: busy === 0 && !jobRunning()
+                            onClicked: propose({
+                                title: "setTokenDepositsFrozen(false) on the Ferrata vault (freeze authority)",
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Account", "the vault's freeze authority"], ["Asset", "ETH"], ["Lift", "ETH deposits, now"]],
+                                effects: ["Accepts ETH deposits again"]
+                            }, function () {
+                                ethStep("admin", "admin.vault", { action: "set_token_deposits_frozen", params: { token: "0x0000000000000000000000000000000000000000", frozen: false } }, function (ok, v, job) {
+                                    adminText = ok ? "Vault: ETH deposits accepted again (transaction " + Fmt.short(v.tx_hash) + ")." : notDone("Not done", v, job);
+                                    refreshAdmin();
+                                });
+                            })
+                        }
+                    }
+                }
+                // Every vault action of the module (admin.rs): the admin's registerToken, setDepositsEnabled (delisting),
+                // setTokenCap, setGlobalCap, setReleaseDelay, announceFees, raiseDelta, transferAdmin, proposeRoles; the
+                // freeze authority's freezes and revokeFrom; anyone's applyFees, applyRoles, acceptAdmin, retire. The token
+                // is any the vault registered; the parameters are the call's own (prefilled per action). The module
+                // checks the role and the call before anything is asked; the role's account approves in the Logos signer.
+                ColumnLayout {
+                    visible: logosEth() && !!(admin && admin.vault_roles)
+                    Label { text: "Any vault action (every token, every setting)"; font.bold: true }
+                    RowLayout {
+                        ComboBox {
+                            id: vaultAction; objectName: "admin.any.action"; Layout.preferredWidth: 260
+                            model: ["set_deposits_enabled", "set_token_cap", "set_global_cap", "set_release_delay", "announce_fees", "apply_fees", "register_token",
+                                    "set_token_deposits_frozen", "set_token_releases_frozen", "set_deposits_frozen", "set_releases_frozen", "set_checkpoints_frozen",
+                                    "revoke_from", "raise_delta", "transfer_admin", "accept_admin", "propose_roles", "apply_roles", "retire"]
+                            onCurrentTextChanged: vaultParams.text = JSON.stringify(vaultTemplate(currentText))
+                        }
+                        ComboBox {
+                            id: vaultToken; objectName: "admin.any.token"; Layout.preferredWidth: 300
+                            model: registry && registry.tokens ? registry.tokens.map(function (t) { return t.symbol + " " + t.token; }) : []
+                        }
+                    }
+                    TextField { id: vaultParams; objectName: "admin.any.params"; Layout.fillWidth: true; text: JSON.stringify(vaultTemplate("set_deposits_enabled")) }
+                    Button {
+                        objectName: "admin.any.send"; text: "Send (the role approves in the Logos signer)"; enabled: busy === 0 && !jobRunning()
+                        onClicked: {
+                            var p = {};
+                            try { p = JSON.parse(vaultParams.text); } catch (e) { adminText = "Not sent: the parameters are not JSON (" + e + ")."; return; }
+                            var tokenOf = registry && registry.tokens && registry.tokens[vaultToken.currentIndex] ? registry.tokens[vaultToken.currentIndex].token : "";
+                            if (vaultTokenActions.indexOf(vaultAction.currentText) >= 0) p.token = tokenOf;
+                            var q = { action: vaultAction.currentText, params: p };
+                            if (vaultGas.text !== "") q.gas_limit = vaultGas.text;
+                            propose({
+                                title: vaultAction.currentText + " on the Ferrata vault",
+                                rows: [["Requested by", "Ferrata Bridge (admin view)"], ["Action", vaultAction.currentText], ["Token", p.token || "(none)"], ["Parameters", JSON.stringify(p)], ["Sent by", "Logos Core's tx_sender_module, after the role's approval in the Logos signer"]],
+                                effects: ["Changes the vault's settings as the parameters say", "Moves no funds"]
+                            }, function () {
+                                ethStep("admin", "admin.vault", q, function (ok, v, job) {
+                                    adminText = ok ? "Vault: " + v.call.what + " (transaction " + Fmt.short(v.tx_hash) + ", block " + v.block + ")." : notDone("Not done", v, job);
+                                    refreshAdmin();
+                                });
+                            });
+                        }
+                    }
+                }
                 Label { objectName: "admin.result"; text: adminText; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                 Item { Layout.fillHeight: true }
             }
@@ -774,9 +987,9 @@ Rectangle {
                 objectName: "page.privacy"
                 spacing: 8
                 Heading { text: "What is public and what is private" }
-                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." }
+                Note { text: "The defaults are the recommended choices: fixed denominations, a private destination, a random delay before the claim, a permissionless relayer, a fresh recipient. What stays linkable even then: the token, the denomination and the time window; a public account's history; a recipient you reuse." + (logosEth() ? " On this path (Ethereum through Logos Core's send stack) the release is sent from your own release account, not by a relayer: that account is linked to the recipient on Ethereum." : "") }
                 RowLayout { StepTable { step: "deposit" } StepTable { step: "claim" } }
-                RowLayout { StepTable { step: "burn" } StepTable { step: "release" } }
+                RowLayout { StepTable { step: "burn" } StepTable { step: "release"; ownRelease: logosEth(); tableName: "privacy.steps.release" } }
                 Item { Layout.fillHeight: true }
             }
 
@@ -830,20 +1043,32 @@ Rectangle {
     }
     onRegistryChanged: if (registry && priceText === "") refreshPrice()
 
-    function reviewDeposit() {
+    // again: the person sends a deposit although the module refused it while their earlier one is not mined yet.
+    function reviewDeposit(again) {
         call("price", { denomination: denomIndex }, function (ok, p) {
             if (!ok) return;
+            var effects = ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"];
+            if (again) effects = ["A NEW deposit, although your earlier one is not mined yet: if the earlier one is mined after all, both land (two deposits)"].concat(effects);
             propose({
-                title: "Deposit to the Ferrata vault",
+                title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault",
                 rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info.user.depositor + " (Ethereum)"], ["Asset", "ETH"], ["Amount", Fmt.eth(p.denomination) + " + fees = " + Fmt.eth(p.total)], ["Destination", "the Ferrata vault " + info.vault + " on chain " + info.chain_id], ["Then on LEZ", destKind + " account /" + destAccount + ", hidden inside C"]],
-                effects: ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"]
+                effects: effects
             }, function () {
-                call("deposit", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok2, v) {
-                    if (!ok2) { depositText = ""; return; }
+                var params = { denomination: denomIndex, kind: destKind, account: destAccount };
+                if (again) params.again = true;
+                if (receiptWaitS > 0) params.receipt_timeout_s = receiptWaitS;
+                depositAgainOffered = false;
+                ethStep("deposit", "deposit", params, function (ok2, v, job) {
+                    if (!ok2) {
+                        depositText = notDone("Not deposited", v, job);
+                        // Refused because the earlier deposit is unmined (nothing was asked or signed): offer it anyway.
+                        depositAgainOffered = !(job && job.state === "unconfirmed") && String(v).indexOf("refused: your earlier deposit") >= 0;
+                        return;
+                    }
                     var h = {}; for (var k in heldUntil) h[k] = heldUntil[k];
                     if (delayOn) h[v.leaf_index] = now() + delayHours * 3600 * 1000;
                     heldUntil = h;
-                    depositText = "Deposited " + Fmt.eth(v.amount) + " to a " + v.kind + " account (/" + v.account + "): transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", position #" + v.leaf_index + ". Public on Ethereum: " + v.public_on_ethereum.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
+                    depositText = "Deposited " + Fmt.eth(v.amount) + " to a " + v.kind + " account (/" + v.account + "): transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", position #" + v.leaf_index + (v.send ? ", sent through Logos Core's tx_sender_module after your approval (request " + v.send.requestId + ")" : "") + ". Public on Ethereum: " + v.public_on_ethereum.join(", ") + ". Hidden: " + v.hidden.join(", ") + ".";
                     refreshPositions();
                 });
             });
@@ -902,11 +1127,11 @@ Rectangle {
     function reviewRelease() {
         propose({
             title: "Release on Ethereum",
-            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", "a permissionless relayer sends it and pays the gas"], ["Asset", "ETH"], ["Destination", "the recipient in your burn note"], ["Program", "the Ferrata vault " + (info ? info.vault : "")]],
+            rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info && info.eth ? "your release account, through Logos Core's tx_sender_module (you approve it in the Logos signer; the relay fee comes back to it)" : "a permissionless relayer sends it and pays the gas"], ["Asset", "ETH"], ["Destination", "the recipient in your burn note"], ["Program", "the Ferrata vault " + (info ? info.vault : "")]],
             effects: ["The vault pays the burn's amount to the recipient", "Spends the burn's release nullifier NOut; does not say which burn"]
         }, function () {
-            call("release", { burn_index: releaseBurn }, function (ok, v) {
-                if (!ok) { releaseText = ""; return; }
+            ethStep("release", "release", { burn_index: releaseBurn }, function (ok, v, job) {
+                if (!ok) { releaseText = notDone("Not released", v, job); return; }
                 releaseText = "Released: " + Fmt.eth(v.paid_wei) + " paid to " + v.recipient + " in block " + v.block + " (transaction " + Fmt.short(v.tx_hash) + "), sent by " + v.sent_by + ".";
                 refreshPositions();
             });

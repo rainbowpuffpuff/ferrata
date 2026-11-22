@@ -1,0 +1,1 @@
+{"ok":true,"result":{"block":40,"private":false,"proof":null,"reverted":false,"settled":true,"tx_bytes":789,"tx_hash":"7f5b8d3fc51d3693b73ec7010f58f1a36fce17af1fd8847ad48fa82a0df9a54d","what":"SetCap: mint cap 12000000000 LEZ units, refill 10000000/s (admin view)"}}

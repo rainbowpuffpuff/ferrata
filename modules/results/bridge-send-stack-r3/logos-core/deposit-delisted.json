@@ -1,0 +1,1 @@
+{"error":"refused: vault error DepositsDisabled() (checked with the vault's views before sending; nothing was signed)","verdict":"invalid_request"}

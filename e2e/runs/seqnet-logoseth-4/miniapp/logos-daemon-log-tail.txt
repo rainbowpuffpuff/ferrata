@@ -1,0 +1,60 @@
+[2026-11-22 01:04:25.779] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:04:26.813] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:04:28.933] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:04:30.014] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:04:32.056] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:32.953] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:45.136] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:45.722] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:46.269] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:56.397] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:56.984] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:04:57.293] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:04:58.315] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:00.447] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:01.513] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:03.581] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:04.163] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:05.213] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:07.333] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:08.413] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:10.461] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:10.757] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:11.814] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:13.884] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:14.914] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:17.078] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:17.378] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:18.414] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:20.506] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: no listener at "local:logos_token_list_module_22413bd66280" -- request for "token_list_module" fails unless the module starts within 1000 ms. Is the module loaded?
+[2026-11-22 01:05:21.514] [warning] [logos] [evm_signer_cli] Warning: RemoteTransportConnection: Timeout waiting for replica: "token_list_module"
+[2026-11-22 01:05:23.550] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.199] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.201] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.202] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.204] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.205] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.207] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.208] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.209] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.233] [out] [lez_core] Syncing to block 44. Blocks to sync: 9
+[2026-11-22 01:05:24.252] [out] [lez_core] Synced to block 44 in 21.115305ms
+[2026-11-22 01:05:24.338] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.339] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.341] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.342] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.344] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.345] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.346] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+[2026-11-22 01:05:24.348] [info] [logos] [lez_core] get_account_public: wallet FFI error 10
+Shutting down logosctl daemon...
+[2026-11-22 01:05:31.992] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"modules_state"::"module_state_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.145] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageStart"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.145] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageStop"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.145] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadDone"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.145] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadProgress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.145] [warning] [logos] [package_downloader] Warning: LogosAPIConsumer: '"storage_module"::"storageDownloadManifestDone"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.245] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"signer_accounts_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.245] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"sign_progress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.245] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"signer_accounts_changed"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
+[2026-11-22 01:05:32.245] [warning] [logos] [signer_manager_module] Warning: LogosAPIConsumer: '"keystore_module"::"sign_progress"' subscription LOST (generation 1) -- the provider became unreachable. Re-arming; events emitted before it returns are unrecoverable.
