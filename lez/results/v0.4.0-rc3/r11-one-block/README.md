@@ -22,17 +22,23 @@ One session on 22 November 2026, 04:10–04:15 UTC, on a Modal build box (a CPU 
   `0x816d1fef…`, the reference consumer `0x8464603b…`, LEZ's `scripted`), deployed through rc3's program loader
   ([`programs.tsv`](programs.tsv)); sha256 and `r0vm --id` checked before use.
 - **Client:** the live driver's phase `attest-block` ([`lez/live/driver/src/block.rs`](../../../live/driver/src/block.rs)),
-  every transaction built by LEZ v0.4.0-rc3's wallet library and sent over the sequencer's RPC; command:
+  every transaction built by LEZ v0.4.0-rc3's wallet library and sent over the sequencer's RPC. The command as it ran,
+  in a copy of the tree with rc3 selected (`lez/scripts/lez-select.sh v0.4.0-rc3`), after `lez/live/run.sh
+  build-standalone` and `lez/live/run.sh build-driver` with the same first five variables; only the box's paths are
+  replaced by `<...>`:
 
   ```sh
-  LEZ_TAG=v0.4.0-rc3 FERRATA_LIVE_BEDROCK=mock FERRATA_LIVE_BLOCK_TIME=6s FERRATA_LIVE_SEQUENCER_DEV_MODE=1 \
-    FERRATA_PROGRAM_BIN=<ferrata_lez.bin> FERRATA_SCRIPTED_BIN=<scripted.bin> FERRATA_LIVE_OUT=<dir> \
-    FERRATA_LIVE_DRIVER_EXTRA="--consumer-bin <ferrata_consumer.bin>" \
+  LEZ_TAG=v0.4.0-rc3 FERRATA_LIVE_TMP=<scratch> FERRATA_LIVE_JOBS=12 FERRATA_LIVE_NICE=0 \
+    FERRATA_LIVE_BEDROCK=mock FERRATA_LIVE_BLOCK_TIME=6s FERRATA_LIVE_SEQUENCER_DEV_MODE=1 \
+    FERRATA_PROGRAM_BIN=<final>/ferrata_lez.bin FERRATA_SCRIPTED_BIN=<final>/scripted.bin \
+    FERRATA_LIVE_HARNESS_RESULTS=<copy>/lez/results/v0.4.0-rc3 FERRATA_LIVE_OUT=<out>/r11-one-block \
+    FERRATA_LIVE_DRIVER_EXTRA="--consumer-bin <final>/ferrata_consumer.bin" \
+    FERRATA_HEAD=522b92df2435026250eff298a8b6ec6e200f79c1 FERRATA_DIRTY=0 \
     FERRATA_LIVE_PHASES="info deploy attest-block export" lez/live/run.sh run
   ```
 
-  in a copy of the tree with rc3 selected (`lez/scripts/lez-select.sh v0.4.0-rc3`), after `run.sh build-standalone`
-  and `run.sh build-driver`.
+  `<final>` held the three binaries of `docs/image-ids.md`; `FERRATA_HEAD` names the commit the copy was taken from
+  (the box's copy has no git history), whose `lez/live/driver` is the one built.
 
 ## What it did (measured; every figure is in [`run.tsv`](run.tsv), [`chain.tsv`](chain.tsv) and [`r11-one-block.json`](r11-one-block.json))
 
