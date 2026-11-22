@@ -344,6 +344,44 @@ async fn token_state<L: Ledger>(ledger: &L, ctx: &Context, token: &[u8; 20]) -> 
     }
 }
 
+/// Review M-1: the configuration `config(cid)` the zone holds is the one the tool reads on Ethereum. A burn binds
+/// `ctx.chain_id` and `ctx.vault` into `COut`, and `ctx.chain_id` is what the Ethereum RPC says (`eth_chainId`): an RPC
+/// that serves another chain (a fork reports its own id, 31337 for anvil's) while returning the real vault's
+/// `lezConfigId` would make a burn that no release can open. Refuses unless `config(cid)` is paired (`Ready`), is the
+/// configuration of this program with this id, and names this chain and this vault.
+pub async fn check_pairing<L: Ledger>(ledger: &L, ctx: &Context) -> Result<()> {
+    let cid = hx(&ctx.cid);
+    let config = match read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(bw::ConfigState::Ready { config, .. })) => config,
+        Some(BridgeState::Config(_)) => bail!("the zone's configuration {cid} is not paired with its vault yet: nothing can be sent under it"),
+        Some(other) => bail!("config(cid) of {cid} holds another state: {other:?}"),
+        None => bail!(
+            "the zone has no configuration {cid} (the vault's lezConfigId) at the bridge program {}: check --bridge-account, --vault and --sequencer",
+            hx(ctx.program.value())
+        ),
+    };
+    ensure!(
+        config.id(ctx.program) == ctx.cid,
+        "config(cid) at {cid} is not the configuration {cid} of the bridge program {}: refusing to go on",
+        hx(ctx.program.value())
+    );
+    ensure!(
+        config.evm_chain_id == ctx.chain_id,
+        "the zone's configuration {cid} pairs with chain {}, but the Ethereum RPC serves chain {}: refusing to go on (a burn \
+         binds the chain into COut, and no release could open it; use an RPC of chain {})",
+        config.evm_chain_id,
+        ctx.chain_id,
+        config.evm_chain_id
+    );
+    ensure!(
+        config.vault == ctx.vault,
+        "the zone's configuration {cid} pairs with the vault {}, not {}: refusing to go on",
+        hx(&config.vault),
+        hx(&ctx.vault)
+    );
+    Ok(())
+}
+
 /// The freezes a mint (`mints`) or a burn of `token` meets, as the bridge program checks them: the token's
 /// gate, then the configuration's (`Gate::admit` at `token(cid, token)` and at `config(cid)`), each frozen while
 /// its attested clock is before the freeze's end. `None` when neither is frozen. The refusal says until when
@@ -416,8 +454,9 @@ pub struct ClaimPlan {
 }
 
 /// Builds the claim of `owned` from the vault's whole leaf list `leaves`: the newest imported root
-/// that covers the leaf, read with its token's state and the nullifier from the zone, then the shared
-/// builder (`ferrata_wallet::claim`: the path, the range, the program's checks, the accounts).
+/// that covers the leaf, read with its token's state from the zone, whether it is spent from `history` (never a read
+/// of its nullifier's account), then the shared builder (`ferrata_wallet::claim`: the path, the range, the program's
+/// checks, the accounts).
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_claim<L: Ledger>(
     ledger: &L,
@@ -438,8 +477,9 @@ pub async fn plan_claim<L: Ledger>(
     if let Some(r) = gate_refusal(ledger, ctx, &token, true).await? {
         bail!(r);
     }
-    let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
-    let spent = history.claimed.contains(&owned.nullifier) || read(ledger, n_actor).await?.is_some();
+    // Spent or not from the downloaded history alone (review M-2): asking the sequencer for `nullifier(cid, chain,
+    // vault, N)` would name this deposit to it before the claim, in a dry run or while the claim delay holds it.
+    let spent = is_claimed(ctx, history, &owned.nullifier);
     let inputs = claim::ClaimInputs { leaves, leaf_count: n, root: &root_state, token: &token, spent };
     let plan = claim::build_claim(ctx, owned, &inputs, private, relayer, prover).map_err(refused)?;
     Ok(ClaimPlan {

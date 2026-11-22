@@ -342,8 +342,10 @@ It picks the deposit (`--leaf`, or the oldest claimable one whose claim delay ha
 newest imported root that covers it, builds the claim (the path, the opening of `C`, the fee schedule's
 range, `--relayer` if a relayer is to be paid) and runs the program's checks before anything is sent:
 `verify_claim`; the token and its denominations; the fee range; the destination's kind; whether the
-nullifier account is already written. A deposit still in its claim delay is held (refused with the block
-it opens at) unless `--no-delay`.
+deposit is already claimed, decided from the zone's history the tool downloads whole (a plaintext claim's
+nullifier, or the nullifier account a private claim names), never by asking the sequencer for this deposit's
+nullifier account, which would name the deposit to it before the claim (review M-2 of 22 November 2026). A
+deposit still in its claim delay is held (refused with the block it opens at) unless `--no-delay`.
 
 - **Private** (default): LEZ's wallet runs the bridge program (`--bridge-program`) privately and proves it
   locally; the fee is paid inside the proof. A private-kind deposit is proven by its destination; a
@@ -419,7 +421,9 @@ binds the recipient, token and amount; the recipient encrypted under `kView` in 
 private burn is proven by LEZ's wallet at the private account, which debits its private holding and sends
 the note to the token's account in the clear. Before sending, the tool checks the denomination and the
 holding (the wallet's view of a private account). It also tells whether the recipient is fresh (not a
-depositor of this vault).
+depositor of this vault), and first that the zone's configuration pairs with the chain the Ethereum RPC
+serves and with the vault (a burn binds both into `COut`: under an RPC of another chain, a fork's 31337 say,
+no release could open it; review M-1 of 22 November 2026).
 
 The burn counter is reserved in a journal beside LEZ's wallet, `<--lez-wallet>/ferrata-burns.json` (mode
 0600; `ferrata-burns.lock` beside it serialises the tool's processes), before the burn is proven and sent,

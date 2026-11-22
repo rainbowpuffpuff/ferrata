@@ -398,6 +398,8 @@ pub async fn claim<L: Ledger>(
     o: &ClaimOpts,
     out: &mut Out,
 ) -> Result<Claimed> {
+    // Review M-1: the zone's configuration pairs with the chain and the vault the Ethereum RPC serves.
+    lez::check_pairing(ledger, ctx).await?;
     let list = eth::deposit_list(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
     let history = lez::history_of(ledger, ctx).await?;
     let refunded = eth::refunded_leaves(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
@@ -645,6 +647,9 @@ pub async fn burn<L: Ledger>(
     o: &BurnOpts,
     out: &mut Out,
 ) -> Result<Burned> {
+    // Review M-1: the zone's configuration pairs with the chain and the vault the Ethereum RPC serves, before a burn
+    // binds them into its note.
+    lez::check_pairing(ledger, ctx).await?;
     let (decimals, symbol) = eth::token_meta(&eth.p, o.token).await?;
     let show = |x: u128| units::show(x, decimals, &symbol);
     let amount = units::parse(&o.amount, decimals).with_context(|| format!("--amount {}", o.amount))?;

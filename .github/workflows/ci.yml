@@ -150,11 +150,12 @@ jobs:
       # cli/tests/relayer.sh's offline part: the relayer library's tests (journals, the burn watch, temporary
       # failures, imported roots) and the gas drop's checks on a real receipt, no dev mode (RFP-022 R.6, U.3). Its
       # third test, tests/relayer_fork.rs, reads public Sepolia state for its fork and runs on the build box.
-      - name: The relayer's tests (library, gas drop)
+      - name: The relayer's tests (library, gas drop); the burn-counter journal's (cli/src/burns.rs, RFP-022 R.7)
         working-directory: cli
         run: |
           export RISC0_HOME="$HOME/risc0-home-lez"
           cargo test --locked --lib relayer
+          cargo test --locked --lib burns
           cargo test --locked --test gasdrop -- --nocapture
 
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state

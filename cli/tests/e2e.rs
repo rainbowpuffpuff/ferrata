@@ -1708,5 +1708,307 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         );
         println!("RELAYER: burn 1 released by the relayer ({} gas), relay fee {fee} wei paid to it; redirected recipient refused: {refused}; another relayer: {not_ours}", rc.gas_used);
     }
+    counters_pairing_and_quiet_dry_runs(&eth_side, &user, &mut zone, &ctx, &dir).await?;
+    Ok(())
+}
+
+// ---- burn counters, the pairing check, quiet dry runs (the reviews of 22 November 2026) ----------
+
+/// A zone whose sequencer takes a transaction and settles it later ([`Deferred::flush`]): burns in flight.
+/// `kill_next`: the next transaction reaches the sequencer, but the tool never learns it (killed after sending). Every
+/// actor read is recorded.
+struct Deferred<'a> {
+    inner: &'a mut HarnessLedger,
+    queue: Vec<LezCall>,
+    kill_next: bool,
+    reads: std::cell::RefCell<Vec<Actor>>,
+}
+
+impl Deferred<'_> {
+    async fn flush(&mut self) -> Vec<Result<String>> {
+        let mut out = Vec::new();
+        for call in std::mem::take(&mut self.queue) {
+            out.push(self.inner.submit(&call).await);
+        }
+        out
+    }
+}
+
+impl Ledger for Deferred<'_> {
+    async fn applied(&self, program: AccountId) -> Result<Vec<Applied>> {
+        self.inner.applied(program).await
+    }
+
+    async fn included(&self, program: AccountId) -> Result<lez::Included> {
+        self.inner.included(program).await
+    }
+
+    async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {
+        self.inner.private_account(id).await
+    }
+
+    async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+        self.reads.borrow_mut().push(actor);
+        self.inner.actor_state(actor).await
+    }
+
+    async fn submit(&mut self, call: &LezCall) -> Result<String> {
+        self.queue.push(call.clone());
+        if std::mem::take(&mut self.kill_next) {
+            bail!("killed: the transaction reached the sequencer, the tool never learnt it");
+        }
+        Ok(format!("{} (queued)", call.what))
+    }
+}
+
+/// The tags of the zone's applied burns of `ctx`, and of its refused ones.
+async fn tags(zone: &HarnessLedger, ctx: &Context) -> Result<(Vec<Hash>, Vec<Hash>)> {
+    let h = lez::history_of(zone, ctx).await?;
+    Ok((h.burns.iter().map(|b| b.note.r).collect(), h.refused_burns.iter().map(|b| b.note.r).collect()))
+}
+
+/// The reviews of 22 November 2026 (the final review's H1; the bridge code review's H-1, M-1 and M-2), through the tool's
+/// own functions on the zone of this test:
+/// - two burns in flight from two holders of the seed take two counters (H-1), and both are applied;
+/// - after a burn killed with its transaction at the sequencer, another burn takes a fresh counter (H1), never the
+///   killed one's, and both are applied; the killed burn asked again once applied burns nothing; the same burn asked
+///   again while unseen takes its counter again (the same note: one of the two is applied, the other refused, one
+///   denomination burnt); a dry run reserves nothing; a burn refused on the zone uses its counter;
+/// - a recovery from the seed alone, with no journal, finds every burn, each with its own `NOut`;
+/// - a burn under an Ethereum RPC of another chain than the configuration's is refused before anything is planned
+///   (M-1);
+/// - a claim's dry run, and a claim held by its delay, never ask the zone for the deposit's nullifier account (M-2).
+async fn counters_pairing_and_quiet_dry_runs(
+    eth_side: &flow::Eth,
+    user: &Seed,
+    zone: &mut HarnessLedger,
+    ctx: &Context,
+    dir: &Path,
+) -> Result<()> {
+    let program = ctx.program;
+    let journal = dir.join("burn-journal");
+    let _ = std::fs::remove_dir_all(&journal);
+    std::fs::create_dir_all(&journal)?;
+    let journal_file = journal.join(ferrata_cli::burns::FILE);
+    // Public /1 gets 0.1 ETH: the plaintext claim of its unclaimed deposit (a second holder of the seed beside /0).
+    let list = eth::deposit_list(&eth_side.p, eth_side.vault, 0, 10_000).await?;
+    let history = lez::history_of(&*zone, ctx).await?;
+    let rows = scan::deposits(user, ctx, &list, 8, &history, &HashSet::new())?;
+    let pick = |kind: DestKind, account: u32| {
+        rows.iter()
+            .find(|r| {
+                r.owned.kind == kind && r.owned.account_index == account && r.state != scan::DepositState::Claimed
+            })
+            .map(|r| r.owned.deposit.leaf_index)
+            .ok_or_else(|| anyhow!("an unclaimed deposit to {kind:?} /{account}"))
+    };
+    let leaf1 = pick(DestKind::Public, 1)?;
+    let copts = flow::ClaimOpts {
+        leaf: Some(leaf1),
+        plaintext: true,
+        accept_plaintext: true,
+        no_delay: true,
+        relayer: None,
+        gap: 8,
+        send: true,
+        yes: true,
+        gas_drop: None,
+    };
+    flow::claim(eth_side, user, zone, ctx, &copts, &mut flow::Out::new(false)).await?;
+    let publics = user.public_accounts(2)?;
+    let tenth = 100_000_000_000_000_000u128;
+    ensure!(zone.world.balance(publics[1].id, &ctx.cid) == tenth, "public /1 holds 0.1 ETH");
+
+    let bopts = |account: u32, to: Address, send: bool| flow::BurnOpts {
+        public: true,
+        accept_public: true,
+        account,
+        token: eth::ETH,
+        amount: "0.1".into(),
+        recipient: to,
+        send,
+        yes: send,
+        journal: Some(journal.clone()),
+    };
+    let (r1, r2, r3, r4) = (
+        Address::repeat_byte(0xe1),
+        Address::repeat_byte(0xe2),
+        Address::repeat_byte(0xe3),
+        Address::repeat_byte(0xe4),
+    );
+    let (applied0, refused0) = tags(zone, ctx).await?;
+    let k = lez::history_of(&*zone, ctx).await?.next_burn_counter(&user.bridge_keys(), ctx);
+
+    // H-1: two burns in flight from two holders (public /0 and public /1), neither applied when the second is planned.
+    let mut z = Deferred { inner: &mut *zone, queue: Vec::new(), kill_next: false, reads: Default::default() };
+    let b0 = flow::burn(eth_side, user, &mut z, ctx, &bopts(0, r1, true), &mut flow::Out::new(false)).await?;
+    let mut out = flow::Out::new(true);
+    let b1 = flow::burn(eth_side, user, &mut z, ctx, &bopts(1, r2, true), &mut out).await?;
+    println!(
+        "COUNTERS in flight: public /0 -> {}, public /1 -> {} (the zone's next counter {k})",
+        b0.plan.i, b1.plan.i
+    );
+    ensure!(b0.plan.i == k && b1.plan.i == k + 1, "two burns in flight take two counters");
+    ensure!(
+        out.text().contains(&format!("counter {k}")) && out.text().contains("is not on the zone yet"),
+        "the second names the first"
+    );
+    let settled = z.flush().await;
+    ensure!(settled.iter().all(|r| r.is_ok()), "both burns in flight applied: {settled:?}");
+
+    // H1: a burn killed with its transaction at the sequencer (the tool never learnt it); then a burn with another
+    // recipient takes a fresh counter, never the killed one's.
+    let mut z = Deferred { inner: &mut *zone, queue: Vec::new(), kill_next: true, reads: Default::default() };
+    let killed = flow::burn(eth_side, user, &mut z, ctx, &bopts(0, r3, true), &mut flow::Out::new(false)).await;
+    ensure!(killed.is_err(), "the killed run fails for the tool");
+    let mut out = flow::Out::new(true);
+    let other = flow::burn(eth_side, user, &mut z, ctx, &bopts(0, r4, true), &mut out).await?;
+    println!(
+        "COUNTERS after a kill: the killed burn holds {}, the burn to another recipient takes {}",
+        k + 2,
+        other.plan.i
+    );
+    ensure!(other.plan.i == k + 3, "a fresh counter after the killed burn's");
+    ensure!(out.text().contains("interrupted before it was known to be sent"), "it names the killed burn");
+    let settled = z.flush().await;
+    ensure!(settled.iter().all(|r| r.is_ok()), "the killed burn (late) and the other both applied: {settled:?}");
+    // The killed burn asked again, now that its transaction is applied: nothing more is burnt.
+    let mut out = flow::Out::new(true);
+    let done = flow::burn(eth_side, user, zone, ctx, &bopts(0, r3, true), &mut out).await?;
+    ensure!(
+        done.already && done.sent.is_none() && done.plan.i == k + 2 && out.text().contains("not burning again"),
+        "the killed burn, found applied, is not burnt again"
+    );
+
+    // The same burn as a killed one, asked again: its counter again, the same note: one applied, one refused.
+    let before = zone.world.balance(publics[0].id, &ctx.cid);
+    let mut z = Deferred { inner: &mut *zone, queue: Vec::new(), kill_next: true, reads: Default::default() };
+    let _ = flow::burn(eth_side, user, &mut z, ctx, &bopts(0, r1, true), &mut flow::Out::new(false)).await;
+    let mut out = flow::Out::new(true);
+    let again = flow::burn(eth_side, user, &mut z, ctx, &bopts(0, r1, true), &mut out).await?;
+    ensure!(
+        again.plan.i == k + 4 && out.text().contains("takes its counter again"),
+        "the same burn resumes its counter"
+    );
+    let settled = z.flush().await;
+    ensure!(settled[0].is_ok(), "the killed run's transaction applied: {settled:?}");
+    let refusal = settled[1].as_ref().err().map(|e| e.to_string()).unwrap_or_default();
+    ensure!(refusal.contains("244 ALREADY_WRITTEN"), "the same note again refused by the program: {settled:?}");
+    ensure!(zone.world.balance(publics[0].id, &ctx.cid) == before - tenth, "one denomination burnt, once");
+
+    // A dry run reserves nothing.
+    let kept = std::fs::read(&journal_file)?;
+    flow::burn(eth_side, user, zone, ctx, &bopts(0, r2, false), &mut flow::Out::new(false)).await?;
+    ensure!(std::fs::read(&journal_file)? == kept, "a dry run leaves the journal as it was");
+
+    // A burn refused on the zone uses its counter: sent without the tool's checks (0.1 ETH more than public /1 holds).
+    let keys = user.bridge_keys();
+    let history = lez::history_of(&*zone, ctx).await?;
+    let c = history.next_burn_counter(&keys, ctx);
+    let valid = lez::plan_burn_at(
+        &*zone,
+        ctx,
+        &keys,
+        BurnFrom::Public(publics[0].id),
+        [0; 20],
+        tenth,
+        r3.into_array(),
+        &history,
+        Some(c),
+    )
+    .await?;
+    // The same note, signed at public /1, whose holding is empty: the program refuses it (254) in its block.
+    let mut call = valid.call.clone();
+    call.mentions[0] = Mention::Signer(ferrata_lez_bridge_wire::own_actor(program, publics[1].id));
+    call.mentions[1] = Mention::Pda {
+        actor: ferrata_lez_bridge_wire::holder_actor(program, &ctx.cid, publics[1].id),
+        seed: ferrata_lez_bridge_wire::holder_seed(&ctx.cid, publics[1].id.value()),
+    };
+    let report = zone.settle(&call);
+    ensure!(report.exit_code == Some(254), "public /1 holds nothing more: {:?}", report.exit_code);
+    let mut out = flow::Out::new(true);
+    let after_refused = flow::burn(eth_side, user, zone, ctx, &bopts(0, r2, true), &mut out).await?;
+    ensure!(
+        after_refused.plan.i == c + 1,
+        "the refused burn's counter {c} is used: the next burn takes {}",
+        after_refused.plan.i
+    );
+
+    // Recovery from the seed alone (no journal): every burn of these scenarios, one NOut each.
+    let (_, refused) = tags(zone, ctx).await?;
+    let new_refused: Vec<&Hash> = refused.iter().filter(|t| !refused0.contains(t)).collect();
+    ensure!(new_refused.len() == 2, "two burns refused on the zone: the same note again, and the empty holder's");
+    let history = lez::history_of(&*zone, ctx).await?;
+    let (burn_rows, next) = scan::burns(user, ctx, &history, &HashSet::new());
+    let new_rows: Vec<_> = burn_rows.iter().filter(|r| !applied0.contains(&r.owned.burn.note.r)).collect();
+    let nouts: HashSet<Hash> = new_rows.iter().map(|r| r.owned.nullifier).collect();
+    let counters: Vec<u64> = new_rows.iter().map(|r| r.owned.i).collect();
+    println!("COUNTERS recovered from the seed: {counters:?}, {} distinct NOut, next counter {next}", nouts.len());
+    ensure!(
+        counters == vec![k, k + 1, k + 2, k + 3, k + 4, c + 1],
+        "the burns of these scenarios, by counter: {counters:?}"
+    );
+    ensure!(
+        nouts.len() == counters.len() && burn_rows.iter().all(|r| r.twin.is_none()),
+        "one NOut per burn, no tag shared"
+    );
+    ensure!(next == c + 2, "the next counter after the refused one and the last burn");
+
+    // M-1: an Ethereum RPC of another chain than the configuration's (a fork reports 31337) is refused before anything
+    // is planned or sent.
+    lez::check_pairing(&*zone, ctx).await?;
+    let forked = Context { chain_id: 31_337, ..ctx.clone() };
+    let e = lez::check_pairing(&*zone, &forked)
+        .await
+        .expect_err("chain 31337 under a configuration of chain 1")
+        .to_string();
+    ensure!(e.contains("pairs with chain 1") && e.contains("serves chain 31337"), "{e}");
+    let eth_fork =
+        flow::Eth { p: eth_side.p.clone(), vault: eth_side.vault, chain_id: 31_337, from_block: 0, chunk: 10_000 };
+    let mut z = Deferred { inner: &mut *zone, queue: Vec::new(), kill_next: false, reads: Default::default() };
+    let e = flow::burn(&eth_fork, user, &mut z, &forked, &bopts(0, r2, true), &mut flow::Out::new(false))
+        .await
+        .err()
+        .context("a burn under the forked RPC")?
+        .to_string();
+    ensure!(e.contains("serves chain 31337") && z.queue.is_empty(), "refused before sending: {e}");
+    println!("PAIRING (M-1): {e}");
+
+    // M-2: a claim's dry run, and a claim held by its delay, read no nullifier account of the zone.
+    let list = eth::deposit_list(&eth_side.p, eth_side.vault, 0, 10_000).await?;
+    let history = lez::history_of(&*zone, ctx).await?;
+    let rows = scan::deposits(user, ctx, &list, 8, &history, &HashSet::new())?;
+    let row = rows
+        .iter()
+        .find(|r| r.owned.kind == DestKind::Private && r.state != scan::DepositState::Claimed)
+        .context("an unclaimed private deposit")?;
+    let n_actor =
+        ferrata_lez_bridge_wire::nullifier_actor(program, &ctx.cid, ctx.chain_id, &ctx.vault, &row.owned.nullifier);
+    for (send, no_delay) in [(false, true), (false, false)] {
+        let mut z = Deferred { inner: &mut *zone, queue: Vec::new(), kill_next: false, reads: Default::default() };
+        let o = flow::ClaimOpts {
+            leaf: Some(row.owned.deposit.leaf_index),
+            plaintext: false,
+            accept_plaintext: false,
+            no_delay,
+            relayer: None,
+            gap: 8,
+            send,
+            yes: send,
+            gas_drop: None,
+        };
+        let r = flow::claim(eth_side, user, &mut z, ctx, &o, &mut flow::Out::new(false)).await;
+        let held = r.as_ref().err().is_some_and(|e| e.to_string().contains("held by your claim delay"));
+        ensure!(
+            !z.reads.borrow().contains(&n_actor),
+            "a claim (send {send}, no_delay {no_delay}) read the nullifier account"
+        );
+        ensure!(z.queue.is_empty(), "nothing sent");
+        println!(
+            "QUIET (M-2): claim send {send} no_delay {no_delay}: {} actor reads, none the nullifier's{}",
+            z.reads.borrow().len(),
+            if held { "; held by its delay" } else { "" }
+        );
+    }
     Ok(())
 }
