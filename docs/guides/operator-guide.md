@@ -370,8 +370,9 @@ target/release/ferrata-relayer --eth-rpc … --vault 0x… --keystore … --pass
 
 For gas drops and the burn watch add the LEZ side: `--sequencer <url> --seed <the relayer's own seed file>
 --lez-wallet <dir> --lez-password-file <file> --bridge-account <program id> --lez-account <its public
-account, which pays the drops> --gasdrop-image-id 0x… --drop-amount <native LEZ per drop>` (and, as needed,
-`--drop-from-private <n>` for the private account the credits come from, `--drop-wait <s>` before a credit not applied
+account: pays its root imports' fees, is named in gas-drop receipts and paid the claims' relay fee> --gasdrop-image-id
+0x… --drop-amount <native LEZ per drop>` (and, as needed, `--drop-from-private <n>` for the private account the drops'
+credits come from, `/0` by default, `--drop-wait <s>` before a credit not applied
 is sent again, 120 s, and `--drop-max-sends <n>` before a drop is given up, 5; under RISC Zero's dev mode gas drops run
 only with `--accept-dev-mode-receipts` and a sequencer at a loopback address, a local devnet). The Ethereum
 account needs gas money only; it is paid relay fees by the releases that name it and checkpoint fees through
@@ -422,9 +423,10 @@ a real succinct proof in 14.6 s and 14.9 s, 584,106 bytes as JSON; image id at t
 `0xe10554850874c952eae7a7a939cc832be97bcd9f4426214269360d736ce0d207` (path-dependent; rebuild and record it
 for a deployment).
 
-Not built: the sealed variant (a credit to a private one-time account); the sweep of the credit inside the
-private claim by LEZ's wallet; a run against a live sequencer (the harness does not model LEZ's native
-token program, so its credit is a recorded stand-in).
+Run on LEZ v0.4.0-rc1's own sequencer, the sealed credit and its sweep inside the private claim included
+(`e2e/runs/seqnet-robust-1/` to `-3/`, dev-mode proofs; the in-process harness does not model LEZ's native token
+program, so its tests' credit is a stand-in). Not built: the gas drop for burns and in the mini-app's claim
+(`ferrata_bridge_module`), and a handover of the job to a relayer other than through a shared inbox directory.
 
 ### 6.5 Wrapping
 
