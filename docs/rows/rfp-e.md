@@ -28,9 +28,9 @@ affected. The second and third reviews' fixes change off-chain code only (`cli/`
 | Row | Today | Proposed | Shown by | Remaining |
 |---|---|---|---|---|
 | U.8 | in part | **shown** | `cli/tests/e2e.rs`, `e2e/runs/cli-freezes/` | — |
-| R.6 | in part | **in part** (the relayer daemon shown on both chains, with the limits below) | `cli/tests/relayer_crash.rs` parts 1–6 (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), `relayer::tests` and `e2e/runs/seqnet-robust-2/`, `-3/` (gas drops), row 43 (monitor kills), `monitor/tests/logos-fallback.sh` (`monitor/results/logos-fallback/`: the monitor's `--send-via logos` route when the module's broadcast fails or sticks) | `monitor` under an RPC failure of its own endpoint (kills, and the module's failures against a stand-in, are tested), the checkpoint prover and the attestors under RPC failure; the relayer's root import under a fault on a real sequencer (its faults ran against the devnet stand-in); the `--send-via logos` route with the real `tx_sender_module` or Logos Core restarted, and `ferrata_relayer_module` itself killed (a stand-in of the module was restarted) |
+| R.6 | in part | **in part** (the relayer daemon shown on both chains, with the limits below) | `cli/tests/relayer_crash.rs` parts 1–6 (`e2e/runs/relayer-crash/`), `e2e/netfault/relayer-lez.sh` (`e2e/runs/relayer-lez/`), `relayer::tests` and `e2e/runs/seqnet-robust-2/`, `-3/`, `-4/` (gas drops), row 43 (monitor kills), `monitor/tests/logos-fallback.sh` (`monitor/results/logos-fallback/`: the monitor's `--send-via logos` route when the module's broadcast fails or sticks) | `monitor` under an RPC failure of its own endpoint (kills, and the module's failures against a stand-in, are tested), the checkpoint prover and the attestors under RPC failure; the relayer's root import under a fault on a real sequencer (its faults ran against the devnet stand-in); the `--send-via logos` route with the real `tx_sender_module` or Logos Core restarted, and `ferrata_relayer_module` itself killed (a stand-in of the module was restarted) |
 | U.3 | in part | **in part** (narrower) | rows 43–48, 96, 106–107, 120; `e2e/runs/seqnet-robust-1/` and `-2/` (the daemon's root import on a running sequencer, by the standalone binary) | `ferrata_relayer_module` with a LEZ sequencer path; chain access through the LEZ and Ethereum Logos modules; `monitor`'s LEZ and Logos Blockchain RPC clients; the operator guide past its first draft |
-| R.7 | in part | **shown** | `e2e/runs/seqnet-robust-1/`, `-2/` and `-3/` (claim killed before sending, burn killed after it, burn killed before it reached the zone then made with other parameters, gas drops across kills), with row 126 | — |
+| R.7 | in part | **shown** | `e2e/runs/seqnet-robust-1/`, `-2/`, `-3/` and `-4/` (claim killed before sending, burn killed after it, burn killed before it reached the zone then made with other parameters, gas drops across kills), with row 126 | — |
 | U.5 | in part | in part, gap narrowed | the gas drop in the relayer daemon and the tool, journaled (`e2e/runs/seqnet-robust-2/`, `-3/`) | the mini-app's claim, burns with a drop, real proofs of this path, a network handover of the job to a third-party relayer |
 | F.7 | in part | in part (narrower gap) | rc3 four-key zone (`zone-rc3-four-keys`), its stall traced (`STALL.md`) | the bridge, a t-of-n checkpoint and releases over an rc3 multi-key zone |
 
@@ -83,7 +83,7 @@ zone, its gas drops' on a running sequencer).
 | what `tx_sender_module` cannot account for (the second review's M2) | part 6, the stand-in with a durable history written before each broadcast (as the module's): (a) automine off, broadcast with its answer held, the daemon SIGKILLed, **the module restarted** (its requests gone), the daemon restarted, the transaction pending; (b) the request made, nothing broadcast, the daemon killed, the module restarted; (c) `stuck` (no hash) with the transaction out; (d) `stuck` with nothing sent | (a) `inflight-request-forgotten` with the request's history row (nonce, hash), `inflight-pending` while it waited, booked from its receipt: **no request after the restart**, nothing refused (before the fix the job went to `refused/` while its transaction then mined); (b) no row (`inflight-request-forgotten`, "no row: never broadcast"), so nothing left: planned again, 1 request, **unpinned**, no `inflight-lost`/`inflight-resent` (the third review's L-5: the lost path, resent pinned, also makes one request; the mutant without the history lookup now fails here); (c) found mined under the request's nonce (`inflight-found`), 1 request; (d) `inflight-lost`, the same call through the module **with the nonce pinned**: 2 requests, 1 transaction; 48 transactions for 48 effects, none reverted |
 | the monitor's sends through `tx_sender_module` when the module fails them (the third review's M-1) | `monitor/tests/logos-fallback.sh` on anvil (the rule (B) fixture vault; the monitor holding the watcher key; `monitor/examples/monitor_logos_stub.rs` with the stand-in, whose new `fail send_status` follows the module's `advance_send`: the row left `unknown`, the leg `left`, the nonce burnt): L1 a broadcast failing after its leg left; L2 the next candidate; L3 `stuck` with nothing sent; L4 the next | 8 of 8: L1 the cancel went the plain way and was mined **at the nonce the module burnt** (0); L2 through the module at 1; L3 plain at 2; L4 through the module at 3; the watcher's account at 4, nothing pending. The same test with `chain.rs` as before the fix (`83cf4eb0`): 1 of 8, **no cancel mined**: 30 requests behind the gap at 0, 28 broadcast and held by anvil, the account still at 0 (`before-fix/`) |
 | LEZ connectivity failure, root imports | `e2e/netfault/relayer-lez.sh` (holdproxy in front of the devnet's zone): outage; ImportRoot applied but its answer lost; SIGKILL with the answer held; SIGKILL with the import held unsent | 9 of 9: each leaf count imported once; booked from the record, nothing sent again; the unsent one planned again after `--import-wait` and imported once |
-| LEZ failure and kills, gas drops (the relayer's LEZ credits) | `relayer::tests` (10 drop tests: a model zone in which credits built on one account state apply once; among them the second review's race, `a_credit_landing_while_it_is_sent_again_is_found_and_nothing_more_is_built`, which tests `drop_step`'s handling; the sequencer zone's own check, `credit_on`'s comparison after its sync, is exercised by no test: the model zone stands in for it, and no robust run reached it, the third review's L-2) and, on LEZ v0.4.0-rc1's running sequencer, the drops daemon behind a second holdproxy: `e2e/runs/seqnet-robust-2/` (its first credit trapped unsent and the daemon SIGKILLed, then a 503 on its next send; its second credit forwarded with the answer held and the daemon SIGKILLed) and `e2e/runs/seqnet-robust-3/` (the same, the 503'd send **forwarded to the sequencer 35 s later**, after the daemon sent a third) | robust-2: 21 of 21; robust-3: 22 of 22. Drop 1 in robust-3: 3 sends; the third forwarded at 02:56:34 and applied (block 34, `15bb85f8…`); the second, answered 503 to the daemon at 02:56:14, reached the sequencer at 02:56:49 and was accepted (its hash `50a9abf9…`) but **never applied** (not among the zone's applied transactions through block 59, `lez/transactions.tsv`): two credits of one drop built on the same account state reached LEZ and one applied; booked from LEZ (`resolvedLater`). The hook's check of this (`e2e/seqnet/late-credit.sh`) now fails unless the late credit was accepted with its own hash, a third send was made, the drop was booked with another hash and the claim claims exactly one credit (the third review's L-4: it had passed a run with one credit at LEZ too); `bash e2e/seqnet/test-late-credit.sh`: robust-3's record passes, five variants fail, three of which the old check passed. Neither run tells the fixed relayer from the one before M1's fix: both build these same two credits (the race M1 closed lies between the step's check and the resend's build, inside one step). Drop 2: forwarded with its answer held and the daemon SIGKILLed; restarted 30 s later, booked from the drop account's nonce with nothing sent again (1 send). Each claim's dry run claims exactly 1 pending credit of 50,000,000; 0 jobs refused |
+| LEZ failure and kills, gas drops (the relayer's LEZ credits) | `relayer::tests` (10 drop tests: a model zone in which credits built on one account state apply once; among them the second review's race, `a_credit_landing_while_it_is_sent_again_is_found_and_nothing_more_is_built`, which tests `drop_step`'s handling; the sequencer zone's own check, `credit_on`'s comparison after its sync, is exercised by no test: the model zone stands in for it, and no robust run reached it, the third review's L-2) and, on LEZ v0.4.0-rc1's running sequencer, the drops daemon behind a second holdproxy: `e2e/runs/seqnet-robust-2/` (its first credit trapped unsent and the daemon SIGKILLed, then a 503 on its next send; its second credit forwarded with the answer held and the daemon SIGKILLed) and `e2e/runs/seqnet-robust-3/` (the same, the 503'd send **forwarded to the sequencer 35 s later**, after the daemon sent a third) | robust-2: 21 of 21; robust-3: 22 of 22. Drop 1 in robust-3: 3 sends; the third forwarded at 02:56:34 and applied (block 34, `15bb85f8…`); the second, answered 503 to the daemon at 02:56:14, reached the sequencer at 02:56:49 and was accepted (its hash `50a9abf9…`) but **never applied** (not among the zone's applied transactions through block 59, `lez/transactions.tsv`): two credits of one drop built on the same account state reached LEZ and one applied; booked from LEZ (`resolvedLater`). The hook's check of this (`e2e/seqnet/late-credit.sh`) now fails unless the late credit was accepted with its own hash, a third send was made, the drop was booked with another hash and the claim claims exactly one credit (the third review's L-4: it had passed a run with one credit at LEZ too); `bash e2e/seqnet/test-late-credit.sh`: robust-3's record passes, five variants fail, three of which the old check passed; and `e2e/runs/seqnet-robust-4/` (the sources of `54de5861`, the new check in the hook): 22 of 22, drop 1's 503'd credit forwarded 35 s later and accepted (`2a5d9970…`, never applied through block 59), the third applied (`d0cce718…`, block 34), 3 sends. Neither run tells the fixed relayer from the one before M1's fix: both build these same two credits (the race M1 closed lies between the step's check and the resend's build, inside one step). Drop 2: forwarded with its answer held and the daemon SIGKILLed; restarted 30 s later, booked from the drop account's nonce with nothing sent again (1 send). Each claim's dry run claims exactly 1 pending credit of 50,000,000; 0 jobs refused |
 
 Runs (Modal build box, profile of this stream's workspace): `cd cli && bash tests/relayer-crash.sh` at `3f3804f9`: `test
 result: ok. 1 passed` in 136.57 s, parts 1–6 (`e2e/runs/relayer-crash/results.json`, README), and again at `41c0d843`:
@@ -99,7 +99,9 @@ and restored): fails at part 6b; `cd monitor && bash tests/logos-fallback.sh` (`
 of `4d3e8d64`): 8 passed, 0 failed (recorded in `monitor/results/logos-fallback/`), and with `monitor/src/chain.rs` as at
 `83cf4eb0`: 1 passed, 7 failed (`before-fix/`); `cd monitor && cargo test --lib`: 8 passed; `cargo clippy --all-targets
 -- -D warnings` (monitor): clean; `cd cli && cargo test --lib logos_send`: 8 passed; `bash e2e/seqnet/test-late-credit.sh`
-(laptop, jq and grep): 0 unexpected.
+(laptop, jq and grep): 0 unexpected; `bash e2e/seqnet/run.sh robust robust-4` at `54de5861`: 22 passed, 0 failed (box
+876 s, the run 04:53–05:05 UTC; recorded); `cd cli && cargo check --all-targets --features seqnet` and `cargo test --lib`
+(31 passed) at `54de5861`, after the residual's text edits.
 
 What the daemon does now (`cli/src/relayerd.rs`, `relayer.rs`, `logos_send.rs`): one Ethereum transaction in flight,
 journaled before it is sent (`<state>/inflight.json`) and resolved first in every round (mined: booked; pending:
@@ -156,7 +158,7 @@ faultnet's faults that fired as recorded; the LEZ side: each root imported once 
 LEZ v0.4.0-rc1's running sequencer: a credit trapped unsent with a kill, then a send answered 503 and forwarded 35 s
 later, a third sent on the same account state: two credits of one drop reached the sequencer, the third applied, the
 late one accepted and never applied; a credit forwarded with its answer held and a kill, booked from LEZ after the
-restart with nothing sent again; each claim claims exactly one credit (robust-2 21/21, robust-3 22/22); and `monitor`'s
+restart with nothing sent again; each claim claims exactly one credit (robust-2 21/21, robust-3 22/22, robust-4 22/22); and `monitor`'s
 sends through the same stand-in: a broadcast failed after its leg left, and one stuck with nothing sent, each cancel
 then sent the plain way at the nonce the module burnt and mined, the next ones through the module, nothing pending
 (8/8; with the code before the fix no cancel was mined, 1/8) | Modal build
@@ -165,7 +167,7 @@ v0.4.0-rc1's sequencer and node (gas drops) | none needed (not about proving); a
 5–6 and the monitor's test | `cd cli && bash tests/relayer-crash.sh`; `bash e2e/netfault/relayer-lez.sh OUT`; `bash
 e2e/seqnet/run.sh robust NAME` (its late-credit check: `bash e2e/seqnet/test-late-credit.sh`); `cd monitor && bash
 tests/logos-fallback.sh` | `e2e/runs/relayer-crash/`, `e2e/runs/relayer-lez/`, `e2e/runs/seqnet-robust-2/`,
-`e2e/runs/seqnet-robust-3/`, `monitor/results/logos-fallback/`".
+`e2e/runs/seqnet-robust-3/`, `e2e/runs/seqnet-robust-4/`, `monitor/results/logos-fallback/`".
 
 ## U.3: long-running components as Logos module plus headless daemon, documented — proposed **in part** (narrower)
 
@@ -199,8 +201,9 @@ sent; SIGTERM gave its `stop` line; nothing left in flight. With rows 43–48, 9
 ## R.7: an interrupted user-side operation does not consume, corrupt, or expose the entitlement — proposed **shown**
 
 **Runs:** `e2e/runs/seqnet-robust-1/` (14 of 14, commit `2c418019`, 21 November 2026), `e2e/runs/seqnet-robust-2/`
-(21 of 21, commit `d8ddc000`, 22 November 2026) and `e2e/runs/seqnet-robust-3/` (22 of 22, commit `f42663ce`, 22
-November 2026, after the second review's fixes), `bash e2e/seqnet/run.sh robust NAME` on a Modal build box:
+(21 of 21, commit `d8ddc000`, 22 November 2026), `e2e/runs/seqnet-robust-3/` (22 of 22, commit `f42663ce`, 22
+November 2026, after the second review's fixes) and `e2e/runs/seqnet-robust-4/` (22 of 22, commit `54de5861`, 22
+November 2026, after the third review's), `bash e2e/seqnet/run.sh robust NAME` on a Modal build box:
 LEZ v0.4.0-rc1's own sequencer and node (one validator, dev-mode leader proofs), dev-mode private proofs, a local anvil
 with the vault tests' mock verifier (what the row needs is the tool's and the daemons' behaviour, not proofs).
 
@@ -231,7 +234,7 @@ be applied; applied once); gas drops across kills of the claim and of the relaye
 one credit) | robust-1 14 of 14; robust-2 21 of 21; robust-3 22 of 22 | Modal build box (CPU); LEZ v0.4.0-rc1 sequencer and node,
 one validator, dev-mode leader proofs | dev-mode private proofs; mock verifier; local anvil; a stand-in beacon committee
 | `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`,
-`e2e/runs/seqnet-robust-3/`, `e2e/seqnet/hook-robust.sh`"
+`e2e/runs/seqnet-robust-3/`, `e2e/runs/seqnet-robust-4/`, `e2e/seqnet/hook-robust.sh`"
 
 ## U.5: the fee-payer mitigation in the relayer daemon and the tool — stays **in part**, gap narrowed
 
@@ -247,7 +250,7 @@ asked (`ferrata-gas-drops.json`), the receipt proven over the claim's witness, t
 awaited, the claim sent with the one-time account as fee payer after LEZ's wallet's dry run (it claims the credit).
 Another relayer gets a receipt of its own for the same one-time account (robust-2: a claim first naming a relayer that
 never answers, then the real one). The dry run names the fee payer and what it leaks; `--no-gas-drop` pays from the
-proving account. Runs: robust-1, 2 drops (credit 50,000,000; fee at head 6,188,624 / 6,223,304); robust-2 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own; robust-3 the same, drop 1's 503'd credit reaching the sequencer late beside the third (one applied, each claim's dry run claims exactly 1 pending credit).
+proving account. Runs: robust-1, 2 drops (credit 50,000,000; fee at head 6,188,624 / 6,223,304); robust-2 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own; robust-3 the same, drop 1's 503'd credit reaching the sequencer late beside the third (one applied, each claim's dry run claims exactly 1 pending credit); robust-4 the same again (22 of 22).
 
 **Still missing for shown:** (1) the mini-app: `ferrata_bridge_module`'s claim does not ask for a drop (its runs use
 the stand-in, rows 102, 103, 125, 126); (2) burns: the burn's fee still comes from `seqnet-fund` (burns with a drop are
@@ -261,9 +264,9 @@ crown-driver, not by the daemon).
 private claim's LEZ fee paid by a one-time private account from the relayer daemon's credit sealed to it (the receipt
 and the account's public keys handed to the relayer's inbox; the drop journaled on the relayer's side; another relayer
 asked with a receipt of its own for the same account) | robust-1: 2 drops sealed, both claims' dry runs claim the credit
-(1 pending credit of 50,000,000 each; fee at head 6,188,624 and 6,223,304); robust-2: 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own; robust-3 the same, with two credits of drop 1 at the sequencer and one applied | Modal build box;
+(1 pending credit of 50,000,000 each; fee at head 6,188,624 and 6,223,304); robust-2: 2 drops sealed, each claim's dry run claims exactly 1 pending credit of 50,000,000; drop 1 sent 3 times across a kill and a 503 and applied once, drop 2 booked from LEZ after a kill (R.6); the silent relayer first, then the real one with a receipt of its own; robust-3 and robust-4 the same, with two credits of drop 1 at the sequencer and one applied | Modal build box;
 LEZ v0.4.0-rc1 sequencer and node | dev-mode receipts and private proofs (row 124: real proofs on rc3, by crown-driver)
-| `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`, `e2e/runs/seqnet-robust-3/`"
+| `bash e2e/seqnet/run.sh robust NAME` | `e2e/runs/seqnet-robust-1/`, `e2e/runs/seqnet-robust-2/`, `e2e/runs/seqnet-robust-3/`, `e2e/runs/seqnet-robust-4/`"
 
 ## F.7: release on native verification of a valid burn, validity with more than one sequencer key — stays **in part**, gap narrowed
 
@@ -356,7 +359,8 @@ match arm; its docs; the stand-in's `fail send_status`; `monitor/examples/monito
 `4d3e8d64` its record (8/8; before the fix 1/8); `ad71bee8` monitor README; `c8cbaa6c` L-5 (crash part 6b, 6d's pins);
 `7a42dcf0` the crash record at `c8cbaa6c`; `b5d0c279` L-4 (`late-credit.sh`, `test-late-credit.sh`); `737220ab` L-1 (the
 residual's wording: §6.1, cli README, the claim's waiting error, `drop_step`'s and `DropRecord::settled`'s docs, a nit);
-`bd446a41` L-3 (§6.2) and §6.4's stale "Not built"; then this file (L-2's wording included).
+`bd446a41` L-3 (§6.2) and §6.4's stale "Not built"; `54de5861`, `249ef85e` this file (L-2's wording included);
+`d3539895` robust-4 recorded (22/22, the new late-credit check); then this file again.
 
 Files of other streams changed, minimal and default-preserving: `lez/crown/driver/src/{main,crown}.rs`
 (`--import-roots no`; a comment), `checkpoint/attestor/zone.sh` (`ZONE_LEZ`, `ZONE_BEDROCK`), `e2e/seqnet/{run,drive}.sh`
