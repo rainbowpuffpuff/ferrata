@@ -406,9 +406,12 @@ fn the_divergence_rule_one_liar_raises_it_by_default_and_not_with_diverge_at_2()
     // ... two of three can (f > n - diverge_at): the rule the README states.
     let o = check(&with(args(&fstate, &[&ps[0], &c0, &c1], now), "2"));
     assert_eq!((o.code, o.report["divergence"].as_str()), (10, Some("contested")), "{}", o.report);
-    // --diverge-at 0 is refused (a usage error).
+    // --diverge-at 0 is refused (a usage error), and so is --min-agreeing 0 (it would confirm with no provider counted).
     let out = Command::new(bin()).arg("check").args(with(args(&state, &[&ps[0]], now), "0")).output().unwrap();
     assert_eq!(out.status.code(), Some(2));
+    let zero_agreeing: Vec<String> = args(&state, &[&ps[0]], now).into_iter().chain(["--min-agreeing".to_string(), "0".to_string()]).collect();
+    let out = Command::new(bin()).arg("check").args(zero_agreeing).output().unwrap();
+    assert_eq!(out.status.code(), Some(2), "{}", String::from_utf8_lossy(&out.stderr));
     // A liar cannot raise the stall alarm alone: the stall is measured against the median of three finalized slots.
     let far = provider(&g, slot, Some(honest), slot + 1_000_000);
     let o = check(&args(&state, &[&ps[0], &ps[1], &far], now));

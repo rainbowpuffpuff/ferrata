@@ -71,7 +71,7 @@ pub struct ProviderView {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Policy {
-    /// Agreeing providers needed (with none disagreeing) to confirm a header.
+    /// Agreeing providers needed (with none disagreeing) to confirm a header. Read as 1 when 0.
     pub min_agreeing: usize,
     /// Disagreeing providers that call the instance diverged (`instance-diverged`, critical), whatever the number that
     /// agree. Default 1: any provider that disagrees. 2, with three or more providers: no single provider can raise
@@ -314,7 +314,7 @@ pub fn judge(c: &Config, slot: u64, root: &Root, views: &[ProviderView], p: &Pol
         Divergence::Diverged
     } else if disagree > 0 && agree > 0 {
         Divergence::Contested
-    } else if disagree == 0 && agree >= p.min_agreeing {
+    } else if disagree == 0 && agree >= p.min_agreeing.max(1) {
         Divergence::Confirmed
     } else {
         Divergence::Unconfirmed
@@ -381,7 +381,7 @@ pub fn assess(state: &InstanceState, views: &[ProviderView], now_s: u64, p: &Pol
             Alert::new(Level::Warn, "instance-unconfirmed", "too few providers answered to confirm the instance's finalized header")
                 .with("slot", slot)
                 .with("agree", assent.len())
-                .with("needed", p.min_agreeing),
+                .with("needed", p.min_agreeing.max(1)),
         ),
     }
 
