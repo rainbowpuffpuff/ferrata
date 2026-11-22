@@ -3,7 +3,7 @@
 # step 1, on the build box (mrun), from lez/: build prove_attest and prove_bridge, their dev-mode dry runs (cycles,
 # the transactions settle), strip and stage them for lez/results/p4-minimum/minimum.py (jobs attest-pad, bridge-pad),
 # with r0vm 3.0.5 beside them. As lez/results/p4-minimum/box-build-pad.sh, without the padding test and the
-# yardstick. Output: spike/tmp/perf-p4 (bring it to the laptop with mrun --get); stage/ is the owner's bundle for
+# yardstick. Output: ../tmp/perf-p4 beside the repository (bring it to the laptop with mrun --get); stage/ is the owner's bundle for
 # bench/perf/p4-laptop-owner.sh (attest-pad/, bridge-pad/, r0vm/r0vm and its SHA256SUMS). Steps 2 and 3 (from the
 # laptop): docs in lez/results/perf-p4-laptop.md.
 set -u

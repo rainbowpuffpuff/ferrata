@@ -6,7 +6,7 @@
 #
 #   bash bench/perf/gate-build.sh BUNDLE      # BUNDLE: bundle-crown-live-3.tar.zst (sha256 0013bab1...)
 #
-# Output in $PERF_GATE_TMP (default spike/tmp/perf-gate): bin/crown-driver, bin/ferrata-updater, crown-lez/bundle.tar.zst.
+# Output in $PERF_GATE_TMP (default ../tmp/perf-gate beside the repository): bin/crown-driver, bin/ferrata-updater, crown-lez/bundle.tar.zst.
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
 T="${PERF_GATE_TMP:-$REPO/../tmp/perf-gate}"
