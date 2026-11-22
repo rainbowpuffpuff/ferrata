@@ -22,18 +22,25 @@ fixes up unchanged when rebuilt.
 |---|---|---|---|
 | ops M3, UP-M2 (server) | `5867dc24` | `serve.rs` (5) | `/health` answered in 0.8 ms beside two idle connections (was: no answer while one is open); each idle one closed after the 2 s deadline; a head of 8,192 bytes answered, 8,193 refused; 1 MiB without a newline: RSS 6,252 → 6,264 KiB (was +257 MiB); 24 idle connections: answered again after 1.73 s; a snapshot no round refreshed: 503 |
 | UP-M2 (sources) | `40cbabf6`, `88d3cf22` | `bounds.rs` (3) | 1,000 bytes read with a bound of 1,000, 1,001 refused, with and without `Content-Length`; a 256 MiB answer refused after 1 MiB in 42 ms, RSS +0.9 MiB (was accepted, +263 MB); `updates` past 8 MiB, a headers answer past 64 KiB, a module reply past 16 MiB refused; `file://` refused; a 10,000-character provider message kept to 200 printable characters |
-| UP-H1 | `09cedec6` | `refusals.rs` (5) | `Init` and `Open` not sent at the window's end minus 60 s or after it: 0 transactions, 0 charged, `/health` degraded naming the action (was: refused and charged 38,415,184 every round); 1 ms inside the margin: sent and applied. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds (fee 8,199,840), nothing charged after, released when the limit is raised (was: refused every round). A new update each round with every `Open` refused: 5 refusals in 40 rounds (was 40). A refusal lost to another updater (exit 207): not held |
+| UP-H1 | `09cedec6`, `55012742` (the clock's default) | `refusals.rs` (5 of 6), `daemon_clock.rs` (1) | `Init` and `Open` not sent at the window's end minus 60 s or after it: 0 transactions, 0 charged, `/health` degraded naming the action (was: refused and charged 38,415,184 every round); 1 ms inside the margin: sent and applied. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds (fee 8,199,840), nothing charged after, released when the limit is raised (was: refused every round). A new update each round with every `Open` refused: 5 refusals in 40 rounds (was 40). A refusal lost to another updater (exit 207): not held |
 | UP-M1 | `700d7673` | `health.rs` (4) | Every send rejected (a payer without funds) or failing at transport (25 errors): degraded in rounds 1-4, `down` (503) in round 5 (was `ok` throughout); `ok` again once one lands; the only light-client source down: `down` (was degraded); no progress for 16 rounds while the sources are 58,080 slots past the instance: degraded (was `ok`) |
 | UP-M3 | `a6802f92` | `jobs.rs` (1) | Ten rounds, a new finality update each, another party opening its job first and leaving it: the updater sends `Miller` then `Finish` of each job it continues, 5 updates applied (store 15,625,920 → 15,630,592), 5 `Miller`s for 5 applied updates, nothing refused, no job kept at the end (was: 7 rounds, 7 `Miller`s, store unmoved) |
 | UP-L5 (Low, beyond the brief; R.9's re-check) | `cd1fd4ae` | `refusals.rs` (`a_step_made_moot_while_planning_is_not_sent`) | Another updater applies the update's job while this one asks its sources: the `Open` planned against the old store is not sent, 0 charged (sent anyway: refused, exit 52, fee 1,706,408) |
 
 The whole suite on the branch tip (the guests built with LEZ's guest toolchain in `RISC0_HOME`,
-`scripts/ci/install-risc0.sh`): `cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked`: **53 tests pass** (9 in the library, 3 `bounds`, 8 `config`, 4 `diversity_limits`, 4 `health`, 1 `jobs`, 13
-`recorded`, 6 `refusals`, 5 `serve`) at `719e04f0`. Clippy `-D warnings`
+`scripts/ci/install-risc0.sh`): `cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked`: **54 tests pass** (9 in the library, 3 `bounds`, 8 `config`, 1 `daemon_clock`, 4 `diversity_limits`, 4 `health`, 1
+`jobs`, 13 `recorded`, 6 `refusals`, 5 `serve`) at `55012742`. Clippy `-D warnings`
 with and without `harness` clean (`RISC0_SKIP_BUILD=1`); fmt clean. The A3 gate on the tip: the default run replays the grown record's 246 updates (108 mainnet, 138 Sepolia), each applied once, in
 1,101 rounds; honest refused / applied gas 0.0752 (gate ≤ 0.10), honest-1's share 0.4841, honest-2's 0.5159 (gate
 0.35-0.65) (the suite
 rewrites `lez/updater/results/gate.txt`; not committed).
+
+Merging: `git merge-tree` with `rfp-docs-final` reports no conflict in any file of this stream (its two conflicts,
+`docs/design/attestation.md` and `docs/guides/consumer-guide.md`, are that branch's with main). Its new
+`lez/updater/tests/every_party.rs` and `replacement.rs`, run on this branch's tip (copied, not committed): 8 of 9
+pass; the ninth reads `docs/trust.md` §2.4, which only that branch adds. Its `Censoring` ledger wraps the in-process
+chain without forwarding `Ledger::now_ms`, which is why that method defaults to each transaction's own time
+(`55012742`): its tests keep passing after the recorded data's windows end in wall-clock time.
 
 ## Requirement rows (proposed)
 
