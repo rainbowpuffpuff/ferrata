@@ -24,7 +24,7 @@ payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
 payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
 payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
 payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
-harness tables: 55 rows from <spike>/ferrata-wt-rfp-g/lez/results
+harness tables: 55 rows from <repo>/lez/results
 == phase deploy (16:30:50)
 Transaction hash is ffcda7010006ccfc2c5fd91a7f1e8b96aa848f7f43508326eb6ebcae79867262
 Transaction is included in block 2
