@@ -195,10 +195,19 @@ pub fn controls() -> Controls {
 ///
 /// Neither file may exist yet, not even as a symbolic link, and both are checked before either is written. Each is
 /// created by the same call that opens it, with mode 600 from the start (`O_CREAT | O_EXCL`, never following a link),
-/// so no other local user can read a key between its creation and its first byte.
+/// so no other local user can read a key between its creation and its first byte. Every directory of `out` that this
+/// call creates gets mode 700 whatever the umask, so no other local user can replace a key in it either; a directory
+/// that exists already keeps its mode.
 pub fn new_role_keys(out: &Path) -> Result<Value> {
     use std::io::{Read, Write};
-    fs::create_dir_all(out)?;
+    let mut dir = fs::DirBuilder::new();
+    dir.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        dir.mode(0o700);
+    }
+    dir.create(out).with_context(|| format!("{}: not created", out.display()))?;
     let paths: Vec<PathBuf> =
         ["lez-admin", "lez-freeze-authority"].iter().map(|name| out.join(format!("{name}.key"))).collect();
     for path in &paths {
@@ -1500,9 +1509,10 @@ mod tests {
         assert!(end_ms < chain.config.slot_start_ms(11_562_112));
     }
 
-    /// `new-role-keys`: both key files are created with mode 600 from the start
-    /// and hold 32 bytes in hex; a second call refuses and changes nothing; a dangling symbolic link at the second
-    /// path is refused before the first key is written, and nothing is written through it.
+    /// `new-role-keys`: both key files are created with mode 600 from the start and hold 32 bytes in hex, in a
+    /// directory created with mode 700 (and its parent too, when the call creates it); a second call refuses and
+    /// changes nothing; a dangling symbolic link at the second path is refused before the first key is written, and
+    /// nothing is written through it.
     #[cfg(unix)]
     #[test]
     fn new_role_keys_private_from_creation_and_never_overwritten() {
@@ -1515,6 +1525,8 @@ mod tests {
 
         let k1 = root.join("k1");
         let out = new_role_keys(&k1).expect("new-role-keys");
+        assert_eq!(mode(&root), 0o700, "{}", root.display());
+        assert_eq!(mode(&k1), 0o700, "{}", k1.display());
         let (admin, freeze) = (k1.join("lez-admin.key"), k1.join("lez-freeze-authority.key"));
         for p in [&admin, &freeze] {
             assert_eq!(mode(p), 0o600, "{}", p.display());
