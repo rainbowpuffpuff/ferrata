@@ -98,21 +98,32 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    `/health`, and nothing is sent until enough sources agree.
    With `min_distinct_clients = k` the update must also come from `k` different consensus clients
    ([below](#client-diversity-policymin_distinct_clients)); otherwise the updater waits.
-6. **Choice.** An update that can be sent now first: its `Open` window is open by the chain's clock (its signature
-   slot has started); then adopting the next committee when the store lacks it; then the furthest finalized header;
-   then the earliest signature slot; then the most signers. The signature does not cover `signature_slot` (only its
-   fork version), so a source can serve a real update, or another real update of the same finalized header with more
-   signers, re-dated to a later slot of its period, whose `Open` window has not opened. Re-dated more than 60 s past
-   the chain's clock it was refused in item 4. Within that margin it is not refused (a few seconds of clock skew make
-   an honest update look the same), but it ranks after every update that can be sent: a source re-dating so, even again every round, holds back only an update no other source serves, and meanwhile the instance advances to the furthest update the other sources serve, but for one case not handled (below, "Not built, not tested"). (Before
-   review-fix-updater3 M1 such an update ranked first when it adopted the next committee, and every round waited for
-   its window, so that nothing was sent until the period ended: 24.2 h of chain time in the review's run, a period
-   being about 27 h.) The comparison is the program's own start check, exact: a tolerance would let a source re-date
-   to a slot about to start. The signer count does not change the store an
-   update leaves (every update the program applies has two thirds of the committee) and breaks the remaining ties
-   (`tests/refusals.rs`: copies of one update, an update only the liar serves, two real updates of one finalized
-   header from the client-diversity probe, Lodestar's with 511 signers re-dated against Nimbus's with 510, and an
-   update adopting the next committee, or one only the liar serves, re-dated 48 s past the clock every round).
+6. **Choice.** An update that can be sent now first: its `Open` window is open by the chain's clock (its signature slot
+   has started); then adopting the next committee when the store lacks it; then the furthest finalized header; then the
+   earliest signature slot (it decides between copies of one update that can both be sent); then the most signers. The
+   signature does not cover `signature_slot` (only its fork version), so a source can serve a real update, or another
+   real update of the same finalized header with more signers, re-dated to another slot of its period: to a later one,
+   whose `Open` window has not opened, or to one that has started. Re-dated more than 60 s past the chain's clock it was
+   refused in item 4. Within that margin it is not refused (a few seconds of clock skew make an honest update look the
+   same), but it ranks after every update that can be sent: a source re-dating so, even again every round, holds back
+   only an update no other source serves, and meanwhile the instance advances to the furthest update the other sources
+   serve. (Before review-fix-updater3 M1 such an update ranked first when it adopted the next committee, and every round
+   waited for its window, so that nothing was sent until the period ended: 24.2 h of chain time in the review's run, a
+   period being about 27 h.) Re-dated to a slot that has started, a copy can be sent and can rank first (adopting the
+   next committee, or finalizing furthest). Each copy is a new job, and anyone may open it and send its steps; the steps
+   this updater sends of a job it does not carry wait their turns by the instance's state, not by the job (item 8), so
+   new copies, opened by the source itself or not, delay the instance by a bounded number of rounds and do not hold it.
+   (Before review-fix-updater3b M1 every copy's `Open` was deferred anew, and before review-fix-updater4 M1 every opened
+   copy's next step: a source that knew the updater's key held every update back, nothing sent in the 113 and 115 rounds
+   the reviews ran after the rotation.) The comparison is the program's own start check, exact: a tolerance would let a
+   source re-date to a slot about to start. The signer count does not change the store an update leaves (every update
+   the program applies has two thirds of the committee) and breaks the remaining ties (`tests/refusals.rs`: copies of
+   one update, an update only the liar serves, two real updates of one finalized header from the client-diversity probe,
+   Lodestar's with 511 signers re-dated against Nimbus's with 510, and an update adopting the next committee, or one
+   only the liar serves, re-dated 48 s past the clock every round; `tests/redating.rs`: an update adopting the next
+   committee re-dated each round to a new started slot, the one whose `Open` the updater defers longest; the same with
+   the source opening each copy itself, or opening it and sending its `Miller`; the strongest attacker known against the
+   turns of item 8; and the earlier attacks' variants).
 7. **The job's next step, from the chain.** A job's id hashes the instance, its starting store and
    the update, so every updater computes the same id for the same update. No job yet: `Open`. A job
    in `Miller`: `Miller`. Adoption pending: the next `Adopt` part. Otherwise `Finish`. The updater
@@ -129,9 +140,26 @@ needs nothing saved: a transaction is either on chain or not, and the next start
    refusal for good, by the program or out of gas, leaves it at once).
    With `finish_own_jobs = false` each round takes the best update, and a job left behind keeps the
    steps already paid for it.
-8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod
-   defer_window` rounds after it first saw the step due, runs out first; the others find the step
-   done and skip it. Two honest updaters collide only when their waits are equal.
+8. **Deferral.** Each (job, step) is sent by the updater whose wait, `H(key, job, step) mod defer_window` rounds after
+   it first saw the step due, runs out first; the others find the step done and skip it. Two honest updaters collide on
+   a job's step only when their waits for it are equal. A step of a job this updater carries (it sent a step of it, item
+   7) counts from the first round that step was due. An `Open`, and a step of a job it does not carry, count from the
+   first round a step of that kind was due on the instance's state, whatever job it is for; after it sends a step there,
+   the next of that kind waits `defer_window - 1` rounds. A job's id hashes `signature_slot`, which a source can change
+   at will; any beacon node can build another real update of the period from each of its blocks; and anyone may open a
+   job and send its steps. Counted by the job, a source serving a new copy each round (review-fix-updater3b M1), or
+   opening each copy itself (review-fix-updater4 M1), had this updater count again each round. Now each kind of step has
+   one turn per state, at most `defer_window - 1` rounds, whatever the sources serve and others send; a source can only
+   present jobs at another step, each kind's turn running once. So this updater's first step on a state goes out within
+   `K × (defer_window - 1)` rounds of the first round one was due there (`K = 3 + adoption_parts` kinds: `Open`,
+   `Miller`, the adoption's parts, `Finish`), and the job it then carries takes each of its other steps within
+   `defer_window` rounds: an update adopting the next committee is applied at most `K × (defer_window - 1) + 1 + (K - 1)
+   × defer_window` rounds after the first round it was due (68 at the defaults, `defer_window` 8 and two parts; measured
+   66 rounds with the strongest attacker known, 16 to 26 with the reviews' openers, `tests/redating.rs`). The key is the
+   updater's name and its payer's account, both public: a source can pick copies whose steps wait longest, but not past
+   these turns. After a step is sent, a fresh turn whose wait is drawn from each round's job would end at the first
+   round whose draw had run out: with `finish_own_jobs = false` and sources whose best update changes every round, an
+   `Open` went out every third round or so (review-fix-updater4 L2).
 9. **Send.** Within `max_fee_per_tx` and `budget`; a transport failure is retried with
    exponential backoff (`retry_base_ms * 2^(attempt-1)` after attempt 1, 2, ..., at most
    `retry_max_ms`, `max_attempts` attempts), and just before sending and before every retry the
@@ -348,18 +376,21 @@ these fixes): **64 tests pass** (10 in the library, 8 in `config.rs`, 4 in `dive
 on the grown record (246 updates, 1,101 rounds) passes: honest refused / applied gas 0.0752, shares 0.4841 / 0.5159.
 
 **Liveness fixes** (22 November 2026: review-integ9d M1 and review-integ9c M4, one lying source holding every update
-back; the Lows L-U2, L-U3, L-U4f, L-U5, L-U6 and L-U7 of review-integ9c; then review-fix-updater3 M1, a source
-re-dating within the margin every round, and its Lows and nits): **82 tests pass** (11 in the library, 3 `bounds`, 8
-`config`, 1 `daemon_clock`, 4 `diversity_limits`, 8 `every_party`, 8 `health`, 2 `jobs`, 13 `recorded`, 16 `refusals`,
-1 `replacement`, 7 `serve`), clippy `-D warnings` clean with and without `harness`, fmt clean; the A3 gate's default run
-writes `results/gate.txt` byte for byte as before. Each new test fails with its fix undone:
-`python3 -I lez/updater/dev/mutants.py NAME` (from the root) undoes one fix in the sources, runs the tests it added and
-puts the sources back, also when stopped by Ctrl-C, SIGTERM or SIGHUP (`--check`: every mutant still applies;
+back; the Lows L-U2, L-U3, L-U4f, L-U5, L-U6 and L-U7 of review-integ9c; then review-fix-updater3 M1, a source re-dating
+within the margin every round, and its Lows and nits; then review-fix-updater3b M1 and review-fix-updater4 M1, a source
+re-dating to slots that have started, a new job each round, opened by itself or not, and review-fix-updater4 L2): **92
+tests pass** (11 in the library, 3 `bounds`, 8 `config`, 1 `daemon_clock`, 4 `diversity_limits`, 8 `every_party`, 8
+`health`, 2 `jobs`, 13 `recorded`, 10 `redating`, 16 `refusals`, 1 `replacement`, 7 `serve`), clippy `-D warnings` clean
+with and without `harness`, fmt clean; the A3 gate's default run writes `results/gate.txt` byte for byte as before (with
+one candidate per state every wait is as it was). Each new test fails with its fix undone: `python3 -I
+lez/updater/dev/mutants.py NAME` (from the root) undoes one fix in the sources, runs the tests it added and puts the
+sources back, also when stopped by Ctrl-C, SIGTERM or SIGHUP (`--check`: every mutant still applies;
 `dev/test_mutants.py` checks the restoring). The table gives the files as they stand.
 
 | test | what it shows | result |
 |---|---|---|
 | `refusals.rs` (16) | `Init` and `Open` with the chain's clock (`HarnessLedger::now`) at and past the window's end; out of gas; a new refused job every round; a race; a store moved while planning; a refusal of unknown cause three times; races each followed by failed reads; a refusal of unknown cause three times with every read after it failing; a source re-dating updates: a copy, an update only it serves, another real update of one finalized header with more signers (600 slots, or 24, 60 or 72 s past the chain's clock), and, again every round 48 s past the clock, an update adopting the next committee or one only it serves; a hold for good across 4,106 rounds and a restart | at the end minus 60 s or past it nothing is sent, 0 charged, `/health` `down` naming the action; 1 ms inside, sent and applied, `ok`. `gas_limit` 1,000,000: `Adopt` refused once in ten rounds, nothing charged after, released when the limit is raised. 5 refusals in 40 rounds where each round brings a new job (the breaker). A refusal lost to another updater (exit 207) not held. A step made moot while planning is not sent (sent anyway: refused, fee 1,706,408). A `Miller` refused three times for an unknown cause: sent again after 4, 8 and 16 rounds, lands, the instance moves. 9 races each followed by one failed read: all races, no strike; with every read failing: held, judged a race the next round (the hold dropped), no strike, no failing send. The same `Miller` refusals with every read after each failing and no other party: each judged due the round after (failing sends 1, 2, 3; strikes 1, 2, 3; `/health` "did not land" from round 3), the third strike pauses sending (rounds 15-23), the fourth lands in round 30, `ok`. A source re-dating every finality update 600 slots, listed first: 4 rounds, 0 waiting, the update applied, the liar demoted (`/health` names the 7,188 s); a re-dated update only the liar serves, the other source one update behind: 4 rounds, 0 waiting, the other's update applied (15,626,400 → 15,627,008); Lodestar's real update of the probe (511 signers) re-dated against Nimbus's of the same finalized header (510): Nimbus's applied in 4 rounds whether the re-dated slot starts 24 s or 60 s (the margin itself) past the chain's clock, the liar not demoted, or 72 s or two hours past it, the liar demoted; with the fix undone, 30 of 30 rounds waiting and the store unmoved. A real update adopting the next committee (the record's entry 12) re-dated 48 s past the chain's clock every time it is asked, the store without its next committee after a rotation: 0 of 60 rounds waiting, the honest period update (entry 10) adopted at once, entry 20 applied (15,635,392) once served, the liar not demoted, `ok` (with the order of `81bbea61`: 27 of 30 rounds waiting, the committee not adopted, then 30 of 30 with entry 20 unsent, `down`); an update only the liar serves, re-dated so: the other source's applied in round 3, then 27 rounds waiting for the liar's window alone, `/health` `degraded` naming no progress (with that order: 30 of 30 waiting, the store unmoved). The initialization's `Adopt` out of gas held for good: 1 refusal in 4,106 rounds, `held.tsv` one line; restarted on the same directory: still 1 refusal ten rounds later; raised: applied, `held.tsv` empty (undone: 2 refusals in 4,106 rounds) |
+| `redating.rs` (10) | `defer_window` 8 unless named. The store lacking its next committee: a source re-dates entry 12 (it adopts it) each round to a started slot it has not used, the one whose `Open` the updater would defer longest (its key computed from its name and payer account); the same against `finish_own_jobs = false`; the source opening each copy itself, a new copy every 7 rounds or every round, or opening it and sending its `Miller`, copies chosen by the updater's wait for the step then due; the source using up each kind of step's turn in turn, then leaving a job to carry, its later steps chosen to wait longest. `finish_own_jobs = false` with two honest sources serving their newest finality update each slot. review-fix-updater3 M1's variants: re-dated a few slots past the clock, varying each round (the review's schedule: 1 to 5 slots; 0 to 5 by SplitMix64; `defer_window` 1 and 8); two sources re-dating alike beside one or two honest sources (`min_agreeing` 2; two clients, `bytes`; `defer_window` 1); a source re-dating 600 slots on every other answer | the started slots: rotated in round 5, the copy's `Open` deferred 7 rounds, the next committee adopted in round 35, entry 20 applied (`m4`: 55 `Open` deferrals, never adopted); `finish_own_jobs = false`: 6 `Open`s of the copies in the 52 rounds after the rotation (`m4reset`: 45); the opener: adopted 16, 26 and 23 rounds after the rotation, entry 20 applied, nothing refused, the source not demoted, `/health` `ok` (`m6`, and `06ed8bc1`'s code: never adopted, nothing sent after the rotation); the cycling source: adopted 66 rounds after the rotation, the bound being 68; newest-only sources with `finish_own_jobs = false`: 8 `Open`s in 60 rounds (`m7`, a fresh turn after each send, and `06ed8bc1`'s code: 16; `m4reset`, no new turn: 56); the variants: adopted in round 8 with `defer_window` 1 and in the two-liar cases, in rounds 33 and 28 (rotated in 15 and 10) with `defer_window` 8, entry 20 applied, no round waiting (`m1roll`: 57 of 60 rounds waiting, then 30 of 30, never adopted, `down`); the 600-slot liar demoted 5 times, every update applied (`m1`: never demoted) |
 | `health.rs` (8) | every send rejected (no funds), failing at transport, the only source down, the instance not moving, the chain unreachable for 200 rounds, the instance past its weak-subjectivity period for 200 rounds, a daemon cut off from its chain, a restart without the committee cache whose source serves only the bootstrap | degraded in rounds 1-4, `down` in round 5, `ok` once one lands; `down`; degraded after 16 rounds without progress, `down` after 32 (`defer_window` 1); unreachable: degraded in rounds 1-4, `down` in 5-200, `ok` once it answers and the instance moves; past its period: `down` in 200 of 200, nothing sent; the daemon's `/health`: 200 in rounds 1-4, 503 from round 5; the committees not served (store in period 1908): degraded in rounds 1-4, `down` from round 5, naming them (undone: the round ends `stuck`), the next round without an error once a source serves them |
 | `jobs.rs` (2) | ten rounds, a new finality update each, another party opening its job first and leaving it; a kept job whose `Miller` is refused once while the sources move on | `Miller` then `Finish` of each job continued: 5 updates applied, 5 `Miller`s and 5 `Finish`es (asserted exactly), nothing refused; the kept job kept through its 3 held rounds and finished: 2 `Open`s for 2 applied updates |
 | `bounds.rs` (3) | answers at and one byte past their bound, with and without a length; 256 MiB; module replies; provider messages | exact bound read, one more refused; 256 MiB cut after 1 MiB: the test server pushed a few MiB of it before curl was stopped (4,194,304, 6,291,456 and 6,291,456 bytes in three runs: socket buffering decides; asserted under 64 MiB: a reader that took the answer whole would have taken all 256 MiB; with curl's limit and the reader's bound both removed, the test fails), and where the kernel reports `VmHWM` the peak RSS is checked too (the box's gVisor does not); `file://` refused; messages kept to 200 printable characters |
@@ -436,13 +467,39 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   Core on a crown zone following Sepolia (`modules/results/updater-sequencer-2026-11-13/`, EVIDENCE row 104).
 - Jobs whose `Finish` fails stay open (the program has no clean-up step); the updater moves on.
 - A chain clock (`Ledger::now_ms`) more than 60 s behind Ethereum's: honest sources' newest updates look signed in the
-  future, are refused and their sources demoted (`/health` names the gap in seconds); before this, such a clock already
-  kept a source serving the newest update each slot waiting for its window. A clock behind by less, but by more than
-  the second or so between a slot's start and its update being served, ranks the newest honest update after an older
-  one that can be sent (item 6): the older may be applied first (one more job and its fees) where the updater used to
-  wait for the newest. A source re-dating within the 60 s, alone in serving the newest finalized header, holds it back until another source serves it or a later one, and is not demoted (`/health` names the instance not moving once that lasts the stall alarm's rounds).
-- One lying light-client source can stall this updater for good: a source that re-dates a real update adopting the next committee to slots that have started (its `Open` window open, so it ranks first), a new slot each round, chosen with the updater's deferral tag (computed from the updater's name and payer account, both public) so that the updater defers that update's `Open` every round, holds every update back while the store lacks its next committee, without end and without demotion, until the operator removes or replaces that source; `/health` raises the stall alarm (`degraded`, then `down`). Measured: the next committee never adopted in 113 rounds after the rotation, past the period's end (review-fix-updater3b M1); `min_agreeing = 2` with a `headers` source does not stop it (the copy's finalized header is canonical; derived, not tested). A fix is in progress. The operator's remedy: when `/health` reports no progress while the sources serve updates past the instance, remove or replace the source (the journal and the per-source metrics show which one served the update that was deferred every round); another updater whose sources exclude it is not held. Tested on the in-process chain with its clock set
-  (`HarnessLedger::now`), not on a sequencer.
+  future, are refused and their sources demoted (`/health` names the gap in seconds). A clock behind Ethereum's by more
+  than the age of the newest update when it is read (up to a slot and a few seconds) keeps every source that serves only
+  its newest update waiting for its window: nothing is sent and no source is demoted until the clock is fixed (`/health`
+  raises the stall alarm). review-fix-updater3b measured, on the in-process chain with two sources serving their newest
+  update each slot, every update applied with the clock up to 13 s behind and none from 15 s. Behind by less, the newest
+  honest update can rank after an older one that can be sent (item 6): the older may be applied first (one more job and
+  its fees).
+- A source re-dating within the 60 s, alone in serving the newest finalized header, holds it back until another source
+  serves it or a later one, and is not demoted (`/health` names the instance not moving once that lasts the stall
+  alarm's rounds).
+- One lying light-client source can still delay this updater, not hold it. Re-dating a real update to slots that have
+  started, a new copy each round, opening the copies itself and sending their steps (anyone may), and choosing them with
+  the updater's key (computed from its name and payer account, both public), it can use up the turn of each kind of step
+  on the instance's state before the updater sends one, then have the job the updater carries wait its full turn at each
+  step (item 8): at most `K × (defer_window - 1) + 1 + (K - 1) × defer_window` rounds per update it serves (68 at the
+  defaults; measured 66), each such update a real one, applied. It is not demoted (a started slot is what an honest
+  update carries), and the stall alarm (`6 × defer_window + 10` rounds, 58 at the defaults) can fire before the update
+  lands. If it recurs, remove or replace that source (the journal and the per-source metrics show which one served the
+  updates applied); another updater whose sources exclude it is not delayed.
+- A sequencer whose clock lags the updater's (with the sequencer backend the updater takes this machine's clock for the
+  chain's; a remote sequencer stamps its blocks with its own) by more than the time from a slot's start to the round: a
+  source re-dating to the slot that has just started makes `Open`s the updater sends and the chain refuses, each charged
+  the whole gas limit, three in a row pausing sending (item 10), for as long as the source does so and the clocks differ
+  (review-fix-updater3b L1: with the sequencer 2 s behind and rounds half a second into a slot, 6 refused and 71 of 80
+  rounds paused with `defer_window` 1; at this commit with `defer_window` 8, 5 refused, three pauses and the next
+  committee not adopted in 80 rounds, as before the turns of item 8 were counted by the state). Keep the sequencer's
+  clock synchronised with the updater's, or run the updater beside it.
+- With `finish_own_jobs = false` and sources whose best update changes every round (honest beacon nodes serving their
+  newest finality update, or a source re-dating its copies), the updater takes the newest update each round and leaves
+  the job it opened: it opens a job at most once per `defer_window` rounds and finishes none (`tests/redating.rs`: 8
+  `Open`s in 60 rounds with two honest sources serving their newest update each slot; 16 with `06ed8bc1`'s code). Do not
+  use it with such sources; the default finishes the job it opened.
+- Tested on the in-process chain with its clock set (`HarnessLedger::now`), not on a sequencer.
 - The bound tests' peak-RSS checks need `VmHWM` in `/proc/self/status` (and `/proc/self/clear_refs` to reset it); the
   build box's gVisor reports neither, so there the byte counts are the check.
 - The review fixes on a sequencer: every measurement of them ran in the in-process chain. A sequencer's real
