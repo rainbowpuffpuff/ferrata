@@ -1050,9 +1050,10 @@ note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transact
 [[row]]
 id = "RFP-022 P.7"
 tests = [
+  { path = "lez/harness/tests/state_growth_bridge.rs", kind = "test", ci = "lez-harness" },
   { path = "docs/performance.md", kind = "document" },
 ]
-note = "the projections at 1M and 10M operations derived in performance.md from measured and type-estimated account sizes (LEZ nullifier accounts 77 MB / 770 MB, burn accounts 185 MB / 1.85 GB, Ethereum 1M / 10M NOut slots); measured sizes and real-traffic projections remain"
+note = "the projections at 1M and 10M operations derived in performance.md from measured and type-estimated account sizes (LEZ nullifier accounts 77 MB / 770 MB, burn accounts 185 MB / 1.85 GB, Ethereum 1M / 10M NOut slots); measured sizes and real-traffic projections remain; state_growth_bridge.rs (CI, lez-harness) measures the three LEZ accounts the projection multiplies as the program writes them: root(cid, n) 117 B per import, nullifier(chain, vault, N) 77 B per claim and burn(cid, H(note)) 185 B per burn (the last two were estimates from the types; the measurement equals them), the same size for a second claim and burn, and no growth of the configuration's or the token's account; the 1M and 10M figures remain derived"
 
 [[row]]
 id = "RFP-022 S.1"
