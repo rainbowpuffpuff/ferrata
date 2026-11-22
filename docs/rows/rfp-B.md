@@ -35,7 +35,8 @@ wording), and the rows below say what changed.
 | "and no gap in the verified handoff chain" | A committee adopted from the update of every period 1410 to 1417, in order, none missing (asserted). The newest period's update sent first is refused at `Open` with exit 23 `PeriodSkipped` and changes nothing. |
 
 - Test: `lez/harness/tests/stall.rs` (`a_stalled_instance_keeps_attesting_and_resumes_without_repair`), commit `80a55d7d`;
-  `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1 RISC0_DEV_MODE=1 cargo test -p harness --locked --test stall -- --nocapture`;
+  `cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1 RISC0_DEV_MODE=1 FERRATA_STALL_FIXTURES=$PWD/../monitor/attest/tests/fixtures cargo test -p harness --locked --test stall -- --nocapture`
+  (the fixture variable writes the monitor's fixture, as the record shows);
   1 passed, 297.9 s (Modal build box); run again after the review at `bce25e02` (the second-provider comparison now
   asserted): the same output, 1 passed, 315.8 s. Record: [`lez/results/r7-stall.md`](../../lez/results/r7-stall.md).
 - Data: `sepolia-gloas-2026-11-10` and `sepolia-attest-2026-11-10` (the instance and R), `lez/lab/results/record/net/sepolia/updates/` (the outstanding updates), real Sepolia only.

@@ -9,8 +9,12 @@ output line for line but that path, 1 passed, 315.8 s, and the fixture it writes
 
 ```sh
 cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_BUILD_LOCKED=1 RISC0_DEV_MODE=1 \
+  FERRATA_STALL_FIXTURES=$PWD/../monitor/attest/tests/fixtures \
   cargo test -p harness --locked --test stall -- --nocapture
 ```
+
+(`FERRATA_STALL_FIXTURES` makes the test write the monitor's fixture, the record's `wrote
+monitor/attest/tests/fixtures/stall.json` line; without it the test runs the same and writes nothing.)
 
 | Step | What happened (measured) |
 |---|---|
