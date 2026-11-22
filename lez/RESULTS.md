@@ -1505,7 +1505,7 @@ box (`results/v0.4.0-rc2/environment.md`), at commit `b761300` for the harness.
 ### The harness on rc2 (`results/v0.4.0-rc2/`)
 
 `lez/scripts/lez-select.sh v0.4.0-rc2`, then the commands of §8 with
-`CARGO_TARGET_DIR=$PWD/target/lez-v0.4.0-rc2` (box script `spike/tmp/rc2/box1.sh`):
+`CARGO_TARGET_DIR=$PWD/target/lez-v0.4.0-rc2` (box script `box1.sh`, beside the repository):
 
 - **All 27 tests pass** (16 suites; `results/v0.4.0-rc2/harness-tests-dev-mode.log`), with
   `RISC0_DEV_MODE=1`: the private paths are executed and settled with fake receipts, as on rc1.
@@ -1585,8 +1585,8 @@ python3 -I scripts/compare-tables.py results results/v0.4.0-rc2 v0.4.0-rc1 v0.4.
 scripts/lez-select.sh v0.4.0-rc1              # back to the committed state
 ```
 
-The live session: `live/README.md`, "LEZ v0.4.0-rc2". The box scripts that ran all of it are in
-`spike/tmp/rc2/` (`box1.sh`, `box3.sh`) beside the repository, not in it.
+The live session: `live/README.md`, "LEZ v0.4.0-rc2". The box scripts that ran all of it are
+`box1.sh` and `box3.sh`, beside the repository, not in it.
 
 ## 11. LEZ v0.4.0-rc3
 

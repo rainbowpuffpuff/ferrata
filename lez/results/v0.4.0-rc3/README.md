@@ -148,7 +148,7 @@ on fixtures only; Logos's devnet itself was not used.
   (the same file names as `../`), `compare-v0.4.0-rc1.md` (`lez/scripts/compare-tables.py`, against `rc1-rerun/`: the
   harness on rc1, same source, same box), `prove-*-dry-run.log`, `checkpoint-core-bedrock-0.3.5.log`
   (`cargo test -p checkpoint-core --test bedrock_0_3_5` in `checkpoint/`).
-- The box job that made them: `spike/tmp/lez-rc3/boxC.sh` beside the repository (not in it). The same by hand:
+- The box job that made them: `boxC.sh` beside the repository (not in it). The same by hand:
 
 ```sh
 scripts/fetch-upstream.sh                     # also upstream/lez-v0.4.0-rc3 (commit bafd07b)

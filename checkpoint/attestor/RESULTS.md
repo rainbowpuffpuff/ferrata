@@ -123,7 +123,7 @@ checkpoint costs 347,832 + 195,149 (`vault/GAS.md`).
 
 ## 6. Against a running node (`attestor/live-node.sh`, `runs/live-node/`)
 
-A copy of the lab's saved generation 3 (`spike/tmp/realblocks/labcopy/gen-3.tar.zst`) and the lab bundle's
+A copy of the lab's saved generation 3 (`gen-3.tar.zst`, outside the repository) and the lab bundle's
 `logos-blockchain-node`, started alone on the box as `realblocks/extract.sh` starts it (never the lab).
 `attest --node http://127.0.0.1:18080 --save …` fetched `/cryptarchia/info` (LIB slot 8,856,126),
 `/channel/<id>` and 27 block windows (7,400,280 bytes), checked blocks 1..=202 and signed tip 202 under the

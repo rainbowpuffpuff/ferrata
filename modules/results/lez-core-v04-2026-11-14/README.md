@@ -82,7 +82,7 @@ transaction was signed or sent through the stack. Details: [`send-stack/README.m
 ## Re-check
 
 ```sh
-cd spike/ferrata-wt-<name>                          # the inputs beside it: spike/tmp/miniapp-sequencer/inputs
+cd <repo>                                           # the inputs beside it: ../tmp/miniapp-sequencer/inputs
 ../modal-build/mrun --profile <yours> --put ../tmp/miniapp-sequencer/inputs -- 'bash e2e/seqnet/run.sh build'
 ../modal-build/mrun --profile <yours> --timeout 3600 -- 'bash e2e/seqnet/run.sh build-lezcore core'
 ../modal-build/mrun --profile <yours> --timeout 3600 -- 'bash e2e/seqnet/run.sh build-lezcore rest'

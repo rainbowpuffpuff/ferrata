@@ -1,7 +1,7 @@
 # crown-live-4: the round trip live on Sepolia with the LEZ side on LEZ v0.4.0-rc3, to DONE (18 Nov 2026)
 
 The main session's `e2e/crown.sh start --inputs rc3 crown-live-4` (approved by the owner) on our Modal workspace (app
-`ferrata-crown`, function `runner`), from the tree `spike/ferrata-wt-crown-rc3`, branch `crown-rc3`, signing on Sepolia
+`ferrata-crown`, function `runner`), from a worktree of branch `crown-rc3`, signing on Sepolia
 with the throwaway deployer `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` (keystore in the Modal Secret
 `ferrata-sepolia-key`). The same round trip as [`crown-live-3`](../crown-live-3/README.md), with the LEZ side on LEZ
 v0.4.0-rc3: rc3's own `sequencer_service` (`bafd07be`) and the Logos Blockchain node it pins, 0.3.5-rc.1 (`f6d4267f`),

@@ -12,7 +12,7 @@ RECORD_DIR is results/<net>/ as testnet.sh wrote it (run.json, state.json, depos
 A LEZ v0.3.1 node keeps no per-transaction status, so a refusal shows as an included transaction that changed
 nothing: the record's account bytes (written after the refusals) are what the accepted transactions alone produce.
 A check whose block is not final (its Bedrock status, the last byte of `getBlock`) is PENDING, not FAIL: the public
-testnet rewinds (spike/tmp/testnet-ops/FOR-SIBLINGS.md); exit 0 all pass, 3 some pending, 1 a failure.
+testnet rewinds (testnet-ops's notes, outside the repository); exit 0 all pass, 3 some pending, 1 a failure.
 Python standard library only; read-only calls; generic User-Agent.
 """
 import argparse

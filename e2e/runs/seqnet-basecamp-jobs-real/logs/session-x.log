@@ -8,7 +8,7 @@
 [14:54:07] sequencer stopped (exit 0)
 [14:54:11] sequencer start 3: scheduler after 0 s; its blocks fall 3 s after an epoch second
 [14:54:11] sequencer up, head block 19
-[14:54:11] hook ~/Downloads/software_i_built/logos-rfp/spike/ferrata-wt-lez-core-v04/e2e/seqnet/hook-basecamp.sh
+[14:54:11] hook <repo>/e2e/seqnet/hook-basecamp.sh
 [15:07:43] driver exit 0
 [15:07:54] sequencer stopped (exit 0)
 [15:08:02] node stopped (exit 143)

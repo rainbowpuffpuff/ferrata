@@ -57,7 +57,7 @@ the public job path:
 | driver | LEZ's wallet sends every transaction; the follower applies only blocks `Finalized` on Bedrock and reads each charge with LEZ's own settlement; every job step declares a gas limit of 4,800,000 (largest step measured 3,731,712) |
 | reads | public Lodestar beacon APIs for bootstraps and updates (the only public ones found serving light-client data), a second provider to confirm roots; a generic User-Agent, no key |
 | keys | LEZ's published test accounts pay; throwaway by design; nothing is signed for Ethereum |
-| operate | `lez/lab/lab.sh deploy | run 60 | status | fetch | verify | stop` |
+| operate | `LAB_PROFILE=<your Modal profile> lez/lab/lab.sh deploy | run 60 | status | fetch | verify | stop` |
 | re-check | `lab.sh verify` replays every block through LEZ's `chain_state::apply_block` from the pre-genesis state, compares every charge, and rebuilds each instance's store natively from the kept bootstrap and updates |
 
 **Measured** (to the session of 11 November 2026, 14:17 UTC): 257 transactions, all applied, none

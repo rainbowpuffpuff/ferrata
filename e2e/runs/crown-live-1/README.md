@@ -1,7 +1,7 @@
 # crown-live-1: the whole round trip, live, Sepolia -> LEZ -> Sepolia, to DONE (11 Nov 2026)
 
-The owner's `e2e/crown.sh start` on our Modal workspace (app `ferrata-crown`, function `runner`), from the
-tree `spike/ferrata-wt-integ5`, branch `integration5`, signing on Sepolia with the throwaway deployer
+The owner's `e2e/crown.sh start` on our Modal workspace (app `ferrata-crown`, function `runner`), from a
+worktree of branch `integration5`, signing on Sepolia with the throwaway deployer
 `0x79A95aE9A3f9000eb41F7CBAB6a6F97826895C07` (keystore in the Modal Secret `ferrata-sepolia-key`). 19 of 19
 stages, **DONE at 15:14:17Z**, the runner's verify **14 of 14** (`verify.txt`). Every number here is from this run's
 files (`stages.done`, `manifest.json`, `deploy.json`, the runner's `crown.log` and LEZ session B's `driver.log`, which

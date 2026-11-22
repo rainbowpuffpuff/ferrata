@@ -208,8 +208,8 @@ transaction a LEZ user's wallet makes costs about what Ferrata's cost, at either
 
 ### What sets the circuit's cycles, and could ours pay less (from LEZ's source; not changed)
 
-Dev-mode executor counts of LEZ's circuit on the build box (`r0vm` 3.0.5 logs; `box-build-scale.sh`, logs in
-`spike/tmp/p4-scale/box/dry/`, the counts copied here), all one private account paying its fee:
+Dev-mode executor counts of LEZ's circuit on the build box (`r0vm` 3.0.5 logs; `box-build-scale.sh`, logs beside
+the repository, not in it; the counts copied here), all one private account paying its fee:
 
 | transaction (dev mode) | circuit user cycles | segments (padded) | difference |
 |---|---:|---:|---|

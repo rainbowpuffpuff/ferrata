@@ -23,6 +23,7 @@ python3 -I tools/gambit_run.py summary "$DIRS" "$OUT/$RUN.jsonl" --survivors "$O
 if [ -z "${IDS:-}" ]; then
   for d in vault registry; do
     cp "notes/gambit_out/$d/mutants.log" "$OUT/gambit-$d-mutants.log"
-    gzip -9 -n -c "notes/gambit_out/$d/gambit_results.json" > "$OUT/gambit-$d-results.json.gz"
+    # gambit records absolute paths: write the vault directory as <repo>/vault, so no machine path is committed
+    sed "s#$(pwd)#<repo>/vault#g" "notes/gambit_out/$d/gambit_results.json" | gzip -9 -n > "$OUT/gambit-$d-results.json.gz"
   done
 fi

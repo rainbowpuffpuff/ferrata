@@ -18,7 +18,7 @@
 //! ```
 //!
 //! **Why queued.** On the public testnet blocks come hours apart and a block can be rewound
-//! (`spike/tmp/testnet-ops/FOR-SIBLINGS.md`). So every transaction is built and signed up front with
+//! (testnet-ops's notes, outside the repository). So every transaction is built and signed up front with
 //! explicit nonces, declares its measured execution gas plus a small margin (a block admits a
 //! transaction only if the gas charged so far plus its *declared* limit fits the 10M cap), and is
 //! queued at once; LEZ's builder then makes three blocks of the sequence: the deployment and `Init`;

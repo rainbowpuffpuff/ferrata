@@ -79,7 +79,7 @@ and EVIDENCE row 80 cite.
 
 ## 3. Live: the updater with the policy, against public APIs
 
-`live/live.py` (box script beside the repository: `spike/tmp/source-diversity/box/live.sh`), 17:46–17:56Z, ten
+`live/live.py` (box script beside the repository: `live.sh`), 17:46–17:56Z, ten
 minutes, two daemons at once, each from the checkpoint of mainnet period 1913's update (finalized slot 15,672,512,
 root `0x76b355f9…6f62`) on an instance of its own, polling every 12 s:
 

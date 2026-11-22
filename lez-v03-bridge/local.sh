@@ -30,7 +30,7 @@ head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$run/payer.key"
 "$drv" "$run" setup --sequencer http://127.0.0.1:3040 --payer "$run/payer.key" > "$run/setup.log"
 payer="$(jq -r .payer "$run/run.json")"
 # One more supply account (the payer); no "gossip" key: on a Modal box its listener exits with os error 95
-# (testnet-ops, spike/tmp/testnet-ops/FOR-SIBLINGS.md), and a standalone sequencer needs no peers.
+# (testnet-ops's notes, outside the repository), and a standalone sequencer needs no peers.
 jq --arg p "$payer" 'del(.gossip) | .genesis += [{"supply_account": {"account_id": $p, "balance": 1000000000000000}}]' \
   "$lez_src/lez/sequencer/service/configs/debug/sequencer_config.json" > "$run/seq/sequencer_config.json"
 log "payer $payer funded at genesis"

@@ -122,7 +122,7 @@ account kind ([`lez-core-v04-2026-11-14`](../lez-core-v04-2026-11-14/README.md))
 ## 6. Findings
 
 - **F1** (`eth_rpc_module`): does not compile against builder 5f74cdb's generated client (above); fixed by the patch;
-  draft upstream PR in `spike/tmp/send-stack/REPORT.md`. No upstream branch or PR fixes it (checked 14 Nov: `main`
+  an upstream PR is drafted, outside the repository. No upstream branch or PR fixes it (checked 14 Nov: `main`
   `6965f32` is the newest branch; no open PR).
 - **F2** (Logos Rust SDK threading, measured): a call to another module from a module's worker thread blocks until the
   module's Qt main thread services it (on the Qt-affine transport, `lp_client_create` ends in a

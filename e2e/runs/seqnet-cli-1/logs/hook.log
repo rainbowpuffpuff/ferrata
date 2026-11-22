@@ -2,7 +2,7 @@
 [crown-b] bridge Register ETH (registry entry, schedules 0 and 1, leaf count) applied        gas    451572 block   24 +  9.9s 50cc551a0ebebbe3d4ad233c7ae9cc7989ed70f7235e083781defabfd6b07842
 [crown-b] token(cid, ETH): 1 schedule(s), known until leaf 1
 [crown-b] bridge ImportRoot n=1 (stage 1, block 9)                   applied        gas    301949 block   25 + 10.0s 807e5c2d8d03b48de15c837e3344f1b59ae2bfe261cf6a2a367eee4861ed19f7
-[crown-b] blocks 20..=25 (T1 0xa95c01046e14234f13c32c240917a4b3afa44b454a04d2e841ee1399a5ef3d9d); 0 burn note(s) written to ~/Downloads/software_i_built/logos-rfp/spike/tmp/miniapp-sequencer/w-cli-1/notes.json
+[crown-b] blocks 20..=25 (T1 0xa95c01046e14234f13c32c240917a4b3afa44b454a04d2e841ee1399a5ef3d9d); 0 burn note(s) written to <work>/notes.json
 [09:11:15] gas drop stand-in: native LEZ to the user's private account /0 (seqnet-fund)
 jq: parse error: Invalid numeric literal at line 2, column 7
 {"step":"faucet public transfer (stand-in for the gas drop)","tx":"02db790c77b3663258600310665935fe2c32c5b402d7ca802ff519190a63500f","amount":"3000000000000","send_ms":2,"seen_ms":4003}
