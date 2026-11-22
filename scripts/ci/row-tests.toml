@@ -766,8 +766,10 @@ tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
   { path = "modules/scripts/check.sh", kind = "test", ci = "box", run = "modules/scripts/check.sh" },
   { path = "cli/README.md", kind = "document" },
+  { path = "modules/scripts/bridge-send-stack.sh", kind = "test", ci = "box", run = "bash modules/scripts/bridge-send-stack.sh run OUT" },
+  { path = "modules/results/bridge-send-stack-r4/README.md", kind = "record" },
 ]
-note = "the user functions as the ferrata tool (deposit, claim, burn, release, recover, status; rows 84, 85) and in ferrata_bridge_module (row 59), its LEZ reads and private claim and burn through lez_core (rows 113, 114); the module's Ethereum sends still go through a stand-in; admin functions in the mini-app and a read-only view"
+note = "the user functions as the ferrata tool (deposit, claim, burn, release, recover, status; rows 84, 85) and in ferrata_bridge_module (row 59), its LEZ reads and private claim and burn through lez_core (rows 113, 114); since, the module's Ethereum reads through eth_rpc_module and its user and admin sends through Logos's send stack, only to the pinned deployment (EVIDENCE rows 198, 199); admin functions in the mini-app and a read-only view"
 
 [[row]]
 id = "RFP-022 U.2"

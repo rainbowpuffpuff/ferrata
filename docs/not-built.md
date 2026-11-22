@@ -32,8 +32,8 @@ The design notes specify these; there is no code for them here:
   `--send-via logos`, on anvil only: 7 of 7 equal to the plain path, EVIDENCE rows 119, 120; that needs our patch of
   `eth_rpc_module` 6965f32 for our builder's code generator, a draft upstream PR, and rests on the keystore's and signer
   manager's `configure` being ungated upstream to name our modules custodians; the bridge module's own Ethereum sends,
-  the mini-app's deposit among them, still go through its stand-in chain service, and nothing went to a public network
-  through the send stack, [`modules/results/send-stack-2026-11-14/`](../modules/results/send-stack-2026-11-14/README.md)); LEZ through `lez_core` is
+  user and admin, go through it too since, on anvil and approved at Logos's headless `evm_signer_cli` (EVIDENCE rows
+  198, 199), not inside Basecamp with Logos's approval app, and nothing went to a public network through the send stack, [`modules/results/send-stack-2026-11-14/`](../modules/results/send-stack-2026-11-14/README.md)); LEZ through `lez_core` is
   built for the bridge module's wallet session only (its LEZ reads and its private claim and burn, through `lez_core` at
   its merged v0.4 state with a patch of ours, on a devnet: EVIDENCE rows 113, 114), not for the other modules' LEZ
   reads and sends, nor the zone's history, which `lez_core` serves only for a sequencer it runs itself; verified reads
@@ -52,15 +52,16 @@ The design notes specify these; there is no code for them here:
 - the user's round trip on a LEZ sequencer through Logos Core's own modules: on a running LEZ sequencer and
   node (a devnet with the final programs, the vault on a local anvil) the private round trip has run through the
   `ferrata` tool's sequencer path and through the mini-app driving `ferrata_bridge_module` inside a headless
-  Logos Core (`e2e/seqnet/RESULTS.md`, EVIDENCE rows 102, 103), but the mini-app's calls (the module's `wallet`
-  method) read the chains, sign and send through a stand-in service (`seqnet-chain`: LEZ's wallet library, a
-  keystore, the relayer) instead of `eth_rpc_module` and `keystore_module`/`tx_sender_module` (the module's
-  `import_root` reads the vault through `eth_rpc_module`, row 109; the `wallet` method does not use it yet; its LEZ
-  reads and private sends go through `lez_core` when the session says so, rows 113, 114); the view has run inside
+  Logos Core (`e2e/seqnet/RESULTS.md`, EVIDENCE rows 102, 103), and since with the module's Ethereum reads through
+  `eth_rpc_module` and its user and admin sends through `tx_sender_module`, driven headless (row 199); a stand-in
+  service (`seqnet-chain`, not a module) still gives the session's seed and accounts, the zone's history, the
+  release's stand-in prover and the LEZ admin signer (its LEZ reads and private sends go through `lez_core` when the
+  session says so, rows 113, 114); the view has run inside
   Logos Basecamp (`b642a9a`) with `ferrata_bridge_module` and `lez_core` loaded there, the whole private round
   trip clicked through Basecamp and checked on the chains (row 125,
   [`modules/ferrata_bridge_ui/results-basecamp-roundtrip/`](../modules/ferrata_bridge_ui/results-basecamp-roundtrip/README.md)),
-  also with the private claim and burn proven for real by `lez_core` there (row 126): Basecamp still cuts a view's
+  also with the private claim and burn proven for real by `lez_core` there (row 126), its Ethereum side through the
+  stand-in service there: Basecamp still cuts a view's
   call to a core module at 20 s, so the module runs the two as jobs the view polls (an upstream fix in
   logos-view-module-runtime would make that unnecessary); that devnet's Ethereum side is anvil finalized by a stand-in
   committee, with the vault tests' mock verifier (no Groth16 proof) and a stand-in for the gas drop;

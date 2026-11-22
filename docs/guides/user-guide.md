@@ -551,7 +551,8 @@ end-to-end test, which CI runs on every push (row 84).
   tree's tools speak only its accounts (§9);
 - a user-side proof on a laptop: the private claim and burn were proven on cloud CPUs held to 8 and 16 cores and on
   M1 and M4 Mac minis under macOS (rows 33, 88);
-- Ethereum reads, signatures and sends through Logos Core's own modules in the mini-app's round trip (inside Basecamp
-  its Ethereum side goes through a stand-in service);
+- the mini-app's round trip inside Basecamp with its Ethereum side through Logos Core's own modules and Logos's
+  approval app (`evm_signer_ui`): headless, its reads, signatures and sends go through them (EVIDENCE row 199); inside
+  Basecamp, through a stand-in service;
 - a public LEZ network under the round trip: the v5 vault made the whole round trip on Sepolia on the final programs,
   with LEZ as zones we ran (rows 91, 142); LEZ testnet 0.4 did not exist when this was written.

@@ -221,14 +221,15 @@ The design notes specify these; there is no code for them here. In short (in ful
 - **Daemons:** the relayer's root imports on a running LEZ sequencer, `monitor`'s client of the LEZ and Logos
   Blockchain nodes' RPCs, the attestation side's monitor against public providers (built on recorded answers:
   `monitor/attest/`), the A3 gate's three daemons on a running sequencer.
-- **Logos modules:** Ethereum transactions through Logos Core's own modules beyond the two daemons on a devnet,
+- **Logos modules:** Ethereum transactions through Logos Core's own modules beyond anvil and inside Basecamp (on anvil
+  the two daemons' sends and the bridge module's user and admin sends go through Logos's send stack),
   LEZ through an unpatched `lez_core` (the bridge module's wallet session and, patched, the attestation module's reads
   and sends go through it), verified reads beyond the attestation
   module's, a published catalog.
 - **The user's round trip on a LEZ sequencer through Logos Core's own modules:** inside Logos Basecamp the
   mini-app's round trip ran with LEZ through `lez_core`, its private claim and burn proven for real there (jobs the
-  view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side still reads, signs and sends
-  through a stand-in service.
+  view polls, around Basecamp's 20 s cap on a view's call), but its Ethereum side read, signed and sent through a
+  stand-in service there; through Logos Core's own modules it ran headless ([EVIDENCE](docs/EVIDENCE.md) row 199).
 - **Logos Blockchain 0.3.5-rc.1:** a zone of several sequencers on it, Logos's devnet itself, and a Bedrock era change;
   the fork digest's reading is built as a second build of the checkpoint guests and paid out on a local anvil, over a
   zone of one sequencer and one local validator ([rows 129, 130](docs/EVIDENCE.md)), and live on Sepolia through a vault
