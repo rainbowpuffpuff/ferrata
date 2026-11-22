@@ -42,6 +42,7 @@
 set -uo pipefail
 . "$SEQNET_ENV"
 . "$REPO/e2e/seqnet/common.sh"
+. "$REPO/e2e/seqnet/late-credit.sh"   # late_credit_verdict (f)
 F=("$BIN/ferrata" --seed "$U/seed.txt" --eth-rpc "$RPC" --chain-id 11155111 --vault "$VAULT" --from-block "$FROM"
    --sequencer "$SEQ" --lez-wallet "$U/lez-wallet" --lez-password-file "$U/lez.pass" --bridge-account "$BRIDGE")
 RELAYER_PHRASE="legal winner thank year wave sausage worth useful legal winner thank yellow"   # BIP-39 test vector
@@ -242,24 +243,18 @@ if [ "$GAS_DROP" = 1 ]; then
     bad "R.06 gas drop: the first drop after the kill: $d1; record $rec1; proxy hits $(hits_of "$PR") (from $hr); $(grep -m1 -o -E 'claims: +[0-9]+ pending credit' "$RUN/user/10-claim.txt")"
   fi
   # The credit answered 503 reached the sequencer late: two credits of the first drop at LEZ, one applied (the
-  # second review's M1).
+  # second review's M1). Anything less fails, a late credit that applied before a third send included (the third
+  # review's L-4; late-credit.sh, tested on robust-3's record by test-late-credit.sh).
   late=""
   for _ in $(seq 1 60); do
     late="$(jq -c 'select(.action == "late forward answered")' "$PR/log.jsonl" 2>/dev/null | head -n 1)"
     [ -n "$late" ] && break; sleep 1
   done
   fact drop1LateCredit "${late:-null}"
-  s1="$(echo "$d1" | jq -r '.sends // 0' 2>/dev/null)"
-  if [ -n "$late" ] && grep -q 'claims: *1 pending credit' "$RUN/user/10-claim.txt"; then
-    if [ "${s1:-0}" -ge 3 ]; then
-      ok "R.06 gas drop (the second review's M1): two credits of the first drop reached the sequencer, built on the same account state: the third send, forwarded, and the second, at the sequencer 35 s after the daemon got its 503 (its answer: $(echo "$late" | jq -r '.answer' | tr '
-' ' ' | cut -c1-200)); the claim's dry run claims exactly 1 pending credit"
-    else
-      ok "R.06 gas drop (the second review's M1): the second send, at the sequencer 35 s after the daemon got its 503, applied before the daemon sent a third (booked from LEZ, $s1 sends; its answer: $(echo "$late" | jq -r '.answer' | tr '
-' ' ' | cut -c1-200)); the claim's dry run claims exactly 1 pending credit"
-    fi
+  if verdict="$(late_credit_verdict "$d1" "$late" "$(cat "$RUN/user/10-claim.txt" 2>/dev/null)")"; then
+    ok "R.06 gas drop (the second review's M1): $verdict"
   else
-    bad "R.06 gas drop (the second review's M1): the late credit: ${late:-no late forward logged}; $(grep -m1 -o -E 'claims: +[0-9]+ pending credit' "$RUN/user/10-claim.txt")"
+    bad "R.06 gas drop (the second review's M1): $verdict"
   fi
   # The second drop: its credit forwarded with the answer held, the daemon killed; restarted 30 s later.
   hr2="$(hits_of "$PR")"; echo "hold sendTransaction 40" > "$PR/ctl"
