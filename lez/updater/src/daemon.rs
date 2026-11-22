@@ -15,13 +15,13 @@ use std::{
 };
 
 use anyhow::{anyhow, bail, Context as _, Result};
-use lee::{AccountId, PrivateKey, PublicKey};
+use lee::{AccountId, Actor, PrivateKey, PublicKey};
 
 use crate::{
     chain::{instance_config, root},
     config::{File, SourceKind},
-    ledger::Ledger,
-    serve::{serve, Snapshot},
+    ledger::{machine_now_ms, Ledger, Tx, TxOutcome},
+    serve::{serve, stale_after, Snapshot},
     source::{BeaconApi, BeaconApiModule, Clock, HeaderWitness, Recorded, Source},
     updater::{Instance, Plan, Updater},
     utc_now,
@@ -50,6 +50,30 @@ pub fn open_ledger(file: &File, _base: &Path, payer: &PrivateKey) -> Result<(Box
              lez/updater/sequencer, which links LEZ's node-side crates)"
         ),
         other => bail!("daemon.ledger = {other:?}: harness or sequencer"),
+    }
+}
+
+/// A chain backend whose blocks carry the time they are made, read from this machine's clock unless the backend
+/// knows better: what the updater checks the program's validity windows against (`Ledger::now_ms`). The daemon puts
+/// every backend but the harness (whose blocks take each transaction's own time) behind it. A sequencer on this
+/// machine stamps its blocks with the same clock; the one remote sequencer the owner may name for the day-one
+/// deployment (`FERRATA_SEQUENCER_REMOTE`, sending only with `FERRATA_TESTNET_SEND=yes`: `chain::check_loopback`, the
+/// live driver's `check_send`) stamps them with its own, so `updater::WINDOW_MARGIN_MS` covers a small skew and a
+/// refusal by a larger one is held like any window refusal (4, 8, ... rounds), within the breaker's bound.
+pub struct MachineClock(pub Box<dyn Ledger>);
+
+impl Ledger for MachineClock {
+    fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
+        self.0.actor_state(actor)
+    }
+    fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
+        self.0.submit(payer, tx, gas_limit, max_fee)
+    }
+    fn flush(&mut self) -> Result<()> {
+        self.0.flush()
+    }
+    fn now_ms(&self) -> Option<u64> {
+        self.0.now_ms().or_else(machine_now_ms)
     }
 }
 
@@ -95,6 +119,8 @@ impl Daemon {
         let state_dir = at(&base, &file.daemon.state_dir);
         fs::create_dir_all(&state_dir)?;
         let (ledger, program) = open(&file, &base, &payer)?;
+        let ledger: Box<dyn Ledger> =
+            if file.daemon.ledger == "harness" { ledger } else { Box::new(MachineClock(ledger)) };
 
         let mut updaters = Vec::new();
         for c in &file.chains {
@@ -257,7 +283,9 @@ pub fn run(open: OpenLedger) -> Result<()> {
         libc::signal(libc::SIGTERM, on_signal as extern "C" fn(libc::c_int) as libc::sighandler_t);
         libc::signal(libc::SIGINT, on_signal as extern "C" fn(libc::c_int) as libc::sighandler_t);
     }
-    let snapshot = Snapshot::default();
+    // `/health` answers 503 once no round has refreshed it for ten polls' worth of time, and at least STALE_AFTER (a
+    // round hung in a settle wait or on a source is not reported healthy).
+    let snapshot = Snapshot::default().with_stale_after(stale_after(d.file.daemon.poll_secs));
     if let Some(addr) = &d.file.daemon.listen {
         let bound = serve(addr, snapshot.clone())?;
         eprintln!("{} [{}] /health and /metrics on http://{bound}", utc_now(), d.file.daemon.name);

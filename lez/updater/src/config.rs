@@ -46,7 +46,9 @@ pub struct Daemon {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SequencerCfg {
-    /// The sequencer's JSON-RPC address (`sequencer_service start --rpc-listen-address`); loopback only.
+    /// The sequencer's JSON-RPC address (`sequencer_service start --rpc-listen-address`); loopback only, or the one
+    /// remote sequencer `FERRATA_SEQUENCER_REMOTE` names exactly (`chain::check_loopback`), which the backend sends to
+    /// only with `FERRATA_TESTNET_SEND=yes`.
     pub rpc: String,
     /// The attestation program's account on that chain (base58), as its deployment computed it.
     pub program: String,
@@ -98,7 +100,8 @@ pub struct Policy {
     pub max_lag_slots: u64,
     /// How many sources must serve the chosen update's finalized header before it is sent.
     pub min_agreeing: usize,
-    /// Backoff after a transport failure: `retry_base_ms * 2^attempt`, at most `retry_max_ms`.
+    /// Backoff after a transport failure (and a failed read of the chain): `retry_base_ms * 2^(attempt-1)` after
+    /// attempt 1, 2, ..., at most `retry_max_ms`; `max_attempts` attempts in all.
     pub retry_base_ms: u64,
     pub retry_max_ms: u64,
     pub max_attempts: u32,
@@ -106,10 +109,12 @@ pub struct Policy {
     pub demote_rounds: u64,
     /// Periods asked of the `updates` endpoint at once.
     pub max_periods_per_request: u64,
-    /// Finish a job this updater opened before choosing another update (default): a beacon node serves only its
-    /// newest finality update, so the update a job was opened for can be gone from every source before the job's
-    /// last step, and the steps already paid would be lost. The update is kept in `state_dir/<chain>/open/` until the
-    /// job is finished or moot, so a restarted updater finishes it too.
+    /// Finish a job this updater sent a step for (its own `Open`, or a later step of a job another party opened)
+    /// before choosing another update (default): a beacon node serves only its newest finality update, so the update
+    /// a job was opened for can be gone from every source before the job's last step, and the steps already paid would
+    /// be lost (and a party that opens every new update's job and leaves it would have the updater pay a step of each).
+    /// The update is kept in `state_dir/<chain>/open/` until the job is finished or moot, so a restarted updater
+    /// finishes it too.
     #[serde(default = "default_true")]
     pub finish_own_jobs: bool,
     /// Client diversity (0, the default: off; otherwise at least 2): send only an update that sources reporting at

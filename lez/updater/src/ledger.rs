@@ -47,6 +47,21 @@ pub trait Ledger {
     fn flush(&mut self) -> Result<()> {
         Ok(())
     }
+    /// The time (Unix milliseconds) the chain's next block will carry, as near as the backend knows: the program's
+    /// timestamp validity windows (`ferrata_advance::Window`) are checked against it before a step is sent, since LEZ
+    /// charges a transaction executed outside its window the whole gas limit. `None` (the default): every transaction
+    /// carries its own block time (`Tx::time_ms`: the in-process harness, and a wrapper of it that does not say
+    /// otherwise). The daemon gives every other backend [`machine_now_ms`] (`daemon::Daemon::open_with`): a sequencer
+    /// on this machine stamps its blocks with the same clock; the one remote sequencer the owner may name
+    /// (`daemon::MachineClock`) with its own, within the window margin or held after a refusal.
+    fn now_ms(&self) -> Option<u64> {
+        None
+    }
+}
+
+/// This machine's clock, in Unix milliseconds.
+pub fn machine_now_ms() -> Option<u64> {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).ok().map(|d| d.as_millis() as u64)
 }
 
 #[cfg(feature = "harness")]
@@ -72,11 +87,14 @@ mod harness_ledger {
     /// LEZ v0.4.0-rc1's state machine in process, with its fee program and settlement (as
     /// `harness::Chain`), the Ferrata program at genesis, and one funded account per payer key.
     /// Each transaction is settled in a block of its own. `fail_next` makes the next submissions
-    /// fail as a dropped connection would (nothing sent).
+    /// fail as a dropped connection would (nothing sent). `now` sets the block time of every
+    /// transaction (the chain's clock, which the updater reads before sending: `Ledger::now_ms`);
+    /// `None` (the default): each transaction's own `time_ms`.
     pub struct HarnessLedger {
         pub state: V03State,
         pub block_id: u64,
         pub fail_next: usize,
+        pub now: Option<u64>,
         /// (payer, label, outcome) of every settled transaction.
         pub log: Vec<(AccountId, String, TxOutcome)>,
     }
@@ -95,7 +113,7 @@ mod harness_ledger {
                 .with_public_accounts(accounts)
                 .with_named_programs([(programs::fee_account_id(), programs::fee())])
                 .with_genesis_programs([(harness::ferrata_program(), true)]);
-            Self { state, block_id: 2, fail_next: 0, log: Vec::new() }
+            Self { state, block_id: 2, fail_next: 0, now: None, log: Vec::new() }
         }
 
         /// The Ferrata program's account.
@@ -115,6 +133,10 @@ mod harness_ledger {
     impl Ledger for HarnessLedger {
         fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
             Ok(self.state.get_account_by_id(actor.account_id).data.actor_state(actor.program_account_id).to_vec())
+        }
+
+        fn now_ms(&self) -> Option<u64> {
+            self.now
         }
 
         fn submit(&mut self, payer: &PrivateKey, tx: &Tx, gas_limit: u64, max_fee: u128) -> Result<TxOutcome> {
@@ -154,7 +176,7 @@ mod harness_ledger {
                 &mut self.state,
                 &opening,
                 self.block_id,
-                tx.time_ms,
+                self.now.unwrap_or(tx.time_ms),
                 &mut summary,
             ) {
                 Ok((_, charge)) => {

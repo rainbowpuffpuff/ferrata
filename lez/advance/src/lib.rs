@@ -166,6 +166,46 @@ pub fn layout_for(config: &Config, store_fork: LcFork, update: &LightClientUpdat
     served_layout(&config.spec(), update.attested_header.beacon.slot).map(|l| l.max(store_fork))
 }
 
+// ---- validity windows -------------------------------------------------------------------------
+
+/// The timestamp validity window the program gives a step's transaction, in Unix milliseconds: from `start_ms`
+/// (inclusive) to `end_ms` (exclusive); `None` is unbounded. LEZ refuses a transaction executed outside its window and
+/// charges it the whole gas limit (`OutOfValidityWindow`), and the native checks of [`evaluate`] do not see the clock,
+/// so a sender checks the window against the chain's clock before it pays.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Window {
+    pub start_ms: Option<u64>,
+    pub end_ms: Option<u64>,
+}
+
+impl Window {
+    /// No window (`Miller`, `Adopt`, `Finish`).
+    pub const ANY: Window = Window { start_ms: None, end_ms: None };
+
+    /// Whether a transaction settled at `now_ms`, or up to `margin_ms` later, falls inside.
+    pub fn admits(&self, now_ms: u64, margin_ms: u64) -> bool {
+        self.start_ms.is_none_or(|s| now_ms >= s) && self.end_ms.is_none_or(|e| now_ms.saturating_add(margin_ms) < e)
+    }
+}
+
+/// `Init`'s window, as the program's `period_window`: until the end of the weak-subjectivity period of the
+/// checkpoint's header (at `checkpoint_slot`).
+pub fn init_window(config: &Config, checkpoint_slot: u64) -> Window {
+    Window { start_ms: None, end_ms: config.ws_end_ms(checkpoint_slot) }
+}
+
+/// `Open`'s window, as the program's `update_window`: from the start of the update's signature slot to the end of the
+/// weak-subjectivity period of the store's finalized header (at `store_finalized_slot`). `None` when the update is
+/// signed at or after that end: the program refuses it whatever the time (`OutsideWeakSubjectivityPeriod`).
+pub fn open_window(config: &Config, store_finalized_slot: u64, signature_slot: u64) -> Option<Window> {
+    let start_ms = Some(config.slot_start_ms(signature_slot));
+    match config.ws_end_slot(store_finalized_slot) {
+        None => Some(Window { start_ms, end_ms: None }),
+        Some(end) if signature_slot >= end => None,
+        Some(end) => Some(Window { start_ms, end_ms: Some(config.slot_start_ms(end)) }),
+    }
+}
+
 // ---- a job and its steps ----------------------------------------------------------------------
 
 /// A step of the public job path.

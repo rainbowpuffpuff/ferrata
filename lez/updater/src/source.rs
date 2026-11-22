@@ -9,8 +9,9 @@
 
 use std::{
     fs,
+    io::Read as _,
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, OnceLock,
@@ -22,6 +23,90 @@ use ferrata_core::Root;
 use ferrata_lez_wire::Config;
 
 use crate::chain::{decode_finality_update, decode_update, split_chunks};
+
+// ---- bounds on what a source may answer ---------------------------------------------------------
+
+/// The most bytes read from a beacon node's `updates` answer: up to 128 periods (the beacon API's
+/// `MAX_REQUEST_LIGHT_CLIENT_UPDATES`; the configuration asks 16 at a time by default) of about 27 KB each with a
+/// 512-member committee, length-prefixed: about 3.5 MB.
+pub const MAX_UPDATES_BYTES: usize = 8 << 20;
+/// The most bytes read from a bootstrap or finality update answer (about 25 KB and 1 KB with a 512-member committee).
+pub const MAX_OBJECT_BYTES: usize = 1 << 20;
+/// The most bytes read from a JSON answer of `/eth/v1/node/version` or `/eth/v1/beacon/headers/{slot}` (under 2 KB).
+pub const MAX_JSON_BYTES: usize = 64 << 10;
+/// The longest reply text accepted from `beacon_api_module` (the provider's JSON for 128 updates is about 8 MB).
+pub const MAX_MODULE_REPLY_BYTES: usize = 16 << 20;
+/// Characters of a provider's or curl's message kept in an error (errors reach the log and `/health`).
+pub const MAX_MESSAGE_CHARS: usize = 200;
+
+/// `text` kept to printable ASCII (others become `_`) and [`MAX_MESSAGE_CHARS`] characters: a provider chooses it.
+pub fn clip(text: &str) -> String {
+    let mut out: String = text
+        .trim()
+        .chars()
+        .take(MAX_MESSAGE_CHARS)
+        .map(|c| if c.is_ascii_graphic() || c == ' ' { c } else { '_' })
+        .collect();
+    if text.trim().chars().count() > MAX_MESSAGE_CHARS {
+        out.push('…');
+    }
+    out
+}
+
+/// What [`fetch`] got: the answer (at most the bound asked for), whether curl succeeded, and curl's message.
+pub struct Fetched {
+    pub body: Vec<u8>,
+    pub ok: bool,
+    pub message: String,
+}
+
+/// `GET url` with `curl`, reading at most `max` bytes of the answer. Curl reads no `~/.curlrc` (`-q`), speaks only
+/// HTTP and HTTPS (`--proto =http,https`), follows no redirect, gives up after `timeout_secs` (at least 1), refuses an
+/// answer that announces more than `max` bytes (`--max-filesize`, exit 63) and is stopped as soon as it has written
+/// more than `max` bytes (an answer that announces no length): the answer never takes more than `max` bytes of memory
+/// here. `args` go before the URL (`--fail`, `-w ...`), which is passed with `--url` (a value that starts with `-` is
+/// not read as an option); the User-Agent is generic, nothing identifies the caller.
+pub fn fetch(url: &str, accept: &str, args: &[&str], timeout_secs: u64, max: usize) -> Result<Fetched> {
+    let mut child = Command::new("curl")
+        .arg("-q")
+        .args(["-sS", "--proto", "=http,https", "--max-redirs", "0"])
+        .args(["--max-time", &timeout_secs.max(1).to_string(), "--max-filesize", &max.to_string()])
+        .args(["-H", &format!("Accept: {accept}"), "-A", "ferrata-updater"])
+        .args(args)
+        .arg("--url")
+        .arg(url)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("curl did not start")?;
+    // curl's messages on a thread of their own (kept to 4 KiB, the rest drained), so that neither pipe can fill up
+    // while the other is read.
+    let mut stderr = child.stderr.take().expect("piped");
+    let messages = std::thread::spawn(move || {
+        let mut kept = Vec::new();
+        let _ = (&mut stderr).take(4096).read_to_end(&mut kept);
+        let _ = std::io::copy(&mut stderr, &mut std::io::sink());
+        kept
+    });
+    let mut body = Vec::new();
+    let read = child.stdout.take().expect("piped").take(max as u64 + 1).read_to_end(&mut body);
+    let over = body.len() > max;
+    if over {
+        let _ = child.kill();
+        body.clear();
+    }
+    let status = child.wait().context("curl")?;
+    let message = clip(&String::from_utf8_lossy(&messages.join().unwrap_or_default()));
+    if over {
+        bail!("an answer longer than {max} bytes (stopped there)");
+    }
+    read.context("reading curl's output")?;
+    if status.code() == Some(63) {
+        bail!("an answer longer than {max} bytes (curl stopped it)");
+    }
+    Ok(Fetched { body, ok: status.success(), message })
+}
 
 /// The three reads the updater makes (beacon-APIs `light_client` namespace, SSZ).
 pub trait Source: Send {
@@ -67,19 +152,15 @@ pub fn parse_version_answer(body: &str) -> Result<String> {
     Ok(clean)
 }
 
-/// `GET {base}/eth/v1/node/version` with `curl` (a generic User-Agent, nothing that identifies the caller).
+/// `GET {base}/eth/v1/node/version` with `curl` ([`fetch`]: at most [`MAX_JSON_BYTES`]).
 pub fn node_version(name: &str, base: &str, timeout_secs: u64) -> Result<String> {
     let url = format!("{}/eth/v1/node/version", base.trim_end_matches('/'));
-    let out = Command::new("curl")
-        .args(["-sS", "--fail", "--max-time", &timeout_secs.to_string()])
-        .args(["-H", "Accept: application/json", "-A", "ferrata-updater"])
-        .arg(&url)
-        .output()
-        .with_context(|| format!("{name}: curl did not start"))?;
-    if !out.status.success() {
-        bail!("{name}: {url}: {}", String::from_utf8_lossy(&out.stderr).trim());
+    let out = fetch(&url, "application/json", &["--fail"], timeout_secs, MAX_JSON_BYTES)
+        .with_context(|| format!("{name}: {url}"))?;
+    if !out.ok {
+        bail!("{name}: {url}: {}", out.message);
     }
-    parse_version_answer(&String::from_utf8_lossy(&out.stdout)).with_context(|| format!("{name}: {url}"))
+    parse_version_answer(&String::from_utf8_lossy(&out.body)).with_context(|| format!("{name}: {url}"))
 }
 
 /// A beacon node's REST API, read with `curl` (no TLS library in this workspace): SSZ, a generic
@@ -91,18 +172,15 @@ pub struct BeaconApi {
 }
 
 impl BeaconApi {
-    fn get(&self, path: &str) -> Result<Vec<u8>> {
+    /// At most `max` bytes ([`fetch`]).
+    fn get(&self, path: &str, max: usize) -> Result<Vec<u8>> {
         let url = format!("{}{}", self.base.trim_end_matches('/'), path);
-        let out = Command::new("curl")
-            .args(["-sS", "--fail", "--max-time", &self.timeout_secs.to_string()])
-            .args(["-H", "Accept: application/octet-stream", "-A", "ferrata-updater"])
-            .arg(&url)
-            .output()
-            .with_context(|| format!("{}: curl did not start", self.name))?;
-        if !out.status.success() {
-            bail!("{}: {url}: {}", self.name, String::from_utf8_lossy(&out.stderr).trim());
+        let out = fetch(&url, "application/octet-stream", &["--fail"], self.timeout_secs, max)
+            .with_context(|| format!("{}: {url}", self.name))?;
+        if !out.ok {
+            bail!("{}: {url}: {}", self.name, out.message);
         }
-        Ok(out.stdout)
+        Ok(out.body)
     }
 }
 
@@ -111,15 +189,17 @@ impl Source for BeaconApi {
         &self.name
     }
     fn bootstrap(&mut self, block_root: &Root) -> Result<Vec<u8>> {
-        self.get(&format!("/eth/v1/beacon/light_client/bootstrap/0x{}", hex::encode(block_root)))
+        self.get(&format!("/eth/v1/beacon/light_client/bootstrap/0x{}", hex::encode(block_root)), MAX_OBJECT_BYTES)
     }
     fn updates(&mut self, start_period: u64, count: u64) -> Result<Vec<Vec<u8>>> {
-        let raw =
-            self.get(&format!("/eth/v1/beacon/light_client/updates?start_period={start_period}&count={count}"))?;
+        let raw = self.get(
+            &format!("/eth/v1/beacon/light_client/updates?start_period={start_period}&count={count}"),
+            MAX_UPDATES_BYTES,
+        )?;
         Ok(split_chunks(&raw))
     }
     fn finality_update(&mut self) -> Result<Vec<u8>> {
-        self.get("/eth/v1/beacon/light_client/finality_update")
+        self.get("/eth/v1/beacon/light_client/finality_update", MAX_OBJECT_BYTES)
     }
     fn client(&mut self) -> Result<String> {
         node_version(&self.name, &self.base, self.timeout_secs)
@@ -150,9 +230,12 @@ pub struct BeaconApiModule {
     /// The provider id `beacon_api_module` tries first (`""`: its own order).
     pub provider: String,
     pub timeout_secs: u64,
-    /// The provider that answered each request, in order (`beacon_api_module`'s ids).
+    /// The provider that answered each of the last [`ANSWERED_KEPT`] requests, in order (`beacon_api_module`'s ids).
     pub answered: Vec<String>,
 }
+
+/// How many providers [`BeaconApiModule::answered`] keeps.
+pub const ANSWERED_KEPT: usize = 64;
 
 impl BeaconApiModule {
     fn request(&mut self, endpoint: &str, params: serde_json::Value) -> Result<serde_json::Value> {
@@ -160,18 +243,28 @@ impl BeaconApiModule {
             .get()
             .ok_or_else(|| anyhow!("{}: beacon_api_module is reachable only from inside Logos Core", self.name))?;
         let text = f(self.chain_id, endpoint, &params.to_string(), &self.provider, self.timeout_secs * 1000)
-            .map_err(|e| anyhow!("{}: {endpoint}: {e}", self.name))?;
+            .map_err(|e| anyhow!("{}: {endpoint}: {}", self.name, clip(&e)))?;
+        if text.len() > MAX_MODULE_REPLY_BYTES {
+            bail!(
+                "{}: {endpoint}: beacon_api_module's reply of {} bytes is longer than {MAX_MODULE_REPLY_BYTES}",
+                self.name,
+                text.len()
+            );
+        }
         let v: serde_json::Value = serde_json::from_str(&text)
             .with_context(|| format!("{}: {endpoint}: beacon_api_module's reply is not JSON", self.name))?;
         if v["ok"].as_bool() != Some(true) {
             bail!(
                 "{}: {endpoint}: beacon_api_module answered {} ({})",
                 self.name,
-                v["error"].as_str().unwrap_or("no detail"),
-                v["code"].as_str().unwrap_or("no code")
+                clip(v["error"].as_str().unwrap_or("no detail")),
+                clip(v["code"].as_str().unwrap_or("no code"))
             );
         }
-        self.answered.push(v["provider"].as_str().unwrap_or("?").to_string());
+        if self.answered.len() >= ANSWERED_KEPT {
+            self.answered.remove(0);
+        }
+        self.answered.push(clip(v["provider"].as_str().unwrap_or("?")));
         let body = v["body"].as_str().ok_or_else(|| anyhow!("{}: {endpoint}: no body", self.name))?;
         serde_json::from_str(body)
             .with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))
@@ -236,21 +329,18 @@ impl Source for HeaderWitness {
     }
     fn canonical_root(&mut self, slot: u64) -> Result<Option<Root>> {
         let url = format!("{}/eth/v1/beacon/headers/{slot}", self.base.trim_end_matches('/'));
-        let out = Command::new("curl")
-            .args(["-sS", "--max-time", &self.timeout_secs.to_string(), "-w", "\n%{http_code}"])
-            .args(["-H", "Accept: application/json", "-A", "ferrata-updater"])
-            .arg(&url)
-            .output()
-            .with_context(|| format!("{}: curl did not start", self.name))?;
-        if !out.status.success() {
-            bail!("{}: {url}: {}", self.name, String::from_utf8_lossy(&out.stderr).trim());
+        // The status line curl writes after the body (`-w`) is counted in the bound too.
+        let out = fetch(&url, "application/json", &["-w", "\n%{http_code}"], self.timeout_secs, MAX_JSON_BYTES + 16)
+            .with_context(|| format!("{}: {url}", self.name))?;
+        if !out.ok {
+            bail!("{}: {url}: {}", self.name, out.message);
         }
-        let text = String::from_utf8_lossy(&out.stdout);
+        let text = String::from_utf8_lossy(&out.body);
         let (body, code) = text.rsplit_once('\n').ok_or_else(|| anyhow!("{}: {url}: no status", self.name))?;
         match code.trim() {
             "200" => parse_header_answer(body, slot).with_context(|| format!("{}: {url}", self.name)),
             "404" => Ok(None),
-            other => bail!("{}: {url}: HTTP {other}: {}", self.name, body.chars().take(200).collect::<String>()),
+            other => bail!("{}: {url}: HTTP {}: {}", self.name, clip(other), clip(body)),
         }
     }
 }
