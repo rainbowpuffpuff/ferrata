@@ -1,9 +1,10 @@
 [workspace]
 resolver = "2"
 members = ["crates/ferrata-core", "crates/ferrata-spectests"]
-# bench/, lez/, bridge/ and checkpoint/ are workspaces of their own (RISC Zero guests and hosts);
-# see their READMEs. vault/ is a Foundry project; docs/design/finality-rule/ is Python.
-exclude = ["bench", "lez", "bridge", "checkpoint"]
+# bench/, lez/, bridge/ and checkpoint/ are workspaces of their own (RISC Zero guests and hosts), and so is
+# gpu-prover/prover (the Modal GPU prover, with its own lockfile); see their READMEs. vault/ is a Foundry project;
+# docs/design/finality-rule/ is Python.
+exclude = ["bench", "lez", "bridge", "checkpoint", "gpu-prover"]
 
 [workspace.package]
 version = "0.0.1"
