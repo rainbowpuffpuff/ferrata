@@ -18,7 +18,8 @@ For each workspace, one cargo-deny run (`--all-features --locked`) checks bans, 
     it and outside cargo's home (a source tree the workspace builds against, such as ../upstream/lez-v0.3.1), and
     no git or registry source failed to load;
   - a Logos Core module's library (modules/*/rust-lib) whose staged copies are absent: the missing Cargo.toml lies
-    under the module's logos-rust-sdk-src/, rust-lib/staged/ or rust-lib/upstream/ (git-ignored; scripts/stage.py).
+    inside the module's directory, in a path git ignores (its staging copies: logos-rust-sdk-src, rust-lib/staged/,
+    rust-lib/crates/, ...; `git check-ignore`, or the .gitignore files where there is no .git).
 - advisories (RustSec vulnerabilities, unmaintained and unsound crates, and yanked versions): `report` (the default)
   lists them and does not fail; `baseline` fails on any one that FILE (default scripts/deny-advisories-baseline.txt)
   does not accept for that workspace (each line: an advisory id, `yanked:CRATE@VERSION` or `CODE:CRATE@VERSION`,
@@ -42,8 +43,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHECK_BITS = {"advisories": 1, "bans": 2, "licenses": 4, "sources": 8}
 ADVISORY_CODES = {"vulnerability", "unmaintained", "unsound", "notice", "yanked"}
 PRUNE = {"target", ".git", "node_modules"}
-# The Logos Core modules' Rust libraries build against copies a staging step makes (git-ignored: rust-lib/staged/,
-# rust-lib/upstream/, logos-rust-sdk-src); unstaged, their graph cannot resolve, and that is a skip, not a failure.
+# The Logos Core modules' Rust libraries build against copies a staging step makes (git-ignored: logos-rust-sdk-src,
+# rust-lib/staged/, rust-lib/crates/, ...); unstaged, their graph cannot resolve, and that is a skip, not a failure.
 STAGED = re.compile(r"^modules/[^/]+/rust-lib$")
 
 
@@ -80,6 +81,36 @@ def cargo_home():
     return os.environ.get("CARGO_HOME") or os.path.join(os.path.expanduser("~"), ".cargo")
 
 
+def ignored(root, path):
+    """Whether git ignores path (inside root): `git check-ignore`, or, where there is no git repository, the plain
+    patterns (no wildcards, no negation) of the .gitignore files from root down to the path's directory."""
+    rel = os.path.relpath(path, root)
+    try:
+        r = subprocess.run(["git", "-C", root, "check-ignore", "-q", "--no-index", "--", rel], capture_output=True)
+        if r.returncode in (0, 1):
+            return r.returncode == 0
+    except OSError:
+        pass
+    parts = rel.split(os.sep)
+    for depth in range(len(parts)):
+        gi = os.path.join(root, *parts[:depth], ".gitignore")
+        if not os.path.isfile(gi):
+            continue
+        sub = parts[depth:]
+        with open(gi, encoding="utf-8") as f:
+            pats = [l.strip() for l in f if l.strip() and not l.lstrip().startswith(("#", "!"))]
+        for pat in pats:
+            if any(c in pat for c in "*?["):
+                continue
+            pat = pat.strip("/")
+            if "/" in pat:
+                if sub[:len(pat.split("/"))] == pat.split("/"):
+                    return True
+            elif pat in sub[:-1] or pat == sub[-1]:
+                return True
+    return False
+
+
 def skip_reason(stderr, root, ws):
     """Why a workspace whose graph does not resolve may be skipped, or None (then it fails). Only a missing path
     dependency beside the repository, or a module's absent staged copies, is a skip; anything to do with fetching a
@@ -96,9 +127,9 @@ def skip_reason(stderr, root, ws):
             continue
         if STAGED.match(ws):
             mod = os.path.join(root, os.path.dirname(ws))
-            if any(under(p, os.path.join(mod, d)) for d in ("logos-rust-sdk-src", "rust-lib/staged", "rust-lib/upstream")):
-                return "needs its staged sources (a Logos Core module: modules/README.md, scripts/stage.py, " \
-                    "logos-rust-sdk-src)"
+            if under(p, mod) and ignored(root, p):
+                return f"needs its staged sources ({scrub(p, root)}: git-ignored, made by the module's staging step; " \
+                    "modules/README.md)"
         if not under(p, root) and under(p, parent) and not under(p, cargo_home()):
             return f"needs {scrub(p, root)} (beside the repository, absent)"
     return None

@@ -119,6 +119,7 @@ class SkipReason(unittest.TestCase):
         os.makedirs(self.root)
         self.env = dict(os.environ)
         os.environ["CARGO_HOME"] = os.path.join(self.parent, "cargo-home")
+        os.environ["GIT_CEILING_DIRECTORIES"] = self.parent       # no repository above the test's tree: .gitignore read
 
     def tearDown(self):
         os.environ.clear()
@@ -156,14 +157,31 @@ class SkipReason(unittest.TestCase):
         self.assertIsNone(self.reason(MISSING_DEP, ws="cli", path="/nonexistent-elsewhere/x/Cargo.toml"))
 
     def test_module_staged_sources(self):
+        # The modules' own .gitignore files name their staging copies (no .git here: the plain patterns are read).
+        for m, pats in (("ferrata_attest_module", "logos-rust-sdk-src\nrust-lib/staged/\nrust-lib/upstream/\n"),
+                        ("ferrata_attestor_module", "result-*\nlogos-rust-sdk-src\nrust-lib/attestor/\nrust-lib/crates/\n")):
+            os.makedirs(os.path.join(self.root, "modules", m))
+            with open(os.path.join(self.root, "modules", m, ".gitignore"), "w") as f:
+                f.write("# staging copies\n" + pats)
         ws = "modules/ferrata_attest_module/rust-lib"
         r = self.reason(MODULE_UNSTAGED, ws=ws)
         self.assertIsNotNone(r)
         self.assertIn("staged sources", r)
-        # The same path for a workspace that is not a module's library, or a path outside the staging dirs: no skip.
+        crates = f"{self.root}/modules/ferrata_attestor_module/rust-lib/crates/attestor-core/Cargo.toml"
+        self.assertIsNotNone(self.reason(MISSING_DEP, ws="modules/ferrata_attestor_module/rust-lib", path=crates))
+        # The same path for a workspace that is not a module's library, a tracked (not ignored) path of the module, or
+        # an ignored path of another module: no skip.
         self.assertIsNone(self.reason(MODULE_UNSTAGED, ws="lez"))
         other = f"{self.root}/modules/ferrata_attest_module/rust-lib/calls-extra/Cargo.toml"
         self.assertIsNone(self.reason(MISSING_DEP, ws=ws, path=other))
+        self.assertIsNone(self.reason(MISSING_DEP, ws=ws, path=crates))
+
+    def test_ignored_by_git(self):
+        subprocess.run(["git", "init", "-q", self.root], check=True, capture_output=True)
+        with open(os.path.join(self.root, ".gitignore"), "w") as f:
+            f.write("modules/m/rust-lib/crates/\n")
+        self.assertTrue(da.ignored(self.root, os.path.join(self.root, "modules/m/rust-lib/crates/a/Cargo.toml")))
+        self.assertFalse(da.ignored(self.root, os.path.join(self.root, "modules/m/rust-lib/calls/Cargo.toml")))
 
 
 FAKE_CARGO = """#!{python}
@@ -309,9 +327,8 @@ class Policy(unittest.TestCase):
     def test_clarifications_name_the_locked_versions(self):
         clar = self.load("deny.toml")["licenses"]["clarify"]
         self.assertEqual(len(clar), 5)
-        locks = subprocess.run(["git", "-C", ROOT, "ls-files", "--", "*Cargo.lock"], capture_output=True,
-                               text=True).stdout.split()
-        self.assertTrue(locks, "no tracked Cargo.lock (run in a git checkout)")
+        locks = [os.path.join(ws, "Cargo.lock") for ws in da.workspaces(ROOT)]     # git's list, else a walk
+        self.assertGreater(len(locks), 10)
         for c in clar:
             name, _, version = c["crate"].partition("@")
             self.assertTrue(version, f"{c['crate']}: no version")
