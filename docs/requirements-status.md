@@ -22,8 +22,8 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 25 | 29 | 2 | 3 | **59** |
-| RFP-022 | 26 | 38 | 2 | 2 | **68** |
+| RFP-021 | 29 | 25 | 2 | 3 | **59** |
+| RFP-022 | 29 | 35 | 2 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -34,13 +34,13 @@ By section, hard requirements:
 | RFP-021 | Functionality | 11 | 3 | 0 | 1 | 15 |
 | RFP-021 | Usability | 2 | 3 | 0 | 1 | 6 |
 | RFP-021 | Reliability | 8 | 4 | 0 | 0 | 12 |
-| RFP-021 | Performance | 1 | 8 | 0 | 0 | 9 |
+| RFP-021 | Performance | 5 | 4 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 0 | 8 | 2 | 1 | 11 |
 | RFP-021 | Verification Security | 3 | 3 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 11 | 6 | 0 | 0 | 17 |
 | RFP-022 | Usability | 2 | 7 | 0 | 1 | 10 |
 | RFP-022 | Reliability | 4 | 10 | 0 | 0 | 14 |
-| RFP-022 | Performance | 2 | 5 | 0 | 0 | 7 |
+| RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 2 | 1 | 1 | 4 |
 | RFP-022 | Security | 3 | 5 | 1 | 0 | 9 |
 | RFP-022 | Privacy Preservation | 4 | 3 | 0 | 0 | 7 |
@@ -90,8 +90,8 @@ By section, hard requirements:
 | R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against the official vectors, Helios (the vectors, 220 recorded updates, 2,000 random mutations of real updates) and Lodestar (the same mutations), 0 disagreements; not audited. | 1, 140, 153; `crates/ferrata-spectests/HELIOS-DIFFERENTIAL.md` |
 | R.7 | in part | Lab instances caught up and ran eight days unrepaired; no attestation tested while stalled; past its bound an instance is replaced. | 21, 69, 70; `lez/lab/README.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
-| R.9 | in part | Two honest daemons and an adversary: refused-step gas 5.7–8.7% of applied, in the in-process chain; not run on a sequencer. | 80; `lez/updater/tests/recorded.rs` |
-| R.10 | in part | Fee share 0.39–0.47 over 58 updates in the in-process chain; the latency effect is derived in a first-draft guide. | 80; `docs/guides/operator-guide.md` §3 |
+| R.9 | in part | On a running sequencer, two honest daemons alone at windows 1, 8 and 30 and with an adversary: A3's waste ratio 0.0036 at window 30 (on 20 updates; the gate asks 100), above the gate at windows 1 and 8 and with the adversary; the abandoned-job policy is not built. | 80, 172; `lez/results/perf-gate-sequencer.md` |
+| R.10 | in part | On a running sequencer, honest-1's fee share 0.493–0.609 and latency medians 105–306 s across windows, 8–23 completed jobs per run against A3's 100 updates, the window comparison confounded by one run's reveal step; the guide's §3.4 sits in a first-draft guide. | 80, 172; `docs/guides/operator-guide.md` §3.4 |
 | R.11 | shown | Four private attestations proven against one snapshot, a finality update applied in between, then settled in one block with nothing re-proven; one account's second transaction on the same snapshot dropped. The block is assembled in process with rc1's block settlement; no sequencer ran it. | 152; `lez/results/lc-security/r11-one-block.md` |
 | R.12 | shown | All seven CI jobs passed on GitHub at `main`; the five latest runs read on 18 November also passed. | GitHub runs 43730879603 and 44172503761; `.github/workflows/ci.yml` |
 
@@ -100,14 +100,14 @@ By section, hard requirements:
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | P.1 | shown | Each attestation type settles in one transaction, 96,584 to 1,618,872 cycles; 8.2M for a 306-log receipt without the Keccak accelerator. | 3; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-keccak-soft.md` |
-| P.2 | in part | Cycles and gas per action and statement type; proof time and size for the update and one log attestation only. | 5, 32, 49, 123; `lez/results/stage1-finality.md` |
-| P.3 | in part | Per-update costs measured; the amortised tables are derived, per period and day, in a first-draft report, without real proving. | `lez/results/stage1-replay.md`; `docs/performance.md` RFP-021 §P.3 |
-| P.4 | in part | Private attestation proven on cloud CPUs at the declared minimum, an M1 and a GPU; not on a laptop. | 32, 38, 50, 88 |
-| P.5 | in part | Parts measured on sequencers we ran and in the live runs; finality is an estimate; no end-to-end figure. | 99; `e2e/runs/crown-live-3/README.md` |
-| P.6 | in part | The update's proof and the lab's zone measured; the updater daemon's CPU, memory and bandwidth are not. | 21, 123; `lez/lab/README.md` |
-| P.7 | in part | Account sizes measured in the harness; the one- and five-year figures are derived in a first-draft report, overhead not counted. | `lez/results/stage1-replay.md`; `docs/performance.md` RFP-021 §P.7 |
-| P.8 | in part | Pairing steps measured (7.0M of 9.2M); the precompile delta is a derived upper bound, not a modelled cost. | 127; `lez/results/stage1-finality.md`; `docs/performance.md` RFP-021 §P.8 |
-| P.9 | in part | Update steps flat across five mainnet updates; attestation cost against accumulated records not measured. | `lez/results/stage1-replay.md`; `lez/lab/README.md` |
+| P.2 | in part | Cycles, gas, proof time and size for every action that advances the tracked state (a finality update and a committee handoff each also proven in one private transaction and settled) and every statement type but the accumulator leaf: 39 guest executions proven for real; the leaf's only real proof is of an earlier image, and the public `VerifyAll`, `ApplyVerified` and `Read` are not proven. | 5, 32, 49, 123, 166; `lez/results/perf-proofs.md` |
+| P.3 | shown | Tracking cost measured over eight days of the lab's sequencer (9,225,372 execution gas a finality update, 16,060,242 a handoff) and amortised per attestation apart from verification: 235.5M / N a day at the recommended cadence, 14.1M / N once per period (derived); the proven path proven for real, 485,298 + 224,063 gas an update, 451,895 + 224,063 a handoff. | 167; `lez/results/perf-tracking.md`; `docs/performance.md` RFP-021 §P.3 |
+| P.4 | in part | This tree's padded private attestation proven at the declared minimum's 8 and 16 CPUs (1,254.8 s and 633.5 s), on an M1 and a GPU; the owner's laptop script is ready and rehearsed; not run on a laptop. | 32, 38, 50, 88, 168; `bench/perf/p4-laptop-owner.sh` |
+| P.5 | shown | End-to-end latency from the live run's own records: median 18.1 min from the Ethereum event to a statement usable on LEZ (p90 20.7), split into finality 13.0, the next finalized header 3.1, availability 0.2, the update on LEZ 1.5 and the consuming transaction 0.3. | 99, 169; `lez/results/perf-latency-e2e.md` |
+| P.6 | in part | The updater daemons on a running sequencer: 0.043–0.092 of a core and 57.3–57.8 MiB each; the update's proofs measured; the attestation CLI and module, the §8 `monitor` and the daemons as Logos modules not measured. | 21, 123, 172; `docs/performance.md` RFP-021 §P.6 |
+| P.7 | shown | Account sizes in LEZ's serialized state with growth measured to 100,000 records (record 453 B, instance 593 B, job 1,110 B); one- and five-year growth derived at the design's cadence (4.12 MB and 20.58 MB); unfinished jobs at most (k − 1) × 10.09 MB a year with k racing operators, none with one (derived). | 170; `lez/results/perf-state.md`; `docs/performance.md` RFP-021 §P.7 |
+| P.8 | shown | The BLS precompile delta modelled at time parity from measured native and in-program costs: 8,344,139 cycles of BLS per finality update in the program, 17,841 as a precompile; the update about 902,607 cycles instead of 9,228,905. | 127, 171; `docs/performance.md` RFP-021 §P.8 |
+| P.9 | in part | Five statement types and every update step charged the same at every size to 100,000 records; the lab's 98 finality jobs flat; other statement types not measured against accumulated state. | 170; `lez/results/perf-state.md`; `lez/lab/README.md` |
 
 ### Supportability
 
@@ -213,12 +213,12 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | P.1 | shown | A plaintext claim settles in one public transaction, 261,671 execution gas broken down by handler, in the harness. | 8; `lez/results/bridge-inbound.md` |
-| P.2 | in part | Import costs measured in the harness and on Sepolia's state; the per-deposit figure is derived in a first-draft report. | 8, 27, 91; `docs/performance.md` RFP-022 §P.2 |
+| P.2 | shown | A root import's cost against the deposits it covers, measured (230,731–236,224 execution gas in the harness, 432,182 on Sepolia's real state), and per deposit at the hourly cadence with the instance's tracking: 10.25M / 1.02M / 102k at 1 / 10 / 100 deposits an hour, 934,029 / 93,403 / 9,340 on the proven path (derived). | 8, 27, 91, 173; `docs/performance.md` RFP-022 §P.2 |
 | P.3 | shown | Deposit, candidate, finalisation and release gas measured with the real verifier on a local EVM and paid live on Sepolia. | 13, 25, 91; `vault/GAS.md` |
-| P.4 | in part | Private claim and burn proven on cloud CPUs at the minimum, Mac minis and a GPU; only the release on a laptop. | 33, 38, 50, 88 |
-| P.5 | in part | Inbound and outbound parts measured live with testnet parameters; production figures are estimates and a simulation. | 41, 91; `e2e/runs/crown-live-3/README.md` |
-| P.6 | in part | Provers and `monitor`'s memory measured; the daemons' CPU and bandwidth and the relayer's memory are not. | 15, 17, 43, 91, 100 |
-| P.7 | in part | 1M and 10M figures derived from one measured and two estimated account sizes, in a first-draft report. | `docs/performance.md` RFP-022 §P.7 |
+| P.4 | in part | Private claim and burn proven at the minimum's 8 and 16 CPUs (1,093.0 / 639.2 s and 932.8 / 534.5 s), on Mac minis and a GPU; the owner's laptop script is ready and rehearsed; only the release on a laptop. | 33, 38, 50, 88, 168 |
+| P.5 | shown | Deposit to mint and burn to release from the live round trip's records: inbound 32.9 min, about 1.1–12.1 h with the client's default claim hold (derived); outbound 71.0 min from the burn's proving, of which W 60.1 min; testnet parameters. | 41, 91, 174; `lez/results/perf-latency-bridge.md` |
+| P.6 | in part | Provers, `monitor` (0.0004 of a core, 14.0 MiB) and the relayer (0.0007 of a core, 20.3 MiB) measured with their bandwidth; the importer as a daemon, `ferrata_attestor`, `monitor`'s LEZ traffic and the daemons as Logos modules not measured. | 15, 17, 43, 91, 100, 175 |
+| P.7 | shown | Growth of all bridge state measured (LEZ: a nullifier 165 B, a burn record 273 B, a root 205 B, 162 B per new holder; Ethereum: one slot per release and per new depositor), its storage cost named, and projected at 1M and 10M operations (nullifiers 165 MB / 1.65 GB, holders 162–324 MB at 1M claims; derived). | 170, 176; `lez/results/perf-projections.md`; `docs/performance.md` RFP-022 §P.7 |
 
 ### Supportability
 

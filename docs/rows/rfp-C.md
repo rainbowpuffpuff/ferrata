@@ -1,5 +1,11 @@
 # Stream rfp-C: measurements for the performance and cost rows (proposals for the integrator)
 
+**Folded on `integration9`, 22 November 2026,** with the second review's verdicts and the second fix round's
+statuses: RFP-021 P.3, P.5, P.7 and P.8 and RFP-022 P.2, P.5 and P.7 shown (the review's conditions L1, L2, L5, L11
+and L12 checked in the text); RFP-021 P.2, P.4, P.6, P.9, R.9 and R.10 and RFP-022 P.4 and P.6 in part; the proposed
+EVIDENCE rows as rows 166–176 (row 166 worded for P.2 in part). Still open: P.2's accumulator-leaf proof (M-a below)
+and the owner's laptop run (P.4 of both RFPs).
+
 Branch `rfp-measure` (from `f13faee2`). Every figure comes from a command run on this branch, on 21 November 2026 (the second review's fixes on 22 November);
 *derived* marks a figure computed from measured inputs. Where the build box ran a command, its copy of the tree holds
 no `.git`; the commit is the branch's at that time. The integrator applies the statuses and EVIDENCE texts; this
