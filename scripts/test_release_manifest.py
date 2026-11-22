@@ -405,8 +405,10 @@ class CrateNotices(unittest.TestCase):
                          "path:ferrata/cli")
         self.assertEqual(cn.source_of({"source": None, "manifest_path": os.path.join(root, "Cargo.toml")}),
                          "path:ferrata")
-        self.assertNotIn(os.path.basename(root) + "/",
-                         cn.source_of({"source": None, "manifest_path": os.path.join(root, "lez", "wire", "Cargo.toml")}))
+        # The exact value, not "the checkout's name is absent": a checkout named ferrata (as CI's is) would match
+        # the fixed project prefix path:ferrata/ and fail a substring check that the code passes.
+        self.assertEqual(cn.source_of({"source": None, "manifest_path": os.path.join(root, "lez", "wire", "Cargo.toml")}),
+                         "path:ferrata/lez/wire")
         beside = os.path.join(os.path.dirname(root), "upstream", "lez", "Cargo.toml")
         self.assertEqual(cn.source_of({"source": None, "manifest_path": beside}), "path:upstream/lez")
         self.assertEqual(cn.source_of({"source": "registry+x", "manifest_path": beside}), "registry+x")
