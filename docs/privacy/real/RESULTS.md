@@ -1,5 +1,12 @@
 # Privacy suite with real proofs (milestone B2's gate on the delivered programs)
 
+> **Which program.** These records are of the bridge program the deployments of November 2026 run
+> ([`docs/image-ids.md`](../../image-ids.md) `ferrata_bridge`, `0xccde6171…71dd`), and they reproduce from commit
+> `f13faee2`, where the steps under "Reproduce" wrote them in place. Since milestone B1 this tree's bridge program is
+> B1 (`ferrata_bridge_b1`, `0xac1fb59b…442e`): on this tree the same steps expect B1's id and write under
+> `target/privacy/real/b1/` (`FERRATA_PRIVACY_OUT`), never over these files. B1 has had dev-mode passes of this
+> suite, not a real-proof one.
+
 The privacy suite of [`../RESULTS.md`](../RESULTS.md) ran with RISC Zero in dev mode and a mock verifier on the
 Ethereum side. This run measures the same gate on what is delivered: the final programs of
 [`../../image-ids.md`](../../image-ids.md), every private claim and burn **proven for real** and its receipt verified
@@ -24,7 +31,7 @@ the same programs in dev mode (fake receipts, mock verifier), the baseline again
 
 | | |
 |---|---|
-| programs | bridge program `0xccde6171…71dd` (the test stops before its first proof unless its id is this, docs/image-ids.md); release `0xb64900bc…29e9` (rebuilt R0BF binary, sha256 `7be1349c…11bf`, equal to docs/image-ids.md's); LEZ v0.4.0-rc1's privacy-preserving circuit as built in this tree, `8fc948d1…f257` (LEZ's own program, not in docs/image-ids.md); vault v5 (`vault/src` of this commit) with RISC Zero's `RiscZeroGroth16Verifier` (risc0-ethereum v3.0.0 `ControlID`) behind RISC Zero's emergency stop |
+| programs | bridge program `0xccde6171…71dd` (the test stops before its first proof unless its id is this: docs/image-ids.md's `ferrata_bridge`, the deployed program, at `f13faee2`); release `0xb64900bc…29e9` (rebuilt R0BF binary, sha256 `7be1349c…11bf`, equal to docs/image-ids.md's); LEZ v0.4.0-rc1's privacy-preserving circuit as built in this tree, `8fc948d1…f257` (LEZ's own program, not in docs/image-ids.md); vault v5 (`vault/src` of this commit) with RISC Zero's `RiscZeroGroth16Verifier` (risc0-ethereum v3.0.0 `ControlID`) behind RISC Zero's emergency stop |
 | LEZ half | the suite's test binary (built on the build box at commit `e9798ca`, the test code of `3d12568`; stripped, sha256 `eece2d83…`) with `FERRATA_PRIVACY_PROOFS=real` and dev mode off, in one Modal container (Modal): **one NVIDIA L4** (23,034 MiB, driver 610.57.04), 4 cores, 32 GiB; r0vm 3.0.5 built with CUDA (sha256 `781ca946…6fb7`, the binary of [`../../../gpu-prover/`](../../../gpu-prover/), checked before use) as the prover (`RISC0_SERVER_PATH`) |
 | releases | each release statement's succinct proof and `identity_p254` step in the same L4 container (`ferrata-e2e prove`, `ferrata-e2e p254`); the Groth16 step in RISC Zero's prover image (`risczero/risc0-groth16-prover:v2025-04-03.1`, CPU, Modal, `e2e/crown/wrap.py`); the Groth16 receipt assembled and verified on the build box (`ferrata-e2e groth16`, `ferrata-e2e verify`) |
 | Ethereum half | Foundry on the build box: `vault/test/PrivacySuite.t.sol` with `release-seals.json`: the vault at P on chain 1, its release image id the real one, releases verified by `RiscZeroGroth16Verifier`; the checkpoint (the burn root's acceptance, one transaction for all 20) on the mock, as before |
@@ -171,6 +178,9 @@ the rest. The local estimates of the same calls (mrun's ledger, `wrap.py`'s) add
 overstate later wraps, whose CPU-seconds accumulate across calls in one container.
 
 ## Reproduce
+
+At `f13faee2` (for example `git worktree add ../ferrata-f13f f13faee2`) the steps below, as written there, reproduce
+these records; on this tree they run B1's program and write `target/privacy/real/b1/{dev,generated,proofs.json}`.
 
 ```sh
 # Build box (spike/modal-build/mrun beside the repository; any Linux machine with lez/'s, bridge/'s and vault/'s

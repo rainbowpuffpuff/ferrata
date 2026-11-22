@@ -1,0 +1,18 @@
+# R1: front-run of a plaintext claim (one transaction per block, in submission order)
+
+bridge program ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e
+
+| transaction | outcome | gas_exec | gas_stor | fee_base |
+|---|---|---:|---:|---:|
+| B: Init (the attacker's record: slot 2 = configId(B)) | applied | 170637 | 1914 | 1380408 |
+| B: Register ETH (the attacker's record) | applied | 330163 | 2619 | 2662256 |
+| B: ImportRoot n = 9 (A's 8 real leaves + 1 invented) | applied | 230069 | 1831 | 1855200 |
+| A: Init (the vault's slot 2 = configId(A)) | applied | 171418 | 1946 | 1386912 |
+| A: Register ETH | applied | 333303 | 2747 | 2688400 |
+| A: ImportRoot n = 8 | applied | 237140 | 2025 | 1913320 |
+| A: ImportFees ETH schedule 1 | applied | 271623 | 2206 | 2190632 |
+| A: ImportFees ETH, no schedule 2 | applied | 252393 | 1945 | 2034704 |
+| B: Claim with the witness copied from the pending claim, ordered first | applied | 261757 | 2053 | 2110480 |
+| A: the payer's own claim, applied after it | applied | 291261 | 2053 | 2346512 |
+
+the honest claim: 1271 bytes as a message, s at a fixed offset; applied after B's copy, gas_exec 291261, fee_base 2346512

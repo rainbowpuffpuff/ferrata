@@ -37,7 +37,7 @@ event), `day1.sh status URL`, `day1.sh daemon-status URL`, `day1.sh daemon-stop 
 | (b) | `Init` of a Sepolia instance from a fresh finalized checkpoint: Lodestar's bootstrap, its block root checked against publicnode's header at the same slot (`lez-v03/scripts/fetch.py`, generic User-Agent); the program's own `Init` checks run natively first; refused if the weak-subjectivity period ends within a day | 1 transaction |
 | (c) | the updater daemon (`lez/updater`, `ferrata-updater` with its sequencer backend, the public job path) following Sepolia from Lodestar's light-client data with publicnode confirming each finalized header (`min_agreeing = 2`), detached, with its own key | the committee's `Adopt` parts, then `Open`, `Miller`, `Finish` per update |
 | (d) | one attestation of the live Sepolia vault `0x04eE…e44c`'s slots 0 and 1 (deposit root, leaf count) under the instance's newest record: `eth_getProof` at that record's block, the verdict computed first with the program's own function | 1 `Attest` (its event) |
-| (e) | with `FERRATA_DAY1_BRIDGE=1`: the bridge program (**image `0xccde6171…`**), immutable; the owner-side Sepolia step for its vault written down, **not sent** | 6 `WriteSegment` + `CreateHeader` |
+| (e) | with `FERRATA_DAY1_BRIDGE=1`: the bridge program since milestone B1 (**image `0xac1fb59b…`**, [`docs/image-ids.md`](../../docs/image-ids.md) `ferrata_bridge_b1`: sha256 `5f47b065…` and the image id checked before anything is signed, so a `ferrata_bridge.bin` built before B1, the live runs' `0xccde6171…`, is refused), immutable; the owner-side Sepolia step for its vault written down, **not sent** | 6 `WriteSegment` + `CreateHeader` |
 
 Every transaction is signed once and kept **beside the keys** (`KEYS/tx/<stage>/NN.tx`, with its hash, signers, nonces
 and limits), with the instance's checkpoint (`KEYS/init/`) and id (`KEYS/instance.json`); `run` sends the stored bytes
@@ -74,7 +74,9 @@ answer; `FERRATA_DAY1_UNTIL=a|b|c|d` stops after a stage.
   sets to the URL it was given). "On its machine" is read from the URL's host strictly
   (`lez/live/driver/src/rpcurl.rs`: a URL with a userinfo, `http://127.0.0.1:1@HOST`, is refused, so the host checked
   is the one the client connects to); a loopback port forwarded to another machine is beyond any URL check.
-- It does not rebuild or change any program: the images are those of `docs/image-ids.md`. If testnet 0.4 runs a later
+- It does not rebuild or change any program: the images are those of `docs/image-ids.md` (the attestation program
+  `ferrata_lez`; for stage (e) the bridge program since milestone B1, `ferrata_bridge_b1`, which this tree builds;
+  the bridge program the live runs deployed, `ferrata_bridge`, is `f13faee2`'s). If testnet 0.4 runs a later
   LEZ than rc3 (LEZ's `dev` has a RISC Zero 3.1.0 bump, upgraded system programs and receipts in blocks since rc3:
   [`NOTES.md`](NOTES.md) §6), the tool and the daemon must be rebuilt against that tag first; `verify` then says
   whether the loader recorded our image ids.

@@ -207,13 +207,9 @@ fn inbound_configuration_import_and_plaintext_claim() {
     let r = w.claim("Claim: vault B's deposit under root(B, 8)", &cid_b, 8, &VAULT_B, witness_b);
     run(r, None);
     assert_eq!(w.balance(payer, &cid_b), DENOMINATIONS[1], "a second configuration's holding");
-    if harness::bridge::SECOND_BUILD {
-        // The second build: one holder account per configuration, each holding its own configuration's only.
-        assert_eq!(w.holder(&cid_a, payer).unwrap().holdings.len(), 1);
-        assert_eq!(w.holder(&cid_b, payer).unwrap().holdings.len(), 1);
-    } else {
-        assert_eq!(w.holder(&cid_a, payer).unwrap().holdings.len(), 2);
-    }
+    // One holder account per configuration (B1), each holding its own configuration's only.
+    assert_eq!(w.holder(&cid_a, payer).unwrap().holdings.len(), 1);
+    assert_eq!(w.holder(&cid_b, payer).unwrap().holdings.len(), 1);
 
     // Every refused transaction changed nothing: the balances above are exactly the three claims.
     let table = render(&reports);

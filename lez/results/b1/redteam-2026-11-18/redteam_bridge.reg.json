@@ -1,0 +1,235 @@
+{
+  "counts": {
+    "PASS": 12
+  },
+  "dev_mode": "1",
+  "lez": "v0.4.0-rc1",
+  "part": "reg",
+  "results": [
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:IMPORT_MISMATCH"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-01",
+      "kind": "adversarial",
+      "observed": {
+        "code": 247,
+        "code_name": "bridge:IMPORT_MISMATCH",
+        "note": "B-BR: ETH already registered in A [Register ETH (A) with other relay fees]",
+        "outcome": "refused"
+      },
+      "title": "entry that the vault does not hold",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:ALREADY_WRITTEN"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-02",
+      "kind": "adversarial",
+      "observed": {
+        "code": 244,
+        "code_name": "bridge:ALREADY_WRITTEN",
+        "note": " [Register ETH (A) again]",
+        "outcome": "refused"
+      },
+      "title": "Register twice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-03",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (nine denominations) [Register: nine denominations]",
+        "outcome": "refused"
+      },
+      "title": "nine denominations",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-04",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (denominations [d1, d0]) [Register: denominations [d1, d0]]",
+        "outcome": "refused"
+      },
+      "title": "denominations not increasing",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-05",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (relay fee d0/100 + lez_unit) [Register: relay fee d0/100 + lez_unit]",
+        "outcome": "refused"
+      },
+      "title": "relay fee above 1%",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-06",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (schedule 0 charging mint fees (0.1%)) [Register: schedule 0 charging mint fees (0.1%)]",
+        "outcome": "refused"
+      },
+      "title": "protocol fee in schedule 0",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-07",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (lez_unit 3 (denominations and fees multiples of 3)) [Register: lez_unit 3 (denominations and fees multiples of 3)]",
+        "outcome": "refused"
+      },
+      "title": "LEZ unit not a power of ten",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-08",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (lez_unit 10^6, denomination 1.5 * 10^6) [Register: lez_unit 10^6, denomination 1.5 * 10^6]",
+        "outcome": "refused"
+      },
+      "title": "denomination not a multiple of the LEZ unit",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-12",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "vault A's registry holds this entry and schedule 0 (unit_weight 0) [Register: unit_weight 0]",
+        "outcome": "refused"
+      },
+      "title": "zero unit weight",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-09",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "T3 plays T (ETH's schedule 1 of A is already imported in B-BR); the vault holds this schedule 1 (effective 6 days after announcement) [ImportFees T3 (A) index 1: effective 6 days after announcement]",
+        "outcome": "refused"
+      },
+      "title": "fee schedule with less than seven days' notice",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [
+          "bridge:BAD_MESSAGE"
+        ],
+        "outcome": "refused"
+      },
+      "id": "BR-REG-10",
+      "kind": "adversarial",
+      "observed": {
+        "code": 240,
+        "code_name": "bridge:BAD_MESSAGE",
+        "note": "T3 plays T (ETH's schedule 1 of A is already imported in B-BR); the vault holds this schedule 1 (burn fee of 2%) [ImportFees T3 (A) index 1: burn fee of 2%]",
+        "outcome": "refused"
+      },
+      "title": "fee schedule above the ceiling",
+      "verdict": "PASS"
+    },
+    {
+      "area": "bridge",
+      "expected": {
+        "codes": [],
+        "outcome": "accepted"
+      },
+      "id": "BR-REG-11",
+      "kind": "control",
+      "observed": {
+        "note": "A's leaf k-1 = 5 is private-kind, which a plaintext Claim cannot take: read on configuration D; range ScheduleRange { index: 0, from_leaf: 0, until_leaf: 2 } [Claim D's leaf 1 under root(D, 4) with schedule 0's range]",
+        "outcome": "accepted"
+      },
+      "title": "a deposit keeps the fee schedule of its leaf index",
+      "verdict": "PASS"
+    }
+  ],
+  "test": "lez/harness/tests/redteam_bridge.rs"
+}

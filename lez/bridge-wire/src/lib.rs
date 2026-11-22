@@ -8,16 +8,31 @@
 //! | `config(cid)` | PDA `H(…/config ‖ cid)` | [`ConfigState`]: the configuration, paired with its vault; global freezes, caps, `Sunset` |
 //! | `token(cid, token)` | PDA `H(…/token ‖ cid ‖ token)` | [`TokenState`]: a registry entry attested from the vault, its fee schedules, the token's freezes and caps |
 //! | `root(cid, n)` | PDA `H(…/root ‖ cid ‖ n)` | [`RootState`]: the vault's root at leaf count `n`, written once |
-//! | `nullifier(chain, vault, N)` | PDA `H(…/nullifier ‖ chain ‖ vault ‖ N)` | [`NullifierState`]: `N` spent, written once |
-//! | `holder(account)` | PDA `H(…/holder ‖ account)` | [`HolderState`]: an account's public wrapped balances (the M0 fallback: no v0.4 token program); written only by `Mint` and the account's own `Burn` |
+//! | `nullifier(cid, chain, vault, N)` | PDA `H(…/nullifier ‖ cid ‖ chain ‖ vault ‖ N)` | [`NullifierState`]: `N` spent under `cid`, written once |
+//! | `holder(cid, account)` | PDA `H(…/holder ‖ cid ‖ account)` | [`HolderState`]: an account's public wrapped balances under `cid` (the M0 fallback: no v0.4 token program); written only by `Mint`, `Credit` and the account's own `Burn` and `Transfer` |
 //! | the account's own actor | the account itself | [`HolderState`] of its own private claims (in a private account, its private state); the entry point of its burns and of its role messages; runs only for its owner |
 //! | `burn(cid, H(note))` | PDA `H(…/burn ‖ cid ‖ H(note))` | [`BurnRecord`]: a burn note, written once |
 //!
-//! `cid` is SPEC-v2 §1's `configId`. The nullifier's address has no `cid`: one namespace for the
-//! whole program, so two configurations cannot both mint against one vault deposit.
+//! `cid` is SPEC-v2 §1's `configId`. Every account a configuration writes is keyed by its `cid`, so one
+//! configuration has no access to another's accounts (RFP-022 F.16, milestone B1; `docs/design/bridge.md` §3,
+//! "Known issues, 18 November 2026", the regression tests `lez/harness/tests/tenant.rs`):
+//!
+//! * The nullifier. Keyed by `(chain, vault, N)` alone, as the program of image `0xccde6171…71dd` had it, a second
+//!   configuration of the same vault (which names an attestation instance its creator controls) spent the nullifier of
+//!   any deposit whose `s` it knew, and the paired configuration's claim of it was then refused (250): the deposit
+//!   frozen (R1). Keyed by `cid` too, each configuration spends only its own. Nothing is lost by separating them: a
+//!   vault releases only burns under the one `configId` it pins (`lezConfigId`), so another configuration's mints are
+//!   worth nothing to it, and within a configuration a deposit still mints once.
+//! * The holder. One `holder(account)` for every configuration was a list that anyone could lengthen, one holding per
+//!   (configuration, token) pair, until a mint, burn or transfer there exceeded a transaction's execution gas (R2).
+//!   `holder(cid, account)` is credited only under `cid` (`Mint` comes only from `nullifier(cid, …)`, `Credit` only
+//!   from `token(cid, token)`, and both check the receiver), so it holds at most one holding per token registered
+//!   under `cid`: other configurations cannot lengthen it.
+//! * `Init` refuses a freeze authority that is the admin ([`Controls::check`]; the red team's F1, vector
+//!   BR-INIT-05): no account holds both roles, as `ProposeRoles` and the vault (`RolesMustDiffer`) require.
 //!
 //! Every address a claim or a burn writes is a PDA whose seed names its role, or the own actor of an
-//! account that authorised the call. A mint names its holder and writes only at `holder(account)`,
+//! account that authorised the call. A mint names its holder and writes only at `holder(cid, account)`,
 //! never at the account itself, so no destination, relayer or fee recipient a claim names can be
 //! another role's PDA (security review of 11 November 2026, C-1).
 //!
@@ -98,6 +113,13 @@ pub fn fee_slot(token: &Address, index: u64) -> Word {
     plain_hash(&[b"ferrata/vault/fees/v1", token, &index.to_be_bytes()])
 }
 
+/// The vault's slot holding whether deposits of `token` are disabled (delisted): `sha256("ferrata/vault/listing/v1" ‖
+/// token)`, the word 1 while delisted and 0 otherwise (never written until the first `setDepositsEnabled`). The LEZ
+/// side mirrors it by `AttestListing` (F.10).
+pub fn listing_slot(token: &Address) -> Word {
+    plain_hash(&[b"ferrata/vault/listing/v1", token])
+}
+
 /// `n` as a 256-bit big-endian word.
 pub const fn word_of(n: u64) -> Word {
     let mut w = [0u8; 32];
@@ -163,6 +185,9 @@ pub const PROPOSAL_RECORD_AGE_MS: u64 = 24 * 3600 * 1000;
 /// At most three watchers (D13), at most eight members of a multisig freeze authority.
 pub const MAX_WATCHERS: usize = 3;
 pub const MAX_FREEZE_MEMBERS: usize = 8;
+/// The deepest inbound finality depth the admin may set (`SetDepth`, F.12): 216,000 beacon slots beyond finality,
+/// 30 days of 12-second slots, the ceiling the vault puts on its outbound wait `Δ`.
+pub const MAX_INBOUND_DEPTH_SLOTS: u64 = 216_000;
 
 // ---------------------------------------------------------------------------------------------
 // The registry (F.8, F.10) and fee schedules (F.13)
@@ -560,11 +585,15 @@ pub struct Controls {
 }
 
 impl Controls {
+    /// What `Init` writes: every cap at least the floor, and a freeze authority that is not the admin, checked as
+    /// `ProposeRoles` checks a proposed authority (`FreezeAuthority::check`): no account holds both roles, as on the
+    /// vault (`RolesMustDiffer`). The program of image `0xccde6171…71dd` checked the caps only, so it wrote a
+    /// configuration whose admin could freeze and run `Sunset` (the red team's F1, vector BR-INIT-05).
     pub fn check(&self) -> Result<(), u8> {
         if !self.token_cap.at_least(&self.floor) || !self.global_cap.at_least(&self.floor) {
             return Err(code::BAD_MESSAGE);
         }
-        Ok(())
+        FreezeAuthority::key(self.freeze_authority).check(&self.admin)
     }
 }
 
@@ -620,8 +649,8 @@ pub struct RoleProposal {
     pub effective_ms: u64,
 }
 
-/// `config(cid)`'s live roles (D13). `Controls` stays as `Init` wrote it (`configId` commits to
-/// it); these start from it and change only by the 14-day handover.
+/// `config(cid)`'s live roles (D13) and the admin's inbound finality depth (F.12). `Controls` stays as `Init`
+/// wrote it (`configId` commits to it); the roles start from it and change only by the 14-day handover.
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct Roles {
     pub freeze_authority: FreezeAuthority,
@@ -632,6 +661,14 @@ pub struct Roles {
     pub vault_retired: bool,
     /// The freeze authority approved `Sunset` by `Cosigned`; anyone may then send it.
     pub sunset_approved: bool,
+    /// The inbound finality depth beyond Ethereum finality, in beacon slots (F.12): `ImportRoot` under the record at
+    /// slot `s` is refused (`FROZEN`) until the configuration's clock has read a record at slot `s + depth` or later.
+    /// 0 at `Init` (Ethereum finality: every record is of a finalized header), at most
+    /// [`MAX_INBOUND_DEPTH_SLOTS`]; set by the admin (`SetDepth`), for imports from then on only.
+    pub inbound_depth_slots: u64,
+    /// The newest record slot the configuration's clock has read (`Tick`, `Freeze`, `Pause`, `ProposeRoles`,
+    /// `ApplyRoles` at `config(cid)`): the finalized tip that [`Roles::inbound_depth_slots`] is measured against.
+    pub tip_slot: u64,
 }
 
 impl Roles {
@@ -642,12 +679,41 @@ impl Roles {
             proposal: None,
             vault_retired: false,
             sunset_approved: false,
+            inbound_depth_slots: 0,
+            tip_slot: 0,
         }
     }
 
     /// Whether a `Sunset` sent at `config(cid)` itself by anyone (a top-level call) may execute.
     pub fn sunset_open(&self) -> bool {
         self.vault_retired || self.sunset_approved
+    }
+
+    /// The configuration's clock read the record at `slot`: the tip moves forward only.
+    pub fn observe(&mut self, slot: u64) {
+        self.tip_slot = self.tip_slot.max(slot);
+    }
+
+    /// An import under the record at `record_slot` is deep enough: at least `inbound_depth_slots` behind the tip
+    /// (always, at depth 0). Refused with `FROZEN` otherwise: it waits, nothing is lost.
+    pub fn deep_enough(&self, record_slot: u64) -> Result<(), u8> {
+        if self.inbound_depth_slots == 0 {
+            return Ok(());
+        }
+        match record_slot.checked_add(self.inbound_depth_slots) {
+            Some(needed) if needed <= self.tip_slot => Ok(()),
+            _ => Err(code::FROZEN),
+        }
+    }
+
+    /// The admin's new depth: at most [`MAX_INBOUND_DEPTH_SLOTS`] (`BAD_MESSAGE` above). Roots already imported stay
+    /// imported, so no claim that was valid becomes invalid (F.12).
+    pub fn set_depth(&mut self, slots: u64) -> Result<(), u8> {
+        if slots > MAX_INBOUND_DEPTH_SLOTS {
+            return Err(code::BAD_MESSAGE);
+        }
+        self.inbound_depth_slots = slots;
+        Ok(())
     }
 }
 
@@ -724,16 +790,18 @@ pub fn root_seed(config_id: &Root, leaf_count: u64) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"root", &[config_id, &leaf_count.to_le_bytes()]))
 }
 
-pub fn nullifier_seed(evm_chain_id: u64, vault: &Address, nullifier: &Root) -> PdaSeed {
-    PdaSeed::new(tagged_hash(b"nullifier", &[&chain_id_u256(evm_chain_id), vault, nullifier]))
+/// `nullifier(cid, chain, vault, N)`'s seed: keyed by the configuration too (module docs, R1).
+pub fn nullifier_seed(config_id: &Root, evm_chain_id: u64, vault: &Address, nullifier: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"nullifier", &[config_id, &chain_id_u256(evm_chain_id), vault, nullifier]))
 }
 
 pub fn burn_seed(config_id: &Root, note_hash: &Root) -> PdaSeed {
     PdaSeed::new(tagged_hash(b"burn", &[config_id, note_hash]))
 }
 
-pub fn holder_seed(account: &Root) -> PdaSeed {
-    PdaSeed::new(tagged_hash(b"holder", &[account]))
+/// `holder(cid, account)`'s seed: keyed by the configuration too (module docs, R2).
+pub fn holder_seed(config_id: &Root, account: &Root) -> PdaSeed {
+    PdaSeed::new(tagged_hash(b"holder", &[config_id, account]))
 }
 
 fn pda(program: AccountId, seed: &PdaSeed) -> Actor {
@@ -752,18 +820,26 @@ pub fn root_actor(program: AccountId, config_id: &Root, leaf_count: u64) -> Acto
     pda(program, &root_seed(config_id, leaf_count))
 }
 
-pub fn nullifier_actor(program: AccountId, evm_chain_id: u64, vault: &Address, nullifier: &Root) -> Actor {
-    pda(program, &nullifier_seed(evm_chain_id, vault, nullifier))
+/// `nullifier(cid, chain, vault, N)`: `N` spent once by a claim under configuration `cid`.
+pub fn nullifier_actor(
+    program: AccountId,
+    config_id: &Root,
+    evm_chain_id: u64,
+    vault: &Address,
+    nullifier: &Root,
+) -> Actor {
+    pda(program, &nullifier_seed(config_id, evm_chain_id, vault, nullifier))
 }
 
 pub fn burn_actor(program: AccountId, config_id: &Root, note_hash: &Root) -> Actor {
     pda(program, &burn_seed(config_id, note_hash))
 }
 
-/// `holder(account)`: the PDA holding `account`'s public wrapped balances. Its seed carries the
-/// role, so it is never the address of another actor of the program, whatever account a claim names.
-pub fn holder_actor(program: AccountId, account: AccountId) -> Actor {
-    pda(program, &holder_seed(account.value()))
+/// `holder(cid, account)`: the PDA holding `account`'s public wrapped balances under configuration `cid`. Its seed
+/// carries the role, so it is never the address of another actor of the program, whatever account a claim names
+/// (security review C-1).
+pub fn holder_actor(program: AccountId, config_id: &Root, account: AccountId) -> Actor {
+    pda(program, &holder_seed(config_id, account.value()))
 }
 
 /// The bridge program's actor at `account` itself: where its owner burns (top-level call or private
@@ -872,7 +948,7 @@ pub struct ClaimWitness {
 #[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub enum BridgeMessage {
     /// Variant 0. At the holder's own actor, as a top-level call or the root of a private
-    /// execution: debit one denomination (from its own state, or else from `holder(account)`, to
+    /// execution: debit one denomination (from its own state, or else from `holder(cid, account)`, to
     /// which it forwards the note) and send the note to `token(cid, token)`, which admits it (the
     /// denomination, the burn freezes and caps) and records it once at `burn(cid, H(note))`.
     Burn { config_id: Root, r: Root, memo: Address, mac: [u8; 16], token: Address, amount: Word, c_out: Root },
@@ -905,7 +981,7 @@ pub enum BridgeMessage {
     Read,
     /// Variant 8. `config(cid)` → `root(cid, n)`: the verified root, written once.
     WriteRoot { root: RootState },
-    /// Variant 9. `token(cid, token)` → `nullifier(chain, vault, N)`: spend `N` once; mint the
+    /// Variant 9. `token(cid, token)` → `nullifier(cid, chain, vault, N)`: spend `N` once; mint the
     /// denomination to `mint_to` (a public account) if given, and each fee to its account.
     Spend {
         nullifier: Root,
@@ -918,7 +994,7 @@ pub enum BridgeMessage {
         mint_to: Option<Root>,
         fees: Vec<(Root, u128)>,
     },
-    /// Variant 10. `nullifier(chain, vault, N)` → `holder(holder)`: credit `amount` of `token`.
+    /// Variant 10. `nullifier(cid, chain, vault, N)` → `holder(cid, holder)`: credit `amount` of `token`.
     Mint {
         nullifier: Root,
         config_id: Root,
@@ -995,12 +1071,22 @@ pub enum BridgeMessage {
     /// checking its own signature, then to `config(cid)`, which checks the threshold.
     Cosigned { config_id: Root, signers: Vec<Root>, action: CosignedAction },
     /// A holder, at its own actor (a call it authorised): move `amount` of its claimed balance
-    /// (its own state first, else `holder(account)`) through `token(cid, token)` (a multiple of
+    /// (its own state first, else `holder(cid, account)`) through `token(cid, token)` (a multiple of
     /// the token's LEZ unit) to `holder(to)`. From a private account, only the boundary delivery
     /// to the token is public: not the sender.
     Transfer { config_id: Root, token: Address, amount: u128, to: Root },
-    /// `token(cid, token)` → `holder(to)` only: credit a transfer.
+    /// `token(cid, token)` → `holder(cid, to)` only: credit a transfer.
     Credit { config_id: Root, token: Address, amount: u128, to: Root },
+    /// Variant 28. The admin, like `SetCap`: the inbound finality depth beyond Ethereum finality, in beacon slots
+    /// (at most [`MAX_INBOUND_DEPTH_SLOTS`]; [`Roles::inbound_depth_slots`]). Applies to imports from then on.
+    SetDepth { config_id: Root, slots: u64 },
+    /// Variant 29. Anyone, at `config(cid)`: attest the vault's [`listing_slot`] of `token` under the record at
+    /// `record_slot`, then `SetListing` at `token(cid, token)` (F.10: the LEZ registry follows the vault's delisting
+    /// and relisting).
+    AttestListing { config_id: Root, token: Address, record_slot: u64, proof: VaultProof },
+    /// Variant 30. `config(cid)` → `token(cid, token)` only: the attested listing, kept if its record is newer than
+    /// the one the token holds.
+    SetListing { config_id: Root, token: Address, delisted: bool, record_slot: u64 },
 }
 
 impl BridgeMessage {
@@ -1088,6 +1174,11 @@ pub enum Pending {
     Retired {
         record_slot: u64,
     },
+    /// `AttestListing`: the attestation of the vault's listing of `token`.
+    Listing {
+        token: Address,
+        record_slot: u64,
+    },
 }
 
 impl Pending {
@@ -1096,7 +1187,8 @@ impl Pending {
             Pending::Import(p) => p.record_slot,
             Pending::Register { record_slot, .. }
             | Pending::Fees { record_slot, .. }
-            | Pending::Retired { record_slot } => *record_slot,
+            | Pending::Retired { record_slot }
+            | Pending::Listing { record_slot, .. } => *record_slot,
             Pending::Time(p) => p.record.record_slot,
         }
     }
@@ -1144,6 +1236,12 @@ pub struct TokenState {
     /// A `Read` of a record for the gate's clock, outstanding within one transaction (`None`
     /// between transactions).
     pub pending: Option<PendingTime>,
+    /// The vault refuses deposits of the token (delisted), as attested under the record at `listing_slot` (F.10).
+    /// Claims of its deposits, its burns and its transfers are not affected: delisting stops new deposits only, on
+    /// the vault, and no valid claim or burn is invalidated by it (R.4).
+    pub delisted: bool,
+    /// The record slot of the newest listing attested (the registration's record at first).
+    pub listing_slot: u64,
 }
 
 impl TokenState {
@@ -1168,7 +1266,7 @@ impl TokenState {
     }
 }
 
-/// `nullifier(chain, vault, N)`: spent.
+/// `nullifier(cid, chain, vault, N)`: spent.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct NullifierState {
     pub config_id: Root,
@@ -1188,7 +1286,7 @@ pub struct Holding {
     pub amount: u128,
 }
 
-/// `holder(account)`, or an account's own actor (its own private claims).
+/// `holder(cid, account)`, or an account's own actor (its own private claims).
 #[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
 pub struct HolderState {
     pub holdings: Vec<Holding>,
@@ -1401,6 +1499,8 @@ pub fn check_register(
         controls: config.controls,
         gate: Gate::new(config.controls.token_cap, now_ms),
         pending: None,
+        delisted: false,
+        listing_slot: record_slot,
     })
 }
 
@@ -1427,7 +1527,17 @@ pub fn check_fees(
     u64_of(&count).ok_or(code::IMPORT_MISMATCH)
 }
 
-/// What a verified claim gives: the nullifier, the amount and the destination's kind.
+/// The reply to `AttestListing`: the vault's [`listing_slot`] of `token` under the record at `record_slot` holds 1
+/// (delisted) or 0 (listed); anything else is `IMPORT_MISMATCH`. Gives whether the token is delisted.
+pub fn check_listing(config: &BridgeConfig, token: &Address, record_slot: u64, attestation: &Attestation) -> Result<bool, u8> {
+    let [word] = vault_slots(config, record_slot, attestation, [listing_slot(token)]).ok_or(code::IMPORT_MISMATCH)?;
+    match u64_of(&word) {
+        Some(0) => Ok(false),
+        Some(1) => Ok(true),
+        _ => Err(code::IMPORT_MISMATCH),
+    }
+}
+
 /// The reply to `AttestRetired`: the vault's [`SLOT_RETIRED`] under the record at `record_slot`
 /// must hold `retired` (`IMPORT_MISMATCH` otherwise, as for any attested fact that differs).
 pub fn check_retired(config: &BridgeConfig, record_slot: u64, attestation: &Attestation) -> Result<(), u8> {
@@ -1438,6 +1548,7 @@ pub fn check_retired(config: &BridgeConfig, record_slot: u64, attestation: &Atte
     Ok(())
 }
 
+/// What a verified claim gives: the nullifier, the amount and the destination's kind.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Claimed {
     pub nullifier: Root,
@@ -1522,14 +1633,16 @@ pub mod code {
         /// power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0,
         /// a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the
         /// floor; a freeze authority with a threshold outside 1 to its members, more than eight
-        /// members, a repeated member or the admin, more than three watchers; a transfer of zero or
-        /// of an amount that is not a multiple of the token's LEZ unit.
+        /// members, a repeated member or the admin (at `Init` too), more than three watchers; a
+        /// transfer of zero or of an amount that is not a multiple of the token's LEZ unit; an inbound
+        /// depth above 216,000 slots.
         BAD_MESSAGE = 240;
         /// Stored state that does not decode, or is another role's, or a transaction-internal
         /// step (a pending attestation or claim) found where none can be.
         BAD_STATE = 241;
         /// Mints or burns frozen (of the token, or of the whole configuration), or an import
-        /// after `Sunset`, or a role proposal applied before its 14 days of attested time.
+        /// after `Sunset`, or a role proposal applied before its 14 days of attested time, or an
+        /// import under a record less than the configuration's inbound depth behind its clock's.
         FROZEN = 242;
         /// An internal message from an actor other than the expected one, a read with nobody to
         /// reply to, or a receiver that is not the actor the message names.
@@ -1544,7 +1657,8 @@ pub mod code {
         PAIRING_MISMATCH = 246;
         /// The attested facts are not the vault's slots holding what the message says (the root
         /// and count, the registry entry, a fee schedule, a schedule out of order), or are of
-        /// another instance, chain or record; a vault whose `retired` flag is not set.
+        /// another instance, chain or record; a vault whose `retired` flag is not set; a listing
+        /// word other than 0 or 1, or a listing record no newer than the one the token holds.
         IMPORT_MISMATCH = 247;
         /// A leaf index at or above the imported root's leaf count, or outside the fee schedule
         /// range the claim names, or beyond the leaves the imported fee schedules cover.
@@ -1562,7 +1676,7 @@ pub mod code {
         WRONG_DESTINATION = 252;
         /// A burn not authorised by its holder, or not a top-level call or private root (D10); an
         /// `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a
-        /// control message (`Sunset`, `Freeze`, `SetCap`, `ProposeRoles`, `CancelRoles`, `Pause`)
+        /// control message (`Sunset`, `Freeze`, `SetCap`, `SetDepth`, `ProposeRoles`, `CancelRoles`, `Pause`)
         /// not from the configured role, or not a top-level call at its own actor; a `Cosigned`
         /// message whose signers did not each sign, are not distinct members or are fewer than the
         /// threshold; a `Sunset` at `config(cid)` itself before the vault is attested retired or
@@ -1591,9 +1705,92 @@ mod tests {
         // A trie node is an RLP list: its first byte is at least 0xc0, the marker's is not.
         assert!(HEADER_MARKER[0] < 0xc0);
     }
+
+    /// B1 (F.16): two configurations of one vault have two nullifier accounts and two holder accounts, and the
+    /// seeds are the earlier program's with the configuration id in front (as the LEZ v0.3.1 port has them).
+    #[test]
+    fn accounts_are_keyed_by_the_configuration() {
+        let program = AccountId::new([0x9a; 32]);
+        let (a, b, vault, n, account) = ([0xaa; 32], [0xbb; 32], [0x22; 20], [0x4e; 32], AccountId::new([0x77; 32]));
+        assert_ne!(nullifier_actor(program, &a, 1, &vault, &n), nullifier_actor(program, &b, 1, &vault, &n));
+        assert_ne!(holder_actor(program, &a, account), holder_actor(program, &b, account));
+        // The earlier program's keys (no configuration id) are not these.
+        let old_nullifier = PdaSeed::new(tagged_hash(b"nullifier", &[&chain_id_u256(1), &vault, &n]));
+        let old_holder = PdaSeed::new(tagged_hash(b"holder", &[account.value()]));
+        assert_ne!(nullifier_seed(&a, 1, &vault, &n), old_nullifier);
+        assert_ne!(holder_seed(&a, account.value()), old_holder);
+        assert_eq!(
+            nullifier_seed(&a, 1, &vault, &n),
+            PdaSeed::new(tagged_hash(b"nullifier", &[&a, &chain_id_u256(1), &vault, &n]))
+        );
+        // The roles stay apart: a holder's address is never a nullifier's, whatever the account.
+        assert_ne!(holder_seed(&a, &n), nullifier_seed(&a, 1, &vault, &n));
+    }
+
+    /// F1: `Init`'s check refuses a freeze authority that is the admin, with the code `ProposeRoles` gives.
+    #[test]
+    fn init_refuses_the_admin_as_freeze_authority() {
+        let cap = CapParams { capacity: 10, refill_per_second: 1 };
+        let ok = Controls {
+            admin: [0x21; 32],
+            freeze_authority: [0x22; 32],
+            fee_recipient: [0x23; 32],
+            floor: cap,
+            token_cap: cap,
+            global_cap: cap,
+        };
+        assert_eq!(ok.check(), Ok(()));
+        assert_eq!(Controls { freeze_authority: ok.admin, ..ok }.check(), Err(code::BAD_MESSAGE));
+        let low = CapParams { capacity: 9, refill_per_second: 1 };
+        assert_eq!(Controls { token_cap: low, ..ok }.check(), Err(code::BAD_MESSAGE));
+        let proposed = FreezeAuthority { members: alloc::vec![[0x24; 32], ok.admin], threshold: 1 };
+        assert_eq!(proposed.check(&ok.admin), Err(code::BAD_MESSAGE));
+    }
+
+    /// F.12: the inbound depth is measured against the newest record the configuration's clock read.
+    #[test]
+    fn the_inbound_depth_waits_for_the_tip() {
+        let cap = CapParams { capacity: 10, refill_per_second: 1 };
+        let controls = Controls {
+            admin: [0x21; 32],
+            freeze_authority: [0x22; 32],
+            fee_recipient: [0x23; 32],
+            floor: cap,
+            token_cap: cap,
+            global_cap: cap,
+        };
+        let mut roles = Roles::new(&controls);
+        // Depth 0 (the default): Ethereum finality, any record, even before the clock read one.
+        assert_eq!((roles.inbound_depth_slots, roles.tip_slot), (0, 0));
+        assert_eq!(roles.deep_enough(9_100_000), Ok(()));
+        assert_eq!(roles.set_depth(MAX_INBOUND_DEPTH_SLOTS + 1), Err(code::BAD_MESSAGE));
+        assert_eq!(roles.set_depth(64), Ok(()));
+        assert_eq!(roles.deep_enough(1_000), Err(code::FROZEN), "no tip read yet");
+        roles.observe(1_063);
+        assert_eq!(roles.deep_enough(1_000), Err(code::FROZEN), "one slot short");
+        roles.observe(1_064);
+        assert_eq!(roles.deep_enough(1_000), Ok(()));
+        roles.observe(900);
+        assert_eq!(roles.tip_slot, 1_064, "the tip never moves back");
+        assert_eq!(roles.deep_enough(u64::MAX), Err(code::FROZEN), "no overflow");
+        assert_eq!(roles.set_depth(0), Ok(()));
+        assert_eq!(roles.deep_enough(u64::MAX), Ok(()));
+    }
+
+    /// F.10: the listing slot is the vault's SHA-256 slot, apart from the registry's and the fees'.
+    #[test]
+    fn the_listing_slot_is_its_own() {
+        let token = [0x11; 20];
+        assert_eq!(listing_slot(&token), plain_hash(&[b"ferrata/vault/listing/v1", &token]));
+        assert_ne!(listing_slot(&token), registry_slot(&token));
+        assert_ne!(listing_slot(&token), fee_slot(&token, 0));
+        assert_ne!(listing_slot(&token), listing_slot(&[0x12; 20]));
+        // The vault's own computation of this slot (`vault/test/Listing.t.sol`).
+        let vector: [u8; 32] = [
+            0x7c, 0x3e, 0x51, 0x56, 0x7f, 0x33, 0x0b, 0xb2, 0xc6, 0xc9, 0xd5, 0x8f, 0x60, 0x14, 0x83, 0x1b, 0xee, 0xf2,
+            0x5d, 0x24, 0x5c, 0xc7, 0x99, 0x11, 0x54, 0x62, 0xf9, 0x64, 0x9a, 0x0c, 0x6f, 0xc4,
+        ];
+        assert_eq!(listing_slot(&token), vector);
+    }
 }
 
-/// The second build's keys (cargo feature `config-keyed`, off by default, which the deployed bridge program does not
-/// compile): `nullifier(cid, chain, vault, N)` and `holder(cid, account)`, [`config_keyed`].
-#[cfg(feature = "config-keyed")]
-pub mod config_keyed;

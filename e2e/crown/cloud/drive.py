@@ -44,6 +44,7 @@ import io
 import json
 import os
 import random
+import re
 import shutil
 import signal
 import subprocess
@@ -376,8 +377,34 @@ def prepare_inputs() -> None:
     got_ids = {r: by_file.get(FILES[r]) for r in IDS}
     if got_ids != IDS:
         die(f"the R0BF programs' image ids {got_ids} are not input set {INPUT_SET}'s {IDS}")
+    # The bundle's LEZ programs must be the ones this tree's crown-driver speaks (docs/image-ids.md): since milestone B1
+    # the bridge program's accounts are keyed by the configuration, holder(cid, account) and nullifier(cid, chain, vault,
+    # N); the bridge program of the live runs (`ferrata_bridge`, 0xccde6171..., in the input sets uploaded before B1) has
+    # neither, so its session B would refuse the claims after the Sepolia stages had deployed a vault and sent deposits.
+    # Checked here, before any stage: nothing is deployed or sent with another bundle.
+    want_lez = tree_lez_programs()
+    lines = out([E2E, "image-id"] + [f"{BUNDLE_DIR}/program/{f}" for f in want_lez]).splitlines()
+    got_lez = {os.path.basename(x["program"]): x["image_id"] for x in (json.loads(l) for l in lines if l.startswith("{"))}
+    if got_lez != want_lez:
+        die(f"the LEZ bundle's programs {got_lez} are not the ones this tree's crown-driver speaks {want_lez} "
+            "(docs/image-ids.md `ferrata_lez`, `ferrata_bridge_b1`): an input set built before milestone B1; build one "
+            "from this tree (e2e/crown/README.md, \"Since milestone B1\") or run the earlier programs from f13faee2")
     say(f"inputs (set {INPUT_SET}: {_SET['lez']}): LEZ bundle sha256 {got[:16]}..., programs "
         + ", ".join(f"{r} ({FILES[r]}) {v[:10]}..." for r, v in got_ids.items()))
+
+
+def tree_lez_programs() -> dict:
+    """{bundle file: image id} of the LEZ programs this tree's crown-driver speaks, from docs/image-ids.md: the
+    attestation program `ferrata_lez` and, since milestone B1, the bridge program `ferrata_bridge_b1` (the row
+    `ferrata_bridge` is the live runs' program, at f13faee2)."""
+    rows: dict = {}
+    for line in open(f"{REPO}/docs/image-ids.md", encoding="utf-8"):
+        m = re.match(r"^\|[^|]*`(\w+)`\s*\|\s*`(0x[0-9a-f]{64})`\s*\|", line)
+        if m:
+            if m.group(1) in rows:
+                die(f"docs/image-ids.md names {m.group(1)} twice")
+            rows[m.group(1)] = m.group(2)
+    return {"ferrata_lez.bin": rows["ferrata_lez"], "ferrata_bridge.bin": rows["ferrata_bridge_b1"]}
 
 
 def driver(*a: str) -> str:

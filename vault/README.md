@@ -81,10 +81,11 @@ Toolchain and dependencies:
   compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
-runtime is 24,254 bytes, 322 below the EIP-170 limit, with the library (12,504 bytes) holding the cold admin code;
-further features need more of it moved to the library. `forge build --sizes` prints these and exits 1 with "some
-contracts exceed the runtime size limit": the one over it is `VaultHandler` (37,962 bytes), the invariant campaign's
-test-only handler, which is never deployed (forge does not apply EIP-170 to tests).
+runtime is 24,369 bytes, 207 below the EIP-170 limit (24,254 before milestone B1's listing slot), with the library
+(12,793 bytes) holding the cold admin code; further features need more of it moved to the library. `forge build
+--sizes` prints these and exits 1 with "some contracts exceed the runtime size limit": the one over it is
+`VaultHandler` (38,215 bytes), the invariant campaign's test-only handler, which is never deployed (forge does not
+apply EIP-170 to tests).
 
 ## How it works
 
@@ -274,8 +275,8 @@ numbers, rules A and B) and `test/invariant/BrokenVerifierInvariants.t.sol` (eig
   (value units), so in any window `[t1, t2]` they pay at most `capacity + refill × (t2 − t1)` of a capped token, and
   at most the global bound in value over all tokens, while the admin leaves the caps alone (raising a cap raises the
   bound). A token without a cap is bounded by the global bucket; with that unlimited too, only by its escrow. The
-  deployment script's testnet defaults leave the caps UNLIMITED ("Deployment" below): for such a deployment, only the
-  clocks below and the stop bound a broken verifier's loss.
+  deployment script is capped by default since milestone B1 ("Deployment" below); with `FERRATA_UNCAPPED=1`, as the
+  testnet runs of November 2026 were deployed, only the clocks below and the stop bound a broken verifier's loss.
 - **The clocks.** A forged checkpoint pays nothing before its wait `W` after its candidate (rule A: `delta + (t − 1) ×
   turnSeconds`, rule B: `deltaAtSubmit`) plus the token's release delay after its finalisation. During `W` a watcher or
   the freeze authority can cancel it; for `revokeWindow` after finalisation the freeze authority can revoke it, and no
@@ -629,10 +630,17 @@ FERRATA_MODE=A FERRATA_GAS_RULE=eip8037 FERRATA_RPC_URL=<Sepolia RPC> script/dep
 script/fork-rehearsal.sh [<log directory>]
 ```
 
-Testnet defaults: `FERRATA_DELTA` 600 s, `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
+Testnet defaults: `FERRATA_DELTA` the design's wait for the rule, 3 h 01 min (A) or 1 h (B), unless set (the script
+warns below it), `FERRATA_REVOKE_WINDOW` 1 day, `FERRATA_MAX_FREEZE` 30 days,
 `FERRATA_MIN_RELEASE_DELAY` 0, `FERRATA_RELEASE_DELAY` 120 s, a freeze authority nobody holds a key for
 (`FERRATA_FREEZE_AUTHORITY`), the deployer as admin and fee recipient (`FERRATA_FEE_RECIPIENT`), no watchers
-(`FERRATA_WATCHERS`), caps UNLIMITED. `script/params/sepolia.json` gives both rules' image ids, the release image id,
+(`FERRATA_WATCHERS`). Caps since milestone B1 (RFP-022 Sec.4): per token and day, deposits and releases each at most
+100 times the token's largest denomination (the params' `ethDailyCap`, `tokenDailyCap` override it), refilled over a
+day; globally, the sum of the two tokens' ceilings in value units (`globalDailyValue`); an immutable release floor of
+one largest denomination of the cheaper token a day (`releaseFloorDailyValue`). A deposit counts its whole escrow
+against its bucket, so 99 deposits of 0.1 ETH fill ETH's day (`test/DeployDefaults.t.sol`, which builds a vault from
+exactly what the script sends). `FERRATA_UNCAPPED=1` deploys with the caps UNLIMITED and no floor, as the testnet runs
+of November 2026 did; the record says which (`uncapped`). `script/params/sepolia.json` gives both rules' image ids, the release image id,
 the LEZ configuration and genesis of the Sepolia run, and the LEZ token definitions, which are zero placeholders:
 registration is write-once, so set them before a deployment the LEZ side will read.
 
@@ -826,6 +834,9 @@ the table above and drives real candidate → beacon → finalisation sequences 
 | `BrokenVerifier.t.sol` | The same attack in seven steps with their numbers, rules (A) and (B) |
 | `ModeB.t.sol` (v4) | Rule (B): the constructor (turnSeconds 0 under B, non-zero under A); a candidate records no beacon and keeps its journal digest; final at its wait and not a second before, whatever its t; every journal word (the 11 the caller can change, and echoNonce) must be the candidate's; `recordBeacon` and `finalize` are rule (A) only, `finalizeAttested` rule (B) only; a watcher cancels within the wait and the same proof waits again in full; revocation, a competing finalisation, a pending duplicate, the checkpoint freeze, the verifier stop; monotonicity and the leaf bound; a Δ raise only for later candidates; the program's image id pinned; a release against a rule (B) root |
 | `Roles.t.sol` (v4) | Watchers: a 12-hour pause that never shortens a freeze and that the freeze authority can lift, renewable only from now, no other power, every slot counts, nobody else pauses. The admin's role change: admin only, applied by anyone 14 days later and not a second earlier, the old roles holding until then, nothing to apply, address(0) keeping the freeze authority, an empty set removing the watchers, a new proposal restarting the clock, the admin never becoming freeze authority. Keyless retirement 30 days after deployment or the last finalisation, the freeze authority at any time. The release floor: the deployment's global bucket, the global and the per-token bucket in value units, saturation, registration, a fuzz test against hand-worked thresholds; deposits not floored. A verifier that is not an untripped stop refused; a renounced stop owner cannot stop it, a proof of exploit still can |
+| `Listing.t.sol` (B1) | Delisting publishes the listing at `sha256("ferrata/vault/listing/v1" ‖ token)` (1 while delisted, 0 relisted; the bridge-wire vector), which the LEZ side attests (`AttestListing`); only the admin. Releases of a delisted token: `Release.t.sol` (`test_release_worksForDelistedToken`) |
+| `DeployDefaults.t.sol` (B1) | What `script/DeployVault.s.sol` deploys is capped: a vault built from exactly its `Deployment` and registrations fills ETH's day with 99 deposits of 0.1 ETH, refuses the 100th, refills in a day, keeps release caps above the immutable floor; uncapped only with `FERRATA_UNCAPPED=1` |
+| `RefusalPrivacy.t.sol` (B1) | RFP-022 Privacy #5 on Ethereum: an unproven, a repeated and a capped release, and three deposit refusals, revert with a four-byte selector only, from the calldata a successful one sends |
 | `SecurityReview.t.sol` | The vault findings of the security review of 11 November 2026, 12 tests that fail on `integration4`'s vault (bc4a2a6) and pass here: keyless retirement counted from the first finalisable moment, not shortened by a checkpoint freeze (lifted early or run to its end), not caused by one watcher pausing or cancelling (M-1); the checkpoint fee to the candidate's prover under both rules, nothing to a copied or proof-less finalisation (M-2); a stale candidate replaced (L-1); no deposit after a finalised sunset checkpoint, anyone retiring once it is irrevocable (L-3); the constructor's bound on `revokeWindow / deltaFloor` (I-7); the deployment script refusing mainnets (I-2) |
 | `real/ReturnLeg.t.sol` | No mock: RISC Zero's Groth16 verifier behind its emergency stop, the vault at the addresses the proofs bind, the design's default timers. Before any proof: the checkpoint program's two journals and the release program's two journals are byte for byte the vault's encodings, and the deposit root is the one the bridge core computed. The run: deposits, `submitCandidate` with the real checkpoint seal, the wait, `recordBeacon`, `finalize` with the seal that echoes that beacon, the release delay, `release` of ETH and of the token to recipients that held nothing. Refused: one flipped byte in each of the four seals (selector and each proof word), a valid seal of another statement, each journal field changed under its real seal (candidate, finalisation, release), a replayed release, a release against a root that is not finalised or still delayed, a finalisation one second early with the right nonce, any proof after the stop. `ReturnLegGas` measures every step. v4 runs it unchanged except where v4 refuses earlier (a finalisation journal with another tip, n or t is refused by the vault before the proof, D11). |
 | `real/RuleBReal.t.sol` (v4) | No mock, rule (B): the real `checkpoint_b` proof of `gpu-prover/results/ruleb-l4b/` wrapped to Groth16 (fixture `test/real/fixtures/rule-b.json`), RISC Zero's verifier behind its stop, a rule (B) vault constructed at the address the journal binds on chain id 1. Accepted; its journal digest kept; final after one hour and not a second earlier; refused with one flipped byte in the selector or any proof word, with each journal field changed, and by a rule (A) vault (rule (A)'s image id); a watcher cancels it. `RuleBRealGas` measures it |

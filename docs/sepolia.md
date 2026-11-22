@@ -51,7 +51,10 @@ configId, genesisState, rule (B), verifier, linked registry), the deposits' comm
 (Merkle proofs against Sepolia's final headers), the checkpoint journal against the LEZ records and its seal through
 the vault's own verifier, finalization and releases (EVIDENCE row 92). The vault's programs rebuild from this tree:
 `scripts/reproduce-image-ids.sh build`, then `compare --vault 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c` gives all
-of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14 of 14 guests).
+of its ids (6 of 6 crown programs, the vault's two immutables among them, and 14 of 14 guests) on a checkout of
+`f13faee2`; since milestone B1 this tree's bridge program is B1's (`docs/image-ids.md` `ferrata_bridge_b1`), so on a
+later tree `compare` gives the other five and the vault's two immutables equal, the bridge equal to its own record, and
+14 of 14 guests ([docs/guides/verify.md](guides/verify.md) §2).
 [docs/guides/verify.md](guides/verify.md) says what each check proves and what it still trusts, and how to
 rebuild the programs to their image ids.
 

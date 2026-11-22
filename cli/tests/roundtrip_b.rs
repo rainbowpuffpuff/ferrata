@@ -353,9 +353,14 @@ async fn deposit_attest_claim_burn_checkpoint_b_release() -> Result<()> {
         let elf = std::fs::read(&release_elf)?;
         B256::from_slice(risc0_zkvm::compute_image_id(&elf).map_err(|e| anyhow!("{e}"))?.as_bytes())
     };
-    let out = Command::new("forge")
+    // One transaction at a time, each after the previous one's receipt (--slow), and at most 15 minutes: without it
+    // anvil (1.3.6, automine) once left the deployer's next two transactions queued with no nonce gap while it mined
+    // a block holding their predecessors, never mined (not even by evm_mine), and forge waited on (review of 22 Nov
+    // 2026; the same as both_halves.rs's deployments).
+    let out = Command::new("timeout")
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault"))
-        .args(["script", "script/CiRoundTrip.s.sol:CiRoundTrip", "--rpc-url", &rpc, "--broadcast", "--unlocked"])
+        .args(["900", "forge", "script", "script/CiRoundTrip.s.sol:CiRoundTrip", "--rpc-url", &rpc, "--broadcast"])
+        .args(["--slow", "--unlocked"])
         .args(["--sender", &ANVIL0.to_string()])
         .env("FERRATA_CID", hx(&cid))
         .env("FERRATA_GENESIS_STATE", genesis_state.to_string())

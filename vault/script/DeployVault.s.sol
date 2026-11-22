@@ -36,6 +36,22 @@ import {TestToken} from "./TestToken.sol";
 ///         forge sends it with --skip-simulation --gas-estimate-multiplier = the same margin, so the limit it uses
 ///         is the node's estimate times the margin (script/deploy.sh passes both).
 ///
+///         Caps (RFP-022 Sec.4, F.11; docs/guides/deployer-guide.md §2): capped by default. Per token and per day,
+///         deposits and releases each at most a ceiling (the params' `ethDailyCap` and `tokenDailyCap`, in base units;
+///         by default 100 times the token's largest denomination: 10 ETH and 1,000,000 test-token units a day);
+///         globally, deposits and releases each at most the params' `globalDailyValue` in value units (by default the
+///         sum of the two ceilings' values); and an immutable release floor (`releaseFloorDailyValue`, by default one
+///         largest denomination of the token whose largest is worth least, a day), so that no admin can throttle
+///         releases below it. Each bucket refills its capacity over a day. FERRATA_UNCAPPED=1 deploys without caps, as
+///         the live testnet runs of November 2026 did; the record says which (`uncapped`).
+///
+///         Wait Δ, the outbound finality depth (RFP-022 F.12; docs/guides/deployer-guide.md §2, docs/design/bridge.md
+///         §13): `deltaFloor` = `initialDelta` = the design's default for the rule, 3 h 01 min under rule (A), 1 h under
+///         rule (B), unless FERRATA_DELTA names another (seconds; the testnet runs of November 2026 used 600 s, the crown
+///         runs 3,600 s). The admin raises it later (`setDelta`, never below the floor); the record gives `delta` and the
+///         rule's `designDelta`. The other timers stay testnet values unless set: revocation window 1 day, release delay
+///         120 s, minimum release delay 0 (the design's: 7 days, a delay between the minimum and the window, 24 h).
+///
 ///         Keys: none is read here. forge signs with Foundry's own keystore variables (ETH_KEYSTORE, ETH_PASSWORD:
 ///         files) or, on a local fork, with --unlocked. Refused: chain 1, forge's default sender (no key given), and,
 ///         except on chain 31337, the public anvil test accounts.
@@ -64,6 +80,9 @@ contract DeployVault is Script {
 
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;
+    /// @dev The design's wait Δ per rule (docs/design/bridge.md §13): (A) 2 h + 1 h + 1 min, (B) 1 h.
+    uint256 internal constant RULE_A_DELTA = 3 hours + 1 minutes;
+    uint256 internal constant RULE_B_DELTA = 1 hours;
     uint256 internal constant EIP7825_TX_GAS_CAP = 1 << 24;
     uint256 internal constant EIP8037_TX_TOTAL_GAS_CAP = (1 << 32) - 1;
     string internal constant LIBRARY_ID = "src/FerrataRegistry.sol:FerrataRegistry";
@@ -78,6 +97,8 @@ contract DeployVault is Script {
     uint256 internal marginPct;
     string internal gasRule;
     uint256 internal gasCap;
+    bool internal uncapped;
+    uint256 internal deltaGiven; // FERRATA_DELTA; 0: the design's wait for the rule
 
     function run() external {
         _init();
@@ -156,6 +177,12 @@ contract DeployVault is Script {
         else if (_eq(modeName, "B")) mode = FerrataVault.Mode.B;
         else revert("DeployVault: FERRATA_MODE must be A or B");
         params = vm.readFile(vm.envOr("FERRATA_PARAMS", string("script/params/sepolia.json")));
+        uncapped = vm.envOr("FERRATA_UNCAPPED", false);
+        if (uncapped) console2.log("warning: FERRATA_UNCAPPED=1: no deposit or release caps (a test deployment only)");
+        deltaGiven = vm.envOr("FERRATA_DELTA", uint256(0));
+        if (deltaGiven != 0 && deltaGiven < _designDelta()) {
+            console2.log("warning: FERRATA_DELTA is below the design's wait for the rule (a test deployment only)");
+        }
         outPath =
             vm.envOr("FERRATA_OUT", string.concat("deployments/", vm.toString(block.chainid), "-", modeName, ".json"));
         marginPct = vm.envOr("FERRATA_GAS_MARGIN_PCT", uint256(125));
@@ -206,10 +233,61 @@ contract DeployVault is Script {
         return FerrataVault.CapParams({capacity: UNLIMITED, refillPerSecond: 0});
     }
 
-    /// @dev The testnet configuration of script/RoundTrip.s.sol, under either rule. Rule (B) has no turn term.
+    /// @dev A bucket of `perDay` that refills over a day (the refill rounded up, so a full day refills it whole).
+    function _daily(uint256 perDay) internal pure returns (FerrataVault.CapParams memory) {
+        return FerrataVault.CapParams({capacity: perDay, refillPerSecond: (perDay + 1 days - 1) / 1 days});
+    }
+
+    /// @dev `key` of the params if present, else `fallbackValue`.
+    function _paramOr(string memory key, uint256 fallbackValue) internal view returns (uint256) {
+        return vm.keyExistsJson(params, key) ? vm.parseJsonUint(params, key) : fallbackValue;
+    }
+
+    /// @dev A token's daily ceiling, in its base units: the params' `key`, else 100 times its largest denomination.
+    function _dailyCeiling(string memory key, uint256[] memory denoms) internal view returns (uint256) {
+        return _paramOr(key, 100 * denoms[denoms.length - 1]);
+    }
+
+    /// @dev `amount` in value units, as the vault counts the global caps: amount / lezUnit * unitWeight.
+    function _value(uint256 amount, uint256 lezUnit, uint256 unitWeight) internal pure returns (uint256) {
+        return amount / lezUnit * unitWeight;
+    }
+
+    /// @dev The global daily ceiling in value units: the params' `globalDailyValue`, else the sum of both tokens'.
+    function _globalDaily() internal view returns (uint256) {
+        FerrataVault.TokenParams memory e = _ethParams();
+        FerrataVault.TokenParams memory t = _tokenParams();
+        return _paramOr(
+            ".globalDailyValue",
+            _value(e.depositCap.capacity, e.lezUnit, e.unitWeight) + _value(t.depositCap.capacity, t.lezUnit, t.unitWeight)
+        );
+    }
+
+    /// @dev The immutable release floor in value units a day: the params' `releaseFloorDailyValue`, else one largest
+    ///      denomination of the token whose largest is worth least.
+    function _releaseFloorDaily() internal view returns (uint256) {
+        FerrataVault.TokenParams memory e = _ethParams();
+        FerrataVault.TokenParams memory t = _tokenParams();
+        uint256 ethLargest = _value(e.denominations[e.denominations.length - 1], e.lezUnit, e.unitWeight);
+        uint256 tokenLargest = _value(t.denominations[t.denominations.length - 1], t.lezUnit, t.unitWeight);
+        return _paramOr(".releaseFloorDailyValue", ethLargest < tokenLargest ? ethLargest : tokenLargest);
+    }
+
+    /// @dev The design's wait Δ for the rule.
+    function _designDelta() internal view returns (uint256) {
+        return mode == FerrataVault.Mode.A ? RULE_A_DELTA : RULE_B_DELTA;
+    }
+
+    /// @dev The wait this deployment uses: FERRATA_DELTA if given, else the design's for the rule.
+    function _delta() internal view returns (uint256) {
+        return deltaGiven != 0 ? deltaGiven : _designDelta();
+    }
+
+    /// @dev The deployment under either rule: the design's wait and capped by default; the other timers testnet values
+    ///      (the header). Rule (B) has no turn term.
     function _deployment(address stop) internal view returns (FerrataVault.Deployment memory d) {
         bool ruleA = mode == FerrataVault.Mode.A;
-        uint256 delta = vm.envOr("FERRATA_DELTA", uint256(600));
+        uint256 delta = _delta();
         d.verifier = IRiscZeroVerifier(stop);
         d.checkpointImageId = vm.parseJsonBytes32(params, ruleA ? ".checkpointImageIdA" : ".checkpointImageIdB");
         d.releaseImageId = vm.parseJsonBytes32(params, ".releaseImageId");
@@ -225,11 +303,12 @@ contract DeployVault is Script {
         d.minReleaseDelay = vm.envOr("FERRATA_MIN_RELEASE_DELAY", uint256(0));
         d.admin = deployer;
         d.freezeAuthority = _freezeAuthority();
-        d.globalDepositCap = _unlimited();
-        d.globalReleaseCap = _unlimited();
+        d.globalDepositCap = uncapped ? _unlimited() : _daily(_globalDaily());
+        d.globalReleaseCap = uncapped ? _unlimited() : _daily(_globalDaily());
         d.mode = mode;
         d.watchers = _watchers();
-        d.releaseCapFloor = FerrataVault.CapParams({capacity: 0, refillPerSecond: 0});
+        d.releaseCapFloor =
+            uncapped ? FerrataVault.CapParams({capacity: 0, refillPerSecond: 0}) : _daily(_releaseFloorDaily());
         d.feeRecipient = vm.envOr("FERRATA_FEE_RECIPIENT", deployer);
     }
 
@@ -245,15 +324,17 @@ contract DeployVault is Script {
         uint256 lezUnit,
         uint256 unitWeight,
         uint8 decimals,
-        bytes32 lezDefinition
+        bytes32 lezDefinition,
+        string memory ceilingKey
     ) internal view returns (FerrataVault.TokenParams memory) {
+        FerrataVault.CapParams memory cap = uncapped ? _unlimited() : _daily(_dailyCeiling(ceilingKey, denoms));
         return FerrataVault.TokenParams({
             denominations: denoms,
             relayFees: relayFees,
             lezUnit: lezUnit,
             unitWeight: unitWeight,
-            depositCap: _unlimited(),
-            releaseCap: _unlimited(),
+            depositCap: cap,
+            releaseCap: cap,
             releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)),
             lezDefinition: lezDefinition,
             decimals: decimals,
@@ -270,7 +351,8 @@ contract DeployVault is Script {
             1e12,
             3000,
             18,
-            vm.parseJsonBytes32(params, ".ethLezDefinition")
+            vm.parseJsonBytes32(params, ".ethLezDefinition"),
+            ".ethDailyCap"
         );
     }
 
@@ -283,7 +365,8 @@ contract DeployVault is Script {
             1,
             1,
             6,
-            vm.parseJsonBytes32(params, ".tokenLezDefinition")
+            vm.parseJsonBytes32(params, ".tokenLezDefinition"),
+            ".tokenDailyCap"
         );
     }
 
@@ -428,8 +511,27 @@ contract DeployVault is Script {
         require(vault.mode() == mode, "check: the vault's rule");
         require(vault.admin() == deployer, "check: admin");
         require(vault.freezeAuthority() == _freezeAuthority(), "check: freeze authority");
+        require(vault.deltaFloor() == _delta() && vault.delta() == _delta(), "check: the wait");
         _checkToken(vault, ETH, _ethParams());
         _checkToken(vault, r.token, _tokenParams());
+        _checkCaps(vault, r.token);
+    }
+
+    /// @dev The caps the deployment chose, read back: finite unless FERRATA_UNCAPPED=1, and the floor immutable.
+    function _checkCaps(FerrataVault vault, address token) internal view {
+        FerrataVault.Deployment memory d = _deployment(address(0));
+        for (uint256 i = 0; i < 2; i++) {
+            FerrataVault.Direction dir = FerrataVault.Direction(i);
+            (uint256 capacity, uint256 refill,) = vault.globalCap(dir);
+            FerrataVault.CapParams memory want = i == 0 ? d.globalDepositCap : d.globalReleaseCap;
+            require(capacity == want.capacity && refill == want.refillPerSecond, "check: global cap");
+            (capacity, refill,) = vault.tokenCap(ETH, dir);
+            require(capacity == _ethParams().depositCap.capacity && refill == _ethParams().depositCap.refillPerSecond, "check: ETH cap");
+            (capacity, refill,) = vault.tokenCap(token, dir);
+            require(capacity == _tokenParams().depositCap.capacity, "check: token cap");
+            require(uncapped == (capacity == UNLIMITED), "check: capped unless FERRATA_UNCAPPED=1");
+        }
+        require(vault.releaseCapFloor() == d.releaseCapFloor.capacity, "check: release floor");
     }
 
     function _checkToken(FerrataVault vault, address token, FerrataVault.TokenParams memory p) internal view {
@@ -488,6 +590,15 @@ contract DeployVault is Script {
         vm.serializeAddress(o, "freezeAuthority", _freezeAuthority());
         vm.serializeAddress(o, "feeRecipient", vm.envOr("FERRATA_FEE_RECIPIENT", deployer));
         vm.serializeString(o, "gasRule", gasRule);
+        vm.serializeBool(o, "uncapped", uncapped);
+        vm.serializeUint(o, "delta", _delta());
+        vm.serializeUint(o, "designDelta", _designDelta());
+        if (!uncapped) {
+            vm.serializeUint(o, "ethDailyCap", _ethParams().depositCap.capacity);
+            vm.serializeUint(o, "tokenDailyCap", _tokenParams().depositCap.capacity);
+            vm.serializeUint(o, "globalDailyValue", _globalDaily());
+            vm.serializeUint(o, "releaseFloorDailyValue", _releaseFloorDaily());
+        }
         vm.serializeUint(o, "gasMarginPct", marginPct);
         vm.serializeAddress(o, "groth16Verifier", r.groth16);
         vm.serializeAddress(o, "emergencyStop", r.stop);

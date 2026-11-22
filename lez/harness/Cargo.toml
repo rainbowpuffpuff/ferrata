@@ -40,9 +40,6 @@ sha2 = "0.10"
 methods-residue-experimental = { path = "../methods-residue-experimental", optional = true }
 residue = { path = "../../bench/residue", optional = true }
 residue-agg = { path = "../../bench/residue-agg", optional = true }
-# The bridge program's second build (guests/bridge-next, not deployed): nullifier and holder accounts keyed by the
-# configuration id as well. Optional, behind the feature `bridge-next`, so that no ordinary build or test builds it.
-methods-bridge-next = { path = "../methods-bridge-next", optional = true }
 # The attestation program's second build (guests/program-class, not deployed): the reply with each
 # statement's nullifier-safety class (tests/history_hops.rs). Optional, behind the feature
 # `program-class`, so that no ordinary build or test of this crate builds the second guest.
@@ -72,9 +69,6 @@ lez-rc2 = []
 lez-rc3 = ["lez-rc2"]
 # The experimental one-transaction update (tests/residue_experimental.rs, bench/RESIDUE.md).
 residue-experimental = ["dep:methods-residue-experimental", "dep:residue", "dep:residue-agg"]
-# The bridge suites against the bridge program's second build (guests/bridge-next: nullifier(cid, chain, vault, N),
-# holder(cid, account)) in place of the deployed program; results under results/bridge-next/.
-bridge-next = ["dep:methods-bridge-next", "ferrata-lez-bridge-wire/config-keyed"]
 # The attestation program's second build at `CLASSED` (tests/history_hops.rs, docs/design/attestation.md §5.7).
 program-class = ["dep:methods-program-class", "dep:ferrata-lez-wire-class"]
 # The recorded-statement path (tests/statements.rs, docs/guides/recorded-statements.md).

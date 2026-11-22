@@ -1,28 +1,39 @@
 //! The Ferrata bridge program on LEZ v0.4 (`ferrata_lez_bridge_wire`; the plan is `lez/BRIDGE.md`).
 //!
+//! Since milestone B1 every account a configuration writes is keyed by its `configId`, the nullifier
+//! (`nullifier(cid, chain, vault, N)`) and the holder (`holder(cid, account)`) included, so one configuration has no
+//! access to another's (RFP-022 F.16; the regression tests `lez/harness/tests/tenant.rs`); `Init` refuses a freeze
+//! authority that is the admin (the red team's F1); the admin sets an inbound finality depth (`SetDepth`, F.12); the
+//! LEZ registry follows the vault's delisting (`AttestListing`, F.10). The program before B1 (image
+//! `0xccde6171…71dd`, deployed by the live runs of November 2026) had none of these.
+//!
 //! * **Configuration.** `Init` at `config(cid)` attests the vault's slot 2 through the attestation
 //!   program's direct path and writes the configuration only if it holds `cid`.
 //! * **Root import.** `ImportRoot` at `config(cid)` attests the vault's slots 0 and 1 under one
-//!   record, inside its own transaction, and writes `root(cid, n)` once; refused after `Sunset`.
+//!   record, inside its own transaction, and writes `root(cid, n)` once; refused after `Sunset`,
+//!   and while the record lies less than the admin's inbound depth behind the newest record the
+//!   configuration's clock has read (`SetDepth`; 0 by default: Ethereum finality).
 //! * **Registry and fees.** `Register` at `config(cid)` attests a token's registry entry and fee
 //!   schedules from the vault and writes `token(cid, token)` once; `ImportFees` extends its fee
-//!   schedules, keyed by leaf index.
+//!   schedules, keyed by leaf index. `AttestListing` (anyone) mirrors the vault's delisting or
+//!   relisting of a token into `token(cid, token)`; claims, burns and transfers of a delisted token
+//!   go on (delisting stops new deposits, on the vault).
 //! * **Claim.** `Claim` at `root(cid, n)` (plaintext) or `ClaimPrivately` at the claimant's own
 //!   actor (meant to run privately; it reads the root and verifies inside its own execution)
 //!   verify the deposit with the bridge core and send `Issue` to `token(cid, token)`, which checks
 //!   the denomination and the fee schedule, applies the token's mint freeze and bucket, has
 //!   `config(cid)` apply the global ones (`Admit`), and sends `Spend` to
-//!   `nullifier(chain, vault, N)`: it spends `N` once and mints the denomination to a public
+//!   `nullifier(cid, chain, vault, N)`: it spends `N` once and mints the denomination to a public
 //!   destination (a private destination credits itself) and the fees to their accounts. A mint
-//!   writes only at `holder(account)`, a PDA whose seed names the account: never at the account a
+//!   writes only at `holder(cid, account)`, a PDA whose seed names the account: never at the account a
 //!   claim names, which could be another actor's address (security review C-1).
 //! * **Burn.** `Burn` at the holder's own actor, as a top-level call or a private root only, debits
-//!   one denomination (its own state first, else its `holder(account)`, to which it forwards the
+//!   one denomination (its own state first, else its `holder(cid, account)`, to which it forwards the
 //!   note) and sends the note to `token(cid, token)`, which applies the burn freezes and buckets
 //!   and records the note once at `burn(cid, H(note))`.
-//! * **Roles.** `Sunset`, `Freeze` and `SetCap` are top-level calls at the role's own actor, which
-//!   forwards them to `config(cid)` or `token(cid, token)`; those accept them only from the
-//!   configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`).
+//! * **Roles.** `Sunset`, `Freeze`, `SetCap` and `SetDepth` are top-level calls at the role's own
+//!   actor, which forwards them to `config(cid)` or `token(cid, token)`; those accept them only from
+//!   the configured freeze authority (`Sunset`, `Freeze`) or admin (`SetCap`, `SetDepth`).
 //! * **Clock.** Freezes and buckets run on attested Ethereum time: `Tick` (anyone) and `Freeze`
 //!   make the target `Read` a record of the configuration's attestation instance and advance its
 //!   clock to that record's execution timestamp, never backwards, in a transaction valid only in a
@@ -33,13 +44,14 @@
 //! transaction with that program's code, so nothing is written without an attestation.
 
 use ferrata_lez_bridge_wire::{
-    burn_actor, burn_seed, check_fees, check_import, check_pairing, check_register, check_retired, code, config_actor,
-    fees_slots, holder_actor, holder_seed, import_request, nullifier_actor, nullifier_seed, own_actor, pairing_request,
-    record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of, vault_request, verify_claim,
-    Address, BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState,
-    CosignedAction, DestKind, FeeSchedule, Gate, HolderState, ImportProof, Note, NullifierState, PairingProof, Pending,
-    PendingClaim, PendingImport, PendingTime, RoleProposal, Roles, Root, RootState, ScheduleRange, TimeRecord, Timed,
-    TokenEntry, TokenState, VaultProof, MAX_WATCHERS, PROPOSAL_RECORD_AGE_MS, ROLE_TIMELOCK_MS, SLOT_RETIRED,
+    burn_actor, burn_seed, check_fees, check_import, check_listing, check_pairing, check_register, check_retired, code,
+    config_actor, fees_slots, holder_actor, holder_seed, import_request, listing_slot, nullifier_actor, nullifier_seed,
+    own_actor, pairing_request, record_time, register_slots, root_actor, root_seed, token_actor, token_seed, u128_of,
+    vault_request, verify_claim, Address, BridgeConfig, BridgeMessage, BridgeState,
+    BurnRecord, CapParams, ClaimWitness, Claimed, ConfigState, CosignedAction, DestKind, FeeSchedule, Gate,
+    HolderState, ImportProof, Note, NullifierState, PairingProof, Pending, PendingClaim, PendingImport, PendingTime,
+    RoleProposal, Roles, Root, RootState, ScheduleRange, TimeRecord, Timed, TokenEntry, TokenState, VaultProof,
+    MAX_WATCHERS, PROPOSAL_RECORD_AGE_MS, ROLE_TIMELOCK_MS, SLOT_RETIRED,
 };
 use ferrata_lez_wire::{attest::Attestation, header_actor, Message as AttestMessage};
 use lee_core::{
@@ -163,11 +175,11 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
             spend(input, program, state, spent, mint_to, fees)
         }
         BridgeMessage::Mint { nullifier, config_id, evm_chain_id, vault, token, holder, amount } => {
-            if input.from != Some(nullifier_actor(program, evm_chain_id, &vault, &nullifier)) {
+            if input.from != Some(nullifier_actor(program, &config_id, evm_chain_id, &vault, &nullifier)) {
                 return Err(code::WRONG_SENDER);
             }
-            // C-1: credits land at `holder(account)` only, never at an address another role uses.
-            if input.receiver != holder_actor(program, AccountId::new(holder)) {
+            // C-1: credits land at `holder(cid, account)` only, never at an address another role uses.
+            if input.receiver != holder_actor(program, &config_id, AccountId::new(holder)) {
                 return Err(code::WRONG_SENDER);
             }
             let mut holder = match state {
@@ -210,6 +222,7 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         control @ (BridgeMessage::Sunset { .. }
         | BridgeMessage::Freeze { .. }
         | BridgeMessage::SetCap { .. }
+        | BridgeMessage::SetDepth { .. }
         | BridgeMessage::ProposeRoles { .. }
         | BridgeMessage::CancelRoles { .. }
         | BridgeMessage::Pause { .. }) => role_message(input, program, state, control),
@@ -225,6 +238,12 @@ fn handle(input: &ReceiveInput) -> Result<Response, Refusal> {
         }
         BridgeMessage::Credit { config_id, token, amount, to } => {
             credit(input, program, state, config_id, token, amount, to)
+        }
+        BridgeMessage::AttestListing { config_id, token, record_slot, proof } => {
+            attest_listing(input, program, state, config_id, token, record_slot, &proof)
+        }
+        BridgeMessage::SetListing { config_id, token, delisted, record_slot } => {
+            set_listing(input, program, state, config_id, token, delisted, record_slot)
         }
     }
 }
@@ -242,6 +261,7 @@ fn init(
     record_slot: u64,
     proof: &PairingProof,
 ) -> Result<Response, Refusal> {
+    // The caps at least the floor, and a freeze authority that is not the admin (F1, SPEC-v2 §7).
     config.controls.check()?;
     let config_id = config.id(program);
     if input.receiver != config_actor(program, &config_id) {
@@ -279,6 +299,8 @@ fn import_root(
     if sunset {
         return Err(code::FROZEN);
     }
+    // F.12: the record lies at least the admin's inbound depth behind the newest record the clock read.
+    roles.deep_enough(pending.record_slot)?;
     let header = header_actor(config.attestation, &config.instance_id, pending.record_slot);
     let request = import_request(&config, proof);
     Ok(set(ready(config, Some(Pending::Import(pending)), gate, sunset, roles))
@@ -344,6 +366,8 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
         let mut gate = *gate;
         let mut roles = roles.clone();
         let t = apply_time(input, &config.instance_id, config.evm_chain_id, pending, &mut gate, Some(&mut roles))?;
+        // The record exists, so the instance finalized its slot: the tip the inbound depth is measured against.
+        roles.observe(pending.record.record_slot);
         let response = set(ready(config.clone(), None, gate, *sunset, roles));
         if let Timed::Propose { .. } = pending.then {
             // The timelock runs from attested time: the proposal's record must be fresh, so it is
@@ -400,6 +424,12 @@ fn config_reply(input: &ReceiveInput, program: AccountId, state: &ConfigState) -
             check_retired(&config, *record_slot, &attestation)?;
             roles.vault_retired = true;
             return Ok(set(ready(config, None, gate, sunset, roles)));
+        }
+        Pending::Listing { token, record_slot } => {
+            let delisted = check_listing(&config, token, *record_slot, &attestation)?;
+            let message = BridgeMessage::SetListing { config_id, token: *token, delisted, record_slot: *record_slot };
+            SyncMessage::new(token_actor(program, &config_id, token), &message)
+                .with_pda_seeds([token_seed(&config_id, token)])
         }
         Pending::Time(_) => return Err(code::BAD_STATE),
     };
@@ -625,8 +655,8 @@ fn issue(
         fees.push((claim.relayer.unwrap_or(fee_recipient), relay_fee));
     }
     let (evm_chain_id, vault) = (state.evm_chain_id, state.vault);
-    let to = nullifier_actor(program, evm_chain_id, &vault, &claim.nullifier);
-    let seed = nullifier_seed(evm_chain_id, &vault, &claim.nullifier);
+    let to = nullifier_actor(program, &config_id, evm_chain_id, &vault, &claim.nullifier);
+    let seed = nullifier_seed(&config_id, evm_chain_id, &vault, &claim.nullifier);
     let spend = BridgeMessage::Spend {
         nullifier: claim.nullifier,
         config_id,
@@ -666,9 +696,9 @@ fn admit(
     Ok(set(ready(config, None, gate, sunset, roles)))
 }
 
-/// At `nullifier(chain, vault, N)`, from `token(cid, token)` after a verified, admitted claim:
+/// At `nullifier(cid, chain, vault, N)`, from `token(cid, token)` after a verified, admitted claim:
 /// spend `N` once; mint the denomination to a public destination and each fee to its account, at
-/// the account's `holder(account)` PDA (seeded, so LEZ admits it the first time).
+/// the account's `holder(cid, account)` PDA (seeded, so LEZ admits it the first time).
 fn spend(
     input: &ReceiveInput,
     program: AccountId,
@@ -680,7 +710,8 @@ fn spend(
     if input.from != Some(token_actor(program, &spent.config_id, &spent.token)) {
         return Err(code::WRONG_SENDER);
     }
-    if input.receiver != nullifier_actor(program, spent.evm_chain_id, &spent.vault, &spent.nullifier) {
+    if input.receiver != nullifier_actor(program, &spent.config_id, spent.evm_chain_id, &spent.vault, &spent.nullifier)
+    {
         return Err(code::WRONG_SENDER);
     }
     if state.is_some() {
@@ -704,8 +735,9 @@ fn spend(
     let mut response = set(BridgeState::Nullifier(record));
     let mints = mint_to.map(|dest| (dest, spent.amount)).into_iter().chain(fees);
     for (account, amount) in mints {
-        let to = holder_actor(program, AccountId::new(account));
-        response = response.send(SyncMessage::new(to, &mint(account, amount)).with_pda_seeds([holder_seed(&account)]));
+        let to = holder_actor(program, &spent.config_id, AccountId::new(account));
+        let seed = holder_seed(&spent.config_id, &account);
+        response = response.send(SyncMessage::new(to, &mint(account, amount)).with_pda_seeds([seed]));
     }
     Ok(response)
 }
@@ -714,8 +746,8 @@ fn spend(
 // Burn
 // ---------------------------------------------------------------------------------------------
 
-/// `Burn` at a holder's own actor (debit its own state, or forward to its `holder(account)`), at
-/// `holder(account)` from that own actor (debit), at `token(cid, token)` (admit, then record), or
+/// `Burn` at a holder's own actor (debit its own state, or forward to its `holder(cid, account)`), at
+/// `holder(cid, account)` from that own actor (debit), at `token(cid, token)` (admit, then record), or
 /// at `burn(cid, H(note))` (record once). A debit sends the note to the token.
 fn burn(
     input: &ReceiveInput,
@@ -772,17 +804,17 @@ fn burn(
             if own.debit(&config_id, &note.token, amount).is_some() {
                 return Ok(set(BridgeState::Holder(own)).send_sync(token, &burn));
             }
-            // Else its public holdings, at `holder(account)`: a nested call, which the checkpoint
+            // Else its public holdings, at `holder(cid, account)`: a nested call, which the checkpoint
             // does not see and need not see, since this root call is the burn it collects.
-            let forward =
-                SyncMessage::new(holder_actor(program, account), &burn).with_pda_seeds([holder_seed(account.value())]);
+            let forward = SyncMessage::new(holder_actor(program, &config_id, account), &burn)
+                .with_pda_seeds([holder_seed(&config_id, account.value())]);
             Ok(Response::keep_state().send(forward))
         }
-        // At `holder(owner)`: the forward from the owner's own actor (only this program's code runs
+        // At `holder(cid, owner)`: the forward from the owner's own actor (only this program's code runs
         // there, and it forwards only after the checks above).
         Some(from)
             if from == own_actor(program, from.account_id)
-                && input.receiver == holder_actor(program, from.account_id) =>
+                && input.receiver == holder_actor(program, &config_id, from.account_id) =>
         {
             let amount = u128_of(&note.amount).ok_or(code::NOT_REGISTERED)?;
             let mut held = holder(state)?;
@@ -799,9 +831,9 @@ fn burn(
 // ---------------------------------------------------------------------------------------------
 
 /// `Transfer` at a holder's own actor (a call it authorised: debit its own state, or forward to its
-/// `holder(account)`), at `holder(account)` from that own actor (debit), or at `token(cid, token)`
+/// `holder(cid, account)`), at `holder(cid, account)` from that own actor (debit), or at `token(cid, token)`
 /// from a holder's actor of this program after the debit (a multiple of the LEZ unit; then
-/// `Credit` to `holder(to)`). From a private account the debit and the sender stay private: only
+/// `Credit` to `holder(cid, to)`). From a private account the debit and the sender stay private: only
 /// the delivery to the token (the boundary) is public.
 fn transfer(
     input: &ReceiveInput,
@@ -824,10 +856,10 @@ fn transfer(
             return Err(code::BAD_MESSAGE);
         }
         let credit = SyncMessage::new(
-            holder_actor(program, AccountId::new(to)),
+            holder_actor(program, &config_id, AccountId::new(to)),
             &BridgeMessage::Credit { config_id, token, amount, to },
         )
-        .with_pda_seeds([holder_seed(&to)]);
+        .with_pda_seeds([holder_seed(&config_id, &to)]);
         return Ok(Response::keep_state().send(credit));
     }
     let holder = |state: Option<BridgeState>| match state {
@@ -835,9 +867,11 @@ fn transfer(
         Some(BridgeState::Holder(holder)) if holder.pending.is_none() => Ok(holder),
         Some(_) => Err(code::BAD_STATE),
     };
-    // At `holder(owner)`: the forward from the owner's own actor.
+    // At `holder(cid, owner)`: the forward from the owner's own actor.
     if let Some(from) = input.from {
-        if from == own_actor(program, from.account_id) && input.receiver == holder_actor(program, from.account_id) {
+        if from == own_actor(program, from.account_id)
+            && input.receiver == holder_actor(program, &config_id, from.account_id)
+        {
             let mut held = holder(state)?;
             held.debit(&config_id, &token, amount).ok_or(code::INSUFFICIENT_BALANCE)?;
             return Ok(set(BridgeState::Holder(held)).send_sync(token_at, &message));
@@ -853,12 +887,12 @@ fn transfer(
         return Ok(set(BridgeState::Holder(own)).send_sync(token_at, &message));
     }
     let account = input.receiver.account_id;
-    let forward =
-        SyncMessage::new(holder_actor(program, account), &message).with_pda_seeds([holder_seed(account.value())]);
+    let forward = SyncMessage::new(holder_actor(program, &config_id, account), &message)
+        .with_pda_seeds([holder_seed(&config_id, account.value())]);
     Ok(Response::keep_state().send(forward))
 }
 
-/// `token(cid, token)` → `holder(to)`: credit a transfer (as `Mint` credits a claim).
+/// `token(cid, token)` → `holder(cid, to)`: credit a transfer (as `Mint` credits a claim).
 fn credit(
     input: &ReceiveInput,
     program: AccountId,
@@ -871,7 +905,7 @@ fn credit(
     if input.from != Some(token_actor(program, &config_id, &token)) {
         return Err(code::WRONG_SENDER);
     }
-    if input.receiver != holder_actor(program, AccountId::new(to)) {
+    if input.receiver != holder_actor(program, &config_id, AccountId::new(to)) {
         return Err(code::WRONG_SENDER);
     }
     let mut holder = match state {
@@ -892,7 +926,7 @@ fn from_account(input: &ReceiveInput, program: AccountId) -> Option<Root> {
     input.from.filter(|from| from.program_account_id == program).map(|from| *from.account_id.value())
 }
 
-/// `Sunset`, `Freeze`, `SetCap`, `ProposeRoles`, `CancelRoles` or `Pause`. At the role's own
+/// `Sunset`, `Freeze`, `SetCap`, `SetDepth`, `ProposeRoles`, `CancelRoles` or `Pause`. At the role's own
 /// actor (any actor that is not `config(cid)` or the token the message names), a top-level call
 /// or private root the role signed is forwarded to `config(cid)`, which checks the role against
 /// its live roles and applies the message, or forwards a token's to `token(cid, token)`, which
@@ -907,6 +941,7 @@ fn role_message(
 ) -> Result<Response, Refusal> {
     let (config_id, token) = match &message {
         BridgeMessage::Sunset { config_id }
+        | BridgeMessage::SetDepth { config_id, .. }
         | BridgeMessage::ProposeRoles { config_id, .. }
         | BridgeMessage::CancelRoles { config_id } => (*config_id, None),
         BridgeMessage::Freeze { config_id, token, .. }
@@ -999,6 +1034,13 @@ fn role_message(
             set_cap(&mut gate, mints, cap, &config.controls.floor)?;
             Ok(set(ready(config, None, gate, sunset, roles)))
         }
+        BridgeMessage::SetDepth { slots, .. } => {
+            if !by_admin {
+                return Err(code::NOT_AUTHORIZED);
+            }
+            roles.set_depth(slots)?;
+            Ok(set(ready(config, None, gate, sunset, roles)))
+        }
         BridgeMessage::ProposeRoles { freeze_authority, watchers, record, .. } => {
             if !by_admin {
                 return Err(code::NOT_AUTHORIZED);
@@ -1042,6 +1084,54 @@ fn attest_retired(
     let request = vault_request(&config, &[SLOT_RETIRED], proof)?;
     Ok(set(ready(config, Some(Pending::Retired { record_slot }), gate, sunset, roles))
         .send_sync(header, &AttestMessage::Attest { request }))
+}
+
+/// Anyone, at `config(cid)`: attest the vault's listing of `token` (F.10); the reply sends `SetListing` to
+/// `token(cid, token)`. A token not registered under `cid` is refused there (`NOT_REGISTERED`).
+#[allow(clippy::too_many_arguments)]
+fn attest_listing(
+    input: &ReceiveInput,
+    program: AccountId,
+    state: Option<BridgeState>,
+    config_id: Root,
+    token: Address,
+    record_slot: u64,
+    proof: &VaultProof,
+) -> Result<Response, Refusal> {
+    if input.receiver != config_actor(program, &config_id) {
+        return Err(code::WRONG_SENDER);
+    }
+    let (config, gate, sunset, roles) = ready_config(state)?;
+    let header = header_actor(config.attestation, &config.instance_id, record_slot);
+    let request = vault_request(&config, &[listing_slot(&token)], proof)?;
+    Ok(set(ready(config, Some(Pending::Listing { token, record_slot }), gate, sunset, roles))
+        .send_sync(header, &AttestMessage::Attest { request }))
+}
+
+/// `config(cid)` → `token(cid, token)`: the attested listing, kept only if its record is newer than the token's
+/// last (`IMPORT_MISMATCH` otherwise), so an older record cannot undo a delisting or a relisting.
+fn set_listing(
+    input: &ReceiveInput,
+    program: AccountId,
+    state: Option<BridgeState>,
+    config_id: Root,
+    token: Address,
+    delisted: bool,
+    record_slot: u64,
+) -> Result<Response, Refusal> {
+    if input.from != Some(config_actor(program, &config_id)) {
+        return Err(code::WRONG_SENDER);
+    }
+    if input.receiver != token_actor(program, &config_id, &token) {
+        return Err(code::WRONG_SENDER);
+    }
+    let mut state = token_state(state)?;
+    if record_slot <= state.listing_slot {
+        return Err(code::IMPORT_MISMATCH);
+    }
+    state.delisted = delisted;
+    state.listing_slot = record_slot;
+    Ok(set(BridgeState::Token(state)))
 }
 
 /// Anyone, at `config(cid)`: read `record`, then apply the pending role proposal if its 14 days

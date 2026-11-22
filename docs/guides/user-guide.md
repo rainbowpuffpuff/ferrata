@@ -321,9 +321,14 @@ choices: `deposit --kind public --i-accept-public-account`; `claim --plaintext
 | Burn from | a private holding | a public holding: the holder is visible |
 | Root read | the newest imported root | an older root dates your deposit (it shows the deposit is at least that old) |
 
-The client shows the **anonymity set** a claim would have: the deposits of that token and
-denomination under the root it reads, less those already claimed in plaintext, which are public (derived; design:
-[`docs/traceability.md`](../traceability.md), row F.8; **not built**).
+The client shows the **anonymity set** a claim would have (`ferrata claim`'s `anonymity` line, which warns when it is
+1): the deposits of that token and denomination under the root it reads and within the fee schedule range it names,
+less those a plaintext claim has published, applied or refused on chain (a refused transaction stays in its block,
+witness and all), which are public ([`cli/README.md`](../../cli/README.md), "Anonymity set";
+measured over both halves, with plaintext and with private claims:
+[`e2e/both-halves/results/randomised.md`](../../e2e/both-halves/results/randomised.md)). Timing is not counted in it.
+This tree's tools speak the bridge program since milestone B1 only; the deployments of November 2026 run the earlier
+program and need the tools of `f13faee2` ([`docs/image-ids.md`](../image-ids.md)).
 
 ## 10. What is public at each step (U.7)
 
@@ -436,6 +441,9 @@ messages for each code.
   that the vault requires only to be above zero: 30 days by default; read it from the vault you use),
   on LEZ at most 30 days after the newest attested Ethereum time (a constant of the bridge program).
   The admin cannot unfreeze.
+- **Delisted** (a token's deposits disabled by the admin on the vault, mirrored on LEZ by `AttestListing`): no new
+  deposit of it; your deposits made before are still claimed, and your holdings still burn, transfer and release
+  ([`lez/harness/tests/bridge_delist.rs`](../../lez/harness/tests/bridge_delist.rs)).
 - **Retired** (`retire()` on the vault, `Sunset` on LEZ): deposits stop forever and root imports stop;
   claims against imported roots, burns and releases continue; unimported deposits become refundable
   after a final sunset checkpoint and its revocation window (`revokeWindow`, 7 days by the design's
@@ -503,7 +511,8 @@ end-to-end test, which CI runs on every push (row 84).
   `Freeze` (17), `SetCap` (18), `Sunset` (2). Variants 0–3 are decoded by the checkpoint program, so
   their bytes are fixed.
 - **Actors and addresses**: `config(cid)`, `token(cid, token)`, `root(cid, n)`,
-  `nullifier(chain, vault, N)` (no `cid`: one namespace per vault for the whole program), the holder,
+  `nullifier(cid, chain, vault, N)` and the holder `holder(cid, account)` (keyed by the configuration since milestone
+  B1; the program the live runs of November 2026 deployed keys them by the chain, vault and `N`, and by the account),
   `burn(cid, H(note))`; seeds `H("ferrata-lez/v1/bridge/<role>" ‖ …)` ([`lez/BRIDGE.md`](../../lez/BRIDGE.md) §2).
 - **Derivations**: `configId` ([`bridge.md`](../design/bridge.md) §3), `s`, `C`, `fid`, `N` (§5.3), the
   leaf (§5.2), `r_i`, `sOut`, `COut`, `memo`, `mac`, burn leaf (§12.1), `NOut` and the release journal
@@ -530,15 +539,16 @@ end-to-end test, which CI runs on every push (row 84).
 ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §9; [`bridge.md`](../design/bridge.md) §1, §18.6, §19;
 [`docs/not-built.md`](../not-built.md); at this commit)
 
-- a wallet integration beyond the mini-app; the anonymity-set view (§9);
+- a wallet integration beyond the mini-app; the anonymity-set view in a wallet (the `ferrata` tool shows it, §9);
 - the gas drop inside the relayer daemon: the sealed credit to a one-time private account, swept by the claim that
   pays its fee from it, ran with LEZ's wallet on LEZ v0.4.0-rc3 with real proofs (EVIDENCE row 124); the daemon's own
   credit is a public transfer that no private claim can sweep;
 - the relayer's root imports on a running LEZ sequencer (they ran on the mini-app's devnet: rows 106, 107);
 - a transfer that credits a private recipient privately (transfers between holders are built: rows 74, 75); the
   switch to LEZ's token program, when one is released;
-- in the deployed bridge program, nullifier and holder accounts keyed by the configuration, which close the two
-  tenant issues of 18 November (row 136): built and tested in a second build, not deployed (row 143);
+- a deployment of the bridge program since milestone B1, whose nullifier and holder accounts keyed by the
+  configuration close the two tenant issues of 18 November (row 136): built and tested, it needs a new vault; this
+  tree's tools speak only its accounts (§9);
 - a user-side proof on a laptop: the private claim and burn were proven on cloud CPUs held to 8 and 16 cores and on
   M1 and M4 Mac minis under macOS (rows 33, 88);
 - Ethereum reads, signatures and sends through Logos Core's own modules in the mini-app's round trip (inside Basecamp

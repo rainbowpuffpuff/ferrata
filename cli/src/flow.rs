@@ -389,6 +389,25 @@ pub async fn claim<L: Ledger>(
         hx(ctx.program.value())
     ));
     out.line(format!("  nullifier N  {}", hx(&plan.nullifier)));
+    // F.8: the deposits this claim cannot be told apart from on chain (the same token and amount under the root and
+    // the fee schedule range it names, less those plaintext claims have published); a plaintext claim names its own.
+    let range = match &plan.call.message {
+        ferrata_lez_bridge_wire::BridgeMessage::Claim { range, .. }
+        | ferrata_lez_bridge_wire::BridgeMessage::ClaimPrivately { range, .. } => *range,
+        _ => bail!("a claim plan holds a claim"),
+    };
+    let own_opened =
+        history.opened.contains(&inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment));
+    let set =
+        ferrata_wallet::claim::anonymity_set(&list.deposits, &history.opened, &d.token, &d.amount, plan.leaf_count, &range);
+    let among = format!(
+        "of {} under root(cid, {}) in leaves {}..{}",
+        show(amount),
+        plan.leaf_count,
+        range.from_leaf,
+        range.until_leaf.min(plan.leaf_count)
+    );
+    out.line(anonymity_line(private, own_opened, set, &among));
     out.line(format!(
         "  cost         nothing more in {symbol}: the mint fee {} and the relay fee {} were paid with the deposit; the LEZ fee is paid {}",
         show(plan.mint_fee),
@@ -426,6 +445,25 @@ pub async fn claim<L: Ledger>(
         None
     };
     Ok(Claimed { plan, leaf: d.leaf_index, sent })
+}
+
+/// `ferrata claim`'s `anonymity` line (F.8): `set` is `anonymity_set`'s count for the claim's deposit, `own_opened`
+/// whether a plaintext claim, applied or refused, under any configuration, has published that deposit already (anyone
+/// can then recompute its nullifier from the published `s`), `among` the deposits counted.
+fn anonymity_line(private: bool, own_opened: bool, set: usize, among: &str) -> String {
+    match (private, own_opened, set) {
+        (false, _, _) => "  anonymity    1: a plaintext claim names its deposit".into(),
+        (true, true, _) => "  anonymity    1: a plaintext claim has already published this deposit (one refused on chain, or \
+             one under another configuration): its nullifier follows from the published witness, so this claim is linked \
+             to it"
+            .into(),
+        (true, false, 0 | 1) => format!(
+            "  anonymity    1 deposit {among}: the only one, so its amount alone links this claim to it; a later root with more deposits of the amount widens the set"
+        ),
+        (true, false, _) => format!(
+            "  anonymity    {set} deposits {among}, less those claimed in plaintext: on chain this claim could be any one of them"
+        ),
+    }
 }
 
 // ---- burn ----------------------------------------------------------------------------------------
@@ -897,7 +935,7 @@ pub async fn recover<L: Ledger>(
         let (decimals, symbol) = eth::token_meta(&eth.p, *token).await?;
         let t = token.into_array();
         for a in &publics {
-            let state = ledger.actor_state(ferrata_lez_bridge_wire::holder_actor(ctx.program, a.id)).await?;
+            let state = ledger.actor_state(ferrata_lez_bridge_wire::holder_actor(ctx.program, &ctx.cid, a.id)).await?;
             let held = lez::holding_in(&state, ctx, &t);
             if held > 0 {
                 r.holdings.push((DestKind::Public, a.index, *token, held));
@@ -919,4 +957,31 @@ pub async fn recover<L: Ledger>(
         r.holdings.len()
     ));
     Ok(r)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::anonymity_line;
+
+    /// The four `anonymity` lines of `ferrata claim` (F.8): a plaintext claim; a private claim of a deposit a plaintext
+    /// claim already published (refused on chain, or under another configuration); the only deposit of its amount; and
+    /// several.
+    #[test]
+    fn the_anonymity_line_names_each_case() {
+        let among = "of 1 ETH under root(cid, 8) in leaves 0..8";
+        assert_eq!(anonymity_line(false, false, 5, among), "  anonymity    1: a plaintext claim names its deposit");
+        let opened = anonymity_line(true, true, 5, among);
+        assert!(opened.starts_with("  anonymity    1: a plaintext claim has already published this deposit"));
+        assert!(opened.contains("refused on chain") && opened.contains("another configuration"), "{opened}");
+        for set in [0, 1] {
+            let only = anonymity_line(true, false, set, among);
+            assert!(only.starts_with(&format!("  anonymity    1 deposit {among}: the only one")), "{only}");
+        }
+        assert_eq!(
+            anonymity_line(true, false, 4, among),
+            format!(
+                "  anonymity    4 deposits {among}, less those claimed in plaintext: on chain this claim could be any one of them"
+            )
+        );
+    }
 }

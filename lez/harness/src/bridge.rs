@@ -12,10 +12,8 @@
 //! `bridge/vectors/inbound-v2.json` (`claim`), so `root(5)` is the vector's root and the claim of
 //! its leaf 2 must spend the vector's `N`. Leaves 5–7 are this harness's own deposits.
 //!
-//! **Which build.** By default the deployed program (`guests/bridge`, `methods::FERRATA_BRIDGE_*`). With the
-//! feature `bridge-next`, its second build (`guests/bridge-next`, not deployed), whose nullifier and holder
-//! accounts are keyed by the configuration id as well: [`holder_of`] and [`nullifier_of`] give the right address
-//! for either, and the tests use them, so every suite runs against both (`lez/results/bridge-next.md`).
+//! **Which build.** The bridge program of `guests/bridge` (`methods::FERRATA_BRIDGE_*`), whose nullifier and
+//! holder accounts are keyed by the configuration id ([`holder_of`], [`nullifier_of`]; milestone B1).
 
 use std::borrow::Cow;
 
@@ -47,18 +45,9 @@ use serde_json::Value;
 
 use crate::{ferrata_account, Chain, TxReport};
 
-/// The bridge program these tests run: the deployed one (`guests/bridge`).
-#[cfg(not(feature = "bridge-next"))]
+/// The bridge program these tests run (`guests/bridge`).
 pub const BRIDGE_ID: [u32; 8] = methods::FERRATA_BRIDGE_ID;
-#[cfg(not(feature = "bridge-next"))]
 pub const BRIDGE_ELF: &[u8] = methods::FERRATA_BRIDGE_ELF;
-/// The bridge program these tests run: its second build (`guests/bridge-next`, feature `bridge-next`).
-#[cfg(feature = "bridge-next")]
-pub const BRIDGE_ID: [u32; 8] = methods_bridge_next::FERRATA_BRIDGE_NEXT_ID;
-#[cfg(feature = "bridge-next")]
-pub const BRIDGE_ELF: &[u8] = methods_bridge_next::FERRATA_BRIDGE_NEXT_ELF;
-/// Whether these tests run the second build (`guests/bridge-next`).
-pub const SECOND_BUILD: bool = cfg!(feature = "bridge-next");
 
 pub fn bridge_program() -> Program {
     Program::new_unchecked(BRIDGE_ID, Cow::Borrowed(BRIDGE_ELF))
@@ -69,55 +58,24 @@ pub fn bridge_account() -> AccountId {
     AccountId::from_builtin_program(BRIDGE_ID)
 }
 
-/// `holder(account)` of the deployed program (`cid` is not part of its address), `holder(cid, account)` of the
-/// second build.
-#[cfg(not(feature = "bridge-next"))]
-pub fn holder_of(program: AccountId, _cid: &Hash, account: AccountId) -> Actor {
-    bw::holder_actor(program, account)
-}
-
-/// `holder(account)` of the deployed program, `holder(cid, account)` of the second build (this one).
-#[cfg(feature = "bridge-next")]
+/// `holder(cid, account)`.
 pub fn holder_of(program: AccountId, cid: &Hash, account: AccountId) -> Actor {
-    bw::config_keyed::holder_actor(program, cid, account)
+    bw::holder_actor(program, cid, account)
 }
 
 /// The seed of [`holder_of`].
-#[cfg(not(feature = "bridge-next"))]
-pub fn holder_seed_of(_cid: &Hash, account: &Hash) -> PdaSeed {
-    bw::holder_seed(account)
-}
-
-/// The seed of [`holder_of`].
-#[cfg(feature = "bridge-next")]
 pub fn holder_seed_of(cid: &Hash, account: &Hash) -> PdaSeed {
-    bw::config_keyed::holder_seed(cid, account)
+    bw::holder_seed(cid, account)
 }
 
-/// `nullifier(chain, vault, N)` of the deployed program (`cid` is not part of its address), `nullifier(cid, chain,
-/// vault, N)` of the second build.
-#[cfg(not(feature = "bridge-next"))]
-pub fn nullifier_of(program: AccountId, _cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
-    bw::nullifier_actor(program, chain_id, vault, n)
-}
-
-/// `nullifier(chain, vault, N)` of the deployed program, `nullifier(cid, chain, vault, N)` of the second build (this
-/// one).
-#[cfg(feature = "bridge-next")]
+/// `nullifier(cid, chain, vault, N)`.
 pub fn nullifier_of(program: AccountId, cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> Actor {
-    bw::config_keyed::nullifier_actor(program, cid, chain_id, vault, n)
+    bw::nullifier_actor(program, cid, chain_id, vault, n)
 }
 
 /// The seed of [`nullifier_of`].
-#[cfg(not(feature = "bridge-next"))]
-pub fn nullifier_seed_of(_cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
-    bw::nullifier_seed(chain_id, vault, n)
-}
-
-/// The seed of [`nullifier_of`].
-#[cfg(feature = "bridge-next")]
 pub fn nullifier_seed_of(cid: &Hash, chain_id: u64, vault: &[u8; 20], n: &Hash) -> PdaSeed {
-    bw::config_keyed::nullifier_seed(cid, chain_id, vault, n)
+    bw::nullifier_seed(cid, chain_id, vault, n)
 }
 
 /// The bridge program's image id as 32 bytes (risc0's little-endian words).
@@ -160,6 +118,9 @@ pub fn handler_name(input: &ReceiveInput) -> String {
         Ok(BridgeMessage::Cosigned { .. }) => "Cosigned",
         Ok(BridgeMessage::Transfer { .. }) => "Transfer",
         Ok(BridgeMessage::Credit { .. }) => "Credit",
+        Ok(BridgeMessage::SetDepth { .. }) => "SetDepth",
+        Ok(BridgeMessage::AttestListing { .. }) => "AttestListing",
+        Ok(BridgeMessage::SetListing { .. }) => "SetListing",
         // Anything that is not one of the bridge's messages is a reply it waits for.
         Err(_) => "(reply)",
     };
@@ -1144,6 +1105,7 @@ impl World {
             BridgeMessage::Sunset { config_id }
             | BridgeMessage::Freeze { config_id, .. }
             | BridgeMessage::SetCap { config_id, .. }
+            | BridgeMessage::SetDepth { config_id, .. }
             | BridgeMessage::ProposeRoles { config_id, .. }
             | BridgeMessage::CancelRoles { config_id }
             | BridgeMessage::Pause { config_id, .. } => Some(config_actor(self.program, config_id)),
@@ -1207,6 +1169,27 @@ impl World {
         let root = config_actor(self.program, cid);
         let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
         self.send(label, root, &message, vec![root, header])
+    }
+
+    /// `AttestListing` of `token` for `cid`: the vault's listing slot of `token` in block `block` (F.10).
+    pub fn attest_listing(
+        &mut self,
+        label: &str,
+        cid: &Hash,
+        token: [u8; 20],
+        block: usize,
+        vault: &[u8; 20],
+    ) -> TxReport {
+        let b = &self.blocks[block];
+        let message = BridgeMessage::AttestListing {
+            config_id: *cid,
+            token,
+            record_slot: b.slot,
+            proof: b.vault_proof(vault, &[bw::listing_slot(&token)]),
+        };
+        let root = config_actor(self.program, cid);
+        let header = header_actor(ferrata_account(), &INSTANCE, b.slot);
+        self.send(label, root, &message, vec![root, header, token_actor(self.program, cid, &token)])
     }
 
     /// `ApplyRoles` for `cid`, reading the record of block `block`.

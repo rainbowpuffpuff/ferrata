@@ -290,7 +290,7 @@ With the zone options it also reads the zone's blocks from the sequencer, in one
 imported roots and the plaintext claims (the bridge program's public calls), the calls private
 transactions make in the clear (a private burn's note reaches `token(cid, token)` that way; the checkpoint
 counts the same calls), and the public accounts private transactions name: a private claim names its
-nullifier account `nullifier(chain, vault, N)` there, and the tool matches those against its own
+nullifier account `nullifier(cid, chain, vault, N)` there (since milestone B1), and the tool matches those against its own
 deposits' `N` locally. Each deposit is then marked claimed, refunded, claimable under `root(n)` (and from
 which block, if its claim delay has not passed), or not yet imported.
 
@@ -349,12 +349,22 @@ it opens at) unless `--no-delay`.
   locally; the fee is paid inside the proof. A private-kind deposit is proven by its destination; a
   public-kind one by the wallet's private account `/0` (the mint still lands at the public destination).
 - **Plaintext**: the wallet sends a public transaction; refused without `--i-accept-plaintext-links-deposit`.
+- **Anonymity set** (RFP-022 F.8): the `anonymity` line counts the deposits a private claim cannot be told apart from
+  on chain: those of the same token and amount, under the root it reads and within the fee schedule range it names,
+  less those a plaintext claim has already published (its witness names the leaf and `s`, under any configuration of
+  the program, and a claim refused on chain publishes it too: LEZ keeps a refused transaction in its block; an observer
+  sees which deposit it spent) (`ferrata_wallet::claim::anonymity_set`). When your own deposit is one of those (say a
+  plaintext claim of it met a full bucket), the line says 1: its nullifier follows from the published witness. A fee change starts
+  a new range. When the deposit is the only one there, the line says that its amount alone links the claim to it
+  (above: the test's only deposit of 1 ETH). A plaintext claim names its deposit, so its set is 1, and it takes its
+  deposit out of every later claim's set: `e2e/both-halves/results/randomised.md` measures both ways.
 
 ```text
 claim on LEZ (configuration 0xa9d67b71ac74fe9bad38696f91d539f82bc21b953b96dee046f02242d718a8c3):
   deposit      1 ETH (…) to your private account /0, under root(cid, 17)
   would send   ClaimPrivately, proven locally by LEZ's wallet (the witness stays in the proof) to the bridge program 0x0d9450db…a38e
   nullifier N  0xf2eeae6fc870ecda4f224349e5be620584f48adb1984c880e6bf38f151703286
+  anonymity    1 deposit of 1 ETH (…) under root(cid, 17) in leaves 0..17: the only one, so its amount alone links this claim to it; a later root with more deposits of the amount widens the set
   cost         nothing more in ETH: the mint fee 0 ETH (…) and the relay fee 0.001 ETH (…) were paid with the deposit; the LEZ fee is paid inside the proof, by the private account that proves
   delay        5 h after the deposit: from Ethereum block 1531 (now 1531), passed
 what becomes public (Claim (LEZ)):
@@ -593,7 +603,13 @@ RECOVERY: 12 deposits (2 claimed, 10 unclaimed), 12 burns (2 released), holdings
   on the zone, so the token's claim, burn and release are not exercised (they are the same code as ETH's).
 - **Freezes** are checked before sending (releases) and decoded (all), but the test vault's freeze
   authority has no key, so no frozen state is exercised.
-- **The anonymity-set view** (how many deposits of the denomination a claim hides among) is not shown.
+- **Timing in the anonymity-set view.** `ferrata claim`'s `anonymity` line (F.8) counts deposits by token, amount, root
+  and fee schedule range, not by how soon after its deposit the claim comes; the claim delay spreads that.
+- **Deployments of the bridge program before milestone B1.** The tool addresses B1's accounts (`holder(cid, account)`,
+  `nullifier(cid, chain, vault, N)`) and does not check which program it talks to: against a deployment of the earlier
+  program (the live runs of November 2026, `docs/image-ids.md` `ferrata_bridge`) `scan` misses that program's private
+  claims and `recover` reads accounts it does not have (no funds at risk: that program refuses B1's accounts). Use the
+  tool of `f13faee2` for those deployments.
 - **Relayer work, admin functions, Logos module.** The relayer's root imports and checkpoint proofs are
   `ferrata-relayer`'s; the admin functions are the vault's and the admin view's
   ([`docs/guides/deployer-guide.md`](../docs/guides/deployer-guide.md)); the Logos core module

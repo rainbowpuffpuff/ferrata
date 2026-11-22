@@ -101,6 +101,30 @@ fn h(bytes: &[u8]) -> String {
     format!("0x{}", hex::encode(bytes))
 }
 
+/// The bridge program this driver speaks: since milestone B1 (docs/image-ids.md `ferrata_bridge_b1`) every account
+/// is keyed by the configuration, `holder(cid, account)` and `nullifier(cid, chain, vault, N)`. The bridge program of
+/// the live runs of November 2026 (`ferrata_bridge`, `0xccde6171…`) has neither: with it session B's claims would be
+/// refused after the Sepolia stages had deployed a vault and sent deposits. Every command that loads `--bridge-bin`,
+/// and `config-id`, refuses another program before anything is deployed or sent (e2e/crown/README.md, "Since
+/// milestone B1"); the live runs' program needs the driver of `f13faee2`.
+pub const BRIDGE_IMAGE_ID: &str = "ac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e";
+
+/// Refuses a bridge program other than [`BRIDGE_IMAGE_ID`].
+pub fn check_bridge_image(image_id: [u8; 32]) -> Result<()> {
+    ensure!(
+        hex::encode(image_id) == BRIDGE_IMAGE_ID,
+        "the bridge program 0x{} is not the one this crown-driver speaks (0x{BRIDGE_IMAGE_ID}, docs/image-ids.md \
+         `ferrata_bridge_b1`): its accounts differ; the bridge program of the live runs needs the driver of f13faee2",
+        hex::encode(image_id)
+    );
+    Ok(())
+}
+
+/// [`check_bridge_image`] of a loaded `--bridge-bin`.
+pub fn check_bridge_bin(bridge_bin: &GuestBinary) -> Result<()> {
+    check_bridge_image(image_bytes(bridge_bin.image_id))
+}
+
 fn image_bytes(id: [u32; 8]) -> [u8; 32] {
     let mut out = [0u8; 32];
     for (i, w) in id.iter().enumerate() {
@@ -130,8 +154,7 @@ fn now_ms() -> u64 {
 // The configuration
 // ---------------------------------------------------------------------------------------------
 
-/// The roles of the configuration and its caps: no floor, unlimited caps (e2e/crown/README.md
-/// "Identity of the configuration"). The admin and the freeze authority act by signing, which admits their
+/// The roles of the configuration and its caps. The admin and the freeze authority act by signing, which admits their
 /// accounts; the fee recipient only receives, and a public account must exist to be admitted, so it is the second of
 /// the funded test accounts of LEZ's local genesis (`keys::lez_test_payers()[3]`, a published throwaway key).
 ///
@@ -140,15 +163,28 @@ fn now_ms() -> u64 {
 /// the accounts of the keys derived from `CROWN_ROLES_LABEL` (`<label>/admin`, `<label>/freeze-authority`; default
 /// `crown`, the recorded runs'). A derived key is SHA-256 of a public prefix, the label and a counter
 /// (`keys::derived_key`): anyone who reads the label has it, so a label is for a local zone or a recorded run, never
-/// for a configuration that holds value. `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets'
-/// capacity in value units, refilled over a day (unset or empty: unlimited; anything but a whole number is refused).
-/// They enter `controls`, so `salt` and `configId`: every call of one configuration (`config-id`, then `crown-b`)
-/// must see the same values.
+/// for a configuration that holds value.
+///
+/// Caps (RFP-022 Sec.4, as `vault/script/DeployVault.s.sol` deploys the vault): by default per token and day 100 times
+/// ETH's largest denomination in value units, refilled over a day, the global cap the same (one token), and an
+/// immutable floor of one largest denomination a day. `FERRATA_UNCAPPED=1` gives the unlimited caps and zero floor of
+/// the live runs of November 2026, whose configuration ids commit to those (e2e/crown/README.md "Identity of the
+/// configuration"). `CROWN_TOKEN_CAP` and `CROWN_GLOBAL_CAP` set the mint and burn buckets' capacity in value units
+/// instead of either default, refilled over a day (capacity / 86,400 a second, at least 1; unset or empty: the
+/// default; anything but a whole number is refused). All of them enter `controls`, so `salt` and `configId`: every
+/// call of one configuration (`config-id`, then `crown-b`) must see the same values.
 pub fn try_controls() -> Result<Controls> {
-    let unlimited = CapParams { capacity: UNLIMITED, refill_per_second: 0 };
+    let (floor, default_cap) = if std::env::var("FERRATA_UNCAPPED").is_ok_and(|v| v == "1") {
+        (CapParams { capacity: 0, refill_per_second: 0 }, CapParams { capacity: UNLIMITED, refill_per_second: 0 })
+    } else {
+        let e = eth_entry();
+        let largest = *e.denominations.last().expect("a denomination");
+        let daily = |v: u128| CapParams { capacity: v, refill_per_second: v.div_ceil(86_400) };
+        (daily(e.value(largest).expect("fits")), daily(e.value(100 * largest).expect("fits")))
+    };
     let cap = |var: &str| -> Result<CapParams> {
         match std::env::var(var).ok().map(|v| v.trim().to_string()).filter(|v| !v.is_empty()) {
-            None => Ok(unlimited),
+            None => Ok(default_cap),
             Some(v) => {
                 let capacity: u128 = v.parse().map_err(|_| anyhow!("{var}={v:?}: not a whole number of value units"))?;
                 Ok(CapParams { capacity, refill_per_second: (capacity / 86_400).max(1) })
@@ -178,7 +214,7 @@ pub fn try_controls() -> Result<Controls> {
         admin,
         freeze_authority,
         fee_recipient: *fee_recipient.value(),
-        floor: CapParams { capacity: 0, refill_per_second: 0 },
+        floor,
         token_cap: cap("CROWN_TOKEN_CAP")?,
         global_cap: cap("CROWN_GLOBAL_CAP")?,
     })
@@ -1041,15 +1077,15 @@ async fn bridge_state(live: &Live, pda: Pda) -> Result<Option<BridgeState>> {
     Ok(if state.is_empty() { None } else { Some(borsh::from_slice(&state)?) })
 }
 
-async fn holder_state(live: &Live, bridge: AccountId, account: AccountId) -> Result<Option<BridgeState>> {
-    let state = live.actor_state(holder_pda(bridge, account).actor()).await?;
+async fn holder_state(live: &Live, bridge: AccountId, cid: &Root, account: AccountId) -> Result<Option<BridgeState>> {
+    let state = live.actor_state(holder_pda(bridge, cid, account).actor()).await?;
     Ok(if state.is_empty() { None } else { Some(borsh::from_slice(&state)?) })
 }
 
-/// `holder(account)`: the PDA holding `account`'s public wrapped balances (security fix C-1); a claim
-/// mints there, a public burn forwards from there.
-fn holder_pda(bridge: AccountId, account: AccountId) -> Pda {
-    Pda { program: bridge, seed: holder_seed(account.value()) }
+/// `holder(cid, account)`: the PDA holding `account`'s public wrapped balances under `cid` (security fix C-1,
+/// milestone B1); a claim mints there, a public burn forwards from there.
+fn holder_pda(bridge: AccountId, cid: &Root, account: AccountId) -> Pda {
+    Pda { program: bridge, seed: holder_seed(cid, account.value()) }
 }
 
 /// The fee schedule range a wallet names for a claim of `leaf`: the schedule it falls under and
@@ -1250,23 +1286,23 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 0)?;
             ensure!(kind == DestKind::Public, "deposit 0 is the public one");
             let range = range_for(live, token_pda, 0).await?;
-            let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
+            let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let dest = AccountId::new(w.dest);
             let message = BridgeMessage::Claim { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
-            let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, dest)), mention(holder_pda(bridge, fee_recipient()))];
+            let mentions = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, dest)), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = send(live, &format!("bridge Claim: deposit 0 (public) under root(cid, {n})"), mentions, &message, payer).await?.expect_applied()?;
             steps.push(row_json(&o));
             claims.push(json!({ "leaf": 0, "kind": "public", "nullifier": h(&nullifier), "block": o.row.block, "tx": o.row.tx_hash, "dest": h(dest.value()) }));
-            println!("[crown-b] public test account 0's holding: {:?}", holder_state(live, bridge, dest).await?);
+            println!("[crown-b] public test account 0's holding: {:?}", holder_state(live, bridge, &cid, dest).await?);
         } else {
             // The private claim of deposit 1, then the two burns.
             let mut session = PrivateSession::open(live, bridge_bin, &b.private).await?;
             let (w, nullifier, kind) = witness(&vault, &stage.deposits, 1)?;
             ensure!(kind == DestKind::Private && w.dest == *session.me.value(), "deposit 1 is the private one, to the wallet's private account");
             let range = range_for(live, token_pda, 1).await?;
-            let n_pda = Pda { program: bridge, seed: nullifier_seed(chain_id, &vault, &nullifier) };
+            let n_pda = Pda { program: bridge, seed: nullifier_seed(&cid, chain_id, &vault, &nullifier) };
             let message = BridgeMessage::ClaimPrivately { config_id: cid, leaf_count: n, witness: w, range, relayer: None };
-            let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, fee_recipient()))];
+            let publics = vec![mention(root_pda), mention(token_pda), mention(config_pda), mention(n_pda), mention(holder_pda(bridge, &cid, fee_recipient()))];
             let o = session.send(live, "bridge ClaimPrivately: deposit 1 at LEZ's private test account 0", publics, &message, "claim").await?;
             steps.push(row_json(&o));
             if session.fake {
@@ -1282,7 +1318,7 @@ pub async fn session_b(live: &mut Live, program: &GuestBinary, bridge_bin: &Gues
             let burn_pda = Pda { program: bridge, seed: burn_seed(&cid, &note.hash()) };
             let mentions = vec![
                 AccountIdentity::Public(holder0).select_program_actor_state(bridge),
-                mention(holder_pda(bridge, holder0)),
+                mention(holder_pda(bridge, &cid, holder0)),
                 mention(token_pda),
                 mention(config_pda),
                 mention(burn_pda),
@@ -1462,6 +1498,42 @@ mod tests {
             .map(|(p, u)| native_apply(&mut native, &chain.config, u, &format!("period {p}")).expect("update"))
             .collect();
         (native, outcomes)
+    }
+
+    /// Sec.4: the configuration's caps are finite by default (the vault's defaults, in value units), above the floor,
+    /// and the unlimited caps of the earlier live runs need FERRATA_UNCAPPED=1.
+    #[test]
+    fn the_configuration_is_capped_by_default() {
+        let c = controls();
+        assert_eq!(c.check(), Ok(()));
+        // ETH: 0.1 ETH / 1e12 x 3000 = 3e8 value units a day for the floor; 100 times that for the caps.
+        assert_eq!(c.floor, CapParams { capacity: 300_000_000, refill_per_second: 3_473 });
+        assert_eq!(c.token_cap, CapParams { capacity: 30_000_000_000, refill_per_second: 347_223 });
+        assert_eq!(c.global_cap, c.token_cap);
+        assert_ne!(c.token_cap.capacity, UNLIMITED);
+    }
+
+    /// The bridge program this driver speaks is docs/image-ids.md's `ferrata_bridge_b1`; the live runs' program, and
+    /// any other, is refused.
+    #[test]
+    fn the_driver_speaks_the_bridge_program_since_b1_only() {
+        let doc = std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/../../../docs/image-ids.md")).unwrap();
+        let id_of = |name: &str| -> [u8; 32] {
+            let rows: Vec<&str> = doc.lines().filter(|l| l.contains(&format!("`{name}` | `0x"))).collect();
+            assert_eq!(rows.len(), 1, "one row for {name}");
+            let mut id = [0u8; 32];
+            hex::decode_to_slice(&rows[0].split(" | `0x").nth(1).unwrap()[..64], &mut id).unwrap();
+            id
+        };
+        let b1 = id_of("ferrata_bridge_b1");
+        assert_eq!(hex::encode(b1), BRIDGE_IMAGE_ID);
+        assert!(check_bridge_image(b1).is_ok());
+        let live = id_of("ferrata_bridge");
+        assert_ne!(live, b1);
+        assert!(check_bridge_image(live).is_err(), "the live runs' bridge program is refused");
+        let mut other = b1;
+        other[31] ^= 1;
+        assert!(check_bridge_image(other).is_err());
     }
 
     #[test]

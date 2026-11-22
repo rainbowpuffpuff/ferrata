@@ -50,7 +50,7 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 |---|---|---|---|
 | Outbound finality rule, `mode` | (B) if the zone's sequencers run `ferrata_attestor`; otherwise (A) | (A) for the Sepolia runs; (B) rehearsed | vault immutable |
 | Committee floors `nMin`, `tMin` | at least 3 and 2 outside testnets; (A) recommends `n ≥ 6` | 3 and 2 (`script/params/sepolia.json`) | vault immutable |
-| Wait: `deltaFloor` and initial `delta` (Δ) | (A): 3 h 01 min; (B): 1 h | 600 s (`FERRATA_DELTA`) | `deltaFloor` immutable; `delta` raise-only, ≤ 30 days |
+| Wait: `deltaFloor` and initial `delta` (Δ) | (A): 3 h 01 min; (B): 1 h | the design default for the rule since milestone B1 (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_DELTA` sets another for a test run (the testnet runs of November 2026: 600 s; the crown runs: 3,600 s); `script/RoundTrip.s.sol`: 600 s | `deltaFloor` immutable; `delta` raise-only (`raiseDelta`), ≤ 30 days |
 | `turnSeconds` (the channel's posting timeframe) | 900 s on testnet values | 900 | vault immutable |
 | `revokeWindow` | 7 days | 1 day | immutable |
 | `maxFreeze` | 30 days | 30 days | immutable |
@@ -60,19 +60,35 @@ choose them ([`vault/README.md`](../../vault/README.md), last paragraph of "Sepo
 | Watchers | up to three hot addresses, each with its own nodes | none | admin's proposal, 14 days later |
 | Fee recipient | the deployer's choice | the deployer | vault immutable |
 | Tokens, denominations, relay and checkpoint fees, `lezUnit`, `unitWeight` | three denominations per token; fees ≤ 1% each | ETH 0.001/0.01/0.1, relay 0.2%, checkpoint 0.1%; test token 100/1,000/10,000, 0.25% and 0.1% | write-once per token |
-| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | UNLIMITED | admin, never below the floor |
+| Caps per token and day | the smaller of 10% of escrow and a deployer-set ceiling, above an immutable floor | capped by default since milestone B1: per token and day 100 times its largest denomination (10 ETH, 1,000,000 test-token units; `ethDailyCap`, `tokenDailyCap` in the params), globally their sum, an immutable release floor of one largest denomination a day (`script/DeployVault.s.sol`, `test/DeployDefaults.t.sol`); `FERRATA_UNCAPPED=1` deploys without caps, as the live runs of November 2026 did; `script/RoundTrip.s.sol` (the earlier runs' single-script round trip) deploys none. Why 100 times: below | admin, never below the floor |
 | Attestation instance (its root id) | an instance whose checkpoint you verified | the Sepolia period-1378 bootstrap | inside `configId` |
-| Inbound finality depth | Ethereum finality, no extra epochs | — | — (deeper settings: not built) |
+| Inbound finality depth | Ethereum finality, no extra epochs (depth 0) | 0 | the admin's `SetDepth` on LEZ, in beacon slots beyond finality, at most 216,000; it applies to later imports only (since B1) |
 
 Sources: [`bridge.md`](../design/bridge.md) §9, §13; [`vault/README.md`](../../vault/README.md),
 "Deployment (v5)", "Roles", "Sepolia round trip"; [`lez/live/inbound/README.md`](../../lez/live/inbound/README.md).
 
 **Finality depth (R.14, F.12).** Inbound, the default is Ethereum finality with no extra epochs; a
 deeper setting delays honest claimants but not a captured sync committee, whose defence is caps and
-freezes ([`bridge.md`](../design/bridge.md) §5.4). Outbound, the depth is the vault's wait (Δ, plus
-`(t − 1) × turnSeconds` under (A)) and the per-token release delay; a change applies only to candidates
-submitted, or roots finalised, after it ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints",
+freezes ([`bridge.md`](../design/bridge.md) §5.4). The admin sets it with `SetDepth`; roots already imported stay
+imported, so no valid claim is lost (`lez/harness/tests/bridge_depth.rs`). Outbound, the depth is the vault's wait (Δ, plus
+`(t − 1) × turnSeconds` under (A)), by default the design's for the rule, 3 h 01 min under (A) and 1 h under (B), which
+`script/DeployVault.s.sol` deploys as `deltaFloor` and initial `delta` unless `FERRATA_DELTA` names another
+(`test/DeployDefaults.t.sol`). The admin can only raise it (`raiseDelta`, at most 30 days): a lower wait would shorten
+the window to react to a wrong candidate ([`bridge.md`](../design/bridge.md) §9), so the floor is immutable; a raise
+applies only to candidates submitted after it. The per-token release delay holds a finalised root's releases while the checkpoint can still be revoked
+(between `minReleaseDelay` and `revokeWindow`; a change applies to roots finalised after it); the scripts deploy the
+testnet 120 s, not the design's 24 h or more ([`vault/README.md`](../../vault/README.md), "LEZ checkpoints",
 "Releases and pull payments").
+
+**Why the caps are 100 largest denominations a day.** The design bounds a day's loss by the smaller of 10 % of escrow
+and a ceiling the deployer sets, above an immutable release floor. A vault's buckets hold fixed capacities the admin
+sets (`setTokenCap`, `setGlobalCap`, never a release cap below the floor), so a deployment can only start from the
+ceiling: 10 % of the zero escrow of a new vault would refuse its first deposit. The script's ceiling, 100 times a
+token's largest denomination a day, lets a day of deposits and releases through at the largest size (99 of them once
+each counts its fees: `test/DeployDefaults.t.sol`) and is the most a broken verifier or a stolen key can take in a day
+before a freeze. 10 % of escrow is the smaller bound until escrow passes 1,000 largest denominations; until then the
+admin should lower the caps toward it as escrow grows (derived: 100 = 10 % of 1,000). The release floor, one largest
+denomination a day, is what no admin can throttle releases below.
 
 **Choosing the rule.** Rule (A) needs an unpredictable `prevrandao` (Ethereum and its testnets); on a
 chain whose `prevrandao` or timestamp is constant or sequencer-chosen, deploy rule (B). Rule (B) also
@@ -281,12 +297,22 @@ stop and its owner (renounced or not), tokens with their caps and fee schedules,
 - **Freezes.** The freeze authority sets mint and burn freezes, globally or per token, at most 30 days
   after the newest attested Ethereum time (a constant of the program; on the vault the bound is its
   `maxFreeze`, §2); the admin cannot unfreeze. `Sunset` is the freeze authority's, one-way; imports stop after it.
+- **Inbound depth** (since B1). The admin's `SetDepth` holds every later `ImportRoot` until the configuration's
+  clock has read a record that many beacon slots newer than the import's (242 until then); at most 216,000 slots
+  (`lez/harness/tests/bridge_depth.rs`).
+- **Delisting** (since B1). The admin delists a token on the vault (`setDepositsEnabled(token, false)`): its
+  deposits stop, and the vault writes 1 at `sha256("ferrata/vault/listing/v1" ‖ token)` (0 when relisted). Anyone
+  then attests that slot on LEZ (`AttestListing`), and `token(cid, token)` records the delisting and the record it
+  came from, which a LEZ-side client can read (none does yet: the `ferrata` tool reads the vault's
+`depositsEnabled`); an older record never undoes a newer listing. Claims of deposits made
+  before it, burns, transfers and releases are untouched, so users lose nothing and need do nothing; to end a token
+  for good, delist it and let holders burn (`vault/test/Listing.t.sol`, `lez/harness/tests/bridge_delist.rs`).
 
-Measured costs of these steps (in-process harness, this tree's program): `Init` 171,027 execution gas;
-`Register` 331,816 (431,512–455,116 on the vault's real storage); `ImportFees` 269,684; `SetCap` 91,019;
-`Freeze` 140,609 (it reads the newest attested record); `Sunset` 44,193
-([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column; `lez/results/bridge-*.md`). All under LEZ's 5M
-execution target.
+Measured costs of these steps (in-process harness, the bridge program since milestone B1, `lez/results/b1/`):
+`Init` 171,418 execution gas; `Register` 333,303 (433,020–456,729 on the vault's real storage); `ImportFees` 271,623;
+`SetCap` 91,833; `Freeze` 140,383 (it reads the newest attested record); `Sunset` 44,695 (`bridge-inbound.md`,
+`bridge-controls.md`, `bridge-vault-storage.md` there; the deployed program's, within 2,000 of these:
+[`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §1, last column). All under LEZ's 5M execution target.
 
 ## 6. Pairing (F.15)
 
@@ -296,9 +322,12 @@ execution target.
 - **Reciprocal check**: the vault copies `lezConfigId` into slot 2; LEZ `Init` attests it. Every proof
   journal carries the EVM chain id, the vault and `lezConfigId`, so a proof made for one vault is
   worthless for another ([`vault/README.md`](../../vault/README.md), "Sepolia round trip").
-- **One nullifier namespace per vault**: inbound nullifier accounts are keyed by `(evmChainId, vault, N)`
-  across the whole bridge program, so two configurations importing one vault's roots cannot both mint
-  against a deposit ([`bridge.md`](../design/bridge.md) §3).
+- **Nullifiers per configuration** (since B1; the program the live runs of November 2026 deployed keyed them by
+  `(evmChainId, vault, N)` across the whole program): inbound nullifier accounts are `nullifier(configId, evmChainId,
+  vault, N)` and holdings `holder(configId, account)`, so no configuration can spend another's nullifier or fill its
+  holders' accounts. A second configuration of a vault can mint only its own tokens, which no vault releases: a
+  release binds the vault's own `lezConfigId` ([`bridge.md`](../design/bridge.md) §3,
+  `lez/harness/tests/tenant.rs`).
 - Measured refusals: `Init` of another configuration of the same vault (246); a vault-A deposit under a
   vault-B root (249); vault B's proofs for configuration A (110) ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2).
 - **Run once against Sepolia:** `Init` against the vault deployed there, which pins the `configId` of the
@@ -316,10 +345,17 @@ configuration and the checkpoint program collects only its own, so a tenant's bu
 from another tenant's vault ([`bridge.md`](../design/bridge.md) §12.1, §15). A client selects a
 configuration by its id. Evidence: the release test
 `attack_burn_from_another_config_cannot_satisfy_a_release` (native); two configurations with their own vaults side by
-side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8); the malicious-tenant test on the
-deployed program, which recorded two known issues (EVIDENCE row 136: a plaintext claim's `s` lets its holder freeze
-that deposit through a second configuration, and a filled public destination), both closed in a second build of the
-program that is not deployed (row 143); and a second deployer's own configuration, §11.
+side in the harness ([`lez/BRIDGE-RESULTS.md`](../../lez/BRIDGE-RESULTS.md) §2, §8); the malicious-tenant test,
+`lez/harness/tests/tenant.rs`: on the bridge program since B1 a tenant's claims, holdings, roles and internal messages
+reach nothing of another configuration (`lez/results/b1/tenant/`), while against the program the live runs of November
+2026 deployed its two known issues stand (EVIDENCE row 136, `lez/results/tenant.md`: a plaintext claim's `s` lets its
+holder freeze that deposit through a second configuration, and a filled public destination); and a second deployer's
+own configuration, §11.
+
+**Identifying and switching.** A vault pins exactly one configuration (`lezConfigId`, slot 2), so a client
+identifies a configuration by its EVM chain id and vault: the `ferrata` tool reads `lezConfigId` from the vault it
+is given (`--chain-id`, `--vault`, with `--bridge-account` for the LEZ program) and acts under that id only; to switch
+configuration, give it another vault ([`cli/README.md`](../../cli/README.md), options).
 
 ## 8. Rehearse the whole round trip
 
@@ -351,6 +387,9 @@ whichever is latest: `retireOpensAt()`), calls `retire()` on the vault
 LEZ never imported become refundable after a final sunset checkpoint and its revocation window. A new
 version is a new configuration, deployed as above, that holders move to by burning and depositing
 again ([`bridge.md`](../design/bridge.md) §16; [`vault/README.md`](../../vault/README.md), "Refunds").
+Rehearsed over both halves (the vault on anvil, the bridge program in the harness, the guests in dev mode):
+`cli/tests/both_halves.rs`, `migration_rehearsal_honours_positions_in_flight`
+([`e2e/both-halves/results/migration.md`](../../e2e/both-halves/results/migration.md)).
 The attestation side's migration (successor and replacement instances) is in
 [`consumer-guide.md`](consumer-guide.md) §9.
 
@@ -361,8 +400,9 @@ The attestation side's migration (successor and replacement instances) is in
   parameters and a LEZ devnet we ran; a deployment on LEZ testnet 0.4 (which does not exist);
 - `verify_checkpoint` as an API of Logos Core's Ethereum module (its execution check runs through
   `verified_proxy_module`, its beacon checks read plain HTTP);
-- in the deployed bridge program, the nullifier and holder accounts keyed by the configuration (the second build,
-  not deployed: EVIDENCE row 143);
+- a deployment of the bridge program since milestone B1 (`ferrata_bridge_b1` in `docs/image-ids.md`: the nullifier
+  and holder accounts keyed by the configuration, `SetDepth`, `AttestListing`): it runs in the harness and in CI's
+  round trip and needs a new vault; the live runs' program keeps its two known issues (EVIDENCE row 136);
 - on LEZ: the admin's own handover (an M-of-N freeze authority, its 14-day handover, watchers and the
   keyless `Sunset` are built: EVIDENCE row 74);
 - a tool for the LEZ configuration's role messages: `crown-driver` puts your own accounts into `controls` (§5), but
@@ -371,7 +411,6 @@ The attestation side's migration (successor and replacement instances) is in
 - published build outputs: the zone's bundle and the R0BF programs of §11 step 0 are built by each deployer; publishing
   them (as release assets, with their sha256) would save a deployer that hour of building and is the maintainer's
   step, not done;
-- deeper inbound finality settings;
 - the v5 vault's registrations and deposits priced on Sepolia (only the v3 vault's were);
 - `ferrata_bridge_module`'s administration methods (the read-only admin view, EVIDENCE row 57, and the
   mini-app's `SetCap` and `Freeze` on a local devnet, row 62, are built).

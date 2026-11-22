@@ -340,14 +340,14 @@ impl Chain {
         if let Some(nf) = params["nullifier"].as_str() {
             let nf = h32(nf)?;
             out["nullifier_state"] =
-                json!(self.state_hex(bw::nullifier_actor(program, self.ctx.chain_id, &self.ctx.vault, &nf)).await?);
+                json!(self.state_hex(bw::nullifier_actor(program, &self.ctx.cid, self.ctx.chain_id, &self.ctx.vault, &nf)).await?);
         }
         if let Some(holders) = params["public_holders"].as_array() {
             let mut states = Vec::new();
             for h in holders {
                 let id = AccountId::new(h32(h.as_str().context("a public holder")?)?);
                 states.push(
-                    json!({ "account": hx(id.value()), "state": self.state_hex(bw::holder_actor(program, id)).await? }),
+                    json!({ "account": hx(id.value()), "state": self.state_hex(bw::holder_actor(program, &self.ctx.cid, id)).await? }),
                 );
             }
             out["public_holder_states"] = json!(states);

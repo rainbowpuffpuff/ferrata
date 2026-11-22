@@ -585,8 +585,11 @@ consumers still bind to an instance id; for them a successor is a move as in §9
    consumer's pool does (`N = H(pool id ‖ statement identifier)`, the pool naming the instance), the same fact gets a
    new nullifier under the replacement and could be claimed again: refuse every nullifier the predecessor spent,
    derived from the statement identifier and the predecessor's pool, which are constants you hold. If your namespace
-   leaves the instance out, as the bridge's does (nullifier accounts keyed by `(evmChainId, vault, N)`, with
-   `N = H(s ‖ fid)`), there is nothing to carry over ([`docs/design/bridge.md`](../design/bridge.md) §3, §5.3).
+   leaves the instance out, as the bridge's does (`N = H(s ‖ fid)`; its account is keyed by `(evmChainId, vault, N)`
+   on the deployed program and, since milestone B1, by `(configId, evmChainId, vault, N)`: `configId` commits to the
+   instance, but a vault pins one `configId`, so a configuration on another instance cannot pair with the vault and
+   its claims mint nothing that vault releases), there is nothing to carry over
+   ([`docs/design/bridge.md`](../design/bridge.md) §3, §5.3).
 5. **Open the replacement.**
 
 Shown by [`lez/updater/tests/replacement.rs`](../../lez/updater/tests/replacement.rs),

@@ -16,6 +16,11 @@
 #                     tag's tree), this tree's crown-driver ($CROWN_LEZ_TMP/bin, built with that tag selected), fixture/
 #                     and session.sh; lez-config/lez-tag.txt names the tag; -> $CROWN_LEZ_TMP/bundle.tar.zst
 #
+# Since milestone B1 this tree's crown-driver speaks only the bridge program of docs/image-ids.md's `ferrata_bridge_b1`
+# (accounts keyed by the configuration): pack, repack and rebase refuse a bundle whose program/ferrata_bridge.bin is
+# another (the bundles of November 2026 carry the live runs' program). CROWN_BRIDGE_BIN puts that file in place of the
+# bundle's (FROM's or $CROWN_PROGRAMS'): B1's ferrata_bridge.bin, which scripts/reproduce-image-ids.sh build --out DIR
+# writes to DIR/programs/ (e2e/crown/README.md, "Since milestone B1").
 # $CROWN_LIVE (default tmp/crown/live beside the repository) holds the sequencer, the node and the target directory;
 # $CROWN_PROGRAMS (default tmp/crown/build/programs) the guests built at the crown path (their image ids are the run's).
 # The fixture: the Sepolia checkpoint the instance starts from ($CROWN_FIXTURE, default the 12 Nov 2026 one; the
@@ -38,6 +43,19 @@ fixture() {
   cp "$FIXTURE/bootstrap.ssz" "$FIXTURE"/update_*.ssz "$FIXTURE"/beacon_header_*_second.json "$FIXTURE/SOURCE.md" "$1/fixture/"
 }
 sums() { ( cd "$1" && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS ); }
+# The bundle's bridge program: CROWN_BRIDGE_BIN if given (repack, rebase), and in any case the one this tree's
+# crown-driver speaks (the sha256 docs/image-ids.md records for `ferrata_bridge_b1`).
+bridge_b1() {
+  if [ -n "${CROWN_BRIDGE_BIN:-}" ]; then cp "$CROWN_BRIDGE_BIN" "$1/program/ferrata_bridge.bin"; fi
+  local want got
+  want="$( { grep -F '`ferrata_bridge_b1` |' "$REPO/docs/image-ids.md" || true; } | awk -F'|' '{gsub(/[` ]/, "", $4); print $4}')"
+  got="$( { sha256sum "$1/program/ferrata_bridge.bin" 2> /dev/null || true; } | cut -c1-64)"
+  [ -n "$want" ] && [ "$got" = "$want" ] || {
+    echo "program/ferrata_bridge.bin has sha256 $got, not the bridge program this tree's crown-driver speaks ($want," \
+      "docs/image-ids.md \`ferrata_bridge_b1\`): set CROWN_BRIDGE_BIN to B1's ferrata_bridge.bin" >&2
+    exit 1
+  }
+}
 
 case "${1:-}" in
   seed)
@@ -73,6 +91,7 @@ case "${1:-}" in
     cp -r "$LIVE/xdg-cache" "$b/xdg-cache"
     cp "$PROGRAMS/ferrata_lez.bin" "$PROGRAMS/ferrata_bridge.bin" "$b/program/"
     cp "$LEZ/lez/sequencer/service/networks/local.json" "$LEZ/bedrock/node-config.yaml" "$LEZ/bedrock/deployment-settings.yaml" "$b/lez-config/"
+    bridge_b1 "$b"
     fixture "$b"
     cp "$HERE/session.sh" "$b/crown/"
     sums "$b"
@@ -87,6 +106,7 @@ case "${1:-}" in
     zstd -q -d -c "$from" | tar -x -C "$b"
     ( cd "$b" && sha256sum -c --quiet SHA256SUMS ) || { echo "$from: its SHA256SUMS do not hold"; exit 1; }
     cp "$CROWN_LEZ_TMP/bin/crown-driver" "$b/bin/crown-driver"
+    bridge_b1 "$b"
     fixture "$b"
     cp "$HERE/session.sh" "$b/crown/session.sh"
     sums "$b"
@@ -110,6 +130,7 @@ case "${1:-}" in
     mkdir -p "$b/xdg-cache" && cp -r "$LIVE/xdg-cache/logos" "$b/xdg-cache/logos"
     cp "$LEZ/lez/sequencer/service/networks/local.json" "$LEZ/bedrock/node-config.yaml" "$LEZ/bedrock/deployment-settings.yaml" "$b/lez-config/"
     echo "$(basename "$LEZ" | sed 's/^lez-//') $(git -C "$LEZ" rev-parse HEAD 2>/dev/null || echo unknown)" > "$b/lez-config/lez-tag.txt"
+    bridge_b1 "$b"
     fixture "$b"
     cp "$HERE/session.sh" "$b/crown/session.sh"
     sums "$b"

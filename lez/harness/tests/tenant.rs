@@ -1,18 +1,23 @@
-//! The malicious-tenant test (RFP-022 F.16, the B2 gate's test), written 18 November 2026.
+//! The malicious-tenant tests (RFP-022 F.16, the B2 gate's test; milestone B1's regression tests).
 //!
-//! An independent review of the bridge's LEZ v0.3.1 port (its findings 1 and 3) found two properties and stated that
-//! the deployed v0.4 bridge program has both. These tests run them through LEZ v0.4.0-rc1's own state machine and fee
-//! settlement with the frozen bridge program (its image id is asserted against `docs/image-ids.md`). They are a
-//! RECORD of the behaviour: each asserts the outcomes it documents, so a change of behaviour fails them.
+//! F.16 asks that configurations of the bridge be strictly separated: one entity's configuration has no privileged
+//! access over another's configuration or funds, as if each were a fully separate deployment. An independent review of
+//! the bridge's LEZ v0.3.1 port found two ways in which the program before B1 (image `0xccde6171…71dd`, which the live
+//! runs of November 2026 deployed) was not; `lez/results/tenant.md` records them against that program (run at commit
+//! `f13faee2`). B1 keys the nullifier and holder accounts by the configuration id (`nullifier(cid, chain, vault, N)`,
+//! `holder(cid, account)`, `ferrata_lez_bridge_wire`'s module docs). These tests run the same attacks through LEZ
+//! v0.4.0-rc1's own state machine and fee settlement against the program of `guests/bridge`, and assert that they fail:
 //!
-//! * R1. A configuration's attestation program and instance are free fields (`BridgeConfig`), and the nullifier
-//!   account is keyed by (chain, vault, N) without the configuration id (`nullifier_seed`). A second configuration of
-//!   the same vault and chain that reads Ethereum through an instance its creator controls can spend the nullifier
-//!   of any public-kind deposit whose `s` it knows; the paired configuration's own claim is then refused (250).
-//! * R2. `holder(dest)` is one account for every configuration. LEZ v0.4 has no limit on an actor's state, so the
-//!   review's figure for v0.3.1 (1,505 holdings, then a panic at the shard limit) does not carry over; what does:
-//!   every mint into `holder(dest)` decodes, searches and re-encodes its whole list, so its cost grows with the list
-//!   until a claim to that destination no longer fits a transaction's execution gas limit (10,000,000).
+//! * R1. A configuration's attestation program and instance are free fields (`BridgeConfig`), so anyone can make a
+//!   second configuration of a vault that reads Ethereum through an instance its creator controls. Its claim of a
+//!   public-kind deposit whose `s` it knows now spends `nullifier(B, …)` only: the paired configuration's claim of the
+//!   deposit applies afterwards, and a copied plaintext claim ordered first no longer blocks its owner's.
+//! * R2. Other configurations' holdings for a destination sit in their own `holder(cid, dest)` accounts: a claim to
+//!   the destination and its owner's burn cost the same with none of them and with 12,098 of them.
+//! * Separation. Every privileged message one configuration's roles can send (freezes, caps, the inbound depth, role
+//!   proposals, pauses, `Sunset`, multisig approvals) is refused at another configuration's accounts, and every
+//!   internal message one configuration's accounts can send (mints, credits, root and token writes, fee extensions,
+//!   listing updates) is refused at another's: `separation_*` below.
 //!
 //! The rogue configuration's records. Anyone can create an instance of the real attestation program (`Init` takes
 //! any checkpoint with a bootstrap that matches it, `lez/guests/program/src/main.rs`, `init`), and that instance
@@ -21,46 +26,35 @@
 //! instance (`World::add_block`); everything from the rogue configuration's `Init` on is executed.
 //!
 //! Re-run: `RISC0_DEV_MODE=1 cargo test -p harness --locked --test tenant -- --nocapture --test-threads 1` (in `lez/`).
-//! Each test writes its figures to `lez/results/tenant/`; `lez/results/tenant.md` reads them.
-//!
-//! **The second build** (`guests/bridge-next`, not deployed; feature `bridge-next`): the same attacks against the
-//! program whose nullifier and holder accounts are keyed by the configuration id as well (`nullifier(cid, chain,
-//! vault, N)`, `holder(cid, account)`, `ferrata_lez_bridge_wire::config_keyed`). Its three tests replace the three
-//! above and assert the fix: the paired configuration's claim applies after the rogue configuration's (and after a
-//! copied plaintext claim ordered first), and a claim or burn costs the same whatever other configurations hold for
-//! the same destination. Re-run: the command above with `--features bridge-next`; they write to
-//! `lez/results/bridge-next/tenant/` (`lez/results/bridge-next.md` reads them).
+//! Each test writes its figures to `lez/results/tenant/` (the records of this branch: `lez/results/b1/tenant/`, with
+//! `FERRATA_LEZ_RESULTS_DIR`; `lez/results/b1/README.md`).
 
 use std::fmt::Write as _;
 
 use ferrata_bridge_core::inbound::DestKind;
 use ferrata_lez_bridge_wire::{
     burn_actor, code, config_actor, config_seed, own_actor, register_slots, root_actor, token_actor, word_of_u128,
-    BridgeConfig, BridgeMessage, BridgeState, BurnRecord, HolderState, Holding, Note, NullifierState,
+    BridgeConfig, BridgeMessage, BridgeState, BurnRecord, CapParams, Controls, CosignedAction, FreezeAuthority,
+    HolderState, Holding, Note, NullifierState, RootState,
 };
 use ferrata_lez_wire::{header_actor, RecordState};
 use harness::{
     bridge::{
-        code_name, eth_entry, eth_schedule_one, holder_of, registry_slots, relayer, render, role_account, role_key,
-        schedule_zero, Block, Deposit, Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH, OUTSIDER_SEED,
+        code_name, controls, eth_entry, eth_schedule_one, holder_of, nullifier_of, registry_slots, relayer, render,
+        role_account, role_key, schedule_zero, Block, Deposit, Vault, VaultSlots, World, CHAIN_ID, DENOMINATIONS, ETH,
+        FLOOR, OUTSIDER_SEED,
     },
     ferrata_account, image_id_hex, TxReport,
 };
 use lee::{Account, PublicAccountEvidence};
 use lee_core::account::ActorState;
 
-/// `docs/image-ids.md`: the bridge program's image id, which the live Sepolia vault's configuration id commits to.
-const PINNED_BRIDGE: &str = "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd";
+/// The bridge program before B1 (`docs/image-ids.md`, the live runs' program): these tests must not run it.
+const BEFORE_B1: &str = "ccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd";
 /// The attacker's instance of the attestation program.
 const ROGUE_INSTANCE: [u8; 32] = [0xbe; 32];
 /// LEZ v0.4's execution gas limit of a transaction.
 const GAS_LIMIT: u64 = fee_core::market::MAX_GAS_EXEC;
-
-#[cfg(not(feature = "bridge-next"))]
-fn frozen_bridge() {
-    assert_eq!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1"), "run these tests with RISC0_DEV_MODE=1");
-    assert_eq!(image_id_hex(methods::FERRATA_BRIDGE_ID), PINNED_BRIDGE, "the bridge program is the frozen one");
-}
 
 fn verdict(r: &TxReport) -> String {
     match (r.ok(), r.exit_code) {
@@ -217,186 +211,6 @@ fn invented(w: &World) -> Deposit {
     }
 }
 
-#[cfg(not(feature = "bridge-next"))]
-#[test]
-fn r1_a_rogue_configuration_freezes_a_public_kind_deposit() {
-    frozen_bridge();
-    let mut w = World::new();
-    let mut log = Vec::new();
-    let program = w.program;
-    let va = w.vault_a.address;
-    let cid_a = w.cid_a;
-    let payer = w.chain.payer;
-    let made_up = invented(&w);
-    let (_, cid_b, fake) = rogue(&mut w, &mut log, &made_up);
-
-    // B claims A's public-kind deposit (leaf 2, 1 ETH) whose s it knows (here the shared test vector's, public).
-    let vector = w.vector.clone();
-    let n = w.vector_n;
-    let squat = fake.witness(&vector, 9);
-    step(&mut log, w.claim("B: Claim of A's deposit (leaf 2, public kind) with its s", &cid_b, 9, &va, squat), None);
-    let spent = NullifierState { config_id: cid_b, token: ETH, leaf_count: 9, amount: DENOMINATIONS[1] };
-    assert_eq!(
-        w.nullifier(&cid_b, &va, &n),
-        Some(spent),
-        "nullifier(chain, vault, N) is spent, recorded under configId(B)"
-    );
-    let held = w.holder(&cid_b, w.vector_dest).expect("holder(dest)");
-    assert_eq!(held.holdings, vec![Holding { config_id: cid_b, token: ETH, amount: DENOMINATIONS[1] }]);
-
-    // A pairs and claims the same deposit: refused, the nullifier is spent. A's other deposit still claims.
-    pair_honest(&mut w, &mut log);
-    let witness = w.vault_a.witness(&vector, 8);
-    let refused = w.claim("A: Claim of the same deposit (leaf 2) by its owner", &cid_a, 8, &va, witness);
-    let refused = step(&mut log, refused, Some(code::ALREADY_CLAIMED));
-    assert_eq!(w.balance(w.vector_dest, &cid_a), 0, "nothing under A");
-    let leaf6 = w.vault_a.witness(&w.payer_deposit.clone(), 8);
-    step(&mut log, w.claim("A: Claim of A's other deposit (leaf 6, 10 ETH)", &cid_a, 8, &va, leaf6), None);
-    assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2]);
-
-    // B mints the invented deposit and the payer burns it: the note is recorded under configId(B) only.
-    let made = fake.witness(&made_up, 9);
-    step(
-        &mut log,
-        w.claim("B: Claim of the invented deposit (leaf 8, 1 ETH to the payer)", &cid_b, 9, &va, made),
-        None,
-    );
-    assert_eq!(w.balance(payer, &cid_b), DENOMINATIONS[1]);
-    let note = Note {
-        r: [0x6e; 32],
-        memo: [0x6d; 20],
-        mac: [0x6c; 16],
-        token: ETH,
-        amount: word_of_u128(DENOMINATIONS[1]),
-        c_out: [0x6b; 32],
-    };
-    let own = own_actor(program, payer);
-    let actors = w.public_burn_actors(payer, &cid_b, &note);
-    let burn = w.send("B: Burn of the invented 1 ETH by the payer", own, &BridgeMessage::burn(cid_b, &note), actors);
-    step(&mut log, burn, None);
-    let record = w.chain.actor_state(burn_actor(program, &cid_b, &note.hash()));
-    assert_eq!(
-        borsh::from_slice::<BridgeState>(&record).unwrap(),
-        BridgeState::Burn(BurnRecord { config_id: cid_b, note })
-    );
-    assert!(w.chain.actor_state(burn_actor(program, &cid_a, &note.hash())).is_empty(), "nothing under configId(A)");
-    assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "A's holding untouched");
-
-    // A private-kind deposit (leaf 5, 1 ETH to a private account). (a) Without s: a guessed s opens no leaf.
-    let private = w.private_deposit.clone();
-    let n5 = private.nullifier(CHAIN_ID, &va);
-    let mut guess = fake.witness(&private, 9);
-    guess.s = [0x42; 32];
-    let r = w.claim("B: Claim of A's private-kind deposit (leaf 5), s guessed", &cid_b, 9, &va, guess.clone());
-    step(&mut log, r, Some(code::CLAIM_INVALID));
-    let mut as_public = guess;
-    as_public.kind = DestKind::Public as u8;
-    as_public.dest = *payer.value();
-    let r = w.claim("B: the same as a public-kind deposit to the attacker, s guessed", &cid_b, 9, &va, as_public);
-    step(&mut log, r, Some(code::CLAIM_INVALID));
-    // (b) With s (as if leaked): the plaintext path refuses a private-kind deposit, and a private claim must run as
-    // the destination account itself, whose key the attacker does not have.
-    let leaked = fake.witness(&private, 9);
-    let r = w.claim("B: plaintext Claim of leaf 5 with its real s", &cid_b, 9, &va, leaked.clone());
-    step(&mut log, r, Some(code::WRONG_DESTINATION));
-    let outsider = role_account(OUTSIDER_SEED);
-    let at = own_actor(program, outsider);
-    let message = w.claim_privately(&cid_b, 9, leaked);
-    let mut actors = vec![at];
-    actors.extend(w.private_claim_actors(&cid_b, 9, &va, &private));
-    let label = "B: ClaimPrivately of leaf 5 with its real s, run as the attacker's own account";
-    let r = w.submit_signed(label, at, &message, actors, vec![], &[&role_key(OUTSIDER_SEED)]);
-    step(&mut log, r, Some(code::WRONG_DESTINATION));
-    assert_eq!(w.nullifier(&cid_b, &va, &n5), None, "the private-kind deposit's nullifier is unspent");
-
-    let mut out = format!(
-        "# R1: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, frozen bridge {PINNED_BRIDGE})\n\n\
-         configId(A) {}\nconfigId(B) {} (A's fields, instance {})\n\n",
-        hex::encode(cid_a),
-        hex::encode(cid_b),
-        hex::encode(ROGUE_INSTANCE)
-    );
-    out.push_str(&table(&log));
-    let _ = write!(
-        out,
-        "\nA's refused claim: exit {:?}, gas_exec {}, fee_base {} (charged to its sender)\n\
-         holder(dest of leaf 2): {:?}\nnullifier(chain, vault, N of leaf 2): {:?}\n\
-         burn(configId(B), H(note)): written; burn(configId(A), H(note)): empty\n\
-         nullifier of the private-kind deposit (leaf 5): unspent\n\n{}",
-        refused.exit_code,
-        refused.charge.gas_exec,
-        refused.charge.fee_base,
-        w.holder(&cid_b, w.vector_dest).unwrap().holdings,
-        w.nullifier(&cid_b, &va, &n),
-        render(&log)
-    );
-    save("r1.txt", &out);
-}
-
-/// A plaintext claim carries the whole witness, `s` included. A transaction seen before inclusion (a block template,
-/// a mempool) can be copied into a rogue configuration's claim ordered before it. The harness settles transactions in
-/// the order they are submitted, one per block.
-#[cfg(not(feature = "bridge-next"))]
-#[test]
-fn r1_a_plaintext_claim_seen_before_inclusion_is_front_run() {
-    frozen_bridge();
-    let mut w = World::new();
-    let mut log = Vec::new();
-    let va = w.vault_a.address;
-    let cid_a = w.cid_a;
-    let made_up = invented(&w);
-    let (_, cid_b, _) = rogue(&mut w, &mut log, &made_up);
-    pair_honest(&mut w, &mut log);
-
-    // The payer's own plaintext claim of its deposit (leaf 6, public kind), as a block template carries it.
-    let deposit = w.payer_deposit.clone();
-    let honest = BridgeMessage::Claim {
-        config_id: cid_a,
-        leaf_count: 8,
-        witness: w.vault_a.witness(&deposit, 8),
-        range: w.range(&cid_a, &ETH, deposit.leaf_index),
-        relayer: Some(*relayer().value()),
-    };
-    let seen = borsh::to_vec(&honest).unwrap();
-    assert!(seen.windows(32).any(|x| x == &deposit.s[..]), "s is in the plaintext claim's bytes");
-    // The attacker decodes it and copies the witness into B's claim (B's root, n = 9, also holds leaf 6).
-    let BridgeMessage::Claim { witness: copied, .. } = borsh::from_slice::<BridgeMessage>(&seen).unwrap() else {
-        unreachable!()
-    };
-    let mut fake_leaves = w.vault_a.leaves.clone();
-    fake_leaves.push(made_up.leaf());
-    let fake = Vault { address: va, leaves: fake_leaves };
-    let for_b = fake.witness(&Deposit::of(&copied), 9);
-    let r = w.claim("B: Claim with the witness copied from the pending claim, ordered first", &cid_b, 9, &va, for_b);
-    step(&mut log, r, None);
-    let BridgeMessage::Claim { config_id, leaf_count, witness, range, relayer } = honest else { unreachable!() };
-    let r = w.claim_with(
-        "A: the payer's own claim, applied after it",
-        &config_id,
-        leaf_count,
-        &va,
-        witness,
-        range,
-        relayer,
-    );
-    let r = step(&mut log, r, Some(code::ALREADY_CLAIMED));
-    assert_eq!(w.balance(w.chain.payer, &cid_a), 0, "the payer holds nothing under A");
-    assert_eq!(w.balance(w.chain.payer, &cid_b), DENOMINATIONS[2], "the payer holds 10 ETH under B: no vault pays it");
-
-    let mut out =
-        String::from("# R1: front-run of a plaintext claim (one transaction per block, in submission order)\n\n");
-    out.push_str(&table(&log));
-    let _ = writeln!(
-        out,
-        "\nthe honest claim: {} bytes as a message, s at a fixed offset; refused {:?}, gas_exec {}, fee_base {}",
-        seen.len(),
-        r.exit_code,
-        r.charge.gas_exec,
-        r.charge.fee_base
-    );
-    save("r1-frontrun.txt", &out);
-}
-
 /// `k` holdings of other configurations (as an attacker's claims under its own configurations leave them).
 fn fillers(k: usize) -> Vec<Holding> {
     (0..k as u64)
@@ -408,8 +222,7 @@ fn fillers(k: usize) -> Vec<Holding> {
         .collect()
 }
 
-/// `holdings` placed at `account`'s holder of configuration `cid` (`holder(account)` of the deployed program, which has
-/// one for every configuration; `holder(cid, account)` of the second build).
+/// `holdings` placed at `account`'s holder of configuration `cid`, `holder(cid, account)`.
 fn place_holder(w: &mut World, cid: &[u8; 32], account: lee::AccountId, holdings: Vec<Holding>) -> usize {
     let bytes = borsh::to_vec(&BridgeState::Holder(HolderState { holdings, pending: None })).unwrap();
     let id = holder_of(w.program, cid, account).account_id;
@@ -424,20 +237,11 @@ struct Probe {
     report: TxReport,
     /// Cycles of the transitions at the holder (the `Mint` of a claim; the debit of a burn).
     at_holder: u64,
-    /// Gas of the setup steps (for the attacker's cost on the deployed program).
-    #[cfg_attr(feature = "bridge-next", allow(dead_code))]
-    register_gas: u64,
 }
 
 fn holder_cycles(w: &World, cid: &[u8; 32], r: &TxReport, account: lee::AccountId) -> u64 {
     let holder = holder_of(w.program, cid, account);
     r.transitions.iter().filter(|t| t.receiver == holder).map(|t| t.cycles).sum()
-}
-
-/// A claim (A's leaf 2, public kind, 1 ETH) to `holder(dest)` holding `k` holdings of other configurations.
-#[cfg(not(feature = "bridge-next"))]
-fn claim_into(k: usize) -> Probe {
-    claim_with_others(k, |w, cid_a, dest, k| place_holder(w, cid_a, dest, fillers(k)))
 }
 
 /// A claim (A's leaf 2, public kind, 1 ETH) to `dest`, after `place(world, cid_a, dest, k)` has placed `k` holdings
@@ -447,16 +251,13 @@ fn claim_with_others(k: usize, place: fn(&mut World, &[u8; 32], lee::AccountId, 
     let mut log = Vec::new();
     let (a, cid_a, va) = (w.config_a.clone(), w.cid_a, w.vault_a.address);
     step(&mut log, w.init("A: Init", &a, 0), None);
-    let reg = step(&mut log, w.register("A: Register ETH", &cid_a, 0, &eth_entry(), &va), None);
+    step(&mut log, w.register("A: Register ETH", &cid_a, 0, &eth_entry(), &va), None);
     step(&mut log, w.import("A: ImportRoot n = 5", &cid_a, 0, w.vault_a.root(5), 5, &va), None);
     let dest = w.vector_dest;
     let bytes = place(&mut w, &cid_a, dest, k);
     let witness = w.vault_a.witness(&w.vector.clone(), 5);
-    let label = if harness::bridge::SECOND_BUILD {
-        format!("A: Claim to dest, {k} other configurations' holdings for it (each at its own holder(cid, dest))")
-    } else {
-        format!("A: Claim to holder(dest) holding {k} holdings")
-    };
+    let label =
+        format!("A: Claim to dest, {k} other configurations' holdings for it (each at its own holder(cid, dest))");
     let report = w.claim(&label, &cid_a, 5, &va, witness);
     if report.ok() {
         assert_eq!(w.balance(dest, &cid_a), DENOMINATIONS[1]);
@@ -465,18 +266,7 @@ fn claim_with_others(k: usize, place: fn(&mut World, &[u8; 32], lee::AccountId, 
         assert_eq!(w.nullifier(&cid_a, &va, &w.vector_n), None, "the deposit is not spent");
     }
     let at_holder = holder_cycles(&w, &cid_a, &report, dest);
-    Probe { k, bytes, report, at_holder, register_gas: reg.charge.gas_exec }
-}
-
-/// The owner's public burn of 1 ETH it holds under A, its `holder(owner)` holding `k` other holdings before it.
-#[cfg(not(feature = "bridge-next"))]
-fn burn_from(k: usize) -> Probe {
-    burn_with_others(k, |w, cid_a, payer, k| {
-        let own_holding = w.holder(cid_a, payer).unwrap().holdings;
-        let mut holdings = fillers(k);
-        holdings.extend(own_holding);
-        place_holder(w, cid_a, payer, holdings)
-    })
+    Probe { k, bytes, report, at_holder }
 }
 
 /// The owner's public burn of 1 ETH it holds under A (claimed: leaf 6), after `place(world, cid_a, owner, k)` has
@@ -499,51 +289,13 @@ fn burn_with_others(k: usize, place: fn(&mut World, &[u8; 32], lee::AccountId, u
     };
     let actors = w.public_burn_actors(payer, &cid_a, &note);
     let own = own_actor(w.program, payer);
-    let label = if harness::bridge::SECOND_BUILD {
-        format!("A: the owner's Burn of 1 ETH, {k} other configurations' holdings for it (each at its own holder)")
-    } else {
-        format!("A: the owner's Burn of 1 ETH, its holder holding {k} other holdings")
-    };
+    let label =
+        format!("A: the owner's Burn of 1 ETH, {k} other configurations' holdings for it (each at its own holder)");
     let report = w.send(&label, own, &BridgeMessage::burn(cid_a, &note), actors);
     let left = if report.ok() { DENOMINATIONS[2] - DENOMINATIONS[1] } else { DENOMINATIONS[2] };
     assert_eq!(w.balance(payer, &cid_a), left);
     let at_holder = holder_cycles(&w, &cid_a, &report, payer);
-    Probe { k, bytes, report, at_holder, register_gas: 0 }
-}
-
-/// The largest `k` at which `probe` applies, from `lo` (applies) by doubling then bisection; every probe kept.
-#[cfg(not(feature = "bridge-next"))]
-fn threshold(probe: fn(usize) -> Probe, lo: usize, seen: &mut Vec<Probe>) -> usize {
-    let mut ok = lo;
-    let mut bad = None;
-    let mut k = lo.max(1);
-    while bad.is_none() && k <= 1 << 20 {
-        k *= 2;
-        let p = probe(k);
-        if p.report.ok() {
-            ok = k;
-        } else {
-            bad = Some(k);
-        }
-        seen.push(p);
-    }
-    bisect(probe, ok, bad.expect("a size at which it no longer applies"), seen)
-}
-
-/// The largest `k` in `ok..bad` at which `probe` applies (it applies at `ok`, not at `bad`).
-#[cfg(not(feature = "bridge-next"))]
-fn bisect(probe: fn(usize) -> Probe, mut ok: usize, mut bad: usize, seen: &mut Vec<Probe>) -> usize {
-    while bad - ok > 1 {
-        let mid = (ok + bad) / 2;
-        let p = probe(mid);
-        if p.report.ok() {
-            ok = mid;
-        } else {
-            bad = mid;
-        }
-        seen.push(p);
-    }
-    ok
+    Probe { k, bytes, report, at_holder }
 }
 
 fn probe_line(p: &Probe) -> String {
@@ -558,94 +310,23 @@ fn probe_line(p: &Probe) -> String {
     )
 }
 
-#[cfg(not(feature = "bridge-next"))]
-#[test]
-fn r2_a_holder_filled_with_other_configurations_holdings() {
-    frozen_bridge();
-    let mut claims = vec![claim_into(0), claim_into(1_505)];
-    assert!(claims.iter().all(|p| p.report.ok()), "no shard limit on LEZ v0.4: 1,505 holdings take a claim");
-    let k_max = threshold(claim_into, 1_505, &mut claims);
-    claims.sort_by_key(|p| p.k);
-    let last = claims.iter().find(|p| p.k == k_max).unwrap();
-    let first_bad = claims.iter().find(|p| p.k == k_max + 1).unwrap();
-    assert!(last.report.charge.gas_exec <= GAS_LIMIT);
-    // Past it: no exit code (not a refusal), the whole gas limit charged, nothing minted, the deposit unspent.
-    assert!(!first_bad.report.ok() && first_bad.report.exit_code.is_none(), "{}", verdict(&first_bad.report));
-    assert_eq!(first_bad.report.charge.gas_exec, GAS_LIMIT);
-
-    let mut burns = vec![burn_from(0), burn_from(k_max + 1)];
-    assert!(burns[0].report.ok());
-    let k_burn = if burns[1].report.ok() {
-        threshold(burn_from, k_max + 1, &mut burns)
-    } else {
-        bisect(burn_from, 0, k_max + 1, &mut burns)
-    };
-    burns.sort_by_key(|p| p.k);
-
-    // The attacker's cost to bring a holder from empty to k_max + 1 holdings: one claim per holding, the i-th into a
-    // holder of i holdings (gas linear in i between the probes at 0 and k_max), and one Register per token.
-    let c0 = claims[0].report.charge.gas_exec;
-    let slope = (last.report.charge.gas_exec - c0) as f64 / k_max as f64;
-    let n = (k_max + 1) as f64;
-    let claims_gas = n * c0 as f64 + slope * n * (n - 1.0) / 2.0;
-    let register_gas = claims[0].register_gas as f64;
-    let total = claims_gas + n * register_gas;
-
-    let mut out = format!(
-        "# R2: holder(dest) with k holdings of other configurations (LEZ v0.4.0-rc1, frozen bridge {PINNED_BRIDGE})\n\n\
-         Execution gas limit of a transaction: {GAS_LIMIT}. Holdings placed directly (borsh: 4 + 68 k + 1 bytes).\n\n\
-         ## A claim to it (leaf 2, 1 ETH, public kind)\n\n\
-         | k | state bytes | outcome | gas_exec charged | fee_base | cycles at the holder |\n|---:|---:|---|---:|---:|---:|\n"
-    );
-    for p in &claims {
-        out.push_str(&probe_line(p));
-    }
-    let _ = write!(
-        out,
-        "\nlargest k at which a claim to it applies: {k_max}; at {}: {}\n\n\
-         ## The owner's burn of 1 ETH it holds there (k other holdings in front of it)\n\n\
-         | k | state bytes | outcome | gas_exec charged | fee_base | cycles at the holder |\n|---:|---:|---|---:|---:|---:|\n",
-        k_max + 1,
-        verdict(&first_bad.report)
-    );
-    for p in &burns {
-        out.push_str(&probe_line(p));
-    }
-    let _ = write!(
-        out,
-        "\nlargest k at which the owner's burn applies: {k_burn}\n\n\
-         ## The attacker's cost (derived from the measured gas above)\n\n\
-         claim into an empty holder: {c0} gas; growth: {slope:.1} gas per holding already there (k = 0 to {k_max});\n\
-         Register: {register_gas} gas per token (one holding per (configuration, token) pair)\n\
-         {} claims: {claims_gas:.3e} gas; {} Registers: {:.3e} gas; total about {total:.3e} execution gas\n",
-        k_max + 1,
-        k_max + 1,
-        n * register_gas
-    );
-    save("r2.txt", &out);
-}
-
 // ---------------------------------------------------------------------------------------------------------------------
-// The second build (`guests/bridge-next`, feature `bridge-next`): nullifier(cid, chain, vault, N) and holder(cid, account)
+// The program of guests/bridge since B1: nullifier(cid, chain, vault, N) and holder(cid, account)
 // ---------------------------------------------------------------------------------------------------------------------
 
-/// `docs/image-ids.md`, "Second build of the bridge program, not deployed": the image id of `guests/bridge-next`.
-#[cfg(feature = "bridge-next")]
-const SECOND_BRIDGE: &str = "c5cad2cd470807a1799613a1f5f699f9d4f4074821a9fb26389ca917a4d0d6da";
-
-#[cfg(feature = "bridge-next")]
-fn second_build() {
+/// The image id of the program these tests run (written into every result), which is not the program before B1.
+fn b1_program() -> String {
     assert_eq!(std::env::var("RISC0_DEV_MODE").as_deref(), Ok("1"), "run these tests with RISC0_DEV_MODE=1");
-    assert_eq!(image_id_hex(harness::bridge::BRIDGE_ID), SECOND_BRIDGE, "the bridge program is its second build");
-    assert_ne!(SECOND_BRIDGE, PINNED_BRIDGE);
+    let id = image_id_hex(harness::bridge::BRIDGE_ID);
+    assert_ne!(id, BEFORE_B1, "the program before B1");
+    id
 }
 
-/// R1 against the second build: the rogue configuration B's claim of A's deposit applies in B's namespace only
+/// R1: the rogue configuration B's claim of A's deposit applies in B's namespace only
 /// (`nullifier(B, …)`, `holder(B, dest)`), and A's claim of it then applies. Within A the deposit still mints once.
-#[cfg(feature = "bridge-next")]
 #[test]
-fn r1_next_the_paired_configuration_claims_after_a_rogue_one() {
-    second_build();
+fn r1_the_paired_configuration_claims_after_a_rogue_one() {
+    let image = b1_program();
     let mut w = World::new();
     let mut log = Vec::new();
     let program = w.program;
@@ -715,7 +396,7 @@ fn r1_next_the_paired_configuration_claims_after_a_rogue_one() {
     assert_eq!(w.balance(payer, &cid_a), DENOMINATIONS[2], "A's holding untouched");
     assert_eq!(w.balance(payer, &cid_b), 0, "B's 1 ETH burnt");
 
-    // A private-kind deposit (leaf 5): as on the deployed program, B cannot take it.
+    // A private-kind deposit (leaf 5): as before B1, B cannot take it.
     let private = w.private_deposit.clone();
     let n5 = private.nullifier(CHAIN_ID, &va);
     let mut guess = fake.witness(&private, 9);
@@ -742,8 +423,8 @@ fn r1_next_the_paired_configuration_claims_after_a_rogue_one() {
     assert_eq!(w.nullifier(&cid_b, &va, &n5), None, "and under B");
 
     let mut out = format!(
-        "# R1 against the second build: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, \
-         second build {SECOND_BRIDGE}, not deployed)\n\n\
+        "# R1: a rogue configuration of the same vault and chain (LEZ v0.4.0-rc1 state machine, bridge program \
+         {image})\n\n\
          configId(A) {}\nconfigId(B) {} (A's fields, instance {})\n\n",
         hex::encode(cid_a),
         hex::encode(cid_b),
@@ -770,12 +451,11 @@ fn r1_next_the_paired_configuration_claims_after_a_rogue_one() {
     save("r1.txt", &out);
 }
 
-/// The front-run against the second build: B's copy of a pending plaintext claim, ordered first, applies under B;
+/// The front-run: B's copy of a pending plaintext claim, ordered first, applies under B;
 /// the owner's own claim then applies under A.
-#[cfg(feature = "bridge-next")]
 #[test]
-fn r1_next_a_copied_plaintext_claim_no_longer_blocks_the_owner() {
-    second_build();
+fn r1_a_copied_plaintext_claim_does_not_block_the_owner() {
+    let image = b1_program();
     let mut w = World::new();
     let mut log = Vec::new();
     let va = w.vault_a.address;
@@ -817,9 +497,9 @@ fn r1_next_a_copied_plaintext_claim_no_longer_blocks_the_owner() {
     assert_eq!(w.balance(w.chain.payer, &cid_a), DENOMINATIONS[2], "the payer holds its 10 ETH under A");
     assert_eq!(w.balance(w.chain.payer, &cid_b), DENOMINATIONS[2], "and B's copy under B, which no vault pays");
 
-    let mut out = String::from(
-        "# R1 against the second build: front-run of a plaintext claim (one transaction per block, in submission order)\n\n",
-    );
+    let mut out =
+        String::from("# R1: front-run of a plaintext claim (one transaction per block, in submission order)\n\n");
+    let _ = writeln!(out, "bridge program {image}\n");
     out.push_str(&table(&log));
     let _ = writeln!(
         out,
@@ -831,9 +511,8 @@ fn r1_next_a_copied_plaintext_claim_no_longer_blocks_the_owner() {
     save("r1-frontrun.txt", &out);
 }
 
-/// `k` holdings of other configurations for `account` as the second build leaves them: each at its own
+/// `k` holdings of other configurations for `account` as the program leaves them: each at its own
 /// `holder(cid, account)`. Returns the bytes placed, in all.
-#[cfg(feature = "bridge-next")]
 fn place_others(w: &mut World, _cid_a: &[u8; 32], account: lee::AccountId, k: usize) -> usize {
     fillers(k)
         .into_iter()
@@ -844,16 +523,15 @@ fn place_others(w: &mut World, _cid_a: &[u8; 32], account: lee::AccountId, k: us
         .sum()
 }
 
-/// R2 against the second build: other configurations' holdings for a destination sit in other accounts, so a claim
+/// R2: other configurations' holdings for a destination sit in other accounts, so a claim
 /// to it and its owner's burn cost the same with none of them and with many. And `holder(A, dest)` takes credits
 /// under A only (the executor, as `bridge_secfix.rs` checks C-1).
-#[cfg(feature = "bridge-next")]
 #[test]
-fn r2_next_other_configurations_holdings_cost_a_claim_nothing() {
+fn r2_other_configurations_holdings_cost_a_claim_nothing() {
     use lee_core::program::ReceiveInput;
 
-    second_build();
-    // 6,049: where a claim fails on the deployed program; 12,098: twice that.
+    let image = b1_program();
+    // 6,049: where a claim failed before B1; 12,098: twice that.
     let claims: Vec<Probe> =
         [0, 1_505, 6_049, 12_098].into_iter().map(|k| claim_with_others(k, place_others)).collect();
     let burns: Vec<Probe> = [0, 6_110, 12_098].into_iter().map(|k| burn_with_others(k, place_others)).collect();
@@ -961,10 +639,9 @@ fn r2_next_other_configurations_holdings_cost_a_claim_nothing() {
     }
 
     let mut out = format!(
-        "# R2 against the second build: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, \
-         second build {SECOND_BRIDGE}, not deployed)\n\n\
+        "# R2: other configurations' holdings for the same destination (LEZ v0.4.0-rc1, bridge program {image})\n\n\
          Execution gas limit of a transaction: {GAS_LIMIT}. The k holdings of other configurations are placed as the \
-         second build would leave them: each at its own holder(cid, dest), one account per configuration \
+         program leaves them: each at its own holder(cid, dest), one account per configuration \
          (state bytes: the k accounts' states in all); A's claim and A's owner's burn touch holder(A, ·) only.\n\n\
          ## A claim to dest (A's leaf 2, 1 ETH, public kind)\n\n\
          | k | state bytes (k accounts) | outcome | gas_exec charged | fee_base | cycles at holder(A, dest) |\n\
@@ -989,4 +666,332 @@ fn r2_next_other_configurations_holdings_cost_a_claim_nothing() {
         hex::encode(cid_b)
     );
     save("r2.txt", &out);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Separation: no configuration's roles or accounts reach another's
+// ---------------------------------------------------------------------------------------------------------------------
+
+/// The tenant T's admin and freeze authority: accounts of their own, apart from configuration A's.
+const T_ADMIN_SEED: u8 = 0x41;
+const T_FREEZE_SEED: u8 = 0x42;
+
+/// The tenant T: a configuration of vault A (A's vault, chain, programs) with its own admin, freeze authority and
+/// fee recipient, reading Ethereum through an instance its creator controls (the only way to pair a second
+/// configuration with a vault whose slot 2 holds A's id). Paired, ETH registered, root of A's 8 leaves imported.
+fn tenant(w: &mut World, log: &mut Vec<TxReport>) -> (BridgeConfig, [u8; 32], Block) {
+    let t_controls = Controls {
+        admin: *role_account(T_ADMIN_SEED).value(),
+        freeze_authority: *role_account(T_FREEZE_SEED).value(),
+        fee_recipient: *role_account(T_ADMIN_SEED).value(),
+        ..controls()
+    };
+    let t = BridgeConfig { instance_id: ROGUE_INSTANCE, controls: t_controls, ..w.config_a.clone() };
+    let cid_t = t.id(w.program);
+    let slots = VaultSlots {
+        address: w.vault_a.address,
+        root: w.vault_a.root(8),
+        count: 8,
+        config_id: cid_t,
+        extra: registry_slots(&eth_entry(), &[]),
+    };
+    let forged = Block::new(9_100_000, 300, &[slots]);
+    place_rogue_record(w, &forged);
+    step(log, rogue_init(w, "T: Init (its creator's record: slot 2 = configId(T))", &t, &forged), None);
+    step(log, rogue_register(w, "T: Register ETH", &t, &forged), None);
+    let root8 = w.vault_a.root(8);
+    step(log, rogue_import(w, "T: ImportRoot n = 8", &t, &forged, root8, 8), None);
+    (t, cid_t, forged)
+}
+
+/// F.16's "strict separation, as if each were a fully separate deployment": every privileged message the tenant T's
+/// roles can send is refused at configuration A's accounts (and applied at T's own: the same message is well formed),
+/// a record of T's instance cannot feed A, and every internal message T's accounts can send is refused at A's
+/// accounts. A's configuration and token state are byte for byte what they were.
+#[test]
+fn separation_another_configurations_roles_and_accounts_reach_nothing() {
+    use lee_core::program::ReceiveInput;
+
+    let image = b1_program();
+    let mut w = World::new();
+    w.add_public_accounts(&[role_account(T_ADMIN_SEED), role_account(T_FREEZE_SEED)]);
+    let mut log = Vec::new();
+    let (program, cid_a, va) = (w.program, w.cid_a, w.vault_a.address);
+    pair_honest(&mut w, &mut log);
+    let (_t, cid_t, forged) = tenant(&mut w, &mut log);
+    let (config_at_a, config_at_t) = (config_actor(program, &cid_a), config_actor(program, &cid_t));
+    let a_before = (w.config_state(&cid_a), w.token_state(&cid_a, &ETH));
+
+    // (1) T's roles, through the state machine: each message naming A, then the same naming T.
+    let record = w.blocks[2].time_record();
+    let until = w.blocks[2].time_ms() + 3_600_000;
+    let cap: CapParams = FLOOR;
+    let for_cid = |cid: [u8; 32], which: usize| -> BridgeMessage {
+        match which {
+            0 => BridgeMessage::SetCap { config_id: cid, token: None, mints: true, cap },
+            1 => BridgeMessage::SetCap { config_id: cid, token: Some(ETH), mints: false, cap },
+            2 => BridgeMessage::SetDepth { config_id: cid, slots: 216_000 },
+            3 => BridgeMessage::ProposeRoles {
+                config_id: cid,
+                freeze_authority: FreezeAuthority::key(*role_account(T_FREEZE_SEED).value()),
+                watchers: vec![*role_account(T_ADMIN_SEED).value()],
+                record: record.clone(),
+            },
+            4 => BridgeMessage::CancelRoles { config_id: cid },
+            5 => BridgeMessage::Freeze {
+                config_id: cid,
+                token: None,
+                mints: true,
+                burns: true,
+                until_ms: until,
+                record: record.clone(),
+            },
+            6 => BridgeMessage::Freeze {
+                config_id: cid,
+                token: Some(ETH),
+                mints: true,
+                burns: true,
+                until_ms: until,
+                record: record.clone(),
+            },
+            7 => BridgeMessage::Pause { config_id: cid, token: None, mints: true, burns: true, record: record.clone() },
+            _ => BridgeMessage::Sunset { config_id: cid },
+        }
+    };
+    // (message, T's role that sends it, whether the same message naming T applies at T: those that read no record
+    // there, since T's records are its own instance's)
+    let rows: [(usize, &str, u8, bool); 9] = [
+        (0, "SetCap (global mints)", T_ADMIN_SEED, true),
+        (1, "SetCap (ETH burns)", T_ADMIN_SEED, true),
+        (2, "SetDepth 216,000", T_ADMIN_SEED, true),
+        (3, "ProposeRoles", T_ADMIN_SEED, false),
+        (4, "CancelRoles", T_ADMIN_SEED, false),
+        (5, "Freeze (global)", T_FREEZE_SEED, false),
+        (6, "Freeze (ETH)", T_FREEZE_SEED, false),
+        (7, "Pause (global)", T_FREEZE_SEED, false),
+        (8, "Sunset", T_FREEZE_SEED, true),
+    ];
+    let mut matrix = String::from("| message | sent by | naming A: outcome | naming T: outcome |\n|---|---|---|---|\n");
+    for (which, what, seed, at_t) in rows {
+        let who = if seed == T_ADMIN_SEED { "T's admin" } else { "T's freeze authority" };
+        let target_a = match &for_cid(cid_a, which) {
+            BridgeMessage::SetCap { token: Some(t), .. } | BridgeMessage::Freeze { token: Some(t), .. } => {
+                token_actor(program, &cid_a, t)
+            }
+            _ => config_at_a,
+        };
+        let r = w.role(&format!("{who}: {what} naming A"), seed, &for_cid(cid_a, which), target_a);
+        let r = step(&mut log, r, Some(code::NOT_AUTHORIZED));
+        let mut t_outcome = String::from("(not sent: it reads a record, and T's are its own instance's)");
+        if at_t {
+            let target_t = match &for_cid(cid_t, which) {
+                BridgeMessage::SetCap { token: Some(t), .. } => token_actor(program, &cid_t, t),
+                _ => config_at_t,
+            };
+            let rt = w.role(&format!("{who}: {what} naming T"), seed, &for_cid(cid_t, which), target_t);
+            let rt = step(&mut log, rt, None);
+            t_outcome = verdict(&rt);
+        }
+        let _ = writeln!(matrix, "| {what} | {who} | {} | {t_outcome} |", verdict(&r));
+    }
+    // Multisig approvals: T's freeze authority as the only signer, naming A.
+    for (label, action) in [
+        ("T's freeze authority: Cosigned Sunset naming A", CosignedAction::Sunset),
+        (
+            "T's freeze authority: Cosigned Freeze (global) naming A",
+            CosignedAction::Freeze { token: None, mints: true, burns: true, until_ms: until, record: record.clone() },
+        ),
+    ] {
+        let r = w.cosign(label, &[T_FREEZE_SEED], &[T_FREEZE_SEED], &cid_a, action);
+        let r = step(&mut log, r, Some(code::NOT_AUTHORIZED));
+        let what = label.trim_start_matches("T's freeze authority: ");
+        let _ = writeln!(matrix, "| {what} | T's freeze authority | {} | |", verdict(&r));
+    }
+    // A top-level Sunset at config(A) by anyone: A's vault is not attested retired, A's multisig approved nothing.
+    let r = w.send(
+        "anyone: Sunset at config(A) itself",
+        config_at_a,
+        &BridgeMessage::Sunset { config_id: cid_a },
+        vec![config_at_a],
+    );
+    let r = step(&mut log, r, Some(code::NOT_AUTHORIZED));
+    let _ = writeln!(matrix, "| Sunset at config(A) itself | anyone | {} | |", verdict(&r));
+    // T's records cannot feed A: an import naming A under T's record slot reads A's own instance there (nothing).
+    let fake9 = {
+        let mut leaves = w.vault_a.leaves.clone();
+        leaves.push([0x99; 32]);
+        Vault { address: va, leaves }.root(9)
+    };
+    let import = BridgeMessage::ImportRoot {
+        config_id: cid_a,
+        record_slot: forged.slot,
+        root: fake9,
+        leaf_count: 9,
+        proof: forged.import_proof(&va),
+    };
+    let header = header_actor(ferrata_account(), &harness::bridge::INSTANCE, forged.slot);
+    let r = w.send(
+        "anyone: ImportRoot naming A under T's record slot",
+        config_at_a,
+        &import,
+        vec![config_at_a, header, root_actor(program, &cid_a, 9)],
+    );
+    assert!(!r.ok(), "{}: {}", r.label, verdict(&r));
+    log.push(r.clone());
+    assert!(w.root_state(&cid_a, 9).is_none(), "nothing imported under A");
+    let _ = writeln!(matrix, "| ImportRoot naming A under T's record slot | anyone | {} | |", verdict(&r));
+
+    let a_after = (w.config_state(&cid_a), w.token_state(&cid_a, &ETH));
+    assert_eq!(a_before, a_after, "A's configuration and token state are untouched");
+
+    // (2) Internal messages, delivered by the program's executor (no state machine) from T's accounts to A's, and
+    // from A's own (the sender check passes: the code is the next check's on an empty state).
+    let n = w.vector_n;
+    let dest = w.vector_dest;
+    let root_of = |cid: [u8; 32]| RootState {
+        config_id: cid,
+        evm_chain_id: CHAIN_ID,
+        vault: va,
+        leaf_count: 9,
+        root: fake9,
+        record_slot: forged.slot,
+        block_number: 300,
+    };
+    let token_of = |cid: [u8; 32]| {
+        let mut s = w.token_state(&cid_a, &ETH).unwrap();
+        s.config_id = cid;
+        s
+    };
+    let spend = |cid: [u8; 32]| BridgeMessage::Spend {
+        nullifier: n,
+        config_id: cid,
+        evm_chain_id: CHAIN_ID,
+        vault: va,
+        token: ETH,
+        leaf_count: 8,
+        amount: DENOMINATIONS[1],
+        mint_to: Some(*dest.value()),
+        fees: vec![],
+    };
+    let mint = |cid: [u8; 32]| BridgeMessage::Mint {
+        nullifier: n,
+        config_id: cid,
+        evm_chain_id: CHAIN_ID,
+        vault: va,
+        token: ETH,
+        holder: *dest.value(),
+        amount: DENOMINATIONS[1],
+    };
+    let credit = |cid: [u8; 32]| BridgeMessage::Credit {
+        config_id: cid,
+        token: ETH,
+        amount: DENOMINATIONS[1],
+        to: *dest.value(),
+    };
+    let extend =
+        |cid: [u8; 32]| BridgeMessage::ExtendFees { config_id: cid, token: ETH, index: 2, schedule: None, count: 9 };
+    let listing =
+        |cid: [u8; 32]| BridgeMessage::SetListing { config_id: cid, token: ETH, delisted: true, record_slot: u64::MAX };
+    let admit = |cid: [u8; 32]| BridgeMessage::Admit { config_id: cid, token: ETH, mints: true, value: 1 };
+    let (cfg, tok) = (|cid: &[u8; 32]| config_actor(program, cid), |cid: &[u8; 32]| token_actor(program, cid, &ETH));
+    let null = |cid: &[u8; 32]| nullifier_of(program, cid, CHAIN_ID, &va, &n);
+    let hold = |cid: &[u8; 32]| holder_of(program, cid, dest);
+    let wrong = u32::from(code::WRONG_SENDER);
+    let cases: Vec<(&str, lee::Actor, lee::Actor, BridgeMessage, u32)> = vec![
+        (
+            "WriteRoot under A, from config(T), at root(A, 9)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_t),
+            BridgeMessage::WriteRoot { root: root_of(cid_a) },
+            wrong,
+        ),
+        (
+            "WriteRoot under T, from config(T), at root(A, 9)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_t),
+            BridgeMessage::WriteRoot { root: root_of(cid_t) },
+            wrong,
+        ),
+        (
+            "WriteRoot under A, from config(A), at root(A, 9) (control)",
+            root_actor(program, &cid_a, 9),
+            cfg(&cid_a),
+            BridgeMessage::WriteRoot { root: root_of(cid_a) },
+            0,
+        ),
+        (
+            "WriteToken under A, from config(T), at token(A, ETH)",
+            tok(&cid_a),
+            cfg(&cid_t),
+            BridgeMessage::WriteToken { state: token_of(cid_a) },
+            wrong,
+        ),
+        (
+            "WriteToken under A, from config(A), at token(A, ETH) (control)",
+            tok(&cid_a),
+            cfg(&cid_a),
+            BridgeMessage::WriteToken { state: token_of(cid_a) },
+            0,
+        ),
+        ("ExtendFees under A, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), extend(cid_a), wrong),
+        ("ExtendFees under T, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), extend(cid_t), wrong),
+        ("SetListing under A, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), listing(cid_a), wrong),
+        ("SetListing under T, from config(T), at token(A, ETH)", tok(&cid_a), cfg(&cid_t), listing(cid_t), wrong),
+        (
+            "SetListing under A, from config(A), at token(A, ETH) (control: no token state)",
+            tok(&cid_a),
+            cfg(&cid_a),
+            listing(cid_a),
+            u32::from(code::NOT_REGISTERED),
+        ),
+        ("Admit under A, from token(T, ETH), at config(A)", cfg(&cid_a), tok(&cid_t), admit(cid_a), wrong),
+        ("Admit under T, from token(T, ETH), at config(A)", cfg(&cid_a), tok(&cid_t), admit(cid_t), wrong),
+        (
+            "Admit under A, from token(A, ETH), at config(A) (control: no configuration state)",
+            cfg(&cid_a),
+            tok(&cid_a),
+            admit(cid_a),
+            u32::from(code::NOT_FOUND),
+        ),
+        ("Spend under A, from token(T, ETH), at nullifier(A, ...)", null(&cid_a), tok(&cid_t), spend(cid_a), wrong),
+        ("Spend under T, from token(T, ETH), at nullifier(A, ...)", null(&cid_a), tok(&cid_t), spend(cid_t), wrong),
+        ("Mint under A, from nullifier(T, ...), at holder(A, dest)", hold(&cid_a), null(&cid_t), mint(cid_a), wrong),
+        ("Mint under T, from nullifier(T, ...), at holder(A, dest)", hold(&cid_a), null(&cid_t), mint(cid_t), wrong),
+        (
+            "Mint under A, from nullifier(A, ...), at holder(A, dest) (control)",
+            hold(&cid_a),
+            null(&cid_a),
+            mint(cid_a),
+            0,
+        ),
+        ("Credit under A, from token(T, ETH), at holder(A, dest)", hold(&cid_a), tok(&cid_t), credit(cid_a), wrong),
+        ("Credit under T, from token(T, ETH), at holder(A, dest)", hold(&cid_a), tok(&cid_t), credit(cid_t), wrong),
+    ];
+    let elf = harness::bridge::bridge_program();
+    let mut executor = String::from("| delivered (the program's executor) | exit code |\n|---|---:|\n");
+    for (what, receiver, from, message, want) in cases {
+        let input = ReceiveInput {
+            receiver,
+            from: Some(from),
+            is_authorized: false,
+            pre_state: Default::default(),
+            message: borsh::to_vec(&message).unwrap(),
+        };
+        let got = harness::attest::execute(what, elf.elf(), &input).exit_code;
+        assert_eq!(got, want, "{what}");
+        let _ = writeln!(executor, "| {what} | {got} |");
+    }
+
+    let mut out = format!(
+        "# Separation of configurations (LEZ v0.4.0-rc1 state machine, bridge program {image})\n\n\
+         configId(A) {} (vault A's own; roles: the world's admin and freeze authority)\n\
+         configId(T) {} (vault A, an instance its creator controls; roles: accounts of seeds 0x41 and 0x42)\n\n\
+         ## T's roles\n\n{matrix}\n\
+         A's configuration and ETH token state after every attempt: identical to before.\n\n\
+         ## Internal messages\n\n{executor}\n## Every transaction\n\n",
+        hex::encode(cid_a),
+        hex::encode(cid_t)
+    );
+    out.push_str(&table(&log));
+    save("separation.txt", &out);
 }

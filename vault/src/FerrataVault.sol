@@ -915,10 +915,13 @@ contract FerrataVault is ReentrancyGuardTransient {
         _feesInForce(token);
     }
 
-    /// @notice Enables or disables deposits of a token (delisting). Releases are unaffected.
+    /// @notice Enables or disables deposits of a token (delisting). Releases are unaffected. The listing is also
+    ///         published at the SHA-256 slot sha256("ferrata/vault/listing/v1" ‖ token), 1 while delisted and 0
+    ///         otherwise, which the LEZ bridge program attests (`AttestListing`, F.10).
     function setDepositsEnabled(address token, bool enabled) external onlyAdmin {
         _requireRegistered(token);
         _tokens[token].depositsEnabled = enabled;
+        FerrataRegistry.publishListing(token, enabled);
         emit DepositsEnabledSet(token, enabled);
     }
 

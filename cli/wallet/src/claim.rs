@@ -2,8 +2,10 @@
 //! (`verify_claim`, the token's registry entry and fee schedules, the nullifier), the accounts it
 //! names and its message, plaintext `Claim` or private `ClaimPrivately`.
 
+use std::collections::HashSet;
+
 use ferrata_bridge_core::{
-    inbound::{DestKind, OwnedDeposit},
+    inbound::{deposit_leaf, DestKind, OwnedDeposit, VaultDeposit},
     tree::{MerklePath, Tree},
     Hash,
 };
@@ -25,6 +27,33 @@ pub fn pick_import(imported: &[u64], leaf_index: u64) -> Result<u64, Refusal> {
             "checked before sending: no imported root covers this leaf yet; wait for the next root import",
         )),
     }
+}
+
+/// The anonymity set of a private claim (RFP-022 F.8): how many deposits of the vault an observer of both chains cannot
+/// tell it apart from. A private claim shows the token and the denomination (its fees and the token's buckets), the
+/// imported root it reads (`root(cid, n)`, so leaf indexes below `n`) and the fee schedule range it names (its `Issue`
+/// to the token is public); it hides the leaf, the depositor and the commitment. So the set is the deposits of the same
+/// token and amount whose leaf index lies in `[range.from_leaf, min(range.until_leaf, leaf_count))`, less the deposits
+/// `opened`: those whose leaf (`deposit_leaf`) a plaintext claim has published, under any configuration of the program
+/// (its witness names the leaf index and `s`, so an observer can tell whether a claim spends that deposit). Deposits
+/// claimed privately stay in: their nullifiers do not say which leaves they spent. A refunded deposit needs no
+/// exclusion: a refund is of a leaf no imported root covers. Timing is not counted here: a claim made soon after its
+/// deposit narrows the set by time, which the claim delay (`ferrata scan`) spreads.
+pub fn anonymity_set(
+    deposits: &[VaultDeposit],
+    opened: &HashSet<Hash>,
+    token: &[u8; 20],
+    amount: &[u8; 32],
+    leaf_count: u64,
+    range: &ScheduleRange,
+) -> usize {
+    let until = range.until_leaf.min(leaf_count);
+    deposits
+        .iter()
+        .filter(|d| d.token == *token && d.amount == *amount)
+        .filter(|d| d.leaf_index >= range.from_leaf && d.leaf_index < until)
+        .filter(|d| !opened.contains(&deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment)))
+        .count()
 }
 
 /// The schedule range a wallet names for a claim of `leaf` (the widest its token state allows).
@@ -134,7 +163,7 @@ pub fn build_claim(
     let fee_recipient = AccountId::new(token.controls.fee_recipient);
     let relayer_account = relayer.map(AccountId::new).unwrap_or(fee_recipient);
     let root = root_actor(ctx.program, &ctx.cid, n);
-    let n_actor = nullifier_actor(ctx.program, ctx.chain_id, &ctx.vault, &owned.nullifier);
+    let n_actor = nullifier_actor(ctx.program, &ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier);
     let mut mentions = Vec::new();
     let message = if private {
         let root_account = match owned.kind {
@@ -157,13 +186,16 @@ pub fn build_claim(
         seed: token_seed(&ctx.cid, &d.token),
     });
     mentions.push(Mention::Pda { actor: config_actor(ctx.program, &ctx.cid), seed: config_seed(&ctx.cid) });
-    mentions.push(Mention::Pda { actor: n_actor, seed: nullifier_seed(ctx.chain_id, &ctx.vault, &owned.nullifier) });
+    mentions.push(Mention::Pda {
+        actor: n_actor,
+        seed: nullifier_seed(&ctx.cid, ctx.chain_id, &ctx.vault, &owned.nullifier),
+    });
     let dest = (owned.kind == DestKind::Public).then(|| AccountId::new(owned.dest));
-    // Mints land at `holder(account)` PDAs (security review C-1); the mint's seed admits a new one.
+    // Mints land at `holder(cid, account)` PDAs (security review C-1); the mint's seed admits a new one.
     for account in dest.into_iter().chain([fee_recipient, relayer_account]) {
-        let actor = holder_actor(ctx.program, account);
+        let actor = holder_actor(ctx.program, &ctx.cid, account);
         if !mentions.iter().any(|m| m.actor() == actor) {
-            mentions.push(Mention::Pda { actor, seed: holder_seed(account.value()) });
+            mentions.push(Mention::Pda { actor, seed: holder_seed(&ctx.cid, account.value()) });
         }
     }
     let what = format!(
@@ -195,5 +227,62 @@ mod tests {
         assert_eq!(pick_import(&[5, 8], 4), Ok(8));
         assert!(matches!(pick_import(&[], 0), Err(Refusal::Program { code: 245, .. })));
         assert!(matches!(pick_import(&[5], 5), Err(Refusal::Program { code: 248, .. })));
+    }
+
+    #[test]
+    fn the_anonymity_set_is_the_same_token_and_amount_under_the_root_and_range() {
+        let word = |v: u8| {
+            let mut w = [0u8; 32];
+            w[31] = v;
+            w
+        };
+        let eth = [0u8; 20];
+        let other = [0x7e; 20];
+        let d = |leaf_index: u64, token: [u8; 20], amount: u8| VaultDeposit {
+            depositor: [0xd1; 20],
+            j: leaf_index,
+            leaf_index,
+            token,
+            amount: word(amount),
+            commitment: [leaf_index as u8; 32],
+        };
+        // Leaves 0..10: ETH 1 at 0, 2, 3, 5, 8, 9; ETH 2 at 1, 6; the other token's 1 at 4, 7.
+        let list: Vec<VaultDeposit> = [
+            (0, eth, 1),
+            (1, eth, 2),
+            (2, eth, 1),
+            (3, eth, 1),
+            (4, other, 1),
+            (5, eth, 1),
+            (6, eth, 2),
+            (7, other, 1),
+            (8, eth, 1),
+            (9, eth, 1),
+        ]
+        .into_iter()
+        .map(|(i, t, a)| d(i, t, a))
+        .collect();
+        let all = ScheduleRange { index: 0, from_leaf: 0, until_leaf: u64::MAX };
+        let none = HashSet::new();
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(1), 10, &all), 6);
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(1), 6, &all), 4, "only the leaves under root(cid, 6)");
+        assert_eq!(anonymity_set(&list, &none, &eth, &word(2), 10, &all), 2);
+        assert_eq!(anonymity_set(&list, &none, &other, &word(1), 10, &all), 2);
+        let schedule_1 = ScheduleRange { index: 1, from_leaf: 5, until_leaf: 9 };
+        assert_eq!(
+            anonymity_set(&list, &none, &eth, &word(1), 10, &schedule_1),
+            2,
+            "leaves 5 and 8: the range splits the set"
+        );
+        // Plaintext claims published leaves 2 and 8 (and a leaf of another vault, which matches none of this list):
+        // an observer sees which deposits those claims spent, so they leave every later claim's set.
+        let leaf = |d: &VaultDeposit| deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment);
+        let mut elsewhere = list[2].clone();
+        elsewhere.commitment = [0xee; 32];
+        let opened: HashSet<Hash> = [leaf(&list[2]), leaf(&list[8]), leaf(&elsewhere)].into();
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 10, &all), 4, "leaves 0, 3, 5 and 9");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 6, &all), 3, "leaves 0, 3 and 5");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(1), 10, &schedule_1), 1, "leaf 5 alone");
+        assert_eq!(anonymity_set(&list, &opened, &eth, &word(2), 10, &all), 2, "no deposit of 2 opened");
     }
 }

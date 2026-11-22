@@ -39,6 +39,31 @@ rehearsals 1 and 2 ran the earlier programs. Commands: "Commands" below. One clo
 after a stop, that crosses Sepolia -> LEZ -> Sepolia with the final programs and real proofs everywhere, and a verify
 script that re-checks every step from public data and the recorded blocks.
 
+## Since milestone B1 (21 Nov 2026): which programs a run uses
+
+- **The live runs** ran the bridge program from before milestone B1: `crown-live-3` and `crown-live-4`
+  `0xccde6171…71dd` ([`docs/image-ids.md`](../../docs/image-ids.md) `ferrata_bridge`, source at `f13faee2`),
+  `crown-live-1` the one of its own table below. Their vaults and LEZ programs are immutable and keep it, and their
+  records still check from this tree: `e2e/crown.sh verify RUN` takes the ids from the run's own records, and
+  `scripts/verify-sepolia.py` holds each live vault to the programs it was deployed with.
+- **A run started from this tree** runs the bridge program since B1 (`ferrata_bridge_b1`, `0xac1fb59b…442e`, binary
+  sha256 `5f47b065…7fd8`) with this tree's crown-driver, which speaks only B1's accounts (`holder(cid, account)`,
+  `nullifier(cid, chain, vault, N)`) and, like `vault/script/DeployVault.s.sol`, deploys a capped configuration
+  (`FERRATA_UNCAPPED=1` for the unlimited one of the live runs). The input sets `rc1` and `rc3` on the Volume carry
+  the earlier bridge program and a crown-driver built before B1, so this tree refuses them before anything runs or is
+  sent: `start`'s first step (`drive.py`, `prepare_inputs`) requires the bundle's `program/ferrata_lez.bin` and
+  `program/ferrata_bridge.bin` to have `docs/image-ids.md`'s `ferrata_lez` and `ferrata_bridge_b1` ids; the
+  crown-driver refuses any other bridge program (`--bridge-bin`, `config-id`); `lez/crown/build.sh` refuses to pack
+  one. Before these checks, a bundle repacked with this tree's driver around the earlier program would have deployed
+  a vault and sent both deposits, then failed at session B's claims.
+- **To run on this tree**: a bundle with this tree's crown-driver (`lez/crown/build.sh driver`, with the LEZ tag of
+  the input set it replaces selected) and B1's `ferrata_bridge.bin` (`scripts/reproduce-image-ids.sh build --out DIR`
+  writes it to `DIR/programs/`), made by `lez/crown/build.sh repack FROM` (or `rebase`, `pack`) with
+  `CROWN_BRIDGE_BIN=DIR/programs/ferrata_bridge.bin`, and a fixture whose `Init` is still valid (`crown-driver check
+  --chain sepolia`); uploaded as its own input set, `e2e/crown.sh setup --inputs rc3-b1 --bundle FILE --programs DIR`
+  with `rc3`'s R0BF programs (the vault-side guests did not change), then `e2e/crown.sh start --inputs rc3-b1 RUN`. No
+  crown run of B1 has been made. The earlier programs run from a checkout of `f13faee2`.
+
 ## On LEZ v0.4.0-rc3: input set `rc3`, the live run `crown-live-4` (DONE, 18 Nov 2026)
 
 The same round trip as `crown-live-3`, with the LEZ side on LEZ v0.4.0-rc3: its own `sequencer_service` and the
@@ -88,7 +113,8 @@ e2e/crown.sh fetch --lez crown-live-4            # e2e/runs/crown-live-4/ (curat
 e2e/crown.sh verify crown-live-4                 # the chain checks again from this machine (read-only)
 ```
 
-`setup` need not run again: input set `rc3` is on the Volume since 18 Nov 2026 14:16Z (`setup --inputs rc3 --bundle
+From `f13faee2` (this tree refuses `rc3`'s bundle: "Since milestone B1" above), `setup` need not run again: input set
+`rc3` is on the Volume since 18 Nov 2026 14:16Z (`setup --inputs rc3 --bundle
 FILE --programs DIR` uploads it again, checking every program's sha256 and image id). The `Init` must be sent before
 3 Dec 2026 09:05:36 UTC (after it: a fresh fixture, `lez/crown/build.sh rebase`, `setup`). What to expect, from
 crown-live-3's measured run and this rehearsal (derived): 13 transactions from the deployer's next nonce (36 on
@@ -184,8 +210,9 @@ the build box (`mrun --profile <yours>). The laptop only starts, reads status an
 
 **The vault's deployment parameters in this run** are `vault/script/deploy.sh`'s testnet defaults, except Δ (from
 `identity.json`): the runner (`e2e/crown/sepolia.sh deploy`) sets no other: revocation window 1 day, release delay
-120 s (minimum 0), maximum freeze 30 days, the freeze authority an address nobody holds a key for, no watchers, and
-no cap set. The proposal's production values differ (a 7-day window, caps, a multisig freeze authority and three
+120 s (minimum 0), maximum freeze 30 days, the freeze authority an address nobody holds a key for, no watchers, and,
+in the live runs, no cap set (since milestone B1 the script deploys capped by default: per token and day 100 times its
+largest denomination, `FERRATA_UNCAPPED=1` for none). The proposal's production values differ (a 7-day window, caps, a multisig freeze authority and three
 watchers); this run shows the mechanism, not that configuration.
 
 Why the devnet comes first: the vault's `genesisState` is the checkpoint state at a real LEZ tip (tip id, tip hash,
@@ -205,7 +232,8 @@ evmChainId (u256) || vault || attestationRootId || salt), 261 bytes, where
   (`crown-live-2`'s `0x88df8428…c358`, from the period-1378 bootstrap, never existed: the program's weak-subjectivity
   bound refused that 38-day-old checkpoint);
 - salt = sha256("ferrata-lez/v1/bridge/controls" || borsh(controls)); controls = LEZ admin, freeze authority,
-  fee recipient (throwaway test accounts), floor and caps (unlimited);
+  fee recipient (throwaway test accounts), floor and caps (unlimited in the live runs; since milestone B1 the
+  crown-driver's default is capped, `FERRATA_UNCAPPED=1` for unlimited);
 - bedrockGenesisId and channelId: the devnet's real values (stage 2), not the inbound plan's tags;
 - vault: CREATE(deployer, N+2), computed at stage 0 from the deployer's nonce and checked after stage 3.
 The vault takes configId as `lezConfigId`; the LEZ Init proves slot 2 (`storedLezConfigId`) at a finalized block.

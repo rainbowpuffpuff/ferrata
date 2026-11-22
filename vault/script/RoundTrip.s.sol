@@ -27,7 +27,9 @@ import {TestToken} from "./TestToken.sol";
 ///
 ///         A testnet configuration: the timers are short and come from the environment; the checks, the verifier
 ///         and the proofs are the real ones. The sender is the admin; the freeze authority is an address nobody
-///         holds a key for unless FERRATA_FREEZE_AUTHORITY names one.
+///         holds a key for unless FERRATA_FREEZE_AUTHORITY names one. Unlike script/DeployVault.s.sol (the deployment
+///         script: capped by default, the design's wait), this round trip of the earlier testnet runs deploys no caps
+///         and waits 600 s unless FERRATA_DELTA says otherwise.
 contract RoundTrip is Script {
     address internal constant ETH = address(0);
     uint256 internal constant UNLIMITED = type(uint256).max;

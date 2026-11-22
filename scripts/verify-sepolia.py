@@ -18,7 +18,9 @@ programs), which must agree with each other, and the vault must hold them. The t
 programs they were deployed with: crown-live-3's (0x04eE…e44c) to the final programs of docs/image-ids.md, which any
 checkout rebuilds (scripts/reproduce-image-ids.sh), crown-live-1's (0xfE31…9E54) to e2e/crown/README.md's table "The
 programs of crown-live-1" (built before guest builds were path-independent). Any other run of the final programs must
-have docs/image-ids.md's ids; a run of earlier programs is named by the README table that lists its ids.
+have docs/image-ids.md's ids; a run of earlier programs is named by the README table that lists its ids. Since
+milestone B1 this tree's bridge program is docs/image-ids.md's `ferrata_bridge_b1`: a run of it is held to that row, the
+live vaults to the first table's `ferrata_bridge` (the program they were deployed with, rebuilt from f13faee2).
 """
 
 from __future__ import annotations
@@ -42,6 +44,9 @@ CHAIN_ID = 11155111
 # The run's programs by the names this script gives them; the guests' own names (docs/image-ids.md, programs/ids.jsonl)
 # map onto them. A run's ids come from its records only (the image ids check in main()).
 GUEST_KEYS = {"ferrata_lez": "attestation", "ferrata_bridge": "bridge"}
+# docs/image-ids.md's name for the bridge program since milestone B1 (this tree's lez/guests/bridge). `ferrata_bridge` is
+# the bridge program the live runs deployed, which their vaults keep; a run whose bridge is B1's is held to this row.
+B1_BRIDGE = "ferrata_bridge_b1"
 # The live runs' vaults on Sepolia and the programs each must hold: crown-live-1's the programs it ran (built before guest
 # builds were path-independent; e2e/crown/README.md's "The programs of crown-live-1"), crown-live-3's the final programs
 # (docs/image-ids.md). A run of either vault whose records name other ids fails; other vaults (rehearsals on forks of
@@ -517,6 +522,11 @@ def main() -> int:
             if "checkpoint_0_3_5" in final:
                 final["checkpoint"] = final["checkpoint_0_3_5"]
             out += "; the second build of the checkpoint guests (zones on Logos Blockchain 0.3.5-rc.1)"
+        # A run of the bridge program since milestone B1 (docs/image-ids.md, "The bridge program since milestone B1"):
+        # its bridge is compared with that row, the other programs with the final ones.
+        if ids.get("bridge") is not None and ids.get("bridge") == final.get(B1_BRIDGE):
+            final = {**final, "bridge": final[B1_BRIDGE]}
+            out += "; the bridge program since milestone B1"
         common = [k for k in ids if k in final]
         if not common:
             return out + f"; none of its programs is in {a.image_ids}"

@@ -349,8 +349,10 @@ the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node w
 
 ### P.1 Claim and mint in one LEZ public transaction
 
-**Met.** In-process harness, this tree's bridge program (image `ccde6171…`, the same built at any path:
-[`image-ids.md`](image-ids.md)), synthetic vault storage (tables `lez/results/bridge-*.md`, recorded on 12 November 2026):
+**Met.** In-process harness, the bridge program the live runs deployed (image `ccde6171…`, the same built at any path
+from `f13faee2`: [`image-ids.md`](image-ids.md); since milestone B1 this tree's is `ac1fb59b…`, its records in
+`lez/results/b1/`, execution gas within −5,272 and +4,718 of these), synthetic vault storage (tables
+`lez/results/bridge-*.md`, recorded on 12 November 2026):
 
 | Claim | Handlers (cycles each) | Execution gas | Storage gas |
 |---|---|---:|---:|
@@ -514,14 +516,15 @@ LEZ view came from a file (`--node file:`), so its traffic to a LEZ node is not 
 ### P.7 State growth at 1M and 10M operations
 
 **Measured per operation**, on both chains. LEZ ([`lez/results/perf-state.md`](../lez/results/perf-state.md) §4, §5;
-real claims and burns of this tree's bridge program, then copies to 100,000 records):
+real claims and burns of the deployed bridge program, `0xccde6171…`, measured before milestone B1, then copies to
+100,000 records):
 
 | LEZ account | per | actor state | `Account` | in the serialized state, measured |
 |---|---|---:|---:|---:|
-| `nullifier(…, N)` | claim | 77 B | 133 B | **165 B** (+165.00 B per record from 1,000 to 100,000) |
+| `nullifier(…, N)` (`nullifier(cid, chain, vault, N)` since milestone B1; the state is the same) | claim | 77 B | 133 B | **165 B** (+165.00 B per record from 1,000 to 100,000) |
 | `burn(cid, H(note))` | burn | 185 B | 241 B | **273 B** (+273.00 B per record) |
 | `root(cid, n)` | import | 117 B | 173 B | 205 B (account and key) |
-| holder | new holder (a claim's destination or its relayer; the fee recipient's once) | | | **162 B** (the second claim: its destination's); the first claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
+| holder (since milestone B1 one account per configuration, `holder(cid, account)`) | new holder (a claim's destination or its relayer; the fee recipient's once) | | | **162 B** (the second claim: its destination's); the first claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
 
 Ethereum ([`lez/results/perf-state-ethereum.txt`](../lez/results/perf-state-ethereum.txt), `vault/test/StateGrowth.t.sol`:
 Foundry's state-diff recording, each slot's value before and after the operation): a release creates **one** vault slot

@@ -61,8 +61,11 @@ cd lez && RISC0_HOME=$PWD/../../risc0-home-lez RISC0_DEV_MODE=1 cargo test -p ha
 
 On a 16-core machine: about 7 minutes of build, then 56 tests in 30 binaries in about 21 minutes (one test
 thread; `vault_consumer` alone runs six minutes without printing; about 13 minutes with `--test-threads 8`). The
-tests rewrite the 21 files they write in `lez/results/`; the committed ones were recorded from this tree's programs
-([`docs/image-ids.md`](../image-ids.md); bridge image `ccde6171…`) on 12 November 2026, so git shows them unchanged
+tests rewrite the 21 files they write in `lez/results/`; the committed ones were recorded on 12 November 2026 from the
+programs the live runs deployed ([`docs/image-ids.md`](../image-ids.md); bridge image `ccde6171…`, at `f13faee2`);
+since milestone B1 this tree's bridge program is `ac1fb59b…`, so its suites' records differ there: run them with
+`FERRATA_LEZ_RESULTS_DIR=$PWD/results/b1` to compare with `lez/results/b1/`, where git shows them unchanged, as it does
+the other suites' files in `lez/results/`
 (the Stage 1, 4 and 5 tables that the `tables` binary of `lez/RESULTS.md` §8 writes are of the earlier images that
 file names). The rest of the setup, the real proofs and the tables: [`lez/RESULTS.md`](../../lez/RESULTS.md) §8.
 

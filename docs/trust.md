@@ -168,8 +168,9 @@ it bounds what one can take before someone freezes, as row 138's invariants meas
   checkpoint, any release, at the earliest second allowed): releases and refunds stayed within the cap bound in every
   window (the fullest 74.00 % of the ETH bucket's bound under rule (A), 90.09 % under rule (B)) and none came before the
   delay; the uncapped USDT lost up to 94.4 % (rule (A)) and 99.4 % (rule (B)) of a run's deposits, and with the
-  deployment script's testnet defaults
-  (caps UNLIMITED) only the clocks and the emergency stop remain.
+  deployment script's testnet defaults of the
+  live runs of November 2026 (caps UNLIMITED; since milestone B1 only with `FERRATA_UNCAPPED=1`, the script's default
+  being capped: `vault/test/DeployDefaults.t.sol`) only the clocks and the emergency stop remain.
 - **Sizing:** a production deployment's caps × (the time to notice and freeze, at least the release delay) is what
   a captured committee can take; set it to what the deployment accepts to lose. The live round trips of rows 41 and 91
   ran with no caps and a 120 s delay (testnet values).
@@ -560,8 +561,9 @@ built, and the test or recorded run that shows the mitigation.
   [`guides/verify.md`](guides/verify.md) §2); what must match is the pinned toolchains. The first live run's programs
   (`crown-live-1`) were built before this, at the maintainer's checkout path, and reproduce only there (6 of 6 on the
   build box, [`guides/verify.md`](guides/verify.md)); the final programs are the ones a production deployment uses, and
-  the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6,
-  [`guides/verify.md`](guides/verify.md) §2).
+  the ones the live run `crown-live-3` deployed: its vault's image ids equal this tree's rebuilt ones (6 of 6 at
+  `f13faee2`, [`guides/verify.md`](guides/verify.md) §2; since milestone B1 this tree's bridge program is B1's, which
+  no live vault pins, and the deployed one rebuilds from `f13faee2`: [`image-ids.md`](image-ids.md)).
 
 ## 6. Failure classes, what is lost, what bounds it (Security #9)
 

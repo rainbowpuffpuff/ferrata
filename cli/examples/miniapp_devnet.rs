@@ -120,8 +120,9 @@ const RESERVE: u128 = 100_000_000;
 struct HarnessLedger {
     world: hb::World,
     applied: Vec<Applied>,
+    refused: Vec<Applied>,
     /// Public accounts named by settled privacy-preserving transactions (a private claim's nullifier
-    /// account among them), as `Sequencer::applied_with_private` reads them from blocks.
+    /// account among them), as `Sequencer::included` reads them from blocks.
     touched: HashSet<AccountId>,
     keys: HashMap<AccountId, PrivateKey>,
 }
@@ -144,14 +145,14 @@ impl HarnessLedger {
     }
 
     fn record(&mut self, report: &TxReport) {
-        if !report.ok() {
-            return;
-        }
         let tx =
             common::transaction::LeeTransaction::try_from_slice(&self.world.chain.last_tx).expect("a LEZ transaction");
         if let common::transaction::LeeTransaction::Public(tx) = tx {
             let root = &tx.message.execution.root;
-            self.applied.push(Applied { to: root.to, message: root.message.clone() });
+            let call = Applied { to: root.to, message: root.message.clone() };
+            // LEZ keeps a refused transaction in its block, message and all (a refused plaintext claim publishes its
+            // witness): as `Sequencer::included` reads it.
+            if report.ok() { self.applied.push(call) } else { self.refused.push(call) }
         }
     }
 
@@ -191,8 +192,9 @@ impl Ledger for HarnessLedger {
         Ok(self.applied.iter().filter(|a| a.to.program_account_id == program).cloned().collect())
     }
 
-    async fn applied_with_private(&self, program: AccountId) -> Result<(Vec<Applied>, HashSet<AccountId>)> {
-        Ok((self.applied(program).await?, self.touched.clone()))
+    async fn included(&self, program: AccountId) -> Result<lez::Included> {
+        let refused = self.refused.iter().filter(|a| a.to.program_account_id == program).cloned().collect();
+        Ok(lez::Included { applied: self.applied(program).await?, refused, touched: self.touched.clone() })
     }
 
     async fn actor_state(&self, actor: Actor) -> Result<Vec<u8>> {
@@ -391,6 +393,7 @@ impl Devnet {
         let mut zone = HarnessLedger {
             world: hb::World::new(),
             applied: Vec::new(),
+            refused: Vec::new(),
             touched: HashSet::new(),
             keys: HashMap::new(),
         };
@@ -1290,7 +1293,7 @@ impl Devnet {
         if let Some(nf) = params["nullifier"].as_str() {
             let nf = ferrata_cli::h32(nf)?;
             out["nullifier_state"] =
-                json!(self.state_hex(bw::nullifier_actor(program, 1, &self.vault.into_array(), &nf)));
+                json!(self.state_hex(bw::nullifier_actor(program, &self.cid, 1, &self.vault.into_array(), &nf)));
         }
         Ok(out)
     }
@@ -1487,18 +1490,22 @@ impl Devnet {
 }
 
 impl Devnet {
-    /// The zone's applied calls of `program` and the public accounts settled private transactions named:
-    /// what a relayer reads from a sequencer's blocks (`lez::Ledger::applied_with_private`).
+    /// The zone's applied calls of `program`, its refused public calls (a refused transaction stays in its block), and
+    /// the public accounts settled private transactions named: what a relayer reads from a sequencer's blocks
+    /// (`lez::Ledger::included`).
     async fn zone_applied(&self, params: &Value) -> Result<Value> {
         let program = AccountId::new(ferrata_cli::h32(params["program"].as_str().context("program")?)?);
-        let (applied, touched) = self.zone.applied_with_private(program).await?;
-        Ok(json!({
-            "applied": applied
-                .iter()
+        let included = self.zone.included(program).await?;
+        let calls = |list: &[Applied]| {
+            list.iter()
                 .map(|a| json!({ "program": hx(a.to.program_account_id.value()), "account": hx(a.to.account_id.value()),
                                  "message": hx(&a.message) }))
-                .collect::<Vec<_>>(),
-            "touched": touched.iter().map(|t| hx(t.value())).collect::<Vec<_>>(),
+                .collect::<Vec<_>>()
+        };
+        Ok(json!({
+            "applied": calls(&included.applied),
+            "refused": calls(&included.refused),
+            "touched": included.touched.iter().map(|t| hx(t.value())).collect::<Vec<_>>(),
             "block": self.zone.world.chain.block_id,
         }))
     }

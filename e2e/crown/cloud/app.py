@@ -499,8 +499,9 @@ def lez_session(run: str, step: str, chain: str, bundle_sha256: str, script: byt
 UPDATER_ENV = ("CROWN_UPDATER_MIN", "CROWN_UPDATER_RESTART_MIN", "CROWN_UPDATER_PROBE_S", "CROWN_UPDATER_POLL_S",
                "CROWN_SAMPLE", "CROWN_MAX_STARTS")
 # The final programs (docs/image-ids.md): session A's deployment must have computed these, or session U does not run.
+# The bridge program since B1 (config-keyed accounts); the live runs of November 2026 deployed 0xccde6171…71dd.
 FINAL_IMAGE_IDS = {"attestation": "0x816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
-                   "bridge": "0xccde6171026cedff8e94fc20491b0d6e4fc825f127ce71f77016e2d96d3871dd"}
+                   "bridge": "0xac1fb59b0188a355523580f160cf929965740928b18b3394344cd5229483442e"}
 control = modal.Dict.from_name("ferrata-crown-control", create_if_missing=True)
 
 

@@ -22,12 +22,12 @@ settlement by the harness (`harness/src/bridge.rs`, `harness/tests/bridge_*.rs`)
 | retirement | SPEC-v2 §4.5, §B5, D13 | `Sunset` by the freeze authority, or by anyone once the vault is attested retired (`AttestRetired`, D13's keyless retirement) or a multisig authority approved it; one-way: no `ImportRoot` after it; claims, burns and transfers go on; the checkpoint collects it (§5) |
 | handover | D13 | the admin's `ProposeRoles` (a freeze authority, up to three watchers), applied by anyone after 14 days of attested time (`ApplyRoles`), withdrawn by the admin (`CancelRoles`); the live roles sit in `config(cid)` (§5) |
 | multisig, watchers | D13, F.14 | an M-of-N freeze authority acts by `Cosigned` (one transaction all M sign); watchers `Pause` mints or burns for 12 hours, never shorter than a freeze, never lifting one (§5) |
-| transfers | (M0 fallback, §3) | `Transfer` moves a claimed balance to another holder's `holder(account)` through the token (multiples of its LEZ unit); from a private holder only the delivery to the token is public (§5) |
+| transfers | (M0 fallback, §3) | `Transfer` moves a claimed balance to another holder's `holder(cid, account)` through the token (multiples of its LEZ unit); from a private holder only the delivery to the token is public (§5) |
 | claim, plaintext | §3.3, B1 | `Claim` at `root(cid, n)`: the deposit leaf's path, the opening of `C`, `N`; then `Issue` at `token(cid, token)`, `Spend` at the nullifier, the mints |
 | claim, private | B1, B6 | `ClaimPrivately` at the destination's own private account: reads `root(cid, n)`, verifies inside its own execution, sends only `Issue` (the fee schedule's range, not the leaf index) |
-| nullifier | §1, B1 | write-once `nullifier(chain, vault, N)`, one namespace for the whole program |
-| wrapped balances | (M0 fallback, §3 below) | public: `holder(account)`, a PDA of the program whose seed names the account; private: the claimant's own private state; per configuration and token |
-| burn | §5.1, D13 outbound, D10 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's own actor, top-level or private root only, which debits its own state or forwards to `holder(account)`; admitted by `token(cid, token)`; a write-once `burn(cid, H(note))` |
+| nullifier | §1, B1 | write-once `nullifier(cid, chain, vault, N)` since milestone B1, one namespace per configuration (the program the live runs of November 2026 deployed: `nullifier(chain, vault, N)`, one for the whole program) |
+| wrapped balances | (M0 fallback, §3 below) | public: `holder(cid, account)` (since B1; `holder(account)` before), a PDA of the program whose seed names the configuration and the account; private: the claimant's own private state; per configuration and token |
+| burn | §5.1, D13 outbound, D10 | `Burn` (the checkpoint's variant 0, byte for byte) at the holder's own actor, top-level or private root only, which debits its own state or forwards to `holder(cid, account)`; admitted by `token(cid, token)`; a write-once `burn(cid, H(note))` |
 
 Left out: the gas drop (B2), a transfer that credits a private recipient privately, the admin's own
 handover (the admin is fixed per configuration), off-chain software (importer, wallet, prover daemons)
@@ -59,8 +59,8 @@ header account is `bridgeHeader`). PDAs are public PDAs of `B`; seeds are
 | `config(cid)` | PDA `config ‖ cid` | `Config { config }`; mutable: the global gate (freezes, mint and burn buckets, the attested clock, §6), `sunset` (one-way), the live roles (`Roles`: freeze authority, watchers, a pending proposal, the vault attested retired, a multisig's `Sunset` approval); transiently a pending attestation or record read inside one transaction | `Init`; attestation and record replies; `Admit`; `Freeze`, `SetCap`, `Tick`, `Sunset`, `Pause`, `ProposeRoles`, `ApplyRoles`, `CancelRoles`, `Cosigned`, `AttestRetired` |
 | `token(cid, token)` | PDA `token ‖ cid ‖ token` | `Token { entry, schedules, known_until, roles, attestation program and instance, gate }`; mutable: schedules (appended), `known_until` (grows), the gate; transiently a pending record read | `WriteToken` and `ExtendFees` from `config(cid)` only; `Issue`, `Burn`, `Freeze`, `SetCap`, `Tick`; record replies |
 | `root(cid, n)` | PDA `root ‖ cid ‖ n` | `Root { cid, chain, vault, n, root, record_slot, block_number }` | `WriteRoot` from `config(cid)` only |
-| `nullifier(chain, vault, N)` | PDA `nullifier ‖ chain:u256 ‖ vault ‖ N` (no `cid`) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
-| `holder(account)` | PDA `holder ‖ account` | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances | `Mint` from the nullifier actor (naming `account`); `Credit` from `token(cid, token)`; `Burn` and `Transfer` forwarded by the account's own actor |
+| `nullifier(cid, chain, vault, N)` | PDA `nullifier ‖ cid ‖ chain:u256 ‖ vault ‖ N` (since B1; without `cid` before) | `Spent { cid, token, n, amount }` | `Spend` from `token(cid, token)` only |
+| `holder(cid, account)` | PDA `holder ‖ cid ‖ account` (since B1; `holder ‖ account` before, one list for every configuration) | `Holder { holdings: [(cid, token, amount)] }` (mutable): public balances, of `cid`'s tokens only | `Mint` from `nullifier(cid, …)` (naming `account`); `Credit` from `token(cid, token)`; `Burn` and `Transfer` forwarded by the account's own actor |
 | the account's own actor | the account itself, program `B` | `Holder` of its own private claims (a private account's private state; a public account has one only if it ran its own `ClaimPrivately` publicly) | its own `ClaimPrivately`; its `Burn`; role messages (forwarded, nothing stored) |
 | `burn(cid, H(note))` | PDA `burn ‖ cid ‖ H(r ‖ memo ‖ mac ‖ token ‖ amount ‖ COut)` | `Burn { cid, note }` | `Burn` from `token(cid, token)` only |
 
@@ -76,7 +76,7 @@ bytes on chain.
 
 | # | message | to | from | does |
 |---|---|---|---|---|
-| 0 | `Burn { cid, r, memo, mac, token, amount, COut }` | the holder's own actor; then (if its own state lacks the amount) `holder(account)`; then `token(cid, token)`; then `burn(cid, H(note))` | top-level (public) or the private root; then `B` | debits one denomination of an authorised holder; the token admits it (denomination, burn freezes and buckets, `Admit`); the note is recorded once |
+| 0 | `Burn { cid, r, memo, mac, token, amount, COut }` | the holder's own actor; then (if its own state lacks the amount) `holder(cid, account)`; then `token(cid, token)`; then `burn(cid, H(note))` | top-level (public) or the private root; then `B` | debits one denomination of an authorised holder; the token admits it (denomination, burn freezes and buckets, `Admit`); the note is recorded once |
 | 1 | `ImportRoot { cid, record_slot, root, leaf_count, proof }` | `config(cid)` | anyone, top-level or private root only (D10) | `Attest` (vault account, slots 0 and 1) at `header(instance, record_slot)`; on the reply, `WriteRoot`. Refused after `Sunset` |
 | 2 | `Sunset { cid }` | the freeze authority's own actor, then `config(cid)`; or `config(cid)` itself | top-level, signed by a single-key authority; or anyone, once `AttestRetired` or a multisig's approval opened it | one-way: no `ImportRoot` after it |
 | 3 | `Echo { nonce }` | any | anyone | no-op (rule (A)'s echo nonce) |
@@ -85,8 +85,8 @@ bytes on chain.
 | 6 | `ClaimPrivately { cid, n, witness, range, relayer }` | the claimant's (private) holder actor | its owner | `Read` of `root(cid, n)`; on the reply verify, then `Issue` (and credit itself) |
 | 7 | `Read` | any | an actor | replies `StateReply` (LEZ v0.4's read idiom) |
 | 8 | `WriteRoot { root }` | `root(cid, n)` | `config(cid)` only | writes the root once |
-| 9 | `Spend { N, cid, chain, vault, token, n, amount, mint_to, fees }` | `nullifier(chain, vault, N)` | `token(cid, token)` only | spends `N` once; mints the denomination to a public `mint_to` and each fee to its account |
-| 10 | `Mint { N, cid, chain, vault, token, holder, amount }` | `holder(holder)` only | `nullifier(chain, vault, N)` only (seeded) | credits the amount |
+| 9 | `Spend { N, cid, chain, vault, token, n, amount, mint_to, fees }` | `nullifier(cid, chain, vault, N)` | `token(cid, token)` only | spends `N` once; mints the denomination to a public `mint_to` and each fee to its account |
+| 10 | `Mint { N, cid, chain, vault, token, holder, amount }` | `holder(cid, holder)` only | `nullifier(cid, chain, vault, N)` only (seeded) | credits the amount |
 | 11 | `Register { cid, entry, schedule, record_slot, proof }` | `config(cid)` | anyone | bounds; `Attest` (the entry's slot, fee slots 0 and 1, slot 1); on the reply, `WriteToken` |
 | 12 | `ImportFees { cid, token, index, schedule?, record_slot, proof }` | `config(cid)` | anyone | `Attest` (fee slot `index`, slot 1); on the reply, `ExtendFees` |
 | 13 | `WriteToken { state }` | `token(cid, token)` | `config(cid)` only | writes the token once |
@@ -102,8 +102,11 @@ bytes on chain.
 | 23 | `CancelRoles { cid }` | the admin's actor; then `config(cid)` | top-level, signed by it | withdraws the proposal |
 | 24 | `Pause { cid, token?, mints, burns, record }` | a watcher's actor; then `config(cid)`; then the token, if one | top-level, signed by it | reads `record`; freezes until 12 h after the clock, never shortening a longer freeze |
 | 25 | `Cosigned { cid, signers, action }` | each signer's own actor in turn; then `config(cid)` (then the token of a token freeze) | top-level at the first signer's actor; every signer signs the transaction | `action`: `Freeze` (as 17) or `Sunset` (an approval: anyone then sends 2 at `config(cid)`); at least the threshold of distinct members |
-| 26 | `Transfer { cid, token, amount, to }` | the holder's own actor; then (if its own state lacks the amount) `holder(account)`; then `token(cid, token)` | a call the holder authorised (top-level, private root, or nested) | debits the amount; the token checks a multiple of its LEZ unit; then `Credit` |
-| 27 | `Credit { cid, token, amount, to }` | `holder(to)` only | `token(cid, token)` only | credits the amount |
+| 26 | `Transfer { cid, token, amount, to }` | the holder's own actor; then (if its own state lacks the amount) `holder(cid, account)`; then `token(cid, token)` | a call the holder authorised (top-level, private root, or nested) | debits the amount; the token checks a multiple of its LEZ unit; then `Credit` |
+| 27 | `Credit { cid, token, amount, to }` | `holder(cid, to)` only | `token(cid, token)` only | credits the amount |
+| 28 | `SetDepth { cid, slots }` (B1, RFP-022 F.12) | the admin's actor; then `config(cid)` | top-level, signed by it | the inbound finality depth in beacon slots beyond finality, at most 216,000 (240 above); from then on `ImportRoot` under the record at slot `s` waits (242) until the configuration's clock has read a record at `s + slots` or later; roots already imported stay |
+| 29 | `AttestListing { cid, token, record_slot, proof }` (B1, F.10) | `config(cid)` | anyone | `Attest` of the vault's listing slot `sha256("ferrata/vault/listing/v1" ‖ token)` (1 delisted, 0 listed; another value 247); on the reply, `SetListing` |
+| 30 | `SetListing { cid, token, delisted, record_slot }` (B1) | `token(cid, token)` | `config(cid)` only | records the listing and its record slot, only from a newer record (247 otherwise); claims, burns and transfers are unaffected |
 
 Every handler checks that its receiver is the actor the message names. Replies are accepted only
 from the actor the receiver is waiting for (the consumer's rule, `guests/consumer`).
@@ -138,7 +141,7 @@ privacy-preserving one and its private→public boundary deliveries. So the hold
 call from any program and an asynchronous message carry a sender and are refused (`NotAuthorized`).
 An import the checkpoint could not see would leave its imported count, and with it the refund
 boundary after `Sunset`, below a root that claims were made against (security review H-1). A public
-holder's `Burn` is forwarded by its own actor to `holder(account)` as a nested call; the root call
+holder's `Burn` is forwarded by its own actor to `holder(cid, account)` as a nested call; the root call
 is the one the checkpoint collects, and the forward is accepted only from that own actor.
 The note itself is admitted by `token(cid, token)` from an actor of `B` only and recorded by
 `burn(cid, H(note))` from that token actor only; in the private case the delivery to the token
@@ -150,7 +153,7 @@ top-level call (or private root), so the checkpoint sees every `Sunset` that exe
 
 LEZ v0.4.0-rc1 has no released token program (`../docs/design/lez-v0.4-findings.md` §8: the
 v0.4 port is an unmerged branch, fungible-only, pinned to another LEZ revision). So the bridge
-keeps wrapped balances itself: a public holder's balance is the state of `holder(account)`, a PDA
+keeps wrapped balances itself: a public holder's balance is the state of `holder(cid, account)`, a PDA
 of the bridge program whose seed names the account, and a private claimant's balance is the bridge
 program's own actor state in its private account (one actor state per program per account is LEZ
 v0.4's account model), per configuration and token, in token base units: a user's balance is always a sum of whole
@@ -162,7 +165,7 @@ private state, updated only by the bridge program inside a proof. Until 11 Novem
 balance was the actor state at the holder's account itself: a mint naming an address the program
 uses for another actor (a `config`, `token`, `root`, `nullifier` or `burn` PDA not written yet) would
 have written a holder state there and blocked that actor for good (security review C-1); a mint
-now writes only at `holder(account)`, which no other actor's seed can produce.
+now writes only at `holder(cid, account)`, which no other actor's seed can produce.
 
 **How it would switch.** When a v0.4 token program is released and deployed immutable (B5), each
 registry entry's `lezDefinition` names the wrapped token's definition account (zero here), with the
@@ -277,7 +280,7 @@ freezes mints and/or burns until 12 hours after it; it never shortens a longer f
 freeze authority unfreezes.
 
 **Transfers.** A holder moves part of its claimed balance to another holder: `Transfer` at its own
-actor (authorised), debited from its own state (a private holder) or its `holder(account)`, checked by
+actor (authorised), debited from its own state (a private holder) or its `holder(cid, account)`, checked by
 `token(cid, token)` (a multiple of the LEZ unit, so the token-program switch stays exact), credited at
 `holder(to)` by `Credit`, which that PDA accepts only from the token actor. Transfers are not gated by
 freezes or caps (nothing crosses the bridge) and continue after `Sunset`. `Transfer` is accepted from a

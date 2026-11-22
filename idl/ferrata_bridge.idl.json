@@ -10,7 +10,7 @@
   "docs": [
     "The bridge program of Ferrata on LEZ v0.4 (RFP-022). Hand-written IDL in SPEL's format (see ferrata_attestation.idl.json for why).",
     "Each instruction is a variant of the borsh enum named by instruction_type; discriminator is its one-byte variant index, followed by args in order.",
-    "PDA seeds: SHA-256(\"ferrata-lez/v1/bridge/\" || tag || parts), u64 parts little-endian, the EVM chain id as a 32-byte big-endian word; the account is AccountId::for_public_pda(program, seed). holder(account) hashes the account's 32 bytes.",
+    "PDA seeds: SHA-256(\"ferrata-lez/v1/bridge/\" || tag || parts), u64 parts little-endian, the EVM chain id as a 32-byte big-endian word; the account is AccountId::for_public_pda(program, seed). holder(cid, account) hashes the configuration id, then the account's 32 bytes; nullifier(cid, chain, vault, N) the configuration id first (milestone B1: every account a configuration writes is keyed by it).",
     "Refusals exit with one byte, 240-255 (below). The attestation program's codes (ferrata_attestation.idl.json) can surface through an attested import."
   ],
   "instructions": [
@@ -49,12 +49,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "the root instead of the own actor when the denomination is debited from holder(account)"
+            "the root instead of the own actor when the denomination is debited from holder(cid, account)"
           ]
         },
         {
@@ -625,6 +629,10 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "evm_chain_id (u256 big-endian)"
               },
               {
@@ -657,12 +665,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
+            "holder(cid, account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
           ]
         }
       ],
@@ -821,6 +833,10 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "evm_chain_id (u256 big-endian)"
               },
               {
@@ -853,12 +869,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "holder(account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
+            "holder(cid, account) of each account credited (the destination, the fee recipient, the relayer), each listed once"
           ]
         }
       ],
@@ -1013,6 +1033,10 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "evm_chain_id (u256 big-endian)"
               },
               {
@@ -1104,7 +1128,7 @@
         "private_owned": false
       },
       "docs": [
-        "Internal: token(cid, token) -> nullifier(chain, vault, N): spend N once; mint to mint_to and each fee to its account."
+        "Internal: token(cid, token) -> nullifier(cid, chain, vault, N): spend N once; mint to mint_to and each fee to its account."
       ],
       "internal": true
     },
@@ -1131,12 +1155,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "from nullifier(chain, vault, N) only"
+            "from nullifier(cid, chain, vault, N) only"
           ]
         }
       ],
@@ -1664,6 +1692,10 @@
               {
                 "kind": "const",
                 "value": "nullifier"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
               },
               {
                 "kind": "arg",
@@ -2839,12 +2871,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "the holder's holder(account), debited when it is not a private holder"
+            "the holder's holder(cid, account), debited when it is not a private holder"
           ]
         },
         {
@@ -2872,7 +2908,7 @@
             ]
           },
           "docs": [
-            "requires a multiple of the LEZ unit and credits holder(to)"
+            "requires a multiple of the LEZ unit and credits holder(cid, to)"
           ]
         },
         {
@@ -2891,12 +2927,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "holder(to), credited"
+            "holder(cid, to), credited"
           ]
         }
       ],
@@ -2964,12 +3004,16 @@
               },
               {
                 "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
                 "path": "holder"
               }
             ]
           },
           "docs": [
-            "holder(to): from token(cid, token) only"
+            "holder(cid, to): from token(cid, token) only"
           ]
         }
       ],
@@ -3011,7 +3055,268 @@
         "private_owned": false
       },
       "docs": [
-        "Internal: token(cid, token) -> holder(to), the transferred amount."
+        "Internal: token(cid, token) -> holder(cid, to), the transferred amount."
+      ],
+      "internal": true
+    },
+    {
+      "name": "set_depth",
+      "variant": "SetDepth",
+      "discriminator": [
+        28
+      ],
+      "accounts": [
+        {
+          "name": "own",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the admin's own account (the program's actor at it); signed"
+          ]
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "slots",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "The admin sets the inbound finality depth beyond Ethereum finality, in beacon slots (at most 216,000): ImportRoot under a record at slot s waits (242 FROZEN) until the configuration's clock has read a record at s + depth or later. Applies to imports from then on; imported roots stay valid."
+      ]
+    },
+    {
+      "name": "attest_listing",
+      "variant": "AttestListing",
+      "discriminator": [
+        29
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "config"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "attestation_record",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "header"
+              },
+              {
+                "kind": "arg",
+                "path": "instance_id"
+              },
+              {
+                "kind": "arg",
+                "path": "record_slot"
+              }
+            ]
+          },
+          "docs": [
+            "the record the vault's listing slot of token (sha256(\"ferrata/vault/listing/v1\" || token): 1 delisted, 0 listed) is proven under; the attestation program's account (its PDA domain is ferrata-lez/v1/, see ferrata_attestation.idl.json)"
+          ],
+          "owner": "ferrata_attestation"
+        },
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "SetListing"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        },
+        {
+          "name": "proof",
+          "type": {
+            "defined": "VaultProof"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Anyone: attest the vault's listing of a token (F.10); token(cid, token) then holds whether deposits of it are delisted. Claims, burns and transfers go on."
+      ]
+    },
+    {
+      "name": "set_listing",
+      "variant": "SetListing",
+      "discriminator": [
+        30
+      ],
+      "accounts": [
+        {
+          "name": "token_actor",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "token"
+              },
+              {
+                "kind": "arg",
+                "path": "config_id"
+              },
+              {
+                "kind": "arg",
+                "path": "token"
+              }
+            ]
+          },
+          "docs": [
+            "from config(cid) only"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "config_id",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "token",
+          "type": {
+            "array": [
+              "u8",
+              20
+            ]
+          }
+        },
+        {
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "name": "record_slot",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: the attested listing, kept only if its record is newer than the token's last."
       ],
       "internal": true
     }
@@ -3091,7 +3396,7 @@
           }
         ],
         "docs": [
-          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(chain, vault, N), holder(account), burn(cid, H(note)), token(cid, token)."
+          "The state of every actor of the bridge program: config(cid), root(cid, n), nullifier(cid, chain, vault, N), holder(cid, account), burn(cid, H(note)), token(cid, token)."
         ]
       }
     }
@@ -3468,10 +3773,18 @@
         {
           "name": "sunset_approved",
           "type": "bool"
+        },
+        {
+          "name": "inbound_depth_slots",
+          "type": "u64"
+        },
+        {
+          "name": "tip_slot",
+          "type": "u64"
         }
       ],
       "docs": [
-        "The live roles in config(cid): the freeze authority, up to three watchers, a pending proposal; vault_retired once AttestRetired read the vault's retired flag; sunset_approved by a multisig's Cosigned Sunset."
+        "The live roles in config(cid): the freeze authority, up to three watchers, a pending proposal; vault_retired once AttestRetired read the vault's retired flag; sunset_approved by a multisig's Cosigned Sunset; inbound_depth_slots, the admin's inbound finality depth beyond Ethereum finality (SetDepth, at most 216,000), measured against tip_slot, the newest record slot the configuration's clock read."
       ]
     },
     {
@@ -4830,6 +5143,88 @@
               }
             }
           ]
+        },
+        {
+          "name": "SetDepth",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "slots",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "AttestListing",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            },
+            {
+              "name": "proof",
+              "type": {
+                "defined": "VaultProof"
+              }
+            }
+          ]
+        },
+        {
+          "name": "SetListing",
+          "fields": [
+            {
+              "name": "config_id",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
+            {
+              "name": "delisted",
+              "type": "bool"
+            },
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ]
         }
       ],
       "docs": [
@@ -4972,6 +5367,24 @@
         {
           "name": "Retired",
           "fields": [
+            {
+              "name": "record_slot",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Listing",
+          "fields": [
+            {
+              "name": "token",
+              "type": {
+                "array": [
+                  "u8",
+                  20
+                ]
+              }
+            },
             {
               "name": "record_slot",
               "type": "u64"
@@ -5131,6 +5544,14 @@
               "defined": "PendingTime"
             }
           }
+        },
+        {
+          "name": "delisted",
+          "type": "bool"
+        },
+        {
+          "name": "listing_slot",
+          "type": "u64"
         }
       ]
     },
@@ -5284,7 +5705,7 @@
     {
       "code": 240,
       "name": "BAD_MESSAGE",
-      "msg": "A message that does not decode or that this actor does not take, or values outside the specified bounds: more than eight denominations, unsorted or zero, not multiples of a power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0, a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the floor; a freeze authority with a threshold outside 1 to its members, more than eight members, a repeated member or the admin, more than three watchers; a transfer of zero or of an amount that is not a multiple of the token's LEZ unit."
+      "msg": "A message that does not decode or that this actor does not take, or values outside the specified bounds: more than eight denominations, unsorted or zero, not multiples of a power-of-ten LEZ unit, a fee above 1% of its denomination, a protocol fee in schedule 0, a fee change with less than seven days' notice, a freeze beyond 30 days, a cap below the floor; a freeze authority with a threshold outside 1 to its members, more than eight members, a repeated member or the admin (at `Init` too), more than three watchers; a transfer of zero or of an amount that is not a multiple of the token's LEZ unit; an inbound depth above 216,000 slots."
     },
     {
       "code": 241,
@@ -5294,7 +5715,7 @@
     {
       "code": 242,
       "name": "FROZEN",
-      "msg": "Mints or burns frozen (of the token, or of the whole configuration), or an import after `Sunset`, or a role proposal applied before its 14 days of attested time."
+      "msg": "Mints or burns frozen (of the token, or of the whole configuration), or an import after `Sunset`, or a role proposal applied before its 14 days of attested time, or an import under a record less than the configuration's inbound depth behind its clock's."
     },
     {
       "code": 243,
@@ -5319,7 +5740,7 @@
     {
       "code": 247,
       "name": "IMPORT_MISMATCH",
-      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set."
+      "msg": "The attested facts are not the vault's slots holding what the message says (the root and count, the registry entry, a fee schedule, a schedule out of order), or are of another instance, chain or record; a vault whose `retired` flag is not set; a listing word other than 0 or 1, or a listing record no newer than the one the token holds."
     },
     {
       "code": 248,
@@ -5349,7 +5770,7 @@
     {
       "code": 253,
       "name": "NOT_AUTHORIZED",
-      "msg": "A burn not authorised by its holder, or not a top-level call or private root (D10); an `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a control message (`Sunset`, `Freeze`, `SetCap`, `ProposeRoles`, `CancelRoles`, `Pause`) not from the configured role, or not a top-level call at its own actor; a `Cosigned` message whose signers did not each sign, are not distinct members or are fewer than the threshold; a `Sunset` at `config(cid)` itself before the vault is attested retired or the multisig approved it; a `Transfer` its holder did not authorise."
+      "msg": "A burn not authorised by its holder, or not a top-level call or private root (D10); an `ImportRoot` that is not a top-level call or private root (D10, security review H-1); a control message (`Sunset`, `Freeze`, `SetCap`, `SetDepth`, `ProposeRoles`, `CancelRoles`, `Pause`) not from the configured role, or not a top-level call at its own actor; a `Cosigned` message whose signers did not each sign, are not distinct members or are fewer than the threshold; a `Sunset` at `config(cid)` itself before the vault is attested retired or the multisig approved it; a `Transfer` its holder did not authorise."
     },
     {
       "code": 254,
