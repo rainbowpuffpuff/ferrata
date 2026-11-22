@@ -92,7 +92,7 @@ pub fn fetch(url: &str, accept: &str, args: &[&str], timeout_secs: u64, max: usi
     let over = body.len() > max;
     if over {
         let _ = child.kill();
-        body.truncate(0);
+        body.clear();
     }
     let status = child.wait().context("curl")?;
     let message = clip(&String::from_utf8_lossy(&messages.join().unwrap_or_default()));
