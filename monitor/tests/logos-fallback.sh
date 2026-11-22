@@ -106,9 +106,10 @@ margs=(run --rpc "$rpc" --vault "$vault" --node "file:$view" --state "$state" --
 } > "$summary"
 
 hits() { [ -f "$ctl.hit" ] && wc -l < "$ctl.hit" || echo 0; }
-requests() { jq -s -c '[.[] | select(.method == "send" and .requestId != null)]' "$tslog" 2>/dev/null || echo '[]'; }
+# (jq -s on a missing file prints [] and fails: test for the file first.)
+requests() { if [ -f "$tslog" ]; then jq -s -c '[.[] | select(.method == "send" and .requestId != null)]' "$tslog"; else echo '[]'; fi; }
 cancelled() { { jq -c --arg s "$1" 'select(.kind == "cancelled" and .newState == $s)' "$alerts" 2>/dev/null || true; } | tail -n 1; }
-failed_alerts() { jq -s --arg s "$1" '[.[] | select(.kind == "cancel-failed" and .newState == $s)] | length' "$alerts" 2>/dev/null || echo 0; }
+failed_alerts() { if [ -f "$alerts" ]; then jq -s --arg s "$1" '[.[] | select(.kind == "cancel-failed" and .newState == $s)] | length' "$alerts"; else echo 0; fi; }
 nonce0=$(cast nonce --rpc-url "$rpc" "$watcher")
 rows=()
 
@@ -159,6 +160,8 @@ pending=$(cast nonce --rpc-url "$rpc" "$watcher" --block pending)
 check "the watcher's account: $((nonce0 + 4)) transactions mined, nothing pending behind a gap (latest $latest, pending $pending)" \
   '[ "$latest" = $((nonce0 + 4)) ] && [ "$pending" = "$latest" ]'
 
+# The node view's path in the alerts, without the checkout's location (as anvil-e2e.sh).
+sed -i -e 's#"file:[^"]*/monitor/results/#"file:<checkout>/monitor/results/#g' "$alerts"
 {
   echo
   echo "| Case | Fault armed | Requests to the module | Request's nonce | The cancel went | Its nonce (mined) | cancel-failed alerts |"

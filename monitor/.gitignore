@@ -2,3 +2,4 @@ target/
 results/anvil-e2e/run/
 results/**/*.lock
 results/fork-live-vault/run/
+results/logos-fallback/run/
