@@ -137,7 +137,10 @@ fn other_fixture(dir: &Path) -> Result<(Root, LightClientBootstrap, LightClientU
 }
 
 /// The commitment root the sequencer holds now, and which of `commitments` are in its tree.
-async fn tree<C: WalletSequencerClient>(client: &C, commitments: Vec<lee_core::Commitment>) -> Result<(String, Vec<bool>)>
+async fn tree<C: WalletSequencerClient>(
+    client: &C,
+    commitments: Vec<lee_core::Commitment>,
+) -> Result<(String, Vec<bool>)>
 where
     C::Error: std::fmt::Display,
 {
@@ -181,12 +184,26 @@ pub async fn attest_block(
 
     // 1. The consumer, instance S with its record, instance E.
     let consumer_at = deploy(live, "consumer", consumer, payer).await?;
-    let mut s = World::with_checkpoint("S (attest fixture)", attest, mainnet_config(2), fx.checkpoint, &fx.bootstrap, LcFork::Electra)?;
+    let mut s = World::with_checkpoint(
+        "S (attest fixture)",
+        attest,
+        mainnet_config(2),
+        fx.checkpoint,
+        &fx.bootstrap,
+        LcFork::Electra,
+    )?;
     init(live, &mut s, &fx.bootstrap, "instance S Init", Harness::None, payer).await?;
     let run = apply(live, &mut s, &fx.update, "instance S finality update", Harness::None, payer).await?;
     ensure!(run.outcome.is_some_and(|o| o.advanced), "instance S's finality update finalizes the block's header");
     check_record(live, &s, fx.finalized_slot).await?;
-    let mut e = World::with_checkpoint("E (end-to-end fixture)", attest, mainnet_config(2), e_checkpoint, &e_bootstrap, LcFork::Electra)?;
+    let mut e = World::with_checkpoint(
+        "E (end-to-end fixture)",
+        attest,
+        mainnet_config(2),
+        e_checkpoint,
+        &e_bootstrap,
+        LcFork::Electra,
+    )?;
     init(live, &mut e, &e_bootstrap, "instance E Init", Harness::None, payer).await?;
     let record = s.inst.header(fx.finalized_slot);
     println!(
@@ -202,7 +219,11 @@ pub async fn attest_block(
     // 2. Four new private accounts, funded.
     let dir = live.opts.run_dir.join("private-block");
     fs::create_dir_all(&dir)?;
-    let client = TapClient::recording(live.wallet.client_owned(), &dir.join("rpc-transcript.jsonl"), &dir.join("funding.borsh"))?;
+    let client = TapClient::recording(
+        live.wallet.client_owned(),
+        &dir.join("rpc-transcript.jsonl"),
+        &dir.join("funding.borsh"),
+    )?;
     let mut wallet: WalletCore<TapClient> = empty_wallet(&dir.join("wallet"), &live.opts.rpc, client.clone())?;
     wallet.storage_mut().key_chain_mut().add_imported_public_account(funder_key.clone());
     wallet.start_at_chain_tip().await?;
@@ -210,7 +231,12 @@ pub async fn attest_block(
     for (i, account) in accounts.iter().enumerate() {
         let since_head = live.head().await?;
         let (hash, _) = NativeTokenTransfer(&wallet)
-            .transfer(AccountIdentity::Public(funder), AccountIdentity::PrivateOwned(*account), FUNDING, CreditDelivery::Automatic)
+            .transfer(
+                AccountIdentity::Public(funder),
+                AccountIdentity::PrivateOwned(*account),
+                FUNDING,
+                CreditDelivery::Automatic,
+            )
             .await
             .map_err(|e| anyhow!("funding reader {i}: {e}: {e:?}"))?;
         let outcome = live
@@ -243,7 +269,13 @@ pub async fn attest_block(
         ]))
     };
     let message = |t: &Transfer| -> Result<Vec<u8>> {
-        let pool = Pool { ferrata: attest, instance_id: s.inst.id, chain_id: fx.chain_id, token: t.token, recipient: t.recipient };
+        let pool = Pool {
+            ferrata: attest,
+            instance_id: s.inst.id,
+            chain_id: fx.chain_id,
+            token: t.token,
+            recipient: t.recipient,
+        };
         Ok(borsh::to_vec(&ConsumerMessage::AttestPrivately {
             pool,
             slot: fx.finalized_slot,
@@ -263,7 +295,8 @@ pub async fn attest_block(
     for (i, (account, t)) in accounts.iter().zip(&reads).enumerate() {
         let path = dir.join(format!("reader-{i}.borsh"));
         client.set_tx_out(&path);
-        let mentions = vec![AccountIdentity::PrivateOwned(*account).select_program_actor_state(consumer_at), mention(record)];
+        let mentions =
+            vec![AccountIdentity::PrivateOwned(*account).select_program_actor_state(consumer_at), mention(record)];
         let (hash, _) = wallet
             .send_privacy_preserving_tx_with_pre_check(mentions, 0, message(t)?, &catalog()?, None, |_| Ok(()))
             .await
@@ -296,7 +329,10 @@ pub async fn attest_block(
     let (root_after_proving, _) = tree(live.wallet.client(), Vec::new()).await?;
     ensure!(root_after_proving == snapshot_root, "the commitment tree moved while the transactions were proven");
     for (i, (_, inner, _)) in held.iter().chain(&control).enumerate() {
-        ensure!(root_of(inner)? == snapshot_root, "transaction {i} is not proven against the snapshot's commitment root");
+        ensure!(
+            root_of(inner)? == snapshot_root,
+            "transaction {i} is not proven against the snapshot's commitment root"
+        );
     }
     println!(
         "[block] {} transactions proven in {proven_in:.1} s against the snapshot (blocks {snapshot_head}..={proven_head}, commitment root {snapshot_root}), none sent",
@@ -318,7 +354,15 @@ pub async fn attest_block(
         )
         .await?;
     ensure!(first.applied(), "the control's first transaction: {} {}", first.row.status, first.row.note);
-    let run = apply(live, &mut e, &e_update, "instance E finality update, between proving and inclusion", Harness::None, payer).await?;
+    let run = apply(
+        live,
+        &mut e,
+        &e_update,
+        "instance E finality update, between proving and inclusion",
+        Harness::None,
+        payer,
+    )
+    .await?;
     ensure!(run.outcome.is_some_and(|o| o.advanced), "instance E's finality update finalizes its header");
     check_record(live, &e, e_update.finalized_header.beacon.slot).await?;
     let (root_before_block, _) = tree(live.wallet.client(), Vec::new()).await?;
@@ -344,7 +388,12 @@ pub async fn attest_block(
     let send_started = Instant::now();
     let mut sent = Vec::new();
     for (i, (tx, _, _)) in held.iter().enumerate() {
-        let returned = live.wallet.client().send_transaction(tx.clone()).await.map_err(|e| anyhow!("reader {i}: the sequencer's RPC refused it: {e}"))?;
+        let returned = live
+            .wallet
+            .client()
+            .send_transaction(tx.clone())
+            .await
+            .map_err(|e| anyhow!("reader {i}: the sequencer's RPC refused it: {e}"))?;
         ensure!(returned == tx.hash(), "reader {i}: the sequencer returned another hash");
         sent.push((returned, Instant::now()));
     }
@@ -355,7 +404,10 @@ pub async fn attest_block(
         let t = &reads[i];
         let outcome = live
             .settle(Sent {
-                step: format!("reader {i}: AttestPrivately of tx {} log {}, proven against the snapshot", t.tx_index, t.log_index),
+                step: format!(
+                    "reader {i}: AttestPrivately of tx {} log {}, proven against the snapshot",
+                    t.tx_index, t.log_index
+                ),
                 hash,
                 sent_at: at,
                 since_head,
@@ -376,8 +428,10 @@ pub async fn attest_block(
     ensure!(blocks.len() == 1, "the {READERS} transactions landed in blocks {blocks:?}, not in one");
     let block = blocks.into_iter().next().unwrap();
     ensure!(live.actor_state(record.actor()).await? == record_before, "the record changed: a read wrote");
-    let made: Vec<lee_core::Commitment> =
-        held.iter().flat_map(|(_, inner, _)| inner.message.execution.private_actions.iter().map(|a| a.commitment.clone())).collect();
+    let made: Vec<lee_core::Commitment> = held
+        .iter()
+        .flat_map(|(_, inner, _)| inner.message.execution.private_actions.iter().map(|a| a.commitment.clone()))
+        .collect();
     let (root_after_block, present) = tree(live.wallet.client(), made).await?;
     ensure!(present.iter().all(|p| *p), "a commitment computed before inclusion is not in the tree after the block");
     println!("[block] the {READERS} private reads applied, all in block {block}; {} commitments computed before inclusion are in the tree", present.len());
@@ -396,7 +450,8 @@ pub async fn attest_block(
         .await?;
     ensure!(!second.applied(), "the second transaction of one account from one snapshot was applied");
     println!("[block] control: {} ({})", second.row.status, second.row.note);
-    summary["control_second"] = json!({ "hash": second.row.tx_hash, "status": second.row.status, "note": second.row.note });
+    summary["control_second"] =
+        json!({ "hash": second.row.tx_hash, "status": second.row.status, "note": second.row.note });
 
     fs::create_dir_all(&live.opts.out_dir)?;
     fs::write(live.opts.out_dir.join("r11-one-block.json"), serde_json::to_string_pretty(&summary)? + "\n")?;

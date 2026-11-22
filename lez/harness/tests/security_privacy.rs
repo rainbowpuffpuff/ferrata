@@ -453,7 +453,9 @@ fn align_boundary(
             if da.inherited_authorizations.len() != dd.inherited_authorizations.len() {
                 return Err(format!("{label} step {i}: inherited authorizations"));
             }
-            if names_public(&da.inherited_authorizations, publics) || names_public(&dd.inherited_authorizations, publics) {
+            if names_public(&da.inherited_authorizations, publics)
+                || names_public(&dd.inherited_authorizations, publics)
+            {
                 return Err(format!("{label} step {i}: an inherited authorization names a public account"));
             }
             dd.inherited_authorizations = da.inherited_authorizations.clone();
@@ -526,14 +528,17 @@ fn fresh_check(
             {
                 let private_side = !publics.contains(&a1) && !publics.contains(&a2);
                 if private_side && a1 == a2 {
-                    return Err(format!("{label} step {i}: the alias `{which}` is the same in two proofs of one claim"));
+                    return Err(format!(
+                        "{label} step {i}: the alias `{which}` is the same in two proofs of one claim"
+                    ));
                 }
                 if !private_side && a1 != a2 {
                     return Err(format!("{label} step {i}: the public actor `{which}` differs"));
                 }
                 aliases += usize::from(private_side);
             }
-            if names_public(&d1.inherited_authorizations, publics) || names_public(&d2.inherited_authorizations, publics)
+            if names_public(&d1.inherited_authorizations, publics)
+                || names_public(&d2.inherited_authorizations, publics)
             {
                 return Err(format!("{label} step {i}: an inherited authorization names a public account"));
             }
