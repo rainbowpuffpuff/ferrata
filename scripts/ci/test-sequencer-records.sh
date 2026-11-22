@@ -47,6 +47,16 @@ check "the log: a longer name that only starts like the path is kept" grep -q -F
 check "records/logs: scrubbed too" grep -q -F 'driver at ../repo/lez/live' "$S/out/records/logs/driver.log"
 check "a binary file untouched" grep -q -a -F "$B/x" "$S/out/records/blocks.borsh"
 
+# With the repository given: its own directory name leaves the records too, absolute or relative from beside it.
+R=$B/some-checkout
+rm -rf "$S/out2" && mkdir -p "$S/out2"
+printf 'tables from %s/lez/results\nCompiling harness (../some-checkout/lez/harness)\nfrom ../other/lez and ../some-checkout-2/x\n' "$R" > "$S/out2/run.log"
+scrub_paths "$S/out2" "$B" "$H" "$R"
+check "with REPO: the repository's absolute path -> <repo>/" grep -q -F 'tables from <repo>/lez/results' "$S/out2/run.log"
+check "with REPO: ../NAME/ written from beside it -> <repo>/" grep -q -F 'Compiling harness (<repo>/lez/harness)' "$S/out2/run.log"
+check "with REPO: other paths beside it, and a longer name, kept" grep -q -F 'from ../other/lez and ../some-checkout-2/x' "$S/out2/run.log"
+check "with REPO: the checkout's name nowhere left" not grep -q -F 'some-checkout/' "$S/out2/run.log"
+
 echo
 echo "test-sequencer-records.sh: $npass passed, $nfail failed"
 [ "$nfail" = 0 ]

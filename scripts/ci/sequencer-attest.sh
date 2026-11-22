@@ -61,7 +61,7 @@ LOG="$OUT/sequencer-attest.log"
 . "$REPO/scripts/ci/sequencer-records.sh"
 # No path of the machine that ran this in what it leaves behind, on every exit: CI uploads the directory
 # whether the run passed or failed.
-trap 'scrub_paths "$OUT" "$BESIDE" "$HOME"' EXIT
+trap 'scrub_paths "$OUT" "$BESIDE" "$HOME" "$REPO"' EXIT
 
 T0=$(date +%s)
 say() { echo "[sequencer-attest $(date -u +%T)] $*"; }
