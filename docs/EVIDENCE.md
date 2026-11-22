@@ -696,6 +696,16 @@ does); attest-monitor's tests, 28 and 4, and clippy `-D warnings` over all targe
 as expected, its 70 records equal to rf1's with the block numbers and transaction hashes masked; `bench/perf/gate-build.sh` with crown-live-3's
 bundle as written: the bundle repacked, crown-driver and ferrata-updater built. On the laptop: `links` and its steps.
 
+**Twenty-seventh pass (branch `integration9`, 22 Nov 2026).** The final review's fixes but its H1 and M1, which have
+fixers of their own, at `190c1e2a`, on the build box: `roundtrip` as merged (`e2e/ci/run.sh build`, the round trip,
+`cli/tests/e2e.sh` with U.8's checks on the whole error chain: 1 passed); the `cli` library, 34 passed, and its check
+without default features on Rust 1.98.1 (`modules-resolve`); `monitor`'s tests and `tests/logos-fallback.sh` at its new
+default output, 8 passed, 0 failed (its pool checked for queued transactions); `deps` over the 56 tracked workspaces
+after the `url` 2.5.9 update: 43 passed, 0 failed, 13 skipped, the root, `cli` and `lez` among those passed, and the
+advisory step no longer reports RUSTSEC-2026-0592; the B1 runs of `captured_committee_exposure` (1 passed) and
+`interrupted_operations` (2 passed) into `lez/results/b1/`. On the laptop: `links` and its steps;
+`check-actions-pinned.py`: `ci.yml` pinned throughout; `scripts/test_scrub_records.py`, 0 failed.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
