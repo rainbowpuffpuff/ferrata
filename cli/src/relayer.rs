@@ -117,9 +117,13 @@ pub struct CheckpointJob {
 
 /// Parses a 17-word checkpoint journal (the checkpoint prover's output, `journal.hex`).
 pub fn checkpoint_from_journal(j: &[u8]) -> Result<CheckpointJob> {
+    parse_checkpoint_journal(j).map_err(|e| anyhow!("not a checkpoint journal: {e:#}"))
+}
+
+fn parse_checkpoint_journal(j: &[u8]) -> Result<CheckpointJob> {
     ensure!(j.len() == 17 * 32, "a checkpoint journal has 17 words, this one {} bytes", j.len());
     let w = |i: usize| &j[i * 32..(i + 1) * 32];
-    ensure!(w(0) == checkpoint_domain(), "not a checkpoint journal (domain)");
+    ensure!(w(0) == checkpoint_domain(), "another domain");
     ensure!(w(2)[..12].iter().all(|b| *b == 0), "the vault word is not an address");
     let h = |i: usize| B256::from_slice(w(i));
     let u32w = |i: usize| -> Result<u32> { Ok(u32::try_from(word_u64(w(i))?)?) };
@@ -169,8 +173,17 @@ pub const TEMPORARY: [&str; 11] = [
 
 /// What makes a failure final for the job: a check of the relayer's or the vault's refusing it (anything else, a
 /// rate limit, a 5xx, a closed connection, a node behind, a body that is not JSON, is the endpoint's and is retried).
-pub const FINAL: [&str; 7] =
-    ["refused", "skipped:", "reverted", "not a relayer job", "not a release journal", "not a receipt", "would revert"];
+pub const FINAL: [&str; 9] = [
+    "refused",
+    "skipped:",
+    "reverted",
+    "not a relayer job",
+    "not a release journal",
+    "not a checkpoint journal",
+    "not hex",
+    "not a receipt",
+    "would revert",
+];
 
 /// Whether a job that failed with `reason` should be retried rather than refused for good: a temporary vault error
 /// ([`TEMPORARY`]), or any failure that is not a refusal ([`FINAL`]). A job kept by mistake is retried until
@@ -447,13 +460,35 @@ pub struct DropBook {
     pub drops: BTreeMap<String, DropRecord>,
 }
 
-/// A drop sent.
+fn settled_by_default() -> bool {
+    true
+}
+
+/// A drop: recorded before its credit is sent, settled once LEZ shows the credit applied ([`drop_step`]).
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct DropRecord {
     pub one_time_address: String,
     pub amount: u128,
     pub at: u64,
+    /// The credit's last transaction (hex); `pending` while LEZ's wallet has not answered its send, `send failed: …`
+    /// when it failed (sent again after `--drop-wait`), `failed: …` in books written before the journal.
     pub tx: String,
+    /// The private nonce (decimal) of the relayer's drop account before this drop's first credit. The drop account
+    /// spends only for drops, one drop at a time, and every credit of this drop is built on that state: the credit
+    /// is applied once the account's nonce has moved, and of two credits built on the same state LEZ applies at most
+    /// one (the second spends a nullifier the first spent). `None`: a book written before the journal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_nonce: Option<String>,
+    /// Applied on LEZ, or given up (the deposit claimed without it, or past `--max-job-age` with nothing applied):
+    /// nothing more is sent for this `N`. Books written before the journal hold settled drops only.
+    #[serde(default = "settled_by_default")]
+    pub settled: bool,
+    /// Credits sent for this `N` (the first, and each one sent again after `--drop-wait`).
+    #[serde(default)]
+    pub sends: u32,
+    /// When the last credit was sent (Unix seconds).
+    #[serde(default)]
+    pub sent_at: u64,
 }
 
 impl DropBook {
@@ -468,8 +503,11 @@ impl DropBook {
 
     /// Writes the book to `path` (via a temporary file beside it).
     pub fn save(&self, path: &Path) -> Result<()> {
+        use std::io::Write as _;
         let tmp = path.with_extension("tmp");
-        std::fs::write(&tmp, serde_json::to_vec_pretty(self)?)?;
+        let mut f = std::fs::File::create(&tmp)?;
+        f.write_all(&serde_json::to_vec_pretty(self)?)?;
+        f.sync_all()?;
         std::fs::rename(&tmp, path)?;
         Ok(())
     }
@@ -477,6 +515,11 @@ impl DropBook {
     /// Whether `n` had its drop.
     pub fn contains(&self, n: &Hash) -> bool {
         self.drops.contains_key(&hx(n))
+    }
+
+    /// The drop in flight (recorded, not settled), if any: at most one at a time.
+    pub fn in_flight(&self) -> Option<(&String, &DropRecord)> {
+        self.drops.iter().find(|(_, r)| !r.settled)
     }
 
     /// Records the drop for `n`.
@@ -559,13 +602,11 @@ pub fn imported_roots(deposits: &[VaultDeposit], counts: &[u64]) -> Result<HashS
     Ok(roots)
 }
 
-/// Checks a gas-drop receipt (JSON, as `risc0_zkvm::Receipt` serialises). Returns its journal if the
-/// relayer should send the drop; `claimed` says whether the bridge program recorded `N`.
-pub fn check_gas_drop(
+/// The receipt's own checks (JSON, as `risc0_zkvm::Receipt` serialises): it verifies against the gas-drop image id,
+/// names this relayer and this configuration, under a root LEZ imported. Not the book or the claims ([`check_gas_drop`]).
+pub fn check_gas_drop_receipt(
     receipt_json: &[u8],
     ctx: &DropContext<'_>,
-    claimed: impl Fn(&Hash) -> bool,
-    book: &DropBook,
 ) -> std::result::Result<GasDropJournal, DropRefusal> {
     let receipt: risc0_zkvm::Receipt =
         serde_json::from_slice(receipt_json).map_err(|e| DropRefusal::BadReceipt(format!("not a receipt: {e}")))?;
@@ -582,6 +623,18 @@ pub fn check_gas_drop(
     if !ctx.imported_roots.contains(&j.root) {
         return Err(DropRefusal::RootNotImported);
     }
+    Ok(j)
+}
+
+/// Checks a gas-drop receipt (JSON, as `risc0_zkvm::Receipt` serialises). Returns its journal if the
+/// relayer should send the drop; `claimed` says whether the bridge program recorded `N`.
+pub fn check_gas_drop(
+    receipt_json: &[u8],
+    ctx: &DropContext<'_>,
+    claimed: impl Fn(&Hash) -> bool,
+    book: &DropBook,
+) -> std::result::Result<GasDropJournal, DropRefusal> {
+    let j = check_gas_drop_receipt(receipt_json, ctx)?;
     if claimed(&j.nullifier) {
         return Err(DropRefusal::AlreadyClaimed);
     }
@@ -626,6 +679,12 @@ pub trait Credit {
     /// Credits `amount` native LEZ to the one-time account `to` (whose public keys are `keys`, when the
     /// request carries them) from the relayer's account; returns the transaction (hex).
     async fn credit(&mut self, to: Hash, keys: Option<&OneTimeKeys>, amount: u128) -> Result<String>;
+    /// The private nonce of the account the credits come from, as the zone holds it now (after a sync): it moves
+    /// when a credit of the relayer's is applied ([`DropRecord::from_nonce`]). `None`: no such account here (the
+    /// journaled drop, [`drop_step`], is not available).
+    async fn drop_nonce(&mut self) -> Result<Option<u128>> {
+        Ok(None)
+    }
 }
 
 /// A sequencer endpoint through LEZ's wallet: one native transfer from the relayer's private account,
@@ -681,6 +740,20 @@ impl Credit for crate::lez::Sequencer {
         let (hash, _) = sent.map_err(|e| anyhow!("the sealed credit was not sent: {e}: {e:?}"))?;
         Ok(hash.to_string())
     }
+
+    async fn drop_nonce(&mut self) -> Result<Option<u128>> {
+        let from = self
+            .drop_from
+            .ok_or_else(|| anyhow!("no private LEZ account of this relayer to send gas drops from"))?;
+        // LEZ's wallet changes its private accounts only from what a sync finds applied, never when it sends.
+        self.wallet.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the relayer's LEZ wallet: {e}"))?;
+        self.synced = true;
+        let account = self
+            .wallet
+            .get_account_private(from)
+            .ok_or_else(|| anyhow!("LEZ's wallet does not hold the relayer's drop account {from}"))?;
+        Ok(Some(account.nonce.0))
+    }
 }
 
 /// The relayer's zone: a sequencer sends the credit; the devnet's zone (a stand-in) sends none.
@@ -693,6 +766,14 @@ impl Credit for crate::lez::Zone {
                 let _ = (to, keys, amount);
                 bail!("refused: the devnet's zone sends no native credit (gas drops need a sequencer)")
             }
+        }
+    }
+
+    async fn drop_nonce(&mut self) -> Result<Option<u128>> {
+        match self {
+            #[cfg(feature = "lez-wallet")]
+            crate::lez::Zone::Sequencer(s) => s.drop_nonce().await,
+            crate::lez::Zone::Devnet(_) => Ok(None),
         }
     }
 }
@@ -720,8 +801,17 @@ pub async fn gas_drop<C: Credit>(
     }
     // Recorded before the credit is sent: a crash between the two cannot lead to a second drop for this N
     // after a restart. A credit that fails stays recorded as failed (it may have been sent); the operator
-    // removes the entry only knowing it was not.
-    let record = |tx: String| DropRecord { one_time_address: hx(&j.one_time_address), amount, at: now, tx };
+    // removes the entry only knowing it was not. (The relayer daemon resumes such drops instead: [`drop_step`].)
+    let record = |tx: String| DropRecord {
+        one_time_address: hx(&j.one_time_address),
+        amount,
+        at: now,
+        tx,
+        from_nonce: None,
+        settled: true,
+        sends: 1,
+        sent_at: now,
+    };
     book.record(&j.nullifier, record("pending".into()));
     book.save(book_path)?;
     match credit.credit(j.one_time_address, keys, amount).await {
@@ -734,6 +824,175 @@ pub async fn gas_drop<C: Credit>(
             book.record(&j.nullifier, record(format!("failed: {e:#}")));
             book.save(book_path)?;
             Err(e.context("the credit failed; recorded as failed"))
+        }
+    }
+}
+
+/// The daemon's terms for a journaled drop ([`drop_step`]).
+#[derive(Clone, Copy, Debug)]
+pub struct DropTerms {
+    /// Native LEZ per drop.
+    pub amount: u128,
+    /// Now (Unix seconds).
+    pub now: u64,
+    /// Seconds a credit sent may stay unapplied before it is sent again (`--drop-wait`).
+    pub drop_wait: u64,
+    /// How long the job has waited in the inbox, and how long it may (`--max-job-age`): a drop with nothing applied
+    /// by then is given up.
+    pub job_age: u64,
+    pub max_job_age: u64,
+}
+
+/// Where a journaled drop stands after one [`drop_step`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DropStep {
+    /// The credit is applied on LEZ (the drop account's nonce moved past the record): the job is done. `resolved`:
+    /// found applied in a later step than the one that sent it (after a lost answer, a restart, a kill).
+    Applied { tx: String, sends: u32, resolved: bool },
+    /// Recorded and not applied yet (sent and waited for, its send failed, a kill left it unsent, or another drop
+    /// is in flight): the job stays in the inbox ("in flight") and the next round takes the next step.
+    InFlight { reason: String },
+}
+
+/// One step of a gas drop with its journal (RFP-022 R.06: resumed after a failed or interrupted credit, never sent
+/// twice to LEZ's effect). The receipt's checks first ([`check_gas_drop_receipt`]), then [`drop_step`].
+#[allow(clippy::too_many_arguments)]
+pub async fn gas_drop_step<C: Credit>(
+    receipt_json: &[u8],
+    keys: &OneTimeKeys,
+    ctx: &DropContext<'_>,
+    claimed: impl Fn(&Hash) -> bool,
+    book: &mut DropBook,
+    book_path: &Path,
+    credit: &mut C,
+    terms: &DropTerms,
+) -> Result<(GasDropJournal, DropStep)> {
+    let j = check_gas_drop_receipt(receipt_json, ctx).map_err(|r| anyhow!("{r}"))?;
+    let step = drop_step(&j, keys, claimed, book, book_path, credit, terms).await?;
+    Ok((j, step))
+}
+
+/// The drop for `j` with its journal (the book, saved before every send):
+/// - a new `N`: refused if claimed; waits while another drop is in flight (one at a time: the drop account's nonce
+///   then speaks for this drop alone); else the drop account's nonce is recorded, then the credit is sent;
+/// - a recorded `N` not settled: the drop account's nonce moved since the record → applied (settled, done); not
+///   moved → waited for until `--drop-wait` after the last send, then sent again, built on the same state of the
+///   drop account (of the two, LEZ applies at most one); the deposit claimed without it, or the job past
+///   `--max-job-age`, with nothing applied → given up (settled, refused);
+/// - a settled `N`: refused (`AlreadyDropped`).
+///
+/// Errors are refusals (final for the job) or the zone's failures (the job is retried; nothing is lost: the record
+/// stays and the next step resolves it).
+pub async fn drop_step<C: Credit>(
+    j: &GasDropJournal,
+    keys: &OneTimeKeys,
+    claimed: impl Fn(&Hash) -> bool,
+    book: &mut DropBook,
+    book_path: &Path,
+    credit: &mut C,
+    t: &DropTerms,
+) -> Result<DropStep> {
+    if keys.account_id()? != j.one_time_address {
+        bail!("{}", DropRefusal::KeysMismatch);
+    }
+    let key = hx(&j.nullifier);
+    let short = &key[..18.min(key.len())];
+    let mut r = match book.drops.get(&key).cloned() {
+        Some(r) if r.settled => bail!("{}", DropRefusal::AlreadyDropped),
+        Some(mut r) => {
+            let from = r.from_nonce.clone().unwrap_or_default();
+            let nonce = credit.drop_nonce().await?.ok_or_else(|| anyhow!("refused: this zone sends no gas drops"))?;
+            if nonce.to_string() != from {
+                let mut done = r.clone();
+                done.settled = true;
+                book.record(&j.nullifier, done);
+                book.save(book_path)?;
+                return Ok(DropStep::Applied { tx: r.tx, sends: r.sends, resolved: true });
+            }
+            let since = t.now.saturating_sub(r.sent_at);
+            let give_up = if t.job_age >= t.max_job_age {
+                Some(format!("not applied within --max-job-age ({} s) after {} send(s)", t.max_job_age, r.sends))
+            } else if claimed(&j.nullifier) && since >= t.drop_wait {
+                Some("the deposit was claimed without it".to_string())
+            } else {
+                None
+            };
+            if let Some(why) = give_up {
+                let mut gone = r.clone();
+                gone.settled = true;
+                gone.tx = format!("given up, nothing applied ({why}); last: {}", r.tx);
+                book.record(&j.nullifier, gone);
+                book.save(book_path)?;
+                bail!("refused: the gas drop for N {short}… was given up with nothing applied: {why}");
+            }
+            if since < t.drop_wait {
+                return Ok(DropStep::InFlight {
+                    reason: format!(
+                        "the gas drop for N {short}… (send {}, {}) is not applied yet; sent again {} s after its last send unless LEZ shows it applied",
+                        r.sends,
+                        r.tx,
+                        t.drop_wait
+                    ),
+                });
+            }
+            // Sent again, on the same state of the drop account (its nonce unchanged since the record).
+            r.sends += 1;
+            r.sent_at = t.now;
+            r.tx = "pending".into();
+            r
+        }
+        None => {
+            if let Some((other, _)) = book.in_flight() {
+                return Ok(DropStep::InFlight {
+                    reason: format!("the gas drop for N {}… is in flight: one drop at a time", &other[..18.min(other.len())]),
+                });
+            }
+            if claimed(&j.nullifier) {
+                bail!("{}", DropRefusal::AlreadyClaimed);
+            }
+            let nonce = credit.drop_nonce().await?.ok_or_else(|| anyhow!("refused: this zone sends no gas drops"))?;
+            DropRecord {
+                one_time_address: hx(&j.one_time_address),
+                amount: t.amount,
+                at: t.now,
+                tx: "pending".into(),
+                from_nonce: Some(nonce.to_string()),
+                settled: false,
+                sends: 1,
+                sent_at: t.now,
+            }
+        }
+    };
+    book.record(&j.nullifier, r.clone());
+    book.save(book_path)?;
+    match credit.credit(j.one_time_address, Some(keys), t.amount).await {
+        Ok(tx) => {
+            r.tx = tx.clone();
+            book.record(&j.nullifier, r.clone());
+            book.save(book_path)?;
+            // Applied already (a block may have come meanwhile)? Otherwise the next rounds see it.
+            if let Ok(Some(n)) = credit.drop_nonce().await {
+                if Some(n.to_string()) != r.from_nonce {
+                    r.settled = true;
+                    book.record(&j.nullifier, r.clone());
+                    book.save(book_path)?;
+                    return Ok(DropStep::Applied { tx, sends: r.sends, resolved: false });
+                }
+            }
+            Ok(DropStep::InFlight {
+                reason: format!("the gas drop for N {short}… sent ({tx}, send {}); waiting for LEZ to apply it", r.sends),
+            })
+        }
+        Err(e) => {
+            r.tx = format!("send failed: {e:#}");
+            book.record(&j.nullifier, r.clone());
+            book.save(book_path)?;
+            Ok(DropStep::InFlight {
+                reason: format!(
+                    "the gas drop's credit for N {short}… was not sent ({e:#}); sent again {} s after this attempt unless LEZ shows it applied",
+                    t.drop_wait
+                ),
+            })
         }
     }
 }
@@ -1156,6 +1415,15 @@ mod tests {
         assert!(!temporary("refused: the proof names relayer 0x…; only it can be paid for this release"));
         assert!(!temporary("refused: NOut 0x… is already released"));
         assert!(!temporary("refused: vault error VerificationFailed() …"));
+        // A malformed job is refused, not retried until --max-job-age.
+        let short = checkpoint_from_journal(&[0u8; 3]).unwrap_err();
+        assert!(!temporary(&format!("{short:#}")), "{short:#}");
+        let mut other = checkpoint_journal(1, Address::ZERO, B256::ZERO, &checkpoint());
+        other[0] ^= 1;
+        assert!(!temporary(&format!("{:#}", checkpoint_from_journal(&other).unwrap_err())));
+        assert!(!temporary(&format!("{:#}", unhex("0xzz").unwrap_err())));
+        assert!(!temporary("refused: the job's one-time account keys (oneTimeNpk, oneTimeVpk) do not decode: …"));
+        assert!(temporary("in flight: the gas drop for N 0x… sent (0x…, send 1); waiting for LEZ to apply it"));
     }
 
     #[test]
@@ -1190,5 +1458,210 @@ mod tests {
         assert_eq!(roots, [at[0], at[2]].into_iter().collect());
         assert!(!roots.contains(&at[1]), "a count LEZ did not import gives no root");
         assert!(imported_roots(&deposits, &[0]).unwrap().contains(&IncrementalTree::new().root()));
+    }
+
+    /// A zone for the journaled drop: the drop account's private nonce, and the credits sent, each built on the
+    /// account's state at its send; applying one spends that state (a second credit built on it is refused, as LEZ
+    /// refuses a nullifier already seen).
+    #[derive(Default)]
+    struct DropZone {
+        nonce: u128,
+        built_on: Vec<(u128, Hash)>,
+        applied: Vec<Hash>,
+        fail_sends: u32,
+        down: bool,
+    }
+
+    impl DropZone {
+        fn apply(&mut self, i: usize) -> bool {
+            let (state, to) = self.built_on[i];
+            if state != self.nonce {
+                return false;
+            }
+            self.nonce = state.wrapping_mul(31).wrapping_add(7);
+            self.applied.push(to);
+            true
+        }
+    }
+
+    impl Credit for DropZone {
+        async fn credit(&mut self, to: Hash, keys: Option<&OneTimeKeys>, _amount: u128) -> Result<String> {
+            assert!(keys.is_some(), "the credit is sealed to the one-time account's keys");
+            if self.down || self.fail_sends > 0 {
+                self.fail_sends = self.fail_sends.saturating_sub(1);
+                bail!("the sealed credit was not sent: error sending request: connection closed");
+            }
+            self.built_on.push((self.nonce, to));
+            Ok(format!("tx{}", self.built_on.len()))
+        }
+        async fn drop_nonce(&mut self) -> Result<Option<u128>> {
+            ensure!(!self.down, "syncing the relayer's LEZ wallet: connection refused");
+            Ok(Some(self.nonce))
+        }
+    }
+
+    fn one_time(seed: u8) -> (OneTimeKeys, GasDropJournal) {
+        let vpk = lee_core::encryption::ViewingPublicKey::from_seed(&[seed; 32], &[seed ^ 0x5a; 32]);
+        let keys = OneTimeKeys { npk: [seed; 32], vpk: vpk.to_bytes().to_vec() };
+        let j = GasDropJournal {
+            root: [1; 32],
+            chain_id: [2; 32],
+            vault: [3; 20],
+            nullifier: sha256(&[seed]),
+            one_time_address: keys.account_id().unwrap(),
+            relayer: [4; 32],
+        };
+        (keys, j)
+    }
+
+    fn terms(now: u64) -> DropTerms {
+        DropTerms { amount: 50_000_000, now, drop_wait: 60, job_age: now - 100, max_job_age: 3_600 }
+    }
+
+    fn book_path(name: &str) -> std::path::PathBuf {
+        // Inside cli/target/ (ignored by git); unit tests have no CARGO_TARGET_TMPDIR.
+        let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/unit-tmp/drop-journal").join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir.join("drops.json")
+    }
+
+    fn in_flight(s: &DropStep) -> bool {
+        matches!(s, DropStep::InFlight { reason } if temporary(&format!("in flight: {reason}")))
+    }
+
+    #[tokio::test]
+    async fn a_failed_credit_is_sent_again_on_the_same_state_and_applied_once() {
+        let (keys, j) = one_time(7);
+        let path = book_path("failed");
+        let (mut book, mut zone) = (DropBook::default(), DropZone { fail_sends: 1, ..DropZone::default() });
+        let none = |_: &Hash| false;
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(100)).await.unwrap();
+        assert!(in_flight(&s), "{s:?}");
+        let r = &DropBook::load(&path).unwrap().drops[&hx(&j.nullifier)];
+        assert!(!r.settled && r.tx.starts_with("send failed") && r.sends == 1 && r.from_nonce == Some("0".into()));
+        // Within --drop-wait nothing is sent; then it is sent again.
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(130)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on.is_empty(), "{s:?}");
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(161)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on.len() == 1, "{s:?}");
+        assert!(zone.apply(0));
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(170)).await.unwrap();
+        assert_eq!(s, DropStep::Applied { tx: "tx1".into(), sends: 2, resolved: true });
+        assert_eq!(zone.applied, vec![j.one_time_address]);
+        let again = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(400)).await;
+        assert!(again.unwrap_err().to_string().contains("already had its drop"));
+        assert_eq!(zone.built_on.len(), 1, "one credit sent after the failure, none after it applied");
+    }
+
+    #[tokio::test]
+    async fn a_kill_between_the_record_and_the_send_resends_after_the_wait_and_applies_once() {
+        let (keys, j) = one_time(8);
+        let path = book_path("killed-unsent");
+        let mut zone = DropZone { nonce: 41, ..DropZone::default() };
+        // What a daemon killed inside the credit's send leaves: the record, nothing sent.
+        let mut left = DropBook::default();
+        left.record(
+            &j.nullifier,
+            DropRecord {
+                one_time_address: hx(&j.one_time_address),
+                amount: 50_000_000,
+                at: 100,
+                tx: "pending".into(),
+                from_nonce: Some("41".into()),
+                settled: false,
+                sends: 1,
+                sent_at: 100,
+            },
+        );
+        left.save(&path).unwrap();
+        let mut book = DropBook::load(&path).unwrap();
+        let none = |_: &Hash| false;
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(120)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on.is_empty(), "{s:?}");
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(161)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on == vec![(41, j.one_time_address)], "{s:?}");
+        assert!(zone.apply(0));
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(162)).await.unwrap();
+        assert_eq!(s, DropStep::Applied { tx: "tx1".into(), sends: 2, resolved: true });
+        assert_eq!(zone.applied.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_kill_after_the_send_books_the_credit_and_two_sends_apply_once() {
+        let (keys, j) = one_time(9);
+        let path = book_path("killed-sent");
+        let mut zone = DropZone::default();
+        let none = |_: &Hash| false;
+        let mut book = DropBook::default();
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(100)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on.len() == 1, "{s:?}");
+        // Killed; the credit applied meanwhile; restarted from the book on disk: booked, nothing sent again.
+        assert!(zone.apply(0));
+        let mut book = DropBook::load(&path).unwrap();
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(500)).await.unwrap();
+        assert_eq!(s, DropStep::Applied { tx: "tx1".into(), sends: 1, resolved: true });
+        assert_eq!(zone.built_on.len(), 1);
+        // A credit sent, not applied in time, sent again: both built on the same state, LEZ applies one.
+        let (keys2, j2) = one_time(10);
+        let s = drop_step(&j2, &keys2, none, &mut book, &path, &mut zone, &terms(600)).await.unwrap();
+        assert!(in_flight(&s));
+        let s = drop_step(&j2, &keys2, none, &mut book, &path, &mut zone, &terms(661)).await.unwrap();
+        assert!(in_flight(&s) && zone.built_on.len() == 3);
+        assert_eq!(zone.built_on[1].0, zone.built_on[2].0, "the second send is built on the first one's state");
+        assert!(zone.apply(1));
+        assert!(!zone.apply(2), "the second credit spends a state the first spent: refused");
+        let s = drop_step(&j2, &keys2, none, &mut book, &path, &mut zone, &terms(662)).await.unwrap();
+        assert_eq!(s, DropStep::Applied { tx: "tx3".into(), sends: 2, resolved: true });
+        assert_eq!(zone.applied, vec![j.one_time_address, j2.one_time_address], "one credit per N");
+    }
+
+    #[tokio::test]
+    async fn one_drop_in_flight_at_a_time_and_a_drop_not_needed_is_given_up() {
+        let (k1, j1) = one_time(11);
+        let (k2, j2) = one_time(12);
+        let path = book_path("one-at-a-time");
+        let (mut book, mut zone) = (DropBook::default(), DropZone::default());
+        let none = |_: &Hash| false;
+        assert!(in_flight(&drop_step(&j1, &k1, none, &mut book, &path, &mut zone, &terms(100)).await.unwrap()));
+        let s = drop_step(&j2, &k2, none, &mut book, &path, &mut zone, &terms(101)).await.unwrap();
+        assert!(matches!(&s, DropStep::InFlight { reason } if reason.contains("one drop at a time")), "{s:?}");
+        assert_eq!(zone.built_on.len(), 1, "nothing sent for the second N while the first is in flight");
+        // N1 claimed without this relayer's credit (which never applied): given up once --drop-wait has passed.
+        let n1 = j1.nullifier;
+        let claimed = move |n: &Hash| *n == n1;
+        assert!(in_flight(&drop_step(&j1, &k1, claimed, &mut book, &path, &mut zone, &terms(130)).await.unwrap()));
+        let e = drop_step(&j1, &k1, claimed, &mut book, &path, &mut zone, &terms(161)).await.unwrap_err();
+        assert!(e.to_string().contains("claimed without it") && !temporary(&e.to_string()), "{e}");
+        assert!(book.in_flight().is_none());
+        // N2 now goes; past --max-job-age with nothing applied it is given up too.
+        assert!(in_flight(&drop_step(&j2, &k2, none, &mut book, &path, &mut zone, &terms(170)).await.unwrap()));
+        let late = DropTerms { job_age: 3_600, ..terms(240) };
+        let e = drop_step(&j2, &k2, none, &mut book, &path, &mut zone, &late).await.unwrap_err();
+        assert!(e.to_string().contains("--max-job-age") && !temporary(&e.to_string()), "{e}");
+        assert!(zone.applied.is_empty() && book.in_flight().is_none());
+    }
+
+    #[tokio::test]
+    async fn a_zone_that_fails_while_a_drop_is_resolved_loses_nothing() {
+        let (keys, j) = one_time(13);
+        let path = book_path("zone-down");
+        let (mut book, mut zone) = (DropBook::default(), DropZone::default());
+        let none = |_: &Hash| false;
+        assert!(in_flight(&drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(100)).await.unwrap()));
+        zone.down = true;
+        let e = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(200)).await.unwrap_err();
+        assert!(temporary(&format!("{e:#}")), "the zone's failure is retried: {e:#}");
+        assert_eq!(DropBook::load(&path).unwrap().drops[&hx(&j.nullifier)].sends, 1, "the record unchanged");
+        zone.down = false;
+        assert!(zone.apply(0));
+        let s = drop_step(&j, &keys, none, &mut book, &path, &mut zone, &terms(201)).await.unwrap();
+        assert_eq!(s, DropStep::Applied { tx: "tx1".into(), sends: 1, resolved: true });
+        // A book written before the journal: its drops are settled (one per N, as before).
+        let old: DropBook = serde_json::from_str(
+            r#"{"drops":{"0xaa":{"one_time_address":"0xbb","amount":5,"at":1,"tx":"failed: x"}}}"#,
+        )
+        .unwrap();
+        assert!(old.drops["0xaa"].settled && old.in_flight().is_none());
     }
 }

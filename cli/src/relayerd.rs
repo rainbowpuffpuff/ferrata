@@ -30,7 +30,11 @@
 //! cut-off daemon: mined, it books what the transaction did (`"recovered": true`); still pending, the round waits;
 //! lost (not mined and unknown to the node, its nonce unspent), the same call is sent again **with the same
 //! nonce**, so at most one of the two can ever be mined. One daemon per state directory (`<state>/lock`). A root
-//! import sent to LEZ is kept the same way (`<state>/root-import-inflight.json`) until `root(cid, n)` holds it.
+//! import sent to LEZ is kept the same way (`<state>/root-import-inflight.json`) until `root(cid, n)` holds it. A gas
+//! drop is journaled in `<state>/drops.json` ([`relayer::drop_step`]): recorded with the private nonce of the account
+//! the credits come from before its credit is sent, one drop at a time; its job stays in the inbox until LEZ shows
+//! that nonce moved (the credit applied); a credit not applied within `--drop-wait` (its send failed, a kill left it
+//! unsent, LEZ dropped it) is sent again on the same state of that account, so LEZ applies at most one of the two.
 //!
 //! Keys: an Ethereum keystore file (`--keystore`, `--password-file`), or, on a local anvil only,
 //! `--unlocked` (the node signs). The LEZ side: a sequencer through LEZ's wallet with the relayer's own
@@ -54,7 +58,7 @@ use sha2::Digest as _;
 
 use crate::eth::{self, IVault};
 use crate::lez::{self, Context, Ledger as _, Zone};
-use crate::relayer::{self, DropBook, DropContext, IRelayVault, Job, Relayer, RootImport};
+use crate::relayer::{self, DropBook, DropContext, DropStep, DropTerms, IRelayVault, Job, Relayer, RootImport};
 use crate::{account, h32, hx};
 
 #[derive(Parser, Clone, Debug)]
@@ -121,6 +125,15 @@ pub struct Cli {
     /// Native LEZ sent per gas drop.
     #[arg(long, default_value_t = 0, global = true)]
     pub drop_amount: u128,
+    /// Seconds a gas drop's credit sent to LEZ may stay unapplied before it is sent again. It is sent again on the same
+    /// state of the drop account (the relayer's book records that account's nonce before the first send), so LEZ
+    /// applies at most one of the two.
+    #[arg(long, default_value_t = 120, global = true)]
+    pub drop_wait: u64,
+    /// Accept RISC Zero dev-mode (fake) gas-drop receipts: a local devnet whose proofs are fake too. Without it, a
+    /// daemon started with RISC0_DEV_MODE set refuses to run gas drops (a fake receipt would be paid a real drop).
+    #[arg(long, global = true)]
+    pub accept_dev_mode_receipts: bool,
     /// Import the vault's deposit roots on LEZ: each round, the bridge program's `ImportRoot` under the newest
     /// record of the configuration's light-client instance, when that record covers deposits LEZ has not
     /// imported (built and dry-run with ferrata-wallet's `import`, the code ferrata_bridge_module's
@@ -204,6 +217,11 @@ fn log(sink: &Sink, event: &str, fields: Value) {
 
 fn unix_now() -> u64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
+}
+
+/// Seconds since `file` was written (an inbox job's age).
+fn file_age(file: &Path) -> u64 {
+    std::fs::metadata(file).and_then(|m| m.modified()).ok().and_then(|t| t.elapsed().ok()).map_or(0, |d| d.as_secs())
 }
 
 /// Writes `bytes` to `path` through a temporary file beside it, synced before the rename: after a crash the
@@ -304,6 +322,8 @@ struct Daemon {
     gasdrop_image_id: Option<[u8; 32]>,
     lez_me: Option<[u8; 32]>,
     drop_amount: u128,
+    /// `--drop-wait`.
+    drop_wait: u64,
     /// Tokens whose credited fees the relayer collects (ETH, and every token of a release it sent).
     tokens: std::collections::BTreeSet<Address>,
     /// The vault runs rule (B) (`mode() == 1`): candidates are finalised with `finalizeAttested`.
@@ -504,9 +524,15 @@ impl Daemon {
                 !eth::view(p, vault, IRelayVault::candidatesCall { newState: new_state }, None).await?.submittedAt.is_zero()
                     || eth::view(p, vault, IRelayVault::finalStateCall {}, None).await? == new_state
             }
+            // Finalised, not merely gone: a watcher's cancellation also empties the candidate's slot.
             "finalizeAttested" => {
-                let new_state = word(&f.key)?;
-                eth::view(p, vault, IRelayVault::candidatesCall { newState: new_state }, None).await?.submittedAt.is_zero()
+                use alloy::sol_types::SolEvent as _;
+                let filter = alloy::rpc::types::Filter::new()
+                    .address(vault)
+                    .event_signature(IVault::CheckpointFinalized::SIGNATURE_HASH)
+                    .topic2(word(&f.key)?)
+                    .from_block(f.from_block);
+                !eth::retry_rpc(|| p.get_logs(&filter)).await?.is_empty()
             }
             "release" => eth::view(p, vault, IVault::nullifierUsedCall { nullifier: word(&f.key)? }, None).await?,
             "claimOwed" => {
@@ -663,12 +689,7 @@ impl Daemon {
         for file in files {
             let name = file.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
             let outcome = self.job(&file, &v).await;
-            let age = std::fs::metadata(&file)
-                .and_then(|m| m.modified())
-                .ok()
-                .and_then(|t| t.elapsed().ok())
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            let age = file_age(&file);
             let dir = match &outcome {
                 Ok(_) => "done",
                 // A root not final yet, a delay, a freeze, a cap, a transport failure: retried next round,
@@ -938,8 +959,9 @@ impl Daemon {
                 )
             }
             Job::GasDrop { receipt, one_time_npk, one_time_vpk } => {
-                let keys = relayer::OneTimeKeys::from_hex(&one_time_npk, &one_time_vpk)
-                    .context("the job's one-time account keys (oneTimeNpk, oneTimeVpk)")?;
+                let keys = relayer::OneTimeKeys::from_hex(&one_time_npk, &one_time_vpk).map_err(|e| {
+                    anyhow!("refused: the job's one-time account keys (oneTimeNpk, oneTimeVpk) do not decode: {e:#}")
+                })?;
                 let (Some((zone, ctx)), Some(image_id), Some(me)) =
                     (self.zone.as_mut(), self.gasdrop_image_id, self.lez_me)
                 else {
@@ -957,21 +979,34 @@ impl Daemon {
                 let mut book = DropBook::load(&book_path)?;
                 let ctx2 = ctx.clone();
                 let claimed = |n: &[u8; 32]| lez::is_claimed(&ctx2, &history, n);
-                let (j, tx) = relayer::gas_drop(
+                // The journaled drop (R.06): recorded before its credit, resolved from LEZ in the next rounds; the job
+                // stays in the inbox ("in flight": deferred) until LEZ shows the credit applied.
+                let terms = DropTerms {
+                    amount: self.drop_amount,
+                    now: unix_now(),
+                    drop_wait: self.drop_wait,
+                    job_age: file_age(file),
+                    max_job_age: self.max_job_age,
+                };
+                let (j, step) = relayer::gas_drop_step(
                     &serde_json::to_vec(&receipt)?,
-                    Some(&keys),
+                    &keys,
                     &dctx,
                     claimed,
                     &mut book,
                     &book_path,
                     zone,
-                    self.drop_amount,
-                    v.now,
+                    &terms,
                 )
                 .await?;
-                Ok(
-                    json!({ "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address), "amount": self.drop_amount.to_string(), "sealed": true, "tx": tx }),
-                )
+                match step {
+                    DropStep::Applied { tx, sends, resolved } => Ok(json!({
+                        "kind": "gas-drop", "nullifier": hx(&j.nullifier), "oneTimeAddress": hx(&j.one_time_address),
+                        "amount": self.drop_amount.to_string(), "sealed": true, "tx": tx, "sends": sends,
+                        "applied": true, "resolvedLater": resolved,
+                    })),
+                    DropStep::InFlight { reason } => bail!("in flight: {reason}"),
+                }
             }
         }
     }
@@ -1012,6 +1047,17 @@ fn sequencer(_cli: &Cli, _rpc: &str) -> Result<Zone> {
 /// binary's SIGTERM or SIGINT, the module's `stop`), after the round in progress. Every line goes to `sink`.
 pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Option<String>>) -> Result<()> {
     let url = cli.eth_rpc.clone().ok_or_else(|| anyhow!("--eth-rpc is required"))?;
+    // RISC Zero's dev mode makes fake receipts verify: a relayer paying gas drops under it pays real drops for fake
+    // receipts. Refused unless asked for, on a sequencer at a loopback address (a local devnet).
+    if cli.gasdrop_image_id.is_some() && risc0_zkvm::VerifierContext::default().dev_mode() {
+        let local = cli.sequencer.as_deref().and_then(|u| url::Url::parse(u).ok()).is_some_and(|u| {
+            matches!(u.host_str(), Some("127.0.0.1" | "localhost" | "[::1]" | "::1"))
+        });
+        ensure!(
+            cli.accept_dev_mode_receipts && local,
+            "RISC0_DEV_MODE is set: gas-drop receipts would verify without a proof; unset it, or on a local devnet add --accept-dev-mode-receipts (with --sequencer at a loopback address)"
+        );
+    }
     let vault = cli.vault.ok_or_else(|| anyhow!("--vault is required"))?;
     let logos = cli.send_via == "logos";
     // The key: no network yet.
@@ -1124,6 +1170,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         gasdrop_image_id: cli.gasdrop_image_id.as_deref().map(h32).transpose()?,
         lez_me: cli.lez_account.as_deref().map(h32).transpose()?,
         drop_amount: cli.drop_amount,
+        drop_wait: cli.drop_wait,
         tokens: [Address::ZERO].into_iter().collect(),
         rule_b,
         max_job_age: cli.max_job_age,
