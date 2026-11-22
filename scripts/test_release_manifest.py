@@ -101,11 +101,27 @@ def crate_graph(base, own_manifest):
                       "native-sys v0.2.0", "serde v1.0.0 (*)"]) + "\n"
     lock = "version = 4\n\n[[package]]\nname = \"ferrata-cli\"\nversion = \"0.1.0\"\n" + "".join(
         f"\n[[package]]\nname = \"{p['name']}\"\nversion = \"{p['version']}\"\nsource = \"{REG}\"\n" for p in pk) + \
-        "\n[[package]]\nname = \"notlinked\"\nversion = \"9.0.0\"\nsource = \"" + REG + "\"\n"
+        "\n[[package]]\nname = \"notlinked\"\nversion = \"9.0.0\"\nsource = \"" + REG + "\"\n" + \
+        "\n[[package]]\nname = \"object\"\nversion = \"0.39.1\"\nsource = \"" + REG + "\"\n"   # a build dependency's
     return meta, tree, lock
 
 
-STD_HTML = "<html><h1>Copyright notices for The Rust Standard Library</h1><p>📦 object-0.37.1</p></html>\n"
+STD_HTML = ("<html><h1>Copyright notices for The Rust Standard Library</h1><h3>📦 gimli-0.32.3</h3>"
+            '<p>URL: <a href="https://crates.io/crates/gimli/0.32.3">https://crates.io/crates/gimli/0.32.3</a></p></html>\n')
+STD_RLIBS = {"libcore-0123456789abcdef.rlib": b"core", "liballoc-0123456789abcdef.rlib": b"alloc",
+             "libstd-0123456789abcdef.rlib": b"std /rust/deps/object-0.37.3/src/read/mod.rs",
+             "libobject-0123456789abcdef.rlib": b"/rust/deps/object-0.37.3/src/read/elf.rs",
+             "libmemchr-0123456789abcdef.rlib": b"/rust/deps/memchr-2.7.6/src/lib.rs",
+             "libgimli-0123456789abcdef.rlib": b"/rust/deps/gimli-0.32.3/src/read/mod.rs"}
+
+
+def sysroot(base, rlibs=None):
+    """A toolchain's sysroot as crate_notices.py reads it: COPYRIGHT-library.html and the target's rlibs."""
+    d = os.path.join(base, "sysroot")
+    wr(os.path.join(d, "share", "doc", "rust", "COPYRIGHT-library.html"), STD_HTML)
+    for n, b in (rlibs or STD_RLIBS).items():
+        wr(os.path.join(d, "lib", "rustlib", "x86_64-unknown-linux-gnu", "lib", n), b)
+    return d
 
 
 def crate_files(base, cli_dir, out, module=cn):
@@ -117,10 +133,8 @@ def crate_files(base, cli_dir, out, module=cn):
     wr(msgs, "".join(json.dumps({"reason": "compiler-artifact", "package_id": p["id"],
                                  "target": {"kind": p["targets"][0]["kind"] if p["targets"] else ["lib"]}}) + "\n"
                      for p in meta["packages"]))
-    std = os.path.join(base, "COPYRIGHT-library.html")
-    wr(std, STD_HTML)
     with contextlib.redirect_stdout(io.StringIO()):
-        module.generate(cli_dir, msgs, out, tree_text=tree, meta=meta, std_copyright=std,
+        module.generate(cli_dir, msgs, out, tree_text=tree, meta=meta, sysroot=sysroot(base),
                         rustc_version="rustc 0.0.0 (test)")
     return meta, tree, lock
 
@@ -403,10 +417,8 @@ class CrateNotices(unittest.TestCase):
         msgs = os.path.join(self.t, "m.jsonl")
         wr(msgs, "".join(json.dumps({"reason": "compiler-artifact", "package_id": p["id"], "target": {"kind": ["lib"]}})
                          + "\n" for p in meta["packages"] if p["name"] != "mitonly"))
-        std = os.path.join(self.t, "std.html")
-        wr(std, STD_HTML)
         with self.assertRaises(cn.Bad) as e:
-            cn.generate(cli, msgs, os.path.join(self.t, "out"), tree_text=tree, meta=meta, std_copyright=std,
+            cn.generate(cli, msgs, os.path.join(self.t, "out"), tree_text=tree, meta=meta, sysroot=sysroot(self.t),
                         rustc_version="test")
         self.assertIn("not compiled by this build (mitonly 0.1.0)", str(e.exception))
 
@@ -420,12 +432,20 @@ class CrateNotices(unittest.TestCase):
         msgs = os.path.join(self.t, "m.jsonl")
         wr(msgs, "".join(json.dumps({"reason": "compiler-artifact", "package_id": p["id"], "target": {"kind": ["lib"]}})
                          + "\n" for p in meta["packages"]))
-        std = os.path.join(self.t, "std.html")
-        wr(std, STD_HTML)
         with self.assertRaises(cn.Bad) as e:
-            cn.generate(cli, msgs, os.path.join(self.t, "out"), tree_text=tree, meta=meta, std_copyright=std,
+            cn.generate(cli, msgs, os.path.join(self.t, "out"), tree_text=tree, meta=meta, sysroot=sysroot(self.t),
                         rustc_version="test")
         self.assertIn("mitonly 0.1.0: used under 'BSD-3-Clause' and its package has no licence file", str(e.exception))
+
+    def test_standard_library_crates(self):
+        rows = cn.std_rows(sysroot(self.t), "rustc 1.98.1 (test)")
+        got = {r["name"]: (r["version"], r["used_under"], r["texts"]) for r in rows}
+        self.assertEqual(got["object"], ("0.37.3", "Apache-2.0", "LICENSE-APACHE"))
+        self.assertEqual(got["memchr"][:2], ("2.7.6", "MIT"))
+        self.assertEqual(got["std"][0], "1.98.1")
+        with self.assertRaises(cn.Bad) as e:                       # a crate whose licence the script does not know
+            cn.std_rows(sysroot(os.path.join(self.t, "b"), {**STD_RLIBS, "libmystery-0000.rlib": b""}), "rustc 1 (x)")
+        self.assertIn("mystery", str(e.exception))
 
     def binary_release(self, symbols):
         d = os.path.join(self.t, "rel")
@@ -447,15 +467,21 @@ class CrateNotices(unittest.TestCase):
 
     def test_binary_check(self):
         good = ["core::fmt::write", "<serde::de::Foo as core::fmt::Debug>::fmt", "std::rt::lang_start",
-                "object::read::elf::parse", "native_sys::init", "ferrata::main", "nlohmann::basic_json<>::parse"]
+                "<&[u8] as object::read::read_ref::ReadRef>::read_bytes_at_until", "gimli::read::Reader::x",
+                "native_sys::init", "ferrata::main", "nlohmann::basic_json<>::parse"]
         d, b = self.binary_release(good)
         r = self.binary_check(d, b)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("2 crates of cli/crates.tsv", r.stdout)
+        self.assertIn("2 crates of the dependency set and 4 of the standard library", r.stdout)
         d, b = self.binary_release(good + ["alloc::vec::Vec<notlinked::Thing>::push"])
         r = self.binary_check(d, b)
         self.assertEqual(r.returncode, 1)
         self.assertIn("symbols of crate notlinked", r.stderr)
+        p = os.path.join(d, "cli", cn.CRATES)                     # the review's find: std's object not in the list
+        wr(p, "".join(l for l in rd(p).splitlines(True) if not l.startswith("object\t")))
+        r = self.binary_check(d, b)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("symbols of crate object", r.stderr)
         d, b = self.binary_release(["_RNvCs1_4core3fmt5write"])               # nm without Rust demangling
         self.assertEqual(self.binary_check(d, b).returncode, 1)
         self.assertEqual(self.binary_check(d, b, strict=False).returncode, 0)

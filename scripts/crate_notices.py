@@ -3,10 +3,10 @@
 licence and the licence and notice files of its package, generated from the build itself.
 
     python3 -I scripts/crate_notices.py generate --cli DIR --messages FILE --out DIR
-                                        [--cargo-tree FILE] [--metadata FILE] [--std-copyright FILE] [--rustc-version S]
+                                        [--cargo-tree FILE] [--metadata FILE] [--sysroot DIR] [--rustc-version S]
         after `cargo build --release --locked --message-format=json` in DIR (scripts/release.sh build does both):
-        writes OUT/crates.tsv (the dependency set), OUT/THIRD-PARTY-CRATES.md (the notices) and
-        OUT/rust-std-COPYRIGHT-library.html (the standard library's notices, as the toolchain ships them)
+        writes OUT/crates.tsv (the dependency set and the standard library's crates), OUT/THIRD-PARTY-CRATES.md (the
+        notices) and OUT/rust-std-COPYRIGHT-library.html (the standard library's notices, as the toolchain ships them)
     python3 -I scripts/crate_notices.py check RELEASE_DIR
         the release's notices match its dependency set and lockfile (scripts/release_manifest.py check runs this)
     python3 -I scripts/crate_notices.py binary-check RELEASE_DIR [--strict]
@@ -25,8 +25,15 @@ root. Packages that compile native code from their own sources (a `links` key, o
 SPDX identifiers and copyright lines of their C, C++ and assembly sources. A package with no such file is used under
 the licence its Cargo.toml declares: Apache-2.0 (the release's LICENSE-APACHE), MIT (the MIT text with the authors the
 package names), or a licence that asks for no notice in a binary (CC0-1.0, Unlicense, 0BSD, MIT-0, BSL-1.0); any other
-licence without a file stops `generate`. Each distinct text (whitespace aside) is given once. `--cargo-tree`,
-`--metadata`, `--std-copyright` and `--rustc-version` replace the commands (tests). Standard library only.
+licence without a file stops `generate`. Each distinct text (whitespace aside) is given once.
+
+The standard library is linked too: its crates are the rlibs of the toolchain's sysroot for the target (std, core,
+alloc, ... in rust-lang/rust itself, Apache-2.0 OR MIT; and the crates std is built from, such as object, addr2line,
+gimli, miniz_oxide, adler2, each version read from the rlib's /rust/deps/NAME-VERSION paths and its licence from
+STD_LICENCES below; one this script does not know stops `generate`). The toolchain's COPYRIGHT-library.html is shipped
+as well, but it does not name every crate std links (Rust 1.98.1's lacks object, addr2line, miniz_oxide and adler2),
+hence the list. `--cargo-tree`, `--metadata`, `--sysroot` and `--rustc-version` replace the commands (tests). Standard
+library only.
 """
 import argparse
 import collections
@@ -58,6 +65,13 @@ PREFER = ["Apache-2.0", "MIT", "Apache-2.0 WITH LLVM-exception", "BSD-3-Clause",
 STD_IN_TREE = {"core", "alloc", "std", "proc_macro", "test", "panic_unwind", "panic_abort", "unwind", "std_detect",
                "compiler_builtins", "profiler_builtins", "rustc_std_workspace_core", "rustc_std_workspace_alloc",
                "rustc_std_workspace_std", "sysroot"}
+# The licences of the crates std is built from, as each declares it (checked against the crates of these versions:
+# fix-supply-2 box run 3). A crate of the sysroot not here, nor in rust-lang/rust, stops `generate`.
+STD_LICENCES = {"addr2line": "Apache-2.0 OR MIT", "adler2": "0BSD OR MIT OR Apache-2.0", "cfg_if": "MIT OR Apache-2.0",
+                "getopts": "MIT OR Apache-2.0", "gimli": "MIT OR Apache-2.0", "hashbrown": "MIT OR Apache-2.0",
+                "libc": "MIT OR Apache-2.0", "memchr": "Unlicense OR MIT", "miniz_oxide": "MIT OR Zlib OR Apache-2.0",
+                "object": "Apache-2.0 OR MIT", "rustc_demangle": "MIT/Apache-2.0",
+                "rustc_literal_escaper": "MIT OR Apache-2.0"}
 
 
 class Bad(Exception):
@@ -341,9 +355,50 @@ def fence(text):
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# the standard library
+# ---------------------------------------------------------------------------------------------------------------
+def std_rows(sysroot, rustc_version):
+    """crates.tsv rows of the standard library's crates, from the sysroot's rlibs for the target."""
+    lib = os.path.join(sysroot, "lib", "rustlib", TARGET, "lib")
+    if not os.path.isdir(lib):
+        raise Bad(f"{lib} missing: the standard library of the toolchain")
+    release = (rustc_version.split() + ["?", "?"])[1]
+    rows, unknown = [], []
+    for n in sorted(os.listdir(lib)):
+        m = re.match(r"^lib([A-Za-z0-9_]+)-[0-9a-f]+\.rlib$", n)
+        if not m:
+            continue
+        crate = m.group(1)
+        with open(os.path.join(lib, n), "rb") as f:
+            data = f.read()
+        versions = {v.decode() for p, v in re.findall(rb"/rust/deps/([A-Za-z0-9_-]+?)-(\d+\.\d+\.\d+)/", data)
+                    if p.decode().replace("-", "_") == crate}
+        if crate in STD_IN_TREE:
+            licence, version, texts = "Apache-2.0 OR MIT", release, f"licenses/{STD} (rust-lang/rust's in-tree files)"
+        elif crate in STD_LICENCES:
+            licence, version = STD_LICENCES[crate], ",".join(sorted(versions)) or "-"
+            texts = None
+        else:
+            unknown.append(crate)
+            continue
+        use = used_under(licence)
+        if texts is None:
+            texts = ("LICENSE-APACHE" if use == "Apache-2.0" else
+                     f"none required ({use})" if use in NO_NOTICE else f"licenses/{STD}")
+        rows.append({"name": crate, "version": version, "source": f"rust-std:{release}", "lib": crate,
+                     "licence": licence, "used_under": use, "origin": "rust-std", "texts": texts})
+    if unknown:
+        raise Bad(f"standard library crates whose licence crate_notices.py does not know (STD_LICENCES): "
+                  f"{', '.join(unknown)}")
+    if not any(r["name"] == "std" for r in rows):
+        raise Bad(f"no libstd rlib in {lib}")
+    return rows
+
+
+# ---------------------------------------------------------------------------------------------------------------
 # generate
 # ---------------------------------------------------------------------------------------------------------------
-def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, rustc_version=None):
+def generate(cli, messages, out, tree_text=None, meta=None, sysroot=None, rustc_version=None):
     cli = os.path.abspath(cli)
     tree_text = tree_text if tree_text is not None else tree_lines(cli)
     meta = meta if meta is not None else json.loads(metadata_json(cli))
@@ -353,12 +408,12 @@ def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, 
     if missing:
         raise Bad(f"{len(missing)} packages of the dependency set were not compiled by this build "
                   f"({', '.join(missing[:8])}{' ...' if len(missing) > 8 else ''}): wrong messages file?")
-    if not std_copyright:
-        sysroot = run(["rustc", "--print", "sysroot"], cli).strip()
-        std_copyright = os.path.join(sysroot, "share", "doc", "rust", "COPYRIGHT-library.html")
+    sysroot = sysroot or run(["rustc", "--print", "sysroot"], cli).strip()
+    std_copyright = os.path.join(sysroot, "share", "doc", "rust", "COPYRIGHT-library.html")
     if not os.path.isfile(std_copyright):
-        raise Bad(f"{std_copyright} missing: the standard library's notices (part of the toolchain's rust-std)")
+        raise Bad(f"{std_copyright} missing: the standard library's notices (part of the toolchain)")
     rustc_version = rustc_version or run(["rustc", "--version"], cli).strip()
+    std = std_rows(sysroot, rustc_version)
     with open(os.path.join(HERE, "native-deps.json"), encoding="utf-8") as f:
         compiled_native = set(json.load(f).get("compiled_from_crate_sources", {}).get("cli", {}))
     lock = os.path.join(cli, "Cargo.lock")
@@ -424,7 +479,7 @@ def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, 
     tsv = os.path.join(out, CRATES)
     with open(tsv, "w", encoding="utf-8") as f:
         f.write("\t".join(TSV_COLUMNS) + "\n")
-        for r in rows:
+        for r in rows + std:
             f.write("\t".join(r[c] for c in TSV_COLUMNS) + "\n")
     shutil.copyfile(std_copyright, os.path.join(out, STD))
     own = [r for r in rows if r["origin"] == "ferrata"]
@@ -443,7 +498,8 @@ def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, 
         f"- Dependency set: `cli/crates.tsv`, sha256 `{sha256(tsv)}`: `cargo tree -e normal,no-proc-macro --target "
         f"{TARGET} -p {PACKAGE}`, {len(rows)} packages, every one compiled by this build (build scripts, procedural "
         "macros and dev-dependencies are not linked into the binary and are not listed).",
-        f"- Rust: {rustc_version}. The standard library's notices, as the toolchain ships them: `licenses/{STD}`.",
+        f"- Rust: {rustc_version}. The standard library's crates ({len(std)}, the toolchain's rlibs) are listed at the "
+        f"end; its notices, as the toolchain ships them: `licenses/{STD}`.",
         f"- Ferrata's own crates ({len(own)}), MIT OR Apache-2.0 (`LICENSE-MIT`, `LICENSE-APACHE`): "
         + ", ".join(f"{r['name']} {r['version']}" for r in own) + ".",
         f"- Third-party crates: {len(third)} ("
@@ -472,7 +528,14 @@ def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, 
         fe = fence(t["text"])
         lines += [f"### {t['id']}", "", "From: " + "; ".join(t["from"]) + ".", "", fe + "text", t["text"].rstrip("\n"),
                   fe, ""]
-    lines += ["## Native code compiled from crate sources", ""]
+    lines += ["## The Rust standard library", "",
+              "The crates of the toolchain's standard library for the target (the rlibs of its sysroot; a binary links "
+              "those std needs). The ones in rust-lang/rust are Apache-2.0 OR MIT, with the exceptions "
+              f"`licenses/{STD}` lists; the others are used under the licence below.", "",
+              "| Crate | Version | Source | Declared licence | Used under | Licence and notice files |", "|---|---|---|---|---|---|"]
+    for r in std:
+        lines.append(f"| {r['name']} | {r['version']} | {r['source']} | {r['licence']} | {r['used_under']} | {r['texts']} |")
+    lines += ["", "## Native code compiled from crate sources", ""]
     for pkg, spdx, cr in native_notes:
         lines += [f"### {pkg['name']} {pkg['version']}", "",
                   "SPDX identifiers in its C, C++ and assembly sources (files): "
@@ -485,8 +548,9 @@ def generate(cli, messages, out, tree_text=None, meta=None, std_copyright=None, 
             lines += ["No copyright lines in those sources.", ""]
     with open(os.path.join(out, NOTICES), "w", encoding="utf-8") as f:
         f.write("\n".join(lines).rstrip("\n") + "\n")
-    print(f"crate notices: {len(rows)} packages ({len(own)} Ferrata's, {len(third)} third-party), {len(order)} distinct "
-          f"texts, {len(native_notes)} packages compiling native code; {NOTICES}, {CRATES}, {STD}")
+    print(f"crate notices: {len(rows)} packages ({len(own)} Ferrata's, {len(third)} third-party), {len(std)} crates of "
+          f"the standard library, {len(order)} distinct texts, {len(native_notes)} packages compiling native code; "
+          f"{NOTICES}, {CRATES}, {STD}")
     return rows
 
 
@@ -534,21 +598,24 @@ def check(d):
         return probs + [str(e)]
     lock = lock_packages(paths["lock"])
     for r in rows:
+        if r["origin"] == "rust-std":
+            continue
         src = "" if r["source"].startswith("path:") else r["source"]
         if (r["name"], r["version"], src) not in lock:
             probs.append(f"cli/{CRATES}: {r['name']} {r['version']} ({shown_source(r['source'])}) is not in cli/Cargo.lock")
-    table = text.split("\n## Crates\n", 1)[-1].split("\n## ", 1)[0]
-    listed = set()
-    for line in table.splitlines():
-        cells = [c.strip() for c in line.strip().strip("|").split("|")]
-        if len(cells) == 6 and cells[0] not in ("Crate", "---"):
-            listed.add(tuple(cells[:3]) + (cells[4], cells[5]))
-    want = {(r["name"], r["version"], shown_source(r["source"]), r["used_under"], r["texts"])
-            for r in rows if r["origin"] == "third-party"}
-    for x in sorted(want - listed):
-        probs.append(f"{NOTICES} does not list {x[0]} {x[1]} ({x[2]}) as cli/{CRATES} does")
-    for x in sorted(listed - want):
-        probs.append(f"{NOTICES} lists {x[0]} {x[1]} ({x[2]}), which cli/{CRATES} does not")
+    for heading, origin in (("Crates", "third-party"), ("The Rust standard library", "rust-std")):
+        table = text.split(f"\n## {heading}\n", 1)[-1].split("\n## ", 1)[0] if f"\n## {heading}\n" in text else ""
+        listed = set()
+        for line in table.splitlines():
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            if line.startswith("|") and len(cells) == 6 and cells[0] not in ("Crate", "---"):
+                listed.add(tuple(cells[:3]) + (cells[4], cells[5]))
+        show = shown_source if origin == "third-party" else (lambda x: x)
+        want = {(r["name"], r["version"], show(r["source"]), r["used_under"], r["texts"]) for r in rows if r["origin"] == origin}
+        for x in sorted(want - listed):
+            probs.append(f"{NOTICES} does not list {x[0]} {x[1]} ({x[2]}) as cli/{CRATES} does")
+        for x in sorted(listed - want):
+            probs.append(f"{NOTICES} lists {x[0]} {x[1]} ({x[2]}), which cli/{CRATES} does not")
     sections = {}
     for m in re.finditer(r"^### (T\d+)\n\nFrom: (.*)$", text, re.M):
         sections[m.group(1)] = m.group(2)
@@ -574,8 +641,10 @@ def check(d):
 # binary-check: the crates whose code is in cli/ferrata
 # ---------------------------------------------------------------------------------------------------------------
 def std_crates(html_path):
+    """The standard library's crates: those in rust-lang/rust, and the out-of-tree ones the toolchain's
+    COPYRIGHT-library.html gives notices for (each named by its crates.io URL)."""
     names = set(STD_IN_TREE)
-    for m in re.finditer(r"📦\s*([A-Za-z0-9_.-]+?)-(\d+\.\d+\.\d+[A-Za-z0-9.+-]*)", read(html_path)):
+    for m in re.finditer(r"crates\.io/crates/([A-Za-z0-9_-]+)/\d", read(html_path)):
         names.add(m.group(1).replace("-", "_"))
     return names
 
@@ -614,14 +683,15 @@ def binary_check(d, strict=False):
         return ([msg], []) if strict else ([], [msg])
     rows = read_tsv(tsv)
     listed = {r["lib"] for r in rows} | {r["name"].replace("-", "_") for r in rows}
-    std = std_crates(html)
-    locked = {n.replace("-", "_") for n, _, _ in lock_packages(lock)}
-    unlisted = sorted(h for h in heads if h in locked and h not in listed and h not in std)
-    seen = sorted(h for h in heads if h in listed)
+    std = {r["lib"] for r in rows if r["origin"] == "rust-std"}
+    known = {n.replace("-", "_") for n, _, _ in lock_packages(lock)} | std_crates(html)
+    unlisted = sorted(h for h in heads if h in known and h not in listed)
+    seen = sorted(h for h in heads if h in listed and h not in std)
     probs = [f"cli/ferrata has symbols of crate {h} ({heads[h]}), which cli/{CRATES} and {NOTICES} do not list"
              for h in unlisted]
-    notes = [f"{len(seen)} crates of cli/{CRATES} and {len(set(heads) & std)} of the standard library have symbols in "
-             f"cli/ferrata; {len(unlisted)} crates of cli/Cargo.lock with symbols there are not listed"]
+    notes = [f"{len(seen)} crates of the dependency set and {len(set(heads) & std)} of the standard library have "
+             f"symbols in cli/ferrata; {len(unlisted)} crates named in cli/Cargo.lock or the toolchain's notices with "
+             "symbols there are not listed"]
     return probs, notes
 
 
@@ -634,7 +704,7 @@ def main():
     ap.add_argument("--out", default="")
     ap.add_argument("--cargo-tree", default="")
     ap.add_argument("--metadata", default="")
-    ap.add_argument("--std-copyright", default="")
+    ap.add_argument("--sysroot", default="")
     ap.add_argument("--rustc-version", default="")
     ap.add_argument("--strict", action="store_true")
     a = ap.parse_args()
@@ -644,7 +714,7 @@ def main():
                 raise Bad("generate: --messages (cargo's JSON messages of the build) and --out are required")
             generate(a.cli, a.messages, a.out, tree_text=read(a.cargo_tree) if a.cargo_tree else None,
                      meta=json.loads(read(a.metadata)) if a.metadata else None,
-                     std_copyright=a.std_copyright or None, rustc_version=a.rustc_version or None)
+                     sysroot=a.sysroot or None, rustc_version=a.rustc_version or None)
         elif a.cmd == "check":
             probs = check(a.release)
             for p in probs:
