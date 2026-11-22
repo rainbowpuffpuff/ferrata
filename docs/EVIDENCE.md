@@ -618,6 +618,23 @@ without default features, 19 of 19; the wallet 4 of 4; `seqnet-chain`'s tests 2 
 steps, `idl`, `scripts/test_image_ids.py`. Not rerun here: the send-stack runs and the seqnet `logoseth` run (Nix and a
 zone; F's third review reran both) and the mini-app's Qt test (no Qt on the box).
 
+**Twentieth pass (branch `integration9`, 22 Nov 2026).** The merge of `fix-updater` (row 200; no conflict), on the build
+box: the updater's whole suite with the harness feature, 73 of 73 in 14 runs (the review fixes' and stream H's
+`every_party` and `replacement`; the A3 gate on 246 updates replayed, its numbers as row 200 gives them); the updater's
+clippy with and without the harness feature, `ferrata-advance`'s, rustfmt clean; the sequencer backend
+(`lez/updater/sequencer`) checks against the changed crate; lez/RESULTS.md §8's clippy gate; the attestation module's
+calls and the updater module built and tested natively. On the laptop: `links` and its steps, `idl`.
+
+**Twenty-first pass (branch `integration9`, 22 Nov 2026).** The merge of `fix-supply` (row 201; one conflict,
+`scripts/reproduce/compare_ids.py`, both streams' logic kept), on the build box, each CI job it changes as `ci.yml` now
+runs it: the six supply suites, 99 of 99 (`links`); the root workspace's tests, rustfmt, clippy (one lint allowed:
+the MSRV raise to 1.85 proposes `is_none_or` in `ferrata-core`, which the deployed attestation program is built from)
+and the check with Rust 1.85 (`test`); `scripts/vault_libs.py check` and `forge test`, 613 passed (`vault`); the round
+trip and `cli/tests/e2e.sh` with the native archives fetched and checked (`roundtrip`); `deny_all` over the 56 tracked
+workspaces, 48 passed, 0 failed, 8 skipped, the root, `cli` and `lez` among those passed (`deps`); with the image-id
+tooling's tests (18) and `scripts/test_image_ids.py` (6) on the merged `compare_ids.py`, and piece 7's clean rebuild
+compared again: 18 of 18 guests, 0 of the first table's 14 missing. On the laptop: `links` and its steps, `idl`.
+
 | Suite | Result |
 |---|---|
 | Root workspace, CI job as written (vectors fetched on the box) | fifth pass (`stable` as 1.98.1) and sixth (stable 1.99.1; fmt and clippy also on beta 1.101.0-beta.1): 142 tests passed in 21 binaries; fmt, clippy `-D warnings` and the `no_std` RISC-V build clean; seventh pass: 150 passed in 24 binaries (`review_core` 6, the two `fuzz_regressions` 1 each), fmt and clippy `-D warnings` clean (the `no_std` build not re-run) |
