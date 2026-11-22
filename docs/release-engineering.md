@@ -145,6 +145,17 @@ and source, carries the notices and texts, explains relinking (LGPL-3.0 section 
 and `deny.toml` declares the native licences against the five crates that link them, so `cargo deny` sees them.
 Release 0.1.0-rc.1 predates all of this: its manifest has no `native` section, so `verify` now fails on it by design.
 
+**Run on the build box, 22 November 2026** (branch `fix-supply` at `68298533`, **measured**; a test release
+`0.0.0-fix-supply`, not recorded): `release.sh build` 10 min 42 s (guests, vault and the CLI, `--locked`, from the two
+checked archives; `check-build` passed), `package`, `verify --strict`: 18 files, 0 bad, the notices cover the 2
+archives and their 8 components, the six programs' image ids recomputed with `r0vm` equal the manifest's, and all six
+equal the crown run's table (`e2e/crown/README.md`). The CLI binary: 30,375,968 bytes; it needs only
+`libpcsclite.so.1` and the C/C++ runtime at run time (no `librapidsnark.so`), holds 198 GMP symbols and 239
+`Circom_CalcWit` strings, and no path of either archive. The tarball 11,475,810 bytes; the sources asset 4,126,720
+bytes (the two GMP archives). The guard's other side: the five crates built with the two variables unset (their build
+scripts fetched their own copies): `check-build` refused all five (9 refusals); the same release build from a cache
+whose circuits archive had one byte changed stopped in 0 s, before any build started.
+
 How the build is made reproducible: a RISC Zero guest built without Docker would embed the absolute paths of its
 sources; `scripts/guest-rustc` (cargo's `build.rustc-wrapper`) remaps them and replaces cargo's path-dependent
 `-C metadata` in guest builds, so the image ids do not depend on where the tree is ([`image-ids.md`](image-ids.md)).
