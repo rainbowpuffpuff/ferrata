@@ -6,7 +6,7 @@
 #   real.sh build        build box: the test binary, ferrata-e2e and the release program; the release program's id
 #                        checked against docs/image-ids.md; staged in target/privacy/real/stage with MANIFEST.json
 #   real.sh dev          build box: the staged binary in dev mode (fake receipts), the Foundry half (mock verifier),
-#                        the analysis -> docs/privacy/real/dev/ (the same programs and code: the baseline)
+#                        the analysis -> $OUT/dev/ (the same programs and code: the baseline)
 #   real.sh volume       laptop: the CUDA r0vm (R0VM_CUDA, default gpu-prover/bin/r0vm-cuda; sha256 checked against
 #                        gpu-prover/logs/bin-meta/r0vm-cuda.json) into the Volume ferrata-prover of $MODAL_PROFILE
 #   real.sh gpu RUN      laptop: scripts/privacy/gpu_app.py on one L4 ($MODAL_PROFILE), fetched to target/privacy/real/RUN
@@ -14,7 +14,11 @@
 #                        FERRATA_WRAP_PROFILE, default $MODAL_PROFILE)
 #   real.sh finish RUN   build box: the Groth16 receipts assembled and verified, release-seals.json, the Foundry half
 #                        with the real verifier, then `analyze`
-#   real.sh analyze RUN  build box: the analysis -> docs/privacy/real/generated/ and docs/privacy/real/proofs.json
+#   real.sh analyze RUN  build box: the analysis -> $OUT/generated/ and $OUT/proofs.json
+#
+# OUT: FERRATA_PRIVACY_OUT, default target/privacy/real/b1. The records in docs/privacy/real/ are of the bridge program
+# the deployments of November 2026 run (docs/image-ids.md `ferrata_bridge`) and reproduce from f13faee2, where these
+# steps wrote them in place; this tree's steps run B1's program (`ferrata_bridge_b1`) and must not write over them.
 #
 # The build box steps run through spike/modal-build/mrun (with --put target/privacy/real/RUN for `finish`, and
 # --env FERRATA_COMMIT=<commit> for `build`: the box's copy is not a git checkout); the
@@ -33,6 +37,7 @@ expect_id() {  # the image id docs/image-ids.md records for a program named in i
 # This tree's bridge program: since milestone B1 docs/image-ids.md's `ferrata_bridge_b1` (its `ferrata_bridge` row is
 # the program the live runs deployed, at f13faee2).
 BRIDGE_ENTRY=ferrata_bridge_b1
+OUT="${FERRATA_PRIVACY_OUT:-$T/b1}"
 E="$S/ferrata-e2e"
 
 case "$step" in
@@ -74,7 +79,7 @@ dev)
   ( cd "$T" && FERRATA_PRIVACY_DIR="$D" RISC0_DEV_MODE=1 FERRATA_EXPECT_BRIDGE_IMAGE_ID="$bridge" \
       "$S/privacy_suite" --exact privacy_suite_lez_half --nocapture --test-threads 1 ) > "$T/logs/dev-lez.log" 2>&1
   ( cd "$root/vault" && FERRATA_PRIVACY_DIR="$D" forge test --match-contract PrivacySuiteTest -vv ) > "$T/logs/dev-forge.log" 2>&1
-  python3 -I "$root/scripts/privacy/adversary.py" "$D" "$root/docs/privacy/real/dev" | tee "$T/logs/dev-analysis.json"
+  python3 -I "$root/scripts/privacy/adversary.py" "$D" "$OUT/dev" | tee "$T/logs/dev-analysis.json"
   ;;
 volume)
   src="${R0VM_CUDA:-$root/gpu-prover/bin/r0vm-cuda}"
@@ -129,8 +134,8 @@ analyze)
   # programs and other statements (gpu-prover/, EVIDENCE rows 5 and 10).
   r="$root/gpu-prover/results"
   export FERRATA_PRIVACY_CONTROL_RECEIPTS="$r/gpu-l4-bridge/lez-bridge/bridge-private-claim-tx.borsh,$r/gpu-l4-bridge/lez-bridge/bridge-private-burn-tx.borsh,$r/gpu-l4-attest-2/lez-attest/stage4-private-attest-tx.borsh"
-  python3 -I "$root/scripts/privacy/adversary.py" "$G/data" "$root/docs/privacy/real/generated" | tee "$G/analysis.json"
-  python3 -I "$root/scripts/privacy/proofs.py" "$G" "$root/docs/privacy/real/proofs.json"
+  python3 -I "$root/scripts/privacy/adversary.py" "$G/data" "$OUT/generated" | tee "$G/analysis.json"
+  python3 -I "$root/scripts/privacy/proofs.py" "$G" "$OUT/proofs.json"
   ;;
 *) echo "unknown step $step" >&2; exit 2 ;;
 esac
