@@ -386,10 +386,12 @@ channel key certified once for this deployment (the certificate binds chain, vau
 proof needs `t` such signatures over the tip or its descendants ([`bridge.md`](design/bridge.md) §8.3), and
 checks the tip's own inscription as rule (A) does: a channel key of the live set must have inscribed it.
 Beyond V1–V3, finality then needs only **no Logos Blockchain reorganisation deeper than `k` on the
-attestors' nodes**, which every LEZ full node assumes. It is beaten by `t` attestation keys together with
-one channel key of the live set (to inscribe a forged tip; `t` attestation keys alone no longer suffice),
-or by eclipsing enough attestors' nodes for as long as it takes to show them `k` private blocks. It tolerates `n − t` silent sequencers, needs no beacon,
-and works on any EVM chain; off-chain roles are liveness-only ([`bridge.md`](design/bridge.md) §9).
+attestors' nodes**, which every LEZ full node assumes. It is beaten by `t` attestors (their attestation keys,
+or the LEZ nodes they trust) together with one channel key of the live set (to inscribe a forged tip; `t`
+attestation keys alone no longer suffice), or by eclipsing enough attestors' nodes for as long as it takes to show
+them `k` private blocks. Under rule (B) each attestor signs a tip only when its own LEZ node holds it in LEZ's final tier (applied, not parked); a forged checkpoint needs `t` attestors (their keys, or the LEZ nodes they trust) together with one channel key. A LEZ node may show an adopted head block `Finalized` early (LEZ #1053); the attestor also requires the block's inscription to be final on its Logos Blockchain node. `lez` must be the attestor's own LEZ node: attestors that share one node share its lies. It tolerates `n − t` silent sequencers, needs no beacon, and works on any
+EVM chain; the attestors and the LEZ nodes they trust are safety roles, every other off-chain role is liveness-only
+([`bridge.md`](design/bridge.md) §9).
 **Status:** the rule is built and measured in the checkpoint program and the vault, and one real proof was
 verified on a rule (B) vault ([`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) §4;
 [`vault/README.md`](../vault/README.md)), of the guest before the tip-inscription check (that check is
@@ -526,7 +528,8 @@ the same pair at construction (`RolesMustDiffer`). The program's second build (n
 | Accredited sequencers and their attestors | LEZ blocks; attestations under (B) | **safety** for the return leg: `t` of them can forge a burn root (§3.2; §3.5 bounds it) | as said | the zone stops; finalisation needs `t` live keys under (B), `t + 1` under (A) | public transactions |
 | RPC and LEZ nodes | chain data | liveness only | refused: checked against roots and records | another node | request metadata; recovery downloads whole lists, never per item |
 
-Under rule (B) every off-chain role apart from the accredited sequencers is liveness-only (Security #7); under rule
+Under rule (B) every off-chain role apart from the accredited sequencers, their attestors and the LEZ node each
+attestor trusts is liveness-only (Security #7); under rule
 (A) the watchers also have the safety role of §3.4.
 
 ### 4.3 Outages and malfunctions of third-party components (RFP-022 R.9)
