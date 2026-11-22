@@ -128,7 +128,6 @@ def extract_ungated_test_names(text: str, enabled_features: set[str]) -> set[str
 
     clean = _strip_rust_comments_and_strings(text)
     raw_lines = text.splitlines()
-    clean_lines = clean.splitlines()
 
     # Map line index -> (module prefix stack, gated_features set) using inline `mod name { ... }`.
     # First find every inline `mod <name> {` and its matching closing brace line.
@@ -417,9 +416,11 @@ def _check_package_coverage(
                     f"{pkg_label}: exact-only split of {bname!r} leaves test(s) unrun: {missing_tests}"
                 )
 
-    # Check completeness: every discovered binary must be covered
+    # Check completeness: every discovered binary must exist on disk and be covered
     covered = set(seen_whole) | set(splits_by_bin) | set(feature_gated_map)
     for bname, info in sorted(binaries.items()):
+        if not info["exists"]:
+            problems.append(f"{pkg_label}: [[test]] {bname!r} points to missing file {info['rel_path']}")
         if bname not in covered:
             problems.append(
                 f"{pkg_label}: test binary {bname!r} ({info['rel_path']}) is not run by any shard"
@@ -633,20 +634,26 @@ def main(argv: list[str]) -> int:
     privacy_out = "$PRIVACY_OUT"
     repo_prefix = ""
 
+    def next_val(flag: str, idx: int) -> str:
+        if idx + 1 >= len(argv):
+            print(f"check-lez-shards.py: {flag} requires a value", file=sys.stderr)
+            sys.exit(2)
+        return argv[idx + 1]
+
     i = 0
     while i < len(argv):
         a = argv[i]
         if a == "--map":
-            map_path = pathlib.Path(argv[i + 1])
+            map_path = pathlib.Path(next_val(a, i))
             i += 2
         elif a == "--harness-dir":
-            harness_dir = pathlib.Path(argv[i + 1])
+            harness_dir = pathlib.Path(next_val(a, i))
             i += 2
         elif a == "--updater-dir":
-            updater_dir = pathlib.Path(argv[i + 1])
+            updater_dir = pathlib.Path(next_val(a, i))
             i += 2
         elif a == "--workflow":
-            workflow_path = pathlib.Path(argv[i + 1])
+            workflow_path = pathlib.Path(next_val(a, i))
             i += 2
         elif a == "--no-workflow":
             workflow_path = None
@@ -656,7 +663,7 @@ def main(argv: list[str]) -> int:
             i += 1
         elif a == "--emit-tsv":
             mode = "tsv"
-            target_shard = argv[i + 1]
+            target_shard = next_val(a, i)
             i += 2
         elif a == "--dry-run":
             mode = "dry-run"
@@ -669,13 +676,13 @@ def main(argv: list[str]) -> int:
             build_only = True
             i += 1
         elif a == "--threads":
-            threads = argv[i + 1]
+            threads = next_val(a, i)
             i += 2
         elif a == "--privacy-out":
-            privacy_out = argv[i + 1]
+            privacy_out = next_val(a, i)
             i += 2
         elif a == "--repo-prefix":
-            repo_prefix = argv[i + 1]
+            repo_prefix = next_val(a, i)
             i += 2
         else:
             print(f"check-lez-shards.py: unknown argument {a!r}", file=sys.stderr)

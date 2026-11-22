@@ -30,6 +30,7 @@ threads="${FERRATA_TEST_THREADS:-4}"
 privacy_out="${FERRATA_PRIVACY_OUT:-${RUNNER_TEMP:-$repo/../tmp}/ci-privacy}"
 
 shard=""
+has_shard=0
 dry_run=0
 build_only=0
 argv=("$@")
@@ -41,10 +42,12 @@ while [ "$i" -lt "${#argv[@]}" ]; do
       i=$((i + 1))
       [ "$i" -lt "${#argv[@]}" ] || { echo "lez-harness.sh: --shard needs a shard name" >&2; exit 2; }
       shard="${argv[$i]}"
+      has_shard=1
       i=$((i + 1))
       ;;
     --shard=*)
       shard="${a#--shard=}"
+      has_shard=1
       i=$((i + 1))
       ;;
     --dry-run)
@@ -62,9 +65,14 @@ while [ "$i" -lt "${#argv[@]}" ]; do
   esac
 done
 
+if [ "$has_shard" = 1 ] && [ -z "$shard" ]; then
+  echo "lez-harness.sh: --shard requires a non-empty shard name" >&2
+  exit 2
+fi
+
 if [ "$dry_run" = 1 ]; then
   args=(--dry-run)
-  [ -n "$shard" ] && args+=("$shard")
+  [ "$has_shard" = 1 ] && args+=("$shard")
   [ "$build_only" = 1 ] && args+=(--build-only)
   args+=(--threads "$threads" --privacy-out "$privacy_out")
   python3 -I "$repo/scripts/ci/check-lez-shards.py" "${args[@]}"
@@ -81,7 +89,7 @@ export RISC0_HOME="$lez_home"
 t0=$(date +%s)
 stamp() { echo "[$(( $(date +%s) - t0 )) s] $*"; }
 
-if [ -n "$shard" ]; then
+if [ "$has_shard" = 1 ]; then
   stamp "guard: check scripts/ci/lez-harness-shards.json against lez/harness and lez/updater"
   python3 -I "$repo/scripts/ci/check-lez-shards.py"
   plan_args=(--emit-tsv "$shard" --threads "$threads" --privacy-out "$privacy_out" --repo-prefix "$repo/")

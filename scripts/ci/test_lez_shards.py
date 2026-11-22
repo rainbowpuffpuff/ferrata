@@ -203,6 +203,12 @@ with tempfile.TemporaryDirectory() as empty_home:
     check("lez-harness.sh --dry-run --shard updater-privacy build exits 0 with --no-run",
           p_b.returncode == 0 and "--no-run" in p_b.stdout and "privacy_suite" in p_b.stdout,
           p_b.stdout + p_b.stderr)
+    p_empty = subprocess.run(
+        ["bash", str(HERE / "lez-harness.sh"), "--shard", ""],
+        capture_output=True, text=True, env=dry_env,
+    )
+    check("lez-harness.sh --shard '' exits 2 instead of falling through to unsharded",
+          p_empty.returncode == 2, f"rc={p_empty.returncode} {p_empty.stderr}")
 
 # 14. Workflow matrix mismatch in ci.yml -> fails
 real_ci = mod.DEFAULT_WORKFLOW.read_text(encoding="utf-8")
