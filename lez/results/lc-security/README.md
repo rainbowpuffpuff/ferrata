@@ -36,3 +36,13 @@ other ways of offering a header and where they are refused, and F.8's alignment 
 seed it takes from A to be each claim's own. The four suites passed (5, 2, 11, 11); seven of the eight files here were
 byte-identical, and `f8-full-diff.md` differed only in that count (29,786); the red team's 22 output files were
 byte-identical to the committed ones.
+
+Run again on 22 November 2026 (build box), after the second review of these results: the texts say what runs next to
+the program (Ferrata's policy store, `FinalizedStore`; the specification's store, `LightClientStore`, is run on the two
+cases where they part, 50 and 51, and refuses neither while finalizing neither); U.5's last column is the message a
+client shows (LEZ's own text where LEZ refuses); F.8 also proves X's claim a second time from the same state and checks
+that every field its alignment takes is fresh, or the account's own per-state value; R.11 names the test's own block
+loop. `security_lc` 5 of 5 (121 s) and `security_privacy` 2 of 2 passed, then `security_privacy` again (the final F.8
+text, 29,818 differing bytes that run) with `redteam_lc` 11 and `redteam_attest` 11, whose 22 output files were
+byte-identical to the committed ones; `f4-comparisons.md` was byte-identical. R.11 on LEZ v0.4.0-rc3's own sequencer:
+[`../v0.4.0-rc3/r11-one-block/`](../v0.4.0-rc3/r11-one-block/README.md).

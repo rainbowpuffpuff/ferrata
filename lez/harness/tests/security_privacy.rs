@@ -531,12 +531,13 @@ fn fresh_check(
             {
                 return Err(format!("{label} step {i}: an inherited authorization names a public account"));
             }
-            if !d1.inherited_authorizations.is_empty() {
-                if d1.inherited_authorizations.intersection(&d2.inherited_authorizations).next().is_some() {
-                    return Err(format!("{label} step {i}: an inherited authorization repeats in two proofs of one claim"));
-                }
-                authorizations += d1.inherited_authorizations.len();
+            if d1.inherited_authorizations.len() != d2.inherited_authorizations.len() {
+                return Err(format!("{label} step {i}: inherited authorizations of another count"));
             }
+            if d1.inherited_authorizations.intersection(&d2.inherited_authorizations).next().is_some() {
+                return Err(format!("{label} step {i}: an inherited authorization repeats in two proofs of one claim"));
+            }
+            authorizations += d1.inherited_authorizations.len();
         }
     }
     let actions = |e: &lee_core::ProvenExecution, f: &Option<lee_core::FeeFallback>| -> Vec<PrivateAction> {
@@ -577,14 +578,19 @@ fn fresh_check(
     }
     Ok(vec![
         format!("{aliases} alias(es) on the private side (the boundary's and the fee fallback's): each different"),
-        format!("{authorizations} inherited authorization(s): each different, none naming a public account"),
+        if authorizations == 0 {
+            "inherited authorizations: none in either proof".to_string()
+        } else {
+            format!("{authorizations} inherited authorization(s): each different, none naming a public account")
+        },
         format!("{} encrypted notes: each different", p1.len()),
         format!("{dummies} dummy actions: nullifier and commitment each different"),
         format!("{bindings} recovery binding(s): each different"),
         format!(
-            "the account's own {} action(s) (the claim's and the fee fallback's): the same nullifier (the private state \
-             spent) and the same commitment (the state made) in both, so the second spend of that state is refused",
-            own.len()
+            "the account's own {} action(s) ({}): one nullifier, the private state spent, and {made} commitment(s), the \
+             states made, the same in both; so spending that state a second time is refused",
+            own.len(),
+            if f1.is_some() { "the claim's and the fee fallback's" } else { "the claim's" }
         ),
     ])
 }
@@ -641,8 +647,8 @@ fn f8_two_deposits_full_diff() {
          field that may differ — each with the same encoded size in both — the two messages are byte-identical. The fields \
          taken:\n\n{}\n\nThose fields carry nothing of the account: X's claim of A proven a second time from the same state \
          (the same account, the same state, the same claim) gives, against the first:\n\n{}\n\nSo the aliases, notes, \
-         authorizations, recovery bindings and dummies are fresh randomness, and the account's own nullifier and commitments \
-         are determined by the private state spent and made, never shown twice since a state is spent once.\n\n\
+         recovery bindings and dummies are fresh randomness, and the account's own nullifier and commitments are \
+         determined by the private state spent and made, never shown twice since a state is spent once.\n\n\
          The proof field differs as two proofs of different statements do; its size is the same. Here the proofs are \
          dev-mode fake receipts; a real private transaction carries LEZ's succinct receipt, of fixed seal size whatever the \
          statement (`ProverOpts::succinct()`, rc1 `lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs` \
