@@ -13,7 +13,7 @@ repository root. Labels as elsewhere: **measured** (a run, with where it ran), *
 | `just bench-user` | `scripts/bench.sh user-stage`, `user-prove` | the user-side proofs (private attestation, claim, burn, padded as LEZ's wallet pads) proven for real in containers held to `BENCH_CPUS` CPUs (default 16, the declared minimum) and 16 GiB | build machine, then Modal (`BENCH_MODAL_PROFILE`) |
 | `just m0` | `scripts/m0.py` | the four M0 checks with their measured values and GO / NO-GO / OPEN; `--online` re-reads the upstream tags; `--json FILE`; `--strict` | anywhere (Python standard library) |
 | `just release VERSION` | `scripts/release.sh`, `scripts/release_manifest.py` | builds the six guests (path-independent ids), the vault and the CLI; packages them with `MANIFEST.json` and `SHA256SUMS`; verifies; records the manifest in `releases/VERSION/` | the build machine |
-| `just release-verify DIR` | `scripts/release.sh verify` | every checksum, the manifest, the LEZ programs' image ids recomputed with `r0vm` | anywhere |
+| `just release-verify DIR` | `scripts/release.sh verify` | every checksum, the manifest, the third-party notices, the six programs' image ids recomputed with `r0vm` (said so when `r0vm` is absent; `--strict` fails then) | anywhere |
 | `just deploy-testnet ...` | `scripts/deploy-testnet.sh` | deploys a release on a LEZ testnet and an EVM chain; plan only unless `--send` | the deployer's machine |
 | `just halmos-long` | `scripts/halmos-long.sh` | the four Halmos properties that did not finish in 900 s, with a longer budget | the build machine |
 
@@ -118,8 +118,32 @@ parameters, a notice period, an engineer's check of the finality conditions, aud
 |---|---|---|
 | `programs/` | `ferrata_lez.bin` (attestation program) and `ferrata_bridge.bin` (bridge program): LEZ program ELFs, deployed with LEZ's program loader; `checkpoint.bin`, `checkpoint_b.bin`, `segment.bin`, `release.bin`: R0BF binaries (`ferrata-e2e program-binary`); `ids.txt`, `ids.jsonl` as the build wrote them | bytes, sha256, image id, role (which vault immutable it is) |
 | `vault/` | `FerrataVault.json`, `FerrataRegistry.json` (forge artifacts: ABI, creation and runtime bytecode, the vault's with solc's link placeholder for the library); `script/DeployVault.s.sol`, `script/deploy.sh`, `script/params/*.json` | compiler, EVM version, optimizer, creation and runtime sizes, sha256 of each bytecode, link references; EIP-170 checked |
-| `cli/` | `ferrata` (x86_64-unknown-linux-gnu) and the `Cargo.lock` it was built with | bytes, sha256 |
-| top | `deploy-testnet.sh`, `toolchains.txt` (rustc, r0vm, forge, solc, LEZ commit, build host), `MANIFEST.json`, `SHA256SUMS` | version, commit, creation time, targets, status ("prototype, unaudited: for testnets only") |
+| `cli/` | `ferrata` (x86_64-unknown-linux-gnu, built `--locked`) and the `Cargo.lock` it was built with | bytes, sha256; `native`: the two prebuilt native archives it links, with their components and licences |
+| licences | `LICENSE-MIT`, `LICENSE-APACHE`, `THIRD-PARTY-NOTICES.md`, `licenses/` (from [`releases/third-party/`](../releases/third-party/THIRD-PARTY-NOTICES.md)) | bytes, sha256; `licence`: the source's (MIT OR Apache-2.0) and the binary's as a combined work |
+| top | `deploy-testnet.sh`, `toolchains.txt` (rustc, r0vm, forge, solc, LEZ commit checked, the native archives' sha256s, build host), `MANIFEST.json`, `SHA256SUMS` | version, commit, creation time, targets, status ("prototype, unaudited: for testnets only") |
+| beside it | `ferrata-VERSION-third-party-sources.tar` (+ `.sha256`): the GMP sources of the source offer | `third_party.sources`: bytes, sha256, the files it holds |
+
+**The native code in the CLI (review-code-ops M1, M2).** The CLI links code that cargo does not build from source:
+LEZ's wallet pulls in the Logos Blockchain node's proof crates, whose build scripts download two prebuilt archives
+with no checksum, rapidsnark (with GMP 6.3.0 and ffiasm) and the Logos circuits (circom-generated witness generators
+with circom's C++ runtime, circomlib, GMP 6.2.1, and the circuits' proving keys, which the binary embeds).
+[`scripts/native-deps.json`](../scripts/native-deps.json) pins each archive by size and sha256 (each confirmed two
+ways: GitHub's own digest, and two downloads on different days or the circuits repository's own Nix pin) and the
+sha256 of every library and key file inside. `release.sh build` first runs
+[`scripts/fetch_native.py`](../scripts/fetch_native.py) `env`, which downloads each archive once, checks it before
+unpacking and again on every later use (a corrupted or replaced cached archive stops the build; it is never used or
+silently replaced), and points the build scripts at the result (`RAPIDSNARK_LIB_DIR`, `LBC_ROOT_DIR`); it then checks
+that `../upstream/lez-v0.4.0-rc1` is at `1806e873` (it no longer writes the expected commit when it cannot read the
+real one), builds the CLI with `--locked`, and runs `fetch_native.py check-build` on cargo's build-script messages,
+which fails if `rust-rapidsnark` or a circuits sys crate linked from anywhere but the checked archive, or if any build
+script linked native code from outside the build and the system library directories. The binary statically links
+GPL-3.0 code (circom's runtime) and LGPL-3.0 code (GMP, rapidsnark, ffiasm, circomlib), so as a combined work it is
+conveyed under the GPL version 3 (the cautious reading; the repository's source stays MIT OR Apache-2.0):
+`THIRD-PARTY-NOTICES.md` says so, lists every archive with its sha256 and every component with its version, licence
+and source, carries the notices and texts, explains relinking (LGPL-3.0 section 4) and makes the source offer.
+`release_manifest.py make` and `check` refuse a release whose notices miss an archive, a component or a licence text,
+and `deny.toml` declares the native licences against the five crates that link them, so `cargo deny` sees them.
+Release 0.1.0-rc.1 predates all of this: its manifest has no `native` section, so `verify` now fails on it by design.
 
 How the build is made reproducible: a RISC Zero guest built without Docker would embed the absolute paths of its
 sources; `scripts/guest-rustc` (cargo's `build.rustc-wrapper`) remaps them and replaces cargo's path-dependent
@@ -135,8 +159,13 @@ What is committed: `releases/VERSION/MANIFEST.json` and `releases/VERSION/SHA256
 which nothing here does (no publishing without the owner).
 
 `scripts/release.sh verify DIR` (and `just release-verify DIR`) checks every line of `SHA256SUMS`, every file of
-the manifest (size and sha256) and, where `r0vm` 3.0.5 is installed, recomputes the two LEZ programs' image ids
-(`r0vm --elf F --id`).
+the manifest (size and sha256), that the notices cover the native code the manifest records and, where `r0vm` 3.0.5
+is installed, recomputes the six programs' image ids (`r0vm --elf F --id`); without `r0vm` it says the ids were not
+recomputed, and `--strict` (what `just release` uses) fails. A build's commit is `+dirty` when a tracked file differs
+or an untracked one exists (`scripts/release.sh commit`; cargo and the build box use untracked files too). Tests:
+[`scripts/test_fetch_native.py`](../scripts/test_fetch_native.py) (19),
+[`scripts/test_release_manifest.py`](../scripts/test_release_manifest.py) (9),
+[`scripts/test_release_scripts.py`](../scripts/test_release_scripts.py) (8).
 
 ### Release 0.1.0-rc.1 (`releases/0.1.0-rc.1/`)
 
