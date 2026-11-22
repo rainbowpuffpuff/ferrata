@@ -1,0 +1,1 @@
+{"executor_wall_s":0.13187748,"image_id":"0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e","input_bytes":263311,"journal_bytes":544,"journal_equals_native":true,"padded_cycles":4194304,"po2":[20,20,20,20],"segments":4,"user_cycles":3454445}

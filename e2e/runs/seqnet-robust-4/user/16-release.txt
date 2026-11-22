@@ -1,0 +1,18 @@
+$ ferrata --seed <work>/user/seed.txt --eth-rpc http://127.0.0.1:8545 --chain-id 11155111 --vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516 --from-block 1 --sequencer http://127.0.0.1:3040 --lez-wallet <work>/user/lez-wallet --lez-password-file <work>/user/lez.pass --bridge-account 0x8face982c2b7368a23541e8b00f94f163fafd3f47f7ab624db2899255144e68d release --seal <work>/seal.hex --job-out <work>/release-job.json
+
+release on Ethereum (vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, chain 11155111):
+  burn         0.001 ETH (1000000000000000 base units, 18 decimals) to 0x7b1bDf63516be912eE92393D3fA2e736Dd58Bc47 (your burn counter 0)
+  burn root    0x28dfbf840032704ac0d6995cbfd59be5246505f48f702daa5cdcd4341bc2cc94 of checkpoint 0 (1 burns): the newest accepted root whose release delay (120 s) has passed
+  NOut         0x01596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584
+  journal      sha256 0x2008b276ba8162bc50ac924b481bc0bfcb7896cd4399ea1cf6498d941e92c47b
+  cost         the burn fee 0 ETH (0 base units, 18 decimals) and the checkpoint fee 0.000001 ETH (1000000000000 base units, 18 decimals) are deducted, the relay fee 0.000002 ETH (2000000000000 base units, 18 decimals) goes to the relayer: the recipient receives 0.000997 ETH (997000000000000 base units, 18 decimals)
+  would send   release(...) to the vault 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516, submitted by any relayer (it pays the gas and is paid the relay fee); nothing is sent from your accounts
+call: to 0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516  data 0x772e8c8f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007b1bdf63516be912ee92393d3fa2e736dd58bc470000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001d1a94a200028dfbf840032704ac0d6995cbfd59be5246505f48f702daa5cdcd4341bc2cc9401596679d2a9c85930b98abde954c6d5804e007185114473c91ac522675cd584000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000045ea15ea100000000000000000000000000000000000000000000000000000000
+what becomes public (Release (Ethereum)):
+  public on Ethereum: the recipient address; the token and amount; NOut (fresh randomness); the burn root used; the time; the relayer that sent it (it pays the gas)
+  public on LEZ:      nothing
+  stays private:      which burn is released (no burn index); the LEZ holder
+privacy of these choices: Minimal: only the residual correlations (token, denomination, time)
+  ok Fresh recipient address: nothing on Ethereum ties the release to your depositor address.
+  ok Released through a relayer: the recipient needs no ETH for gas.
+relayer job written to <work>/release-job.json: the journal and the proof, nothing secret (hand it to a relayer's inbox)
