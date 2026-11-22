@@ -31,7 +31,7 @@ use std::{
 };
 
 use alloy::primitives::Address;
-use anyhow::{anyhow, bail, Context as _, Result};
+use anyhow::{bail, Context as _, Result};
 use ferrata_bridge_core::Hash;
 use serde::{Deserialize, Serialize};
 
@@ -421,18 +421,22 @@ impl Store {
         Ok(choice)
     }
 
-    /// Under the lock: the burn with counter `i` was taken by the sequencer as transaction `h`.
-    pub fn sent(&self, key: &str, i: u64, h: &str) -> Result<()> {
+    /// Under the lock: the burn with counter `i` was taken by the sequencer as transaction `h`. `Some(note)` when the
+    /// journal holds that counter open no more: another run of the tool saw its tag on the zone in the meantime and
+    /// resolved it, and the counter stays used (review L1: an error here, after a successful send, would have the user
+    /// burn again).
+    pub fn sent(&self, key: &str, i: u64, h: &str) -> Result<Option<String>> {
         let _lock = self.lock()?;
         let mut j = self.load()?;
-        let c = j.wallets.get_mut(key).ok_or_else(|| anyhow!("the burn journal has no counters for this seed"))?;
-        let e = c
-            .open
-            .iter_mut()
-            .find(|e| e.i == i)
-            .ok_or_else(|| anyhow!("the burn journal has no open burn counter {i}"))?;
+        let Some(e) = j.wallets.get_mut(key).and_then(|c| c.open.iter_mut().find(|e| e.i == i)) else {
+            return Ok(Some(format!(
+                "burn counter {i} is no longer open in the burn journal: another run of the tool has seen its tag on the \
+                 zone; it stays used (`ferrata recover` shows whether the burn is applied)"
+            )));
+        };
         e.sent = Some(h.to_string());
-        self.save(&j)
+        self.save(&j)?;
+        Ok(None)
     }
 
     /// This seed's counters, as the journal holds them, read without the lock (the journal is replaced whole): `ferrata
@@ -635,7 +639,7 @@ mod tests {
         // Another run planned 5 too, before this one reserved it: refused.
         let stale = s.reserve(&k, &[1; 32], &zone, &ask("private /1", 1, 0xe3), 6, None, &tag, &n, &Counter::Fresh(5));
         assert!(stale.unwrap_err().to_string().contains("another run of the tool reserved burn counter 5"));
-        s.sent(&k, 5, "0xcc").unwrap();
+        assert_eq!(s.sent(&k, 5, "0xcc").unwrap(), None);
         let c = s.counters(&k).unwrap().unwrap();
         assert_eq!(c.next, 6);
         assert_eq!(
@@ -651,6 +655,48 @@ mod tests {
         let other = key(&tag(9));
         let p = s.peek(&other, &[1; 32], &zone, &a, 7, None, &tag, &n).unwrap();
         assert_eq!(p.counter, Counter::Fresh(0));
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    /// Review L1: a run sends its burn, and before it records the send another run sees the burn's tag on the zone and
+    /// resolves the counter (another burn, or the same one asked again: `Done`). Recording the send is a note, not an
+    /// error after a successful send, and the counter stays used: the same burn asked again is not given it or burnt
+    /// twice by mistake.
+    #[test]
+    fn burns_sent_after_another_run_resolved_the_counter() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("target")
+            .join(format!("burns-sent-test-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let s = Store::new(&dir);
+        let k = key(&tag(0));
+        let a = ask("private /0", 1, 0xe1);
+        let to = a.recipient;
+        let n = move |i: u64| note(i, to);
+        let zone0 = Seen::default();
+        let first = s.peek(&k, &[1; 32], &zone0, &a, 1, None, &tag, &n).unwrap();
+        assert_eq!(
+            s.reserve(&k, &[1; 32], &zone0, &a, 1, None, &tag, &n, &first.counter).unwrap().counter,
+            Counter::Fresh(0)
+        );
+        // Run 1 has sent counter 0 (not yet recorded); the zone applies it; run 2 asks another burn and resolves it.
+        let zone1 = Seen { applied: applied(&[(0, to)]), next: 1, ..Seen::default() };
+        let b = ask("private /0", 2, 0xe2);
+        let nb = move |i: u64| note(i, b.recipient);
+        let second = s.peek(&k, &[1; 32], &zone1, &b, 2, None, &tag, &nb).unwrap();
+        assert_eq!(
+            s.reserve(&k, &[1; 32], &zone1, &b, 2, None, &tag, &nb, &second.counter).unwrap().counter,
+            Counter::Fresh(1)
+        );
+        let note0 = s.sent(&k, 0, "0xdd").unwrap().expect("a note, not an error");
+        assert!(note0.contains("burn counter 0 is no longer open") && note0.contains("stays used"), "{note0}");
+        let c = s.counters(&k).unwrap().unwrap();
+        assert_eq!((c.next, c.open.iter().map(|e| e.i).collect::<Vec<_>>()), (2, vec![1]), "the journal unchanged");
+        // Run 1's burn asked again: never counter 0 again, and the zone shows it applied.
+        assert_eq!(s.peek(&k, &[1; 32], &zone1, &a, 3, None, &tag, &n).unwrap().counter, Counter::Fresh(2));
+        // A seed with no counters in this journal: a note too.
+        assert!(s.sent("another seed", 0, "0xee").unwrap().is_some());
         let _ = fs::remove_dir_all(&dir);
     }
 }

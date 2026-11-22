@@ -774,13 +774,22 @@ pub async fn burn<L: Ledger>(
         }
         let h = ledger.submit(&plan.call).await?;
         out.line(format!("sent: {h}"));
+        // Recorded for the next run; the burn is sent whatever happens here (review L1).
         if let Some(j) = &journal {
-            j.store.sent(&j.key, plan.i, &h)?;
-            out.line(format!(
-                "burn counter {} stays reserved in {} until the burn is on the zone",
-                plan.i,
-                j.store.path().display()
-            ));
+            match j.store.sent(&j.key, plan.i, &h) {
+                Ok(None) => out.line(format!(
+                    "burn counter {} stays reserved in {} until the burn is on the zone",
+                    plan.i,
+                    j.store.path().display()
+                )),
+                Ok(Some(note)) => out.line(note),
+                Err(e) => out.line(format!(
+                    "the burn is sent, but the burn journal could not record it ({e:#}): burn counter {} stays reserved \
+                     there as interrupted; asked again with the same holder, amount and recipient, the burn takes it again \
+                     (the same note: at most one is applied)",
+                    plan.i
+                )),
+            }
         }
         Some(h)
     } else {
