@@ -186,8 +186,7 @@ adversary computes them.
 ### Receipts
 
 Gas is public, and it varies; every variation follows the operation's position, not its user:
-- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4335, 4335, …]` by position (`4720` on image
-  `cf41b7e5`), the same
+- **LEZ claims.** Execution gas, minus the first claim's: `[0, 4377, 4377, …]` by position (4,335 at `ccde6171…`, `4720` on image `cf41b7e5`), the same
   sequence in the private and the plaintext universe, whose users stand in different orders, so it is the
   shared public part (Issue, Admit, Spend, the mints) that varies, with the state the claims before it left.
   Storage gas is constant (224,063 private, 2,053 plaintext).

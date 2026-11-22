@@ -17,8 +17,7 @@ vault accept something false ([`docs/design/attestation.md`](../design/attestati
 
 **Your role is liveness only (VS.5).** The programs accept an update on its signatures alone and a release on its
 proof alone, whoever sends them; nothing an operator sends can make them accept a false record, a false root or a
-false release, and if an operator stops, anyone else continues. The one exception on the return leg: under rule (A)
-the watchers also hold a safety role outside the rule's conditions ([`docs/trust.md`](../trust.md) §0, §2.4, §4.2).
+false release, and if an operator stops, anyone else continues. The exceptions on the return leg: under rule (B) each sequencer's attestor, with the LEZ and Logos Blockchain nodes it reads (its operator's own), is one of the `t` the rule counts (§5.4); under rule (A) the watchers also hold a safety role outside the rule's conditions ([`docs/trust.md`](../trust.md) §0, §2.4, §4.2).
 
 **Status.** Four daemons are built as prototypes, each as a binary and as a Logos module run under `logosctl
 daemon` with the binary's own code: the **updater** `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md),

@@ -231,7 +231,7 @@ Each sequencer runs `ferrata_attestor`, a Logos module, which signs its node's f
 
 Ed25519 over the whole tagged message (241 bytes, `tipId` big-endian), never over a bare 32-byte digest. `keySetHash` is the attestor's live key set and must equal the proof's `K`.
 
-Under rule (B) each attestor signs a tip only when its own LEZ node holds it in LEZ's final tier (applied, not parked); a forged checkpoint needs `t` attestors (their keys, or the LEZ nodes they trust) together with one channel key. A LEZ node may show an adopted head block `Finalized` early (LEZ #1053); the attestor also requires the block's inscription to be final on its Logos Blockchain node. `lez` must be the attestor's own LEZ node: attestors that share one node share its lies.
+Under rule (B) each attestor signs a tip only when its own LEZ node holds it in LEZ's final tier (applied, not parked); a forged checkpoint needs `t` attestors (their keys, or the LEZ nodes they trust) together with one channel key. A LEZ node may show an adopted head block `Finalized` early (LEZ #1053); the attestor also requires the block's inscription to be final on its Logos Blockchain node. `lez` must be the attestor's own LEZ node, and its Logos Blockchain node its own too: attestors that share a node share its lies.
 
 **Attestation keys.** Each sequencer's channel key signs, once per deployment, a certificate `("ferrata/attest-key/v1", evmChainId, vault, lezConfigId, channelId, attKey)` (169 bytes). D13 names only `channelId` and `attKey`; the prototype also binds the deployment, so that a certificate cannot be carried to another vault or configuration on the same channel and a leaked attestation key is confined to one deployment. The proof carries the certificates; a certificate dies when its channel key leaves `K` (there is no other bound: a key that leaves and rejoins `K` revives its certificates). Beyond its certificate the channel key signs nothing for the bridge; its inscription of `T`, which it signs for Logos Blockchain anyway, is checked (Rule).
 
@@ -275,7 +275,7 @@ Each honest signature rule (A) sees certifies "`T` was in my head at some time";
 | Outbound latency before the release delay | about 3 h (estimated) | 7–22 h (estimated); 4.00–7.68 h median from tip to finalisation in simulation (§11.7) |
 | Operator duties | an attestor beside every sequencer | none |
 
-Both rules fail equally to `t` colluding keys and to a Logos Blockchain safety failure; a false attestation is checkable but not slashable on v0.4. Under rule (B), F2, F3 and the chain-growth half of F1 drop out (D7), and off-chain roles are liveness-only apart from the attestors and the LEZ nodes they trust (§8.3; Security #7); under rule (A), outside its conditions, the watchers are trusted for safety.
+Both rules fail equally to `t` colluding keys and to a Logos Blockchain safety failure; a false attestation is checkable but not slashable on v0.4. Under rule (B), F2, F3 and the chain-growth half of F1 drop out (D7), and off-chain roles are liveness-only apart from the attestors and the LEZ and Logos Blockchain nodes they trust (§8.3; Security #7); under rule (A), outside its conditions, the watchers are trusted for safety.
 
 **The decision asked of Logos.** Will the testnet's accredited sequencers run `ferrata_attestor`? Yes: rule (B). No, or no answer by day 5 of M0: rule (A).
 
@@ -562,7 +562,7 @@ Vault v4 has all four on its side: watchers cancel and pause for at most 12 h; o
 
 The bridge program on LEZ has the same three roles' controls (`lez/BRIDGE.md` §5, `lez/BRIDGE-RESULTS.md` §14): the admin's proposal of a freeze authority and up to three watchers, applied by anyone after 14 days of attested Ethereum time; an M-of-N freeze authority acting by one transaction its signers all sign; watchers that pause LEZ mints or burns for 12 h; and a keyless `Sunset`: anyone attests the vault's `retired` flag, which only `retire()` sets (open to anyone from `retireOpensAt()` on), and then sends the checkpoint's own `Sunset`. So the 30 days are measured once, on Ethereum's clock, and LEZ never stops importing before the vault stops taking deposits.
 
-Off-chain roles are liveness-only under rule (B), apart from the attestors and the LEZ nodes they trust (§8.3); under rule (A) the watchers have a safety role outside F1–F4 (§11.8).
+Off-chain roles are liveness-only under rule (B), apart from the attestors and the LEZ and Logos Blockchain nodes they trust (§8.3); under rule (A) the watchers have a safety role outside F1–F4 (§11.8).
 
 ## 15. Tenants, immutability, verifier and failsafe (F.16, Security #8, #9)
 
