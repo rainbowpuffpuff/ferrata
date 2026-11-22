@@ -101,6 +101,16 @@ pub struct Action {
 /// A step is sent only if its validity window ([`Window`]) stays open this long past the chain's clock: the time a
 /// transaction may take to reach a block (a sequencer's block interval, a retry).
 pub const WINDOW_MARGIN_MS: u64 = 60_000;
+/// A candidate update whose signature slot starts more than this after the chain's clock (`Ledger::now_ms`, the clock
+/// the program checks `Open`'s window against) is signed in the future: no honest node serves one (a sync aggregate
+/// exists only once its slot's block does), and the program refuses its `Open` until then. The signature does not cover
+/// `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of the same
+/// period, whose window has not opened (review-integ9c M4, review-integ9d M1): such a candidate is refused and its
+/// source demoted (`policy.demote_rounds`), and nothing else that source served in the round is used. The margin is the
+/// skew between the chain's clock and Ethereum's that the updater tolerates, as for its windows ([`WINDOW_MARGIN_MS`]).
+/// One re-dated within it is not refused, and is chosen only when no source serves its finalized header signed earlier
+/// (updates of one finalized header are taken earliest-signed first): it can delay an update by at most this margin.
+pub const FUTURE_MARGIN_MS: u64 = WINDOW_MARGIN_MS;
 /// Refusals in a row, each of a step that stayed due after it (not a race another party won), after which this
 /// updater sends nothing for [`BREAKER_PAUSE`] rounds. Each time it opens again before one of this updater's
 /// transactions is applied, the pause doubles, up to [`BREAKER_MAX_PAUSE`] rounds; after a pause one step is tried.
@@ -272,6 +282,8 @@ pub struct SourceStats {
     /// Candidates it served that the program would refuse (a forged signature, a wrong
     /// bootstrap, a broken branch).
     pub refused: u64,
+    /// The last thing it served that the program would refuse (or signed in the future), described.
+    pub last_refused: String,
     /// Rounds it was found lagging.
     pub lagging_rounds: u64,
     pub lagging: bool,
@@ -604,6 +616,7 @@ impl Updater {
         let s = self.stats(i);
         s.refused += 1;
         s.demoted_until = until;
+        s.last_refused = clip(why);
         self.log(&format!(
             "source {name} served what the program would refuse ({why}); not asked for {} rounds",
             self.policy.demote_rounds
@@ -836,6 +849,35 @@ impl Updater {
         }
     }
 
+    /// [`FUTURE_MARGIN_MS`]: the candidates of the sources that served none signed in the future by the chain's clock
+    /// (`now_ms`; `None`: each transaction carries its own time, so nothing is in the future), and the first refusal
+    /// described (empty: none). A source that served one is demoted, and none of its candidates is kept this round.
+    fn refuse_future(&mut self, candidates: Vec<Candidate>, now_ms: Option<u64>) -> (Vec<Candidate>, String) {
+        let Some(now) = now_ms else { return (candidates, String::new()) };
+        let mut liars: BTreeMap<usize, String> = BTreeMap::new();
+        for c in &candidates {
+            let start = self.inst.config.slot_start_ms(c.update.signature_slot);
+            if start <= now.saturating_add(FUTURE_MARGIN_MS) || liars.contains_key(&c.source) {
+                continue;
+            }
+            let kind = if c.period_update { "period update" } else { "finality update" };
+            let why = format!(
+                "a {kind} finalizing slot {} signed at slot {}, which starts {} s after the chain's clock ({}): signed in \
+                 the future",
+                c.update.finalized_header.beacon.slot,
+                c.update.signature_slot,
+                (start - now) / 1000,
+                crate::utc(now / 1000)
+            );
+            liars.insert(c.source, why);
+        }
+        let first = liars.values().next().cloned().unwrap_or_default();
+        for (&i, why) in &liars {
+            self.demote(i, why);
+        }
+        (candidates.into_iter().filter(|c| !liars.contains_key(&c.source)).collect(), first)
+    }
+
     fn evaluate(&self, store: &CompactStore, update: &LightClientUpdate) -> Verdict {
         let current = self.committees.get(&store.current.pubkeys_root);
         let next = store.next.as_ref().and_then(|n| self.committees.get(&n.pubkeys_root));
@@ -993,6 +1035,13 @@ impl Updater {
         if candidates.is_empty() {
             return Ok(Plan::Stuck("no source answered".into()));
         }
+        let (candidates, future) = self.refuse_future(candidates, ledger.now_ms());
+        if candidates.is_empty() {
+            return Ok(Plan::Stuck(format!(
+                "every source that answered served an update signed in the future ({future}) and is demoted; when every \
+                 source is demoted so, the chain's clock may be behind Ethereum's"
+            )));
+        }
         if k >= 2 {
             self.note_disagreements(&candidates);
             if self.policy.client_match == ClientMatch::Bytes {
@@ -1064,18 +1113,21 @@ impl Updater {
         if useful.is_empty() {
             return Ok(Plan::UpToDate);
         }
-        // Adopting the next committee comes first when the store lacks it; then the furthest
-        // finalized header; then the most signers; then the earliest signature slot. The signature does not cover
-        // `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of
-        // the same period, whose `Open` window has not opened yet: among copies of one update the earliest is taken,
-        // so such a copy cannot hold back the copy other sources serve (review-integ9c M4).
+        // Adopting the next committee comes first when the store lacks it; then the furthest finalized header; then the
+        // earliest signature slot; then the most signers. The signature does not cover `signature_slot` (only its fork
+        // version), so a source can serve a real update, or another real update of the same finalized header with
+        // more signers, re-dated to a later slot of the same period, whose `Open` window has not opened yet
+        // (review-integ9c M4, review-integ9d M1). One signed in the future by more than FUTURE_MARGIN_MS was refused
+        // above; among updates of one finalized header the earliest-signed is taken, so a re-dated one never holds back
+        // one that another source serves signed earlier. The signer count does not change the store an update leaves
+        // (every update applied has two thirds of the committee); it only breaks the remaining ties.
         let needs_next = store.next.is_none();
         let key = |p: &Planned| {
             (
                 needs_next && p.outcome.adopted,
                 p.update.finalized_header.beacon.slot,
-                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
                 std::cmp::Reverse(p.update.signature_slot),
+                p.update.sync_aggregate.bits.iter().filter(|b| **b).count(),
             )
         };
         // The best candidate that enough sources serve: light-client sources serving an update with its finalized
@@ -1780,7 +1832,10 @@ impl Updater {
             .count();
         for (name, s) in &self.metrics.sources {
             if s.demoted_until > self.round {
-                why.push(format!("source {name} demoted (served what the program refuses)"));
+                why.push(format!(
+                    "source {name} demoted until round {} (served what the program refuses: {})",
+                    s.demoted_until, s.last_refused
+                ));
             } else if s.lagging {
                 why.push(format!("source {name} lagging (finalized slot {})", s.finalized_slot));
             } else if s.mismatch {
