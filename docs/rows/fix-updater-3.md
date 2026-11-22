@@ -55,8 +55,9 @@ The whole suite at the tip: `cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-up
 `replacement`, 7 `serve`); clippy `-D warnings` with and without `harness` clean; `cargo fmt --check` clean; the A3
 gate's `results/gate.txt` byte for byte as committed (246 updates, 0.0752, 0.4841 / 0.5159); every mutant of
 `dev/mutants.py` (`m1roll`, `m1`, `m1near`, `u2`, `u3`, `u5`, `u4f`, `u6`) red (build box, fix-updater-3b's run 1 at
-`9fee65b5`). Each intermediate commit (`944456c4` .. `8c56e70e`) builds and passes the tests it adds (build box, the
-author's run 3). Not run on this branch: the updater
+`9fee65b5`; `every_party.rs`, which embeds `docs/trust.md`, again at `38c24562` after the last edit of §2.4: 8 of 8).
+Each intermediate commit (`944456c4` .. `8c56e70e`) builds and passes the tests it adds (build box, the author's run
+3). Not run on this branch: the updater
 module's native build and `updater-e2e.sh`, the sequencer e2e runs, the full `reproduce-image-ids.sh build` (only its
 Python halves, offline).
 
