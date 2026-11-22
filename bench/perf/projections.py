@@ -95,6 +95,22 @@ def main():
     for n in (1_000_000, 10_000_000):
         print(f"| {n:,} | {mb(n * nul_b)} | {mb(n * burn_b)} | {n * rel_slots / rel_ops:,.0f} ({mb(n * rel_slots / rel_ops * 64)} of keys and values) | "
               f"{n * one_new:,} + at most 32 / at most 32 |")
+    # Holder accounts: what each measured claim added beyond its nullifier. The first claim credited three new holders
+    # (its destination, the fee recipient's mint fee, its relayer's relay fee: lez/guests/bridge/src/main.rs `issue`);
+    # the second only its destination's.
+    grew = [num(g) for g in re.findall(r"^\| public claim: [^|]*\| nullifier[^|]*\| \d+ \| \d+ \| ([\d,]+) \|", state, re.M)]
+    first, second = (g - nul_b for g in grew)
+    holder_b = second
+    assert first == 3 * holder_b, "the first claim: three new holders"
+    print(f"\nHolder accounts (an account's public wrapped balances) grow with new holders, not operations. The second "
+          f"measured claim grew the state by {grew[1]:,.0f} B: its nullifier and its destination's new holder, "
+          f"**{holder_b:,.0f} B** with one holding; the first by {grew[0]:,.0f} B: its nullifier and three new holders, its "
+          f"destination's, the fee recipient's (the mint fee) and its relayer's (the relay fee). The fee recipient's is "
+          f"created once; each claim names its relayer, so a claim creates at most two that are not one-time, "
+          f"{holder_b:,.0f} to {2 * holder_b:,.0f} B. At 1M claims at most {mb(1e6 * holder_b)} when the claims name "
+          f"relayers already paid, {mb(2e6 * holder_b)} if every claim named a new destination and a new relayer; at 10M "
+          f"{mb(1e7 * holder_b)} and {mb(2e7 * holder_b)}. A holder that takes another token grows by one 68-B holding "
+          f"(configuration id 32, token 20, amount 16 B: from the layout, not measured).")
     print(f"\nRoots grow with the import cadence, not with deposits: {root_b:,.0f} B each (173 B `Account` and its key), "
           f"8,766 a year at one an hour: {mb(8766 * root_b)} a year. Ethereum slot bytes are counted as a 32-byte key and a "
           f"32-byte value (the trie's own overhead is the client's).")
