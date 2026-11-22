@@ -654,9 +654,11 @@ tests = [
   { path = "vault/test/Deposit.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
   { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
+  { path = "e2e/both-halves/results/randomised.md", kind = "record" },
   { path = "docs/privacy/RESULTS.md", kind = "record" },
 ]
-note = "claims and burns accept only a registered denomination (251) and a registry entry with nine, or one not a multiple of the LEZ unit, is refused (240); the adversary pairs deposits with claims at chance (5.0%); the client's anonymity-set view is not built"
+note = "claims and burns accept only a registered denomination (251) and a registry entry with nine, or one not a multiple of the LEZ unit, is refused (240); the adversary pairs deposits with claims at chance (5.0%); the client prints each claim's anonymity set, measured per denomination over both halves (EVIDENCE row 186)"
 
 [[row]]
 id = "RFP-022 F.9"
@@ -673,10 +675,12 @@ id = "RFP-022 F.10"
 tests = [
   { path = "vault/test/Admin.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Release.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/Listing.t.sol", kind = "test", ci = "vault" },
+  { path = "lez/harness/tests/bridge_delist.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_delist" },
   { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_vault_storage" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
 ]
-note = "write-once registry on both sides; the LEZ entry written by attesting the hash the vault holds (for five tokens the hash v5 itself wrote, BRIDGE-RESULTS 8a); a second registration (244) and an entry the vault does not hold (247) refused; delisting stops deposits and leaves claims and releases working; the guides do not cover delisting yet"
+note = "write-once registry on both sides; the LEZ entry written by attesting the hash the vault holds (for five tokens the hash v5 itself wrote, BRIDGE-RESULTS 8a); a second registration (244) and an entry the vault does not hold (247) refused; delisting stops deposits and leaves claims and releases working; since B1 the vault publishes the listing and AttestListing mirrors it on LEZ; documented in the deployer and user guides"
 
 [[row]]
 id = "RFP-022 F.11"
@@ -692,14 +696,18 @@ id = "RFP-022 F.12"
 tests = [
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/ReleaseDelay.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/DeployDefaults.t.sol", kind = "test", ci = "vault" },
+  { path = "lez/harness/tests/bridge_depth.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_depth" },
 ]
-note = "outbound wait refused one second before W and accepted at it for t = 2, 3, 5, 7; a Delta raise applies only to later candidates, only up, capped (30 days); release-delay changes only to later roots; the inbound admin-set depth is not built (no such setting in lez/guests/bridge)"
+note = "outbound wait refused one second before W and accepted at it for t = 2, 3, 5, 7; a Delta raise applies only to later candidates, only up, capped (30 days); release-delay changes only to later roots; since B1 the admin's SetDepth (at most 216,000 slots, default 0) and the deployment script's design wait per rule (DeployDefaults.t.sol)"
 
 [[row]]
 id = "RFP-022 F.13"
 tests = [
   { path = "vault/test/Fees.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
+  { path = "e2e/both-halves/results/fees.md", kind = "record" },
   { path = "lez/harness/tests/bridge_inbound.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_inbound" },
   { path = "lez/harness/tests/bridge_vault_storage.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_vault_storage" },
 ]
@@ -731,7 +739,7 @@ tests = [
   { path = "lez/harness/tests/tenant.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test tenant" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
 ]
-note = "a vault-A deposit claimed under configuration B's root refused (249) and two configurations run side by side; the tenant test is the honest record of the limit: a second configuration of the same vault can spend a public-kind deposit's nullifier and fill a shared holder account (EVIDENCE row 136), the fix changes the image id"
+note = "a vault-A deposit claimed under configuration B's root refused (249) and two configurations run side by side; the tenant test on the program since B1: configurations strictly apart (EVIDENCE row 183); on the deployed program a second configuration of the same vault can spend a public-kind deposit's nullifier and fill a shared holder account (row 136)"
 
 [[row]]
 id = "RFP-022 F.17"
@@ -867,6 +875,8 @@ tests = [
   { path = "vault/test/Freeze.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/EmergencyStop.t.sol", kind = "test", ci = "vault" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
+  { path = "e2e/both-halves/results/migration.md", kind = "record" },
   { path = "lez/harness/tests/bridge_time.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_time -- --nocapture" },
 ]
 note = "freezes, caps and delisting only delay on both sides; a capped claim (255) or freeze (242) stays claimable and succeeds after the refill or once the freeze ends; the disclosed exceptions are the sunset, the emergency stop and a retirement (Refund.t.sol, EmergencyStop.t.sol, Sunset)"
@@ -1100,10 +1110,11 @@ note = "C and C_out bind the destination under a seed-derived secret, the releas
 id = "RFP-022 Sec.4"
 tests = [
   { path = "vault/test/Caps.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/DeployDefaults.t.sol", kind = "test", ci = "vault" },
   { path = "lez/harness/tests/bridge_controls.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_controls" },
   { path = "docs/guides/deployer-guide.md", kind = "document" },
 ]
-note = "token buckets per token and globally on both sides with the immutable floor; the recommended default (the smaller of 10% of escrow and a deployer-set ceiling) stated in the deployer guide, a first draft, and the design note; the live Sepolia vaults ran without caps (testnet parameters)"
+note = "token buckets per token and globally on both sides with the immutable floor; the recommended default (the smaller of 10% of escrow and a deployer-set ceiling) stated in the deployer guide and the design note; capped by default since B1 (DeployDefaults.t.sol; the crown driver likewise); the live Sepolia vaults ran without caps (testnet parameters) until the admin set them to zero on 21 November 2026"
 
 [[row]]
 id = "RFP-022 Sec.5"
@@ -1119,9 +1130,11 @@ id = "RFP-022 Sec.6"
 tests = [
   { path = "vault/test/invariant/VaultInvariants.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/invariant/VaultInvariantsB.t.sol", kind = "test", ci = "vault" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
+  { path = "e2e/both-halves/results/randomised.md", kind = "record" },
   { path = "scripts/verify-sepolia.py", kind = "test", ci = "local", run = "python3 -I scripts/verify-sepolia.py e2e/runs/crown-live-3" },
 ]
-note = "the invariants hold over 256 runs x 100 calls (balance = escrowed + totalOwed + donations, escrowed = deposits - releases - refunds) and the supply invariant on both rules (F.13's row); after the live round trip the vault's balance equals escrowed + totalOwed (EVIDENCE row 42); invalid mints and releases refused (Sec.2)"
+note = "the invariants hold over 256 runs x 100 calls (balance = escrowed + totalOwed + donations, escrowed = deposits - releases - refunds) and the supply invariant on both rules (F.13's row); after the live round trip the vault's balance equals escrowed + totalOwed (EVIDENCE row 42); invalid mints and releases refused (Sec.2); over both real halves at once, 496 checks over eight randomised seeds (EVIDENCE row 184)"
 
 [[row]]
 id = "RFP-022 Sec.7"
@@ -1140,6 +1153,8 @@ tests = [
 id = "RFP-022 Sec.8"
 tests = [
   { path = "vault/test/Migration.t.sol", kind = "test", ci = "vault" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
+  { path = "e2e/both-halves/results/migration.md", kind = "record" },
   { path = "vault/MIGRATION.md", kind = "document" },
   { path = "bridge/evm-verify/test/v2/VaultV2.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
   { path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" },
@@ -1152,6 +1167,7 @@ note = "the migration rehearsal (Migration.t.sol, 8 tests, CI's vault job): v1 f
 id = "RFP-022 Sec.9"
 tests = [
   { path = "vault/test/MigrationFailsafe.t.sol", kind = "test", ci = "vault" },
+  { path = "cli/tests/both_halves.rs", kind = "test", ci = "box", run = "e2e/both-halves/run.sh" },
   { path = "vault/MIGRATION.md", kind = "document" },
   { path = "vault/test/EmergencyStop.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/Revocation.t.sol", kind = "test", ci = "vault" },
@@ -1205,9 +1221,11 @@ tests = [
 id = "RFP-022 Priv.5"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
+  { path = "vault/test/RefusalPrivacy.t.sol", kind = "test", ci = "vault" },
+  { path = "lez/harness/tests/bridge_refusals.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test bridge_refusals" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
 ]
-note = "23 refusals and holds named before anything is signed, none naming a deposit or burn (EVIDENCE rows 85, 62); the client checks caps before proving, since a retry after a cap rejection would show the first attempt's time; on-chain indistinguishability of refused, repeated and capped claims: not measured"
+note = "23 refusals and holds named before anything is signed, none naming a deposit or burn (EVIDENCE rows 85, 62); the client checks caps before proving, since a retry after a cap rejection would show the first attempt's time; on chain since B1: refusals on the private path leave no trace, on the plaintext path no more than an applied claim, on the vault four bytes (EVIDENCE row 185)"
 
 [[row]]
 id = "RFP-022 Priv.6"
