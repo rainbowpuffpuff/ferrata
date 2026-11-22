@@ -109,7 +109,11 @@ impl Ledger for Flaky {
         if self.refuse > 0 && tx.label.ends_with(self.suffix) {
             self.refuse -= 1;
             self.refused += 1;
-            return Ok(TxOutcome { note: "Program violated execution rules".into(), gas_exec: 1, ..Default::default() });
+            return Ok(TxOutcome {
+                note: "Program violated execution rules".into(),
+                gas_exec: 1,
+                ..Default::default()
+            });
         }
         self.inner.submit(payer, tx, gas_limit, max_fee)
     }
@@ -134,7 +138,8 @@ fn a_kept_job_is_not_left_for_a_short_hold() {
     fs::create_dir_all(&state).unwrap();
     let payer = key(0x63);
     let clock = Clock::new(3);
-    let mut l = Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
+    let mut l =
+        Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
     let inst = Instance::new("mainnet", HarnessLedger::program(), config.clone(), checkpoint);
     let policy = Policy { defer_window: 1, retry_base_ms: 0, ..Policy::default() };
     let source = Recorded::open("a", &dir, &config, clock.clone()).unwrap();

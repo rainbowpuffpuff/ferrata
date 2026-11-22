@@ -246,7 +246,10 @@ fn an_unreachable_chain_takes_it_down_and_back() {
     assert!(seen[..rounds - 1].iter().all(|s| *s == "degraded"), "{seen:?}");
     assert!(seen[rounds - 1..].iter().all(|s| *s == "down"), "{seen:?}");
     assert_eq!(u.metrics.failing_sends, 0, "nothing was sent, so no send failed");
-    assert!(why.iter().any(|w| w.contains("200 round(s) ended in an error") && w.contains("connection refused")), "{why:?}");
+    assert!(
+        why.iter().any(|w| w.contains("200 round(s) ended in an error") && w.contains("connection refused")),
+        "{why:?}"
+    );
     assert_eq!(u.health_json()["failed_rounds"], 200);
     l.down = false;
     let mut back = Vec::new();

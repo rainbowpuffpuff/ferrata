@@ -198,7 +198,8 @@ pub fn serve(addr: &str, snapshot: Snapshot) -> Result<std::net::SocketAddr> {
             let place = Place(lanes.clone(), lane);
             let snapshot = snapshot.clone();
             // If the thread cannot start, the closure (and the place in it) is dropped: the place is given back.
-            let _ = thread::Builder::new().name("ferrata-health".into()).spawn(move || answer(stream, &snapshot, place));
+            let _ =
+                thread::Builder::new().name("ferrata-health".into()).spawn(move || answer(stream, &snapshot, place));
         }
     });
     Ok(local)

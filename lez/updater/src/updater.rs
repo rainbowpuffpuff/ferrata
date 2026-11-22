@@ -1613,7 +1613,10 @@ impl Updater {
                 Err(e) => {
                     attempt += 1;
                     if attempt >= self.policy.max_attempts {
-                        return Err(e.context(format!("{}: the chain could not be read ({attempt} attempts)", action.tx.label)));
+                        return Err(e.context(format!(
+                            "{}: the chain could not be read ({attempt} attempts)",
+                            action.tx.label
+                        )));
                     }
                     let wait = self.backoff_ms(attempt);
                     self.log(&format!("{}: reading the chain: {e:#}; again in {wait} ms", action.tx.label));

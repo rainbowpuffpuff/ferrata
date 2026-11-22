@@ -169,7 +169,10 @@ fn open_is_not_sent_outside_its_window() {
         assert_eq!(l.balance(&payer), before, "nothing charged");
         assert!(plans.iter().all(|p| matches!(p, Plan::Stuck(w) if w.starts_with("Open not sent"))));
         assert_eq!(status, "down");
-        assert!(why.iter().any(|w| w.contains("weak-subjectivity") && w.contains("initialise a new instance")), "{why:?}");
+        assert!(
+            why.iter().any(|w| w.contains("weak-subjectivity") && w.contains("initialise a new instance")),
+            "{why:?}"
+        );
     }
     l.now = Some(ws_end - WINDOW_MARGIN_MS - 1);
     let n0 = l.log.len();
@@ -443,7 +446,11 @@ impl Ledger for Flaky {
         if self.refuse > 0 && tx.label.ends_with(self.suffix) {
             self.refuse -= 1;
             self.refused += 1;
-            return Ok(TxOutcome { note: "Program violated execution rules".into(), gas_exec: 1, ..Default::default() });
+            return Ok(TxOutcome {
+                note: "Program violated execution rules".into(),
+                gas_exec: 1,
+                ..Default::default()
+            });
         }
         self.inner.submit(payer, tx, gas_limit, max_fee)
     }
@@ -462,7 +469,8 @@ fn a_refusal_of_unknown_cause_is_sent_again_until_it_lands() {
     let r = mainnet();
     let clock = Clock::new(3);
     let payer = key(0x49);
-    let mut l = Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
+    let mut l =
+        Flaky { inner: HarnessLedger::new(std::slice::from_ref(&payer)), suffix: "Miller", refuse: 0, refused: 0 };
     let mut u = r.updater("unknown", payer, vec![r.source("a", &clock)], None);
     settle(&mut u, &mut l, 60);
     let start = store(&u, &l.inner).finalized.slot;
