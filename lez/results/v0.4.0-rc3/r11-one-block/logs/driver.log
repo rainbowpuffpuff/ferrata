@@ -1,0 +1,172 @@
+sequencer http://127.0.0.1:3040: head block 1, followed to block 1 (no Bedrock finality: LEZ's mock)
+fee state at height 1: base fee exec 8 / stor 8; block caps exec 10000000 / stor 1000000
+LEZ constants: wallet default gas limit 2000000, TARGET_GAS_EXEC 5000000, MAX_GAS_EXEC 10000000, TARGET_GAS_STOR 500000, MAX_GAS_STOR 1000000, PRIVATE_VERIFY_GAS 409764, PRIVATE_GAS_STOR 224063
+program: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df, 627064 bytes (sha256 ddfde69bea89a5b882f55266fcb4b7c887df7debc1c9d4972d8ebea5a72eaad9), user ELF 594640 bytes in 7 segment(s)
+scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61, 268228 bytes (sha256 29249a3ac807ad3268ff5499ccee70a75b687d5fe5517fa5843b333c2c6c1bc0), user ELF 235804 bytes in 3 segment(s)
+deployments: main CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs, twin DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57, scripted FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K
+payer 0: 6iArKUXxhUJqS7kCaPNhwMWt3ro71PDyBj7jwAyE2VQV holds 10000000000000
+payer 1: 7wHg9sbJwc6h3NP1S9bekfAzB8CHifEcxKswCKUt3YQo holds 20000000000000
+payer 2: CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r holds 10000000000000
+payer 3: 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2 holds 20000000000000
+harness tables: 55 rows from <copy>/lez/results/v0.4.0-rc3
+Transaction hash is bf8bc0928a89af68764142b7b20f9a324311b6d5be32743c7f3db478315484d2
+Transaction is included in block 2
+Transaction hash is 6ad340f42f28f8067ed020430a4aa5d2b03d53f8fdddc0c585e805b732414d9e
+Transaction is included in block 3
+Transaction hash is e49affd02bdcbf7f01bcbe11ac9df72fcb216636b82d30266841226307c85444
+Transaction is included in block 4
+Transaction hash is 7a88a57114ad9906c21fe14203f8f761cd99f1ac03aaf8522ca4a47614b11251
+Transaction is included in block 5
+Transaction hash is 7da48cd6bac2549dfbcaca75c12444c72bf3c325cc8fcd47f163cc82466ae614
+Transaction is included in block 6
+Transaction hash is cd4389af71e33274060df97533f4f09a9981b9264d8b4656b1ccf67bb44b9702
+Transaction is included in block 7
+Transaction hash is d6f64d64c44a76b6427968a1b25b0e22bd4bb5cb63a93a65882ad44669e52687
+Transaction is included in block 8
+Transaction hash is b4b5dee24cfc74da55adec1d70b608eadffe762e57917a566f203370b1c01444
+Transaction is included in block 9
+[deploy] deploy main: WriteSegment 7 of 7 (4816 bytes)              applied   gas         0 +    5396 bytes, block    2
+[deploy] deploy main: WriteSegment 6 of 7 (98304 bytes)             applied   gas      4822 +   98916 bytes, block    3
+[deploy] deploy main: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    4
+[deploy] deploy main: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    5
+[deploy] deploy main: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    6
+[deploy] deploy main: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    7
+[deploy] deploy main: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block    8
+[deploy] deploy main: CreateHeader (immutable) at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs applied   gas    594874 +     608 bytes, block    9
+[deploy] main: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at CXnzhRVkXzwZaDFcvchMvz28iVTy9f8tmesDGpLcGSs (computed by the sequencer's loader), immutable
+Transaction hash is 12e9f3d52f1bc9d7a2e8b45802605df8ebef123c32a0f0df276a61cbd3f1bd5b
+Transaction is included in block 10
+Transaction hash is 8cb432fa8891919690f10bdc01d975b3d5d0c7fc20254f02fdd234b08445dc65
+Transaction is included in block 11
+Transaction hash is 81b2dc2d99076e2c656f990faa6e085ca01beb5e6e8641b5d01569d4d715f65f
+Transaction is included in block 12
+Transaction hash is c64a37d67648c6a5cc0b160dae9c223fb65de3c7576c80f04d57c21e6581e736
+Transaction is included in block 13
+Transaction hash is 58cd656891428ba82ae74f31e0e74461f80f90009d176924d1dcf795917077e8
+Transaction is included in block 14
+Transaction hash is 2ff5efa7a66911a2739732d6c04b65fc10a59021709cbdb36694bf0e2936336b
+Transaction is included in block 15
+Transaction hash is 43245a3377aa5cf9fb815407b24e11795d02ded31812114c8abb146c9c1ab158
+Transaction is included in block 16
+Transaction hash is f1d751cad57a40f62d61fabc4a9f44dc7d3cb6ad68095eebff63bde127849d1b
+Transaction is included in block 17
+[deploy] deploy twin: WriteSegment 7 of 7 (4816 bytes)              applied   gas         0 +    5396 bytes, block   10
+[deploy] deploy twin: WriteSegment 6 of 7 (98304 bytes)             applied   gas      4822 +   98916 bytes, block   11
+[deploy] deploy twin: WriteSegment 5 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   12
+[deploy] deploy twin: WriteSegment 4 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   13
+[deploy] deploy twin: WriteSegment 3 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   14
+[deploy] deploy twin: WriteSegment 2 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   15
+[deploy] deploy twin: WriteSegment 1 of 7 (98304 bytes)             applied   gas     98342 +   98916 bytes, block   16
+[deploy] deploy twin: CreateHeader (immutable) at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 applied   gas    594874 +     608 bytes, block   17
+[deploy] twin: image 816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df at DVcubqr9iDMUwCPdL5sDo5WXLkLFB2dgnc2vdi5bsd57 (computed by the sequencer's loader), immutable
+Transaction hash is f4af03db3ca3db586614de03a17da68dfeba3df6565a5819abe26b2cfbbacd5d
+Transaction is included in block 18
+Transaction hash is bb5434dda2d03d0c8157482afee819b922bdb2ab6bcb240f3945f949d777ed04
+Transaction is included in block 19
+Transaction hash is 80a17c8d470a5667e63ee465099df4a5976acbcfbdf203bb490f07cde0219a29
+Transaction is included in block 20
+Transaction hash is be8589c600015af8175e16b1949b9df9a56a025ca674db738fc31e950c53f205
+Transaction is included in block 21
+[deploy] deploy scripted: WriteSegment 3 of 3 (39196 bytes)         applied   gas         0 +   39776 bytes, block   18
+[deploy] deploy scripted: WriteSegment 2 of 3 (98304 bytes)         applied   gas     39202 +   98916 bytes, block   19
+[deploy] deploy scripted: WriteSegment 1 of 3 (98304 bytes)         applied   gas     98342 +   98916 bytes, block   20
+[deploy] deploy scripted: CreateHeader (immutable) at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K applied   gas    235886 +     608 bytes, block   21
+[deploy] scripted: image 8cb0e3f54dd11a2aea7551227c43e6416a6218e101cc7779c98f4f1a53d64e61 at FeoLrnY94gX4NJQ8duSL11vmFM2r5zGkhiQgJasMKY3K (computed by the sequencer's loader), immutable
+Transaction hash is 614c0c64b3333b9a31e1fb7f8943412f4de250664851ccc8e7c81e63cd7f5b67
+Transaction is included in block 22
+Transaction hash is d7f760f6320e29adb8e6a1ab026933ea45bc3a1a54d11b1b7e0cddf1d2d0ee6f
+Transaction is included in block 23
+Transaction hash is 59db3e608d3092f97f1aa61da5c921ea68ee98ae6f7b4dbaac2b14229b4de5ce
+Transaction is included in block 24
+Transaction hash is 2de19e75419b919a3ad3a8b7d358ad2628738ce800d691b0bffe6c093623def5
+Transaction is included in block 25
+Transaction hash is 873fbeeeb1dd2d0b814444bb873479b24a844f3178ea4d64cf87b7f7864658f6
+Transaction is included in block 26
+Transaction hash is 00b4ae010b9d7cff1de253879b757f15310d58ad99ebdc8ffdbb607c852b0090
+Transaction is included in block 27
+[attest-block] deploy consumer: WriteSegment 5 of 5 (45768 bytes)         applied   gas         0 +   46348 bytes, block   22
+[attest-block] deploy consumer: WriteSegment 4 of 5 (98304 bytes)         applied   gas     45774 +   98916 bytes, block   23
+[attest-block] deploy consumer: WriteSegment 3 of 5 (98304 bytes)         applied   gas     98342 +   98916 bytes, block   24
+[attest-block] deploy consumer: WriteSegment 2 of 5 (98304 bytes)         applied   gas     98342 +   98916 bytes, block   25
+[attest-block] deploy consumer: WriteSegment 1 of 5 (98304 bytes)         applied   gas     98342 +   98916 bytes, block   26
+[attest-block] deploy consumer: CreateHeader (immutable) at BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1 applied   gas    439142 +     608 bytes, block   27
+[deploy] consumer: image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 at BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1 (computed by the sequencer's loader), immutable
+[attest-block] instance S Init Init                                       applied        gas    210357 block   28 +  5.1s b4118caa969c67db0b1173d43d870ded0908c6ecba71932e7c9c460ac979f073
+[attest-block] instance S Init adopt 1/2                                  applied        gas   3399141 block   29 +  5.8s 4edaf32a50eab6a7bfc0fbb54653dbe9137d7e171e48570388a0865af0656f8f
+[attest-block] instance S Init adopt 2/2                                  applied        gas   3485575 block   30 +  6.2s de78f2e26be83fc0eabccfead20747abade772386912a5168d0084a5356235a2
+[attest-block] instance S finality update Open (step 1)                   applied        gas   2330188 block   31 +  5.3s 66f4393e9222ad306145f407db21b3246f30c8290d9834e4a6a95acabc7575c6
+[attest-block] instance S finality update Miller (step 2)                 applied        gas   3308048 block   32 +  5.6s dbcdf8535dc2611e23a040f79288c7655387a82d2778d6ec96714f7219b0bf27
+[attest-block] instance S finality update Finish (step 3)                 applied        gas   3723960 block   33 +  6.3s 7e214abfe185eabfe68bc655ebade0ca138f9b180ab22f295ea679ea01d8d6fd
+[attest-block] instance E Init Init                                       applied        gas    210457 block   34 +  5.0s 8e29412958104fa163c2eae8ec90db933c83dc873dd6cc573f24f5ea595a98d3
+[attest-block] instance E Init adopt 1/2                                  applied        gas   3399141 block   35 +  5.8s 7a5f738858daa9681632f43e99e5640f28b332dca4f8c31de2340747a407c45b
+[attest-block] instance E Init adopt 2/2                                  applied        gas   3485575 block   36 +  6.3s 20b13306754d59865dd73ff61e7e617c46fb57fc6b130f471a9a6cbdbdf64de7
+[block] consumer BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1; instance S 599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd holds the record of slot 15624480 (block 26384851); instance E 8aa6b793122121ab4ba4d0d02092c143c48c4de89d834fe0cc997b27fe34ab22 initialised; 4 reads: tx 0 log 0, tx 1 log 0, tx 2 log 0, tx 3 log 2
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[attest-block] fund reader 0's new private account (1000000000 from a public test account) applied        gas    409764 block   37 +  4.4s d8214cb74165f63cf342a338502fea1eca7359120c446b743d1fc09952cab19c
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[attest-block] fund reader 1's new private account (1000000000 from a public test account) applied        gas    409764 block   38 +  5.9s 0883bc804460c1a1f7df778b7544010cfb64249ca0d6016ad6721be3fa6f0224
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[attest-block] fund reader 2's new private account (1000000000 from a public test account) applied        gas    409764 block   39 +  5.9s c55f11f0e53f67a248046a82088dce6bdf98e0b9049bc5c477bb962551c2fdb6
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[attest-block] fund reader 3's new private account (1000000000 from a public test account) applied        gas    409764 block   40 +  5.9s 546bbf86f293ce08c67690945001c3ea367b1b5aa4f9dab583d6b714cd408ecf
+Latest block is 40
+Syncing to block 40. Blocks to sync: 4
+Synced to block 40 in 5.6982ms
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+WARNING: proving in dev mode. This will not generate valid, secure proofs.
+WARNING: Proving in dev mode does not generate a valid receipt. Receipts generated from this process are invalid and should never be used in production.
+[block] 6 transactions proven in 5.6 s against the snapshot (blocks 40..=41, commitment root ba64320adc4aa1439af05fb788dc10de635d3da1062e4d84058a0daa9450f4b0), none sent
+[attest-block] control: LEZ's test private account 0, first transaction of the snapshot applied        gas    422032 block   42 +  6.5s 802d653cdda822cc8448b00b61cedd236e863db4ea9f754aba6949738625ddaa
+[attest-block] instance E finality update, between proving and inclusion Open (step 1) applied        gas   2141371 block   43 +  6.3s 092752ffdac6b92502d46c346bc74e80aa84889a1f21e652dc086fe3bfb4fcd3
+[attest-block] instance E finality update, between proving and inclusion Miller (step 2) applied        gas   3308048 block   44 +  5.6s 3c4b33db739e0ba927dac4588d0eb4d17a3e161bd136eb6448cd60efbe749f20
+[attest-block] instance E finality update, between proving and inclusion Finish (step 3) applied        gas   3723960 block   45 +  6.3s 48b6bf9783b3bc26bf84aa35906aa3eeacca5e04f2de740daa2af426ecd2a03c
+[attest-block] reader 0: AttestPrivately of tx 0 log 0, proven against the snapshot applied        gas    422032 block   47 +  8.3s 387d309981238b6831f955971d82efad14a6e8216bef6b06724ca22ac0d385c3
+[attest-block] reader 1: AttestPrivately of tx 1 log 0, proven against the snapshot applied        gas    422032 block   47 +  8.3s 66687f967a94c4e3bee2aa9059f01ab3e4eb07190805f5e857ade7cb0d54ca6f
+[attest-block] reader 2: AttestPrivately of tx 2 log 0, proven against the snapshot applied        gas    422032 block   47 +  8.3s b9ebd3774c98efc50d5f3df7b408c7b7c320cfa0bd9163933fd6987c4d466061
+[attest-block] reader 3: AttestPrivately of tx 3 log 2, proven against the snapshot applied        gas    422032 block   47 +  8.3s a4b4e451d444e3aa5a45d28aaed92b4fe3aeebb961aaef9ce4d131c182bc416a
+[block] the 4 private reads applied, all in block 47; 28 commitments computed before inclusion are in the tree
+[attest-block] control: LEZ's test private account 0, second transaction of the same snapshot dropped        gas           block      + 21.8s 8bde45fd95b1722aa8e01a9f36405d519c56d79e5c67e0c4f0bda8358bf4c430
+[block] control: dropped (sequencer: Transaction with hash 8bde45fd95b1722aa8e01a9f36405d519c56d79e5c67e0c4f0bda8358bf4c430 failed settlement: State transition failed at transaction 0: Invalid input: Commitment Commitment(0af0cfdba92fa06627555fa8774ea01a8f76c5d85aa336b5328e499315177c3e) already seen, skipping it; AttestPrivately proven against the snapshot, after the first was included; transaction 28617 bytes: receipt 14365 bytes; claims image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 at account BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1; 7 private action(s); 6 boundary step(s))
+blocks: 1..=51
+transactions: 48 sent; 47 applied, 0 refused with an exit code, 0 reverted otherwise, 1 dropped by the sequencer, 0 rejected at its RPC, 0 unfinished
+charged in all: execution gas 39811221, storage gas 4010970, base fees 350577528
+against the harness tables: 0 transactions have a harness row; execution gas equal in 0, different in 0
+base fee exec over the blocks: min 8, max 8; blocks finalized on Bedrock at export: 0 of 51
+records written to <scratch>/run/export

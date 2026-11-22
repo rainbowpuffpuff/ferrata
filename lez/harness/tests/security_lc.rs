@@ -13,9 +13,15 @@
 //! - R.3: records read and attested after committee rotations (synthetic, mainnet, Sepolia).
 //!
 //! Where a forgery needs a committee whose keys no real chain gives out, the chain is synthetic
-//! (`security_common::Synth`: a mainnet-preset instance whose committees the test holds); every
-//! update there runs next to the specification's store (`World::apply`), so program and store
-//! must agree on every verdict.
+//! (`security_common::Synth`: a mainnet-preset instance whose committees the test holds). Every
+//! update sent there with `World::apply` also runs through Ferrata's policy store (`FinalizedStore`,
+//! the native store whose rules the program runs), which must give the same verdict. The rest are
+//! sent as the program's own transactions only (`run_job`, `verify_all`), with no native verdict
+//! beside them: the refusals the native store does not model (an adoption with a replaced key, 45;
+//! the weak-subjectivity cases, 53 and LEZ's validity window; the update ten years on) and the
+//! `VerifyAll` forms. The specification's store (`LightClientStore`) refuses less than the policy
+//! store: it is run on the two cases where they part (an update without finality, 341 of 512
+//! signers), and refuses neither but finalizes neither (`spec_store_verdict`).
 
 mod security_common;
 
@@ -23,6 +29,7 @@ use ferrata_core::{
     fork::LcFork,
     policy::{Adoption, FinalizedStore},
     steps,
+    store::LightClientStore,
     types::{Execution, LightClientUpdate},
     witness::{uncompressed_keys, CompactBootstrap, CompactUpdate, HeaderRecord},
     Root,
@@ -195,9 +202,23 @@ fn attest_no_record(
     chain.submit(label, actor, message, vec![actor], evidence, time)
 }
 
-/// Run `update` through `w` with `World::apply` (program and native store must agree).
+/// Run `update` through `w` with `World::apply` (the program and Ferrata's native policy store,
+/// `FinalizedStore`, must give the same verdict).
 fn apply(w: &mut World, update: &LightClientUpdate, label: &str) -> Verdict {
     Verdict::of(&w.apply(update, label).reports)
+}
+
+/// The specification's store (`LightClientStore`, initialised from `w`'s checkpoint and
+/// bootstrap: `w` as it is just after `Init`) on `update`, at the slot `World::apply` uses: its
+/// verdict, and whether it finalized the update's header. Ferrata's policy store refuses more
+/// than this store does (it takes finality updates only, signed by at least two thirds).
+fn spec_store_verdict(w: &World, update: &LightClientUpdate) -> (Result<(), ferrata_core::Error>, bool) {
+    assert_eq!(w.runs.len(), 1, "the specification's store is compared with an instance just after Init");
+    let mut store = LightClientStore::initialize(&w.inst.checkpoint, &w.bootstrap, w.inst.fork(), &w.spec)
+        .expect("the specification's store initialises from the checkpoint");
+    let before = store.core.finalized_header.clone();
+    let verdict = store.process_update(update, update.signature_slot + 1, &w.ctx());
+    (verdict, store.core.finalized_header != before)
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -326,8 +347,11 @@ fn light_client_cases() -> Vec<(&'static str, Row)> {
     for (key, n, expected) in [("participation-341", 341usize, Some(51)), ("participation-342", 342, None)] {
         let mut w = base.w.clone();
         let u = in_period(&base, n, None);
+        let (spec, spec_finalized) = spec_store_verdict(&base.w, &u);
+        assert!(spec.is_ok(), "{n} of 512: the specification's store refuses it: {spec:?}");
+        assert_eq!(spec_finalized, expected.is_none(), "{n} of 512: the specification finalizes at two thirds only");
         let note = if expected.is_some() {
-            "one signer below two thirds of 512"
+            "one signer below two thirds of 512; the specification's store does not refuse it and does not finalize it"
         } else {
             "control: two thirds of 512 (rounded up)"
         };
@@ -338,12 +362,15 @@ fn light_client_cases() -> Vec<(&'static str, Row)> {
     {
         let mut w = base.w.clone();
         let u = base.update(0, None, filler_header(s0 + 96), None, s0 + 97, 512);
+        let (spec, spec_finalized) = spec_store_verdict(&base.w, &u);
+        assert!(spec.is_ok() && !spec_finalized, "the specification's store on an optimistic update: {spec:?}");
         put(
             "not-finalized",
             "an update without finality (optimistic)",
             Some(50),
             apply(&mut w, &u, "optimistic update"),
-            "no header enters without a finality branch",
+            "no header enters without a finality branch; the specification's store does not refuse it and does not \
+             finalize it",
         );
         assert!(w.inst.record(&w.chain, s0 + 96).is_none());
     }
@@ -701,7 +728,7 @@ fn vs1_a_fabricated_chain_is_refused_through_the_program() {
         "control: the forger's instance verifies the fabricated finality update",
         None,
         Verdict::of(&run.reports),
-        "the specification's store bootstrapped from the forger's checkpoint accepts it too",
+        "Ferrata's policy store (`FinalizedStore`) bootstrapped from the forger's checkpoint accepts it too",
     );
     s.w.chain = std::mem::take(&mut fw.chain);
     let frecord = finst.record(&s.w.chain, fs).expect("the forger's instance recorded the fabricated header");
@@ -876,7 +903,11 @@ fn vs2_and_f2_forgeries_are_refused_through_the_program() {
         "# VS.2: the six forgeries through the attestation program\n\n\
          Generated by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc vs2` ({}; in process, dev \
          mode). Light-client cases on a synthetic mainnet-preset chain whose committees the test holds (every update \
-         also run through the specification's store, which must agree); execution cases on Stage 4's real mainnet record \
+         sent with `World::apply` also runs through Ferrata's policy store, `FinalizedStore`, the native store whose rules \
+         the program runs, which must give the same verdict; the adoption with a replaced key, 45, a refusal that store \
+         does not model, is sent as the program's own transactions only; the specification's store, `LightClientStore`, \
+         is run on the two cases where it and the policy store part, 50 and 51: it refuses neither, and finalizes \
+         neither); execution cases on Stage 4's real mainnet record \
          (block 26,384,851). The fabricated chain of VS.1 is in `vs1-fabricated-chain.md`.\n\n\
          ## 1. A header signed by a committee never validly handed off from the checkpoint\n\n{}\n\
          ## 2. A signature below the participation threshold\n\n{}\n\
@@ -946,7 +977,12 @@ fn weak_subjectivity_cases() -> Vec<Row> {
     let reports = run_job(&mut w, &u, None, late, "a valid update sent after the end");
     let v = Verdict::of(&reports);
     assert!(matches!(&v, Verdict::Lez { revert, .. } if revert.contains("validity window")), "{}", v.show());
-    rows.push(row("a valid update sent after the end of the period by the sequencer's clock", "refused by LEZ on the program's validity window (no program code)", v, "LEZ's own refusal: the transaction is outside the window `[signature slot, weak-subjectivity end)` the program declared; the dry run of the same transaction gives the same refusal"));
+    rows.push(row(
+        "a valid update sent after the end of the period by the sequencer's clock",
+        "refused by LEZ on the program's validity window (no program code)",
+        v,
+        "the transaction is outside the window `[signature slot, weak-subjectivity end)` the program declared",
+    ));
     // `Init` from a checkpoint whose period has ended by the sequencer's clock: the program
     // declares the window `[.., end of the checkpoint's period)` at `Init`, and LEZ refuses the
     // transaction outside it. Control: the same `Init` one millisecond before the end applies.
@@ -978,7 +1014,7 @@ fn weak_subjectivity_cases() -> Vec<Row> {
         "`Init` from a checkpoint whose weak-subjectivity period has ended, by the sequencer's clock",
         "refused by LEZ on the program's validity window (no program code)",
         v,
-        "LEZ's own refusal: the program declares the window `[.., end of the checkpoint's period)` at `Init`; the same `Init` one millisecond before the end applies",
+        "the program declares the window `[.., end of the checkpoint's period)` at `Init`; the same `Init` one millisecond before the end applies",
     ));
     // A successor (`Succeed`) from a checkpoint that is not the instance's latest record.
     let mut s = synth(0x64, 2);
@@ -1037,8 +1073,9 @@ fn u5_every_listed_failure_mode_returns_its_code_through_the_program() {
          Generated by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc u5` ({}; in process, dev mode). \
          Each failure mode of RFP-021 Usability #5, sent as the transactions a submitter or consumer sends; the code each \
          returns, and its name and message as the IDL (`idl/ferrata_attestation.idl.json`) gives them to the CLI \
-         (`ferrata-attest` prints them) and to any client.\n\n\
-         | Failure mode | Case | Observed through the program | The IDL's message |\n|---|---|---|---|\n",
+         (`ferrata-attest` prints them) and to any client; where LEZ refuses the transaction before the program runs, \
+         LEZ's own text, which is what a client shows (`ferrata-attest` prints it as it is).\n\n\
+         | Failure mode | Case | Observed through the program | Message a client shows (the IDL's; LEZ's own text where LEZ refuses) |\n|---|---|---|---|\n",
         harness::LEZ_TAG
     );
     for (mode, rows) in &modes {
@@ -1050,7 +1087,13 @@ fn u5_every_listed_failure_mode_returns_its_code_through_the_program() {
                     assert!(!msg.is_empty(), "code {code} has no message in the IDL");
                     msg.clone()
                 }
-                None => r.note.clone(),
+                None => match &r.verdict {
+                    Verdict::Lez { revert, .. } => {
+                        assert!(!revert.is_empty(), "{}: LEZ refused without a text", r.case);
+                        format!("LEZ's own text: \"{revert}\" ({})", r.note)
+                    }
+                    other => panic!("{}: neither a code nor LEZ's refusal: {}", r.case, other.show()),
+                },
             };
             out.push_str(&format!("| {mode} | {} | {} | {msg} |\n", r.case, r.verdict.show()));
         }
@@ -1305,7 +1348,7 @@ fn r3_records_stay_valid_after_committee_rotations() {
         "only advancing stops; the records stay valid",
     ));
     out.push_str(&format!(
-        "## 1. Synthetic chain: four rotations\n\nA mainnet-preset instance whose committees the test holds (every update also through the specification's store): the checkpoint (slot {slot0}) binds block 500, a finality update records block 600 at slot {f0} and hands off committee 1; then four updates, each in the next period, rotate the committee and hand off the next one. Both records are attested (a storage slot with a condition and a Transfer log) before the first rotation, after each, and ten years later.\n\n{}\n",
+        "## 1. Synthetic chain: four rotations\n\nA mainnet-preset instance whose committees the test holds (every update sent with `World::apply` also runs through Ferrata's policy store, `FinalizedStore`, the native store whose rules the program runs, which must give the same verdict; the update ten years on, refused on LEZ's validity window, which that store does not model, is sent as the program's own transactions only): the checkpoint (slot {slot0}) binds block 500, a finality update records block 600 at slot {f0} and hands off committee 1; then four updates, each in the next period, rotate the committee and hand off the next one. Both records are attested (a storage slot with a condition and a Transfer log) before the first rotation, after each, and ten years later.\n\n{}\n",
         table(&rows)
     ));
 

@@ -115,7 +115,7 @@ tail -n 15 "$H/crown-b.log"
 "$DRV" export "${D[@]}" --out "$H/export" > "$H/export.log" 2>&1 || say "export failed ($?)"
 
 # ---- records ------------------------------------------------------------------------------------------------
-scrub() { sed -e "s#$BESIDE/#../#g" -e "s#$HOME/#~/#g"; }
+. "$HERE/../scrub.sh"   # scrub: no path of this machine and no name of its folders in the records
 for f in crown-a.log crown-b.log check.log export.log capture-1.log capture-2.log eth-deploy.log eth-deposit-0.log eth-deposit-1.log \
          eth-status.log session-a.json session-b.json burn-notes.json channel.json; do
   [ -f "$H/$f" ] && scrub < "$H/$f" > "$REC/$f"

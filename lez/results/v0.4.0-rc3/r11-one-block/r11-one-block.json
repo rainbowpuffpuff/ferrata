@@ -1,0 +1,90 @@
+{
+  "between": {
+    "commitment_root_before_the_block": "02d14c57bdb6fe8f3fc75163f50da74b2da2aa8b33c1e60237d057fea1a1d81e",
+    "control_first": {
+      "block": "42",
+      "hash": "802d653cdda822cc8448b00b61cedd236e863db4ea9f754aba6949738625ddaa",
+      "status": "applied"
+    },
+    "instance_e_finality_update": {
+      "blocks": [
+        "43",
+        "44",
+        "45"
+      ],
+      "finalized_slot": 15619456,
+      "job_transactions": 3
+    }
+  },
+  "block": {
+    "block": "47",
+    "commitment_root_after": "12e8d9aa53de2beb217e2683af68fa62cfb4b4a214070e1bcfae518af5079f68",
+    "commitments_in_tree": 28,
+    "record_unchanged": true,
+    "send_burst_ms": 2,
+    "sent_after_block": 46,
+    "transactions": [
+      {
+        "block": "47",
+        "exec_gas": "422032",
+        "fee": "5168760",
+        "hash": "387d309981238b6831f955971d82efad14a6e8216bef6b06724ca22ac0d385c3",
+        "log_index": 0,
+        "position": "0",
+        "reader": 0,
+        "stor_gas": "224063",
+        "token": "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "tx_index": 0
+      },
+      {
+        "block": "47",
+        "exec_gas": "422032",
+        "fee": "5168760",
+        "hash": "66687f967a94c4e3bee2aa9059f01ab3e4eb07190805f5e857ade7cb0d54ca6f",
+        "log_index": 0,
+        "position": "1",
+        "reader": 1,
+        "stor_gas": "224063",
+        "token": "c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+        "tx_index": 1
+      },
+      {
+        "block": "47",
+        "exec_gas": "422032",
+        "fee": "5168760",
+        "hash": "b9ebd3774c98efc50d5f3df7b408c7b7c320cfa0bd9163933fd6987c4d466061",
+        "log_index": 0,
+        "position": "2",
+        "reader": 2,
+        "stor_gas": "224063",
+        "token": "a0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "tx_index": 2
+      },
+      {
+        "block": "47",
+        "exec_gas": "422032",
+        "fee": "5168760",
+        "hash": "a4b4e451d444e3aa5a45d28aaed92b4fe3aeebb961aaef9ce4d131c182bc416a",
+        "log_index": 2,
+        "position": "3",
+        "reader": 3,
+        "stor_gas": "224063",
+        "token": "35ebe010cdd541284fcfd2f85992a392a488f989",
+        "tx_index": 3
+      }
+    ]
+  },
+  "control_second": {
+    "hash": "8bde45fd95b1722aa8e01a9f36405d519c56d79e5c67e0c4f0bda8358bf4c430",
+    "note": "sequencer: Transaction with hash 8bde45fd95b1722aa8e01a9f36405d519c56d79e5c67e0c4f0bda8358bf4c430 failed settlement: State transition failed at transaction 0: Invalid input: Commitment Commitment(0af0cfdba92fa06627555fa8774ea01a8f76c5d85aa336b5328e499315177c3e) already seen, skipping it; AttestPrivately proven against the snapshot, after the first was included; transaction 28617 bytes: receipt 14365 bytes; claims image 8464603bcf9ea9c69c0eac100605deb9c8ef666a56f964cceba66947958e4b96 at account BHGktSkLP4MVFA6t3N8YEQjAU7y6yD5in9XpkYEhDpH1; 7 private action(s); 6 boundary step(s)",
+    "status": "dropped"
+  },
+  "proofs": "fake receipts (RISC0_DEV_MODE)",
+  "readers": 4,
+  "snapshot": {
+    "commitment_root": "ba64320adc4aa1439af05fb788dc10de635d3da1062e4d84058a0daa9450f4b0",
+    "head_after_proving": 41,
+    "head_before_proving": 40,
+    "proving_seconds": 5.6
+  }
+}

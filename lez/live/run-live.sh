@@ -15,6 +15,8 @@ STORED_TX="${FERRATA_STORED_TX:-$REPO/lez/results/stage2-private-tx.borsh}"
 # The harness tables (stage1-*.md) each transaction is compared with: those of the deployed image
 # (the default holds the image the harness builds now).
 HARNESS_RESULTS="${FERRATA_LIVE_HARNESS_RESULTS:-$REPO/lez/results}"
+# scrub: no path of this machine and no name of the folders the run used in the records (scrub.sh).
+. "$LIVE_DIR/scrub.sh"
 
 stop_all() {
   [ -f "$PIDS" ] || return 0
@@ -231,7 +233,10 @@ else
 fi
 
 launched="$(date +%s)"
-env -u RISC0_DEV_MODE RUST_LOG="${FERRATA_LIVE_RUST_LOG:-info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn}" \
+# FERRATA_LIVE_SEQUENCER_DEV_MODE=1: the sequencer runs with RISC0_DEV_MODE=1, as LEZ's Justfile documents for
+# development ("to disable proof verification"), so that it takes the fake receipts of a driver in dev mode.
+if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then seq_env="RISC0_DEV_MODE=1"; else seq_env="-u RISC0_DEV_MODE"; fi
+env $seq_env RUST_LOG="${FERRATA_LIVE_RUST_LOG:-info,sequencer_core=debug,risc0_zkvm=warn,kameo=warn}" \
   "$SEQUENCER" start "$RUN_DIR/sequencer_home" --rpc-listen-address "127.0.0.1:$RPC_PORT" > "$LOG/sequencer.log" 2>&1 &
 SEQ_PID=$!
 echo "$SEQ_PID" >> "$PIDS"
@@ -284,9 +289,13 @@ while :; do
 done
 # What the sequencer process was started with, as the kernel reports it.
 {
-  echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | sed "s#$BESIDE/#../#g")"
-  echo "RISC0_* variables in the sequencer's environment: $(tr '\0' '\n' < /proc/$SEQ_PID/environ | grep '^RISC0_' | tr '\n' ' ' | sed "s#$BESIDE/#../#g")"
-  echo "(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)"
+  echo "command: $(tr '\0' ' ' < /proc/$SEQ_PID/cmdline | scrub)"
+  echo "RISC0_* variables in the sequencer's environment: $(tr '\0' '\n' < /proc/$SEQ_PID/environ | grep '^RISC0_' | tr '\n' ' ' | scrub)"
+  if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then
+    echo "(RISC0_DEV_MODE=1, FERRATA_LIVE_SEQUENCER_DEV_MODE: receipts of privacy-preserving transactions are NOT verified; fake receipts are taken)"
+  else
+    echo "(RISC0_DEV_MODE absent: receipts of privacy-preserving transactions are verified)"
+  fi
 } > "$RUN_DIR/config/sequencer-process.txt"
 cat "$RUN_DIR/config/sequencer-process.txt"
 
@@ -338,6 +347,13 @@ for phase in $PHASES; do
         if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
         renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
         driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
+    attest-block)   # driver/src/block.rs (LEZ v0.4.0-rc3): several private reads in one block; fake receipts when the
+      # sequencer runs in dev mode (FERRATA_LIVE_SEQUENCER_DEV_MODE=1), real ones otherwise (threads and priority as
+      # private-real's); --consumer-bin through FERRATA_LIVE_DRIVER_EXTRA
+      ( if [ "${FERRATA_LIVE_SEQUENCER_DEV_MODE:-0}" = 1 ]; then export RISC0_DEV_MODE=1; else unset RISC0_DEV_MODE; fi
+        if [ -n "${FERRATA_LIVE_PROOF_THREADS:-}" ]; then export RAYON_NUM_THREADS="$FERRATA_LIVE_PROOF_THREADS"; fi
+        renice -n "${FERRATA_LIVE_PROOF_NICE:-10}" -p $BASHPID > /dev/null
+        driver "$phase" ) 2>&1 | tee -a "$LOG/driver.log"; rc=${PIPESTATUS[0]} ;;
     hook)   # FERRATA_LIVE_HOOK: a script run while the zone runs (hooks/crown.sh), with the zone in its environment
       if [ -z "${FERRATA_LIVE_HOOK:-}" ] || [ ! -f "$FERRATA_LIVE_HOOK" ]; then
         echo "   no FERRATA_LIVE_HOOK script" | tee -a "$LOG/driver.log"; rc=2
@@ -367,9 +383,15 @@ stop_all
 trap - EXIT
 FINISHED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-scrub() { sed -e "s#$BESIDE/#../#g" -e "s#$HOME/#~/#g"; }   # no paths of this machine in the records
 mkdir -p "$OUT/config" "$OUT/logs" "$OUT/private"
-if [ -d "$DRIVER_OUT" ]; then cp "$DRIVER_OUT"/* "$OUT/"; fi
+if [ -d "$DRIVER_OUT" ]; then   # the driver's records: text through scrub, borsh and other binary files as they are
+  for f in "$DRIVER_OUT"/*; do
+    case "$f" in
+      *.borsh) cp "$f" "$OUT/" ;;
+      *) if grep -Iq . "$f"; then scrub < "$f" > "$OUT/${f##*/}"; else cp "$f" "$OUT/"; fi ;;
+    esac
+  done
+fi
 cp "$RUN_DIR/config/sequencer_config.diff" "$RUN_DIR/config/sequencer-process.txt" "$OUT/config/"
 scrub < "$RUN_DIR/sequencer_home/sequencer_config.json" > "$OUT/config/sequencer_config.json"
 [ -f "$RUN_DIR/config/bedrock-node-config.diff" ] && cp "$RUN_DIR/config/bedrock-node-config.diff" "$OUT/config/"
@@ -405,6 +427,10 @@ for kind in fake real attest; do   # private-attest: phase attest-private
   [ -f "$d/rpc-transcript.jsonl" ] && cp "$d/rpc-transcript.jsonl" "$OUT/private/$kind/"
   [ -f "$d/transaction.borsh" ] && cp "$d/transaction.borsh" "$OUT/private/$kind/"
 done
+if [ -d "$RUN_DIR/driver/private-block" ]; then   # phase attest-block: every transaction it held, as proven
+  mkdir -p "$OUT/private/block"
+  cp "$RUN_DIR/driver/private-block/"*.borsh "$OUT/private/block/" 2>/dev/null || true
+fi
 {
   echo "# The run's environment"
   echo
@@ -438,7 +464,7 @@ done
   echo "- ports: sequencer RPC 127.0.0.1:$RPC_PORT, metrics 127.0.0.1:${FERRATA_LIVE_METRICS_PORT:-9000}, Bedrock API 127.0.0.1:$BEDROCK_PORT"
   echo "- last block: ${head_block:-?}; blocks the sequencer published to Bedrock: $(grep -c 'Published block' "$LOG/sequencer.log" || true); its last channel update: $(grep 'Channel update' "$LOG/sequencer.log" | tail -1 | sed 's/^.*Channel update: //')"
   if [ -n "$bedrock_end" ]; then echo "- Bedrock node at the end (cryptarchia/info): $bedrock_end"; fi
-} > "$OUT/environment.md"
+} | scrub > "$OUT/environment.md"
 cat "$OUT/environment.md"
 echo "== records in ${OUT#$REPO/}"
 exit "$status"

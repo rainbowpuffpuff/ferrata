@@ -74,14 +74,40 @@ What this differential cannot give: Helios and ferrata-core are two transcriptio
 mistake both make the same way (or one the specification itself makes) agrees with itself; the mutations are random,
 so a structured input that needs several coordinated changes (a re-signed update, a consistent fabricated branch) is
 reached only by the targeted tests (`adversarial.rs`, `steps.rs`, `where_helios_departs_from_the_specification`) and
-not by this one. A review of the code against the specification by someone who did not write either is what an audit
-adds.
+not by this one. Its inputs are narrower than "the light client" in five more ways:
+
+- It judges ferrata-core's native stores (the policy store and the spec store), not the program's step path: `Open`,
+  `Miller`, the adoption parts and `Finish`, the signer witness and the compact encodings the program reads are not
+  run on these inputs (the LEZ harness's tests and red-team suites run them, on other inputs).
+- All five originals are period updates of one stretch of mainnet in the Electra layout: no Gloas update, no fork
+  upgrade of the store, no `LightClientFinalityUpdate` form.
+- Only the update's bytes are mutated; the bootstrap and the store before each update never are.
+- The current slot is the *mutated* update's signature slot plus one (`helios_oracle.rs` `Pair::submit`, `diff.mjs`
+  `judge`), so the check that refuses a signature slot in the future is never reached, and the 13 accepted mutations
+  follow from that choice: each of them raises the signature slot (by 7 to 5,120 slots; derived from the fixtures'
+  bytes and the listed flips), so with the original signature slot plus one as the current slot all 13 would be
+  refused.
+- Refusal reasons are not compared, only verdicts and heads.
+
+So could a class of forgery be missed? Yes: every forgery that needs a valid signature over changed signed data, or
+several coordinated changes, is out of reach of random bit flips by construction. What the run shows is narrower: of
+the fields the signature does not cover, only the signature slot let a flip through (the 13 accepted, explained above);
+every flip of every other region, covered by the signature or not (offsets, branches, the next committee, participation
+bits, both headers and payloads, the signature), was refused by all three stores; and two independent clients decide
+as ferrata-core does on 2,005 inputs. A review of the code against the specification by someone who did not
+write either is what an audit adds.
 
 ## A second client: Lodestar
 
 The same 2,000 mutations, and the five updates as served, judged by Lodestar's light client
-(`@lodestar/light-client` 1.43.0, TypeScript, ChainSafe; its `LightclientSpec.onUpdate`, BLS through
-`@chainsafe/blst`): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
+(`@lodestar/light-client` 1.43.0, TypeScript, ChainSafe; its `LightclientSpec.onUpdate`; BLS through
+`@chainsafe/bls` 8.2.0, which with this lockfile runs herumi's `bls-eth-wasm` 1.7.0, in WebAssembly: its optional peer
+`@chainsafe/blst` 1.x, through which it would run blst natively, is one `npm ci` does not install, and the
+`@chainsafe/blst` 2.2.0 the light client lists as a dependency is installed but imported by none of its files; so no
+code of `blst`, ferrata-core's BLS library, takes part. Measured on the build box, 22 November 2026, after `npm ci` from
+the committed lockfile: `@chainsafe/bls` reports its implementation as `herumi`, `node_modules/@chainsafe/blst` is
+absent, and the light client's `lib` imports `@chainsafe/bls` and `@chainsafe/bls/types` only;
+[`results/lodestar-bls-2026-11-22.txt`](results/lodestar-bls-2026-11-22.txt)): `helios_oracle.rs`'s `export_random_mutations_for_a_second_client` (ignored by default) writes
 the corpus with ferrata's and Helios's verdicts and ferrata's heads, and [`lodestar/diff.mjs`](lodestar/diff.mjs) runs
 every record through Lodestar against a copy of a store bootstrapped from the same bytes and advanced by the updates
 before it (current slot: the signature slot plus one, as on the Rust side). Lodestar must refuse what ferrata's spec
@@ -110,8 +136,8 @@ declares). `@lodestar/config` 1.43.0 lists `@lodestar/spec-test-util` (a test he
 stand-in replaces it: `lodestar/stub-spec-test-util`, a dependency of the manifest itself, which the override
 (`$@lodestar/spec-test-util`) gives `@lodestar/config` too; `npm ci` links `node_modules/@lodestar/spec-test-util` to
 it, and nothing imports it at run time. The lockfile also holds `tar` 6.2.1 and `glob` 10.5.0, which npm marks
-deprecated: they reach the tree only through `node-gyp`, which `@chainsafe/blst` uses at install time, and no step of
-the differential runs them. Run again from this lockfile (build box, 21 November 2026, `npm ci`): the same output but
+deprecated: they belong to `node-gyp`, a dependency of `@chainsafe/blst` 1.x, the optional peer `npm ci` does not
+install, so all three stay in the lockfile only (absent from `node_modules` after `npm ci`, measured the same day). Run again from this lockfile (build box, 21 November 2026, `npm ci`): the same output but
 for the elapsed time (326.2 s).
 
 ```sh

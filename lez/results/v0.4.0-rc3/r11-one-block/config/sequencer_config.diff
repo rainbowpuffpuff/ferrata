@@ -1,0 +1,27 @@
+--- lez/lez/sequencer/service/networks/local.json
++++ run/sequencer_config.json
+@@ -2,11 +2,11 @@
+     "home": ".",
+     "max_num_tx_in_block": 20,
+     "mempool_max_size": 1000,
+-    "block_create_timeout": "15s",
++    "block_create_timeout": "6s",
+     "retry_pending_blocks_timeout": "5s",
+     "bedrock_config": {
+         "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+-        "node_url": "http://localhost:18080"
++        "node_url": "http://127.0.0.1:18080"
+     },
+     "genesis": {
+         "channel_params": {
+@@ -52,7 +52,8 @@
+         ]
+     },
+     "gossip": {
+-        "listen_addr": "/ip4/0.0.0.0/udp/0/quic-v1",
++        "listen_addr": "/ip4/127.0.0.1/udp/0/quic-v1",
+         "bootstrap_peers": []
+-    }
++    },
++    "metrics_listen_address": "127.0.0.1:9000"
+ }

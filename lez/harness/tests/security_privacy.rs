@@ -8,8 +8,9 @@
 //! The F.8 test is the one `docs/design/attestation.md` §6.5 specifies: two deposits of the same
 //! token and amount, in different blocks, one needing no hop and one needing three, claimed
 //! privately against the same record. Their transactions, events and state diffs must be identical
-//! except for fresh randomness and the nullifier; a private consumer that calls `Attest` instead of
-//! reading must fail the same comparison. The chain is synthetic (`security_common::Synth`, a
+//! except for fresh randomness and the nullifiers (the claim's, and the account's own with its new
+//! commitments, set by the private state spent and made); a private consumer that calls `Attest`
+//! instead of reading must fail the same comparison. The chain is synthetic (`security_common::Synth`, a
 //! mainnet-preset light client whose committees the test holds) because no real chain has two
 //! deposits to accounts whose keys a test holds, one of them three hops back.
 
@@ -237,14 +238,18 @@ impl Claims {
     }
 }
 
-/// Align `d` to `a`: every field that may differ (fresh randomness: the private side's actors,
-/// the private actions' nullifiers, commitments and encrypted notes, the recovery bindings, the
-/// fee fallback's private action and the payer alias's crossing in its boundary; and the claim's
-/// nullifier N, in `Spend` and in the address and PDA seed of `claim(pool, N)`) is taken from
-/// `a`, after checking it has the same encoded length in both (and, for N, that it is each
-/// transaction's own: `Spend`'s nullifier and the PDA seed of `claim(pool, N)`). Every other field
-/// must already be equal. Returns the log of what was aligned, or the first difference no rule allows, by field.
-/// The caller then requires the two messages' encodings to be byte-identical.
+/// Align `d` to `a`: every field that may differ is taken from `a`, after checking it has the same
+/// encoded length in both: the private side's actors (aliases), the private actions' nullifiers,
+/// commitments and encrypted notes, the recovery bindings, the fee fallback's private action and
+/// the payer alias's crossing in its boundary; and the claim's nullifier N, in `Spend` and in the
+/// address and PDA seed of `claim(pool, N)` (each transaction's own). Of those, the aliases, notes,
+/// recovery bindings and dummy actions are fresh randomness, and the account's own nullifier and
+/// commitments are determined by the private state it spends and makes (the same if the same state
+/// is spent twice; that they reveal nothing of the account is LEZ's nullifier and commitment scheme,
+/// not shown here); `fresh_check` shows which is which. Every other
+/// field must already be equal. Returns the log of what was aligned, or the first difference no
+/// rule allows, by field. The caller then requires the two messages' encodings to be
+/// byte-identical.
 fn align(
     a: &PrivacyPreservingTransaction,
     d: &PrivacyPreservingTransaction,
@@ -262,8 +267,9 @@ fn align(
     let publics = a.message.public_context.actors.clone();
     let (ea, eo) = (&a.message.execution, &mut out.message.execution);
     align_boundary("boundary", &ea.boundary, &mut eo.boundary, &publics, claims, &mut log)?;
-    // Private actions: fresh nullifiers, commitments and notes, of equal sizes; the commitment
-    // root they were proven against must be the same.
+    // Private actions: nullifiers, commitments and notes of equal sizes (the account's own nullifier
+    // and commitment set by the state spent and made, the dummies' fresh, every note fresh); the
+    // commitment root they were proven against must be the same.
     if ea.private_actions.len() != eo.private_actions.len() {
         return Err("private actions: another count".into());
     }
@@ -271,7 +277,9 @@ fn align(
         align_action(&format!("private action {i}"), pa, po)?;
     }
     log.push(format!(
-        "{} private actions: nullifier, commitment and encrypted note (fresh; same sizes, same root)",
+        "{} private actions: nullifier, commitment and encrypted note (same sizes, same root): the account's own \
+         (nullifier and commitment set by the private state spent and made, note fresh) and the dummies (nullifier, \
+         commitment and note fresh)",
         ea.private_actions.len()
     ));
     if ea.recovery_bindings.len() != eo.recovery_bindings.len() {
@@ -307,8 +315,8 @@ fn align(
                         &mut log,
                     )?;
                     log.push(
-                        "the fee fallback's private action: nullifier, commitment and encrypted note (fresh; same \
-                         sizes, same root)"
+                        "the fee fallback's private action: the account's own nullifier and commitment (set by the \
+                         private state spent and made) and encrypted note (fresh); same sizes, same root"
                             .to_string(),
                     );
                 }
@@ -369,7 +377,7 @@ fn align(
 /// claim's (`claims`) or on the private side (in neither transaction's public context, so a
 /// fresh alias); a message only as `Spend`'s nullifier, each transaction's own N; PDA seeds only
 /// as the seed of each transaction's own `claim(pool, N)`; inherited authorizations only at equal
-/// sizes.
+/// sizes, and only where neither names a public account (an authorization of the private side).
 fn align_boundary(
     label: &str,
     ba: &[BoundaryStep],
@@ -445,6 +453,11 @@ fn align_boundary(
             if da.inherited_authorizations.len() != dd.inherited_authorizations.len() {
                 return Err(format!("{label} step {i}: inherited authorizations"));
             }
+            if names_public(&da.inherited_authorizations, publics)
+                || names_public(&dd.inherited_authorizations, publics)
+            {
+                return Err(format!("{label} step {i}: an inherited authorization names a public account"));
+            }
             dd.inherited_authorizations = da.inherited_authorizations.clone();
             log.push(format!("{label} step {i}: inherited authorizations (the private account's alias)"));
         }
@@ -453,7 +466,8 @@ fn align_boundary(
 }
 
 /// Align one private action of `d` to `a`'s: the same commitment root, a note of the same size;
-/// the nullifier, commitment and note are fresh.
+/// the note is fresh, the nullifier and commitment fresh for a dummy and set by the state spent and
+/// made for the account's own.
 fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Result<(), String> {
     if pa.root != po.root {
         return Err(format!("{label}: another commitment root"));
@@ -466,6 +480,130 @@ fn align_action(label: &str, pa: &PrivateAction, po: &mut PrivateAction) -> Resu
     po.commitment = pa.commitment;
     po.encrypted_post_state = pa.encrypted_post_state.clone();
     Ok(())
+}
+
+/// True if `ids` names the account of an actor of the public context.
+fn names_public(ids: &BTreeSet<AccountId>, publics: &BTreeSet<Actor>) -> bool {
+    ids.iter().any(|id| publics.iter().any(|p| p.account_id == *id))
+}
+
+/// What `align` takes from one transaction must not carry the account's identity: `t1` and `t2`
+/// are the same claim by the same account, proven twice from the same state. Every alias on the
+/// private side (in the boundary and the fee fallback's), every inherited authorization, encrypted
+/// note, recovery binding and dummy action must differ between them, and no inherited
+/// authorization may name a public account; the account's own nullifier and new commitments are
+/// the values the same in both (one nullifier: the state spent, by the action and by the fee
+/// fallback; one commitment for each state made), so spending the same state twice is refused
+/// (R.11's control). A per-account deterministic alias (`Shape::Bare`'s) fails this check, though
+/// `align` alone would accept it between two accounts. Returns what was checked.
+fn fresh_check(
+    t1: &PrivacyPreservingTransaction,
+    t2: &PrivacyPreservingTransaction,
+    publics: &BTreeSet<Actor>,
+) -> Result<Vec<String>, String> {
+    let (e1, e2) = (&t1.message.execution, &t2.message.execution);
+    let fallback = |e: &lee_core::ProvenExecution| e.fee.as_ref().and_then(|f| f.fallback.clone());
+    let (f1, f2) = (fallback(e1), fallback(e2));
+    if f1.is_some() != f2.is_some() {
+        return Err("the fee fallback is in one proof only".into());
+    }
+    let mut boundaries = vec![("boundary", e1.boundary.clone(), e2.boundary.clone())];
+    if let (Some(x1), Some(x2)) = (&f1, &f2) {
+        boundaries.push(("the fee fallback's boundary", x1.boundary.clone(), x2.boundary.clone()));
+    }
+    let (mut aliases, mut authorizations) = (0usize, 0usize);
+    for (label, b1, b2) in &boundaries {
+        if b1.len() != b2.len() {
+            return Err(format!("{label}: {} steps against {}", b1.len(), b2.len()));
+        }
+        for (i, (s1, s2)) in b1.iter().zip(b2).enumerate() {
+            let (d1, d2) = match (s1, s2) {
+                (BoundaryStep::PrivateToPublic(x), BoundaryStep::PrivateToPublic(y))
+                | (BoundaryStep::PublicToPrivate(x), BoundaryStep::PublicToPrivate(y)) => (x, y),
+                (x, y) if x == y => continue,
+                _ => return Err(format!("{label} step {i}: another kind of step")),
+            };
+            for (which, a1, a2) in
+                [("from", d1.envelope.from, d2.envelope.from), ("to", d1.envelope.to, d2.envelope.to)]
+            {
+                let private_side = !publics.contains(&a1) && !publics.contains(&a2);
+                if private_side && a1 == a2 {
+                    return Err(format!(
+                        "{label} step {i}: the alias `{which}` is the same in two proofs of one claim"
+                    ));
+                }
+                if !private_side && a1 != a2 {
+                    return Err(format!("{label} step {i}: the public actor `{which}` differs"));
+                }
+                aliases += usize::from(private_side);
+            }
+            if names_public(&d1.inherited_authorizations, publics)
+                || names_public(&d2.inherited_authorizations, publics)
+            {
+                return Err(format!("{label} step {i}: an inherited authorization names a public account"));
+            }
+            if d1.inherited_authorizations.len() != d2.inherited_authorizations.len() {
+                return Err(format!("{label} step {i}: inherited authorizations of another count"));
+            }
+            if d1.inherited_authorizations.intersection(&d2.inherited_authorizations).next().is_some() {
+                return Err(format!("{label} step {i}: an inherited authorization repeats in two proofs of one claim"));
+            }
+            authorizations += d1.inherited_authorizations.len();
+        }
+    }
+    let actions = |e: &lee_core::ProvenExecution, f: &Option<lee_core::FeeFallback>| -> Vec<PrivateAction> {
+        e.private_actions.iter().cloned().chain(f.iter().map(|x| x.action.clone())).collect()
+    };
+    let (p1, p2) = (actions(e1, &f1), actions(e2, &f2));
+    if p1.len() != p2.len() {
+        return Err(format!("{} private actions against {}", p1.len(), p2.len()));
+    }
+    let note = |a: &PrivateAction| borsh::to_vec(&a.encrypted_post_state).unwrap();
+    if let Some(i) = (0..p1.len()).find(|&i| p2.iter().any(|b| note(b) == note(&p1[i]))) {
+        return Err(format!("private action {i}: its encrypted note repeats in two proofs of one claim"));
+    }
+    // The account's own: the actions whose nullifier is in both proofs.
+    let own: Vec<&PrivateAction> = p1.iter().filter(|a| p2.iter().any(|b| b.nullifier == a.nullifier)).collect();
+    let mut spent: Vec<_> = own.iter().map(|a| borsh::to_vec(&a.nullifier).unwrap()).collect();
+    spent.sort();
+    spent.dedup();
+    if spent.len() != 1 {
+        return Err(format!("{} nullifiers repeat in two proofs of one claim, not the one state spent", spent.len()));
+    }
+    let made = p1.iter().filter(|a| p2.iter().any(|b| b.commitment == a.commitment)).count();
+    if made != own.len() {
+        return Err(format!(
+            "{made} commitments repeat in two proofs of one claim, against {} actions of the account's own",
+            own.len()
+        ));
+    }
+    let dummies = p1.len() - own.len();
+    let bindings = e1.recovery_bindings.len();
+    if bindings != e2.recovery_bindings.len() {
+        return Err("recovery bindings: another count".into());
+    }
+    for (i, (r1, r2)) in e1.recovery_bindings.iter().zip(&e2.recovery_bindings).enumerate() {
+        if borsh::to_vec(r1).unwrap() == borsh::to_vec(r2).unwrap() {
+            return Err(format!("recovery binding {i} repeats in two proofs of one claim"));
+        }
+    }
+    Ok(vec![
+        format!("{aliases} alias(es) on the private side (the boundary's and the fee fallback's): each different"),
+        if authorizations == 0 {
+            "inherited authorizations: none in either proof".to_string()
+        } else {
+            format!("{authorizations} inherited authorization(s): each different, none naming a public account")
+        },
+        format!("{} encrypted notes: each different", p1.len()),
+        format!("{dummies} dummy actions: nullifier and commitment each different"),
+        format!("{bindings} recovery binding(s): each different"),
+        format!(
+            "the account's own {} action(s) ({}): one nullifier, the private state spent, and {made} commitment(s), the \
+             states made, the same in both; so spending that state a second time is refused",
+            own.len(),
+            if f1.is_some() { "the claim's and the fee fallback's" } else { "the claim's" }
+        ),
+    ])
 }
 
 #[test]
@@ -489,7 +627,8 @@ fn f8_two_deposits_full_diff() {
         "# F.8: the full-diff test (two deposits, no hop and three hops)\n\n\
          Generated by `RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_privacy f8` ({}; LEZ's state \
          machine and settlement in process, dev mode: the private part is executed, not proven). A synthetic \
-         mainnet-preset light client (committees the test holds; every update through the specification's store too) \
+         mainnet-preset light client (committees the test holds; every update also through Ferrata's policy store, \
+         `FinalizedStore`, which must give the same verdict) \
          records block B = {}. Deposit A (0.001 ETH, private-kind, to account X) is in B; deposit D (0.001 ETH, \
          private-kind, to account Y) is in block {}, three EIP-2935 hops back (B → {} → {} → {}). Each is claimed by the \
          reference consumer's `ClaimDepositPrivately` (it reads the record, verifies the deposit and its hops and opens \
@@ -510,14 +649,31 @@ fn f8_two_deposits_full_diff() {
     assert_eq!(ra.proof_bytes, rd.proof_bytes, "the same proof size");
     let (_, log) = align(&ra.tx, &rd.tx, Some(claims)).unwrap_or_else(|e| panic!("the two claims differ: {e}"));
     let differing = bytes_a.iter().zip(&bytes_d).filter(|(x, y)| x != y).count();
+    // What was taken is fresh, or the account's own per-state value: X's claim of A proven a second
+    // time from the same state.
+    let ra2 = dep.claim(&mut s0.clone(), &dep.x, &dep.a);
+    let fresh = fresh_check(&ra.tx, &ra2.tx, &ra.tx.message.public_context.actors)
+        .unwrap_or_else(|e| panic!("a field align takes is neither fresh nor the account's own per-state value: {e}"));
     out.push_str(&format!(
         "## The transactions\n\nBoth are {} bytes (proof field {} bytes). {} of those bytes differ. After taking from A every \
          field that may differ — each with the same encoded size in both — the two messages are byte-identical. The fields \
-         taken:\n\n{}\n\nThe proof field differs as two proofs of different statements do; its size is the same.\n\n",
+         taken:\n\n{}\n\nThose fields are fresh randomness or the account's own per-state values (LEZ's nullifier and \
+         commitments, never shown twice): X's claim of A proven a second time from the same state (the same account, the \
+         same state, the same claim) gives, against the first:\n\n{}\n\nSo the aliases, notes, recovery bindings and \
+         dummies are fresh randomness, and the account's own nullifier and commitments are determined by the private \
+         state spent and made: never shown twice, since a state is spent once, but computed from that state, so that \
+         they reveal nothing of the account rests on LEZ's nullifier and commitment scheme, which this check does not \
+         test.\n\n\
+         The proof field differs as two proofs of different statements do; its size is the same. Here the proofs are \
+         dev-mode fake receipts; a real private transaction carries LEZ's succinct receipt, of fixed seal size whatever the \
+         statement (`ProverOpts::succinct()`, rc1 `lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs` \
+         line 655), and LEZ charges every private transaction the same flat proof storage (`PROOF_BYTES` = 223,551 of the \
+         224,063 storage gas shown below, rc1 `lez/programs/fee/core/src/market.rs`).\n\n",
         grouped(bytes_a.len()),
         grouped(ra.proof_bytes),
         grouped(differing),
-        log.iter().map(|l| format!("- {l}")).collect::<Vec<_>>().join("\n")
+        log.iter().map(|l| format!("- {l}")).collect::<Vec<_>>().join("\n"),
+        fresh.iter().map(|l| format!("- {l}")).collect::<Vec<_>>().join("\n")
     ));
 
     // 2. What neither transaction contains.
@@ -620,7 +776,7 @@ fn f8_two_deposits_full_diff() {
     }
     out.push_str(&format!(
         "## The state diffs\n\nEvery public account of the state, before and after each claim (decoded from the state's own encoding):\n\n{rows}\n\
-         Nothing else of the public state changes. The private state gains, for each, its {} private actions' nullifiers and commitments (fresh); the whole state encodes to {} bytes after either claim. The record is read, never written; no account of X, Y, the depositors or the vault exists on LEZ.\n\n",
+         Nothing else of the public state changes. The private state gains, for each, its {} private actions' nullifiers and commitments (the dummies' fresh, the account's own per state); the whole state encodes to {} bytes after either claim. The record is read, never written; no account of X, Y, the depositors or the vault exists on LEZ.\n\n",
         ra.tx.message.execution.private_actions.len(),
         grouped(state_a)
     ));
@@ -650,10 +806,15 @@ fn f8_two_deposits_full_diff() {
 // R.11
 // ---------------------------------------------------------------------------------------------
 
-/// Settle `txs` in one block as LEZ's block application does (`chain_state::apply`): one opening
-/// fee state, one fee summary, one block id and timestamp, each transaction in order; a
-/// transaction whose settlement fails is dropped, as the sequencer's block builder drops it
-/// (settled on a scratch copy first). Returns each transaction's result.
+/// Settle `txs` in one block: the test's own block loop around the harness's copy of rc1's
+/// per-transaction settlement (`harness::settle::settle_private_transaction`, rc1's
+/// `settle_private_transaction`), with one opening fee state, one fee summary, one block id and
+/// timestamp, each transaction in order; a transaction whose settlement fails is dropped, as the
+/// sequencer's block builder drops it (settled on a scratch copy first). rc1's block function
+/// (`chain_state::apply::apply_block_to_state`: the block's clock and fee transactions, the
+/// reverted list) and the sequencer's admission screen are not run here; the same kind of block
+/// made by rc3's own sequencer is recorded in `lez/results/v0.4.0-rc3/r11-one-block/`.
+/// Returns each transaction's result.
 fn settle_block(
     chain: &mut Chain,
     txs: &[LeeTransaction],
@@ -791,9 +952,11 @@ fn r11_several_private_reads_in_one_block() {
          execution and keeps the result in its private state). Every transaction is complete — its nullifiers, its new \
          commitments, its predicted reply from the record — before any is included. Then a later finality update is \
          verified and applied (the instance's store and a new record change), and the four transactions are settled \
-         together in one block, as LEZ's block application settles a block (`chain_state::apply`: one opening fee state, \
-         one fee summary, one block id and timestamp; the block's own fee and clock transactions, which carry no user \
-         data, are not modelled here).\n\n{rows}\n\
+         together in one block by the test's own block loop around the harness's copy of rc1's per-transaction \
+         settlement (one opening fee state, one fee summary, one block id and timestamp; rc1's block function, with the \
+         block's clock and fee transactions and its reverted list, and the sequencer's admission screen are not run \
+         here). The same kind of block made by LEZ v0.4.0-rc3's own sequencer is recorded in \
+         `lez/results/v0.4.0-rc3/r11-one-block/`.\n\n{rows}\n\
          None was re-proven; the record they read is unchanged (reads write nothing); LEZ keeps every past commitment root, \
          so proofs against the snapshot settle after the state moved. Control: one account's two transactions proven \
          against the same snapshot — the second is dropped: `{refused}`.\n",
