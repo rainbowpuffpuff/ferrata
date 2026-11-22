@@ -40,6 +40,9 @@ def owner(root: pathlib.Path):
     mem = re.search(r"^Mem:\s+(\d+)", lscpu, re.M)
     shape = (f"{model.group(1).strip() if model else '?'}, {threads.group(1) if threads else '?'} threads, "
              f"{int(mem.group(1)) / GIB:.0f} GiB" if mem else "?")
+    held = re.search(r"^prover CPUs: (\d+) of \d+", lscpu, re.M)  # P4_CPUS
+    if held:
+        shape += f", provers held to {held.group(1)} threads"
     for job in ("attest-pad", "bridge-pad"):
         d = root / job
         if not (d / "prove.log").exists():

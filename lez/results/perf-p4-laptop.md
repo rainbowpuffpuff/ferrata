@@ -64,7 +64,10 @@ An x86-64 Linux laptop with 16 GB or more, on mains power, nothing else busy, ab
 1. The staged folder that `bench/perf/p4-laptop-build.sh` writes on the build box (`attest-pad/`, `bridge-pad/`,
    `r0vm/r0vm` and its `SHA256SUMS`; 136 MB, 136,438,291 B), brought to the laptop with `mrun --get`.
 2. `bash bench/perf/p4-laptop-owner.sh STAGE_DIR OUT_DIR`: the same three proofs and settlements, GNU time's peak
-   and the machine's used memory every second, `lscpu` and the power state in `OUT_DIR/machine.txt`.
+   and the machine's used memory every second, `lscpu` and the power state in `OUT_DIR/machine.txt`. The provers take
+   every hardware thread at nice 10; `P4_CPUS=8` holds them to the first 8 (CPU affinity with `taskset`, and
+   `RAYON_NUM_THREADS`: the circuits' C++ kernels start one thread per hardware thread whatever rayon is told), which
+   `machine.txt` and the summary record.
 3. `python3 -I bench/perf/summarize_p4.py --owner OUT_DIR` prints the rows for the table above.
 
 A Mac follows [`p4-macos`](p4-macos/README.md) (M1 16 GB: 857.4 s padded attestation, EVIDENCE row 88).

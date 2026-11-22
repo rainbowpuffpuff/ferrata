@@ -9,18 +9,28 @@
 #   python3 -I bench/perf/summarize_p4.py --owner OUT_DIR     # its rows for lez/results/perf-p4-laptop.md
 #
 # STAGE_DIR holds attest-pad/, bridge-pad/ and r0vm/ (r0vm and its SHA256SUMS) as staged; OUT_DIR is a new directory
-# outside it. Run it on mains power with nothing else busy. The two proving runs keep every hardware thread busy (at
+# outside it. Run it on mains power with other work closed. The two proving runs keep every hardware thread busy (at
 # nice 10, so the desktop stays usable) and hold about 9.3 GiB each: about 50-55 minutes in all at 8 threads (the
 # attestation 19-21 minutes of proving, the claim and the burn 31-34; measured in containers of that shape, the
-# rehearsal 50 minutes in all), less with 16. x86-64 Linux only (the staged binaries); a Mac runs
-# lez/results/p4-macos's procedure instead. No network beyond a loopback socket to its own r0vm, no keys, no sudo; it
-# writes only inside OUT_DIR (and sets +x on the staged binaries). It exits 1 if a proof or a settlement fails, 2 if
-# it refuses to start.
+# rehearsal 50 minutes in all), less with 16. P4_CPUS=N holds the provers to the first N hardware threads (taskset,
+# and RAYON_NUM_THREADS=N), recorded in OUT_DIR/machine.txt; the circuits' C++ kernels start one thread per hardware
+# thread whatever RAYON_NUM_THREADS says, so the affinity is what holds them. x86-64 Linux only (the staged binaries);
+# a Mac runs lez/results/p4-macos's procedure instead. No network beyond a loopback socket to its own r0vm, no keys,
+# no sudo; it writes only inside OUT_DIR (and sets +x on the staged binaries). It exits 1 if a proof or a settlement
+# fails, 2 if it refuses to start.
 set -euo pipefail
 usage="usage: p4-laptop-owner.sh STAGE_DIR OUT_DIR"
 stage="$(realpath "${1:?$usage}")"
 out="$(realpath -m "${2:?$usage}")"
 die() { echo "p4-laptop-owner: $*" >&2; exit 2; }
+cpus="${P4_CPUS:-}"
+pin=()
+if [ -n "$cpus" ]; then
+  case "$cpus" in *[!0-9]*|0*) die "P4_CPUS must be a whole number of hardware threads, 1 or more";; esac
+  [ "$cpus" -le "$(nproc --all)" ] || die "P4_CPUS=$cpus: this machine has $(nproc --all) hardware threads"
+  command -v taskset > /dev/null || die "P4_CPUS needs taskset (util-linux)"
+  pin=(taskset -c "0-$((cpus - 1))" env "RAYON_NUM_THREADS=$cpus")
+fi
 
 # Refuse what would fail an hour in, or delete the bundle: each job's directory OUT_DIR/<job> is emptied first.
 [ "$(uname -s)/$(uname -m)" = "Linux/x86_64" ] || die "needs x86-64 Linux (this is $(uname -s)/$(uname -m))"
@@ -60,6 +70,8 @@ get() { python3 -I -c 'import json, sys; print(json.load(open(sys.argv[1]))[sys.
   echo "on mains power: $(cat /sys/class/power_supply/A*/online 2>/dev/null | head -1 || echo unknown)"
   echo "cpufreq governor: $(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null || echo unknown)"
   echo "prover niceness: 10"
+  if [ -n "$cpus" ]; then echo "prover CPUs: $cpus of $(nproc --all) (P4_CPUS: taskset -c 0-$((cpus - 1)), RAYON_NUM_THREADS=$cpus)"
+  else echo "prover CPUs: all $(nproc --all)"; fi
   echo "r0vm: $("$r0vm" --version) $(sha256sum "$r0vm" | cut -c1-64)"
   for b in attest-pad/prove_attest bridge-pad/prove_bridge; do echo "$b: $(sha256sum "$stage/$b" | cut -c1-64)"; done
 } > "$out/machine.txt" 2>&1
@@ -89,13 +101,13 @@ run() {  # name binary prove-args... -- txs...
   echo "$(date +%T) $name: proving (no output until it ends; log $d/prove.log)"
   sample > "$d/samples.txt" & local s=$!
   local t0; t0=$(date +%s.%N)
-  ( cd "$d" && exec nice -n 10 env RISC0_DEV_MODE=0 RISC0_SERVER_PATH="$r0vm" RISC0_INFO=1 RUST_LOG=info \
+  ( cd "$d" && exec nice -n 10 ${pin[@]+"${pin[@]}"} env RISC0_DEV_MODE=0 RISC0_SERVER_PATH="$r0vm" RISC0_INFO=1 RUST_LOG=info \
       TMPDIR="$d/tmp" "${ENVS[@]}" /usr/bin/time -v "$bin" "${args[@]}" ) > "$d/prove.log" 2>&1 && rc=0 || rc=$?
   kill "$s" 2> /dev/null || true; wait "$s" 2> /dev/null || true
   echo "exit $rc, wall $(awk -v a="$(date +%s.%N)" -v b="$t0" 'BEGIN { printf "%.1f", a - b }') s" > "$d/exit.txt"
   rm -rf "$d/tmp"
   if [ "$rc" = 0 ]; then
-    ( cd "$d" && exec nice -n 10 env RISC0_DEV_MODE=0 RISC0_SERVER_PATH="$r0vm" "${ENVS[@]}" "$bin" --settle "${txs[@]}" ) \
+    ( cd "$d" && exec nice -n 10 ${pin[@]+"${pin[@]}"} env RISC0_DEV_MODE=0 RISC0_SERVER_PATH="$r0vm" "${ENVS[@]}" "$bin" --settle "${txs[@]}" ) \
       > "$d/settle.log" 2>&1 && echo "settle exit 0" >> "$d/exit.txt" || echo "settle exit $?" >> "$d/exit.txt"
   fi
   echo "$(date +%T) $name: $(tr '\n' ' ' < "$d/exit.txt")"
