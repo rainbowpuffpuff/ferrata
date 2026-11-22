@@ -31,8 +31,9 @@ tests = [
   { path = "crates/ferrata-spectests/tests/mutation_guards.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/steps.rs", kind = "test", ci = "test" },
   { path = "lez/harness/tests/holdings.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test holdings -- --nocapture" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc vs2 -- --nocapture" },
 ]
-note = "a tampered and a removed finality branch are refused natively; a non-finality update never reaches the program; Attest at a never-finalised slot is refused (213) through LEZ"
+note = "a tampered and a removed finality branch are refused natively; through the program an update offering a header without verified finality is refused (50; 26, 1; 26; 25) and so is a proof against a never-finalised header (213, 110), and a header sent with a request or as a hop (215, 120; 150, 151)"
 
 [[row]]
 id = "RFP-021 F.3"
@@ -49,8 +50,9 @@ id = "RFP-021 F.4"
 tests = [
   { path = "scripts/mutants.py", kind = "test", ci = "box", run = "python3 scripts/mutants.py" },
   { path = "lez/harness/tests/attest_public.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test attest_public -- --nocapture" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc f4 -- --nocapture" },
 ]
-note = "predicates and relations are among the 107 mutants (docs/mutants-run.log), all killed; =, >, >=, < and a relation run through the program from the consumer's request; != and <= are in the wire and the core, not in a request run through the program"
+note = "predicates and relations are among the 107 mutants (docs/mutants-run.log), all killed; all six comparisons, against a constant and between two facts, run through the program from the consumer's request (36 cases, lez/results/lc-security/f4-comparisons.md)"
 
 [[row]]
 id = "RFP-021 F.5"
@@ -87,8 +89,9 @@ tests = [
   { path = "lez/harness/tests/private_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test private_consumer -- --nocapture" },
   { path = "lez/harness/tests/vault_consumer.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test vault_consumer -- --nocapture" },
   { path = "lez/results/v0.4.0-rc3/real-proofs/README.md", kind = "record" },
+  { path = "lez/harness/tests/security_privacy.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_privacy f8 -- --nocapture" },
 ]
-note = "the read and the private attestation publish none of the query, keys or account; the F.8 two-deposit full-diff test is not built"
+note = "the read and the private attestation publish none of the query, keys or account; the F.8 two-deposit full-diff test passes in dev mode (lez/results/lc-security/f8-full-diff.md)"
 
 [[row]]
 id = "RFP-021 F.9"
@@ -207,8 +210,9 @@ tests = [
   { path = "crates/ferrata-spectests/tests/exec_adversarial.rs", kind = "test", ci = "test" },
   { path = "lez/harness/tests/exit_codes.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test exit_codes -- --nocapture" },
   { path = "lez/results/stage4-attest-refusals.md", kind = "record" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc u5 -- --nocapture" },
 ]
-note = "stable numeric codes with one owner each, checked for their exact value on every refusal; ferrata-attest prints each code's name and meaning from the IDL (row 56)"
+note = "stable numeric codes with one owner each, checked for their exact value on every refusal; every listed failure mode returns its code through the program (lez/results/lc-security/u5-failure-modes.md); ferrata-attest prints each code's name and meaning from the IDL (row 56)"
 
 [[row]]
 id = "RFP-021 U.6"
@@ -241,8 +245,9 @@ id = "RFP-021 R.3"
 tests = [
   { path = "lez/lab/README.md", kind = "document" },
   { path = "lez/lab/lab.sh", kind = "test", ci = "local", run = "lez/lab/lab.sh verify" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc r3 -- --nocapture" },
 ]
-note = "status not yet: no test reads an old record after later committee rotations. Records are write-once and reads carry no time window; the lab's Sepolia instance accumulated its records through 38 committee handoffs over seven days (EVIDENCE row 21), and lab.sh verify replays every recorded session to the stores"
+note = "records attested after four committee rotations and ten years later give byte-identical statements; real mainnet records read after four real rotations; a real Sepolia record attested across a real rotation (lez/results/lc-security/r3-rotations.md). Records are write-once and reads carry no time window; the lab's Sepolia instance accumulated its records through 38 committee handoffs (EVIDENCE row 21)"
 
 [[row]]
 id = "RFP-021 R.4"
@@ -308,8 +313,9 @@ note = "the same gate runs: honest-1's share of the honest fees 0.39-0.47 (gate 
 id = "RFP-021 R.11"
 tests = [
   { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
+  { path = "lez/harness/tests/security_privacy.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_privacy r11 -- --nocapture" },
 ]
-note = "status not yet: several private reads in one block have not been run. The mechanism is LEZ's settlement (it re-runs the reply and refuses on mismatch), read from the LEZ source; the nearest artefact is the checkpoint program's fixtures over blocks with several private transactions in one block (cp-pp5-360: five), collected by the parser the rule tests cover"
+note = "four private attestations proven against one snapshot, a finality update applied in between, settled in one block with rc1's block settlement in process, nothing re-proven (lez/results/lc-security/r11-one-block.md); no sequencer ran that block. The checkpoint program's fixtures hold blocks with several private transactions (cp-pp5-360: five), collected by the parser the rule tests cover"
 
 [[row]]
 id = "RFP-021 R.12"
@@ -529,8 +535,9 @@ id = "RFP-021 VS.1"
 tests = [
   { path = "crates/ferrata-spectests/tests/adversarial.rs", kind = "test", ci = "test" },
   { path = "lez/results/stage1-refusals.md", kind = "record" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc vs1 -- --nocapture" },
 ]
-note = "a fabricated, self-consistent chain is refused by the real store on the signature (the consensus half; the forger's committee accepted by a trusting store); a forged update cannot be proven (exit 40) and no record exists for it; the fabricated chain itself has not been sent through the program"
+note = "a fabricated, self-consistent chain is refused by the real store on the signature natively, and sent through the program it is refused by the canonical instance (40), at its records (213, 110), across instances (211) and by the reference consumer (lez/results/lc-security/vs1-fabricated-chain.md)"
 
 [[row]]
 id = "RFP-021 VS.2"
@@ -540,8 +547,9 @@ tests = [
   { path = "crates/ferrata-spectests/tests/exec_adversarial.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/signature_paths.rs", kind = "test", ci = "test" },
   { path = "crates/ferrata-spectests/tests/steps.rs", kind = "test", ci = "test" },
+  { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc vs2 -- --nocapture" },
 ]
-note = "all six forgeries refused: substituted key or aggregate and conflicting committees, 21 of 32 signers, non-finality updates, tampering and substituted roots, another chain (also 140 through LEZ), a false predicate (130) and a forged signature (exit 40); through the program in lez/results/stage{1,4}-*-refusals.md"
+note = "all six forgeries refused natively and through the program (lez/results/lc-security/vs2-forgeries.md): a committee never handed off (40, 27, 45, 23), 341 of 512 signers (51), a proof against a non-finalised header (213, 110), tampered roots (25, 110), another chain (140, 211), a predicate the proof does not cover (110, 130, 131)"
 
 [[row]]
 id = "RFP-021 VS.3"
