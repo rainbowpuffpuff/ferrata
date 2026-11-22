@@ -4,7 +4,9 @@
 [`cli/tests/relayer_crash.rs`](../../../cli/tests/relayer_crash.rs)), on a Modal build box (CPU), 22 November 2026
 02:40–02:43 UTC, the sources of commit `3f3804f9` (branch `rfp-relayer-robustness`; the run's files are that commit's,
 byte for byte). **Result:** `test result: ok. 1 passed` in 136.57 s; [`results.json`](results.json) is the test's own
-summary. The previous record (parts 1–5, commit `516e397a`) is in this file's history. The root imports' counterpart, the LEZ
+summary. Run again at `41c0d843` (the branch after its lint edits, 03:08–03:11 UTC): 1 passed in 126.04 s, 48
+transactions for 48 effects, part 6's four cases the same (not kept: the record is the run above). The previous
+record (parts 1–5, commit `516e397a`) is in this file's history. The root imports' counterpart, the LEZ
 side failing under the relayer, is [`../relayer-lez/`](../relayer-lez/README.md); the gas drop's, on a running LEZ
 sequencer, is [`../seqnet-robust-2/`](../seqnet-robust-2/robust.md).
 

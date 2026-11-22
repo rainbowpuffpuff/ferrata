@@ -79,10 +79,11 @@ zone, its gas drops' on a running sequencer).
 | LEZ failure and kills, gas drops (the relayer's LEZ credits) | `relayer::tests` (10 drop tests: a model zone in which credits built on one account state apply once; among them the second review's race, `a_credit_landing_while_it_is_sent_again_is_found_and_nothing_more_is_built`) and, on LEZ v0.4.0-rc1's running sequencer, the drops daemon behind a second holdproxy: `e2e/runs/seqnet-robust-2/` (its first credit trapped unsent and the daemon SIGKILLed, then a 503 on its next send; its second credit forwarded with the answer held and the daemon SIGKILLed) and `e2e/runs/seqnet-robust-3/` (the same, the 503'd send **forwarded to the sequencer 35 s later**, after the daemon sent a third) | robust-2: 21 of 21; robust-3: 22 of 22. Drop 1 in robust-3: 3 sends; the third forwarded at 02:56:34 and applied (block 34, `15bb85f8…`); the second, answered 503 to the daemon at 02:56:14, reached the sequencer at 02:56:49 and was accepted (its hash `50a9abf9…`) but **never applied** (not among the zone's applied transactions through block 59, `lez/transactions.tsv`): two credits of one drop built on the same account state reached LEZ and one applied; booked from LEZ (`resolvedLater`). Drop 2: forwarded with its answer held and the daemon SIGKILLed; restarted 30 s later, booked from the drop account's nonce with nothing sent again (1 send). Each claim's dry run claims exactly 1 pending credit of 50,000,000; 0 jobs refused |
 
 Runs (Modal build box, profile of this stream's workspace): `cd cli && bash tests/relayer-crash.sh` at `3f3804f9`: `test
-result: ok. 1 passed` in 136.57 s, parts 1–6 (`e2e/runs/relayer-crash/results.json`, README); `cd cli && cargo test
+result: ok. 1 passed` in 136.57 s, parts 1–6 (`e2e/runs/relayer-crash/results.json`, README), and again at `41c0d843`:
+1 passed in 126.04 s, 48 for 48; `cd cli && cargo test
 --lib` at `3f3804f9`: 31 passed (the drop journal's 10 tests, `logos_send`'s 8); `cd monitor && cargo test --lib
 logos_send`: 8 passed; `bash e2e/netfault/relayer-lez.sh OUT`: 9 passed, 0 failed at `01b57e13` (recorded), again at
-`8f99ec7f` after the second review's fixes (9 passed, 0 failed); `bash e2e/seqnet/run.sh robust robust-2`: 21 passed, 0 failed (box 852 s, 22 November
+`8f99ec7f` and `41c0d843` after the second review's fixes (9 passed, 0 failed, each); `bash e2e/seqnet/run.sh robust robust-2`: 21 passed, 0 failed (box 852 s, 22 November
 2026), the sources of `d8ddc000`; `bash e2e/seqnet/run.sh robust robust-3`: 22 passed, 0 failed (box 845 s, the run
 02:49–03:01 UTC, 22 November 2026), the sources of `f42663ce`.
 
