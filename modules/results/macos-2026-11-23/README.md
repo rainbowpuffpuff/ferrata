@@ -76,7 +76,10 @@ libSystem's or CoreFoundation's, except the `metal` crate's `MTLCreateSystemDefa
 (Metal.framework); `nvtx`'s two `ffi_range_*` are its own C, stubbed here.
 
 Fix: `modules/ferrata_relayer_module/CMakeLists.txt` links `-framework Metal` and `objc` when `APPLE`; Linux reads
-none of it.
+none of it. The SDKs Nix gives the relayer's `aarch64-darwin` derivations (evaluated on the box: `apple-sdk` 11.3,
+14.4 and 15.2, substituted from cache.nixos.org, nothing built) all carry them: `Metal.tbd` exports
+`MTLCreateSystemDefaultDevice` and `MTLCopyAllDevices`, `usr/lib/libobjc.tbd` `objc_msgSend`, `sel_registerName` and
+`objc_getClass`.
 
 ## 4. Linux unaffected
 
@@ -106,7 +109,8 @@ them (RISC Zero 3.0.5, guest Rust 1.91.1, `scripts/guest-rustc`; 503 s) give the
 ## Not verified until the next macOS run
 
 - The relayer's Nix build on macOS past `risc0-sys`: `nvtx`'s C file under Nix's darwin stdenv (it includes
-  `dlfcn.h` and `pthread.h`; stubbed here), and the plugin's link with Metal and libobjc from the SDK Nix provides.
+  `dlfcn.h` and `pthread.h`, and supports Apple: `SYS_thread_selfid`; stubbed here), and the plugin's link itself
+  (the symbols it needs are in the SDK's stubs; that no other one is missing is not shown).
 - `lgx verify` of the relayer's macOS `.lgx`, and the five `.lgx` uploaded.
 - The user-side job under Rust 1.93.0 on macOS (its commands pass under 1.93.0 on Linux and passed under 1.100.0 on
   macOS until Clippy).
