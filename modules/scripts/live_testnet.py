@@ -56,13 +56,19 @@ KEEP = [
     "report-session2/steps.md", "report-session2/notes.log",
     "session2/req", "session2/rep", "session2/relay", "session2/probes-u1", "session2/calls.tsv", "session2/marks.tsv",
     "session2/samples.csv", "session2/journal.tsv", "session2/run.tsv", "session2/final-state.json",
-    "session2/install.log", "session2/core-start.log", "session2/core-stop.log", "session2/cli",
+    "session2/install.log", "session2/core-start.log", "session2/core-stop.log", "session2/cli", "session2/cli2",
     # The second build (the updater with an execution source, `ferrata attest` for rc3), before session 2
     "report-build-2/steps.md", "report-build-2/artifacts.txt", "report-build-2/logs/stage-updater-rc3.log",
     "report-build-2/logs/cli-rc3.log", "report-build-2/logs/rc3-copy.log",
 ]
 NEVER = re.compile(r"(\.key$|/storage\.json$|/keys/|/wallet|\.raw$|attest-messages|/h\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
+
+
+def gz_write(path, text):
+    """`text` gzipped at `path` with no name or time in the header: collecting again writes the same bytes."""
+    with open(path, "wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) as g:
+        g.write(text.encode())
 
 
 def scrub_text(t, subs):
@@ -112,8 +118,7 @@ def collect(out, rec):
                 continue
             text = scrub_text(text, subs)
             if len(text) > BIG:
-                with gzip.open(dst + ".gz", "wt") as g:
-                    g.write(text)
+                gz_write(dst + ".gz", text)
                 kept.append(rel + ".gz")
             else:
                 open(dst, "w").write(text)
@@ -138,8 +143,7 @@ def collect(out, rec):
                 continue
             text = scrub_text(open(os.path.join(src, f), errors="replace").read(), subs)
             os.makedirs(os.path.join(rec, d), exist_ok=True)
-            with gzip.open(os.path.join(rec, d, f + ".gz"), "wt") as g:
-                g.write(text)
+            gz_write(os.path.join(rec, d, f + ".gz"), text)
             kept.append(f"{d}/{f}.gz")
     print(f"collect: {len(kept)} files into {rec}")
     # Nothing of the host's name, the workspaces or the box's paths may remain (scripts/scrub_records.py checks).
@@ -486,7 +490,7 @@ def session2(rec, check):
     log = rd(rec, f"{D}/updater-module.log") or ""
     confirmed_by = {}
     for m in re.finditer(r"job 0x([0-9a-f]{16}): finalized slot (\d+) root 0x([0-9a-f]{64}) \(.*?\), served or confirmed by (.*)$", log, re.M):
-        confirmed_by[m.group(1)] = (int(m.group(2)), m.group(3))
+        confirmed_by[m.group(1)] = (int(m.group(2)), m.group(4))
     with_el = [j for j in jobs if "eth_rpc_module-sepolia" in confirmed_by.get(j[:16], (0, ""))[1]]
     S2["journal"] = {"transactions": len(journal), "applied": len(applied), "jobs_finished": len(jobs),
                      "jobs_confirmed_by_the_execution_source": len(with_el),
