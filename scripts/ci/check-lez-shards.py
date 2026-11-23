@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Guard and command planner for the sharded `lez-harness` CI job (standard library only).
 
-Checks that `scripts/ci/lez-harness-shards.json` covers every integration-test binary of
-`lez/harness` and `lez/updater` exactly once, with no missing binary, no duplicate binary,
-no nonexistent entry, honest feature-gated exclusions, and exact/skip split partitions whose
-test names exist in the source files.
+Checks that `scripts/ci/lez-harness-shards.json` covers every Cargo test target that the unsharded
+`cargo test -p` commands run on `lez/harness` and `lez/updater` exactly once — library unit tests
+(`--lib`), binary unit tests (`--bins`), doc-tests (`--doc`), and integration-test binaries
+(`--test`) — with no missing target, no duplicate target, no empty shard, no nonexistent entry,
+honest feature-gated exclusions, and exact/skip split partitions whose test names exist in the
+source files.
 
-Test binaries are derived from each package's `Cargo.toml` (`[[test]]` entries and
-`package.autotests`, which defaults to true) and `tests/` (`tests/*.rs` and `tests/*/main.rs`;
-helper subdirectories without `main.rs`, such as `tests/redteam_common/` and
-`tests/security_common/`, are modules, not binaries).
+Targets are derived from each package's `Cargo.toml` (`[lib]`, `[[bin]]`, `[[test]]`, `autobins`,
+`autotests`) and its `src/` and `tests/` trees (`tests/*.rs` and `tests/*/main.rs`; helper
+subdirectories without `main.rs`, such as `tests/redteam_common/` and `tests/security_common/`,
+are modules, not binaries).
 
 Usage:
     python3 -I scripts/ci/check-lez-shards.py
@@ -260,15 +262,91 @@ def discover_test_binaries(pkg_dir: pathlib.Path, enabled_features: set[str]) ->
     return binaries
 
 
-def src_has_unit_tests(pkg_dir: pathlib.Path, enabled_features: set[str]) -> bool:
+def discover_package_targets(pkg_dir: pathlib.Path, enabled_features: set[str]) -> dict:
+    """Inspect Cargo.toml and src/ to discover lib, bin, and doc-test targets and whether each holds tests."""
+    with open(pkg_dir / "Cargo.toml", "rb") as handle:
+        manifest = tomllib.load(handle)
+    pkg = manifest.get("package") or {}
+    pkg_name = pkg.get("name") or ""
+    defaults = set((manifest.get("features") or {}).get("default") or [])
+    active_features = set(enabled_features) | defaults
+
+    lib_cfg = manifest.get("lib") or {}
+    lib_rel = pathlib.PurePosixPath(lib_cfg.get("path") or "src/lib.rs").as_posix()
+    has_lib_file = (pkg_dir / lib_rel).is_file()
+    has_lib = has_lib_file and lib_cfg.get("test", True) is not False
+    has_doc = has_lib_file and lib_cfg.get("doctest", True) is not False
+
+    # Discover bin targets from [[bin]] and package.autobins (default true).
+    bin_paths: set[str] = set()
+    active_bin_targets: list[str] = []
+    for entry in manifest.get("bin") or []:
+        bname = entry.get("name") or ""
+        rel = entry.get("path")
+        if rel:
+            rel = pathlib.PurePosixPath(rel).as_posix()
+        elif bname == pkg_name and (pkg_dir / "src" / "main.rs").is_file():
+            rel = "src/main.rs"
+        else:
+            cand_file = f"src/bin/{bname}.rs"
+            cand_dir = f"src/bin/{bname}/main.rs"
+            rel = cand_file if (pkg_dir / cand_file).is_file() else cand_dir
+        bin_paths.add(rel)
+        req = set(entry.get("required-features") or [])
+        if req <= active_features and entry.get("test", True) is not False and (pkg_dir / rel).is_file():
+            active_bin_targets.append(rel)
+
+    if pkg.get("autobins", True) is not False:
+        if (pkg_dir / "src" / "main.rs").is_file() and "src/main.rs" not in bin_paths:
+            bin_paths.add("src/main.rs")
+            active_bin_targets.append("src/main.rs")
+        bin_dir = pkg_dir / "src" / "bin"
+        if bin_dir.is_dir():
+            for path in sorted(bin_dir.iterdir()):
+                if path.is_file() and path.suffix == ".rs":
+                    rel = f"src/bin/{path.name}"
+                    if rel not in bin_paths:
+                        bin_paths.add(rel)
+                        active_bin_targets.append(rel)
+                elif path.is_dir() and (path / "main.rs").is_file():
+                    rel = f"src/bin/{path.name}/main.rs"
+                    if rel not in bin_paths:
+                        bin_paths.add(rel)
+                        active_bin_targets.append(rel)
+
+    lib_has_unit_tests = False
+    bins_have_unit_tests = False
+    lib_has_doctests = False
     src_dir = pkg_dir / "src"
-    if not src_dir.is_dir():
-        return False
-    for path in sorted(src_dir.rglob("*.rs")):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if extract_ungated_test_names(text, enabled_features):
-            return True
-    return False
+    if src_dir.is_dir():
+        for path in sorted(src_dir.rglob("*.rs")):
+            rel = path.relative_to(pkg_dir).as_posix()
+            text = path.read_text(encoding="utf-8", errors="replace")
+            is_bin_file = (
+                rel in bin_paths
+                or rel == "src/main.rs"
+                or rel.startswith("src/bin/")
+                or not has_lib_file
+            )
+            if is_bin_file:
+                if extract_ungated_test_names(text, active_features):
+                    bins_have_unit_tests = True
+            else:
+                if extract_ungated_test_names(text, active_features):
+                    lib_has_unit_tests = True
+                file_gate = re.search(r'^\s*#!\[cfg\(feature\s*=\s*"([^"]+)"\)\]', text, re.M)
+                if (not file_gate or file_gate.group(1) in active_features) and ci_model.has_doctest(text):
+                    lib_has_doctests = True
+
+    return {
+        "has_lib": has_lib,
+        "has_doc": has_doc,
+        "has_bins": bool(active_bin_targets),
+        "bin_count": len(active_bin_targets),
+        "lib_has_unit_tests": lib_has_unit_tests,
+        "bins_have_unit_tests": bins_have_unit_tests,
+        "lib_has_doctests": lib_has_doctests,
+    }
 
 
 def _check_package_coverage(
@@ -279,7 +357,9 @@ def _check_package_coverage(
     tests_key: str,
     splits_key: str,
     lib_key: str,
-    has_lib_tests: bool,
+    bins_key: str,
+    doc_key: str,
+    targets: dict,
     implicit_owned: dict[str, str],
     problems: list[str],
 ) -> None:
@@ -290,6 +370,8 @@ def _check_package_coverage(
     seen_whole: dict[str, list[str]] = {}
     splits_by_bin: dict[str, list[tuple[str, dict]]] = {}
     lib_shards: list[str] = []
+    bins_shards: list[str] = []
+    doc_shards: list[str] = []
 
     for bname, shard_owner in implicit_owned.items():
         if bname not in binaries:
@@ -298,8 +380,14 @@ def _check_package_coverage(
             seen_whole.setdefault(bname, []).append(f"{shard_owner} (privacy)")
 
     for sname, spec in shards.items():
+        if not isinstance(spec, dict):
+            continue
         if spec.get(lib_key):
             lib_shards.append(sname)
+        if spec.get(bins_key):
+            bins_shards.append(sname)
+        if spec.get(doc_key):
+            doc_shards.append(sname)
         tlist = spec.get(tests_key, [])
         if not isinstance(tlist, list):
             problems.append(f"shard {sname}: {tests_key} must be a list")
@@ -426,11 +514,19 @@ def _check_package_coverage(
                 f"{pkg_label}: test binary {bname!r} ({info['rel_path']}) is not run by any shard"
             )
 
-    # Check lib unit tests
-    if len(lib_shards) > 1:
-        problems.append(f"{pkg_label}: {lib_key} is enabled in more than one shard ({', '.join(lib_shards)})")
-    if has_lib_tests and len(lib_shards) == 0:
-        problems.append(f"{pkg_label}: src/ has unit tests, but no shard enables {lib_key}")
+    # Check lib, bin, and doc-test targets (every target `cargo test -p` runs must be covered by exactly one shard).
+    for key, owners, exists, has_tests, label in (
+        (lib_key, lib_shards, targets["has_lib"], targets["lib_has_unit_tests"], "lib target"),
+        (bins_key, bins_shards, targets["has_bins"], targets["bins_have_unit_tests"], "bin target(s)"),
+        (doc_key, doc_shards, targets["has_doc"], targets["lib_has_doctests"], "doc-tests"),
+    ):
+        if len(owners) > 1:
+            problems.append(f"{pkg_label}: {key} is enabled in more than one shard ({', '.join(owners)})")
+        if exists and len(owners) == 0:
+            detail = " (and has tests)" if has_tests else ""
+            problems.append(f"{pkg_label}: has {label}{detail}, but no shard enables {key}")
+        elif not exists and len(owners) > 0:
+            problems.append(f"{pkg_label}: has no {label}, but {key} is enabled in {', '.join(owners)}")
 
 
 def check_shards(
@@ -446,7 +542,9 @@ def check_shards(
     if not isinstance(shards, dict) or not shards:
         return ["shard map has no `shards` object"], {}
 
-    allowed_shard_keys = {"harness_lib", "harness_tests", "harness_splits", "updater_lib", "updater_tests", "updater_splits", "privacy"}
+    bool_keys = {"harness_lib", "harness_bins", "harness_doc", "updater_lib", "updater_bins", "updater_doc", "privacy"}
+    list_keys = {"harness_tests", "harness_splits", "updater_tests", "updater_splits"}
+    allowed_shard_keys = bool_keys | list_keys
     privacy_shards = []
     for sname, spec in shards.items():
         if not SHARD_NAME_RE.match(sname):
@@ -457,7 +555,15 @@ def check_shards(
         unknown = sorted(set(spec) - allowed_shard_keys)
         if unknown:
             problems.append(f"shard {sname!r} has unknown key(s): {unknown}")
-        if spec.get("privacy"):
+        for bk in bool_keys:
+            if bk in spec and not isinstance(spec[bk], bool):
+                problems.append(f"shard {sname!r}: {bk} must be a boolean")
+        has_work = any(spec.get(bk) is True for bk in bool_keys) or any(
+            isinstance(spec.get(lk), list) and len(spec.get(lk)) > 0 for lk in list_keys
+        )
+        if not has_work:
+            problems.append(f"shard {sname!r} runs nothing (empty shard)")
+        if spec.get("privacy") is True:
             privacy_shards.append(sname)
 
     if len(privacy_shards) != 1:
@@ -465,6 +571,8 @@ def check_shards(
 
     harness_bins = discover_test_binaries(harness_dir, set())
     updater_bins = discover_test_binaries(updater_dir, {"harness"})
+    harness_targets = discover_package_targets(harness_dir, set())
+    updater_targets = discover_package_targets(updater_dir, {"harness"})
 
     implicit_harness = {PRIVACY_BINARY: privacy_shards[0]} if len(privacy_shards) == 1 else {}
     _check_package_coverage(
@@ -475,7 +583,9 @@ def check_shards(
         "harness_tests",
         "harness_splits",
         "harness_lib",
-        src_has_unit_tests(harness_dir, set()),
+        "harness_bins",
+        "harness_doc",
+        harness_targets,
         implicit_harness,
         problems,
     )
@@ -487,7 +597,9 @@ def check_shards(
         "updater_tests",
         "updater_splits",
         "updater_lib",
-        src_has_unit_tests(updater_dir, {"harness"}),
+        "updater_bins",
+        "updater_doc",
+        updater_targets,
         {},
         problems,
     )
@@ -517,7 +629,9 @@ def check_shards(
         "shards": len(shards),
         "harness_total": len(harness_bins),
         "harness_feature_gated": len(data.get("harness_feature_gated", {})),
+        "harness_bins": harness_targets["bin_count"],
         "updater_total": len(updater_bins),
+        "updater_bins": updater_targets["bin_count"],
     }
     return problems, summary
 
@@ -535,44 +649,64 @@ def build_shard_plan(
     if shard_name not in shards:
         raise KeyError(f"unknown shard {shard_name!r} (valid: {', '.join(shards)})")
     spec = shards[shard_name]
+    if not isinstance(spec, dict):
+        raise ValueError(f"shard {shard_name!r} must be an object")
     cmds: list[dict] = []
 
     h_lib = bool(spec.get("harness_lib"))
+    h_bins = bool(spec.get("harness_bins"))
+    h_doc = bool(spec.get("harness_doc"))
     h_tests = list(spec.get("harness_tests") or [])
     h_splits = list(spec.get("harness_splits") or [])
     u_lib = bool(spec.get("updater_lib"))
+    u_bins = bool(spec.get("updater_bins"))
+    u_doc = bool(spec.get("updater_doc"))
     u_tests = list(spec.get("updater_tests") or [])
     u_splits = list(spec.get("updater_splits") or [])
     privacy = bool(spec.get("privacy"))
 
     if build_only:
+        # Cargo rejects combining `--doc` with `--no-run`; compiling `--lib` builds the library that `--doc` tests.
         h_build_targets = sorted(set(h_tests) | {s["test"] for s in h_splits} | ({PRIVACY_BINARY} if privacy else set()))
-        if h_lib or h_build_targets:
+        if h_lib or h_doc or h_bins or h_build_targets:
             argv = ["cargo", "test", "-p", "harness", "--locked", "--no-run"]
-            if h_lib:
+            if h_lib or h_doc:
                 argv.append("--lib")
+            if h_bins:
+                argv.append("--bins")
             for t in h_build_targets:
                 argv += ["--test", t]
             cmds.append({"cwd": "lez", "dev_mode": False, "argv": argv})
 
         u_build_targets = sorted(set(u_tests) | {s["test"] for s in u_splits})
-        if u_lib or u_build_targets:
+        if u_lib or u_doc or u_bins or u_build_targets:
             argv = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked", "--no-run"]
-            if u_lib:
+            if u_lib or u_doc:
                 argv.append("--lib")
+            if u_bins:
+                argv.append("--bins")
             for t in u_build_targets:
                 argv += ["--test", t]
             cmds.append({"cwd": "lez", "dev_mode": False, "argv": argv})
+        if not cmds:
+            raise ValueError(f"shard {shard_name!r} produces no build commands (empty shard)")
         return cmds
 
-    # Run mode: harness whole tests, then harness splits, then updater whole tests, then updater splits, then privacy.
-    if h_lib or h_tests:
+    # Run mode: harness whole (lib/bins/tests), harness doc-tests, harness splits,
+    # updater whole (lib/bins/tests), updater doc-tests, updater splits, then privacy.
+    if h_lib or h_bins or h_tests:
         argv = ["cargo", "test", "-p", "harness", "--locked"]
         if h_lib:
             argv.append("--lib")
+        if h_bins:
+            argv.append("--bins")
         for t in h_tests:
             argv += ["--test", t]
         argv += ["--", "--test-threads", str(threads)]
+        cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
+
+    if h_doc:
+        argv = ["cargo", "test", "-p", "harness", "--locked", "--doc", "--", "--test-threads", str(threads)]
         cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
 
     for split in h_splits:
@@ -584,13 +718,22 @@ def build_shard_plan(
                 argv += ["--skip", name]
         cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
 
-    if u_lib or u_tests:
+    if u_lib or u_bins or u_tests:
         argv = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked"]
         if u_lib:
             argv.append("--lib")
+        if u_bins:
+            argv.append("--bins")
         for t in u_tests:
             argv += ["--test", t]
         argv += ["--", "--test-threads", str(threads)]
+        cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
+
+    if u_doc:
+        argv = [
+            "cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked",
+            "--doc", "--", "--test-threads", str(threads),
+        ]
         cmds.append({"cwd": "lez", "dev_mode": True, "argv": argv})
 
     for split in u_splits:
@@ -611,6 +754,8 @@ def build_shard_plan(
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["bash", run_sh, privacy_out]})
         cmds.append({"cwd": ".", "dev_mode": False, "argv": ["python3", "-I", gate_py, privacy_out]})
 
+    if not cmds:
+        raise ValueError(f"shard {shard_name!r} produces no commands (empty shard)")
     return cmds
 
 
@@ -699,7 +844,7 @@ def main(argv: list[str]) -> int:
         try:
             cmds = build_shard_plan(data, target_shard or "", threads=threads, build_only=build_only,
                                     privacy_out=privacy_out, repo_prefix=repo_prefix)
-        except KeyError as exc:
+        except (KeyError, ValueError) as exc:
             print(f"check-lez-shards.py: {exc}", file=sys.stderr)
             return 1
         for cmd in cmds:
@@ -714,7 +859,7 @@ def main(argv: list[str]) -> int:
             try:
                 cmds = build_shard_plan(data, name, threads=threads, build_only=build_only,
                                         privacy_out=privacy_out, repo_prefix=repo_prefix)
-            except KeyError as exc:
+            except (KeyError, ValueError) as exc:
                 print(f"check-lez-shards.py: {exc}", file=sys.stderr)
                 return 1
             label = f"{name} (build)" if build_only else name
@@ -731,9 +876,10 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         f"check-lez-shards.py: ok — {summary['shards']} shards cover "
+        f"lez/harness (lib, {summary['harness_bins']} bins, doc, "
         f"{summary['harness_total'] - summary['harness_feature_gated']} active + "
-        f"{summary['harness_feature_gated']} feature-gated lez/harness binaries and "
-        f"{summary['updater_total']} lez/updater binaries"
+        f"{summary['harness_feature_gated']} feature-gated tests) and "
+        f"lez/updater (lib, {summary['updater_bins']} bin, doc, {summary['updater_total']} tests)"
     )
     return 0
 

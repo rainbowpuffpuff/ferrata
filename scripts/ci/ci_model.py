@@ -928,8 +928,30 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
                 chain.extend(out[before:])
 
 
+_SHARD_MOD = None
+
+
+def _shard_planner():
+    """Load `check-lez-shards.py` lazily so `ci_model.py` shares its single `build_shard_plan`."""
+    global _SHARD_MOD
+    if _SHARD_MOD is None:
+        existing = sys.modules.get("check_lez_shards")
+        if existing is not None and hasattr(existing, "build_shard_plan"):
+            _SHARD_MOD = existing
+        else:
+            import importlib.util
+            path = pathlib.Path(__file__).resolve().parent / "check-lez-shards.py"
+            spec = importlib.util.spec_from_file_location("check_lez_shards", path)
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules["check_lez_shards"] = mod
+            spec.loader.exec_module(mod)
+            _SHARD_MOD = mod
+    return _SHARD_MOD
+
+
 def _trace_lez_shard(sargs: list[str], cmd_env: dict, origin: str, out: list, tracked: set, level: int, guard) -> bool:
     """Static trace of `scripts/ci/lez-harness.sh` when invoked with `--shard NAME` or `--dry-run`.
+    Delegates command planning to `check-lez-shards.py:build_shard_plan` so there is only one planner.
     Returns True if handled (so the generic unsharded script trace is skipped), False for unsharded calls."""
     shard = None
     dry_run = False
@@ -959,57 +981,25 @@ def _trace_lez_shard(sargs: list[str], cmd_env: dict, origin: str, out: list, tr
     if not map_path.is_file():
         return True
     data = json.loads(map_path.read_text(encoding="utf-8"))
-    spec = (data.get("shards") or {}).get(shard)
-    if not isinstance(spec, dict):
-        return True
-    if build_only:
+    threads = str(cmd_env.get("FERRATA_TEST_THREADS") or "4")
+    try:
+        planned = _shard_planner().build_shard_plan(
+            data, shard, threads=threads, build_only=build_only, privacy_out="target/ci-privacy",
+        )
+    except (KeyError, ValueError):
         return True
 
     dev_env = {**cmd_env, "RISC0_DEV_MODE": "1"}
-    threads = str(cmd_env.get("FERRATA_TEST_THREADS") or "4")
-    if spec.get("harness_lib") or spec.get("harness_tests"):
-        argv = ["cargo", "test", "-p", "harness", "--locked"]
-        if spec.get("harness_lib"):
-            argv.append("--lib")
-        for t in spec.get("harness_tests") or []:
-            argv += ["--test", t]
-        argv += ["--", "--test-threads", threads]
-        out.append(Cmd(argv, "lez", dev_env, origin, guard))
-    for split in spec.get("harness_splits") or []:
-        argv = ["cargo", "test", "-p", "harness", "--locked", "--test", split["test"], "--", "--test-threads", threads, "--exact"]
-        if split.get("mode") == "exact":
-            argv += list(split.get("names") or [])
-        else:
-            for name in split.get("names") or []:
-                argv += ["--skip", name]
-        out.append(Cmd(argv, "lez", dev_env, origin, guard))
-    if spec.get("updater_lib") or spec.get("updater_tests"):
-        argv = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked"]
-        if spec.get("updater_lib"):
-            argv.append("--lib")
-        for t in spec.get("updater_tests") or []:
-            argv += ["--test", t]
-        argv += ["--", "--test-threads", threads]
-        out.append(Cmd(argv, "lez", dev_env, origin, guard))
-    for split in spec.get("updater_splits") or []:
-        argv = [
-            "cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked",
-            "--test", split["test"], "--", "--test-threads", threads, "--exact",
-        ]
-        if split.get("mode") == "exact":
-            argv += list(split.get("names") or [])
-        else:
-            for name in split.get("names") or []:
-                argv += ["--skip", name]
-        out.append(Cmd(argv, "lez", dev_env, origin, guard))
-    if spec.get("privacy"):
-        run_cmd = Cmd(["bash", "scripts/privacy/run.sh", "target/ci-privacy"], ".", cmd_env, origin, guard)
-        out.append(run_cmd)
-        if "scripts/privacy/run.sh" in tracked and level < 6:
-            text = (ROOT / "scripts/privacy/run.sh").read_text(encoding="utf-8", errors="replace")
-            _run_text(text, ".", cmd_env, f"scripts/privacy/run.sh (from {origin})", out, tracked, level + 1,
-                      script="scripts/privacy/run.sh", guard=guard, args=["target/ci-privacy"])
-        out.append(Cmd(["python3", "-I", "scripts/privacy/check-results.py", "target/ci-privacy"], ".", cmd_env, origin, guard))
+    for step in planned:
+        env_for_step = dev_env if step["dev_mode"] else cmd_env
+        cmd = Cmd(list(step["argv"]), step["cwd"], env_for_step, origin, guard)
+        out.append(cmd)
+        if level < 6:
+            target = script_invoked(cmd, tracked)
+            if target and (target.endswith(".sh") or _is_shell_script(target)):
+                text = (ROOT / target).read_text(encoding="utf-8", errors="replace")
+                _run_text(text, step["cwd"], env_for_step, f"{target} (from {origin})", out, tracked, level + 1,
+                          script=target, guard=guard, args=_script_args(cmd, target))
     return True
 
 
@@ -1118,6 +1108,44 @@ def rust_env_gates(text: str) -> set:
     gates = set(re.findall(r'env::var(?:_os)?\(\s*"([A-Z0-9_]+)"\s*\)\s*\.\s*(?:is_err|is_none)\(\)', text))
     gates |= set(re.findall(r'assert(?:_eq|_ne)?!\(\s*(?:std::)?env::var(?:_os)?\(\s*"([A-Z0-9_]+)"', text))
     return gates
+
+
+_DOCTEST_TOKENS = {
+    "", "rust", "no_run", "should_panic", "compile_fail", "standalone_crate",
+    "allow_fail", "edition2015", "edition2018", "edition2021", "edition2024",
+}
+
+
+def has_doctest(text: str, include_ignored: bool = False) -> bool:
+    """Whether `text` contains a runnable Rust doc-test fenced code block in `///` or `//!` comments."""
+    in_fence = False
+    fence_ticks = 0
+    for raw in text.splitlines():
+        m = re.match(r"^\s*//[/!][ \t]?(.*)$", raw)
+        if not m:
+            in_fence = False
+            fence_ticks = 0
+            continue
+        body = m.group(1).lstrip()
+        fm = re.match(r"^(`{3,})(.*)$", body)
+        if not fm:
+            continue
+        ticks, info = len(fm.group(1)), fm.group(2).strip()
+        if not in_fence:
+            in_fence = True
+            fence_ticks = ticks
+            cleaned = re.sub(r"\([^)]*\)", "", info)
+            tokens = [t.strip().lower() for t in re.split(r"[\s,]+", cleaned) if t.strip()]
+            if any(t == "ignore" or t.startswith("ignore-") for t in tokens):
+                if not include_ignored:
+                    continue
+                tokens = [t for t in tokens if t != "ignore" and not t.startswith("ignore-")]
+            if all(t in _DOCTEST_TOKENS for t in tokens):
+                return True
+        elif ticks >= fence_ticks and info == "":
+            in_fence = False
+            fence_ticks = 0
+    return False
 
 
 def feature_gates(text: str, enabled: set) -> tuple:
@@ -1259,28 +1287,62 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
     tests_decl = pkg.get("test", [])
     target, required = None, []
     for t in tests_decl:
-        if t.get("path") == rel_in_pkg or (not t.get("path") and rel_in_pkg in (f"tests/{t.get('name')}.rs", f"tests/{t.get('name')}/main.rs")):
+        tpath = pathlib.PurePosixPath(t["path"]).as_posix() if t.get("path") else None
+        if tpath == rel_in_pkg or (tpath is None and rel_in_pkg in (f"tests/{t.get('name')}.rs", f"tests/{t.get('name')}/main.rs")):
             target, required = ("test", t.get("name")), t.get("required-features", [])
+            break
     if target is None:
         m = re.fullmatch(r"tests/([^/]+)\.rs|tests/([^/]+)/main\.rs", rel_in_pkg)
         if m:
             if pkg["package"].get("autotests") is False:
                 return False, "autotests = false and no [[test]] names it"
             target = ("test", m.group(1) or m.group(2))
-        elif rel_in_pkg.startswith("src/"):
-            target = ("lib", None) if (pkg_dir / "src" / "lib.rs").is_file() else ("bin", None)
+    if target is None:
+        for b in pkg.get("bin", []):
+            bname = b.get("name")
+            bpath = pathlib.PurePosixPath(b["path"]).as_posix() if b.get("path") else None
+            if (
+                (bpath is not None and bpath == rel_in_pkg)
+                or (bpath is None and rel_in_pkg in (f"src/bin/{bname}.rs", f"src/bin/{bname}/main.rs"))
+                or (bpath is None and bname == name and rel_in_pkg == "src/main.rs")
+            ):
+                target, required = ("bin", bname), b.get("required-features", [])
+                break
+    if target is None and pkg["package"].get("autobins") is not False:
+        if rel_in_pkg == "src/main.rs":
+            target = ("bin", name)
+        else:
+            mb = re.fullmatch(r"src/bin/([^/]+)\.rs|src/bin/([^/]+)/.*", rel_in_pkg)
+            if mb:
+                target = ("bin", mb.group(1) or mb.group(2))
+    if target is None:
+        lib_decl = pkg.get("lib") or {}
+        lib_path = pathlib.PurePosixPath(lib_decl.get("path") or "src/lib.rs").as_posix()
+        if (pkg_dir / lib_path).is_file() and (
+            rel_in_pkg == lib_path
+            or (rel_in_pkg.startswith("src/") and rel_in_pkg != "src/main.rs" and not rel_in_pkg.startswith("src/bin/"))
+        ):
+            target = ("lib", None)
+        elif rel_in_pkg.startswith("src/") and (pkg_dir / "src" / "main.rs").is_file():
+            target = ("bin", name)
         else:
             return False, "not a test target of its package"
     selectors = {"--lib", "--bins", "--tests", "--all-targets", "--examples", "--benches", "--doc"} & flags
+    if "--doc" in flags and (opts["test"] or opts["bin"] or (selectors - {"--doc"})):
+        return False, "cargo test --doc cannot be combined with other target selectors"
+    kind, tname = target
     if opts["test"] or opts["bin"] or selectors:
-        kind, tname = target
-        selected = (
+        runs_unit = (
             (kind == "test" and (tname in opts["test"] or "--tests" in flags or "--all-targets" in flags))
             or (kind == "lib" and ("--lib" in flags or "--tests" in flags or "--all-targets" in flags))
-            or (kind == "bin" and ("--bins" in flags or "--tests" in flags or "--all-targets" in flags))
+            or (kind == "bin" and (tname in opts["bin"] or "--bins" in flags or "--tests" in flags or "--all-targets" in flags))
         )
-        if not selected:
+        runs_doc = (kind == "lib" and "--doc" in flags)
+        if not runs_unit and not runs_doc:
             return False, f"its target ({kind} {tname or ''}) is not among those selected"
+    else:
+        runs_unit = True
+        runs_doc = (kind == "lib")
     # features
     if required:
         defaults = set(pkg.get("features", {}).get("default", [])) if "--no-default-features" not in flags else set()
@@ -1289,20 +1351,11 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
             return False, f"needs features {required}"
     if text is None:
         text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
-    if not re.search(r"#\[(?:[a-z_]+::)?test\b", text) and "proptest!" not in text:
-        return False, "the file has no #[test]"
-    # Tests compiled out by a feature the command does not enable (feature_gates).
-    if "--all-features" not in flags:
-        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
-                                           if "--no-default-features" not in flags else set())
-        file_gate, gated, ungated = feature_gates(text, enabled)
-        if file_gate:
-            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
-        if gated and not ungated and "proptest!" not in text:
-            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
-    # filters
+    # filters and harness options
     filters = [p for p in positional]
     harness_flags = set(a for a in harness if a.startswith("-"))
+    exact = "--exact" in harness_flags
+    include_ignored = bool({"--ignored", "--include-ignored"} & harness_flags)
     hpos, skips, skip_next = [], [], None
     for a in harness:
         if skip_next:
@@ -1319,9 +1372,46 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
         if not a.startswith("-"):
             hpos.append(a)
     filters += hpos
+    file_has_unit = bool(re.search(r"#\[(?:[a-z_]+::)?test\b", text) or "proptest!" in text)
+    file_has_doc = runs_doc and has_doctest(text, include_ignored=include_ignored)
+    if runs_doc and not runs_unit:
+        if not file_has_doc:
+            return False, "cargo test --doc runs doc-tests only, and the file has none"
+        if "--all-features" not in flags:
+            enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                               if "--no-default-features" not in flags else set())
+            file_gate, _gated, _ungated = feature_gates(text, enabled)
+            if file_gate:
+                return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
+        if missing:
+            return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
+        return True, ""
+    if not file_has_unit:
+        if file_has_doc:
+            if "--all-features" not in flags:
+                enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                                   if "--no-default-features" not in flags else set())
+                file_gate, _gated, _ungated = feature_gates(text, enabled)
+                if file_gate:
+                    return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+            missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
+            if missing:
+                return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
+            return True, ""
+        return False, "the file has no #[test]"
+    # Tests compiled out by a feature the command does not enable (feature_gates).
+    if "--all-features" not in flags:
+        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                           if "--no-default-features" not in flags else set())
+        file_gate, gated, ungated = feature_gates(text, enabled)
+        if file_gate:
+            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        if gated and not ungated and "proptest!" not in text:
+            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
     # A name filter matches a test's full path: for a file under src/, the module path the file gives (src/relayer.rs:
     # `relayer::...`), then the file's inner modules, then the function; for an integration test file, the inner
-    # modules and the function.
+    # modules and the function. With `--exact`, a filter or `--skip` must equal the full path rather than be a substring.
     fns = re.findall(r"\bfn\s+([A-Za-z0-9_]+)", text)
     mods = re.findall(r"\bmod\s+([A-Za-z0-9_]+)\s*\{", text)
     module = ""
@@ -1336,14 +1426,15 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
     paths = [f"{module}::{fn}" if module else fn for fn in fns]
     paths += [f"{module}::{m}::{fn}" if module else f"{m}::{fn}" for m in mods for fn in fns]
     for f in filters:
-        if not any(f in path for path in paths):
-            return False, f"the name filter {f!r} matches none of its tests' paths"
-    # `--skip P` leaves out every test whose path holds P: a file any of whose tests it could skip does not count.
+        if not any((f == p if exact else f in p) for p in paths):
+            mode = "exact " if exact else ""
+            return False, f"the {mode}name filter {f!r} matches none of its tests' paths"
+    # `--skip P` leaves out every test whose path matches P: a file any of whose tests it could skip does not count.
     for k in skips:
-        if any(k in path for path in paths):
+        if any((k == p if exact else k in p) for p in paths):
             return False, f"--skip {k!r} skips tests of this file"
     n_tests = len(re.findall(r"#\[(?:[a-z_]+::)?test\b", text))
-    if n_tests and n_tests <= text.count("#[ignore") and not ({"--ignored", "--include-ignored"} & harness_flags):
+    if n_tests and n_tests <= text.count("#[ignore") and not include_ignored:
         return False, "every test in it is #[ignore]d"
     missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
     if missing:

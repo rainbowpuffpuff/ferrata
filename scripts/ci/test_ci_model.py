@@ -162,6 +162,66 @@ check("cargo: a file compiled only with a feature the command leaves off (lez/up
 check("cargo: the same file with the feature on",
       ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness"], "lez", {}, "t"),
                           "lez/updater/tests/recorded.rs")[0])
+# M1: bin targets and doc-tests are distinguished from --lib
+BIN_TEST = "#[test]\nfn bin_unit_test_added() { assert!(false); }\n"
+DOC_TEST = "/// ```\n/// assert!(false);\n/// ```\npub fn doc_added() {}\n"
+TEXT_DOC = "//! ```text\n//! not rust\n//! ```\npub fn plain() {}\n"
+check("cargo: --lib does not run #[test] in src/main.rs (ferrata-updater)",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/updater/src/main.rs", text=BIN_TEST)[0])
+check("cargo: --bins and --bin ferrata-updater do run #[test] in src/main.rs",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--bins"], "lez", {}, "t"),
+                          "lez/updater/src/main.rs", text=BIN_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--bin", "ferrata-updater"], "lez", {}, "t"),
+                              "lez/updater/src/main.rs", text=BIN_TEST)[0])
+check("cargo: --lib does not run #[test] in src/bin/tables.rs; --bins does",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--bins"], "lez", {}, "t"),
+                              "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0])
+check("cargo: --lib does not run doc-tests in src/lib.rs; --doc and unsharded cargo test do",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0])
+check("cargo: --doc ignores non-Rust ```text blocks and does not run #[test]-only files",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=TEXT_DOC)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=BIN_TEST)[0])
+check("trace: lez-harness runs bin unit tests and lib doc-tests when present",
+      any(ci_model.cargo_runs(c, "lez/updater/src/main.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
+      and any(ci_model.cargo_runs(c, "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
+      and any(ci_model.cargo_runs(c, "lez/harness/src/lib.rs", text=DOC_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked)))
+# L4: --exact matches full test path, not substring
+UPD_REC = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked", "--test", "recorded"]
+check("cargo: --exact matches exact test name and refuses substring prefix",
+      ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "gate_two_honest_one_adversary"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                          "lez/updater/tests/recorded.rs")[0]
+      and not ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "gate_two"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                                  "lez/updater/tests/recorded.rs")[0])
+check("cargo: --exact --skip ignores non-exact prefix and skips exact match",
+      ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "--skip", "gate_two"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                          "lez/updater/tests/recorded.rs")[0]
+      and not ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "--skip", "gate_two_honest_one_adversary"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                                  "lez/updater/tests/recorded.rs")[0])
+# L3: ci_model trace for lez-harness matches check-lez-shards.py build_shard_plan for every shard
+shard_mod = ci_model._shard_planner()
+shard_map = __import__("json").loads((HERE / "lez-harness-shards.json").read_text(encoding="utf-8"))
+planned_cargos = []
+for sname in shard_map["shards"]:
+    for step in shard_mod.build_shard_plan(shard_map, sname, build_only=False):
+        if step["argv"][0] == "cargo":
+            planned_cargos.append((step["cwd"], step["argv"]))
+traced_cargos = [
+    (c.cwd, c.argv) for c in ci_model.trace(jobs["lez-harness"], tracked)
+    if c.argv and c.argv[0] == "cargo" and "--no-run" not in c.argv
+    and "scripts/privacy/run.sh" not in c.origin
+]
+check("trace: lez-harness traced cargo commands equal check-lez-shards.py build_shard_plan across all shards",
+      traced_cargos == planned_cargos)
 FG = ci_model.feature_gates
 check("features: #![cfg(feature)] gates the whole file", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', set()) == ("a", set(), 0))
 check("features: ... unless the feature is on", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', {"a"}) == (None, set(), 1))

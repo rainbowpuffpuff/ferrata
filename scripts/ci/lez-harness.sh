@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# CI's LEZ suites (job `lez-harness` of .github/workflows/ci.yml; docs/guides/ci.md): the attestation and bridge
-# programs driven through LEZ v0.4.0-rc1's state machine and fee settlement in the harness, every test file of
-# lez/harness/tests/ that builds without an optional feature (the red-team suites and the privacy suite's LEZ half
-# included), the update-submitting daemon on its recorded data (lez/updater/tests/), and the privacy suite end to end
+# CI's LEZ suites (job `lez-harness` of .github/workflows/ci.yml and job `lez-harness-full` of
+# .github/workflows/lez-full.yml; docs/guides/ci.md): the attestation and bridge
+# programs driven through LEZ v0.4.0-rc1's state machine and fee settlement in the harness, every target of
+# `lez/harness` and `lez/updater` that `cargo test -p` runs without an optional feature (lib unit tests, bin unit
+# tests, integration test binaries including red-team suites, doc-tests), and the privacy suite end to end
 # (scripts/privacy/run.sh: the LEZ half, the vault's PrivacySuite, the adversary) with its gate
 # (scripts/privacy/check-results.py: the differential gate, chance-level pairing, nothing hidden found, recovery from
 # the seed, the published tables reproduced). The guests run in RISC Zero dev mode: executed in the zkVM, no proof.
@@ -39,6 +40,7 @@ while [ "$i" -lt "${#argv[@]}" ]; do
   a="${argv[$i]}"
   case "$a" in
     --shard)
+      [ "$has_shard" = 0 ] || { echo "lez-harness.sh: --shard given more than once" >&2; exit 2; }
       i=$((i + 1))
       [ "$i" -lt "${#argv[@]}" ] || { echo "lez-harness.sh: --shard needs a shard name" >&2; exit 2; }
       shard="${argv[$i]}"
@@ -46,6 +48,7 @@ while [ "$i" -lt "${#argv[@]}" ]; do
       i=$((i + 1))
       ;;
     --shard=*)
+      [ "$has_shard" = 0 ] || { echo "lez-harness.sh: --shard given more than once" >&2; exit 2; }
       shard="${a#--shard=}"
       has_shard=1
       i=$((i + 1))
@@ -95,18 +98,32 @@ if [ "$has_shard" = 1 ]; then
   plan_args=(--emit-tsv "$shard" --threads "$threads" --privacy-out "$privacy_out" --repo-prefix "$repo/")
   [ "$build_only" = 1 ] && plan_args+=(--build-only)
   plan="$(python3 -I "$repo/scripts/ci/check-lez-shards.py" "${plan_args[@]}")"
-  while IFS=$'\t' read -r -a fields; do
+  expected=0
+  executed=0
+  while IFS= read -r line; do
+    [ -n "$line" ] && expected=$((expected + 1))
+  done <<< "$plan"
+  if [ "$expected" -le 0 ]; then
+    echo "lez-harness.sh: shard $shard produced no commands" >&2
+    exit 1
+  fi
+  while IFS=$'\t' read -r -u 3 -a fields; do
     [ "${#fields[@]}" -ge 3 ] || continue
     step_cwd="${fields[0]}"
     step_dev="${fields[1]}"
     step_cmd=("${fields[@]:2}")
     stamp "shard $shard: ${step_cmd[*]}"
     if [ "$step_dev" = 1 ]; then
-      (cd "$repo/$step_cwd" && RISC0_DEV_MODE=1 "${step_cmd[@]}")
+      (cd "$repo/$step_cwd" && RISC0_DEV_MODE=1 "${step_cmd[@]}") < /dev/null
     else
-      (cd "$repo/$step_cwd" && "${step_cmd[@]}")
+      (cd "$repo/$step_cwd" && "${step_cmd[@]}") < /dev/null
     fi
-  done <<< "$plan"
+    executed=$((executed + 1))
+  done 3<<< "$plan"
+  if [ "$executed" -ne "$expected" ]; then
+    echo "lez-harness.sh: shard $shard executed $executed of $expected planned step(s)" >&2
+    exit 1
+  fi
   if [ "$build_only" = 1 ]; then
     stamp "built shard $shard"
   else

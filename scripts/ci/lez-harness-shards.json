@@ -9,6 +9,8 @@
   "shards": {
     "harness-1": {
       "harness_lib": true,
+      "harness_bins": true,
+      "harness_doc": true,
       "harness_tests": [
         "attest_native",
         "bridge_burn",
@@ -84,6 +86,8 @@
     },
     "updater-privacy": {
       "updater_lib": true,
+      "updater_bins": true,
+      "updater_doc": true,
       "updater_tests": [
         "bounds",
         "config",
