@@ -190,13 +190,51 @@ two-hour cadence (§2).
 Compare the instance's finalized slot and root with the chain's: the lab's `lab.sh status` puts both
 instances against the chains' clocks, and each session's fetch record holds the root a second provider
 reports for the newest finalized slot, which must equal the instance's `finalized_root`
-([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). The attestation side's monitor (`attest-monitor`, [`monitor/attest/`](../../monitor/attest/README.md); not the watchers'
-`monitor` of §7) compares records with several providers' canonical roots and alarms at half the weak-subjectivity
-bound ([`attestation.md`](../design/attestation.md) §3.6, §8). The updater raises its own alarm: its `/health` is
+([`lez/lab/README.md`](../../lez/lab/README.md), "Re-check"). On a deployment, run the attestation side's monitor
+beside the updater: `attest-monitor` ([`monitor/attest/`](../../monitor/attest/README.md); not the watchers'
+`monitor` of §7) reads the instance (`--state lez:URL` with `--program` and `--instance`, or `file:`/`cmd:`, so
+anything that reads LEZ can feed it) and compares its finalized header with several beacon providers' own
+finality (`--provider NAME=URL`, one flag each) — the design's `monitor` duties of
+[`attestation.md`](../design/attestation.md) §3.6, §8. Its stall alarms, and what to do on each:
+
+- **`instance-stalled` (warn).** The instance's finalized header lags the providers' finalized header — their
+  median, so with three or more providers one can neither raise nor hide a stall; with two, either can hide it —
+  by more than `--stall-after` seconds (default 15,300: 4 h 15 min, two missed sessions of a two-hour cadence
+  plus finality). Updates are outstanding, and anyone may submit them; nobody is obliged to. Check the updater
+  first (§3.6: its `/health`, and a source serving what the program would refuse — remove or replace that
+  source). An instance lags by the cadence plus finality, and it catches up when anyone sends the missing
+  updates, as long as its store knows the signing committee: the R.7 test stalled one for 8.2 days and it
+  resumed on the outstanding updates alone, no repair
+  ([`lez/results/r7-stall.md`](../../lez/results/r7-stall.md)).
+- **`ws-half` (critical).** By the chain's clock the finalized header is past half its weak-subjectivity period
+  (the alert carries `ws_half_slot`, `ws_end_slot` and `seconds_left`): submit the outstanding updates now.
+- **`ws-expired` (critical).** Past the whole period: the program refuses every update. Replace the instance
+  with a fresh one (F.10) and migrate the consumers reading it.
+- **`recovered` (info).** A poll that can judge an alarm no longer raises it: the instance resumed, nothing to
+  do. An outage is not a recovery — a poll that cannot read the instance or has no provider's finalized slot
+  holds what was raised.
+
+`attest-monitor check` is one assessment (JSON on standard output, its alerts one JSON line each on standard
+error; exit 0 healthy, 10 a warning, 20 a critical alert, 1 an error); `attest-monitor watch` is the daemon: an
+assessment every `--interval` seconds (default
+300), each alert emitted when first raised and repeated every `--repeat` seconds while it holds (default 3,600),
+to standard error, `--alert-log` and, at or above `--alert-cmd-level` (default `warn`), an `--alert-cmd` (the
+JSON on its standard input); SIGTERM stops it. The same daemon raises the divergence and ahead-of-finality
+alarms a consumer wires to its freeze authority (`--min-agreeing`, default 2; `--diverge-at`, default 1;
+`--ahead-grace`, default 60 s) — every flag, its default and the exact rule are in
+[`monitor/attest/README.md`](../../monitor/attest/README.md). The updater raises its own alarm: its `/health` is
 `degraded` when the instance has not moved for `6 × defer_window + 10` rounds while its sources serve updates more
 than `max_lag_slots` past it, and `down` (HTTP 503) after twice as many, or at once when the instance is past its
-weak-subjectivity period (then initialise a new instance). An instance lags by the cadence plus finality;
-it catches up when anyone sends the missing updates, as long as its store knows the signing committee.
+weak-subjectivity period (then initialise a new instance).
+
+The alarms are tested where the stall itself is recorded: [`monitor/attest/tests/monitor.rs`](../../monitor/attest/tests/monitor.rs)
+(`cargo test --locked`) runs the binary against providers on loopback serving what Sepolia's public providers
+served, on the instance states the R.7 test wrote through LEZ's state machine
+([`monitor/attest/tests/fixtures/stall.json`](../../monitor/attest/tests/fixtures/stall.json),
+[`lez/results/r7-stall.md`](../../lez/results/r7-stall.md)): the stalled instance at the resume's time (lag
+702,336 s) raises `instance-stalled` and `ws-half`, exit 20, and the resumed instance none; `ws-expired` past
+the period; `watch` emits `recovered` for both when the instance resumes and stops on SIGTERM; and the stall
+resists one lying provider among three, while with two a lying one can hide it.
 
 ### 3.6 Running `ferrata-updater`
 
