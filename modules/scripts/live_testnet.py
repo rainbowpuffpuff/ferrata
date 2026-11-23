@@ -47,6 +47,11 @@ KEEP = [
     "session/probes-u1", "session/calls.tsv", "session/marks.tsv", "session/samples.csv", "session/journal.tsv",
     "session/run.tsv", "session/updater-module.log", "session/final-state.json", "session/processes.txt",
     "session/install.log", "session/core-start.log", "session/core-stop.log", "session/updater-state-files.txt",
+    # RFP-022's monitor and relayer as Logos modules on the anvil fixture (bench/perf/daemons-anvil-modules.sh)
+    "daemons-anvil-modules/samples.csv", "daemons-anvil-modules/phases.tsv", "daemons-anvil-modules/rpc-monitor.json",
+    "daemons-anvil-modules/rpc-relayer.json", "daemons-anvil-modules/machine.txt", "daemons-anvil-modules/log.txt",
+    "daemons-anvil-modules/rep", "daemons-anvil-modules/run/alerts.jsonl", "daemons-anvil-modules/run/core-stop.log",
+    "daemons-anvil-modules/run/install.log", "daemons-anvil-modules/run/node-view.json",
 ]
 NEVER = re.compile(r"(\.key$|storage\.json$|/keys/|wallet|\.raw$|attest-messages|h\.json$|seen\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
@@ -102,9 +107,11 @@ def collect(out, rec):
                 open(dst, "w").write(text)
                 kept.append(rel)
     # The Logos Core logs (the modules' own lines), gzipped.
-    for d in ("session/logos-logs",):
+    for d in ("session/logos-logs", "daemons-anvil-modules/run"):
         src = os.path.join(out, d)
         for f in sorted(os.listdir(src)) if os.path.isdir(src) else []:
+            if not f.startswith("daemon"):
+                continue
             text = scrub_text(open(os.path.join(src, f), errors="replace").read(), subs)
             os.makedirs(os.path.join(rec, d), exist_ok=True)
             with gzip.open(os.path.join(rec, d, f + ".gz"), "wt") as g:
@@ -331,6 +338,42 @@ def summary(rec, write=True):
     vc = js(rec, "session/rep/A-verify_checkpoint.json") or {}
     S["verify_checkpoint"] = {k: vc.get(k) for k in ("verdict", "instance_id_matches", "providers_agreeing")}
     S["verify_checkpoint"]["execution"] = (vc.get("execution") or {}).get("verdict") if isinstance(vc.get("execution"), dict) else vc.get("execution")
+    # ---- RFP-022 P.6: monitor and relayer as Logos modules on the anvil fixture -------------------------------------
+    B = "daemons-anvil-modules"
+    phases = [(float(l.split("\t")[0]), l.split("\t", 1)[1]) for l in (rd(rec, f"{B}/phases.tsv") or "").splitlines() if "\t" in l]
+    if phases:
+        bs = {}
+        for r in csv.DictReader((rd(rec, f"{B}/samples.csv") or "").splitlines()):
+            if r["pid"] != "0" and r["cpu_tree_s"]:
+                bs.setdefault(r["name"], []).append({"t": float(r["t"]), "pid": int(r["pid"]), "cpu": float(r["cpu_tree_s"]),
+                                                     "self": float(r["cpu_s"]), "rss": int(r["rss_tree_kb"]), "hwm": int(r["hwm_kb"]),
+                                                     "procs": int(r["procs"])})
+        t0, t1 = phases[0][0], phases[-1][0]
+        bm = {"phases": [{"at_s": round(t - t0), "mark": m} for t, m in phases], "components": {}, "per_phase_cpu_s": {}}
+        for name in ("monitor-module", "relayer-module", "core"):
+            if name in bs:
+                bm["components"][name] = window(bs[name], t0, t1)
+                bm["per_phase_cpu_s"][name] = [(window(bs[name], a, b) or {}).get("cpu_s") for (a, _), (b, _) in zip(phases, phases[1:])]
+        for who in ("monitor", "relayer"):
+            r = js(rec, f"{B}/rpc-{who}.json")
+            if r:
+                bm["components"].setdefault(f"{who}-module", {})["rpc"] = {"up": r["up"], "down": r["down"], "connections": r.get("connections")}
+        S["bridge_modules"] = bm
+        end = [m for _, m in phases if m.startswith("activity end")]
+        reached = bool(end) and re.search(r"final state (0x[0-9a-f]+)….*wanted (0x[0-9a-f]+)…", end[0])
+        check(reached and reached.group(1) == reached.group(2), "RFP-022: the relayer module finalised the honest candidate (phases.tsv: final state = wanted)")
+        for k in ("monitor-start", "relayer-start", "monitor-stop", "relayer-stop"):
+            r = js(rec, f"{B}/rep/{k}.json")
+            res = r.get("result") if isinstance(r, dict) else None
+            if isinstance(res, str):
+                try:
+                    res = json.loads(res)
+                except ValueError:
+                    pass
+            ok = isinstance(res, dict) and res.get("verdict") not in ("error", "invalid_request") and res.get("exit", 0) in (0, None)
+            check(ok, f"RFP-022: {k} answered through Logos Core, no error ({B}/rep/{k}.json: verdict "
+                      f"{res.get('verdict') if isinstance(res, dict) else None})")
+        check("logosctl daemon stop exit 0" in (rd(rec, f"{B}/run/core-stop.log") or ""), "RFP-022: that Logos Core stopped cleanly")
     S["checks"] = checks
     S["checks_failed"] = sum(not c["ok"] for c in checks)
     if write:
@@ -370,6 +413,17 @@ def markdown(S):
     for c in S["calls"]:
         o.append(f"| {c['name']} | {c['module']} | {c['method']} | {c['exit']} | {c['seconds']} |")
     o += ["", "## Journal", "", "```", json.dumps(S["journal"], indent=1), "```", ""]
+    bm = S.get("bridge_modules")
+    if bm:
+        o += ["## RFP-022: monitor and relayer as Logos modules (anvil fixture)", "",
+              "Phases: " + "; ".join(f"{p['mark']} at +{p['at_s']} s" for p in bm["phases"]) + ".", "",
+              "| process | wall s | CPU s | CPU share of one core | peak RSS MiB | median RSS MiB | JSON-RPC bytes up / down |", "|---|---:|---:|---:|---:|---:|---:|"]
+        for k, v in bm["components"].items():
+            if v and "wall_s" in v:
+                rpc = v.get("rpc") or {}
+                o.append(f"| {k} | {v['wall_s']} | {v['cpu_s']} | {v['cpu_share']} | {v['peak_rss_mib']} | {v['median_rss_mib']} | "
+                         f"{rpc.get('up', '-')} / {rpc.get('down', '-')} |")
+        o += ["", "CPU seconds per phase: " + "; ".join(f"{k} {v}" for k, v in bm["per_phase_cpu_s"].items()), ""]
     return "\n".join(o) + "\n"
 
 
