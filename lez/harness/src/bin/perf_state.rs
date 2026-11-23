@@ -433,7 +433,9 @@ const POOLS: [usize; 5] = [0, 1, 10, 100, 1_000];
 /// claim's private transitions against the claimant's `holdings` (not a comparison; nothing
 /// asserted equal).
 fn holdings_growth(vw: &acc::VaultWorld) {
-    println!("\n## The reference consumer's private-kind claim against the claimant's own holdings (grows; avoidable)\n");
+    println!(
+        "\n## The reference consumer's private-kind claim against the claimant's own holdings (grows; avoidable)\n"
+    );
     println!(
         "The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, \
          amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the \

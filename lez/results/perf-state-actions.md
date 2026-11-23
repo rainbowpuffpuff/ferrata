@@ -11,14 +11,15 @@ every message the attestation program handles), and every message of the referen
 `AttestPrivately`, and the vault pattern's `ClaimDeposit` and `ClaimDepositPrivately` with `Spend` and `CreditHolder`.
 Each is charged with K = 0, 1,000, 10,000 and 100,000 more of the accounts that accumulate beside it, and every private
 transaction with K more commitments in LEZ's commitment set as well. The **serialized state** column is what a node
-writes for the state before RocksDB's compression (`perf-state.md` says how). The last table measures the one cost
-found to grow with use, a private-kind claim's own proof against its claimant's holdings. The same scenarios are pinned
-in CI with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
+writes for the state before RocksDB's compression (`perf-state.md` says how). Two tables follow the sweeps: the
+reference consumer's private-kind claim against its claimant's holdings, which grows (avoidable), and the private
+transactions' circuits from r0vm's session log, which grow by one hash a level of LEZ's commitment path. The same
+scenarios are pinned in CI with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
 
-Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 4558af81.
+Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 8776e635.
 
 
-Each action runs on copies of one world; the copy for K also holds K more of the accounts that accumulate beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers; for the synthetic vault's leaf statements, records of its instance; for the vault pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is longer (printed; the harness cannot read the circuit's cycles); its first "handlers" are its private transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before; a balance or a holder credited K + 1 times before; and, in the last table, a claimant's private holdings. Every charge is asserted equal at every K before it is printed; the last table is not a comparison.
+Each action runs on copies of one world; the copy for K also holds K more of the accounts that accumulate beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers; for the synthetic vault's leaf statements, records of its instance; for the vault pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is longer (printed; the circuit's own cycles, from r0vm's session log, are in the last table); its first "handlers" are its private transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before; a balance or a holder credited K + 1 times before; and, in the table after the sweeps, a claimant's private holdings. Every charge is asserted equal at every K before it is printed; the two tables after the sweeps are not comparisons.
 
 ## `Init` and its adoption (a new chain)
 
@@ -214,9 +215,9 @@ Each action runs on copies of one world; the copy for K also holds K more of the
 | 10,000 | 11,008,515 | 14 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
 | 100,000 | 82,428,547 | 17 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
 
-## The one cost found to grow with use: a private-kind claim against the claimant's own holdings
+## The reference consumer's private-kind claim against the claimant's own holdings (grows; avoidable)
 
-The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the list. Deposit 1 of FerrataVault v5 claimed by its destination (LEZ's private test account 0) in RISC Zero's executor, the claimant already holding `pools` other pools. This is the claimant's own proving work: LEZ charges the private transaction its flat receipt gas plus the public part (`Read`, `Spend`), which does not see the list.
+The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the list. Deposit 1 of FerrataVault v5 claimed by its destination (LEZ's private test account 0) in RISC Zero's executor, the claimant already holding `pools` other pools: the claim's two private transitions (LEZ's circuit, which hashes and encrypts the larger state, grows with it too; not measured here). It is the claimant's own proving work: LEZ charges the private transaction its flat receipt gas plus the public part (`Read`, `Spend`), which does not see the list. It is avoidable: a claimant that sends each pool's deposits to a private account of its own keeps one entry per account.
 
 | pools already held | ClaimDepositPrivately (executor) | the record's reply (executor) | private cycles | over 0 pools, per pool |
 |---:|---:|---:|---:|---:|
@@ -227,3 +228,22 @@ The reference consumer credits a private-kind deposit in the claimant's own priv
 | 1,000 | 1,160,903 | 2,556,184 | 3,717,087 | 2193.2 |
 
 Every transaction of the swept tables was charged the same handler cycles, execution gas and storage gas at every K (asserted).
+
+## The private transactions' circuits, from r0vm's session log
+
+LEZ's API drops the prover's statistics; r0vm logs every session's cycles (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`, as `bench/perf/state-actions.sh` runs `perf_state actions`). For each private transaction of the sweeps above, its circuit's session is the one right after the last proof of its private transitions (`bench/perf/circuit-cycles.py`). The circuit hashes the fee payer's membership path one level at a time; LEZ does not charge these cycles (the sender proves them, RISC Zero dev mode here).
+
+| private transaction | K | membership path (levels) | the circuit's user cycles | over K = 0 | per level |
+|---|---:|---:|---:|---:|---:|
+| `VerifyAll` in one private transaction: the proven update path | 0 | 3 | 1,913,757 | +0 | — |
+| `VerifyAll` in one private transaction: the proven update path | 1,000 | 10 | 1,927,235 | +13,478 | 1,925.4 |
+| `VerifyAll` in one private transaction: the proven update path | 10,000 | 14 | 1,934,974 | +21,217 | 1,928.8 |
+| `VerifyAll` in one private transaction: the proven update path | 100,000 | 17 | 1,940,779 | +27,022 | 1,930.1 |
+| The reference consumer's private read, `AttestPrivately` (one private transaction) | 0 | 3 | 1,975,409 | +0 | — |
+| The reference consumer's private read, `AttestPrivately` (one private transaction) | 1,000 | 10 | 1,988,984 | +13,575 | 1,939.3 |
+| The reference consumer's private read, `AttestPrivately` (one private transaction) | 10,000 | 14 | 1,996,724 | +21,315 | 1,937.7 |
+| The reference consumer's private read, `AttestPrivately` (one private transaction) | 100,000 | 17 | 2,002,530 | +27,121 | 1,937.2 |
+| The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`) | 0 | 3 | 2,176,439 | +0 | — |
+| The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`) | 1,000 | 10 | 2,190,018 | +13,579 | 1,939.9 |
+| The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`) | 10,000 | 14 | 2,197,724 | +21,285 | 1,935.0 |
+| The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`) | 100,000 | 17 | 2,203,529 | +27,090 | 1,935.0 |
