@@ -39,9 +39,9 @@
 //! program gave it with its own text ("Execution outside of the validity window"). `Init` and `Open` carry the window
 //! that ends with the weak-subjectivity period of the checkpoint (for `Open`, the instance's newest finalized header);
 //! past that end, the tool shows the refusal as code 53's message, naming the checkpoint, the time its period ended
-//! and the remedy (a new instance from a recent bootstrap), and sends no step whose window has ended or ends within a
-//! minute of the zone's clock (its newest block's time; the dry run is made at that time). A window not yet open is
-//! LEZ's text as it is, with the window's start.
+//! and the remedy (a new instance from a recent bootstrap), and sends no step whose window has ended, ends within a
+//! minute of the zone's clock (its newest block's time; the dry run is made at that time) or has not opened yet. A
+//! window not yet open is LEZ's text as it is, with the window's start.
 
 #![allow(clippy::too_many_arguments)]
 
@@ -900,14 +900,25 @@ async fn transact(
         }
         return Ok(status);
     }
-    // A step the dry run shows refused because its checkpoint's period has ended is refused by every later block too,
-    // and LEZ would charge it the whole gas limit: nothing is sent. Nor is a step whose window ends within the margin.
+    // A step the dry run, made at the zone's clock, shows refused for its window is not sent: LEZ would charge it the
+    // whole gas limit. Past the window's end it is refused by every later block too; before its start, until then.
+    // Nor is a step whose window ends within the margin.
     if last.stale(last_window.as_ref()) {
         println!(
             "  not sent: LEZ refuses it at any later time too, and would charge it the whole gas limit ({})",
             a.gas_limit
         );
         run.log(json!({ "what": what, "phase": "held", "reason": last.reason, "code": OUTSIDE_WS_PERIOD }));
+        return Ok(3);
+    }
+    if last.timed_out_of_window(last_window.as_ref()) {
+        let start = last_window.as_ref().and_then(|w| w.start_ms).map_or("its window opens".into(), utc);
+        println!(
+            "  not sent: LEZ refuses it until {start}, and would charge it the whole gas limit ({}); run the command \
+             again from then",
+            a.gas_limit
+        );
+        run.log(json!({ "what": what, "phase": "held", "reason": last.reason, "until": start }));
         return Ok(3);
     }
     for s in steps.iter().take(txs.len()) {

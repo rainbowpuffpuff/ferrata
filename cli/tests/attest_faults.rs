@@ -41,7 +41,7 @@
 //!   and from `receipt` too (how a caller of the Logos module reads an outcome);
 //! * `advance` sent before the end of the period of the instance's newest finalized header, its block after it: code
 //!   53's message naming that header, from the run and from `receipt`;
-//! * `advance` before its update's signature slot: LEZ's text with the window's start, not code 53;
+//! * `advance` before its update's signature slot: LEZ's text with the window's start, not code 53, and not sent;
 //! * the followed final tip behind the zone's newest block, that block past the end: the dry run, made at the zone's
 //!   clock, holds `init`;
 //! * the first review's case: `init` killed with its transaction in the pool, the pool lost, the zone's clock past the
@@ -127,9 +127,9 @@ struct Zone {
     final_height: u64,
     clock_ms: u64,
     mode: Mode,
-    /// When set, `sendTransaction` answers with this error and admits nothing, as LEZ's sequencer turns a transaction
-    /// away at submission (too large, its fee, a full pool).
-    refuse: Option<String>,
+    /// When set, `sendTransaction` turns away a transaction larger than this many bytes with LEZ's own answer
+    /// (`Transaction too large: size N, max M`, its RPC's InvalidParams) and admits nothing.
+    refuse: Option<usize>,
     /// The hash of every transaction turned away so.
     turned_away: Vec<String>,
 }
@@ -239,9 +239,10 @@ impl Zone {
             "sendTransaction" => {
                 let tx: LeeTransaction = serde_json::from_value(p0).map_err(err)?;
                 let hash = tx.hash();
-                if let Some(why) = &self.refuse {
+                let size = borsh::to_vec(&tx).map_err(|e| (-32602, e.to_string()))?.len();
+                if let Some(max) = self.refuse.filter(|max| size > *max) {
                     self.turned_away.push(hash.to_string());
-                    return Err((-32602, why.clone()));
+                    return Err((-32602, format!("Transaction too large: size {size}, max {max}")));
                 }
                 self.submitted.push(hash.to_string());
                 self.pending.push(tx);
@@ -937,7 +938,7 @@ fn the_journal_guards() {
 
     // A submission the sequencer turns away (as LEZ's "Transaction too large"): the run ends, recorded; run again,
     // reported, nothing sent; with --again, planned anew and applied once.
-    zone.lock().unwrap().refuse = Some("Transaction too large: size 4357, max 4096".into());
+    zone.lock().unwrap().refuse = Some(4_096);
     let (code, out) = t.run("attest-turned-away", &strs(&attest(&["--account", &acct])));
     assert_eq!(code, 1, "{out}");
     has(&out, "REFUSED by the sequencer at submission: Transaction too large");
@@ -1133,10 +1134,9 @@ fn stale_checkpoint_shown_as_code_53() {
     let id = instance_of(&out);
     let update = fixture("finality_update.ssz");
     let committee = format!("bootstrap:{}", fixture(BOOT).display());
-    let (code, out) = t.run(
-        "advance-before-signature-slot",
-        &["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee],
-    );
+    let advance_dry =
+        ["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee];
+    let (code, out) = t.run("advance-before-signature-slot", &advance_dry);
     assert_eq!(code, 3, "{out}");
     let open = out.lines().find(|l| l.trim_start().starts_with("open ")).expect("the Open's dry run").to_string();
     has(&open, "\"Execution outside of the validity window\": its window opens at");
@@ -1145,18 +1145,26 @@ fn stale_checkpoint_shown_as_code_53() {
         !open.contains("OutsideWeakSubjectivityPeriod") && !open.contains("refused with 53"),
         "not code 53: {open}"
     );
+    // With --send --yes it is not sent either: LEZ would refuse it until its window opens, and charge the gas limit.
+    let before = zone.lock().unwrap().submitted.len();
+    let send = [&advance_dry[..], &["--send", "--yes"]].concat();
+    let (code, out) = t.run("advance-before-signature-slot-send", &send);
+    assert_eq!(code, 3, "{out}");
+    has(&out, &format!("not sent: LEZ refuses it until {}", ferrata_cli::attest::utc(slot_ms(SIGNATURE_SLOT))));
+    assert_eq!(zone.lock().unwrap().submitted.len(), before, "nothing sent");
     // The followed final tip behind the zone's newest block (finality lagging), that block past the end: the dry run is
     // made at the zone's clock, and nothing is sent.
     let zone = Arc::new(Mutex::new(Zone::genesis(end - 3_600_000)));
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-final-tip-lagging", &lez, &zone.lock().unwrap());
     {
         let mut z = zone.lock().unwrap();
         z.clock_ms = end + 60_000;
-        z.produce(); // not final
+        z.produce(); // not final: the follower stays at the genesis block, an hour before the end
     }
-    let lez = serve_zone(zone.clone());
-    let mut t = Tool::new(&dir, "u5-final-tip-lagging", &lez, &zone.lock().unwrap());
     let (code, out) = t.run("init-final-tip-lagging", &strs(&init));
     assert_eq!(code, 3, "{out}");
+    has(&out, "followed to block 1 (final on Bedrock)");
     has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
     has(&out, "not sent");
     assert_eq!(zone.lock().unwrap().submitted.len(), 0, "nothing sent");
