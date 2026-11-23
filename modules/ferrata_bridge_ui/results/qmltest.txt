@@ -1,4 +1,4 @@
-QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '<spike>/tmp/miniapp-private/runtime-root'
+QStandardPaths: XDG_RUNTIME_DIR not set, defaulting to '<spike>/tmp/u8-cases/runtime-root'
 ********* Start testing of qmltestrunner *********
 Config: Using QtTest library 6.4.2, Qt 6.4.2 (x86_64-little_endian-lp64 shared (dynamic) release build; by GCC 13.2.0), ubuntu 24.04
 PASS   : qmltestrunner::FerrataMiniApp::initTestCase()
@@ -8,12 +8,26 @@ PASS   : qmltestrunner::FerrataMiniApp::test_03_registry()
 PASS   : qmltestrunner::FerrataMiniApp::test_04_deposit_private_by_default()
 PASS   : qmltestrunner::FerrataMiniApp::test_05_public_needs_an_explicit_action()
 PASS   : qmltestrunner::FerrataMiniApp::test_06_positions_from_the_seed()
-QDEBUG : qmltestrunner::FerrataMiniApp::test_07_private_claim() qml: PROOF claim {"mode":"dev","prove_ms":927,"receipt_bytes":4429,"tx_bytes":8745}
+QDEBUG : qmltestrunner::FerrataMiniApp::test_06b_error_not_final_claim() qml: U8 245 NOT_FOUND | Not final yet: the deposit is not covered by an imported root. Wait for the relayer's next import, then claim. | refused: LEZ bridge program exit code 245 NOT_FOUND (checked before sending: no imported root covers this leaf yet; wait for the next root import): no configuration, or no imported root at this leaf count
+PASS   : qmltestrunner::FerrataMiniApp::test_06b_error_not_final_claim()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_07_private_claim() qml: PROOF claim {"mode":"dev","prove_ms":1245,"receipt_bytes":4429,"tx_bytes":8745}
 PASS   : qmltestrunner::FerrataMiniApp::test_07_private_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_08_plaintext_claim()
 PASS   : qmltestrunner::FerrataMiniApp::test_09_error_messages()
-QDEBUG : qmltestrunner::FerrataMiniApp::test_10_private_burn_on_defaults() qml: PROOF burn {"mode":"dev","prove_ms":582,"receipt_bytes":3985,"tx_bytes":7857}
+QDEBUG : qmltestrunner::FerrataMiniApp::test_09b_error_unsupported_token() qml: U8 TokenNotRegistered | Unsupported token: this token is not registered with the bridge. Only the tokens the registry lists can be bridged. | refused: vault error TokenNotRegistered() (checked before sending): the token is not registered
+PASS   : qmltestrunner::FerrataMiniApp::test_09b_error_unsupported_token()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_09c_error_invalid_amount() qml: U8 InvalidDenominationIndex | Invalid amount: only this token's fixed denominations can be bridged. Choose one of the amounts the registry lists. | refused: vault error InvalidDenominationIndex() (checked before sending): no denomination has this index
+PASS   : qmltestrunner::FerrataMiniApp::test_09c_error_invalid_amount()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_09d_error_cap_exceeded() qml: U8 TokenDepositCapExceeded | Cap exceeded: the rate limit for this token is used up. It refills over time (see the registry); try later or a smaller amount. | refused: vault error TokenDepositCapExceeded() (eth_call before sending): the token's deposit bucket holds less than this; retry later
+PASS   : qmltestrunner::FerrataMiniApp::test_09d_error_cap_exceeded()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_09e_error_verification_failed() qml: U8 249 CLAIM_INVALID | Verification failed: the claim does not check against the imported root (its destination or path is not the deposit's). Nothing was spent; refresh your positions and claim to the account the deposit names. | refused: LEZ bridge program exit code 249 CLAIM_INVALID (checked before sending with the program's verify_claim): the opening, the leaf and the path do not hash to the root (a wrong leaf, path or destination); the deposi
+PASS   : qmltestrunner::FerrataMiniApp::test_09e_error_verification_failed()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_09f_error_wrong_destination() qml: U8 252 WRONG_DESTINATION | Verification failed: a deposit to a private account can only be claimed privately. Nothing was spent; choose Private claim. | refused: LEZ bridge program exit code 252 WRONG_DESTINATION (checked before sending: a private-kind deposit is claimed privately): a destination this path cannot credit: a plaintext claim of a private-kind deposit, or a 
+PASS   : qmltestrunner::FerrataMiniApp::test_09f_error_wrong_destination()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_10_private_burn_on_defaults() qml: PROOF burn {"mode":"dev","prove_ms":713,"receipt_bytes":3985,"tx_bytes":7857}
 PASS   : qmltestrunner::FerrataMiniApp::test_10_private_burn_on_defaults()
+QDEBUG : qmltestrunner::FerrataMiniApp::test_10b_error_not_final_release() qml: U8 BurnRootNotAccepted | Not final yet: no checkpoint covers this burn. Wait for the next checkpoint, then release. | refused: vault error BurnRootNotAccepted() (checked before sending: no finalized checkpoint covers this burn yet; wait for the next checkpoint): the burn root is not one of a finalized, unrevoked checkpoint
+PASS   : qmltestrunner::FerrataMiniApp::test_10b_error_not_final_release()
 PASS   : qmltestrunner::FerrataMiniApp::test_11_checkpoint_and_private_release()
 PASS   : qmltestrunner::FerrataMiniApp::test_11b_public_burn_and_release()
 PASS   : qmltestrunner::FerrataMiniApp::test_12_admin()
@@ -21,5 +35,5 @@ PASS   : qmltestrunner::FerrataMiniApp::test_13_privacy()
 QDEBUG : qmltestrunner::FerrataMiniApp::test_14_wallet_provider_seam() qml: WALLET seam connect: Ferrata Bridge (ferrata_bridge_ui) | approve: Deposit to the Ferrata vault
 PASS   : qmltestrunner::FerrataMiniApp::test_14_wallet_provider_seam()
 PASS   : qmltestrunner::FerrataMiniApp::cleanupTestCase()
-Totals: 17 passed, 0 failed, 0 skipped, 0 blacklisted, 34386ms
+Totals: 24 passed, 0 failed, 0 skipped, 0 blacklisted, 41002ms
 ********* Finished testing of qmltestrunner *********
