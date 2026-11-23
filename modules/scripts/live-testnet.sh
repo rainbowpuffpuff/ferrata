@@ -49,7 +49,7 @@ CHAIN=11155111
 LODESTAR=https://lodestar-sepolia.chainsafe.io
 NIMBUS=http://unstable.sepolia.beacon-api.nimbus.team
 PN_BEACON=https://ethereum-sepolia-beacon-api.publicnode.com
-PN_EL=https://ethereum-sepolia-rpc.publicnode.com
+EL=https://rpc.sepolia.ethpandaops.io    # keeps every proof (modules/results/verified-proxy-2026-11-14/)
 VAULT=0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c   # FerrataVault v5 on Sepolia (docs/sepolia.md): its slots 0 and 1
 UA=curl/8
 SLOT0=0x0000000000000000000000000000000000000000000000000000000000000000
@@ -354,7 +354,7 @@ do_session() {
   # The execution endpoint through eth_rpc_module (mode off: straight to the endpoint).
   call eth_rpc_module set_network_scope rpc-scope both
   call eth_rpc_module set_chain_config rpc-chain "$CHAIN" \
-    "{\"endpoint\":\"$PN_EL\",\"name\":\"sepolia\",\"testnet\":true,\"timeoutSecs\":60,\"verifiedTimeoutSecs\":240}"
+    "{\"endpoint\":\"$EL\",\"name\":\"sepolia\",\"testnet\":true,\"timeoutSecs\":60,\"verifiedTimeoutSecs\":240}"
   call eth_rpc_module set_verified_proxy_mode rpc-mode "$CHAIN" off
   call eth_rpc_module get_chain_config rpc-chain-config "$CHAIN"
   # The updater: the instance `instance` made, the network's program, both sources through beacon_api_module.
@@ -424,7 +424,7 @@ T
   pids+=("$mon")
   marks monitor-start
   t_start=$(date +%s); t_end=$(( t_start + minutes * 60 ))
-  local restarted=0 attested=0 probed=0 life=1 code restart_at=$(( t_start + minutes * 60 / 2 )) attest_at=$(( t_start + 25 * 60 ))
+  local restarted=0 attested=0 probed=0 life=1 code restart_at=$(( t_start + minutes * 60 / 2 )) attest_at=$(( t_start + minutes * 60 * 6 / 10 ))
   while [ "$(date +%s)" -lt "$t_end" ]; do
     probed=$((probed + 1))
     # /health as check.py reads it (lez/updater/results/live-sepolia/check.py: probes*/health.jsonl), and the
@@ -445,7 +445,7 @@ print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h
     rm -f "$W/rep/status-$probed.raw" "$W/rep/status-$probed.json"
     # Once the instance holds a record of its own past the checkpoint's: the attestation module's calls and one
     # attestation sent with ferrata-day1 (both on that record).
-    if [ "$attested" = 0 ] && [ "$(date +%s)" -ge "$attest_at" ]; then
+    if [ "$attested" = 0 ] && { fresh_finish "$W/updater-state/sepolia/journal.tsv" || [ "$(date +%s)" -ge "$attest_at" ]; }; then
       attest_phase "$W" "$program" "$id" "$checkpoint" && attested=1 || attested=2
     fi
     # The restart through the module, halfway: stop (the round in hand finishes), 15 s, start again.
@@ -489,6 +489,18 @@ print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h
   # The updater's state (journal, the backend's manifest), without the follower's snapshot.
   find "$W/updater-state" -maxdepth 3 -type f -printf '%s %p\n' > "$W/updater-state-files.txt" 2>/dev/null
 }
+# The journal's last line is an applied Finish of the second job or later, at most three minutes old: the instance's
+# newest record is fresh (Sepolia's execution endpoints still serve proofs for its block).
+fresh_finish() {
+  [ -f "$1" ] || return 1
+  python3 -I -c 'import datetime, sys
+rows = [l.split("\t") for l in open(sys.argv[1]).read().splitlines() if l.strip()]
+done = [r for r in rows if len(r) > 10 and r[1] == "finish" and r[4] == "applied"]
+if len(done) < 2 or rows[-1] is not done[-1]:
+    sys.exit(1)
+t = datetime.datetime.strptime(done[-1][10][:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=datetime.timezone.utc)
+sys.exit(0 if (datetime.datetime.now(datetime.timezone.utc) - t).total_seconds() < 180 else 1)' "$1"
+}
 # The attestation module's calls on the instance's newest record, then one attestation sent with ferrata-day1.
 attest_phase() {
   local W=$1 program=$2 id=$3 checkpoint=$4 slot hash dir
@@ -502,8 +514,10 @@ attest_phase() {
   note "attest: the instance's newest record: slot $slot, execution block $hash"
   python3 -I "$repo/lez-v03/scripts/fetch.py" proof "$F" "$slot" "$hash" "$VAULT" "0,1" > "$W/attest/fetch-proof.log" 2>&1 || return 1
   dir="$F/proofs/$slot"
+  # The attestation signed at once (on this record; sent after the module's calls): a later update does not change it.
+  step attest-sign /usr/bin/time -v "$BIN/ferrata-day1" sign --rpc "$FERRATA_TESTNET_RPC" --keys "$K" --state "$S" --stage attest --fetch "$F"
   # verify_checkpoint: the instance's checkpoint, its bootstrap, three providers, the execution check through eth_rpc_module.
-  jq -n --slurpfile ri "$W/rep/A-read_instance.json" --arg c "$checkpoint" --arg id "$id" --arg b "$(xxd -p -c0 "$K/init/bootstrap.ssz")" \
+  jq -n --slurpfile ri "$W/rep/A-read_instance.json" --arg c "$checkpoint" --arg id "$id" --arg b "$(python3 -I -c 'import sys; print(open(sys.argv[1], "rb").read().hex())' "$K/init/bootstrap.ssz")" \
     --argjson ch "$CHAIN" --arg l "$LODESTAR" --arg p "$PN_BEACON" --arg n "$NIMBUS" \
     '{config: $ri[0].config, checkpoint: $c, expected_instance_id: $id, bootstrap: $b,
       providers: [{name: "lodestar", url: $l}, {name: "publicnode", url: $p}, {name: "nimbus", url: $n}], min_providers: 2,
@@ -535,7 +549,6 @@ attest_phase() {
   fi
   marks attest-module-end
   # One attestation sent to the network: the vault's slots 0 and 1 under that record (the day-one kit's stage d).
-  step attest-sign /usr/bin/time -v "$BIN/ferrata-day1" sign --rpc "$FERRATA_TESTNET_RPC" --keys "$K" --state "$S" --stage attest --fetch "$F"
   step attest-send /usr/bin/time -v "$BIN/ferrata-day1" send --rpc "$FERRATA_TESTNET_RPC" --keys "$K" --state "$S" --stage attest
   cp "$rep/logs/attest-sign.log" "$rep/logs/attest-send.log" "$W/attest/" 2>/dev/null
   cp "$K/tx/attest/"*.json "$W/attest/" 2>/dev/null
