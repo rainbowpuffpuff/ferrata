@@ -36,22 +36,23 @@ gas is the transaction's serialized size.
 ### P.1 Verifying an attestation within one LEZ transaction
 
 **Met** for every fact type measured. In-process harness, mainnet block 26,384,851 (finalized
-10 November 2026), RISC Zero's accelerated Keccak in the program ([`lez/RESULTS.md`](../lez/RESULTS.md)
-§5, `results/stage4-attest.md`, `results/stage4-attest-consumer.md`; measured on the images that file names, program
-`9f3eb00f…`; with this tree's programs the private consumer's read is charged 422,032,
-`results/stage4-attest-private-public-outputs.txt`):
+10 November 2026), RISC Zero's accelerated Keccak in the program
+([`lez/results/stage4-attest.md`](../lez/results/stage4-attest.md), `stage4-attest-consumer.md`, regenerated on
+22 November 2026 at `7602bc53` with this tree's programs, program `816d1fef…`, and the private consumer's read,
+`stage4-attest-private-public-outputs.txt`; [`lez/RESULTS.md`](../lez/RESULTS.md) §5 keeps an earlier copy of the
+first two):
 
 | Statement (one transaction each) | Execution gas | Of the 5M target | Storage gas |
 |---|---:|---:|---:|
-| account | 167,882 | 3% | 4,424 |
-| storage slot with a predicate | 274,842 | 5% | 7,338 |
-| absent slot is zero | 269,564 | 5% | 7,291 |
-| ERC-20 `Transfer` log (receipt of 7 logs) | 96,584 | 2% | 2,623 |
-| log in a receipt of 306 logs | 1,618,872 | 32% | 58,812 |
-| one EIP-2935 hop (16 blocks back) and a slot | 498,204 | 10% | 13,578 |
-| four facts and a relation in one call | 453,182 | 9% | 12,309 |
-| reference consumer: claim of a `Transfer` (Claim → Attest → reply → Credit) | 183,538 | 4% | 2,768 |
-| private consumer: read + attestation in its own proof | 421,641 (flat 409,764 + 11,877) | — | 224,063 |
+| account | 168,909 | 3% | 4,424 |
+| storage slot with a predicate | 275,865 | 6% | 7,338 |
+| absent slot is zero | 270,580 | 5% | 7,291 |
+| ERC-20 `Transfer` log (receipt of 7 logs) | 97,485 | 2% | 2,623 |
+| log in a receipt of 306 logs | 1,619,960 | 32% | 58,812 |
+| one EIP-2935 hop (16 blocks back) and a slot | 499,277 | 10% | 13,578 |
+| four facts and a relation in one call | 454,255 | 9% | 12,309 |
+| reference consumer: claim of a `Transfer` (Claim → Attest → reply → Credit) | 185,389 | 4% | 2,768 |
+| private consumer: read + attestation in its own proof | 422,032 (flat 409,764 + 12,268) | — | 224,063 |
 
 Under a Gloas record (Sepolia block 12,105,936; the RLP header travels with the request, 20,663 cycles
 and 691 bytes): storage slot 278,253, `Transfer` 96,713, account 169,611 cycles
@@ -290,7 +291,10 @@ left 0 of 248 jobs; the gates, two daemons racing on updates replayed 81 to 122 
 them, left 8, 19 and 3 beside 16, 23 and 8 completed (G3, G4, G5; [`perf-gate-sequencer.md`](../lez/results/perf-gate-sequencer.md)).
 Abandoned jobs come on top of the completed ones: with k operators racing at the design's cadence (9,087 updates a
 year), at most (k − 1) × 10.09 MB a year and (k − 1) × 50.43 MB in five years (one abandoned job per extra operator
-per update; *derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); none with one operator. The reference consumer's per-claim accounts are the consumer's state, not the module's
+per update; *derived*, [`perf-projections.md`](../lez/results/perf-projections.md)); none with one operator. That bound
+is for honest operators: anyone can add more, one job account per `Open` it never finishes (a forged signature passes
+`Open`, 2,195,028 execution gas: `lez/results/stage1-refusals.md` row 1), and since nothing clears jobs, that growth is
+bounded only by what its sender pays. The reference consumer's per-claim accounts are the consumer's state, not the module's
 (`lez/guests/consumer`).
 
 LEZ v0.4 charges storage gas on a transaction's bytes, not on the state it leaves, so the growth costs nothing in fees:
@@ -522,7 +526,7 @@ real claims and burns of the deployed bridge program, `0xccde6171…`, measured 
 | LEZ account | per | actor state | `Account` | in the serialized state, measured |
 |---|---|---:|---:|---:|
 | `nullifier(…, N)` (`nullifier(cid, chain, vault, N)` since milestone B1; the state is the same) | claim | 77 B | 133 B | **165 B** (+165.00 B per record from 1,000 to 100,000) |
-| `burn(cid, H(note))` | burn | 185 B | 241 B | **273 B** (+273.00 B per record) |
+| `burn(cid, r)` (`burn(cid, H(note))` before ADR 0032; the same size) | burn | 185 B | 241 B | **273 B** (+273.00 B per record) |
 | `root(cid, n)` | import | 117 B | 173 B | 205 B (account and key) |
 | holder (since milestone B1 one account per configuration, `holder(cid, account)`) | new holder (a claim's destination or its relayer; the fee recipient's once) | | | **162 B** (the second claim: its destination's); the first claim's +486 B is three new holders: its destination's, the fee recipient's and its relayer's |
 

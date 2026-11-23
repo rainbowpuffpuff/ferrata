@@ -21,9 +21,12 @@ the record it wrote; a claim, because the bridge program proves the deposit unde
 attested; a release, because the vault verifies a zero-knowledge proof of the burn under a checkpoint it accepted.
 Every off-chain participant (updaters, provers, root importers, relayers, wrappers, RPC providers) only carries data
 that these checks accept or refuse: if it lies it is refused, and if it stops anyone else, the user included, can
-take its place. Its role is **liveness only**. Three assumptions remain, stated rather than hidden: the starting
-checkpoint, until it is checked (§2.1); two thirds of each sync committee, for the inbound leg (§2.2); and fewer than `t` of the zone's accredited sequencers, for the return leg: their keys, or the LEZ and Logos Blockchain nodes their attestors read (each attestor must use its operator's own), where under rule (A) the watchers also hold a safety
-role outside its conditions (§3).
+take its place. Its role is **liveness only**. Four assumptions remain, stated rather than hidden: the starting
+checkpoint, until it is checked (§2.1); two thirds of each sync committee, for the inbound leg (§2.2); fewer than `t` of the zone's accredited sequencers, for the return leg: their keys, or the LEZ and Logos Blockchain nodes their attestors read (each attestor must use its operator's own), where under rule (A) the watchers also hold a safety
+role outside its conditions (§3); and the soundness of the proofs the system accepts: the vault's verifier, and LEZ's
+check of privacy-preserving transactions, on which every Ferrata program's public state rests, an instance's
+included, because LEZ applies a private transaction's calls to public actors on the strength of its proof alone (§5;
+RISC Zero 3.0.x is under advisory: the [security note](security/risc0-groth16-advisory-2026-11-21/README.md)).
 
 **Where each clause is answered.**
 
@@ -296,8 +299,8 @@ further test fails if a row is added here without its scenario, or the reverse.
 | Who | Provides | Can affect | If it lies | If it stops | Observes | Why it cannot block an attestation | Walked by |
 |---|---|---|---|---|---|---|---|
 | Submitters (updater operators) | light-client updates, as the public job's transactions | liveness only | refused: the program checks every update's signatures and branches, whoever sends it (VS.6); a forged update moves no store (the test sends two with the signer witness right: one signature byte flipped, refused at `Open` with 41; the committee's genuine signature over a false header whose branches were recomputed to verify, refused at `Finish` with 40) | anyone else submits; an account with no prior relationship to the instance advances it | public chain data | submitting is permissionless and needs only LEZ gas: when every operator stops, the consumer runs the same daemon with its own key | `submitters_any_account_advances_none_is_needed` |
-| Provers (the proven path only) | a proof of an update's verification (`VerifyAll`, then `ApplyVerified`) | liveness only | refused: LEZ verifies the receipt | nobody needs one | the update, which is public | not required: the public job (`Init`, `Adopt`, `Open`, `Miller`, `Finish`) advances the instance with no proof | `provers_none_is_needed_on_the_public_job` |
-| Beacon API providers | bootstraps and updates | liveness only | refused by the updater before it pays (the source is demoted), and by the program if sent anyway; a real update re-dated to a later `signature_slot` (the signature does not cover it) verifies, and the program refuses its `Open` until that slot: the updater refuses an update signed more than 60 s past the chain's clock and demotes its source, and ranks an update whose window has not opened by the chain's clock after every one that can be sent (of updates of one finalized header, the earliest-signed first), so a source re-dating real updates within the 60 s (a copy, or another real update of one finalized header with more signers), even again every round, holds back only an update no other source serves ([`lez/updater/tests/refusals.rs`](../lez/updater/tests/refusals.rs)); not covered: a source that re-dates a real update adopting the next committee to slots that have started (its `Open` window open, so it ranks first), a new slot each round, chosen with the updater's deferral tag (computed from the updater's name and payer account, both public) so that the updater defers that update's `Open` every round, holds every update back while the store lacks its next committee, without end and without demotion, until the operator removes or replaces that source; `/health` raises the stall alarm (`degraded`, then `down`). Measured: the next committee never adopted in 113 rounds after the rotation, past the period's end (review-fix-updater3b M1); `min_agreeing = 2` with a `headers` source does not stop it (the copy's finalized header is canonical; derived, not tested). A fix is in progress; a chain clock more than 60 s behind Ethereum's makes honest sources look so, and they are demoted (`/health` names the gap) | another provider, or the consumer's own beacon node | which light-client data is fetched, and when; the updater's IP address | light-client data is public: any beacon node serves it, the consumer's own included | `beacon_providers_lie_lag_or_stop` |
+| Provers (the proven path only) | a proof of an update's verification (`VerifyAll`, then `ApplyVerified`) | liveness only, while LEZ's check of private-transaction receipts is sound (§5) | refused: LEZ verifies the receipt; a forged receipt LEZ accepted would write the instance's store (§5) | nobody needs one | the update, which is public | not required: the public job (`Init`, `Adopt`, `Open`, `Miller`, `Finish`) advances the instance with no proof | `provers_none_is_needed_on_the_public_job` |
+| Beacon API providers | bootstraps and updates | liveness only | refused by the updater before it pays (the source is demoted), and by the program if sent anyway; a real update re-dated to a later `signature_slot` (the signature does not cover it) verifies, and the program refuses its `Open` until that slot: the updater refuses an update signed more than 60 s past the chain's clock and demotes its source, and ranks an update whose window has not opened by the chain's clock after every one that can be sent (of updates of one finalized header, the earliest-signed first), so a source re-dating real updates within the 60 s (a copy, or another real update of one finalized header with more signers), even again every round, holds back only an update no other source serves ([`lez/updater/tests/refusals.rs`](../lez/updater/tests/refusals.rs)); not covered: a source that re-dates a real update adopting the next committee to slots that have started (its `Open` window open, so it ranks first), a new slot each round, chosen with the updater's deferral tag (computed from the updater's name and payer account, both public) so that the updater defers that update's `Open` every round, holds every update back while the store lacks its next committee, without end and without demotion, until the operator removes or replaces that source; `/health` raises the stall alarm (`degraded`, then `down`). Measured: the next committee never adopted in 113 rounds after the rotation, past the period's end (an internal review's finding M1, 22 November 2026); `min_agreeing = 2` with a `headers` source does not stop it (the copy's finalized header is canonical; derived, not tested). A fix is in progress; a chain clock more than 60 s behind Ethereum's makes honest sources look so, and they are demoted (`/health` names the gap) | another provider, or the consumer's own beacon node | which light-client data is fetched, and when; the updater's IP address | light-client data is public: any beacon node serves it, the consumer's own included | `beacon_providers_lie_lag_or_stop` |
 | Execution RPC providers | `eth_getProof`, receipts and headers for a request | liveness only | refused: a proof is checked against the record's state or receipts root (110 and the other codes of the [consumer guide](guides/consumer-guide.md) §8) | another provider, or the consumer's own node | which accounts, slots and logs a consumer asks about; its IP address | proofs are public data: any full or archive node serves them | `execution_providers_cannot_forge_a_fact` |
 | Checkpoint source | each fresh checkpoint | **safety**, until checked | a false root: `verify_checkpoint` (built, with its provider checks: §2.1) or a manual comparison catches it; a root no honest node serves a bootstrap for gives no instance; an instance from another checkpoint has another id, which a consumer pinned to the instance it checked refuses (211) | nothing to stop: a checkpoint is public | nothing | a finalized block root is public: anyone initialises an instance from one it checked | `checkpoint_source_misleads_only_until_checked` |
 | LEZ sequencers, and the LEZ nodes clients read from | inclusion, ordering, block timestamps; the instance's state and records, read through a node's RPC by the updater and the consumer's client | liveness only, for Ferrata: the zone's execution is LEZ's own trust, as for every program on it; the bridge's LEZ-side clock is attested Ethereum time, which a producer can delay (by leaving out a `Tick`) but not move ([`lez/BRIDGE.md`](../lez/BRIDGE.md) §6) | cannot make the program accept an invalid update; can leave transactions out; a node that misreports the instance makes the updater plan a step the program refuses, or none, and the consumer's `Attest` still runs on the zone's real state | the zone stops for every program; the instance resumes from its own state when the zone does (R.7) | public transactions; senders' IP addresses | a censored submitter is replaced by another (the test leaves one submitter's transactions out); a node is replaced by another or the consumer's own; a zone that includes nothing is an outage of LEZ itself; producers that together leave out every transaction to the program while including others censor it, which only LEZ's own censorship resistance answers, as for every program on the zone | `sequencers_censor_or_stall_the_instance_still_advances` |
@@ -346,7 +349,7 @@ clients, and skipped one finalized checkpoint no two clients served alike; with 
 | The weak-subjectivity bound passed; a whole sync-committee period without Ethereum finality; a third of one committee withholding its signatures for a period | the instance refuses every update (53, or no update to apply) and stops safely; records already written stay valid | move to a replacement instance from a fresh checkpoint, a new trust decision ([consumer guide](guides/consumer-guide.md) §9) | §2.1, §2.2 |
 | A fork that is not in the schedule fixed at `Init` | the instance cannot follow it; a successor instance under the same root id can | accept the successor ([consumer guide](guides/consumer-guide.md) §9) | [`attestation.md`](design/attestation.md) §3.5 |
 | A consumer holding the program's id in mutable state | whoever controls that pointer substitutes a program that attests to anything | pin the program; derive every actor from constants ([consumer guide](guides/consumer-guide.md) §2) | VS.3 |
-| An unsound proof system (RISC Zero, LEZ's privacy circuit) | private reads, private consumers and the proven update path can be forged; the public job path does not depend on it | caps and freezes | §5 |
+| An unsound proof system (RISC Zero, LEZ's privacy circuit), or LEZ accepting a forged receipt (LEZ v0.4.0-rc1 and rc3 verify with risc0-zkvm 3.0.5, under advisory) | private reads and private consumers can be forged, and, through the calls LEZ replays on a receipt's word, any instance's store and records (`ApplyVerified`, or `Apply` and `Record` sent in a job's or the instance's name), which public consumers read too: no check of the public job guards against it | caps and freezes | §5 |
 | A bug in Ferrata's core or program | depends on the bug; the deployed program cannot be patched | move to a new deployment ([consumer guide](guides/consumer-guide.md) §9) | §6 |
 | A LEZ zone that includes nothing | no update, no attestation, for every program on the zone | wait; the instance resumes from its own state | §2.4 |
 
@@ -562,6 +565,55 @@ built, and the test or recorded run that shows the mitigation.
   of the burn index) ([`bridge.md`](design/bridge.md) §12.2–§12.3).
 - **LEZ's privacy-preserving circuit** gates private claims, private burns, private reads and the proven
   update path; its soundness is LEZ's, not Ferrata's.
+- **LEZ's check of private-transaction receipts, and why the public path rests on it too** (added 23 November
+  2026). LEZ v0.4.0-rc1 and rc3 accept a privacy-preserving transaction when each disclosed program's image is the one
+  its account holds and its proof, decoded as any RISC Zero `InnerReceipt`, passes `Receipt::verify` against the
+  privacy circuit's image id (LEZ's `lee/state_machine/src/validated_state_diff/mod.rs:655-688` at v0.4.0-rc3,
+  `:618-651` at rc1; `lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs:51-65`, the same in both). Both lock
+  risc0-zkvm 3.0.5, risc0-groth16 3.0.4 and risc0-circuit-recursion 4.0.4, in whose `Receipt::verify` a composite,
+  succinct or Groth16 receipt is accepted alike (risc0-zkvm 3.0.5 `src/receipt.rs:344-354`; a fake one only in dev
+  mode). LEZ's own prover makes succinct receipts (`circuit/mod.rs:658` at rc3, `:655` at rc1) and its fee model assumes one
+  (LEZ's `lez/programs/fee/core/src/market.rs:45-51`, rc1 and rc3); we found no check that refuses another kind. These versions are in
+  the ranges of RISC Zero's advisory GHSA-g6qg-9j8p-7j87, whose Groth16 verifier accepts a receipt with a substituted
+  claim digest. Whether a forged receipt passes LEZ's check has not been tested: we built none, and it is for Logos to
+  confirm ([security note](security/risc0-groth16-advisory-2026-11-21/README.md) §3 and its correction of 23
+  November 2026). GHSA-mm6c-35cm-g4x2, about the Solidity verifiers, does not reach LEZ.
+  A private transaction acts on public actors through the calls its journal lists as crossing to the public side
+  (`BoundaryStep::PrivateToPublic`, LEZ's `lee/state_machine/core/src/execution_state.rs:132-137`). LEZ replays each
+  of them on the public side as the journal states it, its receiver, message and sender and the authorizations and
+  PDA seeds it carries, with no check of its own (`replay_proven_calls`, `:842-872` at v0.4.0-rc1 and rc3:
+  `proven.with_from(Sender::Call(proven.envelope.from))` at `:849`; LEZ's own comment at `:733-734`: a proven call is
+  "replayed publicly unchecked"); the receipt check is what binds these calls to a
+  real private run. A receiving program sees a replayed call as it sees any call from that sender (`ReceiveInput`,
+  `lee/state_machine/core/src/program/mod.rs:373-385`, has no field that tells them apart), and the delivery's
+  inherited authorizations and PDA seeds decide whether it is authorized (`authorize`, `execution_state.rs:1431-1470`).
+  So, by our reading of LEZ's source (not tested), every check of who sent a call (a named sender, an actor of the
+  receiver's own program: `ReceiveInput::from_own_program`, `program/mod.rs:390-393`) or of its authorization is met by
+  a journal that names it; the receiver's own checks of the call's content still run, since LEZ executes the receiver
+  on the replayed call (`deliver_to_public`, `execution_state.rs:910-917`). A forged receipt LEZ accepted could reach:
+  - in the attestation program, `ApplyVerified` from any actor of the program (`lez/guests/program/src/main.rs:288-305`),
+    `Apply` in a job actor's name (`:269-286`) and `Record` in the instance actor's name (`:405-425`; `attest` trusts a
+    record because only `Record`, accepted from `instance(id)` alone, writes one: `:429-430`). A job is applied after
+    a check of its phase, its adoption and its starting store (`crates/ferrata-core/src/steps.rs:605-623`) and the
+    period and slot-order rules of `apply_core_compact` (`:304-335`), which bound each job, not where a run of them
+    ends: over a few jobs a forger installs a committee of its own. So it could write any instance's store and
+    records, from which every attestation follows, public consumers' included;
+  - in the bridge program, `issue`, which mints (`lez/guests/bridge/src/main.rs:639`), the burn delivery a checkpoint
+    reads (`:775`) and the transfer delivery (`:852`), and the handlers that accept a configuration's or a nullifier's
+    actor as sender (`:180`, `:202`, `:448`, `:473`);
+  - in the reference consumer, `spend` (`lez/guests/consumer/src/main.rs:185`) and its credits (`:219`, `:285`); and in
+    `ferrata_holdings`, `ferrata_statements`, the statements reader and `ferrata_rebate`, the replies they accept by
+    their sender, a record's, an entry's or an instance's (`lez/guests/holdings/src/main.rs:40`,
+    `lez/guests/statements/src/main.rs:41`, `lez/guests/statements-reader/src/main.rs:43`,
+    `lez/guests/rebate/src/main.rs:59`, `:89`).
+  No Ferrata program is outside this, and nothing in these programs removes it. A program cannot tell a replayed call
+  from a call another actor makes. A replayed call always names a sender (LEZ's `Sender::source`,
+  `execution_state.rs:346-351`), so only handlers that take top-level calls alone are out of its reach, such as the
+  bridge's role actors (`lez/guests/bridge/src/main.rs:979`). Every Ferrata program accepts calls from other actors
+  somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
+  `Record` in its own actors' names. The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
+  risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). No live exposure follows today: no v0.4 program of ours runs on a public
+  network, and every v0.4 sequencer named in this repository is one we ran.
 - **If the proof system is unsound** and RISC Zero publishes the proof, anyone can trip the stop: nothing
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
@@ -672,7 +724,7 @@ secret `s` and the opening of its commitment `C` (`s`, the destination's kind, t
 `sOut` and recipient, and the burn counter. **On the default, private path, none of them leaves the user's machine, and
 none is in any submitted transaction** (a plaintext claim, which the user must choose explicitly, publishes its whole
 witness: the leaf index, the depositor, `j`, `s` and the destination): the privacy suite searched every public byte of both chains over 20 round trips for 320 such values
-and found none, in dev mode and on real proofs of the final programs (EVIDENCE rows 23, 89;
+and found none, in dev mode on this tree's programs and on real proofs of the deployed ones (the bridge program `0xccde6171…`, before milestone B1; EVIDENCE rows 23, 89;
 [`privacy/RESULTS.md`](privacy/RESULTS.md); every public field, step by step:
 [`privacy/generated/fields.md`](privacy/generated/fields.md)).
 

@@ -1,5 +1,9 @@
 # Security note, 21 November 2026: RISC Zero's Groth16 advisory and Ferrata
 
+> **Corrected 23 November 2026**: the light client's public path is not independent of LEZ's check of
+> privacy-preserving transactions, as "Not affected" below said; see [the correction](#correction-23-november-2026).
+> The rest of the note stands as written on 21 November 2026.
+
 RISC Zero published two critical advisories on 11 November 2026:
 [GHSA-g6qg-9j8p-7j87](https://github.com/risc0/risc0/security/advisories/GHSA-g6qg-9j8p-7j87) (risc0-zkvm) and
 [GHSA-mm6c-35cm-g4x2](https://github.com/risc0/risc0-ethereum/security/advisories/GHSA-mm6c-35cm-g4x2) (the Ethereum
@@ -104,6 +108,60 @@ built from it refuses our 3.0.5 receipts until our guests are rebuilt.
 - Ethereum mainnet: nothing of ours is deployed there. No one's funds: the vaults hold the deployer's Sepolia ether.
 - LEZ public transactions, which the sequencer executes rather than verifies by proof (the light client's updates and
   records on its public path, the public LEZ testnet instance of EVIDENCE row 150), and the native light-client core.
+  **Qualified 23 November 2026** ([correction](#correction-23-november-2026)): the public transactions are not checked
+  by proof, but on LEZ v0.4 a privacy-preserving transaction's calls to public actors are applied on its proof alone
+  and can write the instance's store and records, so the light client's records rest on LEZ's receipt check as well.
+  For the v0.3.1 instance of row 150 this was not examined (below).
+
+## Correction, 23 November 2026
+
+**What the note said.** Under "Not affected" (above, as written on 21 November 2026): "LEZ public transactions, which
+the sequencer executes rather than verifies by proof (the light client's updates and records on its public path, …)".
+
+**What holds.** A public transaction is executed by the sequencer, not checked by proof, so the public path's own steps
+(the job's `Open`, `Miller` and `Finish`, and `Attest`) do not depend on RISC Zero. The state they read does. On LEZ v0.4
+a privacy-preserving transaction acts on public actors through the calls its journal lists, and LEZ replays each on the
+public side as the journal states it, sender, inherited authorizations and PDA seeds included, with no check of its own
+(LEZ's `lee/state_machine/core/src/execution_state.rs:842-872`, `proven.with_from(Sender::Call(proven.envelope.from))`
+at `:849`, at v0.4.0-rc1 and rc3); a receiving program cannot tell such a call from a call another actor makes
+(`ReceiveInput`, `lee/state_machine/core/src/program/mod.rs:373-385`), though its own checks of the call's content still
+run (`execution_state.rs:910-917`). Only the receipt check binds these calls to a real private run.
+LEZ v0.4.0-rc1 and rc3 accept a transaction when its proof, decoded as any `InnerReceipt`, passes `Receipt::verify` for
+the privacy circuit (`lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs:51-65`, the same in both).
+With the versions both lock (risc0-zkvm 3.0.5, risc0-groth16 3.0.4, risc0-circuit-recursion 4.0.4), that accepts a
+Groth16 receipt as well as a succinct one (risc0-zkvm 3.0.5 `src/receipt.rs:344-354`): the receipt kind
+GHSA-g6qg-9j8p-7j87 is about, in its affected versions. So if LEZ accepts a forged receipt, which §3 above leaves to
+Logos to confirm and which we have not tested (we built no forgery), it could, by our reading of LEZ's source, write any
+instance's store and records: through `ApplyVerified`, which an instance accepts from any actor of the program
+(`lez/guests/program/src/main.rs:288-305`), or through `Apply` and `Record` sent in a job's or the instance's name
+(`:269-286`, `:405-425`). A job is applied after a check of its phase, its adoption and its starting store
+(`crates/ferrata-core/src/steps.rs:605-623`) and the period rules of `apply_core_compact` (`:304-335`). The records
+public consumers read follow from that store. GHSA-mm6c-35cm-g4x2 (the Solidity verifiers) does not reach LEZ. Every
+Ferrata program's public state rests on the same check: the bridge program's (`issue` and the burn and transfer
+deliveries, `lez/guests/bridge/src/main.rs:639`, `:775`, `:852`, among others), the reference consumer's
+(`lez/guests/consumer/src/main.rs:185`), and that of the programs that accept a reply by its sender (`ferrata_holdings`,
+`ferrata_statements`, the statements reader, `ferrata_rebate`), as `docs/trust.md` §5 lists. RFP-022's rows Sec.2, Sec.3
+and Sec.6 state it for the bridge.
+
+No live exposure follows: no v0.4 program of ours runs on a public network, and every v0.4 sequencer named in this
+repository is one we ran. The experimental v0.3.1 port (row 150) is the one live LEZ deployment. On v0.3.1 a private
+transaction's public effects go through the owning program's apply (LEZ v0.3.1
+`lee/state_machine/src/validated_state_diff/mod.rs:556`), where the port runs every light-client check
+(`lez-v03/guest/src/main.rs:16-19`); whether a forged privacy-preserving transaction could write its state there was not
+examined.
+
+**Why it was missed.** The note judged the public path by the transactions it sends, not by everything that can
+write the state it reads. Internal reviews of `main` at `8c38d723` (22 and 23 November 2026) found it.
+
+**What changes.** `docs/trust.md` states it: a fourth assumption in §0, the provers' row of §2.4, §2.5 and §5. The
+RFP-021 rows of `docs/requirements-status.md` that rest on an instance's store (F.1, F.2, F.12, S.6, VS.1, VS.2, VS.5,
+VS.6) and RFP-022 Sec.6 give it as a condition. Nothing deployed changes. Nothing in our programs removes the dependence.
+A program cannot tell a replayed call from a call another actor makes. A replayed call always names a sender
+(`execution_state.rs:346-351`), so only handlers that take top-level calls alone are out of its reach, such as the
+bridge's role actors (`lez/guests/bridge/src/main.rs:979`). Every Ferrata program accepts calls from other actors
+somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
+`Record` in its own actors' names. The fix is LEZ's, a LEZ on risc0
+3.1.0.
 
 ## Plan
 

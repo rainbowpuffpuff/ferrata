@@ -21,7 +21,9 @@ is named. The code is a prototype, not audited and not for production ([`README.
 ## 0. The model, the journey, and where each clause is answered
 
 **The model (VS.5).** Your program trusts no relayer, no RPC provider and no operator. It trusts the checkpoint of
-the instance it pins (check it once: §7) and two thirds of each sync committee, and nothing else: the attestation
+the instance it pins (check it once: §7) and two thirds of each sync committee and, beneath both, LEZ's verification
+of private-transaction proofs, through which an instance's store can also be written ([`docs/trust.md`](../trust.md)
+§5), and nothing else: the attestation
 program verifies the committee's signatures itself and proves every fact against the record it wrote, inside your
 transaction. Whoever runs the updater, fetches your proofs or submits your transaction only carries data the
 program accepts or refuses; if one of them lies the transaction is refused, if one stops anyone else, you included,
@@ -125,9 +127,11 @@ each hop; each proof against the state or receipts root; each condition and rela
 against the slot it names. It changes no state ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5).
 
 Proof data travels in the transaction. A log needs its whole receipt as the trie leaf: the block's
-largest receipt (306 logs) made a 58,812-byte transaction and cost 1,618,872 cycles; a receipt several
+largest receipt (306 logs) made a 58,812-byte transaction and cost 1,619,960 cycles; a receipt several
 times larger would not fit the 5M execution target (measured, in-process harness;
-[`lez/RESULTS.md`](../../lez/RESULTS.md) §5, row 6 and "What is not built").
+[`lez/results/stage4-attest.md`](../../lez/results/stage4-attest.md) row 6, regenerated at `7602bc53` with this tree's
+programs; [`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "What is not built", whose table is an earlier copy reading
+1,618,872).
 
 ## 4. The two paths in detail
 
@@ -138,21 +142,22 @@ sender check of §2. LEZ v0.4 runs synchronous messages depth-first in one trans
 and the action succeed or fail together ([`attestation.md`](../design/attestation.md) §6.1).
 
 Measured on mainnet block 26,384,851 (finalized 10 November 2026), in-process harness, RISC Zero's
-accelerated Keccak in the program ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5,
-`results/stage4-attest.md`, `results/stage4-attest-consumer.md`):
+accelerated Keccak in the program ([`lez/results/stage4-attest.md`](../../lez/results/stage4-attest.md) and
+[`stage4-attest-consumer.md`](../../lez/results/stage4-attest-consumer.md), regenerated at `7602bc53` with this tree's
+programs; [`lez/RESULTS.md`](../../lez/RESULTS.md) §5 keeps an earlier copy):
 
 | Transaction | Execution gas | Of the 5M target | Storage gas (tx bytes) |
 |---|---:|---:|---:|
-| `Attest` as the transaction's root: an account | 167,882 | 3% | 4,424 |
-| a storage slot, with a condition | 274,842 | 5% | 7,338 |
-| an ERC-20 `Transfer` log (receipt of 7 logs) | 96,584 | 2% | 2,623 |
-| the same, receipt of 306 logs | 1,618,872 | 32% | 58,812 |
-| one history hop (16 blocks back), then a slot | 498,204 | 10% | 13,578 |
-| four facts in one call, with a relation | 453,182 | 9% | 12,309 |
-| a consumer actor calls `Attest` for a storage slot and keeps the reply | 384,776 | 8% | 7,507 |
-| the same for a log | 163,704 | 3% | 2,792 |
-| the reference consumer's claim of a `Transfer` (four handlers) | 183,538 | 4% | 2,768 |
-| the same claim again, refused by the nullifier (223) | 14,835 | 0% | 2,768 |
+| `Attest` as the transaction's root: an account | 168,909 | 3% | 4,424 |
+| a storage slot, with a condition | 275,865 | 6% | 7,338 |
+| an ERC-20 `Transfer` log (receipt of 7 logs) | 97,485 | 2% | 2,623 |
+| the same, receipt of 306 logs | 1,619,960 | 32% | 58,812 |
+| one history hop (16 blocks back), then a slot | 499,277 | 10% | 13,578 |
+| four facts in one call, with a relation | 454,255 | 9% | 12,309 |
+| a consumer actor calls `Attest` for a storage slot and keeps the reply | 386,181 | 8% | 7,507 |
+| the same for a log | 164,872 | 3% | 2,792 |
+| the reference consumer's claim of a `Transfer` (four handlers) | 185,389 | 4% | 2,768 |
+| the same claim again, refused by the nullifier (223) | 14,936 | 0% | 2,768 |
 
 Without the accelerated Keccak the same attestations cost 0.34M to 2.1M cycles, and 8.2M for the
 306-log receipt ([`attestation.md`](../design/attestation.md) §13, P.1). Sent as a transaction's
