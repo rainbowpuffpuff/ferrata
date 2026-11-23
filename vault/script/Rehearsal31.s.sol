@@ -119,6 +119,57 @@ contract Rehearsal31 is Script {
         console2.log(frozen ? "FERRATA_OK releases frozen" : "FERRATA_OK releases unfrozen");
     }
 
+    /// @notice One more deposit, of a commitment of the rehearsal's own: escrow for a forged release to try to take.
+    function depositOne(bytes32 commitment) external {
+        FerrataVault v = _vault();
+        uint64 index = uint64(v.nextLeafIndex());
+        vm.broadcast();
+        v.depositETH{value: 0.001 ether + 2e12}(0, commitment, index);
+        console2.log("FERRATA_OK one more deposit");
+    }
+
+    /// @dev Release 0's request with another nullifier: a burn nobody made, which no proof could bind.
+    function _forged(bytes32 nullifier) internal view returns (FerrataVault.ReleaseRequest memory r, bytes memory seal) {
+        (r, seal) = _release(0);
+        r.nullifier = nullifier;
+    }
+
+    function forgedRefused(bytes32 nullifier, bytes4 selector) external {
+        (FerrataVault.ReleaseRequest memory r, bytes memory seal) = _forged(nullifier);
+        (bool ok, bytes memory ret) = address(_vault()).call(abi.encodeCall(FerrataVault.release, (r, seal)));
+        require(!ok, "the forged release went through");
+        require(ret.length >= 4 && bytes4(ret) == selector, "refused with another error");
+        console2.log("FERRATA_OK the forged release refused as expected");
+    }
+
+    function forgedRelease(bytes32 nullifier) external {
+        (FerrataVault.ReleaseRequest memory r, bytes memory seal) = _forged(nullifier);
+        uint256 before = r.recipient.balance;
+        vm.broadcast();
+        _vault().release(r, seal);
+        console2.log(string.concat("FERRATA_OK the forged release paid (wei) ", vm.toString(r.recipient.balance - before)));
+    }
+
+    /// @notice A forged checkpoint (a new state and burn root nobody attested, on the final state), sent while a
+    ///         watcher's pause holds.
+    function forgedCheckpointRefused(bytes4 selector) external {
+        FerrataVault v = _vault();
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        c.parentState = v.finalState();
+        c.newState = keccak256("fork rehearsal 3.1: a state nobody attested");
+        c.burnRoot = keccak256("fork rehearsal 3.1: burns nobody made");
+        (bool ok, bytes memory ret) = address(v).call(abi.encodeCall(FerrataVault.submitCandidate, (c, hex"00")));
+        require(!ok, "the forged candidate went in");
+        require(ret.length >= 4 && bytes4(ret) == selector, "refused with another error");
+        console2.log("FERRATA_OK the forged checkpoint refused as expected");
+    }
+
+    function pauseCheckpoints() external {
+        vm.broadcast();
+        _vault().pauseCheckpoints();
+        console2.log("FERRATA_OK checkpoints paused by a watcher");
+    }
+
     function release(uint256 i) external {
         (FerrataVault.ReleaseRequest memory r, bytes memory seal) = _release(i);
         require(bytes4(seal) == bytes4(0xe71e6620), "not a seal of RISC Zero 3.1");

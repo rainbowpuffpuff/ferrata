@@ -15,6 +15,8 @@
 #      again under RISC Zero 3.1 (test/real/fixtures/zone-bridge-rc3.json), submitted, final after Δ = 1 h; releases
 #      frozen by the freeze authority and a release refused; unfrozen; both releases paid with their 3.1 seals; a replay
 #      refused.
+#   3. Decision D1 (a) against a forgery (the verifier's code replaced on the fork by STOP, which accepts every seal):
+#      a watcher's pause refuses a forged checkpoint; a freeze refuses a forged release; lifted, the forgery is paid.
 #
 #   script/fork-rehearsal-31.sh [<log directory>]     FERRATA_FORK_URL: a public Sepolia RPC (default publicnode)
 # Prints FORK REHEARSAL 31 OK at the end; <log directory>/transcript.txt has every step with its gas and time.
@@ -127,4 +129,19 @@ step "release(uint256)" "$relayer" 1 1
 step "refused(uint256,bytes4)" "$relayer" 0 0 "$(cast sig 'NullifierAlreadyUsed()')"
 after="$(cast balance "$recipient" --rpc-url "$rpc")"
 say "recipient $recipient received $(python3 -I -c "print($after - $before)") wei for the two releases"
+
+# Decision D1 (a) against the advisory's forgery, stood in for on the fork as
+# docs/security/risc0-groth16-advisory-2026-11-21/fork-rehearsal.sh does: the verifier's code replaced by one STOP
+# opcode, which accepts every seal. A watcher's pause stops a forged checkpoint; the freeze authority's freeze stops a
+# forged release; with the freeze lifted, the same forged release is paid (what the controls are for).
+step "depositOne(bytes32)" "$deployer" 1 "$(cast keccak 'fork rehearsal 3.1: one more deposit')"
+cast rpc --rpc-url "$rpc" anvil_setCode "$g16" 0x00 > /dev/null
+say "the verifier's code replaced on the fork by STOP (the forgery stood in for: every seal accepted)"
+step "pauseCheckpoints()" "$watcher" 1
+step "forgedCheckpointRefused(bytes4)" "$relayer" 0 "$(cast sig 'CheckpointsAreFrozen()')"
+forged="$(cast keccak 'fork rehearsal 3.1: a burn nobody made')"
+step "setReleasesFrozen(bool)" "$freeze" 1 true
+step "forgedRefused(bytes32,bytes4)" "$relayer" 0 "$forged" "$(cast sig 'ReleasesAreFrozen()')"
+step "setReleasesFrozen(bool)" "$freeze" 1 false
+step "forgedRelease(bytes32)" "$relayer" 1 "$forged"
 say "FORK REHEARSAL 31 OK"
