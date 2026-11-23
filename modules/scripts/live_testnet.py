@@ -76,9 +76,13 @@ def collect(out, rec):
              (os.environ.get("ML_WORK", "/var/tmp/ml") + "/", "<work>/"),
              (os.environ.get("LOGOS_TMPDIR", "/var/tmp/mls") + "/", "<logos-tmp>/"),
              (spike + "/", "<spike>/"), (os.path.expanduser("~") + "/", "~/")]
+    # Everything collect writes is written again; the record's README (written by hand) stays.
     if os.path.exists(rec):
-        shutil.rmtree(rec)
-    os.makedirs(rec)
+        for f in os.listdir(rec):
+            if f != "README.md":
+                p = os.path.join(rec, f)
+                shutil.rmtree(p) if os.path.isdir(p) else os.remove(p)
+    os.makedirs(rec, exist_ok=True)
     kept = []
     for item in KEEP:
         src = os.path.join(out, item)
