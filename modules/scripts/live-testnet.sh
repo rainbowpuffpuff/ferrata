@@ -19,6 +19,9 @@
 #                                         (bench/perf/tree_sample.py), each daemon's traffic counted by its own relay
 #                                         (bench/perf/http_relay.py); a restart through the module's stop and start; the
 #                                         module's stop and Logos Core's stop at the end
+#   live-testnet.sh build-bridge OUT      ferrata_monitor_module and ferrata_relayer_module (dev packages, the tree as
+#                                         committed)
+#   live-testnet.sh bridge-modules OUT [IDLE_MIN]   bench/perf/daemons-anvil-modules.sh with them (RFP-022 P.6)
 #   live-testnet.sh collect OUT RECORD    the record (no keys, no wallet storage, the host's name and the box's paths
 #                                         replaced) and its summary (modules/scripts/live_testnet.py)
 #
@@ -165,7 +168,8 @@ prepare() { # MODULE SOURCE_TREE: the module's copy in a fresh repository, the s
   (
     cd "$b" || exit 1
     git init -q && git add -A
-    for c in rust-lib/staged rust-lib/upstream rust-lib/vendor; do if [ -d "$c" ]; then git add -f "$c"; fi; done
+    for c in rust-lib/staged rust-lib/upstream rust-lib/attestor rust-lib/crates rust-lib/monitor rust-lib/checkpoint \
+             rust-lib/vendor; do if [ -d "$c" ]; then git add -f "$c"; fi; done
     git add -f rust-lib/Cargo.lock
     if [ ! -f flake.lock ]; then nix flake lock && git add flake.lock; fi
   )
@@ -219,6 +223,20 @@ do_build() {
   } > "$rep/artifacts.txt" 2>&1
   if [ "${SAVE_NIX:-1}" = 1 ]; then step save-nix save_nix; fi
   failures=$(grep -c FAILED "$rep/steps.md")
+}
+
+# RFP-022's two Ethereum-side daemons as modules (the tree as committed, LEZ v0.4.0-rc1 for the relayer's LEZ side).
+do_build_bridge() {
+  step stage-bridge-modules "$here/stage.sh" ferrata_monitor_module ferrata_relayer_module || return 1
+  step prepare-monitor prepare ferrata_monitor_module "$repo" || return 1
+  step prepare-relayer prepare ferrata_relayer_module "$repo" || return 1
+  step lgx-ferrata_monitor_module lgx ferrata_monitor_module
+  step lgx-ferrata_relayer_module lgx ferrata_relayer_module
+  failures=$(grep -c FAILED "$rep/steps.md")
+}
+do_bridge_modules() {
+  LOGOS_TMPDIR=/var/tmp/mlb bash "$repo/bench/perf/daemons-anvil-modules.sh" "$out/daemons-anvil-modules" "${1:-10}" \
+    "$out/logos/bin/logosctl" "$out/lgx-ferrata_monitor_module" "$out/lgx-ferrata_relayer_module"
 }
 
 # ---- instance -----------------------------------------------------------------------------------------------------
@@ -288,12 +306,12 @@ do_session() {
   trap cleanup EXIT
   # Each daemon's traffic through its own relay.
   relay() { python3 -I "$repo/bench/perf/http_relay.py" --listen "$2" --to "$3" --stats "$W/relay/$1.json" --series "$W/relay/$1.jsonl" --every 30 & pids+=($!); }
-  relay lez-updater 18601 "$FERRATA_TESTNET_RPC"
-  relay lez-monitor 18602 "$FERRATA_TESTNET_RPC"
-  relay lodestar-updater 18611 "$LODESTAR"
-  relay nimbus-updater 18612 "$NIMBUS"
-  relay lodestar-monitor 18621 "$LODESTAR"
-  relay publicnode-monitor 18622 "$PN_BEACON"
+  relay lez-updater 18701 "$FERRATA_TESTNET_RPC"
+  relay lez-monitor 18702 "$FERRATA_TESTNET_RPC"
+  relay lodestar-updater 18711 "$LODESTAR"
+  relay nimbus-updater 18712 "$NIMBUS"
+  relay lodestar-monitor 18721 "$LODESTAR"
+  relay publicnode-monitor 18722 "$PN_BEACON"
   sleep 1
   ctl() { "$out/logos/bin/logosctl" --config-dir "$SESSION" "$@"; }
   call() { # MODULE METHOD NAME [ARGS...]
@@ -314,7 +332,7 @@ do_session() {
     --find "updater-module=logos_host --name ferrata_updater_module " --find "attest-module=logos_host --name ferrata_attest_module " \
     --find "beacon_api_module=logos_host --name beacon_api_module " --find "eth_rpc_module=logos_host --name eth_rpc_module " \
     --find "attest-monitor=attest-monitor watch " --find "core=logosctl --config-dir $SESSION daemon" \
-    --find "relays=python3 -I $repo/bench/perf/http_relay.py --listen 18601 " & pids+=($!)
+    --find "relays=python3 -I $repo/bench/perf/http_relay.py --listen 18701 " & pids+=($!)
   env HOME="$W/home" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-$HOME/.risc0/bin/r0vm}" \
     "$out/logos/bin/logosctl" --config-dir "$SESSION" daemon start --detach >> "$W/core-start.log" 2>&1
   for m in beacon_api_module eth_rpc_module ferrata_attest_module ferrata_updater_module; do
@@ -330,8 +348,8 @@ do_session() {
   # Consensus endpoints through beacon_api_module: its own defaults, and the two the updater asks first, each through
   # its counting relay (an operator's own providers, added with the module's add_provider).
   call beacon_api_module init_defaults bam-init_defaults
-  call beacon_api_module add_provider bam-add-lodestar "$CHAIN" '{"endpoint":"http://127.0.0.1:18611","id":"lodestar-counted"}'
-  call beacon_api_module add_provider bam-add-nimbus "$CHAIN" '{"endpoint":"http://127.0.0.1:18612","id":"nimbus-counted"}'
+  call beacon_api_module add_provider bam-add-lodestar "$CHAIN" '{"endpoint":"http://127.0.0.1:18711","id":"lodestar-counted"}'
+  call beacon_api_module add_provider bam-add-nimbus "$CHAIN" '{"endpoint":"http://127.0.0.1:18712","id":"nimbus-counted"}'
   call beacon_api_module list_providers bam-providers "$CHAIN"
   # The execution endpoint through eth_rpc_module (mode off: straight to the endpoint).
   call eth_rpc_module set_network_scope rpc-scope both
@@ -350,7 +368,7 @@ listen = "127.0.0.1:9464"
 ledger = "sequencer"
 
 [sequencer]
-rpc = "http://127.0.0.1:18601"
+rpc = "http://127.0.0.1:18701"
 program = "$program"
 wait_final = true
 
@@ -399,8 +417,8 @@ T
   marks updater-start
   CALL_MS=600000 call ferrata_updater_module start U-start-1 "@$W/req/updater-config.json"
   # attest-monitor on the same instance: the instance through its relay, two providers through theirs.
-  "$BIN/attest-monitor" watch --state lez:http://127.0.0.1:18602 --program "$(b58hex "$program")" \
-    --instance "$id" --provider lodestar=http://127.0.0.1:18621 --provider publicnode=http://127.0.0.1:18622 --interval 60 \
+  "$BIN/attest-monitor" watch --state lez:http://127.0.0.1:18702 --program "$(b58hex "$program")" \
+    --instance "$id" --provider lodestar=http://127.0.0.1:18721 --provider publicnode=http://127.0.0.1:18722 --interval 60 \
     --alert-log "$W/monitor/alerts.jsonl" --status-file "$W/monitor/status.json" --state-file "$W/monitor/seen.json" \
     > "$W/monitor/monitor.log" 2>&1 & local mon=$!
   pids+=("$mon")
@@ -475,7 +493,7 @@ print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h
 attest_phase() {
   local W=$1 program=$2 id=$3 checkpoint=$4 slot hash dir
   marks attest-start
-  "$BIN/attest-monitor" state --state "lez:http://127.0.0.1:18602" --program "$(b58hex "$program")" --instance "$id" > "$W/attest/state.json" 2> "$W/attest/state.err" || return 1
+  "$BIN/attest-monitor" state --state "lez:http://127.0.0.1:18702" --program "$(b58hex "$program")" --instance "$id" > "$W/attest/state.json" 2> "$W/attest/state.err" || return 1
   jq -n --slurpfile s "$W/attest/state.json" --arg c "$checkpoint" --arg id "$id" \
     '{state: $s[0].instance_state, checkpoint: $c, expected_instance_id: $id}' > "$W/req/read_instance.json"
   call ferrata_attest_module read_instance A-read_instance "@$W/req/read_instance.json" || return 1
@@ -526,6 +544,8 @@ attest_phase() {
 
 case "$cmd" in
   build) do_build ;;
+  build-bridge) do_build_bridge ;;
+  bridge-modules) do_bridge_modules "${3:-10}" ;;
   instance) do_instance ;;
   session) do_session "${3:-90}" ;;
   collect) python3 -I "$here/live_testnet.py" collect "$out" "${3:?RECORD directory}" || failures=$((failures + 1)) ;;
