@@ -69,6 +69,17 @@ Checks failed: 0
 | lodestar-monitor | 264 | 0 | 0.03 MiB | 0.20 MiB | 5955.7 |
 | publicnode-monitor | 264 | 0 | 0.03 MiB | 0.24 MiB | 5955.7 |
 
+After the updater's start (the relays' series; per hour *derived*):
+
+| relay | seconds | requests | up | down | MB per hour up / down |
+|---|---:|---:|---:|---:|---:|
+| lez-updater | 5370.2 | 8952 | 2.12 MiB | 31.47 MiB | 1.49 / 22.12 |
+| lodestar-updater | 5370.2 | 257 | 0.03 MiB | 7.44 MiB | 0.02 / 5.23 |
+| nimbus-updater | 5370.2 | 256 | 0.03 MiB | 7.32 MiB | 0.02 / 5.15 |
+| lez-monitor | 5370.2 | 88 | 0.02 MiB | 0.21 MiB | 0.01 / 0.15 |
+| lodestar-monitor | 5370.2 | 261 | 0.03 MiB | 0.19 MiB | 0.02 / 0.14 |
+| publicnode-monitor | 5370.2 | 261 | 0.03 MiB | 0.24 MiB | 0.02 / 0.17 |
+
 ## Module calls
 
 | call | module | method | exit | seconds |

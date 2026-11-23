@@ -987,6 +987,56 @@
    "up": 34408
   }
  },
+ "traffic_after_start": {
+  "lez-monitor": {
+   "down": 217551,
+   "down_mb_per_hour": 0.15,
+   "requests": 88,
+   "seconds": 5370.2,
+   "up": 21824,
+   "up_mb_per_hour": 0.01
+  },
+  "lez-updater": {
+   "down": 33003420,
+   "down_mb_per_hour": 22.12,
+   "requests": 8952,
+   "seconds": 5370.2,
+   "up": 2223139,
+   "up_mb_per_hour": 1.49
+  },
+  "lodestar-monitor": {
+   "down": 202713,
+   "down_mb_per_hour": 0.14,
+   "requests": 261,
+   "seconds": 5370.2,
+   "up": 34017,
+   "up_mb_per_hour": 0.02
+  },
+  "lodestar-updater": {
+   "down": 7803510,
+   "down_mb_per_hour": 5.23,
+   "requests": 257,
+   "seconds": 5370.2,
+   "up": 30335,
+   "up_mb_per_hour": 0.02
+  },
+  "nimbus-updater": {
+   "down": 7680245,
+   "down_mb_per_hour": 5.15,
+   "requests": 256,
+   "seconds": 5370.2,
+   "up": 30208,
+   "up_mb_per_hour": 0.02
+  },
+  "publicnode-monitor": {
+   "down": 249850,
+   "down_mb_per_hour": 0.17,
+   "requests": 261,
+   "seconds": 5370.2,
+   "up": 34017,
+   "up_mb_per_hour": 0.02
+  }
+ },
  "updater_config": {
   "ledger": "sequencer",
   "min_agreeing": 2,

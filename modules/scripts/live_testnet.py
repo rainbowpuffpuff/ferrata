@@ -290,6 +290,21 @@ def summary(rec, write=True):
     # ---- traffic ---------------------------------------------------------------------------------------------------
     S["traffic"] = {n: relay_of(rec, n) for n in ("lez-updater", "lodestar-updater", "nimbus-updater", "lez-monitor",
                                                   "lodestar-monitor", "publicnode-monitor") if relay_of(rec, n)}
+    # After the updater's start (its follower from genesis), from each relay's series (totals every 30 s): the steady
+    # rate, per hour (derived from the measured totals).
+    t_started = marks.get("updater-started")
+    if t_started:
+        steady = {}
+        for n in S["traffic"]:
+            ser = jsonl(rec, f"session/relay/{n}.jsonl")
+            after = [x for x in ser if x["t"] >= t_started]
+            if len(after) >= 2:
+                a, b = after[0], after[-1]
+                h = (b["t"] - a["t"]) / 3600
+                steady[n] = {"seconds": round(b["t"] - a["t"], 1), "requests": b["requests"] - a["requests"], "up": b["up"] - a["up"],
+                             "down": b["down"] - a["down"], "up_mb_per_hour": round((b["up"] - a["up"]) / 1e6 / h, 2),
+                             "down_mb_per_hour": round((b["down"] - a["down"]) / 1e6 / h, 2)}
+        S["traffic_after_start"] = steady
     # ---- the module calls ------------------------------------------------------------------------------------------
     calls = []
     for row in csv.DictReader((rd(rec, "session/calls.tsv") or "").splitlines(), delimiter="\t"):
@@ -452,6 +467,11 @@ def markdown(S):
           "| relay | requests | errors | up | down | seconds |", "|---|---:|---:|---:|---:|---:|"]
     for k, v in S["traffic"].items():
         o.append(f"| {k} | {v['requests']} | {v['errors']} | {mib(v['up'])} | {mib(v['down'])} | {v['seconds']} |")
+    if S.get("traffic_after_start"):
+        o += ["", "After the updater's start (the relays' series; per hour *derived*):", "",
+              "| relay | seconds | requests | up | down | MB per hour up / down |", "|---|---:|---:|---:|---:|---:|"]
+        for k, v in S["traffic_after_start"].items():
+            o.append(f"| {k} | {v['seconds']} | {v['requests']} | {mib(v['up'])} | {mib(v['down'])} | {v['up_mb_per_hour']} / {v['down_mb_per_hour']} |")
     o += ["", "## Module calls", "", "| call | module | method | exit | seconds |", "|---|---|---|---:|---:|"]
     for c in S["calls"]:
         o.append(f"| {c['name']} | {c['module']} | {c['method']} | {c['exit']} | {c['seconds']} |")
