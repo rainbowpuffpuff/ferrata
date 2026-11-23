@@ -1,7 +1,7 @@
 """The image ids the tools resolve, offline: `python3 -I scripts/test_image_ids.py`.
 
-docs/image-ids.md names each program once; the live runs' records are held to the bridge program they deployed (the
-first table's `ferrata_bridge`) and a run of the bridge program since milestone B1 to `ferrata_bridge_b1`, by
+docs/image-ids.md names each program once and its first table lists the 14 guests this tree builds; the live runs'
+records are held to the bridge program they deployed (`ferrata_bridge`, under "Superseded") and a run of the bridge program since milestone B1 to `ferrata_bridge_b1`, by
 scripts/verify-sepolia.py's "image ids" check, run here on the committed records of crown-live-3 and crown-live-4 with
 every socket refused and an RPC stand-in that answers only the chain's id and head; scripts/reproduce/compare_ids.py
 holds this tree's rebuilt bridge program to `ferrata_bridge_b1`, as the crown runner and the crown driver hold a
@@ -133,8 +133,9 @@ class ImageIds(unittest.TestCase):
         """compare_ids.py on the outputs of a rebuild of this tree whose bridge program is `bridge`."""
         out = os.path.join(self.tmp, f"out-{bridge[2:10]}-{release[2:6]}")
         os.makedirs(os.path.join(out, "r0bf"))
-        first = open(DOC, encoding="utf-8").read().split("## For zones")[0]
-        ids = {n: i for n, i, _ in ROW.findall(first)}
+        cmp = load("compare_ids_offline", os.path.join(HERE, "reproduce", "compare_ids.py"))
+        first = re.split(r"\n## ", open(DOC, encoding="utf-8").read(), maxsplit=1)[0]  # as compare_ids.py reads it
+        ids = {cmp.GUEST.get(n, n): i for n, i, _ in ROW.findall(first)}  # the names a rebuild gives its guests
         self.assertEqual(len(ids), 14)
         ids["ferrata_bridge"] = bridge
         if release:
@@ -147,7 +148,6 @@ class ImageIds(unittest.TestCase):
         with open(os.path.join(out, "r0bf", "ids.jsonl"), "w") as f:
             f.writelines(json.dumps({"program": f"{n}.bin", "image_id": ids[n], "sha256": "x"}) + "\n"
                          for n in ("checkpoint_b", "checkpoint", "segment", "release"))
-        cmp = load("compare_ids_offline", os.path.join(HERE, "reproduce", "compare_ids.py"))
         argv, text = sys.argv, io.StringIO()
         sys.argv = ["compare_ids.py", "--out", out]
         try:
@@ -160,7 +160,11 @@ class ImageIds(unittest.TestCase):
     def test_compare_holds_this_trees_bridge_to_b1(self):
         rc, text = self.compare(self.b1)
         self.assertEqual(rc, 0, text)
-        self.assertIn("5 of 6 ids of the crown run's programs equal the recorded ones; bridge: this tree's own", text)
+        # The crown run's attestation program is this tree's; its bridge (before B1) and its four Ethereum-side programs
+        # (RISC Zero 3.0.5) are not: this tree builds `ferrata_bridge_b1` and the `*_31` rows.
+        self.assertIn("1 of 6 ids of the crown run's programs equal the recorded ones; bridge: this tree's own", text)
+        for k in ("bridge", "checkpoint_b", "checkpoint", "segment", "release"):
+            self.assertIn(f"{k}: this tree's own (docs/image-ids.md), equal", text)
         self.assertIn("14 of 14 guests equal docs/image-ids.md", text)
         rc, text = self.compare(self.deployed)  # the program before B1 is not what this tree builds
         self.assertEqual(rc, 1, text)

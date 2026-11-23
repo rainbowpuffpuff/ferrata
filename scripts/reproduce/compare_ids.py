@@ -17,8 +17,8 @@ beside it; that one rebuilds from f13faee2, the tree before B1, where this scrip
 Fails closed: with --vault, a vault that cannot be read (an RPC error, no endpoint answering, empty return data, an
 unknown mode) counts as a difference, and so does an immutable that differs (checkpointImageId is the rule's program:
 checkpoint in mode A, checkpoint_b in mode B; releaseImageId is release's). A row of DIR/ids.tsv counts only if
-r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table must be in
-DIR/ids.tsv. A row with an all-zero id (a methods.rs written with RISC0_SKIP_BUILD=1, which builds nothing) is reported
+r0vm computed the same id from the binary ("= id"), and every guest of docs/image-ids.md's first table (what this tree
+builds, under the entry names of TREE_ENTRY) must be in DIR/ids.tsv under its guest name. A row with an all-zero id (a methods.rs written with RISC0_SKIP_BUILD=1, which builds nothing) is reported
 NOT BUILT, not as a differing id, and counts as a failure; a guest of a later table that DIR/ids.tsv lacks is named
 NOT BUILT with its section, and does not (review 9b N5: a fresh `build` compared 14 of the 18 and named none of the
 others; `build` now builds them all).
@@ -45,13 +45,15 @@ FILES = {"ferrata_lez.bin": "attestation", "ferrata_bridge.bin": "bridge", "chec
 METHODS = {"CHECKPOINT_B_ID": "checkpoint_b", "CHECKPOINT_ID": "checkpoint", "SEGMENT_ID": "segment",
            "RELEASE_ID": "release"}
 # Guests whose source or toolchain changed after the live runs: the docs/image-ids.md entry this tree builds, where it is
-# not the guest's own name (that one is the program the live deployments keep): the bridge program since milestone B1
-# (its first-table row rebuilds from f13faee2), and the Ethereum-side guests since RISC Zero 3.1 (risc0-zkvm 3.1.0,
-# docs/design/risc0-3.1-migration.md; their first-table rows rebuild from 3d984678, the tree before the move).
+# not the guest's own name (that one is the program the live deployments keep, in docs/image-ids.md's "Superseded"):
+# the bridge program since milestone B1 (its superseded row rebuilds from f13faee2), and the Ethereum-side guests since
+# RISC Zero 3.1 (risc0-zkvm 3.1.0, docs/design/risc0-3.1-migration.md; their superseded rows rebuild from 3d984678, the
+# tree before the move). docs/image-ids.md's first table lists this tree's builds under these entry names.
 TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_b1"}
 TREE_ENTRY.update({g: g + "_31" for g in ("checkpoint", "checkpoint_b", "checkpoint_0_3_5", "checkpoint_b_0_3_5",
                                           "segment", "micro", "release", "claim", "gasdrop")})
 TREE_FROM = {"ferrata_bridge_b1": "f13faee2, the tree before B1"}
+GUEST = {e: g for g, e in TREE_ENTRY.items()}  # an entry name of the first table: the guest a build names
 GUEST_OF = {"attestation": "ferrata_lez", "bridge": "ferrata_bridge", "checkpoint_b": "checkpoint_b",
             "checkpoint": "checkpoint", "segment": "segment", "release": "release"}  # the crown run's roles: guests
 
@@ -178,7 +180,7 @@ def main() -> int:
         text = open(a.table, encoding="utf-8").read()
         doc = dict(re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", text))
         first = re.split(r"\n## ", text, maxsplit=1)[0]
-        expected = [n for n, _ in re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", first)]
+        expected = [GUEST.get(n, n) for n, _ in re.findall(r"`([a-z0-9_]+)` \| `(0x[0-9a-f]{64})`", first)]
         rows = [l.rstrip("\n").split("\t") for l in open(tsv, encoding="utf-8")][1:]
         same, unbuilt = 0, 0
         for r in rows:
@@ -208,6 +210,8 @@ def main() -> int:
         for line in text.splitlines():
             if line.startswith("## "):
                 section = line[3:].strip()
+            if section.startswith("Superseded"):  # rows this tree no longer builds
+                continue
             for n in re.findall(r"`([a-z0-9_]+)` \| `0x[0-9a-f]{64}`", line):
                 if section and n not in built and n not in aliases:
                     print(f"NOT BUILT {n:<30} not in {tsv} (docs/image-ids.md, \"{section}\"); not compared")

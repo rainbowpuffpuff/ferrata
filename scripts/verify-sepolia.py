@@ -20,7 +20,8 @@ checkout rebuilds (scripts/reproduce-image-ids.sh), crown-live-1's (0xfE31…9E5
 programs of crown-live-1" (built before guest builds were path-independent). Any other run of the final programs must
 have docs/image-ids.md's ids; a run of earlier programs is named by the README table that lists its ids. Since
 milestone B1 this tree's bridge program is docs/image-ids.md's `ferrata_bridge_b1`: a run of it is held to that row, the
-live vaults to the first table's `ferrata_bridge` (the program they were deployed with, rebuilt from f13faee2).
+live vaults to docs/image-ids.md's `ferrata_bridge` (under "Superseded": the program they were deployed with,
+rebuilt from f13faee2).
 """
 
 from __future__ import annotations
