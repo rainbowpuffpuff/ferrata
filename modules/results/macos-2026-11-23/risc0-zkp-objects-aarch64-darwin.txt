@@ -1,0 +1,8 @@
+risc0-zkp 3.0.4 [prove,std], aarch64-apple-darwin, Rust 1.98.0, release (6 codegen-unit objects).
+member  references-members  direct Metal/objc refs  item paths defined (risc0_zkp modules, count)
+cgu.0  [2,3]  -  risc0_zkp::core::hash 22
+cgu.1  [0,2,3,4]  -  risc0_zkp::core::hash 23, risc0_zkp::core::digest 18, risc0_zkp::hal::MemoryTracker 1
+cgu.2  [0,1,3,4,5]  -  risc0_zkp::prove::prover 31, risc0_zkp::adapter::PolyExtExecutor 20, risc0_zkp::core::hash 16, risc0_zkp::hal::MemoryTracker 6, risc0_zkp::prove::fri 5, risc0_zkp::hal::metal 3, risc0_zkp::adapter::ProtocolInfo 2, risc0_zkp::hal::Hal 2, risc0_zkp::hal::tracker 2, risc0_zkp::prove::merkle 2, risc0_zkp::adapter::_ 1, risc0_zkp::prove::poly_group 1
+cgu.3  [2,4]  -  risc0_zkp::core::hash 24, risc0_zkp::taps::ComboRef 1, risc0_zkp::taps::RegisterRef 1, risc0_zkp::taps::TapRef 1
+cgu.4  [1,2,3]  -  risc0_zkp::core::hash 37, risc0_zkp::core::digest 1, risc0_zkp::merkle::MerkleTreeParams 1
+cgu.5  [1,2,3,4]  _objc_msgSend _sel_registerName  risc0_zkp::verify::Verifier 30, risc0_zkp::hal::metal 28, risc0_zkp::verify::read_iop 8, risc0_zkp::verify::merkle 4, risc0_zkp::hal::MemoryTracker 2, risc0_zkp::hal::cpu 2, risc0_zkp::verify::VerificationError 2
