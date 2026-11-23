@@ -11,6 +11,9 @@ light-client source, across two reviews:
 - review-fix-updater4 L2: with `finish_own_jobs = false` and honest sources serving their newest update, an `Open` about
   every third round.
 - review-fix-updater4 L1: a stale figure; review-fix-updater3b L2 and L3 (texts) and the nits.
+- review-fix-updater4 round 2 (texts only): M3, the bound holds on each state of the instance, and a party applying
+  older real updates itself restarts the turns at each; L3, what duplicate jobs cost honest updaters with live sources;
+  two nits.
 
 No row moves. **RFP-021 F.12 stays shown** on the RFP's wording: for beacon providers it rests on replacement, as
 `docs/trust.md` §2.4 says; the passages below replace main's "Not covered … A fix is in progress" with what the code now
@@ -38,9 +41,10 @@ opening each copy itself, had the updater count again each round. Now:
 
 A source can then only present jobs at another step, each kind's turn running once. The updater's first step on a state
 goes out within `K × (defer_window - 1)` rounds of the first round one was due (`K = 3 + adoption_parts` kinds), and the
-job it then carries takes each of its other steps within `defer_window` rounds. So an update adopting the next committee
-is applied at most `K × (defer_window - 1) + 1 + (K - 1) × defer_window` rounds after the rotation: **68** at the
-defaults (`defer_window` 8, two parts). Derived; measured below.
+job it then carries takes each of its other steps within `defer_window` rounds. So, on each state of the instance, an
+update adopting the next committee is applied at most `K × (defer_window - 1) + 1 + (K - 1) × defer_window` rounds after
+the first round it was due there: **68** at the defaults (`defer_window` 8, two parts). Derived; measured below. The
+turns start again whenever the state changes, and anyone may change it by applying a real update (M3 of round 2, below).
 
 With one candidate per state (honest sources serving one update each), every wait is as before: `results/gate.txt` is
 unchanged.
@@ -61,6 +65,9 @@ with the new tests.
 | review-fix-updater4 L1: stale "round 48, rotated in 17" | the docs commit | — | the README's `redating.rs` row gives 33 (rotated 15) and 28 (rotated 10) | — |
 | review-fix-updater3b L1: a sequencer clock behind the updater's | not fixed | the review's `v5` (not committed) | stated in the README's limits: with the sequencer 2 s behind and rounds half a second into a slot, `defer_window` 1: 6 refused, 71 of 80 rounds paused; `defer_window` 8: 5 refused, 3 breaker trips, 265,762,928 charged, no adoption in 80 rounds (the same refusals and charge as at `06ed8bc1`); with the clocks equal, adopted in round 31; two honest sources with the lag, round 30 | — |
 | review-fix-updater3b L2, L3; nits | `1cf1570e`, the docs commit | `dev/test_mutants.py` | as in the previous round (the clock limit's text; m1's text; the process group killed on a stop, 3 of 3) | old kill: 3 of 3 fail |
+| round 2 M3: the bound holds on each state; a party applying older real updates restarts the turns | the round-2 docs commit | — (text; figures from review-fix-updater4's round 2 run 4, `r5_attacks.rs`, not committed) | "on each state of the instance" wherever the bound is given, and the reset caveat (README items 6, 8 and its limits, `docs/trust.md` §2.4, F.12, row N, the operator guide): the party applying the record's entries 14 to 20 itself, with the lying source using up the turns on each state: adopted 475 rounds after the rotation (`/health` not `ok` in 4 rounds); 317 with each reset after the updater's first step; with no lying source, 165, the same on main; within one state 67 with every slot searched (the committed test: 66) | — |
+| round 2 L3: duplicate jobs with live sources | the round-2 docs commit | — (text; the same review's run 4, not committed) | README item 8: two updaters in one slot pay 51% more per applied update than on main (2 `Open`s per update against 1), three 28% more (2.25 against 1.5), about the same otherwise; every update applied within its 15 rounds with two or three (on main 2 to 4 of 4); no transaction refused | — |
+| round 2 nits | the round-2 docs commit | — | F.12: "16 to 26 with the openers, 30 with the started slots"; README item 8: honest updaters collide on a step when "their turns for it end in the same round"; row N dated 22–23 Nov 2026 | — |
 
 Why L1 is not fixed here: a margin after an update's window opens before it counts as sendable (the review's fix) costs
 honest liveness, since sources serving only their newest finality update serve one signed in the current slot, and an
@@ -91,13 +98,19 @@ progress." with:
 
 > A source re-dating such an update to slots that have started, a new copy each round chosen with the updater's deferral
 > tag (computed from its public name and payer account), even opening each copy's job and sending its steps itself
-> (anyone may), delays the instance and does not hold it while the chain's clock is the updater's: every step the
+> (anyone may), delays the instance and does not stop it while the chain's clock is the updater's: every step the
 > updater sends of a job it does not carry waits a turn counted by the instance's state, one per kind of step, not by
-> the job (review-fix-updater3b M1, review-fix-updater4 M1), so an update adopting the next committee is applied at
-> most 68 rounds after it was first due at the default `defer_window` 8 (measured 66 with the strongest attacker known,
-> 16 to 26 with the reviews' attacks; `lez/updater/tests/redating.rs`; EVIDENCE row N); the source is not demoted. With
-> a sequencer whose clock lags the updater's, a source re-dating to the slot that has just started can make `Open`s
-> the chain refuses, and pause sending, while that lasts (`lez/updater/README.md`, "Not built, not tested").
+> the job (review-fix-updater3b M1, review-fix-updater4 M1), so on each state of the instance an update adopting the
+> next committee is applied at most 68 rounds after it was first due there, at the default `defer_window` 8 (measured 66
+> with the strongest attacker known, 16 to 26 with the openers and 30 with the started slots,
+> `lez/updater/tests/redating.rs`; 67 by review-fix-updater4 with every slot searched; EVIDENCE row N); the source is
+> not demoted. The turns start again with each new state: a party that also applies older real updates itself (anyone
+> may, paying their jobs) can postpone the adoption, and keep the instance behind the newest update, for as long as it
+> has such updates to apply, the instance moving at each so that the stall alarm need not fire (measured by
+> review-fix-updater4, not committed: adopted 475 rounds after the rotation over seven such updates with the source
+> using up the turns on each state, 165 with no lying source, as on main). With a sequencer whose clock lags the
+> updater's, a source re-dating to the slot that has just started can make `Open`s the chain refuses, and pause sending,
+> while that lasts (`lez/updater/README.md`, "Not built, not tested").
 
 The sentence after it ("An attestation is still produced eventually by an updater whose sources exclude the liar, or by
 this one once the source is removed (replacement, `docs/trust.md` §2.4).") stays: F.12 rests on replacement.
@@ -111,38 +124,48 @@ source was removed (review-fix-updater3b M1; fixed with a bound: row N)".
 
 ### New EVIDENCE row N
 
-| N | **A light-client source re-dating an update that adopts the next committee to slots that have started, opening each copy's job itself or not, delays the instance by at most 68 rounds at the default `defer_window`, with the chain's clock the updater's (RFP-021 F.12; review-fix-updater3b M1, review-fix-updater4 M1 and L2)**: an `Open`, and a step of a job the updater does not carry, wait their turn counted by the instance's state, one turn per kind of step, not by the job (whose id hashes `signature_slot`, which the signature does not cover, and which anyone may open and take on); after a step is sent on a state, the next of its kind there waits a whole turn | `defer_window` 8, the store lacking its next committee, the source serving copies of a real update adopting it, chosen with the updater's public tag: re-dated to a new started slot each round, adopted 30 rounds after the rotation; opened by the source, a new copy every 7 rounds or each round, or opened and taken through `Miller`: adopted 16, 26 and 23 rounds after the rotation (was never adopted, nothing sent in 107 to 115 rounds); the source using up each kind of step's turn in turn, then leaving a job to carry: 66 rounds (the bound: 68, `5 × 7 + 1 + 4 × 8`); entry 20 applied each time, nothing refused, the source not demoted; `finish_own_jobs = false` with honest newest-only sources: 8 `Open`s in 60 rounds (was 16; the review measured 21); review-fix-updater3 M1's variants kept; 92 of 92 tests; `results/gate.txt` unchanged. Not fixed: a sequencer clock behind the updater's (review-fix-updater3b L1): with it 2 s behind, 5 refused, 3 breaker trips, no adoption in 80 rounds | in-process LEZ (as row 43), build box, 22 Nov 2026 | dev mode | `cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test redating -- --nocapture` (setup: `lez/RESULTS.md` §8); red: `python3 -I lez/updater/dev/mutants.py NAME` for `m4`, `m6`, `m4reset`, `m7`, and `m1roll` / `m1` with `--test redating earlier_` | `lez/updater/README.md` (items 6, 8; "Not built, not tested"; "Tested"); `docs/trust.md` §2.4 (linked as the other rows link them) |
+| N | **A light-client source re-dating an update that adopts the next committee to slots that have started, opening each copy's job itself or not, delays the instance by at most 68 rounds on each state of the instance at the default `defer_window`, with the chain's clock the updater's; a party applying older real updates itself restarts the turns at each (RFP-021 F.12; review-fix-updater3b M1, review-fix-updater4 M1 and L2)**: an `Open`, and a step of a job the updater does not carry, wait their turn counted by the instance's state, one turn per kind of step, not by the job (whose id hashes `signature_slot`, which the signature does not cover, and which anyone may open and take on); after a step is sent on a state, the next of its kind there waits a whole turn | `defer_window` 8, the store lacking its next committee, the source serving copies of a real update adopting it, chosen with the updater's public tag: re-dated to a new started slot each round, adopted 30 rounds after the rotation; opened by the source, a new copy every 7 rounds or each round, or opened and taken through `Miller`: adopted 16, 26 and 23 rounds after the rotation (was never adopted, nothing sent in 107 to 115 rounds); the source using up each kind of step's turn in turn, then leaving a job to carry: 66 rounds (the bound on one state: 68, `5 × 7 + 1 + 4 × 8`; 67 measured by review-fix-updater4 with every slot searched); entry 20 applied each time, nothing refused, the source not demoted; `finish_own_jobs = false` with honest newest-only sources: 8 `Open`s in 60 rounds (was 16; the review measured 21); review-fix-updater3 M1's variants kept; 92 of 92 tests; `results/gate.txt` unchanged. Measured by review-fix-updater4 (round 2, not committed): with a party applying the record's entries 14 to 20 itself, a new state each time, the next committee adopted 475 rounds after the rotation with the source using up the turns on each state (`/health` not `ok` in 4 rounds), 165 with no lying source, as on main; with live sources, two updaters in one slot paid 51% more per applied update than on main, three 28% more. Not fixed: a sequencer clock behind the updater's (review-fix-updater3b L1): with it 2 s behind, 5 refused, 3 breaker trips, no adoption in 80 rounds | in-process LEZ (as row 43), build box, 22–23 Nov 2026 | dev mode | `cd lez && RISC0_DEV_MODE=1 cargo test -p ferrata-updater --features harness --locked --test redating -- --nocapture` (setup: `lez/RESULTS.md` §8); red: `python3 -I lez/updater/dev/mutants.py NAME` for `m4`, `m6`, `m4reset`, `m7`, and `m1roll` / `m1` with `--test redating earlier_` | `lez/updater/README.md` (items 6, 8; "Not built, not tested"; "Tested"); `docs/trust.md` §2.4 (linked as the other rows link them) |
 
 ### `docs/guides/operator-guide.md`
 
 Line 211: replace "One lying source can still stall it (review-fix-updater3b M1: a re-dated update adopting the next
 committee, deferred every round; `lez/updater/README.md`, "Not built, not tested"): when `/health` reports no progress
 while the sources serve updates past the instance, remove or replace that source." with "One lying source can still
-delay it, by at most 68 rounds per update at the default `defer_window` (review-fix-updater3b M1, review-fix-updater4
-M1; `lez/updater/README.md`, item 8 and "Not built, not tested"); if `/health` keeps reporting no progress while the
-sources serve updates past the instance, remove or replace that source."
+delay it, by at most 68 rounds on each state of the instance at the default `defer_window`; a party that also applies
+older real updates itself starts a new state, and new turns, with each, so it can postpone the adoption of the next
+committee for as long as it has such updates to apply (review-fix-updater3b M1, review-fix-updater4 M1 and its second
+round; `lez/updater/README.md`, item 8 and "Not built, not tested"). If `/health` keeps reporting no progress while the
+sources serve updates past the instance, or the instance keeps falling behind the newest update, remove or replace a
+source that serves such copies."
 
 §3.4, after "each (job, step) waits `H(key, job, step) mod W` rounds,": add "an `Open`, and a step of a job the daemon
 does not carry, counted from the first round a step of that kind was due on the instance's state,".
 
 ### `docs/decisions/0011-updater-deferral.md`
 
-Add under "Decision": "Amended 22 November 2026 (review-fix-updater3b M1, review-fix-updater4 M1 and L2): an `Open`,
-and a step of a job the daemon has not sent a step of, count their wait from the first round a step of that kind was due
-on the instance's state, whatever job it is for; after the daemon sends a step there, the next of that kind waits `W -
-1` rounds. The wait is still `H(key, job, step) mod W`. A job's id hashes the update's `signature_slot`, which its
+Add under "Decision": "Amended 22 November 2026 (review-fix-updater3b M1, review-fix-updater4 M1 and L2): an `Open`, and
+a step of a job the daemon has not sent a step of, count their wait from the first round a step of that kind was due on
+the instance's state, whatever job it is for; after the daemon sends a step there, the next of that kind waits `W - 1`
+rounds. The wait is still `H(key, job, step) mod W`. A job's id hashes the update's `signature_slot`, which its
 signature does not cover, and anyone may open a job and send its steps, so counted per job a source serving new copies
-restarted the count each round."
+restarted the count each round. A kind's turn runs once per state: a party applying older real updates itself starts new
+states, and new turns, with each (review-fix-updater4, round 2)."
 
 ## What holds now, and what does not
 
 - **Holds**, with the chain's clock the updater's (the in-process chain; a sequencer on the updater's machine; a remote
-  one whose clock agrees with it): one lying light-client source delays the instance by at most
-  `K × (defer_window - 1) + 1 + (K - 1) × defer_window` rounds per update it serves (68 at the defaults; measured 66),
-  however it re-dates, whatever jobs it opens and steps it sends, each such update a real one, applied. Re-dating within
-  the 60 s margin to a slot not started, its copy ranks after every update that can be sent; beyond the margin it is
-  refused and demoted.
+  one whose clock agrees with it): on each state of the instance, one lying light-client source delays an update by at
+  most `K × (defer_window - 1) + 1 + (K - 1) × defer_window` rounds (68 at the defaults; measured 66 in the committed
+  test, 67 by review-fix-updater4), however it re-dates, whatever jobs it opens and steps it sends, each update it
+  delays a real one, applied. Re-dating within the 60 s margin to a slot not started, its copy ranks after every update
+  that can be sent; beyond the margin it is refused and demoted.
 - **Does not hold:**
+  - The turns start again with each new state. A party that also applies older real updates itself (anyone may,
+    paying their jobs) can postpone the adoption of the next committee, and keep the instance behind the newest
+    update, for as long as it has such updates to apply; the instance moves at each one, so the stall alarm need not
+    fire. Measured by review-fix-updater4 (round 2, not committed): adopted 475 rounds after the rotation with the
+    lying source using up the turns on each state, 317 with each reset after the updater's first step, 165 with no lying
+    source at all, as on main. Derived: up to about a sync-committee period, while the party has older updates.
   - It still holds back an update only it serves, by re-dating it within the margin, for as long as it alone serves it.
   - It is not demoted for re-dating to started slots (that is what an honest update carries), and the stall alarm
     (`6 × defer_window + 10` = 58 rounds) can fire before its update lands.
@@ -150,3 +173,16 @@ restarted the count each round."
     has just started.
   - With `finish_own_jobs = false` and sources whose best update changes every round: an `Open` at most once per
     `defer_window` rounds, no job finished.
+  - With live sources (a best update changing every slot), several honest updaters open duplicate jobs: two in one
+    slot pay 51% more per applied update than on main, three 28% more (review-fix-updater4, round 2, not committed).
+
+## If `fix-audit` merges first
+
+At `fix-audit` `c5ae606c`, RFP-021 F.12 is **in part**: its row in `docs/requirements-status.md` begins "In part: the
+attack described below holds the reference updater on this tree; a fix (an `Open`'s turn counted by the instance's
+state, with its tests) is under review, and the row returns to shown once it is merged.", and main's "A fix is in
+progress." reads "A fix is under review, not on this tree." there ("…; until it is merged the row is in part." in
+`docs/traceability.md`). Then: F.12 back to **shown** (one row from in part to shown in the RFP-021 counts); delete
+that "In part: …" sentence; replace from "Not covered: a source that re-dates" through that "under review" sentence, in
+both files, with the F.12 sentence above. `fix-audit` also edits `docs/trust.md` §2.4's Provers row, the row above the
+beacon providers' row this branch edits: take both rows.
