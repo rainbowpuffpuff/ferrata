@@ -53,7 +53,7 @@ KEEP = [
     "daemons-anvil-modules/rep", "daemons-anvil-modules/run/alerts.jsonl", "daemons-anvil-modules/run/core-stop.log",
     "daemons-anvil-modules/run/install.log", "daemons-anvil-modules/run/node-view.json",
 ]
-NEVER = re.compile(r"(\.key$|storage\.json$|/keys/|wallet|\.raw$|attest-messages|/h\.json$)")
+NEVER = re.compile(r"(\.key$|/storage\.json$|/keys/|/wallet|\.raw$|attest-messages|/h\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
 
 
@@ -111,11 +111,12 @@ def collect(out, rec):
                 open(dst, "w").write(text)
                 kept.append(rel)
     # The updater module's own lines, from Logos Core's log, without the prefix Logos Core adds to a module's output
-    # (`[time] [out] [ferrata_updater_module] `): the lines check.py reads (lez/updater/results/live-sepolia/check.py).
+    # (`[time] [out] [ferrata_updater_module] ` for its standard output, `[time] [info] [logos] [ferrata_updater_module] `
+    # for its log): the lines check.py reads (lez/updater/results/live-sepolia/check.py).
     src = os.path.join(out, "session", "logos-logs")
     dated = sorted(f for f in os.listdir(src) if f.startswith("daemon_")) if os.path.isdir(src) else []
     if dated:
-        prefix = re.compile(r"^\[[^\]]*\] \[(?:out|err)\] \[ferrata_updater_module\] ")
+        prefix = re.compile(r"^\[[^\]]*\] \[(?:out|err|info|warning|error|debug)\] (?:\[logos\] )?\[ferrata_updater_module\] ")
         lines = [prefix.sub("", l) for l in open(os.path.join(src, dated[-1]), errors="replace").read().splitlines() if prefix.match(l)]
         open(os.path.join(rec, "session", "updater-module.log"), "w").write(scrub_text("\n".join(lines) + "\n", subs))
         kept.append("session/updater-module.log")
@@ -194,16 +195,21 @@ def marks_of(rec):
     return m
 
 
-def samples_of(rec):
+def samples_of(rec, rel="session/samples.csv"):
     by = {}
-    text = rd(rec, "session/samples.csv") or ""
+    text = rd(rec, rel) or ""
     for r in csv.DictReader(text.splitlines()):
         if r["pid"] == "0" or not r["cpu_tree_s"]:
             continue
         by.setdefault(r["name"], []).append({"t": float(r["t"]), "pid": int(r["pid"]), "cpu": float(r["cpu_tree_s"]),
-                                             "self": float(r["cpu_s"]), "rss": int(r["rss_tree_kb"]), "hwm": int(r["hwm_kb"]),
-                                             "procs": int(r["procs"])})
+                                             "self": float(r["cpu_s"]), "rss": int(r["rss_tree_kb"]), "rss_self": int(r["rss_kb"]),
+                                             "hwm": int(r["hwm_kb"]), "procs": int(r["procs"])})
     return by
+
+
+def own(rows):
+    """The process alone (Logos Core's daemon without the module host processes it starts)."""
+    return [dict(r, cpu=r["self"], rss=r["rss_self"], procs=1) for r in rows]
 
 
 def window(rows, t0, t1):
@@ -247,9 +253,14 @@ def summary(rec, write=True):
     # ---- the components' resources -------------------------------------------------------------------------------
     comp = {}
     if t_up and t_stop:
-        for name in ("updater-module", "beacon_api_module", "eth_rpc_module", "attest-module", "core", "attest-monitor", "relays"):
+        for name in ("updater-module", "beacon_api_module", "eth_rpc_module", "attest-module", "attest-monitor"):
             if name in samples:
                 comp[name] = window(samples[name], t_up, t_stop)
+        if "core" in samples:
+            comp["Logos Core daemon (logosctl, its own process)"] = window(own(samples["core"]), t_up, t_stop)
+            comp["Logos Core with every module host process (its tree)"] = window(samples["core"], t_up, t_stop)
+        if "relays" in samples:
+            comp["measurement: one counting relay (lez-updater)"] = window(samples["relays"], t_up, t_stop)
     # The updater module's start: its follower brought from the network's genesis to its last final block.
     log = rd(rec, "session/updater-module.log") or ""
     follow = [m for m in re.finditer(r"\[sequencer\] \S+: head block (\d+), following to block (\d+) \(final on Bedrock: (\w+)\) in ([0-9.]+) s", log)]
@@ -331,7 +342,15 @@ def summary(rec, write=True):
     # attest-monitor's verdict on every finalized header the instance held (its state file, kept across polls).
     seen = js(rec, "session/monitor/seen.json")
     if seen is not None:
-        S["attest_monitor_seen"] = seen if len(json.dumps(seen)) < 20000 else {"entries": len(seen)}
+        S["attest_monitor_seen"] = {k: {"root": v.get("root"), "divergence": v.get("divergence"), "finalized_by": v.get("finalized_by")}
+                                    for k, v in sorted(seen.items())}
+        cp = (js(rec, "instance/instance.json") or {}).get("checkpoint_slot") or 0
+        moved = sorted({int(j["finalized_slot"]) for j in applied if j["step"] == "finish" and j["finalized_slot"].isdigit()
+                        and int(j["finalized_slot"]) > cp})
+        confirmed = [x for x in moved if (seen.get(str(x)) or {}).get("divergence") == "confirmed"]
+        check(moved and len(confirmed) == len(moved),
+              f"every finalized header the module's jobs moved the instance to ({len(moved)}) was confirmed canonical by "
+              f"attest-monitor's two providers (session/monitor/seen.json: {len(confirmed)} confirmed)")
     probes = jsonl(rec, "session/probes-u1/health.jsonl")
     ok = [p for p in probes if p.get("http") == 200 and p.get("health") and all(h.get("status") == "ok" for h in p["health"])]
     S["health"] = {"probes": len(probes), "ok": len(ok), "lives": sorted({p["life"] for p in probes})}
@@ -367,18 +386,17 @@ def summary(rec, write=True):
     B = "daemons-anvil-modules"
     phases = [(float(l.split("\t")[0]), l.split("\t", 1)[1]) for l in (rd(rec, f"{B}/phases.tsv") or "").splitlines() if "\t" in l]
     if phases:
-        bs = {}
-        for r in csv.DictReader((rd(rec, f"{B}/samples.csv") or "").splitlines()):
-            if r["pid"] != "0" and r["cpu_tree_s"]:
-                bs.setdefault(r["name"], []).append({"t": float(r["t"]), "pid": int(r["pid"]), "cpu": float(r["cpu_tree_s"]),
-                                                     "self": float(r["cpu_s"]), "rss": int(r["rss_tree_kb"]), "hwm": int(r["hwm_kb"]),
-                                                     "procs": int(r["procs"])})
+        bs = samples_of(rec, f"{B}/samples.csv")
         t0, t1 = phases[0][0], phases[-1][0]
         bm = {"phases": [{"at_s": round(t - t0), "mark": m} for t, m in phases], "components": {}, "per_phase_cpu_s": {}}
         for name in ("monitor-module", "relayer-module", "core"):
             if name in bs:
-                bm["components"][name] = window(bs[name], t0, t1)
-                bm["per_phase_cpu_s"][name] = [(window(bs[name], a, b) or {}).get("cpu_s") for (a, _), (b, _) in zip(phases, phases[1:])]
+                rows = own(bs[name]) if name == "core" else bs[name]
+                label = "Logos Core daemon (its own process)" if name == "core" else name
+                bm["components"][label] = window(rows, t0, t1)
+                bm["per_phase_cpu_s"][label] = [(window(rows, a, b) or {}).get("cpu_s") for (a, _), (b, _) in zip(phases, phases[1:])]
+        if "core" in bs:
+            bm["components"]["Logos Core with every module host process (its tree)"] = window(bs["core"], t0, t1)
         for who in ("monitor", "relayer"):
             r = js(rec, f"{B}/rpc-{who}.json")
             if r:
