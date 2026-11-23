@@ -42,7 +42,7 @@
 //! - `lez/results/v0.4.0-rc3/stage1-replay.md` and `…/stage1-finality.md`: the same source on
 //!   rc3 — every row equal to that run's (`…/compare-v0.4.0-rc1.md`: 73 of 73 and 21 of 21) —
 //!   the only committed record that also holds each handler's post-state bytes.
-//! - `lez/results/perf-state.md` §6 (`bash bench/perf/state.sh`): the scenarios of
+//! - `lez/results/perf-state-actions.md` (`bash bench/perf/state-actions.sh`): the scenarios of
 //!   `harness::accumulated` swept to 100,000 of each account; its K = 0 rows are what the last three
 //!   tests pin, and where an earlier record holds the same transaction, its constant names it.
 //! - `docs/performance.md` (§P.3, §P.7, §P.8) and `docs/design/attestation.md` (§3.1, §4.2):
@@ -207,10 +207,9 @@ const ATTEST_STOR: u64 = 7_338;
 /// the 9,081 records a year of `docs/performance.md` §P.7's cadence projection.
 const MORE_RECORDS: u64 = 1_000;
 
-// #9 for every other action (`harness::accumulated`). Record: `lez/results/perf-state.md` §6, the
-// K = 0 rows (the sweep there goes to 100,000 of each account, here to `MORE_RECORDS`).
+// #9 for every other action (`harness::accumulated`). Record: `lez/results/perf-state-actions.md`,
+// the K = 0 rows (the sweep there goes to 100,000 of each account, here to `MORE_RECORDS`).
 
-const FILL: u64 = 0; // TEMPORARY until perf-state.md §6 is measured
 /// A transaction's pinned charge: each handler's cycles in order, then its execution and storage
 /// gas.
 struct Tx {
@@ -228,7 +227,7 @@ const INIT_TXS: [Tx; 3] = [
 ];
 /// `Succeed` at the mainnet instance after update_0 (a successor with Gloas scheduled at epoch
 /// 600,000), and the `Spawn` it sends.
-const SUCCEED_TX: Tx = Tx { handlers: &[("Succeed", FILL), ("Spawn", FILL)], exec: FILL, stor: FILL };
+const SUCCEED_TX: Tx = Tx { handlers: &[("Succeed", 45_512), ("Spawn", 25_098)], exec: 70_610, stor: 697 };
 /// update_1 as a finality update in one public transaction, after update_0; also
 /// `lez/results/v0.4.0-rc3/stage1-one-transaction.md`.
 const VERIFY_ALL_TX: Tx = Tx {
@@ -237,10 +236,11 @@ const VERIFY_ALL_TX: Tx = Tx {
     stor: 4_105,
 };
 /// The same update in one private transaction: the private execution's cycles in RISC Zero's
-/// executor (what the sender proves; LEZ charges it the flat `PRIVATE_VERIFY_GAS`), then the public
+/// executor (what the sender proves; LEZ charges it the flat `PRIVATE_VERIFY_GAS`; the same
+/// handler, message and empty pre-state as the public transaction's `VerifyAll`), then the public
 /// part's (`FINALITY_PRIVATE_CYCLES`, the record of `an_update_verified_privately_costs_what_it_is_charged`).
 const PRIVATE_VERIFY_ALL_TX: Tx = Tx {
-    handlers: &[("VerifyAll, private execution (executor)", FILL), ("public part", FINALITY_PRIVATE_CYCLES)],
+    handlers: &[("VerifyAll, private execution (executor)", 9_049_362), ("public part", FINALITY_PRIVATE_CYCLES)],
     exec: FINALITY_PRIVATE_GAS,
     stor: PRIVATE_GAS_STOR,
 };
@@ -266,8 +266,8 @@ const CALL_ATTEST_EMPTY: Tx = Tx {
     stor: 7_507,
 };
 const CALL_ATTEST_HOLDING: Tx = Tx {
-    handlers: &[("consumer CallAttest", FILL), ("Attest", 279_023), ("consumer (reply)", FILL)],
-    exec: FILL,
+    handlers: &[("consumer CallAttest", 93_003), ("Attest", 279_023), ("consumer (reply)", 22_977)],
+    exec: 395_003,
     stor: 7_507,
 };
 /// The reference consumer's claim, crediting its sender for the first time (row 3 of
@@ -279,8 +279,8 @@ const CLAIM_FIRST: Tx = Tx {
     stor: 2_768,
 };
 const CLAIM_CREDITED: Tx = Tx {
-    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", FILL)],
-    exec: FILL,
+    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", 18_035)],
+    exec: 187_721,
     stor: 2_768,
 };
 
@@ -811,7 +811,7 @@ fn init_and_succeed_cost_the_same_whatever_the_chain_holds() {
 
     pins.print(
         "Pinned: Init and Succeed beside accumulated accounts\n\
-         record: lez/results/perf-state.md §6; Init also lez/results/v0.4.0-rc3/stage1-replay.md rows 1-3",
+         record: lez/results/perf-state-actions.md; Init also lez/results/v0.4.0-rc3/stage1-replay.md rows 1-3",
     );
 }
 
@@ -844,7 +844,7 @@ fn an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds() {
 
     pins.print(
         "Pinned: an update verified in one call beside accumulated accounts (dev mode)\n\
-         record: lez/results/perf-state.md §6; the public one also lez/results/v0.4.0-rc3/stage1-one-transaction.md",
+         record: lez/results/perf-state-actions.md; the public one also lez/results/v0.4.0-rc3/stage1-one-transaction.md",
     );
 }
 
@@ -887,7 +887,7 @@ fn the_reference_consumer_costs_the_same_whatever_the_chain_holds() {
 
     pins.print(
         "Pinned: the reference consumer beside accumulated accounts\n\
-         record: lez/results/perf-state.md §6; the first call and the first claim also\n\
+         record: lez/results/perf-state-actions.md; the first call and the first claim also\n\
          lez/results/stage4-attest-consumer.md rows 1 and 3",
     );
 }

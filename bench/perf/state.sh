@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # RFP-021 P.7, P.9 and RFP-022 P.7 (the LEZ side): writes lez/results/perf-state.md from
-# lez/harness/src/bin/perf_state.rs, on the build box (mrun). RISC0_DEV_MODE=1 for section 6's private update
-# path only (a fake receipt; LEZ charges a private transaction the same whatever its proof).
+# lez/harness/src/bin/perf_state.rs, on the build box (mrun; dev mode is not needed: public transactions only).
 #   bash bench/perf/state.sh            # from the repository root
 set -euo pipefail
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -16,6 +15,6 @@ out="$REPO/lez/results/perf-state.md"
   [ "$model" = unknown ] && model="the build box (its CPU model is not reported inside the sandbox)"
   echo "Measured $(date -u +%F) on $model ($(nproc --all) CPUs visible), commit ${FERRATA_HEAD:-$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)}."
   echo
-  RISC0_DEV_MODE=1 target/debug/perf_state | sed '1d'
+  target/debug/perf_state | sed '1d'
 } > "$out"
 echo "wrote $out"

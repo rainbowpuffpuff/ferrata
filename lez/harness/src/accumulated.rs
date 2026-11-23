@@ -2,9 +2,9 @@
 //! storage", for the actions not covered by `src/bin/perf_state.rs` §2–§3 (five statement types
 //! and every update step): each runs on two copies of one world, one of which also holds K more of
 //! the accounts that accumulate with use, and must be charged the same in both — every handler's
-//! cycles, the execution gas and the storage gas. Shared by `src/bin/perf_state.rs` (§6, K from 0
-//! to 100,000, written to `lez/results/perf-state.md`) and `tests/costs_attestation.rs` (K = 1,000,
-//! pinned in CI).
+//! cycles, the execution gas and the storage gas. Shared by `src/bin/perf_state.rs` (`perf_state
+//! actions`, K from 0 to 100,000, written to `lez/results/perf-state-actions.md` by
+//! `bench/perf/state-actions.sh`) and `tests/costs_attestation.rs` (K = 1,000, pinned in CI).
 //!
 //! The actions:
 //! - `Init` and its two adoption transactions, on a new chain ([`init_on`]);

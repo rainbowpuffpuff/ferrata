@@ -9,18 +9,20 @@
 //! 2. Growth: the serialized state with K more record (or nullifier) accounts, K up to 100,000.
 //! 3. Cost against accumulated state (P.9): the same statements and the same updates, charged with
 //!    0 to 100,000 records held by the instance.
-//! 6. Every other action against accumulated state (P.9): `Init`, `VerifyAll` in a public and in a
-//!    private transaction, `Succeed`, the eight statement types of `stage4-attest.md`, `CallAttest`
-//!    and the reference consumer's claim, each with 0 to 100,000 more of each account that
-//!    accumulates beside it (`harness::accumulated`).
+//!
+//! `perf_state actions` measures instead every other action against accumulated state (P.9):
+//! `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement
+//! types of `stage4-attest.md`, `CallAttest` and the reference consumer's claim, each with 0 to
+//! 100,000 more of each account that accumulates beside it (`harness::accumulated`);
+//! `bench/perf/state-actions.sh` writes `lez/results/perf-state-actions.md`.
 //!
 //! Records added for K are copies of a real record at slots no request names (the program reads a
 //! record by key only, so a copy is as heavy as a real one for the state, and invisible to the
 //! statements); the records written by real updates are measured in step 1 and by
 //! `lez/updater/examples/perf_replay.rs`. Prints markdown; `bench/perf/state.sh` writes
-//! `lez/results/perf-state.md`. Runs with `RISC0_DEV_MODE=1`, for §6's private update path only (a
-//! fake receipt: LEZ charges a private transaction the same whatever its proof); everything else
-//! is a public transaction, executed and settled, not proven.
+//! `lez/results/perf-state.md`. Dev mode is not needed (public transactions only), except by the
+//! `actions` mode's private update path (`RISC0_DEV_MODE=1`: a fake receipt; LEZ charges a private
+//! transaction the same whatever its proof).
 
 use std::time::Instant;
 
@@ -342,7 +344,7 @@ fn synthetic_id(tag: u8, i: usize) -> AccountId {
     AccountId::new(b)
 }
 
-/// One scenario of §6: `run` at every K of [`KS`] on the state `prepare(k)` returns, every charge
+/// One scenario of `actions`: `run` at every K of [`KS`] on the state `prepare(k)` returns, every charge
 /// asserted equal to K = 0's before its row is printed.
 fn sweep<S>(
     what: &str,
@@ -350,7 +352,7 @@ fn sweep<S>(
     state: impl Fn(&S) -> &V03State,
     run: impl Fn(&mut S) -> Vec<Charged>,
 ) {
-    println!("\n### {what}\n");
+    println!("\n## {what}\n");
     println!("| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |\n|---:|---:|---|---|---:|---:|");
     let mut base: Vec<Charged> = Vec::new();
     for k in KS {
@@ -379,9 +381,8 @@ fn other_actions() {
     assert_eq!(
         std::env::var("RISC0_DEV_MODE").as_deref(),
         Ok("1"),
-        "run with RISC0_DEV_MODE=1 (the private update path's fake receipt; bench/perf/state.sh sets it)"
+        "run with RISC0_DEV_MODE=1 (the private update path's fake receipt; bench/perf/state-actions.sh sets it)"
     );
-    println!("\n## 6. Every other action against accumulated state (RFP-021 P.9)\n");
     println!(
         "Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates \
          beside it, copied from accounts the programs wrote, at keys no measured transaction names \
@@ -440,9 +441,17 @@ fn other_actions() {
 }
 
 fn main() {
-    println!("# perf_state: LEZ state sizes and costs against accumulated state\n");
-    sizes_and_statements();
-    updates_against_records();
-    bridge_state();
-    other_actions();
+    match std::env::args().nth(1).as_deref() {
+        None => {
+            println!("# perf_state: LEZ state sizes and costs against accumulated state\n");
+            sizes_and_statements();
+            updates_against_records();
+            bridge_state();
+        }
+        Some("actions") => {
+            println!("# perf_state actions: every other action against accumulated state\n");
+            other_actions();
+        }
+        Some(other) => panic!("unknown mode {other}: none, or `actions`"),
+    }
 }
