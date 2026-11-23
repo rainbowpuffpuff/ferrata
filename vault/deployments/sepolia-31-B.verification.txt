@@ -1,0 +1,96 @@
+# vault/deployments/sepolia-31-B.json checked against Sepolia, 23 Nov 2026 (read-only)
+# publicnode (head 12,196,234):
+ok    chain id = 11155111
+ok    record complete, lastStep = true done
+ok    params vault = record vault = 0x19499061cec0bac2a3e1869ba5ae6b403aa82787
+ok    params evmChainId = record chainId = 11155111
+ok    vault (brief) = 0x19499061cec0bac2a3e1869ba5ae6b403aa82787
+ok    verifier (brief) = 0x43c858f02f209c6c10c06b64b4ab2cefd8b8dc96
+ok    stop (brief) = 0xc15916bdc7b32951b0310e0e24f98764eba4b314
+ok    registry (brief) = 0x03953f8888f2666f5df572551a3141b4b94e0c13
+ok    token (brief) = 0x5d4ddb1863d2ee85765499dd850a9aeedeca03bc
+ok    groth16Verifier = create(deployer, nonce 57) = 0x43c858f02f209c6c10c06b64b4ab2cefd8b8dc96
+ok    emergencyStop = create(deployer, nonce 58) = 0xc15916bdc7b32951b0310e0e24f98764eba4b314
+ok    registry = create(deployer, nonce 59) = 0x03953f8888f2666f5df572551a3141b4b94e0c13
+ok    vault = create(deployer, nonce 60) = 0x19499061cec0bac2a3e1869ba5ae6b403aa82787
+ok    code at groth16Verifier (0x43C858f02f209c6C10c06B64B4ab2Cefd8B8dc96) = yes
+ok    code at emergencyStop (0xC15916BDC7b32951B0310e0E24F98764EbA4b314) = yes
+ok    code at registry (0x03953f8888f2666f5DF572551a3141b4B94e0C13) = yes
+ok    code at vault (0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787) = yes
+ok    code at token (0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC) = yes
+ok    vault has code at block 12196188 = yes
+ok    vault no code at block 12196187 = 0x
+ok    verifier VERSION = 3.1.0
+ok    verifier SELECTOR = 0xe71e6620
+ok    stop owner (renounced) = 0x0000000000000000000000000000000000000000
+ok    stop paused = false
+ok    stop wraps verifier = 0x43c858f02f209c6c10c06b64b4ab2cefd8b8dc96
+ok    Groth16 verifier 0x43C858f02f209c6C10c06B64B4ab2Cefd8B8dc96: selector 0xe71e6620 (RISC Zero 3.1.0)
+ok    check-verifier.sh
+ok    vault verifier = stop = 0xc15916bdc7b32951b0310e0e24f98764eba4b314
+ok    checkpointImageId = params B = 0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04
+ok    releaseImageId = 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd
+ok    lezConfigId = 0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd
+ok    genesisState = 0x047254fe6ba9689b4b5ea8b971aafdd0063ccc146f20fd9897df8751643a1450
+ok    mode (1 = rule B; record B) = 1
+ok    nMin = 1
+ok    tMin = 1
+ok    admin = deployer = 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07
+ok    freezeAuthority = 0x8ee79c5148f2e2969f0cb2114dd733c9e818cbf4
+info  watchers(0) = 0x78E5689AbdBb93ED3Ea749d190f9b00b42bAE0B6
+info  watchers(1) = 0x0000000000000000000000000000000000000000
+info  watchers(2) = 0x0000000000000000000000000000000000000000
+ok    delta = 3600
+ok    deltaFloor = designDelta = 3600
+ok    feeRecipient = 0x79a95ae9a3f9000eb41f7cbab6a6f97826895c07
+ok    releaseCapFloor = releaseFloorDailyValue = 300000000
+ok    globalCap(0) capacity = 1030000000000
+ok    ETH cap(0) capacity = 10000000000000000000
+ok    token cap(0) capacity = 1000000000000
+ok    globalCap(1) capacity = 1030000000000
+ok    ETH cap(1) capacity = 10000000000000000000
+ok    token cap(1) capacity = 1000000000000
+info  revokeWindow = 86400
+info  maxFreeze = 2592000
+info  minReleaseDelay = 0
+ok    ETH registered = true
+ok    token registered = true
+info  ETH tokenConfig: true true 1000000000000 3000 [1000000000000000 
+info  token tokenConfig: true true 1 1 [100000000 
+info  token name/symbol/decimals: "Ferrata Test USD" "TUSD" 6
+info  vault ETH balance: 0
+info  depositRoot slot0: 0x782d35b1fdad7d54e7a1b36a2ab1021e872c7692bb80fdd12bfc321e9e420409
+info  block now: 12196234
+info  deployer nonce now: 65
+checks: 47, failed: 0
+
+# ethpandaops: checks: 47, failed: 0
+
+# Local build (vault/lib as lib.lock, solc 0.8.26) vs deployed code: CBOR metadata (ipfs hash, solc 0.8.26) equal for all five
+vault chain_len=48740 local_len=48740
+  chain: a26469706673582212204f95080f2a220bb3f3da93fb11ffe19ae4b1258c91e2657676019ac7206a9c3464736f6c634300081a0033
+  local: a26469706673582212204f95080f2a220bb3f3da93fb11ffe19ae4b1258c91e2657676019ac7206a9c3464736f6c634300081a0033
+registry chain_len=25588 local_len=25588
+  chain: a26469706673582212206f04f29f4754995ae0bd7153a4e81eda34d2f2861cb509675f06bfca02d0a09064736f6c634300081a0033
+  local: a26469706673582212206f04f29f4754995ae0bd7153a4e81eda34d2f2861cb509675f06bfca02d0a09064736f6c634300081a0033
+token chain_len=3726 local_len=3726
+  chain: a264697066735822122035cacfba0cfebd3fdf60b569fc061365cb176aca9768ccd8c4d13518274a9dc664736f6c634300081a0033
+  local: a264697066735822122035cacfba0cfebd3fdf60b569fc061365cb176aca9768ccd8c4d13518274a9dc664736f6c634300081a0033
+groth16Verifier chain_len=9622 local_len=9622
+  chain: a2646970667358221220ca6a2a758d733aae0afaf3931cf360051cb4e9ac94ed64d8ed1e93fd9140822064736f6c634300081a0033
+  local: a2646970667358221220ca6a2a758d733aae0afaf3931cf360051cb4e9ac94ed64d8ed1e93fd9140822064736f6c634300081a0033
+emergencyStop chain_len=3398 local_len=3398
+  chain: a2646970667358221220bea36040f5979fcb320eca18113a23c5b8cd0061f15cb47c1ebb45a2d565e7d664736f6c634300081a0033
+  local: a2646970667358221220bea36040f5979fcb320eca18113a23c5b8cd0061f15cb47c1ebb45a2d565e7d664736f6c634300081a0033
+
+# Sourcify, 14:20Z: script/sourcify.sh risc0 (the stop was already held by Sourcify), then FERRATA_PUBLISH_SOURCES=yes script/sourcify.sh vault; jobs:
+{"isJobCompleted":true,"contract":{"match":"exact_match","address":"0x43C858f02f209c6C10c06B64B4ab2Cefd8B8dc96"},"error":null}
+{"isJobCompleted":true,"contract":{"match":"exact_match","address":"0x03953f8888f2666f5DF572551a3141b4B94e0C13"},"error":null}
+{"isJobCompleted":true,"contract":{"match":"exact_match","address":"0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787"},"error":null}
+{"isJobCompleted":true,"contract":{"match":"exact_match","address":"0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC"},"error":null}
+# script/sourcify.sh status, 14:21Z:
+vault            0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787  exact_match  src/FerrataVault.sol:FerrataVault
+registry         0x03953f8888f2666f5DF572551a3141b4B94e0C13  exact_match  src/FerrataRegistry.sol:FerrataRegistry
+token            0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC  exact_match  script/TestToken.sol:TestToken
+emergencyStop    0xC15916BDC7b32951B0310e0E24F98764EbA4b314  exact_match  lib/risc0-ethereum/contracts/src/RiscZeroVerifierEmergencyStop.sol:RiscZeroVerifierEmergencyStop
+groth16Verifier  0x43C858f02f209c6C10c06B64B4ab2Cefd8B8dc96  exact_match  lib/risc0-ethereum/contracts/src/groth16/RiscZeroGroth16Verifier.sol:RiscZeroGroth16Verifier
