@@ -12,9 +12,11 @@
 //!
 //! `perf_state actions` measures instead every other action against accumulated state (P.9):
 //! `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement
-//! types of `stage4-attest.md`, `CallAttest` and the reference consumer's claim, each with 0 to
-//! 100,000 more of each account that accumulates beside it (`harness::accumulated`);
-//! `bench/perf/state-actions.sh` writes `lez/results/perf-state-actions.md`.
+//! types of `stage4-attest.md`, the accumulator-leaf statement, `Read` and `ReadPadded`, and the
+//! reference consumer's messages, each with 0 to 100,000 more of the accounts that accumulate
+//! beside it (and, for a private transaction, more commitments in LEZ's commitment set), then the
+//! one cost found to grow with use (`harness::accumulated`); `bench/perf/state-actions.sh` writes
+//! `lez/results/perf-state-actions.md`.
 //!
 //! Records added for K are copies of a real record at slots no request names (the program reads a
 //! record by key only, so a copy is as heavy as a real one for the state, and invisible to the

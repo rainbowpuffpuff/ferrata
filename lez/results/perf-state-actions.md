@@ -11,10 +11,10 @@ sweep, `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, 
 node writes for the state before RocksDB's compression (`perf-state.md` says how). The same scenarios are pinned in CI
 with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
 
-Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 1adfc7b1.
+Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit bc39a01d.
 
 
-Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before, and the claimant's balance credited K + 1 times before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its first "handler" is the private execution's cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat private receipt gas. Every charge is asserted equal at every K before it is printed.
+Each action runs on copies of one world; the copy for K also holds K more of the accounts that accumulate beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers; for the synthetic vault's leaf statements, records of its instance; for the vault pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is longer (printed; the harness cannot read the circuit's cycles); its first "handlers" are its private transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before; a balance or a holder credited K + 1 times before; and, in the last table, a claimant's private holdings. Every charge is asserted equal at every K before it is printed; the last table is not a comparison.
 
 ## `Init` and its adoption (a new chain)
 
@@ -44,12 +44,12 @@ Each action runs on copies of one world; the copy for K also holds K more of eac
 
 ## `VerifyAll` in one private transaction: the proven update path
 
-| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |
-|---:|---:|---|---|---:|---:|
-| 0 | 2,829,006 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
-| 1,000 | 3,955,006 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
-| 10,000 | 14,089,006 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
-| 100,000 | 115,429,006 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
+| K | serialized state before (B) | membership path (levels) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---:|---|---|---:|---:|
+| 0 | 2,829,006 | 3 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
+| 1,000 | 4,090,526 | 10 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
+| 10,000 | 15,855,566 | 14 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
+| 100,000 | 131,015,598 | 17 | VerifyAll, private (the proven path; public part ApplyVerified → Record) | VerifyAll, private execution (executor) 9,049,362 → public part 75,534 | 485,298 | 224,063 |
 
 ## `Succeed` and the `Spawn` it sends
 
@@ -59,6 +59,31 @@ Each action runs on copies of one world; the copy for K also holds K more of eac
 | 1,000 | 3,955,006 | Succeed (→ Spawn) | Succeed 45,512 → Spawn 25,098 | 70,610 | 697 |
 | 10,000 | 14,089,006 | Succeed (→ Spawn) | Succeed 45,512 → Spawn 25,098 | 70,610 | 697 |
 | 100,000 | 115,429,006 | Succeed (→ Spawn) | Succeed 45,512 → Spawn 25,098 | 70,610 | 697 |
+
+## The accumulator-leaf statement and the vault's slots (the synthetic vault of `stage5-vault-synthetic.md`)
+
+| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---|---|---:|---:|
+| 0 | 2,828,518 | vault slots 0 and 1, no leaf (synthetic state, Gloas record) | Attest 122,067 | 122,067 | 2,319 |
+| 0 | 2,828,518 | vault slots 0 and 1 and one deposit leaf | Attest 187,786 | 187,786 | 3,391 |
+| 0 | 2,828,518 | vault slots 0 and 1 and two deposit leaves | Attest 253,107 | 253,107 | 4,463 |
+| 0 | 2,828,518 | vault slots 0 and 1 and all eight deposit leaves | Attest 646,014 | 646,014 | 10,895 |
+| 0 | 2,828,518 | the same with one leaf, under a record that holds the payload's fields (no header) | Attest 167,123 | 167,123 | 2,700 |
+| 1,000 | 3,169,518 | vault slots 0 and 1, no leaf (synthetic state, Gloas record) | Attest 122,067 | 122,067 | 2,319 |
+| 1,000 | 3,169,518 | vault slots 0 and 1 and one deposit leaf | Attest 187,786 | 187,786 | 3,391 |
+| 1,000 | 3,169,518 | vault slots 0 and 1 and two deposit leaves | Attest 253,107 | 253,107 | 4,463 |
+| 1,000 | 3,169,518 | vault slots 0 and 1 and all eight deposit leaves | Attest 646,014 | 646,014 | 10,895 |
+| 1,000 | 3,169,518 | the same with one leaf, under a record that holds the payload's fields (no header) | Attest 167,123 | 167,123 | 2,700 |
+| 10,000 | 6,238,518 | vault slots 0 and 1, no leaf (synthetic state, Gloas record) | Attest 122,067 | 122,067 | 2,319 |
+| 10,000 | 6,238,518 | vault slots 0 and 1 and one deposit leaf | Attest 187,786 | 187,786 | 3,391 |
+| 10,000 | 6,238,518 | vault slots 0 and 1 and two deposit leaves | Attest 253,107 | 253,107 | 4,463 |
+| 10,000 | 6,238,518 | vault slots 0 and 1 and all eight deposit leaves | Attest 646,014 | 646,014 | 10,895 |
+| 10,000 | 6,238,518 | the same with one leaf, under a record that holds the payload's fields (no header) | Attest 167,123 | 167,123 | 2,700 |
+| 100,000 | 36,928,518 | vault slots 0 and 1, no leaf (synthetic state, Gloas record) | Attest 122,067 | 122,067 | 2,319 |
+| 100,000 | 36,928,518 | vault slots 0 and 1 and one deposit leaf | Attest 187,786 | 187,786 | 3,391 |
+| 100,000 | 36,928,518 | vault slots 0 and 1 and two deposit leaves | Attest 253,107 | 253,107 | 4,463 |
+| 100,000 | 36,928,518 | vault slots 0 and 1 and all eight deposit leaves | Attest 646,014 | 646,014 | 10,895 |
+| 100,000 | 36,928,518 | the same with one leaf, under a record that holds the payload's fields (no header) | Attest 167,123 | 167,123 | 2,700 |
 
 ## The eight statement types of `stage4-attest.md`, each the root of a transaction
 
@@ -149,4 +174,52 @@ Each action runs on copies of one world; the copy for K also holds K more of eac
 | 10,000 | 15,349,544 | Claim, the sender credited before | consumer Claim 37,667 → Attest 100,517 → consumer (reply) 31,502 → consumer Credit 18,035 | 187,721 | 2,768 |
 | 100,000 | 128,029,544 | Claim, the sender credited before | consumer Claim 37,667 → Attest 100,517 → consumer (reply) 31,502 → consumer Credit 18,035 | 187,721 | 2,768 |
 
-Every transaction was charged the same handler cycles, execution gas and storage gas at every K (asserted).
+## The reference consumer's private read, `AttestPrivately` (one private transaction)
+
+| K | serialized state before (B) | membership path (levels) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---:|---|---|---:|---:|
+| 0 | 2,829,379 | 3 | AttestPrivately, private (public part Read) | AttestPrivately, private (executor) 34,717 → the record's reply, private (executor) 346,763 → public part 12,268 | 422,032 | 224,063 |
+| 1,000 | 4,216,899 | 10 | AttestPrivately, private (public part Read) | AttestPrivately, private (executor) 34,717 → the record's reply, private (executor) 346,763 → public part 12,268 | 422,032 | 224,063 |
+| 10,000 | 17,115,939 | 14 | AttestPrivately, private (public part Read) | AttestPrivately, private (executor) 34,717 → the record's reply, private (executor) 346,763 → public part 12,268 | 422,032 | 224,063 |
+| 100,000 | 143,615,971 | 17 | AttestPrivately, private (public part Read) | AttestPrivately, private (executor) 34,717 → the record's reply, private (executor) 346,763 → public part 12,268 | 422,032 | 224,063 |
+
+## The vault pattern's public claim (`ClaimDeposit` → `Attest` → reply → `CreditHolder`), FerrataVault v5's deposit 0
+
+| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---|---|---:|---:|
+| 0 | 2,841,955 | ClaimDeposit, the destination's first credit | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 15,906 | 500,206 | 9,105 |
+| 1,000 | 3,481,955 | ClaimDeposit, the destination's first credit | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 15,906 | 500,206 | 9,105 |
+| 10,000 | 9,241,955 | ClaimDeposit, the destination's first credit | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 15,906 | 500,206 | 9,105 |
+| 100,000 | 66,841,955 | ClaimDeposit, the destination's first credit | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 15,906 | 500,206 | 9,105 |
+
+## The same claim, the destination's holder credited K + 1 times before
+
+| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---|---|---:|---:|
+| 0 | 2,842,132 | ClaimDeposit, the holder credited before | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 18,521 | 502,821 | 9,105 |
+| 1,000 | 3,482,132 | ClaimDeposit, the holder credited before | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 18,521 | 502,821 | 9,105 |
+| 10,000 | 9,242,132 | ClaimDeposit, the holder credited before | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 18,521 | 502,821 | 9,105 |
+| 100,000 | 66,842,132 | ClaimDeposit, the holder credited before | consumer ClaimDeposit 114,234 → Attest 333,071 → consumer (reply) 36,995 → consumer CreditHolder 18,521 | 502,821 | 9,105 |
+
+## The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`)
+
+| K | serialized state before (B) | membership path (levels) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---:|---|---|---:|---:|
+| 0 | 2,841,955 | 3 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
+| 1,000 | 3,617,475 | 10 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
+| 10,000 | 11,008,515 | 14 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
+| 100,000 | 82,428,547 | 17 | ClaimDepositPrivately, private (public part Read → Spend → CreditHolder) | ClaimDepositPrivately, private (executor) 112,597 → the record's reply, private (executor) 1,392,412 → public part 47,083 | 456,847 | 224,063 |
+
+## The one cost found to grow with use: a private-kind claim against the claimant's own holdings
+
+The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the list. Deposit 1 of FerrataVault v5 claimed by its destination (LEZ's private test account 0) in RISC Zero's executor, the claimant already holding `pools` other pools. This is the claimant's own proving work: LEZ charges the private transaction its flat receipt gas plus the public part (`Read`, `Spend`), which does not see the list.
+
+| pools already held | ClaimDepositPrivately (executor) | the record's reply (executor) | private cycles | over 0 pools, per pool |
+|---:|---:|---:|---:|---:|
+| 0 | 114,317 | 1,409,528 | 1,523,845 | — |
+| 1 | 115,477 | 1,410,664 | 1,526,141 | 2296.0 |
+| 10 | 124,002 | 1,420,157 | 1,544,159 | 2031.4 |
+| 100 | 213,887 | 1,523,672 | 1,737,559 | 2137.1 |
+| 1,000 | 1,160,903 | 2,556,184 | 3,717,087 | 2193.2 |
+
+Every transaction of the swept tables was charged the same handler cycles, execution gas and storage gas at every K (asserted).
