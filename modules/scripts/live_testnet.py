@@ -45,7 +45,7 @@ KEEP = [
     "instance",
     "session/req", "session/rep", "session/relay", "session/monitor", "session/attest", "session/cli",
     "session/probes-u1", "session/calls.tsv", "session/marks.tsv", "session/samples.csv", "session/journal.tsv",
-    "session/run.tsv", "session/updater-module.log", "session/final-state.json", "session/processes.txt",
+    "session/run.tsv", "session/final-state.json", "session/processes.txt",
     "session/install.log", "session/core-start.log", "session/core-stop.log", "session/updater-state-files.txt",
     # RFP-022's monitor and relayer as Logos modules on the anvil fixture (bench/perf/daemons-anvil-modules.sh)
     "daemons-anvil-modules/samples.csv", "daemons-anvil-modules/phases.tsv", "daemons-anvil-modules/rpc-monitor.json",
@@ -53,7 +53,7 @@ KEEP = [
     "daemons-anvil-modules/rep", "daemons-anvil-modules/run/alerts.jsonl", "daemons-anvil-modules/run/core-stop.log",
     "daemons-anvil-modules/run/install.log", "daemons-anvil-modules/run/node-view.json",
 ]
-NEVER = re.compile(r"(\.key$|storage\.json$|/keys/|wallet|\.raw$|attest-messages|h\.json$|seen\.json$)")
+NEVER = re.compile(r"(\.key$|storage\.json$|/keys/|wallet|\.raw$|attest-messages|/h\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
 
 
@@ -106,11 +106,20 @@ def collect(out, rec):
             else:
                 open(dst, "w").write(text)
                 kept.append(rel)
-    # The Logos Core logs (the modules' own lines), gzipped.
+    # The updater module's own lines, from Logos Core's log, without the prefix Logos Core adds to a module's output
+    # (`[time] [out] [ferrata_updater_module] `): the lines check.py reads (lez/updater/results/live-sepolia/check.py).
+    src = os.path.join(out, "session", "logos-logs")
+    dated = sorted(f for f in os.listdir(src) if f.startswith("daemon_")) if os.path.isdir(src) else []
+    if dated:
+        prefix = re.compile(r"^\[[^\]]*\] \[(?:out|err)\] \[ferrata_updater_module\] ")
+        lines = [prefix.sub("", l) for l in open(os.path.join(src, dated[-1]), errors="replace").read().splitlines() if prefix.match(l)]
+        open(os.path.join(rec, "session", "updater-module.log"), "w").write(scrub_text("\n".join(lines) + "\n", subs))
+        kept.append("session/updater-module.log")
+    # The Logos Core logs (every module's lines), gzipped; daemon.log is a link to the newest dated one.
     for d in ("session/logos-logs", "daemons-anvil-modules/run"):
         src = os.path.join(out, d)
         for f in sorted(os.listdir(src)) if os.path.isdir(src) else []:
-            if not f.startswith("daemon"):
+            if not f.startswith("daemon_"):
                 continue
             text = scrub_text(open(os.path.join(src, f), errors="replace").read(), subs)
             os.makedirs(os.path.join(rec, d), exist_ok=True)
@@ -307,6 +316,18 @@ def summary(rec, write=True):
                     "blocks": [int(applied[0]["block"]), int(applied[-1]["block"])] if applied else None,
                     "finalized_slots": sorted({int(j["finalized_slot"]) for j in applied if j["finalized_slot"].isdigit()})}
     check(len(finished) >= 1 and len(applied) == len(journal), f"the module applied {len(applied)} of {len(journal)} transactions on the network, {len(finished)} jobs finished")
+    # The backend's line per transaction: `[updater] sepolia <step> applied gas N block B + T s <hash>`, T the time from
+    # the send to the block final on Bedrock (the follower applied it).
+    txl = re.findall(r"^\[updater\] (\S+ .+?)\s+(applied|reverted|dropped|rejected)\s+gas\s+(\d+) block (\d+) \+ ([0-9.]+)s ([0-9a-f]{64})$",
+                     log, re.M)
+    if txl:
+        secs = sorted(float(t[4]) for t in txl if t[1] == "applied")
+        S["send_to_final_s"] = {"transactions": len(txl), "applied": len(secs), "min": secs[0] if secs else None,
+                                "median": round(statistics.median(secs), 1) if secs else None, "max": secs[-1] if secs else None}
+    # attest-monitor's verdict on every finalized header the instance held (its state file, kept across polls).
+    seen = js(rec, "session/monitor/seen.json")
+    if seen is not None:
+        S["attest_monitor_seen"] = seen if len(json.dumps(seen)) < 20000 else {"entries": len(seen)}
     probes = jsonl(rec, "session/probes-u1/health.jsonl")
     ok = [p for p in probes if p.get("http") == 200 and p.get("health") and all(h.get("status") == "ok" for h in p["health"])]
     S["health"] = {"probes": len(probes), "ok": len(ok), "lives": sorted({p["life"] for p in probes})}
