@@ -157,6 +157,17 @@ jobs:
           cargo test --locked --lib relayer
           cargo test --locked --lib burns
           cargo test --locked --test gasdrop -- --nocapture
+      # RFP-021 R.5 and U.5: `ferrata attest` against a stand-in LEZ sequencer (LEZ's own block application on
+      # 127.0.0.1) and a scripted Ethereum endpoint failing on demand, killed mid-command and run again with nothing
+      # sent twice; LEZ's validity-window refusal of a stale checkpoint shown as code 53's message, on a real
+      # sequencer's recorded refusal (the library's tests) and on the stand-in's (tests/attest_faults.rs). Local only.
+      - name: The attestation CLI under a failing Ethereum endpoint and interruptions; a stale checkpoint as code 53 (RFP-021 R.5, U.5)
+        working-directory: cli
+        run: |
+          export RISC0_HOME="$HOME/risc0-home-lez"
+          vars=$(python3 -I ../scripts/fetch_native.py env) && eval "$vars"
+          cargo test --locked --lib attest
+          RISC0_DEV_MODE=1 cargo test --locked --test attest_faults -- --nocapture
 
   # The LEZ suites (scripts/ci/lez-harness.sh): the attestation and bridge programs through LEZ v0.4.0-rc1's state
   # machine and fee settlement in the harness, every test file of lez/harness/tests/ (red-team suites included), and

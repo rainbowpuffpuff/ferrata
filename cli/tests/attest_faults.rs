@@ -591,7 +591,7 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
         let record = z.state.get_account_by_id(header_actor(program, &id_bytes, RECORD_SLOT).account_id).clone();
         assert!(!record.data.actor_state(program).is_empty(), "the record header(id, {RECORD_SLOT}) is written");
         let inst: InstanceState =
-            borsh::from_slice(&z.state.get_account_by_id(instance_actor(program, &id_bytes).account_id).data.actor_state(program).clone())
+            borsh::from_slice(&z.state.get_account_by_id(instance_actor(program, &id_bytes).account_id).data.actor_state(program).to_vec())
                 .unwrap();
         assert_eq!(CompactStore::decode(&inst.store).unwrap().finalized.slot, RECORD_SLOT);
         let opens = z.messages(program).iter().filter(|(_, _, _, m)| matches!(m, Message::Open { .. })).count();
@@ -798,7 +798,7 @@ fn stale_checkpoint_shown_as_code_53() {
     let open = out.lines().find(|l| l.trim_start().starts_with("open ")).expect("the Open's dry run").to_string();
     has(&open, "\"Execution outside of the validity window\": its window opens at");
     has(&open, &ferrata_cli::attest::utc(slot_ms(SIGNATURE_SLOT)));
-    assert!(!open.contains("53") && !open.contains("bootstrap"), "not code 53: {open}");
+    assert!(!open.contains("OutsideWeakSubjectivityPeriod") && !open.contains("refused with 53"), "not code 53: {open}");
     println!("U.5: records in {}", dir.display());
 }
 

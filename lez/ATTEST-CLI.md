@@ -185,9 +185,37 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   compares the zone's receipt (the follower's: the sequencer's RPC reports no outcome) with the dry run: exit code,
   execution gas, storage gas, number of events (the receipt carries no event data).
 - Proofs come from an Ethereum JSON-RPC endpoint (`--eth`: `eth_getProof`, `eth_getBlockReceipts`); the program checks
-  them against the record, so the endpoint is not trusted.
-- Exit status: 0 applied (or would be); 3 refused, as the dry run said; 1 the dry run and the zone disagree, or the
-  verdict and the dry run; 2 a usage error.
+  them against the record, so the endpoint is not trusted. `attest` is the only command that reads Ethereum (`init` and
+  `advance` read SSZ files; `config`, `status`, `state` and `receipt` read only the zone). Before any proof it checks
+  that the endpoint serves the record's chain (`eth_chainId`) and block (`eth_getBlockByNumber`: the hash the record
+  binds); each request is bounded by `--eth-timeout` (60 s) and retried `--eth-retries` times (2) after a failure that
+  may pass (no connection, a timeout, an answer cut short or empty, HTTP 5xx or 429), not after an error answer.
+- **Interrupted and run again (RFP-021 R.5).** `--send --yes` needs `--state-dir`: before anything is sent, every
+  transaction of the command is written there, signed, to `sent/<intent>.json` (the intent is what the command asks
+  for: its instance, files by their SHA-256, statements; not the endpoints), and each receipt as it is read. The same
+  command run again after an interruption signs nothing new: a transaction the zone applied is reported from its
+  receipt, one in a block not yet final is waited for, one in no block yet is sent again byte for byte (same hash and
+  nonce: LEZ applies it at most once). Run again after it finished, it prints what the earlier run did and sends
+  nothing; `--again` sends a new one. The follower's state (`follower.state`) is replaced whole or not at all.
+- **A stale checkpoint (RFP-021 U.5).** LEZ refuses a transaction executed outside the timestamp validity window its
+  program gave it with its own text, "Execution outside of the validity window", charging the whole gas limit. `Init`
+  and `Open` carry the window that ends with the weak-subjectivity period of the checkpoint (for `Open`, of the
+  instance's newest finalized header). Past that end the tool prints the refusal as code 53's message: the checkpoint,
+  when its period ended, the zone's clock and the remedy (a new instance from a recent bootstrap, `init`; operator
+  guide §10); a dry run that shows it so is not sent. Before an update's signature slot the refusal stays LEZ's text,
+  with the time the window opens.
+- Exit status: 0 applied (or would be); 3 refused, as the dry run said (or by LEZ's clock past a checkpoint's period);
+  1 the dry run and the zone disagree, or the verdict and the dry run; 2 a usage error; 4 the Ethereum endpoint
+  failed or serves another chain, and nothing was sent.
+
+Tested in CI (`roundtrip` job): [`../cli/tests/attest_faults.rs`](../cli/tests/attest_faults.rs) runs the tool as a
+process against a stand-in sequencer (LEZ's own block application on 127.0.0.1, its clock and Bedrock finality set by
+the test) and a scripted Ethereum endpoint failing on demand: refused connections, no answer, answers cut short (the
+proof; the receipts), HTTP 503, an error answer, another chain id, another block hash, each exit 4 with nothing sent and
+the same command applied once afterwards; kills while reading Ethereum, with the transaction in the pool, in a block
+not yet final, and after an `advance` job's `Open`, each run again with nothing sent or applied twice; and the stale
+checkpoint's code 53 message, from the dry run and from the zone's receipt. The library's tests map the refusal a real
+LEZ v0.4.0-rc1 sequencer gave (`../e2e/runs/ci-sequencer-attest-2026-11-21/records/`).
 
 Run on a zone we started (`cli/tests/attest-seq.sh`: crown session A, then the commands in `cli/tests/attest-seq-hook.sh`):
 see [Results on a sequencer](#results-on-a-sequencer).

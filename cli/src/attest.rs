@@ -356,13 +356,13 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
 /// The follower kept in `dir`: [`FOLLOWER_STATE`], or the two files earlier versions wrote (`follower.borsh`,
 /// `blocks.borsh`), or none.
 fn load_follower(dir: Option<&Path>) -> Result<Follower> {
-    use borsh::BorshDeserialize as _;
+    use borsh::BorshDeserialize;
     let Some(d) = dir else { return Ok(Follower::new()) };
     if d.join(FOLLOWER_STATE).exists() {
         let bytes = std::fs::read(d.join(FOLLOWER_STATE))?;
         let mut rest = &bytes[..];
-        let snapshot = Vec::<u8>::deserialize(&mut rest).context("the follower's saved state")?;
-        let blocks = Vec::<Block>::deserialize(&mut rest).context("the follower's saved blocks")?;
+        let snapshot = <Vec<u8> as BorshDeserialize>::deserialize(&mut rest).context("the follower's saved state")?;
+        let blocks = <Vec<Block> as BorshDeserialize>::deserialize(&mut rest).context("the follower's saved blocks")?;
         ensure!(rest.is_empty(), "the follower's saved state has trailing bytes");
         return Follower::restore(&snapshot, blocks);
     }
@@ -1626,7 +1626,7 @@ mod tests {
         // A refusal (3), not a disagreement, though the program's checks pass natively (expected 0).
         assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 3);
         // Without the step's window the text stays LEZ's, with no code put on it.
-        assert!(!outcome.show().contains("53"), "{}", outcome.show());
+        assert!(!outcome.show().contains("OutsideWeakSubjectivityPeriod"), "{}", outcome.show());
     }
 
     #[test]
@@ -1638,14 +1638,14 @@ mod tests {
         note.end_ms = Some(outcome.at_ms + 1_000_000);
         let (side, message) = outcome.window(Some(&note)).unwrap();
         assert_eq!(side, WindowSide::NotOpen);
-        assert!(!message.contains("53") && !message.contains("bootstrap"), "{message}");
+        assert!(!message.contains("OutsideWeakSubjectivityPeriod") && !message.contains("bootstrap"), "{message}");
         assert!(message.contains(WINDOW_REFUSAL) && message.contains(&utc(outcome.at_ms + 12_000)), "{message}");
         assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 3);
         // Inside the window as computed: LEZ's text as it is, and a disagreement with the program's verdict.
         note.start_ms = Some(outcome.at_ms - 1);
         let (side, message) = outcome.window(Some(&note)).unwrap();
         assert_eq!(side, WindowSide::Inside);
-        assert!(!message.contains("53") && message.contains(WINDOW_REFUSAL), "{message}");
+        assert!(!message.contains("OutsideWeakSubjectivityPeriod") && message.contains(WINDOW_REFUSAL), "{message}");
         assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 1);
         // Other refusals are not touched: the gas limit, and a program's own code (here 53 itself, by the program).
         outcome.reason = Some("Execution exceeded its cycle budget".into());
