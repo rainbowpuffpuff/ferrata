@@ -18,7 +18,25 @@
 //! With `--send --yes` the same transactions are sent to the sequencer, and once a block that includes each is final
 //! on Bedrock (`--wait-final`, default) the follower's receipt is compared with the dry run: exit code, execution
 //! gas, storage gas, events. Exit status: 0 applied (or would be); 3 refused, as the dry run said; 1 the dry run and
-//! the zone disagree, or the verdict and the dry run; 2 a usage error.
+//! the zone disagree, or the verdict and the dry run; 2 a usage error; 4 the Ethereum endpoint failed (refused,
+//! timed out, cut its answer, answered with an error, or serves another chain than the record's) before anything was
+//! sent.
+//!
+//! **Interrupted and run again (RFP-021 R.5).** Before it sends, a command writes every transaction it is about to
+//! send, signed, to a journal in `--state-dir` (`sent/<intent>.json`, keyed by what the command asks for, not by the
+//! endpoints that serve it), and records each receipt there as it reads it. Run again after an interruption, the same
+//! command signs nothing new: a transaction the zone applied is reported from its receipt, one in a block not yet
+//! final is waited for, and one in no block yet is sent again byte for byte (same hash and nonce: LEZ applies it at
+//! most once). Run again after it finished, it reports what the earlier run did and sends nothing (`--again` sends a
+//! new one). The follower's state is written whole or not at all. An Ethereum endpoint that fails is retried
+//! (`--eth-retries`, each request bounded by `--eth-timeout`), then reported with nothing sent.
+//!
+//! **A stale checkpoint (RFP-021 U.5).** LEZ refuses a transaction executed outside the timestamp validity window its
+//! program gave it with its own text ("Execution outside of the validity window"). `Init` and `Open` carry the window
+//! that ends with the weak-subjectivity period of the checkpoint (for `Open`, the instance's newest finalized header);
+//! past that end, the tool shows the refusal as code 53's message, naming the checkpoint, the time its period ended
+//! and the remedy (a new instance from a recent bootstrap), and does not send a transaction its dry run already shows
+//! refused so. A window not yet open is LEZ's text as it is, with the window's start.
 
 #![allow(clippy::too_many_arguments)]
 
@@ -30,7 +48,7 @@ mod follower;
 mod plan;
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
@@ -42,7 +60,7 @@ use ferrata_core::{
     rlp::encode_u64,
     steps,
     types::{LightClientBootstrap, SyncCommittee},
-    witness::{uncompressed_keys, CompactBootstrap, CompactStore},
+    witness::{uncompressed_keys, CompactBootstrap, CompactStore, ExecutionSummary},
     Root,
 };
 use ferrata_lez_wire::{
@@ -56,7 +74,9 @@ use lee::{
     AccountId, Actor, FeeDeclaration, PrivateKey, PublicAccountEvidence, PublicKey, PublicTransaction, ValidatedStateDiff,
 };
 use sequencer_service_rpc::{SequencerClient, SequencerClientBuilder};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest as _, Sha256};
 use wallet::WalletSequencerClient as _;
 
 use follower::{exit_code_of, Follower};
@@ -71,6 +91,104 @@ fn code_name(code: u32) -> String {
         .and_then(|e| e.iter().find(|x| x["code"].as_u64() == Some(u64::from(code))))
         .map(|x| format!("{} ({})", x["name"].as_str().unwrap_or("?"), x["msg"].as_str().unwrap_or("")))
         .unwrap_or_else(|| plan::exit_name(code))
+}
+
+/// LEZ's text for a transaction executed outside the timestamp validity window its program gave it
+/// (`LeeError::OutOfValidityWindow`, LEZ v0.4.0-rc1 `lee/state_machine/src/error.rs`): charged the whole gas limit.
+pub const WINDOW_REFUSAL: &str = "Execution outside of the validity window";
+
+/// The program's code for a store past its weak-subjectivity period (`OutsideWeakSubjectivityPeriod`).
+pub const OUTSIDE_WS_PERIOD: u32 = 53;
+
+/// The timestamp validity window the program gives a step (`Init`: until the end of the checkpoint's
+/// weak-subjectivity period; `Open`: from the update's signature slot to the end of the period of the instance's newest
+/// finalized header), as `ferrata_advance::init_window` and `open_window` compute it, and what it is the window of.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WindowNote {
+    pub start_ms: Option<u64>,
+    pub end_ms: Option<u64>,
+    /// What went stale when the window ends, for the message: `checkpoint 0x… (slot S)` or `the instance's newest
+    /// finalized header 0x… (slot S)`.
+    pub checkpoint: String,
+}
+
+/// Unix milliseconds as `YYYY-MM-DD HH:MM:SS UTC`.
+pub fn utc(ms: u64) -> String {
+    let secs = ms / 1000;
+    let (days, rem) = (secs / 86_400, secs % 86_400);
+    // Civil date from days since 1970-01-01 (Howard Hinnant's algorithm).
+    let z = days as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!("{year:04}-{month:02}-{day:02} {:02}:{:02}:{:02} UTC", rem / 3600, rem % 3600 / 60, rem % 60)
+}
+
+/// Where a block's time fell against a step's window, when LEZ refused the step for its window.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum WindowSide {
+    /// At or after the window's end: the checkpoint is stale by the zone's clock (code 53's message).
+    Ended,
+    /// Before the window's start.
+    NotOpen,
+    /// Inside the window as this tool computes it (LEZ's text as it is).
+    Inside,
+    /// A step without a window this tool knows.
+    Unknown,
+}
+
+/// What to tell the user when LEZ refused a step with `reason` in a block stamped `at_ms`, given the step's window:
+/// `None` unless `reason` is LEZ's window refusal ([`WINDOW_REFUSAL`]). Past the window's end the checkpoint is stale
+/// by the zone's clock: code 53 (`OutsideWeakSubjectivityPeriod`) and its message, the checkpoint, when its period
+/// ended, and the remedy. Before the window's start (an update sent before its signature slot), or inside the window
+/// as this tool computes it, LEZ's text is shown as it is, with the window: no code is put on it.
+pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64) -> Option<(WindowSide, String)> {
+    if !reason.contains(WINDOW_REFUSAL) {
+        return None;
+    }
+    let Some(w) = window else {
+        return Some((WindowSide::Unknown, format!("refused by LEZ: \"{reason}\" (this step carries no window this tool knows)")));
+    };
+    if let Some(end) = w.end_ms.filter(|e| at_ms >= *e) {
+        return Some((
+            WindowSide::Ended,
+            format!(
+                "refused with {OUTSIDE_WS_PERIOD} {}: the {} is stale: its weak-subjectivity period ended at {}, and the \
+                 zone's clock is {} (LEZ's refusal: \"{reason}\"). Nothing can extend an instance from it any more: \
+                 recover from a new bootstrap, a new instance from a recent finalized checkpoint with `ferrata attest \
+                 init` (operator guide §10, \"Instance past its weak-subjectivity bound\")",
+                code_name(OUTSIDE_WS_PERIOD),
+                w.checkpoint,
+                utc(end),
+                utc(at_ms)
+            ),
+        ));
+    }
+    if let Some(start) = w.start_ms.filter(|s| at_ms < *s) {
+        return Some((
+            WindowSide::NotOpen,
+            format!(
+                "refused by LEZ: \"{reason}\": its window opens at {} (the update's signature slot), and the zone's \
+                 clock is {}; it can be sent again from then",
+                utc(start),
+                utc(at_ms)
+            ),
+        ));
+    }
+    Some((
+        WindowSide::Inside,
+        format!(
+            "refused by LEZ: \"{reason}\" (the window this tool computes, {} to {}, holds the block's time {})",
+            w.start_ms.map_or("open".into(), utc),
+            w.end_ms.map_or("open".into(), utc),
+            utc(at_ms)
+        ),
+    ))
 }
 
 #[derive(clap::Args)]
@@ -96,11 +214,21 @@ pub struct AttestArgs {
     /// The gas limit each transaction declares.
     #[arg(long, default_value_t = 10_000_000)]
     gas_limit: u64,
-    /// Send what the dry run shows (with --yes); may follow the command.
+    /// Send what the dry run shows (with --yes); may follow the command. Needs --state-dir, where the journal of what
+    /// is sent is kept.
     #[arg(long, global = true)]
     send: bool,
     #[arg(long, global = true)]
     yes: bool,
+    /// Send it again although an earlier run of the same command already did (its journal in --state-dir says so).
+    #[arg(long, global = true)]
+    again: bool,
+    /// Seconds one request to the Ethereum endpoint (`attest --eth`) may take.
+    #[arg(long, default_value_t = 60)]
+    eth_timeout: u64,
+    /// Retries of an Ethereum request whose connection failed, timed out, was cut or answered HTTP 5xx or 429.
+    #[arg(long, default_value_t = 2)]
+    eth_retries: u32,
     /// Append the run's record (JSON lines: every dry run and every receipt) to this file.
     #[arg(long)]
     record: Option<PathBuf>,
@@ -210,20 +338,55 @@ struct Zone {
     state_dir: Option<PathBuf>,
 }
 
+/// The follower's state in `--state-dir`: `borsh(snapshot) ‖ borsh(blocks)` in one file, replaced whole.
+pub const FOLLOWER_STATE: &str = "follower.state";
+
+/// Write `bytes` to `path` whole or not at all: a temporary file beside it, synced, then renamed over it.
+pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
+    use std::io::Write as _;
+    let tmp = path.with_extension("tmp");
+    let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
+    f.write_all(bytes)?;
+    f.sync_all()?;
+    drop(f);
+    std::fs::rename(&tmp, path).with_context(|| format!("renaming {} to {}", tmp.display(), path.display()))?;
+    Ok(())
+}
+
+/// The follower kept in `dir`: [`FOLLOWER_STATE`], or the two files earlier versions wrote (`follower.borsh`,
+/// `blocks.borsh`), or none.
+fn load_follower(dir: Option<&Path>) -> Result<Follower> {
+    use borsh::BorshDeserialize as _;
+    let Some(d) = dir else { return Ok(Follower::new()) };
+    if d.join(FOLLOWER_STATE).exists() {
+        let bytes = std::fs::read(d.join(FOLLOWER_STATE))?;
+        let mut rest = &bytes[..];
+        let snapshot = Vec::<u8>::deserialize(&mut rest).context("the follower's saved state")?;
+        let blocks = Vec::<Block>::deserialize(&mut rest).context("the follower's saved blocks")?;
+        ensure!(rest.is_empty(), "the follower's saved state has trailing bytes");
+        return Follower::restore(&snapshot, blocks);
+    }
+    if d.join("follower.borsh").exists() {
+        let snapshot = std::fs::read(d.join("follower.borsh"))?;
+        let blocks: Vec<Block> = borsh::from_slice(&std::fs::read(d.join("blocks.borsh"))?)?;
+        return Follower::restore(&snapshot, blocks);
+    }
+    Ok(Follower::new())
+}
+
 impl Zone {
     async fn open(rpc: &str, wait_final: bool, state_dir: Option<PathBuf>) -> Result<Self> {
         let client = SequencerClientBuilder::default().build(rpc).with_context(|| format!("the sequencer at {rpc}"))?;
-        let follower = match &state_dir {
-            Some(d) if d.join("follower.borsh").exists() => {
-                let snapshot = std::fs::read(d.join("follower.borsh"))?;
-                let blocks: Vec<Block> = borsh::from_slice(&std::fs::read(d.join("blocks.borsh"))?)?;
-                Follower::restore(&snapshot, blocks)?
-            }
-            _ => Follower::new(),
-        };
+        let follower = load_follower(state_dir.as_deref())?;
         let mut z = Self { rpc: rpc.to_string(), client, follower, wait_final, state_dir };
         z.sync().await?;
         Ok(z)
+    }
+
+    /// The payer's nonce at the sequencer's head (it counts transactions in blocks not yet final).
+    async fn head_nonce(&self, id: AccountId) -> Result<u128> {
+        let a = self.client.get_account(id).await.map_err(|e| anyhow!("getAccount: {e}"))?;
+        Ok(a.map_or(0, |a| a.nonce.0))
     }
 
     /// Apply the sequencer's blocks after the follower's tip: to its head, or to its last block final on Bedrock.
@@ -239,8 +402,9 @@ impl Zone {
         }
         if let Some(d) = &self.state_dir {
             std::fs::create_dir_all(d)?;
-            std::fs::write(d.join("follower.borsh"), self.follower.snapshot()?)?;
-            std::fs::write(d.join("blocks.borsh"), borsh::to_vec(&self.follower.blocks)?)?;
+            let mut bytes = borsh::to_vec(&self.follower.snapshot()?)?;
+            bytes.extend(borsh::to_vec(&self.follower.blocks)?);
+            write_atomic(&d.join(FOLLOWER_STATE), &bytes)?;
         }
         Ok(())
     }
@@ -269,24 +433,45 @@ impl Zone {
 }
 
 /// What LEZ's settlement did, or would do, with one transaction.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 struct Outcome {
     reverted: bool,
     exit_code: Option<u32>,
+    /// LEZ's message for a revert (for a program's refusal: "Program exited with non-zero code …").
+    #[serde(default)]
+    reason: Option<String>,
     gas_exec: u64,
     gas_stor: u64,
     events: u64,
+    #[serde(skip)]
     event_data: Vec<Vec<u8>>,
+    /// The time of the block it ran in (a dry run: the time it was dry-run at), Unix milliseconds.
+    #[serde(default)]
+    at_ms: u64,
 }
 
 impl Outcome {
-    fn show(&self) -> String {
-        let verdict = match (self.reverted, self.exit_code) {
-            (false, _) => "applied".to_string(),
-            (true, Some(c)) => format!("refused with {c} {}", code_name(c)),
-            (true, None) => "reverted without a code".to_string(),
+    /// LEZ's validity-window refusal of a step with `window`, as [`window_refusal`] words it.
+    fn window(&self, window: Option<&WindowNote>) -> Option<(WindowSide, String)> {
+        match (self.reverted, self.exit_code, &self.reason) {
+            (true, None, Some(r)) => window_refusal(r, window, self.at_ms),
+            _ => None,
+        }
+    }
+    fn show_for(&self, window: Option<&WindowNote>) -> String {
+        let verdict = match (self.reverted, self.exit_code, self.window(window)) {
+            (false, _, _) => "applied".to_string(),
+            (true, Some(c), _) => format!("refused with {c} {}", code_name(c)),
+            (true, None, Some((_, message))) => message,
+            (true, None, None) => match &self.reason {
+                Some(r) => format!("refused by LEZ: \"{r}\""),
+                None => "reverted without a code".to_string(),
+            },
         };
         format!("{verdict}; execution gas {}, storage gas {}, {} event(s)", self.gas_exec, self.gas_stor, self.events)
+    }
+    fn show(&self) -> String {
+        self.show_for(None)
     }
     /// The program's code: 0 when applied.
     fn code(&self) -> u32 {
@@ -295,6 +480,14 @@ impl Outcome {
         } else {
             0
         }
+    }
+    /// Refused by LEZ because the step's window had ended (the checkpoint is stale by the zone's clock).
+    fn stale(&self, window: Option<&WindowNote>) -> bool {
+        matches!(self.window(window), Some((WindowSide::Ended, _)))
+    }
+    /// Refused by LEZ for the block's time: the window had ended or was not open yet.
+    fn timed_out_of_window(&self, window: Option<&WindowNote>) -> bool {
+        matches!(self.window(window), Some((WindowSide::Ended | WindowSide::NotOpen, _)))
     }
 }
 
@@ -315,11 +508,37 @@ fn settle(state: &mut lee::V03State, tx: &LeeTransaction, block_id: u64, ts: u64
     Ok(Outcome {
         reverted,
         exit_code: reason.as_deref().and_then(exit_code_of),
+        reason,
         gas_exec: summary.gas_used_exec,
         gas_stor: summary.gas_used_stor,
         events: events.len() as u64,
         event_data: events.iter().map(|e| e.event.data.clone()).collect(),
+        at_ms: ts,
     })
+}
+
+/// The zone's receipt of a transaction, from the follower.
+fn outcome_of(r: &follower::Receipt) -> Outcome {
+    Outcome {
+        reverted: r.reverted,
+        exit_code: r.exit_code,
+        reason: r.reason.clone(),
+        gas_exec: r.gas_exec,
+        gas_stor: r.gas_stor,
+        events: r.events,
+        event_data: vec![],
+        at_ms: r.timestamp_ms,
+    }
+}
+
+/// The receipt matches the dry run: exit code, execution and storage gas, events. A revert's reason is not compared:
+/// LEZ's window refusal depends on the block's time.
+fn same(zone: &Outcome, dry: &Outcome) -> bool {
+    zone.reverted == dry.reverted
+        && zone.exit_code == dry.exit_code
+        && zone.gas_exec == dry.gas_exec
+        && zone.gas_stor == dry.gas_stor
+        && zone.events == dry.events
 }
 
 struct Payer {
@@ -351,6 +570,128 @@ struct Step {
     message: Vec<u8>,
     actors: Vec<Actor>,
     evidence: Vec<PublicAccountEvidence>,
+    /// The timestamp validity window the program gives it (`Init`, `Open`), for LEZ's window refusal.
+    window: Option<WindowNote>,
+}
+
+// ---- the journal of what a command sends ---------------------------------------------------------------------------
+
+/// One transaction a command sent, or is about to send: the signed bytes, the dry run, and the zone's receipt once read.
+#[derive(Clone, Serialize, Deserialize)]
+struct Sent {
+    label: String,
+    /// `0x` + borsh of the signed `LeeTransaction`.
+    tx: String,
+    hash: String,
+    /// The payer's nonce it is signed at (decimal).
+    nonce: String,
+    dry_run: Outcome,
+    #[serde(default)]
+    window: Option<WindowNote>,
+    #[serde(default)]
+    receipt: Option<Receipt>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+struct Receipt {
+    block: u64,
+    outcome: Outcome,
+}
+
+/// What a sending command sent, kept in `--state-dir/sent/<intent>.json` and written before anything is sent.
+#[derive(Clone, Serialize, Deserialize)]
+struct Journal {
+    version: u32,
+    /// `init`, `advance` or `attest`.
+    what: String,
+    /// What the command asks for, as its key was derived ([`intent`]).
+    intent: String,
+    payer: String,
+    /// The verdict's code for the last step (0: applied), as the command computed it.
+    expected: Option<u32>,
+    steps: Vec<Sent>,
+    /// The exit status once every receipt was read; `None` while the run is unfinished.
+    status: Option<i32>,
+}
+
+/// Where a command's journal lives, and the text its key is the hash of.
+#[derive(Clone)]
+struct Slot {
+    path: PathBuf,
+    intent: String,
+}
+
+impl Slot {
+    fn load(&self) -> Result<Option<Journal>> {
+        if !self.path.exists() {
+            return Ok(None);
+        }
+        let j: Journal = serde_json::from_slice(&std::fs::read(&self.path)?)
+            .with_context(|| format!("the journal {}", self.path.display()))?;
+        ensure!(j.intent == self.intent, "the journal {} is of another command: {}", self.path.display(), j.intent);
+        Ok(Some(j))
+    }
+    fn save(&self, j: &Journal) -> Result<()> {
+        if let Some(d) = self.path.parent() {
+            std::fs::create_dir_all(d)?;
+        }
+        write_atomic(&self.path, &serde_json::to_vec_pretty(j)?)
+    }
+}
+
+/// The text naming what a sending command asks for (its inputs, not the endpoints serving them; files by their
+/// SHA-256), and its journal's place: `None` for a command that sends nothing.
+fn intent(a: &AttestArgs, program: AccountId, chain_id: Option<u64>) -> Result<Option<(String, String)>> {
+    let file = |p: &PathBuf| -> Result<String> {
+        let b = std::fs::read(p).with_context(|| format!("reading {}", p.display()))?;
+        Ok(format!("sha256:{}", hex::encode(Sha256::digest(&b))))
+    };
+    let norm = |s: &str| s.trim().to_lowercase();
+    let list = |v: &[String]| v.iter().map(|s| norm(s)).collect::<Vec<_>>().join(",");
+    let text = match &a.cmd {
+        AttestCmd::Init { preset, bootstrap, checkpoint, layout, parts } => format!(
+            "init program={program} preset={} layout={} parts={parts} checkpoint={} bootstrap={}",
+            norm(preset),
+            norm(layout),
+            norm(checkpoint).trim_start_matches("0x"),
+            file(bootstrap)?
+        ),
+        AttestCmd::Advance { instance, update, finality, .. } => format!(
+            "advance program={program} instance={} finality={finality} update={}",
+            norm(instance).trim_start_matches("0x"),
+            file(update)?
+        ),
+        AttestCmd::Attest { instance, record_slot, block, storage, account, log, header_rlp, .. } => format!(
+            "attest program={program} instance={} record_slot={record_slot} block={block} chain_id={} storage=[{}] \
+             account=[{}] log=[{}] header_rlp={}",
+            norm(instance).trim_start_matches("0x"),
+            chain_id.map_or("record".into(), |c| c.to_string()),
+            list(storage),
+            list(account),
+            list(log),
+            header_rlp.as_ref().map(file).transpose()?.unwrap_or_else(|| "none".into())
+        ),
+        _ => return Ok(None),
+    };
+    let key = hex::encode(Sha256::digest(text.as_bytes()));
+    Ok(Some((key, text)))
+}
+
+/// The exit status of a run whose last outcome is `last`, given the verdict's code for it and whether every receipt
+/// equalled its dry run. LEZ's refusal past a checkpoint's weak-subjectivity period is a refusal (3): the program's
+/// native checks do not see the clock, and a dry run made at an earlier time could not either.
+fn status_of(last: &Outcome, window: Option<&WindowNote>, expected: Option<u32>, all_equal: bool) -> i32 {
+    if last.timed_out_of_window(window) {
+        return 3;
+    }
+    if !all_equal || expected.is_some_and(|e| last.code() != e) {
+        return 1;
+    }
+    if last.reverted {
+        3
+    } else {
+        0
+    }
 }
 
 struct Run {
@@ -370,8 +711,17 @@ impl Run {
 
 /// Dry-run `steps` in order on one scratch copy of the zone's state, then (with `send`) send each and compare the
 /// zone's receipt with its dry run. `expected` is the verdict's code for the last step (0: applied), checked against
-/// the dry run. Returns the exit status.
-async fn transact(z: &mut Zone, a: &AttestArgs, run: &Run, what: &str, steps: Vec<Step>, expected: Option<u32>) -> Result<i32> {
+/// the dry run. With `slot`, every transaction is written to the journal, signed, before the first is sent, and each
+/// receipt as it is read. Returns the exit status.
+async fn transact(
+    z: &mut Zone,
+    a: &AttestArgs,
+    run: &Run,
+    what: &str,
+    steps: Vec<Step>,
+    expected: Option<u32>,
+    slot: Option<&Slot>,
+) -> Result<i32> {
     let p = payer(&a.key)?;
     let (tip, ts) = z.tip();
     let mut scratch = z.follower.state.clone();
@@ -382,9 +732,9 @@ async fn transact(z: &mut Zone, a: &AttestArgs, run: &Run, what: &str, steps: Ve
     for (i, s) in steps.iter().enumerate() {
         let tx = build(&p, start_nonce + i as u128, s.root, s.message.clone(), s.actors.clone(), s.evidence.clone(), a.gas_limit);
         let o = settle(&mut scratch, &tx, tip + 1 + i as u64, ts + 10_000 * (1 + i as u64))?;
-        println!("  {:<28} {} bytes; would be {}", s.label, borsh::to_vec(&tx)?.len(), o.show());
+        println!("  {:<28} {} bytes; would be {}", s.label, borsh::to_vec(&tx)?.len(), o.show_for(s.window.as_ref()));
         run.log(json!({ "what": what, "step": s.label, "phase": "dry-run", "tx": tx.hash().to_string(), "bytes": borsh::to_vec(&tx)?.len(),
-            "reverted": o.reverted, "exit_code": o.exit_code, "gas_exec": o.gas_exec, "gas_stor": o.gas_stor, "events": o.events }));
+            "reverted": o.reverted, "exit_code": o.exit_code, "reason": o.reason, "gas_exec": o.gas_exec, "gas_stor": o.gas_stor, "events": o.events }));
         let stop = o.reverted;
         txs.push(tx);
         dry.push(o);
@@ -393,11 +743,13 @@ async fn transact(z: &mut Zone, a: &AttestArgs, run: &Run, what: &str, steps: Ve
         }
     }
     let last = dry.last().unwrap().clone();
-    let mut status = if last.reverted { 3 } else { 0 };
+    let last_window = steps[dry.len() - 1].window.clone();
+    let status = status_of(&last, last_window.as_ref(), expected, true);
     if let Some(e) = expected {
-        if last.code() != e {
+        if last.timed_out_of_window(last_window.as_ref()) {
+            println!("  the program's checks pass natively ({}); LEZ refuses it for the block's time", if e == 0 { "applied".into() } else { format!("{e}") });
+        } else if last.code() != e {
             println!("  DISAGREE: the verdict says {e}, the zone's execution {}", last.code());
-            status = 1;
         } else {
             println!("  the verdict and the zone's execution agree: {}", if e == 0 { "applied".into() } else { format!("{e} {}", code_name(e)) });
         }
@@ -408,40 +760,184 @@ async fn transact(z: &mut Zone, a: &AttestArgs, run: &Run, what: &str, steps: Ve
         }
         return Ok(status);
     }
-    for (i, (tx, d)) in txs.iter().zip(&dry).enumerate() {
-        let label = &steps[i].label;
-        let hash = z.client.send_transaction(tx.clone()).await.map_err(|e| anyhow!("{label}: the sequencer refused it: {e}"))?;
-        ensure!(hash == tx.hash(), "{label}: the sequencer returned another hash");
+    // A step the dry run shows refused because its checkpoint's period has ended is refused by every later block too,
+    // and LEZ would charge it the whole gas limit: nothing is sent.
+    if last.stale(last_window.as_ref()) {
+        println!("  not sent: LEZ refuses it at any later time too, and would charge it the whole gas limit ({})", a.gas_limit);
+        run.log(json!({ "what": what, "phase": "held", "reason": last.reason, "code": OUTSIDE_WS_PERIOD }));
+        return Ok(3);
+    }
+    let mut journal = Journal {
+        version: 1,
+        what: what.to_string(),
+        intent: slot.map(|s| s.intent.clone()).unwrap_or_default(),
+        payer: p.id.to_string(),
+        expected,
+        steps: txs
+            .iter()
+            .zip(&dry)
+            .enumerate()
+            .map(|(i, (tx, d))| -> Result<Sent> {
+                Ok(Sent {
+                    label: steps[i].label.clone(),
+                    tx: hx(&borsh::to_vec(tx)?),
+                    hash: tx.hash().to_string(),
+                    nonce: (start_nonce + i as u128).to_string(),
+                    dry_run: d.clone(),
+                    window: steps[i].window.clone(),
+                    receipt: None,
+                })
+            })
+            .collect::<Result<_>>()?,
+        status: None,
+    };
+    // Written before anything is sent: a run interrupted from here on is finished by running the same command again.
+    if let Some(s) = slot {
+        s.save(&journal)?;
+    }
+    send_journal(z, a, run, &p, &mut journal, slot, false).await
+}
+
+/// Send the journal's transactions that have no receipt yet, in order, and read each receipt; stop at the first refused.
+/// `resuming`: an earlier run may have sent them already, so a transaction is sent (again, byte for byte) only while
+/// the sequencer's head shows its nonce unused, and otherwise waited for. Writes each receipt and the status to the
+/// journal. Returns the exit status.
+async fn send_journal(
+    z: &mut Zone,
+    a: &AttestArgs,
+    run: &Run,
+    p: &Payer,
+    j: &mut Journal,
+    slot: Option<&Slot>,
+    resuming: bool,
+) -> Result<i32> {
+    let what = j.what.clone();
+    let mut all_equal = true;
+    let mut last: Option<(Outcome, Option<WindowNote>)> = None;
+    for i in 0..j.steps.len() {
+        let s = j.steps[i].clone();
+        if let Some(r) = &s.receipt {
+            let equal = same(&r.outcome, &s.dry_run);
+            println!("  {:<28} block {} (sent and read by an earlier run): {}", s.label, r.block, r.outcome.show_for(s.window.as_ref()));
+            all_equal &= equal;
+            last = Some((r.outcome.clone(), s.window.clone()));
+            if r.outcome.reverted {
+                break;
+            }
+            continue;
+        }
+        let tx: LeeTransaction = borsh::from_slice(&hex::decode(s.tx.trim_start_matches("0x"))?)?;
+        let hash = tx.hash();
+        ensure!(hash.to_string() == s.hash, "{}: the journal's transaction does not hash to its recorded hash", s.label);
+        let nonce: u128 = s.nonce.parse()?;
         let started = Instant::now();
+        let mut sent_now = false;
+        if resuming {
+            z.sync().await?;
+            if z.follower.receipt(&hash).is_some() {
+                println!("  {:<28} applied or refused in a final block since the earlier run sent it: nothing sent", s.label);
+            } else if z.head_nonce(p.id).await? > nonce {
+                println!("  {:<28} in a block of the sequencer not yet final: waiting for it, nothing sent", s.label);
+            } else {
+                println!("  {:<28} in no block yet: sending the same signed transaction again (hash {hash}, nonce {nonce}; LEZ applies it at most once)", s.label);
+                sent_now = true;
+            }
+        } else {
+            sent_now = true;
+        }
+        if sent_now {
+            let got = z.client.send_transaction(tx.clone()).await.map_err(|e| anyhow!("{}: the sequencer refused it: {e}", s.label))?;
+            ensure!(got == hash, "{}: the sequencer returned another hash", s.label);
+        }
         let receipt = loop {
             z.sync().await?;
             if let Some(r) = z.follower.receipt(&hash) {
                 break r.clone();
             }
-            ensure!(started.elapsed() < Duration::from_secs(a.settle_timeout), "{label}: {hash} not in a final block after {} s", a.settle_timeout);
+            // Its nonce used in a final block by another transaction: this one can never be applied.
+            if z.follower.state.get_account_by_id(p.id).nonce.0 > nonce {
+                println!("  {:<28} NOT APPLIED: the payer's nonce {nonce} was used by another transaction in a final block; nothing more is sent", s.label);
+                run.log(json!({ "what": what, "step": s.label, "phase": "superseded", "tx": s.hash, "nonce": s.nonce }));
+                j.status = Some(1);
+                if let Some(sl) = slot {
+                    sl.save(j)?;
+                }
+                return Ok(1);
+            }
+            ensure!(started.elapsed() < Duration::from_secs(a.settle_timeout), "{}: {hash} not in a final block after {} s", s.label, a.settle_timeout);
             tokio::time::sleep(Duration::from_secs(1)).await;
         };
-        let zone = Outcome { reverted: receipt.reverted, exit_code: receipt.exit_code, gas_exec: receipt.gas_exec, gas_stor: receipt.gas_stor, events: receipt.events, event_data: vec![] };
-        let equal = zone.reverted == d.reverted && zone.exit_code == d.exit_code && zone.gas_exec == d.gas_exec && zone.gas_stor == d.gas_stor && zone.events == d.events;
+        let zone = outcome_of(&receipt);
+        let equal = same(&zone, &s.dry_run);
+        let explained = zone.stale(s.window.as_ref()) && !s.dry_run.reverted;
         println!(
             "  {:<28} block {} ({:.0} s): {}; {}",
-            label,
+            s.label,
             receipt.block_id,
             started.elapsed().as_secs_f64(),
-            zone.show(),
-            if equal { "equal to its dry run" } else { "DIFFERS from its dry run" }
+            zone.show_for(s.window.as_ref()),
+            if equal {
+                "equal to its dry run"
+            } else if explained {
+                "its dry run, at the followed tip's earlier time, was inside the window"
+            } else {
+                "DIFFERS from its dry run"
+            }
         );
-        run.log(json!({ "what": what, "step": label, "phase": "sent", "tx": hash.to_string(), "block": receipt.block_id,
-            "reverted": zone.reverted, "exit_code": zone.exit_code, "gas_exec": zone.gas_exec, "gas_stor": zone.gas_stor,
-            "events": zone.events, "equal_to_dry_run": equal, "base_fee": receipt.fee_base }));
-        if !equal {
-            status = 1;
+        run.log(json!({ "what": what, "step": s.label, "phase": "sent", "tx": s.hash, "block": receipt.block_id,
+            "reverted": zone.reverted, "exit_code": zone.exit_code, "reason": zone.reason, "gas_exec": zone.gas_exec, "gas_stor": zone.gas_stor,
+            "events": zone.events, "equal_to_dry_run": equal, "base_fee": receipt.fee_base, "resumed": resuming }));
+        all_equal &= equal || explained;
+        j.steps[i].receipt = Some(Receipt { block: receipt.block_id, outcome: zone.clone() });
+        if let Some(sl) = slot {
+            sl.save(j)?;
         }
+        last = Some((zone.clone(), s.window.clone()));
         if zone.reverted {
             break;
         }
     }
+    let status = match &last {
+        Some((o, w)) => status_of(o, w.as_ref(), j.expected, all_equal),
+        None => 1,
+    };
+    j.status = Some(status);
+    if let Some(sl) = slot {
+        sl.save(j)?;
+    }
     Ok(status)
+}
+
+/// A command whose journal says an earlier run sent it: report what that run did and send nothing (it finished), or
+/// finish it with the transactions it signed (it was interrupted). Signs nothing. Returns the exit status.
+async fn resume(z: &mut Zone, a: &AttestArgs, run: &Run, slot: &Slot, mut j: Journal) -> Result<i32> {
+    let p = payer(&a.key)?;
+    if let Some(status) = j.status {
+        println!("{}: already sent by an earlier run (journal {}): nothing sent", j.what, slot.path.display());
+        for s in &j.steps {
+            match &s.receipt {
+                Some(r) => println!("  {:<28} block {}: {}", s.label, r.block, r.outcome.show_for(s.window.as_ref())),
+                None => println!("  {:<28} not sent", s.label),
+            }
+        }
+        println!("  exit status of that run: {status} (--again sends the command once more)");
+        run.log(json!({ "what": j.what, "phase": "already-sent", "journal": slot.path.display().to_string(), "status": status }));
+        return Ok(status);
+    }
+    ensure!(
+        j.payer == p.id.to_string(),
+        "the interrupted run's transactions are signed by {}, not by --key's account {}: finish it with that key",
+        j.payer,
+        p.id
+    );
+    println!(
+        "{}: an earlier run was interrupted (journal {}): finishing its {} transaction(s), none signed again",
+        j.what,
+        slot.path.display(),
+        j.steps.len()
+    );
+    run.log(json!({ "what": j.what, "phase": "resume", "journal": slot.path.display().to_string() }));
+    send_journal(z, a, run, &p, &mut j, Some(slot), true).await
 }
 
 fn root_arg(s: &str) -> Result<Root> {
@@ -482,16 +978,119 @@ async fn instance_state(z: &Zone, program: AccountId, id: &Root) -> Result<Insta
     Ok(s)
 }
 
-fn eth_call(url: &str, method: &str, params: Value) -> Result<Vec<u8>> {
-    let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params }).to_string();
-    let out = std::process::Command::new("curl")
-        .args(["-sS", "-m", "60", "-A", "ferrata-cli", "-H", "Content-Type: application/json", "--data-binary", &body, url])
-        .output()
-        .context("running curl")?;
-    ensure!(out.status.success(), "{method} on {url}: {}", String::from_utf8_lossy(&out.stderr).trim());
-    let v: Value = serde_json::from_slice(&out.stdout).with_context(|| format!("{method}: not JSON"))?;
-    ensure!(v.get("error").is_none(), "{method}: {}", v["error"]);
-    Ok(out.stdout)
+/// An Ethereum JSON-RPC endpoint (`attest --eth`), read with `curl`: each request bounded by `timeout` seconds, and
+/// retried `retries` times after a failure that may pass (no connection, a timeout, an answer cut or empty, HTTP 5xx or
+/// 429), one second more between each. An answer that is an error, or not the expected shape, is not retried. Nothing
+/// it serves is trusted: the program checks every proof against the record.
+pub struct Eth {
+    pub url: String,
+    pub timeout: u64,
+    pub retries: u32,
+}
+
+/// One failed request: whether trying again may help, and why it failed.
+struct EthFailure {
+    transient: bool,
+    why: String,
+}
+
+impl Eth {
+    /// `method(params)`'s whole answer (a JSON-RPC response with a non-null `result`), as bytes.
+    pub fn call(&self, method: &str, params: Value) -> Result<Vec<u8>> {
+        let mut attempt = 0;
+        loop {
+            match self.once(method, &params) {
+                Ok(body) => return Ok(body),
+                Err(f) if f.transient && attempt < self.retries => {
+                    attempt += 1;
+                    eprintln!("note: {method}: {}; trying again ({attempt} of {})", f.why, self.retries);
+                    std::thread::sleep(Duration::from_secs(u64::from(attempt)));
+                }
+                Err(f) => {
+                    let tries = if f.transient { format!(" (after {} attempt(s))", attempt + 1) } else { String::new() };
+                    bail!("{method}: {}{tries}", f.why)
+                }
+            }
+        }
+    }
+
+    fn once(&self, method: &str, params: &Value) -> std::result::Result<Vec<u8>, EthFailure> {
+        let body = json!({ "jsonrpc": "2.0", "id": 1, "method": method, "params": params }).to_string();
+        let timeout = self.timeout.max(1).to_string();
+        let out = std::process::Command::new("curl")
+            .args(["-sS", "-m", &timeout, "-A", "ferrata-cli", "-H", "Content-Type: application/json", "--data-binary", &body])
+            .args(["-w", "\n%{http_code}", &self.url])
+            .output()
+            .map_err(|e| EthFailure { transient: false, why: format!("running curl: {e}") })?;
+        if !out.status.success() {
+            let code = out.status.code().unwrap_or(-1);
+            let why = String::from_utf8_lossy(&out.stderr).trim().to_string();
+            // curl's exit codes: 6 host not resolved, 7 connection failed, 18 answer cut short, 28 timed out, 52 empty
+            // answer, 55 and 56 send or receive failed, 92 HTTP/2 stream error.
+            let (transient, kind) = match code {
+                7 => (true, "the endpoint refused the connection or is unreachable"),
+                28 => (true, "the endpoint did not answer in time"),
+                18 => (true, "the endpoint's answer was cut short"),
+                52 => (true, "the endpoint closed the connection without answering"),
+                55 | 56 | 92 => (true, "the connection failed mid-answer"),
+                6 => (true, "the endpoint's host name did not resolve"),
+                _ => (false, "curl failed"),
+            };
+            return Err(EthFailure { transient, why: format!("{kind} (curl exit {code}: {why})") });
+        }
+        let text = out.stdout;
+        let split = text.iter().rposition(|b| *b == b'\n').unwrap_or(0);
+        let (body, status) = (&text[..split], String::from_utf8_lossy(&text[(split + 1).min(text.len())..]).trim().to_string());
+        let http: u16 = status.parse().unwrap_or(0);
+        if http == 429 || (500..600).contains(&http) {
+            return Err(EthFailure { transient: true, why: format!("the endpoint answered HTTP {http}") });
+        }
+        if !(200..300).contains(&http) {
+            return Err(EthFailure { transient: false, why: format!("the endpoint answered HTTP {http}") });
+        }
+        let v: Value = serde_json::from_slice(body).map_err(|e| EthFailure {
+            // A body cut where the server closed the connection without a length reads as broken JSON.
+            transient: true,
+            why: format!("the answer is not JSON ({e}; {} bytes): cut short?", body.len()),
+        })?;
+        if let Some(e) = v.get("error") {
+            return Err(EthFailure { transient: false, why: format!("the endpoint answered with an error: {e}") });
+        }
+        if v.get("result").is_none_or(Value::is_null) {
+            return Err(EthFailure { transient: false, why: "the endpoint has no answer for it (result null)".into() });
+        }
+        Ok(body.to_vec())
+    }
+}
+
+/// `f` over data an endpoint served, which may not have the shape `f` expects: a panic is an error, quietly.
+fn untrusted<T>(what: &str, f: impl FnOnce() -> T + std::panic::UnwindSafe) -> Result<T> {
+    let hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let r = std::panic::catch_unwind(f);
+    std::panic::set_hook(hook);
+    r.map_err(|_| anyhow!("{what}: the answer does not have the expected fields"))
+}
+
+/// The endpoint serves the record's chain and block: its `eth_chainId` is the record's, and its block `number` has the
+/// hash the record binds. Otherwise its proofs could not verify under the record, whatever else it serves.
+fn check_endpoint(eth: &Eth, chain_id: u64, number: u64, bound: &Root) -> Result<()> {
+    let v: Value = serde_json::from_slice(&eth.call("eth_chainId", json!([]))?)?;
+    let served = v["result"].as_str().and_then(|s| u64::from_str_radix(s.trim_start_matches("0x"), 16).ok());
+    ensure!(
+        served == Some(chain_id),
+        "the endpoint serves chain {} (eth_chainId), the record is of chain {chain_id}: it serves the wrong chain",
+        served.map_or_else(|| v["result"].to_string(), |c| c.to_string())
+    );
+    let v: Value = serde_json::from_slice(&eth.call("eth_getBlockByNumber", json!([format!("0x{number:x}"), false]))?)?;
+    let hash = v["result"]["hash"].as_str().unwrap_or_default().to_lowercase();
+    ensure!(
+        hash == hx(bound),
+        "the endpoint's block {number} has hash {hash}, the record binds {}: another chain, or a block it does not hold \
+         as the record's",
+        hx(bound)
+    );
+    Ok(())
 }
 
 /// `sequencer` is the tool's global `--sequencer`; `chain_id` its global `--chain-id`, the chain id a statement must
@@ -523,9 +1122,44 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
         run.log(json!({ "what": "wallet", "home": home.display().to_string(), "account": p.id.to_string() }));
         return Ok(0);
     }
+    // A sending command's journal: what it sends is written there before it is sent (RFP-021 R.5).
+    let slot = match intent(&a, program, chain_id)? {
+        Some((key, text)) => {
+            if a.send && a.yes && a.state_dir.is_none() {
+                println!(
+                    "--send --yes needs --state-dir: the tool writes there what it is about to send, so that the same \
+                     command run again after an interruption sends nothing twice"
+                );
+                return Ok(2);
+            }
+            a.state_dir.as_ref().map(|d| Slot { path: d.join("sent").join(format!("{key}.json")), intent: text })
+        }
+        None => None,
+    };
     let mut z = Zone::open(&rpc, a.wait_final != "no", a.state_dir.clone()).await?;
     let (tip, _) = z.tip();
     println!("zone {rpc}: followed to block {tip}{}", if z.wait_final { " (final on Bedrock)" } else { "" });
+    if let Some(s) = &slot {
+        if let Some(j) = s.load()? {
+            if a.send && a.yes && !a.again {
+                return resume(&mut z, &a, &run, s, j).await;
+            }
+            if a.again && j.status.is_none() {
+                println!(
+                    "--again: an earlier run of this command was interrupted (journal {}); run it again without --again \
+                     to finish it first",
+                    s.path.display()
+                );
+                return Ok(2);
+            }
+            println!(
+                "note: an earlier run sent this command (journal {}, {}){}",
+                s.path.display(),
+                j.status.map_or("unfinished".into(), |st| format!("exit status {st}")),
+                if a.again { "; --again: sending it once more" } else { "; with --send --yes nothing more is sent" }
+            );
+        }
+    }
     match &a.cmd {
         AttestCmd::Config { instance, checkpoint } => {
             let id = root_arg(instance)?;
@@ -597,18 +1231,33 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             let job_a = job_actor(program, &id, &jid);
             println!("init: instance {} (chain {}), finalized slot {}, job {}", hx(&id), config.chain_id, store.finalized.slot, hx(&jid));
             let keys = uncompressed_keys(&b.current_sync_committee).map_err(|e| anyhow!("{e:?}"))?;
+            // `Init`'s window: until the end of the weak-subjectivity period of the checkpoint's header.
+            let w = ferrata_advance::init_window(&config, store.finalized.slot);
+            let window = WindowNote {
+                start_ms: w.start_ms,
+                end_ms: w.end_ms,
+                checkpoint: format!("checkpoint {} (its header at slot {})", hx(&checkpoint), store.finalized.slot),
+            };
             let mut list = vec![Step {
                 label: "Init".into(),
                 root: instance_actor(program, &id),
                 message: borsh::to_vec(&Message::Init { config: config.clone(), checkpoint, bootstrap: compact.encode(fork) })?,
                 actors: vec![instance_actor(program, &id), job_a],
                 evidence: vec![PublicAccountEvidence::Pda { program, seed: instance_seed(&id) }],
+                window: Some(window),
             }];
             for p in 0..*parts {
                 let s = ferrata_advance::adopt_step(program, &id, *parts, job_a, &keys, p, Some(store.finalized.slot));
-                list.push(Step { label: format!("Adopt {}/{}", p + 1, parts), root: s.root, message: s.message, actors: s.actors, evidence: vec![] });
+                list.push(Step {
+                    label: format!("Adopt {}/{}", p + 1, parts),
+                    root: s.root,
+                    message: s.message,
+                    actors: s.actors,
+                    evidence: vec![],
+                    window: None,
+                });
             }
-            transact(&mut z, &a, &run, "init", list, Some(0)).await
+            transact(&mut z, &a, &run, "init", list, Some(0), slot.as_ref()).await
         }
         AttestCmd::Advance { instance, update, finality, committees } => {
             let id = root_arg(instance)?;
@@ -635,6 +1284,17 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             }
             println!("advance: update attested at slot {}, signed at slot {}, finalizing slot {}; the store is at slot {}",
                 u.attested_header.beacon.slot, u.signature_slot, u.finalized_header.beacon.slot, store.finalized.slot);
+            // `Open`'s window: from the update's signature slot to the end of the weak-subjectivity period of the
+            // instance's newest finalized header (none if it is signed after that end: the program refuses it, 53).
+            let open_window = ferrata_advance::open_window(&s.config, store.finalized.slot, u.signature_slot).map(|w| WindowNote {
+                start_ms: w.start_ms,
+                end_ms: w.end_ms,
+                checkpoint: format!(
+                    "instance's newest finalized header {} (slot {})",
+                    hx(&store.finalized.hash_tree_root()),
+                    store.finalized.slot
+                ),
+            });
             let mut verdict = None;
             for c in &candidates {
                 match ferrata_advance::evaluate(&s.config, &id, &store, &u, Some(c), Some(c)) {
@@ -676,8 +1336,9 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                         message: borsh::to_vec(&Message::Open { update: compact.encode(layout), signers: witness.encode() })?,
                         actors: vec![instance_actor(program, &id), job_actor(program, &id, &jid)],
                         evidence: vec![],
+                        window: open_window.clone(),
                     };
-                    let st = transact(&mut z, &a, &run, "advance", vec![open], native).await?;
+                    let st = transact(&mut z, &a, &run, "advance", vec![open], native, slot.as_ref()).await?;
                     return Ok(if st == 0 { 1 } else { st });
                 }
                 None => bail!("--committee: at least one full committee the store summarises"),
@@ -687,9 +1348,10 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             let mut list = Vec::new();
             for step in ferrata_advance::job_steps(&s.config, &planned) {
                 let t = ferrata_advance::job_step(program, &id, &s.config, &planned, step)?;
-                list.push(Step { label: step.name(), root: t.root, message: t.message, actors: t.actors, evidence: vec![] });
+                let window = if step == ferrata_advance::Step::Open { open_window.clone() } else { None };
+                list.push(Step { label: step.name(), root: t.root, message: t.message, actors: t.actors, evidence: vec![], window });
             }
-            let st = transact(&mut z, &a, &run, "advance", list, Some(0)).await?;
+            let st = transact(&mut z, &a, &run, "advance", list, Some(0), slot.as_ref()).await?;
             if a.send && a.yes && st == 0 {
                 let after = instance_state(&z, program, &id).await?;
                 let st2 = CompactStore::decode(&after.store).map_err(|e| anyhow!("store: {e:?}"))?;
@@ -725,9 +1387,9 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                 let want = t.trim().trim_start_matches("0x").to_lowercase();
                 match z.follower.receipts.iter().find(|(h, _)| h.trim_start_matches("0x").to_lowercase() == want) {
                     Some((h, r)) => {
-                        let o = Outcome { reverted: r.reverted, exit_code: r.exit_code, gas_exec: r.gas_exec, gas_stor: r.gas_stor, events: r.events, event_data: vec![] };
+                        let o = outcome_of(r);
                         println!("receipt {h}: block {}: {}", r.block_id, o.show());
-                        run.log(json!({ "what": "receipt", "tx": h, "block": r.block_id, "reverted": r.reverted, "exit_code": r.exit_code,
+                        run.log(json!({ "what": "receipt", "tx": h, "block": r.block_id, "reverted": r.reverted, "exit_code": r.exit_code, "reason": r.reason,
                                         "gas_exec": r.gas_exec, "gas_stor": r.gas_stor, "events": r.events }));
                     }
                     None => {
@@ -744,12 +1406,24 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             let rec_bytes = z.actor_state(header).await?;
             ensure!(!rec_bytes.is_empty(), "no record header({}, {record_slot}) on the zone", hx(&id));
             let record: RecordState = borsh::from_slice(&rec_bytes).map_err(|e| anyhow!("record: {e}"))?;
+            let h = record.header().map_err(|e| anyhow!("record: {e:?}"))?;
+            // The block the record binds: its hash, and --block must be its number where the record names it.
+            let bound = match &h.execution {
+                ExecutionSummary::Payload { block_number, block_hash, .. } => {
+                    if block_number != block {
+                        println!("--block {block}: the record header({}, {record_slot}) binds block {block_number}", hx(&id));
+                        return Ok(2);
+                    }
+                    *block_hash
+                }
+                ExecutionSummary::BlockHash(hash) => *hash,
+                ExecutionSummary::None => bail!("the record header({}, {record_slot}) binds no execution block", hx(&id)),
+            };
             let bh = format!("0x{block:x}");
             let mut req = Request { instance_id: id, chain_id: chain_id.unwrap_or(record.chain_id), ..Request::default() };
             if let Some(h) = header_rlp {
                 req.header = Some(std::fs::read(h)?);
             }
-            let mut proofs: BTreeMap<[u8; 20], AccountProof> = BTreeMap::new();
             let mut wanted: BTreeMap<[u8; 20], Vec<[u8; 32]>> = BTreeMap::new();
             for s in storage {
                 let parts: Vec<&str> = s.split(':').collect();
@@ -759,10 +1433,40 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             for s in account {
                 wanted.entry(addr(s.split(':').next().unwrap())?).or_default();
             }
-            for (address, slots) in &wanted {
-                let params = json!([hx(address), slots.iter().map(|k| hx(k)).collect::<Vec<_>>(), bh]);
-                proofs.insert(*address, account_proof(&eth_call(eth, "eth_getProof", params)?));
+            for l in log {
+                ensure!(l.split(':').count() >= 2, "--log {l}: TX:LOG[:emitter=ADDRESS]");
             }
+            // Every Ethereum read comes first: an endpoint that fails leaves nothing built and nothing sent.
+            let eth = Eth { url: eth.clone(), timeout: a.eth_timeout, retries: a.eth_retries };
+            let fetched = (|| -> Result<(BTreeMap<[u8; 20], AccountProof>, Option<Vec<Value>>)> {
+                check_endpoint(&eth, record.chain_id, *block, &bound)?;
+                let mut proofs = BTreeMap::new();
+                for (address, slots) in &wanted {
+                    let params = json!([hx(address), slots.iter().map(|k| hx(k)).collect::<Vec<_>>(), bh]);
+                    let body = eth.call("eth_getProof", params)?;
+                    proofs.insert(*address, untrusted("eth_getProof", || account_proof(&body))?);
+                }
+                let receipts = if log.is_empty() {
+                    None
+                } else {
+                    let v: Value = serde_json::from_slice(&eth.call("eth_getBlockReceipts", json!([bh]))?)?;
+                    Some(v["result"].as_array().ok_or_else(|| anyhow!("eth_getBlockReceipts: the answer is not a list"))?.clone())
+                };
+                Ok((proofs, receipts))
+            })();
+            let (proofs, receipts) = match fetched {
+                Ok(x) => x,
+                Err(e) => {
+                    let endpoint = redacted(&eth.url);
+                    println!("attest: the Ethereum endpoint {endpoint}: {e:#}");
+                    println!(
+                        "  nothing was sent, and the follower's state is kept: run the same command again once the endpoint \
+                         serves the record's chain"
+                    );
+                    run.log(json!({ "what": "attest", "phase": "endpoint-failed", "endpoint": endpoint, "error": format!("{e:#}") }));
+                    return Ok(4);
+                }
+            };
             let mut by_account: BTreeMap<[u8; 20], AccountQuery> = BTreeMap::new();
             for s in account {
                 let parts: Vec<&str> = s.split(':').collect();
@@ -785,17 +1489,16 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                     .push(SlotQuery { slot, proof: sp.proof.clone(), conditions });
             }
             req.accounts = by_account.into_values().collect();
-            if !log.is_empty() {
-                let v: Value = serde_json::from_slice(&eth_call(eth, "eth_getBlockReceipts", json!([bh]))?)?;
-                let receipts = v["result"].as_array().ok_or_else(|| anyhow!("eth_getBlockReceipts: no receipts"))?.clone();
-                let trie = Trie::new(receipts.iter().enumerate().map(|(i, r)| {
-                    let (k, n) = encode_u64(i as u64);
-                    (k[..n].to_vec(), receipt_rlp(r))
-                }));
+            if let Some(receipts) = receipts {
+                let trie = untrusted("eth_getBlockReceipts", || {
+                    Trie::new(receipts.iter().enumerate().map(|(i, r)| {
+                        let (k, n) = encode_u64(i as u64);
+                        (k[..n].to_vec(), receipt_rlp(r))
+                    }))
+                })?;
                 println!("attest: {} receipts of block {block} rebuild the receipts root {}", receipts.len(), hx(&trie.root()));
                 for l in log {
                     let parts: Vec<&str> = l.split(':').collect();
-                    ensure!(parts.len() >= 2, "--log {l}: TX:LOG[:emitter=ADDRESS]");
                     let (tx, li): (u64, u64) = (parts[0].parse()?, parts[1].parse()?);
                     let mut conditions = Vec::new();
                     if let Some(e) = parts.get(2).and_then(|x| x.strip_prefix("emitter=")) {
@@ -805,7 +1508,6 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                     req.logs.push(LogQuery { tx_index: tx, log_index: li, proof: trie.proof(&k[..n]), conditions });
                 }
             }
-            let h = record.header().map_err(|e| anyhow!("record: {e:?}"))?;
             let verdict = wa::evaluate(&record.instance_id, record.chain_id, &h, &req);
             let expected = match &verdict {
                 Ok(at) => {
@@ -822,9 +1524,150 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
             };
             run.log(json!({ "what": "attest", "phase": "verdict", "code": expected, "statements": verdict.as_ref().map(|at| at.statements.iter().map(|s| hx(&s.id)).collect::<Vec<_>>()).ok() }));
             let message = borsh::to_vec(&Message::Attest { request: req })?;
-            let step = Step { label: "Attest".into(), root: header, message, actors: vec![header], evidence: vec![] };
-            transact(&mut z, &a, &run, "attest", vec![step], Some(expected)).await
+            // `Attest` carries no validity window.
+            let step = Step { label: "Attest".into(), root: header, message, actors: vec![header], evidence: vec![], window: None };
+            transact(&mut z, &a, &run, "attest", vec![step], Some(expected), slot.as_ref()).await
         }
     }
 }
 
+/// An endpoint's URL without its path, query or credentials, for messages and records (a provider's key often sits in
+/// the path).
+fn redacted(url: &str) -> String {
+    match url::Url::parse(url) {
+        Ok(u) => format!("{}://{}{}", u.scheme(), u.host_str().unwrap_or("?"), u.port().map(|p| format!(":{p}")).unwrap_or_default()),
+        Err(_) => "(an endpoint whose URL does not parse)".into(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! LEZ's validity-window refusal mapped to code 53's message (RFP-021 U.5), on the refusal a real LEZ v0.4.0-rc1
+    //! sequencer gave: the `twin Init` of `e2e/runs/ci-sequencer-attest-2026-11-21` (its `run.tsv` row, its block in
+    //! `records/blocks.borsh`). Run with `cargo test --lib attest` (CI's `roundtrip` job).
+
+    use super::*;
+    use ferrata_lez_wire::Config;
+
+    const RUN: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../e2e/runs/ci-sequencer-attest-2026-11-21/records");
+
+    /// The recorded refusal: the `twin Init` row of `run.tsv` (its status, gas and LEZ's note), and its transaction's
+    /// block from `blocks.borsh` (its time, and the `Init` message it carried).
+    fn recorded() -> (Outcome, Config, Root, u64) {
+        let tsv = std::fs::read_to_string(format!("{RUN}/run.tsv")).unwrap();
+        let header: Vec<&str> = tsv.lines().next().unwrap().split('\t').collect();
+        let col = |name: &str| header.iter().position(|h| *h == name).unwrap();
+        let row: Vec<&str> = tsv.lines().find(|l| l.contains("\ttwin Init Init\t")).unwrap().split('\t').collect();
+        assert_eq!(row[col("status")], "reverted");
+        assert_eq!(row[col("exit")], "-", "refused by LEZ, not by the program: no exit code");
+        assert_eq!(row[col("exec_gas")], row[col("gas_limit")], "LEZ charged the whole gas limit");
+        let (hash, block_id): (&str, u64) = (row[col("tx_hash")], row[col("block")].parse().unwrap());
+        let blocks: Vec<Block> = borsh::from_slice(&std::fs::read(format!("{RUN}/blocks.borsh")).unwrap()).unwrap();
+        let block = blocks.iter().find(|b| b.header.block_id == block_id).expect("the refused transaction's block");
+        let tx = block.body.transactions.iter().find(|t| t.hash().to_string() == hash).expect("the refused transaction");
+        let LeeTransaction::Public(p) = tx else { panic!("a public transaction") };
+        let Message::Init { config, checkpoint, bootstrap } = borsh::from_slice(&p.message().execution.root.message).unwrap()
+        else {
+            panic!("an Init")
+        };
+        let slot = CompactBootstrap::decode(&bootstrap, config.fork().unwrap()).unwrap().header.beacon.slot;
+        let outcome = Outcome {
+            reverted: true,
+            exit_code: None,
+            reason: Some(row[col("note")].to_string()),
+            gas_exec: row[col("exec_gas")].parse().unwrap(),
+            gas_stor: row[col("stor_gas")].parse().unwrap(),
+            events: 0,
+            event_data: vec![],
+            at_ms: block.header.timestamp,
+        };
+        (outcome, config, checkpoint, slot)
+    }
+
+    /// The window `init` gives the step, as the `init` command computes it.
+    fn init_note(config: &Config, checkpoint: &Root, slot: u64) -> WindowNote {
+        let w = ferrata_advance::init_window(config, slot);
+        WindowNote {
+            start_ms: w.start_ms,
+            end_ms: w.end_ms,
+            checkpoint: format!("checkpoint {} (its header at slot {})", hx(checkpoint), slot),
+        }
+    }
+
+    #[test]
+    fn lez_text_is_the_constant() {
+        // The constant is LEZ's own text: a change in LEZ breaks this test, not the mapping silently.
+        assert_eq!(lee::error::LeeError::OutOfValidityWindow.to_string(), WINDOW_REFUSAL);
+    }
+
+    #[test]
+    fn recorded_refusal_of_a_stale_checkpoint_maps_to_code_53() {
+        let (outcome, config, checkpoint, slot) = recorded();
+        assert_eq!(outcome.reason.as_deref(), Some(WINDOW_REFUSAL), "the recorded note is LEZ's text");
+        let note = init_note(&config, &checkpoint, slot);
+        let end = note.end_ms.unwrap();
+        assert!(outcome.at_ms >= end, "the recorded block ({}) is past the checkpoint's period ({})", utc(outcome.at_ms), utc(end));
+        let (side, message) = outcome.window(Some(&note)).expect("LEZ's window refusal");
+        assert_eq!(side, WindowSide::Ended);
+        for part in [
+            "refused with 53 OutsideWeakSubjectivityPeriod",
+            "recover from a new bootstrap",
+            &hx(&checkpoint),
+            &format!("slot {slot}"),
+            &utc(end),
+            &utc(outcome.at_ms),
+            "ferrata attest init",
+            WINDOW_REFUSAL,
+        ] {
+            assert!(message.contains(part), "{part:?} missing from: {message}");
+        }
+        assert!(outcome.stale(Some(&note)));
+        assert!(outcome.show_for(Some(&note)).starts_with("refused with 53 OutsideWeakSubjectivityPeriod"));
+        // A refusal (3), not a disagreement, though the program's checks pass natively (expected 0).
+        assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 3);
+        // Without the step's window the text stays LEZ's, with no code put on it.
+        assert!(!outcome.show().contains("53"), "{}", outcome.show());
+    }
+
+    #[test]
+    fn a_window_not_open_yet_is_not_code_53() {
+        let (mut outcome, config, checkpoint, slot) = recorded();
+        let mut note = init_note(&config, &checkpoint, slot);
+        // An update's window opens at its signature slot: the same refusal before that start.
+        note.start_ms = Some(outcome.at_ms + 12_000);
+        note.end_ms = Some(outcome.at_ms + 1_000_000);
+        let (side, message) = outcome.window(Some(&note)).unwrap();
+        assert_eq!(side, WindowSide::NotOpen);
+        assert!(!message.contains("53") && !message.contains("bootstrap"), "{message}");
+        assert!(message.contains(WINDOW_REFUSAL) && message.contains(&utc(outcome.at_ms + 12_000)), "{message}");
+        assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 3);
+        // Inside the window as computed: LEZ's text as it is, and a disagreement with the program's verdict.
+        note.start_ms = Some(outcome.at_ms - 1);
+        let (side, message) = outcome.window(Some(&note)).unwrap();
+        assert_eq!(side, WindowSide::Inside);
+        assert!(!message.contains("53") && message.contains(WINDOW_REFUSAL), "{message}");
+        assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 1);
+        // Other refusals are not touched: the gas limit, and a program's own code (here 53 itself, by the program).
+        outcome.reason = Some("Execution exceeded its cycle budget".into());
+        assert!(outcome.window(Some(&note)).is_none());
+        assert_eq!(outcome.show_for(Some(&note)).split(';').next().unwrap(), "refused by LEZ: \"Execution exceeded its cycle budget\"");
+        outcome.exit_code = Some(53);
+        outcome.reason = Some("Program exited with non-zero code 53 after 100 cycles".into());
+        assert!(outcome.window(Some(&note)).is_none());
+        assert!(outcome.show_for(Some(&note)).starts_with("refused with 53 OutsideWeakSubjectivityPeriod"));
+    }
+
+    #[test]
+    fn utc_dates() {
+        assert_eq!(utc(0), "1970-01-01 00:00:00 UTC");
+        assert_eq!(utc(1_795_278_711_972), "2026-11-21 16:31:51 UTC");
+        assert_eq!(utc(951_782_400_000), "2000-02-29 00:00:00 UTC");
+        assert_eq!(utc(4_102_444_800_000), "2100-01-01 00:00:00 UTC");
+    }
+
+    #[test]
+    fn redacted_drops_path_and_query() {
+        assert_eq!(redacted("https://user:pw@eth.example:8545/v3/KEY?x=1"), "https://eth.example:8545");
+        assert_eq!(redacted("http://127.0.0.1:8645"), "http://127.0.0.1:8645");
+    }
+}
