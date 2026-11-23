@@ -57,7 +57,9 @@ KEEP = [
     "session2/req", "session2/rep", "session2/relay", "session2/probes-u1", "session2/calls.tsv", "session2/marks.tsv",
     "session2/samples.csv", "session2/journal.tsv", "session2/run.tsv", "session2/final-state.json",
     "session2/install.log", "session2/core-start.log", "session2/core-stop.log", "session2/cli",
-    "report-build/logs/cli-rc3.log",
+    # The second build (the updater with an execution source, `ferrata attest` for rc3), before session 2
+    "report-build-2/steps.md", "report-build-2/artifacts.txt", "report-build-2/logs/stage-updater-rc3.log",
+    "report-build-2/logs/cli-rc3.log", "report-build-2/logs/rc3-copy.log",
 ]
 NEVER = re.compile(r"(\.key$|/storage\.json$|/keys/|/wallet|\.raw$|attest-messages|/h\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
