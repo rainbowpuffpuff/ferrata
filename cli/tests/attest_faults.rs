@@ -47,8 +47,8 @@
 //! * the followed final tip behind the zone's newest block, that block past the end: the dry run, made at the zone's
 //!   clock, holds `init`;
 //! * the first review's case: `init` killed with its transaction in the pool, the pool lost, the zone's clock past the
-//!   end: run again, nothing is sent (no gas limit charged) and the journal is cleared; the same with no block stamped
-//!   since the end, this machine's clock past it;
+//!   end: run again, nothing is sent (no gas limit charged) and the journal is cleared; with no block stamped since
+//!   the end, this machine's clock past it: nothing sent, the journal kept until the zone's own clock passes the end;
 //! * a run resumed within a minute of the end, the earlier copy still pending: not sent, the run left unfinished; the
 //!   copy lands; run again, found applied.
 //! * the same with this machine's clock past the end and the zone's 5 min before it: held, the journal kept; the copy
@@ -1315,7 +1315,8 @@ fn stale_checkpoint_shown_as_code_53() {
     // The first review's L1 case exactly: the zone's clock past the end and no block stamped since (a sequencer back
     // from a stall, before its first block). The zone's newest block is an hour before the end; this machine's clock,
     // the second clock a window's end is judged at (as `ferrata-updater` judges it), is past it: nothing is sent again,
-    // the journal is cleared, nothing is charged.
+    // nothing is charged. By the zone's own clock the end has not passed, so the earlier copy could still land: the
+    // journal is kept (the third review's L16). Once the zone stamps a block past the end, a rerun clears it.
     let zone = Arc::new(Mutex::new(Zone::genesis(end - 3_600_000)));
     zone.lock().unwrap().mode = Mode::Queue;
     let lez = serve_zone(zone.clone());
@@ -1333,10 +1334,24 @@ fn stale_checkpoint_shown_as_code_53() {
     assert_eq!(code, 3, "{out}");
     has(&out, "not sent again: refused with 53 OutsideWeakSubjectivityPeriod");
     has(&out, "this machine's clock (the zone has stamped no later block)");
-    has(&out, "is cleared");
+    has(&out, "may still be pending: the run stays unfinished");
+    assert!(!out.contains("is cleared") && !out.contains("--again"), "the journal kept: {out}");
     {
         let z = zone.lock().unwrap();
         assert_eq!(z.submitted.len(), 1, "the killed run's submission only");
+        assert!(z.included.is_empty(), "nothing applied, nothing charged");
+    }
+    {
+        let mut z = zone.lock().unwrap();
+        z.produce(); // the zone's next block, stamped past the end (an empty pool: nothing in it)
+        z.final_height = z.tip.block_id;
+    }
+    let (code, out) = t.run_at("init-run-again-zone-past-end", &strs(&init), end + 70_000);
+    assert_eq!(code, 3, "{out}");
+    has(&out, "is cleared");
+    {
+        let z = zone.lock().unwrap();
+        assert_eq!(z.submitted.len(), 1, "nothing sent");
         assert!(z.included.is_empty(), "nothing applied, nothing charged");
     }
 
