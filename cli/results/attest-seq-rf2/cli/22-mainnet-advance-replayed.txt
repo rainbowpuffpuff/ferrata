@@ -1,0 +1,10 @@
+$ ferrata attest advance --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --update $REPO/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/finality_update.ssz --finality --committee bootstrap:$REPO/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --send --yes --again
+zone http://127.0.0.1:3040: followed to block 48 (final on Bedrock)
+note: an earlier run sent this command (journal $REPO/../tmp/attest-seq/work-rf2/hook/follower/sent/3e6da6d792bd1204ac74bec06d68b327c3d4d432478ea403d107e1a23c9d34b8.json, exit status 0); --again: sending it once more
+advance: update attested at slot 15624544, signed at slot 15624545, finalizing slot 15624480; the store is at slot 15624480
+advance: the program's checks, natively: no change: it would not move the store (duplicate, stale or of an earlier period)
+advance: the program's step 1, natively: refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).)
+advance: dry run of 1 transaction(s) on the zone's state at block 48, the zone's clock 2026-11-23 04:56:13 UTC (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  Open                         5452 bytes; would be refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).); execution gas 229560, storage gas 5452, 0 event(s)
+  the verdict and the zone's execution agree: 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).)
+  Open                         block 49 (10 s): refused with 52 NotNewer (Ferrata policy: the update does not advance the finalized header (duplicate or stale).); execution gas 229560, storage gas 5452, 0 event(s); equal to its dry run

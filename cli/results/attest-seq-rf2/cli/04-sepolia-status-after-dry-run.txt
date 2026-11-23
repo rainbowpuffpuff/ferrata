@@ -1,0 +1,4 @@
+$ ferrata attest status --instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+zone http://127.0.0.1:3040: followed to block 24 (final on Bedrock)
+instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5: store layout Gloas, finalized slot 11562112 (period 1411), root 0x3b901f5e6853b5cf5eb04d7ccfe1272e66c38291cb3a11dd159cacd1117ccf7c, next committee known, jobs applied 2
+  newest record header(0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5, 11562112): chain id 11155111, execution BlockHash([206, 170, 161, 186, 0, 208, 93, 46, 63, 114, 82, 185, 209, 189, 216, 77, 230, 215, 108, 177, 76, 31, 52, 87, 33, 111, 136, 89, 104, 59, 8, 199])

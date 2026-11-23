@@ -217,8 +217,11 @@ tests = [
   { path = "lez/harness/tests/exit_codes.rs", kind = "test", ci = "lez-harness" },
   { path = "lez/results/stage4-attest-refusals.md", kind = "record" },
   { path = "lez/harness/tests/security_lc.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_lc u5 -- --nocapture" },
+  { path = "cli/src/attest.rs", kind = "test", ci = "roundtrip" },
+  { path = "cli/tests/attest_faults.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/runs/ci-sequencer-attest-2026-11-21/records/run.tsv", kind = "record" },
 ]
-note = "stable numeric codes with one owner each, checked for their exact value on every refusal; every listed failure mode returns its code through the program (lez/results/lc-security/u5-failure-modes.md); ferrata-attest prints each code's name and meaning from the IDL (row 56)"
+note = "stable numeric codes with one owner each, checked for their exact value on every refusal; every listed failure mode returns its code through the program (lez/results/lc-security/u5-failure-modes.md); ferrata-attest prints each code's name and meaning from the IDL (row 56); LEZ's own refusal of a checkpoint stale by the zone's clock (\"Execution outside of the validity window\") shown by ferrata attest as code 53's message naming the checkpoint, when its period ended and the remedy (a new bootstrap), on a real rc1 sequencer's recorded refusal and on a stand-in zone's, and not sent once its dry run shows it; a window not open yet stays LEZ's text"
 
 [[row]]
 id = "RFP-021 U.6"
@@ -269,9 +272,12 @@ note = "the program restores its compact store from its own state without re-che
 id = "RFP-021 R.5"
 tests = [
   { path = "lez/updater/tests/recorded.rs", kind = "test", ci = "lez-harness" },
+  { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
+  { path = "cli/tests/attest_faults.rs", kind = "test", ci = "roundtrip" },
+  { path = "modules/ferrata_attest_module/rust-lib/calls/tests/failing_endpoint.rs", kind = "test", ci = "modules-resolve" },
   { path = "lez/updater/README.md", kind = "document" },
 ]
-note = "a source that is down counted and the others used; 2 dropped connections retried; restarted mid-job, the daemon finishes the job from the chain's state without duplicated work (rows 79, 99, 104)"
+note = "the updater: a source that is down counted and the others used; 2 dropped connections retried; restarted mid-job, it finishes the job from the chain's state without duplicated work (rows 79, 99, 104). The attestation monitor: unreachable and wrong-chain providers not counted, a divergence held while every provider is down. The attestation CLI (ferrata attest): its Ethereum endpoint refusing, never answering, cutting its answer, answering 503 or an error, serving another chain: exit 4, nothing sent, the same command applied once when the endpoint answers; killed while reading Ethereum, with its transaction in the pool, in a block not yet final, and after an advance job's Open: run again, nothing sent twice, nothing applied twice; the journal's guards (the same command spelled otherwise, a submission the sequencer turns away, a nonce another transaction took, --again on an interrupted run, a missing --state-dir, two runs on one state directory). ferrata_attest_module's own Ethereum reads (fetch_log_proof; eth_getProof behind build_attest_tx and dry_run_attest) against a refusing, holding, cutting, 503 and erroring endpoint: each an error within its bound, then answered once the endpoint is back"
 
 [[row]]
 id = "RFP-021 R.6"

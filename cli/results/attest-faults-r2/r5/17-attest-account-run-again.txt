@@ -1,0 +1,10 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:42567 --block 26384851 --account 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:codehash --send --yes --eth-timeout 60 --eth-retries 1
+zone http://127.0.0.1:47090: followed to block 9 (final on Bedrock)
+attest: verdict (the program's function, natively): 1 statement(s) under block 26384851 (0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce)
+  statement id 0x7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d
+attest: dry run of 1 transaction(s) on the zone's state at block 9, the zone's clock 2026-11-10 13:59:23 UTC (payer 2PfJa7EjGr6X4oTAz77XEnMNzuvQrTFEUiKKJvP7tXXs)
+  Attest                       4356 bytes; would be applied; execution gas 166249, storage gas 4356, 1 event(s)
+  the verdict and the zone's execution agree: applied
+  Attest                       block 10 (1 s): applied; execution gas 166249, storage gas 4356, 1 event(s); equal to its dry run
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
+[exit 0]

@@ -1,0 +1,10 @@
+$ ferrata attest ... advance --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --update <repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/finality_update.ssz --finality --committee bootstrap:<repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --send --yes
+zone http://127.0.0.1:17432: followed to block 4 (final on Bedrock)
+advance: update attested at slot 15624544, signed at slot 15624545, finalizing slot 15624480; the store is at slot 15622144
+advance: useful: job 0xfdb24409059fc23b5d433bbb655551de5269404209c48c6d712a07469f84eaf0, layout Electra, advanced true, adopted false, rotated false
+advance: dry run of 3 transaction(s) on the zone's state at block 4, the zone's clock 2026-11-10 05:59:11 UTC (payer 2PfJa7EjGr6X4oTAz77XEnMNzuvQrTFEUiKKJvP7tXXs)
+  open                         5452 bytes; would be refused by LEZ: "Execution outside of the validity window": its window opens at 2026-11-10 13:49:23 UTC (the update's signature slot), and the dry run's time is 2026-11-10 05:59:21 UTC; it can be sent from then (with --again once a run has sent it); execution gas 10000000, storage gas 5452, 0 event(s)
+  the program's checks pass natively (applied); LEZ refuses it for the block's time
+  not sent: LEZ refuses it until 2026-11-10 13:49:23 UTC, and would charge it the whole gas limit (10000000); run the command again from then
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
+[exit 3]

@@ -1,0 +1,11 @@
+$ ferrata attest attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:8645 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:eq:0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 --log 0:0:emitter=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 --send --yes
+zone http://127.0.0.1:3040: followed to block 47 (final on Bedrock)
+attest: 531 receipts of block 26384851 rebuild the receipts root 0x9f7aae4f6f937ea551a4ca11c31e71be6a309d1aeccbdca49dfd3eff7d4379e2
+attest: verdict (the program's function, natively): 3 statement(s) under block 26384851 (0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce)
+  statement id 0x7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d
+  statement id 0xabc1114e5c089b52e94b0980941b17a7d081c2444f5341b3823fdc4d3a1dfa53
+  statement id 0x4910a599ca62fab4cf4ea62a9ed637c742719889054a316692dc29eaaf9240e2
+attest: dry run of 1 transaction(s) on the zone's state at block 47, the zone's clock 2026-11-23 04:56:03 UTC (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  Attest                       9431 bytes; would be applied; execution gas 349917, storage gas 9431, 1 event(s)
+  the verdict and the zone's execution agree: applied
+  Attest                       block 48 (10 s): applied; execution gas 349917, storage gas 9431, 1 event(s); equal to its dry run

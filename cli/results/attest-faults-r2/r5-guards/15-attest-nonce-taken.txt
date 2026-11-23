@@ -1,0 +1,6 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:63375 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0 --send --yes
+zone http://127.0.0.1:42464: followed to block 11 (final on Bedrock)
+attest: an earlier run was interrupted (journal <repo>/cli/target/tmp/attest-faults/r5-guards/follower/sent/3147f78b4bcd850c03f64239360868f81560920067699a03b385c9886820b54b.json): finishing its 1 transaction(s), none signed again
+  Attest                       NOT APPLIED: the payer's nonce 9 was used by another transaction in a final block; nothing more is sent
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
+[exit 1]

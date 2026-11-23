@@ -1,0 +1,43 @@
+{
+ "version": 1,
+ "what": "attest",
+ "intent": "attest program=9iE718tLLpNX7jUofw329HeJ2crB4CqBxQTRGjS1YBP4 instance=0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd record_slot=15624480 block=26384851 chain_id=record statements=[storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0] header_rlp=none",
+ "payer": "2PfJa7EjGr6X4oTAz77XEnMNzuvQrTFEUiKKJvP7tXXs",
+ "expected": 0,
+ "steps": [
+  {
+   "label": "Attest",
+   "tx": "0x0001000000623d5accba654bf5008b48fc51831fc78acd228762090b75fdc393\u2026(7304 bytes)",
+   "hash": "4ce4fa7874fa1e2ca66b66942838a9eebe38b5f843e6c7d5ae68b8849298e079",
+   "nonce": "10",
+   "dry_run": {
+    "reverted": false,
+    "exit_code": null,
+    "reason": null,
+    "gas_exec": 274613,
+    "gas_stor": 7304,
+    "events": 1,
+    "at_ms": 1794319173010,
+    "dry": true
+   },
+   "window": null,
+   "attempted": true,
+   "receipt": {
+    "block": 12,
+    "outcome": {
+     "reverted": false,
+     "exit_code": null,
+     "reason": null,
+     "gas_exec": 274613,
+     "gas_stor": 7304,
+     "events": 1,
+     "at_ms": 1794319163011,
+     "dry": false
+    }
+   },
+   "superseded": false,
+   "refused": null
+  }
+ ],
+ "status": 0
+}

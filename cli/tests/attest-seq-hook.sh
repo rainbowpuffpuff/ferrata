@@ -46,8 +46,9 @@ step sepolia-advance-finality 0 advance --instance "$SEP" --update "$LAB/00057.f
   --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
 step sepolia-advance-period-1412 0 advance --instance "$SEP" --update "$LAB/00064.period.gloas.ssz" \
   --committee "update:$S12/update_1411.ssz" --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
+# A replay on purpose: the journal in --state-dir would report the earlier run and send nothing; --again sends it.
 step sepolia-advance-replayed 3:23 advance --instance "$SEP" --update "$LAB/00057.finality.gloas.ssz" --finality \
-  --committee "bootstrap:$S12/bootstrap.ssz" --send --yes
+  --committee "bootstrap:$S12/bootstrap.ssz" --send --yes --again
 step sepolia-status-after 0 status --instance "$SEP"
 
 # ---- a mainnet instance created here, its record, and attestations under it (mainnet-attest-2026-11-10) -------------
@@ -78,7 +79,7 @@ step attest-account-codehash 0 "${A[@]}" --account "$WETH:codehash" --send --yes
 step attest-log-failed-tx 3:124 "${A[@]}" --log "$FAILED:0" --send --yes
 step attest-storage-and-log 0 "${A[@]}" --storage "$WETH:$SLOT:eq:$BAL" --log "0:0:emitter=$USDC" --send --yes
 step mainnet-advance-replayed 3:52 advance --instance "$MID" --update "$M/finality_update.ssz" --finality \
-  --committee "bootstrap:$M/bootstrap.ssz" --send --yes
+  --committee "bootstrap:$M/bootstrap.ssz" --send --yes --again
 
 # ---- the attestation side's monitor reads the mainnet instance through the sequencer's getAccount -------------------
 cat > "$W/providers.py" <<'EOF'

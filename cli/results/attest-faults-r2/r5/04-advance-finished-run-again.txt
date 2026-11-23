@@ -1,0 +1,9 @@
+$ ferrata attest ... advance --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --update <repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/finality_update.ssz --finality --committee bootstrap:<repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --send --yes
+zone http://127.0.0.1:47090: followed to block 7 (final on Bedrock)
+advance: already sent by an earlier run (journal <repo>/cli/target/tmp/attest-faults/r5/follower/sent/6e717f829cdcc92a79f9ce5d88c50599c4375bdf658202c89229b04d737b0660.json): nothing sent
+  open                         block 5: applied; execution gas 2330188, storage gas 5452, 0 event(s)
+  miller                       block 6: applied; execution gas 3308048, storage gas 399, 0 event(s)
+  finish                       block 7: applied; execution gas 3723960, storage gas 527, 1 event(s)
+  exit status of that run: 0 (--again sends the command once more)
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
+[exit 0]

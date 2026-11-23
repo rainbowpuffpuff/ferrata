@@ -1,0 +1,7 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:42567 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:ge:0x01 --send --yes --eth-timeout 2 --eth-retries 1
+zone http://127.0.0.1:47090: followed to block 10 (final on Bedrock)
+attest: an earlier run was interrupted (journal <repo>/cli/target/tmp/attest-faults/r5/follower/sent/86a0a2a458fb973f6bf742d06e5afcc592e53eb1bc89bcae84626a6d78517765.json): finishing its 1 transaction(s), none signed again
+  Attest                       in no block yet: sending the same signed transaction again (hash 19e8735cb7d416ec575c2e438b0d2f65d1be1a383e75743559a5e8fd2f4cd11f, nonce 9; LEZ applies it at most once)
+  Attest                       block 11 (1 s): applied; execution gas 275865, storage gas 7338, 1 event(s); equal to its dry run
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
+[exit 0]

@@ -1,0 +1,13 @@
+$ ferrata attest advance --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --update $REPO/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/finality_update.ssz --finality --committee bootstrap:$REPO/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --send --yes
+zone http://127.0.0.1:3040: followed to block 37 (final on Bedrock)
+advance: update attested at slot 15624544, signed at slot 15624545, finalizing slot 15624480; the store is at slot 15622144
+advance: useful: job 0xfdb24409059fc23b5d433bbb655551de5269404209c48c6d712a07469f84eaf0, layout Electra, advanced true, adopted false, rotated false
+advance: dry run of 3 transaction(s) on the zone's state at block 37, the zone's clock 2026-11-23 04:54:23 UTC (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  open                         5452 bytes; would be applied; execution gas 2330188, storage gas 5452, 0 event(s)
+  miller                       399 bytes; would be applied; execution gas 3308048, storage gas 399, 0 event(s)
+  finish                       527 bytes; would be applied; execution gas 3723960, storage gas 527, 1 event(s)
+  the verdict and the zone's execution agree: applied
+  open                         block 38 (9 s): applied; execution gas 2330188, storage gas 5452, 0 event(s); equal to its dry run
+  miller                       block 39 (10 s): applied; execution gas 3308048, storage gas 399, 0 event(s); equal to its dry run
+  finish                       block 40 (11 s): applied; execution gas 3723960, storage gas 527, 1 event(s); equal to its dry run
+advance: the instance's finalized slot is now 15624480 (jobs applied 2)
