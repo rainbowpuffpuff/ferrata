@@ -30,9 +30,9 @@ and the fixtures' other fields are the runs' own.
 Which inputs reproduce their recorded journal under this tree's guests was checked first with the executor
 (`reprove_fixtures.py survey`, r0vm 3.1.0): the ones above do.
 
-## Kept as records of RISC Zero 3.0.5, skipped: 47 of the 94 cases, every rule (A) case among them
+## Kept as records of RISC Zero 3.0.5, skipped: 47 of the 98 cases, every rule (A) case among them
 
-`forge test --list --match-path 'test/real/*'` lists 94 cases in 22 suites; **47 of them, in 11 suites, are skipped**
+`forge test --list --match-path 'test/real/*'` lists 98 cases in 22 suites; **47 of them, in 11 suites, are skipped**
 (forge counts each skipped suite as one skipped test, so a run shows 11 there). Their fixtures (13 seals in 6 files) are
 of earlier programs, or their inputs are not in the repository, so they cannot be proven again with this tree's guests;
 their setUp skips them with the reason (`vm.skip`), and their fixtures stay as the records of what ran under 3.0.5. All

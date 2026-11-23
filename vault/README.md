@@ -40,11 +40,11 @@ Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault 
 run, which made the whole round trip through it on 12 November 2026 ([`../e2e/runs/crown-live-3/`](../e2e/runs/crown-live-3/README.md)),
 and at `0xfE3199fa2634413CbAC317371076Cae3EB2d9E54` (the first run's programs), through which it made the round trip on
 11 November 2026 ([`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)); the v3 vault of the end-to-end
-fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests outside `test/real/` proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers (the 94 cases of `test/real/` use real proofs; 47 of them are skipped, below).
+fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests outside `test/real/` proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers (the 98 cases of `test/real/` use real proofs; 47 of them are skipped, below).
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
 with no mock on the Ethereum side: RISC Zero's real Groth16 verifier **3.1.0** behind the same stop and real proofs
 made under RISC Zero 3.1 (since the move to 3.1, [`test/real/README.md`](test/real/README.md)): rule (B) checkpoints of
-real LEZ zones and the releases of their burns, end to end. **47 of its 94 cases are skipped** (11 suites, each skipped
+real LEZ zones and the releases of their burns, end to end. **47 of its 98 cases are skipped** (11 suites, each skipped
 in `setUp` with its reason): their fixtures are records of earlier programs proven under RISC Zero 3.0.5, which this
 tree's guests cannot prove again (an input not recorded, or recorded for an earlier program); among them **every rule
 (A) case** (the return leg, `ReturnLeg.t.sol`) and `RuleBReal.t.sol`. Rule (A) has no real-proof test under 3.1; its
@@ -60,7 +60,7 @@ forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-co
 python3 -I ../scripts/vault_libs.py check                # the trees lib.lock pins (a tag alone can move); or: vault_libs.py install
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
-forge test                                               # everything, including the invariant campaigns: 592 passed,
+forge test                                               # everything, including the invariant campaigns: 596 passed,
                                                          # 0 failed, 12 skipped (build box, 23 Nov; the 11 suites of 3.0.5
                                                          # records, which forge counts as one test each, and PrivacySuite
                                                          # without its LEZ half)
