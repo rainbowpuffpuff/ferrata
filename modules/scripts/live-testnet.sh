@@ -113,8 +113,12 @@ rc3_copy() {
     --exclude='node_modules/' --exclude='/vault/lib/' "$repo/" "$C/ferrata/"
   ln -sfn "$spike/upstream" "$C/upstream"
   "$C/ferrata/lez/scripts/lez-select.sh" "$TAG"
-  # The updater module's calls crate names the staged LEZ tree by its tag (stage-updater.sh checks it).
-  sed -i "s#vendor/upstream/lez-v0.4.0-rc1/#vendor/upstream/lez-$TAG/#" "$C/ferrata/modules/ferrata_updater_module/rust-lib/calls/Cargo.toml"
+  # What lez-select.sh does not rewrite and the updater module links: the harness's wire crates (rebate-wire,
+  # statements-wire) and the module's calls crate, which names the staged LEZ tree by its tag (stage-updater.sh
+  # checks it). Every remaining manifest of lez/ and of the module, in this copy only.
+  grep -rl "upstream/lez-v0.4.0-rc1/" --include=Cargo.toml "$C/ferrata/lez" "$C/ferrata/modules/ferrata_updater_module" \
+    | grep -v '/target/' | tee "$WORK/rc3-rewritten.txt" | xargs -r sed -i "s#upstream/lez-v0.4.0-rc1/#upstream/lez-$TAG/#g"
+  echo "also pointed at $TAG: $(wc -l < "$WORK/rc3-rewritten.txt") manifests"; cat "$WORK/rc3-rewritten.txt"
   sed -i "s#on a running LEZ v0.4.0-rc1 sequencer#on a running LEZ $TAG sequencer#" "$C/ferrata/modules/ferrata_updater_module/metadata.json"
   "$C/ferrata/lez/scripts/lez-select.sh" --show
 }
