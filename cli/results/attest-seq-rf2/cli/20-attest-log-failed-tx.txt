@@ -1,0 +1,8 @@
+$ ferrata attest attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:8645 --block 26384851 --log 37:0 --send --yes
+zone http://127.0.0.1:3040: followed to block 46 (final on Bedrock)
+attest: 531 receipts of block 26384851 rebuild the receipts root 0x9f7aae4f6f937ea551a4ca11c31e71be6a309d1aeccbdca49dfd3eff7d4379e2
+attest: verdict (the program's function, natively): refused with 124 ReceiptFailed (The transaction failed (receipt status 0).)
+attest: dry run of 1 transaction(s) on the zone's state at block 46, the zone's clock 2026-11-23 04:55:53 UTC (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  Attest                       1612 bytes; would be refused with 124 ReceiptFailed (The transaction failed (receipt status 0).); execution gas 55530, storage gas 1612, 0 event(s)
+  the verdict and the zone's execution agree: 124 ReceiptFailed (The transaction failed (receipt status 0).)
+  Attest                       block 47 (10 s): refused with 124 ReceiptFailed (The transaction failed (receipt status 0).); execution gas 55530, storage gas 1612, 0 event(s); equal to its dry run

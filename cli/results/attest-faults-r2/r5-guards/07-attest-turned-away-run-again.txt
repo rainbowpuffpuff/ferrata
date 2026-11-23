@@ -1,0 +1,6 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:28903 --block 26384851 --account 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:codehash --send --yes
+zone http://127.0.0.1:22574: followed to block 8 (final on Bedrock)
+attest: already sent by an earlier run (journal <repo>/cli/target/tmp/attest-faults/r5-guards/follower/sent/79612943d54285d2e71f379ca78ec13729f94b49f8bc937c17f36efc174a2e2a.json): nothing sent
+  Attest                       refused by the sequencer at submission: Transaction too large: size 4356, max 4096 (code -32602)
+  exit status of that run: 1 (--again sends the command once more)
+[exit 1]

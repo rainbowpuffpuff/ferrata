@@ -1,0 +1,66 @@
+warning: lee@0.1.0: Generated module at <repo>/cli/target/debug/build/lee-1a6347cc3e4b4c67/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <repo>/cli/target/debug/build/programs-a8fc2b826bb00327/out/lez/programs/mod.rs
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+
+running 3 tests
+  init-past-end: exit 3
+  init-crossing-end: exit 3
+  receipt-of-the-refused-init: exit 0
+  init: exit 0
+  init: exit 0
+  killed: signal: 9 (SIGKILL)
+  init: exit 0
+  advance-crossing-end: exit 3
+  receipt-of-the-refused-open: exit 0
+  advance: exit 0
+  advance-run-again: exit 0
+  advance-finished-run-again: exit 0
+  attest-refused: exit 4
+  attest-spelled-with-0x: exit 0
+  attest-spelled-otherwise: exit 0
+  attest-without-state-dir: exit 2
+  attest-turned-away: exit 1
+  attest-turned-away-run-again: exit 1
+  attest-turned-away-again: exit 0
+  killed: signal: 9 (SIGKILL)
+  attest-interrupted-again: exit 2
+  attest-interrupted-finished: exit 0
+  killed: signal: 9 (SIGKILL)
+  init: exit 0
+  advance-before-signature-slot: exit 3
+  attest-takes-the-nonce: exit 0
+  attest-nonce-taken: exit 1
+  attest-nonce-taken-run-again: exit 1
+  advance-before-signature-slot-send: exit 3
+  attest-hang: exit 4
+  init-final-tip-lagging: exit 3
+  attest-nonce-taken-again: exit 0
+  attest-cut-proof: exit 4
+  killed: signal: 9 (SIGKILL)
+  status-beside-it: exit 2
+  init-run-again-past-end: exit 3
+  init-once-more: exit 3
+U.5: records in <repo>/cli/target/tmp/attest-faults
+test stale_checkpoint_shown_as_code_53 ... ok
+  attest-http-503: exit 4
+  attest-rpc-error: exit 4
+  attest-wrong-chain-id: exit 4
+  attest-wrong-block-hash: exit 4
+R.5 guards: 14 submissions, 1 turned away, 12 included, none twice
+test the_journal_guards ... ok
+  attest-cut-receipts: exit 4
+  attest-cut-once: exit 0
+  attest-receipts-again: exit 0
+  attest-storage-again: exit 0
+  killed: signal: 9 (SIGKILL)
+  attest-account-run-again: exit 0
+  killed: signal: 9 (SIGKILL)
+  attest-in-pool-run-again: exit 0
+  killed: signal: 9 (SIGKILL)
+  attest-in-block-finished-run-again: exit 0
+R.5: 12 submissions, 11 transactions included, none twice; records in <repo>/cli/target/tmp/attest-faults
+test failing_endpoint_and_interruptions_do_nothing_twice ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 31.31s
+

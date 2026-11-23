@@ -1,0 +1,8 @@
+$ ferrata attest attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:8645 --block 26384851 --log 0:0:emitter=0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 --send --yes
+zone http://127.0.0.1:3040: followed to block 44 (final on Bedrock)
+attest: 531 receipts of block 26384851 rebuild the receipts root 0x9f7aae4f6f937ea551a4ca11c31e71be6a309d1aeccbdca49dfd3eff7d4379e2
+attest: verdict (the program's function, natively): refused with 130 PredicateFailed (A condition of the statement does not hold.)
+attest: dry run of 1 transaction(s) on the zone's state at block 44, the zone's clock 2026-11-23 04:55:33 UTC (payer 2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2)
+  Attest                       2553 bytes; would be refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 85064, storage gas 2553, 0 event(s)
+  the verdict and the zone's execution agree: 130 PredicateFailed (A condition of the statement does not hold.)
+  Attest                       block 45 (10 s): refused with 130 PredicateFailed (A condition of the statement does not hold.); execution gas 85064, storage gas 2553, 0 event(s); equal to its dry run

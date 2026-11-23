@@ -1,0 +1,23 @@
+
+running 1 test
+refused    fetch_log_proof      0 ms  eth_getBlockByNumber: connect 127.0.0.1:48655: Connection refused (os error 111)
+refused    build_attest_tx      0 ms  eth_getProof: connect 127.0.0.1:48655: Connection refused (os error 111)
+refused    dry_run_attest       0 ms  eth_getProof: connect 127.0.0.1:48655: Connection refused (os error 111)
+hang       fetch_log_proof   1001 ms  eth_getBlockByNumber: read: Resource temporarily unavailable (os error 11)
+hang       build_attest_tx   1001 ms  eth_getProof: read: Resource temporarily unavailable (os error 11)
+hang       dry_run_attest    1000 ms  eth_getProof: read: Resource temporarily unavailable (os error 11)
+cut        fetch_log_proof      3 ms  eth_getBlockByNumber: truncated body: 20220 of 40441 bytes
+cut        build_attest_tx      1 ms  eth_getProof: truncated body: 6975 of 13951 bytes
+cut        dry_run_attest       1 ms  eth_getProof: truncated body: 6975 of 13951 bytes
+http-503   fetch_log_proof      0 ms  eth_getBlockByNumber: HTTP status "HTTP/1.1 503 Service Unavailable"
+http-503   build_attest_tx      0 ms  eth_getProof: HTTP status "HTTP/1.1 503 Service Unavailable"
+http-503   dry_run_attest       0 ms  eth_getProof: HTTP status "HTTP/1.1 503 Service Unavailable"
+rpc-error  fetch_log_proof      0 ms  eth_getBlockByNumber: the node answered with an error: {"code":-32000,"message":"missing trie node"}
+rpc-error  build_attest_tx      0 ms  eth_getProof: the node answered with an error: {"code":-32000,"message":"missing trie node"}
+rpc-error  dry_run_attest       0 ms  eth_getProof: the node answered with an error: {"code":-32000,"message":"missing trie node"}
+cut-second fetch_log_proof    109 ms  eth_getBlockReceipts: truncated body: 781561 of 1563122 bytes
+16 failing calls, each an error within its bound, each answered once the endpoint was back
+test each_ethereum_read_fails_within_its_bound_and_succeeds_once_the_endpoint_answers ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.69s
+

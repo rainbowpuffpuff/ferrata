@@ -1,0 +1,5 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:60174 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:eq:0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 --send --yes --eth-timeout 2 --eth-retries 1
+zone http://127.0.0.1:17086: followed to block 7 (final on Bedrock)
+attest: the Ethereum endpoint http://127.0.0.1:60174: the endpoint's block 26384851 has hash 0xabababababababababababababababababababababababababababababababab, the record binds 0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce: another chain, or a block it does not hold as the record's
+  nothing was sent, and the follower's state is kept: run the same command again once the endpoint answers, on the record's chain
+[exit 4]

@@ -1,0 +1,27 @@
+[04:46:58] crown LEZ session a (chain sepolia)
+[04:46:58] a new zone
+[04:46:59] Bedrock node up: {"cryptarchia_info":{"lib":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","lib_slot":0,"tip":"402255ecf1448ec5d136c293f7eb818cd6137af8175bdc72f06a99cf2eef8a52","slot":0,"height":0,"state":"Bootstrapping"},"phase":"InitialBlockDownload"}
+[04:47:02] node slot 0 is unix second 1785493027 (slots of 1 s)
+[04:47:05] sequencer start 1: scheduler after 2 s; its blocks fall 7 s after an epoch second
+[04:47:05] sequencer stopped (exit 0)
+[04:48:01] sequencer start 2: scheduler after 52 s; its blocks fall 3 s after an epoch second
+[04:48:01] sequencer up, head block 1
+[04:48:01] channel: {"accredited_keys":["9236554a2caf54dbab7699b4c2111160ac0e0ac74ccb4bc8a9d3023015660b0e"],"configuration_threshold":1,"tip_message":"450b955ba57c790e7a7b58533d058f53dc570cbe9c856d9a7504dc40abb17e47","config_tip_hash":"0000000000000000000000000000000000000000000000000000000000000000","tip_slot":9916197
+[04:48:01] the node serves no /chain/fork: bedrockGenesisId = sha256(deployment settings)
+[04:51:58] driver exit 0
+[crown-a] crown sepolia: attestation program A5E62aMHKFUPwtuMZRUTSPsGwkpzeGBWmbVzD8F5tKcX, bridge AfrE4T3U17eZYUH3KMGDgeE6A4jnpDGum151T3VtddCp, instance 0xa5fb2591db162d5a1a8dd56c83c18323a84cb80764fdef585ac0afbb1b9af2b5
+[crown-a] crown sepolia Init Init                                    applied        gas    114811 block   17 + 10.9s 121eefbbeb7d0e8efead7662dda8da5381b5782fa5ff5d5f9793cd355d8fc52f
+[crown-a] crown sepolia Init adopt 1/2                               applied        gas   3397076 block   18 + 10.0s 1fe910a6baca6a137c34fa7c8c8671fa37cae425075155496aa98c3c03559ac6
+[crown-a] crown sepolia Init adopt 2/2                               applied        gas   3480132 block   19 + 10.2s 222a0f091d376162eb5c51625fc5797628bd7ad46896f7090cca617b8b4d9660
+[crown-a] period 1411 update Open (step 1)                           applied        gas   2096392 block   20 + 10.2s 3c795b89bb99f3d14c82d54bfc771267fbba5e8e1d5ed5e008fcf69f06380e0f
+[crown-a] period 1411 update Miller (step 2)                         applied        gas   3310470 block   21 +  9.7s c1f96e4e67d8d286f120e2d2ee36b94a9e12164ecd22ebd4b4a59ae7ae7a2b63
+[crown-a] period 1411 update adopt 1/2                               applied        gas   3408111 block   22 +  9.9s 13ed27f8dfe5103b9bb05fb835d19cda2dce7f64ef058d9936399f0652f83641
+[crown-a] period 1411 update adopt 2/2                               applied        gas   3415303 block   23 + 10.0s 321673054e24a21b020048f73e4b1e4f0a0d4d52c07e71ef81a396d47ddd07ea
+[crown-a] period 1411 update Finish (step 3)                         applied        gas   3696140 block   24 + 10.3s cb7f6d4b4c8dbbf853722b3c0c66ac75a74888b1bce4b0bc5512ccc572f31396
+[crown-a] period 1411 update applied: advanced false, adopted true, rotated false
+[crown-a] the channel accredits 1 key(s)
+[crown-a] T0 = block 24 0xc4d62711c651b0dff4c005c8fdf2544dd3127c9e1e9b8d13b9b0b031cb5bfdaf; identity written to $REPO/../tmp/attest-seq/work-rf2/zone/session-a.json
+[04:51:58] sequencer stopped (exit 0)
+[04:52:07] node stopped (exit 143)
+[04:52:07] saved generation 1 (50623428 bytes; head block 24)
+[04:52:08] session a: ok
