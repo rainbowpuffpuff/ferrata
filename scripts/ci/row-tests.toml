@@ -1124,7 +1124,7 @@ tests = [
   { path = "lez/results/p4-macos/README.md", kind = "record" },
   { path = "modules/scripts/release-local.sh", kind = "test", ci = "box", run = "modules/scripts/release-local.sh OUT_DIR" },
 ]
-note = "the macos workflow (push to main, or by hand) builds five of the six modules for macOS arm64 the way release-local.sh does for linux-amd64 (export.sh, nix build .#lgx-portable, lgx verify, the .lgx uploaded) and runs the light crates' tests; ferrata_updater_module stays Linux x86-64 (it vendors linux-x86_64 circuits and rapidsnark); never run (no push); the scripts it runs checked for GNU-only commands in CI (check-portable.py) and run under a FreeBSD userland with bash 3.2; user-side proving measured under macOS on Apple Silicon (EVIDENCE row 88); Groth16 wrapping still needs Linux x86"
+note = "the macos workflow (push to main, or by hand) builds five of the six modules for macOS arm64 the way release-local.sh does for linux-amd64 (export.sh, nix build .#lgx-portable, lgx verify, the .lgx uploaded) and runs the light crates' tests; ferrata_updater_module stays Linux x86-64 (it vendors linux-x86_64 circuits and rapidsnark); its first run at `907736e8` failed (four modules built; the relayer's `risc0-sys` and Clippy), and the fixed workflow ran green on `macos-15` from the fix's branch (run 45149028056), not yet at `main`; the scripts it runs checked for GNU-only commands in CI (check-portable.py) and run under a FreeBSD userland with bash 3.2; user-side proving measured under macOS on Apple Silicon (EVIDENCE row 88); Groth16 wrapping still needs Linux x86"
 
 [[row]]
 id = "RFP-022 S.3"
