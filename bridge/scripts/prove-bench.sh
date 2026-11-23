@@ -14,7 +14,7 @@ export TMPDIR="$here/../../tmp"         # tmp/ beside the repository, as bench/ 
 export CARGO_TARGET_DIR="$here/target"
 unset RISC0_DEV_MODE
 mkdir -p "$TMPDIR" "$here/artifacts/logs"
-IMAGE=risczero/risc0-groth16-prover:v2025-04-03.1
+IMAGE=risczero/risc0-groth16-prover:v2026-10-20.1
 
 machine() {
   echo "date            $(date -Is)"

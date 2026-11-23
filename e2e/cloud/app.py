@@ -131,7 +131,7 @@ gpu_image = (
 
 # ---- the prover image of risc0-groth16 3.0.5 (spike/modal-build/box.py, groth16_wrap) ----------------------------
 wrap_image = (
-    modal.Image.from_registry("risczero/risc0-groth16-prover:v2025-04-03.1", add_python="3.12")
+    modal.Image.from_registry("risczero/risc0-groth16-prover:v2026-10-20.1", add_python="3.12")
     .entrypoint([])
 )
 
@@ -451,7 +451,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
         tf.extractall("/inputs", filter="data")
     os.makedirs("/root/bin", exist_ok=True)
     prover = "/root/bin/ferrata-modal-cuda"
-    shutil.copy2("/vol/bin/ferrata-modal-cuda", prover)
+    shutil.copy2("/vol/bin-31/ferrata-modal-cuda", prover)
     os.chmod(prover, 0o755)
     manifest = json.load(open("/inputs/MANIFEST.json"))
     hashes_ok = all(os.path.exists(f"/inputs/{p}") and _sha256(f"/inputs/{p}") == v["sha256"]
@@ -487,7 +487,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
         "image_ids_here": ids, "image_ids_local": manifest["local_image_ids"], "image_ids_equal": ids_equal,
         "input_hashes_equal_manifest": hashes_ok, "source_commit": manifest.get("commit"),
         "prover_wall_s": t_end - t0, "container_s_until_done": t_end - t_start, "prove": prove_json,
-        "build_info": json.load(open("/vol/bin/ferrata-modal-cuda.json")), "prover_binary_sha256_here": _sha256(prover),
+        "build_info": json.load(open("/vol/bin-31/ferrata-modal-cuda.json")), "prover_binary_sha256_here": _sha256(prover),
         "task": os.environ.get("MODAL_TASK_ID"), "finished_at_utc": _utc(),
     }
     with open(f"{out}/run.json", "w") as f:
@@ -500,7 +500,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
 
 
 # ---- the Groth16 step of the wrap ---------------------------------------------------------------------------
-# risc0-groth16 3.0.5 runs `docker run -v <dir>:/mnt risczero/risc0-groth16-prover:v2025-04-03.1`, whose
+# risc0-groth16 3.0.6 (RISC Zero 3.1) runs `docker run -v <dir>:/mnt risczero/risc0-groth16-prover:v2026-10-20.1`, whose
 # entrypoint /app/prover.sh reads /mnt/input.json and writes /mnt/proof.json. The same image runs here.
 @app.function(image=wrap_image, cpu=(2.0, 16.0), memory=(8192, 32768), timeout=1800, max_containers=2,
               retries=0, single_use_containers=True)

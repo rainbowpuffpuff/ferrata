@@ -342,7 +342,7 @@ if ! finalised; then
     if [ -n "${FERRATA_MWRAP:-}" ]; then
       "$FERRATA_MWRAP" "$run/work/$proof/input.json" "$run/work/$proof/proof.json" > "$run/work/$proof/prover.log" 2>&1 || die "the prover image failed: see $run/work/$proof/prover.log"
     else
-      docker run --rm -v "$run/work/$proof:/mnt" risczero/risc0-groth16-prover:v2025-04-03.1 > "$run/work/$proof/prover.log" 2>&1 || die "the prover image failed"
+      docker run --rm -v "$run/work/$proof:/mnt" risczero/risc0-groth16-prover:v2026-10-20.1 > "$run/work/$proof/prover.log" 2>&1 || die "the prover image failed"
     fi
     say "proof 5/5: the Groth16 receipt, verified, and the fixture"
     box --put "$run/work/$proof/proof.json" -- "e2e/run.sh groth16 $name $proof && e2e/run.sh fixture $name" || die "assembling the receipt failed"

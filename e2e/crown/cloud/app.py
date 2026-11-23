@@ -135,7 +135,7 @@ gpu_image = (
 )
 
 wrap_image = (
-    modal.Image.from_registry("risczero/risc0-groth16-prover:v2025-04-03.1", add_python="3.12")
+    modal.Image.from_registry("risczero/risc0-groth16-prover:v2026-10-20.1", add_python="3.12")
     .entrypoint([])
 )
 
@@ -601,7 +601,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
         tf.extractall("/inputs", filter="data")
     os.makedirs("/root/bin", exist_ok=True)
     prover = "/root/bin/ferrata-modal-cuda"
-    shutil.copy2("/vol/bin/ferrata-modal-cuda", prover)
+    shutil.copy2("/vol/bin-31/ferrata-modal-cuda", prover)
     os.chmod(prover, 0o755)
     manifest = json.load(open("/inputs/MANIFEST.json"))
     hashes_ok = all(os.path.exists(f"/inputs/{p}") and _sha256(f"/inputs/{p}") == v["sha256"]
@@ -639,7 +639,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
         "image_ids_here": ids, "image_ids_local": manifest["local_image_ids"], "image_ids_equal": ids_equal,
         "input_hashes_equal_manifest": hashes_ok, "source_commit": manifest.get("commit"),
         "prover_wall_s": t_end - t0, "container_s_until_done": t_end - t_start, "prove": prove_json,
-        "build_info": json.load(open("/vol/bin/ferrata-modal-cuda.json")), "prover_binary_sha256_here": _sha256(prover),
+        "build_info": json.load(open("/vol/bin-31/ferrata-modal-cuda.json")), "prover_binary_sha256_here": _sha256(prover),
         "task": os.environ.get("MODAL_TASK_ID"), "finished_at_utc": _utc(),
     }
     with open(f"{out}/run.json", "w") as f:
@@ -651,7 +651,7 @@ def gpu_prove(inputs_tar: bytes, name: str, job: str, limit_s: int) -> dict:
     return {"ok": record["ok"], "record": record, "files": files}
 
 
-# ---- the Groth16 step of the wrap (risc0-groth16 3.0.5's prover image, /app/prover.sh: /mnt/input.json -> proof.json)
+# ---- the Groth16 step of the wrap (risc0-groth16 3.0.6's prover image, RISC Zero 3.1; /app/prover.sh: /mnt/input.json -> proof.json)
 @app.function(image=wrap_image, cpu=(2.0, 16.0), memory=(8192, 32768), timeout=1800, max_containers=2,
               retries=0, single_use_containers=True)
 def groth16_wrap(input_json: bytes) -> dict:
