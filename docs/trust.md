@@ -24,9 +24,9 @@ that these checks accept or refuse: if it lies it is refused, and if it stops an
 take its place. Its role is **liveness only**. Four assumptions remain, stated rather than hidden: the starting
 checkpoint, until it is checked (§2.1); two thirds of each sync committee, for the inbound leg (§2.2); fewer than `t` of the zone's accredited sequencers, for the return leg: their keys, or the LEZ and Logos Blockchain nodes their attestors read (each attestor must use its operator's own), where under rule (A) the watchers also hold a safety
 role outside its conditions (§3); and the soundness of the proofs the system accepts: the vault's verifier, and LEZ's
-check of privacy-preserving transactions, which every instance and the bridge program rely on, their public paths
-included, because each program accepts some messages from its own private runs on that ground alone (§5; RISC Zero
-3.0.x is under advisory: the [security note](security/risc0-groth16-advisory-2026-11-21/README.md)).
+check of privacy-preserving transactions, on which every Ferrata program's public state rests, an instance's
+included, because LEZ applies a private transaction's calls to public actors on the strength of its proof alone (§5;
+RISC Zero 3.0.x is under advisory: the [security note](security/risc0-groth16-advisory-2026-11-21/README.md)).
 
 **Where each clause is answered.**
 
@@ -349,7 +349,7 @@ clients, and skipped one finalized checkpoint no two clients served alike; with 
 | The weak-subjectivity bound passed; a whole sync-committee period without Ethereum finality; a third of one committee withholding its signatures for a period | the instance refuses every update (53, or no update to apply) and stops safely; records already written stay valid | move to a replacement instance from a fresh checkpoint, a new trust decision ([consumer guide](guides/consumer-guide.md) §9) | §2.1, §2.2 |
 | A fork that is not in the schedule fixed at `Init` | the instance cannot follow it; a successor instance under the same root id can | accept the successor ([consumer guide](guides/consumer-guide.md) §9) | [`attestation.md`](design/attestation.md) §3.5 |
 | A consumer holding the program's id in mutable state | whoever controls that pointer substitutes a program that attests to anything | pin the program; derive every actor from constants ([consumer guide](guides/consumer-guide.md) §2) | VS.3 |
-| An unsound proof system (RISC Zero, LEZ's privacy circuit), or LEZ accepting a forged receipt (LEZ v0.4.0-rc1 and rc3 verify with risc0-zkvm 3.0.5, under advisory) | private reads and private consumers can be forged, and through the proven path (`ApplyVerified`) any instance's store and every record after it, which public consumers read too: the public job's own checks do not guard the store against it | caps and freezes | §5 |
+| An unsound proof system (RISC Zero, LEZ's privacy circuit), or LEZ accepting a forged receipt (LEZ v0.4.0-rc1 and rc3 verify with risc0-zkvm 3.0.5, under advisory) | private reads and private consumers can be forged, and, through the calls LEZ replays on a receipt's word, any instance's store and records (`ApplyVerified`, or `Apply` and `Record` sent in a job's or the instance's name), which public consumers read too: no check of the public job guards against it | caps and freezes | §5 |
 | A bug in Ferrata's core or program | depends on the bug; the deployed program cannot be patched | move to a new deployment ([consumer guide](guides/consumer-guide.md) §9) | §6 |
 | A LEZ zone that includes nothing | no update, no attestation, for every program on the zone | wait; the instance resumes from its own state | §2.4 |
 
@@ -573,24 +573,43 @@ built, and the test or recorded run that shows the mitigation.
   risc0-zkvm 3.0.5, risc0-groth16 3.0.4 and risc0-circuit-recursion 4.0.4, in whose `Receipt::verify` a composite,
   succinct or Groth16 receipt is accepted alike (risc0-zkvm 3.0.5 `src/receipt.rs:344-354`; a fake one only in dev
   mode). LEZ's own prover makes succinct receipts (`circuit/mod.rs:658` at rc3, `:655` at rc1) and its fee model assumes one
-  (`lez/programs/fee/core/src/market.rs:45-51`); we found no check that refuses another kind. These versions are in
+  (LEZ's `lez/programs/fee/core/src/market.rs:45-51`, rc1 and rc3); we found no check that refuses another kind. These versions are in
   the ranges of RISC Zero's advisory GHSA-g6qg-9j8p-7j87, whose Groth16 verifier accepts a receipt with a substituted
   claim digest. Whether a forged receipt passes LEZ's check has not been tested: we built none, and it is for Logos to
   confirm ([security note](security/risc0-groth16-advisory-2026-11-21/README.md) §3 and its correction of 23
   November 2026). GHSA-mm6c-35cm-g4x2, about the Solidity verifiers, does not reach LEZ.
-  A private transaction acts on public actors through the messages its journal lists as crossing to the public side
-  (`BoundaryStep::PrivateToPublic`, LEZ's `lee/state_machine/core/src/execution_state.rs:129-139`), each delivered
-  with the private sender the journal names. Each Ferrata program accepts some of those messages on the sender's
-  program alone (LEZ's `ReceiveInput::from_own_program`, `lee/state_machine/core/src/program/mod.rs:390-393`): the
-  attestation program's `ApplyVerified` (`lez/guests/program/src/main.rs:288-305`), whose job is applied after a
-  check of its phase, its adoption and its starting store only (`crates/ferrata-core/src/steps.rs:605-623`), so it
-  writes a finalized header and next committee of the job's choosing; the bridge program's `issue` and burn
-  deliveries (`lez/guests/bridge/src/main.rs:639`, `:775`, `:852`); the reference consumer's `spend`
-  (`lez/guests/consumer/src/main.rs:185`). So if LEZ accepted a forged receipt, it could write any instance's store,
-  and the records that public consumers read follow from that store: the public job path does not guard against it.
-  The fix is LEZ's, a LEZ on risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). An option for after the award: an instance
-  configured at `Init` to refuse `ApplyVerified`, which takes its public path out of this dependence at the price of
-  the proven path; it moves the attestation program's image id.
+  A private transaction acts on public actors through the calls its journal lists as crossing to the public side
+  (`BoundaryStep::PrivateToPublic`, LEZ's `lee/state_machine/core/src/execution_state.rs:132-137`). LEZ replays each
+  of them on the public side as the journal states it, its receiver, message and sender and the authorizations and
+  PDA seeds it carries, with no check of its own (`replay_proven_calls`, `:842-872` at v0.4.0-rc1 and rc3:
+  `proven.with_from(Sender::Call(proven.envelope.from))` at `:849`; LEZ's own comment at `:733-734`: a proven call is
+  "replayed publicly unchecked"); the receipt check is what binds these calls to a
+  real private run. A receiving program sees a replayed call as it sees any call from that sender (`ReceiveInput`,
+  `lee/state_machine/core/src/program/mod.rs:373-385`, has no field that tells them apart), and the delivery's
+  inherited authorizations and PDA seeds decide whether it is authorized (`authorize`, `execution_state.rs:1431-1470`).
+  So, by our reading of LEZ's source (not tested), every check Ferrata's programs make on a message, a named sender,
+  an actor of their own program (`ReceiveInput::from_own_program`, `program/mod.rs:390-393`) or an authorization, is
+  met by a journal that names it, and a forged receipt LEZ accepted could reach:
+  - in the attestation program, `ApplyVerified` from any actor of the program (`lez/guests/program/src/main.rs:288-305`),
+    `Apply` in a job actor's name (`:269-286`) and `Record` in the instance actor's name (`:405-425`; `attest` trusts a
+    record because only `Record`, accepted from `instance(id)` alone, writes one: `:429-430`). A job is applied after
+    a check of its phase, its adoption and its starting store (`crates/ferrata-core/src/steps.rs:605-623`) and the
+    period and slot-order rules of `apply_core_compact` (`:304-335`), which bound each job, not where a run of them
+    ends: over a few jobs a forger installs a committee of its own. So it could write any instance's store and
+    records, from which every attestation follows, public consumers' included;
+  - in the bridge program, `issue`, which mints (`lez/guests/bridge/src/main.rs:639`), the burn delivery a checkpoint
+    reads (`:775`) and the transfer delivery (`:852`), and the handlers that accept a configuration's or a nullifier's
+    actor as sender (`:180`, `:202`, `:448`, `:473`);
+  - in the reference consumer, `spend` (`lez/guests/consumer/src/main.rs:185`) and its credits (`:219`, `:285`); and in
+    `ferrata_holdings`, `ferrata_statements`, the statements reader and `ferrata_rebate`, the replies they accept by
+    their sender, a record's, an entry's or an instance's (`lez/guests/holdings/src/main.rs:40`,
+    `lez/guests/statements/src/main.rs:41`, `lez/guests/statements-reader/src/main.rs:43`,
+    `lez/guests/rebate/src/main.rs:59`, `:89`).
+  No Ferrata program is outside this, and nothing on our side removes it: a program cannot tell a replayed call from a
+  public one, so no check or flag of ours separates them (an instance refusing `ApplyVerified` would still accept
+  `Apply` and `Record` in its own actors' names). The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
+  risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). No live exposure follows today: no v0.4 program of ours runs on a public
+  network, and every v0.4 sequencer named in this repository is one we ran.
 - **If the proof system is unsound** and RISC Zero publishes the proof, anyone can trip the stop: nothing
   more is released or refunded, owed balances stay claimable, and whatever escrow remains stays in the
   vault (vault v5; [`vault/README.md`](../vault/README.md), "Verifier and stop", "Refunds"). Before the stop
