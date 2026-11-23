@@ -22,7 +22,7 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 41 | 14 | 1 | 3 | **59** |
+| RFP-021 | 42 | 13 | 1 | 3 | **59** |
 | RFP-022 | 41 | 24 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
@@ -34,7 +34,7 @@ By section, hard requirements:
 | RFP-021 | Functionality | 13 | 1 | 0 | 1 | 15 |
 | RFP-021 | Usability | 4 | 1 | 0 | 1 | 6 |
 | RFP-021 | Reliability | 8 | 4 | 0 | 0 | 12 |
-| RFP-021 | Performance | 5 | 4 | 0 | 0 | 9 |
+| RFP-021 | Performance | 6 | 3 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 5 | 4 | 1 | 1 | 11 |
 | RFP-021 | Verification Security | 6 | 0 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 15 | 2 | 0 | 0 | 17 |
@@ -107,7 +107,7 @@ By section, hard requirements:
 | P.6 | in part | The updater daemons on a running sequencer: 0.043–0.092 of a core and 57.3–57.8 MiB each; the update's proofs measured; the attestation CLI and module, the §8 `monitor` and the daemons as Logos modules not measured; the updater bounds what it reads and serves. | 21, 123, 172, 200; `docs/performance.md` RFP-021 §P.6 |
 | P.7 | shown | Account sizes in LEZ's serialized state with growth measured to 100,000 records (record 453 B, instance 593 B, job 1,110 B); one- and five-year growth derived at the design's cadence (4.12 MB and 20.58 MB); unfinished jobs at most (k − 1) × 10.09 MB a year with k racing honest operators, none with one (derived); anyone can add more, one 1,110 B job account per `Open` it never finishes (a forged signature passes `Open`, 2,195,028 execution gas: `lez/results/stage1-refusals.md` row 1), and nothing clears jobs, so that growth is bounded only by what its sender pays. | 170; `lez/results/perf-state.md`; `docs/performance.md` RFP-021 §P.7 |
 | P.8 | shown | The BLS precompile delta modelled at time parity from measured native and in-program costs: 8,344,139 cycles of BLS per finality update in the program, 17,841 as a precompile; the update about 902,607 cycles instead of 9,228,905. | 127, 171; `docs/performance.md` RFP-021 §P.8 |
-| P.9 | in part | Every update step charged the same over five updates as records grow and one attestation 275,865 cycles with 2 and with 1,002 record accounts, pinned in CI; five statement types and every update step the same to 100,000 records (`lez/results/perf-state.md`). Not measured at different state sizes (`docs/performance.md` §P.9 lists them): `Init`, `VerifyAll` and the private update path, the absent-account, absent-slot and four-facts statements, `CallAttest` and the reference consumer's claim, `Succeed`/`Spawn`; for them the argument is that they read fixed-size accounts only, which is not a measurement. In part: the clause says "no action". To be shown: the listed actions measured at two state sizes. | 170, 211; `lez/results/perf-state.md`; `lez/lab/README.md` |
+| P.9 | shown | Every message the attestation program handles was charged the same handler cycles, execution and storage gas with more state accumulated (asserted): the update steps over five updates as records grow; `Init` with its adoption, `VerifyAll` public and private (the proven path), `Succeed`/`Spawn`, `Read`/`ReadPadded`, all eight statement types and the accumulator leaf, with 1,000 more of the accounts that accumulate beside them and, for the private path, 1,000 more commitments, pinned in CI; all of them to 100,000 (serialized state to 143.6 MB; `lez/results/perf-state.md` §2–§3, `perf-state-actions.md`). One cost of the private path grows, and it is LEZ's, which the module cannot avoid (the clause's second sentence): a private transaction's circuit hashes its fee payer's commitment path, 3 to 17 levels with 100,000 more commitments while the charge stays the same, at about 1,935 circuit cycles a level (1,913,757 at 3 levels, 1,940,779 at 17, from r0vm's session log; about 62,000 at depth 32, derived), small beside the circuit's 1.9M and the update's 9.05M, so no mitigation is needed. The reference consumer is application code by RFP-021's scope and was measured too: every message charged the same; one of its costs grows with the claimant's own private state, which it keeps as one list of pools: a private-kind claim's private transitions take about 2,000–2,300 more cycles per pool already held (1,523,845 with none, 3,717,087 with 1,000; the circuit's share not measured), which a claimant avoids by sending each pool's deposits to its own private account. Not measured: the bridge's actions (RFP-022's program), the soft-requirement programs (`statements`, `rebate`) and the second consumer (`ferrata_holdings`). | 170, 211, 229; `lez/results/perf-state-actions.md`; `lez/results/perf-state.md`; `lez/lab/README.md` |
 
 ### Supportability
 
