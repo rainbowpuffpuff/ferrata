@@ -16,16 +16,18 @@ import {TestToken} from "./TestToken.sol";
 ///         step. script/deploy.sh runs it until the record says `complete`.
 ///
 ///         groth16Verifier    RISC Zero's Groth16 verifier 3.1.0 (risc0-ethereum v3.1.0, vault/lib.lock; skipped if
-///                            FERRATA_GROTH16_VERIFIER names one, which must then answer VERSION() "3.1.0" and SELECTOR()
-///                            0xe71e6620: a verifier of RISC Zero 3.0.x accepts forged proofs, GHSA-mm6c-35cm-g4x2)
-///         emergencyStop      RiscZeroVerifierEmergencyStop around it, owned by the deployer until the last step
+///                            FERRATA_GROTH16_VERIFIER names one, which must then have exactly the code this script
+///                            builds from vault/lib.lock, VERSION() "3.1.0" and SELECTOR() 0xe71e6620: a verifier of
+///                            RISC Zero 3.0.x accepts forged proofs, GHSA-mm6c-35cm-g4x2)
+///         emergencyStop      RiscZeroVerifierEmergencyStop around it, owned by the deployer until renounceStopOwner
 ///         registry           the library FerrataRegistry
 ///         vault              FerrataVault, its bytecode linked to that library (never `new`: forge would deploy a
 ///                            library of its own)
 ///         token              a test ERC-20 (TestToken, open minting)
+///         renounceStopOwner  the stop's owner renounced (proposal §B5: nobody holds the guardian key), before any
+///                            token is registered: no deposit can reach a vault whose stop a key can still trip
 ///         registerETH        ETH, with relay and checkpoint fees (schedule 0; mint and burn fees start at zero)
 ///         registerToken      the test token, the same
-///         renounceStopOwner  the stop's owner renounced (proposal §B5: nobody holds the guardian key)
 ///         done               the checks below; the record gets `complete: true`
 ///
 ///         Gas: before it sends, a run asks the node (eth_estimateGas, against the chain as the previous runs left it)
@@ -64,9 +66,9 @@ contract DeployVault is Script {
         Registry,
         Vault,
         Token,
+        RenounceStopOwner,
         RegisterETH,
         RegisterToken,
-        RenounceStopOwner,
         Done
     }
 
@@ -393,9 +395,9 @@ contract DeployVault is Script {
         if (r.registry == address(0)) return Step.Registry;
         if (r.vault == address(0)) return Step.Vault;
         if (r.token == address(0)) return Step.Token;
+        if (RiscZeroVerifierEmergencyStop(r.stop).owner() != address(0)) return Step.RenounceStopOwner;
         if (!_registered(r.vault, ETH)) return Step.RegisterETH;
         if (!_registered(r.vault, r.token)) return Step.RegisterToken;
-        if (RiscZeroVerifierEmergencyStop(r.stop).owner() != address(0)) return Step.RenounceStopOwner;
         return Step.Done;
     }
 
@@ -528,8 +530,10 @@ contract DeployVault is Script {
         );
     }
 
-    /// @dev The Groth16 verifier is RISC Zero's 3.1.0: its version and selector (a 3.0.x one is refused).
-    function _checkVerifier(address groth16) internal view {
+    /// @dev The Groth16 verifier is RISC Zero's 3.1.0: its version and selector (a 3.0.x one is refused), and its code
+    ///      exactly that of `RiscZeroGroth16Verifier(ControlID…)` built from vault/lib.lock, deployed here in the script's
+    ///      own simulation only (never broadcast): a contract that merely answers VERSION() and SELECTOR() is refused.
+    function _checkVerifier(address groth16) internal {
         require(
             keccak256(bytes(RiscZeroGroth16Verifier(groth16).VERSION())) == keccak256(bytes(VERIFIER_VERSION)),
             "DeployVault: the Groth16 verifier is not version 3.1.0"
@@ -538,10 +542,15 @@ contract DeployVault is Script {
             RiscZeroGroth16Verifier(groth16).SELECTOR() == VERIFIER_SELECTOR,
             "DeployVault: the Groth16 verifier's selector is not 0xe71e6620"
         );
+        address expected = address(new RiscZeroGroth16Verifier(ControlID.CONTROL_ROOT, ControlID.BN254_CONTROL_ID));
+        require(
+            groth16.codehash == expected.codehash,
+            "DeployVault: the Groth16 verifier's code is not risc0-ethereum v3.1.0's (vault/lib.lock)"
+        );
     }
 
     /// @dev Everything the proposal and the registrations promise, read back from the chain.
-    function _check(Record memory r) internal view {
+    function _check(Record memory r) internal {
         _checkVerifier(r.groth16);
         RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(r.stop);
         FerrataVault vault = FerrataVault(payable(r.vault));
