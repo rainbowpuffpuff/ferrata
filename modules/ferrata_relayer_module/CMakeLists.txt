@@ -18,10 +18,10 @@ string(JSON MODULE_NAME GET ${METADATA_JSON} name)
 logos_module(NAME ${MODULE_NAME})
 
 # macOS: risc0-zkp (the receipt verifier, and the Groth16 step's input.json) compiles its Metal prover into the
-# same object files as its verifier for aarch64-apple-darwin, so the plugin's link needs Metal and the Objective-C
-# runtime (MTLCreateSystemDefaultDevice, MTLCopyAllDevices, objc_msgSend, ...); LogosModule.cmake adds only
-# CoreFoundation and Security for a Rust module. The prover is never called: the relayer proves through r0vm,
-# and flake.nix leaves its kernel library empty (RISC0_SKIP_BUILD_KERNELS).
+# same object files as its verifier for aarch64-apple-darwin; those reference objc_msgSend and sel_registerName,
+# and the metal crate beside them MTLCreateSystemDefaultDevice and MTLCopyAllDevices (modules/results/
+# macos-2026-11-23/). LogosModule.cmake links a Rust module with CoreFoundation and Security only. The prover
+# is never called: the relayer proves through r0vm, and flake.nix leaves its kernel library empty.
 if(APPLE)
     target_link_libraries(${MODULE_NAME}_module_plugin PRIVATE "-framework Metal" objc)
 endif()

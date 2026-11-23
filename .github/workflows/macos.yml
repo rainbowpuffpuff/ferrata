@@ -13,7 +13,9 @@ name: macos
 # steps run is checked for GNU-only commands and bash-4 constructs by scripts/ci/check-portable.py (CI's
 # links job), and was run under a FreeBSD userland with bash 3.2 (scripts/ci/README.md). Its first run
 # (45110242235, at 907736e8) failed in Clippy (an unpinned stable toolchain) and in the relayer module's
-# risc0-sys (Metal kernels compiled inside the Nix build); both are fixed below. Until a first green run it
+# risc0-sys (Metal kernels built through a cache under $HOME, read-only in the Nix build); both are fixed
+# below, and so is the relayer's macOS link, which a cross-build for aarch64-apple-darwin showed would stop
+# next (Metal and the Objective-C runtime; modules/results/macos-2026-11-23/). Until a first green run it
 # runs on pushes to main and when started by hand, one run per branch at a time, not on every pull request.
 # Third-party actions are pinned by commit (the tag or branch they had on 23 November 2026 in the comment;
 # checkout, cache and rust-toolchain at the commits ci.yml uses).
@@ -40,9 +42,10 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      # Rust 1.93.0, the toolchain ci.yml pins: a new stable's Clippy cannot fail the job (the first run took
-      # stable, Rust 1.100.0, whose unnecessary_map_or failed it). The workspace is also Clippy-clean under that
-      # stable: Job::is_verified allows the lint, since the attestation program is built from it.
+      # Rust 1.93.0, the toolchain ci.yml's jobs pin (its `test` job takes stable and allows the lint): a new
+      # stable's Clippy cannot fail this job (the first run took stable, Rust 1.100.0, whose unnecessary_map_or
+      # failed it). The workspace is Clippy-clean under 1.100.0 too: Job::is_verified allows that lint, since
+      # the attestation program is built from it.
       - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
         with:
           components: clippy, rustfmt
