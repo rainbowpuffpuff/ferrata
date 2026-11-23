@@ -1,5 +1,9 @@
 # Image ids of the guests at `integration7`
 
+> **RISC Zero 3.1 (branch `bridge-31`, 23 November 2026).** The Ethereum-side guests are built with risc0-zkvm 3.1.0:
+> their ids are in [the RISC Zero 3.1 section](#risc-zero-31-the-ethereum-side-guests-migration-phase-1) (`*_31`).
+> The first table keeps the RISC Zero 3.0.5 ids, which the Sepolia vaults of November 2026 and the recorded runs pin.
+
 > **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
 > program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below,
 > recorded there as `ferrata_bridge_b1` (`0x847a4336…7515` since 22 November 2026, ADR 0032: a burn's tag used once;
@@ -44,6 +48,40 @@ live run, `crown-live-1`, ran programs built at the maintainer's checkout path (
 | release (`bridge/guests`): `release` | `0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9` | `7be1349cba34b670c0ef63e2093c76885e648d9f9875f5d378ce1706b73f11bf` | 230,360 | `235b2b8441eeb8036a9558932e751814b3c5f97da66cd46a80f958c790d6e714` |
 | claim statement (`bridge/guests`): `claim` | `0xde8d67a46e07254f2fc31202cbae5a35d26f6bfc96e6e436ba732281015965f4` | `ca2c25bf41c307355c0f917427b35469d880b374c3ae16ab26017c73ad78bd02` | 229,408 | `48ab6ae540f4a292eedb6edd0845b93fb166167eacd71953284882f38d48bd2e` |
 | gas-drop receipt (`bridge/guests`): `gasdrop` | `0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4` | `c2119aee6f28359f383d8f1a2e14829f95bdc86e92d52790e442dd823cb43162` | 230,648 | `aa1f819bd46b25cac570db21b4abeb0d84b81c779dccbaad24e5a5fa50cb2114` |
+
+## RISC Zero 3.1: the Ethereum-side guests (migration phase 1)
+
+[RISC Zero's advisories of 11 November 2026](security/risc0-groth16-advisory-2026-11-21/README.md) moved the
+Ethereum side to risc0-zkvm 3.1.0 ([migration plan](design/risc0-3.1-migration.md), phase 1): the guests the vault
+verifies (`release`, both checkpoint rules in both Bedrock layouts, the segment guest they compose with) and the others
+built in the same workspaces (`micro`, and `claim` and `gasdrop`, whose ids are used from phase 2, when the relayer
+links a LEZ on 3.1). Their sources did not change; risc0-zkvm 3.1.0 and risc0-build 3.0.7 did (`bridge/` and
+`checkpoint/` manifests and lockfiles: circuits 4.1.0, risc0-zkp 3.0.6, risc0-groth16 3.0.6), so every id moved. Rows are
+named `<guest>_31`: the rows above, of RISC Zero 3.0.5, stay what the deployed vaults and the recorded runs pin, and
+`scripts/verify-sepolia.py` holds a run to the 3.1 rows when its release is `release_31`;
+`scripts/reproduce-image-ids.sh compare` expects this tree to build the `_31` rows (`scripts/reproduce/compare_ids.py`,
+`TREE_ENTRY`). The LEZ programs (attestation, bridge, consumers) stay on LEZ's RISC Zero (3.0.5) until LEZ is tagged on
+3.1 (phase 2).
+
+Built on 23 November 2026 on the Modal build box from branch `bridge-31` (`fce77353`): RISC Zero 3.1.0 in a RISC Zero
+home of its own (`cargo-risczero` and `r0vm` 3.1.0, guest Rust 1.88.0, C++ 2024.1.5, installed with rzup), through
+`scripts/guest-rustc`, `RISC0_BUILD_LOCKED=1`, `cargo build --release -p methods -p methods-0-3-5 -p methods-plain`
+in `checkpoint/` and `-p methods` in `bridge/` (250 s, both at once), then `python3 -I scripts/reproduce/guest_ids.py`:
+for every row r0vm 3.1.0 computes risc0-build's id from the binary. The binaries' sizes equal the 3.0.5 builds' (the
+guests link the same v1compat kernel, risc0-zkos-v1compat 2.2.3), their bytes do not. `micro_plain`
+(`checkpoint/guests-plain`, not in a table before) builds to `0x3cd9e8be5f4708f55a713fc53ad81cdeb5b06c645d564e5adb27ec8dfdacbd3b`.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF | Before (RISC Zero 3.0.5) |
+|---|---|---|---:|---|---|
+| checkpoint, rule (A) (`checkpoint/guests/checkpoint`): `checkpoint_31` | `0x7c93425e9b6fedbd0d79092b3a0b6c164b9a6ee250b9e2e89b26a7fadc4497c1` | `9c39655875e4b308342a660eb044f6402c417d9e379fb4870a93a62636eef131` | 443,220 | `f2458fb0c81feb6204f03fed6d31e6e38be5fd1c1069c0cd22dd7635c24cf824` | `0xb9c1e6a8…2c84` |
+| checkpoint, rule (B) (`checkpoint/guests/checkpoint-b`): `checkpoint_b_31` | `0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0` | `6b8952089b4185bd37bbd844387ccc42c84a96535a46c04aa503f785bc988727` | 445,120 | `893f26688965bda281d98981378a41b30a64dc285979ccb4762c7fd973468b9d` | `0xf8116722…626e` |
+| checkpoint, rule (A), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint`): `checkpoint_0_3_5_31` | `0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de` | `0150091f569610763c4719f0f05964a7bfb620fb7c9de02a1fd04e9fcebc19a1` | 446,600 | `8dc8850d8f085377c172b058ab80975704abe37f36f88e31ec4720682f5c7c1f` | `0x259cd89e…9b0f` |
+| checkpoint, rule (B), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint-b`): `checkpoint_b_0_3_5_31` | `0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04` | `86eaa5502bffbb85d8661e18d24ae83a797cab5e2cdc4db70c01b6a7ae20bbdc` | 448,132 | `e34f9e92369bf50535462df1720f6dbe9f9120274894d00a0049a6dc91101513` | `0xafbf4023…3bcf` |
+| checkpoint segment (`checkpoint/methods-segment`): `segment_31` | `0x240766633d834cb2617b3f75501513ebeef89cad61a8730a73c685c4f34b3ad9` | `d9ab28b78af89154a66de81d901c7a397f2d3c29ef97ce4c891987ea7863f4a6` | 269,664 | `02ece4d0ab4eaeeaa2563b634feee4054ca9f44a3d971c5f2d7881971320960d` | `0x11e888e9…4592` |
+| checkpoint micro-benchmark guest: `micro_31` | `0x0dc397afcb583efd3f28d7046029f7004b32c83cb7a28ffb78693faa75c588ff` | `356115aa560f9446582c9e4a7db77d9fc89f0a7cfa6abb5e24f75ac762011423` | 408,408 | `fb20b9c0c34ef3889b776e26d8c3b68393fe43ac77aa4e0a7f24db7d5ac05218` | `0xcf7aa50c…5843` |
+| release (`bridge/guests`): `release_31` | `0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd` | `d0fdcac9fa71ee87d22014ccfbb90f4ac543ae2559838d85a9dd0315c7cae2ac` | 230,360 | `3303ae81cc7f69dd7a4902235f52b5c09061eafe6f5f092ff363dda051cc1722` | `0xb64900bc…29e9` |
+| claim statement (`bridge/guests`): `claim_31` | `0x3c1afd01cf3f73513b9fe2ffa7c811726bfd4e68e00df61688a2fe811639e108` | `89ce51ccc86b8c259ca02a4812575f0535e8f0a6dd8ccfc62bbe1823811dfcfd` | 229,408 | `7f4bdbfbe586e649e7d85cbb3ff4222e3c3f5e84c588e24ed558a358b99c537e` | `0xde8d67a4…65f4` |
+| gas-drop receipt (`bridge/guests`): `gasdrop_31` | `0xce3ad533d2c72b38c9779f1c692dd784e3fd754612808696e1362da49c7f8125` | `b0a7dab9e24547e3e234e700c64335cb217810e34cbb08d930914b2f72c84395` | 230,648 | `efa336d2a43323d37dd55d56e96d1491732604e0f28ee66218c6bc880920af10` | `0x89580416…9eb4` |
 
 ## For zones on Logos Blockchain 0.3.5-rc.1; not deployed on Sepolia
 

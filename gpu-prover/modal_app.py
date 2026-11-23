@@ -34,8 +34,8 @@ GPU = os.environ.get("FERRATA_GPU", "L4")  # NVIDIA L4 (FERRATA_GPU=L40S: the fa
 NVCC_APPEND_FLAGS = "--generate-code arch=compute_89,code=sm_89"
 # The CUDA toolkit image RISC Zero's own GPU prover agent (bento) is built on at the v3.0.5 tag.
 CUDA_BASE = "nvidia/cuda:12.8.0-devel-ubuntu24.04"
-RUST_TOOLCHAIN = "1.89.0"  # risc0 v3.0.5 rust-toolchain.toml: channel = "1.89"
-R0VM_VERSION = "=3.0.5"  # crates.io risc0-r0vm 3.0.5; its packaged Cargo.lock = the v3.0.5 tag's versions
+RUST_TOOLCHAIN = "1.93.0"  # since RISC Zero 3.1 (risc0-zkvm 3.1.0); before: risc0 v3.0.5 rust-toolchain.toml, channel = "1.89"
+R0VM_VERSION = "=3.1.0"  # crates.io risc0-r0vm 3.1.0 (since RISC Zero 3.1; before 3.0.5)
 CPU_CORES = 4.0  # physical cores (8 vCPUs) next to the GPU, like a one-L4 cloud VM
 MEMORY_MIB = 32768
 BUILD_CPU_CORES = 16.0
@@ -67,7 +67,9 @@ LEZ_JOBS = {
 
 HERE = pathlib.Path(__file__).resolve().parent
 PATH = "/root/.cargo/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-BIN = "/vol/bin"  # built binaries on the Volume
+# Built binaries on the Volume: bin-31/ since RISC Zero 3.1 (risc0-zkvm 3.1.0). bin/ keeps the 3.0.5 builds, which
+# e2e/crown/cloud/app.py reads for the receipts of RISC Zero 3.0.5 runs.
+BIN = "/vol/bin-31"
 
 base = (
     modal.Image.from_registry(CUDA_BASE, add_python="3.12")

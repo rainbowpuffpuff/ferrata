@@ -98,7 +98,7 @@ fn cmd_verify(receipt_path: &str, image_id: &str, meta_path: &str) -> Result<()>
     Ok(())
 }
 
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "cuda", feature = "prove"))]
 mod prove {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -176,7 +176,7 @@ mod prove {
         let record = json!({
             "name": name, "image_id": image_hex(&id), "program_bytes": program.len(),
             "program_sha256": sha256_hex(&program), "input_bytes": input.len(), "input_sha256": sha256_hex(&input),
-            "risc0_zkvm": risc0_zkvm::VERSION, "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+            "risc0_zkvm": risc0_zkvm::VERSION, "prover": if cfg!(feature = "cuda") { "in-process (LocalProver path), risc0-zkvm feature cuda" } else { "in-process (LocalProver path), risc0-zkvm feature prove (CPU)" },
             "receipt_kind": "succinct", "receipt_bytes": bytes.len(), "receipt_sha256": sha256_hex(&bytes),
             "verifies": true, "journal_equals_native": true,
             "segments": s.segments, "user_cycles": s.user_cycles, "total_cycles": s.total_cycles,
@@ -203,7 +203,7 @@ fn main() -> Result<()> {
     match args.first().map(String::as_str) {
         Some("image-id") => cmd_image_id(&args[1..]),
         Some("verify") => cmd_verify(arg(1)?, arg(2)?, arg(3)?),
-        #[cfg(feature = "cuda")]
+        #[cfg(any(feature = "cuda", feature = "prove"))]
         Some("prove") => prove::cmd_prove(arg(1)?, arg(2)?, arg(3)?, arg(4)?, arg(5)?),
         #[cfg(not(feature = "cuda"))]
         Some("prove") => bail!("built without the `cuda` feature: no prover"),
