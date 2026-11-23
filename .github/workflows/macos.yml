@@ -11,11 +11,12 @@ name: macos
 #
 # GitHub's macOS runners have BSD tar, sed and find, no GNU coreutils, and bash 3.2: every script these
 # steps run is checked for GNU-only commands and bash-4 constructs by scripts/ci/check-portable.py (CI's
-# links job), and was run under a FreeBSD userland with bash 3.2 (scripts/ci/README.md). It has not run on
-# GitHub yet: until a first green run it runs on pushes to main and when started by hand, one run per
-# branch at a time, not on every pull request. Third-party actions are pinned by major tag only: no
-# 40-character SHA of them exists in this worktree to pin them by (checked with git grep); each carries a
-# TODO until the owner runs `python3 scripts/ci/pin-actions.py --write` (scripts/ci/README.md).
+# links job), and was run under a FreeBSD userland with bash 3.2 (scripts/ci/README.md). Its first run
+# (45110242235, at 907736e8) failed in Clippy (an unpinned stable toolchain) and in the relayer module's
+# risc0-sys (Metal kernels compiled inside the Nix build); both are fixed below. Until a first green run it
+# runs on pushes to main and when started by hand, one run per branch at a time, not on every pull request.
+# Third-party actions are pinned by commit (the tag or branch they had on 23 November 2026 in the comment;
+# checkout, cache and rust-toolchain at the commits ci.yml uses).
 
 on:
   push:
@@ -38,13 +39,16 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 90
     steps:
-      - uses: actions/checkout@v4 # TODO: pin to a commit SHA
-      - uses: dtolnay/rust-toolchain@stable # TODO: pin to a commit SHA
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      # Rust 1.93.0, the toolchain ci.yml pins: a new stable's Clippy cannot fail the job (the first run took
+      # stable, Rust 1.100.0, whose unnecessary_map_or failed it). The workspace is also Clippy-clean under that
+      # stable: Job::is_verified allows the lint, since the attestation program is built from it.
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
         with:
           components: clippy, rustfmt
           targets: riscv32im-unknown-none-elf
       # Only the downloaded vectors: vectors/acc-leaf.json is committed and must come from git.
-      - uses: actions/cache@v4 # TODO: pin to a commit SHA
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             vectors/v1.7.0-beta.4
@@ -69,16 +73,19 @@ jobs:
   # each module as its own repository (export.sh, which stages the crates: LEZ's lee_core and, for the
   # relayer, the LEZ tree, from the upstream sources), `nix build .#lgx-portable` in it, then `lgx verify`
   # with the lgx tool of the pinned logos-package. Nix builds the crates itself, so no Rust or RISC Zero
-  # toolchain is installed here. Nix flakes need a larger stack than a macOS runner's default.
+  # toolchain is installed here. Nix flakes need a larger stack than a macOS runner's default. The relayer
+  # links risc0-zkp's prover code only for the Groth16 step's input.json (risc0-groth16's `prove`) and never
+  # proves in-process, so its flake skips RISC Zero's Metal kernels (RISC0_SKIP_BUILD_KERNELS), which
+  # risc0-sys would compile on macOS with Xcode's tools and a cache under $HOME, neither of which Nix offers.
   modules:
     runs-on: macos-15
     timeout-minutes: 240
     steps:
-      - uses: actions/checkout@v4 # TODO: pin to a commit SHA
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Install Nix
-        uses: cachix/install-nix-action@v31 # TODO: pin to a commit SHA
+        uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
-        uses: actions/cache@v4 # TODO: pin to a commit SHA
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: ${{ github.workspace }}/../upstream
           key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
@@ -108,7 +115,7 @@ jobs:
             lgx verify "out/dist/$m-v$version/$lgx"
           done
       - name: Upload the .lgx files
-        uses: actions/upload-artifact@v4 # TODO: pin to a commit SHA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: lgx-macos-arm64
           path: out/dist/**/*.lgx

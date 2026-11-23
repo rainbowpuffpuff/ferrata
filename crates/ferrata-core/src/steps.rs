@@ -383,9 +383,9 @@ pub struct Job {
 }
 
 const JOB_VERSION: u8 = 1;
-
 impl Job {
     /// True once the signature verified and any adoption is complete.
+    #[allow(clippy::unnecessary_map_or, reason = "the attestation program's image id depends on this code")]
     pub fn is_verified(&self) -> bool {
         self.phase == Phase::Verified && self.adoption.as_ref().map_or(true, |a| a.complete)
     }
