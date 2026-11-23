@@ -33,7 +33,8 @@ What the branch does, with its commits:
   (owner renounced), a freeze authority and at least one watcher with keys, capped defaults; no RISC Zero router.
 - **The fork rehearsal** with real 3.1 proofs: [`vault/results/fork-rehearsal-31/`](../../vault/results/fork-rehearsal-31/README.md).
 - **The owner's one-command deploy**: `vault/script/deploy_sepolia.py` (Modal, the Secret `ferrata-sepolia-key`) and its
-  logic `vault/script/deploy_core.py`: refusals before anything is sent (roles, Δ, programs, address), a preflight of
+  logic `vault/script/deploy_core.py`: refusals before anything is sent (roles, Δ, programs, address, and a LEZ
+  configuration whose hash is not `lezConfigId` or that names another vault or chain), a preflight of
   the whole deployment on a fork, the stop renounced before any registration, every value read back.
   `scripts/test_deploy_sepolia.py` runs it end to end, signed path included, on a local anvil with throwaway keys (6 of
   6); its Modal wrapper ran `--dry` on a Sepolia fork without the Secret. Never run with the Secret or on Sepolia.
@@ -79,8 +80,9 @@ deploys rule (B)). Sec.2, Sec.3 and Sec.6's text changes to: "Ethereum side show
 
 - Deploy the new vault on Sepolia: `MODAL_PROFILE=<the Secret's workspace> modal run vault/script/deploy_sepolia.py
   --params <P.json> --freeze-authority <F> --watchers <W> --expect-vault <V> --dry`, then the same without `--dry`.
-  `P.json`: `vault/script/params/sepolia-31.template.json` filled from the zone (lezConfigId, genesisState, nMin/tMin,
-  the LEZ definitions; its Logos Blockchain layout decides `checkpointImageIdB`). `F`, `W`: a freeze authority and one
+  `P.json`: `vault/script/params/sepolia-31.template.json` filled from the zone (`lezConfig`, the bridge's
+  configuration naming `V`, and `lezConfigId`, its hash; genesisState, nMin/tMin, the LEZ definitions; its Logos
+  Blockchain layout decides `checkpointImageIdB`). `F`, `W`: a freeze authority and one
   to three watchers (comma-separated) with keys, none of them the deployer. `V`: the vault's address, the deployer's
   creation at its next nonce + 3, which the zone's configuration must name (the tool prints and checks it). The
   relayer is not a role of the vault: its address is only funded.

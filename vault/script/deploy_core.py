@@ -11,6 +11,8 @@ Before anything is sent (decision D1 (a) of docs/design/risc0-3.1-migration.md, 
 vault/script/deploy.sh and DeployVault.s.sol):
   - the signer is `deployer`, the endpoint is chain 11155111, nothing of the deployer's is pending;
   - the programs are docs/image-ids.md's RISC Zero 3.1 ids; lezConfigId and genesisState are set; 1 <= tMin <= nMin;
+  - lezConfigId is the hash of the LEZ bridge configuration the params carry (`lezConfig`), and that configuration
+    names Sepolia and `expect_vault`: a vault deployed with another zone's configuration could never take a checkpoint;
   - a freeze authority that is none of 0x0, the deployer and the keyless default of the November vaults; one to three
     watchers, none of them 0x0, the deployer, the keyless default or the freeze authority, no two alike;
   - Δ (`delta`, seconds) not below rule (B)'s design wait, 3,600 s (0: that wait);
@@ -24,6 +26,7 @@ deploy.sh's environment is an allow-list (no inherited FERRATA_* or PUBNET_* var
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -48,6 +51,9 @@ ZERO = "0x" + "0" * 40
 ETH = ZERO
 UNLIMITED = 2**256 - 1
 KEYLESS_LABEL = "ferrata testnet: freeze authority (no key)"  # DeployVault.s.sol's default freeze authority
+CONFIG_TAG = b"ferrata/config/v1"
+CONFIG_KEYS = ("bedrockGenesisId", "channelId", "bridgeHeader", "bridgeImageId", "evmChainId", "vault",
+               "attestationRootId", "salt")
 ENV_KEEP = ("PATH", "HOME", "LANG", "LC_ALL", "TMPDIR", "USER", "FOUNDRY_DIR", "SVM_HOME", "RUSTUP_HOME",
             "CARGO_HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME")
 
@@ -74,6 +80,30 @@ def _addr(a: str, what: str) -> str:
     if not re.fullmatch(r"0x[0-9a-fA-F]{40}", (a or "").strip()):
         raise Stop(f"{what}: not an address: {a!r}")
     return a.strip()
+
+
+def config_id(c: dict) -> str:
+    """lezConfigId of a LEZ bridge configuration, as ferrata-bridge-core computes it (encoding.rs, config_id_preimage):
+    sha256 of "ferrata/config/v1" ‖ bedrockGenesisId ‖ channelId ‖ bridgeHeader ‖ bridgeImageId ‖ evmChainId (uint256)
+    ‖ vault (20 bytes) ‖ attestationRootId ‖ salt, 261 bytes."""
+    if not isinstance(c, dict) or sorted(c) != sorted(CONFIG_KEYS):
+        raise Stop(f"params: lezConfig must hold exactly {', '.join(CONFIG_KEYS)}")
+
+    def h32(k: str) -> bytes:
+        if not re.fullmatch(r"0x[0-9a-fA-F]{64}", str(c[k])):
+            raise Stop(f"params: lezConfig.{k} is not 32 bytes of hex")
+        return bytes.fromhex(str(c[k])[2:])
+
+    chain = c["evmChainId"]
+    if isinstance(chain, str) and chain.isdigit():
+        chain = int(chain)
+    if not isinstance(chain, int) or isinstance(chain, bool) or not 0 < chain < 2**64:
+        raise Stop(f"params: lezConfig.evmChainId {c['evmChainId']!r} is not a chain id")
+    vault = bytes.fromhex(_addr(str(c["vault"]), "params: lezConfig.vault")[2:])
+    pre = (CONFIG_TAG + h32("bedrockGenesisId") + h32("channelId") + h32("bridgeHeader") + h32("bridgeImageId")
+           + chain.to_bytes(32, "big") + vault + h32("attestationRootId") + h32("salt"))
+    assert len(pre) == 261
+    return "0x" + hashlib.sha256(pre).hexdigest()
 
 
 def _int(text: str) -> int:
@@ -154,12 +184,24 @@ class Run:
         if self.delta and self.delta < RULE_B_DELTA:
             raise Stop(f"--delta {self.delta} s is below rule (B)'s design wait, {RULE_B_DELTA} s (watchers need the time)")
         self.expect = _addr(a.get("expect_vault", ""), "--expect-vault")
+        c = p.get("lezConfig")
+        if c is None:
+            raise Stop("params: no lezConfig (the LEZ bridge configuration whose hash is lezConfigId): without it nothing "
+                       "shows that lezConfigId names this vault")
+        if config_id(c) != str(p["lezConfigId"]).lower():
+            raise Stop(f"params: lezConfigId {p['lezConfigId']} is not the hash of lezConfig ({config_id(c)})")
+        if int(c["evmChainId"]) != int(CHAIN):
+            raise Stop(f"params: lezConfig names chain {c['evmChainId']}, not Sepolia ({CHAIN})")
+        if str(c["vault"]).lower() != self.expect.lower():
+            raise Stop(f"params: lezConfig names the vault {c['vault']}, not --expect-vault {self.expect}: no checkpoint "
+                       "of that configuration could name this vault")
         self.name = str(a.get("name", ""))
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}", self.name) or self.name.startswith("fork-dry-"):
             raise Stop(f"--name {self.name!r}: letters, digits, '.', '_', '-' (and not fork-dry-*)")
         self.say(f"chain {chain}; deployer {frm}; balance {self.cast('balance', '--ether', frm, rpc=rpc)} ETH")
         self.say(f"programs (RISC Zero 3.1): checkpoint_b {b} ({self.layout}), release {r}; lezConfigId "
-                 f"{p['lezConfigId']}, genesisState {p['genesisState']}, nMin {n}, tMin {t}")
+                 f"{p['lezConfigId']} (= lezConfig's hash; it names chain {CHAIN} and the vault {self.expect}), "
+                 f"genesisState {p['genesisState']}, nMin {n}, tMin {t}")
         self.say(f"D1 (a): freeze authority {self.freeze}, watchers {', '.join(self.watchers)}; Δ "
                  f"{self.delta or RULE_B_DELTA} s; the stop's owner renounced before the token registrations")
         self.latest = int(self.cast("nonce", "--block", "latest", frm, rpc=rpc))

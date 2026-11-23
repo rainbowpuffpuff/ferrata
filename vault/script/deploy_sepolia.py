@@ -16,7 +16,9 @@ per forge run, every signed transaction journaled before it leaves, scripts/pubn
     DeployVault refuses another one's code, VERSION() or SELECTOR()) behind RISC Zero's RiscZeroVerifierEmergencyStop,
     its owner renounced before the token registrations; a freeze authority and one to three watchers that have keys;
     no RISC Zero router;
-  - FERRATA_EXPECT_VAULT = --expect-vault: the address the LEZ configuration names (its configId commits to it). The
+  - FERRATA_EXPECT_VAULT = --expect-vault: the address the LEZ configuration names (its configId commits to it; P.json
+    carries that configuration as `lezConfig`, and the tool refuses unless its hash is lezConfigId and it names
+    Sepolia and --expect-vault: vault/script/params/sepolia-31.template.json). The
     vault is the deployer's fourth creation from its current nonce N (verifier N, stop N+1, library N+2, vault N+3, test
     token N+4); if anything else is sent from the deployer before the vault, its creation is refused, nothing sent.
 Every check and refusal is vault/script/deploy_core.py's (its docstring lists them; scripts/test_deploy_sepolia.py runs

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """vault/script/deploy_core.py (what vault/script/deploy_sepolia.py runs for the owner) end to end on a LOCAL anvil whose
 chain id is Sepolia's, with throwaway keys made here: every refusal of its docstring (nothing sent, the deployer's nonce
-unchanged), the --dry path, the signed path with its preflight, idempotence, a resume after a stop, a lost record, an
+unchanged; the configuration's hash checked against the recorded rc3 run's, which the bridge core computed), the --dry path, the signed path with its preflight, idempotence, a resume after a stop, a lost record, an
 underfunded deployer stopped by the preflight, and an inherited environment that changes nothing. Never Sepolia, never
 the Secret: the endpoint is 127.0.0.1, and scripts/pubnet.py lets no public endpoint answer for a loopback one.
 
@@ -32,6 +32,21 @@ ZERO = "0x" + "0" * 40
 OLD_RELEASE = "0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9"  # release, RISC Zero 3.0.5
 OLD_CHECKPOINT_B_0_3_5 = "0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf"
 PARAMS = json.loads((VAULT / "results" / "fork-rehearsal-31" / "params.json").read_text())
+# The recorded rc3 zone's bridge configuration (its Init's fields): its hash is the run's configId, as the bridge core
+# computed it (e2e/runs/zone-bridge-rc3/identity.json).
+_RUN = ROOT / "e2e" / "runs" / "zone-bridge-rc3"
+_S = json.loads((_RUN / "lez" / "session-a" / "session-a.json").read_text())
+IDENTITY = json.loads((_RUN / "identity.json").read_text())
+RC3_CONFIG = {"bedrockGenesisId": _S["bedrockGenesisId"], "channelId": _S["channel"]["id"],
+              "bridgeHeader": _S["bridge"]["header"], "bridgeImageId": _S["bridge"]["imageId"],
+              "evmChainId": int(_S["evmChainId"]), "vault": IDENTITY["vault"], "attestationRootId": _S["attestationRootId"],
+              "salt": _S["salt"]}
+
+
+def params_for(vault: str, **config) -> dict:
+    """The rehearsal's params with a configuration of the rc3 zone's fields naming `vault`, and its hash."""
+    c = {**RC3_CONFIG, "vault": vault, **config}
+    return {**PARAMS, "lezConfig": c, "lezConfigId": core.config_id(c)}
 
 
 def sh(*a: str, check: bool = True) -> str:
@@ -111,9 +126,9 @@ class DeployToolTest(unittest.TestCase):
 
     def run_tool(self, who: str, dry: bool, name: str, **kw) -> list[str]:
         frm, key = self.keys[who]
-        a = {"params": dict(PARAMS), "freeze_authority": self.F, "watchers": self.W, "expect_vault": self.predicted(frm),
-             "name": name, "delta": 0}
+        a = {"freeze_authority": self.F, "watchers": self.W, "expect_vault": self.predicted(frm), "name": name, "delta": 0}
         a.update(kw)
+        a.setdefault("params", params_for(a["expect_vault"]))
         def commit():
             type(self).commits += 1
         return core.run(a, dry, RPC, frm, None if dry else key, vault_dir=str(VAULT), logs_root=os.path.join(self.tmp, "logs"),
@@ -128,10 +143,18 @@ class DeployToolTest(unittest.TestCase):
         self.assertEqual(self.nonce(frm), n0, "nothing sent")
         self.assertEqual(sh("cast", "code", "--rpc-url", RPC, vault), "0x")
 
-    # ---- refusals (decision D1 (a), the wait, the programs, the address) ------------------------------------------
+    # ---- the configuration's hash: the bridge core's, on the recorded run ------------------------------------------
+    def test_00_config_id_is_the_bridge_cores(self):
+        self.assertEqual(core.config_id(RC3_CONFIG), IDENTITY["configId"])
+        self.assertEqual(core.config_id(RC3_CONFIG), PARAMS["lezConfigId"])
+        self.assertNotEqual(core.config_id({**RC3_CONFIG, "vault": ZERO}), IDENTITY["configId"])
+
+    # ---- refusals (decision D1 (a), the wait, the programs, the configuration, the address) ------------------------
     def test_01_refusals(self):
         F, W, frm = self.F, self.W, self.keys["main"][0]
-        p = lambda **o: {**PARAMS, **o}  # noqa: E731
+        vault = self.predicted(frm)
+        p = lambda **o: {**params_for(vault), **o}  # noqa: E731
+        no_config = {k: v for k, v in params_for(vault).items() if k != "lezConfig"}
         cases = [
             ({"watchers": ZERO}, "a watcher cannot be 0x0"),
             ({"watchers": frm}, "a watcher cannot be the deployer"),
@@ -150,6 +173,12 @@ class DeployToolTest(unittest.TestCase):
             ({"params": p(lezConfigId="0x" + "00" * 32)}, "lezConfigId must be the LEZ side's"),
             ({"params": p(nMin=0, tMin=0)}, "need 1 <= tMin <= nMin"),
             ({"params": p(nMin=1, tMin=2)}, "need 1 <= tMin <= nMin"),
+            ({"params": no_config}, "params: no lezConfig"),
+            ({"params": dict(PARAMS)}, "params: no lezConfig"),  # the rc3 zone's configId alone
+            ({"params": p(lezConfigId=IDENTITY["configId"])}, "is not the hash of lezConfig"),
+            ({"params": params_for(IDENTITY["vault"])}, "lezConfig names the vault"),  # another vault's configuration
+            ({"params": params_for(vault, evmChainId=31337)}, "lezConfig names chain 31337"),
+            ({"params": p(lezConfig={**RC3_CONFIG, "salt": "0x01"})}, "lezConfig.salt is not 32 bytes"),
             ({"expect_vault": "0x000000000000000000000000000000000000dEaD"}, "not --expect-vault"),
             ({"name": "fork-dry-x"}, "--name"),
             ({"name": "../x"}, "--name"),
@@ -240,7 +269,7 @@ class DeployToolTest(unittest.TestCase):
         os.makedirs(kd)
         pathlib.Path(kd, "key.json").write_text(key_json)
         pathlib.Path(kd, "pw").write_text(pw)
-        (VAULT / "deployments" / "fork-test-resume.params.json").write_text(json.dumps(PARAMS))
+        (VAULT / "deployments" / "fork-test-resume.params.json").write_text(json.dumps(params_for(vault)))
         env = core.base_env()
         env.update(FERRATA_MODE="B", FERRATA_GAS_RULE="eip8037", FERRATA_PARAMS="deployments/fork-test-resume.params.json",
                    ETH_FROM=frm, FERRATA_FREEZE_AUTHORITY=self.F, FERRATA_WATCHERS=self.W, FERRATA_EXPECT_VAULT=vault,
