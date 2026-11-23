@@ -17,8 +17,9 @@ import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
 
 abstract contract ZoneBridgeFixture is RuleBMultiFixture {
-    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
-    bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
+    /// @dev docs/image-ids.md, RISC Zero 3.1 (the fixtures were proven again under 3.1: vault/test/real/README.md).
+    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0;
+    bytes32 internal constant RELEASE_IMAGE_ID = 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd;
 
     /// @dev The key set the journal is over (after the proof's rotations) and its threshold.
     function _n() internal pure virtual returns (uint32);

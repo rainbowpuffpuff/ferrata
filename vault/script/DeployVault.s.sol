@@ -15,7 +15,9 @@ import {TestToken} from "./TestToken.sol";
 ///         PER RUN: each run reads the record (FERRATA_OUT), checks on chain what is already there, and does the next
 ///         step. script/deploy.sh runs it until the record says `complete`.
 ///
-///         groth16Verifier    RISC Zero's Groth16 verifier (skipped if FERRATA_GROTH16_VERIFIER names one)
+///         groth16Verifier    RISC Zero's Groth16 verifier 3.1.0 (risc0-ethereum v3.1.0, vault/lib.lock; skipped if
+///                            FERRATA_GROTH16_VERIFIER names one, which must then answer VERSION() "3.1.0" and SELECTOR()
+///                            0xe71e6620: a verifier of RISC Zero 3.0.x accepts forged proofs, GHSA-mm6c-35cm-g4x2)
 ///         emergencyStop      RiscZeroVerifierEmergencyStop around it, owned by the deployer until the last step
 ///         registry           the library FerrataRegistry
 ///         vault              FerrataVault, its bytecode linked to that library (never `new`: forge would deploy a
@@ -83,6 +85,10 @@ contract DeployVault is Script {
     /// @dev The design's wait Δ per rule (docs/design/bridge.md §13): (A) 2 h + 1 h + 1 min, (B) 1 h.
     uint256 internal constant RULE_A_DELTA = 3 hours + 1 minutes;
     uint256 internal constant RULE_B_DELTA = 1 hours;
+    /// @dev risc0-ethereum v3.1.0's RiscZeroGroth16Verifier (docs/design/risc0-3.1-migration.md): VERSION() and the
+    ///      SELECTOR() its constructor derives from ControlID; test/Verifier31.t.sol holds the library to both.
+    string internal constant VERIFIER_VERSION = "3.1.0";
+    bytes4 internal constant VERIFIER_SELECTOR = 0xe71e6620;
     uint256 internal constant EIP7825_TX_GAS_CAP = 1 << 24;
     uint256 internal constant EIP8037_TX_TOTAL_GAS_CAP = (1 << 32) - 1;
     string internal constant LIBRARY_ID = "src/FerrataRegistry.sol:FerrataRegistry";
@@ -106,6 +112,7 @@ contract DeployVault is Script {
         address reused = vm.envOr("FERRATA_GROTH16_VERIFIER", address(0));
         if (reused != address(0)) {
             require(reused.code.length > 0, "DeployVault: FERRATA_GROTH16_VERIFIER has no code");
+            _checkVerifier(reused);
             r.groth16 = reused;
         }
         Step s = _next(r);
@@ -120,6 +127,7 @@ contract DeployVault is Script {
                 )
             );
         } else if (s == Step.EmergencyStop) {
+            _checkVerifier(r.groth16);
             r.stop = _create(
                 r,
                 s,
@@ -132,6 +140,7 @@ contract DeployVault is Script {
                 address(RiscZeroVerifierEmergencyStop(r.stop).verifier()) == r.groth16,
                 "DeployVault: the recorded stop wraps another verifier"
             );
+            _checkExpectedVault();
             _checkLibraryCode(r.registry);
             r.vault = _create(r, s, abi.encodePacked(_linkedVaultCode(r.registry), abi.encode(_deployment(r.stop))));
         } else if (s == Step.Token) {
@@ -500,8 +509,40 @@ contract DeployVault is Script {
         return string(p);
     }
 
+    /// @dev FERRATA_EXPECT_VAULT, if set: the address the LEZ configuration committed to (its configId names the vault),
+    ///      which the vault's creation must land on; with the deployer's nonce moved by anything else it would not, and
+    ///      nothing is sent.
+    function _checkExpectedVault() internal view {
+        address expected = vm.envOr("FERRATA_EXPECT_VAULT", address(0));
+        if (expected == address(0)) return;
+        address next = vm.computeCreateAddress(deployer, vm.getNonce(deployer));
+        require(
+            next == expected,
+            string.concat(
+                "DeployVault: the vault would be created at ",
+                vm.toString(next),
+                ", not at FERRATA_EXPECT_VAULT ",
+                vm.toString(expected),
+                " (the deployer's nonce moved); nothing sent"
+            )
+        );
+    }
+
+    /// @dev The Groth16 verifier is RISC Zero's 3.1.0: its version and selector (a 3.0.x one is refused).
+    function _checkVerifier(address groth16) internal view {
+        require(
+            keccak256(bytes(RiscZeroGroth16Verifier(groth16).VERSION())) == keccak256(bytes(VERIFIER_VERSION)),
+            "DeployVault: the Groth16 verifier is not version 3.1.0"
+        );
+        require(
+            RiscZeroGroth16Verifier(groth16).SELECTOR() == VERIFIER_SELECTOR,
+            "DeployVault: the Groth16 verifier's selector is not 0xe71e6620"
+        );
+    }
+
     /// @dev Everything the proposal and the registrations promise, read back from the chain.
     function _check(Record memory r) internal view {
+        _checkVerifier(r.groth16);
         RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(r.stop);
         FerrataVault vault = FerrataVault(payable(r.vault));
         require(stop.owner() == address(0), "check: the stop still has an owner");
@@ -512,6 +553,8 @@ contract DeployVault is Script {
         require(vault.admin() == deployer, "check: admin");
         require(vault.freezeAuthority() == _freezeAuthority(), "check: freeze authority");
         require(vault.deltaFloor() == _delta() && vault.delta() == _delta(), "check: the wait");
+        address expected = vm.envOr("FERRATA_EXPECT_VAULT", address(0));
+        require(expected == address(0) || r.vault == expected, "check: the vault is not at FERRATA_EXPECT_VAULT");
         _checkToken(vault, ETH, _ethParams());
         _checkToken(vault, r.token, _tokenParams());
         _checkCaps(vault, r.token);

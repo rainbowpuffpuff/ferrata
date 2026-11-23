@@ -1,0 +1,203 @@
+{
+ "_note": "scripts/reprove_fixtures.py: the vault's real-proof fixtures proven again under RISC Zero 3.1 from their recorded inputs (docs/design/risc0-3.1-migration.md, phase 1). The other fixtures' inputs are of earlier programs (their journals differ under this tree's guests) or not recorded: vault/test/real/README.md.",
+ "jobs": [
+  {
+   "id": "zone-bridge.checkpoint",
+   "program": "checkpoint_b",
+   "input": "e2e/runs/zone-bridge-1/checkpoint/zone-34-116.input",
+   "meta": "e2e/runs/zone-bridge-1/checkpoint/zone-34-116.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-1/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-1/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-1/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-1/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rotation.checkpoint",
+   "program": "checkpoint_b",
+   "input": "e2e/runs/zone-bridge-2/checkpoint/zone-28-119.input",
+   "meta": "e2e/runs/zone-bridge-2/checkpoint/zone-28-119.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rotation.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge-rotation.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-2/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-2/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rotation.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rotation.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-2/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-2/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rotation.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-3.checkpoint",
+   "program": "checkpoint_b",
+   "input": "e2e/runs/zone-bridge-3/checkpoint/zone-29-96.input",
+   "meta": "e2e/runs/zone-bridge-3/checkpoint/zone-29-96.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-3.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge-3.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-3/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-3/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-3.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-3.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-3/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-3/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-3.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-4.checkpoint",
+   "program": "checkpoint_b",
+   "input": "e2e/runs/zone-bridge-4/checkpoint/zone-30-148.input",
+   "meta": "e2e/runs/zone-bridge-4/checkpoint/zone-30-148.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-4.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge-4.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-4/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-4/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-4.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-4.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-4/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-4/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-4.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rc3.checkpoint",
+   "program": "checkpoint_b_0_3_5",
+   "input": "e2e/runs/zone-bridge-rc3/checkpoint/zone-24-125.input",
+   "meta": "e2e/runs/zone-bridge-rc3/checkpoint/zone-24-125.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge-rc3.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-rc3/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-rc3/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rc3.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-rc3/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-rc3/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rc3-2.checkpoint",
+   "program": "checkpoint_b_0_3_5",
+   "input": "e2e/runs/zone-bridge-rc3-2/checkpoint/zone-24-106.input",
+   "meta": "e2e/runs/zone-bridge-rc3-2/checkpoint/zone-24-106.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3-2.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "zone-bridge-rc3-2.release-public-0",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-rc3-2/releases/release-public-0.input",
+   "meta": "e2e/runs/zone-bridge-rc3-2/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3-2.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "zone-bridge-rc3-2.release-private-1",
+   "program": "release",
+   "input": "e2e/runs/zone-bridge-rc3-2/releases/release-private-1.input",
+   "meta": "e2e/runs/zone-bridge-rc3-2/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/zone-bridge-rc3-2.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "rule-b-multi.checkpoint",
+   "program": "checkpoint_b",
+   "input": "checkpoint/attestor/runs/devnet-n3/rbm-lab-n3-t2.input",
+   "meta": "checkpoint/attestor/runs/devnet-n3/rbm-lab-n3-t2.json",
+   "fixture": "vault/test/real/fixtures/rule-b-multi.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "rule-b-zone.checkpoint",
+   "program": "checkpoint_b",
+   "input": "checkpoint/attestor/runs/zone/rbz-zone-n4-t3.input",
+   "meta": "checkpoint/attestor/runs/zone/rbz-zone-n4-t3.json",
+   "fixture": "vault/test/real/fixtures/rule-b-zone.json",
+   "seal": "seal",
+   "image": "imageId"
+  },
+  {
+   "id": "crown-live-3.release-public-0",
+   "program": "release",
+   "input": "vault/test/real/inputs/crown-live-3/release-public-0.input",
+   "meta": "e2e/runs/crown-live-3/releases/release-public-0.json",
+   "fixture": "vault/test/real/fixtures/crown-live-3-releases.json",
+   "seal": "releases[0].seal",
+   "image": "releaseImageId"
+  },
+  {
+   "id": "crown-live-3.release-private-1",
+   "program": "release",
+   "input": "vault/test/real/inputs/crown-live-3/release-private-1.input",
+   "meta": "e2e/runs/crown-live-3/releases/release-private-1.json",
+   "fixture": "vault/test/real/fixtures/crown-live-3-releases.json",
+   "seal": "releases[1].seal",
+   "image": "releaseImageId"
+  }
+ ]
+}

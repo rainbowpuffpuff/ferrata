@@ -10,13 +10,15 @@ import {StandInBase} from "./StandInBase.sol";
 
 /// @notice The stand-in verifier alone (src/standin/README.md): what it accepts for its one image id, what it refuses,
 ///         and that every other image id goes to RISC Zero's real verifier, checked with a real release seal of the
-///         live run crown-live-3 (e2e/runs/crown-live-3/crown.json).
+///         live run crown-live-3 (e2e/runs/crown-live-3/crown.json), proven again under RISC Zero 3.1
+///         (test/real/fixtures/crown-live-3-releases.json).
 contract StandInCheckpointVerifierTest is StandInBase {
     bytes32 internal constant JOURNAL_DIGEST = keccak256("test: a checkpoint journal digest");
     /// A tampered Groth16 point makes the BN254 precompiles consume all the gas they are given.
     uint256 internal constant TAMPERED_CALL_GAS = 3_000_000;
 
-    // crown-live-3's first release: its real Groth16 seal and the journal the vault built for it.
+    // crown-live-3's first release: its real Groth16 seal (RISC Zero 3.1, test/real/fixtures/crown-live-3-releases.json)
+    // and the journal the vault built for it; a real checkpoint_b seal of RISC Zero 3.1 (zone-bridge.json).
     bytes internal releaseSeal;
     bytes32 internal releaseDigest;
     bytes internal checkpointBSeal;
@@ -24,8 +26,8 @@ contract StandInCheckpointVerifierTest is StandInBase {
     function setUp() public {
         _setUpStandIn();
         string memory json = vm.readFile("../e2e/runs/crown-live-3/crown.json");
-        releaseSeal = vm.parseJsonBytes(json, ".releases[0].seal");
-        checkpointBSeal = vm.parseJsonBytes(json, ".candidate.seal");
+        releaseSeal = vm.parseJsonBytes(vm.readFile("test/real/fixtures/crown-live-3-releases.json"), ".releases[0].seal");
+        checkpointBSeal = vm.parseJsonBytes(vm.readFile("test/real/fixtures/zone-bridge.json"), ".seal");
         releaseDigest = sha256(
             abi.encode(
                 sha256(bytes("ferrata/vault/release/v2")),
@@ -253,7 +255,7 @@ contract StandInCheckpointVerifierTest is StandInBase {
         standIn.verify{gas: TAMPERED_CALL_GAS}(seal, RELEASE_IMAGE_ID, releaseDigest);
     }
 
-    /// @notice A real proof is not an attestation: crown-live-3's checkpoint_b seal and its release seal, sent for the
+    /// @notice A real proof is not an attestation: a real checkpoint_b seal and crown-live-3's release seal, sent for the
     ///         stand-in id, are refused (260 bytes read as four signatures: more than the set has keys).
     function test_aRealSealIsNotAnAttestation() public {
         vm.expectRevert(StandInCheckpointVerifier.SealLength.selector);

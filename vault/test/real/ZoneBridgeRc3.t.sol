@@ -18,12 +18,12 @@ import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
 
 contract ZoneBridgeRc3Test is RuleBMultiFixture {
-    /// @dev docs/image-ids.md, "For zones on Logos Blockchain 0.3.5-rc.1; not deployed on Sepolia".
+    /// @dev docs/image-ids.md, RISC Zero 3.1, checkpoint_b_0_3_5 (zones on Logos Blockchain 0.3.5-rc.1).
     bytes32 internal constant CHECKPOINT_B_0_3_5_IMAGE_ID =
-        0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf;
-    /// @dev The deployed checkpoint_b (the d480efc6 layout), which the vault on Sepolia pins.
-    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
-    bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
+        0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04;
+    /// @dev checkpoint_b of the d480efc6 layout, RISC Zero 3.1.
+    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0;
+    bytes32 internal constant RELEASE_IMAGE_ID = 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd;
 
     function _path() internal pure virtual override returns (string memory) {
         return "test/real/fixtures/zone-bridge-rc3.json";
