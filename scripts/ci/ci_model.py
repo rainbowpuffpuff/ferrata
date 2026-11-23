@@ -652,28 +652,15 @@ def _resolve(cwd, path: str):
 
 # A step or job condition that always lets it run.
 _ALWAYS = re.compile(r"^\s*(?:\$\{\{\s*)?(?:true|always\(\)|success\(\)|!\s*cancelled\(\))(?:\s*\}\})?\s*$")
-# A job-level condition that runs on every push and pull request (excluding only schedule / manual dispatch).
-_EVERY_CHANGE = re.compile(
-    r"^\s*(?:\$\{\{\s*)?(?:"
-    r"github\.event_name\s*==\s*['\"]push['\"]\s*\|\|\s*github\.event_name\s*==\s*['\"]pull_request['\"]|"
-    r"github\.event_name\s*==\s*['\"]pull_request['\"]\s*\|\|\s*github\.event_name\s*==\s*['\"]push['\"]|"
-    r"github\.event_name\s*!=\s*['\"]schedule['\"]\s*&&\s*github\.event_name\s*!=\s*['\"]workflow_dispatch['\"]|"
-    r"github\.event_name\s*!=\s*['\"]workflow_dispatch['\"]\s*&&\s*github\.event_name\s*!=\s*['\"]schedule['\"]"
-    r")(?:\s*\}\})?\s*$"
-)
 
 
 def step_guard(job: Job, step: dict) -> str | None:
     """Why a step's commands cannot count as CI running a test: its job or the step runs only under an `if:` that
-    is not always true (or, on a job, not true on every push and pull request), or has `continue-on-error` (a
-    failure there does not fail the run). None if neither."""
+    is not always true, or has `continue-on-error` (a failure there does not fail the run). None if neither."""
     for where, spec in (("job", job.spec), ("step", step)):
         cond = spec.get("if")
         if cond is not None and cond is not True and not _ALWAYS.match(str(cond)):
-            if where == "job" and "push" in job.triggers and "pull_request" in job.triggers and _EVERY_CHANGE.match(str(cond)):
-                pass
-            else:
-                return f"the {where} runs only if {cond}"
+            return f"the {where} runs only if {cond}"
         coe = spec.get("continue-on-error")
         if coe is not None and coe is not False and str(coe).strip().lower() not in ("false", "${{ false }}"):
             return f"the {where} has continue-on-error: {coe} (a failure there does not fail the run)"
