@@ -63,8 +63,9 @@ contract Verifier31Test is Test {
         assertEq(bytes4(seal), SELECTOR_3_1_0);
         groth16.verify(seal, RELEASE_IMAGE_ID, digest);
         stop.verify(seal, RELEASE_IMAGE_ID, digest);
+        bytes32 other = sha256("another journal"); // before expectRevert: SHA-256 is a call to a precompile
         vm.expectRevert(VerificationFailed.selector);
-        stop.verify(seal, RELEASE_IMAGE_ID, sha256("another journal"));
+        stop.verify(seal, RELEASE_IMAGE_ID, other);
         vm.expectRevert(VerificationFailed.selector);
         stop.verify(seal, bytes32(uint256(RELEASE_IMAGE_ID) ^ 1), digest);
     }
