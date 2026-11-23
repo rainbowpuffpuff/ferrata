@@ -15,20 +15,36 @@ times and memory from `gpu-prover/results/*/run.json`, the laptop proof and its 
 `checkpoint/results/groth16.jsonl`, and the live run's L40S checkpoint from `e2e/runs/crown-live-3/stages.done`,
 `checkpoint/exec.txt`, `checkpoint/gpu/run.json` and the driver log.
 
-Each test parses the raw files — never the prose of the documents — recomputes a figure and asserts it equals the
-documented value at the document's own rounding, and asserts the document states it (the exact string, so a
-document that drifts from its records fails). The derivations follow what the documents say each figure is.
-Figures of P.6 that cannot be recomputed from committed data are asserted nowhere and named in comments at their
-place: the GPU cost row's "385 L4-seconds billed" and "about 0.09 USD" (Modal's own billing statement of
-10 November 2026; only the 366 s the functions themselves ran, which `gpu-prover/RESULTS.md` also states,
-recomputes from the committed `run.json` files), the Groth16 wrap's "7.3 GiB" of prover memory (the Docker
-container's `VmHWM`, polled live while the wrap ran; the committed `groth16.jsonl` records wall times only), and
-the wrap row's "recursion 18.7 s on 16 cores + 14 s Groth16" (an end-to-end run cited to `docs/design/bridge.md`
-§18.7, whose raw per-step timings are not committed). Standard library only."""
+What is asserted, exactly:
+
+- **The three generated records, byte for byte.** `lez/results/perf-latency-bridge.md` is
+  `bench/perf/latency_bridge.py`'s output on the committed records, `lez/results/perf-daemons.md` is its
+  hand-written header followed by `bench/perf/summarize_daemons.py`'s, and `lez/results/perf-gate-sequencer.md`
+  (whence the §P.6 table's updater row takes its figures, RFP-021 P.6's) is its header followed by
+  `bench/perf/gate_report.py`'s — every figure of all three documents is thereby recomputed, at its generator's
+  own rounding, and a stamp, slot or cell that drifts fails.
+- **`docs/performance.md` §P.5's table and §P.6's rows**, figure by figure from the raw records (each derivation
+  follows what the document says the figure is), each with the document's exact string asserted: every figure the
+  two rows state, and every number of the tables they cite that comes from these records. The one *derived*
+  figure (Ethereum finalizing two epochs after the checkpoint's slot) uses the Sepolia constants both documents
+  name for it.
+
+Figures that cannot be recomputed from committed data are asserted nowhere and named precisely where they belong:
+the §P.6 cost row's "385 L4-seconds billed" and "about 0.09 USD" (Modal's own billing statement of 10 November
+2026; only the 366 s the functions themselves ran recomputes, from the committed `run.json` files — the wrap's
+"7.3 GiB" of prover memory *does* recompute, from the committed wrap logs' `VmHWM`); the §P.6 wrap row's
+"recursion 18.7 s on 16 cores + 14 s Groth16" of an end-to-end run, cited to `docs/design/bridge.md` §18.7, whose
+raw per-step timings are not committed; and, in §P.5, the production-parameter estimates (the design's rule
+(A)/(B) values and the finality simulator's medians, cited to `bridge.md` §9, §11.7) and the closing sentence's
+crown-live-1 "64.7 min" (the first run's own README's account; that run's `stages.done` stamps its release-0
+stage at the runner's late re-check — "0s (already done)" — so the release block's time is not in its stamps).
+Standard library only."""
 
 import json
 import re
 import statistics
+import subprocess
+import sys
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,7 +58,7 @@ SLOT_S, EPOCH_SLOTS, FINALITY_EPOCHS = 12, 32, 2
 
 
 def rd(p):
-    return (ROOT / p).read_text()
+    return (ROOT / p).read_text(encoding="utf-8")
 
 
 def unix(s):
@@ -166,7 +182,9 @@ class TestP5Latency(unittest.TestCase):
                   + self.claim1["proof_s"] + self.claim1["final_s"])  # without the runner's other work
         self.assertEqual(minutes(steady), 29.8)
         self.bridge_doc.has("As it ran: **32.9 min** from the deposit to the mint").has("**29.8 min**")
-        self.perf_doc.has("**32.9 min**").has("18.6 min").has("**29.8 min**")
+        self.perf_doc.has("**32.9 min**").has("18.6 min (Ethereum: the deposit to its checkpoint's finalization")
+        self.perf_doc.has("6.6 min (the covering finality update served and read").has("(25.2 min) elapse inside it")
+        self.perf_doc.has("**29.8 min**")
 
     def test_inbound_with_the_clients_default_hold(self):
         """About 1.1–12.1 h with the client's default 1–12 h claim hold (derived; counted from the deposit's block)."""
@@ -189,6 +207,7 @@ class TestP5Latency(unittest.TestCase):
         self.assertEqual(round(lez_update + self.imp2["final_s"], 1), 39.6)  # "LEZ steps before the claim"
         self.bridge_doc.has("proven in 231.9 s, then sent and final in 8.3 s")
         self.perf_doc.has("231.9 s").has("39.6 s").has("(7.7 min)")
+        self.perf_doc.has("8.3 s (the claim, send to final)")
 
     def test_outbound_burn_to_release(self):
         """71.0 min from the burn's proving, 66.3 from its sending, 66.2 from it final on LEZ."""
@@ -206,7 +225,7 @@ class TestP5Latency(unittest.TestCase):
         self.bridge_doc.has("**71.0 min**; from its sending 66.3 min; from it final on LEZ 66.2 min")
         self.bridge_doc.has("proven in 282.8 s and final on LEZ in 7.0 s (block 90")
         self.perf_doc.has("**71.0 min** from the burn's proving (66.3 from its sending, 66.2 from it final on LEZ)")
-        self.perf_doc.has("282.8 s")
+        self.perf_doc.has("282.8 s").has("7.0 s (LEZ: the burn sent to final on Bedrock")
 
     def test_outbound_w_release_delay_and_verification(self):
         """W 3,607 s (the row's 60.1 min), the release stage 156 s, verification 37 s, the checkpoint proofs 167 s."""
@@ -221,6 +240,9 @@ class TestP5Latency(unittest.TestCase):
         self.perf_doc.has("3,607 s (W = 1 h of block time)").has("156 s (120 s delay and the release)")
         self.perf_doc.has("37 s (`submitCandidate`, `finalizeAttested`)")
         self.perf_doc.has("+ 167 s (checkpoint on one L40S and the Groth16 wrap)")
+        # The row itself states W as minutes; its Evidence row, as the same figure.
+        Stated("docs/requirements-status.md").has("outbound 71.0 min from the burn's proving, of which W 60.1 min")
+        Stated("docs/EVIDENCE.md").has("W 60.1, release 2.6")
 
 
 class TestP6Daemons(unittest.TestCase):
@@ -320,29 +342,32 @@ class TestP6Provers(unittest.TestCase):
         self.perf.has("14.0 s (fixed part), 24.1 s (idle hour), 41.4 s (5 private tx), 219.3 s (50 private tx)")
         self.perf.has("about 10.9 GiB GPU, 0.76–1.08 GiB host")
         self.gpu.has("GPU memory peaks at 11,076–11,159 MiB (10.8–10.9 GiB)")
-        self.gpu.has("host process peaks at\n0.76–1.08 GiB (GNU time)") if "host process peaks at\n0.76–1.08 GiB (GNU time)" in self.gpu.text \
-            else self.gpu.has("0.76–1.08 GiB (GNU time)")
+        self.gpu.has("0.76–1.08 GiB (GNU time)")
         for n, total in totals.items():
             self.gpu.has(f"**{total} s**")
 
     def test_the_same_on_a_laptop_cpu(self):
-        """1,157.5 s starting quiet, 1,758.9 s under load, 9.62 GB peak; the extrapolations the documents label."""
+        """1,157.5 s starting quiet, 1,758.9 s under load, 9.85 GB peak; the extrapolations the documents label."""
         walls = sorted(round(r["wall_s"], 1) for r in self.laptop if r["name"] == "cp-empty-1")
         self.assertEqual(walls, [1157.5, 1758.9])  # "1,157.5–1,758.9 s fixed part"
         quiet = gnu_time(rd("checkpoint/results/logs/20261110T055305Z-prove-cp-empty-1.log"))  # the quiet-start run
         loaded = gnu_time(rd("checkpoint/results/logs/20261110T023312Z-prove-cp-empty-1.log"))  # the run under load
         for log in (quiet, loaded):
-            self.assertEqual(round(log["rss_kb"] / 1e6, 2), 9.62)  # "peak 9.62 GB (host + r0vm)"
-        # The documents' own extrapolation at 289 s per segment (1,157.5 s / 4):
-        per_segment = round(1157.5 / 4)
+            # GNU time's "Maximum resident set size (kbytes)" is KiB: 9,617,860 KiB is 9.85 GB (9.17 GiB),
+            # not the "9.62 GB" the documents said before this branch corrected them (a /1e6 misreading).
+            self.assertEqual(round(log["rss_kb"] * 1024 / 1e9, 2), 9.85)
+        # The documents' own extrapolation from the measured 1,157.5 s over the 4 segments of cp-empty-1:
+        per_segment = round(min(r["wall_s"] for r in self.laptop if r["name"] == "cp-empty-1")
+                            / self.l4["cp-empty-1"]["prove"]["segments"])
+        idle, busy = self.l4["cp-empty-360"]["prove"]["segments"], self.l4["cp-pp50-360"]["prove"]["segments"]
         self.assertEqual(per_segment, 289)
-        self.assertEqual(round(7 * per_segment / 60), 34)  # "≈ 34 min per idle hour"
-        self.assertEqual(round(60 * per_segment / 3600, 1), 4.8)  # "≈ 4.8 h per busy hour"
-        self.assertEqual(7 * per_segment, 2023)  # gpu-prover's "≈ 2,023 s"
-        self.perf.has("9.62 GB peak")
+        self.assertEqual(round(idle * per_segment / 60), 34)  # "≈ 34 min per idle hour"
+        self.assertEqual(round(busy * per_segment / 3600, 1), 4.8)  # "≈ 4.8 h per busy hour"
+        self.assertEqual(idle * per_segment, 2023)  # gpu-prover's "≈ 2,023 s"
+        self.perf.has("9.85 GB peak")
         self.perf.has("1,157.5–1,758.9 s fixed part; ≈ 34 min per idle hour and ≈ 4.8 h per busy hour (extrapolated)")
-        self.gpu.has("1,157.5 s quiet start / 1,758.9 s loaded")
-        self.ck.has("1,157.5 s").has("1,758.9 s").has("9.62 GB (host + r0vm)")
+        self.gpu.has("1,157.5 s quiet start / 1,758.9 s loaded").has("against 9.85 GB for the CPU proof")
+        self.ck.has("1,157.5 s").has("1,758.9 s").has("9.85 GB (host + r0vm)")
 
     def test_rule_b_checkpoint_on_one_l4(self):
         """31.9 s for the idle hour's rule (B) checkpoint (n = 4, 9 segments)."""
@@ -367,19 +392,31 @@ class TestP6Provers(unittest.TestCase):
         self.perf.has("31.9 s prover wall (119 s with the queue and transfers)")
 
     def test_the_groth16_wrap_times(self):
-        """195.1 s and 215.2 s on the laptop. Two figures of the wrap row are NOT recomputable: see the comments."""
+        """195.1 s and 215.2 s on the laptop, the prover container's peak 7.3 GiB; one figure is not recomputable."""
         walls = sorted(round(r["wall_s"], 1) for r in self.wraps)
         self.assertEqual(walls, [195.1, 215.2])
-        for r in self.wraps:  # what the committed record of the wrap holds (times, not memory):
+        for r in self.wraps:  # what the committed record of the wrap holds:
             self.assertEqual((r["name"], r["seal_bytes"], r["selector"]), ("cp-empty-1", 260, "0x73c457ba"))
-        self.perf.has("195.1–215.2 s (laptop)")
-        self.ck.has("Groth16 wrap 215.2 s / 195.1 s under load")
-        # NOT recomputable from committed data, asserted nowhere: performance.md's wrap row states the prover
-        # container's "7.3 GiB" of memory (the `VmHWM` inside the Docker container, polled live while the wrap
-        # ran — checkpoint/RESULTS.md, "Real proof"; the committed groth16.jsonl records wall times only, and
-        # the GNU-time logs of the wrap show the host's 1.44 GB, not the container's peak), and the same row's
-        # "recursion 18.7 s on 16 cores + 14 s Groth16" of an end-to-end run, cited to docs/design/bridge.md
-        # §18.7, whose raw per-step timings are not committed.
+        logs = {n: rd(f"checkpoint/results/logs/{n}") for n in
+                ("20261110T030244Z-groth16-cp-empty-1.log", "20261110T061223Z-groth16-cp-empty-1.log")}
+        # The wrap's memory, recomputed from the committed wrap logs: the prover container's largest process
+        # peak (VmHWM), 7.30 and 7.31 GiB, and the host process's GNU-time peak, 1.48 GB (1,444,084 and
+        # 1,443,392 KiB — "1.44 GB" before this branch corrected the same /1e6 misreading as the 9.62 GB).
+        hwm = sorted(float(re.search(r"largest process peak RSS \(VmHWM\) ([\d.]+) GiB", t).group(1)) for t in logs.values())
+        self.assertEqual(hwm, [7.30, 7.31])
+        self.assertEqual({round(h, 1) for h in hwm}, {7.3})  # the documents' "7.3 GiB"
+        cgroup = sorted(float(re.search(r"cgroup memory\.peak \(max over polls\) ([\d.]+) GiB", t).group(1)) for t in logs.values())
+        self.assertEqual(cgroup, [7.36, 8.48])  # checkpoint/RESULTS.md's two wrap rows
+        for t in logs.values():
+            self.assertEqual(round(gnu_time(t)["rss_kb"] * 1024 / 1e9, 2), 1.48)  # "host + r0vm 1.48 GB"
+        self.perf.has("195.1–215.2 s (laptop)").has("| x86 | 7.3 GiB |")
+        self.ck.has("Groth16 wrap 215.2 s / 195.1 s under load").has("Groth16 prover 7.3 GiB")
+        self.ck.has("host + r0vm 1.48 GB; container seen 48.2 s, cgroup peak 8.48 GiB (incl. page cache), "
+                    "`prover` VmHWM 7.30 GiB")
+        self.ck.has("host + r0vm 1.48 GB; container seen 53.8 s, cgroup peak 7.36 GiB, `prover` VmHWM 7.31 GiB")
+        # NOT recomputable from committed data, asserted nowhere: the same row's "recursion 18.7 s on 16
+        # cores + 14 s Groth16" of an end-to-end run, cited to docs/design/bridge.md §18.7, whose raw
+        # per-step timings are not committed.
 
     def test_the_gpu_cost_row(self):
         """Only the 366 s the functions ran recomputes; the 385 L4-seconds billed do not (Modal's statement)."""
@@ -391,6 +428,68 @@ class TestP6Provers(unittest.TestCase):
         # L4-seconds billed ... about 0.09 USD of GPU", from Modal's own billing statement of 10 November 2026
         # (gpu-prover/RESULTS.md, "Cost"); container start-up, which the committed run records do not measure,
         # makes up the difference between the billed 385 s and the 366 s above.
+
+
+class TestGeneratedRecords(unittest.TestCase):
+    """The three generated records, byte for byte: each generator, run on the committed records, gives the
+    document. This recomputes every figure of `lez/results/perf-latency-bridge.md` (P.5's stamps, slots, tables),
+    of `lez/results/perf-daemons.md` (the daemons' every cell) and of `lez/results/perf-gate-sequencer.md`
+    (whence performance.md §P.6's updater row takes its figures), at the generator's own rounding."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.perf = Stated("docs/performance.md")
+
+    def gen(self, script, *args):
+        return subprocess.run([sys.executable, "-I", script, *args], cwd=ROOT, capture_output=True,
+                              encoding="utf-8", check=True).stdout
+
+    def test_perf_latency_bridge_is_its_generator_output(self):
+        self.assertEqual(self.gen("bench/perf/latency_bridge.py", "e2e/runs/crown-live-3"),
+                         rd("lez/results/perf-latency-bridge.md"))
+
+    def test_perf_daemons_body_is_its_generator_output(self):
+        out = self.gen("bench/perf/summarize_daemons.py", "bench/perf/results/daemons-anvil")
+        doc = rd("lez/results/perf-daemons.md")
+        self.assertTrue(out.startswith("## Run `daemons-anvil`"))
+        self.assertTrue(doc.endswith(out))  # what precedes is the record's hand-written header
+
+    def test_perf_gate_sequencer_body_is_its_generator_output(self):
+        out = self.gen("bench/perf/gate_report.py", *(f"bench/perf/results/gate-g{i}" for i in (2, 3, 4, 5)))
+        doc = rd("lez/results/perf-gate-sequencer.md")
+        self.assertTrue(out.startswith("# RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer"))
+        self.assertTrue(doc.endswith(out))  # what precedes is the record's hand-written header
+
+    def test_the_updater_row_of_the_p6_table(self):
+        """0.043–0.092 of a core and 57.3–57.8 MiB peak (the honest daemons of the gate runs), 10.3–10.4 MB in
+        31 min (gate G2's honest daemons' beacon bytes over their 1,849 s wall)."""
+        doc = rd("lez/results/perf-gate-sequencer.md")
+
+        def daemon_rows(section):
+            """The daemon table of a run section: the rows after the header that names 'CPU share of one core'."""
+            out, in_table = [], False
+            for line in section.splitlines():
+                if line.startswith("| daemon |") and "CPU share of one core" in line:
+                    in_table = True
+                    continue
+                if in_table:
+                    if not line.startswith("|"):
+                        break
+                    if line.startswith("| honest-"):
+                        out.append(line.split("|"))
+            return out
+
+        honest = [r for run in doc.split("## Run `gate-")[1:] for r in daemon_rows(run)]
+        shares = sorted(float(f[6]) for f in honest)     # "CPU share of one core"
+        peaks = sorted(float(f[7]) for f in honest)      # "peak RSS MiB"
+        self.assertEqual((round(shares[0], 3), round(shares[-1], 3)), (0.043, 0.092))
+        self.assertEqual((round(peaks[0], 1), round(peaks[-1], 1)), (57.3, 57.8))
+        g2 = daemon_rows(doc.split("## Run `gate-g2`", 1)[1])
+        for f, mb in zip(g2, (10.3, 10.4)):  # "beacon API: requests / bytes served", over the "wall s" column
+            self.assertEqual(round(int(f[9].split("/")[1].strip().replace(",", "")) / 1e6, 1), mb)
+            self.assertEqual(round(int(f[4].strip().replace(",", "")) / 60), 31)  # 1,849 s ≈ 31 min
+        self.perf.has("0.043–0.092 of one core").has("57.3–57.8 MiB peak")
+        self.perf.has("10.3–10.4 MB from the beacon API in 31 min")
 
 
 if __name__ == "__main__":

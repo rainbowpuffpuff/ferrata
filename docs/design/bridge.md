@@ -664,7 +664,7 @@ Measured on one NVIDIA L4 GPU (cloud), an earlier checkpoint image ([EVIDENCE](.
 
 Components: BLAKE2b 55.9 cycles/B (no accelerator), SHA-256 2.59 cycles/B, Ed25519 0.83M.
 
-**Real proofs** of the fixed-part checkpoint, twice (image built just before the turn-length amendment; same input, 59 cycles fewer): succinct 1,157.5 s starting quiet, 1,758.9 s under load; Groth16 wrap 195.1–215.2 s; peak 9.62 GB; seal 260 bytes. Receipts verify locally; these two were not verified on a contract (the end-to-end fixture's checkpoint proofs were: §18.7). Extrapolated from 289 s per segment: an idle hour about 34 min plus 3.5 min to wrap; an hour with 50 private transactions about 4.8 h.
+**Real proofs** of the fixed-part checkpoint, twice (image built just before the turn-length amendment; same input, 59 cycles fewer): succinct 1,157.5 s starting quiet, 1,758.9 s under load; Groth16 wrap 195.1–215.2 s; peak 9.85 GB; seal 260 bytes. Receipts verify locally; these two were not verified on a contract (the end-to-end fixture's checkpoint proofs were: §18.7). Extrapolated from 289 s per segment: an idle hour about 34 min plus 3.5 min to wrap; an hour with 50 private transactions about 4.8 h.
 
 ### 18.5 Rule (B) program: measured (executor, Modal build box)
 

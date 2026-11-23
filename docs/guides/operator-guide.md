@@ -211,12 +211,12 @@ finality (`--provider NAME=URL`, one flag each) — the design's `monitor` dutie
 - **`ws-expired` (critical).** Past the whole period: the program refuses every update. Replace the instance
   with a fresh one (F.10) and migrate the consumers reading it.
 - **`recovered` (info).** A poll that can judge an alarm no longer raises it: the instance resumed, nothing to
-  do. An outage is not a recovery — a poll that cannot read the instance or has no provider's finalized slot
-  holds what was raised.
+  do. An outage is not a recovery — a poll that cannot read the instance holds every alarm; one without any
+  provider's finalized slot holds the stall alarm (the weak-subjectivity alarms need no provider).
 
 `attest-monitor check` is one assessment (JSON on standard output, its alerts one JSON line each on standard
-error; exit 0 healthy, 10 a warning, 20 a critical alert, 1 an error); `attest-monitor watch` is the daemon: an
-assessment every `--interval` seconds (default
+error; exit 0 healthy, 10 a warning, 20 a critical alert, 1 an error, 2 a usage error); `attest-monitor watch`
+is the daemon: an assessment every `--interval` seconds (default
 300), each alert emitted when first raised and repeated every `--repeat` seconds while it holds (default 3,600),
 to standard error, `--alert-log` and, at or above `--alert-cmd-level` (default `warn`), an `--alert-cmd` (the
 JSON on its standard input); SIGTERM stops it. The same daemon raises the divergence and ahead-of-finality
@@ -341,7 +341,7 @@ Executor (r0vm 3.0.5; user cycles are deterministic), `n = 4`, `t = 3`, 360 bloc
 - Marginal costs: 6,405 cycles per empty block; 2,684 cycles per KB of block data (one ~237 KB private
   transaction outside `T` and the support blocks: 637k cycles).
 - One L4 proves an hour of 50 private transactions about 16 times faster than the hour lasts; GPU memory
-  peaks at about 10.9 GiB whatever the segment count; host memory 0.76–1.08 GiB, against 9.62 GB for the
+  peaks at about 10.9 GiB whatever the segment count; host memory 0.76–1.08 GiB, against 9.85 GB for the
   CPU proof ([`gpu-prover/RESULTS.md`](../../gpu-prover/RESULTS.md), "CPU versus GPU").
 - **Rule (B)** checks 1.69M cycles per attestor (two Ed25519 `verify_strict`), 5.1M at `t` = 3, 11.8M at
   `t` = 7, whatever the blocks hold; one proof per checkpoint. Idle hour at `n` = 4: 7.51M against rule

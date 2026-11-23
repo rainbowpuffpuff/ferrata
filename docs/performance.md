@@ -498,7 +498,7 @@ min from the burns to the first release ([`e2e/runs/crown-live-1/README.md`](../
 | Component | CPU | Memory | Time | Source |
 |---|---|---|---|---|
 | checkpoint prover | one L4 GPU, one CPU core | about 10.9 GiB GPU, 0.76–1.08 GiB host | 14.0 s (fixed part), 24.1 s (idle hour), 41.4 s (5 private tx), 219.3 s (50 private tx) | [`gpu-prover/RESULTS.md`](../gpu-prover/RESULTS.md) |
-| the same on a laptop CPU | 16 threads | 9.62 GB peak | 1,157.5–1,758.9 s fixed part; ≈ 34 min per idle hour and ≈ 4.8 h per busy hour (extrapolated) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) |
+| the same on a laptop CPU | 16 threads | 9.85 GB peak | 1,157.5–1,758.9 s fixed part; ≈ 34 min per idle hour and ≈ 4.8 h per busy hour (extrapolated) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md) |
 | rule (B) checkpoint | one L4 | — | 31.9 s (idle hour, `n` = 4, 9 segments) | [`bridge.md`](design/bridge.md) §18.5 |
 | rule (B) checkpoint of the live run on the final programs (`crown-live-3`: LEZ blocks 25..=90, 2 burns, 18,499,940 user cycles, 20 segments) | one L40S | — | 31.9 s prover wall (119 s with the queue and transfers) | [`e2e/runs/crown-live-3/README.md`](../e2e/runs/crown-live-3/README.md) |
 | Groth16 wrap of a checkpoint | x86 | 7.3 GiB | 195.1–215.2 s (laptop); recursion 18.7 s on 16 cores + 14 s Groth16 (end-to-end run) | [`checkpoint/RESULTS.md`](../checkpoint/RESULTS.md); [`bridge.md`](design/bridge.md) §18.7 |
