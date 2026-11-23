@@ -5,12 +5,13 @@ in `lez/harness/src/accumulated.rs`). **Measured** in LEZ v0.4.0-rc1's own state
 in-process harness, transactions executed and settled with LEZ's fee settlement), as
 [`perf-state.md`](perf-state.md) §2 and §3 measure five statement types and every update step: the actions it does not
 sweep, `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement types of
-[`stage4-attest.md`](stage4-attest.md), `CallAttest` and the reference consumer's claim, each charged with K = 0,
+[`stage4-attest.md`](stage4-attest.md), `Read` and `ReadPadded`, `CallAttest` and the reference consumer's claim (with
+§2–§3 of `perf-state.md`, every message the attestation program handles), each charged with K = 0,
 1,000, 10,000 and 100,000 more of each account that accumulates beside it. The **serialized state** column is what a
 node writes for the state before RocksDB's compression (`perf-state.md` says how). The same scenarios are pinned in CI
 with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
 
-Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 72e99c6c.
+Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 1adfc7b1.
 
 
 Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before, and the claimant's balance credited K + 1 times before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its first "handler" is the private execution's cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat private receipt gas. Every charge is asserted equal at every K before it is printed.

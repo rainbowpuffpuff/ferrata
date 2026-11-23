@@ -550,7 +550,10 @@ pub fn call_attest(s: &mut Stage4) -> Vec<Charged> {
 pub fn read_actor() -> (Actor, Vec<PublicAccountEvidence>) {
     let program = consumer_account();
     let seed = PdaSeed::new([0x33; 32]);
-    (Actor::new(AccountId::for_public_pda(&program, &seed), program), vec![PublicAccountEvidence::Pda { program, seed }])
+    (
+        Actor::new(AccountId::for_public_pda(&program, &seed), program),
+        vec![PublicAccountEvidence::Pda { program, seed }],
+    )
 }
 
 /// The finalized block's record read by a public reader of the consumer (`ReadRecord`: the
