@@ -152,8 +152,9 @@ two-hour cadence (§2).
 
   Derived by arithmetic from that formula. A duplicate costs the 2.2M step above.
   `ferrata-updater` defers per step rather than per update: each (job, step) waits
-  `H(key, job, step) mod W` rounds, `key` the daemon's own (so the wait differs per daemon and per step), reads the
-  job's account just before sending, and an updater continues the open job of the update it chose.
+  `H(key, job, step) mod W` rounds (an `Open`, and a step of a job the daemon does not carry, counted from the first
+  round a step of that kind was due on the instance's state), `key` the daemon's own (so the wait differs per daemon and
+  per step), reads the job's account just before sending, and an updater continues the open job of the update it chose.
 - **The strategy's effect, measured on a running LEZ v0.4.0-rc1 sequencer** (21 November 2026;
   [`perf-gate-sequencer.md`](../../lez/results/perf-gate-sequencer.md), `bash bench/perf/gate-sequencer.sh`): two honest
   daemons following recorded mainnet updates, configured to poll every 4 s, the window `W` in rounds. Latency: a
@@ -209,7 +210,7 @@ demotion) and, per instance, its preset, checkpoint and beacon sources. Per roun
 from the chain, checks every candidate from every source with the program's own steps natively before
 paying for anything (a source serving what the program would refuse, or an update signed more than 60 s past the
 chain's clock, is demoted; one far behind is flagged lagging; one silent is flagged unavailable), and sends the next
-step of the best candidate's job (an update whose window has not opened by the chain's clock ranks after every one that can be sent; of updates of one finalized header, the earliest-signed). One lying source can still stall it (an internal review's finding M1, 22 November 2026: a re-dated update adopting the next committee, deferred every round; `lez/updater/README.md`, "Not built, not tested"): when `/health` reports no progress while the sources serve updates past the instance, remove or replace that source. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
+step of the best candidate's job (an update whose window has not opened by the chain's clock ranks after every one that can be sent; of updates of one finalized header, the earliest-signed). One lying source can still delay it, by at most 68 rounds on each state of the instance at the default `defer_window`; a party that also applies older real updates itself starts a new state, and new turns, with each, so it can postpone the adoption of the next committee for as long as it has such updates to apply (internal reviews of 22 November 2026; `lez/updater/README.md`, item 8 and "Not built, not tested"). If `/health` keeps reporting no progress while the sources serve updates past the instance, or the instance keeps falling behind the newest update, remove or replace a source that serves such copies. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
 (HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
