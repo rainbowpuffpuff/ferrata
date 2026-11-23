@@ -166,6 +166,6 @@ other) and shows its whole state, each value with the getter, event or storage s
 contract does not expose. It rebuilds the deposit root from the `Deposit` events and compares it with the vault's,
 and checks the published registry and fee hashes against the events. `node admin/dump.mjs <rpc> <vault>
 <from-block>` runs the same code without a browser; `node admin/dump.mjs --selftest` checks its keccak, SHA-256 and
-ABI code (232 checks). **Proven** on the live vault `0xfE3199fa…9E54` at Sepolia block 12,113,610 (node) and
+ABI code (235 checks). **Proven** on the live vault `0xfE3199fa…9E54` at Sepolia block 12,113,610 (node) and
 12,113,760 (headless Chromium from `file://`), and on a local anvil vault with freezes in force and a pending
 candidate ([`admin/README.md`](../../admin/README.md), [`admin/results/`](../../admin/results/)).

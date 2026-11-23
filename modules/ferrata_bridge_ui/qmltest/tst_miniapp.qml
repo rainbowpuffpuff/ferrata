@@ -68,7 +68,7 @@ Item {
             console.log("U8 " + code + " | " + el("error.message").text + " | " + el("error.detail").text);
         }
 
-        // The message table on its own (review-u8 L3, L4, M1): a 251 the program returned names both causes, a number
+        // The message table on its own (an internal review's L3, L4, M1): a 251 the program returned names both causes, a number
         // such as "0.249 ETH" is not a code, a SetCap below the floor (240) is not "Cap exceeded", and the verifier's
         // VerificationFailed, named or raw, has its own message.
         function test_00_messages() {
@@ -375,7 +375,7 @@ Item {
             idle();
         }
 
-        // Verification failure on the way out (U.08; review-u8 M1): the public burn's release with a proof the verifier
+        // Verification failure on the way out (U.08; an internal review's M1): the public burn's release with a proof the verifier
         // rejects (the devnet's wrong_proof: the mock verifier is not told of its journal, as for a seal made for another
         // recipient, relay fee or root), refused by the vault's eth_call before anything is signed.
         function test_11c_error_release_proof_rejected() {
@@ -413,7 +413,7 @@ Item {
             click("admin.setcap");
             approve("SetCap", null);
             // What the user sees: the banner (its message and code) and the admin view's result line. The banner stays: the
-            // view refreshes the registry only after a change (review-u8 L3: an unconditional refresh, ffcf0da3, cleared it).
+            // view refreshes the registry only after a change (an internal review's L3: an unconditional refresh, ffcf0da3, cleared it).
             verify(el("error.banner").visible, "the banner shows the refusal: " + host.app.lastError);
             verify(has(el("error.message").text, "Refused: a value is outside the bridge's bounds"), "the banner: " + el("error.message").text + " / " + host.app.lastError);
             verify(has(el("error.detail").text, "240 BAD_MESSAGE"), "the banner's code: " + el("error.detail").text);

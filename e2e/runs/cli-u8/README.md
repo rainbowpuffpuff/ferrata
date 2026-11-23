@@ -2,7 +2,7 @@
 
 **Run:** `RISC0_HOME=<spike>/risc0-home-lez cli/tests/e2e.sh` from the repository's root (the tests of
 [`cli/tests/e2e.rs`](../../../cli/tests/e2e.rs)), on a Modal build box (CPU), 23 November 2026, the tree of commit
-`da4c9de7` (branch `u8-cases`). **Result:** `test result: ok. 2 passed; 0 failed` in 55.05 s:
+`da4c9de7`. **Result:** `test result: ok. 2 passed; 0 failed` in 55.05 s:
 the form check on its own
 (`names_nothing_catches_every_form`) and the sequence (`deposit_scan_claim_burn_release_and_recovery`)
 ([`test.log`](test.log), the tests' own output; the build's lines before it are left out and the checkout's path is

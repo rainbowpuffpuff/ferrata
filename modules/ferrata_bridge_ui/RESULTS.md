@@ -46,7 +46,7 @@ step may still complete"), and the run stopped before the release
 
 ## 23 November 2026: RFP-022 U.8's failure modes on the banner (what `results/` holds now)
 
-Branch `u8-cases`, Modal build box: `scripts/box-test.sh` ran the view's 27 test functions, **27 passed in 40.5 s**
+On the Modal build box: `scripts/box-test.sh` ran the view's 27 test functions, **27 passed in 40.5 s**
 (`results/qmltest.txt`, `results/qmltest.xml`), 48 screenshots (`results/screenshots/`, cropped palette PNGs by
 `scripts/shrink-screenshots.py`), the backend's 76 calls in 15.0 s (`results/calls.jsonl`, 15 of them the refusals the
 test asks for). Added to the round trip below: each of U.8's failure modes as the user sees it, the banner's message

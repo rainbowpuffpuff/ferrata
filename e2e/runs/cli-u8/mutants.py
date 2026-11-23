@@ -17,7 +17,7 @@ import sys
 import time
 
 W = pathlib.Path(__file__).resolve().parents[3]
-BASE = "b5147257"  # the branch before review-u8's fixes: its format.js is mutant Q5
+BASE = "b5147257"  # the branch before an internal review's fixes: its format.js is mutant Q5
 
 CLAIM = "cli/wallet/src/claim.rs"
 CODES = "cli/src/codes.rs"
@@ -60,11 +60,11 @@ TOOL = [
     ("T7 message removed: the inbound depth not named", "the depth case", [(LEZ, "    Ok(if slots == 0 {", "    Ok(if slots == 0 || true {")]),
     ("T8 message removed: BurnRootNotAccepted's what to do", "the release before its checkpoint finalises",
      [(FLOW, "no finalized checkpoint covers this burn yet; wait for the next checkpoint", "no finalized checkpoint covers this burn yet")]),
-    ("N1 VerificationFailed not mapped (the tool before review-u8 M1)", "the release whose proof the verifier rejects", N1),
+    ("N1 VerificationFailed not mapped (the tool before an internal review's M1)", "the release whose proof the verifier rejects", N1),
     ("N2 the round-1 names_nothing (no leaf by number only)", "names_nothing_catches_every_form",
      [(E2E, ("SPAN", "    let mut rest = text.to_string();\n", "    !numbered && !hash_number && !text.contains(\"tag counter\") && !text.contains(\"j = \")\n"),
        ROUND1_NAMES_NOTHING)]),
-    ("N3 a freeze refusal names a leaf by number (review-u8 R4)", "the frozen claim's refusal",
+    ("N3 a freeze refusal names a leaf by number (an internal review's R4)", "the frozen claim's refusal",
      [(LEZ, "                    \"checked before sending: {what} {scope} are frozen until",
        "                    \"checked before sending (leaf number 3): {what} {scope} are frozen until")]),
     ("N4 message removed: TokenNotRegistered's what to do", "the unsupported token case",
@@ -94,10 +94,10 @@ MINIAPP = [
         (ETH, "    ensure!(\n        cfg.registered,\n        crate::codes::vault_refusal(&crate::codes::selector(\"TokenNotRegistered\")",
          "    ensure!(\n        cfg.registered || true,\n        crate::codes::vault_refusal(&crate::codes::selector(\"TokenNotRegistered\")"),
     ]),
-    ("Q3 the view refreshes the registry after a failed admin step (ffcf0da3, review-u8 L3)", "test_12 (the banner)",
+    ("Q3 the view refreshes the registry after a failed admin step (ffcf0da3, an internal review's L3)", "test_12 (the banner)",
      [(VIEW, "                                if (ok) refreshRegistry();", "                                refreshRegistry();")]),
     ("Q4 VerificationFailed not mapped in the devnet's tool library (N1)", "test_11c (the code shown)", N1),
-    ("Q5 format.js as before review-u8 (b5147257)", "test_00, 11c, 12", [(FMT, None, "git:" + BASE)]),
+    ("Q5 format.js as before an internal review's fixes (b5147257)", "test_00, 11c, 12", [(FMT, None, "git:" + BASE)]),
     ("F0 no mutant: the recorded run", "nothing: all pass", []),
 ]
 

@@ -519,7 +519,7 @@ fn burn_values(b: &ferrata_bridge_core::outbound::OwnedBurn) -> Vec<Vec<u8>> {
 }
 
 /// The form check on its own (no anvil, no zone: runs without `FERRATA_E2E`): the messages the tool gives pass; a leaf,
-/// deposit, burn or position named by number, in every form the reviews tried (review-u8 L1: the round-1 check missed
+/// deposit, burn or position named by number, in every form the reviews tried (an internal review's L1: the round-1 check missed
 /// seven of them), fails, alone and inside each message.
 #[test]
 fn names_nothing_catches_every_form() {
@@ -2108,7 +2108,7 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     )
     .await?;
     ensure!(planned.root.count == 12, "the newest root, once its delay has passed");
-    // Verification failure on the way out (U.08; review-u8 M1): the self-sent release with a seal the verifier rejects
+    // Verification failure on the way out (U.08; an internal review's M1): the self-sent release with a seal the verifier rejects
     // (no proof of its journal: the mock verifier was told of none, as with a seal made for another recipient, relay
     // fee or root) is refused by the vault's eth_call before anything is signed, as the verifier's VerificationFailed
     // with what to do, naming no burn; the signer's nonce is unchanged.

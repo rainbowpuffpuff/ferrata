@@ -94,7 +94,7 @@ pub const VAULT_ERRORS: [(&str, &str); 41] = [
     ("NothingOwed", "the vault owes this address nothing in this token"),
     ("VerifierStopped", "the verifier's emergency stop is tripped"),
     // The RISC Zero verifier's error (IRiscZeroVerifier), raised through the vault's call to it.
-    ("VerificationFailed", "the RISC Zero verifier rejects the proof: the seal is not a proof of this call's journal (another recipient, relay fee, root or image id) or is damaged; nothing is sent: prove it again for this journal (`ferrata release --prove`, or a prover given `--input-out`'s input, then `--seal`), or ask the relayer for a new proof"),
+    ("VerificationFailed", "the RISC Zero verifier rejects the proof: the seal is not a proof of this call's journal (a release's: another recipient, relay fee, root or image id; a checkpoint's: another root, committee or image id) or is damaged; nothing is sent: prove it again for this journal (a release: `ferrata release --prove`, or a prover given `--input-out`'s input, then `--seal`; a checkpoint: its prover again for this candidate), or ask the relayer for a new proof"),
     ("CheckpointsAreFrozen", "checkpoints are frozen; retry once the freeze ends"),
     ("WrongMode", "this finalisation path is not the vault's mode"),
     ("WaitNotOver", "the candidate's wait is not over"),
@@ -184,7 +184,7 @@ mod tests {
     #[test]
     fn the_verifiers_rejection_is_named() {
         // `cast sig 'VerificationFailed()'` = 0x439cc0cd: the RISC Zero verifier's error, raised through the vault
-        // (review-u8 M1: the tool printed it as a raw revert).
+        // (an internal review's M1: the tool printed it as a raw revert).
         let r = vault_refusal(&[0x43, 0x9c, 0xc0, 0xcd], "eth_call, nothing sent").expect("named");
         assert_eq!(r.name, "VerificationFailed");
         assert!(r.meaning.contains("prove it again for this journal"), "{}", r.meaning);
