@@ -19,6 +19,7 @@
 #                                         (bench/perf/tree_sample.py), each daemon's traffic counted by its own relay
 #                                         (bench/perf/http_relay.py); a restart through the module's stop and start; the
 #                                         module's stop and Logos Core's stop at the end
+#   live-testnet.sh tools OUT             ferrata-day1 and ferrata-updater again (the copy refreshed), as build does
 #   live-testnet.sh build-bridge OUT      ferrata_monitor_module and ferrata_relayer_module (dev packages, the tree as
 #                                         committed)
 #   live-testnet.sh bridge-modules OUT [IDLE_MIN]   bench/perf/daemons-anvil-modules.sh with them (RFP-022 P.6)
@@ -562,6 +563,7 @@ attest_phase() {
 case "$cmd" in
   build) do_build ;;
   build-bridge) do_build_bridge ;;
+  tools) step rc3-copy rc3_copy && step rc3-tools rc3_tools ;;
   bridge-modules) do_bridge_modules "${3:-10}" ;;
   instance) do_instance ;;
   session) do_session "${3:-90}" ;;
