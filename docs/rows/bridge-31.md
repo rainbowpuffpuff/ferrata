@@ -19,9 +19,11 @@ What the branch does, with its commits:
   inputs (`scripts/reprove_fixtures.py`, `vault/test/real/reprove-31.json`,
   [`vault/test/real/README.md`](../../vault/test/real/README.md)); STARKs on the build box's CPU (r0vm 3.1.0) or, for
   three checkpoints, on an NVIDIA L4 (`gpu-prover` built for 3.1: 15 segments in 44.8 s, 20 in 68.1 s, 29 in 88.9 s);
-  RISC Zero's prover image `v2026-10-20.1` for the Groth16 step (11-18 s each). `vault` `forge test` on the branch's
-  tip of these commits: **588 passed, 0 failed, 12 skipped** (600; 67 suites); `test/real/*`: 47 passed, 11 skipped
-  (the 3.0.5 records, with their reasons). The ids rebuilt at another path from a fresh target directory: 9 of 9.
+  RISC Zero's prover image `v2026-10-20.1` for the Groth16 step (11-18 s each). `vault` `forge test` at `67122945`:
+  **589 passed, 0 failed, 12 skipped** (601; 67 suites; 11 of the skips are the 3.0.5 record suites, with their
+  reasons); `test/real/*`: 47 passed, 11 skipped. The ids rebuilt at another path from a fresh target directory: 9 of 9.
+- **The prover service's path on a GPU** (`67122945`): `gpu-prover` `prove_bytes`, STARK and Groth16 on one L4 (a
+  release: 1.2 s + 11.1 s); its seal verifies on verifier 3.1.0 (`test_aSealMadeOnTheGpuVerifies`).
 - **Decision D1 (a)** of the migration plan, as recommended: our own verifier 3.1.0 behind RISC Zero's emergency stop
   (owner renounced), a freeze authority and at least one watcher with keys, capped defaults; no RISC Zero router.
 - **The fork rehearsal** with real 3.1 proofs: [`vault/results/fork-rehearsal-31/`](../../vault/results/fork-rehearsal-31/README.md).
@@ -43,7 +45,7 @@ text changes to: "Ethereum side shown under RISC Zero 3.1 (phase 1); LEZ side wa
 
 ## New EVIDENCE row (the next free number; 229 at `3d984678`)
 
-| N | **RISC Zero 3.1, phase 1 (the Ethereum side): new programs, verifier 3.1.0, every vault seal made again, a Sepolia-fork rehearsal with real 3.1 proofs (RFP-022 R.8, Sec.2, Sec.3, Sec.6: Ethereum half)**: the guests the vault verifies built with risc0-zkvm 3.1.0 (`docs/image-ids.md` `*_31`: release `0xf279af41…a6fd`, checkpoint_b `0xdafa6ab9…cda0`, checkpoint_b_0_3_5 `0x8917f58e…af04`, checkpoint `0x7c93425e…97c1`); the vault on RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 (risc0-ethereum v3.1.0, `ff30da77`; selector `0xe71e6620`); the real-proof fixtures proven again from their recorded inputs (STARK on the build box's CPU through r0vm 3.1.0, identity_p254, RISC Zero's prover image `v2026-10-20.1`; each Groth16 receipt verified against the run's journal); a seal of risc0 3.0.5 refused (`SelectorMismatch`); on an anvil fork of Sepolia (block 12,194,913) `script/deploy.sh` with D1 (a), then the recorded LEZ v0.4.0-rc3 zone session's deposits, 3.1 checkpoint final after the hour, a freeze refusing a release, both 3.1 releases paid, a replay refused (FORK REHEARSAL 31 OK) | `vault/results/fork-rehearsal-31/`; `vault/test/real/README.md`; `vault/test/Verifier31.t.sol`; `forge test` 588 passed, 0 failed, 12 skipped (`402cdf54`); `docs/image-ids.md` "RISC Zero 3.1"; branch `bridge-31` |
+| N | **RISC Zero 3.1, phase 1 (the Ethereum side): new programs, verifier 3.1.0, every vault seal made again, a Sepolia-fork rehearsal with real 3.1 proofs (RFP-022 R.8, Sec.2, Sec.3, Sec.6: Ethereum half)**: the guests the vault verifies built with risc0-zkvm 3.1.0 (`docs/image-ids.md` `*_31`: release `0xf279af41…a6fd`, checkpoint_b `0xdafa6ab9…cda0`, checkpoint_b_0_3_5 `0x8917f58e…af04`, checkpoint `0x7c93425e…97c1`); the vault on RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 (risc0-ethereum v3.1.0, `ff30da77`; selector `0xe71e6620`); the real-proof fixtures proven again from their recorded inputs (STARK on the build box's CPU through r0vm 3.1.0, identity_p254, RISC Zero's prover image `v2026-10-20.1`; each Groth16 receipt verified against the run's journal); a seal of risc0 3.0.5 refused (`SelectorMismatch`); on an anvil fork of Sepolia (block 12,194,913) `script/deploy.sh` with D1 (a), then the recorded LEZ v0.4.0-rc3 zone session's deposits, 3.1 checkpoint final after the hour, a freeze refusing a release, both 3.1 releases paid, a replay refused (FORK REHEARSAL 31 OK) | `vault/results/fork-rehearsal-31/`; `vault/test/real/README.md`; `vault/test/Verifier31.t.sol`; `forge test` 589 passed, 0 failed, 12 skipped (`67122945`); `docs/image-ids.md` "RISC Zero 3.1"; branch `bridge-31` |
 
 ## Owner steps (not this branch's)
 
