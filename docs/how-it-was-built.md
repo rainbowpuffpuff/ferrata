@@ -7,7 +7,8 @@ one place in the repository that tells this; the [README](../README.md) is about
 
 ## Agents draft, the author decides
 
-The code, the tests and the documents were drafted with coding agents (Claude Code) under the author's
+The code, the tests and the documents were drafted with coding agents (Claude Code; one set of CI changes
+with Antigravity, below) under the author's
 design, review and acceptance tests, and the author's decision log; every commit was made this way. Read
 each commit as agent-drafted, whether or not it carries an `Assisted-by` trailer.
 
@@ -37,6 +38,15 @@ The two commits of 04:37 CET on 11 November are the last without it; every commi
 
 Some drafts were written with GLM 5.3 through Claude Code and reviewed by Opus; their commits carry
 `Assisted-by: Claude Code (glm-5.3)`, beside the Opus trailer where Opus finished or rewrote them.
+
+Two pieces merged on 23 November 2026 were drafted outside Opus. The CI changes (the sharded `lez-harness`
+matrix and its coverage guard, the daily unsharded run in `lez-full.yml`, the concurrency groups, the step
+timeouts, the macOS runner and the round trip's bounded forge deploy) were drafted by Gemini 4 Neon through
+Antigravity; their commits carry `Assisted-by: Antigravity (gemini-4-neon-xhigh)`. The performance-records test
+(`scripts/test_perf_records.py`) and the operator guide's section on stall detection (§3.5) were drafted by
+GLM 5.3 through Claude Code (`Assisted-by: Claude Code (glm-5.3)`). Opus (`claude-opus-5-5`) reviewed each
+twice in a separate context, its drafter fixed the findings, and Opus merged both and wrote their status
+changes.
 
 ## Reviews by agents
 
