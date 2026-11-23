@@ -69,7 +69,11 @@ in today's workflows, so the counts stand:
 - in Rust: `cfg` forms other than a bare `feature = "X"` on the file, the test or its `mod` block, such as
   `cfg(all(feature = "X", test))`, `cfg(any(feature = "X", feature = "Y"))` with both off, a file-level
   `#![cfg(all(feature = "X"))]`, `cfg_attr(not(feature = "X"), ignore)`, or another attribute between a `mod`
-  block and its gate.
+  block and its gate; for doc-tests, `has_doctest` inspects fenced code blocks (`` ``` `` and `~~~`) in `///`, `//!`,
+  `/** */`, `/*! */`, and literal `#[doc = "..."]` / `#![doc = "..."]` attributes, so un-fenced 4-space indented code
+  blocks, `#[doc = include_str!(...)]`, macro-generated docs, and item-level `#[cfg]` gates on doc-tests are not
+  detected (shard execution coverage is unaffected because `--doc` runs whenever a package has a `[lib]` target; only
+  the model's per-file `--doc` verdict and `check-lez-shards.py`'s "(and has tests)" detail depend on `has_doctest`).
 
 It errs the other way on two forms that do run the test: a step under `if: always()` and one with
 `continue-on-error: false` are counted for nothing. A Rust test
@@ -188,8 +192,8 @@ a matching `required-features` / `#![cfg(feature = ...)]` gate, when a split bin
 lists disagree or name a nonexistent test, or when `ci.yml`'s `lez-harness` matrix disagrees with the shard map.
 [`test_lez_shards.py`](test_lez_shards.py) verifies all guard rules on scratch copies and executes `lez-harness.sh`'s
 `--shard` loop end to end against a fake `cargo` and stubbed privacy scripts (each draining stdin) to verify exact
-command lists per shard (run and build), failure propagation, unknown/repeated `--shard` refusals, and empty-plan
-refusal. Standard library only.
+command lists per shard (run and build), failure propagation, unknown/repeated `--shard` refusals, empty-plan refusal,
+and the executed-vs-planned step-count check. Standard library only.
 
 ```sh
 python3 -I scripts/ci/check-lez-shards.py    # validate shard map (links job and start of each shard)

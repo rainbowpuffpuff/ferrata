@@ -2,8 +2,10 @@
 
 Four workflows. [`.github/workflows/ci.yml`](../../.github/workflows/ci.yml), on every push, pull request and manual
 dispatch (`workflow_dispatch`), runs the thirteen jobs below on GitHub's `ubuntu-latest` runners with `lez-harness`
-split across a 6-shard matrix (18 runner jobs total, none skipped on any trigger; `concurrency` cancels superseded
-runs on non-`main` refs). [`.github/workflows/lez-full.yml`](../../.github/workflows/lez-full.yml), daily at 04:17 UTC
+split across a 6-shard matrix (18 runner jobs total, none skipped on any trigger; `concurrency` gives every run on
+`main` its own `github.run_id` group with `cancel-in-progress: false` so runs on `main` never queue behind or
+cancel/replace one another, while cancelling superseded pending and in-progress runs on other refs).
+[`.github/workflows/lez-full.yml`](../../.github/workflows/lez-full.yml), daily at 04:17 UTC
 (`schedule`, automatically disabled by GitHub after 60 days without repository activity in a public repository) and on
 `workflow_dispatch`, runs `lez-harness-full` unsharded once as a backstop; the row checker counts it as manual, not as
 push/PR CI. [`macos.yml`](../../.github/workflows/macos.yml), on pushes to `main` and by hand, runs the light crates
@@ -60,8 +62,9 @@ and 131 s for the rehearsal.
 On GitHub Actions, the unsharded `lez-harness` job passed in **50.6–74.6 min** across two measured runs: 3,038 s
 (50.6 min; setup 166 s, cold build 512 s) in run `45075900693` (`8c38d723`), and 4,474 s (74.6 min; setup 137 s, cold
 build 809 s, warm re-check 59 s, harness 2,158 s, updater 1,217 s of which `tests/recorded.rs` alone took 806.59 s,
-privacy suite + gate 88 s) in run `45072883393` (`ff0cb39a`, job `137363580490`). Every other job finished within
-16.4 min (`roundtrip`, 985 s; `roundtrip` 937 s on run `45075900693` attempt 2).
+privacy suite + gate 88 s) in run `45072883393` (`ff0cb39a`, job `137363580490`). In the green runs, every other job
+finished within 16.4 min (`roundtrip` 985 s in run `45072883393`, 937 s in run `45075900693` attempt 2; on attempt 1
+of `45075900693`, `roundtrip` hung 73 min in `cli/tests/e2e.sh` before being cancelled).
 
 To cut push and pull-request wall time without testing less, `lez-harness` runs as a 6-shard matrix balanced on the
 measured durations (`scripts/ci/lez-harness-shards.json`, `fail-fast: false`): four harness shards
@@ -74,7 +77,9 @@ with its gate, running `privacy_suite` once instead of twice). Each shard builds
 workflow wall time is derived at **~19–28 min** (critical path `updater-gate`, ~62–63% reduction across both measured
 runner speeds). On GitHub's Free plan (20 concurrent jobs), a push to `main` starts 18 `ci.yml` jobs plus `macos.yml`'s
 2 = 20 jobs, while a push to a branch with an open same-repo PR starts 36 `ci.yml` jobs (excess jobs queue without
-failing; `concurrency` cancels superseded non-`main` runs). The daily/manual unsharded backstop runs separately in
+failing; `concurrency` isolates each `main` run in its own `ci-main-<run_id>` group with `cancel-in-progress: false`
+so intermediate commits on `main` are never cancelled or replaced, while cancelling superseded runs on other refs). The
+daily/manual unsharded backstop runs separately in
 [`.github/workflows/lez-full.yml`](../../.github/workflows/lez-full.yml) (`lez-harness-full`, 04:17 UTC; GitHub
 auto-disables scheduled workflows after 60 days without repo activity; `deps` reports RustSec advisories against its
 baseline without blocking on `ci.yml`). Target directories are not cached (the round trip's caches already use most of
