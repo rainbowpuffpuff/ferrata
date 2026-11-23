@@ -12,18 +12,20 @@ pragma solidity ^0.8.26;
 // ZB_FIXTURE=zone-bridge-rc3 checkpoint/attestor/zone-bridge.sh fixture.
 
 import {console2} from "forge-std/Test.sol";
+import {Pausable} from "openzeppelin/contracts/utils/Pausable.sol";
 import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
 
 contract ZoneBridgeRc3Test is RuleBMultiFixture {
-    /// @dev docs/image-ids.md, "For zones on Logos Blockchain 0.3.5-rc.1; not deployed on Sepolia".
+    /// @dev docs/image-ids.md, RISC Zero 3.1, checkpoint_b_0_3_5 (zones on Logos Blockchain 0.3.5-rc.1).
     bytes32 internal constant CHECKPOINT_B_0_3_5_IMAGE_ID =
-        0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf;
-    /// @dev The deployed checkpoint_b (the d480efc6 layout), which the vault on Sepolia pins.
-    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
-    bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
+        0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04;
+    /// @dev checkpoint_b of the d480efc6 layout, RISC Zero 3.1.
+    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0;
+    bytes32 internal constant RELEASE_IMAGE_ID = 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd;
 
     function _path() internal pure virtual override returns (string memory) {
         return "test/real/fixtures/zone-bridge-rc3.json";
@@ -145,6 +147,76 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         vault.submitCandidate{gas: TAMPERED_CALL_GAS}(c, seal);
         _deploy(FerrataVault.Mode.B, CHECKPOINT_B_0_3_5_IMAGE_ID, _state(keys), 1, 1);
         vault.submitCandidate(c, seal);
+    }
+
+    /// @dev The fixture's release `i` and its seal.
+    function _releaseAt(uint256 i) internal view returns (FerrataVault.ReleaseRequest memory r, bytes memory s) {
+        string memory json = vm.readFile(_path());
+        string memory p = string.concat(".releases[", vm.toString(i), "]");
+        r = FerrataVault.ReleaseRequest({
+            token: vm.parseJsonAddress(json, string.concat(p, ".token")),
+            denomIndex: uint8(vm.parseJsonUint(json, string.concat(p, ".denomIndex"))),
+            recipient: vm.parseJsonAddress(json, string.concat(p, ".recipient")),
+            relayer: vm.parseJsonAddress(json, string.concat(p, ".relayer")),
+            relayFee: vm.parseJsonUint(json, string.concat(p, ".relayFee")),
+            burnRoot: vm.parseJsonBytes32(json, string.concat(p, ".burnRoot")),
+            nullifier: vm.parseJsonBytes32(json, string.concat(p, ".nullifier"))
+        });
+        s = vm.parseJsonBytes(json, string.concat(p, ".seal"));
+    }
+
+    /// @notice RFP-022 Sec.3 under RISC Zero's verifier 3.1.0, with the release's real RISC Zero 3.1 seal: the journal
+    ///         binds the recipient, the relayer, the relay fee and the nullifier, so a request with any one of them
+    ///         changed is refused by the verifier; the request as proven is paid once, and its replay is refused.
+    function test_rc3_aRedirectedRepricedOrReplayedReleaseIsRefused() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        vm.warp(block.timestamp + 121);
+        address stranger = makeAddr("a submitter's own address");
+        for (uint256 k = 0; k < 4; k++) {
+            (FerrataVault.ReleaseRequest memory x, bytes memory s) = _releaseAt(0);
+            if (k == 0) x.recipient = stranger;
+            if (k == 1) x.relayer = stranger;
+            if (k == 2) x.relayFee = 2e12; // the registered relay fee of 0.001 ETH: allowed, but not what was proven
+            if (k == 3) x.nullifier = keccak256(abi.encode(x.nullifier));
+            vm.expectRevert(VerificationFailed.selector);
+            vault.release(x, s);
+        }
+        (FerrataVault.ReleaseRequest memory r, bytes memory releaseSeal) = _releaseAt(0);
+        vault.release(r, releaseSeal);
+        vm.expectRevert(FerrataVault.NullifierAlreadyUsed.selector);
+        vault.release(r, releaseSeal);
+    }
+
+    /// @notice A watcher cancels the real (RISC Zero 3.1) candidate within its wait; nothing is accepted. (Under 3.0.5:
+    ///         RuleBReal.t.sol's test_ruleB_realProof_aWatcherCancels, a skipped record.)
+    function test_rc3_aWatcherCancelsTheRealCandidate() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.prank(watcher);
+        vault.cancelCandidate(c.newState);
+        vm.warp(block.timestamp + WAIT);
+        vm.expectRevert(FerrataVault.UnknownCandidate.selector);
+        vault.finalizeAttested(c);
+        assertEq(vault.finalState(), c.parentState);
+    }
+
+    /// @notice Once the stop's owner trips it, a real RISC Zero 3.1 release proof no longer releases. (Under 3.0.5:
+    ///         ReturnLeg.t.sol's test_negative_afterTheStop_aRealProofIsRefused, a skipped record.)
+    function test_rc3_afterTheStop_aRealProofIsRefused() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        vm.warp(block.timestamp + 121);
+        (FerrataVault.ReleaseRequest memory r, bytes memory releaseSeal) = _releaseAt(0);
+        RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(address(vault.verifier()));
+        vm.prank(freezer); // the stop's owner in this fixture
+        stop.estop();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        vault.release(r, releaseSeal);
     }
 
     function test_rc3_aFlippedSealByteIsRefused() public {

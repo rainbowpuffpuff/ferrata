@@ -14,10 +14,10 @@ import {StandInCheckpointVerifier} from "../../src/standin/StandInCheckpointVeri
 ///         The EIP-712 digest is rebuilt here from its written definition, not with the contract's own function.
 abstract contract StandInBase is Test {
     uint256 internal constant SEPOLIA = 11_155_111;
-    /// The final programs' ids (docs/image-ids.md).
-    bytes32 internal constant RELEASE_IMAGE_ID = 0xb64900bcf741668568b3e14ef902987e305b303873ff7258c109409969eb29e9;
-    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xf8116722ee692bcff038eed47d95f0de4b267704e45b1d11711ad84e860e626e;
-    bytes32 internal constant CHECKPOINT_A_IMAGE_ID = 0xb9c1e6a834879f6be79d09d728523565846018629b82f66986eb58fab4f52c84;
+    /// The final programs' ids under RISC Zero 3.1 (docs/image-ids.md).
+    bytes32 internal constant RELEASE_IMAGE_ID = 0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd;
+    bytes32 internal constant CHECKPOINT_B_IMAGE_ID = 0xdafa6ab9a26841681fd071b8e4cdfae514371f82902426dc9fb1e2c80d29cda0;
+    bytes32 internal constant CHECKPOINT_A_IMAGE_ID = 0x7c93425e9b6fedbd0d79092b3a0b6c164b9a6ee250b9e2e89b26a7fadc4497c1;
     uint256 internal constant SECP256K1_N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141;
 
     RiscZeroGroth16Verifier internal groth16;

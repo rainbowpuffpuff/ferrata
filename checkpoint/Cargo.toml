@@ -6,8 +6,10 @@
 #                          collector of t of n attestations into a checkpoint_b input
 # fidelity/                host-only: builds real-format LEZ blocks and Mantle transactions with
 #                          the upstream crates and checks the core's parsers against them; writes
-#                          the bench fixtures
-# methods-segment/, methods/  build the guests in guests/ (risc0-build 3.0.5) and embed them
+#                          the bench fixtures. A workspace of its own since RISC Zero 3.1: LEZ
+#                          v0.4.0-rc1's crates pin risc0 3.0.5's v1compat (=2.2.2), the hosts here
+#                          use risc0-zkvm 3.1.0 (^2.2.3), and one lockfile cannot hold both
+# methods-segment/, methods/  build the guests in guests/ (risc0-build 3.0.7) and embed them
 # methods-0-3-5/           builds the checkpoint guests of guests-0-3-5/ (zones on Logos Blockchain 0.3.5-rc.1)
 # host/                    executor bench, composition demo, proving
 #
@@ -15,9 +17,9 @@
 # and curve25519-dalek) applies there and nowhere else.
 [workspace]
 resolver = "2"
-members = ["crates/checkpoint-core", "crates/attestor-core", "fidelity", "methods-segment", "methods", "methods-0-3-5", "methods-plain", "host", "realblocks", "attestor"]
+members = ["crates/checkpoint-core", "crates/attestor-core", "methods-segment", "methods", "methods-0-3-5", "methods-plain", "host", "realblocks", "attestor"]
 default-members = ["crates/checkpoint-core", "crates/attestor-core"]
-exclude = ["guests", "guests-plain", "guests-0-3-5"]
+exclude = ["guests", "guests-plain", "guests-0-3-5", "fidelity"]
 
 [workspace.package]
 edition = "2021"
@@ -30,11 +32,4 @@ opt-level = 3
 [profile.dev.package."*"]
 opt-level = 2
 
-# LEZ v0.4.0-rc1 depends on logos-blockchain at d480efc6 by git. Point those crates at the shallow
-# clone of exactly that revision (upstream/logos-blockchain-d480efc6 beside the repository, where
-# lez/ also expects LEZ), so nothing else is
-# fetched and the formats checked are the pinned ones.
-[patch."https://github.com/logos-blockchain/logos-blockchain.git"]
-logos-blockchain-common-http-client = { path = "../../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
-logos-blockchain-core = { path = "../../upstream/logos-blockchain-d480efc6/core" }
-logos-blockchain-zone-sdk = { path = "../../upstream/logos-blockchain-d480efc6/zone-sdk" }
+# The patch of LEZ v0.4.0-rc1's logos-blockchain dependency (d480efc6, by path) moved with fidelity/, its only user.

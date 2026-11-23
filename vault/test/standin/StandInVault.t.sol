@@ -12,7 +12,9 @@ import {StandInBase} from "./StandInBase.sol";
 ///         verifier is the stand-in, at the address, chain id and LEZ configuration that the REAL release proofs of the
 ///         live run crown-live-3 bind (e2e/runs/crown-live-3/crown.json: the vault 0x04eE…e44c on Sepolia). The burn
 ///         root those two proofs are about is accepted here on the stand-in keys' signatures instead of crown-live-3's
-///         checkpoint proof; both releases are then paid with their real Groth16 seals through RISC Zero's verifier.
+///         checkpoint proof; both releases are then paid with their real Groth16 seals through RISC Zero's verifier
+///         (3.1.0: the two releases proven again under RISC Zero 3.1 for the same journals,
+///         test/real/fixtures/crown-live-3-releases.json; the run's own seals are of risc0 3.0.5).
 ///         What is real: the vault, the deposits, the release proofs. What is a stand-in: the burn root's attestation.
 contract StandInVaultTest is StandInBase {
     address internal constant ETH = address(0);
@@ -130,7 +132,8 @@ contract StandInVaultTest is StandInBase {
             burnRoot: vm.parseJsonBytes32(json, string.concat(at, ".burnRoot")),
             nullifier: vm.parseJsonBytes32(json, string.concat(at, ".nullifier"))
         });
-        seal = vm.parseJsonBytes(json, string.concat(at, ".seal"));
+        // The run's release proven again under RISC Zero 3.1, for the same journal (its own seal is of risc0 3.0.5).
+        seal = vm.parseJsonBytes(vm.readFile("test/real/fixtures/crown-live-3-releases.json"), string.concat(at, ".seal"));
     }
 
     function _finalise() internal returns (FerrataVault.Checkpoint memory c) {

@@ -98,7 +98,7 @@ fn cmd_verify(receipt_path: &str, image_id: &str, meta_path: &str) -> Result<()>
     Ok(())
 }
 
-#[cfg(feature = "cuda")]
+#[cfg(any(feature = "cuda", feature = "prove"))]
 mod prove {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -130,16 +130,28 @@ mod prove {
         }
     }
 
-    pub fn cmd_prove(name: &str, program_path: &str, input_path: &str, meta_path: &str, out: &str) -> Result<()> {
+    /// `groth16`: after the succinct receipt, the Groth16 receipt the vault takes, made here as well (identity_p254 and,
+    /// with the `cuda` feature, RISC Zero's CUDA Groth16 prover with the rzup component `risc0-groth16` 0.2.0, the
+    /// trusted setup of RISC Zero 3.1; without it, risc0-groth16's Docker prover image), written as receipt-groth16.bin
+    /// and seal.hex (selector ‖ proof, as `RiscZeroGroth16Verifier.verify` takes it).
+    pub fn cmd_prove(name: &str, program_path: &str, input_path: &str, meta_path: &str, out: &str, groth16: bool) -> Result<()> {
         ensure!(!dev_mode(), "RISC0_DEV_MODE is set: receipts would be fake");
         let program = fs::read(program_path).with_context(|| program_path.to_string())?;
         let input = fs::read(input_path).with_context(|| input_path.to_string())?;
         let want = native_journal(Path::new(meta_path))?;
+        // A checkpoint's input is framed as its guest reads it (a little-endian u32 length, then the bytes); a
+        // release's is written as is (bridge/e2e `job`).
+        let meta: Value = serde_json::from_str(&fs::read_to_string(meta_path)?)?;
+        let framed = meta["kind"].as_str() != Some("release");
         let id = compute_image_id(&program)?;
         println!("[{name}] image id {} (program {} bytes, sha256 {})", image_hex(&id), program.len(), sha256_hex(&program));
 
         let len = u32::try_from(input.len())?.to_le_bytes();
-        let env = ExecutorEnv::builder().write_slice(&len).write_slice(&input).build()?;
+        let mut builder = ExecutorEnv::builder();
+        if framed {
+            builder.write_slice(&len);
+        }
+        let env = builder.write_slice(&input).build()?;
         let start = Instant::now();
         let mut session = ExecutorImpl::from_elf(env, &program)?.run()?;
         let exec_s = start.elapsed().as_secs_f64();
@@ -176,7 +188,7 @@ mod prove {
         let record = json!({
             "name": name, "image_id": image_hex(&id), "program_bytes": program.len(),
             "program_sha256": sha256_hex(&program), "input_bytes": input.len(), "input_sha256": sha256_hex(&input),
-            "risc0_zkvm": risc0_zkvm::VERSION, "prover": "in-process (LocalProver path), risc0-zkvm feature cuda",
+            "risc0_zkvm": risc0_zkvm::VERSION, "prover": if cfg!(feature = "cuda") { "in-process (LocalProver path), risc0-zkvm feature cuda" } else { "in-process (LocalProver path), risc0-zkvm feature prove (CPU)" },
             "receipt_kind": "succinct", "receipt_bytes": bytes.len(), "receipt_sha256": sha256_hex(&bytes),
             "verifies": true, "journal_equals_native": true,
             "segments": s.segments, "user_cycles": s.user_cycles, "total_cycles": s.total_cycles,
@@ -193,6 +205,27 @@ mod prove {
             bytes.len()
         );
         println!("{record}");
+        if groth16 {
+            let t = Instant::now();
+            let wrapped = prover.compress(&ProverOpts::groth16(), &receipt)?;
+            let wrap_s = t.elapsed().as_secs_f64();
+            let g = wrapped.inner.groth16().context("not a Groth16 receipt")?;
+            wrapped.verify(id).context("the Groth16 receipt does not verify against the image id")?;
+            ensure!(wrapped.journal.bytes == receipt.journal.bytes, "the journal changed in the wrap");
+            let seal = [&g.verifier_parameters.as_bytes()[..4], g.seal.as_slice()].concat();
+            ensure!(seal.len() == 260, "seal of {} bytes", seal.len());
+            let gbytes = bincode::serialize(&wrapped)?;
+            fs::write(dir.join("receipt-groth16.bin"), &gbytes)?;
+            fs::write(dir.join("seal.hex"), format!("0x{}\n", hex::encode(&seal)))?;
+            let g16 = json!({
+                "name": name, "image_id": image_hex(&id), "selector": format!("0x{}", hex::encode(&seal[..4])),
+                "seal_bytes": seal.len(), "receipt_bytes": gbytes.len(), "verifies": true,
+                "wrap_s": wrap_s, "prover": if cfg!(feature = "cuda") { "identity_p254 and Groth16 on the GPU (risc0-groth16 cuda)" } else { "identity_p254 on the CPU, Groth16 in RISC Zero's Docker image" },
+            });
+            fs::write(dir.join("groth16.json"), serde_json::to_string_pretty(&g16)? + "\n")?;
+            println!("[{name}] Groth16: {wrap_s:.2} s, selector 0x{}, verifies", hex::encode(&seal[..4]));
+            println!("{g16}");
+        }
         Ok(())
     }
 }
@@ -203,10 +236,10 @@ fn main() -> Result<()> {
     match args.first().map(String::as_str) {
         Some("image-id") => cmd_image_id(&args[1..]),
         Some("verify") => cmd_verify(arg(1)?, arg(2)?, arg(3)?),
-        #[cfg(feature = "cuda")]
-        Some("prove") => prove::cmd_prove(arg(1)?, arg(2)?, arg(3)?, arg(4)?, arg(5)?),
-        #[cfg(not(feature = "cuda"))]
-        Some("prove") => bail!("built without the `cuda` feature: no prover"),
-        _ => bail!("usage: ferrata-modal image-id <program.bin>… | prove <name> <program.bin> <input> <fixture.json> <out-dir> | verify <receipt.bin> <image-id> <fixture.json>"),
+        #[cfg(any(feature = "cuda", feature = "prove"))]
+        Some("prove") => prove::cmd_prove(arg(1)?, arg(2)?, arg(3)?, arg(4)?, arg(5)?, args.get(6).map(String::as_str) == Some("--groth16")),
+        #[cfg(not(any(feature = "cuda", feature = "prove")))]
+        Some("prove") => bail!("built without the `cuda` or `prove` feature: no prover"),
+        _ => bail!("usage: ferrata-modal image-id <program.bin>… | prove <name> <program.bin> <input> <fixture.json> <out-dir> [--groth16] | verify <receipt.bin> <image-id> <fixture.json>"),
     }
 }

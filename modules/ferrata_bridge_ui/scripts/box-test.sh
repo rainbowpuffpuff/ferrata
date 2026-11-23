@@ -32,7 +32,7 @@ rm -f "$out"/{backend-contract.txt,calls.jsonl,calls-summary.jsonl,devnet.log,qm
 mkdir -p "$out/screenshots"
 port=18600
 t0=$(date +%s)
-(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build --quiet) || { echo "FAIL vault build"; exit 1; }
+(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build --quiet) || { echo "FAIL vault build"; exit 1; }
 (cd "$repo/cli" && cargo build --example miniapp_devnet --offline 2>&1 | tail -n 3) || true
 bin="$repo/cli/target/debug/examples/miniapp_devnet"
 [ -x "$bin" ] || { echo "FAIL: no devnet binary"; exit 1; }

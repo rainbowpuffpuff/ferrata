@@ -460,7 +460,7 @@ scripts/fetch-upstream.sh                     # LEZ v0.4.0-rc1, rc2 and rc3 and 
 RISC0_HOME_LEZ=$PWD/../risc0-home-lez scripts/ci/install-risc0.sh    # RISC Zero 3.0.5 and both guest toolchains
 export PATH=$HOME/.risc0/bin:$PATH                                     # r0vm, as rzup installs it
 (cd vault && forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 \
-  risc0/risc0-ethereum@v3.0.0 && FOUNDRY_OFFLINE=false forge build)   # the vault's pinned libraries and solc 0.8.26
+  risc0/risc0-ethereum@v3.1.0 && FOUNDRY_OFFLINE=false forge build)   # the vault's pinned libraries and solc 0.8.26
 # The final programs, rebuilt and compared with docs/image-ids.md (any path gives the same ids):
 scripts/reproduce-image-ids.sh build --out ../tmp/programs && scripts/reproduce-image-ids.sh compare --out ../tmp/programs
 # LEZ's sequencer and the Logos Blockchain node (into ../tmp/crown/live), then the zone's bundle (lez/crown/build.sh):

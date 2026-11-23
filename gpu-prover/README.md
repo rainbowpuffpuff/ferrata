@@ -14,6 +14,29 @@ mainnet-p1899 fixtures); `inputs-lez-attest/` (the prebuilt `prove_attest` and t
 `mainnet-attest-2026-11-10` fixture it reads); and `inputs-lez-bridge/` (the prebuilt `prove_bridge`).
 No personal data is in any of them.
 
+## RISC Zero 3.1 (23 November 2026): `bin-31/`, the Groth16 step on the GPU, `prove_bytes`
+
+Since the move to RISC Zero 3.1 ([migration plan](../docs/design/risc0-3.1-migration.md), phase 1) `prover/` is on
+risc0-zkvm 3.1.0 and `modal_app.py::build` writes to the Volume's `bin-31/` (`bin/` keeps the 3.0.5 builds that runs of
+RISC Zero 3.0.5 read). `ferrata-modal prove … --groth16` also makes the Groth16 receipt the vault takes, on the GPU:
+identity_p254 and RISC Zero's CUDA Groth16 prover, which reads the 3.1 trusted setup from the rzup component
+`risc0-groth16` 0.2.0 (installed in the GPU image; risc0-groth16 3.0.4 read 0.1.0, the setup of 3.0.x); a release's
+input is no longer framed (as `bridge/e2e` writes it). `prove_bytes(program, input, meta, groth16=True)` is the call a
+prover service makes (no Volume inputs, no secret; deploy it in a workspace that holds none, with `bin-31/` built there or
+copied in); `prove_one` is the same from the laptop's files.
+
+Measured on Modal (NVIDIA L4, 23 November 2026; records in `logs/run-b31-*.json`, `logs/bin-meta-31/`):
+
+| What | Result |
+|---|---|
+| build (16 cores): `ferrata-modal-cuda` with `--groth16` | 1,604.9 s, sha256 `8a40a4cd…681b` (the first 3.1 build, without `--groth16`: 1,477.5 s, `cda4450a…08da`) |
+| checkpoint `checkpoint_b`, zone-bridge-2: 12,544,642 cycles, 15 segments | 44.8 s (segments 31.8 s, recursion 12.4 s) |
+| checkpoint `checkpoint_b_0_3_5`, zone-bridge-rc3-2: 18,486,594 cycles, 20 segments | 68.1 s (46.4 s, 20.8 s) |
+| checkpoint `checkpoint_b`, zone-bridge-4: 26,952,174 cycles, 29 segments | 88.9 s (62.8 s, 25.4 s) |
+| release (77,736 cycles, 1 segment) with `--groth16` through `prove_bytes` | STARK 1.2 s, Groth16 11.1 s, selector `0xe71e6620`; 126 s from the laptop's call, the container's start included; the seal verifies on RISC Zero's verifier 3.1.0 (`vault/test/Verifier31.t.sol`, `test_aSealMadeOnTheGpuVerifies`) |
+
+On the build box's CPU (32 threads, r0vm 3.1.0) the same class of checkpoint took 1,522.8 s for 21 segments.
+
 ## What is proven, and with which program
 
 The guests are **not rebuilt** on Modal. The ELFs of the local build embed absolute build paths

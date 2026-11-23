@@ -102,9 +102,9 @@ c_verify_sepolia() {   # the final programs' live run (crown-live-3), then the f
 c_vault() {
   cd vault || return 1
   if [ ! -d lib/risc0-ethereum ]; then
-    echo "== forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0"
+    echo "== forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0"
     forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 \
-      risc0/risc0-ethereum@v3.0.0 || return 1
+      risc0/risc0-ethereum@v3.1.0 || return 1
   fi
   echo "== FOUNDRY_OFFLINE=false forge build"; FOUNDRY_OFFLINE=false forge build || return 1
   echo "== forge test"; forge test

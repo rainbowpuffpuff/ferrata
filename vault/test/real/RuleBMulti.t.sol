@@ -221,6 +221,26 @@ contract RuleBMultiTest is RuleBMultiFixture {
     }
 }
 
+/// @notice The real rule (B) proof on a rule (A) vault with the same genesis and key set: the vault asks for rule (A)'s
+///         program, so the proof of checkpoint_b is refused. (Moved here from RuleBReal.t.sol with the move to RISC Zero
+///         3.1: that suite's fixture is a record of an earlier program, this one was proven again under 3.1.)
+contract RuleBMultiOnRuleAVaultTest is RuleBMultiFixture {
+    /// @dev checkpoint, rule (A), docs/image-ids.md (RISC Zero 3.1).
+    bytes32 internal constant CHECKPOINT_A_IMAGE_ID = 0x7c93425e9b6fedbd0d79092b3a0b6c164b9a6ee250b9e2e89b26a7fadc4497c1;
+
+    function setUp() public {
+        _load();
+        _deploy(FerrataVault.Mode.A, CHECKPOINT_A_IMAGE_ID, _state(keys), 3, 2);
+    }
+
+    function test_ruleB_realProof_refusedByARuleAVault() public {
+        assertTrue(imageId != CHECKPOINT_A_IMAGE_ID);
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vm.expectRevert(VerificationFailed.selector);
+        vault.submitCandidate(c, seal);
+    }
+}
+
 contract RuleBMultiWrongVaultTest is RuleBMultiFixture {
     function setUp() public {
         _load();
@@ -280,6 +300,7 @@ contract RuleBRotationTest is RuleBMultiFixture {
     }
 
     function setUp() public {
+        vm.skip(true, "rule-b-rotation.json is a record of an earlier checkpoint_b under RISC Zero 3.0.5; its input is not recorded, so it was not proven again under 3.1 (test/real/README.md); ZoneBridgeRotationTest proves a rotation under 3.1");
         _load();
         _deploy(FerrataVault.Mode.B, imageId, _state(keys), 3, 2);
     }

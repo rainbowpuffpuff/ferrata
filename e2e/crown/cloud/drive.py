@@ -921,8 +921,8 @@ def wrap(receipt: str, image_id: str, meta: str, work: str, dest: str, log: str)
     journal = "0x" + open(f"{dest}/journal.hex").read().strip().removeprefix("0x")
     if journal[2:] != jload(meta)["journal"].removeprefix("0x"):
         die(f"the wrapped journal of {os.path.basename(meta)} is not the native one")
-    if len(seal) != 2 + 2 * 260 or not seal.startswith("0x73c457ba"):
-        die(f"the seal of {os.path.basename(meta)} is not 260 bytes with selector 0x73c457ba")
+    if len(seal) != 2 + 2 * 260 or not seal.startswith("0xe71e6620"):
+        die(f"the seal of {os.path.basename(meta)} is not 260 bytes with selector 0xe71e6620 (RISC Zero 3.1)")
     return {"journal": journal, "seal": seal}
 
 

@@ -62,7 +62,7 @@ end).
 | | |
 |---|---|
 | core tests | 13 pass (`cargo +1.88 test -p checkpoint-core`): unit tests and the cross-implementation vectors of `ferrata-bridge`, now `../bridge/` (configId, burn leaf/frontier/root, the v1 keySetHash convention, S from parts, journal words 1–12) |
-| fidelity tests | 17 pass (`cargo +1.98.1 test -p fidelity`): 7 format tests against LEZ and Logos Blockchain code, 10 rule tests |
+| fidelity tests | 17 pass (`cd fidelity && cargo +1.98.1 test`; a workspace of its own since RISC Zero 3.1): 7 format tests against LEZ and Logos Blockchain code, 10 rule tests |
 | empty LEZ block | 839 bytes (fee tx 447, clock tx 303); identical size to the empty blocks of LEZ's own sequencer dump |
 | marginal cost per empty block | **6,405 cycles** |
 | marginal cost per KB of block data | **2,684 cycles/KB** |
@@ -78,7 +78,7 @@ end).
 
 ## 1. Fidelity to the real formats
 
-`cargo +1.98.1 test -p fidelity -- --nocapture` (output excerpts):
+`cd fidelity && cargo +1.98.1 test -- --nocapture` (output excerpts; before RISC Zero 3.1: `cargo +1.98.1 test -p fidelity` from `checkpoint/`):
 
 ```
 empty block 2: 839 bytes (fee tx 447 bytes, clock tx 303 bytes)

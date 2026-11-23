@@ -45,7 +45,7 @@ jobs:
           path: |
             ~/.risc0
             ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
       - name: RISC Zero toolchains (rzup)
         run: scripts/ci/install-risc0.sh
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
@@ -62,10 +62,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vault/lib
-          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
       - name: Libraries (the privacy suite's Ethereum half)
         working-directory: vault
-        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
       - name: Build (the harness's and the updater's tests, the guests)
         timeout-minutes: 45
         run: scripts/ci/lez-harness.sh build

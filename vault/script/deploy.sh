@@ -20,7 +20,10 @@
 #   FERRATA_GAS_MARGIN_PCT  the margin, 100..300 (default 125); FERRATA_TX_GAS_CAP  an own lower cap
 #   FERRATA_OUT         the record (default deployments/<chain id>-<mode>.json)
 #   FERRATA_PARAMS      programs, LEZ configuration and LEZ definitions (default script/params/sepolia.json)
-#   FERRATA_GROTH16_VERIFIER  an existing Groth16 verifier to put behind the stop instead of deploying one
+#   FERRATA_GROTH16_VERIFIER  an existing Groth16 verifier to put behind the stop instead of deploying one (it must be
+#                       RISC Zero's 3.1.0: VERSION() "3.1.0", SELECTOR() 0xe71e6620; DeployVault.s.sol refuses another)
+#   FERRATA_EXPECT_VAULT  the vault address the LEZ configuration names (its configId commits to it): the vault's
+#                       creation is refused, nothing sent, unless the deployer's next nonce creates it there
 #   FERRATA_FREEZE_AUTHORITY, FERRATA_FEE_RECIPIENT, FERRATA_WATCHERS (comma-separated, at most 3), FERRATA_DELTA,
 #   FERRATA_REVOKE_WINDOW, FERRATA_MAX_FREEZE, FERRATA_MIN_RELEASE_DELAY, FERRATA_RELEASE_DELAY: the testnet
 #     configuration (defaults: an address nobody holds a key for, the deployer, none, the design's wait for the rule

@@ -39,8 +39,8 @@ mkdir -p "$run"
 
 e2e() { (cd "$repo/bridge" && cargo run --quiet --release -p ferrata-e2e -- "$@"); }
 lez() {
-  (cd "$repo/checkpoint" && XDG_CACHE_HOME="${XDG_CACHE_HOME:-$repo/../tmp/xdg-cache}" \
-    cargo +1.98.1 run --quiet -p fidelity --bin e2e -- "$@")
+  (cd "$repo/checkpoint/fidelity" && XDG_CACHE_HOME="${XDG_CACHE_HOME:-$repo/../tmp/xdg-cache}" \
+    cargo +1.98.1 run --quiet --bin e2e -- "$@")
 }
 image_id() { e2e image-id "$programs/$1.bin" | jq -r .image_id; }
 program_of() { case "$1" in release-*) echo release ;; *) echo checkpoint ;; esac; }

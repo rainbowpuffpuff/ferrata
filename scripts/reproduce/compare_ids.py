@@ -44,10 +44,16 @@ FILES = {"ferrata_lez.bin": "attestation", "ferrata_bridge.bin": "bridge", "chec
          "checkpoint.bin": "checkpoint", "segment.bin": "segment", "release.bin": "release"}
 METHODS = {"CHECKPOINT_B_ID": "checkpoint_b", "CHECKPOINT_ID": "checkpoint", "SEGMENT_ID": "segment",
            "RELEASE_ID": "release"}
-# Guests whose source changed after the live runs: the docs/image-ids.md entry this tree builds, where it is not the
-# guest's own name (that one is the program the live deployments keep, which rebuilds from f13faee2).
+# Guests whose source or toolchain changed after the live runs: the docs/image-ids.md entry this tree builds, where it is
+# not the guest's own name (that one is the program the live deployments keep): the bridge program since milestone B1
+# (its first-table row rebuilds from f13faee2), and the Ethereum-side guests since RISC Zero 3.1 (risc0-zkvm 3.1.0,
+# docs/design/risc0-3.1-migration.md; their first-table rows rebuild from 3d984678, the tree before the move).
 TREE_ENTRY = {"ferrata_bridge": "ferrata_bridge_b1"}
-GUEST_OF = {"attestation": "ferrata_lez", "bridge": "ferrata_bridge"}  # the crown run's roles that are LEZ guests
+TREE_ENTRY.update({g: g + "_31" for g in ("checkpoint", "checkpoint_b", "checkpoint_0_3_5", "checkpoint_b_0_3_5",
+                                          "segment", "micro", "release", "claim", "gasdrop")})
+TREE_FROM = {"ferrata_bridge_b1": "f13faee2, the tree before B1"}
+GUEST_OF = {"attestation": "ferrata_lez", "bridge": "ferrata_bridge", "checkpoint_b": "checkpoint_b",
+            "checkpoint": "checkpoint", "segment": "segment", "release": "release"}  # the crown run's roles: guests
 
 
 def read_vault(rpc, vault: str):
@@ -159,7 +165,8 @@ def main() -> int:
         if entry:
             changed.append((k, ok))
             print(f"       {k}: this tree builds docs/image-ids.md's `{entry}` ({'= rebuilt' if want == r else want}); "
-                  f"the crown run's ({t}) rebuilds from f13faee2, the tree before B1")
+                  f"the crown run's ({t}) rebuilds from "
+                  f"{TREE_FROM.get(entry, '3d984678, the tree before RISC Zero 3.1')}")
     print(f"{crown_same} of {len(ORDER)} ids of the crown run's programs equal the recorded ones"
           + "".join(f"; {k}: this tree's own (docs/image-ids.md), {'equal' if ok else 'DIFFERS'}" for k, ok in changed)
           + ("" if not a.vault else " and the vault's immutables" if onchain else "; the vault was NOT read"))

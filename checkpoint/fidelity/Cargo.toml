@@ -33,3 +33,25 @@ sha2 = "0.10"
 # ci_zone (CI's round trip): rule (B) certificates and attestations, as host's gen-b makes them.
 attestor-core = { path = "../crates/attestor-core" }
 ed25519-dalek = { version = "2.2.0", default-features = false }
+
+# A workspace of its own since the move to RISC Zero 3.1 (docs/design/risc0-3.1-migration.md): LEZ v0.4.0-rc1's `lee`
+# pins risc0-zkos-v1compat =2.2.2 (risc0 3.0.5), while checkpoint/'s hosts use risc0-zkvm 3.1.0, which needs ^2.2.3, and
+# one lockfile cannot hold both. This crate only runs checkpoint-core natively (no guest, no proof), so its lockfile
+# keeps LEZ's versions until LEZ moves (phase 2). Its target directory stays checkpoint/target (.cargo/config.toml).
+[workspace]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+
+[profile.release]
+opt-level = 3
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[patch."https://github.com/logos-blockchain/logos-blockchain.git"]
+logos-blockchain-common-http-client = { path = "../../../upstream/logos-blockchain-d480efc6/nodes/node/http-client" }
+logos-blockchain-core = { path = "../../../upstream/logos-blockchain-d480efc6/core" }
+logos-blockchain-zone-sdk = { path = "../../../upstream/logos-blockchain-d480efc6/zone-sdk" }

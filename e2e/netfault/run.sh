@@ -51,9 +51,9 @@ J="$(cast abi-encode 'f(bytes32,uint256,address,bytes32,(uint32,uint32,bytes32,b
 jq -n --arg v "$VAULT" --argjson cid "$cid" --arg c0 "$(h 'netfault c0')" --arg c1 "$(h 'netfault c1')" --arg j "$J" \
   --arg br "$BR" --arg n0 "$(h 'netfault n0')" --arg n1 "$(h 'netfault n1')" --arg to "$deployer" '{chainId: $cid,
   vault: $v, deposits: [{j: 0, denomIndex: 0, commitment: $c0}, {j: 1, denomIndex: 0, commitment: $c1}],
-  candidate: {journal: $j, seal: "0x73c457ba"}, releases: [range(2) as $i | {token: "0x0000000000000000000000000000000000000000",
+  candidate: {journal: $j, seal: "0xe71e6620"}, releases: [range(2) as $i | {token: "0x0000000000000000000000000000000000000000",
   denomIndex: 0, recipient: $to, relayer: "0x0000000000000000000000000000000000000000", relayFee: "0", burnRoot: $br,
-  nullifier: (if $i == 0 then $n0 else $n1 end), seal: "0x73c457ba"}]}' > "$run/crown.json"
+  nullifier: (if $i == 0 then $n0 else $n1 end), seal: "0xe71e6620"}]}' > "$run/crown.json"
 
 # sepolia.sh through the three bad endpoints; the first is "the Secret's".
 export SEPOLIA_RPC_URL="http://127.0.0.1:${P[0]}"

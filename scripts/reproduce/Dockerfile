@@ -33,14 +33,14 @@ RUN curl --proto '=https' --tlsv1.2 -sSfL -o /root/rustup-init \
     && /root/rustup-init -y --no-modify-path --profile minimal --default-toolchain 1.93.0 --component rustfmt,clippy \
     && rm /root/rustup-init && rustup toolchain install 1.98.1 1.88 --profile minimal && rustup toolchain list
 
-# RISC Zero's toolchains, in two homes.
+# RISC Zero's toolchains, in two homes: 3.1.0 for bridge/ and checkpoint/ (risc0-zkvm 3.1.0), 3.0.5 for lez/ (LEZ's).
 RUN cargo install rzup --version 0.5.2 --locked && rm -rf $CARGO_HOME/registry $CARGO_HOME/git \
-    && for h in $HOME/.risc0 $RISC0_HOME_LEZ; do \
-         RISC0_HOME=$h rzup install cargo-risczero 3.0.5 && (RISC0_HOME=$h rzup install r0vm 3.0.5 || true) \
+    && for hv in $HOME/.risc0:3.1.0 $RISC0_HOME_LEZ:3.0.5; do h=${hv%:*}; v=${hv##*:}; \
+         RISC0_HOME=$h rzup install cargo-risczero $v && (RISC0_HOME=$h rzup install r0vm $v || true) \
          && RISC0_HOME=$h rzup install cpp 2024.1.5 || exit 1; done \
     && rzup install rust 1.88.0 && RISC0_HOME=$RISC0_HOME_LEZ rzup install rust 1.91.1 \
     && rzup show && RISC0_HOME=$RISC0_HOME_LEZ rzup show \
-    && { r0vm --version | grep 3.0.5 && cargo risczero --version || { find $HOME/.risc0 -maxdepth 3; exit 1; }; }
+    && { r0vm --version | grep 3.1.0 && cargo risczero --version || { find $HOME/.risc0 -maxdepth 3; exit 1; }; }
 
 # Foundry, then solc fetched once by forge (vault/foundry.toml keeps forge offline) and checked.
 RUN mkdir -p $FOUNDRY_DIR/bin && cd $FOUNDRY_DIR && curl -sSfL -o foundry.tar.gz \

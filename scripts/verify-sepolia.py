@@ -522,6 +522,15 @@ def main() -> int:
             if "checkpoint_0_3_5" in final:
                 final["checkpoint"] = final["checkpoint_0_3_5"]
             out += "; the second build of the checkpoint guests (zones on Logos Blockchain 0.3.5-rc.1)"
+        # A run of the Ethereum-side programs of RISC Zero 3.1 (docs/image-ids.md, "RISC Zero 3.1"; the vaults deployed
+        # after the move, docs/design/risc0-3.1-migration.md): its checkpoint, checkpoint_b, segment and release are
+        # compared with the `*_31` rows (the 0.3.5-rc.1 layout's checkpoint guests if its checkpoint_b is that build's).
+        if ids.get("release") is not None and ids.get("release") == final.get("release_31"):
+            layout = "_0_3_5" if ids.get("checkpoint_b") == final.get("checkpoint_b_0_3_5_31") else ""
+            final = {**final, **{k: final[f"{k}{layout if k.startswith('checkpoint') else ''}_31"]
+                                 for k in ("checkpoint_b", "checkpoint", "segment", "release")
+                                 if f"{k}{layout if k.startswith('checkpoint') else ''}_31" in final}}
+            out += "; the RISC Zero 3.1 programs" + (" (zones on Logos Blockchain 0.3.5-rc.1)" if layout else "")
         # A run of the bridge program since milestone B1 (docs/image-ids.md, "The bridge program since milestone B1"):
         # its bridge is compared with that row, the other programs with the final ones.
         if ids.get("bridge") is not None and ids.get("bridge") == final.get(B1_BRIDGE):

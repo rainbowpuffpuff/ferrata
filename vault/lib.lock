@@ -4,4 +4,4 @@
 # from these trees. The same three hashes from three separate installs on 22 November 2026.
 forge-std               foundry-rs/forge-std@v1.10.0                  ddb80f51bf3ae961da3520a409f99a22286c9b0e93bae5d66664ba482768a9e5
 openzeppelin-contracts  OpenZeppelin/openzeppelin-contracts@v5.4.0    1059160495f67b1c74bce2cecaa0018c7686d16e0203e68f2d14af928e65c77d
-risc0-ethereum          risc0/risc0-ethereum@v3.0.0                   cb57bd080343fe5af294cbcc8ec25a124ad00eea92b2ae1e453e671723f497ed
+risc0-ethereum          risc0/risc0-ethereum@v3.1.0                   4d9296b0ef5411b786bb147191ba40b9386c40745448d83ea29f90fa41cf7b1a

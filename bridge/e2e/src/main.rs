@@ -23,7 +23,7 @@
 //! ferrata-e2e verify --receipt <bin> --image-id <0x…> --meta <file.json>
 //! ferrata-e2e p254 --receipt <succinct.bin> --image-id <0x…> --out-dir <dir>
 //!     first step of the Groth16 wrap: identity_p254 in r0vm, then <dir>/input.json for RISC Zero's
-//!     Groth16 prover image (`docker run --rm -v <dir>:/mnt risczero/risc0-groth16-prover:v2025-04-03.1`
+//!     Groth16 prover image (`docker run --rm -v <dir>:/mnt risczero/risc0-groth16-prover:v2026-10-20.1`
 //!     writes <dir>/proof.json)
 //! ferrata-e2e groth16 --receipt <succinct.bin> --image-id <0x…> --proof <proof.json> --out-dir <dir>
 //!     second step: the Groth16 receipt from proof.json, verified; writes receipt-groth16.bin,

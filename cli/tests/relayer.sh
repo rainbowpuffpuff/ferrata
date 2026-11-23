@@ -21,7 +21,7 @@ FERRATA_RELAYER_FORK=1 FERRATA_RELAYER_RESULTS="${FERRATA_RELAYER_RESULTS:-$here
 # The devnet harness with the relayer (cli/tests/e2e.rs with FERRATA_GASDROP_ELF): a real gas-drop receipt
 # for a deposit of the local vault, checked against the zone; the claim naming the relayer; a paid release.
 cd "$here/../vault"
-[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
+[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0
 forge build --quiet
 # (find fails when bridge/target does not exist yet: a fresh checkout builds it below.)
 elf="$(find "$here/../bridge/target" -path '*riscv32im-risc0-zkvm-elf/release/gasdrop.bin' 2>/dev/null | head -1 || true)"

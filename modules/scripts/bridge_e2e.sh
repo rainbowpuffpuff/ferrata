@@ -79,7 +79,7 @@ printf 'name\tmethod\tseconds\n' > "$out/timings.tsv"
 echo "call mode: $CALL; Ethereum read via: $ETH_VIA" > "$out/mode.txt"
 
 # The devnet: the vault built, the backend built and started.
-(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build --quiet)
+(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build --quiet)
 (cd "$repo/cli" && cargo build --example miniapp_devnet 2>&1 | tail -n 2)
 FERRATA_DEVNET_DIR="$out/devnet" FERRATA_DEVNET_PORT=$PORT FERRATA_DEVNET_ANVIL_PORT=$ANVIL_PORT \
   "$repo/cli/target/debug/examples/miniapp_devnet" > "$out/devnet.log" 2>&1 &

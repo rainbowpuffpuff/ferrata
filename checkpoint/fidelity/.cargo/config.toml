@@ -1,0 +1,4 @@
+# checkpoint/fidelity is a workspace of its own (Cargo.toml); its builds stay in checkpoint/target, where the
+# scripts that run it (e2e/run.sh, e2e/ci/run.sh, e2e/cloud/app.py) find them.
+[build]
+target-dir = "../target"

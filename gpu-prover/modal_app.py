@@ -34,8 +34,8 @@ GPU = os.environ.get("FERRATA_GPU", "L4")  # NVIDIA L4 (FERRATA_GPU=L40S: the fa
 NVCC_APPEND_FLAGS = "--generate-code arch=compute_89,code=sm_89"
 # The CUDA toolkit image RISC Zero's own GPU prover agent (bento) is built on at the v3.0.5 tag.
 CUDA_BASE = "nvidia/cuda:12.8.0-devel-ubuntu24.04"
-RUST_TOOLCHAIN = "1.89.0"  # risc0 v3.0.5 rust-toolchain.toml: channel = "1.89"
-R0VM_VERSION = "=3.0.5"  # crates.io risc0-r0vm 3.0.5; its packaged Cargo.lock = the v3.0.5 tag's versions
+RUST_TOOLCHAIN = "1.93.0"  # since RISC Zero 3.1 (risc0-zkvm 3.1.0); before: risc0 v3.0.5 rust-toolchain.toml, channel = "1.89"
+R0VM_VERSION = "=3.1.0"  # crates.io risc0-r0vm 3.1.0 (since RISC Zero 3.1; before 3.0.5)
 CPU_CORES = 4.0  # physical cores (8 vCPUs) next to the GPU, like a one-L4 cloud VM
 MEMORY_MIB = 32768
 BUILD_CPU_CORES = 16.0
@@ -67,7 +67,9 @@ LEZ_JOBS = {
 
 HERE = pathlib.Path(__file__).resolve().parent
 PATH = "/root/.cargo/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
-BIN = "/vol/bin"  # built binaries on the Volume
+# Built binaries on the Volume: bin-31/ since RISC Zero 3.1 (risc0-zkvm 3.1.0). bin/ keeps the 3.0.5 builds, which
+# e2e/crown/cloud/app.py reads for the receipts of RISC Zero 3.0.5 runs.
+BIN = "/vol/bin-31"
 
 base = (
     modal.Image.from_registry(CUDA_BASE, add_python="3.12")
@@ -89,8 +91,11 @@ build_image = base.add_local_dir(HERE / "prover", "/src/prover", ignore=["target
 # FERRATA_INPUTS: another staged inputs directory (programs/, fixtures/, MANIFEST.json), for example
 # the one `e2e/run.sh stage-gpu <run>` writes; the default is the one scripts/stage-inputs.sh fills.
 INPUTS = pathlib.Path(os.environ.get("FERRATA_INPUTS") or HERE / "inputs")
+# The Groth16 step on the GPU (`prove ... --groth16`): risc0-groth16 3.0.6's CUDA prover reads RISC Zero 3.1's trusted
+# setup from the rzup component `risc0-groth16` 0.2.0 (3.0.4's read 0.1.0: the setup of 3.0.x).
 gpu_image = (
-    base.add_local_dir(INPUTS, "/inputs")
+    base.run_commands("curl -L https://risczero.com/install | bash", "/root/.risc0/bin/rzup install risc0-groth16 0.2.0")
+    .add_local_dir(INPUTS, "/inputs")
     .add_local_dir(HERE / "inputs-lez", "/lez")
     .add_local_dir(HERE / "inputs-lez-attest", "/lez-attest")
     .add_local_dir(HERE / "inputs-lez-bridge", "/lez-bridge")
@@ -290,9 +295,11 @@ def _finish(out_dir: str, run: str, record: dict, summary_keys: tuple[str, ...])
     return record
 
 
-def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
-    """Succinct proof of one ferrata-checkpoint fixture. Writes receipt-succinct.bin, journal.hex,
-    prove.json, run.json, prover.log, gpu-samples.csv and nvidia-smi.txt to results/<run>/<name>/."""
+def _prove_checkpoint(name: str, run: str, limit_s: int, groth16: bool = False) -> dict:
+    """Succinct proof of one ferrata-checkpoint fixture (or a release: the fixture's `kind` names the program). Writes
+    receipt-succinct.bin, journal.hex, prove.json, run.json, prover.log, gpu-samples.csv and nvidia-smi.txt to
+    results/<run>/<name>/; with `groth16`, also the Groth16 receipt made on the GPU (receipt-groth16.bin, seal.hex,
+    groth16.json)."""
     import os
     import subprocess
     import threading
@@ -318,6 +325,8 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
 
     sampler = _GpuSampler(f"{out}/gpu-samples.csv")
     cmd = ["/usr/bin/time", "-v", prover, "prove", name, program, f"/inputs/fixtures/{name}.input", f"/inputs/fixtures/{name}.json", out]
+    if groth16:
+        cmd.append("--groth16")
     env = {**os.environ, "RUST_BACKTRACE": "1"}
     env.pop("RISC0_DEV_MODE", None)
     t0 = time.time()
@@ -349,6 +358,7 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
         "prover_wall_s": t_end - t0, "container_s_until_done": t_end - t_start,
         "gnu_time": _gnu_time(lines), "gpu_stats": sampler.stats(t_exec_end, t_end), "gpu_stats_window": "execution end to prover exit",
         "prove": prove_json, "build_info": json.load(open(f"{BIN}/ferrata-modal-cuda.json")),
+        "groth16": json.load(open(f"{out}/groth16.json")) if groth16 and rc == 0 and os.path.exists(f"{out}/groth16.json") else None,
         "prover_binary_sha256_here": _sha256(prover),
         "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -439,8 +449,47 @@ GPU_FUNCTION = dict(image=gpu_image, gpu=GPU, cpu=CPU_CORES, memory=MEMORY_MIB, 
 
 
 @app.function(**GPU_FUNCTION)
-def prove(name: str, run: str, limit_s: int) -> dict:
-    return _prove_checkpoint(name, run, limit_s)
+def prove(name: str, run: str, limit_s: int, groth16: bool = False) -> dict:
+    return _prove_checkpoint(name, run, limit_s, groth16)
+
+
+@app.function(**GPU_FUNCTION)
+def prove_bytes(program: bytes, input_bytes: bytes, meta: dict, limit_s: int = 1800, groth16: bool = True) -> dict:
+    """A prover service's call (RISC Zero 3.1): one proof of `program` (an R0BF guest binary, docs/image-ids.md `*_31`)
+    on `input_bytes` (a checkpoint input as its guest reads it, or a release input as the CLI's `--input-out` writes
+    it), held to `meta["journal"]` (hex; `meta["kind"]` is "checkpoint-b", "checkpoint" or "release"), on the GPU;
+    with `groth16`, the Groth16 receipt too, also on the GPU. Returns the image id, the journal and the 260-byte seal
+    the vault takes (`seal_hex`), with the prover's records; nothing is kept on the Volume. Needs no secret: deploy
+    it in a workspace that holds none, with bin-31/ of the Volume `ferrata-prover` built there or copied in."""
+    import subprocess
+    import tempfile
+    import threading
+
+    work = tempfile.mkdtemp(prefix="prove-")
+    for name, data in (("program.bin", program), ("input.bin", input_bytes)):
+        with open(f"{work}/{name}", "wb") as f:
+            f.write(data)
+    with open(f"{work}/meta.json", "w") as f:
+        json.dump(meta, f)
+    prover = _local_copy(f"{BIN}/ferrata-modal-cuda", "/root/bin/ferrata-modal-cuda")
+    cmd = [prover, "prove", meta.get("name", "job"), f"{work}/program.bin", f"{work}/input.bin", f"{work}/meta.json",
+           f"{work}/out"] + (["--groth16"] if groth16 else [])
+    env = {**os.environ, "RUST_BACKTRACE": "1"}
+    env.pop("RISC0_DEV_MODE", None)
+    t0 = time.time()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    killer = threading.Timer(limit_s, proc.kill)
+    killer.start()
+    log = proc.stdout.read()
+    rc = proc.wait()
+    killer.cancel()
+    out = f"{work}/out"
+    read = lambda n: open(f"{out}/{n}").read().strip() if os.path.exists(f"{out}/{n}") else None
+    return {"ok": rc == 0 and (read("seal.hex") is not None or not groth16), "exit_code": rc, "wall_s": time.time() - t0,
+            "seal_hex": read("seal.hex"), "journal_hex": read("journal.hex"),
+            "prove": json.loads(read("prove.json") or "null"), "groth16": json.loads(read("groth16.json") or "null"),
+            "gpu": _sh("nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"),
+            "build_info": json.load(open(f"{BIN}/ferrata-modal-cuda.json")), "log": log[-4000:]}
 
 
 @app.function(**GPU_FUNCTION)
@@ -449,13 +498,13 @@ def prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
 
 
 @app.function(**GPU_FUNCTION)
-def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
+def batch(jobs: list[str], run: str, limits: dict, groth16: bool = False) -> list[dict]:
     """Several proofs one after another in one GPU container, each in its own process with its own
     time limit, so the queue for an L4 is waited for once. A failed job does not stop the next."""
     records = []
     for job in jobs:
         try:
-            r = _prove_lez(run, limits[job], job) if job in LEZ_JOBS else _prove_checkpoint(job, run, limits[job])
+            r = _prove_lez(run, limits[job], job) if job in LEZ_JOBS else _prove_checkpoint(job, run, limits[job], groth16)
         except Exception as e:  # recorded, then the next job
             r = {"ok": False, "name": job, "run": run, "error": repr(e)}
         records.append(r)
@@ -464,20 +513,23 @@ def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
 
 
 @app.local_entrypoint()
-def batch_run(jobs: str, run: str = ""):
-    """`--jobs name=limit_s,…` (fixture names, `lez-update` or `lez-attest`), proven in this order in one container."""
+def batch_run(jobs: str, run: str = "", groth16: bool = False):
+    """`--jobs name=limit_s,…` (fixture names, `lez-update` or `lez-attest`), proven in this order in one container;
+    `--groth16`: each fixture's Groth16 receipt too, on the GPU."""
     run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     pairs = [j.split("=") for j in jobs.split(",") if j]
     limits = {name: int(limit) for name, limit in pairs}
     assert sum(limits.values()) < HARD_TIMEOUT_S - 300, "the limits must fit in the function's hard timeout"
     t0 = time.time()
-    records = batch.remote([name for name, _ in pairs], run, limits)
+    records = batch.remote([name for name, _ in pairs], run, limits, groth16)
     (HERE / "logs").mkdir(exist_ok=True)
     for r in records:
         r["client_round_trip_s_of_batch"] = time.time() - t0
         (HERE / "logs" / f"run-{run}-{r['name']}.json").write_text(json.dumps(r, indent=2) + "\n")
         p = r.get("prove") or {}
-        print(f"RESULT {r['name']}: ok={r.get('ok')} total_s={p.get('total_s', r.get('wall_s'))} segments={p.get('segments')} error={r.get('error')}")
+        g = r.get("groth16") or {}
+        print(f"RESULT {r['name']}: ok={r.get('ok')} total_s={p.get('total_s', r.get('wall_s'))} segments={p.get('segments')} "
+              f"groth16_s={g.get('wrap_s')} selector={g.get('selector')} error={r.get('error')}")
 
 
 @app.local_entrypoint()
@@ -520,3 +572,26 @@ def lez(run: str = "", limit_s: int = 3600, job: str = "lez-update"):
     (HERE / "logs").mkdir(exist_ok=True)
     (HERE / "logs" / f"run-{run}-{job}.json").write_text(json.dumps(record, indent=2) + "\n")
     print(f"RESULT {job}: ok={record['ok']} wall_s={record['wall_s']:.1f} gpu={record['gpu']} tx_bytes={record['tx_bytes']}")
+
+
+@app.local_entrypoint()
+def prove_one(program: str, input: str, meta: str, out: str = "", groth16: bool = True, limit_s: int = 1800):
+    """`prove_bytes` on local files (a check of the prover service's call): writes OUT/{seal.hex, journal.hex,
+    result.json} when --out is given."""
+    t0 = time.time()
+    r = prove_bytes.remote(pathlib.Path(program).read_bytes(), pathlib.Path(input).read_bytes(),
+                           json.loads(pathlib.Path(meta).read_text()), limit_s, groth16)
+    r["client_round_trip_s"] = time.time() - t0
+    if out:
+        o = pathlib.Path(out)
+        o.mkdir(parents=True, exist_ok=True)
+        for k, n in (("seal_hex", "seal.hex"), ("journal_hex", "journal.hex")):
+            if r.get(k):
+                (o / n).write_text(r[k] + "\n")
+        (o / "result.json").write_text(json.dumps({k: v for k, v in r.items() if k != "log"}, indent=2) + "\n")
+    p, g = r.get("prove") or {}, r.get("groth16") or {}
+    print(f"RESULT ok={r['ok']} gpu={r['gpu']} segments={p.get('segments')} stark_s={p.get('total_s')} "
+          f"groth16_s={g.get('wrap_s')} selector={g.get('selector')} round_trip_s={r['client_round_trip_s']:.1f}")
+    if not r["ok"]:
+        print(r["log"][-2000:])
+        raise SystemExit(1)

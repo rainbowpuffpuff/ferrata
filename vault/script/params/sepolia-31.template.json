@@ -1,0 +1,23 @@
+{
+  "_source": "Template for vault/script/deploy_sepolia.py (RISC Zero 3.1 programs of docs/image-ids.md). Fill from the LEZ side: lezConfig, the bridge program's configuration on the zone (its fields as the bridge's Init took them; vault = the address --expect-vault gives, evmChainId 11155111), and lezConfigId, its hash (ferrata-bridge-core encoding.rs: the tool recomputes it and refuses any other); genesisState, the zone's state at the tip the vault starts from (rule (B): the state over the zone's channel keys); nMin and tMin the zone's key set and threshold; checkpointImageIdB the checkpoint_b of the zone's Logos Blockchain layout (d480efc6: 0xdafa6ab9..., 0.3.5-rc.1 as LEZ v0.4.0-rc3 pins: 0x8917f58e...). The LEZ definitions are write-once at registration: set them to the LEZ side's token definition accounts.",
+  "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
+  "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+  "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "lezConfigId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "lezConfig": {
+    "bedrockGenesisId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "channelId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "bridgeHeader": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "bridgeImageId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "evmChainId": 11155111,
+    "vault": "0x0000000000000000000000000000000000000000",
+    "attestationRootId": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "salt": "0x0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "genesisState": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}

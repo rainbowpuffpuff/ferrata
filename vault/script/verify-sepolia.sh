@@ -38,7 +38,8 @@ call() { cast call "$@" "${rpc[@]}"; }
 check "vault.verifier is the emergency stop" "$(call "$vault" 'verifier()(address)' | lower)" "$(echo "$estop" | lower)"
 check "the stop wraps the Groth16 verifier" "$(call "$estop" 'verifier()(address)' | lower)" "$(echo "$groth16" | lower)"
 check "the stop is not paused" "$(call "$estop" 'paused()(bool)')" false
-check "Groth16 verifier selector" "$(call "$groth16" 'SELECTOR()(bytes4)')" 0x73c457ba
+# The Groth16 verifier behind the stop: 3.1.0, or 3.0.0 only with the vault's caps at zero (script/check-verifier.sh).
+script/check-verifier.sh "$vault" "$SEPOLIA_RPC_URL" || fail=1
 check "checkpointImageId" "$(call "$vault" 'checkpointImageId()(bytes32)')" "$(f .checkpointImageId)"
 check "releaseImageId" "$(call "$vault" 'releaseImageId()(bytes32)')" "$(f .releaseImageId)"
 check "lezConfigId" "$(call "$vault" 'lezConfigId()(bytes32)')" "$(f .lezConfigId)"

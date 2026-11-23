@@ -4,8 +4,10 @@
 # Two groups, because they differ in what they publish, and a read-only check:
 #
 #   script/sourcify.sh risc0     RiscZeroGroth16Verifier and RiscZeroVerifierEmergencyStop. Every file
-#                                sent is public already: risc0-ethereum v3.0.0 and the OpenZeppelin
-#                                v5.2.0 it pins (lib/risc0-ethereum/...).
+#                                sent is public already: risc0-ethereum as lib.lock pins it (v3.1.0
+#                                since 23 November 2026; a vault of November 2026 was deployed from
+#                                v3.0.0, whose tree must be installed in lib/ to match it) and the
+#                                OpenZeppelin v5.2.0 it pins (lib/risc0-ethereum/...).
 #   script/sourcify.sh vault     FerrataRegistry (the library the vault is linked to), FerrataVault and
 #                                the test token. This publishes files of THIS repository:
 #                                    src/FerrataVault.sol

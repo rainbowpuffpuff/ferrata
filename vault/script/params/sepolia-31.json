@@ -1,0 +1,23 @@
+{
+  "_source": "ferrata-testnet (AWS): LEZ v0.4.0-rc3 on Logos Blockchain 0.3.5-rc.1, one sequencer. lezConfig is the bridge program's configuration on that zone for the vault the deployer's nonce 57 gives (crown-driver config-id, bridge B1 0x847a4336..., attestation instance c741a1f1...); genesisState the rule (B) state at T0 = block 1225 (final on Bedrock) over the channel's one key; LEZ definitions zero: this bridge keeps the balances itself (bridge-wire TokenEntry, the M0 fallback) and registers ETH with a zero definition. From sepolia-31.template.json.",
+  "checkpointImageIdA": "0x9140ec7479debc9b40529b0805095d4cfdef93a1e0500c6687a1d7ec4d7c42de",
+  "checkpointImageIdB": "0x8917f58e76aa805dedc04fc5e2b70404f5078b66b271ec44aaa0c78d9f5eaf04",
+  "releaseImageId": "0xf279af414a8beef160a5a58cef741eba0269b7635a0ccc3d5d22e3c5d771a6fd",
+  "lezConfigId": "0x3773b58836d2fa242e16b3eb580a15630de2a437218a432f52e5b01152ae67cd",
+  "lezConfig": {
+    "bedrockGenesisId": "0xc025c6d2ea30f6338c463b115af83f926ed1211dbfcad685a96a5384513558ac",
+    "channelId": "0x0101010101010101010101010101010101010101010101010101010101010101",
+    "bridgeHeader": "0x1f2e94ffdf25a3feca4e0750be66700be3812434c8cf53e0eb301bc493336195",
+    "bridgeImageId": "0x847a4336c202269dbc1f46f67e469186e258a185839ed3ce61425ef99ca17515",
+    "evmChainId": 11155111,
+    "vault": "0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787",
+    "attestationRootId": "0xca54f36b4eb9ed21e29195b495d651a64d2f6f3e9c63873ab12f7451a371ef7a",
+    "salt": "0x4a7e86f4078f8150fb03a3afa623b8d3d8e48c74acfaba53a8b431086c051402"
+  },
+  "genesisState": "0x047254fe6ba9689b4b5ea8b971aafdd0063ccc146f20fd9897df8751643a1450",
+  "nMin": 1,
+  "tMin": 1,
+  "postingTimeframe": 0,
+  "ethLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000",
+  "tokenLezDefinition": "0x0000000000000000000000000000000000000000000000000000000000000000"
+}
