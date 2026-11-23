@@ -29,18 +29,19 @@
 //! in a block not yet final is waited for, one in no block yet is sent again byte for byte (same hash and nonce: LEZ
 //! applies it at most once), unless its window has ended or is about to (then nothing is sent, and the journal of a
 //! command nothing of which was applied is cleared); one whose nonce another transaction took is reported not applied.
-//! Run again after it finished (or after the sequencer refused a submission, which ends a run), it reports what the
-//! earlier run did and sends nothing (`--again` sends a new one). One run at a time holds a state directory (its file
-//! `lock`); the follower's state and the journals are written whole or not at all, the directory synced. An Ethereum
-//! endpoint that fails is retried (`--eth-retries`, each request bounded by `--eth-timeout`), then reported with nothing
-//! sent.
+//! Run again after it finished (or after the sequencer turned a first submission away, which ends a run; a resend
+//! turned away leaves it unfinished, as the earlier copy may still be pending), it reports what the earlier run did and
+//! sends nothing (`--again` sends a new one). One run at a time holds a state directory (its file `lock`); the
+//! follower's state and the journals are written whole or not at all, the directory synced. An Ethereum endpoint that
+//! fails is retried (`--eth-retries`, each request bounded by `--eth-timeout`), then reported with nothing sent.
 //!
 //! **A stale checkpoint (RFP-021 U.5).** LEZ refuses a transaction executed outside the timestamp validity window its
 //! program gave it with its own text ("Execution outside of the validity window"). `Init` and `Open` carry the window
 //! that ends with the weak-subjectivity period of the checkpoint (for `Open`, the instance's newest finalized header);
 //! past that end, the tool shows the refusal as code 53's message, naming the checkpoint, the time its period ended
 //! and the remedy (a new instance from a recent bootstrap), and sends no step whose window has ended, ends within a
-//! minute of the zone's clock (its newest block's time; the dry run is made at that time) or has not opened yet. A
+//! minute of the clock that judges it (the later of the zone's newest block's time and this machine's clock,
+//! `FERRATA_ATTEST_CLOCK_MS` in tests), or has not opened yet by the dry run (made at the zone's clock, plus 10 s). A
 //! window not yet open is LEZ's text as it is, with the window's start.
 
 #![allow(clippy::too_many_arguments)]
@@ -54,7 +55,7 @@ mod plan;
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{anyhow, bail, ensure, Context as _, Result};
 use chain_state::apply::{opening_fee_state, settle_transaction};
@@ -208,14 +209,40 @@ pub fn window_refusal(
 /// sequencer's block interval, a retry), as `ferrata-updater`'s `WINDOW_MARGIN_MS`.
 pub const WINDOW_MARGIN_MS: u64 = 60_000;
 
-/// Whether a step with `window` may be sent when the zone's clock (its head block's time, or the followed tip's if
-/// later) is `now_ms`: `Err` when the window has ended (code 53's message) or ends within [`WINDOW_MARGIN_MS`] (a
+/// This machine's clock, Unix milliseconds: `FERRATA_ATTEST_CLOCK_MS` when set (rehearsals and tests; `0` leaves the
+/// zone's clock alone), else the system clock.
+fn machine_ms() -> u64 {
+    match std::env::var("FERRATA_ATTEST_CLOCK_MS") {
+        Ok(v) => v.trim().parse().unwrap_or(0),
+        Err(_) => SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64),
+    }
+}
+
+/// The time a window's end is judged at, and what that time is: the later of the zone's clock (its newest block's time)
+/// and this machine's, as `ferrata-updater` judges its windows. A zone that has stamped no block since a window ended
+/// (a sequencer back from a stall, before its first new block) is caught by this machine's clock; a skew is covered by
+/// the [`WINDOW_MARGIN_MS`] margin. A window's start is judged at the zone's clock only: a machine ahead of the zone
+/// must not send a step the zone's next block would refuse.
+fn end_clock(zone_ms: u64) -> (u64, &'static str) {
+    let machine = machine_ms();
+    if machine > zone_ms {
+        (machine, "this machine's clock (the zone has stamped no later block)")
+    } else {
+        (zone_ms, "the zone's clock (its newest block's time)")
+    }
+}
+
+/// Whether a step with `window` may be sent when the clock that judges its end (`clock`: which one, see [`end_clock`])
+/// reads `now_ms`: `Err` when the window has ended (code 53's message) or ends within [`WINDOW_MARGIN_MS`] (a
 /// transaction sent now would likely reach a block after it, be refused and be charged the whole gas limit). A window
-/// not open yet is left to the zone (an update is sent; LEZ refuses it until its signature slot).
-pub fn send_check(window: Option<&WindowNote>, now_ms: u64) -> std::result::Result<(), (WindowSide, String)> {
+/// not open yet is judged by the dry run, at the zone's clock.
+pub fn send_check(
+    window: Option<&WindowNote>,
+    now_ms: u64,
+    clock: &str,
+) -> std::result::Result<(), (WindowSide, String)> {
     let Some(w) = window else { return Ok(()) };
     let Some(end) = w.end_ms else { return Ok(()) };
-    let clock = "the zone's clock (its newest block's time)";
     if now_ms >= end {
         let lez = format!("LEZ refuses a transaction executed then: \"{WINDOW_REFUSAL}\", charged the whole gas limit");
         return Err((WindowSide::Ended, stale_message(w, end, now_ms, clock, &lez)));
@@ -224,9 +251,9 @@ pub fn send_check(window: Option<&WindowNote>, now_ms: u64) -> std::result::Resu
         return Err((
             WindowSide::Inside,
             format!(
-                "not sent: the weak-subjectivity period of the {} ends at {}, less than {} s after {clock}, {}: a \
-                 transaction sent now would likely reach a block after it, be refused (\"{WINDOW_REFUSAL}\") and be \
-                 charged the whole gas limit; recover from a new bootstrap (`ferrata attest init`, operator guide §10)",
+                "the weak-subjectivity period of the {} ends at {}, less than {} s after {clock}, {}: a transaction \
+                 sent now would likely reach a block after it, be refused (\"{WINDOW_REFUSAL}\") and be charged the \
+                 whole gas limit; recover from a new bootstrap (`ferrata attest init`, operator guide §10)",
                 w.checkpoint,
                 utc(end),
                 WINDOW_MARGIN_MS / 1000,
@@ -921,9 +948,10 @@ async fn transact(
         run.log(json!({ "what": what, "phase": "held", "reason": last.reason, "until": start }));
         return Ok(3);
     }
+    let (end_now, end_by) = end_clock(now);
     for s in steps.iter().take(txs.len()) {
-        if let Err((_, message)) = send_check(s.window.as_ref(), now) {
-            println!("  {:<28} {message}", s.label);
+        if let Err((_, message)) = send_check(s.window.as_ref(), end_now, end_by) {
+            println!("  {:<28} not sent: {message}", s.label);
             run.log(json!({ "what": what, "phase": "held", "step": s.label, "message": message }));
             return Ok(3);
         }
@@ -1018,19 +1046,26 @@ async fn send_journal(
                 println!("  {:<28} in a block of the sequencer not yet final: waiting for it, nothing sent", s.label);
             } else {
                 // To be sent (again): not when its window has ended or is about to (it would be charged the gas limit).
-                let now = z.clock().await?;
-                if let Err((side, message)) = send_check(s.window.as_ref(), now) {
+                let (end_now, end_by) = end_clock(z.clock().await?);
+                if let Err((side, message)) = send_check(s.window.as_ref(), end_now, end_by) {
                     println!("  {:<28} not sent again: {message}", s.label);
                     run.log(json!({ "what": what, "step": s.label, "phase": "held-on-resume", "message": message }));
                     let applied_before =
                         j.steps[..i].iter().any(|x| x.receipt.as_ref().is_some_and(|r| !r.outcome.reverted));
                     match slot {
-                        // Nothing of the command was applied and nothing of it can be any more: the journal is cleared.
+                        // Nothing of the command was applied and nothing of it can be any more (past the end a copy
+                        // still pending is refused too): the journal is cleared.
                         Some(sl) if !applied_before && side == WindowSide::Ended => {
                             std::fs::remove_file(&sl.path)
                                 .with_context(|| format!("removing {}", sl.path.display()))?;
                             println!("  the journal {} is cleared: nothing of this command was applied, and its transactions can never be", sl.path.display());
                         }
+                        // The earlier run handed it to the sequencer: a copy may still be pending and land before the
+                        // end. The run stays unfinished (no --again while a copy may land).
+                        Some(_) if s.attempted => println!(
+                            "  the earlier run's submission may still be pending: the run stays unfinished; run the \
+                             same command again to read what became of it"
+                        ),
                         Some(sl) => {
                             j.status = Some(3);
                             sl.save(j)?;
@@ -1056,9 +1091,18 @@ async fn send_journal(
             }
             match z.client.send_transaction(tx.clone()).await {
                 Ok(got) => ensure!(got == hash, "{}: the sequencer returned another hash", s.label),
-                // The sequencer answered and turned it away (too large, its fee, a full pool): it was not admitted and
-                // cannot be applied later. The run ends here, recorded as finished: run again, the command reports it;
-                // with --again, it is planned and signed anew.
+                // A resend turned away: the earlier run's submission of these same bytes may still be pending (admitted
+                // before the pool filled, for one), so nothing is recorded as refused and the run stays unfinished. Run
+                // again, it is found applied, its nonce taken, or in no block (then sent again).
+                Err(sequencer_service_rpc::ClientError::Call(e)) if resuming && s.attempted => {
+                    let why = format!("{} (code {})", e.message(), e.code());
+                    println!("  {:<28} the sequencer answered the resend with: {why}; the earlier run's submission of the same transaction may still be pending, so the run stays unfinished and nothing more is sent: run the same command again to read what became of it", s.label);
+                    run.log(json!({ "what": what, "step": s.label, "phase": "resend-turned-away", "tx": s.hash, "answer": why }));
+                    return Ok(1);
+                }
+                // A first submission turned away (too large, its fee, a full pool): it was not admitted and cannot be
+                // applied later. The run ends here, recorded as finished: run again, the command reports it; with --again,
+                // it is planned and signed anew.
                 Err(sequencer_service_rpc::ClientError::Call(e)) => {
                     let why = format!("{} (code {})", e.message(), e.code());
                     println!("  {:<28} REFUSED by the sequencer at submission: {why}; it was not admitted, nothing of it can be applied, and nothing more is sent", s.label);
@@ -2029,7 +2073,8 @@ mod tests {
         let note = init_note(&config, &checkpoint, slot);
         let end = note.end_ms.unwrap();
         // Past the end: code 53's message (the run's clock is its newest block's time).
-        let (side, message) = send_check(Some(&note), end + 60_000).unwrap_err();
+        let zone = "the zone's clock (its newest block's time)";
+        let (side, message) = send_check(Some(&note), end + 60_000, zone).unwrap_err();
         assert_eq!(side, WindowSide::Ended);
         for part in [
             "refused with 53 OutsideWeakSubjectivityPeriod",
@@ -2040,14 +2085,14 @@ mod tests {
             assert!(message.contains(part), "{part:?} missing from: {message}");
         }
         // Within the margin: not sent, no code put on it.
-        let (side, message) = send_check(Some(&note), end - WINDOW_MARGIN_MS / 2).unwrap_err();
+        let (side, message) = send_check(Some(&note), end - WINDOW_MARGIN_MS / 2, zone).unwrap_err();
         assert_eq!(side, WindowSide::Inside);
         assert!(message.contains("less than 60 s") && !message.contains("OutsideWeakSubjectivityPeriod"), "{message}");
         // Earlier, or a step without a window: sent.
-        assert!(send_check(Some(&note), end - WINDOW_MARGIN_MS - 1).is_ok());
-        assert!(send_check(None, end + 60_000).is_ok());
+        assert!(send_check(Some(&note), end - WINDOW_MARGIN_MS - 1, zone).is_ok());
+        assert!(send_check(None, end + 60_000, zone).is_ok());
         // The recorded refusal's block was past the end: a resumed run would not have sent it.
-        assert!(send_check(Some(&note), outcome.at_ms).is_err());
+        assert!(send_check(Some(&note), outcome.at_ms, zone).is_err());
     }
 
     #[derive(clap::Parser)]
@@ -2084,7 +2129,14 @@ mod tests {
         let mut with0x = base;
         with0x[2] = &id0x;
         assert_eq!(one, key(&[&with0x[..], &["--storage", &format!("{weth}:{slot}:eq:0x01")]].concat()));
-        // Statements in another order: the same.
+        // Two statements of one kind in either order (the request keeps the command line's order; only the key's sort
+        // makes them one command): the same.
+        let empty = "0x00000000000000000000000000000000000000000000000000000000000000ff";
+        assert_eq!(
+            with(&["--storage", &format!("{weth}:{slot}"), "--storage", &format!("{weth}:{empty}")]),
+            with(&["--storage", &format!("{weth}:{empty}"), "--storage", &format!("{weth}:{slot}")])
+        );
+        // Statements of two kinds in another order: the same.
         let log = "0:0:emitter=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
         assert_eq!(
             with(&["--storage", &format!("{weth}:{slot}"), "--log", log]),

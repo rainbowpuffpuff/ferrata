@@ -4,8 +4,9 @@
 //!
 //! The module reads Ethereum in `fetch_log_proof` (`eth_getBlockByNumber`, then `eth_getBlockReceipts`), and in
 //! `build_attest_tx` and `dry_run_attest` when their `storage` names an endpoint (`eth_getProof`); `verify_checkpoint`'s
-//! providers are tested in the crate's own tests. Each is one call that reads and sends nothing, over the plain path
-//! (`rpc_url`, `rpc.rs`'s HTTP/1.1 client) here. Against an endpoint that refuses connections, holds the request
+//! providers are tested in the crate's own tests. Each is one call that reads and sends nothing. The first test reads
+//! over the plain path (`rpc_url`, `rpc.rs`'s HTTP/1.1 client); the second over the route through Logos Core's
+//! `eth_rpc_module`, the module's call replaced by a stand-in (the module crate installs the real one inside Logos Core). Against an endpoint that refuses connections, holds the request
 //! without an answer, cuts its answer (in the first request, and in `fetch_log_proof`'s second after the first was
 //! answered), answers HTTP 503, or answers with an error, each call returns an error reply (`invalid_request`, naming
 //! the method and the failure) within its bound (`timeout_ms`, 1,000 here, per connection and per read); the same call
@@ -22,11 +23,14 @@ use std::{
     io::{BufRead as _, BufReader, Read as _, Write as _},
     net::{TcpListener, TcpStream},
     path::{Path, PathBuf},
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, AtomicU8, Ordering},
+        Arc, Mutex,
+    },
     time::{Duration, Instant},
 };
 
-use ferrata_attest_calls::{build_attest_tx, dry_run_attest, fetch_log_proof};
+use ferrata_attest_calls::{build_attest_tx, dry_run_attest, fetch_log_proof, set_eth_rpc_module};
 use serde_json::{json, Value};
 
 const FIXTURE: &str =
@@ -194,10 +198,21 @@ const CALLS: [&str; 3] = ["fetch_log_proof", "build_attest_tx", "dry_run_attest"
 
 /// `name`'s request reading from `url`.
 fn request(name: &str, url: &str) -> String {
-    let storage = json!({ "rpc_url": url, "address": WETH, "slot": WETH_SLOT, "timeout_ms": TIMEOUT_MS });
+    request_via(name, &json!({ "rpc_url": url }))
+}
+
+/// `name`'s request reading over `route`: `{"rpc_url": URL}` or `{"eth": {"via": "eth_rpc_module", "chain_id": N}}`.
+fn request_via(name: &str, route: &Value) -> String {
+    let with_route = |mut v: Value| {
+        for (k, x) in route.as_object().unwrap() {
+            v[k] = x.clone();
+        }
+        v
+    };
+    let storage = with_route(json!({ "address": WETH, "slot": WETH_SLOT, "timeout_ms": TIMEOUT_MS }));
     match name {
         "fetch_log_proof" => {
-            json!({ "rpc_url": url, "block": BLOCK, "tx_index": 0, "log_index": 0, "timeout_ms": TIMEOUT_MS })
+            with_route(json!({ "block": BLOCK, "tx_index": 0, "log_index": 0, "timeout_ms": TIMEOUT_MS }))
         }
         "build_attest_tx" => {
             let mut at_block = storage;
@@ -217,7 +232,11 @@ fn request(name: &str, url: &str) -> String {
 
 /// `name` called on `url`, timed: its reply and how long it took.
 fn call(name: &str, url: &str) -> (Value, Duration) {
-    let req = request(name, url);
+    call_request(name, request(name, url))
+}
+
+/// `name` called with `req`, timed.
+fn call_request(name: &str, req: String) -> (Value, Duration) {
     let t = Instant::now();
     let reply = match name {
         "fetch_log_proof" => fetch_log_proof(&req),
@@ -299,4 +318,79 @@ fn each_ethereum_read_fails_within_its_bound_and_succeeds_once_the_endpoint_answ
         println!("{l}");
     }
     println!("{} failing calls, each an error within its bound, each answered once the endpoint was back", lines.len());
+}
+
+/// What the stand-in for Logos Core's `eth_rpc_module.raw_rpc` does: 0 answers from the recorded responses; 1 the call
+/// does not reach the module; 2 the module answers `ok: false` (the endpoint behind it failed); 3 a reply that is not
+/// JSON.
+static MODULE_MODE: AtomicU8 = AtomicU8::new(0);
+/// The bound the calls crate handed the module (Logos's module enforces it on its own request).
+static MODULE_TIMEOUT: AtomicU64 = AtomicU64::new(0);
+
+/// The stand-in for `eth_rpc_module.raw_rpc(chain_id, method, params)`, installed with `set_eth_rpc_module` as the
+/// module crate installs Logos Core's call.
+fn module_stub(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
+    MODULE_TIMEOUT.store(timeout_ms, Ordering::SeqCst);
+    assert_eq!(chain_id, 1);
+    match MODULE_MODE.load(Ordering::SeqCst) {
+        1 => Err("eth_rpc_module did not answer (the call into Logos Core failed)".into()),
+        2 => Ok(json!({ "ok": false, "code": "upstream_timeout", "error": "the endpoint did not answer in time" })
+            .to_string()),
+        3 => Ok("<html>502 Bad Gateway</html>".into()),
+        _ => {
+            let params: Value = serde_json::from_str(params).unwrap();
+            Ok(match recorded(method, &params) {
+                Ok(r) => json!({ "ok": true, "result": r, "route": "direct" }),
+                Err(e) => json!({ "ok": false, "code": "not_found", "error": e }),
+            }
+            .to_string())
+        }
+    }
+}
+
+/// The route through Logos Core's `eth_rpc_module` (`"eth": {"via": "eth_rpc_module", "chain_id": 1}`), with the module's
+/// call replaced by a stand-in answering from the same recorded responses or failing: the call not reaching the module,
+/// the module answering `ok: false`, a reply that is not JSON. Each of the three calls returns an error reply; the
+/// stand-in is handed the request's `timeout_ms` (Logos's module bounds its own request with it); the same call
+/// succeeds once the stand-in answers, over that route.
+#[test]
+fn the_eth_rpc_module_route_fails_cleanly_and_recovers() {
+    set_eth_rpc_module(module_stub);
+    let route = json!({ "eth": { "via": "eth_rpc_module", "chain_id": 1 } });
+    for name in CALLS {
+        MODULE_MODE.store(0, Ordering::SeqCst);
+        let (reply, _) = call_request(name, request_via(name, &route));
+        succeeded(name, &reply);
+        assert_eq!(reply["eth"]["via"], "eth_rpc_module", "{name}: {reply}");
+    }
+    let mut lines = Vec::new();
+    for (mode, case, expect) in [
+        (1u8, "unreached", "did not answer"),
+        (2, "ok-false", "eth_rpc_module answered"),
+        (3, "not-json", "is not JSON"),
+    ] {
+        for name in CALLS {
+            MODULE_MODE.store(mode, Ordering::SeqCst);
+            MODULE_TIMEOUT.store(0, Ordering::SeqCst);
+            let (reply, took) = call_request(name, request_via(name, &route));
+            assert_eq!(reply["verdict"], "invalid_request", "{case} {name}: {reply}");
+            let error = reply["error"].as_str().unwrap_or_default().to_string();
+            assert!(error.contains(expect), "{case} {name}: {error}");
+            assert_eq!(
+                MODULE_TIMEOUT.load(Ordering::SeqCst),
+                TIMEOUT_MS,
+                "{case} {name}: the bound handed to the module"
+            );
+            MODULE_MODE.store(0, Ordering::SeqCst);
+            succeeded(name, &call_request(name, request_via(name, &route)).0);
+            lines.push(format!("{case:<10} {name:<16} {:>5} ms  {error}", took.as_millis()));
+        }
+    }
+    for l in &lines {
+        println!("{l}");
+    }
+    println!(
+        "{} failing calls over eth_rpc_module, each an error, each answered once the module answered",
+        lines.len()
+    );
 }
