@@ -1,6 +1,6 @@
-$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:22514 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:eq:0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 --send --yes --eth-timeout 2 --eth-retries 1
-zone http://127.0.0.1:60982: followed to block 7 (final on Bedrock)
-attest: the Ethereum endpoint http://127.0.0.1:22514: eth_getProof: the endpoint answered HTTP 503 (after 2 attempt(s))
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:33575 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:eq:0x0000000000000000000000000000000000000000000000f22ca9b4cc5d0f3d61 --send --yes --eth-timeout 2 --eth-retries 1
+zone http://127.0.0.1:57332: followed to block 7 (final on Bedrock)
+attest: the Ethereum endpoint http://127.0.0.1:33575: eth_getProof: the endpoint answered HTTP 503 (after 2 attempt(s))
   nothing was sent, and the follower's state is kept: run the same command again once the endpoint answers, on the record's chain
 note: eth_getProof: the endpoint answered HTTP 503; trying again (1 of 1)
 [exit 4]

@@ -1,5 +1,5 @@
 $ ferrata attest ... init --preset mainnet --bootstrap <repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --checkpoint 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433 --layout electra --parts 2 --send --yes
-zone http://127.0.0.1:19434: followed to block 1 (final on Bedrock)
+zone http://127.0.0.1:45856: followed to block 1 (final on Bedrock)
 init: instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd (chain 1), finalized slot 15622144, job 0x2f3ba092270a346a2ec83ce77a0928e34abd090ac7bd872501538b2f32583b70
 init: dry run of 3 transaction(s) on the zone's state at block 1 (payer 2PfJa7EjGr6X4oTAz77XEnMNzuvQrTFEUiKKJvP7tXXs)
   Init                         1895 bytes; would be applied; execution gas 210357, storage gas 1895, 0 event(s)

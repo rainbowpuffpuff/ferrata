@@ -1,7 +1,7 @@
 # `ferrata attest` under a failing Ethereum endpoint, interrupted, and a stale checkpoint (run r1)
 
 RFP-021 Reliability #5 and Usability #5. The test [`../../tests/attest_faults.rs`](../../tests/attest_faults.rs) at the
-tree of commit `e097dd5d` (branch `cli-rows`), run once on the Modal build box (Linux x86-64), 23 November 2026:
+tree of commit `42c378d4` (branch `cli-rows`), run once on the Modal build box (Linux x86-64), 23 November 2026:
 
 ```sh
 cd cli
@@ -11,7 +11,7 @@ RISC0_DEV_MODE=1 cargo test --locked --test attest_faults -- --nocapture --test-
 Result (measured): 2 tests passed in 32.4 s; the library's tests of the mapping (`cargo test --locked --lib attest`):
 5 passed. CI's `roundtrip` job runs both. Each file here is one command's output, in order (machine paths replaced
 by `<repo>`); `[exit N]` is its exit status, `[killed: …]` a SIGKILL from the test. 22 commands on the R.5 zone and
-4 on the U.5 zones: 11 exit 0, 3 exit 3, 8 exit 4, 4 killed.
+8 on the four U.5 zones: 14 exit 0, 4 exit 3, 8 exit 4, 4 killed.
 
 ## What ran
 
@@ -61,7 +61,12 @@ here).
   bootstrap … `ferrata attest init`", and "not sent"; exit 3; the zone received nothing.
 - `u5-crossing-end`: the dry run an hour before the end (applied), the zone's block 60 s after it: the receipt's
   refusal ("Execution outside of the validity window", charged the whole gas limit, 10,000,000) shown as the same code
-  53 message; exit 3; the adoption parts not sent.
+  53 message; exit 3; the adoption parts not sent. `receipt --tx` of that `Init` (how a caller of the Logos module,
+  whose `lez_submit` reports inclusion only, reads the outcome) prints the same message.
+- `u5-update-crossing-end`: an instance made an hour before the end, then `advance --finality --send --yes` with the
+  zone's next block 60 s after the end of the period of the instance's newest finalized header (slot 15,622,144): the
+  `Open`'s dry run applied, the zone refused it, shown as code 53's message naming that header; exit 3; `Miller` and
+  `Finish` not sent; `receipt --tx` of the `Open` prints the same message.
 - `u5-not-open`: `advance` before its update's signature slot: "refused by LEZ: \"Execution outside of the validity
   window\": its window opens at 2026-11-10 13:49:23 UTC …": LEZ's text with the window's start, no code put on it;
   exit 3.
