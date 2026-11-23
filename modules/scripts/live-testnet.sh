@@ -338,8 +338,7 @@ do_session() {
     --find "beacon_api_module=logos_host --name beacon_api_module " --find "eth_rpc_module=logos_host --name eth_rpc_module " \
     --find "attest-monitor=attest-monitor watch " --find "core=logosctl --config-dir $SESSION daemon" \
     --find "relays=python3 -I $repo/bench/perf/http_relay.py --listen 18701 " & pids+=($!)
-  env HOME="$W/home" RISC0_SERVER_PATH="${RISC0_SERVER_PATH:-$HOME/.risc0/bin/r0vm}" \
-    "$out/logos/bin/logosctl" --config-dir "$SESSION" daemon start --detach >> "$W/core-start.log" 2>&1
+  env HOME="$W/home" "$out/logos/bin/logosctl" --config-dir "$SESSION" daemon start --detach >> "$W/core-start.log" 2>&1
   for m in beacon_api_module eth_rpc_module ferrata_attest_module ferrata_updater_module; do
     ctl install "$out/lgx-$m"/*.lgx -y >> "$W/install.log" 2>&1 || note "install $m failed"
   done
@@ -420,7 +419,10 @@ T
   jq -n --arg c "$W/req/updater.toml" '{config_file: $c}' > "$W/req/updater-config.json"
   call ferrata_updater_module check_config U-check_config "@$W/req/updater-config.json"
   marks updater-start
-  CALL_MS=600000 call ferrata_updater_module start U-start-1 "@$W/req/updater-config.json"
+  # `start` answers once the set-up is done: the backend's follower brought from the network's genesis to its last
+  # final block (every block read through the relay and applied with LEZ's state transition), minutes on a new state.
+  CALL_MS=1800000 call ferrata_updater_module start U-start-1 "@$W/req/updater-config.json"
+  marks updater-started
   # attest-monitor on the same instance: the instance through its relay, two providers through theirs.
   "$BIN/attest-monitor" watch --state lez:http://127.0.0.1:18702 --program "$(b58hex "$program")" \
     --instance "$id" --provider lodestar=http://127.0.0.1:18721 --provider publicnode=http://127.0.0.1:18722 --interval 60 \
