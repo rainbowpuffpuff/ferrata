@@ -70,6 +70,8 @@ in `checkpoint/` and `-p methods` in `bridge/` (250 s, both at once), then `pyth
 for every row r0vm 3.1.0 computes risc0-build's id from the binary. The binaries' sizes equal the 3.0.5 builds' (the
 guests link the same v1compat kernel, risc0-zkos-v1compat 2.2.3), their bytes do not. `micro_plain`
 (`checkpoint/guests-plain`, not in a table before) builds to `0x3cd9e8be5f4708f55a713fc53ad81cdeb5b06c645d564e5adb27ec8dfdacbd3b`.
+Built a second time the same day on the same box from a copy of the tree at another path (`…/repro2/elsewhere/checkout`)
+in a target directory that did not exist before (243 s): 9 of 9 ids equal the rows below, r0vm "= id" for each.
 
 | Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF | Before (RISC Zero 3.0.5) |
 |---|---|---|---:|---|---|
