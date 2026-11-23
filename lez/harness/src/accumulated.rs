@@ -15,9 +15,14 @@
 //! - `Succeed` and the `Spawn` it sends ([`succeed`]);
 //! - the eight statement types of `lez/results/stage4-attest.md`, among them the absent account,
 //!   the absent slot and the four facts ([`statement_requests`]);
+//! - `Read` and `ReadPadded`, the read idiom of LEZ v0.4 (what a private consumer's transaction
+//!   runs publicly), sent by a public reader of the consumer ([`read_record`]);
 //! - the reference consumer: `CallAttest` with an empty reader and with a reader holding the
 //!   previous reply ([`call_attest`]), and `Claim` for a sender credited for the first time and for
 //!   one credited before ([`claim`], [`place_balance`]).
+//!
+//! With `Open`, `JobOpen`, `Miller`, `Adopt`, `Finish`, `Apply` and `Record` (perf_state §3,
+//! `tests/costs_attestation.rs`'s replay), that is every message the attestation program handles.
 //!
 //! What K adds: copies of real accounts the programs wrote, at keys no measured transaction names.
 //! For the attestation program, `header(id, slot)` records at slots from 2^40 (as perf_state §2),
@@ -26,8 +31,8 @@
 //! callers' reader states, beside the records. A LEZ transaction sees only the accounts it names,
 //! so equal charges show that the metering does not depend on the rest of the state. The accounts
 //! an action does read are fixed in size or replaced rather than appended to; the two that change
-//! with use are measured as they change: the reader holding a previous reply (and again after
-//! another call), and the claimant's balance credited once or K + 1 times before.
+//! with use are measured as they change: a reader holding a previous reply or record (and again
+//! after another call), and the claimant's balance credited once or K + 1 times before.
 
 use ferrata_core::{
     fork::{Fork, LcFork},
@@ -38,10 +43,10 @@ use ferrata_core::{
 };
 use ferrata_lez_wire::{
     attest::{Cmp, Field, LogQuery, Operand, Relation, Request},
-    consumer::{balance_actor, claim_actor, nullifier, BalanceState, ConsumerState},
+    consumer::{balance_actor, claim_actor, nullifier, BalanceState, ConsumerMessage, ConsumerState},
     header_actor, instance_actor, successor_id, Config, Message,
 };
-use lee::{Account, AccountId, Actor, V03State};
+use lee::{Account, AccountId, Actor, PublicAccountEvidence, V03State};
 use lee_core::{
     account::ActorState,
     program::{PdaSeed, ReceiveInput},
@@ -538,6 +543,45 @@ pub fn call_attest(s: &mut Stage4) -> Vec<Charged> {
             Charged::of(action, &r)
         })
         .collect()
+}
+
+/// The public reader of [`read_record`]: the consumer's actor at the seed of
+/// `scenarios::shell_costs`, another than [`call_attest`]'s.
+pub fn read_actor() -> (Actor, Vec<PublicAccountEvidence>) {
+    let program = consumer_account();
+    let seed = PdaSeed::new([0x33; 32]);
+    (Actor::new(AccountId::for_public_pda(&program, &seed), program), vec![PublicAccountEvidence::Pda { program, seed }])
+}
+
+/// The finalized block's record read by a public reader of the consumer (`ReadRecord`: the
+/// consumer sends `Read`, the record replies with its state, which the reader keeps): with an empty
+/// reader, then with the reader holding the record it read; then `ReadPadded` with 1,024 bytes the
+/// program ignores (`scenarios::shell_costs`).
+pub fn read_record(s: &mut Stage4) -> Vec<Charged> {
+    let slot = s.fx.finalized_slot;
+    let (reader, evidence) = read_actor();
+    let header = s.header(slot);
+    let (ferrata, instance_id) = (s.w.inst.program, s.w.inst.id);
+    let read = ConsumerMessage::ReadRecord { ferrata, instance_id, slot, query: vec![] };
+    let padded = ConsumerMessage::ReadPadded { ferrata, instance_id, slot, padding: vec![0xab; 1024] };
+    [
+        ("ReadRecord (→ Read → reply), empty reader", &read),
+        ("ReadRecord, reader holding the record read before", &read),
+        ("ReadPadded, 1,024 bytes of padding", &padded),
+    ]
+    .into_iter()
+    .map(|(action, message)| {
+        let r = s.w.chain.submit(
+            action,
+            reader,
+            borsh::to_vec(message).unwrap(),
+            vec![reader, header],
+            evidence.clone(),
+            s.time,
+        );
+        Charged::of(action, &r)
+    })
+    .collect()
 }
 
 /// The sender's `balance(pool, owner)` account as the reference consumer writes it after `credits`

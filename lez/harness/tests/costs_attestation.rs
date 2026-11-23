@@ -26,9 +26,10 @@
 //!   [`an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds`] and
 //!   [`the_reference_consumer_costs_the_same_whatever_the_chain_holds`]: #9 for every other action
 //!   (`harness::accumulated`): `Init` and its adoption, `Succeed` and `Spawn`, `VerifyAll` in a
-//!   public and in a private transaction (the proven update path), `CallAttest` and the reference
-//!   consumer's claim, each charged the same on the chain its scenario leaves and with a thousand
-//!   more of each account that accumulates beside it.
+//!   public and in a private transaction (the proven update path), `Read` and `ReadPadded`,
+//!   `CallAttest` and the reference consumer's claim, each charged the same on the chain its
+//!   scenario leaves and with a thousand more of each account that accumulates beside it. With the
+//!   update steps above, every message the attestation program handles.
 //!
 //! Every pinned number cites a committed record:
 //!
@@ -270,6 +271,19 @@ const CALL_ATTEST_HOLDING: Tx = Tx {
     exec: 395_003,
     stor: 7_507,
 };
+/// A public reader's `ReadRecord` (`Read` at the record) with an empty reader (row 1 of
+/// `lez/results/v0.4.0-rc3/shell-costs.md`, another record of the same size), then with the reader
+/// holding the record it read, then `ReadPadded` with 1,024 bytes of padding.
+const READS: [Tx; 3] = [
+    Tx {
+        handlers: &[("consumer ReadRecord", 12_061), ("Read", 12_268), ("consumer (reply)", 15_081)],
+        exec: 39_410,
+        stor: 604,
+    },
+    Tx { handlers: &[("consumer ReadRecord", READ2), ("Read", 12_268), ("consumer (reply)", READ2)], exec: READ2, stor: 604 },
+    Tx { handlers: &[("consumer ReadPadded", READ2), ("ReadPadded", READ2), ("consumer (reply)", READ2)], exec: READ2, stor: READ2 },
+];
+const READ2: u64 = 0; // TEMPORARY until perf-state-actions.md is regenerated
 /// The reference consumer's claim, crediting its sender for the first time (row 3 of
 /// `stage4-attest-consumer.md`), and the same claim when the sender's balance holds earlier
 /// credits.
@@ -868,6 +882,14 @@ fn the_reference_consumer_costs_the_same_whatever_the_chain_holds() {
     let more = MORE_RECORDS as usize;
     let mut pins = Pins::new();
 
+    // The module's `Read` and `ReadPadded`, from a public reader: empty, then holding the record.
+    let few = acc::read_record(&mut cw.grown(0));
+    let many = acc::read_record(&mut cw.grown(more));
+    acc::assert_flat(&few, &many, more);
+    for (c, want) in few.iter().zip(&READS) {
+        pin_tx(&mut pins, c, want);
+    }
+
     // `CallAttest` three times from one reader: empty, then holding the previous reply, twice.
     let few = acc::call_attest(&mut cw.grown(0));
     let many = acc::call_attest(&mut cw.grown(more));
@@ -901,7 +923,8 @@ fn the_reference_consumer_costs_the_same_whatever_the_chain_holds() {
 
     pins.print(
         "Pinned: the reference consumer beside accumulated accounts\n\
-         record: lez/results/perf-state-actions.md; the first call and the first claim also\n\
+         record: lez/results/perf-state-actions.md; the first read: lez/results/v0.4.0-rc3/shell-costs.md row 1;\n\
+         the first call and the first claim also\n\
          lez/results/stage4-attest-consumer.md rows 1 and 3",
     );
 }

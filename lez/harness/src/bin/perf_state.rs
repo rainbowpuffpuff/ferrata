@@ -390,8 +390,8 @@ fn other_actions() {
          `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements \
          and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, \
          other owners) and readers. The accounts an action reads that change with use are measured as they change: \
-         the reader empty, then holding the previous reply (twice), and the claimant's balance credited K + 1 times \
-         before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its \
+         a reader empty, then holding the record or reply it read before, and the claimant's balance credited K + 1 \
+         times before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its \
          first \"handler\" is the private execution's cycles in RISC Zero's executor (what the sender proves, not \
          charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat \
          private receipt gas. Every charge is asserted equal at every K before it is printed."
@@ -419,6 +419,12 @@ fn other_actions() {
         |k| cw.grown(k),
         |s| &s.w.chain.state,
         |s| acc::attest_all(s, &requests),
+    );
+    sweep(
+        "`Read` and `ReadPadded` (the module's read idiom), sent by a public reader of the consumer",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        acc::read_record,
     );
     sweep("`CallAttest` from one public reader, three times", |k| cw.grown(k), |s| &s.w.chain.state, acc::call_attest);
     sweep(
