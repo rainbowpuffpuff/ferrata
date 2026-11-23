@@ -280,10 +280,17 @@ const READS: [Tx; 3] = [
         exec: 39_410,
         stor: 604,
     },
-    Tx { handlers: &[("consumer ReadRecord", READ2), ("Read", 12_268), ("consumer (reply)", READ2)], exec: READ2, stor: 604 },
-    Tx { handlers: &[("consumer ReadPadded", READ2), ("ReadPadded", READ2), ("consumer (reply)", READ2)], exec: READ2, stor: READ2 },
+    Tx {
+        handlers: &[("consumer ReadRecord", 16_461), ("Read", 12_268), ("consumer (reply)", 17_559)],
+        exec: 46_288,
+        stor: 604,
+    },
+    Tx {
+        handlers: &[("consumer ReadPadded", 27_561), ("ReadPadded", 18_377), ("consumer (reply)", 17_381)],
+        exec: 63_319,
+        stor: 1_628,
+    },
 ];
-const READ2: u64 = 0; // TEMPORARY until perf-state-actions.md is regenerated
 /// The reference consumer's claim, crediting its sender for the first time (row 3 of
 /// `stage4-attest-consumer.md`), and the same claim when the sender's balance holds earlier
 /// credits.

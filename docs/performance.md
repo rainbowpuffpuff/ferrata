@@ -352,11 +352,13 @@ and 128.0 MB), and each was charged the same handler cycles, execution gas and s
 transaction (9,124,896) and in one private transaction, the proven update path (485,298 execution gas, 224,063 storage
 gas; its private execution 9,049,362 cycles in RISC Zero's executor, which the sender proves and LEZ does not meter),
 `Succeed` → `Spawn` (70,610), all eight statement types of [`stage4-attest.md`](../lez/results/stage4-attest.md), the
-absent account (151,829), the absent slot (270,580) and the four facts (454,255) among them, `CallAttest` and the
-reference consumer's claim. The two accounts an action reads that change with use were measured as they change:
-`CallAttest`'s reader keeps the last reply only (386,181 from an empty reader, 395,003 once it holds a reply, the same
-on the call after), and a claim crediting a sender's existing balance costs 187,721 whether the balance was credited
-once or 100,001 times before (185,389 for a sender's first credit). CI pins the same scenarios with a thousand more of
+absent account (151,829), the absent slot (270,580) and the four facts (454,255) among them, `Read` and `ReadPadded`
+(the read idiom a private consumer's transaction runs publicly: 12,268 cycles for `Read`), `CallAttest` and the
+reference consumer's claim; with §3's update steps, every message the attestation program handles. The two kinds of
+account an action reads that change with use were measured as they change: a consumer's reader keeps only the last
+reply or record (`CallAttest` 386,181 from an empty reader, 395,003 once it holds a reply, the same on the call after),
+and a claim crediting a sender's existing balance costs 187,721 whether the balance was credited once or 100,001 times
+before (185,389 for a sender's first credit). CI pins the same scenarios with a thousand more of
 each account ([`costs_attestation.rs`](../lez/harness/tests/costs_attestation.rs), job `lez-harness`). Not measured
 against accumulation: the bridge's actions (RFP-022's program; the growth of its accounts is RFP-022 §P.7's). The
 node's own work is not charged: serializing the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a

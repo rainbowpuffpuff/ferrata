@@ -6,7 +6,8 @@ in `lez/harness/src/accumulated.rs`). **Measured** in LEZ v0.4.0-rc1's own state
 in-process harness, transactions executed and settled with LEZ's fee settlement), as
 [`perf-state.md`](perf-state.md) §2 and §3 measure five statement types and every update step: the actions it does not
 sweep, `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement types of
-[`stage4-attest.md`](stage4-attest.md), `CallAttest` and the reference consumer's claim, each charged with K = 0,
+[`stage4-attest.md`](stage4-attest.md), `Read` and `ReadPadded`, `CallAttest` and the reference consumer's claim (with
+§2–§3 of `perf-state.md`, every message the attestation program handles), each charged with K = 0,
 1,000, 10,000 and 100,000 more of each account that accumulates beside it. The **serialized state** column is what a
 node writes for the state before RocksDB's compression (`perf-state.md` says how). The same scenarios are pinned in CI
 with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).

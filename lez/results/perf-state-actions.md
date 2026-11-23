@@ -10,10 +10,10 @@ sweep, `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, 
 node writes for the state before RocksDB's compression (`perf-state.md` says how). The same scenarios are pinned in CI
 with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
 
-Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit b0c8f53e.
+Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 72e99c6c.
 
 
-Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers. The accounts an action reads that change with use are measured as they change: the reader empty, then holding the previous reply (twice), and the claimant's balance credited K + 1 times before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its first "handler" is the private execution's cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat private receipt gas. Every charge is asserted equal at every K before it is printed.
+Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before, and the claimant's balance credited K + 1 times before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its first "handler" is the private execution's cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat private receipt gas. Every charge is asserted equal at every K before it is printed.
 
 ## `Init` and its adoption (a new chain)
 
@@ -95,6 +95,23 @@ Each action runs on copies of one world; the copy for K also holds K more of eac
 | 100,000 | 128,029,379 | event log: a Transfer in the block's largest receipt (306 logs) | Attest 1,619,960 | 1,619,960 | 58,812 |
 | 100,000 | 128,029,379 | storage slot 16 blocks back: one EIP-2935 hop, then the slot | Attest 499,277 | 499,277 | 13,578 |
 | 100,000 | 128,029,379 | four facts in one call (account, two slots, a log) and a relation | Attest 454,255 | 454,255 | 12,309 |
+
+## `Read` and `ReadPadded` (the module's read idiom), sent by a public reader of the consumer
+
+| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |
+|---:|---:|---|---|---:|---:|
+| 0 | 2,829,379 | ReadRecord (→ Read → reply), empty reader | consumer ReadRecord 12,061 → Read 12,268 → consumer (reply) 15,081 | 39,410 | 604 |
+| 0 | 2,829,379 | ReadRecord, reader holding the record read before | consumer ReadRecord 16,461 → Read 12,268 → consumer (reply) 17,559 | 46,288 | 604 |
+| 0 | 2,829,379 | ReadPadded, 1,024 bytes of padding | consumer ReadPadded 27,561 → ReadPadded 18,377 → consumer (reply) 17,381 | 63,319 | 1,628 |
+| 1,000 | 4,081,379 | ReadRecord (→ Read → reply), empty reader | consumer ReadRecord 12,061 → Read 12,268 → consumer (reply) 15,081 | 39,410 | 604 |
+| 1,000 | 4,081,379 | ReadRecord, reader holding the record read before | consumer ReadRecord 16,461 → Read 12,268 → consumer (reply) 17,559 | 46,288 | 604 |
+| 1,000 | 4,081,379 | ReadPadded, 1,024 bytes of padding | consumer ReadPadded 27,561 → ReadPadded 18,377 → consumer (reply) 17,381 | 63,319 | 1,628 |
+| 10,000 | 15,349,379 | ReadRecord (→ Read → reply), empty reader | consumer ReadRecord 12,061 → Read 12,268 → consumer (reply) 15,081 | 39,410 | 604 |
+| 10,000 | 15,349,379 | ReadRecord, reader holding the record read before | consumer ReadRecord 16,461 → Read 12,268 → consumer (reply) 17,559 | 46,288 | 604 |
+| 10,000 | 15,349,379 | ReadPadded, 1,024 bytes of padding | consumer ReadPadded 27,561 → ReadPadded 18,377 → consumer (reply) 17,381 | 63,319 | 1,628 |
+| 100,000 | 128,029,379 | ReadRecord (→ Read → reply), empty reader | consumer ReadRecord 12,061 → Read 12,268 → consumer (reply) 15,081 | 39,410 | 604 |
+| 100,000 | 128,029,379 | ReadRecord, reader holding the record read before | consumer ReadRecord 16,461 → Read 12,268 → consumer (reply) 17,559 | 46,288 | 604 |
+| 100,000 | 128,029,379 | ReadPadded, 1,024 bytes of padding | consumer ReadPadded 27,561 → ReadPadded 18,377 → consumer (reply) 17,381 | 63,319 | 1,628 |
 
 ## `CallAttest` from one public reader, three times
 
