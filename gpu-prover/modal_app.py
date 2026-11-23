@@ -91,8 +91,11 @@ build_image = base.add_local_dir(HERE / "prover", "/src/prover", ignore=["target
 # FERRATA_INPUTS: another staged inputs directory (programs/, fixtures/, MANIFEST.json), for example
 # the one `e2e/run.sh stage-gpu <run>` writes; the default is the one scripts/stage-inputs.sh fills.
 INPUTS = pathlib.Path(os.environ.get("FERRATA_INPUTS") or HERE / "inputs")
+# The Groth16 step on the GPU (`prove ... --groth16`): risc0-groth16 3.0.6's CUDA prover reads RISC Zero 3.1's trusted
+# setup from the rzup component `risc0-groth16` 0.2.0 (3.0.4's read 0.1.0: the setup of 3.0.x).
 gpu_image = (
-    base.add_local_dir(INPUTS, "/inputs")
+    base.run_commands("curl -L https://risczero.com/install | bash", "/root/.risc0/bin/rzup install risc0-groth16 0.2.0")
+    .add_local_dir(INPUTS, "/inputs")
     .add_local_dir(HERE / "inputs-lez", "/lez")
     .add_local_dir(HERE / "inputs-lez-attest", "/lez-attest")
     .add_local_dir(HERE / "inputs-lez-bridge", "/lez-bridge")
@@ -292,9 +295,11 @@ def _finish(out_dir: str, run: str, record: dict, summary_keys: tuple[str, ...])
     return record
 
 
-def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
-    """Succinct proof of one ferrata-checkpoint fixture. Writes receipt-succinct.bin, journal.hex,
-    prove.json, run.json, prover.log, gpu-samples.csv and nvidia-smi.txt to results/<run>/<name>/."""
+def _prove_checkpoint(name: str, run: str, limit_s: int, groth16: bool = False) -> dict:
+    """Succinct proof of one ferrata-checkpoint fixture (or a release: the fixture's `kind` names the program). Writes
+    receipt-succinct.bin, journal.hex, prove.json, run.json, prover.log, gpu-samples.csv and nvidia-smi.txt to
+    results/<run>/<name>/; with `groth16`, also the Groth16 receipt made on the GPU (receipt-groth16.bin, seal.hex,
+    groth16.json)."""
     import os
     import subprocess
     import threading
@@ -320,6 +325,8 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
 
     sampler = _GpuSampler(f"{out}/gpu-samples.csv")
     cmd = ["/usr/bin/time", "-v", prover, "prove", name, program, f"/inputs/fixtures/{name}.input", f"/inputs/fixtures/{name}.json", out]
+    if groth16:
+        cmd.append("--groth16")
     env = {**os.environ, "RUST_BACKTRACE": "1"}
     env.pop("RISC0_DEV_MODE", None)
     t0 = time.time()
@@ -351,6 +358,7 @@ def _prove_checkpoint(name: str, run: str, limit_s: int) -> dict:
         "prover_wall_s": t_end - t0, "container_s_until_done": t_end - t_start,
         "gnu_time": _gnu_time(lines), "gpu_stats": sampler.stats(t_exec_end, t_end), "gpu_stats_window": "execution end to prover exit",
         "prove": prove_json, "build_info": json.load(open(f"{BIN}/ferrata-modal-cuda.json")),
+        "groth16": json.load(open(f"{out}/groth16.json")) if groth16 and rc == 0 and os.path.exists(f"{out}/groth16.json") else None,
         "prover_binary_sha256_here": _sha256(prover),
         "finished_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
@@ -441,8 +449,8 @@ GPU_FUNCTION = dict(image=gpu_image, gpu=GPU, cpu=CPU_CORES, memory=MEMORY_MIB, 
 
 
 @app.function(**GPU_FUNCTION)
-def prove(name: str, run: str, limit_s: int) -> dict:
-    return _prove_checkpoint(name, run, limit_s)
+def prove(name: str, run: str, limit_s: int, groth16: bool = False) -> dict:
+    return _prove_checkpoint(name, run, limit_s, groth16)
 
 
 @app.function(**GPU_FUNCTION)
@@ -451,13 +459,13 @@ def prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
 
 
 @app.function(**GPU_FUNCTION)
-def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
+def batch(jobs: list[str], run: str, limits: dict, groth16: bool = False) -> list[dict]:
     """Several proofs one after another in one GPU container, each in its own process with its own
     time limit, so the queue for an L4 is waited for once. A failed job does not stop the next."""
     records = []
     for job in jobs:
         try:
-            r = _prove_lez(run, limits[job], job) if job in LEZ_JOBS else _prove_checkpoint(job, run, limits[job])
+            r = _prove_lez(run, limits[job], job) if job in LEZ_JOBS else _prove_checkpoint(job, run, limits[job], groth16)
         except Exception as e:  # recorded, then the next job
             r = {"ok": False, "name": job, "run": run, "error": repr(e)}
         records.append(r)
@@ -466,20 +474,23 @@ def batch(jobs: list[str], run: str, limits: dict) -> list[dict]:
 
 
 @app.local_entrypoint()
-def batch_run(jobs: str, run: str = ""):
-    """`--jobs name=limit_s,…` (fixture names, `lez-update` or `lez-attest`), proven in this order in one container."""
+def batch_run(jobs: str, run: str = "", groth16: bool = False):
+    """`--jobs name=limit_s,…` (fixture names, `lez-update` or `lez-attest`), proven in this order in one container;
+    `--groth16`: each fixture's Groth16 receipt too, on the GPU."""
     run = run or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     pairs = [j.split("=") for j in jobs.split(",") if j]
     limits = {name: int(limit) for name, limit in pairs}
     assert sum(limits.values()) < HARD_TIMEOUT_S - 300, "the limits must fit in the function's hard timeout"
     t0 = time.time()
-    records = batch.remote([name for name, _ in pairs], run, limits)
+    records = batch.remote([name for name, _ in pairs], run, limits, groth16)
     (HERE / "logs").mkdir(exist_ok=True)
     for r in records:
         r["client_round_trip_s_of_batch"] = time.time() - t0
         (HERE / "logs" / f"run-{run}-{r['name']}.json").write_text(json.dumps(r, indent=2) + "\n")
         p = r.get("prove") or {}
-        print(f"RESULT {r['name']}: ok={r.get('ok')} total_s={p.get('total_s', r.get('wall_s'))} segments={p.get('segments')} error={r.get('error')}")
+        g = r.get("groth16") or {}
+        print(f"RESULT {r['name']}: ok={r.get('ok')} total_s={p.get('total_s', r.get('wall_s'))} segments={p.get('segments')} "
+              f"groth16_s={g.get('wrap_s')} selector={g.get('selector')} error={r.get('error')}")
 
 
 @app.local_entrypoint()
