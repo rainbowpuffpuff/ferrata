@@ -76,8 +76,7 @@ use lee_core::{
 use crate::{
     as_finality_update,
     attest::{account_query, condition, execute, transfer_conditions, u256, Stage4},
-    consumer_account, ferrata_account, grouped, mainnet_bootstrap, mainnet_config,
-    consumer_program,
+    consumer_account, consumer_program, ferrata_account, grouped, mainnet_bootstrap, mainnet_config,
     private::{catalog, PrivateAccount},
     root,
     scenarios::World,
@@ -767,11 +766,31 @@ pub fn attest_leaves(lw: &LeafWorld, chain: &mut Chain) -> Vec<Charged> {
     let by_payload = (&vault::SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &lw.payload);
     let one = vault::vault_request(base.clone(), &s.proof, &s.root, &[leaf(n - 1)]);
     let requests = [
-        ("vault slots 0 and 1, no leaf (synthetic state, Gloas record)", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &[])),
+        (
+            "vault slots 0 and 1, no leaf (synthetic state, Gloas record)",
+            by_hash,
+            lw.actor,
+            vault::vault_request(base.clone(), &s.proof, &s.root, &[]),
+        ),
         ("vault slots 0 and 1 and one deposit leaf", by_hash, lw.actor, one.clone()),
-        ("vault slots 0 and 1 and two deposit leaves", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &[leaf(0), leaf(n - 1)])),
-        ("vault slots 0 and 1 and all eight deposit leaves", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &(0..n).map(leaf).collect::<Vec<_>>())),
-        ("the same with one leaf, under a record that holds the payload's fields (no header)", by_payload, lw.at_payload, Request { header: None, ..one }),
+        (
+            "vault slots 0 and 1 and two deposit leaves",
+            by_hash,
+            lw.actor,
+            vault::vault_request(base.clone(), &s.proof, &s.root, &[leaf(0), leaf(n - 1)]),
+        ),
+        (
+            "vault slots 0 and 1 and all eight deposit leaves",
+            by_hash,
+            lw.actor,
+            vault::vault_request(base.clone(), &s.proof, &s.root, &(0..n).map(leaf).collect::<Vec<_>>()),
+        ),
+        (
+            "the same with one leaf, under a record that holds the payload's fields (no header)",
+            by_payload,
+            lw.at_payload,
+            Request { header: None, ..one },
+        ),
     ];
     requests
         .into_iter()
@@ -800,19 +819,18 @@ pub fn attest_privately(s: &mut Stage4) -> Proven {
     let executed = s.private_transitions(account.id(), slot, &message);
     assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 0], "both private transitions pass");
     let path_levels = membership_path_levels(&s.w.chain, &account);
-    let run = s
-        .w
-        .chain
-        .prove_and_settle_private(
-            &account,
-            Actor::new(account.id(), consumer_account()),
-            borsh::to_vec(&message).unwrap(),
-            vec![header],
-            &catalog(),
-            100_000_000,
-            s.time,
-        )
-        .expect("settles");
+    let run =
+        s.w.chain
+            .prove_and_settle_private(
+                &account,
+                Actor::new(account.id(), consumer_account()),
+                borsh::to_vec(&message).unwrap(),
+                vec![header],
+                &catalog(),
+                100_000_000,
+                s.time,
+            )
+            .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
     let charged = Charged {
         action: "AttestPrivately, private (public part Read)".to_string(),
@@ -911,10 +929,7 @@ pub fn claim_deposit(vw: &VaultWorld, w: &mut World, action: &str, credits_befor
         at,
         borsh::to_vec(&message).unwrap(),
         vec![at, vw.v.actor(), holder],
-        vec![PublicAccountEvidence::Pda {
-            program,
-            seed: ferrata_lez_wire::consumer::claim_seed(&pool_id, &n0),
-        }],
+        vec![PublicAccountEvidence::Pda { program, seed: ferrata_lez_wire::consumer::claim_seed(&pool_id, &n0) }],
         vw.v.time,
     );
     let charged = Charged::of(action, &r);

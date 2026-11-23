@@ -493,8 +493,15 @@ impl RealVault {
             Adoption::OnChain,
         )
         .unwrap();
-        let mut w =
-            crate::scenarios::World { chain: Chain::new(), inst, native, spec, bootstrap, updates: vec![], runs: vec![] };
+        let mut w = crate::scenarios::World {
+            chain: Chain::new(),
+            inst,
+            native,
+            spec,
+            bootstrap,
+            updates: vec![],
+            runs: vec![],
+        };
         let finality = sepolia::gloas_finality_update(&vault_file("finality_update.ssz"));
         let record = HeaderRecord::of(&finality.finalized_header, LcFork::Gloas, &w.spec);
         assert_eq!(Some(record.beacon.slot), m["finalized_slot"].as_u64(), "the finalized header's record");
