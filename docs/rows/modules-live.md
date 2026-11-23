@@ -90,4 +90,6 @@ above and drop "**Not measured:** the daemons as Logos modules … and the `ferr
 (built on recorded answers: `monitor/attest/`)" (attest-monitor ran against Lodestar and publicnode on a public network:
 row next; the network's host runs it too).
 
+**CI**: add `python3 -I modules/scripts/test_live_testnet.py` to the job that runs `scripts/test_perf_records.py` (offline, standard library only, under a second).
+
 Box runs: the Modal build box.
