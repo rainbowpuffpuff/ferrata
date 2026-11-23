@@ -82,10 +82,10 @@ Proposed `docs/requirements-status.md` row:
 Counts: RFP-021 hard 40 shown and 15 in part (from 39 and 16); Performance 6 shown, 3 in part (from 5 and 4); the
 README's status line likewise ("40 and 41 shown, 15 and 24 in part", if no other stream moves a row).
 
-Proposed `docs/traceability.md`: in the P.9 row's evidence column, replace the sentence from "Not measured against
-accumulation ([performance](performance.md) §P.9): …" to "…in CI the update path only from 1 to 5 records." with:
+Proposed `docs/traceability.md` (its links as that file writes them): in the P.9 row's evidence column, replace the sentence from "Not measured against
+accumulation (`[performance](performance.md)` §P.9): …" to "…in CI the update path only from 1 to 5 records." with:
 "Every other action measured with 0 to 100,000 more of each accumulating account and pinned in CI with 1,000
-([EVIDENCE](EVIDENCE.md) row NEW, `results/perf-state-actions.md`, `harness/tests/costs_attestation.rs`): `Init`,
+(`[EVIDENCE](EVIDENCE.md)` row NEW, `results/perf-state-actions.md`, `harness/tests/costs_attestation.rs`): `Init`,
 `VerifyAll` public and private, `Succeed`/`Spawn`, `Read`/`ReadPadded`, all eight statement types, `CallAttest` and the
 reference consumer's claim; with the update steps, every message the program handles." Add
 `results/perf-state-actions.md` to its records column. In the "in part" list (the bullet "R.5, P.9, a component untested
