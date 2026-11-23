@@ -437,7 +437,9 @@ fn other_actions() {
         |(s, _)| &s.w.chain.state,
         |(s, before)| vec![acc::claim(s, "Claim, the sender credited before", *before)],
     );
-    println!("\nEvery transaction was charged the same handler cycles, execution gas and storage gas at every K (asserted).");
+    println!(
+        "\nEvery transaction was charged the same handler cycles, execution gas and storage gas at every K (asserted)."
+    );
 }
 
 fn main() {

@@ -218,8 +218,11 @@ pub fn finality_update(w: &World) -> (LightClientUpdate, u64) {
 pub fn verify_all_message(w: &World, update: &LightClientUpdate) -> Vec<u8> {
     let store = w.inst.store(&w.chain);
     let witness = Instance::signer_witness(w.native.core(), update, &w.spec);
-    let adoption =
-        if update.next_sync_committee.is_empty() { vec![] } else { uncompressed_keys(&update.next_sync_committee).unwrap() };
+    let adoption = if update.next_sync_committee.is_empty() {
+        vec![]
+    } else {
+        uncompressed_keys(&update.next_sync_committee).unwrap()
+    };
     borsh::to_vec(&Message::VerifyAll {
         config: w.inst.config.clone(),
         checkpoint: w.inst.checkpoint,
@@ -492,7 +495,8 @@ impl ConsumerWorld {
         assert!(r.ok(), "{:?} (exit {:?})", r.charge.revert, r.exit_code);
         let program = consumer_account();
         let pool_id = pool.id();
-        let claim = account(&scratch.w.chain.state, claim_actor(program, &pool_id, &nullifier(&pool_id, &id)).account_id);
+        let claim =
+            account(&scratch.w.chain.state, claim_actor(program, &pool_id, &nullifier(&pool_id, &id)).account_id);
         let balance = account(&scratch.w.chain.state, balance_actor(program, &pool_id, &t.from).account_id);
         // The balance as `place_balance` builds it is the account the program wrote.
         assert_eq!(balance_account(&scratch, 1), balance, "place_balance builds the program's balance account");

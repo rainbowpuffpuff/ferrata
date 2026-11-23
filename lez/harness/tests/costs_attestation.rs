@@ -274,12 +274,22 @@ const CALL_ATTEST_HOLDING: Tx = Tx {
 /// `stage4-attest-consumer.md`), and the same claim when the sender's balance holds earlier
 /// credits.
 const CLAIM_FIRST: Tx = Tx {
-    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", 15_703)],
+    handlers: &[
+        ("consumer Claim", 37_667),
+        ("Attest", 100_517),
+        ("consumer (reply)", 31_502),
+        ("consumer Credit", 15_703),
+    ],
     exec: 185_389,
     stor: 2_768,
 };
 const CLAIM_CREDITED: Tx = Tx {
-    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", 18_035)],
+    handlers: &[
+        ("consumer Claim", 37_667),
+        ("Attest", 100_517),
+        ("consumer (reply)", 31_502),
+        ("consumer Credit", 18_035),
+    ],
     exec: 187_721,
     stor: 2_768,
 };
@@ -838,7 +848,11 @@ fn an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds() {
     let many = acc::verify_all_private(&mut uw.grown(more));
     acc::assert_flat(std::slice::from_ref(&few), &[many], more);
     pin_tx(&mut pins, &few, &PRIVATE_VERIFY_ALL_TX);
-    assert_eq!(few.gas_exec, market::PRIVATE_VERIFY_GAS + few.cycles("public part"), "the flat receipt gas plus the public part");
+    assert_eq!(
+        few.gas_exec,
+        market::PRIVATE_VERIFY_GAS + few.cycles("public part"),
+        "the flat receipt gas plus the public part"
+    );
     assert_eq!(few.gas_stor, market::PRIVATE_GAS_STOR, "the private storage gas is fee_core's flat");
     pins.note("added for the second run of each", "a thousand records and a thousand instances");
 
