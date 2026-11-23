@@ -552,7 +552,7 @@ attest_phase() {
     jq -n --slurpfile r "$W/req/record.json" --slurpfile l "$W/rep/A-fetch_log_proof.json" --argjson ch "$CHAIN" \
       '{chain_id: $ch, record: $r[0], log: $l[0].log}' > "$W/req/dry_run_log.json"
     call ferrata_attest_module dry_run_attest A-dry_run_log "@$W/req/dry_run_log.json"
-    jq -n --slurpfile l "$W/rep/A-fetch_log_proof.json" --arg p "$program" --arg id "$id" --argjson ch "$CHAIN" --argjson s "$slot" \
+    jq -n --slurpfile l "$W/rep/A-fetch_log_proof.json" --arg p "$(b58hex "$program")" --arg id "$id" --argjson ch "$CHAIN" --argjson s "$slot" \
       '{program_id: $p, instance_id: $id, chain_id: $ch, slot: $s, log: $l[0].log}' > "$W/req/build_attest_tx.json"
     call ferrata_attest_module build_attest_tx A-build_attest_tx "@$W/req/build_attest_tx.json"
   fi
