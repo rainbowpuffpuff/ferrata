@@ -24,6 +24,7 @@
 //!   applied once; killed with it in a block not yet final: run again, it waits and sends nothing;
 //! * `advance` killed after its `Open` (a job of three transactions): run again, it finishes with `Miller` and
 //!   `Finish`, no second `Open`; a finished command run again sends nothing.
+//!
 //! Checked: every transaction the zone included was submitted once (or resubmitted byte for byte), none applied twice;
 //! no `Attest` request and no job step twice.
 //!
@@ -62,7 +63,8 @@ use serde_json::{json, Value};
 #[allow(dead_code)]
 mod follower;
 
-const FIXTURE: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10");
+const FIXTURE: &str =
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10");
 const WETH: &str = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const USDC: &str = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const WETH_SLOT: &str = "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0";
@@ -143,7 +145,13 @@ impl Zone {
 
     /// A block of `pending` on `state`, as LEZ's block builder makes one: each transaction settled on a scratch copy in
     /// turn, one it rejects dropped (a nonce already used, for one); then the forced fee and clock transactions.
-    fn block(state: &V03State, id: u64, prev: HashType, ts: u64, pending: Vec<LeeTransaction>) -> (Block, Vec<LeeTransaction>) {
+    fn block(
+        state: &V03State,
+        id: u64,
+        prev: HashType,
+        ts: u64,
+        pending: Vec<LeeTransaction>,
+    ) -> (Block, Vec<LeeTransaction>) {
         let opening = opening_fee_state(state);
         let mut scratch = state.clone();
         let mut summary = fee_core::BlockFeeSummary::default();
@@ -159,7 +167,11 @@ impl Zone {
         let mut txs = kept.clone();
         txs.push(LeeTransaction::Public(fee_invocation(summary, payout, producer())));
         txs.push(LeeTransaction::Public(clock_invocation(id, ts)));
-        (HashableBlockData { block_id: id, prev_block_hash: prev, timestamp: ts, transactions: txs, reverted }.into_pending_block(), kept)
+        (
+            HashableBlockData { block_id: id, prev_block_hash: prev, timestamp: ts, transactions: txs, reverted }
+                .into_pending_block(),
+            kept,
+        )
     }
 
     /// The next block, of every pending transaction, stamped with the clock (at least 1 ms after the tip).
@@ -185,7 +197,8 @@ impl Zone {
                 match id.checked_sub(1).and_then(|i| self.blocks.get(i as usize)) {
                     Some(b) => {
                         let mut b = b.clone();
-                        b.bedrock_status = if id <= self.final_height { BedrockStatus::Finalized } else { BedrockStatus::Pending };
+                        b.bedrock_status =
+                            if id <= self.final_height { BedrockStatus::Finalized } else { BedrockStatus::Pending };
                         serde_json::to_value(&b).map_err(err)
                     }
                     None => Ok(Value::Null),
@@ -281,7 +294,9 @@ fn serve_zone(zone: Arc<Mutex<Zone>>) -> String {
                     let answer = zone.lock().unwrap().rpc(req["method"].as_str().unwrap_or(""), &req["params"]);
                     let reply = match answer {
                         Ok(result) => json!({ "jsonrpc": "2.0", "id": req["id"], "result": result }),
-                        Err(e) => json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } }),
+                        Err(e) => {
+                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } })
+                        }
                     };
                     let close = head.contains("connection: close");
                     if respond(&mut w, "200 OK", reply.to_string().as_bytes(), close).is_err() || close {
@@ -337,11 +352,16 @@ fn result_of(path: &Path) -> Value {
 fn recorded(method: &str, params: &Value) -> Result<Value, String> {
     match method {
         "eth_chainId" => Ok(json!("0x1")),
-        "eth_getBlockByNumber" if params[0] == json!(format!("0x{BLOCK:x}")) => Ok(result_of(&fixture(&format!("block_{BLOCK}.json")))),
-        "eth_getBlockReceipts" if params[0] == json!(format!("0x{BLOCK:x}")) => Ok(result_of(&fixture(&format!("receipts_{BLOCK}.json")))),
+        "eth_getBlockByNumber" if params[0] == json!(format!("0x{BLOCK:x}")) => {
+            Ok(result_of(&fixture(&format!("block_{BLOCK}.json"))))
+        }
+        "eth_getBlockReceipts" if params[0] == json!(format!("0x{BLOCK:x}")) => {
+            Ok(result_of(&fixture(&format!("receipts_{BLOCK}.json"))))
+        }
         "eth_getProof" if params[2] == json!(format!("0x{BLOCK:x}")) => {
             let address = params[0].as_str().unwrap_or_default().to_lowercase();
-            let keys: Vec<String> = params[1].as_array().into_iter().flatten().filter_map(|k| k.as_str()).map(str::to_lowercase).collect();
+            let keys: Vec<String> =
+                params[1].as_array().into_iter().flatten().filter_map(|k| k.as_str()).map(str::to_lowercase).collect();
             for entry in std::fs::read_dir(FIXTURE).unwrap().flatten() {
                 let name = entry.file_name().to_string_lossy().to_string();
                 if !(name.starts_with("proof_") && name.ends_with(&format!("_{BLOCK}.json"))) {
@@ -418,7 +438,11 @@ fn serve_eth(eth: Arc<Mutex<Eth>>) -> String {
                 };
                 let bytes = body.to_string().into_bytes();
                 if matches!(fault, Fault::Cut | Fault::CutOnce) {
-                    let _ = write!(w, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n", bytes.len());
+                    let _ = write!(
+                        w,
+                        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n",
+                        bytes.len()
+                    );
                     let _ = w.write_all(&bytes[..bytes.len() / 2]);
                     let _ = w.flush();
                     return;
@@ -470,7 +494,14 @@ impl Tool {
         let mut c = Command::new(env!("CARGO_BIN_EXE_ferrata"));
         c.arg("attest")
             .args(["--lez-rpc", &self.lez, "--program", &format!("0x{}", hex::encode(self.program.value()))])
-            .args(["--key", self.key.to_str().unwrap(), "--state-dir", self.state.to_str().unwrap(), "--settle-timeout", "120"])
+            .args([
+                "--key",
+                self.key.to_str().unwrap(),
+                "--state-dir",
+                self.state.to_str().unwrap(),
+                "--settle-timeout",
+                "120",
+            ])
             .args(args);
         std::fs::write(&out, format!("$ ferrata attest ... {}\n", args.join(" "))).unwrap();
         (c, out)
@@ -540,6 +571,10 @@ fn strs(v: &[String]) -> Vec<&str> {
     v.iter().map(String::as_str).collect()
 }
 
+/// A failing endpoint's case: its name, the fault and the method it applies to, the statement's arguments, and a part
+/// of the message expected.
+type Case<'a> = (&'a str, Fault, Option<&'static str>, Vec<&'a str>, &'a str);
+
 /// R.5: failing endpoints and interruptions, nothing done twice.
 #[test]
 fn failing_endpoint_and_interruptions_do_nothing_twice() {
@@ -563,7 +598,18 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     let id = instance_of(&out);
     let update = fixture("finality_update.ssz");
     let committee = format!("bootstrap:{}", fixture(BOOT).display());
-    let advance = ["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee, "--send", "--yes"];
+    let advance = [
+        "advance",
+        "--instance",
+        &id,
+        "--update",
+        update.to_str().unwrap(),
+        "--finality",
+        "--committee",
+        &committee,
+        "--send",
+        "--yes",
+    ];
 
     // `advance` killed after its `Open`, in a block not yet final; run again: `Miller` and `Finish`, no second `Open`.
     zone.lock().unwrap().mode = Mode::Hold;
@@ -591,9 +637,10 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
         let id_bytes: [u8; 32] = hex::decode(id.trim_start_matches("0x")).unwrap().try_into().unwrap();
         let record = z.state.get_account_by_id(header_actor(program, &id_bytes, RECORD_SLOT).account_id).clone();
         assert!(!record.data.actor_state(program).is_empty(), "the record header(id, {RECORD_SLOT}) is written");
-        let inst: InstanceState =
-            borsh::from_slice(&z.state.get_account_by_id(instance_actor(program, &id_bytes).account_id).data.actor_state(program).to_vec())
-                .unwrap();
+        let inst: InstanceState = borsh::from_slice(
+            z.state.get_account_by_id(instance_actor(program, &id_bytes).account_id).data.actor_state(program),
+        )
+        .unwrap();
         assert_eq!(CompactStore::decode(&inst.store).unwrap().finalized.slot, RECORD_SLOT);
         let opens = z.messages(program).iter().filter(|(_, _, _, m)| matches!(m, Message::Open { .. })).count();
         assert_eq!(opens, 1, "one Open");
@@ -603,10 +650,20 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     let bal = result_of(&fixture(&format!("call_weth_balance_{BLOCK}.json"))).as_str().unwrap().to_string();
     let storage_eq = format!("{WETH}:{WETH_SLOT}:eq:{bal}");
     let attest = |eth: &str, extra: &[&str]| -> Vec<String> {
-        let mut v: Vec<String> = ["attest", "--instance", &id, "--record-slot", &RECORD_SLOT.to_string(), "--eth", eth, "--block", &BLOCK.to_string()]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let mut v: Vec<String> = [
+            "attest",
+            "--instance",
+            &id,
+            "--record-slot",
+            &RECORD_SLOT.to_string(),
+            "--eth",
+            eth,
+            "--block",
+            &BLOCK.to_string(),
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         v.extend(extra.iter().map(|s| s.to_string()));
         v.extend(["--send", "--yes", "--eth-timeout", "2", "--eth-retries", "1"].iter().map(|s| s.to_string()));
         v
@@ -618,7 +675,7 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     let s0 = submitted();
     let log_spec = format!("0:0:emitter={USDC}");
     let (st, lg) = (storage_eq.as_str(), log_spec.as_str());
-    let cases: Vec<(&str, Fault, Option<&'static str>, Vec<&str>, &str)> = vec![
+    let cases: Vec<Case> = vec![
         ("refused", Fault::None, None, vec!["--storage", st], "refused the connection"),
         ("hang", Fault::Hang, Some("eth_getProof"), vec!["--storage", st], "did not answer in time"),
         ("cut-proof", Fault::Cut, Some("eth_getProof"), vec!["--storage", st], "cut short"),
@@ -640,7 +697,9 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
         let calls = eth.lock().unwrap().calls.clone();
         match *name {
             // Retried once (--eth-retries 1) where trying again may help; not after an error answer or another chain.
-            "hang" | "cut-proof" | "http-503" => assert_eq!(calls.iter().filter(|m| *m == "eth_getProof").count(), 2, "{name}: {calls:?}"),
+            "hang" | "cut-proof" | "http-503" => {
+                assert_eq!(calls.iter().filter(|m| *m == "eth_getProof").count(), 2, "{name}: {calls:?}")
+            }
             "rpc-error" => assert_eq!(calls.iter().filter(|m| *m == "eth_getProof").count(), 1, "{calls:?}"),
             "wrong-chain-id" => assert_eq!(calls, ["eth_chainId"]),
             "wrong-block-hash" => assert_eq!(calls, ["eth_chainId", "eth_getBlockByNumber"]),
@@ -742,7 +801,12 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     let attests = z.messages(program).iter().filter(|(_, _, _, m)| matches!(m, Message::Attest { .. })).count();
     assert_eq!(attests, 5, "five attestations, each once");
     assert!(t.state.join(ferrata_cli::attest::FOLLOWER_STATE).exists());
-    println!("R.5: {} submissions, {} transactions included, none twice; records in {}", z.submitted.len(), z.included.len(), dir.display());
+    println!(
+        "R.5: {} submissions, {} transactions included, none twice; records in {}",
+        z.submitted.len(),
+        z.included.len(),
+        dir.display()
+    );
 }
 
 /// U.5: LEZ's refusal of a checkpoint stale by the zone's clock, as code 53's message; a window not open, as LEZ's text.
@@ -760,9 +824,14 @@ fn stale_checkpoint_shown_as_code_53() {
     let mut t = Tool::new(&dir, "u5-past-end", &lez, &zone.lock().unwrap());
     let (code, out) = t.run("init-past-end", &strs(&init));
     assert_eq!(code, 3, "{out}");
-    for part in ["refused with 53 OutsideWeakSubjectivityPeriod", CHECKPOINT, "recover from a new bootstrap", "ferrata attest init",
-        "\"Execution outside of the validity window\"", "not sent"]
-    {
+    for part in [
+        "refused with 53 OutsideWeakSubjectivityPeriod",
+        CHECKPOINT,
+        "recover from a new bootstrap",
+        "ferrata attest init",
+        "\"Execution outside of the validity window\"",
+        "not sent",
+    ] {
         has(&out, part);
     }
     assert_eq!(zone.lock().unwrap().submitted.len(), 0, "nothing sent");
@@ -793,13 +862,18 @@ fn stale_checkpoint_shown_as_code_53() {
     let id = instance_of(&out);
     let update = fixture("finality_update.ssz");
     let committee = format!("bootstrap:{}", fixture(BOOT).display());
-    let (code, out) =
-        t.run("advance-before-signature-slot", &["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee]);
+    let (code, out) = t.run(
+        "advance-before-signature-slot",
+        &["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee],
+    );
     assert_eq!(code, 3, "{out}");
     let open = out.lines().find(|l| l.trim_start().starts_with("open ")).expect("the Open's dry run").to_string();
     has(&open, "\"Execution outside of the validity window\": its window opens at");
     has(&open, &ferrata_cli::attest::utc(slot_ms(SIGNATURE_SLOT)));
-    assert!(!open.contains("OutsideWeakSubjectivityPeriod") && !open.contains("refused with 53"), "not code 53: {open}");
+    assert!(
+        !open.contains("OutsideWeakSubjectivityPeriod") && !open.contains("refused with 53"),
+        "not code 53: {open}"
+    );
     println!("U.5: records in {}", dir.display());
 }
 
