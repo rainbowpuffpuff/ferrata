@@ -17,22 +17,39 @@
 //!   the absent slot and the four facts ([`statement_requests`]);
 //! - `Read` and `ReadPadded`, the read idiom of LEZ v0.4 (what a private consumer's transaction
 //!   runs publicly), sent by a public reader of the consumer ([`read_record`]);
+//! - the accumulator-leaf statement and the vault's slots under a record that binds a block hash
+//!   (the `Request.header` path), on the synthetic vault ([`LeafWorld`]);
 //! - the reference consumer: `CallAttest` with an empty reader and with a reader holding the
-//!   previous reply ([`call_attest`]), and `Claim` for a sender credited for the first time and for
-//!   one credited before ([`claim`], [`place_balance`]).
+//!   previous reply ([`call_attest`]), `Claim` for a sender credited for the first time and for one
+//!   credited before ([`claim`], [`place_balance`]), and its private read `AttestPrivately`
+//!   ([`attest_privately`]);
+//! - the reference consumer's vault pattern on FerrataVault v5's real deposits ([`VaultWorld`]):
+//!   `ClaimDeposit` (→ `Attest` → reply → `CreditHolder`) for a first credit and to a holder
+//!   credited before, `ClaimDepositPrivately` (its public part `Read` → `Spend` → `CreditHolder`),
+//!   and the private claim's own cycles with the claimant's private `holdings` list grown
+//!   ([`private_kind_claim`]), the one cost found to grow with use.
 //!
 //! With `Open`, `JobOpen`, `Miller`, `Adopt`, `Finish`, `Apply` and `Record` (perf_state §3,
-//! `tests/costs_attestation.rs`'s replay), that is every message the attestation program handles.
+//! `tests/costs_attestation.rs`'s replay), that is every message the attestation program handles,
+//! and every message of the reference consumer (`lez/guests/consumer`).
 //!
 //! What K adds: copies of real accounts the programs wrote, at keys no measured transaction names.
 //! For the attestation program, `header(id, slot)` records at slots from 2^40 (as perf_state §2),
 //! and for `Init` and `Succeed`, which each create an instance, `instance(id)` accounts too; for the
-//! reference consumer, spent `claim(pool, N)` nullifiers, `balance(pool, owner)` accounts and
-//! callers' reader states, beside the records. A LEZ transaction sees only the accounts it names,
-//! so equal charges show that the metering does not depend on the rest of the state. The accounts
-//! an action does read are fixed in size or replaced rather than appended to; the two that change
-//! with use are measured as they change: a reader holding a previous reply or record (and again
-//! after another call), and the claimant's balance credited once or K + 1 times before.
+//! reference consumer, spent `claim(pool, N)` nullifiers, `balance(pool, owner)` or
+//! `holder(pool, dest)` accounts and callers' reader states, beside the records. Not copied: job
+//! accounts (one per `Open` never finished; no action but its own job's steps names one). For the
+//! private transactions, K more commitments in LEZ's commitment set ([`add_commitments`]): every
+//! private transaction's circuit verifies its fee payer's membership path in that set's tree, one
+//! SHA-256 per level, so its cycles grow with log2 of all commitments ever made. The harness cannot
+//! read the circuit's cycles (LEZ drops the prover's statistics); what is measured is that the
+//! charge stays the same while the path grows ([`membership_path_levels`]). A LEZ transaction sees
+//! only the accounts it names, so equal charges show that the metering does not depend on the rest
+//! of the state. The accounts an action does read are fixed in size or replaced rather than
+//! appended to, with one exception in the reference consumer's own private state; the ones that
+//! change with use are measured as they change: a reader holding a previous reply or record (and
+//! again after another call), a balance or holder credited once or K + 1 times before, and a
+//! claimant's `holdings` list (one entry per pool it holds privately).
 
 use ferrata_core::{
     fork::{Fork, LcFork},
@@ -43,23 +60,29 @@ use ferrata_core::{
 };
 use ferrata_lez_wire::{
     attest::{Cmp, Field, LogQuery, Operand, Relation, Request},
-    consumer::{balance_actor, claim_actor, nullifier, BalanceState, ConsumerMessage, ConsumerState},
+    consumer::{
+        balance_actor, claim_actor, holder_actor, nullifier, secret_nullifier, BalanceState, ClaimantState,
+        ConsumerMessage, ConsumerState, HolderState, VaultPool,
+    },
     header_actor, instance_actor, successor_id, Config, Message,
 };
-use lee::{Account, AccountId, Actor, PublicAccountEvidence, V03State};
+use lee::{test_utils::TestPrivateKeys, Account, AccountId, Actor, PublicAccountEvidence, V03State};
 use lee_core::{
     account::ActorState,
-    program::{PdaSeed, ReceiveInput},
+    program::{PdaSeed, ReceiveInput, StateReply},
+    AuthorizationSecretKey, Commitment, Nullifier,
 };
 
 use crate::{
     as_finality_update,
     attest::{account_query, condition, execute, transfer_conditions, u256, Stage4},
     consumer_account, ferrata_account, grouped, mainnet_bootstrap, mainnet_config,
-    private::catalog,
+    consumer_program,
+    private::{catalog, PrivateAccount},
     root,
     scenarios::World,
-    Chain, Instance, TxReport, TRUSTED_BLOCK_ROOT,
+    sepolia::SEPOLIA_CHAIN_ID,
+    vault, Chain, Instance, TxReport, TRUSTED_BLOCK_ROOT,
 };
 
 /// Slots of the copied records: far above any real slot, so no request reads one (perf_state §2).
@@ -260,13 +283,53 @@ pub fn verify_all_public(w: &mut World) -> Charged {
     charged
 }
 
+/// A private transaction's measured charge, and the length of its fee payer's membership path in
+/// LEZ's commitment tree (the levels its circuit hashes).
+#[derive(Clone, Debug)]
+pub struct Proven {
+    pub charged: Charged,
+    pub path_levels: usize,
+}
+
+/// `k` more commitments in LEZ's commitment set: new private accounts that no transaction names,
+/// added as LEZ's own settlement tests add them (`Chain::add_private_account`), so that the
+/// commitment tree, and the membership path a private transaction's circuit verifies for its fee
+/// payer, is deeper.
+pub fn add_commitments(chain: &mut Chain, k: usize) {
+    let accounts: Vec<(Commitment, Nullifier)> = (0..k)
+        .map(|i| {
+            let keys = TestPrivateKeys {
+                ask: AuthorizationSecretKey(synthetic_root(0xa5, i)),
+                d: synthetic_root(0xd5, i),
+                z: synthetic_root(0x25, i),
+            };
+            let id = keys.account_id();
+            (Commitment::new(&id, &Account::default()), Nullifier::for_account_initialization(&id, &keys.nsk()))
+        })
+        .collect();
+    let state = std::mem::take(&mut chain.state);
+    chain.state = state.with_private_accounts(accounts);
+}
+
+/// The length of `sender`'s membership path in LEZ's commitment tree: the levels the circuit hashes
+/// for it (`compute_digest_for_path`, one SHA-256 per level).
+pub fn membership_path_levels(chain: &Chain, sender: &PrivateAccount) -> usize {
+    let (_, path) = chain
+        .state
+        .get_proof_for_commitment(&Commitment::new(&sender.id(), &sender.account))
+        .expect("the sender's commitment is in the set");
+    path.len()
+}
+
 /// The finality update verified in one private transaction (the proven path, RISC Zero dev mode):
 /// a new private account runs `VerifyAll` at its own actor, which sends `ApplyVerified` to the
 /// public instance. The charge is LEZ's flat receipt gas plus the public part's cycles, and the
 /// private transaction's flat storage gas; the private execution, which LEZ does not meter (the
 /// sender proves it), is run again in RISC Zero's executor for its cycles. Returned as two
-/// "handlers": the private execution's cycles, then the public part's.
-pub fn verify_all_private(w: &mut World) -> Charged {
+/// "handlers": the private execution's cycles, then the public part's. `VerifyAll` carries the
+/// instance's store in its message, so its private execution reads no chain state: its cycles
+/// cannot vary with K, and are not a measurement against accumulation.
+pub fn verify_all_private(w: &mut World) -> Proven {
     let (update, _) = finality_update(w);
     // The block time of the private placement's own test (`tests/costs_attestation.rs`).
     let time = w.inst.config.slot_start_ms(w.updates[2].signature_slot) + 12_000;
@@ -285,6 +348,7 @@ pub fn verify_all_private(w: &mut World) -> Charged {
         },
     );
     assert_eq!(private.exit_code, 0, "the private execution verifies the update");
+    let path_levels = membership_path_levels(&w.chain, &sender);
     let header = header_actor(w.inst.program, &w.inst.id, update.finalized_header.beacon.slot);
     let run = w
         .chain
@@ -300,7 +364,7 @@ pub fn verify_all_private(w: &mut World) -> Charged {
         .expect("settles");
     assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
     assert!(w.inst.record(&w.chain, update.finalized_header.beacon.slot).is_some(), "the record is written");
-    Charged {
+    let charged = Charged {
         action: "VerifyAll, private (the proven path; public part ApplyVerified → Record)".to_string(),
         handlers: vec![
             ("VerifyAll, private execution (executor)".to_string(), private.cycles),
@@ -308,7 +372,8 @@ pub fn verify_all_private(w: &mut World) -> Charged {
         ],
         gas_exec: run.charge.gas_exec,
         gas_stor: run.charge.gas_stor,
-    }
+    };
+    Proven { charged, path_levels }
 }
 
 /// The successor's configuration: the instance's, with Gloas scheduled at
@@ -619,4 +684,365 @@ pub fn claim(s: &mut Stage4, action: &str, credits_before: u64) -> Charged {
     let balance = s.balance(&pool, &t.from).expect("the sender is credited");
     assert_eq!(balance.credits, credits_before + 1, "{action}: credited once more");
     charged
+}
+
+// ---------------------------------------------------------------------------------------------
+// The accumulator leaf: the synthetic vault
+// ---------------------------------------------------------------------------------------------
+
+/// The block time of `vault::synthetic_attestations`.
+pub const LEAF_TIME: u64 = 1_800_000_000_000;
+
+/// The synthetic vault (`vault::synthetic`): a record of `vault::SYNTHETIC_INSTANCE` that binds the
+/// block hash of a block whose state holds the vault with the eight deposits of the tree vectors,
+/// and a record of the same block that holds the payload's fields, placed on a new chain as
+/// `vault::synthetic_attestations` places them (`lez/results/stage5-vault-synthetic.md`).
+pub struct LeafWorld {
+    pub base: Chain,
+    pub syn: vault::Synthetic,
+    /// `header(id, slot)` of the record that binds the block hash, and its account.
+    pub actor: Actor,
+    pub record: Account,
+    /// The record that holds the payload's fields, and its actor.
+    pub payload: ferrata_core::witness::HeaderRecord,
+    pub at_payload: Actor,
+}
+
+impl Default for LeafWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl LeafWorld {
+    pub fn new() -> Self {
+        use ferrata_core::{
+            types::BeaconBlockHeader,
+            witness::{ExecutionSummary, HeaderRecord},
+        };
+        let syn = vault::synthetic();
+        let mut base = Chain::new();
+        let actor = vault::place_record(&mut base, vault::SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &syn.record);
+        let record = account(&base.state, actor.account_id);
+        let h = ferrata_core::exec::decode_header_with_hash(&syn.header, &syn.block_hash).unwrap();
+        let payload = HeaderRecord {
+            beacon: BeaconBlockHeader { slot: vault::SYNTHETIC_SLOT + 1, ..Default::default() },
+            execution_root: [0; 32],
+            execution: ExecutionSummary::Payload {
+                block_number: h.number,
+                block_hash: syn.block_hash,
+                parent_hash: h.parent_hash,
+                state_root: h.state_root,
+                receipts_root: h.receipts_root,
+                timestamp: h.timestamp,
+            },
+        };
+        let at_payload = vault::place_record(&mut base, vault::SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &payload);
+        Self { base, syn, actor, record, payload, at_payload }
+    }
+
+    /// A copy of the chain with `k` more records of the synthetic instance (slots from 2^40).
+    pub fn grown(&self, k: usize) -> Chain {
+        let mut chain = self.base.clone();
+        add_records(&mut chain.state, &vault::SYNTHETIC_INSTANCE, &self.record, k);
+        chain
+    }
+}
+
+/// The vault's requests of `stage5-vault-synthetic.md` rows 1–5, each attested at its record as the
+/// root of a transaction and checked against the native evaluation: slots 0 and 1 alone, with one,
+/// two and all eight deposit leaves (under the record that binds the block hash, the header
+/// travelling with the request), and with one leaf under the record that holds the payload's fields.
+pub fn attest_leaves(lw: &LeafWorld, chain: &mut Chain) -> Vec<Charged> {
+    let s = &lw.syn;
+    let base = Request {
+        instance_id: vault::SYNTHETIC_INSTANCE,
+        chain_id: SEPOLIA_CHAIN_ID,
+        header: Some(s.header.clone()),
+        ..Request::default()
+    };
+    let n = s.leaves.len();
+    let leaf = |i: usize| (i as u64, s.leaves[i], vault::tree(&s.leaves, i).1);
+    let by_hash = (&vault::SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &s.record);
+    let by_payload = (&vault::SYNTHETIC_INSTANCE, SEPOLIA_CHAIN_ID, &lw.payload);
+    let one = vault::vault_request(base.clone(), &s.proof, &s.root, &[leaf(n - 1)]);
+    let requests = [
+        ("vault slots 0 and 1, no leaf (synthetic state, Gloas record)", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &[])),
+        ("vault slots 0 and 1 and one deposit leaf", by_hash, lw.actor, one.clone()),
+        ("vault slots 0 and 1 and two deposit leaves", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &[leaf(0), leaf(n - 1)])),
+        ("vault slots 0 and 1 and all eight deposit leaves", by_hash, lw.actor, vault::vault_request(base.clone(), &s.proof, &s.root, &(0..n).map(leaf).collect::<Vec<_>>())),
+        ("the same with one leaf, under a record that holds the payload's fields (no header)", by_payload, lw.at_payload, Request { header: None, ..one }),
+    ];
+    requests
+        .into_iter()
+        .map(|(label, native, actor, request)| {
+            let (r, a) = vault::run(chain, native, label, actor, &request, LEAF_TIME);
+            assert!(a.is_ok(), "{label}: accepted");
+            Charged::of(label, &r)
+        })
+        .collect()
+}
+
+// ---------------------------------------------------------------------------------------------
+// The reference consumer's private read, and its vault pattern on FerrataVault v5's deposits
+// ---------------------------------------------------------------------------------------------
+
+/// The reference consumer's private read (`AttestPrivately` of the fixture's `Transfer` in its
+/// pool), by a new private account, proven in one private transaction (RISC Zero dev mode) and
+/// settled: its two private transitions' cycles in the executor (the root call, which sends `Read`;
+/// the record's reply, in which the fact is verified), then the public part (`Read`).
+pub fn attest_privately(s: &mut Stage4) -> Proven {
+    let slot = s.fx.finalized_slot;
+    let (pool, t) = (s.pool(), s.fx.transfer.clone());
+    let header = s.header(slot);
+    let account = s.w.chain.add_private_account(0x81, 1_000_000_000_000);
+    let message = s.private_message(&pool, slot, &t);
+    let executed = s.private_transitions(account.id(), slot, &message);
+    assert_eq!(executed.iter().map(|e| e.exit_code).collect::<Vec<_>>(), [0, 0], "both private transitions pass");
+    let path_levels = membership_path_levels(&s.w.chain, &account);
+    let run = s
+        .w
+        .chain
+        .prove_and_settle_private(
+            &account,
+            Actor::new(account.id(), consumer_account()),
+            borsh::to_vec(&message).unwrap(),
+            vec![header],
+            &catalog(),
+            100_000_000,
+            s.time,
+        )
+        .expect("settles");
+    assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
+    let charged = Charged {
+        action: "AttestPrivately, private (public part Read)".to_string(),
+        handlers: vec![
+            ("AttestPrivately, private (executor)".to_string(), executed[0].cycles),
+            ("the record's reply, private (executor)".to_string(), executed[1].cycles),
+            ("public part".to_string(), run.charge.cycles),
+        ],
+        gas_exec: run.charge.gas_exec,
+        gas_stor: run.charge.gas_stor,
+    };
+    Proven { charged, path_levels }
+}
+
+/// FerrataVault v5's two real deposits under the Sepolia instance's record (`vault::RealVault`):
+/// the reference consumer's vault pattern (`tests/vault_consumer.rs`). Deposit 0 is public-kind (to
+/// LEZ's public test account 0), deposit 1 private-kind (to LEZ's private test account 0). With the
+/// accounts a first public claim of deposit 0 leaves, the templates of the copies.
+pub struct VaultWorld {
+    pub v: vault::RealVault,
+    pub pool: VaultPool,
+    /// Each deposit's opening `(s, kind, dest)` (`vault::crown_openings`).
+    pub openings: Vec<(Root, u8, Root)>,
+    pub record: Account,
+    pub spent: Account,
+    pub holder: Account,
+}
+
+impl Default for VaultWorld {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl VaultWorld {
+    pub fn new() -> Self {
+        let v = vault::RealVault::load();
+        let pool = vault::eth_pool(&v);
+        let openings = vault::crown_openings(&v);
+        let record = account(&v.w.chain.state, v.actor().account_id);
+        let mut vw = Self { v, pool, openings, record: record.clone(), spent: record.clone(), holder: record };
+        let mut scratch = vw.v.w.clone();
+        claim_deposit(&vw, &mut scratch, "the template claim", 0);
+        let (s0, _, dest0) = vw.openings[0];
+        let program = consumer_account();
+        let pool_id = vw.pool.id();
+        let n0 = secret_nullifier(&s0, &vw.v.deposit_id(0));
+        vw.spent = account(&scratch.chain.state, claim_actor(program, &pool_id, &n0).account_id);
+        vw.holder = account(&scratch.chain.state, holder_actor(program, &pool_id, &dest0).account_id);
+        assert_eq!(holder_account(&vw, 1), vw.holder, "place_holder builds the program's holder account");
+        vw
+    }
+
+    /// A copy of the Sepolia world with `k` more records of its instance, and `k` more spent claims
+    /// and holders (same pool, other destinations) of the consumer.
+    pub fn grown(&self, k: usize) -> World {
+        let mut w = self.v.w.clone();
+        let program = consumer_account();
+        let pool_id = self.pool.id();
+        let state = &mut w.chain.state;
+        add_records(state, &w.inst.id, &self.record, k);
+        copy_to(state, &self.spent, k, |i| claim_actor(program, &pool_id, &synthetic_root(0xc2, i)).account_id);
+        copy_to(state, &self.holder, k, |i| holder_actor(program, &pool_id, &synthetic_root(0x40, i)).account_id);
+        w
+    }
+}
+
+/// `ClaimDeposit` of deposit 0 (public kind) at `claim(pool, N)` on `w`: the public claim (`→
+/// Attest → reply → CreditHolder`); `credits_before` is what its destination's holder held.
+pub fn claim_deposit(vw: &VaultWorld, w: &mut World, action: &str, credits_before: u64) -> Charged {
+    let (s0, kind0, dest0) = vw.openings[0];
+    let program = consumer_account();
+    let pool_id = vw.pool.id();
+    let n0 = secret_nullifier(&s0, &vw.v.deposit_id(0));
+    let at = claim_actor(program, &pool_id, &n0);
+    let holder = holder_actor(program, &pool_id, &dest0);
+    let message = ConsumerMessage::ClaimDeposit {
+        pool: vw.pool.clone(),
+        slot: vw.v.slot,
+        deposit: vw.v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
+    let r = w.chain.submit(
+        action,
+        at,
+        borsh::to_vec(&message).unwrap(),
+        vec![at, vw.v.actor(), holder],
+        vec![PublicAccountEvidence::Pda {
+            program,
+            seed: ferrata_lez_wire::consumer::claim_seed(&pool_id, &n0),
+        }],
+        vw.v.time,
+    );
+    let charged = Charged::of(action, &r);
+    let held = match crate::attest::consumer_state(&w.chain, holder) {
+        Some(ConsumerState::Holder(h)) => h,
+        other => panic!("{action}: the holder holds {other:?}"),
+    };
+    assert_eq!(held.credits, credits_before + 1, "{action}: credited once more");
+    charged
+}
+
+/// Deposit 0's destination's holder as the consumer writes it after `credits` credits of 0.001 ETH.
+pub fn holder_account(vw: &VaultWorld, credits: u64) -> Account {
+    let (_, _, dest0) = vw.openings[0];
+    let amount = vw.v.deposits[0].deposit.amount;
+    let state = ConsumerState::Holder(HolderState {
+        pool_id: vw.pool.id(),
+        dest: dest0,
+        amount: u128::from_be_bytes(amount[16..].try_into().unwrap()) * u128::from(credits),
+        credits,
+    });
+    Account::default().with_actor_state(consumer_account(), ActorState::from(borsh::to_vec(&state).unwrap()))
+}
+
+/// Place deposit 0's destination's holder as if credited `credits` times before.
+pub fn place_holder(vw: &VaultWorld, w: &mut World, credits: u64) {
+    let (_, _, dest0) = vw.openings[0];
+    let id = holder_actor(consumer_account(), &vw.pool.id(), &dest0).account_id;
+    w.chain.state.force_insert_account(id, holder_account(vw, credits));
+}
+
+/// The consumer's two private transitions for a private claim, in the executor: the root call at
+/// `account`'s actor holding `pre_state` (it sends `Read`), then the record's reply, in which the
+/// deposit is verified and the claim's commitment opened (it sends `Spend`).
+fn private_claim_transitions(
+    vw: &VaultWorld,
+    account: AccountId,
+    pre_state: ActorState,
+    message: &ConsumerMessage,
+) -> (u64, u64, ActorState) {
+    let elf = consumer_program();
+    let actor = Actor::new(account, consumer_account());
+    let call = ReceiveInput {
+        receiver: actor,
+        from: None,
+        is_authorized: true,
+        pre_state,
+        message: borsh::to_vec(message).unwrap(),
+    };
+    let first = execute("ClaimDepositPrivately (sends Read)", elf.elf(), &call);
+    let transition = first.transition.as_ref().expect("the root call passes");
+    let header = vw.v.actor();
+    let reply = ReceiveInput {
+        receiver: actor,
+        from: Some(header),
+        is_authorized: true,
+        pre_state: transition.response.post_state.clone().expect("the claim is kept for the reply"),
+        message: borsh::to_vec(&StateReply { state: vw.v.w.chain.actor_state(header) }).unwrap(),
+    };
+    let second = execute("the record's reply (verifies the deposit, sends Spend)", elf.elf(), &reply);
+    assert_eq!(second.exit_code, 0, "the reply verifies the deposit");
+    let kept = second.transition.expect("a transition").response.post_state.expect("the claimant keeps its state");
+    (first.cycles, second.cycles, kept)
+}
+
+/// `ClaimDepositPrivately` of deposit 0 (public kind, so its holder is credited publicly), by a new
+/// private account, proven in one private transaction (dev mode) and settled: the two private
+/// transitions' cycles in the executor, then the public part (`Read`, `Spend`, `CreditHolder`).
+pub fn claim_deposit_privately(vw: &VaultWorld, w: &mut World) -> Proven {
+    let (s0, kind0, dest0) = vw.openings[0];
+    let program = consumer_account();
+    let pool_id = vw.pool.id();
+    let n0 = secret_nullifier(&s0, &vw.v.deposit_id(0));
+    let account = w.chain.add_private_account(0x92, 1_000_000_000_000);
+    let message = ConsumerMessage::ClaimDepositPrivately {
+        pool: vw.pool.clone(),
+        slot: vw.v.slot,
+        deposit: vw.v.deposit_proof(0),
+        s: s0,
+        kind: kind0,
+        dest: dest0,
+    };
+    let (root_call, reply, _) = private_claim_transitions(vw, account.id(), ActorState::default(), &message);
+    let path_levels = membership_path_levels(&w.chain, &account);
+    let publics = vec![vw.v.actor(), claim_actor(program, &pool_id, &n0), holder_actor(program, &pool_id, &dest0)];
+    let run = w
+        .chain
+        .prove_and_settle_private(
+            &account,
+            Actor::new(account.id(), program),
+            borsh::to_vec(&message).unwrap(),
+            publics,
+            &catalog(),
+            100_000_000,
+            vw.v.time,
+        )
+        .expect("settles");
+    assert!(run.charge.revert.is_none(), "{:?}", run.charge.revert);
+    let charged = Charged {
+        action: "ClaimDepositPrivately, private (public part Read → Spend → CreditHolder)".to_string(),
+        handlers: vec![
+            ("ClaimDepositPrivately, private (executor)".to_string(), root_call),
+            ("the record's reply, private (executor)".to_string(), reply),
+            ("public part".to_string(), run.charge.cycles),
+        ],
+        gas_exec: run.charge.gas_exec,
+        gas_stor: run.charge.gas_stor,
+    };
+    Proven { charged, path_levels }
+}
+
+/// The private claim of deposit 1 (private kind: credited in the claimant's own private state, its
+/// `holdings`, one `(pool id, amount)` entry per pool) by its destination, LEZ's private test account
+/// 0, in the executor, with the claimant's state already holding `pools` other pools' entries: the
+/// two private transitions' cycles. The claimant's private state is the one list an action reads
+/// that grows with use (`lez/wire/src/lib.rs`, `ClaimantState`); LEZ charges the transaction the same
+/// (its public part, `Read` and `Spend`, does not see it), the claimant's own proof grows.
+pub fn private_kind_claim(vw: &VaultWorld, pools: usize) -> (u64, u64) {
+    let (s1, kind1, dest1) = vw.openings[1];
+    let keys = vault::lez_testnet_private_account_0();
+    assert_eq!(keys.account_id().value(), &dest1, "the deposit's destination is LEZ's private test account 0");
+    let holdings: Vec<(Root, u128)> = (0..pools).map(|i| (synthetic_root(0x9f, i), 1)).collect();
+    let before = ClaimantState { awaiting: None, pending: None, holdings: holdings.clone(), claims: pools as u64 };
+    let pre_state = ActorState::from(borsh::to_vec(&ConsumerState::Claimant(before)).unwrap());
+    let message = ConsumerMessage::ClaimDepositPrivately {
+        pool: vw.pool.clone(),
+        slot: vw.v.slot,
+        deposit: vw.v.deposit_proof(1),
+        s: s1,
+        kind: kind1,
+        dest: dest1,
+    };
+    let (root_call, reply, kept) = private_claim_transitions(vw, keys.account_id(), pre_state, &message);
+    let ConsumerState::Claimant(after) = borsh::from_slice(&kept).expect("a claimant's state") else {
+        panic!("a claimant's state")
+    };
+    assert_eq!(after.holdings.len(), pools + 1, "one more pool held");
+    assert_eq!(after.claims, pools as u64 + 1, "one more claim");
+    (root_call, reply)
 }
