@@ -193,6 +193,11 @@ check("cargo: --doc ignores non-Rust ```text blocks and does not run #[test]-onl
                               "lez/harness/src/lib.rs", text=TEXT_DOC)[0]
       and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
                                   "lez/harness/src/lib.rs", text=BIN_TEST)[0])
+check("cargo: --doc honours name filters and --skip",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc", "--", "zz_no_such_doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc", "--", "--skip", "doc_added"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=DOC_TEST)[0])
 check("trace: lez-harness runs bin unit tests and lib doc-tests when present",
       any(ci_model.cargo_runs(c, "lez/updater/src/main.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
       and any(ci_model.cargo_runs(c, "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))

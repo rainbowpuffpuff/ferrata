@@ -1361,31 +1361,33 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
     filters += hpos
     file_has_unit = bool(re.search(r"#\[(?:[a-z_]+::)?test\b", text) or "proptest!" in text)
     file_has_doc = runs_doc and has_doctest(text, include_ignored=include_ignored)
-    if runs_doc and not runs_unit:
-        if not file_has_doc:
-            return False, "cargo test --doc runs doc-tests only, and the file has none"
+
+    def _doc_ok() -> tuple[bool, str]:
         if "--all-features" not in flags:
             enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
                                                if "--no-default-features" not in flags else set())
             file_gate, _gated, _ungated = feature_gates(text, enabled)
             if file_gate:
                 return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        doc_targets = [rel_in_pkg] + re.findall(r"\b(?:fn|struct|enum|trait|mod)\s+([A-Za-z0-9_]+)", text)
+        for f in filters:
+            if not any((f == p if exact else f in p) for p in doc_targets):
+                return False, f"the name filter {f!r} matches none of its doc-tests"
+        for k in skips:
+            if any((k == p if exact else k in p) for p in doc_targets):
+                return False, f"--skip {k!r} skips doc-tests of this file"
         missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
         if missing:
             return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
         return True, ""
+
+    if runs_doc and not runs_unit:
+        if not file_has_doc:
+            return False, "cargo test --doc runs doc-tests only, and the file has none"
+        return _doc_ok()
     if not file_has_unit:
         if file_has_doc:
-            if "--all-features" not in flags:
-                enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
-                                                   if "--no-default-features" not in flags else set())
-                file_gate, _gated, _ungated = feature_gates(text, enabled)
-                if file_gate:
-                    return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
-            missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
-            if missing:
-                return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
-            return True, ""
+            return _doc_ok()
         return False, "the file has no #[test]"
     # Tests compiled out by a feature the command does not enable (feature_gates).
     if "--all-features" not in flags:
