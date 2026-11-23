@@ -23,20 +23,25 @@
 //! sent.
 //!
 //! **Interrupted and run again (RFP-021 R.5).** Before it sends, a command writes every transaction it is about to
-//! send, signed, to a journal in `--state-dir` (`sent/<intent>.json`, keyed by what the command asks for, not by the
-//! endpoints that serve it), and records each receipt there as it reads it. Run again after an interruption, the same
-//! command signs nothing new: a transaction the zone applied is reported from its receipt, one in a block not yet
-//! final is waited for, and one in no block yet is sent again byte for byte (same hash and nonce: LEZ applies it at
-//! most once). Run again after it finished, it reports what the earlier run did and sends nothing (`--again` sends a
-//! new one). The follower's state is written whole or not at all. An Ethereum endpoint that fails is retried
-//! (`--eth-retries`, each request bounded by `--eth-timeout`), then reported with nothing sent.
+//! send, signed, to a journal in `--state-dir` (`sent/<intent>.json`, keyed by what the command asks for as parsed, not
+//! by its spelling or the endpoints that serve it), and records each attempt and receipt there. Run again after an
+//! interruption, the same command signs nothing new: a transaction the zone applied is reported from its receipt, one
+//! in a block not yet final is waited for, one in no block yet is sent again byte for byte (same hash and nonce: LEZ
+//! applies it at most once), unless its window has ended or is about to (then nothing is sent, and the journal of a
+//! command nothing of which was applied is cleared); one whose nonce another transaction took is reported not applied.
+//! Run again after it finished (or after the sequencer refused a submission, which ends a run), it reports what the
+//! earlier run did and sends nothing (`--again` sends a new one). One run at a time holds a state directory (its file
+//! `lock`); the follower's state and the journals are written whole or not at all, the directory synced. An Ethereum
+//! endpoint that fails is retried (`--eth-retries`, each request bounded by `--eth-timeout`), then reported with nothing
+//! sent.
 //!
 //! **A stale checkpoint (RFP-021 U.5).** LEZ refuses a transaction executed outside the timestamp validity window its
 //! program gave it with its own text ("Execution outside of the validity window"). `Init` and `Open` carry the window
 //! that ends with the weak-subjectivity period of the checkpoint (for `Open`, the instance's newest finalized header);
 //! past that end, the tool shows the refusal as code 53's message, naming the checkpoint, the time its period ended
-//! and the remedy (a new instance from a recent bootstrap), and does not send a transaction its dry run already shows
-//! refused so. A window not yet open is LEZ's text as it is, with the window's start.
+//! and the remedy (a new instance from a recent bootstrap), and sends no step whose window has ended or ends within a
+//! minute of the zone's clock (its newest block's time; the dry run is made at that time). A window not yet open is
+//! LEZ's text as it is, with the window's start.
 
 #![allow(clippy::too_many_arguments)]
 
@@ -142,12 +147,27 @@ pub enum WindowSide {
     Unknown,
 }
 
-/// What to tell the user when LEZ refused a step with `reason` in a block stamped `at_ms`, given the step's window:
-/// `None` unless `reason` is LEZ's window refusal ([`WINDOW_REFUSAL`]). Past the window's end the checkpoint is stale
-/// by the zone's clock: code 53 (`OutsideWeakSubjectivityPeriod`) and its message, the checkpoint, when its period
-/// ended, and the remedy. Before the window's start (an update sent before its signature slot), or inside the window
-/// as this tool computes it, LEZ's text is shown as it is, with the window: no code is put on it.
-pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64) -> Option<(WindowSide, String)> {
+/// Code 53's message for a step whose window ended at `end`: the checkpoint is stale. `at_ms` is the time it was judged
+/// at and `clock` what that time is (a block's, a dry run's); `lez` what LEZ says or would say.
+fn stale_message(w: &WindowNote, end: u64, at_ms: u64, clock: &str, lez: &str) -> String {
+    format!(
+        "refused with {OUTSIDE_WS_PERIOD} {}: the {} is stale: its weak-subjectivity period ended at {}, and {clock} is {} \
+         ({lez}). Nothing can extend an instance from it any more: recover from a new bootstrap, a new instance from a \
+         recent finalized checkpoint with `ferrata attest init` (operator guide §10, \"Instance past its \
+         weak-subjectivity bound\")",
+        code_name(OUTSIDE_WS_PERIOD),
+        w.checkpoint,
+        utc(end),
+        utc(at_ms)
+    )
+}
+
+/// What to tell the user when LEZ refused a step with `reason` at `at_ms` (`clock`: what that time is, a block's or a
+/// dry run's), given the step's window: `None` unless `reason` is LEZ's window refusal ([`WINDOW_REFUSAL`]). Past the
+/// window's end the checkpoint is stale: code 53 (`OutsideWeakSubjectivityPeriod`) and its message, the checkpoint, when
+/// its period ended, and the remedy. Before the window's start (an update sent before its signature slot), or inside
+/// the window as this tool computes it, LEZ's text is shown as it is, with the window: no code is put on it.
+pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64, clock: &str) -> Option<(WindowSide, String)> {
     if !reason.contains(WINDOW_REFUSAL) {
         return None;
     }
@@ -155,26 +175,14 @@ pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64) -> 
         return Some((WindowSide::Unknown, format!("refused by LEZ: \"{reason}\" (no window of it is known here)")));
     };
     if let Some(end) = w.end_ms.filter(|e| at_ms >= *e) {
-        return Some((
-            WindowSide::Ended,
-            format!(
-                "refused with {OUTSIDE_WS_PERIOD} {}: the {} is stale: its weak-subjectivity period ended at {}, and the \
-                 zone's clock is {} (LEZ's refusal: \"{reason}\"). Nothing can extend an instance from it any more: \
-                 recover from a new bootstrap, a new instance from a recent finalized checkpoint with `ferrata attest \
-                 init` (operator guide §10, \"Instance past its weak-subjectivity bound\")",
-                code_name(OUTSIDE_WS_PERIOD),
-                w.checkpoint,
-                utc(end),
-                utc(at_ms)
-            ),
-        ));
+        return Some((WindowSide::Ended, stale_message(w, end, at_ms, clock, &format!("LEZ's refusal: \"{reason}\""))));
     }
     if let Some(start) = w.start_ms.filter(|s| at_ms < *s) {
         return Some((
             WindowSide::NotOpen,
             format!(
-                "refused by LEZ: \"{reason}\": its window opens at {} (the update's signature slot), and the zone's \
-                 clock is {}; it can be sent again from then",
+                "refused by LEZ: \"{reason}\": its window opens at {} (the update's signature slot), and {clock} is {}; \
+                 it can be sent from then (with --again once a run has sent it)",
                 utc(start),
                 utc(at_ms)
             ),
@@ -183,12 +191,45 @@ pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64) -> 
     Some((
         WindowSide::Inside,
         format!(
-            "refused by LEZ: \"{reason}\" (the window this tool computes, {} to {}, holds the block's time {})",
+            "refused by LEZ: \"{reason}\" (the window this tool computes, {} to {}, holds {clock}, {})",
             w.start_ms.map_or("open".into(), utc),
             w.end_ms.map_or("open".into(), utc),
             utc(at_ms)
         ),
     ))
+}
+
+/// How long before a window's end a step is no longer sent: the time a transaction may take to reach a block (a
+/// sequencer's block interval, a retry), as `ferrata-updater`'s `WINDOW_MARGIN_MS`.
+pub const WINDOW_MARGIN_MS: u64 = 60_000;
+
+/// Whether a step with `window` may be sent when the zone's clock (its head block's time, or the followed tip's if
+/// later) is `now_ms`: `Err` when the window has ended (code 53's message) or ends within [`WINDOW_MARGIN_MS`] (a
+/// transaction sent now would likely reach a block after it, be refused and be charged the whole gas limit). A window
+/// not open yet is left to the zone (an update is sent; LEZ refuses it until its signature slot).
+pub fn send_check(window: Option<&WindowNote>, now_ms: u64) -> std::result::Result<(), (WindowSide, String)> {
+    let Some(w) = window else { return Ok(()) };
+    let Some(end) = w.end_ms else { return Ok(()) };
+    let clock = "the zone's clock (its newest block's time)";
+    if now_ms >= end {
+        let lez = format!("LEZ refuses a transaction executed then: \"{WINDOW_REFUSAL}\", charged the whole gas limit");
+        return Err((WindowSide::Ended, stale_message(w, end, now_ms, clock, &lez)));
+    }
+    if now_ms.saturating_add(WINDOW_MARGIN_MS) >= end {
+        return Err((
+            WindowSide::Inside,
+            format!(
+                "not sent: the weak-subjectivity period of the {} ends at {}, less than {} s after {clock}, {}: a \
+                 transaction sent now would likely reach a block after it, be refused (\"{WINDOW_REFUSAL}\") and be \
+                 charged the whole gas limit; recover from a new bootstrap (`ferrata attest init`, operator guide §10)",
+                w.checkpoint,
+                utc(end),
+                WINDOW_MARGIN_MS / 1000,
+                utc(now_ms)
+            ),
+        ));
+    }
+    Ok(())
 }
 
 #[derive(clap::Args)]
@@ -336,21 +377,47 @@ struct Zone {
     follower: Follower,
     wait_final: bool,
     state_dir: Option<PathBuf>,
+    /// The follower's height when its state was last written to `state_dir`.
+    saved_height: Option<u64>,
 }
 
 /// The follower's state in `--state-dir`: `borsh(snapshot) ‖ borsh(blocks)` in one file, replaced whole.
 pub const FOLLOWER_STATE: &str = "follower.state";
 
-/// Write `bytes` to `path` whole or not at all: a temporary file beside it, synced, then renamed over it.
+/// Write `bytes` to `path` whole or not at all: a temporary file of this process beside it, synced, renamed over it,
+/// and the directory synced so that the rename survives a power loss.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> Result<()> {
     use std::io::Write as _;
-    let tmp = path.with_extension("tmp");
+    let name = path.file_name().map(|n| n.to_string_lossy().to_string()).unwrap_or_default();
+    let tmp = path.with_file_name(format!(".{name}.{}.tmp", std::process::id()));
     let mut f = std::fs::File::create(&tmp).with_context(|| format!("writing {}", tmp.display()))?;
     f.write_all(bytes)?;
     f.sync_all()?;
     drop(f);
     std::fs::rename(&tmp, path).with_context(|| format!("renaming {} to {}", tmp.display(), path.display()))?;
+    if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+        std::fs::File::open(dir).and_then(|d| d.sync_all()).with_context(|| format!("syncing {}", dir.display()))?;
+    }
     Ok(())
+}
+
+/// An exclusive lock on `dir/lock`, held while the returned file lives: one run of the tool at a time per state
+/// directory (two would interleave their writes of the follower's state and of the journals). `None` if another
+/// run holds it.
+pub fn lock_state_dir(dir: &Path) -> Result<Option<std::fs::File>> {
+    std::fs::create_dir_all(dir)?;
+    let path = dir.join("lock");
+    let f = std::fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(&path)
+        .with_context(|| format!("opening {}", path.display()))?;
+    match f.try_lock() {
+        Ok(()) => Ok(Some(f)),
+        Err(std::fs::TryLockError::WouldBlock) => Ok(None),
+        Err(std::fs::TryLockError::Error(e)) => Err(anyhow!("locking {}: {e}", path.display())),
+    }
 }
 
 /// The follower kept in `dir`: [`FOLLOWER_STATE`], or the two files earlier versions wrote (`follower.borsh`,
@@ -378,9 +445,23 @@ impl Zone {
     async fn open(rpc: &str, wait_final: bool, state_dir: Option<PathBuf>) -> Result<Self> {
         let client = SequencerClientBuilder::default().build(rpc).with_context(|| format!("the sequencer at {rpc}"))?;
         let follower = load_follower(state_dir.as_deref())?;
-        let mut z = Self { rpc: rpc.to_string(), client, follower, wait_final, state_dir };
+        let saved_height = state_dir.as_ref().filter(|d| d.join(FOLLOWER_STATE).exists()).map(|_| follower.height());
+        let mut z = Self { rpc: rpc.to_string(), client, follower, wait_final, state_dir, saved_height };
         z.sync().await?;
         Ok(z)
+    }
+
+    /// The time of the sequencer's newest block (final or not), Unix milliseconds.
+    async fn head_time(&self) -> Result<u64> {
+        let head = self.client.get_last_block_id().await.map_err(|e| anyhow!("getLastBlockId on {}: {e}", self.rpc))?;
+        let block = self.client.get_block(head).await.map_err(|e| anyhow!("getBlock {head}: {e}"))?;
+        Ok(block.map_or(0, |b| b.header.timestamp))
+    }
+
+    /// The zone's clock as a client can read it: the newest block's time (the sequencer stamps one every block
+    /// interval), or the followed tip's if that is later. The sequencer's RPC serves no other clock.
+    async fn clock(&self) -> Result<u64> {
+        Ok(self.tip().1.max(self.head_time().await?))
     }
 
     /// The payer's nonce at the sequencer's head (it counts transactions in blocks not yet final).
@@ -400,11 +481,15 @@ impl Zone {
             }
             self.follower.apply(block)?;
         }
+        // Written when the follower moved (not at every poll while a transaction is awaited).
         if let Some(d) = &self.state_dir {
-            std::fs::create_dir_all(d)?;
-            let mut bytes = borsh::to_vec(&self.follower.snapshot()?)?;
-            bytes.extend(borsh::to_vec(&self.follower.blocks)?);
-            write_atomic(&d.join(FOLLOWER_STATE), &bytes)?;
+            if self.saved_height != Some(self.follower.height()) {
+                std::fs::create_dir_all(d)?;
+                let mut bytes = borsh::to_vec(&self.follower.snapshot()?)?;
+                bytes.extend(borsh::to_vec(&self.follower.blocks)?);
+                write_atomic(&d.join(FOLLOWER_STATE), &bytes)?;
+                self.saved_height = Some(self.follower.height());
+            }
         }
         Ok(())
     }
@@ -448,13 +533,19 @@ struct Outcome {
     /// The time of the block it ran in (a dry run: the time it was dry-run at), Unix milliseconds.
     #[serde(default)]
     at_ms: u64,
+    /// A dry run's outcome (its time is the dry run's), not a block's.
+    #[serde(default)]
+    dry: bool,
 }
 
 impl Outcome {
     /// LEZ's validity-window refusal of a step with `window`, as [`window_refusal`] words it.
     fn window(&self, window: Option<&WindowNote>) -> Option<(WindowSide, String)> {
         match (self.reverted, self.exit_code, &self.reason) {
-            (true, None, Some(r)) => window_refusal(r, window, self.at_ms),
+            (true, None, Some(r)) => {
+                let clock = if self.dry { "the dry run's time" } else { "the zone's clock (the block's time)" };
+                window_refusal(r, window, self.at_ms, clock)
+            }
             _ => None,
         }
     }
@@ -511,6 +602,7 @@ fn settle(state: &mut lee::V03State, tx: &LeeTransaction, block_id: u64, ts: u64
         events: events.len() as u64,
         event_data: events.iter().map(|e| e.event.data.clone()).collect(),
         at_ms: ts,
+        dry: true,
     })
 }
 
@@ -525,6 +617,7 @@ fn outcome_of(r: &follower::Receipt) -> Outcome {
         events: r.events,
         event_data: vec![],
         at_ms: r.timestamp_ms,
+        dry: false,
     }
 }
 
@@ -590,6 +683,12 @@ struct Sent {
     attempted: bool,
     #[serde(default)]
     receipt: Option<Receipt>,
+    /// Never applied: the payer's nonce it was signed at was used by another transaction in a final block.
+    #[serde(default)]
+    superseded: bool,
+    /// Never applied: the sequencer refused it at submission, with this answer (it was not admitted).
+    #[serde(default)]
+    refused: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -639,38 +738,64 @@ impl Slot {
     }
 }
 
-/// The text naming what a sending command asks for (its inputs, not the endpoints serving them; files by their
-/// SHA-256), and its journal's place: `None` for a command that sends nothing.
+/// The text naming what a sending command asks for, from its parsed arguments (not their spelling: an address or a
+/// word with or without `0x`, padded or not, in any case, statements in any order), files by their SHA-256, and not the
+/// endpoints serving them; and its key, the text's SHA-256. `None` for a command that sends nothing.
 fn intent(a: &AttestArgs, program: AccountId, chain_id: Option<u64>) -> Result<Option<(String, String)>> {
     let file = |p: &PathBuf| -> Result<String> {
         let b = std::fs::read(p).with_context(|| format!("reading {}", p.display()))?;
         Ok(format!("sha256:{}", hex::encode(Sha256::digest(&b))))
     };
-    let norm = |s: &str| s.trim().to_lowercase();
-    let list = |v: &[String]| v.iter().map(|s| norm(s)).collect::<Vec<_>>().join(",");
     let text = match &a.cmd {
         AttestCmd::Init { preset, bootstrap, checkpoint, layout, parts } => format!(
             "init program={program} preset={} layout={} parts={parts} checkpoint={} bootstrap={}",
-            norm(preset),
-            norm(layout),
-            norm(checkpoint).trim_start_matches("0x"),
+            preset.trim().to_lowercase(),
+            layout.trim().to_lowercase(),
+            hx(&root_arg(checkpoint)?),
             file(bootstrap)?
         ),
         AttestCmd::Advance { instance, update, finality, .. } => format!(
             "advance program={program} instance={} finality={finality} update={}",
-            norm(instance).trim_start_matches("0x"),
+            hx(&root_arg(instance)?),
             file(update)?
         ),
-        AttestCmd::Attest { instance, record_slot, block, storage, account, log, header_rlp, .. } => format!(
-            "attest program={program} instance={} record_slot={record_slot} block={block} chain_id={} storage=[{}] \
-             account=[{}] log=[{}] header_rlp={}",
-            norm(instance).trim_start_matches("0x"),
-            chain_id.map_or("record".into(), |c| c.to_string()),
-            list(storage),
-            list(account),
-            list(log),
-            header_rlp.as_ref().map(file).transpose()?.unwrap_or_else(|| "none".into())
-        ),
+        AttestCmd::Attest { instance, record_slot, block, storage, account, log, header_rlp, .. } => {
+            let mut statements = Vec::new();
+            for s in storage {
+                let p: Vec<&str> = s.split(':').collect();
+                ensure!(p.len() == 2 || p.len() == 4, "--storage {s}: ADDRESS:SLOT[:CMP:VALUE]");
+                let mut t = format!("storage {} {}", hx(&addr(p[0])?), hx(&word(p[1])?));
+                if p.len() == 4 {
+                    cmp(p[2])?;
+                    t.push_str(&format!(" {} {}", p[2], hx(&word(p[3])?)));
+                }
+                statements.push(t);
+            }
+            for s in account {
+                let p: Vec<&str> = s.split(':').collect();
+                let flag = if p.get(1) == Some(&"codehash") { " codehash" } else { "" };
+                statements.push(format!("account {}{flag}", hx(&addr(p[0])?)));
+            }
+            for l in log {
+                let p: Vec<&str> = l.split(':').collect();
+                ensure!(p.len() >= 2, "--log {l}: TX:LOG[:emitter=ADDRESS]");
+                let (tx, li): (u64, u64) = (p[0].parse()?, p[1].parse()?);
+                let emitter = match p.get(2).and_then(|x| x.strip_prefix("emitter=")) {
+                    Some(e) => format!(" emitter {}", hx(&addr(e)?)),
+                    None => String::new(),
+                };
+                statements.push(format!("log {tx} {li}{emitter}"));
+            }
+            statements.sort();
+            format!(
+                "attest program={program} instance={} record_slot={record_slot} block={block} chain_id={} \
+                 statements=[{}] header_rlp={}",
+                hx(&root_arg(instance)?),
+                chain_id.map_or("record".into(), |c| c.to_string()),
+                statements.join("; "),
+                header_rlp.as_ref().map(file).transpose()?.unwrap_or_else(|| "none".into())
+            )
+        }
         _ => return Ok(None),
     };
     let key = hex::encode(Sha256::digest(text.as_bytes()));
@@ -723,15 +848,22 @@ async fn transact(
     slot: Option<&Slot>,
 ) -> Result<i32> {
     let p = payer(&a.key)?;
-    let (tip, ts) = z.tip();
+    let (tip, _) = z.tip();
+    // The zone's clock: the newest block's time, which can be ahead of the last final block the follower holds.
+    let now = z.clock().await?;
     let mut scratch = z.follower.state.clone();
     let start_nonce = scratch.get_account_by_id(p.id).nonce.0;
     let mut txs = Vec::new();
     let mut dry = Vec::new();
-    println!("{what}: dry run of {} transaction(s) on the zone's state at block {tip} (payer {})", steps.len(), p.id);
+    println!(
+        "{what}: dry run of {} transaction(s) on the zone's state at block {tip}, the zone's clock {} (payer {})",
+        steps.len(),
+        utc(now),
+        p.id
+    );
     for (i, s) in steps.iter().enumerate() {
         let tx = build(&p, start_nonce + i as u128, s.root, s.message.clone(), s.actors.clone(), s.evidence.clone(), a.gas_limit);
-        let o = settle(&mut scratch, &tx, tip + 1 + i as u64, ts + 10_000 * (1 + i as u64))?;
+        let o = settle(&mut scratch, &tx, tip + 1 + i as u64, now + 10_000 * (1 + i as u64))?;
         println!("  {:<28} {} bytes; would be {}", s.label, borsh::to_vec(&tx)?.len(), o.show_for(s.window.as_ref()));
         run.log(json!({ "what": what, "step": s.label, "phase": "dry-run", "tx": tx.hash().to_string(), "bytes": borsh::to_vec(&tx)?.len(),
             "reverted": o.reverted, "exit_code": o.exit_code, "reason": o.reason, "gas_exec": o.gas_exec, "gas_stor": o.gas_stor, "events": o.events }));
@@ -764,7 +896,7 @@ async fn transact(
         return Ok(status);
     }
     // A step the dry run shows refused because its checkpoint's period has ended is refused by every later block too,
-    // and LEZ would charge it the whole gas limit: nothing is sent.
+    // and LEZ would charge it the whole gas limit: nothing is sent. Nor is a step whose window ends within the margin.
     if last.stale(last_window.as_ref()) {
         println!(
             "  not sent: LEZ refuses it at any later time too, and would charge it the whole gas limit ({})",
@@ -772,6 +904,13 @@ async fn transact(
         );
         run.log(json!({ "what": what, "phase": "held", "reason": last.reason, "code": OUTSIDE_WS_PERIOD }));
         return Ok(3);
+    }
+    for s in steps.iter().take(txs.len()) {
+        if let Err((_, message)) = send_check(s.window.as_ref(), now) {
+            println!("  {:<28} {message}", s.label);
+            run.log(json!({ "what": what, "phase": "held", "step": s.label, "message": message }));
+            return Ok(3);
+        }
     }
     let mut journal = Journal {
         version: 1,
@@ -793,6 +932,8 @@ async fn transact(
                     window: steps[i].window.clone(),
                     attempted: false,
                     receipt: None,
+                    superseded: false,
+                    refused: None,
                 })
             })
             .collect::<Result<_>>()?,
@@ -855,13 +996,36 @@ async fn send_journal(
                     "  {:<28} applied or refused in a final block since the earlier run sent it: nothing sent",
                     s.label
                 );
+            } else if z.follower.state.get_account_by_id(p.id).nonce.0 > nonce {
+                // Handled by the wait below: its nonce is used in a final block, by another transaction.
             } else if z.head_nonce(p.id).await? > nonce {
                 println!("  {:<28} in a block of the sequencer not yet final: waiting for it, nothing sent", s.label);
-            } else if s.attempted {
-                println!("  {:<28} in no block yet: sending the same signed transaction again (hash {hash}, nonce {nonce}; LEZ applies it at most once)", s.label);
-                sent_now = true;
             } else {
-                println!("  {:<28} not sent by the earlier run: sending it as that run signed it (hash {hash}, nonce {nonce})", s.label);
+                // To be sent (again): not when its window has ended or is about to (it would be charged the gas limit).
+                let now = z.clock().await?;
+                if let Err((side, message)) = send_check(s.window.as_ref(), now) {
+                    println!("  {:<28} not sent again: {message}", s.label);
+                    run.log(json!({ "what": what, "step": s.label, "phase": "held-on-resume", "message": message }));
+                    let applied_before = j.steps[..i].iter().any(|x| x.receipt.as_ref().is_some_and(|r| !r.outcome.reverted));
+                    match slot {
+                        // Nothing of the command was applied and nothing of it can be any more: the journal is cleared.
+                        Some(sl) if !applied_before && side == WindowSide::Ended => {
+                            std::fs::remove_file(&sl.path).with_context(|| format!("removing {}", sl.path.display()))?;
+                            println!("  the journal {} is cleared: nothing of this command was applied, and its transactions can never be", sl.path.display());
+                        }
+                        Some(sl) => {
+                            j.status = Some(3);
+                            sl.save(j)?;
+                        }
+                        None => {}
+                    }
+                    return Ok(3);
+                }
+                if s.attempted {
+                    println!("  {:<28} in no block yet: sending the same signed transaction again (hash {hash}, nonce {nonce}; LEZ applies it at most once)", s.label);
+                } else {
+                    println!("  {:<28} not sent by the earlier run: sending it as that run signed it (hash {hash}, nonce {nonce})", s.label);
+                }
                 sent_now = true;
             }
         } else {
@@ -872,12 +1036,29 @@ async fn send_journal(
             if let Some(sl) = slot {
                 sl.save(j)?;
             }
-            let got = z
-                .client
-                .send_transaction(tx.clone())
-                .await
-                .map_err(|e| anyhow!("{}: the sequencer refused it: {e}", s.label))?;
-            ensure!(got == hash, "{}: the sequencer returned another hash", s.label);
+            match z.client.send_transaction(tx.clone()).await {
+                Ok(got) => ensure!(got == hash, "{}: the sequencer returned another hash", s.label),
+                // The sequencer answered and turned it away (too large, its fee, a full pool): it was not admitted and
+                // cannot be applied later. The run ends here, recorded as finished: run again, the command reports it;
+                // with --again, it is planned and signed anew.
+                Err(sequencer_service_rpc::ClientError::Call(e)) => {
+                    let why = format!("{} (code {})", e.message(), e.code());
+                    println!("  {:<28} REFUSED by the sequencer at submission: {why}; it was not admitted, nothing of it can be applied, and nothing more is sent", s.label);
+                    run.log(json!({ "what": what, "step": s.label, "phase": "refused-at-submission", "tx": s.hash, "answer": why }));
+                    j.steps[i].refused = Some(why);
+                    j.status = Some(1);
+                    if let Some(sl) = slot {
+                        sl.save(j)?;
+                    }
+                    return Ok(1);
+                }
+                // No answer (unreachable, timed out, cut): it may have been admitted. The journal keeps it unfinished, and
+                // the same command run again sends it again byte for byte or finds it applied.
+                Err(e) => bail!(
+                    "{}: no answer from the sequencer ({e}); it may have been admitted: run the same command again to finish",
+                    s.label
+                ),
+            }
         }
         let receipt = loop {
             z.sync().await?;
@@ -890,6 +1071,7 @@ async fn send_journal(
                 run.log(
                     json!({ "what": what, "step": s.label, "phase": "superseded", "tx": s.hash, "nonce": s.nonce }),
                 );
+                j.steps[i].superseded = true;
                 j.status = Some(1);
                 if let Some(sl) = slot {
                     sl.save(j)?;
@@ -952,9 +1134,13 @@ async fn resume(z: &mut Zone, a: &AttestArgs, run: &Run, slot: &Slot, mut j: Jou
     if let Some(status) = j.status {
         println!("{}: already sent by an earlier run (journal {}): nothing sent", j.what, slot.path.display());
         for s in &j.steps {
-            match &s.receipt {
-                Some(r) => println!("  {:<28} block {}: {}", s.label, r.block, r.outcome.show_for(s.window.as_ref())),
-                None => println!("  {:<28} not sent", s.label),
+            match (&s.receipt, s.superseded, &s.refused) {
+                (Some(r), _, _) => println!("  {:<28} block {}: {}", s.label, r.block, r.outcome.show_for(s.window.as_ref())),
+                (None, true, _) => {
+                    println!("  {:<28} not applied: its nonce {} was used by another transaction", s.label, s.nonce)
+                }
+                (None, false, Some(why)) => println!("  {:<28} refused by the sequencer at submission: {why}", s.label),
+                (None, false, None) => println!("  {:<28} not sent", s.label),
             }
         }
         println!("  exit status of that run: {status} (--again sends the command once more)");
@@ -1188,6 +1374,21 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
         }
         None => None,
     };
+    // One run at a time per state directory: its follower state and journals are written as a run goes.
+    let _lock = match &a.state_dir {
+        Some(d) => match lock_state_dir(d)? {
+            Some(f) => Some(f),
+            None => {
+                println!(
+                    "another run of `ferrata attest` holds --state-dir {} (its file `lock`): run this one when that one \
+                     has ended",
+                    d.display()
+                );
+                return Ok(2);
+            }
+        },
+        None => None,
+    };
     let mut z = Zone::open(&rpc, a.wait_final != "no", a.state_dir.clone()).await?;
     let (tip, _) = z.tip();
     println!("zone {rpc}: followed to block {tip}{}", if z.wait_final { " (final on Bedrock)" } else { "" });
@@ -1208,10 +1409,11 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                 "note: an earlier run sent this command (journal {}, {}){}",
                 s.path.display(),
                 j.status.map_or("unfinished".into(), |st| format!("exit status {st}")),
-                match (a.again, j.status) {
-                    (true, _) => "; --again: sending it once more",
-                    (false, Some(_)) => "; with --send --yes nothing more is sent",
-                    (false, None) => "; with --send --yes it is finished with the transactions that run signed",
+                match (a.again, a.send && a.yes, j.status) {
+                    (true, true, _) => "; --again: sending it once more",
+                    (true, false, _) => "; with --send --yes --again it would be sent once more",
+                    (false, _, Some(_)) => "; with --send --yes nothing more is sent",
+                    (false, _, None) => "; with --send --yes it is finished with the transactions that run signed",
                 }
             );
         }
@@ -1715,6 +1917,7 @@ mod tests {
             events: 0,
             event_data: vec![],
             at_ms: block.header.timestamp,
+            dry: false,
         };
         (outcome, config, checkpoint, slot)
     }
@@ -1798,6 +2001,76 @@ mod tests {
         outcome.reason = Some("Program exited with non-zero code 53 after 100 cycles".into());
         assert!(outcome.window(Some(&note)).is_none());
         assert!(outcome.show_for(Some(&note)).starts_with("refused with 53 OutsideWeakSubjectivityPeriod"));
+    }
+
+    #[test]
+    fn a_step_is_not_sent_past_or_near_its_window_end() {
+        let (outcome, config, checkpoint, slot) = recorded();
+        let note = init_note(&config, &checkpoint, slot);
+        let end = note.end_ms.unwrap();
+        // Past the end: code 53's message (the run's clock is its newest block's time).
+        let (side, message) = send_check(Some(&note), end + 60_000).unwrap_err();
+        assert_eq!(side, WindowSide::Ended);
+        for part in ["refused with 53 OutsideWeakSubjectivityPeriod", &hx(&checkpoint), &utc(end), "recover from a new bootstrap"] {
+            assert!(message.contains(part), "{part:?} missing from: {message}");
+        }
+        // Within the margin: not sent, no code put on it.
+        let (side, message) = send_check(Some(&note), end - WINDOW_MARGIN_MS / 2).unwrap_err();
+        assert_eq!(side, WindowSide::Inside);
+        assert!(message.contains("less than 60 s") && !message.contains("OutsideWeakSubjectivityPeriod"), "{message}");
+        // Earlier, or a step without a window: sent.
+        assert!(send_check(Some(&note), end - WINDOW_MARGIN_MS - 1).is_ok());
+        assert!(send_check(None, end + 60_000).is_ok());
+        // The recorded refusal's block was past the end: a resumed run would not have sent it.
+        assert!(send_check(Some(&note), outcome.at_ms).is_err());
+    }
+
+    #[derive(clap::Parser)]
+    struct Cli {
+        #[command(flatten)]
+        a: AttestArgs,
+    }
+
+    fn key(args: &[&str]) -> String {
+        use clap::Parser as _;
+        let program = "0x".to_string() + &"11".repeat(32);
+        let mut v = vec!["ferrata-attest", "--program", program.as_str()];
+        v.extend_from_slice(args);
+        let c = Cli::try_parse_from(v).unwrap();
+        intent(&c.a, AccountId::new([0x11; 32]), None).unwrap().unwrap().0
+    }
+
+    #[test]
+    fn the_journal_key_is_the_command_as_parsed() {
+        let id = "ab".repeat(32);
+        let base = ["attest", "--instance", &id, "--record-slot", "15624480", "--eth", "http://a", "--block", "26384851"];
+        let with = |extra: &[&str]| key(&[&base[..], extra].concat());
+        let weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+        let slot = "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0";
+        let one = with(&["--storage", &format!("{weth}:{slot}:eq:0x01")]);
+        // Without 0x, in capitals, a value padded, another endpoint, the instance with 0x: the same command.
+        assert_eq!(one, with(&["--storage", &format!("{}:{}:eq:0x0001", &weth[2..], &slot[2..])]));
+        assert_eq!(one, with(&["--storage", &format!("{}:{slot}:eq:1", weth.to_uppercase().replace("0X", "0x"))]));
+        let mut other = base;
+        other[6] = "http://b";
+        assert_eq!(one, key(&[&other[..], &["--storage", &format!("{weth}:{slot}:eq:0x01")]].concat()));
+        let id0x = format!("0x{id}");
+        let mut with0x = base;
+        with0x[2] = &id0x;
+        assert_eq!(one, key(&[&with0x[..], &["--storage", &format!("{weth}:{slot}:eq:0x01")]].concat()));
+        // Statements in another order: the same.
+        let log = "0:0:emitter=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+        assert_eq!(
+            with(&["--storage", &format!("{weth}:{slot}"), "--log", log]),
+            with(&["--log", "0:0:emitter=A0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", "--storage", &format!("{weth}:{slot}")])
+        );
+        // Another value, comparison, slot, record or chain: another command.
+        assert_ne!(one, with(&["--storage", &format!("{weth}:{slot}:eq:0x02")]));
+        assert_ne!(one, with(&["--storage", &format!("{weth}:{slot}:ge:0x01")]));
+        assert_ne!(one, with(&["--storage", &format!("{weth}:{slot}")]));
+        let mut later = base;
+        later[4] = "15624481";
+        assert_ne!(one, key(&[&later[..], &["--storage", &format!("{weth}:{slot}:eq:0x01")]].concat()));
     }
 
     #[test]

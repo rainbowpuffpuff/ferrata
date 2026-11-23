@@ -28,14 +28,24 @@
 //! Checked: every transaction the zone included was submitted once (or resubmitted byte for byte), none applied twice;
 //! no `Attest` request and no job step twice.
 //!
-//! U.5, four more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
+//! R.5, the journal's guards (another zone): the same command spelled otherwise (no `0x`, capitals, a value unpadded)
+//! is "already sent"; a submission the sequencer turns away ends the run, recorded (reported when run again; `--again`
+//! then applies it once); `--send --yes` without `--state-dir` and `--again` on an interrupted run are refused with
+//! nothing sent; a transaction whose nonce another took is reported not applied (exit 1); a second run on the same
+//! state directory is refused while the first holds it.
+//!
+//! U.5, six more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
 //! * `init` with the zone's clock past the checkpoint's weak-subjectivity period: the dry run's refusal shown as code 53's
 //!   message naming the checkpoint and the remedy, and nothing sent;
 //! * the same with the dry run inside the window and the zone's block past it (the receipt's refusal): code 53's message,
 //!   and from `receipt` too (how a caller of the Logos module reads an outcome);
 //! * `advance` sent before the end of the period of the instance's newest finalized header, its block after it: code
 //!   53's message naming that header, from the run and from `receipt`;
-//! * `advance` before its update's signature slot: LEZ's text with the window's start, not code 53.
+//! * `advance` before its update's signature slot: LEZ's text with the window's start, not code 53;
+//! * the followed final tip behind the zone's newest block, that block past the end: the dry run, made at the zone's
+//!   clock, holds `init`;
+//! * the first review's case: `init` killed with its transaction in the pool, the pool lost, the zone's clock past the
+//!   end: run again, nothing is sent (no gas limit charged) and the journal is cleared.
 //!
 //! Records (each command's output): `$CARGO_TARGET_TMPDIR/attest-faults/`. Run: `cargo test --locked --test
 //! attest_faults -- --nocapture` in `cli/` (CI's `roundtrip` job).
@@ -117,6 +127,11 @@ struct Zone {
     final_height: u64,
     clock_ms: u64,
     mode: Mode,
+    /// When set, `sendTransaction` answers with this error and admits nothing, as LEZ's sequencer turns a transaction
+    /// away at submission (too large, its fee, a full pool).
+    refuse: Option<String>,
+    /// The hash of every transaction turned away so.
+    turned_away: Vec<String>,
 }
 
 /// The fee program's payee: LEZ's test block producer (claimed in the genesis state, as LEZ's own tests do).
@@ -143,6 +158,8 @@ impl Zone {
             final_height: 1,
             clock_ms,
             mode: Mode::Auto,
+            refuse: None,
+            turned_away: Vec::new(),
         }
     }
 
@@ -190,9 +207,17 @@ impl Zone {
         self.blocks.push(block);
     }
 
-    fn rpc(&mut self, method: &str, params: &Value) -> Result<Value, String> {
+    /// The zone's clock moves to `ms` and it stamps a block (empty, final), as a sequencer does every block interval.
+    fn tick(&mut self, ms: u64) {
+        self.clock_ms = ms;
+        self.produce();
+        self.final_height = self.tip.block_id;
+    }
+
+    /// One JSON-RPC call: its result, or a JSON-RPC error (code, message).
+    fn rpc(&mut self, method: &str, params: &Value) -> Result<Value, (i64, String)> {
         let p0 = params.get(0).cloned().unwrap_or(Value::Null);
-        let err = |e: serde_json::Error| e.to_string();
+        let err = |e: serde_json::Error| (-32602, e.to_string());
         match method {
             "getLastBlockId" => Ok(json!(self.tip.block_id)),
             "getBlock" => {
@@ -214,6 +239,10 @@ impl Zone {
             "sendTransaction" => {
                 let tx: LeeTransaction = serde_json::from_value(p0).map_err(err)?;
                 let hash = tx.hash();
+                if let Some(why) = &self.refuse {
+                    self.turned_away.push(hash.to_string());
+                    return Err((-32602, why.clone()));
+                }
                 self.submitted.push(hash.to_string());
                 self.pending.push(tx);
                 match self.mode {
@@ -226,7 +255,7 @@ impl Zone {
                 }
                 serde_json::to_value(hash).map_err(err)
             }
-            other => Err(format!("{other}: not served by this stand-in")),
+            other => Err((-32601, format!("{other}: not served by this stand-in"))),
         }
     }
 
@@ -297,8 +326,8 @@ fn serve_zone(zone: Arc<Mutex<Zone>>) -> String {
                     let answer = zone.lock().unwrap().rpc(req["method"].as_str().unwrap_or(""), &req["params"]);
                     let reply = match answer {
                         Ok(result) => json!({ "jsonrpc": "2.0", "id": req["id"], "result": result }),
-                        Err(e) => {
-                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": -32000, "message": e } })
+                        Err((code, e)) => {
+                            json!({ "jsonrpc": "2.0", "id": req["id"], "error": { "code": code, "message": e } })
                         }
                     };
                     let close = head.contains("connection: close");
@@ -517,6 +546,24 @@ impl Tool {
         let text = format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
         let code = o.status.code().unwrap_or(-1);
         std::fs::write(&out, format!("{}{text}[exit {code}]\n", std::fs::read_to_string(&out).unwrap())).unwrap();
+        println!("  {name}: exit {code}");
+        (code, text)
+    }
+
+    /// Run to the end without `--state-dir`: the exit status and the output.
+    fn run_without_state_dir(&mut self, name: &str, args: &[&str]) -> (i32, String) {
+        self.n += 1;
+        let out = self.dir.join(format!("{:02}-{name}.txt", self.n));
+        let o = Command::new(env!("CARGO_BIN_EXE_ferrata"))
+            .arg("attest")
+            .args(["--lez-rpc", &self.lez, "--program", &format!("0x{}", hex::encode(self.program.value()))])
+            .args(["--key", self.key.to_str().unwrap()])
+            .args(args)
+            .output()
+            .unwrap();
+        let text = format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
+        let code = o.status.code().unwrap_or(-1);
+        std::fs::write(&out, format!("$ ferrata attest ... (no --state-dir) {}\n{text}[exit {code}]\n", args.join(" "))).unwrap();
         println!("  {name}: exit {code}");
         (code, text)
     }
@@ -813,6 +860,156 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     );
 }
 
+/// R.5, the journal's guards: the same command spelled otherwise is recognised (the first review's L10 case); a
+/// submission the sequencer turns away ends the run, recorded (no journal to delete); `--send --yes` needs
+/// `--state-dir`; `--again` does not replace an interrupted run; a transaction whose nonce another took is reported not
+/// applied; one run at a time per state directory.
+#[test]
+fn the_journal_guards() {
+    let dir = records();
+    let zone = Arc::new(Mutex::new(Zone::genesis(slot_ms(SIGNATURE_SLOT) + 600_000)));
+    let lez = serve_zone(zone.clone());
+    let eth = Arc::new(Mutex::new(Eth { fault: Fault::None, only: None, calls: Vec::new(), hung: 0 }));
+    let eth_url = serve_eth(eth.clone());
+    let mut t = Tool::new(&dir, "r5-guards", &lez, &zone.lock().unwrap());
+    let program = t.program;
+    let submitted = || zone.lock().unwrap().submitted.len();
+    let (code, out) = t.run("init", &strs(&[init_args(), vec!["--send".into(), "--yes".into()]].concat()));
+    assert_eq!(code, 0, "{out}");
+    let id = instance_of(&out);
+    let update = fixture("finality_update.ssz");
+    let committee = format!("bootstrap:{}", fixture(BOOT).display());
+    let (code, out) = t.run(
+        "advance",
+        &["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee, "--send", "--yes"],
+    );
+    assert_eq!(code, 0, "{out}");
+    let (rs, bs) = (RECORD_SLOT.to_string(), BLOCK.to_string());
+    let attest = |extra: &[&str]| -> Vec<String> {
+        let mut v: Vec<String> = ["attest", "--instance", &id, "--record-slot", &rs, "--eth", &eth_url, "--block", &bs]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        v.extend(extra.iter().map(|s| s.to_string()));
+        v.extend(["--send", "--yes"].iter().map(|s| s.to_string()));
+        v
+    };
+    let bal = result_of(&fixture(&format!("call_weth_balance_{BLOCK}.json"))).as_str().unwrap().to_string();
+    let s0 = submitted();
+
+    // The same command spelled otherwise: no 0x, capitals, the value unpadded. Applied once, then "already sent".
+    let st = format!("{WETH}:{WETH_SLOT}:eq:{bal}");
+    let unpadded = bal.trim_start_matches("0x").trim_start_matches('0');
+    let st_other = format!("{}:{}:eq:{unpadded}", WETH.trim_start_matches("0x").to_uppercase(), WETH_SLOT.trim_start_matches("0x"));
+    let (code, out) = t.run("attest-spelled-with-0x", &strs(&attest(&["--storage", &st])));
+    assert_eq!(code, 0, "{out}");
+    assert_eq!(submitted(), s0 + 1);
+    let (code, out) = t.run("attest-spelled-otherwise", &strs(&attest(&["--storage", &st_other])));
+    assert_eq!(code, 0, "{out}");
+    has(&out, "already sent by an earlier run");
+    assert_eq!(submitted(), s0 + 1, "the same command: nothing sent");
+
+    // `--send --yes` without `--state-dir`: a usage error, nothing sent.
+    let acct = format!("{WETH}:codehash");
+    let (code, out) = t.run_without_state_dir("attest-without-state-dir", &strs(&attest(&["--account", &acct])));
+    assert_eq!(code, 2, "{out}");
+    has(&out, "--send --yes needs --state-dir");
+    assert_eq!(submitted(), s0 + 1);
+
+    // A submission the sequencer turns away (as LEZ's "Transaction too large"): the run ends, recorded; run again,
+    // reported, nothing sent; with --again, planned anew and applied once.
+    zone.lock().unwrap().refuse = Some("Transaction too large: size 4357, max 4096".into());
+    let (code, out) = t.run("attest-turned-away", &strs(&attest(&["--account", &acct])));
+    assert_eq!(code, 1, "{out}");
+    has(&out, "REFUSED by the sequencer at submission: Transaction too large");
+    assert_eq!((submitted(), zone.lock().unwrap().turned_away.len()), (s0 + 1, 1));
+    zone.lock().unwrap().refuse = None;
+    let (code, out) = t.run("attest-turned-away-run-again", &strs(&attest(&["--account", &acct])));
+    assert_eq!(code, 1, "{out}");
+    has(&out, "already sent by an earlier run");
+    has(&out, "refused by the sequencer at submission: Transaction too large");
+    assert_eq!(submitted(), s0 + 1);
+    let (code, out) = t.run("attest-turned-away-again", &strs(&[attest(&["--account", &acct]), vec!["--again".into()]].concat()));
+    assert_eq!(code, 0, "{out}");
+    assert_eq!(submitted(), s0 + 2);
+
+    // --again does not replace an interrupted run: refused, nothing sent; run without it, the run is finished.
+    zone.lock().unwrap().mode = Mode::Queue;
+    let ge_spec = format!("{WETH}:{WETH_SLOT}:ge:0x01");
+    let ge = attest(&["--storage", &ge_spec]);
+    let (child, out_path) = t.spawn("attest-killed-in-pool", &strs(&ge));
+    wait_for("the Attest", 300, || submitted() > s0 + 2);
+    kill(child, &out_path);
+    let (code, out) = t.run("attest-interrupted-again", &strs(&[ge.clone(), vec!["--again".into()]].concat()));
+    assert_eq!(code, 2, "{out}");
+    has(&out, "was interrupted");
+    assert_eq!(submitted(), s0 + 3, "--again on an interrupted run: nothing sent");
+    zone.lock().unwrap().mode = Mode::Auto;
+    let (code, out) = t.run("attest-interrupted-finished", &strs(&ge));
+    assert_eq!(code, 0, "{out}");
+    has(&out, "in no block yet: sending the same signed transaction again");
+    assert_eq!(submitted(), s0 + 4);
+
+    // A transaction whose nonce another took (the pool lost, then another command sent at that nonce): not applied,
+    // exit 1, recorded; run again, reported; with --again, applied once.
+    zone.lock().unwrap().mode = Mode::Queue;
+    let plain_spec = format!("{WETH}:{WETH_SLOT}");
+    let plain = attest(&["--storage", &plain_spec]);
+    let (child, out_path) = t.spawn("attest-killed-then-pool-lost", &strs(&plain));
+    wait_for("the Attest", 300, || submitted() > s0 + 4);
+    kill(child, &out_path);
+    {
+        let mut z = zone.lock().unwrap();
+        z.pending.clear(); // the sequencer lost its pool (a restart)
+        z.mode = Mode::Auto;
+    }
+    let log_spec = format!("0:0:emitter={USDC}");
+    let (code, out) = t.run("attest-takes-the-nonce", &strs(&attest(&["--log", &log_spec])));
+    assert_eq!(code, 0, "{out}");
+    assert_eq!(submitted(), s0 + 6);
+    let (code, out) = t.run("attest-nonce-taken", &strs(&plain));
+    assert_eq!(code, 1, "{out}");
+    has(&out, "NOT APPLIED: the payer's nonce");
+    assert_eq!(submitted(), s0 + 6, "nothing sent");
+    let (code, out) = t.run("attest-nonce-taken-run-again", &strs(&plain));
+    assert_eq!(code, 1, "{out}");
+    has(&out, "not applied: its nonce");
+    let (code, out) = t.run("attest-nonce-taken-again", &strs(&[plain.clone(), vec!["--again".into()]].concat()));
+    assert_eq!(code, 0, "{out}");
+    assert_eq!(submitted(), s0 + 7);
+
+    // One run at a time per state directory: a status beside a run awaiting its transaction is refused.
+    zone.lock().unwrap().mode = Mode::Hold;
+    let bare = WETH.to_string();
+    let (mut child, out_path) = t.spawn("attest-holding-the-lock", &strs(&attest(&["--account", &bare])));
+    wait_for("the Attest", 300, || submitted() > s0 + 7);
+    let (code, out) = t.run("status-beside-it", &["status", "--instance", &id]);
+    assert_eq!(code, 2, "{out}");
+    has(&out, "another run of `ferrata attest` holds --state-dir");
+    {
+        let mut z = zone.lock().unwrap();
+        z.final_height = z.tip.block_id;
+        z.mode = Mode::Auto;
+    }
+    let status = child.wait().unwrap();
+    let text = std::fs::read_to_string(&out_path).unwrap();
+    std::fs::write(&out_path, format!("{text}[exit {}]\n", status.code().unwrap_or(-1))).unwrap();
+    assert_eq!(status.code(), Some(0), "{text}");
+
+    // Nothing twice: every included transaction once, every message once, none reverted.
+    let z = zone.lock().unwrap();
+    let mut seen = BTreeSet::new();
+    for (h, ..) in &z.included {
+        assert!(seen.insert(h.clone()), "{h} included twice");
+    }
+    let mut bodies = BTreeSet::new();
+    for (h, _, reverted, m) in z.messages(program) {
+        assert!(!reverted, "{h} reverted");
+        assert!(bodies.insert(borsh::to_vec(&m).unwrap()), "a message applied twice: {h}");
+    }
+    println!("R.5 guards: {} submissions, {} turned away, {} included, none twice", z.submitted.len(), z.turned_away.len(), z.included.len());
+}
+
 /// U.5: LEZ's refusal of a checkpoint stale by the zone's clock, as code 53's message; a window not open, as LEZ's text.
 #[test]
 fn stale_checkpoint_shown_as_code_53() {
@@ -923,6 +1120,55 @@ fn stale_checkpoint_shown_as_code_53() {
         !open.contains("OutsideWeakSubjectivityPeriod") && !open.contains("refused with 53"),
         "not code 53: {open}"
     );
+    // The followed final tip behind the zone's newest block (finality lagging), that block past the end: the dry run is
+    // made at the zone's clock, and nothing is sent.
+    let zone = Arc::new(Mutex::new(Zone::genesis(end - 3_600_000)));
+    {
+        let mut z = zone.lock().unwrap();
+        z.clock_ms = end + 60_000;
+        z.produce(); // not final
+    }
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-final-tip-lagging", &lez, &zone.lock().unwrap());
+    let (code, out) = t.run("init-final-tip-lagging", &strs(&init));
+    assert_eq!(code, 3, "{out}");
+    has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, "not sent");
+    assert_eq!(zone.lock().unwrap().submitted.len(), 0, "nothing sent");
+
+    // The first review's L1 case: `init` killed with its `Init` in the pool, the pool lost, the zone's clock 60 s past
+    // the end (and a block stamped then, as a sequencer stamps one every interval): run again, the earlier run's
+    // transaction is not sent again (it would be charged the whole gas limit), the journal is cleared; run once more, a
+    // fresh run's dry run holds it.
+    let zone = Arc::new(Mutex::new(Zone::genesis(end - 3_600_000)));
+    zone.lock().unwrap().mode = Mode::Queue;
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-resume-past-end", &lez, &zone.lock().unwrap());
+    let (child, out_path) = t.spawn("init-killed-in-pool", &strs(&init));
+    wait_for("the Init", 300, || !zone.lock().unwrap().submitted.is_empty());
+    kill(child, &out_path);
+    {
+        let mut z = zone.lock().unwrap();
+        z.pending.clear(); // the sequencer lost its pool (a restart)
+        z.tick(end + 60_000);
+        z.mode = Mode::Auto;
+    }
+    let (code, out) = t.run("init-run-again-past-end", &strs(&init));
+    assert_eq!(code, 3, "{out}");
+    has(&out, "not sent again: refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, CHECKPOINT);
+    has(&out, "is cleared");
+    {
+        let z = zone.lock().unwrap();
+        assert_eq!(z.submitted.len(), 1, "the killed run's submission only");
+        assert!(z.included.is_empty(), "nothing applied, nothing charged");
+    }
+    let journals = std::fs::read_dir(t.state.join("sent")).map(|d| d.count()).unwrap_or(0);
+    assert_eq!(journals, 0, "the journal is cleared");
+    let (code, out) = t.run("init-once-more", &strs(&init));
+    assert_eq!(code, 3, "{out}");
+    has(&out, "not sent: LEZ refuses it at any later time too");
+    assert_eq!(zone.lock().unwrap().submitted.len(), 1, "nothing sent");
     println!("U.5: records in {}", dir.display());
 }
 

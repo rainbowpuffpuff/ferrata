@@ -165,7 +165,8 @@ jobs:
         working-directory: cli
         run: |
           export RISC0_HOME="$HOME/risc0-home-lez"
-          vars=$(python3 -I ../scripts/fetch_native.py env) && eval "$vars"
+          vars=$(python3 -I ../scripts/fetch_native.py env)
+          eval "$vars"
           cargo test --locked --lib attest
           RISC0_DEV_MODE=1 cargo test --locked --test attest_faults -- --nocapture
 
@@ -332,6 +333,12 @@ jobs:
         run: scripts/fetch-upstream.sh
       - name: Every module's staged crate resolves with its committed Cargo.lock
         run: scripts/ci/modules-resolve.sh
+      # RFP-021 R.5: ferrata_attest_module's own Ethereum reads (fetch_log_proof, and eth_getProof behind build_attest_tx
+      # and dry_run_attest) against a scripted endpoint on 127.0.0.1 that refuses, holds, cuts or errors: each an error
+      # within its bound, each answered once the endpoint is back. Uses the crates the step above staged. Local only.
+      - name: The attestation module's Ethereum reads against a failing endpoint (RFP-021 R.5)
+        working-directory: modules/ferrata_attest_module/rust-lib
+        run: cargo test --locked -p ferrata-attest-calls --test failing_endpoint -- --nocapture
       - name: System libraries (libpcsclite for LEZ's wallet crates, protoc)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
       - name: cli/'s library compiles as ferrata_relayer_module builds it (without lez-wallet)
