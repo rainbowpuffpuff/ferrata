@@ -26,6 +26,8 @@
 #   live-testnet.sh session2 OUT MINUTES  the updater module reaching the network directly, an execution source through
 #                                         eth_rpc_module beside its two light-client sources (three to agree), and
 #                                         `ferrata attest` (release) measured on the network beside it
+#   live-testnet.sh cli OUT               `ferrata attest` again after session2 (the module stopped): an attestation with
+#                                         the block's header and a finality update, each a dry run, then sent
 #   live-testnet.sh collect OUT RECORD    the record (no keys, no wallet storage, the host's name and the box's paths
 #                                         replaced) and its summary (modules/scripts/live_testnet.py)
 #
@@ -799,6 +801,41 @@ cli_phase() {
   return 0
 }
 
+# `ferrata attest` again on the network, the module stopped (the instance stays where it left it): an attestation of
+# the vault's slots 0 and 1 under the instance's newest record with the block's RLP header (the record binds the
+# block hash only: Gloas layout), dry run and sent; a finality update past the instance, dry run and sent (its three
+# steps); `status` after. Each command under GNU time, the follower resumed from session2's state directory.
+do_cli() {
+  need_net
+  local W="$out/session2" W2="$out/session2/cli2" program id checkpoint phex slot hash number upd fin
+  program=$(jq -r .program "$I/instance.json"); id=$(jq -r .instance_id "$I/instance.json"); checkpoint=$(jq -r .checkpoint "$I/instance.json")
+  phex=$(b58hex "$program")
+  rm -rf "$W2"; mkdir -p "$W2"
+  fa() { # NAME ARGS...: one command under GNU time
+    local name=$1
+    shift
+    /usr/bin/time -v -o "$W2/$name.time" "$BIN/ferrata" attest --lez-rpc "$FERRATA_TESTNET_RPC" --program "0x$phex" \
+      --key "$K/payer.key" --state-dir "$W/cli-state" --record "$W2/run.jsonl" "$@" > "$W2/$name.out" 2> "$W2/$name.err"
+    echo "$name exit $?" >> "$W2/exits.txt"
+  }
+  "$BIN/ferrata-day1" target --rpc "$FERRATA_TESTNET_RPC" --keys "$K" --state "$S" > "$W2/target.json" 2> "$W2/target.err" || return 1
+  slot=$(jq -r .slot "$W2/target.json"); hash=$(jq -r .block_hash "$W2/target.json")
+  python3 -I "$repo/lez-v03/scripts/fetch.py" proof "$W2/fetch" "$slot" "$hash" "$VAULT" "0,1" > "$W2/fetch-proof.log" 2>&1 || return 1
+  number=$(jq -r .result.number "$W2/fetch/proofs/$slot/block.json" | xargs printf '%d')
+  fa attest-dry attest --instance "0x$id" --record-slot "$slot" --eth "$EL" --block "$number" --storage "$VAULT:0x0" \
+    --storage "$VAULT:0x1" --header-rlp "$W2/fetch/proofs/$slot/header.rlp"
+  fa attest-send attest --instance "0x$id" --record-slot "$slot" --eth "$EL" --block "$number" --storage "$VAULT:0x0" \
+    --storage "$VAULT:0x1" --header-rlp "$W2/fetch/proofs/$slot/header.rlp" --send --yes
+  # A finality update past the instance (the updater is stopped): planned, then submitted.
+  fin=$("$BIN/attest-monitor" state --state "lez:$FERRATA_TESTNET_RPC" --program "$phex" --instance "$id" | jq -r .finalized_slot)
+  python3 -I "$repo/lez-v03/scripts/fetch.py" finality "$W2/fetch" "$fin" 1200 > "$W2/fetch-finality.log" 2>&1 || return 1
+  upd=$(tail -n 1 "$W2/fetch-finality.log" | awk '{print $NF}')
+  fa advance-dry advance --instance "0x$id" --update "$upd" --finality --committee "bootstrap:$K/init/bootstrap.ssz"
+  fa advance-send advance --instance "0x$id" --update "$upd" --finality --committee "bootstrap:$K/init/bootstrap.ssz" --send --yes
+  fa status-after status --instance "0x$id"
+  cat "$W2/exits.txt"
+}
+
 case "$cmd" in
   build) do_build ;;
   build-bridge) do_build_bridge ;;
@@ -807,6 +844,7 @@ case "$cmd" in
   instance) do_instance ;;
   session) do_session "${3:-90}" ;;
   session2) do_session2 "${3:-45}" ;;
+  cli) do_cli ;;
   collect) python3 -I "$here/live_testnet.py" collect "$out" "${3:?RECORD directory}" || failures=$((failures + 1)) ;;
   *) die "$cmd: build, instance, session or collect" ;;
 esac

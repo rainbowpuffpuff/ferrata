@@ -6,9 +6,10 @@ For every `modules/results/live-testnet-*/` record:
   process samples, the tools' GNU time, each daemon's traffic from its relay, the module calls, the journal, the
   /health probes, the instance at the end) computed again from the record's own files, equal; none of its checks
   failed;
-- `lez/updater/results/live-sepolia/check.py` on its session: every journal line has its manifest row (block, result,
+- `lez/updater/results/live-sepolia/check.py` on its sessions: every journal line has its manifest row (block, result,
   execution gas, fee = the payer's debit), the jobs have the shape Open, Miller, [Adopt 1/2, Adopt 2/2,] Finish in
-  increasing blocks, and every applied job's update is in the module's log;
+  increasing blocks; on the second session (both starts with `quiet: false`) every check, each applied job's update
+  in the module's log included (on the first, whose first start was quiet, that one check fails: README);
 - `scripts/scrub_records.py --check-only`: no machine path in it.
 Offline: nothing is read from any network (check.py's `--beacon` re-check is the record README's, by hand)."""
 import glob
@@ -58,6 +59,18 @@ class TestLiveTestnetRecords(unittest.TestCase):
                     self.assertTrue(any(l.startswith("PASS ") and w in l for l in lines), f"check.py: no PASS line for {w!r}\n{r.stdout[-3000:]}")
                 fails = [l for l in lines if l.startswith("FAIL ")]
                 self.assertTrue(all("every applied job's update is in updater.log" in l for l in fails), "\n".join(fails))
+
+    def test_second_session_passes_check_py_whole(self):
+        """The second session started the module with `quiet: false` at both starts: every check of check.py passes,
+        the job lines included (each applied job's update in the log, its sources named)."""
+        for rec in RECORDS:
+            s2 = os.path.join(rec, "session2")
+            if not os.path.isdir(s2):
+                continue
+            with self.subTest(record=os.path.basename(rec)):
+                r = run(os.path.join(REPO, "lez", "updater", "results", "live-sepolia", "check.py"), s2)
+                self.assertEqual(r.returncode, 0, r.stdout[-3000:] + r.stderr[-2000:])
+                self.assertNotIn("FAIL ", r.stdout)
 
     def test_no_machine_paths(self):
         for rec in RECORDS:
