@@ -467,6 +467,12 @@ impl RealVault {
         assert_eq!(run_.outcome.map(|o| o.advanced), Some(true));
         let slot = m["finalized_slot"].as_u64().unwrap();
         let record = w.inst.record(&w.chain, slot).expect("the record").header().unwrap();
+        // What `placed` places is the record the instance wrote.
+        assert_eq!(
+            record,
+            HeaderRecord::of(&finality.finalized_header, LcFork::Gloas, &w.spec),
+            "RealVault::placed's record"
+        );
         Self::on(m, w, record, &finality)
     }
 

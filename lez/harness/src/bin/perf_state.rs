@@ -396,7 +396,14 @@ fn sweep_private<S>(
     for k in KS {
         let mut s = prepare(k);
         let (bytes, _) = state_bytes(state(&s));
+        // Markers for `bench/perf/state-actions.sh`, which reads the circuit's cycles from r0vm's
+        // session log on stderr (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`): the session right after
+        // the last proof of one of the private transitions named at the end marker.
+        eprintln!("perf-state-actions: begin|{what}|{k}");
         let proven = run(&mut s);
+        let private: Vec<String> =
+            proven.charged.handlers.iter().filter(|(h, _)| h != "public part").map(|(_, c)| c.to_string()).collect();
+        eprintln!("perf-state-actions: end|{what}|{k}|{}|{}", proven.path_levels, private.join(","));
         let charged = vec![proven.charged];
         if k == 0 {
             base = charged.clone();
@@ -462,7 +469,8 @@ fn other_actions() {
          pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other \
          destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's \
          commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is \
-         longer (printed; the harness cannot read the circuit's cycles); its first \"handlers\" are its private \
+         longer (printed; the circuit's own cycles, from r0vm's session log, are in the last table); its \
+         first \"handlers\" are its private \
          transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public \
          part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with \
          use are measured as they change: a reader empty, then holding the record or reply it read before; a balance \

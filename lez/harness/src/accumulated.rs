@@ -41,9 +41,10 @@
 //! accounts (one per `Open` never finished; no action but its own job's steps names one). For the
 //! private transactions, K more commitments in LEZ's commitment set ([`add_commitments`]): every
 //! private transaction's circuit verifies its fee payer's membership path in that set's tree, one
-//! SHA-256 per level, so its cycles grow with log2 of all commitments ever made. The harness cannot
-//! read the circuit's cycles (LEZ drops the prover's statistics); what is measured is that the
-//! charge stays the same while the path grows ([`membership_path_levels`]). A LEZ transaction sees
+//! hash per level, so its cycles grow with log2 of all commitments ever made. Measured: the charge
+//! stays the same while the path grows ([`membership_path_levels`]); the circuit's own cycles,
+//! which LEZ's API drops with the prover's statistics, are read from r0vm's session log
+//! (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`) by `bench/perf/state-actions.sh`: 1,935 a level. A LEZ transaction sees
 //! only the accounts it names, so equal charges show that the metering does not depend on the rest
 //! of the state. The accounts an action does read are fixed in size or replaced rather than
 //! appended to, with one exception in the reference consumer's own private state; the ones that

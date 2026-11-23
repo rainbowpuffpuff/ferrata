@@ -38,9 +38,10 @@
 //!   own private proof against the pools it holds (pinned at 0 and 100 pools).
 //!
 //! The private transactions also run with a thousand more commitments in LEZ's commitment set: the
-//! fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, grows from 3 to 10
-//! levels and LEZ's charge stays the same (the circuit's own cycles, about 90 a level, are derived,
-//! not read: `lez/results/p4-minimum/README.md`).
+//! fee payer's membership path, which LEZ's circuit hashes one hash per level, grows from 3 to 10
+//! levels and LEZ's charge stays the same. The circuit's own cycles grow by 1,935 a level; LEZ's API
+//! drops them, r0vm logs them (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info` with `--nocapture`), and
+//! `lez/results/perf-state-actions.md` records them (`bench/perf/state-actions.sh`).
 //!
 //! Every pinned number cites a committed record:
 //!
@@ -1058,8 +1059,9 @@ fn the_vault_pattern_costs_the_same_whatever_the_chain_holds() {
         "run with RISC0_DEV_MODE=1 (fake receipts; the real proofs are the prove_* binaries')"
     );
     // The record placed rather than replayed (`RealVault::placed`: the replay of 32 Sepolia periods
-    // is a minute); the pins are the replayed world's figures (`perf-state-actions.md`), so they
-    // also check that the placed record is the one the instance writes.
+    // is a minute); the pins are the replayed world's figures (`perf-state-actions.md`). That the
+    // placed record is the one the instance writes is asserted in `RealVault::load`, which CI runs
+    // through `vault`, `vault_consumer`, `history_hops` and `redteam_attest`.
     let vw = acc::VaultWorld::placed();
     let more = MORE_RECORDS as usize;
     let mut pins = Pins::new();
