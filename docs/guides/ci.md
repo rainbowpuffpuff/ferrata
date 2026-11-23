@@ -72,7 +72,7 @@ measured durations (`scripts/ci/lez-harness-shards.json`, `fail-fast: false`): f
 `harness --lib --bins` and `harness --doc`), `updater-gate` (splitting `lez/updater/tests/recorded.rs` with `--exact`
 so `gate_two_honest_one_adversary`, derived at 475–725 s as a single test, starts at `t = 0` alongside four other heavy
 `recorded` tests on the remaining 3 cores), and `updater-privacy` (`ferrata-updater --lib --bins`, the remaining 11
-updater binaries (with `redating`, added after the measured runs: 47 s on the build box), `ferrata-updater --doc`, `recorded` with `--exact --skip` for those five names, and the privacy suite
+updater binaries (with `redating`, added after the measured runs: 87 s on the build box at the shard's four test threads), `ferrata-updater --doc`, `recorded` with `--exact --skip` for those five names, and the privacy suite
 with its gate, running `privacy_suite` once instead of twice). Each shard builds only the targets it runs; sharded
 workflow wall time is derived at **~19–28 min** (critical path `updater-gate`, ~62–63% reduction across both measured
 runner speeds). On GitHub's Free plan (20 concurrent jobs), a push to `main` starts 18 `ci.yml` jobs plus `macos.yml`'s
