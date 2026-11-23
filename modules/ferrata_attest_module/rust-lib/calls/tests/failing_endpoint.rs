@@ -96,7 +96,11 @@ fn recorded(method: &str, params: &Value) -> Result<Value, String> {
 }
 
 fn respond(w: &mut TcpStream, status: &str, body: &[u8]) {
-    let _ = write!(w, "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+    let _ = write!(
+        w,
+        "HTTP/1.1 {status}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
     let _ = w.write_all(body);
     let _ = w.flush();
 }
@@ -147,14 +151,22 @@ fn serve(endpoint: Arc<Mutex<Endpoint>>) -> String {
                 match fault {
                     Fault::Hang => std::thread::sleep(Duration::from_secs(30)),
                     Fault::Http503 => respond(&mut w, "503 Service Unavailable", b"busy"),
-                    Fault::RpcError => respond(&mut w, "200 OK", answer(Err("missing trie node".into())).to_string().as_bytes()),
+                    Fault::RpcError => {
+                        respond(&mut w, "200 OK", answer(Err("missing trie node".into())).to_string().as_bytes())
+                    }
                     Fault::Cut => {
                         let bytes = answer(recorded(&method, &req["params"])).to_string().into_bytes();
-                        let _ = write!(w, "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n", bytes.len());
+                        let _ = write!(
+                            w,
+                            "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\n\r\n",
+                            bytes.len()
+                        );
                         let _ = w.write_all(&bytes[..bytes.len() / 2]);
                         let _ = w.flush();
                     }
-                    Fault::None => respond(&mut w, "200 OK", answer(recorded(&method, &req["params"])).to_string().as_bytes()),
+                    Fault::None => {
+                        respond(&mut w, "200 OK", answer(recorded(&method, &req["params"])).to_string().as_bytes())
+                    }
                 }
             });
         }
@@ -184,7 +196,9 @@ const CALLS: [&str; 3] = ["fetch_log_proof", "build_attest_tx", "dry_run_attest"
 fn request(name: &str, url: &str) -> String {
     let storage = json!({ "rpc_url": url, "address": WETH, "slot": WETH_SLOT, "timeout_ms": TIMEOUT_MS });
     match name {
-        "fetch_log_proof" => json!({ "rpc_url": url, "block": BLOCK, "tx_index": 0, "log_index": 0, "timeout_ms": TIMEOUT_MS }),
+        "fetch_log_proof" => {
+            json!({ "rpc_url": url, "block": BLOCK, "tx_index": 0, "log_index": 0, "timeout_ms": TIMEOUT_MS })
+        }
         "build_attest_tx" => {
             let mut at_block = storage;
             at_block["block"] = json!(BLOCK);

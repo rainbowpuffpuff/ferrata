@@ -563,7 +563,11 @@ impl Tool {
             .unwrap();
         let text = format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
         let code = o.status.code().unwrap_or(-1);
-        std::fs::write(&out, format!("$ ferrata attest ... (no --state-dir) {}\n{text}[exit {code}]\n", args.join(" "))).unwrap();
+        std::fs::write(
+            &out,
+            format!("$ ferrata attest ... (no --state-dir) {}\n{text}[exit {code}]\n", args.join(" ")),
+        )
+        .unwrap();
         println!("  {name}: exit {code}");
         (code, text)
     }
@@ -881,7 +885,18 @@ fn the_journal_guards() {
     let committee = format!("bootstrap:{}", fixture(BOOT).display());
     let (code, out) = t.run(
         "advance",
-        &["advance", "--instance", &id, "--update", update.to_str().unwrap(), "--finality", "--committee", &committee, "--send", "--yes"],
+        &[
+            "advance",
+            "--instance",
+            &id,
+            "--update",
+            update.to_str().unwrap(),
+            "--finality",
+            "--committee",
+            &committee,
+            "--send",
+            "--yes",
+        ],
     );
     assert_eq!(code, 0, "{out}");
     let (rs, bs) = (RECORD_SLOT.to_string(), BLOCK.to_string());
@@ -900,7 +915,11 @@ fn the_journal_guards() {
     // The same command spelled otherwise: no 0x, capitals, the value unpadded. Applied once, then "already sent".
     let st = format!("{WETH}:{WETH_SLOT}:eq:{bal}");
     let unpadded = bal.trim_start_matches("0x").trim_start_matches('0');
-    let st_other = format!("{}:{}:eq:{unpadded}", WETH.trim_start_matches("0x").to_uppercase(), WETH_SLOT.trim_start_matches("0x"));
+    let st_other = format!(
+        "{}:{}:eq:{unpadded}",
+        WETH.trim_start_matches("0x").to_uppercase(),
+        WETH_SLOT.trim_start_matches("0x")
+    );
     let (code, out) = t.run("attest-spelled-with-0x", &strs(&attest(&["--storage", &st])));
     assert_eq!(code, 0, "{out}");
     assert_eq!(submitted(), s0 + 1);
@@ -929,7 +948,8 @@ fn the_journal_guards() {
     has(&out, "already sent by an earlier run");
     has(&out, "refused by the sequencer at submission: Transaction too large");
     assert_eq!(submitted(), s0 + 1);
-    let (code, out) = t.run("attest-turned-away-again", &strs(&[attest(&["--account", &acct]), vec!["--again".into()]].concat()));
+    let (code, out) =
+        t.run("attest-turned-away-again", &strs(&[attest(&["--account", &acct]), vec!["--again".into()]].concat()));
     assert_eq!(code, 0, "{out}");
     assert_eq!(submitted(), s0 + 2);
 
@@ -1007,7 +1027,12 @@ fn the_journal_guards() {
         assert!(!reverted, "{h} reverted");
         assert!(bodies.insert(borsh::to_vec(&m).unwrap()), "a message applied twice: {h}");
     }
-    println!("R.5 guards: {} submissions, {} turned away, {} included, none twice", z.submitted.len(), z.turned_away.len(), z.included.len());
+    println!(
+        "R.5 guards: {} submissions, {} turned away, {} included, none twice",
+        z.submitted.len(),
+        z.turned_away.len(),
+        z.included.len()
+    );
 }
 
 /// U.5: LEZ's refusal of a checkpoint stale by the zone's clock, as code 53's message; a window not open, as LEZ's text.

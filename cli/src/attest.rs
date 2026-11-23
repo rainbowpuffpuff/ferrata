@@ -167,7 +167,12 @@ fn stale_message(w: &WindowNote, end: u64, at_ms: u64, clock: &str, lez: &str) -
 /// window's end the checkpoint is stale: code 53 (`OutsideWeakSubjectivityPeriod`) and its message, the checkpoint, when
 /// its period ended, and the remedy. Before the window's start (an update sent before its signature slot), or inside
 /// the window as this tool computes it, LEZ's text is shown as it is, with the window: no code is put on it.
-pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64, clock: &str) -> Option<(WindowSide, String)> {
+pub fn window_refusal(
+    reason: &str,
+    window: Option<&WindowNote>,
+    at_ms: u64,
+    clock: &str,
+) -> Option<(WindowSide, String)> {
     if !reason.contains(WINDOW_REFUSAL) {
         return None;
     }
@@ -1006,11 +1011,13 @@ async fn send_journal(
                 if let Err((side, message)) = send_check(s.window.as_ref(), now) {
                     println!("  {:<28} not sent again: {message}", s.label);
                     run.log(json!({ "what": what, "step": s.label, "phase": "held-on-resume", "message": message }));
-                    let applied_before = j.steps[..i].iter().any(|x| x.receipt.as_ref().is_some_and(|r| !r.outcome.reverted));
+                    let applied_before =
+                        j.steps[..i].iter().any(|x| x.receipt.as_ref().is_some_and(|r| !r.outcome.reverted));
                     match slot {
                         // Nothing of the command was applied and nothing of it can be any more: the journal is cleared.
                         Some(sl) if !applied_before && side == WindowSide::Ended => {
-                            std::fs::remove_file(&sl.path).with_context(|| format!("removing {}", sl.path.display()))?;
+                            std::fs::remove_file(&sl.path)
+                                .with_context(|| format!("removing {}", sl.path.display()))?;
                             println!("  the journal {} is cleared: nothing of this command was applied, and its transactions can never be", sl.path.display());
                         }
                         Some(sl) => {
@@ -1135,7 +1142,9 @@ async fn resume(z: &mut Zone, a: &AttestArgs, run: &Run, slot: &Slot, mut j: Jou
         println!("{}: already sent by an earlier run (journal {}): nothing sent", j.what, slot.path.display());
         for s in &j.steps {
             match (&s.receipt, s.superseded, &s.refused) {
-                (Some(r), _, _) => println!("  {:<28} block {}: {}", s.label, r.block, r.outcome.show_for(s.window.as_ref())),
+                (Some(r), _, _) => {
+                    println!("  {:<28} block {}: {}", s.label, r.block, r.outcome.show_for(s.window.as_ref()))
+                }
                 (None, true, _) => {
                     println!("  {:<28} not applied: its nonce {} was used by another transaction", s.label, s.nonce)
                 }
@@ -2011,7 +2020,12 @@ mod tests {
         // Past the end: code 53's message (the run's clock is its newest block's time).
         let (side, message) = send_check(Some(&note), end + 60_000).unwrap_err();
         assert_eq!(side, WindowSide::Ended);
-        for part in ["refused with 53 OutsideWeakSubjectivityPeriod", &hx(&checkpoint), &utc(end), "recover from a new bootstrap"] {
+        for part in [
+            "refused with 53 OutsideWeakSubjectivityPeriod",
+            &hx(&checkpoint),
+            &utc(end),
+            "recover from a new bootstrap",
+        ] {
             assert!(message.contains(part), "{part:?} missing from: {message}");
         }
         // Within the margin: not sent, no code put on it.
@@ -2043,7 +2057,8 @@ mod tests {
     #[test]
     fn the_journal_key_is_the_command_as_parsed() {
         let id = "ab".repeat(32);
-        let base = ["attest", "--instance", &id, "--record-slot", "15624480", "--eth", "http://a", "--block", "26384851"];
+        let base =
+            ["attest", "--instance", &id, "--record-slot", "15624480", "--eth", "http://a", "--block", "26384851"];
         let with = |extra: &[&str]| key(&[&base[..], extra].concat());
         let weth = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
         let slot = "0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0";
@@ -2062,7 +2077,12 @@ mod tests {
         let log = "0:0:emitter=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
         assert_eq!(
             with(&["--storage", &format!("{weth}:{slot}"), "--log", log]),
-            with(&["--log", "0:0:emitter=A0B86991C6218B36C1D19D4A2E9EB0CE3606EB48", "--storage", &format!("{weth}:{slot}")])
+            with(&[
+                "--log",
+                "0:0:emitter=A0B86991C6218B36C1D19D4A2E9EB0CE3606EB48",
+                "--storage",
+                &format!("{weth}:{slot}")
+            ])
         );
         // Another value, comparison, slot, record or chain: another command.
         assert_ne!(one, with(&["--storage", &format!("{weth}:{slot}:eq:0x02")]));
