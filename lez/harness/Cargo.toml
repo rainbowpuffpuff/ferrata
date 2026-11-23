@@ -57,6 +57,11 @@ ferrata-lez-rebate-wire = { path = "../rebate-wire" }
 # The names program (guests/names; the test network's names, tests/names.rs). Both optional, behind the feature `names`.
 methods-names = { path = "../methods-names", optional = true }
 ferrata-lez-names-wire = { path = "../names-wire", optional = true }
+# The test network's messages programs (guests/msg, v1, live; guests/msg-v2; docs/design/messages.md; tests/messages*.rs).
+# The guests are optional, behind the feature `msg`; the wire crates (no LEZ dependency) are not.
+methods-msg = { path = "../methods-msg", optional = true }
+ferrata-lez-msg-wire = { path = "../msg-wire" }
+ferrata-lez-msg-v2-wire = { path = "../msg-v2-wire" }
 
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
@@ -80,3 +85,5 @@ statements = ["dep:methods-statements"]
 rebate = ["dep:methods-rebate"]
 # The test network's names program (tests/names.rs, names/README.md).
 names = ["dep:methods-names", "dep:ferrata-lez-names-wire"]
+# Encrypted wallet-to-wallet messages on the test network (tests/messages.rs, docs/design/messages.md).
+msg = ["dep:methods-msg"]

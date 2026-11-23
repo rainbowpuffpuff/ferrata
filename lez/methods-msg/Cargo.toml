@@ -1,0 +1,13 @@
+[package]
+name = "methods-msg"
+description = "Builds ferrata_msg (v1, live on the test network) and ferrata_msg_v2 (encrypted wallet-to-wallet messages, one account per message) with risc0-build 3.0.5, apart from `methods`"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[build-dependencies]
+risc0-build = { version = "=3.0.5" }
+
+[package.metadata.risc0]
+methods = ["../guests/msg", "../guests/msg-v2"]

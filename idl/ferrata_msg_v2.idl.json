@@ -1,0 +1,1522 @@
+{
+  "version": "0.2.0",
+  "name": "ferrata_msg_v2",
+  "spec": "logos-co/spel c6f73ce (spel-framework-core 0.7.0, docs/reference/idl.md)",
+  "metadata": {
+    "name": "ferrata_msg_v2",
+    "version": "0.2.0"
+  },
+  "instruction_type": "ferrata_lez_msg_v2_wire::MsgMessage",
+  "docs": [
+    "ferrata_msg_v2: encrypted wallet-to-wallet messages on the Ferrata LEZ v0.4 test network, one account per message (prototype, unaudited; docs/design/messages.md). Hand-written IDL in SPEL's format for the borsh interface of lez/msg-v2-wire.",
+    "Actors: profile (account, ferrata_msg_v2); inbox and envelope are PDAs: an actor's seed is SHA-256(\"ferrata-msg/v2/\" || tag || parts), with u64 parts little-endian; its account is LEZ v0.4's AccountId::for_public_pda(program, seed). The program creates both PDAs itself (it names their seeds); a transaction declares every actor it reaches and carries no evidence.",
+    "Owner instructions (0-6) are sent by a transaction the account signs, straight to its own profile; 7-13 pass only between the program's own actors, each checked to come from the one actor allowed to send it.",
+    "The program stores envelopes it cannot read (versions 3 and 4: docs/design/messages.md, deploy/testnet/web/msg/ferrata-msg.js).",
+    "Refusals exit with one byte, 0xA1-0xB5 (errors); a refusal reverts the whole transaction and writes nothing."
+  ],
+  "instructions": [
+    {
+      "name": "publish",
+      "variant": "Publish",
+      "discriminator": [
+        0
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        },
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "key",
+          "type": {
+            "defined": "MsgKey"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: publish or rotate the messaging key; the first one opens the inbox (Open). Event KeyPublished."
+      ]
+    },
+    {
+      "name": "set_policy",
+      "variant": "SetPolicy",
+      "discriminator": [
+        1
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "policy",
+          "type": {
+            "defined": "Policy"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: who may deliver."
+      ]
+    },
+    {
+      "name": "contacts",
+      "variant": "Contacts",
+      "discriminator": [
+        2
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "add",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "remove",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: edit the contacts list (removals first; at most 64)."
+      ]
+    },
+    {
+      "name": "block",
+      "variant": "Block",
+      "discriminator": [
+        3
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "add",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        },
+        {
+          "name": "remove",
+          "type": {
+            "vec": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: edit the block list (removals first; at most 64)."
+      ]
+    },
+    {
+      "name": "send",
+      "variant": "Send",
+      "discriminator": [
+        4
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        },
+        {
+          "name": "recipient_profile",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the recipient's profile: read, not written"
+          ]
+        },
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "envelope",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "one message's envelope, written once, emptied on delete"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "envelope"
+              },
+              {
+                "kind": "arg",
+                "path": "recipient"
+              },
+              {
+                "kind": "arg",
+                "path": "sender"
+              },
+              {
+                "kind": "arg",
+                "path": "seq"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "now_ms",
+          "type": "u64"
+        },
+        {
+          "name": "seq",
+          "type": "u64"
+        },
+        {
+          "name": "body",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner, as a sender: seq is the sender's send counter (STALE_SEQ otherwise); body an envelope (512/1024/2048/4096 bytes, a hybrid one at least 2048; version 3 or 4; the recipient's epoch). At most 30 sends declared within any hour; valid only in blocks stamped [now_ms, now_ms + 600000). Declares the recipient's profile, the recipient's inbox and envelope(to, signer, seq)."
+      ]
+    },
+    {
+      "name": "delete",
+      "variant": "Delete",
+      "discriminator": [
+        5
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        },
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "envelope",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "one message's envelope, written once, emptied on delete"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "envelope"
+              },
+              {
+                "kind": "arg",
+                "path": "recipient"
+              },
+              {
+                "kind": "arg",
+                "path": "sender"
+              },
+              {
+                "kind": "arg",
+                "path": "seq"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "ns",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: delete these messages (1 to 32 numbers, strictly ascending, each held); their envelopes are emptied. Declares the inbox and each envelope."
+      ]
+    },
+    {
+      "name": "clear",
+      "variant": "Clear",
+      "discriminator": [
+        6
+      ],
+      "accounts": [
+        {
+          "name": "profile",
+          "writable": true,
+          "signer": true,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the signer's profile (account, ferrata_msg_v2): key, policy, lists, sending record"
+          ]
+        },
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "envelope",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "one message's envelope, written once, emptied on delete"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "envelope"
+              },
+              {
+                "kind": "arg",
+                "path": "recipient"
+              },
+              {
+                "kind": "arg",
+                "path": "sender"
+              },
+              {
+                "kind": "arg",
+                "path": "seq"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "upto",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Owner: delete every message numbered up to upto; their envelopes are emptied."
+      ]
+    },
+    {
+      "name": "deliver",
+      "variant": "Deliver",
+      "discriminator": [
+        7
+      ],
+      "accounts": [
+        {
+          "name": "recipient_profile",
+          "writable": false,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the recipient's profile: read, not written"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "now_ms",
+          "type": "u64"
+        },
+        {
+          "name": "seq",
+          "type": "u64"
+        },
+        {
+          "name": "body",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: sender's profile to recipient's profile, only from an actor of ferrata_msg_v2."
+      ]
+    },
+    {
+      "name": "open",
+      "variant": "Open",
+      "discriminator": [
+        8
+      ],
+      "accounts": [
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: owner's profile to its new inbox."
+      ]
+    },
+    {
+      "name": "admit",
+      "variant": "Admit",
+      "discriminator": [
+        9
+      ],
+      "accounts": [
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "from",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "seq",
+          "type": "u64"
+        },
+        {
+          "name": "at_ms",
+          "type": "u64"
+        },
+        {
+          "name": "len",
+          "type": "u32"
+        },
+        {
+          "name": "contact",
+          "type": "bool"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: recipient's profile to its inbox: capacity and stranger limits, then the entry. Event Delivered."
+      ]
+    },
+    {
+      "name": "store",
+      "variant": "Store",
+      "discriminator": [
+        10
+      ],
+      "accounts": [
+        {
+          "name": "envelope",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "one message's envelope, written once, emptied on delete"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "envelope"
+              },
+              {
+                "kind": "arg",
+                "path": "recipient"
+              },
+              {
+                "kind": "arg",
+                "path": "sender"
+              },
+              {
+                "kind": "arg",
+                "path": "seq"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "from",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "seq",
+          "type": "u64"
+        },
+        {
+          "name": "at_ms",
+          "type": "u64"
+        },
+        {
+          "name": "body",
+          "type": {
+            "vec": "u8"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: recipient's profile to the new envelope."
+      ]
+    },
+    {
+      "name": "remove",
+      "variant": "Remove",
+      "discriminator": [
+        11
+      ],
+      "accounts": [
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "ns",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: owner's profile to its inbox; Erase to each removed envelope."
+      ]
+    },
+    {
+      "name": "remove_up_to",
+      "variant": "RemoveUpTo",
+      "discriminator": [
+        12
+      ],
+      "accounts": [
+        {
+          "name": "inbox",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "the owner's inbox: index of its messages"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "inbox"
+              },
+              {
+                "kind": "arg",
+                "path": "owner"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "upto",
+          "type": "u64"
+        }
+      ],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: owner's profile to its inbox; Erase to each removed envelope."
+      ]
+    },
+    {
+      "name": "erase",
+      "variant": "Erase",
+      "discriminator": [
+        13
+      ],
+      "accounts": [
+        {
+          "name": "envelope",
+          "writable": true,
+          "signer": false,
+          "init": false,
+          "visibility": [
+            "public"
+          ],
+          "docs": [
+            "one message's envelope, written once, emptied on delete"
+          ],
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": "envelope"
+              },
+              {
+                "kind": "arg",
+                "path": "recipient"
+              },
+              {
+                "kind": "arg",
+                "path": "sender"
+              },
+              {
+                "kind": "arg",
+                "path": "seq"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [],
+      "execution": {
+        "public": true,
+        "private_owned": false
+      },
+      "docs": [
+        "Internal: inbox to one of its envelopes: empty it."
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Profile",
+      "type": {
+        "name": "Profile",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "key",
+            "type": {
+              "option": {
+                "defined": "MsgKey"
+              }
+            }
+          },
+          {
+            "name": "policy",
+            "type": {
+              "defined": "Policy"
+            }
+          },
+          {
+            "name": "contacts",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "blocked",
+            "type": {
+              "vec": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            }
+          },
+          {
+            "name": "sent_at",
+            "type": {
+              "vec": "u64"
+            }
+          },
+          {
+            "name": "last_send_ms",
+            "type": "u64"
+          },
+          {
+            "name": "sent_total",
+            "type": "u64"
+          }
+        ]
+      },
+      "docs": [
+        "profile (account, ferrata_msg_v2): written only by the owner's own transactions; sent_at holds the declared times of its sends within the last hour (at most 30)."
+      ]
+    },
+    {
+      "name": "Inbox",
+      "type": {
+        "name": "Inbox",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "next_n",
+            "type": "u64"
+          },
+          {
+            "name": "entries",
+            "type": {
+              "vec": {
+                "defined": "Entry"
+              }
+            }
+          }
+        ]
+      },
+      "docs": [
+        "inbox(owner): at most 32 entries and 64 KiB; non-contacts at most 8 entries, 1 each."
+      ]
+    },
+    {
+      "name": "Envelope",
+      "type": {
+        "name": "Envelope",
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "recipient",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "from",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "seq",
+            "type": "u64"
+          },
+          {
+            "name": "at_ms",
+            "type": "u64"
+          },
+          {
+            "name": "body",
+            "type": {
+              "vec": "u8"
+            }
+          }
+        ]
+      },
+      "docs": [
+        "envelope(recipient, sender, seq): one ciphertext; empty once deleted."
+      ]
+    }
+  ],
+  "types": [
+    {
+      "name": "MsgKey",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "epoch",
+          "type": "u32"
+        },
+        {
+          "name": "x25519",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "mlkem768",
+          "type": {
+            "option": {
+              "vec": "u8"
+            }
+          }
+        }
+      ],
+      "docs": [
+        "A published messaging key: X25519, and ML-KEM-768 (1184 bytes) for hybrid envelopes."
+      ]
+    },
+    {
+      "name": "Policy",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Open"
+        },
+        {
+          "name": "ContactsOnly"
+        }
+      ],
+      "docs": [
+        "Open: anyone not blocked, within the stranger limits; ContactsOnly: contacts only."
+      ]
+    },
+    {
+      "name": "Entry",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "n",
+          "type": "u64"
+        },
+        {
+          "name": "from",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "seq",
+          "type": "u64"
+        },
+        {
+          "name": "at_ms",
+          "type": "u64"
+        },
+        {
+          "name": "len",
+          "type": "u32"
+        },
+        {
+          "name": "contact",
+          "type": "bool"
+        }
+      ],
+      "docs": [
+        "One message of an inbox: its number, sender, the sender's seq (with the recipient and the sender, the envelope's address), time, length, contact or not when delivered."
+      ]
+    },
+    {
+      "name": "Delivered",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "from",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "to",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "n",
+          "type": "u64"
+        },
+        {
+          "name": "len",
+          "type": "u32"
+        }
+      ],
+      "docs": [
+        "Event data, selector sha256(\"ferrata_msg_v2::Delivered\")[..8]."
+      ]
+    },
+    {
+      "name": "KeyPublished",
+      "kind": "struct",
+      "fields": [
+        {
+          "name": "account",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "epoch",
+          "type": "u32"
+        },
+        {
+          "name": "hybrid",
+          "type": "bool"
+        }
+      ],
+      "docs": [
+        "Event data, selector sha256(\"ferrata_msg_v2::KeyPublished\")[..8]."
+      ]
+    },
+    {
+      "name": "MsgMessage",
+      "kind": "enum",
+      "variants": [
+        {
+          "name": "Publish",
+          "fields": [
+            {
+              "name": "key",
+              "type": {
+                "defined": "MsgKey"
+              }
+            }
+          ]
+        },
+        {
+          "name": "SetPolicy",
+          "fields": [
+            {
+              "name": "policy",
+              "type": {
+                "defined": "Policy"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Contacts",
+          "fields": [
+            {
+              "name": "add",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "remove",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Block",
+          "fields": [
+            {
+              "name": "add",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            },
+            {
+              "name": "remove",
+              "type": {
+                "vec": {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send",
+          "fields": [
+            {
+              "name": "to",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "now_ms",
+              "type": "u64"
+            },
+            {
+              "name": "seq",
+              "type": "u64"
+            },
+            {
+              "name": "body",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete",
+          "fields": [
+            {
+              "name": "ns",
+              "type": {
+                "vec": "u64"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clear",
+          "fields": [
+            {
+              "name": "upto",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Deliver",
+          "fields": [
+            {
+              "name": "now_ms",
+              "type": "u64"
+            },
+            {
+              "name": "seq",
+              "type": "u64"
+            },
+            {
+              "name": "body",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open",
+          "fields": []
+        },
+        {
+          "name": "Admit",
+          "fields": [
+            {
+              "name": "from",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "seq",
+              "type": "u64"
+            },
+            {
+              "name": "at_ms",
+              "type": "u64"
+            },
+            {
+              "name": "len",
+              "type": "u32"
+            },
+            {
+              "name": "contact",
+              "type": "bool"
+            }
+          ]
+        },
+        {
+          "name": "Store",
+          "fields": [
+            {
+              "name": "from",
+              "type": {
+                "array": [
+                  "u8",
+                  32
+                ]
+              }
+            },
+            {
+              "name": "seq",
+              "type": "u64"
+            },
+            {
+              "name": "at_ms",
+              "type": "u64"
+            },
+            {
+              "name": "body",
+              "type": {
+                "vec": "u8"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove",
+          "fields": [
+            {
+              "name": "ns",
+              "type": {
+                "vec": "u64"
+              }
+            }
+          ]
+        },
+        {
+          "name": "RemoveUpTo",
+          "fields": [
+            {
+              "name": "upto",
+              "type": "u64"
+            }
+          ]
+        },
+        {
+          "name": "Erase",
+          "fields": []
+        }
+      ],
+      "docs": [
+        "The instruction enum (borsh; one-byte variant index): 0-6 the owner's, 7-13 internal."
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 161,
+      "name": "BAD_MESSAGE",
+      "msg": "The message does not decode (or, v2, Delete's numbers are empty, too many or not ascending)."
+    },
+    {
+      "code": 162,
+      "name": "BAD_STATE",
+      "msg": "An actor state that does not decode: a send addressed to one of the program's own accounts (an inbox or an envelope, whose state is not a profile); or a write-once actor written twice (defensive). Nothing is written."
+    },
+    {
+      "code": 163,
+      "name": "NOT_AUTHORIZED",
+      "msg": "An owner's action not signed by the owner or not sent by the transaction itself."
+    },
+    {
+      "code": 164,
+      "name": "WRONG_SENDER",
+      "msg": "A message that did not come from the one actor allowed to send it to this receiver."
+    },
+    {
+      "code": 165,
+      "name": "NO_KEY",
+      "msg": "The recipient has published no key (v2: also Delete or Clear before any key)."
+    },
+    {
+      "code": 166,
+      "name": "BAD_KEY",
+      "msg": "A malformed key, or an epoch that does not move forward."
+    },
+    {
+      "code": 167,
+      "name": "BLOCKED",
+      "msg": "The recipient blocked the sender."
+    },
+    {
+      "code": 168,
+      "name": "NOT_A_CONTACT",
+      "msg": "The recipient accepts contacts only."
+    },
+    {
+      "code": 169,
+      "name": "BAD_SIZE",
+      "msg": "The envelope's length is not a bucket (v2: or a hybrid envelope below 2,048 bytes)."
+    },
+    {
+      "code": 170,
+      "name": "BAD_VERSION",
+      "msg": "An unknown envelope version, or a hybrid envelope to a key without ML-KEM."
+    },
+    {
+      "code": 171,
+      "name": "STALE_KEY",
+      "msg": "The envelope is for another key epoch than the recipient's."
+    },
+    {
+      "code": 172,
+      "name": "DOWNGRADE",
+      "msg": "An X25519-only envelope to a recipient that published an ML-KEM key."
+    },
+    {
+      "code": 173,
+      "name": "INBOX_FULL",
+      "msg": "The inbox holds 32 messages or 64 KiB."
+    },
+    {
+      "code": 174,
+      "name": "STRANGER_LIMIT",
+      "msg": "This non-contact already holds its unread messages here (v1: 2, v2: 1)."
+    },
+    {
+      "code": 175,
+      "name": "STRANGERS_FULL",
+      "msg": "Non-contacts already hold 8 messages here."
+    },
+    {
+      "code": 176,
+      "name": "RATE_LIMITED",
+      "msg": "v1: 30 sends in the current fixed hour window; v2: 30 sends declared within the last hour."
+    },
+    {
+      "code": 177,
+      "name": "CLOCK_BACKWARDS",
+      "msg": "now_ms before the sender's last send."
+    },
+    {
+      "code": 178,
+      "name": "SELF_SEND",
+      "msg": "Sending to oneself."
+    },
+    {
+      "code": 179,
+      "name": "LIST_FULL",
+      "msg": "More than 64 contacts or blocked."
+    },
+    {
+      "code": 180,
+      "name": "NOT_FOUND",
+      "msg": "Delete of a message the inbox does not hold."
+    },
+    {
+      "code": 181,
+      "name": "STALE_SEQ",
+      "msg": "Send whose seq is not the sender's send counter (a concurrent or replayed send)."
+    }
+  ]
+}

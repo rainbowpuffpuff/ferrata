@@ -1,0 +1,25 @@
+[package]
+name = "ferrata_msg"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+ferrata-lez-msg-wire = { path = "../../msg-wire" }
+# LEZ v0.4.0-rc3 (the test network's release). The guest ABI (ReceiveInput, Response, Transition) is the same as
+# rc1's, which the harness runs; only the program loader's entries changed between them.
+lee_core = { path = "../../../../upstream/lez-v0.4.0-rc3/lee/state_machine/core" }
+risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = "=0.10.8"
+
+[patch.crates-io]
+sha2 = { git = "https://github.com/risc0/RustCrypto-hashes", tag = "sha2-v0.10.8-risczero.0" }
+
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1

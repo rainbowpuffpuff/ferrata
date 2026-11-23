@@ -1,0 +1,8 @@
+{
+  "generator": "lez/msg-v2-wire/tests/idl_vectors.rs (FERRATA_IDL_WRITE=1 to rewrite)",
+  "pdas": [
+    {"program": "ferrata_msg_v2", "actor": "inbox", "program_id": "8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaab", "inputs": [{"name": "owner", "encoding": "bytes", "value": "5455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f70717273"}], "account": "7d6ac439225f697281b0a90fc4659d04b904ff0dcdbfe929bf36053be6d32c28"},
+    {"program": "ferrata_msg_v2", "actor": "envelope", "program_id": "8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaab", "inputs": [{"name": "recipient", "encoding": "bytes", "value": "5455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f70717273"}, {"name": "sender", "encoding": "bytes", "value": "62636465666768696a6b6c6d6e6f707172737475767778797a7b7c7d7e7f8081"}, {"name": "seq", "encoding": "u64le", "value": "9"}], "account": "858884fc82e618a3f7f4002a3d6c384738142ca87bd4cb2bdd0447a29e28d9a2"},
+    {"program": "ferrata_msg_v2", "actor": "envelope", "program_id": "8c8d8e8f909192939495969798999a9b9c9d9e9fa0a1a2a3a4a5a6a7a8a9aaab", "inputs": [{"name": "recipient", "encoding": "bytes", "value": "5455565758595a5b5c5d5e5f606162636465666768696a6b6c6d6e6f70717273"}, {"name": "sender", "encoding": "bytes", "value": "5b5c5d5e5f606162636465666768696a6b6c6d6e6f707172737475767778797a"}, {"name": "seq", "encoding": "u64le", "value": "0"}], "account": "cea84ed5f893fd167c0f9483220f5cece945412ddaa246bb6caa25dff4a2b1c9"}
+  ]
+}

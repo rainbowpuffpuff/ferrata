@@ -1,0 +1,16 @@
+{
+  "name": "ferrata-msg-vendor",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Pinned inputs of msg/vendor/crypto.js",
+  "dependencies": {
+    "@noble/ciphers": "^2.4.0",
+    "@noble/curves": "^2.4.0",
+    "@noble/hashes": "^2.4.0",
+    "@noble/post-quantum": "^0.7.1",
+    "@scure/base": "^2.4.0",
+    "@scure/bip39": "^2.4.0",
+    "esbuild": "^0.28.2"
+  },
+  "type": "module"
+}

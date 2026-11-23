@@ -1,0 +1,162 @@
+== ferrata_msg_v2 e2e, 2026-11-23T21:26:02Z; binary sha256 ebcc609a1bd79cb924813f8ce856b6ae6b0465a80d5e3311693ac8e922091e95, 300620 bytes; node v22.12.0
+   LEZ 9c4b6d5633a0089654f6b48800144af82fce21de197a40ed543dddc78ca328ef  sequencer_service_standalone
+   LEZ f6292bedf130606f76ffc6469c5eef54418349d9f2ef5a48d4d37deffde19795  wallet
+== sequencer up: head 1, RPC 127.0.0.1:3040
+== LEZ's CLI: the program splits into 3 segments, not 4
+== deployed in 123 s by LEZ's CLI (immutable): 3 segments + header; program CXPrLtGnEifVFastPUmSXF5FDTC4iaoBUTtUBsWeNzVT
+== alice 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC: balance 1000000000000
+== bob AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: balance 1000000000000
+== carol 9JkLW9KGoVDfxL6zHxyyktG5YGWnpKXbQGb7pUgjgbm3: balance 1000000000000
+== dave AZkQn3wdHE2cKwVhvXp8dUm2X7xHArApzgq4ekGHaZuB: balance 1000000000000
+
+== 1. keys; a send before the recipient has a key is refused before any fee
+$ ferrata-msg keygen (alice)
+    account      28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC
+    epoch        0
+    x25519       9dec21f0147f4026c42063c9e151285a97f76dfa7cee22ea39e8640bb7c8bc0e
+    ml-kem-768   1184 bytes, sha256 22def98db28d228022e508554cab26acad11ae14ba9580936cc395366c67b46f
+    fingerprint  5fWko5Lpi7Tf3U   (give it to your contacts out of band: they send with --expect-key)
+    derived from your account key; nothing new to back up; `ferrata-msg publish` puts it on chain
+    [exit 0]
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 hello before you have a key (alice)
+    ferrata-msg: send: not sent (NO_KEY): the recipient has published no messaging key; no fee paid
+    [exit 1]
+  PASS send to an account with no key: refused NO_KEY, nothing sent, no fee
+
+== 2. bob publishes a hybrid key: his profile and his inbox appear
+$ ferrata-msg publish (bob)
+    publish key epoch 0 (hybrid, fingerprint 5gC4G6CW9e6Y9Z): applied in block 127; tx c1149da477f6193421b5d3924225433b440e0e5fc3f8970dd5fea526173d6b3f
+    [exit 0]
+  PASS publish applied in its block
+  PASS bob's inbox exists, empty, and his key is hybrid epoch 0
+$ ferrata-msg send 65cMXik6T7V5nqTQnMB6f3zyQb645TmHdqtKYSMhb62m to an inbox account (alice)
+    ferrata-msg: send: not sent (BAD_STATE): the address is one of the messages program's own accounts (an inbox or an envelope), not an account; no fee paid
+    [exit 1]
+  PASS send to bob's inbox account (one of the program's own accounts): refused BAD_STATE before sending, no fee
+
+== 3. alice sends, checking bob's key fingerprint; bob reads
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 should not go --expect-key 1111111111111 (alice)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z
+    ferrata-msg: send: not sent (KEY_MISMATCH): the recipient's key has fingerprint 5gC4G6CW9e6Y9Z, not 1111111111111; no fee paid
+    [exit 1]
+  PASS --expect-key with another fingerprint: refused before sending, no fee
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 Hi Bob, this is Alice: end-to-end encrypted, post-quantum hybrid, padded, on LEZ v0.4, one account per message. --expect-key 5gC4G6CW9e6Y9Z (alice)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z
+    send (2048-byte hybrid envelope, seq 0): applied in block 129; tx 5cd6c283760b61d28193d400f4f0a20ae966fa7781a3cc1b504d84ce98a7d1ab
+    [exit 0]
+  PASS send with bob's fingerprint: applied in its block
+  measured: send to its block 3611 ms (wall clock, the CLI's reads included); fee 1022264 units
+$ ferrata-msg inbox (bob)
+    #0 2026-11-23T21:30:13.882Z from 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC (2048 B, hybrid)
+        Hi Bob, this is Alice: end-to-end encrypted, post-quantum hybrid, padded, on LEZ v0.4, one account per message.
+    1 of 32 messages, 2048 of 65536 bytes; free them with `ferrata-msg clear 0`
+    [exit 0]
+  PASS bob's inbox decrypts alice's message
+
+== 4. a stranger's second unread message: refused before sending, then forced: reverted in its block
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 carol 1 (carol)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    send (2048-byte hybrid envelope, seq 0): applied in block 131; tx e2f6bd896e29b06dba3b98516b41ec0d3185450a53fbb77389291dd4722e3390
+    [exit 0]
+  PASS carol (a stranger) sends one: applied
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 carol 2 (carol)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    ferrata-msg: send: not sent (STRANGER_LIMIT): the program would refuse it; no fee paid
+    [exit 1]
+  PASS carol's second: refused STRANGER_LIMIT before sending, no fee
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 carol 2, forced past the client's check --force (carol)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    ferrata-msg: send (2048-byte hybrid envelope, seq 1): reverted in block 133: refused (the fee was charged, nothing changed); the client's check of the program's rules had said STRANGER_LIMIT; tx 599bf2c26e51724fa56012c0d0183f42e14c4b3c6a3aa3569ab79ee373885ad9
+    [exit 1]
+  PASS forced: reverted in its block (the block's reverted list), the fee charged, nothing stored
+  measured: carol's fee for the reverted transaction 724328 units (the exit code, STRANGER_LIMIT, is the harness's: lez/results/messages-v2.md)
+
+== 5. bob blocks carol
+$ ferrata-msg block 9JkLW9KGoVDfxL6zHxyyktG5YGWnpKXbQGb7pUgjgbm3 (bob)
+    block 9JkLW9KGoVDfxL6zHxyyktG5YGWnpKXbQGb7pUgjgbm3: applied in block 134; tx 8876c8e0967892d539baa0235739d7e8d4dfe0f417e1abfee518cd86c128975a
+    [exit 0]
+  PASS block applied
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 carol after the block (carol)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    ferrata-msg: send: not sent (BLOCKED): the program would refuse it; no fee paid
+    [exit 1]
+  PASS carol (blocked): refused BLOCKED before sending, no fee
+
+== 6. contacts-only, both ways
+$ ferrata-msg contact 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC (bob)
+    contact 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC: applied in block 135; tx f0abb18ccfc8a289b95c7d086043b768f3b7f46a2f4dc3dfd9d8ebba8dde0b44
+    [exit 0]
+  PASS bob adds alice as a contact: applied
+$ ferrata-msg policy contacts (bob)
+    policy contacts: applied in block 136; tx ea3dbeaa20a8e6dff7836f70c54d2cedb3e02bed7b24eaf7550c19943413d826
+    [exit 0]
+  PASS policy contacts: applied
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 dave, not a contact (dave)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    ferrata-msg: send: not sent (NOT_A_CONTACT): the program would refuse it; no fee paid
+    [exit 1]
+  PASS dave (not a contact): refused NOT_A_CONTACT before sending, no fee
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 dave, forced --force (dave)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    ferrata-msg: send (2048-byte hybrid envelope, seq 0): reverted in block 137: refused (the fee was charged, nothing changed); the client's check of the program's rules had said NOT_A_CONTACT; tx 258767e10274c0f292b8266d461cf7c94a01c16f2ff904fedde2833f2d6015fd
+    [exit 1]
+  PASS dave forced: reverted in its block, nothing stored
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 alice, a contact, under contacts-only (alice)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 0, hybrid X25519 + ML-KEM-768, fingerprint 5gC4G6CW9e6Y9Z (not checked: pass --expect-key to refuse any other)
+    send (2048-byte hybrid envelope, seq 1): applied in block 138; tx 4535033b084bfa5d37cad72dc7721a01805783edebc578fc9307a33571341d25
+    [exit 0]
+  PASS alice (a contact) under contacts-only: applied
+
+== 7. bob deletes carol's message: its envelope account is emptied
+$ ferrata-msg delete 1 (bob)
+    delete 1 (1 envelopes emptied): applied in block 139; tx ae32bc9e2701d4d0b56679f7d6ea359e35b0a81c39a49c346e1383cb4c0924e1
+    [exit 0]
+  PASS delete applied
+  PASS carol's envelope account is empty and her entry gone
+
+== 8. bob rotates to epoch 1; alice's next message uses it; bob reads both epochs
+$ ferrata-msg publish (bob)
+    publish key epoch 1 (hybrid, fingerprint 4GS6DiNQbqBRsT): applied in block 140; tx e1d7ff1212c8c811a085b725eb18fdccdc3a6c69279ee6bcb68058f1cd0f494e
+    [exit 0]
+  PASS rotation applied
+$ ferrata-msg send AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3 after the rotation, to epoch 1 (alice)
+    to AwMt6DmFSdD3Mu3QBmENpUooKSoCnmyubAkkBzZihTk3: key epoch 1, hybrid X25519 + ML-KEM-768, fingerprint 4GS6DiNQbqBRsT (not checked: pass --expect-key to refuse any other)
+    send (2048-byte hybrid envelope, seq 2): applied in block 141; tx ae2c06c13e9972df8151db48495d7e31dcb03d9eb6184e9d3c289fbfd3368838
+    [exit 0]
+  PASS send to epoch 1: applied
+$ ferrata-msg inbox (bob)
+    #0 2026-11-23T21:30:13.882Z from 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC (2048 B, hybrid)
+        Hi Bob, this is Alice: end-to-end encrypted, post-quantum hybrid, padded, on LEZ v0.4, one account per message.
+    #2 2026-11-23T21:30:33.253Z from 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC (contact) (2048 B, hybrid)
+        alice, a contact, under contacts-only
+    #3 2026-11-23T21:30:39.226Z from 28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC (contact) (2048 B, hybrid)
+        after the rotation, to epoch 1
+    3 of 32 messages, 6144 of 65536 bytes; free them with `ferrata-msg clear 3`
+    [exit 0]
+  PASS bob reads epoch-0 and epoch-1 messages
+
+== 9. on chain: ciphertext only
+    7942 bytes of state searched; found: []
+  PASS no message text in bob's profile, inbox or envelopes
+
+== 10. bob clears everything: every envelope emptied
+$ ferrata-msg clear 3 (bob)
+    clear up to 3 (3 envelopes emptied): applied in block 143; tx 25803df079ab887a0bf5bf9fee5b7f9704dab4450fbb6b271b237444a92a3ded
+    [exit 0]
+  PASS clear applied
+  PASS bob's inbox empty, alice's three envelope accounts empty
+
+== 11. bulk list edits through the library (the wallet's path): 63 ids added, then 64 removed and 64 added
+    {"a":{"reverted":false,"gas":"1334000"},"b":{"reverted":false,"gas":"2504000"},"blocked":64}
+  PASS bulk edits applied within the library's limits (63 ids, then 128), bob's block list full
+
+== 12. the CLI on v20.11.1 (no ES-module detection before 20.19): it loads the wallet's lez.js
+    account      28Zaa8Zce1HM92KjE8cacriGo5S9ra1FGT5bGFTMzKaC
+    epoch        0
+    x25519       9dec21f0147f4026c42063c9e151285a97f76dfa7cee22ea39e8640bb7c8bc0e
+    ml-kem-768   1184 bytes, sha256 22def98db28d228022e508554cab26acad11ae14ba9580936cc395366c67b46f
+    fingerprint  5fWko5Lpi7Tf3U   (give it to your contacts out of band: they send with --expect-key)
+    derived from your account key; nothing new to back up; `ferrata-msg publish` puts it on chain
+  PASS keygen on Node 20 before 20.19
+
+== 27 of 27 checks passed; head {"jsonrpc":"2.0","id":1,"result":145}

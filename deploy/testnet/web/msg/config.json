@@ -1,0 +1,6 @@
+{
+  "rpc": null,
+  "program": null,
+  "legacy_program": "ExZxU36vgBErfDHpnsM97euf4ubx7gL8WpX7DFsYrVTe",
+  "note": "program: ferrata_msg_v2's header account (base58), written at its deployment; legacy_program: ferrata_msg (v1), live and immutable since 23 November 2026, read only; rpc: the network's RPC URL, written by the host that serves this directory"
+}

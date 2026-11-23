@@ -1,5 +1,8 @@
 {
   "harness_feature_gated": {
+    "messages": "msg",
+    "messages_findings": "msg",
+    "messages_v2": "msg",
     "names": "names",
     "names_review": "names",
     "rebate": "rebate",

@@ -313,6 +313,57 @@ jobs:
         timeout-minutes: 30
         run: scripts/ci/names.sh
 
+  # The test network's messages programs (docs/design/messages.md): ferrata_msg (v1, live) and ferrata_msg_v2 in LEZ
+  # v0.4.0-rc1's state machine and fee settlement (lez/harness/tests/messages*.rs, feature `msg`, guests in RISC Zero dev
+  # mode: every reachable exit code, the clients' gas limits against measured worst cases, the review's findings failing
+  # on v1 and passing on v2), their wire crates (the logic, the vectors shared with the JS library, the IDL's vectors),
+  # the JS library's tests (among them an independent implementation against OpenSSL's ML-KEM values) and the IDL
+  # generator's check. scripts/ci/lez-harness.sh leaves feature-gated tests out; this job runs these. No secret, nothing
+  # sent to any network.
+  msg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: The JS library (Node 20 or later)
+        run: node --version && node --test deploy/testnet/web/msg/test/*.test.mjs
+      - name: The IDLs are what idl/tools/msg_idl.py writes
+        run: python3 -I idl/tools/msg_idl.py --check
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (lez/rust-toolchain.toml)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: The wire crates (logic, the vectors the JS library shares, the IDL's vectors)
+        working-directory: lez
+        run: cargo test -p ferrata-lez-msg-wire -p ferrata-lez-msg-v2-wire --locked
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources (the messages guests build against LEZ v0.4.0-rc3)
+        run: scripts/fetch-upstream.sh
+      - name: Both programs in LEZ's state machine, dev mode
+        working-directory: lez
+        timeout-minutes: 60
+        run: |
+          export RISC0_HOME="$HOME/risc0-home-lez" RISC0_DEV_MODE=1
+          cargo test -p harness --features msg --locked --test messages --test messages_v2 --test messages_findings -- --nocapture
+
   # The watchers (monitor/README.md): the monitor's own tests, then its rehearsal on a local anvil chain
   # (monitor/tests/anvil-e2e.sh: rule (B) and rule (A) FerrataVault v5 deployments with the monitor's key as watcher;
   # wrong candidates cancelled in time, a SIGKILL and restart, a lost state file rescanned, a watcher without gas,

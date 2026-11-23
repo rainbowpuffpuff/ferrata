@@ -1,0 +1,16 @@
+[package]
+name = "ferrata-lez-msg-v2-wire"
+description = "Messages, actor states, PDAs, exit codes and the whole logic of ferrata_msg_v2, encrypted wallet-to-wallet messages on LEZ with one account per message (guest and host; no LEZ dependency, so the rc1 harness and the rc3 guest share it)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }
+
+[dev-dependencies]
+# tests/vectors.rs reads the JS library's vectors and writes the IDL's.
+serde_json = "1"
+hex = "0.4"

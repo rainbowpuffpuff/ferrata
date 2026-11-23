@@ -2,6 +2,7 @@
   "name": "ferrata-wallet-vendor",
   "private": true,
   "version": "1.0.0",
+  "type": "module",
   "description": "Pinned inputs of vendor/noble.js",
   "dependencies": {
     "@noble/ciphers": "^2.4.0",

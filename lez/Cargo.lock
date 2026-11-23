@@ -1245,6 +1245,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-msg-v2-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "hex",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "ferrata-lez-msg-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "hex",
+ "serde_json",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-lez-names-wire"
 version = "0.1.0"
 dependencies = [
@@ -1491,6 +1511,8 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-holdings-wire",
+ "ferrata-lez-msg-v2-wire",
+ "ferrata-lez-msg-wire",
  "ferrata-lez-names-wire",
  "ferrata-lez-rebate-wire",
  "ferrata-lez-statements-wire",
@@ -1501,6 +1523,7 @@ dependencies = [
  "lee",
  "lee_core",
  "methods",
+ "methods-msg",
  "methods-names",
  "methods-program-class",
  "methods-rebate",
@@ -1889,6 +1912,13 @@ dependencies = [
 
 [[package]]
 name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
+
+[[package]]
+name = "methods-msg"
 version = "0.1.0"
 dependencies = [
  "risc0-build",

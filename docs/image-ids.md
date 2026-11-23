@@ -195,6 +195,27 @@ own name here. Rebuild: `names/e2e/box.sh build && names/e2e/box.sh ids`.
 | names v1, the LEZ v0.4.0-rc3 build, live: `ferrata_names_v1_rc3` | `0xee9578cab413451e1f0a0cf267a7874ca3231ed0a30907f5d793648ac4e6f790` | `5653a2ee1c3a85f3b29f32a1a227030a2619c096d0dd7c6c92b872e9e7ce75ab` | 287,672 | `eacdfd305520939ba4f092371159a484ec07a1133b5c7e43b764b9a03e9844e5` |
 | names v1, the LEZ v0.4.0-rc1 build: `ferrata_names_v1_rc1` | `0xe4b7d67291668c6309449e3b1d9627a91fdc5916eaa8344c949f3657ea54a71b` | `f232f4b0520b4038abaf4990eafb592ec53ffaaec3e5d93dd5a71c65ecf936c1` | 287,672 | `6e0c91ea65fee6fbef135977fbfb0837210640dec073377680a4da1e54746ec7` |
 
+## The test network's messages programs (`ferrata_msg`, `ferrata_msg_v2`; 23 November 2026)
+
+`lez/guests/msg` (`ferrata_msg`, v1) and `lez/guests/msg-v2` (`ferrata_msg_v2`): encrypted wallet-to-wallet messages
+([`docs/design/messages.md`](design/messages.md)), new programs built against LEZ v0.4.0-rc3's `lee_core` by
+`lez/methods-msg` behind the harness feature `msg`, on the Modal build box (RISC Zero 3.0.5, guest Rust 1.91.1, through
+`scripts/guest-rustc`); no other program changes. Each id is risc0-build's (`FERRATA_MSG_ID`, `FERRATA_MSG_V2_ID`, printed
+in `lez/results/messages.md` and `lez/results/messages-v2.md`) and equals `r0vm --elf <binary> --id`. Rebuild:
+`cd lez && cargo build -p methods-msg --locked`.
+
+- `ferrata_msg` is **live and immutable** on our test network since 23 November 2026 (header
+  `ExZxU36vgBErfDHpnsM97euf4ubx7gL8WpX7DFsYrVTe`, `/programs.json`); this tree keeps its source byte for byte, and it
+  rebuilt to the same binary after v2 was added beside it.
+- `ferrata_msg_v2` replaces it (the review of 23 November 2026, `docs/design/messages.md` "v1"): deployed by LEZ's CLI on
+  a local LEZ v0.4.0-rc3 sequencer (`deploy/testnet/web/msg/test/results/local-2/`), **not yet on the public test
+  network**. A new program id: v1's inboxes stay where they are, readable by the clients (`ferrata-msg inbox --legacy`).
+
+| Program | Image id | sha256 of the binary | Bytes |
+|---|---|---|---:|
+| encrypted messages, v1, live (`lez/guests/msg`): `ferrata_msg` | `0x04ae1988fe84eef6da472152a75b17e6c7453e6e4775264f12af1a750b945277` | `5b7af994f1169f2b6a905ccfda478f098f5bdef9e09cce0edae07fa8fe733134` | 275,444 |
+| encrypted messages, one account per message (`lez/guests/msg-v2`): `ferrata_msg_v2` | `0x480f5c4eedb3bde85c26e3e408c962d91cdea4941391b3e5ac63aefdb2eb4f59` | `ebcc609a1bd79cb924813f8ce856b6ae6b0465a80d5e3311693ac8e922091e95` | 300,620 |
+
 ## Superseded: the ids the November vaults and the recorded runs pin
 
 Rows this tree no longer builds, kept under their names because deployments and records pin them: the Ethereum-side
@@ -218,4 +239,3 @@ this tree's build with the first table.
 | gas-drop receipt (`bridge/guests`): `gasdrop` | `0x895804161df14b00e1cb02e5d27fe136efb82b178db511c7697c030676fc9eb4` | `c2119aee6f28359f383d8f1a2e14829f95bdc86e92d52790e442dd823cb43162` | 230,648 | `aa1f819bd46b25cac570db21b4abeb0d84b81c779dccbaad24e5a5fa50cb2114` |
 | checkpoint, rule (A), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint`): `checkpoint_0_3_5` | `0x259cd89ebd255d34dfbfbbc22e4922d25f5f5d1a57858871475e187e399b9b0f` | `4e872fb563f99e176594889d382626144c4958e0a2cca5408178ff5a27569a0e` | 446,600 | `9f86858ee059cd28230b32c31d3f6f6b33ae46d7ce88976c34e38f6d89048f26` |
 | checkpoint, rule (B), 0.3.5-rc.1 layout (`checkpoint/guests-0-3-5/checkpoint-b`): `checkpoint_b_0_3_5` | `0xafbf402314e9498f3854f02d533e2a355d4692ca2b64b913bcb0232200c63bcf` | `66ac3a9c20794dc36d35a2d21fedf18e78c79c442f82ac70a3e2d59cd5d8ec77` | 448,128 | `3fb2b8da3d82e9b454c7d4d73a56b61e68664e78e93401cded9b13189e131ff0` |
-

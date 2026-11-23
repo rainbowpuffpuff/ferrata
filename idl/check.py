@@ -38,7 +38,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-PROGRAMS = ["ferrata_attestation", "ferrata_bridge"]
+PROGRAMS = ["ferrata_attestation", "ferrata_bridge", "ferrata_msg", "ferrata_msg_v2"]
 
 INTS = {"u8": 1, "u16": 2, "u32": 4, "u64": 8, "u128": 16, "i8": 1, "i16": 2, "i32": 4, "i64": 8, "i128": 16}
 PRIMS32 = {"account_id", "AccountId", "[u8; 32]", "[u8;32]", "program_id", "ProgramId", "[u32; 8]", "[u32;8]"}
@@ -440,12 +440,13 @@ def check_pdas(idls):
     """Check 8. Returns (errors, number checked)."""
     errs, n = [], 0
     files = [HERE / "vectors" / "pda.vectors.json", HERE / "vectors" / "pda-recorded.json"]
+    files += [HERE / "vectors" / f"{name}.pdas.json" for name in PROGRAMS if (HERE / "vectors" / f"{name}.pdas.json").exists()]
     for path in files:
         for e in json.loads(path.read_text())["pdas"]:
             n += 1
             idl = idls[e["program"]]
             where = f"{path.name}: {e['program']} {e['actor']}"
-            domains = {m for d in idl.get("docs", []) for m in re.findall(r'SHA-256\("(ferrata-lez/v1/[a-z/]*)" \|\| tag', d)}
+            domains = {m for d in idl.get("docs", []) for m in re.findall(r'SHA-256\("(ferrata-[a-z]+/v[0-9]+/[a-z/]*)" \|\| tag', d)}
             if len(domains) != 1:
                 errs.append(f"{where}: the IDL's docs name {len(domains)} PDA domains")
                 continue

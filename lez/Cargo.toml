@@ -5,7 +5,7 @@
 resolver = "2"
 members = ["wire", "bridge-wire", "holdings-wire", "methods", "harness", "updater", "advance", "methods-residue-experimental",
            "wire-class", "methods-program-class", "statements-wire", "methods-statements", "rebate-wire", "methods-rebate",
-           "names-wire", "methods-names"]
+           "names-wire", "methods-names", "msg-wire", "methods-msg", "msg-v2-wire"]
 exclude = ["guests"]
 
 # BLS and the zkVM client are slow unoptimised; optimise dependencies even in test builds.
