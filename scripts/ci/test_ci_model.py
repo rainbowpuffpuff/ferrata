@@ -102,12 +102,20 @@ privacy_suite = [p for p in tracked if p.startswith("vault/test/") and p.endswit
                  and "contract PrivacySuite" in (ROOT / p).read_text(encoding="utf-8")]
 check("trace: vault leaves PrivacySuite out (--no-match-contract)",
       bool(privacy_suite) and not runs("vault", privacy_suite[0]))
-check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh, in lez/)",
+check("trace: lez-harness runs lez/harness/tests/public_path.rs (through scripts/ci/lez-harness.sh --shard, in lez/)",
       runs("lez-harness", "lez/harness/tests/public_path.rs"))
-check("trace: lez-harness runs lez/updater/tests/recorded.rs (cargo test -p ferrata-updater --features harness)",
+check("trace: lez-harness runs lez/updater/tests/recorded.rs (updater-gate shard)",
       runs("lez-harness", "lez/updater/tests/recorded.rs"))
+check("trace: lez-harness runs lez/updater/tests/refusals.rs (updater-privacy shard)",
+      runs("lez-harness", "lez/updater/tests/refusals.rs"))
+check("trace: lez-harness runs vault/test/PrivacySuite.t.sol (updater-privacy shard via scripts/privacy/run.sh)",
+      runs("lez-harness", "vault/test/PrivacySuite.t.sol"))
 check("trace: lez-harness does not run lez/harness/tests/residue_experimental.rs (feature residue-experimental)",
       not runs("lez-harness", "lez/harness/tests/residue_experimental.rs"))
+check("jobs: lez-full.yml's lez-harness-full is scheduled/manual only (not on_change CI)",
+      jobs["lez-harness-full"].workflow.name == "lez-full.yml"
+      and not jobs["lez-harness-full"].on_change
+      and runs("lez-harness-full", "lez/harness/tests/public_path.rs"))
 check("trace: monitor runs monitor/tests/check.rs and monitor/tests/anvil-e2e.sh",
       runs("monitor", "monitor/tests/check.rs") and runs("monitor", "monitor/tests/anvil-e2e.sh"))
 check("trace: roundtrip runs cli/tests/gasdrop.rs but not cli/tests/relayer_fork.rs (it reads Sepolia)",
@@ -156,6 +164,108 @@ check("cargo: a file compiled only with a feature the command leaves off (lez/up
 check("cargo: the same file with the feature on",
       ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness"], "lez", {}, "t"),
                           "lez/updater/tests/recorded.rs")[0])
+# M1: bin targets and doc-tests are distinguished from --lib
+BIN_TEST = "#[test]\nfn bin_unit_test_added() { assert!(false); }\n"
+DOC_TEST = "/// ```\n/// assert!(false);\n/// ```\npub fn doc_added() {}\n"
+TEXT_DOC = "//! ```text\n//! not rust\n//! ```\npub fn plain() {}\n"
+check("cargo: --lib does not run #[test] in src/main.rs (ferrata-updater)",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/updater/src/main.rs", text=BIN_TEST)[0])
+check("cargo: --bins and --bin ferrata-updater do run #[test] in src/main.rs",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--bins"], "lez", {}, "t"),
+                          "lez/updater/src/main.rs", text=BIN_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--bin", "ferrata-updater"], "lez", {}, "t"),
+                              "lez/updater/src/main.rs", text=BIN_TEST)[0])
+check("cargo: --lib does not run #[test] in src/bin/tables.rs; --bins does",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--bins"], "lez", {}, "t"),
+                              "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0])
+check("cargo: --lib does not run doc-tests in src/lib.rs; --doc and unsharded cargo test do",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--lib"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0])
+check("cargo: --doc ignores non-Rust ```text blocks and does not run #[test]-only files",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=TEXT_DOC)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=BIN_TEST)[0])
+check("cargo: --doc honours name filters and --skip",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc", "--", "zz_no_such_doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=DOC_TEST)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc", "--", "--skip", "doc_added"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=DOC_TEST)[0])
+# N3: ~~~ fences, /** */ / /*! */ block docs, and literal #[doc = "..."] attributes
+TILDE_DOC = "/// ~~~rust\n/// assert!(false);\n/// ~~~\npub fn tilde() {}\n"
+TILDE_TEXT = "/// ~~~text\n/// not rust\n/// ~~~\npub fn plain_tilde() {}\n"
+BLOCK_OUTER_DOC = "/**\n * ```\n * assert!(false);\n * ```\n */\npub fn block_doc() {}\n"
+BLOCK_INNER_DOC = "/*!\n * ~~~\n * assert!(false);\n * ~~~\n */\n"
+BLOCK_TEXT_DOC = "/**\n * ```text\n * not rust\n * ```\n */\npub fn block_text() {}\n"
+ATTR_DOC = '#[doc = "```\\nassert!(false);\\n```"]\npub fn attr_doc() {}\n'
+ATTR_SPLIT_DOC = '#[doc = "```"]\n#[doc = "assert!(false);"]\n#[doc = "```"]\npub fn attr_split() {}\n'
+ATTR_RAW_DOC = '#![doc = r#"\n~~~rust\nassert!(false);\n~~~\n"#]\n'
+NON_DOC_FORMS = (
+    "//// ```\n//// assert!(false);\n//// ```\n"
+    "/* ```\nassert!(false);\n``` */\n"
+    "/*** ```\nassert!(false);\n``` */\n"
+    'const S: &str = "/// ```\\n/// assert!(false);\\n/// ```";\n'
+    'const R: &str = r#"/**\n```\nassert!(false);\n```\n*/"#;\n'
+)
+check("cargo: --doc detects ~~~ fences and /** */ / /*! */ block doc comments (and ignores non-Rust text fences)",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                          "lez/harness/src/lib.rs", text=TILDE_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=BLOCK_OUTER_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=BLOCK_INNER_DOC)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=TILDE_TEXT)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=BLOCK_TEXT_DOC)[0])
+check("cargo: --doc detects literal #[doc = \"...\"] (single, split, and raw-string) doc-tests",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                          "lez/harness/src/lib.rs", text=ATTR_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=ATTR_SPLIT_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=ATTR_RAW_DOC)[0])
+check("cargo: --doc ignores non-doc comments (////, /* */, /*** */) and doc-like text inside string literals",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=NON_DOC_FORMS)[0])
+check("trace: lez-harness runs bin unit tests and lib doc-tests when present",
+      any(ci_model.cargo_runs(c, "lez/updater/src/main.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
+      and any(ci_model.cargo_runs(c, "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
+      and any(ci_model.cargo_runs(c, "lez/harness/src/lib.rs", text=DOC_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked)))
+# L4: --exact matches full test path, not substring
+UPD_REC = ["cargo", "test", "-p", "ferrata-updater", "--features", "harness", "--locked", "--test", "recorded"]
+check("cargo: --exact matches exact test name and refuses substring prefix",
+      ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "gate_two_honest_one_adversary"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                          "lez/updater/tests/recorded.rs")[0]
+      and not ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "gate_two"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                                  "lez/updater/tests/recorded.rs")[0])
+check("cargo: --exact --skip ignores non-exact prefix and skips exact match",
+      ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "--skip", "gate_two"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                          "lez/updater/tests/recorded.rs")[0]
+      and not ci_model.cargo_runs(C(UPD_REC + ["--", "--exact", "--skip", "gate_two_honest_one_adversary"], "lez", {"RISC0_DEV_MODE": "1"}, "t"),
+                                  "lez/updater/tests/recorded.rs")[0])
+# L3: ci_model trace for lez-harness matches check-lez-shards.py build_shard_plan for every shard
+shard_mod = ci_model._shard_planner()
+shard_map = __import__("json").loads((HERE / "lez-harness-shards.json").read_text(encoding="utf-8"))
+planned_cargos = []
+for sname in shard_map["shards"]:
+    for step in shard_mod.build_shard_plan(shard_map, sname, build_only=False):
+        if step["argv"][0] == "cargo":
+            planned_cargos.append((step["cwd"], step["argv"]))
+traced_cargos = [
+    (c.cwd, c.argv) for c in ci_model.trace(jobs["lez-harness"], tracked)
+    if c.argv and c.argv[0] == "cargo" and "--no-run" not in c.argv
+    and "scripts/privacy/run.sh" not in c.origin
+]
+check("trace: lez-harness traced cargo commands equal check-lez-shards.py build_shard_plan across all shards",
+      traced_cargos == planned_cargos)
 FG = ci_model.feature_gates
 check("features: #![cfg(feature)] gates the whole file", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', set()) == ("a", set(), 0))
 check("features: ... unless the feature is on", FG('#![cfg(feature = "a")]\n#[test]\nfn x() {}\n', {"a"}) == (None, set(), 1))
@@ -200,6 +310,19 @@ check("guard: a job with `continue-on-error: true` counts for nothing",
       not job_runs(synthetic_job([SCRIPT_STEP], **{"continue-on-error": True}), PUBLIC))
 check("guard: a job under an `if:` counts for nothing",
       not job_runs(synthetic_job([SCRIPT_STEP], **{"if": "github.ref == 'refs/heads/main'"}), PUBLIC))
+check("guard: a job with `if: github.event_name == 'push' || github.event_name == 'pull_request'` counts for nothing (no skipped jobs allowed in ci.yml)",
+      not job_runs(ci_model.Job(ROOT / ".github" / "workflows" / "ci.yml", "s",
+                                {"runs-on": "ubuntu-latest", "steps": [SCRIPT_STEP],
+                                 "if": "github.event_name == 'push' || github.event_name == 'pull_request'"},
+                                {"on": {"push": None, "pull_request": None, "schedule": None}}), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 runs public_path; --shard harness-1 does not",
+      job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4"}]), PUBLIC)
+      and not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-1"}]), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 build / --dry-run runs no test",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 build"}]), PUBLIC)
+      and not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 --dry-run"}]), PUBLIC))
+check("guard: lez-harness.sh --shard harness-4 && echo ok || true masks failure",
+      not job_runs(synthetic_job([{"run": "scripts/ci/lez-harness.sh --shard harness-4 && echo ok || true"}]), PUBLIC))
 
 
 def lez_text(text):
@@ -258,9 +381,96 @@ check("guard: ... and counts once the text sets -e",
                                "run": "set -e\nRISC0_DEV_MODE=1 cargo test -p harness --locked\necho done"}]), PUBLIC))
 LH = jobs["lez-harness"]
 last = LH.steps[-1] if LH.steps else {}
-check("jobs: lez-harness's last step runs scripts/ci/lez-harness.sh with no argument, unconditionally",
-      last.get("run") == "scripts/ci/lez-harness.sh" and "if" not in last and "continue-on-error" not in last
-      and "if" not in LH.spec and "continue-on-error" not in LH.spec and LH.on_change)
+check("jobs: no job in ci.yml has a job-level if: (none skipped on push/PR/dispatch)",
+      all("if" not in j.spec for j in jobs.values() if j.workflow.name == "ci.yml"))
+
+
+def _eval_gha_expr(value, ctx):
+    """Evaluate a small GitHub Actions expression subset (==, !=, &&, ||, format(), github.*)."""
+    if not isinstance(value, str):
+        return value
+
+    def eval_atom(tok):
+        tok = tok.strip()
+        if tok == "true":
+            return True
+        if tok == "false":
+            return False
+        if len(tok) >= 2 and tok[0] == "'" and tok[-1] == "'":
+            return tok[1:-1].replace("''", "'")
+        m_fmt = re.fullmatch(r"format\(\s*'((?:''|[^'])*)'\s*,\s*(.+)\)", tok)
+        if m_fmt:
+            fmt = m_fmt.group(1).replace("''", "'")
+            args = [eval_atom(a) for a in m_fmt.group(2).split(",")]
+            return fmt.format(*args)
+        if tok in ctx:
+            return ctx[tok]
+        raise AssertionError(f"unsupported expression token in concurrency test: {tok!r}")
+
+    def eval_cmp(expr):
+        for op in ("==", "!="):
+            if op in expr:
+                lhs, rhs = expr.split(op, 1)
+                lv, rv = eval_atom(lhs), eval_atom(rhs)
+                return (lv == rv) if op == "==" else (lv != rv)
+        return eval_atom(expr)
+
+    def eval_and(expr):
+        res = True
+        for part in expr.split("&&"):
+            res = eval_cmp(part)
+            if not res:
+                return res
+        return res
+
+    def eval_or(expr):
+        res = False
+        for part in expr.split("||"):
+            res = eval_and(part)
+            if res:
+                return res
+        return res
+
+    m_whole = re.fullmatch(r"\$\{\{(.*)\}\}", value.strip())
+    if m_whole:
+        return eval_or(m_whole.group(1))
+    return re.sub(r"\$\{\{(.*?)\}\}", lambda m: str(eval_or(m.group(1))), value)
+
+
+ci_doc = ci_model.load_yaml((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+ci_conc = ci_doc.get("concurrency") or {}
+m1_ctx = {"github.ref": "refs/heads/main", "github.run_id": "1001", "github.sha": "aaaa"}
+m2_ctx = {"github.ref": "refs/heads/main", "github.run_id": "1002", "github.sha": "bbbb"}
+b1_ctx = {"github.ref": "refs/heads/feat", "github.run_id": "2001", "github.sha": "cccc"}
+b2_ctx = {"github.ref": "refs/heads/feat", "github.run_id": "2002", "github.sha": "dddd"}
+pr1_ctx = {"github.ref": "refs/pull/42/merge", "github.run_id": "3001", "github.sha": "eeee"}
+pr2_ctx = {"github.ref": "refs/pull/42/merge", "github.run_id": "3002", "github.sha": "ffff"}
+g_m1, g_m2 = _eval_gha_expr(ci_conc.get("group"), m1_ctx), _eval_gha_expr(ci_conc.get("group"), m2_ctx)
+g_b1, g_b2 = _eval_gha_expr(ci_conc.get("group"), b1_ctx), _eval_gha_expr(ci_conc.get("group"), b2_ctx)
+g_p1, g_p2 = _eval_gha_expr(ci_conc.get("group"), pr1_ctx), _eval_gha_expr(ci_conc.get("group"), pr2_ctx)
+cip_m = _eval_gha_expr(ci_conc.get("cancel-in-progress"), m1_ctx)
+cip_b = _eval_gha_expr(ci_conc.get("cancel-in-progress"), b1_ctx)
+cip_p = _eval_gha_expr(ci_conc.get("cancel-in-progress"), pr1_ctx)
+check("jobs: ci.yml concurrency isolates each run on main (unique group, cancel-in-progress false) and cancels superseded runs elsewhere",
+      bool(g_m1) and bool(g_m2) and g_m1 != g_m2 and cip_m is False
+      and bool(g_b1) and g_b1 == g_b2 and cip_b is True
+      and bool(g_p1) and g_p1 == g_p2 and g_p1 != g_b1 and cip_p is True)
+check("jobs: lez-harness is an unconditional matrix job running scripts/ci/lez-harness.sh --shard \"$SHARD\" via env",
+      last.get("run") == 'scripts/ci/lez-harness.sh --shard "$SHARD"'
+      and (last.get("env") or {}).get("SHARD") == "${{ matrix.shard }}"
+      and "if" not in last and "continue-on-error" not in last
+      and "if" not in LH.spec and "continue-on-error" not in LH.spec and LH.on_change
+      and ci_model.step_guard(LH, last) is None
+      and bool(((LH.spec.get("strategy") or {}).get("matrix") or {}).get("shard")))
+LHF = jobs["lez-harness-full"]
+lhf_last = LHF.steps[-1] if LHF.steps else {}
+check("jobs: lez-harness-full runs unsharded in lez-full.yml on schedule and workflow_dispatch with no if:",
+      LHF.workflow.name == "lez-full.yml"
+      and lhf_last.get("run") == "scripts/ci/lez-harness.sh"
+      and "if" not in LHF.spec and "if" not in lhf_last and "continue-on-error" not in lhf_last
+      and not LHF.on_change
+      and "schedule" in LHF.triggers and "workflow_dispatch" in LHF.triggers
+      and ci_model.step_guard(LHF, lhf_last) is None)
 
 # ── check-row-tests.py refuses false claims ────────────────────────────────────────────────────────
 checker = HERE / "check-row-tests.py"
@@ -331,6 +541,11 @@ check("checker: a row whose tests run on the box only is not counted as CI, and 
       and "--require-ci RFP-022: 1 hard row(s) without a test CI runs" in out)
 rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 S.1"], IN_MANUAL_JOB), "--require-ci", "RFP-022")
 check("checker: a test in a job started by hand only is counted as manual, not as CI",
+      rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
+      and "a test in a workflow started by hand only (1): S.1" in out)
+IN_FULL_JOB = '{ path = "lez/harness/tests/public_path.rs", kind = "test", ci = "lez-harness-full" }'
+rc, out = run_checker(with_tests(with_tests(real, others), ["RFP-022 S.1"], IN_FULL_JOB), "--require-ci", "RFP-022")
+check("checker: a test in lez-full.yml (lez-harness-full) is counted as manual, not as CI",
       rc == 1 and "RFP-022: 68 hard rows; 67 with a test CI runs; 1 without one" in out
       and "a test in a workflow started by hand only (1): S.1" in out)
 # The matrices must hold 59 and 68 hard rows: one RFP-022 row taken out of a copy of traceability.md.

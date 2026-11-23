@@ -35,7 +35,7 @@ jobs:
   # extracts the vectors by name, as BSD tar does too, and hashes with shasum where sha256sum is absent)
   # and the bridge core ferrata-bridge-core.
   user-side:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4 # TODO: pin to a commit SHA
@@ -71,7 +71,7 @@ jobs:
   # with the lgx tool of the pinned logos-package. Nix builds the crates itself, so no Rust or RISC Zero
   # toolchain is installed here. Nix flakes need a larger stack than a macOS runner's default.
   modules:
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4 # TODO: pin to a commit SHA

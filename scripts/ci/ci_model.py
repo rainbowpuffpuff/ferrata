@@ -27,7 +27,8 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
 Not caught (scripts/ci/README.md, "What it does not catch"): a job that `needs:` a skipped job; `on:` filters that
 match nothing; `--ignored` or `--list` on the test binary; `exec` before the test; an `exit` inside a function, a
 compound command or an and-list; `trap 'exit 0' EXIT` or `ERR`; a subshell or brace group masked by `|| true`;
-`cfg` forms other than a bare feature gate.
+`cfg` forms other than a bare feature gate; un-fenced 4-space indented doc-tests, `#[doc = include_str!(...)]`,
+macro-generated doc-tests, and item-level `#[cfg]` on doc-tests.
 """
 
 from __future__ import annotations
@@ -667,25 +668,58 @@ def step_guard(job: Job, step: dict) -> str | None:
     return None
 
 
+def _matrix_combos(job: Job) -> list[dict]:
+    """The matrix combinations of a job's `strategy.matrix`, or `[{}]` if it is not a matrix job."""
+    matrix = (job.spec.get("strategy") or {}).get("matrix")
+    if not isinstance(matrix, dict):
+        return [{}]
+    axes = [(k, v) for k, v in matrix.items() if k not in ("include", "exclude") and isinstance(v, list)]
+    combos = [{}]
+    for k, vals in axes:
+        combos = [{**c, k: v} for c in combos for v in vals]
+    for ex in matrix.get("exclude") or []:
+        if isinstance(ex, dict):
+            combos = [c for c in combos if not all(c.get(k) == v for k, v in ex.items())]
+    for inc in matrix.get("include") or []:
+        if isinstance(inc, dict):
+            combos.append(dict(inc))
+    return combos
+
+
+def _subst_matrix(text: str, combo: dict) -> str:
+    if not combo or "${{" not in text:
+        return text
+    def repl(m):
+        key = m.group(1)
+        return str(combo[key]) if key in combo else m.group(0)
+    return re.sub(r"\$\{\{\s*matrix\.([A-Za-z0-9_-]+)\s*\}\}", repl, text)
+
+
 def trace(job: Job, tracked: set | None = None):
     """Every command the job runs: its steps' `run:` text and, recursively, the scripts they call."""
     tracked = tracked if tracked is not None else tracked_paths()
     out = []
-    base_env = {k: str(v) for k, v in job.env.items()}
-    for number, step in enumerate(job.steps, start=1):
-        if not isinstance(step, dict) or "run" not in step:
-            continue
-        cwd = step.get("working-directory") or job.default_dir or "."
-        cwd = os.path.normpath(cwd)
-        env = {**base_env, **{k: str(v) for k, v in (step.get("env") or {}).items()}}
-        env.setdefault("GITHUB_WORKSPACE", str(ROOT))
-        # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
-        # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
-        shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
-        errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
-        pipefail = shell == "bash" or "pipefail" in shell
-        _run_text(str(step["run"]), cwd, env, f"{job.workflow.name} job {job.name} step {number}", out, tracked, 0,
-                  guard=step_guard(job, step), errexit=errexit, pipefail=pipefail)
+    for combo in _matrix_combos(job):
+        base_env = {k: _subst_matrix(str(v), combo) for k, v in job.env.items()}
+        for number, step in enumerate(job.steps, start=1):
+            if not isinstance(step, dict) or "run" not in step:
+                continue
+            step_eval = dict(step)
+            if "if" in step_eval and isinstance(step_eval["if"], str):
+                step_eval["if"] = _subst_matrix(step_eval["if"], combo)
+            cwd = _subst_matrix(str(step.get("working-directory") or job.default_dir or "."), combo)
+            cwd = os.path.normpath(cwd)
+            env = {**base_env, **{k: _subst_matrix(str(v), combo) for k, v in (step.get("env") or {}).items()}}
+            env.setdefault("GITHUB_WORKSPACE", str(ROOT))
+            # GitHub runs a step with `bash -e {0}` (no shell named), `bash --noprofile --norc -eo pipefail {0}`
+            # (`shell: bash`) or `sh -e {0}` (`shell: sh`); a custom shell string gets only the options it names.
+            shell = str(step.get("shell") or (job.spec.get("defaults") or {}).get("run", {}).get("shell") or "")
+            errexit = shell in ("", "bash", "sh") or bool(re.search(r"(?:^|\s)-[a-z]*e", shell))
+            pipefail = shell == "bash" or "pipefail" in shell
+            run_src = _subst_matrix(str(step["run"]), combo)
+            tag = f"{job.workflow.name} job {job.name}" + (f" [{combo}]" if combo else "") + f" step {number}"
+            _run_text(run_src, cwd, env, tag, out, tracked, 0,
+                      guard=step_guard(job, step_eval), errexit=errexit, pipefail=pipefail)
     return out
 
 
@@ -869,10 +903,92 @@ def _run_text(text, cwd, vars_, origin, out, tracked, level, script=None, guard=
         # scripts this command runs: recurse into shell scripts
         if level < 6:
             target = script_invoked(cmd, tracked)
+            before = len(out)
+            if target == "scripts/ci/lez-harness.sh":
+                sargs = _script_args(cmd, target)
+                if _trace_lez_shard(sargs, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, cmd.guard):
+                    chain.extend(out[before:])
+                    continue
             if target and (target.endswith(".sh") or _is_shell_script(target)) and target != script:
                 text = (ROOT / target).read_text(encoding="utf-8", errors="replace")
                 _run_text(text, cwd, cmd_env, f"{target} (from {origin})", out, tracked, level + 1, script=target,
                           guard=cmd.guard, args=_script_args(cmd, target))
+                chain.extend(out[before:])
+
+
+_SHARD_MOD = None
+
+
+def _shard_planner():
+    """Load `check-lez-shards.py` lazily so `ci_model.py` shares its single `build_shard_plan`."""
+    global _SHARD_MOD
+    if _SHARD_MOD is None:
+        existing = sys.modules.get("check_lez_shards")
+        if existing is not None and hasattr(existing, "build_shard_plan"):
+            _SHARD_MOD = existing
+        else:
+            import importlib.util
+            path = pathlib.Path(__file__).resolve().parent / "check-lez-shards.py"
+            spec = importlib.util.spec_from_file_location("check_lez_shards", path)
+            mod = importlib.util.module_from_spec(spec)
+            sys.modules["check_lez_shards"] = mod
+            spec.loader.exec_module(mod)
+            _SHARD_MOD = mod
+    return _SHARD_MOD
+
+
+def _trace_lez_shard(sargs: list[str], cmd_env: dict, origin: str, out: list, tracked: set, level: int, guard) -> bool:
+    """Static trace of `scripts/ci/lez-harness.sh` when invoked with `--shard NAME` or `--dry-run`.
+    Delegates command planning to `check-lez-shards.py:build_shard_plan` so there is only one planner.
+    Returns True if handled (so the generic unsharded script trace is skipped), False for unsharded calls."""
+    shard = None
+    dry_run = False
+    build_only = False
+    i = 0
+    while i < len(sargs):
+        a = sargs[i]
+        if a == "--shard" and i + 1 < len(sargs):
+            shard = sargs[i + 1]
+            i += 2
+        elif a.startswith("--shard="):
+            shard = a.split("=", 1)[1]
+            i += 1
+        elif a == "--dry-run":
+            dry_run = True
+            i += 1
+        elif a == "build":
+            build_only = True
+            i += 1
+        else:
+            i += 1
+    if dry_run:
+        return True
+    if shard is None:
+        return False
+    map_path = ROOT / "scripts" / "ci" / "lez-harness-shards.json"
+    if not map_path.is_file():
+        return True
+    data = json.loads(map_path.read_text(encoding="utf-8"))
+    threads = str(cmd_env.get("FERRATA_TEST_THREADS") or "4")
+    try:
+        planned = _shard_planner().build_shard_plan(
+            data, shard, threads=threads, build_only=build_only, privacy_out="target/ci-privacy",
+        )
+    except (KeyError, ValueError):
+        return True
+
+    dev_env = {**cmd_env, "RISC0_DEV_MODE": "1"}
+    for step in planned:
+        env_for_step = dev_env if step["dev_mode"] else cmd_env
+        cmd = Cmd(list(step["argv"]), step["cwd"], env_for_step, origin, guard)
+        out.append(cmd)
+        if level < 6:
+            target = script_invoked(cmd, tracked)
+            if target and (target.endswith(".sh") or _is_shell_script(target)):
+                text = (ROOT / target).read_text(encoding="utf-8", errors="replace")
+                _run_text(text, step["cwd"], env_for_step, f"{target} (from {origin})", out, tracked, level + 1,
+                          script=target, guard=guard, args=_script_args(cmd, target))
+    return True
 
 
 def _script_args(cmd: Cmd, target: str):
@@ -980,6 +1096,245 @@ def rust_env_gates(text: str) -> set:
     gates = set(re.findall(r'env::var(?:_os)?\(\s*"([A-Z0-9_]+)"\s*\)\s*\.\s*(?:is_err|is_none)\(\)', text))
     gates |= set(re.findall(r'assert(?:_eq|_ne)?!\(\s*(?:std::)?env::var(?:_os)?\(\s*"([A-Z0-9_]+)"', text))
     return gates
+
+
+_DOCTEST_TOKENS = {
+    "", "rust", "no_run", "should_panic", "compile_fail", "standalone_crate",
+    "allow_fail", "edition2015", "edition2018", "edition2021", "edition2024",
+}
+
+
+def _unescape_rust_string(raw: str) -> str:
+    """Decode common Rust string escapes inside a literal `#[doc = "..."]` attribute."""
+    out = []
+    i, n = 0, len(raw)
+    while i < n:
+        if raw[i] == "\\" and i + 1 < n:
+            nxt = raw[i + 1]
+            if nxt == "n":
+                out.append("\n")
+                i += 2
+            elif nxt == "r":
+                out.append("\r")
+                i += 2
+            elif nxt == "t":
+                out.append("\t")
+                i += 2
+            elif nxt in ('"', "'", "\\"):
+                out.append(nxt)
+                i += 2
+            elif nxt == "\n":
+                i += 2
+                while i < n and raw[i] in " \t\n\r":
+                    i += 1
+            else:
+                out.append(nxt)
+                i += 2
+        else:
+            out.append(raw[i])
+            i += 1
+    return "".join(out)
+
+
+_RE_DOC_ATTR = re.compile(r"(#!?)\[\s*doc\s*=\s*")
+_RE_RAW_STR = re.compile(r'r(#*)"')
+_RE_ANY_RAW_STR = re.compile(r'[bc]?r(#*)"')
+_RE_CLOSE_BRACKET = re.compile(r"\s*\]")
+
+
+def _extract_doc_blocks(text: str) -> list[list[str]]:
+    """Extract contiguous Rust doc blocks (`///`, `//!`, `/** */`, `/*! */`, literal `#[doc = "..."]`)."""
+    blocks: list[list[str]] = []
+    cur: list[str] = []
+    cur_kind: str | None = None
+
+    def flush():
+        nonlocal cur_kind
+        if cur:
+            blocks.append(list(cur))
+            cur.clear()
+        cur_kind = None
+
+    def append_lines(kind: str, lines: list[str]):
+        nonlocal cur_kind
+        if cur_kind is not None and cur_kind != kind:
+            flush()
+        cur_kind = kind
+        cur.extend(lines)
+
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        if c in " \t\r":
+            i += 1
+            continue
+        if c == "\n":
+            j = i + 1
+            while j < n and text[j] in " \t\r":
+                j += 1
+            if j < n and text[j] == "\n":
+                flush()
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            eol = text.find("\n", i)
+            if eol == -1:
+                eol = n
+            line = text[i:eol]
+            if line.startswith("///") and not line.startswith("////"):
+                body = line[3:]
+                append_lines("outer", [body[1:] if body.startswith((" ", "\t")) else body])
+            elif line.startswith("//!"):
+                body = line[3:]
+                append_lines("inner", [body[1:] if body.startswith((" ", "\t")) else body])
+            else:
+                flush()
+            i = eol
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            start = i
+            depth = 1
+            i += 2
+            while i < n and depth:
+                if text[i : i + 2] == "/*":
+                    depth += 1
+                    i += 2
+                elif text[i : i + 2] == "*/":
+                    depth -= 1
+                    i += 2
+                else:
+                    i += 1
+            comment = text[start:i]
+            is_inner = comment.startswith("/*!") and comment.endswith("*/") and len(comment) >= 5
+            is_outer = (
+                comment.startswith("/**")
+                and not comment.startswith("/***")
+                and comment.endswith("*/")
+                and len(comment) > 4
+            )
+            if is_inner or is_outer:
+                inner = comment[3:-2]
+                out_lines = []
+                for idx, bl in enumerate(inner.splitlines()):
+                    if idx == 0:
+                        out_lines.append(bl[1:] if bl.startswith((" ", "\t")) else bl)
+                    else:
+                        out_lines.append(re.sub(r"^[ \t]*\*[ \t]?", "", bl))
+                append_lines("inner" if is_inner else "outer", out_lines)
+            else:
+                flush()
+            continue
+        if c == "#":
+            m_attr = _RE_DOC_ATTR.match(text, i)
+            if m_attr:
+                kind = "inner" if m_attr.group(1) == "#!" else "outer"
+                j = m_attr.end()
+                doc_val = None
+                m_raw = _RE_RAW_STR.match(text, j)
+                if m_raw:
+                    end_tok = '"' + m_raw.group(1)
+                    k = m_raw.end()
+                    end = text.find(end_tok, k)
+                    if end != -1:
+                        after = end + len(end_tok)
+                        m_close = _RE_CLOSE_BRACKET.match(text, after)
+                        if m_close:
+                            doc_val = text[k:end]
+                            i = m_close.end()
+                elif j < n and text[j] == '"':
+                    k = j + 1
+                    while k < n and text[k] != '"':
+                        if text[k] == "\\" and k + 1 < n:
+                            k += 2
+                            continue
+                        k += 1
+                    if k < n and text[k] == '"':
+                        after = k + 1
+                        m_close = _RE_CLOSE_BRACKET.match(text, after)
+                        if m_close:
+                            doc_val = _unescape_rust_string(text[j + 1 : k])
+                            i = m_close.end()
+                if doc_val is not None:
+                    append_lines(kind, doc_val.splitlines() or [""])
+                    continue
+            flush()
+            i += 1
+            continue
+        if c in ("r", "b", "c") and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")):
+            m_raw = _RE_ANY_RAW_STR.match(text, i)
+            if m_raw:
+                flush()
+                end_tok = '"' + m_raw.group(1)
+                k = m_raw.end()
+                end = text.find(end_tok, k)
+                i = n if end == -1 else end + len(end_tok)
+                continue
+        if c == '"':
+            flush()
+            i += 1
+            while i < n and text[i] != '"':
+                if text[i] == "\\" and i + 1 < n:
+                    i += 2
+                    continue
+                i += 1
+            if i < n:
+                i += 1
+            continue
+        if c == "'" and i + 2 < n:
+            if text[i + 1] == "\\":
+                k = i + 2
+                while k < n and text[k] != "'" and text[k] != "\n":
+                    k += 1
+                if k < n and text[k] == "'":
+                    flush()
+                    i = k + 1
+                    continue
+            elif text[i + 2] == "'" and text[i + 1] != "\n":
+                flush()
+                i += 3
+                continue
+        flush()
+        i += 1
+    flush()
+    return blocks
+
+
+def _block_has_doctest(lines: list[str], include_ignored: bool = False) -> bool:
+    """Whether a single extracted doc block contains a runnable fenced code block (``` or ~~~)."""
+    in_fence = False
+    fence_char = ""
+    fence_len = 0
+    for line in lines:
+        body = line.lstrip()
+        if not in_fence:
+            fm = re.match(r"^(`{3,}|~{3,})(.*)$", body)
+            if not fm:
+                continue
+            marker, info = fm.group(1), fm.group(2).strip()
+            if marker[0] == "`" and "`" in info:
+                continue
+            in_fence = True
+            fence_char = marker[0]
+            fence_len = len(marker)
+            cleaned = re.sub(r"\([^)]*\)", "", info)
+            tokens = [t.strip().lower() for t in re.split(r"[\s,]+", cleaned) if t.strip()]
+            if any(t == "ignore" or t.startswith("ignore-") for t in tokens):
+                if not include_ignored:
+                    continue
+                tokens = [t for t in tokens if t != "ignore" and not t.startswith("ignore-")]
+            if all(t in _DOCTEST_TOKENS for t in tokens):
+                return True
+        elif re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}[ \t]*$", body):
+            in_fence = False
+            fence_char = ""
+            fence_len = 0
+    return False
+
+
+def has_doctest(text: str, include_ignored: bool = False) -> bool:
+    """Whether `text` contains a runnable Rust doc-test fenced code block (``` or ~~~) in `///`, `//!`, `/** */`,
+    `/*! */`, or literal `#[doc = "..."]` / `#![doc = "..."]` comments."""
+    return any(_block_has_doctest(block, include_ignored=include_ignored) for block in _extract_doc_blocks(text))
 
 
 def feature_gates(text: str, enabled: set) -> tuple:
@@ -1121,28 +1476,62 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
     tests_decl = pkg.get("test", [])
     target, required = None, []
     for t in tests_decl:
-        if t.get("path") == rel_in_pkg or (not t.get("path") and rel_in_pkg in (f"tests/{t.get('name')}.rs", f"tests/{t.get('name')}/main.rs")):
+        tpath = pathlib.PurePosixPath(t["path"]).as_posix() if t.get("path") else None
+        if tpath == rel_in_pkg or (tpath is None and rel_in_pkg in (f"tests/{t.get('name')}.rs", f"tests/{t.get('name')}/main.rs")):
             target, required = ("test", t.get("name")), t.get("required-features", [])
+            break
     if target is None:
         m = re.fullmatch(r"tests/([^/]+)\.rs|tests/([^/]+)/main\.rs", rel_in_pkg)
         if m:
             if pkg["package"].get("autotests") is False:
                 return False, "autotests = false and no [[test]] names it"
             target = ("test", m.group(1) or m.group(2))
-        elif rel_in_pkg.startswith("src/"):
-            target = ("lib", None) if (pkg_dir / "src" / "lib.rs").is_file() else ("bin", None)
+    if target is None:
+        for b in pkg.get("bin", []):
+            bname = b.get("name")
+            bpath = pathlib.PurePosixPath(b["path"]).as_posix() if b.get("path") else None
+            if (
+                (bpath is not None and bpath == rel_in_pkg)
+                or (bpath is None and rel_in_pkg in (f"src/bin/{bname}.rs", f"src/bin/{bname}/main.rs"))
+                or (bpath is None and bname == name and rel_in_pkg == "src/main.rs")
+            ):
+                target, required = ("bin", bname), b.get("required-features", [])
+                break
+    if target is None and pkg["package"].get("autobins") is not False:
+        if rel_in_pkg == "src/main.rs":
+            target = ("bin", name)
+        else:
+            mb = re.fullmatch(r"src/bin/([^/]+)\.rs|src/bin/([^/]+)/.*", rel_in_pkg)
+            if mb:
+                target = ("bin", mb.group(1) or mb.group(2))
+    if target is None:
+        lib_decl = pkg.get("lib") or {}
+        lib_path = pathlib.PurePosixPath(lib_decl.get("path") or "src/lib.rs").as_posix()
+        if (pkg_dir / lib_path).is_file() and (
+            rel_in_pkg == lib_path
+            or (rel_in_pkg.startswith("src/") and rel_in_pkg != "src/main.rs" and not rel_in_pkg.startswith("src/bin/"))
+        ):
+            target = ("lib", None)
+        elif rel_in_pkg.startswith("src/") and (pkg_dir / "src" / "main.rs").is_file():
+            target = ("bin", name)
         else:
             return False, "not a test target of its package"
     selectors = {"--lib", "--bins", "--tests", "--all-targets", "--examples", "--benches", "--doc"} & flags
+    if "--doc" in flags and (opts["test"] or opts["bin"] or (selectors - {"--doc"})):
+        return False, "cargo test --doc cannot be combined with other target selectors"
+    kind, tname = target
     if opts["test"] or opts["bin"] or selectors:
-        kind, tname = target
-        selected = (
+        runs_unit = (
             (kind == "test" and (tname in opts["test"] or "--tests" in flags or "--all-targets" in flags))
             or (kind == "lib" and ("--lib" in flags or "--tests" in flags or "--all-targets" in flags))
-            or (kind == "bin" and ("--bins" in flags or "--tests" in flags or "--all-targets" in flags))
+            or (kind == "bin" and (tname in opts["bin"] or "--bins" in flags or "--tests" in flags or "--all-targets" in flags))
         )
-        if not selected:
+        runs_doc = (kind == "lib" and "--doc" in flags)
+        if not runs_unit and not runs_doc:
             return False, f"its target ({kind} {tname or ''}) is not among those selected"
+    else:
+        runs_unit = True
+        runs_doc = (kind == "lib")
     # features
     if required:
         defaults = set(pkg.get("features", {}).get("default", [])) if "--no-default-features" not in flags else set()
@@ -1151,20 +1540,11 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
             return False, f"needs features {required}"
     if text is None:
         text = (ROOT / path).read_text(encoding="utf-8", errors="replace")
-    if not re.search(r"#\[(?:[a-z_]+::)?test\b", text) and "proptest!" not in text:
-        return False, "the file has no #[test]"
-    # Tests compiled out by a feature the command does not enable (feature_gates).
-    if "--all-features" not in flags:
-        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
-                                           if "--no-default-features" not in flags else set())
-        file_gate, gated, ungated = feature_gates(text, enabled)
-        if file_gate:
-            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
-        if gated and not ungated and "proptest!" not in text:
-            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
-    # filters
+    # filters and harness options
     filters = [p for p in positional]
     harness_flags = set(a for a in harness if a.startswith("-"))
+    exact = "--exact" in harness_flags
+    include_ignored = bool({"--ignored", "--include-ignored"} & harness_flags)
     hpos, skips, skip_next = [], [], None
     for a in harness:
         if skip_next:
@@ -1181,9 +1561,48 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
         if not a.startswith("-"):
             hpos.append(a)
     filters += hpos
+    file_has_unit = bool(re.search(r"#\[(?:[a-z_]+::)?test\b", text) or "proptest!" in text)
+    file_has_doc = runs_doc and has_doctest(text, include_ignored=include_ignored)
+
+    def _doc_ok() -> tuple[bool, str]:
+        if "--all-features" not in flags:
+            enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                               if "--no-default-features" not in flags else set())
+            file_gate, _gated, _ungated = feature_gates(text, enabled)
+            if file_gate:
+                return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        doc_targets = [rel_in_pkg] + re.findall(r"\b(?:fn|struct|enum|trait|mod)\s+([A-Za-z0-9_]+)", text)
+        for f in filters:
+            if not any((f == p if exact else f in p) for p in doc_targets):
+                return False, f"the name filter {f!r} matches none of its doc-tests"
+        for k in skips:
+            if any((k == p if exact else k in p) for p in doc_targets):
+                return False, f"--skip {k!r} skips doc-tests of this file"
+        missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
+        if missing:
+            return False, f"it skips itself or fails unless {', '.join(missing)} is set, and the command does not set it"
+        return True, ""
+
+    if runs_doc and not runs_unit:
+        if not file_has_doc:
+            return False, "cargo test --doc runs doc-tests only, and the file has none"
+        return _doc_ok()
+    if not file_has_unit:
+        if file_has_doc:
+            return _doc_ok()
+        return False, "the file has no #[test]"
+    # Tests compiled out by a feature the command does not enable (feature_gates).
+    if "--all-features" not in flags:
+        enabled = set(opts["features"]) | (set(pkg.get("features", {}).get("default", []))
+                                           if "--no-default-features" not in flags else set())
+        file_gate, gated, ungated = feature_gates(text, enabled)
+        if file_gate:
+            return False, f"the whole file is compiled only with feature {file_gate!r}, which the command does not enable"
+        if gated and not ungated and "proptest!" not in text:
+            return False, f"every test in it is compiled only with feature(s) {sorted(gated)}, which the command does not enable"
     # A name filter matches a test's full path: for a file under src/, the module path the file gives (src/relayer.rs:
     # `relayer::...`), then the file's inner modules, then the function; for an integration test file, the inner
-    # modules and the function.
+    # modules and the function. With `--exact`, a filter or `--skip` must equal the full path rather than be a substring.
     fns = re.findall(r"\bfn\s+([A-Za-z0-9_]+)", text)
     mods = re.findall(r"\bmod\s+([A-Za-z0-9_]+)\s*\{", text)
     module = ""
@@ -1198,14 +1617,15 @@ def cargo_runs(cmd: Cmd, path: str, text: str | None = None) -> tuple[bool, str]
     paths = [f"{module}::{fn}" if module else fn for fn in fns]
     paths += [f"{module}::{m}::{fn}" if module else f"{m}::{fn}" for m in mods for fn in fns]
     for f in filters:
-        if not any(f in path for path in paths):
-            return False, f"the name filter {f!r} matches none of its tests' paths"
-    # `--skip P` leaves out every test whose path holds P: a file any of whose tests it could skip does not count.
+        if not any((f == p if exact else f in p) for p in paths):
+            mode = "exact " if exact else ""
+            return False, f"the {mode}name filter {f!r} matches none of its tests' paths"
+    # `--skip P` leaves out every test whose path matches P: a file any of whose tests it could skip does not count.
     for k in skips:
-        if any(k in path for path in paths):
+        if any((k == p if exact else k in p) for p in paths):
             return False, f"--skip {k!r} skips tests of this file"
     n_tests = len(re.findall(r"#\[(?:[a-z_]+::)?test\b", text))
-    if n_tests and n_tests <= text.count("#[ignore") and not ({"--ignored", "--include-ignored"} & harness_flags):
+    if n_tests and n_tests <= text.count("#[ignore") and not include_ignored:
         return False, "every test in it is #[ignore]d"
     missing = [g for g in sorted(rust_env_gates(text)) if not cmd.env.get(g)]
     if missing:
