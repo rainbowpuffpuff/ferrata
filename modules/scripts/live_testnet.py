@@ -531,18 +531,33 @@ def session2(rec, check):
     S2["components"] = comp
     if t0 and marks.get("updater-started"):
         S2["updater_start_seconds"] = round(marks["updater-started"] - t0, 1)
-    # `ferrata attest`: each command's GNU time, exit status and what it printed last.
-    exits = dict(l.rsplit(" exit ", 1) for l in (rd(rec, f"{D}/cli/exits.txt") or "").splitlines() if " exit " in l)
+    # `ferrata attest`: each command's GNU time and exit status. First beside the module (cli/): a first `status` from
+    # a new state, the same again, `config`, then an attestation without the block's header and an update the module
+    # had applied already, each refused as its dry run said; then, the module stopped (cli2/), the attestation with
+    # the header and a newer update, each a dry run, then sent.
     cli = {}
-    for name in ("status-first", "status-again", "config", "attest-dry", "attest-send", "advance-dry"):
-        g = gnu_time(rd(rec, f"{D}/cli/{name}.time"))
-        if g:
-            cli[name] = dict(g, exit=int(exits.get(name, -1)))
+    for sub in ("cli", "cli2"):
+        exits = dict(l.rsplit(" exit ", 1) for l in (rd(rec, f"{D}/{sub}/exits.txt") or "").splitlines() if " exit " in l)
+        for name in ("status-first", "status-again", "config", "attest-dry", "attest-send", "advance-dry", "advance-send",
+                     "status-after"):
+            g = gnu_time(rd(rec, f"{D}/{sub}/{name}.time"))
+            if g:
+                cli[f"{sub}/{name}"] = dict(g, exit=int(exits.get(name, -1)))
     S2["ferrata_attest"] = cli
-    for name in ("status-first", "status-again", "config", "attest-dry", "attest-send"):
-        check(name in cli and cli[name]["exit"] == 0, f"session 2: ferrata attest {name} exit 0 (session2/cli/{name}.*)")
-    sent = rd(rec, f"{D}/cli/attest-send.out") or ""
-    check(re.search(r"applied", sent) is not None, "session 2: ferrata attest sent the attestation and it was applied (attest-send.out)")
+    for name in ("cli/status-first", "cli/status-again", "cli/config", "cli2/attest-dry", "cli2/attest-send",
+                 "cli2/advance-dry", "cli2/advance-send", "cli2/status-after"):
+        check(name in cli and cli[name]["exit"] == 0, f"session 2: ferrata attest {name} exit 0 (session2/{name}.*)")
+    for name, code in (("cli/attest-dry", "215 HEADER_REQUIRED"), ("cli/attest-send", "215 HEADER_REQUIRED"),
+                       ("cli/advance-dry", "52 NotNewer")):
+        out = rd(rec, f"{D}/{name}.out") or ""
+        check(name in cli and cli[name]["exit"] == 3 and f"the verdict and the zone's execution agree: {code}" in out,
+              f"session 2: ferrata attest {name} refused with {code}, as its dry run said (exit 3)")
+    sent = rd(rec, f"{D}/cli2/attest-send.out") or ""
+    check(re.search(r"Attest\s+block \d+ \([0-9.]+ s\): applied", sent) is not None,
+          "session 2: ferrata attest sent the attestation (with the block's header) and the network applied it")
+    adv = rd(rec, f"{D}/cli2/advance-send.out") or ""
+    check(len(re.findall(r"block \d+ \([0-9.]+ s\): applied", adv)) >= 3,
+          "session 2: ferrata attest submitted a finality update (its steps applied on the network)")
     return S2
 
 
