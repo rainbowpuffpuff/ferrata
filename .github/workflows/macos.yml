@@ -76,7 +76,8 @@ jobs:
   # toolchain is installed here. Nix flakes need a larger stack than a macOS runner's default. The relayer
   # links risc0-zkp's prover code only for the Groth16 step's input.json (risc0-groth16's `prove`) and never
   # proves in-process, so its flake skips RISC Zero's Metal kernels (RISC0_SKIP_BUILD_KERNELS), which
-  # risc0-sys would compile on macOS with Xcode's tools and a cache under $HOME, neither of which Nix offers.
+  # risc0-sys would compile on macOS with Xcode's tools and a cache under $HOME, neither of which Nix offers;
+  # its CMakeLists.txt links Metal and the Objective-C runtime, which risc0-zkp's verifier objects reference.
   modules:
     runs-on: macos-15
     timeout-minutes: 240
