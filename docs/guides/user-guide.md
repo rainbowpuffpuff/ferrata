@@ -253,7 +253,7 @@ goes to `msg.sender`.
 **Proving** (measured, [`bridge.md`](../design/bridge.md) §18.2, §18.7): the release guest is 80,501
 user cycles, the same for 64 random witnesses (a CI gate: a first version leaked the popcount of the
 burn index); a succinct proof took 37.1–48.6 s on a 16-thread laptop CPU (up to 150 s under load),
-peak 1.49 GB, receipt 223,930 bytes; 15.1 s and 14.7 s on 16 cores in the end-to-end run. The
+peak 1.50 GB, receipt 223,930 bytes; 15.1 s and 14.7 s on 16 cores in the end-to-end run. The
 **Groth16 wrap** runs only on x86 (Docker, about 7.3 GiB, 77.5–79.9 s on the laptop): any relayer can
 wrap your succinct receipt and learns only what the release publishes.
 

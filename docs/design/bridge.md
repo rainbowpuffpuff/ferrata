@@ -634,7 +634,7 @@ Derived (mock removed, the 224,320-gas Groth16 frame of §18.2 added): candidate
 | Item | Result |
 |---|---|
 | Release guest v2 | 80,501 user cycles, one 2^17 segment; one count over 64 random witnesses |
-| Succinct proof | 37.1–48.6 s wall when the prover got 76–91 % of the threads; up to 150.0 s under load 20–40; peak RSS 1.49 GB; receipt 223,930 bytes |
+| Succinct proof | 37.1–48.6 s wall when the prover got 76–91 % of the threads; up to 150.0 s under load 20–40; peak RSS 1.50 GB; receipt 223,930 bytes |
 | Groth16 wrap | 77.5–79.9 s wall started quiet; up to 175.7 s under load; prover about 7.3 GiB; seal 260 bytes |
 | `verify` | 224,320 gas in the Groth16 verifier's frame; 230,107 through the stop |
 | Release, whole transaction, real verifier: ETH / ERC-20 | 367,988 / 397,874 gas (local EVM, `forge test --isolate`) |

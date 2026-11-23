@@ -335,7 +335,7 @@ stop's `EnforcedPause`. The pull-payment release credits `owed[recipient][ETH]`;
 ## Can a phone or laptop make the succinct receipt, and leave only the wrap to a third party?
 
 Unchanged from v1 in substance (same r0vm, same recursion cost): on this laptop CPU a v2 succinct receipt
-takes 519–651 CPU-seconds over the 9 runs logged and 1.49 GB peak RSS (one 2^17 segment plus RISC Zero's fixed
+takes 519–651 CPU-seconds over the 9 runs logged and 1.50 GB peak RSS (one 2^17 segment plus RISC Zero's fixed
 recursion work), 37.1–48.6 s wall when it got most of the 16 threads (Part 2). The wrap needs x86-64, Docker
 and about 7.3 GiB for the prover process; the wrapper sees only the succinct receipt (224 KB) and the journal,
 which is public anyway, and cannot change recipient, relayer or fee, which the journal binds. The v2 guest

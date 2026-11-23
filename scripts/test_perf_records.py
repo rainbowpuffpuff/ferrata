@@ -437,22 +437,29 @@ class TestP6Provers(unittest.TestCase):
         # per-step timings are not committed.
 
     def test_the_release_proofs_peak_memory(self):
-        """RFP-022 P.4's release proofs' peak, corrected with the same KiB misreading as the 9.62 GB: the
-        committed v1 prove logs peak at 1,458,420 KiB, which is 1.49 GB (1.39 GiB), not the "1.46 GB" the
-        documents stated (KiB / 1e6). Corrected on this branch wherever the branch may edit it."""
-        logs = [gnu_time(rd(f"bridge/artifacts/v1/logs/{n}")) for n in
-                ("20261109T213444Z-prove-eth.log", "20261109T213648Z-prove-erc20.log",
-                 "20261109T220505Z-prove-eth.log", "20261109T220651Z-p254-eth.log")]
-        peaks = sorted(t["rss_kb"] for t in logs)
-        self.assertEqual(peaks, [1442748, 1456856, 1457600, 1458420])  # the four runs the documents cover
-        self.assertEqual(round(max(peaks) * 1024 / 1e9, 2), 1.49)  # "peak 1.49 GB"
-        self.assertEqual(round(max(peaks) / 1024 / 1024, 2), 1.39)  # 1.39 GiB
-        self.perf.has("peak 1.49 GB, receipt 223,930 B")  # P.4's table, "release (succinct), earlier image"
-        Stated("docs/design/bridge.md").has("peak RSS 1.49 GB; receipt 223,930 bytes")  # §18.2's row
+        """RFP-022 P.4's release proofs' peak, corrected with the same KiB misreading as the 9.62 GB ("1.46 GB" was
+        KiB / 1e6). v1's three succinct proofs (bridge/RESULTS.md: 43.2, 109.4 and 95.8 s; 558-622 CPU-s) peak at
+        1,458,420 KiB = 1.49 GB; v2's nine (the 80,501-cycle guest of bridge.md section 18.2, performance.md's P.4
+        row, the user guide and bridge/RESULTS.md's "9 runs logged": 519-651 CPU-s, 37.1-48.6 s with most of the
+        threads) peak at 1,461,332 KiB = 1.50 GB; both 1.39 GiB."""
+        v1 = [gnu_time(rd(f"bridge/artifacts/v1/logs/{n}")) for n in
+              ("20261109T213444Z-prove-eth.log", "20261109T213648Z-prove-erc20.log", "20261109T220505Z-prove-eth.log")]
+        v2 = [gnu_time(rd(f"bridge/artifacts/logs/20261110T{n}.log")) for n in
+              ("021234Z-prove-eth", "021505Z-prove-erc20", "021705Z-prove-ethpull", "030949Z-prove-eth",
+               "031026Z-prove-erc20", "031106Z-prove-ethpull", "062310Z-prove-eth", "062804Z-prove-erc20",
+               "063113Z-prove-ethpull")]
+        p1, p2 = max(t["rss_kb"] for t in v1), max(t["rss_kb"] for t in v2)
+        self.assertEqual((p1, p2), (1458420, 1461332))
+        self.assertEqual((round(p1 * 1024 / 1e9, 2), round(p2 * 1024 / 1e9, 2)), (1.49, 1.50))
+        self.assertEqual((round(p1 / 1024 / 1024, 2), round(p2 / 1024 / 1024, 2)), (1.39, 1.39))
+        self.assertEqual((round(min(t["user"] for t in v1)), round(max(t["user"] for t in v1))), (558, 622))
+        self.assertEqual((round(min(t["user"] for t in v2)), round(max(t["user"] for t in v2))), (519, 651))
         br = Stated("bridge/RESULTS.md")
-        br.has("1.49 GB peak RSS (one 2^17 segment").has("peak RSS 1.49 GB (host + r0vm)")
-        br.has("1.49 GB peak RSS (r0vm 3.0.5")
-        Stated("docs/guides/user-guide.md").has("peak 1.49 GB, receipt 223,930 bytes")
+        br.has("peak RSS 1.49 GB (host + r0vm)").has("1.49 GB peak RSS (r0vm 3.0.5")  # v1
+        br.has("1.50 GB peak RSS (one 2^17 segment")  # v2, "over the 9 runs logged"
+        self.perf.has("peak 1.50 GB, receipt 223,930 B")  # P.4's table, "release (succinct), earlier image"
+        Stated("docs/design/bridge.md").has("peak RSS 1.50 GB; receipt 223,930 bytes")  # section 18.2's row
+        Stated("docs/guides/user-guide.md").has("peak 1.50 GB, receipt 223,930 bytes")
 
     def test_the_gpu_cost_row(self):
         """Only the 366 s the functions ran recomputes; the 385 L4-seconds billed do not (Modal's statement)."""

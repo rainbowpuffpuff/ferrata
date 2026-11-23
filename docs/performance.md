@@ -446,7 +446,7 @@ verifier.
 
 | Proof | Figure | Where | Source |
 |---|---|---|---|
-| release (succinct), earlier image | 80,501 user cycles, constant over 64 witnesses; **37.1–48.6 s**, peak 1.49 GB, receipt 223,930 B (up to 150 s under load) | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
+| release (succinct), earlier image | 80,501 user cycles, constant over 64 witnesses; **37.1–48.6 s**, peak 1.50 GB, receipt 223,930 B (up to 150 s under load) | laptop CPU | [`bridge.md`](design/bridge.md) §18.2 |
 | release, current image (`NOut` v2, review M-3) | 77,736 user cycles, constant over 64 witnesses (executor); proven and wrapped in the crown rehearsal | build box (executor); cloud | [`evidence-suites.txt`](evidence-suites.txt); [`crown-rehearsal-3`](../e2e/runs/crown-rehearsal-3/README.md) |
 | release, end-to-end run | 15.1 s and 14.7 s | 16 cores | [`bridge.md`](design/bridge.md) §18.7 |
 | release, current image: the holder's succinct proof | **46.0 s** at 8 CPUs, **26.4–27.0 s** at 16; peak 1.5 GiB; receipt 223,930 B | cloud containers held to 8 / 16 CPUs and 16 GiB (AMD Zen 3) | [`p4-minimum`](../lez/results/p4-minimum/README.md) |
