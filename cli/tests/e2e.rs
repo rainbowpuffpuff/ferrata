@@ -285,6 +285,37 @@ impl Drop for Anvil {
     }
 }
 
+/// Runs `cmd` with stdout and stderr sent to `log` (preventing pipe deadlocks while polling), killing it and
+/// returning an error if it does not exit within `timeout`. Portable: polls `try_wait` instead of GNU `timeout`.
+fn run_with_timeout(cmd: &mut Command, log: &Path, timeout: std::time::Duration, label: &str) -> Result<()> {
+    let out = std::fs::File::create(log).with_context(|| format!("creating {}", log.display()))?;
+    let err = out.try_clone().with_context(|| format!("cloning {}", log.display()))?;
+    let mut child = cmd
+        .stdin(Stdio::null())
+        .stdout(Stdio::from(out))
+        .stderr(Stdio::from(err))
+        .spawn()
+        .with_context(|| format!("starting {label}"))?;
+    let deadline = std::time::Instant::now() + timeout;
+    let status = loop {
+        if let Some(status) = child.try_wait().with_context(|| format!("waiting for {label}"))? {
+            break status;
+        }
+        if std::time::Instant::now() >= deadline {
+            let _ = child.kill();
+            let _ = child.wait();
+            let output = std::fs::read(log).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+            bail!("{label} timed out after {} s and was killed:\n{output}", timeout.as_secs());
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    };
+    if !status.success() {
+        let output = std::fs::read(log).map(|b| String::from_utf8_lossy(&b).into_owned()).unwrap_or_default();
+        bail!("{label} failed ({status}):\n{output}");
+    }
+    Ok(())
+}
+
 fn scratch() -> PathBuf {
     let dir = std::env::var("FERRATA_E2E_DIR")
         .map(PathBuf::from)
@@ -520,13 +551,32 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let vault = ANVIL0.create(3);
     let config = hb::config(vault.into_array(), hb::controls());
     let cid = config.id(program);
-    let out = Command::new("forge")
+    // Run offline (solc 0.8.26 is installed by vault's prior `forge build`, and vault/foundry.toml keeps forge
+    // offline, overriding CI's workflow-level FOUNDRY_OFFLINE=false), one transaction at a time (--slow: works around
+    // anvil 1.3.6 automine occasionally leaving batched deployer txs unmined, as in roundtrip_b.rs), and bounded by a
+    // portable timeout so a stalled broadcast fails instead of hanging CI.
+    let mut forge = Command::new("forge");
+    forge
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")).join("../vault"))
-        .args(["script", "script/CliLocal.s.sol:CliLocal", "--rpc-url", &rpc, "--broadcast", "--unlocked", "--sender"])
+        .args([
+            "script",
+            "script/CliLocal.s.sol:CliLocal",
+            "--rpc-url",
+            &rpc,
+            "--broadcast",
+            "--slow",
+            "--unlocked",
+            "--sender",
+        ])
         .arg(ANVIL0.to_string())
-        .env("FERRATA_CID", hx(&cid))
-        .output()?;
-    ensure!(out.status.success(), "forge script: {}", String::from_utf8_lossy(&out.stderr));
+        .env("FOUNDRY_OFFLINE", "true")
+        .env("FERRATA_CID", hx(&cid));
+    run_with_timeout(
+        &mut forge,
+        &dir.join("forge-cli-local.log"),
+        std::time::Duration::from_secs(300),
+        "forge script CliLocal",
+    )?;
     ensure!(!p.get_code_at(vault).await?.is_empty(), "the vault is not at the predicted address");
     std::env::set_var("FERRATA_E2E_VERIFIER", ANVIL0.create(1).to_string());
     let registered_at = p.get_block(alloy::eips::BlockId::latest()).await?.expect("a block").header.timestamp;
