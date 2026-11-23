@@ -2,8 +2,9 @@
 """The private transactions' circuits from r0vm's session log (RFP-021 P.9; bench/perf/state-actions.sh).
 
 LEZ's API drops the prover's statistics (`prove` in `lee/.../privacy_preserving_transaction/circuit/mod.rs`), but
-r0vm logs every session's cycles when run with `RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`. `perf_state actions` writes a
-begin marker before each private transaction of its sweeps and an end marker after it, naming the cycles of the
+r0vm logs every session's cycles when run with `RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`, to the stdout it inherits.
+`perf_state actions` writes to the same stdout a begin marker before each private transaction of its sweeps and an end
+marker after it, naming the cycles of the
 transaction's private transitions; the circuit's session is the one right after the last proof of one of those
 transitions (the inner proofs come first, then the circuit, then the settlement's public executions). Prints a
 markdown table for lez/results/perf-state-actions.md. Standard library only.

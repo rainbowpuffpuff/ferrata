@@ -15,7 +15,8 @@
 //! types of `stage4-attest.md`, the accumulator-leaf statement, `Read` and `ReadPadded`, and the
 //! reference consumer's messages, each with 0 to 100,000 more of the accounts that accumulate
 //! beside it (and, for a private transaction, more commitments in LEZ's commitment set), then the
-//! one cost found to grow with use (`harness::accumulated`); `bench/perf/state-actions.sh` writes
+//! reference consumer's private-kind claim against its claimant's holdings, which grows
+//! (`harness::accumulated`); `bench/perf/state-actions.sh` writes
 //! `lez/results/perf-state-actions.md`.
 //!
 //! Records added for K are copies of a real record at slots no request names (the program reads a
@@ -397,13 +398,15 @@ fn sweep_private<S>(
         let mut s = prepare(k);
         let (bytes, _) = state_bytes(state(&s));
         // Markers for `bench/perf/state-actions.sh`, which reads the circuit's cycles from r0vm's
-        // session log on stderr (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`): the session right after
-        // the last proof of one of the private transitions named at the end marker.
-        eprintln!("perf-state-actions: begin|{what}|{k}");
+        // session log (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`): the session right after the last
+        // proof of one of the private transitions named at the end marker. r0vm (a subprocess)
+        // writes its log to the stdout it inherits, so the markers go there too, in order; the
+        // script separates both from the record.
+        println!("perf-state-actions: begin|{what}|{k}");
         let proven = run(&mut s);
         let private: Vec<String> =
             proven.charged.handlers.iter().filter(|(h, _)| h != "public part").map(|(_, c)| c.to_string()).collect();
-        eprintln!("perf-state-actions: end|{what}|{k}|{}|{}", proven.path_levels, private.join(","));
+        println!("perf-state-actions: end|{what}|{k}|{}|{}", proven.path_levels, private.join(","));
         let charged = vec![proven.charged];
         if k == 0 {
             base = charged.clone();
@@ -426,17 +429,20 @@ fn sweep_private<S>(
 /// The pools a claimant already holds privately, for [`holdings_growth`].
 const POOLS: [usize; 5] = [0, 1, 10, 100, 1_000];
 
-/// The one cost found to grow with use, measured as it grows: a private-kind vault claim's own
-/// cycles against the claimant's `holdings` (not a comparison; nothing asserted equal).
+/// The reference consumer's cost that grows with use, measured as it grows: a private-kind vault
+/// claim's private transitions against the claimant's `holdings` (not a comparison; nothing
+/// asserted equal).
 fn holdings_growth(vw: &acc::VaultWorld) {
-    println!("\n## The one cost found to grow with use: a private-kind claim against the claimant's own holdings\n");
+    println!("\n## The reference consumer's private-kind claim against the claimant's own holdings (grows; avoidable)\n");
     println!(
         "The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, \
          amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the \
          list. Deposit 1 of FerrataVault v5 claimed by its destination (LEZ's private test account 0) in RISC Zero's \
-         executor, the claimant already holding `pools` other pools. This is the claimant's own proving work: LEZ \
-         charges the private transaction its flat receipt gas plus the public part (`Read`, `Spend`), which does not \
-         see the list."
+         executor, the claimant already holding `pools` other pools: the claim's two private transitions (LEZ's \
+         circuit, which hashes and encrypts the larger state, grows with it too; not measured here). It is the \
+         claimant's own proving work: LEZ charges the private transaction its flat receipt gas plus the public part \
+         (`Read`, `Spend`), which does not see the list. It is avoidable: a claimant that sends each pool's deposits \
+         to a private account of its own keeps one entry per account."
     );
     println!(
         "\n| pools already held | ClaimDepositPrivately (executor) | the record's reply (executor) | private cycles | over 0 pools, per pool |\n|---:|---:|---:|---:|---:|"
@@ -474,8 +480,9 @@ fn other_actions() {
          transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public \
          part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with \
          use are measured as they change: a reader empty, then holding the record or reply it read before; a balance \
-         or a holder credited K + 1 times before; and, in the last table, a claimant's private holdings. Every charge \
-         is asserted equal at every K before it is printed; the last table is not a comparison."
+         or a holder credited K + 1 times before; and, in the table after the sweeps, a claimant's private holdings. \
+         Every charge is asserted equal at every K before it is printed; the two tables after the sweeps are not \
+         comparisons."
     );
     let uw = acc::UpdateWorld::new();
     sweep("`Init` and its adoption (a new chain)", |k| uw.chain_for_init(k), |c| &c.state, acc::init_on);

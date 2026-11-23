@@ -34,7 +34,7 @@
 //!   statement and the vault's slots under a record that binds a block hash (the synthetic vault);
 //! - [`the_vault_pattern_costs_the_same_whatever_the_chain_holds`]: #9 for the reference consumer's
 //!   vault pattern on FerrataVault v5's real deposits (`ClaimDeposit`, `ClaimDepositPrivately` with
-//!   its public `Spend` and `CreditHolder`), and the one cost found to grow with use, the claimant's
+//!   its public `Spend` and `CreditHolder`), and the consumer's cost that grows with use, the claimant's
 //!   own private proof against the pools it holds (pinned at 0 and 100 pools).
 //!
 //! The private transactions also run with a thousand more commitments in LEZ's commitment set: the
@@ -339,7 +339,8 @@ const CLAIM_DEPOSIT_PRIVATELY_TX: Tx = Tx {
     stor: PRIVATE_GAS_STOR,
 };
 /// A private-kind claim's two private transitions with the claimant holding 0 and 100 other pools:
-/// the claimant's own proof grows by about 2,100 cycles a pool.
+/// the claim's private transitions grow by about 2,000–2,300 cycles a pool (the circuit's share not
+/// measured).
 const HOLDINGS_0: (u64, u64) = (114_317, 1_409_528);
 const HOLDINGS_100: (u64, u64) = (213_887, 1_523_672);
 /// A public reader's `ReadRecord` (`Read` at the record) with an empty reader (row 1 of
@@ -1098,8 +1099,9 @@ fn the_vault_pattern_costs_the_same_whatever_the_chain_holds() {
          1,001 times",
     );
 
-    // The one cost that grows with use: a private-kind claim's own proof against the pools its
-    // claimant already holds (its private `holdings`), which LEZ's charge does not see.
+    // The reference consumer's cost that grows with use (avoidable): a private-kind claim's private
+    // transitions against the pools its claimant already holds (its private `holdings`), which
+    // LEZ's charge does not see.
     let at_0 = acc::private_kind_claim(&vw, 0);
     let at_100 = acc::private_kind_claim(&vw, 100);
     pins.eq("a private-kind claim, holding 0 pools: the root call's cycles", at_0.0, HOLDINGS_0.0);
@@ -1108,7 +1110,7 @@ fn the_vault_pattern_costs_the_same_whatever_the_chain_holds() {
     pins.eq("the same: the reply's cycles", at_100.1, HOLDINGS_100.1);
     let per_pool = (at_100.0 + at_100.1 - at_0.0 - at_0.1) / 100;
     assert!((1_500..3_000).contains(&per_pool), "about 2,100 cycles a pool held, not {per_pool}");
-    pins.pin("derived: the claimant's own proof, per pool held (cycles)", per_pool);
+    pins.pin("derived: the claim's private transitions, per pool held (cycles)", per_pool);
 
     pins.print(
         "Pinned: the reference consumer's vault pattern beside accumulated accounts (dev mode)\n\

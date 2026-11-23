@@ -26,8 +26,9 @@
 //! - the reference consumer's vault pattern on FerrataVault v5's real deposits ([`VaultWorld`]):
 //!   `ClaimDeposit` (→ `Attest` → reply → `CreditHolder`) for a first credit and to a holder
 //!   credited before, `ClaimDepositPrivately` (its public part `Read` → `Spend` → `CreditHolder`),
-//!   and the private claim's own cycles with the claimant's private `holdings` list grown
-//!   ([`private_kind_claim`]), the one cost found to grow with use.
+//!   and the private claim's private transitions with the claimant's private `holdings` list
+//!   grown ([`private_kind_claim`]): the reference consumer's cost that grows with use (avoidable,
+//!   by one private account per pool).
 //!
 //! With `Open`, `JobOpen`, `Miller`, `Adopt`, `Finish`, `Apply` and `Record` (perf_state §3,
 //! `tests/costs_attestation.rs`'s replay), that is every message the attestation program handles,
@@ -1047,7 +1048,8 @@ pub fn claim_deposit_privately(vw: &VaultWorld, w: &mut World) -> Proven {
 /// 0, in the executor, with the claimant's state already holding `pools` other pools' entries: the
 /// two private transitions' cycles. The claimant's private state is the one list an action reads
 /// that grows with use (`lez/wire/src/lib.rs`, `ClaimantState`); LEZ charges the transaction the same
-/// (its public part, `Read` and `Spend`, does not see it), the claimant's own proof grows.
+/// (its public part, `Read` and `Spend`, does not see it), the claimant's own proof grows: here its
+/// two private transitions; LEZ's circuit, which hashes and encrypts the larger state, is not measured.
 pub fn private_kind_claim(vw: &VaultWorld, pools: usize) -> (u64, u64) {
     let (s1, kind1, dest1) = vw.openings[1];
     let keys = vault::lez_testnet_private_account_0();

@@ -12,6 +12,7 @@ every message the attestation program handles), and every message of the referen
 `AttestPrivately`, and the vault pattern's `ClaimDeposit` and `ClaimDepositPrivately` with `Spend` and `CreditHolder`.
 Each is charged with K = 0, 1,000, 10,000 and 100,000 more of the accounts that accumulate beside it, and every private
 transaction with K more commitments in LEZ's commitment set as well. The **serialized state** column is what a node
-writes for the state before RocksDB's compression (`perf-state.md` says how). The last table measures the one cost
-found to grow with use, a private-kind claim's own proof against its claimant's holdings. The same scenarios are pinned
-in CI with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
+writes for the state before RocksDB's compression (`perf-state.md` says how). Two tables follow the sweeps: the
+reference consumer's private-kind claim against its claimant's holdings, which grows (avoidable), and the private
+transactions' circuits from r0vm's session log, which grow by one hash a level of LEZ's commitment path. The same
+scenarios are pinned in CI with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
