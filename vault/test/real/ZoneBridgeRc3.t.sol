@@ -147,6 +147,47 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         vault.submitCandidate(c, seal);
     }
 
+    /// @dev The fixture's release `i` and its seal.
+    function _releaseAt(uint256 i) internal view returns (FerrataVault.ReleaseRequest memory r, bytes memory s) {
+        string memory json = vm.readFile(_path());
+        string memory p = string.concat(".releases[", vm.toString(i), "]");
+        r = FerrataVault.ReleaseRequest({
+            token: vm.parseJsonAddress(json, string.concat(p, ".token")),
+            denomIndex: uint8(vm.parseJsonUint(json, string.concat(p, ".denomIndex"))),
+            recipient: vm.parseJsonAddress(json, string.concat(p, ".recipient")),
+            relayer: vm.parseJsonAddress(json, string.concat(p, ".relayer")),
+            relayFee: vm.parseJsonUint(json, string.concat(p, ".relayFee")),
+            burnRoot: vm.parseJsonBytes32(json, string.concat(p, ".burnRoot")),
+            nullifier: vm.parseJsonBytes32(json, string.concat(p, ".nullifier"))
+        });
+        s = vm.parseJsonBytes(json, string.concat(p, ".seal"));
+    }
+
+    /// @notice RFP-022 Sec.3 under RISC Zero's verifier 3.1.0, with the release's real RISC Zero 3.1 seal: the journal
+    ///         binds the recipient, the relayer, the relay fee and the nullifier, so a request with any one of them
+    ///         changed is refused by the verifier; the request as proven is paid once, and its replay is refused.
+    function test_rc3_aRedirectedRepricedOrReplayedReleaseIsRefused() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        vm.warp(block.timestamp + 121);
+        address stranger = makeAddr("a submitter's own address");
+        for (uint256 k = 0; k < 4; k++) {
+            (FerrataVault.ReleaseRequest memory x, bytes memory s) = _releaseAt(0);
+            if (k == 0) x.recipient = stranger;
+            if (k == 1) x.relayer = stranger;
+            if (k == 2) x.relayFee = 2e12; // the registered relay fee of 0.001 ETH: allowed, but not what was proven
+            if (k == 3) x.nullifier = keccak256(abi.encode(x.nullifier));
+            vm.expectRevert(VerificationFailed.selector);
+            vault.release(x, s);
+        }
+        (FerrataVault.ReleaseRequest memory r, bytes memory releaseSeal) = _releaseAt(0);
+        vault.release(r, releaseSeal);
+        vm.expectRevert(FerrataVault.NullifierAlreadyUsed.selector);
+        vault.release(r, releaseSeal);
+    }
+
     function test_rc3_aFlippedSealByteIsRefused() public {
         FerrataVault.Checkpoint memory c = _checkpoint();
         bytes memory bad = bytes.concat(seal);
