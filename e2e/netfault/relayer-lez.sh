@@ -39,7 +39,7 @@ check() { local name=$1; shift; if "$@"; then ok "$name"; else bad "$name"; fi; 
 if ! (cd "$repo/cli" && cargo build --bin ferrata-relayer --example miniapp_devnet) > "$out/build.log" 2>&1; then
   bad "build: $(grep -m 3 -E '^error' "$out/build.log" | tr '\n' ' ')"; exit 1
 fi
-(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build --quiet) > "$out/forge.log" 2>&1
+(cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build --quiet) > "$out/forge.log" 2>&1
 R="$repo/cli/target/debug/ferrata-relayer"
 RISC0_DEV_MODE=1 FERRATA_DEVNET_DIR="$out/devnet" FERRATA_DEVNET_PORT=$PORT FERRATA_DEVNET_ANVIL_PORT=$ANVIL_PORT \
   "$repo/cli/target/debug/examples/miniapp_devnet" > "$out/devnet.log" 2>&1 &

@@ -65,7 +65,7 @@ build() {
   local L="$T/logs/build"; mkdir -p "$L"
   say "vault: libraries and build"
   ( cd "$REPO/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 \
-      OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build ) > "$L/vault.log" 2>&1 \
+      OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build ) > "$L/vault.log" 2>&1 \
     || { tail -n 20 "$L/vault.log"; die "vault build"; }
   say "cli: ferrata, ferrata-relayer, seqnet-fund, seqnet-txs"
   ( cd "$REPO/cli" && CARGO_TARGET_DIR="$TGT" cargo build --release --features seqnet --bin ferrata --bin ferrata-relayer \

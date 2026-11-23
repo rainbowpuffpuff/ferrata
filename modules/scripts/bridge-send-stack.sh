@@ -80,7 +80,7 @@ run() {
 
   anvil --port 18547 --chain-id $CHAIN > "$R/anvil.log" 2>&1 & local anvil_pid=$!
   for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 0.5; done
-  ( cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } \
+  ( cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } \
     && FERRATA_FREEZE_AUTHORITY=$A2 forge script script/LogosSendStack.s.sol:LogosSendStack --rpc-url $RPC --broadcast --private-key $K1 ) > "$R/deploy.log" 2>&1 \
     || { tail -n 30 "$R/deploy.log"; kill $anvil_pid; return 1; }
   local V T

@@ -32,7 +32,7 @@ m() { echo "$1" > "$OUT/req.json"; local r; r=$("$CALL" admin "$OUT/req.json"); 
 anvil --port 18546 --chain-id 11155111 > "$OUT/anvil.log" 2>&1 & ANVIL=$!
 trap 'kill $ANVIL 2>/dev/null' EXIT
 for _ in $(seq 60); do cast chain-id --rpc-url $RPC > /dev/null 2>&1 && break; sleep 0.5; done
-( cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } \
+( cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } \
   && FERRATA_FREEZE_AUTHORITY=$A2 forge script script/LogosSendStack.s.sol:LogosSendStack --rpc-url $RPC --broadcast --private-key $K1 ) > "$OUT/deploy.log" 2>&1 \
   || { tail -n 30 "$OUT/deploy.log"; exit 1; }
 V=$(grep -E '^\s+vault 0x' "$OUT/deploy.log" | awk '{print $2}' | tr 'A-F' 'a-f')

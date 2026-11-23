@@ -49,7 +49,7 @@ jobs:
           path: |
             ~/.risc0
             ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
       - name: RISC Zero toolchains (rzup)
         run: scripts/ci/install-risc0.sh
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)

@@ -29,7 +29,7 @@ stamp() { echo "[$(( $(date +%s) - t0 )) s] $*"; }
 
 stamp "vault: libraries and build"
 cd "$repo/vault"
-[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
+[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0
 python3 -I "$repo/scripts/vault_libs.py" check
 forge build --quiet
 

@@ -80,7 +80,7 @@ jobs:
           path: |
             ~/.risc0
             ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
       - name: RISC Zero toolchains (rzup)
         run: scripts/ci/install-risc0.sh
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
@@ -125,7 +125,7 @@ jobs:
           path: |
             ~/.risc0
             ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
       - name: RISC Zero toolchains (rzup)
         run: scripts/ci/install-risc0.sh
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
@@ -139,7 +139,7 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vault/lib
-          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
       # The LEZ build: LEZ's and Logos Blockchain's crates compiled in cli/target and checkpoint/target.
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
@@ -224,7 +224,7 @@ jobs:
           path: |
             ~/.risc0
             ~/risc0-home-lez
-          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
       - name: RISC Zero toolchains (rzup)
         run: scripts/ci/install-risc0.sh
       - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
@@ -241,10 +241,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vault/lib
-          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
       - name: Libraries (the privacy suite's Ethereum half)
         working-directory: vault
-        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
       - name: Build (shard ${{ matrix.shard }} and the guests)
         timeout-minutes: 45
         env:
@@ -273,10 +273,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vault/lib
-          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
       - name: Libraries
         working-directory: vault
-        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           workspaces: monitor -> target
@@ -303,10 +303,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: vault/lib
-          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.0.0
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
       - name: Libraries
         working-directory: vault
-        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0'
+        run: '[ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0'
       - name: The libraries are the trees vault/lib.lock pins (scripts/vault_libs.py)
         run: python3 -I scripts/vault_libs.py check
       - name: forge test

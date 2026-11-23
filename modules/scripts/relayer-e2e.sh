@@ -106,7 +106,7 @@ fi
 
 # ---- roots: root imports on the mini-app's devnet ------------------------------------------------------------
 if case " $PARTS " in *" roots "*) true ;; *) false ;; esac; then
-  (cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0; } && forge build --quiet)
+  (cd "$repo/vault" && { [ -d lib/risc0-ethereum ] || forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0; } && forge build --quiet)
   RISC0_DEV_MODE=1 FERRATA_DEVNET_DIR="$out/devnet" FERRATA_DEVNET_PORT=$PORT FERRATA_DEVNET_ANVIL_PORT=$ANVIL_PORT \
     "$repo/cli/target/debug/examples/miniapp_devnet" > "$out/devnet.log" 2>&1 &
   devnet=$!

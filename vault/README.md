@@ -54,7 +54,7 @@ the zkVM guests are out of this directory's scope.
 ```sh
 export PATH="$HOME/.foundry/bin:$PATH"
 # Dependencies (lib/ is not committed):
-forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.0.0
+forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-contracts@v5.4.0 risc0/risc0-ethereum@v3.1.0
 python3 -I ../scripts/vault_libs.py check                # the trees lib.lock pins (a tag alone can move); or: vault_libs.py install
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
