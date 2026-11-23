@@ -135,7 +135,7 @@ rc3_tools() {
 # lockfile the committed one for the tag (cli/lockfiles/), else cli's rc1 lockfile moved to the tag's graph by cargo
 # (versions kept wherever they still fit), written back for the repository.
 cli_rc3() {
-  local d="$C/ferrata/cli" saved="$repo/cli/lockfiles/$TAG.Cargo.lock" locked=()
+  local d="$C/ferrata/cli" saved="$repo/cli/lockfiles/Cargo.lock.$TAG" locked=()
   if [ -f "$saved" ]; then cp "$saved" "$d/Cargo.lock"; locked=(--locked); fi
   (cd "$d" && CARGO_TARGET_DIR="$WORK/target-cli-rc3" cargo build --release "${locked[@]}" --bin ferrata --features lez-rc3) \
     || return 1
@@ -167,7 +167,7 @@ sdk() { # MODULE DIR
 # The updater module's lockfile for $TAG: the committed one (rust-lib/lockfiles/), else the rc1 lockfile moved to
 # $TAG's graph by cargo (versions kept wherever they still fit), written back for the repository.
 lock_updater_rc3() {
-  local r="$C/ferrata/modules/ferrata_updater_module/rust-lib" saved="$repo/modules/ferrata_updater_module/rust-lib/lockfiles/$TAG.Cargo.lock"
+  local r="$C/ferrata/modules/ferrata_updater_module/rust-lib" saved="$repo/modules/ferrata_updater_module/rust-lib/lockfiles/Cargo.lock.$TAG"
   if [ -f "$saved" ]; then
     cp "$saved" "$r/Cargo.lock"
     (cd "$r" && cargo +1.98.1 metadata --locked --format-version 1 > /dev/null)
