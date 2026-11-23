@@ -695,6 +695,8 @@ async fn cmd_sign(a: &Args) -> Result<()> {
         fs::write(store.join("instance.json"), serde_json::to_string_pretty(&info)? + "\n")?;
     }
     store_stage(&store, stage, &txs)?;
+    // The follower as far as it read: the stage's `send` (and every later command on this state) resumes from it.
+    live.save()?;
     fs::write(stage_dir(&store, stage).join("stage.json"), serde_json::to_string_pretty(&json!({"stage": stage, "payer": id_of(&payer).to_string(),
         "first_nonce": n.to_string(), "fee_state": [q.0, q.1], "info": info}))? + "\n")?;
     let mut reserve: u128 = 0;
@@ -744,6 +746,7 @@ async fn cmd_target(a: &Args) -> Result<()> {
     let id: Root = ferrata_updater::chain::root(inst["instance_id"].as_str().unwrap_or_default())?;
     let live = connect(a, &state).await?;
     let (slot, hr, st) = newest_record(&live, d.program(), &id).await?;
+    live.save()?;
     println!("{}", json!({"slot": slot, "block_hash": format!("0x{}", hex::encode(block_hash_of(&hr)?)), "applied": st.applied}));
     Ok(())
 }
@@ -820,6 +823,7 @@ async fn inspect(a: &Args, live: &Live) -> Result<Value> {
 
 async fn cmd_inspect(a: &Args) -> Result<()> {
     let live = connect(a, &a.path("state")?).await?;
+    live.save()?;
     println!("{}", serde_json::to_string_pretty(&inspect(a, &live).await?)?);
     Ok(())
 }
