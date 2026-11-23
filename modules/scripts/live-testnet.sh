@@ -476,7 +476,9 @@ print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h
   ctl daemon stop >> "$W/core-stop.log" 2>&1; echo "logosctl daemon stop exit $?" >> "$W/core-stop.log"
   marks core-stopped
   cp -L "$SESSION/logs/"*.log "$W/logos-logs/" 2>/dev/null
-  cp -L "$SESSION/logs/daemon.log" "$W/updater-module.log" 2>/dev/null
+  # The updater daemon's own lines (`TIME [name chain] …`, `TIME [sequencer] …`), as check.py reads them; the
+  # whole Logos Core log is kept beside them (logos-logs/).
+  grep -E '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:]+Z \[' "$SESSION/logs/daemon.log" > "$W/updater-module.log" 2>/dev/null
   cp "$W/updater-state/sepolia/journal.tsv" "$W/journal.tsv" 2>/dev/null
   cp "$W/updater-state/ledger/run.tsv" "$W/run.tsv" 2>/dev/null
   sleep 6
