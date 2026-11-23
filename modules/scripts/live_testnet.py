@@ -532,6 +532,10 @@ def session2(rec, check):
                 comp[name] = window(samples[name], t0, t1)
         if "core" in samples:
             comp["Logos Core daemon (its own process)"] = window(own(samples["core"]), t0, t1)
+    if t0 and t1 and marks.get("updater-started") and "updater-module" in samples:
+        ts = marks["updater-started"]
+        comp["updater-module (start: its follower from session 1's state to the network's head)"] = window(samples["updater-module"], t0, ts)
+        comp["updater-module (after the start)"] = window(samples["updater-module"], ts, t1)
     S2["components"] = comp
     if t0 and marks.get("updater-started"):
         S2["updater_start_seconds"] = round(marks["updater-started"] - t0, 1)

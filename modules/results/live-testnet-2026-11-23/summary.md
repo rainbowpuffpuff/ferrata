@@ -178,6 +178,8 @@ After the updater's start (the relays' series; per hour *derived*):
 | beacon_api_module | 3265.8 | 1.28 | 0.0004 | 59.0 | 58.9 |
 | eth_rpc_module | 3265.8 | 0.73 | 0.0002 | 56.8 | 56.8 |
 | Logos Core daemon (its own process) | 3265.8 | 0.3 | 0.0001 | 57.8 | 57.6 |
+| updater-module (start: its follower from session 1's state to the network's head) | 525.9 | 345.57 | 0.6571 | 275.3 | 248.3 |
+| updater-module (after the start) | 2734.9 | 84.13 | 0.0308 | 296.3 | 165.1 |
 
 | `ferrata attest` (release) | exit | wall s | CPU s | peak RSS MiB |
 |---|---:|---:|---:|---:|

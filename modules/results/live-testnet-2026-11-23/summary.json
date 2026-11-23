@@ -954,6 +954,26 @@
     "peak_rss_mib": 296.3,
     "samples": 653,
     "wall_s": 3265.8
+   },
+   "updater-module (after the start)": {
+    "cpu_s": 84.13,
+    "cpu_share": 0.0308,
+    "max_procs": 2,
+    "median_rss_mib": 165.1,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 296.3,
+    "samples": 547,
+    "wall_s": 2734.9
+   },
+   "updater-module (start: its follower from session 1's state to the network's head)": {
+    "cpu_s": 345.57,
+    "cpu_share": 0.6571,
+    "max_procs": 2,
+    "median_rss_mib": 248.3,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 275.3,
+    "samples": 106,
+    "wall_s": 525.9
    }
   },
   "execution_source_confirmations": 3,
