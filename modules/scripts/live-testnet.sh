@@ -274,7 +274,7 @@ do_session() {
   local program id checkpoint t_start t_end
   program=$(jq -r .program "$I/instance.json"); id=$(jq -r .instance_id "$I/instance.json"); checkpoint=$(jq -r .checkpoint "$I/instance.json")
   rm -rf "$W" "$SESSION"
-  mkdir -p "$W/rep" "$W/req" "$W/probes" "$W/relay" "$W/attest" "$W/cli" "$W/monitor" "$SESSION"
+  mkdir -p "$W/rep" "$W/req" "$W/probes-u1" "$W/relay" "$W/attest" "$W/cli" "$W/monitor" "$W/logos-logs" "$SESSION"
   export TMPDIR="$LOGOS_TMPDIR"
   printf 'name\tmodule\tmethod\texit\tseconds\tstart\n' > "$W/calls.tsv"
   marks() { printf '%s\t%s\n' "$(date +%s.%N)" "$1" >> "$W/marks.tsv"; }
@@ -406,14 +406,24 @@ T
   pids+=("$mon")
   marks monitor-start
   t_start=$(date +%s); t_end=$(( t_start + minutes * 60 ))
-  local restarted=0 attested=0 probed=0 restart_at=$(( t_start + minutes * 60 / 2 )) attest_at=$(( t_start + 25 * 60 ))
+  local restarted=0 attested=0 probed=0 life=1 code restart_at=$(( t_start + minutes * 60 / 2 )) attest_at=$(( t_start + 25 * 60 ))
   while [ "$(date +%s)" -lt "$t_end" ]; do
     probed=$((probed + 1))
-    { printf '{"t":%s,"probe":%s,"health":' "$(date +%s)" "$probed"
-      curl -sS -m 10 -w ',"http":%{http_code}}' http://127.0.0.1:9464/health 2>/dev/null || printf 'null,"http":0}'
-      echo; } >> "$W/probes/health.jsonl"
+    # /health as check.py reads it (lez/updater/results/live-sepolia/check.py: probes*/health.jsonl), and the
+    # module's status through Logos Core.
+    rm -f "$W/h.json"
+    code=$(curl -sS -m 10 -o "$W/h.json" -w '%{http_code}' http://127.0.0.1:9464/health 2>/dev/null) || true
+    python3 -I -c 'import json, sys
+t, life, code, f = sys.argv[1:5]
+try:
+    h = json.load(open(f))
+except Exception:
+    h = None
+print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h}, separators=(",", ":")))' \
+      "$(date -u +%FT%TZ)" "$life" "${code:-0}" "$W/h.json" >> "$W/probes-u1/health.jsonl"
     call ferrata_updater_module status "status-$probed" > /dev/null 2>&1 || true
-    jq -c --arg t "$(date +%s)" '{t: ($t | tonumber), status: .}' "$W/rep/status-$probed.json" >> "$W/probes/status.jsonl" 2>/dev/null
+    jq -c --arg t "$(date -u +%FT%TZ)" --arg life "$life" '{t: $t, life: ($life | tonumber), status: .}' "$W/rep/status-$probed.json" \
+      >> "$W/probes-u1/status.jsonl" 2>/dev/null
     rm -f "$W/rep/status-$probed.raw" "$W/rep/status-$probed.json"
     # Once the instance holds a record of its own past the checkpoint's: the attestation module's calls and one
     # attestation sent with ferrata-day1 (both on that record).
@@ -428,6 +438,7 @@ T
       marks restart-start
       CALL_MS=600000 call ferrata_updater_module start U-start-2 "@$W/req/updater-config.json" || true
       restarted=1
+      life=2
     fi
     sleep 60
   done
@@ -437,8 +448,14 @@ T
   marks stop
   CALL_MS=600000 call ferrata_updater_module stop U-stop-final || true
   kill -TERM "$mon" 2>/dev/null; wait "$mon"; echo "attest-monitor exit $?" >> "$W/monitor/exit.txt"
+  # The instance at the end, as the network holds it.
+  "$BIN/attest-monitor" state --state "lez:$FERRATA_TESTNET_RPC" --program "$(b58hex "$program")" --instance "$id" > "$W/final-state.json" 2>&1
   ctl daemon stop >> "$W/core-stop.log" 2>&1; echo "logosctl daemon stop exit $?" >> "$W/core-stop.log"
   marks core-stopped
+  cp -L "$SESSION/logs/"*.log "$W/logos-logs/" 2>/dev/null
+  cp -L "$SESSION/logs/daemon.log" "$W/updater-module.log" 2>/dev/null
+  cp "$W/updater-state/sepolia/journal.tsv" "$W/journal.tsv" 2>/dev/null
+  cp "$W/updater-state/ledger/run.tsv" "$W/run.tsv" 2>/dev/null
   sleep 6
   cleanup
   trap - EXIT
