@@ -96,7 +96,8 @@ twelve, about 0.10 USD. Measured.
 | N4 `TokenNotRegistered`'s what to do removed | the unsupported token case | fails |
 
 Mini-app: `python3 -I e2e/runs/cli-u8/mutants.py miniapp OUTDIR` (`modules/ferrata_bridge_ui/scripts/box-test.sh` per
-mutant, the view driven through its devnet backend), on the tree of `da4c9de7`; 431 s for the seven,
+mutant, the view driven through its devnet backend), on the tree of `da4c9de7` less two later edits the view does not
+run (the e2e's last nonce check, a rewrapped line of `cli/src/lez.rs` with the same string); 431 s for the seven,
 about 0.04 USD.
 The last run, without a mutant, is the one in `modules/ferrata_bridge_ui/results/`. Measured.
 

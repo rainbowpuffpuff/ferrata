@@ -43,7 +43,8 @@ block, no nonce; releases: the signer's nonce). The four cases the audit asked f
 
 ## The mini-app (`qmltest/tst_miniapp.qml`, `box-test.sh`, the build box, not in CI)
 
-Recorded: `modules/ferrata_bridge_ui/results/` (23 November 2026, the tree of `da4c9de7`: 27 of 27
+Recorded: `modules/ferrata_bridge_ui/results/` (23 November 2026, the tree of `da4c9de7` less two edits the view does
+not run: 27 of 27
 in 40.5 s, 48 screenshots, the backend's 76 calls, 15 of them refusals; measured). Through the devnet backend
 (`cli/examples/miniapp_devnet.rs`, the tool's library), not `ferrata_bridge_module` inside Logos Core. All seven
 modes, each asserted on what the user sees (the banner's message and code), found before sending ("checked before
