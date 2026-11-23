@@ -1,0 +1,6 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:22514 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0 --send --yes --eth-timeout 2 --eth-retries 1
+zone http://127.0.0.1:60982: followed to block 12 (final on Bedrock)
+attest: already sent by an earlier run (journal <repo>/cli/target/tmp/attest-faults/r5/follower/sent/c9adbc7b3e362bbf53675a167c3584b916b937c42e1edca208788899c3fee427.json): nothing sent
+  Attest                       block 12: applied; execution gas 274613, storage gas 7304, 1 event(s)
+  exit status of that run: 0 (--again sends the command once more)
+[exit 0]

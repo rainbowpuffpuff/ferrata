@@ -1,0 +1,6 @@
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:22514 --block 26384851 --log 0:0:emitter=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 --send --yes --eth-timeout 2 --eth-retries 1
+zone http://127.0.0.1:60982: followed to block 7 (final on Bedrock)
+attest: the Ethereum endpoint http://127.0.0.1:22514: eth_getBlockReceipts: the endpoint's answer was cut short (curl exit 18: curl: (18) transfer closed with 781561 bytes remaining to read) (after 2 attempt(s))
+  nothing was sent, and the follower's state is kept: run the same command again once the endpoint answers, on the record's chain
+note: eth_getBlockReceipts: the endpoint's answer was cut short (curl exit 18: curl: (18) transfer closed with 781561 bytes remaining to read); trying again (1 of 1)
+[exit 4]
