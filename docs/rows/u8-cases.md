@@ -10,7 +10,7 @@ changed; no dependency changed.
 The audit (audit-criteria §1.2 item 2) moved U.8 to in part: the tool had no case for a verification failure or for
 insufficient finality, and the mini-app asserted two of the RFP's seven failure modes by their messages. Round 1
 (`e83239ff`, `98f4bdb1`, `d81ee8fb`, `b5147257`) added them. The independent review (review-u8) found one gap that
-kept U.8 in part and nine smaller ones; round 2 (`5e92dc04` and the commit after it) fixes them, each with a test that
+kept U.8 in part and nine smaller ones; round 2 (`5e92dc04`, `da4c9de7`) fixes them, each with a test that
 fails before its fix (the mutant named; [`e2e/runs/cli-u8/`](../../e2e/runs/cli-u8/README.md)):
 
 | Finding | Fix | Fails before the fix |
@@ -28,8 +28,7 @@ fails before its fix (the mutant named; [`e2e/runs/cli-u8/`](../../e2e/runs/cli-
 
 ## The tool (`cli/tests/e2e.rs`, CI job `roundtrip`)
 
-Recorded: [`e2e/runs/cli-u8/`](../../e2e/runs/cli-u8/README.md) (box, 23 November 2026, the tree of the commit after
-`5e92dc04`: `test result: ok. 2 passed` in 55.05 s; on `5e92dc04` the same 2 passed in 59.15 s and `cargo test --lib
+Recorded: [`e2e/runs/cli-u8/`](../../e2e/runs/cli-u8/README.md) (box, 23 November 2026, the tree of `da4c9de7`: `test result: ok. 2 passed` in 55.05 s; on `5e92dc04` the same 2 passed in 59.15 s and `cargo test --lib
 codes` 3 passed; measured). Every U.08 mode of the sequence
 is refused with its source, code and what to do; every refusal is checked by form (`names_nothing`) and by value
 (`names_none_of`); those from a command that would send are checked by state (on the zone: nothing handed to it, no
@@ -44,7 +43,7 @@ block, no nonce; releases: the signer's nonce). The four cases the audit asked f
 
 ## The mini-app (`qmltest/tst_miniapp.qml`, `box-test.sh`, the build box, not in CI)
 
-Recorded: `modules/ferrata_bridge_ui/results/` (23 November 2026, the tree of the commit after `5e92dc04`: 27 of 27
+Recorded: `modules/ferrata_bridge_ui/results/` (23 November 2026, the tree of `da4c9de7`: 27 of 27
 in 40.5 s, 48 screenshots, the backend's 76 calls, 15 of them refusals; measured). Through the devnet backend
 (`cli/examples/miniapp_devnet.rs`, the tool's library), not `ferrata_bridge_module` inside Logos Core. All seven
 modes, each asserted on what the user sees (the banner's message and code), found before sending ("checked before

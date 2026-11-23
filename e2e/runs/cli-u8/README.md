@@ -1,8 +1,8 @@
 # The `ferrata` tool's U.08 refusals: verification failure and insufficient finality (RFP-022 U.08)
 
 **Run:** `RISC0_HOME=<spike>/risc0-home-lez cli/tests/e2e.sh` from the repository's root (the tests of
-[`cli/tests/e2e.rs`](../../../cli/tests/e2e.rs)), on a Modal build box (CPU), 23 November 2026, the tree of the commit
-that records it (branch `u8-cases`, after `5e92dc04`). **Result:** `test result: ok. 2 passed; 0 failed` in 55.05 s:
+[`cli/tests/e2e.rs`](../../../cli/tests/e2e.rs)), on a Modal build box (CPU), 23 November 2026, the tree of commit
+`da4c9de7` (branch `u8-cases`). **Result:** `test result: ok. 2 passed; 0 failed` in 55.05 s:
 the form check on its own
 (`names_nothing_catches_every_form`) and the sequence (`deposit_scan_claim_burn_release_and_recovery`)
 ([`test.log`](test.log), the tests' own output; the build's lines before it are left out and the checkout's path is
@@ -96,7 +96,7 @@ twelve, about 0.10 USD. Measured.
 | N4 `TokenNotRegistered`'s what to do removed | the unsupported token case | fails |
 
 Mini-app: `python3 -I e2e/runs/cli-u8/mutants.py miniapp OUTDIR` (`modules/ferrata_bridge_ui/scripts/box-test.sh` per
-mutant, the view driven through its devnet backend), on the tree of the commit that records it; 431 s for the seven,
+mutant, the view driven through its devnet backend), on the tree of `da4c9de7`; 431 s for the seven,
 about 0.04 USD.
 The last run, without a mutant, is the one in `modules/ferrata_bridge_ui/results/`. Measured.
 
