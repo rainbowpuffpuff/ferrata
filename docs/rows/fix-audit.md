@@ -14,14 +14,16 @@ were cancelled at start, with GitHub's annotation "The configuration 'macos-14-a
 branch.
 
 Run 45075900693 (`ci.yml` at `8c38d723`) passed 13 of 13 jobs only on its second attempt. On the first attempt the
-`roundtrip` job hung for 73 minutes in `cli/tests/e2e.rs`, in its `forge script` call, and was cancelled. The second
+`roundtrip` job's end-to-end step (`cli/tests/e2e.sh`) hung for 73 minutes, apparently in its `forge script` call in
+`cli/tests/e2e.rs` (a `forge` process was still running when the job was cancelled), and the job, 83.6 minutes in all,
+was cancelled. The second
 attempt reran that job alone, and it passed in the usual time; the cause is not established. A text that cites the run
 must say so. If `main`'s tip has moved by then, cite the green runs of the tip instead: the clause asks that the default
 branch be green.
 
 | ID | Status | Why | Evidence |
 |---|---|---|---|
-| R.12 | shown | Every job of `ci.yml` passed on GitHub at `main` `8c38d723` (run 45075900693, 22 November 2026), the harness and updater suites (`lez-harness`) and the round trip (`roundtrip`) among them. The round trip passed on the run's second attempt: on the first, its `forge script` call in `cli/tests/e2e.rs` hung for 73 minutes and the job was cancelled; that one job was rerun alone, cause not established. The `macos` workflow passed at `<commit>` (run `<id>`) once its runner moved off the retired `macos-14` image. | GitHub runs 45075900693 (attempt 2) and `<id>`; `.github/workflows/ci.yml`; `.github/workflows/macos.yml` |
+| R.12 | shown | Every job of `ci.yml` passed on GitHub at `main` `8c38d723` (run 45075900693, 22 November 2026), the harness and updater suites (`lez-harness`) and the round trip (`roundtrip`) among them. The round trip passed on the run's second attempt: on the first, its end-to-end step hung for 73 minutes, apparently in the `forge script` call of `cli/tests/e2e.rs` (a `forge` process was still running when the job was cancelled), and the job was cancelled; that one job was rerun alone, cause not established. The `macos` workflow passed at `<commit>` (run `<id>`) once its runner moved off the retired `macos-14` image. | GitHub runs 45075900693 (attempt 2) and `<id>`; `.github/workflows/ci.yml`; `.github/workflows/macos.yml` |
 
 ## Not applied here (later pieces)
 

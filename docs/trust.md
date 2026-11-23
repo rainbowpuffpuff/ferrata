@@ -587,9 +587,10 @@ built, and the test or recorded run that shows the mitigation.
   real private run. A receiving program sees a replayed call as it sees any call from that sender (`ReceiveInput`,
   `lee/state_machine/core/src/program/mod.rs:373-385`, has no field that tells them apart), and the delivery's
   inherited authorizations and PDA seeds decide whether it is authorized (`authorize`, `execution_state.rs:1431-1470`).
-  So, by our reading of LEZ's source (not tested), every check Ferrata's programs make on a message, a named sender,
-  an actor of their own program (`ReceiveInput::from_own_program`, `program/mod.rs:390-393`) or an authorization, is
-  met by a journal that names it, and a forged receipt LEZ accepted could reach:
+  So, by our reading of LEZ's source (not tested), every check of who sent a call (a named sender, an actor of the
+  receiver's own program: `ReceiveInput::from_own_program`, `program/mod.rs:390-393`) or of its authorization is met by
+  a journal that names it; the receiver's own checks of the call's content still run, since LEZ executes the receiver
+  on the replayed call (`deliver_to_public`, `execution_state.rs:910-917`). A forged receipt LEZ accepted could reach:
   - in the attestation program, `ApplyVerified` from any actor of the program (`lez/guests/program/src/main.rs:288-305`),
     `Apply` in a job actor's name (`:269-286`) and `Record` in the instance actor's name (`:405-425`; `attest` trusts a
     record because only `Record`, accepted from `instance(id)` alone, writes one: `:429-430`). A job is applied after
@@ -605,9 +606,12 @@ built, and the test or recorded run that shows the mitigation.
     their sender, a record's, an entry's or an instance's (`lez/guests/holdings/src/main.rs:40`,
     `lez/guests/statements/src/main.rs:41`, `lez/guests/statements-reader/src/main.rs:43`,
     `lez/guests/rebate/src/main.rs:59`, `:89`).
-  No Ferrata program is outside this, and nothing on our side removes it: a program cannot tell a replayed call from a
-  public one, so no check or flag of ours separates them (an instance refusing `ApplyVerified` would still accept
-  `Apply` and `Record` in its own actors' names). The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
+  No Ferrata program is outside this, and nothing in these programs removes it. A program cannot tell a replayed call
+  from a call another actor makes. A replayed call always names a sender (LEZ's `Sender::source`,
+  `execution_state.rs:346-351`), so only handlers that take top-level calls alone are out of its reach, such as the
+  bridge's role actors (`lez/guests/bridge/src/main.rs:979`). Every Ferrata program accepts calls from other actors
+  somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
+  `Record` in its own actors' names. The fix is LEZ's: a LEZ whose receipt check is sound, a LEZ on
   risc0 3.1.0 (LEZ `dev` moved at `6aaabe5`). No live exposure follows today: no v0.4 program of ours runs on a public
   network, and every v0.4 sequencer named in this repository is one we ran.
 - **If the proof system is unsound** and RISC Zero publishes the proof, anyone can trip the stop: nothing

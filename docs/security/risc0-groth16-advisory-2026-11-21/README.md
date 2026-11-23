@@ -123,8 +123,9 @@ the sequencer executes rather than verifies by proof (the light client's updates
 a privacy-preserving transaction acts on public actors through the calls its journal lists, and LEZ replays each on the
 public side as the journal states it, sender, inherited authorizations and PDA seeds included, with no check of its own
 (LEZ's `lee/state_machine/core/src/execution_state.rs:842-872`, `proven.with_from(Sender::Call(proven.envelope.from))`
-at `:849`, at v0.4.0-rc1 and rc3); a receiving program cannot tell such a call from a public one (`ReceiveInput`,
-`lee/state_machine/core/src/program/mod.rs:373-385`). Only the receipt check binds these calls to a real private run.
+at `:849`, at v0.4.0-rc1 and rc3); a receiving program cannot tell such a call from a call another actor makes
+(`ReceiveInput`, `lee/state_machine/core/src/program/mod.rs:373-385`), though its own checks of the call's content still
+run (`execution_state.rs:910-917`). Only the receipt check binds these calls to a real private run.
 LEZ v0.4.0-rc1 and rc3 accept a transaction when its proof, decoded as any `InnerReceipt`, passes `Receipt::verify` for
 the privacy circuit (`lee/state_machine/src/privacy_preserving_transaction/circuit/mod.rs:51-65`, the same in both).
 With the versions both lock (risc0-zkvm 3.0.5, risc0-groth16 3.0.4, risc0-circuit-recursion 4.0.4), that accepts a
@@ -154,9 +155,12 @@ write the state it reads. Internal reviews of `main` at `8c38d723` (22 and 23 No
 
 **What changes.** `docs/trust.md` states it: a fourth assumption in §0, the provers' row of §2.4, §2.5 and §5. The
 RFP-021 rows of `docs/requirements-status.md` that rest on an instance's store (F.1, F.2, F.12, S.6, VS.1, VS.2, VS.5,
-VS.6) and RFP-022 Sec.6 give it as a condition. Nothing deployed changes. Nothing on our side removes the dependence: a
-program cannot tell a replayed call from a public one, so no check or flag of ours separates them (an instance refusing
-`ApplyVerified` would still accept `Apply` and `Record` in its own actors' names). The fix is LEZ's, a LEZ on risc0
+VS.6) and RFP-022 Sec.6 give it as a condition. Nothing deployed changes. Nothing in our programs removes the dependence.
+A program cannot tell a replayed call from a call another actor makes. A replayed call always names a sender
+(`execution_state.rs:346-351`), so only handlers that take top-level calls alone are out of its reach, such as the
+bridge's role actors (`lez/guests/bridge/src/main.rs:979`). Every Ferrata program accepts calls from other actors
+somewhere, and no flag of ours separates them: an instance refusing `ApplyVerified` would still accept `Apply` and
+`Record` in its own actors' names. The fix is LEZ's, a LEZ on risc0
 3.1.0.
 
 ## Plan

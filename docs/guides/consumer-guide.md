@@ -129,7 +129,9 @@ against the slot it names. It changes no state ([`lez/RESULTS.md`](../../lez/RES
 Proof data travels in the transaction. A log needs its whole receipt as the trie leaf: the block's
 largest receipt (306 logs) made a 58,812-byte transaction and cost 1,619,960 cycles; a receipt several
 times larger would not fit the 5M execution target (measured, in-process harness;
-[`lez/RESULTS.md`](../../lez/RESULTS.md) §5, row 6 and "What is not built").
+[`lez/results/stage4-attest.md`](../../lez/results/stage4-attest.md) row 6, regenerated at `7602bc53` with this tree's
+programs; [`lez/RESULTS.md`](../../lez/RESULTS.md) §5, "What is not built", whose table is an earlier copy reading
+1,618,872).
 
 ## 4. The two paths in detail
 
@@ -140,8 +142,9 @@ sender check of §2. LEZ v0.4 runs synchronous messages depth-first in one trans
 and the action succeed or fail together ([`attestation.md`](../design/attestation.md) §6.1).
 
 Measured on mainnet block 26,384,851 (finalized 10 November 2026), in-process harness, RISC Zero's
-accelerated Keccak in the program ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5,
-`results/stage4-attest.md`, `results/stage4-attest-consumer.md`):
+accelerated Keccak in the program ([`lez/results/stage4-attest.md`](../../lez/results/stage4-attest.md) and
+[`stage4-attest-consumer.md`](../../lez/results/stage4-attest-consumer.md), regenerated at `7602bc53` with this tree's
+programs; [`lez/RESULTS.md`](../../lez/RESULTS.md) §5 keeps an earlier copy):
 
 | Transaction | Execution gas | Of the 5M target | Storage gas (tx bytes) |
 |---|---:|---:|---:|

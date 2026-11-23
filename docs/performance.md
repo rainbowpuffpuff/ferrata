@@ -36,10 +36,11 @@ gas is the transaction's serialized size.
 ### P.1 Verifying an attestation within one LEZ transaction
 
 **Met** for every fact type measured. In-process harness, mainnet block 26,384,851 (finalized
-10 November 2026), RISC Zero's accelerated Keccak in the program ([`lez/RESULTS.md`](../lez/RESULTS.md)
-§5, `results/stage4-attest.md`, `results/stage4-attest-consumer.md`, regenerated on 22 November 2026 at `7602bc53` with this
-tree's programs, program `816d1fef…`; the private consumer's read,
-`results/stage4-attest-private-public-outputs.txt`):
+10 November 2026), RISC Zero's accelerated Keccak in the program
+([`lez/results/stage4-attest.md`](../lez/results/stage4-attest.md), `stage4-attest-consumer.md`, regenerated on
+22 November 2026 at `7602bc53` with this tree's programs, program `816d1fef…`, and the private consumer's read,
+`stage4-attest-private-public-outputs.txt`; [`lez/RESULTS.md`](../lez/RESULTS.md) §5 keeps an earlier copy of the
+first two):
 
 | Statement (one transaction each) | Execution gas | Of the 5M target | Storage gas |
 |---|---:|---:|---:|
