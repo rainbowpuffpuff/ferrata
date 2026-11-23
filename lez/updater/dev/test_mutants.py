@@ -1,8 +1,8 @@
 """Tests of dev/mutants.py: `python3 -I lez/updater/dev/test_mutants.py`.
 
 A mutant's run stopped by SIGTERM, SIGHUP or SIGINT (Ctrl-C) puts the sources back byte for byte and kills the command
-it ran and the process that command started, as cargo starts a test binary (review-fix-updater3: SIGTERM used to end
-the process before the `finally` that restores them, the sources left mutated; review-fix-updater3b: the test binary
+it ran and the process that command started, as cargo starts a test binary (internal reviews: SIGTERM used to end
+the process before the `finally` that restores them, the sources left mutated; then the test binary
 cargo started ran on). No cargo: the run's command is replaced by a sleeping Python process that starts another, and
 the mutant edits a copy of the one source it touches, in a temporary directory (TMPDIR). Standard library only.
 """

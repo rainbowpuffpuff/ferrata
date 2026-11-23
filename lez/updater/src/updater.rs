@@ -105,17 +105,17 @@ pub const WINDOW_MARGIN_MS: u64 = 60_000;
 /// the program checks `Open`'s window against) is signed in the future: no honest node serves one (a sync aggregate
 /// exists only once its slot's block does), and the program refuses its `Open` until then. The signature does not cover
 /// `signature_slot` (only its fork version), so a source can serve a real update re-dated to a later slot of the same
-/// period, whose window has not opened (review-integ9c M4, review-integ9d M1): such a candidate is refused and its
+/// period, whose window has not opened (internal reviews' findings M4 and M1): such a candidate is refused and its
 /// source demoted (`policy.demote_rounds`), and nothing else that source served in the round is used. The margin is the
 /// skew between the chain's clock and Ethereum's that the updater tolerates, as for its windows ([`WINDOW_MARGIN_MS`]).
 /// One re-dated within it is not refused (a few seconds of clock skew make an honest update look the same), but an
 /// update whose `Open` window has not opened by the chain's clock never outranks one that can be sent now (the order in
 /// `plan_inner`): a source that re-dates so, even again every round, holds back only an update no other source serves,
-/// for as long as it alone serves it (review-fix-updater3 M1: it used to hold every update back until the period ended
+/// for as long as it alone serves it (an internal review's M1: it used to hold every update back until the period ended
 /// when the re-dated update adopted the next committee). One re-dated to a slot that has started can be chosen, but
 /// every step of its job that this updater sends before it carries the job, whoever opened it, waits a turn counted by
-/// the instance's state, not by the job (a new copy is a new job, and anyone may open it: review-fix-updater3b M1,
-/// review-fix-updater4 M1): one turn per kind of step and state, at most `policy.defer_window - 1` rounds. It is a
+/// the instance's state, not by the job (a new copy is a new job, and anyone may open it: two internal
+/// reviews' findings M1): one turn per kind of step and state, at most `policy.defer_window - 1` rounds. It is a
 /// real update: applied, it moves the instance.
 pub const FUTURE_MARGIN_MS: u64 = WINDOW_MARGIN_MS;
 /// Refusals in a row, each of a step that stayed due after it (not a race another party won), after which this
@@ -282,7 +282,7 @@ pub fn state_digest(seen: &Option<(bool, Vec<u8>)>) -> Root {
 /// What the turn (`policy.defer_window`) of an `Open`, and of any step of a job this updater does not carry, is counted
 /// by: the instance's state ([`state_digest`], as [`Action::store_seen`] holds it), which no source can change, not the
 /// job, whose id a source can change (it hashes `signature_slot`, which the signature does not cover) and whose job
-/// anyone may open (review-fix-updater3b M1, review-fix-updater4 M1).
+/// anyone may open (two internal reviews' findings M1).
 fn state_turn(state: &InstanceState) -> Root {
     state_digest(&Some((state.active, state.store.clone())))
 }
@@ -1264,14 +1264,14 @@ impl Updater {
         // next committee when the store lacks it; then the furthest finalized header; then the earliest signature slot;
         // then the most signers. The signature does not cover `signature_slot` (only its fork version), so a source can
         // serve a real update, or another real update of the same finalized header with more signers, re-dated to a
-        // later slot of the same period, whose `Open` window has not opened yet (review-integ9c M4, review-integ9d M1).
+        // later slot of the same period, whose `Open` window has not opened yet (internal reviews' findings M4 and M1).
         // One signed in the future by more than FUTURE_MARGIN_MS was refused above. One re-dated within it, again every
         // round, used to rank first when it adopted the next committee, and every round waited for its window until the
-        // period ended (review-fix-updater3 M1); now it ranks after every update that can be sent, so it holds back only
+        // period ended (a review's M1); now it ranks after every update that can be sent, so it holds back only
         // itself, while no other source serves its finalized header. One re-dated to a slot that has started can rank
         // first; the steps of its job then wait their turns by the instance's state (`next_step`), not by the job, so a
-        // new copy each round, opened by the source itself or not, does not postpone them (review-fix-updater3b M1,
-        // review-fix-updater4 M1). The comparison is the program's own (`Open`'s
+        // new copy each round, opened by the source itself or not, does not postpone them (two internal
+        // reviews' findings M1). The comparison is the program's own (`Open`'s
         // window starts at the signature slot's start), exact: a tolerance would let a source re-date to a slot about to
         // start. The signer count does not change the store an update leaves (every update applied has two thirds of the
         // committee); it only breaks the remaining ties.
@@ -1443,8 +1443,8 @@ impl Updater {
         // its blocks; and anyone may open a job and send its steps. Counted by the job, a source serving a new copy each
         // round, or a new copy it had opened (and taken on a step) itself, had this updater count again each round, and
         // one that knew its tag (its name and payer account, both public) served only copies it deferred: an update
-        // adopting the next committee held every update back for good (review-fix-updater3b M1, review-fix-updater4
-        // M1). Now each kind of step has one turn per state, at most `defer_window - 1` rounds, whatever the sources
+        // adopting the next committee held every update back for good (two internal reviews' findings M1). Now each
+        // kind of step has one turn per state, at most `defer_window - 1` rounds, whatever the sources
         // serve and others send; a source can only present jobs at another step, each kind's turn running once.
         let since = match step {
             Step::Open => state_turn(state),
@@ -1794,7 +1794,7 @@ impl Updater {
                     // turn, its wait drawn from each round's job, would end at the first round whose draw had run
                     // out, so with `finish_own_jobs = false` and sources whose best update changes every round (beacon
                     // nodes serving their newest finality update) an `Open` went out about every third round
-                    // (review-fix-updater4 L2); without a new turn, every round.
+                    // (an internal review's L2); without a new turn, every round.
                     let whole = self.policy.defer_window.saturating_sub(1);
                     self.first_due
                         .insert((state_digest(&action.store_seen), action.step), (self.round + 1, Some(whole)));

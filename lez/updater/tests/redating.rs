@@ -1,12 +1,12 @@
 //! Light-client sources that re-date real updates: they change `signature_slot`, which the signature does not cover
-//! (only its fork version), to steer which update the updater chooses and when it sends it. review-fix-updater3b M1: a
+//! (only its fork version), to steer which update the updater chooses and when it sends it. An internal review's M1: a
 //! source re-dating an update that adopts the next committee to slots that have started, a new slot each round, and
 //! choosing them with the updater's tag (its name and payer account, both public), had the deferral postpone that
-//! update's `Open` every round, so that no update was sent until the source was removed. review-fix-updater4 M1: the
+//! update's `Open` every round, so that no update was sent until the source was removed. A later review's M1: the
 //! same source also sending each copy's `Open` (or `Open` and `Miller`) itself, which anyone may, so that the updater's
 //! next step was a later one, still counted by the job; and the strongest attacker known against the fix, cycling
-//! through every kind of step. review-fix-updater4 L2: `finish_own_jobs = false` with honest sources serving their
-//! newest update. Then the variants of review-fix-updater3 M1 that review-fix-updater3b and review-fix-updater3
+//! through every kind of step. That review's L2: `finish_own_jobs = false` with honest sources serving their
+//! newest update. Then the variants of an earlier review's M1 (re-dating within the margin) that the reviews
 //! measured (the reviewers' attack tests, kept as regression tests). The in-process chain (LEZ v0.4.0-rc1's state
 //! machine and fee settlement, dev mode) with its block time set (`HarnessLedger::now`), the lab's recorded mainnet
 //! data, as `refusals.rs`.
@@ -163,7 +163,7 @@ const ROTATED: u64 = 15_631_200;
 /// Entry 20's finalized slot.
 const ENTRY_20: u64 = 15_635_392;
 
-// ---- review-fix-updater3b M1: re-dated to slots that have started, a new job each round ---------------------------
+// ---- The started slots (an internal review's M1): re-dated to slots that have started, a new job each round -------
 
 /// The wait `H(tag, job, step) mod window` that an updater whose tag is `tag` draws for `step` of job `jid`.
 fn wait(tag: &[u8; 32], jid: &Root, step: Step, window: u64) -> u64 {
@@ -250,7 +250,7 @@ impl Source for Starver {
 /// before entry 13, and the copies served.
 type Starved = (Rounds, Rounds, Updater, HarnessLedger, usize, Vec<(u64, u64, u64)>);
 
-/// review-fix-updater3b M1's setting with the deployed `defer_window` 8: the store at entry 9 (period 1907, its next
+/// The started slots' setting with the deployed `defer_window` 8: the store at entry 9 (period 1907, its next
 /// committee known); then the sources at entry 13 for `n13` rounds 12 s apart: both serve its finality update, which
 /// rotates the committees (after which the store lacks the next one); as its period-1908 update the honest source
 /// serves entry 10, the [`Starver`] entry 12 (finalizing later, so it ranks first), re-dated; then at entry 20 for
@@ -307,7 +307,7 @@ fn starved(finish_own_jobs: bool, payer_byte: u8, n13: usize, n20: usize) -> Sta
     (p13, p20, u, l, n0, served)
 }
 
-/// review-fix-updater3b M1. The source re-dates entry 12, which adopts the next committee, every round to a started slot
+/// The started slots. The source re-dates entry 12, which adopts the next committee, every round to a started slot
 /// it has not used, the one whose `Open` the updater would defer longest. The deferral used to count from the first
 /// round each job was due, and the job id hashes `signature_slot`: every copy was a new job, deferred in its first
 /// round, so the next committee was never adopted and nothing was sent past the period's end (the review: 113 rounds),
@@ -395,7 +395,7 @@ fn started_slots_with_finish_own_jobs_off_an_open_is_sent_once_per_turn() {
     assert_eq!(refused(&l, 0), 0);
 }
 
-// ---- review-fix-updater4 M1: the same source opening each copy's job itself (anyone may) ---------------------------
+// ---- The opener (a later review's M1): the same source opening each copy's job itself (anyone may) -----------------
 
 fn id_of(k: &PrivateKey) -> AccountId {
     AccountId::from(&PublicKey::new_from_private_key(k))
@@ -623,7 +623,7 @@ fn assert_opened_bounded(what: &str, o: &OpenedRun) {
     assert_eq!(o.victim_refused, 0, "{what}");
 }
 
-/// review-fix-updater4 M1, the economical form: the source also sends each copy's `Open` itself, so the updater finds
+/// The opener, the economical form: the source also sends each copy's `Open` itself, so the updater finds
 /// the job open and its next step is `Miller`; a new copy every 7 rounds (the longest a turn lasts), chosen by the
 /// `Miller` wait. Counted by the job, a new opened copy restarted the count: nothing sent in 115 rounds after the
 /// rotation, for one `Open` per 7 rounds (the review). Now the `Miller` of a job this updater does not carry waits one
@@ -658,7 +658,7 @@ fn opener_cycling_through_every_kind_of_step_is_bounded() {
     assert_opened_bounded("each kind of step in turn, then a job to carry", &o);
 }
 
-// ---- review-fix-updater4 L2: finish_own_jobs = false with honest sources serving their newest update --------------
+// ---- Newest-only sources (its L2): finish_own_jobs = false with honest sources serving their newest update --------
 
 /// A recorded source serving, as its finality update, its newest one re-dated to the slot that held Ethereum's time
 /// `delay_ms` earlier: as a beacon node serves a new finality update each slot (a new job each round).
@@ -692,12 +692,12 @@ impl Source for Newest {
     }
 }
 
-/// review-fix-updater4 L2: `finish_own_jobs = false`, two honest sources serving their newest finality update each
+/// Newest-only sources: `finish_own_jobs = false`, two honest sources serving their newest finality update each
 /// slot (a new job each round), `defer_window` 8, entries 4 to 7 for 15 rounds each. The updater takes the newest
 /// update each round and leaves the job it opened, so it finishes none; after each `Open` sent on the state, the next
-/// one there waits a whole turn: at most one `Open` per 8 rounds (the review: 21 in 60 rounds at `06ed8bc1`, a fresh
-/// turn after each send ending at the first round whose wait, drawn from that round's job, had run out; 9 with the
-/// turn counted by the job).
+/// one there waits a whole turn: at most one `Open` per 8 rounds (the review: 21 in 60 rounds before the whole turn
+/// after a send, a fresh turn after each send ending at the first round whose wait, drawn from that round's job, had
+/// run out; 9 with the turn counted by the job).
 #[test]
 fn newest_only_sources_with_finish_own_jobs_off_open_once_per_turn() {
     let w = 8u64;
@@ -746,7 +746,7 @@ fn newest_only_sources_with_finish_own_jobs_off_open_once_per_turn() {
     assert_eq!(refused(&l, n0), 0);
 }
 
-// ---- review-fix-updater3 M1's variants (review-fix-updater3b, review-fix-updater3): red under m1roll or m1 -------
+// ---- The earlier attacks' variants (re-dating within the margin): red under m1roll or m1 -------------------------
 
 /// How many slots past the slot holding Ethereum's clock a source re-dates its update in round `n` (0: that slot,
 /// which has started); at most the period's last slot, never before the recorded signature slot.
@@ -833,8 +833,8 @@ fn run(u: &mut Updater, l: &mut HarnessLedger, c: &Clocks, t: &mut u64, n: usize
     out
 }
 
-/// review-fix-updater3 M1's setting: the store at entry 9; the sources at entry 13 for 60 rounds, then at entry 20 for
-/// 30. Returns the rounds at 13 and at 20.
+/// The earlier attack's setting (re-dating within the margin): the store at entry 9; the sources at entry 13 for 60
+/// rounds, then at entry 20 for 30. Returns the rounds at 13 and at 20.
 fn adoption(r: &Rec, u: &mut Updater, l: &mut HarnessLedger, clock: &Clock, c: &Clocks) -> (Rounds, Rounds) {
     settle(u, l, 200);
     let s0 = store(u, l);
@@ -880,7 +880,7 @@ fn mix(n: usize) -> u64 {
     z ^ (z >> 31)
 }
 
-/// review-fix-updater3b, variant 1: the source re-dates entry 12 by a few slots past the clock, varying each round. The
+/// A review's variant 1: the source re-dates entry 12 by a few slots past the clock, varying each round. The
 /// review's schedule, `(n * 6364136223846793005 + 1442695040888963407) >> 33` mod 6 in round `n`, meant 0 to 5 slots;
 /// it gives 5, 2, 4, 5, 2, 4, ..., 1, 2 or 4 or 5 in every round before round 107: inside the 60 s margin, not refused,
 /// its window never open. With `defer_window` 1 and 8. Under the order of `81bbea61` (mutant `m1roll`) it held the
@@ -912,7 +912,7 @@ fn earlier_re_dated_a_few_slots_varying_each_round_does_not_hold_the_adoption() 
     }
 }
 
-/// review-fix-updater3b, variant 2: two sources re-date entry 12 alike (four slots past the clock every round: the same
+/// A review's variant 2: two sources re-date entry 12 alike (four slots past the clock every round: the same
 /// bytes), beside one honest source; two honest sources with `min_agreeing = 2`; four sources reporting four clients
 /// with `min_distinct_clients = 2` and `client_match = "bytes"`. Under `m1roll` each held the adoption (57 of 60 rounds
 /// waiting).
@@ -954,7 +954,7 @@ fn earlier_two_liars_re_dating_alike_do_not_hold_the_adoption() {
     }
 }
 
-/// review-fix-updater3, R3: a source that re-dates its finality update 600 slots on every other answer and is honest
+/// A review's case R3: a source that re-dates its finality update 600 slots on every other answer and is honest
 /// otherwise, over four entries of 60 rounds (`demote_rounds` 50): no round waits, every update the other source serves
 /// is applied, and the liar is demoted again each time it lies after its demotion has ended. Without the refusal of
 /// updates signed in the future (mutant `m1`) it is never demoted.

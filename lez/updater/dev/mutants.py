@@ -12,14 +12,14 @@ of its own; SIGKILL cannot be caught). Exit status: cargo's (non-zero
 expected: the tests fail without the fix); 128 + the signal's number when stopped. `dev/test_mutants.py` checks the
 restoring.
 
-The fixes (22 November 2026): m1 and m1near, review-integ9d M1 / review-integ9c M4 (an update signed in the future is
+The fixes (22 November 2026): m1 and m1near (an update signed in the future is
 refused, of one finalized header the earliest-signed is taken; m1near also undoes m1roll's fix, which alone would pass
-its tests; m1 too, so that it restores the old behaviour whole); m1roll, review-fix-updater3 M1 (an update that can be
-sent now ranks first, so one re-dated within the margin every round holds back only itself); m4, review-fix-updater3b
-M1 (an `Open` waits its turn counted by the instance's state, not by its job, so a source serving a new copy each round
-cannot postpone it); m6, review-fix-updater4 M1 (so does a step of a job this updater does not carry, so a source
+its tests; m1 too, so that it restores the old behaviour whole); m1roll (an update that can be
+sent now ranks first, so one re-dated within the margin every round holds back only itself);
+m4 (an `Open` waits its turn counted by the instance's state, not by its job, so a source serving a new copy each round
+cannot postpone it); m6 (so does a step of a job this updater does not carry, so a source
 opening each copy itself cannot either); m4reset and m7, their companions (after a step is sent on a state, the next of
-its kind there waits a whole turn: m4reset, no new turn; m7, a fresh one, review-fix-updater4 L2); u2, L-U2 (a round
+its kind there waits a whole turn: m4reset, no new turn; m7, a fresh one); u2, L-U2 (a round
 that cannot fetch the committees counts towards `down`); u3, L-U3 (a refusal whose re-reads fail is judged once the
 chain reads again); u5, L-U5 (holds for good outlive HOLD_ROUNDS and restarts); u4f, L-U4f (an IPv6 client counts by
 its /64); u6, L-U6 (the bound tests fail for a reader that takes an answer whole and then refuses it).
@@ -53,12 +53,12 @@ MUTANTS = {
                 (T, "    for (case, to, future, payer) in cases {",
                  "    for (case, to, future, payer) in cases.into_iter().filter(|c| !c.2) {")],
                ["--test", "refusals", "a_re_dated_update_with_more_signers"]),
-    # The order of 81bbea61: an update whose window has not opened can rank first (review-fix-updater3 M1).
+    # The order of 81bbea61: an update whose window has not opened can rank first (an internal review's M1).
     "m1roll": ([(U, *OPEN)], ["--test", "refusals", "within_the_margin_every_round"]),
-    # An `Open`'s turn counted by its job, as before review-fix-updater3b M1: a new copy each round is a new job.
+    # An `Open`'s turn counted by its job, as before an internal review's M1: a new copy each round is a new job.
     "m4": ([(U, "            Step::Open => state_turn(state),\n", "            Step::Open => chosen.jid,\n")],
            ["--test", "redating", "started_slots_an_adopting"]),
-    # A step of a job this updater does not carry counted by the job, as before review-fix-updater4 M1: a new copy the
+    # A step of a job this updater does not carry counted by the job, as before a later review's M1: a new copy the
     # source opened itself each round restarts the count.
     "m6": ([(U, "            _ => state_turn(state),\n", "            _ => chosen.jid,\n")],
            ["--test", "redating", "opener_"]),
@@ -66,7 +66,7 @@ MUTANTS = {
     "m4reset": ([(U, SENT, ".retain(|_, _| true);\n"
                            "                    let _ = (whole, state_digest(&action.store_seen));")],
                 ["--test", "redating", "finish_own_jobs_off"]),
-    # A fresh turn after a step sent on a state, its wait drawn from each round's job, as before review-fix-updater4 L2.
+    # A fresh turn after a step sent on a state, its wait drawn from each round's job, as before a later review's L2.
     "m7": ([(U, SENT, ".remove(&(state_digest(&action.store_seen), action.step));\n"
                       "                    let _ = whole;")],
            ["--test", "redating", "newest_only"]),
@@ -113,7 +113,7 @@ def cargo_test(args: list) -> list:
 
 def stopped(signum, _frame):
     """SIGTERM and SIGHUP end the run as Ctrl-C does: by an exception, so that `finally` puts the sources back (their
-    default action ends the process at once, the sources left mutated: review-fix-updater3). Further signals are
+    default action ends the process at once, the sources left mutated, as an internal review found). Further signals are
     ignored from here, so that none stops the restoring half way."""
     for sig in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
         signal.signal(sig, signal.SIG_IGN)
@@ -145,7 +145,7 @@ def main() -> int:
         print(f"mutant {sys.argv[1]}: {' '.join(cmd)}", flush=True)
         # cargo in a session (and process group) of its own: on an exception (Ctrl-C, or a signal above) the group is
         # killed, the test processes cargo started with it, before the sources are put back (killing cargo alone left
-        # a test binary running on with the mutated build: review-fix-updater3b).
+        # a test binary running on with the mutated build, as an internal review found).
         proc = subprocess.Popen(cmd, cwd=os.path.join(ROOT, "lez"), start_new_session=True)
         try:
             return proc.wait()
