@@ -454,6 +454,45 @@ def prove(name: str, run: str, limit_s: int, groth16: bool = False) -> dict:
 
 
 @app.function(**GPU_FUNCTION)
+def prove_bytes(program: bytes, input_bytes: bytes, meta: dict, limit_s: int = 1800, groth16: bool = True) -> dict:
+    """A prover service's call (RISC Zero 3.1): one proof of `program` (an R0BF guest binary, docs/image-ids.md `*_31`)
+    on `input_bytes` (a checkpoint input as its guest reads it, or a release input as the CLI's `--input-out` writes
+    it), held to `meta["journal"]` (hex; `meta["kind"]` is "checkpoint-b", "checkpoint" or "release"), on the GPU;
+    with `groth16`, the Groth16 receipt too, also on the GPU. Returns the image id, the journal and the 260-byte seal
+    the vault takes (`seal_hex`), with the prover's records; nothing is kept on the Volume. Needs no secret: deploy
+    it in a workspace that holds none, with bin-31/ of the Volume `ferrata-prover` built there or copied in."""
+    import subprocess
+    import tempfile
+    import threading
+
+    work = tempfile.mkdtemp(prefix="prove-")
+    for name, data in (("program.bin", program), ("input.bin", input_bytes)):
+        with open(f"{work}/{name}", "wb") as f:
+            f.write(data)
+    with open(f"{work}/meta.json", "w") as f:
+        json.dump(meta, f)
+    prover = _local_copy(f"{BIN}/ferrata-modal-cuda", "/root/bin/ferrata-modal-cuda")
+    cmd = [prover, "prove", meta.get("name", "job"), f"{work}/program.bin", f"{work}/input.bin", f"{work}/meta.json",
+           f"{work}/out"] + (["--groth16"] if groth16 else [])
+    env = {**os.environ, "RUST_BACKTRACE": "1"}
+    env.pop("RISC0_DEV_MODE", None)
+    t0 = time.time()
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, env=env)
+    killer = threading.Timer(limit_s, proc.kill)
+    killer.start()
+    log = proc.stdout.read()
+    rc = proc.wait()
+    killer.cancel()
+    out = f"{work}/out"
+    read = lambda n: open(f"{out}/{n}").read().strip() if os.path.exists(f"{out}/{n}") else None
+    return {"ok": rc == 0 and (read("seal.hex") is not None or not groth16), "exit_code": rc, "wall_s": time.time() - t0,
+            "seal_hex": read("seal.hex"), "journal_hex": read("journal.hex"),
+            "prove": json.loads(read("prove.json") or "null"), "groth16": json.loads(read("groth16.json") or "null"),
+            "gpu": _sh("nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader"),
+            "build_info": json.load(open(f"{BIN}/ferrata-modal-cuda.json")), "log": log[-4000:]}
+
+
+@app.function(**GPU_FUNCTION)
 def prove_lez(run: str, limit_s: int, job: str = "lez-update") -> dict:
     return _prove_lez(run, limit_s, job)
 
@@ -533,3 +572,26 @@ def lez(run: str = "", limit_s: int = 3600, job: str = "lez-update"):
     (HERE / "logs").mkdir(exist_ok=True)
     (HERE / "logs" / f"run-{run}-{job}.json").write_text(json.dumps(record, indent=2) + "\n")
     print(f"RESULT {job}: ok={record['ok']} wall_s={record['wall_s']:.1f} gpu={record['gpu']} tx_bytes={record['tx_bytes']}")
+
+
+@app.local_entrypoint()
+def prove_one(program: str, input: str, meta: str, out: str = "", groth16: bool = True, limit_s: int = 1800):
+    """`prove_bytes` on local files (a check of the prover service's call): writes OUT/{seal.hex, journal.hex,
+    result.json} when --out is given."""
+    t0 = time.time()
+    r = prove_bytes.remote(pathlib.Path(program).read_bytes(), pathlib.Path(input).read_bytes(),
+                           json.loads(pathlib.Path(meta).read_text()), limit_s, groth16)
+    r["client_round_trip_s"] = time.time() - t0
+    if out:
+        o = pathlib.Path(out)
+        o.mkdir(parents=True, exist_ok=True)
+        for k, n in (("seal_hex", "seal.hex"), ("journal_hex", "journal.hex")):
+            if r.get(k):
+                (o / n).write_text(r[k] + "\n")
+        (o / "result.json").write_text(json.dumps({k: v for k, v in r.items() if k != "log"}, indent=2) + "\n")
+    p, g = r.get("prove") or {}, r.get("groth16") or {}
+    print(f"RESULT ok={r['ok']} gpu={r['gpu']} segments={p.get('segments')} stark_s={p.get('total_s')} "
+          f"groth16_s={g.get('wrap_s')} selector={g.get('selector')} round_trip_s={r['client_round_trip_s']:.1f}")
+    if not r["ok"]:
+        print(r["log"][-2000:])
+        raise SystemExit(1)

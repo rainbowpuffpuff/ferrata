@@ -70,6 +70,20 @@ contract Verifier31Test is Test {
         stop.verify(seal, bytes32(uint256(RELEASE_IMAGE_ID) ^ 1), digest);
     }
 
+    /// @notice A seal made by the prover service on a GPU (STARK and Groth16 step both on an NVIDIA L4,
+    ///         gpu-prover/modal_app.py prove_bytes) verifies like the CPU-made one, for its journal only.
+    function test_aSealMadeOnTheGpuVerifies() public {
+        string memory fx = vm.readFile("test/real/fixtures/gpu-release-31.json");
+        assertEq(vm.parseJsonBytes32(fx, ".releaseImageId"), RELEASE_IMAGE_ID);
+        bytes memory seal = vm.parseJsonBytes(fx, ".seal");
+        bytes32 digest = sha256(vm.parseJsonBytes(fx, ".journal"));
+        bytes32 other = sha256("another journal");
+        assertEq(bytes4(seal), SELECTOR_3_1_0);
+        stop.verify(seal, RELEASE_IMAGE_ID, digest);
+        vm.expectRevert(VerificationFailed.selector);
+        stop.verify(seal, RELEASE_IMAGE_ID, other);
+    }
+
     /// @notice A seal whose selector is 3.1.0's but whose proof is another's is refused (the second release's proof
     ///         under the first's journal).
     function test_aSwappedProofIsRefused() public {
