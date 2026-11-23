@@ -12,7 +12,9 @@ pragma solidity ^0.8.26;
 // ZB_FIXTURE=zone-bridge-rc3 checkpoint/attestor/zone-bridge.sh fixture.
 
 import {console2} from "forge-std/Test.sol";
+import {Pausable} from "openzeppelin/contracts/utils/Pausable.sol";
 import {VerificationFailed} from "risc0/IRiscZeroVerifier.sol";
+import {RiscZeroVerifierEmergencyStop} from "risc0/RiscZeroVerifierEmergencyStop.sol";
 
 import {FerrataVault} from "../../src/FerrataVault.sol";
 import {RuleBMultiFixture} from "./RuleBMulti.t.sol";
@@ -185,6 +187,35 @@ contract ZoneBridgeRc3Test is RuleBMultiFixture {
         (FerrataVault.ReleaseRequest memory r, bytes memory releaseSeal) = _releaseAt(0);
         vault.release(r, releaseSeal);
         vm.expectRevert(FerrataVault.NullifierAlreadyUsed.selector);
+        vault.release(r, releaseSeal);
+    }
+
+    /// @notice A watcher cancels the real (RISC Zero 3.1) candidate within its wait; nothing is accepted. (Under 3.0.5:
+    ///         RuleBReal.t.sol's test_ruleB_realProof_aWatcherCancels, a skipped record.)
+    function test_rc3_aWatcherCancelsTheRealCandidate() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.prank(watcher);
+        vault.cancelCandidate(c.newState);
+        vm.warp(block.timestamp + WAIT);
+        vm.expectRevert(FerrataVault.UnknownCandidate.selector);
+        vault.finalizeAttested(c);
+        assertEq(vault.finalState(), c.parentState);
+    }
+
+    /// @notice Once the stop's owner trips it, a real RISC Zero 3.1 release proof no longer releases. (Under 3.0.5:
+    ///         ReturnLeg.t.sol's test_negative_afterTheStop_aRealProofIsRefused, a skipped record.)
+    function test_rc3_afterTheStop_aRealProofIsRefused() public {
+        FerrataVault.Checkpoint memory c = _checkpoint();
+        vault.submitCandidate(c, seal);
+        vm.warp(block.timestamp + WAIT);
+        vault.finalizeAttested(c);
+        vm.warp(block.timestamp + 121);
+        (FerrataVault.ReleaseRequest memory r, bytes memory releaseSeal) = _releaseAt(0);
+        RiscZeroVerifierEmergencyStop stop = RiscZeroVerifierEmergencyStop(address(vault.verifier()));
+        vm.prank(freezer); // the stop's owner in this fixture
+        stop.estop();
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         vault.release(r, releaseSeal);
     }
 

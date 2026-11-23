@@ -40,14 +40,16 @@ Status: prototype evidence for a grant proposal. **Not audited.** This v5 vault 
 run, which made the whole round trip through it on 12 November 2026 ([`../e2e/runs/crown-live-3/`](../e2e/runs/crown-live-3/README.md)),
 and at `0xfE3199fa2634413CbAC317371076Cae3EB2d9E54` (the first run's programs), through which it made the round trip on
 11 November 2026 ([`../e2e/runs/crown-live-1/`](../e2e/runs/crown-live-1/README.md)); the v3 vault of the end-to-end
-fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests (376 of the 407; the other 31, in `test/real/`, use real proofs) proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers.
+fixture is on Sepolia with one deposit (`../lez/live/inbound/README.md`, "On Sepolia"). In the vault's own tests outside `test/real/` proofs are mocked: the base verifier accepts exactly the (image id, journal digest) pairs a test registers (the 94 cases of `test/real/` use real proofs; 47 of them are skipped, below).
 It sits behind RISC Zero's unmodified `RiscZeroVerifierEmergencyStop`, as a deployment's would. `test/real/` runs
-the return leg once with no mock on the Ethereum side: RISC Zero's real Groth16 verifier behind the same stop, a
-real proof of the checkpoint program for the candidate, a second one for the finalisation, and real proofs of the
-release program ([`../e2e/README.md`](../e2e/README.md)), and `test/real/RuleBReal.t.sol` verifies the real rule (B)
-checkpoint proof on a rule (B) vault. The LEZ side of those runs is a stand-in: blocks built with
-test sequencer keys, no node, no bridge program. The commitment and nullifier derivations, the LEZ programs and
-the zkVM guests are out of this directory's scope.
+with no mock on the Ethereum side: RISC Zero's real Groth16 verifier **3.1.0** behind the same stop and real proofs
+made under RISC Zero 3.1 (since the move to 3.1, [`test/real/README.md`](test/real/README.md)): rule (B) checkpoints of
+real LEZ zones and the releases of their burns, end to end. **47 of its 94 cases are skipped** (11 suites, each skipped
+in `setUp` with its reason): their fixtures are records of earlier programs proven under RISC Zero 3.0.5, which this
+tree's guests cannot prove again (an input not recorded, or recorded for an earlier program); among them **every rule
+(A) case** (the return leg, `ReturnLeg.t.sol`) and `RuleBReal.t.sol`. Rule (A) has no real-proof test under 3.1; its
+vault logic is covered with the mock verifier. The commitment and nullifier derivations, the LEZ programs and the zkVM
+guests are out of this directory's scope.
 
 ## Running it
 
@@ -58,11 +60,14 @@ forge install --no-git foundry-rs/forge-std@v1.10.0 OpenZeppelin/openzeppelin-co
 python3 -I ../scripts/vault_libs.py check                # the trees lib.lock pins (a tag alone can move); or: vault_libs.py install
 FOUNDRY_OFFLINE=false forge build                        # once: forge is offline here (below); this fetches solc 0.8.26
 forge build --sizes                                      # no compiler warnings, no lint findings; exits 1, see below
-forge test                                               # everything, including the invariant campaigns: 564 passed, 1 skipped
-                                                         # (build box, 18 Nov; PrivacySuite skips without its LEZ half)
+forge test                                               # everything, including the invariant campaigns: 592 passed,
+                                                         # 0 failed, 12 skipped (build box, 23 Nov; the 11 suites of 3.0.5
+                                                         # records, which forge counts as one test each, and PrivacySuite
+                                                         # without its LEZ half)
 forge test --isolate --match-contract GasScenarios -vv   # the numbers in GAS.md (mock verifier)
-forge test --match-path 'test/real/*' -vv                # the return leg with RISC Zero's real verifier and real proofs
-forge test --isolate --match-contract ReturnLegGas -vv   # its gas (GAS.md, "With the real verifier")
+forge test --match-path 'test/real/*' -vv                # RISC Zero's real verifier 3.1.0 and real RISC Zero 3.1 proofs
+forge test --isolate --match-contract ZoneBridgeRc3Test --match-test test_gas -vv   # rule (B) gas with them
+                                                         # (ReturnLegGas, GAS.md's "With the real verifier", is a 3.0.5 record)
 forge test --gas-report --no-match-path 'test/invariant/*' > gas-report.txt
 forge coverage --report summary
 forge fmt --check
@@ -77,9 +82,11 @@ Toolchain and dependencies:
   in offline mode"), `evm_version = "cancun"`, optimizer at 200 runs.
 - forge-std v1.10.0.
 - OpenZeppelin Contracts v5.4.0. The vault uses only `SafeERC20` and `ReentrancyGuardTransient`.
-- risc0-ethereum v3.0.0. The vault's own tests use only `RiscZeroVerifierEmergencyStop` and the verifier
-  interface; `test/real/` and `script/` also deploy its `RiscZeroGroth16Verifier` with its `ControlID`. All are
-  compiled unmodified against the OpenZeppelin v5.2.0 that risc0-ethereum itself pins.
+- risc0-ethereum v3.1.0 (commit `ff30da77`, its tree pinned by `lib.lock`; v3.0.0 until 23 November 2026, whose
+  verifier accepts forged claims: GHSA-mm6c-35cm-g4x2). The vault's own tests use only `RiscZeroVerifierEmergencyStop`
+  and the verifier interface; `test/real/` and `script/` also deploy its `RiscZeroGroth16Verifier` with its `ControlID`
+  (version 3.1.0, selector `0xe71e6620`). All are compiled unmodified against the OpenZeppelin v5.2.0 that
+  risc0-ethereum itself pins.
 
 The vault takes the vendored one-function `IRiscZeroVerifier`, whose selector is the same as RISC Zero's. Its
 runtime is 24,369 bytes, 207 below the EIP-170 limit (24,254 before milestone B1's listing slot), with the library

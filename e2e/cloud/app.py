@@ -131,7 +131,7 @@ gpu_image = (
 
 # ---- the prover image of risc0-groth16 3.0.5 (spike/modal-build/box.py, groth16_wrap) ----------------------------
 wrap_image = (
-    modal.Image.from_registry("risczero/risc0-groth16-prover:v2026-10-20.1", add_python="3.12")
+    modal.Image.from_registry("risczero/risc0-groth16-prover:v2026-10-20.1@sha256:e8c2068fb34bbc41447255aa980a89cbb7d6e5a80c0d66041264431f2a955e47", add_python="3.12")
     .entrypoint([])
 )
 

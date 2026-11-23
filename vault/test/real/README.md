@@ -30,11 +30,14 @@ and the fixtures' other fields are the runs' own.
 Which inputs reproduce their recorded journal under this tree's guests was checked first with the executor
 (`reprove_fixtures.py survey`, r0vm 3.1.0): the ones above do.
 
-## Kept as records of RISC Zero 3.0.5, skipped
+## Kept as records of RISC Zero 3.0.5, skipped: 47 of the 94 cases, every rule (A) case among them
 
-These suites' fixtures are of earlier programs, or their inputs are not in the repository, so they cannot be proven
-again with this tree's guests; their setUp skips them with the reason (`vm.skip`), and their fixtures stay as the
-records of what ran under 3.0.5:
+`forge test --list --match-path 'test/real/*'` lists 94 cases in 22 suites; **47 of them, in 11 suites, are skipped**
+(forge counts each skipped suite as one skipped test, so a run shows 11 there). Their fixtures (13 seals in 6 files) are
+of earlier programs, or their inputs are not in the repository, so they cannot be proven again with this tree's guests;
+their setUp skips them with the reason (`vm.skip`), and their fixtures stay as the records of what ran under 3.0.5. All
+15 rule (A) cases are among them (the return leg); the other 32 are rule (B) cases whose paths the suites above cover
+under 3.1 (below), except those listed under "Not covered":
 
 | Suite | Fixture | Why not proven again | Its cases under 3.1 |
 |---|---|---|---|
@@ -44,5 +47,12 @@ records of what ran under 3.0.5:
 | `RuleBRealTest`, `RuleBRealOnRuleAVaultTest`, `RuleBRealGas` | `rule-b.json` | input not recorded | `RuleBMultiTest`; the rule (A) refusal is `RuleBMultiOnRuleAVaultTest` |
 | `RuleBRotationTest` | `rule-b-rotation.json` | input not recorded | `ZoneBridgeRotationTest` (a rotation, proven again) |
 
-Not covered under 3.1: a real rule (A) proof (the return leg). A fresh one needs a run of `e2e/run.sh` on this tree's
-programs (the LEZ side natively, `checkpoint/fidelity`), then its two checkpoints and two releases proven as above.
+Not covered under 3.1 with a real seal: rule (A) end to end and its refusals (the candidate's and the finalisation's
+journal fields, an early finalisation, a release against a root not yet final) and each checkpoint journal field
+bound under a real seal; the vault's logic for each is covered with the mock verifier (`Checkpoint.t.sol`,
+`JournalBinding.t.sol`). Ported to the rc3 fixtures under 3.1 instead: a watcher cancelling a real candidate
+(`test_rc3_aWatcherCancelsTheRealCandidate`), a real proof refused after the stop trips
+(`test_rc3_afterTheStop_aRealProofIsRefused`), a release's recipient, relayer, fee and nullifier each bound
+(`test_rc3_aRedirectedRepricedOrReplayedReleaseIsRefused`). A fresh rule (A) fixture
+needs a run of `e2e/run.sh` on this tree's programs (the LEZ side natively, `checkpoint/fidelity`), then its two
+checkpoints and two releases proven as above. The deploy tool deploys rule (B) only.

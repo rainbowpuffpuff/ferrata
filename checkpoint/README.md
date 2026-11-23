@@ -46,10 +46,10 @@ export XDG_CACHE_HOME=$PWD/../../tmp/xdg-cache
 cargo +1.88 test -p checkpoint-core -p attestor-core      # unit tests, rule (B), cross-implementation vectors
 cargo +1.88 clippy -p checkpoint-core -p attestor-core --all-targets -- -D warnings
 python3 -I scripts/check-attestor-vectors.py              # the attestor's vectors, independently
-cargo +1.98.1 test -p fidelity -- --nocapture             # fidelity to LEZ / Logos Blockchain, the rule's refusals
-cargo +1.98.1 run -p fidelity --bin gen -- all            # fixtures/ (28 MB, git-ignored; ~25 min, LEZ's
+(cd fidelity && cargo +1.98.1 test -- --nocapture)       # fidelity (its own workspace) to LEZ / Logos Blockchain, the rule's refusals
+(cd fidelity && cargo +1.98.1 run --bin gen -- all)      # fixtures/ (28 MB, git-ignored; ~25 min, LEZ's
                                                           # apply_block runs the fee and clock programs)
-cargo +1.98.1 run -p fidelity --bin gen -- rejournal      # re-derive expected journals after a format change
+(cd fidelity && cargo +1.98.1 run --bin gen -- rejournal) # re-derive expected journals after a format change
 cargo +1.93.0 build --release -p host                     # builds the guests too (risc0-build, rzup toolchain)
 target/release/host ids | micro [--plain] | bench [name…] | compose [--real] | prove <name> | groth16 <name> | verify <name>
 target/release/host gen-b && target/release/host bench 'ra-*' 'rb-*'   # rule (B) against rule (A); needs

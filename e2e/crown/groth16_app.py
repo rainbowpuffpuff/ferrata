@@ -22,7 +22,8 @@ import time
 import modal
 
 APP_NAME = "ferrata-groth16"
-PROVER_IMAGE = "risczero/risc0-groth16-prover:v2026-10-20.1"  # risc0-groth16 3.0.6, src/prove/docker.rs
+# risc0-groth16 3.0.6, src/prove/docker.rs; pinned by its digest (Docker Hub's index of the tag, read 23 November 2026).
+PROVER_IMAGE = "risczero/risc0-groth16-prover:v2026-10-20.1@sha256:e8c2068fb34bbc41447255aa980a89cbb7d6e5a80c0d66041264431f2a955e47"
 
 image = modal.Image.from_registry(PROVER_IMAGE, add_python="3.12").entrypoint([])
 app = modal.App(APP_NAME)
