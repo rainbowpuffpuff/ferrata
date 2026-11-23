@@ -1,7 +1,7 @@
 # `ferrata attest` and `ferrata_attest_module` under a failing Ethereum endpoint, interrupted, and a stale checkpoint (run r2)
 
-RFP-021 Reliability #5 and Usability #5, rerecorded after the second review (replaces run r1 and this run's first
-recording). The tests at the tree of commit `69be43a3` (branch `cli-rows`), run once on the Modal build box (Linux x86-64), 23 November 2026, as CI
+RFP-021 Reliability #5 and Usability #5, rerecorded after the third review (replaces run r1 and this run's earlier
+recordings). The tests at the tree of commit `2b22e5f9` (branch `cli-rows`), run once on the Modal build box (Linux x86-64), 23 November 2026, as CI
 runs them:
 
 ```sh
@@ -12,12 +12,13 @@ cd .. && scripts/ci/modules-resolve.sh ferrata_attest_module
 cd modules/ferrata_attest_module/rust-lib && cargo test --locked -p ferrata-attest-calls --test failing_endpoint -- --nocapture
 ```
 
-Result (measured): the library's tests 7 passed; `attest_faults` 3 passed in 35.3 s; `failing_endpoint` 2 passed
-in 5.9 s (16 failing calls over `rpc_url`, 9 over `eth_rpc_module`). Clippy: no warning in this branch's lines.
+Result (measured): the library's tests 7 passed; `attest_faults` 3 passed in 28.9 s; `failing_endpoint` 2 passed
+in 5.2 s (16 failing calls over `rpc_url`, 9 over `eth_rpc_module`). Clippy: no warning in this branch's lines.
 
 Each `*.txt` under the directories is one command's output, in order (machine paths replaced by `<repo>`); `[exit N]` is
-its exit status, `[killed: …]` a SIGKILL from the test. 62 commands: 26 exit 0, 5 exit 1, 3 exit 2, 10 exit 3, 8 exit
-4, 10 killed. The R.5 zone: 12 submissions, 11 transactions included, each once (one byte-for-byte resubmission); the
+its exit status, `[killed: …]` a SIGKILL from the test. 67 commands: 27 exit 0, 5 exit 1, 4 exit 2, 12 exit 3, 8 exit
+4, 11 killed. Every command runs with `FERRATA_ATTEST_CLOCK_MS` set (`0` unless a case sets this machine's clock), so
+each output begins with the tool's note naming it. The R.5 zone: 12 submissions, 11 transactions included, each once (one byte-for-byte resubmission); the
 guards' zone: 15 submissions admitted, 2 turned away, 13 included, each once. `Attest` cost 94,795 (a log) to 275,925
 (a slot with its predicate) execution gas; a refused `Init` was charged 10,000,000 (the gas limit). `test-output.log` is the test binary's own output;
 `module/failing_endpoint.txt` the module test's. No transaction hash is quoted here: signatures are randomized, so a
@@ -50,13 +51,14 @@ a block not yet final, run again: it waits and sends nothing (`20–22`). `r5/jo
 `20–22` (the signed transaction cut short here).
 
 `r5-guards/`: the same command spelled otherwise (no `0x`, capitals, the value unpadded): "already sent" (`03`, `04`);
-`--send --yes` without `--state-dir`: exit 2, nothing sent (`05`); a submission the sequencer turns away (too large):
-exit 1, recorded; run again, reported; with `--again`, applied once (`06–08`); `--again` on an interrupted run: exit 2,
-nothing sent; without it, finished (`09–11`); a transaction whose nonce another took (the pool lost, then another command
-sent at that nonce): "NOT APPLIED", exit 1; run again, reported; with `--again`, applied once (`12–16`); the second
-review's M3 case: killed with its transaction in the pool, the resend turned away ("The mempool is full"): exit 1, the
-run left unfinished, no `--again` suggested; the pooled copy lands; run again, found applied: one `Attest` (`17–20`); a
-`status` beside a run awaiting its transaction: exit 2, the state directory held (`21`, `22`).
+`--send --yes` without `--state-dir`: exit 2, nothing sent (`05`); `FERRATA_ATTEST_CLOCK_MS=garbage`: refused before
+the zone is read, exit 2, nothing sent (`06`); a submission the sequencer turns away (too large):
+exit 1, recorded; run again, reported; with `--again`, applied once (`07–09`); `--again` on an interrupted run: exit 2,
+nothing sent; without it, finished (`10–12`); a transaction whose nonce another took (the pool lost, then another command
+sent at that nonce): "NOT APPLIED", exit 1; run again, reported; with `--again`, applied once (`13–17`); the second
+review's M3 case: killed with its transaction in the pool, the resend turned away ("Mempool is full", LEZ's text): exit 1, the
+run left unfinished, no `--again` suggested; the pooled copy lands; run again, found applied: one `Attest` (`18–21`); a
+`status` beside a run awaiting its transaction: exit 2, the state directory held (`22`, `23`).
 
 `module/failing_endpoint.txt`: each of `fetch_log_proof`, `build_attest_tx` and `dry_run_attest` against a refused, a
 held (cut by its 1,000 ms bound), a cut, a 503 and an erroring endpoint, and `fetch_log_proof` cut in its second request
@@ -81,8 +83,11 @@ replies, the request's `timeout_ms` handed to the module each time, each call an
   clock 60 s past the end (a block stamped then): run again, "not sent again", code 53's message, the journal cleared,
   nothing applied or charged; run once more, a fresh dry run holds it.
 - `u5-resume-past-end-no-block` (the first review's case exactly): the same with no block stamped since the end, this
-  machine's clock past it (`FERRATA_ATTEST_CLOCK_MS`): "not sent again", judged by "this machine's clock", the journal
-  cleared, nothing charged.
+  machine's clock past it (`FERRATA_ATTEST_CLOCK_MS`): "not sent again", judged by "this machine's clock", nothing
+  charged; the journal kept while the zone's own clock is before the end (the copy could land); once the zone stamps a
+  block past the end, the next run clears it.
+- `u5-resume-machine-ahead` (the third review's L16 case): the zone 5 min before the end, this machine 10 s past it, the
+  earlier copy pending: held, the journal kept; the copy lands; run again, found applied: one `Init`.
 - `u5-resume-near-end-copy-pending`: a run resumed 30 s before the end, the earlier run's copy still pending: not sent
   again, the run left unfinished; the copy lands; run again, found applied, the adoption parts sent: one `Init`.
 

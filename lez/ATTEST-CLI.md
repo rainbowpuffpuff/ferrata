@@ -214,14 +214,22 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   when its period ended, the time it was judged at and the remedy (a new instance from a recent bootstrap, `init`;
   operator guide §10). Nothing is sent whose window has ended or ends within a minute, judged at the later of the
   zone's clock (its newest block's time, which can be ahead of the last final block) and this machine's clock, as
-  `ferrata-updater` judges its windows (`FERRATA_ATTEST_CLOCK_MS` sets the latter for rehearsals and tests; `0` leaves
-  the zone's clock alone); nor a step whose window has not opened by the dry run, made at the zone's clock plus 10 s
-  (so on a zone whose block interval exceeds 10 s a valid update can be held up to one interval past its window's
-  start: run it again then). `receipt` prints the same message for an `Init` or an `Open` the zone refused so (how a
-  caller of `ferrata_attest_module`, whose `lez_submit` reports inclusion only, reads the outcome). Before an update's
-  signature slot the refusal stays LEZ's text, with the time the window opens. The limit: with this machine's clock
-  behind the zone's (more than the minute's margin), a zone that has stamped no block since a window ended still gets
-  the step sent and charged the whole gas limit; its receipt then shows code 53.
+  `ferrata-updater` judges its windows; a machine clock Δ ahead of the zone's holds steps Δ before their window really
+  ends. A resumed run held by this machine's clock alone keeps its journal (by the zone's clock the earlier copy can
+  still land); it clears it only once the zone's own clock is past the end. `FERRATA_ATTEST_CLOCK_MS` sets this
+  machine's clock, for tests and rehearsals only: a value that is not a time in milliseconds is refused (exit 2), a
+  value taken is named on standard error, and a time before the zone's clock (`0`, as the tests set) leaves windows'
+  ends to the zone's clock alone, which turns the second clock's protection off. Nor is a step sent whose window has
+  not opened by the dry run, made at the zone's clock plus 10 s (so on a zone whose block interval exceeds 10 s a valid
+  update can be held up to one interval past its window's start: run it again then). `receipt` prints the same message
+  for an `Init` or an `Open` the zone refused so (how a caller of `ferrata_attest_module`, whose `lez_submit` reports
+  inclusion only, reads the outcome). Before an update's signature slot the refusal stays LEZ's text, with the time the
+  window opens. The limit: a windowed step is sent when the later of the two clocks is more than a minute before its
+  end, and charged the whole gas limit when the block that includes it is stamped at or after the end; so it is
+  charged exactly when that block comes more than a minute after the later clock at the send: (a) this machine's clock
+  more than the minute behind a zone that has stamped no block since the end; (b) a zone that stalls, stamping no block
+  for more than about a minute after the send, then resumes past the end, whatever the clocks. Its receipt then shows
+  code 53.
 - Exit status: 0 applied (or would be); 3 refused, as the dry run said (or by LEZ's clock past a checkpoint's period,
   or held because of it); 1 the dry run and the zone disagree, or the verdict and the dry run, or the sequencer turned
   a submission away (a resend: the run stays unfinished), or another transaction took a transaction's nonce; 2 a usage

@@ -1,3 +1,4 @@
 $ ferrata attest ... status --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd
 another run of `ferrata attest` holds --state-dir <repo>/cli/target/tmp/attest-faults/r5-guards/follower (its file `lock`): run this one when that one has ended
+note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock to 1970-01-01 00:00:00 UTC for judging windows' ends (tests and rehearsals; a time before the zone's clock leaves them to the zone's clock alone)
 [exit 2]
