@@ -117,7 +117,8 @@ struct HarnessLedger {
 }
 
 /// What sending anything would move on the zone: the calls the tool handed to it, its block height, and the nonces of
-/// the fee payer and of the wallet's private accounts. A refusal "before anything is signed" leaves all of it as it was.
+/// the fee payer and of the wallet's private accounts. A refusal "before anything is signed" leaves all of it as it
+/// was.
 #[derive(Debug, PartialEq, Eq)]
 struct Marks {
     submitted: usize,
@@ -419,8 +420,9 @@ async fn lez_freeze(
 }
 
 /// The program's and the tool's own words that speak of a leaf in general and name none: 248's name, the meanings of
-/// 245, 248 and 249 (`cli/src/codes.rs`), and the tool's "no imported root covers this leaf yet" (`pick_import`). Each is
-/// removed whole before [`names_nothing`] looks for a leaf, so a number put inside one leaves its "leaf" to be found.
+/// 245, 248 and 249 (`cli/src/codes.rs`), and the tool's "no imported root covers this leaf yet" (`pick_import`).
+/// Each is removed whole before [`names_nothing`] looks for a leaf, so a number put inside one leaves its "leaf" to be
+/// found.
 const GENERAL_LEAF_WORDS: [&str; 5] = [
     "LEAF_NOT_IMPORTED",
     "no imported root covers this leaf yet",
@@ -448,10 +450,10 @@ const NUMBERED_WORDS: [&str; 13] = [
 
 /// A refusal that names no deposit and no burn (U.08's last sentence), by its form: no hash, commitment, nullifier or
 /// address (no run of 40 or more hex digits); no leaf at all, in any case or form ("leaf 5", "Leaf (5)", "leaf number
-/// 5", "the 5th leaf", "leaf_index: 5"), once the program's and the tool's general wordings ([`GENERAL_LEAF_WORDS`]) are
-/// removed whole; no deposit, burn, position, index or counter followed within two words by a number, nor "#5"; no
-/// "tag counter" or "j = ". Called on the whole error chain, `{e:#}`, as the binary prints it (`main.rs`). Every form
-/// the base's check (no "leaf " at all) refused, it refuses, outside those exact wordings
+/// 5", "the 5th leaf", "leaf_index: 5"), once the program's and the tool's general wordings
+/// ([`GENERAL_LEAF_WORDS`]) are removed whole; no deposit, burn, position, index or counter followed within two words
+/// by a number, nor "#5"; no "tag counter" or "j = ". Called on the whole error chain, `{e:#}`, as the binary prints it
+/// (`main.rs`). Every form the base's check (no "leaf " at all) refused, it refuses, outside those exact wordings
 /// (`names_nothing_catches_every_form`). [`names_none_of`] adds the case's own values.
 fn names_nothing(text: &str) -> bool {
     let mut run = 0usize;
@@ -528,9 +530,9 @@ fn names_nothing_catches_every_form() {
         codes::program_refusal(
             248,
             format!(
-                "{not_imported}; this configuration imports a root only once the block it reads is 64 beacon slots (about \
-                 13 min) past Ethereum finality (its inbound finality depth, set by its admin), so a deposit becomes \
-                 claimable that much later"
+                "{not_imported}; this configuration imports a root only once the block it reads is 64 beacon \
+                 slots (about 13 min) past Ethereum finality (its inbound finality depth, set by its admin), so a \
+                 deposit becomes claimable that much later"
             ),
         )
         .to_string(),
@@ -541,23 +543,29 @@ fn names_nothing_catches_every_form() {
         codes::program_refusal(
             242,
             "checked before sending: mints (claims) of this token are frozen until Ethereum time 1808000769 \
-             (2027-04-17 22:26:09 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); \
-             nothing is sent and nothing is consumed: the deposit stays claimable",
+             (2027-04-17 22:26:09 UTC as the bridge's attested clock counts it; a freeze authority may lift it \
+             sooner); nothing is sent and nothing is consumed: the deposit stays claimable",
         )
         .to_string(),
         codes::program_refusal(
             242,
-            "checked before sending: burns of this token are frozen until Ethereum time 1808000769 (2027-04-17 22:26:09 \
-             UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is sent and \
-             nothing is burned: the holding stays yours",
+            "checked before sending: burns of this token are frozen until Ethereum time 1808000769 (2027-04-17 \
+             22:26:09 UTC as the bridge's attested clock counts it; a freeze authority may lift it sooner); nothing is \
+             sent and nothing is burned: the holding stays yours",
         )
         .to_string(),
     ]
     .into_iter()
     .chain(
         [
-            ("DepositsAreFrozen", "checked before sending: frozen until Ethereum time 1797871892 (2026-12-21 16:51:32 UTC)"),
-            ("ReleasesAreFrozen", "checked before sending: frozen until Ethereum time 1797872813 (2026-12-21 17:06:53 UTC)"),
+            (
+                "DepositsAreFrozen",
+                "checked before sending: frozen until Ethereum time 1797871892 (2026-12-21 16:51:32)",
+            ),
+            (
+                "ReleasesAreFrozen",
+                "checked before sending: frozen until Ethereum time 1797872813 (2026-12-21 17:06:53)",
+            ),
             (
                 "BurnRootNotAccepted",
                 "checked before sending: no finalized checkpoint covers this burn yet; wait for the next checkpoint",
@@ -1362,8 +1370,8 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     // naming no deposit, the zone as it was (nothing handed to it, no block, no nonce used): a private-kind deposit
     // claimed by the plaintext path (252, the tool's `claim --plaintext`), and leaf 0's opening redirected to another
     // account than its commitment names (249, the program's verify_claim), handed to the tool's own claim-and-send step
-    // (`flow::claim_row`, what `ferrata claim` runs once it has scanned the deposit) with `--send --yes`, as a faulty or
-    // hostile wallet would hand it: `ferrata claim` itself offers no destination.
+    // (`flow::claim_row`, what `ferrata claim` runs once it has scanned the deposit) with `--send --yes`, as a faulty
+    // or hostile wallet would hand it: `ferrata claim` itself offers no destination.
     let private_kind = rows.iter().find(|r| r.owned.kind == DestKind::Private).context("a private-kind deposit")?;
     let wrong_path = flow::ClaimOpts {
         leaf: Some(private_kind.owned.deposit.leaf_index),
@@ -1698,7 +1706,9 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         eth::view(&p, vault, IVault::nullifierUsedCall { nullifier: B256::from(rplan.nullifier) }, None).await?,
         "NOut used"
     );
-    // Twice: the tool refuses it before sending; the vault, sent it anyway, refuses it too.
+    // Twice: the tool refuses it before sending (the signer's nonce unchanged); the vault, sent it anyway, refuses it
+    // too.
+    let nonce = p.get_transaction_count(keystores[1].1).await?;
     let again = flow::release_burn(
         &eth_side,
         &user,
@@ -1714,7 +1724,8 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     ensure!(
         again.to_string().contains("NullifierAlreadyUsed")
             && again.to_string().contains("checked before sending")
-            && names_none_of(&format!("{again:#}"), &burn_values(&burn_rows[0].owned), Some(burn_rows[0].owned.i)),
+            && names_none_of(&format!("{again:#}"), &burn_values(&burn_rows[0].owned), Some(burn_rows[0].owned.i))
+            && p.get_transaction_count(keystores[1].1).await? == nonce,
         "{again:#}"
     );
     let twice =
@@ -1812,9 +1823,10 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         not_final(&e) && !e.to_string().contains("inbound finality depth"),
         "the claim before its root is imported: {e:#}"
     );
-    //    b. Inside the depth (F.12's admin depth): the admin sets 64 beacon slots beyond Ethereum finality; the relayer's
-    //       import under the newest record waits (242) until the configuration's clock has read a record 64 slots
-    //       later; meanwhile the claim is refused before it is proven (248), saying how long the depth holds imports.
+    //    b. Inside the depth (F.12's admin depth): the admin sets 64 beacon slots beyond Ethereum finality; the
+    //       relayer's import under the newest record waits (242) until the configuration's clock has read a record 64
+    //       slots later; meanwhile the claim is refused before it is proven (248), saying how long the depth holds
+    //       imports.
     let config_at = ferrata_lez_bridge_wire::config_actor(program, &cid);
     let set_depth = |slots: u64| BridgeMessage::SetDepth { config_id: cid, slots };
     let r = zone.world.role("SetDepth 64 (admin)", hb::ADMIN_SEED, &set_depth(64), config_at);

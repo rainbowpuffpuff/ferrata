@@ -864,10 +864,11 @@ note = "the user guide's copy of what the tool prints is generated from cli/src/
 id = "RFP-022 U.8"
 tests = [
   { path = "cli/tests/e2e.rs", kind = "test", ci = "roundtrip" },
+  { path = "e2e/runs/cli-u8/README.md", kind = "record" },
   { path = "e2e/runs/cli-freezes/README.md", kind = "record" },
   { path = "modules/ferrata_bridge_ui/scripts/box-test.sh", kind = "test", ci = "box", run = "modules/ferrata_bridge_ui/scripts/box-test.sh" },
 ]
-note = "21 refusals (and 2 claim-delay holds) named with source, code and meaning before signing, none naming a deposit or burn (EVIDENCE row 85); every freeze refused in the tool, 9 of 9 naming nothing, then lifted (row 202); the mini-app exercises the freeze refusal (FROZEN 242, lifted then accepted; row 62). Verification failure and insufficient finality in the tool (e2e.rs, CI's roundtrip job): 252 and 249, a claim before any import (245) and before its root's (248), a claim inside the admin's inbound depth (248 naming the depth), a release with its checkpoint a candidate (BurnRootNotAccepted), each before anything is signed and checked by value to name no deposit or burn (names_none_of); in the mini-app (box-test.sh, the build box): unsupported token, invalid amount, cap exceeded, verification failure (249, 252) and insufficient finality (claim and release) asserted on the banner the user sees (docs/rows/u8-cases.md)"
+note = "the tool (e2e.rs, CI's roundtrip job): every U.08 mode refused with source, code and what to do, checked by form (names_nothing at full strength, its own test) and by value (names_none_of) to name no deposit or burn, and by state where the command would send (nothing handed to the zone, no block, no nonce; the signer's nonce for releases): unsupported token, invalid amount, cap, verification failure (252, 249 through the tool's claim-and-send step, the verifier's VerificationFailed on a release), insufficient finality (245, 248, 248 naming the admin's inbound depth, BurnRootNotAccepted), already claimed, already released, every freeze (rows 85, 202; e2e/runs/cli-u8/); the mini-app through its devnet backend (box-test.sh, the build box; not in CI): all seven modes on the banner, its message and code, refused before sending and naming nothing (docs/rows/u8-cases.md); mutants: e2e/runs/cli-u8/mutants.py"
 
 [[row]]
 id = "RFP-022 U.9"

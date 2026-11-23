@@ -72,9 +72,11 @@ TOOL = [
 ]
 
 MINIAPP = [
-    ("Q1 messages removed: the U.08 entries of format.js", "test_00, 06b, 09, 09b-09f, 10b, 11c, 12", [
+    ("Q0 messages removed: already claimed and frozen", "test_09, 12", [
         (FMT, "    [/ALREADY_CLAIMED|code 250 /,", "    [/^never-250$/,"),
         (FMT, "    [/FROZEN|frozen/i,", "    [/^never-frozen$/,"),
+    ]),
+    ("Q1 messages removed: the other U.08 entries of format.js", "test_00, 06b, 09b-09f, 10b, 11c, 12", [
         (FMT, "    [/\\bCAPPED\\b|code 255 |CapExceeded|cap exceeded/i,", "    [/^never-cap$/,"),
         (FMT, "    [/BAD_MESSAGE|code 240 /,", "    [/^never-240$/,"),
         (FMT, "    [/InvalidDenominationIndex|not a denomination|the amount is not one of the token's denominations/,", "    [/^never-amount$/,"),

@@ -220,11 +220,8 @@ Item {
             shot("17-claim-plaintext-settled");
         }
 
+        // The view's steps first, so that a failed check of the direct call after them leaves the later tests their tab.
         function test_09_error_messages() {
-            host.app.call("claim", { leaf_index: 1, private: false });
-            idle();
-            refused("Already claimed: this position was claimed before.", "250 ALREADY_CLAIMED", "checked before sending", 1);
-            shot("18-error-already-claimed");
             tab("redeem");
             click("burn.kind.public");
             click("burn.public.ack");
@@ -233,6 +230,10 @@ Item {
             approve("Burn", null);
             verify(has(el("error.message").text, "Insufficient balance"), el("error.message").text);
             shot("19-error-insufficient-balance");
+            host.app.call("claim", { leaf_index: 1, private: false });
+            idle();
+            refused("Already claimed: this position was claimed before.", "250 ALREADY_CLAIMED", "checked before sending", 1);
+            shot("18-error-already-claimed");
         }
 
         // Unsupported token (U.08): a deposit of a token the vault has not registered, refused before signing.

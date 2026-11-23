@@ -44,6 +44,21 @@ shows both sides' balances. Not reached: the round trip with real proofs inside 
 step may still complete"), and the run stopped before the release
 ([`results-basecamp-roundtrip/l4-real-proofs/`](results-basecamp-roundtrip/l4-real-proofs/README.md)). Suites run again on this view: `results-basecamp-roundtrip/regression/`.
 
+## 23 November 2026: RFP-022 U.8's failure modes on the banner (what `results/` holds now)
+
+Branch `u8-cases`, Modal build box: `scripts/box-test.sh` ran the view's 27 test functions, **27 passed in 40.5 s**
+(`results/qmltest.txt`, `results/qmltest.xml`), 48 screenshots (`results/screenshots/`, cropped palette PNGs by
+`scripts/shrink-screenshots.py`), the backend's 76 calls in 15.0 s (`results/calls.jsonl`, 15 of them the refusals the
+test asks for). Added to the round trip below: each of U.8's failure modes as the user sees it, the banner's message
+(what to do) and code, the refusal found before sending and naming no deposit or burn: unsupported token, invalid
+amount, cap exceeded, verification failure (a claim's 249 and 252, a release's proof rejected by the verifier),
+insufficient finality (a claim before the import, a release before the checkpoint), already claimed and frozen
+(`test_00` the message table, `test_06b`, `09`, `09b`–`09f`, `10b`, `11c`, `12`); and the admin view's banner kept
+after a failed step (`test_12`). Through the devnet backend, as below, not `ferrata_bridge_module`; the unsupported
+token, the invalid amount, the cap, the rejected proof and the redirected claim are direct calls with the devnet's
+named levers (the view offers ETH and its denominations only). Mutants that break each check:
+[`e2e/runs/cli-u8/`](../../e2e/runs/cli-u8/README.md).
+
 ## 12 November 2026: the private round trip on the defaults (B3's done gate)
 
 **A user's private round trip runs through the mini-app on its defaults, headless, against the devnet.**
@@ -55,7 +70,7 @@ checkpoint, the release's delay let pass, and the **release by a relayer paying 
 address**. No default was changed on that path. **17 of 17 test functions passed in 34.4 s**
 (`results/qmltest.txt`, `results/qmltest.xml`; the whole script 45 s), 40 screenshots
 (`results/screenshots/`), the backend's 66 calls in 12.5 s (`results/calls.jsonl`, 7 of them the refusals
-the test asks for).
+the test asks for). These are that day's numbers; `results/` now holds the run of 23 November (above).
 
 How the private transactions settle: the devnet gives the harness the wallet's own keys. LEZ's wallet
 derives private account `/0` from the seed's key tree as an authorization secret key and a viewing secret

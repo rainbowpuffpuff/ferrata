@@ -525,8 +525,8 @@ async fn depth_note<L: Ledger>(ledger: &L, ctx: &Context) -> Result<String> {
     } else {
         format!(
             "; this configuration imports a root only once the block it reads is {slots} beacon slots (about {} min) \
-             past Ethereum finality (its inbound finality depth, set by its admin), so a deposit becomes claimable that \
-             much later",
+             past Ethereum finality (its inbound finality depth, set by its admin), so a deposit becomes claimable \
+             that much later",
             (slots * 12).div_ceil(60)
         )
     })
