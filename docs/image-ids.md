@@ -1,8 +1,10 @@
 # Image ids of the guests at `integration7`
 
-> **RISC Zero 3.1 (branch `bridge-31`, 23 November 2026).** The Ethereum-side guests are built with risc0-zkvm 3.1.0:
+> **RISC Zero 3.1 (23 November 2026).** The Ethereum-side guests are built with risc0-zkvm 3.1.0:
 > their ids are in [the RISC Zero 3.1 section](#risc-zero-31-the-ethereum-side-guests-migration-phase-1) (`*_31`).
-> The first table keeps the RISC Zero 3.0.5 ids, which the Sepolia vaults of November 2026 and the recorded runs pin.
+> The first table keeps the RISC Zero 3.0.5 ids, which the four Sepolia vaults of November 2026 (capped at zero) and
+> the recorded runs pin. The Sepolia vault of 23 November 2026 (`0x1949…2787`, EVIDENCE row 232) pins the 3.1 rows
+> `checkpoint_b_0_3_5_31` (rule (B)), `checkpoint_0_3_5_31` (rule (A)) and `release_31`.
 
 > **Milestone B1 (branch `rfp-bridge-hardening`, 21 November 2026).** In this tree `lez/guests/bridge` builds the bridge
 > program of [the B1 section](#the-bridge-program-since-milestone-b1-every-account-keyed-by-the-configuration) below,
@@ -63,7 +65,7 @@ named `<guest>_31`: the rows above, of RISC Zero 3.0.5, stay what the deployed v
 `TREE_ENTRY`). The LEZ programs (attestation, bridge, consumers) stay on LEZ's RISC Zero (3.0.5) until LEZ is tagged on
 3.1 (phase 2).
 
-Built on 23 November 2026 on the Modal build box from branch `bridge-31` (`fce77353`): RISC Zero 3.1.0 in a RISC Zero
+Built on 23 November 2026 on the Modal build box at `fce77353`: RISC Zero 3.1.0 in a RISC Zero
 home of its own (`cargo-risczero` and `r0vm` 3.1.0, guest Rust 1.88.0, C++ 2024.1.5, installed with rzup), through
 `scripts/guest-rustc`, `RISC0_BUILD_LOCKED=1`, `cargo build --release -p methods -p methods-0-3-5 -p methods-plain`
 in `checkpoint/` and `-p methods` in `bridge/` (250 s, both at once), then `python3 -I scripts/reproduce/guest_ids.py`:

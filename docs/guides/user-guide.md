@@ -85,6 +85,9 @@ Keep the seed; it is the only thing recovery needs (§8). No bridge operator hol
 
 ## 3. Deposit (Ethereum)
 
+On Sepolia, the vault is `0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787` since 23 November 2026 (RISC Zero 3.1, rule (B); EVIDENCE row 232); the four
+vaults of November 2026 are capped at zero and take no deposit.
+
 Call `depositETH(denomIndex, C, j)` or `deposit(token, denomIndex, C, j)` on the vault
 ([`vault/README.md`](../../vault/README.md), "Deposits"; [`bridge.md`](../design/bridge.md) §5.1–§5.3):
 

@@ -92,6 +92,11 @@ nor a refund on the v5 vaults, until the admin raises a cap. Caps do not gate ch
 calls, a forged checkpoint was still submitted and finalised on `0x04eE…e44c` (part B), but nothing could be released
 against it.
 
+**Status, 23 November 2026: superseded by the RISC Zero 3.1 vault.** The owner deployed a new vault on Sepolia,
+`0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787` (block 12,196,188), on RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 behind RISC Zero's emergency stop, which
+the advisories' fixed releases make (EVIDENCE rows 231, 232). The four vaults above stay capped at zero and are
+retired as the plan says; they are not used again.
+
 **2. Our proofs as evidence.** Our provers made every seal and receipt in this tree from the recorded inputs, but a
 3.0.x verifier accepting one no longer shows anyone else that its claim is true. EVIDENCE row 149 (our seals accepted
 by RISC Zero's mainnet verifier 3.0.0, 18 November) shows that our seals are well-formed for the 3.0.0 circuits, no
@@ -177,6 +182,7 @@ somewhere, and no flag of ours separates them: an instance refusing `ApplyVerifi
    [`vault/README.md`](../../../vault/README.md) and the operator guide say that the stop did not trip under this
    advisory (the paragraph "The emergency stop did not trip" above).
 4. The move to risc0 3.1.0 and verifier 3.1.0, with new vaults: [risc0-3.1-migration.md](../../design/risc0-3.1-migration.md).
+   Phase 1 (the Ethereum side) done on 23 November 2026: the 3.1 vault on Sepolia (EVIDENCE rows 231, 232).
 5. LEZ: wait for a LEZ tag on risc0 3.1.0 (Logos).
 
 ```sh

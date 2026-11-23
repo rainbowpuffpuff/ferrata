@@ -12,6 +12,11 @@ day the deployer's admin key set every release and deposit cap of the four to ze
 back at block 12,184,587), which closes their releases and deposits and the v5 vaults' refunds. The runs below
 happened and their records stand, but a seal's acceptance by these verifiers shows only that it is well-formed: [security note](security/risc0-groth16-advisory-2026-11-21/README.md).
 
+**The RISC Zero 3.1 vault, 23 November 2026.** Vault [`0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787`](https://sepolia.etherscan.io/address/0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787) (rule (B),
+for our test network's zone), on RISC Zero's `RiscZeroGroth16Verifier` 3.1.0 `0x43C858f02f209c6C10c06B64B4ab2Cefd8B8dc96` behind RISC Zero's emergency
+stop `0xC15916BDC7b32951B0310e0E24F98764EbA4b314` (owner renounced); registry `0x03953f8888f2666f5DF572551a3141b4B94e0C13`; test token `0x5d4DdB1863d2EE85765499dd850a9AeedecA03bC`. Its record, read-only check (47 of 47) and
+Sourcify verification: EVIDENCE row 232. It supersedes the four vaults below, which stay capped at zero.
+
 ## Live on Sepolia, and how to check it yourself
 
 On 12 November 2026 (EVIDENCE rows 91–92) the whole round trip ran on the final programs of

@@ -1,6 +1,6 @@
 # The RISC Zero 3.1 deployment rehearsed on a Sepolia fork, with real 3.1 proofs (23 November 2026)
 
-`vault/script/fork-rehearsal-31.sh` on branch `bridge-31` (the Modal build box; anvil forked from a public Sepolia
+`vault/script/fork-rehearsal-31.sh` (the Modal build box; anvil forked from a public Sepolia
 endpoint, five blocks behind its head, at block 12,195,997, 2026-11-23 13:30:12 UTC; first run at block 12,194,913,
 before the review's changes: the same results but the order of the stop's renouncement). No key was used and nothing was
 sent to Sepolia: every transaction stayed on the fork, from impersonated accounts. Result: **FORK REHEARSAL 31 OK**

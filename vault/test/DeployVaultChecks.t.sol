@@ -23,7 +23,7 @@ contract DeployVaultHarness is DeployVault {
 }
 
 /// @notice script/DeployVault.s.sol puts a Groth16 verifier behind the stop only if it is RISC Zero's 3.1.0 built from
-///         vault/lib.lock: its version, its selector and its code (review of bridge-31, L9).
+///         vault/lib.lock: its version, its selector and its code (an internal review's L9).
 contract DeployVaultChecksTest is Test {
     DeployVaultHarness internal h;
 

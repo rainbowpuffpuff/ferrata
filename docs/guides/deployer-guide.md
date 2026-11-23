@@ -10,13 +10,15 @@ relative to the repository root.
 **Status.** Nothing has been deployed for production, and the code is not audited
 ([`vault/README.md`](../../vault/README.md); [`README.md`](../../README.md), "Not audited"). What was run: the vault's
 deployment script on local chains and forks of Sepolia (one transaction per run, limits from the node), and by the
-owner on public Sepolia for the live round trips (EVIDENCE rows 41, 91, 142; the sources verified, row 122); the LEZ
-programs through LEZ's own program loader on zones we ran; the one-command deployment of a release, tested on anvil
-(row 53). The walkthrough of §11 was followed from a fresh clone, step 0 rebuilding every Ferrata program from source
-and building LEZ's sequencer and the Logos Blockchain node from their pinned sources (what their builds download: §11
-step 0), and stood up a configuration of its own, with its own roles, fees, token, caps and finality settings, on anvil and a local
-LEZ zone: recorded there. It was run on our build box, so it shows that the steps work as written, not that a stranger
-found them clear.
+owner on public Sepolia for the live round trips (EVIDENCE rows 41, 91, 142; the sources verified, row 122); on 23
+November 2026 the owner deployed the RISC Zero 3.1 vault with `vault/script/deploy_sepolia.py` (rule (B): vault
+`0x1949…2787`, verifier 3.1.0 `0x43C8…dc96` behind the stop `0xC159…b314`; row 232); the LEZ programs through LEZ's own
+program loader on zones we ran; the one-command deployment of a release, tested on anvil (row 53). The walkthrough of
+§11 was followed from a fresh clone, step 0 rebuilding every Ferrata program from source and building LEZ's sequencer
+and the Logos Blockchain node from their pinned sources (what their builds download: §11 step 0), and stood up a
+configuration of its own, with its own roles, fees, token, caps and finality settings, on anvil and a local LEZ zone:
+recorded there. It was run on our build box, so it shows that the steps work as written, not that a stranger found them
+clear.
 
 **Where each clause is answered (RFP-022 R.14).** Registering tokens: §3 steps 5 and 7, §5 ("Registry bounds"), §11
 step 3, items 3 to 5. Setting fees: §2, §5 ("Fee schedules"), §11 step 3, item 5. Configuring the admin and the freeze
