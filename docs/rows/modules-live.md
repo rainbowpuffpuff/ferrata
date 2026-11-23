@@ -90,6 +90,8 @@ above and drop "**Not measured:** the daemons as Logos modules … and the `ferr
 (built on recorded answers: `monitor/attest/`)" (attest-monitor ran against Lodestar and publicnode on a public network:
 row next; the network's host runs it too).
 
+**The code changes, tested on the build box after the run**: `attest-monitor`'s suite 32 of 32 (`monitor/attest`, `cargo test --release --locked`); `lez/updater/sequencer`'s library tests at the committed LEZ tag (v0.4.0-rc1) 4 of 4, `day1::tests::a_program_known_by_its_account_has_no_keys_to_sign_with` among them (and at v0.4.0-rc3 in the build, [`report-build/logs/rc3-tools-test.log`](../../modules/results/live-testnet-2026-11-23/report-build/logs/rc3-tools-test.log)).
+
 **CI**: add `python3 -I modules/scripts/test_live_testnet.py` to the job that runs `scripts/test_perf_records.py` (offline, standard library only, under a second).
 
 Box runs: the Modal build box.
