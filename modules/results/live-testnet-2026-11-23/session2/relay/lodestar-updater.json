@@ -1,0 +1,17 @@
+{
+ "by": {
+  "GET /eth/v1/beacon/light_client": {
+   "down": 4192385,
+   "errors": 0,
+   "n": 136,
+   "up": 16109
+  }
+ },
+ "down": 4192385,
+ "errors": 0,
+ "requests": 136,
+ "seconds": 3287.9,
+ "started": 1795470089.024576,
+ "to": "https://lodestar-sepolia.chainsafe.io/",
+ "up": 16109
+}

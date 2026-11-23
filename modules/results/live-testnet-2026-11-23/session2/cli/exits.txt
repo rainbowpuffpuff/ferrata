@@ -1,0 +1,6 @@
+status-first exit 0
+status-again exit 0
+config exit 0
+attest-dry exit 3
+attest-send exit 3
+advance-dry exit 3

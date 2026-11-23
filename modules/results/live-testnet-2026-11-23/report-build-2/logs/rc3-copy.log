@@ -1,0 +1,14 @@
+lez-select: v0.4.0-rc1 -> v0.4.0-rc3 (bafd07be0701398f9bc435f73ab05e9a7936c301)
+also pointed at v0.4.0-rc3: 11 manifests
+<work>/rc3/ferrata/lez/guests/program-class/Cargo.toml
+<work>/rc3/ferrata/lez/guests/program-residue-experimental/Cargo.toml
+<work>/rc3/ferrata/lez/guests/rebate/Cargo.toml
+<work>/rc3/ferrata/lez/guests/statements-reader/Cargo.toml
+<work>/rc3/ferrata/lez/guests/statements/Cargo.toml
+<work>/rc3/ferrata/lez/lab/driver/Cargo.toml
+<work>/rc3/ferrata/lez/rebate-wire/Cargo.toml
+<work>/rc3/ferrata/lez/statements-wire/Cargo.toml
+<work>/rc3/ferrata/modules/ferrata_updater_module/rust-lib/calls/Cargo.toml
+<work>/rc3/ferrata/cli/wallet/Cargo.toml
+<work>/rc3/ferrata/cli/Cargo.toml
+v0.4.0-rc3

@@ -1,0 +1,6 @@
+utc	endpoint	request	file	note
+2026-11-23T22:39:04Z	https://ethereum-sepolia-rpc.publicnode.com	eth_getBlockByHash ["0xf83c333ac4fecde38f731f331023cc9511e79c7fc4dbc0a812b2ae16fee6c9fd", false]	block.json	
+2026-11-23T22:39:04Z	https://1rpc.io/sepolia	eth_getProof ["0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c", ["0x0000000000000000000000000000000000000000000000000000000000000000", "0x0000000000000000000000000000000000000000000000000000000000000001"], "0xba2277"]	proof.json	
+2026-11-23T22:39:57Z	https://lodestar-sepolia.chainsafe.io	GET /eth/v1/beacon/light_client/finality_update		gloas
+2026-11-23T22:39:57Z	https://ethereum-sepolia-beacon-api.publicnode.com	GET /eth/v1/beacon/headers/11644928		
+2026-11-23T22:39:57Z	https://lodestar-sepolia.chainsafe.io	(kept)	000-finality-11644928.ssz	finalized 11644928 root 0xbf50a83b4e082548f9bc824fe98eb656aca5408d91962e0d3d7391cc74d15fc6, 486/512

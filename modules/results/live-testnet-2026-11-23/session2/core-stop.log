@@ -1,0 +1,2 @@
+{"message":"Daemon shutting down.","status":"ok"}
+logosctl daemon stop exit 0

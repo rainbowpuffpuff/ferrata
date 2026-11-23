@@ -1,0 +1,24 @@
+Command exited with non-zero status 3
+	Command being timed: "<out>/bin/ferrata attest --lez-rpc https://<domain>/rpc --program 0x5410ae09971279bdf7e075c7dd58c84d80f91e973f85ebd9ead935a86dceb9c5 --key <out>/keys/payer.key --state-dir <out>/session2/cli-state --record <out>/session2/cli/run.jsonl attest --instance 0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb --record-slot 11644768 --eth https://rpc.sepolia.ethpandaops.io --block 12198398 --storage 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c:0x0 --storage 0x04eE8FF19cC11CEE4aE65d03e12b9888043de44c:0x1 --send --yes"
+	User time (seconds): 1.10
+	System time (seconds): 0.28
+	Percent of CPU this job got: 7%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 0:18.41
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 119452
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 0
+	Voluntary context switches: 107
+	Involuntary context switches: 0
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 3

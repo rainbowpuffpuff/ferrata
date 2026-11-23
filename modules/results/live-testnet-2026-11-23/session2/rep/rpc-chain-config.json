@@ -1,0 +1,1 @@
+{"config":{"enabled":true,"endpoint":"http://127.0.0.1:18713","name":"sepolia","proxy":null,"proxyRequired":false,"source":"external","testnet":true,"timeoutSecs":60,"verifiedMaxSecs":45,"verifiedProxyMode":"off","verifiedTimeoutSecs":240},"ok":true}

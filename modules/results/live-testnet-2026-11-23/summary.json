@@ -496,6 +496,94 @@
   {
    "ok": true,
    "what": "RFP-022: that Logos Core stopped cleanly"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata_updater_module, beacon_api_module and eth_rpc_module loaded in the headless Logos Core"
+  },
+  {
+   "ok": true,
+   "what": "session 2: the module reaches the network's RPC itself (a sequencer not on this machine, by its https URL), two light-client sources through beacon_api_module and an execution source through eth_rpc_module, three to agree"
+  },
+  {
+   "ok": true,
+   "what": "session 2: check_config accepted that file (rep/U-check_config.json)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: the module applied 24 of 24 transactions on the network, 8 jobs finished"
+  },
+  {
+   "ok": true,
+   "what": "session 2: every finished job's update (8 of 8) was confirmed by the execution source before it was sent (the daemon's job line: served or confirmed by \u2026, eth_rpc_module-sepolia among them)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: eth_rpc_module carried the execution checks to the endpoint (8 eth_getBlockByHash, 8 eth_getBlockByNumber: the relay's counts)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: /health ok to 44 of 45 probes"
+  },
+  {
+   "ok": true,
+   "what": "session 2: start, stop, start again (halfway) and the final stop answered through Logos Core"
+  },
+  {
+   "ok": true,
+   "what": "session 2: Logos Core stopped cleanly"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/status-first exit 0 (session2/cli/status-first.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/status-again exit 0 (session2/cli/status-again.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/config exit 0 (session2/cli/config.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli2/attest-dry exit 0 (session2/cli2/attest-dry.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli2/attest-send exit 0 (session2/cli2/attest-send.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli2/advance-dry exit 0 (session2/cli2/advance-dry.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli2/advance-send exit 0 (session2/cli2/advance-send.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli2/status-after exit 0 (session2/cli2/status-after.*)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/attest-dry refused with 215 HEADER_REQUIRED, as its dry run said (exit 3)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/attest-send refused with 215 HEADER_REQUIRED, as its dry run said (exit 3)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest cli/advance-dry refused with 52 NotNewer, as its dry run said (exit 3)"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest sent the attestation (with the block's header) and the network applied it"
+  },
+  {
+   "ok": true,
+   "what": "session 2: ferrata attest submitted a finality update (its steps applied on the network)"
   }
  ],
  "checks_failed": 0,
@@ -824,6 +912,219 @@
   "median": 22.9,
   "min": 15.1,
   "transactions": 49
+ },
+ "session2": {
+  "components": {
+   "Logos Core daemon (its own process)": {
+    "cpu_s": 0.3,
+    "cpu_share": 0.0001,
+    "max_procs": 1,
+    "median_rss_mib": 57.6,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 57.8,
+    "samples": 653,
+    "wall_s": 3265.8
+   },
+   "beacon_api_module": {
+    "cpu_s": 1.28,
+    "cpu_share": 0.0004,
+    "max_procs": 1,
+    "median_rss_mib": 58.9,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 59.0,
+    "samples": 653,
+    "wall_s": 3265.8
+   },
+   "eth_rpc_module": {
+    "cpu_s": 0.73,
+    "cpu_share": 0.0002,
+    "max_procs": 1,
+    "median_rss_mib": 56.8,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 56.8,
+    "samples": 653,
+    "wall_s": 3265.8
+   },
+   "updater-module": {
+    "cpu_s": 432.76,
+    "cpu_share": 0.1325,
+    "max_procs": 2,
+    "median_rss_mib": 165.1,
+    "peak_hwm_mib": 0.0,
+    "peak_rss_mib": 296.3,
+    "samples": 653,
+    "wall_s": 3265.8
+   }
+  },
+  "execution_source_confirmations": 3,
+  "execution_traffic": {
+   "by": {
+    "eth_getBlockByHash": 8,
+    "eth_getBlockByNumber": 8
+   },
+   "down": 225915,
+   "requests": 16,
+   "up": 3512
+  },
+  "ferrata_attest": {
+   "cli/advance-dry": {
+    "cpu_s": 0.35,
+    "cpu_share": 0.3846,
+    "exit": 3,
+    "peak_rss_mib": 116.9,
+    "wall_s": 0.91
+   },
+   "cli/attest-dry": {
+    "cpu_s": 21.26,
+    "cpu_share": 0.6876,
+    "exit": 3,
+    "peak_rss_mib": 136.6,
+    "wall_s": 30.92
+   },
+   "cli/attest-send": {
+    "cpu_s": 1.38,
+    "cpu_share": 0.075,
+    "exit": 3,
+    "peak_rss_mib": 116.7,
+    "wall_s": 18.41
+   },
+   "cli/config": {
+    "cpu_s": 0.59,
+    "cpu_share": 0.4609,
+    "exit": 0,
+    "peak_rss_mib": 114.3,
+    "wall_s": 1.28
+   },
+   "cli/status-again": {
+    "cpu_s": 30.87,
+    "cpu_share": 0.7006,
+    "exit": 0,
+    "peak_rss_mib": 136.8,
+    "wall_s": 44.06
+   },
+   "cli/status-first": {
+    "cpu_s": 827.64,
+    "cpu_share": 0.6571,
+    "exit": 0,
+    "peak_rss_mib": 137.1,
+    "wall_s": 1259.58
+   },
+   "cli2/advance-dry": {
+    "cpu_s": 1.01,
+    "cpu_share": 0.6196,
+    "exit": 0,
+    "peak_rss_mib": 133.0,
+    "wall_s": 1.63
+   },
+   "cli2/advance-send": {
+    "cpu_s": 4.79,
+    "cpu_share": 0.0684,
+    "exit": 0,
+    "peak_rss_mib": 133.0,
+    "wall_s": 70.01
+   },
+   "cli2/attest-dry": {
+    "cpu_s": 19.59,
+    "cpu_share": 0.6881,
+    "exit": 0,
+    "peak_rss_mib": 133.1,
+    "wall_s": 28.47
+   },
+   "cli2/attest-send": {
+    "cpu_s": 1.32,
+    "cpu_share": 0.0568,
+    "exit": 0,
+    "peak_rss_mib": 116.8,
+    "wall_s": 23.22
+   },
+   "cli2/status-after": {
+    "cpu_s": 0.08,
+    "cpu_share": 0.1111,
+    "exit": 0,
+    "peak_rss_mib": 84.4,
+    "wall_s": 0.72
+   }
+  },
+  "health": {
+   "ok": 44,
+   "probes": 45
+  },
+  "instance_final": {
+   "active": true,
+   "applied": 27,
+   "finalized_root": "0x456751647fa3e13463addfa0883bd74d3063b9e33daa8246e87654bee9603542",
+   "finalized_slot": 11644896
+  },
+  "journal": {
+   "applied": 24,
+   "blocks": [
+    4193,
+    4454
+   ],
+   "finalized_slots": [
+    11644672,
+    11644704,
+    11644736,
+    11644768,
+    11644800,
+    11644832,
+    11644864,
+    11644896
+   ],
+   "jobs_confirmed_by_the_execution_source": 8,
+   "jobs_finished": 8,
+   "transactions": 24
+  },
+  "marks": {
+   "cli-advance-dry-end": 2648.4,
+   "cli-advance-dry-start": 2647.5,
+   "cli-attest-dry-end": 2628.7,
+   "cli-attest-dry-start": 2597.7,
+   "cli-attest-send-end": 2647.1,
+   "cli-attest-send-start": 2628.7,
+   "cli-config-end": 1845.9,
+   "cli-config-start": 1844.6,
+   "cli-status-again-end": 1844.6,
+   "cli-status-again-start": 1800.5,
+   "cli-status-first-end": 1800.5,
+   "cli-status-first-start": 540.9,
+   "core-stopped": 3280.6,
+   "restart-start": 1954.7,
+   "restart-stop": 1925.4,
+   "session-end": 3279.2,
+   "session-start": 0.0,
+   "stop": 3279.4,
+   "updater-start": 8.5,
+   "updater-started": 540.9
+  },
+  "updater_config": {
+   "min_agreeing": 3,
+   "rpc": "https://<domain>/rpc",
+   "sources": [
+    {
+     "chain_id": 11155111,
+     "kind": null,
+     "name": "beacon_api_module-lodestar",
+     "provider": "lodestar-counted",
+     "via": "beacon_api_module"
+    },
+    {
+     "chain_id": 11155111,
+     "kind": null,
+     "name": "beacon_api_module-nimbus",
+     "provider": "nimbus-counted",
+     "via": "beacon_api_module"
+    },
+    {
+     "chain_id": 11155111,
+     "kind": "execution",
+     "name": "eth_rpc_module-sepolia",
+     "provider": null,
+     "via": "eth_rpc_module"
+    }
+   ]
+  },
+  "updater_start_seconds": 532.4
  },
  "status_through_core": {
   "calls": 88,

@@ -1,0 +1,60 @@
+# live-testnet.sh session2: ferrata_updater_module on the public test network (LEZ v0.4.0-rc3), reaching it directly, with an
+# execution source through eth_rpc_module: every update's execution block confirmed before it is sent.
+[daemon]
+name = "modules-live-2"
+state_dir = "<out>/session2/updater-state"
+poll_secs = 24
+listen = "127.0.0.1:9465"
+ledger = "sequencer"
+
+[sequencer]
+rpc = "https://<domain>/rpc"
+program = "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg"
+wait_final = true
+
+[keys]
+payer_key_file = "<out>/keys/daemon.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 6000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 3
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+finish_own_jobs = true
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+layout = "gloas"
+checkpoint = "7954ad805ac452669dec3e9ca37adac4f9bcc3fb16032234c01a6cb8e931fce0"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "beacon_api_module-lodestar"
+  via = "beacon_api_module"
+  chain_id = 11155111
+  provider = "lodestar-counted"
+  timeout_secs = 60
+
+  [[chain.source]]
+  name = "beacon_api_module-nimbus"
+  via = "beacon_api_module"
+  chain_id = 11155111
+  provider = "nimbus-counted"
+  timeout_secs = 60
+
+  [[chain.source]]
+  name = "eth_rpc_module-sepolia"
+  kind = "execution"
+  via = "eth_rpc_module"
+  chain_id = 11155111
+  timeout_secs = 60

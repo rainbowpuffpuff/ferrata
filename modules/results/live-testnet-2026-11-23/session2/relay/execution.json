@@ -1,0 +1,23 @@
+{
+ "by": {
+  "eth_getBlockByHash": {
+   "down": 113001,
+   "errors": 0,
+   "n": 8,
+   "up": 1984
+  },
+  "eth_getBlockByNumber": {
+   "down": 112914,
+   "errors": 0,
+   "n": 8,
+   "up": 1528
+  }
+ },
+ "down": 225915,
+ "errors": 0,
+ "requests": 16,
+ "seconds": 3287.8,
+ "started": 1795470089.0245986,
+ "to": "https://rpc.sepolia.ethpandaops.io/",
+ "up": 3512
+}
