@@ -67,6 +67,25 @@ fn beacon_api_module_lc_request(
     })
 }
 
+/// Logos Core's `eth_rpc_module.raw_rpc(chain_id, method, params_json)`, called by name through the SDK as
+/// `ferrata_attest_module` calls it. The updater uses it for an execution source (`kind = "execution"`,
+/// `via = "eth_rpc_module"`: lez/updater/src/source.rs, `EthRpcModule`), which confirms each update's finalized
+/// header by its execution block before the update is sent.
+fn eth_rpc_module_raw_rpc(chain_id: i64, method: &str, params: &str, timeout_ms: u64) -> Result<String, String> {
+    let v = logos_rust_sdk::LogosModuleSDK::new()
+        .plugin("eth_rpc_module")
+        .call_json_with_timeout(
+            "raw_rpc",
+            &serde_json::json!([chain_id, method, params]),
+            std::time::Duration::from_millis(timeout_ms.max(1)),
+        )
+        .map_err(|e| format!("eth_rpc_module.raw_rpc did not answer: {e:?}"))?;
+    Ok(match v {
+        serde_json::Value::String(s) => s,
+        other => other.to_string(),
+    })
+}
+
 #[derive(Default)]
 struct FerrataUpdater {
     daemon: std::sync::Mutex<Option<Daemon>>,
@@ -150,5 +169,6 @@ impl logos_rust_sdk::AboutToUnload for FerrataUpdater {
 #[no_mangle]
 pub extern "Rust" fn logos_module_install() {
     ferrata_updater_calls::set_beacon_api_module(beacon_api_module_lc_request);
+    ferrata_updater_calls::set_eth_rpc_module(eth_rpc_module_raw_rpc);
     logos_install!(FerrataUpdater);
 }

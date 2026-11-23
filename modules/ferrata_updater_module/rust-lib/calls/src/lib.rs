@@ -24,7 +24,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use anyhow::{bail, Context as _, Result};
 use ferrata_updater::config::{File, SourceKind};
 /// The module crate installs Logos Core's `beacon_api_module` here (a source with `via = "beacon_api_module"`).
-pub use ferrata_updater::source::set_beacon_api_module;
+pub use ferrata_updater::source::{set_beacon_api_module, set_eth_rpc_module};
 use ferrata_updater::daemon::Daemon as Rounds;
 use ferrata_updater::ledger::Ledger;
 use ferrata_updater::serve::{serve, Snapshot};
