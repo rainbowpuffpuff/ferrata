@@ -27,7 +27,7 @@ relay, wrap proofs or serve chain data are **liveness only**: if one lies, the p
 sent; if one stops, anyone else, you included, can do its job; none can redirect your funds, because each proof binds
 your destination, recipient and fees. What you do trust, stated in [`docs/trust.md`](../trust.md) §0 and §1: the
 checkpoint the configuration's attestation instance started from (anyone can compare it with public Ethereum), two
-thirds of each Ethereum sync committee for the way in, fewer than `t` of the zone's accredited sequencers for the way out (their keys, or the LEZ and Logos Blockchain nodes their attestors read: each attestor must use its operator's own; under rule (A) also the watchers, outside its conditions), and the code itself, which is not audited.
+thirds of each Ethereum sync committee for the way in, fewer than `t` of the zone's accredited sequencers for the way out (their keys, or the LEZ and Logos Blockchain nodes their attestors read: each attestor must use its operator's own; under rule (A) also the watchers, outside its conditions), the soundness of the proofs, the vault's verifier and LEZ's check of private-transaction proofs, on which the bridge program's state rests too ([`docs/trust.md`](../trust.md) §5; RISC Zero 3.0.x is under advisory), and the code itself, which is not audited.
 
 | Clause | Where |
 |---|---|

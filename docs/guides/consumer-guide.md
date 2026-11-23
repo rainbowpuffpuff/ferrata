@@ -21,7 +21,9 @@ is named. The code is a prototype, not audited and not for production ([`README.
 ## 0. The model, the journey, and where each clause is answered
 
 **The model (VS.5).** Your program trusts no relayer, no RPC provider and no operator. It trusts the checkpoint of
-the instance it pins (check it once: §7) and two thirds of each sync committee, and nothing else: the attestation
+the instance it pins (check it once: §7) and two thirds of each sync committee and, beneath both, LEZ's verification
+of private-transaction proofs, through which an instance's store can also be written ([`docs/trust.md`](../trust.md)
+§5), and nothing else: the attestation
 program verifies the committee's signatures itself and proves every fact against the record it wrote, inside your
 transaction. Whoever runs the updater, fetches your proofs or submits your transaction only carries data the
 program accepts or refuses; if one of them lies the transaction is refused, if one stops anyone else, you included,
@@ -125,7 +127,7 @@ each hop; each proof against the state or receipts root; each condition and rela
 against the slot it names. It changes no state ([`lez/RESULTS.md`](../../lez/RESULTS.md) §5).
 
 Proof data travels in the transaction. A log needs its whole receipt as the trie leaf: the block's
-largest receipt (306 logs) made a 58,812-byte transaction and cost 1,618,872 cycles; a receipt several
+largest receipt (306 logs) made a 58,812-byte transaction and cost 1,619,960 cycles; a receipt several
 times larger would not fit the 5M execution target (measured, in-process harness;
 [`lez/RESULTS.md`](../../lez/RESULTS.md) §5, row 6 and "What is not built").
 

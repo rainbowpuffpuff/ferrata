@@ -14,7 +14,9 @@ deliverables (`modules/`, the updater).
 **What you trust when you use it (VS.5).** The verdict the tool prints is the program's own function run on the
 record the zone holds, and the program accepts a statement only after verifying Ethereum's sync-committee signatures
 from the instance's checkpoint and the Merkle proofs under its record. You trust that checkpoint (check it once:
-`verify_checkpoint`, [`docs/trust.md`](../docs/trust.md) §2.1) and two thirds of each sync committee; whoever runs the
+`verify_checkpoint`, [`docs/trust.md`](../docs/trust.md) §2.1) and two thirds of each sync committee and, beneath both,
+LEZ's verification of private-transaction proofs, through which an instance's store can also be written
+([`docs/trust.md`](../docs/trust.md) §5); whoever runs the
 updater, serves the light-client data or the proofs, or sends the transaction only carries data the program accepts
 or refuses, a liveness role and nothing more ([`docs/trust.md`](../docs/trust.md) §0, §2.4, each such party walked by
 a test).

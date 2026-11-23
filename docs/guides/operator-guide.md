@@ -12,12 +12,13 @@ Every statement cites its source; paths are relative to the repository root.
 **No party is obliged to operate.** Liveness rests on interested parties choosing to spend the gas:
 protocols whose users need fresh records, ecosystem operators, and the author in the post-delivery
 year. Every role below is permissionless except the watchers', and none can make the programs or the
-vault accept something false ([`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
+vault accept something false while the proofs they rest on are sound ([`docs/trust.md`](../trust.md) §5; [`docs/design/attestation.md`](../design/attestation.md) §9, §11.5;
 [`docs/design/bridge.md`](../design/bridge.md) §14).
 
 **Your role is liveness only (VS.5).** The programs accept an update on its signatures alone and a release on its
 proof alone, whoever sends them; nothing an operator sends can make them accept a false record, a false root or a
-false release, and if an operator stops, anyone else continues. The exceptions on the return leg: under rule (B) each sequencer's attestor, with the LEZ and Logos Blockchain nodes it reads (its operator's own), is one of the `t` the rule counts (§5.4); under rule (A) the watchers also hold a safety role outside the rule's conditions ([`docs/trust.md`](../trust.md) §0, §2.4, §4.2).
+false release, while LEZ's check of private-transaction proofs and the vault's verifier are sound
+([`docs/trust.md`](../trust.md) §5), and if an operator stops, anyone else continues. The exceptions on the return leg: under rule (B) each sequencer's attestor, with the LEZ and Logos Blockchain nodes it reads (its operator's own), is one of the `t` the rule counts (§5.4); under rule (A) the watchers also hold a safety role outside the rule's conditions ([`docs/trust.md`](../trust.md) §0, §2.4, §4.2).
 
 **Status.** Four daemons are built as prototypes, each as a binary and as a Logos module run under `logosctl
 daemon` with the binary's own code: the **updater** `ferrata-updater` ([`lez/updater/`](../../lez/updater/README.md),
@@ -208,7 +209,7 @@ demotion) and, per instance, its preset, checkpoint and beacon sources. Per roun
 from the chain, checks every candidate from every source with the program's own steps natively before
 paying for anything (a source serving what the program would refuse, or an update signed more than 60 s past the
 chain's clock, is demoted; one far behind is flagged lagging; one silent is flagged unavailable), and sends the next
-step of the best candidate's job (an update whose window has not opened by the chain's clock ranks after every one that can be sent; of updates of one finalized header, the earliest-signed). One lying source can still stall it (review-fix-updater3b M1: a re-dated update adopting the next committee, deferred every round; `lez/updater/README.md`, "Not built, not tested"): when `/health` reports no progress while the sources serve updates past the instance, remove or replace that source. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
+step of the best candidate's job (an update whose window has not opened by the chain's clock ranks after every one that can be sent; of updates of one finalized header, the earliest-signed). One lying source can still stall it (an internal review's finding M1, 22 November 2026: a re-dated update adopting the next committee, deferred every round; `lez/updater/README.md`, "Not built, not tested"): when `/health` reports no progress while the sources serve updates past the instance, remove or replace that source. It keeps only the full sync committees (accepted when they hash to the summaries on chain) and a
 journal; a restart, in the middle of a job or of a period, reads the chain and sends the job's next
 step. SIGTERM finishes the round and exits. `/health` is `ok`, `degraded` (with the reasons) or `down`
 (HTTP 503: whenever this updater moves nothing once the instance is active (before that, a step held for good, such as the initialization's `Adopt` out of gas, is `degraded`, naming what to change), that is no light-client source answering, five sends in a row that do not land, five
