@@ -6,6 +6,7 @@
 //! action to split its cycles by transition. The program is deployed at genesis, immutable, as
 //! LEZ's own tests deploy programs (`V03State::with_genesis_programs`).
 
+pub mod accumulated;
 pub mod attest;
 pub mod bridge;
 pub mod holdings;

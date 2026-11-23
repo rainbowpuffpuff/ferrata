@@ -130,6 +130,7 @@ impl Transfer {
 }
 
 /// The mainnet fixture: one finalized block and what is proven under it.
+#[derive(Clone)]
 pub struct Fixture {
     pub chain_id: u64,
     /// The checkpoint `Init` trusts: the bootstrap's block root.
@@ -360,7 +361,9 @@ pub fn log_statement_id(chain_id: u64, block: u64, tx_index: u64, log_index: u64
 
 /// A chain whose mainnet instance was initialized from the fixture's bootstrap and has verified
 /// its finality update through the public job: `header(id, bootstrap slot)` and
-/// `header(id, finalized slot)` hold their records.
+/// `header(id, finalized slot)` hold their records. `Clone`, so that a measurement can run the same
+/// transaction on copies of one chain (`accumulated`).
+#[derive(Clone)]
 pub struct Stage4 {
     pub w: World,
     pub fx: Fixture,

@@ -9,12 +9,18 @@
 //! 2. Growth: the serialized state with K more record (or nullifier) accounts, K up to 100,000.
 //! 3. Cost against accumulated state (P.9): the same statements and the same updates, charged with
 //!    0 to 100,000 records held by the instance.
+//! 6. Every other action against accumulated state (P.9): `Init`, `VerifyAll` in a public and in a
+//!    private transaction, `Succeed`, the eight statement types of `stage4-attest.md`, `CallAttest`
+//!    and the reference consumer's claim, each with 0 to 100,000 more of each account that
+//!    accumulates beside it (`harness::accumulated`).
 //!
 //! Records added for K are copies of a real record at slots no request names (the program reads a
 //! record by key only, so a copy is as heavy as a real one for the state, and invisible to the
 //! statements); the records written by real updates are measured in step 1 and by
 //! `lez/updater/examples/perf_replay.rs`. Prints markdown; `bench/perf/state.sh` writes
-//! `lez/results/perf-state.md`. Dev mode is not needed (public transactions only).
+//! `lez/results/perf-state.md`. Runs with `RISC0_DEV_MODE=1`, for §6's private update path only (a
+//! fake receipt: LEZ charges a private transaction the same whatever its proof); everything else
+//! is a public transaction, executed and settled, not proven.
 
 use std::time::Instant;
 
@@ -29,6 +35,7 @@ use ferrata_lez_wire::{
     header_actor,
 };
 use harness::{
+    accumulated::{self as acc, Charged},
     as_finality_update,
     attest::{account_query, condition, u256, Stage4},
     bridge::{self, nullifier_of, CHAIN_ID, DENOMINATIONS, ETH},
@@ -335,9 +342,107 @@ fn synthetic_id(tag: u8, i: usize) -> AccountId {
     AccountId::new(b)
 }
 
+/// One scenario of §6: `run` at every K of [`KS`] on the state `prepare(k)` returns, every charge
+/// asserted equal to K = 0's before its row is printed.
+fn sweep<S>(
+    what: &str,
+    prepare: impl Fn(usize) -> S,
+    state: impl Fn(&S) -> &V03State,
+    run: impl Fn(&mut S) -> Vec<Charged>,
+) {
+    println!("\n### {what}\n");
+    println!("| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |\n|---:|---:|---|---|---:|---:|");
+    let mut base: Vec<Charged> = Vec::new();
+    for k in KS {
+        let mut s = prepare(k);
+        let (bytes, _) = state_bytes(state(&s));
+        let charged = run(&mut s);
+        if k == 0 {
+            base = charged.clone();
+        }
+        acc::assert_flat(&base, &charged, k);
+        for c in &charged {
+            println!(
+                "| {} | {} | {} | {} | {} | {} |",
+                grouped(k as u64),
+                grouped(bytes as u64),
+                c.action,
+                c.handlers_text(),
+                grouped(c.gas_exec),
+                grouped(c.gas_stor)
+            );
+        }
+    }
+}
+
+fn other_actions() {
+    assert_eq!(
+        std::env::var("RISC0_DEV_MODE").as_deref(),
+        Ok("1"),
+        "run with RISC0_DEV_MODE=1 (the private update path's fake receipt; bench/perf/state.sh sets it)"
+    );
+    println!("\n## 6. Every other action against accumulated state (RFP-021 P.9)\n");
+    println!(
+        "Each action runs on copies of one world; the copy for K also holds K more of each account that accumulates \
+         beside it, copied from accounts the programs wrote, at keys no measured transaction names \
+         (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for \
+         `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements \
+         and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, \
+         other owners) and readers. The accounts an action reads that change with use are measured as they change: \
+         the reader empty, then holding the previous reply (twice), and the claimant's balance credited K + 1 times \
+         before. The private update path is LEZ's private transaction settled with a RISC Zero dev-mode receipt; its \
+         first \"handler\" is the private execution's cycles in RISC Zero's executor (what the sender proves, not \
+         charged by LEZ), its second the public part LEZ executes (`ApplyVerified` → `Record`), charged with the flat \
+         private receipt gas. Every charge is asserted equal at every K before it is printed."
+    );
+    let uw = acc::UpdateWorld::new();
+    sweep("`Init` and its adoption (a new chain)", |k| uw.chain_for_init(k), |c| &c.state, acc::init_on);
+    sweep(
+        "`VerifyAll` in one public transaction (update_1 as a finality update, after update_0)",
+        |k| uw.grown(k),
+        |w| &w.chain.state,
+        |w| vec![acc::verify_all_public(w)],
+    );
+    sweep(
+        "`VerifyAll` in one private transaction: the proven update path",
+        |k| uw.grown(k),
+        |w| &w.chain.state,
+        |w| vec![acc::verify_all_private(w)],
+    );
+    sweep("`Succeed` and the `Spawn` it sends", |k| uw.grown(k), |w| &w.chain.state, |w| vec![acc::succeed(w)]);
+    drop(uw);
+    let cw = acc::ConsumerWorld::new();
+    let requests = acc::statement_requests(&cw.base);
+    sweep(
+        "The eight statement types of `stage4-attest.md`, each the root of a transaction",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        |s| acc::attest_all(s, &requests),
+    );
+    sweep("`CallAttest` from one public reader, three times", |k| cw.grown(k), |s| &s.w.chain.state, acc::call_attest);
+    sweep(
+        "The reference consumer's claim (`Claim` → `Attest` → reply → `Credit`)",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        |s| vec![acc::claim(s, "Claim, the sender's first credit", 0)],
+    );
+    sweep(
+        "The same claim, the sender's balance credited K + 1 times before",
+        |k| {
+            let mut s = cw.grown(k);
+            acc::place_balance(&mut s, k as u64 + 1);
+            (s, k as u64 + 1)
+        },
+        |(s, _)| &s.w.chain.state,
+        |(s, before)| vec![acc::claim(s, "Claim, the sender credited before", *before)],
+    );
+    println!("\nEvery transaction was charged the same handler cycles, execution gas and storage gas at every K (asserted).");
+}
+
 fn main() {
     println!("# perf_state: LEZ state sizes and costs against accumulated state\n");
     sizes_and_statements();
     updates_against_records();
     bridge_state();
+    other_actions();
 }
