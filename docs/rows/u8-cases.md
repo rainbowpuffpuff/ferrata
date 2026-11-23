@@ -74,8 +74,10 @@ failed admin step is left as it is (a view matter, not U.8's).
 ## Each test fails without its refusal or its message (mutants, the build box, 23 November 2026)
 
 Each mutant was applied to the tree, the test run, and the file restored (script: the stream's `mutants.py`, kept
-outside the repository; the markers of every mutant counted 0 in the tree afterwards). Tool: `cargo test --test e2e`
-(e2e.sh's environment); mini-app: `box-test.sh`. Measured, 23 November 2026, on `e83239ff`.
+outside the repository; the markers of every mutant counted 0 in the tree afterwards). Tool, in `cli/`: `cargo test --locked --test e2e -- --nocapture` with `FERRATA_E2E=1 RISC0_DEV_MODE=1
+RISC0_HOME=<spike>/risc0-home-lez`, `~/.foundry/bin` on the path and the variables of
+`python3 -I scripts/fetch_native.py env` (what e2e.sh sets); mini-app, from the root: `bash
+modules/ferrata_bridge_ui/scripts/box-test.sh` in the same environment. Measured, 23 November 2026, on `e83239ff`.
 
 | Mutant | Must break | Result |
 |---|---|---|

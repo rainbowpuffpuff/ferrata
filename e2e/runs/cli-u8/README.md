@@ -1,6 +1,6 @@
 # The `ferrata` tool's verification-failure and finality refusals (RFP-022 U.08)
 
-**Run:** `cli/tests/e2e.sh` (the test `deposit_scan_claim_burn_release_and_recovery` of
+**Run:** `RISC0_HOME=<spike>/risc0-home-lez cli/tests/e2e.sh` from the repository's root (the test `deposit_scan_claim_burn_release_and_recovery` of
 [`cli/tests/e2e.rs`](../../../cli/tests/e2e.rs)), on a Modal build box (CPU), 23 November 2026, the tool's sources of
 commit `e83239ff` (branch `u8-cases`). **Result:** `test result: ok. 1 passed; 0 failed` in 50.98 s
 ([`test.log`](test.log), the test's own output; the build's lines before it are left out and the checkout's path is
@@ -46,8 +46,10 @@ is finalised and the test goes on as before. Every other case of the test is unc
 ## Each test fails without its refusal or its message (mutants, 23 November 2026)
 
 Each mutant was applied to the tree, the test run, and the file restored (script: the stream's `mutants.py`, kept
-outside the repository; the markers of every mutant counted 0 in the tree afterwards). Tool: `cargo test --test e2e`
-(e2e.sh's environment); mini-app: `box-test.sh`. Measured, 23 November 2026, on `e83239ff`.
+outside the repository; the markers of every mutant counted 0 in the tree afterwards). Tool, in `cli/`: `cargo test --locked --test e2e -- --nocapture` with `FERRATA_E2E=1 RISC0_DEV_MODE=1
+RISC0_HOME=<spike>/risc0-home-lez`, `~/.foundry/bin` on the path and the variables of
+`python3 -I scripts/fetch_native.py env` (what e2e.sh sets); mini-app, from the root: `bash
+modules/ferrata_bridge_ui/scripts/box-test.sh` in the same environment. Measured, 23 November 2026, on `e83239ff`.
 
 | Mutant | Must break | Result |
 |---|---|---|
