@@ -1057,7 +1057,10 @@ fn the_vault_pattern_costs_the_same_whatever_the_chain_holds() {
         Ok("1"),
         "run with RISC0_DEV_MODE=1 (fake receipts; the real proofs are the prove_* binaries')"
     );
-    let vw = acc::VaultWorld::new();
+    // The record placed rather than replayed (`RealVault::placed`: the replay of 32 Sepolia periods
+    // is a minute); the pins are the replayed world's figures (`perf-state-actions.md`), so they
+    // also check that the placed record is the one the instance writes.
+    let vw = acc::VaultWorld::placed();
     let more = MORE_RECORDS as usize;
     let mut pins = Pins::new();
 

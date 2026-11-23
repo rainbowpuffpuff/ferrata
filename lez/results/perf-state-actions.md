@@ -5,13 +5,17 @@ in `lez/harness/src/accumulated.rs`). **Measured** in LEZ v0.4.0-rc1's own state
 in-process harness, transactions executed and settled with LEZ's fee settlement), as
 [`perf-state.md`](perf-state.md) §2 and §3 measure five statement types and every update step: the actions it does not
 sweep, `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement types of
-[`stage4-attest.md`](stage4-attest.md), `Read` and `ReadPadded`, `CallAttest` and the reference consumer's claim (with
-§2–§3 of `perf-state.md`, every message the attestation program handles), each charged with K = 0,
-1,000, 10,000 and 100,000 more of each account that accumulates beside it. The **serialized state** column is what a
-node writes for the state before RocksDB's compression (`perf-state.md` says how). The same scenarios are pinned in CI
-with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
+[`stage4-attest.md`](stage4-attest.md), the accumulator-leaf statement (the synthetic vault of
+[`stage5-vault-synthetic.md`](stage5-vault-synthetic.md)), `Read` and `ReadPadded` (with §2–§3 of `perf-state.md`,
+every message the attestation program handles), and every message of the reference consumer: `CallAttest`, `Claim`,
+`AttestPrivately`, and the vault pattern's `ClaimDeposit` and `ClaimDepositPrivately` with `Spend` and `CreditHolder`.
+Each is charged with K = 0, 1,000, 10,000 and 100,000 more of the accounts that accumulate beside it, and every private
+transaction with K more commitments in LEZ's commitment set as well. The **serialized state** column is what a node
+writes for the state before RocksDB's compression (`perf-state.md` says how). The last table measures the one cost
+found to grow with use, a private-kind claim's own proof against its claimant's holdings. The same scenarios are pinned
+in CI with K = 1,000 (`lez/harness/tests/costs_attestation.rs`, job `lez-harness`).
 
-Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit bc39a01d.
+Measured 2026-11-23 on the build box (its CPU model is not reported inside the sandbox) (32 CPUs visible), commit 4558af81.
 
 
 Each action runs on copies of one world; the copy for K also holds K more of the accounts that accumulate beside it, copied from accounts the programs wrote, at keys no measured transaction names (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, other owners) and readers; for the synthetic vault's leaf statements, records of its instance; for the vault pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is longer (printed; the harness cannot read the circuit's cycles); its first "handlers" are its private transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with use are measured as they change: a reader empty, then holding the record or reply it read before; a balance or a holder credited K + 1 times before; and, in the last table, a claimant's private holdings. Every charge is asserted equal at every K before it is printed; the last table is not a comparison.

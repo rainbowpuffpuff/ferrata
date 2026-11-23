@@ -848,8 +848,17 @@ impl Default for VaultWorld {
 }
 
 impl VaultWorld {
+    /// On the Sepolia instance's own record, after the replay (`vault::RealVault::load`).
     pub fn new() -> Self {
-        let v = vault::RealVault::load();
+        Self::on(vault::RealVault::load())
+    }
+
+    /// On the same record placed without the replay (`vault::RealVault::placed`): what CI runs.
+    pub fn placed() -> Self {
+        Self::on(vault::RealVault::placed())
+    }
+
+    fn on(v: vault::RealVault) -> Self {
         let pool = vault::eth_pool(&v);
         let openings = vault::crown_openings(&v);
         let record = account(&v.w.chain.state, v.actor().account_id);
