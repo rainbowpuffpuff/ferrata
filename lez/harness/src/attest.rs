@@ -183,6 +183,43 @@ fn finality_update(b: &[u8]) -> LightClientUpdate {
     }
 }
 
+/// The receipts trie, rebuilt from the JSON: key `RLP(index)`, value the receipt's consensus
+/// encoding.
+fn receipts_trie(receipts: &[Value]) -> Trie {
+    Trie::new(receipts.iter().enumerate().map(|(i, r)| {
+        let (key, len) = encode_u64(i as u64);
+        (key[..len].to_vec(), receipt_rlp(r))
+    }))
+}
+
+/// A copy, its receipts trie rebuilt from the same JSON (the trie type is not `Clone`).
+impl Clone for Fixture {
+    fn clone(&self) -> Self {
+        Self {
+            chain_id: self.chain_id,
+            checkpoint: self.checkpoint,
+            bootstrap: self.bootstrap.clone(),
+            update: self.update.clone(),
+            bootstrap_slot: self.bootstrap_slot,
+            finalized_slot: self.finalized_slot,
+            block: self.block,
+            hop_block: self.hop_block,
+            weth: self.weth,
+            weth_slot: self.weth_slot,
+            empty_slot: self.empty_slot,
+            absent: self.absent,
+            history_slot: self.history_slot,
+            transfer: self.transfer.clone(),
+            other_recipient: self.other_recipient.clone(),
+            other_token: self.other_token.clone(),
+            in_largest: self.in_largest.clone(),
+            failed_tx: self.failed_tx,
+            receipts: self.receipts.clone(),
+            receipts_trie: receipts_trie(&self.receipts),
+        }
+    }
+}
+
 impl Fixture {
     pub fn load() -> Self {
         let manifest: Value = serde_json::from_slice(&fixture_file("fixture.json")).unwrap();
@@ -192,12 +229,7 @@ impl Fixture {
             .as_array()
             .expect("receipts")
             .clone();
-        // The receipts trie, rebuilt from the JSON: key `RLP(index)`, value the receipt's
-        // consensus encoding.
-        let receipts_trie = Trie::new(receipts.iter().enumerate().map(|(i, r)| {
-            let (key, len) = encode_u64(i as u64);
-            (key[..len].to_vec(), receipt_rlp(r))
-        }));
+        let receipts_trie = receipts_trie(&receipts);
         Self {
             chain_id: manifest["chain_id"].as_u64().unwrap(),
             checkpoint: root_of(&manifest["bootstrap_root"]),
@@ -360,7 +392,9 @@ pub fn log_statement_id(chain_id: u64, block: u64, tx_index: u64, log_index: u64
 
 /// A chain whose mainnet instance was initialized from the fixture's bootstrap and has verified
 /// its finality update through the public job: `header(id, bootstrap slot)` and
-/// `header(id, finalized slot)` hold their records.
+/// `header(id, finalized slot)` hold their records. `Clone`, so that a measurement can run the same
+/// transaction on copies of one chain (`accumulated`).
+#[derive(Clone)]
 pub struct Stage4 {
     pub w: World,
     pub fx: Fixture,

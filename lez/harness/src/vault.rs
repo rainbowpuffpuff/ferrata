@@ -455,12 +455,6 @@ pub struct RealVault {
 impl RealVault {
     pub fn load() -> Self {
         let m: Value = serde_json::from_slice(&vault_file("fixture.json")).unwrap();
-        assert_eq!(m["chain_id"].as_u64(), Some(SEPOLIA_CHAIN_ID));
-        let vault: Address = hexb(VAULT_V5).try_into().unwrap();
-        let storage = &m["storage"][0];
-        assert_eq!(hexb(storage["address"].as_str().unwrap()), vault.to_vec(), "the fixture is the vault's");
-        assert_eq!(m["deposits"]["vault"].as_str().map(hexb), Some(vault.to_vec()));
-        let block = m["block"].as_u64().unwrap();
         let mut w = sepolia::replay(2, sepolia::LAST_PERIOD);
         for p in m["updates"].as_array().unwrap() {
             let p = p.as_u64().unwrap();
@@ -473,6 +467,63 @@ impl RealVault {
         assert_eq!(run_.outcome.map(|o| o.advanced), Some(true));
         let slot = m["finalized_slot"].as_u64().unwrap();
         let record = w.inst.record(&w.chain, slot).expect("the record").header().unwrap();
+        // What `placed` places is the record the instance wrote.
+        assert_eq!(
+            record,
+            HeaderRecord::of(&finality.finalized_header, LcFork::Gloas, &w.spec),
+            "RealVault::placed's record"
+        );
+        Self::on(m, w, record, &finality)
+    }
+
+    /// The same vault under the same record without the replay: the record placed (`place_record`)
+    /// on a new chain beside the Sepolia instance's id (the instance is not on that chain), as
+    /// `HeaderRecord::of` gives it for the fixture's finalized header in the Gloas layout, which is
+    /// what the replayed instance writes. For measurements of what reads the record and not the
+    /// instance, at a fraction of [`RealVault::load`]'s cost (`tests/costs_attestation.rs` pins the
+    /// reference consumer's charges on it to the figures measured on the replayed world).
+    pub fn placed() -> Self {
+        use ferrata_core::policy::{Adoption, FinalizedStore};
+        let m: Value = serde_json::from_slice(&vault_file("fixture.json")).unwrap();
+        let config = sepolia::sepolia_config(2);
+        let spec = config.spec();
+        let checkpoint = crate::root(sepolia::SEPOLIA_CHECKPOINT);
+        let bootstrap = sepolia::sepolia_bootstrap();
+        let inst = crate::Instance::new(crate::ferrata_account(), config, checkpoint);
+        let native = FinalizedStore::initialize_with(
+            &checkpoint,
+            &bootstrap,
+            inst.fork(),
+            &spec,
+            &crate::scenarios::BLS,
+            Adoption::OnChain,
+        )
+        .unwrap();
+        let mut w = crate::scenarios::World {
+            chain: Chain::new(),
+            inst,
+            native,
+            spec,
+            bootstrap,
+            updates: vec![],
+            runs: vec![],
+        };
+        let finality = sepolia::gloas_finality_update(&vault_file("finality_update.ssz"));
+        let record = HeaderRecord::of(&finality.finalized_header, LcFork::Gloas, &w.spec);
+        assert_eq!(Some(record.beacon.slot), m["finalized_slot"].as_u64(), "the finalized header's record");
+        place_record(&mut w.chain, w.inst.id, SEPOLIA_CHAIN_ID, &record);
+        Self::on(m, w, record, &finality)
+    }
+
+    /// The vault's data from the fixture, under `record` on `w`'s chain.
+    fn on(m: Value, w: crate::scenarios::World, record: HeaderRecord, finality: &LightClientUpdate) -> Self {
+        assert_eq!(m["chain_id"].as_u64(), Some(SEPOLIA_CHAIN_ID));
+        let vault: Address = hexb(VAULT_V5).try_into().unwrap();
+        let storage = &m["storage"][0];
+        assert_eq!(hexb(storage["address"].as_str().unwrap()), vault.to_vec(), "the fixture is the vault's");
+        assert_eq!(m["deposits"]["vault"].as_str().map(hexb), Some(vault.to_vec()));
+        let block = m["block"].as_u64().unwrap();
+        let slot = m["finalized_slot"].as_u64().unwrap();
         let header = vault_file("header.rlp");
         let proof = account_proof(&vault_file(&format!("proof_0x{VAULT_V5}_{block}.json")));
         let value = |n: u8| proof.storage.iter().find(|s| s.key == slot_word(n)).expect("slot").value;

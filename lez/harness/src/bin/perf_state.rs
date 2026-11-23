@@ -10,11 +10,22 @@
 //! 3. Cost against accumulated state (P.9): the same statements and the same updates, charged with
 //!    0 to 100,000 records held by the instance.
 //!
+//! `perf_state actions` measures instead every other action against accumulated state (P.9):
+//! `Init`, `VerifyAll` in a public and in a private transaction, `Succeed`, the eight statement
+//! types of `stage4-attest.md`, the accumulator-leaf statement, `Read` and `ReadPadded`, and the
+//! reference consumer's messages, each with 0 to 100,000 more of the accounts that accumulate
+//! beside it (and, for a private transaction, more commitments in LEZ's commitment set), then the
+//! reference consumer's private-kind claim against its claimant's holdings, which grows
+//! (`harness::accumulated`); `bench/perf/state-actions.sh` writes
+//! `lez/results/perf-state-actions.md`.
+//!
 //! Records added for K are copies of a real record at slots no request names (the program reads a
 //! record by key only, so a copy is as heavy as a real one for the state, and invisible to the
 //! statements); the records written by real updates are measured in step 1 and by
 //! `lez/updater/examples/perf_replay.rs`. Prints markdown; `bench/perf/state.sh` writes
-//! `lez/results/perf-state.md`. Dev mode is not needed (public transactions only).
+//! `lez/results/perf-state.md`. Dev mode is not needed (public transactions only), except by the
+//! `actions` mode's private update path (`RISC0_DEV_MODE=1`: a fake receipt; LEZ charges a private
+//! transaction the same whatever its proof).
 
 use std::time::Instant;
 
@@ -29,6 +40,7 @@ use ferrata_lez_wire::{
     header_actor,
 };
 use harness::{
+    accumulated::{self as acc, Charged},
     as_finality_update,
     attest::{account_query, condition, u256, Stage4},
     bridge::{self, nullifier_of, CHAIN_ID, DENOMINATIONS, ETH},
@@ -335,9 +347,260 @@ fn synthetic_id(tag: u8, i: usize) -> AccountId {
     AccountId::new(b)
 }
 
+/// One scenario of `actions`: `run` at every K of [`KS`] on the state `prepare(k)` returns, every charge
+/// asserted equal to K = 0's before its row is printed.
+fn sweep<S>(
+    what: &str,
+    prepare: impl Fn(usize) -> S,
+    state: impl Fn(&S) -> &V03State,
+    run: impl Fn(&mut S) -> Vec<Charged>,
+) {
+    println!("\n## {what}\n");
+    println!("| K | serialized state before (B) | transaction | handlers (cycles each) | exec gas | stor gas |\n|---:|---:|---|---|---:|---:|");
+    let mut base: Vec<Charged> = Vec::new();
+    for k in KS {
+        let mut s = prepare(k);
+        let (bytes, _) = state_bytes(state(&s));
+        let charged = run(&mut s);
+        if k == 0 {
+            base = charged.clone();
+        }
+        acc::assert_flat(&base, &charged, k);
+        for c in &charged {
+            println!(
+                "| {} | {} | {} | {} | {} | {} |",
+                grouped(k as u64),
+                grouped(bytes as u64),
+                c.action,
+                c.handlers_text(),
+                grouped(c.gas_exec),
+                grouped(c.gas_stor)
+            );
+        }
+    }
+}
+
+/// One private transaction of `actions`: [`sweep`] with K more commitments in LEZ's commitment
+/// set as well (the caller's `prepare` adds them), the fee payer's membership path printed beside
+/// the charge.
+fn sweep_private<S>(
+    what: &str,
+    prepare: impl Fn(usize) -> S,
+    state: impl Fn(&S) -> &V03State,
+    run: impl Fn(&mut S) -> acc::Proven,
+) {
+    println!("\n## {what}\n");
+    println!(
+        "| K | serialized state before (B) | membership path (levels) | transaction | handlers (cycles each) | exec gas | stor gas |\n|---:|---:|---:|---|---|---:|---:|"
+    );
+    let mut base: Vec<Charged> = Vec::new();
+    for k in KS {
+        let mut s = prepare(k);
+        let (bytes, _) = state_bytes(state(&s));
+        // Markers for `bench/perf/state-actions.sh`, which reads the circuit's cycles from r0vm's
+        // session log (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`): the session right after the last
+        // proof of one of the private transitions named at the end marker. r0vm (a subprocess)
+        // writes its log to the stdout it inherits, so the markers go there too, in order; the
+        // script separates both from the record.
+        println!("perf-state-actions: begin|{what}|{k}");
+        let proven = run(&mut s);
+        let private: Vec<String> =
+            proven.charged.handlers.iter().filter(|(h, _)| h != "public part").map(|(_, c)| c.to_string()).collect();
+        println!("perf-state-actions: end|{what}|{k}|{}|{}", proven.path_levels, private.join(","));
+        let charged = vec![proven.charged];
+        if k == 0 {
+            base = charged.clone();
+        }
+        acc::assert_flat(&base, &charged, k);
+        let c = &charged[0];
+        println!(
+            "| {} | {} | {} | {} | {} | {} | {} |",
+            grouped(k as u64),
+            grouped(bytes as u64),
+            proven.path_levels,
+            c.action,
+            c.handlers_text(),
+            grouped(c.gas_exec),
+            grouped(c.gas_stor)
+        );
+    }
+}
+
+/// The pools a claimant already holds privately, for [`holdings_growth`].
+const POOLS: [usize; 5] = [0, 1, 10, 100, 1_000];
+
+/// The reference consumer's cost that grows with use, measured as it grows: a private-kind vault
+/// claim's private transitions against the claimant's `holdings` (not a comparison; nothing
+/// asserted equal).
+fn holdings_growth(vw: &acc::VaultWorld) {
+    println!(
+        "\n## The reference consumer's private-kind claim against the claimant's own holdings (grows; avoidable)\n"
+    );
+    println!(
+        "The reference consumer credits a private-kind deposit in the claimant's own private state, one `(pool id, \
+         amount)` entry per pool it holds (`ClaimantState.holdings`); the claim decodes, searches and re-encodes the \
+         list. Deposit 1 of FerrataVault v5 claimed by its destination (LEZ's private test account 0) in RISC Zero's \
+         executor, the claimant already holding `pools` other pools: the claim's two private transitions (LEZ's \
+         circuit, which hashes and encrypts the larger state, grows with it too; not measured here). It is the \
+         claimant's own proving work: LEZ charges the private transaction its flat receipt gas plus the public part \
+         (`Read`, `Spend`), which does not see the list. It is avoidable: a claimant that sends each pool's deposits \
+         to a private account of its own keeps one entry per account."
+    );
+    println!(
+        "\n| pools already held | ClaimDepositPrivately (executor) | the record's reply (executor) | private cycles | over 0 pools, per pool |\n|---:|---:|---:|---:|---:|"
+    );
+    let (a0, b0) = acc::private_kind_claim(vw, 0);
+    for pools in POOLS {
+        let (a, b) = acc::private_kind_claim(vw, pools);
+        let per = if pools == 0 {
+            "—".to_string()
+        } else {
+            format!("{:.1}", ((a + b) as f64 - (a0 + b0) as f64) / pools as f64)
+        };
+        println!("| {} | {} | {} | {} | {per} |", grouped(pools as u64), grouped(a), grouped(b), grouped(a + b));
+    }
+}
+
+fn other_actions() {
+    assert_eq!(
+        std::env::var("RISC0_DEV_MODE").as_deref(),
+        Ok("1"),
+        "run with RISC0_DEV_MODE=1 (the private transactions' fake receipts; bench/perf/state-actions.sh sets it)"
+    );
+    println!(
+        "Each action runs on copies of one world; the copy for K also holds K more of the accounts that accumulate \
+         beside it, copied from accounts the programs wrote, at keys no measured transaction names \
+         (`lez/harness/src/accumulated.rs`): for `Init`, records of another instance and other instances; for \
+         `VerifyAll` and `Succeed`, records of the instance (slots from 2^40) and other instances; for the statements \
+         and the reference consumer, records of the instance and the consumer's spent claims, balances (same pool, \
+         other owners) and readers; for the synthetic vault's leaf statements, records of its instance; for the vault \
+         pattern, records of the Sepolia instance and the consumer's spent claims and holders (same pool, other \
+         destinations). Job accounts are not copied. Every private transaction also has K more commitments in LEZ's \
+         commitment set, so its fee payer's membership path, which LEZ's circuit hashes one SHA-256 per level, is \
+         longer (printed; the circuit's own cycles, from r0vm's session log, are in the last table); its \
+         first \"handlers\" are its private \
+         transitions' cycles in RISC Zero's executor (what the sender proves, not charged by LEZ), its last the public \
+         part LEZ executes, charged with the flat private receipt gas. The accounts an action reads that change with \
+         use are measured as they change: a reader empty, then holding the record or reply it read before; a balance \
+         or a holder credited K + 1 times before; and, in the table after the sweeps, a claimant's private holdings. \
+         Every charge is asserted equal at every K before it is printed; the two tables after the sweeps are not \
+         comparisons."
+    );
+    let uw = acc::UpdateWorld::new();
+    sweep("`Init` and its adoption (a new chain)", |k| uw.chain_for_init(k), |c| &c.state, acc::init_on);
+    sweep(
+        "`VerifyAll` in one public transaction (update_1 as a finality update, after update_0)",
+        |k| uw.grown(k),
+        |w| &w.chain.state,
+        |w| vec![acc::verify_all_public(w)],
+    );
+    sweep_private(
+        "`VerifyAll` in one private transaction: the proven update path",
+        |k| {
+            let mut w = uw.grown(k);
+            acc::add_commitments(&mut w.chain, k);
+            w
+        },
+        |w| &w.chain.state,
+        acc::verify_all_private,
+    );
+    sweep("`Succeed` and the `Spawn` it sends", |k| uw.grown(k), |w| &w.chain.state, |w| vec![acc::succeed(w)]);
+    drop(uw);
+    let lw = acc::LeafWorld::new();
+    sweep(
+        "The accumulator-leaf statement and the vault's slots (the synthetic vault of `stage5-vault-synthetic.md`)",
+        |k| lw.grown(k),
+        |c| &c.state,
+        |c| acc::attest_leaves(&lw, c),
+    );
+    drop(lw);
+    let cw = acc::ConsumerWorld::new();
+    let requests = acc::statement_requests(&cw.base);
+    sweep(
+        "The eight statement types of `stage4-attest.md`, each the root of a transaction",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        |s| acc::attest_all(s, &requests),
+    );
+    sweep(
+        "`Read` and `ReadPadded` (the module's read idiom), sent by a public reader of the consumer",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        acc::read_record,
+    );
+    sweep("`CallAttest` from one public reader, three times", |k| cw.grown(k), |s| &s.w.chain.state, acc::call_attest);
+    sweep(
+        "The reference consumer's claim (`Claim` → `Attest` → reply → `Credit`)",
+        |k| cw.grown(k),
+        |s| &s.w.chain.state,
+        |s| vec![acc::claim(s, "Claim, the sender's first credit", 0)],
+    );
+    sweep(
+        "The same claim, the sender's balance credited K + 1 times before",
+        |k| {
+            let mut s = cw.grown(k);
+            acc::place_balance(&mut s, k as u64 + 1);
+            (s, k as u64 + 1)
+        },
+        |(s, _)| &s.w.chain.state,
+        |(s, before)| vec![acc::claim(s, "Claim, the sender credited before", *before)],
+    );
+    sweep_private(
+        "The reference consumer's private read, `AttestPrivately` (one private transaction)",
+        |k| {
+            let mut s = cw.grown(k);
+            acc::add_commitments(&mut s.w.chain, k);
+            s
+        },
+        |s| &s.w.chain.state,
+        acc::attest_privately,
+    );
+    drop(cw);
+    let vw = acc::VaultWorld::new();
+    sweep(
+        "The vault pattern's public claim (`ClaimDeposit` → `Attest` → reply → `CreditHolder`), FerrataVault v5's deposit 0",
+        |k| vw.grown(k),
+        |w| &w.chain.state,
+        |w| vec![acc::claim_deposit(&vw, w, "ClaimDeposit, the destination's first credit", 0)],
+    );
+    sweep(
+        "The same claim, the destination's holder credited K + 1 times before",
+        |k| {
+            let mut w = vw.grown(k);
+            acc::place_holder(&vw, &mut w, k as u64 + 1);
+            (w, k as u64 + 1)
+        },
+        |(w, _)| &w.chain.state,
+        |(w, before)| vec![acc::claim_deposit(&vw, w, "ClaimDeposit, the holder credited before", *before)],
+    );
+    sweep_private(
+        "The vault pattern's private claim (`ClaimDepositPrivately`; public part `Read` → `Spend` → `CreditHolder`)",
+        |k| {
+            let mut w = vw.grown(k);
+            acc::add_commitments(&mut w.chain, k);
+            w
+        },
+        |w| &w.chain.state,
+        |w| acc::claim_deposit_privately(&vw, w),
+    );
+    holdings_growth(&vw);
+    println!(
+        "\nEvery transaction of the swept tables was charged the same handler cycles, execution gas and storage gas at every K (asserted)."
+    );
+}
+
 fn main() {
-    println!("# perf_state: LEZ state sizes and costs against accumulated state\n");
-    sizes_and_statements();
-    updates_against_records();
-    bridge_state();
+    match std::env::args().nth(1).as_deref() {
+        None => {
+            println!("# perf_state: LEZ state sizes and costs against accumulated state\n");
+            sizes_and_statements();
+            updates_against_records();
+            bridge_state();
+        }
+        Some("actions") => {
+            println!("# perf_state actions: every other action against accumulated state\n");
+            other_actions();
+        }
+        Some(other) => panic!("unknown mode {other}: none, or `actions`"),
+    }
 }

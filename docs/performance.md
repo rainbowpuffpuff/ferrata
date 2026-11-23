@@ -339,13 +339,60 @@ shows is limited: the copies sit at keys no measured action reads, and a LEZ tra
 names, so the test shows that LEZ's metering does not depend on unrelated state; it cannot catch an account an action
 reads growing with use. That is excluded by construction instead: each action reads the instance (593 B, constant:
 committees as summaries), its job (1,110 B), one record (453 B), or for the bridge one root (205 B) and one nullifier
-or burn record (165 / 273 B), each fixed in size and addressed by key; no action reads a collection. In operation the
+or burn record (165 / 273 B), each fixed in size and addressed by key; no action of the module reads a collection (the
+reference consumer's private holdings, below, are one). In operation the
 lab's `Miller` (3,307,963) and `Finish` (3,723,564) were charged identically in all 98 mainnet finality jobs while 106
 records accumulated ([`perf-tracking.md`](../lez/results/perf-tracking.md); `lez/lab/results/record/run.tsv`).
-**Not measured at different state sizes:** `Init`, the public `VerifyAll` and the private update path; the
-absent-account, absent-slot and four-facts statements; `CallAttest` and the reference consumer's claim; `Succeed` and
-`Spawn`; the bridge's actions. The node's own work is not charged: serializing
-the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node writes, not a transaction's cost).
+**Every other action, measured** ([`lez/results/perf-state-actions.md`](../lez/results/perf-state-actions.md),
+`bash bench/perf/state-actions.sh`; the scenarios in `lez/harness/src/accumulated.rs`): each runs on copies of one
+world, the copy for K holding K = 1,000, 10,000 or 100,000 more of the accounts that accumulate beside it, copied from
+accounts the programs wrote, at keys no measured transaction names (records of the instance and other instances; for
+the consumer, its spent claims, balances or holders, and readers; job accounts are not copied), and every private
+transaction K more commitments in LEZ's commitment set (the serialized state up to 143.6 MB). Each was charged the
+same handler cycles, execution gas and storage gas at every K (asserted): `Init` and its two adoption transactions
+(210,666, 3,399,141 and 3,485,575 execution gas), `VerifyAll` in one public transaction (9,124,896) and in one private
+transaction, the proven update path (485,298 execution gas, 224,063 storage gas), `Succeed` → `Spawn` (70,610), all
+eight statement types of [`stage4-attest.md`](../lez/results/stage4-attest.md) (the absent account 151,829, the absent
+slot 270,580, the four facts 454,255), the accumulator-leaf statement with the vault's slots under a record that binds a
+block hash (122,067 with no leaf to 646,014 with eight; 167,123 with one leaf under a record holding the payload's
+fields: [`stage5-vault-synthetic.md`](../lez/results/stage5-vault-synthetic.md)), and `Read` and `ReadPadded`
+(`Read` 12,268 cycles): with §3's update steps, every message the attestation program handles. The reference
+consumer's messages are application code by RFP-021's scope, and were measured the same way: `CallAttest`, `Claim` with
+its `Credit`, `AttestPrivately` (422,032 execution gas), and the vault pattern on FerrataVault v5's real deposits,
+`ClaimDeposit` → `CreditHolder` (500,206) and `ClaimDepositPrivately` with its public `Read` → `Spend` → `CreditHolder`
+(456,847). The accounts an action reads that change with use were measured as they change: a reader keeps only the
+last reply or record (`CallAttest` 386,181 from an empty reader, 395,003 once it holds a reply, the same on the call
+after), and a credit to an existing balance or holder costs the same whether it was credited once or 100,001 times
+(187,721; 502,821). CI pins the same scenarios with a thousand more of each
+([`costs_attestation.rs`](../lez/harness/tests/costs_attestation.rs), job `lez-harness`; the vault pattern on the
+vault's record placed rather than replayed from Sepolia, its pins the replayed world's figures).
+
+**What grows.** (1) In the program's actions, one cost, and it is LEZ's: a private transaction's circuit verifies its
+fee payer's membership path in LEZ's commitment tree, one hash per level, and the tree's depth is log2 of every
+commitment ever made (`lee/state_machine/src/merkle_tree/mod.rs` in LEZ v0.4.0-rc1). Measured: with 100,000 more
+commitments the path grew from 3 to 17 levels while the private `VerifyAll`, `AttestPrivately` and
+`ClaimDepositPrivately` were charged exactly the same, and the private `VerifyAll`'s circuit grew from 1,913,757 to
+1,927,235, 1,934,974 and 1,940,779 user cycles at 3, 10, 14 and 17 levels, about 1,935 a level (`AttestPrivately`'s
+and `ClaimDepositPrivately`'s the same: 1,975,409 to 2,002,530 and 2,176,439 to 2,203,529 from 3 to 17 levels;
+[`perf-state-actions.md`](../lez/results/perf-state-actions.md), its last table), about 62,000 at depth 32 (derived),
+beside about 1.9M for the circuit and 9.05M for `VerifyAll`'s own execution: the 14 more levels add 1.4% to the
+circuit. The same circuit varies by a few tens of cycles from one run to the next (1,913,726 and 1,913,757 at 3 levels
+in two runs; the cause not established), far below one level's cost. LEZ's API drops the prover's statistics; r0vm logs
+every session's cycles with `RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`, and `bash bench/perf/state-actions.sh` reads the
+circuits' from that log. The module cannot avoid it (it is how LEZ proves that a private account exists), and at that
+size it needs no mitigation. `VerifyAll` carries the instance's store in its message, so its private execution reads no
+chain state: its 9,049,362 cycles cannot vary with K and are not a measurement against accumulation. (2) In the
+reference consumer, which is application code by RFP-021's scope: a private-kind vault claim credits the claimant's own
+private state, one `(pool, amount)` entry per pool it holds, and the claim's two private transitions grow by about
+2,000–2,300 cycles a pool (measured: 1,523,845 with none, 1,737,559 with 100, 3,717,087 with 1,000); LEZ's circuit,
+which hashes and encrypts that state, grows with it too (not measured). LEZ's charge does not see it (the public part is
+`Read` and `Spend`). It is avoidable: a claimant avoids it today by sending each pool's deposits to a private account of
+its own, and a consumer can keep one pool per private account instead of a list. Not measured against accumulation: the
+bridge's actions (RFP-022's program, which has no such clause; the growth of its accounts is RFP-022 §P.7's), and the
+soft-requirement programs (`statements`, `rebate`) and the second consumer (`ferrata_holdings`), which are programs of
+their own. The
+node's own work is not charged: serializing the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a
+node writes, not a transaction's cost).
 
 ---
 
@@ -563,8 +610,9 @@ private transaction are LEZ's and not counted.
 User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
 measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
 `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
-`monitor` not measured (RFP-021 P.6); actions other than five statement types and the update steps at different state
-sizes (RFP-021 P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+`monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
+(`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
+every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
 resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
 devnet). Every one is a milestone
