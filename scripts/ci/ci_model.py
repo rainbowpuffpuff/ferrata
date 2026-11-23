@@ -27,7 +27,8 @@ scripts/ci/check-portable.py (which scripts does the macOS workflow run?).
 Not caught (scripts/ci/README.md, "What it does not catch"): a job that `needs:` a skipped job; `on:` filters that
 match nothing; `--ignored` or `--list` on the test binary; `exec` before the test; an `exit` inside a function, a
 compound command or an and-list; `trap 'exit 0' EXIT` or `ERR`; a subshell or brace group masked by `|| true`;
-`cfg` forms other than a bare feature gate.
+`cfg` forms other than a bare feature gate; un-fenced 4-space indented doc-tests, `#[doc = include_str!(...)]`,
+macro-generated doc-tests, and item-level `#[cfg]` on doc-tests.
 """
 
 from __future__ import annotations
@@ -1103,24 +1104,218 @@ _DOCTEST_TOKENS = {
 }
 
 
-def has_doctest(text: str, include_ignored: bool = False) -> bool:
-    """Whether `text` contains a runnable Rust doc-test fenced code block in `///` or `//!` comments."""
+def _unescape_rust_string(raw: str) -> str:
+    """Decode common Rust string escapes inside a literal `#[doc = "..."]` attribute."""
+    out = []
+    i, n = 0, len(raw)
+    while i < n:
+        if raw[i] == "\\" and i + 1 < n:
+            nxt = raw[i + 1]
+            if nxt == "n":
+                out.append("\n")
+                i += 2
+            elif nxt == "r":
+                out.append("\r")
+                i += 2
+            elif nxt == "t":
+                out.append("\t")
+                i += 2
+            elif nxt in ('"', "'", "\\"):
+                out.append(nxt)
+                i += 2
+            elif nxt == "\n":
+                i += 2
+                while i < n and raw[i] in " \t\n\r":
+                    i += 1
+            else:
+                out.append(nxt)
+                i += 2
+        else:
+            out.append(raw[i])
+            i += 1
+    return "".join(out)
+
+
+_RE_DOC_ATTR = re.compile(r"(#!?)\[\s*doc\s*=\s*")
+_RE_RAW_STR = re.compile(r'r(#*)"')
+_RE_ANY_RAW_STR = re.compile(r'[bc]?r(#*)"')
+_RE_CLOSE_BRACKET = re.compile(r"\s*\]")
+
+
+def _extract_doc_blocks(text: str) -> list[list[str]]:
+    """Extract contiguous Rust doc blocks (`///`, `//!`, `/** */`, `/*! */`, literal `#[doc = "..."]`)."""
+    blocks: list[list[str]] = []
+    cur: list[str] = []
+    cur_kind: str | None = None
+
+    def flush():
+        nonlocal cur_kind
+        if cur:
+            blocks.append(list(cur))
+            cur.clear()
+        cur_kind = None
+
+    def append_lines(kind: str, lines: list[str]):
+        nonlocal cur_kind
+        if cur_kind is not None and cur_kind != kind:
+            flush()
+        cur_kind = kind
+        cur.extend(lines)
+
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        if c in " \t\r":
+            i += 1
+            continue
+        if c == "\n":
+            j = i + 1
+            while j < n and text[j] in " \t\r":
+                j += 1
+            if j < n and text[j] == "\n":
+                flush()
+            i += 1
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "/":
+            eol = text.find("\n", i)
+            if eol == -1:
+                eol = n
+            line = text[i:eol]
+            if line.startswith("///") and not line.startswith("////"):
+                body = line[3:]
+                append_lines("outer", [body[1:] if body.startswith((" ", "\t")) else body])
+            elif line.startswith("//!"):
+                body = line[3:]
+                append_lines("inner", [body[1:] if body.startswith((" ", "\t")) else body])
+            else:
+                flush()
+            i = eol
+            continue
+        if c == "/" and i + 1 < n and text[i + 1] == "*":
+            start = i
+            depth = 1
+            i += 2
+            while i < n and depth:
+                if text[i : i + 2] == "/*":
+                    depth += 1
+                    i += 2
+                elif text[i : i + 2] == "*/":
+                    depth -= 1
+                    i += 2
+                else:
+                    i += 1
+            comment = text[start:i]
+            is_inner = comment.startswith("/*!") and comment.endswith("*/") and len(comment) >= 5
+            is_outer = (
+                comment.startswith("/**")
+                and not comment.startswith("/***")
+                and comment.endswith("*/")
+                and len(comment) > 4
+            )
+            if is_inner or is_outer:
+                inner = comment[3:-2]
+                out_lines = []
+                for idx, bl in enumerate(inner.splitlines()):
+                    if idx == 0:
+                        out_lines.append(bl[1:] if bl.startswith((" ", "\t")) else bl)
+                    else:
+                        out_lines.append(re.sub(r"^[ \t]*\*[ \t]?", "", bl))
+                append_lines("inner" if is_inner else "outer", out_lines)
+            else:
+                flush()
+            continue
+        if c == "#":
+            m_attr = _RE_DOC_ATTR.match(text, i)
+            if m_attr:
+                kind = "inner" if m_attr.group(1) == "#!" else "outer"
+                j = m_attr.end()
+                doc_val = None
+                m_raw = _RE_RAW_STR.match(text, j)
+                if m_raw:
+                    end_tok = '"' + m_raw.group(1)
+                    k = m_raw.end()
+                    end = text.find(end_tok, k)
+                    if end != -1:
+                        after = end + len(end_tok)
+                        m_close = _RE_CLOSE_BRACKET.match(text, after)
+                        if m_close:
+                            doc_val = text[k:end]
+                            i = m_close.end()
+                elif j < n and text[j] == '"':
+                    k = j + 1
+                    while k < n and text[k] != '"':
+                        if text[k] == "\\" and k + 1 < n:
+                            k += 2
+                            continue
+                        k += 1
+                    if k < n and text[k] == '"':
+                        after = k + 1
+                        m_close = _RE_CLOSE_BRACKET.match(text, after)
+                        if m_close:
+                            doc_val = _unescape_rust_string(text[j + 1 : k])
+                            i = m_close.end()
+                if doc_val is not None:
+                    append_lines(kind, doc_val.splitlines() or [""])
+                    continue
+            flush()
+            i += 1
+            continue
+        if c in ("r", "b", "c") and (i == 0 or not (text[i - 1].isalnum() or text[i - 1] == "_")):
+            m_raw = _RE_ANY_RAW_STR.match(text, i)
+            if m_raw:
+                flush()
+                end_tok = '"' + m_raw.group(1)
+                k = m_raw.end()
+                end = text.find(end_tok, k)
+                i = n if end == -1 else end + len(end_tok)
+                continue
+        if c == '"':
+            flush()
+            i += 1
+            while i < n and text[i] != '"':
+                if text[i] == "\\" and i + 1 < n:
+                    i += 2
+                    continue
+                i += 1
+            if i < n:
+                i += 1
+            continue
+        if c == "'" and i + 2 < n:
+            if text[i + 1] == "\\":
+                k = i + 2
+                while k < n and text[k] != "'" and text[k] != "\n":
+                    k += 1
+                if k < n and text[k] == "'":
+                    flush()
+                    i = k + 1
+                    continue
+            elif text[i + 2] == "'" and text[i + 1] != "\n":
+                flush()
+                i += 3
+                continue
+        flush()
+        i += 1
+    flush()
+    return blocks
+
+
+def _block_has_doctest(lines: list[str], include_ignored: bool = False) -> bool:
+    """Whether a single extracted doc block contains a runnable fenced code block (``` or ~~~)."""
     in_fence = False
-    fence_ticks = 0
-    for raw in text.splitlines():
-        m = re.match(r"^\s*//[/!][ \t]?(.*)$", raw)
-        if not m:
-            in_fence = False
-            fence_ticks = 0
-            continue
-        body = m.group(1).lstrip()
-        fm = re.match(r"^(`{3,})(.*)$", body)
-        if not fm:
-            continue
-        ticks, info = len(fm.group(1)), fm.group(2).strip()
+    fence_char = ""
+    fence_len = 0
+    for line in lines:
+        body = line.lstrip()
         if not in_fence:
+            fm = re.match(r"^(`{3,}|~{3,})(.*)$", body)
+            if not fm:
+                continue
+            marker, info = fm.group(1), fm.group(2).strip()
+            if marker[0] == "`" and "`" in info:
+                continue
             in_fence = True
-            fence_ticks = ticks
+            fence_char = marker[0]
+            fence_len = len(marker)
             cleaned = re.sub(r"\([^)]*\)", "", info)
             tokens = [t.strip().lower() for t in re.split(r"[\s,]+", cleaned) if t.strip()]
             if any(t == "ignore" or t.startswith("ignore-") for t in tokens):
@@ -1129,10 +1324,17 @@ def has_doctest(text: str, include_ignored: bool = False) -> bool:
                 tokens = [t for t in tokens if t != "ignore" and not t.startswith("ignore-")]
             if all(t in _DOCTEST_TOKENS for t in tokens):
                 return True
-        elif ticks >= fence_ticks and info == "":
+        elif re.match(rf"^{re.escape(fence_char)}{{{fence_len},}}[ \t]*$", body):
             in_fence = False
-            fence_ticks = 0
+            fence_char = ""
+            fence_len = 0
     return False
+
+
+def has_doctest(text: str, include_ignored: bool = False) -> bool:
+    """Whether `text` contains a runnable Rust doc-test fenced code block (``` or ~~~) in `///`, `//!`, `/** */`,
+    `/*! */`, or literal `#[doc = "..."]` / `#![doc = "..."]` comments."""
+    return any(_block_has_doctest(block, include_ignored=include_ignored) for block in _extract_doc_blocks(text))
 
 
 def feature_gates(text: str, enabled: set) -> tuple:

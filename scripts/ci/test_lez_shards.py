@@ -464,6 +464,22 @@ with tempfile.TemporaryDirectory() as td:
           p_ep.returncode != 0 and "produced no commands" in p_ep.stderr and "passed shard" not in p_ep.stdout,
           f"rc={p_ep.returncode} out={p_ep.stdout} err={p_ep.stderr}")
 
+    # N2: step-count check in lez-harness.sh refuses a dropped/malformed plan line (fails if check is removed)
+    short_repo = base / "short_plan_repo"
+    (short_repo / "scripts" / "ci").mkdir(parents=True)
+    shutil.copy2(HERE / "lez-harness.sh", short_repo / "scripts" / "ci" / "lez-harness.sh")
+    (short_repo / "scripts" / "ci" / "check-lez-shards.py").write_text(
+        'import sys\nif "--emit-tsv" in sys.argv:\n    print("lez\\t1")\nsys.exit(0)\n',
+        encoding="utf-8",
+    )
+    p_sp = subprocess.run(
+        ["bash", str(short_repo / "scripts" / "ci" / "lez-harness.sh"), "--shard", "harness-1"],
+        capture_output=True, text=True, env=env_ep,
+    )
+    check("stub loop: malformed 2-field plan line triggers step-count mismatch (exit 1, executed 0 of 1)",
+          p_sp.returncode == 1 and "executed 0 of 1" in p_sp.stderr and "passed shard" not in p_sp.stdout,
+          f"rc={p_sp.returncode} out={p_sp.stdout} err={p_sp.stderr}")
+
 print()
 print(f"test_lez_shards.py: {npass} passed, {nfail} failed")
 sys.exit(1 if nfail else 0)

@@ -198,6 +198,43 @@ check("cargo: --doc honours name filters and --skip",
                               "lez/harness/src/lib.rs", text=DOC_TEST)[0]
       and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc", "--", "--skip", "doc_added"], "lez", {}, "t"),
                                   "lez/harness/src/lib.rs", text=DOC_TEST)[0])
+# N3: ~~~ fences, /** */ / /*! */ block docs, and literal #[doc = "..."] attributes
+TILDE_DOC = "/// ~~~rust\n/// assert!(false);\n/// ~~~\npub fn tilde() {}\n"
+TILDE_TEXT = "/// ~~~text\n/// not rust\n/// ~~~\npub fn plain_tilde() {}\n"
+BLOCK_OUTER_DOC = "/**\n * ```\n * assert!(false);\n * ```\n */\npub fn block_doc() {}\n"
+BLOCK_INNER_DOC = "/*!\n * ~~~\n * assert!(false);\n * ~~~\n */\n"
+BLOCK_TEXT_DOC = "/**\n * ```text\n * not rust\n * ```\n */\npub fn block_text() {}\n"
+ATTR_DOC = '#[doc = "```\\nassert!(false);\\n```"]\npub fn attr_doc() {}\n'
+ATTR_SPLIT_DOC = '#[doc = "```"]\n#[doc = "assert!(false);"]\n#[doc = "```"]\npub fn attr_split() {}\n'
+ATTR_RAW_DOC = '#![doc = r#"\n~~~rust\nassert!(false);\n~~~\n"#]\n'
+NON_DOC_FORMS = (
+    "//// ```\n//// assert!(false);\n//// ```\n"
+    "/* ```\nassert!(false);\n``` */\n"
+    "/*** ```\nassert!(false);\n``` */\n"
+    'const S: &str = "/// ```\\n/// assert!(false);\\n/// ```";\n'
+    'const R: &str = r#"/**\n```\nassert!(false);\n```\n*/"#;\n'
+)
+check("cargo: --doc detects ~~~ fences and /** */ / /*! */ block doc comments (and ignores non-Rust text fences)",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                          "lez/harness/src/lib.rs", text=TILDE_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=BLOCK_OUTER_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=BLOCK_INNER_DOC)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=TILDE_TEXT)[0]
+      and not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                                  "lez/harness/src/lib.rs", text=BLOCK_TEXT_DOC)[0])
+check("cargo: --doc detects literal #[doc = \"...\"] (single, split, and raw-string) doc-tests",
+      ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                          "lez/harness/src/lib.rs", text=ATTR_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=ATTR_SPLIT_DOC)[0]
+      and ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=ATTR_RAW_DOC)[0])
+check("cargo: --doc ignores non-doc comments (////, /* */, /*** */) and doc-like text inside string literals",
+      not ci_model.cargo_runs(C(["cargo", "test", "-p", "harness", "--doc"], "lez", {}, "t"),
+                              "lez/harness/src/lib.rs", text=NON_DOC_FORMS)[0])
 check("trace: lez-harness runs bin unit tests and lib doc-tests when present",
       any(ci_model.cargo_runs(c, "lez/updater/src/main.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
       and any(ci_model.cargo_runs(c, "lez/harness/src/bin/tables.rs", text=BIN_TEST)[0] for c in ci_model.trace(jobs["lez-harness"], tracked))
@@ -346,6 +383,78 @@ LH = jobs["lez-harness"]
 last = LH.steps[-1] if LH.steps else {}
 check("jobs: no job in ci.yml has a job-level if: (none skipped on push/PR/dispatch)",
       all("if" not in j.spec for j in jobs.values() if j.workflow.name == "ci.yml"))
+
+
+def _eval_gha_expr(value, ctx):
+    """Evaluate a small GitHub Actions expression subset (==, !=, &&, ||, format(), github.*)."""
+    if not isinstance(value, str):
+        return value
+
+    def eval_atom(tok):
+        tok = tok.strip()
+        if tok == "true":
+            return True
+        if tok == "false":
+            return False
+        if len(tok) >= 2 and tok[0] == "'" and tok[-1] == "'":
+            return tok[1:-1].replace("''", "'")
+        m_fmt = re.fullmatch(r"format\(\s*'((?:''|[^'])*)'\s*,\s*(.+)\)", tok)
+        if m_fmt:
+            fmt = m_fmt.group(1).replace("''", "'")
+            args = [eval_atom(a) for a in m_fmt.group(2).split(",")]
+            return fmt.format(*args)
+        if tok in ctx:
+            return ctx[tok]
+        raise AssertionError(f"unsupported expression token in concurrency test: {tok!r}")
+
+    def eval_cmp(expr):
+        for op in ("==", "!="):
+            if op in expr:
+                lhs, rhs = expr.split(op, 1)
+                lv, rv = eval_atom(lhs), eval_atom(rhs)
+                return (lv == rv) if op == "==" else (lv != rv)
+        return eval_atom(expr)
+
+    def eval_and(expr):
+        res = True
+        for part in expr.split("&&"):
+            res = eval_cmp(part)
+            if not res:
+                return res
+        return res
+
+    def eval_or(expr):
+        res = False
+        for part in expr.split("||"):
+            res = eval_and(part)
+            if res:
+                return res
+        return res
+
+    m_whole = re.fullmatch(r"\$\{\{(.*)\}\}", value.strip())
+    if m_whole:
+        return eval_or(m_whole.group(1))
+    return re.sub(r"\$\{\{(.*?)\}\}", lambda m: str(eval_or(m.group(1))), value)
+
+
+ci_doc = ci_model.load_yaml((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+ci_conc = ci_doc.get("concurrency") or {}
+m1_ctx = {"github.ref": "refs/heads/main", "github.run_id": "1001", "github.sha": "aaaa"}
+m2_ctx = {"github.ref": "refs/heads/main", "github.run_id": "1002", "github.sha": "bbbb"}
+b1_ctx = {"github.ref": "refs/heads/feat", "github.run_id": "2001", "github.sha": "cccc"}
+b2_ctx = {"github.ref": "refs/heads/feat", "github.run_id": "2002", "github.sha": "dddd"}
+pr1_ctx = {"github.ref": "refs/pull/42/merge", "github.run_id": "3001", "github.sha": "eeee"}
+pr2_ctx = {"github.ref": "refs/pull/42/merge", "github.run_id": "3002", "github.sha": "ffff"}
+g_m1, g_m2 = _eval_gha_expr(ci_conc.get("group"), m1_ctx), _eval_gha_expr(ci_conc.get("group"), m2_ctx)
+g_b1, g_b2 = _eval_gha_expr(ci_conc.get("group"), b1_ctx), _eval_gha_expr(ci_conc.get("group"), b2_ctx)
+g_p1, g_p2 = _eval_gha_expr(ci_conc.get("group"), pr1_ctx), _eval_gha_expr(ci_conc.get("group"), pr2_ctx)
+cip_m = _eval_gha_expr(ci_conc.get("cancel-in-progress"), m1_ctx)
+cip_b = _eval_gha_expr(ci_conc.get("cancel-in-progress"), b1_ctx)
+cip_p = _eval_gha_expr(ci_conc.get("cancel-in-progress"), pr1_ctx)
+check("jobs: ci.yml concurrency isolates each run on main (unique group, cancel-in-progress false) and cancels superseded runs elsewhere",
+      bool(g_m1) and bool(g_m2) and g_m1 != g_m2 and cip_m is False
+      and bool(g_b1) and g_b1 == g_b2 and cip_b is True
+      and bool(g_p1) and g_p1 == g_p2 and g_p1 != g_b1 and cip_p is True)
 check("jobs: lez-harness is an unconditional matrix job running scripts/ci/lez-harness.sh --shard \"$SHARD\" via env",
       last.get("run") == 'scripts/ci/lez-harness.sh --shard "$SHARD"'
       and (last.get("env") or {}).get("SHARD") == "${{ matrix.shard }}"

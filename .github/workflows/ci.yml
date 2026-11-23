@@ -8,9 +8,13 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Cancel superseded runs on feature branches and pull requests, never on main.
+# Every run on main (push or workflow_dispatch) gets its own concurrency group keyed by github.run_id with
+# cancel-in-progress false, so runs on main never queue behind or cancel/replace each other (in a shared group with
+# default queue: single, a newer run cancels any pending run even when cancel-in-progress is false). On all other refs
+# (feature branches, pull requests, tags), runs share group ci-<ref> with cancel-in-progress true, cancelling
+# superseded pending and in-progress runs.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.ref == 'refs/heads/main' && format('ci-main-{0}', github.run_id) || format('ci-{0}', github.ref) }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # A read-only token: no job writes to the repository or calls GitHub's API. Third-party actions are pinned by commit
