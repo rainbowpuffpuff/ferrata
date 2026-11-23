@@ -30,12 +30,13 @@
 //!
 //! R.5, the journal's guards (another zone): the same command spelled otherwise (no `0x`, capitals, a value unpadded)
 //! is "already sent"; a submission the sequencer turns away ends the run, recorded (reported when run again; `--again`
-//! then applies it once); `--send --yes` without `--state-dir` and `--again` on an interrupted run are refused with
+//! then applies it once); `--send --yes` without `--state-dir`, `--again` on an interrupted run and a
+//! `FERRATA_ATTEST_CLOCK_MS` that is not a time are refused with
 //! nothing sent; a transaction whose nonce another took is reported not applied (exit 1); a resend turned away while
 //! the earlier copy is pending leaves the run unfinished, and the copy, landing, is found applied (one `Attest`); a
 //! second run on the same state directory is refused while the first holds it.
 //!
-//! U.5, eight more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
+//! U.5, nine more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
 //! * `init` with the zone's clock past the checkpoint's weak-subjectivity period: the dry run's refusal shown as code 53's
 //!   message naming the checkpoint and the remedy, and nothing sent;
 //! * the same with the dry run inside the window and the zone's block past it (the receipt's refusal): code 53's message,
@@ -50,6 +51,8 @@
 //!   since the end, this machine's clock past it;
 //! * a run resumed within a minute of the end, the earlier copy still pending: not sent, the run left unfinished; the
 //!   copy lands; run again, found applied.
+//! * the same with this machine's clock past the end and the zone's 5 min before it: held, the journal kept; the copy
+//!   lands; run again, found applied.
 //!
 //! Records (each command's output): `$CARGO_TARGET_TMPDIR/attest-faults/`. Run: `cargo test --locked --test
 //! attest_faults -- --nocapture` in `cli/` (CI's `roundtrip` job).
@@ -134,8 +137,8 @@ struct Zone {
     /// When set, `sendTransaction` turns away a transaction larger than this many bytes with LEZ's own answer
     /// (`Transaction too large: size N, max M`, its RPC's InvalidParams) and admits nothing.
     refuse: Option<usize>,
-    /// When set, `sendTransaction` turns every transaction away as LEZ's sequencer does when its pool is full ("The
-    /// mempool is full", code -31900) and admits nothing.
+    /// When set, `sendTransaction` turns every transaction away as LEZ's sequencer does when its pool is full ("Mempool
+    /// is full", code -31900) and admits nothing.
     full: bool,
     /// The hash of every transaction turned away so.
     turned_away: Vec<String>,
@@ -254,7 +257,7 @@ impl Zone {
                 }
                 if self.full {
                     self.turned_away.push(hash.to_string());
-                    return Err((-31900, "The mempool is full".into()));
+                    return Err((-31900, "Mempool is full".into()));
                 }
                 self.submitted.push(hash.to_string());
                 self.pending.push(tx);
@@ -556,12 +559,17 @@ impl Tool {
 
     /// Run to the end with this machine's clock reading `clock_ms` (`FERRATA_ATTEST_CLOCK_MS`).
     fn run_at(&mut self, name: &str, args: &[&str], clock_ms: u64) -> (i32, String) {
+        self.run_clock(name, args, &clock_ms.to_string())
+    }
+
+    /// Run to the end with `FERRATA_ATTEST_CLOCK_MS` set to `value`, whatever it is.
+    fn run_clock(&mut self, name: &str, args: &[&str], value: &str) -> (i32, String) {
         let (mut c, out) = self.command(name, args);
-        let o = c.env("FERRATA_ATTEST_CLOCK_MS", clock_ms.to_string()).output().unwrap();
+        let o = c.env("FERRATA_ATTEST_CLOCK_MS", value).output().unwrap();
         let text = format!("{}{}", String::from_utf8_lossy(&o.stdout), String::from_utf8_lossy(&o.stderr));
         let code = o.status.code().unwrap_or(-1);
         let head = std::fs::read_to_string(&out).unwrap();
-        std::fs::write(&out, format!("{head}(this machine's clock: {clock_ms} ms)\n{text}[exit {code}]\n")).unwrap();
+        std::fs::write(&out, format!("{head}(FERRATA_ATTEST_CLOCK_MS={value})\n{text}[exit {code}]\n")).unwrap();
         println!("  {name}: exit {code}");
         (code, text)
     }
@@ -963,6 +971,14 @@ fn the_journal_guards() {
     has(&out, "--send --yes needs --state-dir");
     assert_eq!(submitted(), s0 + 1);
 
+    // This machine's clock set to something that is not a time: refused before anything is read (a bad value must not
+    // turn the window protection off silently, the third review's L18), nothing sent.
+    let (code, out) = t.run_clock("attest-clock-not-a-time", &strs(&attest(&["--account", &acct])), "garbage");
+    assert_eq!(code, 2, "{out}");
+    has(&out, "FERRATA_ATTEST_CLOCK_MS=\"garbage\" is not a time in milliseconds");
+    assert!(!out.contains("zone http"), "refused before the zone is read: {out}");
+    assert_eq!(submitted(), s0 + 1);
+
     // A submission the sequencer turns away (as LEZ's "Transaction too large"): the run ends, recorded; run again,
     // reported, nothing sent; with --again, planned anew and applied once.
     zone.lock().unwrap().refuse = Some(4_096);
@@ -1034,10 +1050,10 @@ fn the_journal_guards() {
     let (child, out_path) = t.spawn("attest-killed-copy-pending", &strs(&le));
     wait_for("the Attest", 300, || submitted() > s0 + 7);
     kill(child, &out_path);
-    zone.lock().unwrap().full = true; // every submission turned away: "The mempool is full"
+    zone.lock().unwrap().full = true; // every submission turned away: "Mempool is full"
     let (code, out) = t.run("attest-resend-turned-away", &strs(&le));
     assert_eq!(code, 1, "{out}");
-    has(&out, "the sequencer answered the resend with: The mempool is full");
+    has(&out, "the sequencer answered the resend with: Mempool is full");
     has(&out, "may still be pending");
     assert!(!out.contains("--again") && !out.contains("REFUSED"), "no --again while a copy may land: {out}");
     assert_eq!((submitted(), zone.lock().unwrap().turned_away.len()), (s0 + 8, 2));
@@ -1259,6 +1275,43 @@ fn stale_checkpoint_shown_as_code_53() {
     assert_eq!(code, 3, "{out}");
     has(&out, "not sent: LEZ refuses it at any later time too");
     assert_eq!(zone.lock().unwrap().submitted.len(), 1, "nothing sent");
+    // This machine's clock ahead of the zone's (the third review's L16 case): the zone 5 min before the end, this machine
+    // 10 s past it, the earlier run's copy pending. The resumed run holds it but keeps the journal (the copy can still
+    // land, by the zone's clock); it lands; run again, found applied and finished: one `Init`.
+    let zone = Arc::new(Mutex::new(Zone::genesis(end - 300_000)));
+    zone.lock().unwrap().mode = Mode::Queue;
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-resume-machine-ahead", &lez, &zone.lock().unwrap());
+    let (child, out_path) = t.spawn("init-killed-in-pool", &strs(&init));
+    wait_for("the Init", 300, || !zone.lock().unwrap().submitted.is_empty());
+    kill(child, &out_path);
+    let (code, out) = t.run_at("init-run-again-machine-ahead", &strs(&init), end + 10_000);
+    assert_eq!(code, 3, "{out}");
+    has(&out, "not sent again: refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, "this machine's clock (the zone has stamped no later block)");
+    has(&out, "may still be pending: the run stays unfinished");
+    assert!(!out.contains("is cleared") && !out.contains("--again"), "the journal kept, no --again: {out}");
+    assert_eq!(std::fs::read_dir(t.state.join("sent")).map(|d| d.count()).unwrap_or(0), 1, "the journal kept");
+    {
+        let mut z = zone.lock().unwrap();
+        z.produce(); // the copy lands, inside its window by the zone's clock
+        z.final_height = z.tip.block_id;
+        z.mode = Mode::Auto;
+    }
+    let (code, out) = t.run("init-copy-landed-run-again", &strs(&init));
+    assert_eq!(code, 0, "{out}");
+    has(&out, "applied or refused in a final block since the earlier run sent it: nothing sent");
+    assert_eq!(
+        zone.lock()
+            .unwrap()
+            .messages(t.program)
+            .iter()
+            .filter(|(_, _, _, m)| matches!(m, Message::Init { .. }))
+            .count(),
+        1,
+        "one Init"
+    );
+
     // The first review's L1 case exactly: the zone's clock past the end and no block stamped since (a sequencer back
     // from a stall, before its first block). The zone's newest block is an hour before the end; this machine's clock,
     // the second clock a window's end is judged at (as `ferrata-updater` judges it), is past it: nothing is sent again,

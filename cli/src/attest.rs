@@ -209,12 +209,27 @@ pub fn window_refusal(
 /// sequencer's block interval, a retry), as `ferrata-updater`'s `WINDOW_MARGIN_MS`.
 pub const WINDOW_MARGIN_MS: u64 = 60_000;
 
-/// This machine's clock, Unix milliseconds: `FERRATA_ATTEST_CLOCK_MS` when set (rehearsals and tests; `0` leaves the
-/// zone's clock alone), else the system clock.
+/// The variable that sets this machine's clock for tests and rehearsals.
+pub const CLOCK_VAR: &str = "FERRATA_ATTEST_CLOCK_MS";
+
+/// `FERRATA_ATTEST_CLOCK_MS`: `None` when unset; else the time it sets, Unix milliseconds, or why it is refused (not a
+/// whole number of milliseconds). A time before the zone's clock (`0`, for one) leaves a window's end to the zone's
+/// clock alone, which is what the tests do; `run` refuses a bad value before anything is read and names any value it
+/// takes.
+fn clock_override() -> Option<std::result::Result<u64, String>> {
+    match std::env::var(CLOCK_VAR) {
+        Err(std::env::VarError::NotPresent) => None,
+        Err(std::env::VarError::NotUnicode(_)) => Some(Err(format!("{CLOCK_VAR} is not text"))),
+        Ok(v) => Some(v.trim().parse::<u64>().map_err(|_| format!("{CLOCK_VAR}={v:?} is not a time in milliseconds"))),
+    }
+}
+
+/// This machine's clock, Unix milliseconds: the system clock, or the time `FERRATA_ATTEST_CLOCK_MS` sets (checked by
+/// `run` before any use).
 fn machine_ms() -> u64 {
-    match std::env::var("FERRATA_ATTEST_CLOCK_MS") {
-        Ok(v) => v.trim().parse().unwrap_or(0),
-        Err(_) => SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64),
+    match clock_override() {
+        Some(Ok(ms)) => ms,
+        _ => SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_millis() as u64),
     }
 }
 
@@ -1046,16 +1061,19 @@ async fn send_journal(
                 println!("  {:<28} in a block of the sequencer not yet final: waiting for it, nothing sent", s.label);
             } else {
                 // To be sent (again): not when its window has ended or is about to (it would be charged the gas limit).
-                let (end_now, end_by) = end_clock(z.clock().await?);
+                let zone_now = z.clock().await?;
+                let (end_now, end_by) = end_clock(zone_now);
                 if let Err((side, message)) = send_check(s.window.as_ref(), end_now, end_by) {
                     println!("  {:<28} not sent again: {message}", s.label);
                     run.log(json!({ "what": what, "step": s.label, "phase": "held-on-resume", "message": message }));
                     let applied_before =
                         j.steps[..i].iter().any(|x| x.receipt.as_ref().is_some_and(|r| !r.outcome.reverted));
+                    // Past the end by the zone's own clock, a copy still pending is refused too; by this machine's clock
+                    // alone (ahead of the zone's) it may still land.
+                    let zone_past_end = s.window.as_ref().and_then(|w| w.end_ms).is_some_and(|e| zone_now >= e);
                     match slot {
-                        // Nothing of the command was applied and nothing of it can be any more (past the end a copy
-                        // still pending is refused too): the journal is cleared.
-                        Some(sl) if !applied_before && side == WindowSide::Ended => {
+                        // Nothing of the command was applied and nothing of it can be any more: the journal is cleared.
+                        Some(sl) if !applied_before && side == WindowSide::Ended && (zone_past_end || !s.attempted) => {
                             std::fs::remove_file(&sl.path)
                                 .with_context(|| format!("removing {}", sl.path.display()))?;
                             println!("  the journal {} is cleared: nothing of this command was applied, and its transactions can never be", sl.path.display());
@@ -1438,6 +1456,19 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
         }
         None => None,
     };
+    // This machine's clock set for a test or a rehearsal: refused if it is not a time, said when it is taken.
+    match clock_override() {
+        Some(Err(why)) => {
+            println!("{why}: unset it (it is for tests and rehearsals), or set it to a time in milliseconds");
+            return Ok(2);
+        }
+        Some(Ok(ms)) => eprintln!(
+            "note: {CLOCK_VAR} sets this machine's clock to {} for judging windows' ends (tests and rehearsals; a time \
+             before the zone's clock leaves them to the zone's clock alone)",
+            utc(ms)
+        ),
+        None => {}
+    }
     // One run at a time per state directory: its follower state and journals are written as a run goes.
     let _lock = match &a.state_dir {
         Some(d) => match lock_state_dir(d)? {
