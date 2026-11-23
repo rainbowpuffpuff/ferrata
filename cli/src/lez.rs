@@ -476,7 +476,11 @@ pub async fn plan_claim<L: Ledger>(
         Ok(n) => n,
         // Insufficient finality (U.08): the refusal also says how long the configuration's own depth holds imports.
         Err(ferrata_wallet::Refusal::Program { code, detail }) => {
-            bail!(program_refusal(u32::from(code), format!("{detail}{}", depth_note(ledger, ctx).await?)))
+            // The depth is a note: a failed read of it leaves the refusal as it is.
+            bail!(program_refusal(
+                u32::from(code),
+                format!("{detail}{}", depth_note(ledger, ctx).await.unwrap_or_default())
+            ))
         }
         Err(r) => return Err(refused(r)),
     };

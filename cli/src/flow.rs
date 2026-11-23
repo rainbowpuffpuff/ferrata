@@ -404,11 +404,6 @@ pub async fn claim<L: Ledger>(
     let history = lez::history_of(ledger, ctx).await?;
     let refunded = eth::refunded_leaves(&eth.p, eth.vault, eth.from_block, eth.chunk).await?;
     let rows = scan::deposits(seed, ctx, &list, o.gap, &history, &refunded)?;
-    let hold = |leaf: u64, n: &Hash| {
-        let hours = seed.claim_delay_hours(n);
-        let from = claimable_from(list.blocks[leaf as usize], hours);
-        (hours, from, list.block < from)
-    };
     let row = match o.leaf {
         Some(l) => rows
             .iter()
@@ -416,8 +411,9 @@ pub async fn claim<L: Ledger>(
             .ok_or_else(|| anyhow!("leaf {l} is not a deposit of this seed (`ferrata scan` lists them)"))?,
         None => {
             let claimable: Vec<_> = rows.iter().filter(|r| matches!(r.state, DepositState::Claimable { .. })).collect();
-            let ready =
-                claimable.iter().find(|r| o.no_delay || !hold(r.owned.deposit.leaf_index, &r.owned.nullifier).2);
+            let ready = claimable
+                .iter()
+                .find(|r| o.no_delay || !claim_hold(seed, &list, r.owned.deposit.leaf_index, &r.owned.nullifier).2);
             match ready.or(claimable.first()) {
                 Some(r) => *r,
                 None => rows.iter().find(|r| r.state == DepositState::NotImported).ok_or_else(|| {
@@ -426,6 +422,33 @@ pub async fn claim<L: Ledger>(
             }
         }
     };
+    claim_row(eth, seed, ledger, ctx, o, out, &list, &history, row).await
+}
+
+/// Whether the deposit at `leaf` with nullifier `n` is held by its claim delay: (the delay in hours, the first Ethereum
+/// block it may be claimed in, whether `list`'s block is before it).
+fn claim_hold(seed: &Seed, list: &eth::DepositList, leaf: u64, n: &Hash) -> (u64, u64, bool) {
+    let hours = seed.claim_delay_hours(n);
+    let from = claimable_from(list.blocks[leaf as usize], hours);
+    (hours, from, list.block < from)
+}
+
+/// The claim of one deposit, `row`, scanned from `list` against the zone's `history`: what [`claim`] does once it has
+/// picked the row. Refused if the row is claimed or refunded, or by the program's own checks; then shown, held by the
+/// claim delay or the plaintext path's acknowledgement, and sent only with `send` and `yes`. Every refusal comes before
+/// anything is proven, signed or sent. Public so that a test can hand it a row of its own.
+#[allow(clippy::too_many_arguments)]
+pub async fn claim_row<L: Ledger>(
+    eth: &Eth,
+    seed: &Seed,
+    ledger: &mut L,
+    ctx: &Context,
+    o: &ClaimOpts,
+    out: &mut Out,
+    list: &eth::DepositList,
+    history: &lez::History,
+    row: &scan::DepositRow,
+) -> Result<Claimed> {
     match row.state {
         DepositState::Claimed => {
             bail!(codes::program_refusal(250, "checked before sending: the zone's history shows it claimed"))
@@ -434,7 +457,7 @@ pub async fn claim<L: Ledger>(
         _ => {}
     }
     let d = &row.owned.deposit;
-    let (hours, from_block, held) = hold(d.leaf_index, &row.owned.nullifier);
+    let (hours, from_block, held) = claim_hold(seed, list, d.leaf_index, &row.owned.nullifier);
     let private = !o.plaintext;
     let prover = seed.private_account_ids(1)?.first().copied();
     let leaves: Vec<Hash> = list
@@ -442,7 +465,7 @@ pub async fn claim<L: Ledger>(
         .iter()
         .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
         .collect();
-    let plan = lez::plan_claim(ledger, ctx, &leaves, &row.owned, &history, private, o.relayer, prover).await?;
+    let plan = lez::plan_claim(ledger, ctx, &leaves, &row.owned, history, private, o.relayer, prover).await?;
     let drop = if private { o.gas_drop.as_ref() } else { None };
     if drop.is_some() && o.relayer.is_none() {
         bail!("a gas drop is asked of the relayer the claim names: add --relayer (its LEZ account), or --no-gas-drop to pay the LEZ fee from your own private account");

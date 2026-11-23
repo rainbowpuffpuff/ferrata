@@ -1090,13 +1090,19 @@ impl Devnet {
         })?;
         let plan = release::plan(&self.ctx, &history, &row.owned, root_b.0, count, 0, ETH_TOKEN, 0)?;
         let release_image = eth::view(&self.p, self.vault, ICheckpoints::releaseImageIdCall {}, None).await?;
-        anvil_send(
-            &self.p,
-            self.verifier,
-            IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan.journal)) }.abi_encode(),
-            U256::ZERO,
-        )
-        .await?;
+        // `wrong_proof`: the mock verifier is not told of this journal, so the vault's proof check fails as it does for
+        // a seal made for another journal (another recipient, relay fee or root): the verifier's VerificationFailed,
+        // from the eth_call before anything is sent.
+        if !params["wrong_proof"].as_bool().unwrap_or(false) {
+            anvil_send(
+                &self.p,
+                self.verifier,
+                IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan.journal)) }
+                    .abi_encode(),
+                U256::ZERO,
+            )
+            .await?;
+        }
         let recipient = eth::address(row.owned.recipient);
         let before = self.p.get_balance(recipient).await?;
         let signer = eth::keystore_signer(&self.relayer_ks, &self.password)?;

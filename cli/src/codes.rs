@@ -65,13 +65,13 @@ pub const PROGRAM_CODES: [(u32, &str, &str); 16] = [
 ];
 
 /// The vault's custom errors a user or relayer can meet: (name, meaning).
-pub const VAULT_ERRORS: [(&str, &str); 40] = [
+pub const VAULT_ERRORS: [(&str, &str); 41] = [
     ("VaultRetired", "the vault is retired: no deposits"),
     ("DepositsAreFrozen", "deposits are frozen for the whole vault; nothing is sent: retry once the freeze ends (`ferrata status` shows it)"),
     ("TokenDepositsAreFrozen", "deposits of this token are frozen; nothing is sent: retry once the freeze ends (`ferrata status` shows it)"),
     ("DepositsDisabled", "deposits of this token are disabled"),
     ("UseDepositETH", "ETH is deposited with depositETH"),
-    ("InvalidDenominationIndex", "no denomination has this index"),
+    ("InvalidDenominationIndex", "no denomination has this index: a token is bridged in its fixed denominations only (`ferrata status --token <address>` lists them by index)"),
     ("ZeroCommitment", "the commitment is zero"),
     ("WrongDepositIndex", "the index j is not depositCount[sender]: another deposit from this address came first"),
     ("WrongEthAmount", "msg.value is not the denomination plus the fees in force"),
@@ -79,7 +79,7 @@ pub const VAULT_ERRORS: [(&str, &str); 40] = [
     ("TreeFull", "the deposit tree is full"),
     ("TokenDepositCapExceeded", "the token's deposit bucket holds less than this; retry later"),
     ("GlobalDepositCapExceeded", "the global deposit bucket holds less than this; retry later"),
-    ("TokenNotRegistered", "the token is not registered"),
+    ("TokenNotRegistered", "the token is not registered: only registered tokens are bridged (`ferrata status --token <address>` shows whether a token is, and its denominations)"),
     ("ReleasesAreFrozen", "releases are frozen for the whole vault; the burn stays releasable: retry once the freeze ends (`ferrata status` shows it)"),
     ("TokenReleasesAreFrozen", "releases of this token are frozen; the burn stays releasable: retry once the freeze ends (`ferrata status` shows it)"),
     ("BurnRootNotAccepted", "the burn root is not one of a finalized, unrevoked checkpoint"),
@@ -93,6 +93,8 @@ pub const VAULT_ERRORS: [(&str, &str); 40] = [
     ("EthTransferFailed", "the ETH payout failed"),
     ("NothingOwed", "the vault owes this address nothing in this token"),
     ("VerifierStopped", "the verifier's emergency stop is tripped"),
+    // The RISC Zero verifier's error (IRiscZeroVerifier), raised through the vault's call to it.
+    ("VerificationFailed", "the RISC Zero verifier rejects the proof: the seal is not a proof of this call's journal (another recipient, relay fee, root or image id) or is damaged; nothing is sent: prove it again for this journal (`ferrata release --prove`, or a prover given `--input-out`'s input, then `--seal`), or ask the relayer for a new proof"),
     ("CheckpointsAreFrozen", "checkpoints are frozen; retry once the freeze ends"),
     ("WrongMode", "this finalisation path is not the vault's mode"),
     ("WaitNotOver", "the candidate's wait is not over"),
@@ -177,5 +179,14 @@ mod tests {
         assert!(vault_refusal(&[0, 0, 0, 0], "x").is_none());
         let names: std::collections::HashSet<_> = VAULT_ERRORS.iter().map(|(n, _)| selector(n)).collect();
         assert_eq!(names.len(), VAULT_ERRORS.len(), "selectors are distinct");
+    }
+
+    #[test]
+    fn the_verifiers_rejection_is_named() {
+        // `cast sig 'VerificationFailed()'` = 0x439cc0cd: the RISC Zero verifier's error, raised through the vault
+        // (review-u8 M1: the tool printed it as a raw revert).
+        let r = vault_refusal(&[0x43, 0x9c, 0xc0, 0xcd], "eth_call, nothing sent").expect("named");
+        assert_eq!(r.name, "VerificationFailed");
+        assert!(r.meaning.contains("prove it again for this journal"), "{}", r.meaning);
     }
 }

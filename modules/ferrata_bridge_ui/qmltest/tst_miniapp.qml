@@ -7,6 +7,7 @@
 // changed and no delay is overridden on that path; "waiting" is the devnet's clock moved on.
 import QtQuick
 import QtTest
+import "../qml/js/format.js" as Fmt
 
 Item {
     id: host
@@ -48,7 +49,11 @@ Item {
         // the position's own index as a number.
         function namesNothing(raw, index) {
             var s = String(raw);
-            if (/[0-9a-fA-F]{8,}/.test(s)) return false;
+            // A hash, commitment, nullifier, tag or address, or 8 hex digits of one: a run of 8 or more hex digits with a
+            // letter in it, or 40 or more (a decimal number, such as an Ethereum time, is neither).
+            var runs = s.match(/[0-9a-fA-F]{8,}/g) || [];
+            for (var r = 0; r < runs.length; r++)
+                if (/[a-fA-F]/.test(runs[r]) || runs[r].length >= 40) return false;
             if (/\b(leaf|leaf index|leaf_index|burn|burn index|counter|j)\s*[:=#]?\s*\d/i.test(s)) return false;
             return s.split(/[^0-9A-Za-z]+/).indexOf(String(index)) < 0;
         }
@@ -61,6 +66,24 @@ Item {
             verify(has(el("error.detail").text, code), "the code shown: " + el("error.detail").text);
             verify(namesNothing(host.app.lastError, index), "names no deposit or burn: " + host.app.lastError);
             console.log("U8 " + code + " | " + el("error.message").text + " | " + el("error.detail").text);
+        }
+
+        // The message table on its own (review-u8 L3, L4, M1): a 251 the program returned names both causes, a number
+        // such as "0.249 ETH" is not a code, a SetCap below the floor (240) is not "Cap exceeded", and the verifier's
+        // VerificationFailed, named or raw, has its own message.
+        function test_00_messages() {
+            var cases = [
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (returned by the program in the harness): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Unsupported token or amount:"],
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (checked before sending: the amount is not one of the token's denominations): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Invalid amount:"],
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (checked before sending: no token(cid, token) account): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Unsupported token: "],
+                ["a deposit of 0.249 ETH and one of 0.252 ETH: no reply", "The operation failed. Nothing was changed."],
+                ["refused: LEZ bridge program exit code 240 BAD_MESSAGE (SetCap, returned by the program): a message that does not decode or that this actor does not take, or values outside the specified bounds", "Refused: a value is outside the bridge's bounds"],
+                ["refused: LEZ bridge program exit code 255 CAPPED (returned by the program): the token's or the global mint or burn bucket holds less than the amount; retry later", "Cap exceeded:"],
+                ["refused: vault error VerificationFailed() (eth_call before sending): the RISC Zero verifier rejects the proof", "Verification failed: the release's proof does not check against the vault."],
+                ["the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"", "Verification failed: the release's proof does not check against the vault."]
+            ];
+            for (var i = 0; i < cases.length; i++)
+                verify(has(Fmt.friendly(cases[i][0]), cases[i][1]), cases[i][0] + " -> " + Fmt.friendly(cases[i][0]));
         }
 
         function test_01_connect() {
@@ -200,8 +223,7 @@ Item {
         function test_09_error_messages() {
             host.app.call("claim", { leaf_index: 1, private: false });
             idle();
-            verify(has(el("error.message").text, "Already claimed"), el("error.message").text);
-            verify(!/0x[0-9a-fA-F]{8,}/.test(el("error.detail").text), "no hash in the message: " + el("error.detail").text);
+            refused("Already claimed: this position was claimed before.", "250 ALREADY_CLAIMED", "checked before sending", 1);
             shot("18-error-already-claimed");
             tab("redeem");
             click("burn.kind.public");
@@ -330,7 +352,7 @@ Item {
         }
 
         // The public path keeps its warning: a public burn needs the acknowledgement.
-        function test_11b_public_burn_and_release() {
+        function test_11b_public_burn_and_checkpoint() {
             click("burn.kind.public");
             verify(!el("burn.submit").enabled, "a public burn needs the acknowledgement");
             verify(has(el("burn.leaks.summary").text, "High"), el("burn.leaks.summary").text);
@@ -350,6 +372,20 @@ Item {
             idle();
             click("redeem.refresh");
             idle();
+        }
+
+        // Verification failure on the way out (U.08; review-u8 M1): the public burn's release with a proof the verifier
+        // rejects (the devnet's wrong_proof: the mock verifier is not told of its journal, as for a seal made for another
+        // recipient, relay fee or root), refused by the vault's eth_call before anything is signed.
+        function test_11c_error_release_proof_rejected() {
+            host.app.call("release", { burn_index: 1, wrong_proof: true });
+            idle();
+            refused("Verification failed: the release's proof does not check against the vault.", "VerificationFailed", "eth_call before sending", 1);
+            shot("23a-error-release-proof-rejected");
+        }
+
+        // The same burn released with its proof.
+        function test_11d_public_release() {
             click("release.pick.1");
             idle();
             click("release.submit");
@@ -375,8 +411,11 @@ Item {
             el("admin.cap.capacity").text = "1";
             click("admin.setcap");
             approve("SetCap", null);
-            // What the user sees: the admin view's result line (the banner's error is cleared by the registry refresh
-            // that follows every admin step).
+            // What the user sees: the banner (its message and code) and the admin view's result line. The banner stays: the
+            // view refreshes the registry only after a change (review-u8 L3: an unconditional refresh, ffcf0da3, cleared it).
+            verify(el("error.banner").visible, "the banner shows the refusal: " + host.app.lastError);
+            verify(has(el("error.message").text, "Refused: a value is outside the bridge's bounds"), "the banner: " + el("error.message").text + " / " + host.app.lastError);
+            verify(has(el("error.detail").text, "240 BAD_MESSAGE"), "the banner's code: " + el("error.detail").text);
             verify(has(el("admin.result").text, "Not done: refused: LEZ bridge program exit code 240 BAD_MESSAGE"), "a cap below the floor is refused: " + el("admin.result").text);
             shot("26-admin-cap-below-floor-refused");
             el("admin.cap.capacity").text = "11000000000";
@@ -393,7 +432,7 @@ Item {
             idle();
             host.app.call("claim", { leaf_index: 2, private: false });
             idle();
-            verify(has(el("error.message").text, "Frozen"), "claim while frozen: " + el("error.message").text + " / " + host.app.lastError);
+            refused("Frozen: the bridge or this token is frozen by its freeze authority", "242 FROZEN", "checked before sending", 2);
             shot("29-error-frozen");
             tab("registry");
             click("registry.refresh");
