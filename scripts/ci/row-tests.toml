@@ -509,7 +509,7 @@ tests = [
   { path = "docs/guides/operator-guide.md", kind = "document" },
   { path = "monitor/attest/tests/monitor.rs", kind = "test", ci = "box", run = "cd monitor/attest && cargo test --locked" },
 ]
-note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the stall and weak-subjectivity alarms built and tested (attest-monitor, EVIDENCE row 193); the guide is a first draft and does not describe stall detection with it yet. No CI test: a document (the operator guide); what it describes is tested in CI elsewhere: permissionless submission (F.11), concurrent operators and deferral (R.9, R.10: lez/updater/tests/recorded.rs's gate)"
+note = "the operator's refusals measured (5,981 to 31,919 cycles for a replayed or spoofed step, 2.19M for a duplicate first step), cadence the lab's session every two hours, concurrency R.9's gate, deferral R.10; the stall and weak-subjectivity alarms built and tested (attest-monitor, EVIDENCE row 193); the operator guide's stall-detection section (§3.5) describes attest-monitor's alarms, thresholds, defaults and the operator's action on each. No CI test: a document (the operator guide); what it describes is tested in CI elsewhere: permissionless submission (F.11), concurrent operators and deferral (R.9, R.10: lez/updater/tests/recorded.rs's gate)"
 
 [[row]]
 id = "RFP-021 S.8"
@@ -1068,19 +1068,23 @@ note = "the full private claim and burn proven at cloud containers held to the d
 [[row]]
 id = "RFP-022 P.5"
 tests = [
+  { path = "scripts/test_perf_records.py", kind = "test", ci = "links", run = "python3 -I scripts/test_perf_records.py" },
+  { path = "lez/results/perf-latency-bridge.md", kind = "record" },
   { path = "docs/design/finality-rule/RESULTS.md", kind = "record" },
   { path = "e2e/runs/crown-live-1/README.md", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
-note = "the outbound estimate (about 3 h under rule (B)) and the simulator's tip-to-finalisation medians (table (k)); measured live with testnet parameters (W = 1 h, release delay 120 s): a deposit's block to capture 19.7 and 19.1 min, then 14.7 and 25.2 min; both burns to the first release 64.7 and 66.1 min; production figures not measured. No CI test: the latency is of live networks (Ethereum's finality wait, a beacon node serving the update, a sequencer including the transaction); CI has no live chain, and nothing here sends to Sepolia or a public LEZ network"
+note = "the outbound estimate (about 3 h under rule (B)) and the simulator's tip-to-finalisation medians (table (k)); measured live with testnet parameters (W = 1 h, release delay 120 s): a deposit's block to capture 19.7 and 19.1 min, then 14.7 and 25.2 min; both burns to the first release 64.7 and 66.1 min; production figures not measured. No CI test measures the latency: it is of live networks (Ethereum's finality wait, a beacon node serving the update, a sequencer including the transaction), and CI has no live chain — nothing here sends to Sepolia or a public LEZ network; what CI runs recomputes the documented figures from the run's own committed records (scripts/test_perf_records.py)"
 
 [[row]]
 id = "RFP-022 P.6"
 tests = [
+  { path = "scripts/test_perf_records.py", kind = "test", ci = "links", run = "python3 -I scripts/test_perf_records.py" },
   { path = "checkpoint/results/bench.log", kind = "record" },
+  { path = "lez/results/perf-daemons.md", kind = "record" },
   { path = "e2e/runs/crown-live-3/README.md", kind = "record" },
 ]
-note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.62 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); the daemons' CPU and bandwidth and the relayer's memory: none yet. No CI test: the documented resources are of provers on stated hardware (real proofs, CPU and GPU); the daemons' CPU and bandwidth and the relayer's memory are not measured; the monitor's CI rehearsal prints its resident memory and a rescan's time on GitHub's runner (monitor/tests/anvil-e2e.sh), not a documented figure"
+note = "executor cycle counts by zone load (idle hour 5.99M, 50 private transactions 37.9M); the one-block checkpoint proven in 1,157.5 s, wrap 195.1-215.2 s, peak 9.85 GB; rule (B) checkpoints over real zones 31.9 s on one L40S (row 91) and 701.1 s on the build box's CPU (row 100); monitor (0.0004 of a core, 14.0 MiB) and the relayer (0.0007, 20.3 MiB) with their bandwidth (lez/results/perf-daemons.md); the importer as a daemon, ferrata_attestor, monitor's LEZ traffic and the daemons as Logos modules: none yet. No CI test measures the resources themselves: they are of real proving on stated hardware (CPU and GPU) and of daemons on a stated machine; what CI runs recomputes the documented figures from the committed records (scripts/test_perf_records.py); the monitor's CI rehearsal prints its resident memory and a rescan's time on GitHub's runner (monitor/tests/anvil-e2e.sh), not a documented figure"
 
 [[row]]
 id = "RFP-022 P.7"

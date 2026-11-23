@@ -73,7 +73,7 @@ end).
 | components | SHA-256 2.59 cycles/B (accelerated; 63.1 without the patch), BLAKE2b-256 **55.9 cycles/B** (no accelerator), Ed25519 `verify_strict` **0.83M** (3.49M without the patch), burn leaf + append 4,234 |
 | rule (B) (§4) | **1.69M cycles per attestor** (certificate + attestation, two Ed25519 `verify_strict`); the check 5.1M at t = 3, 11.8M at t = 7, 16.9M at t = 10; one proof per checkpoint; rule (A) 0.89M per supporter, two proofs |
 | composition | two pieces (segment of 180 blocks, then a checkpoint verifying it) prove the same journal as one piece (dev mode) |
-| real proof (4 segments) | succinct 1,758.9 s under load, 1,157.5 s starting quiet; Groth16 wrap 215.2 s / 195.1 s under load; peak 9.62 GB (host + r0vm), Groth16 prover 7.3 GiB; seal 260 bytes, selector `0x73c457ba` |
+| real proof (4 segments) | succinct 1,758.9 s under load, 1,157.5 s starting quiet; Groth16 wrap 215.2 s / 195.1 s under load; peak 9.85 GB (host + r0vm), Groth16 prover 7.3 GiB; seal 260 bytes, selector `0x73c457ba` |
 | real LEZ blocks (§ "Real LEZ blocks") | rule (B) over **195 real blocks** of LEZ v0.4.0-rc1's sequencer (the lab's devnet: one validator, dev-mode leader proofs, n = 1): parser and re-hash accept all 202 blocks and 202 inscriptions as made; 7.66M cycles, 11 segments, **39.5 s on one NVIDIA L4**; accepted by the v5 vault in mode (B) with RISC Zero's verifier, 347,832 + 195,149 gas |
 
 ## 1. Fidelity to the real formats
@@ -421,10 +421,10 @@ container is polled every 0.2 s.
 
 | run | step | wall | CPU (user) | load before → after | peak memory | output |
 |---|---|---|---|---|---|---|
-| **under load** (other agents) | succinct | **1,758.9 s** (29:19) | 13,989 s (798% CPU) | 13.15 → 36.76 | 9.62 GB (host + r0vm) | receipt 224,314 bytes; total cycles 4,194,304 (paging 276,050, reserved 213,312) |
-| **under load** | identity_p254 + Groth16 (Docker) | **215.2 s** | 1,023 s (host + r0vm) | 32.90 → 33.19 | host + r0vm 1.44 GB; container seen 48.2 s, cgroup peak 8.48 GiB (incl. page cache), `prover` VmHWM 7.30 GiB | seal 260 bytes, selector `0x73c457ba` |
-| second run, **started quiet** (only this prover; others resumed before the end) | succinct | **1,157.5 s** (19:17) | 11,726 s (1017% CPU) | 2.95 → 36.05 | 9.62 GB (host + r0vm) | receipt 224,314 bytes; same cycle counts |
-| second run, **under load** | identity_p254 + Groth16 (Docker) | **195.1 s** | 986 s (host + r0vm) | 36.05 → 55.14 | host + r0vm 1.44 GB; container seen 53.8 s, cgroup peak 7.36 GiB, `prover` VmHWM 7.31 GiB | seal 260 bytes, selector `0x73c457ba` |
+| **under load** (other agents) | succinct | **1,758.9 s** (29:19) | 13,989 s (798% CPU) | 13.15 → 36.76 | 9.85 GB (host + r0vm) | receipt 224,314 bytes; total cycles 4,194,304 (paging 276,050, reserved 213,312) |
+| **under load** | identity_p254 + Groth16 (Docker) | **215.2 s** | 1,023 s (host + r0vm) | 32.90 → 33.19 | host + r0vm 1.48 GB; container seen 48.2 s, cgroup peak 8.48 GiB (incl. page cache), `prover` VmHWM 7.30 GiB | seal 260 bytes, selector `0x73c457ba` |
+| second run, **started quiet** (only this prover; others resumed before the end) | succinct | **1,157.5 s** (19:17) | 11,726 s (1017% CPU) | 2.95 → 36.05 | 9.85 GB (host + r0vm) | receipt 224,314 bytes; same cycle counts |
+| second run, **under load** | identity_p254 + Groth16 (Docker) | **195.1 s** | 986 s (host + r0vm) | 36.05 → 55.14 | host + r0vm 1.48 GB; container seen 53.8 s, cgroup peak 7.36 GiB, `prover` VmHWM 7.31 GiB | seal 260 bytes, selector `0x73c457ba` |
 
 Both receipts of each run verify against the proven image id and carry the journal the native
 run produced for that program (`host verify cp-empty-1`, `results/verify-under-load.log`,

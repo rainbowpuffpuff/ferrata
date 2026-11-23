@@ -29,7 +29,7 @@ check), the same scope as the CPU's `prove_with_opts(…, succinct)`.
   3.7 s per segment overall, against 289 s on the laptop.
 - **Memory.** GPU memory peaks at 11,076–11,159 MiB (10.8–10.9 GiB) of 23,034 MiB whatever the
   number of segments, because segments are proven one at a time. The host process peaks at
-  0.76–1.08 GiB (GNU time), against 9.62 GB for the CPU proof of `cp-empty-1`.
+  0.76–1.08 GiB (GNU time), against 9.85 GB for the CPU proof of `cp-empty-1`.
 - **CPU.** GNU time reports 99% CPU for the prover process, a single core: 13.2 s of user time for
   `cp-empty-1`. The laptop needed 11,726–13,989 CPU-seconds (798–1,017% CPU on 16 threads) for
   the same 4 segments.
