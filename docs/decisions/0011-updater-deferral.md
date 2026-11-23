@@ -22,7 +22,7 @@ fall on the fastest operator.
 
 The third.
 
-Amended 22 November 2026, after internal reviews: an `Open`, and a step of a job the daemon has not sent a step of, count their wait from the first round a step of that kind was due on the instance's state, whatever job it is for; after the daemon sends a step there, the next of that kind waits `W - 1` rounds. The wait is still `H(key, job, step) mod W`. A job's id hashes the update's `signature_slot`, which its signature does not cover, and anyone may open a job and send its steps, so counted per job a source serving new copies restarted the count each round. A kind's turn runs once per state: a party applying older real updates itself starts new states, and new turns, with each.
+Amended 22 and 23 November 2026, after internal reviews: an `Open`, and a step of a job the daemon has not sent a step of, count their wait from the first round a step of that kind was due on the instance's state, whatever job it is for; after the daemon sends a step there, the next of that kind waits `W - 1` rounds. The wait is still `H(key, job, step) mod W`. A job's id hashes the update's `signature_slot`, which its signature does not cover, and anyone may open a job and send its steps, so counted per job a source serving new copies restarted the count each round. A kind's turn runs once per state: a party applying older real updates itself starts new states, and new turns, with each.
 
 ## Rationale and trade-offs
 

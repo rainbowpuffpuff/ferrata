@@ -30,8 +30,8 @@ function or compound command, an `exit 0` trap, a masked subshell, other `cfg` f
 The summary gives, per RFP, the rows with a test CI runs, and the others by what they have instead (a test
 in a manual workflow; tests on the box or by hand; records and documents only); `--list` prints every
 row's status. Exits 1 on any problem above. With `--require-ci RFP` (RFP-021, RFP-022 or all) it also
-exits 1 while any hard row of that RFP lacks a test CI runs: the gate RFP-022 R.11 and the B4 milestone
-set (docs/traceability.md, "one named test per hard requirement, passing in CI").
+exits 1 while any hard row of that RFP lacks a test CI runs: the bar milestone B4 sets for RFP-022 R.11
+(docs/traceability.md, "one named test per hard requirement, passing in CI").
 
 Standard library only. Usage: python3 -I scripts/ci/check-row-tests.py [--list] [--require-ci RFP] [--map FILE]
 [--traceability FILE] (--map and --traceability read other copies of the map and of the matrices:

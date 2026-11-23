@@ -24,11 +24,12 @@ in the named workflow. A job that runs only when started by hand counts as manua
 The summary gives, per RFP, the rows with a test CI runs and the others by what they have instead (a test in
 a manual workflow; tests on the build box or by hand; records and documents only); `--list` prints every
 row. `--require-ci RFP-022` (or `RFP-021`, `all`) also fails while any hard row of that RFP lacks a test CI
-runs: that is RFP-022 R.11's gate, and it fails today. Standard library only.
+runs: that is milestone B4's bar for RFP-022 R.11 (each row's test in CI, more than the clause asks), and it
+fails today (R.14, S.1). Standard library only.
 
 ```sh
 python3 -I scripts/ci/check-row-tests.py                          # the map is consistent (CI)
-python3 -I scripts/ci/check-row-tests.py --require-ci RFP-022     # the R.11 gate: exit 1 while rows lack a CI test
+python3 -I scripts/ci/check-row-tests.py --require-ci RFP-022     # B4's bar for R.11: exit 1 while rows lack a CI test
 ```
 
 Run by CI's `links` job on every push and pull request, with its tests (below).

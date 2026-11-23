@@ -504,8 +504,14 @@ Record, tables and the re-check: [`results/live-sepolia/`](results/live-sepolia/
   source using up the turns on each state, the next committee adopted 475 rounds after the rotation (58 to 60 rounds per
   state; `/health` not `ok` in 4 rounds), or 317 with each reset right after this updater's first step on the state
   (`ok` throughout); with no lying source at all, 165 rounds, the same before the per-state turns. Such a party needs no
-  lying source and pays for every update it applies; it is limited by the older real updates it has (derived, not
-  measured: up to about a sync-committee period). If the instance keeps falling behind, remove or replace a source that
+  lying source and pays for every update it applies, and each update it applies must move the finalized header to a
+  later checkpoint (about an epoch, 32 slots). Alone, it is limited by the older real updates it has: without a lying
+  source the states last less than an epoch (165 rounds for the seven updates of the run above; at the default
+  `poll_secs` 12 a round is a slot), so the store gains on the chain and the party soon has none left. With a source
+  using up the turns, states last 58 to 60 rounds, longer than an epoch: the store falls further behind the chain at
+  each reset, so the party can hold each adoption of the next committee until the store reaches the end of its period,
+  and again in the next, for as long as it pays and the source is kept (derived, not measured: the store then crosses a
+  period in about 1.8 periods of real time). If the instance keeps falling behind, remove or replace a source that
   serves such copies (the journal and the per-source metrics show which one served the updates applied); another updater
   whose sources exclude it is not delayed by it.
 - A sequencer whose clock lags the updater's (with the sequencer backend the updater takes this machine's clock for the
