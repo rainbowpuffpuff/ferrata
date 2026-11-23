@@ -1,0 +1,23 @@
+{
+ "by": {
+  "GET /eth/v1/beacon/genesis": {
+   "down": 30536,
+   "errors": 0,
+   "n": 88,
+   "up": 10912
+  },
+  "GET /eth/v1/beacon/headers": {
+   "down": 174508,
+   "errors": 0,
+   "n": 176,
+   "up": 23496
+  }
+ },
+ "down": 205044,
+ "errors": 0,
+ "requests": 264,
+ "seconds": 5955.7,
+ "started": 1795445938.1266074,
+ "to": "https://lodestar-sepolia.chainsafe.io/",
+ "up": 34408
+}

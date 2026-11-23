@@ -1,0 +1,17 @@
+{
+ "by": {
+  "GET /eth/v1/beacon/light_client": {
+   "down": 7680245,
+   "errors": 0,
+   "n": 256,
+   "up": 30208
+  }
+ },
+ "down": 7680245,
+ "errors": 0,
+ "requests": 256,
+ "seconds": 5956.0,
+ "started": 1795445938.133163,
+ "to": "http://unstable.sepolia.beacon-api.nimbus.team/",
+ "up": 30208
+}

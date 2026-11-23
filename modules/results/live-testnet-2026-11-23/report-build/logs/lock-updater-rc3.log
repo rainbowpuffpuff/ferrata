@@ -1,0 +1,601 @@
+    Updating crates.io index
+    Updating git repository `https://github.com/logos-blockchain/logos-blockchain.git`
+    Updating git repository `https://github.com/keycard-tech/keycard-rs`
+    Updating git repository `https://github.com/logos-blockchain/logos-blockchain-circuits.git`
+    Updating git submodule `https://github.com/iden3/circomlib.git`
+    Updating git submodule `https://github.com/iden3/rapidsnark.git`
+    Updating git submodule `https://github.com/iden3/circom_runtime.git`
+    Updating git submodule `https://github.com/iden3/ffiasm`
+    Updating git submodule `https://github.com/nlohmann/json.git`
+    Updating git submodule `https://github.com/pistacheio/pistache`
+    Updating git submodule `https://github.com/google/googletest.git`
+    Updating git submodule `https://github.com/Tencent/rapidjson`
+    Updating git submodule `https://github.com/google/googletest.git`
+    Updating git repository `https://github.com/EspressoSystems/jellyfish.git`
+    Updating git repository `https://github.com/logos-co/Overwatch`
+    Updating git repository `https://github.com/logos-blockchain/logos-blockchain-rust-rapidsnark.git`
+    Updating git repository `https://github.com/arkworks-rs/spongefish.git`
+     Locking 43 packages to latest compatible versions
+      Adding cross_zone_emission_core v0.1.0 (<work>/rc3/ferrata/modules/ferrata_updater_module/rust-lib/vendor/upstream/lez-v0.4.0-rc3/lez/programs/cross_zone_emission_core)
+      Adding logos-blockchain-binary-codec v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-binary-codec-macros v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-blend-crypto v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-blend-message v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-blend-proofs v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-chain-broadcast-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-chain-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-circuits-prover v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-common-http-client v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-core v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-cryptarchia-engine v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-cryptarchia-sync v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-dynamic-merkle v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-groth16 v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-http-api-common v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-key-management-system-keys v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-key-management-system-macros v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-key-management-system-operators v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-key-management-system-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-ledger v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-libp2p v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-log-targets v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-log-targets-macros v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-merkle-tree v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-mmr v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-network-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-poc v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-pol v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-poq v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-poseidon2 v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-proofs-error v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-sdp-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-services-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-storage-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-time v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-time-service v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-tracing v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-utils v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-utxotree v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-version v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-zksign v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+      Adding logos-blockchain-zone-sdk v0.3.5-rc.5 (https://github.com/logos-blockchain/logos-blockchain.git?rev=f6d4267fe7d1ff8ab4cb30e9a18154bc66e10c30#f6d4267f)
+ Downloading crates ...
+  Downloaded anstyle v1.0.14
+  Downloaded anstyle-wincon v3.0.11
+  Downloaded arbitrary-int v2.2.0
+  Downloaded archery v1.2.2
+  Downloaded async-stream-impl v0.3.6
+  Downloaded adler2 v2.0.1
+  Downloaded aead v0.5.2
+  Downloaded android_system_properties v0.1.5
+  Downloaded anstyle-parse v1.0.0
+  Downloaded asn1-rs-derive v0.6.0
+  Downloaded asn1-rs-impl v0.2.0
+  Downloaded astro-float v0.9.5
+  Downloaded base-x v0.2.11
+  Downloaded base16ct v0.2.0
+  Downloaded base256emoji v1.0.2
+  Downloaded base64 v0.21.7
+  Downloaded bincode v1.3.3
+  Downloaded colorchoice v1.0.5
+  Downloaded core-graphics-types v0.1.3
+  Downloaded data-encoding-macro v0.1.20
+  Downloaded data-encoding-macro-internal v0.1.18
+  Downloaded digest v0.9.0
+  Downloaded idna_adapter v1.2.2
+  Downloaded inout v0.1.4
+  Downloaded jni v0.21.1
+  Downloaded jni-sys-macros v0.4.1
+  Downloaded leb128fmt v0.1.0
+  Downloaded lru-slab v0.1.2
+  Downloaded malloc_buf v0.0.6
+  Downloaded manyhow-macros v0.11.4
+  Downloaded match-lookup v0.1.2
+  Downloaded match_cfg v0.1.0
+  Downloaded matchers v0.2.0
+  Downloaded aead v0.6.1
+  Downloaded anstream v1.0.0
+  Downloaded anstyle-query v1.1.5
+  Downloaded argon2 v0.5.3
+  Downloaded arrayref v0.3.9
+  Downloaded arrayvec v0.7.6
+  Downloaded astro-float-macro v0.4.5
+  Downloaded async-channel v2.5.0
+  Downloaded async-stream v0.3.6
+  Downloaded async-trait v0.1.89
+  Downloaded asynchronous-codec v0.7.0
+  Downloaded atomic-waker v1.1.2
+  Downloaded backon v1.6.0
+  Downloaded base16ct v1.0.0
+  Downloaded bitflags v1.3.2
+  Downloaded block v0.1.6
+  Downloaded block-buffer v0.9.0
+  Downloaded block-buffer v0.12.0
+  Downloaded block-padding v0.4.2
+  Downloaded cbc v0.2.1
+  Downloaded cesu8 v1.1.0
+  Downloaded cexpr v0.6.0
+  Downloaded chkstk_stub v0.1.0
+  Downloaded cipher v0.4.4
+  Downloaded concurrent-queue v2.5.0
+  Downloaded const-str v0.4.3
+  Downloaded convert_case v0.8.0
+  Downloaded core-foundation v0.9.4
+  Downloaded core-foundation v0.10.1
+  Downloaded cpubits v0.1.1
+  Downloaded cpufeatures v0.3.0
+  Downloaded critical-section v1.2.0
+  Downloaded crossbeam-epoch v0.9.20
+  Downloaded ctr v0.9.2
+  Downloaded ctr v0.10.1
+  Downloaded ctutils v0.4.2
+  Downloaded curve25519-dalek-derive v0.1.1
+  Downloaded data-encoding v2.11.0
+  Downloaded displaydoc v0.2.6
+  Downloaded dlopen2 v0.5.0
+  Downloaded dtoa v1.0.11
+  Downloaded ecdsa v0.16.9
+  Downloaded hex_fmt v0.3.0
+  Downloaded hmac-sha512 v1.1.12
+  Downloaded hostname v0.3.1
+  Downloaded http-body v1.0.1
+  Downloaded http-body-util v0.1.3
+  Downloaded httpdate v1.0.3
+  Downloaded humantime v2.3.0
+  Downloaded humantime-serde v1.1.1
+  Downloaded hyper-rustls v0.27.9
+  Downloaded hyper-timeout v0.5.2
+  Downloaded iana-time-zone-haiku v0.1.2
+  Downloaded id-arena v2.3.0
+  Downloaded if-addrs v0.15.0
+  Downloaded if-watch v3.2.2
+  Downloaded igd-next v0.16.2
+  Downloaded inout v0.2.2
+  Downloaded ipnet v2.12.0
+  Downloaded is_terminal_polyfill v1.70.2
+  Downloaded jni-sys v0.3.1
+  Downloaded jni-sys v0.4.1
+  Downloaded jobserver v0.1.34
+  Downloaded jsonrpsee-client-transport v0.26.0
+  Downloaded jsonrpsee-http-client v0.26.0
+  Downloaded jsonrpsee-types v0.26.0
+  Downloaded jsonrpsee-wasm-client v0.26.0
+  Downloaded lazy-regex v3.6.0
+  Downloaded lazy-regex-proc_macros v3.6.0
+  Downloaded libp2p-allow-block-list v0.6.0
+  Downloaded libp2p-dns v0.44.0
+  Downloaded libp2p-stream v0.4.0-alpha
+  Downloaded libp2p-swarm-derive v0.35.1
+  Downloaded libp2p-tcp v0.44.1
+  Downloaded libp2p-tls v0.6.2
+  Downloaded libp2p-upnp v0.5.0
+  Downloaded libredox v0.1.17
+  Downloaded lock_api v0.4.14
+  Downloaded loki-api v0.1.3
+  Downloaded aes v0.9.1
+  Downloaded asn1-rs v0.7.2
+  Downloaded async-io v2.6.0
+  Downloaded attohttpc v0.30.1
+  Downloaded axum-core v0.5.6
+  Downloaded bitcoin_hashes v0.14.2
+  Downloaded bumpalo v3.20.3
+  Downloaded clang-sys v1.8.1
+  Downloaded clap v4.6.1
+  Downloaded clap_derive v4.6.1
+  Downloaded clap_lex v1.1.0
+  Downloaded console v0.16.3
+  Downloaded const-hex v1.19.1
+  Downloaded core-foundation-sys v0.8.7
+  Downloaded crc32fast v1.5.0
+  Downloaded crossbeam-channel v0.5.15
+  Downloaded crossbeam-utils v0.8.21
+  Downloaded der-parser v10.0.0
+  Downloaded ecdsa v0.17.0-rc.22
+  Downloaded hashlink v0.9.1
+  Downloaded hermit-abi v0.5.2
+  Downloaded hex-conservative v0.2.2
+  Downloaded hmac v0.13.0
+  Downloaded httparse v1.10.1
+  Downloaded hybrid-array v0.4.12
+  Downloaded icu_normalizer_data v2.2.0
+  Downloaded icu_properties v2.2.0
+  Downloaded icu_provider v2.2.0
+  Downloaded indicatif v0.18.4
+  Downloaded ipconfig v0.3.4
+  Downloaded jsonrpsee v0.26.0
+  Downloaded jsonrpsee-core v0.26.0
+  Downloaded jsonrpsee-proc-macros v0.26.0
+  Downloaded jsonrpsee-ws-client v0.26.0
+  Downloaded libloading v0.8.9
+  Downloaded libp2p v0.56.0
+  Downloaded libp2p-autonat v0.15.0
+  Downloaded libp2p-connection-limits v0.6.0
+  Downloaded libp2p-core v0.43.2
+  Downloaded libp2p-identify v0.47.0
+  Downloaded libp2p-identity v0.2.14
+  Downloaded libp2p-kad v0.48.0
+  Downloaded libp2p-mdns v0.48.0
+  Downloaded libp2p-metrics v0.17.0
+  Downloaded libp2p-quic v0.13.1
+  Downloaded libp2p-request-response v0.29.0
+  Downloaded litemap v0.8.2
+  Downloaded manyhow v0.11.4
+  Downloaded aes v0.8.4
+  Downloaded aes-gcm v0.10.3
+  Downloaded aho-corasick v1.1.4
+  Downloaded astro-float-num v0.3.6
+  Downloaded axum v0.8.9
+  Downloaded bip39 v2.2.2
+  Downloaded cc v1.2.63
+  Downloaded clap_builder v4.6.0
+  Downloaded combine v4.6.7
+  Downloaded crypto-bigint v0.5.5
+  Downloaded der v0.8.2
+  Downloaded ed25519 v2.2.3
+  Downloaded educe v0.7.6
+  Downloaded either v1.16.0
+  Downloaded elliptic-curve v0.13.8
+  Downloaded elliptic-curve v0.14.0
+  Downloaded enum-as-inner v0.6.1
+  Downloaded env_filter v1.0.1
+  Downloaded env_logger v0.11.10
+  Downloaded event-listener v5.4.1
+  Downloaded event-listener-strategy v0.5.4
+  Downloaded fastbloom v0.17.0
+  Downloaded fd-lock v4.0.4
+  Downloaded ff v0.13.1
+  Downloaded ff v0.14.0
+  Downloaded h2 v0.4.18
+  Downloaded hashbrown v0.14.5
+  Downloaded hickory-resolver v0.25.2
+  Downloaded hkdf v0.12.4
+  Downloaded hkdf v0.13.0
+  Downloaded http v1.4.1
+  Downloaded hyper v1.10.1
+  Downloaded hyper-util v0.1.20
+  Downloaded icu_collections v2.2.0
+  Downloaded icu_locale_core v2.2.0
+  Downloaded icu_normalizer v2.2.0
+  Downloaded icu_properties_data v2.2.0
+  Downloaded idna v1.1.0
+  Downloaded itertools v0.10.5
+  Downloaded itertools v0.11.0
+  Downloaded itertools v0.14.0
+  Downloaded jiff-static v0.2.28
+  Downloaded js-sys v0.3.99
+  Downloaded k256 v0.13.4
+  Downloaded k256 v0.14.0-rc.14
+  Downloaded libp2p-gossipsub v0.49.5
+  Downloaded libp2p-swarm v0.47.1
+  Downloaded matchit v0.8.4
+  Downloaded mime v0.3.17
+  Downloaded ml-kem v0.3.2
+  Downloaded module-lattice v0.2.3
+  Downloaded multiaddr v0.18.2
+  Downloaded multibase v0.9.2
+  Downloaded bindgen v0.72.1
+  Downloaded bls12_381 v0.8.0
+  Downloaded blst v0.3.17
+  Downloaded bzip2-sys v0.1.13+1.0.8
+  Downloaded ccm v0.6.0-rc.3
+  Downloaded crypto-bigint v0.7.5
+  Downloaded curve25519-dalek v4.1.3
+  Downloaded ed25519-dalek v2.2.0
+  Downloaded encode_unicode v1.0.0
+  Downloaded fiat-crypto v0.2.9
+  Downloaded hickory-proto v0.25.2
+  Downloaded minimal-lexical v0.2.1
+  Downloaded miniz_oxide v0.8.9
+  Downloaded mio v1.2.1
+  Downloaded multistream-select v0.13.0
+  Downloaded natpmp v0.5.0
+  Downloaded netdev v0.31.0
+  Downloaded netlink-packet-route v0.28.0
+  Downloaded netlink-proto v0.12.0
+  Downloaded nix v0.30.1
+  Downloaded nu-ansi-term v0.50.3
+  Downloaded oid-registry v0.8.1
+  Downloaded polyval v0.6.2
+  Downloaded potential_utf v0.1.5
+  Downloaded primefield v0.14.0
+  Downloaded proc-macro-error-attr2 v2.0.0
+  Downloaded prometheus-client-derive-encode v0.4.2
+  Downloaded prost-derive v0.13.5
+  Downloaded prost-derive v0.14.3
+  Downloaded quick-protobuf-codec v0.3.1
+  Downloaded rand_pcg v0.10.2
+  Downloaded redox_syscall v0.5.18
+  Downloaded redox_users v0.5.2
+  Downloaded flate2 v1.1.9
+  Downloaded foreign-types v0.5.0
+  Downloaded foreign-types-macros v0.2.3
+  Downloaded foreign-types-shared v0.3.1
+  Downloaded futures v0.3.32
+  Downloaded futures-bounded v0.2.4
+  Downloaded futures-channel v0.3.32
+  Downloaded futures-core v0.3.32
+  Downloaded futures-io v0.3.32
+  Downloaded light-poseidon v0.4.0
+  Downloaded moka v0.12.15
+  Downloaded multihash v0.19.5
+  Downloaded netlink-packet-core v0.7.0
+  Downloaded netlink-packet-core v0.8.1
+  Downloaded netlink-packet-route v0.17.1
+  Downloaded netlink-packet-utils v0.5.2
+  Downloaded netlink-sys v0.8.8
+  Downloaded nom v7.1.3
+  Downloaded num-bigint v0.4.6
+  Downloaded objc v0.2.7
+  Downloaded once_cell_polyfill v1.70.2
+  Downloaded openssl-probe v0.2.1
+  Downloaded opentelemetry v0.32.0
+  Downloaded opentelemetry-appender-tracing v0.32.0
+  Downloaded opentelemetry-http v0.32.0
+  Downloaded opentelemetry-otlp v0.32.0
+  Downloaded opentelemetry-proto v0.32.0
+  Downloaded opentelemetry-semantic-conventions v0.32.1
+  Downloaded optfield v0.4.0
+  Downloaded pairing v0.23.0
+  Downloaded parking v2.2.1
+  Downloaded parking_lot v0.12.5
+  Downloaded parking_lot_core v0.9.12
+  Downloaded password-hash v0.5.0
+  Downloaded pbkdf2 v0.13.0
+  Downloaded percent-encoding v2.3.2
+  Downloaded pin-project-internal v1.1.13
+  Downloaded polling v3.11.0
+  Downloaded portable-atomic-util v0.2.7
+  Downloaded prettyplease v0.2.37
+  Downloaded primeorder v0.14.0-rc.14
+  Downloaded proc-macro-error2 v2.0.1
+  Downloaded proc-macro-utils v0.10.0
+  Downloaded prometheus-client v0.23.1
+  Downloaded prost v0.13.5
+  Downloaded prost v0.14.3
+  Downloaded prost-types v0.13.5
+  Downloaded prost-types v0.14.3
+  Downloaded quick-protobuf v0.8.1
+  Downloaded quinn v0.11.9
+  Downloaded quinn-udp v0.5.14
+  Downloaded r-efi v5.3.0
+  Downloaded r-efi v6.0.0
+  Downloaded rcgen v0.13.2
+  Downloaded rtoolbox v0.0.5
+  Downloaded rustc-hash v2.1.2
+  Downloaded rusticata-macros v4.1.0
+  Downloaded rustls-platform-verifier-android v0.1.1
+  Downloaded rw-stream-sink v0.4.0
+  Downloaded same-file v1.0.6
+  Downloaded scopeguard v1.2.0
+  Downloaded sec1 v0.7.3
+  Downloaded sec1 v0.8.1
+  Downloaded wit-bindgen v0.51.0
+  Downloaded wit-bindgen v0.57.1
+  Downloaded wit-bindgen-core v0.51.0
+  Downloaded wit-bindgen-rust v0.51.0
+  Downloaded xattr v1.6.1
+  Downloaded yoke v0.8.2
+  Downloaded yoke-derive v0.8.2
+  Downloaded zerotrie v0.2.4
+  Downloaded zerovec v0.11.6
+  Downloaded zerovec-derive v0.11.3
+  Downloaded filetime v0.2.29
+  Downloaded find-msvc-tools v0.1.9
+  Downloaded foldhash v0.2.0
+  Downloaded form_urlencoded v1.2.2
+  Downloaded futures-executor v0.3.32
+  Downloaded futures-lite v2.6.1
+  Downloaded futures-macro v0.3.32
+  Downloaded futures-rustls v0.26.0
+  Downloaded futures-sink v0.3.32
+  Downloaded futures-task v0.3.32
+  Downloaded futures-timer v3.0.4
+  Downloaded futures-util v0.3.32
+  Downloaded generic-array v1.4.3
+  Downloaded ghash v0.5.1
+  Downloaded glob v0.3.4
+  Downloaded gloo-net v0.6.0
+  Downloaded gloo-timers v0.4.0
+  Downloaded gloo-utils v0.2.0
+  Downloaded group v0.13.0
+  Downloaded group v0.14.0
+  Downloaded opaque-debug v0.3.1
+  Downloaded opentelemetry-prometheus v0.32.0
+  Downloaded opentelemetry_sdk v0.32.1
+  Downloaded pcsc v2.9.0
+  Downloaded pcsc-sys v1.3.0
+  Downloaded pem v3.0.6
+  Downloaded pin-project v1.1.13
+  Downloaded pkg-config v0.3.33
+  Downloaded prometheus v0.14.0
+  Downloaded rand v0.10.1
+  Downloaded regex v1.12.3
+  Downloaded reqwest v0.12.28
+  Downloaded resolv-conf v0.7.6
+  Downloaded rfc6979 v0.4.0
+  Downloaded rfc6979 v0.6.0-pre.0
+  Downloaded risc0-groth16 v3.0.4
+  Downloaded rpassword v7.5.4
+  Downloaded rpds v1.2.1
+  Downloaded rtnetlink v0.20.0
+  Downloaded rustls-native-certs v0.8.4
+  Downloaded rustls-pki-types v1.14.1
+  Downloaded rustls-platform-verifier v0.5.3
+  Downloaded rustls-webpki v0.103.16
+  Downloaded ryu v1.0.23
+  Downloaded schannel v0.1.29
+  Downloaded security-framework-sys v2.17.0
+  Downloaded serde-big-array v0.5.1
+  Downloaded serde_arrays v0.2.0
+  Downloaded serde_ignored v0.1.14
+  Downloaded serde_path_to_error v0.1.20
+  Downloaded serde_urlencoded v0.7.1
+  Downloaded serdect v0.2.0
+  Downloaded sha2 v0.9.9
+  Downloaded signal-hook-registry v1.4.8
+  Downloaded signature v3.0.0
+  Downloaded simd-adler32 v0.3.9
+  Downloaded siphasher v1.0.3
+  Downloaded stable_deref_trait v1.2.1
+  Downloaded synstructure v0.13.2
+  Downloaded tinystr v0.8.3
+  Downloaded tokio-rustls v0.26.4
+  Downloaded portable-atomic v1.13.1
+  Downloaded reqwest v0.13.4
+  Downloaded risc0-circuit-recursion v4.0.4
+  Downloaded rocksdb v0.24.0
+  Downloaded security-framework v3.7.0
+  Downloaded send_wrapper v0.6.0
+  Downloaded serde_yaml v0.9.34+deprecated
+  Downloaded serdect v0.4.3
+  Downloaded sha1 v0.10.6
+  Downloaded sha2 v0.11.0
+  Downloaded sharded-slab v0.1.7
+  Downloaded shlex v1.3.0
+  Downloaded slab v0.4.12
+  Downloaded snap v1.1.1
+  Downloaded sntpc v0.5.2
+  Downloaded socket2 v0.5.10
+  Downloaded socket2 v0.6.4
+  Downloaded soketto v0.8.1
+  Downloaded spki v0.8.0
+  Downloaded static_assertions v1.1.0
+  Downloaded symlink v0.1.0
+  Downloaded sync_wrapper v1.0.2
+  Downloaded system-configuration v0.6.1
+  Downloaded system-configuration-sys v0.6.0
+  Downloaded tagptr v0.2.0
+  Downloaded tar v0.4.46
+  Downloaded thiserror v1.0.69
+  Downloaded tokio-macros v2.7.0
+  Downloaded tokio-stream v0.1.18
+  Downloaded tokio-util v0.7.18
+  Downloaded tonic-prost v0.14.6
+  Downloaded quinn-proto v0.11.19
+  Downloaded system-configuration v0.7.0
+  Downloaded thiserror-impl v1.0.69
+  Downloaded thread_local v1.1.9
+  Downloaded tokio v1.53.3
+  Downloaded tower-layer v0.3.3
+  Downloaded tower-service v0.3.3
+  Downloaded tracing-appender v0.2.5
+  Downloaded tracing-futures v0.2.5
+  Downloaded tracing-gelf v0.7.1
+  Downloaded tracing-serde v0.2.0
+  Downloaded try-lock v0.2.5
+  Downloaded uint v0.10.0
+  Downloaded universal-hash v0.5.1
+  Downloaded unsafe-libyaml v0.2.11
+  Downloaded validator v0.20.0
+  Downloaded wasm-bindgen-futures v0.4.72
+  Downloaded tonic v0.14.6
+  Downloaded tower v0.5.3
+  Downloaded tracing-log v0.2.0
+  Downloaded tracing-loki v0.2.7
+  Downloaded tracing-opentelemetry v0.33.0
+  Downloaded triomphe v0.1.15
+  Downloaded unsigned-varint v0.7.2
+  Downloaded ureq-proto v0.6.0
+  Downloaded utf8_iter v1.0.4
+  Downloaded utf8parse v0.2.2
+  Downloaded utoipa-gen v6.0.1
+  Downloaded uuid v1.23.2
+  Downloaded vcpkg v0.2.15
+  Downloaded wasip2 v1.0.3+wasi-0.2.9
+  Downloaded wasm-encoder v0.244.0
+  Downloaded winapi-util v0.1.11
+  Downloaded windows-strings v0.5.1
+  Downloaded wit-parser v0.244.0
+  Downloaded wnaf v0.14.0-rc.1
+  Downloaded zerocopy-derive v0.8.50
+  Downloaded tonic-types v0.14.6
+  Downloaded unit-prefix v0.5.2
+  Downloaded untrusted v0.9.0
+  Downloaded utf8-zero v0.8.1
+  Downloaded utoipa v6.0.0
+  Downloaded validator_derive v0.20.0
+  Downloaded walkdir v2.5.0
+  Downloaded wasi v0.11.1+wasi-snapshot-preview1
+  Downloaded wasm-bindgen-macro v0.2.122
+  Downloaded wasm-metadata v0.244.0
+  Downloaded web-time v1.1.0
+  Downloaded webpki-root-certs v0.26.11
+  Downloaded windows-collections v0.3.2
+  Downloaded windows-implement v0.60.2
+  Downloaded windows-interface v0.59.3
+  Downloaded windows-link v0.2.1
+  Downloaded windows-numerics v0.3.1
+  Downloaded windows-registry v0.6.1
+  Downloaded windows-targets v0.42.2
+  Downloaded windows-targets v0.52.6
+  Downloaded windows-threading v0.2.1
+  Downloaded zerofrom-derive v0.1.7
+  Downloaded regex-syntax v0.8.10
+  Downloaded rustls v0.23.46
+  Downloaded tower-http v0.6.11
+  Downloaded unicode-normalization v0.1.25
+  Downloaded unicode-width v0.2.2
+  Downloaded unsigned-varint v0.8.0
+  Downloaded want v0.3.1
+  Downloaded wasm-bindgen v0.2.122
+  Downloaded wasm-bindgen-shared v0.2.122
+  Downloaded windows-future v0.3.2
+  Downloaded windows-result v0.4.1
+  Downloaded ureq v3.3.0
+  Downloaded windows-core v0.62.2
+  Downloaded wit-bindgen-rust-macro v0.51.0
+  Downloaded wasm-streams v0.4.2
+  Downloaded widestring v1.2.1
+  Downloaded wit-component v0.244.0
+  Downloaded x509-parser v0.17.0
+  Downloaded xml-rs v0.8.28
+  Downloaded yasna v0.5.2
+  Downloaded tracing-subscriber v0.3.23
+  Downloaded wasip3 v0.4.0+wasi-0.3.0-rc-2026-01-06
+  Downloaded jiff v0.2.28
+  Downloaded syn v3.0.5
+  Downloaded wasm-bindgen-macro-support v0.2.122
+  Downloaded windows_x86_64_gnullvm v0.52.6
+  Downloaded writeable v0.6.3
+  Downloaded webpki-root-certs v1.0.10
+  Downloaded zerofrom v0.1.8
+  Downloaded windows_aarch64_gnullvm v0.52.6
+  Downloaded webpki-roots v1.0.10
+  Downloaded libz-sys v1.1.29
+  Downloaded regex-automata v0.4.14
+  Downloaded wasmparser v0.244.0
+  Downloaded sha3 v0.11.0
+  Downloaded xmltree v0.10.3
+  Downloaded windows_aarch64_gnullvm v0.42.2
+  Downloaded x25519-dalek v2.0.1
+  Downloaded zeroize_derive v1.4.3
+  Downloaded url v2.5.8
+  Downloaded windows_i686_gnullvm v0.52.6
+  Downloaded web-sys v0.3.99
+  Downloaded sha3 v0.10.9
+  Downloaded windows_aarch64_msvc v0.42.2
+  Downloaded windows_x86_64_gnullvm v0.42.2
+  Downloaded windows_i686_gnu v0.42.2
+  Downloaded windows_aarch64_msvc v0.52.6
+  Downloaded windows_x86_64_msvc v0.42.2
+  Downloaded windows_x86_64_gnu v0.42.2
+  Downloaded windows_i686_msvc v0.52.6
+  Downloaded windows_x86_64_gnu v0.52.6
+  Downloaded windows_i686_msvc v0.42.2
+  Downloaded winapi v0.3.9
+  Downloaded ring v0.17.14
+  Downloaded windows_i686_gnu v0.52.6
+  Downloaded windows_x86_64_msvc v0.52.6
+  Downloaded windows-sys v0.59.0
+  Downloaded metal v0.29.0
+  Downloaded windows-sys v0.52.0
+  Downloaded windows-sys v0.61.2
+  Downloaded windows-sys v0.45.0
+  Downloaded winapi-i686-pc-windows-gnu v0.4.0
+  Downloaded winapi-x86_64-pc-windows-gnu v0.4.0
+  Downloaded risc0-circuit-rv32im v4.0.4
+  Downloaded risc0-circuit-keccak v4.0.5
+  Downloaded librocksdb-sys v0.17.3+10.4.2
+  Downloaded windows v0.62.2
+  Downloaded rs-merkle-tree v0.1.0
+wrote modules/ferrata_updater_module/rust-lib/lockfiles/v0.4.0-rc3.Cargo.lock

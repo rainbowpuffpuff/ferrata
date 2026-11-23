@@ -1,0 +1,6 @@
+[14:49:54] vault 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0 at block 3
+[14:51:23] idle-1 start
+[15:01:23] activity start
+[15:02:45] activity end (final state 0x89a39679a46c1f7b…; wanted 0x89a39679a46c1f7b…)
+[15:12:46] idle-2 end
+[15:12:55] records in <out>/daemons-anvil-modules

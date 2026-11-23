@@ -1,0 +1,39 @@
+{
+  "instance_id": "0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb",
+  "chain_id": 11155111,
+  "active": true,
+  "applied_jobs": 16,
+  "finalized_slot": 11643104,
+  "finalized_root": "0xf1800d4083e62b4337407ae268434021acfb88ec76a098c0c6bea3ce46c76194",
+  "store_period": 1421,
+  "next_committee_known": true,
+  "now_s": 1795451870,
+  "now_slot": 11643189,
+  "age_s": 1022,
+  "chain_finalized_slot": 11643104,
+  "lag_s": 0,
+  "ws_end_slot": 11756160,
+  "ws_half_slot": 11699632,
+  "divergence": "confirmed",
+  "finality_delay_s": 768,
+  "ahead": null,
+  "providers_answering": 2,
+  "providers_behind": 0,
+  "providers": [
+    {
+      "name": "lodestar",
+      "standing": "agrees",
+      "root_at_slot": "0xf1800d4083e62b4337407ae268434021acfb88ec76a098c0c6bea3ce46c76194",
+      "finalized_slot": 11643104,
+      "note": null
+    },
+    {
+      "name": "publicnode",
+      "standing": "agrees",
+      "root_at_slot": "0xf1800d4083e62b4337407ae268434021acfb88ec76a098c0c6bea3ce46c76194",
+      "finalized_slot": 11643104,
+      "note": null
+    }
+  ],
+  "alerts": []
+}

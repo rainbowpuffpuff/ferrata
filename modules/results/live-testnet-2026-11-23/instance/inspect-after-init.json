@@ -1,0 +1,79 @@
+{
+  "daemon": {
+    "account": "CJtEhDN6dEk51bmMaczgqXsJ28s2QyhAtjQiKTKzKdB5",
+    "balance": "10000000000",
+    "nonce": "0"
+  },
+  "followed": 1698,
+  "head": 1699,
+  "instance": {
+    "active": false,
+    "applied": 0,
+    "config_matches": true,
+    "exists": true,
+    "finalized_header_ssz": "80a6b1000000000028050000000000004130589a521c5b08e5079f9810a6787827c8ceb145a90c9d0e1f802104a2e6375f3fe7830d9baa37328fdc7368497b9b7f094ecc0c72188700489dbf50c04062c2c8cff26880b1ae21af1d441a2a853440c08f6deef0eea1c67728f8e9bf5c0a",
+    "finalized_slot": 11642496,
+    "id": "3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb",
+    "id_matches": true,
+    "root_id": "3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb"
+  },
+  "payer": {
+    "account": "7KVZiQuiFM5154PYF3UezwNcg1FcDRToD6VAyggBdiK9",
+    "balance": "9999067920",
+    "nonce": "1"
+  },
+  "program": {
+    "deployed": {
+      "first_segment": "853W3j5xG3NDqSaiRnG6SgLEiudiYjRDX6QHJDygw3vG",
+      "image_id": "816d1fef464d25493c5bacf6e97dea288419821bc6ab052f9dd7ed29ee4f03df",
+      "immutable": true
+    },
+    "header": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg",
+    "segments": [
+      {
+        "account": "853W3j5xG3NDqSaiRnG6SgLEiudiYjRDX6QHJDygw3vG",
+        "bytes": 98304,
+        "next": "4tUqGVQNFFnAnSrLCHENcKJBPaLFYuTDoxezDUEnX1Hw",
+        "sha256": "fb5662a1a88bfd0d69608c1dbd393ad59467835d148b8848c040a95268d33706"
+      },
+      {
+        "account": "4tUqGVQNFFnAnSrLCHENcKJBPaLFYuTDoxezDUEnX1Hw",
+        "bytes": 98304,
+        "next": "BRtLfDhon7qYpKBGJtHUPu7GzG2cBKV85MakPqeWB91f",
+        "sha256": "39f37b43acd4e1e5ff4cbd1fb97cdef491a8cd5ad1b32232e3c7916a6f60ade0"
+      },
+      {
+        "account": "BRtLfDhon7qYpKBGJtHUPu7GzG2cBKV85MakPqeWB91f",
+        "bytes": 98304,
+        "next": "CPL97C936Fu6BVHdDcqCSxR2QomrCsRGfNUTXPtMYrr8",
+        "sha256": "1193c88828f1e6b2b8393aa93a5d76dacf14a02fb7168a5570bc910340d9bb8c"
+      },
+      {
+        "account": "CPL97C936Fu6BVHdDcqCSxR2QomrCsRGfNUTXPtMYrr8",
+        "bytes": 98304,
+        "next": "3mDkBcC6KodJAfMvumbsHXTbD5DnkFRcWqdK8V7mmmg8",
+        "sha256": "fb48a161eda0119cc3ebf30b986a5a22238d1443f8f91b74ae276084a04abe2a"
+      },
+      {
+        "account": "3mDkBcC6KodJAfMvumbsHXTbD5DnkFRcWqdK8V7mmmg8",
+        "bytes": 98304,
+        "next": "BbPY4dY7VicLDCaPK3G3DkaMfnT1ARH3XUjThcbVFryP",
+        "sha256": "1445eb3666d15e4363181c02c58b62d4c678aa7ba599ffc9b2f39111c7c6f159"
+      },
+      {
+        "account": "BbPY4dY7VicLDCaPK3G3DkaMfnT1ARH3XUjThcbVFryP",
+        "bytes": 98304,
+        "next": "2SZs3a9ZUfAzLSx1ZYQzFbvZdnHZWYyZRRcbbCUhJXyX",
+        "sha256": "5b620532e1c637228e4fe9c0965a54ccb9d107c30bc3b052bfcc7535117cbeb9"
+      },
+      {
+        "account": "2SZs3a9ZUfAzLSx1ZYQzFbvZdnHZWYyZRRcbbCUhJXyX",
+        "bytes": 4816,
+        "next": null,
+        "sha256": "6c4640be090d508a470553e6387036059b74968ac8da7d60a352819f104a54c1"
+      }
+    ]
+  },
+  "read_utc": "2026-11-23T14:55:21Z",
+  "rpc": "https://<domain>/rpc"
+}

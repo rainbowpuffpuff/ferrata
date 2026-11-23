@@ -1,0 +1,11 @@
+Linux 4.19.0-gvisor x86_64
+cpus 2
+Mem:              64           0          63           0           0          63
+nix (Nix) 2.28.3
+cargo 1.93.0 (083ac5135 2025-12-15)
+rustc 1.98.1 (48a229cea 2026-09-01)
+fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+HEAD
+bafd07be0701398f9bc435f73ab05e9a7936c301

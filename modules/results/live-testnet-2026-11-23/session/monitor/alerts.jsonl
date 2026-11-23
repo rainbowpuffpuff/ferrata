@@ -1,0 +1,4 @@
+{"interval_s":60,"kind":"started","level":"info","message":"the attestation monitor started","providers":["lodestar","publicnode"],"ts":1795446486}
+{"instance":"0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb","kind":"instance-inactive","level":"warn","message":"the instance's initial committee is not adopted yet","ts":1795446488}
+{"cleared":"instance-inactive","kind":"recovered","level":"info","message":"an alert cleared","ts":1795446611,"was":{"instance":"0x3147ce50710d343383a76541c46eeb26ab19d556fe0eb4b9906e9de24421ddbb","kind":"instance-inactive","level":"warn","message":"the instance's initial committee is not adopted yet"}}
+{"kind":"stopped","level":"info","message":"the attestation monitor stopped","polls":88,"ts":1795451886}

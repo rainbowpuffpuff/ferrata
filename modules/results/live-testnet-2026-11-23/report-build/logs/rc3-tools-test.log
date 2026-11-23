@@ -1,0 +1,16 @@
+warning: lee@0.1.0: Generated module at <work>/target-rc3/release/build/lee-86b2515dba0a9466/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <work>/target-rc3/release/build/programs-6c249a2ce12e6a64/out/lez/programs/mod.rs
+   Compiling ferrata-updater-sequencer v0.1.0 (<work>/rc3/ferrata/lez/updater/sequencer)
+    Finished `release` profile [optimized] target(s) in 3.47s
+warning: the following packages contain code that will be rejected by a future version of Rust: proc-macro-error2 v2.0.1
+note: to see what the problems were, use the option `--future-incompat-report`, or run `cargo report future-incompatibilities --id 1`
+     Running unittests src/lib.rs (<work>/target-rc3/release/deps/ferrata_updater_sequencer-0bfda1525403c94a)
+
+running 4 tests
+test live::rpcurl::tests::hosts_read ... ok
+test live::rpcurl::tests::loopback_hosts ... ok
+test live::rpcurl::tests::not_loopback ... ok
+test day1::tests::a_program_known_by_its_account_has_no_keys_to_sign_with ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

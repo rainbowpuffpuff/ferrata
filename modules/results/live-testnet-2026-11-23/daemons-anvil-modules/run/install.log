@@ -1,0 +1,4 @@
+{"affected_loaded":[],"changes":[{"action":"install","file":"<out>/lgx-ferrata_monitor_module/logos-ferrata_monitor_module-module-lib.lgx","fromVersion":"","name":"ferrata_monitor_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_monitor_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"affected_loaded":[],"changes":[{"action":"install","file":"<out>/lgx-ferrata_relayer_module/logos-ferrata_relayer_module-module-lib.lgx","fromVersion":"","name":"ferrata_relayer_module","signature":"unsigned","toVersion":"0.1.0"}],"installed":["ferrata_relayer_module"],"op":"install","reloaded":[],"status":"ok","stopped_dependents":[]}
+{"dependencies_loaded":[],"module":"ferrata_monitor_module","status":"ok","version":"0.1.0"}
+{"dependencies_loaded":[],"module":"ferrata_relayer_module","status":"ok","version":"0.1.0"}
