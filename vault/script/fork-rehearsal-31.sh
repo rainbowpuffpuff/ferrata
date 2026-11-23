@@ -36,7 +36,10 @@ say() { echo "$(date -u +%H:%M:%S) $*" | tee -a "$T"; }
 die() { say "STOP: $*"; exit 1; }
 [ "$(jq -r '.seal[0:10]' "$fixture")" = 0xe71e6620 ] || die "$fixture is not proven under RISC Zero 3.1 (scripts/reprove_fixtures.py)"
 
-anvil --fork-url "$fork_url" --port "$port" > "$logs/anvil.log" 2>&1 &
+# Five blocks behind the endpoint's head: a load-balanced public endpoint may not have the head yet ("block not found",
+# docs/learnings of the cloud fork runs).
+head="$(cast block-number --rpc-url "$fork_url")"
+anvil --fork-url "$fork_url" --fork-block-number "$((head - 5))" --port "$port" > "$logs/anvil.log" 2>&1 &
 anvil_pid=$!
 trap 'kill "$anvil_pid" 2>/dev/null || true' EXIT
 for _ in $(seq 1 90); do cast chain-id --rpc-url "$rpc" > /dev/null 2>&1 && break; sleep 1; done

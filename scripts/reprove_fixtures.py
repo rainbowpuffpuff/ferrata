@@ -177,7 +177,8 @@ def wrap(work, jobs):
             return f"{j['id']}: proof.json present"
         if not os.path.exists(os.path.join(d, "input.json")):
             return f"{j['id']}: no input.json (prove first)"
-        p = run([sys.executable, "-I", wrapper, os.path.join(d, "input.json"), os.path.join(d, "proof.json")],
+        # Not -I: the Modal client is a user-site package (e2e/crown/proofs.sh runs wrap.py the same way).
+        p = run([sys.executable, wrapper, os.path.join(d, "input.json"), os.path.join(d, "proof.json")],
                 os.path.join(d, "wrap.log"))
         tail = (p.stderr.strip().splitlines() or ["?"])[-1]
         return f"{j['id']}: wrap exit {p.returncode}: {tail}"

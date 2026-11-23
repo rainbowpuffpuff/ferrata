@@ -183,8 +183,10 @@ def _deploy(a: dict, dry: bool, rpc: str, frm: str, key: tuple[str, str] | None)
     anvil = None
     target_rpc = rpc
     if dry:
-        anvil = subprocess.Popen(["anvil", "--fork-url", rpc, "--port", "8545", "--silent"], stdout=subprocess.DEVNULL,
-                                 stderr=subprocess.DEVNULL)
+        # Five blocks behind the head: a load-balanced endpoint may not serve the head yet ("block not found").
+        at = int(cast("block-number", "--rpc-url", rpc)) - 5
+        anvil = subprocess.Popen(["anvil", "--fork-url", rpc, "--fork-block-number", str(at), "--port", "8545", "--silent"],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         target_rpc = "http://127.0.0.1:8545"
         for _ in range(90):
             if subprocess.run(["cast", "chain-id", "--rpc-url", target_rpc], capture_output=True).returncode == 0:
@@ -226,7 +228,9 @@ def _deploy(a: dict, dry: bool, rpc: str, frm: str, key: tuple[str, str] | None)
         gas = sum(int(re.search(r"used (\d+)", l).group(1)) for l in sent if re.search(r"used (\d+)", l))
         if dry and gas:
             fee = int(_sh(["cast", "base-fee", "--rpc-url", target_rpc]))
-            say(f"gas used {gas:,}; at the fork's base fee {fee:,} wei: {gas * fee / 1e18:.6f} ETH (plus tips)")
+            say(f"gas used on the fork {gas:,} (anvil's accounting; Sepolia's node prices state creation by EIP-8037 and "
+                f"estimates more, the vault's creation about 39.5 M: deploy.sh sends each step with the node's own "
+                f"estimate x 1.25); at the fork's base fee {fee:,} wei: {gas * fee:,} wei")
     finally:
         if anvil:
             anvil.kill()

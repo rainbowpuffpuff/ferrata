@@ -1,0 +1,30 @@
+pubnet resolve: 0xe1a4c152748948013c0ec6936b806e1f6cf0d993121fdd529da3e88cbe9378e9: mined in block 12194914, status 0x1
+FERRATA_GAS groth16Verifier estimate 1179974 limit 1474967 cap 200000000
+FERRATA_CREATED groth16Verifier 0x4378481de377150C04ab37fCE442FD3D4C02f7FA
+FERRATA_SENT groth16Verifier 0xe1a4c152748948013c0ec6936b806e1f6cf0d993121fdd529da3e88cbe9378e9 gas limit 1474967, used 1179974
+pubnet resolve: 0x3266448db14789a109889a9bca7a45c199450b9b0fe2c7b332cedd79d5613429: mined in block 12194915, status 0x1
+FERRATA_GAS emergencyStop estimate 451756 limit 564695 cap 200000000
+FERRATA_CREATED emergencyStop 0xC3F3a2634412275B24b80891F50027ae7f427971
+FERRATA_SENT emergencyStop 0x3266448db14789a109889a9bca7a45c199450b9b0fe2c7b332cedd79d5613429 gas limit 564695, used 451756
+pubnet resolve: 0x18bed0a89c16c657eeb2ee3a55f0e6ce181c0535f081ea223c6b83a5bbd2a3a4: mined in block 12194916, status 0x1
+FERRATA_GAS registry estimate 2819839 limit 3524798 cap 200000000
+FERRATA_CREATED registry 0x627dDd672d171cc0B9b97d6a5446681a9369C409
+FERRATA_SENT registry 0x18bed0a89c16c657eeb2ee3a55f0e6ce181c0535f081ea223c6b83a5bbd2a3a4 gas limit 3524798, used 2819839
+pubnet resolve: 0x0ccfec41699661ee18428faf566fddf11310b6e8675f9a9f3545c7fc254eaf48: mined in block 12194917, status 0x1
+FERRATA_GAS vault estimate 5771662 limit 7214577 cap 200000000
+FERRATA_CREATED vault 0x169E05aE832232B7B177b717D718bccaC12F65b1
+FERRATA_SENT vault 0x0ccfec41699661ee18428faf566fddf11310b6e8675f9a9f3545c7fc254eaf48 gas limit 7214577, used 5771662
+pubnet resolve: 0x89b3867bf97dc9310f09b2527b73fe05ad49f68c7481eecd434b42b7b6fd0025: mined in block 12194918, status 0x1
+FERRATA_GAS token estimate 508036 limit 635045 cap 200000000
+FERRATA_CREATED token 0x27B91Ef4F0435CD7EeC583dB47AC9D69121909Bd
+FERRATA_SENT token 0x89b3867bf97dc9310f09b2527b73fe05ad49f68c7481eecd434b42b7b6fd0025 gas limit 635045, used 508036
+pubnet resolve: 0x46013d4e66314518e9128ecc42508c52f0d16e4fda9b48eaf53baed415f47188: mined in block 12194919, status 0x1
+FERRATA_GAS registerETH estimate 760590 limit 950737 cap 200000000
+FERRATA_SENT registerETH 0x46013d4e66314518e9128ecc42508c52f0d16e4fda9b48eaf53baed415f47188 gas limit 950737, used 749261
+pubnet resolve: 0x343d37d8ff82172fb3801469d65f8da585eefd3a2011bf460fa4f1ae5aa5ccb1: mined in block 12194920, status 0x1
+FERRATA_GAS registerToken estimate 761260 limit 951575 cap 200000000
+FERRATA_SENT registerToken 0x343d37d8ff82172fb3801469d65f8da585eefd3a2011bf460fa4f1ae5aa5ccb1 gas limit 951575, used 749919
+pubnet resolve: 0xf4975e3f62c6e1cabeac8fadb5a5f89aae62bddb504afa331fced83242f7a400: mined in block 12194921, status 0x1
+FERRATA_GAS renounceStopOwner estimate 30324 limit 37905 cap 200000000
+FERRATA_SENT renounceStopOwner 0xf4975e3f62c6e1cabeac8fadb5a5f89aae62bddb504afa331fced83242f7a400 gas limit 37905, used 25524
+deploy.sh: complete; record deployments/fork-31-11155111-B.json
