@@ -335,7 +335,7 @@ stop's `EnforcedPause`. The pull-payment release credits `owed[recipient][ETH]`;
 ## Can a phone or laptop make the succinct receipt, and leave only the wrap to a third party?
 
 Unchanged from v1 in substance (same r0vm, same recursion cost): on this laptop CPU a v2 succinct receipt
-takes 519–651 CPU-seconds over the 9 runs logged and 1.46 GB peak RSS (one 2^17 segment plus RISC Zero's fixed
+takes 519–651 CPU-seconds over the 9 runs logged and 1.49 GB peak RSS (one 2^17 segment plus RISC Zero's fixed
 recursion work), 37.1–48.6 s wall when it got most of the 16 threads (Part 2). The wrap needs x86-64, Docker
 and about 7.3 GiB for the prover process; the wrapper sees only the succinct receipt (224 KB) and the journal,
 which is public anyway, and cannot change recipient, relayer or fee, which the journal binds. The v2 guest
@@ -370,7 +370,7 @@ times are pessimistic for this machine; CPU time is reported next to them. The e
 | journal vs Solidity | Rust journal = `abi.encode(...)` for 6 vectors, and = the vault's own `_releaseJournalDigest` for the 5 deployable ones |
 | recovery, 100,000 deposits, 7 own | finds exactly the 7; median 30.3 ms (min 29.7, max 32.3, 7 runs, one thread, 1-min load 4.01) |
 | release guest | 65,832 user cycles, 1 segment (po2 17); without RISC Zero's sha2 patch: 342,062 (po2 19) |
-| succinct proof | 43.2 s, 109.4 s and (re-run) 95.8 s wall at load 20–34; 558–622 CPU-s; peak RSS 1.46 GB (host + r0vm); receipt 223,930 bytes |
+| succinct proof | 43.2 s, 109.4 s and (re-run) 95.8 s wall at load 20–34; 558–622 CPU-s; peak RSS 1.49 GB (host + r0vm); receipt 223,930 bytes |
 | Groth16 wrap | 82.3 s, 91.2 s and (re-run) 162.9 s wall in total at load 13–35; identity_p254 alone 156.3 s (re-run); Docker prover ran 19–39 s, largest process peak RSS 7.32 GiB; seal 260 bytes |
 | selector, verifier | `0x73c457ba`; risc0-ethereum v3.0.0 `RiscZeroGroth16Verifier` verifies the 3.0.5 receipts (claim confirmed) |
 | gas, `verify` alone | 224,320 in the verifier's frame; 250,948 as its own transaction (anvil receipt) |
@@ -615,7 +615,7 @@ and from tagged values, and HMAC uses are separated by their own tags.
 ### Can a phone or laptop make the succinct receipt, and leave only the Groth16 wrap to a third party?
 
 **Laptop: yes, measured.** On this laptop CPU (Ryzen 9 7940HS), under heavy contention, the succinct
-receipt took 43–110 s wall in three runs, 558–622 CPU-seconds, and 1.46 GB peak RSS (r0vm 3.0.5, CPU
+receipt took 43–110 s wall in three runs, 558–622 CPU-seconds, and 1.49 GB peak RSS (r0vm 3.0.5, CPU
 only). The release statement is tiny
 (65,832 cycles, one 2^17 segment), so most of the cost is RISC Zero's fixed per-proof work (segment
 proof plus lift), not the bridge's logic. Any recent 4–8-core laptop with 4 GB free should finish in

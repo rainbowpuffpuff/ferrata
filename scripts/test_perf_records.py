@@ -20,14 +20,20 @@ What is asserted, exactly:
 - **The three generated records, byte for byte.** `lez/results/perf-latency-bridge.md` is
   `bench/perf/latency_bridge.py`'s output on the committed records, `lez/results/perf-daemons.md` is its
   hand-written header followed by `bench/perf/summarize_daemons.py`'s, and `lez/results/perf-gate-sequencer.md`
-  (whence the §P.6 table's updater row takes its figures, RFP-021 P.6's) is its header followed by
-  `bench/perf/gate_report.py`'s — every figure of all three documents is thereby recomputed, at its generator's
-  own rounding, and a stamp, slot or cell that drifts fails.
+  (whence the §P.6 table's updater row takes its figures, RFP-021 P.6's) is `bench/perf/gate_report.py`'s output
+  whole. Every *computed* figure of all three documents is thereby recomputed, at its generator's own rounding,
+  and a stamp, slot or table cell that drifts fails; the figures the generators hard-code in their fixed prose
+  ("6 slots", "121.6 min", the testnet and production parameters) are checked as text only, by the byte
+  comparison.
 - **`docs/performance.md` §P.5's table and §P.6's rows**, figure by figure from the raw records (each derivation
-  follows what the document says the figure is), each with the document's exact string asserted: every figure the
-  two rows state, and every number of the tables they cite that comes from these records. The one *derived*
-  figure (Ethereum finalizing two epochs after the checkpoint's slot) uses the Sepolia constants both documents
-  name for it.
+  follows what the document says the figure is), each with the document's exact string asserted — every figure
+  the two rows state, and every number of the tables they cite that comes from these records. Each string is
+  asserted with its count of occurrences, so a copy of it elsewhere (the updater row's figures also appear in
+  RFP-021 §P.6) cannot mask the drift. Of the figures the rows' own status and Evidence lines state
+  (`docs/requirements-status.md`, `docs/EVIDENCE.md` rows 174 and 175), the test asserts the headlines: the
+  latencies and W of the P.5 line and the daemons' four figures, read as those files state them. The one
+  *derived* figure (Ethereum finalizing two epochs after the checkpoint's slot) uses the Sepolia constants both
+  documents name for it.
 
 Figures that cannot be recomputed from committed data are asserted nowhere and named precisely where they belong:
 the §P.6 cost row's "385 L4-seconds billed" and "about 0.09 USD" (Modal's own billing statement of 10 November
@@ -93,9 +99,12 @@ class Stated:
     def __init__(self, path):
         self.path, self.text = path, rd(path)
 
-    def has(self, needle):
-        if needle not in self.text:
-            raise AssertionError(f"{self.path} does not state '{needle}'")
+    def has(self, needle, count=1):
+        """The document states `needle` exactly `count` times (default once: a copy of it elsewhere in the
+        same document cannot mask a drift of the row being asserted — RFP-021 §P.6 repeats the updater row)."""
+        n = self.text.count(needle)
+        if n != count:
+            raise AssertionError(f"{self.path} states '{needle}' {n} time(s), not {count}")
         return self
 
 
@@ -240,8 +249,13 @@ class TestP5Latency(unittest.TestCase):
         self.perf_doc.has("3,607 s (W = 1 h of block time)").has("156 s (120 s delay and the release)")
         self.perf_doc.has("37 s (`submitCandidate`, `finalizeAttested`)")
         self.perf_doc.has("+ 167 s (checkpoint on one L40S and the Groth16 wrap)")
-        # The row itself states W as minutes; its Evidence row, as the same figure.
-        Stated("docs/requirements-status.md").has("outbound 71.0 min from the burn's proving, of which W 60.1 min")
+        # The rows' own status and Evidence lines state the headlines; check they state what the records give.
+        Stated("docs/requirements-status.md").has(
+            "inbound 32.9 min, about 1.1–12.1 h with the client's default claim hold (derived); "
+            "outbound 71.0 min from the burn's proving, of which W 60.1 min")
+        Stated("docs/EVIDENCE.md").has(
+            "inbound 32.9 min (finality 18.6, availability and capture 6.6, LEZ steps 0.7, proof 3.9, "
+            "verification 0.1, the runner's other work 3.0); outbound 71.0 min from the burn's proving")
         Stated("docs/EVIDENCE.md").has("W 60.1, release 2.6")
 
 
@@ -275,6 +289,10 @@ class TestP6Daemons(unittest.TestCase):
         self.doc.has("| monitor | 1284 | 0.53 | 0.00041 | 14.0 | 14.0 | 86,265 / 254,218 | 36 / 22.9 |")
         self.perf.has("0.53 CPU-seconds in 1,284 s (0.0004 of a core)").has("**14.0 MiB peak**")
         self.perf.has("JSON-RPC 86 KB up, 254 KB down (about 23 MB a day, *derived*)")
+        Stated("docs/requirements-status.md").has(
+            "`monitor` (0.0004 of a core, 14.0 MiB) and the relayer (0.0007 of a core, 20.3 MiB) measured with their bandwidth")
+        Stated("docs/EVIDENCE.md").has("`monitor` 0.53 CPU-s in 1,284 s (0.0004 of a core), 14.0 MiB peak, "
+                                       "86,265 / 254,218 B; relayer 0.87 CPU-s (0.0007), 20.3 MiB, 408,005 / 975,682 B")
 
     def test_relayer(self):
         """0.87 CPU-s in 1,284 s (0.0007 of a core), 20.3 MiB peak, 408 KB up / 976 KB down (about 93 MB a day)."""
@@ -367,7 +385,7 @@ class TestP6Provers(unittest.TestCase):
         self.perf.has("9.85 GB peak")
         self.perf.has("1,157.5–1,758.9 s fixed part; ≈ 34 min per idle hour and ≈ 4.8 h per busy hour (extrapolated)")
         self.gpu.has("1,157.5 s quiet start / 1,758.9 s loaded").has("against 9.85 GB for the CPU proof")
-        self.ck.has("1,157.5 s").has("1,758.9 s").has("9.85 GB (host + r0vm)")
+        self.ck.has("1,157.5 s", 3).has("1,758.9 s", 2).has("9.85 GB (host + r0vm)", 3)
 
     def test_rule_b_checkpoint_on_one_l4(self):
         """31.9 s for the idle hour's rule (B) checkpoint (n = 4, 9 segments)."""
@@ -418,6 +436,24 @@ class TestP6Provers(unittest.TestCase):
         # cores + 14 s Groth16" of an end-to-end run, cited to docs/design/bridge.md §18.7, whose raw
         # per-step timings are not committed.
 
+    def test_the_release_proofs_peak_memory(self):
+        """RFP-022 P.4's release proofs' peak, corrected with the same KiB misreading as the 9.62 GB: the
+        committed v1 prove logs peak at 1,458,420 KiB, which is 1.49 GB (1.39 GiB), not the "1.46 GB" the
+        documents stated (KiB / 1e6). Corrected on this branch wherever the branch may edit it."""
+        logs = [gnu_time(rd(f"bridge/artifacts/v1/logs/{n}")) for n in
+                ("20261109T213444Z-prove-eth.log", "20261109T213648Z-prove-erc20.log",
+                 "20261109T220505Z-prove-eth.log", "20261109T220651Z-p254-eth.log")]
+        peaks = sorted(t["rss_kb"] for t in logs)
+        self.assertEqual(peaks, [1442748, 1456856, 1457600, 1458420])  # the four runs the documents cover
+        self.assertEqual(round(max(peaks) * 1024 / 1e9, 2), 1.49)  # "peak 1.49 GB"
+        self.assertEqual(round(max(peaks) / 1024 / 1024, 2), 1.39)  # 1.39 GiB
+        self.perf.has("peak 1.49 GB, receipt 223,930 B")  # P.4's table, "release (succinct), earlier image"
+        Stated("docs/design/bridge.md").has("peak RSS 1.49 GB; receipt 223,930 bytes")  # §18.2's row
+        br = Stated("bridge/RESULTS.md")
+        br.has("1.49 GB peak RSS (one 2^17 segment").has("peak RSS 1.49 GB (host + r0vm)")
+        br.has("1.49 GB peak RSS (r0vm 3.0.5")
+        Stated("docs/guides/user-guide.md").has("peak 1.49 GB, receipt 223,930 bytes")
+
     def test_the_gpu_cost_row(self):
         """Only the 366 s the functions ran recomputes; the 385 L4-seconds billed do not (Modal's statement)."""
         container_s = sum(self.l4[n]["container_s_until_done"] for n in self.l4)
@@ -432,9 +468,10 @@ class TestP6Provers(unittest.TestCase):
 
 class TestGeneratedRecords(unittest.TestCase):
     """The three generated records, byte for byte: each generator, run on the committed records, gives the
-    document. This recomputes every figure of `lez/results/perf-latency-bridge.md` (P.5's stamps, slots, tables),
-    of `lez/results/perf-daemons.md` (the daemons' every cell) and of `lez/results/perf-gate-sequencer.md`
-    (whence performance.md §P.6's updater row takes its figures), at the generator's own rounding."""
+    document. This recomputes every computed figure of `lez/results/perf-latency-bridge.md` (P.5's stamps,
+    slots, tables), of `lez/results/perf-daemons.md` (the daemons' every cell) and of
+    `lez/results/perf-gate-sequencer.md` (whence performance.md §P.6's updater row takes its figures), at the
+    generator's own rounding; the generators' own hard-coded prose is checked as text only."""
 
     @classmethod
     def setUpClass(cls):
@@ -455,10 +492,9 @@ class TestGeneratedRecords(unittest.TestCase):
         self.assertTrue(doc.endswith(out))  # what precedes is the record's hand-written header
 
     def test_perf_gate_sequencer_body_is_its_generator_output(self):
+        """The gate record is entirely generator output (no hand-written header): equality, not a suffix."""
         out = self.gen("bench/perf/gate_report.py", *(f"bench/perf/results/gate-g{i}" for i in (2, 3, 4, 5)))
-        doc = rd("lez/results/perf-gate-sequencer.md")
-        self.assertTrue(out.startswith("# RFP-021 R.9, R.10 and P.6 on a running LEZ sequencer"))
-        self.assertTrue(doc.endswith(out))  # what precedes is the record's hand-written header
+        self.assertEqual(out, rd("lez/results/perf-gate-sequencer.md"))
 
     def test_the_updater_row_of_the_p6_table(self):
         """0.043–0.092 of a core and 57.3–57.8 MiB peak (the honest daemons of the gate runs), 10.3–10.4 MB in
@@ -488,8 +524,15 @@ class TestGeneratedRecords(unittest.TestCase):
         for f, mb in zip(g2, (10.3, 10.4)):  # "beacon API: requests / bytes served", over the "wall s" column
             self.assertEqual(round(int(f[9].split("/")[1].strip().replace(",", "")) / 1e6, 1), mb)
             self.assertEqual(round(int(f[4].strip().replace(",", "")) / 60), 31)  # 1,849 s ≈ 31 min
-        self.perf.has("0.043–0.092 of one core").has("57.3–57.8 MiB peak")
-        self.perf.has("10.3–10.4 MB from the beacon API in 31 min")
+        # The replay-rate gloss the row states: the recorded updates' median spacing over the reveal step.
+        g2_text = doc.split("## Run `gate-g2`", 1)[1].split("## Run `gate-", 1)[0]
+        m = re.search(r"so the replay runs about (\d+) times faster than the lab recorded them and (\d+) times", g2_text)
+        self.assertEqual((m.group(1), m.group(2)), ("122", "60"))
+        # The whole row, as one string: it must appear exactly once, so the same figures copied into another
+        # table (RFP-021 §P.6) cannot mask a drift of this one.
+        self.perf.has("| the updater, whose records the root imports need | 0.043–0.092 of one core | 57.3–57.8 MiB peak | "
+                      "10.3–10.4 MB from the beacon API in 31 min (gate G2, replayed about 122 times faster than the lab "
+                      "recorded them, 60 times the design's hourly cadence)")
 
 
 if __name__ == "__main__":
