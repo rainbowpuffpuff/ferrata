@@ -235,10 +235,12 @@ def summary(rec, write=True):
     follow = [m for m in re.finditer(r"\[sequencer\] \S+: head block (\d+), following to block (\d+) \(final on Bedrock: (\w+)\) in ([0-9.]+) s", log)]
     if follow:
         S["follower_start"] = [{"head": int(m.group(1)), "followed_to": int(m.group(2)), "seconds": float(m.group(4))} for m in follow]
-    if t_up and t_stop and "updater-module" in samples and follow:
-        catch_end = t_up + float(follow[0].group(4)) + 30
-        comp["updater-module (start: follower from genesis)"] = window(samples["updater-module"], t_up, catch_end)
-        comp["updater-module (after the start)"] = window(samples["updater-module"], catch_end, t_stop)
+    # `start` answers once its set-up is done (the follower from the network's genesis): the marks bound the two phases.
+    t_started = marks.get("updater-started")
+    if t_up and t_stop and t_started and "updater-module" in samples:
+        S["updater_start_seconds"] = round(t_started - t_up, 1)
+        comp["updater-module (start: follower from genesis)"] = window(samples["updater-module"], t_up, t_started)
+        comp["updater-module (after the start)"] = window(samples["updater-module"], t_started, t_stop)
     a0, a1 = marks.get("attest-start"), marks.get("attest-module-end")
     if a0 and a1:
         for name in ("attest-module", "eth_rpc_module"):
