@@ -580,6 +580,7 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     assert_eq!(code, 0, "{out}");
     has(&out, "an earlier run was interrupted");
     has(&out, "applied or refused in a final block since the earlier run sent it: nothing sent");
+    has(&out, "not sent by the earlier run: sending it as that run signed it");
     assert_eq!(submitted() - before, 3, "Open once, then Miller and Finish");
     let (code, out) = t.run("advance-finished-run-again", &advance);
     assert_eq!(code, 0, "{out}");

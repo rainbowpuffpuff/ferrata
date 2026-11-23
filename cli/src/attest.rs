@@ -224,10 +224,10 @@ pub struct AttestArgs {
     #[arg(long, global = true)]
     again: bool,
     /// Seconds one request to the Ethereum endpoint (`attest --eth`) may take.
-    #[arg(long, default_value_t = 60)]
+    #[arg(long, global = true, default_value_t = 60)]
     eth_timeout: u64,
     /// Retries of an Ethereum request whose connection failed, timed out, was cut or answered HTTP 5xx or 429.
-    #[arg(long, default_value_t = 2)]
+    #[arg(long, global = true, default_value_t = 2)]
     eth_retries: u32,
     /// Append the run's record (JSON lines: every dry run and every receipt) to this file.
     #[arg(long)]
@@ -588,6 +588,9 @@ struct Sent {
     dry_run: Outcome,
     #[serde(default)]
     window: Option<WindowNote>,
+    /// Set, and written, just before it is handed to the sequencer: it may have been sent.
+    #[serde(default)]
+    attempted: bool,
     #[serde(default)]
     receipt: Option<Receipt>,
 }
@@ -785,6 +788,7 @@ async fn transact(
                     nonce: (start_nonce + i as u128).to_string(),
                     dry_run: d.clone(),
                     window: steps[i].window.clone(),
+                    attempted: false,
                     receipt: None,
                 })
             })
@@ -838,14 +842,21 @@ async fn send_journal(
                 println!("  {:<28} applied or refused in a final block since the earlier run sent it: nothing sent", s.label);
             } else if z.head_nonce(p.id).await? > nonce {
                 println!("  {:<28} in a block of the sequencer not yet final: waiting for it, nothing sent", s.label);
-            } else {
+            } else if s.attempted {
                 println!("  {:<28} in no block yet: sending the same signed transaction again (hash {hash}, nonce {nonce}; LEZ applies it at most once)", s.label);
+                sent_now = true;
+            } else {
+                println!("  {:<28} not sent by the earlier run: sending it as that run signed it (hash {hash}, nonce {nonce})", s.label);
                 sent_now = true;
             }
         } else {
             sent_now = true;
         }
         if sent_now {
+            j.steps[i].attempted = true;
+            if let Some(sl) = slot {
+                sl.save(j)?;
+            }
             let got = z.client.send_transaction(tx.clone()).await.map_err(|e| anyhow!("{}: the sequencer refused it: {e}", s.label))?;
             ensure!(got == hash, "{}: the sequencer returned another hash", s.label);
         }
