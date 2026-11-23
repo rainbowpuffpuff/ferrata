@@ -1,0 +1,16 @@
+# Scratch crate (built outside the repository; its Cargo.lock is modules/ferrata_relayer_module/rust-lib/Cargo.lock, copied): risc0-zkp with the features ferrata_relayer_module enables
+# (prove via risc0-groth16, std via risc0-zkvm), its lockfile seeded from the relayer's, cross-compiled for
+# aarch64-apple-darwin to exercise risc0-sys's Metal build script and inspect risc0-zkp's object files.
+[package]
+name = "zkp-darwin"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+risc0-zkp = { version = "=3.0.4", default-features = false, features = ["prove", "std"] }
