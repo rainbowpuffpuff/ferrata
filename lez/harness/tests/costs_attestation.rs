@@ -19,7 +19,16 @@
 //! - [`an_update_verified_privately_costs_what_it_is_charged`]: #3's proven-path input;
 //! - [`an_attestation_costs_the_same_whatever_the_chain_holds`]: #3's other half — the
 //!   per-attestation verification cost — and #9 again, measured before and after a thousand more
-//!   records are placed on the chain; #7's record account at a scale the replay cannot reach.
+//!   records are placed on the chain, for the WETH balance slot and for every statement type of
+//!   `lez/results/stage4-attest.md` (the absent account, the absent slot and the four facts among
+//!   them); #7's record account at a scale the replay cannot reach;
+//! - [`init_and_succeed_cost_the_same_whatever_the_chain_holds`],
+//!   [`an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds`] and
+//!   [`the_reference_consumer_costs_the_same_whatever_the_chain_holds`]: #9 for every other action
+//!   (`harness::accumulated`): `Init` and its adoption, `Succeed` and `Spawn`, `VerifyAll` in a
+//!   public and in a private transaction (the proven update path), `CallAttest` and the reference
+//!   consumer's claim, each charged the same on the chain its scenario leaves and with a thousand
+//!   more of each account that accumulates beside it.
 //!
 //! Every pinned number cites a committed record:
 //!
@@ -33,6 +42,9 @@
 //! - `lez/results/v0.4.0-rc3/stage1-replay.md` and `…/stage1-finality.md`: the same source on
 //!   rc3 — every row equal to that run's (`…/compare-v0.4.0-rc1.md`: 73 of 73 and 21 of 21) —
 //!   the only committed record that also holds each handler's post-state bytes.
+//! - `lez/results/perf-state.md` §6 (`bash bench/perf/state.sh`): the scenarios of
+//!   `harness::accumulated` swept to 100,000 of each account; its K = 0 rows are what the last three
+//!   tests pin, and where an earlier record holds the same transaction, its constant names it.
 //! - `docs/performance.md` (§P.3, §P.7, §P.8) and `docs/design/attestation.md` (§3.1, §4.2):
 //!   which document row each number carries, and where the document's figure is an earlier
 //!   image's.
@@ -57,6 +69,7 @@ use ferrata_lez_wire::{
 };
 use harness::trace::TransitionTrace;
 use harness::{
+    accumulated::{self as acc, Charged},
     as_finality_update,
     attest::{account_query, condition, u256, Stage4},
     ferrata_account, grouped,
@@ -194,6 +207,83 @@ const ATTEST_STOR: u64 = 7_338;
 /// the 9,081 records a year of `docs/performance.md` §P.7's cadence projection.
 const MORE_RECORDS: u64 = 1_000;
 
+// #9 for every other action (`harness::accumulated`). Record: `lez/results/perf-state.md` §6, the
+// K = 0 rows (the sweep there goes to 100,000 of each account, here to `MORE_RECORDS`).
+
+const FILL: u64 = 0; // TEMPORARY until perf-state.md §6 is measured
+/// A transaction's pinned charge: each handler's cycles in order, then its execution and storage
+/// gas.
+struct Tx {
+    handlers: &'static [(&'static str, u64)],
+    exec: u64,
+    stor: u64,
+}
+
+/// `Init` and its committee's adoption in two parts (`scenarios::World::new(2)`); also rows 1–3 of
+/// `lez/results/v0.4.0-rc3/stage1-replay.md`.
+const INIT_TXS: [Tx; 3] = [
+    Tx { handlers: &[("Init", 191_616), ("JobOpen", 19_050)], exec: 210_666, stor: 1_896 },
+    Tx { handlers: &[("Adopt", 3_399_141)], exec: 3_399_141, stor: 24_980 },
+    Tx { handlers: &[("Adopt", 3_409_234), ("Apply", 58_991), ("Record", 17_350)], exec: 3_485_575, stor: 25_108 },
+];
+/// `Succeed` at the mainnet instance after update_0 (a successor with Gloas scheduled at epoch
+/// 600,000), and the `Spawn` it sends.
+const SUCCEED_TX: Tx = Tx { handlers: &[("Succeed", FILL), ("Spawn", FILL)], exec: FILL, stor: FILL };
+/// update_1 as a finality update in one public transaction, after update_0; also
+/// `lez/results/v0.4.0-rc3/stage1-one-transaction.md`.
+const VERIFY_ALL_TX: Tx = Tx {
+    handlers: &[("VerifyAll", 9_049_362), ("ApplyVerified", 58_184), ("Record", 17_350)],
+    exec: 9_124_896,
+    stor: 4_105,
+};
+/// The same update in one private transaction: the private execution's cycles in RISC Zero's
+/// executor (what the sender proves; LEZ charges it the flat `PRIVATE_VERIFY_GAS`), then the public
+/// part's (`FINALITY_PRIVATE_CYCLES`, the record of `an_update_verified_privately_costs_what_it_is_charged`).
+const PRIVATE_VERIFY_ALL_TX: Tx = Tx {
+    handlers: &[("VerifyAll, private execution (executor)", FILL), ("public part", FINALITY_PRIVATE_CYCLES)],
+    exec: FINALITY_PRIVATE_GAS,
+    stor: PRIVATE_GAS_STOR,
+};
+/// The eight statement types, each one `Attest` (cycles, which are its execution gas; storage
+/// gas): rows 1–8 of `lez/results/stage4-attest.md`, the absent slot (3), the absent account (4)
+/// and the four facts (8) among them.
+const STATEMENTS: [(u64, u64); 8] = [
+    (168_909, 4_424),
+    (275_865, 7_338),
+    (270_580, 7_291),
+    (151_829, 4_150),
+    (97_485, 2_623),
+    (1_619_960, 58_812),
+    (499_277, 13_578),
+    (454_255, 12_309),
+];
+/// `CallAttest` of the WETH balance slot from an empty reader (row 1 of
+/// `lez/results/stage4-attest-consumer.md`), then from the reader holding that reply (each call
+/// replaces it, so a third call costs the second's).
+const CALL_ATTEST_EMPTY: Tx = Tx {
+    handlers: &[("consumer CallAttest", 87_410), ("Attest", 279_023), ("consumer (reply)", 19_748)],
+    exec: 386_181,
+    stor: 7_507,
+};
+const CALL_ATTEST_HOLDING: Tx = Tx {
+    handlers: &[("consumer CallAttest", FILL), ("Attest", 279_023), ("consumer (reply)", FILL)],
+    exec: FILL,
+    stor: 7_507,
+};
+/// The reference consumer's claim, crediting its sender for the first time (row 3 of
+/// `stage4-attest-consumer.md`), and the same claim when the sender's balance holds earlier
+/// credits.
+const CLAIM_FIRST: Tx = Tx {
+    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", 15_703)],
+    exec: 185_389,
+    stor: 2_768,
+};
+const CLAIM_CREDITED: Tx = Tx {
+    handlers: &[("consumer Claim", 37_667), ("Attest", 100_517), ("consumer (reply)", 31_502), ("consumer Credit", FILL)],
+    exec: FILL,
+    stor: 2_768,
+};
+
 // ---------------------------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------------------------
@@ -232,6 +322,15 @@ impl Pins {
             println!("{row}");
         }
     }
+}
+
+/// Assert `got` is the transaction `want` pins, and record its rows.
+fn pin_tx(pins: &mut Pins, got: &Charged, want: &Tx) {
+    let handlers: Vec<(&str, u64)> = got.handlers.iter().map(|(h, c)| (h.as_str(), *c)).collect();
+    assert_eq!(handlers, want.handlers, "{}: the pinned handlers' cycles moved", got.action);
+    pins.note(&format!("{}: handlers (cycles each)", got.action), &got.handlers_text());
+    pins.eq(&format!("{}: execution gas", got.action), got.gas_exec, want.exec);
+    pins.eq(&format!("{}: storage gas", got.action), got.gas_stor, want.stor);
 }
 
 /// The only execution of `handler` in `report`.
@@ -642,6 +741,14 @@ fn an_attestation_costs_the_same_whatever_the_chain_holds() {
         few.transitions[0].pre_state_bytes as u64,
         RECORD_STATE_BYTES as u64,
     );
+    // Every statement type of `stage4-attest.md` the same way, the absent account, the absent slot
+    // and the four facts among them.
+    let requests = acc::statement_requests(&s);
+    let few_all = acc::attest_all(&mut s, &requests);
+    for (c, (cycles, stor)) in few_all.iter().zip(STATEMENTS) {
+        pins.eq(&format!("{}: cycles", c.action), c.cycles("Attest"), cycles);
+        assert_eq!((c.gas_exec, c.gas_stor), (cycles, stor), "{}: execution and storage gas", c.action);
+    }
 
     // #9 and #7: a thousand more records — placed as the program writes them
     // (`harness::vault::place_record`, the LEZ test utility the vault tests place a record with)
@@ -661,6 +768,9 @@ fn an_attestation_costs_the_same_whatever_the_chain_holds() {
         "#9: the attestation's cost does not scale with the records held"
     );
     pins.eq("the same attestation, a thousand more records held: cycles", many.charge.cycles, ATTEST_CYCLES);
+    let many_all = acc::attest_all(&mut s, &requests);
+    acc::assert_flat(&few_all, &many_all, MORE_RECORDS as usize);
+    pins.note("every statement type, a thousand more records held", "the same cycles, execution and storage gas");
     assert_eq!(many.transitions[0].pre_state_bytes, RECORD_STATE_BYTES, "still attesting under one record");
     let held = MORE_RECORDS + 2;
     pins.note(
@@ -672,6 +782,112 @@ fn an_attestation_costs_the_same_whatever_the_chain_holds() {
         "Pinned: an attestation beside accumulated records\n\
          record: lez/results/v0.4.0-rc3/rc1-rerun/harness-tests-dev-mode.log,\n\
          `every_kind_of_fact_is_attested_under_the_real_record`, the row\n\
-         `storage slot: a WETH balance, value >= 1`",
+         `storage slot: a WETH balance, value >= 1`; the eight statement types: lez/results/stage4-attest.md",
+    );
+}
+
+#[test]
+fn init_and_succeed_cost_the_same_whatever_the_chain_holds() {
+    let uw = acc::UpdateWorld::new();
+    let more = MORE_RECORDS as usize;
+    let mut pins = Pins::new();
+
+    // `Init` and its adoption on a new chain, and on one that already holds a thousand records of
+    // another instance and a thousand other instances.
+    let few = acc::init_on(&mut uw.chain_for_init(0));
+    let many = acc::init_on(&mut uw.chain_for_init(more));
+    acc::assert_flat(&few, &many, more);
+    for (c, want) in few.iter().zip(&INIT_TXS) {
+        pin_tx(&mut pins, c, want);
+    }
+
+    // `Succeed` and the `Spawn` it sends, at the instance as update_0 leaves it, and with a
+    // thousand more of its records and a thousand other instances on the chain.
+    let few = acc::succeed(&mut uw.grown(0));
+    let many = acc::succeed(&mut uw.grown(more));
+    acc::assert_flat(std::slice::from_ref(&few), &[many], more);
+    pin_tx(&mut pins, &few, &SUCCEED_TX);
+    pins.note("added for the second run of each", "a thousand records and a thousand instances");
+
+    pins.print(
+        "Pinned: Init and Succeed beside accumulated accounts\n\
+         record: lez/results/perf-state.md §6; Init also lez/results/v0.4.0-rc3/stage1-replay.md rows 1-3",
+    );
+}
+
+#[test]
+fn an_update_verified_in_one_call_costs_the_same_whatever_the_chain_holds() {
+    // The private path needs dev mode, as `an_update_verified_privately_costs_what_it_is_charged`.
+    assert_eq!(
+        std::env::var("RISC0_DEV_MODE").as_deref(),
+        Ok("1"),
+        "run with RISC0_DEV_MODE=1 (fake receipts; the real proof is the prove_private binary's)"
+    );
+    let uw = acc::UpdateWorld::new();
+    let more = MORE_RECORDS as usize;
+    let mut pins = Pins::new();
+
+    // `VerifyAll` in one public transaction, then the proven path, each on the chain update_0
+    // leaves and with a thousand more records of the instance and a thousand other instances.
+    let few = acc::verify_all_public(&mut uw.grown(0));
+    let many = acc::verify_all_public(&mut uw.grown(more));
+    acc::assert_flat(std::slice::from_ref(&few), &[many], more);
+    pin_tx(&mut pins, &few, &VERIFY_ALL_TX);
+
+    let few = acc::verify_all_private(&mut uw.grown(0));
+    let many = acc::verify_all_private(&mut uw.grown(more));
+    acc::assert_flat(std::slice::from_ref(&few), &[many], more);
+    pin_tx(&mut pins, &few, &PRIVATE_VERIFY_ALL_TX);
+    assert_eq!(few.gas_exec, market::PRIVATE_VERIFY_GAS + few.cycles("public part"), "the flat receipt gas plus the public part");
+    assert_eq!(few.gas_stor, market::PRIVATE_GAS_STOR, "the private storage gas is fee_core's flat");
+    pins.note("added for the second run of each", "a thousand records and a thousand instances");
+
+    pins.print(
+        "Pinned: an update verified in one call beside accumulated accounts (dev mode)\n\
+         record: lez/results/perf-state.md §6; the public one also lez/results/v0.4.0-rc3/stage1-one-transaction.md",
+    );
+}
+
+#[test]
+fn the_reference_consumer_costs_the_same_whatever_the_chain_holds() {
+    let cw = acc::ConsumerWorld::new();
+    let more = MORE_RECORDS as usize;
+    let mut pins = Pins::new();
+
+    // `CallAttest` three times from one reader: empty, then holding the previous reply, twice.
+    let few = acc::call_attest(&mut cw.grown(0));
+    let many = acc::call_attest(&mut cw.grown(more));
+    acc::assert_flat(&few, &many, more);
+    pin_tx(&mut pins, &few[0], &CALL_ATTEST_EMPTY);
+    pin_tx(&mut pins, &few[1], &CALL_ATTEST_HOLDING);
+    assert_eq!(
+        (&few[2].handlers, few[2].gas_exec, few[2].gas_stor),
+        (&few[1].handlers, few[1].gas_exec, few[1].gas_stor),
+        "the reader holds one reply, whatever the number of calls"
+    );
+
+    // The claim crediting its sender for the first time, then crediting a sender whose balance
+    // holds one credit, or a thousand and one.
+    let few = acc::claim(&mut cw.grown(0), "Claim, the sender's first credit", 0);
+    let many = acc::claim(&mut cw.grown(more), "Claim, the sender's first credit", 0);
+    acc::assert_flat(std::slice::from_ref(&few), &[many], more);
+    pin_tx(&mut pins, &few, &CLAIM_FIRST);
+    let mut s = cw.grown(0);
+    acc::place_balance(&mut s, 1);
+    let once = acc::claim(&mut s, "Claim, the sender credited before", 1);
+    let mut s = cw.grown(more);
+    acc::place_balance(&mut s, MORE_RECORDS + 1);
+    let many = acc::claim(&mut s, "Claim, the sender credited before", MORE_RECORDS + 1);
+    acc::assert_flat(std::slice::from_ref(&once), &[many], more);
+    pin_tx(&mut pins, &once, &CLAIM_CREDITED);
+    pins.note(
+        "added for the second run of each",
+        "a thousand records, spent claims, balances and readers; the sender credited 1,001 times",
+    );
+
+    pins.print(
+        "Pinned: the reference consumer beside accumulated accounts\n\
+         record: lez/results/perf-state.md §6; the first call and the first claim also\n\
+         lez/results/stage4-attest-consumer.md rows 1 and 3",
     );
 }
