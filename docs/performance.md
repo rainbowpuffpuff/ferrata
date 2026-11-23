@@ -342,10 +342,25 @@ committees as summaries), its job (1,110 B), one record (453 B), or for the brid
 or burn record (165 / 273 B), each fixed in size and addressed by key; no action reads a collection. In operation the
 lab's `Miller` (3,307,963) and `Finish` (3,723,564) were charged identically in all 98 mainnet finality jobs while 106
 records accumulated ([`perf-tracking.md`](../lez/results/perf-tracking.md); `lez/lab/results/record/run.tsv`).
-**Not measured at different state sizes:** `Init`, the public `VerifyAll` and the private update path; the
-absent-account, absent-slot and four-facts statements; `CallAttest` and the reference consumer's claim; `Succeed` and
-`Spawn`; the bridge's actions. The node's own work is not charged: serializing
-the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a node writes, not a transaction's cost).
+**Every other action, measured** ([`lez/results/perf-state-actions.md`](../lez/results/perf-state-actions.md),
+`bash bench/perf/state-actions.sh`; the scenarios in `lez/harness/src/accumulated.rs`): each runs on copies of one
+world, the copy for K holding K = 1,000, 10,000 or 100,000 more of each account that accumulates beside it (copies of
+accounts the programs wrote, at keys no measured transaction names: records and other instances; for the statements
+and the consumer, records and the consumer's spent claims, balances and readers; the serialized state up to 115.4 MB
+and 128.0 MB), and each was charged the same handler cycles, execution gas and storage gas at every K (asserted):
+`Init` and its two adoption transactions (210,666, 3,399,141 and 3,485,575 execution gas), `VerifyAll` in one public
+transaction (9,124,896) and in one private transaction, the proven update path (485,298 execution gas, 224,063 storage
+gas; its private execution 9,049,362 cycles in RISC Zero's executor, which the sender proves and LEZ does not meter),
+`Succeed` → `Spawn` (70,610), all eight statement types of [`stage4-attest.md`](../lez/results/stage4-attest.md), the
+absent account (151,829), the absent slot (270,580) and the four facts (454,255) among them, `CallAttest` and the
+reference consumer's claim. The two accounts an action reads that change with use were measured as they change:
+`CallAttest`'s reader keeps the last reply only (386,181 from an empty reader, 395,003 once it holds a reply, the same
+on the call after), and a claim crediting a sender's existing balance costs 187,721 whether the balance was credited
+once or 100,001 times before (185,389 for a sender's first credit). CI pins the same scenarios with a thousand more of
+each account ([`costs_attestation.rs`](../lez/harness/tests/costs_attestation.rs), job `lez-harness`). Not measured
+against accumulation: the bridge's actions (RFP-022's program; the growth of its accounts is RFP-022 §P.7's). The
+node's own work is not charged: serializing the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a
+node writes, not a transaction's cost).
 
 ---
 
@@ -563,8 +578,8 @@ private transaction are LEZ's and not counted.
 User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
 measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
 `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
-`monitor` not measured (RFP-021 P.6); actions other than five statement types and the update steps at different state
-sizes (RFP-021 P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+`monitor` not measured (RFP-021 P.6); the bridge's actions at different state sizes (RFP-022's program; every action
+of RFP-021 P.9's module and reference consumer is measured); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
 resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
 devnet). Every one is a milestone
