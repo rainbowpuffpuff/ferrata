@@ -1,7 +1,7 @@
 # endpoints-1: the mini-app switching its endpoints inside Logos Core (RFP-022 U.9), 23 November 2026
 
 `e2e/endpoints/run.sh live 1` with `U9_PUBLIC=1`, on the build box (a Modal CPU container), with the code of commit
-`b4a72546` of branch `u9-endpoints` (whose `run.sh` then held our public network's URL itself, now given as
+`b4a72546` (whose `run.sh` then held our public network's URL itself, now given as
 `U9_LIVE_LEZ_URL`). The records do not name that commit (`run.log`'s first line reads "commit ;": the box's copy of
 the worktree is not a git checkout, which `run.sh` now takes as `U9_COMMIT`), nor `logosctl`'s version
 (pre-release-66d098d, from the build's own log on the box; later runs keep it in `versions.txt`). Its code predates

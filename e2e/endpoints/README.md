@@ -76,8 +76,8 @@ public LEZ network.
 ```sh
 M=../modal-build   # from the worktree root
 $M/mrun --profile <yours> --timeout 9000 -- 'bash e2e/endpoints/run.sh build'
-$M/mrun --profile <yours> --timeout 7200 --put ../tmp/crown-fresh/lez/bundle.tar.zst \
-  --put ../tmp/rfp-integ/box33/ids/programs/ferrata_bridge.bin -- 'U9_COMMIT=<commit> bash e2e/endpoints/run.sh live N'
+$M/mrun --profile <yours> --timeout 7200 --put <bundle.tar.zst> --put <ferrata_bridge.bin> \
+  -- 'U9_BUNDLE=<bundle.tar.zst> U9_BRIDGE_BIN=<ferrata_bridge.bin> U9_COMMIT=<commit> bash e2e/endpoints/run.sh live N'
 # scenario E too (read only), with our test network's RPC URL from the owner:
 #   ... -- 'U9_PUBLIC=1 U9_LIVE_LEZ_URL=<from the owner> U9_COMMIT=<commit> bash e2e/endpoints/run.sh live N'
 ```

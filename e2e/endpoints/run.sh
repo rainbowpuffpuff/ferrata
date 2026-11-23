@@ -32,18 +32,18 @@
 #   the Endpoints tab is grabbed at each state.
 #
 # Inputs (put on the box with mrun --put): U9_BUNDLE (a crown LEZ bundle: sequencer_service, the node, r0vm, the
-# attestation program; default spike/tmp/crown-fresh/lez/bundle.tar.zst) and U9_BRIDGE_BIN (the bridge program B1 of
-# docs/image-ids.md, sha256 537cbe7a…; default spike/tmp/rfp-integ/box33/ids/programs/ferrata_bridge.bin), which replaces
-# the bundle's.
+# attestation program; default spike/tmp/crown-fresh/lez/bundle.tar.zst, as checkpoint/attestor/zone-bridge.sh's) and
+# U9_BRIDGE_BIN (the bridge program B1 of docs/image-ids.md, sha256 537cbe7a…, as scripts/reproduce-image-ids.sh builds
+# it; default inputs/ferrata_bridge.bin in the scratch directory U9_TMP), which replaces the bundle's.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 SPIKE="$(cd "$REPO/.." && pwd)"
 LEZ="$SPIKE/upstream/lez-v0.4.0-rc1"; DEV="$LEZ/lez/configs/docker-all-in-one/devnet"
-T="${U9_TMP:-$SPIKE/tmp/u9-endpoints/box}"
+T="${U9_TMP:-$SPIKE/tmp/endpoints}"
 TGT="$T/target-lez"
 BUNDLE="${U9_BUNDLE:-$SPIKE/tmp/crown-fresh/lez/bundle.tar.zst}"
-BRIDGE_IN="${U9_BRIDGE_BIN:-$SPIKE/tmp/rfp-integ/box33/ids/programs/ferrata_bridge.bin}"
+BRIDGE_IN="${U9_BRIDGE_BIN:-$T/inputs/ferrata_bridge.bin}"
 B1_SHA256=537cbe7a4c6900419b54e556b9741a9e37d86adf53f5e65683aa2b22c8e9a036            # docs/image-ids.md ferrata_bridge_b1
 LOGOS_SHORT="$SPIKE/tmp/u9s"                                                          # Logos Core's sockets: 62 bytes at most
 CHANNEL=0101010101010101010101010101010101010101010101010101010101010101
@@ -378,7 +378,7 @@ live() {
   for m in eth_rpc_module ferrata_bridge_module; do ctl module load "$m" >> "$W/logs/logos-daemon.log" 2>&1 || die "module load $m"; done
   ctl module list --json < /dev/null > "$RUN/modules-loaded.json" 2>&1 || true
   ( cd "$T" && sha256sum stack/lgx-eth_rpc_module/*.lgx logos/lgx-ferrata_bridge_module/*.lgx bin/seqnet-chain bin/crown-driver ) | scrub > "$RUN/artefacts-sha256.txt"
-  # What the build made, logosctl's version with it (run.sh build's VERSIONS), in the records (review-u9 L-6).
+  # What the build made, logosctl's version with it (run.sh build's VERSIONS), in the records (review L-6).
   scrub < "$T/logos/VERSIONS" > "$RUN/versions.txt" 2>/dev/null || true
   j eth_rpc_module init_defaults > "$RUN/eth-rpc-init.json"
   j eth_rpc_module set_chain_enabled "$CHAIN_ID" true > /dev/null

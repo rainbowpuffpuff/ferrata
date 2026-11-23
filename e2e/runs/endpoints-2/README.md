@@ -1,8 +1,8 @@
 # endpoints-2: the local scenario on the reviewed code (RFP-022 U.9), 23 November 2026
 
 `U9_COMMIT=3fcd6220 e2e/endpoints/run.sh live 2` (no `U9_PUBLIC`: no public network), on the build box (a Modal CPU
-container), after `e2e/endpoints/run.sh build` of the same tree; commit `3fcd6220` of branch `u9-endpoints`: the code with
-review-u9's fixes (`open` drops another deployment's Ethereum and LEZ paths; a candidate Ethereum RPC must hold the block
+container), after `e2e/endpoints/run.sh build` of the same tree; commit `3fcd6220`: the code with
+the review's fixes (`open` drops another deployment's Ethereum and LEZ paths; a candidate Ethereum RPC must hold the block
 the endpoint in use holds final; a candidate sequencer's channel must be the configuration's). The build's artefacts and
 `logosctl`'s version are in [`versions.txt`](versions.txt); what the run is: [`e2e/endpoints/README.md`](../../endpoints/README.md).
 Read [`summary.md`](summary.md) first.

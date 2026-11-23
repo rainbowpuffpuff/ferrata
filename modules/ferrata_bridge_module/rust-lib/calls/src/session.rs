@@ -553,7 +553,7 @@ fn open(params: &Value) -> Result<Value, String> {
     }
     // The session's Ethereum path (`eth`) and LEZ path (`lez`) were configured for one deployment: its chain, its vault,
     // the user's accounts there. Opened on another deployment (another chain service, or another configuration), the
-    // session drops them, so that nothing reads, sends or switches an endpoint on the old one's behalf (review-u9 M-1:
+    // session drops them, so that nothing reads, sends or switches an endpoint on the old one's behalf (review M-1:
     // a kept path switched eth_rpc_module's endpoint of the old chain to an RPC of the new one). The same deployment
     // opened again (the view opened again) keeps them.
     let same = SESSION.lock().map_err(|_| "the session lock is poisoned")?.as_ref().is_some_and(|old| {
@@ -742,7 +742,7 @@ impl Chain {
         // sequencer; eth_rpc_module's endpoint for the chain on the `eth` path, else the chain service's.
         let owner = EthOwner::of_session();
         // On the `eth` path the endpoint is eth_rpc_module's: when its record cannot be read, that is said, never the
-        // chain service's endpoint in its place (review-u9 L-7).
+        // chain service's endpoint in its place (review L-7).
         let module_path = matches!(owner, EthOwner::Module { .. });
         let (eth_rpc, eth_error) = match owner.endpoint(&i) {
             Ok(u) if !u.is_empty() => (json!(u), Value::Null),

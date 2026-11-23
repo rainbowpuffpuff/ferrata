@@ -15,7 +15,7 @@
 //! that fails the reading after the switch is put back, and the sequencer switched with it too; `info` names the
 //! endpoints in use and who holds each; refused while a job runs, and a sequencer change while `lez_core` holds the
 //! session's LEZ connection; a session opened again on another deployment drops the old one's Ethereum path, so a switch
-//! never writes another chain's record of eth_rpc_module (review-u9 M-1), and the same deployment opened again keeps it.
+//! never writes another chain's record of eth_rpc_module (review M-1), and the same deployment opened again keeps it.
 //! The live test (two LEZ sequencers of one zone, two Sepolia RPCs, the view inside a headless Logos Core) is
 //! e2e/endpoints/run.sh.
 
@@ -443,7 +443,7 @@ fn endpoints_switch_through_their_owners_and_stay_on_failure() {
     let o = ok("open", json!({ "chain": svc }));
     assert_eq!(o["paths_reset"], json!([]), "{o}");
     assert!(!ok("eth_report", json!({}))["path"].is_null(), "the same deployment keeps its Ethereum path");
-    // Opened on another deployment, on chain 560048, the paths not configured again (review-u9 M-1): its Ethereum path
+    // Opened on another deployment, on chain 560048, the paths not configured again (review M-1): its Ethereum path
     // and LEZ path are dropped, so a switch goes to the new deployment's chain service and eth_rpc_module's record of
     // chain 11155111 is not touched (before the fix the chain-560048 RPC was written there and the reply said ok).
     let (e_y, e_y2) = (ethereum(HOODI, true, CID, HASH), ethereum(HOODI, true, CID, HASH));
