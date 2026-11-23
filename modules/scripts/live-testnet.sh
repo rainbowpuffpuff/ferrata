@@ -23,6 +23,9 @@
 #   live-testnet.sh build-bridge OUT      ferrata_monitor_module and ferrata_relayer_module (dev packages, the tree as
 #                                         committed)
 #   live-testnet.sh bridge-modules OUT [IDLE_MIN]   bench/perf/daemons-anvil-modules.sh with them (RFP-022 P.6)
+#   live-testnet.sh session2 OUT MINUTES  the updater module reaching the network directly, an execution source through
+#                                         eth_rpc_module beside its two light-client sources (three to agree), and
+#                                         `ferrata attest` (release) measured on the network beside it
 #   live-testnet.sh collect OUT RECORD    the record (no keys, no wallet storage, the host's name and the box's paths
 #                                         replaced) and its summary (modules/scripts/live_testnet.py)
 #
@@ -116,8 +119,8 @@ rc3_copy() {
   "$C/ferrata/lez/scripts/lez-select.sh" "$TAG"
   # What lez-select.sh does not rewrite and the updater module links: the harness's wire crates (rebate-wire,
   # statements-wire) and the module's calls crate, which names the staged LEZ tree by its tag (stage-updater.sh
-  # checks it). Every remaining manifest of lez/ and of the module, in this copy only.
-  grep -rl "upstream/lez-v0.4.0-rc1/" --include=Cargo.toml "$C/ferrata/lez" "$C/ferrata/modules/ferrata_updater_module" \
+  # checks it); and cli/ (`ferrata attest`). Every remaining manifest of lez/, the module and cli/, in this copy only.
+  grep -rl "upstream/lez-v0.4.0-rc1/" --include=Cargo.toml "$C/ferrata/lez" "$C/ferrata/modules/ferrata_updater_module" "$C/ferrata/cli" \
     | grep -v '/target/' | tee "$WORK/rc3-rewritten.txt" | xargs -r sed -i "s#upstream/lez-v0.4.0-rc1/#upstream/lez-$TAG/#g"
   echo "also pointed at $TAG: $(wc -l < "$WORK/rc3-rewritten.txt") manifests"; cat "$WORK/rc3-rewritten.txt"
   sed -i "s#on a running LEZ v0.4.0-rc1 sequencer#on a running LEZ $TAG sequencer#" "$C/ferrata/modules/ferrata_updater_module/metadata.json"
@@ -127,6 +130,17 @@ rc3_tools() {
   (cd "$C/ferrata/lez/updater/sequencer" && CARGO_TARGET_DIR="$WORK/target-rc3" cargo build --release --locked \
     --bin ferrata-day1 --bin ferrata-updater) || return 1
   cp "$WORK/target-rc3/release/ferrata-day1" "$WORK/target-rc3/release/ferrata-updater" "$BIN/"
+}
+# `ferrata attest` (cli/, the tool RFP-021 U.2 is shown on), release, for the network's tag (feature `lez-rc3`); its
+# lockfile the committed one for the tag (cli/lockfiles/), else cli's rc1 lockfile moved to the tag's graph by cargo
+# (versions kept wherever they still fit), written back for the repository.
+cli_rc3() {
+  local d="$C/ferrata/cli" saved="$repo/cli/lockfiles/$TAG.Cargo.lock" locked=()
+  if [ -f "$saved" ]; then cp "$saved" "$d/Cargo.lock"; locked=(--locked); fi
+  (cd "$d" && CARGO_TARGET_DIR="$WORK/target-cli-rc3" cargo build --release "${locked[@]}" --bin ferrata --features lez-rc3) \
+    || return 1
+  if [ ! -f "$saved" ]; then mkdir -p "$(dirname "$saved")"; cp "$d/Cargo.lock" "$saved"; echo "wrote $saved"; fi
+  cp "$WORK/target-cli-rc3/release/ferrata" "$BIN/ferrata"
 }
 attest_monitor() {
   (cd "$repo/monitor/attest" && CARGO_TARGET_DIR="$WORK/target-attest-monitor" cargo build --release --locked) || return 1
@@ -187,10 +201,9 @@ eth_rpc() {
     && python3 -I "$here/eth_rpc_by_name.py" "$s" && git -C "$s" add -A \
     && nixb "git+file://$s#lgx" --override-input logos-module-builder "$BUILDER" -o "$out/lgx-eth_rpc_module"
 }
-save_nix() {
-  local f=/vol/nix/modules-live.tar.zst
-  [ -d /vol ] || { echo "no /vol: not the build box"; return 0; }
-  mkdir -p /vol/nix
+save_nix() { # FILE: /nix packed there (a box that keeps its own store between containers; SAVE_NIX_TO names it)
+  local f=$1
+  mkdir -p "$(dirname "$f")"
   tar -C / -cf - nix | zstd -T0 -3 -q -f -o "$f.part" && mv "$f.part" "$f" && ls -la "$f"
 }
 versions() {
@@ -220,13 +233,14 @@ do_build() {
   step rc3-tools-test bash -c "cd '$C/ferrata/lez/updater/sequencer' && CARGO_TARGET_DIR='$WORK/target-rc3' cargo test --release --locked --lib"
   step attest-monitor attest_monitor
   step attest-cli attest_cli
+  step cli-rc3 cli_rc3
   wait "$nixlane"
   {
     for f in "$out"/lgx-*/*.lgx; do [ -f "$f" ] && printf '%s  %s %s bytes\n' "$(sha256sum < "$f" | cut -c1-64)" "${f#"$out"/}" "$(stat -L -c %s "$f")"; done
     for f in "$BIN"/*; do printf '%s  bin/%s\n' "$(sha256sum < "$f" | cut -c1-64)" "$(basename "$f")"; done
     "$out/logos/bin/logosctl" --version 2>&1 | head -n 2
   } > "$rep/artifacts.txt" 2>&1
-  if [ "${SAVE_NIX:-1}" = 1 ]; then step save-nix save_nix; fi
+  if [ -n "${SAVE_NIX_TO:-}" ]; then step save-nix save_nix "$SAVE_NIX_TO"; fi
   failures=$(grep -c FAILED "$rep/steps.md")
 }
 
@@ -416,7 +430,9 @@ adoption_parts = 2
   provider = "nimbus-counted"
   timeout_secs = 60
 T
-  jq -n --arg c "$W/req/updater.toml" '{config_file: $c}' > "$W/req/updater-config.json"
+  # Both starts with `quiet: false`: the daemon's own lines (each job's finalized slot, root and sources) in Logos
+  # Core's log (the module's default is quiet).
+  jq -n --arg c "$W/req/updater.toml" '{config_file: $c, quiet: false}' > "$W/req/updater-config.json"
   call ferrata_updater_module check_config U-check_config "@$W/req/updater-config.json"
   marks updater-start
   # `start` answers once the set-up is done: the backend's follower brought from the network's genesis to its last
@@ -564,6 +580,225 @@ attest_phase() {
   marks attest-end
 }
 
+# ---- session2 -----------------------------------------------------------------------------------------------------
+# The second session: the updater module reaching the network directly (a sequencer not on this machine: Logos Core
+# started with FERRATA_SEQUENCER_REMOTE, the network's RPC exactly, and FERRATA_TESTNET_SEND=yes), its two
+# light-client sources through beacon_api_module and an execution source through eth_rpc_module, all three required to
+# agree (each update's execution block confirmed canonical before the update is sent), both starts with quiet: false;
+# its follower taken from the first session's state (the same operator restarting); and `ferrata attest` (cli/,
+# release, LEZ v0.4.0-rc3) measured on the network beside it: a first command from a new state, the same again,
+# config, a dry run and a sent attestation, a dry run of an update.
+do_session2() {
+  need_net
+  local minutes=${1:-45} W="$out/session2" SESSION="$LOGOS_TMPDIR/ml2"
+  local program id checkpoint phex t_start t_end
+  program=$(jq -r .program "$I/instance.json"); id=$(jq -r .instance_id "$I/instance.json"); checkpoint=$(jq -r .checkpoint "$I/instance.json")
+  phex=$(b58hex "$program")
+  rm -rf "$W" "$SESSION"
+  mkdir -p "$W/rep" "$W/req" "$W/probes-u1" "$W/relay" "$W/cli" "$W/logos-logs" "$SESSION"
+  export TMPDIR="$LOGOS_TMPDIR"
+  printf 'name\tmodule\tmethod\texit\tseconds\tstart\n' > "$W/calls.tsv"
+  printf 't\tmark\n' > "$W/marks.tsv"
+  marks() { printf '%s\t%s\n' "$(date +%s.%N)" "$1" >> "$W/marks.tsv"; }
+  local pids=()
+  cleanup() {
+    "$out/logos/bin/logosctl" --config-dir "$SESSION" daemon stop > /dev/null 2>&1 || true
+    for p in "${pids[@]}"; do kill -TERM "$p" 2>/dev/null || true; done
+    wait 2>/dev/null || true
+  }
+  trap cleanup EXIT
+  relay() { python3 -I "$repo/bench/perf/http_relay.py" --listen "$2" --to "$3" --stats "$W/relay/$1.json" --series "$W/relay/$1.jsonl" --every 30 & pids+=($!); }
+  relay lodestar-updater 18711 "$LODESTAR"
+  relay nimbus-updater 18712 "$NIMBUS"
+  relay execution 18713 "$EL"
+  sleep 1
+  ctl() { "$out/logos/bin/logosctl" --config-dir "$SESSION" "$@"; }
+  call() { # MODULE METHOD NAME [ARGS...]
+    local m=$1 f=$2 name=$3 t0 rc=0
+    shift 3
+    t0=$(date +%s.%N)
+    ctl --timeout "${CALL_MS:-300000}" call "$m" "$f" "$@" --json < /dev/null > "$W/rep/$name.raw" 2>&1 || rc=$?
+    jq -c 'if (.result | type) == "string" then (.result | fromjson? // .result) else .result end' "$W/rep/$name.raw" \
+      > "$W/rep/$name.json" 2>/dev/null || echo "{\"call_failed\":$rc}" > "$W/rep/$name.json"
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$m" "$f" "$rc" "$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN { printf "%.2f", b - a }')" "$t0" >> "$W/calls.tsv"
+    return $rc
+  }
+  marks session-start
+  python3 -I "$repo/bench/perf/tree_sample.py" --out "$W/samples.csv" --every 5 \
+    --find "updater-module=logos_host --name ferrata_updater_module " --find "beacon_api_module=logos_host --name beacon_api_module " \
+    --find "eth_rpc_module=logos_host --name eth_rpc_module " --find "core=logosctl --config-dir $SESSION daemon" \
+    --find "ferrata-attest=ferrata attest " & pids+=($!)
+  # Logos Core's environment names the remote sequencer (exactly the URL the updater's file gives) and allows sends.
+  env HOME="$W/home" "$out/logos/bin/logosctl" --config-dir "$SESSION" daemon start --detach >> "$W/core-start.log" 2>&1
+  for m in beacon_api_module eth_rpc_module ferrata_updater_module; do
+    ctl install "$out/lgx-$m"/*.lgx -y >> "$W/install.log" 2>&1 || note "install $m failed"
+    ctl module load "$m" >> "$W/install.log" 2>&1 || note "load $m failed"
+  done
+  ctl module list --json > "$W/rep/modules-loaded.json" 2>&1 || true
+  call ferrata_updater_module version U-version
+  call beacon_api_module init_defaults bam-init_defaults
+  call beacon_api_module add_provider bam-add-lodestar "$CHAIN" '{"endpoint":"http://127.0.0.1:18711","id":"lodestar-counted"}'
+  call beacon_api_module add_provider bam-add-nimbus "$CHAIN" '{"endpoint":"http://127.0.0.1:18712","id":"nimbus-counted"}'
+  call beacon_api_module list_providers bam-providers-start "$CHAIN"
+  call eth_rpc_module set_network_scope rpc-scope both
+  call eth_rpc_module set_chain_config rpc-chain "$CHAIN" \
+    "{\"endpoint\":\"http://127.0.0.1:18713\",\"name\":\"sepolia\",\"testnet\":true,\"timeoutSecs\":60,\"verifiedTimeoutSecs\":240}"
+  call eth_rpc_module set_verified_proxy_mode rpc-mode "$CHAIN" off
+  call eth_rpc_module get_chain_config rpc-chain-config "$CHAIN"
+  # The backend's follower from the first session (blocks and state, not its manifest): a restart of the same
+  # operator, not a first start.
+  mkdir -p "$W/updater-state/ledger"
+  for f in blocks.borsh follower.borsh; do
+    [ -f "$out/session/updater-state/ledger/$f" ] && cp "$out/session/updater-state/ledger/$f" "$W/updater-state/ledger/"
+  done
+  cat > "$W/req/updater.toml" <<T
+# live-testnet.sh session2: ferrata_updater_module on the public test network (LEZ $TAG), reaching it directly, with an
+# execution source through eth_rpc_module: every update's execution block confirmed before it is sent.
+[daemon]
+name = "modules-live-2"
+state_dir = "$W/updater-state"
+poll_secs = 24
+listen = "127.0.0.1:9465"
+ledger = "sequencer"
+
+[sequencer]
+rpc = "$FERRATA_TESTNET_RPC"
+program = "$program"
+wait_final = true
+
+[keys]
+payer_key_file = "$K/daemon.key"
+
+[fees]
+gas_limit = 4800000
+max_fee_per_tx = 1000000000
+budget = 6000000000
+
+[policy]
+defer_window = 1
+max_lag_slots = 64
+min_agreeing = 3
+retry_base_ms = 500
+retry_max_ms = 30000
+max_attempts = 5
+demote_rounds = 50
+max_periods_per_request = 16
+finish_own_jobs = true
+
+[[chain]]
+name = "sepolia"
+preset = "sepolia"
+layout = "gloas"
+checkpoint = "$checkpoint"
+adoption_parts = 2
+
+  [[chain.source]]
+  name = "beacon_api_module-lodestar"
+  via = "beacon_api_module"
+  chain_id = $CHAIN
+  provider = "lodestar-counted"
+  timeout_secs = 60
+
+  [[chain.source]]
+  name = "beacon_api_module-nimbus"
+  via = "beacon_api_module"
+  chain_id = $CHAIN
+  provider = "nimbus-counted"
+  timeout_secs = 60
+
+  [[chain.source]]
+  name = "eth_rpc_module-sepolia"
+  kind = "execution"
+  via = "eth_rpc_module"
+  chain_id = $CHAIN
+  timeout_secs = 60
+T
+  jq -n --arg c "$W/req/updater.toml" '{config_file: $c, quiet: false}' > "$W/req/updater-config.json"
+  call ferrata_updater_module check_config U-check_config "@$W/req/updater-config.json"
+  marks updater-start
+  CALL_MS=1800000 call ferrata_updater_module start U-start-1 "@$W/req/updater-config.json"
+  marks updater-started
+  # `ferrata attest` beside it, from a state of its own.
+  cli_phase "$W" "$phex" "$id" "$checkpoint" > "$W/cli/phase.log" 2>&1 & local clip=$!
+  t_start=$(date +%s); t_end=$(( t_start + minutes * 60 ))
+  local restarted=0 probed=0 life=1 code restart_at=$(( t_start + minutes * 60 / 2 ))
+  while [ "$(date +%s)" -lt "$t_end" ]; do
+    probed=$((probed + 1))
+    rm -f "$W/h.json"
+    code=$(curl -sS -m 10 -o "$W/h.json" -w '%{http_code}' http://127.0.0.1:9465/health 2>/dev/null) || true
+    python3 -I -c 'import json, sys
+t, life, code, f = sys.argv[1:5]
+try:
+    h = json.load(open(f))
+except Exception:
+    h = None
+print(json.dumps({"t": t, "life": int(life), "http": int(code or 0), "health": h}, separators=(",", ":")))' \
+      "$(date -u +%FT%TZ)" "$life" "${code:-0}" "$W/h.json" >> "$W/probes-u1/health.jsonl"
+    call ferrata_updater_module status "status-$probed" > /dev/null 2>&1 || true
+    jq -c --arg t "$(date -u +%FT%TZ)" --arg life "$life" '{t: $t, life: ($life | tonumber), status: .}' "$W/rep/status-$probed.json" \
+      >> "$W/probes-u1/status.jsonl" 2>/dev/null
+    rm -f "$W/rep/status-$probed.raw" "$W/rep/status-$probed.json"
+    if [ "$restarted" = 0 ] && [ "$(date +%s)" -ge "$restart_at" ]; then
+      marks restart-stop
+      CALL_MS=600000 call ferrata_updater_module stop U-stop-1 || true
+      sleep 15
+      marks restart-start
+      CALL_MS=600000 call ferrata_updater_module start U-start-2 "@$W/req/updater-config.json" || true
+      restarted=1
+      life=2
+    fi
+    sleep 60
+  done
+  marks session-end
+  wait "$clip"; echo "cli phase exit $?" >> "$W/cli/phase.log"
+  call ferrata_updater_module metrics U-metrics-final || true
+  call ferrata_updater_module status U-status-final || true
+  call beacon_api_module list_providers bam-providers-end "$CHAIN" || true
+  marks stop
+  CALL_MS=600000 call ferrata_updater_module stop U-stop-final || true
+  "$BIN/attest-monitor" state --state "lez:$FERRATA_TESTNET_RPC" --program "$phex" --instance "$id" > "$W/final-state.json" 2>&1
+  ctl daemon stop >> "$W/core-stop.log" 2>&1; echo "logosctl daemon stop exit $?" >> "$W/core-stop.log"
+  marks core-stopped
+  cp -L "$SESSION/logs/"*.log "$W/logos-logs/" 2>/dev/null
+  cp "$W/updater-state/sepolia/journal.tsv" "$W/journal.tsv" 2>/dev/null
+  cp "$W/updater-state/ledger/run.tsv" "$W/run.tsv" 2>/dev/null
+  sleep 6
+  cleanup
+  trap - EXIT
+}
+# `ferrata attest` on the network, each command under GNU time: a first `status` from a new state directory (it
+# follows the network from genesis), the same again (from the state kept), `config`, an attestation of the vault's
+# slots 0 and 1 under the instance's newest record as a dry run and sent, and a finality update as a dry run.
+cli_phase() {
+  local W=$1 phex=$2 id=$3 checkpoint=$4 slot hash number
+  local F2="$W/cli/fetch"
+  fa() { # NAME ARGS...: one command under GNU time
+    local name=$1
+    shift
+    printf '%s\t%s\n' "$(date +%s.%N)" "cli-$name-start" >> "$W/marks.tsv"
+    /usr/bin/time -v -o "$W/cli/$name.time" "$BIN/ferrata" attest --lez-rpc "$FERRATA_TESTNET_RPC" --program "0x$phex" \
+      --key "$K/payer.key" --state-dir "$W/cli-state" --record "$W/cli/run.jsonl" "$@" > "$W/cli/$name.out" 2> "$W/cli/$name.err"
+    echo "$name exit $?" >> "$W/cli/exits.txt"
+    printf '%s\t%s\n' "$(date +%s.%N)" "cli-$name-end" >> "$W/marks.tsv"
+  }
+  fa status-first status --instance "0x$id"
+  fa status-again status --instance "0x$id"
+  fa config config --instance "0x$id" --checkpoint "0x$checkpoint"
+  "$BIN/ferrata-day1" target --rpc "$FERRATA_TESTNET_RPC" --keys "$K" --state "$S" > "$W/cli/target.json" 2> "$W/cli/target.err"
+  slot=$(jq -r .slot "$W/cli/target.json"); hash=$(jq -r .block_hash "$W/cli/target.json")
+  curl -sS -m 60 -A "$UA" -H 'content-type: application/json' \
+    --data-binary "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"eth_getBlockByHash\",\"params\":[\"$hash\",false]}" "$EL" -o "$W/cli/block.json"
+  number=$(jq -r .result.number "$W/cli/block.json" | xargs printf '%d')
+  fa attest-dry attest --instance "0x$id" --record-slot "$slot" --eth "$EL" --block "$number" --storage "$VAULT:0x0" --storage "$VAULT:0x1"
+  fa attest-send attest --instance "0x$id" --record-slot "$slot" --eth "$EL" --block "$number" --storage "$VAULT:0x0" --storage "$VAULT:0x1" --send --yes
+  # A finality update past the instance's record (Lodestar's, through fetch.py), planned and settled on a scratch copy.
+  if python3 -I "$repo/lez-v03/scripts/fetch.py" finality "$F2" "$slot" 1200 > "$W/cli/fetch-finality.log" 2>&1; then
+    fa advance-dry advance --instance "0x$id" --update "$(tail -n 1 "$W/cli/fetch-finality.log" | awk '{print $NF}')" --finality \
+      --committee "bootstrap:$K/init/bootstrap.ssz"
+  fi
+  return 0
+}
+
 case "$cmd" in
   build) do_build ;;
   build-bridge) do_build_bridge ;;
@@ -571,6 +806,7 @@ case "$cmd" in
   bridge-modules) do_bridge_modules "${3:-10}" ;;
   instance) do_instance ;;
   session) do_session "${3:-90}" ;;
+  session2) do_session2 "${3:-45}" ;;
   collect) python3 -I "$here/live_testnet.py" collect "$out" "${3:?RECORD directory}" || failures=$((failures + 1)) ;;
   *) die "$cmd: build, instance, session or collect" ;;
 esac

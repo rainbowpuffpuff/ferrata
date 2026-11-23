@@ -52,6 +52,12 @@ KEEP = [
     "daemons-anvil-modules/rpc-relayer.json", "daemons-anvil-modules/machine.txt", "daemons-anvil-modules/log.txt",
     "daemons-anvil-modules/rep", "daemons-anvil-modules/run/alerts.jsonl", "daemons-anvil-modules/run/core-stop.log",
     "daemons-anvil-modules/run/install.log", "daemons-anvil-modules/run/node-view.json",
+    # The second session: the module reaching the network directly, an execution source; `ferrata attest` beside it
+    "report-session2/steps.md", "report-session2/notes.log",
+    "session2/req", "session2/rep", "session2/relay", "session2/probes-u1", "session2/calls.tsv", "session2/marks.tsv",
+    "session2/samples.csv", "session2/journal.tsv", "session2/run.tsv", "session2/final-state.json",
+    "session2/install.log", "session2/core-start.log", "session2/core-stop.log", "session2/cli",
+    "report-build/logs/cli-rc3.log",
 ]
 NEVER = re.compile(r"(\.key$|/storage\.json$|/keys/|/wallet|\.raw$|attest-messages|/h\.json$)")
 BIG = 4 << 20  # text files above this are kept gzipped
@@ -113,15 +119,17 @@ def collect(out, rec):
     # The updater module's own lines, from Logos Core's log, without the prefix Logos Core adds to a module's output
     # (`[time] [out] [ferrata_updater_module] ` for its standard output, `[time] [info] [logos] [ferrata_updater_module] `
     # for its log): the lines check.py reads (lez/updater/results/live-sepolia/check.py).
-    src = os.path.join(out, "session", "logos-logs")
-    dated = sorted(f for f in os.listdir(src) if f.startswith("daemon_")) if os.path.isdir(src) else []
-    if dated:
-        prefix = re.compile(r"^\[[^\]]*\] \[(?:out|err|info|warning|error|debug)\] (?:\[logos\] )?\[ferrata_updater_module\] ")
-        lines = [prefix.sub("", l) for l in open(os.path.join(src, dated[-1]), errors="replace").read().splitlines() if prefix.match(l)]
-        open(os.path.join(rec, "session", "updater-module.log"), "w").write(scrub_text("\n".join(lines) + "\n", subs))
-        kept.append("session/updater-module.log")
+    prefix = re.compile(r"^\[[^\]]*\] \[(?:out|err|info|warning|error|debug)\] (?:\[logos\] )?\[ferrata_updater_module\] ")
+    for sess in ("session", "session2"):
+        src = os.path.join(out, sess, "logos-logs")
+        dated = sorted(f for f in os.listdir(src) if f.startswith("daemon_")) if os.path.isdir(src) else []
+        if dated:
+            lines = [prefix.sub("", l) for l in open(os.path.join(src, dated[-1]), errors="replace").read().splitlines() if prefix.match(l)]
+            os.makedirs(os.path.join(rec, sess), exist_ok=True)
+            open(os.path.join(rec, sess, "updater-module.log"), "w").write(scrub_text("\n".join(lines) + "\n", subs))
+            kept.append(f"{sess}/updater-module.log")
     # The Logos Core logs (every module's lines), gzipped; daemon.log is a link to the newest dated one.
-    for d in ("session/logos-logs", "daemons-anvil-modules/run"):
+    for d in ("session/logos-logs", "session2/logos-logs", "daemons-anvil-modules/run"):
         src = os.path.join(out, d)
         for f in sorted(os.listdir(src)) if os.path.isdir(src) else []:
             if not f.startswith("daemon_"):
@@ -432,6 +440,9 @@ def summary(rec, write=True):
             check(ok, f"RFP-022: {k} answered through Logos Core, no error ({B}/rep/{k}.json: verdict "
                       f"{res.get('verdict') if isinstance(res, dict) else None})")
         check("logosctl daemon stop exit 0" in (rd(rec, f"{B}/run/core-stop.log") or ""), "RFP-022: that Logos Core stopped cleanly")
+    # ---- the second session: the remote sequencer path, an execution source, `ferrata attest` ----------------------
+    if rd(rec, "session2/marks.tsv"):
+        S["session2"] = session2(rec, check)
     S["checks"] = checks
     S["checks_failed"] = sum(not c["ok"] for c in checks)
     if write:
@@ -441,6 +452,96 @@ def summary(rec, write=True):
         open(os.path.join(rec, "summary.md"), "w").write(markdown(S))
         print(markdown(S))
     return S
+
+
+def session2(rec, check):
+    """The second session's figures and checks (`live-testnet.sh session2`)."""
+    D = "session2"
+    marks = {}
+    for row in csv.reader((rd(rec, f"{D}/marks.tsv") or "").splitlines()[1:], delimiter="\t"):
+        if len(row) >= 2:
+            marks.setdefault(row[1], float(row[0]))
+    S2 = {"marks": {k: round(v - marks.get("session-start", v), 1) for k, v in sorted(marks.items(), key=lambda kv: kv[1])}}
+    loaded = json.dumps(js(rec, f"{D}/rep/modules-loaded.json"))
+    check(all(m in loaded for m in ("ferrata_updater_module", "beacon_api_module", "eth_rpc_module")),
+          "session 2: ferrata_updater_module, beacon_api_module and eth_rpc_module loaded in the headless Logos Core")
+    cfg = tomllib.loads(rd(rec, f"{D}/req/updater.toml") or "") if tomllib else {}
+    srcs = [x for c in cfg.get("chain", []) for x in c.get("source", [])]
+    rpc = (cfg.get("sequencer") or {}).get("rpc", "")
+    S2["updater_config"] = {"rpc": rpc, "min_agreeing": (cfg.get("policy") or {}).get("min_agreeing"),
+                            "sources": [{k: x.get(k) for k in ("name", "kind", "via", "provider", "chain_id")} for x in srcs]}
+    lc = [x for x in srcs if x.get("via") == "beacon_api_module" and x.get("kind", "light-client") == "light-client"]
+    ex = [x for x in srcs if x.get("kind") == "execution" and x.get("via") == "eth_rpc_module"]
+    check(rpc.startswith("https://") and len(lc) == 2 and len(ex) == 1 and S2["updater_config"]["min_agreeing"] == 3,
+          "session 2: the module reaches the network's RPC itself (a sequencer not on this machine, by its https URL), "
+          "two light-client sources through beacon_api_module and an execution source through eth_rpc_module, three to agree")
+    ok = (js(rec, f"{D}/rep/U-check_config.json") or {}).get("verdict") == "ok"
+    check(ok, "session 2: check_config accepted that file (rep/U-check_config.json)")
+    J = ["round", "step", "job", "finalized_slot", "result", "exit", "gas_exec", "gas_stor", "fee", "block", "utc", "label"]
+    journal = [dict(zip(J, l.split("\t"))) for l in (rd(rec, f"{D}/journal.tsv") or "").splitlines() if l.strip()]
+    applied = [j for j in journal if j["result"] == "applied"]
+    jobs = sorted({j["job"] for j in applied if j["step"] == "finish"})
+    log = rd(rec, f"{D}/updater-module.log") or ""
+    confirmed_by = {}
+    for m in re.finditer(r"job 0x([0-9a-f]{16}): finalized slot (\d+) root 0x([0-9a-f]{64}) \(.*?\), served or confirmed by (.*)$", log, re.M):
+        confirmed_by[m.group(1)] = (int(m.group(2)), m.group(3))
+    with_el = [j for j in jobs if "eth_rpc_module-sepolia" in confirmed_by.get(j[:16], (0, ""))[1]]
+    S2["journal"] = {"transactions": len(journal), "applied": len(applied), "jobs_finished": len(jobs),
+                     "jobs_confirmed_by_the_execution_source": len(with_el),
+                     "blocks": [int(applied[0]["block"]), int(applied[-1]["block"])] if applied else None,
+                     "finalized_slots": sorted({int(j["finalized_slot"]) for j in applied if j["step"] == "finish"})}
+    check(jobs and len(applied) == len(journal),
+          f"session 2: the module applied {len(applied)} of {len(journal)} transactions on the network, {len(jobs)} jobs finished")
+    check(jobs and len(with_el) == len(jobs),
+          f"session 2: every finished job's update ({len(with_el)} of {len(jobs)}) was confirmed by the execution source "
+          f"before it was sent (the daemon's job line: served or confirmed by …, eth_rpc_module-sepolia among them)")
+    met = (js(rec, f"{D}/rep/U-metrics-final.json") or {}).get("metrics") or ""
+    conf = re.search(r'ferrata_updater_source_confirmed_total\{[^}]*source="eth_rpc_module-sepolia"[^}]*\} (\d+)', met)
+    S2["execution_source_confirmations"] = int(conf.group(1)) if conf else None
+    ex_relay = js(rec, f"{D}/relay/execution.json")
+    if ex_relay:
+        S2["execution_traffic"] = {"requests": ex_relay["requests"], "up": ex_relay["up"], "down": ex_relay["down"],
+                                   "by": {k: v["n"] for k, v in sorted(ex_relay["by"].items())}}
+    by = (S2.get("execution_traffic") or {}).get("by", {})
+    check(by.get("eth_getBlockByHash", 0) > 0 and by.get("eth_getBlockByNumber", 0) > 0,
+          f"session 2: eth_rpc_module carried the execution checks to the endpoint ({by.get('eth_getBlockByHash', 0)} "
+          f"eth_getBlockByHash, {by.get('eth_getBlockByNumber', 0)} eth_getBlockByNumber: the relay's counts)")
+    probes = jsonl(rec, f"{D}/probes-u1/health.jsonl")
+    hok = [p for p in probes if p.get("http") == 200 and p.get("health") and all(h.get("status") == "ok" for h in p["health"])]
+    S2["health"] = {"probes": len(probes), "ok": len(hok)}
+    check(probes and len(hok) >= len(probes) - 2, f"session 2: /health ok to {len(hok)} of {len(probes)} probes")
+    restart = [js(rec, f"{D}/rep/{k}.json") for k in ("U-start-1", "U-stop-1", "U-start-2", "U-stop-final")]
+    check(all(isinstance(r, dict) and r.get("verdict") in ("started", "ok") for r in restart),
+          "session 2: start, stop, start again (halfway) and the final stop answered through Logos Core")
+    check("logosctl daemon stop exit 0" in (rd(rec, f"{D}/core-stop.log") or ""), "session 2: Logos Core stopped cleanly")
+    fs = js(rec, f"{D}/final-state.json") or {}
+    S2["instance_final"] = {k: fs.get(k) for k in ("active", "applied", "finalized_slot", "finalized_root")}
+    # Components over the session (the module's start resumed the first session's follower).
+    samples = samples_of(rec, f"{D}/samples.csv")
+    t0, t1 = marks.get("updater-start"), marks.get("stop")
+    comp = {}
+    if t0 and t1:
+        for name in ("updater-module", "beacon_api_module", "eth_rpc_module"):
+            if name in samples:
+                comp[name] = window(samples[name], t0, t1)
+        if "core" in samples:
+            comp["Logos Core daemon (its own process)"] = window(own(samples["core"]), t0, t1)
+    S2["components"] = comp
+    if t0 and marks.get("updater-started"):
+        S2["updater_start_seconds"] = round(marks["updater-started"] - t0, 1)
+    # `ferrata attest`: each command's GNU time, exit status and what it printed last.
+    exits = dict(l.rsplit(" exit ", 1) for l in (rd(rec, f"{D}/cli/exits.txt") or "").splitlines() if " exit " in l)
+    cli = {}
+    for name in ("status-first", "status-again", "config", "attest-dry", "attest-send", "advance-dry"):
+        g = gnu_time(rd(rec, f"{D}/cli/{name}.time"))
+        if g:
+            cli[name] = dict(g, exit=int(exits.get(name, -1)))
+    S2["ferrata_attest"] = cli
+    for name in ("status-first", "status-again", "config", "attest-dry", "attest-send"):
+        check(name in cli and cli[name]["exit"] == 0, f"session 2: ferrata attest {name} exit 0 (session2/cli/{name}.*)")
+    sent = rd(rec, f"{D}/cli/attest-send.out") or ""
+    check(re.search(r"applied", sent) is not None, "session 2: ferrata attest sent the attestation and it was applied (attest-send.out)")
+    return S2
 
 
 def iso(t):
@@ -476,6 +577,18 @@ def markdown(S):
     for c in S["calls"]:
         o.append(f"| {c['name']} | {c['module']} | {c['method']} | {c['exit']} | {c['seconds']} |")
     o += ["", "## Journal", "", "```", json.dumps(S["journal"], indent=1), "```", ""]
+    s2 = S.get("session2")
+    if s2:
+        o += ["## Session 2: the module reaching the network directly, an execution source; `ferrata attest`", "",
+              "| component | wall s | CPU s | CPU share of one core | peak RSS MiB | median RSS MiB |", "|---|---:|---:|---:|---:|---:|"]
+        for k, v in s2.get("components", {}).items():
+            if v:
+                o.append(f"| {k} | {v['wall_s']} | {v['cpu_s']} | {v['cpu_share']} | {v['peak_rss_mib']} | {v['median_rss_mib']} |")
+        o += ["", "| `ferrata attest` (release) | exit | wall s | CPU s | peak RSS MiB |", "|---|---:|---:|---:|---:|"]
+        for k, v in s2.get("ferrata_attest", {}).items():
+            o.append(f"| {k} | {v['exit']} | {v['wall_s']} | {v['cpu_s']} | {v['peak_rss_mib']} |")
+        o += ["", "```", json.dumps({k: s2[k] for k in ("journal", "execution_traffic", "execution_source_confirmations",
+                                                         "instance_final", "updater_config") if k in s2}, indent=1), "```", ""]
     bm = S.get("bridge_modules")
     if bm:
         o += ["## RFP-022: monitor and relayer as Logos modules (anvil fixture)", "",
