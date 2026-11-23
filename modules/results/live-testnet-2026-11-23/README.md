@@ -1,15 +1,18 @@
-# `ferrata_updater_module` on our public LEZ test network, its Ethereum data through Logos Core (23 November 2026)
+# `ferrata_updater_module` on a LEZ v0.4.0-rc3 network we run, its Ethereum data through Logos Core (23 November 2026)
 
 One headless Logos Core (`logosctl` 66d098d) ran `ferrata_updater_module` with `daemon.ledger = "sequencer"` against
-our public test network (LEZ v0.4.0-rc3 anchored to its own Logos Blockchain node; `https://<domain>/rpc`), keeping a
+a LEZ v0.4.0-rc3 network we run, reachable publicly (not Logos's: LEZ testnet 0.4 does not exist; its address is not
+published here, `https://<domain>/rpc` in the record), anchored to its own Logos Blockchain node, keeping a
 Sepolia instance of our own following Sepolia for 90 minutes, **both** of its light-client sources going through Logos
 Core's `beacon_api_module`. Beside it in the same Core: `beacon_api_module`, `eth_rpc_module` (Sepolia's execution
-endpoint) and `ferrata_attest_module`, whose calls read Ethereum through `eth_rpc_module`; `attest-monitor` watched the
+endpoint) and `ferrata_attest_module`, whose execution reads (a block, its receipts, a storage proof) went through
+`eth_rpc_module` (its `verify_checkpoint` read the three beacon providers directly, by URL); `attest-monitor` watched the
 same instance. Every process was sampled every 5 s and each daemon's traffic was counted by its own relay (RFP-021
-P.6). The attestation CLI's journey and the day-one tool were measured in the same run, and RFP-022's two
+P.6). The day-one tool and the harness's `ferrata-attest` journey were measured in the same run (the release CLI,
+`ferrata attest`, on the network in session 2, below), and RFP-022's two
 Ethereum-side daemons ran as Logos modules on `bench/perf/daemons-anvil.sh`'s anvil fixture (RFP-022 P.6).
 
-Transactions went to our test network only: the instance's `Init`, the updater's 49 transactions and one attestation.
+Transactions went to that network only: the instance's `Init`, the updater's 49 transactions and one attestation.
 Ethereum was only read. The network's own instance (`c741a1f1…`, which the host's updater follows) was not touched.
 
 **Result: 27 of 27 checks** ([`summary.md`](summary.md), written by `modules/scripts/live_testnet.py` from this
@@ -19,11 +22,11 @@ record's files; `python3 -I modules/scripts/test_live_testnet.py` computes every
 
 | part | what |
 |---|---|
-| the network | our public LEZ v0.4.0-rc3 test network (`sequencer_service` `bafd07be`, a Logos Blockchain node 0.3.5-rc.1, 10-s blocks, final on Bedrock about 20–30 s later), reached at its public JSON-RPC through its gateway; the attestation program at `6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg`, image `0x816d1fef…03df`, immutable (read back by `ferrata-day1 inspect`, its seven segments followed from the header: [`instance/inspect-after-init.json`](instance/inspect-after-init.json)) |
+| the network | a LEZ v0.4.0-rc3 network we run, reachable publicly (`sequencer_service` `bafd07be` with its own Logos Blockchain node, 10-s blocks; each of the module's transactions final on Bedrock 15.1–26.8 s after it was sent, by the module's own lines), reached at its public JSON-RPC through its gateway; the attestation program at `6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg`, image `0x816d1fef…03df`, immutable (read back by `ferrata-day1 inspect`, its seven segments followed from the header: [`instance/inspect-after-init.json`](instance/inspect-after-init.json)) |
 | the box | the Modal build box (gVisor, x86-64; 2 cores requested, more allowed), one container for the whole session; the updater module and attest-monitor reached the network's RPC each through its own counting relay on the box (`bench/perf/http_relay.py`: loopback HTTP to the relay, HTTPS from it to the network), `ferrata-day1` reached it directly (`FERRATA_SEQUENCER_REMOTE`, `FERRATA_TESTNET_SEND=yes`) |
-| the modules | built on the box with logos-module-builder `5f74cdb` from this branch at `fea8b8e5` ([`report-build/`](report-build/steps.md)): `ferrata_updater_module` from a copy of the tree with LEZ v0.4.0-rc3 selected (`lez/scripts/lez-select.sh`, plus the harness's wire crates and the module's calls crate, which the script leaves on rc1), its lockfile [`modules/ferrata_updater_module/rust-lib/lockfiles/v0.4.0-rc3.Cargo.lock`](../../ferrata_updater_module/rust-lib/lockfiles/v0.4.0-rc3.Cargo.lock), dev package 64,380,611 bytes; the guests it carries are the tree's own (`version()`: the attestation program declared and computed `0x816d1fef…03df`, the image the network runs); `ferrata_attest_module` from the tree as committed (rc1), 3,565,635 bytes; Logos's `beacon_api_module` (`aca138e`) and `eth_rpc_module` (`6965f32`), as `modules/scripts/verified-proxy.sh` builds them |
-| the tools | `ferrata-day1` and `ferrata-updater` for rc3 (the same copy; `ferrata-day1` rebuilt at `0057fe4f` before the session), `attest-monitor` and the `ferrata-attest` CLI from the tree as committed; sha256 of each in [`report-build/artifacts.txt`](report-build/artifacts.txt) |
-| Ethereum | light-client data: Lodestar and Nimbus (`beacon_api_module`'s providers `lodestar-counted`, `nimbus-counted`, added with its `add_provider`, each through a counting relay); execution: ethpandaops's Sepolia endpoint through `eth_rpc_module` (mode `off`: straight to the endpoint); attest-monitor: Lodestar and publicnode. Reads only, no API key |
+| the modules | built on the box with logos-module-builder `5f74cdb` from this branch at `afd17cd8` ([`report-build/`](report-build/steps.md); the box has no git, so the module's `version()` names no commit: its `source_sha256` `053f98a0b2c53d7d6012f225a0785b3b959f858fd2649e4c3419c4d953804c4d` (`STAGED.json`, `session/rep/U-version.json`) is `stage-updater.sh`'s hash of that commit's sources with v0.4.0-rc3 selected, recomputed by the review): `ferrata_updater_module` from a copy of the tree with LEZ v0.4.0-rc3 selected (`lez/scripts/lez-select.sh`, plus the harness's wire crates and the module's calls crate, which the script leaves on rc1), its lockfile [`modules/ferrata_updater_module/rust-lib/lockfiles/v0.4.0-rc3.Cargo.lock`](../../ferrata_updater_module/rust-lib/lockfiles/v0.4.0-rc3.Cargo.lock), dev package 64,380,611 bytes; the guests it carries are the tree's own (`version()`: the attestation program declared and computed `0x816d1fef…03df`, the image the network runs); `ferrata_attest_module` from the tree as committed (rc1), 3,565,635 bytes; Logos's `beacon_api_module` (`aca138e`) and `eth_rpc_module` (`6965f32`), as `modules/scripts/verified-proxy.sh` builds them |
+| the tools | `ferrata-day1` and `ferrata-updater` for rc3 (the same copy; `ferrata-day1` rebuilt at `fb17fcb3` before the session), `attest-monitor` and the `ferrata-attest` CLI from the tree as committed; sha256 of each in [`report-build/artifacts.txt`](report-build/artifacts.txt) |
+| Ethereum | light-client data: Lodestar and Nimbus (`beacon_api_module`'s providers `lodestar-counted`, `nimbus-counted`, added with its `add_provider`, each through a counting relay); execution: ethpandaops's Sepolia endpoint through `eth_rpc_module` (mode `off`: straight to the endpoint); `verify_checkpoint`'s three beacon providers by URL (directly); attest-monitor: Lodestar and publicnode. Reads only, no API key |
 
 ## What happened (UTC, 23 Nov)
 
@@ -31,7 +34,7 @@ record's files; `python3 -I modules/scripts/test_live_testnet.py` computes every
 |---|---|
 | 14:37–14:55 | `live-testnet.sh instance`: fresh keys (`ferrata-day1 keygen --program 6f9zuRR6…`: the network's program by its account, no program keys), two faucet claims of 10 LGO (each account and its public key only), a fresh finalized Sepolia checkpoint (slot 11,642,496, root `0x7954ad80…`; Lodestar's bootstrap, publicnode's header), **`Init` applied in block 1,698** (114,811 execution gas). Instance `0x3147ce50…ddbb` ([`instance/`](instance/)). Each `ferrata-day1` command followed the network from its genesis (sign 489 s, send 558 s) |
 | 14:58:59 | Logos Core started; the four modules installed and loaded; `beacon_api_module`'s two providers added; `eth_rpc_module` given Sepolia's execution endpoint |
-| 14:59:11–15:08:07 | the updater module's `start`: its set-up followed the network from genesis to block 1,722 (head 1,776) in 535.6 s, every block read through the relay and applied with LEZ's state transition, then answered `started` |
+| 14:59:11–15:08:07 | the updater module's `start`: its set-up followed the network from genesis to block 1,722 (head 1,776): 535.6 s by the module's own line, `start` answered 535.8 s after it was called (the session's marks), every block read through the relay and applied with LEZ's state transition, then answered `started` |
 | 15:08–16:37 | the module kept the instance current: the initial committee adopted (blocks 1,779 and 1,784), the period-1421 update adopting the next committee (blocks 1,789–1,807), then 13 finality updates; **49 of 49 transactions applied, 15 jobs finished**, blocks 1,779–2,302 |
 | 15:16:55 | right after an applied update, on the instance's newest record (slot 11,642,688, Sepolia block 12,196,417): `ferrata_attest_module`'s calls (below) and **one attestation of the Sepolia vault's slots 0 and 1, applied in block 1,831** (249,282 execution gas; `ferrata-day1`, the day-one kit's stage d) |
 | 15:53:39 | the restart through the module: `stop` (0.20 s; the round in hand finished, the backend saved its follower), 15 s, `start` again (1.11 s: the follower restored, to block 2,049 in 1.0 s); 21 transactions applied after it |
@@ -48,9 +51,9 @@ module's first round); `status` through Logos Core answered `running` 88 times o
 
 | the RFP asks | shown here |
 |---|---|
-| a process that follows Ethereum through the Logos Ethereum core module | the updater's two light-client sources are `via = "beacon_api_module"` ([`session/req/updater.toml`](session/req/updater.toml)); `beacon_api_module` carried its 258 requests to Lodestar and 256 to Nimbus (the relays' counts), 7.5 and 7.3 MiB of light-client data, two required to agree (`min_agreeing = 2`). Logos's announced light-client API of its Ethereum module does not exist yet; `beacon_api_module` is Logos Core's module for the beacon API |
+| a process that follows Ethereum through the Logos Ethereum core module | the updater's two light-client sources are `via = "beacon_api_module"` ([`session/req/updater.toml`](session/req/updater.toml)); `beacon_api_module` carried its 258 requests to Lodestar and 256 to Nimbus (the relays' counts), 7.5 and 7.3 MiB of light-client data, two sources required to agree (`min_agreeing = 2`; each source names its provider, which `beacon_api_module` tries first and fails over from: no failover happened, by the relays' counts, and since the review a source refuses an answer from another provider). Logos's announced light-client API of its Ethereum module does not exist yet; `beacon_api_module` is Logos Core's module for the beacon API |
 | detects when the tracked instance is behind, and submits the outstanding light-client updates to LEZ | the journal ([`session/journal.tsv`](session/journal.tsv)) and the backend's manifest ([`session/run.tsv`](session/run.tsv)): 15 jobs, 49 transactions, every one applied on the network; `/health`'s `last_plan` alternates between `up-to-date` and the next step |
-| a Logos module accompanied by a Logos Core headless CLI/daemon, runnable standalone | the module in `logosctl daemon` (headless, nothing else running in that Core but Logos's own modules); its methods `start`, `status`, `metrics`, `stop` through `logosctl call` ([`session/calls.tsv`](session/calls.tsv)). The same daemon as a binary, `ferrata-updater`, is the network's own updater |
+| a Logos module accompanied by a Logos Core headless CLI/daemon, runnable standalone | the module in `logosctl daemon` (headless, nothing else running in that Core but Logos's own modules); its methods `start`, `status`, `metrics`, `stop` through `logosctl call` ([`session/calls.tsv`](session/calls.tsv)). The same daemon runs as a binary, `ferrata-updater` (EVIDENCE rows 79–81) |
 | configurable Ethereum consensus and execution RPC endpoints | consensus: the operator's providers added to `beacon_api_module` (`add_provider`), each source naming its provider (`provider = "lodestar-counted"`); execution: the endpoint given to `eth_rpc_module` (`set_chain_config`), through which `ferrata_attest_module` read the record's block, its receipts and a storage proof. The updater itself needs no execution endpoint: a light-client update carries the execution header the program records |
 | structured logging | one line per transaction (step, result, gas, block, send-to-final time, hash: [`session/updater-module.log`](session/updater-module.log)), the journal (TSV), `/health` (JSON) and `/metrics` (Prometheus), and `status` through Logos Core (JSON, [`session/probes-u1/`](session/probes-u1/)) |
 | a clean shutdown path | `stop`: the round in hand finishes and the backend saves its follower, then `logosctl daemon stop` exit 0; after the restart the module went on from the saved follower |
@@ -65,14 +68,14 @@ sample. Over the updater's 5,928 s (from its `start` to its final `stop`):
 | component | CPU s | share of one core | peak MiB | median MiB |
 |---|---:|---:|---:|---:|
 | `ferrata_updater_module` (its host process with the executor it starts) | 714.39 | 0.120 | 270.9 | 148.1 |
-| — its start: the follower from the network's genesis (531.4 s) | 492.87 | 0.928 | 270.9 | 244.0 |
+| — its start: the follower from the network's genesis (531.4 s between the samples nearest the start's marks) | 492.87 | 0.928 | 270.9 | 244.0 |
 | — after the start (5,391.5 s: 15 jobs, a restart) | 216.72 | **0.040** | 268.4 | 148.1 |
 | `beacon_api_module` | 2.24 | 0.0004 | 59.6 | 59.5 |
 | `eth_rpc_module` | 0.67 | 0.0001 | 57.7 | 57.7 |
 | `ferrata_attest_module` (idle but for its calls) | 1.32 | 0.0002 | 58.7 | 58.7 |
 | — during its calls (60.1 s) | 0.89 | 0.015 | 58.7 | 54.7 |
 | Logos Core's daemon (`logosctl`, its own process) | 0.47 | 0.0001 | 58.2 | 58.2 |
-| Logos Core with every module host process (its tree: Logos's five own modules and these four) | 723.10 | 0.122 | 776.1 | 655.6 |
+| Logos Core with every module host process (its tree: Logos's five own modules and these four; resident memory summed, shared pages counted in each process) | 723.10 | 0.122 | 776.1 | 655.6 |
 | `attest-monitor` (polling every 60 s, its `curl`s included; 5,391.5 s) | 17.99 | 0.0033 | 22.2 | 4.2 |
 
 The module calls, through `logosctl` ([`session/calls.tsv`](session/calls.tsv)): `verify_checkpoint` 5.31 s (the
@@ -87,12 +90,13 @@ The one-shot tools (GNU time):
 
 | tool | wall s | CPU s | peak MiB |
 |---|---:|---:|---:|
-| `ferrata-attest` CLI, its journey of `lez/ATTEST-CLI.md` (in-process chain, recorded Sepolia data, dev mode; exit 3, the refusal 130 its dry run predicted) | 119.15 | 121.61 | 137.1 |
+| the harness's `ferrata-attest` (debug build), its journey of `lez/ATTEST-CLI.md` on the in-process chain with recorded Sepolia data, dev mode (103.3 s of it the replay of 169 recorded transactions; exit 3, the refusal 130 its dry run predicted): not the operating cost of `ferrata attest`, measured on the network in session 2 | 119.15 | 121.61 | 137.1 |
 | `ferrata-day1 send` (the `Init`, following the network from its genesis first) | 557.86 | 517.65 | 137.1 |
 | `ferrata-day1 sign` (the attestation; the follower resumed) | 0.98 | 0.90 | 114.3 |
 | `ferrata-day1 send` (the attestation, until final on Bedrock) | 24.58 | 1.19 | 116.8 |
 
-Traffic (each daemon's own relay; the HTTP requests and answers, TLS not counted), after the updater's start, over
+Traffic (each daemon's own relay; the HTTP requests and answers, uncompressed (the relay asks for no compression), TLS
+not counted), after the updater's start, over
 5,370 s (per hour *derived*):
 
 | daemon → endpoint | requests | up | down | MB per hour up / down |
@@ -124,8 +128,9 @@ and `stop` answered without error; `logosctl daemon stop` exit 0.
 | Logos Core with every module host process | 1.84 | 0.0014 | 480.3 | — |
 
 Against the binaries' run (`lez/results/perf-daemons.md`: `monitor` 0.53 CPU s and 14.0 MiB, the relayer 0.87 CPU s
-and 20.3 MiB, the same traffic to within 1%): as modules the daemons cost the same CPU and traffic; each host
-process holds about 55–60 MiB of its own (the idle `eth_rpc_module` host in the live run: 57.7 MiB).
+and 20.3 MiB, the same traffic to within 1%): as modules the daemons carry the same traffic (within 1%) and take no
+more CPU; each host process's resident memory, shared pages (Qt, liblogos) counted in each process, is about 57–60 MiB
+idle (the idle `eth_rpc_module` host in the live run: 57.7 MiB).
 
 ## Not shown here
 
@@ -134,9 +139,13 @@ process holds about 55–60 MiB of its own (the idle `eth_rpc_module` host in th
   expose), `monitor`'s traffic to a LEZ node (it has no LEZ client: its node view comes from a file or a command).
 - The proven path, the A3 gate's three daemons (RFP-021 R.9, R.10), and Logos's testnet 0.4 (this network is ours).
 - The session's first `start` used the module's default (`quiet`): the daemon's own job lines (finalized slot, root,
-  sources) are in the log only after the restart, which asked for them. `check.py`'s check that every applied job's
-  update is in the log therefore fails for the first life; its checks of the journal against the manifest pass, and
-  every job's root is checked by attest-monitor's providers instead (`summary.json`).
+  sources) are in the log only after the restart. `session/req/updater-config.json` is the restart's request: before
+  the restart it was edited by hand on the box to add `"quiet": false`; the first start's request was
+  `{"config_file": "<out>/session/req/updater.toml"}`, as `live-testnet.sh` wrote it then (it now asks for
+  `quiet: false` at both starts, as session 2 did). So `check.py` on `session/` exits 1: its one FAIL is that check
+  (life 1 has no job lines), and its line "N applied jobs advance the finalized header" counts life 2's jobs only (7;
+  all 14 that advanced are checked by the record's own check, against attest-monitor's providers: `summary.json`).
+  Its checks of the journal against the manifest pass.
 - An earlier attempt's container was lost before its call ended (its keys with it: two faucet claims, and an `Init`
   that may have been applied under an unknown instance id).
 
@@ -144,7 +153,7 @@ process holds about 55–60 MiB of its own (the idle `eth_rpc_module` host in th
 
 ```sh
 python3 -I modules/scripts/test_live_testnet.py        # every figure and check again from these files (offline)
-python3 -I lez/updater/results/live-sepolia/check.py modules/results/live-testnet-2026-11-23/session   # journal vs manifest
+python3 -I lez/updater/results/live-sepolia/check.py modules/results/live-testnet-2026-11-23/session   # journal vs manifest: exit 1, the one expected FAIL above
 # the run (build box; FERRATA_TESTNET_RPC = the network's RPC, FERRATA_TESTNET_SEND=yes; sends to that network only):
 modules/scripts/live-testnet.sh build OUT && modules/scripts/live-testnet.sh instance OUT
 modules/scripts/live-testnet.sh session OUT 90 && modules/scripts/live-testnet.sh build-bridge OUT
