@@ -225,10 +225,11 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   for an `Init` or an `Open` the zone refused so (how a caller of `ferrata_attest_module`, whose `lez_submit` reports
   inclusion only, reads the outcome). Before an update's signature slot the refusal stays LEZ's text, with the time the
   window opens. The limit: a windowed step is sent when the later of the two clocks is more than a minute before its
-  end, and charged the whole gas limit when the block that includes it is stamped at or after the end; so it is
-  charged exactly when that block comes more than a minute after the later clock at the send: (a) this machine's clock
-  more than the minute behind a zone that has stamped no block since the end; (b) a zone that stalls, stamping no block
-  for more than about a minute after the send, then resumes past the end, whatever the clocks. Its receipt then shows
+  end, and charged the whole gas limit when the block that includes it is stamped at or after the end; so it is charged
+  only if that block comes more than a minute after the later clock at the send: (a) this machine's clock more than the
+  minute behind a zone that has stamped no block since the end; (b) a zone that stalls, stamping no block for more than
+  about a minute after the send, then resumes past the end, whatever the clocks; (c) a transaction that waits in the
+  sequencer's pool more than a minute while blocks continue (a backlog). Its receipt then shows
   code 53.
 - Exit status: 0 applied (or would be); 3 refused, as the dry run said (or by LEZ's clock past a checkpoint's period,
   or held because of it); 1 the dry run and the zone disagree, or the verdict and the dry run, or the sequencer turned
@@ -244,9 +245,11 @@ the same command applied once afterwards; kills while reading Ethereum, with the
 not yet final, and after an `advance` job's `Open`, each run again with nothing sent or applied twice; the journal's
 guards (the same command spelled otherwise, a submission turned away, a resend turned away while the earlier copy was
 pending, a nonce taken, `--again` on an interrupted run, no `--state-dir`, two runs on one state directory); and the stale checkpoint's code 53 message for an `Init` and for an
-update, from the dry run, from the zone's receipt and from `receipt`, a lagging final tip, and a run resumed past the
-end with or without a block stamped since (nothing sent, the journal cleared), and near it with the earlier copy
-pending (the run left unfinished, the copy found applied). The library's tests map the refusal a real LEZ v0.4.0-rc1 sequencer gave
+update, from the dry run, from the zone's receipt and from `receipt`, a lagging final tip, a run resumed past the end
+(nothing sent; the journal cleared once the zone has stamped a block past the end, kept until then), one with this
+machine's clock ahead of the zone's (held, the journal kept, the copy found applied), one never handed to the sequencer
+and held by this machine's clock (the journal cleared), and one near it with the earlier copy pending (the run left
+unfinished, the copy found applied). The library's tests map the refusal a real LEZ v0.4.0-rc1 sequencer gave
 (`../e2e/runs/ci-sequencer-attest-2026-11-21/records/`). `ferrata_attest_module`'s own Ethereum reads (`fetch_log_proof`,
 and `eth_getProof` behind `build_attest_tx` and `dry_run_attest`) are tested against the same failures in CI's
 `modules-resolve` job, over their `rpc_url` route and over the route through Logos Core's `eth_rpc_module` with the

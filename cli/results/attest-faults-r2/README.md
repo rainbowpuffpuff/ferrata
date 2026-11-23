@@ -18,11 +18,12 @@ in 5.2 s (16 failing calls over `rpc_url`, 9 over `eth_rpc_module`). Clippy: no 
 Each `*.txt` under the directories is one command's output, in order (machine paths replaced by `<repo>`); `[exit N]` is
 its exit status, `[killed: …]` a SIGKILL from the test. 67 commands: 27 exit 0, 5 exit 1, 4 exit 2, 12 exit 3, 8 exit
 4, 11 killed. Every command runs with `FERRATA_ATTEST_CLOCK_MS` set (`0` unless a case sets this machine's clock), so
-each output begins with the tool's note naming it. The R.5 zone: 12 submissions, 11 transactions included, each once (one byte-for-byte resubmission); the
-guards' zone: 15 submissions admitted, 2 turned away, 13 included, each once. `Attest` cost 94,795 (a log) to 275,925
-(a slot with its predicate) execution gas; a refused `Init` was charged 10,000,000 (the gas limit). `test-output.log` is the test binary's own output;
-`module/failing_endpoint.txt` the module test's. No transaction hash is quoted here: signatures are randomized, so a
-rerun gives other hashes with the same exits, gas and messages.
+each record ends with the tool's note naming it (standard error), except `r5-guards/05`, refused before it is read. The
+R.5 zone: 12 submissions, 11 transactions included, each once (one byte-for-byte resubmission); the guards' zone: 15
+submissions admitted, 2 turned away, 13 included, each once. `Attest` cost 94,795 (a log) to 275,925 (a slot with its
+predicate) execution gas; a refused `Init` was charged 10,000,000 (the gas limit). `test-output.log` is the test
+binary's own output; `module/failing_endpoint.txt` the module test's. No transaction hash is quoted here: signatures are
+randomized, so a rerun gives other hashes with the same exits, gas and messages.
 
 ## What ran
 
@@ -36,7 +37,8 @@ rerun gives other hashes with the same exits, gas and messages.
   `crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10`, with faults on demand.
 - **The tool**: the `ferrata` binary built from this tree, run as a process, its follower starting from the zone's
   genesis state. **The module**: `ferrata_attest_module`'s calls crate (`fetch_log_proof`, `build_attest_tx`,
-  `dry_run_attest`), its plain `rpc_url` path. Nothing left 127.0.0.1.
+  `dry_run_attest`), its plain `rpc_url` path, and its `eth_rpc_module` route with Logos's call replaced by a stand-in.
+  Nothing left 127.0.0.1.
 
 ## R.5 (`r5/`, `r5-guards/`, `module/`): nothing done twice
 

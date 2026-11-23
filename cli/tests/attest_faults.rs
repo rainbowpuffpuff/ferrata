@@ -1287,6 +1287,7 @@ fn stale_checkpoint_shown_as_code_53() {
     kill(child, &out_path);
     let (code, out) = t.run_at("init-run-again-machine-ahead", &strs(&init), end + 10_000);
     assert_eq!(code, 3, "{out}");
+    has(&out, "note: FERRATA_ATTEST_CLOCK_MS sets this machine's clock");
     has(&out, "not sent again: refused with 53 OutsideWeakSubjectivityPeriod");
     has(&out, "this machine's clock (the zone has stamped no later block)");
     has(&out, "may still be pending: the run stays unfinished");
@@ -1311,6 +1312,35 @@ fn stale_checkpoint_shown_as_code_53() {
         1,
         "one Init"
     );
+
+    // The same, but the earlier run never handed its transaction to the sequencer (killed after writing its journal,
+    // before the send: the pool emptied and the step marked not attempted, as that run would have left it). No copy
+    // can land, so the run held by this machine's clock alone clears the journal; nothing is sent.
+    let zone = Arc::new(Mutex::new(Zone::genesis(end - 300_000)));
+    zone.lock().unwrap().mode = Mode::Queue;
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-resume-never-sent-machine-ahead", &lez, &zone.lock().unwrap());
+    let (child, out_path) = t.spawn("init-killed-in-pool", &strs(&init));
+    wait_for("the Init", 300, || !zone.lock().unwrap().submitted.is_empty());
+    kill(child, &out_path);
+    {
+        let mut z = zone.lock().unwrap();
+        z.pending.clear();
+        z.submitted.clear();
+    }
+    let journals: Vec<_> = std::fs::read_dir(t.state.join("sent")).unwrap().map(|e| e.unwrap().path()).collect();
+    assert_eq!(journals.len(), 1, "one journal");
+    let mut j: Value = serde_json::from_str(&std::fs::read_to_string(&journals[0]).unwrap()).unwrap();
+    for step in j["steps"].as_array_mut().unwrap() {
+        step["attempted"] = json!(false);
+    }
+    std::fs::write(&journals[0], serde_json::to_string_pretty(&j).unwrap()).unwrap();
+    let (code, out) = t.run_at("init-run-again-never-sent-machine-ahead", &strs(&init), end + 10_000);
+    assert_eq!(code, 3, "{out}");
+    has(&out, "this machine's clock (the zone has stamped no later block)");
+    has(&out, "is cleared");
+    assert_eq!(zone.lock().unwrap().submitted.len(), 0, "nothing sent");
+    assert_eq!(std::fs::read_dir(t.state.join("sent")).map(|d| d.count()).unwrap_or(0), 0, "the journal cleared");
 
     // The first review's L1 case exactly: the zone's clock past the end and no block stamped since (a sequencer back
     // from a stall, before its first block). The zone's newest block is an hour before the end; this machine's clock,
