@@ -6,14 +6,15 @@ a daemon that runs helpers, such as a Logos module's host process with the execu
       --out samples.csv --every 5
 
 --pid NAME=PID names a process; --find NAME=TEXT names the process whose command line (arguments joined by spaces)
-contains TEXT and whose program's name contains TEXT's first word (a Nix wrapper's `.NAME-wrapped` too), looked up again at every sample until found (and again if it
-exits). One CSV row per name and sample:
+contains TEXT and whose program's name contains TEXT's first word (a Nix wrapper's `.NAME-wrapped` too), looked up
+again at every sample until found (and again if it exits). One CSV row per name and sample:
   t            UNIX seconds
   name, pid    (pid 0 while not found)
   cpu_s        the process's own CPU seconds (utime + stime)
   cpu_reaped_s CPU seconds of its children that exited and were waited for (cutime + cstime)
   cpu_tree_s   cpu_s + cpu_reaped_s + the same two of every live descendant
-  rss_kb       the process's resident memory (VmRSS); hwm_kb its peak (VmHWM)
+  rss_kb       the process's resident memory (VmRSS); hwm_kb its peak (VmHWM; 0 where the kernel does not report it,
+               as the build box's gVisor: the peak is then the largest sample)
   rss_tree_kb  resident memory of the process and its live descendants together
   procs        processes in the tree"""
 import argparse, os, signal, sys, time
