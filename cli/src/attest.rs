@@ -1214,7 +1214,11 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                 "note: an earlier run sent this command (journal {}, {}){}",
                 s.path.display(),
                 j.status.map_or("unfinished".into(), |st| format!("exit status {st}")),
-                if a.again { "; --again: sending it once more" } else { "; with --send --yes nothing more is sent" }
+                match (a.again, j.status) {
+                    (true, _) => "; --again: sending it once more",
+                    (false, Some(_)) => "; with --send --yes nothing more is sent",
+                    (false, None) => "; with --send --yes it is finished with the transactions that run signed",
+                }
             );
         }
     }
@@ -1537,7 +1541,7 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                     println!("attest: the Ethereum endpoint {endpoint}: {e:#}");
                     println!(
                         "  nothing was sent, and the follower's state is kept: run the same command again once the endpoint \
-                         serves the record's chain"
+                         answers, on the record's chain"
                     );
                     run.log(json!({ "what": "attest", "phase": "endpoint-failed", "endpoint": endpoint, "error": format!("{e:#}") }));
                     return Ok(4);

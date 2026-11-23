@@ -776,6 +776,7 @@ fn failing_endpoint_and_interruptions_do_nothing_twice() {
     }
     let status = rerun.wait().unwrap();
     let out = std::fs::read_to_string(&rerun_out).unwrap();
+    std::fs::write(&rerun_out, format!("{out}[exit {}]\n", status.code().unwrap_or(-1))).unwrap();
     assert_eq!(status.code(), Some(0), "{out}");
     assert_eq!(submitted(), s0 + 6, "nothing sent by the second run");
     let (code, out) = t.run("attest-in-block-finished-run-again", &strs(&plain));
