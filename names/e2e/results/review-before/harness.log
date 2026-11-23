@@ -1,0 +1,101 @@
+warning: lee@0.1.0: Generated module at <repo>/lez/target/debug/build/lee-946ef43b73a11943/out/lee/privacy_preserving_circuit/mod.rs
+warning: programs@0.1.0: Generated module at <repo>/lez/target/debug/build/programs-64ee1b9189a8bf3b/out/lez/programs/mod.rs
+   Compiling methods v0.1.0 (<repo>/lez/methods)
+   Compiling methods-names v0.1.0 (<repo>/lez/methods-names)
+   Compiling harness v0.1.0 (<repo>/lez/harness)
+    Finished `test` profile [optimized + debuginfo] target(s) in 9.07s
+     Running tests/names_review.rs (target/debug/deps/names_review-231390ca9ad8e38b)
+
+running 9 tests
+test l12_look_alikes_are_refused ... ROW | t+      2000 ms | commit to `alice` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `alice` | ok true | exit None | revert None
+ROW | t+    602000 ms | commit to `a1ice` | ok true | exit None | revert None
+ROW | t+    842000 ms | reveal `a1ice` | ok true | exit None | revert None
+
+thread 'l12_look_alikes_are_refused' (1631) panicked at harness/tests/names_review.rs:185:9:
+`a1ice` registered beside `alice`
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test l12_variants_of_reserved_names_are_refused ... ROW | t+      2000 ms | commit to `faucet1` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `faucet1` | ok true | exit None | revert None
+
+thread 'l12_variants_of_reserved_names_are_refused' (1712) panicked at harness/tests/names_review.rs:198:9:
+`faucet1` registered
+FAILED
+test l13_no_offer_lands_after_expiry ... ROW | t+      2000 ms | commit to `zed` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `zed` | ok true | exit None | revert None
+ROW | t+15552839000 ms | offer with now_ms 1 ms before expiry, landing 9 min 59 s after it | ok true | exit None | revert None
+
+thread 'l13_no_offer_lands_after_expiry' (1753) panicked at harness/tests/names_review.rs:170:5:
+an offer landed after expiry
+FAILED
+test l13_no_renewal_lands_after_the_grace_period ... ROW | t+      2000 ms | commit to `zed` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `zed` | ok true | exit None | revert None
+ROW | t+18144839000 ms | renew with now_ms 1 ms before the grace period ends, landing 9 min 59 s after it | ok true | exit None | revert None
+
+thread 'l13_no_renewal_lands_after_the_grace_period' (1814) panicked at harness/tests/names_review.rs:156:5:
+a renewal landed 599 s after the grace period ended
+FAILED
+test l14_a_lapsed_name_is_taken_without_the_old_owners_actor ... ROW | t+      2000 ms | commit to `zed` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `zed` | ok true | exit None | revert None
+ROW | t+18144243000 ms | commit to `zed` | ok true | exit None | revert None
+ROW | t+18144483000 ms | reveal `zed` | ok false | exit None | revert Some("Program violated execution rules")
+
+thread 'l14_a_lapsed_name_is_taken_without_the_old_owners_actor' (1875) panicked at harness/tests/names_review.rs:89:5:
+reveal `zed`: exit None, Some("Program violated execution rules")
+FAILED
+test l14_accept_does_not_need_the_old_owners_actor ... ROW | t+      2000 ms | commit to `gift` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `gift` | ok true | exit None | revert None
+ROW | t+    602000 ms | alice offers `gift` to bob | ok true | exit None | revert None
+ROW | t+    604000 ms | bob accepts, his actor and the name's only | ok false | exit None | revert Some("Program violated execution rules")
+
+thread 'l14_accept_does_not_need_the_old_owners_actor' (1944) panicked at harness/tests/names_review.rs:89:5:
+bob accepts, his actor and the name's only: exit None, Some("Program violated execution rules")
+FAILED
+test m1_a_refused_reveal_does_not_hand_the_name_to_a_copier ... ROW | t+     10000 ms | alice commits to `alice` | ok true | exit None | revert None
+ROW | t+     22000 ms | alice reveals too early (refused; the name is now in a block) | ok false | exit Some(232) | revert Some("Program exited with non-zero code 232 after 9810 cycles")
+ROW | t+     24000 ms | mallory commits to `alice` (now_ms 2 min back) | ok true | exit None | revert None
+ROW | t+    146001 ms | mallory reveals `alice` when her window opens | ok true | exit None | revert None
+ROW | t+    242000 ms | alice reveals when her window opens | ok false | exit Some(247) | revert Some("Program exited with non-zero code 247 after 12599 cycles")
+
+thread 'm1_a_refused_reveal_does_not_hand_the_name_to_a_copier' (2021) panicked at harness/tests/names_review.rs:89:5:
+alice reveals when her window opens: exit Some(247), Some("Program exited with non-zero code 247 after 12599 cycles")
+FAILED
+test m1_an_owner_whose_reveal_was_refused_can_still_take_the_name ... ROW | t+      2000 ms | commit to `held-0` | ok true | exit None | revert None
+ROW | t+    242000 ms | reveal `held-0` | ok true | exit None | revert None
+ROW | t+    252000 ms | commit to `held-1` | ok true | exit None | revert None
+ROW | t+    492000 ms | reveal `held-1` | ok true | exit None | revert None
+ROW | t+    502000 ms | commit to `held-2` | ok true | exit None | revert None
+ROW | t+    742000 ms | reveal `held-2` | ok true | exit None | revert None
+ROW | t+    752000 ms | commit to `held-3` | ok true | exit None | revert None
+ROW | t+    992000 ms | reveal `held-3` | ok true | exit None | revert None
+ROW | t+   1002000 ms | commit to `held-4` | ok true | exit None | revert None
+ROW | t+   1242000 ms | reveal `held-4` | ok true | exit None | revert None
+ROW | t+   1252000 ms | alice commits to `prize` | ok true | exit None | revert None
+ROW | t+   1492000 ms | alice reveals `prize` (refused TOO_MANY; the name is now public) | ok false | exit Some(251) | revert Some("Program exited with non-zero code 251 after 9757 cycles")
+ROW | t+   1494000 ms | mallory commits to `prize` | ok true | exit None | revert None
+ROW | t+   1615001 ms | mallory reveals `prize` when her window opens | ok true | exit None | revert None
+ROW | t+   1644001 ms | alice releases held-0 | ok true | exit None | revert None
+ROW | t+   1655001 ms | alice reveals `prize` again, 3 minutes after her first attempt | ok false | exit Some(247) | revert Some("Program exited with non-zero code 247 after 12599 cycles")
+
+thread 'm1_an_owner_whose_reveal_was_refused_can_still_take_the_name' (2106) panicked at harness/tests/names_review.rs:89:5:
+alice reveals `prize` again, 3 minutes after her first attempt: exit Some(247), Some("Program exited with non-zero code 247 after 12599 cycles")
+FAILED
+test m4_bad_state_is_reached_with_a_corrupt_record ... ROW | t+      2000 ms | renew `broken`, whose record does not decode | ok false | exit Some(241) | revert Some("Program exited with non-zero code 241 after 9589 cycles")
+ok
+
+failures:
+
+failures:
+    l12_look_alikes_are_refused
+    l12_variants_of_reserved_names_are_refused
+    l13_no_offer_lands_after_expiry
+    l13_no_renewal_lands_after_the_grace_period
+    l14_a_lapsed_name_is_taken_without_the_old_owners_actor
+    l14_accept_does_not_need_the_old_owners_actor
+    m1_a_refused_reveal_does_not_hand_the_name_to_a_copier
+    m1_an_owner_whose_reveal_was_refused_can_still_take_the_name
+
+test result: FAILED. 1 passed; 8 failed; 0 ignored; 0 measured; 0 filtered out; finished in 10.50s
+
+error: test failed, to rerun pass `-p harness --test names_review`

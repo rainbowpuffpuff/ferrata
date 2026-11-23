@@ -173,6 +173,27 @@ table unchanged. Rebuild: `cd lez && cargo build -p harness --features statement
 | their reference reader (`lez/guests/statements-reader`): `ferrata_statements_reader` | `0xd2a8b082f1e4326daad8aad58c2a525f76f17001bb362040fec67260d4d3e73d` | `a74b740eb72c18a06d62a8f55c845fa88a171c913604bf3bdb5d9e2c0d39aa18` | 316,572 | `8a804edfc5b9fa054717ca5c69e7552b2dd58b843f29461fccd6fcff00cf1acf` |
 | the operator rebate (`lez/guests/rebate`): `ferrata_rebate` | `0xe8f1c1c1381a08faf284fd33226ae11fcb4b7b7d3c397faa113b76d9c7e6d902` | `9891fe89165220ae46fd5d1ad6f285b750ceb2b65a431b030356bee1b6e5b1bd` | 290,528 | `f800cf60d551e0a24e0161665205b7b94dfa8da0dd840392361eaa06e9560b04` |
 
+## The test network's names program (`ferrata_names`; 23 November 2026)
+
+`lez/guests/names` with `lez/names-wire` ([`names/README.md`](../names/README.md)): a new program, built by
+`lez/methods-names` behind the harness feature `names`, on the Modal build box (RISC Zero 3.0.5, guest Rust 1.91.1,
+through `scripts/guest-rustc`); no other program changes. Each id is risc0-build's (`FERRATA_NAMES_ID`) and equals
+`r0vm --elf <binary> --id`; the rc1 and rc3 builds of one source differ only by the LEZ tag `lee_core` is taken from.
+The rows are [`names/image-ids.md`](../names/image-ids.md)'s (raw: `names/e2e/results/image-ids.tsv`), each under its
+own name here. Rebuild: `names/e2e/box.sh build && names/e2e/box.sh ids`.
+
+- v1 is **live and immutable** on our test network (header `4EBU635H…`, `/programs.json`; the review read it on 23
+  November 2026). Its source, before the review's fixes, is not in this repository's history (only
+  `lez/names-wire/src/lib.rs` differs from v2's).
+- v2 (the review's fixes) is **not yet on the public test network**: a new program at a new address, which does not
+  read v1's records.
+
+| Program | Image id | sha256 of the binary | Bytes | sha256 of the user ELF |
+|---|---|---|---:|---|
+| names v2, the LEZ v0.4.0-rc3 build, to deploy (`lez/guests/names`): `ferrata_names_v2_rc3` | `0x28d63f2075ffb92d653149f9da00b20c85ab77a365f31263c6483387cd43be9d` | `d6f7c2497a5aa671f4fa6b53ddc51cc9c80310ee6c2d67d55385bd089e52c293` | 306,404 | `34bc4c0980d8e0d8aae4411e7cf9928d69d463cf46dd8260d60932f67ce15289` |
+| names v2, the LEZ v0.4.0-rc1 build (the harness default): `ferrata_names_v2_rc1` | `0x8417e74bb939bf373abe69e1f34807cc7e64f5d7df4880766ab8a5c0a028255b` | `ac9f386fce3f39a1f62c22f86ad18eaa5b3f88f3a5de0715be4964fb09ace752` | 306,404 | `26f2cc4b718f27ca412f71e6bb615fd2ca1fdba213fa986ed499182127cfdc38` |
+| names v1, the LEZ v0.4.0-rc3 build, live: `ferrata_names_v1_rc3` | `0xee9578cab413451e1f0a0cf267a7874ca3231ed0a30907f5d793648ac4e6f790` | `5653a2ee1c3a85f3b29f32a1a227030a2619c096d0dd7c6c92b872e9e7ce75ab` | 287,672 | `eacdfd305520939ba4f092371159a484ec07a1133b5c7e43b764b9a03e9844e5` |
+| names v1, the LEZ v0.4.0-rc1 build: `ferrata_names_v1_rc1` | `0xe4b7d67291668c6309449e3b1d9627a91fdc5916eaa8344c949f3657ea54a71b` | `f232f4b0520b4038abaf4990eafb592ec53ffaaec3e5d93dd5a71c65ecf936c1` | 287,672 | `6e0c91ea65fee6fbef135977fbfb0837210640dec073377680a4da1e54746ec7` |
 
 ## Superseded: the ids the November vaults and the recorded runs pin
 

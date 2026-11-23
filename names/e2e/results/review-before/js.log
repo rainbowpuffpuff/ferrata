@@ -1,0 +1,152 @@
+TAP version 13
+# Subtest: L16: the CLI signs a commit on this branch alone
+not ok 1 - L16: the CLI signs a commit on this branch alone
+  ---
+  duration_ms: 123.358254
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:62:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    ferrata-names: signing needs the web wallet's lez.js (FERRATA_LEZ_JS; not found at )
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:67:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: M1: an early reveal is refused locally, even with --force
+not ok 2 - M1: an early reveal is refused locally, even with --force
+  ---
+  duration_ms: 113.882656
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:76:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /too early/. Input:
+    
+    "ferrata-names: signing needs the web wallet's lez.js (FERRATA_LEZ_JS; not found at )\n"
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: |-
+    ferrata-names: signing needs the web wallet's lez.js (FERRATA_LEZ_JS; not found at )
+    
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:85:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: M1: preflightReveal finds what would refuse the reveal
+not ok 3 - M1: preflightReveal finds what would refuse the reveal
+  ---
+  duration_ms: 0.72656
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:91:1'
+  failureType: 'testCodeFailure'
+  error: 'names.preflightReveal is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:96:25)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: L5: resolve refuses when the RPCs disagree
+not ok 4 - L5: resolve refuses when the RPCs disagree
+  ---
+  duration_ms: 4.656356
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:102:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /disagree/. Input:
+    
+    'TypeError: this.rpc.call is not a function'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+  error: 'this.rpc.call is not a function'
+  name: 'TypeError'
+  stack: |-
+    Names.actorState (file://<repo>/names/js/names.js:270:32)
+    Names.record (file://<repo>/names/js/names.js:280:26)
+    async Names.resolve (file://<repo>/names/js/names.js:288:15)
+    async waitForActual (node:assert:644:5)
+    async Function.rejects (node:assert:767:25)
+    async TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:106:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  operator: 'rejects'
+  stack: |-
+    async TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:106:3)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: L12: look-alikes share a skeleton and variants of reserved names are refused
+not ok 5 - L12: look-alikes share a skeleton and variants of reserved names are refused
+  ---
+  duration_ms: 0.487302
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:110:1'
+  failureType: 'testCodeFailure'
+  error: 'N.skeleton is not a function'
+  code: 'ERR_TEST_FAILURE'
+  name: 'TypeError'
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:111:18)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: L15: every exit code is described
+not ok 6 - L15: every exit code is described
+  ---
+  duration_ms: 0.237144
+  type: 'test'
+  location: '<repo>/names/js/test/review.test.mjs:123:1'
+  failureType: 'testCodeFailure'
+  error: 'code 234'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<repo>/names/js/test/review.test.mjs:125:12)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 0
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 432.291146

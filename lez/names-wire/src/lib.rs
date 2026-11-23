@@ -1,0 +1,810 @@
+//! `ferrata_names` v2: human-readable names for LEZ accounts. EXPERIMENTAL, UNAUDITED, for the test network.
+//!
+//! A name (`alice`) resolves to a record: its owner, an optional public account it points to (the target), an
+//! optional private receiver (the nullifier public key and viewing public key a sender needs to pay the name's holder
+//! privately, without learning any of the holder's accounts), and an expiry. Reverse resolution (account → name) is
+//! the account's own choice of primary name, checked against the forward record by every reader.
+//!
+//! v2 answers the independent review of v1 (`0xee9578ca…f790`, still live and immutable at its own address): a refused
+//! reveal no longer hands the name to a copier (M1: the oldest commitment wins, not the first reveal), deadlines hold
+//! for the block rather than for the caller's clock (L13), look-alikes and variants of reserved names are refused
+//! (L12), and a name can leave an account without that account's actor in the transaction (L14).
+//!
+//! # Actors (P is the program's account id, wherever it is deployed)
+//!
+//! * `user(a)` = `Actor(a, P)`, the account's own actor of this program. Every action is a transaction signed by `a`
+//!   whose root message goes to `user(a)` (LEZ marks it authorized because `a` signed it); `user(a)` forwards it to the
+//!   name's actor, which therefore sees the caller as `from = user(a)`: nobody can act for an account they cannot sign
+//!   for. Its state ([`UserState`]) lists the names `a` holds (the squatting limit), `a`'s primary name, and `a`'s
+//!   pending commitment.
+//! * `name(n)` = the public PDA of P with seed `sha256("ferrata-names/v2/name/" || skeleton(n))` ([`name_seed`],
+//!   [`skeleton`]): its state is the [`NameRecord`] of the one name of that skeleton, or empty. Look-alikes share the
+//!   address, so only one of them can be registered at a time.
+//! * `sequence` = the public PDA of P with seed `sha256("ferrata-names/v2/sequence")`: a counter that numbers every
+//!   commitment in the order the chain applies them ([`sequence_actor`]).
+//!
+//! # Rules (all enforced by the program; [`check_name`] and the constants)
+//!
+//! * A name is 3 to 32 bytes of `a-z`, `0-9` and `-`, neither starting nor ending with `-`, without `--` (no upper
+//!   case, no Unicode). One name per [`skeleton`]: `0` reads as `o`, `1` as `l`, `rn` as `m`, `vv` as `w`, so `a1ice`
+//!   cannot be registered while `alice` holds its address ([`code::CONFUSABLE`]). Reserved: the names in [`RESERVED`]
+//!   and their variants: any `-`-separated part that is, or with its leading and trailing digits removed is, a
+//!   reserved name up to the skeleton (`faucet1`, `wa11et`, `ferrata-team`, `0fficial`).
+//! * First committed, first served; no fee on the test network. An account holds at most [`MAX_NAMES`] names.
+//! * Registration is commit and reveal. `Commit` stores at `user(a)` a hash of the account, a 32-byte salt and the
+//!   name ([`commitment`]), numbered by `sequence`. `Register` (the reveal) carries the name and the salt; it is
+//!   accepted only from the account that committed, with the same salt, from `now_ms + COMMIT_SLACK_MS +
+//!   MIN_REVEAL_DELAY_MS` of the commit (4 minutes) until [`MAX_REVEAL_WINDOW_MS`] (1 hour) after its `now_ms`, its
+//!   whole validity window inside that. The name goes to the oldest commitment: a reveal whose commitment is older
+//!   than the one that registered the name takes it from that registrant, as long as that registration is less than
+//!   [`CONTEST_MS`] (1 hour) old. Why: a reveal that is refused or reverts is still in a block, name and all; anyone
+//!   who reads it can commit, but only after it, so with a younger commitment. The account whose commitment came
+//!   first can therefore always land a valid reveal later in its own window and take the name, from anyone who
+//!   revealed in between. The 4-minute delay and the 2-minute window ([`COMMIT_SLACK_MS`]) still keep a copier from
+//!   ever revealing while the first valid reveal can land, so a registration made by a reveal that never failed is
+//!   not displaced by anyone who learned the name from it. A registration is final [`CONTEST_MS`] after it.
+//! * A registration lasts [`TERM_MS`] (180 days) from its `now_ms`; the owner renews it (to 180 days from the
+//!   renewal) until the grace period ([`GRACE_MS`], 30 days) after expiry ends. Past expiry the name no longer
+//!   resolves and only `Renew` and `Release` work; past the grace period anyone (the old owner too) may register it
+//!   afresh.
+//! * Only the owner offers (transfers), updates, renews or releases. A transfer takes two steps: the owner's `Transfer`
+//!   offers the name to an account, which takes it with `Accept`. A newer offer replaces the pending one; a `Transfer`
+//!   to the owner withdraws it. An offer does not survive the name's expiry: `Accept` is refused once the name may
+//!   have expired, and a renewal that may land after the expiry drops the offer. On acceptance the name points at the
+//!   new owner and the private receiver is dropped.
+//! * A name that leaves an account without that account signing (accepted by the recipient, registered afresh after
+//!   it lapsed, or taken by an older commitment) stays in that account's list until the account sends `Forget`;
+//!   nothing in those transactions needs that account's actor (a private account's actor could not be admitted in a
+//!   public transaction).
+//! * Time: an action that depends on it carries the caller's `now_ms` and sets the transaction's timestamp validity
+//!   window to `[now_ms, now_ms + CLOCK_SLACK_MS)` (`COMMIT_SLACK_MS` for a commit and a reveal), so LEZ applies it
+//!   only in a block whose timestamp is in that window. A condition "before a deadline" must hold for the whole window
+//!   (`now_ms + slack <= deadline`), "after a start" for its start (`now_ms >= start`): no deadline is ever met late.
+//!
+//! # What it does not do
+//!
+//! The owner of a name is a public account (it signs). A name can point at no public account and carry only a private
+//! receiver: then senders learn nothing about the holder's accounts, but the record still shows the owning account,
+//! which should then be an account used for nothing else. The private receiver's keys are stored as given (their
+//! lengths are checked, not their validity). A sequencer that withholds an account's valid reveals for the whole hour
+//! of its commitment can still give the name to another.
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use lee_core::{
+    account::{AccountId, Actor},
+    program::{PdaSeed, ProgramEvent, ReceiveInput, Response},
+};
+use sha2::{Digest, Sha256};
+
+/// The least and greatest length of a name, in bytes.
+pub const MIN_LEN: usize = 3;
+pub const MAX_LEN: usize = 32;
+/// Names nobody can register on the test network (impersonation of the network's own services), with their variants
+/// ([`is_reserved`]).
+pub const RESERVED: &[&str] = &[
+    "admin", "administrator", "bridge", "explorer", "faucet", "ferrata", "help", "lez", "logos", "null", "official",
+    "root", "security", "sequencer", "support", "system", "treasury", "validator", "wallet",
+];
+/// Names one account may hold at once (a name that left the account without it signing counts until it is forgotten).
+pub const MAX_NAMES: usize = 5;
+const DAY_MS: u64 = 86_400_000;
+/// How long a registration or renewal lasts.
+pub const TERM_MS: u64 = 180 * DAY_MS;
+/// After expiry, how long only the owner may still renew it.
+pub const GRACE_MS: u64 = 30 * DAY_MS;
+/// The width of the timestamp validity window an action sets from its `now_ms`.
+pub const CLOCK_SLACK_MS: u64 = 600_000;
+/// The validity window of `Commit` and of the reveal (`Register`): it bounds how long a reveal can be pending
+/// (2 minutes: about 60 blocks at the test network's 2-second blocks).
+pub const COMMIT_SLACK_MS: u64 = 120_000;
+/// The least time from the latest moment a commit can have landed to its reveal: at least [`COMMIT_SLACK_MS`], so
+/// that nobody who learns a name from a reveal can reveal while that reveal can still land.
+pub const MIN_REVEAL_DELAY_MS: u64 = 120_000;
+/// How long after its `now_ms` a commitment can be revealed (the reveal's whole validity window inside it).
+pub const MAX_REVEAL_WINDOW_MS: u64 = 3_600_000;
+/// How long a registration can be taken by a reveal of an older commitment. At least [`MAX_REVEAL_WINDOW_MS`]: any
+/// older commitment that can still be revealed is revealed within it.
+pub const CONTEST_MS: u64 = MAX_REVEAL_WINDOW_MS;
+const _: () = assert!(MIN_REVEAL_DELAY_MS >= COMMIT_SLACK_MS, "a copier cannot reveal while the first reveal can land");
+const _: () = assert!(CONTEST_MS >= MAX_REVEAL_WINDOW_MS, "an older commitment is revealed before its contest ends");
+const _: () = assert!(
+    MAX_REVEAL_WINDOW_MS > 2 * COMMIT_SLACK_MS + MIN_REVEAL_DELAY_MS,
+    "a commitment has a reveal window"
+);
+/// The sizes of a private receiver's keys: a nullifier public key and an ML-KEM-768 encapsulation key (LEZ's
+/// `NullifierPublicKey` and `ViewingPublicKey`, as LEZ's wallet takes them in `--to-npk` / `--to-vpk`).
+pub const NPK_LEN: usize = 32;
+pub const VPK_LEN: usize = 1184;
+
+const NAME_DOMAIN: &[u8] = b"ferrata-names/v2/name/";
+const COMMIT_DOMAIN: &[u8] = b"ferrata-names/v2/commit/";
+const SEQUENCE_DOMAIN: &[u8] = b"ferrata-names/v2/sequence";
+
+/// What a name looks like, for uniqueness: `0` → `o`, `1` → `l`, then `rn` → `m`, then `vv` → `w` (each left to
+/// right, without overlaps). Two names with the same skeleton share an address.
+pub fn skeleton(name: &str) -> String {
+    let letters: String = name.chars().map(|c| match c {
+        '0' => 'o',
+        '1' => 'l',
+        c => c,
+    }).collect();
+    letters.replace("rn", "m").replace("vv", "w")
+}
+
+/// What `Commit` stores: `sha256("ferrata-names/v2/commit/" || owner || salt || name)`. The owner is the account that
+/// will reveal (and own the name): a reveal by any other account, or with another salt or name, does not match.
+pub fn commitment(name: &str, owner: AccountId, salt: &[u8; 32]) -> [u8; 32] {
+    let mut h = Sha256::new();
+    h.update(COMMIT_DOMAIN);
+    h.update(owner.as_ref());
+    h.update(salt);
+    h.update(name.as_bytes());
+    h.finalize().into()
+}
+
+/// Whether `name` is well formed (reserved names are well formed; see [`check_name`]).
+pub fn well_formed(name: &str) -> bool {
+    let b = name.as_bytes();
+    (MIN_LEN..=MAX_LEN).contains(&b.len())
+        && b.iter().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || *c == b'-')
+        && b[0] != b'-'
+        && b[b.len() - 1] != b'-'
+        && !b.windows(2).any(|w| w == b"--")
+}
+
+/// Whether `name` is reserved: a `-`-separated part of it has the skeleton of a reserved name, as it is or with its
+/// leading and trailing digits removed.
+pub fn is_reserved(name: &str) -> bool {
+    let reserved: Vec<String> = RESERVED.iter().map(|r| skeleton(r)).collect();
+    name.split('-').any(|part| {
+        let core = part.trim_matches(|c: char| c.is_ascii_digit());
+        reserved.contains(&skeleton(part)) || (!core.is_empty() && reserved.contains(&skeleton(core)))
+    })
+}
+
+/// `Ok` if `name` may be registered: well formed and not reserved.
+pub fn check_name(name: &str) -> Result<(), u8> {
+    if !well_formed(name) {
+        return Err(code::INVALID_NAME);
+    }
+    if is_reserved(name) {
+        return Err(code::RESERVED_NAME);
+    }
+    Ok(())
+}
+
+pub fn name_seed(name: &str) -> PdaSeed {
+    let mut h = Sha256::new();
+    h.update(NAME_DOMAIN);
+    h.update(skeleton(name).as_bytes());
+    PdaSeed::new(h.finalize().into())
+}
+
+/// `name(n)` of the program deployed at `program`.
+pub fn name_actor(program: AccountId, name: &str) -> Actor {
+    Actor::new(AccountId::for_public_pda(&program, &name_seed(name)), program)
+}
+
+pub fn sequence_seed() -> PdaSeed {
+    PdaSeed::new(Sha256::digest(SEQUENCE_DOMAIN).into())
+}
+
+/// `sequence` of the program deployed at `program`.
+pub fn sequence_actor(program: AccountId) -> Actor {
+    Actor::new(AccountId::for_public_pda(&program, &sequence_seed()), program)
+}
+
+/// `user(a)` of the program deployed at `program`.
+pub fn user_actor(program: AccountId, account: AccountId) -> Actor {
+    Actor::new(account, program)
+}
+
+/// What a sender needs to pay the name's holder privately (LEZ's private transfer to a foreign account).
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct PrivateReceiver {
+    pub npk: [u8; NPK_LEN],
+    /// [`VPK_LEN`] bytes.
+    pub vpk: Vec<u8>,
+}
+
+/// The state of `name(n)`.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct NameRecord {
+    pub name: String,
+    pub owner: AccountId,
+    /// The public account the name resolves to, if any.
+    pub target: Option<AccountId>,
+    pub receiver: Option<PrivateReceiver>,
+    /// The `now_ms` of the reveal that registered it (to within [`COMMIT_SLACK_MS`] of its block), and its expiry.
+    pub registered_ms: u64,
+    pub expires_ms: u64,
+    /// The account the owner has offered the name to, until it accepts or the owner withdraws.
+    pub offer: Option<AccountId>,
+    /// The number `sequence` gave the commitment that registered it: an older (smaller) one can take the name until
+    /// `registered_ms + CONTEST_MS`.
+    pub commit_seq: u64,
+}
+
+impl NameRecord {
+    /// Whether the name resolves at block time `t` (before expiry).
+    pub fn live_at(&self, t: u64) -> bool {
+        t < self.expires_ms
+    }
+    /// From when no older commitment can take it.
+    pub fn final_at(&self) -> u64 {
+        self.registered_ms.saturating_add(CONTEST_MS)
+    }
+}
+
+/// A commitment waiting for its reveal.
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct PendingCommit {
+    pub hash: [u8; 32],
+    /// Its number in the order of all commitments (from `sequence`; 0 only inside the commit's own transaction).
+    pub seq: u64,
+    /// The reveal's `now_ms` must be at least this, and its whole validity window before `expires_ms`.
+    pub not_before_ms: u64,
+    pub expires_ms: u64,
+}
+
+/// The state of `user(a)`.
+#[derive(Clone, Debug, Default, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct UserState {
+    /// The names `a` holds, and those that left it without `a` signing until `a` forgets them; at most [`MAX_NAMES`].
+    pub names: Vec<String>,
+    /// The account's chosen name, for reverse resolution. Readers check it against the forward record: it counts only
+    /// while that name is live and points at this account.
+    pub primary: Option<String>,
+    /// The account's pending commitment, if any (one at a time; a new `Commit` replaces it).
+    pub commit: Option<PendingCommit>,
+}
+
+/// Every message of the program. `Register` to `Forget` are what an account signs (root message at `user(a)`); the
+/// rest are the program's own, accepted only from the actor that sends them: `Credit`, `Debit`, `Primary` from the
+/// name's actor to `user(a)`; `Claim` (a checked reveal) and `Disown` from `user(a)` to the name's actor; `Tick` from
+/// `user(a)` to `sequence`, and `Sequenced` back.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub enum NamesMessage {
+    /// The reveal: register the name for the signer, pointing at `target`. The signer's pending commitment must be
+    /// `commitment(name, signer, salt)`, and `now_ms` in its reveal window.
+    Register { name: String, now_ms: u64, target: Option<AccountId>, receiver: Option<PrivateReceiver>, salt: [u8; 32] },
+    /// Extend to `now_ms + TERM_MS` (owner; until the grace period ends).
+    Renew { name: String, now_ms: u64 },
+    /// Offer the name to `to` (owner; before expiry), who takes it with `Accept`; `to` = the owner withdraws the offer.
+    Transfer { name: String, to: AccountId, now_ms: u64 },
+    /// Change what the name resolves to (owner; before expiry).
+    SetTarget { name: String, target: Option<AccountId>, receiver: Option<PrivateReceiver>, now_ms: u64 },
+    /// Free the name (owner; any time).
+    Release { name: String },
+    /// Set the signer's primary name (the name must be live and point at the signer), or clear it (`None`).
+    SetPrimary { name: Option<String>, now_ms: u64 },
+    /// Take a name offered to the signer (before expiry). It then points at the signer, with no private receiver.
+    Accept { name: String, now_ms: u64 },
+    /// Commit to registering a name: `commitment` = [`commitment`]`(name, signer, salt)`. Replaces a pending one.
+    Commit { commitment: [u8; 32], now_ms: u64 },
+    /// Drop names that left the signer's list without the signer (each must no longer be the signer's).
+    Forget { names: Vec<String> },
+    /// `name(name)` to `user(a)`: `a` now holds `name`.
+    Credit { name: String },
+    /// `name(name)` to `user(a)`: `a` no longer holds `name`.
+    Debit { name: String },
+    /// `name(name)` to `user(a)`: `name` is live and points at `a`; make it `a`'s primary name.
+    Primary { name: String },
+    /// `user(a)` to `name(name)`: `a`'s reveal, its commitment checked, numbered `seq`.
+    Claim { name: String, now_ms: u64, target: Option<AccountId>, receiver: Option<PrivateReceiver>, seq: u64 },
+    /// `user(a)` to `name(name)`: `a` forgets `name`; refused while `a` owns it.
+    Disown { name: String },
+    /// `user(a)` to `sequence`: number `a`'s new commitment.
+    Tick,
+    /// `sequence` to `user(a)`: the number of `a`'s new commitment.
+    Sequenced { seq: u64 },
+}
+
+impl NamesMessage {
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            Self::Register { name, .. }
+            | Self::Renew { name, .. }
+            | Self::Transfer { name, .. }
+            | Self::SetTarget { name, .. }
+            | Self::Release { name }
+            | Self::Accept { name, .. }
+            | Self::Credit { name }
+            | Self::Debit { name }
+            | Self::Primary { name }
+            | Self::Claim { name, .. }
+            | Self::Disown { name } => Some(name),
+            Self::SetPrimary { name, .. } => name.as_deref(),
+            Self::Commit { .. } | Self::Forget { .. } | Self::Tick | Self::Sequenced { .. } => None,
+        }
+    }
+    /// The program's own messages, which no account may sign.
+    pub fn is_internal(&self) -> bool {
+        matches!(
+            self,
+            Self::Credit { .. }
+                | Self::Debit { .. }
+                | Self::Primary { .. }
+                | Self::Claim { .. }
+                | Self::Disown { .. }
+                | Self::Tick
+                | Self::Sequenced { .. }
+        )
+    }
+}
+
+/// The event every change of a record emits (`ProgramEvent::data`), for explorers and indexers.
+#[derive(Clone, Debug, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+pub struct NameEvent {
+    pub name: String,
+    pub owner: Option<AccountId>,
+    pub target: Option<AccountId>,
+    pub expires_ms: u64,
+}
+
+/// The events' kinds; the selector is the first 8 bytes of `sha256("ferrata_names::<kind>")`. `Displaced`: registered
+/// by an older commitment, from the registrant before it.
+pub const EVENT_KINDS: [&str; 7] = ["Registered", "Displaced", "Renewed", "Offered", "Transferred", "Updated", "Released"];
+
+pub fn event_selector(kind: &str) -> [u8; 8] {
+    let mut h = Sha256::new();
+    h.update(b"ferrata_names::");
+    h.update(kind.as_bytes());
+    let d: [u8; 32] = h.finalize().into();
+    let mut s = [0; 8];
+    s.copy_from_slice(&d[..8]);
+    s
+}
+
+fn encode<T: BorshSerialize>(value: &T) -> Vec<u8> {
+    borsh::to_vec(value).expect("borsh serialization is infallible")
+}
+
+fn event(kind: &str, record: Option<&NameRecord>, name: &str) -> ProgramEvent {
+    let data = NameEvent {
+        name: name.into(),
+        owner: record.map(|r| r.owner),
+        target: record.and_then(|r| r.target),
+        expires_ms: record.map_or(0, |r| r.expires_ms),
+    };
+    ProgramEvent { selector: event_selector(kind), data: encode(&data) }
+}
+
+/// Valid only in a block whose timestamp is in `[now_ms, now_ms + slack)`.
+fn window(response: Response, now_ms: u64, slack: u64) -> Result<Response, u8> {
+    let end = now_ms.checked_add(slack).ok_or(code::BAD_MESSAGE)?;
+    response.try_timestamp_window(now_ms..end).map_err(|_| code::BAD_MESSAGE)
+}
+
+/// Refused unless the whole validity window of an action at `now_ms` is before the record's expiry.
+fn live_through(r: &NameRecord, now_ms: u64) -> Result<(), u8> {
+    if now_ms.saturating_add(CLOCK_SLACK_MS) > r.expires_ms {
+        return Err(code::EXPIRED);
+    }
+    Ok(())
+}
+
+fn check_receiver(receiver: &Option<PrivateReceiver>) -> Result<(), u8> {
+    match receiver {
+        Some(r) if r.vpk.len() != VPK_LEN => Err(code::BAD_MESSAGE),
+        _ => Ok(()),
+    }
+}
+
+fn decode_user(state: &[u8]) -> Result<UserState, u8> {
+    if state.is_empty() {
+        return Ok(UserState::default());
+    }
+    borsh::from_slice(state).map_err(|_| code::BAD_STATE)
+}
+
+fn decode_record(state: &[u8]) -> Result<Option<NameRecord>, u8> {
+    if state.is_empty() {
+        return Ok(None);
+    }
+    borsh::from_slice(state).map(Some).map_err(|_| code::BAD_STATE)
+}
+
+/// The program: one delivery in, the actor's response or a refusal (exit code) out.
+pub fn handle(input: &ReceiveInput) -> Result<Response, u8> {
+    let program = input.receiver.program_account_id;
+    let message: NamesMessage = borsh::from_slice(&input.message).map_err(|_| code::BAD_MESSAGE)?;
+    match input.from {
+        None => signed(input, program, message),
+        Some(from) if from.program_account_id != program => Err(code::WRONG_SENDER),
+        Some(from) => internal(input, program, from, message),
+    }
+}
+
+/// At `user(a)`: the transaction's root, signed by `a`.
+fn signed(input: &ReceiveInput, program: AccountId, message: NamesMessage) -> Result<Response, u8> {
+    if !input.is_authorized {
+        return Err(code::NOT_SIGNED);
+    }
+    if message.is_internal() {
+        return Err(code::WRONG_SENDER);
+    }
+    let me = input.receiver.account_id;
+    match message {
+        NamesMessage::Commit { commitment, now_ms } => {
+            let mut user = decode_user(&input.pre_state)?;
+            let not_before_ms =
+                now_ms.checked_add(COMMIT_SLACK_MS + MIN_REVEAL_DELAY_MS).ok_or(code::BAD_MESSAGE)?;
+            let expires_ms = now_ms.checked_add(MAX_REVEAL_WINDOW_MS).ok_or(code::BAD_MESSAGE)?;
+            user.commit = Some(PendingCommit { hash: commitment, seq: 0, not_before_ms, expires_ms });
+            let response = window(Response::set_state(encode(&user)), now_ms, COMMIT_SLACK_MS)?;
+            Ok(response.send_sync(sequence_actor(program), &NamesMessage::Tick))
+        }
+        NamesMessage::Register { name, now_ms, target, receiver, salt } => {
+            check_name(&name)?;
+            // The reveal: the signer's own commitment, this name and salt, inside its window; then it is spent.
+            let mut user = decode_user(&input.pre_state)?;
+            let pending = user.commit.take().ok_or(code::NO_COMMIT)?;
+            if pending.hash != commitment(&name, me, &salt) {
+                return Err(code::COMMIT_MISMATCH);
+            }
+            if pending.seq == 0 {
+                return Err(code::BAD_STATE);
+            }
+            if now_ms < pending.not_before_ms {
+                return Err(code::TOO_EARLY);
+            }
+            if now_ms.saturating_add(COMMIT_SLACK_MS) > pending.expires_ms {
+                return Err(code::COMMIT_EXPIRED);
+            }
+            let at = name_actor(program, &name);
+            let claim = NamesMessage::Claim { name, now_ms, target, receiver, seq: pending.seq };
+            let response = window(Response::set_state(encode(&user)), now_ms, COMMIT_SLACK_MS)?;
+            Ok(response.send_sync(at, &claim))
+        }
+        NamesMessage::Forget { names } => {
+            let user = decode_user(&input.pre_state)?;
+            if names.is_empty() || names.len() > MAX_NAMES {
+                return Err(code::BAD_MESSAGE);
+            }
+            let mut response = Response::keep_state();
+            for (i, name) in names.iter().enumerate() {
+                if names[..i].contains(name) {
+                    return Err(code::BAD_MESSAGE);
+                }
+                if !user.names.contains(name) {
+                    return Err(code::NOT_HELD);
+                }
+                response = response.send_sync(name_actor(program, name), &NamesMessage::Disown { name: name.clone() });
+            }
+            Ok(response)
+        }
+        NamesMessage::SetPrimary { name: None, .. } => {
+            let mut user = decode_user(&input.pre_state)?;
+            user.primary = None;
+            Ok(Response::set_state(encode(&user)))
+        }
+        other => {
+            let name = other.name().ok_or(code::BAD_MESSAGE)?;
+            if !well_formed(name) {
+                return Err(code::INVALID_NAME);
+            }
+            let at = name_actor(program, name);
+            Ok(Response::keep_state().send_sync(at, &other))
+        }
+    }
+}
+
+/// A message from another actor of this program.
+fn internal(input: &ReceiveInput, program: AccountId, from: Actor, message: NamesMessage) -> Result<Response, u8> {
+    match message {
+        NamesMessage::Credit { .. } | NamesMessage::Debit { .. } | NamesMessage::Primary { .. } => {
+            let name = message.name().ok_or(code::BAD_MESSAGE)?;
+            if from != name_actor(program, name) {
+                return Err(code::WRONG_SENDER);
+            }
+            bookkeeping(input, message)
+        }
+        NamesMessage::Sequenced { seq } => {
+            if from != sequence_actor(program) {
+                return Err(code::WRONG_SENDER);
+            }
+            let mut user = decode_user(&input.pre_state)?;
+            match user.commit.as_mut() {
+                Some(pending) if pending.seq == 0 => pending.seq = seq,
+                _ => return Err(code::BAD_STATE),
+            }
+            Ok(Response::set_state(encode(&user)))
+        }
+        NamesMessage::Tick => {
+            if input.receiver != sequence_actor(program) {
+                return Err(code::WRONG_RECEIVER);
+            }
+            let last: u64 =
+                if input.pre_state.is_empty() { 0 } else { borsh::from_slice(&input.pre_state).map_err(|_| code::BAD_STATE)? };
+            let seq = last.checked_add(1).ok_or(code::BAD_STATE)?;
+            Ok(Response::set_state(encode(&seq)).send_sync(from, &NamesMessage::Sequenced { seq }))
+        }
+        NamesMessage::Claim { .. }
+        | NamesMessage::Disown { .. }
+        | NamesMessage::Renew { .. }
+        | NamesMessage::Transfer { .. }
+        | NamesMessage::SetTarget { .. }
+        | NamesMessage::Release { .. }
+        | NamesMessage::SetPrimary { name: Some(_), .. }
+        | NamesMessage::Accept { .. } => at_name(input, program, from.account_id, message),
+        _ => Err(code::BAD_MESSAGE),
+    }
+}
+
+/// At `name(n)`: an action of `user(caller)`.
+fn at_name(input: &ReceiveInput, program: AccountId, caller: AccountId, message: NamesMessage) -> Result<Response, u8> {
+    let name = message.name().ok_or(code::BAD_MESSAGE)?.to_string();
+    if input.receiver != name_actor(program, &name) {
+        return Err(code::WRONG_RECEIVER);
+    }
+    let record = decode_record(&input.pre_state)?;
+    // The record of this very name (the address may hold a look-alike).
+    let this = record.clone().filter(|r| r.name == name);
+    let owned = |r: Option<NameRecord>| -> Result<NameRecord, u8> {
+        let r = r.ok_or(code::NOT_FOUND)?;
+        if r.owner != caller {
+            return Err(code::NOT_OWNER);
+        }
+        Ok(r)
+    };
+    let me = user_actor(program, caller);
+    match message {
+        NamesMessage::Claim { name, now_ms, target, receiver, seq } => {
+            check_receiver(&receiver)?;
+            let mut kind = "Registered";
+            if let Some(r) = &record {
+                let lapsed = now_ms >= r.expires_ms.saturating_add(GRACE_MS);
+                let older = seq < r.commit_seq && now_ms.saturating_add(COMMIT_SLACK_MS) <= r.final_at();
+                if older {
+                    kind = "Displaced";
+                } else if !lapsed {
+                    return Err(if r.name == name { code::TAKEN } else { code::CONFUSABLE });
+                }
+            }
+            let expires_ms = now_ms.checked_add(TERM_MS).ok_or(code::BAD_MESSAGE)?;
+            let r = NameRecord {
+                name,
+                owner: caller,
+                target,
+                receiver,
+                registered_ms: now_ms,
+                expires_ms,
+                offer: None,
+                commit_seq: seq,
+            };
+            // The registrant it replaces, if any, keeps the name in its list until it forgets it.
+            let response = window(Response::set_state(encode(&r)), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response.send_sync(me, &NamesMessage::Credit { name: r.name.clone() }).event(event(kind, Some(&r), &r.name)))
+        }
+        NamesMessage::Disown { name } => {
+            if this.as_ref().is_some_and(|r| r.owner == caller) {
+                return Err(code::STILL_HELD);
+            }
+            Ok(Response::keep_state().send_sync(me, &NamesMessage::Debit { name }))
+        }
+        NamesMessage::Renew { now_ms, .. } => {
+            let mut r = owned(this)?;
+            let latest = now_ms.saturating_add(CLOCK_SLACK_MS);
+            if latest > r.expires_ms.saturating_add(GRACE_MS) {
+                return Err(code::LAPSED);
+            }
+            if latest > r.expires_ms {
+                // It may land after the expiry: the offer does not survive.
+                r.offer = None;
+            }
+            r.expires_ms = r.expires_ms.max(now_ms.checked_add(TERM_MS).ok_or(code::BAD_MESSAGE)?);
+            let response = window(Response::set_state(encode(&r)), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response.event(event("Renewed", Some(&r), &r.name)))
+        }
+        NamesMessage::Transfer { to, now_ms, .. } => {
+            let mut r = owned(this)?;
+            live_through(&r, now_ms)?;
+            if to == caller {
+                // Withdraw the pending offer.
+                if r.offer.take().is_none() {
+                    return Err(code::SAME_OWNER);
+                }
+            } else {
+                r.offer = Some(to);
+            }
+            let response = window(Response::set_state(encode(&r)), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response.event(event("Offered", Some(&r), &r.name)))
+        }
+        NamesMessage::Accept { now_ms, .. } => {
+            let mut r = this.ok_or(code::NOT_FOUND)?;
+            if r.offer != Some(caller) {
+                return Err(code::NOT_TARGET);
+            }
+            live_through(&r, now_ms)?;
+            r.owner = caller;
+            r.target = Some(caller);
+            r.receiver = None;
+            r.offer = None;
+            // The old owner keeps the name in its list until it forgets it: its actor is not needed here.
+            let response = window(Response::set_state(encode(&r)), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response
+                .send_sync(me, &NamesMessage::Credit { name: r.name.clone() })
+                .event(event("Transferred", Some(&r), &r.name)))
+        }
+        NamesMessage::SetTarget { target, receiver, now_ms, .. } => {
+            let mut r = owned(this)?;
+            live_through(&r, now_ms)?;
+            check_receiver(&receiver)?;
+            r.target = target;
+            r.receiver = receiver;
+            let response = window(Response::set_state(encode(&r)), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response.event(event("Updated", Some(&r), &r.name)))
+        }
+        NamesMessage::Release { name } => {
+            owned(this)?;
+            Ok(Response::set_state(Vec::new())
+                .send_sync(me, &NamesMessage::Debit { name: name.clone() })
+                .event(event("Released", None, &name)))
+        }
+        NamesMessage::SetPrimary { name: Some(name), now_ms } => {
+            let r = this.ok_or(code::NOT_FOUND)?;
+            if r.target != Some(caller) {
+                return Err(code::NOT_TARGET);
+            }
+            live_through(&r, now_ms)?;
+            let response = window(Response::keep_state(), now_ms, CLOCK_SLACK_MS)?;
+            Ok(response.send_sync(me, &NamesMessage::Primary { name }))
+        }
+        _ => Err(code::BAD_MESSAGE),
+    }
+}
+
+/// At `user(a)`: the list and the primary name, from the actor of the name concerned.
+fn bookkeeping(input: &ReceiveInput, message: NamesMessage) -> Result<Response, u8> {
+    let mut user = decode_user(&input.pre_state)?;
+    match message {
+        NamesMessage::Credit { name } => {
+            if !user.names.contains(&name) {
+                user.names.push(name);
+                if user.names.len() > MAX_NAMES {
+                    return Err(code::TOO_MANY);
+                }
+            }
+        }
+        NamesMessage::Debit { name } => {
+            user.names.retain(|n| *n != name);
+            if user.primary.as_deref() == Some(name.as_str()) {
+                user.primary = None;
+            }
+        }
+        NamesMessage::Primary { name } => user.primary = Some(name),
+        _ => return Err(code::BAD_MESSAGE),
+    }
+    Ok(Response::set_state(encode(&user)))
+}
+
+/// What a reader concludes from the stored states (the JS resolver does the same).
+pub mod read {
+    use super::*;
+
+    /// `name`'s record at block time `t` from the state of `name(name)`, if it resolves: registered under this very
+    /// name (not a look-alike) and not expired.
+    pub fn resolve(state: &[u8], name: &str, t: u64) -> Option<NameRecord> {
+        decode_record(state).ok().flatten().filter(|r| r.name == name && r.live_at(t))
+    }
+
+    /// `account`'s name from `user(account)`'s state and the state of `name(primary)`: only if that name is live and
+    /// points at `account`.
+    pub fn reverse(user_state: &[u8], name_state: &[u8], account: AccountId, t: u64) -> Option<String> {
+        let primary = decode_user(user_state).ok()?.primary?;
+        let r = resolve(name_state, &primary, t)?;
+        (r.target == Some(account)).then_some(primary)
+    }
+}
+
+/// The program's exit codes: 230–254 (230–236 v2's own). Codes are per program (LEZ reports which program's handler
+/// exited); the bridge program uses 240–255 too, so a reader names a code by the program that returned it.
+pub const CODE_BLOCK: core::ops::RangeInclusive<u8> = 230..=254;
+
+macro_rules! exit_codes {
+    ($($(#[doc = $doc:literal])* $name:ident = $value:literal;)*) => {
+        $($(#[doc = $doc])* pub const $name: u8 = $value;)*
+        /// Every code of this module, with its name.
+        pub const ALL: &[(&str, u8)] = &[$((stringify!($name), $name)),*];
+    };
+}
+
+/// Exit codes of `ferrata_names`.
+pub mod code {
+    exit_codes! {
+        /// `Register` by an account with no pending commitment (a reveal copied by another account that has none).
+        NO_COMMIT = 230;
+        /// `Register` that does not match the signer's commitment: another name or salt, or a reveal copied by another
+        /// account (the commitment binds the owner).
+        COMMIT_MISMATCH = 231;
+        /// `Register` before the commitment's reveal window opens.
+        TOO_EARLY = 232;
+        /// `Register` whose validity window reaches past the commitment's (the commitment is void).
+        COMMIT_EXPIRED = 233;
+        /// `Register` of a name whose look-alike (same skeleton) is registered.
+        CONFUSABLE = 234;
+        /// `Forget` of a name the signer still owns (release it instead).
+        STILL_HELD = 235;
+        /// `Forget` of a name not in the signer's list.
+        NOT_HELD = 236;
+        /// The message does not decode, a time out of range, a private receiver's keys of the wrong size, or a
+        /// `Forget` of no names, of more than `MAX_NAMES` or of one twice.
+        BAD_MESSAGE = 240;
+        /// Stored state that does not decode (defensive: no transaction of this program writes such a state).
+        BAD_STATE = 241;
+        /// A root message to `user(a)` that `a` did not sign.
+        NOT_SIGNED = 242;
+        /// A message from another program, the program's own message signed by an account, or bookkeeping from an
+        /// actor other than the one that sends it.
+        WRONG_SENDER = 243;
+        /// A program message at an actor other than the one it is for (defensive: the program never sends one).
+        WRONG_RECEIVER = 244;
+        /// A name that breaks the rules (length, characters, hyphens).
+        INVALID_NAME = 245;
+        /// A reserved name or a variant of one.
+        RESERVED_NAME = 246;
+        /// `Register` of a name that is held (live, or expired but within the grace period) and not displaceable.
+        TAKEN = 247;
+        /// An action on a name by an account that does not own it.
+        NOT_OWNER = 248;
+        /// `Transfer`, `Accept`, `SetTarget` or `SetPrimary` that may land after the name's expiry.
+        EXPIRED = 249;
+        /// `Renew` that may land after the grace period.
+        LAPSED = 250;
+        /// The account would hold more than `MAX_NAMES` names.
+        TOO_MANY = 251;
+        /// An action on a name that is not registered.
+        NOT_FOUND = 252;
+        /// `Transfer` to the owner with no offer pending to withdraw.
+        SAME_OWNER = 253;
+        /// `SetPrimary` of a name that does not point at the signer, or `Accept` of a name not offered to it.
+        NOT_TARGET = 254;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn names_follow_the_rules() {
+        for ok in ["abc", "alice", "a-b", "0x1", "123", "a1-b2-c3", "abcdefghijklmnopqrstuvwxyz012345", "bridget", "helpful", "rooted", "walleting"] {
+            assert_eq!(check_name(ok), Ok(()), "{ok}");
+        }
+        for bad in [
+            "", "ab", "Alice", "al ice", "-ab", "ab-", "a--b", "alice.eth", "ålice", "аlice", "abcdefghijklmnopqrstuvwxyz0123456",
+            "al_ice", "a\u{0}b",
+        ] {
+            assert_eq!(check_name(bad), Err(code::INVALID_NAME), "{bad:?}");
+        }
+        for reserved in RESERVED {
+            assert_eq!(check_name(reserved), Err(code::RESERVED_NAME), "{reserved}");
+            assert!(well_formed(reserved));
+        }
+        for variant in ["faucet1", "wa11et", "ferrata-team", "team-ferrata", "2faucet", "0fficial", "support-desk", "1ez", "vva11et", "my-wallet-2"] {
+            assert_eq!(check_name(variant), Err(code::RESERVED_NAME), "{variant}");
+        }
+    }
+
+    #[test]
+    fn look_alikes_share_a_skeleton_and_an_address() {
+        assert_eq!(skeleton("a1ice"), "alice");
+        assert_eq!(skeleton("rnallory"), "mallory");
+        assert_eq!(skeleton("vvallet-co"), "wallet-co");
+        assert_eq!(skeleton("g00gle"), "google");
+        assert_eq!(skeleton("rnrn"), "mm");
+        assert_eq!(skeleton("vvv"), "wv");
+        let p = AccountId::new([7; 32]);
+        assert_eq!(name_actor(p, "a1ice"), name_actor(p, "alice"));
+        assert_ne!(name_actor(p, "alice"), name_actor(p, "alicf"));
+    }
+
+    #[test]
+    fn codes_are_distinct_and_in_the_block() {
+        for (i, (n, c)) in code::ALL.iter().enumerate() {
+            assert!(CODE_BLOCK.contains(c), "{n}");
+            assert!(code::ALL[i + 1..].iter().all(|(_, d)| d != c), "{n}");
+        }
+    }
+}

@@ -1,0 +1,43 @@
+ok   rules
+ok   check Alice (normalised to alice)
+ok   check a--b (refused offline)
+ok   check faucet1 (a variant of a reserved name, refused offline)
+ok   resolve alice before it exists
+ok   alice: commit alice (a hash; the name stays hidden)
+ok   alice: reveal at once (refused by the CLI: too early; nothing sent)
+ok   alice: reveal at once with --force (ignored; nothing sent)
+ok   alice: reveal sent early anyway (test-only switch): TOO_EARLY, reverted, the name is public
+ok   mallory: commit alice with now_ms 105 s back (the copier)
+ok   mallory: reveal alice first (registered, provisional)
+ok   after mallory's reveal, alice is mallory's
+ok   alice: reveal alice in her window (older commitment: Displaced)
+ok   after alice's reveal, alice is alice's
+ok   account mallory (alice still in her list)
+ok   mallory: forget (the names that left her)
+ok   account mallory (empty list)
+ok   resolve alice
+ok   whois alice
+ok   alice: set-primary alice
+ok   reverse alice's account
+ok   bob reveals alice's commitment with his key (refused by the CLI: no commitment; nothing sent)
+ok   bob registers alice: commit, wait, reveal (refused by the CLI: taken; the reveal not sent)
+ok   bob offers alice to himself (not owner: reverted on chain)
+ok   alice: set-target alice, add a private receiver
+ok   resolve alice (with receiver)
+ok   alice: renew alice
+ok   alice: offer alice to bob (transfer)
+ok   resolve alice (still alice's, offer pending)
+ok   bob: accept alice
+ok   after bob's accept, alice is bob's
+ok   reverse alice's account (her stored primary no longer points at her)
+ok   account alice (alice still in her list)
+ok   alice: forget (the names that left her)
+ok   bob: set-primary alice
+ok   reverse bob's account
+ok   bob: release alice
+ok   resolve alice after release
+ok   bob: register bob (commit, wait, reveal)
+ok   whois b0b (digit zero: a look-alike of bob is registered)
+ok   resolve b0b (not registered: a look-alike holds its address)
+ok   faucet is reserved (refused before sending)
+checks passed: 42

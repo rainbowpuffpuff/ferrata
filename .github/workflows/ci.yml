@@ -272,6 +272,47 @@ jobs:
           SHARD: ${{ matrix.shard }}
         run: scripts/ci/lez-harness.sh --shard "$SHARD"
 
+  # The names program of the test network (names/README.md; scripts/ci/names.sh): its wire crate's tests, the harness
+  # suites tests/names.rs and tests/names_review.rs (feature `names`, listed as feature-gated in the shard map, so run
+  # here), the IDL check and the JS resolver's and the CLI's tests. Not an RFP requirement. No secret, nothing sent to
+  # any network but dependency fetches.
+  names:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_PROFILE_TEST_DEBUG: "0"
+      CARGO_INCREMENTAL: "0"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Free disk space
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain, lez/rust-toolchain.toml)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - name: Cache RISC Zero's toolchains
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        run: scripts/ci/install-risc0.sh
+      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ${{ github.workspace }}/../upstream
+          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
+      - name: Fetch the upstream sources
+        run: scripts/fetch-upstream.sh
+      - name: Build (the names wire crate and suites, and the guests)
+        timeout-minutes: 45
+        run: scripts/ci/names.sh build
+      - name: The names checks (wire, harness in dev mode, IDL, JS and CLI)
+        timeout-minutes: 30
+        run: scripts/ci/names.sh
+
   # The watchers (monitor/README.md): the monitor's own tests, then its rehearsal on a local anvil chain
   # (monitor/tests/anvil-e2e.sh: rule (B) and rule (A) FerrataVault v5 deployments with the monitor's key as watcher;
   # wrong candidates cancelled in time, a SIGKILL and restart, a lost state file rescanned, a watcher without gas,

@@ -1,0 +1,226 @@
+{
+ "passed": 43,
+ "failed": 0,
+ "numbers": {
+  "faucet_seconds": 32.2,
+  "send1_seconds_to_block": 2.4,
+  "send1_fee_atomic": 4352
+ },
+ "checks": [
+  {
+   "check": "page served with a CSP that allows only its own origin",
+   "ok": true,
+   "detail": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  },
+  {
+   "check": "the page reads the head block through /rpc",
+   "ok": true,
+   "detail": "block 2"
+  },
+  {
+   "check": "first visit offers create or import",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "a new wallet shows a 24-word recovery phrase",
+   "ok": true,
+   "detail": "24"
+  },
+  {
+   "check": "creating is refused until the words are confirmed written down",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the wallet opens on its first account",
+   "ok": true,
+   "detail": "<id1>"
+  },
+  {
+   "check": "the stored record is encrypted (no phrase word, no account id in it)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "a fresh account is absent on LEZ",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "its public key hashes to its account id (LEZ's AccountId::from)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the faucet button funds the new account",
+   "ok": true,
+   "detail": "Received: your balance is 5 LGO."
+  },
+  {
+   "check": "the RPC agrees: 5 LGO",
+   "ok": true,
+   "detail": "5000000000"
+  },
+  {
+   "check": "the page shows the balance",
+   "ok": true,
+   "detail": "5 LGO"
+  },
+  {
+   "check": "account 2 has its own id and a receive code with its key",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "refused: more than the balance",
+   "ok": true,
+   "detail": "Not enough: 1,000 LGO plus at most 0.006434816 LGO in fees is more than your 5 LGO."
+  },
+  {
+   "check": "refused: a never-used account without its key (asks for the receive code)",
+   "ok": true,
+   "detail": "This account has never been used on LEZ, so the network needs its public key once: ask the recipient for their receive code (Receive tab), or paste their public key."
+  },
+  {
+   "check": "refused: a malformed recipient, in plain words",
+   "ok": true,
+   "detail": "That is not an account id, a public key (64 hex digits) or a receive code (lez:\u2026?pk=\u2026)."
+  },
+  {
+   "check": "refused: more decimals than the token has",
+   "ok": true,
+   "detail": "at most 9 decimals"
+  },
+  {
+   "check": "refused: a transfer to the same account",
+   "ok": true,
+   "detail": "That is this account."
+  },
+  {
+   "check": "the refusals sent nothing (nonce unchanged)",
+   "ok": true,
+   "detail": "0"
+  },
+  {
+   "check": "the review shows the transfer before signing",
+   "ok": true,
+   "detail": "From\nAccount 1 (<id1>)\nTo\n<id2>\nAmount\n1.25 LGO\nFee now\nabout 0.000804352 LGO (gas limit 100000, 544 bytes at base fees 8/8)\nFee at most\n0.006434816 LGO (unused gas is refunded)\nNonce\n0\nFirst credit\nthe recipient's public key goes with it (LEZ's admission evidence)"
+  },
+  {
+   "check": "the page reports the transfer in a block, nonce moved",
+   "ok": true,
+   "detail": "In block 19, applied; the nonce moved to 1. Balance: 3.749995648 LGO. Transaction <hash3>."
+  },
+  {
+   "check": "the RPC agrees: account 2 holds 1.25 LGO",
+   "ok": true,
+   "detail": "1250000000"
+  },
+  {
+   "check": "the RPC agrees: account 1 paid 1.25 LGO and a fee",
+   "ok": true,
+   "detail": "fee 4352"
+  },
+  {
+   "check": "the transaction hash the page shows is the sequencer's",
+   "ok": true,
+   "detail": "['<hash3>']"
+  },
+  {
+   "check": "the page computed the same hash as the sequencer (no warning)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "account 2 sends to account 1 by id",
+   "ok": true,
+   "detail": "In block 21, applied; the nonce moved to 1. Balance: 0.749995912 LGO. Transaction <hash4>."
+  },
+  {
+   "check": "the RPC agrees: +0.5 LGO exactly",
+   "ok": true,
+   "detail": "500000000"
+  },
+  {
+   "check": "Activity lists the faucet's credit, the send and the return",
+   "ok": true,
+   "detail": "Received \u00b7 block 21 \u00b7 11/23/2026, 9:16:15 AM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 19 \u00b7 11/23/2026, 9:16:11 AM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 3 \u00b7 11/23/2026, 9:15:39 AM\n+5 LGO\nfrom <id5> \u00b7 <hash6>"
+  },
+  {
+   "check": "Activity marks every listed transfer applied (none in its block's reverted list)",
+   "ok": true,
+   "detail": "Received \u00b7 block 21 \u00b7 11/23/2026, 9:16:15 AM\n+0.5 LGO\nfrom <id2> \u00b7 <hash4>\nSent \u00b7 block 19 \u00b7 11/23/2026, 9:16:11 AM\n\u22121.25 LGO\nto <id2> \u00b7 <hash3>\nReceived \u00b7 block 3 \u00b7 11/23/2026, 9:15:39 AM\n+5 LGO\nfrom <id5> \u00b7 <hash6>"
+  },
+  {
+   "check": "Lock forgets the keys (unlock screen)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "a wrong passphrase is refused",
+   "ok": true,
+   "detail": "wrong passphrase"
+  },
+  {
+   "check": "the right passphrase opens it again",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "after a reload: both accounts, the same ids",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "the recovery phrase can be shown again, with the passphrase",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "network info names the head and the privacy circuit",
+   "ok": true,
+   "detail": "RPC\nhttp://127.0.0.1:18650/rpc\nHead block\n22\nBase fees\nexecution 8, storage 8 per unit\nChannel (zone id)\n<hash7>\nPrivacy circuit\n<hash8>\nLEZ version\nv0.4.0-rc2/rc3 (privacy circuit 631f0c96\u2026)"
+  },
+  {
+   "check": "importing the phrase gives the same first account",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "and the same second account",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "an imported raw key opens its account, balance from the RPC",
+   "ok": true,
+   "detail": "20,000 LGO"
+  },
+  {
+   "check": "a raw key signs a transfer LEZ applies",
+   "ok": true,
+   "detail": "100000000"
+  },
+  {
+   "check": "on a phone the tabs sit at the bottom of the screen",
+   "ok": true,
+   "detail": "{'x': 0, 'y': 794.703125, 'width': 390, 'height': 49.296875}"
+  },
+  {
+   "check": "no sideways scrolling on a 390 px screen",
+   "ok": true,
+   "detail": "390"
+  },
+  {
+   "check": "every request the page made went to its own origin",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "check": "no uncaught script error",
+   "ok": true,
+   "detail": "[]"
+  }
+ ]
+}

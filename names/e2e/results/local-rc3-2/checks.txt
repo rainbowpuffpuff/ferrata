@@ -1,0 +1,32 @@
+ok   rules
+ok   check Alice (normalised to alice)
+ok   check a--b (refused offline)
+ok   resolve alice before it exists
+ok   commit alice (a hash; the name stays hidden)
+ok   reveal alice at once (refused locally: too early)
+ok   reveal alice at once, sent anyway (TOO_EARLY: reverted)
+ok   resolve alice after the refused reveal
+ok   reveal alice (registers it)
+ok   resolve alice
+ok   whois alice
+ok   set-primary alice
+ok   reverse alice's account
+ok   bob reveals alice's commitment with his key (NO_COMMIT: reverted)
+ok   bob registers alice: commit, wait, reveal (TAKEN: reverted)
+ok   bob transfers alice (not owner: reverted)
+ok   set-target alice: add a private receiver
+ok   resolve alice (with receiver)
+ok   renew alice
+ok   offer alice to bob (transfer)
+ok   resolve alice (still alice's, offer pending)
+ok   bob: accept alice
+ok   resolve alice (bob's now)
+ok   reverse alice's account (cleared by the transfer)
+ok   account alice
+ok   bob: set-primary alice
+ok   reverse bob's account
+ok   bob: release alice
+ok   resolve alice after release
+ok   bob: register bob
+ok   faucet is reserved (refused before sending)
+checks passed: 31

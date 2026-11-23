@@ -1,5 +1,7 @@
 {
   "harness_feature_gated": {
+    "names": "names",
+    "names_review": "names",
     "rebate": "rebate",
     "residue_experimental": "residue-experimental",
     "residue_handoff": "residue-experimental",

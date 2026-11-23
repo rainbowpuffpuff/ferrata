@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="color-scheme" content="light dark">
+<title>Ferrata wallet · LEZ v0.4 test network</title>
+<link rel="stylesheet" href="style.css">
+<script type="module" src="app.js"></script>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo" aria-hidden="true">◆</span> Ferrata wallet <span class="net" id="net-name">LEZ v0.4 test network</span></div>
+  <div class="status"><span id="net-status" class="pill" data-testid="net-status">connecting…</span>
+    <button id="lock" class="ghost small" hidden data-testid="lock">Lock</button></div>
+</header>
+
+<main>
+<!-- First visit: create or import -->
+<section id="v-welcome" class="card" hidden>
+  <h1>A wallet for LEZ, in this page</h1>
+  <p class="lead">Your keys are made and kept in this browser, encrypted with your passphrase. They are never sent anywhere:
+    the page talks only to the network's own RPC, and signs every transaction itself.</p>
+  <div class="row">
+    <button id="go-create" class="primary" data-testid="go-create">Create a new wallet</button>
+    <button id="go-import" data-testid="go-import">Import</button>
+  </div>
+  <p class="fine">Test network only: its coins have no value. Prototype, unaudited.</p>
+</section>
+
+<section id="v-create" class="card" hidden>
+  <h1>Your recovery phrase</h1>
+  <p>These 24 words are your wallet. Anyone who has them controls it; without them, a lost passphrase cannot be recovered.
+    The phrase is the same kind LEZ's own wallet uses (BIP-39, LEZ's key tree), so it also opens your accounts there.</p>
+  <ol id="mnemonic-words" class="words" data-testid="mnemonic"></ol>
+  <label class="check"><input type="checkbox" id="saved-words" data-testid="saved-words"> I have written the 24 words down.</label>
+  <label>Passphrase for this browser <input type="password" id="create-pass" autocomplete="new-password" minlength="8" data-testid="create-pass"></label>
+  <label>Again <input type="password" id="create-pass2" autocomplete="new-password" data-testid="create-pass2"></label>
+  <div class="row"><button id="create-back">Back</button><button id="create-go" class="primary" data-testid="create-go">Create wallet</button></div>
+  <p class="err" id="create-err" role="alert"></p>
+</section>
+
+<section id="v-import" class="card" hidden>
+  <h1>Import</h1>
+  <div class="seg" role="tablist">
+    <button class="on" data-import="phrase" data-testid="import-phrase-tab">Recovery phrase</button>
+    <button data-import="key" data-testid="import-key-tab">Private key</button>
+  </div>
+  <label id="import-phrase-box">24 (or 12) words <textarea id="import-phrase" rows="3" autocomplete="off" spellcheck="false" data-testid="import-phrase"></textarea></label>
+  <label id="import-key-box" hidden>Private key (64 hex digits, as LEZ's wallet shows it) <input id="import-key" autocomplete="off" spellcheck="false" data-testid="import-key"></label>
+  <label>Passphrase for this browser <input type="password" id="import-pass" autocomplete="new-password" data-testid="import-pass"></label>
+  <div class="row"><button id="import-back">Back</button><button id="import-go" class="primary" data-testid="import-go">Import</button></div>
+  <p class="err" id="import-err" role="alert"></p>
+</section>
+
+<section id="v-unlock" class="card" hidden>
+  <h1>Unlock</h1>
+  <label>Passphrase <input type="password" id="unlock-pass" autocomplete="current-password" data-testid="unlock-pass"></label>
+  <div class="row"><button id="unlock-go" class="primary" data-testid="unlock-go">Unlock</button></div>
+  <p class="err" id="unlock-err" role="alert"></p>
+  <details class="fine"><summary>Forgot the passphrase?</summary>
+    <p>Erase this browser's copy and import your recovery phrase again. Without the phrase the accounts cannot be recovered.</p>
+    <button id="erase-wallet" class="danger small">Erase this browser's wallet</button></details>
+</section>
+
+<!-- The wallet -->
+<section id="v-main" hidden>
+  <nav class="tabs" id="tabs">
+    <a href="#home" data-tab="home">Home</a><a href="#send" data-tab="send">Send</a><a href="#receive" data-tab="receive">Receive</a>
+    <a href="#activity" data-tab="activity">Activity</a><a href="#prove" data-tab="prove">Prove</a><a href="#bridge" data-tab="bridge">Bridge</a>
+    <a href="#private" data-tab="private">Private</a><a href="#settings" data-tab="settings">More</a>
+  </nav>
+
+  <div class="card account-bar">
+    <label class="inline">Account <select id="account-select" data-testid="account-select"></select></label>
+    <button id="add-account" class="ghost small" data-testid="add-account">+ New account</button>
+  </div>
+
+  <div id="t-home" class="tab card">
+    <div class="balance"><span class="label">Public balance</span>
+      <span class="amount" id="balance" data-testid="balance">—</span>
+      <span class="atomic" id="balance-atomic"></span></div>
+    <div class="row">
+      <button id="faucet" class="primary" data-testid="faucet">Get test coins</button>
+      <a class="button" href="#send">Send</a><a class="button" href="#receive">Receive</a>
+    </div>
+    <p id="faucet-msg" class="msg" data-testid="faucet-msg" role="status"></p>
+    <div class="kv"><span>Account id</span><code id="home-id" class="copy" data-testid="home-id"></code></div>
+    <div class="kv"><span>Nonce</span><code id="home-nonce" data-testid="home-nonce">—</code></div>
+    <div class="privacy"><b>Public on LEZ:</b> this account's id, balance, nonce and every transaction it signs.
+      <b>Private:</b> your keys and recovery phrase (only in this browser) and which accounts belong to one phrase.</div>
+  </div>
+
+  <div id="t-send" class="tab card" hidden>
+    <h2>Send</h2>
+    <label>To <input id="send-to" placeholder="account id, public key, or receive code" autocomplete="off" spellcheck="false" data-testid="send-to"></label>
+    <label>Amount <span class="unit-wrap"><input id="send-amount" inputmode="decimal" placeholder="0.0" data-testid="send-amount"><span class="unit" id="send-unit">LGO</span></span></label>
+    <div class="row"><button id="send-max" class="ghost small">Max</button><span class="fine" id="send-avail"></span></div>
+    <button id="send-review" class="primary" data-testid="send-review">Review</button>
+    <p class="err" id="send-err" role="alert" data-testid="send-err"></p>
+    <div id="send-confirm" hidden class="review" data-testid="send-confirm">
+      <h3>Check, then sign</h3>
+      <dl id="send-summary"></dl>
+      <div class="privacy"><b>Public:</b> sender, recipient, amount, fee, nonce, time; the recipient's public key if this is
+        their first transfer. <b>Private:</b> nothing in a public transfer: use a private account for that.</div>
+      <div class="row"><button id="send-cancel">Cancel</button><button id="send-go" class="primary" data-testid="send-go">Sign and send</button></div>
+    </div>
+    <div id="send-result" class="msg" role="status" data-testid="send-result"></div>
+  </div>
+
+  <div id="t-receive" class="tab card" hidden>
+    <h2>Receive</h2>
+    <p>Give the sender your <b>receive code</b>. It holds your account id and your public key: LEZ needs the key the first
+      time an account is credited (as admission evidence), after that the id alone is enough.</p>
+    <div class="kv"><span>Receive code</span><code id="recv-code" class="copy wrap" data-testid="recv-code"></code></div>
+    <div class="kv"><span>Account id</span><code id="recv-id" class="copy wrap" data-testid="recv-id"></code></div>
+    <div class="kv"><span>Public key</span><code id="recv-pk" class="copy wrap" data-testid="recv-pk"></code></div>
+    <p class="fine">LEZ's own wallet CLI: <code id="recv-cli"></code></p>
+  </div>
+
+  <div id="t-activity" class="tab card" hidden>
+    <h2>Activity</h2>
+    <p class="fine" id="act-status" data-testid="act-status"></p>
+    <ul id="act-list" class="list" data-testid="act-list"></ul>
+    <button id="act-more" class="ghost small">Scan further back</button>
+    <p class="fine">Read from the network's own blocks (the sequencer's <code>getBlockRange</code>): LEZ's RPC keeps no
+      per-account index, so this page reads the blocks and keeps what concerns your accounts, in this browser only.
+      LEZ's RPC reports no outcome for a transaction; a transfer is shown as applied when the sender's nonce moved past it.</p>
+  </div>
+
+  <div id="t-prove" class="tab card" hidden>
+    <h2>Prove an Ethereum fact on LEZ</h2>
+    <div id="prove-body"></div>
+  </div>
+
+  <div id="t-bridge" class="tab card" hidden>
+    <h2>Bridge Sepolia ⇄ LEZ, privately</h2>
+    <div id="bridge-body"></div>
+  </div>
+
+  <div id="t-private" class="tab card" hidden>
+    <h2>Private accounts</h2>
+    <div id="private-body"></div>
+  </div>
+
+  <div id="t-settings" class="tab card" hidden>
+    <h2>More</h2>
+    <h3>Network</h3>
+    <dl id="net-info" data-testid="net-info"></dl>
+    <h3>Backup</h3>
+    <label>Passphrase <input type="password" id="reveal-pass" autocomplete="current-password" data-testid="reveal-pass"></label>
+    <div class="row"><button id="reveal-phrase" data-testid="reveal-phrase">Show recovery phrase</button>
+      <button id="reveal-key" data-testid="reveal-key">Show this account's private key</button></div>
+    <pre id="reveal-out" class="secret" hidden data-testid="reveal-out"></pre>
+    <h3>Session</h3>
+    <label class="inline">Lock after <select id="autolock"><option value="5">5 min</option><option value="15" selected>15 min</option><option value="60">60 min</option></select> idle</label>
+    <p class="fine">Built against LEZ v0.4.0-rc3. Source: the Ferrata repository, <code>deploy/testnet/web/wallet/</code>.</p>
+  </div>
+</section>
+</main>
+<footer class="fine foot">Keys stay in this page · Test network: no value · Prototype, unaudited</footer>
+</body>
+</html>

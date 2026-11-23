@@ -54,6 +54,9 @@ ferrata-lez-statements-wire = { path = "../statements-wire" }
 # feature `rebate`; the wire crate is not, for the same reason.
 methods-rebate = { path = "../methods-rebate", optional = true }
 ferrata-lez-rebate-wire = { path = "../rebate-wire" }
+# The names program (guests/names; the test network's names, tests/names.rs). Both optional, behind the feature `names`.
+methods-names = { path = "../methods-names", optional = true }
+ferrata-lez-names-wire = { path = "../names-wire", optional = true }
 
 [dev-dependencies]
 # The checkpoint program's own block parser and message decoder, to check what it would collect
@@ -75,3 +78,5 @@ program-class = ["dep:methods-program-class", "dep:ferrata-lez-wire-class"]
 statements = ["dep:methods-statements"]
 # The operator rebate (tests/rebate.rs, docs/guides/operator-rebate.md).
 rebate = ["dep:methods-rebate"]
+# The test network's names program (tests/names.rs, names/README.md).
+names = ["dep:methods-names", "dep:ferrata-lez-names-wire"]

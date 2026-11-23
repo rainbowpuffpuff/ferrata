@@ -24,7 +24,7 @@ lez="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 beside="$(cd "$lez/../.." && pwd)"
 manifests=(wire bridge-wire harness guests/program guests/program-keccak-soft guests/consumer
            guests/consumer-keccak-accel guests/scripted guests/bridge live/driver live/frozen/bridge-wire
-           holdings-wire guests/holdings updater advance crown/driver updater/sequencer)
+           holdings-wire guests/holdings updater advance crown/driver updater/sequencer names-wire guests/names)
 featured=(harness live/driver crown/driver updater/sequencer)
 
 die() { echo "lez-select: $*" >&2; exit 1; }

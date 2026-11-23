@@ -1,0 +1,13 @@
+[package]
+name = "ferrata-lez-names-wire"
+description = "ferrata_names, a LEZ program that maps human-readable names to accounts (and, optionally, to a private receiver's keys): its messages, state, rules, exit codes and the whole handler, shared by the guest (guests/names) and the host (harness, CLI vectors)"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[dependencies]
+# LEZ v0.4.0-rc1 by path (see ../wire/Cargo.toml); lez-select.sh points it at another tag.
+lee_core = { path = "../../../upstream/lez-v0.4.0-rc1/lee/state_machine/core" }
+borsh = { version = "=1.6.1", features = ["derive"] }
+sha2 = { version = "0.10", default-features = false }

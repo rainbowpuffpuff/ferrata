@@ -1245,6 +1245,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ferrata-lez-names-wire"
+version = "0.1.0"
+dependencies = [
+ "borsh",
+ "lee_core",
+ "sha2 0.10.9",
+]
+
+[[package]]
 name = "ferrata-lez-rebate-wire"
 version = "0.1.0"
 dependencies = [
@@ -1482,6 +1491,7 @@ dependencies = [
  "ferrata-core",
  "ferrata-lez-bridge-wire",
  "ferrata-lez-holdings-wire",
+ "ferrata-lez-names-wire",
  "ferrata-lez-rebate-wire",
  "ferrata-lez-statements-wire",
  "ferrata-lez-wire",
@@ -1491,6 +1501,7 @@ dependencies = [
  "lee",
  "lee_core",
  "methods",
+ "methods-names",
  "methods-program-class",
  "methods-rebate",
  "methods-residue-experimental",
@@ -1878,6 +1889,13 @@ dependencies = [
 
 [[package]]
 name = "methods"
+version = "0.1.0"
+dependencies = [
+ "risc0-build",
+]
+
+[[package]]
+name = "methods-names"
 version = "0.1.0"
 dependencies = [
  "risc0-build",

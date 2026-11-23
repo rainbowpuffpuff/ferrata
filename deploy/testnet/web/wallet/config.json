@@ -1,0 +1,10 @@
+{
+  "network": "LEZ v0.4 test network",
+  "rpc": "/rpc",
+  "faucet": "/faucet",
+  "explorer": "/explorer",
+  "token": { "symbol": "LGO", "decimals": 9 },
+  "gasLimitTransfer": 100000,
+  "attestation": { "program": null, "instances": [] },
+  "bridge": { "program": null, "configId": null, "vault": null, "evmChainId": 11155111 }
+}
