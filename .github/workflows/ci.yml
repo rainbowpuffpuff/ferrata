@@ -357,6 +357,11 @@ jobs:
         run: python3 -I scripts/test_vault_libs.py
       - name: The cargo-deny runner (scripts/test_deny_all.py)
         run: python3 -I scripts/test_deny_all.py
+      # RFP-022 P.5, P.6: the documented performance figures recomputed from the committed records (the live
+      # run's stamps, captures and driver log; the daemons' GNU time, samples and RPC byte counts; the provers'
+      # run.json files, prove.jsonl and groth16.jsonl) and asserted stated by the documents that document them.
+      - name: The documented performance figures recomputed from the committed records (scripts/test_perf_records.py)
+        run: python3 -I scripts/test_perf_records.py
       # RFP-022 Reliability #11: every hard row of both RFPs mapped to its tests, records and documents
       # (scripts/ci/row-tests.toml), and every test said to run in a CI job really run by that job's
       # commands (scripts/ci/ci_model.py reads the workflows and the scripts they call). The checker's own

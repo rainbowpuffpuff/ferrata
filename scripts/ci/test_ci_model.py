@@ -297,8 +297,8 @@ check("checker: an unknown kind is refused", rc == 1 and "is none of test, recor
 # The real map's counts, as docs/EVIDENCE.md row 162 states them: update these lines with the map (a row that gains a
 # test CI runs moves both numbers).
 rc, out = run_checker(real, "--list")
-check("checker: the real map, RFP-022: 64 of 68 hard rows with a test CI runs",
-      "RFP-022: 68 hard rows; 64 with a test CI runs; 4 without one" in out)
+check("checker: the real map, RFP-022: 66 of 68 hard rows with a test CI runs",
+      "RFP-022: 68 hard rows; 66 with a test CI runs; 2 without one" in out)
 check("checker: the real map, RFP-021: 54 of 59 hard rows with a test CI runs",
       "RFP-021: 59 hard rows; 54 with a test CI runs; 5 without one" in out)
 listed = re.findall(r"^    (RFP-02[12] (?:VS|Sec|Priv|F|U|R|P|S)\.\d+): (\S+)$", out, re.M)
@@ -306,7 +306,7 @@ rows022 = [rid for rid, _ in listed if rid.startswith("RFP-022 ")]
 check("checker: --list gives every hard row its status", len(listed) == 59 + 68 and len(rows022) == 68)
 rc, out = run_checker(real, "--require-ci", "RFP-022")
 check("checker: --require-ci RFP-022 exits 1 on the real map and counts the rows without a test CI runs",
-      rc == 1 and "--require-ci RFP-022: 4 hard row(s) without a test CI runs" in out)
+      rc == 1 and "--require-ci RFP-022: 2 hard row(s) without a test CI runs" in out)
 
 # Synthetic maps: the real one with a test the vault job runs added to some RFP-022 rows (a row may have
 # several [[row]] blocks; the checker joins them).
