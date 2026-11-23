@@ -22,8 +22,8 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 39 | 16 | 1 | 3 | **59** |
-| RFP-022 | 41 | 24 | 1 | 2 | **68** |
+| RFP-021 | 37 | 18 | 1 | 3 | **59** |
+| RFP-022 | 40 | 25 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
 
@@ -33,8 +33,8 @@ By section, hard requirements:
 |---|---|---:|---:|---:|---:|---:|
 | RFP-021 | Functionality | 12 | 2 | 0 | 1 | 15 |
 | RFP-021 | Usability | 3 | 2 | 0 | 1 | 6 |
-| RFP-021 | Reliability | 8 | 4 | 0 | 0 | 12 |
-| RFP-021 | Performance | 6 | 3 | 0 | 0 | 9 |
+| RFP-021 | Reliability | 7 | 5 | 0 | 0 | 12 |
+| RFP-021 | Performance | 5 | 4 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 4 | 5 | 1 | 1 | 11 |
 | RFP-021 | Verification Security | 6 | 0 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 15 | 2 | 0 | 0 | 17 |
@@ -43,7 +43,7 @@ By section, hard requirements:
 | RFP-022 | Performance | 5 | 2 | 0 | 0 | 7 |
 | RFP-022 | Supportability | 0 | 3 | 0 | 1 | 4 |
 | RFP-022 | Security | 4 | 4 | 1 | 0 | 9 |
-| RFP-022 | Privacy Preservation | 7 | 0 | 0 | 0 | 7 |
+| RFP-022 | Privacy Preservation | 6 | 1 | 0 | 0 | 7 |
 
 ## RFP-021: Trustless Ethereum State Attestation
 
@@ -86,7 +86,7 @@ By section, hard requirements:
 | R.2 | shown | Each refusal leaves state unchanged; a refused attestation reverts the consumer's transaction and the same claim then succeeds. | `lez/results/stage1-refusals.md`; `lez/results/stage4-attest-refusals.md` |
 | R.3 | shown | Two records attested after each of four committee rotations and ten years later, statements byte-identical and records unchanged (synthetic chain); five real mainnet records read after four real rotations and ten years later; a real Sepolia record attested before and after a real rotation; in CI, a record and its attestations unchanged after three rotations through the program. | 151, 208; `lez/results/lc-security/r3-rotations.md` |
 | R.4 | shown | Daemon killed inside a job resumes from chain state, no second Open, in the harness and on a sequencer; the lab restarted. | 79, 99, 104; `lez/lab/README.md` |
-| R.5 | shown | The updater daemon: a down source and dropped connections handled; restarted mid-job, it finishes with no second Open, harness and sequencer. The attestation monitor: unreachable and wrong-chain providers not counted (`monitor/attest/tests/monitor.rs:442`); a divergence held while the instance is unreadable and while every provider is down, and its freeze hook retried until it is up (`:617`). The attestation CLI's `advance` under a failing source is not tested. | 79, 99, 104 |
+| R.5 | in part | The updater daemon: a down source and dropped connections handled; restarted mid-job, it finishes with no second Open, harness and sequencer. The attestation monitor: unreachable and wrong-chain providers not counted (`monitor/attest/tests/monitor.rs:442`); a divergence held while the instance is unreadable and while every provider is down, and its freeze hook retried until it is up (`:617`). In part: the clause says "any off-chain component", and the attestation CLI's commands under a failing source are not tested. To be shown: the attestation CLI's commands under a failing Ethereum endpoint, interrupted and rerun with nothing done twice. | 79, 99, 104 |
 | R.6 | in part | BLS is audited `blst`; the light-client logic is Ferrata's own transcription, checked against the official vectors, Helios (the vectors, 220 recorded updates, 2,000 random mutations of real updates) and Lodestar (the same mutations; its BLS is herumi's WebAssembly, not `blst`), 0 disagreements; the mutations judge the native stores, not the program's step path, and only update bytes; not audited. | 1, 140, 153; `crates/ferrata-spectests/HELIOS-DIFFERENTIAL.md` |
 | R.7 | shown | An instance left unadvanced for 8.2 days keeps attesting: three attestations under its record verify during the stall and after eight committee rotations, identical; the 106 outstanding real Sepolia updates (periods 1410–1417) applied late, in order, by any submitter, with no repair and a committee adopted for every period (the newest sent first refused, 23); past its weak-subjectivity bound an instance is replaced (F.10), and the updater opens no new job for it, says so and is `down` (HTTP 503). | 21, 69, 70, 192, 200; `lez/harness/tests/stall.rs`; `lez/results/r7-stall.md` |
 | R.8 | shown | Duplicate Open (207), replayed Finish (205) and an applied update (52) refused in the harness and on sequencers we ran. | 6, 22, 112; `lez/results/stage1-refusals.md` |
@@ -107,7 +107,7 @@ By section, hard requirements:
 | P.6 | in part | The updater daemons on a running sequencer: 0.043–0.092 of a core and 57.3–57.8 MiB each; the update's proofs measured; the attestation CLI and module, the §8 `monitor` and the daemons as Logos modules not measured; the updater bounds what it reads and serves. | 21, 123, 172, 200; `docs/performance.md` RFP-021 §P.6 |
 | P.7 | shown | Account sizes in LEZ's serialized state with growth measured to 100,000 records (record 453 B, instance 593 B, job 1,110 B); one- and five-year growth derived at the design's cadence (4.12 MB and 20.58 MB); unfinished jobs at most (k − 1) × 10.09 MB a year with k racing honest operators, none with one (derived); anyone can add more, one 1,110 B job account per `Open` it never finishes (a forged signature passes `Open`, 2,195,028 execution gas: `lez/results/stage1-refusals.md` row 1), and nothing clears jobs, so that growth is bounded only by what its sender pays. | 170; `lez/results/perf-state.md`; `docs/performance.md` RFP-021 §P.7 |
 | P.8 | shown | The BLS precompile delta modelled at time parity from measured native and in-program costs: 8,344,139 cycles of BLS per finality update in the program, 17,841 as a precompile; the update about 902,607 cycles instead of 9,228,905. | 127, 171; `docs/performance.md` RFP-021 §P.8 |
-| P.9 | shown | Every update step charged the same over five updates as records grow and one attestation 275,865 cycles with 2 and with 1,002 record accounts, pinned in CI; five statement types and every update step the same to 100,000 records (`lez/results/perf-state.md`). Not measured at different state sizes (`docs/performance.md` §P.9 lists them): `Init`, `VerifyAll` and the private update path, the absent-account, absent-slot and four-facts statements, `CallAttest` and the reference consumer's claim, `Succeed`/`Spawn`; for them the argument is that they read fixed-size accounts only. | 170, 211; `lez/results/perf-state.md`; `lez/lab/README.md` |
+| P.9 | in part | Every update step charged the same over five updates as records grow and one attestation 275,865 cycles with 2 and with 1,002 record accounts, pinned in CI; five statement types and every update step the same to 100,000 records (`lez/results/perf-state.md`). Not measured at different state sizes (`docs/performance.md` §P.9 lists them): `Init`, `VerifyAll` and the private update path, the absent-account, absent-slot and four-facts statements, `CallAttest` and the reference consumer's claim, `Succeed`/`Spawn`; for them the argument is that they read fixed-size accounts only, which is not a measurement. In part: the clause says "no action". To be shown: the listed actions measured at two state sizes. | 170, 211; `lez/results/perf-state.md`; `lez/lab/README.md` |
 
 ### Supportability
 
@@ -253,7 +253,7 @@ released ([not-built.md](not-built.md)); the rows below are classified on the be
 | Priv.4 | shown | Every component that handles user data documented (`docs/trust.md` §8.1, user guide §10.1); no linking value in any submitted byte of either chain (0 of 320 hidden values over 20 round trips, in dev mode on this tree's programs and on real proofs of the deployed pre-B1 ones); the tool's claim, dry run or held by its delay, asks the zone for no deposit's nullifier account. | 23, 89, 221; `docs/trust.md` §8.1; `docs/privacy/RESULTS.md` |
 | Priv.5 | shown | A rejected, a repeated and a capped claim reveal nothing of which deposit: on the private path (the default) each is refused before any proof exists (no block, no fee, no public account changed); on the plaintext path each publishes no more than an applied plaintext claim; on the vault, refused releases and deposits revert with their four-byte selector only; the client's refusals name no deposit. | 62, 85, 185; `lez/harness/tests/bridge_refusals.rs`; `vault/test/RefusalPrivacy.t.sol` |
 | Priv.6 | shown | What each third party submitting for the user learns documented (`docs/trust.md` §8.2, user guide §10.2: the gas-drop relayer, the claim's relayer, the release relayer, the wrapper); the user switches per claim (`--relayer`) and per release (relayer address 0 for any, `--relayer`, `--self-send`), tested. | 46, 47, 48, 84, 85, 124; `docs/trust.md` §8.2 |
-| Priv.7 | shown | Tool and mini-app default to private; a public destination, plaintext claim or public burn is refused without its own acknowledgement. The fee payer: the gas drop is on by default only once a relayer's inbox is configured (`cli/README.md`, "The gas drop"); without one a private claim pays its fee from the user's own private account, inside the proof; burns have no drop, and the mini-app's is a stand-in (U.5, in part). | 62, 84, 85, 86 |
+| Priv.7 | in part | Tool and mini-app default to private; a public destination, plaintext claim or public burn is refused without its own acknowledgement. In part: the fee payer's mitigation needs a user action. The gas drop is on only once the user names a relayer's inbox (`--gas-drop-inbox` or `FERRATA_GAS_DROP_INBOX`, `cli/README.md`, "The gas drop"); without it a private claim pays its fee from the user's own private account, and the tool's default line says that account's native LEZ "came from somewhere (a faucet or a purchase can link it to you)" (`cli/src/flow.rs:516`); burns have no drop, and the mini-app's is a stand-in. To be shown: the fee payer's mitigation with no user action (a relayer reachable by default, over the network), as U.5. | 62, 84, 85, 86 |
 
 ### Soft requirements
 
