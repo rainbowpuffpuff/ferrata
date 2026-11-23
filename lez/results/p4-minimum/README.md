@@ -232,9 +232,13 @@ What the cycles go to (`lee/privacy_preserving_circuit/src/`, LEZ `1806e87`):
 - **Dummies, padding, tree depth, journal: small.** A dummy is hashes only (`Nullifier::for_dummy`,
   `Commitment::for_dummy`; its note is given, not encrypted: `output.rs` lines 74–82, 110–150): about 12,700.
   Padding the notes to 512 bytes: +60,149 for two (ChaCha20 over more bytes). The commitment tree's depth costs
-  one accelerated SHA-256 compression per level (`compute_digest_for_path`, `core/src/commitment.rs` line 117;
-  r0vm logs about 90 cycles per SHA-256 call): under 3,000 cycles at depth 32 (*derived*). The journal is
-  hashed once (`main.rs` line 135), a few thousand cycles for these outputs.
+  one hash per level (`compute_digest_for_path`, `core/src/commitment.rs` line 117), measured since at about
+  1,935 user cycles a level from r0vm's session log (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`): the private
+  `VerifyAll`'s circuit 1,913,757, 1,927,235 and 1,940,779 at 3, 10 and 17 levels
+  ([`perf-state-actions.md`](../perf-state-actions.md), `bash bench/perf/state-actions.sh`), so about 62,000
+  cycles at depth 32 (*derived*). This note first said "under 3,000 cycles at depth 32", from about 90 cycles a
+  SHA-256 call; that counted too little. The journal is hashed once (`main.rs` line 135), a few thousand cycles
+  for these outputs.
 - **Our programs' part of the circuit: 2–7 %.** Each private transition is verified as an assumption
   (`env::verify` over its borsh frame, `private_backend.rs` line 77). Against the bare transfer (same shape,
   same harness): attestation +119,835, claim +128,947, burn +32,857 user cycles (*derived* from the counts).

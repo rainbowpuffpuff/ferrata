@@ -367,23 +367,30 @@ after), and a credit to an existing balance or holder costs the same whether it 
 ([`costs_attestation.rs`](../lez/harness/tests/costs_attestation.rs), job `lez-harness`; the vault pattern on the
 vault's record placed rather than replayed from Sepolia, its pins the replayed world's figures).
 
-**What grows, and why it may.** Two costs grow with use; neither is the module's, and LEZ's charge sees neither.
-(1) LEZ's own: a private transaction's circuit verifies its fee payer's membership path in LEZ's commitment tree, one
-SHA-256 per level, and the tree's depth is log2 of every commitment ever made (`lee/state_machine/src/merkle_tree/mod.rs`
-in LEZ v0.4.0-rc1). Measured: with 100,000 more commitments the path grew from 3 to 17 levels while the private
-`VerifyAll`, `AttestPrivately` and `ClaimDepositPrivately` were charged exactly the same. The circuit's cycles cannot be
-read in the harness (LEZ drops the prover's statistics) and are derived: about 90 a level, under 3,000 at depth 32
-([`p4-minimum/README.md`](../lez/results/p4-minimum/README.md)), against about 1.86M for the circuit of a bare private
-transfer and 9.05M for the private `VerifyAll`'s own execution. The module cannot avoid it (it is how LEZ proves a
-private account exists), and at that size it needs no mitigation. `VerifyAll` carries the instance's store in its
-message, so its private execution reads no chain state: its 9,049,362 cycles cannot vary with K and are not a
-measurement against accumulation. (2) The reference consumer's: a private-kind vault claim credits the claimant's own
-private state, one `(pool, amount)` entry per pool it holds, and the claim's proof grows by about 2,100 cycles a pool
-(measured: 1,523,845 with none, 1,737,559 with 100, 3,717,087 with 1,000). It is the user's own proving work on their
-own state, bounded by the pools (a vault and a token each) they hold privately, and LEZ's charge does not see it (the
-public part is `Read` and `Spend`). Mitigation: a user who holds many pools can keep them in separate private accounts,
-and a consumer can keep one pool per private account instead of a list. Not measured against accumulation: the
-bridge's actions (RFP-022's program, which has no such clause; the growth of its accounts is RFP-022 §P.7's). The
+**What grows.** (1) In the program's actions, one cost, and it is LEZ's: a private transaction's circuit verifies its
+fee payer's membership path in LEZ's commitment tree, one hash per level, and the tree's depth is log2 of every
+commitment ever made (`lee/state_machine/src/merkle_tree/mod.rs` in LEZ v0.4.0-rc1). Measured: with 100,000 more
+commitments the path grew from 3 to 17 levels while the private `VerifyAll`, `AttestPrivately` and
+`ClaimDepositPrivately` were charged exactly the same, and the private `VerifyAll`'s circuit grew from 1,913,757 to
+1,927,235, 1,934,974 and 1,940,779 user cycles at 3, 10, 14 and 17 levels, about 1,935 a level (`AttestPrivately`'s
+and `ClaimDepositPrivately`'s the same: 1,975,409 to 2,002,530 and 2,176,439 to 2,203,529 from 3 to 17 levels;
+[`perf-state-actions.md`](../lez/results/perf-state-actions.md), its last table), about 62,000 at depth 32 (derived),
+beside about 1.9M for the circuit and 9.05M for `VerifyAll`'s own execution: the 14 more levels add 1.4% to the
+circuit. The same circuit varies by a few tens of cycles from one run to the next (1,913,726 and 1,913,757 at 3 levels
+in two runs; the cause not established), far below one level's cost. LEZ's API drops the prover's statistics; r0vm logs
+every session's cycles with `RISC0_INFO=1 RUST_LOG=risc0_zkvm=info`, and `bash bench/perf/state-actions.sh` reads the
+circuits' from that log. The module cannot avoid it (it is how LEZ proves that a private account exists), and at that
+size it needs no mitigation. `VerifyAll` carries the instance's store in its message, so its private execution reads no
+chain state: its 9,049,362 cycles cannot vary with K and are not a measurement against accumulation. (2) In the
+reference consumer, which is application code by RFP-021's scope: a private-kind vault claim credits the claimant's own
+private state, one `(pool, amount)` entry per pool it holds, and the claim's two private transitions grow by about
+2,000–2,300 cycles a pool (measured: 1,523,845 with none, 1,737,559 with 100, 3,717,087 with 1,000); LEZ's circuit,
+which hashes and encrypts that state, grows with it too (not measured). LEZ's charge does not see it (the public part is
+`Read` and `Spend`). It is avoidable: a claimant avoids it today by sending each pool's deposits to a private account of
+its own, and a consumer can keep one pool per private account instead of a list. Not measured against accumulation: the
+bridge's actions (RFP-022's program, which has no such clause; the growth of its accounts is RFP-022 §P.7's), and the
+soft-requirement programs (`statements`, `rebate`) and the second consumer (`ferrata_holdings`), which are programs of
+their own. The
 node's own work is not charged: serializing the state took 0.002 s at 2.8 MB and 0.228 s at 48.1 MB (the breakpoint a
 node writes, not a transaction's cost).
 
@@ -603,9 +610,9 @@ private transaction are LEZ's and not counted.
 User-side proofs on a real mid-range laptop (cloud containers held to a laptop's shape, Mac minis and a GPU are
 measured, and the owner's script rehearsed in a laptop-shaped container; the owner's run is
 `bench/perf/p4-laptop-owner.sh`: P.4 of both RFPs); `ferrata-attest` and `ferrata_attest_module` not measured, the §8
-`monitor` not measured (RFP-021 P.6); the bridge's actions at different state sizes (RFP-022's program; every message
-of RFP-021's attestation program and of its reference consumer is measured, and the two costs that grow with use are
-stated in §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
+`monitor` not measured (RFP-021 P.6); the bridge's actions (RFP-022's program), the soft-requirement programs
+(`statements`, `rebate`) and the second consumer (`ferrata_holdings`) at different state sizes (programs of their own;
+every message of RFP-021's attestation program and of its reference consumer is measured, §P.9); A3's 100-update gate and its waste ratio on a sequencer (RFP-021 R.9, R.10); the importer's LEZ-side
 resources as a daemon and `ferrata_attestor` (RFP-022 P.6); v5's ERC-20 calls and refunds on Sepolia's gas rules
 (RFP-022 P.3); the source-chain finality of LEZ testnet 0.4, which is not released (RFP-022 P.5's outbound leg ran on a
 devnet). Every one is a milestone

@@ -38,7 +38,7 @@
 //!   own private proof against the pools it holds (pinned at 0 and 100 pools).
 //!
 //! The private transactions also run with a thousand more commitments in LEZ's commitment set: the
-//! fee payer's membership path, which LEZ's circuit hashes one hash per level, grows from 3 to 10
+//! fee payer's membership path, which LEZ's circuit hashes level by level, grows from 3 to 10
 //! levels and LEZ's charge stays the same. The circuit's own cycles grow by 1,935 a level; LEZ's API
 //! drops them, r0vm logs them (`RISC0_INFO=1 RUST_LOG=risc0_zkvm=info` with `--nocapture`), and
 //! `lez/results/perf-state-actions.md` records them (`bench/perf/state-actions.sh`).
