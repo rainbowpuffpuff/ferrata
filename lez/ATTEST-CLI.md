@@ -202,8 +202,9 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   and `Open` carry the window that ends with the weak-subjectivity period of the checkpoint (for `Open`, of the
   instance's newest finalized header). Past that end the tool prints the refusal as code 53's message: the checkpoint,
   when its period ended, the zone's clock and the remedy (a new instance from a recent bootstrap, `init`; operator
-  guide §10); a dry run that shows it so is not sent. Before an update's signature slot the refusal stays LEZ's text,
-  with the time the window opens.
+  guide §10); a dry run that shows it so is not sent, and `receipt` prints the same for an `Init` or an `Open` the zone
+  refused so (how a caller of `ferrata_attest_module`, whose `lez_submit` reports inclusion only, reads the outcome).
+  Before an update's signature slot the refusal stays LEZ's text, with the time the window opens.
 - Exit status: 0 applied (or would be); 3 refused, as the dry run said (or by LEZ's clock past a checkpoint's period);
   1 the dry run and the zone disagree, or the verdict and the dry run; 2 a usage error; 4 the Ethereum endpoint
   failed or serves another chain, and nothing was sent.
@@ -214,8 +215,9 @@ the test) and a scripted Ethereum endpoint failing on demand: refused connection
 proof; the receipts), HTTP 503, an error answer, another chain id, another block hash, each exit 4 with nothing sent and
 the same command applied once afterwards; kills while reading Ethereum, with the transaction in the pool, in a block
 not yet final, and after an `advance` job's `Open`, each run again with nothing sent or applied twice; and the stale
-checkpoint's code 53 message, from the dry run and from the zone's receipt. The library's tests map the refusal a real
-LEZ v0.4.0-rc1 sequencer gave (`../e2e/runs/ci-sequencer-attest-2026-11-21/records/`).
+checkpoint's code 53 message for an `Init` and for an update, from the dry run, from the zone's receipt and from
+`receipt`. The library's tests map the refusal a real LEZ v0.4.0-rc1 sequencer gave
+(`../e2e/runs/ci-sequencer-attest-2026-11-21/records/`). The recorded run: [`../cli/results/attest-faults-r1/`](../cli/results/attest-faults-r1/README.md).
 
 Run on a zone we started (`cli/tests/attest-seq.sh`: crown session A, then the commands in `cli/tests/attest-seq-hook.sh`):
 see [Results on a sequencer](#results-on-a-sequencer).
