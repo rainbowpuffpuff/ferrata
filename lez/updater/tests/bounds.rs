@@ -228,5 +228,11 @@ fn module_replies_and_messages_are_bounded() {
     );
     assert_eq!(m.answered.len(), ANSWERED_KEPT);
     assert!(m.answered.iter().all(|p| p.chars().count() <= MAX_MESSAGE_CHARS + 1));
+    // A source that names its provider takes no other provider's answer (beacon_api_module failed over).
+    m.provider = "lodestar".into();
+    let other = m.updates(1, 1);
+    println!("an answer from another provider: {:?}", other.as_ref().map(|_| ()).map_err(|e| format!("{e:#}")));
+    assert!(other.is_err_and(|e| format!("{e:#}").contains("not lodestar")));
+    assert_eq!(m.answered.len(), ANSWERED_KEPT, "a refused answer is not counted");
     assert_eq!(clip("a\tb\u{7f}c"), "a_b_c");
 }

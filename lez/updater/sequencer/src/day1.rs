@@ -189,14 +189,20 @@ impl Deployment {
 fn keygen(a: &Args) -> Result<()> {
     let dir = a.path("keys")?;
     ensure!(!dir.join("payer.key").exists(), "{}: keys exist already; a new deployment needs a new directory", dir.display());
+    // `--program ACCOUNT`: an instance on a program already deployed (a network's published one): its account, no keys.
+    // Checked before anything is written, so that a refused call leaves no directory behind.
+    let program: Option<AccountId> = match a.get("program") {
+        Some(account) => {
+            ensure!(a.get("bin").is_none(), "--program names a program deployed already: no --bin");
+            Some(account.trim().parse().map_err(|e| anyhow!("--program {account:?}: {e:?}"))?)
+        }
+        None => None,
+    };
     fs::create_dir_all(&dir)?;
     fs::set_permissions(&dir, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
     write_key(&dir.join("payer.key"), &fresh_key()?)?;
     write_key(&dir.join("daemon.key"), &fresh_key()?)?;
-    // `--program ACCOUNT`: an instance on a program already deployed (a network's published one): its account, no keys.
-    if let Some(account) = a.get("program") {
-        ensure!(a.get("bin").is_none(), "--program names a program deployed already: no --bin");
-        let id: AccountId = account.trim().parse().map_err(|e| anyhow!("--program {account:?}: {e:?}"))?;
+    if let Some(id) = program {
         fs::create_dir_all(dir.join("program"))?;
         fs::write(dir.join("program").join("account"), format!("{id}\n"))?;
     }

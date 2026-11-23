@@ -238,7 +238,8 @@ pub fn set_beacon_api_module(f: BeaconApiModuleCall) {
 pub struct BeaconApiModule {
     pub name: String,
     pub chain_id: i64,
-    /// The provider id `beacon_api_module` tries first (`""`: its own order).
+    /// The provider id `beacon_api_module` tries first (`""`: its own order); an answer from another provider (it failed
+    /// over) is not taken.
     pub provider: String,
     pub timeout_secs: u64,
     /// The provider that answered each of the last [`ANSWERED_KEPT`] requests, in order (`beacon_api_module`'s ids).
@@ -272,10 +273,20 @@ impl BeaconApiModule {
                 clip(v["code"].as_str().unwrap_or("no code"))
             );
         }
+        let by = clip(v["provider"].as_str().unwrap_or("?"));
+        // A source that names its provider takes that provider's answers only: beacon_api_module fails over to its
+        // other providers, and two sources that both fell over to one provider would count as two for min_agreeing.
+        if !self.provider.is_empty() && by != self.provider {
+            bail!(
+                "{}: {endpoint}: beacon_api_module answered from provider {by}, not {} (it failed over): not taken",
+                self.name,
+                self.provider
+            );
+        }
         if self.answered.len() >= ANSWERED_KEPT {
             self.answered.remove(0);
         }
-        self.answered.push(clip(v["provider"].as_str().unwrap_or("?")));
+        self.answered.push(by);
         let body = v["body"].as_str().ok_or_else(|| anyhow!("{}: {endpoint}: no body", self.name))?;
         serde_json::from_str(body)
             .with_context(|| format!("{}: {endpoint}: the provider's body is not JSON", self.name))

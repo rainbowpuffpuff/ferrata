@@ -36,7 +36,8 @@ class TestLiveTestnetRecords(unittest.TestCase):
             with self.subTest(record=os.path.basename(rec)):
                 r = run(os.path.join(HERE, "live_testnet.py"), "verify", rec)
                 self.assertEqual(r.returncode, 0, r.stdout[-3000:] + r.stderr[-3000:])
-                s = json.load(open(os.path.join(rec, "summary.json")))
+                with open(os.path.join(rec, "summary.json")) as f:
+                    s = json.load(f)
                 failed = [c["what"] for c in s["checks"] if not c["ok"]]
                 self.assertEqual(failed, [], "checks that failed in the record")
 
