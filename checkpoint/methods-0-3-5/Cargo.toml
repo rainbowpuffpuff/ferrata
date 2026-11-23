@@ -1,7 +1,7 @@
 [package]
 name = "methods-0-3-5"
 version = "0.1.0"
-description = "Builds the checkpoint guests for zones on Logos Blockchain 0.3.5-rc.1 (guests-0-3-5: checkpoint_0_3_5, rule A; checkpoint_b_0_3_5, rule B) with risc0-build 3.0.5, the segment guest's image id compiled in as for the default ones"
+description = "Builds the checkpoint guests for zones on Logos Blockchain 0.3.5-rc.1 (guests-0-3-5: checkpoint_0_3_5, rule A; checkpoint_b_0_3_5, rule B) with risc0-build 3.0.7, the segment guest's image id compiled in as for the default ones"
 edition.workspace = true
 license.workspace = true
 publish = false
@@ -10,7 +10,7 @@ publish = false
 methods-segment = { path = "../methods-segment" }
 
 [build-dependencies]
-risc0-build = { version = "=3.0.5" }
+risc0-build = { version = "=3.0.7" }
 methods-segment = { path = "../methods-segment" }
 
 [package.metadata.risc0]

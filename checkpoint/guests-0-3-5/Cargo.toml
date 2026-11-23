@@ -1,4 +1,4 @@
-# The checkpoint guests for zones on Logos Blockchain 0.3.5-rc.1 (RISC Zero 3.0.5): ../guests' `checkpoint` and
+# The checkpoint guests for zones on Logos Blockchain 0.3.5-rc.1 (RISC Zero 3.1.0): ../guests' `checkpoint` and
 # `checkpoint-b`, calling checkpoint-core's second build (feature `bedrock-0-3-5`, src/bedrock_0_3_5/) in place of the
 # default rules. A workspace of its own, so that ../guests (the deployed guests of docs/image-ids.md), its lockfile and
 # its feature resolution stay as they are; its lockfile is ../guests' with only the workspace members changed.
@@ -9,7 +9,7 @@ members = ["checkpoint", "checkpoint-b"]
 
 [workspace.dependencies]
 checkpoint-core = { path = "../crates/checkpoint-core", features = ["bedrock-0-3-5"] }
-risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
 bytemuck = "1"
 # Pin the versions the patches provide, so the whole graph resolves to the patched crates.
 sha2 = "=0.10.9"

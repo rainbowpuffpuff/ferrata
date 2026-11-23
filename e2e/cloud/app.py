@@ -370,7 +370,7 @@ def runner(run: str, repo: str, mode: str, commit: str) -> dict:
             subprocess.Popen(["bash", "-c", c], cwd=f"{repo}/{d}", env=env, stdout=open(f"{r.cloud}/build-{d}.log", "w"),
                              stderr=subprocess.STDOUT)
             for d, c in (("bridge", "cargo build --release -p ferrata-e2e"),
-                         ("checkpoint", "cargo +1.98.1 build -p fidelity --bin e2e"))
+                         ("checkpoint", "cd fidelity && cargo +1.98.1 build --bin e2e"))
         ]
         forge_rc = r.sh("forge build", log="build-vault.log", env=env, cwd=f"{repo}/vault")
         codes = [b.wait() for b in builds] + [forge_rc]

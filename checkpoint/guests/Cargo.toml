@@ -1,4 +1,4 @@
-# The zkVM guests (RISC Zero 3.0.5). A workspace of its own so that the patches below apply here
+# The zkVM guests (RISC Zero 3.1.0). A workspace of its own so that the patches below apply here
 # and nowhere else. Each guest package is built by risc0-build from methods-segment/ or methods/.
 [workspace]
 resolver = "3"
@@ -6,7 +6,7 @@ members = ["segment", "checkpoint", "checkpoint-b", "micro"]
 
 [workspace.dependencies]
 checkpoint-core = { path = "../crates/checkpoint-core" }
-risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
 bytemuck = "1"
 # Pin the versions the patches provide, so the whole graph resolves to the patched crates.
 sha2 = "=0.10.9"

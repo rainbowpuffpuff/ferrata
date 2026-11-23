@@ -1,7 +1,7 @@
 [package]
 name = "ferrata-guests"
 version = "0.1.0"
-description = "RISC Zero zkVM 3.0.5 guests (SPEC-v2): release (the release proof), gasdrop (the gas-drop receipt) and claim (measurement only)"
+description = "RISC Zero zkVM 3.1.0 guests (SPEC-v2): release (the release proof), gasdrop (the gas-drop receipt) and claim (measurement only)"
 edition = "2021"
 rust-version = "1.88"
 license = "MIT OR Apache-2.0"
@@ -24,7 +24,7 @@ path = "src/bin/gasdrop.rs"
 
 [dependencies]
 ferrata-bridge-core = { path = "../crates/ferrata-bridge-core", default-features = false }
-risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
 # Pin the version the patch provides, so the whole graph resolves to the patched crate.
 sha2 = "=0.10.8"
 

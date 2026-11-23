@@ -329,7 +329,7 @@ id = "RFP-021 R.11"
 tests = [
   { path = "lez/results/v0.4.0-rc3/r11-one-block/README.md", kind = "record" },
   { path = "lez/harness/tests/statements_same_block.rs", kind = "test", ci = "lez-harness" },
-  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
+  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "lez/harness/tests/security_privacy.rs", kind = "test", ci = "box", run = "cd lez && RISC0_DEV_MODE=1 cargo test -p harness --locked --test security_privacy r11 -- --nocapture" },
 ]
 note = "on LEZ v0.4.0-rc3's own sequencer (standalone, its mock Bedrock, dev mode): four private attestations by four accounts proven against one snapshot, held while the commitment tree moved and another instance verified an update, then applied together in block 47, nothing re-proven, every commitment computed before inclusion in the tree, one account's second transaction from the same snapshot dropped (EVIDENCE row 217; a rerun from the recorded fixtures must start before 24 Nov 2026 19:21 UTC). statements_same_block.rs (CI, lez-harness): four private statement submissions (a record read keeping its query private, the same query sent to the program, an ERC-20 Transfer verified inside the transaction, a call of the program's attestation), from four private accounts, all proven (dev mode) against one pre-state before any is included, then settled into one block at one block id with one opening fee state and one block fee summary (as LEZ v0.4.0-rc1's apply.rs settles a block; the harness otherwise gives each transaction a block of its own), in both orders: all accepted, each one's commitments and nullifiers as computed before inclusion, the same final state either way; the control, one note spent twice in the block, refused at the nullifier check. Also four private attestations proven against one snapshot, a finality update applied in between, settled in one block with rc1's block settlement in process, nothing re-proven (lez/results/lc-security/r11-one-block.md). No sequencer ran either block. The mechanism is LEZ's settlement (it re-runs the reply and refuses on mismatch), read from the LEZ source; the checkpoint program's fixtures hold blocks with several private transactions (cp-pp5-360: five), collected by the parser the rule tests cover"
@@ -665,7 +665,7 @@ note = "the burn note (r, memo, mac, token, amount, C_out) written once with no 
 [[row]]
 id = "RFP-022 F.6"
 tests = [
-  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
+  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "lez/harness/tests/bridge_burn.rs", kind = "test", ci = "lez-harness" },
 ]
 note = "burns from a public holding (a signed top-level call) and from a private one (its delivery to the token's account public), destroying one denomination through synchronous messages only; the parser collects both (fixtures cp-burns10-360, cp-privburns10-360) and the private burn was proven for real (rows 91, 100, 123)"
@@ -677,7 +677,7 @@ tests = [
   { path = "vault/test/real/RuleBReal.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
-  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
+  { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
 ]
 note = "a burn root accepted only through the checkpoint proof, every LEZ block re-hashed, the release checked by the pinned base verifier: rule (B) over real LEZ blocks through RISC Zero's real verifier (lab zone, EVIDENCE row 24; t = 3 of four sequencers, row 65; live on Sepolia, rows 41, 91; the four-sequencer zone with the bridge program, rows 100-101); an rc3 zone of four sequencers ran, its stall traced, no bridge on it (row 206)"
 
@@ -1149,7 +1149,7 @@ id = "RFP-022 Sec.2"
 tests = [
   { path = "bridge/evm-verify/test/v2/Groth16Verify.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
-  { path = "checkpoint/fidelity/tests/formats.rs", kind = "test", ci = "box", run = "cd checkpoint && cargo +1.98.1 test -p fidelity -- --nocapture" },
+  { path = "checkpoint/fidelity/tests/formats.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
 ]
 note = "every flipped proof word, journal word, selector and image id refused by the real verifier; altered requests and replays refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88)"

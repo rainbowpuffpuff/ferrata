@@ -1,13 +1,13 @@
 [package]
 name = "methods-segment"
 version = "0.1.0"
-description = "Builds the segment guest (guests/segment) with risc0-build 3.0.5 and embeds its ELF and image id"
+description = "Builds the segment guest (guests/segment) with risc0-build 3.0.7 and embeds its ELF and image id"
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [build-dependencies]
-risc0-build = { version = "=3.0.5" }
+risc0-build = { version = "=3.0.7" }
 
 [package.metadata.risc0]
 methods = ["../guests/segment"]

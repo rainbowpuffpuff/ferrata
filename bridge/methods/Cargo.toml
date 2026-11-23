@@ -1,13 +1,13 @@
 [package]
 name = "methods"
 version = "0.1.0"
-description = "Builds the guests in ../guests with risc0-build 3.0.5 and embeds their ELFs and image ids"
+description = "Builds the guests in ../guests with risc0-build 3.0.7 and embeds their ELFs and image ids"
 edition.workspace = true
 license.workspace = true
 publish = false
 
 [build-dependencies]
-risc0-build = { version = "=3.0.5" }
+risc0-build = { version = "=3.0.7" }
 
 # One guest package with two binaries: `release` (the release proof) and `claim` (test vehicle).
 [package.metadata.risc0]

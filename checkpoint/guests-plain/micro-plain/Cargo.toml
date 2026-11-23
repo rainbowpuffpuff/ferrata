@@ -12,5 +12,5 @@ path = "../../guests/micro/src/main.rs"
 
 [dependencies]
 checkpoint-core = { path = "../../crates/checkpoint-core" }
-risc0-zkvm = { version = "=3.0.5", default-features = false, features = ["std"] }
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std"] }
 bytemuck = "1"

@@ -48,7 +48,7 @@ cp_elf="$(find target/riscv-guest -path '*riscv32im-risc0-zkvm-elf/release/*' -n
 export FERRATA_CI_CHECKPOINT_B_ELF="$repo/checkpoint/$cp_elf"
 stamp "native archives (rapidsnark, the Logos Blockchain circuits): fetched once, checked against scripts/native-deps.json"
 vars=$(python3 -I "$repo/scripts/fetch_native.py" env) && eval "$vars"
-cargo +1.98.1 build --release --locked -p fidelity --bin ci_zone --message-format=json-render-diagnostics \
+(cd fidelity && cargo +1.98.1 build --release --locked --bin ci_zone --message-format=json-render-diagnostics) \
   > "$FERRATA_E2E_DIR/ci_zone-build.json"
 python3 -I "$repo/scripts/fetch_native.py" check-build "$FERRATA_E2E_DIR/ci_zone-build.json" --target-dir "$repo/checkpoint/target"
 export FERRATA_CI_ZONE="$repo/checkpoint/target/release/ci_zone"
