@@ -75,16 +75,18 @@ so `gate_two_honest_one_adversary`, derived at 475–725 s as a single test, sta
 `recorded` tests on the remaining 3 cores), and `updater-privacy` (`ferrata-updater --lib --bins`, the remaining 11
 updater binaries (with `redating`, added after the measured runs: 87 s on the build box at the shard's four test threads), `ferrata-updater --doc`, `recorded` with `--exact --skip` for those five names, and the privacy suite
 with its gate, running `privacy_suite` once instead of twice). Each shard builds only the targets it runs; sharded
-workflow wall time is derived at **~19–28 min** (critical path `updater-gate` or `updater-privacy`, 834 and 828 s of
-steps on the build box at four threads; ~62–63% reduction across both measured runner speeds). On GitHub's Free plan (20
-concurrent jobs), a push to `main` starts 18 `ci.yml` jobs plus `macos.yml`'s 2 = 20 jobs, while a push to a branch with
-an open same-repo PR starts 36 `ci.yml` jobs (excess jobs queue without failing; `concurrency` isolates each `main` run
-in its own `ci-main-<run_id>` group with `cancel-in-progress: false` so intermediate commits on `main` are never
-cancelled or replaced, while cancelling superseded runs on other refs). The daily/manual unsharded backstop runs
-separately in [`.github/workflows/lez-full.yml`](../../.github/workflows/lez-full.yml) (`lez-harness-full`, 04:17 UTC;
-GitHub auto-disables scheduled workflows after 60 days without repo activity; `deps` reports RustSec advisories against
-its baseline without blocking on `ci.yml`). Target directories are not cached (the round trip's caches already use most
-of GitHub's 10 GB); the toolchains, the upstream sources and the vault's libraries share the round trip's cache entries.
+workflow wall time was derived at **~19–28 min** (~62–63% reduction across both measured runner speeds); the first
+sharded run on GitHub (run 45110242188 at `907736e8`, 23 November 2026) took **22.7 min**, all 18 jobs green, its shards
+`harness-4` 1,362 s, `harness-3` 1,191 s, `harness-2` 1,156 s, `updater-gate` 1,155 s, `updater-privacy` 1,119 s,
+`harness-1` 1,035 s. On GitHub's Free plan (20 concurrent jobs), a push to `main` starts 18 `ci.yml` jobs plus
+`macos.yml`'s 2 = 20 jobs, while a push to a branch with an open same-repo PR starts 36 `ci.yml` jobs (excess jobs queue
+without failing; `concurrency` isolates each `main` run in its own `ci-main-<run_id>` group with `cancel-in-progress:
+false` so intermediate commits on `main` are never cancelled or replaced, while cancelling superseded runs on other
+refs). The daily/manual unsharded backstop runs separately in
+[`.github/workflows/lez-full.yml`](../../.github/workflows/lez-full.yml) (`lez-harness-full`, 04:17 UTC; GitHub
+auto-disables scheduled workflows after 60 days without repo activity; `deps` reports RustSec advisories against its
+baseline without blocking on `ci.yml`). Target directories are not cached (the round trip's caches already use most of
+GitHub's 10 GB); the toolchains, the upstream sources and the vault's libraries share the round trip's cache entries.
 Long steps in `roundtrip`, `lez-harness` and `lez-harness-full` carry explicit `timeout-minutes` bounds, and
 `cli/tests/e2e.rs` runs its `CliLocal` `forge script` offline (`FOUNDRY_OFFLINE=true`), `--slow`, and under a 300 s
 portable timeout.
