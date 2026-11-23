@@ -28,10 +28,13 @@
 //! Checked: every transaction the zone included was submitted once (or resubmitted byte for byte), none applied twice;
 //! no `Attest` request and no job step twice.
 //!
-//! U.5, three more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
+//! U.5, four more zones, with LEZ's own text produced by LEZ's state machine on the zone's blocks:
 //! * `init` with the zone's clock past the checkpoint's weak-subjectivity period: the dry run's refusal shown as code 53's
 //!   message naming the checkpoint and the remedy, and nothing sent;
-//! * the same with the dry run inside the window and the zone's block past it (the receipt's refusal): code 53's message;
+//! * the same with the dry run inside the window and the zone's block past it (the receipt's refusal): code 53's message,
+//!   and from `receipt` too (how a caller of the Logos module reads an outcome);
+//! * `advance` sent before the end of the period of the instance's newest finalized header, its block after it: code
+//!   53's message naming that header, from the run and from `receipt`;
 //! * `advance` before its update's signature slot: LEZ's text with the window's start, not code 53.
 //!
 //! Records (each command's output): `$CARGO_TARGET_TMPDIR/attest-faults/`. Run: `cargo test --locked --test
@@ -848,11 +851,56 @@ fn stale_checkpoint_shown_as_code_53() {
     has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
     has(&out, "its dry run, at the followed tip's earlier time, was inside the window");
     has(&out, CHECKPOINT);
-    {
+    let init_hash = {
         let z = zone.lock().unwrap();
         assert_eq!(z.submitted.len(), 1, "the Init only: the adoption parts are not sent after a refusal");
         assert!(z.included[0].2, "the zone refused it");
-    }
+        z.submitted[0].clone()
+    };
+    // `receipt`, as a caller of the Logos module reads a transaction's outcome: the same message.
+    let (code, out) = t.run("receipt-of-the-refused-init", &["receipt", "--tx", &init_hash]);
+    assert_eq!(code, 0, "{out}");
+    has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, CHECKPOINT);
+
+    // An update sent before the end of the period of the instance's newest finalized header, its block after it.
+    let zone = Arc::new(Mutex::new(Zone::genesis(end - 3_600_000)));
+    let lez = serve_zone(zone.clone());
+    let mut t = Tool::new(&dir, "u5-update-crossing-end", &lez, &zone.lock().unwrap());
+    let (code, out) = t.run("init", &strs(&init));
+    assert_eq!(code, 0, "{out}");
+    let id = instance_of(&out);
+    zone.lock().unwrap().clock_ms = end + 60_000;
+    let update = fixture("finality_update.ssz");
+    let committee = format!("bootstrap:{}", fixture(BOOT).display());
+    let advance = [
+        "advance",
+        "--instance",
+        &id,
+        "--update",
+        update.to_str().unwrap(),
+        "--finality",
+        "--committee",
+        &committee,
+        "--send",
+        "--yes",
+    ];
+    let (code, out) = t.run("advance-crossing-end", &advance);
+    assert_eq!(code, 3, "{out}");
+    has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, "instance's newest finalized header 0x");
+    has(&out, &format!("(slot {BOOTSTRAP_SLOT}) is stale"));
+    let open_hash = {
+        let z = zone.lock().unwrap();
+        assert_eq!(z.submitted.len(), 4, "the instance's three, then the Open only");
+        let last = z.included.last().unwrap();
+        assert!(last.2, "the zone refused the Open");
+        z.submitted[3].clone()
+    };
+    let (code, out) = t.run("receipt-of-the-refused-open", &["receipt", "--tx", &open_hash]);
+    assert_eq!(code, 0, "{out}");
+    has(&out, "refused with 53 OutsideWeakSubjectivityPeriod");
+    has(&out, &format!("(slot {BOOTSTRAP_SLOT}) is stale"));
 
     // An update before its signature slot: LEZ's text with the window's start; not code 53.
     let zone = Arc::new(Mutex::new(Zone::genesis(slot_ms(BOOTSTRAP_SLOT) + 600_000)));

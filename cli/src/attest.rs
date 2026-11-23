@@ -152,10 +152,7 @@ pub fn window_refusal(reason: &str, window: Option<&WindowNote>, at_ms: u64) -> 
         return None;
     }
     let Some(w) = window else {
-        return Some((
-            WindowSide::Unknown,
-            format!("refused by LEZ: \"{reason}\" (this step carries no window this tool knows)"),
-        ));
+        return Some((WindowSide::Unknown, format!("refused by LEZ: \"{reason}\" (no window of it is known here)")));
     };
     if let Some(end) = w.end_ms.filter(|e| at_ms >= *e) {
         return Some((
@@ -472,9 +469,6 @@ impl Outcome {
             },
         };
         format!("{verdict}; execution gas {}, storage gas {}, {} event(s)", self.gas_exec, self.gas_stor, self.events)
-    }
-    fn show(&self) -> String {
-        self.show_for(None)
     }
     /// The program's code: 0 when applied.
     fn code(&self) -> u32 {
@@ -1458,7 +1452,8 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
                 match z.follower.receipts.iter().find(|(h, _)| h.trim_start_matches("0x").to_lowercase() == want) {
                     Some((h, r)) => {
                         let o = outcome_of(r);
-                        println!("receipt {h}: block {}: {}", r.block_id, o.show());
+                        let window = window_of(&z, program, h, r.block_id, r.timestamp_ms);
+                        println!("receipt {h}: block {}: {}", r.block_id, o.show_for(window.as_ref()));
                         run.log(json!({ "what": "receipt", "tx": h, "block": r.block_id, "reverted": r.reverted, "exit_code": r.exit_code, "reason": r.reason,
                                         "gas_exec": r.gas_exec, "gas_stor": r.gas_stor, "events": r.events }));
                     }
@@ -1618,6 +1613,52 @@ pub async fn run(a: AttestArgs, sequencer: Option<String>, chain_id: Option<u64>
     }
 }
 
+/// For `receipt`: the window of a transaction the follower holds, when LEZ refused it at `at_ms` past the window's end
+/// (`None` otherwise, and LEZ's text is shown as it is). An `Init`'s window is its message's; an `Open`'s end is taken
+/// from the instance's newest finalized header as the zone holds it now: a later header only moves that end later, so
+/// a time past it was past the end the `Open` carried.
+fn window_of(z: &Zone, program: AccountId, hash: &str, block_id: u64, at_ms: u64) -> Option<WindowNote> {
+    let want = hash.trim().trim_start_matches("0x").to_lowercase();
+    let block = z.follower.blocks.iter().find(|b| b.header.block_id == block_id)?;
+    let tx = block
+        .body
+        .transactions
+        .iter()
+        .find(|t| t.hash().to_string().trim_start_matches("0x").to_lowercase() == want)?;
+    let LeeTransaction::Public(p) = tx else { return None };
+    let root = &p.message().execution.root;
+    if root.to.program_account_id != program {
+        return None;
+    }
+    let note = match borsh::from_slice::<Message>(&root.message).ok()? {
+        Message::Init { config, checkpoint, bootstrap } => {
+            let slot = CompactBootstrap::decode(&bootstrap, config.fork()?).ok()?.header.beacon.slot;
+            let w = ferrata_advance::init_window(&config, slot);
+            WindowNote {
+                start_ms: w.start_ms,
+                end_ms: w.end_ms,
+                checkpoint: format!("checkpoint {} (its header at slot {slot})", hx(&checkpoint)),
+            }
+        }
+        Message::Open { .. } => {
+            let state = z.follower.state.get_account_by_id(root.to.account_id).data.actor_state(program).to_vec();
+            let s: InstanceState = borsh::from_slice(&state).ok()?;
+            let store = CompactStore::decode(&s.store).ok()?;
+            WindowNote {
+                start_ms: None,
+                end_ms: s.config.ws_end_ms(store.finalized.slot),
+                checkpoint: format!(
+                    "instance's newest finalized header {} (slot {})",
+                    hx(&store.finalized.hash_tree_root()),
+                    store.finalized.slot
+                ),
+            }
+        }
+        _ => return None,
+    };
+    note.end_ms.is_some_and(|e| at_ms >= e).then_some(note)
+}
+
 /// An endpoint's URL without its path, query or credentials, for messages and records (a provider's key often sits in
 /// the path).
 fn redacted(url: &str) -> String {
@@ -1725,7 +1766,7 @@ mod tests {
         // A refusal (3), not a disagreement, though the program's checks pass natively (expected 0).
         assert_eq!(status_of(&outcome, Some(&note), Some(0), true), 3);
         // Without the step's window the text stays LEZ's, with no code put on it.
-        assert!(!outcome.show().contains("OutsideWeakSubjectivityPeriod"), "{}", outcome.show());
+        assert!(!outcome.show_for(None).contains("OutsideWeakSubjectivityPeriod"), "{}", outcome.show_for(None));
     }
 
     #[test]
