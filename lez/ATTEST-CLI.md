@@ -197,12 +197,14 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   and receipt as it happens. The same command run again after an interruption signs nothing new: a transaction the
   zone applied is reported from its receipt, one in a block not yet final is waited for, one in no block yet is sent
   again byte for byte (same hash and nonce: LEZ applies it at most once), unless its window has ended or ends within
-  a minute of the zone's clock (then nothing is sent; when nothing of the command was applied, the journal is
-  cleared); one whose nonce another transaction took is reported not applied (exit 1). Run again after it finished, it
-  prints what the earlier run did and sends nothing; `--again` sends a new one (refused on an interrupted run: finish
-  it first). A submission the sequencer turns away (too large, its fee, a full pool) was not admitted: the run ends
-  there, recorded as finished (exit 1), and `--again` plans it anew; a submission with no answer stays unfinished and
-  is finished by running the command again. One run at a time holds a state directory (the file `lock`; a second run
+  a minute (then nothing is sent; when nothing of the command was applied, the journal is cleared; while the earlier
+  copy may still be pending, the run stays unfinished); one whose nonce another transaction took is reported not
+  applied (exit 1). Run again after it finished, it prints what the earlier run did and sends nothing; `--again` sends a
+  new one (refused on an interrupted run: finish it first). A first submission the sequencer turns away (too large, its
+  fee, a full pool) was not admitted: the run ends there, recorded as finished (exit 1), and `--again` plans it anew. A
+  resend turned away (the earlier run's copy of the same transaction may still be pending) and a submission with no
+  answer leave the run unfinished (exit 1, no `--again` suggested): run the same command again to read what became of
+  it. One run at a time holds a state directory (the file `lock`; a second run
   exits 2); the follower's state (`follower.state`) and the journals are replaced whole or not at all, the directory
   synced after each.
 - **A stale checkpoint (RFP-021 U.5).** LEZ refuses a transaction executed outside the timestamp validity window its
@@ -210,16 +212,21 @@ $F attest  --instance 0x<id> --record-slot S --eth URL --block N \
   and `Open` carry the window that ends with the weak-subjectivity period of the checkpoint (for `Open`, of the
   instance's newest finalized header). Past that end the tool prints the refusal as code 53's message: the checkpoint,
   when its period ended, the time it was judged at and the remedy (a new instance from a recent bootstrap, `init`;
-  operator guide §10). Nothing is sent whose window has ended, ends within a minute of the zone's clock (its newest
-  block's time, which can be ahead of the last final block; the dry run is made at it) or has not opened yet, and
-  `receipt` prints the same message for an `Init` or an `Open` the zone refused so (how a caller of
-  `ferrata_attest_module`, whose `lez_submit` reports inclusion only, reads the outcome). Before an update's signature slot the refusal stays LEZ's text, with the
-  time the window opens. The zone's clock is what its blocks say: the sequencer's RPC serves no other, so a zone whose
-  next block jumps past the end with none between cannot be seen coming; the receipt then shows code 53.
+  operator guide §10). Nothing is sent whose window has ended or ends within a minute, judged at the later of the
+  zone's clock (its newest block's time, which can be ahead of the last final block) and this machine's clock, as
+  `ferrata-updater` judges its windows (`FERRATA_ATTEST_CLOCK_MS` sets the latter for rehearsals and tests; `0` leaves
+  the zone's clock alone); nor a step whose window has not opened by the dry run, made at the zone's clock plus 10 s
+  (so on a zone whose block interval exceeds 10 s a valid update can be held up to one interval past its window's
+  start: run it again then). `receipt` prints the same message for an `Init` or an `Open` the zone refused so (how a
+  caller of `ferrata_attest_module`, whose `lez_submit` reports inclusion only, reads the outcome). Before an update's
+  signature slot the refusal stays LEZ's text, with the time the window opens. The limit: with this machine's clock
+  behind the zone's (more than the minute's margin), a zone that has stamped no block since a window ended still gets
+  the step sent and charged the whole gas limit; its receipt then shows code 53.
 - Exit status: 0 applied (or would be); 3 refused, as the dry run said (or by LEZ's clock past a checkpoint's period,
-  or held because of it); 1 the dry run and the zone disagree, or the verdict and the dry run, or the sequencer turned a
-  submission away, or another transaction took a transaction's nonce; 2 a usage error, or another run holds
-  `--state-dir`; 4 the Ethereum endpoint failed or serves another chain, and nothing was sent.
+  or held because of it); 1 the dry run and the zone disagree, or the verdict and the dry run, or the sequencer turned
+  a submission away (a resend: the run stays unfinished), or another transaction took a transaction's nonce; 2 a usage
+  error, or another run holds `--state-dir`; 4 the Ethereum endpoint failed or serves another chain, and nothing was
+  sent.
 
 Tested in CI (`roundtrip` job): [`../cli/tests/attest_faults.rs`](../cli/tests/attest_faults.rs) runs the tool as a
 process against a stand-in sequencer (LEZ's own block application on 127.0.0.1, its clock and Bedrock finality set by
@@ -227,13 +234,15 @@ the test) and a scripted Ethereum endpoint failing on demand: refused connection
 proof; the receipts), HTTP 503, an error answer, another chain id, another block hash, each exit 4 with nothing sent and
 the same command applied once afterwards; kills while reading Ethereum, with the transaction in the pool, in a block
 not yet final, and after an `advance` job's `Open`, each run again with nothing sent or applied twice; the journal's
-guards (the same command spelled otherwise, a submission turned away, a nonce taken, `--again` on an interrupted run, no
-`--state-dir`, two runs on one state directory); and the stale checkpoint's code 53 message for an `Init` and for an
+guards (the same command spelled otherwise, a submission turned away, a resend turned away while the earlier copy was
+pending, a nonce taken, `--again` on an interrupted run, no `--state-dir`, two runs on one state directory); and the stale checkpoint's code 53 message for an `Init` and for an
 update, from the dry run, from the zone's receipt and from `receipt`, a lagging final tip, and a run resumed past the
-end (nothing sent, the journal cleared). The library's tests map the refusal a real LEZ v0.4.0-rc1 sequencer gave
+end with or without a block stamped since (nothing sent, the journal cleared), and near it with the earlier copy
+pending (the run left unfinished, the copy found applied). The library's tests map the refusal a real LEZ v0.4.0-rc1 sequencer gave
 (`../e2e/runs/ci-sequencer-attest-2026-11-21/records/`). `ferrata_attest_module`'s own Ethereum reads (`fetch_log_proof`,
 and `eth_getProof` behind `build_attest_tx` and `dry_run_attest`) are tested against the same failures in CI's
-`modules-resolve` job
+`modules-resolve` job, over their `rpc_url` route and over the route through Logos Core's `eth_rpc_module` with the
+module's call replaced by a stand-in
 ([`../modules/ferrata_attest_module/rust-lib/calls/tests/failing_endpoint.rs`](../modules/ferrata_attest_module/rust-lib/calls/tests/failing_endpoint.rs)).
 The recorded run: [`../cli/results/attest-faults-r2/`](../cli/results/attest-faults-r2/README.md).
 

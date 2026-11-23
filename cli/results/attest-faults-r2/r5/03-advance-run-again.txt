@@ -1,10 +1,10 @@
 $ ferrata attest ... advance --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --update <repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/finality_update.ssz --finality --committee bootstrap:<repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --send --yes
-zone http://127.0.0.1:17086: followed to block 5 (final on Bedrock)
+zone http://127.0.0.1:61541: followed to block 5 (final on Bedrock)
 advance: an earlier run was interrupted (journal <repo>/cli/target/tmp/attest-faults/r5/follower/sent/6e717f829cdcc92a79f9ce5d88c50599c4375bdf658202c89229b04d737b0660.json): finishing its 3 transaction(s), none signed again
   open                         applied or refused in a final block since the earlier run sent it: nothing sent
   open                         block 5 (0 s): applied; execution gas 2330188, storage gas 5452, 0 event(s); equal to its dry run
-  miller                       not sent by the earlier run: sending it as that run signed it (hash 683ec4b0ae555a0f4cb079ea5babcd15684a2796db388482925b16af636d69c2, nonce 4)
+  miller                       not sent by the earlier run: sending it as that run signed it (hash 7ed97e6f8d401322d763eee7cd5704ded5242506ab50ad41497e56f386fb36a6, nonce 4)
   miller                       block 6 (2 s): applied; execution gas 3308048, storage gas 399, 0 event(s); equal to its dry run
-  finish                       not sent by the earlier run: sending it as that run signed it (hash 9e399e8de750b43bf8a2ddbf3a68f0d65f1812e4548ee5f88172c6323418da93, nonce 5)
+  finish                       not sent by the earlier run: sending it as that run signed it (hash b958fd29fd8fe90c4402b34a47078ed8dc177f75bbc06f18961ce77583e0c505, nonce 5)
   finish                       block 7 (3 s): applied; execution gas 3723960, storage gas 527, 1 event(s); equal to its dry run
 [exit 0]

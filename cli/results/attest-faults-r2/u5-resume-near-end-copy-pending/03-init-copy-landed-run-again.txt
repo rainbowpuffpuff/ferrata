@@ -1,0 +1,10 @@
+$ ferrata attest ... init --preset mainnet --bootstrap <repo>/crates/ferrata-spectests/fixtures/mainnet-attest-2026-11-10/bootstrap.ssz --checkpoint 0x7c279a5e7aee53514ad2ce373139ff36b50e26563ff53134e46cf57b57382433 --layout electra --parts 2 --send --yes
+zone http://127.0.0.1:37940: followed to block 3 (final on Bedrock)
+init: an earlier run was interrupted (journal <repo>/cli/target/tmp/attest-faults/u5-resume-near-end-copy-pending/follower/sent/8e3817dd4507d9e2bf31655f9e46355f23bcceeb611b2e498b23f8ab7b0cc7fc.json): finishing its 3 transaction(s), none signed again
+  Init                         applied or refused in a final block since the earlier run sent it: nothing sent
+  Init                         block 3 (0 s): applied; execution gas 210357, storage gas 1895, 0 event(s); equal to its dry run
+  Adopt 1/2                    not sent by the earlier run: sending it as that run signed it (hash 92ea54fa9c069dc7f9faa909e8b4fb2a161831cdd9bb4fd49c0b9297477b47a8, nonce 1)
+  Adopt 1/2                    block 4 (2 s): applied; execution gas 3399141, storage gas 24980, 0 event(s); equal to its dry run
+  Adopt 2/2                    not sent by the earlier run: sending it as that run signed it (hash f71fac56189385d8a5ee9fe2f14a30343178c657e3ccb92de20263facdc6b1e5, nonce 2)
+  Adopt 2/2                    block 5 (3 s): applied; execution gas 3485575, storage gas 25108, 1 event(s); equal to its dry run
+[exit 0]

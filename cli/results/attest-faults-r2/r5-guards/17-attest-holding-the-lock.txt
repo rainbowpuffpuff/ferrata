@@ -1,9 +1,0 @@
-$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:28903 --block 26384851 --account 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 --send --yes
-zone http://127.0.0.1:22574: followed to block 12 (final on Bedrock)
-attest: verdict (the program's function, natively): 1 statement(s) under block 26384851 (0x3e02e5baa81bf1604b6447e9ca014a1ca85e3c7785ca6b9a5430b6c93cba7bce)
-  statement id 0x7e5f4c87430552093b5b39e5195c6cd5c9210a2832f24b51638586730311555d
-attest: dry run of 1 transaction(s) on the zone's state at block 12, the zone's clock 2026-11-10 13:59:23 UTC (payer 2PfJa7EjGr6X4oTAz77XEnMNzuvQrTFEUiKKJvP7tXXs)
-  Attest                       4322 bytes; would be applied; execution gas 164885, storage gas 4322, 1 event(s)
-  the verdict and the zone's execution agree: applied
-  Attest                       block 13 (2 s): applied; execution gas 164885, storage gas 4322, 1 event(s); equal to its dry run
-[exit 0]

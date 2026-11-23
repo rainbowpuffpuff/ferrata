@@ -1,6 +1,6 @@
-$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:28903 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:ge:0x01 --send --yes
-zone http://127.0.0.1:22574: followed to block 9 (final on Bedrock)
+$ ferrata attest ... attest --instance 0x599a0de5f1dc6248b4e369c2aa066e2c66370f1d1027f16673639893309e4fcd --record-slot 15624480 --eth http://127.0.0.1:50642 --block 26384851 --storage 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2:0xb374801ace2c02f5db0425ab5920a2b7ed1d5a00abbcd395fda7530ba1d666c0:ge:0x01 --send --yes
+zone http://127.0.0.1:22176: followed to block 9 (final on Bedrock)
 attest: an earlier run was interrupted (journal <repo>/cli/target/tmp/attest-faults/r5-guards/follower/sent/86a0a2a458fb973f6bf742d06e5afcc592e53eb1bc89bcae84626a6d78517765.json): finishing its 1 transaction(s), none signed again
-  Attest                       in no block yet: sending the same signed transaction again (hash 6680db401faf3f8e5bda9e8405dc7b088125596e31d7db3e6650c25469c8da52, nonce 8; LEZ applies it at most once)
+  Attest                       in no block yet: sending the same signed transaction again (hash ac37174517d33909c3e3ea2c64dea435a51bfb64dae2b96e4360b8d7c093e02a, nonce 8; LEZ applies it at most once)
   Attest                       block 10 (1 s): applied; execution gas 275865, storage gas 7338, 1 event(s); equal to its dry run
 [exit 0]
