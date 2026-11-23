@@ -7,10 +7,10 @@ one place in the repository that tells this; the [README](../README.md) is about
 
 ## Agents draft, the author decides
 
-The code, the tests and the documents were drafted with coding agents (Claude Code; one set of CI changes
-with Antigravity, below) under the author's
-design, review and acceptance tests, and the author's decision log; every commit was made this way. Read
-each commit as agent-drafted, whether or not it carries an `Assisted-by` trailer.
+The code, the tests and the documents were drafted with coding agents (Claude Code; one set of CI changes with
+Antigravity, below) under the author's design, review and acceptance tests, and the author's decision log;
+every commit was made this way. Read each commit as agent-drafted, whether or not it carries an `Assisted-by`
+trailer.
 
 The author owns the design, the decisions and the acceptance tests: the specification and BLS vectors, the
 real-chain replays, the differential oracles, the adversarial and mutation suites and the measurements each
@@ -45,8 +45,8 @@ timeouts, the macOS runner and the round trip's bounded forge deploy) were draft
 Antigravity; their commits carry `Assisted-by: Antigravity (gemini-4-neon-xhigh)`. The performance-records test
 (`scripts/test_perf_records.py`) and the operator guide's section on stall detection (§3.5) were drafted by
 GLM 5.3 through Claude Code (`Assisted-by: Claude Code (glm-5.3)`). Opus (`claude-opus-5-5`) reviewed each
-twice in a separate context, its drafter fixed the findings, and Opus merged both and wrote their status
-changes.
+twice in a separate context, its drafter fixed the findings, and Opus merged both and folded the status
+changes they proposed into the status documents.
 
 ## Reviews by agents
 
