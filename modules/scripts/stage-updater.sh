@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage ferrata_updater_module's sources into its crate directory (rust-lib/vendor/, ignored by git).
 #
-# The updater links LEZ v0.4.0-rc1's state machine, and for its in-process chain (feature `harness`,
+# The updater links LEZ's state machine (the tag lez/scripts/lez-select.sh selected; v0.4.0-rc1 as committed), and for its in-process chain (feature `harness`,
 # the chain its tests run on) the lez/ harness, which embeds the guests risc0-build makes. The module
 # builder copies only rust-lib/ and runs no RISC Zero toolchain, so:
 #
@@ -22,7 +22,7 @@
 #                                  (`*_ELF`, `*_ID`), the ELF bytes copied from a risc0-build output of
 #                                  lez/methods (the guests are not changed; their ids are recorded in
 #                                  vendor/STAGED.json and checked against docs/image-ids.md by check-daemons.sh)
-#   vendor/upstream/lez-v0.4.0-rc1/  the LEZ tree beside the repository (without target/ and .git),
+#   vendor/upstream/lez-<tag>/     the LEZ tree beside the repository (without target/ and .git),
 #                                  whose artifacts/ LEZ's own build scripts embed
 #   vendor/lbc/                    the prebuilt artifact of logos-blockchain-circuits that LEZ's node-side crates
 #                                  (the sequencer backend's) link and embed, the release their version names
@@ -40,7 +40,10 @@ set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../.." && pwd)
 spike=$(cd "$repo/.." && pwd)
-lez_up="$spike/upstream/lez-v0.4.0-rc1"
+# The LEZ tag the repository's manifests point at (lez/scripts/lez-select.sh: v0.4.0-rc1 as committed; a build for a
+# network on another tag selects it first, in a copy of the repository, as modules/scripts/live-testnet.sh does).
+tag=$("$repo/lez/scripts/lez-select.sh" --show)
+lez_up="$spike/upstream/lez-$tag"
 commit=${FERRATA_COMMIT:-$(git -C "$repo" rev-parse --verify -q HEAD 2>/dev/null || echo unknown)}
 # Portable to macOS's userland (no find -printf; sha256sum where it exists, else shasum; bash 3.2). What it stages
 # is not: the circuits' and rapidsnark's prebuilt artifacts below are their linux-x86_64 releases, so the module
@@ -57,6 +60,9 @@ if [ -z "$methods_rs" ] || [ ! -f "$methods_rs" ]; then
   exit 1
 fi
 [ -d "$lez_up/lee" ] || { echo "stage-updater.sh: $lez_up missing" >&2; exit 1; }
+# The calls crate names the staged LEZ tree by its tag (its `lee` dependency): lez-select.sh does not rewrite it.
+grep -q "vendor/upstream/lez-$tag/" "$r/calls/Cargo.toml" \
+  || { echo "stage-updater.sh: $r/calls/Cargo.toml does not name vendor/upstream/lez-$tag/ (the selected tag)" >&2; exit 1; }
 
 rm -rf "$v"
 mkdir -p "$v/ferrata" "$v/upstream"
@@ -118,7 +124,7 @@ cp "$lbc_cache/$rs/lib/"*.a "$v/rapidsnark/"
 rs_sum=$( (cd "$v/rapidsnark" && ls | LC_ALL=C sort | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
 
 # The LEZ tree.
-tar -C "$spike/upstream" --exclude='lez-v0.4.0-rc1/target' --exclude='lez-v0.4.0-rc1/.git' -cf - lez-v0.4.0-rc1 | tar -C "$v/upstream" -xf -
+tar -C "$spike/upstream" --exclude="lez-$tag/target" --exclude="lez-$tag/.git" -cf - "lez-$tag" | tar -C "$v/upstream" -xf -
 
 # lez/methods, without its build script: the guests risc0-build made, as constants of the same names.
 m="$v/ferrata/lez/methods"
@@ -171,12 +177,12 @@ done
 sum=$( (cd "$repo" && { for c in $crates; do find "$c/Cargo.toml" "$c/src" -type f; done
                          for f in blocklog follower live manifest plan programs rpcurl; do echo "lez/live/driver/src/$f.rs"; done; } \
         | LC_ALL=C sort | xargs "${SHA256[@]}") | "${SHA256[@]}" | cut -d' ' -f1)
-lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || echo "1806e87 (lez/RESULTS.md)")
+lez_rev=$(git -C "$lez_up" rev-parse --short HEAD 2>/dev/null || { [ "$tag" = v0.4.0-rc1 ] && echo "1806e87 (lez/RESULTS.md)"; } || echo unknown)
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' "$repo/lez/updater/Cargo.toml" | head -n 1)
-python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" "$rs" "$rs_sum" <<'PY'
+python3 -I - "$v/STAGED.json" "$version" "$commit" "$sum" "$lez_rev" "$v/ids.json" "$lbc" "$lbc_sum" "$rs" "$rs_sum" "$tag" <<'PY'
 import json, sys
-out, version, commit, s, lez, ids, lbc, lbc_sum, rs, rs_sum = sys.argv[1:11]
-json.dump({"version": version, "commit": commit, "source_sha256": s, "lez": "v0.4.0-rc1 " + lez,
+out, version, commit, s, lez, ids, lbc, lbc_sum, rs, rs_sum, tag = sys.argv[1:12]
+json.dump({"version": version, "commit": commit, "source_sha256": s, "lez": tag + " " + lez,
            "guests": json.load(open(ids)), "circuits": {"artifact": lbc, "files_sha256": lbc_sum},
            "rapidsnark": {"artifact": rs, "files_sha256": rs_sum}},
           open(out, "w"), sort_keys=True)

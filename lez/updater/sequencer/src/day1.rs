@@ -17,6 +17,8 @@
 //! Commands (`--rpc URL` everywhere; read-only unless named `send` or `fund`):
 //!
 //!   keygen   --keys DIR --bin PROGRAM.bin [--bridge-bin BRIDGE.bin]      fresh keys (mode 600), `accounts.json`
+//!   keygen   --keys DIR --program ACCOUNT                                  the same for an instance on a program deployed
+//!                                                                        already (its account only: no program keys)
 //!   sign     --keys DIR --state DIR [--store DIR] --stage deploy-program|deploy-bridge|init|attest [--bin F] [--fetch DIR]
 //!   send     --state DIR --stage S                                       send the stage's stored bytes, settle each
 //!   status   --state DIR --stage S                                       each stored transaction: applied / pending / dead
@@ -146,26 +148,40 @@ fn id_of(key: &PrivateKey) -> AccountId {
     AccountId::from(&PublicKey::new_from_private_key(key))
 }
 
-/// The keys of one deployment: the header's and one per segment.
+/// The keys of one deployment: the header's and one per segment. Or, for a program another deployment made (a second
+/// instance on a network's published program), its account alone: `DIR/account` (base58), no keys, nothing to deploy.
 struct Deployment {
-    header: PrivateKey,
+    header: Option<PrivateKey>,
+    account: AccountId,
     segments: Vec<PrivateKey>,
 }
 
 impl Deployment {
     fn load(dir: &Path) -> Result<Self> {
+        if !dir.join("header.key").exists() && dir.join("account").exists() {
+            let text = fs::read_to_string(dir.join("account"))?;
+            let account = text.trim().parse().map_err(|e| anyhow!("{}: not an account: {e:?}", dir.join("account").display()))?;
+            return Ok(Self { header: None, account, segments: Vec::new() });
+        }
         let header = read_key(&dir.join("header.key"))?;
         let mut segments = Vec::new();
         while dir.join(format!("segment-{:02}.key", segments.len())).exists() {
             segments.push(read_key(&dir.join(format!("segment-{:02}.key", segments.len())))?);
         }
-        Ok(Self { header, segments })
+        Ok(Self { account: id_of(&header), header: Some(header), segments })
+    }
+    /// A deployment of these keys, or the program another deployment made (`DIR/account`).
+    fn known(dir: &Path) -> bool {
+        dir.join("header.key").exists() || dir.join("account").exists()
     }
     fn program(&self) -> AccountId {
-        id_of(&self.header)
+        self.account
+    }
+    fn header_key(&self) -> Result<&PrivateKey> {
+        self.header.as_ref().ok_or_else(|| anyhow!("{}: deployed by another deployment (its account only): nothing to sign for it", self.account))
     }
     fn json(&self) -> Value {
-        json!({"header": self.program().to_string(),
+        json!({"header": self.program().to_string(), "keys": self.header.is_some(),
                "segments": self.segments.iter().map(|k| id_of(k).to_string()).collect::<Vec<_>>()})
     }
 }
@@ -177,6 +193,13 @@ fn keygen(a: &Args) -> Result<()> {
     fs::set_permissions(&dir, std::os::unix::fs::PermissionsExt::from_mode(0o700))?;
     write_key(&dir.join("payer.key"), &fresh_key()?)?;
     write_key(&dir.join("daemon.key"), &fresh_key()?)?;
+    // `--program ACCOUNT`: an instance on a program already deployed (a network's published one): its account, no keys.
+    if let Some(account) = a.get("program") {
+        ensure!(a.get("bin").is_none(), "--program names a program deployed already: no --bin");
+        let id: AccountId = account.trim().parse().map_err(|e| anyhow!("--program {account:?}: {e:?}"))?;
+        fs::create_dir_all(dir.join("program"))?;
+        fs::write(dir.join("program").join("account"), format!("{id}\n"))?;
+    }
     for (name, opt) in [("program", "bin"), ("bridge", "bridge-bin")] {
         let Some(bin) = a.get(opt) else { continue };
         let binary = GuestBinary::load(name, Path::new(bin))?;
@@ -199,7 +222,7 @@ fn accounts_json(dir: &Path) -> Result<Value> {
         "daemon_public_key": hex::encode(PublicKey::new_from_private_key(&read_key(&dir.join("daemon.key"))?).value()),
     });
     for name in ["program", "bridge"] {
-        if dir.join(name).join("header.key").exists() {
+        if Deployment::known(&dir.join(name)) {
             v[name] = Deployment::load(&dir.join(name))?.json();
         }
     }
@@ -343,7 +366,7 @@ fn sign_deploy(payer: &PrivateKey, payer_nonce: u128, d: &Deployment, binary: &G
     let msg = LoaderMessage::CreateHeader { first_segment: seg_ids[0], immutable: true };
     let actor = Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID);
     let fee = max_fee(LOADER_GAS, 1_024, quote);
-    let (tx, signers) = public_tx(actor, borsh::to_vec(&msg)?, vec![actor], vec![], &[(&d.header, 0), (payer, n)], payer, LOADER_GAS, fee);
+    let (tx, signers) = public_tx(actor, borsh::to_vec(&msg)?, vec![actor], vec![], &[(d.header_key()?, 0), (payer, n)], payer, LOADER_GAS, fee);
     let label = format!("deploy {}: CreateHeader (immutable) at {}", binary.name, d.program());
     out.push((tx.clone(), tx_meta(&label, &tx, &signers, LOADER_GAS, fee)));
     Ok(out)
@@ -734,19 +757,34 @@ async fn inspect(a: &Args, live: &Live) -> Result<Value> {
         v[who] = json!({"account": id.to_string(), "balance": live.balance(id).await?.to_string(), "nonce": nonce_of(live, id).await?.to_string()});
     }
     for (name, opt) in [("program", "bin"), ("bridge", "bridge-bin")] {
-        if !keys.join(name).join("header.key").exists() {
+        if !Deployment::known(&keys.join(name)) {
             continue;
         }
         let d = Deployment::load(&keys.join(name))?;
         let header_state = final_state(live, Actor::new(d.program(), PROGRAM_LOADER_ACCOUNT_ID));
         let header = crate::programs::program_header(&header_state);
+        // The segments: this deployment's keys, or (a program known by its account) the chain the header starts.
+        let seg_ids: Vec<AccountId> = if d.header.is_some() {
+            d.segments.iter().map(id_of).collect()
+        } else {
+            let mut ids = Vec::new();
+            let mut next = header.as_ref().map(|h| h.program_first_segment);
+            while let Some(id) = next {
+                if ids.len() >= 64 || ids.contains(&id) {
+                    break;
+                }
+                ids.push(id);
+                next = segment_of(&final_state(live, Actor::new(id, PROGRAM_LOADER_ACCOUNT_ID))).and_then(|seg| seg.next_segment);
+            }
+            ids
+        };
         let mut segs = Vec::new();
-        for k in &d.segments {
-            let s = final_state(live, Actor::new(id_of(k), PROGRAM_LOADER_ACCOUNT_ID));
+        for id in &seg_ids {
+            let s = final_state(live, Actor::new(*id, PROGRAM_LOADER_ACCOUNT_ID));
             segs.push(match segment_of(&s) {
-                Some(seg) => json!({"account": id_of(k).to_string(), "bytes": seg.bytecode.len(), "sha256": sha256_hex(&seg.bytecode),
+                Some(seg) => json!({"account": id.to_string(), "bytes": seg.bytecode.len(), "sha256": sha256_hex(&seg.bytecode),
                                     "next": seg.next_segment.map(|n| n.to_string())}),
-                None => json!({"account": id_of(k).to_string(), "empty": s.is_empty()}),
+                None => json!({"account": id.to_string(), "empty": s.is_empty()}),
             });
         }
         let mut entry = json!({"header": d.program().to_string(), "segments": segs,
@@ -914,4 +952,33 @@ pub fn main() -> Result<()> {
             other => bail!("unknown command {other}: keygen accounts sign send status target inspect verify fund"),
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A second instance on a network's published program: the keys' directory names the program by its account
+    /// (`keygen --program`), and nothing can be signed for the program itself.
+    #[test]
+    fn a_program_known_by_its_account_has_no_keys_to_sign_with() {
+        let dir = std::env::temp_dir().join(format!("day1-deployment-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        let k = fresh_key().unwrap();
+        write_key(&dir.join("own").join("header.key"), &k).unwrap();
+        let own = Deployment::load(&dir.join("own")).unwrap();
+        assert_eq!(own.program(), id_of(&k));
+        assert!(own.header_key().is_ok());
+        fs::create_dir_all(dir.join("theirs")).unwrap();
+        fs::write(dir.join("theirs").join("account"), format!("{}\n", id_of(&k))).unwrap();
+        let theirs = Deployment::load(&dir.join("theirs")).unwrap();
+        assert_eq!(theirs.program(), id_of(&k));
+        assert!(theirs.header_key().is_err());
+        assert_eq!(theirs.json()["keys"], json!(false));
+        assert!(Deployment::known(&dir.join("own")) && Deployment::known(&dir.join("theirs")));
+        assert!(!Deployment::known(&dir.join("none")));
+        fs::write(dir.join("theirs").join("account"), "not an account\n").unwrap();
+        assert!(Deployment::load(&dir.join("theirs")).is_err());
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }
