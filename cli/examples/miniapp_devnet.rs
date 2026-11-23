@@ -98,6 +98,7 @@ sol! {
         function finalState() external view returns (bytes32);
         function checkpointImageId() external view returns (bytes32);
         function releaseImageId() external view returns (bytes32);
+        function setTokenCap(address token, uint8 direction, uint256 capacity, uint256 refillPerSecond) external;
     }
 }
 
@@ -694,7 +695,7 @@ impl Devnet {
 
     async fn price(&self, params: &Value) -> Result<Value> {
         let denomination = params["denomination"].as_u64().unwrap_or(0) as u8;
-        let price = eth::deposit_price(&self.p, self.vault, eth::address(ETH_TOKEN), denomination).await?;
+        let price = eth::deposit_price(&self.p, self.vault, token_param(params)?, denomination).await?;
         Ok(json!({
             "denomination": price.denomination.to_string(),
             "mint_fee": price.mint_fee.to_string(),
@@ -713,7 +714,8 @@ impl Devnet {
         };
         let a = params["account"].as_u64().unwrap_or(0) as u32;
         ensure!(a < GAP, "account /{a} is outside the recovery window ({GAP}): a wallet would not find it");
-        let token = eth::address(ETH_TOKEN);
+        // `token`: ETH unless named; the vault's registry decides (an unregistered token is refused before signing).
+        let token = token_param(params)?;
         let price = eth::deposit_price(&self.p, self.vault, token, denomination).await?;
         let j = eth::view(&self.p, self.vault, IVault::depositCountCall { depositor: self.user_addr }, None).await?;
         let keys = self.user.bridge_keys();
@@ -853,13 +855,21 @@ impl Devnet {
         let refunded = eth::refunded_leaves(&self.p, self.vault, 0, 10_000).await?;
         let rows = scan::deposits(&self.user, &self.ctx, &list, GAP, &history, &refunded)?;
         let row = rows.iter().find(|r| r.owned.deposit.leaf_index == leaf).context("not a deposit of this wallet")?;
+        // `to_account`: the claim names another account of the wallet (of the deposit's kind) than the one the
+        // deposit's commitment names, as a faulty or tampered request would; the program's verify_claim refuses it
+        // (249) before anything is proven or sent.
+        let mut owned = row.owned.clone();
+        if let Some(to) = params["to_account"].as_u64() {
+            let to = u32::try_from(to).ok().filter(|&t| t < GAP).context("to_account: inside the recovery window")?;
+            owned.dest = self.user.destinations(GAP)?.of(owned.kind, to);
+        }
         let leaves: Vec<Hash> = list
             .deposits
             .iter()
             .map(|d| inbound::deposit_leaf(d.leaf_index, &d.depositor, &d.token, &d.amount, &d.commitment))
             .collect();
         let prover = self.user.private_account_ids(1)?.first().copied();
-        let plan = lez::plan_claim(&self.zone, &self.ctx, &leaves, &row.owned, &history, private, None, prover).await?;
+        let plan = lez::plan_claim(&self.zone, &self.ctx, &leaves, &owned, &history, private, None, prover).await?;
         if private {
             // The claim's root is the claimant's own actor (`Mention::PrivateSelf`); the rest are public.
             let a = row.owned.account_index as usize;
@@ -1071,20 +1081,28 @@ impl Devnet {
             "already released: the vault's NullifierAlreadyUsed for this burn's NOut (checked before sending)"
         );
         let roots = eth::accepted_burn_roots(&self.p, self.vault, 0, 10_000).await?;
-        let (root_b, count) = *roots
-            .iter()
-            .rev()
-            .find(|(_, c)| *c > burn_index)
-            .context("no accepted burn root covers this burn yet: wait for the next checkpoint")?;
+        let (root_b, count) = *roots.iter().rev().find(|(_, c)| *c > burn_index).ok_or_else(|| {
+            anyhow!(codes::vault_refusal(
+                &codes::selector("BurnRootNotAccepted"),
+                "checked before sending: no finalized checkpoint covers this burn yet; wait for the next checkpoint",
+            )
+            .expect("a vault error"))
+        })?;
         let plan = release::plan(&self.ctx, &history, &row.owned, root_b.0, count, 0, ETH_TOKEN, 0)?;
         let release_image = eth::view(&self.p, self.vault, ICheckpoints::releaseImageIdCall {}, None).await?;
-        anvil_send(
-            &self.p,
-            self.verifier,
-            IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan.journal)) }.abi_encode(),
-            U256::ZERO,
-        )
-        .await?;
+        // `wrong_proof`: the mock verifier is not told of this journal, so the vault's proof check fails as it does for
+        // a seal made for another journal (another recipient, relay fee or root): the verifier's VerificationFailed,
+        // from the eth_call before anything is sent.
+        if !params["wrong_proof"].as_bool().unwrap_or(false) {
+            anvil_send(
+                &self.p,
+                self.verifier,
+                IMock::acceptCall { imageId: release_image, journalDigest: B256::from(sha256(&plan.journal)) }
+                    .abi_encode(),
+                U256::ZERO,
+            )
+            .await?;
+        }
         let recipient = eth::address(row.owned.recipient);
         let before = self.p.get_balance(recipient).await?;
         let signer = eth::keystore_signer(&self.relayer_ks, &self.password)?;
@@ -1157,6 +1175,27 @@ impl Devnet {
 
     /// `SetCap` from the admin (the bridge program refuses a cap below the floor).
     async fn admin_set_cap(&mut self, params: &Value) -> Result<Value> {
+        if params["vault"].as_bool().unwrap_or(false) {
+            // The vault's token cap (`setTokenCap`), sent by its admin (stand-in: anvil's first account, which
+            // deployed it): `direction` "deposits" (default) or "releases"; capacity in base units.
+            let direction = u8::from(params["direction"].as_str() == Some("releases"));
+            let capacity: U256 = params["capacity"].as_str().context("capacity (base units, a string)")?.parse()?;
+            let refill: U256 = params["refill_per_second"].as_str().unwrap_or("0").parse()?;
+            let call = ICheckpoints::setTokenCapCall {
+                token: eth::address(ETH_TOKEN),
+                direction,
+                capacity,
+                refillPerSecond: refill,
+            };
+            anvil_send(&self.p, self.vault, call.abi_encode(), U256::ZERO).await?;
+            return Ok(json!({
+                "settled": true,
+                "what": "setTokenCap (the vault's admin, stand-in)",
+                "direction": direction,
+                "capacity": capacity.to_string(),
+                "refill_per_second": refill.to_string(),
+            }));
+        }
         let mints = params["mints"].as_bool().unwrap_or(true);
         let capacity: u128 = params["capacity"].as_str().context("capacity (LEZ units, a string)")?.parse()?;
         let refill: u128 = params["refill_per_second"].as_str().unwrap_or("0").parse()?;
@@ -1198,6 +1237,14 @@ impl Devnet {
         self.zone.record(&r);
         ensure!(r.ok(), "{}", refusal_of(&r, "Freeze"));
         Ok(json!({"settled": true, "what": "Freeze", "mints": mints, "burns": burns, "until_ms": until_ms}))
+    }
+}
+
+/// The `token` parameter (an Ethereum address), ETH when absent.
+fn token_param(params: &Value) -> Result<Address> {
+    match params["token"].as_str() {
+        Some(t) if !t.is_empty() => t.parse().context("token: an Ethereum address"),
+        _ => Ok(eth::address(ETH_TOKEN)),
     }
 }
 

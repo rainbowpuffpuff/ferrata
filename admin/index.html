@@ -378,7 +378,8 @@ function decodeAbi(types, data) {
   return out;
 }
 
-// The vault's custom errors (vault/src/FerrataVault.sol; none has parameters) and a few OpenZeppelin ones.
+// The vault's custom errors (vault/src/FerrataVault.sol; none has parameters), the RISC Zero verifier's VerificationFailed
+// (raised through the vault's call to it) and a few OpenZeppelin ones.
 const VAULT_ERRORS = ('NotAdmin NotFreezeAuthority NotPendingAdmin ZeroAddress RolesMustDiffer VerifierHasNoCode InvalidImageIds ' +
   'InvalidLezConfigId InvalidGenesisState InvalidCommitteeFloor InvalidDelta InvalidRevokeWindow InvalidMaxFreeze InvalidTurnSeconds ' +
   'InvalidMinReleaseDelay VerifierNotStop TokenAlreadyRegistered TokenNotRegistered TokenHasNoCode InvalidDenominations InvalidLezUnit ' +
@@ -393,7 +394,7 @@ const VAULT_ERRORS = ('NotAdmin NotFreezeAuthority NotPendingAdmin ZeroAddress R
   'TokenReleasesAreFrozen BurnRootNotAccepted ReleaseDelayNotElapsed NullifierAlreadyUsed InvalidRelayFee ZeroRecipient ' +
   'InsufficientEscrow TokenReleaseCapExceeded GlobalReleaseCapExceeded EthTransferFailed NothingOwed DirectEthNotAccepted FunctionNotFound')
   .split(/\s+/).map((n) => n + '()')
-  .concat(['EnforcedPause()', 'ExpectedPause()', 'ReentrancyGuardReentrantCall()', 'OwnableUnauthorizedAccount(address)', 'SafeERC20FailedOperation(address)']);
+  .concat(['VerificationFailed()', 'EnforcedPause()', 'ExpectedPause()', 'ReentrancyGuardReentrantCall()', 'OwnableUnauthorizedAccount(address)', 'SafeERC20FailedOperation(address)']);
 let _errBySel = null;
 function decodeRevert(data) {
   if (!data || data === '0x') return 'reverted without data';

@@ -51,7 +51,9 @@ rpc() { curl -s -d "{\"method\":\"$1\",\"params\":${2:-{\}}}" "http://127.0.0.1:
 } > "$out/backend-contract.txt" 2>&1
 cat "$out/backend-contract.txt"
 cd "$here"
-QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QML_IMPORT_PATH= \
+# Qt's runtime directory: one of the test's own (0700), so that Qt does not name a default one in the log.
+xdg="$devdir/xdg-runtime"; mkdir -p "$xdg" && chmod 700 "$xdg"
+XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-$xdg}" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software QML_IMPORT_PATH= \
   timeout "${QT_TIMEOUT:-900}" "$QT_BIN/qmltestrunner" -input qmltest/tst_miniapp.qml -o "$out/qmltest.xml,junitxml" -o "-,txt" > "$out/qmltest.txt" 2>&1
 qt=$?
 echo "qmltestrunner exit $qt after $(( $(date +%s) - t0 )) s"
@@ -60,7 +62,8 @@ rpc shutdown >/dev/null; wait $devnet 2>/dev/null
 cp "$devdir/calls.jsonl" "$out/calls.jsonl" 2>/dev/null || true
 jq -c '{method, ms, ok: .reply.ok, error: .reply.error}' "$out/calls.jsonl" > "$out/calls-summary.jsonl" 2>/dev/null
 ls "$out/screenshots" | wc -l | xargs echo screenshots:
-sed -i "s|$(cd "$here/../../.." && pwd)/|<spike>/|g" "$out/qmltest.txt" "$out/devnet.log" 2>/dev/null  # no machine paths in committed logs
+# No machine paths and no scratch folder names in committed logs.
+sed -i -E "s|$(cd "$here/../../.." && pwd)/|<spike>/|g; s|<spike>/tmp/[^/' \"]+/|<scratch>/|g" "$out/qmltest.txt" "$out/qmltest.xml" "$out/devnet.log" 2>/dev/null
 if [ "$final" != "$out" ]; then
   rm -rf "$final"; mv "$out" "$final"
   [ -d "$here/results.keep" ] && mv "$here/results.keep" "$out"

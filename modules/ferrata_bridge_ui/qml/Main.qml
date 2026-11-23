@@ -834,7 +834,9 @@ Rectangle {
                                 adminText = !ok ? notDone("Not done", v, job)
                                     : (v.tx_hash ? "LEZ cap set: " + v.what + " (transaction " + Fmt.short(v.tx_hash) + " in block " + v.block + ", built by ferrata_bridge_module at the admin's own actor, signed by the admin's LEZ key)."
                                                  : "Cap set: " + v.capacity + " LEZ units on " + (v.mints ? "mints" : "burns") + ".");
-                                refreshRegistry();
+                                // Only after a change: a refresh is a call of its own, and its success would clear the
+                                // banner that names this step's refusal.
+                                if (ok) refreshRegistry();
                             });
                         })
                     }

@@ -7,6 +7,7 @@
 // changed and no delay is overridden on that path; "waiting" is the devnet's clock moved on.
 import QtQuick
 import QtTest
+import "../qml/js/format.js" as Fmt
 
 Item {
     id: host
@@ -40,6 +41,49 @@ Item {
             if (shotName) shot(shotName);
             click("approval.approve");
             idle();
+        }
+
+        // RFP-022 U.08's failure modes as the user sees them: the banner's message (what to do) and its technical line
+        // (the code), and the raw refusal behind both names no deposit or burn: no 8 hex digits in a row (no hash,
+        // commitment, nullifier, tag or address, nor a prefix of one), no leaf, burn or counter named by number, and not
+        // the position's own index as a number.
+        function namesNothing(raw, index) {
+            var s = String(raw);
+            // A hash, commitment, nullifier, tag or address, or 8 hex digits of one: a run of 8 or more hex digits with a
+            // letter in it, or 40 or more (a decimal number, such as an Ethereum time, is neither).
+            var runs = s.match(/[0-9a-fA-F]{8,}/g) || [];
+            for (var r = 0; r < runs.length; r++)
+                if (/[a-fA-F]/.test(runs[r]) || runs[r].length >= 40) return false;
+            if (/\b(leaf|leaf index|leaf_index|burn|burn index|counter|j)\s*[:=#]?\s*\d/i.test(s)) return false;
+            return s.split(/[^0-9A-Za-z]+/).indexOf(String(index)) < 0;
+        }
+        // `before`: where the refusal was found, before anything was signed ("checked before sending", the vault's
+        // "eth_call before sending").
+        function refused(message, code, before, index) {
+            verify(!host.app.lastOk, "refused: " + host.app.lastError);
+            verify(has(host.app.lastError, before), "refused before anything is signed: " + host.app.lastError);
+            verify(has(el("error.message").text, message), "the message shown: " + el("error.message").text + " / " + host.app.lastError);
+            verify(has(el("error.detail").text, code), "the code shown: " + el("error.detail").text);
+            verify(namesNothing(host.app.lastError, index), "names no deposit or burn: " + host.app.lastError);
+            console.log("U8 " + code + " | " + el("error.message").text + " | " + el("error.detail").text);
+        }
+
+        // The message table on its own (review-u8 L3, L4, M1): a 251 the program returned names both causes, a number
+        // such as "0.249 ETH" is not a code, a SetCap below the floor (240) is not "Cap exceeded", and the verifier's
+        // VerificationFailed, named or raw, has its own message.
+        function test_00_messages() {
+            var cases = [
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (returned by the program in the harness): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Unsupported token or amount:"],
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (checked before sending: the amount is not one of the token's denominations): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Invalid amount:"],
+                ["refused: LEZ bridge program exit code 251 NOT_REGISTERED (checked before sending: no token(cid, token) account): the token has no registry entry in this configuration, or the amount is not one of its denominations", "Unsupported token: "],
+                ["a deposit of 0.249 ETH and one of 0.252 ETH: no reply", "The operation failed. Nothing was changed."],
+                ["refused: LEZ bridge program exit code 240 BAD_MESSAGE (SetCap, returned by the program): a message that does not decode or that this actor does not take, or values outside the specified bounds", "Refused: a value is outside the bridge's bounds"],
+                ["refused: LEZ bridge program exit code 255 CAPPED (returned by the program): the token's or the global mint or burn bucket holds less than the amount; retry later", "Cap exceeded:"],
+                ["refused: vault error VerificationFailed() (eth_call before sending): the RISC Zero verifier rejects the proof", "Verification failed: the release's proof does not check against the vault."],
+                ["the vault would revert: server returned an error response: error code 3: execution reverted: custom error 0x439cc0cd, data: \"0x439cc0cd\"", "Verification failed: the release's proof does not check against the vault."]
+            ];
+            for (var i = 0; i < cases.length; i++)
+                verify(has(Fmt.friendly(cases[i][0]), cases[i][1]), cases[i][0] + " -> " + Fmt.friendly(cases[i][0]));
         }
 
         function test_01_connect() {
@@ -125,6 +169,16 @@ Item {
             shot("13-positions-before-import");
         }
 
+        // Insufficient finality (U.08): a claim before its root is imported is refused before it is proven (245: no
+        // imported root yet).
+        function test_06b_error_not_final_claim() {
+            compare(host.app.positions.deposits[0].state, "waiting for the root import", "nothing imported yet");
+            host.app.call("claim", { leaf_index: 0, private: true });
+            idle();
+            refused("Not final yet: the deposit is not covered by an imported root. Wait for the relayer's next import, then claim.", "245 NOT_FOUND", "checked before sending: no imported root covers this leaf yet", 0);
+            shot("13b-error-not-final-claim");
+        }
+
         function test_07_private_claim() {
             tab("claim");
             click("claim.relay");
@@ -166,12 +220,8 @@ Item {
             shot("17-claim-plaintext-settled");
         }
 
+        // The view's steps first, so that a failed check of the direct call after them leaves the later tests their tab.
         function test_09_error_messages() {
-            host.app.call("claim", { leaf_index: 1, private: false });
-            idle();
-            verify(has(el("error.message").text, "Already claimed"), el("error.message").text);
-            verify(!/0x[0-9a-fA-F]{8,}/.test(el("error.detail").text), "no hash in the message: " + el("error.detail").text);
-            shot("18-error-already-claimed");
             tab("redeem");
             click("burn.kind.public");
             click("burn.public.ack");
@@ -180,6 +230,65 @@ Item {
             approve("Burn", null);
             verify(has(el("error.message").text, "Insufficient balance"), el("error.message").text);
             shot("19-error-insufficient-balance");
+            host.app.call("claim", { leaf_index: 1, private: false });
+            idle();
+            refused("Already claimed: this position was claimed before.", "250 ALREADY_CLAIMED", "checked before sending", 1);
+            shot("18-error-already-claimed");
+        }
+
+        // Unsupported token (U.08): a deposit of a token the vault has not registered, refused before signing.
+        function test_09b_error_unsupported_token() {
+            host.app.call("deposit", { token: "0x000000000000000000000000000000000000dEaD", denomination: 0, kind: "private", account: 0 });
+            idle();
+            refused("Unsupported token: this token is not registered with the bridge.", "TokenNotRegistered", "checked before sending", 0);
+            shot("19b-error-unsupported-token");
+        }
+
+        // Invalid amount (U.08): a denomination the token does not have, refused before signing.
+        function test_09c_error_invalid_amount() {
+            host.app.call("deposit", { denomination: 7, kind: "private", account: 0 });
+            idle();
+            refused("Invalid amount: only this token's fixed denominations can be bridged.", "InvalidDenominationIndex", "checked before sending", 7);
+            shot("19c-error-invalid-amount");
+        }
+
+        // Cap exceeded (U.08): the vault's admin sets ETH's deposit cap to 1 wei; the deposit is refused by the vault's
+        // eth_call before anything is signed; the cap is put back before the checks, so a failed check stops nothing after.
+        function test_09d_error_cap_exceeded() {
+            host.app.call("admin.set_cap", { vault: true, direction: "deposits", capacity: "1" });
+            idle();
+            verify(host.app.lastOk, "the vault's deposit cap set: " + host.app.lastError);
+            host.app.call("deposit", { denomination: 0, kind: "private", account: 0 });
+            idle();
+            var ok = host.app.lastOk, raw = host.app.lastError;
+            var shown = el("error.message").text, code = el("error.detail").text;
+            shot("19d-error-cap-exceeded");
+            host.app.call("admin.set_cap", { vault: true, direction: "deposits", capacity: "115792089237316195423570985008687907853269984665640564039457584007913129639935" });
+            idle();
+            verify(host.app.lastOk, "the cap put back: " + host.app.lastError);
+            verify(!ok, "refused: " + raw);
+            verify(has(raw, "eth_call before sending"), "refused before anything is signed: " + raw);
+            verify(has(shown, "Cap exceeded: the rate limit for this token is used up."), "the message shown: " + shown + " / " + raw);
+            verify(has(code, "TokenDepositCapExceeded"), "the code shown: " + code);
+            verify(namesNothing(raw, 0), "names no deposit: " + raw);
+            console.log("U8 TokenDepositCapExceeded | " + shown + " | " + code);
+        }
+
+        // Verification failure (U.08): a claim naming another account than the one the deposit commits to fails the
+        // program's verify_claim (249), checked before anything is sent.
+        function test_09e_error_verification_failed() {
+            host.app.call("claim", { leaf_index: 1, private: false, to_account: 2 });
+            idle();
+            refused("Verification failed: the claim does not check against the imported root", "249 CLAIM_INVALID", "checked before sending with the program's verify_claim", 1);
+            shot("19e-error-verification-failed");
+        }
+
+        // Verification failure (U.08): a deposit to a private account by the plaintext path (252), checked before sending.
+        function test_09f_error_wrong_destination() {
+            host.app.call("claim", { leaf_index: 0, private: false });
+            idle();
+            refused("Verification failed: a deposit to a private account can only be claimed privately.", "252 WRONG_DESTINATION", "checked before sending: a private-kind deposit is claimed privately", 0);
+            shot("19f-error-wrong-destination");
         }
 
         function test_10_private_burn_on_defaults() {
@@ -203,6 +312,15 @@ Item {
             compare(r.recipient.toLowerCase(), host.privateRecipient.toLowerCase(), "to the fresh recipient");
             console.log("PROOF burn " + JSON.stringify({ mode: r.proof.mode, prove_ms: r.proof.prove_ms, receipt_bytes: r.proof.receipt_bytes, tx_bytes: r.proof.tx_bytes }));
             shot("21-burn-private-settled");
+        }
+
+        // Insufficient finality on the way out (U.08): the burn's release before any checkpoint covers it, refused before
+        // anything is signed (the vault's BurnRootNotAccepted).
+        function test_10b_error_not_final_release() {
+            host.app.call("release", { burn_index: 0 });
+            idle();
+            refused("Not final yet: no checkpoint covers this burn. Wait for the next checkpoint, then release.", "BurnRootNotAccepted", "checked before sending: no finalized checkpoint covers this burn yet", 0);
+            shot("21a-error-not-final-release");
         }
 
         function test_11_checkpoint_and_private_release() {
@@ -235,7 +353,7 @@ Item {
         }
 
         // The public path keeps its warning: a public burn needs the acknowledgement.
-        function test_11b_public_burn_and_release() {
+        function test_11b_public_burn_and_checkpoint() {
             click("burn.kind.public");
             verify(!el("burn.submit").enabled, "a public burn needs the acknowledgement");
             verify(has(el("burn.leaks.summary").text, "High"), el("burn.leaks.summary").text);
@@ -255,6 +373,20 @@ Item {
             idle();
             click("redeem.refresh");
             idle();
+        }
+
+        // Verification failure on the way out (U.08; review-u8 M1): the public burn's release with a proof the verifier
+        // rejects (the devnet's wrong_proof: the mock verifier is not told of its journal, as for a seal made for another
+        // recipient, relay fee or root), refused by the vault's eth_call before anything is signed.
+        function test_11c_error_release_proof_rejected() {
+            host.app.call("release", { burn_index: 1, wrong_proof: true });
+            idle();
+            refused("Verification failed: the release's proof does not check against the vault.", "VerificationFailed", "eth_call before sending", 1);
+            shot("23a-error-release-proof-rejected");
+        }
+
+        // The same burn released with its proof.
+        function test_11d_public_release() {
             click("release.pick.1");
             idle();
             click("release.submit");
@@ -280,7 +412,12 @@ Item {
             el("admin.cap.capacity").text = "1";
             click("admin.setcap");
             approve("SetCap", null);
-            verify(host.app.lastError !== "", "a cap below the floor is refused");
+            // What the user sees: the banner (its message and code) and the admin view's result line. The banner stays: the
+            // view refreshes the registry only after a change (review-u8 L3: an unconditional refresh, ffcf0da3, cleared it).
+            verify(el("error.banner").visible, "the banner shows the refusal: " + host.app.lastError);
+            verify(has(el("error.message").text, "Refused: a value is outside the bridge's bounds"), "the banner: " + el("error.message").text + " / " + host.app.lastError);
+            verify(has(el("error.detail").text, "240 BAD_MESSAGE"), "the banner's code: " + el("error.detail").text);
+            verify(has(el("admin.result").text, "Not done: refused: LEZ bridge program exit code 240 BAD_MESSAGE"), "a cap below the floor is refused: " + el("admin.result").text);
             shot("26-admin-cap-below-floor-refused");
             el("admin.cap.capacity").text = "11000000000";
             click("admin.setcap");
@@ -296,7 +433,7 @@ Item {
             idle();
             host.app.call("claim", { leaf_index: 2, private: false });
             idle();
-            verify(has(el("error.message").text, "Frozen"), "claim while frozen: " + el("error.message").text + " / " + host.app.lastError);
+            refused("Frozen: the bridge or this token is frozen by its freeze authority", "242 FROZEN", "checked before sending", 2);
             shot("29-error-frozen");
             tab("registry");
             click("registry.refresh");

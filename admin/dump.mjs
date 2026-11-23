@@ -58,7 +58,8 @@ const TOPIC_VECTORS = [
   ['FeesInForce(address,uint256,uint64,uint64,bytes32)', '0xb116813bda4a5628d8affb84d03f7215fa9e5d652f322d3c90dc7d48ab66558a'],
   ['OwedCredited(address,address,uint256)', '0x5e6777bbce5269e6bf9b6dbe08117b87391de5da8bd1cf9430e4fe3911ee436a'],
   ['Transfer(address,address,uint256)', '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef']];
-// The 40 vault errors of cli/src/codes.rs (VAULT_ERRORS), each `cast sig "<Name>()"`.
+// The 41 vault errors of cli/src/codes.rs (VAULT_ERRORS), each `cast sig "<Name>()"` (VerificationFailed is the RISC Zero
+// verifier's, raised through the vault).
 const ERROR_SELECTORS = {
   VaultRetired: '0x95961660', DepositsAreFrozen: '0x36d5cac2', TokenDepositsAreFrozen: '0xb6c684dd', DepositsDisabled: '0x717a1648',
   UseDepositETH: '0x491fe534', InvalidDenominationIndex: '0x84daa5ff', ZeroCommitment: '0x51bda03d', WrongDepositIndex: '0x93526816',
@@ -67,7 +68,8 @@ const ERROR_SELECTORS = {
   TokenReleasesAreFrozen: '0xdad32ed3', BurnRootNotAccepted: '0x02d2e0be', ReleaseDelayNotElapsed: '0xedd7d80f',
   NullifierAlreadyUsed: '0xcad2ae02', InvalidRelayFee: '0x2cd454b1', ZeroRecipient: '0xd27b4443', InsufficientEscrow: '0x90b8ab88',
   TokenReleaseCapExceeded: '0xf1fb62e6', GlobalReleaseCapExceeded: '0x5f21a1ef', EthTransferFailed: '0x6d963f88',
-  NothingOwed: '0x797dba54', VerifierStopped: '0xc8e9f884', CheckpointsAreFrozen: '0x79392e50', WrongMode: '0x2a580d6d',
+  NothingOwed: '0x797dba54', VerifierStopped: '0xc8e9f884', VerificationFailed: '0x439cc0cd', CheckpointsAreFrozen: '0x79392e50',
+  WrongMode: '0x2a580d6d',
   WaitNotOver: '0x2628a860', ParentNotFinal: '0x78e897c4', UnknownCandidate: '0x3c6ed8ee', UnknownBeacon: '0xecc81a8a',
   UnknownLeaf: '0x732ee0ce', AlreadyRefunded: '0xa85e6f1a', NotRefundable: '0x3742d1f6', RefundNotYetOpen: '0x96b70a71',
   InvalidMerklePath: '0x66b08299', DirectEthNotAccepted: '0x867783b7', FunctionNotFound: '0x403e7fa6'};

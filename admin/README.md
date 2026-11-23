@@ -48,11 +48,11 @@ context that receives only `fetch`, timers and `AbortController`, and prints a h
 The header gives the endpoint (origin only), the chain, the block and the UTC time. Exit codes: 0 for a complete read,
 3 if some read failed (listed in the report), 1 if fatal (no chain, no code at the address, bad input).
 
-The self-test (232 checks) uses expected values that come from outside the page's code:
+The self-test (235 checks) uses expected values that come from outside the page's code:
 - keccak-256 of `""`, `"abc"` and inputs of 135, 136, 137 and 300 bytes, which exercise the padding and block
   edges; selectors such as `transfer(address,uint256)` = `a9059cbb`; 11 event topics. All are computed offline with
   Foundry's `cast`.
-- The 40 vault errors of `cli/src/codes.rs`. The test parses the list from that file, checks each selector against
+- The 41 vault errors of `cli/src/codes.rs` (`VerificationFailed` is the RISC Zero verifier's, raised through the vault). The test parses the list from that file, checks each selector against
   `cast sig`, and checks that `decodeRevert` names it.
 - EIP-55 checksums: the examples from the EIP.
 - SHA-256: `""`, `"abc"`, the vault's `LEAF_TAG`, `CHECKPOINT_DOMAIN` and `RELEASE_DOMAIN`, 11 random inputs against
