@@ -389,9 +389,11 @@ async fn lez_freeze(
 }
 
 /// A refusal that names no deposit and no burn: no hash, commitment, nullifier or address (no run of 40 or more
-/// hex digits), no leaf index and no burn counter (U.08's last sentence). Called on the whole error chain, `{e:#}`, as
-/// the binary prints it (`main.rs`). It does not search for the case's own index, `N` or tag by value (review-integ9d
-/// L5: a decimal index or a short prefix would pass it); the recorded messages show none.
+/// hex digits), no leaf named by its index ("leaf 5", "leaf index 5", "leaf_index: 5") and no burn counter (U.08's
+/// last sentence). Called on the whole error chain, `{e:#}`, as the binary prints it (`main.rs`). A leaf in general
+/// words passes: the program's own meanings of 248 and 249 speak of "the leaf index" and "the leaf and the path"
+/// without naming one. It does not search for the case's own index, `N` or tag by value (review-integ9d L5: a decimal
+/// index or a short prefix would pass it); [`names_none_of`] adds that where the case knows its values.
 fn names_nothing(text: &str) -> bool {
     let mut run = 0usize;
     for c in text.chars() {
@@ -400,7 +402,24 @@ fn names_nothing(text: &str) -> bool {
             return false;
         }
     }
-    !text.contains("leaf ") && !text.contains("tag counter") && !text.contains("j = ")
+    let t = text.to_lowercase().replace("leaf index", "leaf").replace("leaf_index", "leaf");
+    let leaf_named = t
+        .match_indices("leaf")
+        .any(|(k, _)| t[k + 4..].trim_start_matches([' ', ':', '=', '#']).starts_with(|c: char| c.is_ascii_digit()));
+    !leaf_named && !text.contains("tag counter") && !text.contains("j = ")
+}
+
+/// [`names_nothing`], and none of the case's own values: no 8 hex digits in a row of any of `values` (its nullifier,
+/// commitment, depositor, destination, tag, recipient; any case, so no short prefix either), and not `index` (its leaf
+/// index or burn counter) as a number on its own.
+fn names_none_of(text: &str, values: &[&[u8]], index: u64) -> bool {
+    let lower = text.to_lowercase();
+    let hex_named = values.iter().any(|v| {
+        let h = hex::encode(v);
+        (0..=h.len().saturating_sub(8)).any(|k| lower.contains(&h[k..k + 8]))
+    });
+    let index_named = text.split(|c: char| !c.is_ascii_alphanumeric()).any(|w| w == index.to_string());
+    names_nothing(text) && !hex_named && !index_named
 }
 
 async fn slot(p: &DynProvider, vault: Address, key: [u8; 32]) -> Result<[u8; 32]> {
@@ -462,11 +481,28 @@ async fn accept_burn_root(
     burn_count: u64,
     wait_release_delay: bool,
 ) -> Result<()> {
+    let c = propose_burn_root(p, vault, cid, burn_root, burn_count).await?;
+    finalize_burn_root(p, vault, cid, c, wait_release_delay).await
+}
+
+/// The mock verifier's acceptance of `journal` under `image` (stand-in for a Groth16 proof of it).
+fn mock_accept(image: B256, journal: &[u8]) -> Vec<u8> {
+    IMock::acceptCall { imageId: image, journalDigest: B256::from(sha256(journal)) }.abi_encode()
+}
+
+/// The checkpoint relayer's candidate of the burn root (its wait starts; not final).
+async fn propose_burn_root(
+    p: &DynProvider,
+    vault: Address,
+    cid: B256,
+    burn_root: Hash,
+    burn_count: u64,
+) -> Result<ICheckpoints::Checkpoint> {
     let chain_id = p.get_chain_id().await?;
     let mock_image = eth::view(p, vault, ICheckpoints::checkpointImageIdCall {}, None).await?;
     let verifier = std::env::var("FERRATA_E2E_VERIFIER")?.parse::<Address>()?;
     let parent = eth::view(p, vault, ICheckpoints::finalStateCall {}, None).await?;
-    let mut c = ICheckpoints::Checkpoint {
+    let c = ICheckpoints::Checkpoint {
         nMin: 3,
         tMin: 2,
         parentState: parent,
@@ -481,9 +517,7 @@ async fn accept_burn_root(
         n: 4,
         t: 3,
     };
-    let accept =
-        |j: &[u8]| IMock::acceptCall { imageId: mock_image, journalDigest: B256::from(sha256(j)) }.abi_encode();
-    anvil_send(p, verifier, accept(&checkpoint_journal(chain_id, vault, cid, &c)), U256::ZERO).await?;
+    anvil_send(p, verifier, mock_accept(mock_image, &checkpoint_journal(chain_id, vault, cid, &c)), U256::ZERO).await?;
     anvil_send(
         p,
         vault,
@@ -491,6 +525,22 @@ async fn accept_burn_root(
         U256::ZERO,
     )
     .await?;
+    Ok(c)
+}
+
+/// The candidate `c`'s wait passes, a beacon is recorded and `c` is finalised; with `wait_release_delay`, the token's
+/// release delay passes too.
+async fn finalize_burn_root(
+    p: &DynProvider,
+    vault: Address,
+    cid: B256,
+    mut c: ICheckpoints::Checkpoint,
+    wait_release_delay: bool,
+) -> Result<()> {
+    let chain_id = p.get_chain_id().await?;
+    let mock_image = eth::view(p, vault, ICheckpoints::checkpointImageIdCall {}, None).await?;
+    let verifier = std::env::var("FERRATA_E2E_VERIFIER")?.parse::<Address>()?;
+    let accept = |j: &[u8]| mock_accept(mock_image, j);
     // W = delta + (t - 1) * turnSeconds = 600 + 2 * 2.
     p.raw_request::<_, serde_json::Value>("evm_increaseTime".into(), (700u64,)).await?;
     p.raw_request::<_, serde_json::Value>("evm_mine".into(), Vec::<u64>::new()).await?;
@@ -856,6 +906,60 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         "the binary's status reads the vault"
     );
 
+    // The user: the tool's library on the zone.
+    let user = Seed::from_phrase(USER)?;
+    for a in user.public_accounts(8)? {
+        zone.keys.insert(a.id, a.key.clone());
+    }
+    let ctx = Context { program, cid, chain_id: 1, vault: vault.into_array() };
+    let eth_side = flow::Eth { p: p.clone(), vault, chain_id: 1, from_block: 0, chunk: 10_000 };
+
+    // Insufficient finality (U.08), before any root is imported: the claim of leaf 0 is refused before anything is
+    // signed, with the program's code (245, no imported root) and what to do, naming no deposit; the zone is as it was.
+    {
+        let first = scan::deposits(
+            &user,
+            &ctx,
+            &eth::deposit_list(&p, vault, 0, 10_000).await?,
+            8,
+            &lez::History::default(),
+            &HashSet::new(),
+        )?
+        .into_iter()
+        .find(|r| r.owned.deposit.leaf_index == 0)
+        .context("leaf 0 is the user's")?
+        .owned;
+        let early = flow::ClaimOpts {
+            leaf: Some(0),
+            plaintext: true,
+            accept_plaintext: true,
+            no_delay: true,
+            relayer: None,
+            gap: 8,
+            send: true,
+            yes: true,
+            gas_drop: None,
+        };
+        let seen = (zone.applied.len(), zone.refused.len());
+        let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &early, &mut flow::Out::new(true))
+            .await
+            .err()
+            .context("a claim before any root is imported")?;
+        println!("NOT FINAL (claim, no root imported): {e}");
+        ensure!(
+            e.to_string().contains("refused: LEZ bridge program exit code 245 NOT_FOUND")
+                && e.to_string().contains("checked before sending: no imported root covers this leaf yet")
+                && e.to_string().contains("wait for the next root import")
+                && names_none_of(
+                    &format!("{e:#}"),
+                    &[&first.nullifier, &first.deposit.commitment, &first.deposit.depositor, &first.dest],
+                    0
+                )
+                && (zone.applied.len(), zone.refused.len()) == seen,
+            "the claim before any import: {e:#}"
+        );
+    }
+
     // The relayer imports the vault's root (its storage after the deposits) on LEZ.
     let n = eth::view(&p, vault, IVault::nextLeafIndexCall {}, None).await?;
     let root = eth::view(&p, vault, IVault::depositRootCall {}, None).await?;
@@ -873,12 +977,6 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     zone.record(&r);
     println!("zone: root({n}) imported; ETH fees known to leaf {n}");
 
-    // The user: the tool's library on the zone.
-    let user = Seed::from_phrase(USER)?;
-    for a in user.public_accounts(8)? {
-        zone.keys.insert(a.id, a.key.clone());
-    }
-    let ctx = Context { program, cid, chain_id: 1, vault: vault.into_array() };
     let list = eth::deposit_list(&p, vault, 0, 10_000).await?;
     let history = lez::history(&ctx, &zone.applied(program).await?);
     let rows = scan::deposits(&user, &ctx, &list, 8, &history, &HashSet::new())?;
@@ -991,7 +1089,6 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
 
     // Claim leaf 0 through the tool's claim, the public path: held by the deposit's claim delay
     // unless the user opts out, and refused without its own acknowledgement after the warning.
-    let eth_side = flow::Eth { p: p.clone(), vault, chain_id: 1, from_block: 0, chunk: 10_000 };
     let mut copts = flow::ClaimOpts {
         leaf: Some(0),
         plaintext: true,
@@ -1045,6 +1142,63 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         );
         lez_freeze(&mut zone, &p, &cid, token, true, true).await?;
     }
+    // Verification failures (U.08), each refused before anything is signed with the program's code and what to do,
+    // naming no deposit, the zone as it was: a private-kind deposit claimed by the plaintext path (252, the tool's
+    // `claim --plaintext`), and leaf 0's opening redirected to another account than its commitment names (249, the
+    // program's verify_claim, as a faulty or hostile wallet would build it; through the library, as `ferrata claim`
+    // offers no destination).
+    let private_kind = rows.iter().find(|r| r.owned.kind == DestKind::Private).context("a private-kind deposit")?;
+    let wrong_path = flow::ClaimOpts {
+        leaf: Some(private_kind.owned.deposit.leaf_index),
+        plaintext: true,
+        accept_plaintext: true,
+        no_delay: true,
+        relayer: None,
+        gap: 8,
+        send: true,
+        yes: true,
+        gas_drop: None,
+    };
+    let seen = (zone.applied.len(), zone.refused.len());
+    let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &wrong_path, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("a private-kind deposit by the plaintext path")?;
+    println!("VERIFICATION (claim, plaintext path of a private-kind deposit): {e}");
+    let o = &private_kind.owned;
+    ensure!(
+        e.to_string().contains("refused: LEZ bridge program exit code 252 WRONG_DESTINATION")
+            && e.to_string().contains("checked before sending: a private-kind deposit is claimed privately")
+            && e.to_string().contains("claim a private-kind deposit privately (the default, without --plaintext)")
+            && names_none_of(
+                &format!("{e:#}"),
+                &[&o.nullifier, &o.deposit.commitment, &o.deposit.depositor, &o.dest],
+                o.deposit.leaf_index
+            )
+            && (zone.applied.len(), zone.refused.len()) == seen,
+        "the plaintext claim of a private-kind deposit: {e:#}"
+    );
+    let mut redirected = big.owned.clone();
+    redirected.dest = *user.public_accounts(2)?[1].id.value();
+    let history = lez::history_of(&zone, &ctx).await?;
+    let e = lez::plan_claim(&zone, &ctx, &leaves, &redirected, &history, false, None, None)
+        .await
+        .err()
+        .context("a claim redirected to another account")?;
+    println!("VERIFICATION (claim, opening redirected): {e}");
+    let o = &big.owned;
+    ensure!(
+        e.to_string().contains("refused: LEZ bridge program exit code 249 CLAIM_INVALID")
+            && e.to_string().contains("checked before sending with the program's verify_claim")
+            && e.to_string().contains("claim it with the seed that made it, to the destination it commits to")
+            && names_none_of(
+                &format!("{e:#}"),
+                &[&o.nullifier, &o.deposit.commitment, &o.deposit.depositor, &o.dest, &redirected.dest],
+                0
+            )
+            && (zone.applied.len(), zone.refused.len()) == seen,
+        "the redirected claim: {e:#}"
+    );
     let claimed0 = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true)).await?;
     let plan = claimed0.plan;
     println!("claim: {:?}; N {}", claimed0.sent, hx(&plan.nullifier));
@@ -1350,21 +1504,15 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
     let sent = ferrata(&dep_args(true).iter().map(String::as_str).collect::<Vec<_>>())?;
     print!("{sent}");
     ensure!(sent.contains("sent: "), "the default deposit is sent");
-    // 2. The relayer imports root(17) and ETH's fee range to it.
+    // 2. Insufficient finality (U.08), then the relayer imports root(17) and ETH's fee range to it. The vault's storage
+    //    is recorded at the newest beacon slot, after every record the configuration's clock has read.
     let n2 = eth::view(&p, vault, IVault::nextLeafIndexCall {}, None).await?;
     let leaf_p = n2 - 1;
     let root2 = eth::view(&p, vault, IVault::depositRootCall {}, None).await?;
     let mut storage3 = vec![(word(0), slot(&p, vault, word(0)).await?), (word(1), slot(&p, vault, word(1)).await?)];
     storage3.push((word(2), cid));
-    let b2 = zone.world.add_block(hb::Block::with_storage(9_000_128, 9_000_128, vault.into_array(), &storage3));
-    let r = zone.world.import("ImportRoot 17 (relayer)", &cid, b2, root2.0, n2, &vault.into_array());
-    ensure!(r.ok(), "ImportRoot 17: {:?}", r.exit_code);
-    zone.record(&r);
-    let r =
-        zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b2, [0; 20], 1, None, &vault.into_array());
-    ensure!(r.ok(), "ImportFees at 17: {:?}", r.exit_code);
-    zone.record(&r);
-    // 3. The claim on the defaults: held by the deposit's claim delay; past it, private.
+    let s2 = zone.world.next_slot();
+    let b2 = zone.world.add_block(hb::Block::with_storage(s2, s2, vault.into_array(), &storage3));
     let mut copts = flow::ClaimOpts {
         leaf: Some(leaf_p),
         plaintext: false,
@@ -1376,6 +1524,88 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         yes: true,
         gas_drop: None,
     };
+    let pending = scan::deposits(
+        &user,
+        &ctx,
+        &eth::deposit_list(&p, vault, 0, 10_000).await?,
+        8,
+        &lez::History::default(),
+        &HashSet::new(),
+    )?
+    .into_iter()
+    .find(|r| r.owned.deposit.leaf_index == leaf_p)
+    .context("leaf 16 is the user's")?
+    .owned;
+    let named: [&[u8]; 4] =
+        [&pending.nullifier, &pending.deposit.commitment, &pending.deposit.depositor, &pending.dest];
+    let not_final = |e: &anyhow::Error| {
+        e.to_string().contains("refused: LEZ bridge program exit code 248 LEAF_NOT_IMPORTED")
+            && e.to_string().contains(
+                "checked before sending: no imported root covers this leaf yet; wait for the next root import",
+            )
+            && names_none_of(&format!("{e:#}"), &named, leaf_p)
+    };
+    //    a. Before its root is imported: the private claim is refused before it is proven (248), the zone as it was.
+    let seen = (zone.applied.len(), zone.refused.len());
+    let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("a claim before its root is imported")?;
+    println!("NOT FINAL (claim, before its root is imported): {e}");
+    ensure!(
+        not_final(&e)
+            && !e.to_string().contains("inbound finality depth")
+            && (zone.applied.len(), zone.refused.len()) == seen,
+        "the claim before its root is imported: {e:#}"
+    );
+    //    b. Inside the depth (F.12's admin depth): the admin sets 64 beacon slots beyond Ethereum finality; the relayer's
+    //       import under the newest record waits (242) until the configuration's clock has read a record 64 slots
+    //       later; meanwhile the claim is refused before it is proven (248), saying how long the depth holds imports.
+    let config_at = ferrata_lez_bridge_wire::config_actor(program, &cid);
+    let set_depth = |slots: u64| BridgeMessage::SetDepth { config_id: cid, slots };
+    let r = zone.world.role("SetDepth 64 (admin)", hb::ADMIN_SEED, &set_depth(64), config_at);
+    zone.record(&r);
+    ensure!(r.ok(), "SetDepth 64: {:?}", r.exit_code);
+    let r = zone.world.import("ImportRoot 17 inside the depth (relayer)", &cid, b2, root2.0, n2, &vault.into_array());
+    zone.record(&r);
+    ensure!(r.exit_code == Some(242), "an import inside the depth waits with 242: {:?}", r.exit_code);
+    let seen = (zone.applied.len(), zone.refused.len());
+    let e = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
+        .await
+        .err()
+        .context("a claim inside the depth")?;
+    println!("NOT FINAL (claim, its root's import inside the depth): {e}");
+    ensure!(
+        not_final(&e)
+            && e.to_string().contains(
+                "this configuration imports a root only once the block it reads is 64 beacon slots (about 13 min) past \
+                 Ethereum finality (its inbound finality depth, set by its admin)"
+            )
+            && (zone.applied.len(), zone.refused.len()) == seen,
+        "the claim inside the depth: {e:#}"
+    );
+    //    The clock reads a record 64 slots on (a Tick, anyone's); the same import applies; the depth back to 0.
+    let tip = loop {
+        let now = eth::now(&p).await?.max(zone.world.newest_record_seconds() + 1);
+        let b = zone.world.finalize(now);
+        if zone.world.blocks[b].slot >= s2 + 64 {
+            break b;
+        }
+    };
+    let r = zone.world.tick("Tick: a record 64 slots past the import's", &cid, None, tip);
+    zone.record(&r);
+    ensure!(r.ok(), "Tick: {:?}", r.exit_code);
+    let r = zone.world.import("ImportRoot 17 (relayer)", &cid, b2, root2.0, n2, &vault.into_array());
+    ensure!(r.ok(), "ImportRoot 17 past the depth: {:?}", r.exit_code);
+    zone.record(&r);
+    let r = zone.world.role("SetDepth 0 (admin)", hb::ADMIN_SEED, &set_depth(0), config_at);
+    zone.record(&r);
+    ensure!(r.ok(), "SetDepth 0: {:?}", r.exit_code);
+    let r =
+        zone.world.import_fees("ImportFees ETH 1 = none (relayer)", &cid, b2, [0; 20], 1, None, &vault.into_array());
+    ensure!(r.ok(), "ImportFees at 17: {:?}", r.exit_code);
+    zone.record(&r);
+    // 3. The claim on the defaults: held by the deposit's claim delay; past it, private.
     let held = flow::claim(&eth_side, &user, &mut zone, &ctx, &copts, &mut flow::Out::new(true))
         .await
         .err()
@@ -1489,7 +1719,48 @@ async fn deposit_scan_claim_burn_release_and_recovery() -> Result<()> {
         .map(|b| burn_leaf(&cid, b.burn_index, &b.note.token, &b.note.amount, &b.note.c_out, &b.note.r))
         .collect();
     let burn_root2 = Tree::from_leaves(burn_leaves2).map_err(|_| anyhow!("tree"))?.root();
-    accept_burn_root(&p, vault, B256::from(cid), burn_root2, 12, false).await?;
+    // Insufficient finality on the way out (U.08): with the checkpoint of the twelve burns a candidate in its wait, not
+    // final, the release of the private burn (only that root covers it), asked of the tool with a signer and --send
+    // --yes, is refused before anything is signed with the vault's error and what to do, naming no burn: the signer's
+    // nonce is unchanged. Then the candidate is finalised.
+    let candidate = propose_burn_root(&p, vault, B256::from(cid), burn_root2, 12).await?;
+    let nonce = p.get_transaction_count(keystores[1].1).await?;
+    let e = flow::release_burn(
+        &eth_side,
+        &user,
+        &mut zone,
+        &ctx,
+        Some(&sender),
+        &flow::ReleaseOpts {
+            burn: Some(burned.plan.i),
+            journal: None,
+            via: flow::Via::Myself,
+            seal: Some(Bytes::from(SEAL.to_vec())),
+            job_out: None,
+            input_out: None,
+            program: None,
+            prove: false,
+            send: true,
+            yes: true,
+            confirmations: 1,
+        },
+        &mut flow::Out::new(true),
+    )
+    .await
+    .err()
+    .context("a release before its checkpoint finalises")?;
+    println!("NOT FINAL (release, its checkpoint a candidate): {e}");
+    let note = &burned.plan.note;
+    ensure!(
+        e.to_string().contains("refused: vault error BurnRootNotAccepted()")
+            && e.to_string().contains(
+                "checked before sending: no finalized checkpoint covers this burn yet; wait for the next checkpoint"
+            )
+            && names_none_of(&format!("{e:#}"), &[&note.r, &note.c_out, fresh.as_slice()], burned.plan.i)
+            && p.get_transaction_count(keystores[1].1).await? == nonce,
+        "the release before its checkpoint finalises: {e:#}"
+    );
+    finalize_burn_root(&p, vault, B256::from(cid), candidate, false).await?;
     let job_path = dir.join("release-job.json");
     let _ = std::fs::remove_file(&job_path);
     let ropts = |burn: u64, seal: Option<Bytes>, job: Option<PathBuf>| flow::ReleaseOpts {

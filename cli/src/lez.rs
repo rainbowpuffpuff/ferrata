@@ -472,7 +472,14 @@ pub async fn plan_claim<L: Ledger>(
     relayer: Option<Hash>,
     prover: Option<AccountId>,
 ) -> Result<ClaimPlan> {
-    let n = claim::pick_import(&history.roots, owned.deposit.leaf_index).map_err(refused)?;
+    let n = match claim::pick_import(&history.roots, owned.deposit.leaf_index) {
+        Ok(n) => n,
+        // Insufficient finality (U.08): the refusal also says how long the configuration's own depth holds imports.
+        Err(ferrata_wallet::Refusal::Program { code, detail }) => {
+            bail!(program_refusal(u32::from(code), format!("{detail}{}", depth_note(ledger, ctx).await?)))
+        }
+        Err(r) => return Err(refused(r)),
+    };
     let root_state: RootState = match read(ledger, root_actor(ctx.program, &ctx.cid, n)).await? {
         Some(BridgeState::Root(r)) => r,
         _ => bail!(program_refusal(245, format!("checked before sending: root(cid, {n}) is not on the zone"))),
@@ -498,6 +505,26 @@ pub async fn plan_claim<L: Ledger>(
         nullifier: plan.nullifier,
         mint_fee: plan.mint_fee,
         relay_fee: plan.relay_fee,
+    })
+}
+
+/// The configuration's inbound finality depth in words, for a claim no imported root covers yet: empty at depth 0
+/// (Ethereum finality), else how much later than finality its imports apply (`Roles::inbound_depth_slots`, set by its
+/// admin with `SetDepth`; 12-second beacon slots). Names no deposit.
+async fn depth_note<L: Ledger>(ledger: &L, ctx: &Context) -> Result<String> {
+    let slots = match read(ledger, config_actor(ctx.program, &ctx.cid)).await? {
+        Some(BridgeState::Config(bw::ConfigState::Ready { roles, .. })) => roles.inbound_depth_slots,
+        _ => 0,
+    };
+    Ok(if slots == 0 {
+        String::new()
+    } else {
+        format!(
+            "; this configuration imports a root only once the block it reads is {slots} beacon slots (about {} min) \
+             past Ethereum finality (its inbound finality depth, set by its admin), so a deposit becomes claimable that \
+             much later",
+            (slots * 12).div_ceil(60)
+        )
     })
 }
 
