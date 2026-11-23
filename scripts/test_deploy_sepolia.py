@@ -84,6 +84,8 @@ class DeployToolTest(unittest.TestCase):
         cls.chain.mine()
         cls.F, cls.W, cls.W2 = label("test: freeze authority"), label("test: watcher"), label("test: watcher 2")
         cls.keyless = label(core.KEYLESS_LABEL)
+        cls.state = os.path.join(cls.tmp, "volume")  # stands for the Modal Volume the records are copied to
+        cls.commits = 0
 
     @classmethod
     def tearDownClass(cls):
@@ -112,8 +114,10 @@ class DeployToolTest(unittest.TestCase):
         a = {"params": dict(PARAMS), "freeze_authority": self.F, "watchers": self.W, "expect_vault": self.predicted(frm),
              "name": name, "delta": 0}
         a.update(kw)
+        def commit():
+            type(self).commits += 1
         return core.run(a, dry, RPC, frm, None if dry else key, vault_dir=str(VAULT), logs_root=os.path.join(self.tmp, "logs"),
-                        deployer=frm, fork_port=FORK_PORT)
+                        deployer=frm, state_dir=self.state, commit=commit, fork_port=FORK_PORT)
 
     def refused(self, who: str, fragment: str, **kw) -> None:
         frm = self.keys[who][0]
@@ -203,6 +207,8 @@ class DeployToolTest(unittest.TestCase):
         self.assertEqual(self.nonce(frm), n0 + 8)
         self.assertNotEqual(sh("cast", "code", "--rpc-url", RPC, vault), "0x")
         rec = json.loads((VAULT / "deployments" / "fork-test-main.json").read_text())
+        self.assertEqual(json.loads(pathlib.Path(self.state, "fork-test-main.json").read_text()), rec, "copied to the Volume")
+        self.assertGreater(self.commits, 0)
         self.assertTrue(rec["complete"])
         self.assertIs(rec["uncapped"], False)
         self.assertEqual(rec["vault"].lower(), vault.lower())
@@ -212,8 +218,15 @@ class DeployToolTest(unittest.TestCase):
         out = self.run_tool("main", False, "fork-test-main", watchers=f"{self.W},{self.W2}", expect_vault=vault)
         self.assertIn("deployment: complete in", "\n".join(out))
         self.assertEqual(self.nonce(frm), n0 + 8)
-        # The record lost: refused, nothing sent (a second vault would land elsewhere).
+        # The container's copy lost (a new container): restored from the Volume, nothing sent.
         (VAULT / "deployments" / "fork-test-main.json").unlink()
+        self.chain.mine()
+        out = self.run_tool("main", False, "fork-test-main", watchers=f"{self.W},{self.W2}", expect_vault=vault)
+        self.assertIn("resuming the record fork-test-main: last step done, complete True", "\n".join(out))
+        self.assertEqual(self.nonce(frm), n0 + 8)
+        # The record lost everywhere: refused, nothing sent (a second vault would land elsewhere).
+        (VAULT / "deployments" / "fork-test-main.json").unlink()
+        pathlib.Path(self.state, "fork-test-main.json").unlink()
         with self.assertRaises(core.Stop) as ctx:
             self.run_tool("main", False, "fork-test-main", expect_vault=vault)
         self.assertIn("already at --expect-vault", str(ctx.exception))

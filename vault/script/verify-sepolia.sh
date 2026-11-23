@@ -38,14 +38,8 @@ call() { cast call "$@" "${rpc[@]}"; }
 check "vault.verifier is the emergency stop" "$(call "$vault" 'verifier()(address)' | lower)" "$(echo "$estop" | lower)"
 check "the stop wraps the Groth16 verifier" "$(call "$estop" 'verifier()(address)' | lower)" "$(echo "$groth16" | lower)"
 check "the stop is not paused" "$(call "$estop" 'paused()(bool)')" false
-# RISC Zero's verifier 3.1.0 (0xe71e6620) for the vaults deployed since the move to RISC Zero 3.1; 3.0.0 (0x73c457ba)
-# for the four vaults of November 2026, capped at zero after GHSA-mm6c-35cm-g4x2 (docs/security/risc0-groth16-advisory-2026-11-21).
-sel="$(call "$groth16" 'SELECTOR()(bytes4)')"
-case "$sel" in
-  0xe71e6620) echo "ok    Groth16 verifier selector 0xe71e6620 (RISC Zero 3.1.0)" ;;
-  0x73c457ba) echo "ok    Groth16 verifier selector 0x73c457ba (RISC Zero 3.0.0: a vault of November 2026, its caps at zero)" ;;
-  *) echo "FAIL  Groth16 verifier selector $sel"; fail=1 ;;
-esac
+# The Groth16 verifier behind the stop: 3.1.0, or 3.0.0 only with the vault's caps at zero (script/check-verifier.sh).
+script/check-verifier.sh "$vault" "$SEPOLIA_RPC_URL" || fail=1
 check "checkpointImageId" "$(call "$vault" 'checkpointImageId()(bytes32)')" "$(f .checkpointImageId)"
 check "releaseImageId" "$(call "$vault" 'releaseImageId()(bytes32)')" "$(f .releaseImageId)"
 check "lezConfigId" "$(call "$vault" 'lezConfigId()(bytes32)')" "$(f .lezConfigId)"

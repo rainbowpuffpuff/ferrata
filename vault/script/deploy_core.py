@@ -1,7 +1,11 @@
 """The checks and the deployment that vault/script/deploy_sepolia.py runs in its Modal container, without Modal, so that
 scripts/test_deploy_sepolia.py can run them end to end on a local anvil with a throwaway key.
 
-    run(args, dry, rpc, frm, key, vault_dir=..., logs_root=..., deployer=..., commit=..., fork_port=...)
+    run(args, dry, rpc, frm, key, vault_dir=..., logs_root=..., deployer=..., state_dir=..., commit=..., fork_port=...)
+
+The record DeployVault writes lives in vault_dir/deployments (forge reads and writes only there); with `state_dir` (the
+Modal Volume) it is restored from there before anything else and copied back, then `commit()`ed, every 15 s while
+deploy.sh runs and at the end, so that a stop at any step resumes from the last one.
 
 Before anything is sent (decision D1 (a) of docs/design/risc0-3.1-migration.md, the vault deployed by
 vault/script/deploy.sh and DeployVault.s.sol):
@@ -79,11 +83,27 @@ def _int(text: str) -> int:
 
 class Run:
     def __init__(self, a: dict, rpc: str, frm: str, key: tuple[str, str] | None, *, vault_dir: str, logs_root: str,
-                 deployer: str, commit=None, fork_port: int = 8545):
+                 deployer: str, state_dir: str | None = None, commit=None, fork_port: int = 8545):
         self.a, self.rpc, self.frm, self.key = a, rpc, frm, key
         self.vault_dir, self.logs_root, self.deployer = vault_dir, logs_root, deployer
-        self.commit, self.fork_port = commit, fork_port
+        self.state_dir, self.commit, self.fork_port = state_dir, commit, fork_port
         self.out: list[str] = []
+
+    def _restore(self) -> None:
+        """The record of this name from the Volume (the source of truth between containers), if it holds one."""
+        if self.state_dir and pathlib.Path(self.state_dir, f"{self.name}.json").exists():
+            self.record.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(pathlib.Path(self.state_dir, f"{self.name}.json"), self.record)
+
+    def _persist(self) -> None:
+        """The record to the Volume, then committed."""
+        if self.state_dir and self.record.exists():
+            os.makedirs(self.state_dir, exist_ok=True)
+            tmp = pathlib.Path(self.state_dir, f".{self.name}.json.tmp")
+            shutil.copy(self.record, tmp)
+            os.replace(tmp, pathlib.Path(self.state_dir, f"{self.name}.json"))
+        if self.commit:
+            self.commit()
 
     def say(self, line: str) -> None:
         print(line, flush=True)
@@ -147,6 +167,7 @@ class Run:
         if pending != self.latest:
             raise Stop(f"the deployer has a pending transaction (latest nonce {self.latest}, pending {pending}): wait")
         self.record = pathlib.Path(self.vault_dir, "deployments", f"{self.name}.json")
+        self._restore()
         rec = json.loads(self.record.read_text()) if self.record.exists() else None
         if rec:
             if rec.get("deployer", "").lower() != frm.lower() or str(rec.get("chainId")) != CHAIN:
@@ -220,13 +241,13 @@ class Run:
                 env.update(FERRATA_RPC_URL=self.rpc, ETH_KEYSTORE=os.path.join(keydir, "key.json"),
                            ETH_PASSWORD=os.path.join(keydir, "pw"))
                 self.say(f"{label}: signing with the deployer key; every transaction journaled before it leaves")
-                if self.commit:  # the record and the journal reach the Volume while deploy.sh runs, not only at the end
+                if self.state_dir or self.commit:  # the record and the journal reach the Volume while deploy.sh runs
                     def loop():
                         while not stop_commits.wait(15):
                             try:
-                                self.commit()
-                            except Exception as e:  # noqa: BLE001 (a failed background commit is retried)
-                                print(f"(background commit failed: {e})", flush=True)
+                                self._persist()
+                            except Exception as e:  # noqa: BLE001 (a failed background copy is retried)
+                                print(f"(background copy of the record failed: {e})", flush=True)
                     committer = threading.Thread(target=loop, daemon=True)
                     committer.start()
             n0 = int(self.cast("nonce", self.frm, rpc=target))
@@ -270,8 +291,8 @@ class Run:
             if dry:
                 rec_path.unlink(missing_ok=True)
                 (deps / f"{rec_name}.params.json").unlink(missing_ok=True)
-            if self.commit and not dry:
-                self.commit()
+            if not dry:
+                self._persist()
 
     # ---- what the chain holds ----------------------------------------------------------------------------------
     def read_back(self, rec: dict, rpc: str, label: str) -> None:
@@ -346,10 +367,10 @@ class Run:
 
 
 def run(a: dict, dry: bool, rpc: str, frm: str, key: tuple[str, str] | None, *, vault_dir: str, logs_root: str,
-        deployer: str, commit=None, fork_port: int = 8545) -> list[str]:
+        deployer: str, state_dir: str | None = None, commit=None, fork_port: int = 8545) -> list[str]:
     """The checks, then --dry: the deployment on a fork; else the preflight on a fork, then the deployment."""
-    r = Run(a, rpc, frm, key, vault_dir=vault_dir, logs_root=logs_root, deployer=deployer, commit=commit,
-            fork_port=fork_port)
+    r = Run(a, rpc, frm, key, vault_dir=vault_dir, logs_root=logs_root, deployer=deployer, state_dir=state_dir,
+            commit=commit, fork_port=fork_port)
     r.check()
     if dry:
         rec = r.attempt(True, "--dry")

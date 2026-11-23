@@ -22,7 +22,8 @@ per forge run, every signed transaction journaled before it leaves, scripts/pubn
 Every check and refusal is vault/script/deploy_core.py's (its docstring lists them; scripts/test_deploy_sepolia.py runs
 them, the signed path included, on a local anvil with a throwaway key). Explicit nonces: every sent transaction is held
 to the next nonce of its start. Idempotent: run it again after a stop and it continues from the record, which lives in
-the Volume `ferrata-deploy` (mounted where DeployVault writes it, committed every 15 s while it runs), as does the
+the Volume `ferrata-deploy` (copied there from vault/deployments and committed every 15 s while deploy.sh runs: forge
+may write only under vault/deployments, and a Volume mounted there is outside the project for forge), as does the
 network journal (logs/).
 
 --dry: the checks, then the whole deployment on an anvil fork of Sepolia, as the deployer (impersonated, with its real
@@ -51,7 +52,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 REPO = HERE.parents[1] if modal.is_local() else pathlib.Path("/repo")  # the image's copy
 NO_SECRET = modal.is_local() and os.environ.get("FERRATA_DEPLOY_NO_SECRET") == "1"
 VAULT_DIR = "/repo/vault"
-DEPLOYMENTS = f"{VAULT_DIR}/deployments"  # the Volume: the records and logs/
+STATE = "/state"  # the Volume: the records (copied to and from vault/deployments, where forge may write) and logs/
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -83,7 +84,7 @@ state = modal.Volume.from_name("ferrata-deploy", create_if_missing=True)
 secrets = [modal.Secret.from_dict({}) if NO_SECRET else modal.Secret.from_name(SECRET)]
 
 
-@app.function(secrets=secrets, volumes={DEPLOYMENTS: state}, timeout=3600, cpu=2.0, memory=4096, retries=0)
+@app.function(secrets=secrets, volumes={STATE: state}, timeout=3600, cpu=2.0, memory=4096, retries=0)
 def deploy(a: dict, dry: bool) -> list[str]:
     sys.path.insert(0, "/root")
     import deploy_core as core
@@ -100,8 +101,8 @@ def deploy(a: dict, dry: bool) -> list[str]:
     else:
         key = None if dry else (key_json, key_pw)
     try:
-        return core.run(a, dry, rpc, frm, key, vault_dir=VAULT_DIR, logs_root=f"{DEPLOYMENTS}/logs", deployer=DEPLOYER,
-                        commit=state.commit)
+        return core.run(a, dry, rpc, frm, key, vault_dir=VAULT_DIR, logs_root=f"{STATE}/logs", deployer=DEPLOYER,
+                        state_dir=STATE, commit=state.commit)
     except core.Stop as e:
         print(f"STOP: {e}", flush=True)
         return [f"STOP: {e}"]

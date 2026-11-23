@@ -674,7 +674,7 @@ note = "burns from a public holding (a signed top-level call) and from a private
 id = "RFP-022 F.7"
 tests = [
   { path = "vault/test/Checkpoint.t.sol", kind = "test", ci = "vault" },
-  { path = "vault/test/real/RuleBReal.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/real/ZoneBridge.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/real/RuleBMulti.t.sol", kind = "test", ci = "vault" },
   { path = "e2e/runs/zone-rc3-four-keys/README.md", kind = "record" },
   { path = "checkpoint/fidelity/tests/rule.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
@@ -959,10 +959,11 @@ note = "in Basecamp the view was closed 6 s into the burn's proof and opened aga
 [[row]]
 id = "RFP-022 R.8"
 tests = [
-  { path = "bridge/evm-verify/test/v2/Groth16Verify.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
-  { path = "vault/test/real/RuleBReal.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/Verifier31.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/real/ZoneBridgeRc3.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/DeployVaultChecks.t.sol", kind = "test", ci = "vault" },
 ]
-note = "RISC Zero zkVM 3.0.5 receipts, the unmodified base Groth16 verifier behind its emergency-stop wrapper: the selector matches, the verifier accepts the receipts in a local EVM and on Sepolia (rows 41, 91); no new ZK primitive"
+note = "RISC Zero zkVM 3.1.0 receipts (the advisories' fixed releases) and RISC Zero's unmodified base Groth16 verifier 3.1.0 (risc0-ethereum v3.1.0, vault/lib.lock) behind its emergency-stop wrapper: the library is 3.1.0, a 3.0.5 seal is refused, real 3.1 seals of rule (B) checkpoints and releases verify, DeployVault puts no other verifier code behind the stop; no new ZK primitive. Whether 3.1.0 is covered by an audit is not established. bridge/evm-verify (risc0-ethereum v3.0.0, seals of the v2 release program) is a record of 3.0.5, not cited."
 
 [[row]]
 id = "RFP-022 R.9"
@@ -1147,12 +1148,13 @@ note = "no functional test is possible until the review Logos pays for from the 
 [[row]]
 id = "RFP-022 Sec.2"
 tests = [
-  { path = "bridge/evm-verify/test/v2/Groth16Verify.t.sol", kind = "test", ci = "box", run = "cd bridge/evm-verify && forge test -vv" },
+  { path = "vault/test/Verifier31.t.sol", kind = "test", ci = "vault" },
+  { path = "vault/test/real/ZoneBridgeRc3.t.sol", kind = "test", ci = "vault" },
   { path = "vault/test/JournalBinding.t.sol", kind = "test", ci = "vault" },
   { path = "checkpoint/fidelity/tests/formats.rs", kind = "test", ci = "box", run = "cd checkpoint/fidelity && cargo +1.98.1 test -- --nocapture" },
   { path = "e2e/ci/run.sh", kind = "test", ci = "roundtrip" },
 ]
-note = "every flipped proof word, journal word, selector and image id refused by the real verifier; altered requests and replays refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88)"
+note = "under RISC Zero's verifier 3.1.0 with real 3.1 seals (rule (B)): a flipped seal byte, another program's or another journal's seal, a swapped proof, a seal of risc0 3.0.5 and replays refused; altered requests refused; wrong inputs, state and tampering refused on LEZ (249, 110; a flipped receipt bit by LEZ's settlement, rows 75, 88; LEZ verifies with risc0 3.0.5). Rule (A) has no real-seal test under 3.1 (vault/test/real/README.md)."
 
 [[row]]
 id = "RFP-022 Sec.3"
