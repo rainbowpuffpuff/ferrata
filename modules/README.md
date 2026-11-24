@@ -425,6 +425,6 @@ that start a Logos Core refuse a `TMPDIR` (or `LOGOS_TMPDIR`) longer than 62 byt
   portable, against 16 MB with the harness alone) and its host needs `curl` and `libpcsclite`; built with Rust
   1.98.0, LEZ pins 1.98.1; the guests it embeds are the ones risc0-build made on the build box (their ids checked against
   `docs/image-ids.md`).
-- **Catalog:** laid out, dry-run and installed from on 127.0.0.1 (`catalog/`); nothing published, one
-  variant (`linux-amd64`), unsigned.
+- **Catalog:** published once by the owner as `landclimber/ferrata-modules` (the six core modules, signed) and
+  installed from on Linux x86-64 only (`catalog/install-test-landclimber-2026-11-24/`); the mini-app is not in it.
 - **Linux x86-64 only** was tried.

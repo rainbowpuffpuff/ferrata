@@ -43,8 +43,8 @@ The design notes specify these; there is no code for them here:
   [`modules/results/verified-proxy-2026-11-14/`](../modules/results/verified-proxy-2026-11-14/README.md); not the bridge
   module's, the relayer's or the monitor's reads; the proxy serves no devnet and no `eth_getProof`, so storage proofs
   come unverified and the programs check them against a record; the private claim's private execution and proof are the LEZ wallet's: the module builds and checks
-  `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and a published catalog (laid out,
-  dry-run and installed from on 127.0.0.1 in `modules/catalog/`); the A3 gate's three daemons on a running
+  `ClaimPrivately`; the release's Groth16 wrap is the relayer's), and the mini-app in the published catalog
+  (`landclimber/ferrata-modules` holds the six core modules); the A3 gate's three daemons on a running
   sequencer (`ferrata-updater` is built as a binary and as a Logos module that drives the same daemon with either
   backend, `lez/updater/`, `modules/ferrata_updater_module`: the in-process LEZ chain, or a running LEZ sequencer
   through `lez/updater/sequencer/`'s library, which the module ran inside a headless Logos Core on a crown zone

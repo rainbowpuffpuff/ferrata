@@ -1,4 +1,4 @@
-# Ferrata's module catalog (layout, not published)
+# Ferrata's module catalog (its layout; published as `landclimber/ferrata-modules`)
 
 The proposal (§B7) releases Ferrata's Logos modules from a catalog of its own with
 `logos-modules-release-action`. This directory is that catalog's content, laid out as a fork of
