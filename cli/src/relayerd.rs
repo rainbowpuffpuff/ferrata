@@ -144,6 +144,12 @@ pub struct Cli {
     /// daemon started with RISC0_DEV_MODE set refuses to run gas drops (a fake receipt would be paid a real drop).
     #[arg(long, global = true)]
     pub accept_dev_mode_receipts: bool,
+    /// Gas drops only (a network's published gas-drop relayer, `deploy/testnet/host/systemd/ferrata-gasdrop.service`):
+    /// no Ethereum key and nothing sent to Ethereum (the vault is only read: its deposits, for the imported roots a
+    /// receipt is checked against); every other job is refused; no root imports, finalisations or fee collection.
+    /// Needs --sequencer, --gasdrop-image-id and --lez-account.
+    #[arg(long, global = true)]
+    pub gas_drops_only: bool,
     /// Import the vault's deposit roots on LEZ: each round, the bridge program's `ImportRoot` under the newest
     /// record of the configuration's light-client instance, when that record covers deposits LEZ has not
     /// imported (built and dry-run with ferrata-wallet's `import`, the code ferrata_bridge_module's
@@ -349,6 +355,8 @@ struct Daemon {
     tokens: std::collections::BTreeSet<Address>,
     /// The vault runs rule (B) (`mode() == 1`): candidates are finalised with `finalizeAttested`.
     rule_b: bool,
+    /// `--gas-drops-only`.
+    gas_drops_only: bool,
     /// A job deferred for longer than this (seconds) is refused.
     max_job_age: u64,
     /// The Groth16 prover command (wrapping), if any.
@@ -922,6 +930,9 @@ impl Daemon {
                 Inflight::clear(&self.state)?;
             }
         }
+        if self.gas_drops_only {
+            return Ok(());
+        }
         // 2. Candidates whose wait is over.
         let Some(v) = self.pinned_view().await? else { return Ok(()) };
         for (c, ready_at) in self.r.candidates_at(&self.p, self.from_block, v.block).await? {
@@ -1117,6 +1128,9 @@ impl Daemon {
 
     async fn job(&mut self, file: &Path, v: &relayer::VaultView) -> Result<serde_json::Value> {
         let job: Job = serde_json::from_slice(&std::fs::read(file)?).context("not a relayer job")?;
+        if self.gas_drops_only && !matches!(job, Job::GasDrop { .. }) {
+            bail!("refused: this relayer runs gas drops only (--gas-drops-only)");
+        }
         let name = file.file_name().map(|n| n.to_string_lossy().into_owned());
         let name = name.as_deref();
         match job {
@@ -1280,7 +1294,19 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
     let vault = cli.vault.ok_or_else(|| anyhow!("--vault is required"))?;
     let logos = cli.send_via == "logos";
     // The key: no network yet.
+    if cli.gas_drops_only {
+        ensure!(
+            cli.keystore.is_none() && cli.unlocked.is_none() && !logos,
+            "--gas-drops-only sends nothing to Ethereum: give no --keystore, --unlocked or --send-via logos"
+        );
+        ensure!(!cli.import_roots, "--gas-drops-only makes no root imports (--import-roots)");
+        ensure!(
+            cli.sequencer.is_some() && cli.gasdrop_image_id.is_some() && cli.lez_account.is_some() && cli.drop_amount > 0,
+            "--gas-drops-only needs --sequencer, --gasdrop-image-id, --lez-account and --drop-amount"
+        );
+    }
     let (p, me, unlocked) = match (&cli.keystore, &cli.password_file, cli.unlocked) {
+        (None, None, None) if cli.gas_drops_only => (eth::provider(&url)?, Address::ZERO, false),
         (None, None, None) if logos => {
             let me = cli.from.ok_or_else(|| anyhow!("--send-via logos needs --from (the keystore account)"))?;
             (eth::provider(&url)?, me, false)
@@ -1393,6 +1419,7 @@ pub async fn run(cli: Cli, sink: Sink, mut stop: tokio::sync::watch::Receiver<Op
         drop_max_sends: cli.drop_max_sends,
         tokens: [Address::ZERO].into_iter().collect(),
         rule_b,
+        gas_drops_only: cli.gas_drops_only,
         max_job_age: cli.max_job_age,
         wrap_command: cli.wrap_command.clone(),
         receipt_timeout: cli.receipt_timeout,

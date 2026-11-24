@@ -148,6 +148,12 @@ pub trait Ledger {
         let _ = ask;
         bail!("a gas drop needs a LEZ sequencer and its wallet (--sequencer)")
     }
+    /// Makes the private account `id` (in the wallet) the fee payer of the next private transaction: a gas drop's
+    /// one-time account whose credit an earlier claim swept, paying a private burn's fee from what it left.
+    async fn set_private_fee_payer(&mut self, id: AccountId) -> Result<()> {
+        let _ = id;
+        bail!("a private fee payer needs a LEZ sequencer and its wallet (--sequencer)")
+    }
 }
 
 /// What a claim asks of a relayer's gas drop ([`Ledger::gas_drop_fee_payer`]).
@@ -159,8 +165,9 @@ pub struct GasDropAsk {
     pub nullifier: Hash,
     /// The relayer's LEZ account: named in the receipt and in the claim, which pays it the relay fee.
     pub relayer: Hash,
-    /// The relayer's inbox (a directory): the job is written there.
-    pub inbox: std::path::PathBuf,
+    /// The relayer's inbox: a directory the job is written to, or a URL it is posted to (the network's relayer,
+    /// `crate::gasdrop_net`).
+    pub inbox: crate::gasdrop_net::Inbox,
     /// The gas-drop guest (ELF), proven over the receipt's input.
     pub elf: std::path::PathBuf,
     /// The record of this wallet's drops (`N` -> its one-time account and the job handed to each relayer asked),
@@ -179,8 +186,9 @@ pub struct GasDropDone {
     pub credit: u128,
     /// Whether that credit is sealed (its amount and recipient encrypted on the zone).
     pub sealed: bool,
-    /// The job handed to the relayer (`None`: an earlier run had handed it over).
-    pub job: Option<std::path::PathBuf>,
+    /// Where the job went (a file, or the inbox URL and the job's name there; `None`: an earlier run had handed it
+    /// over).
+    pub job: Option<String>,
     /// Other relayers an earlier run asked for this `N` (their LEZ accounts, hex), whose credit had not come.
     pub asked_before: Vec<String>,
     /// The one-time account was made by an earlier run, recorded for this `N`.
@@ -933,8 +941,12 @@ impl Ledger for Sequencer {
         let relayer_key = hx(&ask.relayer);
         let entry = book.get(&key).cloned().unwrap_or_default();
         let jobs = entry.get("jobs").and_then(|j| j.as_object()).cloned().unwrap_or_default();
-        let legacy_here =
-            entry.get("job").and_then(|j| j.as_str()).is_some_and(|j| Path::new(j).starts_with(&ask.inbox));
+        let legacy_here = match &ask.inbox {
+            crate::gasdrop_net::Inbox::Dir(dir) => {
+                entry.get("job").and_then(|j| j.as_str()).is_some_and(|j| Path::new(j).starts_with(dir))
+            }
+            crate::gasdrop_net::Inbox::Url(_) => false,
+        };
         let handed_over = jobs.contains_key(&relayer_key) || legacy_here;
         let asked_before: Vec<String> = jobs.keys().filter(|r| **r != relayer_key).cloned().collect();
         let mut job = None;
@@ -953,20 +965,27 @@ impl Ledger for Sequencer {
             })
             .map_err(|e| anyhow!("proving the gas-drop receipt: {e}"))?;
             prove_secs = Some(t.elapsed().as_secs_f64());
+            // Nothing leaves this machine but a receipt of this guest with exactly the journal computed above.
+            crate::gasdrop_net::check_receipt(&info.receipt, &crate::gasdrop_net::image_id_of(&elf)?, &journal.encode())?;
             let value = serde_json::json!({
                 "kind": "gas-drop",
                 "receipt": serde_json::to_value(&info.receipt)?,
                 "oneTimeNpk": hx(&keys.npk),
                 "oneTimeVpk": hx(&keys.vpk),
             });
-            std::fs::create_dir_all(&ask.inbox)
-                .with_context(|| format!("the relayer's inbox {}", ask.inbox.display()))?;
-            let path = ask.inbox.join(format!("gas-drop-{}-{}.json", &key[2..18], &relayer_key[2..10]));
-            write_json_atomic(&path, &value)?;
+            let path = match &ask.inbox {
+                crate::gasdrop_net::Inbox::Dir(dir) => {
+                    std::fs::create_dir_all(dir).with_context(|| format!("the relayer's inbox {}", dir.display()))?;
+                    let path = dir.join(format!("gas-drop-{}-{}.json", &key[2..18], &relayer_key[2..10]));
+                    write_json_atomic(&path, &value)?;
+                    path.display().to_string()
+                }
+                crate::gasdrop_net::Inbox::Url(url) => crate::gasdrop_net::post_job(url, &value).await?,
+            };
             if let Some(entry) = book.get_mut(&key).and_then(|v| v.as_object_mut()) {
                 let jobs = entry.entry("jobs").or_insert_with(|| serde_json::json!({}));
                 if let Some(jobs) = jobs.as_object_mut() {
-                    jobs.insert(relayer_key.clone(), serde_json::json!(path.display().to_string()));
+                    jobs.insert(relayer_key.clone(), serde_json::json!(path));
                 }
             }
             write_json_atomic(&ask.record, &serde_json::Value::Object(book.clone()))?;
@@ -996,6 +1015,15 @@ impl Ledger for Sequencer {
             prove_secs,
             secs: started.elapsed().as_secs_f64(),
         })
+    }
+
+    async fn set_private_fee_payer(&mut self, id: AccountId) -> Result<()> {
+        ensure!(
+            self.wallet.storage().key_chain().private_account(id).is_some(),
+            "LEZ's wallet does not hold the private account {id}"
+        );
+        self.private_fee_payer = Some(id);
+        Ok(())
     }
 
     async fn private_account(&mut self, id: AccountId) -> Result<Option<lee::Account>> {

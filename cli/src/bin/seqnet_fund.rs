@@ -43,6 +43,7 @@ struct Args {
     #[arg(long)]
     lez_password_file: PathBuf,
     #[arg(long)]
+    #[arg(default_value = "seqnet-faucet")]
     faucet_home: PathBuf,
     #[arg(long, default_value_t = 3_000_000_000_000)]
     public_amount: u128,
@@ -52,6 +53,11 @@ struct Args {
     /// its public calls; e2e/seqnet's relayer root imports).
     #[arg(long)]
     public_only: bool,
+    /// Only step 2: the seed's own public account /0 (funded some other way: a network's faucet or its operator)
+    /// moves --private-amount to its private account /0. A gas-drop relayer's drop account on a network whose
+    /// genesis keys are not LEZ's published ones (deploy/testnet: `ferrata-gasdrop-setup fund`). No --faucet-home.
+    #[arg(long)]
+    private_only: bool,
 }
 
 fn faucet_wallet(home: &PathBuf, rpc: &str) -> Result<(WalletCore<sequencer_service_rpc::SequencerClient>, AccountId)> {
@@ -88,7 +94,18 @@ async fn main() -> Result<()> {
     let (public0, public0_key) = (first.id, PublicKey::new_from_private_key(&first.key));
     let private0 = seed.private_account_ids(1)?[0];
 
-    // 1. The faucet pays the user's public account /0.
+    ensure!(!(a.public_only && a.private_only), "--public-only and --private-only exclude each other");
+    if !a.private_only {
+        step_faucet(&a, public0, public0_key).await?;
+    }
+    if a.public_only {
+        return Ok(());
+    }
+    step_private(&a, &seed, public0, private0).await
+}
+
+/// 1. The faucet pays the user's public account /0.
+async fn step_faucet(a: &Args, public0: AccountId, public0_key: PublicKey) -> Result<()> {
     let (faucet, faucet_id) = faucet_wallet(&a.faucet_home, &a.sequencer)?;
     let before =
         faucet.get_account_balance(public0).await.map_err(|e| anyhow!("reading the user's public balance: {e}"))?;
@@ -122,12 +139,12 @@ async fn main() -> Result<()> {
                "to_public_0_hex": format!("0x{}", hex::encode(public0.value())), "amount": a.public_amount.to_string(),
                "balance_before": before.to_string(), "balance_after": after.to_string(), "send_ms": send_ms, "seen_ms": wait_ms})
     );
-    if a.public_only {
-        return Ok(());
-    }
+    Ok(())
+}
 
-    // 2. The user's own wallet moves part of it to its private account /0, proven by LEZ's wallet.
-    let mut user = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, &seed)?;
+/// 2. The user's own wallet moves part of it to its private account /0, proven by LEZ's wallet.
+async fn step_private(a: &Args, seed: &Seed, public0: AccountId, private0: AccountId) -> Result<()> {
+    let mut user = lez::open_wallet(&a.lez_wallet, &a.sequencer, &a.lez_password_file, seed)?;
     user.sync_to_latest_block().await.map_err(|e| anyhow!("syncing the user's wallet: {e}"))?;
     let private_before = user.get_account_private(private0).and_then(|acc| acc.data.native_balance().ok()).unwrap_or(0);
     let t0 = std::time::Instant::now();
