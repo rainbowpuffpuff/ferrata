@@ -69,7 +69,8 @@ check("yaml: a single-quoted scalar", steps[3]["run"] == "single 'quoted' line")
 jobs = ci_model.jobs()
 tracked = ci_model.tracked_paths()
 check("jobs: ci.yml's test job runs on push and pull requests", jobs["test"].on_change)
-check("jobs: sequencer.yml's job is manual only", not jobs["sequencer-attest"].on_change)
+check("jobs: sequencer.yml's two jobs run on pushes to main (on_change)",
+      jobs["sequencer-attest"].on_change and jobs["sequencer-roundtrip"].on_change)
 
 
 def runs(job, path):
@@ -124,6 +125,9 @@ check("trace: witness-independence runs the bridge core's tests (tests/inbound.r
       runs("witness-independence", "bridge/crates/ferrata-bridge-core/tests/inbound.rs"))
 check("trace: links runs scripts/ci/check-unaudited.sh", runs("links", "scripts/ci/check-unaudited.sh"))
 check("trace: links does not run scripts/ci/sequencer-attest.sh", not runs("links", "scripts/ci/sequencer-attest.sh"))
+check("trace: sequencer-attest runs scripts/ci/sequencer-attest.sh; sequencer-roundtrip runs scripts/ci/sequencer-roundtrip.sh",
+      runs("sequencer-attest", "scripts/ci/sequencer-attest.sh")
+      and runs("sequencer-roundtrip", "scripts/ci/sequencer-roundtrip.sh"))
 
 # ── cargo and forge selection on commands made up here ─────────────────────────────────────────────
 C = ci_model.Cmd
@@ -521,7 +525,7 @@ check("checker: --require-ci RFP-022 exits 1 on the real map and counts the rows
 # Synthetic maps: the real one with a test the vault job runs added to some RFP-022 rows (a row may have
 # several [[row]] blocks; the checker joins them).
 IN_CI = '{ path = "vault/test/Refund.t.sol", kind = "test", ci = "vault" }'
-IN_MANUAL_JOB = '{ path = "scripts/ci/sequencer-attest.sh", kind = "test", ci = "sequencer-attest" }'
+IN_MANUAL_JOB = '{ path = "scripts/ci/lez-harness.sh", kind = "test", ci = "lez-harness-full" }'
 
 
 def with_tests(text, ids, test=IN_CI):
