@@ -198,6 +198,9 @@ check "dry run: logos-repo.json's indexUrl" \
   test "$(jq -r .indexUrl "$S/clone/logos-repo.json")" = "https://raw.githubusercontent.com/$ORG/$CAT/refs/heads/main/index/index.json"
 check "dry run: the owner's steps create no index release (the index is index/index.json on main)" \
   sh -c '! grep -q -F "gh release create" "$1"' sh "$S/runs/dry.out"
+check "dry run: the catalog's rebuild-index.yml builds lgx at a pinned logos-package commit" \
+  sh -c 'grep -q -E "nix build github:logos-co/logos-package/[0-9a-f]{40}#lgx " "$1" && ! grep -q -F "logos-package#" "$1"' \
+  sh "$S/clone/.github/workflows/rebuild-index.yml"
 check "dry run: README says to add the key to the keyring" grep -q -F "logosctl key add ferrata --did $DID" "$S/clone/README.md"
 check "dry run: README says to require signatures" grep -q -F "signature_policy: require" "$S/clone/README.md"
 check "dry run: module tags pushed" test -n "$(git -C "$DRY/ferrata_monitor_module.git" tag -l 'v*')"
