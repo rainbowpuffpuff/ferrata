@@ -6,6 +6,7 @@
 //       with its own secret and finds exactly the typed words; a new phrase's words come back sealed.
 //   M2  the typed phrase is never a string in the view (its keys go into a byte buffer, shown as dots), and the buffer
 //       is wiped when the phrase is sealed, before the module answers.
+//   M3  in the network session the release address starts empty and nothing makes one up.
 //   L1  every label shows its text as plain text.
 // Run as `qmltestrunner -input qmltest/tst_network.qml` from the module's directory (scripts/network-ui-test.sh).
 import QtQuick
@@ -222,12 +223,16 @@ Item {
             logos.answerAs = "";
         }
 
-        // H1: the prompt shows the module's record; Approve alone sends confirm, with that record's id.
+        // H1 and M3: the burn's address starts empty (nothing made up); the prompt shows the module's record; Approve
+        // alone sends confirm, with that record's id.
         function test_05_a_burn_is_shown_then_confirmed() {
             host.app.connectedAccount = logos.account0;
             tab("redeem");
+            compare(el("burn.recipient").text, "", "no address made up");
+            verify(!el("burn.fresh").visible, "no fresh random address in the network session");
             click("burn.kind.public");
             click("burn.public.ack");
+            verify(!el("burn.submit").enabled, "a burn needs an address first");
             el("burn.recipient").forceActiveFocus();
             el("burn.recipient").text = "";
             var a = "0x9858EfFD232B4033E47d90003D41EC34EcaEda94";
@@ -269,6 +274,7 @@ Item {
             var zero = true;
             for (var i = 0; i < k.length; i++) if (k[i] !== 0) zero = false;
             verify(zero, "the call key is wiped");
+            compare(host.app.recipient, "");
         }
 
         // M1: a new phrase's words come back sealed and are shown once.

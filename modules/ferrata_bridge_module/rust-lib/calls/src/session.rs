@@ -820,11 +820,11 @@ impl Chain {
 
     /// A burn from public account `/a`'s holding (the network session; the web wallet's public burn): the note and
     /// `Burn` message of the module, as a public call of that account, built for the person's approval (`to_approve`);
-    /// `confirm` signs it.
+    /// `confirm` signs it. The release's address is the person's, entered in its checksummed form (review M3).
     fn burn_public(&self, params: &Value) -> Result<Value, String> {
         let a = params["account"].as_u64().unwrap_or(0) as u32;
         let amount: u128 = params["amount"].as_str().ok_or("amount (base units, a string)")?.parse().map_err(|_| "amount: a decimal")?;
-        let recipient = crate::net::address(params["recipient"].as_str().unwrap_or(""), "recipient")?;
+        let recipient = crate::net::checksummed_address(params["recipient"].as_str().unwrap_or(""), "release to")?;
         let held = crate::net::holding(a, &[0u8; 20])?;
         if held < amount {
             return Err(format!("refused: LEZ bridge program exit code 254 INSUFFICIENT_BALANCE (checked before sending: public /{a} holds {held} base units on the bridge)"));
@@ -853,7 +853,7 @@ impl Chain {
             pda(bw::burn_actor(program, &cid, &r), bw::burn_seed(&cid, &r).as_bytes()),
         ]);
         let what = format!("Burn (public) of /{a} with tag counter {i}");
-        let recipient_text = hex(&recipient);
+        let recipient_text = crate::net::eip55(&recipient);
         let reply = json!({
             "private": false,
             "burn_index": null,
@@ -873,6 +873,7 @@ impl Chain {
         rec["account"] = json!(a);
         rec["amount"] = json!(amount.to_string());
         rec["recipient"] = json!(recipient_text);
+        rec["recipient_note"] = json!("the vault releases to exactly this address on Sepolia, once a checkpoint holds the burn: check it is yours; a release to a wrong address cannot be undone");
         rec["i"] = json!(i);
         Ok(json!({ "to_approve": rec }))
     }
@@ -2253,16 +2254,21 @@ mod tests {
         assert_eq!(v(&wallet_as(VIEW, r#"{"method":"seal_key","params":{}}"#))["ok"], true);
     }
 
-    /// Review H1: a burn is built for the person's approval and sent only when the view confirms it, as approved, once.
+    /// Review H1 and M3: a burn is built for the person's approval and sent only when the view confirms it, as approved,
+    /// once; its release address is the one the person entered, checksummed.
     #[test]
-    fn h1_a_burn_waits_for_approval() {
+    fn h1_m3_a_burn_waits_for_approval_and_needs_a_checksummed_address() {
         let _s = serial();
         let (mut view, net, _) = open_view(1_000_000_000_000_000);
         let mut burn = |recipient: &str| v(&view.call("burn", &json!({ "private": false, "account": 0, "amount": "1000000000000000", "recipient": recipient })));
+        let r = burn("");
+        assert!(r["error"].as_str().unwrap().contains("there is no default"), "{r}");
+        let r = burn("0x9858effd232b4033e47d90003d41ec34ecaeda94");
+        assert!(r["error"].as_str().unwrap().contains("checksummed form"), "{r}");
         let r = burn("0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
         let rec = r["result"]["to_approve"].clone();
         assert_eq!(rec["signed"], false, "{r}");
-        assert_eq!(rec["recipient"], "0x9858effd232b4033e47d90003d41ec34ecaeda94");
+        assert_eq!(rec["recipient"], "0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
         assert!(rec["max_fee"].is_string() && rec["message_hash"].is_string() && rec["payer"].as_str().unwrap().starts_with("public /0"), "{rec}");
         assert!(net.sent.lock().unwrap().is_empty(), "nothing is sent before the approval");
         let id = rec["pending_id"].as_str().unwrap().to_string();
@@ -2273,7 +2279,7 @@ mod tests {
         let done = wait_done(r["result"]["job"]["id"].as_u64().unwrap());
         assert_eq!(done["state"], "settled", "{done}");
         assert_eq!(done["result"]["approved"]["message_hash"], rec["message_hash"]);
-        assert_eq!(done["result"]["recipient"], "0x9858effd232b4033e47d90003d41ec34ecaeda94");
+        assert_eq!(done["result"]["recipient"], "0x9858EfFD232B4033E47d90003D41EC34EcaEda94");
         assert_eq!(net.sent.lock().unwrap().len(), 1);
         let r = v(&view.call("confirm", &json!({ "pending_id": id })));
         assert!(r["error"].as_str().unwrap().contains("no transaction waits"), "{r}");

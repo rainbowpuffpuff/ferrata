@@ -488,27 +488,52 @@ fn same_hex(a: &str, b: &str) -> bool {
     a.trim_start_matches("0x").eq_ignore_ascii_case(b.trim_start_matches("0x"))
 }
 
+fn eip55_upper(lower_hex: &str) -> Vec<bool> {
+    use tiny_keccak::Hasher as _;
+    let mut k = tiny_keccak::Keccak::v256();
+    let mut d = [0u8; 32];
+    k.update(lower_hex.as_bytes());
+    k.finalize(&mut d);
+    (0..lower_hex.len()).map(|i| ((d[i / 2] >> (if i % 2 == 0 { 4 } else { 0 })) & 0xf) >= 8).collect()
+}
+
+/// The EIP-55 (checksummed) form of an address.
+pub(crate) fn eip55(a: &[u8; 20]) -> String {
+    let lower = hex(a)[2..].to_string();
+    let upper = eip55_upper(&lower);
+    let mut out = String::from("0x");
+    for (c, up) in lower.chars().zip(upper) {
+        out.push(if up { c.to_ascii_uppercase() } else { c });
+    }
+    out
+}
+
 /// An Ethereum address, `0x` and 40 hex digits; a mixed-case one must pass EIP-55 (as the web wallet requires).
 pub(crate) fn address(s: &str, what: &str) -> Result<[u8; 20], String> {
     let t = s.trim();
     let h = t.strip_prefix("0x").ok_or_else(|| format!("{what}: an address starts with 0x"))?;
     let b: [u8; 20] = unhex(h).ok().and_then(|v| v.try_into().ok()).ok_or_else(|| format!("{what}: 40 hex digits after 0x"))?;
-    if h.chars().any(|c| c.is_ascii_uppercase()) && h.chars().any(|c| c.is_ascii_lowercase()) {
-        use tiny_keccak::Hasher as _;
-        let lower = h.to_ascii_lowercase();
-        let mut k = tiny_keccak::Keccak::v256();
-        let mut d = [0u8; 32];
-        k.update(lower.as_bytes());
-        k.finalize(&mut d);
-        for (i, c) in h.chars().enumerate() {
-            let nibble = (d[i / 2] >> (if i % 2 == 0 { 4 } else { 0 })) & 0xf;
-            if c.is_ascii_alphabetic() && c.is_ascii_uppercase() != (nibble >= 8) {
-                return Err(format!("{what}: {t} fails its EIP-55 checksum (a mistyped character?)"));
-            }
-        }
+    if h.chars().any(|c| c.is_ascii_uppercase()) && h.chars().any(|c| c.is_ascii_lowercase()) && eip55(&b)[2..] != *h {
+        return Err(format!("{what}: {t} fails its EIP-55 checksum (a mistyped character?)"));
     }
     if b == [0u8; 20] {
         return Err(format!("{what}: the zero address"));
+    }
+    Ok(b)
+}
+
+/// An address the funds go to, which must be typed or pasted in its checksummed (EIP-55) form, as wallets show it: a
+/// mistyped character is then caught before anything is signed (an all-lower- or all-upper-case address carries no
+/// checksum). An address without a letter (no checksum is possible) is taken as it is.
+pub(crate) fn checksummed_address(s: &str, what: &str) -> Result<[u8; 20], String> {
+    let t = s.trim();
+    if t.is_empty() {
+        return Err(format!("{what}: enter the Ethereum address the release pays (yours, as your wallet shows it): there is no default"));
+    }
+    let b = address(t, what)?;
+    let h = &t[2..];
+    if h.chars().any(|c| c.is_ascii_alphabetic()) && eip55(&b)[2..] != *h {
+        return Err(format!("{what}: enter the address in its checksummed form (EIP-55, upper and lower case as your wallet shows it), so that a mistyped character is caught: {}", eip55(&b)));
     }
     Ok(b)
 }
@@ -1321,6 +1346,19 @@ pub(crate) mod tests {
         assert!(address("0x19499061CEC0BaC2a3E1869Ba5AE6B403aA82787", "a").is_err());
         assert!(address("0x0000000000000000000000000000000000000000", "a").is_err());
         assert!(address("19499061cec0bac2a3e1869ba5ae6b403aa82787", "a").is_err());
+        assert_eq!(eip55(&address("0x19499061cec0bac2a3e1869ba5ae6b403aa82787", "a").unwrap()), "0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787");
+    }
+
+    /// Review M3: the release's address is the person's, typed in its checksummed form; none is made up.
+    #[test]
+    fn m3_a_release_address_must_be_entered_checksummed() {
+        let e = checksummed_address("", "recipient").unwrap_err();
+        assert!(e.contains("there is no default"), "{e}");
+        let e = checksummed_address("0x19499061cec0bac2a3e1869ba5ae6b403aa82787", "recipient").unwrap_err();
+        assert!(e.contains("checksummed form") && e.contains("0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787"), "{e}");
+        assert!(checksummed_address("0x19499061CEC0BaC2a3E1869Ba5AE6B403aA82787", "recipient").unwrap_err().contains("fails its EIP-55"));
+        assert!(checksummed_address(" 0x19499061CeC0BaC2a3E1869Ba5AE6B403aA82787 ", "recipient").is_ok());
+        assert!(checksummed_address("0x1111111111111111111111111111111111111111", "recipient").is_ok(), "no letter: nothing to check");
     }
 
     #[test]

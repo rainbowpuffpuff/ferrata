@@ -144,6 +144,7 @@ Rectangle {
                 }
                 netKeys = a.keys; netN = 0; netAccount0 = String(v.account0);
                 netSession = v; netOpen = true;
+                recipient = "";
                 netStatus = "Open (Logos Core named this view as the caller: " + netCaller + "). Checked: " + v.checks.join("; ") + ".";
                 if (v.words_sealed) {
                     var w = Seal.openWords(a.keys, v.words_sealed.ct, v.words_sealed.mac);
@@ -158,7 +159,7 @@ Rectangle {
     function wipeNet() {
         Seal.wipeKeys(netKeys);
         netKeys = null; netN = 0; netAccount0 = ""; netOpen = false; netSession = null; netWordsText = "";
-        info = null; positions = null; registry = null; connectedAccount = ""; faucetText = "";
+        info = null; positions = null; registry = null; connectedAccount = ""; faucetText = ""; recipient = "";
         approval = null; depositPlan = null; phraseClear();
     }
     function netClose() {
@@ -238,6 +239,8 @@ Rectangle {
     property string burnKind: "private"
     property bool burnPublicAcknowledged: false
     property int burnDenom: 0
+    // The release's address. On the devnet a fresh random one by default (privacy); in the network session none: the
+    // person enters theirs (the module takes it only in its checksummed form; review M3).
     property string recipient: freshAddress()
     property string burnText: ""
     property var burnReply: null
@@ -955,14 +958,18 @@ Rectangle {
                     }
                     RowLayout {
                         PlainLabel { text: "Release to" }
-                        TextField { objectName: "burn.recipient"; text: recipient; Layout.preferredWidth: 420; onEditingFinished: recipient = text }
-                        Button { objectName: "burn.fresh"; text: "New fresh address"; onClicked: recipient = freshAddress() }
+                        TextField {
+                            objectName: "burn.recipient"; text: recipient; Layout.preferredWidth: 420; onTextEdited: recipient = text
+                            placeholderText: netOpen ? "0x… your Sepolia address, checksummed (as your wallet shows it)" : ""
+                        }
+                        Button { objectName: "burn.fresh"; visible: !netOpen; text: "New fresh address"; onClicked: recipient = freshAddress() }
                     }
+                    PlainLabel { visible: netOpen; text: "The vault releases to exactly this address: enter one you hold, in its checksummed form (upper and lower case as your wallet shows it). A release to a wrong address cannot be undone."; color: "#8a6d00"; wrapMode: Text.WordWrap; Layout.fillWidth: true }
                     CheckBox { objectName: "burn.delay"; text: "Hold the release for a random delay (recommended): " + releaseDelayHours + " h"; checked: releaseDelayOn; onClicked: releaseDelayOn = checked }
                     Button {
                         objectName: "burn.submit"
                         text: burnJob && !jobOver(burnJob) ? "Proof being made (job " + burnJob.id + ")" : "Burn " + denomText(burnDenom)
-                        enabled: busy === 0 && !jobRunning() && connectedAccount !== "" && (burnKind === "private" || burnPublicAcknowledged)
+                        enabled: busy === 0 && !jobRunning() && connectedAccount !== "" && (burnKind === "private" || burnPublicAcknowledged) && (!netOpen || recipient.trim() !== "")
                         onClicked: reviewBurn()
                     }
                     RowLayout {
@@ -1384,7 +1391,7 @@ Rectangle {
             if (!ok || !v || !v.to_approve) return;
             var r = v.to_approve;
             var rows = [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Call", r.what], ["Amount", Fmt.eth(r.amount)]];
-            if (kind === "burn") rows.push(["Release to", r.recipient + " on Sepolia (encrypted in the note)"]);
+            if (kind === "burn") rows.push(["Release to", r.recipient + " on Sepolia (encrypted in the note)"], ["Check the address", r.recipient_note]);
             else rows.push(["To", r.destination], ["Deposit", "#" + r.leaf_index + " (a plaintext claim names it)"]);
             rows.push(["Signed by", r.signers.join(", ") + ", by ferrata_bridge_module, once you approve"],
                       ["LEZ fee", "paid by " + r.payer + ": at most " + Fmt.units(r.max_fee, 9, "LGO") + " (it holds " + Fmt.units(r.payer_balance, 9, "LGO") + ")"],
