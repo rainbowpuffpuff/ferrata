@@ -508,8 +508,9 @@ pub(crate) fn verify_call(n: u64, body: &str, tag: &[u8]) -> Result<(), String> 
     })
 }
 
-/// The session's bridge keys, for `crate::keys` (a request that says `"keys": "network_session"`): borrowed under the
-/// session's lock, never copied out. A caller holding it must not call back into this module's session functions.
+/// The session's bridge keys, for `crate::keys` within one verified call of the view (`crate::with_session_keys`):
+/// borrowed under the session's lock, never copied out. A caller holding it must not call back into this module's
+/// session functions.
 pub(crate) struct SessionKeys(MutexGuard<'static, Option<Net>>);
 
 impl std::ops::Deref for SessionKeys {
@@ -731,7 +732,6 @@ pub(crate) fn open(params: &Value, channel: seal::Keys) -> Result<(Value, Value)
     drop(seed);
     let account0 = lezkey::id_string(&accounts[0].id);
     let s = json!({
-        "keys": "network_session",
         "chain_id": c.dep.evm_chain_id,
         "vault": hex(&c.vault),
         "config_id": hex(&c.cid),

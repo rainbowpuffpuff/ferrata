@@ -156,8 +156,36 @@ pub fn wallet_as(caller: &str, request: &str) -> String {
     session::wallet_as(caller, request)
 }
 
+/// A public method's request. One that names keys (`keys`) is refused: the network session's keys serve only the
+/// session's own calls (`wallet`, from its view, each with its MAC; review round 2, MF1).
 fn parse(request: &str) -> Result<Value, String> {
-    serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))
+    let v: Value = serde_json::from_str(request).map_err(|e| format!("request is not JSON: {e}"))?;
+    if v.get("keys").is_some() {
+        return Err(KEYS_REFUSED.into());
+    }
+    Ok(v)
+}
+
+const KEYS_REFUSED: &str = "refused: a request does not name keys (`keys`): the network session's keys serve only its own \
+view's calls (wallet, each with its MAC)";
+
+thread_local! {
+    /// Set only while this thread runs one MAC-verified call of the network session's view (session.rs `route`):
+    /// `keys()` then takes the session's keys. Nothing in a request selects them.
+    static SESSION_KEYS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `f`, one verified call of the network session's view, with the session's keys available to `keys()`; the
+/// previous state comes back afterwards, also when `f` panics.
+pub(crate) fn with_session_keys<T>(f: impl FnOnce() -> T) -> T {
+    struct Restore(bool);
+    impl Drop for Restore {
+        fn drop(&mut self) {
+            SESSION_KEYS.with(|c| c.set(self.0));
+        }
+    }
+    let _restore = Restore(SESSION_KEYS.with(|c| c.replace(true)));
+    f()
 }
 
 fn reply(result: Result<Value, String>) -> String {
@@ -175,8 +203,8 @@ fn verify_error(e: VerifyError) -> &'static str {
 // Inputs shared by the methods
 // ---------------------------------------------------------------------------------------------
 
-/// The wallet's keys, made from a request's `bridge_seed` or `lez_seed`, or the network session's own, borrowed under
-/// its lock (`"keys": "network_session"`, net.rs; never copied out of it).
+/// The wallet's keys, made from a request's `bridge_seed` or `lez_seed`, or, within one verified call of the network
+/// session's view ([`with_session_keys`]), the session's own, borrowed under its lock (net.rs; never copied out of it).
 pub(crate) enum Keys {
     Made(BridgeKeys),
     Session(net::SessionKeys),
@@ -194,7 +222,10 @@ impl std::ops::Deref for Keys {
 
 /// The wallet's keys: `bridge_seed`, or `lez_seed` (the BIP-39 seed of the LEZ wallet), or the network session's.
 pub(crate) fn keys(req: &Value) -> Result<Keys, String> {
-    if req["keys"] == "network_session" {
+    if req.get("keys").is_some() {
+        return Err(KEYS_REFUSED.into());
+    }
+    if SESSION_KEYS.with(std::cell::Cell::get) {
         return Ok(Keys::Session(net::session_keys()?));
     }
     if !req["bridge_seed"].is_null() {

@@ -161,7 +161,8 @@ fn route(caller: &str, r: &Value) -> Result<Value, String> {
         crate::net::verify_call(n, body, &tag)?;
         let inner: Value = serde_json::from_str(body).map_err(|e| format!("invalid call: {e}"))?;
         let method = inner["method"].as_str().unwrap_or("");
-        return crate::net::within(crate::net::CALL_LIMIT, || dispatch(method, &inner["params"], caller));
+        // Only here, in a verified call of the session's view, may the bridge's functions use the session's keys.
+        return crate::net::within(crate::net::CALL_LIMIT, || crate::with_session_keys(|| dispatch(method, &inner["params"], caller)));
     }
     let method = r["method"].as_str().unwrap_or("");
     if matches!(method, "seal_key" | "open_network") {
@@ -1033,14 +1034,12 @@ impl Chain {
     }
 
     /// The fields the bridge's functions take with the wallet's keys: the chain service's bridge seed, or in the network
-    /// session a marker that has `crate::keys` borrow the session's keys under its lock (review M2: the bridge seed is
-    /// never in a JSON value or string there).
+    /// session none (`crate::keys` borrows the session's keys under its lock, within the view's verified call only:
+    /// review M2, the bridge seed is never in a JSON value or string there; round 2 MF1, no request selects them).
     fn seed_fields(&self) -> Value {
         let mut f = json!({ "chain_id": self.s["chain_id"], "vault": self.s["vault"], "config_id": self.s["config_id"],
                             "program": self.s["program"], "depositor": self.s["depositor"] });
-        if self.network() {
-            f["keys"] = json!("network_session");
-        } else {
+        if !self.network() {
             f["bridge_seed"] = self.s["bridge_seed"].clone();
         }
         f
@@ -2357,6 +2356,36 @@ mod tests {
         assert_eq!(seen(Some("*.debug=false")), json!(false));
         assert_eq!(seen(Some("ferrata.debug=true")), json!(false));
         assert_eq!(seen(None), json!(false));
+    }
+
+    /// Review round 2, MF1: no public method of the module reaches the open session's keys: each refuses a request that
+    /// names keys, and without the view's verified call no keys of the session are taken.
+    #[test]
+    fn r2_mf1_no_public_method_reaches_the_sessions_keys() {
+        let _s = serial();
+        let (_view, _net, _) = open_view(0);
+        let req = json!({ "keys": "network_session", "chain_id": 11155111, "vault": "0x19499061cec0bac2a3e1869ba5ae6b403aa82787",
+                          "config_id": format!("0x{}", crate::net::KNOWN[0].config_id), "depositor": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94",
+                          "j": 0, "kind": "public", "dest": format!("0x{}", "11".repeat(32)), "token": ETH, "denom_index": 0, "i": 0,
+                          "recipient": "0x9858EfFD232B4033E47d90003D41EC34EcaEda94", "amount": "1000000000000000", "gap": 8,
+                          "destinations": [], "deposits": [], "burns": [] }).to_string();
+        let calls: [(&str, fn(&str) -> String); 10] = [
+            ("deposit", crate::deposit), ("claim", crate::claim), ("burn", crate::burn), ("release", crate::release),
+            ("prove_release", crate::prove_release), ("import_root", crate::import_root), ("registry", crate::registry),
+            ("recover", crate::recover), ("status", crate::status), ("admin", crate::admin),
+        ];
+        for (name, f) in calls {
+            let r = v(&f(&req));
+            let e = r["error"].as_str().unwrap_or("");
+            assert!(e.starts_with("refused: a request does not name keys"), "{name}: {r}");
+            assert!(r.get("commitment").is_none() && r.get("note").is_none() && r.get("nullifier").is_none(), "{name}: {r}");
+        }
+        // Without `keys`, a public method takes no keys of the session either (outside the view's verified call).
+        let mut plain: Value = serde_json::from_str(&req).unwrap();
+        plain.as_object_mut().unwrap().remove("keys");
+        let r = v(&crate::deposit(&plain.to_string()));
+        assert_eq!(r["error"], "the request needs `bridge_seed` or `lez_seed`", "{r}");
+        close();
     }
 
     /// Review M4: no deposit is attempted from the network session; the view sends the person to the web wallet.
