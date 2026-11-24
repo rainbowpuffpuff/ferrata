@@ -43,6 +43,7 @@ var MESSAGES = [
     [/network session ended/, "The module's session ended (15 minutes without a call, or the module restarted): open it again above. Nothing was sent."],
     [/belongs to the Ferrata Bridge view|opened by the Ferrata Bridge view|MAC does not hold|\(a replay\)/, "Refused: only the view that opened the session can use it. Nothing was read or sent."],
     [/a network session is open in this module; close it first/, "A session is already open in the module: close it first (or quit Basecamp; it also ends after 15 minutes without a call)."],
+    [/deposits are made in the network's web wallet/, "Deposits are made in the network's web wallet with this phrase (Basecamp has no Logos signer for Sepolia yet); claim and burn them here afterwards."],
     [/release address|enter the Ethereum address the release pays|checksummed form|fails its EIP-55/, "Enter the address the release pays: yours, in its checksummed form (upper and lower case as your wallet shows it). Nothing was signed."],
     [/above this module's ceiling/, "Refused: the network asks for a LEZ fee above the module's ceiling. Nothing was signed."],
     [/no transaction waits for approval/, "That transaction no longer waits for approval (sent, replaced or expired): start the step again."],

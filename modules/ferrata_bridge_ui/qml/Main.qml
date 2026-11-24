@@ -74,7 +74,6 @@ Rectangle {
     property string netStatus: ""
     property bool netStatusBad: false
     property string faucetText: ""
-    property var depositPlan: null
     // The recovery phrase as typed or pasted: bytes in phraseBuf, never one string (a JavaScript or Qt string cannot be
     // wiped); keys go straight from the keyboard into it, and it is wiped once sealed, on Clear, and on close.
     property var phraseBuf: new Uint8Array(512)
@@ -160,7 +159,7 @@ Rectangle {
         Seal.wipeKeys(netKeys);
         netKeys = null; netN = 0; netAccount0 = ""; netOpen = false; netSession = null; netWordsText = "";
         info = null; positions = null; registry = null; connectedAccount = ""; faucetText = ""; recipient = "";
-        approval = null; depositPlan = null; phraseClear();
+        approval = null; phraseClear();
     }
     function netClose() {
         call("close", {}, function () {
@@ -754,7 +753,7 @@ Rectangle {
                     Button { objectName: "net.phraseClear"; text: "Clear"; visible: phraseLen > 0; onClicked: phraseClear() }
                     TextInput { id: pasteBox; visible: false; echoMode: TextInput.Password }
                 }
-                RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: the account Logos's signer sends your deposits from)"; Layout.preferredWidth: 560 } }
+                RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: shown in the header with its Sepolia balance)"; Layout.preferredWidth: 560 } }
                 RowLayout {
                     Button { objectName: "net.open"; text: "Open with this phrase"; enabled: canOpen(); onClicked: netOpenSession(false) }
                     Button { objectName: "net.generate"; text: "New phrase"; enabled: busy === 0 && !netOpening && fNet.text.trim() !== ""; onClicked: netOpenSession(true) }
@@ -778,7 +777,7 @@ Rectangle {
                     Button { objectName: "net.balances"; text: "LGO balances"; enabled: busy === 0 && !jobRunning(); onClicked: netReadBalances() }
                 }
                 PlainLabel { objectName: "net.faucetText"; text: faucetText; visible: faucetText !== ""; wrapMode: Text.WordWrap; Layout.fillWidth: true; font.pixelSize: 12 }
-                Note { text: "In this session: the registry and the vault read, your positions found from your phrase, the plaintext claim of a deposit to one of your public accounts and the public burn (each shown to you before the module signs it), a deposit planned up to its approval (Logos's signer sends it), and the release handed to the ferrata tool. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
+                Note { text: "In this session: the registry and the vault read, your positions found from your phrase, the plaintext claim of a deposit to one of your public accounts and the public burn (each shown to you before the module signs it), and the release handed to the ferrata tool. Deposits are made in the network's web wallet with this phrase. A private claim or burn needs a proof made on your machine (the ferrata tool, same phrase)." }
             }
         }
 
@@ -858,16 +857,22 @@ Rectangle {
                     items: Privacy.leaks({ kind: destKind, delay: delayOn, delayHours: delayHours, relayer: relayerOn, account: destAccount, denominationText: denomText(denomIndex) })
                 }
                 StepTable { step: "deposit" }
+                Note {
+                    objectName: "deposit.net"
+                    visible: netOpen
+                    color: "#8a4b00"
+                    text: "In Basecamp, deposits are made in the network's web wallet: open " + (netSession ? netSession.address : "the network's address") + "/wallet/, Bridge tab, with this same recovery phrase, and deposit to one of its public accounts (public /0 is " + netAccount0 + "). This Basecamp has no Logos signer for Sepolia (Logos Core's tx_sender_module, keystore_module and a signer), so the app cannot send one. Once the deposit is final and its root imported (15 to 25 minutes), claim it and burn it here."
+                }
                 RowLayout {
                     Button {
                         objectName: "deposit.review"
                         text: "Review deposit"
-                        enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
+                        enabled: !netOpen && busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
                         onClicked: reviewDeposit(false)
                     }
                     Button {
                         objectName: "deposit.again"
-                        visible: depositAgainOffered
+                        visible: depositAgainOffered && !netOpen
                         text: "Deposit again anyway"
                         enabled: busy === 0 && token() !== null && connectedAccount !== "" && (destKind === "private" || publicAcknowledged)
                         onClicked: reviewDeposit(true)
@@ -1334,7 +1339,7 @@ Rectangle {
 
     // again: the person sends a deposit although the module refused it while their earlier one is not mined yet.
     function reviewDeposit(again) {
-        if (netOpen) { reviewDepositNet(again); return; }
+        if (netOpen) return;  // the web wallet's (the deposit tab says so)
         call("price", { denomination: denomIndex }, function (ok, p) {
             if (!ok) return;
             var effects = ["Moves " + Fmt.eth(p.total) + " from your address into the vault's escrow", "Publishes a commitment C; the LEZ destination stays hidden", "Grants no token approval"];
@@ -1343,23 +1348,6 @@ Rectangle {
                 title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault",
                 rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["Account", info.user.depositor + " (Ethereum)"], ["Asset", "ETH"], ["Amount", Fmt.eth(p.denomination) + " + fees = " + Fmt.eth(p.total)], ["Destination", "the Ferrata vault " + info.vault + " on chain " + info.chain_id], ["Then on LEZ", destKind + " account /" + destAccount + ", hidden inside C"]],
                 effects: effects
-            }, function () { sendDeposit(again); });
-        });
-    }
-    // The network session: the module plans the deposit (C, the vault call, the vault's own simulation) and the prompt
-    // shows that plan; approving hands it to Logos's signer, which asks once more before anything is signed.
-    function reviewDepositNet(again) {
-        call("deposit_plan", { denomination: denomIndex, kind: destKind, account: destAccount }, function (ok, p) {
-            if (!ok) return;
-            depositPlan = p;
-            propose({
-                title: again ? "Deposit again anyway (your earlier deposit is not mined yet)" : "Deposit to the Ferrata vault on Sepolia",
-                rows: [["Requested by", "Ferrata Bridge (ferrata_bridge_ui)"], ["From", p.from + " (your Sepolia account: Logos's signer signs, not this app)"], ["Asset", "ETH"],
-                       ["Amount", Fmt.eth(p.amount_wei) + " + fees = " + Fmt.eth(p.value_wei)], ["To", "the Ferrata vault " + p.to + " on chain " + p.chain_id],
-                       ["Call", p.function + ", deposit #" + p.j + " of this address"], ["Commitment C", p.commitment], ["Then on LEZ", p.destination],
-                       ["Vault's check", p.preflight]],
-                effects: ["Moves " + Fmt.eth(p.value_wei) + " from your address into the vault's escrow", "Publishes the commitment C; the LEZ destination stays hidden",
-                          "Grants no token approval", "Approving hands it to Logos's signer (tx_sender_module), which asks you again before signing"]
             }, function () { sendDeposit(again); });
         });
     }

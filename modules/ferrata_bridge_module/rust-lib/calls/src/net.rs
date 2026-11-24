@@ -29,9 +29,10 @@
 //! Ethereum transactions are never signed here.
 //!
 //! What runs here: the public side, as the web wallet runs it in a page: the registry, the positions recovered from the
-//! phrase, the faucet, a deposit planned to its approval, the plaintext claim of a deposit to a public account, the
-//! public burn, and the release's hand-off (the release proof is the `ferrata` tool's, on the person's machine). A
-//! private claim or burn needs a proof of LEZ's privacy circuit, which this module does not make.
+//! phrase, the faucet, the plaintext claim of a deposit to a public account, the public burn, and the release's hand-off
+//! (the release proof is the `ferrata` tool's, on the person's machine). A deposit is made in the web wallet (Basecamp
+//! has no Logos signer for Sepolia yet). A private claim or burn needs a proof of LEZ's privacy circuit, which this
+//! module does not make.
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};

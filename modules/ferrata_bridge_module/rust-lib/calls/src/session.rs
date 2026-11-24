@@ -259,6 +259,7 @@ fn dispatch(method: &str, params: &Value, caller: &str) -> Result<Value, String>
         "faucet" if c.network() => crate::net::faucet(params["account"].as_u64().unwrap_or(0) as u32),
         "balances" if c.network() => Ok(json!({ "accounts": crate::net::lgo_balances()?, "unit": "10^-9 LGO" })),
         "deposit_plan" => c.deposit_plan(params),
+        "deposit" if c.network() => Err(DEPOSITS_IN_THE_WEB_WALLET.into()),
         "release" if c.network() => c.release_handoff(params),
         // A LEZ transaction of the network session: built for the person's approval (signed by nothing yet), then
         // `confirm` with its id signs exactly that and sends it (a job: it waits for its block).
@@ -688,8 +689,7 @@ fn network_session() -> bool {
 /// `open_network`: the mini-app against a Ferrata test network's public endpoints (net.rs: what is checked, where the
 /// phrase's keys live). The phrase comes sealed to the module's one-time key (`seal_key`; `key_id`, `view_key`,
 /// `phrase_sealed`), never in clear (review M1). Its Ethereum side is the session's `eth` path over the endpoint the
-/// person chose: every vault read here, every Ethereum send through Logos Core's tx_sender_module (one approval in the
-/// Logos signer).
+/// person chose: every vault read here; no Ethereum send in this session (deposits are made in the web wallet).
 fn open_network(params: &Value) -> Result<Value, String> {
     if params.get("phrase").is_some_and(|p| !p.is_null()) {
         return Err("refused: open_network takes the phrase sealed to the module's one-time key (seal_key, then key_id, view_key and \
@@ -746,6 +746,12 @@ fn close() -> Value {
     }
     json!({ "closed": was.is_some() || net, "network_session": was == Some(true) || net, "keys": "wiped" })
 }
+
+/// A deposit in the network session (review M4): Basecamp 0.4.0-rc.2 has no Logos signer for Sepolia, so the module
+/// sends none; the person deposits in the web wallet with the same phrase.
+const DEPOSITS_IN_THE_WEB_WALLET: &str = "refused: deposits are made in the network's web wallet (its /wallet/ page, Bridge \
+tab) with this phrase, to one of its public accounts: this Basecamp has no Logos signer for Sepolia (Logos Core's \
+tx_sender_module, keystore_module and a signer), so this module cannot have one signed; claim and burn it here afterwards";
 
 struct Chain {
     url: String,
@@ -813,6 +819,9 @@ impl Chain {
             "destination": dest,
             "preflight": preflight,
             "signs": "Logos's signer, through Logos Core's tx_sender_module (keystore_module holds the key); this module holds no Ethereum key",
+            // Review M4: Basecamp 0.4.0-rc.2 has neither, so in the network session the plan is not sent from here.
+            "sendable": !self.network(),
+            "deposit_in": if self.network() { json!(format!("{}/wallet/ (Bridge tab), with this phrase", self.s["network"].as_str().unwrap_or("the network"))) } else { Value::Null },
             "public_on_ethereum": ["the depositor address", "the token", "the denomination and fees", "the time", "the commitment C"],
             "hidden": ["the LEZ destination (C commits to it)"],
         }))
@@ -1105,10 +1114,11 @@ impl Chain {
                 "public_accounts": self.s["public_accounts"].as_array().into_iter().flatten()
                     .filter_map(|h| fixed::<32>(h, "account").ok()).map(|id| crate::lezkey::id_string(&id)).collect::<Vec<_>>(),
                 "private_proofs": "not made here: a private claim or burn is the ferrata tool's (same phrase)",
+                "deposits": "made in the network's web wallet with the same phrase (this Basecamp has no Logos signer for Sepolia)",
                 "signing": "each LEZ transaction is built for your approval in the view and signed here only after it (confirm)",
             }) } else { Value::Null },
             "backend": if self.network() {
-                "ferrata_bridge_module in Logos Basecamp (network session): LEZ through the network's RPC, Ethereum through the endpoint above, both read here; LEZ public calls signed here with keys from your phrase, each after your approval; Ethereum sends through Logos Core's tx_sender_module (approved in the Logos signer)"
+                "ferrata_bridge_module in Logos Basecamp (network session): LEZ through the network's RPC, Ethereum through the endpoint above, both read here; LEZ public calls signed here with keys from your phrase, each after your approval; no Ethereum send (deposits in the web wallet)"
             } else if eth_path().is_some() {
                 "ferrata_bridge_module in Logos Core; Ethereum through Logos Core's eth_rpc_module (reads) and tx_sender_module (sends, approved in the Logos signer); LEZ through the chain service or lez_core"
             } else {
@@ -2319,6 +2329,16 @@ mod tests {
         assert!(crate::lezkey::seed_of_phrase(&words).is_ok());
         assert!(!reply.contains(words.as_str()) && v(&reply)["result"].get("words").is_none(), "{reply}");
         assert!(v(&reply)["result"]["words_sealed"]["ct"].is_string());
+        view.call("close", &json!({}));
+    }
+
+    /// Review M4: no deposit is attempted from the network session; the view sends the person to the web wallet.
+    #[test]
+    fn m4_a_deposit_is_not_sent_from_the_network_session() {
+        let _s = serial();
+        let (mut view, _net, _) = open_view(0);
+        let r = v(&view.call("deposit", &json!({ "denomination": 0, "kind": "public", "account": 0 })));
+        assert!(r["error"].as_str().unwrap().contains("deposits are made in the network's web wallet"), "{r}");
         view.call("close", &json!({}));
     }
 

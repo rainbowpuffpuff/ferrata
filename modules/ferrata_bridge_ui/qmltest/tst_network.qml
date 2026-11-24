@@ -7,6 +7,7 @@
 //   M2  the typed phrase is never a string in the view (its keys go into a byte buffer, shown as dots), and the buffer
 //       is wiped when the phrase is sealed, before the module answers.
 //   M3  in the network session the release address starts empty and nothing makes one up.
+//   M4  the deposit button is off in the network session and the panel sends the person to the web wallet.
 //   L1  every label shows its text as plain text.
 // Run as `qmltestrunner -input qmltest/tst_network.qml` from the module's directory (scripts/network-ui-test.sh).
 import QtQuick
@@ -221,6 +222,13 @@ Item {
             tryVerify(function () { return !host.app.lastOk; }, 3000);
             verify(String(host.app.lastError).indexOf("not the one this view opened") >= 0, host.app.lastError);
             logos.answerAs = "";
+        }
+
+        // M4: no deposit is sent from the network session; the panel names the web wallet.
+        function test_04_deposits_point_to_the_web_wallet() {
+            tab("deposit");
+            verify(!el("deposit.review").enabled, "the deposit button is off");
+            verify(el("deposit.net").visible && el("deposit.net").text.indexOf("web wallet") >= 0, el("deposit.net").text);
         }
 
         // H1 and M3: the burn's address starts empty (nothing made up); the prompt shows the module's record; Approve
