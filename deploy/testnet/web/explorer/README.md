@@ -34,8 +34,10 @@ checks against (they must send `Access-Control-Allow-Origin: *`), alarm threshol
 instances by id. `?rpc=URL` on any page reads another endpoint for the session.
 
 Names and messages: `idl/ferrata_names.idl.json` and `idl/ferrata_msg.idl.json` are the names and messages programs' IDLs
-(on main since `eccc02a4` and `acf6fce0`; the deployed images `0xee9578ca…` and `0x04ae1988…`); `agents/sections/` are
-their sections of AGENTS.md.
+(on main since `eccc02a4` and `acf6fce0`; the deployed images `0xee9578ca…` and `0x04ae1988…`). Their second versions
+(names v2 `0x28d63f20…`, messages v2 `0x480f5c4e…`, deployed beside them on 24 November 2026) are what the wallet and
+`/msg/` use; this explorer still reads the first versions only. `agents/sections/` are the streams' own AGENTS sections
+for the second versions, copied whole (`names/AGENTS.md`, `deploy/testnet/web/msg/AGENTS-section.md`).
 A message's envelope is never rendered: the transaction page, the feed, the messages page and inbox summaries show
 its size only.
 

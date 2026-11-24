@@ -203,6 +203,9 @@ monitor's, top-up's, gateway's and Caddy's go to CloudWatch Logs. Restarts are s
 - `python3 -I deploy/testnet/tests/test_units.py`: the units read as files (the relayer's inbox and state on one
   mount, every bridge unit sandboxed, every unit's log created for logrotate, the node API guard) and, where
   `unshare -rm` is allowed, the EXDEV mechanism itself.
+- `python3 -I deploy/testnet/tests/test_web_config.py`: `web-config.py` (`install-web.sh`'s config step) on a stand-in web
+  root: messages and names v2 for the messaging module and the wallet when deployed (v1 as legacy), the explorer's
+  catalogue on v1, what the host set in a served config kept, each AGENTS section once.
 - `python3 -I deploy/testnet/tests/test_checkpoint_parent.py`: `ferrata-bridge-checkpoint`'s parent, its refusal to
   stack candidates and to build when the vault's `finalState` cannot be read, against a stand-in Sepolia endpoint;
   `--rebuild` with a stand-in `realblocks-crown` (its copy kept where no parent is chosen from).
