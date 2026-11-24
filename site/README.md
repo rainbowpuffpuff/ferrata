@@ -119,8 +119,9 @@ the two cards share their rows, so they align side by side. A count also sits in
 while the bar is wide enough for it: `build.py` works out, from the part's share and the count's digits, the bar width
 it needs and emits a container query for it, so this holds at every width and without JavaScript. On narrow screens
 the tables of prose (milestones, what is not done, a run's Sepolia transactions) become one card per row, and the
-timeline one cell, then one row, per milestone with its weeks. `test_ui.py` checks the layout at 375, 768, 1024, 1450
-and 1920 px with the live readings answered from fixtures: no sideways scroll, no text over text or out of its box in
-the hero, nothing wider than its card in Live, no box clipping its text; and the testers' page at the same widths:
-its links from the build page's header and hero, no sideways scroll, nothing wider than the screen, no table
-scrolling, no box clipping its text, and the page whole without JavaScript (it has none).
+timeline one cell, then one row, per milestone with its weeks. `test_ui.py` checks the layout at 320, 375, 768, 1024,
+1450 and 1920 px, light and dark, with the live readings answered from fixtures (one fact with a long `statement`, "Full
+values" open): no sideways scroll, no text over text or out of its box in the hero, nothing wider than its card in
+Live, no box clipping its text; and the testers' page at the same widths: its links from the build page's header and
+hero, no sideways scroll, nothing wider than the screen, no table scrolling, no box clipping its text, and the page
+whole without JavaScript (it has none).

@@ -337,6 +337,12 @@
     });
   }
 
+  // The header's sections: a focused link scrolls fully into view, clear of the fade (browsers leave a partly visible one)
+  var topNav = $(".top nav");
+  if (topNav) topNav.addEventListener("focusin", function (e) {
+    if (e.target.scrollIntoView) e.target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+
   if (!cfg || !live("ci-list")) return;
 
   // ---- GitHub: CI on main and the proposal's state (unauthenticated API, cached for five minutes)

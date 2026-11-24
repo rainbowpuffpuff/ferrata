@@ -14,7 +14,8 @@ are long hex words, /status/programs.json and /faucet). Checks:
     ?status=waits opens the table filtered (on a phone too); #rfp-021-s-8 opens the table at that row;
   - the legend highlights one status; without JavaScript the full table shows (assets/nojs.css) and the controls that
     need JavaScript (copy buttons, the filters, the faucet's form) stay hidden;
-  - at 375, 768, 1024, 1450 and 1920 px, with the live readings in: the page does not scroll sideways; in the hero's
+  - at 320, 375, 768, 1024, 1450 and 1920 px, light and dark, with the live readings in (one fact's statement a long
+    hex sentence, its "Full values" open): the page does not scroll sideways; in the hero's
     summary no piece of text overlaps another and each stays inside its card, chip or bar part; no Live card has
     content wider than the card; no box clips its text;
   - the testers' page (testers/): linked from the build page's header and hero at every width; seven steps, the
@@ -34,7 +35,7 @@ import threading
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUNDLE = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else ROOT / "deploy" / "testnet" / "web" / "build"
-WIDTHS = (375, 768, 1024, 1450, 1920)
+WIDTHS = (320, 375, 768, 1024, 1450, 1920)
 
 # The live readings, as the test network and GitHub's API give them (values from the test network's records)
 TX = "a568dcb852637a001b772e258c260a1e9775aa47a987f7e62518198a6cc3674d"
@@ -46,7 +47,9 @@ LIVE = {
          "reasons": [], "last_applied_utc": "2026-11-23T22:29:56Z"}]},
         "attestations": [dict(FACT, kind="storage", slot="0x" + "0" * 63 + "1",
                               value="0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469"),
-                         dict(FACT, kind="account")]},
+                         dict(FACT, kind="account"),
+                         dict(FACT, statement="storage slot 0x" + "0" * 63 + "1 of 0x04ee8ff19cc11cee4ae65d03e12b9888043de44c equals "
+                              "0xa67ef5a18a4399b82912087c326e1d4ca21f076d349707b8a100e6c09ac97469")]},
     "/status/programs.json": {"network": "ferrata-lez-testnet", "lez": "v0.4.0-rc3",
                               "programs": {"ferrata_attestation": {"program_account": "6f9zuRR63bSN5AEeffqZeACYCwFmqfe5JJhPshuJfYNg"}},
                               "instances": {"sepolia": {"instance_id": "0xc741a1f16012516529529814da7a7ebc2d18a8cdcba2a3e7f58710f52630782e"}}},
@@ -71,7 +74,9 @@ LAYOUT = """() => {
       if (!n.nodeValue.trim() || !shown(n.parentElement)) continue;
       const r = document.createRange();
       r.selectNodeContents(n);
-      for (const q of r.getClientRects()) if (q.width > 0 && q.height > 0) list.push({ n, q });
+      const pb = n.parentElement.getBoundingClientRect();
+      for (const q of r.getClientRects()) if (q.width > 0 && q.height > 0)
+        list.push({ n, q, v: { left: q.left, right: q.right, top: Math.max(q.top, pb.top), bottom: Math.min(q.bottom, pb.bottom) } });
     }
     return list;
   };
@@ -81,9 +86,9 @@ LAYOUT = """() => {
   for (let i = 0; i < ht.length; i++) for (let j = i + 1; j < ht.length; j++) {
     const a = ht[i], b = ht[j];
     if (a.n === b.n) continue;
-    const w = Math.min(a.q.right, b.q.right) - Math.max(a.q.left, b.q.left);
-    const h = Math.min(a.q.bottom, b.q.bottom) - Math.max(a.q.top, b.q.top);
-    if (w > 1 && h > 0.25 * Math.min(a.q.height, b.q.height)) out.push(`hero: ${label(a.n.nodeValue)} overlaps ${label(b.n.nodeValue)}`);
+    const w = Math.min(a.v.right, b.v.right) - Math.max(a.v.left, b.v.left);
+    const h = Math.min(a.v.bottom, b.v.bottom) - Math.max(a.v.top, b.v.top);
+    if (w > 1 && h > 0.25 * Math.min(a.v.bottom - a.v.top, b.v.bottom - b.v.top)) out.push(`hero: ${label(a.n.nodeValue)} overlaps ${label(b.n.nodeValue)}`);
   }
   const boxOf = (e) => { for (let x = e.parentElement; x && x !== hero; x = x.parentElement) if (isBox(x)) return x; return null; };
   for (const t of ht) {
@@ -179,8 +184,8 @@ def main():
                 return route.fulfill(json=RUN if "/actions/workflows/" in url else ISSUE)
             return route.abort()
 
-        def page(js=True, width=1366, height=768, readings=False):
-            ctx = browser.new_context(viewport={"width": width, "height": height}, java_script_enabled=js)
+        def page(js=True, width=1366, height=768, readings=False, scheme="light"):
+            ctx = browser.new_context(viewport={"width": width, "height": height}, java_script_enabled=js, color_scheme=scheme)
             pg = ctx.new_page()
             pg.route("**/*", live if readings else lambda r: r.continue_() if r.request.url.startswith(base) else r.abort())
             pg.on("pageerror", lambda e: errors.append(str(e)))
@@ -292,17 +297,18 @@ def main():
         check(tp.url == base, f"testers/: the brand leads to {tp.url}, not the build page")
         tp.context.close()
 
-        for width in WIDTHS:
-            lp = page(width=width, height=900, readings=True)
+        for width, scheme in [(w, s) for w in WIDTHS for s in ("light", "dark")]:
+            lp = page(width=width, height=900, readings=True, scheme=scheme)
             lp.goto(base, wait_until="load")
             try:
                 lp.wait_for_function("document.querySelector('#live-facts .facts') && "
                                      "document.querySelector('[data-live=ci-chip]').textContent !== 'see below'", timeout=10000)
             except Exception:
                 problems.append(f"{width} px: the live readings (CI, attested facts) did not show")
+            lp.evaluate("document.querySelectorAll('#live details').forEach((d) => { d.open = true; })")
             lp.wait_for_timeout(200)
             for what in lp.evaluate(LAYOUT):
-                problems.append(f"{width} px: {what}")
+                problems.append(f"{width} px {scheme}: {what}")
             lp.context.close()
         browser.close()
     httpd.shutdown()
