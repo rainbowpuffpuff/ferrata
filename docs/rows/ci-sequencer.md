@@ -191,8 +191,10 @@ and so never saves them either; not changed here (not this stream's file).
 ## Merging with main
 
 `git merge-tree --write-tree origin/main ci-sequencer` (main at `98375f82`, base `ebbee2aa`): no conflict. Both sides
-changed `docs/guides/ci.md`, `scripts/ci/row-tests.toml` and `scripts/ci/test_ci_model.py`; re-run the `links` job's
-checks on the merged tree.
+changed `docs/guides/ci.md`, `scripts/ci/row-tests.toml` and `scripts/ci/test_ci_model.py`. On a trial merge of
+`97394076` with `98375f82` (a detached worktree, removed after) the `links` job's checks pass: `test_ci_model.py` 113
+passed, `check-row-tests.py` consistent, `check-links.py` 0 broken of 2,529, `check-guides.py` 0 findings,
+`check-actions-pinned.py` 0 unpinned, `test-sequencer-records.sh` 17 passed; re-run them on the real merge.
 
 ## Risks
 
