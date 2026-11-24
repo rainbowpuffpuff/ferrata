@@ -7,11 +7,17 @@ machine.txt, prove-NNN.log, private-*.log).
 The first directory's index.tsv lists the transitions. A later directory may hold proofs of some of them from an
 earlier dump: its index rows for those transitions must equal the first's (the same handler, image id, session
 limit, cycles, input and journal sizes and transaction gas), or the summary stops. Each transition's proof is taken
-from the first directory, in the order given, whose log holds a RESULT line. Every proof is checked against its
-image id: the `image <id>` line perf_prove prints must equal index.tsv's, and the id must be a row of the first
-table of docs/image-ids.md (this tree's guests); where a directory holds the stage's SHA256SUMS, the guest binary's
-sha256 must equal that row's. The check is printed as the file's last section; a mismatch stops the summary."""
+from the first directory, in the order given, whose log holds a RESULT line, and must be that transition's: its
+RESULT line's transition number and user cycles, and the handler its `image <id> (<handler>)` line names, equal
+index.tsv's. Every proof is checked against its image id: the `image` line's id must equal index.tsv's and be the row
+of the first table of docs/image-ids.md (this tree's guests) of the guest the handler runs in, `ferrata_consumer`
+for the reference consumer's handlers (`consumer …`) and `ferrata_lez` for every other and for each private run's
+program; where a directory holds the stage's SHA256SUMS, it must list the guest, with the sha256 of that row. The
+check is printed as the file's last section. A record that fails any of this stops the summary: nothing is printed
+and the exit status is 1 (`bench/perf/test_summarize_proofs.py` tests the refusals)."""
 
+import contextlib
+import io
 import json
 import re
 import sys
@@ -127,6 +133,15 @@ def main():
                 sys.exit(f"{log}: proven against {image.group(1) if image else 'no image line'}, index.tsv says {r[col['image_id']]}")
             checked.setdefault(image.group(1), []).append((n, d))
             f = m.group(1).split("\t")
+            # The record is this transition's: its number, its cycles and its handler, as index.tsv gives them.
+            handler = re.search(r"^image [0-9a-f]{64} \((.*)\)$", text, re.M)
+            if int(f[0]) != n or f[1] != r[col["exec_cycles"]] or not handler or handler.group(1) != r[col["handler"]]:
+                sys.exit(f"{log}: RESULT of transition {f[0]}, {f[1]} user cycles, handler "
+                         f"{handler.group(1) if handler else '?'}; index.tsv row {n}: {r[col['exec_cycles']]}, {r[col['handler']]}")
+            # And of the right guest: the consumer's handlers on the reference consumer, every other on the program.
+            want = "ferrata_consumer" if r[col["handler"]].startswith("consumer") else "ferrata_lez"
+            if ids.get(image.group(1), ("not a row of docs/image-ids.md",))[0] != want:
+                sys.exit(f"{log}: proven on {ids.get(image.group(1), ('not a row of docs/image-ids.md',))[0]}, not {want}")
             rss, wall, cpu = gnu_time(text)
             results[n] = dict(user=int(f[1]), total=int(f[2]), segs=int(f[3]), comp_s=float(f[4]), comp_b=int(f[5]),
                               succ_s=float(f[6]), succ_inner_b=int(f[7]), succ_b=int(f[8]), verify_ms=float(f[9]),
@@ -191,6 +206,8 @@ def main():
         image = re.search(r"^program image ([0-9a-f]{64}) ", text, re.M)
         if not image:
             sys.exit(f"{log}: no program image line")
+        if ids.get(image.group(1), (None,))[0] != "ferrata_lez":
+            sys.exit(f"{log}: program image {image.group(1)} is not ferrata_lez's")
         checked.setdefault(image.group(1), []).append((log.stem, log.parent))
         k = re.search(r"private transition \(VerifyAll, ([^)]*)\):", text)
         by_kind.setdefault(k.group(1) if k else "?", []).append(log)
@@ -247,6 +264,8 @@ def main():
         name, want = ids.get(image, (None, None))
         sums = {stage_sums(d).get(image) for _, d in where} - {None}
         sha = "not kept" if not sums else ("equal" if sums == {want} else f"DIFFERS: {', '.join(sorted(sums))}")
+        if any((d / "SHA256SUMS").exists() and image not in stage_sums(d) for _, d in where):
+            sha = "DIFFERS: a stage's SHA256SUMS lacks this guest"
         if name is None or sha.startswith("DIFFERS"):
             bad.append(image)
         per = OrderedDict()
@@ -262,4 +281,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # Nothing is printed unless every record passes: a refused record leaves no summary behind it.
+    out = io.StringIO()
+    with contextlib.redirect_stdout(out):
+        main()
+    sys.stdout.write(out.getvalue())

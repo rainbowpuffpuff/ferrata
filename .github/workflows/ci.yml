@@ -541,6 +541,10 @@ jobs:
       # run.json files, prove.jsonl and groth16.jsonl) and asserted stated by the documents that document them.
       - name: The documented performance figures recomputed from the committed records (scripts/test_perf_records.py)
         run: python3 -I scripts/test_perf_records.py
+      # RFP-021 P.2: the proof records summarized into lez/results/perf-proofs.md, byte for byte, and a misfiled log,
+      # a proof on a sibling image, a guest missing from a stage's sums and another program's private run refused.
+      - name: The P.2 proof records and their image-id checks (bench/perf/test_summarize_proofs.py)
+        run: python3 -I bench/perf/test_summarize_proofs.py
       # RFP-021 U.3, P.6: the record of the modules on the LEZ v0.4.0-rc3 network we run, its figures and checks computed
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)
