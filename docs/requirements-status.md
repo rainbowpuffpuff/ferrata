@@ -23,7 +23,7 @@ Hard requirements:
 
 | RFP | shown | in part | not yet | waits on Logos | total |
 |---|---:|---:|---:|---:|---:|
-| RFP-021 | 48 | 7 | 1 | 3 | **59** |
+| RFP-021 | 49 | 6 | 1 | 3 | **59** |
 | RFP-022 | 43 | 22 | 1 | 2 | **68** |
 
 Soft requirements, counted apart (5 for each RFP): RFP-021 5 shown; RFP-022 2 shown, 3 in part.
@@ -35,7 +35,7 @@ By section, hard requirements:
 | RFP-021 | Functionality | 13 | 1 | 0 | 1 | 15 |
 | RFP-021 | Usability | 5 | 0 | 0 | 1 | 6 |
 | RFP-021 | Reliability | 9 | 3 | 0 | 0 | 12 |
-| RFP-021 | Performance | 7 | 2 | 0 | 0 | 9 |
+| RFP-021 | Performance | 8 | 1 | 0 | 0 | 9 |
 | RFP-021 | Supportability | 8 | 1 | 1 | 1 | 11 |
 | RFP-021 | Verification Security | 6 | 0 | 0 | 0 | 6 |
 | RFP-022 | Functionality | 15 | 2 | 0 | 0 | 17 |
@@ -101,7 +101,7 @@ By section, hard requirements:
 | ID | Status | Why | Evidence |
 |---|---|---|---|
 | P.1 | shown | Each attestation type settles in one transaction, 97,485 to 1,619,960 cycles on this tree's program (`lez/results/stage4-attest.md`), at most 32% of LEZ's 5M target and under its per-transaction limit of 10,000,000 (`MAX_GAS_EXEC`, `docs/performance.md`); 8,227,481 for a 306-log receipt without the Keccak accelerator, under the limit too. | 3; `lez/results/stage4-attest.md`; `lez/results/stage4-attest-keccak-soft.md` |
-| P.2 | in part | Cycles, gas, proof time and size for every action that advances the tracked state (a finality update and a committee handoff each also proven in one private transaction and settled) and every statement type but the accumulator leaf: 39 guest executions proven for real; the leaf's only real proof is of an earlier image, and the public `VerifyAll`, `ApplyVerified` and `Read` are not proven. | 5, 32, 49, 123, 166; `lez/results/perf-proofs.md` |
+| P.2 | shown | Cycles, gas, proof time and size for every action that advances the tracked state and every statement type, on this tree's images of the attestation program and its reference consumer: the 50 guest executions of the test suite's scenarios, every message of the attestation program and every type of statement (the accumulator leaf, the public `VerifyAll`, `ApplyVerified`, `Read` and `ReadPadded` among them), proven for real on 16-CPU containers, each record checked against the image id; a finality update and a committee handoff each also proven in one private transaction and settled. | 5, 32, 49, 123, 166; `lez/results/perf-proofs.md` |
 | P.3 | shown | Tracking cost measured over eight days of the lab's sequencer (9,225,372 execution gas a finality update, 16,060,242 a handoff; the lab's program is an earlier build, within +85 to +2,391 gas a step of this tree's: `lez/results/perf-tracking.md`) and amortised per attestation apart from verification: 235.5M / N a day at the recommended cadence, 14.1M / N once per period (derived); the proven path proven for real, 485,298 + 224,063 gas an update, 451,895 + 224,063 a handoff. | 167; `lez/results/perf-tracking.md`; `docs/performance.md` RFP-021 §P.3 |
 | P.4 | in part | This tree's padded private attestation proven at the declared minimum's 8 and 16 CPUs (1,254.8 s and 633.5 s), on an M1 and a GPU; the owner's laptop script is ready and rehearsed; not run on a laptop. | 32, 38, 50, 88, 168; `bench/perf/p4-laptop-owner.sh` |
 | P.5 | shown | End-to-end latency from the live run's own records: median 18.1 min from the Ethereum event to a statement usable on LEZ (p90 20.7), split into finality 13.0, the next finalized header 3.1, availability 0.2, the update on LEZ 1.5 and the consuming transaction 0.3. | 99, 169; `lez/results/perf-latency-e2e.md` |
