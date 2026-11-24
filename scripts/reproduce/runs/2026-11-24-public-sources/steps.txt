@@ -1,0 +1,6 @@
+04:01:15 toolchains: cargo 1.93.0 (083ac5135 2025-12-15), risc0-r0vm 3.0.5; nproc 2
+04:01:16 main: a0f388279e2d (LEZ v0.4.0-rc1): cargo build --locked -p methods -p methods-statements -p methods-rebate
+04:10:28 main: built, 10 guests
+04:10:29 msg: acf6fce02281 (LEZ v0.4.0-rc3): cargo build --locked -p methods-msg
+04:12:57 msg: built, 2 guests
+04:12:57 names: its source is not in public history: not rebuilt

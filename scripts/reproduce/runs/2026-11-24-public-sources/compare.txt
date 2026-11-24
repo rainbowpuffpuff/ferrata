@@ -1,0 +1,12 @@
+checked 2026-11-24 04:12:57 UTC; list deployed-programs.json; network (none)
+program                      recorded id          rebuilt    published  on chain         verdict
+ferrata_attestation          0x816d1fef464d2549   equal      -          -                ok
+ferrata_bridge_b1            0x847a4336c202269d   equal      -          -                ok
+ferrata_consumer             0x8464603bcf9ea9c6   equal      -          -                ok
+ferrata_holdings             0xa79e3f5c4496f270   equal      -          -                ok
+ferrata_statements           0x86acef86dc73be13   equal      -          -                ok
+ferrata_statements_reader    0xd2a8b082f1e4326d   equal      -          -                ok
+ferrata_rebate               0xe8f1c1c1381a08fa   equal      -          -                ok
+ferrata_msg                  0x04ae1988fe84eef6   equal      -          -                ok
+ferrata_names                0xee9578cab413451e   missing    -          -                FAIL
+8 of 9 programs ok

@@ -501,6 +501,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # the build page pins each repository link to the commit that last changed its file
       - name: Every relative link in README.md, docs/ and the READMEs elsewhere resolves to a tracked file
         run: python3 -I scripts/check-links.py README.md docs cli/README.md monitor/README.md lez/ATTEST-CLI.md lez/updater/README.md e2e/seqnet/README.md
       # RFP-021 S.3-S.6, VS.5; RFP-022 U.7, R.12-R.14, Sec.7: the guides kept in step with the code (every
@@ -537,6 +539,10 @@ jobs:
       # again from its files, offline (modules/results/live-testnet-2026-11-23/).
       - name: The live test-network record's figures and checks recomputed (modules/scripts/test_live_testnet.py)
         run: python3 -I modules/scripts/test_live_testnet.py
+      # The build page (site/README.md): a fresh build's counts equal the status document's and every link it emits
+      # resolves; the committed bundle's freshness is left to its rebuild (--skip-freshness).
+      - name: The build page, built fresh and checked (site/test_site.py --skip-freshness)
+        run: python3 -I site/test_site.py --skip-freshness
       # RFP-022 Reliability #11: every hard row of both RFPs mapped to its tests, records and documents
       # (scripts/ci/row-tests.toml), and every test said to run in a CI job really run by that job's
       # commands (scripts/ci/ci_model.py reads the workflows and the scripts they call). The checker's own
