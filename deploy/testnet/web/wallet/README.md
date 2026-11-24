@@ -76,6 +76,10 @@ machine that saves only some directories between runs, point `WALLET_WORK` at on
 - `test/public_read.py`: read-only against the public network (no faucet, no transaction). Record
   `test/results/public-read-2026-11-23/record.json`: 7 of 7.
 
+The run records of 23 November (`live-*`, `live-claim-2026-11-23`) and `../android/published/apk.json` name commits and bundle ids of the wallet's
+development history, which is not public; the merged state is `e8e2c007`, whose served files equal those reviewed at the
+end of that history but for comments.
+
 ## As an app: installable, offline, on Android
 
 The same page is an installable app (a PWA) and, wrapped as a Trusted Web Activity, an Android app
@@ -96,7 +100,7 @@ the new `sw.js` leaves installed apps on the previous build (the service worker 
 
 Tests: `node --test test/*.test.mjs` (with `test/pwa.test.mjs`: the list, the manifest and icons, block hashes of
 the public network's blocks, the PIN wrap, the passkey wrap, scanned codes, QR round trip);
-`test/pwa_e2e.py` (record `test/results/pwa-e2e-2026-11-24-local/record.json`: 24 of 24 at the review's fixes;
+`test/pwa_e2e.py` (record `test/results/pwa-e2e-2026-11-24-r6-local/record.json`: 27 of 27 at the reviewed tip;
 Chromium, phone screen, `test/pwa_serve.py` with the host's headers; it moves `TMPDIR` to a short
 directory when the inherited one is long, as full Chromium's socket paths need: install verdict, QR by zbar,
 fake-camera scan, virtual-authenticator passkey with and without PRF, PIN, offline, update, tampered build refused);

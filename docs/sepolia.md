@@ -98,8 +98,8 @@ of Sepolia's finalized state, with the frozen bridge program, not this tree's
 the light client's experimental v0.3.1 port is deployed, on the public LEZ testnet, where it attested slots 0 and 1 of
 the v5 vault `0x04eE…e44c` above (EVIDENCE row 150); none of the proposal's v0.4 programs is: LEZ testnet 0.4 does not
 exist, and the round trip's LEZ side was a devnet we ran (one validator). The attestation program and the bridge program
-at B1 run on a LEZ v0.4.0-rc3 network we run that is reachable publicly (EVIDENCE row 237). The prototypes exist to
-measure and to test the design; the audit is planned for the code the proposal would deliver. A security review by an
+at B1 run on a LEZ v0.4.0-rc3 network we run that is reachable publicly (EVIDENCE rows 237, 238). The prototypes exist
+to measure and to test the design; the audit is planned for the code the proposal would deliver. A security review by an
 agent in a separate context (11 November 2026) is not an audit; its fixes are in this tree (EVIDENCE row 30), and the
 frozen bridge program of the real session predates them and the time fix. Slither, Aderyn, Halmos, cargo-audit,
 cargo-deny and fuzzing (EVIDENCE rows 35, 36, 40 and 78) are tooling, not an audit.

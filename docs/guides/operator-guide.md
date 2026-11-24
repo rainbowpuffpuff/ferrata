@@ -28,7 +28,7 @@ releases, wrapping, fee collection, the gas drop's checks; `ferrata_relayer_modu
 `ferrata_attestor_module`). They log structured lines, stop cleanly on SIGTERM and take their endpoints and depths
 from configuration ([`modules/README.md`](../../modules/README.md)). None has run on a LEZ network Logos runs (none
 exists for v0.4); each has run on zones we ran, on anvil and on forks of Sepolia, as §0 lists, and the updater, as a
-binary and as a Logos module, on a LEZ v0.4.0-rc3 network we run that is reachable publicly
+Logos module, on a LEZ v0.4.0-rc3 network we run that is reachable publicly
 ([`modules/results/live-testnet-2026-11-23/`](../../modules/results/live-testnet-2026-11-23/README.md)).
 
 ## 0. The operator's journey: install, configure, run, monitor, stop
@@ -39,7 +39,7 @@ commands. Every component builds from this repository with the toolchains of
 
 | Component | Install | Configure | Run | Monitor | Stop | Exercised by |
 |---|---|---|---|---|---|---|
-| Updater (RFP-021 U.3) | `cd lez && cargo build -p ferrata-updater --features harness --locked` (the in-process chain), or `cd lez/updater/sequencer && cargo build --release` (a running sequencer); or `ferrata_updater_module` | one TOML file, every field with its default in [`ferrata-updater.example.toml`](../../lez/updater/ferrata-updater.example.toml): beacon sources, the checkpoint, the payer key file, fee limits and budget, the deferral policy (§3.6) | `RISC0_DEV_MODE=1 target/debug/ferrata-updater --config FILE` | `GET /health` (`ok`, `degraded` with reasons, `down` with HTTP 503) and `GET /metrics` (Prometheus) on `daemon.listen` | SIGTERM: the round in hand finishes, exit 0; a restart reads the chain | `lez/updater/dev/demo.sh`, at this commit: [`runs/2026-11-21-lez/`](runs/2026-11-21-lez/README.md); 8 h following Sepolia live on a devnet (`lez/updater/results/live-sepolia/`, EVIDENCE row 99); the module on a crown zone (row 104) |
+| Updater (RFP-021 U.3) | `cd lez && cargo build -p ferrata-updater --features harness --locked` (the in-process chain), or `cd lez/updater/sequencer && cargo build --release` (a running sequencer); or `ferrata_updater_module` | one TOML file, every field with its default in [`ferrata-updater.example.toml`](../../lez/updater/ferrata-updater.example.toml): beacon sources, the checkpoint, the payer key file, fee limits and budget, the deferral policy (§3.6) | `RISC0_DEV_MODE=1 target/debug/ferrata-updater --config FILE` | `GET /health` (`ok`, `degraded` with reasons, `down` with HTTP 503) and `GET /metrics` (Prometheus) on `daemon.listen` | SIGTERM: the round in hand finishes, exit 0; a restart reads the chain | `lez/updater/dev/demo.sh`, at this commit: [`runs/2026-11-21-lez/`](runs/2026-11-21-lez/README.md); 8 h following Sepolia live on a devnet (`lez/updater/results/live-sepolia/`, EVIDENCE row 99); the module on a crown zone (row 104); as a module on a LEZ v0.4.0-rc3 network we run (row 237) |
 | Relayer and root importer (RFP-022 U.3) | `cd cli && cargo build --release --bin ferrata-relayer`, or `ferrata_relayer_module` | options (§6.2): the endpoints, the vault, the keystore and its password file, the state directory, the inbox, `--import-roots` and `--import-every` | `ferrata-relayer … run --inbox DIR` | one JSON line per event on stdout (§6.1); `ferrata-relayer … status` | SIGTERM or SIGINT, after the round in progress | `cli/tests/relayer.sh` on an anvil fork of Sepolia with real proofs (EVIDENCE row 46); `modules/scripts/relayer-e2e.sh`, binary and module (rows 106, 107) |
 | Watcher (`monitor`) | `cd monitor && cargo build --release`, or `ferrata_monitor_module` | options: the RPC, the vault, one `--node` view per own node, the key (`--key-env`, `--key-file` or a keystore, never on the command line), the state file, the alert log and pager command | `monitor run …` ([`monitor/README.md`](../../monitor/README.md), "Running it") | alerts as JSON lines, critical ones to the pager | SIGTERM: a `stopped` alert, the state saved | `monitor/tests/anvil-e2e.sh`, 46 checks (EVIDENCE row 43); `monitor/tests/fork-live-vault.sh` (row 45); the module on its devnet (row 96) |
 | Checkpoint prover | `checkpoint/` (the host) and `gpu-prover/` (a GPU), an x86 machine for the Groth16 wrap | the vault, the LEZ node, the rule | §5.4's sequence; `e2e/sepolia-cloud.sh` runs it end to end | the vault's candidates and checkpoints (the admin view, §10.1) | — | the live round trips (EVIDENCE rows 41, 91); `e2e/runs/crown-rehearsal-*` |
@@ -291,8 +291,13 @@ directory means following the network from its genesis (about 9 minutes and 1,70
 November): give the call a long timeout and keep the state directory. Pass `"quiet": false` to `start` for the daemon's
 own job lines in Logos Core's log (record:
 [`modules/results/live-testnet-2026-11-23/`](../../modules/results/live-testnet-2026-11-23/README.md), both sessions).
-The module's host process needs `curl` on its `PATH` (the beacon sources) and `libpcsclite` (LEZ's wallet links it). Not
-built: the proven path.
+For a network on another LEZ tag (our test network runs v0.4.0-rc3), build the module and `ferrata-updater` from a copy
+of the tree with that tag selected (`lez/scripts/lez-select.sh v0.4.0-rc3`, the manifests it leaves on rc1 — the
+harness's wire crates and the module's calls crate — pointed at the same tag, and
+`modules/ferrata_updater_module/rust-lib/lockfiles/Cargo.lock.v0.4.0-rc3`), as `modules/scripts/live-testnet.sh build`
+does; then `logosctl install FILE.lgx -y` and `logosctl module load ferrata_updater_module`
+([`modules/README.md`](../../modules/README.md)). The module's host process needs `curl` on its `PATH` (the beacon
+sources) and `libpcsclite` (LEZ's wallet links it). Not built: the proven path.
 
 ## 4. The root importer (RFP-022 P.2)
 
