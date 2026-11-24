@@ -34,7 +34,8 @@
 //!   export          write the records into --out
 //! Without a sequencer:
 //!   fresh-check     the fresh data natively (--fresh-checkpoint, --fresh-attest; --out FILE for its JSON): exit 3
-//!                   when its finality update does not advance the store (fetch it again after the next epoch)
+//!                   when its finality update does not advance the store (fetch it again after the next epoch), 4
+//!                   when the bootstrap or the finalized block is older than its bound (a stale endpoint)
 //!   inbound-check   the inbound chain natively (--program-bin, --bridge-bin, --chain ...)
 //!   inbound-plan    the inbound run's configuration identity (--attest-bin, --bridge-bin, --vault HEX)
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
@@ -466,9 +467,9 @@ async fn run(args: Args) -> Result<()> {
                     println!("{text}");
                     return Ok(());
                 }
-                Err(fresh::NotNewer(why)) => {
-                    eprintln!("fresh-check: {why}");
-                    std::process::exit(fresh::NOT_NEWER_EXIT);
+                Err(refused) => {
+                    eprintln!("fresh-check: {}", refused.message());
+                    std::process::exit(refused.exit_code());
                 }
             }
         }

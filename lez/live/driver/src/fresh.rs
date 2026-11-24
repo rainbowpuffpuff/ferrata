@@ -20,7 +20,8 @@
 //!   fresh-check      no sequencer: the whole chain natively (bootstrap, the period updates, the finality update,
 //!                    which must advance the store; the facts evaluated under the record it makes); one JSON line.
 //!                    Exit 3 when the finality update does not advance the store (fetch it again after the next
-//!                    finalized epoch), 1 on any other failure
+//!                    finalized epoch), 4 when the bootstrap is over 30 h or the finalized block over 2 h old by this
+//!                    machine's clock (a stale endpoint), 1 on any other failure
 //!   fresh-follow     instance A of the `main` deployment: `Init`, the period updates, the finality update; its
 //!                    finalized root must be the one the second provider reports
 //!   fresh-scenarios  the `twin` deployment: the refusals of `scenario::scenarios` on this data (a signature that is
@@ -85,6 +86,15 @@ const LAYOUTS: [LcFork; 2] = [LcFork::Electra, LcFork::Gloas];
 const READER_SEED: [u8; 32] = [0x44; 32];
 /// Exit status of `fresh-check` when the finality update does not move the store (fetch it again later).
 pub const NOT_NEWER_EXIT: i32 = 3;
+/// Exit status of `fresh-check` when the data is older than its bound: an endpoint served stale data (no retry helps).
+pub const STALE_EXIT: i32 = 4;
+/// The oldest the finality update's finalized block may be when it is checked: Sepolia finalizes every 6.4 minutes,
+/// and a light-client endpoint serves its newest finality update; two hours of lag is an endpoint (or a chain) that has
+/// stopped, not data to attest.
+pub const MAX_FINALIZED_AGE_S: u64 = 2 * 3600;
+/// The oldest the bootstrap may be: the period's first checkpoint (or the finalized one) is at most one period (27.3 h)
+/// old when fetched, plus the job's build; 30 hours.
+pub const MAX_BOOTSTRAP_AGE_S: u64 = 30 * 3600;
 
 /// The light-client layout of the fork that `config`'s schedule puts at `slot`.
 fn layout_at(config: &Config, slot: u64) -> Option<LcFork> {
@@ -414,13 +424,52 @@ fn native_process(native: &mut Native, config: &Config, update: &LightClientUpda
     Ok(outcome)
 }
 
-/// `Err` with the message of a finality update that is not newer than the store: `fresh-check` exits 3 on it.
-pub struct NotNewer(pub String);
+/// Why `fresh-check` refuses data that loads: not newer than the store yet (exit 3: fetch again later), or older than
+/// its bound (exit 4: a stale endpoint).
+pub enum Refused {
+    NotNewer(String),
+    Stale(String),
+}
 
-/// The chain natively, and a summary for the job's record. `Ok(Err(NotNewer))` when the finality update does not
-/// advance the store (the data is good, only too early).
-pub fn check(fresh: &Fresh) -> Result<std::result::Result<Value, NotNewer>> {
+impl Refused {
+    pub fn exit_code(&self) -> i32 {
+        match self {
+            Refused::NotNewer(_) => NOT_NEWER_EXIT,
+            Refused::Stale(_) => STALE_EXIT,
+        }
+    }
+
+    pub fn message(&self) -> String {
+        match self {
+            Refused::NotNewer(why) => why.clone(),
+            Refused::Stale(why) => format!("stale endpoint: {why}"),
+        }
+    }
+}
+
+/// The chain natively, and a summary for the job's record. `Ok(Err(Refused::NotNewer))` when the finality update does
+/// not advance the store (the data is good, only too early); `Ok(Err(Refused::Stale))` when the bootstrap or the
+/// finalized block is older than its bound by this machine's clock.
+pub fn check(fresh: &Fresh) -> Result<std::result::Result<Value, Refused>> {
     let inst = fresh.instance("A", AccountId::new([1; 32]), AccountId::new([2; 32]));
+    let now_ms = u64::try_from(std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_millis())?;
+    let age_s = |slot: u64| now_ms.saturating_sub(inst.config.slot_start_ms(slot)) / 1000;
+    let boot_slot = fresh.bootstrap.header.beacon.slot;
+    if age_s(boot_slot) > MAX_BOOTSTRAP_AGE_S {
+        return Ok(Err(Refused::Stale(format!(
+            "the bootstrap (slot {boot_slot}, {}) is {} s old, over the bound of {MAX_BOOTSTRAP_AGE_S} s",
+            utc(inst.config.slot_start_ms(boot_slot)),
+            age_s(boot_slot)
+        ))));
+    }
+    if age_s(fresh.finalized_slot) > MAX_FINALIZED_AGE_S {
+        return Ok(Err(Refused::Stale(format!(
+            "the finality update's finalized block (slot {}, {}) is {} s old, over the bound of {MAX_FINALIZED_AGE_S} s",
+            fresh.finalized_slot,
+            utc(inst.config.slot_start_ms(fresh.finalized_slot)),
+            age_s(fresh.finalized_slot)
+        ))));
+    }
     let mut world = fresh.world(&inst)?;
     let mut periods = Vec::new();
     for (p, update) in &fresh.updates {
@@ -429,7 +478,7 @@ pub fn check(fresh: &Fresh) -> Result<std::result::Result<Value, NotNewer>> {
     }
     let before = world.native.core().finalized_header.beacon.slot;
     if fresh.finalized_slot <= before {
-        return Ok(Err(NotNewer(format!(
+        return Ok(Err(Refused::NotNewer(format!(
             "the finality update finalizes slot {}, not newer than the store's finalized slot {before}: fetch it again after the next finalized epoch",
             fresh.finalized_slot
         ))));
@@ -453,6 +502,11 @@ pub fn check(fresh: &Fresh) -> Result<std::result::Result<Value, NotNewer>> {
     let ws_end = inst.config.ws_end_slot(fresh.bootstrap.header.beacon.slot).ok_or_else(|| anyhow!("no ws period"))?;
     Ok(Ok(json!({
         "chain": "sepolia",
+        "checkedAt": utc(now_ms),
+        "bootstrapAgeS": age_s(boot_slot),
+        "finalizedAgeS": age_s(fresh.finalized_slot),
+        "maxBootstrapAgeS": MAX_BOOTSTRAP_AGE_S,
+        "maxFinalizedAgeS": MAX_FINALIZED_AGE_S,
         "checkpoint": hex0x(&fresh.checkpoint),
         "bootstrapSlot": fresh.bootstrap.header.beacon.slot,
         "bootstrapTime": utc(inst.config.slot_start_ms(fresh.bootstrap.header.beacon.slot)),
