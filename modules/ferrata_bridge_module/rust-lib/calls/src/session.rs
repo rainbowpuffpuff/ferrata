@@ -188,7 +188,12 @@ fn dispatch(method: &str, params: &Value, caller: &str) -> Result<Value, String>
         return crate::jobs::get(params);
     }
     if method == "jobs" {
-        return Ok(crate::jobs::list());
+        // The view asks this first, on load: with it, whether Qt's debug logging is on in this process (Basecamp's
+        // environment), which writes every key typed in Basecamp's window to its log: the view then warns before the
+        // phrase is typed and takes it by paste only (review M1).
+        let mut v = crate::jobs::list();
+        v["qt_debug_logging"] = json!(qt_debug_logging());
+        return Ok(v);
     }
     // While a job runs, a call that would call lez_core or reread the chains on the module's Qt thread is refused at
     // once (jobs.rs: it would wait there for lez_core, busy proving). `info` and `price` read through the chain service
@@ -716,19 +721,20 @@ fn open_network(params: &Value) -> Result<Value, String> {
     *SESSION.lock().unwrap_or_else(|p| p.into_inner()) = Some(Session { chain, s, calls: 0 });
     if qt_debug_logging() {
         if let Some(c) = summary["checks"].as_array_mut() {
-            c.push(json!("note: Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log holds this session's calls and answers (account ids, positions, balances; never the phrase or a key, which are sealed)"));
+            c.push(json!("note: Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): its log holds this session's calls and answers (account ids, positions, balances; the phrase and the keys are sealed) and every key typed in Basecamp's window (Qt's own key logging): a phrase typed rather than pasted can be read back from it"));
         }
     }
     Ok(summary)
 }
 
-/// Whether Qt's debug logging for the remote-objects transport looks enabled in this process's environment (a warning
-/// only: what crosses it is sealed or MAC'd; the answers are private but not secret).
+/// Whether Qt's debug logging looks enabled in this process's environment for Qt's own categories (`*`, `qt.*`): the
+/// remote-objects transport's (what crosses it is sealed or MAC'd; the answers are private but not secret) and the
+/// key handling's (`qt.gui.shortcutmap`, `qt.qpa.keymapper`: every key typed in Basecamp's window, with its text).
 fn qt_debug_logging() -> bool {
     let on = |rules: &str| rules.lines().flat_map(|l| l.split(';')).any(|r| {
         let r = r.trim().to_ascii_lowercase().replace(' ', "");
         r.ends_with("=true") && (r.contains("debug") || !r.contains(".critical") && !r.contains(".warning") && !r.contains(".info"))
-            && (r.starts_with('*') || r.starts_with("qt.*") || r.starts_with("qt.remoteobjects"))
+            && (r.starts_with('*') || r.starts_with("qt."))
     });
     std::env::var("QT_LOGGING_RULES").is_ok_and(|v| on(&v))
         || std::env::var("QT_LOGGING_CONF").ok().and_then(|p| std::fs::read_to_string(p).ok()).is_some_and(|v| on(&v))
@@ -2330,6 +2336,27 @@ mod tests {
         assert!(!reply.contains(words.as_str()) && v(&reply)["result"].get("words").is_none(), "{reply}");
         assert!(v(&reply)["result"]["words_sealed"]["ct"].is_string());
         view.call("close", &json!({}));
+    }
+
+    /// Review M1 (what Qt logs): with Qt's debug logging on, Qt writes every key typed in Basecamp's window to its log;
+    /// the view learns it on load (`jobs`) and takes the phrase by paste only.
+    #[test]
+    fn m1_the_view_learns_that_qt_logs_typed_keys() {
+        let _s = serial();
+        close();
+        let seen = |rules: Option<&str>| {
+            match rules {
+                Some(r) => std::env::set_var("QT_LOGGING_RULES", r),
+                None => std::env::remove_var("QT_LOGGING_RULES"),
+            }
+            v(&wallet_as(VIEW, r#"{"method":"jobs","params":{}}"#))["result"]["qt_debug_logging"].clone()
+        };
+        assert_eq!(seen(Some("*.debug=true")), json!(true));
+        assert_eq!(seen(Some("qt.gui.shortcutmap.debug=true")), json!(true));
+        assert_eq!(seen(Some("qt.qpa.*=true")), json!(true));
+        assert_eq!(seen(Some("*.debug=false")), json!(false));
+        assert_eq!(seen(Some("ferrata.debug=true")), json!(false));
+        assert_eq!(seen(None), json!(false));
     }
 
     /// Review M4: no deposit is attempted from the network session; the view sends the person to the web wallet.

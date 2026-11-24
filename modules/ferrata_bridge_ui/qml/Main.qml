@@ -76,6 +76,9 @@ Rectangle {
     property string faucetText: ""
     // The recovery phrase as typed or pasted: bytes in phraseBuf, never one string (a JavaScript or Qt string cannot be
     // wiped); keys go straight from the keyboard into it, and it is wiped once sealed, on Clear, and on close.
+    // Qt's debug logging is on in this Basecamp (the module says so on load: `jobs`): Qt then writes every key typed in
+    // Basecamp's window to its log, so the phrase field takes no keys, only a paste (Paste the phrase: no key events).
+    property bool qtDebugLog: false
     property var phraseBuf: new Uint8Array(512)
     property int phraseLen: 0
     property int phraseWords: 0
@@ -97,14 +100,14 @@ Rectangle {
     function phraseKey(event) {
         if (event.key === Qt.Key_Backspace) { phraseBack(); event.accepted = true; return; }
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) { if (canOpen()) netOpenSession(false); event.accepted = true; return; }
-        if (event.matches(StandardKey.Paste)) {
-            // A paste: read once from the clipboard through a hidden field, which is emptied at once.
-            pasteBox.text = ""; pasteBox.paste();
-            var t = pasteBox.text; pasteBox.text = "";
-            for (var i = 0; i < t.length; i++) phraseChar(t.charCodeAt(i));
-            event.accepted = true; return;
-        }
+        if (event.matches(StandardKey.Paste)) { phrasePaste(); event.accepted = true; return; }
         if (event.text && event.text.length === 1) { phraseChar(event.text.charCodeAt(0)); event.accepted = true; }
+    }
+    // A paste: read once from the clipboard through a hidden field, which is emptied at once.
+    function phrasePaste() {
+        pasteBox.text = ""; pasteBox.paste();
+        var t = pasteBox.text; pasteBox.text = "";
+        for (var i = 0; i < t.length; i++) phraseChar(t.charCodeAt(i));
     }
     function canOpen() { return busy === 0 && !netOpening && fNet.text.trim() !== "" && phraseWords >= 12; }
     function bytesText(b) { var s = ""; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return s; }
@@ -497,6 +500,7 @@ Rectangle {
     function resumeJobs(done) {
         if (transport !== "module") { if (done) done(false, "no module"); return; }
         call("jobs", {}, function (ok, v) {
+            if (ok && v && v.qt_debug_logging !== undefined) qtDebugLog = v.qt_debug_logging === true;
             if (ok && v && v.jobs) {
                 var newest = {};
                 for (var i = 0; i < v.jobs.length; i++) newest[v.jobs[i].kind] = v.jobs[i];
@@ -744,19 +748,27 @@ Rectangle {
                         implicitHeight: 34
                         color: "white"; radius: 4
                         border.color: activeFocus ? "#3b6fd4" : "#c4cbd4"; border.width: activeFocus ? 2 : 1
-                        activeFocusOnTab: true
-                        Keys.onPressed: function (event) { phraseKey(event) }
-                        MouseArea { anchors.fill: parent; onClicked: fPhrase.forceActiveFocus() }
+                        activeFocusOnTab: !qtDebugLog
+                        Keys.onPressed: function (event) { if (!qtDebugLog) phraseKey(event); else event.accepted = true }
+                        MouseArea { anchors.fill: parent; onClicked: if (!qtDebugLog) fPhrase.forceActiveFocus() }
                         Text {
                             anchors.fill: parent; anchors.margins: 8
                             textFormat: Text.PlainText; elide: Text.ElideRight; verticalAlignment: Text.AlignVCenter
                             color: phraseLen > 0 ? "#1d2733" : "#8a93a0"
                             text: phraseLen > 0 ? "●".repeat(Math.min(phraseLen, 40)) + "   " + phraseWords + (phraseWords === 1 ? " word" : " words")
-                                                : "12 or 24 words (BIP-39): click here, then type or paste them (a test phrase, never one that holds value)"
+                                  : qtDebugLog ? "typing is off here (see the warning below): copy the phrase, then Paste the phrase"
+                                  : "12 or 24 words (BIP-39): click here, then type or paste them (a test phrase, never one that holds value)"
                         }
                     }
+                    Button { objectName: "net.paste"; text: "Paste the phrase"; onClicked: phrasePaste() }
                     Button { objectName: "net.phraseClear"; text: "Clear"; visible: phraseLen > 0; onClicked: phraseClear() }
                     TextInput { id: pasteBox; visible: false; echoMode: TextInput.Password }
+                }
+                PlainLabel {
+                    objectName: "net.qtlog"
+                    visible: qtDebugLog
+                    text: "Qt debug logging is on in this Basecamp (QT_LOGGING_RULES or a qtlogging.ini): Qt writes every key typed in Basecamp's window to its log file, so a typed phrase could be read back from it. Typing is off for the phrase: copy it, then use Paste the phrase (no keys are pressed), or quit Basecamp and start it without that logging."
+                    color: "#b3261e"; font.bold: true; wrapMode: Text.WordWrap; Layout.fillWidth: true
                 }
                 RowLayout { PlainLabel { text: "Your Sepolia address"; Layout.preferredWidth: 170 } TextField { id: fDepositor; objectName: "net.depositor"; placeholderText: "0x… (optional: shown in the header with its Sepolia balance)"; Layout.preferredWidth: 560 } }
                 RowLayout {

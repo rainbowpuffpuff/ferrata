@@ -153,7 +153,10 @@ What protects the phrase and the session (review of 24 Nov 2026):
 - **Never in clear on Logos Core's IPC** (which Qt's remote-objects debug logging writes to Basecamp's log). The view
   seals the phrase to the module's one-time X25519 key (`qml/js/seal.js`: X25519, HMAC-SHA256; checked against the
   RFCs' vectors and the module's own implementation by `tests/seal-test.mjs`); a new phrase's words come back sealed to
-  the view.
+  the view. Qt's own debug logging (`QT_LOGGING_RULES="*.debug=true"`, `qt.gui.shortcutmap`) writes every key typed in
+  Basecamp's window to its log, outside the view's reach: the module tells the view on load when that logging is on,
+  and the view then warns before anything is typed, takes no keys in the phrase field, and takes the phrase by its
+  Paste button (no key events).
 - **Typed into bytes, not a string.** The phrase field is not a text field: each key goes into a byte buffer (shown as
   dots and a word count), which is wiped once the phrase is sealed, on Clear and on close. A paste passes through the
   clipboard and one hidden field emptied at once; keystrokes and a paste pass through Basecamp's window, whose memory

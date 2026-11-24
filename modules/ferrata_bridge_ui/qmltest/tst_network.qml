@@ -10,6 +10,8 @@
 //   M4  the deposit button is off in the network session and the panel sends the person to the web wallet.
 //   L1  every label shows its text as plain text.
 //   L2  when open_network's answer is lost (Basecamp's 20 s), the view closes the session with its key.
+//   M1  with Qt's debug logging on (it logs every key typed), the view warns before anything is typed, the phrase field
+//       takes no keys, and the phrase comes in by Paste the phrase.
 // Run as `qmltestrunner -input qmltest/tst_network.qml` from the module's directory (scripts/network-ui-test.sh).
 import QtQuick
 import QtTest
@@ -38,6 +40,7 @@ Item {
         property bool loseOpen: false
         property var held: null
         property string pendingKind: ""
+        property bool debugLog: false
         property int jobId: 7
 
         function reply(result) {
@@ -68,7 +71,7 @@ Item {
                 method = inner.method; params = inner.params;
             }
             methods.push(method);
-            if (method === "jobs") return reply({ jobs: [] });
+            if (method === "jobs") return reply({ jobs: [], qt_debug_logging: debugLog });
             if (method === "seal_key") {
                 secret = new Uint8Array(32); for (var i = 0; i < 32; i++) secret[i] = 0x42;
                 publicKey = Seal.hex(Seal.x25519Base(secret));
@@ -129,6 +132,8 @@ Item {
             return refuse("unknown method " + method);
         }
     }
+
+    TextInput { id: clip; visible: false }
 
     TestCase {
         name: "FerrataNetworkSession"
@@ -307,6 +312,24 @@ Item {
             logos.loseOpen = false;
             compare(logos.methods[logos.methods.length - 1], "close");
             verify(!host.app.netOpen);
+        }
+        // M1: Qt's debug logging on: warned before typing, no keys taken, the phrase pasted.
+        function test_10_with_qt_debug_logging_the_phrase_is_pasted_not_typed() {
+            logos.debugLog = true;
+            host.app.resumeJobs();
+            tryVerify(function () { return host.app.qtDebugLog; }, 2000, "the module said so");
+            verify(el("net.qtlog").visible && el("net.qtlog").text.indexOf("every key typed") >= 0, el("net.qtlog").text);
+            el("net.address").text = "https://n.example";
+            typePhrase("abandon");
+            compare(host.app.phraseLen, 0, "no keys taken");
+            clip.text = phrase; clip.selectAll(); clip.copy(); clip.text = "";
+            click("net.paste");
+            compare(host.app.phraseWords, 12, "pasted");
+            click("net.phraseClear");
+            logos.debugLog = false;
+            host.app.resumeJobs();
+            tryVerify(function () { return !host.app.qtDebugLog; }, 2000);
+            verify(!el("net.qtlog").visible);
         }
         function openWithoutWait() {
             el("net.address").text = "https://n.example";
