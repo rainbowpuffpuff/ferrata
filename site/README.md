@@ -122,6 +122,6 @@ the tables of prose (milestones, what is not done, a run's Sepolia transactions)
 timeline one cell, then one row, per milestone with its weeks. `test_ui.py` checks the layout at 320, 375, 768, 1024,
 1450 and 1920 px, light and dark, with the live readings answered from fixtures (one fact with a long `statement`, "Full
 values" open): no sideways scroll, no text over text or out of its box in the hero, nothing wider than its card in
-Live, no box clipping its text; and the testers' page at the same widths: its links from the build page's header and
-hero, no sideways scroll, nothing wider than the screen, no table scrolling, no box clipping its text, and the page
+Live, no box clipping its text; and the testers' page at the same widths and themes: its links from the build page's
+header and hero, no sideways scroll, nothing wider than the screen, no table scrolling, no box clipping its text, and the page
 whole without JavaScript (it has none).

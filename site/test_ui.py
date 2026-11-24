@@ -19,8 +19,9 @@ are long hex words, /status/programs.json and /faucet). Checks:
     summary no piece of text overlaps another and each stays inside its card, chip or bar part; no Live card has
     content wider than the card; no box clips its text;
   - the testers' page (testers/): linked from the build page's header and hero at every width; seven steps, the
-    bridge's four, the report form's link; no script at all, so the same without JavaScript; at the five widths it
-    does not scroll sideways, nothing in it is wider than the screen, no table scrolls and no box clips its text;
+    bridge's four, the report form's link; no script at all, so the same without JavaScript; at the six widths, light
+    and dark, it does not scroll sideways, nothing in it is wider than the screen, no table scrolls and no box clips
+    its text;
   - no script error on any of these pages.
 
 Usage: python3 site/test_ui.py [BUNDLE_DIR]  (exit 0 pass, 1 fail, 77 when Playwright with Chromium is not installed)
@@ -272,18 +273,18 @@ def main():
 
         # The testers' page: its links from the build page, its steps, no script; the layout at every width
         report = "https://github.com/rainbowpuffpuff/ferrata/issues/new?template=tester-report.yml"
-        for width in WIDTHS:
-            tp = page(width=width, height=900)
+        for width, scheme in [(w, s) for w in WIDTHS for s in ("light", "dark")]:
+            tp = page(width=width, height=900, scheme=scheme)
             tp.goto(base, wait_until="load")
             for sel, where in ((".top .top-cta", "header"), (".hero .testers-cta a", "hero")):
                 link = tp.locator(sel)
                 check(link.count() == 1 and link.is_visible() and link.get_attribute("href") == "testers/",
-                      f"{width} px: the build page's {where} shows no link to testers/")
+                      f"{width} px {scheme}: the build page's {where} shows no link to testers/")
             tp.locator(".top .top-cta").click()
             tp.wait_for_load_state("load")
-            check(tp.url == base + "testers/", f"{width} px: the header's link leads to {tp.url}")
+            check(tp.url == base + "testers/", f"{width} px {scheme}: the header's link leads to {tp.url}")
             for what in tp.evaluate(TESTERS_LAYOUT):
-                problems.append(f"testers/ at {width} px: {what}")
+                problems.append(f"testers/ at {width} px {scheme}: {what}")
             tp.context.close()
         tp = page(js=False)
         tp.goto(base + "testers/", wait_until="load")

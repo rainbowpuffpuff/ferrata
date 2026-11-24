@@ -490,10 +490,22 @@ dialog.sheet[open] { display: flex; }
 .lede-wide { max-width: none; margin-bottom: .7rem; }
 .rq-block .more p { color: var(--ink); font-size: .95rem; }
 /* ---- The testers' start page (/testers/) and its links from the build page's header and hero */
-.top-cta { margin-left: auto; flex: none; padding: .32rem .75rem; border-radius: 999px; background: var(--accent); color: var(--plane);
-  text-decoration: none; font-weight: 650; font-size: .9rem; white-space: nowrap; }
-.top-cta:hover { filter: brightness(1.08); }
+.top nav a.top-cta { margin-right: .3rem; padding: .35rem .75rem; border-radius: 999px; background: var(--accent); color: var(--plane);
+  font-weight: 650; }
+.top nav a.top-cta:hover { background: var(--accent); color: var(--plane); filter: brightness(1.08); }
+.top nav a.top-cta:focus-visible { outline: 2px solid var(--plane); outline-offset: -4px; }
 @media (max-width: 560px) { .top-cta-more { display: none; } }
+/* The testers' page has no script to scroll a focused link into view: under 900 px its five links wrap instead of
+   scrolling, and its header stays at the top of the page rather than following it */
+@media (max-width: 900px) {
+  .top-wrap { position: static; }
+  .top-wrap nav { overflow: visible; -webkit-mask-image: none; mask-image: none; }
+  .top-wrap nav ul { flex-wrap: wrap; white-space: normal; width: auto; padding-right: 0; }
+}
+@media (max-width: 560px) {
+  .top-wrap .top-in { flex-wrap: wrap; row-gap: 0; padding-top: .35rem; padding-bottom: .35rem; }
+  .top-wrap nav { flex-basis: 100%; margin-left: -.6rem; }
+}
 .testers-cta { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; max-width: 76ch; margin: -.4rem 0 1.4rem;
   padding: .55rem .9rem; background: var(--surface); border: 1px solid var(--hair); border-left: 4px solid var(--accent);
   border-radius: var(--r); }

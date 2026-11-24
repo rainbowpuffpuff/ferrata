@@ -69,7 +69,7 @@ the page works under any host name. -->
 <li><b>Burn.</b> Under “Burn to Ethereum”, pick 0.001 ETH. Leave the recipient empty to use your MetaMask address. Press “Review the burn”, check the address character by character, then “Sign and burn”.
 <span class="t-ok"><b>You should see</b> “Burned 0.001 ETH in LEZ block N (burn counter i …)”, with the release command.</span></li>
 <li><b>Release on Sepolia (command line).</b> Not in the web wallet yet, and the hardest step: it needs the <code>ferrata</code> tool built for this network (<a href="{{src:deploy/testnet/cli-rc3}}">deploy/testnet/cli-rc3/</a>), your phrase on your own computer, and a Groth16 proof of the release. You can make that proof with RISC Zero’s prover on an x86 computer with Docker; this network’s GPU prover can make it too, but today only its operator can reach it.
-<span class="t-ok"><b>You should see</b> the vault’s Release event pay your address 0.000997 ETH: 0.001 less its relay fee (0.2 %) and checkpoint fee (0.1 %).</span>
+<span class="t-ok"><b>You should see</b> the vault’s Release event pay your address 0.000997 ETH: 0.001 less its relay fee (0.2 %) and checkpoint fee (0.1 %), as the first release here did.</span>
 <!-- source: vault/script/DeployVault.s.sol | /// @dev ETH: 0.001, 0.01, 0.1 ETH; relay fee 0.2% and checkpoint fee 0.1% of each; LEZ unit 10^12 wei. -->
 <!-- source: vault/script/DeployVault.s.sol | _three(2e12, 2e13, 2e14), -->
 <!-- source: vault/script/DeployVault.s.sol | _three(1e12, 1e13, 1e14), -->
@@ -84,7 +84,8 @@ This is the least-tested step: tell us where it stops.</li>
 
 <section class="wrap band" id="bridge-times" aria-labelledby="h-times">
 <h2 id="h-times">How long the bridge takes</h2>
-<p class="lede">Expected times come from the code and the deployment’s configuration; measured ones are from the first deposit and burn on this network, on 23 and 24 November 2026 (UTC).</p>
+<p class="lede">Expected times come from the code and the deployment’s configuration; measured ones are from the first deposit, burn and release on this network, on 23 and 24 November 2026 (UTC).</p>
+<!-- measured: the operator's notes (not in the repository), for now: their record will be e2e/runs/live-roundtrip-2026-11-24/. -->
 <div class="scroll"><table class="stack t-table">
 <caption>The bridge’s stages, one deposit there and back</caption>
 <thead><tr><th scope="col">Stage</th><th scope="col">Expected</th><th scope="col">Measured on this network</th></tr></thead>
@@ -93,13 +94,13 @@ This is the least-tested step: tell us where it stops.</li>
 <td data-label="Expected">13–19 min</td>
 <!-- source: docs/traceability.md | Ethereum finality (13–19 min, *estimate*) -->
 <td data-label="Measured">19 min: deposited 16:12, final 16:29, recorded on LEZ 16:30</td></tr>
-<!-- measured: 23 Nov 2026, the operator's log of the live network (not in the repository); the deposit is Sepolia tx 0x44709f7c31561f1682b67b95a1a01b774246fcdcbdb4f049d482e8284857e9e1 in block 12,196,757 (16:12 UTC); Sepolia finalized past it at 16:29; the light client's record of slot 11,643,072 was applied in LEZ block 2271 at 16:30:48. -->
+<!-- measured: 23 Nov 2026, the operator's notes (round 6); the deposit is Sepolia tx 0x44709f7c31561f1682b67b95a1a01b774246fcdcbdb4f049d482e8284857e9e1 in block 12,196,757 (16:12 UTC); Sepolia finalized past it at 16:29; the light client's record of slot 11,643,072 was applied in LEZ block 2271 at 16:30:48. -->
 <!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | "block": 12196757, -->
 <tr><th scope="row">The deposit is imported on LEZ</th>
 <td data-label="Expected">when you claim, the wallet imports it itself; the network also imports every 10 min</td>
 <!-- source: deploy/testnet/host/systemd/ferrata-bridge-import.timer | OnUnitInactiveSec=10min -->
 <td data-label="Measured">21 min after the deposit (16:33)</td></tr>
-<!-- measured: 23 Nov 2026: ImportRoot applied in LEZ block 2278 (tx f2fb461e534c17fbcca0de06ff8091542744bbfb7aee27d641e72bfc1213b1e3), confirmed 16:33 UTC. -->
+<!-- measured: 23 Nov 2026, the operator's notes (top section, round 6): ImportRoot applied in LEZ block 2278 (tx f2fb461e534c17fbcca0de06ff8091542744bbfb7aee27d641e72bfc1213b1e3), confirmed 16:33 UTC. -->
 <!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | "lez_block": 2278, -->
 <tr><th scope="row">Claim, then burn</th>
 <td data-label="Expected">one LEZ block each, a block every 10 s</td>
@@ -112,24 +113,26 @@ This is the least-tested step: tell us where it stops.</li>
 <!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | A request is refused while the last one is not final -->
 <!-- source: deploy/testnet/README.md | signs the node's final tier every 60 s. -->
 <td data-label="Measured">on Sepolia 25 min after the burn (20:38 to 21:03)</td></tr>
-<!-- measured: 23 Nov 2026: the burn in LEZ block 3749 at 20:38:08 UTC; the proof requested 20:41:25; submitCandidate in Sepolia block 12,198,162 at 21:03:24 (tx 0xcaa00efa1ec41cf7dfe7ebc20e35368784535fc0e6ec49934644148e13aea0d1). -->
+<!-- measured: 23 Nov 2026, the operator's notes (top section, round 7): the burn in LEZ block 3749 at 20:38:08 UTC; the proof requested 20:41:25; submitCandidate in Sepolia block 12,198,162 at 21:03:24 (tx 0xcaa00efa1ec41cf7dfe7ebc20e35368784535fc0e6ec49934644148e13aea0d1). -->
 <!-- source: deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt | the relayer sent submitCandidate (block 12,198,162, 21:03:24Z) -->
 <tr><th scope="row">The vault’s window, then the finalize</th>
 <td data-label="Expected">60 min after the checkpoint is submitted</td>
 <!-- source: vault/deployments/sepolia-31-B.json | "delta": 3600, -->
 <td data-label="Measured">the first checkpoint was finalized on 24 Nov at 08:30, about 10½ h late: the relayer had stalled (fixed)</td></tr>
-<!-- measured: due 23 Nov 2026 22:03:24 UTC; finalizeAttested in Sepolia block 12,201,456 at 24 Nov 08:30:12 (tx 0x643d0c687b782aad00618d0d50bbaa3cd6aaa01908e0fcf2f2e724b09c5390f8), after the relayer's fix. -->
+<!-- measured: the operator's notes (top section, round 11): due 23 Nov 2026 22:03:24 UTC; finalizeAttested in Sepolia block 12,201,456 at 24 Nov 08:30:12 (tx 0x643d0c687b782aad00618d0d50bbaa3cd6aaa01908e0fcf2f2e724b09c5390f8), after the relayer's fix. -->
 <!-- source: deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt | Fix: the inbox inside the relayer's directory (one mount), a start check. -->
 <tr><th scope="row">Release delay</th>
 <td data-label="Expected">2 min after the finalize</td>
 <!-- source: vault/script/DeployVault.s.sol | releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)), -->
-<td data-label="Measured">not measured here yet</td></tr>
+<td data-label="Measured">2 min, the vault’s own setting: finalized 08:30:12, releasable from 08:32:12</td></tr>
+<!-- measured: 24 Nov 2026, the operator's notes (top section): finalizeAttested in Sepolia block 12,201,456 at 08:30:12 UTC; the vault's release delay 120 s (ferrata status, 23 Nov), so the burn was releasable from 08:32:12. -->
 <tr><th scope="row">The release: proof and transaction</th>
 <td data-label="Expected">the proof from your phrase, 18–46 s on our computers; its Groth16 form, 78–80 s on x86 with Docker; then one Sepolia transaction</td>
 <!-- source: docs/performance.md | **46.0 s** at 8 CPUs, **26.4–27.0 s** at 16 -->
 <!-- source: docs/performance.md | the release's succinct proof **31.7 s** / **18.4 s** -->
 <!-- source: docs/performance.md | | Groth16 wrap of a release | 77.5–79.9 s; about 7.3 GiB; seal 260 B; **x86 only** | -->
-<td data-label="Measured">not measured here yet</td></tr>
+<td data-label="Measured">on the network’s GPU prover: the input queued at 09:01:55, its Groth16 proof 425.6 s, the release on Sepolia at 09:09:24 (7½ min in all); the recipient got 0.000997 ETH</td></tr>
+<!-- measured: 24 Nov 2026, the operator's notes (top section, "Release (Sepolia)"), for now; the record will be e2e/runs/live-roundtrip-2026-11-24/: the holder's release input queued on the host at 09:01:55 UTC; release_31 proven (Groth16) on the network's GPU prover in 425.6 s; the relayer's release, tx 0x48b78ad406eae9c05eb665a1ce06e205cacc45f5905769425b4abbc700886f65, in Sepolia block 12,201,646 at 09:09:24; the recipient's balance +0.000997 ETH (0.001 less the relay fee 0.000002 and the checkpoint fee 0.000001). -->
 </tbody></table></div>
 </section>
 
@@ -192,6 +195,7 @@ This is the least-tested step: tell us where it stops.</li>
 
 <h3>Getting Sepolia ETH</h3>
 <p>The smallest deposit is 0.001 ETH, plus its fee and the gas. Several public Sepolia faucets exist, for example Google Cloud’s Web3 faucet, Alchemy’s, QuickNode’s and pk910’s proof-of-work faucet. We do not run or vouch for any of them, and their terms change.</p>
+<!-- checked 24 Nov 2026, a plain GET of each public page (no sign-up): Google Cloud's "Ethereum Sepolia Faucet", Alchemy's "Ethereum Sepolia Faucet | Get ETH Tokens", QuickNode's "Ethereum Sepolia Faucet - Free Testnet ETH Tokens", pk910's "Sepolia PoW Faucet"; each answered 200. -->
 
 <h3>Browsers, as tested</h3>
 <ul class="t-list">

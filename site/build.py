@@ -746,10 +746,10 @@ def render_index(site, model):
     parts.append('<a class="skip" href="#main">Skip to content</a>')
     parts.append('<header class="top"><div class="wrap top-in"><a class="brand" href="#main" aria-label="Ferrata, top of the page">'
                  '<img src="assets/logo.svg" alt="" width="28" height="28"><span>Ferrata</span></a>'
-                 '<nav aria-label="Sections"><ul>' +
-                 "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav>"
-                 f'<a class="top-cta" href="{TESTERS_DIR}/">Testers<span class="top-cta-more">: start here</span></a>'
-                 "</div></header>")
+                 # The testers' page first: in view at every width, and the sections keep the nav's whole width
+                 f'<nav aria-label="Sections"><ul><li><a class="top-cta" href="{TESTERS_DIR}/">Testers<span '
+                 'class="top-cta-more">: start here</span></a></li>' +
+                 "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav></div></header>")
     parts.append('<main id="main">')
 
     # Hero
@@ -1404,7 +1404,7 @@ def render_testers(site, model):
     nav = [("steps", "What to try"), ("bridge-times", "Bridge times"), ("limits", "Limits"), ("safety", "Safety"),
            ("report", "Report")]
     st = model["stamp"]
-    header = ('<a class="skip" href="#main">Skip to content</a><header class="top"><div class="wrap top-in">'
+    header = ('<a class="skip" href="#main">Skip to content</a><header class="top top-wrap"><div class="wrap top-in">'
               '<a class="brand" href="../" aria-label="Ferrata, the build page"><img src="../assets/logo.svg" alt="" '
               'width="28" height="28"><span>Ferrata</span></a><nav aria-label="Sections"><ul>'
               + "".join(f'<li><a href="#{k}">{h(v)}</a></li>' for k, v in nav) + "</ul></nav></div></header>")
