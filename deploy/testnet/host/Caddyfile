@@ -2,6 +2,8 @@
 # a-b-c-d.sslip.io); {{HOST}}: the sslip.io name. TLS by Let's Encrypt for each.
 #
 #   /                    the bid's build page (the site bundle's build/: README, Artifacts)
+#   /testers/            the testers' start page (the same bundle)
+#   /llms.txt            an index of the site for language models (the same bundle); /agents.md -> /AGENTS.md
 #   /explorer/ /status/ /agents/ /registry/ /AGENTS.md /config.json /idl/   the explorer bundle (its explorer/)
 #   /wallet/             the web wallet (its wallet/), its own strict CSP
 #   /rpc /faucet         the gateway (JSON-RPC allowlist, per-IP limits, CORS; faucet)
@@ -89,6 +91,10 @@
 	redir /agents /agents/ 308
 	redir /registry /registry/ 308
 	redir /wallet /wallet/ 308
+	redir /testers /testers/ 308
+	# Caddy's path matcher ignores case (it would match /AGENTS.md too, a loop): a case-sensitive regexp for the redirect
+	@agentsmd path_regexp ^/agents\.md$
+	redir @agentsmd /AGENTS.md 308
 
 	handle /wallet/* {
 		@hidden path /wallet/test/* /wallet/vendor/build.sh /wallet/vendor/package.json /wallet/vendor/package-lock.json /wallet/vendor/entry.js /wallet/README.md
@@ -102,6 +108,14 @@
 	}
 	handle /AGENTS.md {
 		header Content-Type "text/markdown; charset=utf-8"
+		header Access-Control-Allow-Origin *
+		header Cache-Control "no-cache"
+		file_server {
+			root /srv/ferrata/www
+		}
+	}
+	handle /llms.txt {
+		header Content-Type "text/plain; charset=utf-8"
 		header Access-Control-Allow-Origin *
 		header Cache-Control "no-cache"
 		file_server {
@@ -134,7 +148,7 @@
 	handle {
 		header /img/* Cache-Control "public, max-age=31536000, immutable"
 		header /assets/* Cache-Control "max-age=300"
-		@nocache path / /index.html /evidence.html /evidence.json /build.json /config.json
+		@nocache path / /index.html /evidence.html /evidence.json /build.json /config.json /testers/ /testers/index.html
 		header @nocache Cache-Control "no-cache"
 		header /idl/* Access-Control-Allow-Origin *
 		file_server {

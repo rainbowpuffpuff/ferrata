@@ -26,8 +26,17 @@
 //!                   four are sent back to back and must apply in one block; the control's second transaction from
 //!                   the same snapshot must be refused (src/block.rs; --consumer-bin)
 //!   submit-proven   submit a private update proven elsewhere (--tx FILE, from prove-from-transcript)
+//!   fresh-follow, fresh-scenarios, fresh-consume, fresh-private
+//!                   the run on fresh Sepolia data (--fresh-checkpoint DIR --fresh-attest DIR, fetched when the run
+//!                   starts; src/fresh.rs): instance A of `main` follows Sepolia from a recent checkpoint; the twin's
+//!                   refusals on that data; the attestation consumed publicly (root `Attest`, the reference consumer's
+//!                   `CallAttest` and `Claim`) and privately (`AttestPrivately`, a real proof; --consumer-bin)
 //!   export          write the records into --out
 //! Without a sequencer:
+//!   fresh-check     the fresh data natively (--fresh-checkpoint, --fresh-attest; --out FILE for its JSON): exit 3
+//!                   when its finality update does not advance the store (fetch it again after the next epoch), 4
+//!                   when the bootstrap or the finalized block is older than its bound (Sepolia not finalizing, or a
+//!                   stale endpoint)
 //!   inbound-check   the inbound chain natively (--program-bin, --bridge-bin, --chain ...)
 //!   inbound-plan    the inbound run's configuration identity (--attest-bin, --bridge-bin, --vault HEX)
 //!   verify          re-check a recorded run in --dir, fully if --binary FILE ... are given
@@ -40,7 +49,7 @@
 //! --program-bin FILE, --scripted-bin FILE, --fixtures DIR, --harness-results DIR,
 //! --sequencer-log FILE, --gas-limit N (default 4000000), --stored-tx FILE, --dir DIR,
 //! --binary FILE (repeatable), --transcript FILE, --tx-out FILE, --tx FILE, --consumer-bin FILE,
-//! --attest-fixture DIR, --other-fixture DIR, --private-account N,
+//! --attest-fixture DIR, --other-fixture DIR, --private-account N, --fresh-checkpoint DIR, --fresh-attest DIR,
 //! --wait-final yes|no (default yes: a transaction is settled once its block is final on Bedrock;
 //! no for LEZ's mock Bedrock, where no block becomes final).
 
@@ -49,6 +58,7 @@ mod attest;
 mod block;
 mod blocklog;
 mod follower;
+mod fresh;
 mod inbound;
 mod keys;
 mod live;
@@ -132,6 +142,8 @@ struct Run {
     bridge: Option<GuestBinary>,
     /// The reference consumer (`--consumer-bin`), for `attest-private`.
     consumer: Option<GuestBinary>,
+    /// The fresh Sepolia data (`--fresh-checkpoint`, `--fresh-attest`), for the `fresh-*` phases.
+    fresh: Option<fresh::Fresh>,
     payers: Vec<AccountId>,
 }
 
@@ -178,9 +190,28 @@ async fn open(args: &Args, phase: &str) -> Result<Run> {
     };
     // This driver sends through LEZ's wallet directly too: a sequencer not on this machine only as `check_send` allows.
     crate::live::check_send(&opts.rpc)?;
+    let fresh = fresh_data(args)?;
     let mut live = Live::open(opts, &keys).await?;
     live.phase = phase.to_string();
-    Ok(Run { live, fixtures: fixtures(args)?, program, scripted, bridge, consumer, payers: payer_keys.iter().map(account_of).collect() })
+    Ok(Run {
+        live,
+        fixtures: fixtures(args)?,
+        program,
+        scripted,
+        bridge,
+        consumer,
+        fresh,
+        payers: payer_keys.iter().map(account_of).collect(),
+    })
+}
+
+/// The fresh Sepolia data, if both directories are given.
+fn fresh_data(args: &Args) -> Result<Option<fresh::Fresh>> {
+    match (args.get("fresh-checkpoint"), args.get("fresh-attest")) {
+        (Some(c), Some(a)) => Ok(Some(fresh::Fresh::load(Path::new(c), Path::new(a))?)),
+        (None, None) => Ok(None),
+        _ => bail!("--fresh-checkpoint and --fresh-attest go together"),
+    }
 }
 
 async fn info(run: &Run) -> Result<()> {
@@ -242,6 +273,11 @@ fn instances(run: &Run) -> Vec<Instance> {
         Instance::new("C (twin deployment, another chain's genesis_validators_root)", run.twin(), other, checkpoint),
         Instance::new("D (twin deployment, genesis time ten years later)", run.twin(), late, checkpoint),
     ];
+    if let Some(fresh) = &run.fresh {
+        for which in ["A", "B", "C", "D"] {
+            all.push(fresh.instance(which, run.main(), run.twin()));
+        }
+    }
     if run.consumer.is_some() {
         if let Ok(fx) = attest::AttestFixture::load(&attest_fixture_dir(None)) {
             all.push(Instance::new("attest-mainnet (main deployment, the attestation fixture)", run.main(), mainnet_config(2), fx.checkpoint));
@@ -421,6 +457,23 @@ async fn run(args: Args) -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&ids)?);
             return Ok(());
         }
+        "fresh-check" => {
+            let data = fresh::Fresh::load(&args.path("fresh-checkpoint")?, &args.path("fresh-attest")?)?;
+            match fresh::check(&data)? {
+                Ok(summary) => {
+                    let text = serde_json::to_string(&summary)?;
+                    if let Some(out) = args.get("out") {
+                        fs::write(out, format!("{}\n", serde_json::to_string_pretty(&summary)?))?;
+                    }
+                    println!("{text}");
+                    return Ok(());
+                }
+                Err(refused) => {
+                    eprintln!("fresh-check: {}", refused.message());
+                    std::process::exit(refused.exit_code());
+                }
+            }
+        }
         "describe-tx" => {
             for path in args.all("tx") {
                 println!("{}\t{}", path.display(), private::describe_private(&path)?);
@@ -482,6 +535,27 @@ async fn run(args: Args) -> Result<()> {
             let index = args.get("private-account").map(str::parse).transpose()?.unwrap_or(1);
             let dir = attest_fixture_dir(args.get("attest-fixture"));
             attest::attest_private(&mut run.live, &program, &consumer, &dir, payer, index).await?;
+        }
+        "fresh-follow" | "fresh-scenarios" | "fresh-consume" | "fresh-private" => {
+            let data = run.fresh.take().ok_or_else(|| anyhow!("--fresh-checkpoint and --fresh-attest are required"))?;
+            let (main, twin, scripted) = (run.main(), run.twin(), run.scripted_at());
+            let payer = run.payers[1];
+            let result = match args.command.as_str() {
+                "fresh-follow" => fresh::follow(&mut run.live, main, twin, &data, payer).await,
+                "fresh-scenarios" => fresh::scenarios(&mut run.live, main, twin, scripted, &data, payer).await,
+                "fresh-consume" => {
+                    let consumer = run.consumer.clone().ok_or_else(|| anyhow!("--consumer-bin is required"))?;
+                    fresh::consume(&mut run.live, main, twin, &consumer, &data, payer).await
+                }
+                _ => {
+                    let consumer = run.consumer.clone().ok_or_else(|| anyhow!("--consumer-bin is required"))?;
+                    let program = run.program.clone();
+                    let index = args.get("private-account").map(str::parse).transpose()?.unwrap_or(1);
+                    fresh::private(&mut run.live, main, twin, &program, &consumer, &data, payer, index).await
+                }
+            };
+            run.fresh = Some(data);
+            result?;
         }
         #[cfg(feature = "lez-rc3")]
         "attest-block" => {

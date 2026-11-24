@@ -1,0 +1,48 @@
+{
+  "fork": {
+    "block": 12203095,
+    "hash": "0x0a100fa0511b0abca17d306e02a437ff3499fddfd0ae05ba7fff02c04c308731",
+    "time": "2026-11-24T14:12:24Z",
+    "ageS": 957,
+    "maxAgeS": 3600,
+    "rpc": "https://ethereum-sepolia-rpc.publicnode.com"
+  },
+  "standInSlot": 11649088,
+  "vault": "0x67aC447386F2ea14eF2Fbf55eF33Ce1d8F386516",
+  "configId": "0xd38bff1d95d9441377a6f2ff257f4b5f060614214d5af3f196b8a39f0b8311e6",
+  "deposit": {
+    "tx": "0x5bc73d2a3ae9dc9a0fae4d10525801ae2d42741b19be27658254ef73ca7ca200",
+    "denominationWei": "1000000000000000"
+  },
+  "claim": {
+    "tx": "ad02e144dede462189601665e2bbab5e02ef6a3315636e5c9a53fdfdc1775ea2",
+    "holdingAfterClaim": "1000000000000000"
+  },
+  "burn": {
+    "tx": "5f854d592a8e5e1dba1b86272c1db93d10ed081921e35970773be3e747b795e7",
+    "recipient": "0xC5318b5f799EDDec797e4fF8502EF6f69a2398bC",
+    "holdingAfterBurn": "0"
+  },
+  "checkpoint": {
+    "burnRoot": "0x5ec74bb264f97bbc0dc38c1dc5fef1db6d143b7682043bcb6c73d70a5286fecc",
+    "burnCount": "1",
+    "newState": "0x30bd250244169c2c23da06e6f29f79c2e1036acf843eef6dcbe8cb152d6162e4",
+    "tipId": "30",
+    "vaultFinalState": "0x30bd250244169c2c23da06e6f29f79c2e1036acf843eef6dcbe8cb152d6162e4",
+    "burnRootAccepted": true
+  },
+  "release": {
+    "tx": "0x83961a9bea86f95704ad048fd749dc4bfff3eef44e4fe36d972ffce7fafa5041",
+    "amountWei": "1000000000000000",
+    "relayFeeWei": "2000000000000",
+    "creditedFeesWei": "1000000000000",
+    "recipientBalanceWei": "997000000000000",
+    "nullifier": "0x7c3fea11dd42d7a42f76c0614c661606aa58fb09a8f8cafff2c271907c0068c0",
+    "replay": {
+      "callExit": 1,
+      "revertSelector": "0xcad2ae02",
+      "nullifierUsed": true
+    },
+    "replayRefused": true
+  }
+}

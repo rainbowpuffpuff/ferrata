@@ -11,11 +11,12 @@ cancel/replace one another, while cancelling superseded pending and in-progress 
 `workflow_dispatch`, runs `lez-harness-full` unsharded once as a backstop; the row checker counts it as manual, not as
 push/PR CI. [`macos.yml`](../../.github/workflows/macos.yml), on pushes to `main` and by hand, runs the light crates
 a user's machine runs and builds five of the six modules' `.lgx` for macOS (arm64) on `macos-15` (RFP-022 S.2; the
-updater's module builds for x86-64 Linux only). [`sequencer.yml`](../../.github/workflows/sequencer.yml) runs the
-attestation CLI against a sequencer (`scripts/ci/sequencer-attest.sh`), started by hand only (`workflow_dispatch`):
-the row checker counts it as manual, not as CI. No job needs a secret, and no job sends anything to a public network: the
-network is used only to fetch dependencies (crates, Foundry libraries, RISC Zero's toolchains, the pinned
-upstream sources and spec vectors).
+updater's module builds for x86-64 Linux only). [`sequencer.yml`](../../.github/workflows/sequencer.yml), on pushes to `main`, daily at 05:43 UTC and by hand, runs two
+jobs against LEZ's own sequencer built from source in standalone mode: `sequencer-attest` (RFP-021 S.2) and
+`sequencer-roundtrip` (RFP-022 R.10), each on Sepolia data read when it runs (rows below). No job needs a secret, and
+no job sends anything to a public network: the network is used to fetch dependencies (crates, Foundry libraries, RISC
+Zero's toolchains, the pinned upstream sources and spec vectors) and, in `sequencer.yml` only, to read Sepolia from
+public endpoints.
 
 Prototype evidence for a grant proposal. **Not audited. Not for production.**
 
@@ -39,6 +40,8 @@ Prototype evidence for a grant proposal. **Not audited. Not for production.**
 | `names` | [`scripts/ci/names.sh`](../../scripts/ci/names.sh) `build`, then `scripts/ci/names.sh`: the test network's names program (not an RFP requirement; [`names/README.md`](../../names/README.md)): its wire crate's tests, the harness suites `names` and `names_review` (feature `names`, feature-gated in the shard map; RISC Zero dev mode), the IDL check (`idl/tools/check_names_idl.py`) and the JS resolver's and the CLI's tests (`names/js/test/`) | Rust 1.93 and 1.98.1, RISC Zero's toolchains, the upstream sources, Node 22.7+ or 20.19+ (otherwise Node 22.12.0 from nodejs.org, checked against its SHASUMS256) | a test or the IDL check fails, or the harness run changes `lez/results/names-vectors.json` |
 | `msg` | the test network's messages programs (not an RFP requirement; [`docs/design/messages.md`](../design/messages.md)): `node --test deploy/testnet/web/msg/test/*.test.mjs` (the JS library and CLI, an implementation sharing no code with it against OpenSSL's ML-KEM-768 values, the docs' own check), `python3 -I idl/tools/msg_idl.py --check`, the wire crates' tests (`cargo test -p ferrata-lez-msg-wire -p ferrata-lez-msg-v2-wire`) and the harness suites `messages`, `messages_v2` and `messages_findings` (feature `msg`, feature-gated in the shard map; RISC Zero dev mode) | Node 20 or later, Python, Rust 1.93 and 1.98.1, RISC Zero's toolchains, the upstream sources | a test fails, or the committed IDLs are not what `idl/tools/msg_idl.py` writes |
 | `monitor` | `cargo test` in `monitor/`, then [`monitor/tests/anvil-e2e.sh`](../../monitor/tests/anvil-e2e.sh): the watchers' rehearsal on a local anvil chain (wrong candidates cancelled in time, a SIGKILL and restart, a lost state file, a watcher without gas, a clean shutdown) | Rust 1.93, Foundry 1.3.6, the vault's libraries | a monitor test or a rehearsal scenario fails |
+| `sequencer-attest` | In [`sequencer.yml`](../../.github/workflows/sequencer.yml): [`scripts/ci/sequencer-attest.sh`](../../scripts/ci/sequencer-attest.sh), one stage per step: a recent finalized Sepolia checkpoint from public beacon endpoints; the guests and LEZ v0.4.0-rc3's standalone sequencer and the live driver, built from source; the newest finality update and the facts under its block, checked natively and for age; the run (deploy, instance A follows Sepolia, the twin's refusals, the attestation consumed publicly and, with a real proof the sequencer verifies, privately); every outcome checked, by exact counts; a job summary | Rust 1.93 and 1.98.1, RISC Zero (rzup), the upstream sources, libpcsclite, protoc; Sepolia's public endpoints | a fetch finds no data, or only data older than its bound (nothing recorded is used instead), a build fails or links native code from elsewhere than the checked archives, the private attestation is left out, or any transaction's outcome, image id or instance root is not the designed one |
+| `sequencer-roundtrip` | In [`sequencer.yml`](../../.github/workflows/sequencer.yml): [`scripts/ci/sequencer-roundtrip.sh`](../../scripts/ci/sequencer-roundtrip.sh): LEZ v0.4.0-rc1's standalone sequencer and, while it runs, anvil forking Sepolia at its finalized block, the vault (rule B, the mock verifier), deposit, import, a plaintext claim, a public burn, rule (B) checkpoint (`ci_zone`) and release, each step asserted (the round trip's public variant; the private claim and burn are not in CI) ([`scripts/ci/sequencer-roundtrip-hook.sh`](../../scripts/ci/sequencer-roundtrip-hook.sh)) | as `roundtrip`, plus a public Sepolia RPC for the fork | a build fails or links native code from elsewhere than the checked archives, no public Sepolia RPC answers with a finalized block under an hour old, or any step of the round trip is not as designed |
 
 `witness-independence`, `roundtrip` and `vault` were added on 11 November 2026: the witness-independence check was
 a step of `bridge/scripts/check.sh` only, no end-to-end run was in CI, and the vault's suites ran by hand. On the
@@ -129,7 +132,8 @@ Results and timings: `e2e/ci/RESULTS.md`.
 
 ## Not in CI
 
-Real proofs (CPU and GPU), the Groth16 wrap (Docker), runs against Sepolia or a fork of it (the relayer's
+Real proofs (CPU and GPU) other than `sequencer-attest`'s private attestation, the Groth16 wrap (Docker), runs against
+Sepolia or a fork of it other than `sequencer.yml`'s two jobs (the relayer's
 `tests/relayer_fork.rs`, `monitor/tests/fork-live-vault.sh`), the benches, fuzzing, mutation testing, the LEZ
 harness's feature builds (`residue-experimental`, `bridge-next`, `program-class`), `bridge/scripts/check.sh`'s
 other steps and `checkpoint/`'s suites: their READMEs give the commands, and `docs/EVIDENCE.md` where each ran.

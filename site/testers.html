@@ -1,0 +1,256 @@
+<!--# The testers' start page. site/build.py wraps this body in the build page's header, footer and style and writes
+deploy/testnet/web/build/testers/index.html (served at /testers/). Comments that start with "#" (like this one) stay
+here; every other comment is published with the page.
+
+Every number names where it comes from, in a comment just before or after it:
+  source: PATH | TEXT     PATH is a tracked file that holds TEXT (whitespace aside); site/test_site.py checks both,
+                          so a change to the code or the configuration makes this page fail until it is updated;
+  measured: ...           read on the live network, with the public transactions that date it.
+Placeholders: {{src:PATH}} (PATH on GitHub, pinned to its last commit), {{report}} (a new issue with the tester-report
+form), {{security}} (a private vulnerability report). Links to the host's own pages are root-relative (/wallet/), so
+the page works under any host name. -->
+<section class="hero wrap" aria-labelledby="h-top">
+<p class="eyebrow">Ferrata · the test network</p>
+<h1 id="h-top">Testers: start here</h1>
+<p class="lede">This is a LEZ v0.4.0-rc3 network that we run for the Ferrata bid, bridged to Ethereum’s Sepolia test network; it is not Logos’s LEZ testnet 0.4, which is not released. Nothing here is audited: its tokens are test tokens with no value, and the network may be reset.</p>
+<!-- source: deploy/testnet/README.md | **Prototype, unaudited; a test network** (tokens have no value; it may be reset). -->
+<p class="t-alert"><b>Never paste a recovery phrase or a private key anywhere.</b> Read <a href="#safety">Safety</a> before you start.</p>
+<p class="t-agent" id="agents"><b>Testing with an AI agent?</b> Give it <a href="/AGENTS.md">AGENTS.md</a> (also as a page, <a href="/agents/">For agents</a>): the network’s RPC, every method with an example, the programs and the limits. Never give an agent a recovery phrase or a private key: reading needs none, and no page or service here needs one sent to it.</p>
+<!-- source: deploy/testnet/web/explorer/AGENTS.md | **Never put a private key in a prompt.** Do not paste, print, log, commit or send a private key, seed phrase or wallet password: not to this site, not to any agent, chat or issue. -->
+<!-- source: deploy/testnet/web/explorer/AGENTS.md | Reading needs no key and no account -->
+</section>
+
+<section class="wrap band" id="steps" aria-labelledby="h-steps">
+<h2 id="h-steps">What to try, in order</h2>
+<p class="lede">Each step names the page to open and what you should see. If a step does not do what it says, stop there and <a href="#report">tell us</a>. The step numbers are the ones the report form uses.</p>
+<ol class="t-steps">
+<li id="step-wallet"><h3>Create a wallet</h3>
+<p>Open the <a href="/wallet/">wallet</a> and choose “Create a new wallet”. Write the 24 words on paper, tick the box, then pick a passphrase for this browser.</p>
+<p class="t-ok"><b>You should see</b> Home with your account id and a public balance of 0.</p></li>
+
+<li id="step-faucet"><h3>Get test coins from the faucet</h3>
+<p>On Home, press “Get test coins”. The faucet sends 10 LGO, once per account a day.</p>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_AMOUNT": "10000000000", # 10 LGO (10^9 units each) -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_PER_ACCOUNT_SECONDS": "86400", -->
+<p class="t-ok"><b>You should see</b> “Received: your balance is 10 LGO.” within a few seconds (6.5 s when we measured it).</p>
+<!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "faucet_seconds": 6.5, --></li>
+
+<li id="step-transfer"><h3>Send a transfer: public, then private</h3>
+<p><b>Public.</b> Add a second account (“+ New account”; it opens selected). On Receive, press “Copy the code”: an account’s first payment needs its receive code, not only its id. Switch back to the first account; in Send, paste the code into To, enter 1, press “Review”, then “Sign and send”.</p>
+<p class="t-ok"><b>You should see</b> “In block N, applied” within a block or two (a block every 10 s; 8.8 s when we measured it), and both balances change. The fee is a few millionths of an LGO.</p>
+<!-- source: deploy/testnet/README.md | LEZ's `local.json` with 10 s blocks -->
+<!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "send1_seconds_to_block": 8.8, -->
+<!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "send1_fee_atomic": 4352 -->
+<!-- source: deploy/testnet/web/wallet/config.json | "token": { "symbol": "LGO", "decimals": 9 }, -->
+<p><b>Private (optional, command line).</b> The wallet’s Private tab shows your private account and what proving needs. The transfer itself is proven on your own computer with LEZ’s own wallet, from the same phrase: 49.5 s on a GPU, about 15 minutes on 32 CPU threads.</p>
+<!-- source: deploy/testnet/web/wallet/private.js | measured 49.5 s on an L4 GPU, and 887 s for a private update on 32 CPU threads -->
+<p class="t-ok"><b>You should see</b> it in the explorer as a private transaction: only its public parts, no amount and no accounts.</p></li>
+
+<li id="step-names"><h3>Names and messages</h3>
+<p><b>A name.</b> On Home, type a name and press “Claim”. The button then reads “Reveal NAME in N s”, counting down from about 4 minutes; when it reads “Reveal NAME”, press it (within 24 hours). A name lasts 180 days.</p>
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const COMMIT_SLACK_MS = 120_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const MIN_REVEAL_DELAY_MS = 120_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const MAX_REVEAL_WINDOW_MS = 86_400_000; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | async commitCall(signer, name, { salt = newSalt(), nowMs = Date.now() - 30_000 } = {}) { -->
+<!-- source: deploy/testnet/web/wallet/app.js | const left = p.revealFrom + 31000 - Date.now(); -->
+<!-- source: deploy/testnet/web/wallet/app.js | btn.textContent = left > 0 ? `Reveal ${p.name} in ${Math.ceil(left / 1000)} s` : `Reveal ${p.name}`; -->
+<!-- source: deploy/testnet/web/wallet/vendor/names.js | export const TERM_MS = 180 * DAY_MS; -->
+<p class="t-ok"><b>You should see</b> “NAME.lez is yours” and the name on Home.</p>
+<p><b>A message.</b> In Inbox, press “Publish my messaging key” on both accounts, then write from one to the other (by account id, receive code or name). Messages are encrypted, but they stay on a public chain: write test text only.</p>
+<p class="t-ok"><b>You should see</b> the message in the other account’s Inbox.</p></li>
+
+<li id="step-explorer"><h3>Look it up in the explorer</h3>
+<p>Open the <a href="/explorer/">explorer</a> and search for your account id, a transaction hash or <code>@name</code>.</p>
+<p class="t-ok"><b>You should see</b> your account’s transactions of the last 300 blocks (about 50 minutes), each in its block and marked applied; an older one opens by its hash. The explorer recomputes every block’s hash in your browser.</p></li>
+<!-- source: deploy/testnet/web/explorer/config.json | "scan_blocks": 300, -->
+
+<li id="step-bridge"><h3>The bridge: Sepolia to LEZ and back</h3>
+<p>You need MetaMask, or another browser wallet, on Sepolia with a little Sepolia ETH of your own (<a href="#limits">Limits</a>). How long each stage takes: <a href="#bridge-times">the table below</a>.</p>
+<ol class="t-sub" type="a">
+<li><b>Deposit.</b> In the wallet’s Bridge tab, press “Connect your browser wallet”. Pick ETH, 0.001, and “this wallet’s selected public account”; press “Review the deposit”, then “Deposit with my browser wallet”, and confirm in MetaMask.
+<span class="t-ok"><b>You should see</b> “Deposited: leaf N in block M”.</span></li>
+<li><b>Wait for the import, then claim.</b> About 20 minutes later, press “Find my deposits on the vault”, then “Claim on LEZ” (the wallet imports the deposit first if nobody has yet).
+<span class="t-ok"><b>You should see</b> “Claimed in LEZ block N: 0.001 ETH now held by your account on LEZ”.</span></li>
+<li><b>Burn.</b> Under “Burn to Ethereum”, press “Show this account’s bridge holdings”, then pick 0.001 ETH. Leave the recipient empty to use your MetaMask address. Press “Review the burn”, check the address character by character, then “Sign and burn”.
+<span class="t-ok"><b>You should see</b> “Burned 0.001 ETH in LEZ block N (burn counter i …)”, with the release command.</span></li>
+<li><b>Release on Sepolia (command line).</b> Not in the web wallet yet, and the hardest step: it needs the <code>ferrata</code> tool built for this network (<a href="{{src:deploy/testnet/cli-rc3}}">deploy/testnet/cli-rc3/</a>), your phrase on your own computer, and a Groth16 proof of the release. You can make that proof with RISC Zero’s prover on an x86 computer with Docker; this network’s GPU prover can make it too, but today only its operator can reach it.
+<span class="t-ok"><b>You should see</b> the vault’s Release event pay your address 0.000997 ETH: 0.001 less its relay fee (0.2 %) and checkpoint fee (0.1 %), as the first release here did.</span>
+<!-- source: vault/script/DeployVault.s.sol | /// @dev ETH: 0.001, 0.01, 0.1 ETH; relay fee 0.2% and checkpoint fee 0.1% of each; LEZ unit 10^12 wei. -->
+<!-- source: vault/script/DeployVault.s.sol | _three(2e12, 2e13, 2e14), -->
+<!-- source: vault/script/DeployVault.s.sol | _three(1e12, 1e13, 1e14), -->
+This is the least-tested step: tell us where it stops.</li>
+</ol></li>
+
+<li id="step-facts"><h3>Read the latest attested Ethereum facts</h3>
+<p>Open the build page’s <a href="../#live-facts">Live section</a> (it needs JavaScript). The <a href="/status">status page</a> shows how far the network’s Sepolia light client is behind. To attest a fact yourself, use the wallet’s Prove tab.</p>
+<p class="t-ok"><b>You should see</b> recent Sepolia facts (an account or a storage slot at a block), each with the LEZ transaction that attested it, linked to the explorer.</p></li>
+</ol>
+</section>
+
+<section class="wrap band" id="bridge-times" aria-labelledby="h-times">
+<h2 id="h-times">How long the bridge takes</h2>
+<p class="lede">Expected times come from the code and the deployment’s configuration; measured ones are from the first deposit, burn and release on this network, on 23 and 24 November 2026 (UTC). A relayer fault held up the way back, so its times are not typical.</p>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | # live-roundtrip-2026-11-24: the first full round trip on the Ferrata LEZ test network -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | so the outbound timings here are not a measurement -->
+<div class="scroll"><table class="stack t-table">
+<caption>The bridge’s stages, one deposit there and back</caption>
+<thead><tr><th scope="col">Stage</th><th scope="col">Expected</th><th scope="col">Measured on this network</th></tr></thead>
+<tbody>
+<tr><th scope="row">Sepolia finalizes your deposit, and the network’s light client records it</th>
+<td data-label="Expected">13–19 min</td>
+<!-- source: docs/traceability.md | Ethereum finality (13–19 min, *estimate*) -->
+<td data-label="Measured">about 20 min: deposited 16:11:00; at 16:31:22 an import was applied under the light client’s record that covers it</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Deposit | Sepolia 12,196,757 (23 Nov 16:11:00) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "timestamp": 1795450260, -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Fee import | LEZ 2,276 (16:31:22) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | under the attested Sepolia record slot 11,643,072 -->
+<tr><th scope="row">The deposit is imported on LEZ</th>
+<td data-label="Expected">when you claim, the wallet imports it itself; the network also imports every 10 min</td>
+<!-- source: deploy/testnet/host/systemd/ferrata-bridge-import.timer | OnUnitInactiveSec=10min -->
+<td data-label="Measured">21 min after the deposit: its root imported at 16:31:42, sent by the wallet’s own claim flow</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Root import | LEZ 2,278 (16:31:42) | -->
+<!-- source: deploy/testnet/web/wallet/test/results/live-claim-2026-11-23/record.json | sent from the page's own prepareClaim (claim.js) -->
+<tr><th scope="row">Claim, then burn</th>
+<td data-label="Expected">one LEZ block each, a block every 10 s</td>
+<td data-label="Measured">8.8 s from sending to the block (a transfer)</td></tr>
+<!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "send1_seconds_to_block": 8.8, -->
+<tr><th scope="row">Checkpoint: your burn proven to the vault</th>
+<td data-label="Expected">the network looks for burns every 60 s, waits 2 min more for burns sent together, then proves the checkpoint on a GPU and submits it. One checkpoint waits at a time: a burn made during another’s window goes into the next one</td>
+<!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | every 60 s the new LEZ blocks are searched for a call -->
+<!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | SETTLE_S="${SETTLE_S:-120}" -->
+<!-- source: deploy/testnet/host/bin/ferrata-bridge-checkpoint | A request is refused while the last one is not final -->
+<!-- source: deploy/testnet/README.md | signs the node's final tier every 60 s. -->
+<td data-label="Measured">on Sepolia 26½ min after the burn (20:36:52 to 21:03:24); the GPU proof took 1,307 s of it</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Burn | LEZ 3,749 (20:36:52) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Checkpoint submitted | Sepolia 12,198,162 (21:03:24) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | in **1,307.0 s** -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "seconds": 1307.0, -->
+<tr><th scope="row">The vault’s window, then the finalize</th>
+<td data-label="Expected">60 min after the checkpoint is submitted</td>
+<!-- source: vault/deployments/sepolia-31-B.json | "delta": 3600, -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "deltaAtSubmit": 3600, -->
+<td data-label="Measured">the first checkpoint was finalized on 24 Nov at 08:30:12, about 10½ h after its window ended (22:03:24): the relayer had stalled (fixed)</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Checkpoint finalized | Sepolia 12,201,456 (24 Nov 08:30:12) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | The finalisation came about 10.5 hours after the 1-hour window had passed (22:03:24 on 23 November) -->
+<!-- source: deploy/testnet/results/2026-11-24-relayer-exdev-replay.txt | Fix: the inbox inside the relayer's directory (one mount), a start check. -->
+<tr><th scope="row">Release delay</th>
+<td data-label="Expected">2 min after the finalize</td>
+<!-- source: vault/script/DeployVault.s.sol | releaseDelay: vm.envOr("FERRATA_RELEASE_DELAY", uint256(120)), -->
+<td data-label="Measured">the release came 39 min after the finalize (08:30:12 to 09:09:24)</td></tr>
+<tr><th scope="row">The release: proof and transaction</th>
+<td data-label="Expected">the proof from your phrase, 18–46 s on our computers; its Groth16 form, 78–80 s on x86 with Docker; then one Sepolia transaction</td>
+<!-- source: docs/performance.md | **46.0 s** at 8 CPUs, **26.4–27.0 s** at 16 -->
+<!-- source: docs/performance.md | the release's succinct proof **31.7 s** / **18.4 s** -->
+<!-- source: docs/performance.md | | Groth16 wrap of a release | 77.5–79.9 s; about 7.3 GiB; seal 260 B; **x86 only** | -->
+<td data-label="Measured">on the network’s GPU prover, its Groth16 proof in 425.6 s; the release on Sepolia at 09:09:24 (block 12,201,646); the recipient got 0.000997 ETH</td></tr>
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | Groth16) in **425.6 s** -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/record.json | "seconds": 425.6, -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | | Release | Sepolia 12,201,646 (09:09:24) | -->
+<!-- source: e2e/runs/live-roundtrip-2026-11-24/README.md | the recipient's balance **+0.000997 ETH** in that block -->
+</tbody></table></div>
+</section>
+
+<section class="wrap band" id="limits" aria-labelledby="h-limits">
+<h2 id="h-limits">Limits</h2>
+<p class="lede">The network is shared, so its gateway limits each address. These are the settings it runs with.</p>
+<!-- source: deploy/testnet/install.sh | [ -f /etc/ferrata/gateway.env ] || : > /etc/ferrata/gateway.env -->
+<!-- measured: GET /faucet on the live network, 24 Nov 2026: "amount":"10000000000", "per_account_seconds":86400, "per_ip_per_day":3, "per_network_per_day":10, "global_per_hour":120, "public_send_per_second":0.5. -->
+<div class="scroll"><table class="stack t-table">
+<caption>The test network’s limits</caption>
+<thead><tr><th scope="col">What</th><th scope="col">Limit</th><th scope="col">What you see when you reach it</th></tr></thead>
+<tbody>
+<tr><th scope="row">Faucet</th>
+<td data-label="Limit">10 LGO a claim; one claim per account a day; 3 claims per IP address a day, failed ones included, and 10 per network (an IPv4 /24 or IPv6 /64); 120 an hour for everyone; one claim at a time per address</td>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_PER_IP_PER_DAY": "3", # claims tried, failed ones included -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_PER_NET_PER_DAY": "10", # the same for an IPv4 /24 or IPv6 /64 -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_GLOBAL_PER_HOUR": "120", -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "FAUCET_PER_IP_WAITING": "1", -->
+<td data-label="When reached">HTTP 429 and a message, such as “this account was funded recently; again in N s” or “this address has had its claims for today”</td></tr>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | f"this account was funded recently; again in {wait} s" -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "this address has had its claims for today" -->
+<tr><th scope="row">Requests to the network (<code>/rpc</code>), per IP address</th>
+<td data-label="Limit">about 10 requests a second, bursts of 60 (a request for many blocks counts more); 6 at once; transactions 0.5 a second, bursts of 12</td>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_READ_RATE": "10", # tokens per second, per IP -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_READ_BURST": "60", -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_PER_IP_INFLIGHT": "6", -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_SEND_RATE": "0.5", # sendTransaction per second, per IP -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_SEND_BURST": "12", -->
+<td data-label="When reached">HTTP 429 with a <code>Retry-After</code> header: the seconds to wait (JSON-RPC error <code>-32005</code>). The wallet and the explorer wait and try again a few times by themselves, then show the error</td></tr>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | return self.send(429, jerr(id_, -32005, why), {"Retry-After": str(retry)}) -->
+<!-- source: deploy/testnet/web/wallet/lez.js | if ((res.status === 429 || res.status === 502 || res.status === 503) && attempt < 4) { -->
+<!-- source: deploy/testnet/web/explorer/assets/rpc.js | made again, up to three times; any other error is thrown. -->
+<tr><th scope="row">Transactions, everyone together</th>
+<td data-label="Limit">0.5 a second, bursts of 10</td>
+<td data-label="When reached">the same: HTTP 429 with <code>Retry-After</code></td></tr>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_SEND_GLOBAL_RATE": "0.5", # sendTransaction per second, every public caller together -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_SEND_GLOBAL_BURST": "10", -->
+<tr><th scope="row">Data the network sends back</th>
+<td data-label="Limit">about 128 KiB a second per IP address, bursts of 4 MiB; one answer at most 8 MiB; at most 50 blocks per request and 20 requests per batch</td>
+<td data-label="When reached">the same: HTTP 429 with <code>Retry-After</code></td></tr>
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | response bytes per second, per IP (at most the share below: 128 KiB/s) -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_BYTES_BURST": "4194304", -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_MAX_RESPONSE": "8388608", # bytes of one answer -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_MAX_RANGE": "50", -->
+<!-- source: deploy/testnet/host/bin/ferrata-gateway | "GATEWAY_MAX_BATCH": "20", -->
+<tr><th scope="row">Bridge deposits</th>
+<td data-label="Limit">one denomination per deposit: 0.001, 0.01 or 0.1 ETH, plus a small fee the wallet shows before you sign; or the test token TUSD: 100, 1,000 or 10,000 (the Bridge tab mints it for you; you pay the Sepolia gas). The vault takes at most 10 ETH and 1,000,000 TUSD a day in deposits, and the same in releases, for everyone together</td>
+<!-- source: vault/script/DeployVault.s.sol | _three(0.001 ether, 0.01 ether, 0.1 ether), -->
+<!-- source: vault/script/DeployVault.s.sol | /// @dev The test token (6 decimals): 100, 1,000, 10,000; relay fee 0.25% and checkpoint fee 0.1% of each. -->
+<!-- source: vault/script/TestToken.sol | constructor() ERC20("Ferrata Test USD", "TUSD") {} -->
+<!-- source: vault/deployments/sepolia-31-B.json | "ethDailyCap": 10000000000000000000, -->
+<!-- source: vault/deployments/sepolia-31-B.json | "tokenDailyCap": 1000000000000, -->
+<!-- source: vault/deployments/sepolia-31-B.json | "uncapped": false, -->
+<!-- source: vault/script/DeployVault.s.sol | deposits and releases each at most a ceiling -->
+<td data-label="When reached">the vault refuses the deposit: the transaction fails and only its gas is spent</td></tr>
+<tr><th scope="row">Sepolia ETH</th>
+<td data-label="Limit">bring your own: the faucet here gives LGO on this network only</td>
+<td data-label="When reached">MetaMask reports insufficient funds</td></tr>
+</tbody></table></div>
+
+<h3>Getting Sepolia ETH</h3>
+<p>The smallest deposit is 0.001 ETH, plus its fee and the gas. Several public Sepolia faucets exist, for example Google Cloud’s Web3 faucet, Alchemy’s, QuickNode’s and pk910’s proof-of-work faucet. We do not run or vouch for any of them, and their terms change.</p>
+<!-- checked 24 Nov 2026, a plain GET of each public page (no sign-up): Google Cloud's "Ethereum Sepolia Faucet", Alchemy's "Ethereum Sepolia Faucet | Get ETH Tokens", QuickNode's "Ethereum Sepolia Faucet - Free Testnet ETH Tokens", pk910's "Sepolia PoW Faucet"; each answered 200. -->
+
+<h3>Browsers, as tested</h3>
+<ul class="t-list">
+<li><b>Chromium</b> (through Playwright, desktop and phone-sized screens): every page, and the wallet’s flows end to end, also against this network.</li>
+<!-- source: deploy/testnet/web/wallet/test/results/live-2026-11-23/record.json | "passed": 19, -->
+<!-- source: deploy/testnet/web/wallet/test/results/pwa-e2e-2026-11-23-deployed/record.json | "passed": 23, -->
+<li><b>Firefox 146</b>: every page loads and was checked for accessibility at desktop width; the wallet’s flows were not run in it.</li>
+<!-- source: deploy/testnet/web/trust/accessibility/results.json | Playwright 1.58.0 with Chromium 145.0.7632.6 and Firefox 146.0.1 -->
+<li><b>WebKit 26</b>, Safari’s engine (on Linux with an iPhone’s screen, not a real iPhone): creating a wallet, its QR codes, PIN unlock.</li>
+<!-- source: deploy/testnet/web/wallet/test/results/pwa-webkit-2026-11-23/record.json | "engine": "WebKit 26.0 (Playwright, Linux)", -->
+<li><b>MetaMask</b>: one bridge deposit, by hand, in a desktop browser; the automated tests use a stand-in browser wallet.</li>
+<!-- source: docs/EVIDENCE.md | a desktop browser with MetaMask -->
+<li><b>Android</b>: the wallet also comes as an app (<a href="/android/">the Android page</a>).</li>
+</ul>
+<p>Other browsers may well work: tell us which one you used.</p>
+</section>
+
+<section class="wrap band" id="safety" aria-labelledby="h-safety">
+<h2 id="h-safety">Safety</h2>
+<div class="t-safety">
+<ul class="t-list">
+<li><b>Never paste a recovery phrase or a private key anywhere</b>: not in an issue, a chat, a form or a terminal. Nobody needs it to help you, and a report never does.</li>
+<li><b>Use a fresh wallet made for this test</b>, and a fresh MetaMask account that holds only Sepolia ETH. Never use a phrase or an account that holds anything of value.</li>
+<li><b>The wallet shares its web address with this site’s other pages</b> (the build page, the explorer, the status, trust, Basecamp and Android pages, and this one). A script on any of them could read the wallet’s encrypted record and its PIN wrap, ask for your passkey, or drive the wallet once it is unlocked; only the host’s script policy and those pages’ own code stand in the way. The wallet says so on its first screen and under More.</li>
+<!-- source: deploy/testnet/web/wallet/index.html | could read this browser's encrypted wallet record and its PIN wrap, ask for your passkey, or drive this page once it is -->
+<li><b>The command-line steps</b> (a private transfer, the release) read your test phrase from a file on your own computer. Type it into that file with an editor, never into a command; let only you read the file, and delete it when you are done.</li>
+<li><b>Found a security problem?</b> <a href="{{security}}">Report it privately</a>, not in a public issue.</li>
+</ul>
+</div>
+</section>
+
+<section class="wrap band" id="report" aria-labelledby="h-report">
+<h2 id="h-report">How to report</h2>
+<p><a class="btn" href="{{report}}">Open a tester report</a></p>
+<p>The report form is on GitHub: it needs a GitHub account, and reports are public. Please include:</p>
+<ul class="t-list">
+<li>the step you tried, what happened, and what you expected;</li>
+<li>the page and its build id: on the build page and on this page, the commit in the footer; in the wallet, More, then App: “Offline copy: build …”; on the Basecamp page, “built from …”;</li>
+<li>your browser and operating system;</li>
+<li>transaction hashes, LEZ transaction ids or explorer links, and the time (UTC if you can);</li>
+<li>screenshots, once you have checked that none shows a recovery phrase, a private key, a passphrase or a PIN.</li>
+</ul>
+<p>An AI agent can test too, with <a href="/AGENTS.md">AGENTS.md</a> or <a href="/agents/">For agents</a>; if one writes or files your report, read it first, and give it no recovery phrase or key (<a href="#agents">above</a>).</p>
+</section>

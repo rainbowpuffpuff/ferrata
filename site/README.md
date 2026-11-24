@@ -1,8 +1,8 @@
 # The build page
 
 A static page for the bid, served at `/` of the test network's host beside `/explorer`, `/wallet`, `/agents`,
-`/status` and `/rpc`. It is generated from the repository, so it says what the documents say at the commit it was
-built from, and nothing else:
+`/status` and `/rpc`, with the testers' start page at `/testers/`. It is generated from the repository, so it says what
+the documents say at the commit it was built from, and nothing else:
 
 | On the page | Read from |
 |---|---|
@@ -16,6 +16,8 @@ built from, and nothing else:
 | "Specified but not built" | [`README.md`](../README.md) |
 | Which runs, screenshots and commands to feature, with their captions | [`content.toml`](content.toml) (every path in it must be tracked) |
 | The runs' Sepolia transactions, stage times and LEZ transactions | the run records `content.toml` names (`manifest.json`, `deploy.json`, the README's stage table, `txs.tsv`) |
+| `/llms.txt`, an index of the site for language models (the llms.txt convention) | `llms_txt()` in [`build.py`](build.py), from `content.toml`'s paths: AGENTS.md, the agents' page, the testers' page, `/programs.json`, the RPC and the repository |
+| The testers' start page (`testers/index.html`, linked from the header and the hero) | [`testers.html`](testers.html), written by hand: what to try, the bridge's waiting times, the limits, safety, how to report; each number names its source in a `<!-- source: PATH \| TEXT -->` comment, which the build and `test_site.py` check against that file; the report form is [`.github/ISSUE_TEMPLATE/tester-report.yml`](../.github/ISSUE_TEMPLATE/tester-report.yml) |
 
 ## Commands
 
@@ -24,7 +26,7 @@ python3 -I site/build.py            # writes deploy/testnet/web/build/ (about 1.
 python3 -I site/build.py --check    # exit 1 if the bundle differs from a fresh build
 python3 -I site/test_site.py        # counts, every emitted link, freshness, privacy (also: --strict, --online)
 python3 -I site/test_site.py --skip-freshness   # the same on a fresh build only: the mode for CI
-python3 site/test_ui.py             # the page in Chromium (Playwright, optional): overview, sheet, deep links, table
+python3 site/test_ui.py             # the page in Chromium (Playwright, optional): overview, sheet, deep links, table, layout, testers/
 python3 -I site/extract_rfp.py RFP_CHECKOUT                   # after logos-co/rfp changes an RFP
 gh issue view 257 -R logos-co/rfp --json title,state,createdAt,updatedAt,labels,url,body,comments > ISSUE.json
 python3 -I site/snapshot_proposal.py ISSUE.json               # after the proposal is edited or updated
@@ -62,14 +64,17 @@ row.
    independently of the generator); every ID of `docs/traceability.md` appears once; the hero's figures and
    `build.json` agree. The overview has one tile per row, linking to it, with the row's status as its class, the
    status's symbol as its mark and "RFP-021 F.12, shown" as its accessible name; the legend's counts equal the tiles'.
-2. Every `href` and `src` of `index.html` and `evidence.html`: anchors exist; bundle files exist; links into this
-   repository name tracked files and directories at an existing line or heading; Actions links name real workflows;
-   links into logos-co/rfp name the extracted commit and its files; Etherscan links name the recorded runs'
-   transactions and contracts; the test network's paths are the seven it serves; any other external URL is one the
+2. Every `href` and `src` of `index.html`, `evidence.html` and `testers/index.html`: anchors exist; bundle files
+   exist (relative links resolved from their page's directory); links into this repository name tracked files and
+   directories at an existing line or heading; Actions links name real workflows; links into logos-co/rfp name the
+   extracted commit and its files; Etherscan links name the recorded runs' transactions and contracts; the test
+   network's paths are the nine it serves; the report form is a tracked issue form; any other external URL is one the
    repository's documents give (`--online` also requests each). A self-check feeds it links it must refuse.
 3. No inline script or style attribute, no event-handler attribute, a Content-Security-Policy on every page, unique ids,
    every image with its alt text and size.
 4. The bundle equals a fresh build; no e-mail address or home-directory path in it.
+5. The testers' page: the build page's header and hero link to it; it loads no script; it has at least 30 source
+   notes, and each names a tracked file that still holds the text it quotes (a self-check feeds it two that must fail).
 
 ## The live readings
 
@@ -109,3 +114,15 @@ in both themes and requires at least 3:1 (WCAG 1.4.11). Yellow and orange are li
 would need on its own, so every mark is a bordered box with its symbol, every count sits in text, and a status never
 rests on colour alone: tiles carry their status in their name, chips and legends carry the word. The requirements
 table becomes one card per requirement on narrow screens.
+
+The hero gives each RFP one card (its name, the count shown, a bar of its four statuses and a legend with every count);
+the two cards share their rows, so they align side by side. A count also sits inside its part of the bar, but only
+while the bar is wide enough for it: `build.py` works out, from the part's share and the count's digits, the bar width
+it needs and emits a container query for it, so this holds at every width and without JavaScript. On narrow screens
+the tables of prose (milestones, what is not done, a run's Sepolia transactions) become one card per row, and the
+timeline one cell, then one row, per milestone with its weeks. `test_ui.py` checks the layout at 320, 375, 768, 1024,
+1450 and 1920 px, light and dark, with the live readings answered from fixtures (one fact with a long `statement`, "Full
+values" open): no sideways scroll, no text over text or out of its box in the hero, nothing wider than its card in
+Live, no box clipping its text; and the testers' page at the same widths and themes: its links from the build page's
+header and hero, no sideways scroll, nothing wider than the screen, no table scrolling, no box clipping its text, and the page
+whole without JavaScript (it has none).

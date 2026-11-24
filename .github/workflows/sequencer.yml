@@ -1,50 +1,84 @@
 name: sequencer
 
-# Manual only for now (21 November 2026): on the build box this job built LEZ's standalone sequencer from source,
-# deployed the programs through its loader (20 transactions applied), and stopped in `scenarios`, whose recorded
-# mainnet checkpoint (period 1899, about 31 October 2026) is older than the instance's validity window while the
-# standalone sequencer stamps blocks with the wall clock (e2e/runs/ci-sequencer-attest-2026-11-21/README.md). It joins
-# push and pull_request once its phases run on fresh data (a committee whose keys the run holds, as the driver's
-# `inbound --chain stand-in` phase makes).
+# End-to-end runs against a real, running LEZ sequencer in standalone mode (LEZ's own sequencer_service built with its
+# `standalone` feature: its mock Bedrock actor, no Logos Blockchain node), with the Ethereum side on Sepolia:
+#   sequencer-attest     RFP-021 Supportability #2: attestation production and consumption, on Sepolia data fetched
+#                        from public endpoints when the job runs (scripts/ci/sequencer-attest.sh);
+#   sequencer-roundtrip  RFP-022 Reliability #10: the bridge's deposit and redemption round trip in its public variant
+#                        (a plaintext claim, a public burn), the vault on anvil forking Sepolia at its finalized block
+#                        of the moment (scripts/ci/sequencer-roundtrip.sh).
+# Each job's data is fetched when it runs, so a run is never a replay that ages out of the attestation program's
+# weak-subjectivity window (the manual job's run of 21 November 2026 stopped on recorded data of 31 October,
+# e2e/runs/ci-sequencer-attest-2026-11-21/), and data older than a bound fails the run (the scripts' freshness checks).
+# A public endpoint that does not answer fails its step: nothing recorded is used in its place.
+#
+# Triggers: every push to main (scripts/ci/check-row-tests.py counts a job as CI only on push or pull_request), a
+# daily run at 05:43 UTC (the public endpoints and Sepolia move without a push), and by hand. Not on every branch
+# push or pull request: one run builds LEZ's sequencer from source and proves one private transaction (GitHub runs
+# 45333224944 and 45355193681: the attest job 72-92 min, the round trip 59-73 min).
 on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '43 5 * * *'
   workflow_dispatch:
 
-# The end-to-end run against a real, running LEZ sequencer (RFP-021 Supportability #2: "... against a LEZ
-# sequencer (standalone mode) ... and are included in CI."). The `roundtrip` job of ci.yml runs LEZ's state
-# transition in process; this job runs LEZ's own sequencer_service, built from the unmodified tag as
-# lez/live/README.md builds it. RFP-022 Reliability #10's bridge round trip against the standalone
-# sequencer has no job here yet (docs/rows/G.md, R.10). Its actions are tag-pinned like the new ones of
-# macos.yml, each with the TODO marker scripts/ci/check-actions-pinned.py reads.
+# On main every run finishes (a newer push waits as the one pending run; GitHub keeps one pending run per group, so two
+# 1.5-hour runs never pile up); on another ref a newer run cancels the one in progress. As ci.yml, runs on main are
+# never cancelled.
+concurrency:
+  group: sequencer-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# A read-only token: no job writes to the repository or calls GitHub's API (rzup reads GitHub's releases with it).
+# Third-party actions are pinned by commit (the same SHAs as .github/workflows/ci.yml; the tag in the comment).
+permissions:
+  contents: read
+
+# Caches (GitHub keeps 10 GB per repository, and a branch's saves count against it too). Sizes as GitHub stored them
+# (`gh cache list`, run 45355193681 and main on 24 November 2026):
+#   - RISC Zero's toolchains (~/.risc0, ~/risc0-home-lez), 1,951 MB; the vault's libraries (vault/lib), 10 MB; the
+#     checked native archives (~/.cache/ferrata/native), 54 MB: the same keys as ci.yml's, which saves them on main;
+#     restored here only (actions/cache/restore), never saved.
+#   - sequencer-attest's Rust build (rust-cache: LEZ v0.4.0-rc3's sequencer and the live driver in
+#     tmp/sequencer-v0.4.0-rc3/target, and the cargo registry), 1,651 MB: saved by passing runs on main only (save-if),
+#     restored on every ref.
+#   - Not cached: the upstream sources (cloned in about 5 s; 106 MB), sequencer-roundtrip's Rust builds (2,735 MB with
+#     checkpoint/target in run 45355193681; its build runs beside the attest job, whose run alone takes 42-55 min),
+#     the guests' lez/target.
+#   With ci.yml's on main (6,096 MB: roundtrip 3,182, RISC Zero 1,951, monitor 525, witness 374, native 54, vault 10)
+#   main holds about 7.7 GB.
+env:
+  # vault/foundry.toml keeps forge offline; a fresh runner has no solc 0.8.26 yet, so forge may fetch that one compiler.
+  FOUNDRY_OFFLINE: "false"
+  # No debug info, no incremental artefacts, as the `roundtrip` job.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+  CARGO_INCREMENTAL: "0"
 
 jobs:
-  # RFP-021 Supportability #2: attestation production and consumption against LEZ's sequencer built with
-  # its `standalone` feature (its mock Bedrock actor; no Logos Blockchain node): the programs deployed
-  # through the loader, an instance, updates that advance it, the refusals, and the reference consumer
-  # consuming the attestation in one transaction (scripts/ci/sequencer-attest.sh). Estimated, not
-  # measured: 1.5-2 h on a 4-core runner (the build took 16 min on the 16-core build box; the consumer's
-  # one real proof took 280 s at 32 threads there and grows with fewer cores).
+  # RFP-021 Supportability #2. Stages, one step each: the Sepolia checkpoint (fetched first), the build (the guests
+  # from the committed tree, then LEZ v0.4.0-rc3's standalone sequencer and the live driver against rc3, with the
+  # checked native archives), the newest finality update and the facts under its block (fetched until it advances the
+  # checkpoint's store, refused if older than the freshness bound), the run (deploy; instance A follows Sepolia; the
+  # twin's refusals; the attestation consumed publicly and, with a real proof the sequencer verifies, privately), the
+  # check of every outcome (exact counts), the job summary.
   sequencer-attest:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
-    permissions:
-      contents: read
-    env:
-      # No debug info, no incremental artefacts, as the `roundtrip` job (ci.yml): the caches must stay
-      # far below the 10 GB GitHub keeps per repository.
-      CARGO_PROFILE_DEV_DEBUG: "0"
-      CARGO_PROFILE_TEST_DEBUG: "0"
-      CARGO_INCREMENTAL: "0"
+    timeout-minutes: 340
     steps:
-      - uses: actions/checkout@v4 # TODO: pin to a commit SHA
-      - name: Free disk space (the LEZ and Logos Blockchain builds need about 20 GB)
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false # no step uses git's credentials
+      - name: Free disk space (the LEZ builds need about 20 GB)
         run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
       - name: System libraries (libpcsclite for LEZ's wallet crates, protoc)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
-      - uses: dtolnay/rust-toolchain@1.93.0 # TODO: pin to a commit SHA
-      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain; lez/ builds with it)
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ's toolchain; lez/ builds with it)
         run: rustup toolchain install 1.98.1 --profile minimal
-      - name: Cache RISC Zero's toolchains
-        uses: actions/cache@v4 # TODO: pin to a commit SHA
+      - name: RISC Zero's toolchains (restored from ci.yml's cache, not saved here)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
           path: |
             ~/.risc0
@@ -54,26 +88,114 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }} # rzup's GitHub API calls: the job's read-only token, not the 60-an-hour limit
         run: scripts/ci/install-risc0.sh
-      - name: Cache the upstream sources (LEZ v0.4.0-rc1 1806e87, Logos Blockchain d480efc6)
-        uses: actions/cache@v4 # TODO: pin to a commit SHA
-        with:
-          path: ${{ github.workspace }}/../upstream
-          key: upstream-lez-1806e87-e3edf47-logos-blockchain-d480efc6
-      - name: Fetch the upstream sources
+      - name: Fetch the upstream sources (LEZ v0.4.0-rc1, rc2, rc3; Logos Blockchain d480efc6)
         run: scripts/fetch-upstream.sh
-      # The LEZ build: the driver's and the sequencer's crates (the guests, the methods crate and
-      # everything under lez/) go into lez/target; the sequencer and the driver themselves build into
-      # scratch beside the repository, which the GitHub runners do not keep.
-      - uses: Swatinem/rust-cache@v2 # TODO: pin to a commit SHA
+      - name: Sepolia checkpoint (public beacon endpoints; fails if none answers)
+        timeout-minutes: 15
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest checkpoint
+      - name: The checked native archives (restored from ci.yml's cache, not saved here; scripts/native-deps.json)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          workspaces: lez -> target
-          shared-key: sequencer-attest
-          cache-on-failure: true
-      - name: Attestation against a running LEZ sequencer (standalone)
-        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest
+          path: ~/.cache/ferrata/native
+          key: native-${{ hashFiles('scripts/native-deps.json') }}
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: |
+            lez/live/driver -> ../../../../tmp/sequencer-v0.4.0-rc3/target
+          shared-key: sequencer-attest-2
+          # Saved by a passing run on main only, restored on every ref (the caches comment above).
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+          cache-on-failure: false
+      - name: Build (the guests; LEZ v0.4.0-rc3's standalone sequencer; the live driver; native archives checked)
+        timeout-minutes: 170
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest build
+      - name: Sepolia finality update and the facts under its block (public endpoints, checked natively and for age)
+        # The stage's own limit comes first: at most 12 fetches two minutes apart (about 42 min at worst).
+        timeout-minutes: 50
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest data
+      - name: Run (the standalone sequencer and the driver's phases)
+        timeout-minutes: 150
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest run
+      - name: Check (every phase's outcomes, exact counts, the images, instance A at Sepolia's root, the data's age)
+        timeout-minutes: 5
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest check
+      - name: Job summary (the checkpoint and block used, every phase's counts)
+        if: always()
+        timeout-minutes: 5
+        run: scripts/ci/sequencer-attest.sh e2e/runs/ci-sequencer-attest summary
       - name: Records
         if: always()
-        uses: actions/upload-artifact@v4 # TODO: pin to a commit SHA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ci-sequencer-attest-records
           path: e2e/runs/ci-sequencer-attest
+
+  # RFP-022 Reliability #10. Stages, one step each: the build (the vault, the release and rule (B) guests, ci_zone,
+  # ferrata-e2e, the LEZ guests, LEZ v0.4.0-rc1's standalone sequencer, crown-driver and the `ferrata` tool, with the
+  # checked native archives), the run (the standalone sequencer, and while it runs: anvil forking Sepolia, the vault,
+  # deposit, import, plaintext claim, public burn, checkpoint, release, each step asserted;
+  # scripts/ci/sequencer-roundtrip-hook.sh), the check of its records, the job summary. LEZ rc1 here: ci_zone builds
+  # LEZ v0.4.0-rc1 blocks, which the rule (B) guest the vault pins (checkpoint_b_31) reads. Stand-ins, as the
+  # `roundtrip` job of ci.yml: the vault's verifier is the vault tests' MockRiscZeroVerifier accepting exactly the
+  # journals the checkpoint and release guests computed (executed, dev mode); the light client's committee is the run's
+  # (anvil has no beacon chain); the checkpoint's chain is ci_zone's test committee inscribing the sequencer's
+  # transactions; the gas drop is seqnet-fund. The private claim and burn are not in this job yet.
+  sequencer-roundtrip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false # no step uses git's credentials
+      - name: Free disk space (the LEZ and Logos Blockchain builds need about 25 GB)
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL && df -h .
+      - name: System libraries (libpcsclite for LEZ's wallet crates, protoc)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libpcsclite-dev protobuf-compiler
+      - uses: dtolnay/rust-toolchain@2b28c52cef68d77e9a4de0b428559db37728c04f # 1.93.0
+      - name: Rust 1.98.1 (LEZ v0.4.0-rc1's toolchain; cli/ and checkpoint/fidelity)
+        run: rustup toolchain install 1.98.1 --profile minimal
+      - uses: foundry-rs/foundry-toolchain@dba66c27052e63476d886f22216e119ba7e615bf # v1
+        with:
+          version: v1.3.6
+      - name: RISC Zero's toolchains (restored from ci.yml's cache, not saved here)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.risc0
+            ~/risc0-home-lez
+          key: risc0-3.1.0-3.0.5-rust-1.88.0-1.91.1-cpp-2024.1.5-${{ hashFiles('scripts/ci/install-risc0.sh') }}
+      - name: RISC Zero toolchains (rzup)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # rzup's GitHub API calls: the job's read-only token, not the 60-an-hour limit
+        run: scripts/ci/install-risc0.sh
+      - name: Fetch the upstream sources (LEZ v0.4.0-rc1, rc2, rc3; Logos Blockchain d480efc6)
+        run: scripts/fetch-upstream.sh
+      - name: The vault's libraries (restored from ci.yml's cache, not saved here)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: vault/lib
+          key: vault-lib-forge-std-1.10.0-oz-5.4.0-risc0-ethereum-3.1.0
+      - name: The checked native archives (restored from ci.yml's cache, not saved here; scripts/native-deps.json)
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ferrata/native
+          key: native-${{ hashFiles('scripts/native-deps.json') }}
+      - name: Build (the vault, the guests, ci_zone, LEZ v0.4.0-rc1's standalone sequencer, crown-driver, the tool)
+        timeout-minutes: 200
+        run: scripts/ci/sequencer-roundtrip.sh e2e/runs/ci-sequencer-roundtrip build
+      - name: Run (the standalone sequencer; anvil forking Sepolia; the round trip, every step asserted)
+        timeout-minutes: 90
+        run: scripts/ci/sequencer-roundtrip.sh e2e/runs/ci-sequencer-roundtrip run
+      - name: Check (every step's record, no failed step, the facts asserted)
+        timeout-minutes: 5
+        run: scripts/ci/sequencer-roundtrip.sh e2e/runs/ci-sequencer-roundtrip check
+      - name: Job summary (the fork point, every step)
+        if: always()
+        timeout-minutes: 5
+        run: scripts/ci/sequencer-roundtrip.sh e2e/runs/ci-sequencer-roundtrip summary
+      - name: Records
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ci-sequencer-roundtrip-records
+          path: e2e/runs/ci-sequencer-roundtrip

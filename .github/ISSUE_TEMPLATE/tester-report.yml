@@ -1,0 +1,85 @@
+name: Tester report
+description: Something you tried on the Ferrata LEZ test network (the testers' page, /testers/, lists the steps).
+title: "[tester] "
+labels: ["tester-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for testing. This report is public.
+
+        **Never include a recovery phrase, a private key, a passphrase or a PIN**, not even part of one, and check your
+        screenshots for them. Nobody needs them to look into a report.
+
+        A security problem goes in a private report instead (the repository's Security tab, "Report a vulnerability";
+        see SECURITY.md), not here.
+  - type: dropdown
+    id: step
+    attributes:
+      label: What you tried
+      description: The step numbers of the testers' page.
+      options:
+        - "1. Create a wallet"
+        - "2. Test coins from the faucet"
+        - "3. A public transfer"
+        - "3. A private transfer (command line)"
+        - "4. A name"
+        - "4. A message"
+        - "5. The explorer"
+        - "6a. Bridge: deposit from MetaMask"
+        - "6b. Bridge: the import and the claim"
+        - "6c. Bridge: the burn"
+        - "6d. Bridge: the release on Sepolia (command line)"
+        - "7. Attested Ethereum facts (build page, status page, Prove tab)"
+        - "Other"
+    validations:
+      required: true
+  - type: textarea
+    id: happened
+    attributes:
+      label: What happened
+      description: What you did and what you saw, with any message the page showed (copy its text).
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Page and build id
+      description: >-
+        The page's path (for example /wallet/) and its build where the page shows one: the build page and the testers'
+        page give a commit in their footer; the wallet under More, then App ("Offline copy: build ..."); the Basecamp
+        page ("built from ...").
+      placeholder: /wallet/, build 0123456789abcdef
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: Firefox 147 on Ubuntu 24.04; MetaMask 13.x
+    validations:
+      required: true
+  - type: textarea
+    id: transactions
+    attributes:
+      label: Transaction hashes, LEZ transaction ids, explorer links
+      description: Sepolia transaction hashes, LEZ transaction ids or explorer links, and the time (UTC if you can).
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here. Check first that none shows a recovery phrase, a private key, a passphrase or a PIN.
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Safety
+      options:
+        - label: I have not included a recovery phrase, a private key, a passphrase or a PIN, in the text or in a screenshot
+          required: true

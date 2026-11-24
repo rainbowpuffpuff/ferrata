@@ -337,6 +337,12 @@
     });
   }
 
+  // The header's sections: a focused link scrolls fully into view, clear of the fade (browsers leave a partly visible one)
+  var topNav = $(".top nav");
+  if (topNav) topNav.addEventListener("focusin", function (e) {
+    if (e.target.scrollIntoView) e.target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
+
   if (!cfg || !live("ci-list")) return;
 
   // ---- GitHub: CI on main and the proposal's state (unauthenticated API, cached for five minutes)
@@ -368,12 +374,13 @@
     }
     ciList.textContent = "";
     results.forEach(function (x) {
-      var li = el("li");
+      var li = el("li", { "class": "ci-run" });
       li.appendChild(el("span", { "class": "wf" }, x.wf));
+      var run = el("span", { "class": "run" });
       if (x.error || !x.run) {
         errors++;
         li.appendChild(el("span", { "class": "small" }, x.error ? "not read (" + x.error + ")" : "not run on main yet"));
-        li.appendChild(el("a", { href: cfg.repo + "/actions/workflows/" + x.wf }, "runs"));
+        run.appendChild(el("a", { href: cfg.repo + "/actions/workflows/" + x.wf }, "runs"));
       } else {
         var r = x.run;
         var state = r.status !== "completed" ? r.status.replace("_", " ") : r.conclusion;
@@ -383,10 +390,10 @@
         pill.appendChild(el("span", { "class": "dot " + cls, "aria-hidden": "true" }));
         pill.appendChild(document.createTextNode(state));
         li.appendChild(pill);
-        var a = el("a", { href: r.html_url }, "run " + r.run_number + " at " + r.head_sha.slice(0, 8));
-        li.appendChild(a);
-        li.appendChild(el("span", { "class": "when" }, ago(Date.parse(r.updated_at || r.run_started_at))));
+        run.appendChild(el("a", { href: r.html_url }, "run " + r.run_number + " at " + r.head_sha.slice(0, 8)));
+        run.appendChild(el("span", { "class": "when" }, ago(Date.parse(r.updated_at || r.run_started_at))));
       }
+      li.appendChild(run);
       ciList.appendChild(li);
     });
     var chip = live("ci-chip"), dot = live("ci-dot");
@@ -464,6 +471,26 @@
     };
     return next();
   }
+  // A long value (an address, a slot, a word) is shortened in the middle, in monospace; its title and the fact's
+  // "Full values" hold it whole.
+  function shortValue(v) { return v.length > 24 ? v.slice(0, 12) + "…" + v.slice(-8) : v; }
+  function factRows(f, whole) {
+    var dl = el("dl", { "class": "fact-kv" }), long = false;
+    ["address", "slot", "log", "predicate", "value", "block", "record_slot"].forEach(function (k) {
+      var v = f[k];
+      if (v === undefined || v === null || v === "") return;
+      v = typeof v === "object" ? JSON.stringify(v) : String(v);
+      if (whole && v.length <= 24) return;
+      if (v.length > 24) long = true;
+      var d = el("div");
+      d.appendChild(el("dt", null, k.replace("_", " ")));
+      var dd = el("dd");
+      dd.appendChild(el("code", whole || v.length <= 24 ? { "class": "hex" } : { "class": "hex", title: v }, whole ? v : shortValue(v)));
+      d.appendChild(dd);
+      dl.appendChild(d);
+    });
+    return { dl: dl, long: long };
+  }
   function renderFacts(st) {
     var box = live("facts");
     var list = st && (st.attestations || st.facts || (st.status && st.status.attestations));
@@ -471,18 +498,22 @@
     box.textContent = "";
     var ul = el("ul", { "class": "facts" });
     list.slice(0, 6).forEach(function (f) {
-      var li = el("li");
-      var what = f.statement || f.kind || "statement";
-      li.appendChild(el("b", null, what));
-      var bits = [];
-      ["address", "slot", "log", "predicate", "value", "block", "record_slot"].forEach(function (k) {
-        if (f[k] !== undefined && f[k] !== null && f[k] !== "") bits.push(k.replace("_", " ") + " " + f[k]);
-      });
-      li.appendChild(el("span", { "class": "small" }, " " + bits.join(" · ")));
+      var li = el("li", { "class": "fact" });
+      var head = el("p", { "class": "fact-head" });
+      head.appendChild(el("b", null, f.statement || f.kind || "statement"));
+      li.appendChild(head);
+      var rows = factRows(f, false);
+      li.appendChild(rows.dl);
+      if (rows.long) {
+        var full = el("details", { "class": "fact-full" });
+        full.appendChild(el("summary", null, "Full values"));
+        full.appendChild(factRows(f, true).dl);
+        li.appendChild(full);
+      }
       var tx = f.tx || f.tx_hash || f.hash;
       if (tx && /^(0x)?[0-9a-fA-F]{64}$/.test(tx)) {
-        var p = el("div", { "class": "small" });
-        if (cfg.explorer_tx) p.appendChild(el("a", { href: cfg.explorer_tx.split("{hash}").join(tx) }, "transaction " + tx.slice(0, 12) + "…"));
+        var p = el("p", { "class": "small fact-tx" });
+        if (cfg.explorer_tx) p.appendChild(el("a", { href: cfg.explorer_tx.split("{hash}").join(tx), title: tx }, "transaction " + tx.slice(0, 12) + "…"));
         else p.textContent = "transaction " + tx.slice(0, 12) + "…";
         if (f.time || f.utc) p.appendChild(document.createTextNode(" · " + ago(Date.parse(f.time || f.utc))));
         li.appendChild(p);

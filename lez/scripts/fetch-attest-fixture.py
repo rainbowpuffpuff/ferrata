@@ -46,7 +46,8 @@ block's RLP header. The script then fetches, in this order:
    same account on mainnet (latest block), to record that one contract has one address and one code
    hash on both chains (the chain-binding test asks a Sepolia fact as a mainnet statement);
 4. `eth_getBlockReceipts` of the block, and the first ERC-20 `Transfer` in it (of `--log-token`
-   if given);
+   if given) emitted by a token contract (not EIP-7708's ETH-transfer log) with an amount under 2^128
+   (what a pool of the reference consumer can credit);
 5. with `--deposits VAULT:FROM_BLOCK`: the vault's `Deposit` logs from FROM_BLOCK to the block
    (`eth_getLogs`), the leaves of the deposit tree whose root is the vault's slot 0;
 6. with `--updates-from P`: every period's update from P to the period before the finality
@@ -64,7 +65,8 @@ an address without an account (`keccak256("ferrata/absent-account")[12..]`).
       [--hops] [--absent] OUTDIR
 
 SLOT is a decimal or 0x-hex slot number. Without `--storage`, Sepolia USDC's `totalSupply_`
-(slot 11, checked against `totalSupply()`). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
+(slot 11, checked against `totalSupply()`). `--same-address none` reads no account on both chains
+(no request to mainnet). Ferrata's vault v5 (`e2e/runs/crown-live-1`):
 `--storage 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:0=depositRoot(),1=nextLeafIndex()
  --deposits 0xfE3199fa2634413CbAC317371076Cae3EB2d9E54:12111048 --updates-from 1410 --hops --absent`
 into `crates/ferrata-spectests/fixtures/sepolia-vault-v5-2026-11-11` (read by
@@ -102,19 +104,23 @@ HOP = 16
 SLOTS_PER_PERIOD = e2e.SLOTS_PER_PERIOD
 # keccak256("Transfer(address,address,uint256)")
 TRANSFER = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+# The address EIP-7708 logs every ETH transfer from, with the ERC-20 `Transfer` signature: not a token.
+ETH_TRANSFER_LOGGER = "0xfffffffffffffffffffffffffffffffffffffffe"
 # How many distinct recipients to ask `eth_getCode` about before giving up.
 MAX_CODE_PROBES = 24
 
 
 def erc20_transfers(receipts):
     """(tx index, position in the receipt, log) of every ERC-20 `Transfer` of a successful
-    transaction: three topics and one 32-byte data word (an ERC-721 transfer has four topics)."""
+    transaction: three topics and one 32-byte data word (an ERC-721 transfer has four topics), emitted
+    by a token contract (EIP-7708's ETH-transfer logs have the same shape and are left out)."""
     out = []
     for r in receipts:
         if r["status"] != "0x1":
             continue
         for position, log in enumerate(r["logs"]):
-            if len(log["topics"]) == 3 and log["topics"][0] == TRANSFER and len(log["data"]) == 2 + 64:
+            if (len(log["topics"]) == 3 and log["topics"][0] == TRANSFER and len(log["data"]) == 2 + 64
+                    and log["address"].lower() != ETH_TRANSFER_LOGGER):
                 out.append((int(r["transactionIndex"], 16), position, log))
     return out
 
@@ -233,7 +239,10 @@ def fetch_gloas(out, a):
                 row["getter"] = getter
             entry["slots"].append(row)
         facts.append(entry)
-    same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
+    # `--same-address none`: no account read on both chains (no mainnet request at all; CI's sequencer job).
+    same = None
+    if a.same_address != "none":
+        same, _ = f.rpc_any("eth_getProof", [a.same_address, [], hex(n)], f"proof_{a.same_address}_{n}.json", state_n)
     absent = None
     if a.absent:
         f.rpc_any("eth_getProof", [ABSENT, [e2e.word(0)], hex(n)], f"proof_absent_{n}.json", state_n)
@@ -263,20 +272,23 @@ def fetch_gloas(out, a):
                                    "header": f"header_{m}.rlp", "receipts_file": f"receipts_{m}.json"})
     head, _ = f.rpc_any("eth_blockNumber", [], None, state_n)
     print(f"proofs at {n} served; head {int(head, 16)}", flush=True)
-    mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
-    on_mainnet, _ = f.rpc_any("eth_getProof", [a.same_address, [], mainnet_block],
-                              f"proof_{a.same_address}_mainnet_{int(mainnet_block, 16)}.json", e2e.EXECUTION)
-    if same["codeHash"] == EMPTY_CODE_HASH or same["codeHash"] != on_mainnet["codeHash"]:
-        raise SystemExit(f"{a.same_address}: code hash {same['codeHash']} here, {on_mainnet['codeHash']} on mainnet")
+    if same is not None:
+        mainnet_block, _ = f.rpc_any("eth_blockNumber", [], None, e2e.EXECUTION)
+        on_mainnet, _ = f.rpc_any("eth_getProof", [a.same_address, [], mainnet_block],
+                                  f"proof_{a.same_address}_mainnet_{int(mainnet_block, 16)}.json", e2e.EXECUTION)
+        if same["codeHash"] == EMPTY_CODE_HASH or same["codeHash"] != on_mainnet["codeHash"]:
+            raise SystemExit(f"{a.same_address}: code hash {same['codeHash']} here, {on_mainnet['codeHash']} on mainnet")
 
-    # 4. Receipts, and the ERC-20 Transfer the tests attest.
+    # 4. Receipts, and the ERC-20 Transfer the tests attest: the first one a pool of the reference consumer can
+    # credit (lez/wire's Pool::accept refuses an amount of 2^128 or more: AMOUNT_TOO_LARGE).
     receipts, _ = f.rpc_any("eth_getBlockReceipts", [hex(n)], f"receipts_{n}.json", state_n)
     if [int(r["transactionIndex"], 16) for r in receipts] != list(range(len(receipts))):
         raise SystemExit("receipts are not in transaction order")
     transfers = [t for t in erc20_transfers(receipts)
-                 if a.log_token is None or t[2]["address"].lower() == a.log_token.lower()]
+                 if (a.log_token is None or t[2]["address"].lower() == a.log_token.lower())
+                 and int(t[2]["data"], 16) < 1 << 128]
     if not transfers:
-        raise SystemExit(f"block {n} has no ERC-20 Transfer{' of ' + a.log_token if a.log_token else ''}; "
+        raise SystemExit(f"block {n} has no ERC-20 Transfer{' of ' + a.log_token if a.log_token else ''} under 2^128; "
                          "run again after the next finality update")
     transfer = describe(*transfers[0], receipts)
 
@@ -333,8 +345,9 @@ def fetch_gloas(out, a):
         "receipts": len(receipts),
         "head_when_fetched": int(head, 16),
         "storage": facts,
-        "same_address": {"address": a.same_address, "code_hash": same["codeHash"],
-                         "mainnet_block": int(mainnet_block, 16), "mainnet_code_hash": on_mainnet["codeHash"]},
+        "same_address": None if same is None else {"address": a.same_address, "code_hash": same["codeHash"],
+                                                    "mainnet_block": int(mainnet_block, 16),
+                                                    "mainnet_code_hash": on_mainnet["codeHash"]},
         "transfer": transfer,
         "deposits": deposits,
         "updates": updates,
@@ -370,9 +383,10 @@ def fetch_gloas(out, a):
         for row in entry["slots"]:
             check = f", equal to `{row['getter']}` at the block" if "getter" in row else ""
             lines.append(f"| storage | {entry['address']} slot {row['slot']} = {row['value']}{check} |")
+    if same is not None:
+        lines.append(f"| same address on mainnet | {a.same_address}: code hash {same['codeHash']} at {n} and at mainnet "
+                     f"block {int(mainnet_block, 16)} |")
     lines += [
-        f"| same address on mainnet | {a.same_address}: code hash {same['codeHash']} at {n} and at mainnet block "
-        f"{int(mainnet_block, 16)} |",
         f"| ERC-20 `Transfer` | tx {t['tx_index']}, log {t['log_index']} of {t['logs_in_receipt']} (`logIndex` "
         f"{t['block_log_index']}): {t['token']} from {t['from']} to {t['to']}, value {int(t['value'], 16)} |",
     ]

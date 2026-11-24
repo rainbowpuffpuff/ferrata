@@ -21,9 +21,21 @@ SITES="$SSLIP"; [ -n "${FERRATA_DOMAIN:-}" ] && SITES="$FERRATA_DOMAIN, $SSLIP"
 RANGE_LIMIT=50   # the gateway's GATEWAY_MAX_RANGE: the explorer pages getBlockRange by it
 
 rm -rf "$STAGE"; mkdir -p "$STAGE"; tar -xzf "$TGZ" -C "$STAGE"
+# The wallet's and the messaging module's config as this run finds them, the host's hand edits included (deposits
+# closed with lezReady false), copied before step 3 replaces them with the bundle's raw ones: web-config.py keeps their
+# values first, where the bundle leaves them empty.
+install -d -m 755 "$STAGE/live-configs"
+for f in wallet msg; do [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$STAGE/live-configs/$f-config.json"; done
+# The same two as served after the last run that succeeded, kept outside the stage and written below only once step 5
+# succeeds: they fill only what the live copies lack or leave null, the raw configs a run stopped half way leaves in
+# place. The first run copies them.
+SERVED=/var/lib/ferrata/web-served
+install -d -m 755 "$SERVED"
+for f in wallet msg; do [ -f "$SERVED/$f-config.json" ] || [ ! -f "$WWW/$f/config.json" ] || cp "$WWW/$f/config.json" "$SERVED/$f-config.json"; done
 install -d -m 755 "$WWW" "$WWW/wallet"
 install -d -o ferrata -g ferrata -m 755 "$WWW/status"
-# 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg}, /img/
+# 1. the build page owns /index.html, /evidence.*, /build.json, /assets/{site.css,site.js,logo.svg,nojs.css}, /img/ and
+#    /testers/ (the testers' start page) and /llms.txt: everything build.json's "files" lists
 cp -r "$STAGE/build/." "$WWW/"
 # 2. the explorer bundle: its landing becomes /network.html, the rest keeps its paths (/explorer/, /status/index.html,
 #    /agents/, /registry/, /assets/*.js, /idl/, /config.json, /AGENTS.md)
@@ -58,70 +70,12 @@ install -m 644 "$REPO"/idl/ferrata_attestation.idl.json "$REPO"/idl/ferrata_brid
 [ -f /var/lib/ferrata/status/programs.json ] && install -m 644 /var/lib/ferrata/status/programs.json "$WWW/programs.json"
 [ -f "$WWW/programs.json" ] || echo '{"status": "being deployed"}' > "$WWW/programs.json"
 cp "$WWW/programs.json" "$WWW/status/programs.json"
-# 5. the bundles' config: this network's URLs and, once deployed, its program and instance ids
-FERRATA_WEB_STAGE="$STAGE" FERRATA_HERE="$HERE" FERRATA_RANGE_LIMIT="$RANGE_LIMIT" python3 -I - "$WWW" "$PRIMARY" <<'EOF'
-import json, os, re, sys
-www, primary = sys.argv[1:3]
-range_limit = int(os.environ["FERRATA_RANGE_LIMIT"])
-site = f"https://{primary}"
-progs = json.load(open(os.path.join(www, "programs.json")))
-p = os.path.join(www, "config.json")
-if os.path.exists(p):
-    c = json.load(open(p))
-    c.update({"public_rpc": f"{site}/rpc", "site": site, "wallet": "/wallet/", "faucet": "/faucet",
-              "faucet_api": "POST /faucet {\"account\": \"<base58 public account id>\", \"public_key\": \"<64 hex, for an account never used>\"}",
-              "status_api": "/status/status.json", "range_limit": range_limit})
-    c.setdefault("bedrock", {}).update({"anchored": True, "node_version": "0.3.5-rc.1",
-              "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"})
-    accounts = {k: (v or {}).get("program_account") for k, v in (progs.get("programs") or {}).items()}
-    key_of = {"ferrata_attestation": "attestation", "ferrata_bridge_b1": "bridge", "ferrata_consumer": "consumer",
-              "ferrata_holdings": "holdings", "ferrata_msg": "msg"}
-    for prog in c.get("programs", []):
-        for name, acct in accounts.items():
-            if key_of.get(name) == prog.get("key") and acct:
-                prog["account"] = acct
-    inst = (progs.get("instances") or {}).get("sepolia")
-    if inst and inst.get("instance_id"):
-        c["instances"] = [{"label": "Sepolia", "program": accounts.get("ferrata_attestation"), "instance_id": inst.get("instance_id"),
-                           "account": inst.get("instance_account"), "chain_id": 11155111}]
-    json.dump(c, open(p, "w"), indent=2)
-m = os.path.join(www, "msg", "config.json")
-msgp = (progs.get("programs") or {}).get("ferrata_msg", {}).get("program_account")
-if os.path.exists(m) and msgp:
-    c = json.load(open(m)); c["program"] = msgp; json.dump(c, open(m, "w"), indent=2)
-a = os.path.join(www, "AGENTS.md")
-if os.path.exists(a):
-    t = open(a).read(); t2 = t.replace("{{HOST}}", primary)
-    t2 = re.sub(r"at most \d+ blocks per call", f"at most {range_limit} blocks per call", t2)
-    # The program streams' own AGENTS sections (messaging, names) and this host's limits, appended once each.
-    stage = os.environ.get("FERRATA_WEB_STAGE", "")
-    for sp in (os.path.join(stage, "msg/AGENTS-section.md"), os.path.join(stage, "names/AGENTS.md"),
-               os.path.join(os.environ["FERRATA_HERE"], "host/www/AGENTS-limits.md")):
-        if stage and os.path.exists(sp):
-            body = open(sp).read().strip().replace("{{HOST}}", primary)
-            first = next((l for l in body.splitlines() if l.strip()), "")
-            if first and first not in t2:
-                t2 = t2.rstrip() + "\n\n" + body + "\n"
-    if t2 != t: open(a, "w").write(t2)
-w = os.path.join(www, "wallet", "config.json")
-if os.path.exists(w):
-    c = json.load(open(w))
-    c.update({"network": "Ferrata LEZ testnet (rc3)", "rpc": "/rpc", "faucet": "/faucet", "explorer": "/explorer/"})
-    a = (progs.get("programs") or {}).get("ferrata_attestation", {}).get("program_account")
-    inst = (progs.get("instances") or {}).get("sepolia")
-    if a:
-        c["attestation"] = {"program": a, "instances": ([{"id": "0x" + inst["instance_id"].removeprefix("0x"), "chainId": 11155111,
-                            "name": "Sepolia"}] if inst and inst.get("instance_id") else [])}
-    b = (progs.get("programs") or {}).get("ferrata_bridge_b1", {}).get("program_account")
-    if b:
-        c.setdefault("bridge", {})["program"] = b
-    # The encrypted inbox and names panels turn on when their program is set.
-    for key, prog in (("msg", "ferrata_msg"), ("names", "ferrata_names")):
-        acct = (progs.get("programs") or {}).get(prog, {}).get("program_account")
-        if acct:
-            c.setdefault(key, {})["program"] = acct
-    json.dump(c, open(w, "w"), indent=2)
-EOF
+# 5. the bundles' config: this network's URLs and, once deployed, its program and instance ids (messaging and names:
+#    their second versions where deployed); /AGENTS.md with the program streams' sections and this host's limits
+python3 -I "$HERE/web-config.py" "$WWW" "$PRIMARY" "$HERE" "$RANGE_LIMIT" "$STAGE" "$SERVED"
+for f in wallet msg; do
+  [ ! -f "$WWW/$f/config.json" ] || { cp "$WWW/$f/config.json" "$SERVED/.$f-config.json" && mv "$SERVED/.$f-config.json" "$SERVED/$f-config.json"; }
+done
 # 6. Caddy
 sed -e "s/{{SITES}}/$SITES/" -e "s/{{HOST}}/$SSLIP/g" "$HERE/host/Caddyfile" > /etc/caddy/Caddyfile.new
 caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile > /dev/null 2>&1 || { caddy validate --config /etc/caddy/Caddyfile.new --adapter caddyfile; exit 1; }

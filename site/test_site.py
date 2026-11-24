@@ -6,14 +6,20 @@
    exactly once (59 + 5 and 68 + 5 rows); the hero's "N of M" figures and build.json agree with them. The overview has
    one tile per row, linking to it, with the row's status as its class, its mark (the status's symbol) and its
    accessible name ("RFP-021 F.12, shown"); the legend's counts equal the tiles'.
-2. Links. Every href and src of index.html and evidence.html: in-page anchors exist; bundle files exist; links into
-   this repository name tracked files or directories at an existing line or heading; GitHub Actions links name real
-   workflows; links into logos-co/rfp name the extracted commit and its files; Etherscan links name transactions and
-   addresses of the recorded runs; the test network's paths are the ones its server serves; any other external URL is
+2. Links. Every href and src of index.html, evidence.html and testers/index.html: in-page anchors exist; bundle files
+   exist (a relative link is resolved from its page's directory); links into this repository name tracked files or
+   directories at an existing line or heading; GitHub Actions links name real workflows; links into logos-co/rfp name
+   the extracted commit and its files; Etherscan links name transactions and addresses of the recorded runs; the test
+   network's paths are the ones its server serves; the report form is a tracked issue form; any other external URL is
    one the repository's own documents give. No http:// link, no inline script or style, no event-handler attribute.
+   The build page links to the testers' page from its header and its hero; the testers' page loads no script.
+   llms.txt is a title, a one-line summary and lists of links: AGENTS.md, the agents' page, the testers' page,
+   /programs.json, the RPC and the repository, nothing else.
 3. Freshness. A build in memory equals the bundle on disk (deploy/testnet/web/build/).
 4. Privacy. No e-mail address and no home-directory path in the bundle's text; no text or metadata chunk in its PNGs.
-5. The rest: every row's status equals its row of docs/requirements-status.md; the proposal's payouts add up to its
+5. Sources. Every number of the testers' page names its source in a `<!-- source: PATH | TEXT -->` comment: PATH is
+   tracked and holds TEXT (whitespace aside); the page has at least 30 such notes.
+6. The rest: every row's status equals its row of docs/requirements-status.md; the proposal's payouts add up to its
    total; each status symbol has at least 3:1 contrast on its box in both themes (WCAG 1.4.11); `build.py --out`
    refuses a non-empty directory that is not a bundle and leaves files it did not write.
 
@@ -29,6 +35,7 @@ import html.parser
 import importlib.util
 import json
 import pathlib
+import posixpath
 import re
 import subprocess
 import sys
@@ -39,7 +46,7 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 BUNDLE = ROOT / "deploy" / "testnet" / "web" / "build"
 REPO = "https://github.com/rainbowpuffpuff/ferrata"
-TESTNET_PATHS = {"/explorer/", "/wallet/", "/agents", "/status", "/rpc", "/AGENTS.md", "/faucet"}
+TESTNET_PATHS = {"/explorer/", "/wallet/", "/agents", "/agents/", "/status", "/rpc", "/AGENTS.md", "/faucet", "/android/"}
 STATUSES = ("shown", "in part", "not yet", "waits on Logos")
 SKEY = {"shown": "shown", "in part": "part", "not yet": "notyet", "waits on Logos": "waits"}
 
@@ -80,7 +87,7 @@ class Page(html.parser.HTMLParser):
             self.scripts.append(a)
         if tag == "tr" and "data-status" in a and "data-rfp" in a:
             self.rows.append(a)
-        if tag == "p" and a.get("class") == "tile-value":
+        if tag == "p" and "sum-value" in (a.get("class") or "").split():
             self._tile = True
             self.tiles.append("")
         if tag == "use":
@@ -154,7 +161,7 @@ def main(argv):
             problems.append(f"freshness: {p.relative_to(BUNDLE)} is not built by site/build.py")
 
     pages = {}
-    for name in ("index.html", "evidence.html"):
+    for name in ("index.html", "evidence.html", "testers/index.html"):
         pg = Page()
         pg.feed(files[name].decode("utf-8"))
         pages[name] = pg
@@ -175,6 +182,34 @@ def main(argv):
                 problems.append(f"{name}: an image without alt: {img.get('src')}")
             if img.get("src", "").startswith(("img/", "assets/")) and not (img.get("width") and img.get("height")):
                 problems.append(f"{name}: an image without its size: {img.get('src')}")
+
+    # The testers' page: linked from the build page's header and hero; complete without JavaScript (no script at all);
+    # each number's source holds it
+    testers = files["testers/index.html"].decode("utf-8")
+    head, _, rest = files["index.html"].decode("utf-8").partition('<main id="main">')
+    hero = rest.split("</section>", 1)[0]
+    if 'href="testers/"' not in head or 'href="testers/"' not in hero:
+        problems.append("index.html: the header and the hero do not both link to testers/")
+    if "<script" in testers:
+        problems.append("testers/index.html: a script (the page must work without JavaScript)")
+    notes = build.source_notes(site, testers)
+    problems += [f"testers/index.html: source {p}: {why}: {s!r}" for p, s, why in notes if why]
+    if len(notes) < 30:
+        problems.append(f"testers/index.html: {len(notes)} source notes, fewer than 30")
+    for fake, why in (("<!-- source: no/such/file.txt | 1 -->", "not a tracked file"),
+                      ("<!-- source: README.md | 987654321 seconds -->", "no longer holds")):
+        got = build.source_notes(site, fake)
+        if not got or not got[0][2] or why not in got[0][2]:
+            problems.append(f"self-check: the source note {fake!r} gave {got!r}, expected a refusal naming {why!r}")
+
+    # /llms.txt: the llms.txt convention, its links the six it is for
+    llms = files["llms.txt"].decode("utf-8").splitlines()
+    if not llms or not llms[0].startswith("# ") or not any(line.startswith("> ") for line in llms[1:4]):
+        problems.append("llms.txt: not a title followed by a one-line summary")
+    got = set(re.findall(r"\]\(([^)\s]+)\)", "\n".join(llms)))
+    want = {"/AGENTS.md", "/agents/", "/testers/", "/programs.json", "/rpc", REPO}
+    if got != want:
+        problems.append(f"llms.txt: links {sorted(got)}, expected {sorted(want)}")
 
     # 1. Counts
     idx = pages["index.html"]
@@ -327,7 +362,7 @@ def main(argv):
 
     # 4. Privacy
     for name, data in files.items():
-        if not name.endswith((".html", ".json", ".js", ".css")):
+        if not name.endswith((".html", ".json", ".js", ".css", ".txt")):
             continue
         text = data.decode("utf-8")
         for m in re.finditer(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}", text):
@@ -405,7 +440,8 @@ def main(argv):
         f"https://github.com/logos-co/rfp/blob/{'0' * 40}/RFPs/x.md": "extracted commit",
         "https://sepolia.etherscan.io/tx/0x" + "ab" * 32: "recorded transaction", "http://example.com/": "plain http",
         "https://example.invalid/page": "no document", f"{REPO}/actions/workflows/none.yml": "no such workflow",
-        "/elsewhere": "unrecognised",
+        "/elsewhere": "unrecognised", "../outside.html": "outside the bundle", "testers/#no-such-id": "no id",
+        f"{REPO}/issues/new?template=none.yml": "no such issue form",
     }
     for href, why in bad.items():
         err = check_link(href, "index.html", set(idx.ids), pages, files, repo, rfp_src, comment_urls, txs, addrs, workflows,
@@ -443,12 +479,18 @@ def check_link(href, page, ids, pages, files, repo, rfp_src, comment_urls, txs, 
         return "plain http"
     if href in TESTNET_PATHS:
         return None
-    m = re.match(r"^(index\.html|evidence\.html)(?:#(.*))?$", href)
-    if m:
-        target = pages[m.group(1)]
-        return None if not m.group(2) or m.group(2) in target.ids else f"no id {m.group(2)} in {m.group(1)}"
     if not re.match(r"^[a-z]+:", href) and not href.startswith("/"):
-        return None if href.split("#")[0] in files else "not in the bundle"
+        path, _, frag = href.partition("#")
+        target = posixpath.normpath(posixpath.join(posixpath.dirname(page), path)) if path else page
+        if target == ".." or target.startswith("../"):
+            return "outside the bundle"
+        if target == ".":
+            target = "index.html"
+        elif path.endswith("/"):
+            target += "/index.html"
+        if target in pages:
+            return None if not frag or frag in pages[target].ids else f"no id {frag} in {target}"
+        return None if target in files else "not in the bundle"
     m = re.match(rf"^{re.escape(REPO)}/(blob|tree)/(?:main|[0-9a-f]{{40}})/([^#]+?)(?:#(.+))?$", href)
     if m:
         kind, path, anchor = m.groups()
@@ -473,8 +515,11 @@ def check_link(href, page, ids, pages, files, repo, rfp_src, comment_urls, txs, 
     if m:
         ok = subprocess.run(["git", "-C", str(ROOT), "cat-file", "-e", m.group(1) + "^{commit}"], capture_output=True).returncode == 0
         return None if ok else "no such commit"
-    if href in (REPO, "https://github.com/rainbowpuffpuff", "https://github.com/logos-co/rfp"):
+    if href in (REPO, "https://github.com/rainbowpuffpuff", "https://github.com/logos-co/rfp", REPO + "/security/advisories/new"):
         return None
+    m = re.match(rf"^{re.escape(REPO)}/issues/new\?template=([\w.-]+\.yml)$", href)
+    if m:
+        return None if f".github/ISSUE_TEMPLATE/{m.group(1)}" in repo.files else "no such issue form"
     m = re.match(r"^https://github\.com/logos-co/rfp/blob/([0-9a-f]{40})/(RFPs/[^#]+)(?:#L(\d+))?$", href)
     if m:
         if m.group(1) != rfp_src["commit"]:
