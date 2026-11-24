@@ -538,22 +538,21 @@ a.btn { display: inline-block; text-decoration: none; }
 .g1{flex-grow:1}
 .g2{flex-grow:2}
 .g3{flex-grow:3}
-.g4{flex-grow:4}
 .g5{flex-grow:5}
 .g6{flex-grow:6}
-.g7{flex-grow:7}
 .g8{flex-grow:8}
 .g10{flex-grow:10}
 .g11{flex-grow:11}
+.g12{flex-grow:12}
 .g14{flex-grow:14}
 .g15{flex-grow:15}
 .g18{flex-grow:18}
 .g22{flex-grow:22}
 .g24{flex-grow:24}
-.g28{flex-grow:28}
+.g29{flex-grow:29}
 .g31{flex-grow:31}
 .g43{flex-grow:43}
-.g48{flex-grow:48}
+.g49{flex-grow:49}
 .gs1-1{grid-column:1 / span 1}
 .gs2-1{grid-column:2 / span 1}
 .gs3-1{grid-column:3 / span 1}
@@ -567,6 +566,6 @@ a.btn { display: inline-block; text-decoration: none; }
 @container (min-width: 4rem) { .fit4 > .seg-n { display: inline-block } }
 @container (min-width: 5rem) { .fit5 > .seg-n { display: inline-block } }
 @container (min-width: 8rem) { .fit8 > .seg-n { display: inline-block } }
-@container (min-width: 16rem) { .fit16 > .seg-n { display: inline-block } }
+@container (min-width: 19rem) { .fit19 > .seg-n { display: inline-block } }
 @container (min-width: 37rem) { .fit37 > .seg-n { display: inline-block } }
 @container (min-width: 62rem) { .fit62 > .seg-n { display: inline-block } }
